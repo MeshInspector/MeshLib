@@ -17,6 +17,7 @@
 #include "MR2to3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRPrecisePredicates2.h"
+#include "MRPrecisePredicates3.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 #include <algorithm>
@@ -54,6 +55,34 @@ struct SweepLinePredicates
     std::function<Vector3f( VertId v )> point;
 };
 
+// the sweep-line predicates that depend only on the projected integer coordinates `pts2`;
+// shared by precisePredicates (2D input) and meshSpacePredicates (3D mesh input projected on the dominant axis)
+static void setPts2Predicates( SweepLinePredicates& p, std::shared_ptr<Vector<Vector2i, VertId>> pts2 )
+{
+    p.less = [pts2] ( VertId l, VertId r )
+    {
+        return smaller( { .id = l, .pt = ( *pts2 )[l].x }, { .id = r, .pt = ( *pts2 )[r].x } );
+    };
+    p.less2d = [pts2] ( VertId l, VertId r )
+    {
+        return std::tuple( ( *pts2 )[l].x, ( *pts2 )[l].y ) < std::tuple( ( *pts2 )[r].x, ( *pts2 )[r].y );
+    };
+    p.samePos = [pts2] ( VertId l, VertId r )
+    {
+        return ( *pts2 )[l] == ( *pts2 )[r];
+    };
+    p.ccw = [pts2] ( VertId a, VertId b, VertId c )
+    {
+        return MR::ccw( { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] } } );
+    };
+    p.ccwFromBehind = [pts2] ( VertId b, VertId pivot )
+    {
+        Vector2i base = ( *pts2 )[pivot];
+        base.x -= 10000; // far behind pivot along -X (the sweep axis), matching the historical reference
+        return MR::ccw( { PreciseVertCoords2{ VertId{}, base }, { b, ( *pts2 )[b] }, { pivot, ( *pts2 )[pivot] } } );
+    };
+}
+
 // default predicates: exact integer arithmetic with simulation-of-simplicity (historical behavior)
 static SweepLinePredicates precisePredicates( const Contours2f& contours )
 {
@@ -82,28 +111,7 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
     };
 
     SweepLinePredicates p;
-    p.less = [pts] ( VertId l, VertId r )
-    {
-        return smaller( { .id = l, .pt = ( *pts )[l].x }, { .id = r, .pt = ( *pts )[r].x } );
-    };
-    p.less2d = [pts] ( VertId l, VertId r )
-    {
-        return std::tuple( ( *pts )[l].x, ( *pts )[l].y ) < std::tuple( ( *pts )[r].x, ( *pts )[r].y );
-    };
-    p.samePos = [pts] ( VertId l, VertId r )
-    {
-        return ( *pts )[l] == ( *pts )[r];
-    };
-    p.ccw = [pts] ( VertId a, VertId b, VertId c )
-    {
-        return MR::ccw( { PreciseVertCoords2{ a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] } } );
-    };
-    p.ccwFromBehind = [pts] ( VertId b, VertId pivot )
-    {
-        Vector2i base = ( *pts )[pivot];
-        base.x -= 10000; // far behind pivot along -X, matching the historical sweep reference
-        return MR::ccw( { PreciseVertCoords2{ VertId{}, base }, { b, ( *pts )[b] }, { pivot, ( *pts )[pivot] } } );
-    };
+    setPts2Predicates( p, pts );
     // resolve an input vertex by (contourId, pointId); initMeshByContours_ drives the order, so
     // `contours` only needs to outlive construction (every caller passes its own input by reference)
     p.addInputPoint = [&contours, pts, toInt] ( VertId v, int contourId, int pointId )
@@ -128,6 +136,73 @@ static std::vector<int> getContourSizes( const Contours2f& contours )
     for ( int i = 0; i < int( contours.size() ); ++i )
         sizes[i] = int( contours[i].size() );
     return sizes;
+}
+
+// map an input vertex (its index within the concatenated hole loops) back to its source mesh VertId;
+// mirrors the walk in mergeSamePoints_
+static VertId holeSourceVertId( const HolesVertIds& holes, VertId v )
+{
+    int idx = int( v );
+    for ( const auto& hole : holes )
+    {
+        if ( idx < int( hole.size() ) )
+            return hole[idx];
+        idx -= int( hole.size() );
+    }
+    assert( false ); // a disjoint triangulation outputs only input vertices, all covered by holes
+    return {};
+}
+
+// mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
+// orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
+// predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
+// through `holeVertIds` (no separate coordinate copy, no projection round-trip).
+// `mesh`, `loops` and `holeVertIds` only need to outlive the run.
+static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const HolesVertIds& holeVertIds )
+{
+    Box3f box;
+    int pointsSize = 0;
+    for ( const auto& loop : loops )
+    {
+        for ( EdgeId e : loop )
+            box.include( mesh.orgPnt( e ) );
+        if ( loop.size() >= 3 )
+            pointsSize += int( loop.size() );
+    }
+
+    // drop the axis most aligned with the normal; order the two kept axes so the 2D ccw of the
+    // projection equals the 3D orientation around +normal (swap them when normal points the other way)
+    int dropAx = 0;
+    for ( int i = 1; i < 3; ++i )
+        if ( normal[i] * normal[i] > normal[dropAx] * normal[dropAx] )
+            dropAx = i;
+    int kx = ( dropAx + 1 ) % 3;
+    int ky = ( dropAx + 2 ) % 3;
+    if ( normal[dropAx] < 0 )
+        std::swap( kx, ky );
+
+    auto pts2 = std::make_shared<Vector<Vector2i, VertId>>(); // dominant-axis projection, drives every predicate
+    pts2->reserve( pointsSize );
+    auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
+
+    SweepLinePredicates p;
+    setPts2Predicates( p, pts2 );
+    p.addInputPoint = [&mesh, &loops, pts2, toInt, kx, ky] ( VertId v, int contourId, int pointId )
+    {
+        const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
+        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
+    };
+    p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
+    {
+        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts2 )[a], ( *pts2 )[b], ( *pts2 )[c], ( *pts2 )[d] ) );
+    };
+    // disjoint triangulation creates no output intersection vertices, so every output vertex is an input
+    // vertex: restore its exact original mesh position via the (already-built) holeVertIds identity map
+    p.point = [&mesh, &holeVertIds] ( VertId v )
+    {
+        return mesh.points[holeSourceVertId( holeVertIds, v )];
+    };
+    return p;
 }
 
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
@@ -1423,6 +1498,21 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
 {
     const auto contsf = convertContours<Contours2f>( contours );
     return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries );
+}
+
+std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+{
+    if ( loops.empty() )
+        return Mesh();
+    // boundary loops may share mesh vertices: this identity map drives both vertex merging and exact
+    // point restoration (so the patch reuses the original mesh coordinates instead of projected ones)
+    const HolesVertIds holeVertIds = findHoleVertIdsByHoleEdges( mesh.topology, loops );
+    std::vector<int> sizes( loops.size() );
+    for ( int i = 0; i < int( loops.size() ); ++i )
+        sizes[i] = int( loops[i].size() ) + 1; // +1 matches the queue's closed-contour convention (it allocates size-1 verts)
+    SweepLineQueue triangulator( meshSpacePredicates( mesh, loops, normal, holeVertIds ), std::move( sizes ),
+        { &holeVertIds, true, WindingMode::NonZero, false, true, outBoundaries } );
+    return triangulator.run();
 }
 
 }

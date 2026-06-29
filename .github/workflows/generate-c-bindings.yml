@@ -6,6 +6,10 @@ on:
       docker_image_tag:
         required: true
         type: string
+      version_tag:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   generate-c-bindings:
@@ -14,12 +18,14 @@ jobs:
     permissions:
       contents: read  # This is required for actions/checkout
     container:
-      image: meshlib/meshlib-emscripten-c-bindings-arm64:${{inputs.docker_image_tag}}
+      image: meshlib/meshlib-emscripten-generate-c-bindings-arm64:${{inputs.docker_image_tag}}
       options: --user root
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{inputs.version_tag}}
 
       - name: Checkout third-party submodules
         run: |
@@ -53,9 +59,15 @@ jobs:
 
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
+
+      - name: Generate C bindings (Wasm version)
+        run: |
+          cp -r source/MeshLibC2 source/MeshLibC2_orig
+          make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1 C_FOR_WASM=1
+          mv source/MeshLibC2 source/MeshLibC2Wasm
+          mv source/MeshLibC2_orig source/MeshLibC2
+
       - name: Generate C bindings
-        # I get `sh` by default.
-        shell: bash
         run: |
           make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
 
@@ -65,5 +77,6 @@ jobs:
           name: CBindings
           path: |
             ./source/MeshLibC2
+            ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
           retention-days: 1

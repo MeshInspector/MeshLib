@@ -1,9 +1,15 @@
 # reference: https://github.com/emscripten-core/emscripten/blob/main/src/settings.js
 string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS
-  "--use-port=boost_headers"
-  "--use-port=freetype" # TODO: make optional
-  "--use-port=libpng" # TODO: make optional
-  "--use-port=zlib" # TODO: make optional
+  # I would use the new-style flag spelling here, but it doesn't work on the old EMSDK 3.1.38 that we
+  #   have to support for Unity compatibility.
+  #"--use-port=boost_headers"
+  #"--use-port=freetype" # TODO: make optional
+  #"--use-port=libpng" # TODO: make optional
+  #"--use-port=zlib" # TODO: make optional
+  "-sUSE_BOOST_HEADERS"
+  "-sUSE_FREETYPE" # TODO: make optional
+  "-sUSE_LIBPNG" # TODO: make optional
+  "-sUSE_ZLIB" # TODO: make optional
 )
 
 option(MR_EMSCRIPTEN_SIMD "Enable WebAssembly SIMD (-msimd128) for Emscripten builds" ON)

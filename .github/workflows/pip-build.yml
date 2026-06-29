@@ -143,6 +143,13 @@ jobs:
               exclude:
                 platform: aarch64
 
+  generate-c-bindings:
+    needs: setup
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      version_tag: ${{needs.setup.outputs.version_tag}}
+
   manylinux-pip-build:
     needs: setup
     # Skip entirely when both platforms are disabled (empty matrix would
@@ -297,29 +304,25 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
+
       - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         run: |
           rm -rf source/MeshLibC2 source/MeshLibC2Cuda
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
-
-      - name: Upload C bindings headers
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: CBindings
-          path: |
-            ./source/MeshLibC2/include
-            ./source/MeshLibC2Cuda/include
-          retention-days: 1
 
       - name: Generate C# bindings # generate only sources
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
@@ -362,7 +365,7 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
-      VCPKG-VERSION: '2026.06.01'
+      VCPKG-VERSION: '2026.06.24'
       CUDA-VERSION: '12.0.1'
       CUDA-MAJOR: '12'
       CUDA-MINOR: '0'
@@ -427,7 +430,7 @@ jobs:
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 || exit /b 1
 
       - name: Run Test

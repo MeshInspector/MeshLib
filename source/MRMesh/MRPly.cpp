@@ -20,12 +20,17 @@ namespace
 bool ignoreComment( const std::string & comment )
 {
     return comment == "File generated"
+        || comment == "-"
         || ( comment.starts_with( "Created " ) && comment.size() > 13 && comment[10] == '/' && comment[13] == '/' ) // e.g. 'Created 26/12/2019 10:15'
         || ( comment.starts_with( "Created 20" ) && comment.size() > 12 && comment[12] == '-' ) // e.g. 'Created 2025-12-19T22:09:05'
         || comment.starts_with( "#" )
+        || comment.starts_with( "--" ) // e.g. reconstruction CLI args '--depth 13', '--in /tmp/...ply'
+        || comment.ends_with( ".jpg" ) || comment.ends_with( ".jpeg" ) || comment.ends_with( ".png" ) // source image file lists
         || comment.starts_with( "Coordinate Orientation: " )
+        || comment.starts_with( "dataType " )
         || comment.starts_with( "Density: " )
         || comment.starts_with( "density: " )
+        || comment.starts_with( "epsg " ) // coordinate reference system code
         || comment.starts_with( "FOV: " )
         || comment.starts_with( "geotag " )
         || comment.starts_with( "maxx " )
@@ -48,6 +53,7 @@ bool ignoreComment( const std::string & comment )
         || comment.starts_with( "shiftx " )
         || comment.starts_with( "shifty " )
         || comment.starts_with( "shiftz " )
+        || comment.starts_with( "source " ) // e.g. 'source PortalCam' - per-instance capture metadata
         || comment.starts_with( "Timestamp: " ) // e.g. 'Timestamp: 2026-02-06 15:12:26'
         || comment.starts_with( "unit = " )
         || comment.starts_with( "Unit: " )

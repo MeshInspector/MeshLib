@@ -13,22 +13,37 @@ namespace MR
 namespace Cuda
 {
 
-Expected<RuntimeInfo> getRuntimeInfo()
+Expected<DeviceInfo> getDeviceInfo()
 {
-    int n;
-    CUDA_RETURN_UNEXPECTED( cudaGetDeviceCount( &n ) );
-    if ( n <= 0 )
-        return MR::unexpected( "NVIDIA GPU error: no single device" );
-
-    RuntimeInfo res;
+    DeviceInfo res;
     CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &res.driverVersion ) );
+    if ( res.driverVersion <= 0 )
+        return MR::unexpected( "NVIDIA GPU error: no CUDA driver found" );
+
+    {
+        int n = 0;
+        auto code = cudaGetDeviceCount( &n );
+        if ( code != cudaSuccess || n <= 0 )
+        {
+            auto err = ( code != cudaSuccess ) ? MR::Cuda::getError( code ) : "NVIDIA GPU error: no capable device found";
+            err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );
+            return MR::unexpected( err );
+        }
+    }
+
     CUDA_RETURN_UNEXPECTED( cudaRuntimeGetVersion( &res.runtimeVersion ) );
-    CUDA_RETURN_UNEXPECTED( cudaDeviceGetAttribute( &res.computeMajor, cudaDevAttrComputeCapabilityMajor, 0 ) );
-    CUDA_RETURN_UNEXPECTED( cudaDeviceGetAttribute( &res.computeMinor, cudaDevAttrComputeCapabilityMinor, 0 ) );
+
+    cudaDeviceProp prop;
+    CUDA_RETURN_UNEXPECTED( cudaGetDeviceProperties( &prop, 0 ) );
+    res.computeMajor = prop.major;
+    res.computeMinor = prop.minor;
+    res.totalGlobalMem = prop.totalGlobalMem;
+    res.name = prop.name;
+
     return res;
 }
 
-bool RuntimeInfo::fitForComputations() const
+bool DeviceInfo::fitForComputations() const
 {
     // according to https://en.wikipedia.org/wiki/CUDA Compute Capability (CUDA SDK support vs. Microarchitecture) table
     if ( runtimeVersion / 1000 >= 12 && computeMajor < 5 )
@@ -41,7 +56,7 @@ bool RuntimeInfo::fitForComputations() const
 
 bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
 {
-     auto info = MR::Cuda::getRuntimeInfo();
+     auto info = MR::Cuda::getDeviceInfo();
      if ( !info )
          return false;
 

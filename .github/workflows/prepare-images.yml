@@ -73,7 +73,7 @@ jobs:
           # Only `distro` and `arch` are encoded here so the auto-generated
           # cell name stays "(<distro>, <arch>)"; the runner OS and image
           # suffix are derived from `matrix.arch` inline below.
-          # `emscripten-c-bindings` (the image for generate-c-bindings) has no
+          # `emscripten-generate-c-bindings` (the image for generate-c-bindings) has no
           # disable condition: that job always runs, so the image is always built.
           MATRIX=$(jq -nc \
             --argjson dx64   "$DISABLE_UBUNTU_X64" \
@@ -85,7 +85,8 @@ jobs:
               {distro:"ubuntu22",              arch:"arm64"},
               {distro:"ubuntu24",              arch:"arm64"},
               {distro:"emscripten",            arch:"arm64"},
-              {distro:"emscripten-c-bindings", arch:"arm64"}
+              {distro:"emscripten-generate-c-bindings", arch:"arm64"},
+              {distro:"emscripten-build-c-bindings", arch:"x64"}
              ] | map(select(
               (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
               and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)
@@ -189,7 +190,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
           aws-region: us-east-1
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -251,7 +252,7 @@ jobs:
           submodules: true
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

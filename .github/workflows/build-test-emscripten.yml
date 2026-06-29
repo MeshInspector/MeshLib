@@ -28,17 +28,14 @@ jobs:
             target_name: emscripten-singlethreaded
             package_name: emscripten-singlethreaded
             thirdparty-dir: emscripten-single
-            aws-dir: RMISingle
           - config: Multithreaded
             target_name: emscripten
             package_name: emscripten-multithreaded
             thirdparty-dir: emscripten
-            aws-dir: RMI
           - config: Multithreaded-64Bit
             target_name: emscripten-wasm64
             package_name: emscripten-multithreaded-64bit
             thirdparty-dir: emscripten-wasm64
-            aws-dir: RMI64
 
     steps:
       - name: Work-around possible permission issues

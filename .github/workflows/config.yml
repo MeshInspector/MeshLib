@@ -9,7 +9,7 @@ on:
         value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
       vs22_vcpkg_version:
         description: "vs22 vcpkg version"
-        value: "2026.06.01" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2026.06.24" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -212,11 +212,12 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/(ubuntu22|ubuntu24|emscripten-c-bindings|emscripten)Dockerfile'
+              - 'docker/(ubuntu22|ubuntu24|emscripten-build-c-bindings|emscripten-generate-c-bindings|emscripten)Dockerfile'
               - 'requirements/(ubuntu|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
+              - 'scripts/mrbind/clang_version.txt'
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**)'
 
       - name: Filter Linux vcpkg paths
@@ -313,7 +314,7 @@ jobs:
           # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
             --arg vs19 "2024.10.21" \
-            --arg vs22 "2026.06.01" \
+            --arg vs22 "2026.06.24" \
             '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
             "$MATRIX_FILE" > tmp.json
 

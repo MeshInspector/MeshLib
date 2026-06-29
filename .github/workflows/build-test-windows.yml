@@ -64,7 +64,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ matrix.release_tag || '' }}
+          ref: ${{ inputs.release_tag || '' }}
 
       - name: Locate Visual Studio
         uses: ./.github/actions/locate-visual-studio

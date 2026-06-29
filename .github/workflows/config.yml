@@ -257,7 +257,7 @@ jobs:
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          IMAGE_TAG=vcpkg-$(git ls-files -s -- \
+          IMAGE_TAG=source-checksum-$(git ls-files -s -- \
             docker/rockylinux8-vcpkgDockerfile \
             docker/rockylinux9-vcpkgDockerfile \
             thirdparty/vcpkg \

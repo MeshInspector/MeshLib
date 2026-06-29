@@ -28,7 +28,9 @@ on:
         value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_linux_vcpkg_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        # Content-addressed tag (see select-vcpkg-docker-image-tag): rebuild
+        # iff the image is absent from the registry, regardless of the event.
+        value: ${{ jobs.prepare-config.outputs.vcpkg-image-missing == 'true' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       need_windows_vcpkg_rebuild:
         description:
         value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
@@ -90,6 +92,7 @@ jobs:
       release_tag:              ${{ steps.version-tag.outputs.release_tag }}
       linux-changes:            ${{ steps.linux-changes.outputs.src }}
       linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
+      vcpkg-image-missing:      ${{ steps.check-vcpkg-image.outputs.missing }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
       windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
@@ -253,16 +256,51 @@ jobs:
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
+      # Content-addressed vcpkg image tag: a hash of everything the image is
+      # built from — the rockylinux vcpkg Dockerfiles plus the tracked vcpkg
+      # overlay (ports, triplets, and vcpkg.json, whose builtin-baseline pins
+      # the vcpkg version the Dockerfile checks out). `git ls-files -s` emits
+      # "<mode> <object-sha> <stage> <path>" straight from the index, so the
+      # tag changes whenever any of those blobs changes, with no working-tree
+      # read. Same inputs -> same tag, which lets a PR-built image be reused
+      # as-is once the PR merges, and lets commits that don't touch these
+      # files skip the image rebuild entirely.
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-vcpkg-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
-          else
-            IMAGE_TAG="latest"
-          fi
+          IMAGE_TAG=$(git ls-files -s -- \
+            docker/rockylinux8-vcpkgDockerfile \
+            docker/rockylinux9-vcpkgDockerfile \
+            thirdparty/vcpkg \
+            | git hash-object --stdin | cut -c1-16)
+          echo "image_tag=${IMAGE_TAG}"
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      # Rebuild the vcpkg image only when its content-addressed tag is absent
+      # from the registry (for either arch). Anonymous pull-scoped token — the
+      # meshlib images are public (the build jobs pull them with no creds).
+      - name: Check vcpkg Docker image presence
+        id: check-vcpkg-image
+        env:
+          IMAGE_TAG: ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
+        run: |
+          missing=false
+          for arch in x64 arm64; do
+            repo="meshlib/meshlib-rockylinux8-vcpkg-${arch}"
+            token=$(curl -fsSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:${repo}:pull" | jq -r .token)
+            code=$(curl -s -o /dev/null -w '%{http_code}' \
+              -H "Authorization: Bearer ${token}" \
+              -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+              -H "Accept: application/vnd.docker.distribution.manifest.list.v2+json" \
+              -H "Accept: application/vnd.oci.image.index.v1+json" \
+              "https://registry-1.docker.io/v2/${repo}/manifests/${IMAGE_TAG}")
+            echo "  ${repo}:${IMAGE_TAG} -> HTTP ${code}"
+            if [ "${code}" != "200" ]; then
+              missing=true
+            fi
+          done
+          echo "missing=${missing}"
+          echo "missing=${missing}" >> $GITHUB_OUTPUT
 
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}

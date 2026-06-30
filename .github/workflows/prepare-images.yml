@@ -207,46 +207,33 @@ jobs:
           role-duration-seconds: 7200
           retry-max-attempts: 5
 
-      - name: Build Linux vcpkg image
+      # Build the image only if its content-addressed tag isn't already in the
+      # registry (reused across PR commits and after merge), then point the
+      # conventional tag (latest on master, branch-name on a PR) at it so the
+      # build-test jobs pull it unchanged.
+      - name: Build, push and tag Linux vcpkg image
         env:
           DOCKER_BUILDKIT: 1
         run: |
-          docker build \
-            -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
-            -t ${{ env.image }} \
-            --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
-            --secret id=AWS_ACCESS_KEY_ID \
-            --secret id=AWS_SECRET_ACCESS_KEY \
-            --secret id=AWS_SESSION_TOKEN \
-            . --progress=plain
-
-      - name: Push Linux vcpkg image
-        run: docker push ${{ env.image }}
+          repo="${image%:*}"
+          tag=$(scripts/devops/docker_image_source_checksum.sh ${{ matrix.os }}-vcpkg)
+          if scripts/docker_image_exists.sh "${repo}:${tag}"; then
+            echo "Reusing existing ${repo}:${tag}"
+          else
+            docker build \
+              -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
+              -t "${repo}:${tag}" \
+              --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
+              --secret id=AWS_ACCESS_KEY_ID \
+              --secret id=AWS_SECRET_ACCESS_KEY \
+              --secret id=AWS_SESSION_TOKEN \
+              . --progress=plain
+            docker push "${repo}:${tag}"
+          fi
+          docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
-
-  # Repoint `:latest` at master's current content-addressed vcpkg image, so
-  # the pip-build `:latest` fallback stays current even when the build above
-  # was skipped via reuse.
-  tag-vcpkg-latest:
-    needs: linux-vcpkg-build-upload
-    if: ${{ always() && github.event_name == 'push' && github.ref == 'refs/heads/master' && !inputs.disable_linux_vcpkg && (needs.linux-vcpkg-build-upload.result == 'success' || needs.linux-vcpkg-build-upload.result == 'skipped') }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        arch: [ x64, arm64 ]
-    steps:
-      - name: Login to DockerHub
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          username: meshlib
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Point :latest at the content-addressed vcpkg image
-        run: |
-          repo="meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}"
-          docker buildx imagetools create -t "${repo}:latest" "${repo}:${{ inputs.vcpkg_docker_image_tag }}"
 
   windows-vcpkg-build-upload:
     if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}

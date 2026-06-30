@@ -12,6 +12,10 @@ target_link_libraries(${PROJECT_NAME}
     ${CMAKE_DL_LIBS}
 )
 
+if(TARGET MRVoxels)
+  target_link_libraries(${PROJECT_NAME} PRIVATE -Wl,--whole-archive MRVoxels -Wl,--no-whole-archive)
+endif()
+
 set(CMAKE_EXECUTABLE_SUFFIX ".mjs")
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "meshlib")
 
@@ -24,6 +28,12 @@ target_link_options(${PROJECT_NAME} PRIVATE
   "-sEXIT_RUNTIME=0"
   "-sINVOKE_RUN=0"
 )
+
+set(MESHLIB_WASM_MODULE_TARGET "node" CACHE STRING "Target runtime for the WASM module: 'node' or 'web'")
+set_property(CACHE MESHLIB_WASM_MODULE_TARGET PROPERTY STRINGS "node" "web")
+if(MESHLIB_WASM_MODULE_TARGET STREQUAL "node")
+  target_link_options(${PROJECT_NAME} PRIVATE "-sNODERAWFS=1")
+endif()
 
 install(
   TARGETS ${PROJECT_NAME}

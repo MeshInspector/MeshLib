@@ -5,6 +5,6 @@
   "type": "module",
   "description": "Headless round-trip tests for the MeshLib WebAssembly module (MRWasmModule)",
   "scripts": {
-    "test": "node roundtrip.test.mjs"
+    "test": "node index.mjs"
   }
 }

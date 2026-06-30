@@ -7,7 +7,7 @@ result back.
 From the MeshLib root, in an Emscripten environment, build the module and copy it here:
 
 ```sh
-./scripts/build_wasm_meshlib.sh
+MESHLIB_WASM_MODULE_TARGET=web ./scripts/build_wasm_meshlib.sh
 cp build/Release/bin/meshlib.{mjs,wasm} examples/threejs/
 python3 -m http.server -d examples/threejs 8080
 ```

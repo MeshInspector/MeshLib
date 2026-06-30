@@ -4,9 +4,6 @@ set -euo pipefail
 
 distro=$1
 
-# Inputs the thirdparty build reads for every building image (build script,
-# emscripten-mode helper, per-library build scripts, and the thirdparty
-# sources minus the parts these images don't build).
 common=(
   scripts/build_thirdparty.sh
   scripts/ask_emscripten_mode.src
@@ -19,7 +16,6 @@ common=(
   ':(exclude)thirdparty/Noto_Sans/**'
 )
 
-# Extra files each Dockerfile copies/runs and thus bakes into the image.
 ubuntu=(
   requirements/ubuntu.txt
   requirements/python/requirements.txt

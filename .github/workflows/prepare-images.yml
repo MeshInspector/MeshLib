@@ -111,7 +111,7 @@ jobs:
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
-      repo: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}
+      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Work-around possible permission issues
         shell: bash
@@ -153,14 +153,15 @@ jobs:
       # the build-test jobs pull it unchanged.
       - name: Build, push and tag Linux image
         run: |
-          tag=$(scripts/docker_image_source_checksum.sh "${{ matrix.distro }}")
+          repo="${image%:*}"
+          tag=$(scripts/devops/docker_image_source_checksum.sh "${{ matrix.distro }}")
           if scripts/docker_image_exists.sh "${repo}:${tag}"; then
             echo "Reusing existing ${repo}:${tag}"
           else
             docker build -f ./docker/${{ env.dockerfile }} -t "${repo}:${tag}" . --progress=plain
             docker push "${repo}:${tag}"
           fi
-          docker buildx imagetools create -t "${repo}:${{ inputs.docker_image_tag }}" "${repo}:${tag}"
+          docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes

@@ -538,7 +538,8 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 }
 
 // two incident vertices can be found using this struct
-struct IncidentVert {
+struct IncidentVert
+{
     FaceId f; // to find triangle in triangleToVertices vector
     VertId srcVert; // central vertex, used for sorting triangles per their incident vertices
     // the vertices of the triangle can be upgraded, so no reason to store VertId!
@@ -547,15 +548,20 @@ struct IncidentVert {
         : f(f)
         , srcVert( srcVert )
     {}
+
+    auto asPair() const { return std::make_pair( srcVert, f ); }
+    friend bool operator <( const IncidentVert& l, const IncidentVert& r ) { return l.asPair() < r.asPair(); }
 };
 
-// to find the smallest connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
-struct PathOverIncidentVert {
+// to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
+class PathOverIncidentVert
+{
     Triangulation& faceToVertices;
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
     std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
     size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
 
+public:
     PathOverIncidentVert( Triangulation& triangleToVertices,
                 std::vector<IncidentVert>& incidentItemsVector, size_t beg, size_t end )
         : faceToVertices( triangleToVertices )
@@ -573,19 +579,25 @@ struct PathOverIncidentVert {
     // first unvisited vertex
     VertId getFirstVertex() const
     {
-        for ( auto v : faceToVertices[vertexBegIt->f] )
-            if ( v != vertexBegIt->srcVert )
-                return v;
+        // below selection ensures that getNextIncidentVertex( getFirstVertex(), true ) will find nextVertex in the very first triangle
+        const auto & vs = faceToVertices[vertexBegIt->f];
+        if ( vs[0] == vertexBegIt->srcVert )
+            return vs[1];
+        if ( vs[1] == vertexBegIt->srcVert )
+            return vs[2];
+        if ( vs[2] == vertexBegIt->srcVert )
+            return vs[0];
         assert( false );
         return {};
     }
 
-    // find incident unvisited vertex
-    VertId getNextIncidentVertex( VertId v, bool triOrientation )
+    // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
+    VertId getNextIncidentVertex( VertId v, bool triOrientation, VertId prevVertex = {} )
     {
         if ( lastUnvisitedIndex <= 0 )
             return VertId( -1 );
 
+        auto prevIt = vertexBegIt + lastUnvisitedIndex;
         for ( auto it = vertexBegIt; it < vertexBegIt + lastUnvisitedIndex; ++it )
         {
             VertId nextVertex;
@@ -610,11 +622,22 @@ struct PathOverIncidentVert {
             }
             if ( nextVertex )
             {
-                --lastUnvisitedIndex;
-                std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
-                return nextVertex;
+                if ( nextVertex != prevVertex )
+                {
+                    --lastUnvisitedIndex;
+                    std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
+                    return nextVertex;
+                }
+                // prevVertex is a possible continuation, store it, and search for other options
+                prevIt = it;
             }
-
+        }
+        if ( prevIt < vertexBegIt + lastUnvisitedIndex )
+        {
+            // the only option is return in prevVertex
+            --lastUnvisitedIndex;
+            std::iter_swap( prevIt, vertexBegIt + lastUnvisitedIndex );
+            return prevVertex;
         }
         return {};
     }
@@ -684,11 +707,7 @@ void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vec
             incidentVertVector.emplace_back( f, vs[i] );
     }
 
-    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end(),
-        [] ( const IncidentVert& lhv, const IncidentVert& rhv ) -> bool
-    {
-        return lhv.srcVert < rhv.srcVert;
-    } );
+    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end() );
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
@@ -747,6 +766,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             bool triOrientation = true;
             const VertId firstVertex = incidentItems.getFirstVertex();
             visitedVertices.autoResizeSet( firstVertex );
+            VertId prevVertex = firstVertex;
             VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
             if ( !nextVertex )
             {
@@ -759,7 +779,12 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             path = { firstVertex, nextVertex };
             while ( true )
             {
-                nextVertex = incidentItems.getNextIncidentVertex( nextVertex, triOrientation );
+                {
+                    // prefer finding nextVertex not equal to prevVertex to maximize neighbour ring sizes
+                    auto currVertex = nextVertex;
+                    nextVertex = incidentItems.getNextIncidentVertex( currVertex, triOrientation, prevVertex );
+                    prevVertex = currVertex;
+                }
 
                 if ( !nextVertex )
                 {

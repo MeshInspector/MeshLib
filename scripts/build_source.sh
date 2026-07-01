@@ -98,10 +98,14 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   "
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
-  NPROC=$(sysctl -n hw.logicalcpu)
-else
-  NPROC=$(nproc)
+# Respect a caller-provided NPROC (e.g. to cap parallelism / limit heat);
+# otherwise default to all available cores.
+if [ -z "${NPROC}" ]; then
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    NPROC=$(sysctl -n hw.logicalcpu)
+  else
+    NPROC=$(nproc)
+  fi
 fi
 echo "The number of concurrent build threads NPROC=${NPROC}"
 

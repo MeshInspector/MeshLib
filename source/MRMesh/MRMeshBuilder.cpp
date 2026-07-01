@@ -538,7 +538,8 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 }
 
 // two incident vertices can be found using this struct
-struct IncidentVert {
+struct IncidentVert
+{
     FaceId f; // to find triangle in triangleToVertices vector
     VertId srcVert; // central vertex, used for sorting triangles per their incident vertices
     // the vertices of the triangle can be upgraded, so no reason to store VertId!
@@ -547,6 +548,9 @@ struct IncidentVert {
         : f(f)
         , srcVert( srcVert )
     {}
+
+    auto asPair() const { return std::make_pair( srcVert, f ); }
+    friend bool operator <( const IncidentVert& l, const IncidentVert& r ) { return l.asPair() < r.asPair(); }
 };
 
 // to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
@@ -703,11 +707,7 @@ void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vec
             incidentVertVector.emplace_back( f, vs[i] );
     }
 
-    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end(),
-        [] ( const IncidentVert& lhv, const IncidentVert& rhv ) -> bool
-    {
-        return lhv.srcVert < rhv.srcVert;
-    } );
+    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end() );
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}

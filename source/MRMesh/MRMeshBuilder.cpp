@@ -580,12 +580,13 @@ struct PathOverIncidentVert {
         return {};
     }
 
-    // find incident unvisited vertex
-    VertId getNextIncidentVertex( VertId v, bool triOrientation )
+    // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
+    VertId getNextIncidentVertex( VertId v, bool triOrientation, VertId prevVertex = {} )
     {
         if ( lastUnvisitedIndex <= 0 )
             return VertId( -1 );
 
+        auto prevIt = vertexBegIt + lastUnvisitedIndex;
         for ( auto it = vertexBegIt; it < vertexBegIt + lastUnvisitedIndex; ++it )
         {
             VertId nextVertex;
@@ -610,11 +611,22 @@ struct PathOverIncidentVert {
             }
             if ( nextVertex )
             {
-                --lastUnvisitedIndex;
-                std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
-                return nextVertex;
+                if ( nextVertex != prevVertex )
+                {
+                    --lastUnvisitedIndex;
+                    std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
+                    return nextVertex;
+                }
+                // prevVertex is a possible continuation, store it, and search for other options
+                prevIt = it;
             }
-
+        }
+        if ( prevIt < vertexBegIt + lastUnvisitedIndex )
+        {
+            // the only option is return in prevVertex
+            --lastUnvisitedIndex;
+            std::iter_swap( prevIt, vertexBegIt + lastUnvisitedIndex );
+            return prevVertex;
         }
         return {};
     }
@@ -747,6 +759,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             bool triOrientation = true;
             const VertId firstVertex = incidentItems.getFirstVertex();
             visitedVertices.autoResizeSet( firstVertex );
+            VertId prevVertex = firstVertex;
             VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
             if ( !nextVertex )
             {
@@ -759,7 +772,12 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             path = { firstVertex, nextVertex };
             while ( true )
             {
-                nextVertex = incidentItems.getNextIncidentVertex( nextVertex, triOrientation );
+                {
+                    // prefer finding nextVertex not equal to prevVertex to maximize neighbour ring sizes
+                    auto currVertex = nextVertex;
+                    nextVertex = incidentItems.getNextIncidentVertex( currVertex, triOrientation, prevVertex );
+                    prevVertex = currVertex;
+                }
 
                 if ( !nextVertex )
                 {

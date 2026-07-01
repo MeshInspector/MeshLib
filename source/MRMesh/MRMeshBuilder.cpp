@@ -549,13 +549,15 @@ struct IncidentVert {
     {}
 };
 
-// to find the smallest connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
-struct PathOverIncidentVert {
+// to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
+class PathOverIncidentVert
+{
     Triangulation& faceToVertices;
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
     std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
     size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
 
+public:
     PathOverIncidentVert( Triangulation& triangleToVertices,
                 std::vector<IncidentVert>& incidentItemsVector, size_t beg, size_t end )
         : faceToVertices( triangleToVertices )
@@ -573,9 +575,14 @@ struct PathOverIncidentVert {
     // first unvisited vertex
     VertId getFirstVertex() const
     {
-        for ( auto v : faceToVertices[vertexBegIt->f] )
-            if ( v != vertexBegIt->srcVert )
-                return v;
+        // below selection ensures that getNextIncidentVertex( getFirstVertex(), true ) will find nextVertex in the very first triangle
+        const auto & vs = faceToVertices[vertexBegIt->f];
+        if ( vs[0] == vertexBegIt->srcVert )
+            return vs[1];
+        if ( vs[1] == vertexBegIt->srcVert )
+            return vs[2];
+        if ( vs[2] == vertexBegIt->srcVert )
+            return vs[0];
         assert( false );
         return {};
     }

@@ -689,11 +689,22 @@ public:
     }
 };
 
+struct AllVertTris
+{
+    // the array of all vertex-in-triangle sorted by vertex id
+    std::vector<IncidentVert> recs;
+
+    // maps vertex id to first its record in recs, not descending;
+    // vertex #i is in the records [vert2firstRec[i], vert2firstRec[i+1]) of recs
+    Vector<int, VertId> vert2firstRec;
+};
+
 // fill and sort incidentVertVector by central vertex
-void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vector<IncidentVert>& incidentVertVector )
+AllVertTris prepareVertTris( const Triangulation & t, const FaceBitSet * region )
 {
     MR_TIMER;
-    incidentVertVector.reserve( 3 * t.size() );
+    AllVertTris res;
+    res.recs.reserve( 3 * t.size() );
 
     for ( FaceId f{0}; f < t.size(); ++f )
     {
@@ -704,10 +715,19 @@ void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vec
             continue;
 
         for ( int i = 0; i < 3; ++i )
-            incidentVertVector.emplace_back( f, vs[i] );
+            res.recs.emplace_back( f, vs[i] );
     }
 
-    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end() );
+    tbb::parallel_sort( res.recs.begin(), res.recs.end() );
+
+    for ( int i = 0; i < res.recs.size(); ++i )
+    {
+        auto v = res.recs[i].srcVert;
+        while ( v >= res.vert2firstRec.size() )
+            res.vert2firstRec.push_back( i );
+    }
+    res.vert2firstRec.push_back( (int)res.recs.size() );
+    return res;
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
@@ -736,25 +756,24 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     if ( t.empty() )
         return 0; // input triangulation is empty
 
-    std::vector<IncidentVert> incidentItemsVector;
-    preprocessTriangles( t, region, incidentItemsVector );
-    if ( incidentItemsVector.empty() )
+    auto all = prepareVertTris( t, region );
+    if ( all.recs.empty() )
         return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
 
     if ( !lastValidVert )
-        lastValidVert = incidentItemsVector.back().srcVert;
+        lastValidVert = all.recs.back().srcVert;
 
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
-    VertBitSet visitedVertices( incidentItemsVector.back().srcVert ); // explicitly not `lastValidVert` but last vert used in triangulation
+    VertBitSet visitedVertices( all.recs.back().srcVert ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
-    while ( posEnd != incidentItemsVector.size() )
+    while ( posEnd != all.recs.size() )
     {
         posBegin = posEnd++;
-        while ( posEnd < incidentItemsVector.size() && incidentItemsVector[posBegin].srcVert == incidentItemsVector[posEnd].srcVert )
+        while ( posEnd < all.recs.size() && all.recs[posBegin].srcVert == all.recs[posEnd].srcVert )
             ++posEnd;
-        PathOverIncidentVert incidentItems( t, incidentItemsVector, posBegin, posEnd );
+        PathOverIncidentVert incidentItems( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;

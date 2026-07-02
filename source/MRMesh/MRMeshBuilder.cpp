@@ -657,7 +657,7 @@ public:
 
         for ( size_t i = 1; i < path.size(); ++i )
         {
-            for ( auto it = vertexBegIt; it < vertexEndIt + firstUnvisitedIndex; ++it )
+            for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )
             {
                 VertId v1, v2;
                 bool alreadyDuplicted = true;

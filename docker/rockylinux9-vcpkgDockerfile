@@ -94,3 +94,7 @@ ENV VCPKG_ROOT=/opt/vcpkg
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
+
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

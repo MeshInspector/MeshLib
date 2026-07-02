@@ -89,8 +89,6 @@ RUN <<EOF
     ldconfig
 EOF
 
-# Add a new user "actions-runner" with user id 8877
-RUN useradd -u 8877 -m user
-
-# Change to non-root privilege
-USER user
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

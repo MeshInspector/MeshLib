@@ -77,7 +77,7 @@ jobs:
             - extend:
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
-                  container-options: "--user root"
+                  container-options: " "
                   runner: ubuntu-latest
                   compiler: /usr/bin/clang++
                   container-prefix: ""
@@ -112,7 +112,7 @@ jobs:
           rules: |
             - extend:
                 - platform: x86_64
-                  container-options: "--user root"
+                  container-options: " "
                   runner: ubuntu-latest
                   compiler: /usr/bin/clang++
                   container-prefix: ""

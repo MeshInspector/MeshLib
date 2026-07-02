@@ -153,7 +153,9 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                     res.overlap = false;
                     if ( params.canExitEarlier() )
                     {
-                        const auto planeDistSq = sqr( p - s + t );
+                        auto planeDistSq = sqr( p - s + t );
+                        if ( auto dirSq = sqr( sd.dir ) )
+                            planeDistSq /= dirSq;
                         if ( params.canExitEarlier( planeDistSq ) )
                         {
                             res.distSq = planeDistSq;

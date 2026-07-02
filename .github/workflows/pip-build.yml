@@ -77,13 +77,11 @@ jobs:
             - extend:
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
-                  container-options: " "
                   runner: ubuntu-latest
                   compiler: /usr/bin/clang++
                   container-prefix: ""
                 - platform: aarch64
                   os: rockylinux8-vcpkg-arm64
-                  container-options: " "
                   runner: ubuntu-24.04-arm
                   compiler: /usr/bin/clang++
                   container-prefix: arm64v8/
@@ -112,12 +110,10 @@ jobs:
           rules: |
             - extend:
                 - platform: x86_64
-                  container-options: " "
                   runner: ubuntu-latest
                   compiler: /usr/bin/clang++
                   container-prefix: ""
                 - platform: aarch64
-                  container-options: " "
                   runner: ubuntu-24.04-arm
                   compiler: /usr/bin/clang++
                   container-prefix: arm64v8/
@@ -159,7 +155,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
-      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       # `include` enumerates the per-platform combos, surviving platforms
@@ -584,7 +579,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.container-prefix }}${{ matrix.os }}
-      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       # `include` is the cartesian product (surviving platforms x

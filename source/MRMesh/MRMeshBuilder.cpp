@@ -537,33 +537,27 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     return fromTrianglesSeq( t, settings );
 }
 
-// two incident vertices can be found using this struct
-struct IncidentVert
+/// describes a vertex and one of triangles incident to it
+struct VertTri
 {
-    FaceId f; // to find triangle in triangleToVertices vector
-    VertId srcVert; // central vertex, used for sorting triangles per their incident vertices
-    // the vertices of the triangle can be upgraded, so no reason to store VertId!
+    VertId v;
+    FaceId f;
 
-    IncidentVert( FaceId f, VertId srcVert )
-        : f(f)
-        , srcVert( srcVert )
-    {}
-
-    auto asPair() const { return std::make_pair( srcVert, f ); }
-    friend bool operator <( const IncidentVert& l, const IncidentVert& r ) { return l.asPair() < r.asPair(); }
+    auto asPair() const { return std::make_pair( v, f ); }
+    friend bool operator <( const VertTri& l, const VertTri& r ) { return l.asPair() < r.asPair(); }
 };
 
 // to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
-class PathOverIncidentVert
+class PathOverVertTri
 {
     Triangulation& faceToVertices;
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
-    std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
+    std::vector<VertTri>::iterator vertexBegIt, vertexEndIt;
     size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
 
 public:
-    PathOverIncidentVert( Triangulation& triangleToVertices,
-                std::vector<IncidentVert>& incidentItemsVector, size_t beg, size_t end )
+    PathOverVertTri( Triangulation& triangleToVertices,
+                std::vector<VertTri>& incidentItemsVector, size_t beg, size_t end )
         : faceToVertices( triangleToVertices )
         , vertexBegIt( incidentItemsVector.begin() + beg )
         , vertexEndIt( incidentItemsVector.begin() + end )
@@ -579,20 +573,20 @@ public:
     // first unvisited vertex
     VertId getFirstVertex() const
     {
-        // below selection ensures that getNextIncidentVertex( getFirstVertex(), true ) will find nextVertex in the very first triangle
+        // below selection ensures that getNextVertTriex( getFirstVertex(), true ) will find nextVertex in the very first triangle
         const auto & vs = faceToVertices[vertexBegIt->f];
-        if ( vs[0] == vertexBegIt->srcVert )
+        if ( vs[0] == vertexBegIt->v )
             return vs[1];
-        if ( vs[1] == vertexBegIt->srcVert )
+        if ( vs[1] == vertexBegIt->v )
             return vs[2];
-        if ( vs[2] == vertexBegIt->srcVert )
+        if ( vs[2] == vertexBegIt->v )
             return vs[0];
         assert( false );
         return {};
     }
 
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
-    VertId getNextIncidentVertex( VertId v, bool triOrientation, VertId prevVertex = {} )
+    VertId getNextVertTriex( VertId v, bool triOrientation, VertId prevVertex = {} )
     {
         if ( lastUnvisitedIndex <= 0 )
             return VertId( -1 );
@@ -604,20 +598,20 @@ public:
             const auto & vs = faceToVertices[it->f];
             if ( triOrientation )
             {
-                if ( vs[0] == it->srcVert && vs[1] == v )
+                if ( vs[0] == it->v && vs[1] == v )
                     nextVertex = vs[2];
-                else if ( vs[1] == it->srcVert && vs[2] == v )
+                else if ( vs[1] == it->v && vs[2] == v )
                     nextVertex = vs[0];
-                else if ( vs[2] == it->srcVert && vs[0] == v )
+                else if ( vs[2] == it->v && vs[0] == v )
                     nextVertex = vs[1];
             }
             else
             {
-                if ( vs[1] == it->srcVert && vs[0] == v )
+                if ( vs[1] == it->v && vs[0] == v )
                     nextVertex = vs[2];
-                else if ( vs[2] == it->srcVert && vs[1] == v )
+                else if ( vs[2] == it->v && vs[1] == v )
                     nextVertex = vs[0];
-                else if ( vs[0] == it->srcVert && vs[2] == v )
+                else if ( vs[0] == it->v && vs[2] == v )
                     nextVertex = vs[1];
             }
             if ( nextVertex )
@@ -648,7 +642,7 @@ public:
     {
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
-        vertDup.srcVert = vertexBegIt->srcVert;
+        vertDup.srcVert = vertexBegIt->v;
         if ( dups )
             dups->push_back( vertDup );
 
@@ -681,7 +675,7 @@ public:
                         vi = vertDup.dupVert;
                         break;
                     }
-                    it->srcVert = vertDup.dupVert;
+                    it->v = vertDup.dupVert;
                     break;
                 }
             }
@@ -689,11 +683,22 @@ public:
     }
 };
 
+struct AllVertTris
+{
+    // the array of all vertex-in-triangle sorted by vertex id
+    std::vector<VertTri> recs;
+
+    // maps vertex id to first its record in recs, not descending;
+    // vertex #i is in the records [vert2firstRec[i], vert2firstRec[i+1]) of recs
+    Vector<int, VertId> vert2firstRec;
+};
+
 // fill and sort incidentVertVector by central vertex
-void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vector<IncidentVert>& incidentVertVector )
+AllVertTris prepareVertTris( const Triangulation & t, const FaceBitSet * region )
 {
     MR_TIMER;
-    incidentVertVector.reserve( 3 * t.size() );
+    AllVertTris res;
+    res.recs.reserve( 3 * t.size() );
 
     for ( FaceId f{0}; f < t.size(); ++f )
     {
@@ -704,10 +709,19 @@ void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vec
             continue;
 
         for ( int i = 0; i < 3; ++i )
-            incidentVertVector.emplace_back( f, vs[i] );
+            res.recs.push_back( { vs[i], f } );
     }
 
-    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end() );
+    tbb::parallel_sort( res.recs.begin(), res.recs.end() );
+
+    for ( int i = 0; i < res.recs.size(); ++i )
+    {
+        auto v = res.recs[i].v;
+        while ( v >= res.vert2firstRec.size() )
+            res.vert2firstRec.push_back( i );
+    }
+    res.vert2firstRec.push_back( (int)res.recs.size() );
+    return res;
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
@@ -736,25 +750,24 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     if ( t.empty() )
         return 0; // input triangulation is empty
 
-    std::vector<IncidentVert> incidentItemsVector;
-    preprocessTriangles( t, region, incidentItemsVector );
-    if ( incidentItemsVector.empty() )
+    auto all = prepareVertTris( t, region );
+    if ( all.recs.empty() )
         return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
 
     if ( !lastValidVert )
-        lastValidVert = incidentItemsVector.back().srcVert;
+        lastValidVert = all.recs.back().v;
 
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
-    VertBitSet visitedVertices( incidentItemsVector.back().srcVert ); // explicitly not `lastValidVert` but last vert used in triangulation
+    VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
     size_t posBegin = 0, posEnd = 0;
-    while ( posEnd != incidentItemsVector.size() )
+    while ( posEnd != all.recs.size() )
     {
         posBegin = posEnd++;
-        while ( posEnd < incidentItemsVector.size() && incidentItemsVector[posBegin].srcVert == incidentItemsVector[posEnd].srcVert )
+        while ( posEnd < all.recs.size() && all.recs[posBegin].v == all.recs[posEnd].v )
             ++posEnd;
-        PathOverIncidentVert incidentItems( t, incidentItemsVector, posBegin, posEnd );
+        PathOverVertTri incidentItems( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
@@ -767,11 +780,11 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             const VertId firstVertex = incidentItems.getFirstVertex();
             visitedVertices.autoResizeSet( firstVertex );
             VertId prevVertex = firstVertex;
-            VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
+            VertId nextVertex = incidentItems.getNextVertTriex( firstVertex, triOrientation );
             if ( !nextVertex )
             {
                 triOrientation = false;
-                nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
+                nextVertex = incidentItems.getNextVertTriex( firstVertex, triOrientation );
                 assert( nextVertex.valid() );
             }
             visitedVertices.autoResizeSet( nextVertex );
@@ -782,7 +795,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                 {
                     // prefer finding nextVertex not equal to prevVertex to maximize neighbour ring sizes
                     auto currVertex = nextVertex;
-                    nextVertex = incidentItems.getNextIncidentVertex( currVertex, triOrientation, prevVertex );
+                    nextVertex = incidentItems.getNextVertTriex( currVertex, triOrientation, prevVertex );
                     prevVertex = currVertex;
                 }
 
@@ -791,7 +804,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     if ( triOrientation ) // try the opposite direction from firstVertex
                     {
                         triOrientation = false;
-                        nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
+                        nextVertex = incidentItems.getNextVertTriex( firstVertex, triOrientation );
                     }
                     if ( !nextVertex )
                     {

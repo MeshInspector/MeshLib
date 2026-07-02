@@ -22,12 +22,17 @@
     <PreferredToolArchitecture>x86</PreferredToolArchitecture> <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH -->
   </PropertyGroup>
   <Import Project="$(CustomPlatfotmPropertyDir)\CustomMRPlatform.props" Condition="'$(CustomPlatfotmPropertyDir)' != ''"/>
-  <!-- The same GPU architectures as in the CMake build (cmake/Modules/ConfigureCuda.cmake): SASS for
-       every listed architecture plus PTX for the newest one (JIT on newer GPUs). Raw -gencode flags,
-       because the CodeGeneration property cannot express SASS-only entries on CUDA 11.4. -->
+  <!-- Remaining GPU architectures to match the CMake build (cmake/Modules/ConfigureCuda.cmake): the CUDA
+       props' unconditional default CodeGeneration (compute_52,sm_52; compute_75,sm_75 on CUDA 13+) already
+       supplies the oldest SASS+PTX; these add the newer SASS targets plus PTX for the newest one. -->
   <PropertyGroup Condition="'$(MRCudaGencode)' == '' AND '$(MRCudaVersion)' != ''">
-    <MRCudaGencode Condition="$([MSBuild]::VersionGreaterThanOrEquals($(MRCudaVersion), '13.0'))">-gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=sm_89 -gencode arch=compute_120,code=[sm_120,compute_120]</MRCudaGencode>
-    <MRCudaGencode Condition="'$(MRCudaGencode)' == '' AND $([MSBuild]::VersionGreaterThanOrEquals($(MRCudaVersion), '12.0'))">-gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=[sm_89,compute_89]</MRCudaGencode>
-    <MRCudaGencode Condition="'$(MRCudaGencode)' == ''">-gencode arch=compute_52,code=sm_52 -gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=[sm_75,compute_75]</MRCudaGencode>
+    <MRCudaGencode Condition="$([MSBuild]::VersionGreaterThanOrEquals($(MRCudaVersion), '13.0'))">-gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=sm_89 -gencode arch=compute_120,code=[sm_120,compute_120]</MRCudaGencode>
+    <MRCudaGencode Condition="'$(MRCudaGencode)' == '' AND $([MSBuild]::VersionGreaterThanOrEquals($(MRCudaVersion), '12.0'))">-gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=[sm_89,compute_89]</MRCudaGencode>
+    <MRCudaGencode Condition="'$(MRCudaGencode)' == ''">-gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=[sm_75,compute_75]</MRCudaGencode>
   </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(MRCudaGencode)' != ''">
+    <CudaCompile>
+      <AdditionalOptions>%(AdditionalOptions) $(MRCudaGencode)</AdditionalOptions>
+    </CudaCompile>
+  </ItemDefinitionGroup>
 </Project>

@@ -66,9 +66,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <Defines>_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH</Defines>
-      <!-- Clear the default (compute_52,sm_52); MRCudaGencode in AdditionalOptions supplies the architectures. -->
-      <CodeGeneration Condition="'$(MRCudaGencode)' != ''" />
-      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler $(MRCudaGencode) %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
       <AdditionalCompilerOptions>/wd4514 /wd4574 /wd4668 /wd5039</AdditionalCompilerOptions>
     </CudaCompile>
   </ItemDefinitionGroup>
@@ -94,9 +92,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <Defines>_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH</Defines>
-      <!-- Clear the default (compute_52,sm_52); MRCudaGencode in AdditionalOptions supplies the architectures. -->
-      <CodeGeneration Condition="'$(MRCudaGencode)' != ''" />
-      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler $(MRCudaGencode) %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-std=c++17 -Xcompiler "/std:c++17" -Xcudafe "--diag_suppress=field_without_dll_interface" -Xcudafe "--diag_suppress=base_class_has_different_dll_interface" -allow-unsupported-compiler %(AdditionalOptions)</AdditionalOptions>
       <AdditionalCompilerOptions>/wd4514 /wd4574 /wd4668 /wd5039</AdditionalCompilerOptions>
     </CudaCompile>
   </ItemDefinitionGroup>

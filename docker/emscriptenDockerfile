@@ -65,14 +65,8 @@ COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/ems
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/emscripten-wasm64
 
-# Setup non-root user (use 1001 to play nicely with actions/checkout@v4)
-# https://github.com/actions/checkout/issues/1014
-RUN <<EOF
-    set -e
-    groupadd -g 1001 user
-    useradd -m -u 1001 -g user -s /bin/bash user
-    chmod -R 777 /emsdk/upstream/emscripten/
-EOF
+RUN chmod -R 777 /emsdk/upstream/emscripten/
 
-# Change to non-root privilege
-USER user
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

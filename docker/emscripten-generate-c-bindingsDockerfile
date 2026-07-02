@@ -21,3 +21,7 @@ RUN <<EOF
     apt-get clean
     rm -rf /var/lib/apt/lists/*
 EOF
+
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

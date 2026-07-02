@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-ubuntu22-arm64:latest
-      options: --user root
     strategy:
       fail-fast: false
     env:

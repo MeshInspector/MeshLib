@@ -9,6 +9,8 @@
 #include "MRMeshCollidePrecise.h"
 #include "MRBox.h"
 #include "MRParallelFor.h"
+#include "MRMeshComponents.h"
+#include "MRBitSetParallelFor.h"
 #include <random>
 
 namespace MR
@@ -345,6 +347,58 @@ Expected<Mesh> uniteManyMeshes(
     if ( params.newFaces != nullptr )
         *params.newFaces = std::move( reducer.newFaces );
     return reducer.resultMesh;
+}
+
+Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& params )
+{
+    MR_TIMER;    
+    if ( !mesh.topology.isClosed() )
+    {
+        assert( !"uniteComponents: require closed mesh" );
+        return unexpected( "Mesh is not closed." );
+    }
+    auto mapAndNum = MeshComponents::getAllComponentsMap( mesh );
+    if ( !reportProgress( params.baseParams.progressCb, 0.1f ) )
+        return unexpectedOperationCanceled();
+    std::vector<Mesh> components( mapAndNum.second );
+    std::vector<const Mesh*> meshPtrs( mapAndNum.second );
+    auto keepGoing = ParallelFor( components, [&] ( size_t i )
+    {
+        FaceBitSet compBs( mesh.topology.faceSize() );
+        BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+        {
+            if ( RegionId( i ) == mapAndNum.first[f] )
+                compBs.set( f );
+        } );
+        components[i].addMeshPart( MeshPart( mesh, &compBs ) );
+
+        if ( params.trySelfBoolean )
+        {
+            auto sbRes = selfBoolean( components[i] );
+            if ( sbRes.has_value() )
+            {
+                sbRes->deleteFaces( sbRes->topology.getValidFaces() - MeshComponents::getLargestComponent( *sbRes ) );
+                components[i] = std::move( *sbRes );
+            }
+        }
+        if ( params.flipInverted && components[i].volume() < 0.0f )
+            components[i].topology.flipOrientation();
+
+        meshPtrs[i] = &components[i];
+
+        compBs = {}; // reduce peek memory
+
+        if ( params.expansionRatio != 0.0f )
+        {
+            auto center = components[i].findCenterFromFaces();
+            components[i].transform( AffineXf3f::xfAround( Matrix3f::scale( 1.0f + params.expansionRatio ), center ) );
+        }
+    }, subprogress( params.baseParams.progressCb, 0.1f, 0.4f ) );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+    UniteManyMeshesParams ump = params.baseParams;
+    ump.progressCb = subprogress( params.baseParams.progressCb, 0.4f, 1.0f );
+    return uniteManyMeshes( meshPtrs, ump );
 }
 
 }

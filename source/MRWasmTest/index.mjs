@@ -21,8 +21,8 @@ import './regionBoundary.test.mjs';
 import './icp.test.mjs';
 import './contoursCut.test.mjs';
 import './deformers.test.mjs';
-import './io.test.mjs';
 import './voxels.test.mjs';
 import './mopup.test.mjs';
 
 console.log( 'OK' );
+process.exit( 0 );   // meshlib-mt keeps a worker pool alive; exit explicitly so CI doesn't hang

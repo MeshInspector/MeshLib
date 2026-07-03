@@ -41,10 +41,12 @@ xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
    - Include support for the C++ programming language.
    - Ensure the English language pack is installed (required for `vcpkg`).
  3. **CUDA Toolkit**
-  - For **Visual Studio 2019**: Install [CUDA v11.4](https://developer.nvidia.com/cuda-11-4-0-download-archive)
-  - For **Visual Studio 2022**: Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive)
-  - For **Visual Studio 2026**: Install [CUDA v13.2](https://developer.nvidia.com/cuda-13-2-0-download-archive)
- \n Choose the appropriate version based on your Visual Studio installation.
+  - Recommended CUDA versions (the ones MeshLib CI builds with):
+   - For **Visual Studio 2019**: Install [CUDA v11.4](https://developer.nvidia.com/cuda-11-4-0-download-archive)
+   - For **Visual Studio 2022**: Install [CUDA v12.0](https://developer.nvidia.com/cuda-12-0-0-download-archive)
+   - For **Visual Studio 2026**: Install [CUDA v13.2](https://developer.nvidia.com/cuda-13-2-0-download-archive)
+  - Other CUDA versions work as well: if the recommended one is not installed, the build automatically falls back to the toolkit pointed to by the `CUDA_PATH` environment variable, which the NVIDIA installer keeps at the latest installed version.
+  - In the CUDA installer, keep the **Visual Studio Integration** component enabled: the Visual Studio build needs it.
  4. **vcpkg**
   - To install `vcpkg`, follow these steps:
    1. **Open a command prompt (CMD) or PowerShell window**.

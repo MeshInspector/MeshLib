@@ -28,10 +28,12 @@ jobs:
             target_name: emscripten-singlethreaded
             package_name: emscripten-singlethreaded
             thirdparty-dir: emscripten-single
+            wasm-module-name: meshlib
           - config: Multithreaded
             target_name: emscripten
             package_name: emscripten-multithreaded
             thirdparty-dir: emscripten
+            wasm-module-name: meshlib-mt
           - config: Multithreaded-64Bit
             target_name: emscripten-wasm64
             package_name: emscripten-multithreaded-64bit
@@ -99,6 +101,31 @@ jobs:
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
+
+      - name: Build web Wasm module
+        if: ${{ matrix.wasm-module-name != '' }}
+        run: |
+          cmake build/Release \
+            -D MESHLIB_BUILD_WASM_MODULE=ON \
+            -D MESHLIB_WASM_MODULE_TARGET=web
+          cmake --build build/Release --target MRWasmModule -j "$(nproc)"
+
+      - name: Test web Wasm module
+        if: ${{ matrix.wasm-module-name != '' }}
+        env:
+          MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.mjs
+        run: |
+          node source/MRWasmTest/index.mjs
+
+      - name: Upload web Wasm module
+        if: ${{ matrix.wasm-module-name != '' && inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Distributives_web_${{ matrix.wasm-module-name }}
+          path: |
+            build/Release/bin/${{ matrix.wasm-module-name }}.mjs
+            build/Release/bin/${{ matrix.wasm-module-name }}.wasm
+          retention-days: 1
 
       - name: Stage MRTest bundle
         run: |

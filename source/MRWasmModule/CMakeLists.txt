@@ -17,7 +17,12 @@ if(TARGET MRVoxels)
 endif()
 
 set(CMAKE_EXECUTABLE_SUFFIX ".mjs")
-set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "meshlib")
+if(MR_EMSCRIPTEN_SINGLETHREAD)
+  set(MESHLIB_WASM_OUTPUT_NAME "meshlib")
+else()
+  set(MESHLIB_WASM_OUTPUT_NAME "meshlib-mt")
+endif()
+set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}")
 
 target_link_options(${PROJECT_NAME} PRIVATE
   "--bind"
@@ -27,6 +32,8 @@ target_link_options(${PROJECT_NAME} PRIVATE
   "-sALLOW_MEMORY_GROWTH=1"
   "-sEXIT_RUNTIME=0"
   "-sINVOKE_RUN=0"
+  # keep the module Asyncify-free even when co-built with MRViewer
+  "-sASYNCIFY=0"
 )
 
 set(MESHLIB_WASM_MODULE_TARGET "node" CACHE STRING "Target runtime for the WASM module: 'node' or 'web'")
@@ -40,7 +47,7 @@ install(
   DESTINATION "${MR_BIN_DIR}"
 )
 install(
-  FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib.wasm"
+  FILES "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${MESHLIB_WASM_OUTPUT_NAME}.wasm"
   DESTINATION "${MR_BIN_DIR}"
   OPTIONAL
 )

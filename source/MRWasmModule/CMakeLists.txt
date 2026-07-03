@@ -32,8 +32,6 @@ target_link_options(${PROJECT_NAME} PRIVATE
   "-sALLOW_MEMORY_GROWTH=1"
   "-sEXIT_RUNTIME=0"
   "-sINVOKE_RUN=0"
-  # keep the module Asyncify-free even when co-built with MRViewer
-  "-sASYNCIFY=0"
 )
 
 set(MESHLIB_WASM_MODULE_TARGET "node" CACHE STRING "Target runtime for the WASM module: 'node' or 'web'")

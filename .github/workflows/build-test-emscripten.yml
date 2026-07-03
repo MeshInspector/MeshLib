@@ -102,31 +102,6 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Build web Wasm module
-        if: ${{ matrix.wasm-module-name != '' }}
-        run: |
-          cmake build/Release \
-            -D MESHLIB_BUILD_WASM_MODULE=ON \
-            -D MESHLIB_WASM_MODULE_TARGET=web
-          cmake --build build/Release --target MRWasmModule -j "$(nproc)"
-
-      - name: Test web Wasm module
-        if: ${{ matrix.wasm-module-name != '' }}
-        env:
-          MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.mjs
-        run: |
-          node source/MRWasmTest/index.mjs
-
-      - name: Upload web Wasm module
-        if: ${{ matrix.wasm-module-name != '' && inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: Distributives_web_${{ matrix.wasm-module-name }}
-          path: |
-            build/Release/bin/${{ matrix.wasm-module-name }}.mjs
-            build/Release/bin/${{ matrix.wasm-module-name }}.wasm
-          retention-days: 1
-
       - name: Stage MRTest bundle
         run: |
           mkdir mrtest-bundle
@@ -172,6 +147,32 @@ jobs:
           artifact_path: ${{ github.workspace }}
           artifact_glob: meshlib_${{ matrix.package_name }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
+
+      - name: Build web Wasm module
+        if: ${{ matrix.wasm-module-name != '' }}
+        run: |
+          cmake build/Release \
+            -D MESHLIB_BUILD_MRVIEWER=OFF \
+            -D MESHLIB_BUILD_WASM_MODULE=ON \
+            -D MESHLIB_WASM_MODULE_TARGET=web
+          cmake --build build/Release --target MRWasmModule -j "$(nproc)"
+
+      - name: Test web Wasm module
+        if: ${{ matrix.wasm-module-name != '' }}
+        env:
+          MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.mjs
+        run: |
+          node source/MRWasmTest/index.mjs
+
+      - name: Upload web Wasm module
+        if: ${{ matrix.wasm-module-name != '' && inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Distributives_web_${{ matrix.wasm-module-name }}
+          path: |
+            build/Release/bin/${{ matrix.wasm-module-name }}.mjs
+            build/Release/bin/${{ matrix.wasm-module-name }}.wasm
+          retention-days: 1
 
   emscripten-test:
     needs: emscripten-build

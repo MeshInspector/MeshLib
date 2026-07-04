@@ -201,7 +201,10 @@ jobs:
         run: |
           mkdir gts12
           cd gts12
-          dnf -q repoquery --location --arch $(uname -m) --enablerepo powertools             gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-libstdc++-devel             | sort -u | while read -r url; do
+          # --latest-limit=1: pick only the newest build of each package, else
+          # repoquery returns several builds (e.g. -7.6 and -7.8) that unpack on
+          # top of each other and leave a mismatched libstdc++_nonshared.a.
+          dnf -q repoquery --location --latest-limit=1 --arch $(uname -m) --enablerepo powertools             gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-libstdc++-devel             | sort -u | while read -r url; do
               echo "fetching $url"
               curl -fsSLO "$url"
             done
@@ -219,7 +222,11 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS12_GCC_DIR" EXTRA_LDFLAGS=--gcc-install-dir="$GTS12_GCC_DIR"
+        # EXTRA_LDFLAGS also statically links gts12's libstdc++_nonshared.a, so the
+        # newer libstdc++ symbols the module uses (e.g. filesystem path::_List::type)
+        # are resolved locally on top of the system libstdc++.so.6 -- gcc-toolset's
+        # own "system .so + nonshared static" model, which the post-link ldd -r checks.
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS12_GCC_DIR" EXTRA_LDFLAGS="--gcc-install-dir=$GTS12_GCC_DIR -L$GTS12_GCC_DIR -l:libstdc++_nonshared.a"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

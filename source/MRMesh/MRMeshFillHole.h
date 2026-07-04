@@ -263,6 +263,11 @@ MRMESH_API MakeBridgeResult makeSmoothBridge( Mesh & mesh, EdgeId a, EdgeId b, f
 /// \return invalid id if bridge cannot be created because otherwise multiple edges appear
 MRMESH_API EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b );
 
+/// creates bridges edges between pairs of vertices of different holes, of both vertices in a pair are closest one to another,
+/// \return all created bridge edges
+MRMESH_API std::vector<EdgeId> makeInterHoleBridgeEdges( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+MRMESH_API std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const VertCoords& points, const std::vector<EdgeId>& holeRepresentativeEdges );
+
 /// given quadrangle face to the left of a, splits it in two triangles with new diagonal edge via dest(a)
 MRMESH_API void splitQuad( MeshTopology & topology, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 

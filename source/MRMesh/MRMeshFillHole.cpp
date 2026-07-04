@@ -9,6 +9,8 @@
 #include "MRMarkedContour.h"
 #include "MRParallelFor.h"
 #include "MRFillContours2D.h"
+#include "MRAABBTreePoints.h"
+#include "MRPointsProject.h"
 #include "MRphmap.h"
 #include "MRPch/MRSpdlog.h"
 #include <queue>
@@ -1318,6 +1320,66 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     topology.splice( a, res );
     topology.splice( b, res.sym() );
     return res;
+}
+
+std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const VertCoords& points, const std::vector<EdgeId>& holeRepresentativeEdges )
+{
+    MR_TIMER;
+    assert( holeRepresentativeEdges.size() > 1 );
+    std::vector<EdgeId> bridgesCreated;
+    if ( holeRepresentativeEdges.size() <= 1 )
+        return bridgesCreated;
+
+    // virtual point cloud of boundary vertices from
+    VertCoords bdPoints;            // bdVertId -> 3d coordinate
+    Vector<EdgeId, VertId> bdEdges; // bdVertId -> boundary edge with that point in origin
+    Vector<int, VertId> holeIds;     // bdVertId -> hole index
+    for( int h = 0; h < holeRepresentativeEdges.size(); ++h )
+    {
+        assert( !topology.left( holeRepresentativeEdges[h] ) );
+        for ( EdgeId bdEdge : leftRing( topology, holeRepresentativeEdges[h] ) )
+        {
+            bdPoints.push_back( points[ topology.org( bdEdge ) ] );
+            bdEdges.push_back( bdEdge );
+            holeIds.push_back( h );
+        }
+    }
+
+    AABBTreePoints tree( bdPoints );
+
+    // for each boundary point store the closest point not from the same hole
+    Vector<VertId, VertId> closests;
+    closests.resizeNoInit( bdPoints.size() );
+    ParallelFor( closests, [&]( VertId v )
+    {
+        const auto proj = findProjectionOnPoints( bdPoints[v], tree, FLT_MAX, nullptr, 0, nullptr,
+            [myHole = holeIds[v], &holeIds]( VertId cv ) { return myHole == holeIds[cv]; } );
+        assert( proj.vId );
+        closests[v] = proj.vId;
+    } );
+
+    // find pairs of mutually closest points and create bridges between them
+    for ( auto v = 0_v; v < closests.size(); ++v )
+    {
+        auto v1 = closests[v];
+        assert( v != v1 );
+        if ( v1 <= v )
+            continue;
+        auto v2 = closests[v1];
+        if ( v != v2 )
+            continue;
+        bridgesCreated.push_back( makeBridgeEdge( topology, bdEdges[v], bdEdges[v1] ) );
+    }
+
+    return bridgesCreated;
+}
+
+std::vector<EdgeId> makeInterHoleBridgeEdges( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+{
+    auto bridgesCreated = makeInterHoleBridgeEdges( mesh.topology, mesh.points, holeRepresentativeEdges );
+    if ( !bridgesCreated.empty() )
+        mesh.invalidateCaches( false );
+    return bridgesCreated;
 }
 
 } //namespace MR

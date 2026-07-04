@@ -197,26 +197,26 @@ jobs:
       # the RPMs are unpacked into the workspace and clang is pointed at them
       # via --gcc-install-dir.
       - name: Fetch gcc-toolset-12 libstdc++ (probe)
-        if: ${{ inputs.mrbind && matrix.arch == 'x64' }}
+        if: ${{ inputs.mrbind }}
         run: |
           mkdir gts12
           cd gts12
-          dnf -q repoquery --location --arch x86_64 --enablerepo powertools             gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-libstdc++-devel             | sort -u | while read -r url; do
+          dnf -q repoquery --location --arch $(uname -m) --enablerepo powertools             gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-libstdc++-devel             | sort -u | while read -r url; do
               echo "fetching $url"
               curl -fsSLO "$url"
             done
           for f in *.rpm; do rpm2archive "$f" && tar -xzf "$f.tgz"; done
-          echo "GTS12_GCC_DIR=$PWD/opt/rh/gcc-toolset-12/root/usr/lib/gcc/x86_64-redhat-linux/12" >> "$GITHUB_ENV"
+          echo "GTS12_GCC_DIR=$PWD/opt/rh/gcc-toolset-12/root/usr/lib/gcc/$(uname -m)-redhat-linux/12" >> "$GITHUB_ENV"
 
       - name: Verify clang selects gcc-toolset-12 (probe)
-        if: ${{ inputs.mrbind && matrix.arch == 'x64' }}
+        if: ${{ inputs.mrbind }}
         run: |
           /usr/bin/clang++ --gcc-install-dir="$GTS12_GCC_DIR" -v -fsyntax-only -x c++ /dev/null 2>&1 | grep 'Selected GCC installation'
           /usr/bin/clang++ --gcc-install-dir="$GTS12_GCC_DIR" -v -fsyntax-only -x c++ /dev/null 2>&1 | grep -q 'Selected GCC installation: .*gcc-toolset-12'
           echo '#include <version>' | /usr/bin/clang++ --gcc-install-dir="$GTS12_GCC_DIR" -x c++ - -E -dM | grep _GLIBCXX_RELEASE
 
       - name: Generate and build Python bindings with gcc-toolset-12 (probe)
-        if: ${{ inputs.mrbind && matrix.arch == 'x64' }}
+        if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS12_GCC_DIR" EXTRA_LDFLAGS=--gcc-install-dir="$GTS12_GCC_DIR"

@@ -75,16 +75,20 @@ jobs:
               - aarch64
           rules: |
             - extend:
+                # gcc-install-dir: GCC 11's libstdc++ dir, per-arch. The Build step (always clang++) points
+                # Clang at it via `--gcc-install-dir`; bindings/shim steps keep clang's default libstdc++.
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
                   runner: ubuntu-latest
                   compiler: /usr/bin/clang++
                   container-prefix: ""
+                  gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
                 - platform: aarch64
                   os: rockylinux8-vcpkg-arm64
                   runner: ubuntu-24.04-arm
                   compiler: /usr/bin/clang++
                   container-prefix: arm64v8/
+                  gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/aarch64-redhat-linux/11
             - if: ${{ inputs.disable_ubuntu_x64 }}
               exclude:
                 platform: x86_64
@@ -224,6 +228,7 @@ jobs:
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
+            -DCMAKE_CXX_FLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
       - name: Generate and build MRBind bindings
         run: |

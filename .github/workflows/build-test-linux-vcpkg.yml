@@ -63,18 +63,21 @@ jobs:
             cxx-compiler: /usr/bin/clang++-21
             c-compiler: /usr/bin/clang-21
             cxx-standard: 23
-            # Force Clang to use GCC 11's libstdc++ (arch-agnostic; Clang appends lib/gcc/<triple>/11).
-            clang-gcc-toolchain: "--gcc-toolchain=/opt/rh/gcc-toolset-11/root/usr"
           - compiler: GCC 11
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
             c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
-            # g++ already uses GCC 11's libstdc++ and rejects --gcc-toolchain; keep empty (no-op).
-            clang-gcc-toolchain: ""
+          # GCC 11's libstdc++ install dir, per-arch. Clang 21 defaults to a newer libstdc++;
+          # `--gcc-install-dir=<this>` (Clang 16+) points Clang straight at GCC 11's lib dir — a
+          # working link config, unlike the bare `--gcc-toolchain` prefix that left Clang unable to
+          # finish CMake's configure-time link probe (find_package(Threads) failed). g++ already
+          # links this same libstdc++.
           - arch: x64
             os: ubuntu-latest
+            gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
           - arch: arm64
             os: ubuntu-24.04-arm
+            gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/aarch64-redhat-linux/11
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -85,11 +88,6 @@ jobs:
       # Workaround for aws cli s3 copy - it doesn't work anonymously without this. Specific for Ubuntu 20 and Fedora.
       # https://github.com/aws/aws-cli/issues/5623#issuecomment-801240811
       AWS_EC2_METADATA_DISABLED: true
-      # gcc-toolset-11 (GCC 11) install root. Clang 21 defaults to a newer libstdc++;
-      # passing --gcc-toolchain=$GCC_TOOLSET_ROOT forces it to use GCC 11's libstdc++,
-      # matching the vcpkg deps / CUDA host compiler / GCC 11 build and avoiding
-      # GLIBCXX version mismatches at runtime.
-      GCC_TOOLSET_ROOT: /opt/rh/gcc-toolset-11/root/usr
 
     steps:
       - name: Enable GCC 11 toolset
@@ -190,7 +188,7 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_GTK=ON
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
-            -DCMAKE_CXX_FLAGS=${{ matrix.clang-gcc-toolchain }}
+            -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang 21' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
@@ -201,7 +199,7 @@ jobs:
           CXX: ${{ matrix.cxx-compiler }}
         # Bindings always compile+link with clang++ against the MeshLib .so, so force GCC 11's
         # libstdc++ here too (on both matrix rows) to match the library and avoid GLIBCXX mismatches.
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-toolchain=${{ env.GCC_TOOLSET_ROOT }} EXTRA_LDFLAGS=--gcc-toolchain=${{ env.GCC_TOOLSET_ROOT }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

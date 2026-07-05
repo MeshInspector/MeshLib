@@ -185,11 +185,20 @@ jobs:
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 
+      # Compile only the Python bindings against gcc-toolset-12's libstdc++
+      # (~11% faster than gcc-toolset-11's). The C++/vcpkg build above stays on
+      # gcc-toolset-11; clang selects the toolset for the bindings from
+      # --gcc-install-dir alone, so this doesn't touch the app compiler. gts12 is
+      # dnf-installed in the rockylinux8-vcpkg image. $(uname -m) -> x86_64/aarch64.
+      - name: Select gcc-toolset-12 for Python bindings
+        if: ${{ inputs.mrbind }}
+        run: echo "GTS12_GCC_DIR=/opt/rh/gcc-toolset-12/root/usr/lib/gcc/$(uname -m)-redhat-linux/12" >> "$GITHUB_ENV"
+
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS12_GCC_DIR" EXTRA_LDFLAGS=--gcc-install-dir="$GTS12_GCC_DIR"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

@@ -810,7 +810,7 @@ endif # Python-only.
 
 # Log which C++ standard library the flags select: the parser (extra flags first, like the real parse call)
 # can differ from the compiler. Probed via $(CXX_FOR_BINDINGS); `\043` = `#`, unwritable in a Make function.
-override stdlib_macros = $(strip $(shell printf '\043include <version>\n' | $(CXX_FOR_BINDINGS) -xc++ - -E -dM $1 2>/dev/null | grep -E ' (__GLIBCXX__|_GLIBCXX_RELEASE|_LIBCPP_VERSION|_MSVC_STL_VERSION|_MSVC_STL_UPDATE) ' | tr '\n' ' '))
+override stdlib_macros = $(strip $(shell printf '\043include <version>\n' | $(CXX_FOR_BINDINGS) -xc++ - -E -dM $1 2>/dev/null | grep -E '^.define (__GLIBCXX__|_GLIBCXX_RELEASE|_LIBCPP_VERSION|_MSVC_STL_VERSION|_MSVC_STL_UPDATE) ' | tr '\n' ' '))
 $(info Stdlib for parsing:     $(call stdlib_macros,$(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)))
 $(info Stdlib for compilation: $(call stdlib_macros,$(COMPILER_FLAGS)))
 

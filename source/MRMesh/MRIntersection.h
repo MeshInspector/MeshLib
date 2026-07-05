@@ -124,7 +124,7 @@ std::optional<T> distance( const Plane3<T>& plane, const Line3<T>& line,
 }
 
 /// finds the closest points between two lines in 3D and returns their parameters
-/// (tha can be passed to Line::operator() to get the points) on the original lines;
+/// (that can be passed to Line::operator() to get the points) on the original lines;
 /// for parallel lines the selection is arbitrary;
 /// \return two equal points if the lines intersect
 template<typename T>

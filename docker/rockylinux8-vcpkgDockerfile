@@ -21,7 +21,7 @@ RUN <<EOF
     retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo
     retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
     retry.sh -- dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-11 ninja-build clang-devel-21* \
+        git cmake gcc-toolset-12 ninja-build clang-devel-21* \
         $(: minimal CUDA toolkit - nvcc, cudart ) \
         cuda-nvcc-12-0 cuda-cudart-devel-12-0 cuda-driver-devel-12-0 cuda-cuxxfilt-12-0 \
         $(: vcpkg requirements ) \
@@ -84,7 +84,7 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
     set -e
     source /root/MeshLib/configure_s3_cache.sh
-    source /opt/rh/gcc-toolset-11/enable
+    source /opt/rh/gcc-toolset-12/enable
     source /opt/autoconf27/enable
     # network may flake
     retry.sh -- \

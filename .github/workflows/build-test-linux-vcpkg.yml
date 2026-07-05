@@ -166,12 +166,12 @@ jobs:
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Build
-        run: ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
+          COMPILER: ${{ matrix.compiler }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_PLATFORM=Linux_vcpkg
@@ -181,6 +181,18 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_GTK=ON
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
+        # EXPERIMENT -- not for merge. On Clang rows, force clang onto
+        # gcc-toolset-12's libstdc++ (--gcc-install-dir) at compile + link, to
+        # document that clang cannot build against gts12's libstdc++ (the Python
+        # bindings link fails on std::filesystem::__cxx11::path::_List::type).
+        # GCC rows are untouched (empty PIN_ARGS). See PR body.
+        run: |
+          PIN_ARGS=()
+          if [ "$COMPILER" = "Clang 21" ]; then
+            P="--gcc-install-dir=/opt/rh/gcc-toolset-12/root/usr/lib/gcc/$(uname -m)-redhat-linux/12"
+            PIN_ARGS=(-DCMAKE_C_FLAGS="$P" -DCMAKE_CXX_FLAGS="$P" -DCMAKE_EXE_LINKER_FLAGS="$P" -DCMAKE_SHARED_LINKER_FLAGS="$P")
+          fi
+          ./scripts/build_source.sh "${PIN_ARGS[@]}"
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
@@ -189,7 +201,22 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
+          COMPILER: ${{ matrix.compiler }}
+        # EXPERIMENT -- not for merge. On Clang rows, pin the bindings' clang
+        # (CXX_FOR_BINDINGS) to gcc-toolset-12's libstdc++. Expected RED here: the
+        # link fails on std::filesystem::__cxx11::path::_List::type (clang
+        # externalizes it; gts12's libstdc++ keeps it inline). GCC rows keep the
+        # empty PIN and stay green. See PR body.
+        run: |
+          PIN=
+          if [ "$COMPILER" = "Clang 21" ]; then
+            PIN="--gcc-install-dir=/opt/rh/gcc-toolset-12/root/usr/lib/gcc/$(uname -m)-redhat-linux/12"
+          fi
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace \
+            MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin \
+            CXX_FOR_BINDINGS=/usr/bin/clang++ \
+            DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib \
+            EXTRA_CFLAGS="$PIN" EXTRA_LDFLAGS="$PIN"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

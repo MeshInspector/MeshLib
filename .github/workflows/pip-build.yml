@@ -215,7 +215,6 @@ jobs:
         run: free -h
 
       - name: Build
-        run: ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
@@ -224,21 +223,36 @@ jobs:
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-12/root/usr/bin/g++
+        # EXPERIMENT -- not for merge. These rocky rows are clang-only; pin clang
+        # onto gcc-toolset-12's libstdc++ (--gcc-install-dir) at compile + link to
+        # document that the bindings can't link against gts12's libstdc++ (fails on
+        # std::filesystem::__cxx11::path::_List::type). See PR body.
+        run: |
+          P="--gcc-install-dir=/opt/rh/gcc-toolset-12/root/usr/lib/gcc/$(uname -m)-redhat-linux/12"
+          ./scripts/build_source.sh \
+            -DCMAKE_C_FLAGS="$P" -DCMAKE_CXX_FLAGS="$P" \
+            -DCMAKE_EXE_LINKER_FLAGS="$P" -DCMAKE_SHARED_LINKER_FLAGS="$P"
 
       - name: Generate and build MRBind bindings
+        # EXPERIMENT -- not for merge: pin bindings clang to gts12 libstdc++.
+        # Expected RED: link fails on path::_List::type. See PR body.
         run: |
+          P="--gcc-install-dir=/opt/rh/gcc-toolset-12/root/usr/lib/gcc/$(uname -m)-redhat-linux/12"
           make -f scripts/mrbind/generate.mk -B --trace \
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
-            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}
+            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
+            EXTRA_CFLAGS="$P" EXTRA_LDFLAGS="$P"
 
       # install helper utility for Python version management
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
 
       - name: Build Python shim libs
+        # EXPERIMENT -- not for merge: pin shim clang to gts12 libstdc++ too.
         run: |
+          P="--gcc-install-dir=/opt/rh/gcc-toolset-12/root/usr/lib/gcc/$(uname -m)-redhat-linux/12"
           PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
 
@@ -250,7 +264,8 @@ jobs:
               CXX_FOR_ABI=${{ matrix.compiler }} \
               CXX_FOR_BINDINGS=${{ matrix.compiler }} \
               DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
-              PYTHON_VERSIONS=${PYTHON_VER}
+              PYTHON_VERSIONS=${PYTHON_VER} \
+              EXTRA_CFLAGS="$P" EXTRA_LDFLAGS="$P"
           done
 
       - name: Run Tests

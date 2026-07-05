@@ -37,7 +37,7 @@ on:
 
 jobs:
   linux-vcpkg-build-test:
-    timeout-minutes: 70 # PROBE: 50 + second bindings build
+    timeout-minutes: 85 # PROBE: 50 + second and third bindings builds
     runs-on: ${{ matrix.os }}
     container:
       image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
@@ -240,11 +240,34 @@ jobs:
       # `.DELETE_ON_ERROR` deletes the target -- wiping the gts11 mrmeshpy.so that
       # MRTest (embedded Python) and the import check need. Restored below with
       # `if: always()`; the build *time* is already captured, so restore doesn't skew it.
-      - name: Back up gts11 Python bindings before gts12 probe (probe)
+      - name: Back up baseline Python bindings before probe builds (probe)
         if: ${{ inputs.mrbind }}
         run: |
           rm -rf /tmp/gts11-bindings-backup
           cp -a build/${{ matrix.config }}/bin/meshlib /tmp/gts11-bindings-backup
+
+      - name: Verify clang selects gcc-toolset-11 (probe)
+        if: ${{ inputs.mrbind }}
+        run: |
+          GTS11_GCC_DIR=/opt/rh/gcc-toolset-11/root/usr/lib/gcc/$(uname -m)-redhat-linux/11
+          echo "GTS11_GCC_DIR=$GTS11_GCC_DIR" >> "$GITHUB_ENV"
+          /usr/bin/clang++ --gcc-install-dir="$GTS11_GCC_DIR" -v -fsyntax-only -x c++ /dev/null 2>&1 | grep 'Selected GCC installation'
+          /usr/bin/clang++ --gcc-install-dir="$GTS11_GCC_DIR" -v -fsyntax-only -x c++ /dev/null 2>&1 | grep -q 'Selected GCC installation: .*gcc-toolset-11'
+          echo '#include <version>' | /usr/bin/clang++ --gcc-install-dir="$GTS11_GCC_DIR" -x c++ - -E -dM | grep _GLIBCXX_RELEASE
+
+      # Timed libstdc++11 build, deliberately in the SAME slot (2nd build, warm cache)
+      # where earlier probe runs measured gts12 at 651-659s against the 733-745s
+      # default-gts15 baseline -- so this figure compares directly to gts12's warm
+      # number; the gts12 build below moves to the 3rd slot. gts11 is already in the
+      # image (no fetch needed). continue-on-error: pinned bindings builds fail the
+      # post-link ldd -r gate (undefined path::_List::type) regardless of which
+      # toolset is pinned; only the build *time* matters here.
+      - name: Generate and build Python bindings with gcc-toolset-11 (probe)
+        if: ${{ inputs.mrbind }}
+        continue-on-error: true
+        env:
+          CXX: ${{ matrix.cxx-compiler }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS11_GCC_DIR" EXTRA_LDFLAGS=--gcc-install-dir="$GTS11_GCC_DIR"
 
       # The probe only needs the *build time* against gts12's libstdc++, so this step
       # must not abort the job. The ABI-clean-link route is abandoned: the module ends
@@ -263,7 +286,7 @@ jobs:
       # Restore the good gts11 bindings the probe build clobbered/deleted, so the
       # C++ Unit Tests (MRTest) and the Python import check load an ABI-clean module.
       # `always()` guards against the probe build hard-failing before its own cleanup.
-      - name: Restore gts11 Python bindings after gts12 probe (probe)
+      - name: Restore baseline Python bindings after probe builds (probe)
         if: ${{ always() && inputs.mrbind }}
         run: |
           if [ -d /tmp/gts11-bindings-backup ]; then

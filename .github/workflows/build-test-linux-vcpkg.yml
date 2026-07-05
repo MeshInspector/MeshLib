@@ -234,6 +234,18 @@ jobs:
             fi
           done
 
+      # Back up the gts11 bindings so the C++/Python tests below load the good,
+      # ABI-clean module. The gts12 probe build (-B) rebuilds every module and, when
+      # generate.mk's post-link `ldd -r` gate fails on the lone path symbol,
+      # `.DELETE_ON_ERROR` deletes the target -- wiping the gts11 mrmeshpy.so that
+      # MRTest (embedded Python) and the import check need. Restored below with
+      # `if: always()`; the build *time* is already captured, so restore doesn't skew it.
+      - name: Back up gts11 Python bindings before gts12 probe (probe)
+        if: ${{ inputs.mrbind }}
+        run: |
+          rm -rf /tmp/gts11-bindings-backup
+          cp -a build/${{ matrix.config }}/bin/meshlib /tmp/gts11-bindings-backup
+
       # The probe only needs the *build time* against gts12's libstdc++, so this step
       # must not abort the job. The ABI-clean-link route is abandoned: the module ends
       # up with one undefined symbol clang externalizes but gts12's libstdc++ keeps
@@ -247,6 +259,20 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS12_GCC_DIR" EXTRA_LDFLAGS=--gcc-install-dir="$GTS12_GCC_DIR"
+
+      # Restore the good gts11 bindings the probe build clobbered/deleted, so the
+      # C++ Unit Tests (MRTest) and the Python import check load an ABI-clean module.
+      # `always()` guards against the probe build hard-failing before its own cleanup.
+      - name: Restore gts11 Python bindings after gts12 probe (probe)
+        if: ${{ always() && inputs.mrbind }}
+        run: |
+          if [ -d /tmp/gts11-bindings-backup ]; then
+            rm -rf build/${{ matrix.config }}/bin/meshlib
+            cp -a /tmp/gts11-bindings-backup build/${{ matrix.config }}/bin/meshlib
+            echo "Restored gts11 bindings from /tmp/gts11-bindings-backup"
+          else
+            echo "No gts11 bindings backup found; skipping restore"
+          fi
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

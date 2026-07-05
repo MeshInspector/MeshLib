@@ -1368,7 +1368,8 @@ std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const Vert
         auto v2 = closests[v1];
         if ( v != v2 )
             continue;
-        bridgesCreated.push_back( makeBridgeEdge( topology, bdEdges[v], bdEdges[v1] ) );
+        if ( auto b = makeBridgeEdge( topology, bdEdges[v], bdEdges[v1] ) )
+            bridgesCreated.push_back( b );
     }
 
     return bridgesCreated;

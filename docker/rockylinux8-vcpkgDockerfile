@@ -21,7 +21,7 @@ RUN <<EOF
     retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo
     retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
     retry.sh -- dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-11 ninja-build clang-devel-21* \
+        git cmake gcc-toolset-11 gcc-toolset-12 ninja-build clang-devel-21* \
         $(: minimal CUDA toolkit - nvcc, cudart ) \
         cuda-nvcc-12-0 cuda-cudart-devel-12-0 cuda-driver-devel-12-0 cuda-cuxxfilt-12-0 \
         $(: vcpkg requirements ) \

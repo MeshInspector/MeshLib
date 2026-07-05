@@ -71,8 +71,8 @@ jobs:
           # Used by the *Build* step only: `-DCMAKE_CXX_FLAGS=--gcc-install-dir=<this>` (Clang 16+)
           # points Clang at GCC 11's lib dir without breaking CMake's configure-time link probe the
           # way the bare `--gcc-toolchain` prefix does (find_package(Threads) -> `-pthread - no`).
-          # g++ already links this same libstdc++. The bindings step needs `--gcc-toolchain` instead
-          # of this flag (see the note there).
+          # g++ already links this same libstdc++. The bindings step uses neither flag (see the note
+          # there): clang-21 keeps its default libstdc++.
           - arch: x64
             os: ubuntu-latest
             gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
@@ -198,14 +198,14 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        # Bindings always compile+link with clang++ against the MeshLib .so, so force GCC 11's
-        # libstdc++ here too (all matrix rows) to match the library and avoid GLIBCXX mismatches.
-        # Use the `--gcc-toolchain=<prefix>` form, NOT the Build step's `--gcc-install-dir`: the
-        # prefix gives clang++ GCC 11's libstdc++ headers *and* libs together, so the symbols it
-        # emits match what it links. `--gcc-install-dir` redirects only the lib pick and left a
-        # header/lib skew -- an internal `std::filesystem::path` symbol went unresolved in mrmeshpy.so.
-        # No CMake configure here, so the prefix's Threads-probe issue (see Build step) doesn't apply.
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-toolchain=/opt/rh/gcc-toolset-11/root/usr EXTRA_LDFLAGS=--gcc-toolchain=/opt/rh/gcc-toolset-11/root/usr
+        # Bindings always compile+link with clang++ against the MeshLib .so (all matrix rows).
+        # We do NOT force GCC 11's libstdc++ here -- clang++ keeps its default toolchain:
+        #   * `--gcc-toolchain=<prefix>` is a no-op (clang-21 emits -Wunused-command-line-argument);
+        #   * the Build step's `--gcc-install-dir` leaves an internal `std::filesystem::path` symbol
+        #     unresolved in mrmeshpy.so (header/lib skew).
+        # Clang's default libstdc++ links clean (`ldd -r` on mrmeshpy.so) and stays runtime-compatible
+        # with the GCC-11-built libMRMesh.so it loads.
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

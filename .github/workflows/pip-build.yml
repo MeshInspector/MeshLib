@@ -31,11 +31,9 @@ on:
         default: false
         required: false
         type: boolean
-      disable_ubuntu_x64:
-        default: false
-        required: false
-        type: boolean
-      disable_ubuntu_arm64:
+      # keyed to the linux-vcpkg platform toggle, not ubuntu: manylinux builds in the
+      # rockylinux8-vcpkg image, whose branch tag only exists when linux-vcpkg is enabled (#6091)
+      disable_manylinux:
         default: false
         required: false
         type: boolean
@@ -85,12 +83,10 @@ jobs:
                   runner: ubuntu-24.04-arm
                   compiler: /usr/bin/clang++
                   container-prefix: arm64v8/
-            - if: ${{ inputs.disable_ubuntu_x64 }}
+            - if: ${{ inputs.disable_manylinux }}
               exclude:
-                platform: x86_64
-            - if: ${{ inputs.disable_ubuntu_arm64 }}
-              exclude:
-                platform: aarch64
+                - platform: x86_64
+                - platform: aarch64
 
       - id: test-matrix
         uses: ./.github/actions/matrix-builder
@@ -132,12 +128,10 @@ jobs:
                   os: "fedora:42"
                 - py-version: "3.14"
                   os: "ubuntu:25.10"
-            - if: ${{ inputs.disable_ubuntu_x64 }}
+            - if: ${{ inputs.disable_manylinux }}
               exclude:
-                platform: x86_64
-            - if: ${{ inputs.disable_ubuntu_arm64 }}
-              exclude:
-                platform: aarch64
+                - platform: x86_64
+                - platform: aarch64
 
   generate-c-bindings:
     needs: setup

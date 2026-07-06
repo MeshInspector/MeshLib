@@ -20,6 +20,29 @@ def get_ram_amount():
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
+def get_cpu_model():
+    system = platform.system()
+    if system == "Darwin":
+        output = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
+        return output.strip()
+    elif system == "Linux":
+        with open('/proc/cpuinfo') as f:
+            for line in f:
+                if line.startswith('model name'):
+                    return line.split(':', 1)[1].strip()
+        # ARM kernels report implementer/part ids instead of a model name; lscpu decodes them
+        output = subprocess.check_output(['lscpu'], text=True)
+        for line in output.splitlines():
+            if line.startswith('Model name:'):
+                return line.split(':', 1)[1].strip()
+        return None
+    elif system == "Windows":
+        ps_command = "(Get-CimInstance Win32_Processor).Name"
+        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
+        return output.strip().splitlines()[0]
+    else:
+        raise RuntimeError(f"Unknown system: {system}")
+
 def get_compiler_id(compiler_path):
     # work-around for Windows runners
     if compiler_path.startswith("msvc-"):
@@ -67,12 +90,19 @@ if __name__ == "__main__":
 
         aws_instance_type = os.environ.get('AWS_INSTANCE_TYPE', '').lower()
 
+        try:
+            cpu_model = get_cpu_model()
+        except Exception as e:
+            print(f"Failed to get CPU model: {e}")
+            cpu_model = None
+
         results = {
             'target_os': os.environ.get('TARGET_OS'),
             'target_arch': os.environ.get('TARGET_ARCH'),
             'compiler': compiler_id,
             'build_config': os.environ.get('BUILD_CONFIG').lower(),
             'cpu_count': cpu_count,
+            'cpu_model': cpu_model,
             'ram_mb': ram_amount,
             'build_system': build_system,
             'aws_instance_type': aws_instance_type or None,

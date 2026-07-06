@@ -76,7 +76,9 @@ jobs:
           rules: |
             - extend:
                 # gcc-install-dir: GCC 11's libstdc++ dir, per-arch. The Build step (always clang++) points
-                # Clang at it via `--gcc-install-dir`; bindings/shim steps keep clang's default libstdc++.
+                # Clang at it via `--gcc-install-dir`; the bindings step compiles against it too (EXTRA_CFLAGS)
+                # but links clang's default (newest) GCC dir, whose libstdc++_nonshared.a defines internals
+                # GCC 11's archives lack (fs path::_List::type).
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
                   runner: ubuntu-latest
@@ -236,7 +238,8 @@ jobs:
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
-            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}
+            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
+            EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
       # install helper utility for Python version management
       - name: Install uv

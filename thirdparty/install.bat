@@ -40,14 +40,14 @@ if not defined vcpkg_path (
     REM `git describe --exact-match` yields that tag and keeps the binary-cache
     REM producer (prepare-images) and consumer (build) in sync. safe.directory
     REM covers checkouts owned by another user (common on self-hosted runners).
-    REM A failed describe is fatal: silently falling back to another folder name
-    REM would split the binary cache between producers and consumers.
+    REM A failed describe is fatal when the S3 cache is in use: silently falling
+    REM back to another folder name would split the cache between producers and
+    REM consumers. Without AWS CLI the cache is disabled and the tag irrelevant.
     set "VCPKG_TAG="
     for /f "delims=" %%T in ('git -c safe.directory^=* -C "!vcpkg_path!." describe --tags --exact-match 2^>nul') do set VCPKG_TAG=%%T
     if not defined VCPKG_TAG (
-        echo Error: could not determine the vcpkg release tag at "!vcpkg_path!":
-        git -c safe.directory=* -C "!vcpkg_path!." describe --tags --exact-match
-        exit /b 1
+        if "!aws_cli_available!"=="true" goto :tag_error
+        set VCPKG_TAG=no-tag
     )
 )
 
@@ -142,3 +142,9 @@ REM Error handling
 echo Failed with error #%errorlevel%.
 endlocal
 exit /b %errorlevel%
+
+:tag_error
+echo Error: could not determine the vcpkg release tag at "!vcpkg_path!":
+git -c safe.directory=* -C "!vcpkg_path!." describe --tags --exact-match
+endlocal
+exit /b 1

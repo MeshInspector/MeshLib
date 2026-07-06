@@ -68,7 +68,7 @@ jobs:
             c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
           # GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` (Clang 16+) makes the Build (Clang rows)
-          # and bindings steps use libstdc++11 instead of Clang's default libstdc++15 — matching g++ and
+          # and bindings steps use libstdc++11 instead of Clang's default libstdc++15 - matching g++ and
           # the vcpkg deps, and compiling the bindings ~11% faster.
           - arch: x64
             os: ubuntu-latest

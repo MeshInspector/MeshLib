@@ -76,7 +76,7 @@ jobs:
           rules: |
             - extend:
                 # gcc-install-dir: GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` makes the Build and
-                # bindings steps (always clang++) use libstdc++11 instead of Clang's default libstdc++15 —
+                # bindings steps (always clang++) use libstdc++11 instead of Clang's default libstdc++15 -
                 # matching the vcpkg deps, and compiling the bindings ~11% faster.
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64

@@ -26,11 +26,6 @@ def get_cpu_model():
         output = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
         return output.strip()
     elif system == "Linux":
-        with open('/proc/cpuinfo') as f:
-            for line in f:
-                if line.startswith('model name'):
-                    return line.split(':', 1)[1].strip()
-        # ARM kernels report implementer/part ids instead of a model name; lscpu decodes them
         output = subprocess.check_output(['lscpu'], text=True)
         for line in output.splitlines():
             if line.startswith('Model name:'):
@@ -90,11 +85,7 @@ if __name__ == "__main__":
 
         aws_instance_type = os.environ.get('AWS_INSTANCE_TYPE', '').lower()
 
-        try:
-            cpu_model = get_cpu_model()
-        except Exception as e:
-            print(f"Failed to get CPU model: {e}")
-            cpu_model = None
+        cpu_model = get_cpu_model()
 
         results = {
             'target_os': os.environ.get('TARGET_OS'),

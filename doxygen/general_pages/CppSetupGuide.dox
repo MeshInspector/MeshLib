@@ -61,13 +61,8 @@ git clone https://github.com/microsoft/vcpkg.git
    4. **Navigate to the** `vcpkg` **directory**:
 \code{.cmd}
 cd vcpkg
-git checkout 2024.10.21
-\endcode
-If you're using Visual Studio 2022 or 2026, you can use the latest version of vcpkg:
-\code{.cmd}
 git checkout 2026.06.24
 \endcode
-The version `2024.10.21` is required only for compatibility with **Visual Studio 2019**.
    5. **Run the bootstrap script to build the** `vcpkg` **executable**:
 \code{.cmd}
 bootstrap-vcpkg.bat
@@ -95,6 +90,8 @@ cd vcpkg
 ..\MeshLib\thirdparty\install.bat
 \endcode
   - This script automates the installation of necessary [Third-Party Dependencies](\ref ThirdParty).
+  - If you build with **Visual Studio 2019**, set `VCPKG_DEFAULT_TRIPLET=x64-windows-vs2019-meshlib` in the environment before running the script, so the v142 triplet and its port overlays are used.
+  - If you build with **Visual Studio 2022**, set `VCPKG_DEFAULT_TRIPLET=x64-windows-vs2022-meshlib` the same way to get the v143 triplet.
  4. **Build and Run Visual Studio Solution**
   - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
   - Build the solution and run the application.

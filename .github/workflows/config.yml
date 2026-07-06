@@ -4,11 +4,8 @@ on:
   workflow_call:
     outputs:
       # manually defined values
-      vs19_vcpkg_version:
-        description: "vs19 vcpkg version"
-        value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
-      vs22_vcpkg_version:
-        description: "vs22 vcpkg version"
+      vcpkg_version:
+        description: "vcpkg version"
         value: "2026.06.24" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
@@ -310,12 +307,9 @@ jobs:
             MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
           fi
 
-          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
-          # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
-            --arg vs19 "2024.10.21" \
-            --arg vs22 "2026.06.24" \
-            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
+            --arg vcpkg "2026.06.24" \
+            '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

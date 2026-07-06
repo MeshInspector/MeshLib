@@ -1,0 +1,11 @@
+--- a/cmake/config/OpenVDBVersions.cmake
++++ b/cmake/config/OpenVDBVersions.cmake
+@@ -37,7 +37,7 @@
+   set(MINIMUM_GCC_VERSION 11.2.1)
+   set(MINIMUM_CLANG_VERSION 5.0)
+   set(MINIMUM_ICC_VERSION 19)
+-  set(MINIMUM_MSVC_VERSION 19.30) # 1928 (Visual Studio 2019 Version 16.8 + 16.9)
++  set(MINIMUM_MSVC_VERSION 19.20) # Visual Studio 2019
+ 
+   set(MINIMUM_BOOST_VERSION 1.80)
+   # Nanobind does not store the version in the CMake config file in 2.0.0.

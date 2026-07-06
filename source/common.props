@@ -27,6 +27,8 @@
   </PropertyGroup>
   <PropertyGroup Label="Globals">
     <VcpkgCurrentInstalledDir>$(VcpkgRoot)\installed\$(VcpkgTriplet)</VcpkgCurrentInstalledDir>
+    <!-- Mark vcpkg headers as external (/external:I); with ExternalWarningLevel below this mutes their warnings like vcpkg's CMake toolchain does -->
+    <ExternalIncludePath>$(VcpkgCurrentInstalledDir)\include;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Label="Globals" Condition="Exists('$(VcpkgCurrentInstalledDir)\include\python3.10')">
     <PythonVersion>310</PythonVersion>
@@ -69,6 +71,8 @@
       <UseStandardPreprocessor>true</UseStandardPreprocessor>
       <TreatWarningAsError>true</TreatWarningAsError>
       <WarningLevel>EnableAllWarnings</WarningLevel>
+      <!-- /external:W0, matching `/Wall /WX /external:W0` in CompilerOptions.cmake -->
+      <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <!--
         !! NOTE: Sync this list with `CompilerOptions.cmake` !!
            warning C4061: enumerator V in switch of enum E is not explicitly handled by a case label

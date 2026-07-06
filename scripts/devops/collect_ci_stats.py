@@ -73,6 +73,7 @@ def parse_job(job: dict):
             'runner_type':       runner_type,
             'runner_name':       runner_name,
             'runner_cpu_count':  runner_stats['cpu_count'],
+            'runner_cpu_model':  runner_stats.get('cpu_model'),
             'runner_ram_mb':     runner_stats['ram_mb'],
             'build_system':      runner_stats['build_system'],
             'aws_instance_type': runner_stats['aws_instance_type'],

@@ -29,13 +29,18 @@ struct Line
 
     /// returns same line represented with flipped direction of d-vector
     [[nodiscard]] Line operator -() const { return Line( p, -d ); }
+
     /// returns same representation
     [[nodiscard]] const Line & operator +() const { return *this; }
+
     /// returns same line represented with unit d-vector
     [[nodiscard]] Line normalized() const { return { p, d.normalized() }; }
 
-    /// finds the closest point on line
-    [[nodiscard]] V project( const V & x ) const { return p + dot( d, x - p ) / d.lengthSq() * d; }
+    /// finds the parameter of the closest point to the given one on this line
+    [[nodiscard]] T projectionParam( const V & x ) const { return dot( d, x - p ) / d.lengthSq(); }
+
+    /// finds the closest point to the given one on this line
+    [[nodiscard]] V project( const V & x ) const { return operator()( projectionParam( x ) ); }
 
     friend std::ostream& operator<<( std::ostream& s, const Line& l )
     {

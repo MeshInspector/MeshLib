@@ -67,8 +67,8 @@ jobs:
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
             c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
-          # GCC 11's libstdc++ dir, per-arch. The Build step points Clang 21 at it via `--gcc-install-dir`
-          # (Clang 16+; g++ already uses it). Bindings compile against it too, but link default (see note below).
+          # GCC 11's libstdc++ dir, per-arch. The Build (Clang 21 rows) and bindings steps point Clang
+          # at it via `--gcc-install-dir` (Clang 16+; g++ already uses it).
           - arch: x64
             os: ubuntu-latest
             gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
@@ -194,11 +194,11 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        # EXTRA_CFLAGS pins the bindings' parse+compile to GCC 11's libstdc++ headers, like the main build.
-        # The link intentionally keeps clang's default (newest) GCC dir: its libstdc++_nonshared.a defines
-        # internals that GCC 11's archives lack (fs path::_List::type); old objects + newer link is the
-        # supported direction on EL8, the reverse leaves that symbol undefined in mrmeshpy.so.
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
+        # Bindings always compile with clang++, so GCC 11 rows pin them too. The stub supplies
+        # path::_List::type, which EL8 defines in no library (see the stub for details).
+        run: |
+          /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

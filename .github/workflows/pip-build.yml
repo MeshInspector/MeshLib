@@ -75,10 +75,8 @@ jobs:
               - aarch64
           rules: |
             - extend:
-                # gcc-install-dir: GCC 11's libstdc++ dir, per-arch. The Build step (always clang++) points
-                # Clang at it via `--gcc-install-dir`; the bindings step compiles against it too (EXTRA_CFLAGS)
-                # but links clang's default (newest) GCC dir, whose libstdc++_nonshared.a defines internals
-                # GCC 11's archives lack (fs path::_List::type).
+                # gcc-install-dir: GCC 11's libstdc++ dir, per-arch. The Build and bindings steps (always
+                # clang++) point Clang at it via `--gcc-install-dir`.
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
                   runner: ubuntu-latest
@@ -233,13 +231,16 @@ jobs:
             -DCMAKE_CXX_FLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
       - name: Generate and build MRBind bindings
+        # The stub supplies path::_List::type, which EL8 defines in no library (see the stub for details).
         run: |
+          /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
           make -f scripts/mrbind/generate.mk -B --trace \
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
             DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
-            EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
+            EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} \
+            EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       # install helper utility for Python version management
       - name: Install uv

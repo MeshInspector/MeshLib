@@ -255,6 +255,33 @@ jobs:
           /usr/bin/clang++ --gcc-install-dir="$GTS11_GCC_DIR" -v -fsyntax-only -x c++ /dev/null 2>&1 | grep -q 'Selected GCC installation: .*gcc-toolset-11'
           echo '#include <version>' | /usr/bin/clang++ --gcc-install-dir="$GTS11_GCC_DIR" -x c++ - -E -dM | grep _GLIBCXX_RELEASE
 
+      # The pinned builds' lone undefined symbol, path::_List::type(_Type), is
+      # defined in NO archive on the system (nm-proven over gts11/12/15
+      # libstdc++_nonshared.a + system libstdc++.so.6); default-gts15 only links
+      # clean because its fs_path.h made the private path(string_view, _Type)
+      # ctor out-of-line, so clang never references the symbol. Provide it
+      # ourselves: per GCC 11/12 fs_path.cc it is pure tagged-pointer math,
+      #   _M_impl = (_M_impl & ~3) | t
+      # (release()+reset() -- no deleter runs). Written as C so the mangled
+      # name is emitted verbatim; linked into both pinned probe builds below.
+      - name: Build path::_List::type stub (probe)
+        if: ${{ inputs.mrbind }}
+        run: |
+          cat > gts12/path_list_type_stub.c <<'EOF'
+          #include <stdint.h>
+          // void std::filesystem::__cxx11::path::_List::type(_List::_Type) noexcept
+          // _List's only member is unique_ptr<_Impl,_Impl_deleter> _M_impl: one
+          // pointer whose low 2 bits carry _Type (see fs_path.h _List::type() const).
+          void _ZNSt10filesystem7__cxx114path5_List4typeENS1_5_TypeE(uintptr_t* self, unsigned char t)
+          {
+              *self = (*self & ~(uintptr_t)3) | t;
+          }
+          EOF
+          sed -i 's/^          //' gts12/path_list_type_stub.c
+          /usr/bin/clang -O2 -c gts12/path_list_type_stub.c -o gts12/path_list_type_stub.o
+          echo "STUB_O=$PWD/gts12/path_list_type_stub.o" >> "$GITHUB_ENV"
+          nm gts12/path_list_type_stub.o
+
       # Timed libstdc++11 build, deliberately in the SAME slot (2nd build, warm cache)
       # where earlier probe runs measured gts12 at 651-659s against the 733-745s
       # default-gts15 baseline -- so this figure compares directly to gts12's warm
@@ -267,7 +294,7 @@ jobs:
         continue-on-error: true
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS11_GCC_DIR" EXTRA_LDFLAGS=--gcc-install-dir="$GTS11_GCC_DIR"
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS11_GCC_DIR" EXTRA_LDFLAGS="--gcc-install-dir=$GTS11_GCC_DIR $STUB_O"
 
       # The probe only needs the *build time* against gts12's libstdc++, so this step
       # must not abort the job. The ABI-clean-link route is abandoned: the module ends
@@ -281,7 +308,7 @@ jobs:
         continue-on-error: true
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS12_GCC_DIR" EXTRA_LDFLAGS=--gcc-install-dir="$GTS12_GCC_DIR"
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir="$GTS12_GCC_DIR" EXTRA_LDFLAGS="--gcc-install-dir=$GTS12_GCC_DIR $STUB_O"
 
       # Restore the good gts11 bindings the probe build clobbered/deleted, so the
       # C++ Unit Tests (MRTest) and the Python import check load an ABI-clean module.

@@ -207,7 +207,7 @@ jobs:
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: linux-changes
         with:
           filters: |
@@ -221,7 +221,7 @@ jobs:
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**)'
 
       - name: Filter Linux vcpkg paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: linux-vcpkg-changes
         with:
           filters: |
@@ -230,7 +230,7 @@ jobs:
               - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: windows-changes
         with:
           filters: |

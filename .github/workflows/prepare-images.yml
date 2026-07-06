@@ -18,10 +18,7 @@ on:
       vcpkg_docker_image_tag:
         required: true
         type: string
-      vs19_vcpkg_version:
-        required: true
-        type: string
-      vs22_vcpkg_version:
+      vcpkg_version:
         required: true
         type: string
       # `disable-build-<platform>` PR labels (resolved upstream in
@@ -250,19 +247,15 @@ jobs:
         include:
           - vs: vs2026
             runner: windows-2025
-            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
             vcpkg_triplet: x64-windows-meshlib
           - vs: vs2022
             runner: windows-2025
-            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
             vcpkg_triplet: x64-windows-vs2022-meshlib
           - vs: vs2019
             runner: windows-2022
-            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
             vcpkg_triplet: x64-windows-vs2019-meshlib
           - vs: vs2019
             runner: windows-2022
-            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
             vcpkg_triplet: x64-windows-meshlib-iterator-debug
     steps:
       - name: Checkout
@@ -281,6 +274,6 @@ jobs:
       - name: Build and cache vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:
-          vcpkg-version: ${{ matrix.vcpkg-version }}
+          vcpkg-version: ${{ inputs.vcpkg_version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
           install-flags: '--write-s3'

@@ -259,7 +259,9 @@ jobs:
               CXX_FOR_ABI=${{ matrix.compiler }} \
               CXX_FOR_BINDINGS=${{ matrix.compiler }} \
               DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
-              PYTHON_VERSIONS=${PYTHON_VER}
+              PYTHON_VERSIONS=${PYTHON_VER} \
+              EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} \
+              EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
           done
 
       - name: Run Tests

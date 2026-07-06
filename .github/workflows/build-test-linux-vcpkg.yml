@@ -67,8 +67,9 @@ jobs:
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
             c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
-          # GCC 11's libstdc++ dir, per-arch. The Build (Clang 21 rows) and bindings steps point Clang
-          # at it via `--gcc-install-dir` (Clang 16+; g++ already uses it).
+          # GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` (Clang 16+) makes the Build (Clang rows)
+          # and bindings steps use libstdc++11 instead of Clang's default libstdc++15 — matching g++ and
+          # the vcpkg deps, and compiling the bindings ~11% faster.
           - arch: x64
             os: ubuntu-latest
             gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
@@ -194,8 +195,9 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        # Bindings always compile with clang++, so GCC 11 rows pin them too. The stub supplies
-        # path::_List::type, which EL8 defines in no library (see the stub for details).
+        # Bindings always compile with clang++, so GCC 11 rows pin them too. The stub works around
+        # libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships 11.2.1): Clang emits an
+        # extern ref to path::_List::type, which EL8 defines in no library.
         run: |
           /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
           make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"

@@ -16,7 +16,7 @@ jobs:
   config:
     runs-on: ubuntu-latest
     env:
-      vs19_vcpkg_version: "2024.10.21"
+      vs19_vcpkg_version: "2026.06.24"
       vs22_vcpkg_version: "2026.06.24"
     outputs:
       app_version: ${{ steps.set.outputs.app_version }}

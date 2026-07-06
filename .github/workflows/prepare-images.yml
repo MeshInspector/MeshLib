@@ -283,7 +283,4 @@ jobs:
         with:
           vcpkg-version: ${{ matrix.vcpkg-version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-          # The S3 asset provider is only used for the VS2019 triplets
-          # (x64-windows-vs2019-meshlib and x64-windows-meshlib-iterator-debug);
-          # VS2022/VS2026 fetch their assets from upstream instead.
-          install-flags: ${{ (matrix.vcpkg_triplet == 'x64-windows-vs2019-meshlib' || matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug') && '--write-s3 --use-s3-asset-provider' || '--write-s3' }}
+          install-flags: '--write-s3'

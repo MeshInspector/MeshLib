@@ -1,0 +1,63 @@
+name: Publish WASM to CDN
+
+on:
+  release:
+    types: [ published ]
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      draft:
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  id-token: write   # OIDC -> AWS
+  contents: read    # download the draft release asset
+
+jobs:
+  publish:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+      IS_DRAFT: ${{ inputs.draft || false }}
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
+        with:
+          role-to-assume: arn:aws:iam::662635244517:role/GitHubMeshLibCdn 
+          aws-region: us-east-1
+
+      - name: Download release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${TAG}" --pattern "meshlib-js-*.zip" --repo ${{ github.repository }} --clobber
+
+      - name: Upload to S3
+        env:
+          BUCKET: s3://cdn-meshlib-js/
+        run: |
+          unzip -o meshlib-js-*.zip
+          upload() {
+            local dest="$1" ; shift
+            gzip -9 -c "${f}.mjs"  | aws s3 cp - "${dest}/${f}.mjs"  --content-type text/javascript   --content-encoding gzip "$@"
+            gzip -9 -c "${f}.wasm" | aws s3 cp - "${dest}/${f}.wasm" --content-type application/wasm  --content-encoding gzip "$@"
+          }
+          for f in meshlib meshlib-mt ; do
+            if [ "${IS_DRAFT}" = "true" ] ; then
+              upload "${BUCKET}/js/${f}-draft"  --cache-control "public, max-age=300"
+            else
+              upload "${BUCKET}/js/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
+            fi
+          done
+
+      - name: Invalidate draft
+        if: ${{ env.IS_DRAFT == 'true' }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/js/meshlib-draft/*" "/js/meshlib-mt-draft/*"

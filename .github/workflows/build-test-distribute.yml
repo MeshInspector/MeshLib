@@ -396,6 +396,14 @@ jobs:
       disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
       disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
 
+  publish-wasm-cdn:
+    needs: [ config, upload-distributions ]
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_emscripten == 'true' }}
+    uses: ./.github/workflows/publish-wasm-cdn.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+    secrets: inherit
+
   collect-stats:
     timeout-minutes: 5
     runs-on: ubuntu-latest

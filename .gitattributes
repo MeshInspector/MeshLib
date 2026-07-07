@@ -1,0 +1,7 @@
+# Windows vcpkg triplets are hashed byte-for-byte into vcpkg's triplet_abi,
+# which keys the S3 binary cache. Pin their checkout to CRLF (the effective
+# EOL on the runners that populate the cache) so every machine computes the
+# same key regardless of its core.autocrlf setting; an EOL mismatch silently
+# rebuilds all packages from source. Linux triplets are left untouched: their
+# cache namespace was populated from LF checkouts.
+thirdparty/vcpkg/triplets/x64-windows-* text eol=crlf

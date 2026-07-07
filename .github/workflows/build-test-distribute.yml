@@ -398,7 +398,7 @@ jobs:
 
   publish-wasm-cdn:
     needs: [ config, upload-distributions ]
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_emscripten == 'true' }}
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_emscripten == 'true' && needs.upload-distributions.result == 'success' }}
     uses: ./.github/workflows/publish-wasm-cdn.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}

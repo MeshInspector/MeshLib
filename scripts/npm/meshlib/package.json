@@ -1,7 +1,7 @@
 {
   "name": "@meshinspector/meshlib",
   "version": "0.0.0",
-  "description": "MeshLib geometry library compiled to WebAssembly (single-threaded, Node).",
+  "description": "MeshLib geometry library compiled to WebAssembly (single-threaded).",
   "type": "module",
   "main": "./meshlib.mjs",
   "exports": {

@@ -1,20 +1,16 @@
 # @meshinspector/meshlib-mt
 
-[MeshLib](https://meshlib.io/) geometry library compiled to WebAssembly, for use in **Node.js** —
-the **multi-threaded** build.
+[MeshLib](https://meshlib.io/) geometry library compiled to WebAssembly — the **multi-threaded** build.
 
 This is the higher-throughput sibling of [`@meshinspector/meshlib`](https://www.npmjs.com/package/@meshinspector/meshlib)
-(single-threaded). It uses worker threads and `SharedArrayBuffer` to parallelize geometry
-operations. The API is identical; only the runtime requirements differ.
+(single-threaded). It uses worker threads and `SharedArrayBuffer` to parallelize geometry operations.
 
 - Source: https://github.com/MeshInspector/MeshLib
 - Documentation: https://meshlib.io/
 
 ## Requirements
 
-- **Node.js >= 21** — the thread pool reads `navigator.hardwareConcurrency`, which older Node
-  versions do not provide. Use `@meshinspector/meshlib` if you need to run on older Node or do
-  not need threading.
+- Node.js >= 21
 
 ## Install
 

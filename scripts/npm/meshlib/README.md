@@ -1,10 +1,9 @@
 # @meshinspector/meshlib
 
-[MeshLib](https://meshlib.io/) geometry library compiled to WebAssembly, for use in **Node.js**.
+[MeshLib](https://meshlib.io/) geometry library compiled to WebAssembly.
 
-This package ships the **single-threaded, Node-target** build of MeshLib's WebAssembly
-module (`meshlib.mjs` + `meshlib.wasm`). It is intended for server-side / CLI Node usage
-and is not a browser build.
+This package ships the **single-threaded** build of MeshLib's WebAssembly
+module (`meshlib.mjs` + `meshlib.wasm`).
 
 - Source: https://github.com/MeshInspector/MeshLib
 - Documentation: https://meshlib.io/

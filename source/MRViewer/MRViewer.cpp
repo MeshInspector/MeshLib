@@ -74,8 +74,6 @@
 #include "MRMesh/MRGcodeLoad.h"
 #include "MRMesh/MRSignal.h"
 #include "MRMesh/MRCube.h"
-#include "MRMesh/MRMultiScanLoad.h"
-#include "MRMesh/MRPointCloud.h"
 #include "MRViewerConfigConstants.h"
 
 #ifndef __EMSCRIPTEN__
@@ -841,7 +839,6 @@ bool Viewer::setupWindow_( const LaunchParams& params )
 int Viewer::launchInit_( const LaunchParams& params )
 {
     MR_TIMER;
-    (void)PointsLoad::fromMultiScanFolder( R"(D:\Temp\Laser-Door\)" );
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
     spdlog::info( "Log file: {}", utf8string( Logger::instance().getLogFileName() ) );
     glfwSetErrorCallback( glfw_error_callback );

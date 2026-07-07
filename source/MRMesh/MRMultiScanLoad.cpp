@@ -101,31 +101,41 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
         return unexpected( "No pairs of " + std::string( cScanPosePrefix ) + "*.pose and "
             + std::string( cScanPlyPrefix ) + "*.ply files found in " + utf8string( folder ) );
 
-    const int cReportEveryScan = 16;
+    const int cReportEverySingle = 1;
+    const float cProgressReadXfs = 0.1f;
+    const float cProgressReadScans = 0.9f;
+
+    std::vector<AffineXf3f> scansXf( pairs.size() );
+    if ( !ParallelFor( scansXf, [&]( size_t i )
+        {
+            auto xf = readScanPose( pairs[i].first );
+            if ( xf )
+                scansXf[i] = *xf;
+            //if ( !xf )
+            //    return unexpected( std::move( xf.error() ) );
+        }, subprogress( callback, 0.0f, cProgressReadXfs ), cReportEverySingle ) )
+        return unexpectedOperationCanceled();
 
     std::vector<PointCloud> scans( pairs.size() );
     if ( !ParallelFor( scans, [&]( size_t i )
         {
             const auto& [posePath, plyPath] = pairs[i];
 
-            auto xf = readScanPose( posePath );
-            //if ( !xf )
-            //    return unexpected( std::move( xf.error() ) );
-
-            auto cloud = fromPly( plyPath );
+            auto cloud = fromPly( pairs[i].second );
             //if ( !cloud )
             //    return unexpected( std::move( cloud.error() ) );
 
             // transform the loaded points (and normals) into the common coordinate frame
+            const auto xf = scansXf[i];
             BitSetParallelFor( cloud->validPoints, [&] ( VertId v )
             {
-                cloud->points[v] = ( *xf )( cloud->points[v] );
+                cloud->points[v] = xf( cloud->points[v] );
                 if ( v < cloud->normals.size() )
-                    cloud->normals[v] = xf->A * cloud->normals[v];
+                    cloud->normals[v] = xf.A * cloud->normals[v];
             } );
 
             scans[i] = std::move( *cloud );
-        }, subprogress( callback, 0.0f, 0.9f ), cReportEveryScan ) )
+        }, subprogress( callback, cProgressReadXfs, cProgressReadScans ), cReportEverySingle ) )
         return unexpectedOperationCanceled();
 
     std::vector<VertId> firstScanPoint;
@@ -150,7 +160,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
                 res.points[t] = scan.points[v];
                 res.normals[t] = scan.normals[v];
             }
-        }, subprogress( callback, 0.9f, 1.0f ), cReportEveryScan ) )
+        }, subprogress( callback, cProgressReadScans, 1.0f ) ) )
         return unexpectedOperationCanceled();
 
     return res;

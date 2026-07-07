@@ -15,7 +15,7 @@ on:
 
 permissions:
   id-token: write   # OIDC -> AWS
-  contents: read    # download the draft release asset
+  contents: write   # download the draft release asset
 
 jobs:
   publish:

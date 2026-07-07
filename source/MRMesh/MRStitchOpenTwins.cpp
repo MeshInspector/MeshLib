@@ -6,9 +6,10 @@
 #include "MRRingIterator.h"
 #include "MRMeshComponents.h"
 
+namespace MR
+{
 namespace
 {
-using namespace MR;
 
 class TwinStitcher
 {
@@ -158,7 +159,6 @@ size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& upda
             int numDuplicates = 0;
             int e0 = -1, e1 = -1;
             updateStored( {} );
-            VertId v0, v1;
             for ( int i = 0; i < tws.size(); ++i )
             {
                 if ( visited.test( i ) )
@@ -287,9 +287,6 @@ size_t TwinStitcher::runLoop()
 }
 
 }
-
-namespace MR
-{
 
 void stitchOpenTwinEdges( Mesh& mesh, float tolerance )
 {

@@ -1,10 +1,12 @@
 #include "MRMultiScanLoad.h"
 #include "MRPointsLoad.h"
+#include "MRPointsSave.h"
 #include "MRPointCloud.h"
 #include "MRAffineXf3.h"
 #include "MRDirectory.h"
 #include "MRStringConvert.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRProgressCallback.h"
 #include "MRTimer.h"
 
@@ -100,18 +102,21 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
         return unexpected( "No pairs of " + std::string( cScanPosePrefix ) + "*.pose and "
             + std::string( cScanPlyPrefix ) + "*.ply files found in " + utf8string( folder ) );
 
-    PointCloud res;
-    for ( size_t i = 0; i < pairs.size(); ++i )
+    //std::ofstream csv( R"(D:\Temp\Laser-Door\__all.csv)" );
+    //csv << "file,points,valid" << std::endl;
+
+    std::vector<PointCloud> scans( pairs.size() );
+    ParallelFor( scans, [&]( size_t i )
     {
         const auto& [posePath, plyPath] = pairs[i];
 
         auto xf = readScanPose( posePath );
-        if ( !xf )
-            return unexpected( std::move( xf.error() ) );
+        //if ( !xf )
+        //    return unexpected( std::move( xf.error() ) );
 
-        auto cloud = fromPly( plyPath );
-        if ( !cloud )
-            return unexpected( std::move( cloud.error() ) );
+        auto cloud = fromPly( plyPath, { .telemetrySignal = false } );
+        //if ( !cloud )
+        //    return unexpected( std::move( cloud.error() ) );
 
         // transform the loaded points (and normals) into the common coordinate frame
         BitSetParallelFor( cloud->validPoints, [&] ( VertId v )
@@ -121,11 +126,49 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
                 cloud->normals[v] = xf->A * cloud->normals[v];
         } );
 
-        res.addPartByMask( *cloud, cloud->validPoints );
+        scans[i] = std::move( *cloud );
+    } );
+
+    std::vector<VertId> firstScanPoint;
+    firstScanPoint.reserve( pairs.size() + 1 );
+    firstScanPoint.push_back( 0_v );
+    for ( const auto & s : scans )
+    {
+        firstScanPoint.push_back( firstScanPoint.back() + s.points.size() );
+    }
+    assert( firstScanPoint.size() == pairs.size() + 1 );
+    const int totalPoints( firstScanPoint.back() );
+
+    PointCloud res;
+    res.points.resizeNoInit( totalPoints );
+    res.normals.resizeNoInit( totalPoints );
+    res.validPoints.resize( totalPoints, true );
+    ParallelFor( scans, [&]( size_t i )
+    {
+        const auto& scan = scans[i];
+        const auto f = firstScanPoint[i];
+        for ( auto v = 0_v; v < scan.points.size(); ++v )
+        {
+            auto t = f + (int)v;
+            res.points[t] = scan.points[v];
+            res.normals[t] = scan.normals[v];
+        }
+    } );
+
+
+/*    for ( size_t i = 0; i < pairs.size(); ++i )
+    {
+
+        //res.addPartByMask( *cloud, cloud->validPoints );
+
+        //csv << utf8string( plyPath.filename() ) << ',' << cloud->points.size() << ',' << cloud->validPoints.count() << std::endl;
 
         if ( !reportProgress( callback, float( i + 1 ) / float( pairs.size() ) ) )
             return unexpectedOperationCanceled();
-    }
+    }*/
+
+    (void)PointsSave::toPly( res, R"(D:\Temp\Laser-Door\__combined.ply)" );
+    (void)callback;
 
     return res;
 }

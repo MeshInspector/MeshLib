@@ -1,0 +1,16 @@
+{
+  "name": "meshlib-typescript-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "prestart": "npm run build",
+    "start": "node dist/main.js"
+  },
+  "dependencies": {
+    "@meshinspector/meshlib": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.0"
+  }
+}

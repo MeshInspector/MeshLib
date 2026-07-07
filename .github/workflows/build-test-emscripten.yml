@@ -213,11 +213,17 @@ jobs:
         run: node source/MRWasmTest/index.mjs
 
       - name: Assemble and pack npm package
-        if: ${{ inputs.upload_artifacts }}
         run: |
           scripts/npm/assemble.sh ${{ matrix.wasm-module-name }} "${{ inputs.app_version }}"
           npm pack ./npm-distr/${{ matrix.wasm-module-name }}
           for TGZ in meshinspector-*.tgz ; do mv "${TGZ}" "js-${TGZ#meshinspector-}" ; done
+
+      - name: Build and run TypeScript example
+        if: ${{ matrix.wasm-module-name == 'meshlib' }}
+        working-directory: examples/typescript
+        run: |
+          npm install --no-audit --no-fund --no-save ../../js-meshlib-*.tgz
+          npm start
 
       - name: Upload npm package
         if: ${{ inputs.upload_artifacts }}

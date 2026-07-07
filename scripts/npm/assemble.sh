@@ -17,6 +17,8 @@ mkdir ${DISTR_DIR}
 
 cp -a scripts/npm/${VARIANT} ${DISTR_DIR}/
 cp build/Release/bin/${VARIANT}.{mjs,wasm} ${DISTR_DIR}/${VARIANT}/
+cp build/Release/bin/${VARIANT}.d.mts ${DISTR_DIR}/${VARIANT}/bindings.d.mts
+cp scripts/npm/index.d.mts ${DISTR_DIR}/${VARIANT}/
 cp LICENSE ${DISTR_DIR}/${VARIANT}/
 
 pushd ${DISTR_DIR}/${VARIANT}/

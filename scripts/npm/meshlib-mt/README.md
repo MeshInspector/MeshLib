@@ -50,6 +50,19 @@ tris.delete();
 mesh.delete();
 ```
 
+## TypeScript
+
+The package ships type definitions, so `createMeshLib` and the whole module API are typed with
+no extra setup:
+
+```ts
+import createMeshLib, { type Mesh } from '@meshinspector/meshlib-mt';
+
+const ml = await createMeshLib();
+const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
+const { valid, distSq } = ml.findProjection(point, mesh);
+```
+
 ## Memory management
 
 Values returned from the API (meshes, bit sets, settings, result objects, …) hold

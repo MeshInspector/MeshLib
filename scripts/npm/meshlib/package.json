@@ -4,12 +4,18 @@
   "description": "MeshLib geometry library compiled to WebAssembly (single-threaded).",
   "type": "module",
   "main": "./meshlib.mjs",
+  "types": "./index.d.mts",
   "exports": {
-    ".": "./meshlib.mjs"
+    ".": {
+      "types": "./index.d.mts",
+      "import": "./meshlib.mjs"
+    }
   },
   "files": [
     "meshlib.mjs",
     "meshlib.wasm",
+    "index.d.mts",
+    "bindings.d.mts",
     "README.md",
     "LICENSE"
   ],

@@ -2,13 +2,6 @@
 
 // this is to include all important for us Intel Threading Building Blocks (TBB) parts in a precompiled header and suppress warnings there
 
-#ifdef __EMSCRIPTEN__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-volatile"
-#pragma clang diagnostic ignored "-Wpedantic"
-#pragma clang diagnostic ignored "-W#warnings"
-#endif
-
 // otherwise precompiled header in CMake+MSVC cannot be used in TBB-free projects
 #define __TBB_NO_IMPLICIT_LINKAGE 1
 
@@ -39,7 +32,3 @@
 #include <tbb/global_control.h>
 #include <tbb/task_scheduler_observer.h>
 #pragma warning(pop)
-
-#ifdef __EMSCRIPTEN__
-#pragma clang diagnostic pop
-#endif

@@ -51,10 +51,32 @@ struct UniteManyMeshesParams
     ProgressCallback progressCb;
 };
 
-// Computes the surface of objects' union each of which is defined by its own surface mesh
-// - merge non intersecting meshes first
-// - unite merged groups
+/// Computes the surface of objects' union each of which is defined by its own surface mesh
+/// - merge non intersecting meshes first
+/// - unite merged groups
 MRMESH_API Expected<Mesh> uniteManyMeshes( const std::vector<const Mesh*>& meshes, 
     const UniteManyMeshesParams& params = {} );
+
+/// Parameters structure for uniteComponents function
+struct UniteComponentsParams
+{
+    /// Basic parameters of multi unite
+    UniteManyMeshesParams baseParams;
+
+    /// Per component expansion ratio, if !=0 each component is expanded on 1+expRatio around its own centroid
+    float expansionRatio = 0.0f;
+
+    /// If enabled flips orientation for componentns with negative volume
+    bool flipInverted = true;
+
+    /// Try experimental self-boolean for each component
+    /// not recommended yet
+    /// TODO: update when self-boolean is finalized
+    bool trySelfBoolean = false;
+};
+
+/// Unites components of single mesh together
+/// note: this function require closed mesh
+MRMESH_API Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& params = {} );
 
 }

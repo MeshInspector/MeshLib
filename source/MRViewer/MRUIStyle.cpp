@@ -1957,7 +1957,7 @@ bool inputTextCentered( const char* label, std::string& str, float width /*= 0.0
     return inputText( label, str, flags, callback, user_data );
 }
 
-void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */, const std::optional<ImVec4>& labelColor /*= {}*/ )
+void inputTextCenteredReadOnly( const char* label, const std::string& str, float width /*= 0.0f*/, const std::optional<ImVec4>& textColor /*= {} */, const std::optional<ImVec4>& labelColor /*= {}*/, bool selectable /*= true*/ )
 {
     const auto& style = ImGui::GetStyle();
     const auto estimatedSize = ImGui::CalcTextSize( str.c_str() );
@@ -1979,7 +1979,11 @@ void inputTextCenteredReadOnly( const char* label, const std::string& str, float
         transparentColor.w *= 0.5f;
         ImGui::PushStyleColor( ImGuiCol_Text, transparentColor );
     }
-    inputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    if ( selectable )
+        inputText( ( std::string( "##" ) + label ).c_str(), const_cast< std::string& >( str ), ImGuiInputTextFlags_ReadOnly | ImGuiInputTextFlags_AutoSelectAll );
+    else
+        // non-selectable variant: LabelText draws its value at pos + FramePadding, so the centering trick above carries over
+        ImGui::LabelText( ( std::string( "##" ) + label ).c_str(), "%s", str.c_str() );
     ImGui::PopStyleColor();
 
     std::size_t endOfLabel = std::string_view( label ).find( "##" );

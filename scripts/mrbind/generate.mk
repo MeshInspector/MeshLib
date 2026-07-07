@@ -579,6 +579,10 @@ COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile
 # Add `-frelaxed-template-template-args` if Clang is old enough to support it. Newer versions have this behavior by default.
 # Clang 18 and older need this flag. Clang 19 and 20 do the right thing by default, but still allow the flag with a deprecation warning. Clang 21 and newer consider this an unknown flag and error.
 COMPILER_FLAGS += $(shell $(CXX_FOR_BINDINGS) --help | grep -o -- -frelaxed-template-template-args)
+# `-Wno-enum-constexpr-conversion` is only needed by the older Clang versions (18, 19); pass it only there.
+ifneq ($(filter 18 19,$(call safe_shell,$(CXX_FOR_BINDINGS) -dumpversion | cut -d. -f1)),)
+COMPILER_FLAGS += -Wno-enum-constexpr-conversion
+endif
 ifneq ($(DEPS_INCLUDE_DIR),)
 # Required for vcpkg environments
 COMPILER_FLAGS += -I$(DEPS_INCLUDE_DIR)/eigen3
@@ -802,6 +806,13 @@ rpath_origin := $(if $(IS_MACOS),@loader_path,$$$$ORIGIN)
 LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
 endif # Linux or MacOS.
 endif # Python-only.
+
+
+# Log which C++ standard library the flags select: the parser (extra flags first, like the real parse call)
+# can differ from the compiler. Probed via $(CXX_FOR_BINDINGS); `\043` = `#`, unwritable in a Make function.
+override stdlib_macros = $(strip $(shell printf '\043include <version>\n' | $(CXX_FOR_BINDINGS) -xc++ - -E -dM $1 2>/dev/null | grep -E '^.define (__GLIBCXX__|_GLIBCXX_RELEASE|_LIBCPP_VERSION|_MSVC_STL_VERSION|_MSVC_STL_UPDATE) ' | tr '\n' ' '))
+$(info Stdlib for parsing:     $(call stdlib_macros,$(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)))
+$(info Stdlib for compilation: $(call stdlib_macros,$(COMPILER_FLAGS)))
 
 
 # Directories:

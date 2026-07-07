@@ -20,7 +20,7 @@ jobs:
         id: extract-tag
         run: |
           # TODO: call 'config.yml' for predefined values only
-          current_vcpkg_tag=$(yq eval -r '.on.workflow_call.outputs.vs22_vcpkg_version.value' .github/workflows/config.yml)
+          current_vcpkg_tag=$(yq eval -r '.on.workflow_call.outputs.vcpkg_version.value' .github/workflows/config.yml)
           echo "current_vcpkg_tag=${current_vcpkg_tag}" >> $GITHUB_OUTPUT
           echo "current vcpkg tag: ${current_vcpkg_tag}"
         shell: bash
@@ -76,7 +76,7 @@ jobs:
           # Update the vcpkg manifest and the Windows install batch
           sed -i "s/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g" ./thirdparty/install.bat
           sed -i "s/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g" ./thirdparty/vcpkg/vcpkg.json
-          current_vcpkg_baseline=$(jq -r '.configuration["default-registry"].baseline' "${manifest}")
+          current_vcpkg_baseline=$(jq -r '.configuration["default-registry"].baseline' ./thirdparty/vcpkg/vcpkg.json)
           sed -i "s/${current_vcpkg_baseline}/${{ steps.get-latest-tag.outputs.latest_vcpkg_baseline }}/g" ./thirdparty/vcpkg/vcpkg.json
 
           # Commit the changes

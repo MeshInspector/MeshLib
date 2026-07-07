@@ -31,11 +31,9 @@ on:
         default: false
         required: false
         type: boolean
-      disable_ubuntu_x64:
-        default: false
-        required: false
-        type: boolean
-      disable_ubuntu_arm64:
+      # keyed to the linux-vcpkg platform toggle, not ubuntu: manylinux builds in the
+      # rockylinux8-vcpkg image, whose branch tag only exists when linux-vcpkg is enabled (#6091)
+      disable_manylinux:
         default: false
         required: false
         type: boolean
@@ -75,24 +73,25 @@ jobs:
               - aarch64
           rules: |
             - extend:
+                # gcc-install-dir: GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` makes the Build and
+                # bindings steps (always clang++) use libstdc++11 instead of Clang's default libstdc++15 -
+                # matching the vcpkg deps, and compiling the bindings ~11% faster.
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
-                  container-options: "--user root"
                   runner: ubuntu-latest
                   compiler: /usr/bin/clang++
                   container-prefix: ""
+                  gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
                 - platform: aarch64
                   os: rockylinux8-vcpkg-arm64
-                  container-options: " "
                   runner: ubuntu-24.04-arm
                   compiler: /usr/bin/clang++
                   container-prefix: arm64v8/
-            - if: ${{ inputs.disable_ubuntu_x64 }}
+                  gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/aarch64-redhat-linux/11
+            - if: ${{ inputs.disable_manylinux }}
               exclude:
-                platform: x86_64
-            - if: ${{ inputs.disable_ubuntu_arm64 }}
-              exclude:
-                platform: aarch64
+                - platform: x86_64
+                - platform: aarch64
 
       - id: test-matrix
         uses: ./.github/actions/matrix-builder
@@ -112,12 +111,10 @@ jobs:
           rules: |
             - extend:
                 - platform: x86_64
-                  container-options: "--user root"
                   runner: ubuntu-latest
                   compiler: /usr/bin/clang++
                   container-prefix: ""
                 - platform: aarch64
-                  container-options: " "
                   runner: ubuntu-24.04-arm
                   compiler: /usr/bin/clang++
                   container-prefix: arm64v8/
@@ -136,12 +133,17 @@ jobs:
                   os: "fedora:42"
                 - py-version: "3.14"
                   os: "ubuntu:25.10"
-            - if: ${{ inputs.disable_ubuntu_x64 }}
+            - if: ${{ inputs.disable_manylinux }}
               exclude:
-                platform: x86_64
-            - if: ${{ inputs.disable_ubuntu_arm64 }}
-              exclude:
-                platform: aarch64
+                - platform: x86_64
+                - platform: aarch64
+
+  generate-c-bindings:
+    needs: setup
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      version_tag: ${{needs.setup.outputs.version_tag}}
 
   manylinux-pip-build:
     needs: setup
@@ -152,7 +154,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
-      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       # `include` enumerates the per-platform combos, surviving platforms
@@ -222,18 +223,24 @@ jobs:
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
+            -DCMAKE_CXX_FLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
       - name: Generate and build MRBind bindings
+        # The stub works around libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships
+        # 11.2.1): Clang emits an extern ref to path::_List::type, which EL8 defines in no library.
         run: |
+          /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
           make -f scripts/mrbind/generate.mk -B --trace \
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
-            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}
+            DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
+            EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} \
+            EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3
 
       - name: Build Python shim libs
         run: |
@@ -248,7 +255,9 @@ jobs:
               CXX_FOR_ABI=${{ matrix.compiler }} \
               CXX_FOR_BINDINGS=${{ matrix.compiler }} \
               DEPS_BASE_DIR=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET} \
-              PYTHON_VERSIONS=${PYTHON_VER}
+              PYTHON_VERSIONS=${PYTHON_VER} \
+              EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} \
+              EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
           done
 
       - name: Run Tests
@@ -297,29 +306,25 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
+
       - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
         run: |
           rm -rf source/MeshLibC2 source/MeshLibC2Cuda
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
-
-      - name: Upload C bindings headers
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: CBindings
-          path: |
-            ./source/MeshLibC2/include
-            ./source/MeshLibC2Cuda/include
-          retention-days: 1
 
       - name: Generate C# bindings # generate only sources
         if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
@@ -362,7 +367,7 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
-      VCPKG-VERSION: '2026.06.01'
+      VCPKG-VERSION: '2026.06.24'
       CUDA-VERSION: '12.0.1'
       CUDA-MAJOR: '12'
       CUDA-MINOR: '0'
@@ -427,7 +432,7 @@ jobs:
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 || exit /b 1
 
       - name: Run Test
@@ -581,7 +586,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.container-prefix }}${{ matrix.os }}
-      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       # `include` is the cartesian product (surviving platforms x

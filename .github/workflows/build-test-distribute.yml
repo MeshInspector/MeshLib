@@ -11,8 +11,7 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
   schedule:
-    - cron: '0 17 * * *'  # Run every day at 17:00 UTC
-    #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
+    - cron: '0 2 * * *'  # Run every day at 2 AM UTC
 
 permissions:
   id-token: write
@@ -44,8 +43,7 @@ jobs:
       need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
       vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
       disable_ubuntu_x64:         ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
       disable_ubuntu_arm64:       ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
       disable_emscripten:         ${{ needs.config.outputs.build_enable_emscripten != 'true' }}
@@ -140,7 +138,8 @@ jobs:
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
-    needs: [ config ]
+    # Gate on prepare-image like the other build jobs: generate-c-bindings needs it, and macOS downloads that job's CBindings artifact (else the 'Wait for C bindings' step times out).
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -158,8 +157,7 @@ jobs:
       - windows-build-test
     uses: ./.github/workflows/update-win-version.yml
     with:
-      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version: ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 
@@ -217,16 +215,16 @@ jobs:
      - name: Download C# Wasm Archive (single thread)
        uses: actions/download-artifact@v8
        with:
-         pattern: DotNetPatchArchiveWasm-Single
-         path: browser_wasm_runtime_single
+         pattern: DotNetPatchArchiveWasm-*
+         path: browser_wasm_runtime
+         merge-multiple: true
 
      - name: Build C# Wasm package
        run: |
          mkdir meshlib_dotnet-wasm
          mkdir meshlib_dotnet-wasm/native
          move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
-         mkdir meshlib_dotnet-wasm/native/single
-         move browser_wasm_runtime_single/* meshlib_dotnet-wasm/native/single
+         move browser_wasm_runtime/* meshlib_dotnet-wasm/native
          Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
 
      - name: Generate NuGet specification
@@ -384,8 +382,7 @@ jobs:
     uses: ./.github/workflows/pip-build.yml
     with:
       vcpkg_docker_image_tag: ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      disable_ubuntu_x64:   ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
-      disable_ubuntu_arm64: ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
+      disable_manylinux:    ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
       disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
       disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
 
@@ -412,7 +409,7 @@ jobs:
           pattern: ArtifactStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+      - uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         id: aws-creds
         with:
           aws-region: us-east-1

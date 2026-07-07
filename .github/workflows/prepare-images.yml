@@ -18,10 +18,7 @@ on:
       vcpkg_docker_image_tag:
         required: true
         type: string
-      vs19_vcpkg_version:
-        required: true
-        type: string
-      vs22_vcpkg_version:
+      vcpkg_version:
         required: true
         type: string
       # `disable-build-<platform>` PR labels (resolved upstream in
@@ -142,16 +139,26 @@ jobs:
           submodules: true
 
       - name: Login to DockerHub
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Linux image
-        run: docker build -f ./docker/${{ env.dockerfile }} -t ${{ env.image }} . --progress=plain
-
-      - name: Push Linux image
-        run: docker push ${{ env.image }}
+      # Build the image only if its content-addressed tag isn't already in the
+      # registry (reused as-is across PR commits and after merge), then point
+      # the conventional tag (latest on master, branch-name on a PR) at it so
+      # the build-test jobs pull it unchanged.
+      - name: Build, push and tag Linux image
+        run: |
+          repo="${image%:*}"
+          tag=$(scripts/devops/docker_image_source_checksum.sh "${{ matrix.distro }}")
+          if scripts/docker_image_exists.sh "${repo}:${tag}"; then
+            echo "Reusing existing ${repo}:${tag}"
+          else
+            docker build -f ./docker/${{ env.dockerfile }} -t "${repo}:${tag}" . --progress=plain
+            docker push "${repo}:${tag}"
+          fi
+          docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
@@ -184,34 +191,43 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Login to DockerHub
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
           aws-region: us-east-1
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
           role-duration-seconds: 7200
           retry-max-attempts: 5
 
-      - name: Build Linux vcpkg image
+      # Build the image only if its content-addressed tag isn't already in the
+      # registry (reused across PR commits and after merge), then point the
+      # conventional tag (latest on master, branch-name on a PR) at it so the
+      # build-test jobs pull it unchanged.
+      - name: Build, push and tag Linux vcpkg image
         env:
           DOCKER_BUILDKIT: 1
         run: |
-          docker build \
-            -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
-            -t ${{ env.image }} \
-            --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
-            --secret id=AWS_ACCESS_KEY_ID \
-            --secret id=AWS_SECRET_ACCESS_KEY \
-            --secret id=AWS_SESSION_TOKEN \
-            . --progress=plain
-
-      - name: Push Linux vcpkg image
-        run: docker push ${{ env.image }}
+          repo="${image%:*}"
+          tag=$(scripts/devops/docker_image_source_checksum.sh ${{ matrix.os }}-vcpkg)
+          if scripts/docker_image_exists.sh "${repo}:${tag}"; then
+            echo "Reusing existing ${repo}:${tag}"
+          else
+            docker build \
+              -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
+              -t "${repo}:${tag}" \
+              --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
+              --secret id=AWS_ACCESS_KEY_ID \
+              --secret id=AWS_SECRET_ACCESS_KEY \
+              --secret id=AWS_SESSION_TOKEN \
+              . --progress=plain
+            docker push "${repo}:${tag}"
+          fi
+          docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
@@ -231,19 +247,15 @@ jobs:
         include:
           - vs: vs2026
             runner: windows-2025
-            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
             vcpkg_triplet: x64-windows-meshlib
           - vs: vs2022
             runner: windows-2025
-            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
             vcpkg_triplet: x64-windows-vs2022-meshlib
           - vs: vs2019
             runner: windows-2022
-            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
             vcpkg_triplet: x64-windows-vs2019-meshlib
           - vs: vs2019
             runner: windows-2022
-            vcpkg-version: ${{ inputs.vs19_vcpkg_version }}
             vcpkg_triplet: x64-windows-meshlib-iterator-debug
     steps:
       - name: Checkout
@@ -252,7 +264,7 @@ jobs:
           submodules: true
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -262,9 +274,6 @@ jobs:
       - name: Build and cache vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:
-          vcpkg-version: ${{ matrix.vcpkg-version }}
+          vcpkg-version: ${{ inputs.vcpkg_version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-          # The S3 asset provider is only used for the VS2019 triplets
-          # (x64-windows-vs2019-meshlib and x64-windows-meshlib-iterator-debug);
-          # VS2022/VS2026 fetch their assets from upstream instead.
-          install-flags: ${{ (matrix.vcpkg_triplet == 'x64-windows-vs2019-meshlib' || matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug') && '--write-s3 --use-s3-asset-provider' || '--write-s3' }}
+          install-flags: '--write-s3'

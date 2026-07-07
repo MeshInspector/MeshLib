@@ -4,12 +4,9 @@ on:
   workflow_call:
     outputs:
       # manually defined values
-      vs19_vcpkg_version:
-        description: "vs19 vcpkg version"
-        value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
-      vs22_vcpkg_version:
-        description: "vs22 vcpkg version"
-        value: "2026.06.01" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+      vcpkg_version:
+        description: "vcpkg version"
+        value: "2026.06.24" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -25,10 +22,10 @@ on:
         value: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       need_linux_image_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' }}
       need_linux_vcpkg_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' }}
       need_windows_vcpkg_rebuild:
         description:
         value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
@@ -201,13 +198,13 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Linux paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: linux-changes
         with:
           filters: |
@@ -221,7 +218,7 @@ jobs:
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**)'
 
       - name: Filter Linux vcpkg paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: linux-vcpkg-changes
         with:
           filters: |
@@ -230,7 +227,7 @@ jobs:
               - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: windows-changes
         with:
           filters: |
@@ -310,12 +307,9 @@ jobs:
             MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
           fi
 
-          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
-          # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
-            --arg vs19 "2024.10.21" \
-            --arg vs22 "2026.06.01" \
-            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
+            --arg vcpkg "2026.06.24" \
+            '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

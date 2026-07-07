@@ -9,13 +9,14 @@ on:
 
 permissions:
   contents: write
+  id-token: write # This is required for requesting the JWT (windows-build-test)
+  actions: read   # This is required for wait-for-job (windows-build-test)
 
 jobs:
   config:
     runs-on: ubuntu-latest
     env:
-      vs19_vcpkg_version: "2024.10.21"
-      vs22_vcpkg_version: "2026.06.01"
+      vcpkg_version: "2026.06.24"
     outputs:
       app_version: ${{ steps.set.outputs.app_version }}
       release_tag: ${{ steps.set.outputs.release_tag }}
@@ -24,8 +25,7 @@ jobs:
       internal_build: "false"
       upload_test_artifacts: "false"
       nuget_build: "false"
-      vs19_vcpkg_version: ${{ env.vs19_vcpkg_version }}
-      vs22_vcpkg_version: ${{ env.vs22_vcpkg_version }}
+      vcpkg_version: ${{ env.vcpkg_version }}
     steps:
       - name: Checkout matrix file
         uses: actions/checkout@v7
@@ -44,15 +44,19 @@ jobs:
           # Minimal matrix: Release only
           MATRIX_FILE=".github/workflows/matrix/windows-finalize-release-config.json"
 
-          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
-          # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
-            --arg vs19 "${{ env.vs19_vcpkg_version }}" \
-            --arg vs22 "${{ env.vs22_vcpkg_version }}" \
-            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
+            --arg vcpkg "${{ env.vcpkg_version }}" \
+            '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT
+
+  generate-c-bindings:
+    needs: config
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
+      version_tag: ${{ needs.config.outputs.release_tag }}
 
   windows-build-test:
     needs: [ config ]
@@ -72,8 +76,7 @@ jobs:
       - windows-build-test
     uses: ./.github/workflows/update-win-version.yml
     with:
-      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version: ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 

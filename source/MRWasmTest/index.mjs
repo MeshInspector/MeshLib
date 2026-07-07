@@ -1,0 +1,28 @@
+import './roundtrip.test.mjs';
+import './boolean.test.mjs';
+import './fixSelfIntersections.test.mjs';
+import './meshMeasurements.test.mjs';
+import './primitives.test.mjs';
+import './makers.test.mjs';
+import './meshNormals.test.mjs';
+import './processing.test.mjs';
+import './bitset.test.mjs';
+import './meshDefects.test.mjs';
+import './meshComponents.test.mjs';
+import './expandShrink.test.mjs';
+import './meshProject.test.mjs';
+import './meshAccessors.test.mjs';
+import './meshQueries.test.mjs';
+import './maps.test.mjs';
+import './booleanMapper.test.mjs';
+import './fillHole.test.mjs';
+import './pointCloud.test.mjs';
+import './regionBoundary.test.mjs';
+import './icp.test.mjs';
+import './contoursCut.test.mjs';
+import './deformers.test.mjs';
+import './io.test.mjs';
+import './voxels.test.mjs';
+import './mopup.test.mjs';
+
+console.log( 'OK' );

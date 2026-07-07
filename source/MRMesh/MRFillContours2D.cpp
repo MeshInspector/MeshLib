@@ -248,6 +248,8 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
             fhi.edgeCode1 = i1 == i01 ? ip[i0] : int( np[i01] );
             i1 = dest;
             e1 = np[i1];
+            if ( !e1 )
+                return unexpected( "Incorrect filling" ); // most likely due to ties in input contour
             int i11 = ( i1 + 1 ) % size;
             fhi.edgeCode2 = ( pTp.dest( e1 ) == i11 ) ? ip[i1] : int( np[i11] );
             res.items.push_back( std::move( fhi ) );

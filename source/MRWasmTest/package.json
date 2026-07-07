@@ -1,0 +1,10 @@
+{
+  "name": "meshlib-wasm-test",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless round-trip tests for the MeshLib WebAssembly module (MRWasmModule)",
+  "scripts": {
+    "test": "node index.mjs"
+  }
+}

@@ -37,6 +37,14 @@ COPY . .
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
 
+# 32-bit multi-threaded
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
+    rm -rf bin include lib share thirdparty_build
+EOF
+
 # 32-bit single-threaded
 RUN <<EOF
     set -e
@@ -48,16 +56,11 @@ EOF
 
 FROM base
 
+COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
 
-# Setup non-root user (use 1001 to play nicely with actions/checkout@v4)
-# https://github.com/actions/checkout/issues/1014
-RUN <<EOF
-    set -e
-    groupadd -g 1001 user
-    useradd -m -u 1001 -g user -s /bin/bash user
-    chmod -R 777 /emsdk/upstream/emscripten/
-EOF
+RUN chmod -R 777 /emsdk/upstream/emscripten/
 
-# Change to non-root privilege
-USER user
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

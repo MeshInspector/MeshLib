@@ -600,6 +600,9 @@ Expected<DicomVolumeT<T>> loadSingleDicomFolder( std::vector<std::filesystem::pa
     if ( cancelCalled )
         return unexpectedOperationCanceled();
 
+    if ( std::none_of( slicesRes.begin(), slicesRes.end(), [] ( const auto& sliceR ) { return sliceR.success; } ) )
+        return unexpected( "loadSingleDicomFolder: no slice could be loaded" );
+
     // fill missed slices
     int missedSlicesNum = int( seriesInfo.missedSlices.count() );
     if ( missedSlicesNum != 0 )

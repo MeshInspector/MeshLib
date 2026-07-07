@@ -344,7 +344,9 @@ MRVIEWER_API bool inputTextIntoArrayMultilineFullyScrollable( CachedTextSize& ca
 MRVIEWER_API bool inputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 
 /// draw read-only text box with text aligned by center
-MRVIEWER_API void inputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {}, const std::optional<ImVec4>& labelColor = {} );
+/// \param selectable if true (default) the value is a read-only input box whose text can be selected/copied;
+/// if false the value is drawn as a non-selectable label (ImGui::LabelText), making clear it cannot be edited
+MRVIEWER_API void inputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {}, const std::optional<ImVec4>& labelColor = {}, bool selectable = true );
 
 
 namespace detail

@@ -11,7 +11,7 @@ REM                                   May be passed multiple times. Lets downstr
 REM                                   onto the same vcpkg invocation, so all the env-var and overlay setup lives here.
 
 REM VCPKG_TAG is the S3 binary-cache folder, derived below from the checked-out
-REM vcpkg release tag (e.g. 2026.06.01); it may not always exist in S3.
+REM vcpkg release tag (e.g. 2026.06.24); it may not always exist in S3.
 REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 
 if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
@@ -35,16 +35,19 @@ if not defined vcpkg_path (
     echo vcpkg not found. Setting VCPKG_TAG to "no-tag".
     set VCPKG_TAG=no-tag
 ) else (
-    REM S3 folder name = the checked-out vcpkg release tag (e.g. 2026.06.01).
+    REM S3 folder name = the checked-out vcpkg release tag (e.g. 2026.06.24).
     REM CI checks vcpkg out at a release tag before running this script, so
     REM `git describe --exact-match` yields that tag and keeps the binary-cache
-    REM producer (prepare-images) and consumer (build) in sync. Fall back to the
-    REM vcpkg-tool version date (YYYY-MM-DD) when vcpkg isn't on a tagged commit.
+    REM producer (prepare-images) and consumer (build) in sync. safe.directory
+    REM covers checkouts owned by another user (common on self-hosted runners).
+    REM A failed describe is fatal when the S3 cache is in use: silently falling
+    REM back to another folder name would split the cache between producers and
+    REM consumers. Without AWS CLI the cache is disabled and the tag irrelevant.
     set "VCPKG_TAG="
-    for /f "delims=" %%T in ('git -C "!vcpkg_path!." describe --tags --exact-match 2^>nul') do set VCPKG_TAG=%%T
+    for /f "delims=" %%T in ('git -c safe.directory^=* -C "!vcpkg_path!." describe --tags --exact-match 2^>nul') do set VCPKG_TAG=%%T
     if not defined VCPKG_TAG (
-        for /f "tokens=6" %%V in ('vcpkg version 2^>nul ^| findstr /R "vcpkg package management program version [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]"') do set FULL_VCPKG_TAG=%%V
-        set VCPKG_TAG=!FULL_VCPKG_TAG:~0,10!
+        if "!aws_cli_available!"=="true" goto :tag_error
+        set VCPKG_TAG=no-tag
     )
 )
 
@@ -120,7 +123,7 @@ for %%f in (!extra_req_files!) do (
     )
 )
 
-REM On v142-pinned (VS2019/2024.10.21) triplets, prepend ports-vs19 so its backports win over the registry.
+REM On v142-pinned (VS2019) triplets, prepend ports-vs19 so its overlays win over the registry.
 set "OVERLAY_PORTS_FLAGS="
 if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-vs2019-meshlib" set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19""
 if /I "%VCPKG_DEFAULT_TRIPLET%"=="x64-windows-meshlib-iterator-debug" set "OVERLAY_PORTS_FLAGS=--overlay-ports "%~dp0vcpkg\ports-vs19""
@@ -139,3 +142,9 @@ REM Error handling
 echo Failed with error #%errorlevel%.
 endlocal
 exit /b %errorlevel%
+
+:tag_error
+echo Error: could not determine the vcpkg release tag at "!vcpkg_path!":
+git -c safe.directory=* -C "!vcpkg_path!." describe --tags --exact-match
+endlocal
+exit /b 1

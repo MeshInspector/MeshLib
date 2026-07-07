@@ -205,6 +205,29 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const Un
     return getLargeByAreaComponents( mp, unionFind, minArea );
 }
 
+FaceBitSet getLargeByVolumeComponents( const MeshPart& mp, float minVolume )
+{
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+    {
+        assert( !"getLargeByVolumeComponents: require closed mesh part" );
+        return {};
+    }
+    auto mapAndNum = MeshComponents::getAllComponentsMap( mp );
+    Vector<double, RegionId> volumes( mapAndNum.second, 0.0 );
+    auto region = mp.mesh.topology.getFaceIds( mp.region );
+    for ( auto f : region )
+    {
+        auto fp = mp.mesh.getTriPoints( f );
+        volumes[mapAndNum.first[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
+    }
+    BitSetParallelFor( region, [&] ( FaceId f )
+    {
+        if ( std::abs( volumes[mapAndNum.first[f]] ) < minVolume )
+            region.reset( f );
+    } );
+    return region;
+}
+
 Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params /*= {} */ )
 {
     if ( params.coverRatio > 1.0f )

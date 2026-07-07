@@ -6,6 +6,10 @@ on:
       docker_image_tag:
         required: true
         type: string
+      version_tag:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   generate-c-bindings:
@@ -15,11 +19,12 @@ jobs:
       contents: read  # This is required for actions/checkout
     container:
       image: meshlib/meshlib-emscripten-generate-c-bindings-arm64:${{inputs.docker_image_tag}}
-      options: --user root
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          ref: ${{inputs.version_tag}}
 
       - name: Checkout third-party submodules
         run: |

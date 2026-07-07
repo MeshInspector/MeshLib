@@ -1,4 +1,4 @@
-name: Publish WASM to CDN
+name: Publish Wasm module
 
 on:
   release:
@@ -13,35 +13,35 @@ on:
         type: boolean
         default: true
 
-permissions:
-  id-token: write   # OIDC -> AWS
-  contents: write   # download the draft release asset
+env:
+  TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+  IS_DRAFT: ${{ inputs.draft || false }}
 
 jobs:
-  publish:
+  cdn:
+    permissions:
+      id-token: write   # OIDC -> AWS
+      contents: write   # download the draft release asset
     timeout-minutes: 15
     runs-on: ubuntu-latest
-    env:
-      TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
-      IS_DRAFT: ${{ inputs.draft || false }}
     steps:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
         with:
-          role-to-assume: arn:aws:iam::662635244517:role/GitHubMeshLibCdn 
+          role-to-assume: arn:aws:iam::662635244517:role/GitHubMeshLibCdn
           aws-region: us-east-1
 
       - name: Download release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download "${TAG}" --pattern "meshlib-js-*.zip" --repo ${{ github.repository }} --clobber
+          gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
       - name: Upload to S3
         env:
           BUCKET: s3://cdn-meshlib-js
         run: |
-          unzip -o meshlib-js-*.zip
+          for TGZ in js-meshlib-*.tgz ; do tar -xzf "${TGZ}" --strip-components=1 ; done
           upload() {
             local dest="$1" ; shift
             gzip -9 -c "${f}.mjs"  | aws s3 cp - "${dest}/${f}.mjs"  --content-type text/javascript   --content-encoding gzip "$@"
@@ -61,3 +61,30 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/js/meshlib-draft/*" "/js/meshlib-mt-draft/*"
+
+  npm:
+    permissions:
+      contents: write   # download the draft release asset
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          registry-url: https://registry.npmjs.org
+
+      - name: Download release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
+
+      - name: Publish npm packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          ARGS=""
+          [ "${IS_DRAFT}" = "true" ] && ARGS="--dry-run"   # npm has no draft; validate only
+          for TGZ in js-meshlib-*.tgz ; do
+            npm publish "./${TGZ}" --access public ${ARGS}
+          done

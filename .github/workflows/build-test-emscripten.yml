@@ -3,6 +3,9 @@ name: Build and test Emscripten
 on:
   workflow_call:
     inputs:
+      app_version:
+        required: false
+        type: string
       docker_image_tag:
         required: true
         type: string
@@ -209,14 +212,19 @@ jobs:
           MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.mjs
         run: node source/MRWasmTest/index.mjs
 
-      - name: Upload web Wasm module
+      - name: Assemble and pack npm package
+        if: ${{ inputs.upload_artifacts }}
+        run: |
+          scripts/npm/assemble.sh ${{ matrix.wasm-module-name }} "${{ inputs.app_version }}"
+          npm pack ./npm-distr/${{ matrix.wasm-module-name }}
+          for TGZ in meshinspector-*.tgz ; do mv "${TGZ}" "js-${TGZ#meshinspector-}" ; done
+
+      - name: Upload npm package
         if: ${{ inputs.upload_artifacts }}
         uses: actions/upload-artifact@v7
         with:
           name: Distributives_web_${{ matrix.wasm-module-name }}
-          path: |
-            build/Release/bin/${{ matrix.wasm-module-name }}.mjs
-            build/Release/bin/${{ matrix.wasm-module-name }}.wasm
+          path: js-meshlib-*.tgz
           retention-days: 1
 
   emscripten-test:

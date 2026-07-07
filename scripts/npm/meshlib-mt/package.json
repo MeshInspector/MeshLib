@@ -1,0 +1,37 @@
+{
+  "name": "@meshinspector/meshlib-mt",
+  "version": "0.0.0",
+  "description": "MeshLib geometry library compiled to WebAssembly (multi-threaded, Node).",
+  "type": "module",
+  "main": "./meshlib-mt.mjs",
+  "exports": {
+    ".": "./meshlib-mt.mjs"
+  },
+  "files": [
+    "meshlib-mt.mjs",
+    "meshlib-mt.wasm",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=21"
+  },
+  "author": "MeshLib Team <support@meshinspector.com>",
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://meshlib.io/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MeshInspector/MeshLib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MeshInspector/MeshLib/issues"
+  },
+  "keywords": [
+    "mesh",
+    "geometry",
+    "wasm",
+    "webassembly",
+    "meshlib",
+    "3d"
+  ]
+}

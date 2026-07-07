@@ -119,8 +119,6 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
     std::vector<PointCloud> scans( pairs.size() );
     if ( !ParallelFor( scans, [&]( size_t i )
         {
-            const auto& [posePath, plyPath] = pairs[i];
-
             auto cloud = fromPly( pairs[i].second );
             //if ( !cloud )
             //    return unexpected( std::move( cloud.error() ) );
@@ -148,7 +146,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
 
     PointCloud res;
     res.points.resizeNoInit( totalPoints );
-    res.normals.resizeNoInit( totalPoints );
+    res.normals.resize( totalPoints );
     res.validPoints.resize( totalPoints, true );
     if ( !ParallelFor( scans, [&]( size_t i )
         {
@@ -158,7 +156,8 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
             {
                 auto t = f + (int)v;
                 res.points[t] = scan.points[v];
-                res.normals[t] = scan.normals[v];
+                if ( v < scan.normals.size() )
+                    res.normals[t] = scan.normals[v];
             }
         }, subprogress( callback, cProgressReadScans, 1.0f ) ) )
         return unexpectedOperationCanceled();

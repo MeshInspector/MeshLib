@@ -171,9 +171,8 @@ jobs:
           # Cuda placeholders:
           cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
-      # Temporary diagnostics for the ~30% Build time gap between the two
-      # self-hosted M1 Pro runners: power source, Low Power Mode, thermal
-      # throttle state and background load, sampled every 10s during Build.
+      # Self-hosted runner health around Build: power source, Low Power Mode,
+      # thermal throttle state and background load, sampled every 10s during Build.
       - name: Runner power & thermal diagnostics
         if: ${{ matrix.instance == 'self-hosted-arm' }}
         run: |
@@ -212,7 +211,9 @@ jobs:
         run: |
           if [ -f runner_diag_sampler.pid ]; then
             kill "$(cat runner_diag_sampler.pid)" 2>/dev/null || true
+            echo "::group::power/thermal/load samples during Build"
             cat runner_diag_sampler.log
+            echo "::endgroup::"
           fi
 
       - name: MRMesh Exported Symbols

@@ -1431,6 +1431,9 @@
     <ClInclude Include="MRTbbThreadMutex.h">
       <Filter>Source Files\System</Filter>
     </ClInclude>
+    <ClInclude Include="MRStitchOpenTwins.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRParallelProgressReporter.cpp">
@@ -2323,6 +2326,9 @@
     </ClCompile>
     <ClCompile Include="MRTbbThreadMutex.cpp">
       <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRStitchOpenTwins.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

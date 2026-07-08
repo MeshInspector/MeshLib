@@ -251,6 +251,7 @@
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSplineProject.h" />
+    <ClInclude Include="MRStitchOpenTwins.h" />
     <ClInclude Include="MRTwoLineSegmDist.h" />
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
@@ -662,6 +663,7 @@
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRSplineProject.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
+    <ClCompile Include="MRStitchOpenTwins.cpp" />
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTelemetry.cpp" />

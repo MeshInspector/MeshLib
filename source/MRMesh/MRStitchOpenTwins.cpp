@@ -40,6 +40,7 @@ private:
     Mesh& m_;
     MeshTopology& t_;
     HashMap<VertPair, std::vector<EdgeId>> canonicalMap_;
+    UnionFind<FaceId> unionFind_;
     
     EdgePath p1_; // cached vectors
     EdgePath p2_; // cached vectors
@@ -113,6 +114,7 @@ void TwinStitcher::init_( float tolerance )
             return;
     }
     gbs_.resize( maxGroupSize );
+    unionFind_ = UnionFind<FaceId>( MeshComponents::getUnionFindStructureFaces( m_, MeshComponents::FaceIncidence::PerVertex ) );
     curStitches_ = 0;
     maxStitches_ = maxStitches_ / 2; // each two edge represent 1 stitch
 }
@@ -132,12 +134,14 @@ bool TwinStitcher::tryStitch_( EdgeId e1, EdgeId e2 )
     {
         p1_.front() = e1;
         p2_.front() = e2;
+        unionFind_.unite( r1, l2 );
         stitch = true;
     }
     else if ( e2Rb && e1Lb )
     {
         p1_.front() = e2;
         p2_.front() = e1;
+        unionFind_.unite( l1, r2 );
         stitch = true;
     }
     if ( stitch )
@@ -238,19 +242,18 @@ bool TwinStitcher::doubleEdgesPass()
 bool TwinStitcher::sameComponentPass()
 {
     MR_TIMER;
-    auto compMapAndNum = MeshComponents::getAllComponentsMap( m_, MeshComponents::FaceIncidence::PerVertex );
 
-    auto getCompId = [&] ( EdgeId e )->RegionId
+    auto getRootId = [&] ( EdgeId e )->FaceId
     {
         if ( auto l = t_.left( e ) )
-            return compMapAndNum.first[l];
+            return unionFind_.find( l );
         if ( auto r = t_.right( e ) )
-            return compMapAndNum.first[r];
+            return unionFind_.find( r );
         assert( false );
         return {};
     };
 
-    RegionId e0, curE;
+    FaceId e0, curE;
     return conditionalPass_( [&] ( EdgeId e )
     {
         if ( !e )
@@ -258,7 +261,7 @@ bool TwinStitcher::sameComponentPass()
             e0 = curE = {};
             return;
         }
-        curE = getCompId( e );
+        curE = getRootId( e );
         if ( !e0 )
             e0 = curE;
     }, [&] ()

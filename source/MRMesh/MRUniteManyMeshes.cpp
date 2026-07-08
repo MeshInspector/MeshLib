@@ -351,7 +351,7 @@ Expected<Mesh> uniteManyMeshes(
 
 Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& params )
 {
-    MR_TIMER;    
+    MR_TIMER;
     if ( !mesh.topology.isClosed() )
     {
         assert( !"uniteComponents: require closed mesh" );
@@ -361,7 +361,7 @@ Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& p
     if ( !reportProgress( params.baseParams.progressCb, 0.1f ) )
         return unexpectedOperationCanceled();
     std::vector<Mesh> components( mapAndNum.second );
-    std::vector<const Mesh*> meshPtrs( mapAndNum.second );
+    std::vector<Mesh*> meshPtrs( mapAndNum.second );
     auto keepGoing = ParallelFor( components, [&] ( size_t i )
     {
         FaceBitSet compBs( mesh.topology.faceSize() );
@@ -371,34 +371,46 @@ Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& p
                 compBs.set( f );
         } );
         components[i].addMeshPart( MeshPart( mesh, &compBs ) );
-
-        if ( params.trySelfBoolean )
-        {
-            auto sbRes = selfBoolean( components[i] );
-            if ( sbRes.has_value() )
-            {
-                sbRes->deleteFaces( sbRes->topology.getValidFaces() - MeshComponents::getLargestComponent( *sbRes ) );
-                components[i] = std::move( *sbRes );
-            }
-        }
-        if ( params.flipInverted && components[i].volume() < 0.0f )
-            components[i].topology.flipOrientation();
-
         meshPtrs[i] = &components[i];
 
         compBs = {}; // reduce peek memory
-
-        if ( params.expansionRatio != 0.0f )
-        {
-            auto center = components[i].findCenterFromFaces();
-            components[i].transform( AffineXf3f::xfAround( Matrix3f::scale( 1.0f + params.expansionRatio ), center ) );
-        }
     }, subprogress( params.baseParams.progressCb, 0.1f, 0.4f ) );
     if ( !keepGoing )
         return unexpectedOperationCanceled();
+    auto np = params;
+    np.baseParams.progressCb = subprogress( params.baseParams.progressCb, 0.4f, 1.0f );
+    return uniteComponents( meshPtrs, np );
+}
+
+Expected<Mesh> uniteComponents( const std::vector<Mesh*>& meshes, const UniteComponentsParams& params )
+{
+    MR_TIMER;
+    auto keepGoing = ParallelFor( meshes, [&] ( size_t i )
+    {
+        if ( params.trySelfBoolean )
+        {
+            auto sbRes = selfBoolean( *meshes[i] );
+            if ( sbRes.has_value() )
+            {
+                sbRes->deleteFaces( sbRes->topology.getValidFaces() - MeshComponents::getLargestComponent( *sbRes ) );
+                *meshes[i] = std::move( *sbRes );
+            }
+        }
+        if ( params.flipInverted && meshes[i]->volume() < 0.0f )
+            meshes[i]->topology.flipOrientation();
+
+        if ( params.expansionRatio != 0.0f )
+        {
+            auto center = meshes[i]->findCenterFromFaces();
+            meshes[i]->transform( AffineXf3f::xfAround( Matrix3f::scale( 1.0f + params.expansionRatio ), center ) );
+        }
+    }, subprogress( params.baseParams.progressCb, 0.0f, 0.3f ) );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
     UniteManyMeshesParams ump = params.baseParams;
-    ump.progressCb = subprogress( params.baseParams.progressCb, 0.4f, 1.0f );
-    return uniteManyMeshes( meshPtrs, ump );
+    ump.progressCb = subprogress( params.baseParams.progressCb, 0.3f, 1.0f );
+    // reinterpret_cast here to avoid allocation new vector with same pointers
+    return uniteManyMeshes( reinterpret_cast< const std::vector<const Mesh*>& >( meshes ), ump );
 }
 
 }

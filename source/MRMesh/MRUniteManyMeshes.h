@@ -79,4 +79,8 @@ struct UniteComponentsParams
 /// note: this function require closed mesh
 MRMESH_API Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& params = {} );
 
+/// Unites components of single mesh together
+/// note: this function require closed meshes, also note that meshes are changed in this function
+MRMESH_API Expected<Mesh> uniteComponents( const std::vector<Mesh*>& meshes, const UniteComponentsParams& params = {} );
+
 }

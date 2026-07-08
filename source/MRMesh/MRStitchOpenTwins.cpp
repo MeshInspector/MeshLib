@@ -5,6 +5,7 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRMeshComponents.h"
+#include "MRFinally.h"
 
 namespace MR
 {
@@ -14,9 +15,10 @@ namespace
 class TwinStitcher
 {
 public:
-    TwinStitcher( Mesh& mesh, float tolerance ) :
+    TwinStitcher( Mesh& mesh, float tolerance, const ProgressCallback& cb ) :
         m_{ mesh },
-        t_{ mesh.topology }
+        t_{ mesh.topology },
+        cb_{ cb }
     {
         init_( tolerance );
         p1_.resize( 1 );
@@ -24,16 +26,16 @@ public:
     }
 
     // runs l2loop_
-    size_t runLoop();
+    Expected<size_t> runLoop();
 
     // stitches open twins that have only one stitch option
-    size_t nonAmbiguousPass();
+    bool nonAmbiguousPass();
 
     // stitches open twins that share same vertices (if there are only two in group)
-    size_t doubleEdgesPass();
+    bool doubleEdgesPass();
 
     // stitches twin if it has only one stitch option from same component
-    size_t sameComponentPass();
+    bool sameComponentPass();
 private:
     Mesh& m_;
     MeshTopology& t_;
@@ -43,23 +45,33 @@ private:
     EdgePath p2_; // cached vectors
     BitSet gbs_; // cached group BitSet
 
+    ProgressCallback cb_;
+
+    size_t curStitches_{ 0 };
+    size_t maxStitches_{ 1 }; // 1 - so there is no division by zero on fast cancel mode
+
     void init_( float tolerance );
     bool tryStitch_( EdgeId e0, EdgeId e1 );
 
     // for each twin group stitches pair that share same condition only if the pair is unique (there is no 3rd twin in group with same condition)
-    size_t conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored );
+    bool conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored );
 
     // calls `doubleEdgesPass` with `nonAmbigousPass` until its done
-    size_t l1loop_();
+    bool l1loop_();
 
     // calls `sameComponentPass` with `l1loop_` until its done
-    size_t l2loop_();
+    bool l2loop_();
 };
 
 void TwinStitcher::init_( float tolerance )
 {
     MR_TIMER;
-    auto closeVertsMap = *findSmallestCloseVertices( m_, tolerance );
+    MR_FINALLY{ cb_ = subprogress( cb_, 0.5f, 1.0f ); };
+
+    auto closeVertsMapRes = findSmallestCloseVertices( m_, tolerance, subprogress( cb_, 0.0f, 0.2f ) );
+    if ( !closeVertsMapRes )
+        return;
+    const auto& closeVertsMap = *closeVertsMapRes;
     auto twinEdges = findTwinEdgePairs( t_, closeVertsMap );
     UndirectedEdgeBitSet visitedEdges( t_.undirectedEdgeSize() );
 
@@ -84,18 +96,25 @@ void TwinStitcher::init_( float tolerance )
             std::swap( v1m, v0m );
             e = e.sym();
         }
+        ++maxStitches_; // add for each twin edge in the map
         auto& group = canonicalMap_[std::make_pair( v0m, v1m )];
         group.push_back( e );
         if ( group.size() > maxGroupSize )
             maxGroupSize = int( group.size() );
     };
 
-    for ( auto [e0, e1] : twinEdges )
+    auto sb = subprogress( cb_, 0.2f, 0.5f );
+    for ( size_t i = 0; i < twinEdges.size(); ++i )
     {
+        auto [e0, e1] = twinEdges[i];
         addE( e0 );
         addE( e1 );
+        if ( i % 64 == 0 && !reportProgress( sb, float( i ) / float( twinEdges.size() ) ) )
+            return;
     }
     gbs_.resize( maxGroupSize );
+    curStitches_ = 0;
+    maxStitches_ = maxStitches_ / 2; // each two edge represent 1 stitch
 }
 
 bool TwinStitcher::tryStitch_( EdgeId e1, EdgeId e2 )
@@ -122,32 +141,19 @@ bool TwinStitcher::tryStitch_( EdgeId e1, EdgeId e2 )
         stitch = true;
     }
     if ( stitch )
+    {
         stitchContours( t_, p1_, p2_ );
+        ++curStitches_;
+    }
     return stitch;
 }
 
-size_t TwinStitcher::nonAmbiguousPass()
+bool TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored )
 {
-    MR_TIMER;
-    size_t counter = 0;
-    for ( auto it = canonicalMap_.begin(); it != canonicalMap_.end(); )
-    {
-        const auto& tws = it->second;
-        if ( tws.size() <= 1 || ( tws.size() == 2 && tryStitch_( tws[0], tws[1] ) ) )
-        {
-            it = canonicalMap_.erase( it );
-            ++counter;
-        }
-        else
-            it++;
-    }
-    return counter;
-}
-
-size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored )
-{
-    size_t counter = 0;
+    if ( !reportProgress( cb_, float( curStitches_ ) / float( maxStitches_ ) ) )
+        return false;
     auto& visited = gbs_;
+    size_t counter = 0;
     for ( auto it = canonicalMap_.begin(); it != canonicalMap_.end(); )
     {
         auto& tws = it->second;
@@ -178,7 +184,6 @@ size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& upda
             {
                 if ( tryStitch_( tws[e0], tws[e1] ) )
                 {
-                    ++counter;
                     tws[e0] = EdgeId( -1 ); // invalidate
                     tws[e1] = EdgeId( -1 ); // invalidate
                 }
@@ -193,11 +198,22 @@ size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& upda
             it = canonicalMap_.erase( it );
         else
             it++;
+
+        if ( counter % 128 == 0 && !reportProgress( cb_, float( curStitches_ ) / float( maxStitches_ ) ) )
+            return false;
     }
-    return counter;
+    if ( !reportProgress( cb_, float( curStitches_ ) / float( maxStitches_ ) ) )
+        return false;
+    return true;
 }
 
-size_t TwinStitcher::doubleEdgesPass()
+bool TwinStitcher::nonAmbiguousPass()
+{
+    MR_TIMER;
+    return conditionalPass_( [] ( EdgeId ) {}, [] () { return true; } );
+}
+
+bool TwinStitcher::doubleEdgesPass()
 {
     MR_TIMER;
     VertPair e0, curE;
@@ -219,7 +235,7 @@ size_t TwinStitcher::doubleEdgesPass()
     } );
 }
 
-size_t TwinStitcher::sameComponentPass()
+bool TwinStitcher::sameComponentPass()
 {
     MR_TIMER;
     auto compMapAndNum = MeshComponents::getAllComponentsMap( m_, MeshComponents::FaceIncidence::PerVertex );
@@ -251,49 +267,57 @@ size_t TwinStitcher::sameComponentPass()
     } );
 }
 
-size_t TwinStitcher::l1loop_()
+bool TwinStitcher::l1loop_()
 {
-    size_t sumStitches = nonAmbiguousPass();
+    if ( !nonAmbiguousPass() )
+        return false;
     for ( ;;)
     {
-        auto localStitches = doubleEdgesPass();
-        if ( localStitches > 0 )
-            localStitches += nonAmbiguousPass();
-        sumStitches += localStitches;
-        if ( localStitches == 0 )
+        auto lsc = curStitches_;
+        if ( !doubleEdgesPass() )
+            return false;
+        if ( curStitches_ > lsc && !nonAmbiguousPass() )
+            return false;
+        if ( curStitches_ == lsc )
             break;
     }
-    return sumStitches;
+    return true;
 }
 
-size_t TwinStitcher::l2loop_()
+bool TwinStitcher::l2loop_()
 {
-    size_t sumStitches = l1loop_();
+    if ( !l1loop_() )
+        return false;
     for ( ;;)
     {
-        auto localStitches = sameComponentPass();
-        if ( localStitches > 0 )
-            localStitches += l1loop_();
-        sumStitches += localStitches;
-        if ( localStitches == 0 )
+        auto lsc = curStitches_;
+        if ( !sameComponentPass() )
+            return false;
+        if ( curStitches_ > lsc && !l1loop_() )
+            return false;
+        if ( curStitches_ == lsc )
             break;
     }
-    return sumStitches;
+    return true;
 }
 
-size_t TwinStitcher::runLoop()
+Expected<size_t> TwinStitcher::runLoop()
 {
-    return l2loop_();
+    if ( !l2loop_() )
+        return unexpectedOperationCanceled();
+    return curStitches_;
 }
 
 }
 
-void stitchOpenTwinEdges( Mesh& mesh, float tolerance )
+Expected<size_t> stitchOpenTwinEdges( Mesh& mesh, float tolerance, const ProgressCallback& cb )
 {
     MR_TIMER;
-    TwinStitcher ts( mesh, tolerance );
-    if ( ts.runLoop() > 0 )
+    TwinStitcher ts( mesh, tolerance, cb );
+    auto numStitched = ts.runLoop();
+    if ( numStitched.has_value() && *numStitched > 0 )
         mesh.invalidateCaches();
+    return numStitched;
 }
 
 }

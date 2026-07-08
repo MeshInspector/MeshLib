@@ -99,6 +99,13 @@ static Slices2D prepareSlices( const MeshXf& mesh, const Box3f& worldBox, float 
     return res;
 }
 
+static Expected<void> saveXml( tinyxml2::XMLDocument& doc, const std::filesystem::path& file )
+{
+    if ( tinyxml2::XML_SUCCESS != doc.SaveFile( utf8string( file ).c_str() ) )
+        return unexpected( fmt::format( "Cannot save {}: {}", utf8string( file.filename() ), doc.ErrorStr() ) );
+    return {};
+}
+
 void save2dModelFile( const std::filesystem::path& path, const Slices2D& slices )
 {
     if ( slices.empty() )
@@ -229,8 +236,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
             type->LinkEndChild( el );
         }
         contentType.LinkEndChild( type );
-        auto ctPath = utf8string( dir / "[Content_Types].xml" );
-        contentType.SaveFile( ctPath.c_str() );
+        if ( auto res = saveXml( contentType, dir / "[Content_Types].xml" ); !res )
+            return unexpected( std::move( res.error() ) );
     }
 
     if ( !reportProgress( params.cb, 0.05f ) )
@@ -381,8 +388,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
         }
         model->LinkEndChild( build );
         buildDoc.LinkEndChild( model );
-        auto bdPath = utf8string( dir / "3D" / "3dmodel.model" );
-        buildDoc.SaveFile( bdPath.c_str() );
+        if ( auto res = saveXml( buildDoc, dir / "3D" / "3dmodel.model" ); !res )
+            return unexpected( std::move( res.error() ) );
     }
 
     if ( !reportProgress( params.cb, 0.4f ) )
@@ -419,8 +426,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
             rels->LinkEndChild( rel );
         }
         rootRels.LinkEndChild( rels );
-        auto rootRelsPath = utf8string( dirRels / ".rels" );
-        rootRels.SaveFile( rootRelsPath.c_str() );
+        if ( auto res = saveXml( rootRels, dirRels / ".rels" ); !res )
+            return unexpected( std::move( res.error() ) );
 
         tinyxml2::XMLDocument rels3d;
         decl = rels3d.NewDeclaration( "xml version=\"1.0\"" );
@@ -446,8 +453,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
             rels->LinkEndChild( rel );
         }
         rels3d.LinkEndChild( rels );
-        auto rels3dPath = utf8string( dir3dRels / "3dmodel.model.rels" );
-        rels3d.SaveFile( rels3dPath.c_str() );
+        if ( auto res = saveXml( rels3d, dir3dRels / "3dmodel.model.rels" ); !res )
+            return unexpected( std::move( res.error() ) );
     }
 
     if ( !reportProgress( params.cb, 0.5f ) )

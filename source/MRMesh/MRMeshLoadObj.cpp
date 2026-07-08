@@ -58,14 +58,20 @@ enum class MtlElement
     DissolveTexture,
 };
 
+std::string_view skipSpaces( std::string_view line )
+{
+    while ( !line.empty() && ( line[0] == ' ' || line[0] == '\t' ) )
+        line.remove_prefix( 1 );
+    return line;
+}
+
 template <typename T>
 T parseToken( std::string_view line );
 
 template <>
 ObjElement parseToken<ObjElement>( std::string_view line )
 {
-    while ( !line.empty() && line[0] == ' ' )
-        line.remove_prefix( 1 );
+    line = skipSpaces( line );
 
     assert( !line.empty() );
     switch ( line[0] )
@@ -75,6 +81,7 @@ ObjElement parseToken<ObjElement>( std::string_view line )
         switch ( line[1] )
         {
         case ' ':
+        case '\t':
             return ObjElement::Vertex;
         case 't':
             return ObjElement::TextureVertex;
@@ -114,8 +121,7 @@ bool isSingleLineElement( T el )
 template <>
 MtlElement parseToken<MtlElement>( std::string_view line )
 {
-    while ( !line.empty() && line[0] == ' ' )
-        line.remove_prefix( 1 );
+    line = skipSpaces( line );
 
     assert( !line.empty() );
     switch ( line[0] )
@@ -472,7 +478,7 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
                 result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
                 currentMaterial = {};
             }
-            currentMaterialName = line.substr( 6, std::string_view::npos );
+            currentMaterialName = skipSpaces( line ).substr( strlen( "newmtl" ), std::string_view::npos );
             boost::trim( currentMaterialName );
         }
         break;
@@ -1020,7 +1026,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             // TODO: support multiple files
-            std::string filename( line.substr( strlen( "mtllib" ), std::string_view::npos ) );
+            std::string filename( skipSpaces( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
             boost::trim( filename );
             mtl = loadMtlLibrary( dir / filename );
             break;
@@ -1173,7 +1179,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& objData = oScopes.emplace_back();
-            objData.objName = line.substr( strlen( "o" ), std::string_view::npos );
+            objData.objName = skipSpaces( line ).substr( strlen( "o" ), std::string_view::npos );
             objData.fId = faceInfos.size();
             boost::trim( objData.objName );
             break;
@@ -1185,7 +1191,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& mtlData = mScopes.emplace_back();
-            mtlData.mtName = line.substr( strlen( "usemtl" ), std::string_view::npos );
+            mtlData.mtName = skipSpaces( line ).substr( strlen( "usemtl" ), std::string_view::npos );
             mtlData.fId = faceInfos.size();
             boost::trim( mtlData.mtName );
             break;

@@ -6,7 +6,7 @@ This is the higher-throughput sibling of [`@meshinspector/meshlib`](https://www.
 (single-threaded). It uses worker threads and `SharedArrayBuffer` to parallelize geometry operations.
 
 - Source: https://github.com/MeshInspector/MeshLib
-- Documentation: https://meshlib.io/
+- Documentation: https://meshlib.io/documentation/index.html
 
 ## Requirements
 
@@ -17,6 +17,33 @@ This is the higher-throughput sibling of [`@meshinspector/meshlib`](https://www.
 ```sh
 npm install @meshinspector/meshlib-mt
 ```
+
+## Use from CDN
+
+In the browser you can skip npm entirely and import the module directly:
+
+```js
+// latest version
+import createMeshLib from 'https://cdn.meshlib.io/js/meshlib-mt/meshlib-mt.mjs';
+
+// or pin a specific version
+import createMeshLib from 'https://cdn.meshlib.io/js/meshlib-mt@1.2.3/meshlib-mt.mjs';
+```
+
+## Browser requirements: cross-origin isolation
+
+The multi-threaded build relies on `SharedArrayBuffer`, which browsers only enable on
+**cross-origin isolated** pages. Your server must send these headers with the page that
+loads the module:
+
+```
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+```
+
+Without them `SharedArrayBuffer` is unavailable and the module will fail to initialize —
+use the single-threaded [`@meshinspector/meshlib`](https://www.npmjs.com/package/@meshinspector/meshlib)
+package in that case.
 
 ## Usage
 
@@ -72,3 +99,5 @@ WebAssembly memory that the JavaScript garbage collector does not reclaim. Call
 ## License
 
 Free for non-commercial and educational use. See [LICENSE](./LICENSE).
+
+For commercial use, contact us at https://meshlib.io/book-a-call/

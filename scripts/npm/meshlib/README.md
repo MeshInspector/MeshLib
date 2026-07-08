@@ -6,7 +6,7 @@ This package ships the **single-threaded** build of MeshLib's WebAssembly
 module (`meshlib.mjs` + `meshlib.wasm`).
 
 - Source: https://github.com/MeshInspector/MeshLib
-- Documentation: https://meshlib.io/
+- Documentation: https://meshlib.io/documentation/index.html
 
 ## Requirements
 
@@ -16,6 +16,18 @@ module (`meshlib.mjs` + `meshlib.wasm`).
 
 ```sh
 npm install @meshinspector/meshlib
+```
+
+## Use from CDN
+
+In the browser you can skip npm entirely and import the module directly:
+
+```js
+// latest version
+import createMeshLib from 'https://cdn.meshlib.io/js/meshlib/meshlib.mjs';
+
+// or pin a specific version
+import createMeshLib from 'https://cdn.meshlib.io/js/meshlib@1.2.3/meshlib.mjs';
 ```
 
 ## Usage
@@ -72,3 +84,5 @@ WebAssembly memory that the JavaScript garbage collector does not reclaim. Call
 ## License
 
 Free for non-commercial and educational use. See [LICENSE](./LICENSE).
+
+For commercial use, contact us at https://meshlib.io/book-a-call/

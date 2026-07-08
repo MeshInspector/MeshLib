@@ -38,6 +38,15 @@
     "wasm",
     "webassembly",
     "meshlib",
-    "3d"
+    "3d",
+    "mesh-processing",
+    "mesh-repair",
+    "boolean-operations",
+    "geometry-processing",
+    "3d-printing",
+    "stl",
+    "remeshing",
+    "cad",
+    "point-cloud"
   ]
 }

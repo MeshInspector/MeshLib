@@ -171,27 +171,11 @@ jobs:
           # Cuda placeholders:
           cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
-      # Self-hosted runner health around Build: power source, Low Power Mode,
-      # thermal throttle state and background load, sampled every 10s during Build.
       - name: Runner power & thermal diagnostics
         if: ${{ matrix.instance == 'self-hosted-arm' }}
-        run: |
-          pmset -g
-          pmset -g batt
-          pmset -g therm
-          uptime
-          ps -Ao %cpu,%mem,etime,comm -r | head -16
-          vm_stat | head -8
-          sysctl vm.swapusage
-          nohup bash -c 'while :; do
-              echo "=== $(date -u +%FT%TZ)"
-              pmset -g therm
-              pmset -g batt
-              uptime
-              ps -Ao %cpu,comm -r | head -8
-              sleep 10
-            done' >runner_diag_sampler.log 2>&1 &
-          echo $! >runner_diag_sampler.pid
+        uses: ./.github/actions/runner-power-diagnostics
+        with:
+          mode: start
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -208,13 +192,9 @@ jobs:
 
       - name: Runner power & thermal during build
         if: ${{ always() && matrix.instance == 'self-hosted-arm' }}
-        run: |
-          if [ -f runner_diag_sampler.pid ]; then
-            kill "$(cat runner_diag_sampler.pid)" 2>/dev/null || true
-            echo "::group::power/thermal/load samples during Build"
-            cat runner_diag_sampler.log
-            echo "::endgroup::"
-          fi
+        uses: ./.github/actions/runner-power-diagnostics
+        with:
+          mode: stop
 
       - name: MRMesh Exported Symbols
         run: |

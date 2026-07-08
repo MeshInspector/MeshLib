@@ -118,6 +118,8 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
     std::vector<AffineXf3f> scansXf( pairs.size() );
     tbb::task_group_context ctx;
     std::string error;
+    // ParallelFor's own result only reflects the progress callback, so check the shared context as well:
+    // it may be cancelled by a worker after the reporting thread has made its last callback call
     if ( !ParallelFor( scansXf, [&]( size_t i )
         {
             auto xf = readScanPose( pairs[i].first );
@@ -128,7 +130,8 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
                 return;
             }
             scansXf[i] = *xf;
-        }, mixContextProgress( ctx, subprogress( callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle ) )
+        }, mixContextProgress( ctx, subprogress( callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle )
+        || ctx.is_group_execution_cancelled() )
     {
         if ( ctx.is_group_execution_cancelled() )
             return unexpected( std::move( error ) );
@@ -156,7 +159,8 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
             } );
 
             scans[i] = std::move( *cloud );
-        }, mixContextProgress( ctx, subprogress( callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle ) )
+        }, mixContextProgress( ctx, subprogress( callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle )
+        || ctx.is_group_execution_cancelled() )
     {
         if ( ctx.is_group_execution_cancelled() )
             return unexpected( std::move( error ) );

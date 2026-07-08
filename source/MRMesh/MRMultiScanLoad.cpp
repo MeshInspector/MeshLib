@@ -21,11 +21,7 @@ namespace MR::PointsLoad
 namespace
 {
 
-// file name prefixes used by the multi-scan laser export (e.g. _intemp000007.pose and _laser000007.ply)
-constexpr std::string_view cScanPosePrefix = "_intemp";
-constexpr std::string_view cScanPlyPrefix = "_laser";
-
-// parses the integer index from a scan file stem with the given prefix, e.g. ("_intemp000007", "_intemp") -> 7;
+// parses the integer index from a scan file stem with the given prefix, e.g. ("pose000007", "pose") -> 7;
 // returns std::nullopt if the stem does not start with the prefix or the remainder is not a pure number
 std::optional<int> parseScanIndex( const std::string& stem, std::string_view prefix )
 {
@@ -68,7 +64,7 @@ ProgressCallback mixContextProgress( tbb::task_group_context& ctx, ProgressCallb
 
 } // anonymous namespace
 
-Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, const ProgressCallback& callback )
+Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, const MultiScanLoadSettings& settings )
 {
     MR_TIMER;
 
@@ -90,12 +86,12 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
 
         if ( ext == ".pose" )
         {
-            if ( auto idx = parseScanIndex( stem, cScanPosePrefix ) )
+            if ( auto idx = parseScanIndex( stem, settings.posePrefix ) )
                 poseFiles[*idx] = path;
         }
         else if ( ext == ".ply" )
         {
-            if ( auto idx = parseScanIndex( stem, cScanPlyPrefix ) )
+            if ( auto idx = parseScanIndex( stem, settings.scanPrefix ) )
                 plyFiles[*idx] = path;
         }
     }
@@ -108,8 +104,8 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
             pairs.emplace_back( posePath, it->second );
     }
     if ( pairs.empty() )
-        return unexpected( "No pairs of " + std::string( cScanPosePrefix ) + "*.pose and "
-            + std::string( cScanPlyPrefix ) + "*.ply files found in " + utf8string( folder ) );
+        return unexpected( "No pairs of " + settings.posePrefix + "*.pose and "
+            + settings.scanPrefix + "*.ply files found in " + utf8string( folder ) );
 
     const int cReportEverySingle = 1;
     const float cProgressReadXfs = 0.1f;
@@ -130,7 +126,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
                 return;
             }
             scansXf[i] = *xf;
-        }, mixContextProgress( ctx, subprogress( callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle )
+        }, mixContextProgress( ctx, subprogress( settings.callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle )
         || ctx.is_group_execution_cancelled() )
     {
         if ( ctx.is_group_execution_cancelled() )
@@ -159,7 +155,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
             } );
 
             scans[i] = std::move( *cloud );
-        }, mixContextProgress( ctx, subprogress( callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle )
+        }, mixContextProgress( ctx, subprogress( settings.callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle )
         || ctx.is_group_execution_cancelled() )
     {
         if ( ctx.is_group_execution_cancelled() )
@@ -195,7 +191,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
                 if ( anyNormals && v < scan.normals.size() )
                     res.normals[t] = scan.normals[v];
             }
-        }, subprogress( callback, cProgressReadScans, 1.0f ) ) )
+        }, subprogress( settings.callback, cProgressReadScans, 1.0f ) ) )
         return unexpectedOperationCanceled();
 
     return res;

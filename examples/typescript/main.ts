@@ -13,17 +13,17 @@ const indices = new Uint32Array([
 ]);
 const coords = ml.VertCoords.fromArray(positions);
 const tris = ml.Triangulation.fromArray(indices);
-const cube: Mesh = ml.Mesh.fromTriangles(coords, tris);
+const cube: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 coords.delete();
 tris.delete();
 console.log('cube volume =', cube.volume().toFixed(3));
 
 // A generated maker + boolean (generated enum value).
-const sphere: Mesh = ml.makeUVSphere(1, 24, 24);
+const sphere: Mesh = ml.makeUVSphere(1, 24, 24)!;
 const res = ml.boolean(cube, sphere, ml.BooleanOperation.Union);
 if (!res.valid())
   throw new Error(res.errorString);
-const union: Mesh = res.mesh;
+const union: Mesh = res.mesh!;
 console.log('union volume =', union.volume().toFixed(3));
 
 // Overlay-refined val return: a precisely-typed result object.

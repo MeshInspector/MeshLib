@@ -23,13 +23,13 @@ public:
         p2_.resize( 1 );
     }
 
-    // runs existing stitch loops until it can
+    // runs l2loop_
     size_t runLoop();
 
-    // stitches open twins that have only one sticth option
-    size_t nonAmbigousPass();
+    // stitches open twins that have only one stitch option
+    size_t nonAmbiguousPass();
 
-    // stitches open twins that share same vertices (if there there are only two in group)
+    // stitches open twins that share same vertices (if there are only two in group)
     size_t doubleEdgesPass();
 
     // stitches twin if it has only one stitch option from same component
@@ -37,7 +37,7 @@ public:
 private:
     Mesh& m_;
     MeshTopology& t_;
-    HashMap<VertPair, std::vector<EdgeId>> canonicalMap_; 
+    HashMap<VertPair, std::vector<EdgeId>> canonicalMap_;
     
     EdgePath p1_; // cached vectors
     EdgePath p2_; // cached vectors
@@ -49,10 +49,10 @@ private:
     // for each twin group stitches pair that share same condition only if the pair is unique (there is no 3rd twin in group with same condition)
     size_t conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored );
 
-    // calls `doubleEdgesPass` with `nonAmbigousPass` untill its done
+    // calls `doubleEdgesPass` with `nonAmbigousPass` until its done
     size_t l1loop_();
 
-    // calls `sameComponentPass` with `l1loop_` untill its done
+    // calls `sameComponentPass` with `l1loop_` until its done
     size_t l2loop_();
 };
 
@@ -126,7 +126,7 @@ bool TwinStitcher::tryStitch_( EdgeId e1, EdgeId e2 )
     return stitch;
 }
 
-size_t TwinStitcher::nonAmbigousPass()
+size_t TwinStitcher::nonAmbiguousPass()
 {
     MR_TIMER;
     size_t counter = 0;
@@ -253,32 +253,32 @@ size_t TwinStitcher::sameComponentPass()
 
 size_t TwinStitcher::l1loop_()
 {
-    size_t sumStithces = nonAmbigousPass();
+    size_t sumStitches = nonAmbiguousPass();
     for ( ;;)
     {
         auto localStitches = doubleEdgesPass();
         if ( localStitches > 0 )
-            localStitches += nonAmbigousPass();
-        sumStithces += localStitches;
+            localStitches += nonAmbiguousPass();
+        sumStitches += localStitches;
         if ( localStitches == 0 )
             break;
     }
-    return sumStithces;
+    return sumStitches;
 }
 
 size_t TwinStitcher::l2loop_()
 {
-    size_t sumStithces = l1loop_();
+    size_t sumStitches = l1loop_();
     for ( ;;)
     {
         auto localStitches = sameComponentPass();
         if ( localStitches > 0 )
             localStitches += l1loop_();
-        sumStithces += localStitches;
+        sumStitches += localStitches;
         if ( localStitches == 0 )
             break;
     }
-    return sumStithces;
+    return sumStitches;
 }
 
 size_t TwinStitcher::runLoop()

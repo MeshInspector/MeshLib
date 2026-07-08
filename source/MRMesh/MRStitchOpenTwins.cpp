@@ -15,18 +15,17 @@ namespace
 class TwinStitcher
 {
 public:
-    TwinStitcher( Mesh& mesh, float tolerance, const ProgressCallback& cb ) :
+    TwinStitcher( Mesh& mesh, const ProgressCallback& cb ) :
         m_{ mesh },
         t_{ mesh.topology },
         cb_{ cb }
     {
-        init_( tolerance );
         p1_.resize( 1 );
         p2_.resize( 1 );
     }
 
     // runs l2loop_
-    Expected<size_t> runLoop();
+    Expected<size_t> runLoop( float tolerance );
 
     // stitches open twins that have only one stitch option
     bool nonAmbiguousPass();
@@ -49,29 +48,29 @@ private:
     ProgressCallback cb_;
 
     size_t curStitches_{ 0 };
-    size_t maxStitches_{ 1 }; // 1 - so there is no division by zero on fast cancel mode
+    size_t maxStitches_{ 0 }; // 1 - so there is no division by zero on fast cancel mode
 
-    void init_( float tolerance );
+    bool init_( float tolerance );
     bool tryStitch_( EdgeId e0, EdgeId e1 );
 
     // for each twin group stitches pair that share same condition only if the pair is unique (there is no 3rd twin in group with same condition)
     bool conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored );
 
-    // calls `doubleEdgesPass` with `nonAmbigousPass` until its done
+    // calls `doubleEdgesPass` with `nonAmbiguousPass` until its done
     bool l1loop_();
 
     // calls `sameComponentPass` with `l1loop_` until its done
     bool l2loop_();
 };
 
-void TwinStitcher::init_( float tolerance )
+bool TwinStitcher::init_( float tolerance )
 {
     MR_TIMER;
     MR_FINALLY{ cb_ = subprogress( cb_, 0.5f, 1.0f ); };
 
     auto closeVertsMapRes = findSmallestCloseVertices( m_, tolerance, subprogress( cb_, 0.0f, 0.2f ) );
     if ( !closeVertsMapRes )
-        return;
+        return false;
     const auto& closeVertsMap = *closeVertsMapRes;
     auto twinEdges = findTwinEdgePairs( t_, closeVertsMap );
     UndirectedEdgeBitSet visitedEdges( t_.undirectedEdgeSize() );
@@ -110,13 +109,15 @@ void TwinStitcher::init_( float tolerance )
         auto [e0, e1] = twinEdges[i];
         addE( e0 );
         addE( e1 );
-        if ( i % 64 == 0 && !reportProgress( sb, float( i ) / float( twinEdges.size() ) ) )
-            return;
+        if ( !reportProgress( sb, float( i ) / float( twinEdges.size() ), i, 64 ) )
+            return false;
     }
     gbs_.resize( maxGroupSize );
-    unionFind_ = UnionFind<FaceId>( MeshComponents::getUnionFindStructureFaces( m_, MeshComponents::FaceIncidence::PerVertex ) );
+    if ( !canonicalMap_.empty() )
+        unionFind_ = UnionFind<FaceId>( MeshComponents::getUnionFindStructureFaces( m_, MeshComponents::FaceIncidence::PerVertex ) );
     curStitches_ = 0;
-    maxStitches_ = maxStitches_ / 2; // each two edge represent 1 stitch
+    maxStitches_ = std::max( maxStitches_ / 2, size_t( 1 ) ); // each two edges represent 1 stitch
+    return true;
 }
 
 bool TwinStitcher::tryStitch_( EdgeId e1, EdgeId e2 )
@@ -129,27 +130,24 @@ bool TwinStitcher::tryStitch_( EdgeId e1, EdgeId e2 )
     bool e1Lb = l1 && !r1;
     bool e2Rb = !l2 && r2;
     bool e2Lb = l2 && !r2;
-    bool stitch = false;
-    if ( e1Rb && e2Lb )
-    {
-        p1_.front() = e1;
-        p2_.front() = e2;
-        unionFind_.unite( r1, l2 );
-        stitch = true;
-    }
-    else if ( e2Rb && e1Lb )
-    {
-        p1_.front() = e2;
-        p2_.front() = e1;
-        unionFind_.unite( l1, r2 );
-        stitch = true;
-    }
-    if ( stitch )
-    {
-        stitchContours( t_, p1_, p2_ );
-        ++curStitches_;
-    }
-    return stitch;
+    bool o1 = e1Rb && e2Lb;
+    bool o2 = e2Rb && e1Lb;
+    if ( !o1 && !o2 )
+        return false;
+    if ( o2 )
+        std::swap( e1, e2 );
+
+    if ( t_.org( e1 ) == t_.org( e2 ) && t_.next( e1 ) != e2 )
+        return false;
+    if ( t_.dest( e1 ) == t_.dest( e2 ) && t_.next( e2.sym() ) != e1.sym() )
+        return false;
+
+    p1_.front() = e1;
+    p2_.front() = e2;
+    unionFind_.unite( o1 ? r1 : l1, o1 ? l2 : r2 );
+    stitchContours( t_, p1_, p2_ );
+    ++curStitches_;
+    return true;
 }
 
 bool TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored )
@@ -203,7 +201,7 @@ bool TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& update
         else
             it++;
 
-        if ( counter % 128 == 0 && !reportProgress( cb_, float( curStitches_ ) / float( maxStitches_ ) ) )
+        if ( !reportProgress( cb_, float( curStitches_ ) / float( maxStitches_ ), ++counter, 128 ) )
             return false;
     }
     if ( !reportProgress( cb_, float( curStitches_ ) / float( maxStitches_ ) ) )
@@ -304,9 +302,15 @@ bool TwinStitcher::l2loop_()
     return true;
 }
 
-Expected<size_t> TwinStitcher::runLoop()
+Expected<size_t> TwinStitcher::runLoop( float tolerance )
 {
+    MR_FINALLY{ if ( curStitches_ > 0 ) m_.invalidateCaches(); };
+
+    if ( !init_( tolerance ) )
+        return unexpectedOperationCanceled();
     if ( !l2loop_() )
+        return unexpectedOperationCanceled();
+    if ( !reportProgress( cb_, 1.0f ) )
         return unexpectedOperationCanceled();
     return curStitches_;
 }
@@ -316,11 +320,8 @@ Expected<size_t> TwinStitcher::runLoop()
 Expected<size_t> stitchOpenTwinEdges( Mesh& mesh, float tolerance, const ProgressCallback& cb )
 {
     MR_TIMER;
-    TwinStitcher ts( mesh, tolerance, cb );
-    auto numStitched = ts.runLoop();
-    if ( numStitched.has_value() && *numStitched > 0 )
-        mesh.invalidateCaches();
-    return numStitched;
+    TwinStitcher ts( mesh, cb );
+    return ts.runLoop( tolerance );
 }
 
 }

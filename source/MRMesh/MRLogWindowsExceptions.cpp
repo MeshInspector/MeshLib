@@ -15,6 +15,7 @@ namespace
 constexpr auto EXCEPTION_CXX   = 0xE06D7363L; // c++ throw ...
 constexpr auto MS_VC_EXCEPTION = 0x406D1388L; // thread renaming
 constexpr auto RPC_UNAVAILABLE = 0x000006BAL; // thrown in file dialog
+constexpr auto EPT_NOT_REGISTERED = 0x000006D9L; // EPT_S_NOT_REGISTERED, raised and handled inside RPC runtime, e.g. when print spooler service is stopped
 
 // we limit the number of logged stacktraces since typically only the first exception is of any interest,
 // and the following ones are either repetitions or consequences of the first exception which only make the log huge
@@ -33,6 +34,7 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
     if ( pExceptionRecord->ExceptionCode == EXCEPTION_BREAKPOINT ||
          pExceptionRecord->ExceptionCode == EXCEPTION_SINGLE_STEP ||
          pExceptionRecord->ExceptionCode == RPC_UNAVAILABLE ||
+         pExceptionRecord->ExceptionCode == EPT_NOT_REGISTERED ||
          pExceptionRecord->ExceptionCode == EXCEPTION_CXX ||
          pExceptionRecord->ExceptionCode == MS_VC_EXCEPTION )
         return EXCEPTION_CONTINUE_SEARCH; //normal situation, handled otherwise

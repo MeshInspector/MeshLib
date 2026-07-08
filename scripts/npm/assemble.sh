@@ -8,7 +8,7 @@ if [ "${2:-}" ] ; then
   VERSION=$2
   VERSION=${VERSION#v}    # v1.2.3.4 -> 1.2.3.4
   VERSION=${VERSION%%-*}  # drop any -namespace
-  VERSION=${VERSION%.*}   # 1.2.3.4 -> 1.2.3
+  VERSION="${VERSION%.*}-${VERSION##*.}"   # 1.2.3.4 -> 1.2.3-4
 fi
 
 DISTR_DIR=./npm-distr

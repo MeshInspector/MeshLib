@@ -44,7 +44,7 @@ private:
     BitSet gbs_; // cached group BitSet
 
     void init_( float tolerance );
-    void stitch_( EdgeId e0, EdgeId e1 );
+    bool tryStitch_( EdgeId e0, EdgeId e1 );
 
     // for each twin group stitches pair that share same condition only if the pair is unique (there is no 3rd twin in group with same condition)
     size_t conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored );
@@ -98,38 +98,54 @@ void TwinStitcher::init_( float tolerance )
     gbs_.resize( maxGroupSize );
 }
 
-void TwinStitcher::stitch_( EdgeId e1, EdgeId e2 )
+bool TwinStitcher::tryStitch_( EdgeId e1, EdgeId e2 )
 {
-    assert( t_.right( e1 ) && !t_.left( e1 ) );
-    assert( t_.left( e2 ) && !t_.right( e2 ) );
-    p1_.front() = e1;
-    p2_.front() = e2;
-    stitchContours( t_, p1_, p2_ );
+    auto l1 = t_.left( e1 );
+    auto r1 = t_.right( e1 );
+    auto l2 = t_.left( e2 );
+    auto r2 = t_.right( e2 );
+    bool e1Rb = !l1 && r1;
+    bool e1Lb = l1 && !r1;
+    bool e2Rb = !l2 && r2;
+    bool e2Lb = l2 && !r2;
+    bool stitch = false;
+    if ( e1Rb && e2Lb )
+    {
+        p1_.front() = e1;
+        p2_.front() = e2;
+        stitch = true;
+    }
+    else if ( e2Rb && e1Lb )
+    {
+        p1_.front() = e2;
+        p2_.front() = e1;
+        stitch = true;
+    }
+    if ( stitch )
+        stitchContours( t_, p1_, p2_ );
+    return stitch;
+}
+
+size_t TwinStitcher::nonAmbigousPass()
+{
+    MR_TIMER;
+    size_t counter = 0;
+    for ( auto it = canonicalMap_.begin(); it != canonicalMap_.end(); )
+    {
+        const auto& tws = it->second;
+        if ( tws.size() <= 1 || ( tws.size() == 2 && tryStitch_( tws[0], tws[1] ) ) )
+        {
+            it = canonicalMap_.erase( it );
+            ++counter;
+        }
+        else
+            it++;
+    }
+    return counter;
 }
 
 size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& updateStored, const std::function<bool()>& compareStored )
 {
-    enum class BdState : uint8_t
-    {
-        None = 0, RBd = 1, LBd = 2
-    };
-
-    auto isSyncBdState = [] ( BdState a, BdState b )->bool
-    {
-        return ( uint8_t( a ) & uint8_t( b ) ) == ( uint8_t( BdState::RBd ) & uint8_t( BdState::LBd ) );
-    };
-
-    auto getBdState = [&] ( EdgeId e )->BdState
-    {
-        auto l = t_.left( e );
-        auto r = t_.right( e );
-        if ( l && !r )
-            return BdState::LBd;
-        else if ( r && !l )
-            return BdState::RBd;
-        return BdState::None;
-    };
-
     size_t counter = 0;
     auto& visited = gbs_;
     for ( auto it = canonicalMap_.begin(); it != canonicalMap_.end(); )
@@ -141,7 +157,6 @@ size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& upda
         while ( !visited.all() )
         {
             int numDuplicates = 0;
-            BdState s0 = BdState::None;
             int e0 = -1, e1 = -1;
             updateStored( {} );
             for ( int i = 0; i < tws.size(); ++i )
@@ -149,18 +164,6 @@ size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& upda
                 if ( visited.test( i ) )
                     continue;
                 auto e = tws[i];
-                auto s = getBdState( e );
-                if ( s == BdState::None )
-                {
-                    assert( false ); // we should never fall in this block
-                    visited.set( i );
-                    tws[i] = EdgeId( -1 ); // invalidate
-                    continue;
-                }
-                if ( s0 == BdState::None )
-                    s0 = s;
-                else if ( !isSyncBdState( s0, s ) )
-                    continue;
                 updateStored( e );
                 if ( !compareStored() )
                     continue;
@@ -173,12 +176,12 @@ size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& upda
             }
             if ( numDuplicates == 2 )
             {
-                if ( s0 == BdState::LBd )
-                    std::swap( e0, e1 );
-                stitch_( tws[e0], tws[e1] );
-                ++counter;
-                tws[e0] = EdgeId( -1 ); // invalidate
-                tws[e1] = EdgeId( -1 ); // invalidate
+                if ( tryStitch_( tws[e0], tws[e1] ) )
+                {
+                    ++counter;
+                    tws[e0] = EdgeId( -1 ); // invalidate
+                    tws[e1] = EdgeId( -1 ); // invalidate
+                }
             }
         }
         // remove stitched edges
@@ -192,13 +195,6 @@ size_t TwinStitcher::conditionalPass_( const std::function<void( EdgeId )>& upda
             it++;
     }
     return counter;
-}
-
-size_t TwinStitcher::nonAmbigousPass()
-{
-    MR_TIMER;
-    // only stitches if there is single candidate
-    return conditionalPass_( [] ( EdgeId ) {}, [] () { return true; } );
 }
 
 size_t TwinStitcher::doubleEdgesPass()

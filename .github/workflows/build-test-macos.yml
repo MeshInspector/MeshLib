@@ -171,6 +171,29 @@ jobs:
           # Cuda placeholders:
           cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
+      # Temporary diagnostics for the ~30% Build time gap between the two
+      # self-hosted M1 Pro runners: power source, Low Power Mode, thermal
+      # throttle state and background load, sampled every 10s during Build.
+      - name: Runner power & thermal diagnostics
+        if: ${{ matrix.instance == 'self-hosted-arm' }}
+        run: |
+          pmset -g
+          pmset -g batt
+          pmset -g therm
+          uptime
+          ps -Ao %cpu,%mem,etime,comm -r | head -16
+          vm_stat | head -8
+          sysctl vm.swapusage
+          nohup bash -c 'while :; do
+              echo "=== $(date -u +%FT%TZ)"
+              pmset -g therm
+              pmset -g batt
+              uptime
+              ps -Ao %cpu,comm -r | head -8
+              sleep 10
+            done' >runner_diag_sampler.log 2>&1 &
+          echo $! >runner_diag_sampler.pid
+
       - name: Build
         run: ./scripts/build_source.sh
         env:
@@ -183,6 +206,14 @@ jobs:
             -DMR_CXX_STANDARD=23
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+
+      - name: Runner power & thermal during build
+        if: ${{ always() && matrix.instance == 'self-hosted-arm' }}
+        run: |
+          if [ -f runner_diag_sampler.pid ]; then
+            kill "$(cat runner_diag_sampler.pid)" 2>/dev/null || true
+            cat runner_diag_sampler.log
+          fi
 
       - name: MRMesh Exported Symbols
         run: |

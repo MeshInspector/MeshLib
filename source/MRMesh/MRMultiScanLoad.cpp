@@ -56,6 +56,16 @@ Expected<AffineXf3f> readScanPose( const std::filesystem::path& file )
     return xf;
 }
 
+ProgressCallback mixContextProgress( tbb::task_group_context& ctx, ProgressCallback in )
+{
+    return [&ctx, in = std::move( in )]( float p ) -> bool
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return false;
+        return in ? in( p ) : true;
+    };
+}
+
 } // anonymous namespace
 
 Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, const ProgressCallback& callback )
@@ -106,22 +116,35 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
     const float cProgressReadScans = 0.9f;
 
     std::vector<AffineXf3f> scansXf( pairs.size() );
+    tbb::task_group_context ctx;
+    std::string error;
     if ( !ParallelFor( scansXf, [&]( size_t i )
         {
             auto xf = readScanPose( pairs[i].first );
-            if ( xf )
-                scansXf[i] = *xf;
-            //if ( !xf )
-            //    return unexpected( std::move( xf.error() ) );
-        }, subprogress( callback, 0.0f, cProgressReadXfs ), cReportEverySingle ) )
+            if ( !xf )
+            {
+                if ( ctx.cancel_group_execution() )
+                    error = xf.error();
+                return;
+            }
+            scansXf[i] = *xf;
+        }, mixContextProgress( ctx, subprogress( callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle ) )
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return unexpected( std::move( error ) );
         return unexpectedOperationCanceled();
+    }
 
     std::vector<PointCloud> scans( pairs.size() );
     if ( !ParallelFor( scans, [&]( size_t i )
         {
             auto cloud = fromPly( pairs[i].second );
-            //if ( !cloud )
-            //    return unexpected( std::move( cloud.error() ) );
+            if ( !cloud )
+            {
+                if ( ctx.cancel_group_execution() )
+                    error = cloud.error();
+                return;
+            }
 
             // transform the loaded points (and normals) into the common coordinate frame
             const auto xf = scansXf[i];
@@ -133,20 +156,29 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
             } );
 
             scans[i] = std::move( *cloud );
-        }, subprogress( callback, cProgressReadXfs, cProgressReadScans ), cReportEverySingle ) )
+        }, mixContextProgress( ctx, subprogress( callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle ) )
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return unexpected( std::move( error ) );
         return unexpectedOperationCanceled();
+    }
 
     std::vector<VertId> firstScanPoint;
     firstScanPoint.reserve( pairs.size() + 1 );
     firstScanPoint.push_back( 0_v );
+    bool anyNormals = false;
     for ( const auto & s : scans )
+    {
         firstScanPoint.push_back( firstScanPoint.back() + s.points.size() );
+        anyNormals = anyNormals || !s.normals.empty();
+    }
     assert( firstScanPoint.size() == pairs.size() + 1 );
     const int totalPoints( firstScanPoint.back() );
 
     PointCloud res;
     res.points.resizeNoInit( totalPoints );
-    res.normals.resize( totalPoints );
+    if ( anyNormals )
+        res.normals.resize( totalPoints );
     res.validPoints.resize( totalPoints, true );
     if ( !ParallelFor( scans, [&]( size_t i )
         {
@@ -156,7 +188,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
             {
                 auto t = f + (int)v;
                 res.points[t] = scan.points[v];
-                if ( v < scan.normals.size() )
+                if ( anyNormals && v < scan.normals.size() )
                     res.normals[t] = scan.normals[v];
             }
         }, subprogress( callback, cProgressReadScans, 1.0f ) ) )

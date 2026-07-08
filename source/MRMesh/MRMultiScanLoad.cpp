@@ -36,7 +36,7 @@ std::optional<int> parseScanIndex( const std::string& stem, std::string_view pre
     return index;
 }
 
-// reads a 4x4 row-major rigid transformation from a .pose file as AffineXf3f (the last row 0 0 0 1 is ignored)
+// reads a 4x4 row-major rigid transformation from a text file as AffineXf3f (the last row 0 0 0 1 is ignored)
 Expected<AffineXf3f> readScanPose( const std::filesystem::path& file )
 {
     std::ifstream in( file );
@@ -64,7 +64,8 @@ ProgressCallback mixContextProgress( tbb::task_group_context& ctx, ProgressCallb
 
 } // anonymous namespace
 
-Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, const MultiScanLoadSettings& settings )
+Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder,
+    const MultiScanLoadSettings& settings, const ProgressCallback& callback )
 {
     MR_TIMER;
 
@@ -72,7 +73,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
     if ( !std::filesystem::is_directory( folder, ec ) )
         return unexpected( utf8string( folder ) + " is not a folder" );
 
-    // collect .pose and .ply files indexed by the number embedded in their names
+    // collect transformation and .ply files indexed by the number embedded in their names
     std::map<int, std::filesystem::path> poseFiles, plyFiles;
     for ( auto entry : Directory{ folder, ec } )
     {
@@ -84,7 +85,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
         for ( auto& c : ext )
             c = ( char )tolower( c );
 
-        if ( ext == ".pose" )
+        if ( ext == settings.poseExt )
         {
             if ( auto idx = parseScanIndex( stem, settings.posePrefix ) )
                 poseFiles[*idx] = path;
@@ -96,15 +97,15 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
         }
     }
 
-    // keep only the indices having both a .pose and a .ply file
-    std::vector<std::pair<std::filesystem::path, std::filesystem::path>> pairs; // ( .pose, .ply )
+    // keep only the indices having both a transformation and a .ply file
+    std::vector<std::pair<std::filesystem::path, std::filesystem::path>> pairs; // ( transformation, .ply )
     for ( const auto& [idx, posePath] : poseFiles )
     {
         if ( auto it = plyFiles.find( idx ); it != plyFiles.end() )
             pairs.emplace_back( posePath, it->second );
     }
     if ( pairs.empty() )
-        return unexpected( "No pairs of " + settings.posePrefix + "*.pose and "
+        return unexpected( "No pairs of " + settings.posePrefix + "*" + settings.poseExt + " and "
             + settings.scanPrefix + "*.ply files found in " + utf8string( folder ) );
 
     const int cReportEverySingle = 1;
@@ -126,7 +127,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
                 return;
             }
             scansXf[i] = *xf;
-        }, mixContextProgress( ctx, subprogress( settings.callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle )
+        }, mixContextProgress( ctx, subprogress( callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle )
         || ctx.is_group_execution_cancelled() )
     {
         if ( ctx.is_group_execution_cancelled() )
@@ -155,7 +156,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
             } );
 
             scans[i] = std::move( *cloud );
-        }, mixContextProgress( ctx, subprogress( settings.callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle )
+        }, mixContextProgress( ctx, subprogress( callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle )
         || ctx.is_group_execution_cancelled() )
     {
         if ( ctx.is_group_execution_cancelled() )
@@ -191,7 +192,7 @@ Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder, c
                 if ( anyNormals && v < scan.normals.size() )
                     res.normals[t] = scan.normals[v];
             }
-        }, subprogress( settings.callback, cProgressReadScans, 1.0f ) ) )
+        }, subprogress( callback, cProgressReadScans, 1.0f ) ) )
         return unexpectedOperationCanceled();
 
     return res;

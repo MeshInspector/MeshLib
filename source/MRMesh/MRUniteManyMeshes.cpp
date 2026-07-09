@@ -11,6 +11,7 @@
 #include "MRParallelFor.h"
 #include "MRMeshComponents.h"
 #include "MRBitSetParallelFor.h"
+#include "MRMeshFillHole.h"
 #include <random>
 
 namespace MR
@@ -349,19 +350,62 @@ Expected<Mesh> uniteManyMeshes(
     return reducer.resultMesh;
 }
 
-Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& params )
+namespace
+{
+void normalizeUniteMesh( Mesh& mesh, bool needClosed, const UniteMeshNormalizationParams& params )
+{
+    if ( needClosed )
+    {
+        FillHoleParams fhp;
+        fhp.metric = getMinAreaMetric( mesh );
+        fillHoles( mesh, mesh.topology.findHoleRepresentiveEdges(), fhp );
+    }
+
+    if ( params.trySelfBoolean )
+    {
+        auto sbRes = selfBoolean( mesh );
+        if ( sbRes.has_value() )
+        {
+            sbRes->deleteFaces( sbRes->topology.getValidFaces() - MeshComponents::getLargestComponent( *sbRes ) );
+            mesh = std::move( *sbRes );
+        }
+    }
+    if ( params.flipInverted && mesh.volume() < 0.0f )
+        mesh.topology.flipOrientation();
+
+    if ( params.expansionRatio != 0.0f )
+    {
+        auto center = mesh.findCenterFromFaces();
+        mesh.transform( AffineXf3f::xfAround( Matrix3f::scale( 1.0f + params.expansionRatio ), center ) );
+    }
+}
+}
+
+Expected<Mesh> uniteManyMeshesMutable( const std::vector<Mesh*>& meshes,
+    const UniteManyMeshesParams& params, const UniteMeshNormalizationParams& normalizeParams )
 {
     MR_TIMER;
-    if ( !mesh.topology.isClosed() )
+    auto keepGoing = ParallelFor( meshes, [&] ( size_t i )
     {
-        assert( !"uniteComponents: require closed mesh" );
-        return unexpected( "Mesh is not closed." );
-    }
+        normalizeUniteMesh( *meshes[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );
+    }, subprogress( params.progressCb, 0.0f, 0.3f ) );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+    UniteManyMeshesParams ump = params;
+    ump.progressCb = subprogress( params.progressCb, 0.3f, 1.0f );
+    // reinterpret_cast here to avoid allocation new vector with same pointers
+    return uniteManyMeshes( reinterpret_cast< const std::vector<const Mesh*>& >( meshes ), ump );
+}
+
+Expected<Mesh> uniteComponents( const Mesh& mesh,
+    const UniteManyMeshesParams& params, const UniteMeshNormalizationParams& normalizeParams )
+{
+    MR_TIMER;
     auto mapAndNum = MeshComponents::getAllComponentsMap( mesh );
-    if ( !reportProgress( params.baseParams.progressCb, 0.1f ) )
+    if ( !reportProgress( params.progressCb, 0.1f ) )
         return unexpectedOperationCanceled();
     std::vector<Mesh> components( mapAndNum.second );
-    std::vector<Mesh*> meshPtrs( mapAndNum.second );
+    std::vector<const Mesh*> meshPtrs( mapAndNum.second );
     auto keepGoing = ParallelFor( components, [&] ( size_t i )
     {
         FaceBitSet compBs( mesh.topology.faceSize() );
@@ -371,46 +415,16 @@ Expected<Mesh> uniteComponents( const Mesh& mesh, const UniteComponentsParams& p
                 compBs.set( f );
         } );
         components[i].addMeshPart( MeshPart( mesh, &compBs ) );
+        normalizeUniteMesh( components[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );
         meshPtrs[i] = &components[i];
 
         compBs = {}; // reduce peek memory
-    }, subprogress( params.baseParams.progressCb, 0.1f, 0.4f ) );
+    }, subprogress( params.progressCb, 0.1f, 0.4f ) );
     if ( !keepGoing )
         return unexpectedOperationCanceled();
     auto np = params;
-    np.baseParams.progressCb = subprogress( params.baseParams.progressCb, 0.4f, 1.0f );
-    return uniteComponents( meshPtrs, np );
-}
-
-Expected<Mesh> uniteComponents( const std::vector<Mesh*>& meshes, const UniteComponentsParams& params )
-{
-    MR_TIMER;
-    auto keepGoing = ParallelFor( meshes, [&] ( size_t i )
-    {
-        if ( params.trySelfBoolean )
-        {
-            auto sbRes = selfBoolean( *meshes[i] );
-            if ( sbRes.has_value() )
-            {
-                sbRes->deleteFaces( sbRes->topology.getValidFaces() - MeshComponents::getLargestComponent( *sbRes ) );
-                *meshes[i] = std::move( *sbRes );
-            }
-        }
-        if ( params.flipInverted && meshes[i]->volume() < 0.0f )
-            meshes[i]->topology.flipOrientation();
-
-        if ( params.expansionRatio != 0.0f )
-        {
-            auto center = meshes[i]->findCenterFromFaces();
-            meshes[i]->transform( AffineXf3f::xfAround( Matrix3f::scale( 1.0f + params.expansionRatio ), center ) );
-        }
-    }, subprogress( params.baseParams.progressCb, 0.0f, 0.3f ) );
-    if ( !keepGoing )
-        return unexpectedOperationCanceled();
-    UniteManyMeshesParams ump = params.baseParams;
-    ump.progressCb = subprogress( params.baseParams.progressCb, 0.3f, 1.0f );
-    // reinterpret_cast here to avoid allocation new vector with same pointers
-    return uniteManyMeshes( reinterpret_cast< const std::vector<const Mesh*>& >( meshes ), ump );
+    np.progressCb = subprogress( params.progressCb, 0.4f, 1.0f );
+    return uniteManyMeshes( meshPtrs, np );
 }
 
 }

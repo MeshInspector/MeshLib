@@ -11,6 +11,7 @@
 #include "MRFillContours2D.h"
 #include "MRAABBTreePoints.h"
 #include "MRPointsProject.h"
+#include "MRClosestPointInTriangle.h"
 #include "MRphmap.h"
 #include "MRPch/MRSpdlog.h"
 #include <queue>
@@ -1322,6 +1323,26 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     return res;
 }
 
+// considers possible bridge between org(e0) and point p1 as good,
+// if org(e0) is baryscentrically nearest to point p1 among all 3 vertices in every triangle incident to it;
+// so bridges going deep inside existing triangles are bad
+static bool isGoodBridge( MeshTopology& topology, const VertCoords& points, EdgeId e0, const Vector3f& p1 )
+{
+    assert( !topology.left( e0 ) );
+    const auto eEnd = topology.next( e0 );
+
+    for ( auto e = e0; e != eEnd; e = topology.prev( e ) )
+    {
+        if ( !topology.left( e ) )
+            continue;
+        const auto ps = getLeftTriPoints( topology, points, e );
+        const auto pp = closestPointInTriangle( p1, ps[0], ps[1], ps[2] );
+        if ( pp.second.a + pp.second.b > 0.5f )
+            return false;
+    }
+    return true;
+}
+
 std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const VertCoords& points, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER;
@@ -1333,7 +1354,7 @@ std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const Vert
     // virtual point cloud of boundary vertices from
     VertCoords bdPoints;            // bdVertId -> 3d coordinate
     Vector<EdgeId, VertId> bdEdges; // bdVertId -> boundary edge with that point in origin
-    Vector<int, VertId> holeIds;     // bdVertId -> hole index
+    Vector<int, VertId> holeIds;    // bdVertId -> hole index
     for( int h = 0; h < holeRepresentativeEdges.size(); ++h )
     {
         assert( !topology.left( holeRepresentativeEdges[h] ) );
@@ -1367,6 +1388,10 @@ std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const Vert
             continue;
         auto v2 = closests[v1];
         if ( v != v2 )
+            continue;
+        if ( !isGoodBridge( topology, points, bdEdges[v], bdPoints[v1] ) )
+            continue;
+        if ( !isGoodBridge( topology, points, bdEdges[v1], bdPoints[v] ) )
             continue;
         if ( auto b = makeBridgeEdge( topology, bdEdges[v], bdEdges[v1] ) )
             bridgesCreated.push_back( b );

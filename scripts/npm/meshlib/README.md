@@ -24,10 +24,10 @@ In the browser you can skip npm entirely and import the module directly:
 
 ```js
 // latest version
-import createMeshLib from 'https://cdn.meshlib.io/js/meshlib/meshlib.mjs';
+import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
 // or pin a specific version
-import createMeshLib from 'https://cdn.meshlib.io/js/meshlib@1.2.3/meshlib.mjs';
+import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
 ```
 
 ## Usage

@@ -49,9 +49,9 @@ jobs:
           }
           for f in meshlib meshlib-mt ; do
             if [ "${IS_DRAFT}" = "true" ] ; then
-              upload "${BUCKET}/js/${f}-draft"  --cache-control "public, max-age=300"
+              upload "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
             else
-              upload "${BUCKET}/js/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
+              upload "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
             fi
           done
 
@@ -60,7 +60,7 @@ jobs:
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/js/meshlib-draft/*" "/js/meshlib-mt-draft/*"
+            --paths "/meshlib-draft/*" "/meshlib-mt-draft/*"
 
   npm:
     permissions:

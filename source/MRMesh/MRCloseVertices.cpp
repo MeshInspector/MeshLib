@@ -123,22 +123,26 @@ std::optional<VertBitSet> findCloseVertices( const PointCloud & cloud, float clo
     return findCloseVertices( *x );
 }
 
-std::vector<EdgePair> findTwinEdgePairs( const Mesh & mesh, float closeDist )
+std::vector<EdgePair> findTwinEdgePairs( const Mesh& mesh, float closeDist )
+{
+    const auto map = *findSmallestCloseVertices( mesh, closeDist );
+    return findTwinEdgePairs( mesh.topology, map );
+}
+
+std::vector<EdgePair> findTwinEdgePairs( const MeshTopology& tp, const VertMap& map )
 {
     MR_TIMER;
     std::vector<EdgePair> res;
-
-    const auto map = *findSmallestCloseVertices( mesh, closeDist );
     VertBitSet closeVerts = findCloseVertices( map );
 
     HashMap<VertPair, EdgeId> hmap;
     for ( auto v : closeVerts )
     {
         const auto vm = map[v];
-        for ( auto e : orgRing( mesh.topology, v ) )
+        for ( auto e : orgRing( tp, v ) )
         {
-            assert( mesh.topology.org( e ) == v );
-            VertPair vp{ vm, map[mesh.topology.dest( e )] };
+            assert( tp.org( e ) == v );
+            VertPair vp{ vm, map[tp.dest( e )] };
             auto [it, inserted] = hmap.insert( { vp, e } );
             if ( !inserted )
             {

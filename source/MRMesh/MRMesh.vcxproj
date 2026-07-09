@@ -251,6 +251,7 @@
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
     <ClInclude Include="MRSplineProject.h" />
+    <ClInclude Include="MRStitchOpenTwins.h" />
     <ClInclude Include="MRTwoLineSegmDist.h" />
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
@@ -337,6 +338,7 @@
     <ClInclude Include="MRPointCloudRadius.h" />
     <ClInclude Include="MRPointsInBall.h" />
     <ClInclude Include="MRPointsLoad.h" />
+    <ClInclude Include="MRMultiScanLoad.h" />
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
@@ -624,6 +626,7 @@
     <ClCompile Include="MRPointObject.cpp" />
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRMultiScanLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
     <ClCompile Include="MRPointToPointAligningTransform.cpp" />
@@ -660,6 +663,7 @@
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRSplineProject.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
+    <ClCompile Include="MRStitchOpenTwins.cpp" />
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTelemetry.cpp" />

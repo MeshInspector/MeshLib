@@ -43,8 +43,7 @@ jobs:
       need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
       vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
       disable_ubuntu_x64:         ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
       disable_ubuntu_arm64:       ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
       disable_emscripten:         ${{ needs.config.outputs.build_enable_emscripten != 'true' }}
@@ -158,8 +157,7 @@ jobs:
       - windows-build-test
     uses: ./.github/workflows/update-win-version.yml
     with:
-      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version: ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 

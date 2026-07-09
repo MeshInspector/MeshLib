@@ -22,6 +22,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 
+#include <atomic>
 #include <filesystem>
 
 namespace
@@ -99,10 +100,17 @@ static Slices2D prepareSlices( const MeshXf& mesh, const Box3f& worldBox, float 
     return res;
 }
 
-void save2dModelFile( const std::filesystem::path& path, const Slices2D& slices )
+static Expected<void> saveXml( tinyxml2::XMLDocument& doc, const std::filesystem::path& file )
+{
+    if ( tinyxml2::XML_SUCCESS != doc.SaveFile( utf8string( file ).c_str() ) )
+        return unexpected( fmt::format( "Cannot save {}: {}", utf8string( file.filename() ), doc.ErrorStr() ) );
+    return {};
+}
+
+static Expected<void> save2dModelFile( const std::filesystem::path& path, const Slices2D& slices )
 {
     if ( slices.empty() )
-        return;
+        return {};
 
     tinyxml2::XMLDocument slicesDoc;
     auto decl = slicesDoc.NewDeclaration();
@@ -169,8 +177,7 @@ void save2dModelFile( const std::filesystem::path& path, const Slices2D& slices 
     model->LinkEndChild( resources );
     model->LinkEndChild( model->InsertNewChildElement( "build" ) );
     slicesDoc.LinkEndChild( model );
-    auto slPath = utf8string( path );
-    slicesDoc.SaveFile( slPath.c_str() );
+    return saveXml( slicesDoc, path );
 }
 
 Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nesting3mfParams& params )
@@ -229,8 +236,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
             type->LinkEndChild( el );
         }
         contentType.LinkEndChild( type );
-        auto ctPath = utf8string( dir / "[Content_Types].xml" );
-        contentType.SaveFile( ctPath.c_str() );
+        if ( auto res = saveXml( contentType, dir / "[Content_Types].xml" ); !res )
+            return unexpected( std::move( res.error() ) );
     }
 
     if ( !reportProgress( params.cb, 0.05f ) )
@@ -269,14 +276,26 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
 
     // 2D
     {
+        // task_group_context cannot be combined with the progress callback, so the first
+        // failed worker wins the hadError CAS and publishes its error; others see it and skip
+        std::atomic<bool> hadError{ false };
+        std::string firstError;
         keepGoing = ParallelFor( params.meshes, [&] ( ObjId i )
         {
+            if ( hadError.load( std::memory_order_relaxed ) )
+                return;
             auto slices = prepareSlices( params.meshes[i], worldBoxes[i], params.zStep, params.decimateMaxError );
-            auto slPath = utf8string( dir / "2D" / ( uuids[i] + ".model" ) );
-            save2dModelFile( slPath, slices );
+            if ( auto res = save2dModelFile( dir2d / ( uuids[i] + ".model" ), slices ); !res )
+            {
+                bool expected = false;
+                if ( hadError.compare_exchange_strong( expected, true, std::memory_order_acq_rel ) )
+                    firstError = std::move( res.error() );
+            }
         }, subprogress( params.cb, 0.15f, 0.4f ) );
         if ( !keepGoing )
             return unexpectedOperationCanceled();
+        if ( hadError.load() )
+            return unexpected( std::move( firstError ) );
     }
 
     std::string tempStr;
@@ -381,8 +400,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
         }
         model->LinkEndChild( build );
         buildDoc.LinkEndChild( model );
-        auto bdPath = utf8string( dir / "3D" / "3dmodel.model" );
-        buildDoc.SaveFile( bdPath.c_str() );
+        if ( auto res = saveXml( buildDoc, dir / "3D" / "3dmodel.model" ); !res )
+            return unexpected( std::move( res.error() ) );
     }
 
     if ( !reportProgress( params.cb, 0.4f ) )
@@ -419,8 +438,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
             rels->LinkEndChild( rel );
         }
         rootRels.LinkEndChild( rels );
-        auto rootRelsPath = utf8string( dirRels / ".rels" );
-        rootRels.SaveFile( rootRelsPath.c_str() );
+        if ( auto res = saveXml( rootRels, dirRels / ".rels" ); !res )
+            return unexpected( std::move( res.error() ) );
 
         tinyxml2::XMLDocument rels3d;
         decl = rels3d.NewDeclaration( "xml version=\"1.0\"" );
@@ -446,8 +465,8 @@ Expected<void> exportNesting3mf( const std::filesystem::path& path, const Nestin
             rels->LinkEndChild( rel );
         }
         rels3d.LinkEndChild( rels );
-        auto rels3dPath = utf8string( dir3dRels / "3dmodel.model.rels" );
-        rels3d.SaveFile( rels3dPath.c_str() );
+        if ( auto res = saveXml( rels3d, dir3dRels / "3dmodel.model.rels" ); !res )
+            return unexpected( std::move( res.error() ) );
     }
 
     if ( !reportProgress( params.cb, 0.5f ) )

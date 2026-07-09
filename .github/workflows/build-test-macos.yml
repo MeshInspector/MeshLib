@@ -76,6 +76,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
+
       - name: Checkout third-party submodules
         run: |
           # Selective init -- parent Checkout drops submodules:true.
@@ -170,9 +173,6 @@ jobs:
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           # Cuda placeholders:
           cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
-
-      - name: macOS Diagnostics
-        uses: ./.github/actions/macos-diagnostics
 
       - name: Build
         run: ./scripts/build_source.sh

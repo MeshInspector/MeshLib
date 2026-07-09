@@ -58,22 +58,15 @@ enum class MtlElement
     DissolveTexture,
 };
 
-std::string_view skipSpaces( std::string_view line )
-{
-    while ( !line.empty() && ( line[0] == ' ' || line[0] == '\t' ) )
-        line.remove_prefix( 1 );
-    return line;
-}
-
 template <typename T>
 T parseToken( std::string_view line );
 
 template <>
 ObjElement parseToken<ObjElement>( std::string_view line )
 {
-    line = skipSpaces( line );
-
-    assert( !line.empty() );
+    line = trimLeft( line );
+    if ( line.empty() )
+        return ObjElement::Unknown;
     switch ( line[0] )
     {
     case 'v':
@@ -121,9 +114,9 @@ bool isSingleLineElement( T el )
 template <>
 MtlElement parseToken<MtlElement>( std::string_view line )
 {
-    line = skipSpaces( line );
-
-    assert( !line.empty() );
+    line = trimLeft( line );
+    if ( line.empty() )
+        return MtlElement::Unknown;
     switch ( line[0] )
     {
     case 'n':
@@ -478,7 +471,7 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
                 result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
                 currentMaterial = {};
             }
-            currentMaterialName = skipSpaces( line ).substr( strlen( "newmtl" ), std::string_view::npos );
+            currentMaterialName = trimLeft( line ).substr( strlen( "newmtl" ), std::string_view::npos );
             boost::trim( currentMaterialName );
         }
         break;
@@ -1026,7 +1019,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             // TODO: support multiple files
-            std::string filename( skipSpaces( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
+            std::string filename( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
             boost::trim( filename );
             mtl = loadMtlLibrary( dir / filename );
             break;
@@ -1179,7 +1172,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& objData = oScopes.emplace_back();
-            objData.objName = skipSpaces( line ).substr( strlen( "o" ), std::string_view::npos );
+            objData.objName = trimLeft( line ).substr( strlen( "o" ), std::string_view::npos );
             objData.fId = faceInfos.size();
             boost::trim( objData.objName );
             break;
@@ -1191,7 +1184,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
             auto& mtlData = mScopes.emplace_back();
-            mtlData.mtName = skipSpaces( line ).substr( strlen( "usemtl" ), std::string_view::npos );
+            mtlData.mtName = trimLeft( line ).substr( strlen( "usemtl" ), std::string_view::npos );
             mtlData.fId = faceInfos.size();
             boost::trim( mtlData.mtName );
             break;

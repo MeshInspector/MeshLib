@@ -1,4 +1,4 @@
-name: Runner power & thermal diagnostics
+name: macOS Diagnostics
 description: >
   Print the runner's power source, Low Power Mode, thermal throttle state and
   background load, then sample them every 10s until the end of the job; the

@@ -171,9 +171,8 @@ jobs:
           # Cuda placeholders:
           cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
-      - name: Runner power & thermal diagnostics
-        if: ${{ matrix.instance == 'self-hosted-arm' }}
-        uses: ./.github/actions/runner-power-diagnostics
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
 
       - name: Build
         run: ./scripts/build_source.sh

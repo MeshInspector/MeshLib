@@ -174,8 +174,6 @@ jobs:
       - name: Runner power & thermal diagnostics
         if: ${{ matrix.instance == 'self-hosted-arm' }}
         uses: ./.github/actions/runner-power-diagnostics
-        with:
-          mode: start
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -189,12 +187,6 @@ jobs:
             -DMR_CXX_STANDARD=23
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
-
-      - name: Runner power & thermal during build
-        if: ${{ always() && matrix.instance == 'self-hosted-arm' }}
-        uses: ./.github/actions/runner-power-diagnostics
-        with:
-          mode: stop
 
       - name: MRMesh Exported Symbols
         run: |

@@ -1,45 +1,11 @@
 name: Runner power & thermal diagnostics
 description: >
   Print the runner's power source, Low Power Mode, thermal throttle state and
-  background load, and sample them in the background between 'start' and 'stop'
-  to explain speed differences between self-hosted machines. macOS only.
-
-inputs:
-  mode:
-    description: start = print state and launch a 10s background sampler; stop = kill the sampler and dump its samples
-    required: true
+  background load, then sample them every 10s until the end of the job; the
+  automatic post step dumps the samples. Helps explain speed differences
+  between self-hosted machines. macOS only.
 
 runs:
-  using: composite
-  steps:
-    - name: Print state and start sampler
-      if: ${{ inputs.mode == 'start' }}
-      shell: bash
-      run: |
-        pmset -g
-        pmset -g batt
-        pmset -g therm
-        uptime
-        ps -Ao %cpu,%mem,etime,comm -r | head -16 || true
-        vm_stat | head -8 || true
-        sysctl vm.swapusage
-        nohup bash -c 'while :; do
-            echo "=== $(date -u +%FT%TZ)"
-            pmset -g therm
-            pmset -g batt
-            uptime
-            ps -Ao %cpu,comm -r | head -8
-            sleep 10
-          done' >runner_diag_sampler.log 2>&1 &
-        echo $! >runner_diag_sampler.pid
-
-    - name: Stop sampler and dump samples
-      if: ${{ inputs.mode == 'stop' }}
-      shell: bash
-      run: |
-        if [ -f runner_diag_sampler.pid ]; then
-          kill "$(cat runner_diag_sampler.pid)" 2>/dev/null || true
-          echo "::group::power/thermal/load samples"
-          cat runner_diag_sampler.log
-          echo "::endgroup::"
-        fi
+  using: node24
+  main: start.js
+  post: stop.js

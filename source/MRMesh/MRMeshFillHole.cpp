@@ -1324,7 +1324,7 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
 }
 
 // considers possible bridge between org(e0) and point p1 as good,
-// if org(e0) is barycentrically nearest to point p1 among all 3 vertices in every triangle incident to it;
+// if org(e0) has barycentric weight not less than 0.5 in the point closest to p1 within every triangle incident to org(e0);
 // so bridges going deep inside existing triangles are bad
 static bool isGoodBridge( const MeshTopology& topology, const VertCoords& points, EdgeId e0, const Vector3f& p1 )
 {

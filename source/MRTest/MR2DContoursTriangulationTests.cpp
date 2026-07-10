@@ -8,6 +8,7 @@
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MR2to3.h>
 #include <MRSymbolMesh/MRSymbolMesh.h>
 #include <gtest/gtest.h>
 #include <chrono>
@@ -37,6 +38,94 @@ TEST( MRMesh, PlanarTriangulation )
     // Must not contain degenerate faces
     EXPECT_TRUE( mesh.triangleAspectRatio( 0_f ) < 10.0f );
     EXPECT_TRUE( mesh.triangleAspectRatio( 1_f ) < 10.0f );
+}
+
+TEST( MRMesh, PlanarTriangulationWindingAndIntersections )
+{
+    // signed crossing number, independent of the sweep line internals
+    auto windingOracle = [] ( const Contours2f& conts, const Vector2f& p )
+    {
+        int w = 0;
+        for ( const auto& cont : conts )
+        {
+            for ( size_t i = 0; i + 1 < cont.size(); ++i )
+            {
+                const auto& a = cont[i];
+                const auto& b = cont[i + 1];
+                if ( a.y <= p.y && b.y > p.y && cross( b - a, p - a ) > 0 )
+                    ++w;
+                else if ( b.y <= p.y && a.y > p.y && cross( b - a, p - a ) < 0 )
+                    --w;
+            }
+        }
+        return w;
+    };
+
+    // checks each face's winding against the oracle at the face centroid (a mismatch means the face
+    // straddles two winding regions, e.g. if a Delone flip crossed a contour edge), then total areas per winding
+    auto checkWinding = [&] ( const Contours2f& conts, const Mesh& mesh, const Vector<int, FaceId>& faceWinding,
+        double expectedArea1, double expectedArea2 )
+    {
+        ASSERT_EQ( faceWinding.size(), mesh.topology.faceSize() );
+        double areaByWinding[3] = {};
+        for ( auto f : mesh.topology.getValidFaces() )
+        {
+            const int w = faceWinding[f];
+            EXPECT_EQ( w, windingOracle( conts, to2dim( mesh.triCenter( f ) ) ) );
+            ASSERT_TRUE( w == 1 || w == 2 );
+            areaByWinding[w] += mesh.area( f );
+        }
+        EXPECT_NEAR( areaByWinding[1], expectedArea1, 1e-4 );
+        EXPECT_NEAR( areaByWinding[2], expectedArea2, 1e-4 );
+    };
+
+    {
+        // two overlapping ccw squares [0,2]^2 and [1,3]^2: the [1,2]^2 overlap has winding number 2, the rest of the union 1
+        const Contours2f conts =
+        {
+            { { 0.f, 0.f }, { 2.f, 0.f }, { 2.f, 2.f }, { 0.f, 2.f }, { 0.f, 0.f } },
+            { { 1.f, 1.f }, { 3.f, 1.f }, { 3.f, 3.f }, { 1.f, 3.f }, { 1.f, 1.f } }
+        };
+
+        PlanarTriangulation::IntersectionsMap interMap;
+        Vector<int, FaceId> faceWinding;
+        const Mesh mesh = PlanarTriangulation::triangulateContours( conts,
+            { .outFaceWinding = &faceWinding, .outInterMap = &interMap } );
+
+        // squares' edges cross at (2,1) and (1,2); each crossing vertex interpolates both of its source edges
+        EXPECT_EQ( interMap.shift, size_t( 8 ) );
+        ASSERT_EQ( interMap.map.size(), size_t( 2 ) );
+        for ( size_t i = 0; i < interMap.map.size(); ++i )
+        {
+            const auto& info = interMap.map[i];
+            ASSERT_TRUE( info.isIntersection() );
+            const auto p = to2dim( mesh.points[VertId( interMap.shift + i )] );
+            const auto l = ( 1 - info.lRatio ) * to2dim( mesh.points[info.lOrg] ) + info.lRatio * to2dim( mesh.points[info.lDest] );
+            const auto u = ( 1 - info.uRatio ) * to2dim( mesh.points[info.uOrg] ) + info.uRatio * to2dim( mesh.points[info.uDest] );
+            EXPECT_LE( ( l - p ).length(), 1e-6f );
+            EXPECT_LE( ( u - p ).length(), 1e-6f );
+        }
+
+        checkWinding( conts, mesh, faceWinding, 6.0, 1.0 ); // union 7 = 6 + the [1,2]^2 overlap
+
+        // the holeVertsIds overload stays available and resolves without ambiguity
+        EXPECT_EQ( PlanarTriangulation::triangulateContours( conts, nullptr ).topology.numValidFaces(), mesh.topology.numValidFaces() );
+    }
+
+    {
+        // long thin overlap strip [0,10]x[0,0.3] (winding 2) with a far midpoint vertex below: if Delone flips
+        // ran here, they would cross the strip's long boundary edges and smear face winding
+        const Contours2f conts =
+        {
+            { { 0.f, -2.f }, { 5.f, -2.f }, { 10.f, -2.f }, { 10.f, 0.3f }, { 0.f, 0.3f }, { 0.f, -2.f } },
+            { { -1.f, 0.f }, { 11.f, 0.f }, { 11.f, 2.f }, { -1.f, 2.f }, { -1.f, 0.f } }
+        };
+
+        Vector<int, FaceId> faceWinding;
+        const Mesh mesh = PlanarTriangulation::triangulateContours( conts, { .outFaceWinding = &faceWinding } );
+
+        checkWinding( conts, mesh, faceWinding, 41.0, 3.0 ); // areas 23 + 24 with the strip counted once per winding
+    }
 }
 
 TEST( MRMesh, PlanarTriangulationMeshSpace )

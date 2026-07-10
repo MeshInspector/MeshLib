@@ -64,6 +64,7 @@ jobs:
 
   npm:
     permissions:
+      id-token: write   # OIDC -> npm trusted publishing
       contents: write   # download the draft release asset
     timeout-minutes: 15
     runs-on: ubuntu-latest
@@ -71,6 +72,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
+          node-version: 24   # staged publishing needs npm >= 11.15
           registry-url: https://registry.npmjs.org
 
       - name: Download release
@@ -80,11 +82,12 @@ jobs:
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
       - name: Publish npm packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          ARGS=""
-          [ "${IS_DRAFT}" = "true" ] && ARGS="--dry-run"   # npm has no draft; validate only
+          if [ "${IS_DRAFT}" = "true" ] ; then
+            ARGS="--dry-run"
+          else
+            ARGS="--provenance"
+          fi
           for TGZ in js-meshlib-*.tgz ; do
-            npm publish "./${TGZ}" --access public ${ARGS}
+            npm stage publish "./${TGZ}" --access public ${ARGS}
           done

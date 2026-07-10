@@ -1324,14 +1324,13 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
 }
 
 // considers possible bridge between org(e0) and point p1 as good,
-// if org(e0) is baryscentrically nearest to point p1 among all 3 vertices in every triangle incident to it;
+// if org(e0) is barycentrically nearest to point p1 among all 3 vertices in every triangle incident to it;
 // so bridges going deep inside existing triangles are bad
-static bool isGoodBridge( MeshTopology& topology, const VertCoords& points, EdgeId e0, const Vector3f& p1 )
+static bool isGoodBridge( const MeshTopology& topology, const VertCoords& points, EdgeId e0, const Vector3f& p1 )
 {
     assert( !topology.left( e0 ) );
-    const auto eEnd = topology.next( e0 );
 
-    for ( auto e = e0; e != eEnd; e = topology.prev( e ) )
+    for ( EdgeId e : orgRing( topology, e0 ) )
     {
         if ( !topology.left( e ) )
             continue;
@@ -1346,8 +1345,8 @@ static bool isGoodBridge( MeshTopology& topology, const VertCoords& points, Edge
 std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const VertCoords& points, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER;
-    assert( holeRepresentativeEdges.size() > 1 );
     std::vector<EdgeId> bridgesCreated;
+    // at least two holes are required to make a bridge
     if ( holeRepresentativeEdges.size() <= 1 )
         return bridgesCreated;
 

@@ -331,7 +331,7 @@ jobs:
           name: Distributives*
           failOnError: false
 
-  windows-unity-test:
+  unity-nuget-test:
     # Run whenever full-ci is requested and the Windows build is enabled, provided the
     # NuGet package was actually built and uploaded to the release. `!cancelled()` keeps
     # this job from being auto-skipped: without a status function the implicit success()

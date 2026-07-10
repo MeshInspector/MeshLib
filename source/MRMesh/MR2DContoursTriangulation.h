@@ -97,10 +97,11 @@ struct TriangulationParameters
 MRMESH_API Mesh triangulateContours( const Contours2d& contours, const TriangulationParameters& params = {} );
 MRMESH_API Mesh triangulateContours( const Contours2f& contours, const TriangulationParameters& params = {} );
 
-/// triangulate 2d contours, overload for backward compatibility
+/// triangulate 2d contours, C++-only overload for backward compatibility;
+/// hidden from generated bindings to keep their triangulateContours signatures unique
 /// \param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
-MRMESH_API Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds );
-MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds );
+MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds );
+MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds );
 
 /**
  * @brief triangulate 2d contours

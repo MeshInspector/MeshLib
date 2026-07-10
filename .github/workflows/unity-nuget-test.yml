@@ -19,9 +19,8 @@ on:
 permissions:
   contents: write
 
-# A Unity license allows at most 2 concurrent activations; together with
-# `max-parallel: 2` below this keeps simultaneous activations within the
-# limit even when several releases are tested back to back.
+# Serialize whole runs; matrix parallelism within a run is unrestricted
+# because manual (.ulf) license activation is per-machine, not seat-counted.
 concurrency:
   group: unity-test
   cancel-in-progress: false
@@ -36,9 +35,7 @@ jobs:
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      # Each job activates the Unity license on start; the activation
-      # action's post-job hook returns it automatically.
-      max-parallel: 2
+      max-parallel: 4
       matrix:
         os: [ windows-latest, ubuntu-latest, macos-latest, macos-15-intel ]
     runs-on: ${{ matrix.os }}
@@ -51,6 +48,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          # The job token has `contents: write`; don't leave it readable in
+          # .git/config for later steps.
+          persist-credentials: false
 
       - name: Download nuget package
         shell: pwsh
@@ -115,24 +116,53 @@ jobs:
           version-file: ${{ env.UNITY_PROJECT }}/ProjectSettings/ProjectVersion.txt
 
       - name: Activate Unity license
-        uses: buildalon/activate-unity-license@e0d245d0787b7b9931b56ccbde3b508f6b70f1af # v2.2.2
-        with:
-          license: 'Personal'
-          username: ${{ secrets.UNITY_USERNAME }}
-          password: ${{ secrets.UNITY_PASSWORD }}
+        # Personal license via the official CLI and a manual license file:
+        # no Unity account credentials in CI. `-manualLicenseFile` is known
+        # to exit non-zero even on success, so the step is not gated on the
+        # exit code -- a failed activation surfaces as a licensing error in
+        # the test step.
+        shell: pwsh
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+        run: |
+          if (-not $env:UNITY_LICENSE) {
+            Write-Error "UNITY_LICENSE secret is not set (expected contents of the .ulf license file)"
+            exit 1
+          }
+          if ($IsMacOS) {
+            sudo mkdir -p "/Library/Application Support/Unity"
+            sudo chown -R "$env:USER" "/Library/Application Support/Unity"
+          }
+          $ulf = Join-Path $env:RUNNER_TEMP "Unity_lic.ulf"
+          Set-Content -Path $ulf -Value $env:UNITY_LICENSE
+          $log = Join-Path $env:RUNNER_TEMP "activation.log"
+          Start-Process -FilePath $env:UNITY_EDITOR_PATH -ArgumentList "-batchmode","-nographics","-quit","-manualLicenseFile",$ulf,"-logfile",$log -Wait -NoNewWindow
+          Remove-Item $ulf
+          Get-Content $log -Tail 20 -ErrorAction SilentlyContinue
 
       - name: Run test
         # Step-level timeout: when the Unity Editor invocation exceeds this
-        # cap, the step ends with `failure` (not `cancelled`) and the results
-        # upload below still executes. The action streams the editor log to
-        # the console and fails on non-zero exit codes (`-runTests` exits 2
-        # when tests fail), so no separate result verification is needed.
+        # cap, the step ends with `failure` (not `cancelled`) and the log
+        # print + results upload below still execute. `-runTests` exit codes:
+        # 0 all tests passed, 2 tests failed, 3 run error.
         timeout-minutes: 20
-        uses: buildalon/unity-action@2d420bea0f47fbe01377601fa3231bcf4de04f3a # v3.1.0
-        with:
-          project-path: ${{ env.UNITY_PROJECT }}
-          log-name: unity-test
-          args: '-runTests -testPlatform playmode -testResults ${{ github.workspace }}/results.xml'
+        shell: pwsh
+        run: |
+          $unityArgs = @(
+            "-batchmode", "-nographics",
+            "-projectPath", (Join-Path $env:GITHUB_WORKSPACE $env:UNITY_PROJECT),
+            "-runTests", "-testPlatform", "playmode",
+            "-testResults", (Join-Path $env:GITHUB_WORKSPACE "results.xml"),
+            "-logfile", (Join-Path $env:GITHUB_WORKSPACE "unity-test.log")
+          )
+          $proc = Start-Process -FilePath $env:UNITY_EDITOR_PATH -ArgumentList $unityArgs -Wait -PassThru -NoNewWindow
+          Write-Output "Unity exit code: $($proc.ExitCode)"
+          exit $proc.ExitCode
+
+      - name: Print editor log
+        if: always()
+        shell: pwsh
+        run: Get-Content unity-test.log -ErrorAction SilentlyContinue
 
       - name: Upload test results
         if: failure()
@@ -141,5 +171,5 @@ jobs:
           name: unity-test-results-${{ matrix.os }}
           path: |
             results.xml
-            ${{ env.UNITY_PROJECT }}/Builds/Logs/*.log
+            unity-test.log
           if-no-files-found: ignore

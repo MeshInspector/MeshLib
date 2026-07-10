@@ -239,6 +239,8 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
             if ( i1 < 0 )
                 return unexpected( "Incorrect filling" ); // most likely due to ties in input contour
             auto e1 = np[i1];
+            if ( !e1 )
+                return unexpected( "Incorrect filling" ); // most likely due to ties in input contour
             auto ne = pTp.next( e0 );
             auto dest = pTp.dest( ne );
             if ( dest != pTp.dest( e1 ) )

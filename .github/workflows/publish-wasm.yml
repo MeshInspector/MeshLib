@@ -61,6 +61,7 @@ jobs:
               upload "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
             else
               upload "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
+              upload "${BUCKET}/${f}"        --cache-control "public, max-age=300"
             fi
           done
 
@@ -70,6 +71,13 @@ jobs:
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/meshlib-draft/*" "/meshlib-mt-draft/*"
+
+      - name: Invalidate latest
+        if: ${{ env.IS_DRAFT != 'true' }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/meshlib/*" "/meshlib-mt/*"
 
   npm:
     permissions:

@@ -164,6 +164,14 @@ jobs:
         run: |
           Start-Process -FilePath $env:UNITY_EDITOR_PATH -ArgumentList "-batchmode","-nographics","-quit","-projectPath",(Join-Path $env:GITHUB_WORKSPACE $env:UNITY_PROJECT),"-logfile",(Join-Path $env:GITHUB_WORKSPACE "unity-prime.log") -Wait -NoNewWindow
 
+      - name: Setup .NET
+        # macOS runners ship dotnet on PATH but without a registered install
+        # location, so the NuGetForUnity.Cli tool host fails with ".NET
+        # location: Not found"; setup-dotnet registers it (sets DOTNET_ROOT).
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '9.x'
+
       - name: Install nuget package
         # Runs after the prime pass so the natives restored here are imported
         # by an editor session that already has the postprocessor compiled.

@@ -112,7 +112,7 @@
     },
     {
       "cpuArchitecture": "x86_64",
-      "editorCpuArchitecture": "",
+      "editorCpuArchitecture": "X86_64",
       "editorOperatingSystem": "OSX",
       "runtime": "osx-x64",
       "supportedPlatformTargets": null,
@@ -122,8 +122,8 @@
     },
     {
       "cpuArchitecture": "ARM64",
-      "editorCpuArchitecture": "",
-      "editorOperatingSystem": "",
+      "editorCpuArchitecture": "ARM64",
+      "editorOperatingSystem": "OSX",
       "runtime": "osx-arm64",
       "supportedPlatformTargets": null,
       "\u003CSupportedPlatformTargets\u003Ek__BackingField": [

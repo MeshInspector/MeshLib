@@ -351,6 +351,9 @@ jobs:
     uses: ./.github/workflows/unity-nuget-test.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
+    # Reusable workflows do not see repository secrets unless the caller
+    # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
+    secrets: inherit
 
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.

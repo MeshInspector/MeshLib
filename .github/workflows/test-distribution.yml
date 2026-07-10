@@ -85,7 +85,7 @@ jobs:
 
       - name: Download Ubuntu x86-64 Release
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
@@ -180,7 +180,7 @@ jobs:
 
       - name: Download Ubuntu arm64 Release
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
@@ -272,7 +272,7 @@ jobs:
         # the macOS keychain, which is locked in self-hosted runner sessions
         # ("failed to move active token in keyring: exit status 36").
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
           scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
@@ -357,7 +357,7 @@ jobs:
 
       - name: Download Distributive
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
           gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}
 

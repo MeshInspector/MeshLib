@@ -398,14 +398,30 @@ Expected<LoadedObject> ThreeMFLoader::load( const std::vector<std::filesystem::p
     if ( !reportProgress( callback, 0.8f ) )
         return unexpectedOperationCanceled();
 
-    if ( objectNodes_.empty() )
-        return unexpected( "No objects found" );
-
     std::shared_ptr<Object> objRes = std::make_shared<Object>();
     for ( auto& node : objectNodes_ )
     {
         objRes->addChild( std::move( node->obj_ ) );
     }
+
+    if ( objRes->children().empty() )
+    {
+        // no <build> items (e.g. standalone slice stack .model file): add slice stacks not owned by any object
+        for ( auto& [_, xmlDoc] : xmlDocuments_ )
+        {
+            if ( !xmlDoc.rootNode )
+                continue;
+            for ( auto& ssItem : xmlDoc.rootNode->slicestackNodes_ )
+            {
+                auto* ssNode = ssItem.second;
+                if ( ssNode && ssNode->obj_ && !ssNode->obj_->parent() )
+                    objRes->addChild( ssNode->obj_ );
+            }
+        }
+    }
+
+    if ( objRes->children().empty() )
+        return unexpected( "No objects found" );
 
     if ( !reportProgress( callback, 1.0f ) )
         return unexpectedOperationCanceled();
@@ -1140,7 +1156,7 @@ Expected<void> Node::loadSlicestack_( ThreeMFLoader& loader, const tinyxml2::XML
 
         auto verticesNode = sliceNode->FirstChildElement( "s:vertices" );
         if ( !verticesNode )
-            break;
+            continue; // a slice without polygons is valid (empty layer)
         Polyline3 localPoly;
 #if TINYXML2_MAJOR_VERSION > 10
         localPoly.points.reserve( verticesNode->ChildElementCount( "s:vertex" ) );

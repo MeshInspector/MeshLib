@@ -105,12 +105,6 @@ jobs:
           $xml.packages.package.version = $pkgVersion
           $xml.Save($xmlPath)
 
-      - name: Install nuget package
-        shell: pwsh
-        run: |
-          dotnet tool install --global NuGetForUnity.Cli
-          nugetforunity restore "$env:UNITY_PROJECT"
-
       - name: Install Unity editor
         uses: buildalon/unity-setup@30fcbcb56c10ea5d64298e970d952b8d29bc268b # v2.6.0
         with:
@@ -156,6 +150,28 @@ jobs:
           & $client --activate-ulf --username $env:UNITY_USERNAME --password $env:UNITY_PASSWORD --include-personal
           exit $LASTEXITCODE
 
+      - name: Prime Unity project
+        # First cold start on a fresh runner: resolves the NuGetForUnity UPM
+        # package (git dependency) and compiles its asset postprocessor into
+        # Library BEFORE the nuget natives are restored. Without this, native
+        # plugins imported during the first-ever editor session keep the
+        # restorer's placeholder import settings (all platforms disabled) and
+        # fail with DllNotFoundException. The exit code is not checked: this
+        # session reports script compile errors because MRDotNet2.dll is not
+        # restored yet, which is expected and harmless.
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          Start-Process -FilePath $env:UNITY_EDITOR_PATH -ArgumentList "-batchmode","-nographics","-quit","-projectPath",(Join-Path $env:GITHUB_WORKSPACE $env:UNITY_PROJECT),"-logfile",(Join-Path $env:GITHUB_WORKSPACE "unity-prime.log") -Wait -NoNewWindow
+
+      - name: Install nuget package
+        # Runs after the prime pass so the natives restored here are imported
+        # by an editor session that already has the postprocessor compiled.
+        shell: pwsh
+        run: |
+          dotnet tool install --global NuGetForUnity.Cli
+          nugetforunity restore "$env:UNITY_PROJECT"
+
       - name: Run test
         # Step-level timeout: when the Unity Editor invocation exceeds this
         # cap, the step ends with `failure` (not `cancelled`) and the log
@@ -196,4 +212,5 @@ jobs:
           path: |
             results.xml
             unity-test.log
+            unity-prime.log
           if-no-files-found: ignore

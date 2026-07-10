@@ -19,8 +19,9 @@ on:
 permissions:
   contents: write
 
-# Serialize whole runs; matrix parallelism within a run is unrestricted
-# because manual (.ulf) license activation is per-machine, not seat-counted.
+# Serialize whole runs; within a run each job activates a personal license
+# on start and returns it when the job ends (professional seats are capped
+# at 2 concurrent activations, personal ones are not).
 concurrency:
   group: unity-test
   cancel-in-progress: false
@@ -116,29 +117,44 @@ jobs:
           version-file: ${{ env.UNITY_PROJECT }}/ProjectSettings/ProjectVersion.txt
 
       - name: Activate Unity license
-        # Personal license via the official CLI and a manual license file:
-        # no Unity account credentials in CI. `-manualLicenseFile` is known
-        # to exit non-zero even on success, so the step is not gated on the
-        # exit code -- a failed activation surfaces as a licensing error in
-        # the test step.
+        # Personal licenses can no longer be activated from a manual .ulf
+        # file (license.unity3d.com/manual only offers serial activation
+        # now), so this drives Unity's own licensing client instead -- the
+        # same official binary Unity Hub uses. The account credentials only
+        # pass through this first-party step, never through a third-party
+        # action. The account must have accepted the Personal license terms
+        # once (Unity Hub -> Licenses -> Get a free personal license) and
+        # must not have 2FA enabled.
         shell: pwsh
         env:
-          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_USERNAME: ${{ secrets.UNITY_USERNAME }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
         run: |
-          if (-not $env:UNITY_LICENSE) {
-            Write-Error "UNITY_LICENSE secret is not set (expected contents of the .ulf license file)"
+          if (-not $env:UNITY_USERNAME -or -not $env:UNITY_PASSWORD) {
+            Write-Error "UNITY_USERNAME / UNITY_PASSWORD secrets are not set"
             exit 1
           }
           if ($IsMacOS) {
             sudo mkdir -p "/Library/Application Support/Unity"
             sudo chown -R "$env:USER" "/Library/Application Support/Unity"
           }
-          $ulf = Join-Path $env:RUNNER_TEMP "Unity_lic.ulf"
-          Set-Content -Path $ulf -Value $env:UNITY_LICENSE
-          $log = Join-Path $env:RUNNER_TEMP "activation.log"
-          Start-Process -FilePath $env:UNITY_EDITOR_PATH -ArgumentList "-batchmode","-nographics","-quit","-manualLicenseFile",$ulf,"-logfile",$log -Wait -NoNewWindow
-          Remove-Item $ulf
-          Get-Content $log -Tail 20 -ErrorAction SilentlyContinue
+          $clientName = $IsWindows ? "Unity.Licensing.Client.exe" : "Unity.Licensing.Client"
+          $editorDir = Split-Path $env:UNITY_EDITOR_PATH
+          $client = @(
+            (Join-Path $editorDir "Data/Resources/Licensing/Client/$clientName"),
+            (Join-Path (Split-Path $editorDir) "Frameworks/UnityLicensingClient_V1.app/Contents/MacOS/$clientName")
+          ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $client) {
+            $client = (Get-ChildItem -Path $editorDir, (Split-Path $editorDir) -Recurse -Filter $clientName -File -ErrorAction SilentlyContinue | Select-Object -First 1).FullName
+          }
+          if (-not $client) {
+            Write-Error "Unity.Licensing.Client not found near $env:UNITY_EDITOR_PATH"
+            exit 1
+          }
+          Write-Output "Licensing client: $client"
+          "UNITY_LICENSING_CLIENT=$client" >> $env:GITHUB_ENV
+          & $client --activate-ulf --username $env:UNITY_USERNAME --password $env:UNITY_PASSWORD --include-personal
+          exit $LASTEXITCODE
 
       - name: Run test
         # Step-level timeout: when the Unity Editor invocation exceeds this
@@ -163,6 +179,14 @@ jobs:
         if: always()
         shell: pwsh
         run: Get-Content unity-test.log -ErrorAction SilentlyContinue
+
+      - name: Return Unity license
+        if: always()
+        shell: pwsh
+        run: |
+          if ($env:UNITY_LICENSING_CLIENT) {
+            & $env:UNITY_LICENSING_CLIENT --return-ulf
+          }
 
       - name: Upload test results
         if: failure()

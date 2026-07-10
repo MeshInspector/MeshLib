@@ -1,0 +1,52 @@
+{
+  "name": "@meshinspector/meshlib",
+  "version": "0.0.0",
+  "description": "MeshLib geometry library compiled to WebAssembly (single-threaded).",
+  "type": "module",
+  "main": "./meshlib.mjs",
+  "types": "./index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./index.d.mts",
+      "import": "./meshlib.mjs"
+    }
+  },
+  "files": [
+    "meshlib.mjs",
+    "meshlib.wasm",
+    "index.d.mts",
+    "bindings.d.mts",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "author": "MeshLib Team <support@meshinspector.com>",
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://meshlib.io/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MeshInspector/MeshLib.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MeshInspector/MeshLib/issues"
+  },
+  "keywords": [
+    "mesh",
+    "geometry",
+    "wasm",
+    "webassembly",
+    "meshlib",
+    "3d",
+    "mesh-processing",
+    "mesh-repair",
+    "boolean-operations",
+    "geometry-processing",
+    "3d-printing",
+    "stl",
+    "remeshing",
+    "cad",
+    "point-cloud"
+  ]
+}

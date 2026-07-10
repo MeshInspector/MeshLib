@@ -139,6 +139,10 @@ ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
 ENDIF()
 
+IF(EMSCRIPTEN AND NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MR_EMSCRIPTEN_ASYNCIFY)
+ENDIF()
+
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")

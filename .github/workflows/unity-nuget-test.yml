@@ -13,8 +13,11 @@ on:
         required: true
         type: string
 
+# `contents: write` is required to see the release: pr-test releases created
+# by full-ci PR runs are drafts, and drafts are invisible to a read-only token
+# ("release not found" from `gh release download`).
 permissions:
-  contents: read
+  contents: write
 
 # A Unity license allows at most 2 concurrent activations; together with
 # `max-parallel: 2` below this keeps simultaneous activations within the

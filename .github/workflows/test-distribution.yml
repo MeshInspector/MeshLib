@@ -21,6 +21,23 @@ on:
     secrets:
       GH_TOKEN:
         required: true
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      test_ubuntu_x64:
+        type: boolean
+        default: false
+      test_ubuntu_arm64:
+        type: boolean
+        default: false
+      test_macos:
+        type: boolean
+        default: false
+      test_windows:
+        type: boolean
+        default: false
 
 jobs:
   linux-x64-test:

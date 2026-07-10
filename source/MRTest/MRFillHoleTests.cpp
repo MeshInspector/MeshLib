@@ -118,6 +118,65 @@ TEST( MRMesh, makeBridgeEdge )
     EXPECT_FALSE( x.valid() );
 }
 
+TEST( MRMesh, makeInterHoleBridgeEdges )
+{
+    // two separate triangles, one on top of the other with opposite orientations, with a hole around each
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 5_v, 4_v }
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // VertId{0}
+    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // VertId{1}
+    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // VertId{2}
+    mesh.points.emplace_back( 0.f, 0.f, 1.f ); // VertId{3}
+    mesh.points.emplace_back( 1.f, 0.f, 1.f ); // VertId{4}
+    mesh.points.emplace_back( 0.f, 1.f, 1.f ); // VertId{5}
+
+    auto bdEdges = mesh.topology.findHoleRepresentiveEdges();
+    EXPECT_EQ( bdEdges.size(), 2 );
+
+    // no bridges if less than two holes are given
+    EXPECT_TRUE( makeInterHoleBridgeEdges( mesh, {} ).empty() );
+    EXPECT_TRUE( makeInterHoleBridgeEdges( mesh, { bdEdges[0] } ).empty() );
+
+    // a bridge appears between each pair of mutually closest vertices: (0,3), (1,4), (2,5)
+    auto bridges = makeInterHoleBridgeEdges( mesh, bdEdges );
+    EXPECT_EQ( bridges.size(), 3 );
+    for ( EdgeId b : bridges )
+    {
+        EXPECT_FALSE( mesh.topology.left( b ).valid() );
+        EXPECT_FALSE( mesh.topology.right( b ).valid() );
+        const auto d = mesh.destPnt( b ) - mesh.orgPnt( b );
+        EXPECT_EQ( d.x, 0.f );
+        EXPECT_EQ( d.y, 0.f );
+        EXPECT_EQ( d.lengthSq(), 1.f );
+    }
+    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), 3 );
+
+    // vertices 0 and 3 are mutually closest, but no bridge is created between them,
+    // because it would go deep inside the triangle 0-1-2 incident to vertex 0
+    Triangulation t2{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 4_v, 5_v }
+    };
+    Mesh mesh2;
+    mesh2.topology = MeshBuilder::fromTriangles( t2 );
+    mesh2.points.emplace_back(   0.f, 0.f, 0.f ); // VertId{0}
+    mesh2.points.emplace_back(  10.f, 0.f, 1.f ); // VertId{1}
+    mesh2.points.emplace_back( -10.f, 0.f, 1.f ); // VertId{2}
+    mesh2.points.emplace_back(   0.f, 0.f, 2.f ); // VertId{3}
+    mesh2.points.emplace_back(   1.f, 3.f, 3.f ); // VertId{4}
+    mesh2.points.emplace_back(  -1.f, 3.f, 3.f ); // VertId{5}
+
+    bdEdges = mesh2.topology.findHoleRepresentiveEdges();
+    EXPECT_EQ( bdEdges.size(), 2 );
+    EXPECT_TRUE( makeInterHoleBridgeEdges( mesh2, bdEdges ).empty() );
+}
+
 TEST( MRMesh, HoleFillPlan3 )
 {
     Mesh mesh;

@@ -89,5 +89,5 @@ jobs:
             ARGS="--provenance"
           fi
           for TGZ in js-meshlib-*.tgz ; do
-            npm stage publish "./${TGZ}" --access public ${ARGS}
+            npm stage publish "./${TGZ}" --access public --tag latest ${ARGS}
           done

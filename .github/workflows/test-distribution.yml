@@ -67,8 +67,9 @@ jobs:
           fi
 
       - name: Download Ubuntu x86-64 Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu x86-64 Release
@@ -161,8 +162,9 @@ jobs:
           apt-get install -y gh
 
       - name: Download Ubuntu arm64 Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu arm64 Release
@@ -249,17 +251,12 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
-        # `gh auth login --with-token` validates the token by calling the
-        # GraphQL `viewer` query, which intermittently returns HTTP 401
-        # ("Bad credentials") even for a perfectly valid token -- a known
-        # transient on GitHub's side. See community discussion #101661;
-        # GitHub's official guidance is to retry after a short delay.
-        # Auth and download are wrapped in independent retry loops so a
-        # flake in one does not force the other to re-run. `--clobber`
-        # lets a download retry overwrite a partial file from a previous
-        # attempt.
+        # GH_TOKEN instead of `gh auth login`: the login stores the token in
+        # the macOS keychain, which is locked in self-hosted runner sessions
+        # ("failed to move active token in keyring: exit status 36").
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          scripts/retry.sh -- bash -c 'echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token'
           scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
       # Self-hosted runners have no passwordless sudo, so they install into
@@ -342,8 +339,9 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}
 
       - name: Unpack Distributive

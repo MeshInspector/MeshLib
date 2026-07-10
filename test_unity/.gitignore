@@ -1,0 +1,23 @@
+# Unity generated state (NugetTestProj is opened/imported fresh in CI)
+NugetTestProj/[Ll]ibrary/
+NugetTestProj/[Tt]emp/
+NugetTestProj/[Oo]bj/
+NugetTestProj/[Bb]uilds/
+NugetTestProj/[Ll]ogs/
+NugetTestProj/[Uu]ser[Ss]ettings/
+
+# Packages restored by NuGetForUnity and the local feed CI populates
+NugetTestProj/Assets/Packages/
+NugetTestProj/Assets/Packages.meta
+NugetTestProj/nuget_repo/
+
+# IDE-generated files (recreated whenever the project is opened locally)
+NugetTestProj/*.csproj
+NugetTestProj/*.sln
+NugetTestProj/.vsconfig
+NugetTestProj/.vs/
+NugetTestProj/.idea/
+NugetTestProj/UpgradeLog*.htm
+
+# Unity test runner residue (temp scene of an interrupted playmode run)
+NugetTestProj/Assets/InitTestScene*

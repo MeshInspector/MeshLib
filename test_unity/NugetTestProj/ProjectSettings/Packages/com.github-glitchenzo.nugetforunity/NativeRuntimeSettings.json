@@ -1,0 +1,134 @@
+{
+  "configurations": [
+    {
+      "cpuArchitecture": "x86_64",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "Windows",
+      "runtime": "win10-x64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        19
+      ]
+    },
+    {
+      "cpuArchitecture": "AnyCPU",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "Windows",
+      "runtime": "win10-x86",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        5
+      ]
+    },
+    {
+      "cpuArchitecture": "x86_64",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "Windows",
+      "runtime": "win7-x64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        19
+      ]
+    },
+    {
+      "cpuArchitecture": "AnyCPU",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "Windows",
+      "runtime": "win7-x86",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        5
+      ]
+    },
+    {
+      "cpuArchitecture": "x86_64",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "Windows",
+      "runtime": "win-x64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        19
+      ]
+    },
+    {
+      "cpuArchitecture": "AnyCPU",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "Windows",
+      "runtime": "win-x86",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        5
+      ]
+    },
+    {
+      "cpuArchitecture": "x86_64",
+      "editorCpuArchitecture": "x86_64",
+      "editorOperatingSystem": "Linux",
+      "runtime": "linux-x64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        24
+      ]
+    },
+    {
+      "cpuArchitecture": "",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "",
+      "runtime": "android",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        13
+      ]
+    },
+    {
+      "cpuArchitecture": "ARM64",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "",
+      "runtime": "android-arm64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        13
+      ]
+    },
+    {
+      "cpuArchitecture": "",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "",
+      "runtime": "ios",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        9
+      ]
+    },
+    {
+      "cpuArchitecture": "ARM64",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "",
+      "runtime": "ios-arm64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        9
+      ]
+    },
+    {
+      "cpuArchitecture": "x86_64",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "OSX",
+      "runtime": "osx-x64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        2
+      ]
+    },
+    {
+      "cpuArchitecture": "ARM64",
+      "editorCpuArchitecture": "",
+      "editorOperatingSystem": "",
+      "runtime": "osx-arm64",
+      "supportedPlatformTargets": null,
+      "\u003CSupportedPlatformTargets\u003Ek__BackingField": [
+        2
+      ]
+    }
+  ]
+}

@@ -537,6 +537,17 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     return fromTrianglesSeq( t, settings );
 }
 
+/// returns the two other triangle vertices in cyclic order following vertex v
+static std::pair<VertId, VertId> getOtherTriVerts( const ThreeVertIds & vs, VertId v )
+{
+    if ( vs[0] == v )
+        return { vs[1], vs[2] };
+    if ( vs[1] == v )
+        return { vs[2], vs[0] };
+    assert( vs[2] == v );
+    return { vs[0], vs[1] };
+}
+
 /// describes a vertex and one of triangles incident to it
 struct VertTri
 {
@@ -576,14 +587,7 @@ public:
         const auto first = vertexBegIt + firstUnvisitedIndex;
         // below selection ensures that getNextIncidentVertex( getFirstVertex(), true ) will find nextVertex in the very first triangle
         const auto & vs = faceToVertices[first->f];
-        if ( vs[0] == first->v )
-            return vs[1];
-        if ( vs[1] == first->v )
-            return vs[2];
-        if ( vs[2] == first->v )
-            return vs[0];
-        assert( false );
-        return {};
+        return getOtherTriVerts( vs, first->v ).first;
     }
 
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
@@ -597,24 +601,11 @@ public:
         {
             VertId nextVertex;
             const auto & vs = faceToVertices[it->f];
-            if ( triOrientation )
-            {
-                if ( vs[0] == it->v && vs[1] == v )
-                    nextVertex = vs[2];
-                else if ( vs[1] == it->v && vs[2] == v )
-                    nextVertex = vs[0];
-                else if ( vs[2] == it->v && vs[0] == v )
-                    nextVertex = vs[1];
-            }
-            else
-            {
-                if ( vs[1] == it->v && vs[0] == v )
-                    nextVertex = vs[2];
-                else if ( vs[2] == it->v && vs[1] == v )
-                    nextVertex = vs[0];
-                else if ( vs[0] == it->v && vs[2] == v )
-                    nextVertex = vs[1];
-            }
+            const auto v12 = getOtherTriVerts( vs, it->v );
+            if ( triOrientation && v12.first == v )
+                nextVertex = v12.second;
+            else if ( !triOrientation && v12.second == v )
+                nextVertex = v12.first;
             if ( nextVertex )
             {
                 if ( nextVertex != prevVertex )

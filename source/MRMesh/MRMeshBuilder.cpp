@@ -684,6 +684,13 @@ struct AllVertTris
 
     /// initializes recs
     AllVertTris( const Triangulation & t, const FaceBitSet * region );
+
+    /// maps vertex id to first its record in recs, not descending;
+    /// vertex #i is in the records [vert2firstRec[i], vert2firstRec[i+1]) of recs
+    Vector<int, VertId> vert2firstRec;
+
+    /// fills vert2firstRec
+    void computeVertSpans();
 };
 
 AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
@@ -708,6 +715,23 @@ AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
     }
 
     tbb::parallel_sort( recs.begin(), recs.end() );
+}
+
+void AllVertTris::computeVertSpans()
+{
+    MR_TIMER;
+    if ( recs.empty() )
+        return;
+
+    vert2firstRec.reserve( recs.back().v + 1 );
+    for ( int i = 0; i < recs.size(); ++i )
+    {
+        auto v = recs[i].v;
+        while ( v >= vert2firstRec.size() )
+            vert2firstRec.push_back( i );
+    }
+    vert2firstRec.push_back( (int)recs.size() );
+    assert( vert2firstRec.size() == recs.back().v + 1 );
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}

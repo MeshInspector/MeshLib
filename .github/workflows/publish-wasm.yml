@@ -1,0 +1,110 @@
+name: Publish Wasm module
+
+on:
+  release:
+    types: [ published ]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      draft:
+        required: false
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      draft:
+        required: false
+        type: boolean
+        default: true
+
+env:
+  TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+  IS_DRAFT: ${{ inputs.draft || false }}
+
+jobs:
+  cdn:
+    permissions:
+      id-token: write   # OIDC -> AWS
+      contents: write   # download the draft release asset
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b # v6.2.1
+        with:
+          role-to-assume: arn:aws:iam::662635244517:role/GitHubMeshLibCdn
+          aws-region: us-east-1
+
+      - name: Download release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
+
+      - name: Upload to S3
+        env:
+          BUCKET: s3://cdn-meshlib-js
+        run: |
+          for TGZ in js-meshlib-*.tgz ; do tar -xzf "${TGZ}" --strip-components=1 ; done
+          upload() {
+            local dest="$1" ; shift
+            gzip -9 -c "${f}.mjs"  | aws s3 cp - "${dest}/${f}.mjs"  --content-type text/javascript   --content-encoding gzip "$@"
+            gzip -9 -c "${f}.wasm" | aws s3 cp - "${dest}/${f}.wasm" --content-type application/wasm  --content-encoding gzip "$@"
+          }
+          for f in meshlib meshlib-mt ; do
+            if [ "${IS_DRAFT}" = "true" ] ; then
+              upload "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
+            else
+              upload "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
+              upload "${BUCKET}/${f}"        --cache-control "public, max-age=300"
+            fi
+          done
+
+      - name: Invalidate draft
+        if: ${{ env.IS_DRAFT == 'true' }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/meshlib-draft/*" "/meshlib-mt-draft/*"
+
+      - name: Invalidate latest
+        if: ${{ env.IS_DRAFT != 'true' }}
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/meshlib/*" "/meshlib-mt/*"
+
+  npm:
+    permissions:
+      id-token: write   # OIDC -> npm trusted publishing
+      contents: write   # download the draft release asset
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24   # staged publishing needs npm >= 11.15
+          registry-url: https://registry.npmjs.org
+
+      - name: Download release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
+
+      - name: Publish npm packages
+        run: |
+          if [ "${IS_DRAFT}" = "true" ] ; then
+            ARGS="--dry-run"
+          else
+            ARGS="--provenance"
+          fi
+          for TGZ in js-meshlib-*.tgz ; do
+            npm stage publish "./${TGZ}" --access public --tag latest ${ARGS}
+          done

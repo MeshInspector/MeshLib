@@ -69,8 +69,6 @@ IF(MESHLIB_BUILD_MRVIEWER)
       # FIXME: comment required
       "-Wno-limited-postlink-optimizations"
     )
-
-    add_compile_definitions(MR_EMSCRIPTEN_ASYNCIFY)
   ENDIF()
 ENDIF()
 

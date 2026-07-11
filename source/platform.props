@@ -22,4 +22,24 @@
     <PreferredToolArchitecture>x86</PreferredToolArchitecture> <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH -->
   </PropertyGroup>
   <Import Project="$(CustomPlatfotmPropertyDir)\CustomMRPlatform.props" Condition="'$(CustomPlatfotmPropertyDir)' != ''"/>
+  <!-- If the CUDA version selected above has no MSBuild integration in this Visual Studio, fall back
+       to the toolkit pointed to by the CUDA_PATH environment variable (the NVIDIA installer keeps it
+       at the latest installed version), when that version's integration is present. -->
+  <PropertyGroup Condition="('$(MRCudaVersion)' == '' OR !Exists('$(VCTargetsPath)\BuildCustomizations\CUDA $(MRCudaVersion).props')) AND '$(CUDA_PATH)' != ''">
+    <_MRCudaVersionFromCudaPath>$([System.IO.Path]::GetFileName('$(CUDA_PATH)').TrimStart('v'))</_MRCudaVersionFromCudaPath>
+    <MRCudaVersion Condition="Exists('$(VCTargetsPath)\BuildCustomizations\CUDA $(_MRCudaVersionFromCudaPath).props')">$(_MRCudaVersionFromCudaPath)</MRCudaVersion>
+  </PropertyGroup>
+  <!-- Remaining GPU architectures to match the CMake build (cmake/Modules/ConfigureCuda.cmake): the CUDA
+       props' unconditional default CodeGeneration (compute_52,sm_52; compute_75,sm_75 on CUDA 13+) already
+       supplies the oldest SASS+PTX; these add the newer SASS targets plus PTX for the newest one. -->
+  <PropertyGroup Condition="'$(MRCudaGencode)' == '' AND '$(MRCudaVersion)' != ''">
+    <MRCudaGencode Condition="$([MSBuild]::VersionGreaterThanOrEquals($(MRCudaVersion), '13.0'))">-gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=sm_89 -gencode arch=compute_120,code=[sm_120,compute_120]</MRCudaGencode>
+    <MRCudaGencode Condition="'$(MRCudaGencode)' == '' AND $([MSBuild]::VersionGreaterThanOrEquals($(MRCudaVersion), '12.0'))">-gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=sm_75 -gencode arch=compute_86,code=sm_86 -gencode arch=compute_89,code=[sm_89,compute_89]</MRCudaGencode>
+    <MRCudaGencode Condition="'$(MRCudaGencode)' == ''">-gencode arch=compute_60,code=sm_60 -gencode arch=compute_61,code=sm_61 -gencode arch=compute_70,code=sm_70 -gencode arch=compute_75,code=[sm_75,compute_75]</MRCudaGencode>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(MRCudaGencode)' != ''">
+    <CudaCompile>
+      <AdditionalOptions>%(AdditionalOptions) $(MRCudaGencode)</AdditionalOptions>
+    </CudaCompile>
+  </ItemDefinitionGroup>
 </Project>

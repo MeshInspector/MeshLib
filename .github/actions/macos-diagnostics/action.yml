@@ -1,0 +1,11 @@
+name: macOS Diagnostics
+description: >
+  Print the runner's power source, Low Power Mode, thermal throttle state and
+  background load, then sample them every 10s until the end of the job; the
+  automatic post step dumps the samples. Helps explain speed differences
+  between self-hosted machines. macOS only.
+
+runs:
+  using: node24
+  main: start.js
+  post: stop.js

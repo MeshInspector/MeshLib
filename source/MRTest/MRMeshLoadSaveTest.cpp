@@ -1,8 +1,11 @@
 #include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
+#include <filesystem>
+#include <fstream>
 
 namespace MR
 {
@@ -74,6 +77,41 @@ TEST(MRMesh, LoadSave)
     EXPECT_EQ( loadRes->points.size(), 5 );
     EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+}
+
+TEST(MRMesh, LoadObjTabIndented)
+{
+    // some exporters (e.g. 3ds Max guruware OBJ exporter) indent lines with tabs
+    const auto dir = std::filesystem::temp_directory_path();
+    const auto mtlPath = dir / "MRLoadObjTabIndented.mtl";
+    {
+        std::ofstream mtl( mtlPath, std::ios::binary );
+        mtl <<
+            "newmtl Mat1\n"
+            "\tKd 0.5880 0.5880 0.5880\n"
+            "\tmap_Kd tex1.jpg\n";
+    }
+
+    std::string file =
+        "mtllib MRLoadObjTabIndented.mtl\n"
+        "v 0 0 0\n"
+        "\tv 1 0 0\n"
+        "v 0 1 0\n"
+        "vt 0 0\n"
+        "vt 1 0\n"
+        "vt 0 1\n"
+        "\tusemtl Mat1\n"
+        "f 1/1 2/2 3/3\n";
+
+    auto res = MeshLoad::fromSceneObjFile( file.data(), file.size(), false, dir );
+    std::filesystem::remove( mtlPath );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->size(), 1 );
+    const auto& named = res->front();
+    EXPECT_EQ( named.mesh.topology.numValidFaces(), 1 );
+    ASSERT_EQ( named.textureFiles.size(), 1 );
+    EXPECT_EQ( named.textureFiles.front().filename(), "tex1.jpg" );
+    ASSERT_TRUE( named.diffuseColor.has_value() );
 }
 
 } //namespace MR

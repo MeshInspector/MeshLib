@@ -552,8 +552,8 @@ class PathOverVertTri
 {
     Triangulation& faceToVertices;
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
-    std::vector<VertTri>::iterator vertexBegIt, vertexEndIt;
-    size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
+    std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
+    size_t firstUnvisitedIndex = 0; // pivot index. [vertexBegIt + firstUnvistedIndex, vertexBegIt) - unvisited vertices
 
 public:
     PathOverVertTri( Triangulation& triangleToVertices,
@@ -561,25 +561,26 @@ public:
         : faceToVertices( triangleToVertices )
         , vertexBegIt( incidentItemsVector.begin() + beg )
         , vertexEndIt( incidentItemsVector.begin() + end )
-        , lastUnvisitedIndex( end - beg )
     {}
 
     // false if there are some unvisited vertices
     bool empty() const
     {
-        return lastUnvisitedIndex <= 0;
+        return vertexBegIt + firstUnvisitedIndex >= vertexEndIt;
     }
 
     // first unvisited vertex
     VertId getFirstVertex() const
     {
-        // below selection ensures that getNextVertTriex( getFirstVertex(), true ) will find nextVertex in the very first triangle
-        const auto & vs = faceToVertices[vertexBegIt->f];
-        if ( vs[0] == vertexBegIt->v )
+        assert( !empty() );
+        const auto first = vertexBegIt + firstUnvisitedIndex;
+        // below selection ensures that getNextIncidentVertex( getFirstVertex(), true ) will find nextVertex in the very first triangle
+        const auto & vs = faceToVertices[first->f];
+        if ( vs[0] == first->v )
             return vs[1];
-        if ( vs[1] == vertexBegIt->v )
+        if ( vs[1] == first->v )
             return vs[2];
-        if ( vs[2] == vertexBegIt->v )
+        if ( vs[2] == first->v )
             return vs[0];
         assert( false );
         return {};
@@ -588,11 +589,11 @@ public:
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
     VertId getNextVertTriex( VertId v, bool triOrientation, VertId prevVertex = {} )
     {
-        if ( lastUnvisitedIndex <= 0 )
+        if ( empty() )
             return VertId( -1 );
 
-        auto prevIt = vertexBegIt + lastUnvisitedIndex;
-        for ( auto it = vertexBegIt; it < vertexBegIt + lastUnvisitedIndex; ++it )
+        auto prevIt = vertexEndIt;
+        for ( auto it = vertexBegIt + firstUnvisitedIndex; it < vertexEndIt; ++it )
         {
             VertId nextVertex;
             const auto & vs = faceToVertices[it->f];
@@ -618,19 +619,21 @@ public:
             {
                 if ( nextVertex != prevVertex )
                 {
-                    --lastUnvisitedIndex;
-                    std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
+                    if ( it != vertexBegIt + firstUnvisitedIndex )
+                        std::iter_swap( it, vertexBegIt + firstUnvisitedIndex );
+                    ++firstUnvisitedIndex;
                     return nextVertex;
                 }
                 // prevVertex is a possible continuation, store it, and search for other options
                 prevIt = it;
             }
         }
-        if ( prevIt < vertexBegIt + lastUnvisitedIndex )
+        if ( prevIt < vertexEndIt )
         {
             // the only option is return in prevVertex
-            --lastUnvisitedIndex;
-            std::iter_swap( prevIt, vertexBegIt + lastUnvisitedIndex );
+            if ( prevIt != vertexBegIt + firstUnvisitedIndex )
+                std::iter_swap( prevIt, vertexBegIt + firstUnvisitedIndex );
+            ++firstUnvisitedIndex;
             return prevVertex;
         }
         return {};
@@ -648,7 +651,7 @@ public:
 
         for ( size_t i = 1; i < path.size(); ++i )
         {
-            for ( auto it = vertexBegIt + lastUnvisitedIndex; it < vertexEndIt; ++it )
+            for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )
             {
                 VertId v1, v2;
                 bool alreadyDuplicted = true;

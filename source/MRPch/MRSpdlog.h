@@ -46,12 +46,6 @@ class __attribute__((visibility("default"))) ansicolor_stderr_sink;
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
-#if __GNUC__ == 13
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#pragma GCC diagnostic ignored "-Wstringop-overflow"
-#endif
-
 #pragma warning(push)
 #pragma warning(disable:4275) // non dll-interface class 'std::runtime_error' used as base for dll-interface class 'fmt::v10::format_error'
 #pragma warning(disable:4251)
@@ -66,10 +60,6 @@ class __attribute__((visibility("default"))) ansicolor_stderr_sink;
 #include <spdlog/sinks/msvc_sink.h>
 #endif
 #pragma warning(pop)
-
-#if __GNUC__ == 13
-#pragma GCC diagnostic pop
-#endif
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic pop

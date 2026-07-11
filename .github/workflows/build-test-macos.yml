@@ -76,6 +76,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
+
       - name: Checkout third-party submodules
         run: |
           # Selective init -- parent Checkout drops submodules:true.

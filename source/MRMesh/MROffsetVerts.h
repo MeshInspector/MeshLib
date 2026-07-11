@@ -12,6 +12,10 @@ namespace MR
 /// @return false if cancelled.
 MRMESH_API bool offsetVerts( Mesh& mesh, const VertMetric& offset, const ProgressCallback& cb = {} );
 
+/// Modifies \p mesh shifting each boundary vertex on the given expansion distance to make holes wider (for positive expansion values)
+/// @return false if cancelled.
+MRMESH_API bool expandHoles( Mesh& mesh, float expansion, const ProgressCallback& cb = {} );
+
 struct ThickenParams
 {
     /// the amount of offset for original mesh vertices

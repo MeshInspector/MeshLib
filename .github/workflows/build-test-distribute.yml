@@ -43,8 +43,7 @@ jobs:
       need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
       vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
       disable_ubuntu_x64:         ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
       disable_ubuntu_arm64:       ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
       disable_emscripten:         ${{ needs.config.outputs.build_enable_emscripten != 'true' }}
@@ -125,6 +124,7 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
+      app_version:       ${{ needs.config.outputs.app_version }}
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
       internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
@@ -158,8 +158,7 @@ jobs:
       - windows-build-test
     uses: ./.github/workflows/update-win-version.yml
     with:
-      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version: ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 
@@ -322,7 +321,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz js-meshlib-*.tgz"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
@@ -384,10 +383,17 @@ jobs:
     uses: ./.github/workflows/pip-build.yml
     with:
       vcpkg_docker_image_tag: ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      disable_ubuntu_x64:   ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
-      disable_ubuntu_arm64: ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
+      disable_manylinux:    ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
       disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
       disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
+
+  publish-wasm:
+    needs: [ config, upload-distributions ]
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_emscripten == 'true' && needs.upload-distributions.result == 'success' }}
+    uses: ./.github/workflows/publish-wasm.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+    secrets: inherit
 
   collect-stats:
     timeout-minutes: 5

@@ -3,10 +3,7 @@ name: Update Windows distribution version
 on:
   workflow_call:
     inputs:
-      vs19_vcpkg_version:
-        required: true
-        type: string
-      vs22_vcpkg_version:
+      vcpkg_version:
         required: true
         type: string
       app_version:
@@ -22,29 +19,24 @@ jobs:
       matrix:
         # One developer distributive per Visual Studio toolchain. The MREDist_*
         # inputs are produced by the matching VS CMake build in
-        # build-test-windows.yml (named via its VS_TAG). vcpkg_baseline selects
-        # which vcpkg version the binaries were built against.
+        # build-test-windows.yml (named via its VS_TAG).
         include:
           - vcpkg_triplet: x64-windows-vs2019-meshlib
-            vcpkg_baseline: vs19
             extract_release: MREDist_VS19_Release.zip
             extract_debug: MREDist_VS19_Debug.zip
             output_zip: MeshLibDistVS19.zip
             artifact_name: DistributivesWin-VS19
           - vcpkg_triplet: x64-windows-vs2022-meshlib
-            vcpkg_baseline: vs22
             extract_release: MREDist_VS22_Release.zip
             extract_debug: MREDist_VS22_Debug.zip
             output_zip: MeshLibDistVS22.zip
             artifact_name: DistributivesWin-VS22
           - vcpkg_triplet: x64-windows-meshlib
-            vcpkg_baseline: vs22
             extract_release: MREDist_VS26_Release.zip
             extract_debug: MREDist_VS26_Debug.zip
             output_zip: MeshLibDistVS26.zip
             artifact_name: DistributivesWin-VS26
           - vcpkg_triplet: x64-windows-meshlib-iterator-debug
-            vcpkg_baseline: vs19
             extract_debug: MREDist_VS19_Debug-IteratorDebug.zip
             output_zip: MeshLibDist-IteratorDebug.zip
             artifact_name: DistributivesWin-IteratorDebug
@@ -59,7 +51,7 @@ jobs:
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:
-          vcpkg-version: ${{ matrix.vcpkg_baseline == 'vs22' && inputs.vs22_vcpkg_version || inputs.vs19_vcpkg_version }}
+          vcpkg-version: ${{ inputs.vcpkg_version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet }}
 
       - name: Download Windows Binaries Archive

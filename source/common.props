@@ -74,7 +74,7 @@
       <!-- /external:W0, matching `/Wall /WX /external:W0` in CompilerOptions.cmake -->
       <ExternalWarningLevel>TurnOffAllWarnings</ExternalWarningLevel>
       <!--
-        !! NOTE: Sync this list with `CompilerOptions.cmake` and the /wd flags in `MRCuda.vcxproj` (CudaCompile) !!
+        !! NOTE: Sync this list with `CompilerOptions.cmake` and the /wd flags in `platform.props` (CudaCompile) !!
            warning C4061: enumerator V in switch of enum E is not explicitly handled by a case label
            warning C4250: 'class1': inherits 'class2' via dominance
            warning C4324: structure was padded due to alignment specifier
@@ -113,7 +113,7 @@
            warning C5262: implicit fall-through occurs here; are you missing a break statement? Use [[fallthrough]] when a break statement is intentionally omitted between cases
            warning C5264: 'const' variable is not used
            warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
-        !! NOTE: Sync this list with `CompilerOptions.cmake` and the /wd flags in `MRCuda.vcxproj` (CudaCompile) !!
+        !! NOTE: Sync this list with `CompilerOptions.cmake` and the /wd flags in `platform.props` (CudaCompile) !!
       -->
       <DisableSpecificWarnings>4061;4250;4324;4365;4371;4388;4435;4514;4582;4583;4599;4605;4623;4625;4626;4651;4668;4686;4710;4711;4820;4865;4866;4868;5026;5027;5031;5039;5045;5104;5105;5219;5243;5246;5262;5264;26451;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>

@@ -537,14 +537,14 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     return fromTrianglesSeq( t, settings );
 }
 
-/// returns the next two vertices in the order as in the given vs following vertex v
-inline std::pair<VertId, VertId> getOtherTriVerts( const ThreeVertIds& vs, VertId v )
+/// returns the two other triangle vertices in cyclic order following vertex v
+static std::pair<VertId, VertId> getOtherTriVerts( const ThreeVertIds & vs, VertId v )
 {
     if ( vs[0] == v )
         return { vs[1], vs[2] };
     if ( vs[1] == v )
         return { vs[2], vs[0] };
-    assert ( vs[2] == v );
+    assert( vs[2] == v );
     return { vs[0], vs[1] };
 }
 

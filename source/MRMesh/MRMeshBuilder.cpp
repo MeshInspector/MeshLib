@@ -552,7 +552,7 @@ class PathOverVertTri
 {
     Triangulation& faceToVertices;
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
-    std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
+    std::vector<VertTri>::iterator vertexBegIt, vertexEndIt;
     size_t firstUnvisitedIndex = 0; // pivot index. [vertexBegIt + firstUnvistedIndex, vertexBegIt) - unvisited vertices
 
 public:
@@ -587,7 +587,7 @@ public:
     }
 
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
-    VertId getNextVertTriex( VertId v, bool triOrientation, VertId prevVertex = {} )
+    VertId getNextVertex( VertId v, bool triOrientation, VertId prevVertex = {} )
     {
         if ( empty() )
             return VertId( -1 );
@@ -688,20 +688,17 @@ public:
 
 struct AllVertTris
 {
-    // the array of all vertex-in-triangle sorted by vertex id
+    /// the array of all vertex-in-triangle sorted by vertex id
     std::vector<VertTri> recs;
 
-    // maps vertex id to first its record in recs, not descending;
-    // vertex #i is in the records [vert2firstRec[i], vert2firstRec[i+1]) of recs
-    Vector<int, VertId> vert2firstRec;
+    /// initializes recs
+    AllVertTris( const Triangulation & t, const FaceBitSet * region );
 };
 
-// fill and sort incidentVertVector by central vertex
-AllVertTris prepareVertTris( const Triangulation & t, const FaceBitSet * region )
+AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
 {
     MR_TIMER;
-    AllVertTris res;
-    res.recs.reserve( 3 * t.size() );
+    recs.reserve( 3 * t.size() );
 
     for ( FaceId f{0}; f < t.size(); ++f )
     {
@@ -712,19 +709,10 @@ AllVertTris prepareVertTris( const Triangulation & t, const FaceBitSet * region 
             continue;
 
         for ( int i = 0; i < 3; ++i )
-            res.recs.push_back( { vs[i], f } );
+            recs.push_back( { vs[i], f } );
     }
 
-    tbb::parallel_sort( res.recs.begin(), res.recs.end() );
-
-    for ( int i = 0; i < res.recs.size(); ++i )
-    {
-        auto v = res.recs[i].v;
-        while ( v >= res.vert2firstRec.size() )
-            res.vert2firstRec.push_back( i );
-    }
-    res.vert2firstRec.push_back( (int)res.recs.size() );
-    return res;
+    tbb::parallel_sort( recs.begin(), recs.end() );
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
@@ -753,7 +741,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     if ( t.empty() )
         return 0; // input triangulation is empty
 
-    auto all = prepareVertTris( t, region );
+    AllVertTris all( t, region );
     if ( all.recs.empty() )
         return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
 
@@ -783,11 +771,11 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             const VertId firstVertex = incidentItems.getFirstVertex();
             visitedVertices.autoResizeSet( firstVertex );
             VertId prevVertex = firstVertex;
-            VertId nextVertex = incidentItems.getNextVertTriex( firstVertex, triOrientation );
+            VertId nextVertex = incidentItems.getNextVertex( firstVertex, triOrientation );
             if ( !nextVertex )
             {
                 triOrientation = false;
-                nextVertex = incidentItems.getNextVertTriex( firstVertex, triOrientation );
+                nextVertex = incidentItems.getNextVertex( firstVertex, triOrientation );
                 assert( nextVertex.valid() );
             }
             visitedVertices.autoResizeSet( nextVertex );
@@ -798,7 +786,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                 {
                     // prefer finding nextVertex not equal to prevVertex to maximize neighbour ring sizes
                     auto currVertex = nextVertex;
-                    nextVertex = incidentItems.getNextVertTriex( currVertex, triOrientation, prevVertex );
+                    nextVertex = incidentItems.getNextVertex( currVertex, triOrientation, prevVertex );
                     prevVertex = currVertex;
                 }
 
@@ -807,7 +795,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     if ( triOrientation ) // try the opposite direction from firstVertex
                     {
                         triOrientation = false;
-                        nextVertex = incidentItems.getNextVertTriex( firstVertex, triOrientation );
+                        nextVertex = incidentItems.getNextVertex( firstVertex, triOrientation );
                     }
                     if ( !nextVertex )
                     {

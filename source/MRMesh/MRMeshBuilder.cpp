@@ -548,7 +548,7 @@ struct VertTri
 };
 
 // to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
-class PathOverVertTri
+class PathAroundVertex
 {
     Triangulation& faceToVertices;
     // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
@@ -556,11 +556,11 @@ class PathOverVertTri
     size_t firstUnvisitedIndex = 0; // pivot index. [vertexBegIt + firstUnvistedIndex, vertexBegIt) - unvisited vertices
 
 public:
-    PathOverVertTri( Triangulation& triangleToVertices,
-                std::vector<VertTri>& incidentItemsVector, size_t beg, size_t end )
+    PathAroundVertex( Triangulation& triangleToVertices,
+                std::vector<VertTri>& vertTris, size_t beg, size_t end )
         : faceToVertices( triangleToVertices )
-        , vertexBegIt( incidentItemsVector.begin() + beg )
-        , vertexEndIt( incidentItemsVector.begin() + end )
+        , vertexBegIt( vertTris.begin() + beg )
+        , vertexEndIt( vertTris.begin() + end )
     {}
 
     // false if there are some unvisited vertices
@@ -688,7 +688,7 @@ public:
 
 struct AllVertTris
 {
-    /// the array of all vertex-in-triangle sorted by vertex id
+    /// the array of all vertex-in-triangle sorted by vertex id, then by face id
     std::vector<VertTri> recs;
 
     /// initializes recs
@@ -758,7 +758,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         posBegin = posEnd++;
         while ( posEnd < all.recs.size() && all.recs[posBegin].v == all.recs[posEnd].v )
             ++posEnd;
-        PathOverVertTri incidentItems( t, all.recs, posBegin, posEnd );
+        PathAroundVertex incidentItems( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;

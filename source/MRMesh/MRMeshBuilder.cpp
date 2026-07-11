@@ -698,7 +698,11 @@ struct AllVertTris
 AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
 {
     MR_TIMER;
-    recs.reserve( 3 * t.size() );
+
+    if ( region )
+        recs.reserve( 3 * region->count() );
+    else
+        recs.reserve( 3 * t.size() );
 
     for ( FaceId f{0}; f < t.size(); ++f )
     {
@@ -758,35 +762,39 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         posBegin = posEnd++;
         while ( posEnd < all.recs.size() && all.recs[posBegin].v == all.recs[posEnd].v )
             ++posEnd;
-        PathAroundVertex incidentItems( t, all.recs, posBegin, posEnd );
+        PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
-        while ( !incidentItems.empty() )
+        while ( !pathMaker.empty() )
         {
             for(const auto& v : path)
                 visitedVertices.reset(v);
 
             bool triOrientation = true;
-            const VertId firstVertex = incidentItems.getFirstVertex();
+            const VertId firstVertex = pathMaker.getFirstVertex();
             visitedVertices.autoResizeSet( firstVertex );
             VertId prevVertex = firstVertex;
-            VertId nextVertex = incidentItems.getNextVertex( firstVertex, triOrientation );
+            VertId nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation );
             if ( !nextVertex )
             {
                 triOrientation = false;
-                nextVertex = incidentItems.getNextVertex( firstVertex, triOrientation );
+                nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation );
                 assert( nextVertex.valid() );
             }
             visitedVertices.autoResizeSet( nextVertex );
 
-            path = { firstVertex, nextVertex };
+            // preserve allocated memory in path
+            path.clear();
+            path.push_back( firstVertex );
+            path.push_back( nextVertex );
+
             while ( true )
             {
                 {
                     // prefer finding nextVertex not equal to prevVertex to maximize neighbour ring sizes
                     auto currVertex = nextVertex;
-                    nextVertex = incidentItems.getNextVertex( currVertex, triOrientation, prevVertex );
+                    nextVertex = pathMaker.getNextVertex( currVertex, triOrientation, prevVertex );
                     prevVertex = currVertex;
                 }
 
@@ -795,13 +803,13 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     if ( triOrientation ) // try the opposite direction from firstVertex
                     {
                         triOrientation = false;
-                        nextVertex = incidentItems.getNextVertex( firstVertex, triOrientation );
+                        nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation );
                     }
                     if ( !nextVertex )
                     {
                         if ( foundChains )
                         {
-                            incidentItems.duplicateVertex( path, lastValidVert, dups );
+                            pathMaker.duplicateVertex( path, lastValidVert, dups );
                             ++duplicatedVerticesCnt;
                         }
                         ++foundChains;
@@ -821,7 +829,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
                     if ( foundChains )
                     {
-                        incidentItems.duplicateVertex( closedPath, lastValidVert, dups );
+                        pathMaker.duplicateVertex( closedPath, lastValidVert, dups );
                         ++duplicatedVerticesCnt;
                     }
                     ++foundChains;

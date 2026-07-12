@@ -4,6 +4,7 @@
 #include "MRCloseVertices.h"
 #include "MRBuffer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
@@ -691,22 +692,28 @@ struct AllVertTris
 
     /// fills vert2firstRec
     void computeVertSpans();
+
+    /// the number of non-manifoldness around each vertex
+    Vector<int, VertId> vert2nms;
+
+    /// fills vert2nms
+    void computeNMs( const Triangulation & tris );
 };
 
-AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
+AllVertTris::AllVertTris( const Triangulation & tris, const FaceBitSet * region )
 {
     MR_TIMER;
 
     if ( region )
         recs.reserve( 3 * region->count() );
     else
-        recs.reserve( 3 * t.size() );
+        recs.reserve( 3 * tris.size() );
 
-    for ( FaceId f{0}; f < t.size(); ++f )
+    for ( FaceId f{0}; f < tris.size(); ++f )
     {
         if ( region && !region->test( f ) )
             continue;
-        const auto & vs = t[f];
+        const auto & vs = tris[f];
         if ( vs[0] == vs[1] || vs[1] == vs[2] || vs[2] == vs[0] )
             continue;
 
@@ -732,6 +739,43 @@ void AllVertTris::computeVertSpans()
     }
     vert2firstRec.push_back( (int)recs.size() );
     assert( vert2firstRec.size() == recs.back().v + 1 );
+}
+
+void AllVertTris::computeNMs( const Triangulation & tris )
+{
+    MR_TIMER;
+    if ( vert2firstRec.empty() )
+        return;
+    vert2nms.clear();
+    vert2nms.resize( vert2firstRec.size() - 1 );
+
+    struct ThreadData
+    {
+        /// first and second vertices in cyclic order following vertex v in triangles around v
+        HashSet<VertId> first, second;
+    };
+
+    tbb::enumerable_thread_specific<ThreadData> e;
+    ParallelFor( vert2nms, e, [&]( VertId v, ThreadData & td )
+    {
+        int i = vert2firstRec[v];
+        const auto iEnd = vert2firstRec[v + 1];
+        if ( i == iEnd )
+            return;
+        td.first.clear();
+        td.second.clear();
+        int nms = 0;
+        for ( ; i != iEnd; ++i )
+        {
+            assert( recs[i].v == v );
+            const auto v12 = getOtherTriVerts( tris[recs[i].f], v );
+            if ( !td.first.insert( v12.first ).second )
+                ++nms;
+            if ( !td.second.insert( v12.second ).second )
+                ++nms;
+        }
+        vert2nms[v] = nms;
+    } );
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}

@@ -245,7 +245,7 @@ jobs:
       - name: Select Docker image tag
         id: select-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+          if [[ "${{ steps.linux-changes.outputs.src }}" == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
             # https://stackoverflow.com/q/58033366/7325599
             IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
@@ -256,7 +256,7 @@ jobs:
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-vcpkg-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+          if [[ "${{ steps.linux-vcpkg-changes.outputs.src }}" == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
             # https://stackoverflow.com/q/58033366/7325599
             IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else

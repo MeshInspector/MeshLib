@@ -149,7 +149,7 @@ jobs:
           artifact_glob: meshlib_${{ matrix.package_name }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
-  web-wasm-module-build:
+  wasm-module-build:
     timeout-minutes: 40
     runs-on: ubuntu-24.04-arm
     container:
@@ -201,15 +201,14 @@ jobs:
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
 
-      - name: Build web Wasm module
+      - name: Build Wasm module
         env:
-          MESHLIB_WASM_MODULE_TARGET: web
           MR_EMSCRIPTEN_SINGLETHREAD: ${{ matrix.singlethread }}
         run: ./scripts/build_wasm_meshlib.sh
 
-      - name: Test web Wasm module
+      - name: Test Wasm module
         env:
-          MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.mjs
+          MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.node.mjs
         run: node source/MRWasmTest/index.mjs
 
       - name: Assemble and pack npm package

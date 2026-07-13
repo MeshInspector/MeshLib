@@ -8,12 +8,19 @@
   "exports": {
     ".": {
       "types": "./index.d.mts",
-      "import": "./meshlib-mt.mjs"
-    }
+      "node": "./meshlib-mt.node.mjs",
+      "browser": "./meshlib-mt.mjs",
+      "import": "./meshlib-mt.mjs",
+      "default": "./meshlib-mt.mjs"
+    },
+    "./meshlib-mt.wasm": "./meshlib-mt.wasm",
+    "./package.json": "./package.json"
   },
   "files": [
     "meshlib-mt.mjs",
     "meshlib-mt.wasm",
+    "meshlib-mt.node.mjs",
+    "meshlib-mt.node.wasm",
     "index.d.mts",
     "bindings.d.mts",
     "README.md",

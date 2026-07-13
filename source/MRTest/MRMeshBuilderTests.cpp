@@ -51,7 +51,8 @@ TEST( MRMesh, duplicateDoubleHoleVertex )
     ASSERT_EQ( dups.size(), 1 );
     ASSERT_EQ( dups[0].srcVert, 0_v );
     ASSERT_EQ( dups[0].dupVert, 5_v );
-    ASSERT_EQ( t[1_f][0], 5_v );
+    ASSERT_EQ( t[0_f], ( ThreeVertIds{ 0_v, 1_v, 2_v } ) );
+    ASSERT_EQ( t[1_f], ( ThreeVertIds{ 5_v, 3_v, 4_v } ) );
 }
 
 static void testBuildWithDups( const char * objMesh, int numVerts, int numComps )

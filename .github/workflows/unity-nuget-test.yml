@@ -106,6 +106,10 @@ jobs:
           $xml.Save($xmlPath)
 
       - name: Install Unity editor
+        # The only step with a live external dependency (Unity CDN); a step
+        # timeout makes a hung download fail fast and visibly instead of
+        # burning the whole job budget. Normal duration is 8-12 minutes.
+        timeout-minutes: 25
         uses: buildalon/unity-setup@30fcbcb56c10ea5d64298e970d952b8d29bc268b # v2.6.0
         with:
           version-file: ${{ env.UNITY_PROJECT }}/ProjectSettings/ProjectVersion.txt

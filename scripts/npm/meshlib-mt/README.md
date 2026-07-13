@@ -45,6 +45,21 @@ Without them `SharedArrayBuffer` is unavailable and the module will fail to init
 use the single-threaded [`@meshinspector/meshlib`](https://www.npmjs.com/package/@meshinspector/meshlib)
 package in that case.
 
+For a Vite dev server, set them in `vite.config.js` (and make sure whatever hosts the production
+build sends them too; `vite-plugin-cross-origin-isolation` can stamp them for `vite preview`):
+
+```js
+// vite.config.js
+export default {
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+};
+```
+
 ## Usage
 
 The default export is an async factory. Await it once to get the module instance, then call
@@ -76,6 +91,21 @@ coords.delete();
 tris.delete();
 mesh.delete();
 ```
+
+## Using with bundlers
+
+Bundlers (Vite, webpack, Rollup) hash and relocate the sidecar `meshlib-mt.wasm`, so the module
+can't locate it on its own. Import the wasm as an asset URL and hand it to the loader via
+`locateFile`:
+
+```js
+import createMeshLib from '@meshinspector/meshlib-mt';
+import wasmUrl from '@meshinspector/meshlib-mt/meshlib-mt.wasm?url';
+
+const ml = await createMeshLib( { locateFile: () => wasmUrl } );
+```
+
+The page must also be [cross-origin isolated](#browser-requirements-cross-origin-isolation).
 
 ## TypeScript
 

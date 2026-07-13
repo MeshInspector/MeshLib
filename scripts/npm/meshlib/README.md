@@ -62,6 +62,18 @@ tris.delete();
 mesh.delete();
 ```
 
+## Using with bundlers
+
+Bundlers (Vite, webpack, Rollup) hash and relocate the sidecar `meshlib.wasm`, so the module can't
+locate it on its own. Import the wasm as an asset URL and hand it to the loader via `locateFile`:
+
+```js
+import createMeshLib from '@meshinspector/meshlib';
+import wasmUrl from '@meshinspector/meshlib/meshlib.wasm?url';
+
+const ml = await createMeshLib( { locateFile: () => wasmUrl } );
+```
+
 ## TypeScript
 
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with

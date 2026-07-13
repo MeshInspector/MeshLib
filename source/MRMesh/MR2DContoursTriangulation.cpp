@@ -292,6 +292,9 @@ struct SweepLineParams
 
     /// optional out EdgePaths that corresponds to initial contours
     std::vector<EdgePath>* outBoundaries{ nullptr };
+
+    /// optional out per-face winding numbers
+    Vector<int, FaceId>* outFaceWinding{ nullptr };
 };
 
 class SweepLineQueue
@@ -611,10 +614,13 @@ Mesh SweepLineQueue::triangulate()
         if ( tp_.left( dirE ) )
             continue;
 
+        const auto firstBlockFace = FaceId( tp_.faceSize() );
         if ( !params_.needOutline )
             triangulateMonotoneBlock_( dirE ); // triangulate
         else
             tp_.setLeft( dirE, tp_.addFaceId() ); // mark present
+        if ( params_.outFaceWinding ) // all faces of one monotone block are in the region with same winding number
+            params_.outFaceWinding->autoResizeSet( firstBlockFace, tp_.faceSize() - firstBlockFace, windInfo.winding );
     }
     Mesh mesh;
     mesh.topology = std::move( tp_ );
@@ -623,7 +629,8 @@ Mesh SweepLineQueue::triangulate()
     {
         mesh.points[v] = predicates_.point( v );
     } );
-    if ( !params_.needOutline )
+    // Delone flips could cross a contour edge between two inside regions and smear the face winding map
+    if ( !params_.needOutline && !params_.outFaceWinding )
     {
         makeDeloneEdgeFlips( mesh, {}, 300 );
     }
@@ -1467,12 +1474,15 @@ Contours2f getOutline( const Contours2f& contours, const OutlineParameters& para
     return getOutline( contsd, params );
 }
 
-Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
+Mesh triangulateContours( const Contours2f& contours, const TriangulationParameters& params /*= {}*/ )
 {
     if ( contours.empty() )
         return {};
-    SweepLineQueue triangulator( precisePredicates( contours ), getContourSizes( contours ), { holeVertsIds, false, WindingMode::NonZero } );
-    auto res = triangulator.run();
+    SweepLineQueue triangulator( precisePredicates( contours ), getContourSizes( contours ),
+        { params.holeVertsIds, false, WindingMode::NonZero, false, true, nullptr, params.outFaceWinding } );
+    if ( params.outInterMap )
+        params.outInterMap->shift = triangulator.vertSize();
+    auto res = triangulator.run( params.outInterMap );
     assert( res );
     if ( res )
         return std::move( *res );
@@ -1480,10 +1490,20 @@ Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVe
         return Mesh();
 }
 
-Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/ )
+Mesh triangulateContours( const Contours2d& contours, const TriangulationParameters& params /*= {}*/ )
 {
     const auto contsf = convertContours<Contours2f>( contours );
-    return triangulateContours( contsf, holeVertsIds );
+    return triangulateContours( contsf, params );
+}
+
+Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds )
+{
+    return triangulateContours( contours, { .holeVertsIds = holeVertsIds } );
+}
+
+Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds )
+{
+    return triangulateContours( contours, { .holeVertsIds = holeVertsIds } );
 }
 
 std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )

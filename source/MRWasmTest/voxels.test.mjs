@@ -1,7 +1,4 @@
 import assert from 'node:assert/strict';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { rmSync } from 'node:fs';
 import { ml, meshToGeometry } from './helpers.mjs';
 
 // mesh -> signed-distance VDB volume -> mesh, plus volume field access
@@ -49,27 +46,6 @@ import { ml, meshToGeometry } from './helpers.mjs';
   assert.ok( maxR > 1.05, `offset pushed the surface outward (maxR=${maxR.toFixed( 3 )})` );
 
   off.delete();
-  params.delete();
-  sphere.delete();
-}
-
-// VDB voxel file I/O round-trip (NODERAWFS)
-{
-  const sphere = ml.makeUVSphere( 1, 16, 16 );
-  const params = new ml.MeshToVolumeParams();
-  params.voxelSize = { x: 0.15, y: 0.15, z: 0.15 };
-  const vol = ml.meshToVolume( sphere, params );
-
-  const path = join( tmpdir(), `meshlib-vox-${process.pid}.vdb` );
-  ml.VoxelsSave.toAnySupportedFormat( vol, path );
-  const loaded = ml.VoxelsLoad.fromAnySupportedFormat( path );
-  assert.ok( loaded.length >= 1, 'VDB load returned at least one volume' );
-  assert.ok( loaded[ 0 ].dims.x > 0, 'loaded volume has positive dims' );
-
-  for ( const v of loaded )
-    v.delete();
-  rmSync( path );
-  vol.delete();
   params.delete();
   sphere.delete();
 }

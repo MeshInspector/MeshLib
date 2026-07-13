@@ -75,14 +75,33 @@ struct OutlineParameters
 MRMESH_API Contours2f getOutline( const Contours2f& contours, const OutlineParameters& params = {} );
 MRMESH_API Contours2f getOutline( const Contours2d& contours, const OutlineParameters& params = {} );
 
+struct TriangulationParameters
+{
+    /// if set merge only points with same vertex id, otherwise merge all points with same coordinates
+    const HolesVertIds* holeVertsIds{ nullptr };
+
+    /// optional output: winding number of the region each face belongs to;
+    /// when set, Delone flips after triangulation are skipped, so each face stays strictly inside one winding region
+    Vector<int, FaceId>* outFaceWinding{ nullptr };
+
+    /// optional output: maps each vertex created at contours intersection to the pair of intersected edges;
+    /// vertices with id less than `shift` are original contour vertices
+    IntersectionsMap* outInterMap{ nullptr };
+};
+
 /**
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
- * @param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
  * @return return created mesh
  */
-MRMESH_API Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr );
-MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr );
+MRMESH_API Mesh triangulateContours( const Contours2d& contours, const TriangulationParameters& params = {} );
+MRMESH_API Mesh triangulateContours( const Contours2f& contours, const TriangulationParameters& params = {} );
+
+/// triangulate 2d contours, C++-only overload for backward compatibility;
+/// hidden from generated bindings to keep their triangulateContours signatures unique
+/// \param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
+MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds );
+MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds );
 
 /**
  * @brief triangulate 2d contours

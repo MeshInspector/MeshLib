@@ -198,12 +198,13 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@d31148d669074a8d0a63714ba94f3201e7020bc3
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Linux paths
+        if: ${{ github.event_name != 'schedule' }}
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: linux-changes
         with:
@@ -218,6 +219,7 @@ jobs:
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**)'
 
       - name: Filter Linux vcpkg paths
+        if: ${{ github.event_name != 'schedule' }}
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: linux-vcpkg-changes
         with:
@@ -227,6 +229,7 @@ jobs:
               - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths
+        if: ${{ github.event_name != 'schedule' }}
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
         id: windows-changes
         with:
@@ -242,7 +245,7 @@ jobs:
       - name: Select Docker image tag
         id: select-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+          if [[ "${{ steps.linux-changes.outputs.src }}" == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
             # https://stackoverflow.com/q/58033366/7325599
             IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
@@ -253,7 +256,7 @@ jobs:
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-vcpkg-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+          if [[ "${{ steps.linux-vcpkg-changes.outputs.src }}" == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
             # https://stackoverflow.com/q/58033366/7325599
             IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else

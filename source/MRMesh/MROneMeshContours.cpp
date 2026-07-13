@@ -326,7 +326,8 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
         auto vid = curr.inVertex( topology );
         if ( vid.valid() )
             return OneMeshIntersection{vid,mesh.points[vid]};
-        if ( topology.prev( edgeOp.e ) == pEId || topology.next( edgeOp.e.sym() ) == pEId.sym() )
+        // .undirected() here since `pEId` might be non-consistent on first intersection
+        if ( topology.prev( edgeOp.e ).undirected() == pEId.undirected() || topology.next( edgeOp.e.sym() ).undirected() == pEId.sym().undirected() )
             return OneMeshIntersection{edgeOp.e,mesh.edgePoint( edgeOp )};
         else
             return OneMeshIntersection{edgeOp.e.sym(),mesh.edgePoint( edgeOp )};

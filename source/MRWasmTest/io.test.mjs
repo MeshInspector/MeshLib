@@ -42,3 +42,27 @@ import { ml } from './helpers.mjs';
 
   sphere.delete();
 }
+
+// VDB voxel volume file round-trip
+{
+  const sphere = ml.makeUVSphere( 1, 16, 16 );
+  const params = new ml.MeshToVolumeParams();
+  params.voxelSize = { x: 0.15, y: 0.15, z: 0.15 };
+  const vol = ml.meshToVolume( sphere, params );
+
+  const path = join( tmpdir(), `meshlib-vox-${process.pid}.vdb` );
+  ml.VoxelsSave.toAnySupportedFormat( vol, path );
+  const loaded = ml.VoxelsLoad.fromAnySupportedFormat( path );
+  assert.ok( loaded.length >= 1, 'VDB load returned at least one volume' );
+  assert.ok( loaded[ 0 ].dims.x > 0, 'loaded volume has positive dims' );
+
+  for ( const v of loaded )
+    v.delete();
+  rmSync( path );
+  vol.delete();
+  params.delete();
+  sphere.delete();
+}
+
+console.log( 'IO OK' );
+process.exit( 0 );   // meshlib-mt keeps a worker pool alive; exit explicitly so the run doesn't hang

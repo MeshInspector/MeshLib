@@ -206,12 +206,20 @@ jobs:
         # `|| exit /b 1` is used instead of `if errorlevel 1 exit 1`
         # because the latter can miss exit codes inside parenthesized IF
         # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).
+        # The z-applocal loop uses `exit 1` (no /b): cmd.exe drops the errorlevel
+        # of `exit /b` from a for-loop body nested in the parenthesized IF block.
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake --version || exit /b 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
+            rem Deploy vcpkg DLLs in one serial pass here: with VCPKG_APPLOCAL_DEPS=ON (default)
+            rem every parallel Ninja link edge runs its own z-applocal into the shared bin dir,
+            rem and concurrent copies of the same DLL intermittently fail with ERROR_SHARING_VIOLATION.
+            for %%b in (source\TempOutput\bin\*.exe source\TempOutput\bin\*.dll) do (
+              %VCPKG_ROOT%\vcpkg.exe z-applocal --target-binary="%%b" --installed-bin-dir="%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%${{ matrix.config == 'Debug' && '\debug' || '' }}\bin" >nul || exit 1
+            )
             if not exist source\x64 mkdir source\x64 || exit /b 1
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (

@@ -13,15 +13,11 @@ on:
         required: true
         type: string
 
-# `contents: write` is required to see the release: pr-test releases created
-# by full-ci PR runs are drafts, and drafts are invisible to a read-only token
-# ("release not found" from `gh release download`).
+# pr-test releases are drafts; reading them requires a write token.
 permissions:
   contents: write
 
-# Serialize whole runs; within a run each job activates a personal license
-# on start and returns it when the job ends (professional seats are capped
-# at 2 concurrent activations, personal ones are not).
+# Serialize runs; each job activates a personal license and returns it at job end.
 concurrency:
   group: unity-test
   cancel-in-progress: false
@@ -29,10 +25,7 @@ concurrency:
 jobs:
   unity-nuget-test:
     name: Unity test (${{ matrix.os }})
-    # Job-level timeout is a safety net (editor download + install alone
-    # takes ~10 minutes); the real cap for the editor run is on the
-    # "Run test" step below so that a timeout there is reported as a
-    # `failure` rather than `cancelled`, letting the results upload execute.
+    # Safety net; the editor steps below carry their own tighter timeouts.
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -40,9 +33,8 @@ jobs:
       matrix:
         os: [ windows-latest, ubuntu-latest, macos-latest, macos-15-intel ]
     runs-on: ${{ matrix.os }}
-    # Windows is the established release gate; the other platforms exercise
-    # the previously untested linux-x64 / osx-arm64 / osx-x64 natives of the
-    # package and stay non-blocking until proven stable.
+    # Windows is the release gate; other legs cover the remaining package
+    # natives and stay non-blocking until proven stable.
     continue-on-error: ${{ matrix.os != 'windows-latest' }}
     env:
       UNITY_PROJECT: test_unity/NugetTestProj
@@ -50,8 +42,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          # The job token has `contents: write`; don't leave it readable in
-          # .git/config for later steps.
+          # Keep the write token out of .git/config.
           persist-credentials: false
 
       - name: Download nuget package
@@ -81,9 +72,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path $feedDir | Out-Null
           Move-Item $pkg.FullName (Join-Path $feedDir "MeshLib.$pkgVersion.nupkg")
 
-          # NuGetForUnity's resolution base for relative feed paths is not
-          # well defined, so point the local package source at the feed
-          # folder by absolute path.
+          # NuGetForUnity resolves relative feed paths inconsistently; use an
+          # absolute path.
           $patched = $false
           foreach ($cfg in Get-ChildItem -Path $env:UNITY_PROJECT -Recurse -Filter "NuGet.config") {
             $xml = [xml](Get-Content -Path $cfg.FullName)
@@ -106,23 +96,17 @@ jobs:
           $xml.Save($xmlPath)
 
       - name: Install Unity editor
-        # The only step with a live external dependency (Unity CDN); a step
-        # timeout makes a hung download fail fast and visibly instead of
-        # burning the whole job budget. Normal duration is 8-12 minutes.
+        # The one step with a live external dependency (Unity CDN); a hung
+        # download should fail fast, not eat the job budget.
         timeout-minutes: 25
         uses: buildalon/unity-setup@30fcbcb56c10ea5d64298e970d952b8d29bc268b # v2.6.0
         with:
           version-file: ${{ env.UNITY_PROJECT }}/ProjectSettings/ProjectVersion.txt
 
       - name: Activate Unity license
-        # Personal licenses can no longer be activated from a manual .ulf
-        # file (license.unity3d.com/manual only offers serial activation
-        # now), so this drives Unity's own licensing client instead -- the
-        # same official binary Unity Hub uses. The account credentials only
-        # pass through this first-party step, never through a third-party
-        # action. The account must have accepted the Personal license terms
-        # once (Unity Hub -> Licenses -> Get a free personal license) and
-        # must not have 2FA enabled.
+        # The manual .ulf flow no longer offers personal licenses, so drive
+        # the licensing client bundled with the editor. The account must have
+        # accepted the personal-license terms and must not use 2FA.
         shell: pwsh
         env:
           UNITY_USERNAME: ${{ secrets.UNITY_USERNAME }}
@@ -155,40 +139,32 @@ jobs:
           exit $LASTEXITCODE
 
       - name: Prime Unity project
-        # First cold start on a fresh runner: resolves the NuGetForUnity UPM
-        # package (git dependency) and compiles its asset postprocessor into
-        # Library BEFORE the nuget natives are restored. Without this, native
-        # plugins imported during the first-ever editor session keep the
-        # restorer's placeholder import settings (all platforms disabled) and
-        # fail with DllNotFoundException. The exit code is not checked: this
-        # session reports script compile errors because MRDotNet2.dll is not
-        # restored yet, which is expected and harmless.
+        # Compile the NuGetForUnity UPM package (and its asset postprocessor)
+        # into Library before restoring: natives imported without the
+        # postprocessor keep all-platforms-disabled import settings and fail
+        # with DllNotFoundException. Exit code ignored -- compile errors are
+        # expected while the nuget package is missing.
         timeout-minutes: 15
         shell: pwsh
         run: |
           Start-Process -FilePath $env:UNITY_EDITOR_PATH -ArgumentList "-batchmode","-nographics","-quit","-projectPath",(Join-Path $env:GITHUB_WORKSPACE $env:UNITY_PROJECT),"-logfile",(Join-Path $env:GITHUB_WORKSPACE "unity-prime.log") -Wait -NoNewWindow
 
       - name: Setup .NET
-        # macOS runners ship dotnet on PATH but without a registered install
-        # location, so the NuGetForUnity.Cli tool host fails with ".NET
-        # location: Not found"; setup-dotnet registers it (sets DOTNET_ROOT).
+        # macOS runners have no registered dotnet install; the tool host
+        # needs DOTNET_ROOT.
         uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '9.x'
 
       - name: Install nuget package
-        # Runs after the prime pass so the natives restored here are imported
-        # by an editor session that already has the postprocessor compiled.
         shell: pwsh
         run: |
           dotnet tool install --global NuGetForUnity.Cli
           nugetforunity restore "$env:UNITY_PROJECT"
 
       - name: Run test
-        # Step-level timeout: when the Unity Editor invocation exceeds this
-        # cap, the step ends with `failure` (not `cancelled`) and the result
-        # and log printing below still execute. `-runTests` exit codes:
-        # 0 all tests passed, 2 tests failed, 3 run error.
+        # Exit codes: 0 all passed, 2 test failures, 3 run error. The step
+        # timeout keeps the printing steps below reachable on a hang.
         timeout-minutes: 20
         shell: pwsh
         run: |
@@ -204,9 +180,7 @@ jobs:
           exit $proc.ExitCode
 
       - name: Print test results
-        # Job logs live as long as artifacts (same retention setting), so the
-        # parsed results are printed instead of uploaded. Informational only:
-        # pass/fail gating stays with the Run test exit code.
+        # Informational; gating is the Run test exit code above.
         if: always()
         shell: pwsh
         run: |
@@ -219,6 +193,11 @@ jobs:
           Write-Output "Test run result: $($tr.result) (total=$($tr.total) passed=$($tr.passed) failed=$($tr.failed) skipped=$($tr.skipped) duration=$($tr.duration)s)"
           foreach ($tc in $r.SelectNodes("//test-case")) {
             Write-Output "  $($tc.fullname): $($tc.result) ($($tc.duration)s)"
+            $testOutput = $tc.output.'#cdata-section'
+            if ($testOutput -and $testOutput.Trim()) {
+              Write-Output "    console output:"
+              $testOutput.Trim() -split "`n" | ForEach-Object { Write-Output "      $_" }
+            }
             if ($tc.result -eq "Failed") {
               $msg = $tc.failure.message.'#cdata-section'
               $stack = $tc.failure.'stack-trace'.'#cdata-section'

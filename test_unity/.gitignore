@@ -6,6 +6,17 @@ NugetTestProj/[Bb]uilds/
 NugetTestProj/[Ll]ogs/
 NugetTestProj/[Uu]ser[Ss]ettings/
 
+# Editor-generated project settings (recreated with defaults by the prime
+# session in CI); only the version pin and the NuGetForUnity native runtime
+# map are tracked
+NugetTestProj/ProjectSettings/*
+!NugetTestProj/ProjectSettings/ProjectVersion.txt
+!NugetTestProj/ProjectSettings/Packages/
+NugetTestProj/ProjectSettings/Packages/*
+!NugetTestProj/ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/
+NugetTestProj/ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/*
+!NugetTestProj/ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/NativeRuntimeSettings.json
+
 # Packages restored by NuGetForUnity and the local feed CI populates
 NugetTestProj/Assets/Packages/
 NugetTestProj/Assets/Packages.meta

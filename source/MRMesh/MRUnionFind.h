@@ -2,6 +2,7 @@
 
 #include "MRVector.h"
 #include "MRTimer.h"
+#include "MRId.h"
 #include <atomic>
 #include <utility>
 

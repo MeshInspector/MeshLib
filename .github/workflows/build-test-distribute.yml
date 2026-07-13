@@ -332,7 +332,7 @@ jobs:
           name: Distributives*
           failOnError: false
 
-  windows-unity-test:
+  unity-nuget-test:
     # Run whenever full-ci is requested and the Windows build is enabled, provided the
     # NuGet package was actually built and uploaded to the release. `!cancelled()` keeps
     # this job from being auto-skipped: without a status function the implicit success()
@@ -352,6 +352,9 @@ jobs:
     uses: ./.github/workflows/unity-nuget-test.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
+    # Reusable workflows do not see repository secrets unless the caller
+    # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
+    secrets: inherit
 
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.

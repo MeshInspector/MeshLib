@@ -182,8 +182,8 @@ jobs:
 
       - name: Run test
         # Step-level timeout: when the Unity Editor invocation exceeds this
-        # cap, the step ends with `failure` (not `cancelled`) and the log
-        # print + results upload below still execute. `-runTests` exit codes:
+        # cap, the step ends with `failure` (not `cancelled`) and the result
+        # and log printing below still execute. `-runTests` exit codes:
         # 0 all tests passed, 2 tests failed, 3 run error.
         timeout-minutes: 20
         shell: pwsh
@@ -199,6 +199,32 @@ jobs:
           Write-Output "Unity exit code: $($proc.ExitCode)"
           exit $proc.ExitCode
 
+      - name: Print test results
+        # Job logs live as long as artifacts (same retention setting), so the
+        # parsed results are printed instead of uploaded. Informational only:
+        # pass/fail gating stays with the Run test exit code.
+        if: always()
+        shell: pwsh
+        run: |
+          if (-not (Test-Path results.xml)) {
+            Write-Output "No results.xml produced (the editor failed before running tests); see the editor log below."
+            exit 0
+          }
+          [xml]$r = Get-Content results.xml
+          $tr = $r.'test-run'
+          Write-Output "Test run result: $($tr.result) (total=$($tr.total) passed=$($tr.passed) failed=$($tr.failed) skipped=$($tr.skipped) duration=$($tr.duration)s)"
+          foreach ($tc in $r.SelectNodes("//test-case")) {
+            Write-Output "  $($tc.fullname): $($tc.result) ($($tc.duration)s)"
+            if ($tc.result -eq "Failed") {
+              $msg = $tc.failure.message.'#cdata-section'
+              $stack = $tc.failure.'stack-trace'.'#cdata-section'
+              if ($msg) { Write-Output "    message: $($msg.Trim())" }
+              if ($stack) { Write-Output "    stack: $($stack.Trim())" }
+              $oneLine = ("$($tc.fullname): $msg" -replace "\s+", " ").Trim()
+              Write-Output "::error title=Unity test failed::$oneLine"
+            }
+          }
+
       - name: Print editor log
         if: always()
         shell: pwsh
@@ -211,14 +237,3 @@ jobs:
           if ($env:UNITY_LICENSING_CLIENT) {
             & $env:UNITY_LICENSING_CLIENT --return-ulf
           }
-
-      - name: Upload test results
-        if: failure()
-        uses: actions/upload-artifact@v7
-        with:
-          name: unity-test-results-${{ matrix.os }}
-          path: |
-            results.xml
-            unity-test.log
-            unity-prime.log
-          if-no-files-found: ignore

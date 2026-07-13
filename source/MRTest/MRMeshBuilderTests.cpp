@@ -38,6 +38,22 @@ TEST( MRMesh, duplicateNonManifoldVertices )
         ASSERT_EQ( t[i][0], 7 );
 }
 
+TEST( MRMesh, duplicateDoubleHoleVertex )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f
+    t.push_back( { 0_v, 3_v, 4_v } ); //1_f
+    // there are four edges with origin at vertex #0 having hole on one side (two with no left(e) and two with no right(e))
+
+    std::vector<VertDuplication> dups;
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    ASSERT_EQ( duplicatedVerticesCnt, 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    ASSERT_EQ( dups[0].srcVert, 0_v );
+    ASSERT_EQ( dups[0].dupVert, 5_v );
+    ASSERT_EQ( t[1_f][0], 5_v );
+}
+
 static void testBuildWithDups( const char * objMesh, int numVerts, int numComps )
 {
     std::istringstream s( objMesh );

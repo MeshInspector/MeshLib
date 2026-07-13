@@ -28,9 +28,11 @@ If you also have installed MeshLib in Nuget-for-Unity (which is a good idea to b
 
      * Click `Apply`.
 
-  3. Open `meshlib_vA.B.C.D_dotnet-wasm/native/singlethreaded/` or `.../multithreaded/`.
+  3. Open `meshlib_vA.B.C.D_dotnet-wasm/native/emsdk-X.Y.Z/singlethreaded/` or `.../multithreaded/`.
 
-     This must match your Wasm build settings in Unity. If you enabled Wasm multithreading in Unity, use the multithreaded version of the files. If you don't know what you're doing, you probably have a single-threaded build.
+     The `emsdk-X.Y.Z` version must match your Unity version. Consult [this table](https://docs.unity3d.com/6000.7/Documentation/Manual/webgl-native-plugins-with-emscripten.html) for which Unity version corresponds to which EMSDK version.
+
+     The "singlethreaded"/"multithreaded" part must match your Wasm build settings in Unity. If you enabled Wasm multithreading in Unity, use the multithreaded version of the files. If you don't know what you're doing, you probably have a single-threaded build.
 
      * Select all files there (`.a` files).
 
@@ -48,6 +50,8 @@ If you also have installed MeshLib in Nuget-for-Unity (which is a good idea to b
 
   5. Uncheck the unused libraries:
 
-     * If you used `.../singlethreaded/` libraries, then disable the `.../multithreaded/` ones, or vice versa.
+     * If you used `.../singlethreaded/` libraries, then delete or disable the `.../multithreaded/` ones, or vice versa.
 
-     * To disable them, open the respective directory, select all files there (`.a` files), uncheck `Any Platform` and uncheck all platforms.
+       Similarly, delete or disable all other `emsdk-X.Y.Z` versions, other than the one you're using.
+
+     * To disable them (as an alternative to deleting the files), open the respective directory, select all files there (`.a` files), uncheck `Any Platform` and uncheck all platforms.

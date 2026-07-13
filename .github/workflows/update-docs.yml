@@ -37,6 +37,7 @@ jobs:
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
+          ref: 'feature/js'
 
       - name: Download Python Stubs
         uses: actions/download-artifact@v8
@@ -63,6 +64,13 @@ jobs:
         with:
           name: CsharpBindings
           path: MeshLib/CsharpBindings
+
+      - name: Download Wasm definitions
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: WasmBindingsDts
+          path: MeshLib/scripts/npm/meshlib
 
       - name: Check for bindings
         id: check_bindings

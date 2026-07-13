@@ -26,6 +26,7 @@ MODULE_PARAMETERS_MATRIX=(
   "PY:Py:Python"
   "C:C:C"
   "CSHARP:Csharp:C#"
+  "JS:Js:JavaScript"
 )
 
 for MODULES_ROW in "${MODULE_PARAMETERS_MATRIX[@]}"; do

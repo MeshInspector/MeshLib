@@ -14,12 +14,11 @@ jobs:
   emscripten-build-c-bindings:
     timeout-minutes: 40
     runs-on: ubuntu-24.04
-    container:
-      image: meshlib/meshlib-emscripten-build-c-bindings:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
       matrix:
         config: [Singlethreaded, Multithreaded]
+        emsdk_ver: [3.1.38, 4.0.19]
         include:
           - config: Singlethreaded
             target_name: emscripten-singlethreaded
@@ -29,6 +28,12 @@ jobs:
             target_name: emscripten
             short_name: multithreaded
             thirdparty-dir: emscripten
+          - emsdk_ver: 3.1.38
+            emsdk_ver_docker: 3-1-38
+          - emsdk_ver: 4.0.19
+            emsdk_ver_docker: 4-0-19
+    container:
+      image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_ver_docker}}:${{inputs.docker_image_tag}}
 
     steps:
       - name: Work-around possible permission issues
@@ -119,14 +124,14 @@ jobs:
       - name: Prepare output files
         shell: bash
         run: |
-          mkdir -p wasm_files/${{matrix.short_name}}
-          cp build/Release/bin/*.a wasm_files/${{matrix.short_name}}
-          cp lib/*.a wasm_files/${{matrix.short_name}}
+          mkdir -p wasm_files/emsdk-${{matrix.emsdk_ver}}/${{matrix.short_name}}
+          cp build/Release/bin/*.a wasm_files/emsdk-${{matrix.emsdk_ver}}/${{matrix.short_name}}
+          cp lib/*.a wasm_files/emsdk-${{matrix.emsdk_ver}}/${{matrix.short_name}}
 
       - name: Upload to Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: DotNetPatchArchiveWasm-${{matrix.short_name}}
+          name: DotNetPatchArchiveWasm-${{matrix.emsdk_ver}}-${{matrix.short_name}}
           path: ./wasm_files/*
           retention-days: 1
           overwrite: true

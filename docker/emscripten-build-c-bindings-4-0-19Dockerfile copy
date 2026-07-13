@@ -1,8 +1,11 @@
 # syntax=docker/dockerfile:1.6
 
-# Any changes in this file should probably be mirrored in `emscripten-build-c-bindings-X-Y-ZDockerfile`.
+# This dockerfile is used to build C bindings for Wasm.
+# This is a modified version of `emscriptenDockerfile`.
 
-FROM emscripten/emsdk:4.0.10-arm64 AS base
+# Have to use the specific EMSDK here for compatibility with Unity.
+
+FROM emscripten/emsdk:4.0.19-arm64 AS base
 
 RUN <<EOF
     set -e
@@ -49,21 +52,10 @@ RUN <<EOF
     rm -rf bin include lib share thirdparty_build
 EOF
 
-# 64-bit multi-threaded
-RUN <<EOF
-    set -e
-    export MR_EMSCRIPTEN_WASM64=ON
-    ./scripts/build_thirdparty.sh
-    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64
-    rm -rf bin include lib share thirdparty_build
-EOF
-
-
 FROM base
 
 COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
-COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/emscripten-wasm64
 
 RUN chmod -R 777 /emsdk/upstream/emscripten/
 

@@ -32,7 +32,7 @@ jobs:
             emsdk_ver_docker: 3-1-38
             emsdk_runs_on: ubuntu-24.04
           - emsdk_ver: 4.0.19
-            emsdk_ver_docker: 4-0-19
+            emsdk_ver_docker: 4-0-19-arm
             emsdk_runs_on: ubuntu-24.04-arm
 
     runs-on: ${{matrix.emsdk_runs_on}}

@@ -6,6 +6,9 @@ NugetTestProj/[Bb]uilds/
 NugetTestProj/[Ll]ogs/
 NugetTestProj/[Uu]ser[Ss]ettings/
 
+# .meta files are regenerated on import; nothing here is referenced by GUID
+NugetTestProj/**/*.meta
+
 # Editor-generated project settings (recreated with defaults by the prime
 # session in CI); only the version pin and the NuGetForUnity native runtime
 # map are tracked
@@ -19,7 +22,6 @@ NugetTestProj/ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/*
 
 # Packages restored by NuGetForUnity and the local feed CI populates
 NugetTestProj/Assets/Packages/
-NugetTestProj/Assets/Packages.meta
 NugetTestProj/nuget_repo/
 
 # IDE-generated files (recreated whenever the project is opened locally)

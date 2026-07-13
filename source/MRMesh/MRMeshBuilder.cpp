@@ -779,10 +779,27 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
         for ( ; i != iEnd; ++i )
         {
             assert( recs[i].v == v );
-            const auto v12 = getOtherTriVerts( t[recs[i].f], v );
-            if ( !td.first.insert( { v12.first, v12.second } ).second )
-                ++info.numRepeatedVerts;
-            if ( !td.second.insert( { v12.second, v12.first } ).second )
+            const auto [v1, v2] = getOtherTriVerts( t[recs[i].f], v );
+            const auto firstInsertion = td.first.insert( { v1, v2 } );
+            const auto secondInsertion = td.second.insert( { v2, v1 } );
+            if ( firstInsertion.second )
+            {
+                if ( auto it = td.first.find( v2 ); it != td.first.end() )
+                {
+                    // the edge v - v12.second becomes inner, upda
+                    auto vEnd = firstInsertion.first->second = it->second;
+                    it->second = VertId{};
+                    if ( vEnd )
+                    {
+                        assert( td.second[vEnd] == v2 );
+                        td.second[vEnd] = v1;
+                    }
+                }
+            }
+            else
+                ++info.numRepeatedVerts; // insertion can fail only if the vertex is repeated
+
+            if ( !secondInsertion.second )
                 ++info.numRepeatedVerts;
         }
         vertInfos[v] = info;

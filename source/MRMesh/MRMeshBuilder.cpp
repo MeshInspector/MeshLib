@@ -678,6 +678,15 @@ public:
     }
 };
 
+struct VertInfo
+{
+    /// the number of connected chains around the vertex
+    int numChains = 0;
+
+    /// the number of vertices, which are passed more than once
+    int numRepeatedVerts = 0;
+};
+
 struct AllVertTris
 {
     /// the array of all vertex-in-triangle sorted by vertex id, then by face id
@@ -694,10 +703,10 @@ struct AllVertTris
     void computeVertSpans();
 
     /// the number of non-manifoldness around each vertex
-    Vector<int, VertId> vert2nms;
+    Vector<VertInfo, VertId> vertInfos;
 
-    /// fills vert2nms
-    void computeNMs( const Triangulation & t );
+    /// fills vertInfos
+    void computeVertInfos( const Triangulation & t );
 };
 
 AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
@@ -741,22 +750,24 @@ void AllVertTris::computeVertSpans()
     assert( vert2firstRec.size() == recs.back().v + 2 );
 }
 
-void AllVertTris::computeNMs( const Triangulation & t )
+void AllVertTris::computeVertInfos( const Triangulation & t )
 {
     MR_TIMER;
     if ( vert2firstRec.empty() )
         return;
-    vert2nms.clear();
-    vert2nms.resize( vert2firstRec.size() - 1 );
+    vertInfos.clear();
+    vertInfos.resize( vert2firstRec.size() - 1 );
 
     struct ThreadData
     {
-        /// first and second vertices in cyclic order following vertex v in triangles around v
-        HashSet<VertId> first, second;
+        /// key - first and second vertices in cyclic order following vertex v in triangles around v,
+        /// value - for boundary edges - the opposite edge of the same chain,
+        ///         for inner edges - invalid VertId
+        HashMap<VertId, VertId> first, second;
     };
 
     tbb::enumerable_thread_specific<ThreadData> e;
-    ParallelFor( vert2nms, e, [&]( VertId v, ThreadData & td )
+    ParallelFor( vertInfos, e, [&]( VertId v, ThreadData & td )
     {
         int i = vert2firstRec[v];
         const auto iEnd = vert2firstRec[v + 1];
@@ -764,17 +775,17 @@ void AllVertTris::computeNMs( const Triangulation & t )
             return;
         td.first.clear();
         td.second.clear();
-        int nms = 0;
+        VertInfo info;
         for ( ; i != iEnd; ++i )
         {
             assert( recs[i].v == v );
             const auto v12 = getOtherTriVerts( t[recs[i].f], v );
-            if ( !td.first.insert( v12.first ).second )
-                ++nms;
-            if ( !td.second.insert( v12.second ).second )
-                ++nms;
+            if ( !td.first.insert( { v12.first, v12.second } ).second )
+                ++info.numRepeatedVerts;
+            if ( !td.second.insert( { v12.second, v12.first } ).second )
+                ++info.numRepeatedVerts;
         }
-        vert2nms[v] = nms;
+        vertInfos[v] = info;
     } );
 }
 
@@ -812,7 +823,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         lastValidVert = all.recs.back().v;
 
     all.computeVertSpans();
-    all.computeNMs( t );
+    all.computeVertInfos( t );
 
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
@@ -820,7 +831,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        if ( all.vert2nms[v] == 0 )
+        if ( all.vertInfos[v].numChains == 0 && all.vertInfos[v].numRepeatedVerts == 0 )
             continue; // no repeating vertices in the heighbourhood of v
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];

@@ -362,9 +362,6 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-# Bundle the upstream license notices of the third-party components shipped in
-# the SDK (see docs/third_party_licenses.md). Required to satisfy each upstream
-# license's redistribution/attribution clause.
 install(
   DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/licenses/
   DESTINATION ${MR_RESOURCES_DIR}/third_party_licenses

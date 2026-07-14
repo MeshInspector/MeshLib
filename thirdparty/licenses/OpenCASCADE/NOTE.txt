@@ -1,0 +1,7 @@
+MeshLib links against Open CASCADE Technology (OCCT) only as dynamic (shared)
+libraries; it does not statically link OCCT into its binaries.
+
+OCCT is distributed under LGPL-2.1 with the Open CASCADE exception -- see
+LICENSE_LGPL_21.txt and OCCT_LGPL_EXCEPTION.txt. Dynamic linking preserves the
+end user's LGPL right to replace OCCT with a modified version, so shipping these
+license texts is the only LGPL obligation that applies here.

@@ -216,7 +216,7 @@ jobs:
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
               - 'scripts/mrbind/clang_version.txt'
-              - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**)'
+              - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**|licenses/**)'
 
       - name: Filter Linux vcpkg paths
         if: ${{ github.event_name != 'schedule' }}

@@ -678,6 +678,9 @@ public:
     }
 };
 
+/// classification of the triangles around one vertex;
+/// the skip-criterion derived from it in duplicateNonManifoldVertices must remain equivalent to
+/// "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
 struct VertInfo
 {
     /// the number of chains of connected triangles around the vertex;
@@ -703,7 +706,7 @@ struct AllVertTris
     /// fills vert2firstRec
     void computeVertSpans();
 
-    /// the number of non-manifoldness around each vertex
+    /// manifoldness info for each vertex
     Vector<VertInfo, VertId> vertInfos;
 
     /// fills vertInfos
@@ -833,7 +836,7 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
                     ++info.numRepeatedVerts;
                 if ( !rInsertion.second )
                     ++info.numRepeatedVerts;
-                // numChains is not updated and not trustfull after this
+                // numChains is not updated and not trustworthy after this
                 info.numChains = 0;
             }
         }
@@ -883,8 +886,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        if ( all.vertInfos[v].numChains == 1 && all.vertInfos[v].numRepeatedVerts == 0 )
-            continue; // good case, nothing to duplicate
+        if ( all.vertInfos[v].numRepeatedVerts == 0 && all.vertInfos[v].numChains <= 1 )
+            continue; // single chain of triangles or no triangles at all, nothing to duplicate
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );

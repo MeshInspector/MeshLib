@@ -210,7 +210,7 @@ jobs:
         with:
           filters: |
             src:
-              - 'docker/(ubuntu22|ubuntu24|emscripten-build-c-bindings-3-1-38|emscripten-build-c-bindings-4-0-19|emscripten-generate-c-bindings|emscripten)Dockerfile'
+              - 'docker/(ubuntu22|ubuntu24|emscripten-build-c-bindings|emscripten-generate-c-bindings|emscripten)Dockerfile'
               - 'requirements/(ubuntu|distribution_python).txt'
               - 'scripts/build_thirdparty.sh'
               - 'scripts/install_apt_requirements.sh'

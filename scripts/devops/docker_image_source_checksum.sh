@@ -33,7 +33,7 @@ generate=( scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/clang_version.tx
 case "${distro}" in
   ubuntu22|ubuntu24)
     files=( "docker/${distro}Dockerfile" "${common[@]}" "${ubuntu[@]}" ) ;;
-  emscripten|emscripten-build-c-bindings-*)
+  emscripten|emscripten-build-c-bindings)
     files=( "docker/${distro}Dockerfile" "${common[@]}" "${emscripten[@]}" ) ;;
   emscripten-generate-c-bindings)
     files=( "docker/${distro}Dockerfile" "${generate[@]}" ) ;;

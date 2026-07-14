@@ -680,7 +680,8 @@ public:
 
 struct VertInfo
 {
-    /// the number of connected chains around the vertex
+    /// the number of connected chains around the vertex;
+    /// numChains is not trustful if numRepeatedVerts > 0
     int numChains = 0;
 
     /// the number of vertices, which are passed more than once
@@ -760,10 +761,15 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
 
     struct ThreadData
     {
-        /// key - first and second vertices in cyclic order following vertex v in triangles around v,
-        /// value - for boundary edges - the opposite edge of the same chain,
-        ///         for inner edges - invalid VertId
-        HashMap<VertId, VertId> first, second;
+        /// l[v1] is present in the map, if there is a triangle to the left of (v,v1) edge;
+        /// l[v1]'s value is invalid if there is a triangle to the right of (v,v1) edge;
+        /// otherwise it is the vertex v2 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the left of (v,v2) edge
+        HashMap<VertId, VertId> l;
+
+        /// r[v2] is present in the map, if there is a triangle to the right of (v,v2) edge;
+        /// r[v2]'s value is invalid if there is a triangle to the left of (v,v2) edge;
+        /// otherwise it is the vertex v1 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the right of (v,v1) edge
+        HashMap<VertId, VertId> r;
     };
 
     tbb::enumerable_thread_specific<ThreadData> e;
@@ -773,34 +779,62 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
         const auto iEnd = vert2firstRec[v + 1];
         if ( i == iEnd )
             return;
-        td.first.clear();
-        td.second.clear();
+        td.l.clear();
+        td.r.clear();
         VertInfo info;
         for ( ; i != iEnd; ++i )
         {
             assert( recs[i].v == v );
             const auto [v1, v2] = getOtherTriVerts( t[recs[i].f], v );
-            const auto firstInsertion = td.first.insert( { v1, v2 } );
-            const auto secondInsertion = td.second.insert( { v2, v1 } );
-            if ( firstInsertion.second )
+            const auto lInsertion = td.l.insert( { v1, v2 } );
+            const auto rInsertion = td.r.insert( { v2, v1 } );
+            ++info.numChains;
+            if ( lInsertion.second && rInsertion.second )
             {
-                if ( auto it = td.first.find( v2 ); it != td.first.end() )
+                if ( auto it = td.l.find( v2 ); it != td.l.end() )
                 {
-                    // the edge v - v12.second becomes inner, upda
-                    auto vEnd = firstInsertion.first->second = it->second;
+                    // the edge (v,v2) becomes inner
+                    const auto vEnd = it->second;
                     it->second = VertId{};
-                    if ( vEnd )
+                    assert( vEnd ); // the edge (v,v2) was boundary
+                    assert( info.numChains > 0 );
+                    --info.numChains;
+                    lInsertion.first->second = vEnd;
+                    assert( td.r[vEnd] == v2 );
+                    td.r[vEnd] = v1;
+                }
+                if ( auto it = td.r.find( v1 ); it != td.r.end() )
+                {
+                    // the edge (v,v1) becomes inner
+                    const auto vEnd = it->second;
+                    it->second = VertId{};
+                    assert( vEnd ); // the edge (v,v1) was boundary
+                    if ( vEnd == v2 )
                     {
-                        assert( td.second[vEnd] == v2 );
-                        td.second[vEnd] = v1;
+                        // the chain is closed
+                        assert( lInsertion.first->second == v1 );
+                        lInsertion.first->second = VertId{};
+                        rInsertion.first->second = VertId{};
+                    }
+                    else
+                    {
+                        assert( info.numChains > 0 );
+                        --info.numChains;
+                        rInsertion.first->second = vEnd;
+                        assert( td.l[vEnd] == v1 );
+                        td.l[vEnd] = v2;
                     }
                 }
             }
             else
-                ++info.numRepeatedVerts; // insertion can fail only if the vertex is repeated
-
-            if ( !secondInsertion.second )
-                ++info.numRepeatedVerts;
+            {
+                // insertion can fail only if the vertex is repeated
+                if ( !lInsertion.second )
+                    ++info.numRepeatedVerts;
+                if ( !rInsertion.second )
+                    ++info.numRepeatedVerts;
+                // numChains is not updated and not trustfull after this
+            }
         }
         vertInfos[v] = info;
     } );

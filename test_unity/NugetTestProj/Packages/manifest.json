@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
+    "com.unity.test-framework": "1.6.0"
+  }
+}

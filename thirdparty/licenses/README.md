@@ -33,7 +33,7 @@ dependency version has **not moved** since the text was curated. When you bump a
 
 1. CI fails with `"<id>: version changed A -> B"`.
 2. Re-check the upstream license for that version; if it changed, update the text in
-   `third_party_licenses/<id>/` (and the `license`/`files` fields if needed).
+   `thirdparty/licenses/<id>/` (and the `license`/`files` fields if needed).
 3. Re-pin: `python scripts/check_third_party_licenses.py --update-versions`, and commit the
    updated `manifest.json`.
 

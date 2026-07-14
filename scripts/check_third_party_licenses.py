@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify the bundled third-party license notices are complete and current.
 
-The `third_party_licenses/` folder is hand-curated: it holds the verbatim upstream
+The `thirdparty/licenses/` folder is hand-curated: it holds the verbatim upstream
 LICENSE/NOTICE texts of every OSS component shipped in the MeshLib SDK. This script is
 the drift tripwire for that folder. For each component in `manifest.json` it:
 
@@ -27,12 +27,13 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-LICENSES_DIR = REPO_ROOT / "third_party_licenses"
+LICENSES_DIR = REPO_ROOT / "thirdparty" / "licenses"
+REL = LICENSES_DIR.relative_to(REPO_ROOT).as_posix()  # "thirdparty/licenses"
 MANIFEST = LICENSES_DIR / "manifest.json"
 VCPKG_JSON = REPO_ROOT / "thirdparty" / "vcpkg" / "vcpkg.json"
 VCPKG_PORTS = REPO_ROOT / "thirdparty" / "vcpkg" / "ports"
 
-# Directory entries in third_party_licenses/ that are not component folders.
+# Directory entries in thirdparty/licenses/ that are not component folders.
 NON_COMPONENT_ENTRIES = {"manifest.json", "README.md"}
 
 # Submodules that ship nothing in the SDK binaries, so they need no license folder.
@@ -129,7 +130,7 @@ def check():
 
         comp_dir = LICENSES_DIR / cid
         if not comp_dir.is_dir():
-            errors.append(f"{cid}: missing license directory third_party_licenses/{cid}/")
+            errors.append(f"{cid}: missing license directory {REL}/{cid}/")
             continue
 
         # 1. declared files present and non-empty
@@ -154,7 +155,7 @@ def check():
                           f"'scripts/check_third_party_licenses.py --update-versions'")
         elif pinned != cur:
             errors.append(f"{cid}: version changed {pinned} -> {cur} -- re-verify the "
-                          f"upstream LICENSE text, update third_party_licenses/{cid}/, "
+                          f"upstream LICENSE text, update {REL}/{cid}/, "
                           f"then re-pin with --update-versions")
 
     # 3a. orphan directories with no manifest entry

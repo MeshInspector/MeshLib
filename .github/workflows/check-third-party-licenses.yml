@@ -1,0 +1,25 @@
+name: Check third-party licenses
+
+# The bundled notices in thirdparty/licenses/ are hand-curated and guarded by a
+# version tripwire (scripts/check_third_party_licenses.py). Running it daily and
+# at release keeps the notices current without gating every PR: a dependency bump
+# merges freely, and this flags within a day (and hard-fails at release) if a
+# notice needs updating. Run manually any time via "Run workflow".
+on:
+  schedule:
+    - cron: '23 5 * * *'   # daily, 05:23 UTC
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check-licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+      - name: Check third-party license notices
+        run: python3 scripts/check_third_party_licenses.py

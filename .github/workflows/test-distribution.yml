@@ -290,6 +290,8 @@ jobs:
             installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
             MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
           fi
+          # aws/tap ships untrusted in GH images and warns on every brew command
+          brew untap aws/tap 2>/dev/null || true
           xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"

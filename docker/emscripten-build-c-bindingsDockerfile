@@ -14,8 +14,8 @@ RUN <<EOF
     export DEBCONF_NONINTERACTIVE_SEEN=true
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
-    # use more reliable mirror
-    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    # uncomment in case of problems with the Canonical mirrors
+    # sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \

@@ -108,6 +108,6 @@ it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes
 it.copy_app = copy_app
 it.copy_lib = copy_lib
+it.copy_licenses = copy_licenses
 
 it.main()
-copy_licenses()

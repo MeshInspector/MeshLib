@@ -1,0 +1,743 @@
+{
+  "_comment": [
+    "Source of truth for the bundled third-party license notices.",
+    "Each component maps to a directory alongside this file holding the verbatim",
+    "upstream LICENSE/NOTICE text(s). 'version' pins the dependency version the text",
+    "was curated against; scripts/check_third_party_licenses.py recomputes it from the",
+    "source below and FAILS if it drifts, so a human re-checks the license on every bump.",
+    "To re-pin after verifying the texts are still correct: run the script with",
+    "--update-versions. Inclusion authority: doxygen/general_pages/ThirdpartyList.dox,",
+    "reconciled against .gitmodules and thirdparty/vcpkg/vcpkg.json.",
+    "source.type: submodule=gitlink SHA | vcpkg-overlay=port version+port-version |",
+    "vcpkg-registry=vcpkg baseline (sound: vcpkg.json has no per-port overrides) |",
+    "hash=sha256 of tracked in-tree files | manual=stable/link-only, presence-checked only."
+  ],
+  "components": [
+    {
+      "id": "Boost",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "BSL-1.0",
+      "upstream": "https://www.boost.org",
+      "license_source": "https://www.boost.org/LICENSE_1_0.txt",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "boost-algorithm",
+          "boost-dynamic-bitset",
+          "boost-functional",
+          "boost-integer",
+          "boost-locale",
+          "boost-move",
+          "boost-multiprecision",
+          "boost-program-options",
+          "boost-range",
+          "boost-serialization",
+          "boost-signals2",
+          "boost-stacktrace",
+          "boost-url"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
+      "files": [
+        "LICENSE_1_0.txt"
+      ]
+    },
+    {
+      "id": "Eigen",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "MPL-2.0",
+      "upstream": "https://eigen.tuxfamily.org",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/eigen"
+      },
+      "version": "3147391d946bb4b6c68edd901f2add6ac1f31f8c",
+      "files": [
+        "COPYING.MPL2",
+        "COPYING.README"
+      ]
+    },
+    {
+      "id": "spdlog",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/gabime/spdlog",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/spdlog"
+      },
+      "version": "6fa36017cfd5731d617e1a934f0e5ea9c4445b13",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "fmt",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/fmtlib/fmt",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/fmt"
+      },
+      "version": "47a66c5eccc0cce71ad81b4a681a2032d86ca951",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "libtiff",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "libtiff",
+      "upstream": "https://libtiff.gitlab.io/libtiff/",
+      "license_source": "https://gitlab.com/libtiff/libtiff/-/raw/v4.7.0/LICENSE.md",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "tiff"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
+      "files": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "id": "jsoncpp",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/open-source-parsers/jsoncpp",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/jsoncpp"
+      },
+      "version": "42e892d96e47b1f6e29844cc705e148ec4856448",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "libzip",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "BSD-3-Clause",
+      "upstream": "https://libzip.org",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/libzip"
+      },
+      "version": "6f8a0cdd24a0dc6cce9dac4a7679da784ab124ea",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "zlib-ng",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "Zlib",
+      "upstream": "https://github.com/zlib-ng/zlib-ng",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/zlib-ng"
+      },
+      "version": "860e4cff7917d93f54f5d7f0bc1d0e8b1a3cb988",
+      "files": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "id": "miniply",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/vilya/miniply",
+      "license_source": "in-tree: source/MRMesh/miniply.h",
+      "source": {
+        "type": "hash",
+        "track": [
+          "source/MRMesh/miniply.h",
+          "source/MRMesh/miniply.cpp"
+        ]
+      },
+      "version": "2a8d299466e7a951",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "oneTBB",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/uxlfoundation/oneTBB",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/onetbb"
+      },
+      "version": "12ceae12138af08845b3e8c369b24527346fe99e",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "parallel-hashmap",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/greg7mdp/parallel-hashmap",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/parallel-hashmap"
+      },
+      "version": "c36739b79ff1dd506708de251c43e8c778da2c00",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "expected",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "CC0-1.0",
+      "upstream": "https://github.com/TartanLlama/expected",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/expected"
+      },
+      "version": "d6e1fcc766b725f196d7f58097d72f8cfab4d56a",
+      "files": [
+        "COPYING"
+      ]
+    },
+    {
+      "id": "MbedTLS",
+      "modules": [
+        "MRMesh"
+      ],
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/Mbed-TLS/mbedtls",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/mbedtls"
+      },
+      "version": "1ec69067fa1351427f904362c1221b31538c8b57",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "libHaru",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "Zlib",
+      "upstream": "http://libharu.org",
+      "license_source": "https://raw.githubusercontent.com/libharu/libharu/master/LICENSE",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "libharu"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "libjpeg-turbo",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "BSD-3-Clause AND IJG",
+      "upstream": "https://libjpeg-turbo.org",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/libjpeg-turbo"
+      },
+      "version": "7fa4b5b762c9a99b46b0b7838f5fd55071b92ea5",
+      "files": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "id": "libpng",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "Libpng",
+      "upstream": "http://www.libpng.org",
+      "license_source": "http://www.libpng.org/pub/png/src/libpng-LICENSE.txt",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "libpng"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "OpenCASCADE",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "LGPL-2.1-only WITH OCCT-exception-1.0",
+      "upstream": "https://dev.opencascade.org",
+      "license_source": "https://raw.githubusercontent.com/Open-Cascade-SAS/OCCT/V7_9_1/",
+      "source": {
+        "type": "vcpkg-overlay",
+        "port": "opencascade-minimal"
+      },
+      "version": "7.9.1#0",
+      "files": [
+        "LICENSE_LGPL_21.txt",
+        "OCCT_LGPL_EXCEPTION.txt",
+        "NOTE.txt"
+      ]
+    },
+    {
+      "id": "tinygltf",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/syoyo/tinygltf",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/tinygltf"
+      },
+      "version": "98adbb3fb32850bb4918cc147a2d2428b011ad91",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "OpenCTM",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "Zlib",
+      "upstream": "https://sourceforge.net/projects/openctm/",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/OpenCTM-git"
+      },
+      "version": "49cfd0eb5de37cfd1d1290dc58d2b934dce9d387",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "LAZperf",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/hobuinc/laz-perf",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/laz-perf"
+      },
+      "version": "05ea01542e5c4417c05e7222f920e06276c79324",
+      "files": [
+        "COPYING"
+      ]
+    },
+    {
+      "id": "libE57Format",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "BSL-1.0",
+      "upstream": "https://github.com/asmaloney/libE57Format",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/libE57Format"
+      },
+      "version": "46eb0d02e00a6b0aeaee3e6655328b78c7e07b5b",
+      "files": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "id": "tinyxml2",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "Zlib",
+      "upstream": "https://leethomason.github.io/tinyxml2/",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/tinyxml2"
+      },
+      "version": "321ea883b7190d4e85cae5512a12e5eaa8f8731f",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "nlohmann-json",
+      "modules": [
+        "MRIOExtras",
+        "MRMcp",
+        "MRMCPGateway"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/nlohmann/json",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/nlohmann-json"
+      },
+      "version": "3946872265598aed5a7aea68cad4d9d1f168bd4b",
+      "files": [
+        "LICENSE.MIT"
+      ]
+    },
+    {
+      "id": "FreeType",
+      "modules": [
+        "MRSymbolMesh"
+      ],
+      "license": "FTL OR GPL-2.0-or-later",
+      "upstream": "https://freetype.org",
+      "license_source": "https://raw.githubusercontent.com/freetype/freetype/master/docs/",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "freetype"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
+      "files": [
+        "FTL.TXT",
+        "GPLv2.TXT",
+        "NOTE.txt"
+      ]
+    },
+    {
+      "id": "Python",
+      "modules": [
+        "MRPython"
+      ],
+      "license": "PSF-2.0",
+      "upstream": "https://www.python.org",
+      "license_source": "https://raw.githubusercontent.com/python/cpython/3.12/LICENSE",
+      "source": {
+        "type": "hash",
+        "track": [
+          "thirdparty/python/python311.zip",
+          "thirdparty/python/python312.zip"
+        ]
+      },
+      "version": "35ba61c359222abe",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "pybind11",
+      "modules": [
+        "MRPython"
+      ],
+      "license": "BSD-3-Clause",
+      "upstream": "https://github.com/pybind/pybind11",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/mrbind-pybind11"
+      },
+      "version": "b747f677ab30ec62aca834c78383cd92c90e6b32",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "OpenVDB",
+      "modules": [
+        "MRVoxels"
+      ],
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/AcademySoftwareFoundation/openvdb",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/openvdb/v10/openvdb"
+      },
+      "version": "87a508ca48a69f06d149be6cb0d8289fc1314f72",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "GDCM",
+      "modules": [
+        "MRVoxels"
+      ],
+      "license": "BSD-3-Clause",
+      "upstream": "https://sourceforge.net/projects/gdcm/",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/GDCM"
+      },
+      "version": "9c71b163416130ffdec26534444e9b85fcf0682a",
+      "files": [
+        "Copyright.txt"
+      ]
+    },
+    {
+      "id": "c-blosc",
+      "modules": [
+        "MRVoxels"
+      ],
+      "license": "BSD-3-Clause",
+      "upstream": "https://github.com/Blosc/c-blosc",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/c-blosc"
+      },
+      "version": "616f4b7343a8479f7e71dd3d7025bd92c9a6bbd0",
+      "files": [
+        "LICENSE.txt",
+        "LICENSES/BITSHUFFLE.txt",
+        "LICENSES/FASTLZ.txt",
+        "LICENSES/LZ4.txt",
+        "LICENSES/SNAPPY.txt",
+        "LICENSES/STDINT.txt",
+        "LICENSES/ZLIB-NG.txt",
+        "LICENSES/ZLIB.txt"
+      ]
+    },
+    {
+      "id": "CUDA",
+      "modules": [
+        "MRCuda"
+      ],
+      "license": "NVIDIA-CUDA-EULA",
+      "upstream": "https://docs.nvidia.com/cuda/eula/index.html",
+      "source": {
+        "type": "manual"
+      },
+      "version": "link-only (EULA not bundled)",
+      "files": [
+        "NOTICE.txt"
+      ]
+    },
+    {
+      "id": "glad",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/Dav1dde/glad",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/glad"
+      },
+      "version": "e86f90457371c6233053bacf0d6f486a51ddcd67",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "GLFW",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "Zlib",
+      "upstream": "https://www.glfw.org",
+      "license_source": "https://raw.githubusercontent.com/glfw/glfw/master/LICENSE.md",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "glfw3"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
+      "files": [
+        "LICENSE.md"
+      ]
+    },
+    {
+      "id": "DearImGui",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/ocornut/imgui",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/imgui"
+      },
+      "version": "adfa5364cd84db127f8f5d093be90c2e3608be0f",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "cpr",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/libcpr/cpr",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/cpr"
+      },
+      "version": "f091b2c061b307ee89b164c39976fc9202a1c79d",
+      "files": [
+        "LICENSE"
+      ]
+    },
+    {
+      "id": "libcurl",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "curl",
+      "upstream": "https://curl.se",
+      "license_source": "https://raw.githubusercontent.com/curl/curl/master/COPYING",
+      "source": {
+        "type": "manual"
+      },
+      "version": "bundled/linked via cpr (see cpr)",
+      "files": [
+        "COPYING"
+      ]
+    },
+    {
+      "id": "clip",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/dacap/clip",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/clip"
+      },
+      "version": "7f2e86ab9690f7df88440002083edd257f87bc58",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "hidapi",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "BSD-3-Clause OR GPL-3.0-only OR HIDAPI-orig",
+      "upstream": "https://github.com/libusb/hidapi",
+      "license_source": "https://raw.githubusercontent.com/libusb/hidapi/master/",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "hidapi"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
+      "files": [
+        "LICENSE.txt",
+        "LICENSE-bsd.txt",
+        "LICENSE-gpl3.txt",
+        "LICENSE-orig.txt"
+      ]
+    },
+    {
+      "id": "FontAwesome",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "OFL-1.1 AND CC-BY-4.0 AND MIT",
+      "upstream": "https://fontawesome.com/license/free",
+      "license_source": "https://raw.githubusercontent.com/FortAwesome/Font-Awesome/6.x/LICENSE.txt",
+      "source": {
+        "type": "hash",
+        "track": [
+          "thirdparty/fontawesome-free/fa-solid-900.ttf"
+        ]
+      },
+      "version": "4235ead522551569",
+      "files": [
+        "LICENSE.txt"
+      ]
+    },
+    {
+      "id": "NotoSans",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "OFL-1.1",
+      "upstream": "https://fonts.google.com/noto",
+      "license_source": "https://raw.githubusercontent.com/googlefonts/noto-fonts/main/LICENSE",
+      "source": {
+        "type": "hash",
+        "track": [
+          "thirdparty/Noto_Sans/NotoSans-Regular.ttf",
+          "thirdparty/Noto_Sans/NotoSans-SemiBold.ttf",
+          "thirdparty/Noto_Sans/NotoSansCJK-Regular.ttc",
+          "thirdparty/Noto_Sans/NotoSansMono-Regular.ttf"
+        ]
+      },
+      "version": "68527db989c034fa",
+      "files": [
+        "OFL.txt"
+      ]
+    },
+    {
+      "id": "fastmcpp",
+      "modules": [
+        "MRMcp",
+        "MRMCPGateway"
+      ],
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/MeshInspector/fastmcpp",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/fastmcpp"
+      },
+      "version": "9aa1a179f886f6d098f67693e18ee4778db924b7",
+      "files": [
+        "LICENSE",
+        "NOTICE"
+      ]
+    },
+    {
+      "id": "cpp-httplib",
+      "modules": [
+        "MRMcp",
+        "MRMCPGateway"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/yhirose/cpp-httplib",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/cpp-httplib"
+      },
+      "version": "b045ee7f6b434a85fd011e96e28c6d4abfb18788",
+      "files": [
+        "LICENSE"
+      ]
+    }
+  ]
+}

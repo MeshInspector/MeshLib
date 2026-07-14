@@ -1,0 +1,29 @@
+================================================================================
+fastmcpp - High-Performance C++ Port of fastmcp
+================================================================================
+
+Copyright 2025 Elias Bachaalany
+
+This software is a C++ port of the fastmcp library, originally written in Python.
+
+Original Work:
+  fastmcp - Fast MCP (Model Context Protocol) implementation
+  Copyright: Jeremiah Lowin and fastmcp contributors
+  Repository: https://github.com/jlowin/fastmcp
+  License: Apache License 2.0
+
+C++ Port:
+  Author: Elias Bachaalany
+  Repository: https://github.com/0xeb/fastmcpp
+
+Attribution Requirement:
+  When using fastmcpp, please include the following attribution:
+  "Uses fastmcpp (https://github.com/0xeb/fastmcpp) by Elias Bachaalany"
+
+This C++ port is a complete reimplementation providing:
+  - Native C++ performance
+  - Header-only libraries where possible
+  - Modern C++17/20 features
+  - Cross-platform support (Windows, Linux, macOS)
+
+================================================================================

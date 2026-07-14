@@ -55,6 +55,35 @@ TEST( MRMesh, duplicateDoubleHoleVertex )
     ASSERT_EQ( t[1_f], ( ThreeVertIds{ 5_v, 3_v, 4_v } ) );
 }
 
+// check a vertex with both a closed ring of triangles and a separate chain around it
+TEST( MRMesh, duplicateClosedPlusOpenChainVertex )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 0_v, 3_v, 1_v } ); //2_f closed ring around #0
+    t.push_back( { 0_v, 4_v, 5_v } ); //3_f separate triangle sharing #0 only
+
+    std::vector<VertDuplication> dups;
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    ASSERT_EQ( duplicatedVerticesCnt, 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    ASSERT_EQ( dups[0].srcVert, 0_v );
+    ASSERT_EQ( dups[0].dupVert, 6_v );
+    if ( t[3_f][0] == 0_v )
+    {
+        // the single triangle was walked first, so the closed ring got the duplicated vertex
+        for ( FaceId i{ 0 }; i < 3; ++i )
+            ASSERT_EQ( t[i][0], 6_v );
+    }
+    else
+    {
+        for ( FaceId i{ 0 }; i < 3; ++i )
+            ASSERT_EQ( t[i][0], 0_v );
+        ASSERT_EQ( t[3_f][0], 6_v );
+    }
+}
+
 static void testBuildWithDups( const char * objMesh, int numVerts, int numComps )
 {
     std::istringstream s( objMesh );

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-# Any changes in this file should probably be mirrored in `emscripten-build-c-bindingsDockerfile`.
+# Any changes in this file should probably be mirrored in `emscripten-build-c-bindings-X-Y-ZDockerfile`.
 
 FROM emscripten/emsdk:4.0.10-arm64 AS base
 

@@ -13,8 +13,8 @@ COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 RUN <<EOF
     set -e
     export DEBIAN_FRONTEND=noninteractive
-    # use more reliable mirror
-    sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
+    # uncomment in case of problems with the Canonical mirrors
+    # sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
     # MRBind dependencies
     ./scripts/mrbind/install_deps_ubuntu.sh
     # clean downloaded files

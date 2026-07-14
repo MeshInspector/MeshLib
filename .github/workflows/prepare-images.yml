@@ -249,7 +249,7 @@ jobs:
       image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}
     steps:
       - name: Remove unused Docker data
-        run: docker system prune --force --all --volumes`
+        run: docker system prune --force --all --volumes
 
       - name: Checkout
         uses: actions/checkout@v7

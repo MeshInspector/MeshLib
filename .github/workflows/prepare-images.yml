@@ -83,8 +83,6 @@ jobs:
               {distro:"ubuntu24",              arch:"arm64"},
               {distro:"emscripten",            arch:"arm64"},
               {distro:"emscripten-generate-c-bindings", arch:"arm64"},
-              {distro:"emscripten-build-c-bindings-3-1-38", arch:"x64"},
-              {distro:"emscripten-build-c-bindings-4-0-19", arch:"arm64"}
              ] | map(select(
               (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
               and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)
@@ -244,7 +242,12 @@ jobs:
       matrix:
         # The old `3.1.38` didn't have ARM images.
         emsdk_image: [ 3.1.38, 4.0.19-arm64 ]
-    runs-on: ubuntu-latest
+        include:
+          - emsdk_image: 3.1.38
+            runner_image: ubuntu-latest
+          - emsdk_image: 4.0.19-arm64
+            runner_image: ubuntu-24.04-arm
+    runs-on: ${{matrix.runner_image}}
     env:
       image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}
     steps:

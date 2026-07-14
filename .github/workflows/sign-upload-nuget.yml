@@ -43,6 +43,14 @@ jobs:
     needs: setup
     runs-on: [windows-x64-codesign]
     steps:
+      # Only the beta-patch script is needed here (used by "Make Beta").
+      # Must run before the download step: checkout cleans the workdir by default.
+      - name: Checkout beta-patch script
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/nuget_patch/nuget_make_beta.py
+          sparse-checkout-cone-mode: false
+
       - name: Remove old local NuGet packages
         run: Remove-Item "MeshLib_*.nupkg"
 

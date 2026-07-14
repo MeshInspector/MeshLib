@@ -4,6 +4,7 @@
 #include "MRCloseVertices.h"
 #include "MRBuffer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
@@ -431,7 +432,7 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
     MR_TIMER;
 
     // reserve enough elements for faces and vertices
-    //auto [maxFaceId, maxVertId] = computeMaxIds( tris );
+    //auto [maxFaceId, maxVertId] = computeMaxIds( t );
     const auto maxVertId = findMaxVertId( t, settings.region );
 
     // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
@@ -677,6 +678,19 @@ public:
     }
 };
 
+/// classification of the triangles around one vertex;
+/// the skip-criterion derived from it in duplicateNonManifoldVertices must remain equivalent to
+/// "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
+struct VertInfo
+{
+    /// the number of chains of connected triangles around the vertex;
+    /// numChains is set to 0 if numRepeatedVerts > 0
+    int numChains = 0;
+
+    /// the number of vertices, which are passed more than once
+    int numRepeatedVerts = 0;
+};
+
 struct AllVertTris
 {
     /// the array of all vertex-in-triangle sorted by vertex id, then by face id
@@ -684,6 +698,19 @@ struct AllVertTris
 
     /// initializes recs
     AllVertTris( const Triangulation & t, const FaceBitSet * region );
+
+    /// maps vertex id to first its record in recs, not descending;
+    /// vertex #i is in the records [vert2firstRec[i], vert2firstRec[i+1]) of recs
+    Vector<int, VertId> vert2firstRec;
+
+    /// fills vert2firstRec
+    void computeVertSpans();
+
+    /// manifoldness info for each vertex
+    Vector<VertInfo, VertId> vertInfos;
+
+    /// fills vertInfos
+    void computeVertInfos( const Triangulation & t );
 };
 
 AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
@@ -708,6 +735,113 @@ AllVertTris::AllVertTris( const Triangulation & t, const FaceBitSet * region )
     }
 
     tbb::parallel_sort( recs.begin(), recs.end() );
+}
+
+void AllVertTris::computeVertSpans()
+{
+    MR_TIMER;
+    if ( recs.empty() )
+        return;
+
+    vert2firstRec.reserve( recs.back().v + 2 );
+    for ( int i = 0; i < recs.size(); ++i )
+    {
+        auto v = recs[i].v;
+        while ( v >= vert2firstRec.size() )
+            vert2firstRec.push_back( i );
+    }
+    vert2firstRec.push_back( (int)recs.size() );
+    assert( vert2firstRec.size() == recs.back().v + 2 );
+}
+
+void AllVertTris::computeVertInfos( const Triangulation & t )
+{
+    MR_TIMER;
+    if ( vert2firstRec.empty() )
+        return;
+    vertInfos.clear();
+    vertInfos.resize( vert2firstRec.size() - 1 );
+
+    struct ThreadData
+    {
+        /// l[v1] is present in the map, if there is a triangle to the left of (v,v1) edge;
+        /// l[v1]'s value is invalid if there is a triangle to the right of (v,v1) edge;
+        /// otherwise it is the vertex v2 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the left of (v,v2) edge
+        HashMap<VertId, VertId> l;
+
+        /// r[v2] is present in the map, if there is a triangle to the right of (v,v2) edge;
+        /// r[v2]'s value is invalid if there is a triangle to the left of (v,v2) edge;
+        /// otherwise it is the vertex v1 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the right of (v,v1) edge
+        HashMap<VertId, VertId> r;
+    };
+
+    tbb::enumerable_thread_specific<ThreadData> e;
+    ParallelFor( vertInfos, e, [&]( VertId v, ThreadData & td )
+    {
+        int i = vert2firstRec[v];
+        const auto iEnd = vert2firstRec[v + 1];
+        if ( i == iEnd )
+            return;
+        td.l.clear();
+        td.r.clear();
+        VertInfo info;
+        for ( ; i != iEnd; ++i )
+        {
+            assert( recs[i].v == v );
+            const auto [v1, v2] = getOtherTriVerts( t[recs[i].f], v );
+            const auto lInsertion = td.l.insert( { v1, v2 } );
+            const auto rInsertion = td.r.insert( { v2, v1 } );
+            if ( info.numRepeatedVerts == 0 && lInsertion.second && rInsertion.second )
+            {
+                ++info.numChains;
+                if ( auto it = td.l.find( v2 ); it != td.l.end() )
+                {
+                    // the edge (v,v2) becomes inner
+                    const auto vEnd = it->second;
+                    it->second = VertId{};
+                    assert( vEnd ); // the edge (v,v2) was boundary
+                    assert( info.numChains > 0 );
+                    --info.numChains;
+                    lInsertion.first->second = vEnd;
+                    assert( td.r[vEnd] == v2 );
+                    td.r[vEnd] = v1;
+                }
+                if ( auto it = td.r.find( v1 ); it != td.r.end() )
+                {
+                    // the edge (v,v1) becomes inner
+                    const auto vEnd = it->second;
+                    it->second = VertId{};
+                    assert( vEnd ); // the edge (v,v1) was boundary
+                    if ( vEnd == v1 )
+                    {
+                        // the chain is closed
+                        assert( lInsertion.first->second == v1 );
+                        lInsertion.first->second = VertId{};
+                        rInsertion.first->second = VertId{};
+                    }
+                    else
+                    {
+                        assert( info.numChains > 0 );
+                        --info.numChains;
+                        rInsertion.first->second = vEnd;
+                        assert( td.l[vEnd] == v1 );
+                        td.l[vEnd] = v2;
+                    }
+                }
+            }
+            else
+            {
+                // insertion can fail only if the vertex is repeated
+                if ( !lInsertion.second )
+                    ++info.numRepeatedVerts;
+                if ( !rInsertion.second )
+                    ++info.numRepeatedVerts;
+                // numChains is not updated and not trustworthy after this
+                info.numChains = 0;
+            }
+        }
+        vertInfos[v] = info;
+    } );
 }
 
 // path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
@@ -743,24 +877,27 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     if ( !lastValidVert )
         lastValidVert = all.recs.back().v;
 
+    all.computeVertSpans();
+    all.computeVertInfos( t );
+
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
-    size_t posBegin = 0, posEnd = 0;
-    while ( posEnd != all.recs.size() )
+    for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        posBegin = posEnd++;
-        while ( posEnd < all.recs.size() && all.recs[posBegin].v == all.recs[posEnd].v )
-            ++posEnd;
+        if ( all.vertInfos[v].numRepeatedVerts == 0 && all.vertInfos[v].numChains <= 1 )
+            continue; // single chain of triangles or no triangles at all, nothing to duplicate
+        const auto posBegin = all.vert2firstRec[v];
+        const auto posEnd = all.vert2firstRec[v + 1];
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
         while ( !pathMaker.empty() )
         {
-            for(const auto& v : path)
-                visitedVertices.reset(v);
+            for(const auto& vi : path)
+                visitedVertices.reset(vi);
 
             bool triOrientation = true;
             const VertId firstVertex = pathMaker.getFirstVertex();
@@ -815,8 +952,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     // save only closed path and prepare for new search starting with non-manifold vertex
                     path.push_back( nextVertex );
                     extractClosedPath( path, closedPath );
-                    for( const auto& v : closedPath)
-                        visitedVertices.reset(v);
+                    for( const auto& vi : closedPath)
+                        visitedVertices.reset(vi);
 
                     if ( foundChains )
                     {

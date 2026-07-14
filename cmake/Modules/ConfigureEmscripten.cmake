@@ -18,6 +18,21 @@ IF(MR_EMSCRIPTEN_SIMD)
     "-msimd128"
   )
 ENDIF()
+IF(MR_EMSCRIPTEN_SINGLETHREAD)
+  option(MR_EMSCRIPTEN_WASM2023 "Enable WebAssembly 2023 for Emscripten builds, as defined by Unity" OFF)
+ELSE()
+  # Enabling this when multithreaded builds are enabled seems like a good default, even though multithreading is not a part of Wasm 2023.
+  option(MR_EMSCRIPTEN_WASM2023 "Enable WebAssembly 2023 for Emscripten builds, as defined by Unity" ON)
+ENDIF()
+IF(MR_EMSCRIPTEN_WASM2023)
+  # Those flags come from here: https://docs.unity3d.com/6000.7/Documentation/Manual/webgl-native-plugins-with-emscripten.html
+  # Skipping `-msimd128` because we have it behind a separate flag.
+  # Skipping `-fwasm-exceptions` because we don't use exceptions.
+  # Skipping `-sSUPPORT_LONGJMP=wasm` because that conflicts with our `-s NO_DISABLE_EXCEPTION_CATCHING=1`.
+  string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}
+    "-mbulk-memory -mnontrapping-fptoint -msse4.2"
+  )
+ENDIF()
 string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS
   "-s ALLOW_MEMORY_GROWTH=1"
   "-s LLD_REPORT_UNDEFINED=1"

@@ -282,7 +282,7 @@ jobs:
             echo "Reusing existing ${repo}:${tag}"
           else
             docker build \
-              -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
+              -f docker/emscripten-build-c-bindingsDockerfile \
               -t "${repo}:${tag}" \
               --build-arg BASE_EMSDK_IMAGE=${{matrix.emsdk_image}} \
               --secret id=AWS_ACCESS_KEY_ID \

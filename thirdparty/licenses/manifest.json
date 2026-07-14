@@ -313,7 +313,8 @@
       "version": "7.9.1#0",
       "files": [
         "LICENSE_LGPL_21.txt",
-        "OCCT_LGPL_EXCEPTION.txt"
+        "OCCT_LGPL_EXCEPTION.txt",
+        "NOTE.txt"
       ]
     },
     {
@@ -431,7 +432,8 @@
       "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
       "files": [
         "FTL.TXT",
-        "GPLv2.TXT"
+        "GPLv2.TXT",
+        "NOTE.txt"
       ]
     },
     {

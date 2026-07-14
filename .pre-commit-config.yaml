@@ -10,10 +10,3 @@ repos:
         entry: scripts/check_vcxproj.py source/
         language: script
         pass_filenames: false
-    -   id: third-party-licenses
-        name: Check third-party license notices are complete and current
-        stages: [pre-push, manual]
-        always_run: true
-        entry: scripts/check_third_party_licenses.py
-        language: script
-        pass_filenames: false

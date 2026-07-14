@@ -216,8 +216,6 @@ jobs:
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
               - 'scripts/mrbind/clang_version.txt'
-              # licenses/** excluded: bundled notice texts are not build inputs, so
-              # editing them must not trigger a Linux Docker image rebuild.
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**|licenses/**)'
 
       - name: Filter Linux vcpkg paths

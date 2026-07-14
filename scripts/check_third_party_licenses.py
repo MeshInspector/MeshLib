@@ -16,8 +16,9 @@ the drift tripwire for that folder. For each component in `manifest.json` it:
 Run `--update-versions` to re-pin the manifest to current versions after you have
 verified the texts are still correct.
 
-Invoked with no build artifacts (pre-commit / CI): every version signal is read from
-the git tree and in-tree files, so it works on a fresh checkout without submodules.
+Runs daily and on release (.github/workflows/check-third-party-licenses.yml); run it
+locally any time with `python scripts/check_third_party_licenses.py`. Every version signal
+is read from the git tree and in-tree files, so it needs no build and no submodule checkout.
 """
 import argparse
 import hashlib
@@ -34,7 +35,7 @@ VCPKG_JSON = REPO_ROOT / "thirdparty" / "vcpkg" / "vcpkg.json"
 VCPKG_PORTS = REPO_ROOT / "thirdparty" / "vcpkg" / "ports"
 
 # Directory entries in thirdparty/licenses/ that are not component folders.
-NON_COMPONENT_ENTRIES = {"manifest.json", "README.md"}
+NON_COMPONENT_ENTRIES = {"manifest.json"}
 
 # Submodules that ship nothing in the SDK binaries, so they need no license folder.
 # Keep this list short and justified -- anything not here must appear in the manifest.

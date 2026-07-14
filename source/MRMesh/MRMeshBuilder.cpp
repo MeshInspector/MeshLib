@@ -680,8 +680,8 @@ public:
 
 struct VertInfo
 {
-    /// the number of connected chains around the vertex;
-    /// numChains is not trustful if numRepeatedVerts > 0
+    /// the number of chains of connected triangles around the vertex;
+    /// numChains is set to 0 if numRepeatedVerts > 0
     int numChains = 0;
 
     /// the number of vertices, which are passed more than once
@@ -788,9 +788,9 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
             const auto [v1, v2] = getOtherTriVerts( t[recs[i].f], v );
             const auto lInsertion = td.l.insert( { v1, v2 } );
             const auto rInsertion = td.r.insert( { v2, v1 } );
-            ++info.numChains;
-            if ( lInsertion.second && rInsertion.second )
+            if ( info.numRepeatedVerts == 0 && lInsertion.second && rInsertion.second )
             {
+                ++info.numChains;
                 if ( auto it = td.l.find( v2 ); it != td.l.end() )
                 {
                     // the edge (v,v2) becomes inner
@@ -809,7 +809,7 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
                     const auto vEnd = it->second;
                     it->second = VertId{};
                     assert( vEnd ); // the edge (v,v1) was boundary
-                    if ( vEnd == v2 )
+                    if ( vEnd == v1 )
                     {
                         // the chain is closed
                         assert( lInsertion.first->second == v1 );
@@ -834,6 +834,7 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
                 if ( !rInsertion.second )
                     ++info.numRepeatedVerts;
                 // numChains is not updated and not trustfull after this
+                info.numChains = 0;
             }
         }
         vertInfos[v] = info;
@@ -882,8 +883,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        if ( all.vertInfos[v].numChains == 0 && all.vertInfos[v].numRepeatedVerts == 0 )
-            continue; // no repeating vertices in the heighbourhood of v
+        if ( all.vertInfos[v].numChains == 1 && all.vertInfos[v].numRepeatedVerts == 0 )
+            continue; // good case, nothing to duplicate
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );

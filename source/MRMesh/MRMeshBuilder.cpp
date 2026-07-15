@@ -876,8 +876,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        /// this skip-criterion must remain equivalent to
-        /// "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
+        // this skip-criterion must remain equivalent to
+        // "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
         if ( all.vertInfos[v].numRepeatedVerts == 0 && all.vertInfos[v].numChains <= 1 )
             continue; // single chain of triangles or no triangles at all, nothing to duplicate
         const auto posBegin = all.vert2firstRec[v];

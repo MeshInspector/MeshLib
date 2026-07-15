@@ -3,6 +3,7 @@
 #include "MRMeshBuilderTypes.h"
 #include "MRMesh.h"
 #include "MRProgressCallback.h"
+#include <utility>
 
 namespace MR
 {
@@ -145,7 +146,8 @@ struct VertTri
     friend bool operator <( const VertTri& l, const VertTri& r ) { return l.asPair() < r.asPair(); }
 };
 
-/// computes VertInfo from all the triangles around it [begin, end)
+/// computes VertInfo of one vertex given all its incident triangles in [begin, end), all referencing the same vertex;
+/// allocates temporary hash maps on every call, so prefer batch processing over calling it per vertex of a large mesh
 [[nodiscard]] MRMESH_API VertInfo inspectVertNeighbourhood( const Triangulation & t, const VertTri * begin, const VertTri * end );
 
 } //namespace MeshBuilder

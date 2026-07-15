@@ -42,7 +42,6 @@ NON_COMPONENT_ENTRIES = {"manifest.json"}
 EXCLUDED_SUBMODULES = {
     "thirdparty/googletest",          # unit-test framework, not shipped
     "thirdparty/mrbind",              # build-time binding generator, not shipped
-    "thirdparty/openvdb/v9/openvdb",  # legacy OpenVDB; only v10 ships (see OpenVDB entry)
     "test_data",                      # test assets
 }
 

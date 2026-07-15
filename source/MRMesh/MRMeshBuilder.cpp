@@ -549,16 +549,6 @@ static std::pair<VertId, VertId> getOtherTriVerts( const ThreeVertIds & vs, Vert
     return { vs[0], vs[1] };
 }
 
-/// describes a vertex and one of triangles incident to it
-struct VertTri
-{
-    VertId v;
-    FaceId f;
-
-    auto asPair() const { return std::make_pair( v, f ); }
-    friend bool operator <( const VertTri& l, const VertTri& r ) { return l.asPair() < r.asPair(); }
-};
-
 // to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
 class PathAroundVertex
 {
@@ -678,18 +668,93 @@ public:
     }
 };
 
-/// classification of the triangles around one vertex;
-/// the skip-criterion derived from it in duplicateNonManifoldVertices must remain equivalent to
-/// "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
-struct VertInfo
+class VertNeighbourhoodInspector
 {
-    /// the number of chains of connected triangles around the vertex;
-    /// numChains is set to 0 if numRepeatedVerts > 0
-    int numChains = 0;
+public:
+    VertInfo run( const Triangulation & t, const VertTri * begin, const VertTri * end );
 
-    /// the number of vertices, which are passed more than once
-    int numRepeatedVerts = 0;
+private:
+    /// l_[v1] is present in the map, if there is a triangle to the left of (v,v1) edge;
+    /// l_[v1]'s value is invalid if there is a triangle to the right of (v,v1) edge;
+    /// otherwise it is the vertex v2 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the left of (v,v2) edge
+    HashMap<VertId, VertId> l_;
+
+    /// r_[v2] is present in the map, if there is a triangle to the right of (v,v2) edge;
+    /// r_[v2]'s value is invalid if there is a triangle to the left of (v,v2) edge;
+    /// otherwise it is the vertex v1 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the right of (v,v1) edge
+    HashMap<VertId, VertId> r_;
 };
+
+VertInfo inspectVertNeighbourhood( const Triangulation & t, const VertTri * begin, const VertTri * end )
+{
+    return VertNeighbourhoodInspector{}.run( t, begin, end );
+}
+
+VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri * begin, const VertTri * end )
+{
+    l_.clear();
+    r_.clear();
+    VertInfo info;
+    if ( begin == end )
+        return info;
+    const auto v0 = begin->v;
+    for ( auto i = begin; i != end; ++i )
+    {
+        assert( i->v == v0 );
+        const auto [v1, v2] = getOtherTriVerts( t[i->f], v0 );
+        const auto lInsertion = l_.insert( { v1, v2 } );
+        const auto rInsertion = r_.insert( { v2, v1 } );
+        if ( info.numRepeatedVerts == 0 && lInsertion.second && rInsertion.second )
+        {
+            ++info.numChains;
+            if ( auto it = l_.find( v2 ); it != l_.end() )
+            {
+                // the edge (v,v2) becomes inner
+                const auto vEnd = it->second;
+                it->second = VertId{};
+                assert( vEnd ); // the edge (v,v2) was boundary
+                assert( info.numChains > 0 );
+                --info.numChains;
+                lInsertion.first->second = vEnd;
+                assert( r_[vEnd] == v2 );
+                r_[vEnd] = v1;
+            }
+            if ( auto it = r_.find( v1 ); it != r_.end() )
+            {
+                // the edge (v,v1) becomes inner
+                const auto vEnd = it->second;
+                it->second = VertId{};
+                assert( vEnd ); // the edge (v,v1) was boundary
+                if ( vEnd == v1 )
+                {
+                    // the chain is closed
+                    assert( lInsertion.first->second == v1 );
+                    lInsertion.first->second = VertId{};
+                    rInsertion.first->second = VertId{};
+                }
+                else
+                {
+                    assert( info.numChains > 0 );
+                    --info.numChains;
+                    rInsertion.first->second = vEnd;
+                    assert( l_[vEnd] == v1 );
+                    l_[vEnd] = v2;
+                }
+            }
+        }
+        else
+        {
+            // insertion can fail only if the vertex is repeated
+            if ( !lInsertion.second )
+                ++info.numRepeatedVerts;
+            if ( !rInsertion.second )
+                ++info.numRepeatedVerts;
+            // numChains is not updated and not trustworthy after this
+            info.numChains = 0;
+        }
+    }
+    return info;
+}
 
 struct AllVertTris
 {
@@ -762,85 +827,10 @@ void AllVertTris::computeVertInfos( const Triangulation & t )
     vertInfos.clear();
     vertInfos.resize( vert2firstRec.size() - 1 );
 
-    struct ThreadData
+    tbb::enumerable_thread_specific<VertNeighbourhoodInspector> e;
+    ParallelFor( vertInfos, e, [&]( VertId v, VertNeighbourhoodInspector & td )
     {
-        /// l[v1] is present in the map, if there is a triangle to the left of (v,v1) edge;
-        /// l[v1]'s value is invalid if there is a triangle to the right of (v,v1) edge;
-        /// otherwise it is the vertex v2 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the left of (v,v2) edge
-        HashMap<VertId, VertId> l;
-
-        /// r[v2] is present in the map, if there is a triangle to the right of (v,v2) edge;
-        /// r[v2]'s value is invalid if there is a triangle to the left of (v,v2) edge;
-        /// otherwise it is the vertex v1 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the right of (v,v1) edge
-        HashMap<VertId, VertId> r;
-    };
-
-    tbb::enumerable_thread_specific<ThreadData> e;
-    ParallelFor( vertInfos, e, [&]( VertId v, ThreadData & td )
-    {
-        int i = vert2firstRec[v];
-        const auto iEnd = vert2firstRec[v + 1];
-        if ( i == iEnd )
-            return;
-        td.l.clear();
-        td.r.clear();
-        VertInfo info;
-        for ( ; i != iEnd; ++i )
-        {
-            assert( recs[i].v == v );
-            const auto [v1, v2] = getOtherTriVerts( t[recs[i].f], v );
-            const auto lInsertion = td.l.insert( { v1, v2 } );
-            const auto rInsertion = td.r.insert( { v2, v1 } );
-            if ( info.numRepeatedVerts == 0 && lInsertion.second && rInsertion.second )
-            {
-                ++info.numChains;
-                if ( auto it = td.l.find( v2 ); it != td.l.end() )
-                {
-                    // the edge (v,v2) becomes inner
-                    const auto vEnd = it->second;
-                    it->second = VertId{};
-                    assert( vEnd ); // the edge (v,v2) was boundary
-                    assert( info.numChains > 0 );
-                    --info.numChains;
-                    lInsertion.first->second = vEnd;
-                    assert( td.r[vEnd] == v2 );
-                    td.r[vEnd] = v1;
-                }
-                if ( auto it = td.r.find( v1 ); it != td.r.end() )
-                {
-                    // the edge (v,v1) becomes inner
-                    const auto vEnd = it->second;
-                    it->second = VertId{};
-                    assert( vEnd ); // the edge (v,v1) was boundary
-                    if ( vEnd == v1 )
-                    {
-                        // the chain is closed
-                        assert( lInsertion.first->second == v1 );
-                        lInsertion.first->second = VertId{};
-                        rInsertion.first->second = VertId{};
-                    }
-                    else
-                    {
-                        assert( info.numChains > 0 );
-                        --info.numChains;
-                        rInsertion.first->second = vEnd;
-                        assert( td.l[vEnd] == v1 );
-                        td.l[vEnd] = v2;
-                    }
-                }
-            }
-            else
-            {
-                // insertion can fail only if the vertex is repeated
-                if ( !lInsertion.second )
-                    ++info.numRepeatedVerts;
-                if ( !rInsertion.second )
-                    ++info.numRepeatedVerts;
-                // numChains is not updated and not trustworthy after this
-                info.numChains = 0;
-            }
-        }
-        vertInfos[v] = info;
+        vertInfos[v] = td.run( t, recs.data() + vert2firstRec[v], recs.data() + vert2firstRec[v + 1] );
     } );
 }
 
@@ -886,6 +876,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
+        /// this skip-criterion must remain equivalent to
+        /// "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
         if ( all.vertInfos[v].numRepeatedVerts == 0 && all.vertInfos[v].numChains <= 1 )
             continue; // single chain of triangles or no triangles at all, nothing to duplicate
         const auto posBegin = all.vert2firstRec[v];

@@ -124,6 +124,30 @@ MRMESH_API int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyB
 /// \return the number of vertices united, 0 means no change in the mesh
 MRMESH_API int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params = {} );
 
+/// classification of the triangles around one vertex
+struct VertInfo
+{
+    /// the number of chains of connected triangles around the vertex;
+    /// numChains is set to 0 if numRepeatedVerts > 0
+    int numChains = 0;
+
+    /// the number of vertices, which are passed more than once
+    int numRepeatedVerts = 0;
+};
+
+/// describes a vertex and one of triangles incident to it
+struct VertTri
+{
+    VertId v;
+    FaceId f;
+
+    auto asPair() const { return std::make_pair( v, f ); }
+    friend bool operator <( const VertTri& l, const VertTri& r ) { return l.asPair() < r.asPair(); }
+};
+
+/// computes VertInfo from all the triangles around it [begin, end)
+[[nodiscard]] MRMESH_API VertInfo inspectVertNeighbourhood( const Triangulation & t, const VertTri * begin, const VertTri * end );
+
 } //namespace MeshBuilder
 
 } //namespace MR

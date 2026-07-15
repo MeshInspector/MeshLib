@@ -1,4 +1,5 @@
 #include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRVertDuplication.h>
 #include <MRMesh/MRMeshBuilderTypes.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshComponents.h>
@@ -82,6 +83,30 @@ TEST( MRMesh, duplicateClosedPlusOpenChainVertex )
             ASSERT_EQ( t[i][0], 0_v );
         ASSERT_EQ( t[3_f][0], 6_v );
     }
+}
+
+// a vertex with two closed rings of triangles around it, from a real mesh
+TEST( MRMesh, inspectVertNeighbourhood )
+{
+    Triangulation t;
+    t.push_back( { 992_v, 991_v, 990_v } );     //0_f
+    t.push_back( { 992_v, 988_v, 1911_v } );    //1_f
+    t.push_back( { 992_v, 989_v, 988_v } );     //2_f
+    t.push_back( { 992_v, 1911_v, 989_v } );    //3_f
+    t.push_back( { 992_v, 1020_v, 1019_v } );   //4_f
+    t.push_back( { 992_v, 990_v, 1020_v } );    //5_f
+    t.push_back( { 992_v, 1019_v, 460079_v } ); //6_f
+    t.push_back( { 992_v, 1013_v, 991_v } );    //7_f
+    t.push_back( { 992_v, 460079_v, 1013_v } ); //8_f
+
+    std::vector<VertTri> recs;
+    for ( FaceId f = 0_f; f < t.size(); ++f )
+        recs.push_back( { 992_v, f } );
+
+    // 6-triangle closed ring (991,990,1020,1019,460079,1013) and 3-triangle closed ring (988,1911,989)
+    const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
+    EXPECT_EQ( info.numRepeatedVerts, 0 );
+    EXPECT_EQ( info.numChains, 2 );
 }
 
 static void testBuildWithDups( const char * objMesh, int numVerts, int numComps )

@@ -394,6 +394,7 @@
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMeshBuilder.h" />
+    <ClInclude Include="MRVertDuplication.h" />
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMeshLoad.h" />
     <ClInclude Include="MRObject.h" />
@@ -727,6 +728,7 @@
     <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />
+    <ClCompile Include="MRVertDuplication.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRObject.cpp" />
     <ClCompile Include="MRObjectLoad.cpp" />

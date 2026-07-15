@@ -561,6 +561,9 @@
     <ClInclude Include="MRMeshBuilder.h">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClInclude>
+    <ClInclude Include="MRVertDuplication.h">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClInclude>
     <ClInclude Include="MRIdentifyVertices.h">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClInclude>
@@ -1716,6 +1719,9 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBuilder.cpp">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVertDuplication.cpp">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="MRIdentifyVertices.cpp">

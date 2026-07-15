@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools >= 61.0"]
+requires = ["setuptools >= 77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,6 +10,9 @@ authors = [
 ]
 readme = "readme.md"
 license = { file = "LICENSE" }
+# Ship MeshLib's own LICENSE plus the bundled third-party notices into the
+# wheel's .dist-info/licenses/ (PEP 639). See docs/third_party_licenses.md.
+license-files = ["LICENSE", "third_party_licenses/**"]
 classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",

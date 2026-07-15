@@ -107,6 +107,12 @@ TEST( MRMesh, inspectVertNeighbourhood )
     const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
     EXPECT_EQ( info.numRepeatedVerts, 0 );
     EXPECT_EQ( info.numChains, 2 );
+
+    // the vertex is non-manifold, so one of its rings must get a duplicate
+    std::vector<VertDuplication> dups;
+    EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 992_v );
 }
 
 static void testBuildWithDups( const char * objMesh, int numVerts, int numComps )

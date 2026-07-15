@@ -9,7 +9,7 @@ authors = [
     { name = "MeshLib Team", email = "support@meshinspector.com" },
 ]
 readme = "readme.md"
-license = { file = "LICENSE" }
+license = "LicenseRef-MeshLib"
 # Ship MeshLib's own LICENSE plus the bundled third-party notices into the
 # wheel's .dist-info/licenses/ (PEP 639). See docs/third_party_licenses.md.
 license-files = ["LICENSE", "third_party_licenses/**"]

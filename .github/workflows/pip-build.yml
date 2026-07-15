@@ -93,6 +93,12 @@ jobs:
       version_tag:  ${{ steps.get-latest-tag.outputs.tag }}
       build-matrix: ${{ steps.build-matrix.outputs.matrix }}
       test-matrix:  ${{ steps.test-matrix.outputs.matrix }}
+      # Aux values reused across jobs (per review): the publish decision, the ref to
+      # build, and the wheel version to stamp - kept here so the logic lives in one place.
+      publish_prod:  ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
+      publish_test:  ${{ inputs.publish == 'publish-test' }}
+      build_ref:     ${{ inputs.ref || steps.get-latest-tag.outputs.tag }}
+      wheel_version: ${{ inputs.version || steps.get-latest-tag.outputs.tag || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -214,7 +220,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref || needs.setup.outputs.version_tag }}
+          ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Checkout third-party submodules
         # Some of those safe.directory rules could be redudant.
@@ -335,10 +341,10 @@ jobs:
           python3.12 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
           python3.12 -m pip install patchelf
-          python3.12 ./scripts/wheel/build_wheel.py --version ${{ inputs.version || needs.setup.outputs.version_tag || '0' }}
+          python3.12 ./scripts/wheel/build_wheel.py --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload Python Stubs
-        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v7
         with:
           name: PythonStubs
@@ -352,25 +358,25 @@ jobs:
           job-name: generate-c-bindings
 
       - name: Download C bindings
-        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         run: |
           rm -rf source/MeshLibC2 source/MeshLibC2Cuda
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Generate C# bindings # generate only sources
-        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
-        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v7
         with:
           name: CsharpBindings
@@ -387,8 +393,9 @@ jobs:
   update-documentation:
     # always() need to ignore general fail previous job, because this job depends on one matrix variant (aarch64 && py-version == 3.10),
     # and if this variant failed this job also will fail
-    if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && always() }}
+    if: ${{ needs.setup.outputs.publish_prod == 'true' && always() }}
     needs:
+      - setup
       - manylinux-pip-build
     uses: ./.github/workflows/update-docs.yml
     with:
@@ -419,7 +426,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: recursive
-          ref: ${{ inputs.ref || needs.setup.outputs.version_tag }}
+          ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Locate Visual Studio
         uses: ./.github/actions/locate-visual-studio
@@ -497,7 +504,7 @@ jobs:
           py -3.11 -m venv venv
           venv\Scripts\Activate
           python -m pip install --upgrade pip
-          python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{ inputs.version || needs.setup.outputs.version_tag || '0' }}
+          python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v7
@@ -529,7 +536,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: recursive
-          ref: ${{ inputs.ref || needs.setup.outputs.version_tag }}
+          ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Python setup
         env:
@@ -609,7 +616,7 @@ jobs:
 
       - name: Create and fix Wheel
         run: |
-          python3 ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{ inputs.version || needs.setup.outputs.version_tag || '0' }}
+          python3 ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v7
@@ -637,7 +644,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref || needs.setup.outputs.version_tag }}
+          ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Rocky Linux system setup
         if: ${{ matrix.os == 'rockylinux:8' }}
@@ -679,7 +686,7 @@ jobs:
         run: ${{ env.PYTHON_CMD }} -m pytest -s -v
 
   windows-pip-test:
-    needs: [windows-pip-build]
+    needs: [setup, windows-pip-build]
     if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
     runs-on: ${{ matrix.runner }}
@@ -691,7 +698,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref || needs.setup.outputs.version_tag }}
+          ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v8
@@ -743,7 +750,7 @@ jobs:
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.14
 
   macos-pip-test:
-    needs: [macos-pip-build]
+    needs: [setup, macos-pip-build]
     if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 120
     runs-on: ${{ matrix.instance }}
@@ -782,7 +789,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          ref: ${{ inputs.ref || needs.setup.outputs.version_tag }}
+          ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v8
@@ -815,8 +822,8 @@ jobs:
         run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
   upload-to-release:
-    if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
-    needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
+    if: ${{ needs.setup.outputs.publish_prod == 'true' }}
+    needs: [setup, manylinux-pip-test, windows-pip-test, macos-pip-test]
     outputs:
       uploaded: ${{ steps.check_upload.outputs.uploaded }}
     timeout-minutes: 30
@@ -857,11 +864,11 @@ jobs:
     # Upload whatever wheels were built: run unless something that actually ran failed,
     # so a subset build (e.g. a manylinux-only smoke test) still publishes.
     if: >-
-      ${{ !cancelled() && inputs.publish == 'publish-test'
+      ${{ !cancelled() && needs.setup.outputs.publish_test == 'true'
         && needs.manylinux-pip-test.result != 'failure'
         && needs.windows-pip-test.result != 'failure'
         && needs.macos-pip-test.result != 'failure' }}
-    needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
+    needs: [setup, manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
@@ -890,39 +897,39 @@ jobs:
         run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
 
   post-release-test:
-    if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
-    needs: upload-to-release
+    if: ${{ needs.setup.outputs.publish_prod == 'true' }}
+    needs: [setup, upload-to-release]
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 
   delete-artifacts:
     timeout-minutes: 5
     runs-on: ubuntu-latest
-    needs: upload-to-release
+    needs: [setup, upload-to-release]
     if: always()
     steps:
       - name: Delete all ManyLinux
-        if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: ManyLinux-*
           failOnError: false
 
       - name: Delete Python Stubs
-        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) }}
+        if: ${{ needs.update-documentation.result == 'success' && needs.setup.outputs.publish_prod == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: PythonStubs
           failOnError: false
 
       - name: Delete C bindings headers
-        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) }}
+        if: ${{ needs.update-documentation.result == 'success' && needs.setup.outputs.publish_prod == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CBindings
           failOnError: false
 
       - name: Delete Csharp bindings
-        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) }}
+        if: ${{ needs.update-documentation.result == 'success' && needs.setup.outputs.publish_prod == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CsharpBindings
@@ -930,14 +937,14 @@ jobs:
 
 
       - name: Delete all Windows
-        if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Windows
           failOnError: false
 
       - name: Delete all Macos
-        if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Macos-*

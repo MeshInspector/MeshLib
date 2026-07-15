@@ -19,6 +19,7 @@
 	<files>
 		<file src="./macos/MeshInspector_icon.png" target="images/"></file>
 		<file src="LICENSE.txt" target=""></file>
+		<file src="./thirdparty/licenses/**" target="third_party_licenses/"></file>
 		<file src="./readme.md" target="docs/"></file>
 		<file src="./scripts/nuget_patch/MeshLib.targets" target="build/"></file>
 		<file src="./scripts/nuget_patch/MeshLib.targets" target="buildTransitive/"></file>

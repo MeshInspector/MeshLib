@@ -69,6 +69,15 @@ def setup_workspace(version, modules, plat_name):
         str(font_resources.relative_to(WHEEL_SRC_DIR))
         for font_resources in (WHEEL_SRC_DIR).glob("NotoSans*.*") # no folders
     ]
+    # Bundle the third-party license notices (see docs/third_party_licenses.md).
+    # rglob("*") + is_file() so extensionless files (LICENSE, COPYING) and nested
+    # ones (c-blosc/LICENSES/*) are all captured, unlike the "*.*" globs above.
+    shutil.copytree(SOURCE_DIR / "thirdparty" / "licenses", WHEEL_SRC_DIR / "third_party_licenses", dirs_exist_ok=True)
+    license_resources = [
+        str(license_file.relative_to(WHEEL_SRC_DIR))
+        for license_file in (WHEEL_SRC_DIR / "third_party_licenses").rglob("*")
+        if license_file.is_file()
+    ]
     pybind_shims = []
     py_versions = []
     for pybind_shim in LIB_DIR_MESHLIB.glob("*pybind11nonlimitedapi_meshlib_*"):
@@ -87,7 +96,8 @@ def setup_workspace(version, modules, plat_name):
         "MRDarkTheme.json",
         "MRLightTheme.json",
         "fa-solid-900.ttf",
-        *font_resources
+        *font_resources,
+        *license_resources
     ]
     for module in modules:
         package_files += [

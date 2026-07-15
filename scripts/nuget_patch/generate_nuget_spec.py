@@ -40,6 +40,18 @@ add_files( LINUX_ARM_RUNTIME_DIR, "runtimes/linux-arm64/native/" )
 add_files( MACOS_X64_RUNTIME_DIR, "runtimes/osx-x64/native/" )
 add_files( MACOS_ARM_RUNTIME_DIR, "runtimes/osx-arm64/native/" )
 
+# Third-party license notices. Enumerate the tree explicitly (add_files above
+# only handles flat directories) so nested files (e.g. c-blosc/LICENSES/*) keep
+# their per-component folder structure under third_party_licenses/ in the package.
+licenses_dir = WORK_DIR / "thirdparty" / "licenses"
+for address, dirs, files in os.walk(licenses_dir):
+	dirs.sort()
+	rel = Path(address).relative_to(licenses_dir).as_posix()
+	target = "third_party_licenses/" if rel == "." else f"third_party_licenses/{rel}/"
+	for file in sorted(files):
+		src = (Path(address) / file).as_posix()
+		FILES += f'\t\t<file src="{src}" target="{target}"></file>\n'
+
 with open(Path(__file__).parent / "template.nuspec", 'r') as template_file:
 	updated_nuspec = Template(template_file.read()).substitute(
 		VERSION=VERSION,

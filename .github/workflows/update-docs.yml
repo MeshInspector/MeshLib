@@ -37,7 +37,6 @@ jobs:
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
-          ref: 'feature/js'
 
       - name: Download Python Stubs
         uses: actions/download-artifact@v8

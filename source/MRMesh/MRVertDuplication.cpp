@@ -211,9 +211,21 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
                 {
                     assert( info.numChains > 0 );
                     --info.numChains;
-                    rInsertion.first->second = vEnd;
+                    // the right end of the chain grown from the current triangle: v2, or updated by the merge above
+                    const auto vRight = lInsertion.first->second;
+                    assert( vRight );
+                    if ( vRight != v2 )
+                    {
+                        // the current triangle merged two chains on both sides, so its both edges are inner
+                        lInsertion.first->second = VertId{};
+                        rInsertion.first->second = VertId{};
+                        assert( r_[vRight] == v1 );
+                        r_[vRight] = vEnd;
+                    }
+                    else
+                        rInsertion.first->second = vEnd;
                     assert( l_[vEnd] == v1 );
-                    l_[vEnd] = v2;
+                    l_[vEnd] = vRight;
                 }
             }
         }

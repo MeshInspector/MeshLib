@@ -36,8 +36,6 @@ on:
         default: ""
         required: false
         type: string
-      # Platform toggles (mirror of the workflow_call inputs below) so a manual run
-      # can build a subset - handy for a quick TestPyPI smoke test.
       disable_manylinux:
         default: false
         required: false
@@ -93,8 +91,6 @@ jobs:
       version_tag:  ${{ steps.get-latest-tag.outputs.tag }}
       build-matrix: ${{ steps.build-matrix.outputs.matrix }}
       test-matrix:  ${{ steps.test-matrix.outputs.matrix }}
-      # Aux values reused across jobs (per review): the publish decision, the ref to
-      # build, and the wheel version to stamp - kept here so the logic lives in one place.
       publish_prod:  ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
       publish_test:  ${{ inputs.publish == 'publish-test' }}
       build_ref:     ${{ inputs.ref || steps.get-latest-tag.outputs.tag }}

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRId.h"
+#include "MRPch/MRBindingMacros.h"
 #include <utility>
 #include <vector>
 
@@ -45,7 +46,7 @@ struct VertTri
 
 /// computes VertInfo of one vertex given all its incident triangles in [begin, end), all referencing the same vertex;
 /// allocates temporary hash maps on every call, so prefer batch processing over calling it per vertex of a large mesh
-[[nodiscard]] MRMESH_API VertInfo inspectVertNeighbourhood( const Triangulation & t, const VertTri * begin, const VertTri * end );
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE_PY VertInfo inspectVertNeighbourhood( const Triangulation & t, const VertTri * begin, const VertTri * end );
 
 } //namespace MeshBuilder
 

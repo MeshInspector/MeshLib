@@ -2,6 +2,7 @@
 #include <MRMesh/MRMeshLoadObj.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRTriMesh.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <filesystem>
@@ -74,6 +75,40 @@ TEST(MRMesh, LoadSave)
     loadRes = MeshLoad::fromBinaryStl( ss );
     EXPECT_TRUE( loadRes.has_value() );
 
+    EXPECT_EQ( loadRes->points.size(), 5 );
+    EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
+    EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+}
+
+TEST(MRMesh, TriMeshSavePly)
+{
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 4_v },
+        { 0_v, 4_v, 1_v },
+        { 1_v, 3_v, 2_v },
+        { 1_v, 4_v, 3_v }
+    };
+    triMesh.points.emplace_back( 0.f, 0.f, 1.f );
+    triMesh.points.emplace_back( 1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 1.f, 0.f );
+    triMesh.points.emplace_back( -1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, -1.f, 0.f );
+
+    std::ostringstream outTriMesh;
+    EXPECT_TRUE( MeshSave::toPly( triMesh, outTriMesh ).has_value() );
+
+    // the same bytes must be saved for TriMesh and for equivalent Mesh
+    const auto mesh = Mesh::fromTriMesh( TriMesh( triMesh ) );
+    std::ostringstream outMesh;
+    EXPECT_TRUE( MeshSave::toPly( mesh, outMesh ).has_value() );
+    EXPECT_EQ( outTriMesh.str(), outMesh.str() );
+
+    std::istringstream in( outTriMesh.str() );
+    auto loadRes = MeshLoad::fromPly( in );
+    ASSERT_TRUE( loadRes.has_value() );
     EXPECT_EQ( loadRes->points.size(), 5 );
     EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );

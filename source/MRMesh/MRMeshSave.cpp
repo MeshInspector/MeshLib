@@ -1,6 +1,7 @@
 #include "MRMeshSave.h"
 #include "MRIOFormatsRegistry.h"
 #include "MRMesh.h"
+#include "MRTriMesh.h"
 #include "MRTimer.h"
 #include "MRColor.h"
 #include "MRStringConvert.h"
@@ -394,7 +395,50 @@ Expected<void> toAsciiStl( const Mesh& mesh, std::ostream& out, const SaveSettin
     return {};
 }
 
-Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+// helpers allowing to save Mesh and TriMesh by the same code;
+// all vertices and triangles of TriMesh are always valid
+
+static VertRenumber getVertRenumber( const Mesh & mesh, const SaveSettings & settings )
+{
+    return VertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+}
+
+/// identity vertex renumbering for TriMesh
+struct NoRenumber
+{
+    int numVerts = 0;
+    int sizeVerts() const { return numVerts; }
+    int operator()( VertId v ) const { assert( v ); return (int)v; }
+};
+
+static NoRenumber getVertRenumber( const TriMesh & mesh, const SaveSettings & )
+{
+    return { .numVerts = (int)mesh.points.size() };
+}
+
+static VertId lastValidVert( const Mesh & mesh ) { return mesh.topology.lastValidVert(); }
+static VertId lastValidVert( const TriMesh & mesh ) { return VertId( (int)mesh.points.size() - 1 ); }
+
+static bool hasVert( const Mesh & mesh, VertId v ) { return mesh.topology.hasVert( v ); }
+static bool hasVert( const TriMesh &, VertId ) { return true; }
+
+static FaceId lastValidFace( const Mesh & mesh ) { return mesh.topology.lastValidFace(); }
+static FaceId lastValidFace( const TriMesh & mesh ) { return FaceId( (int)mesh.tris.size() - 1 ); }
+
+static int numValidFaces( const Mesh & mesh ) { return mesh.topology.numValidFaces(); }
+static int numValidFaces( const TriMesh & mesh ) { return (int)mesh.tris.size(); }
+
+static bool hasFace( const Mesh & mesh, FaceId f ) { return mesh.topology.hasFace( f ); }
+static bool hasFace( const TriMesh &, FaceId ) { return true; }
+
+static ThreeVertIds getTriVerts( const Mesh & mesh, FaceId f ) { return mesh.topology.getTriVerts( f ); }
+static const ThreeVertIds & getTriVerts( const TriMesh & mesh, FaceId f ) { return mesh.tris[f]; }
+
+template<typename MeshType>
+static Expected<void> toPlyImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings );
+
+template<typename MeshType>
+static Expected<void> toPlyImpl( const MeshType & mesh, const std::filesystem::path & file, const SaveSettings & settings )
 {
     std::ofstream out( file, std::ofstream::binary );
     if ( !out )
@@ -409,16 +453,17 @@ Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, con
             (void)texSaver( *settings.texture, file.parent_path() / asU8String( settings.materialName + ".jpg" ) );
     }
 #endif
-    return toPly( mesh, out, settings );
+    return toPlyImpl( mesh, out, settings );
 }
 
-Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+template<typename MeshType>
+static Expected<void> toPlyImpl( const MeshType & mesh, std::ostream & out, const SaveSettings & settings )
 {
     MR_TIMER;
 
-    const VertRenumber vertRenumber( mesh.topology.getValidVerts(), settings.onlyValidPoints );
+    const auto vertRenumber = getVertRenumber( mesh, settings );
     const int numPoints = vertRenumber.sizeVerts();
-    const VertId lastVertId = mesh.topology.lastValidVert();
+    const VertId lastVertId = lastValidVert( mesh );
 
     bool saveTexture = settings.texture && !settings.texture->pixels.empty();
     bool saveUV = settings.uvMap && !settings.uvMap->empty();
@@ -434,8 +479,8 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     if ( saveUV && !settings.saveTriCornerUVCoords )
         out << "property float texture_u\nproperty float texture_v\n";
 
-    const auto fLast = mesh.topology.lastValidFace();
-    const auto numSaveFaces = settings.packPrimitives ? mesh.topology.numValidFaces() : int( fLast + 1 );
+    const auto fLast = lastValidFace( mesh );
+    const auto numSaveFaces = settings.packPrimitives ? numValidFaces( mesh ) : int( fLast + 1 );
     out << "element face " << numSaveFaces << "\nproperty list uchar int vertex_indices\n";
     if ( saveFaceColors )
         out << "property uchar red\nproperty uchar green\nproperty uchar blue\n";
@@ -455,7 +500,7 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     int numSaved = 0;
     for ( VertId i{ 0 }; i <= lastVertId; ++i )
     {
-        if ( settings.onlyValidPoints && !mesh.topology.hasVert( i ) )
+        if ( settings.onlyValidPoints && !hasVert( mesh, i ) )
             continue;
         const Vector3f p = applyFloat( settings.xf, mesh.points[i] );
         out.write( ( const char* )&p, 12 );
@@ -480,10 +525,10 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
     int savedFaces = 0;
     for ( FaceId f{0}; f <= fLast; ++f )
     {
-        VertId vs[3];
-        if ( mesh.topology.hasFace( f ) )
+        ThreeVertIds vs;
+        if ( hasFace( mesh, f ) )
         {
-            mesh.topology.getTriVerts( f, vs );
+            vs = getTriVerts( mesh, f );
             for ( int i = 0; i < 3; ++i )
                 tri[i] = vertRenumber( vs[i] );
         }
@@ -519,6 +564,26 @@ Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings 
 
     reportProgress( settings.progress, 1.f );
     return {};
+}
+
+Expected<void> toPly( const Mesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return toPlyImpl( mesh, file, settings );
+}
+
+Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings )
+{
+    return toPlyImpl( mesh, out, settings );
+}
+
+Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path & file, const SaveSettings & settings )
+{
+    return toPlyImpl( mesh, file, settings );
+}
+
+Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings )
+{
+    return toPlyImpl( mesh, out, settings );
 }
 
 Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )

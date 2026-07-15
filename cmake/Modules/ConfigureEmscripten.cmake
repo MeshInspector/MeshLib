@@ -12,14 +12,15 @@ string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS
   "-sUSE_ZLIB" # TODO: make optional
 )
 
-option(MR_EMSCRIPTEN_WASM2023 "Enable WebAssembly 2023 for Emscripten builds, as defined by Unity (includes SIMD among other things)" ON)
+option(MR_EMSCRIPTEN_WASM2023 "Enable Unity's WebAssembly 2023 target (a set of general-purpose optimizations, including SIMD)" ON)
 IF(MR_EMSCRIPTEN_WASM2023)
   # Those flags come from here: https://docs.unity3d.com/6000.7/Documentation/Manual/webgl-native-plugins-with-emscripten.html
-  # Skipping `-msimd128` because we have it behind a separate flag.
   # Skipping `-fwasm-exceptions` because we don't use exceptions.
-  # Skipping `-sSUPPORT_LONGJMP=wasm` because that conflicts with our `-s NO_DISABLE_EXCEPTION_CATCHING=1`.
+  # Skipping `-sSUPPORT_LONGJMP=wasm` because that conflicts with our `-s NO_DISABLE_EXCEPTION_CATCHING=1`. That conflict only happens in third-party libraries, not here, but still disabling it here for consistency.
+  #   In theory, this flag is supposed to be implemented in terms of `-fwasm-exceptions`, so I'm not sure how it works without that one, but it seems to work if enabled.
+  #   Either way, we don't juse `longjmp()`, so it doesn't seem terribly useful.
   string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}
-    "-msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"
+    "-msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2 -sSUPPORT_LONGJMP=wasm"
   )
 ENDIF()
 string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS

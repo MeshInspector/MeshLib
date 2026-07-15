@@ -98,9 +98,16 @@ def copy_lib():
 	for f in glob.glob(os.path.join(it.path_to_app, "*/*pybind11nonlimitedapi_meshlib_*")):
 		os.remove(f)
 
+def copy_licenses():
+	# Bundle the upstream third-party license notices (see docs/third_party_licenses.md).
+	src = os.path.join(it.base_path, 'thirdparty', 'licenses')
+	dst = os.path.join(it.path_to_install_folder, 'third_party_licenses')
+	shutil.copytree(src, dst, dirs_exist_ok=True)
+
 it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes
 it.copy_app = copy_app
 it.copy_lib = copy_lib
+it.copy_licenses = copy_licenses
 
 it.main()

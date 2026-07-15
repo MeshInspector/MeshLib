@@ -18,24 +18,24 @@ on:
         required: false
         type: string
       publish:
-        default: false
+        description: "dry = build + test only; publish-test = upload to TestPyPI; publish-prod = upload to production PyPI."
+        default: dry
         required: false
-        type: boolean
+        type: choice
+        options:
+          - dry
+          - publish-test
+          - publish-prod
       ref:
         description: "Git ref (branch / tag / SHA) to build. Empty = the branch this workflow runs from."
         default: ""
         required: false
         type: string
       version:
-        description: "Wheel version to stamp (PEP 440). Empty = derive from the latest git tag."
+        description: "Wheel version to stamp (PEP 440), used by publish-test. Empty falls back to 0 on a manual run."
         default: ""
         required: false
         type: string
-      publish_testpypi:
-        description: "Upload the built wheels to TestPyPI (never touches production PyPI)."
-        default: false
-        required: false
-        type: boolean
       # Platform toggles (mirror of the workflow_call inputs below) so a manual run
       # can build a subset - handy for a quick TestPyPI smoke test.
       disable_manylinux:
@@ -56,13 +56,12 @@ on:
       vcpkg_docker_image_tag:
         required: true
         type: string
+      # workflow_call can't use type:choice; keep publish a string with the same values
+      # as the workflow_dispatch enum: dry | publish-test | publish-prod.
       publish:
-        default: false
+        default: dry
         required: false
-        type: boolean
-      # Manual TestPyPI publish (see `.github/workflows/publish-testpypi.yml`):
-      #   ref     - source to build; version - wheel version to stamp;
-      #   publish_testpypi - upload to TestPyPI only (production PyPI stays gated on `publish`).
+        type: string
       ref:
         default: ""
         required: false
@@ -71,10 +70,6 @@ on:
         default: ""
         required: false
         type: string
-      publish_testpypi:
-        default: false
-        required: false
-        type: boolean
       # keyed to the linux-vcpkg platform toggle, not ubuntu: manylinux builds in the
       # rockylinux8-vcpkg image, whose branch tag only exists when linux-vcpkg is enabled (#6091)
       disable_manylinux:
@@ -105,7 +100,7 @@ jobs:
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
       - uses: actions-ecosystem/action-get-latest-tag@v1
-        if: ${{ github.event_name == 'release' || inputs.publish }}
+        if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
         id: get-latest-tag
 
       - id: build-matrix
@@ -343,7 +338,7 @@ jobs:
           python3.12 ./scripts/wheel/build_wheel.py --version ${{ inputs.version || needs.setup.outputs.version_tag || '0' }}
 
       - name: Upload Python Stubs
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v7
         with:
           name: PythonStubs
@@ -357,25 +352,25 @@ jobs:
           job-name: generate-c-bindings
 
       - name: Download C bindings
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
         run: |
           rm -rf source/MeshLibC2 source/MeshLibC2Cuda
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Generate C# bindings # generate only sources
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
-        if: ${{ (github.event_name == 'release' || inputs.publish) && matrix.platform == 'aarch64' }}
+        if: ${{ (github.event_name == 'release' || inputs.publish == 'publish-prod') && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v7
         with:
           name: CsharpBindings
@@ -392,7 +387,7 @@ jobs:
   update-documentation:
     # always() need to ignore general fail previous job, because this job depends on one matrix variant (aarch64 && py-version == 3.10),
     # and if this variant failed this job also will fail
-    if: ${{ ( github.event_name == 'release' || inputs.publish ) && always() }}
+    if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && always() }}
     needs:
       - manylinux-pip-build
     uses: ./.github/workflows/update-docs.yml
@@ -820,7 +815,7 @@ jobs:
         run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }} ${{ matrix.runner-tier }}
 
   upload-to-release:
-    if: ${{ github.event_name == 'release' || inputs.publish }}
+    if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
     outputs:
       uploaded: ${{ steps.check_upload.outputs.uploaded }}
@@ -855,15 +850,14 @@ jobs:
         id: check_upload
         run: echo "uploaded=true" >> $GITHUB_OUTPUT
 
-  # Manual-only path, driven by the `Publish to TestPyPI` wrapper (or a direct
-  # workflow_dispatch with `publish_testpypi: true`). Kept separate from
-  # `upload-to-release` so the production PyPI path is untouched: `publish_testpypi`
-  # never sets `inputs.publish`, so this job can't reach production PyPI.
+  # Manual-only path (workflow_dispatch with publish=publish-test). Kept separate from
+  # `upload-to-release` so the production PyPI path is untouched: publish-test can't
+  # reach production PyPI - that job only runs for a release or publish-prod.
   upload-to-testpypi:
     # Upload whatever wheels were built: run unless something that actually ran failed,
     # so a subset build (e.g. a manylinux-only smoke test) still publishes.
     if: >-
-      ${{ !cancelled() && inputs.publish_testpypi
+      ${{ !cancelled() && inputs.publish == 'publish-test'
         && needs.manylinux-pip-test.result != 'failure'
         && needs.windows-pip-test.result != 'failure'
         && needs.macos-pip-test.result != 'failure' }}
@@ -896,7 +890,7 @@ jobs:
         run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
 
   post-release-test:
-    if: ${{ github.event_name == 'release' || inputs.publish }}
+    if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
     needs: upload-to-release
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 
@@ -907,28 +901,28 @@ jobs:
     if: always()
     steps:
       - name: Delete all ManyLinux
-        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: ManyLinux-*
           failOnError: false
 
       - name: Delete Python Stubs
-        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: PythonStubs
           failOnError: false
 
       - name: Delete C bindings headers
-        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CBindings
           failOnError: false
 
       - name: Delete Csharp bindings
-        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish ) }}
+        if: ${{ needs.update-documentation.result == 'success' && ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CsharpBindings
@@ -936,14 +930,14 @@ jobs:
 
 
       - name: Delete all Windows
-        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Windows
           failOnError: false
 
       - name: Delete all Macos
-        if: ${{ ( github.event_name == 'release' || inputs.publish ) && needs.upload-to-release.outputs.uploaded == 'true' }}
+        if: ${{ ( github.event_name == 'release' || inputs.publish == 'publish-prod' ) && needs.upload-to-release.outputs.uploaded == 'true' }}
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Macos-*

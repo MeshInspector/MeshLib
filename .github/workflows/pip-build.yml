@@ -36,6 +36,20 @@ on:
         default: false
         required: false
         type: boolean
+      # Platform toggles (mirror of the workflow_call inputs below) so a manual run
+      # can build a subset - handy for a quick TestPyPI smoke test.
+      disable_manylinux:
+        default: false
+        required: false
+        type: boolean
+      disable_macos:
+        default: false
+        required: false
+        type: boolean
+      disable_windows:
+        default: false
+        required: false
+        type: boolean
   # This is the `uses:` call from other `.yml` files.
   workflow_call:
     inputs:
@@ -846,7 +860,13 @@ jobs:
   # `upload-to-release` so the production PyPI path is untouched: `publish_testpypi`
   # never sets `inputs.publish`, so this job can't reach production PyPI.
   upload-to-testpypi:
-    if: ${{ inputs.publish_testpypi }}
+    # Upload whatever wheels were built: run unless something that actually ran failed,
+    # so a subset build (e.g. a manylinux-only smoke test) still publishes.
+    if: >-
+      ${{ !cancelled() && inputs.publish_testpypi
+        && needs.manylinux-pip-test.result != 'failure'
+        && needs.windows-pip-test.result != 'failure'
+        && needs.macos-pip-test.result != 'failure' }}
     needs: [manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 30
     runs-on: ubuntu-latest

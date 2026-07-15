@@ -6,7 +6,7 @@
 	url = https://github.com/greg7mdp/parallel-hashmap.git
 [submodule "thirdparty/eigen"]
 	path = thirdparty/eigen
-	url = https://gitlab.com/cantonios/eigen.git
+	url = https://gitlab.com/libeigen/eigen.git
 [submodule "thirdparty/expected"]
 	path = thirdparty/expected
 	url = https://github.com/Developer-Ecosystem-Engineering/expected.git

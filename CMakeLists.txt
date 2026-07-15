@@ -362,10 +362,26 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/licenses/
-  DESTINATION ${MR_RESOURCES_DIR}/third_party_licenses
-)
+# Aggregate the third-party license notices into a single file at configure time
+# and install it (see docs/third_party_licenses.md). Best-effort on python: all
+# distribution builds have it; a rare python-less source build skips the notices.
+find_program(MR_NOTICES_PYTHON NAMES python3 python)
+IF(MR_NOTICES_PYTHON)
+  execute_process(
+    COMMAND "${MR_NOTICES_PYTHON}" "${CMAKE_CURRENT_SOURCE_DIR}/scripts/gen_third_party_notices.py"
+            --output "${CMAKE_CURRENT_BINARY_DIR}/THIRD-PARTY-NOTICES.txt"
+    RESULT_VARIABLE MR_NOTICES_RESULT
+  )
+  IF(NOT MR_NOTICES_RESULT EQUAL 0)
+    message(FATAL_ERROR "Failed to generate THIRD-PARTY-NOTICES.txt")
+  ENDIF()
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/THIRD-PARTY-NOTICES.txt
+    DESTINATION ${MR_RESOURCES_DIR}
+  )
+ELSE()
+  message(WARNING "python not found: THIRD-PARTY-NOTICES.txt will not be bundled")
+ENDIF()
 
 IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   set(CPACK_GENERATOR "DRAGNDROP")

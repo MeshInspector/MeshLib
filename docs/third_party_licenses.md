@@ -1,10 +1,12 @@
 # Third-party license notices
 
 Verbatim upstream `LICENSE` / `NOTICE` texts for every open-source component bundled in the
-MeshLib SDK live in [`thirdparty/licenses/`](../thirdparty/licenses/). Redistributing those
-components (in the deb, macOS pkg, Windows folder, Python wheel, or NuGet package) obliges us to
-ship their license texts alongside the binaries; that folder is the bundle. It is **separate
-from and additional to** MeshLib's own top-level `LICENSE`, which covers only MeshLib itself.
+MeshLib SDK live in [`thirdparty/licenses/`](../thirdparty/licenses/) as the maintained,
+per-component source. At package time they are concatenated into a single
+`THIRD-PARTY-NOTICES.txt` that ships in every distribution (deb, macOS pkg, Windows folder,
+Python wheel, NuGet), satisfying each upstream license's obligation to accompany the binaries.
+It is **separate from and additional to** MeshLib's own top-level `LICENSE`, which covers only
+MeshLib itself.
 
 ## Layout
 
@@ -19,6 +21,18 @@ from and additional to** MeshLib's own top-level `LICENSE`, which covers only Me
 The inclusion list is `doxygen/general_pages/ThirdpartyList.dox`, reconciled against
 `.gitmodules` and `thirdparty/vcpkg/vcpkg.json`. Build- and test-only submodules (googletest,
 mrbind) are not shipped and are excluded (see `EXCLUDED_SUBMODULES` in the checker).
+
+## Shipping (single aggregated file)
+
+`scripts/gen_third_party_notices.py --output <path>` concatenates the per-component folder into
+one `THIRD-PARTY-NOTICES.txt` (a section per component: name, license id, upstream, then the
+text(s)). It is generated at package time -- not committed -- and each channel ships that one file:
+
+- **deb / macOS / vcpkg** -- generated at CMake configure time, installed to `${MR_RESOURCES_DIR}`.
+- **Windows folder** -- `make_install_folder.py` writes it to the install root.
+- **Python wheel** -- `build_wheel.py` writes it to the wheel root; `pyproject.toml` lists it in
+  `license-files`, so it lands in the wheel's `.dist-info/licenses/` (PEP 639).
+- **NuGet** -- `generate_nuget_spec.py` writes it; the nuspec ships it at the package root.
 
 ## Why hand-curated
 

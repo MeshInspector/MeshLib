@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from string import Template
@@ -40,17 +41,10 @@ add_files( LINUX_ARM_RUNTIME_DIR, "runtimes/linux-arm64/native/" )
 add_files( MACOS_X64_RUNTIME_DIR, "runtimes/osx-x64/native/" )
 add_files( MACOS_ARM_RUNTIME_DIR, "runtimes/osx-arm64/native/" )
 
-# Third-party license notices. Enumerate the tree explicitly (add_files above
-# only handles flat directories) so nested files (e.g. c-blosc/LICENSES/*) keep
-# their per-component folder structure under third_party_licenses/ in the package.
-licenses_dir = WORK_DIR / "thirdparty" / "licenses"
-for address, dirs, files in os.walk(licenses_dir):
-	dirs.sort()
-	rel = Path(address).relative_to(licenses_dir).as_posix()
-	target = "third_party_licenses/" if rel == "." else f"third_party_licenses/{rel}/"
-	for file in sorted(files):
-		src = (Path(address) / file).as_posix()
-		FILES += f'\t\t<file src="{src}" target="{target}"></file>\n'
+# Generate the aggregated third-party license notices (see docs/third_party_licenses.md).
+# It is shipped via the THIRD-PARTY-NOTICES.txt <file> entry in template.nuspec.
+subprocess.check_call([sys.executable, str(Path(__file__).resolve().parents[1] / "gen_third_party_notices.py"),
+                       "--output", str(WORK_DIR / "THIRD-PARTY-NOTICES.txt")])
 
 with open(Path(__file__).parent / "template.nuspec", 'r') as template_file:
 	updated_nuspec = Template(template_file.read()).substitute(

@@ -541,6 +541,22 @@
       "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
     },
     {
+      "id": "dbus",
+      "modules": [
+        "MRViewer"
+      ],
+      "license": "AFL-2.1 OR GPL-2.0-or-later",
+      "upstream": "https://www.freedesktop.org/wiki/Software/dbus/",
+      "license_source": "https://gitlab.freedesktop.org/dbus/dbus/-/tree/dbus-1.16.2/LICENSES",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "dbus"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+    },
+    {
       "id": "FontAwesome",
       "modules": [
         "MRViewer"
@@ -602,6 +618,22 @@
         "path": "thirdparty/cpp-httplib"
       },
       "version": "b045ee7f6b434a85fd011e96e28c6d4abfb18788"
+    },
+    {
+      "id": "mimalloc",
+      "modules": [
+        "MRViewerApp"
+      ],
+      "license": "MIT",
+      "upstream": "https://github.com/microsoft/mimalloc",
+      "license_source": "https://github.com/microsoft/mimalloc/blob/master/LICENSE",
+      "source": {
+        "type": "vcpkg-registry",
+        "ports": [
+          "mimalloc"
+        ]
+      },
+      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
     }
   ]
 }

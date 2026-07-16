@@ -12,8 +12,8 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_mesh_to_point_cloud )
 {
-    emscripten::function( "meshToPointCloud", +[]( std::shared_ptr<Mesh> m, bool saveNormals )
+    emscripten::function( "meshToPointCloud", +[]( std::shared_ptr<Mesh> mesh, bool saveNormals )
     {
-        return meshToPointCloud( *m, saveNormals );
+        return meshToPointCloud( *mesh, saveNormals );
     } );
 }

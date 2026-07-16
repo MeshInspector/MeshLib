@@ -14,8 +14,8 @@ using namespace MR;
 EMSCRIPTEN_BINDINGS( meshlib_mesh_normals )
 {
     emscripten::function( "computePerVertNormals",
-        +[]( std::shared_ptr<Mesh> m ) { return computePerVertNormals( *m ); } );
+        +[]( std::shared_ptr<Mesh> mesh ) { return computePerVertNormals( *mesh ); } );
 
     emscripten::function( "computePerFaceNormals",
-        +[]( std::shared_ptr<Mesh> m ) { return computePerFaceNormals( *m ); } );
+        +[]( std::shared_ptr<Mesh> mesh ) { return computePerFaceNormals( *mesh ); } );
 }

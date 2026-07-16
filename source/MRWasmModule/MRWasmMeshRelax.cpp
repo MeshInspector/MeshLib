@@ -19,13 +19,13 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_relax )
         .property( "maxInitialDist", static_cast<float MeshRelaxParams::*>( &MeshRelaxParams::maxInitialDist ) )
         .property( "hardSmoothTetrahedrons", &MeshRelaxParams::hardSmoothTetrahedrons );
 
-    emscripten::function( "relax", +[]( std::shared_ptr<Mesh> m, const MeshRelaxParams& p )
+    emscripten::function( "relax", +[]( std::shared_ptr<Mesh> mesh, const MeshRelaxParams& params )
     {
-        return relax( *m, p );
+        return relax( *mesh, params );
     } );
 
-    emscripten::function( "relaxKeepVolume", +[]( std::shared_ptr<Mesh> m, const MeshRelaxParams& p )
+    emscripten::function( "relaxKeepVolume", +[]( std::shared_ptr<Mesh> mesh, const MeshRelaxParams& params )
     {
-        return relaxKeepVolume( *m, p );
+        return relaxKeepVolume( *mesh, params );
     } );
 }

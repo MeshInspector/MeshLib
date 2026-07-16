@@ -10,68 +10,68 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_region_boundary )
 {
-    emscripten::function( "getIncidentVertsFromFaces", +[]( const MeshTopology& t, const FaceBitSet& faces )
+    emscripten::function( "getIncidentVertsFromFaces", +[]( const MeshTopology& topology, const FaceBitSet& faces )
     {
-        return getIncidentVerts( t, faces );
+        return getIncidentVerts( topology, faces );
     } );
-    emscripten::function( "getIncidentVertsFromEdges", +[]( const MeshTopology& t, const UndirectedEdgeBitSet& edges )
+    emscripten::function( "getIncidentVertsFromEdges", +[]( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
     {
-        return getIncidentVerts( t, edges );
-    } );
-
-    emscripten::function( "getIncidentFacesFromVerts", +[]( const MeshTopology& t, const VertBitSet& verts )
-    {
-        return getIncidentFaces( t, verts );
-    } );
-    emscripten::function( "getIncidentFacesFromEdges", +[]( const MeshTopology& t, const UndirectedEdgeBitSet& edges )
-    {
-        return getIncidentFaces( t, edges );
+        return getIncidentVerts( topology, edges );
     } );
 
-    emscripten::function( "getIncidentEdgesFromFaces", +[]( const MeshTopology& t, const FaceBitSet& faces )
+    emscripten::function( "getIncidentFacesFromVerts", +[]( const MeshTopology& topology, const VertBitSet& verts )
     {
-        return getIncidentEdges( t, faces );
+        return getIncidentFaces( topology, verts );
     } );
-    emscripten::function( "getIncidentEdgesFromEdges", +[]( const MeshTopology& t, const UndirectedEdgeBitSet& edges )
+    emscripten::function( "getIncidentFacesFromEdges", +[]( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
     {
-        return getIncidentEdges( t, edges );
-    } );
-
-    emscripten::function( "getInnerVertsFromFaces", +[]( const MeshTopology& t, const FaceBitSet& region )
-    {
-        return getInnerVerts( t, &region );
-    } );
-    emscripten::function( "getInnerVertsFromEdges", +[]( const MeshTopology& t, const UndirectedEdgeBitSet& edges )
-    {
-        return getInnerVerts( t, edges );
+        return getIncidentFaces( topology, edges );
     } );
 
-    emscripten::function( "getInnerFaces", +[]( const MeshTopology& t, const VertBitSet& verts )
+    emscripten::function( "getIncidentEdgesFromFaces", +[]( const MeshTopology& topology, const FaceBitSet& faces )
     {
-        return getInnerFaces( t, verts );
+        return getIncidentEdges( topology, faces );
+    } );
+    emscripten::function( "getIncidentEdgesFromEdges", +[]( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
+    {
+        return getIncidentEdges( topology, edges );
     } );
 
-    emscripten::function( "getInnerEdgesFromVerts", +[]( const MeshTopology& t, const VertBitSet& verts )
+    emscripten::function( "getInnerVertsFromFaces", +[]( const MeshTopology& topology, const FaceBitSet& region )
     {
-        return getInnerEdges( t, verts );
+        return getInnerVerts( topology, &region );
     } );
-    emscripten::function( "getInnerEdgesFromFaces", +[]( const MeshTopology& t, const FaceBitSet& region )
+    emscripten::function( "getInnerVertsFromEdges", +[]( const MeshTopology& topology, const UndirectedEdgeBitSet& edges )
     {
-        return getInnerEdges( t, region );
-    } );
-
-    emscripten::function( "getBoundaryVerts", +[]( const MeshTopology& t, const FaceBitSet& region )
-    {
-        return getBoundaryVerts( t, &region );
+        return getInnerVerts( topology, edges );
     } );
 
-    emscripten::function( "trackRightBoundaryLoop", +[]( const MeshTopology& t, int e0 )
+    emscripten::function( "getInnerFaces", +[]( const MeshTopology& topology, const VertBitSet& verts )
     {
-        return Wasm::packedToTypedArray<EdgeLoop, uint32_t>( trackRightBoundaryLoop( t, EdgeId( e0 ) ) );
+        return getInnerFaces( topology, verts );
     } );
-    emscripten::function( "findRightBoundary", +[]( const MeshTopology& t )
+
+    emscripten::function( "getInnerEdgesFromVerts", +[]( const MeshTopology& topology, const VertBitSet& verts )
     {
-        auto loops = findRightBoundary( t );
+        return getInnerEdges( topology, verts );
+    } );
+    emscripten::function( "getInnerEdgesFromFaces", +[]( const MeshTopology& topology, const FaceBitSet& region )
+    {
+        return getInnerEdges( topology, region );
+    } );
+
+    emscripten::function( "getBoundaryVerts", +[]( const MeshTopology& topology, const FaceBitSet& region )
+    {
+        return getBoundaryVerts( topology, &region );
+    } );
+
+    emscripten::function( "trackRightBoundaryLoop", +[]( const MeshTopology& topology, int e0 )
+    {
+        return Wasm::packedToTypedArray<EdgeLoop, uint32_t>( trackRightBoundaryLoop( topology, EdgeId( e0 ) ) );
+    } );
+    emscripten::function( "findRightBoundary", +[]( const MeshTopology& topology )
+    {
+        auto loops = findRightBoundary( topology );
         auto out = emscripten::val::array();
         for ( const auto& loop : loops )
             out.call<void>( "push", Wasm::packedToTypedArray<EdgeLoop, uint32_t>( loop ) );

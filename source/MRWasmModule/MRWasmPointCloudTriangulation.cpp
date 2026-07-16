@@ -21,9 +21,9 @@ EMSCRIPTEN_BINDINGS( meshlib_point_cloud_triangulation )
         .property( "critHoleLength", &TriangulationParameters::critHoleLength )
         .property( "automaticRadiusIncrease", &TriangulationParameters::automaticRadiusIncrease );
 
-    emscripten::function( "triangulatePointCloud", +[]( const PointCloud& pc, const TriangulationParameters& params ) -> std::shared_ptr<Mesh>
+    emscripten::function( "triangulatePointCloud", +[]( const PointCloud& pointCloud, const TriangulationParameters& params ) -> std::shared_ptr<Mesh>
     {
-        auto res = triangulatePointCloud( pc, params );
+        auto res = triangulatePointCloud( pointCloud, params );
         if ( !res )
             return nullptr;
         return std::make_shared<Mesh>( std::move( *res ) );

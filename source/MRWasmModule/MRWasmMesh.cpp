@@ -21,9 +21,9 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh )
         .smart_ptr<std::shared_ptr<Mesh>>( "MeshPtr" )
         .property( "points", +[]( const Mesh& m ) { return m.points; } )
         .property( "topology", +[]( const Mesh& m ) { return m.topology; } )
-        .class_function( "fromTriangles", +[]( const VertCoords& coords, const Triangulation& t )
+        .class_function( "fromTriangles", +[]( const VertCoords& vertexCoordinates, const Triangulation& t )
         {
-            return std::make_shared<Mesh>( Mesh::fromTriangles( coords, t ) );
+            return std::make_shared<Mesh>( Mesh::fromTriangles( vertexCoordinates, t ) );
         } )
         .function( "pack", +[]( Mesh& m ) { m.pack(); } )
         .function( "volume", +[]( const Mesh& m ) { return m.volume(); } )
@@ -36,8 +36,8 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh )
         .function( "findCenterFromFaces", +[]( const Mesh& m ) { return m.findCenterFromFaces(); } )
         .function( "findCenterFromBBox", +[]( const Mesh& m ) { return m.findCenterFromBBox(); } )
         .function( "addMesh", +[]( Mesh& m, std::shared_ptr<Mesh> from ) { m.addMesh( *from ); } )
-        .function( "edgeLength", +[]( const Mesh& m, int ue ) { return m.edgeLength( UndirectedEdgeId( ue ) ); } )
-        .function( "edgeLengthSq", +[]( const Mesh& m, int ue ) { return m.edgeLengthSq( UndirectedEdgeId( ue ) ); } )
+        .function( "edgeLength", +[]( const Mesh& m, int e ) { return m.edgeLength( UndirectedEdgeId( e ) ); } )
+        .function( "edgeLengthSq", +[]( const Mesh& m, int e ) { return m.edgeLengthSq( UndirectedEdgeId( e ) ); } )
         .function( "toTriPoint", +[]( const Mesh& m, int f, const Vector3f& p )
         {
             const MeshTriPoint mtp = m.toTriPoint( FaceId( f ), p );
@@ -49,8 +49,8 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh )
             out.set( "bary", bary );
             return out;
         } )
-        .class_function( "fromTrianglesDuplicatingNonManifoldVertices", +[]( const VertCoords& coords, Triangulation& t )
+        .class_function( "fromTrianglesDuplicatingNonManifoldVertices", +[]( const VertCoords& vertexCoordinates, Triangulation& t )
         {
-            return std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( coords, t ) );
+            return std::make_shared<Mesh>( Mesh::fromTrianglesDuplicatingNonManifoldVertices( vertexCoordinates, t ) );
         } );
 }

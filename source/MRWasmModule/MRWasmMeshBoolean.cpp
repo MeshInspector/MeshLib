@@ -29,9 +29,9 @@ EMSCRIPTEN_BINDINGS( meshlib_boolean )
         .property( "mesh", +[]( const BooleanResult& r ) { return std::make_shared<Mesh>( r.mesh ); } )
         .function( "valid", &BooleanResult::valid );
 
-    emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b, BooleanOperation op )
+    emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> meshA, std::shared_ptr<Mesh> meshB, BooleanOperation operation )
     {
-        return boolean( *a, *b, op );
+        return boolean( *meshA, *meshB, operation );
     } );
 
     emscripten::enum_<BooleanResultMapper::MapObject>( "BooleanMapObject" )
@@ -40,26 +40,26 @@ EMSCRIPTEN_BINDINGS( meshlib_boolean )
 
     emscripten::class_<BooleanResultMapper>( "BooleanResultMapper" )
         .constructor<>()
-        .function( "mapFaces", +[]( const BooleanResultMapper& m, const FaceBitSet& bs, BooleanResultMapper::MapObject obj )
+        .function( "mapFaces", +[]( const BooleanResultMapper& m, const FaceBitSet& oldBS, BooleanResultMapper::MapObject obj )
         {
-            return m.map( bs, obj );
+            return m.map( oldBS, obj );
         } )
-        .function( "mapVerts", +[]( const BooleanResultMapper& m, const VertBitSet& bs, BooleanResultMapper::MapObject obj )
+        .function( "mapVerts", +[]( const BooleanResultMapper& m, const VertBitSet& oldBS, BooleanResultMapper::MapObject obj )
         {
-            return m.map( bs, obj );
+            return m.map( oldBS, obj );
         } )
         .function( "newFaces", +[]( const BooleanResultMapper& m ) { return m.newFaces(); } )
-        .function( "filteredOldFaceBitSet", +[]( const BooleanResultMapper& m, const FaceBitSet& bs, BooleanResultMapper::MapObject obj )
+        .function( "filteredOldFaceBitSet", +[]( const BooleanResultMapper& m, const FaceBitSet& oldBS, BooleanResultMapper::MapObject obj )
         {
-            return m.filteredOldFaceBitSet( bs, obj );
+            return m.filteredOldFaceBitSet( oldBS, obj );
         } )
         .function( "getNew2OldFaceMap", +[]( const BooleanResultMapper& m, BooleanResultMapper::MapObject obj )
         {
             return m.getNew2OldFaceMap( obj );
         } );
 
-    emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b, BooleanOperation op, BooleanResultMapper& mapper )
+    emscripten::function( "boolean", +[]( std::shared_ptr<Mesh> meshA, std::shared_ptr<Mesh> meshB, BooleanOperation operation, BooleanResultMapper& mapper )
     {
-        return boolean( *a, *b, op, nullptr, &mapper );
+        return boolean( *meshA, *meshB, operation, nullptr, &mapper );
     } );
 }

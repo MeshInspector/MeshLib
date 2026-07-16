@@ -63,8 +63,8 @@ EMSCRIPTEN_BINDINGS( meshlib_decimate )
         .property( "packMesh", &RemeshSettings::packMesh )
         .property( "projectOnOriginalMesh", &RemeshSettings::projectOnOriginalMesh );
 
-    emscripten::function( "remesh", +[]( std::shared_ptr<Mesh> m, const RemeshSettings& s )
+    emscripten::function( "remesh", +[]( std::shared_ptr<Mesh> mesh, const RemeshSettings& settings )
     {
-        return remesh( *m, s );
+        return remesh( *mesh, settings );
     } );
 }

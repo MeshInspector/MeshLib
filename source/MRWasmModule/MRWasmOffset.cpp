@@ -34,33 +34,33 @@ EMSCRIPTEN_BINDINGS( meshlib_offset )
         .constructor<>()
         .property( "mode", &GeneralOffsetParameters::mode );
 
-    emscripten::function( "suggestVoxelSize", +[]( std::shared_ptr<Mesh> mesh, float approxNumVoxels )
+    emscripten::function( "suggestVoxelSize", +[]( std::shared_ptr<Mesh> mp, float approxNumVoxels )
     {
-        return suggestVoxelSize( *mesh, approxNumVoxels );
+        return suggestVoxelSize( *mp, approxNumVoxels );
     } );
-    emscripten::function( "offsetMesh", +[]( std::shared_ptr<Mesh> mesh, float offset, const OffsetParameters& params )
+    emscripten::function( "offsetMesh", +[]( std::shared_ptr<Mesh> mp, float offset, const OffsetParameters& params )
     {
-        return std::make_shared<Mesh>( Wasm::unwrap( offsetMesh( *mesh, offset, params ) ) );
+        return std::make_shared<Mesh>( Wasm::unwrap( offsetMesh( *mp, offset, params ) ) );
     } );
-    emscripten::function( "doubleOffsetMesh", +[]( std::shared_ptr<Mesh> mesh, float offsetA, float offsetB, const OffsetParameters& params )
+    emscripten::function( "doubleOffsetMesh", +[]( std::shared_ptr<Mesh> mp, float offsetA, float offsetB, const OffsetParameters& params )
     {
-        return std::make_shared<Mesh>( Wasm::unwrap( doubleOffsetMesh( *mesh, offsetA, offsetB, params ) ) );
+        return std::make_shared<Mesh>( Wasm::unwrap( doubleOffsetMesh( *mp, offsetA, offsetB, params ) ) );
     } );
-    emscripten::function( "mcOffsetMesh", +[]( std::shared_ptr<Mesh> mesh, float offset, const OffsetParameters& params )
+    emscripten::function( "mcOffsetMesh", +[]( std::shared_ptr<Mesh> mp, float offset, const OffsetParameters& params )
     {
-        return std::make_shared<Mesh>( Wasm::unwrap( mcOffsetMesh( *mesh, offset, params ) ) );
+        return std::make_shared<Mesh>( Wasm::unwrap( mcOffsetMesh( *mp, offset, params ) ) );
     } );
     emscripten::function( "mcShellMeshRegion", +[]( std::shared_ptr<Mesh> mesh, const FaceBitSet& region, float offset, const BaseShellParameters& params )
     {
         return std::make_shared<Mesh>( Wasm::unwrap( mcShellMeshRegion( *mesh, region, offset, params ) ) );
     } );
-    emscripten::function( "sharpOffsetMesh", +[]( std::shared_ptr<Mesh> mesh, float offset, const SharpOffsetParameters& params )
+    emscripten::function( "sharpOffsetMesh", +[]( std::shared_ptr<Mesh> mp, float offset, const SharpOffsetParameters& params )
     {
-        return std::make_shared<Mesh>( Wasm::unwrap( sharpOffsetMesh( *mesh, offset, params ) ) );
+        return std::make_shared<Mesh>( Wasm::unwrap( sharpOffsetMesh( *mp, offset, params ) ) );
     } );
-    emscripten::function( "generalOffsetMesh", +[]( std::shared_ptr<Mesh> mesh, float offset, const GeneralOffsetParameters& params )
+    emscripten::function( "generalOffsetMesh", +[]( std::shared_ptr<Mesh> mp, float offset, const GeneralOffsetParameters& params )
     {
-        return std::make_shared<Mesh>( Wasm::unwrap( generalOffsetMesh( *mesh, offset, params ) ) );
+        return std::make_shared<Mesh>( Wasm::unwrap( generalOffsetMesh( *mp, offset, params ) ) );
     } );
     emscripten::function( "thickenMesh", +[]( std::shared_ptr<Mesh> mesh, float offset, const GeneralOffsetParameters& params )
     {

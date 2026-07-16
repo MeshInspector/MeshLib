@@ -29,28 +29,28 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_fixer )
         .property( "mimicPatch", &FixMeshDegeneraciesParams::mimicPatch );
 
     emscripten::function( "fixMeshDegeneracies",
-        +[]( std::shared_ptr<Mesh> m, const FixMeshDegeneraciesParams& p )
+        +[]( std::shared_ptr<Mesh> mesh, const FixMeshDegeneraciesParams& params )
     {
-        Wasm::unwrap( fixMeshDegeneracies( *m, p ) );
+        Wasm::unwrap( fixMeshDegeneracies( *mesh, params ) );
     } );
 
-    emscripten::function( "fixMultipleEdges", +[]( std::shared_ptr<Mesh> m )
+    emscripten::function( "fixMultipleEdges", +[]( std::shared_ptr<Mesh> mesh )
     {
-        fixMultipleEdges( *m );
+        fixMultipleEdges( *mesh );
     } );
 
-    emscripten::function( "findDegenerateFaces", +[]( std::shared_ptr<Mesh> m, float criticalAspectRatio )
+    emscripten::function( "findDegenerateFaces", +[]( std::shared_ptr<Mesh> mp, float criticalAspectRatio )
     {
-        return Wasm::unwrap( findDegenerateFaces( *m, criticalAspectRatio ) );
+        return Wasm::unwrap( findDegenerateFaces( *mp, criticalAspectRatio ) );
     } );
 
-    emscripten::function( "findShortEdges", +[]( std::shared_ptr<Mesh> m, float criticalLength )
+    emscripten::function( "findShortEdges", +[]( std::shared_ptr<Mesh> mp, float criticalLength )
     {
-        return Wasm::unwrap( findShortEdges( *m, criticalLength ) );
+        return Wasm::unwrap( findShortEdges( *mp, criticalLength ) );
     } );
 
-    emscripten::function( "findHoleComplicatingFaces", +[]( std::shared_ptr<Mesh> m )
+    emscripten::function( "findHoleComplicatingFaces", +[]( std::shared_ptr<Mesh> mesh )
     {
-        return findHoleComplicatingFaces( *m );
+        return findHoleComplicatingFaces( *mesh );
     } );
 }

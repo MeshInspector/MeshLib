@@ -12,9 +12,9 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_convex_hull )
 {
-    emscripten::function( "makeConvexHullFromMesh", +[]( std::shared_ptr<Mesh> m )
+    emscripten::function( "makeConvexHullFromMesh", +[]( std::shared_ptr<Mesh> mesh )
     {
-        return std::make_shared<Mesh>( makeConvexHull( *m ) );
+        return std::make_shared<Mesh>( makeConvexHull( *mesh ) );
     } );
     emscripten::function( "makeConvexHullFromPoints", +[]( const PointCloud& pointCloud )
     {

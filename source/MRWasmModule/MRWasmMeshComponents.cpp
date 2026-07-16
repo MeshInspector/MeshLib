@@ -27,45 +27,45 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_components )
         .value( "PerVertex", MeshComponents::FaceIncidence::PerVertex );
 
     emscripten::class_<MeshComponentsModule>( "MeshComponents" )
-        .class_function( "getComponent", +[]( std::shared_ptr<Mesh> m, int seed, MeshComponents::FaceIncidence inc )
+        .class_function( "getComponent", +[]( std::shared_ptr<Mesh> meshPart, int id, MeshComponents::FaceIncidence incidence )
         {
-            return MeshComponents::getComponent( *m, FaceId( seed ), inc );
+            return MeshComponents::getComponent( *meshPart, FaceId( id ), incidence );
         } )
-        .class_function( "getComponents", +[]( std::shared_ptr<Mesh> m, const FaceBitSet& seeds, MeshComponents::FaceIncidence inc )
+        .class_function( "getComponents", +[]( std::shared_ptr<Mesh> meshPart, const FaceBitSet& seeds, MeshComponents::FaceIncidence incidence )
         {
-            return MeshComponents::getComponents( *m, seeds, inc );
+            return MeshComponents::getComponents( *meshPart, seeds, incidence );
         } )
-        .class_function( "getLargestComponent", +[]( std::shared_ptr<Mesh> m, MeshComponents::FaceIncidence inc, float minArea )
+        .class_function( "getLargestComponent", +[]( std::shared_ptr<Mesh> meshPart, MeshComponents::FaceIncidence incidence, float minArea )
         {
-            return MeshComponents::getLargestComponent( *m, inc, nullptr, minArea );
+            return MeshComponents::getLargestComponent( *meshPart, incidence, nullptr, minArea );
         } )
-        .class_function( "getLargeByAreaComponents", +[]( std::shared_ptr<Mesh> m, float minArea )
+        .class_function( "getLargeByAreaComponents", +[]( std::shared_ptr<Mesh> mp, float minArea )
         {
-            return MeshComponents::getLargeByAreaComponents( *m, minArea, nullptr );
+            return MeshComponents::getLargeByAreaComponents( *mp, minArea, nullptr );
         } )
-        .class_function( "getNumComponents", +[]( std::shared_ptr<Mesh> m, MeshComponents::FaceIncidence inc )
+        .class_function( "getNumComponents", +[]( std::shared_ptr<Mesh> meshPart, MeshComponents::FaceIncidence incidence )
         {
-            return MeshComponents::getNumComponents( *m, inc );
+            return MeshComponents::getNumComponents( *meshPart, incidence );
         } )
-        .class_function( "getAllComponents", +[]( std::shared_ptr<Mesh> m, MeshComponents::FaceIncidence inc )
+        .class_function( "getAllComponents", +[]( std::shared_ptr<Mesh> meshPart, MeshComponents::FaceIncidence incidence )
         {
-            const std::vector<FaceBitSet> comps = MeshComponents::getAllComponents( *m, inc );
+            const std::vector<FaceBitSet> comps = MeshComponents::getAllComponents( *meshPart, incidence );
             emscripten::val arr = emscripten::val::array();
             for ( const FaceBitSet& c : comps )
                 arr.call<void>( "push", c );
             return arr;
         } )
-        .class_function( "getAllComponentsMap", +[]( std::shared_ptr<Mesh> m, MeshComponents::FaceIncidence inc )
+        .class_function( "getAllComponentsMap", +[]( std::shared_ptr<Mesh> meshPart, MeshComponents::FaceIncidence incidence )
         {
-            auto [regionMap, numRegions] = MeshComponents::getAllComponentsMap( *m, inc );
+            auto [regionMap, numRegions] = MeshComponents::getAllComponentsMap( *meshPart, incidence );
             emscripten::val out = emscripten::val::object();
             out.set( "map", regionMap );
             out.set( "numRegions", numRegions );
             return out;
         } )
-        .class_function( "getLargeByAreaRegions", +[]( std::shared_ptr<Mesh> m, const Face2RegionMap& face2RegionMap, int numRegions, float minArea )
+        .class_function( "getLargeByAreaRegions", +[]( std::shared_ptr<Mesh> meshPart, const Face2RegionMap& regionMap, int numRegions, float minArea )
         {
-            auto [faces, n] = MeshComponents::getLargeByAreaRegions( *m, face2RegionMap, numRegions, minArea );
+            auto [faces, n] = MeshComponents::getLargeByAreaRegions( *meshPart, regionMap, numRegions, minArea );
             emscripten::val out = emscripten::val::object();
             out.set( "faces", faces );
             out.set( "numRegions", n );

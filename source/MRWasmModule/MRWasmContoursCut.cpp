@@ -45,23 +45,23 @@ EMSCRIPTEN_BINDINGS( meshlib_contours_cut )
         .constructor<>()
         .property( "direction", &CutByProjectionSettings::direction );
 
-    emscripten::function( "cutMeshByProjection", +[]( std::shared_ptr<Mesh> mesh, emscripten::val jsContours, const CutByProjectionSettings& settings )
+    emscripten::function( "cutMeshByProjection", +[]( std::shared_ptr<Mesh> mesh, emscripten::val contours, const CutByProjectionSettings& settings )
     {
-        Contours3f contours;
-        const size_t n = jsContours[ "length" ].as<size_t>();
-        contours.resize( n );
+        Contours3f cppContours;
+        const size_t n = contours[ "length" ].as<size_t>();
+        cppContours.resize( n );
         for ( size_t i = 0; i < n; ++i )
         {
-            emscripten::val arr = jsContours[ i ];
+            emscripten::val arr = contours[ i ];
             const size_t len = arr[ "length" ].as<size_t>();
-            contours[ i ].resize( len / 3 );
+            cppContours[ i ].resize( len / 3 );
             if ( len != 0 )
             {
-                emscripten::val view( emscripten::typed_memory_view( len, reinterpret_cast<float*>( contours[ i ].data() ) ) );
+                emscripten::val view( emscripten::typed_memory_view( len, reinterpret_cast<float*>( cppContours[ i ].data() ) ) );
                 view.call<void>( "set", arr );
             }
         }
-        auto paths = Wasm::unwrap( cutMeshByProjection( *mesh, contours, settings ) );
+        auto paths = Wasm::unwrap( cutMeshByProjection( *mesh, cppContours, settings ) );
         auto out = emscripten::val::array();
         for ( const auto& path : paths )
             out.call<void>( "push", Wasm::packedToTypedArray<EdgePath, uint32_t>( path ) );

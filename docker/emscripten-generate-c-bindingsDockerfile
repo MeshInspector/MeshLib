@@ -12,13 +12,6 @@ COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
 Types: deb
-URIs: http://archive.ubuntu.com/ubuntu/ http://mirror.eu.ossplanet.net/ubuntu/
-Suites: jammy jammy-updates jammy-security jammy-backports
-Components: main restricted universe multiverse
-Architectures: amd64
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-
-Types: deb
 URIs: http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/
 Suites: jammy jammy-updates jammy-security jammy-backports
 Components: main restricted universe multiverse

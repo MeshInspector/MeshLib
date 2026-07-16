@@ -120,7 +120,7 @@ jobs:
     secrets: inherit
 
   emscripten-build-test:
-    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
+    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' || needs.config.outputs.update_doc == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
@@ -128,6 +128,7 @@ jobs:
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
       internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      definitions_only:  ${{ needs.config.outputs.build_enable_emscripten != 'true' && needs.config.outputs.update_doc == 'true' }}
 
   emscripten-c-bindings-build-test:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
@@ -374,7 +375,7 @@ jobs:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
     # and if this variant failed this job also will fail
     if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && !cancelled() }}
-    needs: [ config, ubuntu-arm64-build-test, generate-c-bindings ]
+    needs: [ config, ubuntu-arm64-build-test, generate-c-bindings, emscripten-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev

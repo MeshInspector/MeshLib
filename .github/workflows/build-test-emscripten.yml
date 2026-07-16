@@ -6,6 +6,10 @@ on:
       app_version:
         required: false
         type: string
+      definitions_only:
+        required: false
+        type: boolean
+        default: false
       docker_image_tag:
         required: true
         type: string
@@ -18,6 +22,7 @@ on:
 
 jobs:
   emscripten-build:
+    if: ${{ !inputs.definitions_only }}
     timeout-minutes: 40
     runs-on: ubuntu-24.04-arm
     container:
@@ -243,7 +248,7 @@ jobs:
           retention-days: 1
 
       - name: Upload the TypeScript definition file for docs
-        if: ${{ inputs.upload_artifacts && matrix.wasm-module-name == 'meshlib' }}
+        if: ${{ (inputs.upload_artifacts || inputs.definitions_only) && matrix.wasm-module-name == 'meshlib' }}
         uses: actions/upload-artifact@v7
         with:
           name: WasmBindingsDts
@@ -251,6 +256,7 @@ jobs:
           retention-days: 1
 
   emscripten-test:
+    if: ${{ !inputs.definitions_only }}
     needs: emscripten-build
     timeout-minutes: 10
     runs-on: ubuntu-24.04-arm

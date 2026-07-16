@@ -128,8 +128,15 @@ jobs:
           path: ./source/MRDotNet2/src
           retention-days: 1
 
+  generate-wasm-definitions:
+    uses: ./.github/workflows/build-test-emscripten.yml
+    with:
+      docker_image_tag: latest
+      upload_artifacts: false
+      definitions_only: true
+
   update-dev-documentation:
-    needs: [ create-stubs ]
+    needs: [ create-stubs, generate-wasm-definitions ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: ${{ inputs.output_folder }}
@@ -156,4 +163,9 @@ jobs:
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CsharpBindings
+          failOnError: false
+      - name: Delete Wasm definitions
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: WasmBindingsDts
           failOnError: false

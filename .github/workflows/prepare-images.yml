@@ -99,7 +99,7 @@ jobs:
   linux-image-build-upload:
     needs: compute-linux-image-matrix
     if: ${{ needs.compute-linux-image-matrix.outputs.empty == 'false' }}
-    timeout-minutes: 30
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -236,7 +236,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    timeout-minutes: 30
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:

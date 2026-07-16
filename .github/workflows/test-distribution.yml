@@ -267,6 +267,9 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
+
       - name: Download Distributive
         # GH_TOKEN instead of `gh auth login`: the login stores the token in
         # the macOS keychain, which is locked in self-hosted runner sessions

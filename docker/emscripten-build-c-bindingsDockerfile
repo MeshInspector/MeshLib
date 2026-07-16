@@ -7,6 +7,25 @@ ARG BASE_EMSDK_IMAGE
 
 FROM emscripten/emsdk:$BASE_EMSDK_IMAGE AS base
 
+# URL and metadata are TAB-separated (required by apt's mirror method)
+COPY <<EOF /etc/apt/mirrors.list
+http://archive.ubuntu.com/ubuntu/	priority:1 arch:amd64
+http://mirror.eu.ossplanet.net/ubuntu/	priority:2 arch:amd64
+http://ports.ubuntu.com/ubuntu-ports/	priority:1 arch:arm64
+http://mirror.eu.ossplanet.net/ubuntu-ports/	priority:2 arch:arm64
+EOF
+
+COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
+Types: deb
+URIs: mirror+file:/etc/apt/mirrors.list
+Suites: jammy jammy-updates jammy-security jammy-backports
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+EOF
+
+COPY <<EOF /etc/apt/sources.list
+EOF
+
 RUN <<EOF
     set -e
     # configure timezone
@@ -14,8 +33,6 @@ RUN <<EOF
     export DEBCONF_NONINTERACTIVE_SEEN=true
     echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
-    # uncomment in case of problems with the Canonical mirrors
-    # sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \

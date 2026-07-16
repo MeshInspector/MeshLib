@@ -16,7 +16,11 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        tzdata git pkg-config ninja-build gettext
+        tzdata git pkg-config ninja-build \
+        $(: to compile translation files ) \
+        gettext \
+        $(: to generate TypeScript documentation ) \
+        doxygen
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*

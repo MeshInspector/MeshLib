@@ -74,12 +74,23 @@ jobs:
       - name: Check for bindings
         id: check_bindings
         run: |
-          if [ -d MeshLib/scripts/wheel/meshlib/meshlib ] && [ -d MeshLib/Cbindings ] && [ -d MeshLib/CsharpBindings ] && [ -f MeshLib/scripts/npm/meshlib/bindings.d.mts ] ; then
-            echo "all_bindings=true" >> $GITHUB_OUTPUT
-          else
+          if [ ! -d MeshLib/scripts/wheel/meshlib/meshlib ]; then
             echo "Failed to get Python stub files, aborting"
-            echo "all_bindings=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
+          if [ ! -d MeshLib/Cbindings ]; then
+            echo "Failed to get C bindings headers, aborting"
+            exit 0
+          fi
+          if [ ! -d MeshLib/CsharpBindings ]; then
+            echo "Failed to get C# bindings, aborting"
+            exit 0
+          fi
+          if [ ! -f MeshLib/scripts/npm/meshlib/bindings.d.mts ]; then
+            echo "Failed to get Wasm definitions, aborting"
+            exit 0
+          fi
+          echo "all_bindings=true" >> $GITHUB_OUTPUT
 
       - name: Build All Documentation
         if: ${{ steps.check_bindings.outputs.all_bindings == 'true' }}

@@ -99,10 +99,8 @@ def copy_lib():
 		os.remove(f)
 
 def copy_licenses():
-	# Bundle the upstream third-party license notices (see docs/third_party_licenses.md).
-	src = os.path.join(it.base_path, 'thirdparty', 'licenses')
-	dst = os.path.join(it.path_to_install_folder, 'third_party_licenses')
-	shutil.copytree(src, dst, dirs_exist_ok=True)
+	src = os.path.join(it.base_path, 'thirdparty', 'licenses', 'THIRD-PARTY-NOTICES.txt')
+	shutil.copyfile(src, os.path.join(it.path_to_install_folder, 'THIRD-PARTY-NOTICES.txt'))
 
 it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes

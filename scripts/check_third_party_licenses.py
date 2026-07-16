@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Verify the bundled third-party license notices are complete and current.
 
-The `thirdparty/licenses/` folder is hand-curated: it holds the verbatim upstream
-LICENSE/NOTICE texts of every OSS component shipped in the MeshLib SDK. This script is
-the drift tripwire for that folder. For each component in `manifest.json` it:
+`thirdparty/licenses/THIRD-PARTY-NOTICES.txt` is hand-maintained: it holds the verbatim
+upstream LICENSE/NOTICE texts of every OSS component shipped in the MeshLib SDK, one
+'#'-ruled section per component, and every SDK package ships it as-is. This script is
+the drift tripwire for that file. For each component in `manifest.json` it:
 
-  1. checks the declared license file(s) exist and are non-empty;
+  1. checks the file has a matching non-empty section (id, license, upstream), with
+     no orphan or misordered sections;
   2. recomputes the component's current version from its source (git submodule SHA,
      vcpkg overlay-port version, vcpkg baseline, or a hash of tracked in-tree files)
      and fails if it differs from the pinned `version` in the manifest -- forcing a
      human to re-check the upstream license text and re-pin;
-  3. checks there are no orphan license directories, and warns about git submodules
-     that look shippable but are absent from the manifest.
+  3. warns about git submodules that look shippable but are absent from the manifest.
 
 Run `--update-versions` to re-pin the manifest to current versions after you have
 verified the texts are still correct.
@@ -31,11 +32,15 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 LICENSES_DIR = REPO_ROOT / "thirdparty" / "licenses"
 REL = LICENSES_DIR.relative_to(REPO_ROOT).as_posix()  # "thirdparty/licenses"
 MANIFEST = LICENSES_DIR / "manifest.json"
+NOTICES = LICENSES_DIR / "THIRD-PARTY-NOTICES.txt"
 VCPKG_JSON = REPO_ROOT / "thirdparty" / "vcpkg" / "vcpkg.json"
 VCPKG_PORTS = REPO_ROOT / "thirdparty" / "vcpkg" / "ports"
 
-# Directory entries in thirdparty/licenses/ that are not component folders.
-NON_COMPONENT_ENTRIES = {"manifest.json"}
+# Section separator in THIRD-PARTY-NOTICES.txt.
+RULE = "#" * 80
+
+# The only entries allowed in thirdparty/licenses/.
+ALLOWED_ENTRIES = {"manifest.json", "THIRD-PARTY-NOTICES.txt"}
 
 # Submodules that ship nothing in the SDK binaries, so they need no license folder.
 # Keep this list short and justified -- anything not here must appear in the manifest.
@@ -115,10 +120,44 @@ def load_components():
     return data, data["components"]
 
 
+def parse_sections(text):
+    """Parse THIRD-PARTY-NOTICES.txt into [(id, license, upstream, has_body)].
+
+    A section starts with a 4-line block: RULE, '<id> -- <license>', upstream, RULE;
+    its body runs to the next such block (or EOF).
+    """
+    lines = text.split("\n")
+
+    def is_section_start(i):
+        return lines[i] == RULE and i + 3 < len(lines) and lines[i + 3] == RULE
+
+    starts = [i for i in range(len(lines)) if is_section_start(i)]
+    sections = []
+    for n, i in enumerate(starts):
+        header, upstream = lines[i + 1], lines[i + 2]
+        cid, sep, lic = header.partition(" -- ")
+        end = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        body = "\n".join(lines[i + 4:end]).strip()
+        sections.append((cid if sep else header, lic, upstream, bool(body)))
+    return sections
+
+
 def check():
     _, components = load_components()
     errors, warnings = [], []
-    seen_ids, seen_dirs = set(), set()
+    seen_ids = set()
+
+    notices_rel = f"{REL}/{NOTICES.name}"
+    sections = []
+    if NOTICES.is_file():
+        sections = parse_sections(NOTICES.read_text(encoding="utf-8"))
+    else:
+        errors.append(f"missing {notices_rel}")
+    by_id = {}
+    for cid, lic, upstream, has_body in sections:
+        if cid in by_id:
+            errors.append(f"{cid}: duplicate section in {notices_rel}")
+        by_id[cid] = (lic, upstream, has_body)
 
     for comp in components:
         cid = comp["id"]
@@ -126,20 +165,21 @@ def check():
             errors.append(f"{cid}: duplicate manifest entry")
             continue
         seen_ids.add(cid)
-        seen_dirs.add(cid)
 
-        comp_dir = LICENSES_DIR / cid
-        if not comp_dir.is_dir():
-            errors.append(f"{cid}: missing license directory {REL}/{cid}/")
-            continue
-
-        # 1. declared files present and non-empty
-        for rel in comp["files"]:
-            f = comp_dir / rel
-            if not f.is_file():
-                errors.append(f"{cid}: missing license file {rel}")
-            elif f.stat().st_size == 0:
-                errors.append(f"{cid}: empty license file {rel}")
+        # 1. matching non-empty section in THIRD-PARTY-NOTICES.txt
+        sec = by_id.get(cid)
+        if sec is None:
+            errors.append(f"{cid}: no section in {notices_rel}")
+        else:
+            lic, upstream, has_body = sec
+            if lic != comp.get("license", ""):
+                errors.append(f"{cid}: section license '{lic}' != manifest "
+                              f"'{comp.get('license', '')}'")
+            if upstream != comp.get("upstream", ""):
+                errors.append(f"{cid}: section upstream '{upstream}' != manifest "
+                              f"'{comp.get('upstream', '')}'")
+            if not has_body:
+                errors.append(f"{cid}: empty section in {notices_rel}")
 
         # 2. version tripwire
         try:
@@ -155,15 +195,21 @@ def check():
                           f"'scripts/check_third_party_licenses.py --update-versions'")
         elif pinned != cur:
             errors.append(f"{cid}: version changed {pinned} -> {cur} -- re-verify the "
-                          f"upstream LICENSE text, update {REL}/{cid}/, "
+                          f"upstream LICENSE text, update its section in {notices_rel}, "
                           f"then re-pin with --update-versions")
 
-    # 3a. orphan directories with no manifest entry
+    # 3a. orphan or misordered sections, stray files in the folder
+    for cid, *_ in sections:
+        if cid not in seen_ids:
+            errors.append(f"{cid}: section in {notices_rel} has no manifest.json entry")
+    file_order = [cid for cid, *_ in sections if cid in seen_ids]
+    manifest_order = [c["id"] for c in components if c["id"] in by_id]
+    if file_order != manifest_order:
+        errors.append(f"sections in {notices_rel} are not in manifest.json order")
     for entry in sorted(LICENSES_DIR.iterdir()):
-        if entry.name in NON_COMPONENT_ENTRIES:
-            continue
-        if entry.is_dir() and entry.name not in seen_dirs:
-            errors.append(f"{entry.name}: license directory has no manifest.json entry")
+        if entry.name not in ALLOWED_ENTRIES:
+            errors.append(f"unexpected entry {REL}/{entry.name} -- only "
+                          f"{', '.join(sorted(ALLOWED_ENTRIES))} belong here")
 
     # 3b. shippable-looking submodules missing from the manifest (warning only)
     covered = {c["source"].get("path") for c in components

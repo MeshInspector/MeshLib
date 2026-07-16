@@ -1,8 +1,0 @@
-FreeType is dual-licensed under:
-
-  - the FreeType License (FTL), a BSD-style license -- see FTL.TXT; and
-  - the GNU General Public License v2 -- see GPLv2.TXT.
-
-A user of FreeType may choose either. MeshLib uses and redistributes FreeType
-under the FTL. Both license texts are included here because the FTL asks that
-its credit notice be preserved and the project ships both texts.

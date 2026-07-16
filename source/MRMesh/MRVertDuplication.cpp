@@ -361,10 +361,13 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        // skip a vertex, for which the sequential walk via PathAroundVertex finds nothing to duplicate;
-        // also skip a vertex with exactly two open chains and no closed ones, MeshBuilder has no issue with such configuration
         const auto vertInfo = all.vertInfos[v];
-        if ( !vertInfo.hasRepeatedVerts() && ( vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1 || ( vertInfo.numOpenChains() == 2 && vertInfo.numClosedChains() == 0 ) ) )
+        // a vertex with exactly two open chains of triangles and no closed ones is not duplicated,
+        // because MeshBuilder has no issue with such configuration
+        const bool twoOpenChainsOnly = !vertInfo.hasRepeatedVerts() && vertInfo.numOpenChains() == 2 && vertInfo.numClosedChains() == 0;
+
+        // performance optimization only: skip a vertex, for which the sequential walk below finds nothing to duplicate
+        if ( twoOpenChainsOnly || ( !vertInfo.hasRepeatedVerts() && vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1 ) )
             continue;
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
@@ -413,7 +416,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     }
                     if ( !nextVertex )
                     {
-                        if ( foundChains )
+                        if ( foundChains && !twoOpenChainsOnly )
                         {
                             pathMaker.duplicateVertex( path, lastValidVert, dups );
                             ++duplicatedVerticesCnt;
@@ -433,7 +436,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     for( const auto& vi : closedPath)
                         visitedVertices.reset(vi);
 
-                    if ( foundChains )
+                    if ( foundChains && !twoOpenChainsOnly )
                     {
                         pathMaker.duplicateVertex( closedPath, lastValidVert, dups );
                         ++duplicatedVerticesCnt;

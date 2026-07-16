@@ -211,6 +211,9 @@ jobs:
           MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.node.mjs
         run: node source/MRWasmTest/index.mjs
 
+        # Embind doesn't provide any way to define docstrings for the generated TypeScript definition file.
+        # `inject_tsdoc.py` manually updates it with docstrings extracted from the C++ code with Doxygen.
+        # The docstrings are then used both by the end users ("hover information") and for generating documentation.
       - name: Document the TypeScript definition file
         run: |
           doxygen scripts/npm/Doxyfile

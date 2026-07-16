@@ -59,6 +59,28 @@ TEST( MRMesh, duplicateDoubleHoleVertex )
     EXPECT_EQ( topology.numValidFaces(), 2 );
 }
 
+// duplication of one vertex can resolve non-manifoldness in its neighbor vertex, which shall not be duplicated then
+TEST( MRMesh, duplicateResolvedNeighborVertex )
+{
+    Triangulation t;
+    t.push_back( { 1_v, 2_v, 3_v } ); //0_f
+    t.push_back( { 2_v, 1_v, 4_v } ); //1_f
+    t.push_back( { 1_v, 2_v, 5_v } ); //2_f
+    // the edge (1,2) is shared by three triangles, so both vertices 1 and 2 have repeated neighbor vertices;
+    // duplication of vertex 1 in one of the triangles resolves vertex 2 into two open chains requiring nothing
+
+    std::vector<VertDuplication> dups;
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    EXPECT_EQ( duplicatedVerticesCnt, 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 1_v );
+    EXPECT_EQ( dups[0].dupVert, 6_v );
+
+    const auto topology = fromTrianglesDuplicatingNonManifoldVertices( t );
+    EXPECT_EQ( topology.numValidVerts(), 6 );
+    EXPECT_EQ( topology.numValidFaces(), 3 );
+}
+
 // check a vertex with both a closed ring of triangles and a separate chain around it
 TEST( MRMesh, duplicateClosedPlusOpenChainVertex )
 {

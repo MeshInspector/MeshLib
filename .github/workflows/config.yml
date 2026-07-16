@@ -203,7 +203,6 @@ jobs:
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
-      # Keep in sync with scripts/devops/docker_image_source_checksum.sh (see the note there).
       - name: Filter Linux paths
         if: ${{ github.event_name != 'schedule' }}
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
@@ -217,7 +216,6 @@ jobs:
               - 'scripts/install_apt_requirements.sh'
               - 'scripts/mrbind/install_deps_ubuntu.sh'
               - 'scripts/mrbind/clang_version.txt'
-              - 'scripts/devops/docker_image_source_checksum.sh'
               - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**|licenses/**)'
 
       - name: Filter Linux vcpkg paths
@@ -228,7 +226,6 @@ jobs:
           filters: |
             src:
               - 'docker/(rockylinux8|rockylinux9)-vcpkgDockerfile'
-              - 'scripts/devops/docker_image_source_checksum.sh'
               - 'thirdparty/vcpkg/**'
 
       - name: Filter Windows paths

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Usage: docker_image_source_checksum.sh <distro>
-# The path sets must stay in sync with the image-rebuild filters in
-# .github/workflows/config.yml: a path hashed here but absent from the filter
-# moves the expected tag without triggering the rebuild that would push it.
+# Hash only paths that affect image content: hashing anything else moves the
+# expected source-checksum-* tag on commits that build no new image, breaking
+# consumers that pull strictly by that tag (thirdparty/licenses/** is license
+# texts shipped in packages, not image inputs).
 set -euo pipefail
 
 distro=$1

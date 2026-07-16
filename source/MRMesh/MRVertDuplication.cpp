@@ -179,17 +179,16 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
         const auto [v1, v2] = getOtherTriVerts( t[i->f], v0 );
         const auto lInsertion = l_.insert( { v1, v2 } );
         const auto rInsertion = r_.insert( { v2, v1 } );
-        if ( info.numRepeatedVerts == 0 && lInsertion.second && rInsertion.second )
+        if ( !info.hasRepeatedVerts() && lInsertion.second && rInsertion.second )
         {
-            ++info.numChains;
+            info.incOpenChains();
             if ( auto it = l_.find( v2 ); it != l_.end() )
             {
                 // the edge (v,v2) becomes inner
                 const auto vEnd = it->second;
                 it->second = VertId{};
                 assert( vEnd ); // the edge (v,v2) was boundary
-                assert( info.numChains > 0 );
-                --info.numChains;
+                info.decOpenChains();
                 lInsertion.first->second = vEnd;
                 assert( r_[vEnd] == v2 );
                 r_[vEnd] = v1;
@@ -206,11 +205,12 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
                     assert( lInsertion.first->second == v1 );
                     lInsertion.first->second = VertId{};
                     rInsertion.first->second = VertId{};
+                    info.decOpenChains();
+                    info.incClosedChains();
                 }
                 else
                 {
-                    assert( info.numChains > 0 );
-                    --info.numChains;
+                    info.decOpenChains();
                     // the right end of the chain grown from the current triangle: v2, or updated by the merge above
                     const auto vRight = lInsertion.first->second;
                     assert( vRight );
@@ -233,11 +233,9 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
         {
             // insertion can fail only if the vertex is repeated
             if ( !lInsertion.second )
-                ++info.numRepeatedVerts;
+                info.incRepeatedVerts();
             if ( !rInsertion.second )
-                ++info.numRepeatedVerts;
-            // numChains is not updated and not trustworthy after this
-            info.numChains = 0;
+                info.incRepeatedVerts();
         }
     }
     return info;
@@ -365,7 +363,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     {
         // this skip-criterion must remain equivalent to
         // "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
-        if ( all.vertInfos[v].numRepeatedVerts == 0 && all.vertInfos[v].numChains <= 1 )
+        const auto vertInfo = all.vertInfos[v];
+        if ( !vertInfo.hasRepeatedVerts() && vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1 )
             continue; // single chain of triangles or no triangles at all, nothing to duplicate
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];

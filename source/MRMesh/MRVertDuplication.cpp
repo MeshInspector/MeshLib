@@ -338,6 +338,15 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
     }
 }
 
+/// returns true if the vertex with such neighborhood does not require duplication:
+/// a single chain of triangles (or no triangles at all), or two open chains, which MeshBuilder has no issue with
+static bool noDuplicationNeeded( const VertInfo & vertInfo )
+{
+    return !vertInfo.hasRepeatedVerts() &&
+        ( vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1
+        || ( vertInfo.numOpenChains() == 2 && vertInfo.numClosedChains() == 0 ) );
+}
+
 // for all vertices get over all incident vertices to find connected sequences
 size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
 {
@@ -355,19 +364,23 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     all.computeVertSpans();
     all.computeVertInfos( t );
 
+    VertNeighbourhoodInspector inspector;
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        // this skip-criterion must remain equivalent to
-        // "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
-        const auto vertInfo = all.vertInfos[v];
-        if ( !vertInfo.hasRepeatedVerts() && vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1 )
-            continue; // single chain of triangles or no triangles at all, nothing to duplicate
+        // skip a vertex based on the neighborhood in the original triangulation;
+        // a vertex not requiring duplication cannot start requiring it after duplication of its neighbors
+        if ( noDuplicationNeeded( all.vertInfos[v] ) )
+            continue;
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
+        // duplication of one vertex can resolve non-manifoldness in its neighbor vertex,
+        // so after the first duplication recheck the neighborhood in the current triangulation
+        if ( duplicatedVerticesCnt > 0 && noDuplicationNeeded( inspector.run( t, all.recs.data() + posBegin, all.recs.data() + posEnd ) ) )
+            continue;
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication

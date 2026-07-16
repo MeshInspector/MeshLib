@@ -44,16 +44,19 @@ TEST( MRMesh, duplicateDoubleHoleVertex )
     Triangulation t;
     t.push_back( { 0_v, 1_v, 2_v } ); //0_f
     t.push_back( { 0_v, 3_v, 4_v } ); //1_f
-    // there are four edges with origin at vertex #0 having hole on one side (two with no left(e) and two with no right(e))
+    // there are four edges with origin at vertex #0 having hole on one side (two with no left(e) and two with no right(e));
+    // it is two open chains around vertex #0, and MeshBuilder has no issue with such configuration, so no duplication shall be done
 
     std::vector<VertDuplication> dups;
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
-    ASSERT_EQ( duplicatedVerticesCnt, 1 );
-    ASSERT_EQ( dups.size(), 1 );
-    ASSERT_EQ( dups[0].srcVert, 0_v );
-    ASSERT_EQ( dups[0].dupVert, 5_v );
+    ASSERT_EQ( duplicatedVerticesCnt, 0 );
+    ASSERT_EQ( dups.size(), 0 );
     ASSERT_EQ( t[0_f], ( ThreeVertIds{ 0_v, 1_v, 2_v } ) );
-    ASSERT_EQ( t[1_f], ( ThreeVertIds{ 5_v, 3_v, 4_v } ) );
+    ASSERT_EQ( t[1_f], ( ThreeVertIds{ 0_v, 3_v, 4_v } ) );
+
+    const auto topology = fromTrianglesDuplicatingNonManifoldVertices( t );
+    EXPECT_EQ( topology.numValidVerts(), 5 );
+    EXPECT_EQ( topology.numValidFaces(), 2 );
 }
 
 // check a vertex with both a closed ring of triangles and a separate chain around it

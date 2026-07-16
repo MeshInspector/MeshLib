@@ -361,11 +361,11 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        // this skip-criterion must remain equivalent to
-        // "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
+        // skip a vertex, for which the sequential walk via PathAroundVertex finds nothing to duplicate;
+        // also skip a vertex with exactly two open chains and no closed ones, MeshBuilder has no issue with such configuration
         const auto vertInfo = all.vertInfos[v];
-        if ( !vertInfo.hasRepeatedVerts() && vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1 )
-            continue; // single chain of triangles or no triangles at all, nothing to duplicate
+        if ( !vertInfo.hasRepeatedVerts() && ( vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1 || ( vertInfo.numOpenChains() == 2 && vertInfo.numClosedChains() == 0 ) ) )
+            continue;
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );

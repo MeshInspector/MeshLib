@@ -2,6 +2,7 @@
 
 #include "MRId.h"
 #include "MRPch/MRBindingMacros.h"
+#include <cstdint>
 #include <utility>
 #include <vector>
 
@@ -23,16 +24,27 @@ struct VertDuplication
 MRMESH_API size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region = nullptr,
     std::vector<VertDuplication>* dups = nullptr, VertId lastValidVert = {} );
 
-/// classification of the triangles around one vertex
+/// classification of the triangles around one vertex, packed in 32 bits;
+/// each counter saturates at its maximum value instead of overflowing
 struct VertInfo
 {
-    /// the number of chains of connected triangles around the vertex;
-    /// numChains is set to 0 if numRepeatedVerts > 0
-    int numChains = 0;
+    /// the number of open chains of connected triangles around the vertex;
+    /// set to 0 if numRepeatedVerts > 0
+    std::uint32_t numOpenChains : 10 = 0;
+
+    /// the number of closed chains (rings) of connected triangles around the vertex;
+    /// set to 0 if numRepeatedVerts > 0
+    std::uint32_t numClosedChains : 10 = 0;
 
     /// the number of vertices, which are passed more than once
-    int numRepeatedVerts = 0;
+    std::uint32_t numRepeatedVerts : 12 = 0;
+
+    /// maximal values storable in the bit-fields above
+    static constexpr std::uint32_t maxNumOpenChains = 1023;
+    static constexpr std::uint32_t maxNumClosedChains = 1023;
+    static constexpr std::uint32_t maxNumRepeatedVerts = 4095;
 };
+static_assert( sizeof( VertInfo ) == 4 );
 
 /// describes a vertex and one of triangles incident to it
 struct VertTri

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Usage: docker_image_source_checksum.sh <distro>
+# The path sets must stay in sync with the image-rebuild filters in
+# .github/workflows/config.yml: a path hashed here but absent from the filter
+# moves the expected tag without triggering the rebuild that would push it.
 set -euo pipefail
 
 distro=$1
@@ -14,6 +17,7 @@ common=(
   ':(exclude)thirdparty/mrbind'
   ':(exclude)thirdparty/mrbind/**'
   ':(exclude)thirdparty/Noto_Sans/**'
+  ':(exclude)thirdparty/licenses/**'
 )
 
 ubuntu=(

@@ -371,17 +371,15 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     size_t duplicatedVerticesCnt = 0;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
     {
-        // performance optimization only: skip a vertex based on the neighborhood in the original triangulation;
-        // it is safe, because a vertex not requiring duplication cannot start requiring it after duplication of its neighbors
+        // skip a vertex based on the neighborhood in the original triangulation;
+        // a vertex not requiring duplication cannot start requiring it after duplication of its neighbors
         if ( noDuplicationNeeded( all.vertInfos[v] ) )
             continue;
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
         // duplication of one vertex can resolve non-manifoldness in its neighbor vertex,
-        // so after the first duplication the decision is made on the neighborhood in the current triangulation
-        const auto vertInfo = duplicatedVerticesCnt == 0 ? all.vertInfos[v]
-            : inspector.run( t, all.recs.data() + posBegin, all.recs.data() + posEnd );
-        if ( noDuplicationNeeded( vertInfo ) )
+        // so after the first duplication recheck the neighborhood in the current triangulation
+        if ( duplicatedVerticesCnt > 0 && noDuplicationNeeded( inspector.run( t, all.recs.data() + posBegin, all.recs.data() + posEnd ) ) )
             continue;
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
 

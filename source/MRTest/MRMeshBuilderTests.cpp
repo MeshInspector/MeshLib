@@ -105,9 +105,9 @@ TEST( MRMesh, inspectVertNeighbourhood )
 
     // 6-triangle closed ring (991,990,1020,1019,460079,1013) and 3-triangle closed ring (988,1911,989)
     const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
-    EXPECT_EQ( info.numRepeatedVerts, 0 );
-    EXPECT_EQ( info.numOpenChains, 0 );
-    EXPECT_EQ( info.numClosedChains, 2 );
+    EXPECT_FALSE( info.hasRepeatedVerts() );
+    EXPECT_EQ( info.numOpenChains(), 0 );
+    EXPECT_EQ( info.numClosedChains(), 2 );
 
     // the vertex is non-manifold, so one of its rings must get a duplicate
     std::vector<VertDuplication> dups;
@@ -123,23 +123,23 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
     {
         Triangulation t;
         std::vector<VertTri> recs;
-        const int n = (int)VertInfo::maxNumOpenChains + 100;
+        const int n = int( VertInfo::maxNumOpenChains ) + 100;
         for ( int i = 0; i < n; ++i )
         {
             t.push_back( { 0_v, VertId( 1 + 2 * i ), VertId( 2 + 2 * i ) } );
             recs.push_back( { 0_v, FaceId( i ) } );
         }
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
-        EXPECT_EQ( info.numRepeatedVerts, 0 );
-        EXPECT_EQ( info.numOpenChains, VertInfo::maxNumOpenChains );
-        EXPECT_EQ( info.numClosedChains, 0 );
+        EXPECT_FALSE( info.hasRepeatedVerts() );
+        EXPECT_EQ( info.numOpenChains(), VertInfo::maxNumOpenChains );
+        EXPECT_EQ( info.numClosedChains(), 0 );
     }
 
     // more closed rings around one vertex than numClosedChains can store
     {
         Triangulation t;
         std::vector<VertTri> recs;
-        const int n = (int)VertInfo::maxNumClosedChains + 100;
+        const int n = int( VertInfo::maxNumClosedChains ) + 100;
         for ( int i = 0; i < n; ++i )
         {
             const VertId a( 1 + 2 * i ), b( 2 + 2 * i );
@@ -149,25 +149,26 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
             recs.push_back( { 0_v, FaceId( 2 * i + 1 ) } );
         }
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
-        EXPECT_EQ( info.numRepeatedVerts, 0 );
-        EXPECT_EQ( info.numOpenChains, 0 );
-        EXPECT_EQ( info.numClosedChains, VertInfo::maxNumClosedChains );
+        EXPECT_FALSE( info.hasRepeatedVerts() );
+        EXPECT_EQ( info.numOpenChains(), 0 );
+        EXPECT_EQ( info.numClosedChains(), VertInfo::maxNumClosedChains );
     }
 
-    // the same triangle repeated more times than numRepeatedVerts can store (each repetition adds 2)
+    // the same triangle repeated many times: repetitions are counted, chain counters read as zero
     {
         Triangulation t;
         std::vector<VertTri> recs;
-        const int n = (int)VertInfo::maxNumRepeatedVerts;
+        const int n = 100;
         for ( int i = 0; i < n; ++i )
         {
             t.push_back( { 0_v, 1_v, 2_v } );
             recs.push_back( { 0_v, FaceId( i ) } );
         }
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
-        EXPECT_EQ( info.numRepeatedVerts, VertInfo::maxNumRepeatedVerts );
-        EXPECT_EQ( info.numOpenChains, 0 );
-        EXPECT_EQ( info.numClosedChains, 0 );
+        EXPECT_TRUE( info.hasRepeatedVerts() );
+        EXPECT_EQ( info.numRepeatedVerts(), 2u * ( n - 1 ) );
+        EXPECT_EQ( info.numOpenChains(), 0 );
+        EXPECT_EQ( info.numClosedChains(), 0 );
     }
 }
 

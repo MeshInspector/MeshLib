@@ -143,34 +143,6 @@ public:
     }
 };
 
-// all changes of VertInfo counters below saturate at the field's maximum instead of overflowing,
-// and a saturated counter sticks to its maximum to keep the vertex suspicious for the sequential walk
-
-static void incOpenChains( VertInfo & info )
-{
-    if ( info.numOpenChains < VertInfo::maxNumOpenChains )
-        ++info.numOpenChains;
-}
-
-static void decOpenChains( VertInfo & info )
-{
-    assert( info.numOpenChains > 0 );
-    if ( info.numOpenChains < VertInfo::maxNumOpenChains )
-        --info.numOpenChains;
-}
-
-static void incClosedChains( VertInfo & info )
-{
-    if ( info.numClosedChains < VertInfo::maxNumClosedChains )
-        ++info.numClosedChains;
-}
-
-static void incRepeatedVerts( VertInfo & info )
-{
-    if ( info.numRepeatedVerts < VertInfo::maxNumRepeatedVerts )
-        ++info.numRepeatedVerts;
-}
-
 class VertNeighbourhoodInspector
 {
 public:
@@ -207,16 +179,16 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
         const auto [v1, v2] = getOtherTriVerts( t[i->f], v0 );
         const auto lInsertion = l_.insert( { v1, v2 } );
         const auto rInsertion = r_.insert( { v2, v1 } );
-        if ( info.numRepeatedVerts == 0 && lInsertion.second && rInsertion.second )
+        if ( !info.hasRepeatedVerts() && lInsertion.second && rInsertion.second )
         {
-            incOpenChains( info );
+            info.incOpenChains();
             if ( auto it = l_.find( v2 ); it != l_.end() )
             {
                 // the edge (v,v2) becomes inner
                 const auto vEnd = it->second;
                 it->second = VertId{};
                 assert( vEnd ); // the edge (v,v2) was boundary
-                decOpenChains( info );
+                info.decOpenChains();
                 lInsertion.first->second = vEnd;
                 assert( r_[vEnd] == v2 );
                 r_[vEnd] = v1;
@@ -233,12 +205,12 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
                     assert( lInsertion.first->second == v1 );
                     lInsertion.first->second = VertId{};
                     rInsertion.first->second = VertId{};
-                    decOpenChains( info );
-                    incClosedChains( info );
+                    info.decOpenChains();
+                    info.incClosedChains();
                 }
                 else
                 {
-                    decOpenChains( info );
+                    info.decOpenChains();
                     // the right end of the chain grown from the current triangle: v2, or updated by the merge above
                     const auto vRight = lInsertion.first->second;
                     assert( vRight );
@@ -261,12 +233,9 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
         {
             // insertion can fail only if the vertex is repeated
             if ( !lInsertion.second )
-                incRepeatedVerts( info );
+                info.incRepeatedVerts();
             if ( !rInsertion.second )
-                incRepeatedVerts( info );
-            // chain counters are not updated and not trustworthy after this
-            info.numOpenChains = 0;
-            info.numClosedChains = 0;
+                info.incRepeatedVerts();
         }
     }
     return info;
@@ -394,7 +363,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     {
         // this skip-criterion must remain equivalent to
         // "the sequential walk via PathAroundVertex finds nothing to duplicate for this vertex"
-        if ( all.vertInfos[v].numRepeatedVerts == 0 && all.vertInfos[v].numOpenChains + all.vertInfos[v].numClosedChains <= 1 )
+        const auto vertInfo = all.vertInfos[v];
+        if ( !vertInfo.hasRepeatedVerts() && vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1 )
             continue; // single chain of triangles or no triangles at all, nothing to duplicate
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];

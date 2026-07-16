@@ -22,10 +22,10 @@ on:
         value: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       need_linux_image_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' }}
+        value: ${{ jobs.prepare-config.outputs.need-linux-image-rebuild == 'true' }}
       need_linux_vcpkg_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' }}
+        value: ${{ jobs.prepare-config.outputs.need-linux-vcpkg-rebuild == 'true' }}
       need_windows_vcpkg_rebuild:
         description:
         value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
@@ -85,8 +85,8 @@ jobs:
       app_version:              ${{ steps.version-tag.outputs.app_version }}
       docker-image-tag:         ${{ steps.select-docker-image-tag.outputs.image_tag }}
       release_tag:              ${{ steps.version-tag.outputs.release_tag }}
-      linux-changes:            ${{ steps.linux-changes.outputs.src }}
-      linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
+      need-linux-image-rebuild: ${{ steps.select-docker-image-tag.outputs.need_rebuild }}
+      need-linux-vcpkg-rebuild: ${{ steps.select-vcpkg-docker-image-tag.outputs.need_rebuild }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
       windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
@@ -203,31 +203,6 @@ jobs:
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
-      - name: Filter Linux paths
-        if: ${{ github.event_name != 'schedule' }}
-        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
-        id: linux-changes
-        with:
-          filters: |
-            src:
-              - 'docker/(ubuntu22|ubuntu24|emscripten-build-c-bindings|emscripten-generate-c-bindings|emscripten)Dockerfile'
-              - 'requirements/(ubuntu|distribution_python).txt'
-              - 'scripts/build_thirdparty.sh'
-              - 'scripts/install_apt_requirements.sh'
-              - 'scripts/mrbind/install_deps_ubuntu.sh'
-              - 'scripts/mrbind/clang_version.txt'
-              - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**|licenses/**)'
-
-      - name: Filter Linux vcpkg paths
-        if: ${{ github.event_name != 'schedule' }}
-        uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
-        id: linux-vcpkg-changes
-        with:
-          filters: |
-            src:
-              - 'docker/(rockylinux8|rockylinux9)-vcpkgDockerfile'
-              - 'thirdparty/vcpkg/**'
-
       - name: Filter Windows paths
         if: ${{ github.event_name != 'schedule' }}
         uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
@@ -239,30 +214,30 @@ jobs:
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
-      # if nothing to rebuild: "latest"
-      # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
-      # example: fix/mesh -> fix-mesh
+      # Single criterion for image selection and rebuilds: registry manifest
+      # digests compared against the content-addressed source-checksum-* tags
+      # (see select_docker_image_tags.sh). `latest` is selected when it
+      # already points at the wanted images; otherwise the branch tag is
+      # selected and prepare-images (re)points it, building only images whose
+      # source-checksum-* tag is absent.
       - name: Select Docker image tag
         id: select-docker-image-tag
         run: |
-          if [[ "${{ steps.linux-changes.outputs.src }}" == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+          BRANCH_TAG=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
             # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
-          else
-            IMAGE_TAG="latest"
+            BRANCH_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           fi
-          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          scripts/devops/select_docker_image_tags.sh linux "${BRANCH_TAG}" >> $GITHUB_OUTPUT
 
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [[ "${{ steps.linux-vcpkg-changes.outputs.src }}" == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
-          else
-            IMAGE_TAG="latest"
+          BRANCH_TAG=""
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BRANCH_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           fi
-          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          scripts/devops/select_docker_image_tags.sh linux-vcpkg "${BRANCH_TAG}" >> $GITHUB_OUTPUT
 
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}

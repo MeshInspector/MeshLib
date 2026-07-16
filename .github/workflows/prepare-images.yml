@@ -72,6 +72,7 @@ jobs:
           # suffix are derived from `matrix.arch` inline below.
           # `emscripten-generate-c-bindings` (the image for generate-c-bindings) has no
           # disable condition: that job always runs, so the image is always built.
+          # Keep in sync with scripts/devops/select_docker_image_tags.sh.
           MATRIX=$(jq -nc \
             --argjson dx64   "$DISABLE_UBUNTU_X64" \
             --argjson darm64 "$DISABLE_UBUNTU_ARM64" \
@@ -171,6 +172,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Keep in sync with scripts/devops/select_docker_image_tags.sh.
         arch: [ x64, arm64 ]
         os: [ rockylinux8 ] # also available: rockylinux9
         include:
@@ -241,6 +243,7 @@ jobs:
       fail-fast: false
       matrix:
         # The old `3.1.38` didn't have ARM images.
+        # Keep in sync with scripts/devops/select_docker_image_tags.sh.
         emsdk_image: [ 3.1.38, 4.0.19-arm64 ]
         include:
           - emsdk_image: 3.1.38

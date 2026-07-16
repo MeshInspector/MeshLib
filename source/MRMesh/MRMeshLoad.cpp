@@ -660,7 +660,7 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     Mesh res;
     res.points = std::move( *maybePoints );
 
-    if ( tris && !tris->empty() ) // an empty PLY point cloud must not lose its points in mesh construction below
+    if ( tris )
     {
         int mySkippedFaceCount = 0;
         const auto numPoints = res.points.size();

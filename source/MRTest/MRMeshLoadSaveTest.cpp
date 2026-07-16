@@ -156,6 +156,29 @@ TEST(MRMesh, LoadPlyDuplicatingNonManifoldVertices)
     EXPECT_EQ( loadedColors[7_v], colors[0_v] );
 }
 
+TEST(MRMesh, LoadPlyPointCloud)
+{
+    // PLY point cloud with a face element having zero faces must keep all its points
+    std::string file =
+        "ply\n"
+        "format ascii 1.0\n"
+        "element vertex 2\n"
+        "property float x\n"
+        "property float y\n"
+        "property float z\n"
+        "element face 0\n"
+        "property list uchar int vertex_indices\n"
+        "end_header\n"
+        "0 0 0\n"
+        "1 0 0\n";
+
+    std::istringstream in( file );
+    auto loadRes = MeshLoad::fromPly( in );
+    ASSERT_TRUE( loadRes.has_value() );
+    EXPECT_EQ( loadRes->points.size(), 2 );
+    EXPECT_EQ( loadRes->topology.numValidFaces(), 0 );
+}
+
 TEST(MRMesh, LoadObjTabIndented)
 {
     // some exporters (e.g. 3ds Max guruware OBJ exporter) indent lines with tabs

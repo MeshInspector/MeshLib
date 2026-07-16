@@ -191,15 +191,8 @@ Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {
     for ( FaceId i{0}; i < (int)triCount; ++i )
         t.push_back( { VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ) } );
 
-    Mesh mesh;
-    if ( t.empty() ) // a CTM point cloud must not lose its points in mesh construction below
-    {
-        mesh.points = std::move( points );
-        return mesh;
-    }
-
     std::vector<MeshBuilder::VertDuplication> dups;
-    mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, &dups,
+    auto mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, &dups,
         { .skippedFaceCount = settings.skippedFaceCount } );
     if ( mesh.topology.lastValidVert() + 1 > vertCount + dups.size() )
         return unexpected( "vertex id is larger than total point coordinates" );

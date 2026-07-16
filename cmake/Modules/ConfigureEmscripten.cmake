@@ -16,11 +16,11 @@ option(MR_EMSCRIPTEN_WASM2023 "Enable Unity's WebAssembly 2023 target (a set of 
 IF(MR_EMSCRIPTEN_WASM2023)
   # Those flags come from here: https://docs.unity3d.com/6000.7/Documentation/Manual/webgl-native-plugins-with-emscripten.html
   # Skipping `-fwasm-exceptions` because we don't use exceptions.
-  # Skipping `-sSUPPORT_LONGJMP=wasm` because that conflicts with our `-s NO_DISABLE_EXCEPTION_CATCHING=1`. That conflict only happens in third-party libraries, not here, but still disabling it here for consistency.
-  #   In theory, this flag is supposed to be implemented in terms of `-fwasm-exceptions`, so I'm not sure how it works without that one, but it seems to work if enabled.
+  # Skipping `-sSUPPORT_LONGJMP=wasm` because that conflicts with our `-s NO_DISABLE_EXCEPTION_CATCHING=1`, and also prevents CMake from finding FreeType during configuration.
+  #   In theory, this flag is supposed to be implemented in terms of `-fwasm-exceptions`, so I'm not sure how it works without that one, but it seems to work (other than the issues above).
   #   Either way, we don't juse `longjmp()`, so it doesn't seem terribly useful.
   string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}
-    "-msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2 -sSUPPORT_LONGJMP=wasm"
+    "-msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"
   )
 ENDIF()
 string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS

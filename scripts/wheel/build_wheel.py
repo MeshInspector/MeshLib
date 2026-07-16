@@ -55,8 +55,6 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_ROOT_DIR)
     shutil.copy(SOURCE_DIR / "readme.md", WHEEL_ROOT_DIR)
 
-    # Third-party notices ship in the wheel's .dist-info/licenses/ via the
-    # license-files entry in pyproject.toml (see docs/third_party_licenses.md).
     shutil.copy(SOURCE_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", WHEEL_ROOT_DIR)
 
     print("Copying resource files...")

@@ -99,7 +99,6 @@ def copy_lib():
 		os.remove(f)
 
 def copy_licenses():
-	# Third-party license notices of the bundled OSS components (see docs/third_party_licenses.md).
 	src = os.path.join(it.base_path, 'thirdparty', 'licenses', 'THIRD-PARTY-NOTICES.txt')
 	shutil.copyfile(src, os.path.join(it.path_to_install_folder, 'THIRD-PARTY-NOTICES.txt'))
 

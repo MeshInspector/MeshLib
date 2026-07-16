@@ -362,8 +362,6 @@ install(
   DESTINATION ${MR_CONFIG_DIR}
 )
 
-# Third-party license notices of the bundled OSS components
-# (see docs/third_party_licenses.md).
 install(
   FILES ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/licenses/THIRD-PARTY-NOTICES.txt
   DESTINATION ${MR_RESOURCES_DIR}

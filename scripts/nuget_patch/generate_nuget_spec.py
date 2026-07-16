@@ -40,8 +40,6 @@ add_files( LINUX_ARM_RUNTIME_DIR, "runtimes/linux-arm64/native/" )
 add_files( MACOS_X64_RUNTIME_DIR, "runtimes/osx-x64/native/" )
 add_files( MACOS_ARM_RUNTIME_DIR, "runtimes/osx-arm64/native/" )
 
-# Third-party license notices of the bundled OSS components, shipped at the package
-# root via the <file> entry in template.nuspec (see docs/third_party_licenses.md).
 shutil.copy(WORK_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", "THIRD-PARTY-NOTICES.txt")
 
 with open(Path(__file__).parent / "template.nuspec", 'r') as template_file:

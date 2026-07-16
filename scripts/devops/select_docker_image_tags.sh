@@ -14,30 +14,25 @@
 #                  Registry query failures count as absent, i.e. fail toward
 #                  rebuilding.
 # Diagnostics go to stderr. Must run from the repository root. The image
-# lists mirror the build matrices in .github/workflows/prepare-images.yml.
+# inventory comes from matrix/docker-images.json, shared with the build
+# matrices in .github/workflows/prepare-images.yml; Docker Hub repository
+# names are derived here the same way its jobs derive them from the matrix.
 set -euo pipefail
 
 family=$1
 branch_tag=${2:-}
 
-# "<Docker Hub repository> <checksum-script distro>" pairs
+manifest=.github/workflows/matrix/docker-images.json
+
+# "<Docker Hub repository> <checksum-script distro>" lines
 case "${family}" in
   linux)
-    images=(
-      'meshlib/meshlib-ubuntu22 ubuntu22'
-      'meshlib/meshlib-ubuntu24 ubuntu24'
-      'meshlib/meshlib-ubuntu22-arm64 ubuntu22'
-      'meshlib/meshlib-ubuntu24-arm64 ubuntu24'
-      'meshlib/meshlib-emscripten-arm64 emscripten'
-      'meshlib/meshlib-emscripten-generate-c-bindings-arm64 emscripten-generate-c-bindings'
-      'meshlib/meshlib-emscripten-build-c-bindings-3.1.38 emscripten-build-c-bindings'
-      'meshlib/meshlib-emscripten-build-c-bindings-4.0.19-arm64 emscripten-build-c-bindings'
-    ) ;;
+    pairs=$(jq -r '
+      (.linux[] | "meshlib/meshlib-\(.distro)\(if .arch == "arm64" then "-arm64" else "" end) \(.distro)"),
+      (."emscripten-c-bindings"[] | "meshlib/meshlib-emscripten-build-c-bindings-\(.emsdk_image) emscripten-build-c-bindings")
+    ' "${manifest}") ;;
   linux-vcpkg)
-    images=(
-      'meshlib/meshlib-rockylinux8-vcpkg-x64 rockylinux8-vcpkg'
-      'meshlib/meshlib-rockylinux8-vcpkg-arm64 rockylinux8-vcpkg'
-    ) ;;
+    pairs=$(jq -r '."linux-vcpkg"[] | "meshlib/meshlib-\(.os)-vcpkg-\(.arch) \(.os)-vcpkg"' "${manifest}") ;;
   *)
     echo "unknown image family: ${family}" >&2
     exit 1 ;;
@@ -72,9 +67,7 @@ leaves() {
 repos=()
 hash_leaves_list=()
 latest_synced=true
-for image in "${images[@]}"; do
-  repo=${image% *}
-  distro=${image#* }
+while read -r repo distro; do
   hash_tag=$(scripts/devops/docker_image_source_checksum.sh "${distro}")
   hash_leaves=$(leaves "${repo}" "${hash_tag}")
   latest_leaves=$(leaves "${repo}" latest)
@@ -84,7 +77,7 @@ for image in "${images[@]}"; do
   if [ "${hash_leaves}" = absent ] || [ "${latest_leaves}" != "${hash_leaves}" ]; then
     latest_synced=false
   fi
-done
+done <<< "${pairs}"
 
 if [ -z "${branch_tag}" ] || [ "${latest_synced}" = true ]; then
   image_tag=latest

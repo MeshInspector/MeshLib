@@ -1,7 +1,6 @@
 import glob
 import os
 import shutil
-import subprocess
 import sys
 import re
 
@@ -100,10 +99,9 @@ def copy_lib():
 		os.remove(f)
 
 def copy_licenses():
-	# Generate the aggregated third-party license notices (see docs/third_party_licenses.md).
-	gen = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gen_third_party_notices.py')
-	dst = os.path.join(it.path_to_install_folder, 'THIRD-PARTY-NOTICES.txt')
-	subprocess.check_call([sys.executable, gen, '--output', dst])
+	# Third-party license notices of the bundled OSS components (see docs/third_party_licenses.md).
+	src = os.path.join(it.base_path, 'thirdparty', 'licenses', 'THIRD-PARTY-NOTICES.txt')
+	shutil.copyfile(src, os.path.join(it.path_to_install_folder, 'THIRD-PARTY-NOTICES.txt'))
 
 it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes

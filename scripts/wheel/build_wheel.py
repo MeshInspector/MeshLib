@@ -57,8 +57,7 @@ def setup_workspace(version, modules, plat_name):
 
     # Third-party notices ship in the wheel's .dist-info/licenses/ via the
     # license-files entry in pyproject.toml (see docs/third_party_licenses.md).
-    subprocess.check_call([sys.executable, str(SOURCE_DIR / "scripts" / "gen_third_party_notices.py"),
-                           "--output", str(WHEEL_ROOT_DIR / "THIRD-PARTY-NOTICES.txt")])
+    shutil.copy(SOURCE_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", WHEEL_ROOT_DIR)
 
     print("Copying resource files...")
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRDarkTheme.json", WHEEL_SRC_DIR)

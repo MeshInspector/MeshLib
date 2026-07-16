@@ -1,6 +1,5 @@
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 from string import Template
@@ -41,10 +40,9 @@ add_files( LINUX_ARM_RUNTIME_DIR, "runtimes/linux-arm64/native/" )
 add_files( MACOS_X64_RUNTIME_DIR, "runtimes/osx-x64/native/" )
 add_files( MACOS_ARM_RUNTIME_DIR, "runtimes/osx-arm64/native/" )
 
-# Generate the aggregated third-party license notices (see docs/third_party_licenses.md).
-# It is shipped via the THIRD-PARTY-NOTICES.txt <file> entry in template.nuspec.
-subprocess.check_call([sys.executable, str(Path(__file__).resolve().parents[1] / "gen_third_party_notices.py"),
-                       "--output", str(WORK_DIR / "THIRD-PARTY-NOTICES.txt")])
+# Third-party license notices of the bundled OSS components, shipped at the package
+# root via the <file> entry in template.nuspec (see docs/third_party_licenses.md).
+shutil.copy(WORK_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", "THIRD-PARTY-NOTICES.txt")
 
 with open(Path(__file__).parent / "template.nuspec", 'r') as template_file:
 	updated_nuspec = Template(template_file.read()).substitute(

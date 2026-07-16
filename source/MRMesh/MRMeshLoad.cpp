@@ -660,16 +660,33 @@ static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& setting
     Mesh res;
     res.points = std::move( *maybePoints );
 
-    if ( tris )
+    if ( tris && !tris->empty() ) // an empty PLY point cloud must not lose its points in mesh construction below
     {
         int mySkippedFaceCount = 0;
-        res.topology = MeshBuilder::fromTriangles( *tris,
-            { .skippedFaceCount = settings.skippedFaceCount ? &mySkippedFaceCount : nullptr },
-            subprogress( settings.callback, 0.9f, 1.0f ) );
-        if ( res.topology.lastValidVert() + 1 > res.points.size() )
+        const auto numPoints = res.points.size();
+        std::vector<MeshBuilder::VertDuplication> dups;
+        res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( res.points ), *tris, &dups,
+            { .skippedFaceCount = settings.skippedFaceCount ? &mySkippedFaceCount : nullptr } );
+        if ( res.topology.lastValidVert() + 1 > numPoints + dups.size() )
             return unexpected( "vertex id is larger than total point coordinates" );
         if ( settings.skippedFaceCount )
             *settings.skippedFaceCount += mySkippedFaceCount;
+        if ( settings.duplicatedVertexCount )
+            *settings.duplicatedVertexCount = int( dups.size() );
+        if ( !dups.empty() )
+        {
+            auto copyDupAttributes = [&dups, sz = res.points.size()] ( auto * attributes )
+            {
+                if ( !attributes || attributes->empty() )
+                    return;
+                attributes->resize( sz );
+                for ( const auto & [src, dup] : dups )
+                    (*attributes)[dup] = (*attributes)[src];
+            };
+            copyDupAttributes( settings.colors );
+            copyDupAttributes( settings.uvCoords );
+            copyDupAttributes( settings.normals );
+        }
     }
 
     // try converting per-corner UVs into per-vertex UVs

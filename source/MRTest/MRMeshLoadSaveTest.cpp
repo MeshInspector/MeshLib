@@ -4,6 +4,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRTriMesh.h>
 #include <MRMesh/MRBox.h>
+#include <MRMesh/MRColor.h>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
@@ -112,6 +113,47 @@ TEST(MRMesh, TriMeshSavePly)
     EXPECT_EQ( loadRes->points.size(), 5 );
     EXPECT_EQ( loadRes->topology.numValidVerts(), 5 );
     EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+}
+
+TEST(MRMesh, LoadPlyDuplicatingNonManifoldVertices)
+{
+    // two closed triangle fans sharing only the central vertex #0
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 1_v },
+        { 0_v, 4_v, 5_v },
+        { 0_v, 5_v, 6_v },
+        { 0_v, 6_v, 4_v }
+    };
+    triMesh.points.emplace_back( 0.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 1.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 0.f, 1.f );
+    triMesh.points.emplace_back( -1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, -1.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 0.f, -1.f );
+
+    VertColors colors;
+    for ( int i = 0; i < 7; ++i )
+        colors.push_back( Color( i, 0, 0 ) );
+
+    std::ostringstream out;
+    ASSERT_TRUE( MeshSave::toPly( triMesh, out, { .colors = &colors } ).has_value() );
+
+    VertColors loadedColors;
+    int dupCount = 0;
+    std::istringstream in( out.str() );
+    auto loadRes = MeshLoad::fromPly( in, { .colors = &loadedColors, .duplicatedVertexCount = &dupCount } );
+    ASSERT_TRUE( loadRes.has_value() );
+    EXPECT_EQ( dupCount, 1 );
+    EXPECT_EQ( loadRes->points.size(), 8 );
+    EXPECT_EQ( loadRes->topology.numValidVerts(), 8 );
+    EXPECT_EQ( loadRes->topology.numValidFaces(), 6 );
+    EXPECT_EQ( loadRes->points[7_v], triMesh.points[0_v] );
+    ASSERT_EQ( loadedColors.size(), 8 );
+    EXPECT_EQ( loadedColors[7_v], colors[0_v] );
 }
 
 TEST(MRMesh, LoadObjTabIndented)

@@ -10,21 +10,11 @@ FROM emscripten/emsdk:4.0.10-arm64
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
 COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 
-COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
-Types: deb
-URIs: http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/
-Suites: jammy jammy-updates jammy-security jammy-backports
-Components: main restricted universe multiverse
-Architectures: arm64
-Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
-EOF
-
-COPY <<EOF /etc/apt/sources.list
-EOF
-
 RUN <<EOF
     set -e
     export DEBIAN_FRONTEND=noninteractive
+    # uncomment in case of problems with the Canonical mirrors
+    # sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
     # MRBind dependencies
     ./scripts/mrbind/install_deps_ubuntu.sh
     # clean downloaded files

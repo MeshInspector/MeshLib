@@ -59,6 +59,19 @@ MRMESH_API Expected<Mesh> loadASCIIStl( const std::filesystem::path& file, const
 /// loads mesh from stream in textual .STL format
 MRMESH_API Expected<Mesh> loadASCIIStl( std::istream& in, const MeshLoadSettings& settings = {} );
 
+/// loads mesh as TriMesh (without building topology) from stream in binary .STL format;
+/// important on Windows: in stream must be open in binary mode;
+/// only settings.callback and settings.telemetrySignal are used here
+MRMESH_API Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology) from file in textual .STL format;
+/// only settings.callback and settings.telemetrySignal are used here
+MRMESH_API Expected<TriMesh> loadASCIIStlAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology) from stream in textual .STL format;
+/// only settings.callback and settings.telemetrySignal are used here
+MRMESH_API Expected<TriMesh> loadASCIIStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
 /// loads mesh from file in .PLY format;
 MRMESH_API Expected<Mesh> loadPly( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 

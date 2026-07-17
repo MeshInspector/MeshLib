@@ -140,6 +140,9 @@ def load_comment_db(xml_dir):
 
 _MR = "MR::"
 
+# Synthetic embind converters have no 1:1 C++ declaration; name their sole param descriptively.
+_SYNTH_PARAMS = {"fromArray": ["array"], "fromIndices": ["indices"]}
+
 
 def _split_params(s):
     """Split a C++ parameter list on top-level commas (respecting <> () [] {} nesting)."""
@@ -165,16 +168,17 @@ def _param_name(param):
     return ids[-1] if ids else None
 
 
-def _lambda_params(line):
-    """Parameter names of a ``+[](...)`` embind wrapper on this line (receiver included).
+def _lambda_params(text):
+    """Parameter names of the first ``+[](...)`` embind wrapper in `text` (receiver included).
 
-    None if the line has no wrapper, or its parameter list spills onto the next line."""
-    m = re.search(r"\+\s*\[\s*\]\s*\(", line)
+    `text` may span several joined lines, since a wrapper's parameter list can spill past the line
+    its binding name is on. None if there is no wrapper or its parentheses never balance."""
+    m = re.search(r"\+\s*\[\s*\]\s*\(", text)
     if not m:
         return None
     depth, i = 1, m.end()
-    while i < len(line) and depth:
-        c = line[i]
+    while i < len(text) and depth:
+        c = text[i]
         if c in "(<[{":
             depth += 1
         elif c in ")>]}":
@@ -182,7 +186,7 @@ def _lambda_params(line):
         i += 1
     if depth:
         return None
-    return [_param_name(p) for p in _split_params(line[m.end():i - 1])]
+    return [_param_name(p) for p in _split_params(text[m.end():i - 1])]
 
 
 def _qualify(cpp_type):
@@ -201,6 +205,7 @@ class EmbindMap:
         self.enum_values = {}    # (js enum, js value) -> cpp enumerator or None
         self.free_params = {}    # js free function -> list of [param names] (one per overload)
         self.member_params = {}  # (js class, js member) -> list of [param names]; receiver dropped
+        self.ctor_params = {}    # js class -> list of [param names] from a factory .constructor(+[]...)
 
 
 def load_embind_map(sources_dir):
@@ -208,11 +213,14 @@ def load_embind_map(sources_dir):
     reg = re.compile(r'emscripten::(class_|enum_)<\s*(.+?)\s*>\(\s*"([\w]+)"')
     member = re.compile(r'\.(function|property|class_function)\(\s*"([\w]+)"\s*,\s*(&[\w:]+)?')
     free = re.compile(r'emscripten::function\(\s*"([\w]+)"\s*,\s*(&[\w:]+)?')
+    ctor = re.compile(r'\.constructor\(\s*\+\s*\[\s*\]')  # a factory constructor's +[] wrapper
     value = re.compile(r'\.value\(\s*"([\w]+)"\s*,\s*([\w:]+)')
 
     for cpp in sorted(Path(sources_dir).glob("*.cpp")):
         current = None  # (js name, kind)
-        for line in cpp.read_text(encoding="utf-8", errors="replace").splitlines():
+        lines = cpp.read_text(encoding="utf-8", errors="replace").splitlines()
+        for i, line in enumerate(lines):
+            window = "\n".join(lines[i:i + 8])  # a wrapper's +[](...) list may spill onto later lines
             mr = reg.search(line)
             if mr:
                 kind, cpp_type, js = mr.group(1), mr.group(2), mr.group(3)
@@ -223,7 +231,7 @@ def load_embind_map(sources_dir):
                 js, target = fm.group(1), fm.group(2)
                 m.frees[js] = target[1:] if target else None
                 if not target:  # +[]{} wrapper: capture its param names (frees have no receiver)
-                    params = _lambda_params(line)
+                    params = _lambda_params(window)
                     if params and all(params):
                         m.free_params.setdefault(js, []).append(params)
             mm = member.search(line)
@@ -233,11 +241,15 @@ def load_embind_map(sources_dir):
                     continue
                 m.members[(current[0], js)] = target[1:] if target else None
                 if not target and mkind != "property":  # a +[]{} wrapper method
-                    params = _lambda_params(line)
+                    params = _lambda_params(window)
                     if params and mkind == "function":
                         params = params[1:]  # drop the receiver (*this) of an instance method
                     if params and all(params):
                         m.member_params.setdefault((current[0], js), []).append(params)
+            if ctor.search(line) and current and current[1] == "class_":
+                params = _lambda_params(window)  # the factory lambda's params are the JS ctor's
+                if params and all(params):
+                    m.ctor_params.setdefault(current[0], []).append(params)
             vm = value.search(line)
             if vm and current and current[1] == "enum_":
                 m.enum_values[(current[0], vm.group(1))] = vm.group(2)
@@ -334,8 +346,19 @@ class Injector:
             if len(names) == arity and all(names):
                 return names
         cpp_cls = self.emb.classes.get(js_cls, f"{_MR}{js_cls}")
-        return self._cpp_params(
+        cpp = self._cpp_params(
             [self.emb.members.get((js_cls, js_mem)), f"{cpp_cls}::{js_mem}", f"{_MR}{js_cls}::{js_mem}"], arity)
+        if cpp:
+            return cpp
+        synth = _SYNTH_PARAMS.get(js_mem)  # synthetic converters have no C++ decl to source from
+        return synth if synth and len(synth) == arity else None
+
+    def param_names_for_ctor(self, js_cls, arity):
+        for names in self.emb.ctor_params.get(js_cls, []):  # a factory .constructor(+[]...) wrapper
+            if len(names) == arity and all(names):
+                return names
+        cpp_cls = self.emb.classes.get(js_cls, f"{_MR}{js_cls}")  # else the C++ ctor's declnames
+        return self._cpp_params([f"{cpp_cls}::{cpp_cls.split('::')[-1]}", f"{_MR}{js_cls}::{js_cls}"], arity)
 
     @staticmethod
     def _rename(s, names):
@@ -376,6 +399,9 @@ class Injector:
                         stat_cls = None
                     else:
                         ctx = None
+                elif stat_cls and s.startswith("new(") and s.endswith(";"):
+                    arity = len(re.findall(r"\b_\d+\b", s))  # constructor: names only, no comment
+                    names = self.param_names_for_ctor(stat_cls, arity) if arity else None
                 elif re.match(r"(\w+)\(.*\):", s) and not s.startswith("new("):
                     fn = re.match(r"(\w+)\(", s).group(1)
                     arity = len(re.findall(r"\b_\d+\b", s))

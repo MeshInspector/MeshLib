@@ -179,6 +179,60 @@ TEST(MRMesh, LoadPlyPointCloud)
     EXPECT_EQ( loadRes->topology.numValidFaces(), 0 );
 }
 
+TEST(MRMesh, StlLoadAsTriMesh)
+{
+    TriMesh triMesh;
+    triMesh.tris = Triangulation{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 4_v },
+        { 0_v, 4_v, 1_v },
+        { 1_v, 3_v, 2_v },
+        { 1_v, 4_v, 3_v }
+    };
+    triMesh.points.emplace_back( 0.f, 0.f, 1.f );
+    triMesh.points.emplace_back( 1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, 1.f, 0.f );
+    triMesh.points.emplace_back( -1.f, 0.f, 0.f );
+    triMesh.points.emplace_back( 0.f, -1.f, 0.f );
+    const auto mesh = Mesh::fromTriMesh( TriMesh( triMesh ) );
+
+    std::stringstream binStream;
+    EXPECT_TRUE( MeshSave::toBinaryStl( mesh, binStream ).has_value() );
+    auto binTriMesh = loadBinaryStlAsTriMesh( binStream );
+    ASSERT_TRUE( binTriMesh.has_value() );
+    EXPECT_EQ( binTriMesh->tris.size(), 6 );
+    EXPECT_EQ( binTriMesh->points.size(), 5 );
+
+    // mesh made from loaded TriMesh must be equal to directly loaded mesh
+    binStream.clear();
+    binStream.seekg( 0 );
+    auto binMesh = loadBinaryStl( binStream );
+    ASSERT_TRUE( binMesh.has_value() );
+    EXPECT_EQ( Mesh::fromTriMesh( std::move( *binTriMesh ) ), *binMesh );
+
+    std::stringstream ascStream;
+    EXPECT_TRUE( MeshSave::toAsciiStl( mesh, ascStream ).has_value() );
+    auto ascTriMesh = loadASCIIStlAsTriMesh( ascStream );
+    ASSERT_TRUE( ascTriMesh.has_value() );
+    EXPECT_EQ( ascTriMesh->tris.size(), 6 );
+    EXPECT_EQ( ascTriMesh->points.size(), 5 );
+
+    ascStream.clear();
+    ascStream.seekg( 0 );
+    auto ascMesh = loadASCIIStl( ascStream );
+    ASSERT_TRUE( ascMesh.has_value() );
+    EXPECT_EQ( Mesh::fromTriMesh( std::move( *ascTriMesh ) ), *ascMesh );
+
+    const auto file = std::filesystem::temp_directory_path() / "MRStlLoadAsTriMesh.stl";
+    EXPECT_TRUE( MeshSave::toAsciiStl( mesh, file ).has_value() );
+    auto fileTriMesh = loadASCIIStlAsTriMesh( file );
+    std::filesystem::remove( file );
+    ASSERT_TRUE( fileTriMesh.has_value() );
+    EXPECT_EQ( fileTriMesh->tris.size(), 6 );
+    EXPECT_EQ( fileTriMesh->points.size(), 5 );
+}
+
 TEST(MRMesh, LoadAsciiStlTooFewVertices)
 {
     std::string file =

@@ -16,7 +16,9 @@ EMSCRIPTEN_BINDINGS( meshlib_vector )
 {
     emscripten::class_<VertCoords>( "VertCoords" )
         .class_function( "fromArray", &Wasm::packedFromTypedArray<VertCoords, float, 3> )
-        .function( "toArray", &Wasm::packedToTypedArray<VertCoords, float, 3> );
+        .function( "toArray", &Wasm::packedToTypedArray<VertCoords, float, 3> )
+        .function( "size", +[]( const VertCoords& v ) { return (int)v.size(); } )
+        .function( "get", +[]( const VertCoords& v, int i ) { return v[VertId( i )]; } );
 
     emscripten::class_<Triangulation>( "Triangulation" )
         .class_function( "fromArray", &Wasm::packedFromTypedArray<Triangulation, uint32_t, 3> )

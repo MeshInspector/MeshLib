@@ -17,4 +17,11 @@ EMSCRIPTEN_BINDINGS( meshlib_torus )
         return std::make_shared<Mesh>(
             makeTorus( primaryRadius, secondaryRadius, primaryResolution, secondaryResolution ) );
     } );
+
+    emscripten::function( "makeTorusWithSelfIntersections",
+        +[]( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution )
+    {
+        return std::make_shared<Mesh>(
+            makeTorusWithSelfIntersections( primaryRadius, secondaryRadius, primaryResolution, secondaryResolution ) );
+    } );
 }

@@ -53,6 +53,19 @@ export interface SignedMeshProjectionResult {
   dist: number;
 }
 
+export interface MeshMeshSignedDistanceResult {
+  a: PointOnFace;
+  b: PointOnFace;
+  /** value of the MeshMeshCollisionStatus enum */
+  status: number;
+  signedDist: number;
+}
+
+export interface FaceFace {
+  aFace: number;
+  bFace: number;
+}
+
 export interface MeshDistanceResult {
   a: PointOnFace;
   b: PointOnFace;
@@ -147,8 +160,18 @@ type Converters = {
 // Top-level free functions that return / accept a raw `val`.
 type Functions = {
   findProjection( pt: Base.Vector3f, m: Base.Mesh ): MeshProjectionResult;
-  findSignedDistance( pt: Base.Vector3f, m: Base.Mesh ): SignedMeshProjectionResult | null;
+  // Overloaded in C++ by operand type; the JS bindings take the operand suffix (cf.
+  // makeConvexHullFromMesh / getIncidentVertsFromFaces).
+  findSignedDistanceFromPoint( pt: Base.Vector3f, m: Base.Mesh ): SignedMeshProjectionResult | null;
+  findSignedDistanceFromMesh( a: Base.Mesh, b: Base.Mesh ): MeshMeshSignedDistanceResult;
   findDistance( a: Base.Mesh, b: Base.Mesh ): MeshDistanceResult;
+  findCollidingTriangles: {
+    ( a: Base.Mesh, b: Base.Mesh ): FaceFace[];
+    ( a: Base.Mesh, b: Base.Mesh, firstIntersectionOnly: boolean ): FaceFace[];
+  };
+  findCollidingTriangleBitsets( a: Base.Mesh, b: Base.Mesh ): { a: Base.FaceBitSet; b: Base.FaceBitSet };
+  findSelfCollidingTriangles( mp: Base.Mesh ): FaceFace[];
+  findSelfCollidingTrianglesBS( mp: Base.Mesh ): Base.FaceBitSet;
   cutMesh( mesh: Base.Mesh, contours: Base.OneMeshContours, params: Base.CutMeshParameters ): CutMeshResult;
   cutMeshByProjection( mesh: Base.Mesh, contours: readonly Float32Array[], settings: Base.CutByProjectionSettings ): Uint32Array[];
   findRightBoundary( topology: Base.MeshTopology ): Uint32Array[];

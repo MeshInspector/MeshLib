@@ -179,6 +179,23 @@ TEST(MRMesh, LoadPlyPointCloud)
     EXPECT_EQ( loadRes->topology.numValidFaces(), 0 );
 }
 
+TEST(MRMesh, LoadAsciiStlTooFewVertices)
+{
+    std::string file =
+        "solid Name\n"
+        "facet normal 0 0 1\n"
+        "outer loop\n"
+        "vertex 0 0 0\n"
+        "vertex 1 0 0\n"
+        "endloop\n"
+        "endfacet\n"
+        "endsolid Name\n";
+
+    std::istringstream in( file );
+    auto loadRes = MeshLoad::fromASCIIStl( in );
+    EXPECT_FALSE( loadRes.has_value() );
+}
+
 TEST(MRMesh, LoadObjTabIndented)
 {
     // some exporters (e.g. 3ds Max guruware OBJ exporter) indent lines with tabs

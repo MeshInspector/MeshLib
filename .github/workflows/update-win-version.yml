@@ -42,6 +42,10 @@ jobs:
             artifact_name: DistributivesWin-IteratorDebug
     env:
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-vs2019-meshlib' }}
+      # Build-wide cl.exe process cap for the msbuild steps (multi-tool-task scheduling;
+      # plain -m + /MP has no global bound). Same setup as in build-test-windows.yml.
+      UseMultiToolTask: 'true'
+      EnforceProcessCountAcrossBuilds: 'true'
     steps:
       - name: Checkout
         uses: actions/checkout@v7

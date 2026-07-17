@@ -59,6 +59,11 @@ jobs:
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
       MRCUDA_PLATFORM_TOOLSET: ${{ matrix.mrcuda_platform_toolset }}
+      # Multi-tool-task with a build-wide process count (default: core count) bounds
+      # cl.exe concurrency in every msbuild step; plain -m + /MP lets each concurrently-
+      # building project fan out to the core count independently. No effect on CMake legs.
+      UseMultiToolTask: 'true'
+      EnforceProcessCountAcrossBuilds: 'true'
 
     steps:
       - name: Checkout
@@ -203,11 +208,6 @@ jobs:
           GETTEXT_ROOT: C:\msys64\clang64
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
-          # Multi-tool-task with a build-wide process count (default: core count) bounds
-          # MSBuild's cl.exe concurrency; plain -m + /MP lets every concurrently-building
-          # project fan out to the core count independently. No effect on the CMake leg.
-          UseMultiToolTask: 'true'
-          EnforceProcessCountAcrossBuilds: 'true'
         # `|| exit /b 1` is used instead of `if errorlevel 1 exit 1`
         # because the latter can miss exit codes inside parenthesized IF
         # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).

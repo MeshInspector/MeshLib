@@ -11,14 +11,18 @@ top-to-bottom.
 
 ## Inputs
 
-| Name     | Required | Default | Description                                                                       |
-|----------|----------|---------|-----------------------------------------------------------------------------------|
-| `matrix` | no       | `{}`    | YAML/JSON object: axis name → list of values. Base matrix is the cartesian product. |
-| `rules`  | no       | `[]`    | YAML/JSON list of rules, applied in order.                                        |
+| Name          | Required | Default | Description                                                                              |
+|---------------|----------|---------|------------------------------------------------------------------------------------------|
+| `matrix`      | no       | `{}`    | YAML/JSON base matrix: axis map (cartesian product) or list of entries (used as-is). Mutually exclusive with `matrix-file`. |
+| `matrix-file` | no       | —       | Path of a YAML/JSON file to load the base matrix from (same forms as `matrix`). Mutually exclusive with `matrix`. |
+| `matrix-key`  | no       | —       | Top-level key to select within the `matrix-file` document, for files bundling several matrices. Requires `matrix-file`. |
+| `rules`       | no       | `[]`    | YAML/JSON list of rules, applied in order.                                               |
 
-Both inputs accept YAML or JSON (YAML is a superset). YAML 1.1 booleans
+All inputs accept YAML or JSON (YAML is a superset). YAML 1.1 booleans
 (`yes` / `no` / `on` / `off`) are intentionally not coerced — they remain
-strings, matching what you see in your workflow.
+strings, matching what you see in your workflow. `matrix-file` paths are
+resolved against the workspace root, so the file must be checked out (a
+sparse checkout of its directory is enough).
 
 ## Outputs
 
@@ -28,10 +32,15 @@ strings, matching what you see in your workflow.
 
 ## Grammar
 
-### Base `matrix`
+### Base matrix
 
-A map from axis name to a list of values. Scalar values are treated as
-one-element lists. Missing or `{}` starts from an empty list of entries.
+The base matrix comes from the `matrix` input, or — when `matrix-file` is
+set instead — from a YAML/JSON file in the repository. Either way it takes
+one of two forms.
+
+**Axis map** — a map from axis name to a list of values. Scalar values are
+treated as one-element lists. Missing or `{}` starts from an empty list of
+entries.
 
 ```yaml
 matrix:
@@ -53,6 +62,39 @@ produces 4 base entries:
   {"platform": "aarch64", "config": "Release"}
 ]
 ```
+
+**Entry list** — a list of include-style entries, taken as the base entries
+verbatim (no cartesian product). The axis keys — what `include` / `extend`
+rules match on — are the union of the entries' keys.
+
+```yaml
+matrix:
+  - { distro: ubuntu22, arch: x64 }
+  - { distro: ubuntu24, arch: arm64 }
+```
+
+### Loading the base matrix from a file (`matrix-file`)
+
+`matrix-file` names a YAML or JSON file (workspace-relative) holding the
+base matrix in either form above, so one inventory file can be shared
+between workflows and shell scripts. When the file bundles several
+matrices under top-level keys, `matrix-key` selects one:
+
+```yaml
+# .github/workflows/matrix/docker-images.json:
+#   { "linux": [ {"distro": "ubuntu22", "arch": "x64"}, ... ], "linux-vcpkg": [ ... ] }
+- uses: ./.github/actions/matrix-builder
+  with:
+    matrix-file: .github/workflows/matrix/docker-images.json
+    matrix-key: linux
+    rules: |
+      - if: ${{ inputs.disable_ubuntu_x64 }}
+        exclude:
+          - { distro: ubuntu22, arch: x64 }
+          - { distro: ubuntu24, arch: x64 }
+```
+
+`matrix` and `matrix-file` are mutually exclusive.
 
 ### Rules
 
@@ -276,7 +318,11 @@ Layout:
   - `dist/index.js` — bundled artifact GitHub actually runs. Regenerate
     whenever `src/` or `lib/` changes.
   - `tests/engine.test.js` — `node --test` suite covering each rule
-    type, `if:` truthiness, ordering, and a parity snapshot against the
-    original `pip-build.yml` jq pipeline.
+    type, `if:` truthiness, ordering, and parity snapshots against the
+    original `pip-build.yml` and `prepare-images.yml` jq pipelines.
+  - `tests/action.test.js` — runs `src/index.js` as a child process with
+    `INPUT_*` env vars, covering input handling: `matrix-file` /
+    `matrix-key` loading and the input-validation errors.
   - `tests/fixtures/` — captured jq outputs (`build-*.json`,
-    `test-*.json`) for the parity snapshot.
+    `test-*.json`, `docker-linux-*.json`) for the parity snapshots, plus
+    sample matrix files for `matrix-file` tests.

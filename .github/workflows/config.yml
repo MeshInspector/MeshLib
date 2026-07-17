@@ -226,11 +226,11 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       # Single criterion for image selection and rebuilds: every image's
-      # conventional tag must point at its content-addressed source-checksum-*
-      # tag (see select_docker_image_tags.sh). `latest` is selected when it
-      # already points at the wanted images; otherwise the script syncs the
-      # selected tag right here, and prepare-images runs only for images whose
-      # source-checksum-* tag is absent, i.e. that really must be built.
+      # conventional tag (branch tag on PRs, `latest` otherwise) must point at
+      # its content-addressed source-checksum-* tag; the script syncs it right
+      # here (see select_docker_image_tags.sh), and prepare-images runs only
+      # for images whose source-checksum-* tag is absent, i.e. that really
+      # must be built.
       - name: Select Docker image tag
         id: select-docker-image-tag
         env:

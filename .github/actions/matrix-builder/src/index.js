@@ -28,16 +28,14 @@ function parseInput(name, fallback) {
 }
 
 /**
- * Load the base matrix from a YAML/JSON file, optionally descending into a
- * named top-level key (for files that bundle several matrices).
+ * Load the base matrix from a YAML/JSON file.
  *
  * @param {string} file Path as given, resolved against the process cwd
  *   (the workspace root when run by GitHub).
- * @param {string} key Top-level key to select, or '' for the whole document.
  * @returns {*} The base matrix structure.
- * @throws {Error} If the file is unreadable, unparsable, or lacks the key.
+ * @throws {Error} If the file is unreadable or unparsable.
  */
-function loadMatrixFile(file, key) {
+function loadMatrixFile(file) {
   let raw;
   try {
     raw = fs.readFileSync(file, 'utf8');
@@ -50,27 +48,16 @@ function loadMatrixFile(file, key) {
   } catch (e) {
     throw new Error(`Failed to parse matrix file '${file}' as YAML/JSON: ${e.message}`);
   }
-  if (!key) return doc == null ? {} : doc;
-  if (doc == null || typeof doc !== 'object' || Array.isArray(doc)) {
-    throw new Error(`matrix file '${file}' must be a map to select 'matrix-key' from`);
-  }
-  if (!Object.prototype.hasOwnProperty.call(doc, key)) {
-    throw new Error(`matrix file '${file}' has no top-level key '${key}'`);
-  }
-  return doc[key];
+  return doc == null ? {} : doc;
 }
 
 try {
   const matrixFile = core.getInput('matrix-file');
-  const matrixKey = core.getInput('matrix-key');
-  if (matrixKey && !matrixFile) {
-    throw new Error("'matrix-key' requires 'matrix-file'");
-  }
   if (matrixFile && core.getInput('matrix')) {
     throw new Error("'matrix' and 'matrix-file' are mutually exclusive");
   }
   const matrix = matrixFile
-    ? loadMatrixFile(matrixFile, matrixKey)
+    ? loadMatrixFile(matrixFile)
     : parseInput('matrix', {});
   const rules = parseInput('rules', []);
   const result = buildMatrix(matrix, rules);

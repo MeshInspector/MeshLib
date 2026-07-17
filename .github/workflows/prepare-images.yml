@@ -50,12 +50,9 @@ jobs:
       - name: Do nothing
         run: echo
 
-  # Build the job matrices from the image inventory in the
-  # matrix/docker-images-*.json files (shared with
-  # scripts/devops/sync_docker_image_tags.sh), dropping linux cells the PR
-  # opted out of via `disable-build-<platform>` labels. The `matrix` context
-  # is not available in job-level `if:` for reusable workflow inputs, so
-  # per-cell skipping must happen here.
+  # Build the job matrices from the matrix/docker-images-*.json inventory
+  # (shared with scripts/devops/sync_docker_image_tags.sh). Cells disabled
+  # by PR labels must be dropped here: job-level `if:` cannot see `matrix`.
   compute-image-matrices:
     if: ${{ inputs.need_linux_image_rebuild || inputs.need_linux_vcpkg_rebuild }}
     runs-on: ubuntu-latest
@@ -72,14 +69,9 @@ jobs:
             .github/actions/matrix-builder
             .github/workflows/matrix
 
-      # Linux cells encode only `distro` and `arch` so the auto-generated
-      # cell name stays "(<distro>, <arch>)"; the runner OS and image suffix
-      # are derived from `matrix.arch` inline below. A new ubuntu distro in
-      # docker-images-linux.json must also be added to the exclude rules here.
-      # `emscripten-generate-c-bindings` (the image for generate-c-bindings)
-      # has no disable rule: that job always runs, so the image is always
-      # built. The parity tests in the action's tests/engine.test.js pin
-      # these rules to the jq filter they replaced.
+      # A new ubuntu distro needs a matching exclude rule (pinned by the
+      # action's parity tests); emscripten-generate-c-bindings has none:
+      # its consumer always runs.
       - id: linux
         uses: ./.github/actions/matrix-builder
         with:

@@ -1,17 +1,9 @@
 #!/usr/bin/env bash
 # Usage: sync_docker_image_tags.sh <linux|linux-vcpkg> <tag>
-#
-# Points <tag> of every image of the family at its content-addressed
-# source-checksum-* tag (docker_image_source_checksum.sh) with an
-# unconditional `docker buildx imagetools create` (requires a prior docker
-# login): a no-op when it already points there, a cheap retag when it
-# doesn't, and a failure exactly when the source-checksum-* tag is absent,
-# i.e. when the image really must be built — then this script exits 1;
-# it exits 0 when there is nothing to build. Must run from the repository
-# root. The image inventory comes from the matrix/docker-images-*.json
-# files, shared with the build matrices in
-# .github/workflows/prepare-images.yml; Docker Hub repository names are
-# derived here the same way its jobs derive them from the matrix.
+# Points <tag> of every family image at its source-checksum-* tag with
+# `docker buildx imagetools create` (needs a prior docker login; run from
+# the repository root). Exits 1 when some source-checksum-* tag is absent,
+# i.e. the image must be built first; 0 when there is nothing to build.
 set -euo pipefail
 
 family=$1

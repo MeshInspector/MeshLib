@@ -23,13 +23,6 @@ inputs:
       Path (relative to the workspace) of a YAML or JSON file to load the
       base matrix from, in either of the forms accepted by `matrix`.
       Mutually exclusive with `matrix`.
-  matrix-key:
-    required: false
-    default: ''
-    description: >
-      Top-level key to select as the base matrix within the `matrix-file`
-      document, for files that bundle several matrices. Requires
-      `matrix-file`.
   rules:
     required: false
     default: '[]'

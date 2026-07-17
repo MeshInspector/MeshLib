@@ -15,7 +15,6 @@ top-to-bottom.
 |---------------|----------|---------|------------------------------------------------------------------------------------------|
 | `matrix`      | no       | `{}`    | YAML/JSON base matrix: axis map (cartesian product) or list of entries (used as-is). Mutually exclusive with `matrix-file`. |
 | `matrix-file` | no       | —       | Path of a YAML/JSON file to load the base matrix from (same forms as `matrix`). Mutually exclusive with `matrix`. |
-| `matrix-key`  | no       | —       | Top-level key to select within the `matrix-file` document, for files bundling several matrices. Requires `matrix-file`. |
 | `rules`       | no       | `[]`    | YAML/JSON list of rules, applied in order.                                               |
 
 All inputs accept YAML or JSON (YAML is a superset). YAML 1.1 booleans
@@ -76,22 +75,22 @@ matrix:
 ### Loading the base matrix from a file (`matrix-file`)
 
 `matrix-file` names a YAML or JSON file (workspace-relative) holding the
-base matrix in either form above, so one inventory file can be shared
-between workflows and shell scripts. When the file bundles several
-matrices under top-level keys, `matrix-key` selects one:
+base matrix in either form above, so an inventory file can be shared
+between workflows and shell scripts:
 
 ```yaml
-# .github/workflows/matrix/docker-images.json:
-#   { "linux": [ {"distro": "ubuntu22", "arch": "x64"}, ... ], "linux-vcpkg": [ ... ] }
+# .github/workflows/matrix/docker-images-linux.json:
+#   [ {"distro": "ubuntu22", "arch": "x64"}, ... ]
 - uses: ./.github/actions/matrix-builder
   with:
-    matrix-file: .github/workflows/matrix/docker-images.json
-    matrix-key: linux
+    matrix-file: .github/workflows/matrix/docker-images-linux.json
     rules: |
       - if: ${{ inputs.disable_ubuntu_x64 }}
         exclude:
-          - { distro: ubuntu22, arch: x64 }
-          - { distro: ubuntu24, arch: x64 }
+          - distro: ubuntu22
+            arch: x64
+          - distro: ubuntu24
+            arch: x64
 ```
 
 `matrix` and `matrix-file` are mutually exclusive.
@@ -321,8 +320,8 @@ Layout:
     type, `if:` truthiness, ordering, and parity snapshots against the
     original `pip-build.yml` and `prepare-images.yml` jq pipelines.
   - `tests/action.test.js` — runs `src/index.js` as a child process with
-    `INPUT_*` env vars, covering input handling: `matrix-file` /
-    `matrix-key` loading and the input-validation errors.
+    `INPUT_*` env vars, covering input handling: `matrix-file`
+    loading and the input-validation errors.
   - `tests/fixtures/` — captured jq outputs (`build-*.json`,
     `test-*.json`, `docker-linux-*.json`) for the parity snapshots, plus
     sample matrix files for `matrix-file` tests.

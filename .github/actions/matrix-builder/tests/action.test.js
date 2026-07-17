@@ -61,10 +61,9 @@ function matrixOf(result) {
   return JSON.parse(result.outputs.matrix);
 }
 
-test('matrix-file: JSON file with matrix-key selects one bundled matrix', () => {
+test('matrix-file: JSON entry list with exclude rules', () => {
   const result = runAction({
-    'matrix-file': path.join(FIXTURES, 'docker-images.json'),
-    'matrix-key': 'linux',
+    'matrix-file': path.join(FIXTURES, 'docker-images-linux.json'),
     rules: [
       '- if: true',
       '  exclude:',
@@ -73,23 +72,22 @@ test('matrix-file: JSON file with matrix-key selects one bundled matrix', () => 
     ].join('\n'),
   });
   const expected = JSON.parse(
-    fs.readFileSync(path.join(FIXTURES, 'docker-images.json'), 'utf8'),
-  ).linux.filter(e => e.arch !== 'x64');
+    fs.readFileSync(path.join(FIXTURES, 'docker-images-linux.json'), 'utf8'),
+  ).filter(e => e.arch !== 'x64');
   assert.deepStrictEqual(matrixOf(result), expected);
 });
 
 test('matrix-file: workspace-relative path is resolved against cwd', () => {
   const result = runAction({
-    'matrix-file': path.join('tests', 'fixtures', 'docker-images.json'),
-    'matrix-key': 'linux-vcpkg',
+    'matrix-file': path.join('tests', 'fixtures', 'docker-images-linux.json'),
   });
-  assert.deepStrictEqual(matrixOf(result), [
-    { os: 'rockylinux8', arch: 'x64', runner: 'ubuntu-latest' },
-    { os: 'rockylinux8', arch: 'arm64', runner: 'ubuntu-24.04-arm' },
-  ]);
+  assert.deepStrictEqual(
+    matrixOf(result),
+    JSON.parse(fs.readFileSync(path.join(FIXTURES, 'docker-images-linux.json'), 'utf8')),
+  );
 });
 
-test('matrix-file: YAML axis map without matrix-key', () => {
+test('matrix-file: YAML axis map', () => {
   const result = runAction({
     'matrix-file': path.join(FIXTURES, 'axes.yml'),
   });
@@ -130,33 +128,9 @@ test("error: 'matrix' and 'matrix-file' are mutually exclusive", () => {
   );
 });
 
-test("error: 'matrix-key' requires 'matrix-file'", () => {
-  assertFails(runAction({ 'matrix-key': 'linux' }), /'matrix-key' requires 'matrix-file'/);
-});
-
 test('error: matrix-file does not exist', () => {
   assertFails(
     runAction({ 'matrix-file': path.join(FIXTURES, 'no-such-file.json') }),
     /Failed to read matrix file/,
-  );
-});
-
-test('error: matrix-key absent from the document', () => {
-  assertFails(
-    runAction({
-      'matrix-file': path.join(FIXTURES, 'docker-images.json'),
-      'matrix-key': 'windows',
-    }),
-    /has no top-level key 'windows'/,
-  );
-});
-
-test('error: matrix-key on a non-map document', () => {
-  assertFails(
-    runAction({
-      'matrix-file': path.join(FIXTURES, 'entry-list.yml'),
-      'matrix-key': 'linux',
-    }),
-    /must be a map to select 'matrix-key' from/,
   );
 });

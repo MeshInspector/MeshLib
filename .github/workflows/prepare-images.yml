@@ -61,13 +61,10 @@ jobs:
     if: ${{ inputs.need_linux_image_rebuild || inputs.need_linux_vcpkg_rebuild }}
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.compute.outputs.matrix }}
-      empty:  ${{ steps.compute.outputs.empty }}
-      cbindings_axis:    ${{ steps.compute.outputs.cbindings_axis }}
-      cbindings_include: ${{ steps.compute.outputs.cbindings_include }}
-      vcpkg_arch_axis: ${{ steps.compute.outputs.vcpkg_arch_axis }}
-      vcpkg_os_axis:   ${{ steps.compute.outputs.vcpkg_os_axis }}
-      vcpkg_include:   ${{ steps.compute.outputs.vcpkg_include }}
+      linux_matrix: ${{ steps.compute.outputs.linux_matrix }}
+      linux_empty:  ${{ steps.compute.outputs.linux_empty }}
+      cbindings_matrix: ${{ steps.compute.outputs.cbindings_matrix }}
+      vcpkg_matrix:     ${{ steps.compute.outputs.vcpkg_matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -81,41 +78,32 @@ jobs:
           DISABLE_EMSCRIPTEN:   ${{ inputs.disable_emscripten }}
         run: |
           FILE=.github/workflows/matrix/docker-images.json
-          # Cells encode only `distro` and `arch` so the auto-generated cell
-          # name stays "(<distro>, <arch>)"; the runner OS and image suffix
-          # are derived from `matrix.arch` inline below.
-          MATRIX=$(jq -c \
+          # Linux cells encode only `distro` and `arch` so the auto-generated
+          # cell name stays "(<distro>, <arch>)"; the runner OS and image
+          # suffix are derived from `matrix.arch` inline below.
+          LINUX=$(jq -c \
             --argjson dx64   "$DISABLE_UBUNTU_X64" \
             --argjson darm64 "$DISABLE_UBUNTU_ARM64" \
             --argjson demscr "$DISABLE_EMSCRIPTEN" \
-            '.linux | map(select(
+            '{include: (.linux | map(select(
               (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
               and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)
               and (((.distro=="emscripten")                              and $demscr) | not)
-             ))' "$FILE")
-          echo "matrix=${MATRIX}"
-          echo "matrix=${MATRIX}" >> "$GITHUB_OUTPUT"
-          if [[ "${MATRIX}" == "[]" ]]; then
-            echo "empty=true"  >> "$GITHUB_OUTPUT"
-          else
-            echo "empty=false" >> "$GITHUB_OUTPUT"
-          fi
+             )))}' "$FILE")
           {
-            echo "cbindings_axis=$(jq -c '[."emscripten-c-bindings"[].emsdk_image]' "$FILE")"
-            echo "cbindings_include=$(jq -c '."emscripten-c-bindings"' "$FILE")"
-            echo "vcpkg_arch_axis=$(jq -c '[."linux-vcpkg"[].arch] | unique' "$FILE")"
-            echo "vcpkg_os_axis=$(jq -c '[."linux-vcpkg"[].os] | unique' "$FILE")"
-            echo "vcpkg_include=$(jq -c '[."linux-vcpkg"[] | {arch, runner}]' "$FILE")"
-          } >> "$GITHUB_OUTPUT"
+            echo "linux_matrix=${LINUX}"
+            echo "linux_empty=$(jq -c '.include == []' <<<"${LINUX}")"
+            echo "cbindings_matrix=$(jq -c '{emsdk_image: [."emscripten-c-bindings"[].emsdk_image], include: ."emscripten-c-bindings"}' "$FILE")"
+            echo "vcpkg_matrix=$(jq -c '{arch: ([."linux-vcpkg"[].arch] | unique), os: ([."linux-vcpkg"[].os] | unique), include: [."linux-vcpkg"[] | {arch, runner}]}' "$FILE")"
+          } | tee -a "$GITHUB_OUTPUT"
 
   linux-image-build-upload:
     needs: compute-image-matrices
-    if: ${{ needs.compute-image-matrices.outputs.empty == 'false' && inputs.need_linux_image_rebuild }}
+    if: ${{ needs.compute-image-matrices.outputs.linux_empty == 'false' && inputs.need_linux_image_rebuild }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
-      matrix:
-        include: ${{ fromJSON(needs.compute-image-matrices.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.compute-image-matrices.outputs.linux_matrix) }}
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
@@ -183,10 +171,7 @@ jobs:
     timeout-minutes: 75
     strategy:
       fail-fast: false
-      matrix:
-        arch: ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_arch_axis) }}
-        os:   ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_os_axis) }}
-        include: ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_include) }}
+      matrix: ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_matrix) }}
     runs-on: ${{ matrix.runner }}
     env:
       image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
@@ -249,10 +234,7 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      matrix:
-        # The old `3.1.38` didn't have ARM images.
-        emsdk_image: ${{ fromJSON(needs.compute-image-matrices.outputs.cbindings_axis) }}
-        include: ${{ fromJSON(needs.compute-image-matrices.outputs.cbindings_include) }}
+      matrix: ${{ fromJSON(needs.compute-image-matrices.outputs.cbindings_matrix) }}
     runs-on: ${{matrix.runner_image}}
     env:
       image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}

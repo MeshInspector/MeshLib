@@ -9,8 +9,8 @@
 # by an unconditional `docker buildx imagetools create` — a no-op when it
 # already points there, a cheap retag when it doesn't, and a failure exactly
 # when the source-checksum-* tag is absent, i.e. when the image really must
-# be built. Without TAG_WRITES (fork PRs) the same divergence is detected
-# read-only by comparing leaf manifest digests (docker_image_leaf_digests.sh).
+# be built. Without TAG_WRITES (fork and Dependabot PRs, no secrets) the
+# registry is not inspected at all: such runs just use `latest` as-is.
 # Prints in GITHUB_OUTPUT format:
 #   image_tag    — conventional tag the build jobs should pull: `latest` on
 #                  push/schedule (no branch-tag argument) and on pull requests
@@ -24,6 +24,12 @@ set -euo pipefail
 
 family=$1
 branch_tag=${2:-}
+
+if [ "${TAG_WRITES:-false}" != true ]; then
+  echo "image_tag=latest"
+  echo "need_rebuild=false"
+  exit 0
+fi
 
 here=$(dirname "$0")
 pairs=$("${here}"/docker_image_list.sh "${family}")
@@ -60,20 +66,11 @@ fi
 
 need_rebuild=false
 for i in "${!repos[@]}"; do
-  if [ "${TAG_WRITES:-false}" = true ]; then
-    if docker buildx imagetools create -t "${repos[$i]}:${conventional_tag}" "${repos[$i]}:${hash_tags[$i]}" >&2; then
-      echo "${repos[$i]}:${conventional_tag} -> ${hash_tags[$i]}" >&2
-    else
-      echo "${repos[$i]}:${hash_tags[$i]} absent, needs building" >&2
-      need_rebuild=true
-    fi
+  if docker buildx imagetools create -t "${repos[$i]}:${conventional_tag}" "${repos[$i]}:${hash_tags[$i]}" >&2; then
+    echo "${repos[$i]}:${conventional_tag} -> ${hash_tags[$i]}" >&2
   else
-    hash_leaves=$("${here}"/docker_image_leaf_digests.sh "${repos[$i]}" "${hash_tags[$i]}")
-    conventional_leaves=$("${here}"/docker_image_leaf_digests.sh "${repos[$i]}" "${conventional_tag}")
-    echo "${repos[$i]}:${conventional_tag} ${conventional_leaves} (want: ${hash_leaves})" >&2
-    if [ "${hash_leaves}" = absent ] || [ "${conventional_leaves}" != "${hash_leaves}" ]; then
-      need_rebuild=true
-    fi
+    echo "${repos[$i]}:${hash_tags[$i]} absent, needs building" >&2
+    need_rebuild=true
   fi
 done
 

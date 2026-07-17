@@ -594,7 +594,7 @@ Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings 
                     return unexpected( parseRes.error() + " line: " + std::to_string( newlines[lineI] ) );
             }
             if ( triI != 3 )
-                unexpected( "Too few vertices for triangle, line: " + std::to_string( newlines[fLine] ) );
+                return unexpected( "Too few vertices for triangle, line: " + std::to_string( newlines[fLine] ) );
             chunk[i++] = std::move( tri );
         }
         if ( i == itemsInBuffer || fLine == lastFaceLine )

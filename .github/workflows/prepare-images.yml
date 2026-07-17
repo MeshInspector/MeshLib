@@ -51,7 +51,7 @@ jobs:
         run: echo
 
   # Read the image inventory from matrix/docker-images.json (shared with
-  # scripts/devops/select_docker_image_tags.sh) and build the job matrices,
+  # scripts/devops/sync_docker_image_tags.sh) and build the job matrices,
   # dropping linux cells the PR opted out of via `disable-build-<platform>`
   # labels. The `matrix` context is not available in job-level `if:` for
   # reusable workflow inputs, so per-cell skipping must happen here.

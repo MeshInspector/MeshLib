@@ -113,9 +113,15 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # `env:` block removed — its three label-derived booleans
-    # (full_config_build / upload_artifacts / version_namespace) are
-    # written to $GITHUB_ENV by the live-labels step below.
+    env:
+      # Whether this run may push Docker tags: fork and Dependabot PRs have
+      # no repository secrets, so they skip the DockerHub login and use
+      # `latest` images as-is without inspecting the registry.
+      TAG_WRITES: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
+
+    # The label-derived booleans (full_config_build / upload_artifacts /
+    # version_namespace) are not here: they are written to $GITHUB_ENV by
+    # the live-labels step below.
 
     steps:
       - name: Checkout
@@ -214,12 +220,10 @@ jobs:
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
-      # Login so select_docker_image_tags.sh can sync conventional tags
-      # (`imagetools create` needs push rights). Fork and Dependabot PRs
-      # have no repository secrets; they skip the login and the gate then
-      # selects `latest` as-is without inspecting the registry.
+      # Login so sync_docker_image_tags.sh can sync conventional tags
+      # (`imagetools create` needs push rights).
       - name: Login to DockerHub
-        if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
+        if: ${{ env.TAG_WRITES == 'true' }}
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           username: meshlib
@@ -227,32 +231,48 @@ jobs:
 
       # Single criterion for image selection and rebuilds: every image's
       # conventional tag (branch tag on PRs, `latest` otherwise) must point at
-      # its content-addressed source-checksum-* tag; the script syncs it right
-      # here (see select_docker_image_tags.sh), and prepare-images runs only
-      # for images whose source-checksum-* tag is absent, i.e. that really
-      # must be built.
+      # its content-addressed source-checksum-* tag; sync_docker_image_tags.sh
+      # syncs it right here, and its exit code says whether prepare-images
+      # must run for images whose source-checksum-* tag is absent, i.e. that
+      # really must be built.
       - name: Select Docker image tag
         id: select-docker-image-tag
-        env:
-          TAG_WRITES: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
         run: |
-          BRANCH_TAG=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${TAG_WRITES}" = "true" ]; then
             # https://stackoverflow.com/q/58033366/7325599
-            BRANCH_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          else
+            IMAGE_TAG="latest"
           fi
-          scripts/devops/select_docker_image_tags.sh linux "${BRANCH_TAG}" >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+          NEED_REBUILD=false
+          if [ "${TAG_WRITES}" = "true" ]; then
+            rc=0
+            scripts/devops/sync_docker_image_tags.sh linux "${IMAGE_TAG}" || rc=$?
+            [ "${rc}" -le 1 ] || exit "${rc}"
+            [ "${rc}" -eq 0 ] || NEED_REBUILD=true
+          fi
+          echo "need_rebuild=${NEED_REBUILD}" >> $GITHUB_OUTPUT
 
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
-        env:
-          TAG_WRITES: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
         run: |
-          BRANCH_TAG=""
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BRANCH_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${TAG_WRITES}" = "true" ]; then
+            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          else
+            IMAGE_TAG="latest"
           fi
-          scripts/devops/select_docker_image_tags.sh linux-vcpkg "${BRANCH_TAG}" >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+          NEED_REBUILD=false
+          if [ "${TAG_WRITES}" = "true" ]; then
+            rc=0
+            scripts/devops/sync_docker_image_tags.sh linux-vcpkg "${IMAGE_TAG}" || rc=$?
+            [ "${rc}" -le 1 ] || exit "${rc}"
+            [ "${rc}" -eq 0 ] || NEED_REBUILD=true
+          fi
+          echo "need_rebuild=${NEED_REBUILD}" >> $GITHUB_OUTPUT
 
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}

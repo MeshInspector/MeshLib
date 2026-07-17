@@ -9,11 +9,20 @@ description: >
 inputs:
   matrix:
     required: false
-    default: '{}'
+    default: ''
     description: >
-      YAML or JSON object mapping axis names to value lists. The base matrix
-      is the cartesian product of all axes. Pass {} (or omit) to start from
-      an empty matrix and build it entirely via rules.
+      YAML or JSON base matrix: either an object mapping axis names to value
+      lists (the base matrix is the cartesian product of all axes) or a list
+      of include-style entries used as-is. Omit to start from an empty
+      matrix and build it entirely via rules. Mutually exclusive with
+      `matrix-file`.
+  matrix-file:
+    required: false
+    default: ''
+    description: >
+      Path (relative to the workspace) of a YAML or JSON file to load the
+      base matrix from, in either of the forms accepted by `matrix`.
+      Mutually exclusive with `matrix`.
   rules:
     required: false
     default: '[]'

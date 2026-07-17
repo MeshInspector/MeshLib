@@ -202,7 +202,7 @@ function normalizeBodies(body, kind, ruleIndex) {
 }
 
 /**
- * Build a GitHub Actions matrix from a base axis-map and an ordered list of
+ * Build a GitHub Actions matrix from a base matrix and an ordered list of
  * rules.
  *
  * Rules are applied strictly in source order; each rule sees the state
@@ -211,9 +211,13 @@ function normalizeBodies(body, kind, ruleIndex) {
  * this engine can model order-dependent flows that native matrix syntax
  * cannot.
  *
- * @param {Object<string, *|Array<*>>} baseMatrix
- *   Axis name -> value list. Scalars are treated as one-element lists. Pass
- *   `{}` (or omit) to start from an empty entry list.
+ * @param {Object<string, *|Array<*>>|Array<Object>} baseMatrix
+ *   Either an axis map (axis name -> value list; scalars are treated as
+ *   one-element lists; the base entries are the cartesian product) or a
+ *   list of include-style entries used as-is. In the list form the axis
+ *   keys - the keys `include` / `extend` rules match on - are the union of
+ *   the entries' keys. Pass `{}` (or omit) to start from an empty entry
+ *   list.
  * @param {Array<Object>} rules
  *   Ordered rules. Each rule must have exactly one of `include`, `extend`,
  *   `exclude`, optionally guarded by `if`.
@@ -231,14 +235,27 @@ function normalizeBodies(body, kind, ruleIndex) {
  * // => [ { platform: 'x86_64', runner: 'ubuntu-latest' } ]
  */
 function buildMatrix(baseMatrix, rules) {
-  if (baseMatrix == null || typeof baseMatrix !== 'object' || Array.isArray(baseMatrix)) {
-    throw new Error("'matrix' must be a map of axis names to value lists");
+  let axisKeys;
+  let entries;
+  if (Array.isArray(baseMatrix)) {
+    baseMatrix.forEach((e, i) => {
+      if (e == null || typeof e !== 'object' || Array.isArray(e)) {
+        throw new Error(`base matrix entry #${i} must be an object`);
+      }
+    });
+    axisKeys = new Set(baseMatrix.flatMap(e => Object.keys(e)));
+    entries = baseMatrix.map(e => ({ ...e }));
+  } else if (baseMatrix != null && typeof baseMatrix === 'object') {
+    axisKeys = new Set(Object.keys(baseMatrix));
+    entries = cartesian(baseMatrix);
+  } else {
+    throw new Error(
+      "'matrix' must be a map of axis names to value lists or a list of entries"
+    );
   }
   if (!Array.isArray(rules)) {
     throw new Error("'rules' must be a list");
   }
-  const axisKeys = new Set(Object.keys(baseMatrix));
-  let entries = cartesian(baseMatrix);
 
   rules.forEach((rule, i) => {
     if (rule == null || typeof rule !== 'object' || Array.isArray(rule)) {

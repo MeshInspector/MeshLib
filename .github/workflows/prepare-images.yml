@@ -50,49 +50,61 @@ jobs:
       - name: Do nothing
         run: echo
 
-  # Read the image inventory from matrix/docker-images.json (shared with
-  # scripts/devops/sync_docker_image_tags.sh) and build the job matrices,
-  # dropping linux cells the PR opted out of via `disable-build-<platform>`
-  # labels. The `matrix` context is not available in job-level `if:` for
-  # reusable workflow inputs, so per-cell skipping must happen here.
-  # `emscripten-generate-c-bindings` (the image for generate-c-bindings) has no
-  # disable condition: that job always runs, so the image is always built.
+  # Build the job matrices from the image inventory in
+  # matrix/docker-images.json (shared with
+  # scripts/devops/sync_docker_image_tags.sh), dropping linux cells the PR
+  # opted out of via `disable-build-<platform>` labels. The `matrix` context
+  # is not available in job-level `if:` for reusable workflow inputs, so
+  # per-cell skipping must happen here.
   compute-image-matrices:
     if: ${{ inputs.need_linux_image_rebuild || inputs.need_linux_vcpkg_rebuild }}
     runs-on: ubuntu-latest
     outputs:
-      linux_matrix: ${{ steps.compute.outputs.linux_matrix }}
-      linux_empty:  ${{ steps.compute.outputs.linux_empty }}
-      cbindings_matrix: ${{ steps.compute.outputs.cbindings_matrix }}
-      vcpkg_matrix:     ${{ steps.compute.outputs.vcpkg_matrix }}
+      linux_matrix: ${{ steps.linux.outputs.matrix }}
+      linux_empty:  ${{ steps.linux.outputs.matrix == '[]' }}
+      cbindings_matrix: ${{ steps.reshape.outputs.cbindings_matrix }}
+      vcpkg_matrix:     ${{ steps.reshape.outputs.vcpkg_matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          sparse-checkout: .github/workflows/matrix
+          sparse-checkout: |
+            .github/actions/matrix-builder
+            .github/workflows/matrix
 
-      - id: compute
-        env:
-          DISABLE_UBUNTU_X64:   ${{ inputs.disable_ubuntu_x64 }}
-          DISABLE_UBUNTU_ARM64: ${{ inputs.disable_ubuntu_arm64 }}
-          DISABLE_EMSCRIPTEN:   ${{ inputs.disable_emscripten }}
+      # Linux cells encode only `distro` and `arch` so the auto-generated
+      # cell name stays "(<distro>, <arch>)"; the runner OS and image suffix
+      # are derived from `matrix.arch` inline below. A new ubuntu distro in
+      # docker-images.json must also be added to the exclude rules here.
+      # `emscripten-generate-c-bindings` (the image for generate-c-bindings)
+      # has no disable rule: that job always runs, so the image is always
+      # built. The parity tests in the action's tests/engine.test.js pin
+      # these rules to the jq filter they replaced.
+      - id: linux
+        uses: ./.github/actions/matrix-builder
+        with:
+          matrix-file: .github/workflows/matrix/docker-images.json
+          matrix-key: linux
+          rules: |
+            - if: ${{ inputs.disable_ubuntu_x64 }}
+              exclude:
+                - { distro: ubuntu22, arch: x64 }
+                - { distro: ubuntu24, arch: x64 }
+            - if: ${{ inputs.disable_ubuntu_arm64 }}
+              exclude:
+                - { distro: ubuntu22, arch: arm64 }
+                - { distro: ubuntu24, arch: arm64 }
+            - if: ${{ inputs.disable_emscripten }}
+              exclude: { distro: emscripten }
+
+      # Reshape the other families into axes + include form: the axis values
+      # make up the cell display name, while the include-only payload (the
+      # runner names) stays out of it. matrix-builder outputs a flat entry
+      # list, so these stay on jq.
+      - id: reshape
         run: |
           FILE=.github/workflows/matrix/docker-images.json
-          # Linux cells encode only `distro` and `arch` so the auto-generated
-          # cell name stays "(<distro>, <arch>)"; the runner OS and image
-          # suffix are derived from `matrix.arch` inline below.
-          LINUX=$(jq -c \
-            --argjson dx64   "$DISABLE_UBUNTU_X64" \
-            --argjson darm64 "$DISABLE_UBUNTU_ARM64" \
-            --argjson demscr "$DISABLE_EMSCRIPTEN" \
-            '{include: (.linux | map(select(
-              (((.distro|startswith("ubuntu")) and (.arch=="x64"  ) and $dx64  ) | not)
-              and (((.distro|startswith("ubuntu")) and (.arch=="arm64") and $darm64) | not)
-              and (((.distro=="emscripten")                              and $demscr) | not)
-             )))}' "$FILE")
           {
-            echo "linux_matrix=${LINUX}"
-            echo "linux_empty=$(jq -c '.include == []' <<<"${LINUX}")"
             echo "cbindings_matrix=$(jq -c '{emsdk_image: [."emscripten-c-bindings"[].emsdk_image], include: ."emscripten-c-bindings"}' "$FILE")"
             echo "vcpkg_matrix=$(jq -c '{arch: ([."linux-vcpkg"[].arch] | unique), os: ([."linux-vcpkg"[].os] | unique), include: [."linux-vcpkg"[] | {arch, runner}]}' "$FILE")"
           } | tee -a "$GITHUB_OUTPUT"
@@ -103,7 +115,8 @@ jobs:
     timeout-minutes: 75
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.compute-image-matrices.outputs.linux_matrix) }}
+      matrix:
+        include: ${{ fromJSON(needs.compute-image-matrices.outputs.linux_matrix) }}
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile

@@ -26,17 +26,17 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_fill_hole )
         .property( "makeDegenerateBand", &FillHoleParams::makeDegenerateBand )
         .property( "maxPolygonSubdivisions", &FillHoleParams::maxPolygonSubdivisions );
 
-    emscripten::function( "fillHole", +[]( std::shared_ptr<Mesh> m, int edge, const FillHoleParams& params )
+    emscripten::function( "fillHole", +[]( std::shared_ptr<Mesh> mesh, int a, const FillHoleParams& params )
     {
-        fillHole( *m, EdgeId( edge ), params );
+        fillHole( *mesh, EdgeId( a ), params );
     } );
 
-    emscripten::function( "fillHoles", +[]( std::shared_ptr<Mesh> m, emscripten::val edges, const FillHoleParams& params )
+    emscripten::function( "fillHoles", +[]( std::shared_ptr<Mesh> mesh, emscripten::val as, const FillHoleParams& params )
     {
-        const size_t len = edges[ "length" ].as<size_t>();
+        const size_t len = as[ "length" ].as<size_t>();
         std::vector<EdgeId> es( len );
         for ( size_t i = 0; i < len; ++i )
-            es[i] = EdgeId( edges[ i ].as<int>() );
-        fillHoles( *m, es, params );
+            es[i] = EdgeId( as[ i ].as<int>() );
+        fillHoles( *mesh, es, params );
     } );
 }

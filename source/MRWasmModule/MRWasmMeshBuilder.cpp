@@ -17,8 +17,8 @@ struct MeshBuilderModule {};
 EMSCRIPTEN_BINDINGS( meshlib_mesh_builder )
 {
     emscripten::class_<MeshBuilderModule>( "MeshBuilder" )
-        .class_function( "uniteCloseVertices", +[]( std::shared_ptr<Mesh> m, float closeDist, bool uniteOnlyBd )
+        .class_function( "uniteCloseVertices", +[]( std::shared_ptr<Mesh> mesh, float closeDist, bool uniteOnlyBd )
         {
-            return MeshBuilder::uniteCloseVertices( *m, closeDist, uniteOnlyBd );
+            return MeshBuilder::uniteCloseVertices( *mesh, closeDist, uniteOnlyBd );
         } );
 }

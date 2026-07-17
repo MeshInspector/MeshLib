@@ -15,16 +15,16 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_metrics )
 {
     emscripten::class_<FillHoleMetric>( "FillHoleMetric" );
 
-    emscripten::function( "getCircumscribedMetric", +[]( std::shared_ptr<Mesh> m ) { return getCircumscribedMetric( *m ); } );
-    emscripten::function( "getPlaneFillMetric", +[]( std::shared_ptr<Mesh> m, int e ) { return getPlaneFillMetric( *m, EdgeId( e ) ); } );
-    emscripten::function( "getPlaneNormalizedFillMetric", +[]( std::shared_ptr<Mesh> m, int e ) { return getPlaneNormalizedFillMetric( *m, EdgeId( e ) ); } );
-    emscripten::function( "getComplexFillMetric", +[]( std::shared_ptr<Mesh> m, int e ) { return getComplexFillMetric( *m, EdgeId( e ) ); } );
-    emscripten::function( "getEdgeLengthFillMetric", +[]( std::shared_ptr<Mesh> m ) { return getEdgeLengthFillMetric( *m ); } );
-    emscripten::function( "getUniversalMetric", +[]( std::shared_ptr<Mesh> m ) { return getUniversalMetric( *m ); } );
-    emscripten::function( "getMinAreaMetric", +[]( std::shared_ptr<Mesh> m ) { return getMinAreaMetric( *m ); } );
+    emscripten::function( "getCircumscribedMetric", +[]( std::shared_ptr<Mesh> mesh ) { return getCircumscribedMetric( *mesh ); } );
+    emscripten::function( "getPlaneFillMetric", +[]( std::shared_ptr<Mesh> mesh, int e ) { return getPlaneFillMetric( *mesh, EdgeId( e ) ); } );
+    emscripten::function( "getPlaneNormalizedFillMetric", +[]( std::shared_ptr<Mesh> mesh, int e ) { return getPlaneNormalizedFillMetric( *mesh, EdgeId( e ) ); } );
+    emscripten::function( "getComplexFillMetric", +[]( std::shared_ptr<Mesh> mesh, int e ) { return getComplexFillMetric( *mesh, EdgeId( e ) ); } );
+    emscripten::function( "getEdgeLengthFillMetric", +[]( std::shared_ptr<Mesh> mesh ) { return getEdgeLengthFillMetric( *mesh ); } );
+    emscripten::function( "getUniversalMetric", +[]( std::shared_ptr<Mesh> mesh ) { return getUniversalMetric( *mesh ); } );
+    emscripten::function( "getMinAreaMetric", +[]( std::shared_ptr<Mesh> mesh ) { return getMinAreaMetric( *mesh ); } );
 
-    emscripten::function( "calcCombinedFillMetric", +[]( std::shared_ptr<Mesh> m, const FaceBitSet& region, const FillHoleMetric& metric )
+    emscripten::function( "calcCombinedFillMetric", +[]( std::shared_ptr<Mesh> mesh, const FaceBitSet& filledRegion, const FillHoleMetric& metric )
     {
-        return calcCombinedFillMetric( *m, region, metric );
+        return calcCombinedFillMetric( *mesh, filledRegion, metric );
     } );
 }

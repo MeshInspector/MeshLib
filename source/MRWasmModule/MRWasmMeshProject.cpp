@@ -15,9 +15,9 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_mesh_project )
 {
-    emscripten::function( "findProjection", +[]( const Vector3f& pt, std::shared_ptr<Mesh> m )
+    emscripten::function( "findProjection", +[]( const Vector3f& pt, std::shared_ptr<Mesh> mp )
     {
-        const MeshProjectionResult r = findProjection( pt, *m );
+        const MeshProjectionResult r = findProjection( pt, *mp );
 
         emscripten::val proj = emscripten::val::object();
         proj.set( "face", (int)r.proj.face );
@@ -38,9 +38,9 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_project )
         return out;
     } );
 
-    emscripten::function( "findSignedDistance", +[]( const Vector3f& pt, std::shared_ptr<Mesh> m )
+    emscripten::function( "findSignedDistance", +[]( const Vector3f& pt, std::shared_ptr<Mesh> mp )
     {
-        const auto res = findSignedDistance( pt, *m );
+        const auto res = findSignedDistance( pt, *mp );
         if ( !res )
             return emscripten::val::null();
 

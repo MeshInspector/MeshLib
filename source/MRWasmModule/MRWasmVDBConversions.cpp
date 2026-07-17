@@ -45,13 +45,13 @@ EMSCRIPTEN_BINDINGS( meshlib_vdb_conversions )
         return out;
     } );
 
-    emscripten::function( "meshToVolume", +[]( std::shared_ptr<Mesh> mesh, const MeshToVolumeParams& params )
+    emscripten::function( "meshToVolume", +[]( std::shared_ptr<Mesh> mp, const MeshToVolumeParams& params )
     {
-        return Wasm::unwrap( meshToVolume( *mesh, params ) );
+        return Wasm::unwrap( meshToVolume( *mp, params ) );
     } );
-    emscripten::function( "meshToDistanceVdbVolume", +[]( std::shared_ptr<Mesh> mesh, const MeshToVolumeParams& params )
+    emscripten::function( "meshToDistanceVdbVolume", +[]( std::shared_ptr<Mesh> mp, const MeshToVolumeParams& params )
     {
-        return Wasm::unwrap( meshToDistanceVdbVolume( *mesh, params ) );
+        return Wasm::unwrap( meshToDistanceVdbVolume( *mp, params ) );
     } );
     emscripten::function( "floatGridToVdbVolume", +[]( FloatGrid grid )
     {

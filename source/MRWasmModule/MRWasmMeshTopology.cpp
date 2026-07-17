@@ -25,9 +25,9 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_topology )
         {
             return Wasm::packedToTypedArray<ThreeVertIds, uint32_t>( t.getTriVerts( FaceId( f ) ) );
         } )
-        .function( "getLeftTriVerts", +[]( const MeshTopology& t, int e )
+        .function( "getLeftTriVerts", +[]( const MeshTopology& t, int a )
         {
-            return Wasm::packedToTypedArray<ThreeVertIds, uint32_t>( t.getLeftTriVerts( EdgeId( e ) ) );
+            return Wasm::packedToTypedArray<ThreeVertIds, uint32_t>( t.getLeftTriVerts( EdgeId( a ) ) );
         } )
         .function( "findHoleRepresentiveEdges", +[]( const MeshTopology& t )
         {

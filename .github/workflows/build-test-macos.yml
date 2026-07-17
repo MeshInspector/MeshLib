@@ -68,6 +68,15 @@ jobs:
             c-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
+          - arch: x64-cross
+            config: Release
+            compiler: AppleClang
+            cxx-compiler-template: /usr/bin/clang++
+            c-compiler-template: /usr/bin/clang
+            runner: [ self-hosted, macos, arm64, build ]
+            instance: self-hosted-arm-x64-native
+            cross-osx-arch: x86_64
+            skip-bindings: true
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -99,6 +108,27 @@ jobs:
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
+      - name: Configure native x86_64 cross-build environment
+        if: ${{ matrix.cross-osx-arch == 'x86_64' }}
+        run: |
+          SHIM="$RUNNER_TEMP/x86_64-cross-shim"
+          mkdir -p "$SHIM"
+          ln -sf /opt/homebrew/bin/cmake "$SHIM/cmake"
+          ln -sf /opt/homebrew/bin/ninja "$SHIM/ninja"
+          ln -sf /usr/local/bin/python3.10 "$SHIM/python3.10"
+          ln -sf /usr/local/bin/python3.10-config "$SHIM/python3.10-config"
+          # A symlink-to-a-symlink breaks Homebrew's self-location (it
+          # mis-resolves its own repo path); a wrapper that execs the real
+          # binary works.
+          printf '#!/bin/bash\nexec /usr/local/bin/brew "$@"\n' > "$SHIM/brew"
+          chmod +x "$SHIM/brew"
+          echo "$SHIM" >> "$GITHUB_PATH"
+          echo "CMAKE_OSX_ARCHITECTURES=${{ matrix.cross-osx-arch }}" >> "$GITHUB_ENV"
+          echo "CMAKE_MAKE_PROGRAM=/opt/homebrew/bin/ninja" >> "$GITHUB_ENV"
+          echo "CMAKE_PREFIX_PATH=/usr/local" >> "$GITHUB_ENV"
+          echo "MESHLIB_HOMEBREW_PREFIX=/usr/local" >> "$GITHUB_ENV"
+          echo "HOMEBREW_DIR=/usr/local" >> "$GITHUB_ENV"
+
       - name: Install thirdparty libs
         id: thirdparty
         uses: ./.github/actions/install-macos-thirdparty
@@ -120,14 +150,14 @@ jobs:
           build_config: ${{ matrix.config }}
 
       - name: Install MRBind deps
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        if: ${{ (inputs.mrbind || inputs.mrbind_c) && !matrix.skip-bindings }}
         env:
           HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed llvm/lld, no z3, no rebuild
           HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
       - name: Build MRBind
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        if: ${{ (inputs.mrbind || inputs.mrbind_c) && !matrix.skip-bindings }}
         uses: ./.github/actions/build-mrbind
         with:
           # Keyed on the runner image (matrix.instance) plus the brew-prefix hash
@@ -150,14 +180,14 @@ jobs:
           python3 -m pip install pytest
 
       - name: Download C bindings
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ inputs.mrbind_c && !matrix.skip-bindings }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ inputs.mrbind_c && !matrix.skip-bindings }}
         run: |
           rm -rf source/MeshLibC2
           mv MeshLib/CbindingsTmp/MeshLibC2 source
@@ -172,18 +202,21 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ steps.thirdparty.outputs.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           MR_CMAKE_OPTIONS: >
-            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ (matrix.skip-bindings && 'OFF') || fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMR_CXX_STANDARD=23
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ (matrix.skip-bindings && 'OFF') || fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: MRMesh Exported Symbols
+        # Needs llvm-cxxfilt from brewed llvm@22, which "Install MRBind deps"
+        # installs; skipped alongside bindings for skip-bindings entries
+        if: ${{ !matrix.skip-bindings }}
         run: |
           export PATH="$(brew --prefix llvm@22)/bin:$PATH"
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings
-        if: ${{ inputs.mrbind }}
+        if: ${{ inputs.mrbind && !matrix.skip-bindings }}
         env:
           PATH: ${{ steps.thirdparty.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.thirdparty.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
           CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
@@ -199,7 +232,7 @@ jobs:
         run: ./build/${{ matrix.config }}/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd
 
       - name: Verify meshlib.mrmeshpy import
-        if: ${{ inputs.mrbind }}
+        if: ${{ inputs.mrbind && !matrix.skip-bindings }}
         timeout-minutes: 3
         uses: ./.github/actions/verify-meshlib-python-import
         with:
@@ -209,20 +242,21 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/${{ matrix.config }}/bin/MRTest${{ matrix.skip-bindings && ' --no-python-tests' || '' }}
 
       - name: C Unit Tests
-        if: ${{ inputs.mrbind_c }}
+        if: ${{ inputs.mrbind_c && !matrix.skip-bindings }}
         timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTestC2
 
       - name: Python Sanity Tests
+        if: ${{ !matrix.skip-bindings }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
         run: python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
-        if: ${{ inputs.internal_build }}
+        if: ${{ inputs.internal_build && !matrix.skip-bindings }}
         env:
           RUN_CUDA_ARG: "--run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
         uses: ./.github/actions/python-regression-tests
@@ -303,7 +337,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && !matrix.skip-bindings }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -313,7 +347,7 @@ jobs:
           ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/libMeshLibC2.dylib
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && !matrix.skip-bindings }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveMacOs-${{ matrix.arch }}

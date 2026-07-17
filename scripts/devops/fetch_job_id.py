@@ -41,7 +41,7 @@ def get_job_id(attempts=3, cooldown=10):
             return jobs[0]['id']
         # the jobs API is eventually consistent and may not list a just-started job yet
         if attempt < attempts:
-            print(f"get_job_id: attempt {attempt}/{attempts} found no jobs for {job_name}; retrying in {cooldown}s...")
+            print(f"Attempt {attempt}/{attempts} failed, retrying...")
             time.sleep(cooldown)
     raise RuntimeError(f"No jobs found for {job_name}")
 

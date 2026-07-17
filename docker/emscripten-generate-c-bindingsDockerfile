@@ -5,7 +5,7 @@
 # We could choose a platform here that doesn't need EMSDK, but it's desirable to use EMSDK to check that the process actually works,
 #   since this can be used on all OSes, while the EMSDK-less process only works on a few of them.
 
-FROM emscripten/emsdk:4.0.10-arm64
+FROM emscripten/emsdk:4.0.19-arm64
 
 COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
 COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt

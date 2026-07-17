@@ -380,6 +380,7 @@ class Injector:
 
             comment, key, names = None, None, None
             iface = re.match(r"(?:export )?interface (\w+)", s)
+            type_alias = re.match(r"(?:export )?type (\w+)\s*=", s)
             if iface:
                 name = iface.group(1)
                 if name == "EmbindModule":
@@ -389,6 +390,13 @@ class Injector:
                 else:
                     ctx = name
                     comment, key = self.comment_for_type(name)
+            elif type_alias and ctx is None:
+                # value_object / register_type aliases (`type PointOnFace = {...}`): document from the
+                # same-named C++ struct via the naming convention; skip silently if none exists.
+                name = type_alias.group(1)
+                comment, _ = self.comment_for_type(name)
+                if s.endswith("{"):  # multiline object alias: document its fields too (as members below)
+                    ctx = name
             elif ctx == "module":
                 if re.match(r"(\w+):\s*\{.+Value<\d+>", s):        # enum object literal
                     comment, key = self.comment_for_type(re.match(r"(\w+):", s).group(1))
@@ -421,7 +429,7 @@ class Injector:
                     if mth and not g:
                         arity = len(re.findall(r"\b_\d+\b", s))
                         names = self.param_names_for_member(ctx, mth.group(1), arity) if arity else None
-                if s == "}":
+                if s in ("}", "};"):
                     ctx = None
 
             if comment and not prev_doc:

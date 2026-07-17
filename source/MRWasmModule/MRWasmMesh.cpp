@@ -1,4 +1,5 @@
 #include "MRWasmBindings.h"
+#include "MRWasmMeshTriPoint.h"
 
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshTopology.h"
@@ -47,7 +48,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh )
             emscripten::val out = emscripten::val::object();
             out.set( "e", (int)mtp.e );
             out.set( "bary", bary );
-            return out;
+            return Wasm::MeshTriPointVal( out );
         } )
         .class_function( "fromTrianglesDuplicatingNonManifoldVertices", +[]( const VertCoords& vertexCoordinates, Triangulation& t )
         {

@@ -13,8 +13,21 @@
 
 using namespace MR;
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( MeshProjectionResultVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( SignedMeshProjectionResultVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_mesh_project )
 {
+    emscripten::register_type<MeshProjectionResultVal>( "MeshProjectionResult",
+        "{\n"
+        "  proj: PointOnFace;\n"
+        "  mtp: MeshTriPoint;\n"
+        "  distSq: number;\n"
+        "  valid: boolean;\n"
+        "}" );
+    emscripten::register_type<SignedMeshProjectionResultVal>( "SignedMeshProjectionResult",
+        "{ proj: PointOnFace; mtp: MeshTriPoint; dist: number } | null" );
+
     emscripten::function( "findProjection", +[]( const Vector3f& pt, std::shared_ptr<Mesh> mp )
     {
         const MeshProjectionResult r = findProjection( pt, *mp );
@@ -35,14 +48,14 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_project )
         out.set( "mtp", mtp );
         out.set( "distSq", r.distSq );
         out.set( "valid", r.valid() );
-        return out;
+        return MeshProjectionResultVal( out );
     } );
 
     emscripten::function( "findSignedDistance", +[]( const Vector3f& pt, std::shared_ptr<Mesh> mp )
     {
         const auto res = findSignedDistance( pt, *mp );
         if ( !res )
-            return emscripten::val::null();
+            return SignedMeshProjectionResultVal( emscripten::val::null() );
 
         emscripten::val proj = emscripten::val::object();
         proj.set( "face", (int)res->proj.face );
@@ -59,6 +72,6 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_project )
         out.set( "proj", proj );
         out.set( "mtp", mtp );
         out.set( "dist", res->dist );
-        return out;
+        return SignedMeshProjectionResultVal( out );
     } );
 }

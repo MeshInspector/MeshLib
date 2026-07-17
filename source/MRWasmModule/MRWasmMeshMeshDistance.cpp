@@ -12,8 +12,13 @@
 
 using namespace MR;
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( MeshDistanceResultVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_mesh_mesh_distance )
 {
+    emscripten::register_type<MeshDistanceResultVal>( "MeshDistanceResult",
+        "{ a: PointOnFace; b: PointOnFace; distSq: number }" );
+
     emscripten::function( "findDistance", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b )
     {
         const MeshMeshDistanceResult r = findDistance( *a, *b );
@@ -29,6 +34,6 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_mesh_distance )
         out.set( "a", va );
         out.set( "b", vb );
         out.set( "distSq", r.distSq );
-        return out;
+        return MeshDistanceResultVal( out );
     } );
 }

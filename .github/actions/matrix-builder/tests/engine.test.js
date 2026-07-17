@@ -547,7 +547,7 @@ test('error: list base entry must be an object', () => {
 // (compute-image-matrices). The docker-linux-<dx64><darm64><demscr>.json
 // fixtures are the captured outputs of the original jq filter over
 // fixtures/docker-images.json (a snapshot of
-// .github/workflows/matrix/docker-images.json). The rules below must stay in
+// the .github/workflows/matrix/docker-images-*.json inventory). The rules below must stay in
 // sync with the matrix-builder step in prepare-images.yml.
 
 const DOCKER_IMAGES = loadFixture('docker-images.json');

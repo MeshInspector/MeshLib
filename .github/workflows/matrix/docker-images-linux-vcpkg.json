@@ -1,0 +1,12 @@
+[
+    {
+        "os": "rockylinux8",
+        "arch": "x64",
+        "runner": "ubuntu-latest"
+    },
+    {
+        "os": "rockylinux8",
+        "arch": "arm64",
+        "runner": "ubuntu-24.04-arm"
+    }
+]

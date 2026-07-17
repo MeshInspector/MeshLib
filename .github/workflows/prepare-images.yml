@@ -50,8 +50,8 @@ jobs:
       - name: Do nothing
         run: echo
 
-  # Build the job matrices from the image inventory in
-  # matrix/docker-images.json (shared with
+  # Build the job matrices from the image inventory in the
+  # matrix/docker-images-*.json files (shared with
   # scripts/devops/sync_docker_image_tags.sh), dropping linux cells the PR
   # opted out of via `disable-build-<platform>` labels. The `matrix` context
   # is not available in job-level `if:` for reusable workflow inputs, so
@@ -62,8 +62,8 @@ jobs:
     outputs:
       linux_matrix: ${{ steps.linux.outputs.matrix }}
       linux_empty:  ${{ steps.linux.outputs.matrix == '[]' }}
-      cbindings_matrix: ${{ steps.reshape.outputs.cbindings_matrix }}
-      vcpkg_matrix:     ${{ steps.reshape.outputs.vcpkg_matrix }}
+      cbindings_matrix: ${{ steps.cbindings.outputs.matrix }}
+      vcpkg_matrix:     ${{ steps.vcpkg.outputs.matrix }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -75,7 +75,7 @@ jobs:
       # Linux cells encode only `distro` and `arch` so the auto-generated
       # cell name stays "(<distro>, <arch>)"; the runner OS and image suffix
       # are derived from `matrix.arch` inline below. A new ubuntu distro in
-      # docker-images.json must also be added to the exclude rules here.
+      # docker-images-linux.json must also be added to the exclude rules here.
       # `emscripten-generate-c-bindings` (the image for generate-c-bindings)
       # has no disable rule: that job always runs, so the image is always
       # built. The parity tests in the action's tests/engine.test.js pin
@@ -83,31 +83,33 @@ jobs:
       - id: linux
         uses: ./.github/actions/matrix-builder
         with:
-          matrix-file: .github/workflows/matrix/docker-images.json
-          matrix-key: linux
+          matrix-file: .github/workflows/matrix/docker-images-linux.json
           rules: |
             - if: ${{ inputs.disable_ubuntu_x64 }}
               exclude:
-                - { distro: ubuntu22, arch: x64 }
-                - { distro: ubuntu24, arch: x64 }
+                - distro: ubuntu22
+                  arch: x64
+                - distro: ubuntu24
+                  arch: x64
             - if: ${{ inputs.disable_ubuntu_arm64 }}
               exclude:
-                - { distro: ubuntu22, arch: arm64 }
-                - { distro: ubuntu24, arch: arm64 }
+                - distro: ubuntu22
+                  arch: arm64
+                - distro: ubuntu24
+                  arch: arm64
             - if: ${{ inputs.disable_emscripten }}
-              exclude: { distro: emscripten }
+              exclude:
+                distro: emscripten
 
-      # Reshape the other families into axes + include form: the axis values
-      # make up the cell display name, while the include-only payload (the
-      # runner names) stays out of it. matrix-builder outputs a flat entry
-      # list, so these stay on jq.
-      - id: reshape
-        run: |
-          FILE=.github/workflows/matrix/docker-images.json
-          {
-            echo "cbindings_matrix=$(jq -c '{emsdk_image: [."emscripten-c-bindings"[].emsdk_image], include: ."emscripten-c-bindings"}' "$FILE")"
-            echo "vcpkg_matrix=$(jq -c '{arch: ([."linux-vcpkg"[].arch] | unique), os: ([."linux-vcpkg"[].os] | unique), include: [."linux-vcpkg"[] | {arch, runner}]}' "$FILE")"
-          } | tee -a "$GITHUB_OUTPUT"
+      - id: cbindings
+        uses: ./.github/actions/matrix-builder
+        with:
+          matrix-file: .github/workflows/matrix/docker-images-emscripten-c-bindings.json
+
+      - id: vcpkg
+        uses: ./.github/actions/matrix-builder
+        with:
+          matrix-file: .github/workflows/matrix/docker-images-linux-vcpkg.json
 
   linux-image-build-upload:
     needs: compute-image-matrices
@@ -184,7 +186,8 @@ jobs:
     timeout-minutes: 75
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_matrix) }}
+      matrix:
+        include: ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_matrix) }}
     runs-on: ${{ matrix.runner }}
     env:
       image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
@@ -247,7 +250,8 @@ jobs:
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.compute-image-matrices.outputs.cbindings_matrix) }}
+      matrix:
+        include: ${{ fromJSON(needs.compute-image-matrices.outputs.cbindings_matrix) }}
     runs-on: ${{matrix.runner_image}}
     env:
       image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}

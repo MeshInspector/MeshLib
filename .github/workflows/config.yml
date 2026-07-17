@@ -215,10 +215,11 @@ jobs:
               - 'thirdparty/install.bat'
 
       # Login so select_docker_image_tags.sh can sync conventional tags
-      # (`imagetools create` needs push rights). Fork PRs have no secrets;
-      # the script then falls back to read-only digest comparison.
+      # (`imagetools create` needs push rights). Fork and Dependabot PRs
+      # have no repository secrets; the script then falls back to read-only
+      # digest comparison.
       - name: Login to DockerHub
-        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        if: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
         uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           username: meshlib
@@ -233,7 +234,7 @@ jobs:
       - name: Select Docker image tag
         id: select-docker-image-tag
         env:
-          TAG_WRITES: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          TAG_WRITES: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
         run: |
           BRANCH_TAG=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -245,7 +246,7 @@ jobs:
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         env:
-          TAG_WRITES: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+          TAG_WRITES: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
         run: |
           BRANCH_TAG=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then

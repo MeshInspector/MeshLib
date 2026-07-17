@@ -59,11 +59,11 @@ jobs:
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
       MRCUDA_PLATFORM_TOOLSET: ${{ matrix.mrcuda_platform_toolset }}
-      # Multi-tool-task with a build-wide process count (default: core count) bounds
-      # cl.exe concurrency in every msbuild step; plain -m + /MP lets each concurrently-
-      # building project fan out to the core count independently. No effect on CMake legs.
+      # Multi-tool-task scheduling of cl.exe in every msbuild step; the cross-build
+      # process-count enforcement is off for now to measure its cost separately.
+      # No effect on CMake legs.
       UseMultiToolTask: 'true'
-      EnforceProcessCountAcrossBuilds: 'true'
+      EnforceProcessCountAcrossBuilds: 'false'
 
     steps:
       - name: Checkout

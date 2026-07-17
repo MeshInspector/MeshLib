@@ -417,10 +417,10 @@ jobs:
       VCVARS_VER: '14.5'
       PLATFORM_TOOLSET: v145
       CUDA_PLATFORM_TOOLSET: v143
-      # Build-wide cl.exe process cap for the msbuild step (multi-tool-task scheduling;
-      # plain -m + /MP has no global bound). Same setup as in build-test-windows.yml.
+      # Multi-tool-task cl.exe scheduling for the msbuild step; same setup as in
+      # build-test-windows.yml.
       UseMultiToolTask: 'true'
-      EnforceProcessCountAcrossBuilds: 'true'
+      EnforceProcessCountAcrossBuilds: 'false'
     steps:
       - name: Checkout
         uses: actions/checkout@v7

@@ -182,19 +182,35 @@ Expected<Mesh> fromCtm( std::istream& in, const MeshLoadSettings& settings /*= {
             (*settings.normals)[i] = Vector3f( normals[3 * i], normals[3 * i + 1], normals[3 * i + 2] );
     }
 
-    Mesh mesh;
-    mesh.points.resize( vertCount );
+    VertCoords points( vertCount );
     for ( VertId i{0}; i < (int)vertCount; ++i )
-        mesh.points[i] = Vector3f( vertices[3*i], vertices[3*i+1], vertices[3*i+2] );
+        points[i] = Vector3f( vertices[3*i], vertices[3*i+1], vertices[3*i+2] );
 
     Triangulation t;
     t.reserve( triCount );
     for ( FaceId i{0}; i < (int)triCount; ++i )
         t.push_back( { VertId( (int)indices[3*i] ), VertId( (int)indices[3*i+1] ), VertId( (int)indices[3*i+2] ) } );
 
-    mesh.topology = MeshBuilder::fromTriangles( t, { .skippedFaceCount = settings.skippedFaceCount } );
-    if ( mesh.topology.lastValidVert() + 1 > mesh.points.size() )
+    std::vector<MeshBuilder::VertDuplication> dups;
+    auto mesh = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, &dups,
+        { .skippedFaceCount = settings.skippedFaceCount } );
+    if ( mesh.topology.lastValidVert() + 1 > vertCount + dups.size() )
         return unexpected( "vertex id is larger than total point coordinates" );
+    if ( settings.duplicatedVertexCount )
+        *settings.duplicatedVertexCount = int( dups.size() );
+    if ( !dups.empty() )
+    {
+        auto copyDupAttributes = [&dups, sz = mesh.points.size()] ( auto * attributes )
+        {
+            if ( !attributes || attributes->empty() )
+                return;
+            attributes->resize( sz );
+            for ( const auto & [src, dup] : dups )
+                (*attributes)[dup] = (*attributes)[src];
+        };
+        copyDupAttributes( settings.colors );
+        copyDupAttributes( settings.normals );
+    }
     return mesh;
 }
 

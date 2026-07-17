@@ -23,6 +23,8 @@ jobs:
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
   config:
     uses: ./.github/workflows/config.yml
+    # for the DockerHub login in prepare-config (tag sync)
+    secrets: inherit
 
   debug-config:
     needs: config

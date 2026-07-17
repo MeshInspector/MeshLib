@@ -214,14 +214,26 @@ jobs:
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
-      # Single criterion for image selection and rebuilds: registry manifest
-      # digests compared against the content-addressed source-checksum-* tags
-      # (see select_docker_image_tags.sh). `latest` is selected when it
-      # already points at the wanted images; otherwise the branch tag is
-      # selected and prepare-images (re)points it, building only images whose
-      # source-checksum-* tag is absent.
+      # Login so select_docker_image_tags.sh can sync conventional tags
+      # (`imagetools create` needs push rights). Fork PRs have no secrets;
+      # the script then falls back to read-only digest comparison.
+      - name: Login to DockerHub
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        with:
+          username: meshlib
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Single criterion for image selection and rebuilds: every image's
+      # conventional tag must point at its content-addressed source-checksum-*
+      # tag (see select_docker_image_tags.sh). `latest` is selected when it
+      # already points at the wanted images; otherwise the script syncs the
+      # selected tag right here, and prepare-images runs only for images whose
+      # source-checksum-* tag is absent, i.e. that really must be built.
       - name: Select Docker image tag
         id: select-docker-image-tag
+        env:
+          TAG_WRITES: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           BRANCH_TAG=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then
@@ -232,6 +244,8 @@ jobs:
 
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
+        env:
+          TAG_WRITES: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
         run: |
           BRANCH_TAG=""
           if [ "${{ github.event_name }}" = "pull_request" ]; then

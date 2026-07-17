@@ -131,8 +131,8 @@ TEST( MRMesh, inspectVertNeighbourhood )
     // 6-triangle closed ring (991,990,1020,1019,460079,1013) and 3-triangle closed ring (988,1911,989)
     const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
     EXPECT_FALSE( info.hasRepeatedVerts() );
-    EXPECT_EQ( info.numOpenChains(), 0 );
-    EXPECT_EQ( info.numClosedChains(), 2 );
+    EXPECT_EQ( info.numOpenChains(), 0u );
+    EXPECT_EQ( info.numClosedChains(), 2u );
 
     // the vertex is non-manifold, so one of its rings must get a duplicate
     std::vector<VertDuplication> dups;
@@ -157,7 +157,7 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
         EXPECT_FALSE( info.hasRepeatedVerts() );
         EXPECT_EQ( info.numOpenChains(), VertInfo::maxNumOpenChains );
-        EXPECT_EQ( info.numClosedChains(), 0 );
+        EXPECT_EQ( info.numClosedChains(), 0u );
     }
 
     // more closed rings around one vertex than numClosedChains can store
@@ -175,7 +175,7 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
         }
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
         EXPECT_FALSE( info.hasRepeatedVerts() );
-        EXPECT_EQ( info.numOpenChains(), 0 );
+        EXPECT_EQ( info.numOpenChains(), 0u );
         EXPECT_EQ( info.numClosedChains(), VertInfo::maxNumClosedChains );
     }
 
@@ -192,8 +192,8 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
         EXPECT_TRUE( info.hasRepeatedVerts() );
         EXPECT_EQ( info.numRepeatedVerts(), 2u * ( n - 1 ) );
-        EXPECT_EQ( info.numOpenChains(), 0 );
-        EXPECT_EQ( info.numClosedChains(), 0 );
+        EXPECT_EQ( info.numOpenChains(), 0u );
+        EXPECT_EQ( info.numClosedChains(), 0u );
     }
 }
 

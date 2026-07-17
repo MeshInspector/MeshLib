@@ -1406,7 +1406,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
         }
 
         if ( totalSkippedFaceCount )
-            res.warnings += fmt::format( "{} triangles were skipped as inconsistent with others.\n", totalSkippedFaceCount );
+            res.warnings += fmt::format( "{} triangles were skipped as having repeated vertex ids or being inconsistent with others.\n", totalSkippedFaceCount );
         if ( totalDuplicatedVertexCount )
             res.warnings += fmt::format( "{} vertices were duplicated to make them manifold.\n", totalDuplicatedVertexCount );
         if ( holesCount )

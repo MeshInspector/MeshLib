@@ -13,6 +13,7 @@ import './expandShrink.test.mjs';
 import './meshProject.test.mjs';
 import './meshAccessors.test.mjs';
 import './meshQueries.test.mjs';
+import './collisions.test.mjs';
 import './maps.test.mjs';
 import './booleanMapper.test.mjs';
 import './fillHole.test.mjs';

@@ -44,3 +44,21 @@ import { ml, cube, meshFromGeometry } from './helpers.mjs';
   topo.delete();
   m.delete();
 }
+
+// Mesh.normal and VertCoords.get / size
+{
+  const c = cube( 0, 0, 0, 2 );
+  const m = meshFromGeometry( c.positions, c.indices );
+  const points = m.points;
+
+  assert.equal( points.size(), 8, 'a size-2 cube has 8 vertices' );
+  const p0 = points.get( 0 );
+  assert.ok( Math.abs( p0.x + 1 ) < 1e-4 && Math.abs( p0.y + 1 ) < 1e-4 && Math.abs( p0.z + 1 ) < 1e-4,
+    'vertex 0 is the (-1,-1,-1) corner' );
+
+  const n = m.normal( 0 );
+  assert.ok( Math.abs( Math.hypot( n.x, n.y, n.z ) - 1 ) < 1e-3, 'the vertex normal is unit length' );
+
+  points.delete();
+  m.delete();
+}

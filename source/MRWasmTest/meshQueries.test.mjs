@@ -31,20 +31,34 @@ const eq = ( a, b ) => Math.abs( a - b ) < 1e-3;
   big.delete();
 }
 
-// findSignedDistance — sign flips inside vs outside
+// findSignedDistanceFromPoint — sign flips inside vs outside
 {
   const c = cube( 0, 0, 0, 2 );
   const m = meshFromGeometry( c.positions, c.indices );
 
-  const outside = ml.findSignedDistance( { x: 5, y: 0, z: 0 }, m );
+  const outside = ml.findSignedDistanceFromPoint( { x: 5, y: 0, z: 0 }, m );
   assert.notEqual( outside, null, 'a projection exists' );
   assert.ok( eq( outside.dist, 4 ), 'point (5,0,0) is 4 outside the +x face' );
   assert.ok( eq( outside.proj.point.x, 1 ), 'closest point on the +x face' );
 
-  const inside = ml.findSignedDistance( { x: 0, y: 0, z: 0 }, m );
+  const inside = ml.findSignedDistanceFromPoint( { x: 0, y: 0, z: 0 }, m );
   assert.ok( inside.dist < 0 && eq( inside.dist, -1 ), 'the centre is 1 unit inside (negative distance)' );
 
   m.delete();
+}
+
+// findSignedDistanceFromMesh — signed distance between two separated cubes
+{
+  const ca = cube( 0, 0, 0, 2 ), cb = cube( 5, 0, 0, 2 );
+  const a = meshFromGeometry( ca.positions, ca.indices );
+  const b = meshFromGeometry( cb.positions, cb.indices );
+
+  const r = ml.findSignedDistanceFromMesh( a, b );
+  assert.ok( eq( r.signedDist, 3 ), 'the [-1,1] and [4,6] cubes are 3 apart (positive: not colliding)' );
+  assert.ok( Number.isInteger( r.status ), 'a MeshMeshCollisionStatus value is returned' );
+
+  a.delete();
+  b.delete();
 }
 
 // findSignedDistances — verts of a mesh lie on its own surface

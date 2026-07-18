@@ -43,6 +43,13 @@ import { ml, meshToGeometry } from './helpers.mjs';
 }
 
 {
+  const m = ml.makeTorusWithSelfIntersections( 1, 0.1, 16, 16 );
+  const g = meshToGeometry( m, false );
+  assert.ok( g.positions.length > 0 && g.indices.length > 0, 'self-intersecting torus is non-empty' );
+  m.delete();
+}
+
+{
   const c = ml.makeCube( { x: 2, y: 2, z: 2 }, { x: -1, y: -1, z: -1 } );
   const hull = ml.makeConvexHullFromMesh( c );
   const g = meshToGeometry( hull, false );

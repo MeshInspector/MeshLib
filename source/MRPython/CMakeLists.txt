@@ -7,17 +7,27 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 # TODO: find Python independently
 
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/include>
-)
+find_package(pybind11nonlimitedapi REQUIRED HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/pybind11nonlimitedapi")
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     MRMesh
-    pybind11nonlimitedapi_stubs
+    pybind11nonlimitedapi::pybind11nonlimitedapi_stubs
   PRIVATE
     ${CMAKE_DL_LIBS}
+)
+
+# Put the prebuilt shim next to the modules, where our patched pybind looks for it at runtime.
+if(NOT "${pybind11nonlimitedapi_SHIM_PYTHON_VERSION}" STREQUAL "${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}")
+  message(FATAL_ERROR "The prebuilt pybind shim targets Python ${pybind11nonlimitedapi_SHIM_PYTHON_VERSION}, but this build uses ${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}. Rebuild the thirdparty against this Python version.")
+endif()
+file(
+  COPY "${pybind11nonlimitedapi_SHIM_FILE}"
+  DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib"
+)
+install(
+  FILES "${pybind11nonlimitedapi_SHIM_FILE}"
+  DESTINATION "${MR_PY_LIB_DIR}"
 )
 
 IF(APPLE)

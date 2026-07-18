@@ -49,6 +49,13 @@
     <PythonLibPath>$(VcpkgCurrentInstalledDir)\lib\python3.lib</PythonLibPath>
     <PythonDllPath>$(VcpkgCurrentInstalledDir)\bin\python$(PythonVersion).dll</PythonDllPath>
     <PythonStableDllPath>$(VcpkgCurrentInstalledDir)\bin\python3.dll</PythonStableDllPath>
+    <!-- The vcpkg installed tree for the current configuration (debug artifacts live in the `debug` subtree). -->
+    <VcpkgCurrentInstalledConfigDir>$(VcpkgCurrentInstalledDir)</VcpkgCurrentInstalledConfigDir>
+    <VcpkgCurrentInstalledConfigDir Condition="'$(Configuration)'=='Debug'">$(VcpkgCurrentInstalledDir)\debug</VcpkgCurrentInstalledConfigDir>
+    <!-- The pybind stubs and the shim come prebuilt from the `mrbind-pybind11` vcpkg port.
+         The stubs .lib is spelled out for the projects that set VcpkgAutoLink=false. -->
+    <Pybind11StubsLibPath>$(VcpkgCurrentInstalledConfigDir)\lib\pybind11nonlimitedapi_stubs.lib</Pybind11StubsLibPath>
+    <Pybind11ShimDllPath>$(VcpkgCurrentInstalledConfigDir)\bin\pybind11nonlimitedapi_meshlib_3.$(PythonVersionMinor).dll</Pybind11ShimDllPath>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -65,7 +72,7 @@
       <!-- Adding frequently used MeshLib headers to the PCH speeds up clean (CI) builds but slows local
            iterative development, so it is off by default and enabled only in CI via -p:MR_PCH_USE_EXTRA_HEADERS=ON -->
       <PreprocessorDefinitions Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">MR_PCH_USE_EXTRA_HEADERS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(PythonIncludePath);$(MeshLibDir)thirdparty\parallel-hashmap\;$(MeshLibDir)thirdparty\mrbind-pybind11\include\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;$(VcpkgCurrentInstalledDir)\include\eigen3;$(MeshLibDir)thirdparty\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(PythonIncludePath);$(MeshLibDir)thirdparty\parallel-hashmap\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;$(VcpkgCurrentInstalledDir)\include\eigen3;$(MeshLibDir)thirdparty\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>

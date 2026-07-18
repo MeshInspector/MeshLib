@@ -16,9 +16,6 @@
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
-      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>
@@ -90,7 +87,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;fmtd.lib;spdlogd.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;fmtd.lib;spdlogd.lib;%(AdditionalDependencies);$(PythonLibPath);$(Pybind11StubsLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
@@ -120,7 +117,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;fmt.lib;spdlog.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;fmt.lib;spdlog.lib;%(AdditionalDependencies);$(PythonLibPath);$(Pybind11StubsLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>

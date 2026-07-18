@@ -21,5 +21,3 @@ fi
 brew untap aws/tap 2>/dev/null || true
 
 brew install --quiet $(echo "$MESHLIB_BREW_REQUIREMENTS" | tr '\n' ' ')
-# FIXME: build w/o pybind11
-brew install --quiet pybind11

@@ -31,8 +31,6 @@ install(
 )
 
 IF(APPLE)
-  find_package(pybind11 REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PUBLIC pybind11::module)
   target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
 ENDIF()
 

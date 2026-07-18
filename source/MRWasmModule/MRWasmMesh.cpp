@@ -19,7 +19,9 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh )
 {
     emscripten::class_<Mesh>( "Mesh" )
         .smart_ptr<std::shared_ptr<Mesh>>( "MeshPtr" )
-        .property( "points", +[]( const Mesh& m ) { return m.points; } )
+        .property( "points",
+            +[]( const Mesh& m ) { return m.points; },
+            +[]( Mesh& m, const VertCoords& c ) { m.points = c; } )
         .property( "topology", +[]( const Mesh& m ) { return m.topology; } )
         .class_function( "fromTriangles", +[]( const VertCoords& vertexCoordinates, const Triangulation& t )
         {

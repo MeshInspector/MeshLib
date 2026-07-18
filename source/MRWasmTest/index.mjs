@@ -23,6 +23,10 @@ import './icp.test.mjs';
 import './contoursCut.test.mjs';
 import './deformers.test.mjs';
 import './voxels.test.mjs';
+import './extrude.test.mjs';
+import './denoise.test.mjs';
+import './fusion.test.mjs';
+import './weightedShell.test.mjs';
 import './mopup.test.mjs';
 
 console.log( 'OK' );

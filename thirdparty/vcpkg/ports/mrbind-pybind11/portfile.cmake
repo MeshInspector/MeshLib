@@ -4,7 +4,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MeshInspector/mrbind-pybind11
     REF 96233b4098fd1d68653aa5e26c8069b56f93ef7c
-    SHA512 0
+    SHA512 c87872140cfda09472b0893e15b6f54a81069ab4d6e7d5cd8c031aa274bf4e4206d4050c2480d71bbd8951bf6ca4b8217cbe3926ecd34890ca81287451526423
     HEAD_REF non-limited-api
 )
 

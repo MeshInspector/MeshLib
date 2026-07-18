@@ -21,12 +21,12 @@ target_link_libraries(${PROJECT_NAME}
 if(NOT "${pybind11nonlimitedapi_SHIM_PYTHON_VERSION}" STREQUAL "${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}")
   message(FATAL_ERROR "The prebuilt pybind shim targets Python ${pybind11nonlimitedapi_SHIM_PYTHON_VERSION}, but this build uses ${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}. Rebuild the thirdparty against this Python version.")
 endif()
-file(
-  COPY "${pybind11nonlimitedapi_SHIM_FILE}"
-  DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib"
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "$<TARGET_FILE:${pybind11nonlimitedapi_SHIM_TARGET}>" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib/"
 )
 install(
-  FILES "${pybind11nonlimitedapi_SHIM_FILE}"
+  FILES "$<TARGET_FILE:${pybind11nonlimitedapi_SHIM_TARGET}>"
   DESTINATION "${MR_PY_LIB_DIR}"
 )
 

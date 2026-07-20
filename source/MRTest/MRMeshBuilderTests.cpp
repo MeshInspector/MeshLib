@@ -110,6 +110,44 @@ TEST( MRMesh, duplicateClosedPlusOpenChainVertex )
     }
 }
 
+// a vertex with three chains around it, where the walk enters the closed ring via shared rim vertex #3,
+// so the ring is extracted mid-walk as the first found chain, and both open chains get duplicates
+TEST( MRMesh, duplicateVertexWithThreeChains )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f open chain 1-2-3
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 0_v, 3_v, 4_v } ); //2_f closed ring 3-4-5-3
+    t.push_back( { 0_v, 4_v, 5_v } ); //3_f
+    t.push_back( { 0_v, 5_v, 3_v } ); //4_f
+    t.push_back( { 0_v, 6_v, 7_v } ); //5_f open chain 6-7-8
+    t.push_back( { 0_v, 7_v, 8_v } ); //6_f
+
+    std::vector<VertDuplication> dups;
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    EXPECT_EQ( duplicatedVerticesCnt, 2 );
+    ASSERT_EQ( dups.size(), 2 );
+    // both duplicates must originate from the true central vertex #0
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].dupVert, 9_v );
+    EXPECT_EQ( dups[1].srcVert, 0_v );
+    EXPECT_EQ( dups[1].dupVert, 10_v );
+
+    // the closed ring was found first and keeps #0, each open chain got its own duplicate
+    EXPECT_EQ( t[0_f][0], 9_v );
+    EXPECT_EQ( t[1_f][0], 9_v );
+    EXPECT_EQ( t[2_f][0], 0_v );
+    EXPECT_EQ( t[3_f][0], 0_v );
+    EXPECT_EQ( t[4_f][0], 0_v );
+    EXPECT_EQ( t[5_f][0], 10_v );
+    EXPECT_EQ( t[6_f][0], 10_v );
+
+    // the result is manifold
+    dups.clear();
+    EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 0 );
+    EXPECT_EQ( dups.size(), 0 );
+}
+
 // a vertex with two closed rings of triangles around it, from a real mesh
 TEST( MRMesh, inspectVertNeighbourhood )
 {

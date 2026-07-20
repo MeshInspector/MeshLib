@@ -97,15 +97,16 @@ public:
     }
 
     // duplicate the vertex around which the chain was found
-    void duplicateVertex( std::vector<VertId>& path, VertId& lastUsedVertId,
+    void duplicateVertex( VertId v, std::vector<VertId>& path, VertId& lastUsedVertId,
                           std::vector<VertDuplication>* dups = nullptr )
     {
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
-        vertDup.srcVert = vertexBegIt->v;
+        vertDup.srcVert = v;
         if ( dups )
             dups->push_back( vertDup );
 
+        [[maybe_unused]] size_t changedTris = 0;
         for ( size_t i = 1; i < path.size(); ++i )
         {
             for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )
@@ -124,6 +125,7 @@ public:
                 if ( alreadyDuplicted )
                     continue;
                 assert( v1 && v2 );
+                assert( v1 != v2 );
 
                 if ( ( v1 == path[i - 1] || v2 == path[i - 1] ) &&
                      ( v1 == path[i] || v2 == path[i] ) )
@@ -135,11 +137,13 @@ public:
                         vi = vertDup.dupVert;
                         break;
                     }
+                    ++changedTris;
                     it->v = vertDup.dupVert;
                     break;
                 }
             }
         }
+        assert( changedTris + 1 == path.size() );
     }
 };
 
@@ -428,7 +432,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     {
                         if ( foundChains )
                         {
-                            pathMaker.duplicateVertex( path, lastValidVert, dups );
+                            pathMaker.duplicateVertex( v, path, lastValidVert, dups );
                             ++duplicatedVerticesCnt;
                         }
                         ++foundChains;
@@ -448,7 +452,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
                     if ( foundChains )
                     {
-                        pathMaker.duplicateVertex( closedPath, lastValidVert, dups );
+                        pathMaker.duplicateVertex( v, closedPath, lastValidVert, dups );
                         ++duplicatedVerticesCnt;
                     }
                     ++foundChains;

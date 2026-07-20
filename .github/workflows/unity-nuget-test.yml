@@ -152,7 +152,7 @@ jobs:
       - name: Setup .NET
         # macOS runners have no registered dotnet install; the tool host
         # needs DOTNET_ROOT.
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '9.x'
 

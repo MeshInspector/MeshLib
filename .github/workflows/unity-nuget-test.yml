@@ -40,7 +40,7 @@ jobs:
       UNITY_PROJECT: test_unity/NugetTestProj
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Keep the write token out of .git/config.
           persist-credentials: false

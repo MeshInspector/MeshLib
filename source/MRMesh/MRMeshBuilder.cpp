@@ -671,8 +671,8 @@ std::vector<int> computeTrianglesRepetitions( const Triangulation & t )
     for ( const auto & [triplet, num] : map )
     {
         assert( num >= 1 );
-        if ( res.size() <= size_t( num ) )
-            res.resize( num + 1 );
+        while ( res.size() <= size_t( num ) )
+            res.push_back( 0 );
         ++res[num];
     }
     return res;

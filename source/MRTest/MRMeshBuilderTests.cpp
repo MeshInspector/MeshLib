@@ -110,6 +110,35 @@ TEST( MRMesh, duplicateClosedPlusOpenChainVertex )
     }
 }
 
+// a closed ring around #0 plus one opposite-orientation triangle sharing the ring's rim pair (2,3):
+// the duplicated chain must take its own triangle 4_f, not the ring's 1_f with the same rim vertices
+TEST( MRMesh, duplicateVertexOppositeOrientedTri )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f closed ring 1-2-3-4-1
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 0_v, 3_v, 4_v } ); //2_f
+    t.push_back( { 0_v, 4_v, 1_v } ); //3_f
+    t.push_back( { 0_v, 3_v, 2_v } ); //4_f reversed rim pair of 1_f
+
+    std::vector<VertDuplication> dups;
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    EXPECT_EQ( duplicatedVerticesCnt, 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].dupVert, 5_v );
+
+    // the ring is intact and only the lone triangle got the duplicate
+    for ( FaceId i{ 0 }; i < 4; ++i )
+        EXPECT_EQ( t[i][0], 0_v );
+    EXPECT_EQ( t[4_f][0], 5_v );
+
+    // the result is manifold
+    dups.clear();
+    EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 0 );
+    EXPECT_EQ( dups.size(), 0 );
+}
+
 // a vertex with three chains around it, where the walk enters the closed ring via shared rim vertex #3,
 // so the ring is extracted mid-walk as the first found chain, and both open chains get duplicates
 TEST( MRMesh, duplicateVertexWithThreeChains )

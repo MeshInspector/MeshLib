@@ -118,6 +118,7 @@ public:
                     if ( vi == vertDup.srcVert )
                     {
                         alreadyDuplicted = false;
+                        // make (v1,v2) the cyclic pair following srcVert in the triangle
                         if ( v1 && !v2 )
                             std::swap( v1, v2 );
                     }
@@ -132,7 +133,7 @@ public:
                 assert( v1 != v2 );
 
                 if ( ( triOrientation && v1 == path[i - 1] && v2 == path[i] ) ||
-                    ( !triOrientation && v2 == path[i - 1] && v1 == path[i] ) )
+                     ( !triOrientation && v2 == path[i - 1] && v1 == path[i] ) )
                 {
                     for ( VertId & vi : faceToVertices[it->f] )
                     {

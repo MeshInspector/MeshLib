@@ -368,6 +368,9 @@
     <CopyFileToFolders Include="MRLightTheme.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\licenses\THIRD-PARTY-NOTICES.txt">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="MRFileDialogCocoa.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>

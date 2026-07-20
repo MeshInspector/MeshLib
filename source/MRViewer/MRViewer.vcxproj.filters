@@ -38,6 +38,9 @@
     <Filter Include="Fonts">
       <UniqueIdentifier>{44ab7180-8a0d-45cc-a894-2c7fc5419bd8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Licenses">
+      <UniqueIdentifier>{b7e9c3a4-2f81-4d6e-9a05-3c1f7b2e8d40}</UniqueIdentifier>
+    </Filter>
     <Filter Include="History">
       <UniqueIdentifier>{3070cea7-b1d9-4627-9d06-476b27257614}</UniqueIdentifier>
     </Filter>
@@ -1149,6 +1152,9 @@
     </CopyFileToFolders>
     <CopyFileToFolders Include="MRLightTheme.json">
       <Filter>UIStyle</Filter>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\licenses\THIRD-PARTY-NOTICES.txt">
+      <Filter>Licenses</Filter>
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>

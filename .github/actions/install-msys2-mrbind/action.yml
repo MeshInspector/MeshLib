@@ -26,3 +26,18 @@ runs:
       shell: pwsh
       run: |
         C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang22 && bash scripts/mrbind/msys2_install_packages.sh _clang22"
+        $code = $LASTEXITCODE
+        if ($code -ne 0) {
+          # The msys2 shell occasionally dies without its console output
+          # reaching the runner; recover what hit the disk instead.
+          Write-Host "msys2_shell.cmd exited with code $code"
+          Write-Host '::group::scripts/mrbind/msys2_pacman_install.log'
+          $teeLog = 'scripts/mrbind/msys2_pacman_install.log'
+          if (Test-Path $teeLog) { Get-Content $teeLog } else { Write-Host 'absent — died before pacman produced output' }
+          Write-Host '::endgroup::'
+          Write-Host '::group::C:\msys64\var\log\pacman.log (last 200 lines)'
+          $pacLog = 'C:\msys64\var\log\pacman.log'
+          if (Test-Path $pacLog) { Get-Content $pacLog -Tail 200 } else { Write-Host 'absent — pacman never started a transaction' }
+          Write-Host '::endgroup::'
+          exit $code
+        }

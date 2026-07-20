@@ -268,7 +268,7 @@ jobs:
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        uses: paulhatch/semantic-version@502226b17e3e242e4befd0a45690fcbb27dd1373 # v6.0.3
         id: version
         with:
           tag_prefix: "v"

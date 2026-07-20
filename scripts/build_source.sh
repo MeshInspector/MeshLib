@@ -94,7 +94,10 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   PYTHON_LIBRARY=${PYTHON_PREFIX}/lib/libpython${PYTHON_VERSION}.dylib
   PYTHON_INCLUDE_DIR=${PYTHON_PREFIX}/include/python${PYTHON_VERSION}
 
+  # pin FindPython to this prefix: /usr/local/Frameworks (e.g. Rosetta Homebrew) must not shadow it
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
+    -D Python_ROOT_DIR=${PYTHON_PREFIX} \
+    -D Python_FIND_FRAMEWORK=LAST \
     -D PYTHON_LIBRARY=${PYTHON_LIBRARY} \
     -D PYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} \
     -D PYTHON_EXECUTABLE:FILEPATH=${PYTHON_EXECUTABLE} \

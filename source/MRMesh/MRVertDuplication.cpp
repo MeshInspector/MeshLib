@@ -106,7 +106,7 @@ public:
         if ( dups )
             dups->push_back( vertDup );
 
-        [[maybe_unused]] int changedTris = 0;
+        [[maybe_unused]] size_t changedTris = 0;
         for ( size_t i = 1; i < path.size(); ++i )
         {
             for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )

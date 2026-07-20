@@ -3,6 +3,8 @@
 #include "MRRingIterator.h"
 #include "MRCloseVertices.h"
 #include "MRBuffer.h"
+#include "MRUnorientedTriangle.h"
+#include "MRphmap.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
@@ -645,6 +647,35 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
         *params.optionalVertOldToNew = std::move( vertOldToNew );
 
     return numChanged;
+}
+
+std::vector<int> computeTrianglesRepetitions( const Triangulation & t )
+{
+    MR_TIMER;
+
+    ParallelHashMap<UnorientedTriangle, int> map;
+    ParallelFor( size_t( 0 ), map.subcnt(), [&]( size_t myPartId )
+    {
+        for ( const auto & vs : t )
+        {
+            const UnorientedTriangle triplet( vs );
+            const auto hashval = map.hash( triplet );
+            const auto idx = map.subidx( hashval );
+            if ( idx != myPartId )
+                continue;
+            ++map[triplet];
+        }
+    } );
+
+    std::vector<int> res;
+    for ( const auto & [triplet, num] : map )
+    {
+        assert( num >= 1 );
+        if ( res.size() <= size_t( num ) )
+            res.resize( num + 1 );
+        ++res[num];
+    }
+    return res;
 }
 
 } //namespace MeshBuilder

@@ -79,6 +79,13 @@ MRMESH_API void addTriangles( MeshTopology & res, std::vector<VertId> & vertTrip
 MRMESH_API MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
     const BuildSettings & settings = {}, ProgressCallback progressCb = {} );
 
+/// computes the histogram of triangle repetitions in given triangulation, ignoring vertex order in each triangle:
+/// res[0] is always zero,
+/// res[1] is the number of triangles without duplicates,
+/// res[2] is the number of distinct triangles present in two copies,
+/// res[3] is the number of distinct triangles present in three copies, etc.
+[[nodiscard]] MRMESH_API std::vector<int> computeTrianglesRepetitions( const Triangulation & t );
+
 struct UniteCloseParams
 {
     ///< vertices located closer to each other than \param closeDist will be united

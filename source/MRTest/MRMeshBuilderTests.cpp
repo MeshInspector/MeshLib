@@ -272,6 +272,26 @@ TEST( MRMesh, MeshBuildWithDups )
     );
 }
 
+TEST( MRMesh, computeTrianglesRepetitions )
+{
+    Triangulation t;
+    EXPECT_TRUE( computeTrianglesRepetitions( t ).empty() );
+
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 2_v, 0_v, 3_v } ); //2_f same as 1_f with the opposite orientation
+    t.push_back( { 1_v, 2_v, 0_v } ); //3_f same as 0_f
+    t.push_back( { 2_v, 0_v, 1_v } ); //4_f same as 0_f
+    t.push_back( { 3_v, 4_v, 5_v } ); //5_f
+
+    const auto reps = computeTrianglesRepetitions( t );
+    ASSERT_EQ( reps.size(), 4 );
+    EXPECT_EQ( reps[0], 0 );
+    EXPECT_EQ( reps[1], 1 ); // {3,4,5}
+    EXPECT_EQ( reps[2], 1 ); // {0,2,3}
+    EXPECT_EQ( reps[3], 1 ); // {0,1,2}
+}
+
 } //namespace MeshBuilder
 
 } //namespace MR

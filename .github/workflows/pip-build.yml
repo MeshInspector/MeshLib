@@ -106,7 +106,7 @@ jobs:
         id: get-latest-tag
 
       - id: build-matrix
-        uses: ./.github/actions/matrix-builder
+        uses: ./scripts/actions/matrix-builder
         with:
           matrix: |
             platform:
@@ -135,7 +135,7 @@ jobs:
                 - platform: aarch64
 
       - id: test-matrix
-        uses: ./.github/actions/matrix-builder
+        uses: ./scripts/actions/matrix-builder
         with:
           matrix: |
             platform:

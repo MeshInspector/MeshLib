@@ -139,8 +139,8 @@ TEST( MRMesh, duplicateVertexOppositeOrientedTri )
     EXPECT_EQ( dups.size(), 0 );
 }
 
-// a vertex with three chains around it, where the walk enters the closed ring via shared rim vertex #3,
-// so the ring is extracted mid-walk as the first found chain, and both open chains get duplicates
+// a hub vertex #0 with two open chains (1-2-3, 6-7-8) and a closed ring (3-4-5) sharing rim vertex #3;
+// duplicating the shared rim vertex #3 once resolves #0, so the hub itself is never split
 TEST( MRMesh, duplicateVertexWithThreeChains )
 {
     Triangulation t;
@@ -156,11 +156,11 @@ TEST( MRMesh, duplicateVertexWithThreeChains )
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
     EXPECT_EQ( duplicatedVerticesCnt, 1 );
     ASSERT_EQ( dups.size(), 1 );
-    // both duplicates must originate from the true central vertex #0
+    // the shared rim vertex #3 is duplicated, not the hub #0
     EXPECT_EQ( dups[0].srcVert, 3_v );
     EXPECT_EQ( dups[0].dupVert, 9_v );
 
-    // the closed ring was found first and keeps #0, each open chain got its own duplicate
+    // every triangle keeps the hub vertex #0
     EXPECT_EQ( t[0_f][0], 0_v );
     EXPECT_EQ( t[1_f][0], 0_v );
     EXPECT_EQ( t[2_f][0], 0_v );

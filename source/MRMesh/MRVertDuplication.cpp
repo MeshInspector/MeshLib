@@ -347,15 +347,6 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
     }
 }
 
-/// returns true if the vertex with such neighborhood does not require duplication:
-/// a single chain of triangles (or no triangles at all), or two open chains, which MeshBuilder has no issue with
-static bool noDuplicationNeeded( const VertInfo & vertInfo )
-{
-    return !vertInfo.hasRepeatedVerts() &&
-        ( vertInfo.numOpenChains() + vertInfo.numClosedChains() <= 1
-        || ( vertInfo.numOpenChains() == 2 && vertInfo.numClosedChains() == 0 ) );
-}
-
 // for all vertices get over all incident vertices to find connected sequences
 size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
 {
@@ -373,10 +364,13 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     all.computeVertSpans();
     all.computeVertInfos( t );
 
-    std::vector<VertId> voi;
+    // collect the vertices requiring duplication in the original triangulation;
+    // a vertex not requiring duplication cannot start requiring it after duplication of its neighbors,
+    // so this set never has to grow later
+    std::vector<VertId> vertsToProcess;
     for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
-        if ( !noDuplicationNeeded( all.vertInfos[v] ) )
-            voi.push_back( v );
+        if ( all.vertInfos[v].duplicationNeeded() )
+            vertsToProcess.push_back( v );
 
     auto sortPred = [&]( VertId a, VertId b )
     {
@@ -389,24 +383,20 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         // process neighbourhoods with more chains (a) first
         return std::make_pair( ai.numOpenChains() + ai.numClosedChains(), a ) > std::make_pair( bi.numOpenChains() + bi.numClosedChains(), b );
     };
-    tbb::parallel_sort( voi.begin(), voi.end(), sortPred );
+    tbb::parallel_sort( vertsToProcess.begin(), vertsToProcess.end(), sortPred );
 
     VertNeighbourhoodInspector inspector;
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
-    for ( auto v : voi )
+    for ( auto v : vertsToProcess )
     {
-        // skip a vertex based on the neighborhood in the original triangulation;
-        // a vertex not requiring duplication cannot start requiring it after duplication of its neighbors
-        if ( noDuplicationNeeded( all.vertInfos[v] ) )
-            continue;
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
         // duplication of one vertex can resolve non-manifoldness in its neighbor vertex,
         // so after the first duplication recheck the neighborhood in the current triangulation
-        if ( duplicatedVerticesCnt > 0 && noDuplicationNeeded( inspector.run( t, all.recs.data() + posBegin, all.recs.data() + posEnd ) ) )
+        if ( duplicatedVerticesCnt > 0 && !inspector.run( t, all.recs.data() + posBegin, all.recs.data() + posEnd ).duplicationNeeded() )
             continue;
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
 

@@ -42,6 +42,15 @@ struct VertInfo
     /// the number of closed chains (rings) of connected triangles around the vertex; 0 if hasRepeatedVerts()
     [[nodiscard]] std::uint32_t numClosedChains() const { return hasRepeatedVerts() ? 0 : data_ >> 17; }
 
+    /// true if the triangles around the vertex do not form a configuration MeshBuilder accepts as is
+    /// (a single chain or ring, no triangles at all, or two open chains), so the vertex must be duplicated
+    [[nodiscard]] bool duplicationNeeded() const
+    {
+        return hasRepeatedVerts() ||
+            !( numOpenChains() + numClosedChains() <= 1
+            || ( numOpenChains() == 2 && numClosedChains() == 0 ) );
+    }
+
     /// increments numRepeatedVerts saturating at its maximum; the first call zeros the chain counters forever
     void incRepeatedVerts()
     {

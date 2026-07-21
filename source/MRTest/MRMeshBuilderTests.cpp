@@ -110,6 +110,73 @@ TEST( MRMesh, duplicateClosedPlusOpenChainVertex )
     }
 }
 
+// a closed ring around #0 plus one opposite-orientation triangle sharing the ring's rim pair (2,3):
+// the duplicated chain must take its own triangle 4_f, not the ring's 1_f with the same rim vertices
+TEST( MRMesh, duplicateVertexOppositeOrientedTri )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f closed ring 1-2-3-4-1
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 0_v, 3_v, 4_v } ); //2_f
+    t.push_back( { 0_v, 4_v, 1_v } ); //3_f
+    t.push_back( { 0_v, 3_v, 2_v } ); //4_f reversed rim pair of 1_f
+
+    std::vector<VertDuplication> dups;
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    EXPECT_EQ( duplicatedVerticesCnt, 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].dupVert, 5_v );
+
+    // the ring is intact and only the lone triangle got the duplicate
+    for ( FaceId i{ 0 }; i < 4; ++i )
+        EXPECT_EQ( t[i][0], 0_v );
+    EXPECT_EQ( t[4_f][0], 5_v );
+
+    // the result is manifold
+    dups.clear();
+    EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 0 );
+    EXPECT_EQ( dups.size(), 0 );
+}
+
+// a vertex with three chains around it, where the walk enters the closed ring via shared rim vertex #3,
+// so the ring is extracted mid-walk as the first found chain, and both open chains get duplicates
+TEST( MRMesh, duplicateVertexWithThreeChains )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f open chain 1-2-3
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 0_v, 3_v, 4_v } ); //2_f closed ring 3-4-5-3
+    t.push_back( { 0_v, 4_v, 5_v } ); //3_f
+    t.push_back( { 0_v, 5_v, 3_v } ); //4_f
+    t.push_back( { 0_v, 6_v, 7_v } ); //5_f open chain 6-7-8
+    t.push_back( { 0_v, 7_v, 8_v } ); //6_f
+
+    std::vector<VertDuplication> dups;
+    size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
+    EXPECT_EQ( duplicatedVerticesCnt, 2 );
+    ASSERT_EQ( dups.size(), 2 );
+    // both duplicates must originate from the true central vertex #0
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].dupVert, 9_v );
+    EXPECT_EQ( dups[1].srcVert, 0_v );
+    EXPECT_EQ( dups[1].dupVert, 10_v );
+
+    // the closed ring was found first and keeps #0, each open chain got its own duplicate
+    EXPECT_EQ( t[0_f][0], 9_v );
+    EXPECT_EQ( t[1_f][0], 9_v );
+    EXPECT_EQ( t[2_f][0], 0_v );
+    EXPECT_EQ( t[3_f][0], 0_v );
+    EXPECT_EQ( t[4_f][0], 0_v );
+    EXPECT_EQ( t[5_f][0], 10_v );
+    EXPECT_EQ( t[6_f][0], 10_v );
+
+    // the result is manifold
+    dups.clear();
+    EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 0 );
+    EXPECT_EQ( dups.size(), 0 );
+}
+
 // a vertex with two closed rings of triangles around it, from a real mesh
 TEST( MRMesh, inspectVertNeighbourhood )
 {
@@ -131,8 +198,8 @@ TEST( MRMesh, inspectVertNeighbourhood )
     // 6-triangle closed ring (991,990,1020,1019,460079,1013) and 3-triangle closed ring (988,1911,989)
     const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
     EXPECT_FALSE( info.hasRepeatedVerts() );
-    EXPECT_EQ( info.numOpenChains(), 0 );
-    EXPECT_EQ( info.numClosedChains(), 2 );
+    EXPECT_EQ( info.numOpenChains(), 0u );
+    EXPECT_EQ( info.numClosedChains(), 2u );
 
     // the vertex is non-manifold, so one of its rings must get a duplicate
     std::vector<VertDuplication> dups;
@@ -157,7 +224,7 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
         EXPECT_FALSE( info.hasRepeatedVerts() );
         EXPECT_EQ( info.numOpenChains(), VertInfo::maxNumOpenChains );
-        EXPECT_EQ( info.numClosedChains(), 0 );
+        EXPECT_EQ( info.numClosedChains(), 0u );
     }
 
     // more closed rings around one vertex than numClosedChains can store
@@ -175,7 +242,7 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
         }
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
         EXPECT_FALSE( info.hasRepeatedVerts() );
-        EXPECT_EQ( info.numOpenChains(), 0 );
+        EXPECT_EQ( info.numOpenChains(), 0u );
         EXPECT_EQ( info.numClosedChains(), VertInfo::maxNumClosedChains );
     }
 
@@ -192,8 +259,8 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
         const auto info = inspectVertNeighbourhood( t, recs.data(), recs.data() + recs.size() );
         EXPECT_TRUE( info.hasRepeatedVerts() );
         EXPECT_EQ( info.numRepeatedVerts(), 2u * ( n - 1 ) );
-        EXPECT_EQ( info.numOpenChains(), 0 );
-        EXPECT_EQ( info.numClosedChains(), 0 );
+        EXPECT_EQ( info.numOpenChains(), 0u );
+        EXPECT_EQ( info.numClosedChains(), 0u );
     }
 }
 
@@ -270,6 +337,25 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 2 7 6\n"
         "f 7 5 3\n", 10, 2
     );
+}
+
+TEST( MRMesh, computeTrianglesRepetitions )
+{
+    Triangulation t;
+    EXPECT_TRUE( computeTrianglesRepetitions( t ).empty() );
+
+    t.push_back( { 0_v, 1_v, 2_v } ); //0_f
+    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    t.push_back( { 2_v, 0_v, 3_v } ); //2_f same as 1_f with the opposite orientation
+    t.push_back( { 1_v, 2_v, 0_v } ); //3_f same as 0_f
+    t.push_back( { 2_v, 0_v, 1_v } ); //4_f same as 0_f
+    t.push_back( { 3_v, 4_v, 5_v } ); //5_f
+
+    const auto reps = computeTrianglesRepetitions( t );
+    ASSERT_EQ( reps.size(), 3 );
+    EXPECT_EQ( reps[0], 1 ); // {3,4,5}
+    EXPECT_EQ( reps[1], 1 ); // {0,2,3}
+    EXPECT_EQ( reps[2], 1 ); // {0,1,2}
 }
 
 } //namespace MeshBuilder

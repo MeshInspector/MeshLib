@@ -14,6 +14,7 @@
 #include "MRIOParsing.h"
 #include "MRMeshDelone.h"
 #include "MRPly.h"
+#include "MRTriMesh.h"
 #include "MRParallelFor.h"
 #include "MRImageLoad.h"
 #include "MRTelemetry.h"
@@ -79,19 +80,262 @@ Expected<Mesh> loadBinaryStl( const std::filesystem::path& file, const MeshLoadS
     return MeshLoad::fromBinaryStl( file, settings );
 }
 
+/// builds Mesh from just loaded TriMesh, resolving non-manifold vertices by their duplication
+static Expected<Mesh> stlTriMeshToMesh( TriMesh && triMesh, const MeshLoadSettings& settings )
+{
+    std::vector<MeshBuilder::VertDuplication> dups;
+    std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
+    if ( settings.duplicatedVertexCount )
+        dupsPtr = &dups;
+    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( triMesh.points ), triMesh.tris, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
+    if ( settings.duplicatedVertexCount )
+        *settings.duplicatedVertexCount = int( dups.size() );
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
+    return res;
+}
+
 Expected<Mesh> loadBinaryStl( std::istream& in, const MeshLoadSettings& settings )
 {
-    return MeshLoad::fromBinaryStl( in, settings );
+    auto subSettings = settings;
+    // 0.5 because fromTrianglesDuplicatingNonManifoldVertices takes at least half of time
+    subSettings.callback = subprogress( settings.callback, 0.0f, 0.5f );
+    auto triMesh = loadBinaryStlAsTriMesh( in, subSettings );
+    if ( !triMesh )
+        return unexpected( std::move( triMesh.error() ) );
+    return stlTriMeshToMesh( std::move( *triMesh ), settings );
 }
 
 Expected<Mesh> loadASCIIStl( const std::filesystem::path& file, const MeshLoadSettings& settings )
 {
-    return MeshLoad::fromASCIIStl( file, settings );
+    auto subSettings = settings;
+    subSettings.callback = subprogress( settings.callback, 0.0f, 0.9f );
+    auto triMesh = loadASCIIStlAsTriMesh( file, subSettings );
+    if ( !triMesh )
+        return unexpected( std::move( triMesh.error() ) );
+    return stlTriMeshToMesh( std::move( *triMesh ), settings );
 }
 
 Expected<Mesh> loadASCIIStl( std::istream& in, const MeshLoadSettings& settings )
 {
-    return MeshLoad::fromASCIIStl( in, settings );
+    auto subSettings = settings;
+    subSettings.callback = subprogress( settings.callback, 0.0f, 0.9f );
+    auto triMesh = loadASCIIStlAsTriMesh( in, subSettings );
+    if ( !triMesh )
+        return unexpected( std::move( triMesh.error() ) );
+    return stlTriMeshToMesh( std::move( *triMesh ), settings );
+}
+
+Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings )
+{
+    MR_TIMER;
+
+    char header[81];
+    in.read( header, 80 );
+    header[80] = '\0';
+
+    std::uint32_t numTris;
+    in.read( (char*)&numTris, 4 );
+    if ( !in )
+        return unexpected( std::string( "Error reading the number of triangles from STL-file" ) );
+
+    const auto streamSize = getStreamSize( in );
+    if ( streamSize < 50 * std::istream::pos_type( numTris ) )
+        return unexpected( std::string( "Binary STL-file is too short" ) );
+
+    MeshBuilder::VertexIdentifier vi;
+    vi.reserve( numTris );
+
+    using Pos3f = std::array<char, 12>;
+    struct StlTriangle
+    {
+        Pos3f normal;
+        Pos3f coords[3];
+        char attrs[2];
+        // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast them in Vector3f on access
+        Vector3f vertex( int i ) const
+        {
+        #if __cpp_lib_bit_cast >= 201806L
+            return std::bit_cast<Vector3f>( coords[i] );
+        #else
+            Vector3f v;
+            std::memcpy( &v, &coords[i], sizeof( coords[i] ) );
+            return v;
+        #endif
+        }
+    };
+    static_assert( sizeof( StlTriangle ) == 50 );
+    static_assert( alignof( StlTriangle ) <= 2 );
+
+    const auto itemsInBuffer = std::min( numTris, 32768u );
+    std::vector<StlTriangle> buffer( itemsInBuffer ), nextBuffer( itemsInBuffer );
+    std::vector<Triangle3f> chunk( itemsInBuffer );
+
+    // first chunk
+    in.read( (char*)buffer.data(), sizeof(StlTriangle) * itemsInBuffer );
+    if ( !in  )
+        return unexpected( std::string( "Binary STL read error" ) );
+
+    size_t decodedBytes = 0;
+    const float rStreamSize = sizeof( StlTriangle ) / float( streamSize );
+
+    while ( !buffer.empty() )
+    {
+        // decode previously read buffer in a worked thread
+        tbb::task_group taskGroup;
+        taskGroup.run( [&chunk, &vi, &buffer] ()
+        {
+            chunk.resize( buffer.size() );
+            for ( int i = 0; i < buffer.size(); ++i )
+                for ( int j = 0; j < 3; ++j )
+                    chunk[i][j] = buffer[i].vertex( j );
+            vi.addTriangles( chunk );
+        } );
+
+        if ( vi.numTris() + buffer.size() < numTris )
+        {
+            const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
+            nextBuffer.resize( itemsInNextChuck );
+            const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
+            // read from stream in the current thread to be compatible with PythonIstreamBuf
+            in.read( ( char* )nextBuffer.data(), size );
+        }
+        else
+            nextBuffer.clear();
+
+        taskGroup.wait();
+        decodedBytes += buffer.size();
+
+        if ( !reportProgress( settings.callback , decodedBytes * rStreamSize ) )
+            return unexpectedOperationCanceled();
+        if ( !in )
+            return unexpected( std::string( "Binary STL read error" ) );
+        buffer.swap( nextBuffer );
+    }
+
+    TriMesh res;
+    res.tris = vi.takeTriangulation();
+    res.points = vi.takePoints();
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    if ( settings.telemetrySignal )
+        telemetryStlHead( "STL head ", header );
+
+    return res;
+}
+
+Expected<TriMesh> loadASCIIStlAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings )
+{
+    std::ifstream in( file, std::ifstream::binary );
+    if ( !in )
+        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
+
+    return addFileNameInError( loadASCIIStlAsTriMesh( in, settings ), file );
+}
+
+Expected<TriMesh> loadASCIIStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings )
+{
+    MR_TIMER;
+
+    auto data = readCharBuffer( in );
+    if ( !data.has_value() )
+        return unexpected( data.error() );
+
+    std::string_view dataView( data->data(), data->size() );
+
+    if ( hasBom( dataView ) )
+        dataView = dataView.substr( 3 );
+
+    const auto newlines = splitByLines( dataView.data(), dataView.size() );
+
+    if ( !reportProgress( settings.callback, 0.15f ) )
+        return unexpectedOperationCanceled();
+
+    if ( newlines.size() < 2 )
+        return unexpected( std::string( "Ascii STL is too short" ) );
+
+    auto headerView = dataView.substr( newlines[0], newlines[1] );
+    if ( !headerView.starts_with( "solid" ) )
+        return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
+
+    BitSet faceRepresentativeLines( newlines.size() - 1 );
+    auto keepGoing = BitSetParallelForAll( faceRepresentativeLines, [&] ( size_t lineI )
+    {
+        auto startLine = newlines[lineI];
+        auto size = newlines[lineI + 1] - newlines[lineI];
+        if ( trimLeft( dataView.substr( startLine, size ) ).starts_with( "outer" ) )
+            faceRepresentativeLines.set( lineI );
+    }, subprogress( settings.callback, 0.15f, 0.3f ) );
+
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+
+    auto numTris = faceRepresentativeLines.count();
+    const auto itemsInBuffer = std::min( numTris, size_t( 32768 ) );
+    const int numChunks = itemsInBuffer > 0 ? ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer ) : 0;
+    std::vector<Triangle3f> chunk( itemsInBuffer );
+    std::vector<Triangle3f> chunk2( itemsInBuffer );
+
+    auto lastFaceLine = faceRepresentativeLines.find_last();
+
+    MeshBuilder::VertexIdentifier vi;
+    vi.reserve( numTris );
+    tbb::task_group taskGroup;
+
+    int i = 0;
+    int processedChunks = 0;
+    auto sb = subprogress( settings.callback, 0.3f, 0.9f );
+    for ( auto fLine : faceRepresentativeLines )
+    {
+        if ( i < itemsInBuffer )
+        {
+            int triI = 0;
+            Triangle3f tri;
+            for ( auto lineI = fLine + 1; lineI + 1 < newlines.size(); ++lineI )
+            {
+                if ( faceRepresentativeLines.test( lineI ) )
+                    break;
+                auto lineView = trimLeft( dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] ) );
+                if ( lineView.starts_with( "endloop" ) )
+                    break;
+                if ( !lineView.starts_with( "vertex" ) )
+                    continue;
+                if ( triI == 3 )
+                    return unexpected( "Polygonal STL is not supported, line: " + std::to_string( newlines[lineI] ) );
+                auto parseRes = parseTextCoordinate( lineView.substr( 7 ), tri[triI++] );
+                if ( !parseRes.has_value() )
+                    return unexpected( parseRes.error() + " line: " + std::to_string( newlines[lineI] ) );
+            }
+            if ( triI != 3 )
+                return unexpected( "Too few vertices for triangle, line: " + std::to_string( newlines[fLine] ) );
+            chunk[i++] = std::move( tri );
+        }
+        if ( i == itemsInBuffer || fLine == lastFaceLine )
+        {
+            taskGroup.wait();
+            if ( !reportProgress( sb, float( ++processedChunks ) / float( numChunks ) ) )
+                return unexpectedOperationCanceled();
+            std::swap( chunk, chunk2 );
+            chunk2.resize( i );
+            i = 0;
+            if ( fLine != lastFaceLine ) // add previous chunk in indexer in parallel
+                taskGroup.run( [&chunk2, &vi] () { vi.addTriangles( chunk2 ); } );
+            else
+                vi.addTriangles( chunk2 );
+        }
+    }
+
+    TriMesh res;
+    res.tris = vi.takeTriangulation();
+    res.points = vi.takePoints();
+    if ( !reportProgress( settings.callback, 1.0f ) )
+        return unexpectedOperationCanceled();
+
+    if ( settings.telemetrySignal )
+        telemetryStlHead( "STL ASCII ", std::string( headerView.substr( 6 ) ) ); // "solid " - 6 chars
+
+    return res;
 }
 
 Expected<Mesh> loadPly( const std::filesystem::path& file, const MeshLoadSettings& settings )
@@ -399,237 +643,17 @@ Expected<Mesh> fromBinaryStl( const std::filesystem::path & file, const MeshLoad
 
 Expected<Mesh> fromBinaryStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER;
-
-    char header[81];
-    in.read( header, 80 );
-    header[80] = '\0';
-
-    std::uint32_t numTris;
-    in.read( (char*)&numTris, 4 );
-    if ( !in )
-        return unexpected( std::string( "Error reading the number of triangles from STL-file" ) );
-
-    const auto streamSize = getStreamSize( in );
-    if ( streamSize < 50 * std::istream::pos_type( numTris ) )
-        return unexpected( std::string( "Binary STL-file is too short" ) );
-
-    MeshBuilder::VertexIdentifier vi;
-    vi.reserve( numTris );
-
-    using Pos3f = std::array<char, 12>;
-    struct StlTriangle
-    {
-        Pos3f normal;
-        Pos3f coords[3];
-        char attrs[2];
-        // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast them in Vector3f on access
-        Vector3f vertex( int i ) const
-        {
-        #if __cpp_lib_bit_cast >= 201806L
-            return std::bit_cast<Vector3f>( coords[i] );
-        #else
-            Vector3f v;
-            std::memcpy( &v, &coords[i], sizeof( coords[i] ) );
-            return v;
-        #endif
-        }
-    };
-    static_assert( sizeof( StlTriangle ) == 50 );
-    static_assert( alignof( StlTriangle ) <= 2 );
-
-    const auto itemsInBuffer = std::min( numTris, 32768u );
-    std::vector<StlTriangle> buffer( itemsInBuffer ), nextBuffer( itemsInBuffer );
-    std::vector<Triangle3f> chunk( itemsInBuffer );
-
-    // first chunk
-    in.read( (char*)buffer.data(), sizeof(StlTriangle) * itemsInBuffer );
-    if ( !in  )
-        return unexpected( std::string( "Binary STL read error" ) );
-
-    size_t decodedBytes = 0;
-    // 0.5 because fromTrianglesDuplicatingNonManifoldVertices takes at least half of time
-    const float rStreamSize = 0.5f * sizeof( StlTriangle ) / float( streamSize );
-
-    while ( !buffer.empty() )
-    {
-        // decode previously read buffer in a worked thread
-        tbb::task_group taskGroup;
-        taskGroup.run( [&chunk, &vi, &buffer] ()
-        {
-            chunk.resize( buffer.size() );
-            for ( int i = 0; i < buffer.size(); ++i )
-                for ( int j = 0; j < 3; ++j )
-                    chunk[i][j] = buffer[i].vertex( j );
-            vi.addTriangles( chunk );
-        } );
-
-        if ( vi.numTris() + buffer.size() < numTris )
-        {
-            const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
-            nextBuffer.resize( itemsInNextChuck );
-            const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
-            // read from stream in the current thread to be compatible with PythonIstreamBuf
-            in.read( ( char* )nextBuffer.data(), size );
-        }
-        else
-            nextBuffer.clear();
-
-        taskGroup.wait();
-        decodedBytes += buffer.size();
-
-        if ( !reportProgress( settings.callback , decodedBytes * rStreamSize ) )
-            return unexpectedOperationCanceled();
-        if ( !in )
-            return unexpected( std::string( "Binary STL read error" ) );
-        buffer.swap( nextBuffer );
-    }
-
-//     #pragma warning(disable: 4244)
-//     std::cout <<
-//         "tris = " << numTris << "\n"
-//         "verts = " << hmap.size() << "\n"
-//         "bucket_count = " << hmap.bucket_count() << "\n"
-//         "subcnt = " << hmap.subcnt() << "\n"
-//         "load_factor = " << hmap.load_factor() << "\n"
-//         "max_load_factor = " << hmap.max_load_factor() << "\n";
-
-    auto t = vi.takeTriangulation();
-    std::vector<MeshBuilder::VertDuplication> dups;
-    std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
-    if ( settings.duplicatedVertexCount )
-        dupsPtr = &dups;
-    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
-    if ( settings.duplicatedVertexCount )
-        *settings.duplicatedVertexCount = int( dups.size() );
-    if ( !reportProgress( settings.callback , 1.0f ) )
-        return unexpectedOperationCanceled();
-
-    if ( settings.telemetrySignal )
-        telemetryStlHead( "STL head ", header );
-
-    return res;
+    return loadBinaryStl( in, settings );
 }
 
 Expected<Mesh> fromASCIIStl( const std::filesystem::path& file, const MeshLoadSettings& settings /*= {}*/ )
 {
-    std::ifstream in( file, std::ifstream::binary );
-    if ( !in )
-        return unexpected( std::string( "Cannot open file for reading " ) + utf8string( file ) );
-
-    return addFileNameInError( fromASCIIStl( in, settings ), file );
+    return loadASCIIStl( file, settings );
 }
 
 Expected<Mesh> fromASCIIStl( std::istream& in, const MeshLoadSettings& settings /*= {}*/ )
 {
-    MR_TIMER;
-
-    auto data = readCharBuffer( in );
-    if ( !data.has_value() )
-        return unexpected( data.error() );
-
-    std::string_view dataView( data->data(), data->size() );
-
-    if ( hasBom( dataView ) )
-        dataView = dataView.substr( 3 );
-
-    const auto newlines = splitByLines( dataView.data(), dataView.size() );
-
-    if ( !reportProgress( settings.callback, 0.15f ) )
-        return unexpectedOperationCanceled();
-
-    if ( newlines.size() < 2 )
-        return unexpected( std::string( "Ascii STL is too short" ) );
-
-    auto headerView = dataView.substr( newlines[0], newlines[1] );
-    if ( !headerView.starts_with( "solid" ) )
-        return unexpected( std::string( "Failed to find 'solid' prefix in ascii STL" ) );
-
-    BitSet faceRepresentativeLines( newlines.size() - 1 );
-    auto keepGoing = BitSetParallelForAll( faceRepresentativeLines, [&] ( size_t lineI )
-    {
-        auto startLine = newlines[lineI];
-        auto size = newlines[lineI + 1] - newlines[lineI];
-        if ( trimLeft( dataView.substr( startLine, size ) ).starts_with( "outer" ) )
-            faceRepresentativeLines.set( lineI );
-    }, subprogress( settings.callback, 0.15f, 0.3f ) );
-
-    if ( !keepGoing )
-        return unexpectedOperationCanceled();
-
-    auto numTris = faceRepresentativeLines.count();
-    const auto itemsInBuffer = std::min( numTris, size_t( 32768 ) );
-    const int numChunks = itemsInBuffer > 0 ? ( int( numTris ) + int( itemsInBuffer ) - 1 ) / int( itemsInBuffer ) : 0;
-    std::vector<Triangle3f> chunk( itemsInBuffer );
-    std::vector<Triangle3f> chunk2( itemsInBuffer );
-
-    auto lastFaceLine = faceRepresentativeLines.find_last();
-
-    MeshBuilder::VertexIdentifier vi;
-    vi.reserve( numTris );
-    tbb::task_group taskGroup;
-
-    int i = 0;
-    int processedChunks = 0;
-    auto sb = subprogress( settings.callback, 0.3f, 0.9f );
-    for ( auto fLine : faceRepresentativeLines )
-    {
-        if ( i < itemsInBuffer )
-        {
-            int triI = 0;
-            Triangle3f tri;
-            for ( auto lineI = fLine + 1; lineI + 1 < newlines.size(); ++lineI )
-            {
-                if ( faceRepresentativeLines.test( lineI ) )
-                    break;
-                auto lineView = trimLeft( dataView.substr( newlines[lineI], newlines[lineI + 1] - newlines[lineI] ) );
-                if ( lineView.starts_with( "endloop" ) )
-                    break;
-                if ( !lineView.starts_with( "vertex" ) )
-                    continue;
-                if ( triI == 3 )
-                    return unexpected( "Polygonal STL is not supported, line: " + std::to_string( newlines[lineI] ) );
-                auto parseRes = parseTextCoordinate( lineView.substr( 7 ), tri[triI++] );
-                if ( !parseRes.has_value() )
-                    return unexpected( parseRes.error() + " line: " + std::to_string( newlines[lineI] ) );
-            }
-            if ( triI != 3 )
-                unexpected( "Too few vertices for triangle, line: " + std::to_string( newlines[fLine] ) );
-            chunk[i++] = std::move( tri );
-        }
-        if ( i == itemsInBuffer || fLine == lastFaceLine )
-        {
-            taskGroup.wait();
-            if ( !reportProgress( sb, float( ++processedChunks ) / float( numChunks ) ) )
-                return unexpectedOperationCanceled();
-            std::swap( chunk, chunk2 );
-            chunk2.resize( i );
-            i = 0;
-            if ( fLine != lastFaceLine ) // add previous chunk in indexer in parallel
-                taskGroup.run( [&chunk2, &vi] () { vi.addTriangles( chunk2 ); } );
-            else
-                vi.addTriangles( chunk2 );
-        }
-    }
-
-    if ( !reportProgress( sb, 1.0f ) )
-        return unexpectedOperationCanceled();
-
-    auto t = vi.takeTriangulation();
-    std::vector<MeshBuilder::VertDuplication> dups;
-    std::vector<MeshBuilder::VertDuplication>* dupsPtr = nullptr;
-    if ( settings.duplicatedVertexCount )
-        dupsPtr = &dups;
-    const auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( vi.takePoints(), t, dupsPtr, { .skippedFaceCount = settings.skippedFaceCount } );
-    if ( settings.duplicatedVertexCount )
-        *settings.duplicatedVertexCount = int( dups.size() );
-    if ( !reportProgress( settings.callback, 1.0f ) )
-        return unexpectedOperationCanceled();
-
-    if ( settings.telemetrySignal )
-        telemetryStlHead( "STL ASCII ", std::string( headerView.substr( 6 ) ) ); // "solid " - 6 chars
-
-    return res;
+    return loadASCIIStl( in, settings );
 }
 
 static Expected<Mesh> fromPly( std::istream& in, const MeshLoadSettings& settings, const std::filesystem::path& dir )

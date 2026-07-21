@@ -264,10 +264,10 @@ test('empty matrix + rules produces only what rules add', () => {
   );
 });
 
-test('error: matrix must be a map', () => {
-  assert.throws(() => buildMatrix([], []), /must be a map/);
+test('error: matrix must be a map or a list of entries', () => {
   assert.throws(() => buildMatrix(null, []), /must be a map/);
   assert.throws(() => buildMatrix('foo', []), /must be a map/);
+  assert.throws(() => buildMatrix(42, []), /must be a map/);
 });
 
 test('error: rules must be a list', () => {
@@ -469,4 +469,116 @@ for (const { suffix, dx, da } of COMBOS) {
   test(`parity: pip-build test matrix (disable_x64=${dx}, disable_arm64=${da})`, () => {
     deepEqual(pipTestMatrix(dx, da), loadFixture(`test-${suffix}.json`));
   });
+}
+
+// ---------------------------------------------------------------------------
+// List-form base matrix: include-style entries taken verbatim, axis keys =
+// union of the entries' keys.
+
+test('list base: entries pass through verbatim with no rules', () => {
+  deepEqual(
+    buildMatrix([{ a: 1, b: 'x' }, { a: 2 }], []),
+    [{ a: 1, b: 'x' }, { a: 2 }],
+  );
+});
+
+test('list base: empty list yields an empty matrix', () => {
+  deepEqual(buildMatrix([], []), []);
+});
+
+test('list base: extend matches on entry keys', () => {
+  deepEqual(
+    buildMatrix(
+      [{ distro: 'ubuntu22', arch: 'x64' }, { distro: 'ubuntu22', arch: 'arm64' }],
+      [{ extend: { arch: 'arm64', runner: 'ubuntu-24.04-arm' } }],
+    ),
+    [
+      { distro: 'ubuntu22', arch: 'x64' },
+      { distro: 'ubuntu22', arch: 'arm64', runner: 'ubuntu-24.04-arm' },
+    ],
+  );
+});
+
+test('list base: axis keys are the union of entry keys', () => {
+  // `runner` appears in only one base entry but is still an axis key, so an
+  // include matching on it extends that entry instead of appending a new one.
+  deepEqual(
+    buildMatrix(
+      [{ a: 1 }, { a: 2, runner: 'r1' }],
+      [{ include: { runner: 'r1', tag: 't' } }],
+    ),
+    [{ a: 1 }, { a: 2, runner: 'r1', tag: 't' }],
+  );
+});
+
+test('list base: include with unmatched axis criteria appends', () => {
+  deepEqual(
+    buildMatrix(
+      [{ distro: 'ubuntu22', arch: 'x64' }],
+      [{ include: { distro: 'ubuntu24', arch: 'x64' } }],
+    ),
+    [{ distro: 'ubuntu22', arch: 'x64' }, { distro: 'ubuntu24', arch: 'x64' }],
+  );
+});
+
+test('list base: exclude drops matching entries', () => {
+  deepEqual(
+    buildMatrix(
+      [{ distro: 'ubuntu22', arch: 'x64' }, { distro: 'emscripten', arch: 'arm64' }],
+      [{ exclude: { distro: 'emscripten' } }],
+    ),
+    [{ distro: 'ubuntu22', arch: 'x64' }],
+  );
+});
+
+test('list base: input entries are not mutated', () => {
+  const base = [{ a: 1 }];
+  buildMatrix(base, [{ extend: { b: 2 } }]);
+  assert.deepStrictEqual(base, [{ a: 1 }]);
+});
+
+test('error: list base entry must be an object', () => {
+  assert.throws(() => buildMatrix([{ a: 1 }, 'nope'], []), /entry #1 must be an object/);
+  assert.throws(() => buildMatrix([[1]], []), /entry #0 must be an object/);
+});
+
+// ---------------------------------------------------------------------------
+// Parity with the jq pipeline these rules replaced in prepare-images.yml
+// (compute-image-matrices). The docker-linux-<dx64><darm64><demscr>.json
+// fixtures are the captured outputs of the original jq filter over
+// fixtures/docker-images-linux.json (a snapshot of
+// .github/workflows/matrix/docker-images-linux.json). The rules below must
+// stay in sync with the matrix-builder step in prepare-images.yml.
+
+const DOCKER_IMAGES_LINUX = loadFixture('docker-images-linux.json');
+
+function dockerLinuxMatrix(dx64, darm64, demscr) {
+  return buildMatrix(DOCKER_IMAGES_LINUX, [
+    {
+      if: dx64,
+      exclude: [
+        { distro: 'ubuntu22', arch: 'x64' },
+        { distro: 'ubuntu24', arch: 'x64' },
+      ],
+    },
+    {
+      if: darm64,
+      exclude: [
+        { distro: 'ubuntu22', arch: 'arm64' },
+        { distro: 'ubuntu24', arch: 'arm64' },
+      ],
+    },
+    { if: demscr, exclude: { distro: 'emscripten' } },
+  ]);
+}
+
+for (const dx64 of [false, true]) {
+  for (const darm64 of [false, true]) {
+    for (const demscr of [false, true]) {
+      const suffix = `${+dx64}${+darm64}${+demscr}`;
+      test(`parity: prepare-images linux matrix (${suffix})`, () => {
+        deepEqual(dockerLinuxMatrix(dx64, darm64, demscr), loadFixture(`docker-linux-${suffix}.json`));
+      });
+    }
+  }
 }

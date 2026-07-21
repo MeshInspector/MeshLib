@@ -55,6 +55,10 @@ EMSCRIPTEN_BINDINGS( meshlib_bitset )
         .function( "count", &BitSet::count )
         .function( "empty", &BitSet::empty )
         .function( "test", &BitSet::test )
+        .function( "set", +[]( BitSet& bs, int n, bool val ) { bs.set( BitSet::IndexType( n ), val ); } )
+        .function( "resize", +[]( BitSet& bs, int numBits, bool fillValue ) { bs.resize( BitSet::size_type( numBits ), fillValue ); } )
+        .function( "find_first", +[]( const BitSet& bs ) { return (int)bs.find_first(); } )
+        .function( "find_last", +[]( const BitSet& bs ) { return (int)bs.find_last(); } )
         .function( "toIndices", &bitSetToIndices )
         .class_function( "fromIndices", &bitSetFromIndices<BitSet> );
 

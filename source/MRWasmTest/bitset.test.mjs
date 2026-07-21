@@ -33,3 +33,22 @@ import { ml, cube, meshFromGeometry } from './helpers.mjs';
   assert.deepEqual( Array.from( fbs.toIndices() ), [ 1, 3, 5 ], 'round-trips the indices' );
   fbs.delete();
 }
+
+// set / resize / find_first / find_last
+{
+  const bs = new ml.VertBitSet();
+  bs.resize( 10, false );
+  assert.equal( bs.size(), 10, 'resize sets the size' );
+  assert.equal( bs.count(), 0, 'resize(…, false) leaves every bit clear' );
+
+  bs.set( 3, true );
+  bs.set( 7, true );
+  assert.equal( bs.count(), 2, 'two bits set' );
+  assert.equal( bs.find_first(), 3, 'find_first returns the lowest set bit' );
+  assert.equal( bs.find_last(), 7, 'find_last returns the highest set bit' );
+
+  bs.set( 3, false );
+  assert.equal( bs.find_first(), 7, 'clearing bit 3 advances find_first to 7' );
+
+  bs.delete();
+}

@@ -17,7 +17,10 @@ EMSCRIPTEN_BINDINGS( meshlib_point_cloud )
         .constructor<>()
         .property( "points", +[]( const PointCloud& pc ) { return pc.points; } )
         .property( "normals", +[]( const PointCloud& pc ) { return pc.normals; } )
-        .property( "validPoints", +[]( const PointCloud& pc ) { return pc.validPoints; } )
+        .property( "validPoints",
+            +[]( const PointCloud& pc ) { return pc.validPoints; },
+            +[]( PointCloud& pc, const VertBitSet& bs ) { pc.validPoints = bs; } )
         .function( "addPoint", +[]( PointCloud& pc, const Vector3f& point ) { return (int)pc.addPoint( point ); } )
-        .function( "computeBoundingBox", +[]( const PointCloud& pc ) { return pc.computeBoundingBox(); } );
+        .function( "computeBoundingBox", +[]( const PointCloud& pc ) { return pc.computeBoundingBox(); } )
+        .function( "invalidateCaches", +[]( PointCloud& pc ) { pc.invalidateCaches(); } );
 }

@@ -51,7 +51,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_project )
         return MeshProjectionResultVal( out );
     } );
 
-    emscripten::function( "findSignedDistance", +[]( const Vector3f& pt, std::shared_ptr<Mesh> mp )
+    emscripten::function( "findSignedDistanceFromPoint", +[]( const Vector3f& pt, std::shared_ptr<Mesh> mp )
     {
         const auto res = findSignedDistance( pt, *mp );
         if ( !res )

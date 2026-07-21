@@ -1,5 +1,6 @@
 'use strict';
 
+const fs = require('node:fs');
 const core = require('@actions/core');
 const yaml = require('js-yaml');
 const { buildMatrix } = require('../lib/engine');
@@ -26,8 +27,38 @@ function parseInput(name, fallback) {
   }
 }
 
+/**
+ * Load the base matrix from a YAML/JSON file.
+ *
+ * @param {string} file Path as given, resolved against the process cwd
+ *   (the workspace root when run by GitHub).
+ * @returns {*} The base matrix structure.
+ * @throws {Error} If the file is unreadable or unparsable.
+ */
+function loadMatrixFile(file) {
+  let raw;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch (e) {
+    throw new Error(`Failed to read matrix file '${file}': ${e.message}`);
+  }
+  let doc;
+  try {
+    doc = yaml.load(raw, { schema: yaml.JSON_SCHEMA });
+  } catch (e) {
+    throw new Error(`Failed to parse matrix file '${file}' as YAML/JSON: ${e.message}`);
+  }
+  return doc == null ? {} : doc;
+}
+
 try {
-  const matrix = parseInput('matrix', {});
+  const matrixFile = core.getInput('matrix-file');
+  if (matrixFile && core.getInput('matrix')) {
+    throw new Error("'matrix' and 'matrix-file' are mutually exclusive");
+  }
+  const matrix = matrixFile
+    ? loadMatrixFile(matrixFile)
+    : parseInput('matrix', {});
   const rules = parseInput('rules', []);
   const result = buildMatrix(matrix, rules);
   core.setOutput('matrix', JSON.stringify(result));

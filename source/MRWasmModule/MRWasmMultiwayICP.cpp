@@ -7,6 +7,7 @@
 #include "MRMesh/MRVector.h"
 
 #include <emscripten/bind.h>
+#include <emscripten/val.h>
 
 using namespace MR;
 
@@ -34,7 +35,11 @@ EMSCRIPTEN_BINDINGS( meshlib_multiway_icp )
         }, emscripten::allow_raw_pointers() )
         .function( "calculateTransformations", +[]( MultiwayICP& self )
         {
-            return Wasm::packedToTypedArray<Vector<AffineXf3f, ObjId>, float, 12>( self.calculateTransformations() );
+            const auto xfs = self.calculateTransformations();
+            emscripten::val arr = emscripten::val::array();
+            for ( const auto& xf : xfs )
+                arr.call<void>( "push", xf );
+            return arr;
         } )
         .function( "resamplePoints", &MultiwayICP::resamplePoints )
         .function( "updateAllPointPairs", +[]( MultiwayICP& self ) { return self.updateAllPointPairs(); } )

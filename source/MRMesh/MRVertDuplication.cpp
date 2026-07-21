@@ -97,15 +97,16 @@ public:
     }
 
     // duplicate the vertex around which the chain was found
-    void duplicateVertex( std::vector<VertId>& path, VertId& lastUsedVertId,
+    void duplicateVertex( VertId v, const std::vector<VertId>& path, VertId& lastUsedVertId, bool triOrientation,
                           std::vector<VertDuplication>* dups = nullptr )
     {
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
-        vertDup.srcVert = vertexBegIt->v;
+        vertDup.srcVert = v;
         if ( dups )
             dups->push_back( vertDup );
 
+        [[maybe_unused]] size_t changedTris = 0;
         for ( size_t i = 1; i < path.size(); ++i )
         {
             for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )
@@ -115,7 +116,12 @@ public:
                 for ( VertId vi : faceToVertices[it->f] )
                 {
                     if ( vi == vertDup.srcVert )
+                    {
                         alreadyDuplicted = false;
+                        // make (v1,v2) the cyclic pair following srcVert in the triangle
+                        if ( v1 && !v2 )
+                            std::swap( v1, v2 );
+                    }
                     else if ( !v1 )
                         v1 = vi;
                     else if ( !v2 )
@@ -124,9 +130,10 @@ public:
                 if ( alreadyDuplicted )
                     continue;
                 assert( v1 && v2 );
+                assert( v1 != v2 );
 
-                if ( ( v1 == path[i - 1] || v2 == path[i - 1] ) &&
-                     ( v1 == path[i] || v2 == path[i] ) )
+                if ( ( triOrientation && v1 == path[i - 1] && v2 == path[i] ) ||
+                     ( !triOrientation && v2 == path[i - 1] && v1 == path[i] ) )
                 {
                     for ( VertId & vi : faceToVertices[it->f] )
                     {
@@ -135,11 +142,13 @@ public:
                         vi = vertDup.dupVert;
                         break;
                     }
+                    ++changedTris;
                     it->v = vertDup.dupVert;
                     break;
                 }
             }
         }
+        assert( changedTris + 1 == path.size() );
     }
 };
 
@@ -422,19 +431,20 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                     if ( triOrientation ) // try the opposite direction from firstVertex
                     {
                         triOrientation = false;
-                        nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation );
+                        prevVertex = path[1];
+                        std::reverse( path.begin(), path.end() );
+                        nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation, prevVertex );
                     }
                     if ( !nextVertex )
                     {
                         if ( foundChains )
                         {
-                            pathMaker.duplicateVertex( path, lastValidVert, dups );
+                            pathMaker.duplicateVertex( v, path, lastValidVert, triOrientation, dups );
                             ++duplicatedVerticesCnt;
                         }
                         ++foundChains;
                         break;
                     }
-                    std::reverse( path.begin(), path.end() );
                 }
 
                 // returned to already visited vertex
@@ -448,7 +458,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
                     if ( foundChains )
                     {
-                        pathMaker.duplicateVertex( closedPath, lastValidVert, dups );
+                        pathMaker.duplicateVertex( v, closedPath, lastValidVert, triOrientation, dups );
                         ++duplicatedVerticesCnt;
                     }
                     ++foundChains;

@@ -11,6 +11,8 @@ Some examples of mesh modification are presented here
 \include MeshModification.dox.py
 - <b class="tab-title">C</b>
 \include MeshModification.dox.c
+- <b class="tab-title">JavaScript</b>
+\include MeshModification.dox.js
 
 </div>
 

@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "ncc build src/index.js -o dist --minify",
-    "test": "node --test tests/engine.test.js"
+    "test": "node --test"
   },
   "dependencies": {
     "@actions/core": "^2.0.3",

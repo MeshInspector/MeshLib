@@ -97,24 +97,32 @@ def parse_jobs(jobs: List[dict]):
         if job is not None
     ]
 
-def fetch_jobs(repo: str, run_id: str, attempts=3, cooldown=30):
-    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs'
-    headers = {
-        'Accept': 'application/vnd.github.v3+json',
-        'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',
-        'X-GitHub-Api-Version': '2022-11-28',
-    }
+def fetch_page(url, headers, attempts=3, cooldown=30):
     for attempt in range(1, attempts + 1):
         try:
             resp = requests.get(url, headers=headers)
         except requests.exceptions.RequestException as e:
             if attempt == attempts:
                 raise
-            print(f'fetch_jobs: attempt {attempt}/{attempts} failed ({e}); retrying in {cooldown}s...')
+            print(f'fetch_page: attempt {attempt}/{attempts} failed ({e}); retrying in {cooldown}s...')
             time.sleep(cooldown)
             continue
         resp.raise_for_status()
         return resp
+
+def fetch_jobs(repo: str, run_id: str):
+    url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
+    headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': f'Bearer {os.environ.get("GITHUB_TOKEN")}',
+        'X-GitHub-Api-Version': '2022-11-28',
+    }
+    jobs = []
+    while url:
+        resp = fetch_page(url, headers)
+        jobs += resp.json()['jobs']
+        url = resp.links.get('next', {}).get('url')
+    return jobs
 
 def sign_api_request(url, method, headers, body, region, service):
     # Use the credentials from the assumed role
@@ -140,17 +148,19 @@ if __name__ == "__main__":
     ref = os.environ.get("GITHUB_REF")
     run_id = os.environ.get("GITHUB_RUN_ID")
 
-    resp = fetch_jobs(repo, run_id)
-
     result = {
         'id':          int(run_id),
         'git_commit':  commit,
         'git_branch':  branch,
         'github_ref':  ref,
         'github_repo': repo,
-        'jobs':        parse_jobs(resp.json()['jobs']),
+        'jobs':        parse_jobs(fetch_jobs(repo, run_id)),
     }
     pprint.pp(result, indent=2, width=150)
+
+    stats_file_count = len(list(Path('.').glob('RunnerSysStats-*.json')))
+    if stats_file_count != len(result['jobs']):
+        print(f"WARNING: found {stats_file_count} RunnerSysStats files but the payload has {len(result['jobs'])} jobs")
 
     headers = {
         'Content-Type': 'application/json',

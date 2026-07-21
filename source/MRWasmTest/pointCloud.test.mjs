@@ -45,3 +45,29 @@ import { ml, cube, meshFromGeometry, meshToGeometry } from './helpers.mjs';
   pc.delete();
   sphere.delete();
 }
+
+// pointUniformSampling + writable validPoints + invalidateCaches
+{
+  const sphere = ml.makeUVSphere( 1, 32, 32 );
+  const pc = ml.meshToPointCloud( sphere, true );
+
+  const initial = pc.validPoints;
+  const total = initial.count();
+  initial.delete();
+
+  const settings = new ml.UniformSamplingSettings();
+  settings.distance = 0.2;
+  const samples = ml.pointUniformSampling( pc, settings );
+  assert.ok( samples.count() > 0 && samples.count() < total, 'uniform sampling selects a proper subset' );
+
+  pc.validPoints = samples;
+  pc.invalidateCaches();
+  const after = pc.validPoints;
+  assert.equal( after.count(), samples.count(), 'the sampled subset becomes the valid points' );
+
+  after.delete();
+  samples.delete();
+  settings.delete();
+  pc.delete();
+  sphere.delete();
+}

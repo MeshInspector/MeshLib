@@ -40,7 +40,7 @@ jobs:
       UNITY_PROJECT: test_unity/NugetTestProj
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # Keep the write token out of .git/config.
           persist-credentials: false
@@ -152,7 +152,7 @@ jobs:
       - name: Setup .NET
         # macOS runners have no registered dotnet install; the tool host
         # needs DOTNET_ROOT.
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '9.x'
 

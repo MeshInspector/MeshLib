@@ -23,6 +23,7 @@ jobs:
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
   config:
     uses: ./.github/workflows/config.yml
+    secrets: inherit
 
   debug-config:
     needs: config

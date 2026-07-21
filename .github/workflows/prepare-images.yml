@@ -66,14 +66,14 @@ jobs:
         uses: actions/checkout@v7
         with:
           sparse-checkout: |
-            .github/actions/matrix-builder
+            scripts/actions/matrix-builder
             .github/workflows/matrix
 
       # A new ubuntu distro needs a matching exclude rule (pinned by the
       # action's parity tests); emscripten-generate-c-bindings has none:
       # its consumer always runs.
       - id: linux
-        uses: ./.github/actions/matrix-builder
+        uses: ./scripts/actions/matrix-builder
         with:
           matrix-file: .github/workflows/matrix/docker-images-linux.json
           rules: |
@@ -94,12 +94,12 @@ jobs:
                 distro: emscripten
 
       - id: cbindings
-        uses: ./.github/actions/matrix-builder
+        uses: ./scripts/actions/matrix-builder
         with:
           matrix-file: .github/workflows/matrix/docker-images-emscripten-c-bindings.json
 
       - id: vcpkg
-        uses: ./.github/actions/matrix-builder
+        uses: ./scripts/actions/matrix-builder
         with:
           matrix-file: .github/workflows/matrix/docker-images-linux-vcpkg.json
 

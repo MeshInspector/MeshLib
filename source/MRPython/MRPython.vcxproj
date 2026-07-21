@@ -126,8 +126,14 @@
       </DelayLoadDLLs>
     </Link>
     <PostBuildEvent>
+      <!-- Here we copy both python3.dll and python3XY.dll. The former seems to be just a tiny shim for the latter. -->
+      <!-- python3XY.dll is reached only through python3.dll's export forwarders, which applocal's import scan doesn't -->
+      <!-- see, so nothing else deploys it. Without it every python3.dll consumer (e.g. MRTest.exe) dies at load with -->
+      <!-- STATUS_DLL_NOT_FOUND. -->
       <!-- The vcpkg-built pybind shim is dlopened by name from `meshlib\`, never imported, so applocal won't deploy it. -->
-      <Command>if not exist $(TargetDir)meshlib mkdir $(TargetDir)meshlib
+      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
+      copy $(PythonStableDllPath) $(TargetDir)python3.dll
+      if not exist $(TargetDir)meshlib mkdir $(TargetDir)meshlib
       copy "$(Pybind11ShimDllPath)" $(TargetDir)meshlib\
       </Command>
     </PostBuildEvent>

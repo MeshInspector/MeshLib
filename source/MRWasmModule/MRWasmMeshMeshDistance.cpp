@@ -13,6 +13,7 @@
 using namespace MR;
 
 EMSCRIPTEN_DECLARE_VAL_TYPE( MeshDistanceResultVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( MeshMeshSignedDistanceResultVal )
 
 EMSCRIPTEN_BINDINGS( meshlib_mesh_mesh_distance )
 {
@@ -27,6 +28,14 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_mesh_distance )
 
     emscripten::register_type<MeshDistanceResultVal>( "MeshDistanceResult",
         "{ a: PointOnFace; b: PointOnFace; distSq: number }" );
+
+    emscripten::register_type<MeshMeshSignedDistanceResultVal>( "MeshMeshSignedDistanceResult",
+        "{\n"
+        "  a: PointOnFace;\n"
+        "  b: PointOnFace;\n"
+        "  status: number;\n"
+        "  signedDist: number;\n"
+        "}" );
 
     emscripten::function( "findDistance", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b )
     {
@@ -62,6 +71,6 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_mesh_distance )
         out.set( "b", vb );
         out.set( "status", (int)r.status );
         out.set( "signedDist", r.signedDist );
-        return out;
+        return MeshMeshSignedDistanceResultVal( out );
     } );
 }

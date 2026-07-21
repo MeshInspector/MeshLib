@@ -50,17 +50,16 @@ const indices = new Uint32Array([
   3, 6, 2,  3, 7, 6,  0, 4, 7,  0, 7, 3,  1, 2, 6,  1, 6, 5,
 ]);
 
-const coords = ml.VertCoords.fromArray(positions);
-const tris = ml.Triangulation.fromArray(indices);
-const mesh = ml.Mesh.fromTriangles(coords, tris);
+using coords = ml.VertCoords.fromArray(positions);
+using tris = ml.Triangulation.fromArray(indices);
+using mesh = ml.Mesh.fromTriangles(coords, tris);
 
 console.log('volume =', mesh.volume()); // ~8
-
-// Objects are backed by WebAssembly memory — free them explicitly.
-coords.delete();
-tris.delete();
-mesh.delete();
+// `using` frees these WebAssembly-backed objects automatically at the end of scope
 ```
+
+> `using` requires Node.js 24+ or a current browser. On older runtimes, call `.delete()`
+> instead — see [Memory management](#memory-management).
 
 ## Using with bundlers
 
@@ -83,15 +82,47 @@ no extra setup:
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
-const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
+using mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
 const { valid, distSq } = ml.findProjection(point, mesh);
 ```
 
 ## Memory management
 
 Values returned from the API (meshes, bit sets, settings, result objects, …) hold
-WebAssembly memory that the JavaScript garbage collector does not reclaim. Call
-`.delete()` on them when you are done to avoid leaks.
+WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one
+must be freed explicitly.
+
+The preferred way is JavaScript's explicit resource management: declare a handle with
+`using` and it is freed automatically when its scope ends — even if an exception is thrown.
+
+```js
+using mesh = ml.Mesh.fromTriangles(coords, tris);
+// ... use mesh; it is freed at the end of this scope
+```
+
+When the number of handles is dynamic (for example built in a loop), collect them in a
+`DisposableStack`, which frees everything it holds, in reverse order, at the end of the scope:
+
+```js
+using stack = new DisposableStack();
+for (const path of inputPaths) {
+  const cloud = stack.use(ml.PointsLoad.fromAnySupportedFormat(path));
+  // ... use cloud
+}
+// every handle passed to stack.use(...) is freed here
+```
+
+`using` and `DisposableStack` are part of JavaScript's Explicit Resource Management,
+available in Node.js 24+ and current browsers. On older runtimes and browsers, call
+`.delete()` on each object when you are done instead:
+
+```js
+const mesh = ml.Mesh.fromTriangles(coords, tris);
+// ... use mesh
+mesh.delete();
+```
+
+See also, on MDN: [`using`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using) and [`DisposableStack`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DisposableStack).
 
 ## License
 

@@ -11,6 +11,22 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_torus )
 {
+    emscripten::function( "makeTorus", +[]()
+    {
+        return std::make_shared<Mesh>( makeTorus() );
+    } );
+    emscripten::function( "makeTorus", +[]( float primaryRadius )
+    {
+        return std::make_shared<Mesh>( makeTorus( primaryRadius ) );
+    } );
+    emscripten::function( "makeTorus", +[]( float primaryRadius, float secondaryRadius )
+    {
+        return std::make_shared<Mesh>( makeTorus( primaryRadius, secondaryRadius ) );
+    } );
+    emscripten::function( "makeTorus", +[]( float primaryRadius, float secondaryRadius, int primaryResolution )
+    {
+        return std::make_shared<Mesh>( makeTorus( primaryRadius, secondaryRadius, primaryResolution ) );
+    } );
     emscripten::function( "makeTorus",
         +[]( float primaryRadius, float secondaryRadius, int primaryResolution, int secondaryResolution )
     {

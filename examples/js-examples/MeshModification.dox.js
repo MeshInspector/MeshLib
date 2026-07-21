@@ -15,6 +15,6 @@ subdivideSettings.maxDeviationAfterFlip = 0.5;
 ml.subdivideMesh(mesh, subdivideSettings);
 
 // Rotate mesh
-using rotation = ml.Matrix3f.rotation({ x: 0, y: 0, z: 1 }, Math.PI * 0.5);
+using rotation = ml.Matrix3f.rotation(ml.Vector3.plusZ(), Math.PI * 0.5);
 using rotationXf = ml.AffineXf3f.linear(rotation);
 mesh.transform(rotationXf);

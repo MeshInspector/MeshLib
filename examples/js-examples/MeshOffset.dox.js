@@ -3,7 +3,7 @@ import createMeshLib from '@meshinspector/meshlib';
 const ml = await createMeshLib();
 
 // Create mesh
-using mesh = ml.makeCube({ x: 1, y: 1, z: 1 }, { x: -0.5, y: -0.5, z: -0.5 });
+using mesh = ml.makeCube();
 
 // Setup parameters
 using params = new ml.GeneralOffsetParameters();

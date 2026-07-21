@@ -2,7 +2,7 @@ import createMeshLib from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
 
-using mesh = ml.makeTorus(1.0, 0.1, 16, 16);
+using mesh = ml.makeTorus();
 
 // build a per-vertex weight (extra offset) from each vertex's x coordinate
 using coords = mesh.points;

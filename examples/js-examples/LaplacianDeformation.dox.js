@@ -33,10 +33,7 @@ using points = mesh.points;
 for (const anchor of [ancV0, ancV1]) {
   const p = points.get(anchor);
   const n = mesh.normal(anchor);
-  deformer.fixVertex(
-    anchor,
-    { x: p.x + n.x * shiftAmount, y: p.y + n.y * shiftAmount, z: p.z + n.z * shiftAmount },
-    true );
+  deformer.fixVertex(anchor, ml.Vector3.add(p, ml.Vector3.mulScalar(n, shiftAmount)), true);
 }
 
 // Move the free vertices according to the anchor ones

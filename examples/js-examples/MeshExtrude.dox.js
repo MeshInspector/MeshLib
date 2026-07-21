@@ -14,11 +14,8 @@ ml.makeDegenerateBandAroundRegion(mesh, facesToExtrude);
 using topology = mesh.topology;
 using vertsForMove = ml.getIncidentVertsFromFaces(topology, facesToExtrude);
 using coords = mesh.points;
-for (const v of vertsForMove.toIndices()) {
-  const p = coords.get(v);
-  p.z += 1;
-  coords.set(v, p);
-}
+for (const v of vertsForMove.toIndices())
+  coords.set(v, ml.Vector3.add(coords.get(v), ml.Vector3.plusZ()));
 mesh.points = coords;
 
 // invalidate internal caches after the manual vertex changes

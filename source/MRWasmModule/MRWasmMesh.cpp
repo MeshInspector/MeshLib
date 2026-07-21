@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshTopology.h"
+#include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRVector3.h"
@@ -28,6 +29,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh )
             return std::make_shared<Mesh>( Mesh::fromTriangles( vertexCoordinates, t ) );
         } )
         .function( "pack", +[]( Mesh& m ) { m.pack(); } )
+        .function( "packOptimally", +[]( Mesh& m ) { m.packOptimally(); } )
         .function( "volume", +[]( const Mesh& m ) { return m.volume(); } )
         .function( "area", +[]( const Mesh& m ) { return m.area(); } )
         .function( "computeBoundingBox", +[]( const Mesh& m ) { return m.computeBoundingBox(); } )

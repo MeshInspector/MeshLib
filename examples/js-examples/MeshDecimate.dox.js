@@ -7,7 +7,7 @@ using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh.stl');
 
 // Repack the mesh.
 // Not necessary, but highly recommended to achieve the best performance in parallel processing.
-mesh.pack();
+mesh.packOptimally();
 
 // Setup decimate parameters
 using settings = new ml.DecimateSettings();

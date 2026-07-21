@@ -57,3 +57,25 @@ import { ml, meshToGeometry } from './helpers.mjs';
   c.delete();
   hull.delete();
 }
+
+// default-argument overloads
+{
+  const m = ml.makeCube();
+  assert.ok( Math.abs( m.volume() - 1 ) < 1e-4, 'default cube (no args) has volume 1' );
+  m.delete();
+}
+
+{
+  const m = ml.makeTorus();
+  const g = meshToGeometry( m, false );
+  assert.ok( g.positions.length > 0 && g.indices.length > 0, 'default torus (no args) is non-empty' );
+  m.delete();
+}
+
+// packOptimally reorders storage without changing the geometry
+{
+  const m = ml.makeCube();
+  m.packOptimally();
+  assert.ok( Math.abs( m.volume() - 1 ) < 1e-4, 'packOptimally preserves the mesh' );
+  m.delete();
+}

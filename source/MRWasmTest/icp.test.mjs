@@ -75,11 +75,13 @@ import { ml } from './helpers.mjs';
   params.samplingVoxelSize = 0.1;
   const mw = new ml.MultiwayICP( objs, params );
 
-  const results = mw.calculateTransformations();  // Float32Array, 12 floats (Matrix3f A + Vector3f b) per object
-  assert.equal( results.length, offsets.length * 12, 'a 12-float transform per object' );
+  const results = mw.calculateTransformations();  // one AffineXf3f per object
+  assert.equal( results.length, offsets.length, 'one transform per object' );
+  assert.ok( results[0].A !== undefined && results[0].b !== undefined, 'each result is an AffineXf3f' );
   assert.ok( mw.getNumSamples() > 0, 'MultiwayICP formed sample pairs' );
   assert.ok( mw.getMeanSqDistToPoint() < 0.1, 'MultiwayICP converged' );
 
+  for ( const r of results ) r.delete();
   mw.delete();
   params.delete();
   for ( const o of objs ) o.delete();

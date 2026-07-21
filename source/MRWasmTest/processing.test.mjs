@@ -43,3 +43,19 @@ import { ml, cube, meshFromGeometry, meshToGeometry } from './helpers.mjs';
   p.delete();
   m.delete();
 }
+
+{
+  const c = cube( 0, 0, 0, 2 );
+  const m = meshFromGeometry( c.positions, c.indices );
+  const before = meshToGeometry( m, false ).indices.length / 3;
+
+  const s = new ml.SubdivideSettings();
+  s.maxEdgeLen = 0.5;
+  s.maxEdgeSplits = 10000;
+  const splits = ml.subdivideMesh( m, s );
+  assert.ok( splits > 0, 'subdivideMesh performs edge splits' );
+  assert.ok( meshToGeometry( m, false ).indices.length / 3 > before, 'subdivideMesh increases the face count' );
+
+  s.delete();
+  m.delete();
+}

@@ -37,8 +37,11 @@ jobs:
       - name: Test, including a smoke run of the rebuilt bundle
         run: |
           npm test
-          INPUT_MATRIX='{"os": ["a", "b"]}' GITHUB_OUTPUT=/tmp/smoke node dist/index.js
-          grep -q '"os":"a"' /tmp/smoke
+          # @actions/core appends outputs and errors out unless the file
+          # already exists (the runner normally pre-creates it).
+          touch "$RUNNER_TEMP/smoke"
+          INPUT_MATRIX='{"os": ["a", "b"]}' GITHUB_OUTPUT="$RUNNER_TEMP/smoke" node dist/index.js
+          grep -q '"os":"a"' "$RUNNER_TEMP/smoke"
 
       - name: Push dist if changed
         run: |
@@ -53,4 +56,4 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A .
           git commit -m "Rebuild matrix-builder dist"
-          git push
+          git push origin HEAD

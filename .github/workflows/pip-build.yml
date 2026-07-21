@@ -491,6 +491,12 @@ jobs:
         timeout-minutes: 10
         run: source\x64\Release\MRTest.exe
 
+      - name: Print MRTest log
+        # The console output of a fast-exiting MRTest can be lost; the file sink keeps it.
+        if: failure()
+        shell: pwsh
+        run: Get-ChildItem "$env:TEMP\MeshViewer\Logs\MRLog_*.txt" | Sort-Object LastWriteTime | Select-Object -Last 1 | ForEach-Object { Write-Host "=== $($_.FullName) ==="; Get-Content $_ }
+
       - name: Python Tests
         working-directory: source\x64\Release
         run: py -3 -u ..\..\..\scripts\run_python_test_script.py -multi-cmd

@@ -26,3 +26,18 @@ import { ml } from './helpers.mjs';
   assert.ok( bsz.x === 2 && bsz.y === 3 && bsz.z === 4, 'integer box size is (2,3,4)' );
   box.delete();
 }
+
+// Vector3 helpers operate on plain {x,y,z} value objects
+{
+  const z = ml.Vector3.plusZ();
+  assert.ok( z.x === 0 && z.y === 0 && z.z === 1, 'plusZ is (0,0,1)' );
+
+  const d = ml.Vector3.diagonal( 2 );
+  assert.ok( d.x === 2 && d.y === 2 && d.z === 2, 'diagonal(2) is (2,2,2)' );
+
+  const s = ml.Vector3.add( { x: 1, y: 2, z: 3 }, { x: 10, y: 20, z: 30 } );
+  assert.ok( s.x === 11 && s.y === 22 && s.z === 33, 'add sums componentwise' );
+
+  const m = ml.Vector3.mulScalar( { x: 1, y: -2, z: 3 }, 2 );
+  assert.ok( m.x === 2 && m.y === -4 && m.z === 6, 'mulScalar scales componentwise' );
+}

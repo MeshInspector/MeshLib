@@ -10,8 +10,14 @@ using namespace MR;
 
 EMSCRIPTEN_BINDINGS( meshlib_mesh_collide_precise )
 {
-    // Opaque carrier: std::vector<VarEdgeTri>; produced here, consumed by orderIntersectionContours.
-    emscripten::class_<PreciseCollisionResult>( "PreciseCollisionResult" );
+    emscripten::class_<VarEdgeTri>( "VarEdgeTri" )
+        .property( "edge", +[]( const VarEdgeTri& v ) { return (int)v.edge; } )
+        .function( "tri", +[]( const VarEdgeTri& v ) { return (int)v.tri(); } )
+        .function( "isEdgeATriB", +[]( const VarEdgeTri& v ) { return v.isEdgeATriB(); } );
+
+    emscripten::class_<PreciseCollisionResult>( "PreciseCollisionResult" )
+        .function( "size", +[]( const PreciseCollisionResult& r ) { return (int)r.size(); } )
+        .function( "get", +[]( const PreciseCollisionResult& r, int i ) { return r[i]; } );
 
     emscripten::function( "getVectorConverters", +[]( const Mesh& a, const Mesh& b )
     {

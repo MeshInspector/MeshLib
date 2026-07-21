@@ -24,7 +24,12 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_fill_hole )
         .property( "smoothBd", &FillHoleParams::smoothBd )
         .property( "multipleEdgesResolveMode", &FillHoleParams::multipleEdgesResolveMode )
         .property( "makeDegenerateBand", &FillHoleParams::makeDegenerateBand )
-        .property( "maxPolygonSubdivisions", &FillHoleParams::maxPolygonSubdivisions );
+        .property( "maxPolygonSubdivisions", &FillHoleParams::maxPolygonSubdivisions )
+        .property( "metric", &FillHoleParams::metric );
+
+    emscripten::class_<StitchHolesParams>( "StitchHolesParams" )
+        .constructor<>()
+        .property( "metric", &StitchHolesParams::metric );
 
     emscripten::function( "fillHole", +[]( std::shared_ptr<Mesh> mesh, int a, const FillHoleParams& params )
     {
@@ -38,5 +43,10 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_fill_hole )
         for ( size_t i = 0; i < len; ++i )
             es[i] = EdgeId( as[ i ].as<int>() );
         fillHoles( *mesh, es, params );
+    } );
+
+    emscripten::function( "stitchHoles", +[]( std::shared_ptr<Mesh> mesh, int a, int b, const StitchHolesParams& params )
+    {
+        stitchHoles( *mesh, EdgeId( a ), EdgeId( b ), params );
     } );
 }

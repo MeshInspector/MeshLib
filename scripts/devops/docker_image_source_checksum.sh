@@ -14,6 +14,10 @@ common=(
   ':(exclude)thirdparty/mrbind'
   ':(exclude)thirdparty/mrbind/**'
   ':(exclude)thirdparty/Noto_Sans/**'
+  # license texts shipped in packages, not an image input: including them would
+  # move the source-checksum-* tag on licenses-only commits and force a needless
+  # rebuild of every image (the registry-check finds nothing at the new tag).
+  ':(exclude)thirdparty/licenses/**'
 )
 
 ubuntu=(

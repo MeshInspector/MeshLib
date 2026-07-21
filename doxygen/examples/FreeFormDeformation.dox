@@ -19,6 +19,9 @@ Example of using Free Form deformation of the mesh
 - <b class="tab-title">C#</b>
 \include FreeFormDeformation.dox.cs
 
+- <b class="tab-title">JavaScript</b>
+\include FreeFormDeformation.dox.js
+
 </div>
 
  */

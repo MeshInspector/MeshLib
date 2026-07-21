@@ -16,6 +16,9 @@
 - <b class="tab-title">C</b>
 \include NoiseDenoise.dox.c
 
+- <b class="tab-title">JavaScript</b>
+\include NoiseDenoise.dox.js
+
 </div>
 
  */

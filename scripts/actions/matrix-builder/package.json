@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@actions/core": "^2.0.3",
-    "js-yaml": "^4.2.0"
+    "js-yaml": "^4.3.0"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.3"

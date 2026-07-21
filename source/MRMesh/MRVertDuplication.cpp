@@ -373,12 +373,30 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     all.computeVertSpans();
     all.computeVertInfos( t );
 
+    std::vector<VertId> voi;
+    for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
+        if ( !noDuplicationNeeded( all.vertInfos[v] ) )
+            voi.push_back( v );
+
+    auto sortPred = [&]( VertId a, VertId b )
+    {
+        const auto ai = all.vertInfos[a];
+        const auto bi = all.vertInfos[b];
+        if ( ai.hasRepeatedVerts() != bi.hasRepeatedVerts() )
+            return bi.hasRepeatedVerts(); // process neighbourhoods without repeated vertices (a) first, because duplication of neighbours cannot help them
+        if ( ai.hasRepeatedVerts() ) // process neighbourhoods with more repeated vertices (a) first
+            return std::make_pair( ai.numRepeatedVerts(), a ) > std::make_pair( bi.numRepeatedVerts(), b );
+        // process neighbourhoods with more chains (a) first
+        return std::make_pair( ai.numOpenChains() + ai.numClosedChains(), a ) > std::make_pair( bi.numOpenChains() + bi.numClosedChains(), b );
+    };
+    tbb::parallel_sort( voi.begin(), voi.end(), sortPred );
+
     VertNeighbourhoodInspector inspector;
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
     size_t duplicatedVerticesCnt = 0;
-    for ( auto v = 0_v; v + 1 < all.vert2firstRec.size(); ++v )
+    for ( auto v : voi )
     {
         // skip a vertex based on the neighborhood in the original triangulation;
         // a vertex not requiring duplication cannot start requiring it after duplication of its neighbors

@@ -67,13 +67,13 @@ TEST( MRMesh, duplicateResolvedNeighborVertex )
     t.push_back( { 2_v, 1_v, 4_v } ); //1_f
     t.push_back( { 1_v, 2_v, 5_v } ); //2_f
     // the edge (1,2) is shared by three triangles, so both vertices 1 and 2 have repeated neighbor vertices;
-    // duplication of vertex 1 in one of the triangles resolves vertex 2 into two open chains requiring nothing
+    // duplication of vertex 2 in one of the triangles resolves vertex 1 into two open chains requiring nothing
 
     std::vector<VertDuplication> dups;
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
     EXPECT_EQ( duplicatedVerticesCnt, 1 );
     ASSERT_EQ( dups.size(), 1 );
-    EXPECT_EQ( dups[0].srcVert, 1_v );
+    EXPECT_EQ( dups[0].srcVert, 2_v );
     EXPECT_EQ( dups[0].dupVert, 6_v );
 
     const auto topology = fromTrianglesDuplicatingNonManifoldVertices( t );
@@ -154,22 +154,20 @@ TEST( MRMesh, duplicateVertexWithThreeChains )
 
     std::vector<VertDuplication> dups;
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
-    EXPECT_EQ( duplicatedVerticesCnt, 2 );
-    ASSERT_EQ( dups.size(), 2 );
+    EXPECT_EQ( duplicatedVerticesCnt, 1 );
+    ASSERT_EQ( dups.size(), 1 );
     // both duplicates must originate from the true central vertex #0
-    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].srcVert, 3_v );
     EXPECT_EQ( dups[0].dupVert, 9_v );
-    EXPECT_EQ( dups[1].srcVert, 0_v );
-    EXPECT_EQ( dups[1].dupVert, 10_v );
 
     // the closed ring was found first and keeps #0, each open chain got its own duplicate
-    EXPECT_EQ( t[0_f][0], 9_v );
-    EXPECT_EQ( t[1_f][0], 9_v );
+    EXPECT_EQ( t[0_f][0], 0_v );
+    EXPECT_EQ( t[1_f][0], 0_v );
     EXPECT_EQ( t[2_f][0], 0_v );
     EXPECT_EQ( t[3_f][0], 0_v );
     EXPECT_EQ( t[4_f][0], 0_v );
-    EXPECT_EQ( t[5_f][0], 10_v );
-    EXPECT_EQ( t[6_f][0], 10_v );
+    EXPECT_EQ( t[5_f][0], 0_v );
+    EXPECT_EQ( t[6_f][0], 0_v );
 
     // the result is manifold
     dups.clear();
@@ -264,12 +262,13 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
     }
 }
 
-static void testBuildWithDups( const char * objMesh, int numVerts, int numComps )
+static void testBuildWithDups( const char * objMesh, int numFaces, int numVerts, int numComps )
 {
     std::istringstream s( objMesh );
     auto maybeMesh = MeshLoad::fromObj( s );
     EXPECT_TRUE( maybeMesh );
 
+    EXPECT_EQ( maybeMesh->topology.numValidFaces(), numFaces );
     EXPECT_EQ( maybeMesh->topology.numValidVerts(), numVerts );
     EXPECT_EQ( MeshComponents::getNumComponents( *maybeMesh ), numComps );
 }
@@ -294,7 +293,7 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 3 5 1\n"
         "f 2 1 3\n"
         "f 3 1 5\n"
-        "f 1 4 5\n", 6, 1
+        "f 1 4 5\n", 8, 6, 1
     );
 
     // same situation as above with the order of triangles changed
@@ -312,7 +311,7 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 1 4 2\n"
         "f 2 3 1\n"
         "f 1 5 4\n"
-        "f 3 5 1\n", 6, 1
+        "f 3 5 1\n", 8, 6, 1
     );
 
     // first 4 triangles subdivide a square with center point,
@@ -335,7 +334,7 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 5 7 2\n"
         "f 7 3 6\n"
         "f 2 7 6\n"
-        "f 7 5 3\n", 10, 2
+        "f 7 5 3\n", 8, 8, 2
     );
 }
 

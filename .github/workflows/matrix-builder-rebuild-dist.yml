@@ -1,0 +1,53 @@
+name: Rebuild matrix-builder dist
+
+# The action runs from the committed ncc bundle (dist/index.js), but Dependabot
+# PRs only bump package.json/package-lock.json. Regenerate and push the bundle
+# on its PRs so the dependency update actually takes effect.
+on:
+  pull_request:
+    paths:
+      - scripts/actions/matrix-builder/package.json
+      - scripts/actions/matrix-builder/package-lock.json
+
+permissions: {}
+
+jobs:
+  rebuild-dist:
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: scripts/actions/matrix-builder
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Rebuild dist
+        run: |
+          npm ci --ignore-scripts
+          npm run build
+
+      - name: Test, including a smoke run of the rebuilt bundle
+        run: |
+          npm test
+          INPUT_MATRIX='{"os": ["a", "b"]}' GITHUB_OUTPUT=/tmp/smoke node dist/index.js
+          grep -q '"os":"a"' /tmp/smoke
+
+      - name: Push dist if changed
+        run: |
+          if git diff --quiet; then
+            echo "dist unchanged"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A .
+          git commit -m "Rebuild matrix-builder dist"
+          git push

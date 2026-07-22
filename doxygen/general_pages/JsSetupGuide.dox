@@ -27,8 +27,8 @@ You can use any JavaScript- or TypeScript-compatible editor, such as Visual Stud
 ## Choosing a Package: Single-Threaded or Multi-Threaded
 MeshLib ships in two flavors with an identical API:
 
- - **`@meshinspector/meshlib`**: the single-threaded build. The simplest choice, and the right one for most applications.
- - **`@meshinspector/meshlib-mt`**: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput, and requires Node.js 21 or newer.
+ - `@meshinspector/meshlib`: the single-threaded build. The simplest choice, and the right one for most applications.
+ - `@meshinspector/meshlib-mt`: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput, and requires Node.js 21 or newer.
 
 The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; nothing else changes.
 

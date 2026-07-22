@@ -134,7 +134,20 @@ MRMESH_API MR_BIND_IGNORE char * formatNoTrailingZeros( char * fmt, double v, in
     return "Loading canceled: " + utf8string( path );
 }
 
-/// return a copy of the string with all alphabetic ASCII characters replaced with upper-case variants
+/// convert an alphabetic ASCII character to lower-case, other characters are returned unchanged
+/// (unlike std::tolower, well-defined for negative char values)
+[[nodiscard]] MR_BIND_IGNORE inline char toLower( char ch )
+{
+    return ( ch >= 'A' && ch <= 'Z' ) ? ch + ( 'a' - 'A' ) : ch;
+}
+
+/// convert an alphabetic ASCII codepoint to lower-case, other codepoints are returned unchanged
+[[nodiscard]] MR_BIND_IGNORE inline char32_t toLower( char32_t ch )
+{
+    return ( ch >= U'A' && ch <= U'Z' ) ? ch + ( U'a' - U'A' ) : ch;
+}
+
+/// return a copy of the string with all alphabetic ASCII characters replaced with lower-case variants
 [[nodiscard]] MRMESH_API std::string toLower( std::string str );
 
 /// \}

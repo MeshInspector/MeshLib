@@ -75,7 +75,9 @@ FROM base
 COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
 
-RUN chmod -R 777 /emsdk/upstream/emscripten/
+# Only cache/ needs to be writable (emcc regenerates system libs there); a
+# whole-tree chmod copies up every file on containerd-overlayfs docker hosts.
+RUN chmod -R 777 /emsdk/upstream/emscripten/cache
 
 RUN useradd -u 8877 -m aws-user
 RUN useradd -u 1001 -m github-user

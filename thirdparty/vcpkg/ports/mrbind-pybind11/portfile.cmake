@@ -12,12 +12,6 @@ set(EXTRA_OPTIONS "")
 if(VCPKG_TARGET_IS_WINDOWS)
     # Pin the vcpkg Python; otherwise FindPython may pick a host installation.
     list(APPEND EXTRA_OPTIONS "-DPython_EXECUTABLE=${CURRENT_INSTALLED_DIR}/tools/python3/python.exe")
-else()
-    # Unify the pybind ABI across GCC and Clang.
-    list(APPEND EXTRA_OPTIONS
-        -DPYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING=_meshlib
-        -DPYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING=_meshlib
-    )
 endif()
 
 vcpkg_cmake_configure(
@@ -30,6 +24,8 @@ vcpkg_cmake_configure(
         -DPYBIND11_NONLIMITEDAPI_SUFFIX=meshlib
         -DPYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX=0x030800f0
         -DPYBIND11_NONLIMITEDAPI_INTERNALS_VERSION=5
+        -DPYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING=_meshlib
+        -DPYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING=_meshlib
         ${EXTRA_OPTIONS}
 )
 

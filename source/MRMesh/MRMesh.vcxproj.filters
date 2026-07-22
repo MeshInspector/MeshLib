@@ -2339,5 +2339,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
+    <None Include="MRUnicodeCaseFold.inl">
+      <Filter>Source Files\Basic</Filter>
+    </None>
   </ItemGroup>
 </Project>

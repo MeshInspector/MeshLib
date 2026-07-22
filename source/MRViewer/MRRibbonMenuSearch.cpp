@@ -1,6 +1,7 @@
 #include "MRRibbonMenuSearch.h"
 #include "ImGuiHelpers.h"
 #include "MRColorTheme.h"
+#include "MRI18n.h"
 #include "MRRibbonFontManager.h"
 #include "MRRibbonConstants.h"
 #include "MRRibbonButtonDrawer.h"
@@ -156,7 +157,7 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 if ( ImGui::BeginTable( "##Extended Search separator", 2, ImGuiTableFlags_SizingFixedFit) )
                 {
                     ImGui::TableNextColumn();
-                    ImGui::Text( "Extended Search" );
+                    ImGui::Text( "%s", _tr( "Extended Search" ) );
                     ImGui::TableNextColumn();
                     auto width = ImGui::GetWindowWidth();
                     ImGui::SetCursorPos( { width - ImGui::GetStyle().WindowPadding.x, ImGui::GetCursorPosY() + std::round( ImGui::GetTextLineHeight() * 0.5f ) } );
@@ -183,16 +184,18 @@ void RibbonMenuSearch::drawWindow_( const Parameters& params )
                 auto storePos = ImGui::GetCursorPos();
                 auto numColors = params.btnDrawer.pushRibbonButtonColors( true, false, false, dbParams.rootType );
 
-                auto name = "##" + RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name + "##" + foundItem.item->item->name();
+                const auto& tab = RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex];
+                auto name = "##" + tab.name + "##" + foundItem.item->item->name();
 
                 if ( ImGui::Button( name.c_str(), ImVec2( tabBtnWidth, dbParams.itemSize.y ) ) )
                     params.changeTabFunc( foundItem.tabIndex );
 
-                auto textSize = ImGui::CalcTextSize( RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name.c_str() );
+                const auto tabText = Locale::translate( "Tab name", tab.name.c_str(), tab.localeDomainId );
+                auto textSize = ImGui::CalcTextSize( tabText.c_str() );
 
                 ImGui::SetCursorPosX( storePos.x + ( tabBtnWidth - textSize.x ) * 0.5f );
                 ImGui::SetCursorPosY( storePos.y + ( dbParams.itemSize.y - textSize.y ) * 0.5f );
-                ImGui::Text( "%s", RibbonSchemaHolder::schema().tabsOrder[foundItem.tabIndex].name.c_str() );
+                ImGui::Text( "%s", tabText.c_str() );
 
                 ImGui::SetCursorPosX( storePos.x + tabBtnWidth + 0.5f * tabBtnPadding - UI::scale() );
                 ImGui::SetCursorPosY( storePos.y + ( dbParams.itemSize.y - textSize.y ) * 0.5f );

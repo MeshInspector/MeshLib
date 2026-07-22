@@ -105,21 +105,59 @@ bool RibbonSchemaHolder::delItem( const std::shared_ptr<RibbonMenuItem>& item )
     return true;
 }
 
+namespace
+{
+
+// case-folded UTF-32 representation of a string, for case-insensitive search
+struct FoldedSearchString
+{
+    std::u32string full;               // the whole string, for substring search
+    std::vector<std::u32string> words; // split by spaces, for word-by-word fuzzy matching
+};
+
+// converts a UTF-8 string to case-folded UTF-32 codepoints (self-contained, identical on every platform)
+std::u32string foldToUtf32( const std::string& str )
+{
+    auto res = utf8ToUtf32( str );
+    for ( auto& cp : res )
+        cp = caseFold( cp );
+    return res;
+}
+
+FoldedSearchString foldForSearch( const std::string& str )
+{
+    FoldedSearchString res;
+    res.full = foldToUtf32( str );
+    // spaces are ASCII and unaffected by folding, so word boundaries are the same before or after
+    auto words = split( str, " " );
+    std::erase_if( words, [] ( const auto& word ) { return word.empty(); } );
+    for ( const auto& word : words )
+        res.words.push_back( foldToUtf32( word ) );
+    return res;
+}
+
+// folds the translated form of a string (what the user sees on the screen) for search
+FoldedSearchString foldField( const std::string& source, LocaleDomainId domainId )
+{
+    if ( source.empty() ) // do not translate empty strings: gettext returns the catalog header for them
+        return {};
+    return foldForSearch( Locale::translate( source, domainId ) );
+}
+
+} // anonymous namespace
+
 std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const std::string& searchStr, const SearchParams& params )
 {
     std::vector<std::pair<SearchResult, SearchResultWeight>> rawResult;
 
     if ( searchStr.empty() )
         return {};
-    auto words = split( searchStr, " " );
-    std::erase_if( words, [] ( const auto& str ) { return str.empty(); } );
-    auto calcWeight = [&words] ( const std::string& sourceStr )->Vector2f
+    const auto foldedSearch = foldForSearch( searchStr );
+    if ( foldedSearch.full.empty() ) // e.g. invalid UTF-8 input, an empty needle would match everything
+        return {};
+    const auto& words = foldedSearch.words;
+    auto calcWeight = [&words] ( const std::vector<std::u32string>& sourceWords )->Vector2f
     {
-        if ( sourceStr.empty() )
-            return { 1.0f, 1.f };
-
-        auto sourceWords = split( sourceStr, " " );
-        std::erase_if( sourceWords, [] ( const auto& str ) { return str.empty(); } );
         if ( sourceWords.empty() )
             return { 1.0f, 1.f };
 
@@ -139,7 +177,7 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 if ( busyWord[j] )
                     continue;
                 int cornersInsertions = 0;
-                int error = calcDamerauLevenshteinDistance( words[i], sourceWords[j], false, &cornersInsertions );
+                int error = calcDamerauLevenshteinDistance( words[i], sourceWords[j], true, &cornersInsertions ); // both strings are already case-folded
                 if ( i == words.size() - 1 )
                     error -= cornersInsertions;
                 if ( error < minError )
@@ -160,16 +198,16 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
 
     const float maxWeight = 0.25f;
     bool exactMatch = false;
+    const auto& needle = foldedSearch.full;
     // check item (calc difference from search item) and add item to raw results if difference less than threshold
     auto checkItem = [&] ( const MenuItemInfo& item, int t )
     {
-        const auto& caption = item.getCaption();
-        const auto& tooltip = item.tooltip;
+        const auto caption = foldField( item.getCaption(), item.localeDomainId );
+        const auto tooltip = foldField( item.tooltip, item.localeDomainId );
         std::pair<SearchResult, SearchResultWeight> itemRes;
         itemRes.first.tabIndex = t;
         itemRes.first.item = &item;
-        const auto posCE = findSubstringCaseInsensitive( caption, searchStr );
-        if ( posCE != std::string::npos )
+        if ( const auto pos = caption.full.find( needle ); pos != std::u32string::npos )
         {
             if ( !exactMatch )
             {
@@ -177,25 +215,25 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
                 exactMatch = true;
             }
             itemRes.second.captionWeight = 0.f;
-            itemRes.second.captionOrderWeight = float( posCE ) / caption.size();
+            itemRes.second.captionOrderWeight = float( pos ) / caption.full.size();
             rawResult.push_back( itemRes );
             return;
         }
         else if ( exactMatch )
         {
-            const auto posTE = findSubstringCaseInsensitive( tooltip, searchStr );
-            if ( posTE == std::string::npos )
+            const auto tooltipPos = tooltip.full.find( needle );
+            if ( tooltipPos == std::u32string::npos )
                 return;
             itemRes.second.tooltipWeight = 0.f;
-            itemRes.second.tooltipOrderWeight = float( posTE ) / tooltip.size();
+            itemRes.second.tooltipOrderWeight = float( tooltipPos ) / tooltip.full.size();
             rawResult.push_back( itemRes );
             return;
         }
 
-        Vector2f weightEP = calcWeight( caption );
+        Vector2f weightEP = calcWeight( caption.words );
         itemRes.second.captionWeight = weightEP.x;
         itemRes.second.captionOrderWeight = weightEP.y;
-        weightEP = calcWeight( tooltip );
+        weightEP = calcWeight( tooltip.words );
         itemRes.second.tooltipWeight = weightEP.x;
         itemRes.second.tooltipOrderWeight = weightEP.y;
         if ( itemRes.second.captionWeight > maxWeight && itemRes.second.tooltipWeight > maxWeight )

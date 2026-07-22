@@ -1,5 +1,6 @@
 #include "MRWasmBindings.h"
 
+#include <emscripten/bind.h>
 #include <emscripten/val.h>
 #include <emscripten.h>
 
@@ -30,6 +31,14 @@ std::function<bool( float )> jsToCppCallback( val cb )
     };
 }
 
+}
+
+EMSCRIPTEN_BINDINGS( meshlib_common_val_types )
+{
+    register_type<Wasm::Float32ArrayVal>( Wasm::TypedArrayName<float>::value );
+    register_type<Wasm::Uint32ArrayVal>( Wasm::TypedArrayName<uint32_t>::value );
+    register_type<Wasm::Uint8ArrayVal>( Wasm::TypedArrayName<uint8_t>::value );
+    register_type<Wasm::IndicesInputVal>( "readonly number[] | Uint32Array" );
 }
 
 int main()

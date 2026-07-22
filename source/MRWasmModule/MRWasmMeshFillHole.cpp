@@ -36,7 +36,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_fill_hole )
         fillHole( *mesh, EdgeId( a ), params );
     } );
 
-    emscripten::function( "fillHoles", +[]( std::shared_ptr<Mesh> mesh, emscripten::val as, const FillHoleParams& params )
+    emscripten::function( "fillHoles", +[]( std::shared_ptr<Mesh> mesh, Wasm::IndicesInputVal as, const FillHoleParams& params )
     {
         const size_t len = as[ "length" ].as<size_t>();
         std::vector<EdgeId> es( len );

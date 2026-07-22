@@ -13,8 +13,12 @@
 
 using namespace MR;
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( GridMinMaxVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_vdb_conversions )
 {
+    emscripten::register_type<GridMinMaxVal>( "GridMinMax", "{ min: number; max: number }" );
+
     emscripten::enum_<MeshToVolumeParams::Type>( "MeshToVolumeType" )
         .value( "Signed", MeshToVolumeParams::Type::Signed )
         .value( "Unsigned", MeshToVolumeParams::Type::Unsigned );
@@ -42,7 +46,7 @@ EMSCRIPTEN_BINDINGS( meshlib_vdb_conversions )
         auto out = emscripten::val::object();
         out.set( "min", mn );
         out.set( "max", mx );
-        return out;
+        return GridMinMaxVal( out );
     } );
 
     emscripten::function( "meshToVolume", +[]( std::shared_ptr<Mesh> mp, const MeshToVolumeParams& params )

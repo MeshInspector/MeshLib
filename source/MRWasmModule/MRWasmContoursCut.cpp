@@ -12,8 +12,20 @@
 
 using namespace MR;
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( CutMeshResultVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( CutByProjectionContoursVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( CutByProjectionResultVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_contours_cut )
 {
+    emscripten::register_type<CutMeshResultVal>( "CutMeshResult",
+        "{\n"
+        "  resultCut: Uint32Array[];\n"
+        "  fbsWithContourIntersections: FaceBitSet;\n"
+        "}" );
+    emscripten::register_type<CutByProjectionContoursVal>( "readonly Float32Array[]" );
+    emscripten::register_type<CutByProjectionResultVal>( "Uint32Array[]" );
+
     emscripten::enum_<CutMeshParameters::FillPart>( "FillPart" )
         .value( "Both", CutMeshParameters::FillPart::Both )
         .value( "Left", CutMeshParameters::FillPart::Left )
@@ -38,14 +50,14 @@ EMSCRIPTEN_BINDINGS( meshlib_contours_cut )
         auto out = emscripten::val::object();
         out.set( "resultCut", resultCut );
         out.set( "fbsWithContourIntersections", res.fbsWithContourIntersections );
-        return out;
+        return CutMeshResultVal( out );
     } );
 
     emscripten::class_<CutByProjectionSettings>( "CutByProjectionSettings" )
         .constructor<>()
         .property( "direction", &CutByProjectionSettings::direction );
 
-    emscripten::function( "cutMeshByProjection", +[]( std::shared_ptr<Mesh> mesh, emscripten::val contours, const CutByProjectionSettings& settings )
+    emscripten::function( "cutMeshByProjection", +[]( std::shared_ptr<Mesh> mesh, CutByProjectionContoursVal contours, const CutByProjectionSettings& settings )
     {
         Contours3f cppContours;
         const size_t n = contours[ "length" ].as<size_t>();
@@ -65,6 +77,6 @@ EMSCRIPTEN_BINDINGS( meshlib_contours_cut )
         auto out = emscripten::val::array();
         for ( const auto& path : paths )
             out.call<void>( "push", Wasm::packedToTypedArray<EdgePath, uint32_t>( path ) );
-        return out;
+        return CutByProjectionResultVal( out );
     } );
 }

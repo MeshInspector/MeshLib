@@ -20,8 +20,18 @@ namespace
 struct MeshComponentsModule {};
 }
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( FaceBitSetArrayVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( ComponentsMapResultVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( LargeByAreaRegionsResultVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_mesh_components )
 {
+    emscripten::register_type<FaceBitSetArrayVal>( "FaceBitSet[]" );
+    emscripten::register_type<ComponentsMapResultVal>( "ComponentsMapResult",
+        "{ map: Face2RegionMap; numRegions: number }" );
+    emscripten::register_type<LargeByAreaRegionsResultVal>( "LargeByAreaRegionsResult",
+        "{ faces: FaceBitSet; numRegions: number }" );
+
     emscripten::enum_<MeshComponents::FaceIncidence>( "MeshComponentsFaceIncidence" )
         .value( "PerEdge", MeshComponents::FaceIncidence::PerEdge )
         .value( "PerVertex", MeshComponents::FaceIncidence::PerVertex );
@@ -53,7 +63,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_components )
             emscripten::val arr = emscripten::val::array();
             for ( const FaceBitSet& c : comps )
                 arr.call<void>( "push", c );
-            return arr;
+            return FaceBitSetArrayVal( arr );
         } )
         .class_function( "getAllComponentsMap", +[]( std::shared_ptr<Mesh> meshPart, MeshComponents::FaceIncidence incidence )
         {
@@ -61,7 +71,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_components )
             emscripten::val out = emscripten::val::object();
             out.set( "map", regionMap );
             out.set( "numRegions", numRegions );
-            return out;
+            return ComponentsMapResultVal( out );
         } )
         .class_function( "getLargeByAreaRegions", +[]( std::shared_ptr<Mesh> meshPart, const Face2RegionMap& regionMap, int numRegions, float minArea )
         {
@@ -69,6 +79,6 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_components )
             emscripten::val out = emscripten::val::object();
             out.set( "faces", faces );
             out.set( "numRegions", n );
-            return out;
+            return LargeByAreaRegionsResultVal( out );
         } );
 }

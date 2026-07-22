@@ -8,8 +8,12 @@
 
 using namespace MR;
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( RightBoundaryVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_region_boundary )
 {
+    emscripten::register_type<RightBoundaryVal>( "Uint32Array[]" );
+
     emscripten::function( "getIncidentVertsFromFaces", +[]( const MeshTopology& topology, const FaceBitSet& faces )
     {
         return getIncidentVerts( topology, faces );
@@ -75,6 +79,6 @@ EMSCRIPTEN_BINDINGS( meshlib_region_boundary )
         auto out = emscripten::val::array();
         for ( const auto& loop : loops )
             out.call<void>( "push", Wasm::packedToTypedArray<EdgeLoop, uint32_t>( loop ) );
-        return out;
+        return RightBoundaryVal( out );
     } );
 }

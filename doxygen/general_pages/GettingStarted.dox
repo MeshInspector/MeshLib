@@ -3,7 +3,7 @@
 \page InstallationGuide Getting Started with MeshLib SDK
 
 MeshLib is a powerful, open-source 3D geometry library designed for developers across multiple platforms and programming languages.
-Whether you're working in C++, Python, C#, or C, MeshLib offers robust tools for creating, manipulating, and analyzing 3D data, e.g. meshes, voxels, point clouds.
+Whether you're working in C++, Python, C#, C, or JavaScript, MeshLib offers robust tools for creating, manipulating, and analyzing 3D data, e.g. meshes, voxels, point clouds.
 This guide will help you get started with setting up MeshLib for your preferred development environment.
 
 ## Choose Your Setup Guide
@@ -22,7 +22,10 @@ It covers installation on Windows, macOS, and Linux, with detailed steps for Vis
 4. \ref MeshLibCSetupGuide "\b MeshLib \b C \b Setup \b Guide"
 \n Learn how to install and configure MeshLib for C development on Windows, Linux, and macOS.
 
-5. \ref MeshLibCmakeSetupGuide "\b MeshLib \b CMake \b Setup \b Guide"
+5. \ref MeshLibJsSetupGuide "\b MeshLib \b JavaScript \b Setup \b Guide"
+\n Set up MeshLib for JavaScript and TypeScript in Node.js or the browser.
+
+6. \ref MeshLibCmakeSetupGuide "\b MeshLib \b CMake \b Setup \b Guide"
 \n Simple way of integrating MeshLib to your project via CMake.
 
 Each of these setup guides is tailored to help you quickly and efficiently integrate MeshLib into your development environment.

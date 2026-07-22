@@ -491,20 +491,6 @@ jobs:
         timeout-minutes: 10
         run: source\x64\Release\MRTest.exe
 
-      - name: Diagnose MRTest startup
-        # Rerun with file-redirected stdio: the console output of a fast-exiting process can be
-        # lost by the runner, while file redirection cannot. Prints the raw exit code too.
-        if: failure()
-        shell: pwsh
-        run: |
-          $p = Start-Process -FilePath "source\x64\Release\MRTest.exe" -NoNewWindow -Wait -PassThru -RedirectStandardOutput mrtest-out.txt -RedirectStandardError mrtest-err.txt
-          "MRTest exit code: {0} (0x{0:X8})" -f $p.ExitCode
-          "--- stdout ---"; Get-Content mrtest-out.txt -ErrorAction SilentlyContinue
-          "--- stderr ---"; Get-Content mrtest-err.txt -ErrorAction SilentlyContinue
-          "--- meshlib dir ---"; Get-ChildItem source\x64\Release\meshlib | Select-Object Length, LastWriteTime, Name
-          "--- newest MRLog ---"
-          Get-ChildItem "$env:TEMP\MeshViewer\Logs\MRLog_*.txt" -ErrorAction SilentlyContinue | Sort-Object LastWriteTime | Select-Object -Last 1 | ForEach-Object { Write-Host $_.FullName; Get-Content $_ }
-
       - name: Python Tests
         working-directory: source\x64\Release
         run: py -3 -u ..\..\..\scripts\run_python_test_script.py -multi-cmd

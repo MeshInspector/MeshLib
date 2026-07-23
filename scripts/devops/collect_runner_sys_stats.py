@@ -21,18 +21,19 @@ def get_ram_amount():
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
-# same tables as GetCpuId in source/MRMesh/MRSystem.cpp
+# decoding as in GetCpuId (source/MRMesh/MRSystem.cpp), but names must match
+# lscpu (util-linux sys-utils/lscpu-arm.c) so old and new stats rows agree
 ARM_CPU_NAMES = {
-    (0x41, 0xd03): "ARM Cortex-A53",    (0x41, 0xd05): "ARM Cortex-A55",
-    (0x41, 0xd07): "ARM Cortex-A57",    (0x41, 0xd08): "ARM Cortex-A72",
-    (0x41, 0xd09): "ARM Cortex-A73",    (0x41, 0xd0a): "ARM Cortex-A75",
-    (0x41, 0xd0b): "ARM Cortex-A76",    (0x41, 0xd0c): "ARM Neoverse-N1",
-    (0x41, 0xd0d): "ARM Cortex-A77",    (0x41, 0xd40): "ARM Neoverse-V1",
-    (0x41, 0xd41): "ARM Cortex-A78",    (0x41, 0xd44): "ARM Cortex-X1",
-    (0x41, 0xd49): "ARM Neoverse-N2",   (0x41, 0xd4f): "ARM Neoverse-V2",
-    (0xc0, 0xac3): "Ampere-1",          (0xc0, 0xac4): "Ampere-1a",
-    (0x43, 0x0af): "Marvell ThunderX2", (0x46, 0x001): "Fujitsu A64FX",
-    (0x51, 0xc01): "Qualcomm Kryo",
+    (0x41, 0xd03): "Cortex-A53",     (0x41, 0xd05): "Cortex-A55",
+    (0x41, 0xd07): "Cortex-A57",     (0x41, 0xd08): "Cortex-A72",
+    (0x41, 0xd09): "Cortex-A73",     (0x41, 0xd0a): "Cortex-A75",
+    (0x41, 0xd0b): "Cortex-A76",     (0x41, 0xd0c): "Neoverse-N1",
+    (0x41, 0xd0d): "Cortex-A77",     (0x41, 0xd40): "Neoverse-V1",
+    (0x41, 0xd41): "Cortex-A78",     (0x41, 0xd44): "Cortex-X1",
+    (0x41, 0xd49): "Neoverse-N2",    (0x41, 0xd4f): "Neoverse-V2",
+    (0xc0, 0xac3): "Ampere-1",       (0xc0, 0xac4): "Ampere-1a",
+    (0x43, 0x0af): "ThunderX2-99xx", (0x46, 0x001): "A64FX",
+    (0x51, 0xc01): "Saphira",
 }
 
 ARM_VENDORS = {

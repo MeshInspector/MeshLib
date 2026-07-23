@@ -49,6 +49,15 @@ import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
 \endcode
 
+## Cross-Origin Isolation for the Multi-Threaded Build
+The multi-threaded package `@meshinspector/meshlib-mt` relies on `SharedArrayBuffer`, which browsers only enable on **cross-origin isolated** pages. The server that serves the page loading the module must send these headers:
+\code{.txt}
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+\endcode
+
+Without them `SharedArrayBuffer` is unavailable and the module fails to initialize; use the single-threaded `@meshinspector/meshlib` package in that case.
+
 ## Getting Started: Your First Example
 The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:
 \code{.js}

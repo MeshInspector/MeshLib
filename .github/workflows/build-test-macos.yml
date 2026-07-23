@@ -68,6 +68,21 @@ jobs:
             c-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
+          # Cross-build the Intel (x86_64) target on the arm64 fleet via Rosetta 2
+          # and the x86_64 Homebrew at /usr/local (see "Configure x86_64 cross-build
+          # environment" below). Runs ALONGSIDE the hosted macos-15-intel x64 job for
+          # validation -- its `x64-cross` artifacts are kept distinct and are not
+          # consumed downstream yet. Prerequisite: the runner must have Rosetta 2 and
+          # an x86_64 Homebrew bootstrapped at /usr/local (formulae are installed by
+          # the workflow). AppleClang is universal, so the same compiler templates work.
+          - arch: x64-cross
+            config: Release
+            compiler: AppleClang
+            cxx-compiler-template: /usr/bin/clang++
+            c-compiler-template: /usr/bin/clang
+            runner: [ self-hosted, macos, arm64, build ]
+            instance: self-hosted-arm-x64
+            cross-osx-arch: x86_64
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -102,6 +117,22 @@ jobs:
             thirdparty/mrbind-pybind11
           # mrbind needs deps/cppdecl; recurse only there
           bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+
+      # x86_64-on-arm64 cross build (matrix arch `x64-cross`). Putting the x86_64
+      # Homebrew first on PATH makes brew, cmake, ninja, python, pkg-config, make
+      # and grep all resolve to their x86_64 builds. An x86_64 cmake reports
+      # CMAKE_SYSTEM_PROCESSOR=x86_64 (so thirdparty SIMD code paths are selected
+      # correctly) and its child compilers inherit the x86_64 slice; the x86_64
+      # Homebrew also installs x86_64 bottles. CMAKE_OSX_ARCHITECTURES pins the
+      # produced object code, and HOMEBREW_DIR points mrbind at the x86_64 llvm@22.
+      # No `arch -x86_64` wrapping or thirdparty-submodule patching is needed.
+      - name: Configure x86_64 cross-build environment
+        if: ${{ matrix.cross-osx-arch == 'x86_64' }}
+        run: |
+          echo "/usr/local/bin"  >> "$GITHUB_PATH"
+          echo "/usr/local/sbin" >> "$GITHUB_PATH"
+          echo "CMAKE_OSX_ARCHITECTURES=${{ matrix.cross-osx-arch }}" >> "$GITHUB_ENV"
+          echo "HOMEBREW_DIR=/usr/local" >> "$GITHUB_ENV"
 
       - name: Install thirdparty libs
         id: thirdparty

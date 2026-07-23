@@ -21,6 +21,61 @@ def get_ram_amount():
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
+# same tables as GetCpuId in source/MRMesh/MRSystem.cpp
+ARM_CPU_NAMES = {
+    (0x41, 0xd03): "ARM Cortex-A53",    (0x41, 0xd05): "ARM Cortex-A55",
+    (0x41, 0xd07): "ARM Cortex-A57",    (0x41, 0xd08): "ARM Cortex-A72",
+    (0x41, 0xd09): "ARM Cortex-A73",    (0x41, 0xd0a): "ARM Cortex-A75",
+    (0x41, 0xd0b): "ARM Cortex-A76",    (0x41, 0xd0c): "ARM Neoverse-N1",
+    (0x41, 0xd0d): "ARM Cortex-A77",    (0x41, 0xd40): "ARM Neoverse-V1",
+    (0x41, 0xd41): "ARM Cortex-A78",    (0x41, 0xd44): "ARM Cortex-X1",
+    (0x41, 0xd49): "ARM Neoverse-N2",   (0x41, 0xd4f): "ARM Neoverse-V2",
+    (0xc0, 0xac3): "Ampere-1",          (0xc0, 0xac4): "Ampere-1a",
+    (0x43, 0x0af): "Marvell ThunderX2", (0x46, 0x001): "Fujitsu A64FX",
+    (0x51, 0xc01): "Qualcomm Kryo",
+}
+
+ARM_VENDORS = {
+    0x41: "ARM",     0x42: "Broadcom",
+    0x43: "Cavium",  0x48: "HiSilicon",
+    0x4e: "NVIDIA",  0x51: "Qualcomm",
+    0x53: "Samsung", 0x56: "Marvell",
+    0x70: "Phytium", 0xc0: "Ampere",
+}
+
+def get_arm_cpu_model():
+    implementer, part = -1, -1
+    with open('/proc/cpuinfo') as f:
+        for line in f:
+            if line.startswith('CPU implementer'):
+                implementer = int(line.split(':', 1)[1], 0)
+            elif line.startswith('CPU part'):
+                part = int(line.split(':', 1)[1], 0)
+            if implementer >= 0 and part >= 0:
+                break
+
+    name = ARM_CPU_NAMES.get((implementer, part))
+    if name:
+        return name
+
+    vendor = ARM_VENDORS.get(implementer)
+    if vendor and part >= 0:
+        return f"{vendor} ARM CPU (part {part:#x})"
+
+    if implementer != -1 or part != -1:
+        return f"ARM CPU: {implementer:#x}, {part:#x}"
+
+    # single-board computers (Raspberry Pi etc.) expose a device-tree model name
+    try:
+        with open('/proc/device-tree/model') as f:
+            name = f.read().strip('\0').strip()
+            if name:
+                return name
+    except OSError:
+        pass
+
+    return "ARM CPU"
+
 def get_cpu_model():
     system = platform.system()
     if system == "Darwin":
@@ -30,7 +85,11 @@ def get_cpu_model():
         output = subprocess.check_output(['lscpu'], text=True)
         for line in output.splitlines():
             if line.startswith('Model name:'):
-                return line.split(':', 1)[1].strip()
+                model = line.split(':', 1)[1].strip()
+                if model and model != '-':
+                    return model
+        if platform.machine() in ('aarch64', 'arm64'):
+            return get_arm_cpu_model()
         return None
     elif system == "Windows":
         ps_command = "(Get-CimInstance Win32_Processor).Name"

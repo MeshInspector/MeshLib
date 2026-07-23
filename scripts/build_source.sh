@@ -39,6 +39,25 @@ MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
 # Extra flags for `cmake --build`.
 MR_CMAKE_BUILD_OPTIONS="${MR_CMAKE_BUILD_OPTIONS:-}"
 
+# Cross-compilation knobs for building the x86_64 target on an arm64 macOS host
+# with a NATIVE toolchain (no Rosetta). Each is a no-op when unset, so native
+# and other-platform builds are unaffected.
+#  - CMAKE_OSX_ARCHITECTURES   pins the produced object code arch.
+#  - CMAKE_MAKE_PROGRAM        forces the native (arm64) ninja; otherwise CMake's
+#                              find_program picks the x86_64 ninja under /usr/local
+#                              and the compile silently runs under Rosetta.
+#  - MESHLIB_HOMEBREW_PREFIX   points library discovery at the x86_64 Homebrew
+#                              (passed to ConfigureHomebrew.cmake as HOMEBREW_PREFIX).
+if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+fi
+if [ -n "${CMAKE_MAKE_PROGRAM}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+fi
+if [ -n "${MESHLIB_HOMEBREW_PREFIX}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D HOMEBREW_PREFIX=${MESHLIB_HOMEBREW_PREFIX}"
+fi
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
@@ -104,10 +123,14 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   "
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
-  NPROC=$(sysctl -n hw.logicalcpu)
-else
-  NPROC=$(nproc)
+# Respect a caller-provided NPROC (e.g. to cap parallelism / limit heat);
+# otherwise default to all available cores.
+if [ -z "${NPROC}" ]; then
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    NPROC=$(sysctl -n hw.logicalcpu)
+  else
+    NPROC=$(nproc)
+  fi
 fi
 echo "The number of concurrent build threads NPROC=${NPROC}"
 

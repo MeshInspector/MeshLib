@@ -57,6 +57,20 @@ MR_CMAKE_OPTIONS="\
   -D CMAKE_BUILD_TYPE=Release \
 "
 
+# Cross-compilation knobs for building the x86_64 target on an arm64 macOS host
+# with a native toolchain (no Rosetta). No-ops when unset. CMAKE_OSX_ARCHITECTURES
+# pins the output arch; CMAKE_MAKE_PROGRAM forces the native (arm64) ninja (else
+# CMake's find_program picks the x86_64 ninja under /usr/local and the compile runs
+# under Rosetta). x86_64 dependencies are located via the CMAKE_PREFIX_PATH env var,
+# which CMake reads automatically. These options also flow to the sub-builds
+# (clip/fastmcpp) via CMAKE_OPTIONS below.
+if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+fi
+if [ -n "${CMAKE_MAKE_PROGRAM}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+fi
+
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
   if [ -n "${CMAKE_C_COMPILER}" ] ; then
@@ -120,10 +134,13 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
-  NPROC=$(sysctl -n hw.logicalcpu)
-else
-  NPROC=$(nproc)
+# Respect a caller-provided NPROC
+if [ -z "${NPROC}" ]; then
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    NPROC=$(sysctl -n hw.logicalcpu)
+  else
+    NPROC=$(nproc)
+  fi
 fi
 
 # build

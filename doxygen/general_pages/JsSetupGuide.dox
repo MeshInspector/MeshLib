@@ -1,0 +1,132 @@
+/**
+\page MeshLibJsSetupGuide How to Install MeshLib SDK for JavaScript
+
+# Installing MeshLib SDK for JavaScript
+
+\tableofcontents
+
+[MeshLib](https://meshlib.io/) is available for JavaScript as the geometry library compiled to WebAssembly.
+It runs both in Node.js and in the browser, and is published to npm as two packages that share an identical API:
+`@meshinspector/meshlib` (single-threaded) and `@meshinspector/meshlib-mt` (multi-threaded).
+
+## Prerequisites
+Before installing MeshLib SDK for JavaScript, ensure you have the following:
+
+### Runtime
+MeshLib runs in Node.js or in a modern browser.
+ - `@meshinspector/meshlib` (single-threaded) requires **Node.js 18 or newer**.
+ - `@meshinspector/meshlib-mt` (multi-threaded) requires **Node.js 21 or newer**.
+
+[Download Node.js](https://nodejs.org/en/download).
+
+### Code Editor
+You can use any JavaScript- or TypeScript-compatible editor, such as Visual Studio Code, WebStorm, or any IDE you prefer.
+
+[Download Visual Studio Code](https://code.visualstudio.com/download)
+
+## Choosing a Package: Single-Threaded or Multi-Threaded
+MeshLib ships in two flavors with an identical API:
+
+ - `@meshinspector/meshlib`: the single-threaded build. The simplest choice, and the right one for most applications.
+ - `@meshinspector/meshlib-mt`: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput, and requires Node.js 21 or newer.
+
+The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; nothing else changes.
+
+## Installation
+### Installation via npm
+Install the package from npm:
+\code{.sh}
+npm install @meshinspector/meshlib
+\endcode
+
+### Use from CDN
+In the browser you can skip npm entirely and import the module directly:
+\code{.js}
+// latest version
+import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
+
+// or pin a specific version
+import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
+\endcode
+
+## Cross-Origin Isolation for the Multi-Threaded Build
+The multi-threaded package `@meshinspector/meshlib-mt` relies on `SharedArrayBuffer`, which browsers only enable on **cross-origin isolated** pages. The server that serves the page loading the module must send these headers:
+\code{.txt}
+Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Embedder-Policy: require-corp
+\endcode
+
+Without them `SharedArrayBuffer` is unavailable and the module fails to initialize; use the single-threaded `@meshinspector/meshlib` package in that case.
+
+## Getting Started: Your First Example
+The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:
+\code{.js}
+import createMeshLib from '@meshinspector/meshlib';
+
+const ml = await createMeshLib();
+
+// Build a cube (side 2) from raw geometry.
+const positions = new Float32Array([
+  -1, -1, -1,   1, -1, -1,   1, 1, -1,   -1, 1, -1,
+  -1, -1,  1,   1, -1,  1,   1, 1,  1,   -1, 1,  1,
+]);
+const indices = new Uint32Array([
+  0, 2, 1,  0, 3, 2,  4, 5, 6,  4, 6, 7,  0, 1, 5,  0, 5, 4,
+  3, 6, 2,  3, 7, 6,  0, 4, 7,  0, 7, 3,  1, 2, 6,  1, 6, 5,
+]);
+
+using coords = ml.VertCoords.fromArray(positions);
+using tris = ml.Triangulation.fromArray(indices);
+using mesh = ml.Mesh.fromTriangles(coords, tris);
+
+console.log('volume =', mesh.volume()); // ~8
+\endcode
+
+\note The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
+
+## TypeScript
+The package ships type definitions, so `createMeshLib` and the whole module API are typed with no extra setup:
+\code{.ts}
+import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
+
+const ml = await createMeshLib();
+using mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
+const { valid, distSq } = ml.findProjection(point, mesh);
+\endcode
+
+## Memory Management
+Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one must be freed explicitly.
+
+The preferred way is JavaScript's explicit resource management: declare a handle with [`using`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using) and it is freed automatically when its scope ends, even if an exception is thrown.
+\code{.js}
+using mesh = ml.Mesh.fromTriangles(coords, tris);
+// ... use mesh; it is freed at the end of this scope
+\endcode
+
+When the number of handles is dynamic (for example built in a loop), collect them in a [`DisposableStack`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DisposableStack), which frees everything it holds, in reverse order, at the end of the scope:
+\code{.js}
+using stack = new DisposableStack();
+for (const path of inputPaths) {
+  const cloud = stack.use(ml.PointsLoad.fromAnySupportedFormat(path));
+  // ... use cloud
+}
+// every handle passed to stack.use(...) is freed here
+\endcode
+
+`using` and `DisposableStack` are part of JavaScript's Explicit Resource Management, available in Node.js 24+ and current browsers. On older runtimes and browsers, call `.delete()` on each object when you are done instead:
+\code{.js}
+const mesh = ml.Mesh.fromTriangles(coords, tris);
+// ... use mesh
+mesh.delete();
+\endcode
+
+## Try MeshLib with JavaScript Examples
+After installing MeshLib, a great way to start exploring its capabilities is through the code samples. Each of the following example pages includes a JavaScript tab:
+
+ - [**Loading and saving mesh files**](\ref ExampleMeshLoadSave)
+ - [**Mesh Boolean**](\ref ExampleMeshBoolean)
+ - [**Mesh Decimation**](\ref ExampleMeshDecimate)
+
+Browse the full set on the [**MeshLib Code Samples**](\ref Examples) page.
+
+*/

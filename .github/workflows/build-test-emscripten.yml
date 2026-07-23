@@ -274,6 +274,8 @@ jobs:
         with:
           name: MRTest_${{ matrix.package_name }}
           path: mrtest-bundle
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
 
       - name: Unit Tests
         timeout-minutes: 5

@@ -411,10 +411,12 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
         if ( ai.hasRepeatedVerts() )
         {
+            const int aTris = all.vert2firstRec[a+1] - all.vert2firstRec[a];
+            const int bTris = all.vert2firstRec[b+1] - all.vert2firstRec[b];
             // double ring is the case when every triangle around central vertex is present in both orientations,
             // so every neighbour vertex is repeated
-            const bool aDoubleRing = all.vert2firstRec[a+1] - all.vert2firstRec[a] == (int)ai.numRepeatedVerts();
-            const bool bDoubleRing = all.vert2firstRec[b+1] - all.vert2firstRec[b] == (int)bi.numRepeatedVerts();
+            const bool aDoubleRing = aTris == (int)ai.numRepeatedVerts();
+            const bool bDoubleRing = bTris == (int)bi.numRepeatedVerts();
             if ( aDoubleRing != bDoubleRing )
                 return aDoubleRing; // process double ring vertices ahead of others, since their duplication produces two closed chains
 

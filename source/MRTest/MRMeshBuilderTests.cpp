@@ -336,6 +336,44 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 2 7 6\n"
         "f 7 5 3\n", 8, 8, 2
     );
+
+    // two cubes with mirrored triangulations sharing all 8 vertices;
+    // every vertex must be duplicated exactly once giving two separate cube components
+    testBuildWithDups
+    (
+        "v -0.5 -0.5 -0.5\n"
+        "v -0.5 0.5 -0.5\n"
+        "v 0.5 0.5 -0.5\n"
+        "v 0.5 -0.5 -0.5\n"
+        "v -0.5 -0.5 0.5\n"
+        "v -0.5 0.5 0.5\n"
+        "v 0.5 0.5 0.5\n"
+        "v 0.5 -0.5 0.5\n"
+        "f 7 5 6\n"
+        "f 5 7 8\n"
+        "f 2 7 6\n"
+        "f 7 2 3\n"
+        "f 7 4 8\n"
+        "f 4 7 3\n"
+        "f 1 2 3\n"
+        "f 3 4 1\n"
+        "f 1 5 6\n"
+        "f 6 2 1\n"
+        "f 1 4 8\n"
+        "f 8 5 1\n"
+        "f 7 6 5\n"
+        "f 5 8 7\n"
+        "f 2 6 7\n"
+        "f 7 3 2\n"
+        "f 7 8 4\n"
+        "f 4 3 7\n"
+        "f 1 3 2\n"
+        "f 3 1 4\n"
+        "f 1 6 5\n"
+        "f 6 1 2\n"
+        "f 1 8 4\n"
+        "f 8 1 5\n", 24, 16, 2
+    );
 }
 
 TEST( MRMesh, computeTrianglesRepetitions )

@@ -376,13 +376,14 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     if ( t.empty() )
         return 0; // input triangulation is empty
 
-    std::vector<VertDuplication> myDups;
-    if ( dups )
-        myDups = std::move( *dups );
-
     AllVertTris all( t, region );
     if ( all.recs.empty() )
         return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
+
+    // maintain the duplications even if the caller did not ask for them, they are necessary for getOrgVertex
+    std::vector<VertDuplication> myDups;
+    if ( dups )
+        myDups = std::move( *dups );
 
     if ( !lastValidVert )
         lastValidVert = all.recs.back().v;

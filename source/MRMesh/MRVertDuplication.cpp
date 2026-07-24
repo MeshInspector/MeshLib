@@ -57,41 +57,63 @@ public:
     }
 
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
-    VertId getNextVertex( VertId v, bool triOrientation, VertId prevVertex = {} )
+    VertId getNextVertex( VertId center, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
         if ( empty() )
             return VertId( -1 );
 
+        // if v is an original vertex, then return it;
+        // if v is a duplicated vertex, then return the id of the original vertex, which was duplicated to make v
+        auto getOrgVertex = [&dups]( VertId v )
+        {
+            if ( dups.empty() || v < dups.front().dupVert )
+                return v;
+            const auto i = v - dups.front().dupVert;
+            assert( i < dups.size() );
+            if ( i >= dups.size() )
+                return v;
+            assert( dups[i].dupVert == v );
+            assert( dups[i].srcVert < dups.front().dupVert );
+            return dups[i].srcVert;
+        };
+
+        assert( prevVertex );
+        prevVertex = getOrgVertex( prevVertex );
+        assert( prevVertex );
+
+        VertId prevOrPrevDup;
         auto prevIt = vertexEndIt;
         for ( auto it = vertexBegIt + firstUnvisitedIndex; it < vertexEndIt; ++it )
         {
             VertId nextVertex;
             const auto & vs = faceToVertices[it->f];
             const auto v12 = getOtherTriVerts( vs, it->v );
-            if ( triOrientation && v12.first == v )
+            if ( triOrientation && v12.first == center )
                 nextVertex = v12.second;
-            else if ( !triOrientation && v12.second == v )
+            else if ( !triOrientation && v12.second == center )
                 nextVertex = v12.first;
             if ( nextVertex )
             {
-                if ( nextVertex != prevVertex )
+                if ( getOrgVertex( nextVertex ) != prevVertex )
                 {
                     if ( it != vertexBegIt + firstUnvisitedIndex )
                         std::iter_swap( it, vertexBegIt + firstUnvisitedIndex );
                     ++firstUnvisitedIndex;
                     return nextVertex;
                 }
-                // prevVertex is a possible continuation, store it, and search for other options
+                // prevVertex (or its duplicate) is a possible continuation, store it, and search for other options
                 prevIt = it;
+                prevOrPrevDup = nextVertex;
             }
         }
         if ( prevIt < vertexEndIt )
         {
-            // the only option is return in prevVertex
+            // the only option is return in prevVertex (or its duplicate)
             if ( prevIt != vertexBegIt + firstUnvisitedIndex )
                 std::iter_swap( prevIt, vertexBegIt + firstUnvisitedIndex );
             ++firstUnvisitedIndex;
-            return prevVertex;
+            assert( prevOrPrevDup );
+            return prevOrPrevDup;
         }
         return {};
     }
@@ -351,12 +373,20 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
 {
     MR_TIMER;
+    if ( dups )
+        dups->clear(); // input contents are ignored
     if ( t.empty() )
         return 0; // input triangulation is empty
 
     AllVertTris all( t, region );
     if ( all.recs.empty() )
         return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
+
+    // maintain the duplications even if the caller did not ask for them, they are necessary for getOrgVertex;
+    // the caller's vector was cleared above, moving it in just reuses its buffer
+    std::vector<VertDuplication> myDups;
+    if ( dups )
+        myDups = std::move( *dups );
 
     if ( !lastValidVert )
         lastValidVert = all.recs.back().v;
@@ -423,7 +453,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                 {
                     // prefer finding nextVertex not equal to prevVertex to maximize neighbour ring sizes
                     auto currVertex = nextVertex;
-                    nextVertex = pathMaker.getNextVertex( currVertex, triOrientation, prevVertex );
+                    nextVertex = pathMaker.getNextVertex( currVertex, triOrientation, prevVertex, myDups );
                     prevVertex = currVertex;
                 }
 
@@ -434,13 +464,13 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                         triOrientation = false;
                         prevVertex = path[1];
                         std::reverse( path.begin(), path.end() );
-                        nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation, prevVertex );
+                        nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation, prevVertex, myDups );
                     }
                     if ( !nextVertex )
                     {
                         if ( foundChains )
                         {
-                            pathMaker.duplicateVertex( v, path, lastValidVert, triOrientation, dups );
+                            pathMaker.duplicateVertex( v, path, lastValidVert, triOrientation, &myDups );
                             ++duplicatedVerticesCnt;
                         }
                         ++foundChains;
@@ -459,7 +489,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
                     if ( foundChains )
                     {
-                        pathMaker.duplicateVertex( v, closedPath, lastValidVert, triOrientation, dups );
+                        pathMaker.duplicateVertex( v, closedPath, lastValidVert, triOrientation, &myDups );
                         ++duplicatedVerticesCnt;
                     }
                     ++foundChains;
@@ -471,6 +501,10 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             }
         }
     }
+
+    if ( dups )
+        *dups = std::move( myDups );
+
     return duplicatedVerticesCnt;
 }
 

@@ -57,7 +57,7 @@ public:
     }
 
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
-    VertId getNextVertex( VertId center, bool triOrientation, VertId prevVertex, std::vector<VertDuplication>& dups )
+    VertId getNextVertex( VertId center, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
         if ( empty() )
             return VertId( -1 );

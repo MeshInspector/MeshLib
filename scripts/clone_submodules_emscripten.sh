@@ -3,6 +3,7 @@
 git -C "$(dirname "$BASH_SOURCE")"/.. submodule update --init --depth 1 \
     thirdparty/imgui \
     thirdparty/parallel-hashmap \
+    thirdparty/expected \
     thirdparty/mrbind-pybind11 \
     thirdparty/mrbind \
 

@@ -57,24 +57,29 @@ public:
     }
 
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
-    VertId getNextVertex( VertId v, bool triOrientation, VertId prevVertex, std::vector<VertDuplication>& dups )
+    VertId getNextVertex( VertId center, bool triOrientation, VertId prevVertex, std::vector<VertDuplication>& dups )
     {
         if ( empty() )
             return VertId( -1 );
 
-        auto isPrevOrPrevDup = [prevVertex, &dups]( VertId nextVertex )
+        // if v is an original vertex, then return it;
+        // if v is a duplicated vertex, then return the id of the original vertex, which was duplicated to make v
+        auto getOrgVertex = [&dups]( VertId v )
         {
-            if ( prevVertex == nextVertex )
-                return true;
-            if ( dups.empty() || nextVertex < dups.front().dupVert )
-                return false;
-            const auto i = nextVertex - dups.front().dupVert;
+            if ( dups.empty() || v < dups.front().dupVert )
+                return v;
+            const auto i = v - dups.front().dupVert;
             assert( i < dups.size() );
             if ( i >= dups.size() )
-                return false;
-            assert( dups[i].dupVert == nextVertex );
-            return dups[i].srcVert == prevVertex;
+                return v;
+            assert( dups[i].dupVert == v );
+            assert( dups[i].srcVert < dups.front().dupVert );
+            return dups[i].srcVert;
         };
+
+        assert( prevVertex );
+        prevVertex = getOrgVertex( prevVertex );
+        assert( prevVertex );
 
         VertId prevOrPrevDup;
         auto prevIt = vertexEndIt;
@@ -83,27 +88,27 @@ public:
             VertId nextVertex;
             const auto & vs = faceToVertices[it->f];
             const auto v12 = getOtherTriVerts( vs, it->v );
-            if ( triOrientation && v12.first == v )
+            if ( triOrientation && v12.first == center )
                 nextVertex = v12.second;
-            else if ( !triOrientation && v12.second == v )
+            else if ( !triOrientation && v12.second == center )
                 nextVertex = v12.first;
             if ( nextVertex )
             {
-                if ( !isPrevOrPrevDup( nextVertex ) )
+                if ( getOrgVertex( nextVertex ) != prevVertex )
                 {
                     if ( it != vertexBegIt + firstUnvisitedIndex )
                         std::iter_swap( it, vertexBegIt + firstUnvisitedIndex );
                     ++firstUnvisitedIndex;
                     return nextVertex;
                 }
-                // prevVertex is a possible continuation, store it, and search for other options
+                // prevVertex (or its duplicate) is a possible continuation, store it, and search for other options
                 prevIt = it;
                 prevOrPrevDup = nextVertex;
             }
         }
         if ( prevIt < vertexEndIt )
         {
-            // the only option is return in prevVertex
+            // the only option is return in prevVertex (or its duplicate)
             if ( prevIt != vertexBegIt + firstUnvisitedIndex )
                 std::iter_swap( prevIt, vertexBegIt + firstUnvisitedIndex );
             ++firstUnvisitedIndex;

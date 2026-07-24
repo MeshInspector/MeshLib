@@ -1,4 +1,4 @@
-git -C $PSScriptRoot/.. submodule update --init --depth 1 `
+git -C $PSScriptRoot\.. submodule update --init --depth 1 `
     thirdparty/imgui `
     thirdparty/eigen `
     thirdparty/parallel-hashmap `
@@ -9,4 +9,4 @@ git -C $PSScriptRoot/.. submodule update --init --depth 1 `
     thirdparty/mrbind `
     thirdparty/mrbind-pybind11 `
 
-git -C $PSScriptRoot/../thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+git -C $PSScriptRoot\..\thirdparty\mrbind submodule update --init --depth 1 deps/cppdecl

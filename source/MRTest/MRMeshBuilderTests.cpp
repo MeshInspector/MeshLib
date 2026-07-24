@@ -374,6 +374,29 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 1 8 4\n"
         "f 8 1 5\n", 24, 16, 2
     );
+
+    // a soup of mirrored and repeated triangles over 6 vertices mixing double ring and other repeated-vertex
+    // neighbourhoods; without double-ring-first processing it built 19 vertices in 5 components instead
+    testBuildWithDups
+    (
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "v 1 1 0\n"
+        "v 1 0 1\n"
+        "f 3 5 6\n"
+        "f 1 4 5\n"
+        "f 6 2 4\n"
+        "f 2 6 4\n"
+        "f 3 5 1\n"
+        "f 6 5 4\n"
+        "f 6 1 4\n"
+        "f 1 3 5\n"
+        "f 1 6 4\n"
+        "f 6 4 5\n"
+        "f 2 5 6\n", 11, 18, 4
+    );
 }
 
 TEST( MRMesh, computeTrianglesRepetitions )

@@ -9,6 +9,7 @@
       <tab type="user" url="__BEGIN_URL__MeshLibCppSetupGuide__END_URL__" title="C++"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCSharpSetupGuide__END_URL__" title="C#"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCSetupGuide__END_URL__" title="C"/>
+      <tab type="user" url="__BEGIN_URL__MeshLibJsSetupGuide__END_URL__" title="JavaScript"/>
       <tab type="user" url="__BEGIN_URL__MeshLibCmakeSetupGuide__END_URL__" title="CMake"/>
     </tab>
     <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />

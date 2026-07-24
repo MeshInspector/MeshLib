@@ -46,14 +46,13 @@ public:
         return vertexBegIt + firstUnvisitedIndex >= vertexEndIt;
     }
 
-    // first unvisited vertex
-    VertId getFirstVertex() const
+    // returns the first unvisited vertex, and the following one in the path
+    std::pair<VertId, VertId> getFirstTwoVertices()
     {
         assert( !empty() );
-        const auto first = vertexBegIt + firstUnvisitedIndex;
-        // below selection ensures that getNextIncidentVertex( getFirstVertex(), true ) will find nextVertex in the very first triangle
+        const auto first = vertexBegIt + firstUnvisitedIndex++;
         const auto & vs = faceToVertices[first->f];
-        return getOtherTriVerts( vs, first->v ).first;
+        return getOtherTriVerts( vs, first->v );
     }
 
     // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
@@ -408,17 +407,10 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                 visitedVertices.reset(vi);
 
             bool triOrientation = true;
-            const VertId firstVertex = pathMaker.getFirstVertex();
+            auto [firstVertex, nextVertex] = pathMaker.getFirstTwoVertices();
             visitedVertices.autoResizeSet( firstVertex );
-            VertId prevVertex = firstVertex;
-            VertId nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation );
-            if ( !nextVertex )
-            {
-                triOrientation = false;
-                nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation );
-                assert( nextVertex.valid() );
-            }
             visitedVertices.autoResizeSet( nextVertex );
+            VertId prevVertex = firstVertex;
 
             // preserve allocated memory in path
             path.clear();

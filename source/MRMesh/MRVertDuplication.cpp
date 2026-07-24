@@ -46,7 +46,8 @@ public:
         return vertexBegIt + firstUnvisitedIndex >= vertexEndIt;
     }
 
-    // returns the first unvisited vertex, and the following one in the path
+    // takes the first unvisited triangle and returns its two other vertices in cyclic order
+    // to start a new path there, so the walk can continue with triOrientation = true
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
         assert( !empty() );

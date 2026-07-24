@@ -11,9 +11,6 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
-      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>
@@ -85,7 +82,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;fmtd.lib;spdlogd.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;fmtd.lib;spdlogd.lib;%(AdditionalDependencies);$(PythonLibPath);$(Pybind11StubsLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
@@ -95,10 +92,13 @@
       <!-- which now wraps zlib-ng's compat mode). In Release builds applocal carries it in via the consumer chain, but -->
       <!-- Debug builds only ask for the Debug zlib (`zd.dll` / `zlib-ngd2.dll`), so `z.dll` never lands next to the -->
       <!-- Release `python3XY.dll` we just deployed. Copy it explicitly so `Py_Initialize` doesn't fail silently in MRTest.exe. -->
+      <!-- The vcpkg-built pybind shim is dlopened by name from `meshlib\`, never imported, so applocal won't deploy it. -->
       <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
       copy $(PythonStableDllPath) $(TargetDir)python3.dll
       if exist "$(VcpkgCurrentInstalledDir)\bin\z.dll"     copy "$(VcpkgCurrentInstalledDir)\bin\z.dll"     "$(TargetDir)z.dll"
       if exist "$(VcpkgCurrentInstalledDir)\bin\zlib1.dll" copy "$(VcpkgCurrentInstalledDir)\bin\zlib1.dll" "$(TargetDir)zlib1.dll"
+      if not exist $(TargetDir)meshlib mkdir $(TargetDir)meshlib
+      copy "$(Pybind11ShimDllPath)" $(TargetDir)meshlib\
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -121,10 +121,22 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;fmt.lib;spdlog.lib;%(AdditionalDependencies);$(PythonLibPath)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;fmt.lib;spdlog.lib;%(AdditionalDependencies);$(PythonLibPath);$(Pybind11StubsLibPath)</AdditionalDependencies>
       <DelayLoadDLLs>
       </DelayLoadDLLs>
     </Link>
+    <PostBuildEvent>
+      <!-- Here we copy both python3.dll and python3XY.dll. The former seems to be just a tiny shim for the latter. -->
+      <!-- python3XY.dll is reached only through python3.dll's export forwarders, which applocal's import scan doesn't -->
+      <!-- see, so nothing else deploys it. Without it every python3.dll consumer (e.g. MRTest.exe) dies at load with -->
+      <!-- STATUS_DLL_NOT_FOUND. -->
+      <!-- The vcpkg-built pybind shim is dlopened by name from `meshlib\`, never imported, so applocal won't deploy it. -->
+      <Command>copy $(PythonDllPath) $(TargetDir)python$(PythonVersion).dll
+      copy $(PythonStableDllPath) $(TargetDir)python3.dll
+      if not exist $(TargetDir)meshlib mkdir $(TargetDir)meshlib
+      copy "$(Pybind11ShimDllPath)" $(TargetDir)meshlib\
+      </Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

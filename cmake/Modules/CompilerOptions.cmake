@@ -125,35 +125,6 @@ IF(NOT MSVC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
 ENDIF()
 
-# This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
-#   to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
-# We allow customizing those so that our clients can prevent their modules from talking to ours, e.g. to provide their own simplified bindings
-#   for our classes, to avoid having our modules as dependencies.
-# Pass empty strings to those to avoid customizing them at all.
-set(MESHLIB_PYBIND11_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
-set(MESHLIB_PYBIND11_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
-IF(NOT "${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}" STREQUAL "")
-  add_compile_definitions(PYBIND11_COMPILER_TYPE=\"${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}\")
-ENDIF()
-IF(NOT "${MESHLIB_PYBIND11_BUILD_ABI_STRING}" STREQUAL "")
-  add_compile_definitions(PYBIND11_BUILD_ABI=\"${MESHLIB_PYBIND11_BUILD_ABI_STRING}\")
-ENDIF()
-
-# Things for our patched pybind: --- [
-
-# It's a good idea to have this match `PYTHON_MIN_VERSION` in `scripts/mrbind/generate.mk`.
-# Here `0x030800f0` corresponds to 3.8 (ignore the `f0` suffix at the end, it just means a release version as opposed to alpha/beta/etc).
-add_compile_definitions(Py_LIMITED_API=0x030800f0)
-
-# It's a good idea to have this match the value specified in `scripts/mrbind/generate.mk`. See that file for the explanation.
-add_compile_definitions(PYBIND11_INTERNALS_VERSION=5)
-
-# This affects the naming of our pybind shims.
-set(MESHLIB_PYBIND11_LIB_SUFFIX "meshlib" CACHE STRING "")
-add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"${MESHLIB_PYBIND11_LIB_SUFFIX}\")
-
-# ] --- end things for our patched pybind
-
 # Warn about ABI incompatibilities.
 # GCC 12 fixed a bug, and this fix affects the ABI: https://github.com/gcc-mirror/gcc/commit/a37e8ce3b66325f0c6de55c80d50ac1664c3d0eb
 # Because of this fix GCC 11 and older are incompatible with GCC 12+, and also with Clang that we use the build the Python bindings.

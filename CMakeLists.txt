@@ -170,6 +170,10 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
     ENDIF()
   ENDIF()
 
+  IF(APPLE)
+    set(Python_ROOT_DIR "${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}")
+  ENDIF()
+
   IF(DEFINED MESHLIB_PYTHON_VERSION)
     find_package(Python ${MESHLIB_PYTHON_VERSION} EXACT REQUIRED COMPONENTS Interpreter Development)
   ELSE()
@@ -293,19 +297,6 @@ IF(NOT MR_EMSCRIPTEN)
       ENDIF()
     ENDIF()
   ENDIF()
-ENDIF()
-
-IF(MESHLIB_PYTHON_SUPPORT)
-  set(PYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX 0x030800f0 CACHE STRING "") # Python 3.8
-  set(PYBIND11_NONLIMITEDAPI_SUFFIX "${MESHLIB_PYBIND11_LIB_SUFFIX}" CACHE STRING "")
-  set(PYBIND11_NONLIMITEDAPI_LIBRARY_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/meshlib" CACHE PATH "")
-  set(PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_STUBS "${MR_MAIN_LIB_DIR}" CACHE PATH "")
-  set(PYBIND11_NONLIMITEDAPI_INSTALL_LIBDIR_SHIMS "${MR_PY_LIB_DIR}" CACHE PATH "")
-  # We want to always build stubs here because we want to set `PYBIND11_COMPILER_TYPE`, `PYBIND11_BUILD_ABI` for them, and accessing them in `thirdparty/CMakeLists.txt` gets weird.
-  # If not for that, we'd build them here only on Windows (because there we don't have a thirdparty build script).
-  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" ON)
-  option(PYBIND11_NONLIMITEDAPI_INSTALL_EXPORTS "" ON)
-  add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11/source/non_limited_api ./meshlib)
 ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)

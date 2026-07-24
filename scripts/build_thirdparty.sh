@@ -57,6 +57,11 @@ MR_CMAKE_OPTIONS="\
   -D CMAKE_BUILD_TYPE=Release \
 "
 
+# Which Python version the mrbind-pybind11 stubs and shim are built against.
+if [ -n "${MESHLIB_PYTHON_VERSION}" ] ; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION=${MESHLIB_PYTHON_VERSION}"
+fi
+
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
   if [ -n "${CMAKE_C_COMPILER}" ] ; then

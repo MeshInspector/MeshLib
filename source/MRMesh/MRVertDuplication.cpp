@@ -373,6 +373,8 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
 {
     MR_TIMER;
+    if ( dups )
+        dups->clear(); // input contents are ignored
     if ( t.empty() )
         return 0; // input triangulation is empty
 
@@ -380,7 +382,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     if ( all.recs.empty() )
         return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
 
-    // maintain the duplications even if the caller did not ask for them, they are necessary for getOrgVertex
+    // maintain the duplications even if the caller did not ask for them, they are necessary for getOrgVertex;
+    // the caller's vector was cleared above, moving it in just reuses its buffer
     std::vector<VertDuplication> myDups;
     if ( dups )
         myDups = std::move( *dups );

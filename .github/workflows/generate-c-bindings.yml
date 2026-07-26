@@ -16,11 +16,17 @@ jobs:
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     permissions:
-      contents: read  # This is required for actions/checkout
+      # required for actions/checkout
+      # change to write if you require draft MRBind release
+      contents: write  
     container:
       image: meshlib/meshlib-emscripten-generate-c-bindings-arm64:${{inputs.docker_image_tag}}
 
     steps:
+      - name: Fix git permissions
+        run: |
+          git config --global --add safe.directory '*'
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -30,8 +36,6 @@ jobs:
         run: |
           # have to checkout selective submodules by our own
           # related issue: https://github.com/actions/checkout/issues/1779
-          export HOME=${RUNNER_TEMP}
-          git config --global --add safe.directory '*'
           # Retried via retry.sh: submodule endpoints occasionally 500.
           bash scripts/retry.sh -- git submodule update --init --depth 1 \
             thirdparty/imgui \
@@ -44,17 +48,22 @@ jobs:
             thirdparty/onetbb \
             thirdparty/openvdb/v10/openvdb \
             thirdparty/spdlog
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
 
-      - name: Install MRBind
-        uses: ./.github/actions/build-mrbind
-        with:
-          # The Dockerfile hash in extra-cache-key busts the cache whenever the
-          # toolchain inside the image changes (e.g. glibc, clang upgrade).
-          cache-key-prefix: ubuntu-arm64-emscripten
-          build-script: scripts/mrbind/install_mrbind_ubuntu.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+      - name: Download and unpack MRBind
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          MRBIND_VERSION=$(cat scripts/mrbind/mrbind_version.txt | xargs)
+          curl -sL https://github.com/cli/cli/releases/download/v2.95.0/gh_2.95.0_linux_arm64.tar.gz | tar xz
+          alias gh=gh_2.95.0_linux_arm64/bin/gh
+          gh release list \
+            --repo MeshInspector/mrbind
+          gh api repos/MeshInspector/mrbind/releases --jq '.[] | select(.draft) | .assets[].url'
+          gh release download $MRBIND_VERSION \
+            --repo MeshInspector/mrbind \
+            --pattern "mrbind-linux-$(uname -m).zip"
+          unzip "mrbind-linux-$(uname -m).zip"
+          mv mrbind thirdparty/mrbind/build
 
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
@@ -68,7 +77,7 @@ jobs:
 
       - name: Generate C bindings
         run: |
-          make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1
+          make -f scripts/mrbind/generate.mk TARGET=c -B --trace EM_USE_HOST_HEADERS=0 ENABLE_CUDA=1 CLANG_RESOURCE_DIR=thirdparty/mrbind/build/resource-dir
 
       - name: Upload C bindings
         uses: actions/upload-artifact@v7

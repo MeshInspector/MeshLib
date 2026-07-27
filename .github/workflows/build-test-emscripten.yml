@@ -81,7 +81,7 @@ jobs:
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh
+          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
 
       - name: Install thirdparty libs
         run: |
@@ -186,7 +186,7 @@ jobs:
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh
+          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
 
       - name: Install thirdparty libs
         run: |

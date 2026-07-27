@@ -2,9 +2,11 @@
 
 SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 
-"$SCRIPT_DIR"/checkout_submodules.sh "$SCRIPT_DIR"/.. \
-    thirdparty/imgui \
-    thirdparty/mrbind-pybind11 \
-    thirdparty/mrbind \
+SUBMODULES=(
+    thirdparty/imgui
+    thirdparty/mrbind
+    thirdparty/mrbind-pybind11
+)
 
+"$SCRIPT_DIR"/checkout_submodules.sh "$SCRIPT_DIR"/.. "${SUBMODULES[@]}"
 "$SCRIPT_DIR"/checkout_submodules.sh "$SCRIPT_DIR"/../thirdparty/mrbind deps/cppdecl

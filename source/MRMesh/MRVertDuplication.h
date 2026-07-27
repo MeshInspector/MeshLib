@@ -34,14 +34,20 @@ struct VertInfo
     /// true if some neighbor vertex is present in more than one triangle-pair around the vertex
     [[nodiscard]] bool hasRepeatedVerts() const { return ( data_ & 1 ) != 0; }
 
-    /// the number of neighbor vertex repetitions; 0 if !hasRepeatedVerts()
-    [[nodiscard]] std::uint32_t numRepeatedVerts() const { return hasRepeatedVerts() ? data_ >> 1 : 0; }
+    /// the total number of neighbor vertex repetitions; 0 if !hasRepeatedVerts()
+    [[nodiscard]] std::uint32_t numRepeatedVerts() const { return hasRepeatedVerts() ? ( data_ >> 1 ) & maxNumRepeatedVerts : 0; }
+
+    /// the maximum number of a neighbor vertex repetitions; 0 if !hasRepeatedVerts()
+    [[nodiscard]] std::uint32_t maxVertRepetitions() const { return hasRepeatedVerts() ? data_ >> 17 : 0; }
 
     /// the number of open chains of connected triangles around the vertex; 0 if hasRepeatedVerts()
     [[nodiscard]] std::uint32_t numOpenChains() const { return hasRepeatedVerts() ? 0 : ( data_ >> 1 ) & maxNumOpenChains; }
 
     /// the number of closed chains (rings) of connected triangles around the vertex; 0 if hasRepeatedVerts()
     [[nodiscard]] std::uint32_t numClosedChains() const { return hasRepeatedVerts() ? 0 : data_ >> 17; }
+
+    /// the total number of open and closed chains of connected triangles around the vertex; 0 if hasRepeatedVerts()
+    [[nodiscard]] std::uint32_t numChains() const { return numOpenChains() + numClosedChains(); }
 
     /// true if the triangles around the vertex do not form a configuration MeshBuilder accepts as is
     /// (a single chain or ring, no triangles at all, or two open chains), so the vertex must be duplicated
@@ -52,44 +58,36 @@ struct VertInfo
             || ( numOpenChains() == 2 && numClosedChains() == 0 ) );
     }
 
-    /// increments numRepeatedVerts saturating at its maximum; the first call zeros the chain counters forever
-    void incRepeatedVerts()
+    /// tests for the case when every triangle around central vertex is present twice,
+    /// if the chains are closed, the copy triangles have always same or always opposite orientation,
+    /// if the chains are open, the copy triangles have always same orientation,
+    /// so every neighbour vertex is repeated
+    [[nodiscard]] bool areTwinChains( std::uint32_t numTris ) const
     {
-        if ( !hasRepeatedVerts() )
-            data_ = 3; // the flag and numRepeatedVerts = 1
-        else if ( numRepeatedVerts() < maxNumRepeatedVerts )
-            data_ += 2;
+        return maxVertRepetitions() == 1 && numTris == numRepeatedVerts();
     }
 
-    /// increments numOpenChains saturating at its maximum
-    void incOpenChains()
+    void setNumChains( std::uint32_t openChains, std::uint32_t closedChains )
     {
-        assert( !hasRepeatedVerts() );
-        if ( numOpenChains() < maxNumOpenChains )
-            data_ += 2;
+        data_ = ( std::min( openChains, maxNumOpenChains ) << 1 ) +
+                ( std::min( closedChains, maxNumClosedChains ) << 17 );
     }
 
-    /// decrements numOpenChains, but a saturated counter sticks to its maximum forever
-    void decOpenChains()
+    void setNumRepeatedVerts( std::uint32_t repeatedVerts, std::uint32_t maxVertRepetitions )
     {
-        assert( !hasRepeatedVerts() );
-        assert( numOpenChains() > 0 );
-        if ( numOpenChains() < maxNumOpenChains )
-            data_ -= 2;
-    }
-
-    /// increments numClosedChains saturating at its maximum
-    void incClosedChains()
-    {
-        assert( !hasRepeatedVerts() );
-        if ( numClosedChains() < maxNumClosedChains )
-            data_ += 1u << 17;
+        assert( repeatedVerts >= 1 );
+        assert( maxVertRepetitions >= 1 );
+        assert( repeatedVerts >= maxVertRepetitions );
+        repeatedVerts = std::min( repeatedVerts, maxNumRepeatedVerts );
+        maxVertRepetitions = std::min( maxVertRepetitions, maxMaxVertRepetitions );
+        data_ = 1 + ( repeatedVerts << 1 ) + ( maxVertRepetitions << 17 );
     }
 
     /// maximal values storable in the counters
     static constexpr std::uint32_t maxNumOpenChains = ( 1u << 16 ) - 1;
     static constexpr std::uint32_t maxNumClosedChains = ( 1u << 15 ) - 1;
-    static constexpr std::uint32_t maxNumRepeatedVerts = ( 1u << 31 ) - 1;
+    static constexpr std::uint32_t maxNumRepeatedVerts = ( 1u << 16 ) - 1;
+    static constexpr std::uint32_t maxMaxVertRepetitions = ( 1u << 15 ) - 1;
 
 private:
     std::uint32_t data_ = 0;

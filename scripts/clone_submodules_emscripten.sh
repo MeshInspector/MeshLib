@@ -9,7 +9,7 @@ SUBMODULES=(
     thirdparty/parallel-hashmap
 )
 
-if [[ $1 != --prebuilt-thirdparty ]]; then
+if [[ $1 != --skip-prebuilt-thirdparty ]]; then
     SUBMODULES+=(
         thirdparty/c-blosc
         thirdparty/clip

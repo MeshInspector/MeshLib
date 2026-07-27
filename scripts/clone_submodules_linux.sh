@@ -10,7 +10,7 @@ SUBMODULES=(
     thirdparty/mrbind
 )
 
-if [[ $1 != --prebuilt-thirdparty ]]; then
+if [[ $1 != --skip-prebuilt-thirdparty ]]; then
     SUBMODULES+=(
         thirdparty/clip
         thirdparty/cpp-httplib

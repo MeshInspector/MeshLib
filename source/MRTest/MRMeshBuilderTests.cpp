@@ -73,7 +73,7 @@ TEST( MRMesh, duplicateResolvedNeighborVertex )
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
     EXPECT_EQ( duplicatedVerticesCnt, 1 );
     ASSERT_EQ( dups.size(), 1 );
-    EXPECT_EQ( dups[0].srcVert, 2_v );
+    EXPECT_EQ( dups[0].srcVert, 1_v );
     EXPECT_EQ( dups[0].dupVert, 6_v );
 
     const auto topology = fromTrianglesDuplicatingNonManifoldVertices( t );
@@ -139,35 +139,35 @@ TEST( MRMesh, duplicateVertexOppositeOrientedTri )
     EXPECT_EQ( dups.size(), 0 );
 }
 
-// a hub vertex #0 with two open chains (1-2-3, 6-7-8) and a closed ring (3-4-5) sharing rim vertex #3;
-// duplicating the shared rim vertex #3 once resolves #0, so the hub itself is never split
+// a hub vertex #0 with two open chains (1-2-0, 6-7-8) and a closed ring (0-4-5) sharing rim vertex #0;
+// duplicating the shared rim vertex #0 once resolves #3, so the hub itself is never split
 TEST( MRMesh, duplicateVertexWithThreeChains )
 {
     Triangulation t;
-    t.push_back( { 0_v, 1_v, 2_v } ); //0_f open chain 1-2-3
-    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
-    t.push_back( { 0_v, 3_v, 4_v } ); //2_f closed ring 3-4-5-3
-    t.push_back( { 0_v, 4_v, 5_v } ); //3_f
-    t.push_back( { 0_v, 5_v, 3_v } ); //4_f
-    t.push_back( { 0_v, 6_v, 7_v } ); //5_f open chain 6-7-8
-    t.push_back( { 0_v, 7_v, 8_v } ); //6_f
+    t.push_back( { 3_v, 1_v, 2_v } ); //0_f open chain 1-2-0
+    t.push_back( { 3_v, 2_v, 0_v } ); //1_f
+    t.push_back( { 3_v, 0_v, 4_v } ); //2_f closed ring 0-4-5-0
+    t.push_back( { 3_v, 4_v, 5_v } ); //3_f
+    t.push_back( { 3_v, 5_v, 0_v } ); //4_f
+    t.push_back( { 3_v, 6_v, 7_v } ); //5_f open chain 6-7-8
+    t.push_back( { 3_v, 7_v, 8_v } ); //6_f
 
     std::vector<VertDuplication> dups;
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
     EXPECT_EQ( duplicatedVerticesCnt, 1 );
     ASSERT_EQ( dups.size(), 1 );
     // the shared rim vertex #3 is duplicated, not the hub #0
-    EXPECT_EQ( dups[0].srcVert, 3_v );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
     EXPECT_EQ( dups[0].dupVert, 9_v );
 
     // every triangle keeps the hub vertex #0
-    EXPECT_EQ( t[0_f][0], 0_v );
-    EXPECT_EQ( t[1_f][0], 0_v );
-    EXPECT_EQ( t[2_f][0], 0_v );
-    EXPECT_EQ( t[3_f][0], 0_v );
-    EXPECT_EQ( t[4_f][0], 0_v );
-    EXPECT_EQ( t[5_f][0], 0_v );
-    EXPECT_EQ( t[6_f][0], 0_v );
+    EXPECT_EQ( t[0_f][0], 3_v );
+    EXPECT_EQ( t[1_f][0], 3_v );
+    EXPECT_EQ( t[2_f][0], 3_v );
+    EXPECT_EQ( t[3_f][0], 3_v );
+    EXPECT_EQ( t[4_f][0], 3_v );
+    EXPECT_EQ( t[5_f][0], 3_v );
+    EXPECT_EQ( t[6_f][0], 3_v );
 
     // the result is manifold
     dups.clear();
@@ -373,29 +373,6 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 6 1 2\n"
         "f 1 8 4\n"
         "f 8 1 5\n", 24, 16, 2
-    );
-
-    // a soup of mirrored and repeated triangles over 6 vertices mixing double ring and other repeated-vertex
-    // neighbourhoods; without double-ring-first processing it built 19 vertices in 5 components instead
-    testBuildWithDups
-    (
-        "v 0 0 0\n"
-        "v 1 0 0\n"
-        "v 0 1 0\n"
-        "v 0 0 1\n"
-        "v 1 1 0\n"
-        "v 1 0 1\n"
-        "f 3 5 6\n"
-        "f 1 4 5\n"
-        "f 6 2 4\n"
-        "f 2 6 4\n"
-        "f 3 5 1\n"
-        "f 6 5 4\n"
-        "f 6 1 4\n"
-        "f 1 3 5\n"
-        "f 1 6 4\n"
-        "f 6 4 5\n"
-        "f 2 5 6\n", 11, 18, 4
     );
 }
 

@@ -442,8 +442,9 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             if ( ai.maxVertRepeations() != bi.maxVertRepeations() )
                 return ai.maxVertRepeations() < bi.maxVertRepeations(); // process vertices with fewer maximal neigbour repetitions first
 
-            // process neighbourhoods with more repeated vertices (a) first
-            return std::make_pair( ai.numRepeatedVerts(), a ) > std::make_pair( bi.numRepeatedVerts(), b );
+            // process neighbourhoods with more repeated vertices first,
+            // keep normal (not reversed) order of the vertices with same number of neighbours' repeatitions
+            return std::make_pair( -(int)ai.numRepeatedVerts(), a ) < std::make_pair( -(int)bi.numRepeatedVerts(), b );
         }
         // process neighbourhoods with more chains (a) first
         return std::make_pair( ai.numOpenChains() + ai.numClosedChains(), a ) > std::make_pair( bi.numOpenChains() + bi.numClosedChains(), b );

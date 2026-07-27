@@ -173,9 +173,8 @@ TEST( MRMesh, PlanarTriangulationMeshSpace )
 
 namespace
 {
-
 // circle of n points (closed: first == last)
-Contour2d benchCircle( int n, double r, const Vector2d& center )
+Contour2d circle( int n, double r, const Vector2d& center )
 {
     Contour2d cont;
     cont.reserve( n + 1 );
@@ -187,6 +186,60 @@ Contour2d benchCircle( int n, double r, const Vector2d& center )
     cont.push_back( cont.front() );
     return cont;
 }
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSame1 )
+{
+    Contours2d conts( 2 );
+    conts[0] = circle( 10, 20, Vector2d( 100, 100 ) );
+    conts[1] =
+    {
+        {0.0,0.0},
+        {0.0,0.0},
+
+        {5.0,10.0},
+        {15.0,15.0},
+        {20.0,5.0},
+
+        {0.0,0.0},
+        {0.0,0.0}
+    };
+    auto mesh = PlanarTriangulation::triangulateContours( conts );
+    EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ) + calcOrientedArea( conts[1] ), 1e-3 );
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSame2 )
+{
+    Contours2d conts( 2 );
+    conts[0] = circle( 10, 20, Vector2d( 100, 100 ) );
+    conts[1] =
+    {
+        {0.0,0.0},
+        {0.0,0.0},
+        {0.0,0.0},
+        {0.0,0.0}
+    };
+    auto mesh = PlanarTriangulation::triangulateContours( conts );
+    EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ), 1e-3 );
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSame3 )
+{
+    Contours2d conts( 2 );
+    conts[0] = circle( 10, 20, Vector2d( 0.0, 0.0 ) );
+    conts[1] =
+    {
+        {0.0,0.0},
+        {45.0,45.0},
+        {0.0,0.0},
+        {0.0,0.0}
+    };
+    auto mesh = PlanarTriangulation::triangulateContours( conts );
+    EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ), 1e-3 );
+}
+
+namespace
+{
 
 // star polygon {n/step} as a single self-intersecting closed contour (needs gcd(n,step)==1)
 Contour2d benchStar( int n, int step, double r, const Vector2d& center )
@@ -254,7 +307,7 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
     // 1) one big circle: single large monotone polygon -> dominated by the `less` sort.
     //    This is the path the predicate refactor regressed and parallel_sort targets.
     {
-        Contours2d conts{ benchCircle( 100000, 1.0, Vector2d() ) };
+        Contours2d conts{ circle( 100000, 1.0, Vector2d() ) };
         runBench( "one-big-circle", countVerts( conts ), warmup, iters,
             [&] { return triangulateOnceMs( conts ); } );
     }
@@ -265,7 +318,7 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
         constexpr int grid = 24, ptsPer = 48;
         for ( int gx = 0; gx < grid; ++gx )
             for ( int gy = 0; gy < grid; ++gy )
-                conts.push_back( benchCircle( ptsPer, 0.4, Vector2d( double( gx ), double( gy ) ) ) );
+                conts.push_back( circle( ptsPer, 0.4, Vector2d( double( gx ), double( gy ) ) ) );
         runBench( "disjoint-circles", countVerts( conts ), warmup, iters,
             [&] { return triangulateOnceMs( conts ); } );
     }
@@ -276,7 +329,7 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
         constexpr int grid = 10, ptsPer = 40;
         for ( int gx = 0; gx < grid; ++gx )
             for ( int gy = 0; gy < grid; ++gy )
-                conts.push_back( benchCircle( ptsPer, 0.5, Vector2d( 0.8 * gx, 0.8 * gy ) ) );
+                conts.push_back( circle( ptsPer, 0.5, Vector2d( 0.8 * gx, 0.8 * gy ) ) );
         runBench( "overlapping-circles", countVerts( conts ), warmup, iters,
             [&] { return triangulateOnceMs( conts ); } );
     }

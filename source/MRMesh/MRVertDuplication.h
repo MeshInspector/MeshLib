@@ -34,8 +34,11 @@ struct VertInfo
     /// true if some neighbor vertex is present in more than one triangle-pair around the vertex
     [[nodiscard]] bool hasRepeatedVerts() const { return ( data_ & 1 ) != 0; }
 
-    /// the number of neighbor vertex repetitions; 0 if !hasRepeatedVerts()
-    [[nodiscard]] std::uint32_t numRepeatedVerts() const { return hasRepeatedVerts() ? data_ >> 1 : 0; }
+    /// the total number of neighbor vertex repetitions; 0 if !hasRepeatedVerts()
+    [[nodiscard]] std::uint32_t numRepeatedVerts() const { return hasRepeatedVerts() ? ( data_ >> 1 ) & maxNumRepeatedVerts : 0; }
+
+    /// the maximum number of a neighbor vertex repetitions; 0 if !hasRepeatedVerts()
+    [[nodiscard]] std::uint32_t maxVertRepeations() const { return hasRepeatedVerts() ? data_ >> 17 : 0; }
 
     /// the number of open chains of connected triangles around the vertex; 0 if hasRepeatedVerts()
     [[nodiscard]] std::uint32_t numOpenChains() const { return hasRepeatedVerts() ? 0 : ( data_ >> 1 ) & maxNumOpenChains; }
@@ -52,44 +55,31 @@ struct VertInfo
             || ( numOpenChains() == 2 && numClosedChains() == 0 ) );
     }
 
-    /// increments numRepeatedVerts saturating at its maximum; the first call zeros the chain counters forever
-    void incRepeatedVerts()
+    void setNumChains( std::uint32_t openChains, std::uint32_t closedChains )
     {
-        if ( !hasRepeatedVerts() )
-            data_ = 3; // the flag and numRepeatedVerts = 1
-        else if ( numRepeatedVerts() < maxNumRepeatedVerts )
-            data_ += 2;
+        data_ = ( std::min( openChains, maxNumOpenChains ) << 1 ) +
+                ( std::min( closedChains, maxNumClosedChains ) << 17 );
     }
 
-    /// increments numOpenChains saturating at its maximum
-    void incOpenChains()
+    void setNumRepeatedVerts( std::uint32_t repeatedVerts, std::uint32_t maxVertRepeations )
     {
-        assert( !hasRepeatedVerts() );
-        if ( numOpenChains() < maxNumOpenChains )
-            data_ += 2;
-    }
-
-    /// decrements numOpenChains, but a saturated counter sticks to its maximum forever
-    void decOpenChains()
-    {
-        assert( !hasRepeatedVerts() );
-        assert( numOpenChains() > 0 );
-        if ( numOpenChains() < maxNumOpenChains )
-            data_ -= 2;
-    }
-
-    /// increments numClosedChains saturating at its maximum
-    void incClosedChains()
-    {
-        assert( !hasRepeatedVerts() );
-        if ( numClosedChains() < maxNumClosedChains )
-            data_ += 1u << 17;
+        assert( repeatedVerts >= 1 );
+        assert( maxVertRepeations >= 1 );
+        assert( repeatedVerts >= maxVertRepeations );
+        repeatedVerts = std::min( repeatedVerts, maxNumRepeatedVerts );
+        maxVertRepeations = std::min( maxVertRepeations, maxMaxVertRepeations );
+        data_ = 1 + ( repeatedVerts << 1 ) + ( maxVertRepeations << 17 );
+        auto a = numRepeatedVerts();
+        auto b = this->maxVertRepeations();
+        assert( a == repeatedVerts );
+        assert( b == maxVertRepeations );
     }
 
     /// maximal values storable in the counters
     static constexpr std::uint32_t maxNumOpenChains = ( 1u << 16 ) - 1;
     static constexpr std::uint32_t maxNumClosedChains = ( 1u << 15 ) - 1;
-    static constexpr std::uint32_t maxNumRepeatedVerts = ( 1u << 31 ) - 1;
+    static constexpr std::uint32_t maxNumRepeatedVerts = ( 1u << 16 ) - 1;
+    static constexpr std::uint32_t maxMaxVertRepeations = ( 1u << 15 ) - 1;
 
 private:
     std::uint32_t data_ = 0;

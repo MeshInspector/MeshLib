@@ -180,15 +180,22 @@ public:
     VertInfo run( const Triangulation & t, const VertTri * begin, const VertTri * end );
 
 private:
+    struct VertRepetitions
+    {
+        VertId v;
+        std::uint32_t r = 0;
+    };
+    static_assert( sizeof( VertRepetitions ) == 8 );
+
     /// l_[v1] is present in the map, if there is a triangle to the left of (v,v1) edge;
-    /// l_[v1]'s value is invalid if there is a triangle to the right of (v,v1) edge;
+    /// l_[v1].v is invalid if there is a triangle to the right of (v,v1) edge;
     /// otherwise it is the vertex v2 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the left of (v,v2) edge
-    HashMap<VertId, VertId> l_;
+    HashMap<VertId, VertRepetitions> l_;
 
     /// r_[v2] is present in the map, if there is a triangle to the right of (v,v2) edge;
-    /// r_[v2]'s value is invalid if there is a triangle to the left of (v,v2) edge;
+    /// r_[v2].v is invalid if there is a triangle to the left of (v,v2) edge;
     /// otherwise it is the vertex v1 such that there is a chain of triangles in between (v,v1) and (v,v2) and there is no triangle to the right of (v,v1) edge
-    HashMap<VertId, VertId> r_;
+    HashMap<VertId, VertRepetitions> r_;
 };
 
 VertInfo inspectVertNeighbourhood( const Triangulation & t, const VertTri * begin, const VertTri * end )
@@ -200,63 +207,64 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
 {
     l_.clear();
     r_.clear();
-    VertInfo info;
     if ( begin == end )
-        return info;
+        return {};
     const auto v0 = begin->v;
+    std::uint32_t repeatedVerts = 0, maxVertRepeations = 0;
+    std::uint32_t openChains = 0, closedChains = 0;
     for ( auto i = begin; i != end; ++i )
     {
         assert( i->v == v0 );
         const auto [v1, v2] = getOtherTriVerts( t[i->f], v0 );
-        const auto lInsertion = l_.insert( { v1, v2 } );
-        const auto rInsertion = r_.insert( { v2, v1 } );
-        if ( !info.hasRepeatedVerts() && lInsertion.second && rInsertion.second )
+        const auto lInsertion = l_.insert( { v1, { v2 } } );
+        const auto rInsertion = r_.insert( { v2, { v1 } } );
+        if ( repeatedVerts == 0 && lInsertion.second && rInsertion.second )
         {
-            info.incOpenChains();
+            ++openChains;
             if ( auto it = l_.find( v2 ); it != l_.end() )
             {
                 // the edge (v,v2) becomes inner
-                const auto vEnd = it->second;
-                it->second = VertId{};
+                const auto vEnd = it->second.v;
+                it->second.v = VertId{};
                 assert( vEnd ); // the edge (v,v2) was boundary
-                info.decOpenChains();
-                lInsertion.first->second = vEnd;
-                assert( r_[vEnd] == v2 );
-                r_[vEnd] = v1;
+                --openChains;
+                lInsertion.first->second.v = vEnd;
+                assert( r_[vEnd].v == v2 );
+                r_[vEnd].v = v1;
             }
             if ( auto it = r_.find( v1 ); it != r_.end() )
             {
                 // the edge (v,v1) becomes inner
-                const auto vEnd = it->second;
-                it->second = VertId{};
+                const auto vEnd = it->second.v;
+                it->second.v = VertId{};
                 assert( vEnd ); // the edge (v,v1) was boundary
                 if ( vEnd == v1 )
                 {
                     // the chain is closed
-                    assert( lInsertion.first->second == v1 );
-                    lInsertion.first->second = VertId{};
-                    rInsertion.first->second = VertId{};
-                    info.decOpenChains();
-                    info.incClosedChains();
+                    assert( lInsertion.first->second.v == v1 );
+                    lInsertion.first->second.v = VertId{};
+                    rInsertion.first->second.v = VertId{};
+                    --openChains;
+                    ++closedChains;
                 }
                 else
                 {
-                    info.decOpenChains();
+                    --openChains;
                     // the right end of the chain grown from the current triangle: v2, or updated by the merge above
-                    const auto vRight = lInsertion.first->second;
+                    const auto vRight = lInsertion.first->second.v;
                     assert( vRight );
                     if ( vRight != v2 )
                     {
                         // the current triangle merged two chains on both sides, so its both edges are inner
-                        lInsertion.first->second = VertId{};
-                        rInsertion.first->second = VertId{};
-                        assert( r_[vRight] == v1 );
-                        r_[vRight] = vEnd;
+                        lInsertion.first->second.v = VertId{};
+                        rInsertion.first->second.v = VertId{};
+                        assert( r_[vRight].v == v1 );
+                        r_[vRight].v = vEnd;
                     }
                     else
-                        rInsertion.first->second = vEnd;
-                    assert( l_[vEnd] == v1 );
-                    l_[vEnd] = vRight;
+                        rInsertion.first->second.v = vEnd;
+                    assert( l_[vEnd].v == v1 );
+                    l_[vEnd].v = vRight;
                 }
             }
         }
@@ -264,11 +272,22 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
         {
             // insertion can fail only if the vertex is repeated
             if ( !lInsertion.second )
-                info.incRepeatedVerts();
+            {
+                ++repeatedVerts;
+                maxVertRepeations = std::max( maxVertRepeations, ++lInsertion.first->second.r );
+            }
             if ( !rInsertion.second )
-                info.incRepeatedVerts();
+            {
+                ++repeatedVerts;
+                maxVertRepeations = std::max( maxVertRepeations, ++rInsertion.first->second.r );
+            }
         }
     }
+    VertInfo info;
+    if ( repeatedVerts == 0 )
+        info.setNumChains( openChains, closedChains );
+    else
+        info.setNumRepeatedVerts( repeatedVerts, maxVertRepeations );
     return info;
 }
 
@@ -409,7 +428,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         if ( ai.hasRepeatedVerts() != bi.hasRepeatedVerts() )
             return bi.hasRepeatedVerts(); // process neighbourhoods without repeated vertices (a) first, because duplication of neighbours cannot help them
 
-        if ( ai.hasRepeatedVerts() )
+        if ( ai.hasRepeatedVerts() && ai.maxVertRepeations() == 1 && bi.maxVertRepeations() == 1 )
         {
             const int aTris = all.vert2firstRec[a+1] - all.vert2firstRec[a];
             const int bTris = all.vert2firstRec[b+1] - all.vert2firstRec[b];

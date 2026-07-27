@@ -142,10 +142,10 @@ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
 fi
 
 if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
-  printf "\rAutoinstall script successfully finished. You could run ./build/Release/bin/MRTest next\n\n"
+  printf "\rBuild script successfully finished. You could run ./build/Release/bin/MRTest next\n\n"
 else
   if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
-    printf "\rAutoinstall script successfully finished. You could run ./build/Debug/bin/MRTest next\n\n"
+    printf "\rBuild script successfully finished. You could run ./build/Debug/bin/MRTest next\n\n"
   else
     printf "\rNothing was built\n\n"
   fi

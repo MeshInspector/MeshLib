@@ -1,20 +1,24 @@
 #!/bin/bash
 
-git -C "$(dirname "$BASH_SOURCE")"/.. submodule update --init --depth 1 \
-    thirdparty/imgui \
-    thirdparty/eigen \
-    thirdparty/parallel-hashmap \
-    thirdparty/expected \
-    thirdparty/OpenCTM-git \
-    thirdparty/libE57Format \
-    thirdparty/glad \
-    thirdparty/tinygltf \
-    thirdparty/laz-perf \
-    thirdparty/clip \
-    thirdparty/fastmcpp \
-    thirdparty/nlohmann-json \
-    thirdparty/cpp-httplib \
-    thirdparty/mrbind \
-    thirdparty/mrbind-pybind11 \
+SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 
-git -C "$(dirname "$BASH_SOURCE")"/../thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+SUBMODULES=(
+    thirdparty/clip
+    thirdparty/cpp-httplib
+    thirdparty/eigen
+    thirdparty/expected
+    thirdparty/fastmcpp
+    thirdparty/glad
+    thirdparty/imgui
+    thirdparty/laz-perf
+    thirdparty/libE57Format
+    thirdparty/mrbind
+    thirdparty/mrbind-pybind11
+    thirdparty/nlohmann-json
+    thirdparty/OpenCTM-git
+    thirdparty/parallel-hashmap
+    thirdparty/tinygltf
+)
+
+"$SCRIPT_DIR"/checkout_submodules.sh "$SCRIPT_DIR"/.. "${SUBMODULES[@]}"
+"$SCRIPT_DIR"/checkout_submodules.sh "$SCRIPT_DIR"/../thirdparty/mrbind deps/cppdecl

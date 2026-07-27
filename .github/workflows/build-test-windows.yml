@@ -72,7 +72,7 @@ jobs:
       - name: Checkout third-party submodules
         shell: bash
         run: |
-          bash scripts/retry.sh -- powershell scripts/clone_submodules_windows.ps1
+          bash scripts/retry.sh -- powershell scripts/clone_submodules_windows.ps1 --prebuilt-thirdparty
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type

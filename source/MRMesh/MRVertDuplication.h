@@ -55,6 +55,13 @@ struct VertInfo
             || ( numOpenChains() == 2 && numClosedChains() == 0 ) );
     }
 
+    // double ring is the case when every triangle around central vertex is present in both orientations,
+    // so every neighbour vertex is repeated
+    [[nodiscard]] bool isDoubleRing( std::uint32_t numTris ) const
+    {
+        return maxVertRepeations() == 1 && numTris == numRepeatedVerts();
+    }
+
     void setNumChains( std::uint32_t openChains, std::uint32_t closedChains )
     {
         data_ = ( std::min( openChains, maxNumOpenChains ) << 1 ) +

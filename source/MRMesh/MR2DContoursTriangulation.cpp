@@ -1157,6 +1157,11 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
         tp_.splice( tp_.prev( e ), e );
         tp_.splice( tp_.prev( e.sym() ), e.sym() );
         sameEdges.erase( sameEdges.begin() + sameToUniqueEdgeIndex );
+        if ( sameEdges.empty() )
+        {
+            tp_.setOrg( e, VertId{} ); // the "same" becomes invalid after removing of its only edge
+            tp_.setOrg( e.sym(), VertId{}); // the "same" becomes invalid after removing of its only edge
+        }
     }
 
     for ( auto eSame : sameEdges )
@@ -1184,6 +1189,13 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
             edgeInfo.windingModifier += ( ( uniqueIsOdd == sameIsOdd ) ? 1 : -1 );
             tp_.splice( tp_.prev( eSame ), eSame );
             tp_.splice( tp_.prev( eSame.sym() ), eSame.sym() );
+            if ( tp_.next( minEUnique ) == minEUnique )
+            {
+                // invalidate lone edge
+                tp_.splice( tp_.prev( minEUnique.sym() ), minEUnique.sym() );
+                tp_.setOrg( minEUnique, VertId{} );
+                tp_.setOrg( minEUnique.sym(), VertId{} );
+            }
         }
     }
 }

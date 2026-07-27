@@ -134,12 +134,12 @@ public:
             for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )
             {
                 VertId v1, v2;
-                bool alreadyDuplicted = true;
+                bool alreadyDuplicated = true;
                 for ( VertId vi : faceToVertices[it->f] )
                 {
                     if ( vi == vertDup.srcVert )
                     {
-                        alreadyDuplicted = false;
+                        alreadyDuplicated = false;
                         // make (v1,v2) the cyclic pair following srcVert in the triangle
                         if ( v1 && !v2 )
                             std::swap( v1, v2 );
@@ -149,7 +149,7 @@ public:
                     else if ( !v2 )
                         v2 = vi;
                 }
-                if ( alreadyDuplicted )
+                if ( alreadyDuplicated )
                     continue;
                 assert( v1 && v2 );
                 assert( v1 != v2 );
@@ -446,8 +446,9 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             // keep normal (not reversed) order of the vertices with same number of neighbours' repetitions
             return std::make_pair( -(int)ai.numRepeatedVerts(), a ) < std::make_pair( -(int)bi.numRepeatedVerts(), b );
         }
-        // process neighbourhoods with more chains (a) first
-        return std::make_pair( ai.numOpenChains() + ai.numClosedChains(), a ) > std::make_pair( bi.numOpenChains() + bi.numClosedChains(), b );
+        // process neighbourhoods with more chains first,
+        // keep normal (not reversed) order of the vertices with same number of chains
+        return std::make_pair( -(int)ai.numChains(), a ) < std::make_pair( -(int)bi.numChains(), b );
     };
     tbb::parallel_sort( vertsToProcess.begin(), vertsToProcess.end(), sortPred );
 

@@ -38,7 +38,7 @@ struct VertInfo
     [[nodiscard]] std::uint32_t numRepeatedVerts() const { return hasRepeatedVerts() ? ( data_ >> 1 ) & maxNumRepeatedVerts : 0; }
 
     /// the maximum number of a neighbor vertex repetitions; 0 if !hasRepeatedVerts()
-    [[nodiscard]] std::uint32_t maxVertRepeations() const { return hasRepeatedVerts() ? data_ >> 17 : 0; }
+    [[nodiscard]] std::uint32_t maxVertRepetitions() const { return hasRepeatedVerts() ? data_ >> 17 : 0; }
 
     /// the number of open chains of connected triangles around the vertex; 0 if hasRepeatedVerts()
     [[nodiscard]] std::uint32_t numOpenChains() const { return hasRepeatedVerts() ? 0 : ( data_ >> 1 ) & maxNumOpenChains; }
@@ -64,7 +64,7 @@ struct VertInfo
     /// so every neighbour vertex is repeated
     [[nodiscard]] bool areTwinChains( std::uint32_t numTris ) const
     {
-        return maxVertRepeations() == 1 && numTris == numRepeatedVerts();
+        return maxVertRepetitions() == 1 && numTris == numRepeatedVerts();
     }
 
     void setNumChains( std::uint32_t openChains, std::uint32_t closedChains )
@@ -73,21 +73,21 @@ struct VertInfo
                 ( std::min( closedChains, maxNumClosedChains ) << 17 );
     }
 
-    void setNumRepeatedVerts( std::uint32_t repeatedVerts, std::uint32_t maxVertRepeations )
+    void setNumRepeatedVerts( std::uint32_t repeatedVerts, std::uint32_t maxVertRepetitions )
     {
         assert( repeatedVerts >= 1 );
-        assert( maxVertRepeations >= 1 );
-        assert( repeatedVerts >= maxVertRepeations );
+        assert( maxVertRepetitions >= 1 );
+        assert( repeatedVerts >= maxVertRepetitions );
         repeatedVerts = std::min( repeatedVerts, maxNumRepeatedVerts );
-        maxVertRepeations = std::min( maxVertRepeations, maxMaxVertRepeations );
-        data_ = 1 + ( repeatedVerts << 1 ) + ( maxVertRepeations << 17 );
+        maxVertRepetitions = std::min( maxVertRepetitions, maxMaxVertRepetitions );
+        data_ = 1 + ( repeatedVerts << 1 ) + ( maxVertRepetitions << 17 );
     }
 
     /// maximal values storable in the counters
     static constexpr std::uint32_t maxNumOpenChains = ( 1u << 16 ) - 1;
     static constexpr std::uint32_t maxNumClosedChains = ( 1u << 15 ) - 1;
     static constexpr std::uint32_t maxNumRepeatedVerts = ( 1u << 16 ) - 1;
-    static constexpr std::uint32_t maxMaxVertRepeations = ( 1u << 15 ) - 1;
+    static constexpr std::uint32_t maxMaxVertRepetitions = ( 1u << 15 ) - 1;
 
 private:
     std::uint32_t data_ = 0;

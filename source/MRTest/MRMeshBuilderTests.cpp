@@ -156,11 +156,11 @@ TEST( MRMesh, duplicateVertexWithThreeChains )
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
     EXPECT_EQ( duplicatedVerticesCnt, 1 );
     ASSERT_EQ( dups.size(), 1 );
-    // the shared rim vertex #3 is duplicated, not the hub #0
+    // the shared rim vertex #0 is duplicated, not the hub #3
     EXPECT_EQ( dups[0].srcVert, 0_v );
     EXPECT_EQ( dups[0].dupVert, 9_v );
 
-    // every triangle keeps the hub vertex #0
+    // every triangle keeps the hub vertex #3
     EXPECT_EQ( t[0_f][0], 3_v );
     EXPECT_EQ( t[1_f][0], 3_v );
     EXPECT_EQ( t[2_f][0], 3_v );
@@ -373,6 +373,30 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 6 1 2\n"
         "f 1 8 4\n"
         "f 8 1 5\n", 24, 16, 2
+    );
+
+    // a soup of mirrored and repeated triangles over 6 vertices mixing twin chains and neighbourhoods
+    // with unevenly repeated vertices; with less precise twin-chains check or another processing order
+    // it built 15 vertices in 4 components instead of 10 in 2
+    testBuildWithDups
+    (
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "v 1 1 0\n"
+        "v 1 0 1\n"
+        "f 3 2 5\n"
+        "f 3 5 6\n"
+        "f 4 1 6\n"
+        "f 4 2 3\n"
+        "f 3 6 4\n"
+        "f 2 4 1\n"
+        "f 5 2 3\n"
+        "f 4 6 5\n"
+        "f 3 4 5\n"
+        "f 1 3 6\n"
+        "f 6 2 4\n", 11, 10, 2
     );
 }
 

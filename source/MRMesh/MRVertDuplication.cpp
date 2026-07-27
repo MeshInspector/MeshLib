@@ -210,7 +210,7 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
     if ( begin == end )
         return {};
     const auto v0 = begin->v;
-    std::uint32_t repeatedVerts = 0, maxVertRepeations = 0;
+    std::uint32_t repeatedVerts = 0, maxVertRepetitions = 0;
     std::uint32_t openChains = 0, closedChains = 0;
     for ( auto i = begin; i != end; ++i )
     {
@@ -274,12 +274,12 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
             if ( !lInsertion.second )
             {
                 ++repeatedVerts;
-                maxVertRepeations = std::max( maxVertRepeations, ++lInsertion.first->second.r );
+                maxVertRepetitions = std::max( maxVertRepetitions, ++lInsertion.first->second.r );
             }
             if ( !rInsertion.second )
             {
                 ++repeatedVerts;
-                maxVertRepeations = std::max( maxVertRepeations, ++rInsertion.first->second.r );
+                maxVertRepetitions = std::max( maxVertRepetitions, ++rInsertion.first->second.r );
             }
         }
     }
@@ -287,7 +287,7 @@ VertInfo VertNeighbourhoodInspector::run( const Triangulation & t, const VertTri
     if ( repeatedVerts == 0 )
         info.setNumChains( openChains, closedChains );
     else
-        info.setNumRepeatedVerts( repeatedVerts, maxVertRepeations );
+        info.setNumRepeatedVerts( repeatedVerts, maxVertRepetitions );
     return info;
 }
 
@@ -439,8 +439,8 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             if ( aTwinChains != bTwinChains )
                 return aTwinChains; // process double ring vertices ahead of others, since their duplication produces two closed chains
 
-            if ( ai.maxVertRepeations() != bi.maxVertRepeations() )
-                return ai.maxVertRepeations() < bi.maxVertRepeations(); // process vertices with fewer maximal neigbour repetitions first
+            if ( ai.maxVertRepetitions() != bi.maxVertRepetitions() )
+                return ai.maxVertRepetitions() < bi.maxVertRepetitions(); // process vertices with fewer maximal neighbour repetitions first
 
             // process neighbourhoods with more repeated vertices first,
             // keep normal (not reversed) order of the vertices with same number of neighbours' repetitions

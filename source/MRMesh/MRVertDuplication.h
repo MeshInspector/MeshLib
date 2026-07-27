@@ -76,10 +76,6 @@ struct VertInfo
         repeatedVerts = std::min( repeatedVerts, maxNumRepeatedVerts );
         maxVertRepeations = std::min( maxVertRepeations, maxMaxVertRepeations );
         data_ = 1 + ( repeatedVerts << 1 ) + ( maxVertRepeations << 17 );
-        auto a = numRepeatedVerts();
-        auto b = this->maxVertRepeations();
-        assert( a == repeatedVerts );
-        assert( b == maxVertRepeations );
     }
 
     /// maximal values storable in the counters

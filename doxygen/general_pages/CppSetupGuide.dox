@@ -79,11 +79,13 @@ vcpkg integrate install
 
  1. **Clone the MeshLib Repository**:
 \code{.cmd}
-git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
+git clone https://github.com/MeshInspector/MeshLib.git
 \endcode
- 2. \b (Optional) **Speed Up with AWS CLI**
+ 2. **Clone submodules**:
+ \n Run `scripts/clone_submodules_windows.ps1` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Windows.
+ 3. \b (Optional) **Speed Up with AWS CLI**
   - Optionally, [install AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to speed up the process before using the MeshLib Installation Script. Restart your terminal after installation.
- 3. **Install MeshLib [Third-Party Dependencies](\ref ThirdParty)**
+ 4. **Install MeshLib [Third-Party Dependencies](\ref ThirdParty)**
   - Execute the following commands to run the MeshLib third-party installation script:
 \code{.cmd}
 cd vcpkg
@@ -92,10 +94,10 @@ cd vcpkg
   - This script automates the installation of necessary [Third-Party Dependencies](\ref ThirdParty).
   - If you build with **Visual Studio 2019**, set `VCPKG_DEFAULT_TRIPLET=x64-windows-vs2019-meshlib` in the environment before running the script, so the v142 triplet and its port overlays are used.
   - If you build with **Visual Studio 2022**, set `VCPKG_DEFAULT_TRIPLET=x64-windows-vs2022-meshlib` the same way to get the v143 triplet.
- 4. **Build and Run Visual Studio Solution**
+ 5. **Build and Run Visual Studio Solution**
   - Open `MeshLib/source/MeshLib.sln` in Visual Studio.
   - Build the solution and run the application.
- 5. **Build and Run CMake Project**
+ 6. **Build and Run CMake Project**
   - Make sure you have the "C++ CMake tools for Windows" component installed.
   - Open `MeshLib/CMakeLists.txt` in Visual Studio (File - Open - CMake).
   - Build the project and run the application.
@@ -135,15 +137,17 @@ MeshViewer
 #### Installing the local build
  1. **Clone the MeshLib Repository**:
 \code{.sh}
-git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
+git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 \endcode
- 2. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
+ 2. **Clone submodules**:
+ \n Run `scripts/clone_submodules_linux.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Linux.
+ 3. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 \code{.sh}
 ./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
 ./scripts/build_source.sh      # Do not select emscripten in the corresponding question
 \endcode
- 3. **Create and Install Package**:
+ 4. **Create and Install Package**:
  \n This step will create distribution package and install it to the system
  \n **For Ubuntu**:
 \code{.sh}
@@ -155,7 +159,7 @@ sudo apt install ./distr/meshlib-dev.deb
 ./scripts/distribution_rpm.sh
 sudo rpm -i ./distr/meshlib-dev.rpm
 \endcode
- 4. **Open MeshViewer**
+ 5. **Open MeshViewer**
  \n To verify that everything is fine you can run MeshViewer application:
   - if you previously have installed `meshlib` to your system:
 \code{.sh}
@@ -165,7 +169,7 @@ MeshViewer
 \code{.sh}
 ./build/Release/bin/MeshViewer
 \endcode
- 5. **Integrate Using CMake**
+ 6. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 \subsection CppSetupMacOS macOS
@@ -206,17 +210,19 @@ brew install git
 #### Installing the local build
  1. **Clone the MeshLib Repository**:
 \code{.sh}
-git clone --recurse-submodules https://github.com/MeshInspector/MeshLib.git
+git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 \endcode
- 2. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
+ 2. **Clone submodules**:
+ \n Run `scripts/clone_submodules_macos.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on MacOS.
+ 3. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 \code{.sh}
 ./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 \endcode
- 3. **Run example**
+ 4. **Run example**
 We suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
- 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ 5. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
 \subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
 

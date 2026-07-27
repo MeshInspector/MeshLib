@@ -434,16 +434,16 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             const int bTris = all.vert2firstRec[b+1] - all.vert2firstRec[b];
             // double ring is the case when every triangle around central vertex is present in both orientations,
             // so every neighbour vertex is repeated
-            const bool aDoubleRing = ai.isDoubleRing( aTris );
-            const bool bDoubleRing = bi.isDoubleRing( bTris );
-            if ( aDoubleRing != bDoubleRing )
-                return aDoubleRing; // process double ring vertices ahead of others, since their duplication produces two closed chains
+            const bool aTwinChains = ai.areTwinChains( aTris );
+            const bool bTwinChains = bi.areTwinChains( bTris );
+            if ( aTwinChains != bTwinChains )
+                return aTwinChains; // process double ring vertices ahead of others, since their duplication produces two closed chains
 
             if ( ai.maxVertRepeations() != bi.maxVertRepeations() )
                 return ai.maxVertRepeations() < bi.maxVertRepeations(); // process vertices with fewer maximal neigbour repetitions first
 
             // process neighbourhoods with more repeated vertices first,
-            // keep normal (not reversed) order of the vertices with same number of neighbours' repeatitions
+            // keep normal (not reversed) order of the vertices with same number of neighbours' repetitions
             return std::make_pair( -(int)ai.numRepeatedVerts(), a ) < std::make_pair( -(int)bi.numRepeatedVerts(), b );
         }
         // process neighbourhoods with more chains (a) first

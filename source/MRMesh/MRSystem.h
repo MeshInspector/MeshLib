@@ -107,7 +107,7 @@ struct MR_BIND_IGNORE ProccessMemoryInfo
 #endif //_WIN32
 
 /// return the current process's id (or 0 for Wasm)
-std::uint32_t getCurrentProcessId();
+MRMESH_API std::uint32_t getCurrentProcessId();
 
 /// Setups logger:
 /// 1) makes stdout sink

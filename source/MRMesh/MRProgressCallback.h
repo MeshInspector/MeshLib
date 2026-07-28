@@ -50,7 +50,7 @@ inline ProgressCallback subprogress( ProgressCallback cb, float from, float to )
 {
     ProgressCallback res;
     if ( cb )
-        res = [cb, from, to]( float v ) { return cb( std::lerp( from, to, v ) ); };
+        res = [cb = std::move( cb ), from, to]( float v ) { return cb( std::lerp( from, to, v ) ); };
     return res;
 }
 
@@ -60,7 +60,7 @@ inline ProgressCallback subprogress( ProgressCallback cb, F && f )
 {
     ProgressCallback res;
     if ( cb )
-        res = [cb, f = std::forward<F>( f )]( float v ) { return cb( f( v ) ); };
+        res = [cb = std::move( cb ), f = std::forward<F>( f )]( float v ) { return cb( f( v ) ); };
     return res;
 }
 
@@ -69,9 +69,19 @@ inline ProgressCallback subprogress( ProgressCallback cb, size_t index, size_t c
 {
     assert( index < count );
     if ( cb )
-        return [cb, index, count] ( float v ) { return cb( ( (float)index + v ) / (float)count ); };
+        return [cb = std::move( cb ), index, count] ( float v ) { return cb( ( (float)index + v ) / (float)count ); };
     else
         return {};
+}
+
+/// splits the given progress on two sub-progresses: [0, threshold] and [threshold, 1]
+inline std::pair<ProgressCallback, ProgressCallback> splitProgress( const ProgressCallback& cb, float threshold )
+{
+    return
+    {
+        subprogress( cb, 0.0f, threshold ),
+        subprogress( cb, threshold, 1.0f )
+    };
 }
 
 } //namespace MR

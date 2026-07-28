@@ -11,18 +11,19 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
   schedule:
-    - cron: '0 17 * * *'  # Run every day at 17:00 UTC
-    #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
+    - cron: '0 2 * * *'  # Run every day at 2 AM UTC
 
 permissions:
   id-token: write
   contents: write
+  actions: read  # This is required for wait-for-job
 
 jobs:
   # NOTE: all output values are strings
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
   config:
     uses: ./.github/workflows/config.yml
+    secrets: inherit
 
   debug-config:
     needs: config
@@ -43,8 +44,7 @@ jobs:
       need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
       vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
       disable_ubuntu_x64:         ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
       disable_ubuntu_arm64:       ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
       disable_emscripten:         ${{ needs.config.outputs.build_enable_emscripten != 'true' }}
@@ -61,14 +61,14 @@ jobs:
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   generate-c-bindings:
-    needs: config
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
       docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
-    needs: [ config, prepare-image, generate-c-bindings ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
       config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
@@ -81,7 +81,7 @@ jobs:
 
   ubuntu-arm64-build-test:
     if: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
-    needs: [ config, prepare-image, generate-c-bindings ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -94,7 +94,7 @@ jobs:
 
   ubuntu-x64-build-test:
     if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
-    needs: [ config, prepare-image, generate-c-bindings ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu-x64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -108,7 +108,7 @@ jobs:
 
   linux-vcpkg-build-test:
     if: ${{ needs.config.outputs.build_enable_linux_vcpkg == 'true' }}
-    needs: [ config, prepare-image, generate-c-bindings ]
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-linux-vcpkg.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -121,17 +121,28 @@ jobs:
     secrets: inherit
 
   emscripten-build-test:
-    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
-    needs: [ config, prepare-image, generate-c-bindings ]
+    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' || needs.config.outputs.update_doc == 'true' }}
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
-      internal_build:   ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      app_version:       ${{ needs.config.outputs.app_version }}
+      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      definitions_only:  ${{ needs.config.outputs.build_enable_emscripten != 'true' && needs.config.outputs.update_doc == 'true' }}
+
+  emscripten-c-bindings-build-test:
+    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
+    needs: [ config, prepare-image ]
+    uses: ./.github/workflows/build-test-emscripten-c-bindings.yml
+    with:
+      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
-    needs: [ config, generate-c-bindings ]
+    # Gate on prepare-image like the other build jobs: generate-c-bindings needs it, and macOS downloads that job's CBindings artifact (else the 'Wait for C bindings' step times out).
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -149,7 +160,7 @@ jobs:
       - windows-build-test
     uses: ./.github/workflows/update-win-version.yml
     with:
-      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 
@@ -160,11 +171,12 @@ jobs:
       - windows-build-test
       - linux-vcpkg-build-test
       - macos-build-test
+      - emscripten-c-bindings-build-test
     timeout-minutes: 20
     runs-on: windows-2025
     steps:
      - name: Checkout
-       uses: actions/checkout@v6
+       uses: actions/checkout@v7
 
      - name: Download NuGet Windows Patch Archive
        uses: actions/download-artifact@v8
@@ -203,6 +215,21 @@ jobs:
          path: dotnet_dll
          merge-multiple: true
 
+     - name: Download C# Wasm Archive (single thread)
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWasm-*
+         path: browser_wasm_runtime
+         merge-multiple: true
+
+     - name: Build C# Wasm package
+       run: |
+         mkdir meshlib_dotnet-wasm
+         mkdir meshlib_dotnet-wasm/native
+         move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
+         move browser_wasm_runtime/* meshlib_dotnet-wasm/native
+         Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
+
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
@@ -216,11 +243,16 @@ jobs:
 
      - name: Upload NuGet Package
        uses: actions/upload-artifact@v7
-       env:
-         ACTIONS_STEP_DEBUG: true
        with:
          name: DistributivesNuGet
          path: MeshLib.nupkg
+         retention-days: 1
+
+     - name: Upload C# Wasm Package
+       uses: actions/upload-artifact@v7
+       with:
+         name: DistributivesDotNetWasm
+         path: meshlib_dotnet-wasm.zip
          retention-days: 1
 
      - name: Delete consumed NuGet input artifacts
@@ -233,6 +265,7 @@ jobs:
 
   upload-distributions:
     # Don't publish if any build failed (its distributive is missing); skipped builds are fine.
+    # Don't need `emscripten-c-bindings-build-test` here, it doesn't upload any distributions of its own.
     if: >-
       ${{ !cancelled()
         && needs.config.outputs.upload_artifacts == 'true'
@@ -241,6 +274,7 @@ jobs:
         && needs.ubuntu-arm64-build-test.result != 'failure'
         && needs.linux-vcpkg-build-test.result != 'failure'
         && needs.emscripten-build-test.result != 'failure'
+        && needs.emscripten-c-bindings-build-test.result != 'failure'
         && needs.macos-build-test.result != 'failure' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
@@ -257,7 +291,7 @@ jobs:
       - macos-build-test
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download All Developer Distributives
         uses: actions/download-artifact@v8
@@ -269,7 +303,13 @@ jobs:
         run: |
           shopt -s nullglob
           for PKG_FILE in MeshLibDist*.zip ; do
-            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}"
+            case "$PKG_FILE" in
+              # Keep the historical layout for the iterator-debug archive:
+              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
+              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
+              # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
+              *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
+            esac
           done
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
@@ -283,7 +323,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz js-meshlib-*.tgz"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
@@ -294,7 +334,7 @@ jobs:
           name: Distributives*
           failOnError: false
 
-  windows-unity-test:
+  unity-nuget-test:
     # Run whenever full-ci is requested and the Windows build is enabled, provided the
     # NuGet package was actually built and uploaded to the release. `!cancelled()` keeps
     # this job from being auto-skipped: without a status function the implicit success()
@@ -314,6 +354,9 @@ jobs:
     uses: ./.github/workflows/unity-nuget-test.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
+    # Reusable workflows do not see repository secrets unless the caller
+    # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
+    secrets: inherit
 
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.
@@ -333,7 +376,7 @@ jobs:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
     # and if this variant failed this job also will fail
     if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && !cancelled() }}
-    needs: [ config, generate-c-bindings ]
+    needs: [ config, ubuntu-arm64-build-test, generate-c-bindings, emscripten-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
@@ -345,10 +388,17 @@ jobs:
     uses: ./.github/workflows/pip-build.yml
     with:
       vcpkg_docker_image_tag: ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      disable_ubuntu_x64:   ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
-      disable_ubuntu_arm64: ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
+      disable_manylinux:    ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
       disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
       disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
+
+  publish-wasm:
+    needs: [ config, upload-distributions ]
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_emscripten == 'true' && needs.upload-distributions.result == 'success' }}
+    uses: ./.github/workflows/publish-wasm.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+    secrets: inherit
 
   collect-stats:
     timeout-minutes: 5
@@ -359,7 +409,7 @@ jobs:
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download runners' system stats
         uses: actions/download-artifact@v8
@@ -373,7 +423,7 @@ jobs:
           pattern: ArtifactStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+      - uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
         id: aws-creds
         with:
           aws-region: us-east-1
@@ -455,12 +505,11 @@ jobs:
           name: PythonStubs
           failOnError: false
 
-      - name: Delete C bindings
-        if: needs.update-dev-documentation.result == 'success'
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: CBindings
-          failOnError: false
+      # NOTE: intentionally NOT deleting the CBindings artifact here.
+      # It already has retention-days: 1 (see generate-c-bindings.yml), and keeping it for
+      # that window lets us re-run individual failed build jobs — a partial re-run does not
+      # re-run generate-c-bindings, so the artifact would otherwise be gone and the re-run
+      # would fail at "Download C bindings" with "Artifact not found for name: CBindings".
 
       - name: Delete Csharp bindings
         if: needs.update-dev-documentation.result == 'success'

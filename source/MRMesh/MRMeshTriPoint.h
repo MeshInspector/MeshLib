@@ -67,6 +67,9 @@ struct MeshTriPoint
     /// returns three weighted triangle's vertices with the sum of not-negative weights equal to 1, and the largest weight in the closest vertex
     [[nodiscard]] MRMESH_API std::array<WeightedVertex, 3> getWeightedVerts( const MeshTopology & topology ) const;
 
+    /// linearly interpolates the values given in vertices to find the field's value at this point
+    [[nodiscard]] MRMESH_API float interpolate( const MeshTopology & topology, const VertScalars & field ) const;
+
     /// returns true if two points are equal including equal not-unique representation
     [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;
 };

@@ -264,8 +264,7 @@ double roundToPrecision( double v, int precision )
 std::string toLower( std::string str )
 {
     for ( auto& ch : str )
-        if ( (unsigned char)ch <= 127 )
-            ch = (char)std::tolower( ch );
+        ch = toLower( ch );
     return str;
 }
 

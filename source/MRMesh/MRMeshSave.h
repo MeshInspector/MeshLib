@@ -5,7 +5,7 @@
 #include "MRIOFilters.h"
 #include "MRSaveSettings.h"
 #include <filesystem>
-#include <ostream>
+#include <iosfwd>
 
 namespace MR
 {
@@ -67,7 +67,7 @@ public:
 private:
     std::ostream & out_;
     SaveSettings settings_;
-    std::ostream::pos_type numTrisPos_ = 0; ///< the location in the stream where the number of triangles is stored
+    std::streamoff numTrisPos_ = 0; ///< the location in the stream where the number of triangles is stored
     std::uint32_t headNumTris_ = 0;  ///< what was written in the header
     std::uint32_t savedNumTris_ = 0; ///< how many triangles were actually written in the stream
 };
@@ -80,6 +80,11 @@ MRMESH_API Expected<void> toAsciiStl( const Mesh & mesh, std::ostream& out, cons
 /// saves in .ply file
 MRMESH_API Expected<void> toPly( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
 MRMESH_API Expected<void> toPly( const Mesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
+
+/// saves in .ply file; all vertices and triangles of TriMesh are always saved
+/// independently of SaveSettings::onlyValidPoints and SaveSettings::packPrimitives
+MRMESH_API Expected<void> toPly( const TriMesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );
+MRMESH_API Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettings & settings = {} );
 
 /// saves in 3mf .model file
 MRMESH_API Expected<void> toModel3mf( const Mesh & mesh, const std::filesystem::path& file, const SaveSettings & settings = {} );

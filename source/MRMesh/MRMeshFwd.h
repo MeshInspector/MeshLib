@@ -140,6 +140,7 @@ struct PackMapping;
 
 class ViewportId;
 class ViewportMask;
+template<typename T> class ViewportProperty;
 
 struct UnorientedTriangle;
 struct SomeLocalTriangulations;
@@ -369,6 +370,8 @@ using Contour2d = Contour2<double>;
 using Contour2f = Contour2<float>;
 using Contour3d = Contour3<double>;
 using Contour3f = Contour3<float>;
+
+struct MarkedContour3f;
 
 template <typename V> using Contours = std::vector<Contour<V>>;
 template <typename T> using Contours2 = Contours<Vector2<T>>;

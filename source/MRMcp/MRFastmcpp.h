@@ -2,9 +2,9 @@
 
 // Centralised fastmcpp wrapper. Both MRMcp.cpp and MRMCPGateway.cpp must pull
 // fastmcpp in before any standard library header (fastmcpp's macro tricks rely
-// on that ordering). Keep `#undef _t` next to the includes: fastmcpp uses `_t`
-// as a template parameter and our translation macro shadows it.
+// on that ordering).
 
+#pragma push_macro( "_t" )
 #undef _t
 
 #if defined( __GNUC__ )
@@ -13,6 +13,7 @@
 #elif defined( _MSC_VER )
 #pragma warning( push )
 #pragma warning( disable: 4100 ) // unreferenced formal parameter
+#pragma warning( disable: 4127 ) // conditional expression is constant (vcpkg 2026.06.24 + vs2022)
 #pragma warning( disable: 4355 ) // 'this': used in base member initializer list
 #pragma warning( disable: 4800 ) // Implicit conversion from 'BrotliDecoderState *const ' to bool. Possible information loss (Visual Studio Build Tools 2019 16.11.32510.428)
 #endif
@@ -29,3 +30,5 @@
 #elif defined( _MSC_VER )
 #pragma warning( pop )
 #endif
+
+#pragma pop_macro( "_t" )

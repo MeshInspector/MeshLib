@@ -5,7 +5,7 @@
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBox.h"
 
-#include "MROpenVDB.h"
+#include "MRPch/MROpenVDB.h"
 #include "MRPch/MRBindingMacros.h"
 
 namespace MR

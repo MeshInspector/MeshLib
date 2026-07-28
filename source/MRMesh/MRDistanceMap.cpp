@@ -613,6 +613,10 @@ SeparationPoint findSeparationPoint( const DistanceMap& dm, const Vector2i& p, N
 Polyline2 distanceMapTo2DIsoPolyline( const DistanceMap& distMap, float isoValue )
 {
     using namespace MarchingSquaresHelper;
+    // disambiguate from the same-named types in MRSeparationPoint.h
+    using MarchingSquaresHelper::NeighborDir;
+    using MarchingSquaresHelper::SeparationPointSet;
+    using MarchingSquaresHelper::SeparationPointMap;
     MR_NAMED_TIMER( "distanceMapTo2DIsoPolyline" );
     const size_t resX = distMap.resX();
     const size_t resY = distMap.resY();

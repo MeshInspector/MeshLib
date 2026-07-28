@@ -40,6 +40,8 @@ add_files( LINUX_ARM_RUNTIME_DIR, "runtimes/linux-arm64/native/" )
 add_files( MACOS_X64_RUNTIME_DIR, "runtimes/osx-x64/native/" )
 add_files( MACOS_ARM_RUNTIME_DIR, "runtimes/osx-arm64/native/" )
 
+shutil.copy(WORK_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", "THIRD-PARTY-NOTICES.txt")
+
 with open(Path(__file__).parent / "template.nuspec", 'r') as template_file:
 	updated_nuspec = Template(template_file.read()).substitute(
 		VERSION=VERSION,

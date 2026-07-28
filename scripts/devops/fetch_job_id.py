@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import urllib.request
 
 GITHUB_HEADERS = {
@@ -19,26 +20,30 @@ def fetch_jobs(repo: str, run_id: str):
 def filter_job(job, job_name, runner_name):
     return job['status'] == "in_progress" and job_name in job['name'] and runner_name in [job['runner_name'], f"GitHub-Actions-{job['runner_id']}"]
 
-def get_job_id():
+def get_job_id(attempts=3, cooldown=10):
     job_name = os.environ.get("GITHUB_JOB")
     repo = os.environ.get("GITHUB_REPOSITORY")
     run_id = os.environ.get("GITHUB_RUN_ID")
     runner_name = os.environ.get("RUNNER_NAME")
 
-    resp = fetch_jobs(repo, run_id)
-    if int(resp['total_count']) > 100:
-        print("Total job count has exceeded 100; consider enabling the pagination support")
-    jobs = [
-        job
-        for job in resp['jobs']
-        if filter_job(job, job_name, runner_name)
-    ]
-    if len(jobs) == 0:
-        raise RuntimeError(f"No jobs found for {job_name}")
-    elif len(jobs) > 1:
-        raise RuntimeError(f"Multiple jobs found for {job_name}: {jobs}")
-    else:
-        return jobs[0]['id']
+    for attempt in range(1, attempts + 1):
+        resp = fetch_jobs(repo, run_id)
+        if int(resp['total_count']) > 100:
+            print("Total job count has exceeded 100; consider enabling the pagination support")
+        jobs = [
+            job
+            for job in resp['jobs']
+            if filter_job(job, job_name, runner_name)
+        ]
+        if len(jobs) > 1:
+            raise RuntimeError(f"Multiple jobs found for {job_name}: {jobs}")
+        elif len(jobs) == 1:
+            return jobs[0]['id']
+        # the jobs API is eventually consistent and may not list a just-started job yet
+        if attempt < attempts:
+            print(f"Attempt {attempt}/{attempts} failed, retrying...")
+            time.sleep(cooldown)
+    raise RuntimeError(f"No jobs found for {job_name}")
 
 if __name__ == "__main__":
     if os.environ.get('CI'):

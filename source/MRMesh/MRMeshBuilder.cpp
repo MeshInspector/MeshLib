@@ -3,7 +3,10 @@
 #include "MRRingIterator.h"
 #include "MRCloseVertices.h"
 #include "MRBuffer.h"
+#include "MRUnorientedTriangle.h"
+#include "MRphmap.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
@@ -221,7 +224,7 @@ static FaceBitSet getLocalRegion( FaceBitSet * region, size_t tSize )
     return res;
 }
 
-static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, const BuildSettings & settings = {} )
+static size_t addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, const BuildSettings & settings = {} )
 {
     MR_TIMER;
 
@@ -230,6 +233,7 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
     FaceBitSet active = getLocalRegion( settings.region, t.size() );
     // these are triangles that cannot be added even after other triangles
     FaceBitSet bad;
+    size_t triAddedTotal = 0;
     for (;;)
     {
         size_t triAddedOnThisPass = 0;
@@ -247,6 +251,7 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
 
         if ( triAddedOnThisPass == 0 )
             break; // no single triangle added during the pass
+        triAddedTotal += triAddedOnThisPass;
     }
     if ( settings.region || settings.skippedFaceCount )
     {
@@ -256,6 +261,7 @@ static void addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, con
         if ( settings.region )
             *settings.region = std::move( active );
     }
+    return triAddedTotal;
 }
 
 MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertSpan, FaceId> & faces,
@@ -315,18 +321,18 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
     return res;
 }
 
-void addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings )
+size_t addTriangles( MeshTopology & res, const Triangulation & t, const BuildSettings & settings )
 {
     MR_TIMER;
     if ( t.empty() )
-        return;
+        return 0;
 
     // reserve enough elements for faces and vertices
     const auto maxVertId = findMaxVertId( t, settings.region );
     res.faceResize( t.size() + settings.shiftFaceId );
     res.vertResize( maxVertId + 1 );
 
-    addTrianglesSeqCore( res, t, settings );
+    return addTrianglesSeqCore( res, t, settings );
 }
 
 void addTriangles( MeshTopology & res, std::vector<VertId> & vertTriples,
@@ -428,7 +434,7 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
     MR_TIMER;
 
     // reserve enough elements for faces and vertices
-    //auto [maxFaceId, maxVertId] = computeMaxIds( tris );
+    //auto [maxFaceId, maxVertId] = computeMaxIds( t );
     const auto maxVertId = findMaxVertId( t, settings.region );
 
     // numParts shall not depend on hardware (e.g. on std::thread::hardware_concurrency()) to be repeatable on all hardware
@@ -532,276 +538,6 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
     }
 
     return fromTrianglesSeq( t, settings );
-}
-
-// two incident vertices can be found using this struct
-struct IncidentVert {
-    FaceId f; // to find triangle in triangleToVertices vector
-    VertId srcVert; // central vertex, used for sorting triangles per their incident vertices
-    // the vertices of the triangle can be upgraded, so no reason to store VertId!
-
-    IncidentVert( FaceId f, VertId srcVert )
-        : f(f)
-        , srcVert( srcVert )
-    {}
-};
-
-// to find the smallest connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
-struct PathOverIncidentVert {
-    Triangulation& faceToVertices;
-    // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
-    std::vector<IncidentVert>::iterator vertexBegIt, vertexEndIt;
-    size_t lastUnvisitedIndex = 0; // pivot index. [vertexBegIt, vertexBegIt + lastUnvisitedIndex) - unvisited vertices
-
-    PathOverIncidentVert( Triangulation& triangleToVertices,
-                std::vector<IncidentVert>& incidentItemsVector, size_t beg, size_t end )
-        : faceToVertices( triangleToVertices )
-        , vertexBegIt( incidentItemsVector.begin() + beg )
-        , vertexEndIt( incidentItemsVector.begin() + end )
-        , lastUnvisitedIndex( end - beg )
-    {}
-
-    // false if there are some unvisited vertices
-    bool empty() const
-    {
-        return lastUnvisitedIndex <= 0;
-    }
-
-    // first unvisited vertex
-    VertId getFirstVertex() const
-    {
-        for ( auto v : faceToVertices[vertexBegIt->f] )
-            if ( v != vertexBegIt->srcVert )
-                return v;
-        assert( false );
-        return {};
-    }
-
-    // find incident unvisited vertex
-    VertId getNextIncidentVertex( VertId v, bool triOrientation )
-    {
-        if ( lastUnvisitedIndex <= 0 )
-            return VertId( -1 );
-
-        for ( auto it = vertexBegIt; it < vertexBegIt + lastUnvisitedIndex; ++it )
-        {
-            VertId nextVertex;
-            const auto & vs = faceToVertices[it->f];
-            if ( triOrientation )
-            {
-                if ( vs[0] == it->srcVert && vs[1] == v )
-                    nextVertex = vs[2];
-                else if ( vs[1] == it->srcVert && vs[2] == v )
-                    nextVertex = vs[0];
-                else if ( vs[2] == it->srcVert && vs[0] == v )
-                    nextVertex = vs[1];
-            }
-            else
-            {
-                if ( vs[1] == it->srcVert && vs[0] == v )
-                    nextVertex = vs[2];
-                else if ( vs[2] == it->srcVert && vs[1] == v )
-                    nextVertex = vs[0];
-                else if ( vs[0] == it->srcVert && vs[2] == v )
-                    nextVertex = vs[1];
-            }
-            if ( nextVertex )
-            {
-                --lastUnvisitedIndex;
-                std::iter_swap( it, vertexBegIt + lastUnvisitedIndex );
-                return nextVertex;
-            }
-
-        }
-        return {};
-    }
-
-    // duplicate the vertex around which the chain was found
-    void duplicateVertex( std::vector<VertId>& path, VertId& lastUsedVertId,
-                          std::vector<VertDuplication>* dups = nullptr )
-    {
-        VertDuplication vertDup;
-        vertDup.dupVert = ++lastUsedVertId;
-        vertDup.srcVert = vertexBegIt->srcVert;
-        if ( dups )
-            dups->push_back( vertDup );
-
-        for ( size_t i = 1; i < path.size(); ++i )
-        {
-            for ( auto it = vertexBegIt + lastUnvisitedIndex; it < vertexEndIt; ++it )
-            {
-                VertId v1, v2;
-                bool alreadyDuplicted = true;
-                for ( VertId vi : faceToVertices[it->f] )
-                {
-                    if ( vi == vertDup.srcVert )
-                        alreadyDuplicted = false;
-                    else if ( !v1 )
-                        v1 = vi;
-                    else if ( !v2 )
-                        v2 = vi;
-                }
-                if ( alreadyDuplicted )
-                    continue;
-                assert( v1 && v2 );
-
-                if ( ( v1 == path[i - 1] || v2 == path[i - 1] ) &&
-                     ( v1 == path[i] || v2 == path[i] ) )
-                {
-                    for ( VertId & vi : faceToVertices[it->f] )
-                    {
-                        if ( vi != vertDup.srcVert )
-                            continue;
-                        vi = vertDup.dupVert;
-                        break;
-                    }
-                    it->srcVert = vertDup.dupVert;
-                    break;
-                }
-            }
-        }
-    }
-};
-
-// fill and sort incidentVertVector by central vertex
-void preprocessTriangles( const Triangulation & t, FaceBitSet * region, std::vector<IncidentVert>& incidentVertVector )
-{
-    MR_TIMER;
-    incidentVertVector.reserve( 3 * t.size() );
-
-    for ( FaceId f{0}; f < t.size(); ++f )
-    {
-        if ( region && !region->test( f ) )
-            continue;
-        const auto & vs = t[f];
-        if ( vs[0] == vs[1] || vs[1] == vs[2] || vs[2] == vs[0] )
-            continue;
-
-        for ( int i = 0; i < 3; ++i )
-            incidentVertVector.emplace_back( f, vs[i] );
-    }
-
-    tbb::parallel_sort( incidentVertVector.begin(), incidentVertVector.end(),
-        [] ( const IncidentVert& lhv, const IncidentVert& rhv ) -> bool
-    {
-        return lhv.srcVert < rhv.srcVert;
-    } );
-}
-
-// path = {abcDefgD} => closedPath = {DefgD}; path = {abc}
-void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPath )
-{
-    closedPath.clear();
-    auto lastVertex = path.back();
-    for ( size_t i = 0; i < path.size(); ++i )
-    {
-        if ( path[i] == lastVertex )
-        {
-            closedPath.reserve( path.size() - i );
-            closedPath.insert( closedPath.end(), std::make_move_iterator( path.begin() + i ),
-                                                 std::make_move_iterator( path.end() ) );
-
-            path.resize(i);
-            break;
-        }
-    }
-}
-
-// for all vertices get over all incident vertices to find connected sequences
-size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert )
-{
-    MR_TIMER;
-    if ( t.empty() )
-        return 0; // input triangulation is empty
-
-    std::vector<IncidentVert> incidentItemsVector;
-    preprocessTriangles( t, region, incidentItemsVector );
-    if ( incidentItemsVector.empty() )
-        return 0; // input triangulation contains only degenerate triangles, e.g. with repeating vertex (v v u)
-
-    if ( !lastValidVert )
-        lastValidVert = incidentItemsVector.back().srcVert;
-
-    std::vector<VertId> path;
-    std::vector<VertId> closedPath;
-    VertBitSet visitedVertices( incidentItemsVector.back().srcVert ); // explicitly not `lastValidVert` but last vert used in triangulation
-    size_t duplicatedVerticesCnt = 0;
-    size_t posBegin = 0, posEnd = 0;
-    while ( posEnd != incidentItemsVector.size() )
-    {
-        posBegin = posEnd++;
-        while ( posEnd < incidentItemsVector.size() && incidentItemsVector[posBegin].srcVert == incidentItemsVector[posEnd].srcVert )
-            ++posEnd;
-        PathOverIncidentVert incidentItems( t, incidentItemsVector, posBegin, posEnd );
-
-        // first chain of vertices around the center does not require duplication
-        int foundChains = 0;
-        while ( !incidentItems.empty() )
-        {
-            for(const auto& v : path)
-                visitedVertices.reset(v);
-
-            bool triOrientation = true;
-            const VertId firstVertex = incidentItems.getFirstVertex();
-            visitedVertices.autoResizeSet( firstVertex );
-            VertId nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
-            if ( !nextVertex )
-            {
-                triOrientation = false;
-                nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
-                assert( nextVertex.valid() );
-            }
-            visitedVertices.autoResizeSet( nextVertex );
-
-            path = { firstVertex, nextVertex };
-            while ( true )
-            {
-                nextVertex = incidentItems.getNextIncidentVertex( nextVertex, triOrientation );
-
-                if ( !nextVertex )
-                {
-                    if ( triOrientation ) // try the opposite direction from firstVertex
-                    {
-                        triOrientation = false;
-                        nextVertex = incidentItems.getNextIncidentVertex( firstVertex, triOrientation );
-                    }
-                    if ( !nextVertex )
-                    {
-                        if ( foundChains )
-                        {
-                            incidentItems.duplicateVertex( path, lastValidVert, dups );
-                            ++duplicatedVerticesCnt;
-                        }
-                        ++foundChains;
-                        break;
-                    }
-                    std::reverse( path.begin(), path.end() );
-                }
-
-                // returned to already visited vertex
-                if ( visitedVertices.test(nextVertex) )
-                {
-                    // save only closed path and prepare for new search starting with non-manifold vertex
-                    path.push_back( nextVertex );
-                    extractClosedPath( path, closedPath );
-                    for( const auto& v : closedPath)
-                        visitedVertices.reset(v);
-
-                    if ( foundChains )
-                    {
-                        incidentItems.duplicateVertex( closedPath, lastValidVert, dups );
-                        ++duplicatedVerticesCnt;
-                    }
-                    ++foundChains;
-                    if ( path.empty() )
-                        break;
-                }
-                path.push_back( nextVertex );
-                visitedVertices.autoResizeSet( nextVertex );
-            }
-        }
-    }
-    return duplicatedVerticesCnt;
 }
 
 MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
@@ -911,6 +647,35 @@ int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params /*= {} */ )
         *params.optionalVertOldToNew = std::move( vertOldToNew );
 
     return numChanged;
+}
+
+std::vector<int> computeTrianglesRepetitions( const Triangulation & t )
+{
+    MR_TIMER;
+
+    ParallelHashMap<UnorientedTriangle, int> map;
+    ParallelFor( size_t( 0 ), map.subcnt(), [&]( size_t myPartId )
+    {
+        for ( const auto & vs : t )
+        {
+            const UnorientedTriangle triplet( vs );
+            const auto hashval = map.hash( triplet );
+            const auto idx = map.subidx( hashval );
+            if ( idx != myPartId )
+                continue;
+            ++map[triplet];
+        }
+    } );
+
+    std::vector<int> res;
+    for ( const auto & [triplet, num] : map )
+    {
+        assert( num >= 1 );
+        while ( res.size() < size_t( num ) )
+            res.push_back( 0 );
+        ++res[num - 1];
+    }
+    return res;
 }
 
 } //namespace MeshBuilder

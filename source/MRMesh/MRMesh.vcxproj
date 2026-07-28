@@ -250,6 +250,8 @@
     <ClInclude Include="MRRigidXf3.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
+    <ClInclude Include="MRSplineProject.h" />
+    <ClInclude Include="MRStitchOpenTwins.h" />
     <ClInclude Include="MRTwoLineSegmDist.h" />
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
@@ -336,6 +338,7 @@
     <ClInclude Include="MRPointCloudRadius.h" />
     <ClInclude Include="MRPointsInBall.h" />
     <ClInclude Include="MRPointsLoad.h" />
+    <ClInclude Include="MRMultiScanLoad.h" />
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
@@ -391,6 +394,7 @@
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMeshBuilder.h" />
+    <ClInclude Include="MRVertDuplication.h" />
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMeshLoad.h" />
     <ClInclude Include="MRObject.h" />
@@ -454,6 +458,18 @@
     <ClInclude Include="MRFunctional.h" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Reuse the shared MRPch PCH when extra headers are off: reference MRPch so it builds first and
+         its PCH object is linked. With extra headers on, MRMesh builds its own PCH and needs no reference. -->
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj" Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MRPchCreate.cpp">
+      <!-- Build our own PCH only with the extra headers (MSVC); otherwise reuse the shared MRPch PCH. -->
+      <PrecompiledHeader Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">Create</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
     <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />
@@ -611,6 +627,7 @@
     <ClCompile Include="MRPointObject.cpp" />
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRMultiScanLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
     <ClCompile Include="MRPointToPointAligningTransform.cpp" />
@@ -645,7 +662,9 @@
     <ClCompile Include="MRSharedThreadSafeOwner.cpp" />
     <ClCompile Include="MRSignDetectionMode.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
+    <ClCompile Include="MRSplineProject.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
+    <ClCompile Include="MRStitchOpenTwins.cpp" />
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTelemetry.cpp" />
@@ -709,6 +728,7 @@
     <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />
+    <ClCompile Include="MRVertDuplication.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRObject.cpp" />
     <ClCompile Include="MRObjectLoad.cpp" />
@@ -751,12 +771,8 @@
     <ClCompile Include="MRBitSetParallelFor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
-      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\.editorconfig" />
+    <None Include="MRUnicodeCaseFold.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -795,12 +811,13 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRMesh_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRMesh_EXPORTS;MESHLIB_NO_VIEWER;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -817,12 +834,13 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRMesh_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRMesh_EXPORTS;MESHLIB_NO_VIEWER;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

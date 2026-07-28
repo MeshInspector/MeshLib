@@ -3,7 +3,7 @@
 #include "MRExpected.h"
 #include "MRBuffer.h"
 #include "MRPch/MRBindingMacros.h"
-#include <istream>
+#include <iosfwd>
 
 namespace MR
 {

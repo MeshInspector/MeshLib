@@ -41,7 +41,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     container:
       image: meshlib/meshlib-rockylinux8-vcpkg-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
-      options: --user root
     strategy:
       fail-fast: false
       matrix:
@@ -68,13 +67,19 @@ jobs:
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
             c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
+          # GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` (Clang 16+) makes the Build (Clang rows)
+          # and bindings steps use libstdc++11 instead of Clang's default libstdc++15 - matching g++ and
+          # the vcpkg deps, and compiling the bindings ~11% faster.
           - arch: x64
             os: ubuntu-latest
+            gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
           - arch: arm64
             os: ubuntu-24.04-arm
+            gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/aarch64-redhat-linux/11
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     env:
       # Disables AWS Instance Metadata Service (IMDS), that not in use.
@@ -92,7 +97,7 @@ jobs:
           done
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
@@ -115,13 +120,8 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui \
-            thirdparty/mrbind-pybind11 \
-            thirdparty/mrbind
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          # No retry.sh, linux scripts retry themselves.
+          scripts/clone_submodules_linux_vcpkg.sh --skip-prebuilt-thirdparty
 
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
@@ -144,6 +144,12 @@ jobs:
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
@@ -175,6 +181,7 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_GTK=ON
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
+            -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang 21' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
@@ -183,7 +190,12 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg/installed/${{ matrix.arch }}-linux-meshlib
+        # Bindings always compile with clang++, so GCC 11 rows pin them too. The stub works around
+        # libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships 11.2.1): Clang emits an
+        # extern ref to path::_List::type, which EL8 defines in no library.
+        run: |
+          /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

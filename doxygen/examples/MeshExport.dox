@@ -17,6 +17,9 @@ See a more relevant example \ref ExampleNumpy
 - <b class="tab-title">C#</b>
 \include MeshExport.dox.cs
 
+- <b class="tab-title">JavaScript</b>
+\include MeshExport.dox.js
+
 </div>
 
  */

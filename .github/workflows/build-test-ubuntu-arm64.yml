@@ -37,7 +37,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-${{matrix.os}}-arm64:${{inputs.docker_image_tag}}
-      options: --user root
     strategy:
       fail-fast: false
       matrix:
@@ -57,6 +56,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     steps:
       - name: Work-around possible permission issues
@@ -70,7 +70,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
@@ -93,15 +93,8 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui \
-            thirdparty/eigen \
-            thirdparty/parallel-hashmap \
-            thirdparty/mrbind-pybind11 \
-            thirdparty/mrbind
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          # No retry.sh, linux scripts retry themselves.
+          scripts/clone_submodules_linux.sh --skip-prebuilt-thirdparty
 
       - name: Install thirdparty libs
         run: |
@@ -129,6 +122,12 @@ jobs:
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
@@ -178,7 +177,10 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
+          # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
+          # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
+          PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin PCH_CODEGEN=${{env.PCH_CODEGEN}}
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}

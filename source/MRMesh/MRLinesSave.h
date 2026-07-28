@@ -4,7 +4,7 @@
 #include "MRIOFilters.h"
 #include "MRSaveSettings.h"
 #include <filesystem>
-#include <ostream>
+#include <iosfwd>
 
 namespace MR
 {

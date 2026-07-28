@@ -21,6 +21,23 @@ on:
     secrets:
       GH_TOKEN:
         required: true
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      test_ubuntu_x64:
+        type: boolean
+        default: false
+      test_ubuntu_arm64:
+        type: boolean
+        default: false
+      test_macos:
+        type: boolean
+        default: false
+      test_windows:
+        type: boolean
+        default: false
 
 jobs:
   linux-x64-test:
@@ -47,7 +64,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -67,8 +84,9 @@ jobs:
           fi
 
       - name: Download Ubuntu x86-64 Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu x86-64 Release
@@ -144,7 +162,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -161,8 +179,9 @@ jobs:
           apt-get install -y gh
 
       - name: Download Ubuntu arm64 Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu arm64 Release
@@ -244,22 +263,20 @@ jobs:
             pkg_pattern: '*x64.pkg'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
+
       - name: Download Distributive
-        # `gh auth login --with-token` validates the token by calling the
-        # GraphQL `viewer` query, which intermittently returns HTTP 401
-        # ("Bad credentials") even for a perfectly valid token -- a known
-        # transient on GitHub's side. See community discussion #101661;
-        # GitHub's official guidance is to retry after a short delay.
-        # Auth and download are wrapped in independent retry loops so a
-        # flake in one does not force the other to re-run. `--clobber`
-        # lets a download retry overwrite a partial file from a previous
-        # attempt.
+        # GH_TOKEN instead of `gh auth login`: the login stores the token in
+        # the macOS keychain, which is locked in self-hosted runner sessions
+        # ("failed to move active token in keyring: exit status 36").
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          scripts/retry.sh -- bash -c 'echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token'
           scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
       # Self-hosted runners have no passwordless sudo, so they install into
@@ -276,6 +293,8 @@ jobs:
             installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
             MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
           fi
+          # aws/tap ships untrusted in GH images and warns on every brew command
+          brew untap aws/tap 2>/dev/null || true
           xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
@@ -319,7 +338,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - dist_pattern: "MeshLibDist_${{ inputs.release_tag }}.zip"
+          - dist_pattern: "MeshLibDistVS19_${{ inputs.release_tag }}.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
+          - dist_pattern: "MeshLibDistVS22_${{ inputs.release_tag }}.zip"
+            config: Release
+            app_subdir: Release
+            idl: 0
+          - dist_pattern: "MeshLibDistVS26_${{ inputs.release_tag }}.zip"
             config: Release
             app_subdir: Release
             idl: 0
@@ -329,13 +356,14 @@ jobs:
             idl: 2
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}
 
       - name: Unpack Distributive

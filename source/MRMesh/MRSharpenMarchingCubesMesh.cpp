@@ -6,6 +6,7 @@
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
+#include "MRReducePath.h"
 
 namespace MR
 {
@@ -67,6 +68,7 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
         e0 = e; // an edge with this voxel on the left and another voxel on the right
         Vector3f sumAC;
         float sumArea = 0;
+        Vector3f sumDirArea; // area-weighted normal sum of the voxel's faces
         PlaneAccumulator pacc;
         do
         {
@@ -81,9 +83,11 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
                     break;
                 if ( facesToProcess.test_set( l, false ) )
                 {
-                    auto a = vox.dblArea( l );
+                    const auto da = vox.dirDblArea( l ); // length = 2x face area
+                    const auto a = da.length();
                     sumArea += a;
                     sumAC += a * vox.triCenter( l );
+                    sumDirArea += da;
                 }
                 ei = vox.topology.next( ei );
             }
@@ -116,6 +120,12 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
         if ( rank == 3 && distSq > sqr( settings.maxNewRank3VertDev ) )
             continue; //new point is too from existing mesh triangles
 
+        // forbid in-plane shifts: the displacement to sharpPt must rise off the voxel's mean
+        // surface plane, not slide along it; an in-plane sharpPt is a phantom feature and a fold source
+        constexpr float minElevSin = 0.1f; // ~6 deg minimal angle between the displacement and the plane
+        const Vector3f d = sharpPt - avgPt;
+        if ( sqr( dot( d, sumDirArea ) ) < sqr( minElevSin ) * d.lengthSq() * sumDirArea.lengthSq() )
+            continue; //sharpPt shifts (nearly) within the surface plane
         auto v = vox.splitFace( f, sharpPt );
         assert( v == dirs.size() + firstNewVert );
         dirs.push_back( dir );
@@ -144,6 +154,8 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
             auto b = vox.topology.dest( vox.topology.prev( e ) );
             auto c = vox.topology.dest( e );
             auto d = vox.topology.dest( vox.topology.next( e ) );
+            if ( !isUnfoldQuadrangleConvex( vox.points[v], vox.points[b], vox.points[c], vox.points[d] ) )
+                return false;
             SymMatrix3f mat;
             mat += outerSquare( normals[b] );
             mat += outerSquare( normals[c] );

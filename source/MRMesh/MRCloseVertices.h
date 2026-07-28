@@ -40,6 +40,10 @@ namespace MR
 /// finds pairs of twin edges (each twin edge will be present at least in one of pairs)
 [[nodiscard]] MRMESH_API std::vector<EdgePair> findTwinEdgePairs( const Mesh & mesh, float closeDist );
 
+/// finds pairs of twin edges (each twin edge will be present at least in one of pairs)
+/// smallestClose: map obtained with `findSmallestCloseVertices` function
+[[nodiscard]] MRMESH_API std::vector<EdgePair> findTwinEdgePairs( const MeshTopology& tp, const VertMap& smallestClose );
+
 /// finds all directed twin edges
 [[nodiscard]] MRMESH_API EdgeBitSet findTwinEdges( const Mesh & mesh, float closeDist );
 [[nodiscard]] MRMESH_API EdgeBitSet findTwinEdges( const std::vector<EdgePair> & pairs );

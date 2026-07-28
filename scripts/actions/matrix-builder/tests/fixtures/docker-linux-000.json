@@ -1,0 +1,26 @@
+[
+  {
+    "distro": "ubuntu22",
+    "arch": "x64"
+  },
+  {
+    "distro": "ubuntu24",
+    "arch": "x64"
+  },
+  {
+    "distro": "ubuntu22",
+    "arch": "arm64"
+  },
+  {
+    "distro": "ubuntu24",
+    "arch": "arm64"
+  },
+  {
+    "distro": "emscripten",
+    "arch": "arm64"
+  },
+  {
+    "distro": "emscripten-generate-c-bindings",
+    "arch": "arm64"
+  }
+]

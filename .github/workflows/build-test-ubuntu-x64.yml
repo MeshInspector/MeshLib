@@ -40,20 +40,20 @@ jobs:
     runs-on: [ubuntu-latest]
     container:
       image: meshlib/meshlib-${{matrix.os}}:${{inputs.docker_image_tag}}
-      options: --user root
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON( inputs.config_matrix ) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     steps:
       - name: Display job info
         run: echo "Building on ${{ matrix.os }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -72,15 +72,8 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui \
-            thirdparty/eigen \
-            thirdparty/parallel-hashmap \
-            thirdparty/mrbind-pybind11 \
-            thirdparty/mrbind
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          # No retry.sh, linux scripts retry themselves.
+          scripts/clone_submodules_linux.sh --skip-prebuilt-thirdparty
 
       - name: Install thirdparty libs
         run: |
@@ -108,6 +101,12 @@ jobs:
 
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
@@ -146,6 +145,9 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
+      - name: PCH size (diagnostic)
+        run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
+
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt
 
@@ -154,7 +156,10 @@ jobs:
         env:
           CXX: ${{ matrix.cxx-compiler }}
           ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}}
+          # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
+          # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
+          PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}}
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"

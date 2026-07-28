@@ -11,6 +11,8 @@ Example of extrude faces on mesh
 \include MeshExtrude.dox.py
 - <b class="tab-title">C</b>
 \include MeshExtrude.dox.c
+- <b class="tab-title">JavaScript</b>
+\include MeshExtrude.dox.js
 
 </div>
 

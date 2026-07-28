@@ -17,6 +17,8 @@ ENDIF()
 
 file(GLOB HEADERS "*.h" "*.ipp")
 file(GLOB SOURCES "*.cpp")
+# MRPchCreate.cpp only drives the MSVC/MSBuild precompiled header; CMake generates its own.
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 set(OBJCPP_SOURCES "")
 IF(APPLE)
   file(GLOB OBJCPP_SOURCES "*.mm")
@@ -120,7 +122,15 @@ IF(NOT MRVIEWER_NO_LOCALE)
 ENDIF()
 
 IF(MR_PCH)
-  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MSVC AND MR_PCH_USE_EXTRA_HEADERS)
+    # MRViewer exports MRVIEWER_API, so like MRMesh it builds its own PCH from MRPch.h in its
+    # (dllexport) context instead of reusing the shared one. See cmake/Modules/ConfigurePch.cmake.
+    # Without the extra headers the shared PCH holds no MeshLib headers, so MRViewer just reuses it.
+    target_precompile_headers(${PROJECT_NAME} PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")
+  ELSE()
+    target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  ENDIF()
 ENDIF()
 
 IF(MESHLIB_BUILD_MCP)
@@ -129,10 +139,17 @@ ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
 ENDIF()
 
+IF(EMSCRIPTEN AND NOT MR_DISABLE_EMSCRIPTEN_ASYNCIFY)
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MR_EMSCRIPTEN_ASYNCIFY)
+ENDIF()
+
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
 file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
 file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
+# desktop bundles the third-party notices next to the executable for the About dialog;
+# wasm links to them on GitHub instead, so they are not copied into the emscripten assets
+set(THIRD_PARTY_NOTICES "${MESHLIB_THIRDPARTY_DIR}/licenses/THIRD-PARTY-NOTICES.txt")
 IF(EMSCRIPTEN)
   file(
     COPY
@@ -154,6 +171,7 @@ ELSE()
       ${MAIN_FONTS}
       ${AWESOME_FONTS}
       ${IMGUI_FONTS}
+      ${THIRD_PARTY_NOTICES}
       "resource"
     DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   )

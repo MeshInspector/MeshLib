@@ -1,0 +1,2 @@
+# The triplet EOL feeds vcpkg's ABI hash; changing this invalidates the vcpkg binary cache on Windows.
+thirdparty/vcpkg/triplets/x64-windows-* text eol=crlf

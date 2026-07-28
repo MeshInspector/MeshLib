@@ -293,6 +293,9 @@ Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOff
     if ( !reportProgress( params.callBack, 0.99f ) )
         return unexpectedOperationCanceled();
 
+    if ( params.outVoxelPerFace )
+        *params.outVoxelPerFace = std::move( map );
+
     return res;
 }
 

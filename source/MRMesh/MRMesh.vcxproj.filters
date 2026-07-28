@@ -561,6 +561,9 @@
     <ClInclude Include="MRMeshBuilder.h">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClInclude>
+    <ClInclude Include="MRVertDuplication.h">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClInclude>
     <ClInclude Include="MRIdentifyVertices.h">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClInclude>
@@ -1278,7 +1281,6 @@
     <ClInclude Include="MRMeshDoubleLayer.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
-    <ClInclude Include="MRTbbThreadMutex.h" />
     <ClInclude Include="MRProcessSelfTreeSubtasks.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>
@@ -1318,7 +1320,6 @@
     <ClInclude Include="MROneMeshContours.h">
       <Filter>Source Files\Contours</Filter>
     </ClInclude>
-    <ClInclude Include="MRInplaceStack.h" />
     <ClInclude Include="MRUnionFindParallel.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
@@ -1385,7 +1386,6 @@
     <ClInclude Include="MRFormat.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRFunctional.h" />
     <ClInclude Include="MRTwoLineSegmDist.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1420,6 +1420,21 @@
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRHoleFillPlan.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MRSplineProject.h">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFunctional.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRInplaceStack.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="MRTbbThreadMutex.h">
+      <Filter>Source Files\System</Filter>
+    </ClInclude>
+    <ClInclude Include="MRStitchOpenTwins.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
   </ItemGroup>
@@ -1704,6 +1719,9 @@
       <Filter>Source Files\DataModel\Features</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshBuilder.cpp">
+      <Filter>Source Files\MeshBuilder</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVertDuplication.cpp">
       <Filter>Source Files\MeshBuilder</Filter>
     </ClCompile>
     <ClCompile Include="MRIdentifyVertices.cpp">
@@ -2192,7 +2210,6 @@
     <ClCompile Include="MRMeshDoubleLayer.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
-    <ClCompile Include="MRTbbThreadMutex.cpp" />
     <ClCompile Include="MRProcessSelfTreeSubtasks.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -2271,8 +2288,6 @@
     <ClCompile Include="MRFormat.cpp">
       <Filter>Source Files\Basic</Filter>
     </ClCompile>
-    <ClCompile Include="MRParallelFor.cpp" />
-    <ClCompile Include="MRBitSetParallelFor.cpp" />
     <ClCompile Include="MRTwoLineSegmDist.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
@@ -2303,8 +2318,29 @@
     <ClCompile Include="MREdgePathsBuilder.cpp">
       <Filter>Source Files\SurfacePath</Filter>
     </ClCompile>
+    <ClCompile Include="MRSplineProject.cpp">
+      <Filter>Source Files\AABBTree</Filter>
+    </ClCompile>
+    <ClCompile Include="MRBitSetParallelFor.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRParallelFor.cpp">
+      <Filter>Source Files\Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPchCreate.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRTbbThreadMutex.cpp">
+      <Filter>Source Files\System</Filter>
+    </ClCompile>
+    <ClCompile Include="MRStitchOpenTwins.cpp">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\.editorconfig" />
+    <None Include="MRUnicodeCaseFold.inl">
+      <Filter>Source Files\Basic</Filter>
+    </None>
   </ItemGroup>
 </Project>

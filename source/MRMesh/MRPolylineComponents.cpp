@@ -9,34 +9,6 @@
 #include "MRParallelFor.h"
 #include <climits>
 
-namespace
-{
-
-using namespace MR;
-
-/// returns
-/// 1. the mapping: FaceId -> Root ID in [0, 1, 2, ...)
-/// 2. the total number of roots
-static std::pair<UndirectedEdge2RegionMap, int> getUniqueRootIds( const UndirectedEdgeMap& allRoots, const UndirectedEdgeBitSet& region )
-{
-    MR_TIMER;
-    UndirectedEdge2RegionMap uniqueRootsMap( allRoots.size() );
-    int k = 0;
-    for ( auto ue : region )
-    {
-        auto& uniqIndex = uniqueRootsMap[allRoots[ue]];
-        if ( uniqIndex < 0 )
-        {
-            uniqIndex = RegionId( k );
-            ++k;
-        }
-        uniqueRootsMap[ue] = uniqIndex;
-    }
-    return { std::move( uniqueRootsMap ), k };
-}
-
-}
-
 namespace MR
 {
 

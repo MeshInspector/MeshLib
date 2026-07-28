@@ -65,51 +65,23 @@
 #include <GLFW/glfw3.h>
 #endif
 
-#include <algorithm>
-#include <array>
-#include <bit>
-#include <cassert>
-#include <cfloat>
-#include <chrono>
-#include <cmath>
-#include <codecvt>
-#include <compare>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <ctype.h>
-#include "MRFilesystem.h"
-#include <fstream>
-#include <functional>
-#include <future>
-#include <iomanip>
-#include <iostream>
-#include <istream>
-#include <iterator>
-#include <limits>
-#include <locale>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <ostream>
-#include <queue>
-#include <string>
-#include <thread>
-#include <tuple>
-#include <typeindex>
-#include <unordered_map>
-#include <variant>
-#include <vector>
-#include <version>
+#include "MRStdlib.h"
 
 #ifdef MR_PCH_USE_EXTRA_HEADERS
+#include "MRMesh/MRBitSetParallelFor.h"
+#include "MRMesh/MRFunctional.h"
 #include "MRMesh/MRIOFilters.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObject.h"
+#include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectsAccess.h"
+#include "MRMesh/MRParallel.h"
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRTbbThreadMutex.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRVisualObject.h"
 
@@ -121,6 +93,12 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRUIStyle.h"
 #endif
+#endif
+
+// in MSVC it dramaticcaly increases the size of PCH file (from 400Mb to 800Mb),
+// but greatly improves compilation time of TUs that include OpenVDB
+#ifdef MR_PCH_USE_OPENVDB
+#include "MROpenVDB.h"
 #endif
 
 #pragma warning(pop)

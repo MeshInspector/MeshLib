@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-ARG VCPKG_VERSION=2026.06.01
+ARG VCPKG_VERSION=2026.06.24
 ARG VCPKG_TRIPLET=x64-linux-meshlib
 
 
@@ -94,3 +94,7 @@ ENV VCPKG_ROOT=/opt/vcpkg
 
 ARG VCPKG_TRIPLET
 ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
+
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

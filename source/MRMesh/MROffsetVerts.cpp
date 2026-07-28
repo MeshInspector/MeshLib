@@ -33,6 +33,36 @@ bool offsetVerts( Mesh& mesh, const VertMetric& offset, const ProgressCallback& 
     }, cb );
 }
 
+bool expandHoles( Mesh& mesh, float expansion, const ProgressCallback& cb )
+{
+    MR_TIMER;
+    mesh.invalidateCaches();
+
+    // prepare all shifts before modifying the points
+    VertCoords shifts( mesh.topology.vertSize() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        if ( !mesh.topology.isBdVertex( v ) )
+            return;
+        const Vector3f normal = mesh.pseudonormal( v );
+        Vector3f shift;
+        for ( auto e : orgRing( mesh.topology, v ) )
+        {
+            if ( mesh.topology.left( e ) )
+                continue;
+            const auto nextPt = mesh.destPnt( e );
+            const auto prevPt = mesh.destPnt( mesh.topology.next( e ) );
+            shift += expansion * cross( nextPt - prevPt, normal ).normalized();
+        }
+        shifts[v] = shift;
+    } );
+
+    return BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        mesh.points[v] += shifts[v];
+    }, cb );
+}
+
 Mesh makeThickMesh( const Mesh & m, const ThickenParams & params )
 {
     MR_TIMER;

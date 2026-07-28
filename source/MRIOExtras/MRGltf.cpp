@@ -34,7 +34,9 @@ MR_SUPPRESS_WARNING_PUSH
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#if __clang_major__ >= 17
+// The second part of this condition is here to reject Clang 17.0.0 from EMSDK 3.1.38. Those two warnings are known to Clang 17.0.1 on godbolt, and there's no 17.0.0 on godbolt to check.
+// They were either added in 17.0.1, or the old Emscripten used a patched Clang without those flags.
+#if __clang_major__ >= 17 && !(__clang_major__ == 17 && __clang_minor__ == 0 && __clang_patchlevel__ == 0)
 #pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
 #pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
 #else
@@ -200,14 +202,17 @@ Expected<void> fillVertsColorMap( VertColors& vertsColorMap, int vertexCount, co
 
         ParallelFor( vertsColorMap, [&] ( VertId v )
         {
+            auto byteStride = bufferView.byteStride;
+            if ( byteStride == 0 )
+                byteStride = size_t( channelCount ) * sizeof( ChannelType );
             if constexpr ( channelCount == 3 )
             {
-                const Vector3<ChannelType> col = *( Vector3<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                const Vector3<ChannelType> col = *( Vector3<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * byteStride] );
                 vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ) );
             }
             else if constexpr ( channelCount == 4 )
             {
-                const Vector4<ChannelType> col = *( Vector4<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * bufferView.byteStride] );
+                const Vector4<ChannelType> col = *( Vector4<ChannelType>* )( &buffer.data[accessor.byteOffset + bufferView.byteOffset + v * byteStride] );
                 vertsColorMap[startPos + v] = Color( float( col[0] / cMax ), float( col[1] / cMax ), float( col[2] / cMax ), float( col[3] / cMax ) );
             }
         } );

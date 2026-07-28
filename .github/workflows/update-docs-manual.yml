@@ -15,7 +15,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-ubuntu22-arm64:latest
-      options: --user root
     strategy:
       fail-fast: false
     env:
@@ -38,7 +37,7 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Checkout third-party submodules
         run: |
@@ -46,15 +45,8 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
-          # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui \
-            thirdparty/eigen \
-            thirdparty/parallel-hashmap \
-            thirdparty/mrbind-pybind11 \
-            thirdparty/mrbind
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          # No retry.sh, linux scripts retry themselves.
+          scripts/clone_submodules_linux.sh --skip-prebuilt-thirdparty
 
       - name: Install thirdparty libs
         run: |
@@ -129,8 +121,15 @@ jobs:
           path: ./source/MRDotNet2/src
           retention-days: 1
 
+  generate-wasm-definitions:
+    uses: ./.github/workflows/build-test-emscripten.yml
+    with:
+      docker_image_tag: latest
+      upload_artifacts: false
+      definitions_only: true
+
   update-dev-documentation:
-    needs: [ create-stubs ]
+    needs: [ create-stubs, generate-wasm-definitions ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: ${{ inputs.output_folder }}
@@ -157,4 +156,9 @@ jobs:
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: CsharpBindings
+          failOnError: false
+      - name: Delete Wasm definitions
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: WasmBindingsDts
           failOnError: false

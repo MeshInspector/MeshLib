@@ -1,0 +1,5 @@
+# Bare entry-list form: the whole document is the base matrix.
+- distro: ubuntu22
+  arch: x64
+- distro: ubuntu24
+  arch: arm64

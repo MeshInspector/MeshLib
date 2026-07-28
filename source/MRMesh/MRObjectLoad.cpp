@@ -137,7 +137,7 @@ static std::string makeWarningString( int skippedFaceCount, int duplicatedVertex
 {
     std::string res;
     if ( skippedFaceCount )
-        res = fmt::format( "{} triangles were skipped as inconsistent with others.\n", skippedFaceCount );
+        res = fmt::format( "{} triangles were skipped as having repeated vertex ids or being inconsistent with others.\n", skippedFaceCount );
     if ( duplicatedVertexCount )
         res += fmt::format( "{} vertices were duplicated to make them manifold.\n", duplicatedVertexCount );
     if ( holesCount )

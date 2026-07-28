@@ -1,0 +1,201 @@
+#include "MRMultiScanLoad.h"
+#include "MRPointsLoad.h"
+#include "MRPointCloud.h"
+#include "MRAffineXf3.h"
+#include "MRDirectory.h"
+#include "MRStringConvert.h"
+#include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
+#include "MRProgressCallback.h"
+#include "MRTimer.h"
+
+#include <fstream>
+#include <map>
+#include <charconv>
+#include <optional>
+#include <string_view>
+
+namespace MR::PointsLoad
+{
+
+namespace
+{
+
+// parses the integer index from a scan file stem with the given prefix, e.g. ("pose000007", "pose") -> 7;
+// returns std::nullopt if the stem does not start with the prefix or the remainder is not a pure number
+std::optional<int> parseScanIndex( const std::string& stem, std::string_view prefix )
+{
+    if ( !std::string_view( stem ).starts_with( prefix ) )
+        return {};
+    const char* first = stem.data() + prefix.size();
+    const char* last = stem.data() + stem.size();
+    int index = 0;
+    const auto [ptr, ec] = std::from_chars( first, last, index );
+    if ( ec != std::errc{} || ptr != last )
+        return {};
+    return index;
+}
+
+// reads a 4x4 row-major rigid transformation from a text file as AffineXf3f (the last row 0 0 0 1 is ignored)
+Expected<AffineXf3f> readScanPose( const std::filesystem::path& file )
+{
+    std::ifstream in( file );
+    if ( !in )
+        return unexpected( "Cannot open file for reading " + utf8string( file ) );
+
+    AffineXf3f xf;
+    in  >> xf.A.x.x >> xf.A.x.y >> xf.A.x.z >> xf.b.x
+        >> xf.A.y.x >> xf.A.y.y >> xf.A.y.z >> xf.b.y
+        >> xf.A.z.x >> xf.A.z.y >> xf.A.z.z >> xf.b.z;
+    if ( in.fail() )
+        return unexpected( "Cannot parse transformation from " + utf8string( file ) );
+    return xf;
+}
+
+ProgressCallback mixContextProgress( tbb::task_group_context& ctx, ProgressCallback in )
+{
+    return [&ctx, in = std::move( in )]( float p ) -> bool
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return false;
+        return in ? in( p ) : true;
+    };
+}
+
+} // anonymous namespace
+
+Expected<PointCloud> fromMultiScanFolder( const std::filesystem::path& folder,
+    const MultiScanLoadSettings& settings, const ProgressCallback& callback )
+{
+    MR_TIMER;
+
+    std::error_code ec;
+    if ( !std::filesystem::is_directory( folder, ec ) )
+        return unexpected( utf8string( folder ) + " is not a folder" );
+
+    // collect transformation and .ply files indexed by the number embedded in their names
+    std::map<int, std::filesystem::path> poseFiles, plyFiles;
+    for ( auto entry : Directory{ folder, ec } )
+    {
+        if ( !entry.is_regular_file( ec ) )
+            continue;
+        const auto path = entry.path();
+        const auto stem = utf8string( path.stem() );
+        auto ext = utf8string( path.extension() );
+        for ( auto& c : ext )
+            c = ( char )tolower( c );
+
+        if ( ext == settings.poseExt )
+        {
+            if ( auto idx = parseScanIndex( stem, settings.posePrefix ) )
+                poseFiles[*idx] = path;
+        }
+        else if ( ext == ".ply" )
+        {
+            if ( auto idx = parseScanIndex( stem, settings.scanPrefix ) )
+                plyFiles[*idx] = path;
+        }
+    }
+
+    // keep only the indices having both a transformation and a .ply file
+    std::vector<std::pair<std::filesystem::path, std::filesystem::path>> pairs; // ( transformation, .ply )
+    for ( const auto& [idx, posePath] : poseFiles )
+    {
+        if ( auto it = plyFiles.find( idx ); it != plyFiles.end() )
+            pairs.emplace_back( posePath, it->second );
+    }
+    if ( pairs.empty() )
+        return unexpected( "No pairs of " + settings.posePrefix + "*" + settings.poseExt + " and "
+            + settings.scanPrefix + "*.ply files found in " + utf8string( folder ) );
+
+    const int cReportEverySingle = 1;
+    const float cProgressReadXfs = 0.1f;
+    const float cProgressReadScans = 0.9f;
+
+    std::vector<AffineXf3f> scansXf( pairs.size() );
+    tbb::task_group_context ctx;
+    std::string error;
+    // ParallelFor's own result only reflects the progress callback, so check the shared context as well:
+    // it may be cancelled by a worker after the reporting thread has made its last callback call
+    if ( !ParallelFor( scansXf, [&]( size_t i )
+        {
+            auto xf = readScanPose( pairs[i].first );
+            if ( !xf )
+            {
+                if ( ctx.cancel_group_execution() )
+                    error = xf.error();
+                return;
+            }
+            scansXf[i] = *xf;
+        }, mixContextProgress( ctx, subprogress( callback, 0.0f, cProgressReadXfs ) ), cReportEverySingle )
+        || ctx.is_group_execution_cancelled() )
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return unexpected( std::move( error ) );
+        return unexpectedOperationCanceled();
+    }
+
+    std::vector<PointCloud> scans( pairs.size() );
+    if ( !ParallelFor( scans, [&]( size_t i )
+        {
+            auto cloud = fromPly( pairs[i].second );
+            if ( !cloud )
+            {
+                if ( ctx.cancel_group_execution() )
+                    error = cloud.error();
+                return;
+            }
+
+            // transform the loaded points (and normals) into the common coordinate frame
+            const auto xf = scansXf[i];
+            BitSetParallelFor( cloud->validPoints, [&] ( VertId v )
+            {
+                cloud->points[v] = xf( cloud->points[v] );
+                if ( v < cloud->normals.size() )
+                    cloud->normals[v] = xf.A * cloud->normals[v];
+            } );
+
+            scans[i] = std::move( *cloud );
+        }, mixContextProgress( ctx, subprogress( callback, cProgressReadXfs, cProgressReadScans ) ), cReportEverySingle )
+        || ctx.is_group_execution_cancelled() )
+    {
+        if ( ctx.is_group_execution_cancelled() )
+            return unexpected( std::move( error ) );
+        return unexpectedOperationCanceled();
+    }
+
+    std::vector<VertId> firstScanPoint;
+    firstScanPoint.reserve( pairs.size() + 1 );
+    firstScanPoint.push_back( 0_v );
+    bool anyNormals = false;
+    for ( const auto & s : scans )
+    {
+        firstScanPoint.push_back( firstScanPoint.back() + s.points.size() );
+        anyNormals = anyNormals || !s.normals.empty();
+    }
+    assert( firstScanPoint.size() == pairs.size() + 1 );
+    const int totalPoints( firstScanPoint.back() );
+
+    PointCloud res;
+    res.points.resizeNoInit( totalPoints );
+    if ( anyNormals )
+        res.normals.resize( totalPoints );
+    res.validPoints.resize( totalPoints, true );
+    if ( !ParallelFor( scans, [&]( size_t i )
+        {
+            const auto& scan = scans[i];
+            const auto f = firstScanPoint[i];
+            for ( auto v = 0_v; v < scan.points.size(); ++v )
+            {
+                auto t = f + (int)v;
+                res.points[t] = scan.points[v];
+                if ( anyNormals && v < scan.normals.size() )
+                    res.normals[t] = scan.normals[v];
+            }
+        }, subprogress( callback, cProgressReadScans, 1.0f ) ) )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
+} // namespace MR::PointsLoad

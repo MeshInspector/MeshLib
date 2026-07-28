@@ -23,7 +23,7 @@ float findMaxDistanceSqOneWay( const PointCloud& a, const PointCloud& b, const A
                 if ( !b.validPoints.test( i ) )
                     continue;
 
-                auto distSq = findProjectionOnPoints( rigidB2A ? (*rigidB2A)( b.points[i] ) : b.points[i], a, maxDistanceSq ).distSq;
+                auto distSq = findProjectionOnPoints( rigidB2A ? (*rigidB2A)( b.points[i] ) : b.points[i], PointCloudPart{ a }, maxDistanceSq ).distSq;
                 if ( distSq > init )
                     init = distSq;
             }

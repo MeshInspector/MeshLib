@@ -80,33 +80,20 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
 
       - name: Checkout third-party submodules
         run: |
           # Selective init -- parent Checkout drops submodules:true.
           # https://github.com/actions/checkout/issues/1779
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui \
-            thirdparty/eigen \
-            thirdparty/parallel-hashmap \
-            thirdparty/expected \
-            thirdparty/OpenCTM-git \
-            thirdparty/libE57Format \
-            thirdparty/glad \
-            thirdparty/tinygltf \
-            thirdparty/laz-perf \
-            thirdparty/clip \
-            thirdparty/fastmcpp \
-            thirdparty/nlohmann-json \
-            thirdparty/cpp-httplib \
-            thirdparty/mrbind \
-            thirdparty/mrbind-pybind11
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          bash scripts/retry.sh -- scripts/clone_submodules_linux.sh --skip-prebuilt-thirdparty
 
       - name: Configure native x86_64 cross-build environment
         if: ${{ matrix.cross-osx-arch == 'x86_64' }}
@@ -178,6 +165,12 @@ jobs:
           curl -sS https://bootstrap.pypa.io/get-pip.py | python3
           python3 -m pip install -r ./requirements/python/requirements.txt
           python3 -m pip install pytest
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c && !matrix.skip-bindings }}

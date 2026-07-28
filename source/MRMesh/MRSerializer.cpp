@@ -26,6 +26,7 @@
 #include "MRPch/MRJson.h"
 
 #include <streambuf>
+#include <fstream>
 
 namespace MR
 {

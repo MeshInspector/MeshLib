@@ -7,6 +7,7 @@
 #include "MRZip.h"
 #include "MRTimer.h"
 #include "MRPch/MRFmt.h"
+#include <fstream>
 
 namespace MR
 {

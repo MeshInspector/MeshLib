@@ -1,9 +1,18 @@
 #include "MRString.h"
+#include "MRStringConvert.h"
 #include <algorithm>
+#include <cctype>
+#include <iterator>
 #include <limits>
+#include <utility>
 
 namespace
 {
+
+// simple Unicode case-folding table (from -> to), sorted by `from`, generated from CaseFolding.txt
+constexpr std::pair<char32_t, char32_t> cCaseFoldTable[] =
+#include "MRUnicodeCaseFold.inl"
+;
 
 enum class PatchType : int
 {
@@ -33,20 +42,31 @@ bool isAscii( char ch )
 namespace MR
 {
 
+char32_t caseFold( char32_t ch )
+{
+    if ( ch < 0x80 ) // ASCII fast path (the common case), consistent with the table's A-Z entries
+        return ( ch >= U'A' && ch <= U'Z' ) ? ch + ( U'a' - U'A' ) : ch;
+    const auto* end = cCaseFoldTable + std::size( cCaseFoldTable );
+    const auto it = std::lower_bound( cCaseFoldTable, end, ch,
+        [] ( const auto& entry, char32_t value ) { return entry.first < value; } );
+    return ( it != end && it->first == ch ) ? it->second : ch;
+}
+
 size_t findSubstringCaseInsensitive( const std::string& string, const std::string& substring )
 {
     auto iter = std::search( string.begin(), string.end(),
         substring.begin(), substring.end(),
         [] ( char ch1, char ch2 )
     {
-        return std::toupper( ch1 ) == std::toupper( ch2 );
+        return std::toupper( (unsigned char)ch1 ) == std::toupper( (unsigned char)ch2 );
     } );
     if ( iter == string.end() )
         return std::string::npos;
     return std::distance( string.begin(), iter );
 }
 
-int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
+template <typename String>
+static int calcDamerauLevenshteinDistanceT( const String& stringA, const String& stringB,
     bool caseSensitive, int* outLeftRightAddition )
 {
     std::vector<SumPatchWeight> map( ( stringA.size() + 1 ) * ( stringB.size() + 1 ) );
@@ -61,7 +81,7 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
         if ( caseSensitive )
             return stringA[i - 1] == stringB[j - 1];
         else
-            return std::tolower( stringA[i - 1] ) == std::tolower( stringB[j - 1] );
+            return toLower( stringA[i - 1] ) == toLower( stringB[j - 1] );
     };
 
     for ( int i = 0; i < stringA.size() + 1; ++i )
@@ -153,6 +173,18 @@ int calcDamerauLevenshteinDistance( const std::string& stringA, const std::strin
         ( *outLeftRightAddition ) += currentInsertionStrike;
     }
     return at( int( stringA.size() ), int( stringB.size() ) ).w;
+}
+
+int calcDamerauLevenshteinDistance( const std::string& stringA, const std::string& stringB,
+    bool caseSensitive, int* outLeftRightAddition )
+{
+    return calcDamerauLevenshteinDistanceT( stringA, stringB, caseSensitive, outLeftRightAddition );
+}
+
+int calcDamerauLevenshteinDistance( const std::u32string& stringA, const std::u32string& stringB,
+    bool caseSensitive, int* outLeftRightAddition )
+{
+    return calcDamerauLevenshteinDistanceT( stringA, stringB, caseSensitive, outLeftRightAddition );
 }
 
 std::vector<std::string> split( const std::string& string, const std::string& delimiter )

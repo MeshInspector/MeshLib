@@ -123,11 +123,12 @@ std::optional<T> distance( const Plane3<T>& plane, const Line3<T>& line,
     return std::abs( dot( line.p, plane.n ) - plane.d );
 }
 
-/// finds the closest points between two lines in 3D;
+/// finds the closest points between two lines in 3D and returns their parameters
+/// (that can be passed to Line::operator() to get the points) on the original lines;
 /// for parallel lines the selection is arbitrary;
 /// \return two equal points if the lines intersect
 template<typename T>
-LineSegm3<T> closestPoints( const Line3<T>& line1, const Line3<T>& line2 )
+std::pair<T,T> closestPointsParams( const Line3<T>& line1, const Line3<T>& line2 )
 {
     const auto d11 = line1.d.lengthSq();
     const auto d12 = dot( line1.d, line2.d );
@@ -136,7 +137,7 @@ LineSegm3<T> closestPoints( const Line3<T>& line1, const Line3<T>& line2 )
     if ( det == 0 )
     {
         // lines are parallel
-        return { line1.p, line2.project( line1.p ) };
+        return { T(0), line2.projectionParam( line1.p ) };
     }
 
     const auto dp = line2.p - line1.p;
@@ -144,7 +145,17 @@ LineSegm3<T> closestPoints( const Line3<T>& line1, const Line3<T>& line2 )
     const auto y = dot( dp, line2.d ) / det;
     const auto a = d12 * y - d22 * x;
     const auto b = d11 * y - d12 * x;
-    return { line1( a ), line2( b ) };
+    return { a, b };
+}
+
+/// finds the closest points between two lines in 3D;
+/// for parallel lines the selection is arbitrary;
+/// \return two equal points if the lines intersect
+template<typename T>
+LineSegm3<T> closestPoints( const Line3<T>& line1, const Line3<T>& line2 )
+{
+    const auto pp = closestPointsParams( line1, line2 );
+    return { line1( pp.first ), line2( pp.second ) };
 }
 
 /// finds the closest points between an infinite line and finite line segment in 3D;

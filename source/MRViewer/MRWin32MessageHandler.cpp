@@ -3,6 +3,7 @@
 
 #include "MRMesh/MRMeshFwd.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRPch/MRHashMap.h"
 
 namespace
 {

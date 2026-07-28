@@ -32,6 +32,8 @@ void TouchpadController::reset()
 bool TouchpadController::touchpadRotateGestureBegin_()
 {
     auto& viewer = getViewerInstance();
+    // operate on the viewport under the cursor, matching zoom and mouse-click behavior
+    viewer.select_hovered_viewport();
     auto& viewport = viewer.viewport();
 
     initRotateParams_ = viewer.viewport().getParameters();
@@ -69,6 +71,8 @@ bool TouchpadController::touchpadRotateGestureEnd_()
 bool TouchpadController::touchpadSwipeGestureBegin_()
 {
     auto& viewer = getViewerInstance();
+    // operate on the viewport under the cursor, matching zoom and mouse-click behavior
+    viewer.select_hovered_viewport();
     auto& viewport = viewer.viewport();
 
     currentSwipeMode_ = parameters_.swipeMode;

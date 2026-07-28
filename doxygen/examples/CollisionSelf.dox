@@ -17,6 +17,9 @@ Following code presents example of finding self-intersecting triangles of single
 - <b class="tab-title">C#</b>
 \include CollisionSelf.dox.cs
 
+- <b class="tab-title">JavaScript</b>
+\include CollisionSelf.dox.js
+
 </div>
 
  */

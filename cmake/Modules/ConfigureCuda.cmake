@@ -9,7 +9,8 @@ IF(NOT CUDAToolkit_FOUND AND NOT CUDA_FOUND)
       find_package(CUDAToolkit 11 REQUIRED)
 
       # For our VS2022 CI:
-      set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
+      # 20011: VS2026's <cmath> calls the __host__-only __copysignf intrinsic from __host__ __device__ copysign
+      set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -diag-suppress 20011 -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
     ELSE()
       # https://cmake.org/cmake/help/latest/release/3.25.html#id2
       IF(CMAKE_VERSION VERSION_LESS 3.25.2)

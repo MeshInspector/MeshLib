@@ -127,4 +127,40 @@ VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTri
     return b.takeDistanceMap();
 }
 
+VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTriPoint>& starts, const std::vector<MeshTriPoint>& ends,
+    const VertBitSet* region, bool * endReached, int maxVertUpdates )
+{
+    MR_TIMER;
+
+    SurfaceDistanceBuilder b( mesh, region );
+    b.setMaxVertUpdates( maxVertUpdates );
+    for ( const auto& triPoint : starts )
+        b.addStart( triPoint );
+
+    VertBitSet stopVerts;
+    for ( const auto & end : ends )
+        mesh.topology.forEachVertex( end, [&]( VertId v )
+        {
+            stopVerts.autoResizeSet( v );
+        } );
+    auto numStopVerts = stopVerts.count();
+
+    if ( endReached )
+        *endReached = true;
+    while ( numStopVerts > 0 )
+    {
+        auto v = b.growOne();
+        if ( !v )
+        {
+            if ( endReached )
+                *endReached = false;
+            break;
+        }
+
+        if ( stopVerts.test_set( v, false ) )
+            --numStopVerts;
+    }
+    return b.takeDistanceMap();
+}
+
 } //namespace MR

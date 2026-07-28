@@ -13,6 +13,12 @@ KNOWN_ITEM_GROUPS = {
     'CudaCompile': {".cu"},
 }
 
+IGNORED_PROJECTS = {
+    # auto-generated bindings
+    "MeshLibC2",
+    "MeshLibC2Cuda",
+}
+
 IGNORED_FILENAMES = {
     # CMake-specific files
     "config.h",
@@ -58,6 +64,8 @@ def find_missing_entries(vcxproj_path):
 
 
 def process_file(vcxproj_path):
+    if vcxproj_path.stem in IGNORED_PROJECTS:
+        return True
     result = find_missing_entries(vcxproj_path)
     ok = True
     for group_name, group in result.items():

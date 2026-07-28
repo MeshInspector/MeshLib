@@ -42,12 +42,19 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     env:
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'CMake' }}
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-      job_upload_artifact: ${{ inputs.upload_artifacts && matrix.cxx_compiler == 'msvc-2019' && matrix.build_system == 'CMake' }}
+      # Upload a developer distributive per Visual Studio toolchain so
+      # update-win-version can repackage each into MeshLibDistVS{19,22,26}.zip.
+      # VS2019/VS2022 ship the CMake build; VS2026 ships the MSBuild build
+      # (which also produces the C#/.NET components). VS_TAG keeps the archive
+      # names distinct.
+      job_upload_artifact: ${{ inputs.upload_artifacts && ( matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler != 'msvc-2026' && matrix.build_system == 'CMake' ) }}
+      VS_TAG: ${{ fromJSON('{"msvc-2019":"VS19","msvc-2022":"VS22"}')[matrix.cxx_compiler] || 'VS26' }}
       CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
@@ -55,7 +62,9 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.release_tag || '' }}
 
       - name: Locate Visual Studio
         uses: ./.github/actions/locate-visual-studio
@@ -63,21 +72,7 @@ jobs:
       - name: Checkout third-party submodules
         shell: bash
         run: |
-          # Selective init -- parent Checkout drops submodules:true.
-          # https://github.com/actions/checkout/issues/1779
-          # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui \
-            thirdparty/eigen \
-            thirdparty/parallel-hashmap \
-            thirdparty/expected \
-            thirdparty/fastmcpp \
-            thirdparty/nlohmann-json \
-            thirdparty/cpp-httplib \
-            thirdparty/mrbind \
-            thirdparty/mrbind-pybind11
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          bash scripts/retry.sh -- powershell scripts/clone_submodules_windows.ps1 --skip-prebuilt-thirdparty
 
       - name: Get AWS instance type
         uses: ./.github/actions/get-aws-instance-type
@@ -100,10 +95,7 @@ jobs:
         with:
           vcpkg-version: ${{ matrix.vcpkg-version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
-          # The S3 asset provider is only used for the VS2019 triplets
-          # (x64-windows-vs2019-meshlib and x64-windows-meshlib-iterator-debug);
-          # VS2022/VS2026 fetch their assets from upstream instead.
-          install-flags: ${{ (matrix.vcpkg_triplet == 'x64-windows-vs2019-meshlib' || matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug') && '--write-s3 --use-s3-asset-provider' || '--write-s3' }}
+          install-flags: '--write-s3'
           internal-build: ${{ inputs.internal_build }}
 
       - name: Resolve CUDA major/minor
@@ -137,7 +129,7 @@ jobs:
 
       - name: Install .NET
         if:   ${{ env.BUILD_C_SHARP == 'true' }}
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: '8.0.x'
 
@@ -152,6 +144,12 @@ jobs:
           cache-key-prefix: windows-clang22
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
           extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
@@ -175,10 +173,15 @@ jobs:
         env:
           MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        # Note `|| exit /b 1` after each command: cmd.exe does not stop on a failed
+        #   command, so without these a generate_win.bat failure would be masked
+        #   by the following dotnet build (see the Build step's note below).
+        # `CSHARP_STATIC_DLLIMPORT=1` is used to build the version of the bindings that's suitable for use in Wasm in Unity.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }}
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}}
-          dotnet build examples/c-sharp-examples -c ${{matrix.config}}
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 || exit /b 1
+          dotnet build examples/c-sharp-examples -c ${{matrix.config}} || exit /b 1
 
       - name: Build
         shell: cmd
@@ -189,17 +192,31 @@ jobs:
         # `|| exit /b 1` is used instead of `if errorlevel 1 exit 1`
         # because the latter can miss exit codes inside parenthesized IF
         # blocks in cmd.exe (e.g. it failed to catch a ninja build failure).
+        # The z-applocal loop uses `exit 1` (no /b): cmd.exe drops the errorlevel
+        # of `exit /b` from a for-loop body nested in the parenthesized IF block.
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake --version || exit /b 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} || exit /b 1
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
+            rem Deploy vcpkg DLLs in one serial pass here: with VCPKG_APPLOCAL_DEPS=ON (default)
+            rem every parallel Ninja link edge runs its own z-applocal into the shared bin dir,
+            rem and concurrent copies of the same DLL intermittently fail with ERROR_SHARING_VIOLATION.
+            for %%b in (source\TempOutput\bin\*.exe source\TempOutput\bin\*.dll) do (
+              %VCPKG_ROOT%\vcpkg.exe z-applocal --target-binary="%%b" --installed-bin-dir="%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%${{ matrix.config == 'Debug' && '\debug' || '' }}\bin" >nul || exit 1
+            )
             if not exist source\x64 mkdir source\x64 || exit /b 1
             xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }} || exit /b 1
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
           )
+
+      - name: Log precompiled header sizes
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-pch-sizes.ps1"
 
       - name: Build C bindings with MSBuild
         if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
@@ -209,15 +226,25 @@ jobs:
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
         run: msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }}
 
+      - name: Build C CUDA bindings with MSBuild
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
+        shell: cmd
+        env:
+          VCPKG_ROOT: C:\vcpkg
+          VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
+        run: msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }}
+
       - name: Generate and build Python bindings
         if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
         shell: cmd
         env:
           MSYS2_DIR: C:\msys64
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
+        # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }}
-          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}}
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}
@@ -317,7 +344,7 @@ jobs:
           rem VsDevCmd.bat overrides VCPKG_ROOT with the VS-bundled vcpkg; preserve the
           rem step env: value so MESHLIB_INCLUDE_DIRS resolves to the project vcpkg.
           set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
           cmake --version || exit /b 1
           cmake ^
@@ -333,7 +360,7 @@ jobs:
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           cmake --version || exit /b 1
           cmake ^
             -S examples/c-examples ^
@@ -347,18 +374,20 @@ jobs:
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ env.job_upload_artifact == 'true' }}
-        run: tar --format zip -c -f MREDist_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
+        run: tar --format zip -c -f MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
 
       - name: Archive generated C headers
-        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
+        # The C2 headers are compiler-independent; upload them once (from VS2019)
+        # to avoid racing artifact uploads with the same name across VS builds.
+        if: ${{ env.job_upload_artifact == 'true' && matrix.cxx_compiler == 'msvc-2019' && matrix.config == 'Release' && inputs.mrbind_c }}
         run: tar --format zip -c -f MeshLibC2Headers.zip ./source/MeshLibC2/include
 
       - name: Upload Windows Binaries Archive
         if: ${{ env.job_upload_artifact == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: WindowsArchive_${{ matrix.upload_name || matrix.config }}
-          path: MREDist_${{ matrix.upload_name || matrix.config }}.zip
+          name: WindowsArchive_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}
+          path: MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip
           retention-days: 1
           overwrite: true
           # The payload is already a .zip; don't re-Deflate it (no size gain).
@@ -370,11 +399,11 @@ jobs:
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: MREDist_${{ matrix.upload_name || matrix.config }}.zip
+          artifact_glob: MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Upload MeshLibC2 headers archive
-        if: ${{ env.job_upload_artifact == 'true' && matrix.config == 'Release' && inputs.mrbind_c }}
+        if: ${{ env.job_upload_artifact == 'true' && matrix.cxx_compiler == 'msvc-2019' && matrix.config == 'Release' && inputs.mrbind_c }}
         uses: actions/upload-artifact@v7
         with:
           name: WindowsArchive_MeshLibC2Headers
@@ -408,6 +437,7 @@ jobs:
           name: DotNetDllXml
           path: |
             ./source/x64/Release/MRDotNet2.dll
+            ./source/x64/Release/MRDotNet2Static.dll
             ./source/x64/Release/MRDotNet2.xml
           retention-days: 1
           overwrite: true

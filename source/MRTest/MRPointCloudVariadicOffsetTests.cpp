@@ -10,6 +10,7 @@
 #include <MRMesh/MRParallelFor.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <fstream>
 
 namespace MR
 {

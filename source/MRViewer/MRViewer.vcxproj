@@ -11,6 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRPchCreate.cpp">
+      <!-- Build our own PCH only with the extra headers (MSVC); otherwise reuse the shared MRPch PCH. -->
+      <PrecompiledHeader Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">Create</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="ImGuiHelpers.cpp" />
     <ClCompile Include="MRImGuiMultiViewport.cpp" />
     <ClCompile Include="MRAncillaryLabels.cpp" />
@@ -160,6 +165,7 @@
     <ClCompile Include="MRWin32MessageHandler.cpp" />
     <ClCompile Include="MRI18n.cpp" />
     <ClCompile Include="MRUITestEngineControl.cpp" />
+    <ClCompile Include="MRSceneStateCheck.cpp" />
     <ClCompile Include="MRUiMcp.cpp" />
     <ClCompile Include="MRSceneMcp.cpp" />
     <ClCompile Include="MRViewerMcp.cpp" />
@@ -362,6 +368,9 @@
     <CopyFileToFolders Include="MRLightTheme.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <CopyFileToFolders Include="..\..\thirdparty\licenses\THIRD-PARTY-NOTICES.txt">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
     <None Include="MRFileDialogCocoa.mm">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -475,9 +484,6 @@
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
-      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MRSymbolMesh\MRSymbolMesh.vcxproj">
       <Project>{eaa47dfb-ecea-4d46-90be-718b190f06c4}</Project>
     </ProjectReference>
@@ -486,6 +492,11 @@
     </ProjectReference>
     <ProjectReference Include="..\MRMcp\MRMcp.vcxproj">
       <Project>{c8250f26-e01d-4a63-98cd-68069d818080}</Project>
+    </ProjectReference>
+    <!-- Reuse the shared MRPch PCH when extra headers are off: reference MRPch so it builds first and
+         its PCH object is linked. With extra headers on, MRViewer builds its own PCH and needs no reference. -->
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj" Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -530,7 +541,8 @@
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -555,7 +567,8 @@
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

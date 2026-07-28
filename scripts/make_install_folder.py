@@ -74,6 +74,14 @@ def copy_lib():
 	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_libs,dirs_exist_ok=True)
 	shutil.copytree(os.path.join(os.path.join(vcpkg_directory,'debug'),'lib'),os.path.join(it.path_to_libs,"Debug"),dirs_exist_ok=True)
 	shutil.copytree(os.path.join(vcpkg_directory,'lib'),os.path.join(it.path_to_libs,"Release"),dirs_exist_ok=True)
+
+	# Drop the debug-symbol cache that the .NET (C#) test run leaves under
+	# x64/<config>/sym (coreclr/ntdll/kernelbase PDBs, indexed by GUID). Its
+	# files end in .pdb so the prune below would otherwise keep them, bloating
+	# the package with system symbols that must not ship.
+	for sym_dir in glob.glob(os.path.join(it.path_to_libs, "*", "sym")):
+		shutil.rmtree(sym_dir, ignore_errors=True)
+
 	folder = os.walk(it.path_to_libs)
 	for address, dirs, files in folder:
 		for file in files:
@@ -90,9 +98,14 @@ def copy_lib():
 	for f in glob.glob(os.path.join(it.path_to_app, "*/*pybind11nonlimitedapi_meshlib_*")):
 		os.remove(f)
 
+def copy_licenses():
+	src = os.path.join(it.base_path, 'thirdparty', 'licenses', 'THIRD-PARTY-NOTICES.txt')
+	shutil.copyfile(src, os.path.join(it.path_to_install_folder, 'THIRD-PARTY-NOTICES.txt'))
+
 it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes
 it.copy_app = copy_app
 it.copy_lib = copy_lib
+it.copy_licenses = copy_licenses
 
 it.main()

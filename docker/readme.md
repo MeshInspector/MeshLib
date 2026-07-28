@@ -1,34 +1,15 @@
-### Some useful commands
+### MeshLib docker images
 
-Build image with
-```
-$ docker build -f ./docker/fedora39Dockerfile -t meshlib/fedora39-build-server .
-$ docker build -f ./docker/ubuntu22Dockerfile -t meshlib/ubuntu22-build-server .
-```
+The Dockerfiles in this directory (and the corresponding `meshlib/meshlib-*` images on [Docker Hub](https://hub.docker.com/u/meshlib)) are designed for MeshLib CI/CD only: they provide the build environments for the GitHub Actions workflows and are not intended for local development.
 
-Run a temporary container:
+In particular, the images contain prebuilt thirdparty libraries in `/usr/local/lib/` (`meshlib-thirdparty-lib/` in the Linux images; `emscripten/`, `emscripten-single/` and `emscripten-wasm64/` in the emscripten ones) — outside the source tree, where the build does not find them by itself. If you still want to build MeshLib from source in a container, first link them into the repository root, as the CI workflows do:
 ```
-$ docker run --rm -it meshlib/fedora39-build-server bash
-```
-Run a container in background:
-```
-$ docker run -d --name angry_fedora meshlib/fedora39-build-server tail -f /dev/null
-```
-[Start an existing container](https://docs.docker.com/engine/reference/commandline/container_start/) and "Attach STDOUT/STDERR and forward signals" (-a), "Attach container's STDIN" (-i):
-```
-$ docker container start -ai angry_fedora
-```
-Attach to a running (!) container as root:
-```
-$ docker exec -u 0 -it angry_fedora bash
-```
-Show all containers:
-```
-$ docker ps -a
-```
-Delete all containers:
-```
-$ docker rm -f $(docker ps -a -q)
+$ ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
+$ ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
+$ ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 ```
 
-
+Build an image locally:
+```
+$ docker build -f ./docker/ubuntu24Dockerfile -t meshlib/meshlib-ubuntu24 .
+```

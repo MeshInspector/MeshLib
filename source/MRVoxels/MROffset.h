@@ -61,6 +61,8 @@ struct SharpOffsetParameters : OffsetParameters
 {
     /// if non-null then created sharp edges will be saved here
     UndirectedEdgeBitSet* outSharpEdges = nullptr;
+    /// if non-null then for each output mesh face maps its voxel id
+    Vector<VoxelId, FaceId>* outVoxelPerFace = nullptr;
     /// minimal surface deviation to introduce new vertex in a voxel, measured in voxelSize
     float minNewVertDev = 1.0f / 25;
     /// maximal surface deviation to introduce new rank 2 vertex (on intersection of 2 planes), measured in voxelSize

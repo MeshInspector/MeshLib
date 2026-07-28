@@ -1,8 +1,7 @@
 #pragma once
 #include "MRProgressCallback.h"
 #include "MRMeshFwd.h"
-#include <ostream>
-#include <istream>
+#include <iosfwd>
 
 namespace MR
 {

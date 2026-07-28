@@ -17,28 +17,6 @@ namespace MR
 namespace MeshComponents
 {
 
-/// returns
-/// 1. the mapping: Root Id -> Region Id in [0, 1, 2, ...)
-/// 2. the total number of roots/regions
-template<typename T>
-static std::pair<Vector<RegionId, Id<T>>, int> getUniqueRootIds( const Vector<Id<T>, Id<T>>& allRoots, const TaggedBitSet<T>& region )
-{
-    MR_TIMER;
-    Vector<RegionId, Id<T>> uniqueRootsMap( allRoots.size() );
-    int k = 0;
-    for ( auto f : region )
-    {
-        auto& uniqIndex = uniqueRootsMap[allRoots[f]];
-        if ( uniqIndex < 0 )
-        {
-            uniqIndex = RegionId( k );
-            ++k;
-        }
-        uniqueRootsMap[f] = uniqIndex;
-    }
-    return { std::move( uniqueRootsMap ), k };
-}
-
 FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     MR_TIMER;
@@ -203,6 +181,29 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const Un
 {
     auto unionFind = getUnionFindStructureFacesPerEdge( mp, isCompBd );
     return getLargeByAreaComponents( mp, unionFind, minArea );
+}
+
+FaceBitSet getLargeByVolumeComponents( const MeshPart& mp, float minVolume )
+{
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+    {
+        assert( !"getLargeByVolumeComponents: require closed mesh part" );
+        return {};
+    }
+    auto mapAndNum = MeshComponents::getAllComponentsMap( mp );
+    Vector<double, RegionId> volumes( mapAndNum.second, 0.0 );
+    auto region = mp.mesh.topology.getFaceIds( mp.region );
+    for ( auto f : region )
+    {
+        auto fp = mp.mesh.getTriPoints( f );
+        volumes[mapAndNum.first[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
+    }
+    BitSetParallelFor( region, [&] ( FaceId f )
+    {
+        if ( std::abs( volumes[mapAndNum.first[f]] ) < minVolume )
+            region.reset( f );
+    } );
+    return region;
 }
 
 Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params /*= {} */ )

@@ -11,7 +11,7 @@ It has base functions:
 \b Available \b function - \ref ISceneStateCheck interface function that block plugin in UI
 
 \parblock
-\note This fuction can be inherited from some helper classes \ref SceneStateExactCheck \ref SceneStateAtLeastCheck \ref SceneStateOrCheck \ref SceneStateAndCheck
+\note This fuction can be inherited from some helper classes \ref SceneStateExactCheck \ref SceneStateAtLeastCheck \ref SceneStateAtMostCheck \ref SceneStateOrCheck \ref SceneStateAndCheck
 \endparblock
 
 \code

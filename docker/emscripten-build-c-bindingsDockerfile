@@ -1,0 +1,84 @@
+# syntax=docker/dockerfile:1.6
+
+# This dockerfile is used to build C bindings for Wasm.
+# This is a modified version of `emscriptenDockerfile`.
+
+ARG BASE_EMSDK_IMAGE
+
+FROM emscripten/emsdk:$BASE_EMSDK_IMAGE AS base
+
+ARG VERSION_CODENAME=jammy
+COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
+Types: deb
+URIs: http://archive.ubuntu.com/ubuntu/ http://mirror.eu.ossplanet.net/ubuntu/
+Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates ${VERSION_CODENAME}-security ${VERSION_CODENAME}-backports
+Components: main restricted universe multiverse
+Architectures: amd64
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb
+URIs: http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/
+Suites: ${VERSION_CODENAME} ${VERSION_CODENAME}-updates ${VERSION_CODENAME}-security ${VERSION_CODENAME}-backports
+Components: main restricted universe multiverse
+Architectures: arm64
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+EOF
+
+COPY <<EOF /etc/apt/sources.list
+EOF
+
+RUN <<EOF
+    set -e
+    # configure timezone
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    # install packages
+    apt-get update -qqy
+    apt-get install -qqy --no-install-recommends \
+        tzdata git pkg-config ninja-build gettext
+    # clean downloaded files
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOF
+
+
+FROM base AS builder
+
+WORKDIR /home/MeshLib
+
+COPY . .
+
+ENV MR_STATE=DOCKER_BUILD
+ENV MR_EMSCRIPTEN=ON
+
+# 32-bit multi-threaded
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
+    rm -rf bin include lib share thirdparty_build
+EOF
+
+# 32-bit single-threaded
+RUN <<EOF
+    set -e
+    export MR_EMSCRIPTEN_SINGLE=ON
+    ./scripts/build_thirdparty.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single
+    rm -rf bin include lib share thirdparty_build
+EOF
+
+FROM base
+
+COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
+COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
+
+# Only cache/ needs to be writable (emcc regenerates system libs there); a
+# whole-tree chmod copies up every file on containerd-overlayfs docker hosts.
+RUN chmod -R 777 /emsdk/upstream/emscripten/cache
+
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

@@ -4,6 +4,8 @@
 
 project(MeshLibC2Cuda CXX)
 
+IF(NOT EMSCRIPTEN)
+
 IF(MSVC)
   # Disabling following warnings:
   #   warning C4244: '+=': conversion from 'T' to 'unsigned short', possible loss of data
@@ -79,3 +81,5 @@ install(
   NAMESPACE MeshLib::
   DESTINATION ${MR_CONFIG_DIR}
 )
+
+ENDIF() # NOT EMSCRIPTEN

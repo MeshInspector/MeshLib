@@ -15,6 +15,8 @@
 #include "MRPartMappingAdapters.h"
 #include <atomic>
 #include <initializer_list>
+#include <istream>
+#include <ostream>
 
 namespace MR
 {

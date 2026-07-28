@@ -55,6 +55,8 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_ROOT_DIR)
     shutil.copy(SOURCE_DIR / "readme.md", WHEEL_ROOT_DIR)
 
+    shutil.copy(SOURCE_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", WHEEL_ROOT_DIR)
+
     print("Copying resource files...")
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRDarkTheme.json", WHEEL_SRC_DIR)
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRLightTheme.json", WHEEL_SRC_DIR)

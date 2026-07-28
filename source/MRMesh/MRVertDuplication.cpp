@@ -56,7 +56,7 @@ public:
         return getOtherTriVerts( vs, first->v );
     }
 
-    // find incident unvisited vertex, in case of several option prefer finding the vertex not equal to preVertex
+    // find incident unvisited vertex except for prevVertex and its duplicates
     VertId getNextVertex( VertId center, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
         if ( empty() )
@@ -81,8 +81,6 @@ public:
         prevVertex = getOrgVertex( prevVertex );
         assert( prevVertex );
 
-        VertId prevOrPrevDup;
-        auto prevIt = vertexEndIt;
         for ( auto it = vertexBegIt + firstUnvisitedIndex; it < vertexEndIt; ++it )
         {
             VertId nextVertex;
@@ -92,28 +90,13 @@ public:
                 nextVertex = v12.second;
             else if ( !triOrientation && v12.second == center )
                 nextVertex = v12.first;
-            if ( nextVertex )
+            if ( nextVertex && getOrgVertex( nextVertex ) != prevVertex )
             {
-                if ( getOrgVertex( nextVertex ) != prevVertex )
-                {
-                    if ( it != vertexBegIt + firstUnvisitedIndex )
-                        std::iter_swap( it, vertexBegIt + firstUnvisitedIndex );
-                    ++firstUnvisitedIndex;
-                    return nextVertex;
-                }
-                // prevVertex (or its duplicate) is a possible continuation, store it, and search for other options
-                prevIt = it;
-                prevOrPrevDup = nextVertex;
+                if ( it != vertexBegIt + firstUnvisitedIndex )
+                    std::iter_swap( it, vertexBegIt + firstUnvisitedIndex );
+                ++firstUnvisitedIndex;
+                return nextVertex;
             }
-        }
-        if ( prevIt < vertexEndIt )
-        {
-            // the only option is return in prevVertex (or its duplicate)
-            if ( prevIt != vertexBegIt + firstUnvisitedIndex )
-                std::iter_swap( prevIt, vertexBegIt + firstUnvisitedIndex );
-            ++firstUnvisitedIndex;
-            assert( prevOrPrevDup );
-            return prevOrPrevDup;
         }
         return {};
     }
@@ -452,7 +435,6 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     };
     tbb::parallel_sort( vertsToProcess.begin(), vertsToProcess.end(), sortPred );
 
-    VertNeighbourhoodInspector inspector;
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
@@ -461,10 +443,11 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     {
         const auto posBegin = all.vert2firstRec[v];
         const auto posEnd = all.vert2firstRec[v + 1];
-        // duplication of one vertex can resolve non-manifoldness in its neighbor vertex,
-        // so after the first duplication recheck the neighborhood in the current triangulation
-        if ( duplicatedVerticesCnt > 0 && !inspector.run( t, all.recs.data() + posBegin, all.recs.data() + posEnd ).duplicationNeeded() )
-            continue;
+
+        // do not call inspector.run( t, all.recs.data() + posBegin, all.recs.data() + posEnd ).duplicationNeeded() to skip duplication,
+        // because formal non-manifoldness of this vertex can be resolved by a neighbour vertex duplication,
+        // but we still want to dupliate it to avoid neighbours with equal coordinates
+
         PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
@@ -502,6 +485,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                         prevVertex = path[1];
                         std::reverse( path.begin(), path.end() );
                         nextVertex = pathMaker.getNextVertex( firstVertex, triOrientation, prevVertex, myDups );
+                        prevVertex = firstVertex;
                     }
                     if ( !nextVertex )
                     {

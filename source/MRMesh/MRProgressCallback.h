@@ -2,8 +2,11 @@
 
 #include "MRMeshFwd.h"
 
+#include <array>
 #include <cassert>
 #include <cmath>
+#include <tuple>
+#include <utility>
 
 namespace MR
 {
@@ -74,14 +77,20 @@ inline ProgressCallback subprogress( ProgressCallback cb, size_t index, size_t c
         return {};
 }
 
-/// splits the given progress on two sub-progresses: [0, threshold] and [threshold, 1]
-inline std::pair<ProgressCallback, ProgressCallback> splitProgress( const ProgressCallback& cb, float threshold )
+/// splits the given progress on (n+1) sub-progresses: [0,t1], [t1,t2], ... [tn,1],
+/// where n given thresholds must be sorted: 0 <= t1 <= ... <= tn <= 1;
+/// returns the sub-progresses in std::tuple with (n+1) elements
+template <typename ...Ts>
+auto splitProgress( const ProgressCallback& cb, Ts ... thresholds )
 {
-    return
+    constexpr size_t n = sizeof...( Ts );
+    static_assert( n > 0, "at least one threshold is required" );
+    const std::array<float, n + 2> bounds{ 0.0f, float( thresholds )..., 1.0f };
+    return [&]<size_t ...I>( std::index_sequence<I...> )
     {
-        subprogress( cb, 0.0f, threshold ),
-        subprogress( cb, threshold, 1.0f )
-    };
+        assert( ( ( bounds[I] <= bounds[I + 1] ) && ... ) );
+        return std::tuple{ subprogress( cb, bounds[I], bounds[I + 1] )... };
+    }( std::make_index_sequence<n + 1>{} );
 }
 
 } //namespace MR

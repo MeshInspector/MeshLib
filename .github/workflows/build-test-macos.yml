@@ -73,7 +73,7 @@ jobs:
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
-            runner: [ self-hosted, macos, arm64, build ]
+            runner: [ self-hosted, macos, arm64, crossplatform-build ]
             instance: self-hosted-arm-x64-native
             cross-osx-arch: x86_64
             skip-bindings: true

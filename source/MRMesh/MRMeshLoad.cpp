@@ -181,6 +181,8 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
 
     while ( !buffer.empty() )
     {
+        auto preNumTris = vi.numTris();
+
         // decode previously read buffer in a worked thread
         tbb::task_group taskGroup;
         taskGroup.run( [&chunk, &vi, &buffer] ()
@@ -192,9 +194,9 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
             vi.addTriangles( chunk );
         } );
 
-        if ( vi.numTris() + buffer.size() < numTris )
+        if ( preNumTris + buffer.size() < numTris )
         {
-            const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
+            const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( preNumTris + buffer.size() ), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
             const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
             // read from stream in the current thread to be compatible with PythonIstreamBuf

@@ -664,6 +664,17 @@ SystemMemory getSystemMemory()
     return res;
 }
 
+std::uint32_t getCurrentProcessId()
+{
+#if defined __EMSCRIPTEN__
+    return 0;
+#elif defined  _WIN32
+    return GetCurrentProcessId();
+#else
+    return getpid();
+#endif
+}
+
 #ifdef _WIN32
 ProccessMemoryInfo getProccessMemoryInfo()
 {
@@ -712,8 +723,13 @@ void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
     fileName /= "Logs";
     removeOldLogs( fileName );
 
-    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", LocaltimeOrZero( t ),
-                std::chrono::milliseconds( now.time_since_epoch().count() ).count() % 1000 );
+    const auto tm = LocaltimeOrZero( t );
+#ifndef __EMSCRIPTEN__
+    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", tm, getCurrentProcessId() );
+#else
+    const auto us = std::chrono::milliseconds( now.time_since_epoch().count() ).count();
+    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", tm, us % 1000 );
+#endif
 
     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( utf8string( fileName ), 1024 * 1024 * 5, 1, true );
     file_sink->set_level( minLevel );

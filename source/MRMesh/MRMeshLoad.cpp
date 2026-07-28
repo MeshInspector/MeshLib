@@ -181,7 +181,7 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
 
     while ( !buffer.empty() )
     {
-        auto preNumTris = vi.numTris();
+        auto preNumTris = vi.numTris(); // must be read before the task below starts adding more triangles in (vi)
 
         // decode previously read buffer in a worked thread
         tbb::task_group taskGroup;

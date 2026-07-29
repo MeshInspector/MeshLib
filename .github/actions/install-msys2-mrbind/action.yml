@@ -23,14 +23,21 @@ runs:
       # (currently 22.1.4-3). Pinning only the clang/llvm packages fails
       # with STATUS_DLL_NOT_FOUND from cc.exe; the lockfile carries the
       # whole runtime stack.
+      #
+      # Retried because the msys2/cygwin runtime intermittently dies
+      # spawning pacman (silent exit 1 or 4 right after the sha256 OKs).
+      # Everything here is idempotent: `wget -nc` skips present files and
+      # `pacman -U --needed` skips already-installed packages.
       shell: pwsh
       run: |
-        C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang22 && bash scripts/mrbind/msys2_install_packages.sh _clang22"
-        $code = $LASTEXITCODE
-        if ($code -ne 0) {
-          # The msys2 shell occasionally dies without its console output
-          # reaching the runner; recover what hit the disk instead.
-          Write-Host "msys2_shell.cmd exited with code $code"
+        $attempts = 3
+        foreach ($i in 1..$attempts) {
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang22 && bash scripts/mrbind/msys2_install_packages.sh _clang22"
+          $code = $LASTEXITCODE
+          if ($code -eq 0) { break }
+          # The msys2 shell dies without its console output reaching the
+          # runner; recover what hit the disk instead.
+          Write-Host "msys2_shell.cmd exited with code $code (attempt $i of $attempts)"
           Write-Host '::group::scripts/mrbind/msys2_pacman_install.log'
           $teeLog = 'scripts/mrbind/msys2_pacman_install.log'
           if (Test-Path $teeLog) { Get-Content $teeLog } else { Write-Host 'absent — died before pacman produced output' }
@@ -39,5 +46,11 @@ runs:
           $pacLog = 'C:\msys64\var\log\pacman.log'
           if (Test-Path $pacLog) { Get-Content $pacLog -Tail 200 } else { Write-Host 'absent — pacman never started a transaction' }
           Write-Host '::endgroup::'
-          exit $code
+          if ($i -lt $attempts) {
+            # A pacman killed mid-transaction leaves a stale db lock behind.
+            Remove-Item 'C:\msys64\var\lib\pacman\db.lck' -Force -ErrorAction SilentlyContinue
+            Remove-Item $teeLog -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 10
+          }
         }
+        if ($code -ne 0) { exit $code }

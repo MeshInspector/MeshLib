@@ -178,6 +178,47 @@ bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
     return orient3d( vs.data() );
 }
 
+bool inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
+{
+    // no overflow anywhere below given that any difference of two points is within +-0.99*2^31
+    // (as getToIntConverter guarantees) and rSq fits in int64
+
+    const Vector3i64 u{ b - a };
+    const Vector3i64 v{ c - a };
+    const Vector3i64 q{ d - a };
+
+    const auto w = cross( u, v ); // doubled normal of triangle ABC, <= 2^63
+    const auto W = dot( Vector3i256{ w }, Vector3i256{ w } ); // <= 2^128
+    if ( W == 0 )
+        return false; // A, B, C are collinear => no circle through them
+
+    // M = 2 * |w|^2 * ( circumcenter(ABC) - A ), components <= 2^160
+    const auto uu = dot( Vector3i128{ u }, Vector3i128{ u } );
+    const auto vv = dot( Vector3i128{ v }, Vector3i128{ v } );
+    const auto M = Int256( uu ) * Vector3i256{ cross( Vector3i128{ v }, Vector3i128{ w } ) }
+                 + Int256( vv ) * Vector3i256{ cross( Vector3i128{ w }, Vector3i128{ u } ) };
+
+    // E = sqr( 2 * h * |w|^2 ), where h is the distance between plane ABC and sphere's center, <= 2^321
+    const auto E = 4 * Int512( rSq ) * sqr( Int512( W ) ) - dot( Vector3i512{ M }, Vector3i512{ M } );
+    if ( E < 0 )
+        return false; // sqrt(rSq) is less than the circumradius of ABC => no such sphere
+
+    // A = |w|^2 * ( |D - circumcenter(ABC)|^2 - sqr( circumradius ) ), <= 2^193
+    const auto A = W * Int256( dot( Vector3i128{ q }, Vector3i128{ q } ) ) - dot( Vector3i256{ q }, M );
+
+    // t = |w| * signedDistance( D, plane ABC ), <= 2^96
+    const auto t = dot( Vector3i128{ q }, Vector3i128{ w } );
+
+    // D is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
+    if ( A < 0 && t >= 0 )
+        return true;
+    if ( A >= 0 && t <= 0 )
+        return false;
+    const auto lhs = sqr( Int1024( A ) ) * Int1024( W ); // <= 2^513
+    const auto rhs = Int1024( E ) * sqr( Int1024( t ) ); // <= 2^512
+    return A < 0 ? lhs > rhs : lhs < rhs;
+}
+
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )
 {
     TriangleSegmentIntersectResult res;

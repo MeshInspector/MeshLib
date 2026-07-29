@@ -20,6 +20,16 @@ MRMESH_API bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i
 inline bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
     { return orient3d( a - d, b - d, c - d ); }
 
+/// returns true if the point D is strictly inside the sphere of radius sqrt(rSq) passing via
+/// points A, B, C, whose center is located on the positive side of plane ABC
+/// (in the half-space pointed at by cross( b - a, c - a ) from the plane);
+/// returns false in degenerate cases: A, B, C are collinear or rSq is smaller than the squared
+/// circumradius of triangle ABC (no such sphere exists), and when D is exactly on the sphere;
+/// cyclic permutations of (A, B, C) do not change the result, a swap of two of them selects the mirror sphere;
+/// rSq must be given in the same integer grid units as the point coordinates
+[[nodiscard]] MRMESH_API bool inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c,
+    const Vector3i & d, std::int64_t rSq );
+
 struct PreciseVertCoords
 {
     VertId id;   ///< unique id of the vertex (in both meshes)

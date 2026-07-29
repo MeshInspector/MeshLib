@@ -257,6 +257,45 @@ TEST( MRMesh, sosInCircle2 )
     EXPECT_FALSE( inCircle( { vs[1],vs[4],vs[2],vs[3] } ) );
 }
 
+TEST( MRMesh, inSphere )
+{
+    const Vector3i a{ 0, 0, 0 };
+    const Vector3i b{ 2, 0, 0 };
+    const Vector3i c{ 0, 2, 0 };
+    // circumcircle of triangle ABC: center (1,1,0), squared radius 2, plane normal +Z
+
+    // degenerate cases: the radius is less than the circumradius of ABC, collinear A, B, C
+    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 1 ) );
+    EXPECT_FALSE( inSphere( a, Vector3i{ 1, 1, 1 }, Vector3i{ 2, 2, 2 }, Vector3i{ 0, 0, 1 }, 9 ) );
+
+    // rSq == 2: the unique sphere centered at (1,1,0)
+    EXPECT_TRUE(  inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 2 ) );
+    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 3, 3, 0 }, 2 ) );
+    EXPECT_FALSE( inSphere( a, b, c, b, 2 ) ); // exactly on the sphere
+
+    // rSq == 4: sphere center at ( 1, 1, sqrt(2) )
+    EXPECT_TRUE(  inSphere( a, b, c, Vector3i{ 1, 1, 2 }, 4 ) );
+    EXPECT_TRUE(  inSphere( a, b, c, Vector3i{ 1, 1, 3 }, 4 ) );
+    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 1, 1, -1 }, 4 ) );
+    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 1, 1, 4 }, 4 ) );
+
+    // cyclic permutations of (A, B, C) keep the result, a swap selects the mirror sphere
+    EXPECT_TRUE(  inSphere( b, c, a, Vector3i{ 1, 1, 2 }, 4 ) );
+    EXPECT_TRUE(  inSphere( c, a, b, Vector3i{ 1, 1, 2 }, 4 ) );
+    EXPECT_FALSE( inSphere( b, a, c, Vector3i{ 1, 1, 2 }, 4 ) );
+    EXPECT_TRUE(  inSphere( b, a, c, Vector3i{ 1, 1, -1 }, 4 ) );
+
+    // maximal magnitudes as if from getToIntConverter: no overflow in internal computations
+    constexpr int H = 1'000'000'000;
+    const Vector3i a1{ -H, -H, 0 }, b1{ H, -H, 0 }, c1{ -H, H, 0 };
+    // circumcircle center (0,0,0), squared radius 2*H^2; with rSq = 3*H^2 sphere center is (0,0,H)
+    const auto rSq = 3 * sqr( std::int64_t( H ) );
+    EXPECT_TRUE(  inSphere( a1, b1, c1, Vector3i{ 0, 0, 2 * H }, rSq ) );
+    EXPECT_TRUE(  inSphere( a1, b1, c1, Vector3i{ 0, 0, -1 }, rSq ) );
+    EXPECT_FALSE( inSphere( a1, b1, c1, Vector3i{ H, H, 2 * H }, rSq ) ); // exactly on the sphere
+    EXPECT_FALSE( inSphere( a1, b1, c1, Vector3i{ 2 * H, 0, 0 }, rSq ) );
+}
+
 TEST( MRMesh, segmentIntersectionOrder2b )
 {
     PreciseVertCoords2 vs[6] =

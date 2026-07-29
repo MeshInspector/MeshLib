@@ -24,6 +24,8 @@ namespace MR
 
 using Int128 = boost::multiprecision::int128_t;
 using Int256 = boost::multiprecision::int256_t;
+using Int512 = boost::multiprecision::int512_t;
+using Int1024 = boost::multiprecision::int1024_t;
 
 using Vector2i128 = Vector2<Int128>;
 using Vector3i128 = Vector3<Int128>;
@@ -36,6 +38,8 @@ using Vector3i128fast = Vector3<FastInt128>;
 
 using Vector2i256 = Vector3<Int256>;
 using Vector3i256 = Vector3<Int256>;
+
+using Vector3i512 = Vector3<Int512>;
 
 
 /// \}

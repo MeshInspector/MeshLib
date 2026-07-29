@@ -2,8 +2,11 @@
 
 #include "MRMeshFwd.h"
 
+#include <array>
 #include <cassert>
 #include <cmath>
+#include <tuple>
+#include <utility>
 
 namespace MR
 {
@@ -48,9 +51,10 @@ inline bool reportProgress( ProgressCallback cb, F && f, size_t counter, int div
 /// returns a callback that maps [0,1] linearly into [from,to] in the call to \param cb (which can be empty)
 inline ProgressCallback subprogress( ProgressCallback cb, float from, float to )
 {
+    assert( from <= to );
     ProgressCallback res;
     if ( cb )
-        res = [cb, from, to]( float v ) { return cb( std::lerp( from, to, v ) ); };
+        res = [cb = std::move( cb ), from, to]( float v ) { return cb( std::lerp( from, to, v ) ); };
     return res;
 }
 
@@ -60,7 +64,7 @@ inline ProgressCallback subprogress( ProgressCallback cb, F && f )
 {
     ProgressCallback res;
     if ( cb )
-        res = [cb, f = std::forward<F>( f )]( float v ) { return cb( f( v ) ); };
+        res = [cb = std::move( cb ), f = std::forward<F>( f )]( float v ) { return cb( f( v ) ); };
     return res;
 }
 
@@ -69,9 +73,24 @@ inline ProgressCallback subprogress( ProgressCallback cb, size_t index, size_t c
 {
     assert( index < count );
     if ( cb )
-        return [cb, index, count] ( float v ) { return cb( ( (float)index + v ) / (float)count ); };
+        return [cb = std::move( cb ), index, count] ( float v ) { return cb( ( (float)index + v ) / (float)count ); };
     else
         return {};
+}
+
+/// splits the given progress on (n+1) sub-progresses: [0,t1], [t1,t2], ... [tn,1],
+/// where n given thresholds must be sorted: 0 <= t1 <= ... <= tn <= 1;
+/// returns the sub-progresses in std::tuple with (n+1) elements
+template <typename ...Ts>
+auto splitProgress( const ProgressCallback& cb, Ts ... thresholds )
+{
+    constexpr size_t n = sizeof...( Ts );
+    static_assert( n > 0, "at least one threshold is required" );
+    const std::array<float, n + 2> bounds{ 0.0f, float( thresholds )..., 1.0f };
+    return [&]<size_t ...I>( std::index_sequence<I...> )
+    {
+        return std::tuple{ subprogress( cb, bounds[I], bounds[I + 1] )... };
+    }( std::make_index_sequence<n + 1>{} );
 }
 
 } //namespace MR

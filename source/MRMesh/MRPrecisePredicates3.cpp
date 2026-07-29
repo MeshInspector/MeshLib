@@ -178,6 +178,11 @@ bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
     return orient3d( vs.data() );
 }
 
+#if __GNUC__ >= 12 // false positive array-bounds warnings in boost widening conversions like Int1024( Int256 )
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
+
 bool inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
 {
     // no overflow anywhere below given that any difference of two points is within +-0.99*2^31
@@ -218,6 +223,10 @@ bool inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const
     const auto rhs = Int1024( E ) * sqr( Int1024( t ) ); // <= 2^512
     return A < 0 ? lhs > rhs : lhs < rhs;
 }
+
+#if __GNUC__ >= 12
+#pragma GCC diagnostic pop
+#endif
 
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )
 {

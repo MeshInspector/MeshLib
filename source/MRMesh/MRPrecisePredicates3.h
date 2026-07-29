@@ -40,6 +40,18 @@ struct PreciseVertCoords
 MRMESH_API bool orient3d( const std::array<PreciseVertCoords, 4> & vs );
 MRMESH_API bool orient3d( const PreciseVertCoords* vs );
 
+/// returns true if the point vs[3] is strictly inside the sphere of radius sqrt(rSq) passing via
+/// points vs[0], vs[1], vs[2], with the center located on the positive side of plane vs[0]vs[1]vs[2]
+/// (same convention as in the overload above);
+/// resolves "vs[3] is exactly on the sphere" ties using simulation-of-simplicity: the points are
+/// symbolically perturbed (larger perturbations of points with smaller ids; per point the z-coordinate
+/// gets larger perturbation than y than x), and the first point whose perturbation moves vs[3] off
+/// the sphere decides the answer;
+/// configurations without a resolvable sphere keep the deterministic answers of the overload above:
+/// collinear vs[0]vs[1]vs[2], rSq below the squared circumradius of the triangle, and on-sphere ties
+/// with rSq exactly equal to it (a perturbation of the triangle then breaks the sphere's existence)
+[[nodiscard]] MRMESH_API bool inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq );
+
 struct TriangleSegmentIntersectResult
 {
     bool doIntersect = false;    ///< whether triangle and segment intersect

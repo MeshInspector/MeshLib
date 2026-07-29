@@ -296,6 +296,42 @@ TEST( MRMesh, inSphere )
     EXPECT_FALSE( inSphere( a1, b1, c1, Vector3i{ 2 * H, 0, 0 }, rSq ) );
 }
 
+TEST( MRMesh, sosInSphere )
+{
+    auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };
+
+    // in all tie configurations below the query point vs[3] is exactly on the sphere;
+    // the expected values are validated against exact rational-perturbation evaluation
+
+    // sphere center (0,0,0), rSq = 25; the outcome depends on the assignment of ids
+    EXPECT_FALSE( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 0,0,5 ) }, 25 ) );
+    EXPECT_FALSE( inSphere( { vc( 3_v, 3,4,0 ), vc( 2_v, 4,0,3 ), vc( 1_v, 0,3,4 ), vc( 0_v, 0,0,5 ) }, 25 ) );
+    EXPECT_FALSE( inSphere( { vc( 1_v, 3,4,0 ), vc( 3_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 0_v, 0,0,5 ) }, 25 ) );
+    EXPECT_TRUE(  inSphere( { vc( 2_v, 3,4,0 ), vc( 0_v, 4,0,3 ), vc( 3_v, 0,3,4 ), vc( 1_v, 0,0,5 ) }, 25 ) );
+
+    // the query point coincides with a triangle point (distinct ids)
+    EXPECT_TRUE(  inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 3,4,0 ) }, 25 ) );
+    EXPECT_FALSE( inSphere( { vc( 3_v, 3,4,0 ), vc( 2_v, 4,0,3 ), vc( 1_v, 0,3,4 ), vc( 0_v, 3,4,0 ) }, 25 ) );
+
+    // the first derivative vanishes for the smallest-id point: query coplanar with the center and two others
+    EXPECT_FALSE( inSphere( { vc( 0_v, -5,0,0 ), vc( 1_v, -4,-3,0 ), vc( 2_v, -4,0,-3 ), vc( 3_v, 4,0,3 ) }, 25 ) );
+    EXPECT_FALSE( inSphere( { vc( 0_v, -5,0,0 ), vc( 3_v, -4,-3,0 ), vc( 2_v, -4,0,-3 ), vc( 1_v, 4,0,3 ) }, 25 ) );
+
+    // concyclic points on the tilted plane x+y+z=0, sphere center (1,1,1): sqrt( E*W ) is irrational
+    EXPECT_FALSE( inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 9 ) );
+    EXPECT_TRUE(  inSphere( { vc( 3_v, 1,-2,1 ), vc( 2_v, 1,1,-2 ), vc( 1_v, -2,1,1 ), vc( 0_v, -1,2,-1 ) }, 9 ) );
+    EXPECT_TRUE(  inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, 2,-1,-1 ) }, 9 ) );
+    EXPECT_TRUE(  inSphere( { vc( 0_v, -2,1,1 ), vc( 1_v, 2,-1,-1 ), vc( 2_v, 1,1,-2 ), vc( 3_v, -1,-1,2 ) }, 9 ) );
+    EXPECT_FALSE( inSphere( { vc( 3_v, -2,1,1 ), vc( 2_v, 2,-1,-1 ), vc( 1_v, 1,1,-2 ), vc( 0_v, -1,-1,2 ) }, 9 ) );
+
+    // rSq exactly equal to the squared circumradius: the tie resolves deterministically to outside
+    EXPECT_FALSE( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ) );
+
+    // no tie: same answers as the plain overload
+    EXPECT_TRUE(  inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ) );
+    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ) );
+}
+
 TEST( MRMesh, segmentIntersectionOrder2b )
 {
     PreciseVertCoords2 vs[6] =

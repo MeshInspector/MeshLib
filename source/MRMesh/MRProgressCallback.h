@@ -51,6 +51,7 @@ inline bool reportProgress( ProgressCallback cb, F && f, size_t counter, int div
 /// returns a callback that maps [0,1] linearly into [from,to] in the call to \param cb (which can be empty)
 inline ProgressCallback subprogress( ProgressCallback cb, float from, float to )
 {
+    assert( from <= to );
     ProgressCallback res;
     if ( cb )
         res = [cb = std::move( cb ), from, to]( float v ) { return cb( std::lerp( from, to, v ) ); };
@@ -88,7 +89,6 @@ auto splitProgress( const ProgressCallback& cb, Ts ... thresholds )
     const std::array<float, n + 2> bounds{ 0.0f, float( thresholds )..., 1.0f };
     return [&]<size_t ...I>( std::index_sequence<I...> )
     {
-        assert( ( ( bounds[I] <= bounds[I + 1] ) && ... ) );
         return std::tuple{ subprogress( cb, bounds[I], bounds[I + 1] )... };
     }( std::make_index_sequence<n + 1>{} );
 }

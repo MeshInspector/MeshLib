@@ -252,9 +252,11 @@ jobs:
           - arch: arm64
             runner: macos-26
             pkg_pattern: '*arm64.pkg'
-          - arch: x64
-            runner: macos-12-intel
-            pkg_pattern: '*x64.pkg'
+          # The macos-12-intel self-hosted runner is temporarily
+          # unavailable; restore this entry once it is back online.
+          # - arch: x64
+          #   runner: macos-12-intel
+          #   pkg_pattern: '*x64.pkg'
           - arch: x64
             runner: macos-15-intel
             pkg_pattern: '*x64.pkg'

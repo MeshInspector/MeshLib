@@ -86,7 +86,7 @@ if "!aws_cli_available!"=="true" (
         set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
     ) else (
         echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,read;"
     )
 ) else (
     echo "Mode: build from source (no S3 binary cache)."

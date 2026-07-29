@@ -36,7 +36,7 @@ using Vector2i128fast = Vector2<FastInt128>;
 using Vector3i128fast = Vector3<FastInt128>;
 #endif
 
-using Vector2i256 = Vector3<Int256>;
+using Vector2i256 = Vector2<Int256>;
 using Vector3i256 = Vector3<Int256>;
 
 using Vector3i512 = Vector3<Int512>;

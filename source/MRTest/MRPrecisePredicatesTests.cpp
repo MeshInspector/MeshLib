@@ -332,6 +332,40 @@ TEST( MRMesh, sosInSphere )
     EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ) );
 }
 
+TEST( MRMesh, sosInSphereConcyclic )
+{
+    // four points on one circle lie on both spheres of radius sqrt(rSq) > circle radius passing via
+    // any three of them, so every arrangement of the vertices is an exact tie resolved by ids only;
+    // simulation-of-simplicity answers as for one perturbed configuration: over all 24 arrangements
+    // of the same four vertices in the array, exactly half must give inside
+    auto countInside = []( std::array<PreciseVertCoords, 4> vs, std::int64_t rSq )
+    {
+        auto less = []( const PreciseVertCoords & l, const PreciseVertCoords & r ) { return l.id < r.id; };
+        std::sort( vs.begin(), vs.end(), less );
+        int cnt = 0;
+        do
+        {
+            cnt += inSphere( vs, rSq ) ? 1 : 0;
+        }
+        while ( std::next_permutation( vs.begin(), vs.end(), less ) );
+        return cnt;
+    };
+
+    // circle x^2+y^2=25 in the plane z=0, sphere radius^2 = 169 (center at z=+-12)
+    EXPECT_EQ( countInside( {
+        PreciseVertCoords{ 0_v, Vector3i{  5, 0, 0 } },
+        PreciseVertCoords{ 1_v, Vector3i{  0, 5, 0 } },
+        PreciseVertCoords{ 2_v, Vector3i{ -5, 0, 0 } },
+        PreciseVertCoords{ 3_v, Vector3i{  3, 4, 0 } } }, 169 ), 12 );
+
+    // concyclic points on the tilted plane x+y+z=0 (circle radius^2 = 6), sqrt(E*W) is irrational
+    EXPECT_EQ( countInside( {
+        PreciseVertCoords{ 5_v, Vector3i{  1, -2,  1 } },
+        PreciseVertCoords{ 2_v, Vector3i{ -2,  1,  1 } },
+        PreciseVertCoords{ 8_v, Vector3i{  1,  1, -2 } },
+        PreciseVertCoords{ 1_v, Vector3i{ -1,  2, -1 } } }, 9 ), 12 );
+}
+
 TEST( MRMesh, segmentIntersectionOrder2b )
 {
     PreciseVertCoords2 vs[6] =

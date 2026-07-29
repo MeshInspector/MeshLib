@@ -1,5 +1,6 @@
 #include <MRMesh/MRPrecisePredicates2.h>
 #include <MRMesh/MRPrecisePredicates3.h>
+#include <MRMesh/MRInSphere.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -364,15 +365,48 @@ TEST( MRMesh, sosInSphereConcyclic )
         PreciseVertCoords{ 2_v, Vector3i{ -2,  1,  1 } },
         PreciseVertCoords{ 8_v, Vector3i{  1,  1, -2 } },
         PreciseVertCoords{ 1_v, Vector3i{ -1,  2, -1 } } }, 9 ), 12 );
+}
 
-    // all four points with equal coordinates (a degenerate circle of zero radius): the triangle
-    // vs[0]vs[1]vs[2] is degenerate, no sphere passes via it, so by the documented convention
-    // every arrangement gives false deterministically, and the ids do not participate
+TEST( MRMesh, sosInSphereDeviations )
+{
+    // documents the scenarios where the current deterministic answers deviate from full
+    // simulation-of-simplicity (see the comment on inSphere in MRInSphere.h);
+    // the expectations assert the current behavior and shall change when the corresponding
+    // perturbation cascades are implemented
+
+    auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };
+    auto countInside = []( std::array<PreciseVertCoords, 4> vs, std::int64_t rSq )
+    {
+        auto less = []( const PreciseVertCoords & l, const PreciseVertCoords & r ) { return l.id < r.id; };
+        std::sort( vs.begin(), vs.end(), less );
+        int cnt = 0;
+        do
+        {
+            cnt += inSphere( vs, rSq ) ? 1 : 0;
+        }
+        while ( std::next_permutation( vs.begin(), vs.end(), less ) );
+        return cnt;
+    };
+
+    // all points of the triangle coincide: currently always false, while the perturbed triangle
+    // is not degenerate and its sphere exists, so full SoS would give id-dependent answers
     EXPECT_EQ( countInside( {
-        PreciseVertCoords{ 0_v, Vector3i{ 1, 2, 3 } },
-        PreciseVertCoords{ 1_v, Vector3i{ 1, 2, 3 } },
-        PreciseVertCoords{ 2_v, Vector3i{ 1, 2, 3 } },
-        PreciseVertCoords{ 3_v, Vector3i{ 1, 2, 3 } } }, 25 ), 0 );
+        vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), vc( 3_v, 1,2,3 ) }, 25 ), 0 );
+    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 3_v, 1,0,0 ) }, 25 ) );
+
+    // two points of the triangle coincide, the third is closer than the sphere's diameter:
+    // currently always false, while the perturbed sphere may exist depending on the ids
+    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 4,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ) );
+
+    // rSq exactly equal to the squared circumradius: a perturbation of the triangle changes
+    // the sphere's existence, so full SoS would make both answers below id-dependent
+    EXPECT_TRUE(  inSphere( { vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), vc( 3_v, 0,0,0 ) }, 25 ) );   // strictly inside
+    EXPECT_FALSE( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ) ); // exactly on the sphere
+
+    // the false answers below are exact under full SoS: no small perturbation creates the sphere
+    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 11,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ) ); // third point beyond the diameter
+    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 10,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ) ); // third point exactly at the diameter
+    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 1,0,0 ), vc( 2_v, 3,0,0 ), vc( 3_v, 0,1,0 ) }, 25 ) );  // distinct collinear triangle
 }
 
 TEST( MRMesh, segmentIntersectionOrder2b )

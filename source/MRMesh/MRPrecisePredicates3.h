@@ -20,16 +20,6 @@ MRMESH_API bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i
 inline bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
     { return orient3d( a - d, b - d, c - d ); }
 
-/// returns true if the point D is strictly inside the sphere of radius sqrt(rSq) passing via
-/// points A, B, C, whose center is located on the positive side of plane ABC
-/// (in the half-space pointed at by cross( b - a, c - a ) from the plane);
-/// returns false in degenerate cases: A, B, C are collinear or rSq is smaller than the squared
-/// circumradius of triangle ABC (no such sphere exists), and when D is exactly on the sphere;
-/// cyclic permutations of (A, B, C) do not change the result, a swap of two of them selects the mirror sphere;
-/// rSq must be given in the same integer grid units as the point coordinates
-[[nodiscard]] MRMESH_API bool inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c,
-    const Vector3i & d, std::int64_t rSq );
-
 struct PreciseVertCoords
 {
     VertId id;   ///< unique id of the vertex (in both meshes)
@@ -39,18 +29,6 @@ struct PreciseVertCoords
 /// first sorts the indices in ascending order, then calls the predicate for sorted points
 MRMESH_API bool orient3d( const std::array<PreciseVertCoords, 4> & vs );
 MRMESH_API bool orient3d( const PreciseVertCoords* vs );
-
-/// returns true if the point vs[3] is strictly inside the sphere of radius sqrt(rSq) passing via
-/// points vs[0], vs[1], vs[2], with the center located on the positive side of plane vs[0]vs[1]vs[2]
-/// (same convention as in the overload above);
-/// resolves "vs[3] is exactly on the sphere" ties using simulation-of-simplicity: the points are
-/// symbolically perturbed (larger perturbations of points with smaller ids; per point the z-coordinate
-/// gets larger perturbation than y than x), and the first point whose perturbation moves vs[3] off
-/// the sphere decides the answer;
-/// configurations without a resolvable sphere keep the deterministic answers of the overload above:
-/// collinear vs[0]vs[1]vs[2], rSq below the squared circumradius of the triangle, and on-sphere ties
-/// with rSq exactly equal to it (a perturbation of the triangle then breaks the sphere's existence)
-[[nodiscard]] MRMESH_API bool inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq );
 
 struct TriangleSegmentIntersectResult
 {

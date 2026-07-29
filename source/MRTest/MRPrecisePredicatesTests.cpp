@@ -364,6 +364,15 @@ TEST( MRMesh, sosInSphereConcyclic )
         PreciseVertCoords{ 2_v, Vector3i{ -2,  1,  1 } },
         PreciseVertCoords{ 8_v, Vector3i{  1,  1, -2 } },
         PreciseVertCoords{ 1_v, Vector3i{ -1,  2, -1 } } }, 9 ), 12 );
+
+    // all four points with equal coordinates (a degenerate circle of zero radius): the triangle
+    // vs[0]vs[1]vs[2] is degenerate, no sphere passes via it, so by the documented convention
+    // every arrangement gives false deterministically, and the ids do not participate
+    EXPECT_EQ( countInside( {
+        PreciseVertCoords{ 0_v, Vector3i{ 1, 2, 3 } },
+        PreciseVertCoords{ 1_v, Vector3i{ 1, 2, 3 } },
+        PreciseVertCoords{ 2_v, Vector3i{ 1, 2, 3 } },
+        PreciseVertCoords{ 3_v, Vector3i{ 1, 2, 3 } } }, 25 ), 0 );
 }
 
 TEST( MRMesh, segmentIntersectionOrder2b )

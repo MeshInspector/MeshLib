@@ -26,8 +26,16 @@ struct InSphereQuantities
     Int512 E;           // sqr( 2 * h * |w|^2 ), h = distance from plane ABC to the sphere's center
 };
 
-/// returns +1 if D is strictly inside the sphere, 0 if D is exactly on it (and E > 0), -1 otherwise
-int classifyInSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d,
+/// same as InSphereResult plus the exact "D is on the sphere" state, possible only when E > 0
+enum class ClassifyResult
+{
+    NoSphere,
+    Outside,
+    OnSphere,
+    Inside
+};
+
+ClassifyResult classifyInSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d,
     std::int64_t rSq, InSphereQuantities & qs )
 {
     // no overflow anywhere below given that any difference of two points is within +-0.99*2^31
@@ -40,7 +48,7 @@ int classifyInSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c
     qs.w = cross( qs.u, qs.v ); // <= 2^63
     qs.W = dot( Vector3i256{ qs.w }, Vector3i256{ qs.w } ); // <= 2^128
     if ( qs.W == 0 )
-        return -1; // A, B, C are collinear => no circle through them
+        return ClassifyResult::NoSphere; // A, B, C are collinear => no circle through them
 
     // components <= 2^160
     const auto uu = dot( Vector3i128{ qs.u }, Vector3i128{ qs.u } );
@@ -50,11 +58,11 @@ int classifyInSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c
 
     qs.E = 4 * Int512( rSq ) * sqr( Int512( qs.W ) ) - dot( Vector3i512{ qs.M }, Vector3i512{ qs.M } ); // <= 2^321
     if ( qs.E < 0 )
-        return -1; // sqrt(rSq) is less than the circumradius of ABC => no such sphere
+        return ClassifyResult::NoSphere; // sqrt(rSq) is less than the circumradius of ABC => no such sphere
 
-    // on-sphere ties with rSq exactly equal to the squared circumradius are reported as -1 (outside),
+    // on-sphere ties with rSq exactly equal to the squared circumradius are reported as Outside,
     // since a perturbation of A, B, C breaks the sphere's existence there
-    const int onSphere = qs.E == 0 ? -1 : 0;
+    const auto onSphere = qs.E == 0 ? ClassifyResult::Outside : ClassifyResult::OnSphere;
 
     // A = |w|^2 * ( |D - circumcenter(ABC)|^2 - sqr( circumradius ) ), <= 2^193
     const auto A = qs.W * Int256( dot( Vector3i128{ qs.q }, Vector3i128{ qs.q } ) ) - dot( Vector3i256{ qs.q }, qs.M );
@@ -64,14 +72,14 @@ int classifyInSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c
 
     // D is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
     if ( A < 0 && t >= 0 )
-        return 1;
+        return ClassifyResult::Inside;
     if ( A >= 0 && t <= 0 )
-        return ( A == 0 && ( t == 0 || qs.E == 0 ) ) ? onSphere : -1;
+        return ( A == 0 && ( t == 0 || qs.E == 0 ) ) ? onSphere : ClassifyResult::Outside;
     const auto lhs = sqr( Int1024( A ) ) * Int1024( qs.W ); // <= 2^513
     const auto rhs = Int1024( qs.E ) * sqr( Int1024( t ) ); // <= 2^512
     if ( lhs == rhs )
         return onSphere;
-    return ( A < 0 ) == ( lhs > rhs ) ? 1 : -1;
+    return ( A < 0 ) == ( lhs > rhs ) ? ClassifyResult::Inside : ClassifyResult::Outside;
 }
 
 using BigInt = boost::multiprecision::cpp_int;
@@ -121,13 +129,21 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 
 } // anonymous namespace
 
-bool inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
+InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
 {
     InSphereQuantities qs;
-    return classifyInSphere( a, b, c, d, rSq, qs ) > 0;
+    switch ( classifyInSphere( a, b, c, d, rSq, qs ) )
+    {
+    case ClassifyResult::NoSphere:
+        return InSphereResult::NoSphere;
+    case ClassifyResult::Inside:
+        return InSphereResult::Inside;
+    default:
+        return InSphereResult::Outside;
+    }
 }
 
-bool inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
+InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
 {
 #ifndef NDEBUG
     for ( int i = 0; i < 3; ++i )
@@ -135,8 +151,11 @@ bool inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
             assert( vs[i].id != vs[j].id );
 #endif
     InSphereQuantities qs;
-    if ( const int res = classifyInSphere( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt, rSq, qs ) )
-        return res > 0;
+    const auto res = classifyInSphere( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt, rSq, qs );
+    if ( res == ClassifyResult::NoSphere )
+        return InSphereResult::NoSphere;
+    if ( res != ClassifyResult::OnSphere )
+        return res == ClassifyResult::Inside ? InSphereResult::Inside : InSphereResult::Outside;
 
     // vs[3] is exactly on the sphere: perturb the points in the order of ascending ids, the first point
     // whose perturbation moves vs[3] off the sphere decides; when a triangle point is perturbed, the
@@ -161,7 +180,7 @@ bool inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
         {
             // perturbing the query point never moves the sphere: its largest (z) perturbation resolves
             // the tie, and an exactly tangential move exits the sphere
-            return signOf( ch[3][2], ew ) < 0;
+            return signOf( ch[3][2], ew ) < 0 ? InSphereResult::Inside : InSphereResult::Outside;
         }
         const int q1 = idx == 0 ? 1 : 0;
         const int q2 = idx == 2 ? 1 : 2;
@@ -174,7 +193,7 @@ bool inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
         if ( sG != 0 )
         {
             const int sz = signOf( ch[idx][2], ew );
-            return ( sz != 0 ? sG * sz * sN : sG * sN ) > 0;
+            return ( sz != 0 ? sG * sz * sN : sG * sN ) > 0 ? InSphereResult::Inside : InSphereResult::Outside;
         }
         // the first derivative vanishes for all perturbation directions of vs[idx]; the answer is given
         // by the curvature term (D-c)*(c-m) + sqr(rho), m = middle of two other triangle points,
@@ -186,11 +205,11 @@ bool inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
         auto f2 = dot( ch[3], chm, ew );
         f2.x += W * W * W * W * ( 4 * BigInt{ rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );
         if ( const int sF = signOf( f2, ew ) )
-            return sF < 0;
+            return sF < 0 ? InSphereResult::Inside : InSphereResult::Outside;
         assert( false ); // possible only for an idle point, and those are skipped above
     }
     assert( false ); // the query point always resolves the tie
-    return false;
+    return InSphereResult::Outside;
 }
 
 #if __GNUC__ >= 12

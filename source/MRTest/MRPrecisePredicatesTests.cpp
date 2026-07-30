@@ -260,65 +260,73 @@ TEST( MRMesh, sosInCircle2 )
 
 TEST( MRMesh, inSphere )
 {
+    const auto In = InSphereResult::Inside;
+    const auto Out = InSphereResult::Outside;
+    const auto NoS = InSphereResult::NoSphere;
+
     const Vector3i a{ 0, 0, 0 };
     const Vector3i b{ 2, 0, 0 };
     const Vector3i c{ 0, 2, 0 };
     // circumcircle of triangle ABC: center (1,1,0), squared radius 2, plane normal +Z
 
-    // degenerate cases: the radius is less than the circumradius of ABC, collinear A, B, C
-    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 1 ) );
-    EXPECT_FALSE( inSphere( a, Vector3i{ 1, 1, 1 }, Vector3i{ 2, 2, 2 }, Vector3i{ 0, 0, 1 }, 9 ) );
+    // no sphere: the radius is less than the circumradius of ABC, collinear A, B, C
+    EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 1 ), NoS );
+    EXPECT_EQ( inSphere( a, Vector3i{ 1, 1, 1 }, Vector3i{ 2, 2, 2 }, Vector3i{ 0, 0, 1 }, 9 ), NoS );
 
     // rSq == 2: the unique sphere centered at (1,1,0)
-    EXPECT_TRUE(  inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 2 ) );
-    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 3, 3, 0 }, 2 ) );
-    EXPECT_FALSE( inSphere( a, b, c, b, 2 ) ); // exactly on the sphere
+    EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 2 ), In );
+    EXPECT_EQ( inSphere( a, b, c, Vector3i{ 3, 3, 0 }, 2 ), Out );
+    EXPECT_EQ( inSphere( a, b, c, b, 2 ), Out ); // exactly on the sphere
 
     // rSq == 4: sphere center at ( 1, 1, sqrt(2) )
-    EXPECT_TRUE(  inSphere( a, b, c, Vector3i{ 1, 1, 2 }, 4 ) );
-    EXPECT_TRUE(  inSphere( a, b, c, Vector3i{ 1, 1, 3 }, 4 ) );
-    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 1, 1, -1 }, 4 ) );
-    EXPECT_FALSE( inSphere( a, b, c, Vector3i{ 1, 1, 4 }, 4 ) );
+    EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 2 }, 4 ), In );
+    EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 3 }, 4 ), In );
+    EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, -1 }, 4 ), Out );
+    EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 4 }, 4 ), Out );
 
     // cyclic permutations of (A, B, C) keep the result, a swap selects the mirror sphere
-    EXPECT_TRUE(  inSphere( b, c, a, Vector3i{ 1, 1, 2 }, 4 ) );
-    EXPECT_TRUE(  inSphere( c, a, b, Vector3i{ 1, 1, 2 }, 4 ) );
-    EXPECT_FALSE( inSphere( b, a, c, Vector3i{ 1, 1, 2 }, 4 ) );
-    EXPECT_TRUE(  inSphere( b, a, c, Vector3i{ 1, 1, -1 }, 4 ) );
+    EXPECT_EQ( inSphere( b, c, a, Vector3i{ 1, 1, 2 }, 4 ), In );
+    EXPECT_EQ( inSphere( c, a, b, Vector3i{ 1, 1, 2 }, 4 ), In );
+    EXPECT_EQ( inSphere( b, a, c, Vector3i{ 1, 1, 2 }, 4 ), Out );
+    EXPECT_EQ( inSphere( b, a, c, Vector3i{ 1, 1, -1 }, 4 ), In );
 
     // maximal magnitudes as if from getToIntConverter: no overflow in internal computations
     constexpr int H = 1'000'000'000;
     const Vector3i a1{ -H, -H, 0 }, b1{ H, -H, 0 }, c1{ -H, H, 0 };
     // circumcircle center (0,0,0), squared radius 2*H^2; with rSq = 3*H^2 sphere center is (0,0,H)
     const auto rSq = 3 * sqr( std::int64_t( H ) );
-    EXPECT_TRUE(  inSphere( a1, b1, c1, Vector3i{ 0, 0, 2 * H }, rSq ) );
-    EXPECT_TRUE(  inSphere( a1, b1, c1, Vector3i{ 0, 0, -1 }, rSq ) );
-    EXPECT_FALSE( inSphere( a1, b1, c1, Vector3i{ H, H, 2 * H }, rSq ) ); // exactly on the sphere
-    EXPECT_FALSE( inSphere( a1, b1, c1, Vector3i{ 2 * H, 0, 0 }, rSq ) );
+    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 0, 0, 2 * H }, rSq ), In );
+    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 0, 0, -1 }, rSq ), In );
+    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ H, H, 2 * H }, rSq ), Out ); // exactly on the sphere
+    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 2 * H, 0, 0 }, rSq ), Out );
 }
 
 TEST( MRMesh, inSphereFloat )
 {
+    const auto In = InSphereResult::Inside;
+    const auto Out = InSphereResult::Outside;
+    const auto NoS = InSphereResult::NoSphere;
+
     const Vector3d a{ 0, 0, 0 }, b{ 2, 0, 0 }, c{ 0, 2, 0 };
     // circumcircle of triangle (a,b,c): center (1,1,0), squared radius 2, plane normal +Z
 
-    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 1, 1, 1 }, 1.0 ) ); // radius below circumradius
-    EXPECT_FALSE( inSphere( a, Vector3d{ 1, 1, 1 }, Vector3d{ 2, 2, 2 }, Vector3d{ 0, 0, 1 }, 9.0 ) ); // collinear
+    EXPECT_EQ( inSphere( a, b, c, Vector3d{ 1, 1, 1 }, 1.0 ), NoS ); // radius below circumradius
+    EXPECT_EQ( inSphere( a, Vector3d{ 1, 1, 1 }, Vector3d{ 2, 2, 2 }, Vector3d{ 0, 0, 1 }, 9.0 ), NoS ); // collinear
 
     // rSq == 2: the unique sphere centered at (1,1,0)
-    EXPECT_TRUE(  inSphere( a, b, c, Vector3d{ 1, 1, 1 }, 2.0 ) );
-    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 3, 3, 0 }, 2.0 ) );
-    EXPECT_FALSE( inSphere( a, b, c, b, 2.0 ) ); // exactly on the sphere (small integers are exact in double)
+    EXPECT_EQ( inSphere( a, b, c, Vector3d{ 1, 1, 1 }, 2.0 ), In );
+    EXPECT_EQ( inSphere( a, b, c, Vector3d{ 3, 3, 0 }, 2.0 ), Out );
+    EXPECT_EQ( inSphere( a, b, c, b, 2.0 ), Out ); // exactly on the sphere (small integers are exact in double)
 
     // rSq == 4: sphere center at ( 1, 1, sqrt(2) )
-    EXPECT_TRUE(  inSphere( a, b, c, Vector3d{ 1, 1, 2 }, 4.0 ) );
-    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 1, 1, -1 }, 4.0 ) );
-    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 1, 1, 4 }, 4.0 ) );
-    EXPECT_TRUE(  inSphere( a, c, b, Vector3d{ 1, 1, -1 }, 4.0 ) ); // a swap selects the mirror sphere
+    EXPECT_EQ( inSphere( a, b, c, Vector3d{ 1, 1, 2 }, 4.0 ), In );
+    EXPECT_EQ( inSphere( a, b, c, Vector3d{ 1, 1, -1 }, 4.0 ), Out );
+    EXPECT_EQ( inSphere( a, b, c, Vector3d{ 1, 1, 4 }, 4.0 ), Out );
+    EXPECT_EQ( inSphere( a, c, b, Vector3d{ 1, 1, -1 }, 4.0 ), In ); // a swap selects the mirror sphere
 
     // float instantiation
-    EXPECT_TRUE(  inSphere( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, Vector3f{ 1, 1, 2 }, 4.0f ) );
-    EXPECT_FALSE( inSphere( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, Vector3f{ 1, 1, -1 }, 4.0f ) );
+    EXPECT_EQ( inSphere( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, Vector3f{ 1, 1, 2 }, 4.0f ), In );
+    EXPECT_EQ( inSphere( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, Vector3f{ 1, 1, -1 }, 4.0f ), Out );
 }
 
 TEST( MRMesh, inSphereTetrahedron )
@@ -344,48 +352,52 @@ TEST( MRMesh, inSphereTetrahedron )
     do
     {
         const auto & a = ps[order[0]], & b = ps[order[1]], & c = ps[order[2]], & d = ps[order[3]];
-        const bool expected = dot( d - a, cross( b - a, c - a ) ) > 0; // inside-oriented triangle
+        const bool expectInside = dot( d - a, cross( b - a, c - a ) ) > 0; // inside-oriented triangle
+        const auto expected = expectInside ? InSphereResult::Inside : InSphereResult::Outside;
         EXPECT_EQ( inSphere( a, b, c, d, 1.0 ), expected );
         EXPECT_EQ( inSphere( psi[order[0]], psi[order[1]], psi[order[2]], psi[order[3]], 4 ), expected );
-        nInside += expected ? 1 : 0;
+        nInside += expectInside ? 1 : 0;
     } while ( std::next_permutation( std::begin( order ), std::end( order ) ) );
-    EXPECT_EQ( nInside, 12 ); // 4 outside-oriented triangles of 8 give false, each thrice (cyclic invariance)
+    EXPECT_EQ( nInside, 12 ); // 4 outside-oriented triangles of 8 give Outside, each thrice (cyclic invariance)
 }
 
 TEST( MRMesh, sosInSphere )
 {
+    const auto In = InSphereResult::Inside;
+    const auto Out = InSphereResult::Outside;
+
     auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };
 
     // in all tie configurations below the query point vs[3] is exactly on the sphere;
     // the expected values are validated against exact rational-perturbation evaluation
 
     // sphere center (0,0,0), rSq = 25; the outcome depends on the assignment of ids
-    EXPECT_FALSE( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 0,0,5 ) }, 25 ) );
-    EXPECT_FALSE( inSphere( { vc( 3_v, 3,4,0 ), vc( 2_v, 4,0,3 ), vc( 1_v, 0,3,4 ), vc( 0_v, 0,0,5 ) }, 25 ) );
-    EXPECT_FALSE( inSphere( { vc( 1_v, 3,4,0 ), vc( 3_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 0_v, 0,0,5 ) }, 25 ) );
-    EXPECT_TRUE(  inSphere( { vc( 2_v, 3,4,0 ), vc( 0_v, 4,0,3 ), vc( 3_v, 0,3,4 ), vc( 1_v, 0,0,5 ) }, 25 ) );
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 0,0,5 ) }, 25 ), Out );
+    EXPECT_EQ( inSphere( { vc( 3_v, 3,4,0 ), vc( 2_v, 4,0,3 ), vc( 1_v, 0,3,4 ), vc( 0_v, 0,0,5 ) }, 25 ), Out );
+    EXPECT_EQ( inSphere( { vc( 1_v, 3,4,0 ), vc( 3_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 0_v, 0,0,5 ) }, 25 ), Out );
+    EXPECT_EQ( inSphere( { vc( 2_v, 3,4,0 ), vc( 0_v, 4,0,3 ), vc( 3_v, 0,3,4 ), vc( 1_v, 0,0,5 ) }, 25 ), In );
 
     // the query point coincides with a triangle point (distinct ids)
-    EXPECT_TRUE(  inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 3,4,0 ) }, 25 ) );
-    EXPECT_FALSE( inSphere( { vc( 3_v, 3,4,0 ), vc( 2_v, 4,0,3 ), vc( 1_v, 0,3,4 ), vc( 0_v, 3,4,0 ) }, 25 ) );
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 3,4,0 ) }, 25 ), In );
+    EXPECT_EQ( inSphere( { vc( 3_v, 3,4,0 ), vc( 2_v, 4,0,3 ), vc( 1_v, 0,3,4 ), vc( 0_v, 3,4,0 ) }, 25 ), Out );
 
     // the first derivative vanishes for the smallest-id point: query coplanar with the center and two others
-    EXPECT_FALSE( inSphere( { vc( 0_v, -5,0,0 ), vc( 1_v, -4,-3,0 ), vc( 2_v, -4,0,-3 ), vc( 3_v, 4,0,3 ) }, 25 ) );
-    EXPECT_FALSE( inSphere( { vc( 0_v, -5,0,0 ), vc( 3_v, -4,-3,0 ), vc( 2_v, -4,0,-3 ), vc( 1_v, 4,0,3 ) }, 25 ) );
+    EXPECT_EQ( inSphere( { vc( 0_v, -5,0,0 ), vc( 1_v, -4,-3,0 ), vc( 2_v, -4,0,-3 ), vc( 3_v, 4,0,3 ) }, 25 ), Out );
+    EXPECT_EQ( inSphere( { vc( 0_v, -5,0,0 ), vc( 3_v, -4,-3,0 ), vc( 2_v, -4,0,-3 ), vc( 1_v, 4,0,3 ) }, 25 ), Out );
 
     // concyclic points on the tilted plane x+y+z=0, sphere center (1,1,1): sqrt( E*W ) is irrational
-    EXPECT_FALSE( inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 9 ) );
-    EXPECT_TRUE(  inSphere( { vc( 3_v, 1,-2,1 ), vc( 2_v, 1,1,-2 ), vc( 1_v, -2,1,1 ), vc( 0_v, -1,2,-1 ) }, 9 ) );
-    EXPECT_TRUE(  inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, 2,-1,-1 ) }, 9 ) );
-    EXPECT_TRUE(  inSphere( { vc( 0_v, -2,1,1 ), vc( 1_v, 2,-1,-1 ), vc( 2_v, 1,1,-2 ), vc( 3_v, -1,-1,2 ) }, 9 ) );
-    EXPECT_FALSE( inSphere( { vc( 3_v, -2,1,1 ), vc( 2_v, 2,-1,-1 ), vc( 1_v, 1,1,-2 ), vc( 0_v, -1,-1,2 ) }, 9 ) );
+    EXPECT_EQ( inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 9 ), Out );
+    EXPECT_EQ( inSphere( { vc( 3_v, 1,-2,1 ), vc( 2_v, 1,1,-2 ), vc( 1_v, -2,1,1 ), vc( 0_v, -1,2,-1 ) }, 9 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, 2,-1,-1 ) }, 9 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, -2,1,1 ), vc( 1_v, 2,-1,-1 ), vc( 2_v, 1,1,-2 ), vc( 3_v, -1,-1,2 ) }, 9 ), In );
+    EXPECT_EQ( inSphere( { vc( 3_v, -2,1,1 ), vc( 2_v, 2,-1,-1 ), vc( 1_v, 1,1,-2 ), vc( 0_v, -1,-1,2 ) }, 9 ), Out );
 
-    // rSq exactly equal to the squared circumradius: the tie resolves deterministically to outside
-    EXPECT_FALSE( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ) );
+    // rSq exactly equal to the squared circumradius: the tie resolves deterministically to Outside
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), Out );
 
     // no tie: same answers as the plain overload
-    EXPECT_TRUE(  inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ) );
-    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ) );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ), Out );
 }
 
 TEST( MRMesh, sosInSphereConcyclic )
@@ -393,7 +405,7 @@ TEST( MRMesh, sosInSphereConcyclic )
     // four points on one circle lie on both spheres of radius sqrt(rSq) > circle radius passing via
     // any three of them, so every arrangement of the vertices is an exact tie resolved by ids only;
     // simulation-of-simplicity answers as for one perturbed configuration: over all 24 arrangements
-    // of the same four vertices in the array, exactly half must give inside
+    // of the same four vertices in the array, exactly half must give Inside
     auto countInside = []( std::array<PreciseVertCoords, 4> vs, std::int64_t rSq )
     {
         auto less = []( const PreciseVertCoords & l, const PreciseVertCoords & r ) { return l.id < r.id; };
@@ -401,7 +413,7 @@ TEST( MRMesh, sosInSphereConcyclic )
         int cnt = 0;
         do
         {
-            cnt += inSphere( vs, rSq ) ? 1 : 0;
+            cnt += inSphere( vs, rSq ) == InSphereResult::Inside ? 1 : 0;
         }
         while ( std::next_permutation( vs.begin(), vs.end(), less ) );
         return cnt;
@@ -429,6 +441,10 @@ TEST( MRMesh, sosInSphereDeviations )
     // the expectations assert the current behavior and shall change when the corresponding
     // perturbation cascades are implemented
 
+    const auto In = InSphereResult::Inside;
+    const auto Out = InSphereResult::Outside;
+    const auto NoS = InSphereResult::NoSphere;
+
     auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };
     auto countInside = []( std::array<PreciseVertCoords, 4> vs, std::int64_t rSq )
     {
@@ -437,31 +453,31 @@ TEST( MRMesh, sosInSphereDeviations )
         int cnt = 0;
         do
         {
-            cnt += inSphere( vs, rSq ) ? 1 : 0;
+            cnt += inSphere( vs, rSq ) == InSphereResult::Inside ? 1 : 0;
         }
         while ( std::next_permutation( vs.begin(), vs.end(), less ) );
         return cnt;
     };
 
-    // all points of the triangle coincide: currently always false, while the perturbed triangle
+    // all points of the triangle coincide: currently NoSphere, while the perturbed triangle
     // is not degenerate and its sphere exists, so full SoS would give id-dependent answers
     EXPECT_EQ( countInside( {
         vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), vc( 3_v, 1,2,3 ) }, 25 ), 0 );
-    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 3_v, 1,0,0 ) }, 25 ) );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 3_v, 1,0,0 ) }, 25 ), NoS );
 
     // two points of the triangle coincide, the third is closer than the sphere's diameter:
-    // currently always false, while the perturbed sphere may exist depending on the ids
-    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 4,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ) );
+    // currently NoSphere, while the perturbed sphere may exist depending on the ids
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 4,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS );
 
     // rSq exactly equal to the squared circumradius: a perturbation of the triangle changes
     // the sphere's existence, so full SoS would make both answers below id-dependent
-    EXPECT_TRUE(  inSphere( { vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), vc( 3_v, 0,0,0 ) }, 25 ) );   // strictly inside
-    EXPECT_FALSE( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ) ); // exactly on the sphere
+    EXPECT_EQ( inSphere( { vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), vc( 3_v, 0,0,0 ) }, 25 ), In );    // strictly inside
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), Out ); // exactly on the sphere
 
-    // the false answers below are exact under full SoS: no small perturbation creates the sphere
-    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 11,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ) ); // third point beyond the diameter
-    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 10,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ) ); // third point exactly at the diameter
-    EXPECT_FALSE( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 1,0,0 ), vc( 2_v, 3,0,0 ), vc( 3_v, 0,1,0 ) }, 25 ) );  // distinct collinear triangle
+    // the NoSphere answers below are exact under full SoS: no small perturbation creates the sphere
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 11,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point beyond the diameter
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 10,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point exactly at the diameter
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 1,0,0 ), vc( 2_v, 3,0,0 ), vc( 3_v, 0,1,0 ) }, 25 ), NoS );  // distinct collinear triangle
 }
 
 TEST( MRMesh, segmentIntersectionOrder2b )

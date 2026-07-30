@@ -26,16 +26,7 @@ struct InSphereQuantities
     Int512 E;           // sqr( 2 * h * |w|^2 ), h = distance from plane ABC to the sphere's center
 };
 
-/// same as InSphereResult plus the exact "D is on the sphere" state, possible only when E > 0
-enum class ClassifyResult
-{
-    NoSphere,
-    Outside,
-    OnSphere,
-    Inside
-};
-
-ClassifyResult classifyInSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d,
+InSphereResult classifyInSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d,
     std::int64_t rSq, InSphereQuantities & qs )
 {
     // no overflow anywhere below given that any difference of two points is within +-0.99*2^31
@@ -48,7 +39,7 @@ ClassifyResult classifyInSphere( const Vector3i & a, const Vector3i & b, const V
     qs.w = cross( qs.u, qs.v ); // <= 2^63
     qs.W = dot( Vector3i256{ qs.w }, Vector3i256{ qs.w } ); // <= 2^128
     if ( qs.W == 0 )
-        return ClassifyResult::NoSphere; // A, B, C are collinear => no circle through them
+        return InSphereResult::NoSphere; // A, B, C are collinear => no circle through them
 
     // components <= 2^160
     const auto uu = dot( Vector3i128{ qs.u }, Vector3i128{ qs.u } );
@@ -58,11 +49,7 @@ ClassifyResult classifyInSphere( const Vector3i & a, const Vector3i & b, const V
 
     qs.E = 4 * Int512( rSq ) * sqr( Int512( qs.W ) ) - dot( Vector3i512{ qs.M }, Vector3i512{ qs.M } ); // <= 2^321
     if ( qs.E < 0 )
-        return ClassifyResult::NoSphere; // sqrt(rSq) is less than the circumradius of ABC => no such sphere
-
-    // on-sphere ties with rSq exactly equal to the squared circumradius are reported as Outside,
-    // since a perturbation of A, B, C breaks the sphere's existence there
-    const auto onSphere = qs.E == 0 ? ClassifyResult::Outside : ClassifyResult::OnSphere;
+        return InSphereResult::NoSphere; // sqrt(rSq) is less than the circumradius of ABC => no such sphere
 
     // A = |w|^2 * ( |D - circumcenter(ABC)|^2 - sqr( circumradius ) ), <= 2^193
     const auto A = qs.W * Int256( dot( Vector3i128{ qs.q }, Vector3i128{ qs.q } ) ) - dot( Vector3i256{ qs.q }, qs.M );
@@ -72,14 +59,14 @@ ClassifyResult classifyInSphere( const Vector3i & a, const Vector3i & b, const V
 
     // D is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
     if ( A < 0 && t >= 0 )
-        return ClassifyResult::Inside;
+        return InSphereResult::Inside;
     if ( A >= 0 && t <= 0 )
-        return ( A == 0 && ( t == 0 || qs.E == 0 ) ) ? onSphere : ClassifyResult::Outside;
+        return ( A == 0 && ( t == 0 || qs.E == 0 ) ) ? InSphereResult::OnSphere : InSphereResult::Outside;
     const auto lhs = sqr( Int1024( A ) ) * Int1024( qs.W ); // <= 2^513
     const auto rhs = Int1024( qs.E ) * sqr( Int1024( t ) ); // <= 2^512
     if ( lhs == rhs )
-        return onSphere;
-    return ( A < 0 ) == ( lhs > rhs ) ? ClassifyResult::Inside : ClassifyResult::Outside;
+        return InSphereResult::OnSphere;
+    return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;
 }
 
 using BigInt = boost::multiprecision::cpp_int;
@@ -132,15 +119,7 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
 {
     InSphereQuantities qs;
-    switch ( classifyInSphere( a, b, c, d, rSq, qs ) )
-    {
-    case ClassifyResult::NoSphere:
-        return InSphereResult::NoSphere;
-    case ClassifyResult::Inside:
-        return InSphereResult::Inside;
-    default:
-        return InSphereResult::Outside;
-    }
+    return classifyInSphere( a, b, c, d, rSq, qs );
 }
 
 InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
@@ -152,10 +131,11 @@ InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64
 #endif
     InSphereQuantities qs;
     const auto res = classifyInSphere( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt, rSq, qs );
-    if ( res == ClassifyResult::NoSphere )
-        return InSphereResult::NoSphere;
-    if ( res != ClassifyResult::OnSphere )
-        return res == ClassifyResult::Inside ? InSphereResult::Inside : InSphereResult::Outside;
+    if ( res != InSphereResult::OnSphere )
+        return res;
+    if ( qs.E == 0 )
+        return InSphereResult::Outside; // a perturbation of the triangle breaks the sphere's existence here
+
 
     // vs[3] is exactly on the sphere: perturb the points in the order of ascending ids, the first point
     // whose perturbation moves vs[3] off the sphere decides; when a triangle point is perturbed, the

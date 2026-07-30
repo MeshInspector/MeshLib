@@ -262,6 +262,7 @@ TEST( MRMesh, inSphere )
 {
     const auto In = InSphereResult::Inside;
     const auto Out = InSphereResult::Outside;
+    const auto On = InSphereResult::OnSphere;
     const auto NoS = InSphereResult::NoSphere;
 
     const Vector3i a{ 0, 0, 0 };
@@ -276,7 +277,7 @@ TEST( MRMesh, inSphere )
     // rSq == 2: the unique sphere centered at (1,1,0)
     EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 2 ), In );
     EXPECT_EQ( inSphere( a, b, c, Vector3i{ 3, 3, 0 }, 2 ), Out );
-    EXPECT_EQ( inSphere( a, b, c, b, 2 ), Out ); // exactly on the sphere
+    EXPECT_EQ( inSphere( a, b, c, b, 2 ), On ); // exactly on the sphere (rSq equal to the squared circumradius)
 
     // rSq == 4: sphere center at ( 1, 1, sqrt(2) )
     EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 2 }, 4 ), In );
@@ -297,7 +298,7 @@ TEST( MRMesh, inSphere )
     const auto rSq = 3 * sqr( std::int64_t( H ) );
     EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 0, 0, 2 * H }, rSq ), In );
     EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 0, 0, -1 }, rSq ), In );
-    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ H, H, 2 * H }, rSq ), Out ); // exactly on the sphere
+    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ H, H, 2 * H }, rSq ), On ); // exactly on the sphere
     EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 2 * H, 0, 0 }, rSq ), Out );
 }
 
@@ -305,6 +306,7 @@ TEST( MRMesh, inSphereFloat )
 {
     const auto In = InSphereResult::Inside;
     const auto Out = InSphereResult::Outside;
+    const auto On = InSphereResult::OnSphere;
     const auto NoS = InSphereResult::NoSphere;
 
     const Vector3d a{ 0, 0, 0 }, b{ 2, 0, 0 }, c{ 0, 2, 0 };
@@ -316,7 +318,7 @@ TEST( MRMesh, inSphereFloat )
     // rSq == 2: the unique sphere centered at (1,1,0)
     EXPECT_EQ( inSphere( a, b, c, Vector3d{ 1, 1, 1 }, 2.0 ), In );
     EXPECT_EQ( inSphere( a, b, c, Vector3d{ 3, 3, 0 }, 2.0 ), Out );
-    EXPECT_EQ( inSphere( a, b, c, b, 2.0 ), Out ); // exactly on the sphere (small integers are exact in double)
+    EXPECT_EQ( inSphere( a, b, c, b, 2.0 ), On ); // exactly on the sphere (small integers are exact in double)
 
     // rSq == 4: sphere center at ( 1, 1, sqrt(2) )
     EXPECT_EQ( inSphere( a, b, c, Vector3d{ 1, 1, 2 }, 4.0 ), In );

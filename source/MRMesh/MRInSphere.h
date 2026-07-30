@@ -16,8 +16,12 @@ enum class InSphereResult
     /// the sphere is not defined: the points A, B, C are collinear or coincident,
     /// or rSq is less than the squared circumradius of triangle ABC
     NoSphere,
-    /// the sphere exists, and the point D is on it or outside
+    /// the sphere exists, and the point D is strictly outside
     Outside,
+    /// the sphere exists, and the point D is exactly on it;
+    /// never returned by the simulation-of-simplicity overload, which resolves
+    /// such ties into Inside or Outside
+    OnSphere,
     /// the sphere exists, and the point D is strictly inside
     Inside
 };
@@ -25,7 +29,7 @@ enum class InSphereResult
 /// checks whether the point D is strictly inside the sphere of radius sqrt(rSq) passing via
 /// points A, B, C, whose center is located on the positive side of plane ABC
 /// (in the half-space pointed at by cross( b - a, c - a ) from the plane);
-/// returns Outside when D is exactly on the sphere;
+/// returns OnSphere when D is exactly on the sphere;
 /// cyclic permutations of (A, B, C) do not change the result, a swap of two of them selects the mirror sphere;
 /// rSq must be given in the same integer grid units as the point coordinates
 [[nodiscard]] MRMESH_API InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c,
@@ -55,7 +59,8 @@ enum class InSphereResult
 /// checks whether the point d is strictly inside the sphere of radius sqrt(rSq) passing via
 /// points a, b, c, whose center is located on the positive side of plane abc
 /// (same convention and case analysis as in the precise overloads above), computed in floating-point:
-/// the answers for the points near the sphere's surface are subject to rounding errors;
+/// the answers for the points near the sphere's surface are subject to rounding errors,
+/// and OnSphere is returned only on the exact equality in the comparisons;
 /// the products inside have degree 16 in coordinates, so to avoid overflows any difference of two
 /// given points' coordinates as well as sqrt(rSq) must be below ~100 for T=float and ~1e18 for T=double
 template <typename T>
@@ -83,12 +88,12 @@ template <typename T>
     if ( A < 0 && t >= 0 )
         return InSphereResult::Inside;
     if ( A >= 0 && t <= 0 )
-        return InSphereResult::Outside;
+        return ( A == 0 && ( t == 0 || E == 0 ) ) ? InSphereResult::OnSphere : InSphereResult::Outside;
     const T lhs = A * A * W;
     const T rhs = E * t * t;
-    if ( A < 0 )
-        return lhs > rhs ? InSphereResult::Inside : InSphereResult::Outside;
-    return lhs < rhs ? InSphereResult::Inside : InSphereResult::Outside;
+    if ( lhs == rhs )
+        return InSphereResult::OnSphere;
+    return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;
 }
 
 MR_BIND_TEMPLATE( InSphereResult inSphere( const Vector3f & a, const Vector3f & b, const Vector3f & c, const Vector3f & d, float rSq ) );

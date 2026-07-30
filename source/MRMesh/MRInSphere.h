@@ -73,7 +73,9 @@ template <typename T>
 
     // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
     // strictly greater: a side exactly equal to the diameter can lie on the sphere
-    if ( u.lengthSq() > 4 * rSq || v.lengthSq() > 4 * rSq || ( v - u ).lengthSq() > 4 * rSq )
+    const T uu = u.lengthSq();
+    const T vv = v.lengthSq();
+    if ( uu > 4 * rSq || vv > 4 * rSq || ( v - u ).lengthSq() > 4 * rSq )
         return InSphereResult::NoSphere;
 
     const auto w = cross( u, v ); // doubled normal of triangle abc
@@ -81,7 +83,7 @@ template <typename T>
     if ( W <= 0 )
         return InSphereResult::NoSphere; // a, b, c are collinear => no circle through them
 
-    const auto M = u.lengthSq() * cross( v, w ) + v.lengthSq() * cross( w, u ); // 2 * W * ( circumcenter(abc) - a )
+    const auto M = uu * cross( v, w ) + vv * cross( w, u ); // 2 * W * ( circumcenter(abc) - a )
     const T E = 4 * rSq * W * W - M.lengthSq(); // sqr( 2 * h * W ), h = distance from plane abc to the sphere's center
     if ( E < 0 )
         return InSphereResult::NoSphere; // sqrt(rSq) is less than the circumradius of abc => no such sphere

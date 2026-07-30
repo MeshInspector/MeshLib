@@ -45,38 +45,37 @@ namespace MR
 /// points a, b, c, whose center is located on the positive side of plane abc
 /// (same convention and case analysis as in the precise overloads above), computed in floating-point:
 /// the answers for the points near the sphere's surface are subject to rounding errors;
-/// returns false in degenerate cases: collinear a, b, c or rSq below the squared circumradius
+/// returns false in degenerate cases: collinear a, b, c or rSq below the squared circumradius;
+/// the products inside have degree 16 in coordinates, so to avoid overflows any difference of two
+/// given points' coordinates as well as sqrt(rSq) must be below ~100 for T=float and ~1e18 for T=double
 template <typename T>
 [[nodiscard]] std::enable_if_t<std::is_floating_point_v<T>, bool> inSphere( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
     const Vector3<T> & d, T rSq )
 {
-    // compute in double for float inputs: the products of degree 16 in coordinates below
-    // overflow float range already for coordinates ~250, while double covers them up to ~1e18
-    using D = std::conditional_t<std::is_same_v<T, float>, double, T>;
-    const auto u = Vector3<D>{ b } - Vector3<D>{ a };
-    const auto v = Vector3<D>{ c } - Vector3<D>{ a };
-    const auto q = Vector3<D>{ d } - Vector3<D>{ a };
+    const auto u = b - a;
+    const auto v = c - a;
+    const auto q = d - a;
 
     const auto w = cross( u, v ); // doubled normal of triangle abc
-    const D W = w.lengthSq();
+    const T W = w.lengthSq();
     if ( W <= 0 )
         return false; // a, b, c are collinear => no circle through them
 
     const auto M = u.lengthSq() * cross( v, w ) + v.lengthSq() * cross( w, u ); // 2 * W * ( circumcenter(abc) - a )
-    const D E = 4 * D( rSq ) * W * W - M.lengthSq(); // sqr( 2 * h * W ), h = distance from plane abc to the sphere's center
+    const T E = 4 * rSq * W * W - M.lengthSq(); // sqr( 2 * h * W ), h = distance from plane abc to the sphere's center
     if ( E < 0 )
         return false; // sqrt(rSq) is less than the circumradius of abc => no such sphere
 
-    const D A = W * q.lengthSq() - dot( q, M ); // W * ( |d - circumcenter(abc)|^2 - sqr( circumradius ) )
-    const D t = dot( q, w ); // |w| * signedDistance( d, plane abc )
+    const T A = W * q.lengthSq() - dot( q, M ); // W * ( |d - circumcenter(abc)|^2 - sqr( circumradius ) )
+    const T t = dot( q, w ); // |w| * signedDistance( d, plane abc )
 
     // d is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
     if ( A < 0 && t >= 0 )
         return true;
     if ( A >= 0 && t <= 0 )
         return false;
-    const D lhs = A * A * W;
-    const D rhs = E * t * t;
+    const T lhs = A * A * W;
+    const T rhs = E * t * t;
     return A < 0 ? lhs > rhs : lhs < rhs;
 }
 

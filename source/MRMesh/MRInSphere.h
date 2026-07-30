@@ -71,6 +71,11 @@ template <typename T>
     const auto v = c - a;
     const auto q = d - a;
 
+    // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
+    // strictly greater: a side exactly equal to the diameter can lie on the sphere
+    if ( u.lengthSq() > 4 * rSq || v.lengthSq() > 4 * rSq || ( v - u ).lengthSq() > 4 * rSq )
+        return InSphereResult::NoSphere;
+
     const auto w = cross( u, v ); // doubled normal of triangle abc
     const T W = w.lengthSq();
     if ( W <= 0 )

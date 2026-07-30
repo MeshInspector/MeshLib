@@ -36,14 +36,25 @@ InSphereResult classifyInSphere( const Vector3i & a, const Vector3i & b, const V
     qs.v = Vector3i64{ c - a };
     qs.q = Vector3i64{ d - a };
 
+    // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
+    // strictly greater: a side exactly equal to the diameter can lie on the sphere
+    const auto rSq4 = 4 * Int128( rSq );
+    const auto uu = dot( Vector3i128{ qs.u }, Vector3i128{ qs.u } );
+    if ( uu > rSq4 )
+        return InSphereResult::NoSphere;
+    const auto vv = dot( Vector3i128{ qs.v }, Vector3i128{ qs.v } );
+    if ( vv > rSq4 )
+        return InSphereResult::NoSphere;
+    const Vector3i64 bc = qs.v - qs.u;
+    if ( dot( Vector3i128{ bc }, Vector3i128{ bc } ) > rSq4 )
+        return InSphereResult::NoSphere;
+
     qs.w = cross( qs.u, qs.v ); // <= 2^63
     qs.W = dot( Vector3i256{ qs.w }, Vector3i256{ qs.w } ); // <= 2^128
     if ( qs.W == 0 )
         return InSphereResult::NoSphere; // A, B, C are collinear => no circle through them
 
     // components <= 2^160
-    const auto uu = dot( Vector3i128{ qs.u }, Vector3i128{ qs.u } );
-    const auto vv = dot( Vector3i128{ qs.v }, Vector3i128{ qs.v } );
     qs.M = Int256( uu ) * Vector3i256{ cross( Vector3i128{ qs.v }, Vector3i128{ qs.w } ) }
          + Int256( vv ) * Vector3i256{ cross( Vector3i128{ qs.w }, Vector3i128{ qs.u } ) };
 

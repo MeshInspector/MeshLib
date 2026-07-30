@@ -274,6 +274,14 @@ TEST( MRMesh, inSphere )
     EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 1 ), NoS );
     EXPECT_EQ( inSphere( a, Vector3i{ 1, 1, 1 }, Vector3i{ 2, 2, 2 }, Vector3i{ 0, 0, 1 }, 9 ), NoS );
 
+    // no sphere: a triangle side is longer than the sphere's diameter
+    EXPECT_EQ( inSphere( a, Vector3i{ 10, 0, 0 }, c, Vector3i{ 1, 1, 1 }, 4 ), NoS );
+    EXPECT_EQ( inSphere( a, Vector3i{ 1, 0, 0 }, Vector3i{ -1, 0, 1 }, Vector3i{ 0, 0, 1 }, 1 ), NoS ); // the side BC
+
+    // a side exactly equal to the diameter: the sphere can still exist (rSq equal to the squared circumradius)
+    EXPECT_EQ( inSphere( a, b, Vector3i{ 1, 1, 0 }, Vector3i{ 1, 0, 0 }, 1 ), In );
+    EXPECT_EQ( inSphere( a, b, Vector3i{ 1, 1, 0 }, Vector3i{ 1, 0, 1 }, 1 ), On );
+
     // rSq == 2: the unique sphere centered at (1,1,0)
     EXPECT_EQ( inSphere( a, b, c, Vector3i{ 1, 1, 1 }, 2 ), In );
     EXPECT_EQ( inSphere( a, b, c, Vector3i{ 3, 3, 0 }, 2 ), Out );

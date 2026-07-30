@@ -297,6 +297,30 @@ TEST( MRMesh, inSphere )
     EXPECT_FALSE( inSphere( a1, b1, c1, Vector3i{ 2 * H, 0, 0 }, rSq ) );
 }
 
+TEST( MRMesh, inSphereFloat )
+{
+    const Vector3d a{ 0, 0, 0 }, b{ 2, 0, 0 }, c{ 0, 2, 0 };
+    // circumcircle of triangle (a,b,c): center (1,1,0), squared radius 2, plane normal +Z
+
+    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 1, 1, 1 }, 1.0 ) ); // radius below circumradius
+    EXPECT_FALSE( inSphere( a, Vector3d{ 1, 1, 1 }, Vector3d{ 2, 2, 2 }, Vector3d{ 0, 0, 1 }, 9.0 ) ); // collinear
+
+    // rSq == 2: the unique sphere centered at (1,1,0)
+    EXPECT_TRUE(  inSphere( a, b, c, Vector3d{ 1, 1, 1 }, 2.0 ) );
+    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 3, 3, 0 }, 2.0 ) );
+    EXPECT_FALSE( inSphere( a, b, c, b, 2.0 ) ); // exactly on the sphere (small integers are exact in double)
+
+    // rSq == 4: sphere center at ( 1, 1, sqrt(2) )
+    EXPECT_TRUE(  inSphere( a, b, c, Vector3d{ 1, 1, 2 }, 4.0 ) );
+    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 1, 1, -1 }, 4.0 ) );
+    EXPECT_FALSE( inSphere( a, b, c, Vector3d{ 1, 1, 4 }, 4.0 ) );
+    EXPECT_TRUE(  inSphere( a, c, b, Vector3d{ 1, 1, -1 }, 4.0 ) ); // a swap selects the mirror sphere
+
+    // float instantiation
+    EXPECT_TRUE(  inSphere( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, Vector3f{ 1, 1, 2 }, 4.0f ) );
+    EXPECT_FALSE( inSphere( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, Vector3f{ 1, 1, -1 }, 4.0f ) );
+}
+
 TEST( MRMesh, sosInSphere )
 {
     auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };

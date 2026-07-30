@@ -2,7 +2,6 @@
 
 #include "MRPrecisePredicates3.h"
 #include "MRPch/MRBindingMacros.h"
-#include <cmath>
 #include <type_traits>
 
 namespace MR
@@ -44,28 +43,41 @@ namespace MR
 
 /// returns true if the point d is strictly inside the sphere of radius sqrt(rSq) passing via
 /// points a, b, c, whose center is located on the positive side of plane abc
-/// (same convention as in the precise overloads above), all computed in floating-point:
+/// (same convention and case analysis as in the precise overloads above), computed in floating-point:
 /// the answers for the points near the sphere's surface are subject to rounding errors;
 /// returns false in degenerate cases: collinear a, b, c or rSq below the squared circumradius
 template <typename T>
 [[nodiscard]] std::enable_if_t<std::is_floating_point_v<T>, bool> inSphere( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
     const Vector3<T> & d, T rSq )
 {
-    const auto u = b - a;
-    const auto v = c - a;
+    // compute in double for float inputs: the products of degree 16 in coordinates below
+    // overflow float range already for coordinates ~250, while double covers them up to ~1e18
+    using D = std::conditional_t<std::is_same_v<T, float>, double, T>;
+    const auto u = Vector3<D>{ b } - Vector3<D>{ a };
+    const auto v = Vector3<D>{ c } - Vector3<D>{ a };
+    const auto q = Vector3<D>{ d } - Vector3<D>{ a };
+
     const auto w = cross( u, v ); // doubled normal of triangle abc
-    const T ww = w.lengthSq();
-    if ( ww <= 0 )
+    const D W = w.lengthSq();
+    if ( W <= 0 )
         return false; // a, b, c are collinear => no circle through them
 
-    // circumcenter of triangle abc
-    const auto o = a + ( u.lengthSq() * cross( v, w ) + v.lengthSq() * cross( w, u ) ) / ( 2 * ww );
-    const T hh = rSq - ( a - o ).lengthSq(); // squared distance between the sphere's center and plane abc
-    if ( hh < 0 )
+    const auto M = u.lengthSq() * cross( v, w ) + v.lengthSq() * cross( w, u ); // 2 * W * ( circumcenter(abc) - a )
+    const D E = 4 * D( rSq ) * W * W - M.lengthSq(); // sqr( 2 * h * W ), h = distance from plane abc to the sphere's center
+    if ( E < 0 )
         return false; // sqrt(rSq) is less than the circumradius of abc => no such sphere
 
-    const auto center = o + std::sqrt( hh / ww ) * w;
-    return ( d - center ).lengthSq() < rSq;
+    const D A = W * q.lengthSq() - dot( q, M ); // W * ( |d - circumcenter(abc)|^2 - sqr( circumradius ) )
+    const D t = dot( q, w ); // |w| * signedDistance( d, plane abc )
+
+    // d is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
+    if ( A < 0 && t >= 0 )
+        return true;
+    if ( A >= 0 && t <= 0 )
+        return false;
+    const D lhs = A * A * W;
+    const D rhs = E * t * t;
+    return A < 0 ? lhs > rhs : lhs < rhs;
 }
 
 MR_BIND_TEMPLATE( bool inSphere( const Vector3f & a, const Vector3f & b, const Vector3f & c, const Vector3f & d, float rSq ) );

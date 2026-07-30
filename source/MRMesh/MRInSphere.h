@@ -83,7 +83,9 @@ template <typename T>
     if ( W <= 0 )
         return InSphereResult::NoSphere; // a, b, c are collinear => no circle through them
 
-    const auto M = uu * cross( v, w ) + vv * cross( w, u ); // 2 * W * ( circumcenter(abc) - a )
+    // 2 * W * ( circumcenter(abc) - a ), expanded as in circumcircleCenter
+    const T uv = dot( u, v );
+    const auto M = ( vv * ( uu - uv ) ) * u + ( uu * ( vv - uv ) ) * v;
     const T E = 4 * rSq * W * W - M.lengthSq(); // sqr( 2 * h * W ), h = distance from plane abc to the sphere's center
     if ( E < 0 )
         return InSphereResult::NoSphere; // sqrt(rSq) is less than the circumradius of abc => no such sphere

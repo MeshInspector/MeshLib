@@ -54,15 +54,17 @@ InSphereResult classifyInSphere( const Vector3i & a, const Vector3i & b, const V
     if ( qs.W == 0 )
         return InSphereResult::NoSphere; // A, B, C are collinear => no circle through them
 
-    // components <= 2^160
-    qs.M = Int256( uu ) * Vector3i256{ cross( Vector3i128{ qs.v }, Vector3i128{ qs.w } ) }
-         + Int256( vv ) * Vector3i256{ cross( Vector3i128{ qs.w }, Vector3i128{ qs.u } ) };
+    // same as |u|^2 * cross( v, w ) + |v|^2 * cross( w, u ) expanded as in circumcircleCenter,
+    // with one dot product instead of two cross products; components <= 2^161
+    const auto uv = dot( Vector3i128{ qs.u }, Vector3i128{ qs.v } );
+    qs.M = ( Int256( vv ) * Int256( uu - uv ) ) * Vector3i256{ qs.u }
+         + ( Int256( uu ) * Int256( vv - uv ) ) * Vector3i256{ qs.v };
 
-    qs.E = 4 * Int512( rSq ) * sqr( Int512( qs.W ) ) - dot( Vector3i512{ qs.M }, Vector3i512{ qs.M } ); // <= 2^321
+    qs.E = 4 * Int512( rSq ) * sqr( Int512( qs.W ) ) - dot( Vector3i512{ qs.M }, Vector3i512{ qs.M } ); // <= 2^322
     if ( qs.E < 0 )
         return InSphereResult::NoSphere; // sqrt(rSq) is less than the circumradius of ABC => no such sphere
 
-    // A = |w|^2 * ( |D - circumcenter(ABC)|^2 - sqr( circumradius ) ), <= 2^193
+    // A = |w|^2 * ( |D - circumcenter(ABC)|^2 - sqr( circumradius ) ), <= 2^194
     const auto A = qs.W * Int256( dot( Vector3i128{ qs.q }, Vector3i128{ qs.q } ) ) - dot( Vector3i256{ qs.q }, qs.M );
 
     // t = |w| * signedDistance( D, plane ABC ), <= 2^96
@@ -73,8 +75,8 @@ InSphereResult classifyInSphere( const Vector3i & a, const Vector3i & b, const V
         return InSphereResult::Inside;
     if ( A >= 0 && t <= 0 )
         return ( A == 0 && ( t == 0 || qs.E == 0 ) ) ? InSphereResult::OnSphere : InSphereResult::Outside;
-    const auto lhs = sqr( Int1024( A ) ) * Int1024( qs.W ); // <= 2^513
-    const auto rhs = Int1024( qs.E ) * sqr( Int1024( t ) ); // <= 2^512
+    const auto lhs = sqr( Int1024( A ) ) * Int1024( qs.W ); // <= 2^514
+    const auto rhs = Int1024( qs.E ) * sqr( Int1024( t ) ); // <= 2^513
     if ( lhs == rhs )
         return InSphereResult::OnSphere;
     return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;

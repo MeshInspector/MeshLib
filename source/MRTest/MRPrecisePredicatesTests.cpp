@@ -321,6 +321,37 @@ TEST( MRMesh, inSphereFloat )
     EXPECT_FALSE( inSphere( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, Vector3f{ 1, 1, -1 }, 4.0f ) );
 }
 
+TEST( MRMesh, inSphereTetrahedron )
+{
+    // four vertices of a tetrahedron inscribed in the cube [-1/2, 1/2]^3, sphere radius 1:
+    // for every arrangement the query point must be outside the sphere if the triangle is oriented
+    // outside the tetrahedron (its normal points away from the query), and inside otherwise
+    const Vector3d ps[4] = {
+        Vector3d{  0.5,  0.5, -0.5 },
+        Vector3d{ -0.5,  0.5,  0.5 },
+        Vector3d{  0.5,  0.5,  0.5 },
+        Vector3d{  0.5, -0.5,  0.5 }
+    };
+    // the same points scaled x2 to integers, the radius scales to 2
+    const Vector3i psi[4] = {
+        Vector3i{  1,  1, -1 },
+        Vector3i{ -1,  1,  1 },
+        Vector3i{  1,  1,  1 },
+        Vector3i{  1, -1,  1 }
+    };
+    int order[4] = { 0, 1, 2, 3 };
+    int nInside = 0;
+    do
+    {
+        const auto & a = ps[order[0]], & b = ps[order[1]], & c = ps[order[2]], & d = ps[order[3]];
+        const bool expected = dot( d - a, cross( b - a, c - a ) ) > 0; // inside-oriented triangle
+        EXPECT_EQ( inSphere( a, b, c, d, 1.0 ), expected );
+        EXPECT_EQ( inSphere( psi[order[0]], psi[order[1]], psi[order[2]], psi[order[3]], 4 ), expected );
+        nInside += expected ? 1 : 0;
+    } while ( std::next_permutation( std::begin( order ), std::end( order ) ) );
+    EXPECT_EQ( nInside, 12 ); // 4 outside-oriented triangles of 8 give false, each thrice (cyclic invariance)
+}
+
 TEST( MRMesh, sosInSphere )
 {
     auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };

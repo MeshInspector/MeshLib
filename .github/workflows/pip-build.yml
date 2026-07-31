@@ -766,11 +766,9 @@ jobs:
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-26
-          # The macos-12-intel self-hosted runner is temporarily
-          # unavailable; restore this entry once it is back online.
-          # - platform: "x86"
-          #   runner-tier: "self-hosted"
-          #   instance: macos-12-intel
+          - platform: "x86"
+            runner-tier: "self-hosted"
+            instance: macos-12-intel
           - platform: "x86"
             runner-tier: "github"
             instance: macos-15-intel

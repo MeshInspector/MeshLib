@@ -70,6 +70,11 @@ MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
 [[nodiscard]] MRMESH_API Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,
     const VertCoords& points, const VertBitSet* valid = nullptr );
 
+/// converts given integer coordinates into float points in parallel
+/// \param valid if given then only valid coordinates are converted, and the content of other elements in the returned vector is undefined
+[[nodiscard]] MRMESH_API VertCoords computeFloatCoords( const ConvertToFloatVector& conv,
+    const Vector<Vector3i, VertId>& intCoords, const VertBitSet* valid = nullptr );
+
 /// given two line segments AB and CD located in one plane,
 /// finds whether they intersect and if yes, computes their common point using integer-only arithmetic
 [[nodiscard]] MRMESH_API std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di );

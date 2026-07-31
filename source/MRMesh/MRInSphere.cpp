@@ -137,19 +137,14 @@ InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i 
     return tester( d );
 }
 
-InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
+/// grants the simulation-of-simplicity tie resolution access to the tester internals
+struct InSphereSosResolver
 {
-#ifndef NDEBUG
-    for ( int i = 0; i < 3; ++i )
-        for ( int j = i + 1; j < 4; ++j )
-            assert( vs[i].id != vs[j].id );
-#endif
-    InSphereTesteri tester;
-    if ( !tester.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) )
-        return InSphereResult::NoSphere;
-    const auto res = tester( vs[3].pt );
-    if ( res != InSphereResult::OnSphere )
-        return res;
+    static InSphereResult resolve( const InSphereTester<int> & tester, const std::array<PreciseVertCoords, 4> & vs );
+};
+
+InSphereResult InSphereSosResolver::resolve( const InSphereTester<int> & tester, const std::array<PreciseVertCoords, 4> & vs )
+{
     if ( tester.E == 0 )
         return InSphereResult::Outside; // a perturbation of the triangle breaks the sphere's existence here
 
@@ -199,13 +194,29 @@ InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64
             chm[i] = { W * BigInt{ tester.M[i] } - W * W * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ tester.w[i] } };
         const Vector3i64 qr{ vs[q1].pt - vs[q2].pt };
         auto f2 = dot( ch[3], chm, ew );
-        f2.x += W * W * W * W * ( 4 * BigInt{ rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );
+        f2.x += W * W * W * W * ( 4 * BigInt{ tester.rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );
         if ( const int sF = signOf( f2, ew ) )
             return sF < 0 ? InSphereResult::Inside : InSphereResult::Outside;
         assert( false ); // possible only for an idle point, and those are skipped above
     }
     assert( false ); // the query point always resolves the tie
     return InSphereResult::Outside;
+}
+
+InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
+{
+#ifndef NDEBUG
+    for ( int i = 0; i < 3; ++i )
+        for ( int j = i + 1; j < 4; ++j )
+            assert( vs[i].id != vs[j].id );
+#endif
+    InSphereTesteri tester;
+    if ( !tester.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) )
+        return InSphereResult::NoSphere;
+    const auto res = tester( vs[3].pt );
+    if ( res != InSphereResult::OnSphere )
+        return res;
+    return InSphereSosResolver::resolve( tester, vs );
 }
 
 #if __GNUC__ >= 12

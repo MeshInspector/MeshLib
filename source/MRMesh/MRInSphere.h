@@ -72,9 +72,6 @@ class InSphereTester
 {
     static_assert( std::is_floating_point_v<T> );
 public:
-    /// declared to avoid the aggregate constructor from the fields in the generated bindings
-    InSphereTester() = default;
-
     /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a, b, c, with the
     /// center located on the positive side of plane abc (in the half-space pointed at by
     /// cross( b - a, c - a ) from the plane);
@@ -136,16 +133,17 @@ public:
         return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;
     }
 
-public: // the fields are filled by reset() and shall be treated as read-only
-    Vector3<T> a;                   ///< the first sphere point
-    MR_BIND_IGNORE Vector3<T> u;    ///< b - a
-    MR_BIND_IGNORE Vector3<T> v;    ///< c - a
-    MR_BIND_IGNORE Vector3<T> w;    ///< doubled normal of triangle abc
-    MR_BIND_IGNORE T W = 0;         ///< |w|^2
-    MR_BIND_IGNORE Vector3<T> M;    ///< 2 * |w|^2 * ( circumcenter(abc) - a )
-    MR_BIND_IGNORE T E = -1;        ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
+private:
+    Vector3<T> a;    ///< the first sphere point
+    Vector3<T> u, v; ///< b - a, c - a
+    Vector3<T> w;    ///< doubled normal of triangle abc
+    T W = 0;         ///< |w|^2
+    Vector3<T> M;    ///< 2 * |w|^2 * ( circumcenter(abc) - a )
+    T E = -1;        ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
     T rSq = 0;       ///< the squared radius of the sphere
 };
+
+struct InSphereSosResolver; ///< an internal helper of the simulation-of-simplicity inSphere
 
 /// the specialization implementing the precise integer predicate, exact for any input;
 /// rSq must be given in the same integer grid units as the point coordinates
@@ -153,9 +151,6 @@ template <>
 class InSphereTester<int>
 {
 public:
-    /// declared to avoid the aggregate constructor from the fields in the generated bindings
-    InSphereTester() = default;
-
     /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a, b, c, with the
     /// center located on the positive side of plane abc (in the half-space pointed at by
     /// cross( b - a, c - a ) from the plane);
@@ -167,15 +162,16 @@ public:
     /// shall be called only after reset() returned true
     [[nodiscard]] MRMESH_API InSphereResult operator()( const Vector3i & d ) const;
 
-public: // the fields are filled by reset() and shall be treated as read-only
-    Vector3i a;                   ///< the first sphere point
-    MR_BIND_IGNORE Vector3i64 u;  ///< b - a
-    MR_BIND_IGNORE Vector3i64 v;  ///< c - a
-    MR_BIND_IGNORE Vector3i64 w;  ///< doubled normal of triangle abc
-    MR_BIND_IGNORE Int256 W;      ///< |w|^2
-    MR_BIND_IGNORE Vector3i256 M; ///< 2 * |w|^2 * ( circumcenter(abc) - a )
-    MR_BIND_IGNORE Int512 E = -1; ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
-    std::int64_t rSq = 0;         ///< the squared radius of the sphere
+private:
+    friend InSphereSosResolver;
+
+    Vector3i a;           ///< the first sphere point
+    Vector3i64 u, v;      ///< b - a, c - a
+    Vector3i64 w;         ///< doubled normal of triangle abc
+    Int256 W;             ///< |w|^2
+    Vector3i256 M;        ///< 2 * |w|^2 * ( circumcenter(abc) - a )
+    Int512 E = -1;        ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
+    std::int64_t rSq = 0; ///< the squared radius of the sphere
 };
 
 using InSphereTesterf = InSphereTester<float>;

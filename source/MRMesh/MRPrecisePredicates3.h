@@ -53,19 +53,22 @@ struct TriangleSegmentIntersectResult
 struct ConvertToIntVector
 {
     Vector3d center;
-    double invRange = 0;
+    double invRange = 1;
 
+    /// applies scaling only (without translation) with the following rounding to the nearest int
     [[nodiscard]] int scaleOnly( double v ) const
     {
         return (int)std::round( v * invRange );
     }
 
+    /// double-to-int coordinates converter
     [[nodiscard]] Vector3i operator()( const Vector3d& p ) const
     {
         const auto d = p - center;
         return { scaleOnly( d.x ), scaleOnly( d.y ), scaleOnly( d.z ) };
     }
 
+    /// float-to-int coordinates converter
     [[nodiscard]] Vector3i operator()( const Vector3f& p ) const
     {
         return operator()( Vector3d{ p } );
@@ -75,14 +78,16 @@ struct ConvertToIntVector
 /// scale then translate int-to-float coordinate converter
 struct ConvertToFloatVector
 {
-    double range = 0;
+    double range = 1;
     Vector3d center;
 
+    /// int-to-double coordinates converter
     [[nodiscard]] Vector3d convert( const Vector3i& v ) const
     {
         return Vector3d{ v } * range + center;
     }
 
+    /// int-to-float coordinates converter
     [[nodiscard]] Vector3f operator()( const Vector3i& v ) const
     {
         return Vector3f( convert( v ) );

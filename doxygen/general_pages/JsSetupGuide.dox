@@ -120,6 +120,9 @@ const mesh = ml.Mesh.fromTriangles(coords, tris);
 mesh.delete();
 \endcode
 
+## Try Interactive MeshLib Examples
+You can check how MeshLib works in a browser environment with live interactive examples: https://demo.meshlib.io/
+
 ## Try MeshLib with JavaScript Examples
 After installing MeshLib, a great way to start exploring its capabilities is through the code samples. Each of the following example pages includes a JavaScript tab:
 

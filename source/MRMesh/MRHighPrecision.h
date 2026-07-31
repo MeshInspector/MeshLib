@@ -7,7 +7,7 @@
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
+#pragma clang diagnostic ignored "-Wdeprecated" // covers redundant out-of-line constexpr static definitions in older boost
 #endif
 
 #include <boost/multiprecision/cpp_int.hpp>

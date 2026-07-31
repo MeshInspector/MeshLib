@@ -19,6 +19,10 @@ on:
       upload_artifacts:
         required: true
         type: boolean
+      version_tag:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   emscripten-build:
@@ -149,6 +153,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
   wasm-module-build:
+    if: ${{ !inputs.definitions_only }}
     timeout-minutes: 40
     runs-on: ubuntu-24.04-arm
     container:
@@ -236,7 +241,62 @@ jobs:
           retention-days: 1
 
       - name: Upload the TypeScript definition file for docs
-        if: ${{ (inputs.upload_artifacts || inputs.definitions_only) && matrix.wasm-module-name == 'meshlib' }}
+        if: ${{ inputs.upload_artifacts && matrix.wasm-module-name == 'meshlib' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: WasmBindingsDts
+          path: npm-distr/meshlib/bindings.d.mts
+          retention-days: 1
+
+  wasm-definitions-build:
+    if: ${{ inputs.definitions_only }}
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
+    steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version_tag }}
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/emscripten-single/include ./include
+          ln -s /usr/local/lib/emscripten-single/lib ./lib
+          ln -s /usr/local/lib/emscripten-single/share ./share
+
+      - name: Generate the TypeScript definition file
+        env:
+          MR_CMAKE_BUILD_OPTIONS: --target MRWasmModuleDefinitions
+        run: |
+          ./scripts/build_wasm_meshlib.sh -D MESHLIB_BUILD_WASM_DEFINITIONS_ONLY=ON
+          doxygen scripts/npm/Doxyfile
+          python3 scripts/npm/inject_tsdoc.py \
+            build/Release/bin/meshlib.d.mts \
+            --bindings source/MRWasmModule
+          install -D build/Release/bin/meshlib.d.mts npm-distr/meshlib/bindings.d.mts
+
+      - name: Upload the TypeScript definition file for docs
         uses: actions/upload-artifact@v7
         with:
           name: WasmBindingsDts

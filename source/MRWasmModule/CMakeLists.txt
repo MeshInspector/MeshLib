@@ -59,13 +59,27 @@ function(mr_add_wasm_module TARGET_NAME)
   )
 endfunction()
 
-mr_add_wasm_module(MRWasmModuleBrowser
-  OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}"
-  LINK_OPTIONS "-sENVIRONMENT=web,worker"
-)
-mr_add_wasm_module(MRWasmModuleNode
-  OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}.node"
-  LINK_OPTIONS
-    "-sENVIRONMENT=node"
-    "-sNODERAWFS=1"
-)
+if(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY)
+  # `--emit-tsd` only runs the embind registrations, which never call into the unlinked MeshLib.
+  add_executable(MRWasmModuleDefinitions $<TARGET_OBJECTS:MRWasmModuleObjects>)
+  set_target_properties(MRWasmModuleDefinitions PROPERTIES
+    OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}"
+    LINKER_LANGUAGE CXX
+  )
+  target_link_options(MRWasmModuleDefinitions PRIVATE
+    "--bind"
+    "SHELL:--emit-tsd ${MESHLIB_WASM_OUTPUT_NAME}.d.mts"
+    "-sERROR_ON_UNDEFINED_SYMBOLS=0"
+  )
+else()
+  mr_add_wasm_module(MRWasmModuleBrowser
+    OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}"
+    LINK_OPTIONS "-sENVIRONMENT=web,worker"
+  )
+  mr_add_wasm_module(MRWasmModuleNode
+    OUTPUT_NAME "${MESHLIB_WASM_OUTPUT_NAME}.node"
+    LINK_OPTIONS
+      "-sENVIRONMENT=node"
+      "-sNODERAWFS=1"
+  )
+endif()

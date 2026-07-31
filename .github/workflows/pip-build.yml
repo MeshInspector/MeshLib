@@ -186,6 +186,16 @@ jobs:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       version_tag: ${{needs.setup.outputs.version_tag}}
 
+  generate-wasm-definitions:
+    needs: setup
+    if: ${{ needs.setup.outputs.publish_prod == 'true' }}
+    uses: ./.github/workflows/build-test-emscripten.yml
+    with:
+      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      upload_artifacts: false
+      definitions_only: true
+      version_tag: ${{needs.setup.outputs.version_tag}}
+
   manylinux-pip-build:
     needs: setup
     # Skip entirely when both platforms are disabled (empty matrix would
@@ -387,6 +397,7 @@ jobs:
     needs:
       - setup
       - manylinux-pip-build
+      - generate-wasm-definitions
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib

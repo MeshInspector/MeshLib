@@ -133,13 +133,14 @@ public:
         return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;
     }
 
-private:
-    Vector3<T> a;    ///< the first sphere point
-    Vector3<T> u, v; ///< b - a, c - a
-    Vector3<T> w;    ///< doubled normal of triangle abc
-    T W = 0;         ///< |w|^2
-    Vector3<T> M;    ///< 2 * |w|^2 * ( circumcenter(abc) - a )
-    T E = -1;        ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
+public: // the fields are filled by reset() and shall be treated as read-only
+    Vector3<T> a;                   ///< the first sphere point
+    MR_BIND_IGNORE Vector3<T> u;    ///< b - a
+    MR_BIND_IGNORE Vector3<T> v;    ///< c - a
+    MR_BIND_IGNORE Vector3<T> w;    ///< doubled normal of triangle abc
+    MR_BIND_IGNORE T W = 0;         ///< |w|^2
+    MR_BIND_IGNORE Vector3<T> M;    ///< 2 * |w|^2 * ( circumcenter(abc) - a )
+    MR_BIND_IGNORE T E = -1;        ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
     T rSq = 0;       ///< the squared radius of the sphere
 };
 

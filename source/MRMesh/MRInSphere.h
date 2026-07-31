@@ -3,6 +3,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRHighPrecision.h"
 #include "MRPch/MRBindingMacros.h"
+#include <cassert>
 #include <type_traits>
 
 namespace MR
@@ -59,8 +60,93 @@ enum class InSphereResult
 
 /// accelerates testing of many query points against one sphere given by the same three points
 /// and radius, pre-computing all the point-independent quantities once;
-/// the one-call inSphere functions above are implemented via this class
+/// the primary template works for floating-point T with the same case analysis as the precise
+/// specialization for int below, so the answers for the query points near the sphere's surface
+/// are subject to rounding errors, and OnSphere is returned only on the exact equality in the
+/// comparisons; the products inside have degree 16 in coordinates, so to avoid overflows any
+/// difference of two given points' coordinates as well as sqrt(rSq) must be below ~100 for T=float
+/// and ~1e18 for T=double;
+/// the one-call inSphere functions are implemented via this class
+template <typename T>
 class InSphereTester
+{
+    static_assert( std::is_floating_point_v<T> );
+public:
+    /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a, b, c, with the
+    /// center located on the positive side of plane abc (in the half-space pointed at by
+    /// cross( b - a, c - a ) from the plane);
+    /// returns false if no such sphere exists: the points are collinear or coincident,
+    /// or rSq is less than the squared circumradius of triangle abc
+    bool reset( const Vector3<T> & va, const Vector3<T> & vb, const Vector3<T> & vc, T sqRadius )
+    {
+        a = va;
+        rSq = sqRadius;
+        E = -1;
+        u = vb - va;
+        v = vc - va;
+
+        // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
+        // strictly greater: a side exactly equal to the diameter can lie on the sphere
+        const T uu = u.lengthSq();
+        const T vv = v.lengthSq();
+        if ( uu > 4 * rSq || vv > 4 * rSq || ( v - u ).lengthSq() > 4 * rSq )
+            return false;
+
+        w = cross( u, v );
+        W = w.lengthSq();
+        if ( W <= 0 )
+            return false; // a, b, c are collinear => no circle through them
+
+        // 2 * W * ( circumcenter(abc) - a ), expanded as in circumcircleCenter
+        const T uv = dot( u, v );
+        M = ( vv * ( uu - uv ) ) * u + ( uu * ( vv - uv ) ) * v;
+
+        // negative: sqrt(rSq) is less than the circumradius of the triangle => no such sphere
+        E = 4 * rSq * W * W - M.lengthSq();
+        return E >= 0;
+    }
+
+    /// returns the position of the point d relative to the sphere (never NoSphere);
+    /// shall be called only after reset() returned true
+    [[nodiscard]] InSphereResult operator()( const Vector3<T> & d ) const
+    {
+        assert( E >= 0 ); // the last reset() must have returned true
+        const auto q = d - a;
+
+        // d farther than the diameter from a point on the sphere is strictly outside
+        const T qq = q.lengthSq();
+        if ( qq > 4 * rSq )
+            return InSphereResult::Outside;
+
+        const T A = W * qq - dot( q, M ); // W * ( |d - circumcenter|^2 - sqr( circumradius ) )
+        const T t = dot( q, w ); // |w| * signedDistance( d, plane of the triangle )
+
+        // d is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
+        if ( A < 0 && t >= 0 )
+            return InSphereResult::Inside;
+        if ( A >= 0 && t <= 0 )
+            return ( A == 0 && ( t == 0 || E == 0 ) ) ? InSphereResult::OnSphere : InSphereResult::Outside;
+        const T lhs = A * A * W;
+        const T rhs = E * t * t;
+        if ( lhs == rhs )
+            return InSphereResult::OnSphere;
+        return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;
+    }
+
+public: // the fields are filled by reset() and shall be treated as read-only
+    Vector3<T> a;    ///< the first sphere point
+    Vector3<T> u, v; ///< b - a, c - a
+    Vector3<T> w;    ///< doubled normal of triangle abc
+    T W = 0;         ///< |w|^2
+    Vector3<T> M;    ///< 2 * |w|^2 * ( circumcenter(abc) - a )
+    T E = -1;        ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
+    T rSq = 0;       ///< the squared radius of the sphere
+};
+
+/// the specialization implementing the precise integer predicate, exact for any input;
+/// rSq must be given in the same integer grid units as the point coordinates
+template <>
+class InSphereTester<int>
 {
 public:
     /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a, b, c, with the
@@ -85,53 +171,21 @@ public: // the fields are filled by reset() and shall be treated as read-only
     std::int64_t rSq = 0;         ///< the squared radius of the sphere
 };
 
+using InSphereTesterf = InSphereTester<float>;
+using InSphereTesterd = InSphereTester<double>;
+using InSphereTesteri = InSphereTester<int>;
+
 /// checks whether the point d is strictly inside the sphere of radius sqrt(rSq) passing via
-/// points a, b, c, whose center is located on the positive side of plane abc
-/// (same convention and case analysis as in the precise overloads above), computed in floating-point:
-/// the answers for the points near the sphere's surface are subject to rounding errors,
-/// and OnSphere is returned only on the exact equality in the comparisons;
-/// the products inside have degree 16 in coordinates, so to avoid overflows any difference of two
-/// given points' coordinates as well as sqrt(rSq) must be below ~100 for T=float and ~1e18 for T=double
+/// points a, b, c, whose center is located on the positive side of plane abc, in floating-point;
+/// see the comment on InSphereTester above for the limitations
 template <typename T>
 [[nodiscard]] std::enable_if_t<std::is_floating_point_v<T>, InSphereResult> inSphere( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c,
     const Vector3<T> & d, T rSq )
 {
-    const auto u = b - a;
-    const auto v = c - a;
-    const auto q = d - a;
-
-    // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
-    // strictly greater: a side exactly equal to the diameter can lie on the sphere
-    const T uu = u.lengthSq();
-    const T vv = v.lengthSq();
-    if ( uu > 4 * rSq || vv > 4 * rSq || ( v - u ).lengthSq() > 4 * rSq )
+    InSphereTester<T> tester;
+    if ( !tester.reset( a, b, c, rSq ) )
         return InSphereResult::NoSphere;
-
-    const auto w = cross( u, v ); // doubled normal of triangle abc
-    const T W = w.lengthSq();
-    if ( W <= 0 )
-        return InSphereResult::NoSphere; // a, b, c are collinear => no circle through them
-
-    // 2 * W * ( circumcenter(abc) - a ), expanded as in circumcircleCenter
-    const T uv = dot( u, v );
-    const auto M = ( vv * ( uu - uv ) ) * u + ( uu * ( vv - uv ) ) * v;
-    const T E = 4 * rSq * W * W - M.lengthSq(); // sqr( 2 * h * W ), h = distance from plane abc to the sphere's center
-    if ( E < 0 )
-        return InSphereResult::NoSphere; // sqrt(rSq) is less than the circumradius of abc => no such sphere
-
-    const T A = W * q.lengthSq() - dot( q, M ); // W * ( |d - circumcenter(abc)|^2 - sqr( circumradius ) )
-    const T t = dot( q, w ); // |w| * signedDistance( d, plane abc )
-
-    // d is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
-    if ( A < 0 && t >= 0 )
-        return InSphereResult::Inside;
-    if ( A >= 0 && t <= 0 )
-        return ( A == 0 && ( t == 0 || E == 0 ) ) ? InSphereResult::OnSphere : InSphereResult::Outside;
-    const T lhs = A * A * W;
-    const T rhs = E * t * t;
-    if ( lhs == rhs )
-        return InSphereResult::OnSphere;
-    return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;
+    return tester( d );
 }
 
 MR_BIND_TEMPLATE( InSphereResult inSphere( const Vector3f & a, const Vector3f & b, const Vector3f & c, const Vector3f & d, float rSq ) );

@@ -62,7 +62,7 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 
 } // anonymous namespace
 
-bool InSphereTester::reset( const Vector3i & va, const Vector3i & vb, const Vector3i & vc, std::int64_t sqRadius )
+bool InSphereTester<int>::reset( const Vector3i & va, const Vector3i & vb, const Vector3i & vc, std::int64_t sqRadius )
 {
     // no overflow anywhere below given that any difference of two points is within +-0.99*2^31
     // (as getToIntConverter guarantees) and rSq fits in int64
@@ -101,7 +101,7 @@ bool InSphereTester::reset( const Vector3i & va, const Vector3i & vb, const Vect
     return E >= 0;
 }
 
-InSphereResult InSphereTester::operator()( const Vector3i & d ) const
+InSphereResult InSphereTester<int>::operator()( const Vector3i & d ) const
 {
     assert( E >= 0 ); // the last reset() must have returned true
     const Vector3i64 q{ d - a };
@@ -131,7 +131,7 @@ InSphereResult InSphereTester::operator()( const Vector3i & d ) const
 
 InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
 {
-    InSphereTester tester;
+    InSphereTesteri tester;
     if ( !tester.reset( a, b, c, rSq ) )
         return InSphereResult::NoSphere;
     return tester( d );
@@ -144,7 +144,7 @@ InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64
         for ( int j = i + 1; j < 4; ++j )
             assert( vs[i].id != vs[j].id );
 #endif
-    InSphereTester tester;
+    InSphereTesteri tester;
     if ( !tester.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) )
         return InSphereResult::NoSphere;
     const auto res = tester( vs[3].pt );

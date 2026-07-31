@@ -320,7 +320,7 @@ TEST( MRMesh, inSphereTester )
     const Vector3i b{ 2, 0, 0 };
     const Vector3i c{ 0, 2, 0 };
 
-    InSphereTester tester;
+    InSphereTesteri tester;
     EXPECT_FALSE( tester.reset( a, b, c, 1 ) ); // rSq below the squared circumradius
     EXPECT_FALSE( tester.reset( a, Vector3i{ 1, 1, 1 }, Vector3i{ 2, 2, 2 }, 9 ) ); // collinear
     EXPECT_FALSE( tester.reset( a, Vector3i{ 10, 0, 0 }, c, 4 ) ); // a side beyond the diameter
@@ -343,6 +343,33 @@ TEST( MRMesh, inSphereTester )
     ASSERT_TRUE( tester.reset( a, b, c, 2 ) ); // the unique sphere centered at (1,1,0)
     EXPECT_EQ( tester( Vector3i{ 1, 1, 1 } ), In );
     EXPECT_EQ( tester( b ), On );
+}
+
+TEST( MRMesh, inSphereTesterFloat )
+{
+    const auto In = InSphereResult::Inside;
+    const auto Out = InSphereResult::Outside;
+
+    const Vector3d a{ 0, 0, 0 }, b{ 2, 0, 0 }, c{ 0, 2, 0 };
+    InSphereTesterd tester;
+    EXPECT_FALSE( tester.reset( a, b, c, 1.0 ) ); // rSq below the squared circumradius
+    ASSERT_TRUE( tester.reset( a, b, c, 4.0 ) ); // sphere center at ( 1, 1, sqrt(2) )
+    EXPECT_EQ( tester( Vector3d{ 1, 1, 2 } ), In );
+    EXPECT_EQ( tester( Vector3d{ 1, 1, -1 } ), Out );
+
+    // same answers as one-call inSphere for a grid of query points
+    for ( int z = -2; z <= 4; ++z )
+        for ( int y = -2; y <= 4; ++y )
+            for ( int x = -2; x <= 4; ++x )
+            {
+                const Vector3d d{ double( x ), double( y ), double( z ) };
+                EXPECT_EQ( tester( d ), inSphere( a, b, c, d, 4.0 ) );
+            }
+
+    InSphereTesterf testerf;
+    ASSERT_TRUE( testerf.reset( Vector3f{ 0, 0, 0 }, Vector3f{ 2, 0, 0 }, Vector3f{ 0, 2, 0 }, 4.0f ) );
+    EXPECT_EQ( testerf( Vector3f{ 1, 1, 2 } ), In );
+    EXPECT_EQ( testerf( Vector3f{ 1, 1, -1 } ), Out );
 }
 
 TEST( MRMesh, inSphereFloat )

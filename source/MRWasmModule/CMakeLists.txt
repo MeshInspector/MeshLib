@@ -70,6 +70,7 @@ if(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY)
     "--bind"
     "SHELL:--emit-tsd ${MESHLIB_WASM_OUTPUT_NAME}.d.mts"
     "-sERROR_ON_UNDEFINED_SYMBOLS=0"
+    "-Wno-error=js-compiler"
   )
 else()
   mr_add_wasm_module(MRWasmModuleBrowser

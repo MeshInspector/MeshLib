@@ -1,4 +1,8 @@
 #include "MRPrecisePredicates3.h"
+#include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
+#include "MRVector.h"
 #include "MRHighPrecision.h"
 #include "MRVector2.h"
 #include "MRBox.h"
@@ -397,6 +401,52 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     {
         return Vector3f( Vector3d{ v }*range + center );
     };
+}
+
+Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,
+    const VertCoords& points, const VertBitSet* valid )
+{
+    MR_TIMER;
+    Vector<Vector3i, VertId> res;
+    res.resizeNoInit( points.size() );
+    if ( valid )
+    {
+        BitSetParallelFor( *valid, [&]( VertId v )
+        {
+            res[v] = conv( points[v] );
+        } );
+    }
+    else
+    {
+        ParallelFor( res, [&]( VertId v )
+        {
+            res[v] = conv( points[v] );
+        } );
+    }
+    return res;
+}
+
+VertCoords computeFloatCoords( const ConvertToFloatVector& conv,
+    const Vector<Vector3i, VertId>& intCoords, const VertBitSet* valid )
+{
+    MR_TIMER;
+    VertCoords res;
+    res.resizeNoInit( intCoords.size() );
+    if ( valid )
+    {
+        BitSetParallelFor( *valid, [&]( VertId v )
+        {
+            res[v] = conv( intCoords[v] );
+        } );
+    }
+    else
+    {
+        ParallelFor( res, [&]( VertId v )
+        {
+            res[v] = conv( intCoords[v] );
+        } );
+    }
+    return res;
 }
 
 std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )

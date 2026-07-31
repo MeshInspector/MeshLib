@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRPrecisePredicates3.h"
+#include "MRHighPrecision.h"
 #include "MRPch/MRBindingMacros.h"
 #include <type_traits>
 
@@ -55,6 +56,34 @@ enum class InSphereResult
 /// no small perturbation can create the sphere: distinct collinear triangle points, two coincident
 /// triangle points with the third one at or beyond the sphere's diameter, rSq below the squared circumradius
 [[nodiscard]] MRMESH_API InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq );
+
+/// accelerates testing of many query points against one sphere given by the same three points
+/// and radius, pre-computing all the point-independent quantities once;
+/// the one-call inSphere functions above are implemented via this class
+class InSphereTester
+{
+public:
+    /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a, b, c, with the
+    /// center located on the positive side of plane abc (in the half-space pointed at by
+    /// cross( b - a, c - a ) from the plane);
+    /// returns false if no such sphere exists: the points are collinear or coincident,
+    /// or rSq is less than the squared circumradius of triangle abc
+    MRMESH_API bool reset( const Vector3i & a, const Vector3i & b, const Vector3i & c, std::int64_t rSq );
+
+    /// returns the position of the point d relative to the sphere (never NoSphere);
+    /// shall be called only after reset() returned true
+    [[nodiscard]] MRMESH_API InSphereResult operator()( const Vector3i & d ) const;
+
+public: // the fields are filled by reset() and shall be treated as read-only
+    Vector3i a;                   ///< the first sphere point
+    MR_BIND_IGNORE Vector3i64 u;  ///< b - a
+    MR_BIND_IGNORE Vector3i64 v;  ///< c - a
+    MR_BIND_IGNORE Vector3i64 w;  ///< doubled normal of triangle abc
+    MR_BIND_IGNORE Int256 W;      ///< |w|^2
+    MR_BIND_IGNORE Vector3i256 M; ///< 2 * |w|^2 * ( circumcenter(abc) - a )
+    MR_BIND_IGNORE Int512 E = -1; ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
+    std::int64_t rSq = 0;         ///< the squared radius of the sphere
+};
 
 /// checks whether the point d is strictly inside the sphere of radius sqrt(rSq) passing via
 /// points a, b, c, whose center is located on the positive side of plane abc

@@ -814,8 +814,8 @@ TEST( MRMesh, segmentIntersectionOrder3b )
 TEST( MRMesh, getToIntConverter )
 {
     auto toInt = getToIntConverter( Box3d( {0,0,-1.0}, {0,0,1.0} ) );
-    auto i0 = toInt( { 0,0,-1.f } );
-    auto i1 = toInt( { 0,0, 1.f } );
+    auto i0 = toInt( Vector3f{ 0,0,-1.f } );
+    auto i1 = toInt( Vector3f{ 0,0, 1.f } );
     // check that sum and difference of any two points can be computed in integer without overflow
     EXPECT_LE( -i0.z, INT_MAX / 2 );
     EXPECT_LE(  i1.z, INT_MAX / 2 );

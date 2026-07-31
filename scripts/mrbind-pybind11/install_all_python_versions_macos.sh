@@ -34,12 +34,6 @@ fi
 brew update
 
 for ver in $PY_VERSIONS; do
-    if [[ $ver == 3.8 ]]; then
-        # ($HOMEBREW_DIR == /usr/local) for mac x64 and (/opt/homebrew == /opt/homebrew) for mac Arm
-        # python 3.8 disabled on macOS since 2024-10-14 (according to our old pip-build file)
-        continue
-    fi
-
     # ??
     # Note that Brew doesn't want to be ran in `sudo`.
     brew install python@$ver

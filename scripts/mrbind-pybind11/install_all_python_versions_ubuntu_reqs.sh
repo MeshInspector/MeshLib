@@ -12,11 +12,7 @@ echo "Python versions: $PY_VERSIONS"
 
 # Install the dependencies.
 for ver in $PY_VERSIONS; do
-    if [[ $ver == 3.8 ]]; then
-        curl -sS https://bootstrap.pypa.io/pip/3.8/get-pip.py | python$ver
-    else
-        curl -sS https://bootstrap.pypa.io/get-pip.py | python$ver
-    fi
+    curl -sS https://bootstrap.pypa.io/get-pip.py | python$ver
     python$ver -m pip install --upgrade -r ./requirements/python/requirements.txt
     python$ver -m pip install pytest
 done

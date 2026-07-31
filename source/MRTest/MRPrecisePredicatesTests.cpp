@@ -470,6 +470,12 @@ TEST( MRMesh, sosInSphere )
     // no tie: same answers as the plain overload
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ), In );
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ), Out );
+
+    // the same tie resolution via the tester method with one reset
+    InSphereTesteri tester;
+    ASSERT_TRUE( tester.reset( Vector3i{ 3, 4, 0 }, Vector3i{ 4, 0, 3 }, Vector3i{ 0, 3, 4 }, 25 ) );
+    EXPECT_EQ( tester( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 0,0,5 ) } ), Out );
+    EXPECT_EQ( tester( { vc( 2_v, 3,4,0 ), vc( 0_v, 4,0,3 ), vc( 3_v, 0,3,4 ), vc( 1_v, 0,0,5 ) } ), In );
 }
 
 TEST( MRMesh, sosInSphereConcyclic )

@@ -137,30 +137,34 @@ InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i 
     return tester( d );
 }
 
-/// grants the simulation-of-simplicity tie resolution access to the tester internals
-struct InSphereSosResolver
+InSphereResult InSphereTester<int>::operator()( const std::array<PreciseVertCoords, 4> & vs ) const
 {
-    static InSphereResult resolve( const InSphereTester<int> & tester, const std::array<PreciseVertCoords, 4> & vs );
-};
-
-InSphereResult InSphereSosResolver::resolve( const InSphereTester<int> & tester, const std::array<PreciseVertCoords, 4> & vs )
-{
-    if ( tester.E == 0 )
+    assert( E >= 0 ); // the last reset() must have returned true
+    assert( vs[0].pt == a && Vector3i64{ vs[1].pt - vs[0].pt } == u && Vector3i64{ vs[2].pt - vs[0].pt } == v );
+#ifndef NDEBUG
+    for ( int i = 0; i < 3; ++i )
+        for ( int j = i + 1; j < 4; ++j )
+            assert( vs[i].id != vs[j].id );
+#endif
+    const auto res = ( *this )( vs[3].pt );
+    if ( res != InSphereResult::OnSphere )
+        return res;
+    if ( E == 0 )
         return InSphereResult::Outside; // a perturbation of the triangle breaks the sphere's existence here
 
     // vs[3] is exactly on the sphere: perturb the points in the order of ascending ids, the first point
     // whose perturbation moves vs[3] off the sphere decides; when a triangle point is perturbed, the
     // center moves along the circle of points equidistant from two other triangle points, on which
     // the squared distance to vs[3] is a degree-1 trigonometric polynomial
-    const BigInt W{ tester.W };
-    const BigInt ew = BigInt{ tester.E } * W; // sqr( S ); the signs below are computed in Z[S]
+    const BigInt bigW{ W };
+    const BigInt ew = BigInt{ E } * bigW; // sqr( S ); the signs below are computed in Z[S]
 
     // ch[k] = 2 W^2 * ( vs[k].pt - sphereCenter ) = 2 W^2 ( vs[k].pt - vs[0].pt ) - W M - S w
-    const Vector3i64 rel[4] = { {}, tester.u, tester.v, Vector3i64{ vs[3].pt - vs[0].pt } };
+    const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ vs[3].pt - vs[0].pt } };
     std::array<SqrtVec, 4> ch;
     for ( int k = 0; k < 4; ++k )
         for ( int i = 0; i < 3; ++i )
-            ch[k][i] = { 2 * W * W * rel[k][i] - W * BigInt{ tester.M[i] }, -BigInt{ tester.w[i] } };
+            ch[k][i] = { 2 * bigW * bigW * rel[k][i] - bigW * BigInt{ M[i] }, -BigInt{ w[i] } };
 
     int order[4] = { 0, 1, 2, 3 };
     std::sort( std::begin( order ), std::end( order ), [&]( int l, int r ) { return vs[l].id < vs[r].id; } );
@@ -191,10 +195,10 @@ InSphereResult InSphereSosResolver::resolve( const InSphereTester<int> & tester,
         // rho = radius of the circle of centers
         SqrtVec chm;
         for ( int i = 0; i < 3; ++i )
-            chm[i] = { W * BigInt{ tester.M[i] } - W * W * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ tester.w[i] } };
+            chm[i] = { bigW * BigInt{ M[i] } - bigW * bigW * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ w[i] } };
         const Vector3i64 qr{ vs[q1].pt - vs[q2].pt };
         auto f2 = dot( ch[3], chm, ew );
-        f2.x += W * W * W * W * ( 4 * BigInt{ tester.rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );
+        f2.x += bigW * bigW * bigW * bigW * ( 4 * BigInt{ rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );
         if ( const int sF = signOf( f2, ew ) )
             return sF < 0 ? InSphereResult::Inside : InSphereResult::Outside;
         assert( false ); // possible only for an idle point, and those are skipped above
@@ -205,18 +209,10 @@ InSphereResult InSphereSosResolver::resolve( const InSphereTester<int> & tester,
 
 InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
 {
-#ifndef NDEBUG
-    for ( int i = 0; i < 3; ++i )
-        for ( int j = i + 1; j < 4; ++j )
-            assert( vs[i].id != vs[j].id );
-#endif
     InSphereTesteri tester;
     if ( !tester.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) )
         return InSphereResult::NoSphere;
-    const auto res = tester( vs[3].pt );
-    if ( res != InSphereResult::OnSphere )
-        return res;
-    return InSphereSosResolver::resolve( tester, vs );
+    return tester( vs );
 }
 
 #if __GNUC__ >= 12

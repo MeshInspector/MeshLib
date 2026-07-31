@@ -143,7 +143,6 @@ private:
     T rSq = 0;       ///< the squared radius of the sphere
 };
 
-struct InSphereSosResolver; ///< an internal helper of the simulation-of-simplicity inSphere
 
 /// the specialization implementing the precise integer predicate, exact for any input;
 /// rSq must be given in the same integer grid units as the point coordinates
@@ -162,9 +161,14 @@ public:
     /// shall be called only after reset() returned true
     [[nodiscard]] MRMESH_API InSphereResult operator()( const Vector3i & d ) const;
 
-private:
-    friend InSphereSosResolver;
+    /// returns the position of the point vs[3] relative to the sphere, resolving "exactly on the
+    /// sphere" ties into Inside or Outside by simulation-of-simplicity as described at the inSphere
+    /// overload above (never returns OnSphere or NoSphere);
+    /// shall be called only after reset() returned true, and the points vs[0], vs[1], vs[2] must be
+    /// the same a, b, c as in that reset()
+    [[nodiscard]] MRMESH_API InSphereResult operator()( const std::array<PreciseVertCoords, 4> & vs ) const;
 
+private:
     Vector3i a;           ///< the first sphere point
     Vector3i64 u, v;      ///< b - a, c - a
     Vector3i64 w;         ///< doubled normal of triangle abc

@@ -27,40 +27,72 @@ static std::pair<VertId, VertId> getOtherTriVerts( const ThreeVertIds & vs, Vert
 // to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
 class PathAroundVertex
 {
-    Triangulation& faceToVertices;
-    // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
-    std::vector<VertTri>::iterator vertexBegIt, vertexEndIt;
-    size_t firstUnvisitedIndex = 0; // pivot index. [vertexBegIt + firstUnvistedIndex, vertexBegIt) - unvisited vertices
+    Triangulation* faceToVertices = nullptr;
+    const std::vector<VertTri>* vertTris = nullptr;
+    // all elements in [vertexBegIndex, vertexEndIndex) of *vertTris have the same central vertex
+    size_t vertexBegIndex = 0, vertexEndIndex = 0;
+    size_t firstUnvisitedIndex = 0; // lazily advanced index of the first element with not yet visited face
+    VertId center; // the central vertex of the current neighborhood
+
+    // (vnext, f): there is triangle #f with the vertices (center, vnext, some-third-vert) up to rotation
+    std::vector<std::pair<VertId, FaceId>> vnextFaces;
+    // (vprev, f): there is triangle #f with the vertices (vprev, center, some-third-vert) up to rotation
+    std::vector<std::pair<VertId, FaceId>> vprevFaces;
+    HashSet<FaceId> visitedFaces;
 
 public:
-    PathAroundVertex( Triangulation& triangleToVertices,
-                std::vector<VertTri>& vertTris, size_t beg, size_t end )
-        : faceToVertices( triangleToVertices )
-        , vertexBegIt( vertTris.begin() + beg )
-        , vertexEndIt( vertTris.begin() + end )
-    {}
-
-    // false if there are some unvisited vertices
-    bool empty() const
+    // prepares the search around the central vertex of elements [beg, end), reusing the memory allocated for a previous vertex
+    void init( Triangulation& triangleToVertices, const std::vector<VertTri>& tris, size_t beg, size_t end )
     {
-        return vertexBegIt + firstUnvisitedIndex >= vertexEndIt;
+        faceToVertices = &triangleToVertices;
+        vertTris = &tris;
+        vertexBegIndex = beg;
+        vertexEndIndex = end;
+        firstUnvisitedIndex = beg;
+        assert( beg < end );
+        center = tris[beg].v;
+
+        vnextFaces.clear();
+        vprevFaces.clear();
+        visitedFaces.clear();
+        vnextFaces.reserve( end - beg );
+        vprevFaces.reserve( end - beg );
+        for ( auto i = beg; i < end; ++i )
+        {
+            assert( tris[i].v == center );
+            const auto f = tris[i].f;
+            const auto [v1, v2] = getOtherTriVerts( triangleToVertices[f], center );
+            vnextFaces.emplace_back( v1, f );
+            vprevFaces.emplace_back( v2, f );
+        }
+        std::sort( vnextFaces.begin(), vnextFaces.end() );
+        std::sort( vprevFaces.begin(), vprevFaces.end() );
     }
 
-    // takes the first unvisited triangle and returns its two other vertices in cyclic order
+    // false if there are some elements with not yet visited faces; advances firstUnvisitedIndex
+    bool empty()
+    {
+        while ( firstUnvisitedIndex < vertexEndIndex && visitedFaces.contains( (*vertTris)[firstUnvisitedIndex].f ) )
+            ++firstUnvisitedIndex;
+        return firstUnvisitedIndex >= vertexEndIndex;
+    }
+
+    // takes the first triangle with not yet visited face and returns its two other vertices in cyclic order
     // to start a new path there, so the walk can continue with triOrientation = true
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
-        assert( !empty() );
-        const auto first = vertexBegIt + firstUnvisitedIndex++;
-        const auto & vs = faceToVertices[first->f];
-        return getOtherTriVerts( vs, first->v );
+        [[maybe_unused]] const bool noRecs = empty(); // also advances firstUnvisitedIndex
+        assert( !noRecs );
+        const auto f = (*vertTris)[firstUnvisitedIndex].f;
+        visitedFaces.insert( f );
+        return getOtherTriVerts( (*faceToVertices)[f], center );
     }
 
-    // find incident unvisited vertex except for prevVertex and its duplicates
-    VertId getNextVertex( VertId center, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
+    // find incident vertex in a not yet visited face except for prevVertex and its duplicates
+    VertId getNextVertex( VertId v, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
         if ( empty() )
-            return VertId( -1 );
+            return {};
 
         // if v is an original vertex, then return it;
         // if v is a duplicated vertex, then return the id of the original vertex, which was duplicated to make v
@@ -81,20 +113,19 @@ public:
         prevVertex = getOrgVertex( prevVertex );
         assert( prevVertex );
 
-        for ( auto it = vertexBegIt + firstUnvisitedIndex; it < vertexEndIt; ++it )
+        const auto & vec = triOrientation ? vnextFaces : vprevFaces;
+        for ( auto it = std::lower_bound( vec.begin(), vec.end(), std::make_pair( v, FaceId{} ) );
+              it != vec.end() && it->first == v; ++it )
         {
-            VertId nextVertex;
-            const auto & vs = faceToVertices[it->f];
-            const auto v12 = getOtherTriVerts( vs, it->v );
-            if ( triOrientation && v12.first == center )
-                nextVertex = v12.second;
-            else if ( !triOrientation && v12.second == center )
-                nextVertex = v12.first;
-            if ( nextVertex && getOrgVertex( nextVertex ) != prevVertex )
+            const auto f = it->second;
+            if ( visitedFaces.contains( f ) )
+                continue;
+            const auto v12 = getOtherTriVerts( (*faceToVertices)[f], center );
+            assert( ( triOrientation ? v12.first : v12.second ) == v );
+            const auto nextVertex = triOrientation ? v12.second : v12.first;
+            if ( getOrgVertex( nextVertex ) != prevVertex )
             {
-                if ( it != vertexBegIt + firstUnvisitedIndex )
-                    std::iter_swap( it, vertexBegIt + firstUnvisitedIndex );
-                ++firstUnvisitedIndex;
+                visitedFaces.insert( f );
                 return nextVertex;
             }
         }
@@ -105,6 +136,7 @@ public:
     void duplicateVertex( VertId v, const std::vector<VertId>& path, VertId& lastUsedVertId, bool triOrientation,
                           std::vector<VertDuplication>* dups = nullptr )
     {
+        assert( v == center );
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
         vertDup.srcVert = v;
@@ -112,45 +144,32 @@ public:
             dups->push_back( vertDup );
 
         [[maybe_unused]] size_t changedTris = 0;
+        const auto & vec = triOrientation ? vnextFaces : vprevFaces;
         for ( size_t i = 1; i < path.size(); ++i )
         {
-            for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )
+            // the triangle of this path step is (srcVert, path[i-1], path[i]) for triOrientation = true,
+            // and (srcVert, path[i], path[i-1]) otherwise, up to rotation
+            for ( auto it = std::lower_bound( vec.begin(), vec.end(), std::make_pair( path[i - 1], FaceId{} ) );
+                  it != vec.end() && it->first == path[i - 1]; ++it )
             {
-                VertId v1, v2;
-                bool alreadyDuplicated = true;
-                for ( VertId vi : faceToVertices[it->f] )
-                {
-                    if ( vi == vertDup.srcVert )
-                    {
-                        alreadyDuplicated = false;
-                        // make (v1,v2) the cyclic pair following srcVert in the triangle
-                        if ( v1 && !v2 )
-                            std::swap( v1, v2 );
-                    }
-                    else if ( !v1 )
-                        v1 = vi;
-                    else if ( !v2 )
-                        v2 = vi;
-                }
-                if ( alreadyDuplicated )
+                const auto f = it->second;
+                if ( !visitedFaces.contains( f ) )
+                    continue; // only visited triangles can be in the path
+                auto & tri = (*faceToVertices)[f];
+                if ( tri[0] != vertDup.srcVert && tri[1] != vertDup.srcVert && tri[2] != vertDup.srcVert )
+                    continue; // this triangle has already been re-pointed to the duplicate
+                const auto v12 = getOtherTriVerts( tri, vertDup.srcVert );
+                if ( ( triOrientation ? v12.second : v12.first ) != path[i] )
                     continue;
-                assert( v1 && v2 );
-                assert( v1 != v2 );
-
-                if ( ( triOrientation && v1 == path[i - 1] && v2 == path[i] ) ||
-                     ( !triOrientation && v2 == path[i - 1] && v1 == path[i] ) )
+                for ( VertId & vi : tri )
                 {
-                    for ( VertId & vi : faceToVertices[it->f] )
-                    {
-                        if ( vi != vertDup.srcVert )
-                            continue;
-                        vi = vertDup.dupVert;
-                        break;
-                    }
-                    ++changedTris;
-                    it->v = vertDup.dupVert;
+                    if ( vi != vertDup.srcVert )
+                        continue;
+                    vi = vertDup.dupVert;
                     break;
                 }
+                ++changedTris;
+                break;
             }
         }
         assert( changedTris + 1 == path.size() );
@@ -435,6 +454,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     };
     tbb::parallel_sort( vertsToProcess.begin(), vertsToProcess.end(), sortPred );
 
+    PathAroundVertex pathMaker;
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
@@ -448,7 +468,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         // because formal non-manifoldness of this vertex can be resolved by a neighbour vertex duplication,
         // but we still want to dupliate it to avoid neighbours with equal coordinates
 
-        PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
+        pathMaker.init( t, all.recs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;

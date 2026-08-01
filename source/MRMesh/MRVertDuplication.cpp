@@ -91,9 +91,6 @@ public:
     // find incident vertex in a not yet visited face except for prevVertex and its duplicates
     VertId getNextVertex( VertId v, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
-        if ( empty() )
-            return {};
-
         // if v is an original vertex, then return it;
         // if v is a duplicated vertex, then return the id of the original vertex, which was duplicated to make v
         auto getOrgVertex = [&dups]( VertId v )

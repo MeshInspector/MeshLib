@@ -76,7 +76,7 @@ jobs:
             runner: [ self-hosted, macos, arm64, crossplatform-build ]
             instance: self-hosted-arm-x64-native
             cross-osx-arch: x86_64
-            skip-bindings: true
+            skip-bindings: false
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -115,6 +115,7 @@ jobs:
           echo "CMAKE_PREFIX_PATH=/usr/local" >> "$GITHUB_ENV"
           echo "MESHLIB_HOMEBREW_PREFIX=/usr/local" >> "$GITHUB_ENV"
           echo "HOMEBREW_DIR=/usr/local" >> "$GITHUB_ENV"
+          echo "PKG_CONFIG_PATH=$(/usr/local/bin/brew --prefix python@3.10)/lib/pkgconfig" >> "$GITHUB_ENV"
 
       - name: Install thirdparty libs
         id: thirdparty
@@ -293,7 +294,7 @@ jobs:
             --parallel $(sysctl -n hw.physicalcpu)
 
       - name: Build C examples
-        if: ${{ matrix.config == 'Release' }}
+        if: ${{ matrix.config == 'Release' && !matrix.skip-bindings }}
         env:
           CC: ${{ steps.thirdparty.outputs.c-compiler }}
         run: |

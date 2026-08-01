@@ -28,39 +28,48 @@ static std::pair<VertId, VertId> getOtherTriVerts( const ThreeVertIds & vs, Vert
 class PathAroundVertex
 {
     Triangulation& faceToVertices;
-    // all iterators in [vertexBegIt, vertexEndIt) must have the same central vertex
-    std::vector<VertTri>::iterator vertexBegIt, vertexEndIt;
-    size_t firstUnvisitedIndex = 0; // pivot index. [vertexBegIt + firstUnvistedIndex, vertexBegIt) - unvisited vertices
+    const std::vector<VertTri>& vertTris;
+    BitSet& unvisitedRecs; // set bits correspond to unvisited elements of vertTris (shared among all vertices)
+    // all elements in [vertexBegIndex, vertexEndIndex) of vertTris must have the same central vertex
+    size_t vertexBegIndex = 0, vertexEndIndex = 0;
+    size_t firstUnvisitedIndex = 0; // lazily advanced index of the first unvisited element of the central vertex
 
 public:
     PathAroundVertex( Triangulation& triangleToVertices,
-                std::vector<VertTri>& vertTris, size_t beg, size_t end )
+                const std::vector<VertTri>& tris, BitSet& unvisited, size_t beg, size_t end )
         : faceToVertices( triangleToVertices )
-        , vertexBegIt( vertTris.begin() + beg )
-        , vertexEndIt( vertTris.begin() + end )
+        , vertTris( tris )
+        , unvisitedRecs( unvisited )
+        , vertexBegIndex( beg )
+        , vertexEndIndex( end )
+        , firstUnvisitedIndex( beg )
     {}
 
-    // false if there are some unvisited vertices
-    bool empty() const
+    // false if there are some unvisited elements of the central vertex; advances firstUnvisitedIndex
+    bool empty()
     {
-        return vertexBegIt + firstUnvisitedIndex >= vertexEndIt;
+        while ( firstUnvisitedIndex < vertexEndIndex && !unvisitedRecs.test( firstUnvisitedIndex ) )
+            ++firstUnvisitedIndex;
+        return firstUnvisitedIndex >= vertexEndIndex;
     }
 
     // takes the first unvisited triangle and returns its two other vertices in cyclic order
     // to start a new path there, so the walk can continue with triOrientation = true
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
-        assert( !empty() );
-        const auto first = vertexBegIt + firstUnvisitedIndex++;
-        const auto & vs = faceToVertices[first->f];
-        return getOtherTriVerts( vs, first->v );
+        [[maybe_unused]] const bool noRecs = empty(); // also advances firstUnvisitedIndex
+        assert( !noRecs );
+        unvisitedRecs.reset( firstUnvisitedIndex );
+        const auto & first = vertTris[firstUnvisitedIndex];
+        const auto & vs = faceToVertices[first.f];
+        return getOtherTriVerts( vs, first.v );
     }
 
     // find incident unvisited vertex except for prevVertex and its duplicates
     VertId getNextVertex( VertId center, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
         if ( empty() )
-            return VertId( -1 );
+            return {};
 
         // if v is an original vertex, then return it;
         // if v is a duplicated vertex, then return the id of the original vertex, which was duplicated to make v
@@ -81,20 +90,19 @@ public:
         prevVertex = getOrgVertex( prevVertex );
         assert( prevVertex );
 
-        for ( auto it = vertexBegIt + firstUnvisitedIndex; it < vertexEndIt; ++it )
+        for ( auto i = firstUnvisitedIndex; i < vertexEndIndex; i = unvisitedRecs.find_next( i ) )
         {
             VertId nextVertex;
-            const auto & vs = faceToVertices[it->f];
-            const auto v12 = getOtherTriVerts( vs, it->v );
+            const auto & rec = vertTris[i];
+            const auto & vs = faceToVertices[rec.f];
+            const auto v12 = getOtherTriVerts( vs, rec.v );
             if ( triOrientation && v12.first == center )
                 nextVertex = v12.second;
             else if ( !triOrientation && v12.second == center )
                 nextVertex = v12.first;
             if ( nextVertex && getOrgVertex( nextVertex ) != prevVertex )
             {
-                if ( it != vertexBegIt + firstUnvisitedIndex )
-                    std::iter_swap( it, vertexBegIt + firstUnvisitedIndex );
-                ++firstUnvisitedIndex;
+                unvisitedRecs.reset( i );
                 return nextVertex;
             }
         }
@@ -114,11 +122,13 @@ public:
         [[maybe_unused]] size_t changedTris = 0;
         for ( size_t i = 1; i < path.size(); ++i )
         {
-            for ( auto it = vertexBegIt; it < vertexBegIt + firstUnvisitedIndex; ++it )
+            for ( auto j = vertexBegIndex; j < vertexEndIndex; ++j )
             {
+                if ( unvisitedRecs.test( j ) )
+                    continue; // only visited triangles can be in the path
                 VertId v1, v2;
                 bool alreadyDuplicated = true;
-                for ( VertId vi : faceToVertices[it->f] )
+                for ( VertId vi : faceToVertices[vertTris[j].f] )
                 {
                     if ( vi == vertDup.srcVert )
                     {
@@ -140,7 +150,7 @@ public:
                 if ( ( triOrientation && v1 == path[i - 1] && v2 == path[i] ) ||
                      ( !triOrientation && v2 == path[i - 1] && v1 == path[i] ) )
                 {
-                    for ( VertId & vi : faceToVertices[it->f] )
+                    for ( VertId & vi : faceToVertices[vertTris[j].f] )
                     {
                         if ( vi != vertDup.srcVert )
                             continue;
@@ -148,7 +158,6 @@ public:
                         break;
                     }
                     ++changedTris;
-                    it->v = vertDup.dupVert;
                     break;
                 }
             }
@@ -438,6 +447,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
+    BitSet unvisitedRecs( all.recs.size(), true ); // set bits correspond to not yet visited elements of all.recs
     size_t duplicatedVerticesCnt = 0;
     for ( auto v : vertsToProcess )
     {
@@ -448,7 +458,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         // because formal non-manifoldness of this vertex can be resolved by a neighbour vertex duplication,
         // but we still want to dupliate it to avoid neighbours with equal coordinates
 
-        PathAroundVertex pathMaker( t, all.recs, posBegin, posEnd );
+        PathAroundVertex pathMaker( t, all.recs, unvisitedRecs, posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;

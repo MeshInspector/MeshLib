@@ -28,7 +28,7 @@ static std::pair<VertId, VertId> getOtherTriVerts( const ThreeVertIds & vs, Vert
 class PathAroundVertex
 {
     Triangulation& faceToVertices;
-    const std::vector<VertTri>* vertTris = nullptr;
+    const std::vector<VertTri>& vertTris;
     // all elements in [vertexBegIndex, vertexEndIndex) of *vertTris have the same central vertex
     size_t vertexBegIndex = 0, vertexEndIndex = 0;
     size_t firstUnvisitedIndex = 0; // lazily advanced index of the first element with not yet visited face
@@ -41,17 +41,17 @@ class PathAroundVertex
     HashSet<FaceId> visitedFaces;
 
 public:
-    explicit PathAroundVertex( Triangulation& triangleToVertices ) : faceToVertices( triangleToVertices ) {}
+    PathAroundVertex( Triangulation& triangleToVertices, const std::vector<VertTri>& tris )
+        : faceToVertices( triangleToVertices ), vertTris( tris ) {}
 
     // prepares the search around the central vertex of elements [beg, end), reusing the memory allocated for a previous vertex
-    void init( const std::vector<VertTri>& tris, size_t beg, size_t end )
+    void init( size_t beg, size_t end )
     {
-        vertTris = &tris;
         vertexBegIndex = beg;
         vertexEndIndex = end;
         firstUnvisitedIndex = beg;
         assert( beg < end );
-        center = tris[beg].v;
+        center = vertTris[beg].v;
 
         vnextFaces.clear();
         vprevFaces.clear();
@@ -60,8 +60,8 @@ public:
         vprevFaces.reserve( end - beg );
         for ( auto i = beg; i < end; ++i )
         {
-            assert( tris[i].v == center );
-            const auto f = tris[i].f;
+            assert( vertTris[i].v == center );
+            const auto f = vertTris[i].f;
             const auto [v1, v2] = getOtherTriVerts( faceToVertices[f], center );
             vnextFaces.push_back( { v1, f } );
             vprevFaces.push_back( { v2, f } );
@@ -75,11 +75,11 @@ public:
     // returns a pair of invalid ids if all faces around the central vertex are already visited
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
-        while ( firstUnvisitedIndex < vertexEndIndex && visitedFaces.contains( (*vertTris)[firstUnvisitedIndex].f ) )
+        while ( firstUnvisitedIndex < vertexEndIndex && visitedFaces.contains( vertTris[firstUnvisitedIndex].f ) )
             ++firstUnvisitedIndex;
         if ( firstUnvisitedIndex >= vertexEndIndex )
             return {};
-        const auto f = (*vertTris)[firstUnvisitedIndex].f;
+        const auto f = vertTris[firstUnvisitedIndex].f;
         visitedFaces.insert( f );
         return getOtherTriVerts( faceToVertices[f], center );
     }
@@ -448,7 +448,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     };
     tbb::parallel_sort( vertsToProcess.begin(), vertsToProcess.end(), sortPred );
 
-    PathAroundVertex pathMaker( t );
+    PathAroundVertex pathMaker( t, all.recs );
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation
@@ -462,7 +462,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
         // because formal non-manifoldness of this vertex can be resolved by a neighbour vertex duplication,
         // but we still want to dupliate it to avoid neighbours with equal coordinates
 
-        pathMaker.init( all.recs, posBegin, posEnd );
+        pathMaker.init( posBegin, posEnd );
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;

@@ -35,9 +35,9 @@ class PathAroundVertex
     VertId center; // the central vertex of the current neighborhood
 
     // (vnext, f): there is triangle #f with the vertices (center, vnext, some-third-vert) up to rotation
-    std::vector<std::pair<VertId, FaceId>> vnextFaces;
+    std::vector<VertTri> vnextFaces;
     // (vprev, f): there is triangle #f with the vertices (vprev, center, some-third-vert) up to rotation
-    std::vector<std::pair<VertId, FaceId>> vprevFaces;
+    std::vector<VertTri> vprevFaces;
     HashSet<FaceId> visitedFaces;
 
 public:
@@ -62,8 +62,8 @@ public:
             assert( tris[i].v == center );
             const auto f = tris[i].f;
             const auto [v1, v2] = getOtherTriVerts( triangleToVertices[f], center );
-            vnextFaces.emplace_back( v1, f );
-            vprevFaces.emplace_back( v2, f );
+            vnextFaces.push_back( { v1, f } );
+            vprevFaces.push_back( { v2, f } );
         }
         std::sort( vnextFaces.begin(), vnextFaces.end() );
         std::sort( vprevFaces.begin(), vprevFaces.end() );
@@ -111,10 +111,10 @@ public:
         assert( prevVertex );
 
         const auto & vec = triOrientation ? vnextFaces : vprevFaces;
-        for ( auto it = std::lower_bound( vec.begin(), vec.end(), std::make_pair( v, FaceId{} ) );
-              it != vec.end() && it->first == v; ++it )
+        for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertTri{ v, FaceId{} } );
+              it != vec.end() && it->v == v; ++it )
         {
-            const auto f = it->second;
+            const auto f = it->f;
             if ( visitedFaces.contains( f ) )
                 continue;
             const auto v12 = getOtherTriVerts( (*faceToVertices)[f], center );
@@ -146,10 +146,10 @@ public:
         {
             // the triangle of this path step is (srcVert, path[i-1], path[i]) for triOrientation = true,
             // and (srcVert, path[i], path[i-1]) otherwise, up to rotation
-            for ( auto it = std::lower_bound( vec.begin(), vec.end(), std::make_pair( path[i - 1], FaceId{} ) );
-                  it != vec.end() && it->first == path[i - 1]; ++it )
+            for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertTri{ path[i - 1], FaceId{} } );
+                  it != vec.end() && it->v == path[i - 1]; ++it )
             {
-                const auto f = it->second;
+                const auto f = it->f;
                 if ( !visitedFaces.contains( f ) )
                     continue; // only visited triangles can be in the path
                 auto & tri = (*faceToVertices)[f];

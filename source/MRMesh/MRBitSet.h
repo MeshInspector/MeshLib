@@ -155,8 +155,8 @@ public:
     /// return the smallest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] IndexType find_first() const { return findSetBitAfter_( 0 ); }
 
-    /// return the smallest index i>n such that bit i is set, or npos if *this has no on bits.
-    [[nodiscard]] IndexType find_next( IndexType n ) const { return findSetBitAfter_( n + 1 ); }
+    /// return the smallest index i such that n<i<upTo and bit i is set, or npos if there is no such bit
+    [[nodiscard]] IndexType find_next( IndexType n, IndexType upTo = npos ) const { return findSetBitAfter_( n + 1, upTo ); }
 
     /// return the highest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] MRMESH_API IndexType find_last() const;
@@ -164,8 +164,8 @@ public:
     /// return the smallest index i such that bit i is NOT set, or npos if *this has no off bits.
     [[nodiscard]] IndexType find_first_not_set() const { return findNonSetBitAfter_( 0 ); }
 
-    /// return the smallest index i>n such that bit i is NOT set, or npos if *this has no off bits.
-    [[nodiscard]] IndexType find_next_not_set( IndexType n ) const { return findNonSetBitAfter_( n + 1 ); }
+    /// return the smallest index i such that n<i<upTo and bit i is NOT set, or npos if there is no such bit
+    [[nodiscard]] IndexType find_next_not_set( IndexType n, IndexType upTo = npos ) const { return findNonSetBitAfter_( n + 1, upTo ); }
 
     /// return the highest index i such that bit i is NOT set, or npos if *this has no off bits.
     [[nodiscard]] MRMESH_API IndexType find_last_not_set() const;
@@ -253,11 +253,11 @@ private:
     template<class FullBlock, class PartialBlock>
     BitSet & rangeOp_( IndexType n, size_type len, FullBlock&&, PartialBlock&& );
 
-    /// return the smallest index i>=n such that bit i is set, or npos if *this has no on bits.
-    MRMESH_API IndexType findSetBitAfter_( IndexType n ) const;
+    /// return the smallest index i such that n<=i<upTo and bit i is set, or npos if there is no such bit
+    MRMESH_API IndexType findSetBitAfter_( IndexType n, IndexType upTo = npos ) const;
 
-    /// return the smallest index i>=n such that bit i is not set, or npos if *this has no off bits.
-    MRMESH_API IndexType findNonSetBitAfter_( IndexType n ) const;
+    /// return the smallest index i such that n<=i<upTo and bit i is not set, or npos if there is no such bit
+    MRMESH_API IndexType findNonSetBitAfter_( IndexType n, IndexType upTo = npos ) const;
 
     MRMESH_API friend std::ostream& operator<<( std::ostream& s, const BitSet & bs );
     MRMESH_API friend std::istream& operator>>( std::istream& s, BitSet & bs );
@@ -300,10 +300,10 @@ public:
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return base::test_set( n, val ); }
 
     [[nodiscard]] IndexType find_first() const { return IndexType( base::find_first() ); }
-    [[nodiscard]] IndexType find_next( IndexType pos ) const { return IndexType( base::find_next( pos ) ); }
+    [[nodiscard]] IndexType find_next( IndexType pos, IndexType upTo = IndexType( npos ) ) const { return IndexType( base::find_next( pos, upTo ) ); }
     [[nodiscard]] IndexType find_last() const { return IndexType( base::find_last() ); }
     [[nodiscard]] IndexType find_first_not_set() const { return IndexType( base::find_first_not_set() ); }
-    [[nodiscard]] IndexType find_next_not_set( IndexType pos ) const { return IndexType( base::find_next_not_set( pos ) ); }
+    [[nodiscard]] IndexType find_next_not_set( IndexType pos, IndexType upTo = IndexType( npos ) ) const { return IndexType( base::find_next_not_set( pos, upTo ) ); }
     [[nodiscard]] IndexType find_last_not_set() const { return IndexType( base::find_last_not_set() ); }
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or IndexType(npos) if there are less bit set
     [[nodiscard]] IndexType nthSetBit( size_t n ) const { return IndexType( base::nthSetBit( n ) ); }

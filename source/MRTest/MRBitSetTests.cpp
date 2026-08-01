@@ -57,6 +57,17 @@ TEST(MRMesh, BitSet)
     EXPECT_EQ( bs4.find_next_not_set( 0 ), 1 );
     EXPECT_EQ( bs4.find_last(), 161 );
     EXPECT_EQ( bs4.find_last_not_set(), 269 );
+
+    EXPECT_EQ( bs4.find_next( 42, 160 ), BitSet::npos );
+    EXPECT_EQ( bs4.find_next( 42, 161 ), 160 );
+    EXPECT_EQ( bs4.find_next( 160, 161 ), BitSet::npos );
+    EXPECT_EQ( bs4.find_next( 160, 162 ), 161 );
+    EXPECT_EQ( bs4.find_next( 160, 0 ), BitSet::npos );
+    EXPECT_EQ( bs4.find_next_not_set( 0, 1 ), BitSet::npos );
+    EXPECT_EQ( bs4.find_next_not_set( 0, 2 ), 1 );
+    EXPECT_EQ( bs4.find_next_not_set( 159, 162 ), BitSet::npos );
+    EXPECT_EQ( bs4.find_next_not_set( 159, 163 ), 162 );
+
     bs4.flip();
     EXPECT_EQ( bs4.find_first(), 0 );
     EXPECT_EQ( bs4.find_next( 0 ), 1 );
@@ -79,6 +90,12 @@ TEST(MRMesh, TaggedBitSet)
     EXPECT_EQ( bs1.nthSetBit( 0 ), 1_v );
     EXPECT_EQ( bs1.nthSetBit( 1 ), 2_v );
     EXPECT_EQ( bs1.nthSetBit( 2 ), VertId{} );
+
+    EXPECT_EQ( bs1.find_next( 1_v ), 2_v );
+    EXPECT_EQ( bs1.find_next( 1_v, 2_v ), VertId{} );
+    EXPECT_EQ( bs1.find_next( 1_v, 3_v ), 2_v );
+    EXPECT_EQ( bs1.find_next_not_set( 0_v, 3_v ), VertId{} );
+    EXPECT_EQ( bs1.find_next_not_set( 0_v ), 3_v );
 
     EXPECT_EQ( VertBitSet( bs0 & bs1 ).count(), 1 );
     EXPECT_EQ( VertBitSet( bs0 | bs1 ).count(), 3 );

@@ -31,7 +31,7 @@ class PathAroundVertex
     const std::vector<VertTri>& vertTris;
     // all elements in [vertexBegIndex, vertexEndIndex) of *vertTris have the same central vertex
     size_t vertexBegIndex = 0, vertexEndIndex = 0;
-    size_t firstUnvisitedIndex = 0; // lazily advanced index of the first element with not yet visited face
+    size_t firstUnvisitedIndex = 0; // lazily advanced index of the first not yet visited element of the central vertex
     VertId center; // the central vertex of the current neighborhood
 
     // (vnext, f): there is triangle #f with the vertices (center, vnext, some-third-vert) up to rotation
@@ -70,9 +70,9 @@ public:
         std::sort( vprevFaces.begin(), vprevFaces.end() );
     }
 
-    // takes the first triangle with not yet visited face and returns its two other vertices in cyclic order
+    // takes the first not yet visited triangle and returns its two other vertices in cyclic order
     // to start a new path there, so the walk can continue with triOrientation = true;
-    // returns a pair of invalid ids if all faces around the central vertex are already visited
+    // returns a pair of invalid ids if all triangles around the central vertex are already visited
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
         while ( firstUnvisitedIndex < vertexEndIndex && visitedFaces.contains( vertTris[firstUnvisitedIndex].f ) )
@@ -84,7 +84,7 @@ public:
         return getOtherTriVerts( faceToVertices[f], center );
     }
 
-    // find incident vertex in a not yet visited face except for prevVertex and its duplicates
+    // find incident vertex in a not yet visited triangle except for prevVertex and its duplicates
     VertId getNextVertex( VertId v, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
         // if v is an original vertex, then return it;
@@ -474,7 +474,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
             bool triOrientation = true;
             auto [firstVertex, nextVertex] = pathMaker.getFirstTwoVertices();
             if ( !firstVertex )
-                break; // all faces around the central vertex are already visited
+                break; // all triangles around the central vertex are already visited
             visitedVertices.autoResizeSet( firstVertex );
             visitedVertices.autoResizeSet( nextVertex );
             VertId prevVertex = firstVertex;

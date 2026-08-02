@@ -79,7 +79,7 @@ public:
             ++firstUnvisitedIndex;
         if ( firstUnvisitedIndex >= vertexEndIndex )
             return {};
-        const auto f = vertTris[firstUnvisitedIndex].f;
+        const auto f = vertTris[firstUnvisitedIndex++].f;
         visitedFaces.insert( f );
         return getOtherTriVerts( faceToVertices[f], center );
     }

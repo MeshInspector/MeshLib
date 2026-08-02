@@ -48,7 +48,6 @@ class PathAroundVertex
     // one bit per element in [vertexBegIndex, vertexEndIndex): set means the triangle was visited;
     // a bit marks the element at once for the span cursor and for both sorted vectors above
     BitSet visitedRecs;
-    size_t numVisited = 0;
 
 public:
     PathAroundVertex( Triangulation& triangleToVertices, const std::vector<VertTri>& tris )
@@ -69,7 +68,6 @@ public:
         vprevRecs.reserve( end - beg );
         visitedRecs.clear();
         visitedRecs.resize( end - beg );
-        numVisited = 0;
         for ( auto i = beg; i < end; ++i )
         {
             assert( vertTris[i].v == center );
@@ -84,7 +82,7 @@ public:
     // true if all triangles around the central vertex are already visited
     bool empty() const
     {
-        return numVisited == vertexEndIndex - vertexBegIndex;
+        return visitedRecs.all();
     }
 
     // takes the first not yet visited triangle and returns its two other vertices in cyclic order
@@ -95,7 +93,6 @@ public:
         while ( visitedRecs.test( firstUnvisitedIndex - vertexBegIndex ) )
             ++firstUnvisitedIndex;
         visitedRecs.set( firstUnvisitedIndex - vertexBegIndex );
-        ++numVisited;
         const auto f = vertTris[firstUnvisitedIndex++].f;
         return getOtherTriVerts( faceToVertices[f], center );
     }
@@ -136,12 +133,9 @@ public:
             if ( getOrgVertex( nextVertex ) != prevVertex )
             {
                 visitedRecs.set( it->rec );
-                ++numVisited;
                 return nextVertex;
             }
         }
-        assert( false );
-        return {};
     }
 
     // duplicate the vertex around which the chain was found

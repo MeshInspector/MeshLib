@@ -6,7 +6,7 @@ on:
       # manually defined values
       vcpkg_version:
         description: "vcpkg version"
-        value: "2026.06.24" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+        value: "2026.07.29" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -307,7 +307,7 @@ jobs:
           fi
 
           jq \
-            --arg vcpkg "2026.06.24" \
+            --arg vcpkg "2026.07.29" \
             '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
             "$MATRIX_FILE" > tmp.json
 

@@ -69,8 +69,8 @@
         "default-registry": {
             "kind": "git",
             "repository": "https://github.com/Microsoft/vcpkg",
-            "baseline": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3",
-            "$version-tag": "2026.06.24"
+            "baseline": "9e593bb18ea69cc5095e012465dcd675a822ed0d",
+            "$version-tag": "2026.07.29"
         },
         "overlay-ports": [
             "./ports"

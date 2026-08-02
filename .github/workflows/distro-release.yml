@@ -16,7 +16,7 @@ jobs:
   config:
     runs-on: ubuntu-latest
     env:
-      vcpkg_version: "2026.06.24"
+      vcpkg_version: "2026.07.29"
     outputs:
       app_version: ${{ steps.set.outputs.app_version }}
       release_tag: ${{ steps.set.outputs.release_tag }}

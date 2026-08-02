@@ -34,11 +34,21 @@ class PathAroundVertex
     size_t firstUnvisitedIndex = 0; // lazily advanced index of the first not yet visited element of the central vertex
     VertId center; // the central vertex of the current neighborhood
 
-    // (vnext, f): there is triangle #f with the vertices (center, vnext, some-third-vert) up to rotation
-    std::vector<VertTri> vnextFaces;
-    // (vprev, f): there is triangle #f with the vertices (vprev, center, some-third-vert) up to rotation
-    std::vector<VertTri> vprevFaces;
-    HashSet<FaceId> visitedFaces;
+    struct VertRec
+    {
+        VertId v;    // neighbor vertex
+        int rec = 0; // index of the element in [vertexBegIndex, vertexEndIndex) minus vertexBegIndex
+        auto asPair() const { return std::make_pair( v, rec ); }
+        friend bool operator <( const VertRec& l, const VertRec& r ) { return l.asPair() < r.asPair(); }
+    };
+    // (vnext, rec): there is triangle #vertTris[vertexBegIndex+rec].f with the vertices (center, vnext, some-third-vert) up to rotation
+    std::vector<VertRec> vnextRecs;
+    // (vprev, rec): there is triangle #vertTris[vertexBegIndex+rec].f with the vertices (vprev, center, some-third-vert) up to rotation
+    std::vector<VertRec> vprevRecs;
+    // one bit per element in [vertexBegIndex, vertexEndIndex): set means the triangle was visited;
+    // a bit marks the element at once for the span cursor and for both sorted vectors above
+    BitSet visitedRecs;
+    size_t numVisited = 0;
 
 public:
     PathAroundVertex( Triangulation& triangleToVertices, const std::vector<VertTri>& tris )
@@ -53,27 +63,28 @@ public:
         assert( beg < end );
         center = vertTris[beg].v;
 
-        vnextFaces.clear();
-        vprevFaces.clear();
-        visitedFaces.clear();
-        vnextFaces.reserve( end - beg );
-        vprevFaces.reserve( end - beg );
+        vnextRecs.clear();
+        vprevRecs.clear();
+        vnextRecs.reserve( end - beg );
+        vprevRecs.reserve( end - beg );
+        visitedRecs.clear();
+        visitedRecs.resize( end - beg );
+        numVisited = 0;
         for ( auto i = beg; i < end; ++i )
         {
             assert( vertTris[i].v == center );
-            const auto f = vertTris[i].f;
-            const auto [v1, v2] = getOtherTriVerts( faceToVertices[f], center );
-            vnextFaces.push_back( { v1, f } );
-            vprevFaces.push_back( { v2, f } );
+            const auto [v1, v2] = getOtherTriVerts( faceToVertices[vertTris[i].f], center );
+            vnextRecs.push_back( { v1, int( i - beg ) } );
+            vprevRecs.push_back( { v2, int( i - beg ) } );
         }
-        std::sort( vnextFaces.begin(), vnextFaces.end() );
-        std::sort( vprevFaces.begin(), vprevFaces.end() );
+        std::sort( vnextRecs.begin(), vnextRecs.end() );
+        std::sort( vprevRecs.begin(), vprevRecs.end() );
     }
 
     // true if all triangles around the central vertex are already visited
     bool empty() const
     {
-        return visitedFaces.size() == vertexEndIndex - vertexBegIndex;
+        return numVisited == vertexEndIndex - vertexBegIndex;
     }
 
     // takes the first not yet visited triangle and returns its two other vertices in cyclic order
@@ -81,10 +92,11 @@ public:
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
         assert( !empty() );
-        while ( visitedFaces.contains( vertTris[firstUnvisitedIndex].f ) )
+        while ( visitedRecs.test( firstUnvisitedIndex - vertexBegIndex ) )
             ++firstUnvisitedIndex;
+        visitedRecs.set( firstUnvisitedIndex - vertexBegIndex );
+        ++numVisited;
         const auto f = vertTris[firstUnvisitedIndex++].f;
-        visitedFaces.insert( f );
         return getOtherTriVerts( faceToVertices[f], center );
     }
 
@@ -110,20 +122,21 @@ public:
         prevVertex = getOrgVertex( prevVertex );
         assert( prevVertex );
 
-        const auto & vec = triOrientation ? vnextFaces : vprevFaces;
-        for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertTri{ v, FaceId{} } ); ; ++it )
+        const auto & vec = triOrientation ? vnextRecs : vprevRecs;
+        for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertRec{ v, 0 } ); ; ++it )
         {
             if ( it == vec.end() || it->v != v )
                 return {}; // no unvisited continuation from v
-            const auto f = it->f;
-            if ( visitedFaces.contains( f ) )
+            if ( visitedRecs.test( it->rec ) )
                 continue;
+            const auto f = vertTris[vertexBegIndex + it->rec].f;
             const auto v12 = getOtherTriVerts( faceToVertices[f], center );
             assert( ( triOrientation ? v12.first : v12.second ) == v );
             const auto nextVertex = triOrientation ? v12.second : v12.first;
             if ( getOrgVertex( nextVertex ) != prevVertex )
             {
-                visitedFaces.insert( f );
+                visitedRecs.set( it->rec );
+                ++numVisited;
                 return nextVertex;
             }
         }
@@ -142,18 +155,17 @@ public:
             dups->push_back( vertDup );
 
         [[maybe_unused]] size_t changedTris = 0;
-        const auto & vec = triOrientation ? vnextFaces : vprevFaces;
+        const auto & vec = triOrientation ? vnextRecs : vprevRecs;
         for ( size_t i = 1; i < path.size(); ++i )
         {
             // the triangle of this path step is (srcVert, path[i-1], path[i]) for triOrientation = true,
             // and (srcVert, path[i], path[i-1]) otherwise, up to rotation
-            for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertTri{ path[i - 1], FaceId{} } );
+            for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertRec{ path[i - 1], 0 } );
                   it != vec.end() && it->v == path[i - 1]; ++it )
             {
-                const auto f = it->f;
-                if ( !visitedFaces.contains( f ) )
+                if ( !visitedRecs.test( it->rec ) )
                     continue; // only visited triangles can be in the path
-                auto & tri = faceToVertices[f];
+                auto & tri = faceToVertices[vertTris[vertexBegIndex + it->rec].f];
                 if ( tri[0] != vertDup.srcVert && tri[1] != vertDup.srcVert && tri[2] != vertDup.srcVert )
                     continue; // this triangle has already been re-pointed to the duplicate
                 const auto v12 = getOtherTriVerts( tri, vertDup.srcVert );

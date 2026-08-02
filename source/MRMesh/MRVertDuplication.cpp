@@ -70,15 +70,19 @@ public:
         std::sort( vprevFaces.begin(), vprevFaces.end() );
     }
 
+    // true if all triangles around the central vertex are already visited
+    bool empty() const
+    {
+        return visitedFaces.size() == vertexEndIndex - vertexBegIndex;
+    }
+
     // takes the first not yet visited triangle and returns its two other vertices in cyclic order
-    // to start a new path there, so the walk can continue with triOrientation = true;
-    // returns a pair of invalid ids if all triangles around the central vertex are already visited
+    // to start a new path there, so the walk can continue with triOrientation = true
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
-        while ( firstUnvisitedIndex < vertexEndIndex && visitedFaces.contains( vertTris[firstUnvisitedIndex].f ) )
+        assert( !empty() );
+        while ( visitedFaces.contains( vertTris[firstUnvisitedIndex].f ) )
             ++firstUnvisitedIndex;
-        if ( firstUnvisitedIndex >= vertexEndIndex )
-            return {};
         const auto f = vertTris[firstUnvisitedIndex++].f;
         visitedFaces.insert( f );
         return getOtherTriVerts( faceToVertices[f], center );
@@ -466,15 +470,13 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
         // first chain of vertices around the center does not require duplication
         int foundChains = 0;
-        for ( ;; )
+        while ( !pathMaker.empty() )
         {
             for(const auto& vi : path)
                 visitedVertices.reset(vi);
 
             bool triOrientation = true;
             auto [firstVertex, nextVertex] = pathMaker.getFirstTwoVertices();
-            if ( !firstVertex )
-                break; // all triangles around the central vertex are already visited
             visitedVertices.autoResizeSet( firstVertex );
             visitedVertices.autoResizeSet( nextVertex );
             VertId prevVertex = firstVertex;

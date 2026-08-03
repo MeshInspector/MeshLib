@@ -44,66 +44,66 @@ static VertId getOrgVertex( VertId v, const std::vector<VertDuplication>& dups )
 // to find connected sequences around central vertex, where a sequence does not repeat any neighbor vertex twice.
 class PathAroundVertex
 {
-    Triangulation& faceToVertices;
-    const std::vector<VertTri>& vertTris;
-    const VertCoords* points = nullptr; // optional vertex coordinates for smooth path continuation selection
-    // all elements in [vertexBegIndex, vertexEndIndex) of *vertTris have the same central vertex
-    size_t vertexBegIndex = 0, vertexEndIndex = 0;
-    size_t firstUnvisitedIndex = 0; // lazily advanced index of the first not yet visited element of the central vertex
-    VertId center; // the central vertex of the current neighborhood
+    Triangulation& faceToVertices_;
+    const std::vector<VertTri>& vertTris_;
+    const VertCoords* points_ = nullptr; // optional vertex coordinates for smooth path continuation selection
+    // all elements in [vertexBegIndex_, vertexEndIndex_) of *vertTris_ have the same central vertex
+    size_t vertexBegIndex_ = 0, vertexEndIndex_ = 0;
+    size_t firstUnvisitedIndex_ = 0; // lazily advanced index of the first not yet visited element of the central vertex
+    VertId center_; // the central vertex of the current neighborhood
 
     struct VertRec
     {
         VertId v;    // neighbor vertex
-        int rec = 0; // index of the element in [vertexBegIndex, vertexEndIndex) minus vertexBegIndex
+        int rec = 0; // index of the element in [vertexBegIndex_, vertexEndIndex_) minus vertexBegIndex_
         auto asPair() const { return std::make_pair( v, rec ); }
         friend bool operator <( const VertRec& l, const VertRec& r ) { return l.asPair() < r.asPair(); }
     };
-    // (vnext, rec): there is triangle #vertTris[vertexBegIndex+rec].f with the vertices (center, vnext, some-third-vert) up to rotation
-    std::vector<VertRec> vnextRecs;
-    // (vprev, rec): there is triangle #vertTris[vertexBegIndex+rec].f with the vertices (vprev, center, some-third-vert) up to rotation
-    std::vector<VertRec> vprevRecs;
-    // one bit per element in [vertexBegIndex, vertexEndIndex): set means the triangle was visited;
+    // (vnext, rec): there is triangle #vertTris_[vertexBegIndex_+rec].f with the vertices (center_, vnext, some-third-vert) up to rotation
+    std::vector<VertRec> vnextRecs_;
+    // (vprev, rec): there is triangle #vertTris_[vertexBegIndex_+rec].f with the vertices (vprev, center_, some-third-vert) up to rotation
+    std::vector<VertRec> vprevRecs_;
+    // one bit per element in [vertexBegIndex_, vertexEndIndex_): set means the triangle was visited;
     // a bit marks the element at once for the span cursor and for both sorted vectors above
-    BitSet visitedRecs;
-    FaceId firstTri; // the triangle visited first in the current path
-    FaceId refTri;   // the last visited triangle, its normal is the reference for smooth path continuation
-    std::optional<Vector3f> refNormal; // cached normal of refTri to avoid recomputing it for the same triangle
+    BitSet visitedRecs_;
+    FaceId firstTri_; // the triangle visited first in the current path
+    FaceId refTri_;   // the last visited triangle, its normal is the reference for smooth path continuation
+    std::optional<Vector3f> refNormal_; // cached normal of refTri_ to avoid recomputing it for the same triangle
 
 public:
     PathAroundVertex( Triangulation& triangleToVertices, const std::vector<VertTri>& tris, const VertCoords* pts )
-        : faceToVertices( triangleToVertices ), vertTris( tris ), points( pts ) {}
+        : faceToVertices_( triangleToVertices ), vertTris_( tris ), points_( pts ) {}
 
     // prepares the search around the central vertex of elements [beg, end), reusing the memory allocated for a previous vertex
     void init( size_t beg, size_t end )
     {
-        vertexBegIndex = beg;
-        vertexEndIndex = end;
-        firstUnvisitedIndex = beg;
+        vertexBegIndex_ = beg;
+        vertexEndIndex_ = end;
+        firstUnvisitedIndex_ = beg;
         assert( beg < end );
-        center = vertTris[beg].v;
+        center_ = vertTris_[beg].v;
 
-        vnextRecs.clear();
-        vprevRecs.clear();
-        vnextRecs.reserve( end - beg );
-        vprevRecs.reserve( end - beg );
-        visitedRecs.clear();
-        visitedRecs.resize( end - beg );
+        vnextRecs_.clear();
+        vprevRecs_.clear();
+        vnextRecs_.reserve( end - beg );
+        vprevRecs_.reserve( end - beg );
+        visitedRecs_.clear();
+        visitedRecs_.resize( end - beg );
         for ( auto i = beg; i < end; ++i )
         {
-            assert( vertTris[i].v == center );
-            const auto [v1, v2] = getOtherTriVerts( faceToVertices[vertTris[i].f], center );
-            vnextRecs.push_back( { v1, int( i - beg ) } );
-            vprevRecs.push_back( { v2, int( i - beg ) } );
+            assert( vertTris_[i].v == center_ );
+            const auto [v1, v2] = getOtherTriVerts( faceToVertices_[vertTris_[i].f], center_ );
+            vnextRecs_.push_back( { v1, int( i - beg ) } );
+            vprevRecs_.push_back( { v2, int( i - beg ) } );
         }
-        std::sort( vnextRecs.begin(), vnextRecs.end() );
-        std::sort( vprevRecs.begin(), vprevRecs.end() );
+        std::sort( vnextRecs_.begin(), vnextRecs_.end() );
+        std::sort( vprevRecs_.begin(), vprevRecs_.end() );
     }
 
     // true if all triangles around the central vertex are already visited
     bool empty() const
     {
-        return visitedRecs.all();
+        return visitedRecs_.all();
     }
 
     // takes the first not yet visited triangle and returns its two other vertices in cyclic order
@@ -111,22 +111,22 @@ public:
     std::pair<VertId, VertId> getFirstTwoVertices()
     {
         assert( !empty() );
-        while ( visitedRecs.test( firstUnvisitedIndex - vertexBegIndex ) )
-            ++firstUnvisitedIndex;
-        visitedRecs.set( firstUnvisitedIndex - vertexBegIndex );
-        const auto f = vertTris[firstUnvisitedIndex++].f;
-        firstTri = refTri = f;
-        refNormal.reset();
-        return getOtherTriVerts( faceToVertices[f], center );
+        while ( visitedRecs_.test( firstUnvisitedIndex_ - vertexBegIndex_ ) )
+            ++firstUnvisitedIndex_;
+        visitedRecs_.set( firstUnvisitedIndex_ - vertexBegIndex_ );
+        const auto f = vertTris_[firstUnvisitedIndex_++].f;
+        firstTri_ = refTri_ = f;
+        refNormal_.reset();
+        return getOtherTriVerts( faceToVertices_[f], center_ );
     }
 
     // the search from firstVertex continues over the edge of the first visited triangle, so its normal becomes the reference
     void restartFromFirstTriangle()
     {
-        if ( refTri != firstTri )
+        if ( refTri_ != firstTri_ )
         {
-            refTri = firstTri;
-            refNormal.reset();
+            refTri_ = firstTri_;
+            refNormal_.reset();
         }
     }
 
@@ -135,7 +135,7 @@ public:
     {
         Vector3f p[3];
         for ( int i = 0; i < 3; ++i )
-            p[i] = (*points)[ getOrgVertex( faceToVertices[f][i], dups ) ];
+            p[i] = (*points_)[ getOrgVertex( faceToVertices_[f][i], dups ) ];
         return cross( p[1] - p[0], p[2] - p[0] ).normalized();
     }
 
@@ -148,7 +148,7 @@ public:
         prevVertex = getOrgVertex( prevVertex, dups );
         assert( prevVertex );
 
-        const auto & vec = triOrientation ? vnextRecs : vprevRecs;
+        const auto & vec = triOrientation ? vnextRecs_ : vprevRecs_;
         const VertRec * best = nullptr;
         VertId bestNext;
         std::optional<Vector3f> bestNormal; // engaged only when several continuation options were compared
@@ -157,18 +157,18 @@ public:
         {
             if ( it == vec.end() || it->v != v )
                 break; // no more continuation options from v
-            if ( visitedRecs.test( it->rec ) )
+            if ( visitedRecs_.test( it->rec ) )
                 continue;
-            const auto f = vertTris[vertexBegIndex + it->rec].f;
-            const auto v12 = getOtherTriVerts( faceToVertices[f], center );
+            const auto f = vertTris_[vertexBegIndex_ + it->rec].f;
+            const auto v12 = getOtherTriVerts( faceToVertices_[f], center_ );
             assert( ( triOrientation ? v12.first : v12.second ) == v );
             const auto nextVertex = triOrientation ? v12.second : v12.first;
             if ( getOrgVertex( nextVertex, dups ) == prevVertex )
                 continue;
-            if ( !points )
+            if ( !points_ )
             {
                 // without coordinates, the first found continuation is taken
-                visitedRecs.set( it->rec );
+                visitedRecs_.set( it->rec );
                 return nextVertex;
             }
             if ( !best )
@@ -180,13 +180,13 @@ public:
             if ( !bestNormal )
             {
                 // the second continuation option is found, time to compute the normals
-                if ( !refNormal )
-                    refNormal = triNormal( refTri, dups );
-                bestNormal = triNormal( vertTris[vertexBegIndex + best->rec].f, dups );
-                bestDot = dot( *refNormal, *bestNormal );
+                if ( !refNormal_ )
+                    refNormal_ = triNormal( refTri_, dups );
+                bestNormal = triNormal( vertTris_[vertexBegIndex_ + best->rec].f, dups );
+                bestDot = dot( *refNormal_, *bestNormal );
             }
             const auto n = triNormal( f, dups );
-            if ( const auto d = dot( *refNormal, n ); d > bestDot )
+            if ( const auto d = dot( *refNormal_, n ); d > bestDot )
             {
                 best = &*it;
                 bestNext = nextVertex;
@@ -196,9 +196,9 @@ public:
         }
         if ( !best )
             return {};
-        visitedRecs.set( best->rec );
-        refTri = vertTris[vertexBegIndex + best->rec].f;
-        refNormal = bestNormal; // the normal of the winner (if it was computed) becomes the reference
+        visitedRecs_.set( best->rec );
+        refTri_ = vertTris_[vertexBegIndex_ + best->rec].f;
+        refNormal_ = bestNormal; // the normal of the winner (if it was computed) becomes the reference
         return bestNext;
     }
 
@@ -208,12 +208,12 @@ public:
     {
         VertDuplication vertDup;
         vertDup.dupVert = ++lastUsedVertId;
-        vertDup.srcVert = center;
+        vertDup.srcVert = center_;
         if ( dups )
             dups->push_back( vertDup );
 
         [[maybe_unused]] size_t changedTris = 0;
-        const auto & vec = triOrientation ? vnextRecs : vprevRecs;
+        const auto & vec = triOrientation ? vnextRecs_ : vprevRecs_;
         for ( size_t i = 1; i < path.size(); ++i )
         {
             // the triangle of this path step is (srcVert, path[i-1], path[i]) for triOrientation = true,
@@ -221,9 +221,9 @@ public:
             for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertRec{ path[i - 1], 0 } );
                   it != vec.end() && it->v == path[i - 1]; ++it )
             {
-                if ( !visitedRecs.test( it->rec ) )
+                if ( !visitedRecs_.test( it->rec ) )
                     continue; // only visited triangles can be in the path
-                auto & tri = faceToVertices[vertTris[vertexBegIndex + it->rec].f];
+                auto & tri = faceToVertices_[vertTris_[vertexBegIndex_ + it->rec].f];
                 if ( tri[0] != vertDup.srcVert && tri[1] != vertDup.srcVert && tri[2] != vertDup.srcVert )
                     continue; // this triangle has already been re-pointed to the duplicate
                 const auto v12 = getOtherTriVerts( tri, vertDup.srcVert );

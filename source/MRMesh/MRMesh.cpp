@@ -81,7 +81,7 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     Mesh res;
     res.points = std::move( vertexCoordinates );
     std::vector<MeshBuilder::VertDuplication> localDups;
-    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings );
+    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings, &res.points );
     if ( res.points.size() < res.topology.vertSize() ) // never shrink
         res.points.resize( res.topology.vertSize() );
     for ( const auto & d : localDups )

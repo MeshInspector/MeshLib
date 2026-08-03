@@ -283,7 +283,9 @@ jobs:
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
 
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
-            export PKG_CONFIG_PATH=$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
+            # Keep the assignment separate from `export`: the latter would mask a `uv` failure from `sh -e`.
+            PKG_CONFIG_PATH=$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
+            export PKG_CONFIG_PATH
 
             make shims -f scripts/mrbind/generate.mk -B --trace \
               FOR_WHEEL=1 \

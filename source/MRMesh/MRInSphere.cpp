@@ -147,7 +147,7 @@ bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCo
 
 InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) const
 {
-    const auto res = ( *this )( d.pt );
+    const auto res = InSphereTester<int>::operator()( d.pt );
     if ( res != InSphereResult::OnSphere )
         return res;
     if ( E == 0 )

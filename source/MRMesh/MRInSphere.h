@@ -188,9 +188,6 @@ public:
     /// this hides the id-less reset of the base class, which would leave stale ids
     MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
 
-    /// the plain query by coordinates only from the base class (may return OnSphere)
-    using InSphereTester<int>::operator();
-
     /// returns the position of the point d.pt relative to the sphere, resolving "exactly on the
     /// sphere" ties into Inside or Outside by simulation-of-simplicity as described at the inSphere
     /// overload above, using the ids of d and of the points given in reset()

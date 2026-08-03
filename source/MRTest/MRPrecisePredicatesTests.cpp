@@ -475,7 +475,6 @@ TEST( MRMesh, sosInSphere )
     InSphereTesterSoS tester;
     ASSERT_TRUE( tester.reset( vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), 25 ) );
     EXPECT_EQ( tester( vc( 3_v, 0,0,5 ) ), Out );
-    EXPECT_EQ( tester( Vector3i{ 0, 0, 5 } ), InSphereResult::OnSphere ); // the base plain query is also available
     ASSERT_TRUE( tester.reset( vc( 2_v, 3,4,0 ), vc( 0_v, 4,0,3 ), vc( 3_v, 0,3,4 ), 25 ) );
     EXPECT_EQ( tester( vc( 1_v, 0,0,5 ) ), In );
 }

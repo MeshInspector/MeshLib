@@ -7,6 +7,7 @@
 #include "MRphmap.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
+#include <optional>
 
 namespace MR
 {
@@ -67,6 +68,7 @@ class PathAroundVertex
     BitSet visitedRecs;
     FaceId firstTri; // the triangle visited first in the current path
     FaceId refTri;   // the last visited triangle, its normal is the reference for smooth path continuation
+    std::optional<Vector3f> refNormal; // cached normal of refTri to avoid recomputing it for the same triangle
 
 public:
     PathAroundVertex( Triangulation& triangleToVertices, const std::vector<VertTri>& tris, const VertCoords* pts )
@@ -114,13 +116,18 @@ public:
         visitedRecs.set( firstUnvisitedIndex - vertexBegIndex );
         const auto f = vertTris[firstUnvisitedIndex++].f;
         firstTri = refTri = f;
+        refNormal.reset();
         return getOtherTriVerts( faceToVertices[f], center );
     }
 
     // the search from firstVertex continues over the edge of the first visited triangle, so its normal becomes the reference
     void restartFromFirstTriangle()
     {
-        refTri = firstTri;
+        if ( refTri != firstTri )
+        {
+            refTri = firstTri;
+            refNormal.reset();
+        }
     }
 
     // computes unit normal of the triangle #f using provided coordinates, mapping duplicated vertices on their originals
@@ -144,9 +151,8 @@ public:
         const auto & vec = triOrientation ? vnextRecs : vprevRecs;
         const VertRec * best = nullptr;
         VertId bestNext;
+        std::optional<Vector3f> bestNormal; // engaged only when several continuation options were compared
         float bestDot = 0;
-        Vector3f refNormal;
-        bool refNormalReady = false;
         for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertRec{ v, 0 } ); ; ++it )
         {
             if ( it == vec.end() || it->v != v )
@@ -171,17 +177,20 @@ public:
                 bestNext = nextVertex;
                 continue;
             }
-            if ( !refNormalReady )
+            if ( !bestNormal )
             {
                 // the second continuation option is found, time to compute the normals
-                refNormal = triNormal( refTri, dups );
-                bestDot = dot( refNormal, triNormal( vertTris[vertexBegIndex + best->rec].f, dups ) );
-                refNormalReady = true;
+                if ( !refNormal )
+                    refNormal = triNormal( refTri, dups );
+                bestNormal = triNormal( vertTris[vertexBegIndex + best->rec].f, dups );
+                bestDot = dot( *refNormal, *bestNormal );
             }
-            if ( const auto d = dot( refNormal, triNormal( f, dups ) ); d > bestDot )
+            const auto n = triNormal( f, dups );
+            if ( const auto d = dot( *refNormal, n ); d > bestDot )
             {
                 best = &*it;
                 bestNext = nextVertex;
+                bestNormal = n;
                 bestDot = d;
             }
         }
@@ -189,6 +198,7 @@ public:
             return {};
         visitedRecs.set( best->rec );
         refTri = vertTris[vertexBegIndex + best->rec].f;
+        refNormal = bestNormal; // the normal of the winner (if it was computed) becomes the reference
         return bestNext;
     }
 

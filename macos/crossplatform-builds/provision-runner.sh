@@ -14,7 +14,7 @@
 #                                                       binaries and CMake configure-time
 #                                                       probes; compilation itself is native.
 #
-# The runner must also carry the labels  [self-hosted, macos, arm64, build].
+# The runner must also carry the labels  [self-hosted, macos, arm64, crossplatform-build].
 set -euo pipefail
 
 PREWARM=0
@@ -46,10 +46,14 @@ echo "==> 2/3  Rosetta 2 (to run x86_64 output + configure probes)"
 if /usr/bin/pgrep -q oahd; then
   echo "    already installed"
 else
-  softwareupdate --install-rosetta --agree-to-license
+  # Needs root; run under sudo so `set -e` doesn't abort on a Rosetta-less host.
+  sudo softwareupdate --install-rosetta --agree-to-license
 fi
 
 echo "==> 3/3  x86_64 Homebrew at /usr/local (source of x86_64 bottles)"
+# `arch -x86_64` below is only needed to BOOTSTRAP Intel brew; once installed,
+# /usr/local brew operates on its Intel prefix regardless of the invoking arch,
+# so CI's native `exec /usr/local/bin/brew` (the cross-build shim) is equivalent.
 if [[ -x /usr/local/bin/brew ]]; then
   echo "    already present ($(arch -x86_64 /usr/local/bin/brew --version | head -1))"
 else

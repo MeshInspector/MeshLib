@@ -62,17 +62,15 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 
 } // anonymous namespace
 
-bool InSphereTester<int>::reset( const PreciseVertCoords & va, const PreciseVertCoords & vb, const PreciseVertCoords & vc, std::int64_t sqRadius )
+bool InSphereTester<int>::reset( const Vector3i & va, const Vector3i & vb, const Vector3i & vc, std::int64_t sqRadius )
 {
     // no overflow anywhere below given that any difference of two points is within +-0.99*2^31
     // (as getToIntConverter guarantees) and rSq fits in int64
-    pa = va;
-    pb = vb;
-    pc = vc;
+    a = va;
     rSq = sqRadius;
     E = -1;
-    u = Vector3i64{ vb.pt - va.pt };
-    v = Vector3i64{ vc.pt - va.pt };
+    u = Vector3i64{ vb - va };
+    v = Vector3i64{ vc - va };
 
     // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
     // strictly greater: a side exactly equal to the diameter can lie on the sphere
@@ -106,7 +104,7 @@ bool InSphereTester<int>::reset( const PreciseVertCoords & va, const PreciseVert
 InSphereResult InSphereTester<int>::operator()( const Vector3i & d ) const
 {
     assert( E >= 0 ); // the last reset() must have returned true
-    const Vector3i64 q{ d - pa.pt };
+    const Vector3i64 q{ d - a };
 
     // d farther than the diameter from a point on the sphere is strictly outside
     const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
@@ -134,12 +132,20 @@ InSphereResult InSphereTester<int>::operator()( const Vector3i & d ) const
 InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
 {
     InSphereTesteri tester;
-    if ( !tester.reset( { {}, a }, { {}, b }, { {}, c }, rSq ) ) // the ids are unused without simulation-of-simplicity
+    if ( !tester.reset( a, b, c, rSq ) )
         return InSphereResult::NoSphere;
     return tester( d );
 }
 
-InSphereResult InSphereTester<int>::operator()( const PreciseVertCoords & d ) const
+bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCoords & vb, const PreciseVertCoords & vc, std::int64_t sqRadius )
+{
+    va_ = va.id;
+    vb_ = vb.id;
+    vc_ = vc.id;
+    return InSphereTester<int>::reset( va.pt, vb.pt, vc.pt, sqRadius );
+}
+
+InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) const
 {
     const auto res = ( *this )( d.pt );
     if ( res != InSphereResult::OnSphere )
@@ -147,7 +153,8 @@ InSphereResult InSphereTester<int>::operator()( const PreciseVertCoords & d ) co
     if ( E == 0 )
         return InSphereResult::Outside; // a perturbation of the triangle breaks the sphere's existence here
 
-    const PreciseVertCoords vs[4] = { pa, pb, pc, d };
+    // the sphere points with their ids; b and c are reconstructed exactly from the stored differences
+    const PreciseVertCoords vs[4] = { { va_, a }, { vb_, a + Vector3i( u ) }, { vc_, a + Vector3i( v ) }, d };
 #ifndef NDEBUG
     for ( int i = 0; i < 3; ++i )
         for ( int j = i + 1; j < 4; ++j )
@@ -162,7 +169,7 @@ InSphereResult InSphereTester<int>::operator()( const PreciseVertCoords & d ) co
     const BigInt ew = BigInt{ E } * bigW; // sqr( S ); the signs below are computed in Z[S]
 
     // ch[k] = 2 W^2 * ( vs[k].pt - sphereCenter ) = 2 W^2 ( vs[k].pt - vs[0].pt ) - W M - S w
-    const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ d.pt - pa.pt } };
+    const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ d.pt - a } };
     std::array<SqrtVec, 4> ch;
     for ( int k = 0; k < 4; ++k )
         for ( int i = 0; i < 3; ++i )
@@ -211,7 +218,7 @@ InSphereResult InSphereTester<int>::operator()( const PreciseVertCoords & d ) co
 
 InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
 {
-    InSphereTesteri tester;
+    InSphereTesterSoS tester;
     if ( !tester.reset( vs[0], vs[1], vs[2], rSq ) )
         return InSphereResult::NoSphere;
     return tester( vs[3] );

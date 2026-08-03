@@ -405,7 +405,7 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
-      VCPKG-VERSION: '2026.06.24'
+      VCPKG-VERSION: '2026.07.29'
       CUDA-VERSION: '12.0.1'
       CUDA-MAJOR: '12'
       CUDA-MINOR: '0'

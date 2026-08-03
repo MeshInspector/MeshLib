@@ -1,5 +1,6 @@
 # Overlay until upstream re-registers the hash: GitHub regenerated the v3.0.0 archive
-# (microsoft/vcpkg#53143). Extracted contents are unchanged; only the tarball encoding differs.
+# (microsoft/vcpkg#53143). The only content change is a dropped checked-in binary,
+# tools/windows/premake5.exe, which this port does not install.
 
 # Header-only library
 vcpkg_from_github(

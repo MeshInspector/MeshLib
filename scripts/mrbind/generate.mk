@@ -138,7 +138,7 @@ else
 $(info Failed to parse the Emscripten sysroot out of the following probe, its output follows:)
 $(info $(EMSCRIPTEN_SYSROOT_PROBE))
 # `$(shell)` doesn't capture stderr, so sending stdout there too puts the whole output in our log, newlines intact.
-override EMSCRIPTEN_SYSROOT_PROBE_LOG := $(shell $(EMSCRIPTEN_SYSROOT_PROBE) 1>&2)
+$(call ,$(shell $(EMSCRIPTEN_SYSROOT_PROBE) 1>&2))
 $(error Unable to find Emscripten SDK, ensure you have `em++` in the PATH. In powershell run `emsdk/emsdk_env.ps1`; or in bash run `. emsdk/emsdk_env.sh`)
 endif
 endif

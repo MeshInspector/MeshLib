@@ -55,7 +55,7 @@ runs:
           export HOME="${RUNNER_TEMP}"
           git config --global --add safe.directory '*'
         fi
-        bash scripts/retry.sh -- git submodule update --init --checkout --depth 1 test_data
+        bash scripts/retry.sh --timeout 300 -- git submodule update --init --checkout --depth 1 test_data
 
     - name: Python Regression Tests
       if: ${{ runner.os != 'Windows' }}

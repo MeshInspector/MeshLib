@@ -57,13 +57,8 @@ MR_CMAKE_OPTIONS="\
   -D CMAKE_BUILD_TYPE=Release \
 "
 
-# Cross-compilation knobs for building the x86_64 target on an arm64 macOS host
-# with a native toolchain (no Rosetta). No-ops when unset. CMAKE_OSX_ARCHITECTURES
-# pins the output arch; CMAKE_MAKE_PROGRAM forces the native (arm64) ninja (else
-# CMake's find_program picks the x86_64 ninja under /usr/local and the compile runs
-# under Rosetta). x86_64 dependencies are located via the CMAKE_PREFIX_PATH env var,
-# which CMake reads automatically. These options also flow to the sub-builds
-# (clip/fastmcpp) via CMAKE_OPTIONS below.
+# Cross-compilation knobs for building x86_64 on an arm64 macOS host with a native
+# toolchain (no-ops when unset). See macos/crossplatform-builds/README.md.
 if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
 fi

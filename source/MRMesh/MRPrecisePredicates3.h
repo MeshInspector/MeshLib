@@ -49,15 +49,56 @@ struct TriangleSegmentIntersectResult
 /// triangles ta and tb can have at most two shared points, all other points must be unique
 [[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs );
 
-/// float-to-int coordinate converter
-using ConvertToIntVector = std::function<Vector3i( const Vector3f& )>;
-/// int-to-float coordinate converter
-using ConvertToFloatVector = std::function<Vector3f( const Vector3i& )>;
+/// translate then scale float-to-int coordinate converter
+struct ConvertToIntVector
+{
+    Vector3d center;
+    double invRange = 1;
+
+    /// applies scaling only (without translation) with the following rounding to the nearest int
+    [[nodiscard]] int scaleOnly( double v ) const
+    {
+        return (int)std::round( v * invRange );
+    }
+
+    /// double-to-int coordinates converter
+    [[nodiscard]] Vector3i operator()( const Vector3d& p ) const
+    {
+        const auto d = p - center;
+        return { scaleOnly( d.x ), scaleOnly( d.y ), scaleOnly( d.z ) };
+    }
+
+    /// float-to-int coordinates converter
+    [[nodiscard]] Vector3i operator()( const Vector3f& p ) const
+    {
+        return operator()( Vector3d{ p } );
+    }
+};
+
+/// scale then translate int-to-float coordinate converter
+struct ConvertToFloatVector
+{
+    double range = 1;
+    Vector3d center;
+
+    /// int-to-double coordinates converter
+    [[nodiscard]] Vector3d convert( const Vector3i& v ) const
+    {
+        return Vector3d{ v } * range + center;
+    }
+
+    /// int-to-float coordinates converter
+    [[nodiscard]] Vector3f operator()( const Vector3i& v ) const
+    {
+        return Vector3f( convert( v ) );
+    }
+};
+
 /// this struct contains coordinate converters float-int-float
 struct CoordinateConverters
 {
-    ConvertToIntVector toInt{};
-    ConvertToFloatVector toFloat{};
+    ConvertToIntVector toInt;
+    ConvertToFloatVector toFloat;
 };
 
 /// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range)

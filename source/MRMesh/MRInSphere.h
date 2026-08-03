@@ -150,26 +150,28 @@ template <>
 class InSphereTester<int>
 {
 public:
-    /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a, b, c, with the
-    /// center located on the positive side of plane abc (in the half-space pointed at by
-    /// cross( b - a, c - a ) from the plane);
+    /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a.pt, b.pt, c.pt,
+    /// with the center located on the positive side of their plane (in the half-space pointed at by
+    /// cross( b.pt - a.pt, c.pt - a.pt ) from the plane);
     /// returns false if no such sphere exists: the points are collinear or coincident,
-    /// or rSq is less than the squared circumradius of triangle abc
-    MRMESH_API bool reset( const Vector3i & a, const Vector3i & b, const Vector3i & c, std::int64_t rSq );
+    /// or rSq is less than the squared circumradius of the triangle;
+    /// rSq must be given in the same integer grid units as the point coordinates;
+    /// the ids are used only by the simulation-of-simplicity query below
+    MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
 
     /// returns the position of the point d relative to the sphere (never NoSphere);
     /// shall be called only after reset() returned true
     [[nodiscard]] MRMESH_API InSphereResult operator()( const Vector3i & d ) const;
 
-    /// returns the position of the point vs[3] relative to the sphere, resolving "exactly on the
+    /// returns the position of the point d.pt relative to the sphere, resolving "exactly on the
     /// sphere" ties into Inside or Outside by simulation-of-simplicity as described at the inSphere
-    /// overload above (never returns OnSphere or NoSphere);
-    /// shall be called only after reset() returned true, and the points vs[0], vs[1], vs[2] must be
-    /// the same a, b, c as in that reset()
-    [[nodiscard]] MRMESH_API InSphereResult operator()( const std::array<PreciseVertCoords, 4> & vs ) const;
+    /// overload above, using the ids of d and of the points given in reset()
+    /// (never returns OnSphere or NoSphere);
+    /// shall be called only after reset() returned true, and all four ids must be distinct
+    [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
 
 private:
-    Vector3i a;           ///< the first sphere point
+    PreciseVertCoords pa, pb, pc; ///< the sphere points with their ids
     Vector3i64 u, v;      ///< b - a, c - a
     Vector3i64 w;         ///< doubled normal of triangle abc
     Int256 W;             ///< |w|^2

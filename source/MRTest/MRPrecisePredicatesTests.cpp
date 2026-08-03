@@ -321,11 +321,11 @@ TEST( MRMesh, inSphereTester )
     const Vector3i c{ 0, 2, 0 };
 
     InSphereTesteri tester;
-    EXPECT_FALSE( tester.reset( a, b, c, 1 ) ); // rSq below the squared circumradius
-    EXPECT_FALSE( tester.reset( a, Vector3i{ 1, 1, 1 }, Vector3i{ 2, 2, 2 }, 9 ) ); // collinear
-    EXPECT_FALSE( tester.reset( a, Vector3i{ 10, 0, 0 }, c, 4 ) ); // a side beyond the diameter
+    EXPECT_FALSE( tester.reset( { 0_v, a }, { 1_v, b }, { 2_v, c }, 1 ) ); // rSq below the squared circumradius
+    EXPECT_FALSE( tester.reset( { 0_v, a }, { 1_v, Vector3i{ 1, 1, 1 } }, { 2_v, Vector3i{ 2, 2, 2 } }, 9 ) ); // collinear
+    EXPECT_FALSE( tester.reset( { 0_v, a }, { 1_v, Vector3i{ 10, 0, 0 } }, { 2_v, c }, 4 ) ); // a side beyond the diameter
 
-    ASSERT_TRUE( tester.reset( a, b, c, 4 ) ); // sphere center at ( 1, 1, sqrt(2) )
+    ASSERT_TRUE( tester.reset( { 0_v, a }, { 1_v, b }, { 2_v, c }, 4 ) ); // sphere center at ( 1, 1, sqrt(2) )
     EXPECT_EQ( tester( Vector3i{ 1, 1, 2 } ), In );
     EXPECT_EQ( tester( Vector3i{ 1, 1, -1 } ), Out );
     EXPECT_EQ( tester( Vector3i{ 30, 0, 0 } ), Out ); // farther than the diameter from A
@@ -340,7 +340,7 @@ TEST( MRMesh, inSphereTester )
             }
 
     // reuse of the same tester for another sphere
-    ASSERT_TRUE( tester.reset( a, b, c, 2 ) ); // the unique sphere centered at (1,1,0)
+    ASSERT_TRUE( tester.reset( { 0_v, a }, { 1_v, b }, { 2_v, c }, 2 ) ); // the unique sphere centered at (1,1,0)
     EXPECT_EQ( tester( Vector3i{ 1, 1, 1 } ), In );
     EXPECT_EQ( tester( b ), On );
 }
@@ -471,11 +471,12 @@ TEST( MRMesh, sosInSphere )
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ), In );
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ), Out );
 
-    // the same tie resolution via the tester method with one reset
+    // the same tie resolution via the tester: the triangle ids are given once in reset
     InSphereTesteri tester;
-    ASSERT_TRUE( tester.reset( Vector3i{ 3, 4, 0 }, Vector3i{ 4, 0, 3 }, Vector3i{ 0, 3, 4 }, 25 ) );
-    EXPECT_EQ( tester( { vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), vc( 3_v, 0,0,5 ) } ), Out );
-    EXPECT_EQ( tester( { vc( 2_v, 3,4,0 ), vc( 0_v, 4,0,3 ), vc( 3_v, 0,3,4 ), vc( 1_v, 0,0,5 ) } ), In );
+    ASSERT_TRUE( tester.reset( vc( 0_v, 3,4,0 ), vc( 1_v, 4,0,3 ), vc( 2_v, 0,3,4 ), 25 ) );
+    EXPECT_EQ( tester( vc( 3_v, 0,0,5 ) ), Out );
+    ASSERT_TRUE( tester.reset( vc( 2_v, 3,4,0 ), vc( 0_v, 4,0,3 ), vc( 3_v, 0,3,4 ), 25 ) );
+    EXPECT_EQ( tester( vc( 1_v, 0,0,5 ) ), In );
 }
 
 TEST( MRMesh, sosInSphereConcyclic )

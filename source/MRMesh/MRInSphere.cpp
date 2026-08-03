@@ -62,15 +62,17 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 
 } // anonymous namespace
 
-bool InSphereTester<int>::reset( const Vector3i & va, const Vector3i & vb, const Vector3i & vc, std::int64_t sqRadius )
+bool InSphereTester<int>::reset( const PreciseVertCoords & va, const PreciseVertCoords & vb, const PreciseVertCoords & vc, std::int64_t sqRadius )
 {
     // no overflow anywhere below given that any difference of two points is within +-0.99*2^31
     // (as getToIntConverter guarantees) and rSq fits in int64
-    a = va;
+    pa = va;
+    pb = vb;
+    pc = vc;
     rSq = sqRadius;
     E = -1;
-    u = Vector3i64{ vb - va };
-    v = Vector3i64{ vc - va };
+    u = Vector3i64{ vb.pt - va.pt };
+    v = Vector3i64{ vc.pt - va.pt };
 
     // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
     // strictly greater: a side exactly equal to the diameter can lie on the sphere
@@ -104,7 +106,7 @@ bool InSphereTester<int>::reset( const Vector3i & va, const Vector3i & vb, const
 InSphereResult InSphereTester<int>::operator()( const Vector3i & d ) const
 {
     assert( E >= 0 ); // the last reset() must have returned true
-    const Vector3i64 q{ d - a };
+    const Vector3i64 q{ d - pa.pt };
 
     // d farther than the diameter from a point on the sphere is strictly outside
     const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
@@ -132,25 +134,25 @@ InSphereResult InSphereTester<int>::operator()( const Vector3i & d ) const
 InSphereResult inSphere( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d, std::int64_t rSq )
 {
     InSphereTesteri tester;
-    if ( !tester.reset( a, b, c, rSq ) )
+    if ( !tester.reset( { {}, a }, { {}, b }, { {}, c }, rSq ) ) // the ids are unused without simulation-of-simplicity
         return InSphereResult::NoSphere;
     return tester( d );
 }
 
-InSphereResult InSphereTester<int>::operator()( const std::array<PreciseVertCoords, 4> & vs ) const
+InSphereResult InSphereTester<int>::operator()( const PreciseVertCoords & d ) const
 {
-    assert( E >= 0 ); // the last reset() must have returned true
-    assert( vs[0].pt == a && Vector3i64{ vs[1].pt - vs[0].pt } == u && Vector3i64{ vs[2].pt - vs[0].pt } == v );
+    const auto res = ( *this )( d.pt );
+    if ( res != InSphereResult::OnSphere )
+        return res;
+    if ( E == 0 )
+        return InSphereResult::Outside; // a perturbation of the triangle breaks the sphere's existence here
+
+    const PreciseVertCoords vs[4] = { pa, pb, pc, d };
 #ifndef NDEBUG
     for ( int i = 0; i < 3; ++i )
         for ( int j = i + 1; j < 4; ++j )
             assert( vs[i].id != vs[j].id );
 #endif
-    const auto res = ( *this )( vs[3].pt );
-    if ( res != InSphereResult::OnSphere )
-        return res;
-    if ( E == 0 )
-        return InSphereResult::Outside; // a perturbation of the triangle breaks the sphere's existence here
 
     // vs[3] is exactly on the sphere: perturb the points in the order of ascending ids, the first point
     // whose perturbation moves vs[3] off the sphere decides; when a triangle point is perturbed, the
@@ -160,7 +162,7 @@ InSphereResult InSphereTester<int>::operator()( const std::array<PreciseVertCoor
     const BigInt ew = BigInt{ E } * bigW; // sqr( S ); the signs below are computed in Z[S]
 
     // ch[k] = 2 W^2 * ( vs[k].pt - sphereCenter ) = 2 W^2 ( vs[k].pt - vs[0].pt ) - W M - S w
-    const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ vs[3].pt - vs[0].pt } };
+    const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ d.pt - pa.pt } };
     std::array<SqrtVec, 4> ch;
     for ( int k = 0; k < 4; ++k )
         for ( int i = 0; i < 3; ++i )
@@ -210,9 +212,9 @@ InSphereResult InSphereTester<int>::operator()( const std::array<PreciseVertCoor
 InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
 {
     InSphereTesteri tester;
-    if ( !tester.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) )
+    if ( !tester.reset( vs[0], vs[1], vs[2], rSq ) )
         return InSphereResult::NoSphere;
-    return tester( vs );
+    return tester( vs[3] );
 }
 
 #if __GNUC__ >= 12

@@ -75,6 +75,9 @@ on:
       build_enable_macos:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' ) }}
+      build_enable_macos_crossplatform:
+        description: "macOS native x86_64 cross job; also off whenever macOS is disabled"
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' || jobs.prepare-config.outputs.tag-disable-macos-crossplatform == 'true' ) }}
       build_enable_emscripten:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-emscripten == 'true' ) }}
@@ -109,6 +112,7 @@ jobs:
       tag-disable-ubuntu-arm64:   ${{ steps.live-labels.outputs.tag-disable-ubuntu-arm64 }}
       tag-disable-linux-vcpkg:    ${{ steps.live-labels.outputs.tag-disable-linux-vcpkg }}
       tag-disable-macos:          ${{ steps.live-labels.outputs.tag-disable-macos }}
+      tag-disable-macos-crossplatform: ${{ steps.live-labels.outputs.tag-disable-macos-crossplatform }}
       tag-disable-emscripten:     ${{ steps.live-labels.outputs.tag-disable-emscripten }}
 
     runs-on: ubuntu-latest

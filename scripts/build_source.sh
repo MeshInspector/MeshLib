@@ -39,6 +39,18 @@ MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
 # Extra flags for `cmake --build`.
 MR_CMAKE_BUILD_OPTIONS="${MR_CMAKE_BUILD_OPTIONS:-}"
 
+# Cross-compilation knobs for building x86_64 on an arm64 macOS host with a native
+# toolchain (no-ops when unset). See macos/crossplatform-builds/README.md.
+if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+fi
+if [ -n "${CMAKE_MAKE_PROGRAM}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+fi
+if [ -n "${MESHLIB_HOMEBREW_PREFIX}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D HOMEBREW_PREFIX=${MESHLIB_HOMEBREW_PREFIX}"
+fi
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
@@ -104,10 +116,14 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   "
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
-  NPROC=$(sysctl -n hw.logicalcpu)
-else
-  NPROC=$(nproc)
+# Respect a caller-provided NPROC (e.g. to cap parallelism / limit heat);
+# otherwise default to all available cores.
+if [ -z "${NPROC}" ]; then
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    NPROC=$(sysctl -n hw.logicalcpu)
+  else
+    NPROC=$(nproc)
+  fi
 fi
 echo "The number of concurrent build threads NPROC=${NPROC}"
 

@@ -57,6 +57,15 @@ MR_CMAKE_OPTIONS="\
   -D CMAKE_BUILD_TYPE=Release \
 "
 
+# Cross-compilation knobs for building x86_64 on an arm64 macOS host with a native
+# toolchain (no-ops when unset). See macos/crossplatform-builds/README.md.
+if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+fi
+if [ -n "${CMAKE_MAKE_PROGRAM}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}"
+fi
+
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
   if [ -n "${CMAKE_C_COMPILER}" ] ; then
@@ -120,10 +129,13 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
-  NPROC=$(sysctl -n hw.logicalcpu)
-else
-  NPROC=$(nproc)
+# Respect a caller-provided NPROC
+if [ -z "${NPROC}" ]; then
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    NPROC=$(sysctl -n hw.logicalcpu)
+  else
+    NPROC=$(nproc)
+  fi
 fi
 
 # build

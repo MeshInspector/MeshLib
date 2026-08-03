@@ -151,6 +151,7 @@ jobs:
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
       nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
+      build_macos_crossplatform: ${{ needs.config.outputs.build_enable_macos_crossplatform == 'true' }}
     secrets: inherit
 
   update-win-version:

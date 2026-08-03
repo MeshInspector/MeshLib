@@ -261,6 +261,9 @@ jobs:
           - arch: x64
             runner: macos-26-intel
             pkg_pattern: '*x64.pkg'
+          - arch: x64-cross
+            runner: macos-15-intel
+            pkg_pattern: '*x64-cross.pkg'
     steps:
       - name: Checkout
         uses: actions/checkout@v7

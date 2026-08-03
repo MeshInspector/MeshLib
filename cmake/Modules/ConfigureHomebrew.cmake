@@ -1,17 +1,20 @@
 IF(APPLE)
   message("building for Apple")
-  execute_process(
-    COMMAND brew --prefix
-    RESULT_VARIABLE CMD_ERROR
-    OUTPUT_VARIABLE HOMEBREW_PREFIX
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  IF(CMD_ERROR EQUAL 0 AND EXISTS "${HOMEBREW_PREFIX}")
-    message("Homebrew found. Prefix: ${HOMEBREW_PREFIX}")
-  ELSE()
-    message("Homebrew not found!")
-    message(FATAL_ERROR "${CMD_ERROR} ${HOMEBREW_PREFIX}")
+  # Allow an explicit Homebrew prefix override (e.g. -D HOMEBREW_PREFIX=/usr/local
+  # to link the x86_64 bottles when cross-building Intel on an arm64 host).
+  # Falls back to `brew --prefix` for the common native case.
+  IF(NOT HOMEBREW_PREFIX)
+    execute_process(
+      COMMAND brew --prefix
+      OUTPUT_VARIABLE HOMEBREW_PREFIX
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
   ENDIF()
+  # Validate whichever prefix we ended up with (auto-detected or overridden).
+  IF(NOT EXISTS "${HOMEBREW_PREFIX}")
+    message(FATAL_ERROR "Homebrew prefix not found: '${HOMEBREW_PREFIX}'")
+  ENDIF()
+  message("Homebrew prefix: ${HOMEBREW_PREFIX}")
 
   include_directories(${HOMEBREW_PREFIX}/include)
   link_directories(${HOMEBREW_PREFIX}/lib)

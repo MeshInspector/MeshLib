@@ -408,7 +408,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     converters = getVectorConverters( meshA, meshB, params.rigidB2A );
 
-    auto loneCb = subprogress( params.cb, 0.0f, 0.8f );
+    auto [loneCb, mainCb] = splitProgress( params.cb, 0.8f );
 
     FaceHashMap new2orgSubdivideMapA;
     FaceHashMap new2orgSubdivideMapB;
@@ -481,8 +481,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     // clear intersections
     intersections = {};
 
-
-    auto mainCb = subprogress( params.cb, 0.8f, 1.0f );
     if ( mainCb && !mainCb( 0.0f ) )
         return { .errorString = stringOperationCanceled() };
 

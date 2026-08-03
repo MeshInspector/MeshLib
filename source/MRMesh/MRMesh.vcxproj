@@ -140,6 +140,7 @@
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRInnerShell.h" />
+    <ClInclude Include="MRInSphere.h" />
     <ClInclude Include="MRIOParsing.h" />
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMapEdge.h" />
@@ -565,6 +566,7 @@
     <ClCompile Include="MRImageSave.cpp" />
     <ClCompile Include="MRImproveSampling.cpp" />
     <ClCompile Include="MRInnerShell.cpp" />
+    <ClCompile Include="MRInSphere.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRInTreePathBuilder.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />

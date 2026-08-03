@@ -1,4 +1,8 @@
 #include "MRPrecisePredicates3.h"
+#include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
+#include "MRVector.h"
 #include "MRHighPrecision.h"
 #include "MRVector2.h"
 #include "MRBox.h"
@@ -374,13 +378,7 @@ ConvertToIntVector getToIntConverter( const Box3d& box )
     // so the difference of any two points will be within [-max; +max] range
     double invRange = cRangeIntMax / maxDim;
 
-    return [invRange, center] ( const Vector3f& v )
-    {
-        // perform intermediate operations in double for better precision
-        const auto d = ( Vector3d{ v } - center ) * invRange;
-        // and round to the nearest integer instead of truncating to zero
-        return Vector3i( (int)std::round( d.x ), (int)std::round( d.y ), (int)std::round( d.z ) );
-    };
+    return ConvertToIntVector{ center, invRange };
 }
 
 ConvertToFloatVector getToFloatConverter( const Box3d& box )
@@ -393,10 +391,53 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     // so the difference of any two points will be within [-max; +max] range
     double range = maxDim / cRangeIntMax;
 
-    return [range, center] ( const Vector3i& v )
+    return ConvertToFloatVector{ range, center };
+}
+
+Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,
+    const VertCoords& points, const VertBitSet* valid )
+{
+    MR_TIMER;
+    Vector<Vector3i, VertId> res;
+    res.resizeNoInit( points.size() );
+    if ( valid )
     {
-        return Vector3f( Vector3d{ v }*range + center );
-    };
+        BitSetParallelFor( *valid, [&]( VertId v )
+        {
+            res[v] = conv( points[v] );
+        } );
+    }
+    else
+    {
+        ParallelFor( res, [&]( VertId v )
+        {
+            res[v] = conv( points[v] );
+        } );
+    }
+    return res;
+}
+
+VertCoords computeFloatCoords( const ConvertToFloatVector& conv,
+    const Vector<Vector3i, VertId>& intCoords, const VertBitSet* valid )
+{
+    MR_TIMER;
+    VertCoords res;
+    res.resizeNoInit( intCoords.size() );
+    if ( valid )
+    {
+        BitSetParallelFor( *valid, [&]( VertId v )
+        {
+            res[v] = conv( intCoords[v] );
+        } );
+    }
+    else
+    {
+        ParallelFor( res, [&]( VertId v )
+        {
+            res[v] = conv( intCoords[v] );
+        } );
+    }
+    return res;
 }
 
 std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )

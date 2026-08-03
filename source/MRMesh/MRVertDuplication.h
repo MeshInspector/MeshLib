@@ -22,9 +22,11 @@ struct VertDuplication
 /// resolve non-manifold vertices by creating duplicate vertices in the triangulation (which is modified)
 /// `lastValidVert` is needed if `region` or `t` does not contain full mesh, then first duplicated vertex will have `lastValidVert+1` index
 /// `dups` (if given) contents will be ignored and overridden; it receives the duplications in creation order with consecutive dupVert ids starting from `lastValidVert+1`
+/// `points` (if given) provides the coordinates of the vertices, and among several possible path continuations
+/// the one with the maximal dot-product between its triangle's normal and the normal of the preceding triangle is selected
 /// return number of duplicated vertices
 MRMESH_API size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region = nullptr,
-    std::vector<VertDuplication>* dups = nullptr, VertId lastValidVert = {} );
+    std::vector<VertDuplication>* dups = nullptr, VertId lastValidVert = {}, const VertCoords * points = nullptr );
 
 /// classification of the triangles around one vertex, packed in 32 bits;
 /// it stores 1-bit flag (hasRepeatedVerts) and either 31-bit numRepeatedVerts (if the flag is on),

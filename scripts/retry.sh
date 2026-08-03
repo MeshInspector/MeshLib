@@ -40,6 +40,8 @@ fi
 
 run_attempt() {
     if [ -n "$timeout_bin" ]; then
+        # SIGTERM once the limit is up (exit 124), then --kill-after SIGKILL for
+        # commands that ignore it (exit 137).
         "$timeout_bin" --kill-after "${kill_after}s" "${timeout}s" "$@"
     else
         "$@"

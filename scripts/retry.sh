@@ -4,6 +4,7 @@ set -eu
 times=3
 cooldown=30
 timeout=0
+kill_after=10
 
 usage() {
     echo "Usage: $0 [--times N] [--cooldown S] [--timeout S] -- COMMAND [ARGS...]" >&2
@@ -39,7 +40,7 @@ fi
 
 run_attempt() {
     if [ -n "$timeout_bin" ]; then
-        "$timeout_bin" --kill-after 10s "${timeout}s" "$@"
+        "$timeout_bin" --kill-after "${kill_after}s" "${timeout}s" "$@"
     else
         "$@"
     fi
@@ -54,10 +55,13 @@ for attempt in $(seq 1 "$times"); do
         exit 0
     fi
     if [ "$attempt" -lt "$times" ]; then
-        if [ "$rc" -eq 124 ] && [ -n "$timeout_bin" ]; then
-            reason="timed out after ${timeout}s"
-        else
-            reason="failed (exit $rc)"
+        reason="failed (exit $rc)"
+        if [ -n "$timeout_bin" ]; then
+            case "$rc" in
+                # 137 is our SIGKILL escalation: timed out, then ignored SIGTERM.
+                124) reason="timed out after ${timeout}s" ;;
+                137) reason="timed out after ${timeout}s, SIGKILLed ${kill_after}s later" ;;
+            esac
         fi
         echo "$(basename "$0"): attempt $attempt/$times $reason; retrying in ${cooldown}s..." >&2
         sleep "$cooldown"

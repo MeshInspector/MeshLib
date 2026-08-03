@@ -161,14 +161,7 @@ public:
     /// shall be called only after reset() returned true
     [[nodiscard]] MRMESH_API InSphereResult operator()( const Vector3i & d ) const;
 
-    /// returns the position of the point vs[3] relative to the sphere, resolving "exactly on the
-    /// sphere" ties into Inside or Outside by simulation-of-simplicity as described at the inSphere
-    /// overload above (never returns OnSphere or NoSphere);
-    /// shall be called only after reset() returned true, and the points vs[0], vs[1], vs[2] must be
-    /// the same a, b, c as in that reset()
-    [[nodiscard]] MRMESH_API InSphereResult operator()( const std::array<PreciseVertCoords, 4> & vs ) const;
-
-private:
+protected:
     Vector3i a;           ///< the first sphere point
     Vector3i64 u, v;      ///< b - a, c - a
     Vector3i64 w;         ///< doubled normal of triangle abc
@@ -181,6 +174,30 @@ private:
 using InSphereTesterf = InSphereTester<float>;
 using InSphereTesterd = InSphereTester<double>;
 using InSphereTesteri = InSphereTester<int>;
+
+/// the precise tester with simulation-of-simplicity resolution of "exactly on the sphere" ties,
+/// which reuses all the geometric machinery of InSphereTester<int> and adds only the vertex ids
+class InSphereTesterSoS : public InSphereTester<int>
+{
+public:
+    /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a.pt, b.pt, c.pt,
+    /// with the center located on the positive side of their plane (in the half-space pointed at by
+    /// cross( b.pt - a.pt, c.pt - a.pt ) from the plane), remembering the ids for the queries;
+    /// returns false if no such sphere exists: the points are collinear or coincident,
+    /// or rSq is less than the squared circumradius of the triangle;
+    /// this hides the id-less reset of the base class, which would leave stale ids
+    MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
+
+    /// returns the position of the point d.pt relative to the sphere, resolving "exactly on the
+    /// sphere" ties into Inside or Outside by simulation-of-simplicity as described at the inSphere
+    /// overload above, using the ids of d and of the points given in reset()
+    /// (never returns OnSphere or NoSphere);
+    /// shall be called only after reset() returned true, and all four ids must be distinct
+    [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
+
+private:
+    VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
+};
 
 /// checks whether the point d is strictly inside the sphere of radius sqrt(rSq) passing via
 /// points a, b, c, whose center is located on the positive side of plane abc, in floating-point;

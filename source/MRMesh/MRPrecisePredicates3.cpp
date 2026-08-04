@@ -177,11 +177,6 @@ bool orient3d( const PreciseVertCoords* vs )
     return odd != orient3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
 }
 
-bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
-{
-    return orient3d( vs.data() );
-}
-
 bool ccwAroundLine( const PreciseVertCoords* vs )
 {
     // orient3d( vs[0], vs[1], x, y ) is true iff the rotation around the line from the half-plane
@@ -193,11 +188,6 @@ bool ccwAroundLine( const PreciseVertCoords* vs )
         return l4; // the pairs (2,3) and (4,2) agree, and give the answer
 
     return orient3d( { vs[0], vs[1], vs[4], vs[3] } ); // they disagree, so the pair (3,4) decides
-}
-
-bool ccwAroundLine( const std::array<PreciseVertCoords, 5> & vs )
-{
-    return ccwAroundLine( vs.data() );
 }
 
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )

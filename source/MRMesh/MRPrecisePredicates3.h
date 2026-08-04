@@ -30,6 +30,15 @@ struct PreciseVertCoords
 MRMESH_API bool orient3d( const std::array<PreciseVertCoords, 4> & vs );
 MRMESH_API bool orient3d( const PreciseVertCoords* vs );
 
+/// returns true if the points vs[2], vs[3], vs[4] are in counter-clockwise order on the plane
+/// orthogonal to the direction vs[1]-vs[0], as seen by the viewer this direction points at,
+/// i.e. if dot( vs[1]-vs[0], cross( vs[3]-vs[2], vs[4]-vs[2] ) ) is positive;
+/// uses simulation-of-simplicity (assuming larger perturbations of points with smaller id)
+/// to avoid "the direction is exactly parallel to the plane of the three points";
+/// all five ids must be distinct, while the coordinates of the points can coincide arbitrarily
+[[nodiscard]] MRMESH_API bool ccw3d( const std::array<PreciseVertCoords, 5> & vs );
+[[nodiscard]] MRMESH_API bool ccw3d( const PreciseVertCoords* vs );
+
 struct TriangleSegmentIntersectResult
 {
     bool doIntersect = false;    ///< whether triangle and segment intersect

@@ -636,6 +636,109 @@ TEST( MRMesh, orientParaboloid3d )
     EXPECT_FALSE( orientParaboloid3d( a, b, b ) );
 }
 
+TEST( MRMesh, ccw3d )
+{
+    const std::array<PreciseVertCoords, 5> vs =
+    {
+        PreciseVertCoords{ 0_v, Vector3i(  0,  0, -1 ) }, //p
+        PreciseVertCoords{ 1_v, Vector3i(  0,  0,  1 ) }, //q
+
+        PreciseVertCoords{ 2_v, Vector3i(  2,  1,  0 ) }, //a
+        PreciseVertCoords{ 3_v, Vector3i( -2,  1,  0 ) }, //b
+        PreciseVertCoords{ 4_v, Vector3i(  0, -2,  0 ) }  //c
+    };
+
+    // the triangle abc is counter-clockwise in the plane z=0 for the viewer the direction p->q points at
+    EXPECT_TRUE(  ccw3d( vs ) );
+    EXPECT_FALSE( ccw3d( { vs[1], vs[0], vs[2], vs[3], vs[4] } ) ); // the viewer on the other side of the plane
+    EXPECT_FALSE( ccw3d( { vs[0], vs[1], vs[2], vs[4], vs[3] } ) ); // clockwise triangle
+    EXPECT_TRUE(  ccw3d( { vs[0], vs[1], vs[3], vs[4], vs[2] } ) ); // cyclic permutation of the triangle changes nothing
+
+    // both ends of the direction are on the same side of the triangle's plane
+    EXPECT_TRUE(  ccw3d( { PreciseVertCoords{ 0_v, Vector3i( 10, 10, 1 ) },
+                           PreciseVertCoords{ 1_v, Vector3i( 20, 30, 2 ) }, vs[2], vs[3], vs[4] } ) );
+    EXPECT_FALSE( ccw3d( { PreciseVertCoords{ 0_v, Vector3i( 10, 10, 2 ) },
+                           PreciseVertCoords{ 1_v, Vector3i( 20, 30, 1 ) }, vs[2], vs[3], vs[4] } ) );
+
+    // large coordinates requiring more than 64-bit arithmetic
+    constexpr int m = 1000000000;
+    EXPECT_TRUE( ccw3d( {
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0,  0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 0, 0, 10 ) },
+        PreciseVertCoords{ 2_v, Vector3i( 0, 0,  0 ) },
+        PreciseVertCoords{ 3_v, Vector3i( m, 0,  0 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 0, m,  0 ) } } ) );
+    EXPECT_FALSE( ccw3d( {
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0,   0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 0, 0, -10 ) },
+        PreciseVertCoords{ 2_v, Vector3i( 0, 0,   0 ) },
+        PreciseVertCoords{ 3_v, Vector3i( m, 0,   0 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 0, m,   0 ) } } ) );
+}
+
+TEST( MRMesh, ccw3dSmallGrid )
+{
+    const PreciseVertCoords a{ 2_v, Vector3i( 0, 0, 0 ) };
+    const PreciseVertCoords b{ 3_v, Vector3i( 2, 0, 0 ) };
+    const PreciseVertCoords c{ 4_v, Vector3i( 0, 2, 0 ) };
+    const auto n = cross( Vector3i64( b.pt - a.pt ), Vector3i64( c.pt - a.pt ) );
+
+    for ( int i = 0; i < 27; ++i )
+    {
+        const PreciseVertCoords q{ 1_v, Vector3i( i % 3 - 1, ( i / 3 ) % 3 - 1, i / 9 - 1 ) };
+
+        // the direction starting exactly at the triangle's point a is equivalent to orient3d
+        const PreciseVertCoords p0{ 0_v, a.pt };
+        if ( dot( Vector3i64( q.pt - a.pt ), n ) != 0 )
+            EXPECT_EQ( ccw3d( { p0, q, a, b, c } ), !orient3d( { a, b, c, q } ) );
+
+        for ( int j = 0; j < 27; ++j )
+        {
+            const PreciseVertCoords p{ 0_v, Vector3i( j % 3 - 1, ( j / 3 ) % 3 - 1, j / 9 - 1 ) };
+            const auto v = dot( Vector3i64( q.pt - p.pt ), n );
+            if ( v != 0 )
+                EXPECT_EQ( ccw3d( { p, q, a, b, c } ), v > 0 );
+        }
+    }
+}
+
+TEST( MRMesh, sosCcw3d )
+{
+    // the direction lies in the plane of the three points, and the triangle is degenerate as well,
+    // so the answer is given by simulation-of-simplicity only
+    const std::array<PreciseVertCoords, 5> vs =
+    {
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 1, 0, 0 ) },
+
+        PreciseVertCoords{ 2_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 3_v, Vector3i( 1, 0, 0 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 2, 0, 0 ) }
+    };
+
+    const bool res = ccw3d( vs );
+    EXPECT_NE( res, ccw3d( { vs[1], vs[0], vs[2], vs[3], vs[4] } ) );
+    EXPECT_NE( res, ccw3d( { vs[0], vs[1], vs[2], vs[4], vs[3] } ) );
+    EXPECT_EQ( res, ccw3d( { vs[0], vs[1], vs[3], vs[4], vs[2] } ) );
+}
+
+TEST( MRMesh, ccw3dFullDegen )
+{
+    std::array<PreciseVertCoords, 5> vs;
+    for ( VertId i = 0_v; i < 5; ++i )
+        vs[i].id = i; //and point coordinate is (0,0,0)
+
+    // test that maximum degree in ccw3d can cope with most degenerate situation possible
+    do
+    {
+        const bool res = ccw3d( vs );
+        EXPECT_NE( res, ccw3d( { vs[1], vs[0], vs[2], vs[3], vs[4] } ) ); // swapped ends of the direction
+        EXPECT_NE( res, ccw3d( { vs[0], vs[1], vs[2], vs[4], vs[3] } ) ); // swapped points of the triangle
+        EXPECT_EQ( res, ccw3d( { vs[0], vs[1], vs[3], vs[4], vs[2] } ) ); // cyclic permutation of the triangle
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
 TEST( MRMesh, doTriangleSegmentIntersect )
 {
     const std::array<PreciseVertCoords, 5> vs = 

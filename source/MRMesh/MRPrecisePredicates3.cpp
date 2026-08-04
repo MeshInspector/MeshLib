@@ -28,28 +28,29 @@ struct PointDegree
 // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
 constexpr int cMaxPolyD = 14'941'836;
 
-std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
+template <std::size_t N>
+std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords, N> & vs )
 {
     struct VertN
     {
         VertId v;
         int n = 0;
     };
-    std::array<VertN, 8> as;
-    for ( int i = 0; i < 8; ++i )
-        as[i] = { vs[i].id, i };
+    std::array<VertN, N> as;
+    for ( std::size_t i = 0; i < N; ++i )
+        as[i] = { vs[i].id, int( i ) };
     std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
 
-    std::array<PointDegree, 8> res;
+    std::array<PointDegree, N> res;
     int d = 1;
     constexpr int maxD = INT_MAX / 9;
     static_assert( maxD > cMaxPolyD );
     constexpr int preMaxD = maxD / 27;
-    for ( int i = 0; i < 8; ++i )
+    for ( std::size_t i = 0; i < N; ++i )
     {
         const auto n = as[i].n;
         res[n] = { vs[n].pt, d };
-        if ( i < 7 && as[i].v < as[i+1].v ) // skip to support triangles with shared vertices
+        if ( i + 1 < N && as[i].v < as[i+1].v ) // skip to support triangles with shared vertices
         {
             if ( d <= preMaxD )
                 d *= 27; // normal power up
@@ -98,16 +99,18 @@ Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegr
     return det;
 }
 
-Int128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+// signed volume of the parallelepiped given by three vectors, whose components must fit in 32 bits
+Int128 volume( const Vector3i64 & x, const Vector3i64 & y, const Vector3i64 & z )
 {
-    const Vector3i64 x( a - d );
-    const Vector3i64 y( b - d );
-    const Vector3i64 z( c - d );
-
     return
         x.x * Int128( y.y * z.z - y.z * z.y )
      -  x.y * Int128( y.x * z.z - y.z * z.x )
      +  x.z * Int128( y.x * z.y - y.y * z.x );
+}
+
+Int128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+{
+    return volume( Vector3i64( a - d ), Vector3i64( b - d ), Vector3i64( c - d ) );
 }
 
 } // anonymous namespace
@@ -180,6 +183,31 @@ bool orient3d( const PreciseVertCoords* vs )
 bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
 {
     return orient3d( vs.data() );
+}
+
+bool ccw3d( const std::array<PreciseVertCoords, 5> & vs )
+{
+    const auto v = volume( Vector3i64( vs[1].pt - vs[0].pt ), Vector3i64( vs[3].pt - vs[2].pt ), Vector3i64( vs[4].pt - vs[2].pt ) );
+    if ( v != 0 )
+        return v > 0;
+
+    // the direction is exactly parallel to the plane of the three points, so resolve it by simulation-of-simplicity
+    // using det( q-p, b-a, c-a ) = det( q-a, b-a, c-a ) - det( p-a, b-a, c-a )
+#ifndef NDEBUG
+    for ( int i = 0; i < 5; ++i )
+        for ( int j = i + 1; j < 5; ++j )
+            assert( vs[i].id != vs[j].id );
+#endif
+    const auto ds = getPointDegrees( vs );
+    auto poly = orient3dPoly( ds[1], ds[3], ds[4], ds[2], 3 );
+    poly -= orient3dPoly( ds[0], ds[3], ds[4], ds[2], 3 );
+    assert( poly.get().find( 0 ) == poly.get().end() ); // zero degree coefficients are equal here and cancel one another
+    return poly.isPositive();
+}
+
+bool ccw3d( const PreciseVertCoords* vs )
+{
+    return ccw3d( std::array<PreciseVertCoords, 5>{ vs[0], vs[1], vs[2], vs[3], vs[4] } );
 }
 
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )

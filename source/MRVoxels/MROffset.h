@@ -72,7 +72,9 @@ struct SharpOffsetParameters : OffsetParameters
     /// correct positions of the input vertices using reference mesh by not more than this distance, measured in voxelSize;
     /// big correction can be wrong and result from self-intersections in the reference mesh
     float maxOldVertPosCorrection = 0.5f;
-    /// see SharpenMarchingCubesMeshSettings::voxelClamp
+    /// if true, the displacement of a new vertex from the average point is shortened to keep the vertex
+    /// within its voxel's box (so the geometry of a voxel can never reach another one),
+    /// and the in-plane elevation check is skipped
     bool voxelClamp = false;
 };
 

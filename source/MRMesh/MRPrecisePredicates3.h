@@ -44,14 +44,17 @@ struct PreciseVertCoords
 MRMESH_API bool orient3d( const std::array<PreciseVertCoords, 4> & vs );
 MRMESH_API bool orient3d( const PreciseVertCoords* vs );
 
-/// returns true if the points vs[2], vs[3], vs[4] are in counter-clockwise order on the plane
-/// orthogonal to the direction vs[1]-vs[0], as seen by the viewer this direction points at,
-/// i.e. if dot( vs[1]-vs[0], cross( vs[3]-vs[2], vs[4]-vs[2] ) ) is positive;
-/// uses simulation-of-simplicity (assuming larger perturbations of points with smaller id)
-/// to avoid "the direction is exactly parallel to the plane of the three points";
-/// all five ids must be distinct, while the coordinates of the points can coincide arbitrarily
-[[nodiscard]] MRMESH_API bool ccw3d( const std::array<PreciseVertCoords, 5> & vs );
-[[nodiscard]] MRMESH_API bool ccw3d( const PreciseVertCoords* vs );
+/// Precise predicate for the rotational order of three half-planes around a directed line.
+/// The line passes via vs[0] and vs[1] and is directed from vs[0] to vs[1]; the three half-planes
+/// are bounded by that line and pass via vs[2], vs[3], vs[4] respectively. Returns true iff the
+/// half-planes follow one another in counter-clockwise order around the line, as seen by the viewer
+/// the line's direction points at. Only the rotation of every point around the line matters, so
+/// cyclic permutations of vs[2], vs[3], vs[4] do not change the result, while a swap of two of them,
+/// as well as a swap of vs[0] and vs[1], inverts it. Implemented via orient3d and inherits its
+/// simulation-of-simplicity, so the predicate is never "undefined" even if some of the points
+/// coincide; all five ids must be distinct.
+[[nodiscard]] MRMESH_API bool ccwAroundLine( const std::array<PreciseVertCoords, 5> & vs );
+[[nodiscard]] MRMESH_API bool ccwAroundLine( const PreciseVertCoords* vs );
 
 struct TriangleSegmentIntersectResult
 {

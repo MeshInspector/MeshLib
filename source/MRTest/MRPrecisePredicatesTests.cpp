@@ -690,14 +690,18 @@ TEST( MRMesh, ccw3dSmallGrid )
         // the direction starting exactly at the triangle's point a is equivalent to orient3d
         const PreciseVertCoords p0{ 0_v, a.pt };
         if ( dot( Vector3i64( q.pt - a.pt ), n ) != 0 )
+        {
             EXPECT_EQ( ccw3d( { p0, q, a, b, c } ), !orient3d( { a, b, c, q } ) );
+        }
 
         for ( int j = 0; j < 27; ++j )
         {
             const PreciseVertCoords p{ 0_v, Vector3i( j % 3 - 1, ( j / 3 ) % 3 - 1, j / 9 - 1 ) };
             const auto v = dot( Vector3i64( q.pt - p.pt ), n );
             if ( v != 0 )
+            {
                 EXPECT_EQ( ccw3d( { p, q, a, b, c } ), v > 0 );
+            }
         }
     }
 }

@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClCompile Include="MRAABBTreeTests.cpp" />
     <ClCompile Include="MRAABBTreePointsTests.cpp" />
+    <ClCompile Include="MRAlphaShapeTests.cpp" />
     <ClCompile Include="MRBase64Tests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />

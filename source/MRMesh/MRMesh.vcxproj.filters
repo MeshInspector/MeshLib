@@ -642,6 +642,9 @@
     <ClInclude Include="MRPointCloudTriangulation.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
+    <ClInclude Include="MRAlphaShape.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointCloudTriangulationHelpers.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
@@ -1800,6 +1803,9 @@
       <Filter>Source Files\Decimation</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudTriangulation.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAlphaShape.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudTriangulationHelpers.cpp">

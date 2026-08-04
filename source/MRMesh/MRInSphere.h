@@ -5,6 +5,7 @@
 #include "MRPch/MRBindingMacros.h"
 #include <cassert>
 #include <type_traits>
+#include <utility>
 
 namespace MR
 {
@@ -106,6 +107,17 @@ public:
         return E >= 0;
     }
 
+    /// swaps the points b and c, which selects the mirror sphere with the center on the other side
+    /// of plane abc, and gives exactly the state of reset( a, c, b, rSq ) without recomputing anything:
+    /// only the normal w changes there, and W, M, E are symmetric in b and c;
+    /// shall be called only after reset() returned true
+    void flip()
+    {
+        assert( E >= 0 ); // the last reset() must have returned true
+        std::swap( u, v );
+        w = -w;
+    }
+
     /// returns the position of the point d relative to the sphere (never NoSphere);
     /// shall be called only after reset() returned true
     [[nodiscard]] InSphereResult operator()( const Vector3<T> & d ) const
@@ -157,6 +169,17 @@ public:
     /// or rSq is less than the squared circumradius of triangle abc
     MRMESH_API bool reset( const Vector3i & a, const Vector3i & b, const Vector3i & c, std::int64_t rSq );
 
+    /// swaps the points b and c, which selects the mirror sphere with the center on the other side
+    /// of plane abc, and gives exactly the state of reset( a, c, b, rSq ) without recomputing anything:
+    /// only the normal w changes there, and W, M, E are symmetric in b and c;
+    /// shall be called only after reset() returned true
+    void flip()
+    {
+        assert( E >= 0 ); // the last reset() must have returned true
+        std::swap( u, v );
+        w = -w;
+    }
+
     /// returns the position of the point d relative to the sphere (never NoSphere);
     /// shall be called only after reset() returned true
     [[nodiscard]] MRMESH_API InSphereResult operator()( const Vector3i & d ) const;
@@ -187,6 +210,15 @@ public:
     /// or rSq is less than the squared circumradius of the triangle;
     /// this hides the id-less reset of the base class, which would leave stale ids
     MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
+
+    /// swaps the points b and c together with their ids, which selects the mirror sphere as in the
+    /// base class, and gives exactly the state of reset( a, c, b, rSq );
+    /// this hides the id-less flip of the base class, which would leave stale ids
+    void flip()
+    {
+        InSphereTester<int>::flip();
+        std::swap( vb_, vc_ );
+    }
 
     /// returns the position of the point d.pt relative to the sphere, resolving "exactly on the
     /// sphere" ties into Inside or Outside by simulation-of-simplicity as described at the inSphere

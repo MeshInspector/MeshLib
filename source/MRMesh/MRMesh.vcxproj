@@ -12,6 +12,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlignContoursToMesh.h" />
+    <ClInclude Include="MRAlphaShape.h" />
     <ClInclude Include="MRBoxNesting.h" />
     <ClInclude Include="MRCurve.h" />
     <ClInclude Include="MRDivRound.h" />
@@ -472,6 +473,7 @@
       <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />
     <ClCompile Include="MRDirMax.cpp" />

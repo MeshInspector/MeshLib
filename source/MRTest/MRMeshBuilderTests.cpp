@@ -1,5 +1,6 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRVertDuplication.h>
+#include <MRMesh/MRVector3.h>
 #include <MRMesh/MRMeshBuilderTypes.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshComponents.h>
@@ -146,6 +147,50 @@ TEST( MRMesh, duplicateVertexOppositeOrientedTri )
     dups.clear();
     EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 0 );
     EXPECT_EQ( dups.size(), 0 );
+}
+
+// a fan around #0 with two continuation options from the shared rim vertex #2:
+// folded triangle 1_f (normal opposite to 0_f) and flat triangle 2_f (normal equal to 0_f);
+// with given coordinates the walk prefers the flat continuation (maximal normals' dot-product),
+// so the folded triangle is fully detached; without coordinates the first option by face id wins instead
+TEST( MRMesh, duplicateVertexSmoothContinuation )
+{
+    Triangulation initT;
+    initT.push_back( { 0_v, 1_v, 2_v } ); //0_f
+    initT.push_back( { 0_v, 2_v, 3_v } ); //1_f folded
+    initT.push_back( { 0_v, 2_v, 4_v } ); //2_f flat
+
+    VertCoords points;
+    points.push_back( Vector3f( 0, 0, 0 ) );  //0
+    points.push_back( Vector3f( 1, 0, 0 ) );  //1
+    points.push_back( Vector3f( 0, 1, 0 ) );  //2
+    points.push_back( Vector3f( 1, 1, 0 ) );  //3
+    points.push_back( Vector3f( -1, 1, 0 ) ); //4
+
+    {
+        auto t = initT;
+        std::vector<VertDuplication> dups;
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, &points ), 2 );
+        ASSERT_EQ( dups.size(), 2 );
+        EXPECT_EQ( dups[0].srcVert, 0_v );
+        EXPECT_EQ( dups[0].dupVert, 5_v );
+        EXPECT_EQ( dups[1].srcVert, 2_v );
+        EXPECT_EQ( dups[1].dupVert, 6_v );
+        EXPECT_EQ( t[0_f], ( ThreeVertIds{ 0_v, 1_v, 2_v } ) );
+        EXPECT_EQ( t[1_f], ( ThreeVertIds{ 5_v, 6_v, 3_v } ) );
+        EXPECT_EQ( t[2_f], ( ThreeVertIds{ 0_v, 2_v, 4_v } ) );
+
+        // the result is manifold
+        dups.clear();
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, &points ), 0 );
+    }
+    {
+        auto t = initT;
+        std::vector<VertDuplication> dups;
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 2 );
+        EXPECT_EQ( t[1_f], ( ThreeVertIds{ 0_v, 2_v, 3_v } ) );
+        EXPECT_EQ( t[2_f], ( ThreeVertIds{ 5_v, 6_v, 4_v } ) );
+    }
 }
 
 // a hub vertex #3 with two open chains (1-2-0, 6-7-8) and a closed ring (0-4-5) sharing rim vertex #0;

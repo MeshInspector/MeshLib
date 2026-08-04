@@ -378,13 +378,7 @@ ConvertToIntVector getToIntConverter( const Box3d& box )
     // so the difference of any two points will be within [-max; +max] range
     double invRange = cRangeIntMax / maxDim;
 
-    return [invRange, center] ( const Vector3f& v )
-    {
-        // perform intermediate operations in double for better precision
-        const auto d = ( Vector3d{ v } - center ) * invRange;
-        // and round to the nearest integer instead of truncating to zero
-        return Vector3i( (int)std::round( d.x ), (int)std::round( d.y ), (int)std::round( d.z ) );
-    };
+    return ConvertToIntVector{ center, invRange };
 }
 
 ConvertToFloatVector getToFloatConverter( const Box3d& box )
@@ -397,10 +391,7 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     // so the difference of any two points will be within [-max; +max] range
     double range = maxDim / cRangeIntMax;
 
-    return [range, center] ( const Vector3i& v )
-    {
-        return Vector3f( Vector3d{ v }*range + center );
-    };
+    return ConvertToFloatVector{ range, center };
 }
 
 Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,

@@ -391,6 +391,8 @@ jobs:
       disable_manylinux:    ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
       disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
       disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
+      release_tag:          ${{ needs.config.outputs.release_tag }}
+      version:              ${{ needs.config.outputs.app_version }}
 
   publish-wasm:
     needs: [ config, upload-distributions ]

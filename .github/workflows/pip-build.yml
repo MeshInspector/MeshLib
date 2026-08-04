@@ -68,6 +68,10 @@ on:
         default: ""
         required: false
         type: string
+      release_tag:
+        default: ""
+        required: false
+        type: string
       # keyed to the linux-vcpkg platform toggle, not ubuntu: manylinux builds in the
       # rockylinux8-vcpkg image, whose branch tag only exists when linux-vcpkg is enabled (#6091)
       disable_manylinux:
@@ -94,7 +98,8 @@ jobs:
       publish_prod:  ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
       publish_test:  ${{ inputs.publish == 'publish-test' }}
       build_ref:     ${{ inputs.ref || steps.get-latest-tag.outputs.tag }}
-      wheel_version: ${{ inputs.version || steps.get-latest-tag.outputs.tag || '0' }}
+      release_tag:   ${{ inputs.release_tag || steps.release-for-ref.outputs.tag }}
+      wheel_version: ${{ inputs.version || steps.release-for-ref.outputs.tag || steps.get-latest-tag.outputs.tag || '0' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -104,6 +109,18 @@ jobs:
       - uses: actions-ecosystem/action-get-latest-tag@v1
         if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
         id: get-latest-tag
+
+      # Attach to a release that already exists for this ref; never create one. No match leaves the
+      # tag empty, which is what skips the upload job.
+      - name: Find the release for the build ref
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        id: release-for-ref
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ inputs.ref || github.ref_name }}
+        run: |
+          TAG=$(gh release view "${REF}" --repo ${{ github.repository }} --json tagName --jq .tagName) || TAG=""
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - id: build-matrix
         uses: ./scripts/actions/matrix-builder
@@ -184,6 +201,16 @@ jobs:
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      version_tag: ${{needs.setup.outputs.version_tag}}
+
+  generate-wasm-definitions:
+    needs: setup
+    if: ${{ needs.setup.outputs.publish_prod == 'true' }}
+    uses: ./.github/workflows/build-test-emscripten.yml
+    with:
+      docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      upload_artifacts: false
+      definitions_only: true
       version_tag: ${{needs.setup.outputs.version_tag}}
 
   manylinux-pip-build:
@@ -389,6 +416,7 @@ jobs:
     needs:
       - setup
       - manylinux-pip-build
+      - generate-wasm-definitions
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib
@@ -616,6 +644,42 @@ jobs:
           name: Macos-${{matrix.platform}}
           path: meshlib-*.whl
           retention-days: 1
+
+  upload-wheels-to-release:
+    # On the `workflow_call` path the tag is empty unless the PR also carries `upload-binaries` (or `full-ci`).
+    if: >-
+      ${{ !cancelled() && needs.setup.outputs.release_tag != ''
+        && needs.manylinux-pip-build.result != 'failure'
+        && needs.windows-pip-build.result != 'failure'
+        && needs.macos-pip-build.result != 'failure' }}
+    needs: [setup, manylinux-pip-build, windows-pip-build, macos-pip-build]
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Wheels Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ManyLinux-*
+          merge-multiple: true
+
+      - name: Download Wheels Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: Windows
+          merge-multiple: true
+
+      - name: Download Wheels Artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: Macos-*
+          merge-multiple: true
+
+      - name: Upload Wheels to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload ${{ needs.setup.outputs.release_tag }} ./meshlib-*.whl --repo ${{ github.repository }} --clobber
 
   manylinux-pip-test:
     needs: [setup, manylinux-pip-build]

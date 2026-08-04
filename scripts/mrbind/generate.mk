@@ -130,10 +130,15 @@ override IS_EMSCRIPTEN := 1
 # Must special-case Windows because there `em++` is actually `em++.py`, and Bash doesn't want to run it without the extension.
 # `MSYS2_ARG_CONV_EXCL=*` guards `/c`.
 # Note that we have to poke some libraries here too, to add them to the sysroot.
-EMSCRIPTEN_SYSROOT := $(shell echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - -sUSE_BOOST_HEADERS=1 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
+override EMSCRIPTEN_SYSROOT_PROBE := echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - -sUSE_BOOST_HEADERS=1
+EMSCRIPTEN_SYSROOT := $(shell $(EMSCRIPTEN_SYSROOT_PROBE) 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
 ifneq ($(EMSCRIPTEN_SYSROOT),)
 $(info Determined EMSCRIPTEN_SYSROOT = `$(EMSCRIPTEN_SYSROOT)`)
 else
+$(info Failed to parse the Emscripten sysroot out of the following probe, its output follows:)
+$(info $(EMSCRIPTEN_SYSROOT_PROBE))
+# `$(shell)` doesn't capture stderr, so sending stdout there too puts the whole output in our log, newlines intact.
+$(call ,$(shell $(EMSCRIPTEN_SYSROOT_PROBE) 1>&2))
 $(error Unable to find Emscripten SDK, ensure you have `em++` in the PATH. In powershell run `emsdk/emsdk_env.ps1`; or in bash run `. emsdk/emsdk_env.sh`)
 endif
 endif

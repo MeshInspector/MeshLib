@@ -236,7 +236,7 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind/deps/cppdecl
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
 
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind
@@ -287,7 +287,9 @@ jobs:
           GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
 
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
-            export PKG_CONFIG_PATH=$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
+            # Keep the assignment separate from `export`: the latter would mask a `uv` failure from `sh -e`.
+            PKG_CONFIG_PATH=$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
+            export PKG_CONFIG_PATH
 
             make shims -f scripts/mrbind/generate.mk -B --trace \
               FOR_WHEEL=1 \
@@ -407,7 +409,7 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
-      VCPKG-VERSION: '2026.06.24'
+      VCPKG-VERSION: '2026.07.29'
       CUDA-VERSION: '12.0.1'
       CUDA-MAJOR: '12'
       CUDA-MINOR: '0'

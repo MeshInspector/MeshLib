@@ -33,7 +33,7 @@ jobs:
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- scripts/clone_submodules_emscripten_bindings.sh
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten_bindings.sh
 
       - name: Install MRBind
         uses: ./.github/actions/build-mrbind

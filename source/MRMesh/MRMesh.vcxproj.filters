@@ -285,6 +285,9 @@
     <ClInclude Include="MRPrecisePredicates3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRInSphere.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRObjectsAccess.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
@@ -1545,6 +1548,9 @@
       <Filter>Source Files\Voxels</Filter>
     </ClCompile>
     <ClCompile Include="MRPrecisePredicates3.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRInSphere.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectPoints.cpp">

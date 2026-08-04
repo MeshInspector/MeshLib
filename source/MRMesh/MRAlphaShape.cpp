@@ -79,14 +79,13 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             const auto & pj = neis[j];
             if ( onlyLargerVids && pj.id < v )
                 continue;
-            // reset checks the existence of the ball, which does not depend on the order of pi and pj,
-            // and the two orders select the balls on the opposite sides of the triangle
+            // the two balls touching all three points differ only by the side of the triangle,
+            // so one reset is enough for the both
             if ( !tester.reset( p0, pi, pj, data.intRadiusSq ) )
                 continue;
             if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
-            [[maybe_unused]] const bool mirrorBallExists = tester.reset( p0, pj, pi, data.intRadiusSq );
-            assert( mirrorBallExists );
+            tester.flip();
             if ( ballEmpty( pj.id, pi.id ) )
                 appendTris.push_back( { v, pj.id, pi.id } );
         }

@@ -345,6 +345,55 @@ TEST( MRMesh, inSphereTester )
     EXPECT_EQ( tester( b ), On );
 }
 
+TEST( MRMesh, inSphereTesterFlip )
+{
+    const Vector3i a{ 0, 0, 0 }, b{ 2, 0, 0 }, c{ 0, 2, 0 };
+    InSphereTesteri flipped, mirror;
+    ASSERT_TRUE( flipped.reset( a, b, c, 4 ) );
+    ASSERT_TRUE( mirror.reset( a, c, b, 4 ) );
+    flipped.flip();
+
+    // flip must give the answers of the tester reset with the swapped second and third points
+    for ( int z = -2; z <= 4; ++z )
+        for ( int y = -2; y <= 4; ++y )
+            for ( int x = -2; x <= 4; ++x )
+            {
+                const Vector3i d{ x, y, z };
+                EXPECT_EQ( flipped( d ), mirror( d ) );
+            }
+    flipped.flip();
+    EXPECT_EQ( flipped( Vector3i{ 1, 1, 2 } ), InSphereResult::Inside ); // the initial sphere is back
+
+    const Vector3d ad{ 0, 0, 0 }, bd{ 2, 0, 0 }, cd{ 0, 2, 0 };
+    InSphereTesterd flippedd, mirrord;
+    ASSERT_TRUE( flippedd.reset( ad, bd, cd, 4.0 ) );
+    ASSERT_TRUE( mirrord.reset( ad, cd, bd, 4.0 ) );
+    flippedd.flip();
+    EXPECT_EQ( flippedd( Vector3d{ 1, 1, -1 } ), mirrord( Vector3d{ 1, 1, -1 } ) );
+
+    // four concyclic points: every query point is exactly on the both spheres passing via three
+    // others, so the ties of all the arrangements are resolved by ids and must survive the flip
+    const PreciseVertCoords ps[4] = {
+        { 0_v, Vector3i{  5, 0, 0 } },
+        { 1_v, Vector3i{  0, 5, 0 } },
+        { 2_v, Vector3i{ -5, 0, 0 } },
+        { 3_v, Vector3i{  3, 4, 0 } }
+    };
+    InSphereTesterSoS flippedSos, mirrorSos;
+    for ( int i = 0; i < 4; ++i )
+        for ( int j = 0; j < 4; ++j )
+            for ( int k = 0; k < 4; ++k )
+            {
+                if ( i == j || j == k || i == k )
+                    continue;
+                ASSERT_TRUE( flippedSos.reset( ps[i], ps[j], ps[k], 169 ) );
+                ASSERT_TRUE( mirrorSos.reset( ps[i], ps[k], ps[j], 169 ) );
+                flippedSos.flip();
+                const auto & d = ps[6 - i - j - k];
+                EXPECT_EQ( flippedSos( d ), mirrorSos( d ) );
+            }
+}
+
 TEST( MRMesh, inSphereTesterFloat )
 {
     const auto In = InSphereResult::Inside;

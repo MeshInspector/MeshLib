@@ -27,7 +27,8 @@ struct BaseShellParameters
 
 struct OffsetParameters : BaseShellParameters
 {
-    /// determines the method to compute distance sign
+    /// determines the method to compute distance sign;
+    /// \ref offsetMesh implementing OffsetMode::Smooth supports only Unsigned, OpenVDB and HoleWindingRule here
     SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
     /// whether to construct closed mesh in signMode = SignDetectionModeShort::HoleWindingNumber

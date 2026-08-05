@@ -152,8 +152,20 @@ std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, cons
     if ( !maybeTris )
         return std::nullopt;
 
+    const auto sd = getAlphaShapeData( cloud, radius, true );
+    // the best triangle-continuation during vertex duplication is the first one rotating counter-clockwise
+    // from the reference triangle around the shared edge directed from the neighbor vertex (e1) to the center (e0)
+    auto betterCont = [&sd, &cloud]( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )
+    {
+        if ( vRef == vCand || vRef == vBest || vCand == vBest )
+            return false; // ccwAroundLine requires all distinct points, keep the current best otherwise
+        return ccwAroundLine( { sd.coords( cloud, e1 ), sd.coords( cloud, e0 ),
+            sd.coords( cloud, vRef ), sd.coords( cloud, vCand ), sd.coords( cloud, vBest ) } );
+    };
+
     int skippedFaceCount = 0;
-    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, *maybeTris, nullptr, { .skippedFaceCount = &skippedFaceCount } );
+    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, *maybeTris, nullptr,
+        { .skippedFaceCount = &skippedFaceCount }, betterCont );
     assert( skippedFaceCount == 0 );
     return res;
 }

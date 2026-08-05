@@ -1,6 +1,7 @@
 #include <MRMesh/MRAlphaShape.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshComponents.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -68,6 +69,27 @@ TEST( MRMesh, AlphaShapeSquare )
     const auto mesh = findAlphaShape( cloud, 0.8f );
     EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
     EXPECT_TRUE( mesh.topology.isClosed() );
+}
+
+// two grids crossing along a line: many junction fans where several continuation triangles exist;
+// the ccwAroundLine-based selection of the best continuation gives 676 vertices in 68 components here,
+// while taking the first found continuation gave 725 vertices in 98 components
+TEST( MRMesh, AlphaShapeCrossingGrids )
+{
+    PointCloud cloud;
+    for ( int i = 0; i <= 10; ++i )
+        for ( int j = 0; j <= 10; ++j )
+            cloud.points.push_back( { i * 0.05f, j * 0.05f, 0 } );
+    for ( int i = 0; i <= 10; ++i )
+        for ( int k = 0; k <= 10; ++k )
+            if ( k != 5 )
+                cloud.points.push_back( { i * 0.05f, 0.25f, k * 0.05f - 0.25f } );
+    cloud.validPoints.autoResizeSet( 0_v, (int)cloud.points.size(), true );
+
+    const auto mesh = findAlphaShape( cloud, 0.08f );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 904 );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 676 );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 68 );
 }
 
 } //namespace MR

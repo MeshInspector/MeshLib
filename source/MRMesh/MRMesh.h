@@ -3,6 +3,7 @@
 #include "MRPch/MRBindingMacros.h"
 #include "MRMeshMath.h"
 #include "MRMeshBuilderTypes.h"
+#include "MRVertDuplication.h"
 #include "MRMeshProject.h"
 #include "MREdgePoint.h"
 #include "MRSharedThreadSafeOwner.h"
@@ -35,12 +36,14 @@ struct [[nodiscard]] Mesh
         const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
-    /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
+    /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices;
+    /// `betterCont` (if given) selects the best triangle among several possible continuations during the duplication
     [[nodiscard]] MRMESH_API static Mesh fromTrianglesDuplicatingNonManifoldVertices(
         VertCoords vertexCoordinates,
         Triangulation & t,
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
-        const MeshBuilder::BuildSettings & settings = {} );
+        const MeshBuilder::BuildSettings & settings = {},
+        const MeshBuilder::BetterDupContinuation & betterCont = {} );
 
     /// construct mesh from vertex coordinates and construct mesh topology from face soup,
     /// where each face can have arbitrary degree (not only triangles);

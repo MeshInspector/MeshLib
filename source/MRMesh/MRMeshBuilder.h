@@ -39,13 +39,11 @@ MRMESH_API MeshTopology fromTriangles( const Triangulation & t, const BuildSetti
 
 /// construct mesh topology from a set of triangles with given ids;
 /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices;
-/// triangulation is modified to introduce duplicates;
-/// `points` (if given) provides the coordinates of the vertices for smoother vertex duplication
+/// triangulation is modified to introduce duplicates
 MRMESH_API MeshTopology fromTrianglesDuplicatingNonManifoldVertices( 
     Triangulation & t,
     std::vector<VertDuplication> * dups = nullptr,
-    const BuildSettings & settings = {},
-    const VertCoords * points = nullptr );
+    const BuildSettings & settings = {} );
 
 /// construct mesh from point triples;
 /// all coinciding points are given the same VertId in the result

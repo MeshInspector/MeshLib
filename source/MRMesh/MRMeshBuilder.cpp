@@ -541,7 +541,7 @@ MeshTopology fromTriangles( const Triangulation & t, const BuildSettings & setti
 }
 
 MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
-    std::vector<VertDuplication> * dups, const BuildSettings & settings, const VertCoords * points )
+    std::vector<VertDuplication> * dups, const BuildSettings & settings )
 {
     MR_TIMER;
     FaceBitSet localRegion = getLocalRegion( settings.region, t.size() );
@@ -560,7 +560,7 @@ MeshTopology fromTrianglesDuplicatingNonManifoldVertices( Triangulation & t,
     }
     // full path
     std::vector<VertDuplication> localDups;
-    MeshBuilder::duplicateNonManifoldVertices( t, settings.region, &localDups, {}, points );
+    MeshBuilder::duplicateNonManifoldVertices( t, settings.region, &localDups );
     const bool noDuplicates = localDups.empty();
     if ( dups )
         *dups = std::move( localDups );

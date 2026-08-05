@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cassert>
+#include <functional>
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -19,14 +20,22 @@ struct VertDuplication
     VertId dupVert; ///< new vertex after duplication
 };
 
+/// decides which of the two continuation triangles is better during a walk around a non-manifold vertex;
+/// all 5 arguments are original vertices (before duplication):
+/// e0, e1 - the vertices of the shared edge between the reference triangle and both continuation candidates (e0 is the central vertex),
+/// vRef - the remaining vertex of the reference triangle,
+/// vCand - the remaining vertex of the candidate triangle,
+/// vBest - the remaining vertex of the currently best continuation triangle;
+/// returns true if the candidate triangle shall replace the currently best continuation triangle
+using BetterDupContinuation = std::function<bool( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )>;
+
 /// resolve non-manifold vertices by creating duplicate vertices in the triangulation (which is modified)
 /// `lastValidVert` is needed if `region` or `t` does not contain full mesh, then first duplicated vertex will have `lastValidVert+1` index
 /// `dups` (if given) contents will be ignored and overridden; it receives the duplications in creation order with consecutive dupVert ids starting from `lastValidVert+1`
-/// `points` (if given) provides the coordinates of the vertices, and among several possible path continuations
-/// the one with the maximal dot-product between its triangle's normal and the normal of the preceding triangle is selected
+/// `betterCont` (if given) selects the best triangle among several possible path continuations
 /// return number of duplicated vertices
 MRMESH_API size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region = nullptr,
-    std::vector<VertDuplication>* dups = nullptr, VertId lastValidVert = {}, const VertCoords * points = nullptr );
+    std::vector<VertDuplication>* dups = nullptr, VertId lastValidVert = {}, const BetterDupContinuation & betterCont = {} );
 
 /// classification of the triangles around one vertex, packed in 32 bits;
 /// it stores 1-bit flag (hasRepeatedVerts) and either 31-bit numRepeatedVerts (if the flag is on),

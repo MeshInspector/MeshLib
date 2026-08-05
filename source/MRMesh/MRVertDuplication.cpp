@@ -3,11 +3,9 @@
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRVector.h"
-#include "MRVector3.h"
 #include "MRphmap.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
-#include <optional>
 
 namespace MR
 {
@@ -46,7 +44,7 @@ class PathAroundVertex
 {
     Triangulation& faceToVertices_;
     const std::vector<VertTri>& vertTris_;
-    const VertCoords* points_ = nullptr; // optional vertex coordinates for smooth path continuation selection
+    const BetterDupContinuation& betterCont_; // optional selector of the best triangle among several path continuations
     // all elements in [vertexBegIndex_, vertexEndIndex_) of *vertTris_ have the same central vertex
     size_t vertexBegIndex_ = 0, vertexEndIndex_ = 0;
     size_t firstUnvisitedIndex_ = 0; // lazily advanced index of the first not yet visited element of the central vertex
@@ -67,12 +65,11 @@ class PathAroundVertex
     // a bit marks the element at once for the span cursor and for both sorted vectors above
     BitSet visitedRecs_;
     FaceId firstTri_; // the triangle visited first in the current path
-    FaceId refTri_;   // the last visited triangle, its normal is the reference for smooth path continuation
-    std::optional<Vector3f> refNormal_; // cached normal of refTri_ to avoid recomputing it for the same triangle
+    FaceId refTri_;   // the last visited triangle, the reference for the continuation selection
 
 public:
-    PathAroundVertex( Triangulation& triangleToVertices, const std::vector<VertTri>& tris, const VertCoords* pts )
-        : faceToVertices_( triangleToVertices ), vertTris_( tris ), points_( pts ) {}
+    PathAroundVertex( Triangulation& triangleToVertices, const std::vector<VertTri>& tris, const BetterDupContinuation & betterCont )
+        : faceToVertices_( triangleToVertices ), vertTris_( tris ), betterCont_( betterCont ) {}
 
     // prepares the search around the central vertex of elements [beg, end), reusing the memory allocated for a previous vertex
     void init( size_t beg, size_t end )
@@ -116,32 +113,17 @@ public:
         visitedRecs_.set( firstUnvisitedIndex_ - vertexBegIndex_ );
         const auto f = vertTris_[firstUnvisitedIndex_++].f;
         firstTri_ = refTri_ = f;
-        refNormal_.reset();
         return getOtherTriVerts( faceToVertices_[f], center_ );
     }
 
-    // the search from firstVertex continues over the edge of the first visited triangle, so its normal becomes the reference
+    // the search from firstVertex continues over the edge of the first visited triangle, so it becomes the reference
     void restartFromFirstTriangle()
     {
-        if ( refTri_ != firstTri_ )
-        {
-            refTri_ = firstTri_;
-            refNormal_.reset();
-        }
-    }
-
-    // computes unit normal of the triangle #f using provided coordinates, mapping duplicated vertices on their originals
-    Vector3f triNormal( FaceId f, const std::vector<VertDuplication>& dups ) const
-    {
-        Vector3f p[3];
-        for ( int i = 0; i < 3; ++i )
-            p[i] = (*points_)[ getOrgVertex( faceToVertices_[f][i], dups ) ];
-        return cross( p[1] - p[0], p[2] - p[0] ).normalized();
+        refTri_ = firstTri_;
     }
 
     // find incident vertex in a not yet visited triangle except for prevVertex and its duplicates;
-    // if the coordinates of the vertices are known and there are several continuation options,
-    // then the triangle with the maximal dot-product between its normal and the normal of the preceding triangle is selected
+    // if the predicate is given and there are several continuation options, the best triangle by the predicate is selected
     VertId getNextVertex( VertId v, bool triOrientation, VertId prevVertex, const std::vector<VertDuplication>& dups )
     {
         assert( prevVertex );
@@ -150,9 +132,8 @@ public:
 
         const auto & vec = triOrientation ? vnextRecs_ : vprevRecs_;
         const VertRec * best = nullptr;
-        VertId bestNext;
-        std::optional<Vector3f> bestNormal; // engaged only when several continuation options were compared
-        float bestDot = 0;
+        VertId bestNext, bestNextOrg;
+        VertId vOrg, refThird; // prepared only when several continuation options were found
         for ( auto it = std::lower_bound( vec.begin(), vec.end(), VertRec{ v, 0 } ); ; ++it )
         {
             if ( it == vec.end() || it->v != v )
@@ -163,11 +144,12 @@ public:
             const auto v12 = getOtherTriVerts( faceToVertices_[f], center_ );
             assert( ( triOrientation ? v12.first : v12.second ) == v );
             const auto nextVertex = triOrientation ? v12.second : v12.first;
-            if ( getOrgVertex( nextVertex, dups ) == prevVertex )
+            const auto nextOrg = getOrgVertex( nextVertex, dups );
+            if ( nextOrg == prevVertex )
                 continue;
-            if ( !points_ )
+            if ( !betterCont_ )
             {
-                // without coordinates, the first found continuation is taken
+                // without the predicate, the first found continuation is taken
                 visitedRecs_.set( it->rec );
                 return nextVertex;
             }
@@ -175,30 +157,35 @@ public:
             {
                 best = &*it;
                 bestNext = nextVertex;
+                bestNextOrg = nextOrg;
                 continue;
             }
-            if ( !bestNormal )
+            if ( !vOrg )
             {
-                // the second continuation option is found, time to compute the normals
-                if ( !refNormal_ )
-                    refNormal_ = triNormal( refTri_, dups );
-                bestNormal = triNormal( vertTris_[vertexBegIndex_ + best->rec].f, dups );
-                bestDot = dot( *refNormal_, *bestNormal );
+                // the second continuation option is found, time to prepare the predicate arguments
+                vOrg = getOrgVertex( v, dups );
+                for ( VertId tv : faceToVertices_[refTri_] )
+                {
+                    const auto tvOrg = getOrgVertex( tv, dups );
+                    if ( tvOrg != center_ && tvOrg != vOrg )
+                    {
+                        refThird = tvOrg;
+                        break;
+                    }
+                }
+                assert( refThird );
             }
-            const auto n = triNormal( f, dups );
-            if ( const auto d = dot( *refNormal_, n ); d > bestDot )
+            if ( refThird && betterCont_( center_, vOrg, refThird, nextOrg, bestNextOrg ) )
             {
                 best = &*it;
                 bestNext = nextVertex;
-                bestNormal = n;
-                bestDot = d;
+                bestNextOrg = nextOrg;
             }
         }
         if ( !best )
             return {};
         visitedRecs_.set( best->rec );
         refTri_ = vertTris_[vertexBegIndex_ + best->rec].f;
-        refNormal_ = bestNormal; // the normal of the winner (if it was computed) becomes the reference
         return bestNext;
     }
 
@@ -459,7 +446,7 @@ void extractClosedPath( std::vector<VertId>& path, std::vector<VertId>& closedPa
 }
 
 // for all vertices get over all incident vertices to find connected sequences
-size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert, const VertCoords * points )
+size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std::vector<VertDuplication>* dups, VertId lastValidVert, const BetterDupContinuation & betterCont )
 {
     MR_TIMER;
     if ( dups )
@@ -522,7 +509,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
     };
     tbb::parallel_sort( vertsToProcess.begin(), vertsToProcess.end(), sortPred );
 
-    PathAroundVertex pathMaker( t, all.recs, points );
+    PathAroundVertex pathMaker( t, all.recs, betterCont );
     std::vector<VertId> path;
     std::vector<VertId> closedPath;
     VertBitSet visitedVertices( all.recs.back().v ); // explicitly not `lastValidVert` but last vert used in triangulation

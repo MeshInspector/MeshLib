@@ -72,8 +72,8 @@ TEST( MRMesh, AlphaShapeSquare )
 }
 
 // two grids crossing along a line: many junction fans where several continuation triangles exist;
-// the ccwAroundLine-based selection of the best continuation gives 676 vertices in 68 components here,
-// while taking the first found continuation gave 725 vertices in 98 components
+// the ccwAroundLine-based selection of the best continuation gives one connected component here,
+// while taking the first found continuation gave 468 vertices in 65 components
 TEST( MRMesh, AlphaShapeCrossingGrids )
 {
     PointCloud cloud;
@@ -86,10 +86,10 @@ TEST( MRMesh, AlphaShapeCrossingGrids )
                 cloud.points.push_back( { i * 0.05f, 0.25f, k * 0.05f - 0.25f } );
     cloud.validPoints.autoResizeSet( 0_v, (int)cloud.points.size(), true );
 
-    const auto mesh = findAlphaShape( cloud, 0.08f );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 904 );
-    EXPECT_EQ( mesh.topology.numValidVerts(), 676 );
-    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 68 );
+    const auto mesh = findAlphaShape( cloud, 0.1f );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 584 );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 322 );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
 }
 
 } //namespace MR

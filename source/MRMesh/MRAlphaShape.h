@@ -52,12 +52,12 @@ MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback & cb );
+[[nodiscard]] MRMESH_API Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius );
 
 /// finds all triangles of alpha-shape given the data prepared by getAlphaShapeData for the same cloud
 /// (preferably with allPoints=true, since the triangles around all points will be searched)
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud,
     const AlphaShapeData & data, const ProgressCallback & cb );
-[[nodiscard]] MRMESH_API Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius );
 
 /// builds alpha-shape mesh with negative alpha = -1/radius
 [[nodiscard]] MRMESH_API std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, const ProgressCallback & cb );

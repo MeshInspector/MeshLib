@@ -802,24 +802,25 @@ void CornerControllerObject::initDefault()
     } ) );
 
 #ifndef MRVIEWER_NO_LOCALE
-    [[maybe_unused]] static auto onLocaleChanged = Locale::onChanged( [hoverable = std::weak_ptr{ basisViewControllerHoverable }, nonhoverable = std::weak_ptr{ basisViewControllerNonHoverable }] ( const std::string& )
+    connections_.push_back( Locale::onChanged( [hoverable = std::weak_ptr{ basisViewControllerHoverable }, nonhoverable = std::weak_ptr{ basisViewControllerNonHoverable }] ( const std::string& )
     {
+        auto hoverableObj = hoverable.lock();
+        auto nonhoverableObj = nonhoverable.lock();
+        if ( !hoverableObj && !nonhoverableObj )
+            return; // loading textures is expensive, skip it if there is nothing to update
         const auto textures = loadCornerControllerTextures();
-        if ( auto obj = hoverable.lock() )
+        if ( hoverableObj )
         {
-            obj->setTextures( textures );
-            obj->setDirtyFlags( DIRTY_TEXTURE );
+            hoverableObj->setTextures( textures );
+            hoverableObj->setDirtyFlags( DIRTY_TEXTURE );
         }
-        if ( auto obj = nonhoverable.lock() )
+        if ( nonhoverableObj && !textures.empty() )
         {
-            if ( !textures.empty() )
-            {
-                obj->setTextures( { textures.front() } );
-                obj->setDirtyFlags( DIRTY_TEXTURE );
-            }
+            nonhoverableObj->setTextures( { textures.front() } );
+            nonhoverableObj->setDirtyFlags( DIRTY_TEXTURE );
         }
         getViewerInstance().setSceneDirty();
-    } );
+    } ) );
 #endif
 
     rootObj_ = std::make_shared<Object>();

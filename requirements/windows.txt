@@ -28,6 +28,7 @@ mimalloc[override]
 opencascade-minimal
 openctm
 openvdb
+parallel-hashmap
 python3
 spdlog
 tiff

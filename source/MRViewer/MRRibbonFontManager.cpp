@@ -46,6 +46,10 @@ RibbonFontManager::RibbonFontManager()
     SystemPath::getFontsDirectory() / "NotoSansMono-Regular.ttf",
     SystemPath::getFontsDirectory() / "fa-solid-900.ttf",
     };
+    // the CJK font is optional in Python wheels (provided by the meshlib-fonts package)
+    std::error_code ec;
+    if ( !std::filesystem::is_regular_file( fontPaths_[int( FontFile::RegularCJK )], ec ) )
+        fontPaths_[int( FontFile::RegularCJK )] = fontPaths_[int( FontFile::Regular )];
 }
 
 void RibbonFontManager::loadAllFonts( ImWchar* charRanges )

@@ -8,6 +8,9 @@ include_package_data = True
 [options.package_data]
 meshlib = $PACKAGE_DATA
 
+[options.extras_require]
+fonts = meshlib-fonts
+
 [bdist_wheel]
 python_tag = $PYTHON_TAG
 plat_name = $PLAT_NAME

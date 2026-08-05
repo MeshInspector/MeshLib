@@ -362,6 +362,19 @@ jobs:
           python3.12 -m pip install patchelf
           python3.12 ./scripts/wheel/build_wheel.py --version ${{ needs.setup.outputs.wheel_version }}
 
+      - name: Build fonts wheel
+        # the fonts wheel is platform- and Python-independent, so one leg builds it for everyone
+        if: ${{ matrix.platform == 'aarch64' }}
+        run: python3.12 ./scripts/wheel/build_fonts_wheel.py
+
+      - name: Upload fonts wheel
+        if: ${{ matrix.platform == 'aarch64' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: FontsWheel
+          path: ./scripts/wheel/meshlib_fonts-*.whl
+          retention-days: 1
+
       - name: Upload Python Stubs
         if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v7
@@ -903,11 +916,18 @@ jobs:
           pattern: Macos-*
           merge-multiple: true
 
+      - name: Download Fonts Wheel Artifact
+        uses: actions/download-artifact@v8
+        with:
+          pattern: FontsWheel
+          merge-multiple: true
+
       - name: Install twine
         run: python3 -m pip install --upgrade pip twine packaging
 
       - name: Upload to Production PyPi
-        run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
+        # meshlib*.whl also matches meshlib_fonts-*.whl; --skip-existing makes the rarely-changing fonts wheel a no-op
+        run: twine upload ./meshlib*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
       - name: Mark Success
         id: check_upload
@@ -946,11 +966,18 @@ jobs:
           pattern: Macos-*
           merge-multiple: true
 
+      - name: Download Fonts Wheel Artifact
+        uses: actions/download-artifact@v8
+        with:
+          pattern: FontsWheel
+          merge-multiple: true
+
       - name: Install twine
         run: python3 -m pip install --upgrade pip twine packaging
 
       - name: Upload to TestPyPI
-        run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
+        # meshlib*.whl also matches meshlib_fonts-*.whl (absent if manylinux legs were disabled)
+        run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
 
   post-release-test:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
@@ -968,6 +995,13 @@ jobs:
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: ManyLinux-*
+          failOnError: false
+
+      - name: Delete Fonts Wheel
+        if: ${{ needs.setup.outputs.publish_prod == 'true' && needs.upload-to-release.outputs.uploaded == 'true' }}
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: FontsWheel
           failOnError: false
 
       - name: Delete Python Stubs

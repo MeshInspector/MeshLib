@@ -2,7 +2,11 @@
 
 find_path(phmap_INCLUDE_DIR
   NAMES parallel_hashmap/phmap.h
-  HINTS ${MESHLIB_THIRDPARTY_ROOT_DIR}/include
+  HINTS
+    # within MeshLib's own build
+    ${MESHLIB_THIRDPARTY_ROOT_DIR}/include
+    # from an installed MeshLib, where meshlib-config.cmake defines this before find_dependency
+    ${MESHLIB_THIRDPARTY_INCLUDE_DIR}
 )
 
 if(phmap_INCLUDE_DIR)

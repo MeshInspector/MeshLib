@@ -18,7 +18,7 @@ namespace MR
 /// (equivalently, seen from the origin A->B->C winds clockwise).
 /// Simulation-of-simplicity resolves the degenerate case dot( a, cross( b, c ) ) == 0 (origin exactly
 /// on plane ABC) deterministically, so the predicate is never "undefined".
-MRMESH_API bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c );
+[[nodiscard]] MRMESH_API bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c );
 
 /// Precise orientation predicate for point D against the plane of triangle ABC
 /// (the general case of the 3-argument overload above, which tests the origin instead of D).
@@ -27,7 +27,7 @@ MRMESH_API bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i
 /// cross( b - a, c - a ) of triangle ABC points away from (equivalently, seen from D the vertices
 /// A->B->C wind clockwise). Simulation-of-simplicity resolves the degenerate case (D exactly on
 /// plane ABC) deterministically, so the predicate is never "undefined".
-inline bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+[[nodiscard]] inline bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
     { return orient3d( a - d, b - d, c - d ); }
 
 struct PreciseVertCoords
@@ -41,8 +41,22 @@ struct PreciseVertCoords
 /// perturbation depends on vertex id, so sorting makes the result depend only on the set of four
 /// vertices and not on the order they are passed in: every call involving the same four vertices
 /// agrees, which keeps orientation decisions consistent mesh-wide.
-MRMESH_API bool orient3d( const std::array<PreciseVertCoords, 4> & vs );
-MRMESH_API bool orient3d( const PreciseVertCoords* vs );
+[[nodiscard]] MRMESH_API bool orient3d( const PreciseVertCoords* vs );
+[[nodiscard]] inline bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
+    { return orient3d( vs.data() ); }
+
+/// Precise predicate for the rotational order of three half-planes around a directed line.
+/// The line passes via vs[0] and vs[1] and is directed from vs[0] to vs[1]; the three half-planes
+/// are bounded by that line and pass via vs[2], vs[3], vs[4] respectively. Returns true iff the
+/// half-planes follow one another in counter-clockwise order around the line, as seen by the viewer
+/// the line's direction points at. Only the rotation of every point around the line matters, so
+/// cyclic permutations of vs[2], vs[3], vs[4] do not change the result, while a swap of two of them,
+/// as well as a swap of vs[0] and vs[1], inverts it. Implemented via orient3d and inherits its
+/// simulation-of-simplicity, so the predicate is never "undefined" even if some of the points
+/// coincide; all five ids must be distinct.
+[[nodiscard]] MRMESH_API bool ccwAroundLine( const PreciseVertCoords* vs );
+[[nodiscard]] inline bool ccwAroundLine( const std::array<PreciseVertCoords, 5> & vs )
+    { return ccwAroundLine( vs.data() ); }
 
 struct TriangleSegmentIntersectResult
 {
@@ -120,9 +134,9 @@ struct CoordinateConverters
 };
 
 /// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range)
-MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
+[[nodiscard]] MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
 /// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range)
-MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
+[[nodiscard]] MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
 
 /// converts given points into integer coordinates in parallel
 /// \param valid if given then only valid points are converted, and the content of other elements in the returned vector is undefined

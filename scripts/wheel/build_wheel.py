@@ -107,6 +107,22 @@ def setup_workspace(version, modules, plat_name):
         config_file.write(config)
 
 
+def strip_libraries():
+    # Only MeshLib's own libs need this: the vcpkg-built third-party libs are already stripped.
+    # Must run before `auditwheel repair`, not after (e.g. via its --strip flag): auditwheel
+    # patchelf's the grafted libs, and stripping a patchelf'ed lib breaks its load command
+    # alignment, making it unloadable.
+    if SYSTEM != "Linux":
+        return
+    libs = [
+        *LIB_DIR.glob("libMR*.so"),
+        *LIB_DIR.glob("libpybind11nonlimitedapi_stubs.so"),
+        *WHEEL_SRC_DIR.glob("*.so"),
+    ]
+    for lib in libs:
+        subprocess.check_call(["strip", "--strip-all", lib])
+
+
 def build_wheel():
     os.chdir(WHEEL_ROOT_DIR)
     subprocess.check_call(
@@ -125,7 +141,6 @@ def build_wheel():
                 sys.executable, "-m", "auditwheel",
                 "repair",
                 "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
-                "--strip",  # drop .symtab/.strtab (~9 MB unpacked); MR libs are built unstripped
                 wheel_file
             ]
         )
@@ -180,6 +195,7 @@ if __name__ == "__main__":
         install_packages()
         setup_workspace(version=args.version, modules=args.modules, plat_name=args.plat_name)
         create_stubs.generate_stubs(modules=args.modules)
+        strip_libraries()
         build_wheel()
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)

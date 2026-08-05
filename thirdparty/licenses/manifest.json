@@ -12,7 +12,9 @@
     "doxygen/general_pages/ThirdpartyList.dox, reconciled against .gitmodules and",
     "thirdparty/vcpkg/vcpkg.json.",
     "source.type: submodule=gitlink SHA | vcpkg-overlay=port version+port-version |",
-    "vcpkg-registry=vcpkg baseline (sound: vcpkg.json has no per-port overrides) |",
+    "vcpkg-registry=baseline version of each listed port, read from the registry at the",
+    "pinned baseline (sound: vcpkg.json has no per-port overrides), so a registry bump",
+    "only trips the components whose own ports moved |",
     "hash=sha256 of tracked in-tree files | manual=stable/link-only, presence-checked only."
   ],
   "components": [
@@ -42,7 +44,21 @@
           "boost-url"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "boost-algorithm": "1.91.0#0",
+        "boost-dynamic-bitset": "1.91.0#0",
+        "boost-functional": "1.91.0#0",
+        "boost-integer": "1.91.0#0",
+        "boost-locale": "1.91.0#0",
+        "boost-move": "1.91.0#0",
+        "boost-multiprecision": "1.91.0#0",
+        "boost-program-options": "1.91.0#0",
+        "boost-range": "1.91.0#0",
+        "boost-serialization": "1.91.0#0",
+        "boost-signals2": "1.91.0#0",
+        "boost-stacktrace": "1.91.0#0",
+        "boost-url": "1.91.0#0"
+      }
     },
     {
       "id": "Eigen",
@@ -97,7 +113,9 @@
           "tiff"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "tiff": "4.7.2#0"
+      }
     },
     {
       "id": "jsoncpp",
@@ -221,7 +239,9 @@
           "libharu"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "libharu": "2.4.6#0"
+      }
     },
     {
       "id": "libjpeg-turbo",
@@ -250,7 +270,9 @@
           "libpng"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "libpng": "1.6.58#0"
+      }
     },
     {
       "id": "OpenCASCADE",
@@ -360,7 +382,9 @@
           "freetype"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "freetype": "2.14.3#0"
+      }
     },
     {
       "id": "Python",
@@ -470,7 +494,9 @@
           "glfw3"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "glfw3": "3.4#1"
+      }
     },
     {
       "id": "DearImGui",
@@ -538,7 +564,9 @@
           "hidapi"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "hidapi": "0.15.0#1"
+      }
     },
     {
       "id": "dbus",
@@ -554,7 +582,9 @@
           "dbus"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "dbus": "1.16.2#5"
+      }
     },
     {
       "id": "FontAwesome",
@@ -633,7 +663,9 @@
           "mimalloc"
         ]
       },
-      "version": "cd61e1e26a038e82d6550a3ebbe0fbbfe7da78e3"
+      "version": {
+        "mimalloc": "3.4.3#0"
+      }
     }
   ]
 }

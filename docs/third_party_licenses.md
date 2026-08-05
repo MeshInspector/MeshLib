@@ -45,9 +45,11 @@ hand -- and guarded by a drift tripwire.
 
 `scripts/check_third_party_licenses.py` verifies every manifest component has a matching
 non-empty section and that each dependency's version has **not moved** since its text was
-curated. It runs **daily and on release** (`.github/workflows/check-third-party-licenses.yml`)
--- deliberately not on every PR, so a routine dependency bump merges freely and this flags
-within a day (and hard-fails at release) if a notice needs updating. Run it locally any time:
+curated. It runs **on every push and pull request, daily, and on release**
+(`.github/workflows/check-third-party-licenses.yml`): the check needs no build and no
+submodule checkout, so gating a PR costs only a runner slot and a few seconds, and catching
+a bump on the PR that makes it beats rediscovering it at release. The daily run still covers
+drift that lands without a version change. Run it locally any time:
 `python scripts/check_third_party_licenses.py`.
 
 When it reports drift:
@@ -59,8 +61,15 @@ When it reports drift:
    updated `manifest.json`.
 
 Version is tracked per source (see `manifest.json` `_comment`): git submodule SHA, vcpkg
-overlay-port version, the vcpkg registry baseline (sound because `vcpkg.json` has no per-port
-overrides), or a sha256 of tracked in-tree files (vendored code, fonts, Python zips).
+overlay-port version, the baseline version of each registry port the component covers (sound
+because `vcpkg.json` has no per-port overrides), or a sha256 of tracked in-tree files (vendored
+code, fonts, Python zips).
+
+Registry ports are tracked **per port**, not by the registry baseline commit: that commit moves
+on every routine vcpkg bump, so using it flagged all nine vcpkg components at once even when
+their own libraries were untouched -- and blanket re-pinning that noise is how a genuine license
+change gets waved through. Reading the ports' own baseline versions is the one signal that needs
+the network (a single `versions/baseline.json` fetch from the registry, shared across components).
 
 ## Adding a new dependency
 

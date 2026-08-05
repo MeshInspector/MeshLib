@@ -156,14 +156,14 @@ std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, cons
     if ( !maybeTris )
         return std::nullopt;
 
-    // the best triangle-continuation during vertex duplication is the first one rotating counter-clockwise
-    // from the reference triangle around the shared edge directed from the neighbor vertex (e1) to the center (e0)
+    // the best triangle-continuation during vertex duplication is the first one rotating
+    // counter-clockwise from the reference triangle around the directed shared edge (e0, e1)
     auto betterCont = [&sd, &cloud]( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )
     {
         if ( vCand == vBest )
             return false; // two remaining vertices can be equal as originals if two triangles over the shared edge
                           // had equal third vertices before duplication; ccwAroundLine requires all distinct points
-        return ccwAroundLine( { sd.coords( cloud, e1 ), sd.coords( cloud, e0 ),
+        return ccwAroundLine( { sd.coords( cloud, e0 ), sd.coords( cloud, e1 ),
             sd.coords( cloud, vRef ), sd.coords( cloud, vCand ), sd.coords( cloud, vBest ) } );
     };
 

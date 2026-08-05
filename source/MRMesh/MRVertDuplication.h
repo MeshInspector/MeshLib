@@ -21,8 +21,10 @@ struct VertDuplication
 };
 
 /// decides which of the two continuation triangles is better during a walk around a non-manifold vertex;
-/// all 5 arguments are original vertices (before duplication):
-/// e0, e1 - the vertices of the shared edge between the reference triangle and both continuation candidates (e0 is the central vertex),
+/// all 5 arguments are original vertices (before duplication), and one of e0, e1 is the central vertex:
+/// e0, e1 - the vertices of the shared edge between the reference triangle and both continuation candidates,
+/// oriented so that the reference triangle has the vertices (e0, e1, vRef) up to rotation,
+/// while the candidate triangles have the vertices (e1, e0, vCand) and (e1, e0, vBest) up to rotation;
 /// vRef - the remaining vertex of the reference triangle,
 /// vCand - the remaining vertex of the candidate triangle,
 /// vBest - the remaining vertex of the currently best continuation triangle;

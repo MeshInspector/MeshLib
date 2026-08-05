@@ -162,10 +162,11 @@ TEST( MRMesh, duplicateVertexPreferredContinuation )
         auto t = initT;
         auto prefer4 = []( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )
         {
-            if ( e0 == 0_v )
+            if ( e1 == 0_v )
             {
-                // the branching during the walk around #0
-                EXPECT_EQ( e1, 2_v );
+                // the branching during the walk around #0: the reference triangle is (2, 0, 1) = 0_f up to rotation,
+                // and the candidates are (0, 2, 3) = 1_f and (0, 2, 4) = 2_f
+                EXPECT_EQ( e0, 2_v );
                 EXPECT_EQ( vRef, 1_v );
                 EXPECT_EQ( vBest, 3_v );
             }

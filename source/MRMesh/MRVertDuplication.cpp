@@ -175,7 +175,10 @@ public:
                 }
                 assert( refThird );
             }
-            if ( refThird && betterCont_( center_, vOrg, refThird, nextOrg, bestNextOrg ) )
+            // the shared edge (e0, e1) is oriented so that the reference triangle is (e0, e1, refThird)
+            // and the continuation candidates are (e1, e0, cand-remaining-vertex) up to rotation
+            if ( refThird && betterCont_( triOrientation ? vOrg : center_, triOrientation ? center_ : vOrg,
+                refThird, nextOrg, bestNextOrg ) )
             {
                 best = &*it;
                 bestNext = nextVertex;

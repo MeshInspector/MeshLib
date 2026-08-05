@@ -16,6 +16,7 @@
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRMouseController.h"
@@ -81,9 +82,12 @@ void flipVertically( Image& img )
 Expected<Image> renderControllerSideText( const Vector2i& resolution )
 {
     // TODO: disconnect from ImGui
-    static auto* font = loadControllerCubeFont( cControllerCubeFontSize );
+    // the font lives in the atlas only for this call: caching it is unsafe, since every
+    // ImFontAtlas::Clear() (font reload, display rescale) deletes all ImFont objects
+    auto* font = loadControllerCubeFont( cControllerCubeFontSize );
     if ( !font )
         return unexpected( "Could not load font" );
+    MR_FINALLY { ImGui::GetIO().Fonts->RemoveFont( font ); };
 
     auto* baked = font->GetFontBaked( cControllerCubeFontSize );
     if ( !baked )

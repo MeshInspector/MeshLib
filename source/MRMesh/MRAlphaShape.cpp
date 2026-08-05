@@ -94,6 +94,11 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
 
 std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback& cb )
 {
+    return findAlphaShapeAllTriangles( cloud, getAlphaShapeData( cloud, radius, true ), cb );
+}
+
+std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, const AlphaShapeData & data, const ProgressCallback& cb )
+{
     MR_TIMER;
     struct ThreadData
     {
@@ -104,8 +109,6 @@ std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & clou
     tbb::enumerable_thread_specific<ThreadData> threadData;
     cloud.getAABBTree(); // to avoid multiple calls to tree construction from parallel region,
                          // which can result that two different vertices will start being processed by one thread
-
-    const auto data = getAlphaShapeData( cloud, radius, true );
 
     if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
     {
@@ -148,12 +151,25 @@ Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius
 std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, const ProgressCallback& cb )
 {
     MR_TIMER;
-    auto maybeTris = findAlphaShapeAllTriangles( cloud, radius, subprogress( cb, 0.0f, 0.8f ) );
+    const auto sd = getAlphaShapeData( cloud, radius, true );
+    auto maybeTris = findAlphaShapeAllTriangles( cloud, sd, subprogress( cb, 0.0f, 0.8f ) );
     if ( !maybeTris )
         return std::nullopt;
 
+    // the best triangle-continuation during vertex duplication is the first one rotating
+    // counter-clockwise from the reference triangle around the directed shared edge (e0, e1)
+    auto betterCont = [&sd, &cloud]( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )
+    {
+        if ( vCand == vBest )
+            return false; // two remaining vertices can be equal as originals if two triangles over the shared edge
+                          // had equal third vertices before duplication; ccwAroundLine requires all distinct points
+        return ccwAroundLine( { sd.coords( cloud, e0 ), sd.coords( cloud, e1 ),
+            sd.coords( cloud, vRef ), sd.coords( cloud, vCand ), sd.coords( cloud, vBest ) } );
+    };
+
     int skippedFaceCount = 0;
-    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, *maybeTris, nullptr, { .skippedFaceCount = &skippedFaceCount } );
+    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, *maybeTris, nullptr,
+        { .skippedFaceCount = &skippedFaceCount }, betterCont );
     assert( skippedFaceCount == 0 );
     return res;
 }

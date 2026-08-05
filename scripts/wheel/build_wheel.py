@@ -125,6 +125,7 @@ def build_wheel():
                 sys.executable, "-m", "auditwheel",
                 "repair",
                 "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
+                "--strip",  # drop .symtab/.strtab (~9 MB unpacked); MR libs are built unstripped
                 wheel_file
             ]
         )

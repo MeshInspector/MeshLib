@@ -86,9 +86,11 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             if ( onlyLargerVids && pj.id < v )
                 continue;
             // the two balls touching all three points differ only by the side of the triangle,
-            // so one reset is enough for the both
+            // so one reset is enough for the both; the tester cheaply rejects the points farther than
+            // the diameter from the first of the three, and every candidate is within the search
+            // radius from p0, so p0 is not given first
             ++myStats.consideredTris;
-            if ( !tester.reset( p0, pi, pj, data.intRadiusSq ) )
+            if ( !tester.reset( pj, p0, pi, data.intRadiusSq ) )
                 continue;
             ++myStats.touchableTris;
             if ( ballEmpty( pi.id, pj.id ) )

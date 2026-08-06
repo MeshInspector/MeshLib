@@ -5,7 +5,9 @@ version = $VERSION
 packages = meshlib
 include_package_data = True
 # exact pin: the viewer wheel carries libraries whose mangled names match only this build
-install_requires = meshlib-viewer==$VERSION
+install_requires =
+    numpy >= 1.19.0
+    meshlib-viewer==$VERSION
 
 [options.package_data]
 meshlib = $PACKAGE_DATA

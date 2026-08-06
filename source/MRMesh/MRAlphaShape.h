@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRPrecisePredicates3.h"
 #include "MRVector.h"
+#include <cstddef>
 #include <optional>
 
 namespace MR
@@ -42,25 +43,56 @@ struct AlphaShapeData
 ///                  which pays off if the triangles around many points will be searched
 [[nodiscard]] MRMESH_API AlphaShapeData getAlphaShapeData( const PointCloud & cloud, float radius, bool allPoints );
 
+/// the amount of work done during the search of alpha-shape triangles;
+/// every function below only increases the counters, never resets them,
+/// so the statistics of several calls can be accumulated in one object
+struct AlphaShapeStats
+{
+    /// the number of triangles considered: the triples of close enough points that were checked
+    /// for the existence of a ball of the given radius passing via all three of them
+    std::size_t consideredTris = 0;
+
+    /// the number of considered triangles touchable by the ball of the given radius,
+    /// for each of which two balls (one from each side of the triangle) were tested for emptiness
+    std::size_t touchableTris = 0;
+
+    /// the number of point-in-ball tests performed for the balls of touchable triangles;
+    /// less than 2 * touchableTris * (points in the neighbourhood) because a ball
+    /// is not tested further as soon as the first point inside it is found
+    std::size_t inBallTests = 0;
+
+    AlphaShapeStats & operator +=( const AlphaShapeStats & r )
+    {
+        consideredTris += r.consideredTris;
+        touchableTris += r.touchableTris;
+        inBallTests += r.inBallTests;
+        return *this;
+    }
+};
+
 /// finds all triangles of alpha-shape with negative alpha = -1/radius,
 /// where each triangle contains point #v and two other points
 MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     Triangulation & appendTris,  ///< found triangles will be appended here
     std::vector<PreciseVertCoords> & neis, ///< temporary storage to avoid memory allocations, it will be filled with all neighbours of point #v within data.searchRadius
-    bool onlyLargerVids );       ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
+    bool onlyLargerVids,         ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
+    AlphaShapeStats * stats = nullptr ); ///< optional statistics of the work done, which is increased here
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius
-[[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback & cb );
-[[nodiscard]] MRMESH_API Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius );
+[[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius,
+    const ProgressCallback & cb, AlphaShapeStats * stats = nullptr );
+[[nodiscard]] MRMESH_API Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius,
+    AlphaShapeStats * stats = nullptr );
 
 /// finds all triangles of alpha-shape given the data prepared by getAlphaShapeData for the same cloud
 /// (preferably with allPoints=true, since the triangles around all points will be searched)
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud,
-    const AlphaShapeData & data, const ProgressCallback & cb );
+    const AlphaShapeData & data, const ProgressCallback & cb, AlphaShapeStats * stats = nullptr );
 
 /// builds alpha-shape mesh with negative alpha = -1/radius
-[[nodiscard]] MRMESH_API std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, const ProgressCallback & cb );
-[[nodiscard]] MRMESH_API Mesh findAlphaShape( const PointCloud & cloud, float radius );
+[[nodiscard]] MRMESH_API std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius,
+    const ProgressCallback & cb, AlphaShapeStats * stats = nullptr );
+[[nodiscard]] MRMESH_API Mesh findAlphaShape( const PointCloud & cloud, float radius, AlphaShapeStats * stats = nullptr );
 
 } //namespace MR

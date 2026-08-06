@@ -32,7 +32,7 @@ mark_as_advanced(
 if(phmap_FOUND AND NOT TARGET phmap::phmap)
   add_library(phmap::phmap INTERFACE IMPORTED)
   set_target_properties(phmap::phmap PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES ${phmap_INCLUDE_DIR}
+    INTERFACE_INCLUDE_DIRECTORIES "${phmap_INCLUDE_DIR}"
     VERSION ${phmap_VERSION}
   )
 endif()

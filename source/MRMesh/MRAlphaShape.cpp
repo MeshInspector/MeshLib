@@ -8,6 +8,7 @@
 #include "MRTimer.h"
 #include "MRProgressCallback.h"
 #include "MRPch/MRTBB.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -58,6 +59,14 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                 neis.push_back( data.coords( cloud, found.vId ) );
             return Processing::Continue;
         } );
+
+    // the ball emptiness test below stops on the first point inside the ball,
+    // and the points closest to #v have the best chance to be there
+    const auto pv = cloud.points[v];
+    std::sort( neis.begin(), neis.end(), [&cloud, pv]( const PreciseVertCoords & a, const PreciseVertCoords & b )
+    {
+        return distanceSq( cloud.points[a.id], pv ) < distanceSq( cloud.points[b.id], pv );
+    } );
 
     const auto p0 = data.coords( cloud, v );
     InSphereTesterSoS tester;

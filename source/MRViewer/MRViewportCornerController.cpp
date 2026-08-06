@@ -34,12 +34,7 @@ ImFont* loadControllerCubeFont( float fontSize )
 {
     auto* font = loadCustomFont( SystemPath::getFontsDirectory() / "NotoSans-SemiBold.ttf", fontSize, { .forceBold = true } );
     if ( font )
-    {
-        // the CJK font is optional in Python wheels (provided by the meshlib-fonts package)
-        std::error_code ec;
-        if ( auto cjkPath = SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc"; std::filesystem::is_regular_file( cjkPath, ec ) )
-            font = loadCustomFont( cjkPath, fontSize, { .mergeMode = true } );
-    }
+        font = loadCustomFont( SystemPath::getFontsDirectory() / "NotoSansCJK-Regular.ttc", fontSize, { .mergeMode = true } );
     return font;
 }
 

@@ -131,46 +131,58 @@ def build_wheel():
     )
 
     wheel_file = list(WHEEL_ROOT_DIR.glob("dist/*.whl"))[0]
+    # Repairing this viewer-less copy alongside the full wheel lets the repair tool
+    # itself decide which bundled libraries are viewer-only (see split_viewer_wheel.py).
+    base_wheel_file = split_viewer_wheel.make_base_input(wheel_file, WHEEL_ROOT_DIR / "dist_base")
 
     if SYSTEM == "Linux":
         # see also: https://github.com/mayeut/pep600_compliance
         manylinux_version = "2_28"
 
         os.chdir(WHEEL_ROOT_DIR)
-        subprocess.check_call(
-            [
-                sys.executable, "-m", "auditwheel",
-                "repair",
-                "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
-                wheel_file
-            ]
-        )
+        for wf, out_dir in ((wheel_file, "wheelhouse_full"), (base_wheel_file, "wheelhouse")):
+            subprocess.check_call(
+                [
+                    sys.executable, "-m", "auditwheel",
+                    "repair",
+                    "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
+                    "-w", out_dir,
+                    wf
+                ]
+            )
 
-        for repaired_wheel_file in list(WHEEL_ROOT_DIR.glob("wheelhouse/meshlib-*.whl")):
-            split_viewer_wheel.split_wheel(repaired_wheel_file)
+        split_viewer_wheel.extract_viewer_wheel(
+            next((WHEEL_ROOT_DIR / "wheelhouse_full").glob("meshlib-*.whl")),
+            next((WHEEL_ROOT_DIR / "wheelhouse").glob("meshlib-*.whl")),
+        )
 
     elif SYSTEM == "Windows":
         os.chdir(SOURCE_DIR)
-        subprocess.check_call(
-            [
-                sys.executable, "-m", "delvewheel",
-                "repair",
-                # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
-                # that happens if we pack these dlls into whl.
-                # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
-                # to pack these dlls with original names and let system solve conflicts on import
-                # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
-                # UPDATE:
-                #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
-                #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
-                "--add-path", LIB_DIR,
-                # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
-                # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
-                "--analyze-existing",
-                wheel_file
-            ]
+        for wf, out_dir in ((wheel_file, "wheelhouse_full"), (base_wheel_file, "wheelhouse")):
+            subprocess.check_call(
+                [
+                    sys.executable, "-m", "delvewheel",
+                    "repair",
+                    # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
+                    # that happens if we pack these dlls into whl.
+                    # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
+                    # to pack these dlls with original names and let system solve conflicts on import
+                    # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
+                    # UPDATE:
+                    #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
+                    #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
+                    "--add-path", LIB_DIR,
+                    # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
+                    # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
+                    "--analyze-existing",
+                    "-w", out_dir,
+                    wf
+                ]
+            )
+        split_viewer_wheel.extract_viewer_wheel(
+            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib-*.whl")),
+            next((SOURCE_DIR / "wheelhouse").glob("meshlib-*.whl")),
         )
-        split_viewer_wheel.split_wheel(next((SOURCE_DIR / "wheelhouse").glob("meshlib-*.whl")))
 
     elif SYSTEM == "Darwin":
         os.chdir(WHEEL_ROOT_DIR)
@@ -178,10 +190,14 @@ def build_wheel():
             ["delocate-path", "meshlib"]
         )
         os.chdir(SOURCE_DIR)
-        subprocess.check_call(
-            ["delocate-wheel", "-w", ".", "-v", wheel_file]
+        for wf, out_dir in ((wheel_file, "./wheelhouse_full"), (base_wheel_file, ".")):
+            subprocess.check_call(
+                ["delocate-wheel", "-w", out_dir, "-v", wf]
+            )
+        split_viewer_wheel.extract_viewer_wheel(
+            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib-*.whl")),
+            next(SOURCE_DIR.glob("meshlib-*.whl")),
         )
-        split_viewer_wheel.split_wheel(next(SOURCE_DIR.glob("meshlib-*.whl")))
 
 
 if __name__ == "__main__":

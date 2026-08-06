@@ -24,6 +24,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     steps:
       - name: Work-around possible permission issues
@@ -98,6 +99,26 @@ jobs:
           name: PythonStubs
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
+
+      # `TARGET=csharp` only reads `source/MeshLibC2/temp/interop_desc.json`, which the C
+      # generator writes and the `CBindings` artifact carries, so the C bindings have to be
+      # unpacked here first. Same steps as build-test-ubuntu-arm64.yml and pip-build.yml.
+      - name: Wait for C bindings
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
+
+      - name: Download C bindings
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        run: |
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Generate C# bindings # generate only sources
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate

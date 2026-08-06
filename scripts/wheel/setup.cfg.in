@@ -4,12 +4,11 @@ version = $VERSION
 [options]
 packages = meshlib
 include_package_data = True
+# exact pin: the viewer wheel carries libraries whose mangled names match only this build
+install_requires = meshlib-viewer==$VERSION
 
 [options.package_data]
 meshlib = $PACKAGE_DATA
-
-[options.extras_require]
-viewer = meshlib-viewer==$VERSION
 
 [bdist_wheel]
 python_tag = $PYTHON_TAG

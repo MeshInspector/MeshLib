@@ -7,7 +7,6 @@ param([Parameter(Mandatory)][string]$Version)
 
 $ErrorActionPreference = 'Stop'
 
-# base wheel plus the split-off meshlib_viewer wheel
 $wheels = @(Get-ChildItem -Filter meshlib*win*.whl)
 if ($wheels.Count -eq 0) { throw "No meshlib*win*.whl wheel found in $(Get-Location)" }
 

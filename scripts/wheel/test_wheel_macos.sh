@@ -16,7 +16,6 @@ RUNNER_TIER="${3:?${USAGE}}"
 # picked up from Anaconda).
 export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
 
-# base wheel plus the split-off meshlib_viewer wheel
 WHEELS=$(ls ./meshlib-*"${PLATFORM}"*.whl ./meshlib_viewer-*"${PLATFORM}"*.whl)
 
 # Python 3.11 ships pre-installed on the GitHub macos-15-intel image;
@@ -40,7 +39,6 @@ rm -rf "${VENV}"
 python -m pip install --upgrade pip
 python -m pip install --upgrade -r ./requirements/python/requirements.txt
 python -m pip install pytest
-# shellcheck disable=SC2086
 python -m pip install ${WHEELS}
 
 ( cd test_python && python -m pytest -s -v )

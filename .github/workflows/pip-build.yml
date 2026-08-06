@@ -406,7 +406,6 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ManyLinux-${{matrix.platform}}
-          # meshlib*.whl also matches the split-off meshlib_viewer wheel
           path: ./scripts/wheel/meshlib/wheelhouse/meshlib*.whl
           retention-days: 1
 
@@ -908,7 +907,6 @@ jobs:
         run: python3 -m pip install --upgrade pip twine packaging
 
       - name: Upload to Production PyPi
-        # meshlib*.whl also matches the split-off meshlib_viewer wheels
         run: twine upload ./meshlib*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
       - name: Mark Success
@@ -952,7 +950,6 @@ jobs:
         run: python3 -m pip install --upgrade pip twine packaging
 
       - name: Upload to TestPyPI
-        # meshlib*.whl also matches the split-off meshlib_viewer wheels
         run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
 
   post-release-test:

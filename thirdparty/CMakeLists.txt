@@ -112,10 +112,10 @@ IF(NOT APPLE)
   ELSE()
     add_subdirectory(./zlib-ng)
   ENDIF()
-ENDIF()
 
-option(PHMAP_INSTALL "" ON)
-add_subdirectory(./parallel-hashmap)
+  option(PHMAP_INSTALL "" ON)
+  add_subdirectory(./parallel-hashmap)
+ENDIF()
 
 IF(EMSCRIPTEN)
   add_subdirectory(./expected ./expected)

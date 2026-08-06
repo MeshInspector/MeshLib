@@ -16,7 +16,6 @@ SUBMODULES=(
     thirdparty/mrbind-pybind11
     thirdparty/nlohmann-json
     thirdparty/OpenCTM-git
-    thirdparty/parallel-hashmap
     thirdparty/tinygltf
 )
 

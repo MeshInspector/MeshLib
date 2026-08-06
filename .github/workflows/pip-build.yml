@@ -419,7 +419,8 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ManyLinux-${{matrix.platform}}
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
+          # meshlib*.whl also matches the split-off meshlib_viewer wheel
+          path: ./scripts/wheel/meshlib/wheelhouse/meshlib*.whl
           retention-days: 1
 
   update-documentation:
@@ -543,7 +544,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Windows
-          path: wheelhouse\meshlib-*.whl
+          path: wheelhouse\meshlib*.whl
           retention-days: 1
 
   macos-pip-build:
@@ -655,7 +656,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Macos-${{matrix.platform}}
-          path: meshlib-*.whl
+          path: meshlib*.whl
           retention-days: 1
 
   upload-wheels-to-release:
@@ -748,7 +749,7 @@ jobs:
           merge-multiple: true
 
       - name: Meshlib wheel install
-        run: ${{ env.PYTHON_CMD }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
+        run: ${{ env.PYTHON_CMD }} -m pip install ${{ matrix.pip-options }} ./meshlib*.whl
 
       - name: Run Python tests
         working-directory: test_python

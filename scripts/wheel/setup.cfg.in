@@ -10,6 +10,7 @@ meshlib = $PACKAGE_DATA
 
 [options.extras_require]
 fonts = meshlib-fonts
+viewer = meshlib-viewer==$VERSION
 
 [bdist_wheel]
 python_tag = $PYTHON_TAG

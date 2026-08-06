@@ -11,6 +11,7 @@ from string import Template
 
 from build_constants import *
 import create_stubs
+import split_viewer_wheel
 
 def install_packages():
     create_stubs.install_packages()
@@ -146,9 +147,8 @@ def build_wheel():
             ]
         )
 
-        print("Wheel files are ready:")
-        for repaired_wheel_file in WHEEL_ROOT_DIR.glob("wheelhouse/meshlib-*.whl"):
-            print(repaired_wheel_file)
+        for repaired_wheel_file in list(WHEEL_ROOT_DIR.glob("wheelhouse/meshlib-*.whl")):
+            split_viewer_wheel.split_wheel(repaired_wheel_file)
 
     elif SYSTEM == "Windows":
         os.chdir(SOURCE_DIR)
@@ -171,6 +171,7 @@ def build_wheel():
                 wheel_file
             ]
         )
+        split_viewer_wheel.split_wheel(next((SOURCE_DIR / "wheelhouse").glob("meshlib-*.whl")))
 
     elif SYSTEM == "Darwin":
         os.chdir(WHEEL_ROOT_DIR)
@@ -181,6 +182,7 @@ def build_wheel():
         subprocess.check_call(
             ["delocate-wheel", "-w", ".", "-v", wheel_file]
         )
+        split_viewer_wheel.split_wheel(next(SOURCE_DIR.glob("meshlib-*.whl")))
 
 
 if __name__ == "__main__":

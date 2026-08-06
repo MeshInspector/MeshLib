@@ -83,8 +83,9 @@ static void setPts2Predicates( SweepLinePredicates& p, std::shared_ptr<Vector<Ve
     };
 }
 
-// default predicates: exact integer arithmetic with simulation-of-simplicity (historical behavior)
-static SweepLinePredicates precisePredicates( const Contours2f& contours )
+// default predicates: exact integer arithmetic with simulation-of-simplicity (historical behavior);
+// `pts` is the storage for the projected points, cleared here; a cached buffer keeps its capacity
+static SweepLinePredicates precisePredicates( const Contours2f& contours, std::shared_ptr<Vector<Vector2i, VertId>> pts )
 {
     Box3f box;
     int pointsSize = 0;
@@ -99,7 +100,7 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
         }
     }
 
-    auto pts = std::make_shared<Vector<Vector2i, VertId>>();
+    pts->clear();
     pts->reserve( pointsSize );
     auto toInt = [conv = getToIntConverter( Box3d( box ) )] ( const Vector2f& coord )
     {
@@ -158,7 +159,8 @@ static VertId holeSourceVertId( const HolesVertIds& holes, VertId v )
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
 // through `holeVertIds` (no separate coordinate copy, no projection round-trip).
 // `mesh`, `loops` and `holeVertIds` only need to outlive the run.
-static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const HolesVertIds& holeVertIds )
+static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const HolesVertIds& holeVertIds,
+    std::shared_ptr<Vector<Vector2i, VertId>> pts2 ) // storage for the dominant-axis projection that drives every predicate
 {
     Box3f box;
     int pointsSize = 0;
@@ -181,7 +183,7 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     if ( normal[dropAx] < 0 )
         std::swap( kx, ky );
 
-    auto pts2 = std::make_shared<Vector<Vector2i, VertId>>(); // dominant-axis projection, drives every predicate
+    pts2->clear();
     pts2->reserve( pointsSize );
     auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
 
@@ -297,24 +299,41 @@ struct SweepLineParams
     Vector<int, FaceId>* outFaceWinding{ nullptr };
 };
 
-class SweepLineQueue
+// the sweep-line triangulator and the only implementation of ISweepLineCache: an instance handed out
+// by makeSweepLineCache() is a queue whose internal buffers survive between runs
+class SweepLineQueue final : public ISweepLineCache
 {
 public:
-    // constructor makes initial mesh which simply contain input contours as edges
-    // if holesVertId is null - merge all vertices with same coordinates
+    // an instance is reusable: init() prepares it for the next run keeping the buffers of the previous one
+    SweepLineQueue() = default;
+
+    // resets the state of the previous run, if any (all internal buffers keep their capacity),
+    // and makes initial mesh which simply contain input contours as edges
+    // if params.holesVertId is null - merge all vertices with same coordinates
     // otherwise only merge the ones with same initial vertId
-    SweepLineQueue( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params );
+    void init( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params );
+
+    // storage for the projected points of the predicates built for this queue's runs;
+    // kept here only so that a cached queue reuses the buffer's capacity across runs
+    const std::shared_ptr<Vector<Vector2i, VertId>>& pts2Buffer() { return pts2Buffer_; }
 
     size_t vertSize() const { return tp_.vertSize(); }
     std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
 
+    // same as run(), but does not create a Mesh: the result connectivity stays in the internal
+    // cached topology (so its buffers are reused by the next run) and a pointer to it is returned,
+    // valid until the next operation on this queue; nullptr if contours intersect while forbidden
+    MeshTopology* runTopology( IntersectionsMap* interMap = nullptr );
+
     bool findIntersections();
     void injectIntersections( IntersectionsMap* interMap );
     void makeMonotone();
-    Mesh triangulate();
+    void triangulate();
 private:
     MeshTopology tp_;
+    VertCoords pointsCache_; // scratch positions of tp_'s vertices for the Delone flips in triangulate()
     SweepLinePredicates predicates_;
+    std::shared_ptr<Vector<Vector2i, VertId>> pts2Buffer_ = std::make_shared<Vector<Vector2i, VertId>>();
 
     SweepLineParams params_;
 
@@ -374,6 +393,8 @@ private:
     std::vector<Intersection> intersections_;
 
     void setupStartVertices_();
+    // scratch bitset of setupStartVertices_()
+    VertBitSet startVerticesCache_;
     // sorted vertices with no left-going edges
     std::vector<VertId> startVerts_;
     std::vector<EdgeId> startVertLowestRight_;
@@ -446,10 +467,30 @@ private:
     void checkIntersection_( int indexLower );
 };
 
-SweepLineQueue::SweepLineQueue( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params ) :
-    predicates_{ std::move( predicates ) },
-    params_{ params }
+ISweepLineCache::~ISweepLineCache() = default;
+
+std::unique_ptr<ISweepLineCache> makeSweepLineCache()
 {
+    return std::make_unique<SweepLineQueue>();
+}
+
+void SweepLineQueue::init( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params )
+{
+    predicates_ = std::move( predicates );
+    params_ = params;
+    stage_ = Stage::Init;
+    tp_.clear(); // empty husk if the previous run() moved it out, filled if runTopology() kept it
+    windingInfo_.clear(); // stale winding modifiers would leak into this run through resize()
+    intersections_.clear();
+    intersectionsMap_.clear(); // keyed by the previous run's edge ids
+    startVerts_.clear();
+    startVertLowestRight_.clear();
+    startVertIndex_ = 0;
+    sortedVerts_.clear(); // mergeSamePoints_() appends
+    sortedVertIndex_ = 0;
+    activeSweepEdges_.clear();
+    events_.clear();
+
     initMeshByContours_( contourSizes );
     mergeSamePoints_( params.holesVertId );
     setupStartVertices_();
@@ -457,12 +498,24 @@ SweepLineQueue::SweepLineQueue( SweepLinePredicates predicates, std::vector<int>
 
 std::optional<MR::Mesh> SweepLineQueue::run( IntersectionsMap* interMap )
 {
+    if ( !runTopology( interMap ) )
+        return {};
+    // materialize the result, donating the cached buffers to it
+    Mesh mesh;
+    mesh.topology = std::move( tp_ );
+    mesh.points = std::move( pointsCache_ );
+    return mesh;
+}
+
+MeshTopology* SweepLineQueue::runTopology( IntersectionsMap* interMap )
+{
     MR_TIMER;
     if ( !findIntersections() )
-        return {};
+        return nullptr;
     injectIntersections( interMap );
     makeMonotone();
-    return triangulate();
+    triangulate();
+    return &tp_;
 }
 
 bool SweepLineQueue::findIntersections()
@@ -595,7 +648,7 @@ void SweepLineQueue::makeMonotone()
     }
 }
 
-Mesh SweepLineQueue::triangulate()
+void SweepLineQueue::triangulate()
 {
     MR_TIMER;
     stage_ = Stage::Triangulation;
@@ -622,24 +675,29 @@ Mesh SweepLineQueue::triangulate()
         if ( params_.outFaceWinding ) // all faces of one monotone block are in the region with same winding number
             params_.outFaceWinding->autoResizeSet( firstBlockFace, tp_.faceSize() - firstBlockFace, windInfo.winding );
     }
-    Mesh mesh;
-    mesh.topology = std::move( tp_ );
-    mesh.points.resize( mesh.topology.vertSize() );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
+    pointsCache_.resize( tp_.vertSize() );
+    BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v )
     {
-        mesh.points[v] = predicates_.point( v );
+        pointsCache_[v] = predicates_.point( v );
     } );
     // Delone flips could cross a contour edge between two inside regions and smear the face winding map
     if ( !params_.needOutline && !params_.outFaceWinding )
     {
+        // borrow the cached topology and points into a temporary mesh for the flips (moves, no copies)
+        Mesh mesh;
+        mesh.topology = std::move( tp_ );
+        mesh.points = std::move( pointsCache_ );
         makeDeloneEdgeFlips( mesh, {}, 300 );
+        tp_ = std::move( mesh.topology );
+        pointsCache_ = std::move( mesh.points );
     }
-    return mesh;
 }
 
 void SweepLineQueue::setupStartVertices_()
 {
-    VertBitSet startVertices( tp_.vertSize() );
+    auto& startVertices = startVerticesCache_;
+    startVertices.clear();
+    startVertices.resize( tp_.vertSize() );
     BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v )
     {
         bool startVert = true;
@@ -1419,7 +1477,8 @@ HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vect
 
 Mesh getOutlineMesh( const Contours2f& conts, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
-    SweepLineQueue triangulator( precisePredicates( conts ), getContourSizes( conts ), { nullptr, false, params.innerType, true, params.allowMerge } );
+    SweepLineQueue triangulator;
+    triangulator.init( precisePredicates( conts, triangulator.pts2Buffer() ), getContourSizes( conts ), { nullptr, false, params.innerType, true, params.allowMerge } );
 
     if ( interMap )
         interMap->shift = triangulator.vertSize();
@@ -1490,7 +1549,8 @@ Mesh triangulateContours( const Contours2f& contours, const TriangulationParamet
 {
     if ( contours.empty() )
         return {};
-    SweepLineQueue triangulator( precisePredicates( contours ), getContourSizes( contours ),
+    SweepLineQueue triangulator;
+    triangulator.init( precisePredicates( contours, triangulator.pts2Buffer() ), getContourSizes( contours ),
         { params.holeVertsIds, false, WindingMode::NonZero, false, true, nullptr, params.outFaceWinding } );
     if ( params.outInterMap )
         params.outInterMap->shift = triangulator.vertSize();
@@ -1518,18 +1578,27 @@ Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVe
     return triangulateContours( contours, { .holeVertsIds = holeVertsIds } );
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/, ISweepLineCache* cache /*= nullptr*/ )
+{
+    const auto contsf = convertContours<Contours2f>( contours );
+    return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries, cache );
+}
+
+std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/, ISweepLineCache* cache /*= nullptr*/ )
 {
     if ( contours.empty() )
         return Mesh();
-    SweepLineQueue triangulator( precisePredicates( contours ), getContourSizes( contours ), { holeVertsIds, true, WindingMode::NonZero, false, true, outBoundaries } );
+    std::optional<SweepLineQueue> localQueue;
+    auto& triangulator = cache ? static_cast<SweepLineQueue&>( *cache ) : localQueue.emplace();
+    triangulator.init( precisePredicates( contours, triangulator.pts2Buffer() ), getContourSizes( contours ), { holeVertsIds, true, WindingMode::NonZero, false, true, outBoundaries } );
     return triangulator.run();
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds /*= nullptr*/, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+MeshTopology* triangulateDisjointContoursTopology( const Contours2f& contours, const HolesVertIds* holeVertsIds, std::vector<EdgePath>* outBoundaries, ISweepLineCache& cache )
 {
-    const auto contsf = convertContours<Contours2f>( contours );
-    return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries );
+    auto& triangulator = static_cast<SweepLineQueue&>( cache );
+    triangulator.init( precisePredicates( contours, triangulator.pts2Buffer() ), getContourSizes( contours ), { holeVertsIds, true, WindingMode::NonZero, false, true, outBoundaries } );
+    return triangulator.runTopology();
 }
 
 std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
@@ -1542,7 +1611,8 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
     std::vector<int> sizes( loops.size() );
     for ( int i = 0; i < int( loops.size() ); ++i )
         sizes[i] = int( loops[i].size() ) + 1; // +1 matches the queue's closed-contour convention (it allocates size-1 verts)
-    SweepLineQueue triangulator( meshSpacePredicates( mesh, loops, normal, holeVertIds ), std::move( sizes ),
+    SweepLineQueue triangulator;
+    triangulator.init( meshSpacePredicates( mesh, loops, normal, holeVertIds, triangulator.pts2Buffer() ), std::move( sizes ),
         { &holeVertIds, true, WindingMode::NonZero, false, true, outBoundaries } );
     return triangulator.run();
 }

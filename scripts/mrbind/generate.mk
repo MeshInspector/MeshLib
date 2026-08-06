@@ -318,7 +318,7 @@ ifneq ($(IS_LINUX),)
 # Fold byte-identical functions: the bindings are ~190k tiny near-duplicate template
 # instantiations, and ICF removes 11% of mrmeshpy.so (7 MB unpacked, 2.3 MB compressed).
 # Linux-only until lld-link (Windows) and ld64.lld (macOS) get their own measurements.
-override EXTRA_CFLAGS += -ffunction-sections -fdata-sections
+# No -ffunction-sections needed: lld's LTO codegen always emits per-function sections.
 override EXTRA_LDFLAGS += -Wl,--icf=all
 endif
 else ifeq ($(MODE),debug)

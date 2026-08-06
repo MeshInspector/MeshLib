@@ -85,7 +85,9 @@ jobs:
       - name: Generate and build MRBind bindings
         env:
           CXX: ${{ env.CXX-COMPILER }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin
+        # PCH_CODEGEN=0: `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on this image's
+        # libstdc++-12, same as the ubuntu22 opt-out in build-test-ubuntu-arm64.yml.
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin PCH_CODEGEN=0
 
       - name: Create Python Stubs
         run: python3 ./scripts/wheel/create_stubs.py
@@ -100,7 +102,7 @@ jobs:
       - name: Generate C bindings
         env:
           CXX: ${{ env.CXX-COMPILER }}
-        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace
+        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace PCH_CODEGEN=0
 
       - name: Upload C bindings headers
         uses: actions/upload-artifact@v7

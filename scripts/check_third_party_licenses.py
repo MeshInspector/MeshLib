@@ -15,14 +15,13 @@ the drift tripwire for that file. For each component in `manifest.json` it:
   3. warns about git submodules that look shippable but are absent from the manifest.
 
 Run `--update-versions` to re-pin the manifest to current versions after you have
-verified the texts are still correct.
+verified the texts are still correct. That is the only mode that reads the vcpkg registry
+(over the network) to resolve per-port versions; see docs/third_party_licenses.md.
 
 Runs on every push and pull request, daily, and on release
 (.github/workflows/check-third-party-licenses.yml); run it locally any time with
-`python scripts/check_third_party_licenses.py`. It needs no build and no submodule
-checkout: every version signal is read from the git tree and in-tree files, except
-`vcpkg-registry` components, whose per-port versions live in the registry repository
-and so cost one HTTPS fetch (see vcpkg_baseline_versions).
+`python scripts/check_third_party_licenses.py`. Checking needs no build, no submodule
+checkout and no network -- every signal is read from the git tree and in-tree files.
 """
 import argparse
 import hashlib
@@ -80,20 +79,15 @@ def vcpkg_default_registry():
     return reg["repository"], reg["baseline"]
 
 
-_BASELINE_VERSIONS = None  # memoized: the port map on success, the ValueError on failure
+_BASELINE_VERSIONS = None  # memoized: the registry is read at most once per run
 
 
 def vcpkg_baseline_versions():
     """port -> baseline version map of the default registry, at the pinned baseline commit.
 
-    The registry is not vendored in-tree, so this is the one signal that needs the network:
-    it fetches versions/baseline.json from the registry repository at the pinned baseline.
-    Resolved once per run and shared by every vcpkg-registry component -- the failure is
-    memoized too, so an outage costs one attempt, not one per component.
-
-    Keep this per-port: the baseline SHA moves on every routine registry bump, so tracking
-    it flagged all nine vcpkg components at once even when their own libraries were
-    untouched -- and blanket re-pinning that noise is how a real license change slips by.
+    Only --update-versions reaches here. The registry is not vendored in-tree, so this is
+    the one signal that reads the network; `check` never does, because the pinned
+    `vcpkg_registry_baseline` already tells it whether these versions can have moved.
     """
     global _BASELINE_VERSIONS
     if _BASELINE_VERSIONS is None:
@@ -104,10 +98,7 @@ def vcpkg_baseline_versions():
             with urllib.request.urlopen(url, timeout=30) as resp:
                 _BASELINE_VERSIONS = json.loads(resp.read().decode("utf-8"))["default"]
         except (OSError, ValueError, KeyError) as e:
-            _BASELINE_VERSIONS = ValueError(
-                f"cannot read vcpkg baseline versions from {url} ({e})")
-    if isinstance(_BASELINE_VERSIONS, ValueError):
-        raise _BASELINE_VERSIONS
+            raise ValueError(f"cannot read vcpkg baseline versions from {url} ({e})")
     return _BASELINE_VERSIONS
 
 
@@ -148,20 +139,49 @@ def files_hash(track):
     return hashlib.sha256(",".join(oids).encode()).hexdigest()[:16]
 
 
-def current_version(source):
-    """Recompute a component's version from its source, or None for manual entries."""
+def current_version(source, resolve_registry=False):
+    """Recompute a component's version from its source, or None when it cannot be.
+
+    'manual' entries have no computable version. 'vcpkg-registry' ones do, but resolving
+    them reads the registry over the network, so only --update-versions asks for it
+    (resolve_registry=True); `check` covers them with one offline comparison instead --
+    see check_vcpkg_baseline.
+    """
     t = source["type"]
     if t == "submodule":
         return submodule_sha(source["path"])
     if t == "vcpkg-overlay":
         return vcpkg_overlay_version(source["port"])
     if t == "vcpkg-registry":
-        return vcpkg_registry_versions(source["ports"])
+        return vcpkg_registry_versions(source["ports"]) if resolve_registry else None
     if t == "hash":
         return files_hash(source["track"])
     if t == "manual":
         return None
     raise ValueError(f"unknown source type '{t}'")
+
+
+def check_vcpkg_baseline(data):
+    """The whole vcpkg-registry tripwire, as one offline comparison. Returns errors.
+
+    A port's baseline version is a pure function of the registry commit, and
+    versions/baseline.json at a given commit is immutable -- so a baseline that has not
+    moved proves no registry port has moved, without reading the registry at all. When it
+    does move, --update-versions re-resolves the per-port versions and names the ones that
+    actually changed, which is the only moment the detail is worth fetching.
+    """
+    pinned = data.get("vcpkg_registry_baseline", "")
+    _, current = vcpkg_default_registry()
+    if not pinned:
+        return [f"vcpkg_registry_baseline not pinned -- run "
+                f"'scripts/check_third_party_licenses.py --update-versions'"]
+    if pinned != current:
+        return [f"vcpkg registry baseline moved {pinned[:12]} -> {current[:12]} -- run "
+                f"'scripts/check_third_party_licenses.py --update-versions' to see which "
+                f"ports moved, re-verify the upstream LICENSE text of each, update their "
+                f"sections in {REL}/{NOTICES.name}, then commit the re-pinned manifest "
+                f"(docs/third_party_licenses.md)"]
+    return []
 
 
 def describe_change(pinned, current):
@@ -206,8 +226,8 @@ def parse_sections(text):
 
 
 def check():
-    _, components = load_components()
-    errors, warnings = [], []
+    data, components = load_components()
+    errors, warnings = check_vcpkg_baseline(data), []
     seen_ids = set()
 
     notices_rel = f"{REL}/{NOTICES.name}"
@@ -308,7 +328,7 @@ def update_versions():
     changed = 0
     for comp in components:
         try:
-            cur = current_version(comp["source"])
+            cur = current_version(comp["source"], resolve_registry=True)
         except (ValueError, subprocess.CalledProcessError) as e:
             print(f"ERROR: {comp['id']}: cannot compute version ({e})", file=sys.stderr)
             return False
@@ -316,6 +336,9 @@ def update_versions():
             print(f"  {comp['id']}: {describe_change(comp.get('version', ''), cur)}")
             comp["version"] = cur
             changed += 1
+    # Re-pin the baseline those registry versions were resolved at; `check` compares it
+    # against thirdparty/vcpkg/vcpkg.json to stay offline.
+    data["vcpkg_registry_baseline"] = vcpkg_default_registry()[1]
     # Write explicit LF bytes: Path.write_text would translate to CRLF on Windows,
     # producing spurious end-of-line churn when a Windows dev re-pins.
     MANIFEST.write_bytes((json.dumps(data, indent=2, ensure_ascii=False) + "\n").encode("utf-8"))

@@ -12,11 +12,16 @@
     "doxygen/general_pages/ThirdpartyList.dox, reconciled against .gitmodules and",
     "thirdparty/vcpkg/vcpkg.json.",
     "source.type: submodule=gitlink SHA | vcpkg-overlay=port version+port-version |",
-    "vcpkg-registry=baseline version of each listed port, read from the registry at the",
-    "pinned baseline (sound: vcpkg.json has no per-port overrides), so a registry bump",
-    "only trips the components whose own ports moved |",
-    "hash=sha256 of tracked in-tree files | manual=stable/link-only, presence-checked only."
+    "vcpkg-registry=baseline version of each listed port (sound: vcpkg.json has no",
+    "per-port overrides), so a registry bump only implicates the components whose own",
+    "ports moved |",
+    "hash=sha256 of tracked in-tree files | manual=stable/link-only, presence-checked only.",
+    "vcpkg_registry_baseline is the vcpkg.json baseline those port versions were resolved",
+    "at. Port versions are a pure function of that commit, so while it matches vcpkg.json",
+    "no registry port can have moved and the check needs no network; when it differs,",
+    "--update-versions re-resolves them and names the ports that actually changed."
   ],
+  "vcpkg_registry_baseline": "9e593bb18ea69cc5095e012465dcd675a822ed0d",
   "components": [
     {
       "id": "Boost",

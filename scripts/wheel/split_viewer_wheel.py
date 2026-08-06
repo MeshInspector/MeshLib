@@ -1,13 +1,13 @@
 """
 Splits a repaired meshlib wheel into the slim base wheel and a `meshlib-viewer` wheel.
 
-The viewer wheel contains `mrviewerpy` and every bundled native library that only
+The viewer wheel contains `mrviewerpy`, every bundled native library that only
 `mrviewerpy` needs (the viewer/UI stack: MRViewer, MRMcp, imgui, glfw, networking,
-input-device libs, ...). The set is computed from the binaries' import tables, so it
-follows dependency changes automatically. Like meshlib-fonts, the viewer wheel installs
-its files into the same site-packages directories as the base wheel (`meshlib/`,
-`meshlib.libs/`, `meshlib/.dylibs/`), where the base wheel's rpaths/DLL directory
-already point.
+input-device libs, ...), and the large CJK UI font. The library set is computed from
+the binaries' import tables, so it follows dependency changes automatically. The viewer
+wheel installs its files into the same site-packages directories as the base wheel
+(`meshlib/`, `meshlib.libs/`, `meshlib/.dylibs/`), where the base wheel's rpaths/DLL
+directory already point.
 
 The split runs AFTER auditwheel/delvewheel/delocate: the repair tools mangle bundled
 library names per build, so the two wheels are only compatible in exactly matching
@@ -179,6 +179,8 @@ def split_wheel(wheel_path):
             binaries[info.filename] = data
     moved = viewer_only_libs(binaries)
     moved |= { n for n in src.namelist() if n.rsplit("/", 1)[-1].startswith("mrviewerpy.") }
+    # the CJK font is only rendered by the viewer UI; label rendering treats it as optional
+    moved |= { n for n in src.namelist() if n.endswith("NotoSansCJK-Regular.ttc") }
     base_dist_info = next(n.split("/")[0] for n in src.namelist() if n.endswith(".dist-info/RECORD"))
     wheel_meta = src.read(f"{base_dist_info}/WHEEL")
 

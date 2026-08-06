@@ -9,7 +9,6 @@ include_package_data = True
 meshlib = $PACKAGE_DATA
 
 [options.extras_require]
-fonts = meshlib-fonts
 viewer = meshlib-viewer==$VERSION
 
 [bdist_wheel]

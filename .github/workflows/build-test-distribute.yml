@@ -35,6 +35,23 @@ jobs:
           ${{ toJSON( needs.config.outputs ) }}
           EOF
 
+  # The bundled notices in thirdparty/licenses/ are hand-curated and guarded by a version
+  # tripwire (scripts/check_third_party_licenses.py). It needs no build, no submodule
+  # checkout and no network, so it takes no `needs:` and runs alongside the builds: a few
+  # seconds, and a failure marks the run red instead of skipping the whole matrix.
+  # Catching a dependency bump on the PR that makes it beats rediscovering it at release.
+  check-third-party-licenses:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check third-party license notices
+        run: python3 scripts/check_third_party_licenses.py
+
   prepare-image:
     needs: config
     uses: ./.github/workflows/prepare-images.yml

@@ -48,7 +48,7 @@ AlphaShapeData getAlphaShapeData( const PointCloud & cloud, float radius, bool a
 }
 
 void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const AlphaShapeData & data,
-    Triangulation & appendTris, std::vector<PreciseVertCoords> & neis, bool onlyLargerVids )
+    Triangulation & appendTris, std::vector<PreciseVertCoords> & neis, bool onlyLargerVids, AlphaShapeStats * stats )
 {
     neis.clear();
     findPointsInBall( cloud, { cloud.points[v], sqr( data.searchRadius ) },
@@ -61,12 +61,18 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
 
     const auto p0 = data.coords( cloud, v );
     InSphereTesterSoS tester;
+    AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     // the tester must be already reset on the ball in question, and a, b are the ids of its points
-    auto ballEmpty = [&tester, &neis]( VertId a, VertId b )
+    auto ballEmpty = [&tester, &neis, &myStats]( VertId a, VertId b )
     {
         for ( const auto & pn : neis )
-            if ( pn.id != a && pn.id != b && tester( pn ) == InSphereResult::Inside )
+        {
+            if ( pn.id == a || pn.id == b )
+                continue;
+            ++myStats.inBallTests;
+            if ( tester( pn ) == InSphereResult::Inside )
                 return false;
+        }
         return true;
     };
     for ( size_t i = 0; i + 1 < neis.size(); ++i )
@@ -81,8 +87,10 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                 continue;
             // the two balls touching all three points differ only by the side of the triangle,
             // so one reset is enough for the both
+            ++myStats.consideredTris;
             if ( !tester.reset( p0, pi, pj, data.intRadiusSq ) )
                 continue;
+            ++myStats.touchableTris;
             if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
             tester.flip();
@@ -90,31 +98,42 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                 appendTris.push_back( { v, pj.id, pi.id } );
         }
     }
+    if ( stats )
+        *stats += myStats;
 }
 
-std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback& cb )
+std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback& cb,
+    AlphaShapeStats * stats )
 {
-    return findAlphaShapeAllTriangles( cloud, getAlphaShapeData( cloud, radius, true ), cb );
+    return findAlphaShapeAllTriangles( cloud, getAlphaShapeData( cloud, radius, true ), cb, stats );
 }
 
-std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, const AlphaShapeData & data, const ProgressCallback& cb )
+std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, const AlphaShapeData & data, const ProgressCallback& cb,
+    AlphaShapeStats * stats )
 {
     MR_TIMER;
     struct ThreadData
     {
         Triangulation tris;
         std::vector<PreciseVertCoords> neis;
+        AlphaShapeStats stats;
     };
 
     tbb::enumerable_thread_specific<ThreadData> threadData;
     cloud.getAABBTree(); // to avoid multiple calls to tree construction from parallel region,
                          // which can result that two different vertices will start being processed by one thread
 
-    if ( !BitSetParallelFor( cloud.validPoints, [&]( VertId v )
+    const bool completed = BitSetParallelFor( cloud.validPoints, [&]( VertId v )
     {
         auto & tls = threadData.local();
-        findAlphaShapeNeiTriangles( cloud, v, data, tls.tris, tls.neis, true );
-    }, subprogress( cb, 0.0f, 0.9f ) ) )
+        findAlphaShapeNeiTriangles( cloud, v, data, tls.tris, tls.neis, true, &tls.stats );
+    }, subprogress( cb, 0.0f, 0.9f ) );
+
+    if ( stats )
+        for ( const auto & tls : threadData )
+            *stats += tls.stats; // the work already done is reported even if the search was cancelled
+
+    if ( !completed )
         return std::nullopt;
 
     size_t numTris = 0;
@@ -138,9 +157,9 @@ std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & clou
     return res;
 }
 
-Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius )
+Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, AlphaShapeStats * stats )
 {
-    auto maybe = findAlphaShapeAllTriangles( cloud, radius, ProgressCallback{} );
+    auto maybe = findAlphaShapeAllTriangles( cloud, radius, ProgressCallback{}, stats );
     assert( maybe.has_value() );
     Triangulation res;
     if ( maybe.has_value() )
@@ -148,11 +167,11 @@ Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius
     return res;
 }
 
-std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, const ProgressCallback& cb )
+std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, const ProgressCallback& cb, AlphaShapeStats * stats )
 {
     MR_TIMER;
     const auto sd = getAlphaShapeData( cloud, radius, true );
-    auto maybeTris = findAlphaShapeAllTriangles( cloud, sd, subprogress( cb, 0.0f, 0.8f ) );
+    auto maybeTris = findAlphaShapeAllTriangles( cloud, sd, subprogress( cb, 0.0f, 0.8f ), stats );
     if ( !maybeTris )
         return std::nullopt;
 
@@ -174,9 +193,9 @@ std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, cons
     return res;
 }
 
-Mesh findAlphaShape( const PointCloud & cloud, float radius )
+Mesh findAlphaShape( const PointCloud & cloud, float radius, AlphaShapeStats * stats )
 {
-    auto maybe = findAlphaShape( cloud, radius, ProgressCallback{} );
+    auto maybe = findAlphaShape( cloud, radius, ProgressCallback{}, stats );
     assert( maybe.has_value() );
     Mesh res;
     if ( maybe.has_value() )

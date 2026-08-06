@@ -1,7 +1,6 @@
 git -C "$PSScriptRoot\.." submodule update --init --depth 1 `
     thirdparty/imgui `
     thirdparty/eigen `
-    thirdparty/parallel-hashmap `
     thirdparty/expected `
     thirdparty/fastmcpp `
     thirdparty/nlohmann-json `

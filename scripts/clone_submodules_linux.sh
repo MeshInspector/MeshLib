@@ -5,7 +5,6 @@ SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 SUBMODULES=(
     thirdparty/imgui
     thirdparty/eigen
-    thirdparty/parallel-hashmap
     thirdparty/mrbind-pybind11
     thirdparty/mrbind
 )
@@ -22,6 +21,7 @@ if [[ $1 != --skip-prebuilt-thirdparty ]]; then
         thirdparty/nlohmann-json
         thirdparty/OpenCTM-git
         thirdparty/openvdb/v10/openvdb
+        thirdparty/parallel-hashmap
         thirdparty/tinygltf
         thirdparty/zlib-ng
     )

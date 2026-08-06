@@ -65,7 +65,7 @@
       <!-- Adding frequently used MeshLib headers to the PCH speeds up clean (CI) builds but slows local
            iterative development, so it is off by default and enabled only in CI via -p:MR_PCH_USE_EXTRA_HEADERS=ON -->
       <PreprocessorDefinitions Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">MR_PCH_USE_EXTRA_HEADERS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(PythonIncludePath);$(MeshLibDir)thirdparty\parallel-hashmap\;$(MeshLibDir)thirdparty\mrbind-pybind11\include\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;$(VcpkgCurrentInstalledDir)\include\eigen3;$(MeshLibDir)thirdparty\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(PythonIncludePath);$(MeshLibDir)thirdparty\mrbind-pybind11\include\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;$(VcpkgCurrentInstalledDir)\include\eigen3;$(MeshLibDir)thirdparty\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <UseStandardPreprocessor>true</UseStandardPreprocessor>

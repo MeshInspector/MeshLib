@@ -99,20 +99,6 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
-      - name: Generate C bindings
-        env:
-          CXX: ${{ env.CXX-COMPILER }}
-        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace PCH_CODEGEN=0
-
-      - name: Upload C bindings headers
-        uses: actions/upload-artifact@v7
-        with:
-          name: CBindings
-          path: |
-            ./source/MeshLibC2/include
-            ./source/MeshLibC2Cuda/include
-          retention-days: 1
-
       - name: Generate C# bindings # generate only sources
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
@@ -130,8 +116,17 @@ jobs:
       upload_artifacts: false
       definitions_only: true
 
+  # The `CBindings` artifact comes from the shared workflow, same as in pip-build.yml and
+  # build-test-distribute.yml. Generating it inside `create-stubs` doesn't work: `TARGET=c`
+  # targets Emscripten, and host headers are only usable on Linux x64, so on this arm64 runner
+  # it needs an Emscripten SDK that the ubuntu22 image doesn't carry.
+  generate-c-bindings:
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: latest
+
   update-dev-documentation:
-    needs: [ create-stubs, generate-wasm-definitions ]
+    needs: [ create-stubs, generate-wasm-definitions, generate-c-bindings ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: ${{ inputs.output_folder }}

@@ -26,7 +26,9 @@ WHEELS=$(ls ./meshlib-*"${PLATFORM}"*.whl ./meshlib_viewer-*"${PLATFORM}"*.whl)
 # generic "post-install step did not complete" summary it prints
 # otherwise hides the real error.
 if [ "${RUNNER_TIER}" != "github" ] || [ "${PLATFORM}" != "x86" ] || [ "${PY_VER}" != "3.11" ]; then
-  brew install --overwrite "python@${PY_VER}"
+  # The formula's post-install step is flaky (seen with python@3.13 3.13.15 on the
+  # self-hosted hosts); retry it once and let the venv creation below be the real check.
+  brew install --overwrite "python@${PY_VER}" || brew postinstall "python@${PY_VER}" || true
 fi
 
 PY_CMD="python${PY_VER}"

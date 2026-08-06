@@ -75,13 +75,14 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     VertCoords vertexCoordinates,
     Triangulation & t,
     std::vector<MeshBuilder::VertDuplication> * dups,
-    const MeshBuilder::BuildSettings & settings )
+    const MeshBuilder::BuildSettings & settings,
+    const MeshBuilder::BetterDupContinuation & betterCont )
 {
     MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     std::vector<MeshBuilder::VertDuplication> localDups;
-    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings, &res.points );
+    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings, betterCont );
     if ( res.points.size() < res.topology.vertSize() ) // never shrink
         res.points.resize( res.topology.vertSize() );
     for ( const auto & d : localDups )

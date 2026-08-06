@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
+import argparse
 import json
-import sys
 from pathlib import Path
 
 
@@ -15,15 +15,18 @@ msgstr ""
 
 
 if __name__ == "__main__":
-    if len(sys.argv) not in (3, 4):
-        print("Usage: update_json_translations.py POT_FILE ITEMS_JSON [UI_JSON]")
-        sys.exit(0)
+    parser = argparse.ArgumentParser(description="Extract translatable strings from ribbon .items.json / .ui.json into a .pot template.")
+    parser.add_argument("pot_file", type=Path, help="output .pot file; its stem is the domain name")
+    parser.add_argument("items_json", type=Path, help=".items.json holding item captions and tooltips")
+    parser.add_argument("ui_json", type=Path, nargs='?', help=".ui.json holding tab names; defaults to the sibling of ITEMS_JSON")
+    parser.add_argument("--package-name", help="value for the Project-Id-Version header field")
+    args = parser.parse_args()
 
-    pot_file = Path(sys.argv[1])
-    input_json = Path(sys.argv[2])
+    pot_file = args.pot_file
+    input_json = args.items_json
     # Auto-detect paired .ui.json if not provided explicitly
-    if len(sys.argv) == 4:
-        ui_json = Path(sys.argv[3])
+    if args.ui_json is not None:
+        ui_json = args.ui_json
     else:
         ui_json_path = input_json.with_suffix('').with_suffix('.ui.json')
         ui_json = ui_json_path if ui_json_path.exists() else None
@@ -54,6 +57,9 @@ if __name__ == "__main__":
         with open(ui_json, 'r') as f:
             ui_doc = json.load(f)
             tab_name_records = [name for tab in ui_doc.get('Tabs', []) if (name := tab.get('Name'))]
+
+    if args.package_name:
+        POT_HEADER = POT_HEADER[:-1] + f'"Project-Id-Version: {args.package_name}\\n"\n' + POT_HEADER[-1:]
 
     with open(pot_file, 'w') as f:
         f.write(POT_HEADER)

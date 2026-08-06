@@ -685,6 +685,84 @@ TEST( MRMesh, orientParaboloid3d )
     EXPECT_FALSE( orientParaboloid3d( a, b, b ) );
 }
 
+TEST( MRMesh, ccwAroundLine )
+{
+    const std::array<PreciseVertCoords, 5> vs =
+    {
+        PreciseVertCoords{ 0_v, Vector3i(  0,  0,  0 ) }, // the line is the z-axis directed up
+        PreciseVertCoords{ 1_v, Vector3i(  0,  0,  1 ) },
+
+        PreciseVertCoords{ 2_v, Vector3i(  2,  0,  7 ) }, // rotation 0 degrees
+        PreciseVertCoords{ 3_v, Vector3i( -1,  2, -3 ) }, // rotation ~117 degrees
+        PreciseVertCoords{ 4_v, Vector3i( -1, -2,  5 ) }  // rotation ~243 degrees
+    };
+
+    EXPECT_TRUE(  ccwAroundLine( vs ) );
+    EXPECT_FALSE( ccwAroundLine( { vs[0], vs[1], vs[2], vs[4], vs[3] } ) ); // swapped half-planes
+    EXPECT_FALSE( ccwAroundLine( { vs[1], vs[0], vs[2], vs[3], vs[4] } ) ); // reversed line
+    EXPECT_TRUE(  ccwAroundLine( { vs[0], vs[1], vs[3], vs[4], vs[2] } ) ); // cyclic permutations
+    EXPECT_TRUE(  ccwAroundLine( { vs[0], vs[1], vs[4], vs[2], vs[3] } ) );
+
+    // all three half-planes within one half-space: rotations 0, ~11 and ~22 degrees
+    const PreciseVertCoords a{ 2_v, Vector3i( 10, 0, 0 ) };
+    const PreciseVertCoords b{ 3_v, Vector3i( 10, 2, 0 ) };
+    const PreciseVertCoords c{ 4_v, Vector3i( 10, 4, 0 ) };
+    EXPECT_TRUE(  ccwAroundLine( { vs[0], vs[1], a, b, c } ) );
+    EXPECT_FALSE( ccwAroundLine( { vs[0], vs[1], a, c, b } ) );
+
+    // the same three half-planes around an oblique line
+    const PreciseVertCoords p{ 0_v, Vector3i( 1, 1, 1 ) };
+    const PreciseVertCoords q{ 1_v, Vector3i( 3, 3, 3 ) };
+    EXPECT_TRUE(  ccwAroundLine( { p, q, PreciseVertCoords{ 2_v, Vector3i(  1, -1,  0 ) },
+                                         PreciseVertCoords{ 3_v, Vector3i(  0,  1, -1 ) },
+                                         PreciseVertCoords{ 4_v, Vector3i( -1,  0,  1 ) } } ) );
+    EXPECT_FALSE( ccwAroundLine( { p, q, PreciseVertCoords{ 2_v, Vector3i(  1, -1,  0 ) },
+                                         PreciseVertCoords{ 4_v, Vector3i( -1,  0,  1 ) },
+                                         PreciseVertCoords{ 3_v, Vector3i(  0,  1, -1 ) } } ) );
+}
+
+TEST( MRMesh, ccwAroundLineCircle )
+{
+    // 16 directions with strictly increasing rotation around the z-axis
+    constexpr int cNum = 16;
+    const Vector2i dirs[cNum] =
+    {
+        { 1, 0 }, { 2, 1 }, { 1, 1 }, { 1, 2 }, { 0, 1 }, { -1, 2 }, { -1, 1 }, { -2, 1 },
+        { -1, 0 }, { -2, -1 }, { -1, -1 }, { -1, -2 }, { 0, -1 }, { 1, -2 }, { 1, -1 }, { 2, -1 }
+    };
+    std::array<PreciseVertCoords, cNum> ps;
+    for ( int i = 0; i < cNum; ++i )
+        ps[i] = { VertId( i + 2 ), Vector3i( dirs[i].x, dirs[i].y, i - cNum / 2 ) }; // z varies on purpose
+
+    const PreciseVertCoords p{ 0_v, Vector3i( 0, 0, -5 ) };
+    const PreciseVertCoords q{ 1_v, Vector3i( 0, 0,  7 ) };
+    for ( int i = 0; i < cNum; ++i )
+        for ( int j = i + 1; j < cNum; ++j )
+            for ( int k = j + 1; k < cNum; ++k )
+            {
+                EXPECT_TRUE(  ccwAroundLine( { p, q, ps[i], ps[j], ps[k] } ) );
+                EXPECT_FALSE( ccwAroundLine( { p, q, ps[i], ps[k], ps[j] } ) );
+            }
+}
+
+TEST( MRMesh, sosCcwAroundLine )
+{
+    std::array<PreciseVertCoords, 5> vs;
+    for ( VertId i = 0_v; i < 5; ++i )
+        vs[i].id = i; //and point coordinate is (0,0,0)
+
+    // simulation-of-simplicity must answer consistently in the most degenerate situation possible
+    do
+    {
+        const bool res = ccwAroundLine( vs );
+        EXPECT_NE( res, ccwAroundLine( { vs[0], vs[1], vs[2], vs[4], vs[3] } ) ); // swapped half-planes
+        EXPECT_NE( res, ccwAroundLine( { vs[1], vs[0], vs[2], vs[3], vs[4] } ) ); // reversed line
+        EXPECT_EQ( res, ccwAroundLine( { vs[0], vs[1], vs[3], vs[4], vs[2] } ) ); // cyclic permutations
+        EXPECT_EQ( res, ccwAroundLine( { vs[0], vs[1], vs[4], vs[2], vs[3] } ) );
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
 TEST( MRMesh, doTriangleSegmentIntersect )
 {
     const std::array<PreciseVertCoords, 5> vs = 

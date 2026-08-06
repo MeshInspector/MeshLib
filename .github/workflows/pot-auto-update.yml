@@ -2,8 +2,8 @@ name: Update Translation Template Files
 
 on:
   workflow_dispatch:
-  #schedule:
-  #  - cron: "0 0 * * 0"  # Run every Sunday at midnight
+  schedule:
+    - cron: "0 4 * * *"  # Run every day at 04:00 UTC
 
 jobs:
   update-pot-files:
@@ -24,16 +24,31 @@ jobs:
         with:
           ref: master
           token: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?
+          fetch-depth: 0  # the branch below is continued, so a merge base must be reachable
 
       # https://github.com/actions/checkout/issues/766
       - name: Fix git permissions
         run: |
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
 
+      - name: Continue or start the update branch
+        run: |
+          git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
+          git config --global user.name "meshinspector-bot"
+
+          # Never force-push: on a daily cron that discards whatever was pushed to the open PR.
+          if git ls-remote --exit-code --heads origin "$GIT_BRANCH_NAME" > /dev/null 2>&1 ; then
+            git fetch --no-tags origin "$GIT_BRANCH_NAME"
+            git switch -c "$GIT_BRANCH_NAME" "origin/$GIT_BRANCH_NAME"
+            git merge --no-edit origin/master
+          else
+            git switch -c "$GIT_BRANCH_NAME" origin/master
+          fi
+
       - name: Update translation templates
         run: |
-          scripts/gettext/update_translations.py locale/MeshLib.pot source/
-          scripts/gettext/update_json_translations.py locale/MRRibbonCommonMenuStructure.pot source/MRCommonPlugins/MRRibbonCommonMenuStructure.items.json
+          scripts/gettext/update_translations.py --package-name=MeshLib locale/MeshLib.pot source/
+          scripts/gettext/update_json_translations.py --package-name=MeshLib locale/MRRibbonCommonMenuStructure.pot source/MRCommonPlugins/MRRibbonCommonMenuStructure.items.json
 
       - name: Check for changes
         id: check-diff
@@ -44,25 +59,16 @@ jobs:
           if [ -n "$(pot_diff)" ] ; then
             echo "need_update=true" >> $GITHUB_OUTPUT
           else
+            # POT-Creation-Date churns on every run; revert rather than commit daily noise.
+            git checkout -- locale/*.pot
             echo "need_update=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Update translations
-        if: ${{ steps.check-diff.outputs.need_update == 'true' }}
-        run: |
-          scripts/gettext/merge_po_from_pot.py locale/ locale/MeshLib.pot locale/MRRibbonCommonMenuStructure.pot
-
       - name: Push changes
         if: ${{ steps.check-diff.outputs.need_update == 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?
         run: |
-          git config --global user.email "${{ secrets.MESHINSPECTOR_BOT_EMAIL }}@gmail.com"
-          git config --global user.name "meshinspector-bot"
-          
-          git checkout -b $GIT_BRANCH_NAME
           git commit -am "Auto CI: Update translation templates"
-          git push --force origin $GIT_BRANCH_NAME
+          git push origin $GIT_BRANCH_NAME
 
       - name: Create pull request
         if: ${{ steps.check-diff.outputs.need_update == 'true' }}

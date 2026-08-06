@@ -25,6 +25,9 @@ jobs:
     uses: ./.github/workflows/config.yml
     secrets: inherit
 
+  check-third-party-licenses:
+    uses: ./.github/workflows/check-third-party-licenses.yml
+
   debug-config:
     needs: config
     runs-on: ubuntu-latest

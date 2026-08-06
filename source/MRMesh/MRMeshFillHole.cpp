@@ -628,11 +628,11 @@ public:
     HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
     HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
     unsigned concurrentSmallHoleSize = 0; ///< if hole size is smaller than this value preffer concurrent processing, sometimes it better than isolated parallelism overhead
-    PlanarTriangulation::ISweepLineCache* sweepCache = nullptr; ///< if set, swept-line planning reuses this cache between runs instead of a temporary one per run
 private:
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
     tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> sweepCache_; ///< keeps swept-line triangulation buffers alive between runPlanar() runs
     MapPatch savedMapPatch_, cachedMapPatch_;
     std::queue<std::pair<WeightedConn, int>> newEdgesQueue_;
 };
@@ -824,7 +824,9 @@ HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowS
         if ( holeSize >= cMinSweptHoleSize )
         {
             // only use this for large holes
-            auto exRes = fillContours2DPlan( mesh, e, sweepCache );
+            if ( !sweepCache_ )
+                sweepCache_ = PlanarTriangulation::makeSweepLineCache();
+            auto exRes = fillContours2DPlan( mesh, e, sweepCache_.get() );
             if ( exRes.has_value() )
                 return *exRes;
         }
@@ -872,18 +874,11 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
 {
     MR_TIMER;
     std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
-    // per-worker sweep-line caches persisting across calls: they hold only hole-size-linear buffers,
-    // and constructing/freeing them per call would dominate here when there are few holes per thread
-    static tbb::enumerable_thread_specific<std::unique_ptr<PlanarTriangulation::ISweepLineCache>> staticSweepCaches;
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
         // isolate keeps run()'s nested ParallelFor from stealing this thread onto another i-index
         planner.concurrentSmallHoleSize = cMinSweptHoleSize;
-        auto& threadSweepCache = staticSweepCaches.local();
-        if ( !threadSweepCache )
-            threadSweepCache = PlanarTriangulation::makeSweepLineCache();
-        planner.sweepCache = threadSweepCache.get();
         tbb::this_task_arena::isolate( [&]
         {
             fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );

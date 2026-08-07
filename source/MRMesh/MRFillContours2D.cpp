@@ -11,6 +11,8 @@
 #include "MRObjectMeshData.h"
 #include "MRColor.h"
 #include "MRMeshFillHole.h"
+#include "MRBox.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -225,8 +227,21 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
 
     // the hole loop winds counterclockwise around this direction, same as around the fitted plane's normal it replaces
     Vector3d sumCross;
+    Box3f loopBox;
+    float minEdgeLenSq = FLT_MAX;
     for ( EdgeId e : loops.front() )
-        sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+    {
+        const auto o = mesh.orgPnt( e ), d = mesh.destPnt( e );
+        sumCross += cross( Vector3d( o ), Vector3d( d ) );
+        loopBox.include( o );
+        minEdgeLenSq = std::min( minEdgeLenSq, ( d - o ).lengthSq() );
+    }
+
+    // A hairline boundary edge forces every triangulation to emit a zero-area needle whose placement
+    // in 3d is arbitrary; two holes sharing such an edge pick their needles independently and can make
+    // them cross. Leave those contours to the metric fill, which weighs triangle shape.
+    if ( minEdgeLenSq < 1e-12f * loopBox.diagonal() * loopBox.diagonal() )
+        return unexpected( "Hole boundary has a degenerate edge" );
 
     std::vector<EdgePath> newPaths;
     auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), &newPaths );

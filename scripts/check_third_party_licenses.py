@@ -18,8 +18,8 @@ Run `--update-versions` to re-pin the manifest to current versions after you hav
 verified the texts are still correct. That is the only mode that reads the vcpkg registry
 (over the network) to resolve per-port versions; see docs/third_party_licenses.md.
 
-Runs on every push and pull request, daily, and on release
-(.github/workflows/check-third-party-licenses.yml); run it locally any time with
+Runs on every push, pull request and daily build, as the `check-third-party-licenses` job
+of .github/workflows/build-test-distribute.yml; run it locally any time with
 `python scripts/check_third_party_licenses.py`. Checking needs no build, no submodule
 checkout and no network -- every signal is read from the git tree and in-tree files.
 """

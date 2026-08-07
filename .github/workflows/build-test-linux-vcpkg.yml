@@ -189,8 +189,8 @@ jobs:
           grep -i "MESHLIB_HAVE_ICF\|icf" build/${{ matrix.config }}/*.log build/${{ matrix.config }}/CMakeCache.txt || true
           echo "=== bin sizes"
           find build/${{ matrix.config }}/bin -maxdepth 1 -type f -printf '%10s %f\n' | sort -rn
-          echo "=== total bytes"
-          find build/${{ matrix.config }}/bin -maxdepth 1 -type f -printf '%s\n' | paste -sd+ | bc
+          echo "=== total bytes of .so"
+          find build/${{ matrix.config }}/bin -maxdepth 1 -name '*.so' -printf '%s\n' | awk '{s+=$1} END {print s}'
           echo "=== link timings"
           find build/${{ matrix.config }} -maxdepth 1 -name link_timings.txt -exec cat {} + || true
 

@@ -2,7 +2,9 @@
 
 #include "MRMeshFwd.h"
 #include "MRPrecisePredicates3.h"
+#include "MRHighPrecision.h"
 #include "MRVector.h"
+#include "MRPch/MRBindingMacros.h"
 #include <cstddef>
 #include <optional>
 
@@ -70,12 +72,22 @@ struct AlphaShapeStats
     }
 };
 
+/// a neighbour of the point #v in the search of alpha-shape triangles around it
+struct AlphaShapeNei
+{
+    /// the neighbour's id together with its integer coordinates
+    PreciseVertCoords coords;
+
+    /// the exact squared distance from #v in the units of the same integer grid
+    MR_BIND_IGNORE Int128 distSq;
+};
+
 /// finds all triangles of alpha-shape with negative alpha = -1/radius,
 /// where each triangle contains point #v and two other points
 MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     Triangulation & appendTris,  ///< found triangles will be appended here
-    std::vector<PreciseVertCoords> & neis, ///< temporary storage to avoid memory allocations, it will be filled with all neighbours of point #v within data.searchRadius
+    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point #v within data.searchRadius sorted by distance, except the ones redundant for the search
     bool onlyLargerVids,         ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
     AlphaShapeStats * stats = nullptr ); ///< optional statistics of the work done, which is increased here
 

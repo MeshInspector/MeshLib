@@ -24,7 +24,7 @@ if [ -d "./distr/" ]; then
  rm -rf distr
 fi
 
-cmake --install ./build/Release --prefix "./distr/meshlib-dev/usr/local"
+cmake --install ./build/Release --prefix "./distr/meshlib-dev/usr/local" --strip
 
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib"
 MR_INSTALL_INCLUDE_DIR="/usr/local/include/MeshLib"
@@ -33,14 +33,16 @@ MR_INSTALL_RES_DIR="/usr/local/share/MeshLib"
 # Install the generated bindings, if needed.
 if [ ! -f "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib/mrmeshpy.so" ] && [ -f "build/Release/bin/meshlib/mrmeshpy.so" ]; then
   echo "Installing the generated bindings..."
-  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so,__init__.py}
-  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"         build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so,__init__.py}
+  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/__init__.py
+  install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so}
+  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"         build/Release/bin/meshlib/__init__.py
+  install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"        build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so}
   patchelf --set-rpath '' "distr/meshlib-dev$MR_INSTALL_LIB_DIR/"{,meshlib/}mrmeshpy.so
 
   if [ -f "build/Release/bin/meshlib/mrcudapy.so" ]; then
     echo "CUDA bindings found, installing with mrcudapy.so..."
-    install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/mrcudapy.so
-    install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"         build/Release/bin/meshlib/mrcudapy.so
+    install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/mrcudapy.so
+    install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"        build/Release/bin/meshlib/mrcudapy.so
     patchelf --set-rpath '' "distr/meshlib-dev$MR_INSTALL_LIB_DIR/"{,meshlib/}mrcudapy.so
   fi
 fi

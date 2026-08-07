@@ -314,6 +314,13 @@ MODE := release
 ifeq ($(MODE),release)
 override EXTRA_CFLAGS += -Oz -flto=thin -DNDEBUG
 override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),-Wl$(comma)-x,-s)# Apple's ld rejects `-s`; `-Wl,-x` drops local Mach-O symbols (most of __LINKEDIT) instead.
+ifneq ($(IS_LINUX),)
+# Fold byte-identical functions: the bindings are ~190k tiny near-duplicate template
+# instantiations, and ICF removes 11% of mrmeshpy.so (7 MB unpacked, 2.3 MB compressed).
+# Linux-only until lld-link (Windows) and ld64.lld (macOS) get their own measurements.
+# No -ffunction-sections needed: lld's LTO codegen always emits per-function sections.
+override EXTRA_LDFLAGS += -Wl,--icf=all
+endif
 else ifeq ($(MODE),debug)
 override EXTRA_CFLAGS += -g
 override EXTRA_LDFLAGS += -g

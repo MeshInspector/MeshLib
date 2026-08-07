@@ -257,6 +257,15 @@ jobs:
           ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
           mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
+      - name: TEMP package size both ways
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        run: |
+          echo -n "stripped:   "; stat -c '%s' meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          sed -i 's/ --strip//' scripts/distribution_vcpkg.sh
+          ./scripts/distribution_vcpkg.sh 0.0.0.0 > /dev/null
+          echo -n "unstripped: "; stat -c '%s' meshlib_linux-vcpkg.tar.xz
+          git checkout -- scripts/distribution_vcpkg.sh
+
       - name: Extract Package
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
         run: |

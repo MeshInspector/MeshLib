@@ -243,6 +243,13 @@ jobs:
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
+      - name: TEMP import the packaged bindings
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        run: |
+          LIB=$(pwd)/meshlib_install/usr/local/lib/MeshLib
+          ls -l $LIB/meshlib/mrmeshpy.so
+          PYTHONPATH=$LIB LD_LIBRARY_PATH=$LIB python3 -c "import meshlib.mrmeshpy as m; print('imported', m.__file__); print(m.Vector3f(1,2,3))"
+
       - name: Build C++ examples and samples
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |

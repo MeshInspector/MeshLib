@@ -183,6 +183,17 @@ jobs:
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
             -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang 21' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
+      - name: TEMP binary sizes
+        run: |
+          echo "=== ICF check"
+          grep -i "MESHLIB_HAVE_ICF\|icf" build/${{ matrix.config }}/*.log build/${{ matrix.config }}/CMakeCache.txt || true
+          echo "=== bin sizes"
+          find build/${{ matrix.config }}/bin -maxdepth 1 -type f -printf '%10s %f\n' | sort -rn
+          echo "=== total bytes"
+          find build/${{ matrix.config }}/bin -maxdepth 1 -type f -printf '%s\n' | paste -sd+ | bc
+          echo "=== link timings"
+          find build/${{ matrix.config }} -maxdepth 1 -name link_timings.txt -exec cat {} + || true
+
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 

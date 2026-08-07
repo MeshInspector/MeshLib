@@ -183,6 +183,18 @@ jobs:
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
             -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang 21' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
+      - name: TEMP section breakdown
+        run: |
+          BIN=build/${{ matrix.config }}/bin
+          echo "=== file sizes"
+          find $BIN -maxdepth 1 -name '*.so' -exec stat -c '%s %n' {} + | sort -rn
+          echo "=== per-section sizes"
+          for f in $BIN/*.so ; do echo "## $(basename $f)"; size -A $f ; done
+          echo "=== section table libMeshLibC2.so"
+          readelf -SW $BIN/libMeshLibC2.so || true
+          echo "=== section table libMRMesh.so"
+          readelf -SW $BIN/libMRMesh.so || true
+
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 

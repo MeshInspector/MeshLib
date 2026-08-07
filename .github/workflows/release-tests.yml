@@ -2,6 +2,17 @@ name: Post Release Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      pip-spec:
+        description: "pip requirement to install; empty = the released `meshlib`"
+        default: ""
+        required: false
+        type: string
+      pip-index-args:
+        description: "extra pip args, e.g. `-i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/` to test a TestPyPI upload"
+        default: ""
+        required: false
+        type: string
   workflow_call:
 
 jobs:
@@ -67,7 +78,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Meshlib wheel install
-        run:  ${{ matrix.py-cmd }} -m pip install meshlib
+        run:  ${{ matrix.py-cmd }} -m pip install ${{ inputs.pip-index-args }} ${{ inputs.pip-spec || 'meshlib' }}
 
       - name: Run Python tests
         working-directory: test_python
@@ -96,7 +107,7 @@ jobs:
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip install pytest
-          py -${{matrix.py-version}} -m pip install meshlib
+          py -${{matrix.py-version}} -m pip install ${{ inputs.pip-index-args }} ${{ inputs.pip-spec || 'meshlib' }}
 
       - name: Run Python tests
         working-directory: test_python
@@ -126,7 +137,7 @@ jobs:
           python${{matrix.py-version}} -m pip install pytest
 
       - name: Meshlib wheel install
-        run:  python${{matrix.py-version}} -m pip install meshlib
+        run:  python${{matrix.py-version}} -m pip install ${{ inputs.pip-index-args }} ${{ inputs.pip-spec || 'meshlib' }}
 
       - name: Run Python tests
         working-directory: test_python

@@ -57,18 +57,19 @@ def _record_entry(name, data):
 def make_meshlib_metadata(core_metadata, version):
     """The `meshlib` METADATA is the core's setuptools-generated one (readme,
     classifiers, license refs) renamed, with the core pin replacing direct deps."""
-    lines = core_metadata.decode().splitlines(keepends=True)
     out = []
-    for line in lines:
+    dep_lines_replaced = 0
+    for line in core_metadata.decode().splitlines(keepends=True):
         if line.startswith("Name: "):
             out.append("Name: meshlib\n")
         elif line.startswith("Requires-Dist: "):
-            continue  # numpy etc. come transitively via the core
-        elif line.startswith("Requires-Python: "):
-            out.append(line)
-            out.append(f"Requires-Dist: meshlib-core=={version}\n")
+            # the core's own deps come transitively; its dep lines collapse into the pin
+            if dep_lines_replaced == 0:
+                out.append(f"Requires-Dist: meshlib-core=={version}\n")
+            dep_lines_replaced += 1
         else:
             out.append(line)
+    assert dep_lines_replaced > 0, "no Requires-Dist in the core METADATA"
     return "".join(out).encode()
 
 

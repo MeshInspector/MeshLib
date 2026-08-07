@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "meshlib version to test; empty = the latest one"
+        description: "meshlib version to install; only used with index `test` (prod always tests the latest release)"
         default: ""
         required: false
         type: string
@@ -24,17 +24,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
-      pip-install-args: ${{ steps.pip-args.outputs.args }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
-
-      - name: Resolve pip install arguments
-        id: pip-args
-        run: echo "args=${{ inputs.index == 'test' && '-i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ ' || '' }}meshlib${{ inputs.version != '' && inputs.version != null && format('=={0}', inputs.version) || '' }}" >> $GITHUB_OUTPUT
 
   pip-test-linux:
     needs: setup
@@ -45,9 +40,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        config: [ "${{ inputs.index || 'prod' }}" ]
         platform: ["x86_64", "aarch64"]
         os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
         include:
+          - config: prod
+            pip-options: meshlib
+          # --extra-index-url: TestPyPI does not mirror numpy
+          - config: test
+            pip-options: -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ meshlib==${{ inputs.version }}
+
           - platform: "x86_64"
             runner: ubuntu-latest
             container-prefix: ""
@@ -86,7 +88,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Meshlib wheel install
-        run:  ${{ matrix.py-cmd }} -m pip install ${{ needs.setup.outputs.pip-install-args }}
+        run:  ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }}
 
       - name: Run Python tests
         working-directory: test_python
@@ -99,7 +101,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        config: [ "${{ inputs.index || 'prod' }}" ]
         py-version: ["3.8", "3.9", "3.10", "3.11"]
+        include:
+          - config: prod
+            pip-options: meshlib
+          # --extra-index-url: TestPyPI does not mirror numpy
+          - config: test
+            pip-options: -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ meshlib==${{ inputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -115,7 +124,7 @@ jobs:
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip install pytest
-          py -${{matrix.py-version}} -m pip install ${{ needs.setup.outputs.pip-install-args }}
+          py -${{matrix.py-version}} -m pip install ${{ matrix.pip-options }}
 
       - name: Run Python tests
         working-directory: test_python
@@ -128,7 +137,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        config: [ "${{ inputs.index || 'prod' }}" ]
         py-version: ["3.9", "3.10", "3.11"]
+        include:
+          - config: prod
+            pip-options: meshlib
+          # --extra-index-url: TestPyPI does not mirror numpy
+          - config: test
+            pip-options: -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ meshlib==${{ inputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -145,7 +161,7 @@ jobs:
           python${{matrix.py-version}} -m pip install pytest
 
       - name: Meshlib wheel install
-        run:  python${{matrix.py-version}} -m pip install ${{ needs.setup.outputs.pip-install-args }}
+        run:  python${{matrix.py-version}} -m pip install ${{ matrix.pip-options }}
 
       - name: Run Python tests
         working-directory: test_python

@@ -2,6 +2,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMeshTrimWithPlane.h>
 #include <MRMesh/MRPlane3.h>
 #include <gtest/gtest.h>
@@ -57,6 +58,37 @@ TEST( MRMesh, fillContours2DTiltedPlane )
     // the current fill emits slivers, and the exact triangulation is not a stable invariant to guard.
     for ( FaceId f = firstNewFace; f <= mesh.topology.lastValidFace(); ++f )
         EXPECT_GT( dot( mesh.normal( f ), -normal ), 0.99f );
+}
+
+// Plans the filling of several coplanar holes at once: trimming a hollow sphere leaves an outer and an
+// inner border, and the ring between them cannot be triangulated hole by hole, so the plan has to
+// connect the two borders - the case the single-hole overload cannot express.
+TEST( MRMesh, fillContours2DPlanMultipleHoles )
+{
+    Mesh mesh = makeUVSphere( 1.0f, 32, 32 );
+    Mesh sphereSmall = makeUVSphere( 0.7f, 16, 16 );
+    sphereSmall.topology.flipOrientation();
+    mesh.addMesh( sphereSmall );
+    trimWithPlane( mesh, TrimWithPlaneParams{ .plane = Plane3f::fromDirAndPt( Vector3f::plusZ(), Vector3f() ) } );
+    mesh.pack();
+
+    const auto holes = mesh.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( holes.size(), size_t( 2 ) );
+
+    auto plan = fillContours2DPlan( mesh, holes );
+    ASSERT_TRUE( plan.has_value() ) << plan.error();
+
+    const int vertsBefore = mesh.topology.numValidVerts();
+    const int facesBefore = mesh.topology.numValidFaces();
+    const FaceId firstNewFace = mesh.topology.lastValidFace() + 1;
+    executeHoleFillPlan( mesh, holes[0], *plan );
+
+    // both holes are closed by the planned filling alone, reusing the border vertices in place
+    EXPECT_TRUE( mesh.topology.findHoleRepresentiveEdges().empty() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), vertsBefore );
+    EXPECT_EQ( mesh.topology.numValidFaces() - facesBefore, plan->numTris );
+    for ( FaceId f = firstNewFace; f <= mesh.topology.lastValidFace(); ++f )
+        EXPECT_GT( dot( mesh.normal( f ), Vector3f::minusZ() ), 0.99f );
 }
 
 }

@@ -214,28 +214,209 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     return {};
 }
 
-Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
+// converts a triangulated patch into a plan of new edges for executeHoleFillPlan.
+// The patch is peeled ear by ear, each ear recording its closing edge as a chord between the polygon
+// edges currently at its ends. executeHoleFillPlan re-creates such a chord by splicing it right after
+// those edges in their vertex rings, and every later chord at the same vertex lands closer to the
+// anchor - which is exactly the patch's angular order, also where several holes meet in one vertex.
+static Expected<HoleFillPlan> patchToPlan( const MeshTopology& pTp, const std::vector<EdgeLoop>& meshLoops,
+    const std::vector<EdgePath>& patchBds, std::vector<EdgeId>* outSingleFaceHoles )
 {
-    assert( !mesh.topology.left( holeEdgeId ) );
-    if ( mesh.topology.left( holeEdgeId ) )
-        return unexpected( "Hole edge has left face" );
+    assert( meshLoops.size() == patchBds.size() ); // validated in validateAndFixPatch
 
-    // triangulate the hole in the mesh's own 3d space: only the plan is needed, so the projection
+    // peeling state per boundary point; each current polygon ring is implicit in succ
+    int n = 0;
+    for ( const auto& loop : meshLoops )
+        n += int( loop.size() );
+    std::vector<EdgeId> cur;  // current polygon edge in the patch, invalid = consumed position
+    std::vector<int> refCode; // plan code of cur: not-negative absolute EdgeId in the mesh, negative - plan edge
+    std::vector<int> succ;    // next position around the polygon
+    cur.reserve( n + patchBds.size() ); // joining two rings adds a position
+    refCode.reserve( n + patchBds.size() );
+    succ.reserve( n + patchBds.size() );
+    Vector<EdgeId, UndirectedEdgeId> bd2mesh( n ); // patch boundary edge (even direction) -> mesh edge
+    for ( int j = 0, base = 0; j < int( patchBds.size() ); base += int( patchBds[j].size() ), ++j )
+    {
+        for ( int i = 0; i < int( patchBds[j].size() ); ++i )
+        {
+            const EdgeId b = patchBds[j][i];
+            if ( !pTp.left( b ) )
+                return unexpected( "Patch surface borders are incompatible with mesh borders" );
+            cur.push_back( b );
+            refCode.push_back( int( meshLoops[j][i] ) );
+            succ.push_back( i + 1 < int( patchBds[j].size() ) ? int( cur.size() ) : base );
+            bd2mesh.autoResizeSet( b.undirected(), b.even() ? meshLoops[j][i] : meshLoops[j][i].sym() );
+        }
+    }
+    auto meshEdge = [&] ( EdgeId patchBd )
+    {
+        return patchBd.even() ? bd2mesh[patchBd.undirected()] : bd2mesh[patchBd.undirected()].sym();
+    };
+
+    UndirectedEdgeBitSet bdEdges( pTp.undirectedEdgeSize() );
+    for ( auto e : cur )
+        bdEdges.set( e.undirected() );
+
+    // the plan has to create every interior edge of the patch, and every filled face must be adjacent
+    // to one of them (or belong to a hole filled with a single face, see below)
+    int numChords = 0;
+    FaceBitSet chordFaces( pTp.faceSize() );
+    for ( UndirectedEdgeId ue{ 0 }; ue < pTp.undirectedEdgeSize(); ++ue )
+    {
+        if ( bdEdges.test( ue ) )
+            continue;
+        const auto l = pTp.left( ue ), r = pTp.right( EdgeId( ue ) );
+        if ( !l && !r )
+            continue; // lone edge
+        if ( !l || !r )
+            return unexpected( "Incorrect filling" );
+        ++numChords;
+        chordFaces.set( l );
+        chordFaces.set( r );
+    }
+
+    HoleFillPlan res;
+    res.items.reserve( numChords );
+    UndirectedEdgeBitSet emitted( pTp.undirectedEdgeSize() ); // patch edges already present in the plan
+    auto clip = [&] ( int p0, EdgeId ne, int code )
+    {
+        const int p1 = succ[p0];
+        cur[p1] = {};
+        cur[p0] = ne;
+        refCode[p0] = code;
+        succ[p0] = succ[p1];
+    };
+    while ( int( res.items.size() ) < numChords )
+    {
+        bool progress = false;
+        for ( int p0 = 0; p0 < int( cur.size() ) && int( res.items.size() ) < numChords; ++p0 )
+        {
+            if ( !cur[p0] )
+                continue;
+            const int p1 = succ[p0];
+            const int p2 = succ[p1];
+            if ( succ[p2] == p0 )
+                continue; // triangle ring: its last face needs no new edge
+            const EdgeId ne = pTp.next( cur[p0] );
+            if ( pTp.dest( ne ) != pTp.dest( cur[p1] ) )
+                continue; // left face of cur[p0] is not an ear here
+            if ( emitted.test( ne.undirected() ) )
+                continue; // this face is clipped from the position holding ne as its polygon edge
+            if ( bdEdges.test( ne.undirected() ) )
+                clip( p0, ne, int( meshEdge( ne ) ) ); // pinched ring: the closing edge exists in the mesh
+            else
+            {
+                res.items.push_back( { refCode[p0], refCode[p2] } );
+                emitted.set( ne.undirected() );
+                clip( p0, ne, -int( res.items.size() ) );
+            }
+            progress = true;
+        }
+        if ( progress || int( res.items.size() ) >= numChords )
+            continue;
+
+        // no ears left: the rings have to be joined through a bridge edge first. A bridge is expressible
+        // only if it is the first new edge after the current polygon edge at both of its ends, and only
+        // when the face left of its reversed direction is clipped before it: that clip lands right after
+        // the bridge in the shared vertex ring, so it has to be created earlier (see anchoring above)
+        bool joined = false;
+        for ( int s = 0; s < int( cur.size() ) && !joined; ++s )
+        {
+            if ( !cur[s] )
+                continue;
+            const EdgeId m = pTp.next( cur[s] );
+            if ( bdEdges.test( m.undirected() ) || emitted.test( m.undirected() ) )
+                continue;
+            int q = -1;
+            for ( int c = 0; c < int( cur.size() ) && q < 0; ++c )
+                if ( cur[c] && c != s && pTp.next( cur[c] ) == m.sym() )
+                    q = c;
+            if ( q < 0 || q == succ[s] || succ[q] == s )
+                continue;
+            const EdgeId x = pTp.next( m.sym() ); // closes the face left of m.sym() together with cur[s]
+            assert( pTp.dest( x ) == pTp.dest( cur[s] ) );
+            int codeX;
+            if ( bdEdges.test( x.undirected() ) )
+                codeX = int( meshEdge( x ) );
+            else
+            {
+                res.items.push_back( { refCode[q], refCode[succ[s]] } );
+                emitted.set( x.undirected() );
+                codeX = -int( res.items.size() );
+            }
+            res.items.push_back( { refCode[s], refCode[q] } );
+            emitted.set( m.undirected() );
+            // join the rings: ... -> s( cur = m ) -> q -> ... -> q's old predecessor -> t( cur = x ) -> old succ[s] -> ...
+            const int t = int( cur.size() );
+            cur.push_back( x );
+            refCode.push_back( codeX );
+            succ.push_back( succ[s] );
+            for ( int c = 0; c < t; ++c )
+                if ( cur[c] && succ[c] == q )
+                {
+                    succ[c] = t;
+                    break;
+                }
+            cur[s] = m;
+            refCode[s] = -int( res.items.size() );
+            succ[s] = q;
+            joined = true;
+        }
+        if ( !joined )
+            return unexpected( "Incorrect filling" ); // most likely due to ties in input contour
+    }
+
+    // an untouched triangle ring got no new edges, so executeHoleFillPlan cannot reach its face:
+    // such a hole is reported to be filled with one face separately
+    int numSingleFaceHoles = 0;
+    for ( int j = 0, base = 0; j < int( patchBds.size() ); base += int( patchBds[j].size() ), ++j )
+    {
+        if ( patchBds[j].size() != 3 || !cur[base] || !cur[base + 1] || !cur[base + 2] ||
+            succ[base] != base + 1 || succ[base + 1] != base + 2 || succ[base + 2] != base )
+            continue;
+        if ( !pTp.isLeftTri( cur[base] ) )
+            return unexpected( "Incorrect filling" );
+        ++numSingleFaceHoles;
+        if ( !outSingleFaceHoles )
+            return unexpected( "Hole needs no new edges to be filled" );
+        outSingleFaceHoles->push_back( meshLoops[j].front() );
+    }
+    if ( int( chordFaces.count() ) + numSingleFaceHoles != pTp.numValidFaces() )
+        return unexpected( "Incorrect filling" );
+    res.numTris = pTp.numValidFaces() - numSingleFaceHoles;
+    return res;
+}
+
+Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges,
+    std::vector<EdgeId>* outSingleFaceHoles )
+{
+    assert( !holeRepresentativeEdges.empty() );
+    if ( holeRepresentativeEdges.empty() )
+        return unexpected( "No hole edges are given" );
+
+    // triangulate the holes in the mesh's own 3d space: only the plan is needed, so the projection
     // round-trip of the mesh-filling path above is avoided
-    EdgeLoops loops( 1 );
-    loops.front() = trackRightBoundaryLoop( mesh.topology, holeEdgeId );
+    EdgeLoops loops( holeRepresentativeEdges.size() );
+    for ( int i = 0; i < int( holeRepresentativeEdges.size() ); ++i )
+    {
+        assert( !mesh.topology.left( holeRepresentativeEdges[i] ) );
+        if ( mesh.topology.left( holeRepresentativeEdges[i] ) )
+            return unexpected( "Hole edge has left face" );
+        loops[i] = trackRightBoundaryLoop( mesh.topology, holeRepresentativeEdges[i] );
+    }
 
-    // the hole loop winds counterclockwise around this direction, same as around the fitted plane's normal it replaces
+    // the hole loops wind counterclockwise around this direction, same as around the fitted plane's normal it replaces
     Vector3d sumCross;
     Box3f loopBox;
     float minEdgeLenSq = FLT_MAX;
-    for ( EdgeId e : loops.front() )
-    {
-        const auto o = mesh.orgPnt( e ), d = mesh.destPnt( e );
-        sumCross += cross( Vector3d( o ), Vector3d( d ) );
-        loopBox.include( o );
-        minEdgeLenSq = std::min( minEdgeLenSq, ( d - o ).lengthSq() );
-    }
+    for ( const auto& loop : loops )
+        for ( EdgeId e : loop )
+        {
+            const auto o = mesh.orgPnt( e ), d = mesh.destPnt( e );
+            sumCross += cross( Vector3d( o ), Vector3d( d ) );
+            loopBox.include( o );
+            minEdgeLenSq = std::min( minEdgeLenSq, ( d - o ).lengthSq() );
+        }
 
     // A hairline boundary edge forces every triangulation to emit a zero-area needle whose placement
     // in 3d is arbitrary; two holes sharing such an edge pick their needles independently and can make
@@ -251,50 +432,16 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     if ( auto v = validateAndFixPatch( patch->topology, loops, newPaths ); !v )
         return unexpected( std::move( v.error() ) );
 
-    const auto& pTp = patch->topology;
-    const auto& ip = loops.front();
-    auto& np = newPaths.front();
-    HoleFillPlan res;
-    res.numTris = pTp.numValidFaces();
-    if ( res.numTris == 1 )
-        return res;
-    auto size = int( np.size() );
-    assert( size > 3 );
-    res.items.reserve( size - 3 );
+    return patchToPlan( patch->topology, loops, newPaths, outSingleFaceHoles );
+}
 
-    for ( ;;)
-    {
-        for ( int i0 = 0; i0 < np.size(); ++i0 )
-        {
-            auto e0 = np[i0];
-            if ( !e0 )
-                continue; // skip unused/encoded 
-            auto i1 = int( pTp.dest( np[i0] ) );
-            if ( i1 < 0 )
-                return unexpected( "Incorrect filling" ); // most likely due to ties in input contour
-            auto e1 = np[i1];
-            if ( !e1 )
-                return unexpected( "Incorrect filling" ); // most likely due to ties in input contour
-            auto ne = pTp.next( e0 );
-            auto dest = pTp.dest( ne );
-            if ( dest != pTp.dest( e1 ) )
-                continue;
-            FillHoleItem fhi;
-            int i01 = ( i0 + 1 ) % size;
-            fhi.edgeCode1 = i1 == i01 ? ip[i0] : int( np[i01] );
-            i1 = dest;
-            e1 = np[i1];
-            if ( !e1 )
-                return unexpected( "Incorrect filling" ); // most likely due to ties in input contour
-            int i11 = ( i1 + 1 ) % size;
-            fhi.edgeCode2 = ( pTp.dest( e1 ) == i11 ) ? ip[i1] : int( np[i11] );
-            res.items.push_back( std::move( fhi ) );
-            if ( res.items.size() == size - 3 )
-                return res;
-            np[i0] = ne;
-            np[i01] = EdgeId( -int( res.items.size() ) ); // encode newly created plan edge in free slot
-        }
-    }
+Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
+{
+    std::vector<EdgeId> singleFaceHoles;
+    auto res = fillContours2DPlan( mesh, std::vector<EdgeId>{ holeEdgeId }, &singleFaceHoles );
+    if ( res && !singleFaceHoles.empty() )
+        res->numTris = 1; // the only hole is a triangle, executeHoleFillPlan fills it by the empty plan
+    return res;
 }
 
 Expected<void> fillPlanarHole( ObjectMeshData& data, std::vector<EdgeLoop>& holeContours )

@@ -25,6 +25,21 @@ MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>&
  */
 MRMESH_API Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId );
 
+/**
+ * @brief prepare one filling plan for several holes with borders in same plane (i.e. after cut by plane),
+ * the holes are triangulated together, so the filling may connect different holes (e.g. it can fill the
+ * region between two nested borders); execute it by executeHoleFillPlan with any hole edge
+ * except the ones reported in outSingleFaceHoles
+ * @param mesh - mesh with holes
+ * @param holeRepresentativeEdges - each edge here represents a hole borders that should be filled
+ * should be not empty, edges should have invalid left face (FaceId == -1)
+ * @param outSingleFaceHoles - receives an edge of every hole that the plan does not cover because its
+ * filling needs no new edges (a triangular hole); each of them is to be filled with one face separately
+ * @return Expected with has_value()=true if the plan is prepared, otherwise - string error
+ */
+MRMESH_API Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges,
+    std::vector<EdgeId>* outSingleFaceHoles = nullptr );
+
 /// computes the transformation that maps
 /// O into center mass of contours' points
 /// OXY into best plane containing the points

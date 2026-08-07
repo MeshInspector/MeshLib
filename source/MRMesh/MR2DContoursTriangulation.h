@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include <memory>
 #include <optional>
 
 namespace MR
@@ -103,15 +104,43 @@ MRMESH_API Mesh triangulateContours( const Contours2f& contours, const Triangula
 MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds );
 MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds );
 
+/// reusable internal state of the sweep-line triangulation;
+/// a caller making many triangulation calls one by one can pass the same cache into each of them
+/// to avoid re-allocating the internal buffers on every call;
+/// one cache serves one call at a time: never share an instance between concurrent calls
+class ISweepLineCache
+{
+public:
+    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    ISweepLineCache() = default;
+    ISweepLineCache( const ISweepLineCache & ) = default;
+    ISweepLineCache( ISweepLineCache && ) noexcept = default;
+
+    /// pure to make the class abstract: instances are created by makeSweepLineCache() only
+    MRMESH_API virtual ~ISweepLineCache() = 0;
+};
+
+/// creates a cache for the triangulation functions accepting it below
+MRMESH_API std::unique_ptr<ISweepLineCache> makeSweepLineCache();
+
 /**
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
  * @param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
  * @param outBoundaries optional output EdgePaths that correspond to initial contours
+ * @param cache if not null, keeps the triangulation's internal buffers in it after the call,
+ * so that the next call with the same cache reuses them instead of allocating anew
  * @return std::optional<Mesh> : if some contours intersect return false, otherwise return created mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr, ISweepLineCache* cache = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr, ISweepLineCache* cache = nullptr );
+
+/// same as above, but does not create a Mesh at all: the triangulation connectivity is built inside
+/// \p cache (reusing even its topology buffers) and a pointer to it is returned, valid until the next
+/// operation with \p cache; returns nullptr if some contours intersect;
+/// use it when only the connectivity is needed, e.g. to build a HoleFillPlan;
+/// the cache is required here since it owns the returned topology
+MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( const Contours2f& contours, const HolesVertIds* holeVertsIds, std::vector<EdgePath>* outBoundaries, ISweepLineCache& cache );
 
 /**
  * @brief triangulate hole boundary loops of \p mesh in the mesh's own 3d space, orienting faces around \p normal
@@ -121,6 +150,11 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
  * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
  */
 MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries = nullptr );
+
+/// mesh-space counterpart of triangulateDisjointContoursTopology: builds the patch connectivity of
+/// \p loops inside \p cache without creating a Mesh, and returns a pointer to it (valid until the next
+/// operation with \p cache); returns nullptr if the loops self-intersect
+MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries, ISweepLineCache& cache );
 
 }
 }

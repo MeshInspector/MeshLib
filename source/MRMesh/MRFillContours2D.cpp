@@ -129,9 +129,9 @@ struct ProjectedFillMesh
     std::vector<EdgeLoop> paths;
 };
 
-// checks that patch boundary loops match the input hole loops one-to-one and re-orients inverted
-// degenerate holes (expected sometimes as far as planar triangulation does not now about input topology)
-static Expected<void> validateAndFixPatch( MeshTopology& patchTopology, const std::vector<EdgeLoop>& inputPaths, std::vector<EdgePath>& patchPaths )
+// checks that the patch triangulation borders match the input hole loops and
+// fixes inverted degenerate holes right in the patch topology
+Expected<void> validateAndFixPatch( MeshTopology& patchTp, const std::vector<EdgeLoop>& inputPaths, std::vector<EdgeLoop>& patchPaths )
 {
     if ( inputPaths.size() != patchPaths.size() )
         return unexpected( "Patch surface borders size different from original mesh borders size" );
@@ -143,26 +143,27 @@ static Expected<void> validateAndFixPatch( MeshTopology& patchTopology, const st
         if ( inputPaths[i].size() != patchPaths[i].size() )
             return unexpected( "Patch surface borders size different from original mesh borders size" );
 
-        if ( patchPaths[i].empty() || patchTopology.right( patchPaths[i].front() ) )
+        // degenerate holes might invert sometimes (it is expected as far as planar triangulation does not now about input topology)
+        if ( patchPaths[i].empty() || patchTp.right( patchPaths[i].front() ) )
             if ( !patchPaths[i].empty() )
                 MR::reverse( invertedHoles.emplace_back( patchPaths[i] ) );
     }
     if ( !invertedHoles.empty() )
     {
-        auto invertedParts = fillContourLeft( patchTopology, invertedHoles );
-        auto invertedEdges = getIncidentEdges( patchTopology, invertedParts );
-        patchTopology.flipOrientation( &invertedEdges );
+        auto invertedParts = fillContourLeft( patchTp, invertedHoles );
+        auto invertedEdges = getIncidentEdges( patchTp, invertedParts );
+        patchTp.flipOrientation( &invertedEdges );
 
         // validate one more time
         for ( int i = 0; i < patchPaths.size(); ++i )
-            if ( patchPaths[i].empty() || patchTopology.right( patchPaths[i].front() ) )
+            if ( patchPaths[i].empty() || patchTp.right( patchPaths[i].front() ) )
                 if ( !patchPaths[i].empty() )
                     return unexpected( "Patch surface borders are incompatible with mesh borders" );
     }
     return {};
 }
 
-Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const ProjectFillInput& input )
+Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const ProjectFillInput& input, PlanarTriangulation::ISweepLineCache* cache )
 {
     MR_TIMER;
     ProjectedFillMesh res;
@@ -170,7 +171,7 @@ Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const Project
     auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
         PlanarTriangulation::findHoleVertIdsByHoleEdges( tp, input.paths ) );
 
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( input.holes2d, holeVertIds.get(), &res.paths );
+    auto fillResult = PlanarTriangulation::triangulateDisjointContours( input.holes2d, holeVertIds.get(), &res.paths, cache );
     holeVertIds.reset();
     if ( !fillResult )
         return unexpected( "Cannot triangulate contours with self-intersections" );
@@ -190,7 +191,7 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     if ( !projInput.has_value() )
         return unexpected( std::move( projInput.error() ) );
 
-    auto fillRes = fillProjected( mesh.topology, *projInput );
+    auto fillRes = fillProjected( mesh.topology, *projInput, nullptr );
     if ( !fillRes.has_value() )
         return unexpected( std::move( fillRes.error() ) );
 
@@ -212,7 +213,7 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     return {};
 }
 
-Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
+Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, PlanarTriangulation::ISweepLineCache* cache /*= nullptr*/ )
 {
     assert( !mesh.topology.left( holeEdgeId ) );
     if ( mesh.topology.left( holeEdgeId ) )
@@ -228,17 +229,25 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     for ( EdgeId e : loops.front() )
         sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
 
-    std::vector<EdgePath> newPaths;
-    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), &newPaths );
-    if ( !patch )
+    // a plan needs only the patch connectivity: triangulate into the cache without creating a Mesh;
+    // the connectivity must live somewhere even if the caller gave no cache, hence the temporary one
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> tmpCache;
+    if ( !cache )
+        cache = ( tmpCache = PlanarTriangulation::makeSweepLineCache() ).get();
+
+    std::vector<EdgeLoop> patchPaths;
+    auto* patchTp = PlanarTriangulation::triangulateDisjointContoursTopology( mesh, loops, Vector3f( sumCross.normalized() ), &patchPaths, *cache );
+    if ( !patchTp )
         return unexpected( "Cannot triangulate contours with self-intersections" );
 
-    if ( auto v = validateAndFixPatch( patch->topology, loops, newPaths ); !v )
+    if ( auto v = validateAndFixPatch( *patchTp, loops, patchPaths ); !v )
         return unexpected( std::move( v.error() ) );
 
-    const auto& pTp = patch->topology;
+    assert( patchPaths.size() == 1 ); // should be validated in validateAndFixPatch
+
+    const auto& pTp = *patchTp;
     const auto& ip = loops.front();
-    auto& np = newPaths.front();
+    auto& np = patchPaths[0];
     HoleFillPlan res;
     res.numTris = pTp.numValidFaces();
     if ( res.numTris == 1 )

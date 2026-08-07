@@ -13,6 +13,7 @@
 #include "MRMeshFillHole.h"
 #include "MRBox.h"
 #include <cfloat>
+#include <climits>
 
 namespace MR
 {
@@ -224,92 +225,84 @@ static Expected<HoleFillPlan> patchToPlan( const MeshTopology& pTp, const std::v
 {
     assert( meshLoops.size() == patchBds.size() ); // validated in validateAndFixPatch
 
-    // peeling state per boundary point; each current polygon ring is implicit in succ
-    int n = 0;
+    int n = 0; // boundary positions, i.e. edge sides the patch borders take
     for ( const auto& loop : meshLoops )
         n += int( loop.size() );
-    std::vector<EdgeId> cur;  // current polygon edge in the patch, invalid = consumed position
-    std::vector<int> refCode; // plan code of cur: not-negative absolute EdgeId in the mesh, negative - plan edge
-    std::vector<int> succ;    // next position around the polygon
-    cur.reserve( n + patchBds.size() ); // joining two rings adds a position
-    refCode.reserve( n + patchBds.size() );
-    succ.reserve( n + patchBds.size() );
-    Vector<EdgeId, UndirectedEdgeId> bd2mesh( n ); // patch boundary edge (even direction) -> mesh edge
+
+    // the polygon being peeled: the patch edge currently at each boundary position, and the position
+    // following it - so a ring is a cycle of `next` and rings can be joined and split in place
+    struct Pos
+    {
+        EdgeId cur; // invalid once the position is consumed
+        int next = 0;
+    };
+    std::vector<Pos> pos;
+    pos.reserve( n + patchBds.size() ); // joining two rings adds a position
+
+    // how the plan can name each patch edge: not-negative absolute mesh edge (given for its even
+    // direction) on the hole borders, negative plan edge once a chord for it is planned
+    constexpr int cUnnameable = INT_MAX;
+    Vector<int, UndirectedEdgeId> codes( pTp.undirectedEdgeSize(), cUnnameable );
     for ( int j = 0, base = 0; j < int( patchBds.size() ); base += int( patchBds[j].size() ), ++j )
     {
         for ( int i = 0; i < int( patchBds[j].size() ); ++i )
         {
-            const EdgeId b = patchBds[j][i];
+            const EdgeId b = patchBds[j][i], m = meshLoops[j][i];
             if ( !pTp.left( b ) )
                 return unexpected( "Patch surface borders are incompatible with mesh borders" );
-            cur.push_back( b );
-            refCode.push_back( int( meshLoops[j][i] ) );
-            succ.push_back( i + 1 < int( patchBds[j].size() ) ? int( cur.size() ) : base );
-            bd2mesh.autoResizeSet( b.undirected(), b.even() ? meshLoops[j][i] : meshLoops[j][i].sym() );
+            codes[b.undirected()] = int( b.even() ? m : m.sym() );
+            pos.push_back( { b, i + 1 < int( patchBds[j].size() ) ? int( pos.size() ) + 1 : base } );
         }
     }
-    auto meshEdge = [&] ( EdgeId patchBd )
+    // a plan edge can only be named in the direction it is created in, so a chord already planned from
+    // the other side is off limits; a mesh edge can be named either way
+    auto planned = [&] ( EdgeId e ) { return codes[e.undirected()] < 0; };
+    auto nameable = [&] ( EdgeId e ) { return codes[e.undirected()] != cUnnameable; };
+    auto codeOf = [&] ( EdgeId e )
     {
-        return patchBd.even() ? bd2mesh[patchBd.undirected()] : bd2mesh[patchBd.undirected()].sym();
+        const int c = codes[e.undirected()];
+        assert( c != cUnnameable );
+        return c < 0 ? c : int( e.even() ? EdgeId( c ) : EdgeId( c ).sym() );
     };
 
-    UndirectedEdgeBitSet bdEdges( pTp.undirectedEdgeSize() );
-    for ( auto e : cur )
-        bdEdges.set( e.undirected() );
-
-    // the plan has to create every interior edge of the patch, and every filled face must be adjacent
-    // to one of them (or belong to a hole filled with a single face, see below)
-    int numChords = 0;
-    FaceBitSet chordFaces( pTp.faceSize() );
-    for ( UndirectedEdgeId ue{ 0 }; ue < pTp.undirectedEdgeSize(); ++ue )
-    {
-        if ( bdEdges.test( ue ) )
-            continue;
-        const auto l = pTp.left( ue ), r = pTp.right( EdgeId( ue ) );
-        if ( !l && !r )
-            continue; // lone edge
-        if ( !l || !r )
-            return unexpected( "Incorrect filling" );
-        ++numChords;
-        chordFaces.set( l );
-        chordFaces.set( r );
-    }
+    // the plan has to create every interior edge of the patch: each of the numFaces faces has three
+    // edge sides, and the boundary takes n of them, so the rest are the two sides of every chord
+    const int numFaces = pTp.numValidFaces();
+    if ( 3 * numFaces < n || ( 3 * numFaces - n ) % 2 != 0 )
+        return unexpected( "Incorrect filling" );
+    const int numChords = ( 3 * numFaces - n ) / 2;
 
     HoleFillPlan res;
     res.items.reserve( numChords );
-    UndirectedEdgeBitSet emitted( pTp.undirectedEdgeSize() ); // patch edges already present in the plan
-    auto clip = [&] ( int p0, EdgeId ne, int code )
+    auto clip = [&] ( int p0, EdgeId ne )
     {
-        const int p1 = succ[p0];
-        cur[p1] = {};
-        cur[p0] = ne;
-        refCode[p0] = code;
-        succ[p0] = succ[p1];
+        const int p1 = pos[p0].next;
+        pos[p1].cur = {};
+        pos[p0].cur = ne;
+        pos[p0].next = pos[p1].next;
     };
     while ( int( res.items.size() ) < numChords )
     {
         bool progress = false;
-        for ( int p0 = 0; p0 < int( cur.size() ) && int( res.items.size() ) < numChords; ++p0 )
+        for ( int p0 = 0; p0 < int( pos.size() ) && int( res.items.size() ) < numChords; ++p0 )
         {
-            if ( !cur[p0] )
+            if ( !pos[p0].cur )
                 continue;
-            const int p1 = succ[p0];
-            const int p2 = succ[p1];
-            if ( succ[p2] == p0 )
+            const int p1 = pos[p0].next;
+            const int p2 = pos[p1].next;
+            if ( pos[p2].next == p0 )
                 continue; // triangle ring: its last face needs no new edge
-            const EdgeId ne = pTp.next( cur[p0] );
-            if ( pTp.dest( ne ) != pTp.dest( cur[p1] ) )
+            const EdgeId ne = pTp.next( pos[p0].cur );
+            if ( pTp.dest( ne ) != pTp.dest( pos[p1].cur ) )
                 continue; // left face of cur[p0] is not an ear here
-            if ( emitted.test( ne.undirected() ) )
+            if ( planned( ne ) )
                 continue; // this face is clipped from the position holding ne as its polygon edge
-            if ( bdEdges.test( ne.undirected() ) )
-                clip( p0, ne, int( meshEdge( ne ) ) ); // pinched ring: the closing edge exists in the mesh
-            else
+            if ( !nameable( ne ) ) // an interior edge: the plan has to create it
             {
-                res.items.push_back( { refCode[p0], refCode[p2] } );
-                emitted.set( ne.undirected() );
-                clip( p0, ne, -int( res.items.size() ) );
-            }
+                res.items.push_back( { codeOf( pos[p0].cur ), codeOf( pos[p2].cur ) } );
+                codes[ne.undirected()] = -int( res.items.size() );
+            } // otherwise a pinched ring closing on an edge that already exists in the mesh
+            clip( p0, ne );
             progress = true;
         }
         if ( progress || int( res.items.size() ) >= numChords )
@@ -320,46 +313,41 @@ static Expected<HoleFillPlan> patchToPlan( const MeshTopology& pTp, const std::v
         // when the face left of its reversed direction is clipped before it: that clip lands right after
         // the bridge in the shared vertex ring, so it has to be created earlier (see anchoring above)
         bool joined = false;
-        for ( int s = 0; s < int( cur.size() ) && !joined; ++s )
+        for ( int s = 0; s < int( pos.size() ) && !joined; ++s )
         {
-            if ( !cur[s] )
+            if ( !pos[s].cur )
                 continue;
-            const EdgeId m = pTp.next( cur[s] );
-            if ( bdEdges.test( m.undirected() ) || emitted.test( m.undirected() ) )
+            const EdgeId m = pTp.next( pos[s].cur );
+            if ( nameable( m ) )
                 continue;
             int q = -1;
-            for ( int c = 0; c < int( cur.size() ) && q < 0; ++c )
-                if ( cur[c] && c != s && pTp.next( cur[c] ) == m.sym() )
+            for ( int c = 0; c < int( pos.size() ) && q < 0; ++c )
+                if ( pos[c].cur && c != s && pTp.next( pos[c].cur ) == m.sym() )
                     q = c;
-            if ( q < 0 || q == succ[s] || succ[q] == s )
+            if ( q < 0 || q == pos[s].next || pos[q].next == s )
                 continue;
             const EdgeId x = pTp.next( m.sym() ); // closes the face left of m.sym() together with cur[s]
-            assert( pTp.dest( x ) == pTp.dest( cur[s] ) );
-            int codeX;
-            if ( bdEdges.test( x.undirected() ) )
-                codeX = int( meshEdge( x ) );
-            else
+            assert( pTp.dest( x ) == pTp.dest( pos[s].cur ) );
+            if ( planned( x ) )
+                continue; // its plan edge is named in the other direction, which nothing can reference
+            if ( !nameable( x ) )
             {
-                res.items.push_back( { refCode[q], refCode[succ[s]] } );
-                emitted.set( x.undirected() );
-                codeX = -int( res.items.size() );
+                res.items.push_back( { codeOf( pos[q].cur ), codeOf( pos[pos[s].next].cur ) } );
+                codes[x.undirected()] = -int( res.items.size() );
             }
-            res.items.push_back( { refCode[s], refCode[q] } );
-            emitted.set( m.undirected() );
-            // join the rings: ... -> s( cur = m ) -> q -> ... -> q's old predecessor -> t( cur = x ) -> old succ[s] -> ...
-            const int t = int( cur.size() );
-            cur.push_back( x );
-            refCode.push_back( codeX );
-            succ.push_back( succ[s] );
+            res.items.push_back( { codeOf( pos[s].cur ), codeOf( pos[q].cur ) } );
+            codes[m.undirected()] = -int( res.items.size() );
+            // join the rings: ... -> s( cur = m ) -> q -> ... -> q's old predecessor -> t( cur = x ) -> old next of s -> ...
+            const int t = int( pos.size() );
+            pos.push_back( { x, pos[s].next } );
             for ( int c = 0; c < t; ++c )
-                if ( cur[c] && succ[c] == q )
+                if ( pos[c].cur && pos[c].next == q )
                 {
-                    succ[c] = t;
+                    pos[c].next = t;
                     break;
                 }
-            cur[s] = m;
-            refCode[s] = -int( res.items.size() );
-            succ[s] = q;
+            pos[s].cur = m;
+            pos[s].next = q;
             joined = true;
         }
         if ( !joined )
@@ -371,19 +359,23 @@ static Expected<HoleFillPlan> patchToPlan( const MeshTopology& pTp, const std::v
     int numSingleFaceHoles = 0;
     for ( int j = 0, base = 0; j < int( patchBds.size() ); base += int( patchBds[j].size() ), ++j )
     {
-        if ( patchBds[j].size() != 3 || !cur[base] || !cur[base + 1] || !cur[base + 2] ||
-            succ[base] != base + 1 || succ[base + 1] != base + 2 || succ[base + 2] != base )
+        if ( patchBds[j].size() != 3 || !pos[base].cur || !pos[base + 1].cur || !pos[base + 2].cur ||
+            pos[base].next != base + 1 || pos[base + 1].next != base + 2 || pos[base + 2].next != base )
             continue;
-        if ( !pTp.isLeftTri( cur[base] ) )
+        if ( !pTp.isLeftTri( pos[base].cur ) )
             return unexpected( "Incorrect filling" );
         ++numSingleFaceHoles;
         if ( !outSingleFaceHoles )
             return unexpected( "Hole needs no new edges to be filled" );
         outSingleFaceHoles->push_back( meshLoops[j].front() );
     }
-    if ( int( chordFaces.count() ) + numSingleFaceHoles != pTp.numValidFaces() )
-        return unexpected( "Incorrect filling" );
-    res.numTris = pTp.numValidFaces() - numSingleFaceHoles;
+
+    // every chord is planned once, so with all of them planned each ring must be down to one triangle;
+    // then the faces the plan reaches are all of them but the single-face holes
+    for ( int p = 0; p < int( pos.size() ); ++p )
+        if ( pos[p].cur && pos[pos[pos[p].next].next].next != p )
+            return unexpected( "Incorrect filling" );
+    res.numTris = numFaces - numSingleFaceHoles;
     return res;
 }
 

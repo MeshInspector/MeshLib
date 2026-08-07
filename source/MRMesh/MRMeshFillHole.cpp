@@ -9,11 +9,13 @@
 #include "MRMarkedContour.h"
 #include "MRParallelFor.h"
 #include "MRFillContours2D.h"
+#include "MR2DContoursTriangulation.h"
 #include "MRAABBTreePoints.h"
 #include "MRPointsProject.h"
 #include "MRClosestPointInTriangle.h"
 #include "MRphmap.h"
 #include "MRPch/MRSpdlog.h"
+#include <memory>
 #include <queue>
 #include <functional>
 
@@ -630,6 +632,7 @@ private:
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
     tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> sweepCache_; ///< keeps swept-line triangulation buffers alive between runPlanar() runs
     MapPatch savedMapPatch_, cachedMapPatch_;
     std::queue<std::pair<WeightedConn, int>> newEdgesQueue_;
 };
@@ -821,7 +824,9 @@ HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowS
         if ( holeSize >= cMinSweptHoleSize )
         {
             // only use this for large holes
-            auto exRes = fillContours2DPlan( mesh, e );
+            if ( !sweepCache_ )
+                sweepCache_ = PlanarTriangulation::makeSweepLineCache();
+            auto exRes = fillContours2DPlan( mesh, e, sweepCache_.get() );
             if ( exRes.has_value() )
                 return *exRes;
         }

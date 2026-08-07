@@ -4,7 +4,6 @@ version = $VERSION
 [options]
 packages = meshlib
 include_package_data = True
-install_requires = numpy >= 1.19.0
 
 [options.package_data]
 meshlib = $PACKAGE_DATA

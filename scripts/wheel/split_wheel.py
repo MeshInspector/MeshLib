@@ -1,36 +1,18 @@
 """
-Splits the Python distribution into two wheels:
+Splits the built distribution into two wheels:
 
-- `meshlib-core` — the headless core (mrmeshpy, mrmeshnumpy, mrcudapy and their
-  native libraries). Depends only on numpy.
-- `meshlib` — the viewer add-on (mrviewerpy, the libraries only it needs and the
-  large CJK UI font), which depends on `meshlib-core==<version>`. Keeping the
-  `meshlib` name on the full package means `pip install meshlib` and upgrades of
-  existing installations behave exactly as today, while headless deployments can
-  switch to `pip install meshlib-core`.
+- `meshlib-core`: the headless core, i.e. the repaired viewer-less wheel, produced
+  entirely by auditwheel/delvewheel/delocate;
+- `meshlib`: mrviewerpy, the libraries only it needs and the CJK UI font, pinning
+  `meshlib-core==<version>`.
 
-The split is the complement of two wheel-repair runs, letting
-auditwheel/delvewheel/delocate decide which libraries belong where:
-
-1. the wheel is built once with all modules (project name `meshlib-core`);
-2. a copy WITHOUT `mrviewerpy` and the CJK font (`make_base_input`) is repaired
-   alongside the full wheel;
-3. the repaired core-only wheel ships as `meshlib-core`, and everything the full
-   repair contains on top of it becomes `meshlib` (`extract_viewer_wheel`), whose
-   dist-info is the core's setuptools-generated one with the name and dependencies
-   patched.
-
-The repair tools derive mangled library names from file contents, so the two repair
-runs name their common libraries identically and the diff is exact.
-
-Fully independent wheels would not work here: a viewer wheel repaired on its own
-would reference `libMRMesh.so` while the core wheel ships `libMRMesh-<hash>.so`.
-For the same reason the two wheels are only compatible in exactly matching versions:
-`meshlib` pins `meshlib-core==<version>` and both are published for every release.
-
-Both wheels install into the same site-packages directories (`meshlib/`,
-`meshlib.libs/`, `meshlib/.dylibs/`), so the core wheel's rpaths / DLL directory /
-`@loader_path` references resolve the viewer's libraries with no extra wiring.
+The library sets are the file-name complement of two repair runs: the repair tools
+derive mangled library names from file contents, so shared libraries get identical
+names in both runs. Independently repaired wheels would not work (the viewer's libs
+would reference `libMRMesh.so` while the core ships `libMRMesh-<hash>.so`), which is
+also why the version pin is exact. Both wheels install into the same site-packages
+directories, so the core's rpaths / DLL directory / `@loader_path` references
+resolve the viewer's libraries without extra wiring.
 """
 
 import base64
@@ -48,12 +30,12 @@ def _is_viewer_source_file(zip_name):
     return zip_name.rsplit("/", 1)[-1].startswith(VIEWER_FILE_PREFIXES)
 
 
-def make_base_input(full_wheel, out_dir):
+def make_core_input(full_wheel, out_dir):
     """Copy of the built (not yet repaired) wheel without the viewer files."""
     out_dir = Path(out_dir)
     out_dir.mkdir(exist_ok=True)
-    base_wheel = out_dir / Path(full_wheel).name
-    with zipfile.ZipFile(full_wheel) as src, zipfile.ZipFile(base_wheel, "w", zipfile.ZIP_DEFLATED) as out:
+    core_wheel = out_dir / Path(full_wheel).name
+    with zipfile.ZipFile(full_wheel) as src, zipfile.ZipFile(core_wheel, "w", zipfile.ZIP_DEFLATED) as out:
         for info in src.infolist():
             if _is_viewer_source_file(info.filename):
                 continue
@@ -64,7 +46,7 @@ def make_base_input(full_wheel, out_dir):
                     if not _is_viewer_source_file(line.split(b",", 1)[0].decode())
                 )
             out.writestr(info, data)
-    return base_wheel
+    return core_wheel
 
 
 def _record_entry(name, data):
@@ -90,7 +72,7 @@ def make_meshlib_metadata(core_metadata, version):
     return "".join(out).encode()
 
 
-def extract_viewer_wheel(full_repaired, core_repaired):
+def extract_meshlib_wheel(full_repaired, core_repaired):
     """Write the `meshlib` wheel (next to the repaired core wheel) from the files
     that the full repair produced and the core repair did not."""
     full_repaired, core_repaired = Path(full_repaired), Path(core_repaired)
@@ -137,7 +119,3 @@ def extract_viewer_wheel(full_repaired, core_repaired):
             writer.writerows(rows)
             writer.writerow([f"{dist_info}/RECORD", "", ""])
             out.writestr(f"{dist_info}/RECORD", record.getvalue())
-
-    print(f"meshlib (viewer) wheel extracted ({len(viewer_names)} files):")
-    print(f"  core:    {core_repaired} ({core_repaired.stat().st_size / 2**20:.1f} MB)")
-    print(f"  meshlib: {meshlib_path} ({meshlib_path.stat().st_size / 2**20:.1f} MB)")

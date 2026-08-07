@@ -3,8 +3,6 @@ requires = ["setuptools >= 77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-# the headless core; the `meshlib` wheel (viewer add-on depending on this) is derived
-# from the build by split_viewer_wheel.py
 name = "meshlib-core"
 description = "3d processing library"
 authors = [
@@ -26,9 +24,10 @@ classifiers = [
     "Operating System :: MacOS :: MacOS X",
 ]
 requires-python = ">=3.8"
-# dependencies live in setup.cfg (install_requires): the meshlib-viewer pin is versioned,
-# and a static [project] dependencies list would silently override the setup.cfg one
-dynamic = ["version", "dependencies"]
+dependencies = [
+    "numpy >= 1.19.0",
+]
+dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://meshlib.io/"

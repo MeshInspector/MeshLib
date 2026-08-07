@@ -148,6 +148,18 @@ jobs:
       - name: PCH size (diagnostic)
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
 
+      - name: TEMP sizes and link time
+        run: |
+          BIN=build/${{ matrix.config }}/bin
+          echo "=== ld.lld present"; command -v ld.lld || echo "NO ld.lld"
+          echo "=== flags in use"
+          grep -oE "(-fuse-ld=[a-z]+|--icf=[a-z]+|ffunction-sections)" build/${{ matrix.config }}/link_timings.txt build/${{ matrix.config }}/compile_timings.txt 2>/dev/null | sed 's/.*://' | sort | uniq -c || true
+          echo -n "total unstripped: "; stat -c '%s' $BIN/*.so | awk '{s+=$1} END {print s}'
+          rm -rf /tmp/st && mkdir -p /tmp/st && cp $BIN/*.so /tmp/st/ && strip --strip-all /tmp/st/*.so
+          echo -n "total stripped: "; stat -c '%s' /tmp/st/*.so | awk '{s+=$1} END {print s}'
+          echo -n "link count: "; grep -c "" build/${{ matrix.config }}/link_timings.txt
+          echo -n "link seconds: "; awk -F, '{s+=$2+$3} END {printf "%.2f", s; print ""}' build/${{ matrix.config }}/link_timings.txt
+
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt
 

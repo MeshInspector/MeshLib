@@ -32,8 +32,6 @@ mkdir ${DISTR_DIR}
 VCPKG_INSTALLED_DIR=${VCPKG_INSTALLED_DIR:=${VCPKG_ROOT}/installed}
 cp -a ${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}/* ${DISTR_DIR}/
 # install MeshLib files
-# --strip drops .symtab/.strtab: linking needs only .dynsym, and the wheels
-# and the AppImage have always shipped stripped.
 cmake --install ./build/Release --prefix ${DISTR_DIR} --strip
 # create tar.xz file
 tar --create --use-compress-program='xz -9 -T0' --file=meshlib_linux-vcpkg.tar.xz --directory=${DISTR_DIR} .

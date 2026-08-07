@@ -16,7 +16,7 @@ RUNNER_TIER="${3:?${USAGE}}"
 # picked up from Anaconda).
 export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
 
-WHEEL=$(ls ./meshlib-*"${PLATFORM}"*.whl | head -n 1)
+WHEELS=$(ls ./meshlib*"${PLATFORM}"*.whl)
 
 # Python 3.11 ships pre-installed on the GitHub macos-15-intel image;
 # `brew install python@3.11` trips its post-install there. Skip the brew
@@ -26,7 +26,9 @@ WHEEL=$(ls ./meshlib-*"${PLATFORM}"*.whl | head -n 1)
 # generic "post-install step did not complete" summary it prints
 # otherwise hides the real error.
 if [ "${RUNNER_TIER}" != "github" ] || [ "${PLATFORM}" != "x86" ] || [ "${PY_VER}" != "3.11" ]; then
-  brew install --overwrite "python@${PY_VER}"
+  # The formula's post-install step is flaky (seen with python@3.13 3.13.15 on the
+  # self-hosted hosts); retry it once and let the venv creation below be the real check.
+  brew install --overwrite "python@${PY_VER}" || brew postinstall "python@${PY_VER}" || true
 fi
 
 PY_CMD="python${PY_VER}"
@@ -39,6 +41,6 @@ rm -rf "${VENV}"
 python -m pip install --upgrade pip
 python -m pip install --upgrade -r ./requirements/python/requirements.txt
 python -m pip install pytest
-python -m pip install "${WHEEL}"
+python -m pip install ${WHEELS}
 
 ( cd test_python && python -m pytest -s -v )

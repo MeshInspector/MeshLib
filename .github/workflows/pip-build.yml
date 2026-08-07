@@ -406,7 +406,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ManyLinux-${{matrix.platform}}
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib-*.whl
+          path: ./scripts/wheel/meshlib/wheelhouse_core/meshlib*.whl
           retention-days: 1
 
   update-documentation:
@@ -530,7 +530,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Windows
-          path: wheelhouse\meshlib-*.whl
+          path: wheelhouse_core\meshlib*.whl
           retention-days: 1
 
   macos-pip-build:
@@ -642,7 +642,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Macos-${{matrix.platform}}
-          path: meshlib-*.whl
+          path: wheelhouse_core/meshlib*.whl
           retention-days: 1
 
   upload-wheels-to-release:
@@ -679,7 +679,7 @@ jobs:
       - name: Upload Wheels to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload ${{ needs.setup.outputs.release_tag }} ./meshlib-*.whl --repo ${{ github.repository }} --clobber
+        run: gh release upload ${{ needs.setup.outputs.release_tag }} ./meshlib*.whl --repo ${{ github.repository }} --clobber
 
   manylinux-pip-test:
     needs: [setup, manylinux-pip-build]
@@ -735,7 +735,7 @@ jobs:
           merge-multiple: true
 
       - name: Meshlib wheel install
-        run: ${{ env.PYTHON_CMD }} -m pip install ${{ matrix.pip-options }} ./meshlib-*.whl
+        run: ${{ env.PYTHON_CMD }} -m pip install ${{ matrix.pip-options }} ./meshlib*.whl
 
       - name: Run Python tests
         working-directory: test_python
@@ -907,7 +907,7 @@ jobs:
         run: python3 -m pip install --upgrade pip twine packaging
 
       - name: Upload to Production PyPi
-        run: twine upload ./meshlib-*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
+        run: twine upload ./meshlib*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
 
       - name: Mark Success
         id: check_upload
@@ -950,7 +950,7 @@ jobs:
         run: python3 -m pip install --upgrade pip twine packaging
 
       - name: Upload to TestPyPI
-        run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib-*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
+        run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
 
   post-release-test:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}

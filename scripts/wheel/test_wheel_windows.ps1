@@ -7,18 +7,18 @@ param([Parameter(Mandatory)][string]$Version)
 
 $ErrorActionPreference = 'Stop'
 
-$wheel = Get-ChildItem -Filter meshlib*win*.whl
-if ($null -eq $wheel) { throw "No meshlib*win*.whl wheel found in $(Get-Location)" }
+$wheels = @(Get-ChildItem -Filter meshlib*win*.whl)
+if ($wheels.Count -eq 0) { throw "No meshlib*win*.whl wheel found in $(Get-Location)" }
 
 py -$Version -m pip install --upgrade pip
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-py -$Version -m pip uninstall -y meshlib
+py -$Version -m pip uninstall -y meshlib meshlib-core
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 py -$Version -m pip install --upgrade -r ./requirements/python/requirements.txt
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 py -$Version -m pip install pytest
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-py -$Version -m pip install $wheel
+py -$Version -m pip install @($wheels | ForEach-Object FullName)
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Set-Location test_python

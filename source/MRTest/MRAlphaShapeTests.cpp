@@ -18,7 +18,7 @@ TEST( MRMesh, AlphaShape )
     cloud.validPoints.autoResizeSet( 2_v, 3, true );
 
     Triangulation tris;
-    std::vector<PreciseVertCoords> neis;
+    std::vector<AlphaShapeNei> neis;
     AlphaShapeStats stats;
 
     auto data = getAlphaShapeData( cloud, 3, false );

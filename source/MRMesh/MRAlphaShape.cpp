@@ -49,31 +49,27 @@ AlphaShapeData getAlphaShapeData( const PointCloud & cloud, float radius, bool a
 }
 
 void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const AlphaShapeData & data,
-    Triangulation & appendTris, std::vector<PreciseVertCoords> & neis, bool onlyLargerVids, AlphaShapeStats * stats )
+    Triangulation & appendTris, std::vector<AlphaShapeNei> & neis, bool onlyLargerVids, AlphaShapeStats * stats )
 {
+    const auto p0 = data.coords( cloud, v );
     neis.clear();
     findPointsInBall( cloud, { cloud.points[v], sqr( data.searchRadius ) },
         [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
             if ( v != found.vId )
-                neis.push_back( data.coords( cloud, found.vId ) );
+            {
+                const auto c = data.coords( cloud, found.vId );
+                const Vector3i64 d{ c.pt - p0.pt };
+                neis.push_back( { c, dot( Vector3i128{ d }, Vector3i128{ d } ) } );
+            }
             return Processing::Continue;
         } );
 
-    const auto p0 = data.coords( cloud, v );
-    // the ball emptiness test below stops on the first point inside the ball, and the points closest
-    // to #v have the best chance to be there; the integer coordinates of neis are taken as they are
-    // already here, and squared in double because their squares can overflow std::int64_t
-    auto distSqFromV = [&p0]( const PreciseVertCoords & c )
+    // the ball emptiness test below stops on the first point inside the ball,
+    // and the points closest to #v have the best chance to be there
+    std::sort( neis.begin(), neis.end(), []( const AlphaShapeNei & a, const AlphaShapeNei & b )
     {
-        const double dx = double( c.pt.x ) - p0.pt.x;
-        const double dy = double( c.pt.y ) - p0.pt.y;
-        const double dz = double( c.pt.z ) - p0.pt.z;
-        return dx * dx + dy * dy + dz * dz;
-    };
-    std::sort( neis.begin(), neis.end(), [&distSqFromV]( const PreciseVertCoords & a, const PreciseVertCoords & b )
-    {
-        return distSqFromV( a ) < distSqFromV( b );
+        return a.distSq < b.distSq;
     } );
 
     // a neighbor p makes a farther neighbor x redundant if p is strictly inside every ball of the given
@@ -91,28 +87,15 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         // x is strictly outside every ball of the given radius through #v and p
         return Int256( pp ) * sqr( Int256( xx - px ) ) > d * crossSq;
     };
-    // exact squared distances from #v of the sorted neis, each serving as pp and as xx above;
-    // thread_local to avoid allocations on every call
-    thread_local std::vector<Int128> pps;
-    pps.resize( neis.size() );
-    for ( size_t i = 0; i < neis.size(); ++i )
-    {
-        const Vector3i64 p{ neis[i].pt - p0.pt };
-        pps[i] = dot( Vector3i128{ p }, Vector3i128{ p } );
-    }
     size_t goodSize = neis.size();
     for ( size_t i = 0; i < goodSize; ++i )
     {
-        const Vector3i64 p{ neis[i].pt - p0.pt };
+        const Vector3i64 p{ neis[i].coords.pt - p0.pt };
         size_t good = i + 1;
         for ( size_t j = i + 1; j < goodSize; ++j )
         {
-            if ( !makesRedundant( p, pps[i], Vector3i64{ neis[j].pt - p0.pt }, pps[j] ) )
-            {
-                neis[good] = neis[j];
-                pps[good] = pps[j];
-                ++good;
-            }
+            if ( !makesRedundant( p, neis[i].distSq, Vector3i64{ neis[j].coords.pt - p0.pt }, neis[j].distSq ) )
+                neis[good++] = neis[j];
         }
         goodSize = good;
     }
@@ -125,22 +108,22 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     {
         for ( const auto & pn : neis )
         {
-            if ( pn.id == a || pn.id == b )
+            if ( pn.coords.id == a || pn.coords.id == b )
                 continue;
             ++myStats.inBallTests;
-            if ( tester( pn ) == InSphereResult::Inside )
+            if ( tester( pn.coords ) == InSphereResult::Inside )
                 return false;
         }
         return true;
     };
     for ( size_t i = 0; i + 1 < neis.size(); ++i )
     {
-        const auto & pi = neis[i];
+        const auto & pi = neis[i].coords;
         if ( onlyLargerVids && pi.id < v )
             continue;
         for ( size_t j = i + 1; j < neis.size(); ++j )
         {
-            const auto & pj = neis[j];
+            const auto & pj = neis[j].coords;
             if ( onlyLargerVids && pj.id < v )
                 continue;
             // the two balls touching all three points differ only by the side of the triangle,
@@ -175,7 +158,7 @@ std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & clou
     struct ThreadData
     {
         Triangulation tris;
-        std::vector<PreciseVertCoords> neis;
+        std::vector<AlphaShapeNei> neis;
         AlphaShapeStats stats;
     };
 

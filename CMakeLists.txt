@@ -49,20 +49,10 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
       add_link_options("-fuse-ld=lld")
     ENDIF()
     add_link_options("LINKER:-z,separate-loadable-segments")
-    set(MESHLIB_LINKER_OPTIONS "-fuse-ld=lld")
-  ENDIF()
-ENDIF()
-
-# Fold byte-identical functions at link time. Supported by lld, gold and mold;
-# GNU ld (bfd) has no ICF, so the check just fails there. `safe` folds only
-# address-insignificant functions, keeping function pointers comparable.
-IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN)
-  include(CheckLinkerFlag)
-  set(CMAKE_REQUIRED_LINK_OPTIONS ${MESHLIB_LINKER_OPTIONS})
-  check_linker_flag(CXX "-Wl,--icf=safe" MESHLIB_HAVE_ICF)
-  unset(CMAKE_REQUIRED_LINK_OPTIONS)
-  IF(MESHLIB_HAVE_ICF)
-    add_link_options($<$<NOT:$<CONFIG:Debug>>:LINKER:--icf=safe>)
+    # Fold byte-identical functions. `safe` folds only the address-insignificant
+    # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
+    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
+    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
   ENDIF()
 ENDIF()
 

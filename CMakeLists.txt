@@ -53,6 +53,10 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
     # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
     # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
     add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
+    # Widen what ICF can reach: without this only COMDAT functions (templates,
+    # inlines) get their own section, so plain out-of-line ones never fold.
+    # `-fdata-sections` would add nothing -- lld folds executable sections only.
+    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
   ENDIF()
 ENDIF()
 

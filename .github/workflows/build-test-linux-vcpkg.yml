@@ -183,6 +183,19 @@ jobs:
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
             -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang 21' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
+      - name: TEMP stripped vs unstripped sizes
+        run: |
+          BIN=build/${{ matrix.config }}/bin
+          rm -rf /tmp/st && mkdir -p /tmp/st && cp $BIN/*.so /tmp/st/
+          strip --strip-all /tmp/st/*.so
+          echo "=== unstripped"
+          for f in $BIN/*.so ; do stat -c '%s %n' $f ; done | sort -rn
+          echo "=== stripped"
+          for f in /tmp/st/*.so ; do stat -c '%s %n' $f ; done | sort -rn
+          echo "=== totals"
+          echo -n "unstripped: "; stat -c '%s' $BIN/*.so | awk '{s+=$1} END {print s}'
+          echo -n "stripped:   "; stat -c '%s' /tmp/st/*.so | awk '{s+=$1} END {print s}'
+
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
 

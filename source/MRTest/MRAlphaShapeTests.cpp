@@ -19,14 +19,20 @@ TEST( MRMesh, AlphaShape )
 
     Triangulation tris;
     std::vector<PreciseVertCoords> neis;
+    AlphaShapeStats stats;
 
     auto data = getAlphaShapeData( cloud, 3, false );
-    findAlphaShapeNeiTriangles( cloud, 3_v, data, tris, neis, true );
+    findAlphaShapeNeiTriangles( cloud, 3_v, data, tris, neis, true, &stats );
     EXPECT_EQ( tris.size(), 0 );
-    findAlphaShapeNeiTriangles( cloud, 4_v, data, tris, neis, true );
+    findAlphaShapeNeiTriangles( cloud, 4_v, data, tris, neis, true, &stats );
     EXPECT_EQ( tris.size(), 0 );
-    findAlphaShapeNeiTriangles( cloud, 2_v, data, tris, neis, true );
+    findAlphaShapeNeiTriangles( cloud, 2_v, data, tris, neis, true, &stats );
     EXPECT_EQ( tris.size(), 2 ); // two balls touching all three points from the opposite sides are empty
+
+    // only the triangle 2-3-4 is considered, from point #2 with the two others having larger ids
+    EXPECT_EQ( stats.consideredTris, 1 );
+    EXPECT_EQ( stats.touchableTris, 1 );
+    EXPECT_EQ( stats.inBallTests, 0 ); // no other points in the neighbourhood to test
 
     cloud.validPoints.set( 1_v );
     cloud.invalidateCaches();
@@ -86,7 +92,12 @@ TEST( MRMesh, AlphaShapeCrossingGrids )
                 cloud.points.push_back( { i * 0.05f, 0.25f, k * 0.05f - 0.25f } );
     cloud.validPoints.autoResizeSet( 0_v, (int)cloud.points.size(), true );
 
-    const auto mesh = findAlphaShape( cloud, 0.1f );
+    AlphaShapeStats stats;
+    const auto mesh = findAlphaShape( cloud, 0.1f, &stats );
+    // the counters are about 99000, 47600 and 1324000 here, but not exactly the same on every
+    // platform, because the neighbourhood of a point is searched in floating point
+    EXPECT_GT( stats.consideredTris, stats.touchableTris );
+    EXPECT_GT( stats.inBallTests, stats.touchableTris );
     EXPECT_EQ( mesh.topology.numValidFaces(), 584 );
     EXPECT_EQ( mesh.topology.numValidVerts(), 322 );
     EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );

@@ -240,7 +240,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     // A hairline boundary edge forces every triangulation to emit a zero-area needle whose placement
     // in 3d is arbitrary; two holes sharing such an edge pick their needles independently and can make
     // them cross. Leave those contours to the metric fill, which weighs triangle shape.
-    if ( minEdgeLenSq < 1e-12f * loopBox.diagonal() * loopBox.diagonal() )
+    if ( minEdgeLenSq < 1e-12f * loopBox.size().lengthSq() )
         return unexpected( "Hole boundary has a degenerate edge" );
 
     std::vector<EdgePath> newPaths;

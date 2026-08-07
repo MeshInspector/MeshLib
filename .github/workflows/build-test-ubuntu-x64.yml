@@ -226,6 +226,19 @@ jobs:
           ./scripts/distribution.sh ${{inputs.app_version}}
           mv ./distr/meshlib-dev.deb meshlib_${{matrix.os}}-dev.deb
 
+      - name: TEMP deb size both ways
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        env:
+          MESHLIB_BUILD_RELEASE: "ON"
+          MESHLIB_BUILD_DEBUG: "OFF"
+        run: |
+          echo -n "stripped:   "; stat -c '%s' meshlib_${{ matrix.os }}-dev.deb
+          sed -i 's/ --strip//; s/install -sDt/install -Dt/g' scripts/distribution.sh
+          ./scripts/distribution.sh ${{ inputs.app_version }} > /dev/null
+          echo -n "unstripped: "; stat -c '%s' ./distr/meshlib-dev.deb
+          echo "=== installed lib bytes, stripped vs not"
+          git checkout -- scripts/distribution.sh
+
       - name: Extract Deb
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/

@@ -406,7 +406,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ManyLinux-${{matrix.platform}}
-          path: ./scripts/wheel/meshlib/wheelhouse/meshlib*.whl
+          path: ./scripts/wheel/meshlib/wheelhouse_core/meshlib*.whl
           retention-days: 1
 
   update-documentation:
@@ -530,7 +530,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Windows
-          path: wheelhouse\meshlib*.whl
+          path: wheelhouse_core\meshlib*.whl
           retention-days: 1
 
   macos-pip-build:
@@ -642,7 +642,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Macos-${{matrix.platform}}
-          path: meshlib*.whl
+          path: wheelhouse_core/meshlib*.whl
           retention-days: 1
 
   upload-wheels-to-release:

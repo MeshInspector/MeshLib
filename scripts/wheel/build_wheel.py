@@ -131,8 +131,6 @@ def build_wheel():
     )
 
     full_wheel_file = list(WHEEL_ROOT_DIR.glob("dist/*.whl"))[0]
-    # The viewer-less copy is repaired alongside the full wheel, so the repair tool itself
-    # decides which bundled libraries are viewer-only (see split_wheel.py).
     core_wheel_file = split_wheel.make_core_input(full_wheel_file, WHEEL_ROOT_DIR / "dist_core")
 
     if SYSTEM == "Linux":
@@ -140,9 +138,7 @@ def build_wheel():
         manylinux_version = "2_28"
 
         os.chdir(WHEEL_ROOT_DIR)
-        # the repaired core wheel ships as `meshlib-core`; the repaired full wheel is
-        # temporary - only its complement ships, as the `meshlib` wheel
-        for wf, out_dir in ((full_wheel_file, "wheelhouse_full"), (core_wheel_file, "wheelhouse")):
+        for wf, out_dir in ((full_wheel_file, "wheelhouse_full"), (core_wheel_file, "wheelhouse_core")):
             subprocess.check_call(
                 [
                     sys.executable, "-m", "auditwheel",
@@ -155,14 +151,12 @@ def build_wheel():
 
         split_wheel.extract_meshlib_wheel(
             next((WHEEL_ROOT_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
-            next((WHEEL_ROOT_DIR / "wheelhouse").glob("meshlib_core-*.whl")),
+            next((WHEEL_ROOT_DIR / "wheelhouse_core").glob("meshlib_core-*.whl")),
         )
 
     elif SYSTEM == "Windows":
         os.chdir(SOURCE_DIR)
-        # the repaired core wheel ships as `meshlib-core`; the repaired full wheel is
-        # temporary - only its complement ships, as the `meshlib` wheel
-        for wf, out_dir in ((full_wheel_file, "wheelhouse_full"), (core_wheel_file, "wheelhouse")):
+        for wf, out_dir in ((full_wheel_file, "wheelhouse_full"), (core_wheel_file, "wheelhouse_core")):
             subprocess.check_call(
                 [
                     sys.executable, "-m", "delvewheel",
@@ -185,7 +179,7 @@ def build_wheel():
             )
         split_wheel.extract_meshlib_wheel(
             next((SOURCE_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
-            next((SOURCE_DIR / "wheelhouse").glob("meshlib_core-*.whl")),
+            next((SOURCE_DIR / "wheelhouse_core").glob("meshlib_core-*.whl")),
         )
 
     elif SYSTEM == "Darwin":
@@ -194,15 +188,13 @@ def build_wheel():
             ["delocate-path", "meshlib"]
         )
         os.chdir(SOURCE_DIR)
-        # the repaired core wheel ships as `meshlib-core`; the repaired full wheel is
-        # temporary - only its complement ships, as the `meshlib` wheel
-        for wf, out_dir in ((full_wheel_file, "./wheelhouse_full"), (core_wheel_file, ".")):
+        for wf, out_dir in ((full_wheel_file, "./wheelhouse_full"), (core_wheel_file, "./wheelhouse_core")):
             subprocess.check_call(
                 ["delocate-wheel", "-w", out_dir, "-v", wf]
             )
         split_wheel.extract_meshlib_wheel(
             next((SOURCE_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
-            next(SOURCE_DIR.glob("meshlib_core-*.whl")),
+            next((SOURCE_DIR / "wheelhouse_core").glob("meshlib_core-*.whl")),
         )
 
 

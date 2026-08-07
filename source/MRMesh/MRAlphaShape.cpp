@@ -79,13 +79,11 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     // a neighbor p makes a farther neighbor x redundant if p is strictly inside every ball of the given
     // radius through #v having x inside or on it: then x can neither make a triangle with #v (p blocks
     // both its balls) nor be the only point blocking a triangle of others; see the PR for the derivation
-    auto makesRedundant = [rSq4 = 4 * Int128( data.intRadiusSq )]( const Vector3i64 & p, const Vector3i64 & x )
+    auto makesRedundant = [rSq4 = 4 * Int128( data.intRadiusSq )]( const Vector3i64 & p, const Int128 & pp, const Vector3i64 & x, const Int128 & xx )
     {
-        const auto pp = dot( Vector3i128{ p }, Vector3i128{ p } );
         const auto px = dot( Vector3i128{ p }, Vector3i128{ x } );
         if ( px <= pp )
             return false; // x is not behind the plane through p orthogonal to #v-p
-        const auto xx = dot( Vector3i128{ x }, Vector3i128{ x } );
         const auto crossSq = Int256( xx ) * Int256( pp ) - sqr( Int256( px ) ); // |cross(p,x)|^2
         const auto d = Int256( rSq4 - pp );
         if ( 4 * crossSq >= Int256( pp ) * d )
@@ -93,14 +91,29 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         // x is strictly outside every ball of the given radius through #v and p
         return Int256( pp ) * sqr( Int256( xx - px ) ) > d * crossSq;
     };
+    // exact squared distances from #v of the sorted neis, each serving as pp and as xx above;
+    // thread_local to avoid allocations on every call
+    thread_local std::vector<Int128> pps;
+    pps.resize( neis.size() );
+    for ( size_t i = 0; i < neis.size(); ++i )
+    {
+        const Vector3i64 p{ neis[i].pt - p0.pt };
+        pps[i] = dot( Vector3i128{ p }, Vector3i128{ p } );
+    }
     size_t goodSize = neis.size();
     for ( size_t i = 0; i < goodSize; ++i )
     {
         const Vector3i64 p{ neis[i].pt - p0.pt };
         size_t good = i + 1;
         for ( size_t j = i + 1; j < goodSize; ++j )
-            if ( !makesRedundant( p, Vector3i64{ neis[j].pt - p0.pt } ) )
-                neis[good++] = neis[j];
+        {
+            if ( !makesRedundant( p, pps[i], Vector3i64{ neis[j].pt - p0.pt }, pps[j] ) )
+            {
+                neis[good] = neis[j];
+                pps[good] = pps[j];
+                ++good;
+            }
+        }
         goodSize = good;
     }
     neis.resize( goodSize );

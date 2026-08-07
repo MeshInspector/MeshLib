@@ -268,6 +268,12 @@ jobs:
           ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
           mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
+      - name: TEMP package size
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        run: |
+          ls -l meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
+          tar -tvf meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz | grep -E '/lib(MR|meshlib)' || true
+
       - name: Extract Package
         if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
         run: |

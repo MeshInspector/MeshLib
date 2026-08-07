@@ -3,7 +3,9 @@ requires = ["setuptools >= 77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "meshlib"
+# the headless core; the `meshlib` wheel (viewer add-on depending on this) is derived
+# from the build by split_viewer_wheel.py
+name = "meshlib-core"
 description = "3d processing library"
 authors = [
     { name = "MeshLib Team", email = "support@meshinspector.com" },

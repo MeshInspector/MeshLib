@@ -16,7 +16,7 @@ RUNNER_TIER="${3:?${USAGE}}"
 # picked up from Anaconda).
 export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
 
-WHEELS=$(ls ./meshlib-*"${PLATFORM}"*.whl ./meshlib_viewer-*"${PLATFORM}"*.whl)
+WHEELS=$(ls ./meshlib*"${PLATFORM}"*.whl)
 
 # Python 3.11 ships pre-installed on the GitHub macos-15-intel image;
 # `brew install python@3.11` trips its post-install there. Skip the brew

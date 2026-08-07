@@ -152,8 +152,8 @@ def build_wheel():
             )
 
         split_viewer_wheel.extract_viewer_wheel(
-            next((WHEEL_ROOT_DIR / "wheelhouse_full").glob("meshlib-*.whl")),
-            next((WHEEL_ROOT_DIR / "wheelhouse").glob("meshlib-*.whl")),
+            next((WHEEL_ROOT_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
+            next((WHEEL_ROOT_DIR / "wheelhouse").glob("meshlib_core-*.whl")),
         )
 
     elif SYSTEM == "Windows":
@@ -180,8 +180,8 @@ def build_wheel():
                 ]
             )
         split_viewer_wheel.extract_viewer_wheel(
-            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib-*.whl")),
-            next((SOURCE_DIR / "wheelhouse").glob("meshlib-*.whl")),
+            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
+            next((SOURCE_DIR / "wheelhouse").glob("meshlib_core-*.whl")),
         )
 
     elif SYSTEM == "Darwin":
@@ -195,8 +195,8 @@ def build_wheel():
                 ["delocate-wheel", "-w", out_dir, "-v", wf]
             )
         split_viewer_wheel.extract_viewer_wheel(
-            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib-*.whl")),
-            next(SOURCE_DIR.glob("meshlib-*.whl")),
+            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
+            next(SOURCE_DIR.glob("meshlib_core-*.whl")),
         )
 
 

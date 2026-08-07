@@ -679,7 +679,7 @@ jobs:
       - name: Upload Wheels to GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload ${{ needs.setup.outputs.release_tag }} ./meshlib-*.whl --repo ${{ github.repository }} --clobber
+        run: gh release upload ${{ needs.setup.outputs.release_tag }} ./meshlib*.whl --repo ${{ github.repository }} --clobber
 
   manylinux-pip-test:
     needs: [setup, manylinux-pip-build]

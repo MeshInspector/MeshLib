@@ -45,11 +45,11 @@ hand -- and guarded by a drift tripwire.
 
 `scripts/check_third_party_licenses.py` verifies every manifest component has a matching
 non-empty section and that each dependency's version has **not moved** since its text was
-curated. It runs **on every push and pull request, daily, and on release**
-(`.github/workflows/check-third-party-licenses.yml`): checking needs no build, no submodule
-checkout and no network, so gating a PR costs only a runner slot and a few seconds, and
-catching a bump on the PR that makes it beats rediscovering it at release. The daily run
-still covers drift that lands without a version change. Run it locally any time:
+curated. It is the `check-third-party-licenses` job of `Build Test Distribute`, so it runs
+**on every push and pull request, and on the daily run**: checking needs no build, no
+submodule checkout and no network, so gating a PR costs only a runner slot and a few
+seconds, and catching a bump on the PR that makes it beats rediscovering it at release. The
+daily run still covers drift that lands without a version change. Run it locally any time:
 `python scripts/check_third_party_licenses.py`.
 
 Version is tracked per source (see `manifest.json` `_comment`): git submodule SHA, vcpkg

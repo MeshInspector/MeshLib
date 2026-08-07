@@ -24,6 +24,7 @@ jobs:
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
 
     steps:
       - name: Work-around possible permission issues
@@ -99,19 +100,25 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
-      - name: Generate C bindings
-        env:
-          CXX: ${{ env.CXX-COMPILER }}
-        run: make -f scripts/mrbind/generate.mk TARGET=c -B --trace PCH_CODEGEN=0
+      # `TARGET=csharp` only reads `source/MeshLibC2/temp/interop_desc.json`, which the C
+      # generator writes and the `CBindings` artifact carries, so the C bindings have to be
+      # unpacked here first. Same steps as build-test-ubuntu-arm64.yml and pip-build.yml.
+      - name: Wait for C bindings
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
-      - name: Upload C bindings headers
-        uses: actions/upload-artifact@v7
+      - name: Download C bindings
+        uses: actions/download-artifact@v8
         with:
           name: CBindings
-          path: |
-            ./source/MeshLibC2/include
-            ./source/MeshLibC2Cuda/include
-          retention-days: 1
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        run: |
+          rm -rf source/MeshLibC2 source/MeshLibC2Cuda
+          mv MeshLib/CbindingsTmp/MeshLibC2 source
+          mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Generate C# bindings # generate only sources
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
@@ -130,8 +137,17 @@ jobs:
       upload_artifacts: false
       definitions_only: true
 
+  # The `CBindings` artifact comes from the shared workflow, same as in pip-build.yml and
+  # build-test-distribute.yml. Generating it inside `create-stubs` doesn't work: `TARGET=c`
+  # targets Emscripten, and host headers are only usable on Linux x64, so on this arm64 runner
+  # it needs an Emscripten SDK that the ubuntu22 image doesn't carry.
+  generate-c-bindings:
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: latest
+
   update-dev-documentation:
-    needs: [ create-stubs, generate-wasm-definitions ]
+    needs: [ create-stubs, generate-wasm-definitions, generate-c-bindings ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: ${{ inputs.output_folder }}

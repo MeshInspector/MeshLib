@@ -76,6 +76,35 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         return distSqFromV( a ) < distSqFromV( b );
     } );
 
+    // a neighbor p makes a farther neighbor x redundant if p is strictly inside every ball of the given
+    // radius through #v having x inside or on it: then x can neither make a triangle with #v (p blocks
+    // both its balls) nor be the only point blocking a triangle of others; see the PR for the derivation
+    auto makesRedundant = [rSq4 = 4 * Int128( data.intRadiusSq )]( const Vector3i64 & p, const Vector3i64 & x )
+    {
+        const auto pp = dot( Vector3i128{ p }, Vector3i128{ p } );
+        const auto px = dot( Vector3i128{ p }, Vector3i128{ x } );
+        if ( px <= pp )
+            return false; // x is not behind the plane through p orthogonal to #v-p
+        const auto xx = dot( Vector3i128{ x }, Vector3i128{ x } );
+        const auto crossSq = Int256( xx ) * Int256( pp ) - sqr( Int256( px ) ); // |cross(p,x)|^2
+        const auto d = Int256( rSq4 - pp );
+        if ( 4 * crossSq >= Int256( pp ) * d )
+            return false; // x is not closer to line #v-p than the centers of the balls through #v and p
+        // x is strictly outside every ball of the given radius through #v and p
+        return Int256( pp ) * sqr( Int256( xx - px ) ) > d * crossSq;
+    };
+    size_t goodSize = neis.size();
+    for ( size_t i = 0; i < goodSize; ++i )
+    {
+        const Vector3i64 p{ neis[i].pt - p0.pt };
+        size_t good = i + 1;
+        for ( size_t j = i + 1; j < goodSize; ++j )
+            if ( !makesRedundant( p, Vector3i64{ neis[j].pt - p0.pt } ) )
+                neis[good++] = neis[j];
+        goodSize = good;
+    }
+    neis.resize( goodSize );
+
     InSphereTesterSoS tester;
     AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     // the tester must be already reset on the ball in question, and a, b are the ids of its points

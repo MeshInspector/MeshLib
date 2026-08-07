@@ -188,6 +188,13 @@ void Timer::restart( std::string name )
     start( std::move( name ) );
 }
 
+void Timer::start( const char * name )
+{
+    if ( !currentRecord )
+        return; // the name will be thrown away, do not allocate a string for it
+    start( std::string( name ) );
+}
+
 void Timer::start( std::string name )
 {
     auto parent = currentRecord;

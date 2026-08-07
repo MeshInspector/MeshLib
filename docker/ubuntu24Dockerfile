@@ -51,8 +51,10 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        gh g++-13 gcc-14 g++-14 clang-18 \
+        gh g++-13 gcc-14 g++-14 clang-18 lld-18 \
         tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext
+    # `-fuse-ld=lld` looks for `ld.lld` in PATH, which the versioned package does not provide
+    command -v ld.lld || ln -s "$(ls /usr/lib/llvm-*/bin/ld.lld | tail -n 1)" /usr/bin/ld.lld
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     ./scripts/install_apt_cuda.sh

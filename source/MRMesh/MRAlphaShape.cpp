@@ -8,6 +8,7 @@
 #include "MRTimer.h"
 #include "MRProgressCallback.h"
 #include "MRPch/MRTBB.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -60,6 +61,21 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         } );
 
     const auto p0 = data.coords( cloud, v );
+    // the ball emptiness test below stops on the first point inside the ball, and the points closest
+    // to #v have the best chance to be there; the integer coordinates of neis are taken as they are
+    // already here, and squared in double because their squares can overflow std::int64_t
+    auto distSqFromV = [&p0]( const PreciseVertCoords & c )
+    {
+        const double dx = double( c.pt.x ) - p0.pt.x;
+        const double dy = double( c.pt.y ) - p0.pt.y;
+        const double dz = double( c.pt.z ) - p0.pt.z;
+        return dx * dx + dy * dy + dz * dz;
+    };
+    std::sort( neis.begin(), neis.end(), [&distSqFromV]( const PreciseVertCoords & a, const PreciseVertCoords & b )
+    {
+        return distSqFromV( a ) < distSqFromV( b );
+    } );
+
     InSphereTesterSoS tester;
     AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     // the tester must be already reset on the ball in question, and a, b are the ids of its points
@@ -86,9 +102,11 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             if ( onlyLargerVids && pj.id < v )
                 continue;
             // the two balls touching all three points differ only by the side of the triangle,
-            // so one reset is enough for the both
+            // so one reset is enough for the both; the tester cheaply rejects the points farther than
+            // the diameter from the first of the three, and every candidate is within the search
+            // radius from p0, so p0 is not given first
             ++myStats.consideredTris;
-            if ( !tester.reset( p0, pi, pj, data.intRadiusSq ) )
+            if ( !tester.reset( pj, p0, pi, data.intRadiusSq ) )
                 continue;
             ++myStats.touchableTris;
             if ( ballEmpty( pi.id, pj.id ) )

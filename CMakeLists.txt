@@ -49,6 +49,11 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN)
     # The rest is Clang-only: `--icf=safe` reads Clang's `.llvm_addrsig`, which
     # GCC does not emit, so folding would find nothing to do on GCC output --
     # and the padding below only pays for the patchelf-ed AppImage path.
+    IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+      # TEMP ceiling probe: GCC emits no .llvm_addrsig, so only `all` can fold.
+      add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=all>)
+      add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
+    ENDIF()
     IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
       # Give lld room to grow the PHT so patchelf doesn't trample `.init`:
       # https://github.com/NixOS/patchelf/issues/639

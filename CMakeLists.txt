@@ -33,11 +33,9 @@ project(MeshLib CXX)
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
-# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
-# Force lld + give it room to grow PHT so patchelf doesn't trample `.init`.
-# Skip on images without lld (older ubuntu22 Clang 14 etc., which aren't
-# AppImage-packaged anyway).
-IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+# Link with lld where it exists, GCC rows included. Skipped on images without
+# it (older ubuntu22 Clang 14 etc.).
+IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN)
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
   IF(MESHLIB_HAVE_LLD)
@@ -48,15 +46,20 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
     ELSE()
       add_link_options("-fuse-ld=lld")
     ENDIF()
-    add_link_options("LINKER:-z,separate-loadable-segments")
-    # Fold byte-identical functions. `safe` folds only the address-insignificant
-    # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
-    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
-    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
-    # Widen what ICF can reach: without this only COMDAT functions (templates,
-    # inlines) get their own section, so plain out-of-line ones never fold.
-    # `-fdata-sections` would add nothing -- lld folds executable sections only.
-    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
+    # The rest is Clang-only: `--icf=safe` reads Clang's `.llvm_addrsig`, which
+    # GCC does not emit, so folding would find nothing to do on GCC output --
+    # and the padding below only pays for the patchelf-ed AppImage path.
+    IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+      # Give lld room to grow the PHT so patchelf doesn't trample `.init`:
+      # https://github.com/NixOS/patchelf/issues/639
+      add_link_options("LINKER:-z,separate-loadable-segments")
+      # Fold byte-identical functions; `safe` folds only the address-insignificant
+      # ones, so function pointers stay comparable.
+      add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
+      # Widen what ICF can reach: without this only COMDAT functions (templates,
+      # inlines) get their own section, so plain out-of-line ones never fold.
+      add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
+    ENDIF()
   ENDIF()
 ENDIF()
 

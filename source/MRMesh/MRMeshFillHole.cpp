@@ -884,6 +884,15 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
             fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
         } );
     } );
+    // every worker's planner holds grown buffers (sweep-line cache, triangulation maps); freeing
+    // them all serially in the ETS destructor right here would dominate small batches
+    std::vector<HoleFillPlanner*> planners;
+    for ( auto& planner : threadData_ )
+        planners.push_back( &planner );
+    ParallelFor( size_t( 0 ), planners.size(), [&]( size_t i )
+    {
+        *planners[i] = HoleFillPlanner{};
+    } );
     return fillPlans;
 }
 

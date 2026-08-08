@@ -151,7 +151,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         return sqr( Int1024( b ) ) * ew > sqr( Int1024( c ) * Int1024( nd ) );
     };
 
-    // the tester is reset on a ball touching #v and the found triangle's other points p and q (given
+    // the tester is reset on a ball touching #v and two other neighbours p and q (given
     // relative to #v); a neighbour strictly outside both touching balls and strictly inside the wedge
     // of the four planes via #v, one of p and q, and one of the two centers, is redundant for the same
     // reason as in the filter above: every ball of the given radius via #v containing such a neighbour
@@ -234,17 +234,14 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             if ( !tester.reset( pj, p0, pi, data.intRadiusSq ) )
                 continue;
             ++myStats.touchableTris;
-            bool found = ballEmpty( pi.id, pj.id );
-            if ( found )
+            // the shadow depends only on the existence of the touching balls, not on their emptiness,
+            // and dropping before the tests below shortens their scans as well
+            dropShadowed( Vector3i64{ pi.pt - p0.pt }, Vector3i64{ pj.pt - p0.pt }, j + 1 );
+            if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
             tester.flip();
             if ( ballEmpty( pj.id, pi.id ) )
-            {
                 appendTris.push_back( { v, pj.id, pi.id } );
-                found = true;
-            }
-            if ( found )
-                dropShadowed( Vector3i64{ pi.pt - p0.pt }, Vector3i64{ pj.pt - p0.pt }, j + 1 );
         }
     }
     if ( stats )

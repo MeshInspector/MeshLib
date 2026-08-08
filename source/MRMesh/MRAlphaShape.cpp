@@ -13,6 +13,13 @@
 namespace MR
 {
 
+#if __GNUC__ >= 12 // false positive array-bounds warnings in boost widening conversions like Int1024( Int256 )
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overread"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+
 PreciseVertCoords AlphaShapeData::coords( const PointCloud & cloud, VertId v ) const
 {
     return { v, intPoints.empty() ? toInt( cloud.points[v] ) : intPoints[v] };
@@ -101,7 +108,28 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     }
     neis.resize( goodSize );
 
-    InSphereTesterSoS tester;
+    // the sphere quantities computed by reset() are reused by the shadow filter below
+    struct Tester : InSphereTesterSoS
+    {
+        const Vector3i64 & normal() const { return w; }
+        const Int256 & normalSq() const { return W; }
+        const Int512 & heightSq() const { return E; }
+
+        /// whether d is strictly outside both balls touching the triangle, which is
+        /// A * W > S * |t| in the notation of operator()
+        bool outsideBothBalls( const Vector3i & d ) const
+        {
+            const Vector3i64 q{ d - a };
+            const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
+            if ( qq > 4 * Int128( rSq ) )
+                return true;
+            const auto A = W * Int256( qq ) - dot( Vector3i256{ q }, M );
+            if ( A <= 0 )
+                return false;
+            const auto t = dot( Vector3i128{ q }, Vector3i128{ w } );
+            return sqr( Int1024( A ) ) * Int1024( W ) > Int1024( E ) * sqr( Int1024( t ) );
+        }
+    } tester;
     AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     // the tester must be already reset on the ball in question, and a, b are the ids of its points
     auto ballEmpty = [&tester, &neis, &myStats]( VertId a, VertId b )
@@ -116,15 +144,95 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         }
         return true;
     };
-    for ( size_t i = 0; i + 1 < neis.size(); ++i )
+
+    // whether b * sqrt( ew ) > | c * nd | exactly, given b > 0 and ew >= 0
+    auto insideWedge = []( const Int256 & b, const Int512 & c, const Int128 & nd, const Int1024 & ew )
     {
-        const auto & pi = neis[i].coords;
-        if ( onlyLargerVids && pi.id < v )
-            continue;
-        for ( size_t j = i + 1; j < neis.size(); ++j )
+        return sqr( Int1024( b ) ) * ew > sqr( Int1024( c ) * Int1024( nd ) );
+    };
+
+    // the tester is reset on a ball touching #v and two other neighbours p and q (given
+    // relative to #v); a neighbour strictly outside both touching balls and strictly inside the wedge
+    // of the four planes via #v, one of p and q, and one of the two centers, is redundant for the same
+    // reason as in the filter above: every ball of the given radius via #v containing such a neighbour
+    // has p or q strictly inside; see the PR for the derivation
+    auto dropShadowed = [&]( size_t i, size_t j )
+    {
+        const size_t from = j + 1;
+        if ( from >= neis.size() )
+            return;
+        const Vector3i64 p{ neis[i].coords.pt - p0.pt }, q{ neis[j].coords.pt - p0.pt };
+        const Int128 pp = neis[i].distSq, qq = neis[j].distSq; // already exact in the neighbours
+        const auto pq = dot( Vector3i128{ p }, Vector3i128{ q } );
+        // bp and bq below are the dot products of d with these two vectors, and most candidates are
+        // rejected by the sign of one of them, so the exact value is computed only when the
+        // floating-point approximation is too close to zero to decide it; the components here are
+        // below 2^96 and every difference of two points is below 2^31, which bounds the error of the
+        // dot products by 2^78, well below the tolerance
+        const Vector3d up{ Vector3d( q ) * double( pp ) - Vector3d( p ) * double( pq ) };
+        const Vector3d uq{ Vector3d( p ) * double( qq ) - Vector3d( q ) * double( pq ) };
+        constexpr double tolerance = 2e25; // 2^84
+        Int512 cp, cq;
+        Int1024 ew;
+        bool prepared = false; // most pairs shadow no point at all, so the rest is computed on demand
+        size_t good = from;
+        for ( size_t k = from; k < neis.size(); ++k )
         {
-            const auto & pj = neis[j].coords;
-            if ( onlyLargerVids && pj.id < v )
+            bool shadowed = false;
+            const auto & x = neis[k].coords;
+            const Vector3i64 d{ x.pt - p0.pt };
+            const Vector3d dd( d );
+            ++myStats.shadowTests;
+            if ( dot( up, dd ) > -tolerance && dot( uq, dd ) > -tolerance )
+            {
+                ++myStats.exactShadowTests;
+                const auto pd = dot( Vector3i128{ p }, Vector3i128{ d } );
+                const auto qd = dot( Vector3i128{ q }, Vector3i128{ d } );
+                // the wedge is within the dihedral angle of the half-planes via #v containing p and q
+                const auto bp = Int256( pp ) * Int256( qd ) - Int256( pq ) * Int256( pd );
+                const auto bq = Int256( qq ) * Int256( pd ) - Int256( pq ) * Int256( qd );
+                if ( bp > 0 && bq > 0 )
+                {
+                    if ( !prepared )
+                    {
+                        prepared = true;
+                        const auto & W = tester.normalSq();
+                        // sqr( S ) of the exact center identity 2 * W^2 * center = W * M +- S * n, where
+                        // M = qq * ( pp - pq ) * p + pp * ( qq - pq ) * q = 2 * W * ( circumcenter - #v );
+                        // the tester's E is the same for any of the three points as the origin
+                        ew = Int1024( tester.heightSq() ) * Int1024( W );
+                        cp = Int512( W ) * Int512( pp ) * Int512( qq - pq );
+                        cq = Int512( W ) * Int512( qq ) * Int512( pp - pq );
+                    }
+                    // the tester's normal is cross( p, q ) up to the sign, which does not matter here
+                    const auto nd = dot( Vector3i128{ tester.normal() }, Vector3i128{ d } );
+                    shadowed = insideWedge( bp, cp, nd, ew ) && insideWedge( bq, cq, nd, ew )
+                            && tester.outsideBothBalls( x.pt );
+                }
+            }
+            if ( shadowed )
+            {
+                ++myStats.shadowedNeis;
+                continue;
+            }
+            if ( good != k )
+                neis[good] = neis[k];
+            ++good;
+        }
+        neis.resize( good );
+    };
+
+    // the farther point of the pair is taken in the outer loop, so that the pairs of the closest
+    // neighbours, whose shadows are the largest, cast them first and shorten the loops below
+    for ( size_t j = 1; j < neis.size(); ++j )
+    {
+        const auto & pj = neis[j].coords;
+        if ( onlyLargerVids && pj.id < v )
+            continue;
+        for ( size_t i = 0; i < j; ++i )
+        {
+            const auto & pi = neis[i].coords;
+            if ( onlyLargerVids && pi.id < v )
                 continue;
             // the two balls touching all three points differ only by the side of the triangle,
             // so one reset is enough for the both; the tester cheaply rejects the points farther than
@@ -134,6 +242,9 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             if ( !tester.reset( pj, p0, pi, data.intRadiusSq ) )
                 continue;
             ++myStats.touchableTris;
+            // the shadow depends only on the existence of the touching balls, not on their emptiness,
+            // and dropping before the tests below shortens their scans as well
+            dropShadowed( i, j );
             if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
             tester.flip();
@@ -245,5 +356,9 @@ Mesh findAlphaShape( const PointCloud & cloud, float radius, AlphaShapeStats * s
         res = std::move( *maybe );
     return res;
 }
+
+#if __GNUC__ >= 12
+#pragma GCC diagnostic pop
+#endif
 
 } //namespace MR

@@ -63,11 +63,24 @@ struct AlphaShapeStats
     /// is not tested further as soon as the first point inside it is found
     std::size_t inBallTests = 0;
 
+    /// the number of neighbours tested for being shadowed by the balls of a touchable triangle
+    std::size_t shadowTests = 0;
+
+    /// the number of shadow tests not decided by the floating-point rejection,
+    /// which had to evaluate the exact predicates
+    std::size_t exactShadowTests = 0;
+
+    /// the number of neighbours found shadowed, which are excluded from the search
+    std::size_t shadowedNeis = 0;
+
     AlphaShapeStats & operator +=( const AlphaShapeStats & r )
     {
         consideredTris += r.consideredTris;
         touchableTris += r.touchableTris;
         inBallTests += r.inBallTests;
+        shadowTests += r.shadowTests;
+        exactShadowTests += r.exactShadowTests;
+        shadowedNeis += r.shadowedNeis;
         return *this;
     }
 };

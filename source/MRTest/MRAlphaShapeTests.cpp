@@ -33,6 +33,9 @@ TEST( MRMesh, AlphaShape )
     EXPECT_EQ( stats.consideredTris, 1 );
     EXPECT_EQ( stats.touchableTris, 1 );
     EXPECT_EQ( stats.inBallTests, 0 ); // no other points in the neighbourhood to test
+    EXPECT_EQ( stats.shadowTests, 0 ); // and none behind the only triangle to be shadowed by it
+    EXPECT_EQ( stats.exactShadowTests, 0 );
+    EXPECT_EQ( stats.shadowedNeis, 0 );
 
     cloud.validPoints.set( 1_v );
     cloud.invalidateCaches();

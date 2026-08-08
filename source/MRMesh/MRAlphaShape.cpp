@@ -161,6 +161,14 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         const auto pp = dot( Vector3i128{ p }, Vector3i128{ p } );
         const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
         const auto pq = dot( Vector3i128{ p }, Vector3i128{ q } );
+        // bp and bq below are the dot products of d with these two vectors, and most candidates are
+        // rejected by the sign of one of them, so the exact value is computed only when the
+        // floating-point approximation is too close to zero to decide it; the components here are
+        // below 2^96 and every difference of two points is below 2^31, which bounds the error of the
+        // dot products by 2^78, well below the tolerance
+        const Vector3d up{ Vector3d( q ) * double( pp ) - Vector3d( p ) * double( pq ) };
+        const Vector3d uq{ Vector3d( p ) * double( qq ) - Vector3d( q ) * double( pq ) };
+        constexpr double tolerance = 2e25; // 2^84
         Int512 cp, cq;
         Int1024 ew;
         bool prepared = false; // most triangles shadow no point at all, so the rest is computed on demand
@@ -170,28 +178,32 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             bool shadowed = false;
             const auto & x = neis[k].coords;
             const Vector3i64 d{ x.pt - p0.pt };
-            const auto pd = dot( Vector3i128{ p }, Vector3i128{ d } );
-            const auto qd = dot( Vector3i128{ q }, Vector3i128{ d } );
-            // the wedge is within the dihedral angle of the half-planes via #v containing p and q
-            const auto bp = Int256( pp ) * Int256( qd ) - Int256( pq ) * Int256( pd );
-            const auto bq = Int256( qq ) * Int256( pd ) - Int256( pq ) * Int256( qd );
-            if ( bp > 0 && bq > 0 )
+            const Vector3d dd( d );
+            if ( dot( up, dd ) > -tolerance && dot( uq, dd ) > -tolerance )
             {
-                if ( !prepared )
+                const auto pd = dot( Vector3i128{ p }, Vector3i128{ d } );
+                const auto qd = dot( Vector3i128{ q }, Vector3i128{ d } );
+                // the wedge is within the dihedral angle of the half-planes via #v containing p and q
+                const auto bp = Int256( pp ) * Int256( qd ) - Int256( pq ) * Int256( pd );
+                const auto bq = Int256( qq ) * Int256( pd ) - Int256( pq ) * Int256( qd );
+                if ( bp > 0 && bq > 0 )
                 {
-                    prepared = true;
-                    const auto & W = tester.normalSq();
-                    // sqr( S ) of the exact center identity 2 * W^2 * center = W * M +- S * n, where
-                    // M = qq * ( pp - pq ) * p + pp * ( qq - pq ) * q = 2 * W * ( circumcenter - #v );
-                    // the tester's E is the same for any point of the triangle taken as the origin
-                    ew = Int1024( tester.heightSq() ) * Int1024( W );
-                    cp = Int512( W ) * Int512( pp ) * Int512( qq - pq );
-                    cq = Int512( W ) * Int512( qq ) * Int512( pp - pq );
+                    if ( !prepared )
+                    {
+                        prepared = true;
+                        const auto & W = tester.normalSq();
+                        // sqr( S ) of the exact center identity 2 * W^2 * center = W * M +- S * n, where
+                        // M = qq * ( pp - pq ) * p + pp * ( qq - pq ) * q = 2 * W * ( circumcenter - #v );
+                        // the tester's E is the same for any point of the triangle as the origin
+                        ew = Int1024( tester.heightSq() ) * Int1024( W );
+                        cp = Int512( W ) * Int512( pp ) * Int512( qq - pq );
+                        cq = Int512( W ) * Int512( qq ) * Int512( pp - pq );
+                    }
+                    // the tester's normal is cross( p, q ) up to the sign, which does not matter here
+                    const auto nd = dot( Vector3i128{ tester.normal() }, Vector3i128{ d } );
+                    shadowed = insideWedge( bp, cp, nd, ew ) && insideWedge( bq, cq, nd, ew )
+                            && tester.outsideBothBalls( x.pt );
                 }
-                // the tester's normal is cross( p, q ) up to the sign, which does not matter here
-                const auto nd = dot( Vector3i128{ tester.normal() }, Vector3i128{ d } );
-                shadowed = insideWedge( bp, cp, nd, ew ) && insideWedge( bq, cq, nd, ew )
-                        && tester.outsideBothBalls( x.pt );
             }
             if ( shadowed )
                 continue;
@@ -231,7 +243,6 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                 appendTris.push_back( { v, pj.id, pi.id } );
                 found = true;
             }
-            // the filter is symmetric in the two balls, so one pass per pair is enough
             if ( found )
                 dropShadowed( Vector3i64{ pi.pt - p0.pt }, Vector3i64{ pj.pt - p0.pt }, j + 1 );
         }

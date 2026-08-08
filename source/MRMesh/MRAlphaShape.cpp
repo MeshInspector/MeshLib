@@ -13,6 +13,13 @@
 namespace MR
 {
 
+#if __GNUC__ >= 12 // false positive array-bounds warnings in boost widening conversions like Int1024( Int256 )
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#pragma GCC diagnostic ignored "-Wstringop-overread"
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+
 PreciseVertCoords AlphaShapeData::coords( const PointCloud & cloud, VertId v ) const
 {
     return { v, intPoints.empty() ? toInt( cloud.points[v] ) : intPoints[v] };
@@ -331,5 +338,9 @@ Mesh findAlphaShape( const PointCloud & cloud, float radius, AlphaShapeStats * s
         res = std::move( *maybe );
     return res;
 }
+
+#if __GNUC__ >= 12
+#pragma GCC diagnostic pop
+#endif
 
 } //namespace MR

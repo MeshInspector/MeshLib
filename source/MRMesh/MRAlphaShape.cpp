@@ -202,15 +202,17 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         neis.resize( good );
     };
 
-    for ( size_t i = 0; i + 1 < neis.size(); ++i )
+    // the farther point of the pair is taken in the outer loop, so that the triangles of the closest
+    // neighbours, whose shadows are the largest, are found first and shorten the loops below
+    for ( size_t j = 1; j < neis.size(); ++j )
     {
-        const auto & pi = neis[i].coords;
-        if ( onlyLargerVids && pi.id < v )
+        const auto & pj = neis[j].coords;
+        if ( onlyLargerVids && pj.id < v )
             continue;
-        for ( size_t j = i + 1; j < neis.size(); ++j )
+        for ( size_t i = 0; i < j; ++i )
         {
-            const auto & pj = neis[j].coords;
-            if ( onlyLargerVids && pj.id < v )
+            const auto & pi = neis[i].coords;
+            if ( onlyLargerVids && pi.id < v )
                 continue;
             // the two balls touching all three points differ only by the side of the triangle,
             // so one reset is enough for the both; the tester cheaply rejects the points farther than

@@ -179,8 +179,10 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             const auto & x = neis[k].coords;
             const Vector3i64 d{ x.pt - p0.pt };
             const Vector3d dd( d );
+            ++myStats.shadowTests;
             if ( dot( up, dd ) > -tolerance && dot( uq, dd ) > -tolerance )
             {
+                ++myStats.exactShadowTests;
                 const auto pd = dot( Vector3i128{ p }, Vector3i128{ d } );
                 const auto qd = dot( Vector3i128{ q }, Vector3i128{ d } );
                 // the wedge is within the dihedral angle of the half-planes via #v containing p and q
@@ -206,7 +208,10 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                 }
             }
             if ( shadowed )
+            {
+                ++myStats.shadowedNeis;
                 continue;
+            }
             if ( good != k )
                 neis[good] = neis[k];
             ++good;

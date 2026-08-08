@@ -156,10 +156,13 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     // of the four planes via #v, one of p and q, and one of the two centers, is redundant for the same
     // reason as in the filter above: every ball of the given radius via #v containing such a neighbour
     // has p or q strictly inside; see the PR for the derivation
-    auto dropShadowed = [&]( const Vector3i64 & p, const Vector3i64 & q, size_t from )
+    auto dropShadowed = [&]( size_t i, size_t j )
     {
-        const auto pp = dot( Vector3i128{ p }, Vector3i128{ p } );
-        const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
+        const size_t from = j + 1;
+        if ( from >= neis.size() )
+            return;
+        const Vector3i64 p{ neis[i].coords.pt - p0.pt }, q{ neis[j].coords.pt - p0.pt };
+        const Int128 pp = neis[i].distSq, qq = neis[j].distSq; // already exact in the neighbours
         const auto pq = dot( Vector3i128{ p }, Vector3i128{ q } );
         // bp and bq below are the dot products of d with these two vectors, and most candidates are
         // rejected by the sign of one of them, so the exact value is computed only when the
@@ -171,7 +174,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         constexpr double tolerance = 2e25; // 2^84
         Int512 cp, cq;
         Int1024 ew;
-        bool prepared = false; // most triangles shadow no point at all, so the rest is computed on demand
+        bool prepared = false; // most pairs shadow no point at all, so the rest is computed on demand
         size_t good = from;
         for ( size_t k = from; k < neis.size(); ++k )
         {
@@ -196,7 +199,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                         const auto & W = tester.normalSq();
                         // sqr( S ) of the exact center identity 2 * W^2 * center = W * M +- S * n, where
                         // M = qq * ( pp - pq ) * p + pp * ( qq - pq ) * q = 2 * W * ( circumcenter - #v );
-                        // the tester's E is the same for any point of the triangle as the origin
+                        // the tester's E is the same for any of the three points as the origin
                         ew = Int1024( tester.heightSq() ) * Int1024( W );
                         cp = Int512( W ) * Int512( pp ) * Int512( qq - pq );
                         cq = Int512( W ) * Int512( qq ) * Int512( pp - pq );
@@ -219,8 +222,8 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         neis.resize( good );
     };
 
-    // the farther point of the pair is taken in the outer loop, so that the triangles of the closest
-    // neighbours, whose shadows are the largest, are found first and shorten the loops below
+    // the farther point of the pair is taken in the outer loop, so that the pairs of the closest
+    // neighbours, whose shadows are the largest, cast them first and shorten the loops below
     for ( size_t j = 1; j < neis.size(); ++j )
     {
         const auto & pj = neis[j].coords;
@@ -241,7 +244,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             ++myStats.touchableTris;
             // the shadow depends only on the existence of the touching balls, not on their emptiness,
             // and dropping before the tests below shortens their scans as well
-            dropShadowed( Vector3i64{ pi.pt - p0.pt }, Vector3i64{ pj.pt - p0.pt }, j + 1 );
+            dropShadowed( i, j );
             if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
             tester.flip();

@@ -6,6 +6,12 @@
     in a project's FileListAbsolute.txt, the next relink makes IncrementalClean delete them as
     "orphaned" outputs. No single project owns a DLL in a shared OutDir, so never clean them.
   -->
+  <!-- Chain-import the next Directory.Build.targets above this repo: MSBuild's first-found-wins
+       search would otherwise shadow it for projects embedding this repo as a submodule. -->
+  <PropertyGroup>
+    <_MRParentDirectoryBuildTargets>$([MSBuild]::GetPathOfFileAbove('Directory.Build.targets', '$(MSBuildThisFileDirectory)../'))</_MRParentDirectoryBuildTargets>
+  </PropertyGroup>
+  <Import Project="$(_MRParentDirectoryBuildTargets)" Condition="'$(_MRParentDirectoryBuildTargets)' != ''" />
   <Target Name="MRProtectSharedDllsFromIncrementalClean" BeforeTargets="IncrementalClean">
     <ItemGroup>
       <_MRDllPriorFileWrites Include="@(_CleanPriorFileWrites)" Condition="'%(Extension)' == '.dll'" />

@@ -164,11 +164,9 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         const Vector3i64 p{ neis[i].coords.pt - p0.pt }, q{ neis[j].coords.pt - p0.pt };
         const Int128 pp = neis[i].distSq, qq = neis[j].distSq; // already exact in the neighbours
         const auto pq = dot( Vector3i128{ p }, Vector3i128{ q } );
-        // bp and bq below are the dot products of d with these two vectors, and most candidates are
-        // rejected by the sign of one of them, so the exact value is computed only when the
-        // floating-point approximation is too close to zero to decide it; the components here are
-        // below 2^96 and every difference of two points is below 2^31, which bounds the error of the
-        // dot products by 2^78, well below the tolerance
+        // bp and bq below are the dot products of d with these two vectors, and the sign of one of
+        // them rejects most candidates; the exact values are needed only within the tolerance of zero,
+        // which given the coordinate range exceeds the error of these double dot products (2^78) 64x
         const Vector3d up{ Vector3d( q ) * double( pp ) - Vector3d( p ) * double( pq ) };
         const Vector3d uq{ Vector3d( p ) * double( qq ) - Vector3d( q ) * double( pq ) };
         constexpr double tolerance = 2e25; // 2^84

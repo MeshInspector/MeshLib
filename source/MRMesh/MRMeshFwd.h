@@ -755,7 +755,7 @@ struct TransparencyMode;
 
 /// squared value; the result type is the type of x*x, which is int for small integer types (char, short)
 template <typename T>
-constexpr inline auto sqr( T x ) noexcept { return x * x; }
+constexpr inline auto sqr( T x ) noexcept -> decltype( x * x ) { return x * x; }
 
 /// sign of given value in { -1, 0, 1 }
 template <typename T>

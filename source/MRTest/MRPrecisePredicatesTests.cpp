@@ -394,6 +394,71 @@ TEST( MRMesh, inSphereTesterFlip )
             }
 }
 
+TEST( MRMesh, fastInSphereTesterSoS )
+{
+    // the fast tester must answer exactly as InSphereTesterSoS does, only sooner
+    InSphereTesterSoS exact;
+    FastInSphereTesterSoS fast;
+
+    // four concyclic points: every query is exactly on the sphere, so the fast path must always
+    // defer to the exact one and the ties must still be resolved by the ids
+    const PreciseVertCoords ps[4] = {
+        { 0_v, Vector3i{  5, 0, 0 } },
+        { 1_v, Vector3i{  0, 5, 0 } },
+        { 2_v, Vector3i{ -5, 0, 0 } },
+        { 3_v, Vector3i{  3, 4, 0 } }
+    };
+    for ( int i = 0; i < 4; ++i )
+        for ( int j = 0; j < 4; ++j )
+            for ( int k = 0; k < 4; ++k )
+            {
+                if ( i == j || j == k || i == k )
+                    continue;
+                ASSERT_TRUE( exact.reset( ps[i], ps[j], ps[k], 169 ) );
+                ASSERT_TRUE( fast.reset( ps[i], ps[j], ps[k], 169 ) );
+                const auto & d = ps[6 - i - j - k];
+                EXPECT_EQ( exact( d ), fast( d ) );
+                exact.flip();
+                fast.flip();
+                EXPECT_EQ( exact( d ), fast( d ) );
+            }
+
+    // pseudo-random spheres and queries, from tiny coordinates up to the magnitudes of getToIntConverter
+    std::uint64_t seed = 12345;
+    auto rnd = [&seed]( int mag )
+    {
+        seed = seed * 6364136223846793005ull + 1442695040888963407ull;
+        return int( std::int64_t( seed >> 33 ) % ( 2 * mag + 1 ) ) - mag;
+    };
+    int tested = 0;
+    for ( int mag : { 100, 1000000, 1000000000 } )
+        for ( int t = 0; t < 300; ++t )
+        {
+            const PreciseVertCoords vs[3] = {
+                { 0_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } },
+                { 1_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } },
+                { 2_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } }
+            };
+            const auto rSq = 4 * sqr( std::int64_t( mag ) );
+            const bool ok = exact.reset( vs[0], vs[1], vs[2], rSq );
+            ASSERT_EQ( ok, fast.reset( vs[0], vs[1], vs[2], rSq ) );
+            if ( !ok )
+                continue;
+            for ( int f = 0; f < 2; ++f )
+            {
+                for ( int q = 0; q < 10; ++q )
+                {
+                    const PreciseVertCoords d{ 3_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } };
+                    EXPECT_EQ( exact( d ), fast( d ) );
+                    ++tested;
+                }
+                exact.flip();
+                fast.flip();
+            }
+        }
+    EXPECT_GT( tested, 10000 );
+}
+
 TEST( MRMesh, inSphereTesterFloat )
 {
     const auto In = InSphereResult::Inside;

@@ -109,7 +109,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     neis.resize( goodSize );
 
     // the sphere quantities computed by reset() are reused by the shadow filter below
-    struct Tester : InSphereTesterSoS
+    struct Tester : FastInSphereTesterSoS
     {
         const Vector3i64 & normal() const { return w; }
         const Int256 & normalSq() const { return W; }

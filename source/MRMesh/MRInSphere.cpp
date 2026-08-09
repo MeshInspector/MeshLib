@@ -1,6 +1,7 @@
 #include "MRInSphere.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 namespace MR
 {
@@ -214,6 +215,36 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
     }
     assert( false ); // the query point always resolves the tie
     return InSphereResult::Outside;
+}
+
+bool FastInSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCoords & vb, const PreciseVertCoords & vc, std::int64_t sqRadius )
+{
+    if ( !InSphereTesterSoS::reset( va, vb, vc, sqRadius ) )
+        return false;
+
+    // circumcenter - a = M / (2W) lies in the plane of the triangle and the height S * w / (2W^2)
+    // is orthogonal to it, so the sum below cannot lose precision to cancellation
+    const auto dW = W.convert_to<double>();
+    cc_ = Vector3d{ M.x.convert_to<double>(), M.y.convert_to<double>(), M.z.convert_to<double>() } / ( 2 * dW );
+    hn_ = ( std::sqrt( E.convert_to<double>() * dW ) / ( 2 * dW * dW ) ) * Vector3d( w );
+
+    // every value above carries a relative error of a few 2^-53, and the center is at the distance
+    // sqrt(rSq) from a, so the squared distance in operator() is off by at most rSq * 2^-48;
+    // 2^-44 of rSq keeps a 16x margin over that, and a query is decided only outside of it
+    tol_ = double( rSq ) * 0x1p-44;
+    return true;
+}
+
+InSphereResult FastInSphereTesterSoS::operator()( const PreciseVertCoords & d ) const
+{
+    assert( E >= 0 ); // the last reset() must have returned true
+    // sqr( distance from d to the center ) - rSq, which is negative exactly when d is inside
+    const auto e = ( Vector3d( Vector3i64{ d.pt - a } ) - cc_ - hn_ ).lengthSq() - double( rSq );
+    if ( e > tol_ )
+        return InSphereResult::Outside;
+    if ( e < -tol_ )
+        return InSphereResult::Inside;
+    return InSphereTesterSoS::operator()( d );
 }
 
 InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )

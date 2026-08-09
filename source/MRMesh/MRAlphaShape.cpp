@@ -164,12 +164,16 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         const Vector3i64 p{ neis[i].coords.pt - p0.pt }, q{ neis[j].coords.pt - p0.pt };
         const Int128 pp = neis[i].distSq, qq = neis[j].distSq; // already exact in the neighbours
         const auto pq = dot( Vector3i128{ p }, Vector3i128{ q } );
-        // bp and bq below are the dot products of d with these two vectors, and the sign of one of
-        // them rejects most candidates; the exact values are needed only within the tolerance of zero,
-        // which given the coordinate range exceeds the error of these double dot products (2^78) 64x
+        // bp and bq below are the dot products of d with these two vectors, and the sign of one of them
+        // rejects most candidates, so the exact Int256 values are needed only where the double ones are
+        // too close to zero. Any difference of two points is below 2^31, so pp and pq are below 2^64,
+        // the components of up and uq below 2^96, and these dot products below 2^129; the roundings on
+        // the way cost 2^-53 of the running magnitude each, keeping the total error below 2^78, and a
+        // double value below -2^78 is thus negative exactly as well. The tolerance takes 64 times that
+        // margin for safety, at the price of evaluating exactly the few candidates falling in between
         const Vector3d up{ Vector3d( q ) * double( pp ) - Vector3d( p ) * double( pq ) };
         const Vector3d uq{ Vector3d( p ) * double( qq ) - Vector3d( q ) * double( pq ) };
-        constexpr double tolerance = 2e25; // 2^84
+        constexpr double tolerance = 2e25; // 2^84 = 64 * 2^78
         Int512 cp, cq;
         Int1024 ew;
         bool prepared = false; // most pairs shadow no point at all, so the rest is computed on demand

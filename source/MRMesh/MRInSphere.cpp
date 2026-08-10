@@ -247,6 +247,31 @@ InSphereResult FastInSphereTesterSoS::operator()( const PreciseVertCoords & d ) 
     return InSphereTesterSoS::operator()( d );
 }
 
+bool FastInSphereTesterSoS::outsideBothSpheres( const Vector3i & d ) const
+{
+    assert( E >= 0 ); // the last reset() must have returned true
+    const Vector3i64 q{ d - a };
+
+    // the two centers are cc_ + hn_ and cc_ - hn_, mirror images in the plane of the triangle
+    const auto qd = Vector3d( q ) - cc_;
+    const auto e0 = ( qd - hn_ ).lengthSq() - double( rSq );
+    const auto e1 = ( qd + hn_ ).lengthSq() - double( rSq );
+    if ( e0 > tol_ && e1 > tol_ )
+        return true;
+    if ( e0 < -tol_ || e1 < -tol_ )
+        return false;
+
+    // exactly: outside both means A * W > S * |t| in the notation of operator()
+    const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
+    if ( qq > 4 * Int128( rSq ) )
+        return true;
+    const auto A = W * Int256( qq ) - dot( Vector3i256{ q }, M );
+    if ( A <= 0 )
+        return false;
+    const auto t = dot( Vector3i128{ q }, Vector3i128{ w } );
+    return sqr( Int1024( A ) ) * Int1024( W ) > Int1024( E ) * sqr( Int1024( t ) );
+}
+
 InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )
 {
     InSphereTesterSoS tester;

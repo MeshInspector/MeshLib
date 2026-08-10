@@ -255,6 +255,13 @@ public:
     /// shall be called only after reset() returned true, and all four ids must be distinct
     [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
 
+    /// whether d is strictly outside both spheres of the given radius passing via the three points
+    /// of reset(): the selected one and its mirror in the plane of the triangle;
+    /// the answer is exact, and a point lying on either of them is not strictly outside, so no tie
+    /// arises and no simulation-of-simplicity is involved;
+    /// filtered in floating point as the query above, and equally exact
+    [[nodiscard]] MRMESH_API bool outsideBothSpheres( const Vector3i & d ) const;
+
 private:
     /// the sphere's center relative to the first point, split in the part within the plane of the
     /// triangle and the height orthogonal to it, so that flip() only negates the latter;

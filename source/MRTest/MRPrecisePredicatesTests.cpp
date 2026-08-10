@@ -444,12 +444,20 @@ TEST( MRMesh, fastInSphereTesterSoS )
             ASSERT_EQ( ok, fast.reset( vs[0], vs[1], vs[2], rSq ) );
             if ( !ok )
                 continue;
+            // outsideBothSpheres must agree with the plain tester asked on both sides
+            InSphereTesteri plain;
+            ASSERT_TRUE( plain.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) );
             for ( int f = 0; f < 2; ++f )
             {
                 for ( int q = 0; q < 10; ++q )
                 {
                     const PreciseVertCoords d{ 3_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } };
                     EXPECT_EQ( exact( d ), fast( d ) );
+                    const bool out0 = plain( d.pt ) == InSphereResult::Outside;
+                    plain.flip();
+                    const bool out1 = plain( d.pt ) == InSphereResult::Outside;
+                    plain.flip();
+                    EXPECT_EQ( fast.outsideBothSpheres( d.pt ), out0 && out1 );
                     ++tested;
                 }
                 exact.flip();

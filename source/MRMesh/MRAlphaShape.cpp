@@ -114,21 +114,6 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         const Vector3i64 & normal() const { return w; }
         const Int256 & normalSq() const { return W; }
         const Int512 & heightSq() const { return E; }
-
-        /// whether d is strictly outside both balls touching the triangle, which is
-        /// A * W > S * |t| in the notation of operator()
-        bool outsideBothBalls( const Vector3i & d ) const
-        {
-            const Vector3i64 q{ d - a };
-            const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
-            if ( qq > 4 * Int128( rSq ) )
-                return true;
-            const auto A = W * Int256( qq ) - dot( Vector3i256{ q }, M );
-            if ( A <= 0 )
-                return false;
-            const auto t = dot( Vector3i128{ q }, Vector3i128{ w } );
-            return sqr( Int1024( A ) ) * Int1024( W ) > Int1024( E ) * sqr( Int1024( t ) );
-        }
     } tester;
     AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     // the tester must be already reset on the ball in question, and a, b are the ids of its points
@@ -209,7 +194,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                     // the tester's normal is cross( p, q ) up to the sign, which does not matter here
                     const auto nd = dot( Vector3i128{ tester.normal() }, Vector3i128{ d } );
                     shadowed = insideWedge( bp, cp, nd, ew ) && insideWedge( bq, cq, nd, ew )
-                            && tester.outsideBothBalls( x.pt );
+                            && tester.outsideBothSpheres( x.pt );
                 }
             }
             if ( shadowed )

@@ -3,7 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRMeshMetrics.h"
 #include "MRId.h"
-#include "MRHoleFillPlan.h"
+#include "MRTriangulationPlan.h"
 #include <functional>
 #include <memory>
 
@@ -160,28 +160,33 @@ MRMESH_API void fillHoles( Mesh& mesh, const std::vector<EdgeId> & as, const Fil
 
 /// prepares the plan how to triangulate the face or hole to the left of (e) (not filling it immediately),
 /// several getHoleFillPlan can work in parallel
-[[nodiscard]] MRMESH_API HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
+[[nodiscard]] MRMESH_API TriangulationPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
 
 /// prepares the plans how to triangulate the faces or holes, each given by a boundary edge (with filling target to the left),
 /// the plans are prepared in parallel with minimal memory allocation compared to manual calling of several getHoleFillPlan(), but it can inefficient when some holes are very complex
-[[nodiscard]] MRMESH_API std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params = {} );
+[[nodiscard]] MRMESH_API std::vector<TriangulationPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params = {} );
 
 /// prepares the plan how to triangulate the planar face or planar hole to the left of (e) (not filling it immediately),
 /// several getPlanarHoleFillPlan can work in parallel
 /// if `allowSweptLine` is set - tries to use faster swept line triangulation for larger holes but do not resolve multiple edges in any way (OK in most cases)
-[[nodiscard]] MRMESH_API HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
+[[nodiscard]] MRMESH_API TriangulationPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
 
 /// prepares the plans how to triangulate the planar faces or holes, each given by a boundary edge (with filling target to the left),
 /// the plans are prepared in parallel with minimal memory allocation compared to manual calling of several getPlanarHoleFillPlan(), but it can inefficient when some holes are very complex
-[[nodiscard]] MRMESH_API std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
+[[nodiscard]] MRMESH_API std::vector<TriangulationPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 
-/// quickly triangulates the face or hole to the left of (e) given the plan (quickly compared to fillHole function)
-MRMESH_API void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces = nullptr );
+/// quickly adds the edges of the plan in the mesh, triangulating the face or hole to the left of (e)
+/// (quickly compared to fillHole function)
+MRMESH_API void executeTriangulationPlan( Mesh & mesh, EdgeId a0, TriangulationPlan & plan, FaceBitSet * outNewFaces = nullptr );
 
-/// returns true if executeHoleFillPlan() with the same topology and plan
+/// \deprecated use executeTriangulationPlan() instead
+[[deprecated( "Use `executeTriangulationPlan` instead." )]]
+MRMESH_API MR_BIND_IGNORE void executeHoleFillPlan( Mesh & mesh, EdgeId a0, TriangulationPlan & plan, FaceBitSet * outNewFaces = nullptr );
+
+/// returns true if executeTriangulationPlan() with the same topology and plan
 /// does not introduce any edge with the same end-vertices as any existed edge in the mesh;
 /// note: this function can be used for checking a fill plan that was generated before filling other holes
-[[nodiscard]] MRMESH_API bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan );
+[[nodiscard]] MRMESH_API bool isFillingMultipleEdgeFree( const MeshTopology & topology, const TriangulationPlan & plan );
 
 /** \brief Triangulates face of hole in mesh trivially\n
   * \ingroup FillHoleGroup

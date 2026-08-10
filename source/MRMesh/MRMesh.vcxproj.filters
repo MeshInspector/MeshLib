@@ -1428,6 +1428,9 @@
     <ClInclude Include="MRHoleFillPlan.h">
       <Filter>Source Files\MeshAlgorithm</Filter>
     </ClInclude>
+    <ClInclude Include="MRTriangulationPlan.h">
+      <Filter>Source Files\MeshAlgorithm</Filter>
+    </ClInclude>
     <ClInclude Include="MRSplineProject.h">
       <Filter>Source Files\AABBTree</Filter>
     </ClInclude>

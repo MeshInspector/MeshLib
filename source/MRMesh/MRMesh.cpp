@@ -115,7 +115,7 @@ Mesh Mesh::fromFaceSoup(
     reportProgress( cb, 0.9f );
 
     for ( size_t i = 0; i < holeRepresentativeEdges.size(); ++i )
-        executeHoleFillPlan( res, holeRepresentativeEdges[i], fillPlans[i] );
+        executeTriangulationPlan( res, holeRepresentativeEdges[i], fillPlans[i] );
 
     reportProgress( cb, 1.0f );
 

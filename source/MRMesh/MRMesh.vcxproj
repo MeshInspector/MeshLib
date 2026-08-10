@@ -22,6 +22,7 @@
     <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRLoadedMeshData.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
+    <ClInclude Include="MRTriangulationPlan.h" />
     <ClInclude Include="MRAABBTreeBase.h" />
     <ClInclude Include="MRAABBTreeBase.hpp" />
     <ClInclude Include="MRAABBTreeMaker.hpp" />

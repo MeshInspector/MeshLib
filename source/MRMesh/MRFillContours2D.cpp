@@ -214,7 +214,7 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     return {};
 }
 
-Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
+Expected<TriangulationPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
 {
     assert( !mesh.topology.left( holeEdgeId ) );
     if ( mesh.topology.left( holeEdgeId ) )
@@ -254,7 +254,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     const auto& pTp = patch->topology;
     const auto& ip = loops.front();
     auto& np = newPaths.front();
-    HoleFillPlan res;
+    TriangulationPlan res;
     res.numTris = pTp.numValidFaces();
     if ( res.numTris == 1 )
         return res;
@@ -279,7 +279,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
             auto dest = pTp.dest( ne );
             if ( dest != pTp.dest( e1 ) )
                 continue;
-            FillHoleItem fhi;
+            TriangulationPlanItem fhi;
             int i01 = ( i0 + 1 ) % size;
             fhi.edgeCode1 = i1 == i01 ? ip[i0] : int( np[i01] );
             i1 = dest;

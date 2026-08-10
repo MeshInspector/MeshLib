@@ -528,7 +528,7 @@ inline EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     return newEdge;
 }
 
-void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces )
+void executeTriangulationPlan( Mesh & mesh, EdgeId a0, TriangulationPlan & plan, FaceBitSet * outNewFaces )
 {
     [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
     const FaceId f0 = mesh.topology.left( a0 );
@@ -597,7 +597,12 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
 }
 
-bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan )
+void executeHoleFillPlan( Mesh & mesh, EdgeId a0, TriangulationPlan & plan, FaceBitSet * outNewFaces )
+{
+    executeTriangulationPlan( mesh, a0, plan, outNewFaces );
+}
+
+bool isFillingMultipleEdgeFree( const MeshTopology & topology, const TriangulationPlan & plan )
 {
     if ( plan.items.empty() )
         return true;
@@ -623,8 +628,8 @@ bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPla
 class HoleFillPlanner
 {
 public:
-    HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
-    HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
+    TriangulationPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
+    TriangulationPlan runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
     unsigned concurrentSmallHoleSize = 0; ///< if hole size is smaller than this value preffer concurrent processing, sometimes it better than isolated parallelism overhead
 private:
     std::vector<EdgeId> edgeMap_;
@@ -635,9 +640,9 @@ private:
 };
 
 // Sub cubic complexity
-HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
+TriangulationPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHoleParams& params )
 {
-    HoleFillPlan res;
+    TriangulationPlan res;
     if ( params.stopBeforeBadTriangulation )
         *params.stopBeforeBadTriangulation = false;
     if ( params.maxPolygonSubdivisions < 2 )
@@ -809,7 +814,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
     return res;
 }
 
-HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine )
+TriangulationPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine )
 {
     if ( allowSweptLine )
     {
@@ -838,15 +843,15 @@ HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowS
     return res;
 }
 
-HoleFillPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params )
+TriangulationPlan getHoleFillPlan( const Mesh& mesh, EdgeId e, const FillHoleParams& params )
 {
     return HoleFillPlanner{}.run( mesh, e, params );
 }
 
-std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params )
+std::vector<TriangulationPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges, const FillHoleParams& params )
 {
     MR_TIMER;
-    std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
+    std::vector<TriangulationPlan> fillPlans( holeRepresentativeEdges.size() );
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
@@ -860,15 +865,15 @@ std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<
     return fillPlans;
 }
 
-HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e, bool allowSwept )
+TriangulationPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e, bool allowSwept )
 {
     return HoleFillPlanner{}.runPlanar( mesh, e, allowSwept );
 }
 
-std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
+std::vector<TriangulationPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER;
-    std::vector<HoleFillPlan> fillPlans( holeRepresentativeEdges.size() );
+    std::vector<TriangulationPlan> fillPlans( holeRepresentativeEdges.size() );
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
@@ -950,7 +955,7 @@ void fillHole( Mesh& mesh, EdgeId a0, const FillHoleParams& params )
     if ( params.stopBeforeBadTriangulation && *params.stopBeforeBadTriangulation )
         return;
 
-    executeHoleFillPlan( mesh, a0, plan, params.outNewFaces );
+    executeTriangulationPlan( mesh, a0, plan, params.outNewFaces );
 }
 
 void fillHoles( Mesh& mesh, const std::vector<EdgeId> & as, const FillHoleParams& params )

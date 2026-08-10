@@ -367,11 +367,11 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
     return res;
 }
 
-void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
+void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, TriangulationPlan& plan, FaceId oldFace, FaceMap* new2OldMap, NewEdgesMap* new2OldEdgeMap )
 {
     const auto fsz0 = mesh.topology.faceSize();
     const auto uesz0 = mesh.topology.undirectedEdgeSize();
-    executeHoleFillPlan( mesh, e, plan );
+    executeTriangulationPlan( mesh, e, plan );
     if ( new2OldMap )
     {
         assert( oldFace.valid() );

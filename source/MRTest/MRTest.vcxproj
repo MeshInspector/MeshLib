@@ -92,6 +92,7 @@
     <ClCompile Include="MRFillContours2DTests.cpp" />
     <ClCompile Include="MRFinallyTests.cpp" />
     <ClCompile Include="MRIdTests.cpp" />
+    <ClCompile Include="MRInt64Mul128Tests.cpp" />
     <ClCompile Include="MRIntersectionTests.cpp" />
     <ClCompile Include="MRIterativeSamplingTests.cpp" />
     <ClCompile Include="MRLine3Tests.cpp" />

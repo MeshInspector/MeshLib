@@ -173,6 +173,167 @@ TEST( MRMesh, PlanarTriangulationMeshSpace )
 
 namespace
 {
+
+// checks that the patch's boundary loops correspond 1:1 to the input mesh loops:
+// same sizes, patch side filled (left face valid), exact original coordinates at every origin
+void checkPatchBorders( const Mesh& mesh, const EdgeLoops& loops, const Mesh& patch, const std::vector<EdgePath>& bds )
+{
+    ASSERT_EQ( bds.size(), loops.size() );
+    for ( size_t i = 0; i < loops.size(); ++i )
+    {
+        ASSERT_EQ( bds[i].size(), loops[i].size() );
+        for ( size_t j = 0; j < loops[i].size(); ++j )
+        {
+            EXPECT_TRUE( patch.topology.left( bds[i][j] ).valid() );
+            EXPECT_EQ( patch.points[patch.topology.org( bds[i][j] )], mesh.points[mesh.topology.org( loops[i][j] )] );
+            EXPECT_EQ( patch.points[patch.topology.dest( bds[i][j] )], mesh.points[mesh.topology.dest( loops[i][j] )] );
+        }
+    }
+}
+
+}
+
+TEST( MRMesh, PlanarTriangulationMeshSpacePinch )
+{
+    // two ccw square loops sharing exactly one mesh vertex v0 (a bowtie): the configuration a cut
+    // contour leaves when it touches the removed face's boundary at a vertex
+    Mesh mesh;
+    auto& tp = mesh.topology;
+    const VertId v0 = tp.addVertId(); // shared
+    const VertId a1 = tp.addVertId(), a2 = tp.addVertId(), a3 = tp.addVertId(); // lower-left square
+    const VertId b1 = tp.addVertId(), b2 = tp.addVertId(), b3 = tp.addVertId(); // upper-right square
+    mesh.points.autoResizeSet( v0, Vector3f( 0, 0, 0 ) );
+    mesh.points.autoResizeSet( a1, Vector3f( -1, 0, 0 ) );
+    mesh.points.autoResizeSet( a2, Vector3f( -1, -1, 0 ) );
+    mesh.points.autoResizeSet( a3, Vector3f( 0, -1, 0 ) );
+    mesh.points.autoResizeSet( b1, Vector3f( 1, 0, 0 ) );
+    mesh.points.autoResizeSet( b2, Vector3f( 1, 1, 0 ) );
+    mesh.points.autoResizeSet( b3, Vector3f( 0, 1, 0 ) );
+
+    const EdgeId eA0 = tp.makeEdge(), eA1 = tp.makeEdge(), eA2 = tp.makeEdge(), eA3 = tp.makeEdge();
+    const EdgeId eB0 = tp.makeEdge(), eB1 = tp.makeEdge(), eB2 = tp.makeEdge(), eB3 = tp.makeEdge();
+    // rings at the simple vertices: in-edge and out-edge only
+    tp.splice( eA0.sym(), eA1 );
+    tp.splice( eA1.sym(), eA2 );
+    tp.splice( eA2.sym(), eA3 );
+    tp.splice( eB0.sym(), eB1 );
+    tp.splice( eB1.sym(), eB2 );
+    tp.splice( eB2.sym(), eB3 );
+    // ring at v0 in ccw order around +Z: toward b1 (0), b3 (90), a1 (180), a3 (270);
+    // each loop's interior wedge stays contiguous, as in a real mesh
+    tp.splice( eB0, eB3.sym() );
+    tp.splice( eB3.sym(), eA0 );
+    tp.splice( eA0, eA3.sym() );
+    tp.setOrg( eA0, v0 );
+    tp.setOrg( eA1, a1 );
+    tp.setOrg( eA2, a2 );
+    tp.setOrg( eA3, a3 );
+    tp.setOrg( eB1, b1 );
+    tp.setOrg( eB2, b2 );
+    tp.setOrg( eB3, b3 );
+
+    const EdgeLoops loops = { { eA0, eA1, eA2, eA3 }, { eB0, eB1, eB2, eB3 } };
+    std::vector<EdgePath> bds;
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f::plusZ(), &bds );
+    ASSERT_TRUE( res.has_value() );
+    const Mesh& patch = *res;
+
+    EXPECT_EQ( patch.topology.numValidFaces(), 4 ); // 2 triangles per square
+    EXPECT_NEAR( patch.area(), 2.0f, 1e-5f );
+    // one figure-eight boundary loop: the hole walk passes the shared vertex twice
+    EXPECT_EQ( patch.topology.findHoleRepresentiveEdges().size(), 1 );
+    for ( auto f : patch.topology.getValidFaces() )
+        EXPECT_GT( dot( patch.normal( f ), Vector3f::plusZ() ), 0.f );
+    checkPatchBorders( mesh, loops, patch, bds );
+}
+
+TEST( MRMesh, PlanarTriangulationMeshSpaceSharedEdge )
+{
+    // square [0,3]^2 split by a chord: two ccw loops traverse the chord edge in opposite directions —
+    // exactly what a cut contour crossing a removed face leaves for the joint per-face fill
+    Mesh mesh;
+    auto& tp = mesh.topology;
+    const VertId c0 = tp.addVertId(), m1 = tp.addVertId(), c1 = tp.addVertId();
+    const VertId c2 = tp.addVertId(), m2 = tp.addVertId(), c3 = tp.addVertId();
+    mesh.points.autoResizeSet( c0, Vector3f( 0, 0, 0 ) );
+    mesh.points.autoResizeSet( m1, Vector3f( 1.5f, 0, 0 ) );
+    mesh.points.autoResizeSet( c1, Vector3f( 3, 0, 0 ) );
+    mesh.points.autoResizeSet( c2, Vector3f( 3, 3, 0 ) );
+    mesh.points.autoResizeSet( m2, Vector3f( 1.5f, 3, 0 ) );
+    mesh.points.autoResizeSet( c3, Vector3f( 0, 3, 0 ) );
+
+    const EdgeId eBL = tp.makeEdge(); // c0 -> m1
+    const EdgeId eBR = tp.makeEdge(); // m1 -> c1
+    const EdgeId eR = tp.makeEdge();  // c1 -> c2
+    const EdgeId eTR = tp.makeEdge(); // c2 -> m2
+    const EdgeId eTL = tp.makeEdge(); // m2 -> c3
+    const EdgeId eL = tp.makeEdge();  // c3 -> c0
+    const EdgeId eC = tp.makeEdge();  // m1 -> m2, the chord
+    tp.splice( eL.sym(), eBL );      // c0
+    tp.splice( eBR.sym(), eR );      // c1
+    tp.splice( eR.sym(), eTR );      // c2
+    tp.splice( eTL.sym(), eL );      // c3
+    // ring at m1, ccw: toward c1 (0), m2 (90), c0 (180)
+    tp.splice( eBR, eC );
+    tp.splice( eC, eBL.sym() );
+    // ring at m2, ccw: toward c2 (0), c3 (180), m1 (270)
+    tp.splice( eTR.sym(), eTL );
+    tp.splice( eTL, eC.sym() );
+    tp.setOrg( eBL, c0 );
+    tp.setOrg( eBR, m1 );
+    tp.setOrg( eR, c1 );
+    tp.setOrg( eTR, c2 );
+    tp.setOrg( eTL, m2 );
+    tp.setOrg( eL, c3 );
+
+    const EdgeLoops loops = { { eBL, eC, eTL, eL }, { eBR, eR, eTR, eC.sym() } };
+    std::vector<EdgePath> bds;
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f::plusZ(), &bds );
+    ASSERT_TRUE( res.has_value() );
+    const Mesh& patch = *res;
+
+    EXPECT_NEAR( patch.area(), 9.0f, 1e-5f ); // both sides of the chord filled
+    EXPECT_EQ( patch.topology.findHoleRepresentiveEdges().size(), 1 ); // one outer boundary, chord interior
+    for ( auto f : patch.topology.getValidFaces() )
+        EXPECT_GT( dot( patch.normal( f ), Vector3f::plusZ() ), 0.f );
+    checkPatchBorders( mesh, loops, patch, bds );
+    // the two loops' chord entries are one shared patch edge seen from both sides, as in the mesh
+    ASSERT_EQ( bds.size(), size_t( 2 ) );
+    ASSERT_EQ( bds[0].size(), size_t( 4 ) );
+    ASSERT_EQ( bds[1].size(), size_t( 4 ) );
+    EXPECT_EQ( bds[0][1], bds[1][3].sym() );
+    EXPECT_TRUE( patch.topology.left( bds[0][1] ).valid() );
+    EXPECT_TRUE( patch.topology.right( bds[0][1] ).valid() );
+}
+
+TEST( MRMesh, PlanarTriangulationMeshSpaceAnnulus )
+{
+    // nested square loops with no shared vertices: the copy path must reproduce the classic case exactly
+    const std::vector<Vector3f> outer = { { 0, 0, 0 }, { 3, 0, 0 }, { 3, 3, 0 }, { 0, 3, 0 } };
+    const std::vector<Vector3f> inner = { { 1, 1, 0 }, { 1, 2, 0 }, { 2, 2, 0 }, { 2, 1, 0 } }; // cw: a hole in the fill
+
+    Mesh mesh;
+    const EdgeId o0 = mesh.addSeparateEdgeLoop( outer );
+    const EdgeId i0 = mesh.addSeparateEdgeLoop( inner );
+    EdgeLoops loops( 2 );
+    loops[0] = trackRightBoundaryLoop( mesh.topology, o0 );
+    loops[1] = trackRightBoundaryLoop( mesh.topology, i0 );
+    ASSERT_EQ( loops[0].size(), size_t( 4 ) );
+    ASSERT_EQ( loops[1].size(), size_t( 4 ) );
+
+    std::vector<EdgePath> bds;
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f::plusZ(), &bds );
+    ASSERT_TRUE( res.has_value() );
+    const Mesh& patch = *res;
+
+    EXPECT_NEAR( patch.area(), 8.0f, 1e-5f ); // 9 - 1
+    EXPECT_EQ( patch.topology.numValidFaces(), 8 ); // annulus on 8 boundary verts
+    EXPECT_EQ( patch.topology.findHoleRepresentiveEdges().size(), 2 );
+    checkPatchBorders( mesh, loops, patch, bds );
+}
+
+namespace
+{
 // circle of n points (closed: first == last)
 Contour2d circle( int n, double r, const Vector2d& center )
 {

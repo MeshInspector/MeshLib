@@ -116,7 +116,9 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
 /**
  * @brief triangulate hole boundary loops of \p mesh in the mesh's own 3d space, orienting faces around \p normal
  * combinatorics run on the dominant-axis projection of \p normal; output vertices keep the exact mesh coordinates
- * (no projection round-trip), and loops sharing a mesh vertex are merged by identity.
+ * (no projection round-trip). The sweep works on a copy of the boundary sub-topology, so vertices and edges
+ * several loops share stay shared, with the mesh's own ring order defining the arrangement at such vertices;
+ * an edge two loops traverse in opposite directions (a slit) gets filled faces on both of its sides.
  * @param loops one closed EdgeLoop per contour (as produced by trackRightBoundaryLoop on each hole edge)
  * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
  */

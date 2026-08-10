@@ -138,37 +138,16 @@ static std::vector<int> getContourSizes( const Contours2f& contours )
     return sizes;
 }
 
-// map an input vertex (its index within the concatenated hole loops) back to its source mesh VertId;
-// mirrors the walk in mergeSamePoints_
-static VertId holeSourceVertId( const HolesVertIds& holes, VertId v )
-{
-    int idx = int( v );
-    for ( const auto& hole : holes )
-    {
-        if ( idx < int( hole.size() ) )
-            return hole[idx];
-        idx -= int( hole.size() );
-    }
-    assert( false ); // a disjoint triangulation outputs only input vertices, all covered by holes
-    return {};
-}
-
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
 // orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
-// through `holeVertIds` (no separate coordinate copy, no projection round-trip).
-// `mesh`, `loops` and `holeVertIds` only need to outlive the run.
-static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const HolesVertIds& holeVertIds )
+// through `localToMesh` (no separate coordinate copy, no projection round-trip).
+// `mesh` and `localToMesh` only need to outlive the run.
+static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const std::vector<VertId>& localToMesh, const Vector3f& normal )
 {
     Box3f box;
-    int pointsSize = 0;
-    for ( const auto& loop : loops )
-    {
-        for ( EdgeId e : loop )
-            box.include( mesh.orgPnt( e ) );
-        if ( loop.size() >= 3 )
-            pointsSize += int( loop.size() );
-    }
+    for ( VertId mv : localToMesh )
+        box.include( mesh.points[mv] );
 
     // drop the axis most aligned with the normal; order the two kept axes so the 2D ccw of the
     // projection equals the 3D orientation around +normal (swap them when normal points the other way)
@@ -182,27 +161,234 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
         std::swap( kx, ky );
 
     auto pts2 = std::make_shared<Vector<Vector2i, VertId>>(); // dominant-axis projection, drives every predicate
-    pts2->reserve( pointsSize );
+    pts2->resize( localToMesh.size() );
     auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
+    // every vertex is known up front (the topology arrives prebuilt), so fill the projection here
+    for ( size_t i = 0; i < localToMesh.size(); ++i )
+    {
+        const Vector3i q = toInt( mesh.points[localToMesh[i]] );
+        ( *pts2 )[VertId( i )] = Vector2i( q[kx], q[ky] );
+    }
 
     SweepLinePredicates p;
     setPts2Predicates( p, pts2 );
-    p.addInputPoint = [&mesh, &loops, pts2, toInt, kx, ky] ( VertId v, int contourId, int pointId )
-    {
-        const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
-        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
-    };
+    // addInputPoint stays unset: it drives the contour rebuild, which this path replaces
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
         pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts2 )[a], ( *pts2 )[b], ( *pts2 )[c], ( *pts2 )[d] ) );
     };
     // disjoint triangulation creates no output intersection vertices, so every output vertex is an input
-    // vertex: restore its exact original mesh position via the (already-built) holeVertIds identity map
-    p.point = [&mesh, &holeVertIds] ( VertId v )
+    // vertex: restore its exact original mesh position via the identity map
+    p.point = [&mesh, &localToMesh] ( VertId v )
     {
-        return mesh.points[holeSourceVertId( holeVertIds, v )];
+        return mesh.points[localToMesh[v]];
     };
     return p;
+}
+
+// the sweep's working topology for mesh hole loops: the boundary sub-topology copied out of the mesh
+struct RegionCopy
+{
+    MeshTopology tp;                 // compact-id copy of the boundary, mesh ring order preserved
+    std::vector<VertId> localToMesh; // local VertId -> source mesh vertex
+    // winding modifiers for edges the boundary traverses more than once (0 = a slit: winding equal on
+    // both of its sides); single-traversal edges follow the default direction rule
+    std::vector<std::pair<UndirectedEdgeId, int>> windingExceptions;
+};
+
+// copies the sub-topology induced by the boundary `loops` out of `mesh`. Vertices and edges get compact
+// local ids in first-occurrence order along the concatenated loops, so on simple inputs the result is
+// bit-identical to the contour rebuild it replaces. A vertex the boundary visits several times becomes
+// ONE local vertex whose ring keeps the mesh's cyclic edge order - the arrangement the rebuild had to
+// re-derive by welding coincident duplicates; an edge traversed twice becomes one local edge with its
+// net winding recorded. Loops of fewer than 3 edges are skipped, like contours of fewer than 3 points.
+static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
+    std::vector<EdgePath>* outBoundaries )
+{
+    MR_TIMER;
+    RegionCopy res;
+    if ( outBoundaries )
+        outBoundaries->resize( loops.size() );
+
+    int n = 0;
+    Vector3d sumCross;
+    for ( const auto& loop : loops )
+    {
+        if ( loop.size() < 3 )
+            continue;
+        n += int( loop.size() );
+        for ( EdgeId e : loop )
+            sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+    }
+    if ( n == 0 )
+        return res;
+    // mesh rings run counterclockwise around the surface orientation of the loops; walk them reversed
+    // when the sweep's plane (ccw around +normal) sees the loops wound the other way
+    const bool sameSense = dot( Vector3f( sumCross ), normal ) >= 0.f;
+
+    struct PosInfo
+    {
+        EdgeId meshEdge;         // the loop's directed mesh edge at this position
+        EdgeId localEdge;        // its copy, directed along this traversal
+        VertId localOrg;         // local vertex at the traversal's origin
+        int vertRepPos{ -1 };    // first position sharing this mesh origin
+        int edgeRepPos{ -1 };    // first position traversing this mesh edge
+        bool orgRepeated{ false };
+    };
+    std::vector<PosInfo> pos;
+    pos.reserve( n );
+    std::vector<std::pair<VertId, int>> vps;         // (mesh origin, position)
+    std::vector<std::pair<UndirectedEdgeId, int>> eps; // (mesh edge, position)
+    vps.reserve( n );
+    eps.reserve( n );
+    for ( const auto& loop : loops )
+    {
+        if ( loop.size() < 3 )
+            continue;
+        for ( EdgeId e : loop )
+        {
+            const int p = int( pos.size() );
+            pos.push_back( { .meshEdge = e } );
+            vps.emplace_back( mesh.topology.org( e ), p );
+            eps.emplace_back( e.undirected(), p );
+        }
+    }
+    std::sort( vps.begin(), vps.end() );
+    std::sort( eps.begin(), eps.end() );
+
+    // resolve repeated vertices/edges: each run of equal ids shares its first position as representative
+    for ( size_t i = 0; i < vps.size(); )
+    {
+        size_t j = i + 1;
+        while ( j < vps.size() && vps[j].first == vps[i].first )
+            ++j;
+        for ( size_t k = i; k < j; ++k )
+        {
+            pos[vps[k].second].vertRepPos = vps[i].second;
+            pos[vps[k].second].orgRepeated = ( j - i ) > 1;
+        }
+        i = j;
+    }
+    for ( size_t i = 0; i < eps.size(); )
+    {
+        size_t j = i + 1;
+        while ( j < eps.size() && eps[j].first == eps[i].first )
+            ++j;
+        for ( size_t k = i; k < j; ++k )
+            pos[eps[k].second].edgeRepPos = eps[i].second;
+        i = j;
+    }
+
+    // create local vertices and edges in first-occurrence order (matching the rebuild's flat order)
+    res.localToMesh.reserve( n );
+    res.tp.vertReserve( n );
+    res.tp.edgeReserve( size_t( 2 ) * n );
+    for ( int p = 0; p < n; ++p )
+    {
+        auto& pi = pos[p];
+        if ( pi.vertRepPos == p )
+        {
+            pi.localOrg = res.tp.addVertId();
+            res.localToMesh.push_back( mesh.topology.org( pi.meshEdge ) );
+        }
+        else
+            pi.localOrg = pos[pi.vertRepPos].localOrg;
+        if ( pi.edgeRepPos == p )
+            pi.localEdge = res.tp.makeEdge();
+        else
+        {
+            const auto& rep = pos[pi.edgeRepPos];
+            pi.localEdge = rep.meshEdge == pi.meshEdge ? rep.localEdge : rep.localEdge.sym();
+        }
+    }
+    // net winding of multiply-traversed edges: +1 along the local edge's direction, -1 against
+    for ( size_t i = 0; i < eps.size(); )
+    {
+        size_t j = i + 1;
+        while ( j < eps.size() && eps[j].first == eps[i].first )
+            ++j;
+        if ( j - i > 1 )
+        {
+            const auto& rep = pos[eps[i].second];
+            int delta = 0;
+            for ( size_t k = i; k < j; ++k )
+                delta += pos[eps[k].second].meshEdge == rep.meshEdge ? 1 : -1;
+            res.windingExceptions.emplace_back( rep.localEdge.undirected(), delta );
+        }
+        i = j;
+    }
+
+    // vertex rings: a once-visited vertex has only its loop's in- and out-edge (the rebuild's chain);
+    // a repeated vertex copies the mesh's cyclic order of the region's edges around it
+    {
+        int base = 0;
+        for ( const auto& loop : loops )
+        {
+            if ( loop.size() < 3 )
+                continue;
+            const int sz = int( loop.size() );
+            for ( int j = 0; j < sz; ++j )
+            {
+                const int p = base + j;
+                if ( pos[p].orgRepeated )
+                    continue;
+                const int q = base + ( j + sz - 1 ) % sz;
+                res.tp.splice( pos[p].localEdge, pos[q].localEdge.sym() );
+            }
+            base += sz;
+        }
+    }
+    for ( size_t i = 0; i < vps.size(); )
+    {
+        size_t j = i + 1;
+        while ( j < vps.size() && vps[j].first == vps[i].first )
+            ++j;
+        if ( j - i > 1 )
+        {
+            const VertId meshV = vps[i].first;
+            EdgeId prevLocal;
+            const EdgeId start = mesh.topology.edgeWithOrg( meshV );
+            EdgeId me = start;
+            do
+            {
+                const auto it = std::lower_bound( eps.begin(), eps.end(), std::make_pair( me.undirected(), INT_MIN ) );
+                if ( it != eps.end() && it->first == me.undirected() )
+                {
+                    const auto& rep = pos[it->second];
+                    const EdgeId localOut = rep.meshEdge == me ? rep.localEdge : rep.localEdge.sym();
+                    if ( prevLocal )
+                        res.tp.splice( prevLocal, localOut );
+                    prevLocal = localOut;
+                }
+                me = sameSense ? mesh.topology.next( me ) : mesh.topology.prev( me );
+            } while ( me != start );
+        }
+        i = j;
+    }
+
+    // origins after the rings are complete, so one call covers each whole ring
+    for ( int p = 0; p < n; ++p )
+        if ( pos[p].vertRepPos == p )
+            res.tp.setOrg( pos[p].localEdge, pos[p].localOrg );
+
+    {
+        int boundId = -1, base = 0;
+        for ( const auto& loop : loops )
+        {
+            ++boundId;
+            if ( loop.size() < 3 )
+                continue;
+            if ( outBoundaries )
+            {
+                auto& bd = ( *outBoundaries )[boundId];
+                bd.resize( loop.size() );
+                for ( int j = 0; j < int( loop.size() ); ++j )
+                    bd[j] = pos[base + j].localEdge;
+            }
+            base += int( loop.size() );
+        }
+    }
+    return res;
 }
 
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
@@ -305,6 +491,10 @@ public:
     // otherwise only merge the ones with same initial vertId
     SweepLineQueue( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params );
 
+    // constructor taking the working topology prebuilt (copied out of a mesh): no contour rebuild,
+    // no vertex merging - shared vertices and edges arrive already shared, with their winding recorded
+    SweepLineQueue( SweepLinePredicates predicates, RegionCopy& region, const SweepLineParams& params );
+
     size_t vertSize() const { return tp_.vertSize(); }
     std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
 
@@ -321,6 +511,8 @@ private:
 // INITIALIZATION CLASS BLOCK
     // make base mesh only containing input contours as edge loops
     void initMeshByContours_( const std::vector<int>& contourSizes );
+    // fill sortedVerts_ with all vertices ordered along the sweep
+    void sortVerts_();
     // merge same points on base mesh
     void mergeSamePoints_( const HolesVertIds* holesVertId );
     void mergeSinglePare_( VertId unique, VertId same );
@@ -452,6 +644,18 @@ SweepLineQueue::SweepLineQueue( SweepLinePredicates predicates, std::vector<int>
 {
     initMeshByContours_( contourSizes );
     mergeSamePoints_( params.holesVertId );
+    setupStartVertices_();
+}
+
+SweepLineQueue::SweepLineQueue( SweepLinePredicates predicates, RegionCopy& region, const SweepLineParams& params ) :
+    tp_{ std::move( region.tp ) },
+    predicates_{ std::move( predicates ) },
+    params_{ params }
+{
+    windingInfo_.resize( tp_.undirectedEdgeSize() );
+    for ( const auto& [ue, delta] : region.windingExceptions )
+        windingInfo_[ue].windingModifier = delta;
+    sortVerts_();
     setupStartVertices_();
 }
 
@@ -632,7 +836,18 @@ Mesh SweepLineQueue::triangulate()
     // Delone flips could cross a contour edge between two inside regions and smear the face winding map
     if ( !params_.needOutline && !params_.outFaceWinding )
     {
-        makeDeloneEdgeFlips( mesh, {}, 300 );
+        // an edge whose crossing does not change the winding (a slit the region touches from both sides)
+        // has filled faces on both of its sides; a flip across it would break the boundary correspondence
+        UndirectedEdgeBitSet notFlippable;
+        for ( UndirectedEdgeId ue{ 0 }; ue < windingInfo_.size(); ++ue )
+        {
+            if ( windingInfo_[ue].windingModifier != 0 )
+                continue;
+            if ( notFlippable.empty() )
+                notFlippable.resize( mesh.topology.undirectedEdgeSize() );
+            notFlippable.set( ue );
+        }
+        makeDeloneEdgeFlips( mesh, { .notFlippable = notFlippable.empty() ? nullptr : &notFlippable }, 300 );
     }
     return mesh;
 }
@@ -1073,6 +1288,15 @@ void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
             tp_.splice( edgePerVert[VertId( firstVert + i )], edgePerVert[VertId( firstVert + ( ( i + int( size ) - 1 ) % size ) )].sym() );
         firstVert += size;
     }
+}
+
+void SweepLineQueue::sortVerts_()
+{
+    MR_TIMER;
+    sortedVerts_.reserve( tp_.vertSize() );
+    for ( int i = 0; i < tp_.vertSize(); ++i )
+        sortedVerts_.emplace_back( VertId( i ) );
+    tbb::parallel_sort( sortedVerts_.begin(), sortedVerts_.end(), [&] ( VertId l, VertId r ) { return predicates_.less( l, r ); } );
 }
 
 void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )
@@ -1536,14 +1760,11 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
 {
     if ( loops.empty() )
         return Mesh();
-    // boundary loops may share mesh vertices: this identity map drives both vertex merging and exact
-    // point restoration (so the patch reuses the original mesh coordinates instead of projected ones)
-    const HolesVertIds holeVertIds = findHoleVertIdsByHoleEdges( mesh.topology, loops );
-    std::vector<int> sizes( loops.size() );
-    for ( int i = 0; i < int( loops.size() ); ++i )
-        sizes[i] = int( loops[i].size() ) + 1; // +1 matches the queue's closed-contour convention (it allocates size-1 verts)
-    SweepLineQueue triangulator( meshSpacePredicates( mesh, loops, normal, holeVertIds ), std::move( sizes ),
-        { &holeVertIds, true, WindingMode::NonZero, false, true, outBoundaries } );
+    // copy the boundary sub-topology out of the mesh: vertices and edges several loops share arrive
+    // already shared, in the mesh's own ring order, instead of being re-derived by coordinate welding
+    RegionCopy region = buildRegionTopology_( mesh, loops, normal, outBoundaries );
+    SweepLineQueue triangulator( meshSpacePredicates( mesh, region.localToMesh, normal ), region,
+        { nullptr, true, WindingMode::NonZero, false, true } );
     return triangulator.run();
 }
 

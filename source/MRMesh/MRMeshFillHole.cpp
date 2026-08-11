@@ -534,7 +534,7 @@ inline EdgeId executedPlanEdge( const HoleFillPlan & plan, int code )
 {
     if ( code >= 0 )
         return EdgeId( code );
-    const auto ref = fillHoleItemRef( code );
+    const auto ref = decodeFillHoleItemRef( code );
     const EdgeId e( plan.items[ref.item].edgeCode1 );
     return ref.sym ? e.sym() : e;
 }
@@ -630,7 +630,7 @@ bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPla
         // taken in the opposite direction is the origin of the second code of its item
         while ( code < 0 )
         {
-            const auto ref = fillHoleItemRef( code );
+            const auto ref = decodeFillHoleItemRef( code );
             const auto & item = plan.items[ref.item];
             code = ref.sym ? item.edgeCode2 : item.edgeCode1;
         }
@@ -820,14 +820,14 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = fillHoleItemCode( { .item = int( res.items.size() ) } ); // the item about to be pushed
+            auto newEdgeCode = encodeFillHoleItemRef( { .item = int( res.items.size() ) } ); // the item about to be pushed
             res.items.push_back( { (int)edgeMap_[curConn.first.prevA], (int)edgeMap_[curConn.first.a] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.a][curConn.first.prevA], newEdgeCode } );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = fillHoleItemCode( { .item = int( res.items.size() ) } ); // the item about to be pushed
+            auto newEdgeCode = encodeFillHoleItemRef( { .item = int( res.items.size() ) } ); // the item about to be pushed
             res.items.push_back( { (int)curConn.second, (int)edgeMap_[curConn.first.prevA] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.prevA][curConn.first.b], newEdgeCode } );
         }

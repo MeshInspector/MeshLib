@@ -7,7 +7,7 @@ namespace MR
 
 /// one edge to add, connecting the origins of the two edges given by the codes;
 /// a not-negative code is an EdgeId, a negative one refers to the edge created by an earlier item
-/// of the same plan - see \ref fillHoleItemCode
+/// of the same plan - see \ref encodeFillHoleItemRef
 struct FillHoleItem
 {
     int edgeCode1, edgeCode2;
@@ -23,14 +23,14 @@ struct FillHoleItemRef
 };
 
 /// encodes the reference to the edge of an earlier item in a negative code
-[[nodiscard]] inline int fillHoleItemCode( FillHoleItemRef ref )
+[[nodiscard]] inline int encodeFillHoleItemRef( FillHoleItemRef ref )
 {
     assert( ref.item >= 0 );
     return -( 2 * ref.item + int( ref.sym ) + 1 );
 }
 
 /// decodes a negative code back in the reference it holds
-[[nodiscard]] inline FillHoleItemRef fillHoleItemRef( int code )
+[[nodiscard]] inline FillHoleItemRef decodeFillHoleItemRef( int code )
 {
     assert( code < 0 );
     const int r = -( code + 1 );

@@ -105,7 +105,7 @@ public:
 
 /// returns the exact product of two 128-bit integers, which in general does not fit in 128 bits;
 /// operator * of FastInt128 keeps the lowest 128 bits of the product only
-[[nodiscard]] inline constexpr FastInt256 mulExact( FastInt128 a, FastInt128 b ) noexcept
+[[nodiscard]] MR_BIND_IGNORE inline constexpr FastInt256 mulExact( FastInt128 a, FastInt128 b ) noexcept
 {
     const FastUInt128 ua( a ), ub( b );
     const uint64_t x[2] = { uint64_t( ua ), uint64_t( ua >> 64 ) };

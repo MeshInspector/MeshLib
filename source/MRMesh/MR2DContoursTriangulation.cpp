@@ -143,21 +143,18 @@ static std::vector<int> getContourSizes( const Contours2f& contours )
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
 // through `localToMesh` (no separate coordinate copy, no projection round-trip).
 // `mesh` and `localToMesh` only need to outlive the run.
-static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const std::vector<VertId>& localToMesh, const Vector3f& normal )
+static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const std::vector<VertId>& localToMesh, SignedAxis projAxis )
 {
     Box3f box;
     for ( VertId mv : localToMesh )
         box.include( mesh.points[mv] );
 
-    // drop the axis most aligned with the normal; order the two kept axes so the 2D ccw of the
-    // projection equals the 3D orientation around +normal (swap them when normal points the other way)
-    int dropAx = 0;
-    for ( int i = 1; i < 3; ++i )
-        if ( normal[i] * normal[i] > normal[dropAx] * normal[dropAx] )
-            dropAx = i;
+    // drop the projection axis; order the two kept axes so the 2D ccw of the projection equals the
+    // 3D orientation around the axis (swap them when it points against its coordinate axis)
+    const int dropAx = int( axis( projAxis ) );
     int kx = ( dropAx + 1 ) % 3;
     int ky = ( dropAx + 2 ) % 3;
-    if ( normal[dropAx] < 0 )
+    if ( isNegative( projAxis ) )
         std::swap( kx, ky );
 
     auto pts2 = std::make_shared<Vector<Vector2i, VertId>>(); // dominant-axis projection, drives every predicate
@@ -202,7 +199,7 @@ struct RegionCopy
 // ONE local vertex whose ring keeps the mesh's cyclic edge order - the arrangement the rebuild had to
 // re-derive by welding coincident duplicates; an edge traversed twice becomes one local edge with its
 // net winding recorded. Loops of fewer than 3 edges are skipped, like contours of fewer than 3 points.
-static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal,
+static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops, [[maybe_unused]] SignedAxis projAxis,
     std::vector<EdgePath>* outBoundaries )
 {
     MR_TIMER;
@@ -211,20 +208,28 @@ static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops
         outBoundaries->resize( loops.size() );
 
     int n = 0;
-    Vector3d sumCross;
     for ( const auto& loop : loops )
-    {
-        if ( loop.size() < 3 )
-            continue;
-        n += int( loop.size() );
-        for ( EdgeId e : loop )
-            sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
-    }
+        if ( loop.size() >= 3 )
+            n += int( loop.size() );
     if ( n == 0 )
         return res;
-    // mesh rings run counterclockwise around the surface orientation of the loops; walk them reversed
-    // when the sweep's plane (ccw around +normal) sees the loops wound the other way
-    const bool sameSense = dot( Vector3f( sumCross ), normal ) >= 0.f;
+
+#ifndef NDEBUG
+    // The copy takes the mesh's own ring order, which runs counterclockwise around the surface
+    // orientation of the loops, and the predicates read that order as counterclockwise around
+    // projAxis. So the loops have to wind that way; the opposite direction is a caller error rather
+    // than something to detect and adapt to (which is what the axis argument replaces).
+    {
+        Vector3d sumCross;
+        for ( const auto& loop : loops )
+            if ( loop.size() >= 3 )
+                for ( EdgeId e : loop )
+                    sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+        const double alongAxis = isNegative( projAxis )
+            ? -sumCross[int( axis( projAxis ) )] : sumCross[int( axis( projAxis ) )];
+        assert( alongAxis >= 0 ); // loops wound clockwise around projAxis
+    }
+#endif
 
     struct PosInfo
     {
@@ -360,7 +365,7 @@ static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops
                         res.tp.splice( prevLocal, localOut );
                     prevLocal = localOut;
                 }
-                me = sameSense ? mesh.topology.next( me ) : mesh.topology.prev( me );
+                me = mesh.topology.next( me );
             } while ( me != start );
         }
         i = j;
@@ -1756,14 +1761,14 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
     return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries );
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, SignedAxis axis, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
 {
     if ( loops.empty() )
         return Mesh();
     // copy the boundary sub-topology out of the mesh: vertices and edges several loops share arrive
     // already shared, in the mesh's own ring order, instead of being re-derived by coordinate welding
-    RegionCopy region = buildRegionTopology_( mesh, loops, normal, outBoundaries );
-    SweepLineQueue triangulator( meshSpacePredicates( mesh, region.localToMesh, normal ), region,
+    RegionCopy region = buildRegionTopology_( mesh, loops, axis, outBoundaries );
+    SweepLineQueue triangulator( meshSpacePredicates( mesh, region.localToMesh, axis ), region,
         { nullptr, true, WindingMode::NonZero, false, true } );
     return triangulator.run();
 }

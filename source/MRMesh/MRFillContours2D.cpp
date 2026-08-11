@@ -225,7 +225,8 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     EdgeLoops loops( 1 );
     loops.front() = trackRightBoundaryLoop( mesh.topology, holeEdgeId );
 
-    // the hole loop winds counterclockwise around this direction, same as around the fitted plane's normal it replaces
+    // the hole loop winds counterclockwise around this direction, same as around the fitted plane's
+    // normal it replaces; only its dominant signed axis reaches the triangulation
     Vector3d sumCross;
     Box3f loopBox;
     float minEdgeLenSq = FLT_MAX;
@@ -244,7 +245,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
         return unexpected( "Hole boundary has a degenerate edge" );
 
     std::vector<EdgePath> newPaths;
-    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), &newPaths );
+    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, dominantSignedAxis( sumCross ), &newPaths );
     if ( !patch )
         return unexpected( "Cannot triangulate contours with self-intersections" );
 

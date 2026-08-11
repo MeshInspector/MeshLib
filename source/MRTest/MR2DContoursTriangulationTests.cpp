@@ -146,7 +146,7 @@ TEST( MRMesh, PlanarTriangulationMeshSpace )
     const EdgeLoop loop = trackRightBoundaryLoop( mesh.topology, e0 );
     ASSERT_GE( loop.size(), size_t( 3 ) );
 
-    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, EdgeLoops{ loop }, normal );
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, EdgeLoops{ loop }, dominantSignedAxis( normal ) );
     ASSERT_TRUE( res.has_value() );
     const Mesh& patch = *res;
 
@@ -234,7 +234,7 @@ TEST( MRMesh, PlanarTriangulationMeshSpacePinch )
 
     const EdgeLoops loops = { { eA0, eA1, eA2, eA3 }, { eB0, eB1, eB2, eB3 } };
     std::vector<EdgePath> bds;
-    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f::plusZ(), &bds );
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, SignedAxis::PlusZ, &bds );
     ASSERT_TRUE( res.has_value() );
     const Mesh& patch = *res;
 
@@ -288,7 +288,7 @@ TEST( MRMesh, PlanarTriangulationMeshSpaceSharedEdge )
 
     const EdgeLoops loops = { { eBL, eC, eTL, eL }, { eBR, eR, eTR, eC.sym() } };
     std::vector<EdgePath> bds;
-    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f::plusZ(), &bds );
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, SignedAxis::PlusZ, &bds );
     ASSERT_TRUE( res.has_value() );
     const Mesh& patch = *res;
 
@@ -322,7 +322,7 @@ TEST( MRMesh, PlanarTriangulationMeshSpaceAnnulus )
     ASSERT_EQ( loops[1].size(), size_t( 4 ) );
 
     std::vector<EdgePath> bds;
-    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f::plusZ(), &bds );
+    const auto res = PlanarTriangulation::triangulateDisjointContours( mesh, loops, SignedAxis::PlusZ, &bds );
     ASSERT_TRUE( res.has_value() );
     const Mesh& patch = *res;
 

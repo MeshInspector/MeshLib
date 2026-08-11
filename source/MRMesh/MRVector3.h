@@ -62,7 +62,7 @@ struct Vector3
     constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
     constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
-    T lengthSq() const { return x * x + y * y + z * z; }
+    auto lengthSq() const -> decltype( std::declval<T>() * std::declval<T>() ) { return x * x + y * y + z * z; }
     auto length() const
     {
         // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
@@ -194,7 +194,7 @@ inline auto dot( const Vector3<T> & a, const Vector3<T> & b ) -> decltype( a.x *
 
 /// squared length
 template <typename T>
-inline T sqr( const Vector3<T> & a )
+inline auto sqr( const Vector3<T> & a ) -> decltype( a.lengthSq() )
 {
     return a.lengthSq();
 }

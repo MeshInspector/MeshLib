@@ -125,9 +125,12 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
  *        around - the only thing the algorithm takes from a plane normal, so pass
  *        dominantSignedAxis() of the region's normal. The loops must really wind that way (asserted):
  *        this function does not accept the opposite direction and silently adapt to it
+ * @param outBd2meshEdges optional output: for every boundary edge of the patch (by undirected id)
+ *        the mesh edge it copies, directed along the patch edge; patch edges past its size are the
+ *        triangulation's own. Lets a caller anchor on mesh edges without matching boundary paths
  * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, SignedAxis axis, std::vector<EdgePath>* outBoundaries = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, SignedAxis axis, std::vector<EdgePath>* outBoundaries = nullptr, WholeEdgeMap* outBd2meshEdges = nullptr );
 
 }
 }

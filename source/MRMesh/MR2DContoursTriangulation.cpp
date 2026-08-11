@@ -199,8 +199,8 @@ struct RegionCopy
 // ONE local vertex whose ring keeps the mesh's cyclic edge order - the arrangement the rebuild had to
 // re-derive by welding coincident duplicates; an edge traversed twice becomes one local edge with its
 // net winding recorded. Loops of fewer than 3 edges are skipped, like contours of fewer than 3 points.
-static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops, [[maybe_unused]] SignedAxis projAxis,
-    std::vector<EdgePath>* outBoundaries )
+static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops, SignedAxis projAxis,
+    std::vector<EdgePath>* outBoundaries, WholeEdgeMap* outBd2meshEdges )
 {
     MR_TIMER;
     RegionCopy res;
@@ -288,6 +288,11 @@ static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops
     res.localToMesh.reserve( n );
     res.tp.vertReserve( n );
     res.tp.edgeReserve( size_t( 2 ) * n );
+    if ( outBd2meshEdges )
+    {
+        outBd2meshEdges->clear();
+        outBd2meshEdges->reserve( n );
+    }
     for ( int p = 0; p < n; ++p )
     {
         auto& pi = pos[p];
@@ -299,7 +304,11 @@ static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops
         else
             pi.localOrg = pos[pi.vertRepPos].localOrg;
         if ( pi.edgeRepPos == p )
+        {
             pi.localEdge = res.tp.makeEdge();
+            if ( outBd2meshEdges )
+                outBd2meshEdges->push_back( pi.meshEdge ); // ids in creation order, one per distinct edge
+        }
         else
         {
             const auto& rep = pos[pi.edgeRepPos];
@@ -343,6 +352,20 @@ static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops
             base += sz;
         }
     }
+    // mesh rings run counterclockwise around the surface's own orientation, which the loops' winding
+    // (and so projAxis) may oppose - e.g. on the outer boundary of a bowtie patch pinched at a vertex.
+    // The filtered ring has to follow the projection, so take the sense from the faces at the rim;
+    // faceless boundaries (no right faces anywhere) keep the forward walk
+    bool ringsReversed = false;
+    if ( std::adjacent_find( vps.begin(), vps.end(), [] ( const auto& a, const auto& b ) { return a.first == b.first; } ) != vps.end() )
+    {
+        Vector3d surf;
+        for ( int p = 0; p < n; ++p )
+            if ( auto f = mesh.topology.right( pos[p].meshEdge ) )
+                surf += Vector3d( mesh.dirDblArea( f ) );
+        const double along = isNegative( projAxis ) ? -surf[int( axis( projAxis ) )] : surf[int( axis( projAxis ) )];
+        ringsReversed = along < 0;
+    }
     for ( size_t i = 0; i < vps.size(); )
     {
         size_t j = i + 1;
@@ -365,7 +388,7 @@ static RegionCopy buildRegionTopology_( const Mesh& mesh, const EdgeLoops& loops
                         res.tp.splice( prevLocal, localOut );
                     prevLocal = localOut;
                 }
-                me = mesh.topology.next( me );
+                me = ringsReversed ? mesh.topology.prev( me ) : mesh.topology.next( me );
             } while ( me != start );
         }
         i = j;
@@ -1761,13 +1784,13 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
     return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries );
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, SignedAxis axis, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, SignedAxis axis, std::vector<EdgePath>* outBoundaries /*= nullptr*/, WholeEdgeMap* outBd2meshEdges /*= nullptr*/ )
 {
     if ( loops.empty() )
         return Mesh();
     // copy the boundary sub-topology out of the mesh: vertices and edges several loops share arrive
     // already shared, in the mesh's own ring order, instead of being re-derived by coordinate welding
-    RegionCopy region = buildRegionTopology_( mesh, loops, axis, outBoundaries );
+    RegionCopy region = buildRegionTopology_( mesh, loops, axis, outBoundaries, outBd2meshEdges );
     SweepLineQueue triangulator( meshSpacePredicates( mesh, region.localToMesh, axis ), region,
         { nullptr, true, WindingMode::NonZero, false, true } );
     return triangulator.run();

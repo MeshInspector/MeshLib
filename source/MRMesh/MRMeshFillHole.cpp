@@ -534,9 +534,9 @@ inline EdgeId executedPlanEdge( const HoleFillPlan & plan, int code )
 {
     if ( code >= 0 )
         return EdgeId( code );
-    const auto itemEdge = decodeFillHoleItemEdge( code );
-    const EdgeId e( plan.items[itemEdge.item].edgeCode1 );
-    return itemEdge.sym ? e.sym() : e;
+    const auto [item, sym] = FillHoleItemEdge::decode( code );
+    const EdgeId e( plan.items[item].edgeCode1 );
+    return sym ? e.sym() : e;
 }
 
 // adds the edges of the plan without creating any face
@@ -630,9 +630,8 @@ bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPla
         // taken in the opposite direction is the origin of the second code of its item
         while ( code < 0 )
         {
-            const auto itemEdge = decodeFillHoleItemEdge( code );
-            const auto & item = plan.items[itemEdge.item];
-            code = itemEdge.sym ? item.edgeCode2 : item.edgeCode1;
+            const auto [item, sym] = FillHoleItemEdge::decode( code );
+            code = sym ? plan.items[item].edgeCode2 : plan.items[item].edgeCode1;
         }
         return topology.org( EdgeId( code ) );
     };
@@ -820,14 +819,14 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = encodeFillHoleItemEdge( { .item = int( res.items.size() ) } ); // the item about to be pushed
+            auto newEdgeCode = FillHoleItemEdge{ .item = int( res.items.size() ) }.encode(); // the item about to be pushed
             res.items.push_back( { (int)edgeMap_[curConn.first.prevA], (int)edgeMap_[curConn.first.a] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.a][curConn.first.prevA], newEdgeCode } );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = encodeFillHoleItemEdge( { .item = int( res.items.size() ) } ); // the item about to be pushed
+            auto newEdgeCode = FillHoleItemEdge{ .item = int( res.items.size() ) }.encode(); // the item about to be pushed
             res.items.push_back( { (int)curConn.second, (int)edgeMap_[curConn.first.prevA] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.prevA][curConn.first.b], newEdgeCode } );
         }

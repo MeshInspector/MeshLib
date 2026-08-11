@@ -21,22 +21,22 @@ struct FillHoleItemEdge
     int item = 0;
     /// take that edge in the opposite direction, so with the other origin
     bool sym = false;
+
+    /// encodes this edge in a negative code
+    [[nodiscard]] int encode() const
+    {
+        assert( item >= 0 );
+        return -( 2 * item + int( sym ) + 1 );
+    }
+
+    /// decodes a negative code back in the edge it denotes
+    [[nodiscard]] static FillHoleItemEdge decode( int code )
+    {
+        assert( code < 0 );
+        const int c = -( code + 1 );
+        return { .item = c >> 1, .sym = ( c & 1 ) != 0 };
+    }
 };
-
-/// encodes the edge of an earlier item in a negative code
-[[nodiscard]] inline int encodeFillHoleItemEdge( FillHoleItemEdge e )
-{
-    assert( e.item >= 0 );
-    return -( 2 * e.item + int( e.sym ) + 1 );
-}
-
-/// decodes a negative code back in the edge it denotes
-[[nodiscard]] inline FillHoleItemEdge decodeFillHoleItemEdge( int code )
-{
-    assert( code < 0 );
-    const int c = -( code + 1 );
-    return { .item = c >> 1, .sym = ( c & 1 ) != 0 };
-}
 
 /// concise representation of proposed hole triangulation
 struct HoleFillPlan

@@ -6,15 +6,16 @@ namespace MR
 {
 
 /// one edge to add, connecting the origins of the two edges given by the codes;
-/// a not-negative code is an EdgeId, a negative one refers to the edge created by an earlier item
-/// of the same plan - see \ref encodeFillHoleItemRef
+/// a not-negative code is an EdgeId, a negative one denotes an edge that an earlier item
+/// of the same plan creates - see \ref FillHoleItemEdge
 struct FillHoleItem
 {
     int edgeCode1, edgeCode2;
 };
 
-/// reference to the edge created by an earlier item of the same plan
-struct FillHoleItemRef
+/// an edge created by an item of the plan, given in the same way as EdgeId gives an edge of a mesh:
+/// what the edge is, plus which of its two directions is meant
+struct FillHoleItemEdge
 {
     /// index of the item creating the edge
     int item = 0;
@@ -22,19 +23,19 @@ struct FillHoleItemRef
     bool sym = false;
 };
 
-/// encodes the reference to the edge of an earlier item in a negative code
-[[nodiscard]] inline int encodeFillHoleItemRef( FillHoleItemRef ref )
+/// encodes the edge of an earlier item in a negative code
+[[nodiscard]] inline int encodeFillHoleItemEdge( FillHoleItemEdge e )
 {
-    assert( ref.item >= 0 );
-    return -( 2 * ref.item + int( ref.sym ) + 1 );
+    assert( e.item >= 0 );
+    return -( 2 * e.item + int( e.sym ) + 1 );
 }
 
-/// decodes a negative code back in the reference it holds
-[[nodiscard]] inline FillHoleItemRef decodeFillHoleItemRef( int code )
+/// decodes a negative code back in the edge it denotes
+[[nodiscard]] inline FillHoleItemEdge decodeFillHoleItemEdge( int code )
 {
     assert( code < 0 );
-    const int r = -( code + 1 );
-    return { .item = r >> 1, .sym = ( r & 1 ) != 0 };
+    const int c = -( code + 1 );
+    return { .item = c >> 1, .sym = ( c & 1 ) != 0 };
 }
 
 /// concise representation of proposed hole triangulation

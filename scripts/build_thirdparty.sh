@@ -47,7 +47,7 @@ fi
 rm -rf "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 mkdir -p "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 # FIXME: make it optional
-for SUBDIR in lib include ; do
+for SUBDIR in lib include share ; do
   rm -rf "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
   mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
 done

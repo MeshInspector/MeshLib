@@ -272,6 +272,14 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
 }
 
 
+/// one edge added by makeMonotone() to split the region in monotone parts:
+/// it was created as `splice( anchor1, edge ); splice( anchor2, edge.sym() )`, so it connects
+/// org( anchor1 ) with org( anchor2 ) exactly like makeNewEdge( topology, anchor1, anchor2 ) does
+struct MonotoneChord
+{
+    EdgeId anchor1, anchor2, edge;
+};
+
 struct SweepLineParams
 {
     /// if holesVertId is null - merge all vertices with same coordinates
@@ -295,6 +303,9 @@ struct SweepLineParams
 
     /// optional out per-face winding numbers
     Vector<int, FaceId>* outFaceWinding{ nullptr };
+
+    /// if set, makeMonotone() records here every edge it adds, in creation order
+    std::vector<MonotoneChord>* outChords{ nullptr };
 };
 
 class SweepLineQueue
@@ -306,6 +317,8 @@ public:
     SweepLineQueue( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params );
 
     size_t vertSize() const { return tp_.vertSize(); }
+    size_t undirectedEdgeSize() const { return tp_.undirectedEdgeSize(); }
+    VertId org( EdgeId e ) const { return tp_.org( e ); }
     std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
 
     bool findIntersections();
@@ -842,6 +855,8 @@ void SweepLineQueue::processStartEvent_( int index )
             newEdge = newEdge.sym();
         tp_.splice( helperId, newEdge );
         tp_.splice( rightGoingCache_.back().edgeId, newEdge.sym() );
+        if ( params_.outChords )
+            params_.outChords->push_back( { helperId, rightGoingCache_.back().edgeId, newEdge } );
 
         windingInfo_.autoResizeSet( newEdge.undirected(), windingInfo_[activeSweepEdges_[index - 1].edgeId.undirected()] );
     }
@@ -900,6 +915,8 @@ void SweepLineQueue::processDestenationEvent_( int index )
                 newEdge = newEdge.sym();
             tp_.splice( lowerLone, newEdge );
             tp_.splice( connectorEdgeId, newEdge.sym() );
+            if ( params_.outChords )
+                params_.outChords->push_back( { lowerLone, connectorEdgeId, newEdge } );
 
             lowerLone = upperLone = {};
 
@@ -1545,6 +1562,91 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
     SweepLineQueue triangulator( meshSpacePredicates( mesh, loops, normal, holeVertIds ), std::move( sizes ),
         { &holeVertIds, true, WindingMode::NonZero, false, true, outBoundaries } );
     return triangulator.run();
+}
+
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+{
+    MR_TIMER;
+    HoleFillPlan res;
+    if ( loops.empty() )
+        return res;
+    for ( const auto& loop : loops )
+        if ( loop.size() < 3 )
+            return {}; // the queue skips such contours entirely, so their holes would stay unaddressed
+
+    const HolesVertIds holeVertIds = findHoleVertIdsByHoleEdges( mesh.topology, loops );
+    std::vector<int> sizes( loops.size() );
+    for ( int i = 0; i < int( loops.size() ); ++i )
+        sizes[i] = int( loops[i].size() ) + 1; // +1 matches the queue's closed-contour convention
+
+    std::vector<EdgePath> boundaries;
+    std::vector<MonotoneChord> chords;
+    SweepLineQueue triangulator( meshSpacePredicates( mesh, loops, normal, holeVertIds ), std::move( sizes ),
+        { .holesVertId = &holeVertIds, .abortWhenIntersect = true, .outBoundaries = &boundaries, .outChords = &chords } );
+    if ( !triangulator.findIntersections() )
+        return {};
+    triangulator.injectIntersections( nullptr );
+    triangulator.makeMonotone(); // and stop here: monotone parts are what the caller fills
+
+    // the chords are given in the edges of the queue's own topology, so translate every one of them
+    // in a plan code: the loop edges are the edges of `mesh`, and the chords are the plan items
+    constexpr int cNoCode = INT_MAX;
+    Vector<int, UndirectedEdgeId> evenCode( triangulator.undirectedEdgeSize(), cNoCode ); // code of EdgeId( ue << 1 )
+    for ( int i = 0; i < int( loops.size() ); ++i )
+    {
+        assert( boundaries[i].size() == loops[i].size() ); // initMeshByContours_ keeps them parallel
+        for ( int j = 0; j < int( loops[i].size() ); ++j )
+        {
+            const EdgeId local = boundaries[i][j];
+            evenCode[local.undirected()] = int( local.odd() ? loops[i][j].sym() : loops[i][j] );
+        }
+    }
+    for ( int k = 0; k < int( chords.size() ); ++k )
+    {
+        const EdgeId local = chords[k].edge;
+        evenCode[local.undirected()] = FillHoleItemEdge{ .item = k, .sym = local.odd() }.encode();
+    }
+    auto symCode = [] ( int code )
+    {
+        if ( code >= 0 )
+            return int( EdgeId( code ).sym() );
+        auto itemEdge = FillHoleItemEdge::decode( code );
+        itemEdge.sym = !itemEdge.sym;
+        return itemEdge.encode();
+    };
+    auto codeOf = [&] ( EdgeId local )
+    {
+        const int code = evenCode[local.undirected()];
+        if ( code == cNoCode )
+            return cNoCode;
+        return local.odd() ? symCode( code ) : code;
+    };
+
+    res.items.resize( chords.size() );
+    for ( int k = 0; k < int( chords.size() ); ++k )
+    {
+        const int code1 = codeOf( chords[k].anchor1 );
+        const int code2 = codeOf( chords[k].anchor2 );
+        if ( code1 == cNoCode || code2 == cNoCode )
+        {
+            assert( false ); // every anchor is either a loop edge or an earlier chord
+            return {};
+        }
+        // the chord is spliced right after each of its anchors, so it lands in the wedge left( anchor );
+        // that wedge must be a hole of the mesh, otherwise the loops do not bound a region of this mesh
+        for ( int side = 0; side < 2; ++side )
+        {
+            const int code = side == 0 ? code1 : code2;
+            if ( code < 0 )
+                continue; // an edge the plan itself creates, it will have no left face
+            if ( mesh.topology.left( EdgeId( code ) ) )
+                return {};
+            assert( mesh.topology.org( EdgeId( code ) ) == holeSourceVertId( holeVertIds,
+                triangulator.org( side == 0 ? chords[k].anchor1 : chords[k].anchor2 ) ) );
+        }
+        res.items[k] = { code1, code2 };
+    }
+    return res;
 }
 
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MRHoleFillPlan.h"
 #include <optional>
 
 namespace MR
@@ -121,6 +122,22 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
  * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
  */
 MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries = nullptr );
+
+/**
+ * @brief splits the planar region bounded by \p loops in monotone parts, without triangulating them
+ * this is the sweep-line triangulation stopped after monotonation: the returned plan lists the edges
+ * to add to \p mesh to realize the split, each connecting the origins of two already existing edges
+ * @param loops one closed EdgeLoop per boundary of one region (as produced by trackRightBoundaryLoop
+ *        on a hole edge); each loop must have at least 3 edges. Which way round a loop runs does not
+ *        matter: the region is taken from the winding number of the loops, not from their direction
+ * @param normal the orientation the region is monotone around, see \ref triangulateDisjointContours
+ * @return std::nullopt if the loops intersect or do not bound holes of \p mesh, so that the caller can
+ *         fall back on filling every loop separately; otherwise a plan with numTris == 0, to run with
+ *         \ref executeHoleFillPlan which then only adds edges and creates no faces.
+ *         The plan is empty if the region is a single already monotone loop; an empty plan must not be
+ *         executed, there is nothing to add
+ */
+MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
 }
 }

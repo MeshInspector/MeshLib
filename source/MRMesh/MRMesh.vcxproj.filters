@@ -1335,6 +1335,9 @@
     <ClInclude Include="MRFastInt128.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRFastInt256.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MREndMill.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>

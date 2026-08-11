@@ -292,7 +292,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
             if ( res.items.size() == size - 3 )
                 return res;
             np[i0] = ne;
-            np[i01] = EdgeId( -int( 2 * res.items.size() - 1 ) ); // encode forward direction of the new plan edge in free slot
+            np[i01] = EdgeId( fillHoleItemCode( { .item = int( res.items.size() ) - 1 } ) ); // encode the just pushed plan edge in free slot
         }
     }
 }

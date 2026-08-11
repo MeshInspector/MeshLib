@@ -1,17 +1,41 @@
 #pragma once
+#include <cassert>
 #include <vector>
 
 namespace MR
 {
 
-/// one edge to add, connecting the origins of the two edges given by the codes
+/// one edge to add, connecting the origins of the two edges given by the codes;
+/// a not-negative code is an EdgeId, a negative one refers to the edge created by an earlier item
+/// of the same plan - see \ref fillHoleItemCode
 struct FillHoleItem
 {
-    /// if not-negative number then it is edgeid;
-    /// otherwise it refers to the edge created by an earlier item: -( 2 * item + sym + 1 ),
-    /// where sym tells to take that edge in the opposite direction (so with the other origin)
     int edgeCode1, edgeCode2;
 };
+
+/// reference to the edge created by an earlier item of the same plan
+struct FillHoleItemRef
+{
+    /// index of the item creating the edge
+    int item = 0;
+    /// take that edge in the opposite direction, so with the other origin
+    bool sym = false;
+};
+
+/// encodes the reference to the edge of an earlier item in a negative code
+[[nodiscard]] inline int fillHoleItemCode( FillHoleItemRef ref )
+{
+    assert( ref.item >= 0 );
+    return -( 2 * ref.item + int( ref.sym ) + 1 );
+}
+
+/// decodes a negative code back in the reference it holds
+[[nodiscard]] inline FillHoleItemRef fillHoleItemRef( int code )
+{
+    assert( code < 0 );
+    const int r = -( code + 1 );
+    return { .item = r >> 1, .sym = ( r & 1 ) != 0 };
+}
 
 /// concise representation of proposed hole triangulation
 struct HoleFillPlan

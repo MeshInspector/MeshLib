@@ -287,7 +287,7 @@ TEST( MRMesh, HoleFillPlanEdgesOnly )
     // of the first item: -( 2 * item + sym + 1 ) == -2
     HoleFillPlan plan;
     plan.items.push_back( { (int)he[2], (int)he[0] } ); // chord org( he2 ) -> org( he0 )
-    plan.items.push_back( { -2, (int)he[4] } );         // chord org( he0 ) -> org( he4 )
+    plan.items.push_back( { fillHoleItemCode( { .item = 0, .sym = true } ), (int)he[4] } ); // org( he0 ) -> org( he4 )
 
     executeHoleFillPlan( mesh, e, plan );
     EXPECT_EQ( mesh.topology.numValidFaces(), 0 );
@@ -316,7 +316,7 @@ TEST( MRMesh, HoleFillPlanSymAnchorMultipleEdge )
     // resolving its sym code by the first item's edgeCode1 would look at the other end and miss it
     HoleFillPlan plan;
     plan.items.push_back( { (int)he[2], (int)he[0] } );
-    plan.items.push_back( { -2, (int)he[4] } );
+    plan.items.push_back( { fillHoleItemCode( { .item = 0, .sym = true } ), (int)he[4] } );
     EXPECT_FALSE( isFillingMultipleEdgeFree( mesh.topology, plan ) );
 }
 

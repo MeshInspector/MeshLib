@@ -200,8 +200,8 @@ inline auto sqr( const Vector3<T> & a ) -> decltype( a.lengthSq() )
 }
 
 /// mixed product
-template <typename T>
-inline auto mixed( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c ) -> decltype( dot( a, cross( b, c ) ) )
+template <typename T, typename U>
+inline auto mixed( const Vector3<T> & a, const Vector3<U> & b, const Vector3<U> & c ) -> decltype( dot( a, cross( b, c ) ) )
 {
     return dot( a, cross( b, c ) );
 }

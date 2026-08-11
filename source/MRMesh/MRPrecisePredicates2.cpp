@@ -131,7 +131,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     const Vector3i64 c( c0.x, c0.y, sqr( std::int64_t( c0.x ) ) + sqr( std::int64_t( c0.y ) ) );
 
     //e**0
-    if ( auto v = dot( Vector3i128fast( a ), cross( Vector3i64mul( b ), Vector3i64mul( c ) ) ) )
+    if ( auto v = mixed( Vector3i128fast( a ), Vector3i64mul( b ), Vector3i64mul( c ) ) )
         return v > 0;
 
     // e**1

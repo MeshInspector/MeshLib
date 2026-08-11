@@ -753,9 +753,9 @@ enum class Reorder : char;
 
 struct TransparencyMode;
 
-/// squared value
+/// squared value; the result type is the type of x*x, which is int for small integer types (char, short)
 template <typename T>
-constexpr inline T sqr( T x ) noexcept { return x * x; }
+constexpr inline auto sqr( T x ) noexcept -> decltype( x * x ) { return x * x; }
 
 /// sign of given value in { -1, 0, 1 }
 template <typename T>
@@ -765,9 +765,10 @@ constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 )
 template <typename T>
 constexpr inline T distance( T x, T y ) noexcept { return x >= y ? x - y : y - x; }
 
-/// squared difference between two value
+/// squared difference between two value; the result type is the type of the product
+/// (spelled via * and not via sqr, so that vector types with their own distanceSq do not match here)
 template <typename T>
-constexpr inline T distanceSq( T x, T y ) noexcept { return sqr( x - y ); }
+constexpr inline auto distanceSq( T x, T y ) noexcept -> decltype( ( x - y ) * ( x - y ) ) { return sqr( x - y ); }
 
 /// Linear interpolation: returns v0 when t==0 and v1 when t==1
 template <typename V, typename T>

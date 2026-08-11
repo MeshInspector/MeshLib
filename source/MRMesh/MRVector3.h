@@ -176,7 +176,7 @@ inline T distance( const Vector3<T> & a, const Vector3<T> & b )
 
 /// cross product
 template <typename T>
-inline Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b )
+inline auto cross( const Vector3<T> & a, const Vector3<T> & b ) -> Vector3<decltype( a.x * b.x )>
 {
     return {
         a.y * b.z - a.z * b.y,

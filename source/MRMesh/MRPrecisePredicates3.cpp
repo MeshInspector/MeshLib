@@ -3,6 +3,7 @@
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRVector.h"
+#include "MRFastInt.h"
 #include "MRHighPrecision.h"
 #include "MRInt64Mul128.h"
 #include "MRVector2.h"
@@ -99,16 +100,16 @@ Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegr
     return det;
 }
 
-Int128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+FastInt128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
 {
     const Vector3i64 x( a - d );
     const Vector3i64 y( b - d );
     const Vector3i64 z( c - d );
 
     return
-        x.x * Int128( y.y * z.z - y.z * z.y )
-     -  x.y * Int128( y.x * z.z - y.z * z.x )
-     +  x.z * Int128( y.x * z.y - y.y * z.x );
+        Int64Mul128( x.x ) * Int64Mul128( y.y * z.z - y.z * z.y )
+     -  Int64Mul128( x.y ) * Int64Mul128( y.x * z.z - y.z * z.x )
+     +  Int64Mul128( x.z ) * Int64Mul128( y.x * z.y - y.y * z.x );
 }
 
 } // anonymous namespace
@@ -337,7 +338,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
     const auto volumeTbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
     assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
 
-    const auto nomSimple = Int256( volumeTaOrg ) * Int256( volumeTbDest ) - Int256( volumeTbOrg ) * Int256( volumeTaDest );
+    const auto nomSimple = Int128Mul256( volumeTaOrg ) * Int128Mul256( volumeTbDest ) - Int128Mul256( volumeTbOrg ) * Int128Mul256( volumeTaDest );
     if ( nomSimple != 0 )
     {
         // happy not-degenerated path

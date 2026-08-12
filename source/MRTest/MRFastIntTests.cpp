@@ -190,6 +190,41 @@ TEST( MRMesh, FastInt1024 )
     testFastIntWidth<1024, Int1024, Int2048>( 333 );
 }
 
+TEST( MRMesh, FastInt192 )
+{
+    testFastIntWidth<192, Int256, Int512>( 444 ); // the narrowest width of the family
+}
+
+TEST( MRMesh, FastIntMixedWidths )
+{
+    std::mt19937_64 gen( 777 );
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const Words<3> a = randomWords<3>( gen, 192 );
+        const Words<4> b = randomWords<4>( gen, 256 );
+        const Words<2> e = randomWords<2>( gen, 128 );
+        const auto fa = toFastInt<192>( a );
+        const auto fb = toFastInt<256>( b );
+        const Int512 refA = toBoost<Int512>( a ), refB = toBoost<Int512>( b ), refE = toBoost<Int512>( e );
+
+        // the width of a product is the sum of the widths of its arguments
+        static_assert( std::is_same_v<decltype( fa * fb ), FastInt<448> > );
+        static_assert( std::is_same_v<decltype( fa * std::int64_t( 1 ) ), FastInt<256> > );
+        static_assert( std::is_same_v<decltype( fa * FastInt128( 1 ) ), FastInt<320> > );
+        EXPECT_EQ( toBoost<Int512>( fa * fb ), refA * refB );
+        EXPECT_EQ( toBoost<Int512>( fb * fa ), refA * refB );
+
+        const auto c = std::int64_t( gen() );
+        EXPECT_EQ( toBoost<Int512>( fa * c ), refA * Int512( c ) );
+        EXPECT_EQ( toBoost<Int512>( c * fa ), refA * Int512( c ) );
+        EXPECT_EQ( toBoost<Int512>( fa * toFastInt128( e ) ), refA * refE );
+
+        // widening and narrowing back keeps the value
+        EXPECT_TRUE( FastInt<192>( FastInt<448>( fa ) ) == fa );
+        EXPECT_TRUE( FastInt<256>( FastInt<512>( fb ) ) == fb );
+    }
+}
+
 TEST( MRMesh, FastIntVector )
 {
     std::mt19937_64 gen( 54321 );

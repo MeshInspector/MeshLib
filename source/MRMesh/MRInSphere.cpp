@@ -130,7 +130,7 @@ InSphereResult InSphereTester<int>::operator()( const Vector3i & d ) const
         return InSphereResult::Inside;
     if ( A >= 0 && t <= 0 )
         return ( A == 0 && ( t == 0 || E == 0 ) ) ? InSphereResult::OnSphere : InSphereResult::Outside;
-    const auto lhs = A * A * W; // <= 2^514
+    const auto lhs = FastInt<448>( A * A ) * W; // A * A <= 2^388, the product <= 2^514
     const auto rhs = E * sqr( Int128Mul256( t ) ); // <= 2^513
     if ( lhs == rhs )
         return InSphereResult::OnSphere;

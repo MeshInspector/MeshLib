@@ -82,12 +82,14 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         const auto px = dot( Vector3i64mul{ p }, Vector3i64mul{ x } );
         if ( px <= pp )
             return false; // x is not behind the plane through p orthogonal to #v-p
-        const auto crossSq = Int128Mul256( xx ) * Int128Mul256( pp ) - sqr( Int128Mul256( px ) ); // |cross(p,x)|^2
+        // every dot product here is at most 2^64 in magnitude, so all the products below
+        // fit in three words, and the two final ones in four
+        const auto crossSq = FastInt<192>( Int128Mul256( xx ) * Int128Mul256( pp ) - sqr( Int128Mul256( px ) ) ); // |cross(p,x)|^2
         const auto d = rSq4 - pp;
-        if ( 4 * crossSq >= Int128Mul256( pp ) * Int128Mul256( d ) )
+        if ( FastInt<192>( 4 * crossSq ) >= FastInt<192>( Int128Mul256( pp ) * Int128Mul256( d ) ) )
             return false; // x is not closer to line #v-p than the centers of the balls through #v and p
         // x is strictly outside every ball of the given radius through #v and p
-        return pp * sqr( Int128Mul256( xx - px ) ) > d * crossSq;
+        return pp * FastInt<192>( sqr( Int128Mul256( xx - px ) ) ) > d * crossSq;
     };
     size_t goodSize = neis.size();
     for ( size_t i = 0; i < goodSize; ++i )

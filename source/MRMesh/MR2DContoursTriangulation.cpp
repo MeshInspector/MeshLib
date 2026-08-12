@@ -51,8 +51,9 @@ struct SweepLinePredicates
     std::function<void( VertId v, int contourId, int pointId )> addInputPoint;
     // compute and store the position of intersection vertex v of segments (a,b) and (c,d)
     std::function<void( VertId v, VertId a, VertId b, VertId c, VertId d )> addIntersectionPoint;
-    // position of vertex v in the output mesh
-    std::function<Vector3f( VertId v )> point;
+    // position of vertex v in the output mesh; tp is the topology v lives in, passed at call time
+    // because the queue's topology is moved into the output mesh before the points are filled
+    std::function<Vector3f( const MeshTopology& tp, VertId v )> point;
 };
 
 // the sweep-line predicates that depend only on the projected integer coordinates `pts2`;
@@ -122,7 +123,7 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
     {
         pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts )[a], ( *pts )[b], ( *pts )[c], ( *pts )[d] ) );
     };
-    p.point = [pts, toFloat] ( VertId v )
+    p.point = [pts, toFloat] ( const MeshTopology&, VertId v )
     {
         return to3dim( toFloat( ( *pts )[v] ) );
     };
@@ -138,27 +139,14 @@ static std::vector<int> getContourSizes( const Contours2f& contours )
     return sizes;
 }
 
-// map an input vertex (its index within the concatenated hole loops) back to its source mesh VertId;
-// mirrors the walk in mergeSamePoints_
-static VertId holeSourceVertId( const HolesVertIds& holes, VertId v )
-{
-    int idx = int( v );
-    for ( const auto& hole : holes )
-    {
-        if ( idx < int( hole.size() ) )
-            return hole[idx];
-        idx -= int( hole.size() );
-    }
-    assert( false ); // a disjoint triangulation outputs only input vertices, all covered by holes
-    return {};
-}
-
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
 // orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
-// through `holeVertIds` (no separate coordinate copy, no projection round-trip).
-// `mesh`, `loops` and `holeVertIds` only need to outlive the run.
-static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const HolesVertIds& holeVertIds )
+// through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection
+// round-trip, no positional vertex id contract); the caller may fill the map after construction but
+// before the run - the loops ctor fills it itself via SweepLineParams::outPatchMap.
+// `mesh`, `loops` and `patchToInEdges` only need to outlive the run.
+static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges )
 {
     Box3f box;
     int pointsSize = 0;
@@ -196,11 +184,22 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     {
         pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts2 )[a], ( *pts2 )[b], ( *pts2 )[c], ( *pts2 )[d] ) );
     };
-    // disjoint triangulation creates no output intersection vertices, so every output vertex is an input
-    // vertex: restore its exact original mesh position via the (already-built) holeVertIds identity map
-    p.point = [&mesh, &holeVertIds] ( VertId v )
+    // disjoint triangulation creates no output intersection vertices, so every output vertex lies on a
+    // copied input edge: find one in its org ring (which by fill time also holds unmapped triangulation
+    // diagonals) and restore the exact original mesh position through the edge map
+    p.point = [&mesh, &patchToInEdges] ( const MeshTopology& patchTp, VertId v )
     {
-        return mesh.points[holeSourceVertId( holeVertIds, v )];
+        for ( EdgeId e : orgRing( patchTp, v ) )
+        {
+            if ( e.undirected() >= patchToInEdges.size() )
+                continue;
+            const EdgeId inE = patchToInEdges[e.undirected()];
+            if ( !inE )
+                continue;
+            return mesh.points[mesh.topology.org( e.odd() ? inE.sym() : inE )];
+        }
+        assert( false ); // a disjoint triangulation vertex always originates from a copied input edge
+        return Vector3f{};
     };
     return p;
 }
@@ -525,11 +524,11 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
             mapVal.uOrg = tp_.org( inter.upper );
             mapVal.uDest = tp_.dest( inter.upper );
 
-            auto iP = predicates_.point( inter.vId );
-            auto lO = predicates_.point( mapVal.lOrg );
-            auto lD = predicates_.point( mapVal.lDest );
-            auto uO = predicates_.point( mapVal.uOrg );
-            auto uD = predicates_.point( mapVal.uDest );
+            auto iP = predicates_.point( tp_, inter.vId );
+            auto lO = predicates_.point( tp_, mapVal.lOrg );
+            auto lD = predicates_.point( tp_, mapVal.lDest );
+            auto uO = predicates_.point( tp_, mapVal.uOrg );
+            auto uD = predicates_.point( tp_, mapVal.uDest );
             auto lVec = ( lD - lO );
             auto uVec = ( uD - uO );
             auto lVecLSq = lVec.lengthSq();
@@ -641,7 +640,7 @@ Mesh SweepLineQueue::triangulate()
     mesh.points.resize( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
-        mesh.points[v] = predicates_.point( v );
+        mesh.points[v] = predicates_.point( mesh.topology, v );
     } );
     // Delone flips could cross a contour edge between two inside regions and smear the face winding map
     if ( !params_.needOutline && !params_.outFaceWinding )
@@ -1648,13 +1647,30 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
 {
     if ( loops.empty() )
         return Mesh();
-    // boundary loops may share mesh vertices: this identity map drives both vertex merging and exact
-    // point restoration (so the patch reuses the original mesh coordinates instead of projected ones)
+    if ( !outBoundaries )
+    {
+        // copy the boundary sub-topology straight from the mesh: shared vertices and slit edges arrive
+        // already shared, so no positional id contract and no coordinate-based merging is needed
+        WholeEdgeMap patchToInEdges;
+        SweepLineQueue triangulator( mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges ), loops,
+            { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges } );
+        return triangulator.run();
+    }
+    // outBoundaries consumers (fillContours2D) need per-contour paths that only the rebuild-from-contours
+    // path provides, until the fill plan is built from SweepLineParams::outPatchMap instead
     const HolesVertIds holeVertIds = findHoleVertIdsByHoleEdges( mesh.topology, loops );
+    // initMeshByContours_ creates the patch undirected edges sequentially per non-degenerate contour, and
+    // merging collapses vertices, never edges, so the patch->input edge map here is positional
+    WholeEdgeMap patchToInEdges;
     std::vector<int> sizes( loops.size() );
     for ( int i = 0; i < int( loops.size() ); ++i )
+    {
         sizes[i] = int( loops[i].size() ) + 1; // +1 matches the queue's closed-contour convention (it allocates size-1 verts)
-    SweepLineQueue triangulator( meshSpacePredicates( mesh, loops, normal, holeVertIds ), std::move( sizes ),
+        if ( loops[i].size() >= 3 )
+            for ( EdgeId e : loops[i] )
+                patchToInEdges.push_back( e );
+    }
+    SweepLineQueue triangulator( meshSpacePredicates( mesh, loops, normal, patchToInEdges ), std::move( sizes ),
         { &holeVertIds, true, WindingMode::NonZero, false, true, outBoundaries } );
     return triangulator.run();
 }

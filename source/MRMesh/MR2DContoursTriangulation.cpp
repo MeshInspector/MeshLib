@@ -295,6 +295,9 @@ struct SweepLineParams
 
     /// optional out per-face winding numbers
     Vector<int, FaceId>* outFaceWinding{ nullptr };
+
+    /// optional map of patch topology edges->input topology edges
+    WholeEdgeMap* outPatchMap{ nullptr };
 };
 
 class SweepLineQueue
@@ -304,6 +307,8 @@ public:
     // if holesVertId is null - merge all vertices with same coordinates
     // otherwise only merge the ones with same initial vertId
     SweepLineQueue( SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params );
+
+    SweepLineQueue( const MeshTopology& inTp, SweepLinePredicates predicates, const EdgeLoops& holes, const SweepLineParams& params );
 
     size_t vertSize() const { return tp_.vertSize(); }
     std::optional<Mesh> run( IntersectionsMap* interMap = nullptr );
@@ -321,6 +326,7 @@ private:
 // INITIALIZATION CLASS BLOCK
     // make base mesh only containing input contours as edge loops
     void initMeshByContours_( const std::vector<int>& contourSizes );
+    void initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops );
     // merge same points on base mesh
     void mergeSamePoints_( const HolesVertIds* holesVertId );
     void mergeSinglePare_( VertId unique, VertId same );
@@ -452,6 +458,14 @@ SweepLineQueue::SweepLineQueue( SweepLinePredicates predicates, std::vector<int>
 {
     initMeshByContours_( contourSizes );
     mergeSamePoints_( params.holesVertId );
+    setupStartVertices_();
+}
+
+SweepLineQueue::SweepLineQueue( const MeshTopology& inTp, SweepLinePredicates predicates, const EdgeLoops& holes, const SweepLineParams& params ) :
+    predicates_{ std::move( predicates ) },
+    params_{ params }
+{
+    initMeshByLoops_( inTp, holes );
     setupStartVertices_();
 }
 
@@ -639,6 +653,7 @@ Mesh SweepLineQueue::triangulate()
 
 void SweepLineQueue::setupStartVertices_()
 {
+    // TODO: optimize, it seems we can avoid bitset allocation here (at least it can be cached)
     VertBitSet startVertices( tp_.vertSize() );
     BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v )
     {
@@ -1073,6 +1088,103 @@ void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
             tp_.splice( edgePerVert[VertId( firstVert + i )], edgePerVert[VertId( firstVert + ( ( i + int( size ) - 1 ) % size ) )].sym() );
         firstVert += size;
     }
+}
+
+void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops )
+{
+    MR_TIMER;
+    //HashMap<>
+    UndirectedEdgeHashMap in2p; // TODO: can be cached
+    WholeEdgeMap p2inCache; // TODO: can be cached
+    WholeEdgeMap& p2in = params_.outPatchMap ? *params_.outPatchMap : p2inCache;
+
+    auto addNewEdge = [&] ( EdgeId inE, int cId, int pId )
+    {
+        EdgeId inFE, newPE;
+        UndirectedEdgeId pFE;
+        for ( auto ne : orgRing( inTp, inE ) )
+        {
+            auto it = in2p.find( ne.undirected() );
+            if ( it == in2p.end() )
+                continue;
+            inFE = ne;
+            pFE = it->second;
+            break;
+        }
+        if ( inFE == inE )
+        {
+            // this edge was already added
+            auto existingInE = p2in[pFE];
+            auto pE = existingInE == inFE ? EdgeId( pFE ) : EdgeId( pFE ).sym();
+            auto& wind = windingInfo_[pE].windingModifier;
+            predicates_.less( tp_.org( pE ), tp_.dest( pE ) ) ? ++wind : --wind;
+        }
+        else if ( inFE )
+        {
+            // another ring edge is added but not ours
+            auto existingInE = p2in[pFE];
+            auto pRE = existingInE == inFE ? EdgeId( pFE ) : EdgeId( pFE ).sym();
+            newPE = tp_.makeEdge();
+            tp_.splice( tp_.prev( pRE ), newPE );
+        }
+        else
+        {
+            // no ring edges at all
+            VertId v = tp_.addVertId();
+            predicates_.addInputPoint( v, cId, pId );
+            newPE = tp_.makeEdge();
+            tp_.setOrg( newPE, v );
+        }
+        if ( newPE )
+        {
+            in2p[inE.undirected()] = newPE.undirected();
+            p2in.autoResizeSet( newPE.undirected(), inE );
+            EdgeId inSE;
+            UndirectedEdgeId pSE;
+            for ( auto de : orgRing0( inTp, inE.sym() ) )
+            {
+                auto it = in2p.find( de.undirected() );
+                if ( it == in2p.end() )
+                    continue;
+                inSE = de;
+                pSE = it->second;
+                break;
+            }
+            if ( inSE )
+            {
+                auto existingInE = p2in[pSE];
+                auto pe = existingInE == inSE ? EdgeId( pSE ) : EdgeId( pSE ).sym();
+                tp_.splice( tp_.prev( pe ), newPE.sym() );
+            }
+            else
+            {
+                VertId v = tp_.addVertId();
+                // `pId + 1` can never reach `size` because loops are closed and we will always be in previous "if" block
+                predicates_.addInputPoint( v, cId, pId + 1 );
+                tp_.setOrg( newPE.sym(), v );
+            }
+            auto& wind = windingInfo_.autoResizeAt( newPE ).windingModifier;
+            wind = predicates_.less( tp_.org( newPE ), tp_.dest( newPE ) ) ? 1 : -1;
+        }
+    };
+
+
+    for ( int loopId = 0; loopId < int( loops.size() ); ++loopId )
+    {
+        const auto& loop = loops[loopId];
+        if ( loop.size() < 3 )
+            continue;
+        for ( int lId = 0; lId < loop.size(); ++lId )
+            addNewEdge( loop[lId], loopId, lId );
+    }
+
+    sortedVerts_.reserve( tp_.vertSize() );
+    for ( int i = 0; i < tp_.vertSize(); ++i )
+        sortedVerts_.emplace_back( VertId( i ) );
+    tbb::parallel_sort( sortedVerts_.begin(), sortedVerts_.end(), [&] ( VertId l, VertId r )
+    {
+        return predicates_.less( l, r );
+    } );
 }
 
 void SweepLineQueue::mergeSamePoints_( const HolesVertIds* holesVertId )

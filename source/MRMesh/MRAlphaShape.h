@@ -3,7 +3,6 @@
 #include "MRMeshFwd.h"
 #include "MRPrecisePredicates3.h"
 #include "MRFastInt128.h"
-#include "MRHighPrecision.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cstddef>

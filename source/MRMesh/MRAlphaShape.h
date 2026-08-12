@@ -2,6 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRPrecisePredicates3.h"
+#include "MRFastInt128.h"
 #include "MRHighPrecision.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
@@ -79,7 +80,7 @@ struct AlphaShapeNei
     PreciseVertCoords coords;
 
     /// the exact squared distance from #v in the units of the same integer grid
-    MR_BIND_IGNORE Int128 distSq;
+    MR_BIND_IGNORE FastInt128 distSq;
 };
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius,

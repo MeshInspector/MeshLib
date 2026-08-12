@@ -1,4 +1,6 @@
 #include "MRInSphere.h"
+#include "MRHighPrecision.h"
+#include "MRInt64Mul128.h"
 #include <algorithm>
 #include <cassert>
 
@@ -74,30 +76,36 @@ bool InSphereTester<int>::reset( const Vector3i & va, const Vector3i & vb, const
 
     // no sphere of radius sqrt(rSq) can pass via two points more than the diameter apart;
     // strictly greater: a side exactly equal to the diameter can lie on the sphere
-    const auto rSq4 = 4 * Int128( sqRadius );
-    const auto uu = dot( Vector3i128{ u }, Vector3i128{ u } );
+    const auto rSq4 = 4 * FastInt128( sqRadius );
+    const auto uu = dot( Vector3i64mul{ u }, Vector3i64mul{ u } );
     if ( uu > rSq4 )
         return false;
-    const auto vv = dot( Vector3i128{ v }, Vector3i128{ v } );
+    const auto vv = dot( Vector3i64mul{ v }, Vector3i64mul{ v } );
     if ( vv > rSq4 )
         return false;
     const Vector3i64 bc = v - u;
-    if ( dot( Vector3i128{ bc }, Vector3i128{ bc } ) > rSq4 )
+    if ( dot( Vector3i64mul{ bc }, Vector3i64mul{ bc } ) > rSq4 )
         return false;
 
     w = cross( u, v ); // <= 2^63
-    W = dot( Vector3i256{ w }, Vector3i256{ w } ); // <= 2^128
+    // the sum of three products of two 64-bit values does not fit in 128 bits
+    W = FastInt256( Int64Mul128( w.x ) * Int64Mul128( w.x ) )
+      + FastInt256( Int64Mul128( w.y ) * Int64Mul128( w.y ) )
+      + FastInt256( Int64Mul128( w.z ) * Int64Mul128( w.z ) ); // <= 2^128
     if ( W == 0 )
         return false; // a, b, c are collinear => no circle through them
 
     // same as |u|^2 * cross( v, w ) + |v|^2 * cross( w, u ) expanded as in circumcircleCenter,
     // with one dot product instead of two cross products; components <= 2^161
-    const auto uv = dot( Vector3i128{ u }, Vector3i128{ v } );
-    M = ( Int256( vv ) * Int256( uu - uv ) ) * Vector3i256{ u }
-      + ( Int256( uu ) * Int256( vv - uv ) ) * Vector3i256{ v };
+    const auto uv = dot( Vector3i64mul{ u }, Vector3i64mul{ v } );
+    const auto su = Int128Mul256( vv ) * Int128Mul256( uu - uv );
+    const auto sv = Int128Mul256( uu ) * Int128Mul256( vv - uv );
+    M = { FastInt256( su * u.x + sv * v.x ),
+          FastInt256( su * u.y + sv * v.y ),
+          FastInt256( su * u.z + sv * v.z ) };
 
     // negative: sqrt(rSq) is less than the circumradius of the triangle => no such sphere
-    E = 4 * Int512( sqRadius ) * sqr( Int512( W ) ) - dot( Vector3i512{ M }, Vector3i512{ M } ); // <= 2^322
+    E = FastInt<384>( W * W * rSq * 4 - ( M[0] * M[0] + M[1] * M[1] + M[2] * M[2] ) ); // <= 2^322
     return E >= 0;
 }
 
@@ -107,23 +115,23 @@ InSphereResult InSphereTester<int>::operator()( const Vector3i & d ) const
     const Vector3i64 q{ d - a };
 
     // d farther than the diameter from a point on the sphere is strictly outside
-    const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
-    if ( qq > 4 * Int128( rSq ) )
+    const auto qq = dot( Vector3i64mul{ q }, Vector3i64mul{ q } );
+    if ( qq > 4 * FastInt128( rSq ) )
         return InSphereResult::Outside;
 
     // A = |w|^2 * ( |d - circumcenter|^2 - sqr( circumradius ) ), <= 2^194
-    const auto A = W * Int256( qq ) - dot( Vector3i256{ q }, M );
+    const auto A = FastInt256( W * qq - ( M[0] * q.x + M[1] * q.y + M[2] * q.z ) );
 
     // t = |w| * signedDistance( d, plane of the triangle ), <= 2^96
-    const auto t = dot( Vector3i128{ q }, Vector3i128{ w } );
+    const auto t = dot( Vector3i64mul{ q }, Vector3i64mul{ w } );
 
     // d is strictly inside the sphere <=> A * |w| < sqrt( E ) * t
     if ( A < 0 && t >= 0 )
         return InSphereResult::Inside;
     if ( A >= 0 && t <= 0 )
         return ( A == 0 && ( t == 0 || E == 0 ) ) ? InSphereResult::OnSphere : InSphereResult::Outside;
-    const auto lhs = sqr( Int1024( A ) ) * Int1024( W ); // <= 2^514
-    const auto rhs = Int1024( E ) * sqr( Int1024( t ) ); // <= 2^513
+    const auto lhs = A * A * W; // <= 2^514
+    const auto rhs = E * sqr( Int128Mul256( t ) ); // <= 2^513
     if ( lhs == rhs )
         return InSphereResult::OnSphere;
     return ( A < 0 ) == ( lhs > rhs ) ? InSphereResult::Inside : InSphereResult::Outside;
@@ -165,15 +173,15 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
     // whose perturbation moves vs[3] off the sphere decides; when a triangle point is perturbed, the
     // center moves along the circle of points equidistant from two other triangle points, on which
     // the squared distance to vs[3] is a degree-1 trigonometric polynomial
-    const BigInt bigW{ W };
-    const BigInt ew = BigInt{ E } * bigW; // sqr( S ); the signs below are computed in Z[S]
+    const BigInt bigW = toBoostInt<BigInt>( W );
+    const BigInt ew = toBoostInt<BigInt>( E ) * bigW; // sqr( S ); the signs below are computed in Z[S]
 
     // ch[k] = 2 W^2 * ( vs[k].pt - sphereCenter ) = 2 W^2 ( vs[k].pt - vs[0].pt ) - W M - S w
     const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ d.pt - a } };
     std::array<SqrtVec, 4> ch;
     for ( int k = 0; k < 4; ++k )
         for ( int i = 0; i < 3; ++i )
-            ch[k][i] = { 2 * bigW * bigW * rel[k][i] - bigW * BigInt{ M[i] }, -BigInt{ w[i] } };
+            ch[k][i] = { 2 * bigW * bigW * rel[k][i] - bigW * toBoostInt<BigInt>( M[i] ), -BigInt{ w[i] } };
 
     int order[4] = { 0, 1, 2, 3 };
     std::sort( std::begin( order ), std::end( order ), [&]( int l, int r ) { return vs[l].id < vs[r].id; } );
@@ -204,7 +212,7 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
         // rho = radius of the circle of centers
         SqrtVec chm;
         for ( int i = 0; i < 3; ++i )
-            chm[i] = { bigW * BigInt{ M[i] } - bigW * bigW * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ w[i] } };
+            chm[i] = { bigW * toBoostInt<BigInt>( M[i] ) - bigW * bigW * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ w[i] } };
         const Vector3i64 qr{ vs[q1].pt - vs[q2].pt };
         auto f2 = dot( ch[3], chm, ew );
         f2.x += bigW * bigW * bigW * bigW * ( 4 * BigInt{ rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );

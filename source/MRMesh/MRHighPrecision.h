@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRFastInt.h"
 #include "MRFastInt128.h"
 #include <MRPch/MRBindingMacros.h>
 
@@ -41,6 +42,28 @@ using Vector2i256 = Vector2<Int256>;
 using Vector3i256 = Vector3<Int256>;
 
 using Vector3i512 = Vector3<Int512>;
+
+/// the same value as a boost integer of the type B, which unlike FastInt supports division,
+/// square root and stream output; B must be able to represent the value, and cpp_int always can
+template <typename B, int nBits>
+[[nodiscard]] MR_BIND_IGNORE B toBoostInt( const FastInt<nBits> & v )
+{
+    const bool neg = v.sign() < 0;
+    auto w = v.w;
+    if ( neg ) // the magnitude, so that 2^nBits is never needed in B
+    {
+        std::uint64_t borrow = 0;
+        for ( auto & x : w )
+            x = detail::subBorrow64( 0, x, borrow );
+    }
+    B res = 0;
+    for ( int i = FastInt<nBits>::numWords - 1; i >= 0; --i )
+    {
+        res <<= 64;
+        res |= B( w[i] );
+    }
+    return neg ? -res : res;
+}
 
 
 /// \}

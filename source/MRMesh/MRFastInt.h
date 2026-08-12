@@ -4,6 +4,7 @@
 #include "MRFastInt128.h"
 #include <MRPch/MRBindingMacros.h>
 #include <array>
+#include <cassert>
 #include <compare>
 #include <cstdint>
 #include <type_traits>
@@ -47,39 +48,58 @@ constexpr bool cFitsFastInt128 = std::is_integral_v<T> || std::is_same_v<T, Fast
 }
 
 /// the exact product of two two's-complement values given by their 64-bit words,
-/// which always fits in twice as many words; the only multiplication of this file
-template <std::size_t n> // std::size_t and not int, to be deducible from std::array
-[[nodiscard]] constexpr std::array<std::uint64_t, 2 * n> mulWords(
-    const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, n> & b ) noexcept
+/// which always fits in the sum of their word counts; the only multiplication of this file
+template <std::size_t n, std::size_t m> // std::size_t and not int, to be deducible from std::array
+[[nodiscard]] constexpr std::array<std::uint64_t, n + m> mulWords(
+    const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, m> & b ) noexcept
 {
-    std::array<std::uint64_t, 2 * n> res = {};
+    std::array<std::uint64_t, n + m> res = {};
     for ( std::size_t i = 0; i < n; ++i ) // schoolbook multiplication of unsigned values
     {
         std::uint64_t carry = 0;
-        for ( std::size_t j = 0; j < n; ++j )
+        for ( std::size_t j = 0; j < m; ++j )
         {
             // at most ( 2^64 - 1 )^2 + 2 * ( 2^64 - 1 ) < 2^128 here
             const FastUInt128 t = FastUInt128( a[i] ) * FastUInt128( b[j] ) + FastUInt128( res[i + j] ) + FastUInt128( carry );
             res[i + j] = std::uint64_t( t );
             carry = std::uint64_t( t >> 64 );
         }
-        res[i + n] = carry; // never written before, since the loop above stops at i + n - 1
+        res[i + m] = carry; // never written before, since the loop above stops at i + m - 1
     }
 
-    // a negative argument was taken 2^(64*n) times larger than it is
+    // a negative argument was taken 2^(64*words) times larger than it is; both subtractions
+    // below end exactly at the end of res, so the borrow never leaves it
     if ( std::int64_t( a[n - 1] ) < 0 )
     {
         std::uint64_t borrow = 0;
-        for ( std::size_t i = 0; i < n; ++i )
+        for ( std::size_t i = 0; i < m; ++i )
             res[n + i] = subBorrow64( res[n + i], b[i], borrow );
     }
-    if ( std::int64_t( b[n - 1] ) < 0 )
+    if ( std::int64_t( b[m - 1] ) < 0 )
     {
         std::uint64_t borrow = 0;
         for ( std::size_t i = 0; i < n; ++i )
-            res[n + i] = subBorrow64( res[n + i], a[i], borrow );
+            res[m + i] = subBorrow64( res[m + i], a[i], borrow );
     }
     return res;
+}
+
+/// the number of bits a multiplier of FastInt occupies: 128 for FastInt128 and for an unsigned
+/// 64-bit integer, both of which need two words, and 64 for anything signed or narrower
+template <typename T>
+constexpr int cMulBits = std::is_same_v<T, FastInt128> || ( std::is_unsigned_v<T> && sizeof( T ) >= 8 ) ? 128 : 64;
+
+/// the words of a multiplier of FastInt, sign-extended if it is signed
+template <typename T>
+[[nodiscard]] constexpr auto mulWordsOf( T v ) noexcept
+{
+    if constexpr ( cMulBits<T> == 128 )
+    {
+        const FastInt128 x = FastInt128( v );
+        return std::array{ std::uint64_t( x ), std::uint64_t( x >> 64 ) };
+    }
+    else
+        return std::array{ std::uint64_t( std::int64_t( v ) ) };
 }
 
 } // namespace detail
@@ -128,6 +148,20 @@ public:
             w[i] = s;
     }
 
+    /// takes the lowest nBits bits of a wider value of this family, which must be enough to
+    /// represent it exactly; as every product below widens, this is how a value with a proven
+    /// bound returns to the narrow type where it belongs
+    template <int mBits>
+    requires ( mBits > nBits )
+    constexpr explicit FastInt( const FastInt<mBits> & v ) noexcept
+    {
+        for ( int i = 0; i < numWords; ++i )
+            w[i] = v.w[i];
+        [[maybe_unused]] const auto s = detail::signWord( w[numWords - 1] );
+        for ( int i = numWords; i < FastInt<mBits>::numWords; ++i )
+            assert( v.w[i] == s ); // the value does not fit in nBits bits
+    }
+
     /// -1, 0 or 1 if the value is negative, zero or positive respectively
     [[nodiscard]] constexpr int sign() const noexcept
     {
@@ -165,14 +199,6 @@ public:
     [[nodiscard]] friend constexpr FastInt operator +( FastInt a, const FastInt & b ) noexcept { a += b; return a; }
     [[nodiscard]] friend constexpr FastInt operator -( FastInt a, const FastInt & b ) noexcept { a -= b; return a; }
 
-    /// the exact product, which in general needs twice as many bits as the arguments
-    [[nodiscard]] friend constexpr FastInt<2 * nBits> operator *( const FastInt & a, const FastInt & b ) noexcept
-    {
-        FastInt<2 * nBits> res;
-        res.w = detail::mulWords( a.w, b.w );
-        return res;
-    }
-
     [[nodiscard]] friend constexpr bool operator ==( const FastInt & a, const FastInt & b ) noexcept { return a.w == b.w; }
 
     [[nodiscard]] friend constexpr std::strong_ordering operator <=>( const FastInt & a, const FastInt & b ) noexcept
@@ -189,6 +215,34 @@ public:
 using FastInt256 = FastInt<256>;
 using FastInt512 = FastInt<512>;
 using FastInt1024 = FastInt<1024>;
+
+/// every product below is exact, because the type of a product is as wide as the sum of
+/// the widths of its arguments; a value with a proven bound is brought back to a narrow type
+/// by the explicit narrowing constructor above
+
+template <int nBits, int mBits>
+[[nodiscard]] MR_BIND_IGNORE constexpr FastInt<nBits + mBits> operator *( const FastInt<nBits> & a, const FastInt<mBits> & b ) noexcept
+{
+    FastInt<nBits + mBits> res;
+    res.w = detail::mulWords( a.w, b.w );
+    return res;
+}
+
+template <int nBits, typename T>
+requires detail::cFitsFastInt128<T>
+[[nodiscard]] MR_BIND_IGNORE constexpr FastInt<nBits + detail::cMulBits<T>> operator *( const FastInt<nBits> & a, T b ) noexcept
+{
+    FastInt<nBits + detail::cMulBits<T>> res;
+    res.w = detail::mulWords( a.w, detail::mulWordsOf( b ) );
+    return res;
+}
+
+template <int nBits, typename T>
+requires detail::cFitsFastInt128<T>
+[[nodiscard]] MR_BIND_IGNORE constexpr FastInt<nBits + detail::cMulBits<T>> operator *( T a, const FastInt<nBits> & b ) noexcept
+{
+    return b * a;
+}
 
 /// a 128-bit integer, which product with another one is an exact 256-bit integer;
 /// addition, subtraction and division stay 128-bit and can overflow just like FastInt128

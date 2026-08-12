@@ -1643,7 +1643,7 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, con
     return triangulateDisjointContours( contsf, holeVertsIds, outBoundaries );
 }
 
-std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries /*= nullptr*/ )
+std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries /*= nullptr*/, WholeEdgeMap* outPatchMap /*= nullptr*/ )
 {
     if ( loops.empty() )
         return Mesh();
@@ -1651,7 +1651,13 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
     {
         // copy the boundary sub-topology straight from the mesh: shared vertices and slit edges arrive
         // already shared, so no positional id contract and no coordinate-based merging is needed
-        WholeEdgeMap patchToInEdges;
+        WholeEdgeMap localMap;
+        WholeEdgeMap& patchToInEdges = outPatchMap ? *outPatchMap : localMap;
+        patchToInEdges.clear();
+        size_t numLoopEdges = 0;
+        for ( const auto& loop : loops )
+            numLoopEdges += loop.size();
+        patchToInEdges.reserve( numLoopEdges );
         SweepLineQueue triangulator( mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges ), loops,
             { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges } );
         return triangulator.run();

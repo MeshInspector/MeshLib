@@ -334,7 +334,7 @@
     <ClCompile Include="MRMimallocRedirectTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRFastInt256Tests.cpp">
+    <ClCompile Include="MRFastIntTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

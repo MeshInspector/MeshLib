@@ -1,0 +1,237 @@
+#pragma once
+
+#include "MRMeshFwd.h"
+#include "MRFastInt128.h"
+#include <MRPch/MRBindingMacros.h>
+#include <array>
+#include <compare>
+#include <cstdint>
+#include <type_traits>
+
+namespace MR
+{
+
+/// \addtogroup HighPrecisionGroup
+/// \{
+
+namespace detail
+{
+
+/// the integer types that FastInt128 represents exactly, and which the classes below accept
+template <typename T>
+constexpr bool cFitsFastInt128 = std::is_integral_v<T> || std::is_same_v<T, FastInt128>;
+
+// the two functions below are spelled via FastUInt128, where the carry-out is simply
+// the higher word, as in mulWords below
+
+/// returns a + b + carry modulo 2^64, and replaces carry with the carry-out (0 or 1)
+[[nodiscard]] inline constexpr std::uint64_t addCarry64( std::uint64_t a, std::uint64_t b, std::uint64_t & carry ) noexcept
+{
+    const FastUInt128 t = FastUInt128( a ) + FastUInt128( b ) + FastUInt128( carry );
+    carry = std::uint64_t( t >> 64 );
+    return std::uint64_t( t );
+}
+
+/// returns a - b - borrow modulo 2^64, and replaces borrow with the borrow-out (0 or 1)
+[[nodiscard]] inline constexpr std::uint64_t subBorrow64( std::uint64_t a, std::uint64_t b, std::uint64_t & borrow ) noexcept
+{
+    const FastUInt128 t = FastUInt128( a ) - FastUInt128( b ) - FastUInt128( borrow );
+    borrow = std::uint64_t( t >> 64 ) & 1;
+    return std::uint64_t( t );
+}
+
+/// all ones if the highest bit of the given word is set, and zeros otherwise
+[[nodiscard]] inline constexpr std::uint64_t signWord( std::uint64_t hi ) noexcept
+{
+    return std::int64_t( hi ) < 0 ? ~std::uint64_t( 0 ) : 0;
+}
+
+/// the exact product of two two's-complement values given by their 64-bit words,
+/// which always fits in twice as many words; the only multiplication of this file
+template <std::size_t n> // std::size_t and not int, to be deducible from std::array
+[[nodiscard]] constexpr std::array<std::uint64_t, 2 * n> mulWords(
+    const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, n> & b ) noexcept
+{
+    std::array<std::uint64_t, 2 * n> res = {};
+    for ( std::size_t i = 0; i < n; ++i ) // schoolbook multiplication of unsigned values
+    {
+        std::uint64_t carry = 0;
+        for ( std::size_t j = 0; j < n; ++j )
+        {
+            // at most ( 2^64 - 1 )^2 + 2 * ( 2^64 - 1 ) < 2^128 here
+            const FastUInt128 t = FastUInt128( a[i] ) * FastUInt128( b[j] ) + FastUInt128( res[i + j] ) + FastUInt128( carry );
+            res[i + j] = std::uint64_t( t );
+            carry = std::uint64_t( t >> 64 );
+        }
+        res[i + n] = carry; // never written before, since the loop above stops at i + n - 1
+    }
+
+    // a negative argument was taken 2^(64*n) times larger than it is
+    if ( std::int64_t( a[n - 1] ) < 0 )
+    {
+        std::uint64_t borrow = 0;
+        for ( std::size_t i = 0; i < n; ++i )
+            res[n + i] = subBorrow64( res[n + i], b[i], borrow );
+    }
+    if ( std::int64_t( b[n - 1] ) < 0 )
+    {
+        std::uint64_t borrow = 0;
+        for ( std::size_t i = 0; i < n; ++i )
+            res[n + i] = subBorrow64( res[n + i], a[i], borrow );
+    }
+    return res;
+}
+
+} // namespace detail
+
+/// signed integer of nBits bits, which must be a multiple of 64 and at least 256
+/// (below that use FastInt128 and Int64Mul128);
+/// the product of two of them is exact, because it is twice as wide as the arguments;
+/// as FastInt128 it lacks conversion in double, sqrt-function and stream input/output
+template <int nBits>
+class MR_BIND_IGNORE FastInt
+{
+public:
+    static_assert( nBits >= 256 && nBits % 64 == 0 );
+
+    /// the number of words in the representation below
+    static constexpr int numWords = nBits / 64;
+
+    /// two's complement representation: w[0] + 2^64 * w[1] + ... + 2^(nBits-64) * std::int64_t( w[numWords-1] )
+    std::array<std::uint64_t, numWords> w = {};
+
+    FastInt() noexcept = default;
+
+    /// sign-extends the given value, which must fit in 128 bits
+    template <typename T>
+    requires detail::cFitsFastInt128<T>
+    constexpr FastInt( T v ) noexcept
+    {
+        const FastInt128 x = FastInt128( v );
+        w[0] = std::uint64_t( x );
+        w[1] = std::uint64_t( x >> 64 );
+        const auto s = detail::signWord( w[1] );
+        for ( int i = 2; i < numWords; ++i )
+            w[i] = s;
+    }
+
+    /// sign-extends a narrower value of this family
+    template <int mBits>
+    requires ( mBits < nBits )
+    constexpr FastInt( const FastInt<mBits> & v ) noexcept
+    {
+        constexpr int m = FastInt<mBits>::numWords;
+        for ( int i = 0; i < m; ++i )
+            w[i] = v.w[i];
+        const auto s = detail::signWord( v.w[m - 1] );
+        for ( int i = m; i < numWords; ++i )
+            w[i] = s;
+    }
+
+    /// -1, 0 or 1 if the value is negative, zero or positive respectively
+    [[nodiscard]] constexpr int sign() const noexcept
+    {
+        if ( std::int64_t( w[numWords - 1] ) < 0 )
+            return -1;
+        std::uint64_t any = 0;
+        for ( int i = 0; i < numWords; ++i )
+            any |= w[i];
+        return any != 0 ? 1 : 0;
+    }
+
+    constexpr FastInt & operator +=( const FastInt & b ) noexcept
+    {
+        std::uint64_t carry = 0;
+        for ( int i = 0; i < numWords; ++i )
+            w[i] = detail::addCarry64( w[i], b.w[i], carry );
+        return *this;
+    }
+
+    constexpr FastInt & operator -=( const FastInt & b ) noexcept
+    {
+        std::uint64_t borrow = 0;
+        for ( int i = 0; i < numWords; ++i )
+            w[i] = detail::subBorrow64( w[i], b.w[i], borrow );
+        return *this;
+    }
+
+    [[nodiscard]] constexpr FastInt operator -() const noexcept
+    {
+        FastInt res;
+        res -= *this;
+        return res;
+    }
+
+    [[nodiscard]] friend constexpr FastInt operator +( FastInt a, const FastInt & b ) noexcept { a += b; return a; }
+    [[nodiscard]] friend constexpr FastInt operator -( FastInt a, const FastInt & b ) noexcept { a -= b; return a; }
+
+    /// the exact product, which in general needs twice as many bits as the arguments
+    [[nodiscard]] friend constexpr FastInt<2 * nBits> operator *( const FastInt & a, const FastInt & b ) noexcept
+    {
+        FastInt<2 * nBits> res;
+        res.w = detail::mulWords( a.w, b.w );
+        return res;
+    }
+
+    [[nodiscard]] friend constexpr bool operator ==( const FastInt & a, const FastInt & b ) noexcept { return a.w == b.w; }
+
+    [[nodiscard]] friend constexpr std::strong_ordering operator <=>( const FastInt & a, const FastInt & b ) noexcept
+    {
+        if ( const auto c = std::int64_t( a.w[numWords - 1] ) <=> std::int64_t( b.w[numWords - 1] ); c != std::strong_ordering::equal )
+            return c;
+        for ( int i = numWords - 2; i >= 0; --i )
+            if ( const auto c = a.w[i] <=> b.w[i]; c != std::strong_ordering::equal )
+                return c;
+        return std::strong_ordering::equal;
+    }
+};
+
+using FastInt256 = FastInt<256>;
+using FastInt512 = FastInt<512>;
+using FastInt1024 = FastInt<1024>;
+
+/// a 128-bit integer, which product with another one is an exact 256-bit integer;
+/// addition, subtraction and division stay 128-bit and can overflow just like FastInt128
+class MR_BIND_IGNORE Int128Mul256
+{
+public:
+    Int128Mul256() noexcept = default;
+
+    template <typename T>
+    requires detail::cFitsFastInt128<T>
+    constexpr Int128Mul256( T v ) noexcept : v_( v ) { }
+
+    [[nodiscard]] constexpr explicit operator FastInt128() const noexcept { return v_; }
+
+    [[nodiscard]] friend constexpr FastInt128 operator +( Int128Mul256 a ) noexcept { return a.v_; }
+    [[nodiscard]] friend constexpr FastInt128 operator -( Int128Mul256 a ) noexcept { return -a.v_; }
+
+    [[nodiscard]] friend constexpr FastInt128 operator +( Int128Mul256 a, Int128Mul256 b ) noexcept { return a.v_ + b.v_; }
+    [[nodiscard]] friend constexpr FastInt128 operator -( Int128Mul256 a, Int128Mul256 b ) noexcept { return a.v_ - b.v_; }
+    [[nodiscard]] friend constexpr FastInt128 operator /( Int128Mul256 a, Int128Mul256 b ) noexcept { return a.v_ / b.v_; }
+
+    [[nodiscard]] friend constexpr FastInt256 operator *( Int128Mul256 a, Int128Mul256 b ) noexcept
+    {
+        const FastUInt128 ua( a.v_ ), ub( b.v_ );
+        FastInt256 res;
+        res.w = detail::mulWords( std::array{ std::uint64_t( ua ), std::uint64_t( ua >> 64 ) },
+                                  std::array{ std::uint64_t( ub ), std::uint64_t( ub >> 64 ) } );
+        return res;
+    }
+
+    [[nodiscard]] friend constexpr bool operator ==( Int128Mul256 a, Int128Mul256 b ) noexcept { return a.v_ == b.v_; }
+    [[nodiscard]] friend constexpr auto operator <=>( Int128Mul256 a, Int128Mul256 b ) noexcept { return a.v_ <=> b.v_; }
+
+private:
+    FastInt128 v_;
+};
+
+// no bindings for the same reason as for Vector3i128fast
+#if !defined MR_PARSING_FOR_ANY_BINDINGS && !defined MR_COMPILING_ANY_BINDINGS
+using Vector2i128mul = Vector2<Int128Mul256>;
+using Vector3i128mul = Vector3<Int128Mul256>;
+#endif
+
+/// \}
+
+} // namespace MR

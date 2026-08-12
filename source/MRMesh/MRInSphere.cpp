@@ -89,20 +89,20 @@ bool InSphereTester<int>::reset( const Vector3i & va, const Vector3i & vb, const
 
     w = cross( u, v ); // <= 2^63
     // the sum of three products of two 64-bit values does not fit in 128 bits
-    W = FastInt256( Int64Mul128( w.x ) * Int64Mul128( w.x ) )
-      + FastInt256( Int64Mul128( w.y ) * Int64Mul128( w.y ) )
-      + FastInt256( Int64Mul128( w.z ) * Int64Mul128( w.z ) ); // <= 2^128
+    W = FastInt<192>( Int64Mul128( w.x ) * Int64Mul128( w.x ) )
+      + FastInt<192>( Int64Mul128( w.y ) * Int64Mul128( w.y ) )
+      + FastInt<192>( Int64Mul128( w.z ) * Int64Mul128( w.z ) ); // <= 2^128
     if ( W == 0 )
         return false; // a, b, c are collinear => no circle through them
 
     // same as |u|^2 * cross( v, w ) + |v|^2 * cross( w, u ) expanded as in circumcircleCenter,
     // with one dot product instead of two cross products; components <= 2^161
     const auto uv = dot( Vector3i64mul{ u }, Vector3i64mul{ v } );
-    const auto su = Int128Mul256( vv ) * Int128Mul256( uu - uv );
-    const auto sv = Int128Mul256( uu ) * Int128Mul256( vv - uv );
-    M = { FastInt256( su * u.x + sv * v.x ),
-          FastInt256( su * u.y + sv * v.y ),
-          FastInt256( su * u.z + sv * v.z ) };
+    const auto su = FastInt<192>( Int128Mul256( vv ) * Int128Mul256( uu - uv ) ); // <= 2^129
+    const auto sv = FastInt<192>( Int128Mul256( uu ) * Int128Mul256( vv - uv ) );
+    M = { FastInt<192>( su * u.x + sv * v.x ),
+          FastInt<192>( su * u.y + sv * v.y ),
+          FastInt<192>( su * u.z + sv * v.z ) };
 
     // negative: sqrt(rSq) is less than the circumradius of the triangle => no such sphere
     E = FastInt<384>( W * W * rSq * 4 - ( M[0] * M[0] + M[1] * M[1] + M[2] * M[2] ) ); // <= 2^322

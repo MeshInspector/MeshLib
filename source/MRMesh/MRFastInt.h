@@ -104,15 +104,15 @@ template <typename T>
 
 } // namespace detail
 
-/// signed integer of nBits bits, which must be a multiple of 64 and at least 256
-/// (below that use FastInt128 and Int64Mul128);
+/// signed integer of nBits bits, which must be a multiple of 64 and at least 192
+/// (below that use FastInt128 with Int64Mul128 and Int128Mul256);
 /// the product of two of them is exact, because it is twice as wide as the arguments;
 /// as FastInt128 it lacks conversion in double, sqrt-function and stream input/output
 template <int nBits>
 class MR_BIND_IGNORE FastInt
 {
 public:
-    static_assert( nBits >= 256 && nBits % 64 == 0 );
+    static_assert( nBits >= 192 && nBits % 64 == 0 );
 
     /// the number of words in the representation below
     static constexpr int numWords = nBits / 64;

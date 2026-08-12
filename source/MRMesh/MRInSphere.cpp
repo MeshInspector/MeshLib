@@ -1,5 +1,4 @@
 #include "MRInSphere.h"
-#include "MRHighPrecision.h"
 #include "MRInt64Mul128.h"
 #include <algorithm>
 #include <cassert>
@@ -7,7 +6,7 @@
 namespace MR
 {
 
-#if __GNUC__ >= 12 // false positive array-bounds warnings in boost widening conversions like Int1024( Int256 )
+#if __GNUC__ >= 12 // false positive array-bounds/stringop warnings from GCC on the fixed-width FastInt array operations below
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #pragma GCC diagnostic ignored "-Wstringop-overread"
@@ -17,23 +16,35 @@ namespace MR
 namespace
 {
 
-using BigInt = boost::multiprecision::cpp_int;
+// fixed-precision replacement for the former boost::multiprecision path: every SqrtNum component
+// below stays within ~2^875 (see the bound annotations in InSphereTesterSoS::operator()), so
+// FastInt<960> holds them all with room to spare; each product widens to an exact type that is
+// narrowed back to this width once its proven bound is small enough
+constexpr int cSoSBits = 960;
+using SoSInt = FastInt<cSoSBits>;
+
+// sqr( S ) = E * W <= 2^450; kept in its own width because it multiplies the widest sub-expressions
+using EwInt = FastInt<512>;
 
 // value x + y * sqrt( ew ) for a fixed ew > 0; exact sign computations in inSphere tie resolution
 struct SqrtNum
 {
-    BigInt x, y;
+    SoSInt x, y;
 };
 
 SqrtNum operator +( const SqrtNum & a, const SqrtNum & b ) { return { a.x + b.x, a.y + b.y }; }
 SqrtNum operator -( const SqrtNum & a, const SqrtNum & b ) { return { a.x - b.x, a.y - b.y }; }
 
-SqrtNum mul( const SqrtNum & a, const SqrtNum & b, const BigInt & ew )
+SqrtNum mul( const SqrtNum & a, const SqrtNum & b, const EwInt & ew )
 {
-    return { a.x * b.x + a.y * b.y * ew, a.x * b.y + a.y * b.x };
+    // a.x * b.x is FastInt<1920>, a.y * b.y * ew is FastInt<2432>: widen the former to add, then narrow
+    // the result back (proven <= 2^873 for mul( ch, cross(ch,ch) ), the widest case that reaches here)
+    const auto x = FastInt<2 * cSoSBits + 512>( a.x * b.x ) + a.y * b.y * ew;
+    const auto y = a.x * b.y + a.y * b.x; // <= 2^646
+    return { SoSInt( x ), SoSInt( y ) };
 }
 
-int signOf( const SqrtNum & a, const BigInt & ew )
+int signOf( const SqrtNum & a, const EwInt & ew )
 {
     const int sx = a.x.sign();
     const int sy = a.y.sign();
@@ -41,7 +52,8 @@ int signOf( const SqrtNum & a, const BigInt & ew )
         return sx;
     if ( sx == 0 )
         return sy;
-    const BigInt l = a.x * a.x, r = a.y * a.y * ew;
+    const auto l = FastInt<2 * cSoSBits + 512>( a.x * a.x ); // <= 2^1750
+    const auto r = a.y * a.y * ew;                           // <= 2^1746, FastInt<2 * cSoSBits + 512>
     if ( l == r )
         return 0;
     return l > r ? sx : sy;
@@ -49,12 +61,12 @@ int signOf( const SqrtNum & a, const BigInt & ew )
 
 using SqrtVec = std::array<SqrtNum, 3>;
 
-SqrtNum dot( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
+SqrtNum dot( const SqrtVec & u, const SqrtVec & v, const EwInt & ew )
 {
     return mul( u[0], v[0], ew ) + mul( u[1], v[1], ew ) + mul( u[2], v[2], ew );
 }
 
-SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
+SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const EwInt & ew )
 {
     return SqrtVec{
         mul( u[1], v[2], ew ) - mul( u[2], v[1], ew ),
@@ -173,15 +185,15 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
     // whose perturbation moves vs[3] off the sphere decides; when a triangle point is perturbed, the
     // center moves along the circle of points equidistant from two other triangle points, on which
     // the squared distance to vs[3] is a degree-1 trigonometric polynomial
-    const BigInt bigW = toBoostInt<BigInt>( W );
-    const BigInt ew = toBoostInt<BigInt>( E ) * bigW; // sqr( S ); the signs below are computed in Z[S]
+    const auto & bigW = W; // <= 2^128
+    const EwInt ew = EwInt( E * W ); // sqr( S ) = E * W <= 2^450; the signs below are computed in Z[S]
 
     // ch[k] = 2 W^2 * ( vs[k].pt - sphereCenter ) = 2 W^2 ( vs[k].pt - vs[0].pt ) - W M - S w
     const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ d.pt - a } };
     std::array<SqrtVec, 4> ch;
     for ( int k = 0; k < 4; ++k )
         for ( int i = 0; i < 3; ++i )
-            ch[k][i] = { 2 * bigW * bigW * rel[k][i] - bigW * toBoostInt<BigInt>( M[i] ), -BigInt{ w[i] } };
+            ch[k][i] = { 2 * bigW * bigW * rel[k][i] - bigW * M[i], -w[i] }; // x <= 2^290, y = -w <= 2^63
 
     int order[4] = { 0, 1, 2, 3 };
     std::sort( std::begin( order ), std::end( order ), [&]( int l, int r ) { return vs[l].id < vs[r].id; } );
@@ -212,10 +224,12 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
         // rho = radius of the circle of centers
         SqrtVec chm;
         for ( int i = 0; i < 3; ++i )
-            chm[i] = { bigW * toBoostInt<BigInt>( M[i] ) - bigW * bigW * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ w[i] } };
+            chm[i] = { bigW * M[i] - bigW * bigW * ( rel[q1][i] + rel[q2][i] ), w[i] }; // x <= 2^290, y = w <= 2^63
         const Vector3i64 qr{ vs[q1].pt - vs[q2].pt };
         auto f2 = dot( ch[3], chm, ew );
-        f2.x += bigW * bigW * bigW * bigW * ( 4 * BigInt{ rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );
+        // + W^4 * ( 4 rSq - |qr|^2 ): qr <= 2^32, so |qr|^2 <= 2^66 fits in 128 bits as in the primary path
+        const auto qrSq = dot( Vector3i64mul{ qr }, Vector3i64mul{ qr } ); // FastInt128, <= 2^66
+        f2.x += bigW * bigW * bigW * bigW * ( 4 * FastInt128( rSq ) - qrSq ); // added term <= 2^578
         if ( const int sF = signOf( f2, ew ) )
             return sF < 0 ? InSphereResult::Inside : InSphereResult::Outside;
         assert( false ); // possible only for an idle point, and those are skipped above

@@ -165,9 +165,11 @@ void testFastIntWidth( unsigned seed )
         EXPECT_EQ( fa > fb, refA > refB );
         EXPECT_EQ( fa <= fb, refA <= refB );
 
-        // the product is exact in the twice wider type
-        EXPECT_EQ( toBoost<B2>( fa * fb ), B2( refA ) * B2( refB ) );
-        EXPECT_EQ( toBoost<B2>( sqr( fa ) ), B2( refA ) * B2( refA ) );
+        // the product is exact in the twice wider type; the wider references are built from
+        // the words and not converted from B, because GCC 12 gives false positive -Warray-bounds
+        // on the widening conversions of boost integers
+        EXPECT_EQ( toBoost<B2>( fa * fb ), toBoost<B2>( a ) * toBoost<B2>( b ) );
+        EXPECT_EQ( toBoost<B2>( sqr( fa ) ), toBoost<B2>( a ) * toBoost<B2>( a ) );
     }
 }
 

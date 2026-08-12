@@ -5,6 +5,7 @@
 #include "MRVector.h"
 #include "MRFastInt256.h"
 #include "MRHighPrecision.h"
+#include "MRInt64Mul128.h"
 #include "MRVector2.h"
 #include "MRBox.h"
 #include "MRDivRound.h"
@@ -115,7 +116,7 @@ FastInt128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, c
 
 bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
-    auto vhp = dot( Vector3i128fast{ a }, Vector3i128fast{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
+    auto vhp = dot( Vector3i64mul{ a }, Vector3i64mul{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
     if ( vhp ) return vhp > 0;
 
     auto v = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
@@ -457,14 +458,14 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
     const auto abc = cross( ab, ac );
     const auto abd = cross( ab, ad );
 
-    if ( dot( Vector3i128fast( abc ), Vector3i128fast( abd ) ) > 0 )
+    if ( dot( Vector3i64mul( abc ), Vector3i64mul( abd ) ) > 0 )
         return std::nullopt; // CD is on one side of AB
 
     const auto cd = Vector3i64{ di - ci };
     const auto cb = Vector3i64{ bi - ci };
     const auto cda = cross( cd, -ac );
     const auto cdb = cross( cd, cb );
-    if ( dot( Vector3i128fast( cda ), Vector3i128fast( cdb ) ) > 0 )
+    if ( dot( Vector3i64mul( cda ), Vector3i64mul( cdb ) ) > 0 )
         return std::nullopt; // AB is on one side of CD
 
     constexpr Vector3i64 zero;
@@ -488,8 +489,8 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
 
     // common intersection - AB and CD are non-collinear
     const Vector3i64 n = abc - abd; // not unit
-    FastInt128 ck = dot( Vector3i128fast( n ), Vector3i128fast( abc ) );
-    FastInt128 dk = dot( Vector3i128fast( n ), Vector3i128fast( abd ) );
+    FastInt128 ck = dot( Vector3i64mul( n ), Vector3i64mul( abc ) );
+    FastInt128 dk = dot( Vector3i64mul( n ), Vector3i64mul( abd ) );
     assert( ck >=0 && dk <= 0 );
 
     // scale down ck and dk to make sure that below products can be computed in 128 bits
@@ -513,10 +514,10 @@ Vector3f findTriangleSegmentIntersectionPrecise(
     auto ci = converters.toInt( c );
     auto di = converters.toInt( d );
     auto ei = converters.toInt( e );
-    auto abcd = dot( Vector3i128fast{ ai - di }, Vector3i128fast{ cross( Vector3i64{ bi - di }, Vector3i64{ ci - di } ) } );
+    auto abcd = dot( Vector3i64mul{ ai - di }, Vector3i64mul{ cross( Vector3i64{ bi - di }, Vector3i64{ ci - di } ) } );
     if ( abcd < 0 )
         abcd = -abcd;
-    auto abce = dot( Vector3i128fast{ ai - ei }, Vector3i128fast{ cross( Vector3i64{ bi - ei }, Vector3i64{ ci - ei } ) } );
+    auto abce = dot( Vector3i64mul{ ai - ei }, Vector3i64mul{ cross( Vector3i64{ bi - ei }, Vector3i64{ ci - ei } ) } );
     if ( abce < 0 )
         abce = -abce;
     auto sum = abcd + abce;

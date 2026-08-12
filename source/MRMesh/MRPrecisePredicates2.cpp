@@ -1,5 +1,6 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
+#include "MRInt64Mul128.h"
 #include "MRPrecisePredicates3.h"
 #include "MRSparsePolynomial.h"
 #include "MRDivRound.h"
@@ -130,12 +131,12 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     const Vector3i64 c( c0.x, c0.y, sqr( std::int64_t( c0.x ) ) + sqr( std::int64_t( c0.y ) ) );
 
     //e**0
-    if ( auto v = mixed( Vector3i128fast( a ), Vector3i128fast( b ), Vector3i128fast( c ) ) )
+    if ( auto v = mixed( Vector3i128fast( a ), Vector3i64mul( b ), Vector3i64mul( c ) ) )
         return v > 0;
 
     // e**1
     const auto bxy_cxy = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
-    if ( auto v = -cross( Vector2i128fast{ b.x, b.z }, Vector2i128fast{ c.x, c.z } ) + 2 * a.y * FastInt128( bxy_cxy ) )
+    if ( auto v = -cross( Vector2i64mul{ b.x, b.z }, Vector2i64mul{ c.x, c.z } ) + Int64Mul128( 2 * a.y ) * Int64Mul128( bxy_cxy ) )
         return v > 0;
 
     // e**2
@@ -144,14 +145,14 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
 
     // e**3
     assert( bxy_cxy == 0 );
-    if ( auto v = cross( Vector2i128fast{ b.y, b.z }, Vector2i128fast{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
+    if ( auto v = cross( Vector2i64mul{ b.y, b.z }, Vector2i64mul{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
         return v > 0;
 
     // e**6 same as e**2
 
     // e**9
     const auto axy_cxy = cross( Vector2i64{ a.x, a.y }, Vector2i64{ c.x, c.y } );
-    if ( auto v = cross( Vector2i128fast{ a.x, a.z }, Vector2i128fast{ c.x, c.z } ) - 2 * b.y * FastInt128( axy_cxy ) )
+    if ( auto v = cross( Vector2i64mul{ a.x, a.z }, Vector2i64mul{ c.x, c.z } ) - Int64Mul128( 2 * b.y ) * Int64Mul128( axy_cxy ) )
         return v > 0;
 
     // e**10
@@ -177,7 +178,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     assert( c.x == 0 && c.y == 0 && c.z == 0 );
 
     // e**81
-    if ( auto v = b.x * FastInt128( a.z ) - a.x * FastInt128( b.z ) )
+    if ( auto v = Int64Mul128( b.x ) * Int64Mul128( a.z ) - Int64Mul128( a.x ) * Int64Mul128( b.z ) )
         return v > 0;
 
     // e**82
@@ -342,7 +343,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     const auto areaSbDest = area( vs[4].pt, vs[5].pt, vs[1].pt );
     assert( ( areaSbOrg <= 0 && areaSbDest >= 0 ) || ( areaSbOrg >= 0 && areaSbDest <= 0 ) );
 
-    const auto nomSimple = FastInt128( areaSaOrg ) * FastInt128( areaSbDest ) - FastInt128( areaSbOrg ) * FastInt128( areaSaDest );
+    const auto nomSimple = Int64Mul128( areaSaOrg ) * Int64Mul128( areaSbDest ) - Int64Mul128( areaSbOrg ) * Int64Mul128( areaSaDest );
     if ( nomSimple != 0 )
     {
         // happy not-degenerated path

@@ -20,6 +20,7 @@
     <ClInclude Include="MRFastInt256.h" />
     <ClInclude Include="MRHoleFillPlan.h" />
     <ClInclude Include="MRImageTransform.h" />
+    <ClInclude Include="MRInt64Mul128.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRLoadedMeshData.h" />
     <ClInclude Include="MRMapOrHashMap.h" />

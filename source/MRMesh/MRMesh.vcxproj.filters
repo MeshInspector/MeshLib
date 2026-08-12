@@ -1338,6 +1338,9 @@
     <ClInclude Include="MRFastInt256.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRInt64Mul128.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MREndMill.h">
       <Filter>Source Files\Gcode</Filter>
     </ClInclude>

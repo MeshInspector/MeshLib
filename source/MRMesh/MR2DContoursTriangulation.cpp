@@ -1097,6 +1097,18 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     WholeEdgeMap p2inCache; // TODO: can be cached
     WholeEdgeMap& p2in = params_.outPatchMap ? *params_.outPatchMap : p2inCache;
 
+    // upper bounds, capacity hints only (multiple traversals share one patch edge, shared vertices
+    // arrive shared): actual sizes come from the built topology
+    size_t numLoopEdges = 0;
+    for ( const auto& loop : loops )
+        if ( loop.size() >= 3 )
+            numLoopEdges += loop.size();
+    in2p.reserve( numLoopEdges );
+    p2in.reserve( numLoopEdges );
+    windingInfo_.reserve( numLoopEdges );
+    tp_.vertReserve( numLoopEdges );
+    tp_.edgeReserve( 2 * numLoopEdges );
+
     auto addNewEdge = [&] ( EdgeId inE, int cId, int pId )
     {
         EdgeId inFE, newPE;
@@ -1112,10 +1124,15 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
         }
         if ( inFE == inE )
         {
-            // this edge was already added
+            // this edge was already traversed: fold this traversal into the winding modifier, seeding
+            // it with the first traversal's contribution (single-traversal edges keep the sentinel -
+            // the default parity rule in calculateWinding_ computes the same value for them)
+            const EdgeId pFirst( pFE ); // created along the first traversal
+            auto& wind = windingInfo_.autoResizeAt( pFirst ).windingModifier;
+            if ( wind == INT_MAX )
+                wind = predicates_.less( tp_.org( pFirst ), tp_.dest( pFirst ) ) ? 1 : -1;
             auto existingInE = p2in[pFE];
-            auto pE = existingInE == inFE ? EdgeId( pFE ) : EdgeId( pFE ).sym();
-            auto& wind = windingInfo_[pE].windingModifier;
+            const EdgeId pE = existingInE == inFE ? pFirst : pFirst.sym();
             predicates_.less( tp_.org( pE ), tp_.dest( pE ) ) ? ++wind : --wind;
         }
         else if ( inFE )
@@ -1162,8 +1179,6 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
                 predicates_.addInputPoint( v, cId, pId + 1 );
                 tp_.setOrg( newPE.sym(), v );
             }
-            auto& wind = windingInfo_.autoResizeAt( newPE ).windingModifier;
-            wind = predicates_.less( tp_.org( newPE ), tp_.dest( newPE ) ) ? 1 : -1;
         }
     };
 
@@ -1176,6 +1191,10 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
         for ( int lId = 0; lId < loop.size(); ++lId )
             addNewEdge( loop[lId], loopId, lId );
     }
+
+    // multi-traversal edges got explicit modifiers above, everything else keeps the sentinel and
+    // takes the default parity rule; sized from the actually built topology, not the loop count
+    windingInfo_.resize( tp_.undirectedEdgeSize() );
 
     sortedVerts_.reserve( tp_.vertSize() );
     for ( int i = 0; i < tp_.vertSize(); ++i )

@@ -1,0 +1,95 @@
+name: zz throwaway - SoS bignum bench (MSVC)
+
+on:
+  push:
+    branches: [ 'agent/bench-insphere-sos-compilers' ]
+  workflow_dispatch:
+
+jobs:
+  msvc-bench:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mlib-insphere-sos-varbigint
+          path: src
+
+      - name: Checkout bench source
+        uses: actions/checkout@v4
+        with:
+          path: bench
+
+      - name: Prepare both sides
+        shell: bash
+        working-directory: src
+        run: |
+          set -eux
+          git submodule update --init --depth 1 thirdparty/parallel-hashmap
+          git fetch --depth 1 origin master
+          # boost baseline: master's MRInSphere.cpp inside the PR tree, so both sides share all headers
+          git show FETCH_HEAD:source/MRMesh/MRInSphere.cpp > source/MRMesh/MRInSphere_boost.cpp
+          grep -c 'cpp_int' source/MRMesh/MRInSphere_boost.cpp
+          grep -c 'VarBigInt' source/MRMesh/MRInSphere.cpp
+
+      - name: Install boost headers
+        shell: bash
+        run: |
+          set -eux
+          "$VCPKG_INSTALLATION_ROOT/vcpkg.exe" install boost-multiprecision:x64-windows
+          ls "$VCPKG_INSTALLATION_ROOT/installed/x64-windows/include/boost/multiprecision/cpp_int.hpp"
+
+      - name: Build and run both sides (MSVC)
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set VSPATH=%%i
+          call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" || exit /b 1
+          cl /nologo /std:c++latest /O2 /DNDEBUG /EHsc /W0 /DMRMesh_EXPORTS /DNOMINMAX /I src\source /I src\thirdparty\parallel-hashmap /I "%VCPKG_INSTALLATION_ROOT%\installed\x64-windows\include" /Fe:bench_boost.exe bench\bench\sos_bench.cpp src\source\MRMesh\MRInSphere_boost.cpp || exit /b 1
+          cl /nologo /std:c++latest /O2 /DNDEBUG /EHsc /W0 /DMRMesh_EXPORTS /DNOMINMAX /I src\source /I src\thirdparty\parallel-hashmap /I "%VCPKG_INSTALLATION_ROOT%\installed\x64-windows\include" /Fe:bench_var.exe bench\bench\sos_bench.cpp src\source\MRMesh\MRInSphere.cpp || exit /b 1
+          cl 2>&1 | findstr /C:"Version"
+          echo ===== MSVC: master boost cpp_int =====
+          bench_boost.exe 5 150000 || exit /b 1
+          echo ===== MSVC: PR VarBigInt =====
+          bench_var.exe 5 150000 || exit /b 1
+
+  clang-bench:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/mlib-insphere-sos-varbigint
+          path: src
+
+      - name: Checkout bench source
+        uses: actions/checkout@v4
+        with:
+          path: bench
+
+      - name: Prepare both sides
+        shell: bash
+        working-directory: src
+        run: |
+          set -eux
+          git submodule update --init --depth 1 thirdparty/parallel-hashmap
+          git fetch --depth 1 origin master
+          git show FETCH_HEAD:source/MRMesh/MRInSphere.cpp > source/MRMesh/MRInSphere_boost.cpp
+          sudo apt-get update -qq && sudo apt-get install -y -qq libboost-dev clang-18
+
+      - name: Build and run both sides (clang)
+        shell: bash
+        run: |
+          set -eux
+          clang++-18 --version
+          for side in boost var; do
+            f=src/source/MRMesh/MRInSphere.cpp
+            [ "$side" = boost ] && f=src/source/MRMesh/MRInSphere_boost.cpp
+            clang++-18 -std=gnu++20 -O3 -DNDEBUG -w -I src/source -I src/thirdparty/parallel-hashmap \
+              -o bench_$side bench/bench/sos_bench.cpp $f
+          done
+          echo "===== clang-18: master boost cpp_int ====="
+          taskset -c 0 ./bench_boost 5 150000
+          echo "===== clang-18: PR VarBigInt ====="
+          taskset -c 0 ./bench_var 5 150000

@@ -1109,48 +1109,68 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     tp_.vertReserve( numLoopEdges );
     tp_.edgeReserve( 2 * numLoopEdges );
 
+    // when an edge's dest vertex is created fresh, the org ring of the next loop edge contains
+    // exactly one mapped edge - the one just created - so its search result is forced; the one
+    // exception is backtracking right along the same undirected edge (a spike): that second
+    // traversal is invisible to the dest search (its orgRing0 skips the edge itself), hence the
+    // prevInUE filter. A loop's closing edge always finds its dest mapped, so no carry survives
+    // into the next loop
+    EdgeId prevFreshPE;
+    UndirectedEdgeId prevInUE;
+
     auto addNewEdge = [&] ( EdgeId inE, int cId, int pId )
     {
-        EdgeId inFE, newPE;
-        UndirectedEdgeId pFE;
-        for ( auto ne : orgRing( inTp, inE ) )
+        EdgeId newPE;
+        if ( prevFreshPE && inE.undirected() != prevInUE )
         {
-            auto it = in2p.find( ne.undirected() );
-            if ( it == in2p.end() )
-                continue;
-            inFE = ne;
-            pFE = it->second;
-            break;
-        }
-        if ( inFE == inE )
-        {
-            // this edge was already traversed: fold this traversal into the winding modifier, seeding
-            // it with the first traversal's contribution (single-traversal edges keep the sentinel -
-            // the default parity rule in calculateWinding_ computes the same value for them)
-            const EdgeId pFirst( pFE ); // created along the first traversal
-            auto& wind = windingInfo_.autoResizeAt( pFirst ).windingModifier;
-            if ( wind == INT_MAX )
-                wind = predicates_.less( tp_.org( pFirst ), tp_.dest( pFirst ) ) ? 1 : -1;
-            auto existingInE = p2in[pFE];
-            const EdgeId pE = existingInE == inFE ? pFirst : pFirst.sym();
-            predicates_.less( tp_.org( pE ), tp_.dest( pE ) ) ? ++wind : --wind;
-        }
-        else if ( inFE )
-        {
-            // another ring edge is added but not ours
-            auto existingInE = p2in[pFE];
-            auto pRE = existingInE == inFE ? EdgeId( pFE ) : EdgeId( pFE ).sym();
+            // org vertex is the previous edge's fresh dest: the only mapped ring edge is the carried one
             newPE = tp_.makeEdge();
-            tp_.splice( tp_.prev( pRE ), newPE );
+            tp_.splice( tp_.prev( prevFreshPE ), newPE );
         }
         else
         {
-            // no ring edges at all
-            VertId v = tp_.addVertId();
-            predicates_.addInputPoint( v, cId, pId );
-            newPE = tp_.makeEdge();
-            tp_.setOrg( newPE, v );
+            EdgeId inFE;
+            UndirectedEdgeId pFE;
+            for ( auto ne : orgRing( inTp, inE ) )
+            {
+                auto it = in2p.find( ne.undirected() );
+                if ( it == in2p.end() )
+                    continue;
+                inFE = ne;
+                pFE = it->second;
+                break;
+            }
+            if ( inFE == inE )
+            {
+                // this edge was already traversed: fold this traversal into the winding modifier, seeding
+                // it with the first traversal's contribution (single-traversal edges keep the sentinel -
+                // the default parity rule in calculateWinding_ computes the same value for them)
+                const EdgeId pFirst( pFE ); // created along the first traversal
+                auto& wind = windingInfo_.autoResizeAt( pFirst ).windingModifier;
+                if ( wind == INT_MAX )
+                    wind = predicates_.less( tp_.org( pFirst ), tp_.dest( pFirst ) ) ? 1 : -1;
+                auto existingInE = p2in[pFE];
+                const EdgeId pE = existingInE == inFE ? pFirst : pFirst.sym();
+                predicates_.less( tp_.org( pE ), tp_.dest( pE ) ) ? ++wind : --wind;
+            }
+            else if ( inFE )
+            {
+                // another ring edge is added but not ours
+                auto existingInE = p2in[pFE];
+                auto pRE = existingInE == inFE ? EdgeId( pFE ) : EdgeId( pFE ).sym();
+                newPE = tp_.makeEdge();
+                tp_.splice( tp_.prev( pRE ), newPE );
+            }
+            else
+            {
+                // no ring edges at all
+                VertId v = tp_.addVertId();
+                predicates_.addInputPoint( v, cId, pId );
+                newPE = tp_.makeEdge();
+                tp_.setOrg( newPE, v );
+            }
         }
+        prevFreshPE = {};
         if ( newPE )
         {
             in2p[inE.undirected()] = newPE.undirected();
@@ -1178,6 +1198,8 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
                 // `pId + 1` can never reach `size` because loops are closed and we will always be in previous "if" block
                 predicates_.addInputPoint( v, cId, pId + 1 );
                 tp_.setOrg( newPE.sym(), v );
+                prevFreshPE = newPE.sym();
+                prevInUE = inE.undirected();
             }
         }
     };

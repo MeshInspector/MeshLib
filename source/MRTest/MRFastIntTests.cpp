@@ -82,8 +82,8 @@ Words<nWords> randomWords( std::mt19937_64 & gen, int maxBits )
     return w;
 }
 
-// the pre-optimization detail::mulWords (no zero-high-word skip), kept only as the reference
-// arm of DISABLED_FastIntMulWordsBench below; both arms must stay bit-identical
+// the original detail::mulWords (no zero-word skip at all), kept only as the oldest arm of
+// DISABLED_FastIntMulWordsBench below; all arms must stay bit-identical
 template <std::size_t n, std::size_t m>
 std::array<std::uint64_t, n + m> mulWordsRef(
     const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, m> & b ) noexcept
@@ -91,6 +91,42 @@ std::array<std::uint64_t, n + m> mulWordsRef(
     std::array<std::uint64_t, n + m> res = {};
     for ( std::size_t i = 0; i < n; ++i )
     {
+        std::uint64_t carry = 0;
+        for ( std::size_t j = 0; j < m; ++j )
+        {
+            const FastUInt128 t = FastUInt128( a[i] ) * FastUInt128( b[j] ) + FastUInt128( res[i + j] ) + FastUInt128( carry );
+            res[i + j] = std::uint64_t( t );
+            carry = std::uint64_t( t >> 64 );
+        }
+        res[i + m] = carry;
+    }
+    if ( std::int64_t( a[n - 1] ) < 0 )
+    {
+        std::uint64_t borrow = 0;
+        for ( std::size_t i = 0; i < m; ++i )
+            res[n + i] = detail::subBorrow64( res[n + i], b[i], borrow );
+    }
+    if ( std::int64_t( b[m - 1] ) < 0 )
+    {
+        std::uint64_t borrow = 0;
+        for ( std::size_t i = 0; i < n; ++i )
+            res[m + i] = detail::subBorrow64( res[m + i], a[i], borrow );
+    }
+    return res;
+}
+
+// detail::mulWords as of master before this change: it skips a row with a zero word of the first
+// argument only, and always runs the inner loop over all words of the second one; it is the
+// baseline the benchmark below is measured against
+template <std::size_t n, std::size_t m>
+std::array<std::uint64_t, n + m> mulWordsMaster(
+    const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, m> & b ) noexcept
+{
+    std::array<std::uint64_t, n + m> res = {};
+    for ( std::size_t i = 0; i < n; ++i )
+    {
+        if ( a[i] == 0 )
+            continue;
         std::uint64_t carry = 0;
         for ( std::size_t j = 0; j < m; ++j )
         {
@@ -286,70 +322,117 @@ TEST( MRMesh, FastIntVector )
     }
 }
 
-// opt-in A/B micro-benchmark for the zero-high-word skip in detail::mulWords: times the
-// pre-optimization reference (mulWordsRef) against the shipped detail::mulWords over many random
-// 256-bit-wide products, for small-magnitude values (high words zero -> fast path) and full-width
-// values (control, nothing to skip). Same opt-in idiom as DISABLED_PlanarTriangulationBench:
+namespace
+{
+
+// nPairs argument pairs, of which only wordsA and wordsB low words are random and the rest are 0
+template <std::size_t n, std::size_t m>
+std::vector<std::pair<Words<n>, Words<m>>> mulWordsPairs(
+    std::mt19937_64 & gen, std::size_t nPairs, std::size_t wordsA, std::size_t wordsB )
+{
+    std::vector<std::pair<Words<n>, Words<m>>> res;
+    res.reserve( nPairs );
+    for ( std::size_t i = 0; i < nPairs; ++i )
+    {
+        Words<n> a = {};
+        Words<m> b = {};
+        for ( std::size_t k = 0; k < wordsA; ++k )
+            a[k] = gen();
+        for ( std::size_t k = 0; k < wordsB; ++k )
+            b[k] = gen();
+        // keep both arguments non-negative, so that sign correction does not skew the timing
+        a[wordsA - 1] &= ~( std::uint64_t( 1 ) << 63 );
+        b[wordsB - 1] &= ~( std::uint64_t( 1 ) << 63 );
+        res.emplace_back( a, b );
+    }
+    return res;
+}
+
+// arm 0 = original (no skip), 1 = master (skips a zero word of the first argument only),
+// 2 = the shipped detail::mulWords (both arguments trimmed once)
+template <int arm, std::size_t n, std::size_t m>
+std::array<std::uint64_t, n + m> mulWordsArm( const Words<n> & a, const Words<m> & b ) noexcept
+{
+    if constexpr ( arm == 0 )
+        return mulWordsRef( a, b );
+    else if constexpr ( arm == 1 )
+        return mulWordsMaster( a, b );
+    else
+        return detail::mulWords( a, b );
+}
+
+template <int arm, std::size_t n, std::size_t m>
+double mulWordsMs( const std::vector<std::pair<Words<n>, Words<m>>> & pairs )
+{
+    std::uint64_t sink = 0;
+    const auto t0 = std::chrono::steady_clock::now();
+    for ( const auto & [a, b] : pairs )
+    {
+        const auto r = mulWordsArm<arm>( a, b );
+        sink ^= r[0] ^ r[n + m - 1];
+    }
+    const auto t1 = std::chrono::steady_clock::now();
+    volatile std::uint64_t keep = sink; (void)keep;
+    return std::chrono::duration<double, std::milli>( t1 - t0 ).count();
+}
+
+template <std::size_t n, std::size_t m>
+void mulWordsBench( const char * name, const std::vector<std::pair<Words<n>, Words<m>>> & pairs )
+{
+    constexpr int warmup = 3, iters = 25;
+    for ( int i = 0; i < warmup; ++i )
+    {
+        mulWordsMs<0>( pairs );
+        mulWordsMs<1>( pairs );
+        mulWordsMs<2>( pairs );
+    }
+    double orig = 1e300, master = 1e300, opt = 1e300;
+    for ( int i = 0; i < iters; ++i ) // the minimum is the least noisy estimator here
+    {
+        orig = std::min( orig, mulWordsMs<0>( pairs ) );
+        master = std::min( master, mulWordsMs<1>( pairs ) );
+        opt = std::min( opt, mulWordsMs<2>( pairs ) );
+    }
+    std::printf( "[BENCH] mulWords %-22s pairs=%zu  orig=%8.3f  master=%8.3f  new=%8.3f ms  vs master=%.2fx\n",
+        name, pairs.size(), orig, master, opt, master / opt );
+    std::fflush( stdout );
+}
+
+} // namespace
+
+// the shipped detail::mulWords must agree with both older versions bit for bit, including on the
+// zero-high-word inputs its fast path is about
+TEST( MRMesh, FastIntMulWordsSkipZeros )
+{
+    std::mt19937_64 gen( 20260813 );
+    for ( int i = 0; i < 20000; ++i )
+    {
+        const auto a = randomWords<4>( gen, 1 + i % 256 );
+        const auto b = randomWords<4>( gen, 1 + ( 3 * i ) % 256 );
+        const auto res = detail::mulWords( a, b );
+        EXPECT_EQ( res, mulWordsRef( a, b ) );
+        EXPECT_EQ( res, mulWordsMaster( a, b ) );
+        const auto res21 = detail::mulWords( Words<2>{ a[0], a[1] }, Words<1>{ b[0] } );
+        EXPECT_EQ( res21, mulWordsRef( Words<2>{ a[0], a[1] }, Words<1>{ b[0] } ) );
+    }
+}
+
+// opt-in A/B/C micro-benchmark for the zero-word skips in detail::mulWords: times the original
+// version and the master one (first argument only) against the shipped detail::mulWords, over
+// small-magnitude arguments (high words zero -> fast path), each of them small in turn, and
+// full-width arguments (control, nothing to skip). Same opt-in idiom as
+// DISABLED_PlanarTriangulationBench:
 //   MRTest --gtest_also_run_disabled_tests --gtest_filter=*FastIntMulWordsBench*
 TEST( MRMesh, DISABLED_FastIntMulWordsBench )
 {
     constexpr std::size_t nPairs = 200000;
-    constexpr int warmup = 3, iters = 25;
     std::mt19937_64 gen( 20240813 );
-
-    // low-word-only, non-negative 4-word inputs: high 3 words are 0 -> 3 of 4 rows are skippable
-    std::vector<std::pair<Words<4>, Words<4>>> small;
-    small.reserve( nPairs );
-    for ( std::size_t i = 0; i < nPairs; ++i )
-    {
-        Words<4> a = {}, b = {};
-        a[0] = gen() >> 1; // clear the top bit so the value stays non-negative (high words 0)
-        b[0] = gen() >> 1;
-        small.emplace_back( a, b );
-    }
-
-    // full-width random 4-word inputs: every word set -> no row is skippable (control)
-    std::vector<std::pair<Words<4>, Words<4>>> full;
-    full.reserve( nPairs );
-    for ( std::size_t i = 0; i < nPairs; ++i )
-    {
-        Words<4> a, b;
-        for ( std::size_t k = 0; k < 4; ++k ) { a[k] = gen(); b[k] = gen(); }
-        a[3] &= ~( std::uint64_t( 1 ) << 63 ); // keep non-negative so sign correction doesn't skew timing
-        b[3] &= ~( std::uint64_t( 1 ) << 63 );
-        full.emplace_back( a, b );
-    }
-
-    const auto timeMs = []( const std::vector<std::pair<Words<4>, Words<4>>> & pairs, bool optimized )
-    {
-        std::uint64_t sink = 0;
-        const auto t0 = std::chrono::steady_clock::now();
-        for ( const auto & [a, b] : pairs )
-        {
-            const auto r = optimized ? detail::mulWords( a, b ) : mulWordsRef( a, b );
-            sink ^= r[0] ^ r[7];
-        }
-        const auto t1 = std::chrono::steady_clock::now();
-        volatile std::uint64_t keep = sink; (void)keep;
-        return std::chrono::duration<double, std::milli>( t1 - t0 ).count();
-    };
-
-    const auto runAB = [&]( const char * name, const std::vector<std::pair<Words<4>, Words<4>>> & pairs )
-    {
-        for ( int i = 0; i < warmup; ++i ) { timeMs( pairs, false ); timeMs( pairs, true ); }
-        double ref = 1e300, opt = 1e300;
-        for ( int i = 0; i < iters; ++i )
-        {
-            ref = std::min( ref, timeMs( pairs, false ) );
-            opt = std::min( opt, timeMs( pairs, true ) );
-        }
-        std::printf( "[BENCH] mulWords %-12s pairs=%zu  ref=%8.3f  opt=%8.3f ms  speedup=%.2fx\n",
-            name, pairs.size(), ref, opt, ref / opt );
-        std::fflush( stdout );
-    };
-
-    runAB( "small(hi=0)", small );
-    runAB( "full-width", full );
+    mulWordsBench( "4x4 both small", mulWordsPairs<4, 4>( gen, nPairs, 1, 1 ) );
+    mulWordsBench( "4x4 second small", mulWordsPairs<4, 4>( gen, nPairs, 4, 1 ) );
+    mulWordsBench( "4x4 first small", mulWordsPairs<4, 4>( gen, nPairs, 1, 4 ) );
+    mulWordsBench( "4x4 full (control)", mulWordsPairs<4, 4>( gen, nPairs, 4, 4 ) );
+    mulWordsBench( "2x2 both small", mulWordsPairs<2, 2>( gen, nPairs, 1, 1 ) ); // Int128Mul256
+    mulWordsBench( "2x2 full (control)", mulWordsPairs<2, 2>( gen, nPairs, 2, 2 ) );
 }
 
 } // namespace MR

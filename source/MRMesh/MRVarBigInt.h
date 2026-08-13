@@ -7,6 +7,7 @@
 #include <MRPch/MRBindingMacros.h>
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <compare>
 #include <cstdint>
 #include <variant>
@@ -198,7 +199,15 @@ private:
         {
             std::array<std::uint64_t, 2> tmp{ 0, 0 };
             const std::size_t n = kernel( tmp.data() );
-            res.assignLimbs( sign, tmp.data(), n );
+            assert( n <= 2 ); // ub bounds the kernel's output length
+            if ( n == 0 )
+                return res; // exact cancellation => zero
+            // tmp is already the inline layout (zero above limb n - 1), so move it in as is:
+            // going through assignLimbs() instead would copy limb-by-limb out of a loop whose
+            // trip count the optimizer cannot bound by 2, tripping -Warray-bounds at -O3
+            res.sign_ = sign;
+            res.len_ = n;
+            res.mag_.emplace<1>( tmp );
         }
         else
         {

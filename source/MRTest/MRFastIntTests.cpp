@@ -137,7 +137,11 @@ public:
         for ( std::size_t i = v.mag_.size(); i > 0; --i )
         {
             char buf[9];
-            std::snprintf( buf, sizeof( buf ), i == v.mag_.size() ? "%x" : "%08x", v.mag_[i - 1] );
+            // the format has to be a literal in each branch: MSVC rejects a ternary one (C4774)
+            if ( i == v.mag_.size() )
+                std::snprintf( buf, sizeof( buf ), "%x", v.mag_[i - 1] ); // the top limb, no leading zeros
+            else
+                std::snprintf( buf, sizeof( buf ), "%08x", v.mag_[i - 1] );
             str += buf;
         }
         return s << str;

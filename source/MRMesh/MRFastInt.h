@@ -56,6 +56,12 @@ template <std::size_t n, std::size_t m> // std::size_t and not int, to be deduci
     std::array<std::uint64_t, n + m> res = {};
     for ( std::size_t i = 0; i < n; ++i ) // schoolbook multiplication of unsigned values
     {
+        if ( a[i] == 0 )
+            continue; // this row adds nothing: 0 * b[j] leaves every res[i + j] unchanged, and
+                      // res[i + m] is still 0 (never written before this row), so the skipped
+                      // res[i + m] = carry (carry stays 0 here) would be a no-op. Small-magnitude
+                      // values keep their high words at 0, so this is the common fast path; negative
+                      // operands are sign-extended to all-ones top words and are not skipped.
         std::uint64_t carry = 0;
         for ( std::size_t j = 0; j < m; ++j )
         {

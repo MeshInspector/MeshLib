@@ -1,14 +1,33 @@
 #include <MRMesh/MRFastInt.h>
-#include <MRMesh/MRHighPrecision.h>
 #include <MRMesh/MRVector3.h>
 #include <gtest/gtest.h>
 #include <random>
+
+// the only remaining user of boost multiprecision: an independent reference implementation
+// to validate the FastInt family against; MeshLib itself does not use boost integers anymore
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wdeprecated" // covers redundant out-of-line constexpr static definitions in older boost
+#endif
+
+#include <boost/multiprecision/cpp_int.hpp>
+
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 
 namespace MR
 {
 
 namespace
 {
+
+using Int256 = boost::multiprecision::int256_t;
+using Int512 = boost::multiprecision::int512_t;
+using Int1024 = boost::multiprecision::int1024_t;
+using Int2048 = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<2048, 2048,
+    boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void>>;
 
 template <std::size_t nWords> // std::size_t and not int, to be deducible from std::array
 using Words = std::array<std::uint64_t, nWords>;
@@ -185,8 +204,6 @@ TEST( MRMesh, FastInt512 )
 
 TEST( MRMesh, FastInt1024 )
 {
-    using Int2048 = boost::multiprecision::number<boost::multiprecision::cpp_int_backend<2048, 2048,
-        boost::multiprecision::signed_magnitude, boost::multiprecision::unchecked, void>>;
     testFastIntWidth<1024, Int1024, Int2048>( 333 );
 }
 

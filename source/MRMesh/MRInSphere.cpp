@@ -1,5 +1,5 @@
 #include "MRInSphere.h"
-#include "MRHighPrecision.h"
+#include "MRVarBigInt.h"
 #include "MRInt64Mul128.h"
 #include <algorithm>
 #include <cassert>
@@ -7,7 +7,7 @@
 namespace MR
 {
 
-#if __GNUC__ >= 12 // false positive array-bounds warnings in boost widening conversions like Int1024( Int256 )
+#if __GNUC__ >= 12 // false positive array-bounds/stringop warnings from GCC on the fixed-width FastInt array operations below
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"
 #pragma GCC diagnostic ignored "-Wstringop-overread"
@@ -17,7 +17,9 @@ namespace MR
 namespace
 {
 
-using BigInt = boost::multiprecision::cpp_int;
+// variable-length big integer replacing the former boost::multiprecision::cpp_int; it grows with
+// the value, so unlike FastInt<N> no per-sub-expression bit-width bounds are needed here
+using BigInt = VarBigInt;
 
 // value x + y * sqrt( ew ) for a fixed ew > 0; exact sign computations in inSphere tie resolution
 struct SqrtNum
@@ -173,15 +175,15 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
     // whose perturbation moves vs[3] off the sphere decides; when a triangle point is perturbed, the
     // center moves along the circle of points equidistant from two other triangle points, on which
     // the squared distance to vs[3] is a degree-1 trigonometric polynomial
-    const BigInt bigW = toBoostInt<BigInt>( W );
-    const BigInt ew = toBoostInt<BigInt>( E ) * bigW; // sqr( S ); the signs below are computed in Z[S]
+    const BigInt bigW = BigInt( W );
+    const BigInt ew = BigInt( E ) * bigW; // sqr( S ); the signs below are computed in Z[S]
 
     // ch[k] = 2 W^2 * ( vs[k].pt - sphereCenter ) = 2 W^2 ( vs[k].pt - vs[0].pt ) - W M - S w
     const Vector3i64 rel[4] = { {}, u, v, Vector3i64{ d.pt - a } };
     std::array<SqrtVec, 4> ch;
     for ( int k = 0; k < 4; ++k )
         for ( int i = 0; i < 3; ++i )
-            ch[k][i] = { 2 * bigW * bigW * rel[k][i] - bigW * toBoostInt<BigInt>( M[i] ), -BigInt{ w[i] } };
+            ch[k][i] = { 2 * bigW * bigW * rel[k][i] - bigW * BigInt( M[i] ), -BigInt{ w[i] } };
 
     int order[4] = { 0, 1, 2, 3 };
     std::sort( std::begin( order ), std::end( order ), [&]( int l, int r ) { return vs[l].id < vs[r].id; } );
@@ -212,10 +214,12 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
         // rho = radius of the circle of centers
         SqrtVec chm;
         for ( int i = 0; i < 3; ++i )
-            chm[i] = { bigW * toBoostInt<BigInt>( M[i] ) - bigW * bigW * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ w[i] } };
+            chm[i] = { bigW * BigInt( M[i] ) - bigW * bigW * ( BigInt{ rel[q1][i] } + rel[q2][i] ), BigInt{ w[i] } };
         const Vector3i64 qr{ vs[q1].pt - vs[q2].pt };
         auto f2 = dot( ch[3], chm, ew );
-        f2.x += bigW * bigW * bigW * bigW * ( 4 * BigInt{ rSq } - BigInt{ dot( Vector3i128{ qr }, Vector3i128{ qr } ) } );
+        // + W^4 * ( 4 rSq - |qr|^2 ): qr <= 2^32, so |qr|^2 <= 2^66 fits in 128 bits as in the primary path
+        const auto qrSq = dot( Vector3i64mul{ qr }, Vector3i64mul{ qr } ); // FastInt128
+        f2.x += bigW * bigW * bigW * bigW * ( 4 * BigInt{ rSq } - BigInt{ qrSq } );
         if ( const int sF = signOf( f2, ew ) )
             return sF < 0 ? InSphereResult::Inside : InSphereResult::Outside;
         assert( false ); // possible only for an idle point, and those are skipped above

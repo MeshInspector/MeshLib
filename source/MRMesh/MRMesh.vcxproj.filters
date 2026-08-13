@@ -1338,6 +1338,9 @@
     <ClInclude Include="MRFastInt.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRVarBigInt.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRInt64Mul128.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>

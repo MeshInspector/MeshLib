@@ -18,6 +18,7 @@
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
     <ClInclude Include="MRFastInt.h" />
+    <ClInclude Include="MRVarBigInt.h" />
     <ClInclude Include="MRHoleFillPlan.h" />
     <ClInclude Include="MRImageTransform.h" />
     <ClInclude Include="MRInt64Mul128.h" />

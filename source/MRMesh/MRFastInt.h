@@ -47,37 +47,62 @@ constexpr bool cFitsFastInt128 = std::is_integral_v<T> || std::is_same_v<T, Fast
     return std::int64_t( hi ) < 0 ? ~std::uint64_t( 0 ) : 0;
 }
 
-/// the exact product of two two's-complement values given by their 64-bit words, computed with
-/// the inner loop over the mEff lowest words of b only; mEff is a template parameter and not an
-/// argument, because a run-time trip count costs the unrolling this multiplication relies on
-template <std::size_t mEff, std::size_t n, std::size_t m>
-[[nodiscard]] constexpr std::array<std::uint64_t, n + m> mulWordsFixed(
+/// the exact product of two two's-complement values given by their 64-bit words,
+/// which always fits in the sum of their word counts; the only multiplication of this file
+template <std::size_t n, std::size_t m> // std::size_t and not int, to be deducible from std::array
+[[nodiscard]] constexpr std::array<std::uint64_t, n + m> mulWords(
     const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, m> & b ) noexcept
 {
-    static_assert( mEff >= 1 && mEff <= m );
     std::array<std::uint64_t, n + m> res = {};
-    for ( std::size_t i = 0; i < n; ++i ) // schoolbook multiplication of unsigned values
+    bool bOneWord = false;
+    if constexpr ( m > 1 )
     {
-        if ( a[i] == 0 )
-            continue; // this row adds nothing: 0 * b[j] leaves every res[i + j] unchanged, and
-                      // res[i + mEff] is still 0 (never written before this row), so the skipped
-                      // res[i + mEff] = carry (carry stays 0 here) would be a no-op. Small-magnitude
-                      // values keep their high words at 0, so this is the common fast path; negative
-                      // operands are sign-extended to all-ones top words and are not skipped.
-        std::uint64_t carry = 0;
-        for ( std::size_t j = 0; j < mEff; ++j )
-        {
-            // at most ( 2^64 - 1 )^2 + 2 * ( 2^64 - 1 ) < 2^128 here
-            const FastUInt128 t = FastUInt128( a[i] ) * FastUInt128( b[j] ) + FastUInt128( res[i + j] ) + FastUInt128( carry );
-            res[i + j] = std::uint64_t( t );
-            carry = std::uint64_t( t >> 64 );
-        }
-        // never written before, since row i - 1 stopped at i - 1 + mEff; dropping the columns
-        // j in [mEff, m), where b[j] = 0, is exact: the full loop would only have carried carry
-        // into the still-zero res[i + mEff], where it fits without a carry-out, and then stored
-        // zeros over zeros up to res[i + m]
-        res[i + mEff] = carry;
+        // whether b fits in one word, tested once per product and not in every inner loop
+        // iteration, which was measured to cost more than it saves; the scan stops at the first
+        // significant word, so a full-width b is rejected on the very first word it reads
+        bOneWord = true;
+        for ( std::size_t j = 1; j < m; ++j )
+            if ( b[j] != 0 )
+            {
+                bOneWord = false;
+                break;
+            }
     }
+    if ( bOneWord ) // one column instead of m, which is exact: dropping the columns j in [1, m),
+    {               // where b[j] = 0, would only have carried carry into the still-zero
+                    // res[i + 1], where it fits without a carry-out, and then stored zeros over
+                    // zeros up to res[i + m]. Such a b has its top word 0, hence is non-negative,
+                    // so its sign correction below is skipped anyway; a negative b is sign-extended
+                    // to all-ones top words and always takes the full-width path.
+        for ( std::size_t i = 0; i < n; ++i )
+        {
+            if ( a[i] == 0 )
+                continue; // this row adds nothing: 0 * b[0] leaves res[i] unchanged, and res[i + 1]
+                          // is still 0 (never written before this row), so the skipped
+                          // res[i + 1] = carry (carry stays 0 here) would be a no-op
+            // at most ( 2^64 - 1 )^2 + ( 2^64 - 1 ) < 2^128 here
+            const FastUInt128 t = FastUInt128( a[i] ) * FastUInt128( b[0] ) + FastUInt128( res[i] );
+            res[i] = std::uint64_t( t );
+            res[i + 1] = std::uint64_t( t >> 64 ); // never written before: row i - 1 stopped at res[i]
+        }
+    }
+    else
+        for ( std::size_t i = 0; i < n; ++i ) // schoolbook multiplication of unsigned values
+        {
+            if ( a[i] == 0 )
+                continue; // as above, with res[i + m] in place of res[i + 1]. Small-magnitude values
+                          // keep their high words at 0, so this is the common fast path; negative
+                          // operands are sign-extended to all-ones top words and are not skipped.
+            std::uint64_t carry = 0;
+            for ( std::size_t j = 0; j < m; ++j )
+            {
+                // at most ( 2^64 - 1 )^2 + 2 * ( 2^64 - 1 ) < 2^128 here
+                const FastUInt128 t = FastUInt128( a[i] ) * FastUInt128( b[j] ) + FastUInt128( res[i + j] ) + FastUInt128( carry );
+                res[i + j] = std::uint64_t( t );
+                carry = std::uint64_t( t >> 64 );
+            }
+            res[i + m] = carry;
+        }
 
     // a negative argument was taken 2^(64*words) times larger than it is; both subtractions
     // below end exactly at the end of res, so the borrow never leaves it
@@ -94,45 +119,6 @@ template <std::size_t mEff, std::size_t n, std::size_t m>
             res[m + i] = subBorrow64( res[m + i], a[i], borrow );
     }
     return res;
-}
-
-/// the exact product of two two's-complement values given by their 64-bit words,
-/// which always fits in the sum of their word counts; the only multiplication of this file
-template <std::size_t n, std::size_t m> // std::size_t and not int, to be deducible from std::array
-[[nodiscard]] constexpr std::array<std::uint64_t, n + m> mulWords(
-    const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, m> & b ) noexcept
-{
-    if constexpr ( m > 1 )
-    {
-        // how many words b occupies, found once per product and not in every inner loop
-        // iteration, which was measured to cost more than it saves. Any b taking a narrowed path
-        // has its top word 0, hence is non-negative, so its sign correction is skipped anyway; a
-        // negative b is sign-extended to all-ones top words and always comes out full width.
-        bool bOneWord = true; // the narrowest case is tested first and on its own, scanning up
-        for ( std::size_t j = 1; j < m; ++j ) // and stopping at the first significant word: it is
-            if ( b[j] != 0 )                  // the cheapest test for a full-width b, which this
-            {                                 // scan rejects on the very first word it looks at
-                bOneWord = false;
-                break;
-            }
-        if ( bOneWord )
-            return mulWordsFixed<1>( a, b );
-        if constexpr ( m > 2 )
-        {
-            // b takes at least two words; find how many exactly, scanning down from the top.
-            // Only widths up to 3 are singled out, because each one instantiates another copy of
-            // the multiplication above: wider b keeps the full-width path, which is exact anyway.
-            std::size_t mEff = m;
-            while ( mEff > 2 && b[mEff - 1] == 0 )
-                --mEff;
-            if ( mEff == 2 )
-                return mulWordsFixed<2>( a, b );
-            if constexpr ( m > 3 )
-                if ( mEff == 3 )
-                    return mulWordsFixed<3>( a, b );
-        }
-    }
-    return mulWordsFixed<m>( a, b );
 }
 
 /// the number of bits a multiplier of FastInt occupies: 128 for FastInt128 and for an unsigned

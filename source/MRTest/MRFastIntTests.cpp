@@ -430,6 +430,8 @@ TEST( MRMesh, DISABLED_FastIntMulWordsBench )
     mulWordsBench( "4x4 both small", mulWordsPairs<4, 4>( gen, nPairs, 1, 1 ) );
     mulWordsBench( "4x4 second small", mulWordsPairs<4, 4>( gen, nPairs, 4, 1 ) );
     mulWordsBench( "4x4 first small", mulWordsPairs<4, 4>( gen, nPairs, 1, 4 ) );
+    mulWordsBench( "4x4 second 2 words", mulWordsPairs<4, 4>( gen, nPairs, 4, 2 ) );
+    mulWordsBench( "4x4 second 3 words", mulWordsPairs<4, 4>( gen, nPairs, 4, 3 ) );
     mulWordsBench( "4x4 full (control)", mulWordsPairs<4, 4>( gen, nPairs, 4, 4 ) );
     mulWordsBench( "2x2 both small", mulWordsPairs<2, 2>( gen, nPairs, 1, 1 ) ); // Int128Mul256
     mulWordsBench( "2x2 full (control)", mulWordsPairs<2, 2>( gen, nPairs, 2, 2 ) );

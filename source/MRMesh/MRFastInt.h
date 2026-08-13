@@ -104,21 +104,33 @@ template <std::size_t n, std::size_t m> // std::size_t and not int, to be deduci
 {
     if constexpr ( m > 1 )
     {
-        // whether b fits in its lowest word, tested once per product and not in every inner loop
-        // iteration, which was measured to cost more than it saves. Such a b is non-negative, as
-        // its top word is 0, so its sign correction is skipped anyway; a negative b is
-        // sign-extended to all-ones top words and never takes this path. Only this narrowest case
-        // is singled out, because every extra width instantiates another copy of the whole
-        // multiplication above.
-        bool bOneWord = true;
-        for ( std::size_t j = 1; j < m; ++j )
-            if ( b[j] != 0 )
-            {
-                bOneWord = false; // the loop stops at the first significant word, which for a
-                break;            // full-width b is the very first one it looks at
+        // how many words b occupies, found once per product and not in every inner loop
+        // iteration, which was measured to cost more than it saves. Any b taking a narrowed path
+        // has its top word 0, hence is non-negative, so its sign correction is skipped anyway; a
+        // negative b is sign-extended to all-ones top words and always comes out full width.
+        bool bOneWord = true; // the narrowest case is tested first and on its own, scanning up
+        for ( std::size_t j = 1; j < m; ++j ) // and stopping at the first significant word: it is
+            if ( b[j] != 0 )                  // the cheapest test for a full-width b, which this
+            {                                 // scan rejects on the very first word it looks at
+                bOneWord = false;
+                break;
             }
         if ( bOneWord )
             return mulWordsFixed<1>( a, b );
+        if constexpr ( m > 2 )
+        {
+            // b takes at least two words; find how many exactly, scanning down from the top.
+            // Only widths up to 3 are singled out, because each one instantiates another copy of
+            // the multiplication above: wider b keeps the full-width path, which is exact anyway.
+            std::size_t mEff = m;
+            while ( mEff > 2 && b[mEff - 1] == 0 )
+                --mEff;
+            if ( mEff == 2 )
+                return mulWordsFixed<2>( a, b );
+            if constexpr ( m > 3 )
+                if ( mEff == 3 )
+                    return mulWordsFixed<3>( a, b );
+        }
     }
     return mulWordsFixed<m>( a, b );
 }

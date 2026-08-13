@@ -28,6 +28,7 @@
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRFastIntTests.cpp" />
     <ClCompile Include="MRFeaturesTests.cpp" />
     <ClCompile Include="MRFillHoleTests.cpp" />
     <ClCompile Include="MRFixSelfIntersectionsTests.cpp" />
@@ -92,6 +93,7 @@
     <ClCompile Include="MRFillContours2DTests.cpp" />
     <ClCompile Include="MRFinallyTests.cpp" />
     <ClCompile Include="MRIdTests.cpp" />
+    <ClCompile Include="MRInt64Mul128Tests.cpp" />
     <ClCompile Include="MRIntersectionTests.cpp" />
     <ClCompile Include="MRIterativeSamplingTests.cpp" />
     <ClCompile Include="MRLine3Tests.cpp" />

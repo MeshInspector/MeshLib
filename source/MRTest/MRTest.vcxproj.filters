@@ -115,6 +115,9 @@
     <ClCompile Include="MRPrecisePredicatesTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRInt64Mul128Tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRCylinderApproximation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -329,6 +332,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMimallocRedirectTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFastIntTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

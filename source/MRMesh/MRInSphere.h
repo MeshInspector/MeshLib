@@ -1,8 +1,9 @@
 #pragma once
 
 #include "MRPrecisePredicates3.h"
-#include "MRHighPrecision.h"
+#include "MRFastInt.h"
 #include "MRPch/MRBindingMacros.h"
+#include <array>
 #include <cassert>
 #include <type_traits>
 #include <utility>
@@ -187,10 +188,10 @@ public:
 protected:
     Vector3i a;           ///< the first sphere point
     Vector3i64 u, v;      ///< b - a, c - a
-    Vector3i64 w;         ///< doubled normal of triangle abc
-    Int256 W;             ///< |w|^2
-    Vector3i256 M;        ///< 2 * |w|^2 * ( circumcenter(abc) - a )
-    Int512 E = -1;        ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center
+    Vector3i64 w;         ///< doubled normal of triangle abc, <= 2^63
+    FastInt<192> W;       ///< |w|^2, <= 2^128
+    std::array<FastInt<192>, 3> M; ///< 2 * |w|^2 * ( circumcenter(abc) - a ), <= 2^161
+    FastInt<384> E = -1;  ///< sqr( 2 * h * |w|^2 ), h = distance from plane abc to the sphere's center, <= 2^322
     std::int64_t rSq = 0; ///< the squared radius of the sphere
 };
 

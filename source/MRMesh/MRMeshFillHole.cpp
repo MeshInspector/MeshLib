@@ -528,8 +528,36 @@ inline EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     return newEdge;
 }
 
+// resolves the code of an already executed item into the edge it denotes,
+// which requires edgeCode1 of every earlier item to be overwritten with the created edge
+inline EdgeId executedPlanEdge( const HoleFillPlan & plan, int code )
+{
+    if ( code >= 0 )
+        return EdgeId( code );
+    const auto [item, sym] = FillHoleItemEdge::decode( code );
+    const EdgeId e( plan.items[item].edgeCode1 );
+    return sym ? e.sym() : e;
+}
+
+// adds the edges of the plan without creating any face
+void executeEdgesOnlyPlan( MeshTopology & topology, HoleFillPlan & plan )
+{
+    assert( !plan.items.empty() ); // nothing to add, most likely a default-constructed plan
+    for ( int i = 0; i < plan.items.size(); ++i )
+    {
+        EdgeId a = executedPlanEdge( plan, plan.items[i].edgeCode1 );
+        EdgeId b = executedPlanEdge( plan, plan.items[i].edgeCode2 );
+        plan.items[i].edgeCode1 = (int)makeNewEdge( topology, a, b );
+    }
+}
+
 void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces )
 {
+    if ( plan.numTris == 0 )
+    {
+        executeEdgesOnlyPlan( mesh.topology, plan );
+        return;
+    }
     [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
     const FaceId f0 = mesh.topology.left( a0 );
     if ( plan.items.empty() )
@@ -555,17 +583,11 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     {
         if ( f0 )
             mesh.topology.setLeft( a0, {} );
-        auto getEdge = [&]( int code )
-        {
-            if ( code >= 0 )
-                return EdgeId( code );
-            return EdgeId( plan.items[ -(code+1) ].edgeCode1 );
-        };
         // make new edges
         for ( int i = 0; i < plan.items.size(); ++i )
         {
-            EdgeId a = getEdge( plan.items[i].edgeCode1 );
-            EdgeId b = getEdge( plan.items[i].edgeCode2 );
+            EdgeId a = executedPlanEdge( plan, plan.items[i].edgeCode1 );
+            EdgeId b = executedPlanEdge( plan, plan.items[i].edgeCode2 );
             EdgeId c = makeNewEdge( mesh.topology, a, b );
             plan.items[i].edgeCode1 = (int)c;
         }
@@ -604,8 +626,13 @@ bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPla
 
     auto getVert = [&]( int code )
     {
+        // makeNewEdge( a, b ) runs from org(a) to org(b), so the origin of a not yet created edge
+        // taken in the opposite direction is the origin of the second code of its item
         while ( code < 0 )
-            code = plan.items[ -(code+1) ].edgeCode1;
+        {
+            const auto [item, sym] = FillHoleItemEdge::decode( code );
+            code = sym ? plan.items[item].edgeCode2 : plan.items[item].edgeCode1;
+        }
         return topology.org( EdgeId( code ) );
     };
     for ( int i = 0; i < plan.items.size(); ++i )
@@ -792,14 +819,14 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.items.size() + 1 );
+            auto newEdgeCode = FillHoleItemEdge{ .item = int( res.items.size() ) }.encode(); // the item about to be pushed
             res.items.push_back( { (int)edgeMap_[curConn.first.prevA], (int)edgeMap_[curConn.first.a] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.a][curConn.first.prevA], newEdgeCode } );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.items.size() + 1 );
+            auto newEdgeCode = FillHoleItemEdge{ .item = int( res.items.size() ) }.encode(); // the item about to be pushed
             res.items.push_back( { (int)curConn.second, (int)edgeMap_[curConn.first.prevA] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.prevA][curConn.first.b], newEdgeCode } );
         }

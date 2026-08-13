@@ -47,10 +47,23 @@ constexpr bool cFitsFastInt128 = std::is_integral_v<T> || std::is_same_v<T, Fast
     return std::int64_t( hi ) < 0 ? ~std::uint64_t( 0 ) : 0;
 }
 
+/// the number of non-zero words in the given value, which is the number of rows mulWordsOrdered
+/// below executes for it as its first argument
+template <std::size_t n>
+[[nodiscard]] constexpr std::size_t numNonZeroWords( const std::array<std::uint64_t, n> & a ) noexcept
+{
+    std::size_t res = 0;
+    for ( std::size_t i = 0; i < n; ++i )
+        res += a[i] != 0 ? 1 : 0;
+    return res;
+}
+
 /// the exact product of two two's-complement values given by their 64-bit words,
-/// which always fits in the sum of their word counts; the only multiplication of this file
+/// which always fits in the sum of their word counts; the only multiplication of this file.
+/// It skips the zero words of the first argument only, so mulWords below passes the argument
+/// with fewer of them first
 template <std::size_t n, std::size_t m> // std::size_t and not int, to be deducible from std::array
-[[nodiscard]] constexpr std::array<std::uint64_t, n + m> mulWords(
+[[nodiscard]] constexpr std::array<std::uint64_t, n + m> mulWordsOrdered(
     const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, m> & b ) noexcept
 {
     std::array<std::uint64_t, n + m> res = {};
@@ -88,6 +101,22 @@ template <std::size_t n, std::size_t m> // std::size_t and not int, to be deduci
             res[m + i] = subBorrow64( res[m + i], a[i], borrow );
     }
     return res;
+}
+
+/// the exact product of two two's-complement values given by their 64-bit words,
+/// which always fits in the sum of their word counts
+template <std::size_t n, std::size_t m>
+[[nodiscard]] constexpr std::array<std::uint64_t, n + m> mulWords(
+    const std::array<std::uint64_t, n> & a, const std::array<std::uint64_t, m> & b ) noexcept
+{
+    // both orders produce the same n + m words, and mulWordsOrdered( x, y ) runs one row per
+    // non-zero word of x and one column per word of y, so take the order with fewer of them;
+    // small-magnitude values keep their high words at 0, and this is how the zeros of either
+    // argument are skipped. Negative values are sign-extended to all-ones top words and have
+    // no zero words to skip, whichever place they take
+    if ( numNonZeroWords( b ) * n < numNonZeroWords( a ) * m )
+        return mulWordsOrdered( b, a );
+    return mulWordsOrdered( a, b );
 }
 
 /// the number of bits a multiplier of FastInt occupies: 128 for FastInt128 and for an unsigned

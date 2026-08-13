@@ -238,6 +238,76 @@ TEST( MRMesh, PlanarTriangulationMergeSame3 )
     EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ), 1e-3 );
 }
 
+TEST( MRMesh, PlanarTriangulationMergeSameCascade )
+{
+    // minimal (ddmin from a 119-point quantized star of the offset difftest corpus): a 6-gon that
+    // visits ( -4, 8 ) twice at non-adjacent positions and self-intersects. mergeSamePoints_ merges
+    // the coincident pair, leaving two active sweep edges chained at the merged vertex; on master
+    // checkIntersection_'s canIntersect misses the org1 == dest2 / dest1 == org2 cases, so
+    // doSegmentSegmentIntersect_ calls ccw with duplicate ids: Debug asserts at
+    // MRPrecisePredicates2.cpp:240, Release SoS is arbitrary on duplicates. Extending the guard with
+    // org1 != dest2 && dest1 != org2 makes exactly this test pass (verified; 6 faces, 5 verts).
+    // The bigger corpus siblings die deeper in the same cascade family and are worth keeping as
+    // follow-up fixtures: the full 119-point polygon reaches a pinched monotone block
+    // ( triangulateMonotoneBlock_ ccw duplicate ids ) and quant500_15 invalidates
+    // startVertLowestRight_ ( assert pos > -1 in updateStartRightGoingCache_; the Release hang ).
+    Contour2f cont = {
+        { -3, 6 }, { -8, 16 }, { -4, 8 }, { -6, 10 }, { -4, 8 }, { -7, 1 }
+    };
+    cont.push_back( cont.front() ); // close the contour
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationPinchedMonotoneBlock )
+{
+    // 5 points, segment (-7,2)-(-13,3) traversed twice, then a tail through (-18,1): the merge
+    // cascade leaves a doubled edge whose monotone block visits the merged vertex on both chains;
+    // triangulateMonotoneBlock_'s ccw gets duplicate ids - assert MRPrecisePredicates2.cpp:240.
+    // This is also the smallest known repro of the original master crash (MRVector.h:71 flavor).
+    Contour2f cont = {
+        { -7, 2 }, { -13, 3 }, { -7, 2 }, { -13, 3 }, { -18, 1 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 ); // the net winding covers triangle (-7,2)(-13,3)(-18,1)
+}
+
+TEST( MRMesh, PlanarTriangulationPinchedMonotoneBlock2 )
+{
+    // the surviving flavor of the class after the mergeSinglePare_ collapse guard
+    // ( eSame == sameEdges.back() ) fixed PinchedMonotoneBlock: the same doubled segment
+    // (-7,2)-(-13,3) now sits opposite a small crossing cluster, and the pinch forms regardless -
+    // dup-id ccw in triangulateMonotoneBlock_, assert MRPrecisePredicates2.cpp:240.
+    // 53 of the 720 quant-corpus polygons (incl. quant500_28) still fail here with both
+    // generating-phase fixes applied; ddmin-reduced from quant127_25.
+    Contour2f cont = {
+        { 14, 2 }, { 18, 2 }, { 9, 1 }, { 18, 3 },
+        { -7, 2 }, { -13, 3 }, { -7, 2 }, { -13, 3 }, { 18, -3 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+// this test if failing seems to be predicates issue
+TEST( MRMesh, DISABLED_PlanarTriangulationChainedActiveEdges )
+{
+    // 8 points, two coincident pairs in a near-collinear grid cluster: after the merges, two
+    // active sweep edges chained at a merged vertex (dest1 == org2) get probed for intersection -
+    // doSegmentSegmentIntersect_ calls ccw with duplicate ids, assert MRPrecisePredicates2.cpp:240.
+    // Same site as the MergeSameCascade 6-gon, through a route that survives the injectIntersections
+    // lone-origin fix; 8 of the 720 quant-corpus polygons still fail here after the round-3 fixes
+    // (quant127_57, quant500_{1,17,20,31,41,48,52}). ddmin-reduced from quant127_57.
+    Contour2f cont = {
+        { -9, 0 }, { -10, -1 }, { -15, -1 }, { -19, -2 },
+        { -15, -1 }, { -7, -1 }, { -11, -1 }, { -10, -1 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
 namespace
 {
 

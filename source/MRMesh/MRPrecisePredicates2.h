@@ -94,6 +94,11 @@ struct CoordinateConverters2
 [[nodiscard]] MRMESH_API Vector2i findSegmentSegmentIntersectionPrecise(
     const Vector2i& a, const Vector2i& b, const Vector2i& c, const Vector2i& d );
 
+/// same for segments (vs[0],vs[1]) and (vs[2],vs[3]); when all four points lie on one line,
+/// uses vertex ids to select the intersection position consistent with the simulation-of-simplicity
+/// answers of ccw about every other vertex
+[[nodiscard]] MRMESH_API Vector2i findSegmentSegmentIntersectionPrecise( const PreciseVertCoords2* vs );
+
 /// finds intersection precise, using high precision int inside
 /// this function input should have intersection
 [[nodiscard]] MRMESH_API Vector2f findSegmentSegmentIntersectionPrecise(

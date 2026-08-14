@@ -277,9 +277,7 @@ TEST( MRMesh, PlanarTriangulationPinchedMonotoneBlock2 )
     EXPECT_GT( mesh.topology.numValidFaces(), 0 );
 }
 
-// TODO: still fails - the merge orders the ring of a merged vertex by ids that later merges
-// rename, so the sweep line ends up in a state the predicates never produce
-TEST( MRMesh, DISABLED_PlanarTriangulationChainedActiveEdges )
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges )
 {
     // four points on one line with two coincident pairs: (-15,-1) and (-10,-1) each appear twice
     Contour2f cont = {
@@ -289,6 +287,42 @@ TEST( MRMesh, DISABLED_PlanarTriangulationChainedActiveEdges )
     cont.push_back( cont.front() );
     Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
     EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges2 )
+{
+    // four points on y=0 walked back and forth, plus two points above
+    Contour2f cont = {
+        { 14, 0 }, { 7, 0 }, { 15, 0 }, { 14, 3 }, { 18, 4 }, { 13, 0 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSameCascade2 )
+{
+    // one segment traversed back and forth three times: the merge cascade folds all three
+    // traversals into nothing
+    Contour2f cont = {
+        { 11, -12 }, { 7, -7 }, { 11, -12 }, { 7, -7 }, { 11, -12 }, { 7, -7 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 0 ); // zero-area input: survive and produce nothing
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges3 )
+{
+    // six points on one line walked back and forth, ( 0.4, 0 ) visited twice; zero area;
+    // keep the float literals exact - the repro is sensitive to the float->int quantization
+    Contour2f cont = {
+        { 0.800000012f, 0.f }, { 0.400000006f, 0.f }, { 0.5f, 0.f },
+        { 0.349999994f, 0.f }, { 0.600000024f, 0.f }, { 0.400000006f, 0.f }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GE( mesh.topology.numValidFaces(), 0 ); // completing without the assert is the test
 }
 
 namespace

@@ -35,6 +35,11 @@ struct AlphaShapeData
     /// a bit larger than the doubled ball radius to compensate the rounding of integer coordinates
     float searchRadius = 0;
 
+    /// whether to exclude the neighbours shadowed by a found touchable triangle from the search;
+    /// the filter is output-preserving, so switching it off gives exactly the same triangles
+    /// after more work, which is the baseline the benchmark compares against
+    bool shadowFilter = true;
+
     /// returns point #v of the cloud (which must be the cloud given to getAlphaShapeData)
     /// together with its integer coordinates
     [[nodiscard]] MRMESH_API PreciseVertCoords coords( const PointCloud & cloud, VertId v ) const;

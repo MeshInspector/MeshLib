@@ -6,8 +6,10 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <iostream>
 #include <random>
+#include <vector>
 
 namespace MR
 {
@@ -168,33 +170,113 @@ PointCloud randomCloud( int n, float size )
     return res;
 }
 
+// the number of points of the largest cloud: a Release build on a hosted runner searches it in
+// seconds, while MSVC iterator-debug, brew-llvm Debug and wasm are one to two orders slower and
+// share the same 10-minute cap on the whole MRTest run, so they get a proportionally smaller cloud
+#if defined( NDEBUG ) && !defined( __EMSCRIPTEN__ )
+constexpr int cBenchPoints = 40000;
+#else
+constexpr int cBenchPoints = 4000;
+#endif
+
+// the reps of one variant, capped by the count and by the wall clock: five is enough for the
+// minimum to be a stable estimator, and the budget keeps a slow runner from eating the job's cap
+constexpr int cBenchReps = 5;
+constexpr double cBenchBudgetMs = 20000;
+
+struct BenchResult
+{
+    std::vector<double> ms; // sorted times of the completed reps
+    std::uint64_t hash = 0;
+    size_t numTris = 0;
+    AlphaShapeStats stats; // of the last rep, so the counters are per-search and not accumulated
+};
+
+// searches the same cloud with the same prepared data cBenchReps times and keeps the times;
+// the shadow filter is switched by data.shadowFilter, so the two variants a branch is compared
+// by run in one process on one runner, on the same cloud and with the same tree
+BenchResult benchVariant( const PointCloud & cloud, const AlphaShapeData & data )
+{
+    BenchResult res;
+    double total = 0;
+    for ( int i = 0; i < cBenchReps && total < cBenchBudgetMs; ++i )
+    {
+        AlphaShapeStats stats;
+        const auto start = std::chrono::steady_clock::now();
+        const auto tris = findAlphaShapeAllTriangles( cloud, data, {}, &stats );
+        const auto ms = std::chrono::duration<double, std::milli>( std::chrono::steady_clock::now() - start ).count();
+        EXPECT_TRUE( tris.has_value() ); // no progress callback is given, so the search cannot be cancelled
+        if ( !tris )
+            break;
+        res.ms.push_back( ms );
+        total += ms;
+        res.hash = hashOf( *tris );
+        res.numTris = tris->size();
+        res.stats = stats;
+    }
+    std::sort( res.ms.begin(), res.ms.end() );
+    return res;
+}
+
+// one greppable line per variant: 19 MRTest jobs are scraped for these
+void printVariant( const char * name, const PointCloud & cloud, float radius, bool filter, const BenchResult & r )
+{
+    if ( r.ms.empty() )
+        return;
+    std::cout << "[alpha-bench] " << name << " points=" << cloud.points.size() << " radius=" << radius
+        << " filter=" << ( filter ? "on" : "off" )
+        << " reps=" << r.ms.size()
+        << " min=" << r.ms.front() << " med=" << r.ms[r.ms.size() / 2] << " max=" << r.ms.back()
+        << " tris=" << r.numTris << " hash=" << r.hash
+        << " consideredTris=" << r.stats.consideredTris
+        << " touchableTris=" << r.stats.touchableTris
+        << " inBallTests=" << r.stats.inBallTests
+        << " shadowTests=" << r.stats.shadowTests
+        << " exactShadowTests=" << r.stats.exactShadowTests
+        << " shadowedNeis=" << r.stats.shadowedNeis << std::endl;
+}
+
 void benchAlphaShape( const char * name, const PointCloud & cloud, float radius )
 {
-    AlphaShapeStats stats;
-    const auto start = std::chrono::steady_clock::now();
-    const auto tris = findAlphaShapeAllTriangles( cloud, radius, &stats );
-    const auto ms = std::chrono::duration<double, std::milli>( std::chrono::steady_clock::now() - start ).count();
-    std::cout << name << ": " << cloud.points.size() << " points, radius " << radius << '\n'
-        << "  time            " << ms << " ms\n"
-        << "  triangles       " << tris.size() << " (hash " << hashOf( tris ) << ")\n"
-        << "  consideredTris  " << stats.consideredTris << '\n'
-        << "  touchableTris   " << stats.touchableTris << '\n'
-        << "  inBallTests     " << stats.inBallTests << '\n'
-        << "  shadowTests     " << stats.shadowTests << '\n'
-        << "  exactShadowTests " << stats.exactShadowTests << '\n'
-        << "  shadowedNeis    " << stats.shadowedNeis << std::endl;
+    auto data = getAlphaShapeData( cloud, radius, true );
+    cloud.getAABBTree(); // built once here, so it is not timed with the first rep
+
+    // filter off first: this branch is master plus the shadow filter, so that variant is the
+    // master baseline, and its counters are what a master build must reproduce
+    data.shadowFilter = false;
+    const auto off = benchVariant( cloud, data );
+    data.shadowFilter = true;
+    const auto on = benchVariant( cloud, data );
+
+    printVariant( name, cloud, radius, false, off );
+    printVariant( name, cloud, radius, true, on );
+    if ( !off.ms.empty() && !on.ms.empty() )
+        std::cout << "[alpha-bench] " << name << " speedup=" << off.ms.front() / on.ms.front()
+            << " inBallTestsRatio=" << double( off.stats.inBallTests ) / double( std::max<size_t>( 1, on.stats.inBallTests ) )
+            << std::endl;
+
+    // the filter only removes the neighbours that cannot change the outcome, so the whole point
+    // of it is that these two agree - on every cloud, every runner and every branch
+    EXPECT_EQ( off.hash, on.hash );
+    EXPECT_EQ( off.numTris, on.numTris );
+    EXPECT_LE( on.stats.inBallTests, off.stats.inBallTests );
+    EXPECT_EQ( off.stats.shadowTests, 0 );
 }
 
 } // anonymous namespace
 
-// opt-in benchmark of the alpha-shape search on three clouds of different structure, in the idiom
-// of DISABLED_FastIntMulWordsBench: run it with --gtest_also_run_disabled_tests to compare the
-// timings and the counters of two branches, and the triangle hashes to prove they agree
+// benchmark of the alpha-shape search on three clouds of different structure, timing the shadow
+// filter against the unfiltered search (= master) in one process: same runner, same cloud, same
+// binary. The cloud sizes keep the neighbourhood of a point about the same in every config, so
+// the filter-on/off ratio is comparable across the runners even where the absolute times are not
 TEST( MRMesh, DISABLED_AlphaShapeBench )
 {
-    benchAlphaShape( "sphere", sphereCloud( 40000, 1.f ), 0.02f );
-    benchAlphaShape( "grid",   gridCloud( 200, 0.01f ),   0.03f );
-    benchAlphaShape( "random", randomCloud( 40000, 1.f ), 0.05f );
+    const int n = cBenchPoints;
+    // the ball radius is scaled with the sampling step of each cloud, so a smaller cloud is not
+    // also a sparser one: step ~ 1/sqrt(n) on the sphere and the grid, ~ 1/cbrt(n) in the cube
+    benchAlphaShape( "sphere", sphereCloud( n, 1.f ), 0.02f * std::sqrt( 40000.f / n ) );
+    benchAlphaShape( "grid",   gridCloud( int( std::lround( std::sqrt( float( n ) ) ) ), 0.01f ), 0.03f );
+    benchAlphaShape( "random", randomCloud( n, 1.f ), 0.05f * std::cbrt( 40000.f / n ) );
 }
 
 } //namespace MR

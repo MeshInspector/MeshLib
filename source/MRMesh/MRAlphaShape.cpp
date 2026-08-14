@@ -229,7 +229,8 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             ++myStats.touchableTris;
             // the shadow depends only on the existence of the touching balls, not on their emptiness,
             // and dropping before the tests below shortens their scans as well
-            dropShadowed( i, j );
+            if ( data.shadowFilter )
+                dropShadowed( i, j );
             if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
             tester.flip();

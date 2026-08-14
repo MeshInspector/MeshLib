@@ -55,10 +55,10 @@ on:
         value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       test_pip_build:
         description:
-        value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
+        value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' || ( github.event_name == 'push' && startsWith(github.ref_name, 'release/') ) }}
       build-release-win:
-        description: "True when full-ci, scheduled, or tag-build-release-windows is set"
-        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
+        description: "True when full-ci, scheduled, tag-build-release-windows is set, or on a release branch"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' || ( github.event_name == 'push' && startsWith(github.ref_name, 'release/') ) }}
       # flags for disabling builds for different systems
       build_enable_ubuntu_arm64:
         description:
@@ -230,9 +230,13 @@ jobs:
       - name: Select Docker image tag
         id: select-docker-image-tag
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
+          # Only master writes `latest`: a release branch's docker sources freeze
+          # while master moves on, so it would point master at an older image.
+          if { [ "${{ github.event_name }}" = "pull_request" ] || \
+               [ "${{ startsWith(github.ref_name, 'release/') }}" = "true" ] ; } && \
+             [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
             # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi
@@ -247,8 +251,10 @@ jobs:
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
-            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          if { [ "${{ github.event_name }}" = "pull_request" ] || \
+               [ "${{ startsWith(github.ref_name, 'release/') }}" = "true" ] ; } && \
+             [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
+            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi
@@ -283,7 +289,16 @@ jobs:
         id: version-tag
         run: |
           version=${{ steps.version.outputs.version }}
-          echo "release_tag=${version}" >> $GITHUB_OUTPUT
+          # Both lines version off the same baseline, so the same vA.B.C.N comes up
+          # on each; -rc keeps their tags apart. Publishing drops it.
+          if [ "${{ github.event_name }}" = "push" ] && \
+             [ "${{ startsWith(github.ref_name, 'release/') }}" = "true" ] ; then
+            # %%-* first, so a pr-test namespace can't yield -pr-test-rc
+            release_tag="${version%%-*}-rc"
+          else
+            release_tag="${version}"
+          fi
+          echo "release_tag=${release_tag}" >> $GITHUB_OUTPUT
           echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT
 
       - name: Set matrix for ubuntu-x64 builds

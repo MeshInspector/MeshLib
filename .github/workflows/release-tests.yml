@@ -17,18 +17,26 @@ on:
           - prod
           - test
   workflow_call:
+    inputs:
+      version_tag:
+        description: "Tag of the release under test. Empty falls back to the newest tag in the repo."
+        default: ""
+        required: false
+        type: string
 
 jobs:
   setup:
     timeout-minutes: 5
     runs-on: ubuntu-latest
     outputs:
-      version_tag: ${{ steps.get-latest-tag.outputs.tag }}
+      version_tag: ${{ inputs.version_tag || steps.get-latest-tag.outputs.tag }}
     steps:
       - name: Checkout
+        if: ${{ !inputs.version_tag }}
         uses: actions/checkout@v7
 
       - uses: actions-ecosystem/action-get-latest-tag@v1
+        if: ${{ !inputs.version_tag }}
         id: get-latest-tag
 
   pip-test-linux:

@@ -1,0 +1,48 @@
+name: Publish documentation
+
+on:
+  release:
+    types: [ released ]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag of the release to publish the documentation of
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read   # list workflow runs, and download artifacts from another run
+
+jobs:
+  # The binding artifacts live on the build run, not on the release, and
+  # `download-artifact` only reaches another run by id.
+  find-build-run:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.find.outputs.run_id }}
+    steps:
+      - name: Find the build that produced this release
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${TAG}" --jq .sha)
+          run_id=$(
+            gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/build-test-distribute.yml/runs?head_sha=${sha}&status=success" \
+              --jq '[ .workflow_runs[] | .id ] | max // empty'
+          )
+          [ -n "${run_id}" ] || { echo "no successful build for ${TAG} (${sha})" >&2 ; exit 1 ; }
+          echo "${TAG} -> ${sha} -> run ${run_id}"
+          echo "run_id=${run_id}" >> $GITHUB_OUTPUT
+
+  update-documentation:
+    needs: find-build-run
+    uses: ./.github/workflows/update-docs.yml
+    with:
+      output_folder: MeshLib
+      run_id: ${{ needs.find-build-run.outputs.run_id }}
+    secrets: inherit

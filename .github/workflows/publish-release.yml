@@ -1,0 +1,89 @@
+name: Publish release
+
+# Run it from the release branch whose newest draft should be published.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-release:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Publish
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          series=$(echo "${BRANCH}" | sed -n 's|^release/\([0-9]\{1,\}\.[0-9]\{1,\}\).*|\1|p')
+          [ -n "${series}" ] || { echo "expected release/<major>.<minor>[...], got '${BRANCH}'" >&2 ; exit 1 ; }
+
+          gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate > releases.json
+
+          # A draft has no git tag, so GET /releases/tags/<tag> cannot find it.
+          # The branch's drafts are the -rc ones on its own major.minor series.
+          drafts=$(
+            jq -r --arg p "v${series}." '
+              .[] | select(.draft and (.tag_name | startswith($p) and endswith("-rc")))
+                  | "\(.tag_name)\t\(.id)\t\(.target_commitish)"' releases.json
+          )
+          [ -n "${drafts}" ] || { echo "no -rc draft on ${BRANCH}" >&2 ; exit 1 ; }
+          IFS=$'\t' read -r draft_tag release_id target \
+            <<< "$(printf '%s\n' "${drafts}" | sort -V | tail -n1)"
+
+          version="${draft_tag%-rc}"          # v3.1.4.7-rc -> v3.1.4.7
+          baseline="${version%.*}"            # v3.1.4.7    -> v3.1.4
+          echo "${version}" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$' \
+            || { echo "unexpected version shape ${version}" >&2 ; exit 1 ; }
+
+          sha=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${target}" --jq .sha)
+
+          # Guards against tagging a commit the draft was never built from.
+          status=$(gh api "repos/${GITHUB_REPOSITORY}/compare/${BRANCH}...${sha}" --jq .status)
+          case "${status}" in
+            identical|behind) ;;
+            *) echo "${draft_tag} targets ${sha}, which is ${status} ${BRANCH}" >&2 ; exit 1 ;;
+          esac
+
+          # The baseline tag goes on before publishing: publishing fires the
+          # release workflows, and they must not see a half-tagged release.
+          if existing=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${baseline}" --jq .object.sha 2>/dev/null) ; then
+            [ "${existing}" = "${sha}" ] \
+              || { echo "${baseline} already exists on ${existing}, not ${sha}" >&2 ; exit 1 ; }
+            echo "${baseline} already points at ${sha}"
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/git/refs" \
+              -f "ref=refs/tags/${baseline}" -f "sha=${sha}"
+          fi
+
+          # Notes cover this patch only, so diff against the previous release on
+          # the same line rather than letting GitHub pick one across lines. The
+          # release being published is still a draft, so it is not a candidate.
+          previous=$(
+            jq -r --arg p "v${series}." '.[] | select( ( .draft | not ) and ( .tag_name | startswith($p) ) ) | .tag_name' \
+              releases.json | sort -V | tail -n1
+          )
+          notes=$(
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f "tag_name=${version}" -f "target_commitish=${sha}" \
+              ${previous:+-f "previous_tag_name=${previous}"} --jq .body
+          ) || notes=""
+          echo "notes generated against ${previous:-<no previous release>}"
+
+          # Renaming the tag drops the -rc; publishing creates it on ${sha}.
+          # %details_after_publish% is left for release-body-update.yml.
+          if [ -n "${notes}" ] ; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              -f "tag_name=${version}" -F draft=false \
+              -f "body=${notes}"$'\n\n'"%details_after_publish%"
+          else
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+              -f "tag_name=${version}" -F draft=false
+          fi
+
+          echo "published ${version} from ${BRANCH}, baseline ${baseline} -> ${sha}"

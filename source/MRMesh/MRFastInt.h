@@ -165,7 +165,7 @@ template <std::size_t nWords>
 /// otherwise (so with a relative error below 2^-53), and +-infinity past DBL_MAX. The bound is
 /// load-bearing: the pre-filters that reject a case in double before evaluating it exactly are
 /// only safe against a stated error of the conversion feeding them
-[[nodiscard]] inline double toDouble( FastInt128 v ) noexcept
+[[nodiscard]] MR_BIND_IGNORE inline double toDouble( FastInt128 v ) noexcept
 {
     const FastUInt128 u( v );
     // deliberately the same code as for FastInt below, and not the built-in conversion of

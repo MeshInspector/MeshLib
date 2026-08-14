@@ -553,8 +553,17 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
         auto ll = tp_.makeEdge();
         if ( inter.lower.odd() )
             ll = ll.sym(); // oddity should stay the same (for winding number)
-        tp_.splice( pl, inter.lower );
-        tp_.splice( pl, ll );
+        if ( pl != inter.lower )
+        {
+            tp_.splice( pl, inter.lower );
+            tp_.splice( pl, ll );
+        }
+        else
+        {
+            auto v = tp_.org( inter.lower );
+            tp_.setOrg( inter.lower, VertId() );
+            tp_.setOrg( ll, v );
+        }
         tp_.splice( inter.lower, ll.sym() );
 
         // prev upper
@@ -564,9 +573,17 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
         if ( inter.upper.odd() )
             ul = ul.sym(); // oddity should stay the same (for winding number)
 
-        tp_.splice( pu, inter.upper );
-        tp_.splice( pu, ul );
-
+        if ( pu != inter.upper )
+        {
+            tp_.splice( pu, inter.upper );
+            tp_.splice( pu, ul );
+        }
+        else
+        {
+            auto v = tp_.org( inter.upper );
+            tp_.setOrg( inter.upper, VertId() );
+            tp_.setOrg( ul, v );
+        }
         tp_.splice( inter.lower, ul.sym() );
         tp_.splice( ll.sym(), inter.upper );
 
@@ -861,7 +878,7 @@ void SweepLineQueue::processStartEvent_( int index )
     if ( stage_ == Stage::Intersections )
     {
         checkIntersection_( index, true );
-        checkIntersection_( index + 1, false );
+        checkIntersection_( index + int( rightGoingCache_.size() ) - 1, false );
     }
 
     ++startVertIndex_;
@@ -1321,17 +1338,31 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
         else
             tp_.setOrg( eSame, VertId{} );
         tp_.splice( minEUnique, eSame );
-        if ( tp_.dest( minEUnique ) == tp_.dest( eSame ) )
+        auto uDest = tp_.dest( minEUnique );
+        if ( uDest == tp_.dest( eSame ) )
         {
-            auto& edgeInfo = windingInfo_.autoResizeAt( minEUnique.undirected() );
-            if ( edgeInfo.windingModifier == INT_MAX )
-                edgeInfo.windingModifier = 1;
-            bool uniqueIsOdd = minEUnique.odd();
-            bool sameIsOdd = eSame.odd();
-            edgeInfo.windingModifier += ( ( uniqueIsOdd == sameIsOdd ) ? 1 : -1 );
+            auto meuUndir = minEUnique.undirected();
+            auto esUndir = eSame.undirected();
+            auto& uWM = windingInfo_.autoResizeAt( meuUndir ).windingModifier;
+            int8_t lessFactor = 0;
+            if ( uWM == INT_MAX )
+            {
+                lessFactor = predicates_.less( unique, uDest ) ? 1 : -1;
+                uWM = minEUnique.even() ? lessFactor : -lessFactor;
+            }
+            int evenAddition = INT_MAX;
+            if ( esUndir < windingInfo_.size() )
+                evenAddition = windingInfo_[esUndir].windingModifier;
+            if ( evenAddition == INT_MAX )
+            {
+                if ( lessFactor == 0 )
+                    lessFactor = predicates_.less( same, uDest ) ? 1 : -1;
+                evenAddition = eSame.even() ? lessFactor : -lessFactor;
+            }
+            uWM += evenAddition;
             tp_.splice( tp_.prev( eSame ), eSame );
             tp_.splice( tp_.prev( eSame.sym() ), eSame.sym() );
-            if ( tp_.next( minEUnique ) == minEUnique )
+            if ( tp_.next( minEUnique ) == minEUnique && eSame == sameEdges.back() ) // nothing left to splice
             {
                 // invalidate lone edge
                 tp_.splice( tp_.prev( minEUnique.sym() ), minEUnique.sym() );

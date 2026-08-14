@@ -48,6 +48,9 @@ jobs:
         with:
           name: Release ${{ inputs.release_tag }}
           tag_name: ${{ inputs.release_tag }}
+          # Unset, this defaults to the default branch, so publishing would tag
+          # whatever master's tip is by then instead of the commit built here.
+          target_commitish: ${{ github.sha }}
           draft: true
           prerelease: false
           body: |

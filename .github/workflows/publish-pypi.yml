@@ -1,0 +1,42 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [ released ]
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Tag of the release whose wheels to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      # The wheels attached to the release are the ones that were built and
+      # tested on that commit; nothing is rebuilt here.
+      - name: Download wheels from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+        run: |
+          gh release download "${TAG}" --repo "${GITHUB_REPOSITORY}" --pattern '*.whl' --clobber
+          ls -1 meshlib*.whl
+
+      - name: Install twine
+        run: python3 -m pip install --upgrade pip twine packaging
+
+      - name: Upload to Production PyPi
+        run: twine upload ./meshlib*.whl -u __token__ -p ${{ secrets.PYPI_MESHINSPECTOR_TOKEN }} --skip-existing
+
+  post-release-test:
+    needs: publish
+    uses: ./.github/workflows/release-tests.yml
+    with:
+      version_tag: ${{ inputs.release_tag || github.event.release.tag_name }}
+    secrets: inherit

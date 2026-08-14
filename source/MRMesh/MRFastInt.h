@@ -4,7 +4,9 @@
 #include "MRFastInt128.h"
 #include <MRPch/MRBindingMacros.h>
 #include <array>
+#include <bit>
 #include <cassert>
+#include <cmath>
 #include <compare>
 #include <cstdint>
 #include <type_traits>
@@ -108,12 +110,73 @@ template <typename T>
         return std::array{ std::uint64_t( std::int64_t( v ) ) };
 }
 
+/// the nearest double to the two's-complement value in the given words, least significant first;
+/// see toDouble below for the guarantees, which this function alone provides for the whole family
+template <std::size_t nWords>
+[[nodiscard]] inline double doubleFromWords( std::array<std::uint64_t, nWords> w ) noexcept
+{
+    static_assert( nWords >= 1 );
+    const bool neg = std::int64_t( w[nWords - 1] ) < 0;
+    if ( neg )
+    {
+        // the magnitude, by negating in place; the smallest value negates into 2^(64*nWords-1),
+        // which is not representable as a signed value here, but is as an unsigned magnitude
+        std::uint64_t carry = 1;
+        for ( std::size_t i = 0; i < nWords; ++i )
+        {
+            w[i] = ~w[i] + carry;
+            carry = carry != 0 && w[i] == 0 ? 1 : 0;
+        }
+    }
+
+    std::size_t k = nWords; // one past the highest non-zero word of the magnitude
+    while ( k > 0 && w[k - 1] == 0 )
+        --k;
+    if ( k == 0 )
+        return 0; // and not -0 for a negative zero, which two's complement has no representation of
+
+    // the top 64 significant bits, with the highest one in bit 63: the word below k contributes
+    // the bits shifted in from the right, and the shift by s cannot lose anything, because the
+    // top s bits of w[k-1] are zero by the definition of s
+    const int s = std::countl_zero( w[k - 1] );
+    std::uint64_t top = w[k - 1] << s;
+    if ( s > 0 && k >= 2 )
+        top |= w[k - 2] >> ( 64 - s );
+
+    // everything below those 64 bits, as a single sticky bit in the lowest one. That keeps the
+    // conversion of top correctly rounded for the whole value: only 53 of its bits reach the
+    // mantissa, so bit 0 sits well below the rounding position, and a non-zero tail there is
+    // exactly what tells a tie (round to even) from a value strictly above it (round up)
+    bool tail = k >= 2 && ( w[k - 2] << s ) != 0; // the bits of w[k-2] that top did not take, all of it if s is 0
+    for ( std::size_t i = 0; i + 2 < k && !tail; ++i )
+        tail = w[i] != 0; // the words entirely below top
+    if ( tail )
+        top |= 1;
+
+    // std::uint64_t -> double is correctly rounded, and the scaling by a power of two is exact
+    // unless it overflows, which yields the infinity of the right sign as intended
+    const double res = std::ldexp( double( top ), int( 64 * ( k - 1 ) ) - s );
+    return neg ? -res : res;
+}
+
 } // namespace detail
+
+/// the nearest double to the given value: exact for a magnitude below 2^53, correctly rounded
+/// otherwise (so with a relative error below 2^-53), and +-infinity past DBL_MAX. The bound is
+/// load-bearing: the pre-filters that reject a case in double before evaluating it exactly are
+/// only safe against a stated error of the conversion feeding them
+[[nodiscard]] inline double toDouble( FastInt128 v ) noexcept
+{
+    const FastUInt128 u( v );
+    // deliberately the same code as for FastInt below, and not the built-in conversion of
+    // __int128_t, which MSVC's std::_Signed128 lacks: the value must not depend on the platform
+    return detail::doubleFromWords( std::array{ std::uint64_t( u ), std::uint64_t( u >> 64 ) } );
+}
 
 /// signed integer of nBits bits, which must be a multiple of 64 and at least 192
 /// (below that use FastInt128 with Int64Mul128 and Int128Mul256);
 /// the product of two of them is exact, because it is twice as wide as the arguments;
-/// as FastInt128 it lacks conversion in double, sqrt-function and stream input/output
+/// as FastInt128 it lacks a sqrt-function and stream input/output
 template <int nBits>
 class MR_BIND_IGNORE FastInt
 {
@@ -217,6 +280,13 @@ public:
         return std::strong_ordering::equal;
     }
 };
+
+/// the nearest double to the given value, with the same guarantees as toDouble( FastInt128 ) above
+template <int nBits>
+[[nodiscard]] MR_BIND_IGNORE inline double toDouble( const FastInt<nBits> & v ) noexcept
+{
+    return detail::doubleFromWords( v.w );
+}
 
 using FastInt256 = FastInt<256>;
 using FastInt512 = FastInt<512>;

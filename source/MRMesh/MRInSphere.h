@@ -232,17 +232,46 @@ private:
     VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
 };
 
-/// adds to InSphereTesterSoS the test of a point against both spheres passing via the three points;
-/// it used to filter its queries through a floating-point center computed in reset(), which needs
-/// a bignum-to-double conversion that FastInt does not provide, so every query is exact for now
+/// gives exactly the same answers as InSphereTesterSoS, only faster: the sphere's center is also
+/// computed in floating point during reset(), and every query point far enough from the sphere's
+/// surface is answered by it alone, leaving the exact predicates for the points close to it
 class FastInSphereTesterSoS : public InSphereTesterSoS
 {
 public:
+    /// prepares the tester as InSphereTesterSoS::reset does, and additionally computes the
+    /// floating-point center of the sphere and the tolerance of the tests below;
+    /// this hides the reset of the base class, which would leave the center stale
+    MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
+
+    /// selects the mirror sphere as the base class does, moving the floating-point center as well;
+    /// this hides the flip of the base class, which would leave the center on the wrong side
+    void flip()
+    {
+        InSphereTesterSoS::flip();
+        hn_ = -hn_;
+    }
+
+    /// returns the position of the point d.pt relative to the sphere, with the ties resolved by
+    /// simulation-of-simplicity exactly as InSphereTesterSoS does (never OnSphere or NoSphere);
+    /// shall be called only after reset() returned true, and all four ids must be distinct
+    [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
+
     /// whether d is strictly outside both spheres of the given radius passing via the three points
     /// of reset(): the selected one and its mirror in the plane of the triangle;
     /// the answer is exact, and a point lying on either of them is not strictly outside, so no tie
-    /// arises and no simulation-of-simplicity is involved
+    /// arises and no simulation-of-simplicity is involved;
+    /// filtered in floating point as the query above, and equally exact
     [[nodiscard]] MRMESH_API bool outsideBothSpheres( const Vector3i & d ) const;
+
+private:
+    /// the sphere's center relative to the first point, split in the part within the plane of the
+    /// triangle and the height orthogonal to it, so that flip() only negates the latter;
+    /// the two are orthogonal, so neither of them can cancel the other in the sum
+    Vector3d cc_, hn_;
+
+    /// the queries with the squared distance to the center farther than this from rSq are
+    /// decided in floating point; proportional to rSq, since so is the error of that distance
+    double tol_ = 0;
 };
 
 /// checks whether the point d is strictly inside the sphere of radius sqrt(rSq) passing via

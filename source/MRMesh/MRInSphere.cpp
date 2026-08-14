@@ -229,10 +229,54 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
     return InSphereResult::Outside;
 }
 
+bool FastInSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCoords & vb, const PreciseVertCoords & vc, std::int64_t sqRadius )
+{
+    if ( !InSphereTesterSoS::reset( va, vb, vc, sqRadius ) )
+        return false;
+
+    // circumcenter - a = M / (2W) lies in the plane of the triangle and the height S * w / (2W^2)
+    // is orthogonal to it, so the sum below cannot lose precision to cancellation;
+    // W, M, E cannot be recomputed in double: E = 4 rSq W^2 - |M|^2 is a difference of two values
+    // below 2^322 that vanishes exactly when the circumradius reaches the radius, so it cancels
+    // completely on the near-degenerate triangles this filter must get right - converting the
+    // exact values is both the cheapest and the only accurate source
+    const auto dW = toDouble( W );
+    cc_ = Vector3d{ toDouble( M[0] ), toDouble( M[1] ), toDouble( M[2] ) } / ( 2 * dW );
+    hn_ = ( std::sqrt( toDouble( E ) * dW ) / ( 2 * dW * dW ) ) * Vector3d( w );
+
+    // every value above carries a relative error of a few 2^-53 (toDouble is correctly rounded,
+    // so its own share is one of them), and the center is at the distance sqrt(rSq) from a, so the
+    // squared distance in operator() is off by at most rSq * 2^-48;
+    // 2^-44 of rSq keeps a 16x margin over that, and a query is decided only outside of it
+    tol_ = double( rSq ) * 0x1p-44;
+    return true;
+}
+
+InSphereResult FastInSphereTesterSoS::operator()( const PreciseVertCoords & d ) const
+{
+    assert( E >= 0 ); // the last reset() must have returned true
+    // sqr( distance from d to the center ) - rSq, which is negative exactly when d is inside
+    const auto e = ( Vector3d( Vector3i64{ d.pt - a } ) - cc_ - hn_ ).lengthSq() - double( rSq );
+    if ( e > tol_ )
+        return InSphereResult::Outside;
+    if ( e < -tol_ )
+        return InSphereResult::Inside;
+    return InSphereTesterSoS::operator()( d );
+}
+
 bool FastInSphereTesterSoS::outsideBothSpheres( const Vector3i & d ) const
 {
     assert( E >= 0 ); // the last reset() must have returned true
     const Vector3i64 q{ d - a };
+
+    // the two centers are cc_ + hn_ and cc_ - hn_, mirror images in the plane of the triangle
+    const auto qd = Vector3d( q ) - cc_;
+    const auto e0 = ( qd - hn_ ).lengthSq() - double( rSq );
+    const auto e1 = ( qd + hn_ ).lengthSq() - double( rSq );
+    if ( e0 > tol_ && e1 > tol_ )
+        return true;
+    if ( e0 < -tol_ || e1 < -tol_ )
+        return false;
 
     // d farther than the diameter from a point on the spheres is strictly outside both of them
     const auto qq = dot( Vector3i64mul{ q }, Vector3i64mul{ q } );

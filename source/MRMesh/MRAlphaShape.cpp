@@ -155,6 +155,17 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         const Vector3i64 p{ neis[i].coords.pt - p0.pt }, q{ neis[j].coords.pt - p0.pt };
         const FastInt128 pp = neis[i].distSq, qq = neis[j].distSq; // already exact in the neighbours
         const auto pq = dot( Vector3i64mul{ p }, Vector3i64mul{ q } );
+        // bp and bq below are the dot products of d with these two vectors, and the sign of one of them
+        // rejects most candidates, so the exact values are needed only where the double ones are too
+        // close to zero. Any difference of two points is below 2^31, so pp and pq are below 2^64,
+        // the components of up and uq below 2^96, and these dot products below 2^129; toDouble is
+        // correctly rounded, so the roundings on the way cost 2^-53 of the running magnitude each,
+        // keeping the total error below 2^78, and a double value below -2^78 is thus negative exactly
+        // as well. The tolerance takes 64 times that margin for safety, at the price of evaluating
+        // exactly the few candidates falling in between
+        const Vector3d up{ Vector3d( q ) * toDouble( pp ) - Vector3d( p ) * toDouble( pq ) };
+        const Vector3d uq{ Vector3d( p ) * toDouble( qq ) - Vector3d( q ) * toDouble( pq ) };
+        constexpr double tolerance = 2e25; // 2^84 = 64 * 2^78
         FastInt<320> cp, cq;
         FastInt<512> ew;
         bool prepared = false; // most pairs shadow no point at all, so the rest is computed on demand
@@ -164,36 +175,38 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             bool shadowed = false;
             const auto & x = neis[k].coords;
             const Vector3i64 d{ x.pt - p0.pt };
-            // every candidate is evaluated exactly for now: the floating-point pre-filter that used
-            // to reject most of them needs a bignum-to-double conversion, which FastInt lacks
+            const Vector3d dd( d );
             ++myStats.shadowTests;
-            ++myStats.exactShadowTests;
-            // any difference of two points is below 2^31, so every dot product here is below 2^64
-            const auto pd = dot( Vector3i64mul{ p }, Vector3i64mul{ d } );
-            const auto qd = dot( Vector3i64mul{ q }, Vector3i64mul{ d } );
-            // the wedge is within the dihedral angle of the half-planes via #v containing p and q;
-            // bp and bq are the dot products of d with two vectors of magnitude below 2^96,
-            // so both of them are below 2^129
-            const auto bp = Int128Mul256( pp ) * Int128Mul256( qd ) - Int128Mul256( pq ) * Int128Mul256( pd );
-            const auto bq = Int128Mul256( qq ) * Int128Mul256( pd ) - Int128Mul256( pq ) * Int128Mul256( qd );
-            if ( bp > 0 && bq > 0 )
+            if ( dot( up, dd ) > -tolerance && dot( uq, dd ) > -tolerance )
             {
-                if ( !prepared )
+                ++myStats.exactShadowTests;
+                // any difference of two points is below 2^31, so every dot product here is below 2^64
+                const auto pd = dot( Vector3i64mul{ p }, Vector3i64mul{ d } );
+                const auto qd = dot( Vector3i64mul{ q }, Vector3i64mul{ d } );
+                // the wedge is within the dihedral angle of the half-planes via #v containing p and q;
+                // bp and bq are the dot products of d with two vectors of magnitude below 2^96,
+                // so both of them are below 2^129
+                const auto bp = Int128Mul256( pp ) * Int128Mul256( qd ) - Int128Mul256( pq ) * Int128Mul256( pd );
+                const auto bq = Int128Mul256( qq ) * Int128Mul256( pd ) - Int128Mul256( pq ) * Int128Mul256( qd );
+                if ( bp > 0 && bq > 0 )
                 {
-                    prepared = true;
-                    const auto & W = tester.normalSq();
-                    // sqr( S ) of the exact center identity 2 * W^2 * center = W * M +- S * n, where
-                    // M = qq * ( pp - pq ) * p + pp * ( qq - pq ) * q = 2 * W * ( circumcenter - #v );
-                    // the tester's E is the same for any of the three points as the origin;
-                    // W <= 2^128 and E <= 2^322, so ew <= 2^450 and cp, cq <= 2^257
-                    ew = FastInt<512>( tester.heightSq() * W );
-                    cp = FastInt<320>( W * pp * ( qq - pq ) );
-                    cq = FastInt<320>( W * qq * ( pp - pq ) );
+                    if ( !prepared )
+                    {
+                        prepared = true;
+                        const auto & W = tester.normalSq();
+                        // sqr( S ) of the exact center identity 2 * W^2 * center = W * M +- S * n, where
+                        // M = qq * ( pp - pq ) * p + pp * ( qq - pq ) * q = 2 * W * ( circumcenter - #v );
+                        // the tester's E is the same for any of the three points as the origin;
+                        // W <= 2^128 and E <= 2^322, so ew <= 2^450 and cp, cq <= 2^257
+                        ew = FastInt<512>( tester.heightSq() * W );
+                        cp = FastInt<320>( W * pp * ( qq - pq ) );
+                        cq = FastInt<320>( W * qq * ( pp - pq ) );
+                    }
+                    // the tester's normal is cross( p, q ) up to the sign, which does not matter here
+                    const auto nd = dot( Vector3i64mul{ tester.normal() }, Vector3i64mul{ d } );
+                    shadowed = insideWedge( bp, cp, nd, ew ) && insideWedge( bq, cq, nd, ew )
+                            && tester.outsideBothSpheres( x.pt );
                 }
-                // the tester's normal is cross( p, q ) up to the sign, which does not matter here
-                const auto nd = dot( Vector3i64mul{ tester.normal() }, Vector3i64mul{ d } );
-                shadowed = insideWedge( bp, cp, nd, ew ) && insideWedge( bq, cq, nd, ew )
-                        && tester.outsideBothSpheres( x.pt );
             }
             if ( shadowed )
             {

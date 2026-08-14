@@ -51,8 +51,7 @@ struct SweepLinePredicates
     std::function<void( VertId v, int contourId, int pointId )> addInputPoint;
     // compute and store the position of intersection vertex v of segments (a,b) and (c,d)
     std::function<void( VertId v, VertId a, VertId b, VertId c, VertId d )> addIntersectionPoint;
-    // position of vertex v in the output mesh; tp is the topology v lives in, passed at call time
-    // because the queue's topology is moved into the output mesh before the points are filled
+    // position of vertex v; tp is passed at call time because the queue's topology is moved into the output mesh
     std::function<Vector3f( const MeshTopology& tp, VertId v )> point;
 };
 
@@ -142,10 +141,8 @@ static std::vector<int> getContourSizes( const Contours2f& contours )
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
 // orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
 // predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
-// through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection
-// round-trip, no positional vertex id contract); the caller may fill the map after construction but
-// before the run - the loops ctor fills it itself via SweepLineParams::outPatchMap.
-// `mesh`, `loops` and `patchToInEdges` only need to outlive the run.
+// through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
+// `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges )
 {
     Box3f box;
@@ -184,9 +181,8 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     {
         pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts2 )[a], ( *pts2 )[b], ( *pts2 )[c], ( *pts2 )[d] ) );
     };
-    // disjoint triangulation creates no output intersection vertices, so every output vertex lies on a
-    // copied input edge: find one in its org ring (which by fill time also holds unmapped triangulation
-    // diagonals) and restore the exact original mesh position through the edge map
+    // every output vertex lies on a copied input edge (disjoint triangulation adds no intersection
+    // vertices), so find one in its org ring, skipping the triangulation's own diagonals
     p.point = [&mesh, &patchToInEdges] ( const MeshTopology& patchTp, VertId v )
     {
         for ( EdgeId e : orgRing( patchTp, v ) )
@@ -1097,8 +1093,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     WholeEdgeMap p2inCache; // TODO: can be cached
     WholeEdgeMap& p2in = params_.outPatchMap ? *params_.outPatchMap : p2inCache;
 
-    // upper bounds, capacity hints only (multiple traversals share one patch edge, shared vertices
-    // arrive shared): actual sizes come from the built topology
+    // upper bound: capacity hints only, actual sizes come from the built topology
     size_t numLoopEdges = 0;
     for ( const auto& loop : loops )
         if ( loop.size() >= 3 )
@@ -1109,12 +1104,9 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     tp_.vertReserve( numLoopEdges );
     tp_.edgeReserve( 2 * numLoopEdges );
 
-    // when an edge's dest vertex is created fresh, the org ring of the next loop edge contains
-    // exactly one mapped edge - the one just created - so its search result is forced; the one
-    // exception is backtracking right along the same undirected edge (a spike): that second
-    // traversal is invisible to the dest search (its orgRing0 skips the edge itself), hence the
-    // prevInUE filter. A loop's closing edge always finds its dest mapped, so no carry survives
-    // into the next loop
+    // a fresh dest vertex has exactly one mapped edge in its ring - the one just created - so the next
+    // loop edge can skip the search below, unless it backtracks along the same undirected edge, which is
+    // a re-traversal the dest search cannot see (orgRing0 skips the edge itself)
     EdgeId prevFreshPE;
     UndirectedEdgeId prevInUE;
 
@@ -1123,7 +1115,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
         EdgeId newPE;
         if ( prevFreshPE && inE.undirected() != prevInUE )
         {
-            // org vertex is the previous edge's fresh dest: the only mapped ring edge is the carried one
+            // org is the previous edge's fresh dest: the carried edge is the only one to splice against
             newPE = tp_.makeEdge();
             tp_.splice( tp_.prev( prevFreshPE ), newPE );
         }
@@ -1142,9 +1134,8 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
             }
             if ( inFE == inE )
             {
-                // this edge was already traversed: fold this traversal into the winding modifier, seeding
-                // it with the first traversal's contribution (single-traversal edges keep the sentinel -
-                // the default parity rule in calculateWinding_ computes the same value for them)
+                // this edge was already traversed: accumulate both traversals in the winding modifier,
+                // seeding from the first one (a single traversal keeps the sentinel = default parity rule)
                 const EdgeId pFirst( pFE ); // created along the first traversal
                 auto& wind = windingInfo_.autoResizeAt( pFirst ).windingModifier;
                 if ( wind == INT_MAX )
@@ -1214,8 +1205,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
             addNewEdge( loop[lId], loopId, lId );
     }
 
-    // multi-traversal edges got explicit modifiers above, everything else keeps the sentinel and
-    // takes the default parity rule; sized from the actually built topology, not the loop count
+    // the sweep indexes windingInfo_ by every edge; those without an explicit modifier keep the sentinel
     windingInfo_.resize( tp_.undirectedEdgeSize() );
 
     sortedVerts_.reserve( tp_.vertSize() );
@@ -1690,8 +1680,7 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
         return Mesh();
     if ( !outBoundaries )
     {
-        // copy the boundary sub-topology straight from the mesh: shared vertices and slit edges arrive
-        // already shared, so no positional id contract and no coordinate-based merging is needed
+        // copy the boundary sub-topology from the mesh: shared vertices and slit edges arrive already shared
         WholeEdgeMap localMap;
         WholeEdgeMap& patchToInEdges = outPatchMap ? *outPatchMap : localMap;
         patchToInEdges.clear();
@@ -1703,11 +1692,10 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
             { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges } );
         return triangulator.run();
     }
-    // outBoundaries consumers (fillContours2D) need per-contour paths that only the rebuild-from-contours
-    // path provides, until the fill plan is built from SweepLineParams::outPatchMap instead
+    // outBoundaries consumers (fillContours2D) still need the rebuild-from-contours path
     const HolesVertIds holeVertIds = findHoleVertIdsByHoleEdges( mesh.topology, loops );
-    // initMeshByContours_ creates the patch undirected edges sequentially per non-degenerate contour, and
-    // merging collapses vertices, never edges, so the patch->input edge map here is positional
+    // initMeshByContours_ creates edges sequentially per non-degenerate contour and merging never
+    // collapses edges, so the patch->input map here is positional
     WholeEdgeMap patchToInEdges;
     std::vector<int> sizes( loops.size() );
     for ( int i = 0; i < int( loops.size() ); ++i )

@@ -245,8 +245,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     if ( minEdgeLenSq < 1e-12f * loopBox.size().lengthSq() )
         return unexpected( "Hole boundary has a degenerate edge" );
 
-    // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel below anchors on
-    // mesh edges through it, so no boundary paths and no positional alignment are needed
+    // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel anchors through it
     WholeEdgeMap bd2mesh;
     auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), nullptr, &bd2mesh );
     if ( !patch )
@@ -258,15 +257,13 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     if ( res.numTris == 1 )
         return res;
 
-    // the copy guarantees one patch boundary edge per loop position, faces on its left and the void
-    // on its right - except a degenerate (zero area) hole, which SoS can fill on the wrong side
+    // faces must lie on the left of the boundary; a degenerate (zero area) hole can be filled on the wrong side
     if ( pTp.right( EdgeId( 0 ) ) )
         return unexpected( "Incorrect filling" );
 
     const int n = int( loops.front().size() );
     assert( n > 3 );
-    // interior patch edges the plan must create: of the 3 * numTris face sides, each boundary edge
-    // covers one and each interior edge two
+    // interior edges: of the 3 * numTris face sides, each boundary edge covers one and each interior edge two
     const int numChords = ( 3 * res.numTris - int( bd2mesh.size() ) ) / 2;
 
     // the peel's current polygon: one slot per boundary edge, the rings implicit in succ
@@ -278,11 +275,9 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     };
     std::vector<Slot> slots;
     slots.reserve( n );
-    // seed the polygon from the patch boundary itself: EdgeId( 0 ) is the first boundary edge the
-    // copy created, so for a plain loop the slots repeat the loop order (and the plan its old form).
-    // Turn::Leftmost keeps the walk in the same region corner at a pinch vertex, reproducing the
-    // input loop's own pairing there; the default tight-right turn would pair the arrival with the
-    // other cavity's exit, seeding rings that do not bound the peel's sub-polygons
+    // EdgeId( 0 ) is the first boundary edge the copy created, so a plain loop yields the loop order.
+    // Turn::Leftmost keeps the walk in the same region corner at a pinch vertex (the input loop's own
+    // pairing); the default tight-right turn would pair the arrival with the other cavity's exit
     auto walkRing = [&]( EdgeId b0, UndirectedEdgeBitSet* visited )
     {
         const int first = int( slots.size() );

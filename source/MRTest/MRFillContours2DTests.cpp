@@ -62,11 +62,8 @@ TEST( MRMesh, fillContours2DTiltedPlane )
         EXPECT_GT( dot( mesh.normal( f ), -normal ), 0.99f );
 }
 
-// A pinched hole: an island triangle touches the cavity's outer arc at one vertex, so the hole
-// boundary is a single 8-edge loop passing through that vertex twice (a pinched annulus). The old
-// positional peel identified peel positions with patch vertex ids, so the repeated vertex made it
-// fail with "Incorrect filling" and the caller fell back on the metric fill; the boundary-seeded
-// peel plans and fills it.
+// A pinched hole: an island triangle touches the cavity's outer arc at one vertex, so the hole boundary
+// is a single 8-edge loop passing through that vertex twice
 TEST( MRMesh, fillContours2DPlanPinchedHole )
 {
     VertCoords points;

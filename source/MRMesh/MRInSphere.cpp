@@ -229,59 +229,23 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
     return InSphereResult::Outside;
 }
 
-bool FastInSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCoords & vb, const PreciseVertCoords & vc, std::int64_t sqRadius )
-{
-    if ( !InSphereTesterSoS::reset( va, vb, vc, sqRadius ) )
-        return false;
-
-    // circumcenter - a = M / (2W) lies in the plane of the triangle and the height S * w / (2W^2)
-    // is orthogonal to it, so the sum below cannot lose precision to cancellation
-    const auto dW = W.convert_to<double>();
-    cc_ = Vector3d{ M.x.convert_to<double>(), M.y.convert_to<double>(), M.z.convert_to<double>() } / ( 2 * dW );
-    hn_ = ( std::sqrt( E.convert_to<double>() * dW ) / ( 2 * dW * dW ) ) * Vector3d( w );
-
-    // every value above carries a relative error of a few 2^-53, and the center is at the distance
-    // sqrt(rSq) from a, so the squared distance in operator() is off by at most rSq * 2^-48;
-    // 2^-44 of rSq keeps a 16x margin over that, and a query is decided only outside of it
-    tol_ = double( rSq ) * 0x1p-44;
-    return true;
-}
-
-InSphereResult FastInSphereTesterSoS::operator()( const PreciseVertCoords & d ) const
-{
-    assert( E >= 0 ); // the last reset() must have returned true
-    // sqr( distance from d to the center ) - rSq, which is negative exactly when d is inside
-    const auto e = ( Vector3d( Vector3i64{ d.pt - a } ) - cc_ - hn_ ).lengthSq() - double( rSq );
-    if ( e > tol_ )
-        return InSphereResult::Outside;
-    if ( e < -tol_ )
-        return InSphereResult::Inside;
-    return InSphereTesterSoS::operator()( d );
-}
-
 bool FastInSphereTesterSoS::outsideBothSpheres( const Vector3i & d ) const
 {
     assert( E >= 0 ); // the last reset() must have returned true
     const Vector3i64 q{ d - a };
 
-    // the two centers are cc_ + hn_ and cc_ - hn_, mirror images in the plane of the triangle
-    const auto qd = Vector3d( q ) - cc_;
-    const auto e0 = ( qd - hn_ ).lengthSq() - double( rSq );
-    const auto e1 = ( qd + hn_ ).lengthSq() - double( rSq );
-    if ( e0 > tol_ && e1 > tol_ )
+    // d farther than the diameter from a point on the spheres is strictly outside both of them
+    const auto qq = dot( Vector3i64mul{ q }, Vector3i64mul{ q } );
+    if ( qq > 4 * FastInt128( rSq ) )
         return true;
-    if ( e0 < -tol_ || e1 < -tol_ )
-        return false;
 
-    // exactly: outside both means A * W > S * |t| in the notation of operator()
-    const auto qq = dot( Vector3i128{ q }, Vector3i128{ q } );
-    if ( qq > 4 * Int128( rSq ) )
-        return true;
-    const auto A = W * Int256( qq ) - dot( Vector3i256{ q }, M );
+    // outside both means A * |w| > sqrt( E ) * | t | in the notation of operator(),
+    // with the same bounds on A and t there
+    const auto A = FastInt256( W * qq - ( M[0] * q.x + M[1] * q.y + M[2] * q.z ) );
     if ( A <= 0 )
-        return false;
-    const auto t = dot( Vector3i128{ q }, Vector3i128{ w } );
-    return sqr( Int1024( A ) ) * Int1024( W ) > Int1024( E ) * sqr( Int1024( t ) );
+        return false; // d is inside the selected sphere, or on it
+    const auto t = dot( Vector3i64mul{ q }, Vector3i64mul{ w } );
+    return FastInt<448>( A * A ) * W > E * sqr( Int128Mul256( t ) );
 }
 
 InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq )

@@ -120,8 +120,8 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
     };
     p.addIntersectionPoint = [pts] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        const PreciseVertCoords2 vs[4] = { { a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] }, { d, ( *pts )[d] } };
-        pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( vs ) );
+        pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
+            { PreciseVertCoords2{ a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] }, { d, ( *pts )[d] } } ) );
     };
     p.point = [pts, toFloat] ( const MeshTopology&, VertId v )
     {
@@ -180,8 +180,8 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        const PreciseVertCoords2 vs[4] = { { a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } };
-        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( vs ) );
+        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
+            { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } ) );
     };
     // every output vertex lies on a copied input edge (disjoint triangulation adds no intersection
     // vertices), so find one in its org ring, skipping the triangulation's own diagonals

@@ -413,7 +413,7 @@ Vector2i findSegmentSegmentIntersectionPrecise(
     return Vector2i( divRound( Vector2i64( ab.min ) + Vector2i64( ab.max ), std::int64_t( 2 ) ) );
 }
 
-Vector2i findSegmentSegmentIntersectionPrecise( const PreciseVertCoords2* vs )
+Vector2i findSegmentSegmentIntersectionPrecise( const std::array<PreciseVertCoords2, 4> & vs )
 {
     const auto& ai = vs[0].pt;
     const auto& bi = vs[1].pt;

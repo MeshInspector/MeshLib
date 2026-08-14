@@ -269,7 +269,9 @@ void benchAlphaShape( const char * name, const PointCloud & cloud, float radius 
 // filter against the unfiltered search (= master) in one process: same runner, same cloud, same
 // binary. The cloud sizes keep the neighbourhood of a point about the same in every config, so
 // the filter-on/off ratio is comparable across the runners even where the absolute times are not
-TEST( MRMesh, DISABLED_AlphaShapeBench )
+// NOTE: temporarily enabled to collect the numbers from every MRTest job of a PR run;
+// the DISABLED_ prefix is restored before this branch reaches master
+TEST( MRMesh, AlphaShapeBench )
 {
     const int n = cBenchPoints;
     // the ball radius is scaled with the sampling step of each cloud, so a smaller cloud is not

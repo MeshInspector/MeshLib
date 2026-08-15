@@ -6,7 +6,6 @@
 #include <array>
 #include <bit>
 #include <cassert>
-#include <cmath>
 #include <compare>
 #include <cstdint>
 #include <type_traits>
@@ -110,6 +109,18 @@ template <typename T>
         return std::array{ std::uint64_t( std::int64_t( v ) ) };
 }
 
+/// the largest exponent of a normal double, and so the largest step exp2i below can take
+constexpr int cMaxDoubleExp = 1023;
+
+/// 2^e as a double, for an exponent within [-1022, cMaxDoubleExp], that is of a normal double;
+/// it is assembled as a bit pattern, because std::ldexp and std::exp2 are library calls, and one
+/// of them costs about as much as everything else doubleFromWords below does
+[[nodiscard]] inline double exp2i( int e ) noexcept
+{
+    assert( e >= -1022 && e <= cMaxDoubleExp );
+    return std::bit_cast<double>( std::uint64_t( e + cMaxDoubleExp ) << 52 );
+}
+
 /// the nearest double to the two's-complement value in the given words, least significant first;
 /// see toDouble below for the guarantees, which this function alone provides for the whole family
 template <std::size_t nWords>
@@ -154,8 +165,14 @@ template <std::size_t nWords>
         top |= 1;
 
     // std::uint64_t -> double is correctly rounded, and the scaling by a power of two is exact
-    // unless it overflows, which yields the infinity of the right sign as intended
-    const double res = std::ldexp( double( top ), int( 64 * ( k - 1 ) ) - s );
+    // unless it overflows, which yields the infinity of the right sign as intended. A value past
+    // DBL_MAX takes more than one step, its exponent alone exceeding what a double holds; every
+    // factor below is at least one, so an intermediate infinity is one the exact value reaches too
+    double res = double( top );
+    int e = int( 64 * ( k - 1 ) ) - s; // at least -63, since k >= 1 and s <= 63, so nothing underflows
+    for ( ; e > cMaxDoubleExp; e -= cMaxDoubleExp )
+        res *= exp2i( cMaxDoubleExp );
+    res *= exp2i( e );
     return neg ? -res : res;
 }
 
@@ -167,10 +184,15 @@ template <std::size_t nWords>
 /// only safe against a stated error of the conversion feeding them
 [[nodiscard]] MR_BIND_IGNORE inline double toDouble( FastInt128 v ) noexcept
 {
+#ifdef MR_HAS_BUILTIN_INT128
+    return double( v ); // faster than the code below, and correctly rounded as well, which the
+                        // FastIntToDouble tests check on each platform rather than assume
+#else
+    // std::_Signed128 has no conversion in double at all, so MSVC takes the same code as the
+    // wider types below, and its results are the built-in ones above bit for bit
     const FastUInt128 u( v );
-    // deliberately the same code as for FastInt below, and not the built-in conversion of
-    // __int128_t, which MSVC's std::_Signed128 lacks: the value must not depend on the platform
     return detail::doubleFromWords( std::array{ std::uint64_t( u ), std::uint64_t( u >> 64 ) } );
+#endif
 }
 
 /// signed integer of nBits bits, which must be a multiple of 64 and at least 192

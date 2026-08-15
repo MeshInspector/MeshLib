@@ -627,6 +627,9 @@ TEST( MRMesh, FastIntToDouble128 )
         // the wider types hold the same value and must convert to the very same double
         EXPECT_EQ( toDouble( FastInt256( v ) ), d );
         EXPECT_EQ( toDouble( FastInt1024( v ) ), d );
+        // toDouble( FastInt128 ) defers to the built-in conversion where there is one, so this
+        // is what keeps its MSVC implementation checked - and equal to the built-in - everywhere
+        EXPECT_EQ( detail::doubleFromWords( w ), d );
     }
     EXPECT_EQ( toDouble( cMax128 ), std::ldexp( 1.0, 127 ) ); // rounds up to the power of two
     EXPECT_EQ( toDouble( cMin128 ), -std::ldexp( 1.0, 127 ) );

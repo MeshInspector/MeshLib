@@ -4,7 +4,6 @@
 #include "MRFastInt128.h"
 #include <MRPch/MRBindingMacros.h>
 #include <array>
-#include <bit>
 #include <cassert>
 #include <compare>
 #include <cstdint>
@@ -109,72 +108,9 @@ template <typename T>
         return std::array{ std::uint64_t( std::int64_t( v ) ) };
 }
 
-/// the largest exponent of a normal double, and so the largest step exp2i below can take
-constexpr int cMaxDoubleExp = 1023;
-
-/// 2^e as a double, for an exponent within [-1022, cMaxDoubleExp], that is of a normal double;
-/// it is assembled as a bit pattern, because std::ldexp and std::exp2 are library calls, and one
-/// of them costs about as much as everything else doubleFromWords below does
-[[nodiscard]] inline double exp2i( int e ) noexcept
-{
-    assert( e >= -1022 && e <= cMaxDoubleExp );
-    return std::bit_cast<double>( std::uint64_t( e + cMaxDoubleExp ) << 52 );
-}
-
-/// the nearest double to the two's-complement value in the given words, least significant first;
+/// the nearest double to the two's-complement value in the n words at w, least significant first;
 /// see toDouble below for the guarantees, which this function alone provides for the whole family
-template <std::size_t nWords>
-[[nodiscard]] inline double doubleFromWords( std::array<std::uint64_t, nWords> w ) noexcept
-{
-    static_assert( nWords >= 1 );
-    const bool neg = std::int64_t( w[nWords - 1] ) < 0;
-    if ( neg )
-    {
-        // the magnitude, by negating in place; the smallest value negates into 2^(64*nWords-1),
-        // which is not representable as a signed value here, but is as an unsigned magnitude
-        std::uint64_t carry = 1;
-        for ( std::size_t i = 0; i < nWords; ++i )
-        {
-            w[i] = ~w[i] + carry;
-            carry = carry != 0 && w[i] == 0 ? 1 : 0;
-        }
-    }
-
-    std::size_t k = nWords; // one past the highest non-zero word of the magnitude
-    while ( k > 0 && w[k - 1] == 0 )
-        --k;
-    if ( k == 0 )
-        return 0; // and not -0 for a negative zero, which two's complement has no representation of
-
-    // the top 64 significant bits, with the highest one in bit 63: the word below k contributes
-    // the bits shifted in from the right, and the shift by s cannot lose anything, because the
-    // top s bits of w[k-1] are zero by the definition of s
-    const int s = std::countl_zero( w[k - 1] );
-    std::uint64_t top = w[k - 1] << s;
-    if ( s > 0 && k >= 2 )
-        top |= w[k - 2] >> ( 64 - s );
-
-    // everything below those 64 bits, as a single sticky bit in the lowest one. That keeps the
-    // conversion of top correctly rounded for the whole value: only 53 of its bits reach the
-    // mantissa, so bit 0 sits well below the rounding position, and a non-zero tail there is
-    // exactly what tells a tie (round to even) from a value strictly above it (round up)
-    bool tail = k >= 2 && ( w[k - 2] << s ) != 0; // the bits of w[k-2] that top did not take, all of it if s is 0
-    for ( std::size_t i = 0; i + 2 < k && !tail; ++i )
-        tail = w[i] != 0; // the words entirely below top
-    if ( tail )
-        top |= 1;
-
-    // std::uint64_t -> double is correctly rounded, and the scaling by a power of two is exact
-    // unless it overflows, which yields the infinity of the right sign as intended. A value past
-    // DBL_MAX takes more than one step, its exponent alone exceeding what a double holds; every
-    // factor below is at least one, so an intermediate infinity is one the exact value reaches too
-    double res = double( top );
-    int e = int( 64 * ( k - 1 ) ) - s; // at least -63, since k >= 1 and s <= 63, so nothing underflows
-    for ( ; e > cMaxDoubleExp; e -= cMaxDoubleExp )
-        res *= exp2i( cMaxDoubleExp );
-    res *= exp2i( e );
-    return neg ? -res : res;
-}
+[[nodiscard]] MRMESH_API double doubleFromWords( const std::uint64_t * w, int n ) noexcept;
 
 } // namespace detail
 
@@ -191,7 +127,8 @@ template <std::size_t nWords>
     // std::_Signed128 has no conversion in double at all, so MSVC takes the same code as the
     // wider types below, and its results are the built-in ones above bit for bit
     const FastUInt128 u( v );
-    return detail::doubleFromWords( std::array{ std::uint64_t( u ), std::uint64_t( u >> 64 ) } );
+    const std::uint64_t w[2] = { std::uint64_t( u ), std::uint64_t( u >> 64 ) };
+    return detail::doubleFromWords( w, 2 );
 #endif
 }
 
@@ -307,7 +244,7 @@ public:
 template <int nBits>
 [[nodiscard]] MR_BIND_IGNORE inline double toDouble( const FastInt<nBits> & v ) noexcept
 {
-    return detail::doubleFromWords( v.w );
+    return detail::doubleFromWords( v.w.data(), FastInt<nBits>::numWords );
 }
 
 using FastInt256 = FastInt<256>;

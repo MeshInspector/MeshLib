@@ -1,12 +1,90 @@
+[submodule "thirdparty/cpr"]
+	path = thirdparty/cpr
+	url = https://github.com/whoshuu/cpr.git
+[submodule "thirdparty/parallel-hashmap"]
+	path = thirdparty/parallel-hashmap
+	url = https://github.com/greg7mdp/parallel-hashmap.git
+[submodule "thirdparty/eigen"]
+	path = thirdparty/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "thirdparty/expected"]
+	path = thirdparty/expected
+	url = https://github.com/Developer-Ecosystem-Engineering/expected.git
+[submodule "thirdparty/googletest"]
+	path = thirdparty/googletest
+	url = https://github.com/google/googletest.git
+[submodule "thirdparty/spdlog"]
+	path = thirdparty/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "thirdparty/libzip"]
+	path = thirdparty/libzip
+	url = https://github.com/nih-at/libzip.git
+[submodule "thirdparty/jsoncpp"]
+	path = thirdparty/jsoncpp
+	url = https://github.com/open-source-parsers/jsoncpp.git
 [submodule "thirdparty/imgui"]
 	path = thirdparty/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "thirdparty/glad"]
+	path = thirdparty/glad
+	url = https://github.com/Dav1dde/glad.git
+[submodule "thirdparty/clip"]
+	path = thirdparty/clip
+	url = https://github.com/dacap/clip.git
+[submodule "thirdparty/openvdb/v10/openvdb"]
+	path = thirdparty/openvdb/v10/openvdb
+	url = https://github.com/AcademySoftwareFoundation/openvdb
+[submodule "thirdparty/tinygltf"]
+	path = thirdparty/tinygltf
+	url = https://github.com/syoyo/tinygltf
+[submodule "thirdparty/onetbb"]
+	path = thirdparty/onetbb
+	url = https://github.com/oneapi-src/oneTBB.git
+[submodule "thirdparty/libE57Format"]
+	path = thirdparty/libE57Format
+	url = https://github.com/MeshInspector/libE57Format
+[submodule "thirdparty/laz-perf"]
+	path = thirdparty/laz-perf
+	url = https://github.com/MeshInspector/laz-perf
+[submodule "thirdparty/mbedtls"]
+	path = thirdparty/mbedtls
+	url = https://github.com/Mbed-TLS/mbedtls
+[submodule "thirdparty/GDCM"]
+	path = thirdparty/GDCM
+	url = https://github.com/malaterre/GDCM.git
+[submodule "thirdparty/tinyxml2"]
+	path = thirdparty/tinyxml2
+	url = https://github.com/leethomason/tinyxml2.git
+[submodule "thirdparty/libjpeg-turbo"]
+	path = thirdparty/libjpeg-turbo
+	url = https://github.com/libjpeg-turbo/libjpeg-turbo.git
+[submodule "thirdparty/c-blosc"]
+	path = thirdparty/c-blosc
+	url = https://github.com/Blosc/c-blosc.git
+[submodule "thirdparty/fmt"]
+	path = thirdparty/fmt
+	url = https://github.com/fmtlib/fmt.git
 [submodule "thirdparty/mrbind-pybind11"]
 	path = thirdparty/mrbind-pybind11
 	url = https://github.com/MeshInspector/mrbind-pybind11
 [submodule "thirdparty/mrbind"]
 	path = thirdparty/mrbind
 	url = https://github.com/MeshInspector/mrbind
+[submodule "thirdparty/OpenCTM-git"]
+	path = thirdparty/OpenCTM-git
+	url = https://github.com/MeshInspector/OpenCTM.git
+[submodule "thirdparty/fastmcpp"]
+	path = thirdparty/fastmcpp
+	url = https://github.com/MeshInspector/fastmcpp
+[submodule "thirdparty/nlohmann-json"]
+	path = thirdparty/nlohmann-json
+	url = https://github.com/nlohmann/json
+[submodule "thirdparty/cpp-httplib"]
+	path = thirdparty/cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib
+[submodule "thirdparty/zlib-ng"]
+	path = thirdparty/zlib-ng
+	url = https://github.com/zlib-ng/zlib-ng.git
 [submodule "test_data"]
 	path = test_data
 	url = https://github.com/MeshInspector/MeshLibTestData.git

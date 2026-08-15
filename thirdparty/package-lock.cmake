@@ -92,6 +92,8 @@ set(MESHLIB_PACKAGE_libE57Format
 set(MESHLIB_PACKAGE_libjpeg-turbo
   GIT_REPOSITORY https://github.com/libjpeg-turbo/libjpeg-turbo.git
   GIT_TAG 7fa4b5b762c9a99b46b0b7838f5fd55071b92ea5
+  PATCHES
+    ${CMAKE_CURRENT_LIST_DIR}/patches/libjpeg-turbo-allow-add-subdirectory.patch
 )
 
 set(MESHLIB_PACKAGE_libzip

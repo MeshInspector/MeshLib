@@ -7,7 +7,6 @@ distro=$1
 common=(
   scripts/build_thirdparty.sh
   scripts/ask_emscripten_mode.src
-  scripts/thirdparty
   thirdparty
   ':(exclude)thirdparty/install.bat'
   ':(exclude)thirdparty/vcpkg/**'

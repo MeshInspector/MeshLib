@@ -94,7 +94,7 @@ jobs:
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
           # No retry.sh, linux scripts retry themselves.
-          scripts/clone_submodules_linux.sh --skip-prebuilt-thirdparty
+          scripts/clone_submodules_linux.sh
 
       - name: Install thirdparty libs
         run: |

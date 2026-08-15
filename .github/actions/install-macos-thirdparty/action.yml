@@ -91,10 +91,12 @@ runs:
     #   the prefix is baked into mrbind's rpath.
     # - thirdparty-hash: unified hash of everything that influences the
     #   thirdparty ./lib + ./include outputs -- brew prefix (baked into the
-    #   rpaths of the produced .dylibs), submodule SHAs pinned in HEAD (the
-    #   source we compile), and the build-relevant scripts + CMakeLists +
-    #   brew-requirements list. `git ls-tree` reads gitlink entries from the
-    #   index, so it works whether or not the submodules are checked out.
+    #   rpaths of the produced .dylibs), the dependency versions (pinned in
+    #   package-lock.cmake, plus the mrbind-pybind11 gitlink for the one
+    #   dependency that is still a submodule), and the build-relevant scripts +
+    #   stage projects + brew-requirements list. `git ls-tree` reads gitlink
+    #   entries from the index, so it works whether or not the submodule is
+    #   checked out.
     - name: Compute cache key inputs
       id: cache-keys
       shell: bash
@@ -104,23 +106,14 @@ runs:
         echo "brew-hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
         echo "thirdparty-hash=$( {
           printf '%s\n' "$BREW_PREFIX"
-          git ls-tree HEAD \
-            thirdparty/googletest \
-            thirdparty/OpenCTM-git \
-            thirdparty/parallel-hashmap \
-            thirdparty/libE57Format \
-            thirdparty/glad \
-            thirdparty/mrbind-pybind11 \
-            thirdparty/tinygltf \
-            thirdparty/laz-perf \
-            thirdparty/clip \
-            thirdparty/fastmcpp
+          git ls-tree HEAD thirdparty/mrbind-pybind11
           shasum -a 256 \
             scripts/build_thirdparty.sh \
             scripts/install_brew_requirements.sh \
-            scripts/thirdparty/clip.sh \
-            scripts/thirdparty/fastmcpp.sh \
-            thirdparty/CMakeLists.txt \
+            thirdparty/package-lock.cmake \
+            thirdparty/common.cmake \
+            thirdparty/stage1/CMakeLists.txt \
+            thirdparty/stage2/CMakeLists.txt \
             requirements/macos.txt
         } | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
@@ -136,6 +129,15 @@ runs:
           lib
           include
         key: ${{ inputs.cache-prefix }}-${{ inputs.cache-instance }}-${{ inputs.cache-compiler }}-${{ steps.cache-keys.outputs.thirdparty-hash }}
+
+    # CPM downloads dependency sources here when the build runs. Keyed on the pins alone --
+    # sources are independent of runner and compiler, so every instance shares one entry.
+    - name: Cache thirdparty sources
+      if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
+      uses: actions/cache@v5
+      with:
+        path: thirdparty_sources
+        key: ${{ inputs.cache-prefix }}-sources-${{ hashFiles('thirdparty/package-lock.cmake') }}
 
     # Always run: cached thirdparty .dylibs link against brew libs at runtime,
     # so brew packages must be installed on hosted runners even on cache hit.

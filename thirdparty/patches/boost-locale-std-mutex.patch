@@ -1,6 +1,6 @@
-diff -rup a/src/boost/locale/icu/date_time.cpp b/src/boost/locale/icu/date_time.cpp
---- a/src/boost/locale/icu/date_time.cpp
-+++ b/src/boost/locale/icu/date_time.cpp
+diff -rup a/libs/locale/src/boost/locale/icu/date_time.cpp b/libs/locale/src/boost/locale/icu/date_time.cpp
+--- a/libs/locale/src/boost/locale/icu/date_time.cpp
++++ b/libs/locale/src/boost/locale/icu/date_time.cpp
 @@ -14,9 +14,9 @@
  #include "boost/locale/icu/icu_util.hpp"
  #include "boost/locale/icu/time_zone.hpp"
@@ -23,9 +23,9 @@ diff -rup a/src/boost/locale/icu/date_time.cpp b/src/boost/locale/icu/date_time.
          std::string encoding_;
          hold_ptr<icu::Calendar> calendar_;
      };
-diff -rup a/src/boost/locale/shared/date_time.cpp b/src/boost/locale/shared/date_time.cpp
---- a/src/boost/locale/shared/date_time.cpp
-+++ b/src/boost/locale/shared/date_time.cpp
+diff -rup a/libs/locale/src/boost/locale/shared/date_time.cpp b/libs/locale/src/boost/locale/shared/date_time.cpp
+--- a/libs/locale/src/boost/locale/shared/date_time.cpp
++++ b/libs/locale/src/boost/locale/shared/date_time.cpp
 @@ -7,9 +7,8 @@
  #include <boost/locale/date_time.hpp>
  #include <boost/locale/formatting.hpp>
@@ -64,9 +64,9 @@ diff -rup a/src/boost/locale/shared/date_time.cpp b/src/boost/locale/shared/date
              return boost::exchange(tz_id(), new_id);
          }
      } // namespace time_zone
-diff -rup a/src/boost/locale/shared/generator.cpp b/src/boost/locale/shared/generator.cpp
---- a/src/boost/locale/shared/generator.cpp
-+++ b/src/boost/locale/shared/generator.cpp
+diff -rup a/libs/locale/src/boost/locale/shared/generator.cpp b/libs/locale/src/boost/locale/shared/generator.cpp
+--- a/libs/locale/src/boost/locale/shared/generator.cpp
++++ b/libs/locale/src/boost/locale/shared/generator.cpp
 @@ -7,10 +7,9 @@
  #include <boost/locale/encoding.hpp>
  #include <boost/locale/generator.hpp>
@@ -106,9 +106,9 @@ diff -rup a/src/boost/locale/shared/generator.cpp b/src/boost/locale/shared/gene
              const auto p = d->cached.find(id);
              if(p == d->cached.end())
                  d->cached[id] = result;
-diff -rup a/src/boost/locale/shared/localization_backend.cpp b/src/boost/locale/shared/localization_backend.cpp
---- a/src/boost/locale/shared/localization_backend.cpp
-+++ b/src/boost/locale/shared/localization_backend.cpp
+diff -rup a/libs/locale/src/boost/locale/shared/localization_backend.cpp b/libs/locale/src/boost/locale/shared/localization_backend.cpp
+--- a/libs/locale/src/boost/locale/shared/localization_backend.cpp
++++ b/libs/locale/src/boost/locale/shared/localization_backend.cpp
 @@ -5,10 +5,9 @@
  // https://www.boost.org/LICENSE_1_0.txt
  
@@ -148,9 +148,9 @@ diff -rup a/src/boost/locale/shared/localization_backend.cpp b/src/boost/locale/
          return exchange(localization_backend_manager_global(), in);
      }
  
-diff -rup a/src/boost/locale/win32/lcid.cpp b/src/boost/locale/win32/lcid.cpp
---- a/src/boost/locale/win32/lcid.cpp
-+++ b/src/boost/locale/win32/lcid.cpp
+diff -rup a/libs/locale/src/boost/locale/win32/lcid.cpp b/libs/locale/src/boost/locale/win32/lcid.cpp
+--- a/libs/locale/src/boost/locale/win32/lcid.cpp
++++ b/libs/locale/src/boost/locale/win32/lcid.cpp
 @@ -10,9 +10,8 @@
  
  #include "boost/locale/win32/lcid.hpp"

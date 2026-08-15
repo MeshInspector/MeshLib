@@ -259,7 +259,7 @@ jobs:
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind/deps/cppdecl
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh
 
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind

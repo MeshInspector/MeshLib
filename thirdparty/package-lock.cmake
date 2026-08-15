@@ -138,7 +138,7 @@ set(MESHLIB_PACKAGE_spdlog
 
 set(MESHLIB_PACKAGE_tinygltf
   GIT_REPOSITORY https://github.com/syoyo/tinygltf
-  GIT_TAG 98adbb3fb32850bb4918cc147a2d2428b011ad91
+  GIT_TAG v2.8.2
 )
 
 set(MESHLIB_PACKAGE_tinyxml2

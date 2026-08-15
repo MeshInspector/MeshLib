@@ -303,7 +303,7 @@
         "type": "cpm",
         "package": "tinygltf"
       },
-      "version": "98adbb3fb32850bb4918cc147a2d2428b011ad91"
+      "version": "v2.8.2"
     },
     {
       "id": "OpenCTM",

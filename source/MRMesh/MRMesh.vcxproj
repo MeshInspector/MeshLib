@@ -545,6 +545,7 @@
     <ClCompile Include="MRExpected.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRFaceDistance.cpp" />
+    <ClCompile Include="MRFastInt.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />
     <ClCompile Include="MRFeatures.cpp" />
     <ClCompile Include="MRFile.cpp" />

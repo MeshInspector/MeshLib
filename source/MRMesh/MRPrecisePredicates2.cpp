@@ -4,6 +4,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRSparsePolynomial.h"
 #include "MRDivRound.h"
+#include "MRBox.h"
 
 namespace MR
 {
@@ -386,6 +387,13 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     return res;
 }
 
+// intersection of segments (a,b) and (c,d) from the doubled areas abc = |area(a,b,c)| and
+// abd = |area(a,b,d)|, which must not be both zero
+static Vector2i intersectionByAreas( const Vector2i& ci, const Vector2i& di, std::int64_t abc, std::int64_t abd )
+{
+    return Vector2i( divRound( FastInt128( abc ) * Vector2i128fast( di ) + FastInt128( abd ) * Vector2i128fast( ci ), FastInt128( abc + abd ) ) );
+}
+
 Vector2i findSegmentSegmentIntersectionPrecise(
     const Vector2i& ai, const Vector2i& bi, const Vector2i& ci, const Vector2i& di )
 {
@@ -395,19 +403,40 @@ Vector2i findSegmentSegmentIntersectionPrecise(
     auto abd = cross( Vector2i64( ai - di ), Vector2i64( bi - di ) );
     if ( abd < 0 )
         abd = -abd;
-    const auto sum = abc + abd;
-    if ( sum != 0 )
-        return Vector2i( divRound( FastInt128( abc ) * Vector2i128fast( di ) + FastInt128( abd ) * Vector2i128fast( ci ), FastInt128( sum ) ) );
+    if ( abc + abd != 0 )
+        return intersectionByAreas( ci, di, abc, abd );
 
-    // degenerate case
-    auto adLSq = Vector2i64( di - ai ).lengthSq();
-    auto bcLSq = Vector2i64( bi - ci ).lengthSq();
-    if ( adLSq > bcLSq )
-        return ci;
-    else if ( bcLSq > adLSq )
-        return di;
-    else
-        return Vector2i( divRound( Vector2i64( ai ) + Vector2i64( bi ) + Vector2i64( ci ) + Vector2i64( di ), std::int64_t( 2 ) ) );
+    Box2i ab, cd;
+    ab.include( ai ); ab.include( bi );
+    cd.include( ci ); cd.include( di );
+    ab.intersect( cd );
+    return Vector2i( divRound( Vector2i64( ab.min ) + Vector2i64( ab.max ), std::int64_t( 2 ) ) );
+}
+
+Vector2i findSegmentSegmentIntersectionPrecise( const std::array<PreciseVertCoords2, 4> & vs )
+{
+    const auto& ai = vs[0].pt;
+    const auto& bi = vs[1].pt;
+    const auto& ci = vs[2].pt;
+    const auto& di = vs[3].pt;
+    auto abc = cross( Vector2i64( ai - ci ), Vector2i64( bi - ci ) );
+    if ( abc < 0 )
+        abc = -abc;
+    auto abd = cross( Vector2i64( ai - di ), Vector2i64( bi - di ) );
+    if ( abd < 0 )
+        abd = -abd;
+    if ( abc + abd != 0 )
+        return intersectionByAreas( ci, di, abc, abd );
+
+    // all four points lie on one line: simulation-of-simplicity lifts every point off the line
+    // by an amount steeply decreasing with the vertex id, so the two perturbed segments cross
+    // right next to the far end of the segment holding the smallest id; returning that end keeps
+    // the intersection on the same side of every other vertex as ccw reports
+    int m = 0;
+    for ( int i = 1; i < 4; ++i )
+        if ( vs[i].id < vs[m].id )
+            m = i;
+    return vs[m ^ 1].pt; // the other end of the segment of vs[m]
 }
 
 Vector2f findSegmentSegmentIntersectionPrecise(

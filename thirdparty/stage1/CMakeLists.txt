@@ -12,6 +12,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/../common_post_project.cmake)
 IF(EMSCRIPTEN)
   set(BOOST_INCLUDE_LIBRARIES locale)
   set(BOOST_LOCALE_ENABLE_ICONV OFF)
+  set(BOOST_SKIP_INSTALL_RULES OFF)
   meshlib_add_package(boost-libs)
 
   set(WITH_JAVA OFF)

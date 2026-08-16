@@ -21,6 +21,7 @@ set(MESHLIB_PACKAGE_boost-libs
   PATCHES
     ${CMAKE_CURRENT_LIST_DIR}/patches/boost-locale-no-thread.patch
     ${CMAKE_CURRENT_LIST_DIR}/patches/boost-locale-std-mutex.patch
+    ${CMAKE_CURRENT_LIST_DIR}/patches/boost-honor-skip-install-rules.patch
 )
 
 set(MESHLIB_PACKAGE_c-blosc

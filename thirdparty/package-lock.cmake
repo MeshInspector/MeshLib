@@ -9,6 +9,10 @@
 # commit hash, because the pin tracks a mid-branch commit or a MeshInspector fork. Bumping a
 # hash pin onto a tag is a version change, not a cleanup.
 #
+# Editing a file under patches/ in place does not invalidate CPM's source cache -- its key
+# covers a patch's path, not its contents. Clear CPM_SOURCE_CACHE (thirdparty_sources/ by
+# default) after doing so, or the previously patched tree is reused.
+#
 # scripts/check_third_party_licenses.py parses this file, so keep one argument per line.
 
 set(MESHLIB_PACKAGE_boost-libs

@@ -111,9 +111,11 @@ runs:
             scripts/build_thirdparty.sh \
             scripts/install_brew_requirements.sh \
             thirdparty/package-lock.cmake \
-            thirdparty/common.cmake \
+            thirdparty/common_pre_project.cmake \
+            thirdparty/common_post_project.cmake \
             thirdparty/stage1/CMakeLists.txt \
             thirdparty/stage2/CMakeLists.txt \
+            thirdparty/patches/* \
             requirements/macos.txt
         } | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
@@ -130,14 +132,16 @@ runs:
           include
         key: ${{ inputs.cache-prefix }}-${{ inputs.cache-instance }}-${{ inputs.cache-compiler }}-${{ steps.cache-keys.outputs.thirdparty-hash }}
 
-    # CPM downloads dependency sources here when the build runs. Keyed on the pins alone --
-    # sources are independent of runner and compiler, so every instance shares one entry.
+    # CPM downloads dependency sources here when the build runs. Keyed on the pins and the
+    # patches -- sources are independent of runner and compiler, so every instance shares one
+    # entry. The patches matter because CPM's own source-cache key covers a patch file's path
+    # but not its contents, so editing one in place would otherwise reuse the old patched tree.
     - name: Cache thirdparty sources
       if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
       uses: actions/cache@v5
       with:
         path: thirdparty_sources
-        key: ${{ inputs.cache-prefix }}-sources-${{ hashFiles('thirdparty/package-lock.cmake') }}
+        key: ${{ inputs.cache-prefix }}-sources-${{ hashFiles('thirdparty/package-lock.cmake', 'thirdparty/patches/*') }}
 
     # Always run: cached thirdparty .dylibs link against brew libs at runtime,
     # so brew packages must be installed on hosted runners even on cache hit.

@@ -12,3 +12,12 @@ diff -rup a/CMakeLists.txt b/CMakeLists.txt
  # CMake 3.14 and later sets CMAKE_MACOSX_BUNDLE to TRUE by default when
  # CMAKE_SYSTEM_NAME is iOS, tvOS, or watchOS, which breaks the libjpeg-turbo
  # build.  (Specifically, when CMAKE_MACOSX_BUNDLE is TRUE, executables for
+@@ -1820,8 +1816,3 @@
+   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR} COMPONENT include)
+
+ include(cmakescripts/BuildPackages.cmake)
+-
+-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/cmakescripts/cmake_uninstall.cmake.in"
+-  "cmake_uninstall.cmake" IMMEDIATE @ONLY)
+-
+-add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P cmake_uninstall.cmake)

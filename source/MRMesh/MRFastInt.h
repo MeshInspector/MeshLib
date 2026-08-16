@@ -108,12 +108,34 @@ template <typename T>
         return std::array{ std::uint64_t( std::int64_t( v ) ) };
 }
 
+/// the nearest double to the two's-complement value in the n words at w, least significant first;
+/// see toDouble below for the guarantees, which this function alone provides for the whole family
+[[nodiscard]] MRMESH_API double doubleFromWords( const std::uint64_t * w, int n ) noexcept;
+
 } // namespace detail
+
+/// the nearest double to the given value: exact for a magnitude below 2^53, correctly rounded
+/// otherwise (so with a relative error below 2^-53), and +-infinity past DBL_MAX. The bound is
+/// load-bearing: the pre-filters that reject a case in double before evaluating it exactly are
+/// only safe against a stated error of the conversion feeding them
+[[nodiscard]] MR_BIND_IGNORE inline double toDouble( FastInt128 v ) noexcept
+{
+#ifdef MR_HAS_BUILTIN_INT128
+    return double( v ); // faster than the code below, and correctly rounded as well, which the
+                        // FastIntToDouble tests check on each platform rather than assume
+#else
+    // std::_Signed128 has no conversion in double at all, so MSVC takes the same code as the
+    // wider types below, and its results are the built-in ones above bit for bit
+    const FastUInt128 u( v );
+    const std::uint64_t w[2] = { std::uint64_t( u ), std::uint64_t( u >> 64 ) };
+    return detail::doubleFromWords( w, 2 );
+#endif
+}
 
 /// signed integer of nBits bits, which must be a multiple of 64 and at least 192
 /// (below that use FastInt128 with Int64Mul128 and Int128Mul256);
 /// the product of two of them is exact, because it is twice as wide as the arguments;
-/// as FastInt128 it lacks conversion in double, sqrt-function and stream input/output
+/// as FastInt128 it lacks a sqrt-function and stream input/output
 template <int nBits>
 class MR_BIND_IGNORE FastInt
 {
@@ -217,6 +239,13 @@ public:
         return std::strong_ordering::equal;
     }
 };
+
+/// the nearest double to the given value, with the same guarantees as toDouble( FastInt128 ) above
+template <int nBits>
+[[nodiscard]] MR_BIND_IGNORE inline double toDouble( const FastInt<nBits> & v ) noexcept
+{
+    return detail::doubleFromWords( v.w.data(), FastInt<nBits>::numWords );
+}
 
 using FastInt256 = FastInt<256>;
 using FastInt512 = FastInt<512>;

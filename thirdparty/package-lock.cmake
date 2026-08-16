@@ -32,6 +32,8 @@ set(MESHLIB_PACKAGE_c-blosc
 set(MESHLIB_PACKAGE_clip
   GIT_REPOSITORY https://github.com/dacap/clip.git
   GIT_TAG 7f2e86ab9690f7df88440002083edd257f87bc58
+  PATCHES
+    ${CMAKE_CURRENT_LIST_DIR}/patches/clip-config-use-project-name.patch
 )
 
 set(MESHLIB_PACKAGE_cpp-httplib

@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <compare>
 #include <cstdio>
 #include <limits>
@@ -499,6 +500,182 @@ TEST( MRMesh, FastIntMixedWidths )
         EXPECT_TRUE( FastInt<192>( FastInt<448>( fa ) ) == fa );
         EXPECT_TRUE( FastInt<256>( FastInt<512>( fb ) ) == fb );
     }
+}
+
+namespace
+{
+
+// the value of a finite double as a reference integer, exact for every integer double
+RefInt toRef( double d )
+{
+    if ( std::abs( d ) < std::ldexp( 1.0, 53 ) )
+        return RefInt( std::int64_t( d ) ); // every integer of this magnitude fits a std::int64_t
+    int e = 0;
+    const double m = std::frexp( d, &e ); // d == m * 2^e with |m| in [0.5, 1)
+    const auto mi = std::int64_t( std::ldexp( m, 53 ) ); // exact: 53 bits is the whole mantissa
+    return RefInt( mi ) << ( e - 53 ); // and e >= 54 here, so the shift is never negative
+}
+
+// |a - b|, as the reference has no absolute value of its own
+RefInt refDist( const RefInt & a, const RefInt & b )
+{
+    const RefInt d = a - b;
+    return d.sign() < 0 ? -d : d;
+}
+
+// toDouble of the given words is the nearest double to their value: within the documented
+// relative error of 2^-53, and with no neighbouring double strictly closer
+template <std::size_t nWords>
+void expectNearestDouble( const Words<nWords> & w, double d )
+{
+    const RefInt ref = toRef( w );
+    ASSERT_EQ( d < 0, ref.sign() < 0 ) << ref;
+    ASSERT_EQ( d == 0, ref.sign() == 0 ) << ref;
+    if ( ref.sign() == 0 )
+        return;
+    ASSERT_TRUE( std::isfinite( d ) ) << ref; // no width here reaches DBL_MAX, see FastIntToDoubleExtremes
+    if ( std::abs( d ) < std::ldexp( 1.0, 53 ) )
+    {
+        EXPECT_EQ( toRef( d ), ref ) << "exact below 2^53"; // the mantissa holds the value whole
+        return;
+    }
+    const RefInt refD = toRef( d );
+    const RefInt err = refDist( ref, refD );
+    const RefInt absRef = ref.sign() < 0 ? -ref : ref;
+
+    // correct rounding is at most half an ulp off, which is 2^-53 of the value at worst
+    EXPECT_LE( err << 53, absRef ) << "value " << ref << " became " << refD;
+
+    // and no other double is closer, which the bound alone does not imply
+    EXPECT_GE( refDist( ref, toRef( std::nextafter( d, -INFINITY ) ) ), err ) << ref;
+    EXPECT_GE( refDist( ref, toRef( std::nextafter( d, INFINITY ) ) ), err ) << ref;
+}
+
+// toDouble of the given width against the reference, over all magnitudes
+template <int nBits>
+void testToDoubleWidth( unsigned seed )
+{
+    constexpr int n = nBits / 64;
+    std::mt19937_64 gen( seed );
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const auto w = randomWords<n>( gen, nBits - 1 ); // one bit short, so that -v does not overflow
+        const auto v = toFastInt<nBits>( w );
+        const double d = toDouble( v );
+        expectNearestDouble( w, d );
+        EXPECT_EQ( toDouble( -v ), -d ); // the conversion is symmetric, being sign-magnitude
+        EXPECT_EQ( d > 0, v.sign() > 0 );
+        EXPECT_EQ( d < 0, v.sign() < 0 );
+    }
+}
+
+} // anonymous namespace
+
+// every value of magnitude below 2^53 converts exactly, at every width of the family
+TEST( MRMesh, FastIntToDoubleExact )
+{
+    std::mt19937_64 gen( 555 );
+    const auto test = [&]( std::int64_t v )
+    {
+        const auto d = double( v ); // exact for |v| < 2^53, and the conversion must agree with it
+        EXPECT_EQ( toDouble( FastInt128( v ) ), d );
+        EXPECT_EQ( toDouble( FastInt<192>( v ) ), d );
+        EXPECT_EQ( toDouble( FastInt256( v ) ), d );
+        EXPECT_EQ( toDouble( FastInt1024( v ) ), d );
+    };
+    for ( std::int64_t v : { std::int64_t( 0 ), std::int64_t( 1 ), std::int64_t( -1 ), std::int64_t( 2 ),
+        std::int64_t( 1 ) << 52, -( std::int64_t( 1 ) << 52 ), ( std::int64_t( 1 ) << 53 ) - 1 } )
+        test( v );
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const auto v = std::int64_t( gen() % ( std::uint64_t( 1 ) << 53 ) );
+        test( v );
+        test( -v );
+    }
+    EXPECT_EQ( toDouble( FastInt256( 0 ) ), 0 );
+    EXPECT_FALSE( std::signbit( toDouble( FastInt256( 0 ) ) ) ); // zero has no sign here
+}
+
+// the first magnitudes that do not fit the mantissa, where the rounding starts
+TEST( MRMesh, FastIntToDoubleRounding )
+{
+    const auto pow53 = std::int64_t( 1 ) << 53;
+    EXPECT_EQ( toDouble( FastInt256( pow53 ) ), std::ldexp( 1.0, 53 ) );
+    EXPECT_EQ( toDouble( FastInt256( pow53 + 1 ) ), std::ldexp( 1.0, 53 ) );      // ties to even, down
+    EXPECT_EQ( toDouble( FastInt256( pow53 + 2 ) ), std::ldexp( 1.0, 53 ) + 2 );  // exact again
+    EXPECT_EQ( toDouble( FastInt256( pow53 + 3 ) ), std::ldexp( 1.0, 53 ) + 4 );  // ties to even, up
+    EXPECT_EQ( toDouble( FastInt256( -pow53 - 1 ) ), -std::ldexp( 1.0, 53 ) );
+    EXPECT_EQ( toDouble( FastInt256( -pow53 - 3 ) ), -std::ldexp( 1.0, 53 ) - 4 );
+
+    // a tie broken by a single bit far below the mantissa, which only the sticky bit can carry:
+    // 2^64 + 2^11 is a tie of the doubles around it, and 2^64 + 2^11 + 1 is just above it
+    const FastInt256 v = FastInt256( FastInt128( FastUInt128( 1 ) << 64 ) ) + FastInt256( std::int64_t( 1 ) << 11 );
+    EXPECT_EQ( toDouble( v ), std::ldexp( 1.0, 64 ) ); // ties to even, down
+    EXPECT_EQ( toDouble( v + FastInt256( 1 ) ), std::ldexp( 1.0, 64 ) + 4096 ); // above the tie, up
+}
+
+TEST( MRMesh, FastIntToDouble128 )
+{
+    std::mt19937_64 gen( 666 );
+    for ( int i = 0; i < 1000; ++i )
+    {
+        const auto w = randomWords<2>( gen, 127 ); // one bit short, so that -v does not overflow
+        const auto v = toFastInt128( w );
+        const double d = toDouble( v );
+        expectNearestDouble( w, d );
+        EXPECT_EQ( toDouble( FastInt128( -v ) ), -d );
+        // the wider types hold the same value and must convert to the very same double
+        EXPECT_EQ( toDouble( FastInt256( v ) ), d );
+        EXPECT_EQ( toDouble( FastInt1024( v ) ), d );
+        // toDouble( FastInt128 ) defers to the built-in conversion where there is one, so this
+        // is what keeps its MSVC implementation checked - and equal to the built-in - everywhere
+        EXPECT_EQ( detail::doubleFromWords( w.data(), 2 ), d );
+    }
+    EXPECT_EQ( toDouble( cMax128 ), std::ldexp( 1.0, 127 ) ); // rounds up to the power of two
+    EXPECT_EQ( toDouble( cMin128 ), -std::ldexp( 1.0, 127 ) );
+}
+
+TEST( MRMesh, FastIntToDouble256 )
+{
+    testToDoubleWidth<256>( 111 );
+}
+
+TEST( MRMesh, FastIntToDouble512 )
+{
+    testToDoubleWidth<512>( 222 );
+}
+
+TEST( MRMesh, FastIntToDouble192 )
+{
+    testToDoubleWidth<192>( 444 ); // the narrowest width of the family
+}
+
+// the widest alias still fits a double, and past DBL_MAX the conversion saturates; that is
+// reachable, because every product widens (FastInt1024 * FastInt1024 is a FastInt<2048>)
+TEST( MRMesh, FastIntToDoubleExtremes )
+{
+    FastInt1024 max1024; // the largest value of the width: all ones but the sign bit, 2^1023 - 1
+    max1024.w.fill( ~std::uint64_t( 0 ) );
+    max1024.w.back() = ~std::uint64_t( 0 ) >> 1;
+    const FastInt1024 min1024 = -max1024 - FastInt1024( 1 ); // and the smallest, -2^1023
+    // both are below DBL_MAX = ( 2 - 2^-52 ) * 2^1023, and 2^1023 - 1 rounds up to the power of two
+    EXPECT_EQ( toDouble( max1024 ), std::ldexp( 1.0, 1023 ) );
+    EXPECT_EQ( toDouble( min1024 ), -std::ldexp( 1.0, 1023 ) );
+
+    // a power of two just below DBL_MAX converts exactly, and 2^1024 no longer fits
+    FastInt<2048> pow1023;
+    pow1023.w[15] = std::uint64_t( 1 ) << 63; // positive here: the sign bit of this width is w[31]
+    EXPECT_EQ( toDouble( pow1023 ), std::ldexp( 1.0, 1023 ) );
+    FastInt<2048> pow1024;
+    pow1024.w[16] = 1;
+    EXPECT_EQ( toDouble( pow1024 ), INFINITY );
+    EXPECT_EQ( toDouble( -pow1024 ), -INFINITY );
+
+    // and so does the square of the widest alias, which is what reaches here in practice
+    EXPECT_EQ( toDouble( max1024 * max1024 ), INFINITY );
+    EXPECT_EQ( toDouble( max1024 * min1024 ), -INFINITY );
+
+    testToDoubleWidth<1024>( 333 ); // the random values are one bit short of the width and stay finite
 }
 
 TEST( MRMesh, FastIntVector )

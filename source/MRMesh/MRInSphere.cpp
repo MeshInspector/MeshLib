@@ -157,8 +157,8 @@ EpsVec perturbedDiff( const Vector3i & pTo, const Vector3i & pFrom, std::int64_t
     {
         if ( const auto base = std::int64_t( pTo[i] ) - pFrom[i] )
             addTerm( r[i], 0, BigInt( base ) );
-        addTerm( r[i], axisMult[i] * degTo, BigInt( 1 ) );
-        addTerm( r[i], axisMult[i] * degFrom, BigInt( -1 ) );
+        addTerm( r[i], axisMult[i] * degTo, BigInt( std::int64_t( 1 ) ) );
+        addTerm( r[i], axisMult[i] * degFrom, BigInt( std::int64_t( -1 ) ) );
     }
     return r;
 }

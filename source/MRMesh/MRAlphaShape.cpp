@@ -61,6 +61,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     Triangulation & appendTris, std::vector<AlphaShapeNei> & neis, bool onlyLargerVids, AlphaShapeStats * stats )
 {
     const auto p0 = data.coords( cloud, v );
+    AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     neis.clear();
     findPointsInBall( cloud, { cloud.points[v], sqr( data.searchRadius ) },
         [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
@@ -73,6 +74,8 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             }
             return Processing::Continue;
         } );
+
+    myStats.collectedNeis += neis.size();
 
     // the ball emptiness test below stops on the first point inside the ball,
     // and the points closest to #v have the best chance to be there
@@ -105,16 +108,17 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         size_t good = i + 1;
         for ( size_t j = i + 1; j < goodSize; ++j )
         {
+            ++myStats.redundancyTests;
             if ( !makesRedundant( p, neis[i].distSq, Vector3i64{ neis[j].coords.pt - p0.pt }, neis[j].distSq ) )
                 neis[good++] = neis[j];
         }
         goodSize = good;
     }
+    myStats.redundantNeis += neis.size() - goodSize;
     neis.resize( goodSize );
 
     // the shadow filter below reuses the sphere quantities this tester computes in reset()
     FastInSphereTesterSoS tester;
-    AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     // the tester must be already reset on the ball in question, and a, b are the ids of its points
     auto ballEmpty = [&tester, &neis, &myStats]( VertId a, VertId b )
     {

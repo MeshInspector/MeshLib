@@ -34,6 +34,10 @@ TEST( MRMesh, AlphaShape )
     findAlphaShapeNeiTriangles( cloud, 2_v, data, tris, neis, true, &stats );
     EXPECT_EQ( tris.size(), 2 ); // two balls touching all three points from the opposite sides are empty
 
+    // each of the three points has the two others as neighbours, and one pair of them to check
+    EXPECT_EQ( stats.collectedNeis, 6 );
+    EXPECT_EQ( stats.redundancyTests, 3 );
+    EXPECT_EQ( stats.redundantNeis, 0 ); // no point here is behind another one
     // only the triangle 2-3-4 is considered, from point #2 with the two others having larger ids
     EXPECT_EQ( stats.consideredTris, 1 );
     EXPECT_EQ( stats.touchableTris, 1 );
@@ -177,6 +181,9 @@ void benchAlphaShape( const char * name, const PointCloud & cloud, float radius 
     std::cout << name << ": " << cloud.points.size() << " points, radius " << radius << '\n'
         << "  time            " << ms << " ms\n"
         << "  triangles       " << tris.size() << " (hash " << hashOf( tris ) << ")\n"
+        << "  collectedNeis   " << stats.collectedNeis << '\n'
+        << "  redundancyTests " << stats.redundancyTests << '\n'
+        << "  redundantNeis   " << stats.redundantNeis << '\n'
         << "  consideredTris  " << stats.consideredTris << '\n'
         << "  touchableTris   " << stats.touchableTris << '\n'
         << "  inBallTests     " << stats.inBallTests << '\n'

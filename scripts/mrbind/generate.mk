@@ -582,9 +582,16 @@ ifneq ($(TARGETING_EMSCRIPTEN),)
 FETCH_PACKAGES += expected spdlog parallel-hashmap onetbb jsoncpp googletest openvdb
 endif
 
-THIRDPARTY_SOURCES_MK := $(TEMP_OUTPUT_DIR)/thirdparty_sources.mk
+# Both the sources and the CMake scratch have to stay out of `$(TEMP_OUTPUT_DIR)`: for TARGET=c
+# that is `source/MeshLibC2/temp`, which ships whole as the CBindings artifact and is fed to
+# Doxygen. The download location defaults to the one scripts/build_thirdparty.sh uses, so a
+# checkout that built the thirdparty libs already has these sources.
+CPM_SOURCE_CACHE ?= $(abspath $(makefile_dir)../../thirdparty_sources)
+THIRDPARTY_FETCH_DIR := $(makefile_dir)../../build/thirdparty_fetch
+THIRDPARTY_SOURCES_MK := $(THIRDPARTY_FETCH_DIR)/thirdparty_sources.mk
 $(THIRDPARTY_SOURCES_MK): $(makefile_dir)../../thirdparty/package-lock.cmake
-	cmake -S $(makefile_dir)../../thirdparty/fetch -B $(TEMP_OUTPUT_DIR)/thirdparty_fetch \
+	cmake -S $(makefile_dir)../../thirdparty/fetch -B $(THIRDPARTY_FETCH_DIR) \
+		-D CPM_SOURCE_CACHE=$(CPM_SOURCE_CACHE) \
 		-D MESHLIB_FETCH_PACKAGES="$(subst $(space),;,$(sort $(FETCH_PACKAGES)))" \
 		-D MESHLIB_FETCH_OUTPUT=$(abspath $@)
 include $(THIRDPARTY_SOURCES_MK)

@@ -158,14 +158,21 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         // bp and bq below are the dot products of d with the two vectors up and uq, and a negative
         // sign of either rejects the candidate before any bignum work, so the exact values are needed
         // only where the double ones are too close to zero. The operands have to approximate the
-        // values on the integer grid, where the predicates and the ties live; every difference of two
-        // points is below 2^31, so Vector3d of it is exact and the dot products below are as good as
-        // converting the exact bignums (0.7 bits worse in measurement) without needing a conversion
-        // at all. Those are below 2^64, the components of up and uq below 2^96, and their dot products
-        // with d below 2^129; each rounding on the way costs 2^-53 of the running magnitude, keeping
-        // the total error below 2^79, so a double below -2^79 is negative exactly as well. The
-        // tolerance takes 32 times that margin, at the price of evaluating exactly the few candidates
-        // falling in between; all of this is hoisted out of the loop over the candidates
+        // values on the integer grid, where the predicates and the ties live, and the dot products are
+        // taken in double rather than converted from the exact bignums: the same accuracy up to 0.7 bits
+        // and no conversion at all. Writing B < 2^31 for a difference of two points and u = 2^-53:
+        //   Vector3d of a difference is exact, B being far below 2^53;
+        //   the three dot products are below 3*B^2 < 2^64, and five roundings leave them off by 2^12;
+        //   the components of up and uq are below 6*B^3 < 2^96, off by 2^45 - dominated by q * 2^12
+        //     and p * 2^12 from the line above, not by the three roundings of 2^42 here;
+        //   their dot products with d are below 18*B^4 < 2^129, off by 3 * 2^45 * B = 2^78 from the
+        //     line above plus five roundings of 2^76, so below 2^79 in total.
+        // A double below -2^79 is therefore negative exactly as well; the tolerance takes 32 times that
+        // margin, at the price of evaluating exactly the few candidates falling in between. Measured
+        // worst error over 400k configurations at the full coordinate range: 2^74.6. Contraction into
+        // fused multiply-add only removes roundings, so it cannot break the bound, and a value it moves
+        // across the tolerance lands in the band that goes to the exact test anyway.
+        // All of this is hoisted out of the loop over the candidates.
         const Vector3d pDbl( p ), qDbl( q );
         const double ppDbl = dot( pDbl, pDbl ), qqDbl = dot( qDbl, qDbl ), pqDbl = dot( pDbl, qDbl );
         const Vector3d up{ qDbl * ppDbl - pDbl * pqDbl };

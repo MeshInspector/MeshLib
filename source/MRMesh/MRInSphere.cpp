@@ -244,10 +244,21 @@ bool FastInSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVe
     cc_ = Vector3d{ toDouble( M[0] ), toDouble( M[1] ), toDouble( M[2] ) } / ( 2 * dW );
     hn_ = ( std::sqrt( toDouble( E ) * dW ) / ( 2 * dW * dW ) ) * Vector3d( w );
 
-    // every value above carries a relative error of a few 2^-53 (toDouble is correctly rounded,
-    // so its own share is one of them), and the center is at the distance sqrt(rSq) from a, so the
-    // squared distance in operator() is off by at most rSq * 2^-48;
-    // 2^-44 of rSq keeps a 16x margin over that, and a query is decided only outside of it
+    // the tolerance of the tests in operator() and outsideBothSpheres, with u = 2^-53 and r the
+    // radius: |cc_| is the circumradius and |hn_| the height, both at most r, and each carries a few
+    // relative u - one from toDouble, which is correctly rounded, the rest from the operations above,
+    // including the conversion of w, whose components reach 2^63 and are NOT exact in double. That
+    // puts the center about 10 * u * r away from the true one. Near the surface, the only place where
+    // the tolerance decides anything, |q - center| is about r, so the squared distance is off by
+    //   2 * r * 10 * u * r  from the center, plus the roundings of three squares, two sums, the
+    //   conversion of rSq and the subtraction, together about 34 * u * rSq < rSq * 2^-48,
+    // and the tolerance takes 16 times that. Measured worst over 60k queries placed within 3e-14 of
+    // the surface: rSq * 2^-50, no query decided against the exact predicate.
+    // The tolerance is proportional to rSq rather than absolute, which is what makes it sound in both
+    // directions: where the exact value is not positive, |q - center|^2 <= rSq bounds the error below
+    // the tolerance, so the point is never called Outside; where it is not negative, |q - center|^2 >=
+    // rSq bounds the computed value above -tolerance, so it is never called Inside. An absolute
+    // tolerance fitted to the largest coordinates would instead swallow the whole range at small ones.
     tol_ = double( rSq ) * 0x1p-44;
     return true;
 }

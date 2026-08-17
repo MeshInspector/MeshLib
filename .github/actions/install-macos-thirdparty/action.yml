@@ -136,12 +136,18 @@ runs:
     # patches -- sources are independent of runner and compiler, so every instance shares one
     # entry. The patches matter because CPM's own source-cache key covers a patch file's path
     # but not its contents, so editing one in place would otherwise reuse the old patched tree.
+    # COPYFILE_DISABLE stops bsdtar from storing macOS xattrs as `._name` AppleDouble members.
+    # This is the only entry restored on a different runner image than saved it, and a tar that
+    # does not reassemble those members leaves `._*.cpp` files that upstream source globs then
+    # try to compile; `-v2-` drops the entries saved before that.
     - name: Cache thirdparty sources
       if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
       uses: actions/cache@v5
+      env:
+        COPYFILE_DISABLE: '1'
       with:
         path: thirdparty_sources
-        key: ${{ inputs.cache-prefix }}-sources-${{ hashFiles('thirdparty/package-lock.cmake', 'thirdparty/patches/*') }}
+        key: ${{ inputs.cache-prefix }}-sources-v2-${{ hashFiles('thirdparty/package-lock.cmake', 'thirdparty/patches/*') }}
 
     # Always run: cached thirdparty .dylibs link against brew libs at runtime,
     # so brew packages must be installed on hosted runners even on cache hit.

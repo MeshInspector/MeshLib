@@ -228,6 +228,24 @@ public:
     /// shall be called only after reset() returned true, and all four ids must be distinct
     [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
 
+    // the three accessors below describe the prepared sphere itself, for a caller that needs its own
+    // exact predicate about it rather than the position of a point. With S = sqrt( heightSq() *
+    // normalSq() ) and M = 2 * normalSq() * ( circumcenter - a ), which is recomputable from the three
+    // points, the center satisfies 2 * sqr( normalSq() ) * ( center - a ) = normalSq() * M + S *
+    // normal() exactly; findAlphaShapeNeiTriangles builds its wedge predicates on that identity.
+    // All three are valid only after reset() returned true.
+
+    /// doubled normal cross( b - a, c - a ) of the triangle, directed at the sphere's center
+    [[nodiscard]] MR_BIND_IGNORE const Vector3i64 & normal() const { return w; }
+
+    /// squared length of normal()
+    [[nodiscard]] MR_BIND_IGNORE const FastInt<192> & normalSq() const { return W; }
+
+    /// sqr( 2 * h * normalSq() ), h being the distance from the plane of the triangle to the
+    /// sphere's center - not h^2 itself, the scaling by the doubled normal keeps the value integer;
+    /// zero exactly when the circumradius equals the radius, so the center lies in the plane
+    [[nodiscard]] MR_BIND_IGNORE const FastInt<384> & heightSq() const { return E; }
+
 private:
     VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
 };

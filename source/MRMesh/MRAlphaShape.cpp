@@ -112,13 +112,8 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     }
     neis.resize( goodSize );
 
-    // the sphere quantities computed by reset() are reused by the shadow filter below
-    struct Tester : FastInSphereTesterSoS
-    {
-        const Vector3i64 & normal() const { return w; }
-        const FastInt<192> & normalSq() const { return W; }
-        const FastInt<384> & heightSq() const { return E; }
-    } tester;
+    // the shadow filter below reuses the sphere quantities this tester computes in reset()
+    FastInSphereTesterSoS tester;
     AlphaShapeStats myStats; // local to keep the counters out of the caller's memory in the loops below
     // the tester must be already reset on the ball in question, and a, b are the ids of its points
     auto ballEmpty = [&tester, &neis, &myStats]( VertId a, VertId b )

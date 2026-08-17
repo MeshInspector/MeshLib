@@ -33,9 +33,6 @@ jobs:
       matrix:
         os: [ windows-latest, ubuntu-latest, macos-latest, macos-15-intel ]
     runs-on: ${{ matrix.os }}
-    # Windows is the release gate; other legs cover the remaining package
-    # natives and stay non-blocking until proven stable.
-    continue-on-error: ${{ matrix.os != 'windows-latest' }}
     env:
       UNITY_PROJECT: test_unity/NugetTestProj
     steps:
@@ -94,6 +91,13 @@ jobs:
           $xml = [xml](Get-Content -Path $xmlPath)
           $xml.packages.package.version = $pkgVersion
           $xml.Save($xmlPath)
+
+      # Unity Hub 3.20.0 repackaged with Electron Forge: it installs into
+      # /usr/lib/unityhub, while unity-setup hardcodes /opt/unityhub. The link
+      # dangles until the next step's apt run unpacks the Hub.
+      - name: Point legacy Unity Hub path at the Electron Forge layout
+        if: runner.os == 'Linux'
+        run: sudo ln -sfT /usr/lib/unityhub /opt/unityhub
 
       - name: Install Unity editor
         # The one step with a live external dependency (Unity CDN); a hung

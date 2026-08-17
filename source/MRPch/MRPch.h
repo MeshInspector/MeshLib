@@ -23,7 +23,6 @@
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/signals2/connection.hpp>
 #include <boost/stacktrace.hpp>

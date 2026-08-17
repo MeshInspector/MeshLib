@@ -1,4 +1,6 @@
 #include "MRAlphaShape.h"
+#include "MRFastInt.h"
+#include "MRInt64Mul128.h"
 #include "MRPointCloud.h"
 #include "MRPointsInBall.h"
 #include "MRInSphere.h"
@@ -60,7 +62,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             {
                 const auto c = data.coords( cloud, found.vId );
                 const Vector3i64 d{ c.pt - p0.pt };
-                neis.push_back( { c, dot( Vector3i128{ d }, Vector3i128{ d } ) } );
+                neis.push_back( { c, dot( Vector3i64mul{ d }, Vector3i64mul{ d } ) } );
             }
             return Processing::Continue;
         } );
@@ -75,17 +77,19 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     // a neighbor p makes a farther neighbor x redundant if p is strictly inside every ball of the given
     // radius through #v having x inside or on it: then x can neither make a triangle with #v (p blocks
     // both its balls) nor be the only point blocking a triangle of others; see the PR for the derivation
-    auto makesRedundant = [rSq4 = 4 * Int128( data.intRadiusSq )]( const Vector3i64 & p, const Int128 & pp, const Vector3i64 & x, const Int128 & xx )
+    auto makesRedundant = [rSq4 = 4 * FastInt128( data.intRadiusSq )]( const Vector3i64 & p, const FastInt128 & pp, const Vector3i64 & x, const FastInt128 & xx )
     {
-        const auto px = dot( Vector3i128{ p }, Vector3i128{ x } );
+        const auto px = dot( Vector3i64mul{ p }, Vector3i64mul{ x } );
         if ( px <= pp )
             return false; // x is not behind the plane through p orthogonal to #v-p
-        const auto crossSq = Int256( xx ) * Int256( pp ) - sqr( Int256( px ) ); // |cross(p,x)|^2
-        const auto d = Int256( rSq4 - pp );
-        if ( 4 * crossSq >= Int256( pp ) * d )
+        // every dot product here is at most 2^64 in magnitude, so all the products below
+        // fit in three words, and the two final ones in four
+        const auto crossSq = FastInt<192>( Int128Mul256( xx ) * Int128Mul256( pp ) - sqr( Int128Mul256( px ) ) ); // |cross(p,x)|^2
+        const auto d = rSq4 - pp;
+        if ( FastInt<192>( 4 * crossSq ) >= FastInt<192>( Int128Mul256( pp ) * Int128Mul256( d ) ) )
             return false; // x is not closer to line #v-p than the centers of the balls through #v and p
         // x is strictly outside every ball of the given radius through #v and p
-        return Int256( pp ) * sqr( Int256( xx - px ) ) > d * crossSq;
+        return pp * FastInt<192>( sqr( Int128Mul256( xx - px ) ) ) > d * crossSq;
     };
     size_t goodSize = neis.size();
     for ( size_t i = 0; i < goodSize; ++i )

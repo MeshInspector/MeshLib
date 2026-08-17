@@ -17,8 +17,11 @@
     <ClInclude Include="MRCurve.h" />
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
+    <ClInclude Include="MRFastInt.h" />
+    <ClInclude Include="MRVarBigInt.h" />
     <ClInclude Include="MRHoleFillPlan.h" />
     <ClInclude Include="MRImageTransform.h" />
+    <ClInclude Include="MRInt64Mul128.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRLoadedMeshData.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
@@ -542,6 +545,7 @@
     <ClCompile Include="MRExpected.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRFaceDistance.cpp" />
+    <ClCompile Include="MRFastInt.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />
     <ClCompile Include="MRFeatures.cpp" />
     <ClCompile Include="MRFile.cpp" />

@@ -62,7 +62,7 @@ struct Vector3
     constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
     constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
-    T lengthSq() const { return x * x + y * y + z * z; }
+    auto lengthSq() const -> decltype( std::declval<T>() * std::declval<T>() ) { return x * x + y * y + z * z; }
     auto length() const
     {
         // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
@@ -176,7 +176,7 @@ inline T distance( const Vector3<T> & a, const Vector3<T> & b )
 
 /// cross product
 template <typename T>
-inline Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b )
+inline auto cross( const Vector3<T> & a, const Vector3<T> & b ) -> Vector3<decltype( a.x * b.x )>
 {
     return {
         a.y * b.z - a.z * b.y,
@@ -194,14 +194,14 @@ inline auto dot( const Vector3<T> & a, const Vector3<T> & b ) -> decltype( a.x *
 
 /// squared length
 template <typename T>
-inline T sqr( const Vector3<T> & a )
+inline auto sqr( const Vector3<T> & a ) -> decltype( a.lengthSq() )
 {
     return a.lengthSq();
 }
 
 /// mixed product
-template <typename T>
-inline T mixed( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+template <typename T, typename U>
+inline auto mixed( const Vector3<T> & a, const Vector3<U> & b, const Vector3<U> & c ) -> decltype( dot( a, cross( b, c ) ) )
 {
     return dot( a, cross( b, c ) );
 }

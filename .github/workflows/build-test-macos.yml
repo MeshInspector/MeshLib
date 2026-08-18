@@ -64,8 +64,8 @@ jobs:
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            cxx-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang++
-            c-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang
+            cxx-compiler-template: BREW_LLVM_PREFIX/bin/clang++
+            c-compiler-template: BREW_LLVM_PREFIX/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:
@@ -113,6 +113,14 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
+      # The resolved version (e.g. `22.1.7`) discriminates the mrbind cache when
+      # the same llvm major flips between the PGO'd main keg and the versioned
+      # one -- mrbind bakes the keg's libclang path into its rpath.
+      - name: Resolve MRBind Clang version
+        if: ${{ inputs.mrbind || inputs.mrbind_c }}
+        id: mrbind-clang
+        run: echo "version=$("$(scripts/mrbind/brew_llvm_prefix_macos.sh)/bin/clang" --version | grep -oE '[0-9]+(\.[0-9]+)+' | head -1)" >> $GITHUB_OUTPUT
+
       - name: Build MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
@@ -122,7 +130,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ steps.mrbind-clang.outputs.version }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -172,7 +180,7 @@ jobs:
 
       - name: MRMesh Exported Symbols
         run: |
-          export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          export PATH="$(scripts/mrbind/brew_llvm_prefix_macos.sh)/bin:$PATH"
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings

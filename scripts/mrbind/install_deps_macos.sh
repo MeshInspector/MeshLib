@@ -11,4 +11,11 @@ CLANG_VER="$(cat $SCRIPT_DIR/clang_version_macos.txt | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
 brew update
-brew install --quiet make grep lld llvm@$CLANG_VER
+
+# The versioned llvm@N keg is only needed when there is no matching
+# (PGO-optimized) main `llvm` keg -- see brew_llvm_prefix_macos.sh.
+if [[ "$("$SCRIPT_DIR/brew_llvm_prefix_macos.sh")" == *"/opt/llvm" ]]; then
+    brew install --quiet make grep lld
+else
+    brew install --quiet make grep lld llvm@$CLANG_VER
+fi

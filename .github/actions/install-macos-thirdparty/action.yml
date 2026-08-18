@@ -23,13 +23,15 @@ inputs:
     default: /usr/bin/clang++
     description: >
       C++ compiler path template; literal `BREW_PREFIX` is replaced with
-      the resolved homebrew prefix.
+      the resolved homebrew prefix, literal `BREW_LLVM_PREFIX` with the
+      output of scripts/mrbind/brew_llvm_prefix_macos.sh.
   c-compiler-template:
     required: false
     default: /usr/bin/clang
     description: >
       C compiler path template; literal `BREW_PREFIX` is replaced with
-      the resolved homebrew prefix.
+      the resolved homebrew prefix, literal `BREW_LLVM_PREFIX` with the
+      output of scripts/mrbind/brew_llvm_prefix_macos.sh.
   cache-prefix:
     required: false
     default: v1-thirdparty
@@ -73,9 +75,17 @@ runs:
         echo "brew-prefix=$BREW_PREFIX" >> $GITHUB_OUTPUT
         echo "BREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
 
-        # Substitute BREW_PREFIX in templates and set actual compiler paths
-        CXX_COMPILER=$(echo "${{ inputs.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
-        C_COMPILER=$(echo "${{ inputs.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
+        # BREW_LLVM_PREFIX prefers the PGO-optimized main `llvm` keg over the
+        # plain-built versioned `llvm@N` -- see brew_llvm_prefix_macos.sh.
+        BREW_LLVM_PREFIX=
+        if [[ "${{ inputs.cxx-compiler-template }}${{ inputs.c-compiler-template }}" == *BREW_LLVM_PREFIX* ]]; then
+          BREW_LLVM_PREFIX="$(scripts/mrbind/brew_llvm_prefix_macos.sh)"
+          echo "Brew LLVM prefix: $BREW_LLVM_PREFIX"
+        fi
+
+        # Substitute the prefixes in templates and set actual compiler paths
+        CXX_COMPILER=$(echo "${{ inputs.cxx-compiler-template }}" | sed "s|BREW_LLVM_PREFIX|$BREW_LLVM_PREFIX|g; s|BREW_PREFIX|$BREW_PREFIX|g")
+        C_COMPILER=$(echo "${{ inputs.c-compiler-template }}" | sed "s|BREW_LLVM_PREFIX|$BREW_LLVM_PREFIX|g; s|BREW_PREFIX|$BREW_PREFIX|g")
 
         echo "CXX compiler: $CXX_COMPILER"
         echo "C compiler: $C_COMPILER"

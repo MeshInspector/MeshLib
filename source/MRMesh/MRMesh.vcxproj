@@ -13,6 +13,7 @@
   <ItemGroup>
     <ClInclude Include="MRAlignContoursToMesh.h" />
     <ClInclude Include="MRAlphaShape.h" />
+    <ClInclude Include="MRBitCast.h" />
     <ClInclude Include="MRBoxNesting.h" />
     <ClInclude Include="MRCurve.h" />
     <ClInclude Include="MRDivRound.h" />

@@ -1,4 +1,5 @@
 #include "MRMeshLoad.h"
+#include "MRBitCast.h"
 #include "MRMeshBuilder.h"
 #include "MRIdentifyVertices.h"
 #include "MRMesh.h"
@@ -155,7 +156,7 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
         // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast them in Vector3f on access
         Vector3f vertex( int i ) const
         {
-            return __builtin_bit_cast( Vector3f, coords[i] );
+            return MR::bit_cast<Vector3f>( coords[i] );
         }
     };
     static_assert( sizeof( StlTriangle ) == 50 );

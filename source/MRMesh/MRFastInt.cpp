@@ -21,7 +21,7 @@ constexpr int cMaxDoubleExp = 1023;
 [[nodiscard]] inline double exp2i( int e ) noexcept
 {
     assert( e >= -1022 && e <= cMaxDoubleExp );
-    return MR::bit_cast<double>( std::uint64_t( e + cMaxDoubleExp ) << 52 );
+    return bit_cast<double>( std::uint64_t( e + cMaxDoubleExp ) << 52 );
 }
 
 } // anonymous namespace

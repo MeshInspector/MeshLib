@@ -9,8 +9,7 @@
 namespace MR
 {
 
-/// reinterprets the bits of (from) as a value of type To, which must be of the same size;
-/// std::bit_cast where the standard library provides it, and the intrinsic behind it otherwise
+/// std::bit_cast wrapper with the compiler's intrinsic fallback
 template <typename To, typename From>
 [[nodiscard]] constexpr To bit_cast( const From& from ) noexcept
 {

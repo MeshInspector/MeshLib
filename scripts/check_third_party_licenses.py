@@ -8,11 +8,12 @@ the drift tripwire for that file. For each component in `manifest.json` it:
 
   1. checks the file has a matching non-empty section (id, license, upstream), with
      no orphan or misordered sections;
-  2. recomputes the component's current version from its source (git submodule SHA,
-     vcpkg overlay-port version, vcpkg registry baseline versions, or a hash of tracked
-     in-tree files) and fails if it differs from the pinned `version` in the manifest --
-     forcing a human to re-check the upstream license text and re-pin;
-  3. warns about git submodules that look shippable but are absent from the manifest.
+  2. recomputes the component's current version from its source (CPM pin, git submodule
+     SHA, vcpkg overlay-port version, vcpkg registry baseline versions, or a hash of
+     tracked in-tree files) and fails if it differs from the pinned `version` in the
+     manifest -- forcing a human to re-check the upstream license text and re-pin;
+  3. warns about CPM packages and git submodules that look shippable but are absent from
+     the manifest.
 
 Run `--update-versions` to re-pin the manifest to current versions after you have
 verified the texts are still correct. That is the only mode that reads the vcpkg registry
@@ -26,6 +27,7 @@ checkout and no network -- every signal is read from the git tree and in-tree fi
 import argparse
 import hashlib
 import json
+import re
 import subprocess
 import sys
 import urllib.parse
@@ -39,6 +41,7 @@ MANIFEST = LICENSES_DIR / "manifest.json"
 NOTICES = LICENSES_DIR / "THIRD-PARTY-NOTICES.txt"
 VCPKG_JSON = REPO_ROOT / "thirdparty" / "vcpkg" / "vcpkg.json"
 VCPKG_PORTS = REPO_ROOT / "thirdparty" / "vcpkg" / "ports"
+PACKAGE_LOCK = REPO_ROOT / "thirdparty" / "package-lock.cmake"
 
 # Section separator in THIRD-PARTY-NOTICES.txt.
 RULE = "#" * 80
@@ -49,9 +52,15 @@ ALLOWED_ENTRIES = {"manifest.json", "THIRD-PARTY-NOTICES.txt"}
 # Submodules that ship nothing in the SDK binaries, so they need no license folder.
 # Keep this list short and justified -- anything not here must appear in the manifest.
 EXCLUDED_SUBMODULES = {
-    "thirdparty/googletest",          # unit-test framework, not shipped
     "thirdparty/mrbind",              # build-time binding generator, not shipped
     "test_data",                      # test assets
+}
+
+# Same, for packages declared in thirdparty/package-lock.cmake.
+EXCLUDED_PACKAGES = {
+    "googletest",                     # unit-test framework, not shipped
+    "boost-libs",                     # Boost's manifest entry pins the vcpkg ports instead;
+                                      # this package is the Emscripten-only source tarball
 }
 
 
@@ -71,6 +80,37 @@ def submodule_sha(path):
     if kind != "commit":
         raise ValueError(f"'{path}' is not a submodule gitlink (found {kind})")
     return sha
+
+
+_CPM_PINS = None
+
+
+def cpm_pins():
+    """package -> pinned ref, parsed from thirdparty/package-lock.cmake.
+
+    The ref is the GIT_TAG (a release tag or a commit hash) or, for packages fetched as an
+    archive, the URL. Either changes whenever the dependency is bumped, which is all the
+    tripwire needs.
+    """
+    global _CPM_PINS
+    if _CPM_PINS is None:
+        text = PACKAGE_LOCK.read_text(encoding="utf-8")
+        _CPM_PINS = {}
+        for name, body in re.findall(r"^set\(MESHLIB_PACKAGE_(\S+)(.*?)^\)$", text,
+                                     re.MULTILINE | re.DOTALL):
+            ref = re.search(r"^\s*(?:GIT_TAG|URL)\s+(\S+)$", body, re.MULTILINE)
+            if ref is None:
+                raise ValueError(f"package '{name}' in {PACKAGE_LOCK.name} "
+                                 f"declares neither GIT_TAG nor URL")
+            _CPM_PINS[name] = ref.group(1)
+    return _CPM_PINS
+
+
+def cpm_pin(package):
+    pin = cpm_pins().get(package)
+    if pin is None:
+        raise ValueError(f"package '{package}' is not declared in {PACKAGE_LOCK.name}")
+    return pin
 
 
 def vcpkg_default_registry():
@@ -148,6 +188,8 @@ def current_version(source, resolve_registry=False):
     see check_vcpkg_baseline.
     """
     t = source["type"]
+    if t == "cpm":
+        return cpm_pin(source["package"])
     if t == "submodule":
         return submodule_sha(source["path"])
     if t == "vcpkg-overlay":
@@ -294,7 +336,7 @@ def check():
             errors.append(f"unexpected entry {REL}/{entry.name} -- only "
                           f"{', '.join(sorted(ALLOWED_ENTRIES))} belong here")
 
-    # 3b. shippable-looking submodules missing from the manifest (warning only)
+    # 3b. shippable-looking dependencies missing from the manifest (warning only)
     covered = {c["source"].get("path") for c in components
                if c["source"]["type"] == "submodule"}
     for path in gitmodules_paths():
@@ -302,6 +344,14 @@ def check():
             continue
         warnings.append(f"submodule '{path}' is not in manifest.json and not in "
                         f"EXCLUDED_SUBMODULES -- add a license entry or exclude it")
+
+    covered = {c["source"].get("package") for c in components
+               if c["source"]["type"] == "cpm"}
+    for package in cpm_pins():
+        if package in covered or package in EXCLUDED_PACKAGES:
+            continue
+        warnings.append(f"package '{package}' is not in manifest.json and not in "
+                        f"EXCLUDED_PACKAGES -- add a license entry or exclude it")
 
     for w in warnings:
         print(f"WARNING: {w}", file=sys.stderr)

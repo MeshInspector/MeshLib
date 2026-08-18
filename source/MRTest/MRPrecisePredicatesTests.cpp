@@ -673,6 +673,12 @@ TEST( MRMesh, sosInSphereDegenerate )
     EXPECT_EQ( inSphere( { vc( 1_v, 1,-2,1 ), vc( 0_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 6 ), Out );
     EXPECT_EQ( inSphere( { vc( 2_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 3_v, -2,1,1 ), vc( 0_v, -1,2,-1 ) }, 6 ), In );
 
+    // an exact tie of the pair existence rule: V = (3,4,5), 4*rSq*(Vx^2+Vy^2) == |V|^4 == 2500,
+    // resolved by the deeper terms of the perturbation, so it depends on the ids
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 3,4,5 ), vc( 3_v, 3,4,0 ) }, 25 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 3,4,5 ), vc( 3_v, 0,0,1 ) }, 25 ), Out );
+    EXPECT_EQ( inSphere( { vc( 2_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 0_v, 3,4,5 ), vc( 3_v, 3,4,0 ) }, 25 ), NoS );
+
     // stable NoSphere answers: no perturbation creates the sphere
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 11,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point beyond the diameter
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 10,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point exactly at the diameter

@@ -367,8 +367,28 @@ bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCo
         return false;
     if ( cross( u, v ) != Vector3i64() )
         return false; // W > 0, so the base failed on E < 0, which is stable
-    if ( !sosSphereExists( pts, ids, sqRadius ) )
+
+    // closed-form resolutions of the degenerate triangles, validated against the full evaluation
+    const bool ab = u == Vector3i64(); // a == b
+    const bool ac = v == Vector3i64(); // a == c
+    const bool bc = u == v;            // b == c
+    if ( int( ab ) + int( ac ) + int( bc ) >= 2 )
+        return false; // all three coincide: the perturbed needle-like triangle has diverging circumradius
+    if ( !( ab || ac || bc ) )
+        return false; // distinct collinear points: the perturbed circumradius diverges as well
+    // two coincident points separate along z after the perturbation, so the sphere exists iff
+    // 4 rSq (Vx^2 + Vy^2) > |V|^4 at the leading order, V = the third point minus the pair
+    // (V = -V for b == c, which does not change the rule)
+    const Vector3i64 V = ab ? v : u;
+    const auto vxy = FastInt128( Int64Mul128( V.x ) * Int64Mul128( V.x ) )
+                   + FastInt128( Int64Mul128( V.y ) * Int64Mul128( V.y ) ); // <= 2^65
+    const auto vv2 = dot( Vector3i64mul{ V }, Vector3i64mul{ V } );         // <= 2^66
+    const auto lhs = FastInt<192>( Int128Mul256( vxy ) * Int128Mul256( 4 * FastInt128( sqRadius ) ) ); // <= 2^131
+    const auto rhs = FastInt<192>( Int128Mul256( vv2 ) * Int128Mul256( vv2 ) ); // <= 2^132
+    if ( lhs < rhs )
         return false;
+    if ( lhs == rhs && !sosSphereExists( pts, ids, sqRadius ) )
+        return false; // an exact tie of the leading rule is resolved by the full evaluation
     degenerateTriangle_ = true;
     return true;
 }

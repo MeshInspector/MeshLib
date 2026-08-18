@@ -219,7 +219,10 @@ public:
     void flip()
     {
         if ( degenerateTriangle_ )
+        {
             std::swap( u, v ); // w stays exactly zero for a degenerate triangle
+            pairSigma_ = -pairSigma_; // the mirror of the limit sphere
+        }
         else
             InSphereTester<int>::flip();
         std::swap( vb_, vc_ );
@@ -231,6 +234,11 @@ public:
     /// (never returns OnSphere or NoSphere);
     /// shall be called only after reset() returned true, and all four ids must be distinct
     [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
+
+    /// whether the last successful reset() got a degenerate triangle (two coincident points), where
+    /// only the symbolically perturbed sphere exists; the exact sphere quantities of the base class
+    /// are not valid then
+    [[nodiscard]] bool degenerateTriangle() const { return degenerateTriangle_; }
 
     // the three accessors below describe the prepared sphere itself, for a caller that needs its own
     // exact predicate about it rather than the position of a point. With S = sqrt( heightSq() *
@@ -252,7 +260,10 @@ public:
 
 protected:
     VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
-    bool degenerateTriangle_ = false; ///< reset() got W == 0, and the queries go via the full symbolic evaluation
+    bool degenerateTriangle_ = false; ///< reset() got W == 0 with two coincident points and an existing perturbed sphere
+    Vector3i pairPt_;     ///< the position of the coincident pair
+    Vector3i64 pairV_;    ///< the third point minus the pair
+    int pairSigma_ = 0;   ///< the side of the limit sphere's center: +1 along ( -Vy, Vx, 0 ), -1 the opposite
 };
 
 /// gives exactly the same answers as InSphereTesterSoS, only faster: the sphere's center is also

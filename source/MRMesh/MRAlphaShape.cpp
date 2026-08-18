@@ -255,6 +255,11 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             const auto & pi = neis[i].coords;
             if ( onlyLargerVids && pi.id < v )
                 continue;
+            // a triangle with two coincident corners is a zero-area needle, useless for the shape;
+            // before full simulation-of-simplicity it was implicitly skipped by reset() as NoSphere,
+            // and skipping it here also avoids the expensive symbolic evaluations of its queries
+            if ( pi.pt == pj.pt || pi.pt == p0.pt || pj.pt == p0.pt )
+                continue;
             // the two balls touching all three points differ only by the side of the triangle,
             // so one reset is enough for the both; the tester cheaply rejects the points farther than
             // the diameter from the first of the three, and every candidate is within the search
@@ -264,8 +269,10 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
                 continue;
             ++myStats.touchableTris;
             // the shadow depends only on the existence of the touching balls, not on their emptiness,
-            // and dropping before the tests below shortens their scans as well
-            dropShadowed( neis, i, j, p0.pt, tester, myStats );
+            // and dropping before the tests below shortens their scans as well;
+            // a degenerate triangle has no exact spheres for the wedge math of the filter
+            if ( !tester.degenerateTriangle() )
+                dropShadowed( neis, i, j, p0.pt, tester, myStats );
             if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
             tester.flip();

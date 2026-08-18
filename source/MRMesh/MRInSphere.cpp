@@ -4,7 +4,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <map>
+#include <vector>
+
 
 namespace MR
 {
@@ -72,49 +73,67 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 // (value + eps^k), and the answer is given by the signs of the leading terms of the same predicate
 // polynomials in eps
 
-/// sparse polynomial in the perturbation parameter, the map is ordered by ascending degree
-using EpsPoly = std::map<std::int64_t, BigInt>;
-
-void addTerm( EpsPoly & p, std::int64_t deg, BigInt c )
+/// a term of the sparse polynomial in the perturbation parameter
+struct EpsTerm
 {
-    auto [it, inserted] = p.try_emplace( deg, std::move( c ) );
-    if ( !inserted )
+    std::int64_t deg = 0;
+    BigInt coef;
+};
+
+/// sparse polynomial in the perturbation parameter: the terms are ordered by ascending degree
+using EpsPoly = std::vector<EpsTerm>;
+
+/// merges same-degree terms of a degree-sorted sequence, dropping the vanished ones
+void mergeTerms( EpsPoly & r )
+{
+    size_t out = 0;
+    for ( size_t i = 0; i < r.size(); )
     {
-        it->second += c;
-        if ( it->second.sign() == 0 )
-            p.erase( it );
+        auto deg = r[i].deg;
+        auto coef = std::move( r[i].coef );
+        for ( ++i; i < r.size() && r[i].deg == deg; ++i )
+            coef += r[i].coef;
+        if ( coef.sign() != 0 )
+            r[out++] = { deg, std::move( coef ) };
     }
+    r.resize( out );
 }
 
 EpsPoly operator +( const EpsPoly & a, const EpsPoly & b )
 {
-    EpsPoly r = a;
-    for ( const auto & [d, c] : b )
-        addTerm( r, d, c );
+    EpsPoly r;
+    r.reserve( a.size() + b.size() );
+    std::merge( a.begin(), a.end(), b.begin(), b.end(), std::back_inserter( r ),
+        []( const EpsTerm & x, const EpsTerm & y ) { return x.deg < y.deg; } );
+    mergeTerms( r );
     return r;
 }
 
 EpsPoly operator -( const EpsPoly & a, const EpsPoly & b )
 {
-    EpsPoly r = a;
-    for ( const auto & [d, c] : b )
-        addTerm( r, d, -c );
-    return r;
+    EpsPoly nb;
+    nb.reserve( b.size() );
+    for ( const auto & t : b )
+        nb.push_back( { t.deg, -t.coef } );
+    return a + nb;
 }
 
 EpsPoly operator *( const EpsPoly & a, const EpsPoly & b )
 {
     EpsPoly r;
-    for ( const auto & [da, ca] : a )
-        for ( const auto & [db, cb] : b )
-            addTerm( r, da + db, ca * cb );
+    r.reserve( a.size() * b.size() );
+    for ( const auto & ta : a )
+        for ( const auto & tb : b )
+            r.push_back( { ta.deg + tb.deg, ta.coef * tb.coef } );
+    std::sort( r.begin(), r.end(), []( const EpsTerm & x, const EpsTerm & y ) { return x.deg < y.deg; } );
+    mergeTerms( r );
     return r;
 }
 
 /// the sign of the polynomial for eps -> +0, which is the sign of its lowest-degree term
 int signOf( const EpsPoly & p )
 {
-    return p.empty() ? 0 : p.begin()->second.sign();
+    return p.empty() ? 0 : p.front().coef.sign();
 }
 
 using EpsVec = std::array<EpsPoly, 3>;
@@ -157,9 +176,10 @@ EpsVec perturbedDiff( const Vector3i & pTo, const Vector3i & pFrom, std::int64_t
     for ( int i = 0; i < 3; ++i )
     {
         if ( const auto base = std::int64_t( pTo[i] ) - pFrom[i] )
-            addTerm( r[i], 0, BigInt( base ) );
-        addTerm( r[i], axisMult[i] * degTo, BigInt( std::int64_t( 1 ) ) );
-        addTerm( r[i], axisMult[i] * degFrom, BigInt( std::int64_t( -1 ) ) );
+            r[i].push_back( { 0, BigInt( base ) } );
+        r[i].push_back( { axisMult[i] * degTo, BigInt( std::int64_t( 1 ) ) } );
+        r[i].push_back( { axisMult[i] * degFrom, BigInt( std::int64_t( -1 ) ) } );
+        std::sort( r[i].begin(), r[i].end(), []( const EpsTerm & x, const EpsTerm & y ) { return x.deg < y.deg; } );
     }
     return r;
 }
@@ -186,10 +206,10 @@ SosQuantities buildSosQuantities( const Vector3i * pts, const VertId * ids, int 
     EpsVec M;
     for ( int i = 0; i < 3; ++i )
         M[i] = su * u[i] + sv * v[i];
-    EpsPoly rSq4W2;
+    EpsPoly rSq4W2 = res.W * res.W;
     const BigInt rSq4 = BigInt( rSq ) * 4;
-    for ( const auto & [d, c] : res.W * res.W )
-        rSq4W2.emplace( d, c * rSq4 );
+    for ( auto & t : rSq4W2 )
+        t.coef = t.coef * rSq4;
     res.E = rSq4W2 - dot( M, M );
     if ( n == 4 )
     {
@@ -232,10 +252,10 @@ InSphereResult sosInSphereFull( const Vector3i * pts, const VertId * ids, std::i
     // product of the leading terms, so the sign is known from the degrees alone unless they match
     // (the leading coefficients of W and E are positive here), and the full products are expanded
     // only on an exact tie of both the degrees and the coefficients
-    const auto & [dA, cA] = *qs.A.begin();
-    const auto & [dW, cW] = *qs.W.begin();
-    const auto & [dE, cE] = *qs.E.begin();
-    const auto & [dt, ct] = *qs.t.begin();
+    const auto & [dA, cA] = qs.A.front();
+    const auto & [dW, cW] = qs.W.front();
+    const auto & [dE, cE] = qs.E.front();
+    const auto & [dt, ct] = qs.t.front();
     int sG;
     if ( const auto degDiff = ( 2 * dA + dW ) - ( dE + 2 * dt ); degDiff != 0 )
         sG = degDiff < 0 ? 1 : -1;
@@ -389,6 +409,27 @@ bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCo
         return false;
     if ( lhs == rhs && !sosSphereExists( pts, ids, sqRadius ) )
         return false; // an exact tie of the leading rule is resolved by the full evaluation
+    // the perturbed sphere converges to the sphere via the pair and the third point, tangent to
+    // the z-axis at the pair; remember it for the closed-form queries, with the side of its center
+    // given by the leading direction of the perturbed normal (validated against the full evaluation)
+    if ( sameAB )
+    {
+        pairPt_ = a;
+        pairV_ = v;
+        pairSigma_ = vb_ < va_ ? 1 : -1;
+    }
+    else if ( sameAC )
+    {
+        pairPt_ = a;
+        pairV_ = u;
+        pairSigma_ = vc_ < va_ ? -1 : 1;
+    }
+    else
+    {
+        pairPt_ = a + Vector3i( u );
+        pairV_ = -u;
+        pairSigma_ = vc_ < vb_ ? 1 : -1;
+    }
     degenerateTriangle_ = true;
     return true;
 }
@@ -397,15 +438,37 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
 {
     if ( degenerateTriangle_ || E == 0 )
     {
-        // a degenerate triangle (every query) or an exact rSq == squared circumradius (only the
-        // "exactly on the sphere" queries reach the full evaluation): b and c are reconstructed
-        // exactly from the stored differences
-        if ( !degenerateTriangle_ )
+        if ( degenerateTriangle_ )
         {
+            // strictly inside or outside the limit sphere resolves the query in closed form,
+            // and only the points exactly on it need the full evaluation
+            const Vector3i64 g{ d.pt - pairPt_ };
+            const auto k = FastInt128( Int64Mul128( pairV_.x ) * Int64Mul128( pairV_.x ) )
+                         + FastInt128( Int64Mul128( pairV_.y ) * Int64Mul128( pairV_.y ) );
+            const auto ss = k + FastInt128( Int64Mul128( pairV_.z ) * Int64Mul128( pairV_.z ) );
+            const BigInt bk{ k }, bs{ ss };
+            const BigInt D = 4 * BigInt{ rSq } * bk - bs * bs; // >= 0 since the sphere exists
+            const auto gg = dot( Vector3i64mul{ g }, Vector3i64mul{ g } );
+            const auto gvxy = FastInt128( Int64Mul128( g.x ) * Int64Mul128( pairV_.x ) )
+                            + FastInt128( Int64Mul128( g.y ) * Int64Mul128( pairV_.y ) );
+            const auto gcrs = FastInt128( Int64Mul128( g.y ) * Int64Mul128( pairV_.x ) )
+                            - FastInt128( Int64Mul128( g.x ) * Int64Mul128( pairV_.y ) );
+            // |g - center|^2 - rSq multiplied by k: ( k |g|^2 - s (g.V)xy ) - sigma sqrt(D) ( gy Vx - gx Vy )
+            const SqrtNum val{ bk * BigInt{ gg } - bs * BigInt{ gvxy },
+                BigInt{ std::int64_t( -pairSigma_ ) } * BigInt{ gcrs } };
+            const int sg = D.sign() > 0 ? signOf( val, D ) : val.x.sign(); // D == 0 on the existence tie
+            if ( sg )
+                return sg < 0 ? InSphereResult::Inside : InSphereResult::Outside;
+        }
+        else
+        {
+            // an exact rSq == squared circumradius: only the "exactly on the sphere" queries
+            // reach the full evaluation
             const auto res = InSphereTester<int>::operator()( d.pt );
             if ( res != InSphereResult::OnSphere )
                 return res;
         }
+        // b and c are reconstructed exactly from the stored differences
         const Vector3i pts[4] = { a, a + Vector3i( u ), a + Vector3i( v ), d.pt };
         const VertId ids[4] = { va_, vb_, vc_, d.id };
         const auto res = sosInSphereFull( pts, ids, rSq );

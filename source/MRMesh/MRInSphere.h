@@ -232,9 +232,71 @@ public:
     /// shall be called only after reset() returned true, and all four ids must be distinct
     [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
 
-private:
+    // the three accessors below describe the prepared sphere itself, for a caller that needs its own
+    // exact predicate about it rather than the position of a point. With S = sqrt( heightSq() *
+    // normalSq() ) and M = 2 * normalSq() * ( circumcenter - a ), which is recomputable from the three
+    // points, the center satisfies 2 * sqr( normalSq() ) * ( center - a ) = normalSq() * M + S *
+    // normal() exactly; findAlphaShapeNeiTriangles builds its wedge predicates on that identity.
+    // All three are valid only after reset() returned true.
+
+    /// doubled normal cross( b - a, c - a ) of the triangle, directed at the sphere's center
+    [[nodiscard]] MR_BIND_IGNORE const Vector3i64 & normal() const { return w; }
+
+    /// squared length of normal()
+    [[nodiscard]] MR_BIND_IGNORE const FastInt<192> & normalSq() const { return W; }
+
+    /// sqr( 2 * h * normalSq() ), h being the distance from the plane of the triangle to the
+    /// sphere's center - not h^2 itself, the scaling by the doubled normal keeps the value integer;
+    /// zero exactly when the circumradius equals the radius, so the center lies in the plane
+    [[nodiscard]] MR_BIND_IGNORE const FastInt<384> & heightSq() const { return E; }
+
+protected:
     VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
     bool degenerateTriangle_ = false; ///< reset() got W == 0, and the queries go via the full symbolic evaluation
+};
+
+/// gives exactly the same answers as InSphereTesterSoS, only faster: the sphere's center is also
+/// computed in floating point during reset(), and every query point far enough from the sphere's
+/// surface is answered by it alone, leaving the exact predicates for the points close to it
+class FastInSphereTesterSoS : public InSphereTesterSoS
+{
+public:
+    /// prepares the tester as InSphereTesterSoS::reset does, and additionally computes the
+    /// floating-point center of the sphere and the tolerance of the tests below;
+    /// this hides the reset of the base class, which would leave the center stale
+    MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
+
+    /// selects the mirror sphere as the base class does, moving the floating-point center as well;
+    /// this hides the flip of the base class, which would leave the center on the wrong side
+    void flip()
+    {
+        InSphereTesterSoS::flip();
+        hn_ = -hn_;
+    }
+
+    /// returns the position of the point d.pt relative to the sphere, with the ties resolved by
+    /// simulation-of-simplicity exactly as InSphereTesterSoS does (never OnSphere or NoSphere);
+    /// shall be called only after reset() returned true, and all four ids must be distinct
+    [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
+
+    /// whether d is strictly outside both spheres of the given radius passing via the three points
+    /// of reset(): the selected one and its mirror in the plane of the triangle;
+    /// the answer is exact, and a point lying on either of them is not strictly outside, so no tie
+    /// arises and no simulation-of-simplicity is involved;
+    /// filtered in floating point as the query above, and equally exact;
+    /// for a degenerate triangle, where only the perturbed spheres exist and the answer would need
+    /// the id of d, returns false conservatively (never prunes)
+    [[nodiscard]] MRMESH_API bool outsideBothSpheres( const Vector3i & d ) const;
+
+private:
+    /// the sphere's center relative to the first point, split in the part within the plane of the
+    /// triangle and the height orthogonal to it, so that flip() only negates the latter;
+    /// the two are orthogonal, so neither of them can cancel the other in the sum
+    Vector3d cc_, hn_;
+
+    /// the queries with the squared distance to the center farther than this from rSq are
+    /// decided in floating point; proportional to rSq, since so is the error of that distance
+    double tol_ = 0;
 };
 
 /// checks whether the point d is strictly inside the sphere of radius sqrt(rSq) passing via

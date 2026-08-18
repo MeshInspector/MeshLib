@@ -3,6 +3,11 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <iostream>
+#include <random>
 
 namespace MR
 {
@@ -29,10 +34,17 @@ TEST( MRMesh, AlphaShape )
     findAlphaShapeNeiTriangles( cloud, 2_v, data, tris, neis, true, &stats );
     EXPECT_EQ( tris.size(), 2 ); // two balls touching all three points from the opposite sides are empty
 
+    // each of the three points has the two others as neighbours, and one pair of them to check
+    EXPECT_EQ( stats.collectedNeis, 6 );
+    EXPECT_EQ( stats.redundancyTests, 3 );
+    EXPECT_EQ( stats.redundantNeis, 0 ); // no point here is behind another one
     // only the triangle 2-3-4 is considered, from point #2 with the two others having larger ids
     EXPECT_EQ( stats.consideredTris, 1 );
     EXPECT_EQ( stats.touchableTris, 1 );
     EXPECT_EQ( stats.inBallTests, 0 ); // no other points in the neighbourhood to test
+    EXPECT_EQ( stats.shadowTests, 0 ); // and none behind the only triangle to be shadowed by it
+    EXPECT_EQ( stats.exactShadowTests, 0 );
+    EXPECT_EQ( stats.shadowedNeis, 0 );
 
     cloud.validPoints.set( 1_v );
     cloud.invalidateCaches();
@@ -101,6 +113,95 @@ TEST( MRMesh, AlphaShapeCrossingGrids )
     EXPECT_EQ( mesh.topology.numValidFaces(), 584 );
     EXPECT_EQ( mesh.topology.numValidVerts(), 322 );
     EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+}
+
+namespace
+{
+
+// the found triangles must be exactly the same on every branch and every platform,
+// so a single number is enough to compare the runs below
+std::uint64_t hashOf( const Triangulation & tris )
+{
+    std::uint64_t h = 1469598103934665603ull; // FNV-1a
+    for ( const auto & t : tris )
+        for ( const auto v : t )
+            for ( int i = 0; i < 4; ++i )
+                h = ( h ^ ( ( unsigned( int( v ) ) >> ( 8 * i ) ) & 0xff ) ) * 1099511628211ull;
+    return h;
+}
+
+// a sphere of the given radius sampled by the Fibonacci spiral: every point is on the alpha-shape
+PointCloud sphereCloud( int n, float radius )
+{
+    PointCloud res;
+    res.points.reserve( n );
+    constexpr float golden = 2.39996323f; // pi * ( 3 - sqrt( 5 ) )
+    for ( int i = 0; i < n; ++i )
+    {
+        const float z = 1 - ( 2 * i + 1.f ) / n;
+        const float r = std::sqrt( std::max( 0.f, 1 - z * z ) );
+        const float a = golden * i;
+        res.points.push_back( radius * Vector3f{ r * std::cos( a ), r * std::sin( a ), z } );
+    }
+    res.validPoints.autoResizeSet( 0_v, n, true );
+    return res;
+}
+
+// a plane grid of the given step, the densest neighbourhood the filters below have to prune
+PointCloud gridCloud( int n, float step )
+{
+    PointCloud res;
+    res.points.reserve( n * n );
+    for ( int i = 0; i < n; ++i )
+        for ( int j = 0; j < n; ++j )
+            res.points.push_back( { i * step, j * step, 0 } );
+    res.validPoints.autoResizeSet( 0_v, n * n, true );
+    return res;
+}
+
+// uniform noise in a cube: no structure, and the neighbourhoods are the largest of the three
+PointCloud randomCloud( int n, float size )
+{
+    PointCloud res;
+    res.points.reserve( n );
+    std::mt19937 gen( 20260813 );
+    std::uniform_real_distribution<float> d( 0, size );
+    for ( int i = 0; i < n; ++i )
+        res.points.push_back( { d( gen ), d( gen ), d( gen ) } );
+    res.validPoints.autoResizeSet( 0_v, n, true );
+    return res;
+}
+
+void benchAlphaShape( const char * name, const PointCloud & cloud, float radius )
+{
+    AlphaShapeStats stats;
+    const auto start = std::chrono::steady_clock::now();
+    const auto tris = findAlphaShapeAllTriangles( cloud, radius, &stats );
+    const auto ms = std::chrono::duration<double, std::milli>( std::chrono::steady_clock::now() - start ).count();
+    std::cout << name << ": " << cloud.points.size() << " points, radius " << radius << '\n'
+        << "  time            " << ms << " ms\n"
+        << "  triangles       " << tris.size() << " (hash " << hashOf( tris ) << ")\n"
+        << "  collectedNeis   " << stats.collectedNeis << '\n'
+        << "  redundancyTests " << stats.redundancyTests << '\n'
+        << "  redundantNeis   " << stats.redundantNeis << '\n'
+        << "  consideredTris  " << stats.consideredTris << '\n'
+        << "  touchableTris   " << stats.touchableTris << '\n'
+        << "  inBallTests     " << stats.inBallTests << '\n'
+        << "  shadowTests     " << stats.shadowTests << '\n'
+        << "  exactShadowTests " << stats.exactShadowTests << '\n'
+        << "  shadowedNeis    " << stats.shadowedNeis << std::endl;
+}
+
+} // anonymous namespace
+
+// opt-in benchmark of the alpha-shape search on three clouds of different structure, in the idiom
+// of DISABLED_FastIntMulWordsBench: run it with --gtest_also_run_disabled_tests to compare the
+// timings and the counters of two branches, and the triangle hashes to prove they agree
+TEST( MRMesh, DISABLED_AlphaShapeBench )
+{
+    benchAlphaShape( "sphere", sphereCloud( 40000, 1.f ), 0.02f );
+    benchAlphaShape( "grid",   gridCloud( 200, 0.01f ),   0.03f );
+    benchAlphaShape( "random", randomCloud( 40000, 1.f ), 0.05f );
 }
 
 } //namespace MR

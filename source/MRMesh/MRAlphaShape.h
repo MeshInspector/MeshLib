@@ -50,6 +50,18 @@ struct AlphaShapeData
 /// so the statistics of several calls can be accumulated in one object
 struct AlphaShapeStats
 {
+    /// the number of neighbours found within the search radius, before any of the filters below;
+    /// the searches around all the points are quadratic in this, so it explains most of the
+    /// difference in the time spent per point between one cloud and another
+    std::size_t collectedNeis = 0;
+
+    /// the number of pairs of neighbours checked for one of them making the other redundant,
+    /// which is quadratic in the neighbours of a point
+    std::size_t redundancyTests = 0;
+
+    /// the number of neighbours found redundant by those checks and excluded from the search
+    std::size_t redundantNeis = 0;
+
     /// the number of triangles considered: the triples of close enough points that were checked
     /// for the existence of a ball of the given radius passing via all three of them
     std::size_t consideredTris = 0;
@@ -63,11 +75,27 @@ struct AlphaShapeStats
     /// is not tested further as soon as the first point inside it is found
     std::size_t inBallTests = 0;
 
+    /// the number of neighbours tested for being shadowed by the balls of a touchable triangle
+    std::size_t shadowTests = 0;
+
+    /// the number of shadow tests not decided by the floating-point rejection,
+    /// which had to evaluate the exact predicates
+    std::size_t exactShadowTests = 0;
+
+    /// the number of neighbours found shadowed, which are excluded from the search
+    std::size_t shadowedNeis = 0;
+
     AlphaShapeStats & operator +=( const AlphaShapeStats & r )
     {
+        collectedNeis += r.collectedNeis;
+        redundancyTests += r.redundancyTests;
+        redundantNeis += r.redundantNeis;
         consideredTris += r.consideredTris;
         touchableTris += r.touchableTris;
         inBallTests += r.inBallTests;
+        shadowTests += r.shadowTests;
+        exactShadowTests += r.exactShadowTests;
+        shadowedNeis += r.shadowedNeis;
         return *this;
     }
 };

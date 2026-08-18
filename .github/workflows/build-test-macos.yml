@@ -64,12 +64,11 @@ jobs:
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            # Exact keg of the main `llvm` formula: its Apple Silicon bottles are
-            # PGO+LTO-optimized, unlike the versioned llvm@N ones (~12% faster
-            # compiles). Held in place by `brew pin llvm` on the runners.
+            # Use a specific PGO+LTO-optimized LLVM version.
+            # Held in place by `brew pin llvm` on the self-hosted runners.
             llvm-version: 22.1.7
-            cxx-compiler-template: BREW_PREFIX/Cellar/llvm/LLVM_VERSION/bin/clang++
-            c-compiler-template: BREW_PREFIX/Cellar/llvm/LLVM_VERSION/bin/clang
+            cxx-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang++
+            c-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     env:

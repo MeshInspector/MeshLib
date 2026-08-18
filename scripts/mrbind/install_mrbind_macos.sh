@@ -21,8 +21,7 @@ rm -rf build
 
 # Add `make` to PATH.
 export PATH="$HOMEBREW_DIR/opt/make/libexec/gnubin:$PATH"
-# Add Clang to PATH. LLVM_VERSION (set for self-hosted runners) selects an
-# exact keg of the main formula.
+# Add Clang to PATH.
 if [[ -n "${LLVM_VERSION:-}" ]]; then
     export PATH="$HOMEBREW_DIR/Cellar/llvm/$LLVM_VERSION/bin:$PATH"
 else

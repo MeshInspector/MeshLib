@@ -23,15 +23,13 @@ inputs:
     default: /usr/bin/clang++
     description: >
       C++ compiler path template; literal `BREW_PREFIX` is replaced with
-      the resolved homebrew prefix, literal `LLVM_VERSION` with the
-      `LLVM_VERSION` environment variable (set for self-hosted runners).
+      the resolved homebrew prefix.
   c-compiler-template:
     required: false
     default: /usr/bin/clang
     description: >
       C compiler path template; literal `BREW_PREFIX` is replaced with
-      the resolved homebrew prefix, literal `LLVM_VERSION` with the
-      `LLVM_VERSION` environment variable (set for self-hosted runners).
+      the resolved homebrew prefix.
   cache-prefix:
     required: false
     default: v1-thirdparty
@@ -75,9 +73,9 @@ runs:
         echo "brew-prefix=$BREW_PREFIX" >> $GITHUB_OUTPUT
         echo "BREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
 
-        # Substitute the tokens in templates and set actual compiler paths
-        CXX_COMPILER=$(echo "${{ inputs.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g; s|LLVM_VERSION|${LLVM_VERSION:-}|g")
-        C_COMPILER=$(echo "${{ inputs.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g; s|LLVM_VERSION|${LLVM_VERSION:-}|g")
+        # Substitute BREW_PREFIX in templates and set actual compiler paths
+        CXX_COMPILER=$(echo "${{ inputs.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
+        C_COMPILER=$(echo "${{ inputs.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
 
         echo "CXX compiler: $CXX_COMPILER"
         echo "C compiler: $C_COMPILER"

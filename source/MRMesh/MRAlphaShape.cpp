@@ -61,11 +61,14 @@ namespace
 {
 
 // whether b * sqrt( ew ) > | c * nd | exactly, given b > 0 and ew >= 0;
-// b <= 2^129, c <= 2^257, nd <= 2^96 and ew <= 2^450 as derived below, so the left side
-// is at most 2^708 and the right one at most 2^706, and both fit in 1024 bits
+// b <= 2^129, c <= 2^257, nd <= 2^96 and ew <= 2^450 as derived below, so the left side is at most
+// 2^708, in 1024 bits as the sum of the widths of its factors, and the right one at most 2^706.
+// c * nd <= 2^353 is narrowed to six words before squaring: mulWords skips the zero words of its
+// left operand but iterates over every word of its right one, so the square costs six words by six
+// instead of six by seven
 bool insideWedge( const FastInt256 & b, const FastInt<320> & c, const FastInt128 & nd, const FastInt<512> & ew )
 {
-    return b * b * ew > FastInt<1024>( sqr( c * nd ) );
+    return b * b * ew > FastInt<1024>( sqr( FastInt<384>( c * nd ) ) );
 }
 
 // excludes from neis[j + 1, end) the neighbours shadowed by the pair ( neis[i], neis[j] ), on the two

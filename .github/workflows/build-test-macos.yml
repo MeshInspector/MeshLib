@@ -64,8 +64,11 @@ jobs:
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            cxx-compiler-template: BREW_LLVM_PREFIX/bin/clang++
-            c-compiler-template: BREW_LLVM_PREFIX/bin/clang
+            # The main `llvm` keg: kept at the major pinned in
+            # clang_version_macos.txt via `brew pin llvm` on the runners.
+            llvm-prefix-template: BREW_PREFIX/opt/llvm
+            cxx-compiler-template: LLVM_PREFIX/bin/clang++
+            c-compiler-template: LLVM_PREFIX/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:
@@ -94,6 +97,7 @@ jobs:
           cache-compiler: ${{ matrix.compiler }}
           cxx-compiler-template: ${{ matrix.cxx-compiler-template }}
           c-compiler-template: ${{ matrix.c-compiler-template }}
+          llvm-prefix-template: ${{ matrix.llvm-prefix-template }}
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

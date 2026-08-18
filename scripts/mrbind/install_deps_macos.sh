@@ -14,8 +14,6 @@ brew update
 
 # The versioned llvm@N keg is only needed when there is no matching
 # (PGO-optimized) main `llvm` keg -- see brew_llvm_prefix_macos.sh.
-if [[ "$("$SCRIPT_DIR/brew_llvm_prefix_macos.sh")" == *"/opt/llvm" ]]; then
-    brew install --quiet make grep lld
-else
-    brew install --quiet make grep lld llvm@$CLANG_VER
-fi
+LLVM_PKG=
+[[ "$("$SCRIPT_DIR/brew_llvm_prefix_macos.sh")" == *"/opt/llvm" ]] || LLVM_PKG="llvm@$CLANG_VER"
+brew install --quiet make grep lld $LLVM_PKG

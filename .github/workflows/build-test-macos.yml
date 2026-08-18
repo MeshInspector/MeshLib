@@ -64,13 +64,16 @@ jobs:
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            # The main `llvm` keg: kept at the major pinned in
-            # clang_version_macos.txt via `brew pin llvm` on the runners.
-            llvm-prefix-template: BREW_PREFIX/opt/llvm
-            cxx-compiler-template: LLVM_PREFIX/bin/clang++
-            c-compiler-template: LLVM_PREFIX/bin/clang
+            # Exact keg of the main `llvm` formula: its Apple Silicon bottles are
+            # PGO+LTO-optimized, unlike the versioned llvm@N ones (~12% faster
+            # compiles). Held in place by `brew pin llvm` on the runners.
+            llvm-version: 22.1.7
+            cxx-compiler-template: BREW_PREFIX/Cellar/llvm/LLVM_VERSION/bin/clang++
+            c-compiler-template: BREW_PREFIX/Cellar/llvm/LLVM_VERSION/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
+    env:
+      LLVM_VERSION: ${{ matrix.llvm-version }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -97,7 +100,6 @@ jobs:
           cache-compiler: ${{ matrix.compiler }}
           cxx-compiler-template: ${{ matrix.cxx-compiler-template }}
           c-compiler-template: ${{ matrix.c-compiler-template }}
-          llvm-prefix-template: ${{ matrix.llvm-prefix-template }}
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -117,14 +119,6 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: ./scripts/mrbind/install_deps_macos.sh
 
-      # The resolved version (e.g. `22.1.7`) discriminates the mrbind cache when
-      # the same llvm major flips between the PGO'd main keg and the versioned
-      # one -- mrbind bakes the keg's libclang path into its rpath.
-      - name: Resolve MRBind Clang version
-        if: ${{ inputs.mrbind || inputs.mrbind_c }}
-        id: mrbind-clang
-        run: echo "version=$("$(scripts/mrbind/brew_llvm_prefix_macos.sh)/bin/clang" --version | grep -oE '[0-9]+(\.[0-9]+)+' | head -1)" >> $GITHUB_OUTPUT
-
       - name: Build MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
@@ -134,7 +128,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ steps.mrbind-clang.outputs.version }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ matrix.llvm-version }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -184,7 +178,11 @@ jobs:
 
       - name: MRMesh Exported Symbols
         run: |
-          export PATH="$(scripts/mrbind/brew_llvm_prefix_macos.sh)/bin:$PATH"
+          if [[ -n "${LLVM_VERSION:-}" ]]; then
+            export PATH="$(brew --prefix)/Cellar/llvm/$LLVM_VERSION/bin:$PATH"
+          else
+            export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          fi
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings

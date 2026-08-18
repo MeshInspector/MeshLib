@@ -12,8 +12,8 @@ CLANG_VER="$(cat $SCRIPT_DIR/clang_version_macos.txt | xargs)"
 
 brew update
 
-# The versioned llvm@N keg is only needed when LLVM_PREFIX doesn't select
-# another keg -- see brew_llvm_prefix_macos.sh.
+# LLVM_VERSION (set for self-hosted runners) selects an existing main-formula
+# keg, making the versioned llvm@N unnecessary.
 LLVM_PKG=
-[[ -n "${LLVM_PREFIX:-}" ]] || LLVM_PKG="llvm@$CLANG_VER"
+[[ -n "${LLVM_VERSION:-}" ]] || LLVM_PKG="llvm@$CLANG_VER"
 brew install --quiet make grep lld $LLVM_PKG

@@ -8,8 +8,10 @@ SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 
 [[ ${MRBIND_DIR:=} ]] || MRBIND_DIR="$SCRIPT_DIR/../../thirdparty/mrbind"
 
-# Resolve before `cd` -- SCRIPT_DIR is relative.
-BREW_LLVM_PREFIX="$("$SCRIPT_DIR/brew_llvm_prefix_macos.sh")"
+# Read the Clang version from `clang_version_macos.txt`. `xargs` trims the whitespace.
+# Some versions of MacOS seem to lack `realpath`, so not using it here.
+CLANG_VER="$(cat "$SCRIPT_DIR/clang_version_macos.txt" | xargs)"
+[[ ${CLANG_VER:=} ]] || (echo "Not sure what version of Clang to use." && false)
 
 cd "$MRBIND_DIR"
 rm -rf build
@@ -19,8 +21,13 @@ rm -rf build
 
 # Add `make` to PATH.
 export PATH="$HOMEBREW_DIR/opt/make/libexec/gnubin:$PATH"
-# Add Clang to PATH.
-export PATH="$BREW_LLVM_PREFIX/bin:$PATH"
+# Add Clang to PATH. LLVM_VERSION (set for self-hosted runners) selects an
+# exact keg of the main formula.
+if [[ -n "${LLVM_VERSION:-}" ]]; then
+    export PATH="$HOMEBREW_DIR/Cellar/llvm/$LLVM_VERSION/bin:$PATH"
+else
+    export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
+fi
 
 
 # Guess the number of build threads.

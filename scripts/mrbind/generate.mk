@@ -245,7 +245,12 @@ MACOS_MIN_VER :=
 ifneq ($(HOST_IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(HOST_IS_MACOS),)
-CXX_FOR_BINDINGS := $(call safe_shell,$(makefile_dir)brew_llvm_prefix_macos.sh)/bin/clang++
+# LLVM_VERSION (set for self-hosted runners) selects an exact keg of the main formula.
+ifneq ($(LLVM_VERSION),)
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/Cellar/llvm/$(LLVM_VERSION)/bin/clang++
+else
+CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
+endif
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
 CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))

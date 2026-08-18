@@ -64,10 +64,15 @@ jobs:
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            cxx-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang++
-            c-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang
+            # Use a specific PGO+LTO-optimized LLVM version.
+            # Held in place by `brew pin llvm` on the self-hosted runners.
+            llvm-version: 22.1.7
+            cxx-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang++
+            c-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
+    env:
+      LLVM_VERSION: ${{ matrix.llvm-version }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -122,7 +127,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ matrix.llvm-version }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -172,7 +177,11 @@ jobs:
 
       - name: MRMesh Exported Symbols
         run: |
-          export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          if [[ -n "${LLVM_VERSION:-}" ]]; then
+            export PATH="$(brew --prefix)/Cellar/llvm/$LLVM_VERSION/bin:$PATH"
+          else
+            export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          fi
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings

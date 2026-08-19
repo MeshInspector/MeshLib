@@ -45,6 +45,8 @@ public:
 
     SparsePolynomial& operator +=( const SparsePolynomial& b );
     SparsePolynomial& operator -=( const SparsePolynomial& b );
+    [[nodiscard]] friend SparsePolynomial operator +( SparsePolynomial a, const SparsePolynomial& b ) { a += b; return a; }
+    [[nodiscard]] friend SparsePolynomial operator -( SparsePolynomial a, const SparsePolynomial& b ) { a -= b; return a; }
     friend SparsePolynomial operator *<>( const SparsePolynomial& a, const SparsePolynomial& b );
 
 private:

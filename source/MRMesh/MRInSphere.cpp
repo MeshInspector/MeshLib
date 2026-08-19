@@ -1,10 +1,10 @@
 #include "MRInSphere.h"
 #include "MRVarBigInt.h"
+#include "MRSparsePolynomial.h"
 #include "MRInt64Mul128.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <vector>
 
 
 namespace MR
@@ -73,67 +73,22 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 // (value + eps^k), and the answer is given by the signs of the leading terms of the same predicate
 // polynomials in eps
 
-/// a term of the sparse polynomial in the perturbation parameter
-struct EpsTerm
-{
-    std::int64_t deg = 0;
-    BigInt coef;
-};
+/// the ladder between the ranks, larger than the maximal degree-weight of one point (8 * 9 = 72)
+/// in the polynomials below, so the term order is lexicographic in the rank-weights and the
+/// existence sign does not depend on whether the ranks are computed among 3 or among 4 points
+constexpr std::int64_t cSosLadder = 128;
 
-/// sparse polynomial in the perturbation parameter: the terms are ordered by ascending degree
-using EpsPoly = std::vector<EpsTerm>;
+/// the maximal degree of eps: A^2 W and E t^2 have degree 16 in the coordinates, and every
+/// coordinate factor is perturbed by at most eps^(9 * ladder^3)
+constexpr std::int64_t cMaxEpsDeg = 16 * 9 * cSosLadder * cSosLadder * cSosLadder;
 
-/// merges same-degree terms of a degree-sorted sequence, dropping the vanished ones
-void mergeTerms( EpsPoly & r )
-{
-    size_t out = 0;
-    for ( size_t i = 0; i < r.size(); )
-    {
-        auto deg = r[i].deg;
-        auto coef = std::move( r[i].coef );
-        for ( ++i; i < r.size() && r[i].deg == deg; ++i )
-            coef += r[i].coef;
-        if ( coef.sign() != 0 )
-            r[out++] = { deg, std::move( coef ) };
-    }
-    r.resize( out );
-}
-
-EpsPoly operator +( const EpsPoly & a, const EpsPoly & b )
-{
-    EpsPoly r;
-    r.reserve( a.size() + b.size() );
-    std::merge( a.begin(), a.end(), b.begin(), b.end(), std::back_inserter( r ),
-        []( const EpsTerm & x, const EpsTerm & y ) { return x.deg < y.deg; } );
-    mergeTerms( r );
-    return r;
-}
-
-EpsPoly operator -( const EpsPoly & a, const EpsPoly & b )
-{
-    EpsPoly nb;
-    nb.reserve( b.size() );
-    for ( const auto & t : b )
-        nb.push_back( { t.deg, -t.coef } );
-    return a + nb;
-}
-
-EpsPoly operator *( const EpsPoly & a, const EpsPoly & b )
-{
-    EpsPoly r;
-    r.reserve( a.size() * b.size() );
-    for ( const auto & ta : a )
-        for ( const auto & tb : b )
-            r.push_back( { ta.deg + tb.deg, ta.coef * tb.coef } );
-    std::sort( r.begin(), r.end(), []( const EpsTerm & x, const EpsTerm & y ) { return x.deg < y.deg; } );
-    mergeTerms( r );
-    return r;
-}
+/// sparse polynomial in the perturbation parameter, as in the other precise predicates
+using EpsPoly = SparsePolynomial<BigInt, std::int64_t, cMaxEpsDeg>;
 
 /// the sign of the polynomial for eps -> +0, which is the sign of its lowest-degree term
 int signOf( const EpsPoly & p )
 {
-    return p.empty() ? 0 : p.front().coef.sign();
+    return p.empty() ? 0 : p.get().begin()->second.sign();
 }
 
 using EpsVec = std::array<EpsPoly, 3>;
@@ -150,11 +105,6 @@ EpsVec cross( const EpsVec & u, const EpsVec & v )
         u[2] * v[0] - u[0] * v[2],
         u[0] * v[1] - u[1] * v[0] };
 }
-
-/// the ladder between the ranks, larger than the maximal degree-weight of one point (8 * 9 = 72)
-/// in the polynomials below, so the term order is lexicographic in the rank-weights and the
-/// existence sign does not depend on whether the ranks are computed among 3 or among 4 points
-constexpr std::int64_t cSosLadder = 128;
 
 /// the base perturbation degrees: ladder^rank with the ranks by ascending ids
 std::array<std::int64_t, 4> sosDegrees( const VertId * ids, int n )
@@ -174,13 +124,9 @@ EpsVec perturbedDiff( const Vector3i & pTo, const Vector3i & pFrom, std::int64_t
     constexpr int axisMult[3] = { 9, 3, 1 };
     EpsVec r;
     for ( int i = 0; i < 3; ++i )
-    {
-        if ( const auto base = std::int64_t( pTo[i] ) - pFrom[i] )
-            r[i].push_back( { 0, BigInt( base ) } );
-        r[i].push_back( { axisMult[i] * degTo, BigInt( std::int64_t( 1 ) ) } );
-        r[i].push_back( { axisMult[i] * degFrom, BigInt( std::int64_t( -1 ) ) } );
-        std::sort( r[i].begin(), r[i].end(), []( const EpsTerm & x, const EpsTerm & y ) { return x.deg < y.deg; } );
-    }
+        r[i] = EpsPoly( BigInt( std::int64_t( pTo[i] ) - pFrom[i] ),
+            axisMult[i] * degTo, BigInt( std::int64_t( 1 ) ),
+            axisMult[i] * degFrom, BigInt( std::int64_t( -1 ) ) );
     return r;
 }
 
@@ -206,11 +152,10 @@ SosQuantities buildSosQuantities( const Vector3i * pts, const VertId * ids, int 
     EpsVec M;
     for ( int i = 0; i < 3; ++i )
         M[i] = su * u[i] + sv * v[i];
-    EpsPoly rSq4W2 = res.W * res.W;
-    const BigInt rSq4 = BigInt( rSq ) * 4;
-    for ( auto & t : rSq4W2 )
-        t.coef = t.coef * rSq4;
-    res.E = rSq4W2 - dot( M, M );
+    std::map<std::int64_t, BigInt> rSq4;
+    if ( rSq > 0 )
+        rSq4.emplace( 0, BigInt( rSq ) * 4 );
+    res.E = EpsPoly( std::move( rSq4 ) ) * res.W * res.W - dot( M, M );
     if ( n == 4 )
     {
         const auto q = perturbedDiff( pts[3], pts[0], dg[3], dg[0] );
@@ -252,10 +197,10 @@ InSphereResult sosInSphereFull( const Vector3i * pts, const VertId * ids, std::i
     // product of the leading terms, so the sign is known from the degrees alone unless they match
     // (the leading coefficients of W and E are positive here), and the full products are expanded
     // only on an exact tie of both the degrees and the coefficients
-    const auto & [dA, cA] = qs.A.front();
-    const auto & [dW, cW] = qs.W.front();
-    const auto & [dE, cE] = qs.E.front();
-    const auto & [dt, ct] = qs.t.front();
+    const auto & [dA, cA] = *qs.A.get().begin();
+    const auto & [dW, cW] = *qs.W.get().begin();
+    const auto & [dE, cE] = *qs.E.get().begin();
+    const auto & [dt, ct] = *qs.t.get().begin();
     int sG;
     if ( const auto degDiff = ( 2 * dA + dW ) - ( dE + 2 * dt ); degDiff != 0 )
         sG = degDiff < 0 ? 1 : -1;

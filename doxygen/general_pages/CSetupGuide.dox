@@ -42,7 +42,7 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
     - **C/C++ → General → Additional Include Directories**:
     \n Add: `C:\meshlib-built\install\include`
     - **C/C++ → All Options → Additional Options**:
-    \n Add: `/bigobj /utf8`
+    \n Add: `/bigobj /utf-8`
     - **Linker → Input → Additional Dependencies**:
     \n Add: `C:\meshlib-built\install\lib\$(Configuration)\*.lib`
     - **Copy DLLs**:

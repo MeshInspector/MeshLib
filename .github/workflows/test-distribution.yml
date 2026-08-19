@@ -131,6 +131,9 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          # run one example: building is not enough to catch a broken rpath
+          # in the installed CMake config, the failure only shows up at launch
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
@@ -225,6 +228,9 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          # run one example: building is not enough to catch a broken rpath
+          # in the installed CMake config, the failure only shows up at launch
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
@@ -329,6 +335,9 @@ jobs:
           fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
+          # run one example: building is not enough to catch a broken rpath
+          # in the installed CMake config, the failure only shows up at launch
+          ./build/MeshModification
 
   windows-test:
     if: ${{ inputs.test_windows }}

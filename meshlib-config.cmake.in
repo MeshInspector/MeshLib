@@ -57,6 +57,75 @@ if(DEFINED CMAKE_C_COMPILER_VERSION)
 endif()
 
 if(APPLE)
+  # In the macOS package the libraries live inside `MeshLib.framework/Versions/<ver>/lib/`
+  # while their install names are flat (`@rpath/libMeshLibC2.dylib`). When a consumer links
+  # such a library, CMake derives the automatic rpath from the *parent* directory of the
+  # framework, because a path below `<name>.framework/` is assumed to point at the framework
+  # binary itself (see cmOrderDirectories). That guess is made whenever the remaining path
+  # contains the framework name, so it hits `libMeshLibC2.dylib` but not `libMRMesh.dylib`.
+  # The resulting rpath is several levels above the real `lib` directory, and the consumer --
+  # which builds and links fine -- aborts at launch with
+  #   dyld: Library not loaded: @rpath/libMeshLibC2.dylib
+  # So pass the directory the libraries really live in to the linker explicitly. The directory
+  # is taken from the imported targets rather than computed from this file's location, because
+  # macOS has two install layouts (framework, and the flat `MR_ROOT` one) placing the CMake
+  # config at a different depth relative to the libraries.
+  # Keep the list of targets in sync with the includes above.
+  foreach(_meshlib_target
+    MRMesh MRIOExtras MRSymbolMesh MRVoxels MRCuda imgui MRViewer MRCommonPlugins
+    MRMeshC MeshLibC2 MeshLibC2Cuda
+  )
+    if(NOT TARGET MeshLib::${_meshlib_target})
+      continue()
+    endif()
+
+    # collect the imported locations of all configurations
+    set(_meshlib_locations "")
+    get_target_property(_meshlib_location MeshLib::${_meshlib_target} IMPORTED_LOCATION)
+    if(_meshlib_location)
+      list(APPEND _meshlib_locations "${_meshlib_location}")
+    endif()
+    get_target_property(_meshlib_configs MeshLib::${_meshlib_target} IMPORTED_CONFIGURATIONS)
+    if(_meshlib_configs)
+      foreach(_meshlib_config IN LISTS _meshlib_configs)
+        get_target_property(_meshlib_location
+          MeshLib::${_meshlib_target} IMPORTED_LOCATION_${_meshlib_config}
+        )
+        if(_meshlib_location)
+          list(APPEND _meshlib_locations "${_meshlib_location}")
+        endif()
+      endforeach()
+    endif()
+
+    set(_meshlib_lib_dirs "")
+    foreach(_meshlib_location IN LISTS _meshlib_locations)
+      if(_meshlib_location MATCHES "\\.framework/")
+        get_filename_component(_meshlib_lib_dir "${_meshlib_location}" DIRECTORY)
+        list(APPEND _meshlib_lib_dirs "${_meshlib_lib_dir}")
+      endif()
+    endforeach()
+    if(NOT _meshlib_lib_dirs)
+      continue()
+    endif()
+    list(REMOVE_DUPLICATES _meshlib_lib_dirs)
+
+    foreach(_meshlib_lib_dir IN LISTS _meshlib_lib_dirs)
+      set_property(TARGET MeshLib::${_meshlib_target} APPEND PROPERTY
+        INTERFACE_LINK_OPTIONS "LINKER:-rpath,${_meshlib_lib_dir}"
+      )
+    endforeach()
+  endforeach()
+
+  unset(_meshlib_target)
+  unset(_meshlib_config)
+  unset(_meshlib_configs)
+  unset(_meshlib_location)
+  unset(_meshlib_locations)
+  unset(_meshlib_lib_dir)
+  unset(_meshlib_lib_dirs)
+endif(APPLE)
+
+if(APPLE)
     message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt '")
 endif(APPLE)
 

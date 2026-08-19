@@ -279,8 +279,6 @@ jobs:
           cmake \
             --build c-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
-          # run one example: building is not enough to catch a broken rpath
-          # in the installed CMake config, the failure only shows up at launch
           ./c-examples-build/MeshModification
 
       - name: Upload Macos Distribution

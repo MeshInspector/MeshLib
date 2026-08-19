@@ -57,24 +57,6 @@ if(DEFINED CMAKE_C_COMPILER_VERSION)
 endif()
 
 if(APPLE)
-  # In the macOS package the libraries live inside `MeshLib.framework/Versions/<ver>/lib/`.
-  # CMake mis-derives a consumer's rpath for a library there whose *file name* contains the
-  # framework name: `cmOrderDirectories` takes such a path for the framework binary itself and
-  # adds the framework's parent directory. That hits `libMeshLibC2.dylib` but not
-  # `libMRMesh.dylib`, so C consumers link fine and then abort at launch with
-  #   dyld: Library not loaded: @rpath/libMeshLibC2.dylib
-  # Pass the real library directory to the linker instead. It is also the directory CMake picks
-  # by itself in the flat (non-framework) macOS layout, so this needs no layout check.
-  foreach(_meshlib_target IN ITEMS MeshLib::MeshLibC2 MeshLib::MeshLibC2Cuda)
-    if(TARGET ${_meshlib_target})
-      set_property(TARGET ${_meshlib_target} APPEND PROPERTY
-        INTERFACE_LINK_OPTIONS "LINKER:-rpath,@PACKAGE_MR_MAIN_LIB_DIR@"
-      )
-    endif()
-  endforeach()
-endif(APPLE)
-
-if(APPLE)
     message("You can install required packages via brew: ' xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt '")
 endif(APPLE)
 

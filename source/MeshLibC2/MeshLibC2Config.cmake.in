@@ -1,0 +1,18 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+include("${CMAKE_CURRENT_LIST_DIR}/MeshLibC2Targets.cmake")
+
+if(APPLE)
+  # In the macOS package the libraries live inside `MeshLib.framework/Versions/<ver>/lib/`, and
+  # CMake derives a consumer's rpath for a library there from the framework's *parent* directory
+  # once the file name contains the framework name: `cmOrderDirectories` takes such a path for
+  # the framework binary itself. That hits `libMeshLibC2.dylib` but not `libMRMesh.dylib`, so C
+  # consumers link fine and then abort at launch with
+  #   dyld: Library not loaded: @rpath/libMeshLibC2.dylib
+  # Pass the real library directory to the linker instead. It is also the directory CMake picks
+  # by itself in the flat (non-framework) macOS layout, so this needs no layout check.
+  set_property(TARGET MeshLib::MeshLibC2 APPEND PROPERTY
+    INTERFACE_LINK_OPTIONS "LINKER:-rpath,@PACKAGE_MR_MAIN_LIB_DIR@"
+  )
+endif()

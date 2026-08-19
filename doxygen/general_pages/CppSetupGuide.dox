@@ -257,11 +257,11 @@ git pull origin
 \endcode
  - Install a Specific Version of Emscripten
 \code{.sh}
-./emsdk install 4.0.10
+./emsdk install 4.0.19
 \endcode
  - Activate the Installed Version
 \code{.sh}
-./emsdk activate 4.0.10
+./emsdk activate 4.0.19
 \endcode
  - Set Up Environment Variables
   - **macOS and Linux**:

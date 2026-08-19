@@ -78,9 +78,13 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
 /// existence sign does not depend on whether the ranks are computed among 3 or among 4 points
 constexpr std::int64_t cSosLadder = 128;
 
-/// the maximal degree of eps: A^2 W and E t^2 have degree 16 in the coordinates, and every
-/// coordinate factor is perturbed by at most eps^(9 * ladder^3)
-constexpr std::int64_t cMaxEpsDeg = 16 * 9 * cSosLadder * cSosLadder * cSosLadder;
+/// everything above this degree is truncated in the polynomials below, which keeps the symbolic
+/// products small; it must exceed the leading (lowest surviving) degree of every polynomial whose
+/// sign is read, and the worst case over the degenerate classes and the rank permutations was
+/// found experimentally at 6 * ladder^2 + 2 (A^2 W - E t^2 for two coincident pairs of points) -
+/// value-dependent terms only appear at lower degrees than the surviving pure-perturbation terms;
+/// if it is ever not enough, the polynomial comes out empty and the asserts on the signs fire
+constexpr std::int64_t cMaxEpsDeg = 8 * cSosLadder * cSosLadder;
 
 /// sparse polynomial in the perturbation parameter, as in the other precise predicates
 using EpsPoly = SparsePolynomial<BigInt, std::int64_t, cMaxEpsDeg>;

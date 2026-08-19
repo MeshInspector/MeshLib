@@ -9,9 +9,19 @@ from contextlib import contextmanager
 import pytest
 from helper import *
 
-mrviewerpy = pytest.importorskip(
-    "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
-)
+# Imported by the `viewer` fixture, never at module scope: loading `meshlib.mrviewerpy` pulls
+# in libMRViewer, whose statically registered ribbon items queue `CommandLoop` commands from
+# their constructors (`MR_REGISTER_RIBBON_ITEM` -> `StateBasePlugin`, MRStatePlugin.cpp). Those
+# commands only drain once the viewer's loop runs, so a debug build that imports the module and
+# then skips - any platform below - aborts at interpreter exit inside `~CommandLoop`
+# (`assert( commands_.empty() )`, MRCommandLoop.cpp:13), long after pytest reported success.
+mrviewerpy = None
+
+
+def _is_debug_build():
+    """Debug builds prefix the version string with "Debug: " (MRMesh/MRSystem.cpp)."""
+    return getattr(mrmesh, "GetMRVersionString", lambda: "")().startswith("Debug")
+
 
 # The viewer can only be launched from Python headless on Linux:
 #  - macOS: `launch()` runs the viewer on a detached thread, but GLFW/Cocoa insists on
@@ -29,6 +39,17 @@ pytestmark = [
     pytest.mark.skipif(
         not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")),
         reason="no DISPLAY/WAYLAND_DISPLAY, run the tests under `xvfb-run -a`",
+    ),
+    # `RibbonMenu::setupShortcuts_` (MRViewer) binds shortcuts to items owned by
+    # MRCommonPlugins, which mrviewerpy neither links nor loads (`MinimalViewerSetup`
+    # overrides `setupExtendedLibraries` to do nothing). Release only logs
+    # "Ribbon item not found: Fit data"; debug aborts the whole process on
+    # `assert( !"item not found" )` in `addRibbonItemShortcut_`, MRRibbonMenu.cpp.
+    pytest.mark.skipif(
+        _is_debug_build(),
+        reason="debug build: launching the viewer from mrviewerpy asserts in "
+        "RibbonMenu::addRibbonItemShortcut_ on ribbon items MRViewer references but "
+        "mrviewerpy does not load",
     ),
 ]
 
@@ -93,6 +114,10 @@ def viewer():
     runs in a single pytest process, so the viewer can be launched exactly once - never
     per test - and everything needing it must live in this module.
     """
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
     _point_at_bundled_resources()
 
     params = mrviewerpy.ViewerLaunchParams()

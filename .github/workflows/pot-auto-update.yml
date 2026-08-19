@@ -53,8 +53,14 @@ jobs:
       - name: Check for changes
         id: check-diff
         run: |
-          # ignore auto-updated timestamp, ignore source line comments
-          pot_diff () { git diff --unified=0 --ignore-matching-lines="POT-Creation-Date.*" --ignore-matching-lines="#: .*" locale/*.pot ; }
+          # ignore auto-updated timestamp, ignore source line comments, ignore format flags
+          pot_diff () {
+            git diff --unified=0 \
+              --ignore-matching-lines="POT-Creation-Date.*" \
+              --ignore-matching-lines="^#: .*" \
+              --ignore-matching-lines="^#, (c-format|no-c-format|c\+\+-format)$" \
+              locale/*.pot
+          }
           pot_diff
           if [ -n "$(pot_diff)" ] ; then
             echo "need_update=true" >> $GITHUB_OUTPUT
@@ -79,6 +85,7 @@ jobs:
           GH_TOKEN: ${{ secrets.MESHINSPECTOR_BOT_VCPKG_UPDATE_TOKEN }} # TODO: replace token?
         run: |
           gh pr create --title "Auto CI: Update translation templates" \
+                       --body "Templates regenerated from source." \
                        --base master \
                        --head $GIT_BRANCH_NAME \
                        --reviewer oitel,Grantim

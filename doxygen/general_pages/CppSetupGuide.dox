@@ -10,6 +10,13 @@ and also shows how to \ref CppSetupWASM "build WebAssembly" modules using MeshLi
 It covers all the prerequisites and setup steps for each platform, making it easy to get started.
 
 \subsection CppSetupWindows Windows
+\note MeshLib for Windows is distributed for **x64** only: set the platform of your project to `x64`.
+A 32-bit (`Win32`) build is not supported and fails while compiling `MRMesh/MRId.h` with
+`C2535: member function already defined or declared` and `C2995: function template has already been defined`
+(on 32-bit MSVC `size_t` and `unsigned int` are the same type, so two `MR::Id` constructors collapse into one).
+Visual Studio 2019 still defaults new C++ console projects to `Win32`.
+On Windows on Arm, use the x64 toolchain: no native Arm64 Windows build is published.
+
 There are two options: Download and Install release build or compile from sources:
 ### Installing the release build
  1. **Download and Extract the Built Version**
@@ -147,6 +154,11 @@ cd MeshLib
 ./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
 ./scripts/build_source.sh      # Do not select emscripten in the corresponding question
 \endcode
+You may also run the scripts in the non-interactive mode (see \ref CppSetupWASM "Building WebAssembly with MeshLib Using Emscripten" for more info):
+\code{.sh}
+MR_EMSCRIPTEN=OFF ./scripts/build_thirdparty.sh
+MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
+\endcode
  4. **Create and Install Package**:
  \n This step will create distribution package and install it to the system
  \n **For Ubuntu**:
@@ -250,11 +262,11 @@ git pull origin
 \endcode
  - Install a Specific Version of Emscripten
 \code{.sh}
-./emsdk install 4.0.10
+./emsdk install 4.0.19
 \endcode
  - Activate the Installed Version
 \code{.sh}
-./emsdk activate 4.0.10
+./emsdk activate 4.0.19
 \endcode
  - Set Up Environment Variables
   - **macOS and Linux**:
@@ -287,12 +299,24 @@ emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_meshlib_installation
 cd ~/MeshLib
 \endcode
  - Run the script to build [Third-Party Dependencies](\ref ThirdParty). When prompted, select \b Emscripten as the build target:
-  - Choose `y` for multithreaded, `s` for single-threaded, or `n` for a standard Linux build.
+  - `y` - Emscripten, multi-threaded
+  - `s` - Emscripten, single-threaded
+  - `l` - Emscripten, multi-threaded 64-bit (wasm64)
+  - any other key, or no keypress within 5 seconds - native, non-Emscripten build
 \code{.sh}
 ./scripts/build_thirdparty.sh
 \endcode
  - Build the MeshLib source code. Make sure to select the same Emscripten option you used in the `build_thirdparty.sh` script:
 \code{.sh}
+./scripts/build_source.sh
+\endcode
+
+\note **Non-interactive builds.** You may pre-set the environment variables to skip the prompt:
+\code{.sh}
+export MR_EMSCRIPTEN=ON               # same as 'y': multi-threaded
+#export MR_EMSCRIPTEN_SINGLETHREAD=1  # ...plus this for 's': single-threaded
+#export MR_EMSCRIPTEN_WASM64=1        # ...plus this for 'l': multi-threaded 64-bit
+./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 \endcode
 

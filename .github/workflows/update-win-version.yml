@@ -77,6 +77,12 @@ jobs:
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
 
+      - name: Test find_package(MeshLib) # call it after archive not to pack build results
+        if: ${{ matrix.extract_release }}
+        run: |
+          cmake -S examples\cpp-examples -B cpp-examples-build -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="${{ github.workspace }}\install"
+          cmake --build cpp-examples-build --config Release -j
+
       - name: Test Example Plugin # call it after archive not to pack build results
         env:
           IDL: ${{ matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug' && '2' || '0' }}

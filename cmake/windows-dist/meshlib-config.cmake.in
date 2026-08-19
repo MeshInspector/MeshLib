@@ -1,0 +1,80 @@
+# CMake package configuration for the prebuilt Windows distribution (MeshLibDistVS*.zip).
+#
+# That archive is packed by scripts/make_install_folder.py from the build output tree rather
+# than by `cmake --install`, so its layout is
+#   <prefix>/include        headers of MeshLib and of every third-party library
+#   <prefix>/lib/<Config>   import libraries (.lib) and .pdb
+#   <prefix>/app/<Config>   .dll and .exe
+# and it ships no third-party CMake config files. Hence the imported targets below are written
+# by hand and must not call find_dependency().
+
+cmake_minimum_required(VERSION 3.18)
+
+get_filename_component(MESHLIB_DIST_ROOT "${CMAKE_CURRENT_LIST_DIR}/../../.." ABSOLUTE)
+
+# _ITERATOR_DEBUG_LEVEL the packaged binaries were built with, see source/MRMesh/MRMeshFwd.h.
+set(MESHLIB_ITERATOR_DEBUG_LEVEL @MESHLIB_ITERATOR_DEBUG_LEVEL@)
+
+set(MESHLIB_INCLUDE_DIR "${MESHLIB_DIST_ROOT}/include")
+# Eigen keeps its own subdirectory in the vcpkg include tree, which is copied verbatim
+set(MESHLIB_THIRDPARTY_INCLUDE_DIR "${MESHLIB_DIST_ROOT}/include" "${MESHLIB_DIST_ROOT}/include/eigen3")
+set(MESHLIB_THIRDPARTY_LIB_DIR "${MESHLIB_DIST_ROOT}/lib/$<IF:$<CONFIG:Debug>,Debug,Release>")
+set(MESHLIB_DATA_DIR "${MESHLIB_DIST_ROOT}/app/$<IF:$<CONFIG:Debug>,Debug,Release>")
+
+set(MESHLIB_DIST_COMPILE_DEFINITIONS
+  _ITERATOR_DEBUG_LEVEL=${MESHLIB_ITERATOR_DEBUG_LEVEL}
+  MR_ITERATOR_DEBUG_LEVEL=${MESHLIB_ITERATOR_DEBUG_LEVEL}
+  NOMINMAX
+  SPDLOG_COMPILED_LIB
+  SPDLOG_SHARED_LIB
+)
+
+# Adds MeshLib::<name> for a module present in the package; ARGN are its MeshLib dependencies.
+function(_meshlib_dist_add_library name)
+  if(NOT EXISTS "${MESHLIB_DIST_ROOT}/lib/Release/${name}.lib" AND
+     NOT EXISTS "${MESHLIB_DIST_ROOT}/lib/Debug/${name}.lib")
+    return()
+  endif()
+
+  add_library(MeshLib::${name} SHARED IMPORTED)
+  set_target_properties(MeshLib::${name} PROPERTIES
+    INTERFACE_INCLUDE_DIRECTORIES "${MESHLIB_THIRDPARTY_INCLUDE_DIR}"
+    INTERFACE_LINK_DIRECTORIES "${MESHLIB_THIRDPARTY_LIB_DIR}"
+    INTERFACE_COMPILE_DEFINITIONS "${MESHLIB_DIST_COMPILE_DEFINITIONS}"
+    INTERFACE_LINK_LIBRARIES "${ARGN}"
+    MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
+    MAP_IMPORTED_CONFIG_MINSIZEREL Release
+    MAP_IMPORTED_CONFIG_NOCONFIG Release
+  )
+  foreach(config Release Debug)
+    if(EXISTS "${MESHLIB_DIST_ROOT}/lib/${config}/${name}.lib")
+      string(TOUPPER ${config} config_upper)
+      set_property(TARGET MeshLib::${name} APPEND PROPERTY IMPORTED_CONFIGURATIONS ${config_upper})
+      set_target_properties(MeshLib::${name} PROPERTIES
+        IMPORTED_IMPLIB_${config_upper} "${MESHLIB_DIST_ROOT}/lib/${config}/${name}.lib"
+        IMPORTED_LOCATION_${config_upper} "${MESHLIB_DIST_ROOT}/app/${config}/${name}.dll"
+      )
+    endif()
+  endforeach()
+endfunction()
+
+_meshlib_dist_add_library(MRMesh)
+_meshlib_dist_add_library(MRIOExtras MeshLib::MRMesh)
+_meshlib_dist_add_library(MRSymbolMesh MeshLib::MRMesh)
+_meshlib_dist_add_library(MRVoxels MeshLib::MRMesh)
+_meshlib_dist_add_library(MRCuda MeshLib::MRMesh)
+_meshlib_dist_add_library(imgui)
+_meshlib_dist_add_library(MRViewer MeshLib::MRMesh MeshLib::imgui)
+_meshlib_dist_add_library(MRCommonPlugins MeshLib::MRViewer)
+_meshlib_dist_add_library(MeshLibC2)
+_meshlib_dist_add_library(MeshLibC2Cuda MeshLib::MeshLibC2)
+
+if(TARGET MeshLib::imgui)
+  # mirrors the PUBLIC definitions of the imgui target, see source/imgui/CMakeLists.txt
+  set_property(TARGET MeshLib::imgui APPEND PROPERTY INTERFACE_COMPILE_DEFINITIONS
+    IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    IMGUI_ENABLE_FREETYPE
+    ImDrawIdx=unsigned
+    "IMGUI_USER_CONFIG=\"imgui/MRCustomImGuiConfig.h\""
+  )
+endif()

@@ -143,9 +143,10 @@ cd MeshLib
  2. **Clone submodules**:
  \n Run `scripts/clone_submodules_linux.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Linux.
  3. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
+ \n Both scripts ask `Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N)`. It is a **5-second timed prompt** that does not echo the keystroke; `n`, any other key, or no answer at all selects the native Linux build. Setting `MR_EMSCRIPTEN=OFF` skips the question entirely and is the only reliable form in scripts and CI - pass the same value to both scripts. For the emscripten options see \ref CppSetupWASM "Building WebAssembly with MeshLib Using Emscripten".
 \code{.sh}
-./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
-./scripts/build_source.sh      # Do not select emscripten in the corresponding question
+MR_EMSCRIPTEN=OFF ./scripts/build_thirdparty.sh
+MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
 \endcode
  4. **Create and Install Package**:
  \n This step will create distribution package and install it to the system
@@ -287,12 +288,24 @@ emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_meshlib_installation
 cd ~/MeshLib
 \endcode
  - Run the script to build [Third-Party Dependencies](\ref ThirdParty). When prompted, select \b Emscripten as the build target:
-  - Choose `y` for multithreaded, `s` for single-threaded, or `n` for a standard Linux build.
+  - The prompt `Build with emscripten? Press (y) in 5 seconds to build (y/s/l/N)` waits **5 seconds** and does not echo the keystroke:
+   - `y` - emscripten, multithreaded
+   - `s` - emscripten, single-threaded
+   - `l` - emscripten, multithreaded 64-bit (wasm64)
+   - `n`, any other key, or no answer within 5 seconds - native (non-emscripten) build
 \code{.sh}
 ./scripts/build_thirdparty.sh
 \endcode
  - Build the MeshLib source code. Make sure to select the same Emscripten option you used in the `build_thirdparty.sh` script:
 \code{.sh}
+./scripts/build_source.sh
+\endcode
+\note **Non-interactive builds.** Pre-set the environment variables the prompt would assign and it is skipped; otherwise an unanswered prompt silently falls back to a native build. `MR_EMSCRIPTEN` is the gate - `MR_EMSCRIPTEN_SINGLETHREAD` and `MR_EMSCRIPTEN_WASM64` on their own do **not** suppress the question. Both scripts read the same variables, so export them once:
+\code{.sh}
+export MR_EMSCRIPTEN=ON               # same as 'y': multithreaded
+#export MR_EMSCRIPTEN_SINGLETHREAD=1  # ...plus this for 's': single-threaded
+#export MR_EMSCRIPTEN_WASM64=1        # ...plus this for 'l': multithreaded 64-bit
+./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 \endcode
 

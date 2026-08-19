@@ -644,8 +644,7 @@ int Viewer::launch( const LaunchParams& params )
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
     {
-        // no command loop will ever run, so close the queue: otherwise every later blocking
-        // command (e.g. from mrviewerpy) waits for a loop that does not exist
+        // no command loop will ever run here, so no command may wait for one
         CommandLoop::removeCommands( true );
         return res;
     }

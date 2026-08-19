@@ -23,7 +23,9 @@ void CommandLoop::setMainThreadId( const std::thread::id& id )
 
 std::thread::id CommandLoop::getMainThreadId()
 {
-    return instance_().mainThreadId_;
+    auto& inst = instance_();
+    std::unique_lock<std::mutex> lock( inst.mutex_ ); // `setMainThreadId` runs on the launch thread
+    return inst.mainThreadId_;
 }
 
 void CommandLoop::setState( StartPosition state )
@@ -102,16 +104,21 @@ bool CommandLoop::empty()
 void CommandLoop::removeCommands( bool closeLoop )
 {
     auto& inst = instance_();
-    std::unique_lock<std::mutex> lock( inst.mutex_ );
-    inst.queueClosed_ = closeLoop;
-    while ( !inst.commands_.empty() )
+    std::vector<std::shared_ptr<Command>> droppedCommands;
     {
-        auto cmd = std::move( inst.commands_.front() );
-        inst.commands_.pop();
-        cmd->dropped = true; // the command is gone; a blocked caller must report that, not return as if it ran
-        cmd->callerThreadCV.notify_one();
+        std::unique_lock<std::mutex> lock( inst.mutex_ );
+        inst.queueClosed_ = closeLoop;
+        while ( !inst.commands_.empty() )
+        {
+            auto cmd = std::move( inst.commands_.front() );
+            inst.commands_.pop();
+            cmd->dropped = true;
+            droppedCommands.emplace_back( std::move( cmd ) );
+        }
+        spdlog::debug( "CommandLoop::removeCommands(): queue size={}", inst.commands_.size() );
     }
-    spdlog::debug( "CommandLoop::removeCommands(): queue size={}", inst.commands_.size() );
+    for ( auto& cmd : droppedCommands ) // notify out of the lock, so the woken caller does not block on it again
+        cmd->callerThreadCV.notify_one();
 }
 
 CommandLoop& CommandLoop::instance_()
@@ -148,14 +155,12 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     if ( inst.queueClosed_ )
     {
         spdlog::debug( "CommandLoop::addCommand_: cannot accept new command because it is closed" );
-        // a non-blocking command is silently dropped as before (shutdown paths rely on that),
-        // but a blocking caller must not be told the command ran when it never will
+        // a non-blocking command is dropped as before; a blocking caller must not be told it ran
         if ( blockThread )
             throw std::runtime_error( "Viewer command loop is stopped, cannot run the command" );
         return;
     }
-    // an empty main thread id means no `launch` ever got far enough to call `setMainThreadId`,
-    // so nobody will ever call `processCommands` and the wait below would never return
+    // no `setMainThreadId` yet: nobody will ever call `processCommands`, so the wait below cannot end
     if ( blockThread && inst.mainThreadId_ == std::thread::id{} )
     {
         spdlog::debug( "CommandLoop::addCommand_: cannot block on a command loop that was never started" );
@@ -166,8 +171,7 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     getViewerInstance().postEmptyEvent();
     if ( blockThread )
     {
-        // the predicate closes two holes of the bare wait: a spurious wakeup no longer looks like
-        // completion, and a wakeup from `removeCommands` is distinguishable from an actual execution
+        // a spurious wakeup or `removeCommands` must not look like completion
         cmd->callerThreadCV.wait( lock, [&cmd] { return cmd->processed || cmd->dropped; } );
 
         if ( cmd->dropped )

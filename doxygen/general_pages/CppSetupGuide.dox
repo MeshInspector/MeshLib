@@ -154,6 +154,11 @@ cd MeshLib
 ./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
 ./scripts/build_source.sh      # Do not select emscripten in the corresponding question
 \endcode
+You may also run the scripts in the non-interactive mode (see \ref CppSetupWASM "Building WebAssembly with MeshLib Using Emscripten" for more info):
+\code{.sh}
+MR_EMSCRIPTEN=OFF ./scripts/build_thirdparty.sh
+MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
+\endcode
  4. **Create and Install Package**:
  \n This step will create distribution package and install it to the system
  \n **For Ubuntu**:
@@ -294,12 +299,24 @@ emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_meshlib_installation
 cd ~/MeshLib
 \endcode
  - Run the script to build [Third-Party Dependencies](\ref ThirdParty). When prompted, select \b Emscripten as the build target:
-  - Choose `y` for multithreaded, `s` for single-threaded, or `n` for a standard Linux build.
+  - `y` - Emscripten, multi-threaded
+  - `s` - Emscripten, single-threaded
+  - `l` - Emscripten, multi-threaded 64-bit (wasm64)
+  - any other key, or no keypress within 5 seconds - native, non-Emscripten build
 \code{.sh}
 ./scripts/build_thirdparty.sh
 \endcode
  - Build the MeshLib source code. Make sure to select the same Emscripten option you used in the `build_thirdparty.sh` script:
 \code{.sh}
+./scripts/build_source.sh
+\endcode
+
+\note **Non-interactive builds.** You may pre-set the environment variables to skip the prompt:
+\code{.sh}
+export MR_EMSCRIPTEN=ON               # same as 'y': multi-threaded
+#export MR_EMSCRIPTEN_SINGLETHREAD=1  # ...plus this for 's': single-threaded
+#export MR_EMSCRIPTEN_WASM64=1        # ...plus this for 'l': multi-threaded 64-bit
+./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 \endcode
 

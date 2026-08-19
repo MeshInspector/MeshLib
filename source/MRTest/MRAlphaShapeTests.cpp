@@ -7,10 +7,52 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <map>
 #include <random>
 
 namespace MR
 {
+
+TEST( MRMesh, AlphaShapeDuplicates )
+{
+    // four corners of a cube forming a tetrahedron, with the last one duplicated
+    PointCloud cloud;
+    cloud.points.push_back( {  0.5f,  0.5f, -0.5f } ); //0_v
+    cloud.points.push_back( { -0.5f,  0.5f,  0.5f } ); //1_v
+    cloud.points.push_back( {  0.5f,  0.5f,  0.5f } ); //2_v
+    cloud.points.push_back( {  0.5f, -0.5f,  0.5f } ); //3_v
+    cloud.points.push_back( {  0.5f, -0.5f,  0.5f } ); //4_v
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto tris = findAlphaShapeAllTriangles( cloud, 1 );
+    EXPECT_EQ( tris.size(), 4 );
+
+    // the duplicated position is merged: only its smallest id appears in the triangles,
+    // and the tetrahedron surface is closed - every directed edge is balanced by its opposite
+    std::map<std::pair<VertId, VertId>, int> edges;
+    for ( const auto & t : tris )
+        for ( int i = 0; i < 3; ++i )
+        {
+            EXPECT_NE( t[i], 4_v );
+            ++edges[ { t[i], t[( i + 1 ) % 3] } ];
+        }
+    for ( const auto & [e, n] : edges )
+    {
+        auto it = edges.find( { e.second, e.first } );
+        EXPECT_EQ( n, it == edges.end() ? 0 : it->second );
+    }
+
+    // the duplicate point with the larger id gets no triangles of its own
+    Triangulation vTris;
+    std::vector<AlphaShapeNei> neis;
+    auto data = getAlphaShapeData( cloud, 1, false );
+    findAlphaShapeNeiTriangles( cloud, 4_v, data, vTris, neis, false );
+    EXPECT_TRUE( vTris.empty() );
+    EXPECT_TRUE( neis.empty() );
+    findAlphaShapeNeiTriangles( cloud, 3_v, data, vTris, neis, false );
+    EXPECT_EQ( vTris.size(), 3 );
+    EXPECT_EQ( neis.size(), 3 );
+}
 
 TEST( MRMesh, AlphaShape )
 {

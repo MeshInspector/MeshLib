@@ -11,6 +11,7 @@
 #include "MRProgressCallback.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
+#include <cassert>
 
 namespace MR
 {
@@ -187,11 +188,45 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     myStats.collectedNeis += neis.size();
 
     // the ball emptiness test below stops on the first point inside the ball,
-    // and the points closest to #v have the best chance to be there
+    // and the points closest to #v have the best chance to be there;
+    // the ordering by id makes the deduplication below keep the smallest id of a position
     std::sort( neis.begin(), neis.end(), []( const AlphaShapeNei & a, const AlphaShapeNei & b )
     {
-        return a.distSq < b.distSq;
+        return a.distSq < b.distSq || ( a.distSq == b.distSq && a.coords.id < b.coords.id );
     } );
+
+    // points sharing one position in the integer grid are merged: only the one with the smallest id
+    // participates in the search, so that the triangles found around all the points use the same
+    // representative of each position and together form a surface without cracks
+    for ( const auto & n : neis )
+    {
+        if ( n.coords.pt != p0.pt )
+            break; // the twins of #v have zero distance, so they are first after the sort
+        if ( n.coords.id < v )
+        {
+            // all the triangles of #v are made by this twin instead of it
+            neis.clear();
+            if ( stats )
+                *stats += myStats;
+            return;
+        }
+    }
+    size_t uniqueSize = 0;
+    for ( size_t i = 0; i < neis.size(); ++i )
+    {
+        if ( neis[i].coords.pt == p0.pt )
+            continue; // a twin of #v with a larger id
+        bool dup = false;
+        for ( size_t j = uniqueSize; j > 0 && neis[j - 1].distSq == neis[i].distSq; --j )
+            if ( neis[j - 1].coords.pt == neis[i].coords.pt )
+            {
+                dup = true;
+                break;
+            }
+        if ( !dup )
+            neis[uniqueSize++] = neis[i];
+    }
+    neis.resize( uniqueSize );
 
     // a neighbor p makes a farther neighbor x redundant if p is strictly inside every ball of the given
     // radius through #v having x inside or on it: then x can neither make a triangle with #v (p blocks
@@ -255,11 +290,6 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             const auto & pi = neis[i].coords;
             if ( onlyLargerVids && pi.id < v )
                 continue;
-            // a triangle with two coincident corners is a zero-area needle, useless for the shape;
-            // before full simulation-of-simplicity it was implicitly skipped by reset() as NoSphere,
-            // and skipping it here also avoids the expensive symbolic evaluations of its queries
-            if ( pi.pt == pj.pt || pi.pt == p0.pt || pj.pt == p0.pt )
-                continue;
             // the two balls touching all three points differ only by the side of the triangle,
             // so one reset is enough for the both; the tester cheaply rejects the points farther than
             // the diameter from the first of the three, and every candidate is within the search
@@ -268,11 +298,11 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             if ( !tester.reset( pj, p0, pi, data.intRadiusSq ) )
                 continue;
             ++myStats.touchableTris;
+            // the deduplication above guarantees three distinct points, whose sphere is never symbolic
+            assert( !tester.degenerateTriangle() );
             // the shadow depends only on the existence of the touching balls, not on their emptiness,
-            // and dropping before the tests below shortens their scans as well;
-            // a degenerate triangle has no exact spheres for the wedge math of the filter
-            if ( !tester.degenerateTriangle() )
-                dropShadowed( neis, i, j, p0.pt, tester, myStats );
+            // and dropping before the tests below shortens their scans as well
+            dropShadowed( neis, i, j, p0.pt, tester, myStats );
             if ( ballEmpty( pi.id, pj.id ) )
                 appendTris.push_back( { v, pi.id, pj.id } );
             tester.flip();

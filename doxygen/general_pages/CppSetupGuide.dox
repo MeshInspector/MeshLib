@@ -234,6 +234,9 @@ This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. 
 
 Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below.
 For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).
+
+\note Use the same Emscripten version MeshLib is built with — see `FROM emscripten/emsdk:<version>` in [`docker/emscriptenDockerfile`](https://github.com/MeshInspector/MeshLib/blob/master/docker/emscriptenDockerfile).
+
  - Clone the Emscripten SDK Repository
  \n Run the following command on **all platforms**:
 \code{.sh}
@@ -250,11 +253,11 @@ git pull origin
 \endcode
  - Install a Specific Version of Emscripten
 \code{.sh}
-./emsdk install 4.0.10
+./emsdk install 4.0.19
 \endcode
  - Activate the Installed Version
 \code{.sh}
-./emsdk activate 4.0.10
+./emsdk activate 4.0.19
 \endcode
  - Set Up Environment Variables
   - **macOS and Linux**:

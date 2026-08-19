@@ -19,13 +19,15 @@
       "Name": "Open files",
       "Caption": "Open Files",
       "Tooltip": "Select files from the dialog and open them in the viewer window.",
-      "Icon": "\uF15B"
+      "Icon": "\uF15B",
+      "HelpLink": "https://meshinspector.com/inappvideo/openfiles"
     },
     {
       "Name": "Open directory",
       "Caption": "Open Directory",
       "Tooltip": "Load all supported files from given directory and subdirectories.",
-      "Icon": "\uF07C"
+      "Icon": "\uF07C",
+      "HelpLink": "https://meshinspector.com/inappvideo/opendirectory"
     },
     {
       "Name": "Open DICOMs",
@@ -54,23 +56,27 @@
       "Name": "Save object",
       "Caption": "Export",
       "Tooltip": "Save selected objects to files.",
-      "Icon": "\uF0C6"
+      "Icon": "\uF0C6",
+      "HelpLink": "https://meshinspector.com/inappvideo/saveobject"
     },
     {
       "Name": "Save selected",
       "Caption": "Save Selected",
       "Tooltip": "Save scene tree branches with selected objects to MRU format.",
-      "Icon": "\uF0C7"
+      "Icon": "\uF0C7",
+      "HelpLink": "https://meshinspector.com/inappvideo/saveselected"
     },
     {
       "Name": "Save Scene",
       "Tooltip": "Save MRU scene to the file from which it was opened.",
-      "Icon": "\uF0C7"
+      "Icon": "\uF0C7",
+      "HelpLink": "https://meshinspector.com/inappvideo/savescene"
     },
     {
       "Name": "Save Scene As",
       "Tooltip": "Saves scene in a file.",
-      "Icon": "\uF0C7"
+      "Icon": "\uF0C7",
+      "HelpLink": "https://meshinspector.com/inappvideo/savesceneas"
     },
     {
       "Name": "Capture screenshot",
@@ -91,13 +97,15 @@
       "Name": "Capture UI screenshot",
       "Caption": "Save Screenshot",
       "Tooltip": "Saves a screenshot of the current view to file.",
-      "Icon": "\uF03E"
+      "Icon": "\uF03E",
+      "HelpLink": "https://meshinspector.com/inappvideo/captureuiscreenshot"
     },
     {
       "Name": "Screenshot to clipboard",
       "Caption": "Screenshot to Clipboard",
       "Tooltip": "Copies screenshot of the scene to clipboard",
-      "Icon": "\uF03E"
+      "Icon": "\uF03E",
+      "HelpLink": "https://meshinspector.com/inappvideo/screenshottoclipboard"
     },
     {
       "Name": "Fit data",
@@ -111,19 +119,22 @@
         {
           "Name": "Fit selected primitives"
         }
-      ]
+      ],
+      "HelpLink": "https://meshinspector.com/inappvideo/fitdata"
     },
     {
       "Name": "Fit selected objects",
       "Caption": "Fit Selected Objects",
       "Tooltip": "Changes current viewport settings to fit selected visible objects in scene.",
-      "Icon": "\uF066"
+      "Icon": "\uF066",
+      "HelpLink": "https://meshinspector.com/inappvideo/fitselectedobjects"
     },
     {
       "Name": "Fit selected primitives",
       "Caption": "Fit Selected Primitives",
       "Tooltip": "Changes current viewport settings to fit selection.",
-      "Icon": "\uF05B"
+      "Icon": "\uF05B",
+      "HelpLink": "https://meshinspector.com/inappvideo/fitselectedprimitives"
     },
     {
       "Name": "Camera",
@@ -134,74 +145,88 @@
     {
       "Name": "Front View",
       "Tooltip": "A view of XZ plane with camera looking along Y.",
-      "Icon": "\uF102"
+      "Icon": "\uF102",
+      "HelpLink": "https://meshinspector.com/inappvideo/frontview"
     },
     {
       "Name": "Top View",
       "Tooltip": "A view of XY plane with Z axis looking in camera.",
-      "Icon": "\uF107"
+      "Icon": "\uF107",
+      "HelpLink": "https://meshinspector.com/inappvideo/topview"
     },
     {
       "Name": "Bottom View",
       "Tooltip": "A view of XY plane with camera looking along Z.",
-      "Icon": "\uF106"
+      "Icon": "\uF106",
+      "HelpLink": "https://meshinspector.com/inappvideo/bottomview"
     },
     {
       "Name": "Left View",
       "Tooltip": "A view of YZ plane with camera looking along X.",
-      "Icon": "\uF105"
+      "Icon": "\uF105",
+      "HelpLink": "https://meshinspector.com/inappvideo/leftview"
     },
     {
       "Name": "Back View",
       "Tooltip": "A view of XZ plane with Y axis looking in camera.",
-      "Icon": "\uF103"
+      "Icon": "\uF103",
+      "HelpLink": "https://meshinspector.com/inappvideo/backview"
     },
     {
       "Name": "Right View",
       "Tooltip": "A view of YZ plane with X axis looking in camera.",
-      "Icon": "\uF104"
+      "Icon": "\uF104",
+      "HelpLink": "https://meshinspector.com/inappvideo/rightview"
     },
     {
       "Name": "Isometric View",
       "Tooltip": "Look at the object so the axes X,Y,Z form 120 degree angles on the view.",
-      "Icon": "\uF1B2"
+      "Icon": "\uF1B2",
+      "HelpLink": "https://meshinspector.com/inappvideo/isometricview"
     },
     {
       "Name": "Invert View",
       "Tooltip": "Rotates the camera 180 degrees around the current vertical axis.",
-      "Icon": "\uF2F1"
+      "Icon": "\uF2F1",
+      "HelpLink": "https://meshinspector.com/inappvideo/invertview"
     },
     {
       "Name": "Single Viewport",
       "Tooltip": "Setup single viewport for the whole window.",
-      "Icon": "\uF525"
+      "Icon": "\uF525",
+      "HelpLink": "https://meshinspector.com/inappvideo/singleviewport"
     },
     {
       "Name": "Horizontal Viewports",
       "Tooltip": "Setup two horizontal viewports for the whole window.",
-      "Icon": "\uF7A4"
+      "Icon": "\uF7A4",
+      "HelpLink": "https://meshinspector.com/inappvideo/horizontalviewports"
     },
     {
       "Name": "Vertical Viewports",
       "Tooltip": "Setup two vertical viewports for the whole window.",
-      "Icon": "\uF7A5"
+      "Icon": "\uF7A5",
+      "HelpLink": "https://meshinspector.com/inappvideo/verticalviewports"
     },
     {
       "Name": "Quad Viewports",
       "Tooltip": "Setup four equal viewports for the whole window.",
-      "Icon": "\uF524"
+      "Icon": "\uF524",
+      "HelpLink": "https://meshinspector.com/inappvideo/quadviewports"
     },
     {
       "Name": "Add custom theme",
       "Caption": "Add Custom Theme",
       "Tooltip": "Customize and save the color theme.",
-      "Icon": "\uF0D0"
+      "Icon": "\uF0D0",
+      "HelpLink": "https://meshinspector.com/inappvideo/addcustomtheme"
     },
     {
       "Name": "Show_Hide Global Basis",
       "Caption": "Toggle Global Basis",
       "Tooltip": "Show or hide global 0 and X,Y,Z axes, also allows showing 3d grid.",
-      "Icon": "\uf546"
+      "Icon": "\uf546",
+      "HelpLink": "https://meshinspector.com/inappvideo/showhideglobalbasis"
     },
     {
       "Name": "Viewer settings",
@@ -214,13 +239,15 @@
       "Name": "Select objects",
       "Caption": "Select Objects",
       "Tooltip": "Selects objects by clicking them in the scene",
-      "Icon": "\uF245"
+      "Icon": "\uF245",
+      "HelpLink": "https://meshinspector.com/inappvideo/selectobjects"
     },
     {
       "Name": "Move object",
       "Caption": "Move Object",
       "Tooltip": "Move an object in a scene using a mouse",
-      "Icon": "\uF256"
+      "Icon": "\uF256",
+      "HelpLink": "https://meshinspector.com/inappvideo/moveobject"
     },
     {
       "Name": "Ribbon Scene Sort by name",
@@ -285,12 +312,14 @@
     {
       "Name": "Rotator",
       "Tooltip": "Permanently rotates the scene around vertical axis.",
-      "Icon": "\uF2F1"
+      "Icon": "\uF2F1",
+      "HelpLink": "https://meshinspector.com/inappvideo/rotator"
     },
     {
       "Name": "Object Info",
       "Tooltip": "Show information about currently selected object.",
-      "Icon": "\uF05A"
+      "Icon": "\uF05A",
+      "HelpLink": "https://meshinspector.com/inappvideo/objectinfo"
     }
   ]
 }

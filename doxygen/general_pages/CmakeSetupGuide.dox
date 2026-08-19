@@ -6,23 +6,80 @@
 \tableofcontents
 
 ## CMake Integration Support
-MeshLib provides CMake integration support for \b Windows, \b Linux and \b macOS.
+MeshLib supports \b Windows, \b Linux and \b macOS, but its distributions are consumed in two different ways:
+
+- The Linux packages, the `linux-vcpkg` tarball and the macOS framework are produced by `cmake --install` and therefore **ship CMake config files**: `find_package(MeshLib CONFIG REQUIRED)` works, see the *Quick Integration Guide* below.
+- The **Windows prebuilt archives** (`MeshLibDistVS*.zip`) are packed from the MSBuild output tree and **ship no CMake config files**, so `find_package(MeshLib)` cannot find them. See the *Windows Integration Guide* below.
+
 Example CMake configuration files are available to demonstrate how to link against the pre-built libraries.
-You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt).
+You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) — that file handles both cases.
 
 ## Windows Integration Guide
 
-MeshLib supports \b Windows via CMake, including integration with **Visual Studio**.
+MeshLib supports \b Windows via CMake, including integration with **Visual Studio**: ensure the **CMake component** is installed in your Visual Studio setup.
 
-To enable support in Visual Studio, ensure the **CMake component** is installed in your Visual Studio setup. Once installed, standard CMake configuration should work seamlessly.
+### Prebuilt archive from GitHub Releases
 
-For easier setup and dependency management, we recommend using \b vcpkg as outlined in our \ref MeshLibCppSetupGuide "C++ Setup Guide". You can configure your build with the following command:
+The `MeshLibDistVS*.zip` archives contain no CMake config files, so `find_package(MeshLib CONFIG REQUIRED)` fails at \b configure time. Point CMake at the extracted tree instead — assuming the archive was extracted to `C:/meshlib-built` as described in the \ref MeshLibCppSetupGuide "C++ Setup Guide":
+
+\code
+cmake -S . -B build -A x64 ^
+  -D MESHLIB_INCLUDE_DIRS=C:/meshlib-built/install/include ^
+  -D MESHLIB_LIB_DIRS=C:/meshlib-built/install/lib/Release
+\endcode
+
+\code{.cmake}
+target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIRS})
+target_link_directories(your_project_name PUBLIC ${MESHLIB_LIB_DIRS})
+target_link_libraries(your_project_name PRIVATE MRMesh)
+# if you want to use viewer libraries
+target_link_libraries(your_project_name PRIVATE MRViewer)
+# or, if you use the C API
+target_link_libraries(your_project_name PRIVATE MeshLibC2)
+\endcode
+
+Two things differ from the config-file route:
+
+- Link the \b unprefixed target names (`MRMesh`, `MRViewer`, `MeshLibC2`). The imported `MeshLib::*` targets are created by the CMake config files, which this distribution does not contain; here the names are plain link libraries resolved from `MESHLIB_LIB_DIRS`.
+- `MESHLIB_THIRDPARTY_INCLUDE_DIR` is not needed. This archive flattens the third-party headers into `install/include` next to `MRMesh`, so that single include directory covers everything.
+
+Finally, copy the runtime libraries next to your executable, as described in the \ref MeshLibCppSetupGuide "C++ Setup Guide".
+
+### Iterator debug level
+
+With MSVC, MeshLib checks that your `_ITERATOR_DEBUG_LEVEL` matches the one its binaries were built with and stops the build on a mismatch:
+
+\code
+fatal error C1189: #error:  _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib
+\endcode
+
+This is a \b compile error, not a link error. Define \b both macros to the value matching your archive:
+
+| archive | configuration | defines |
+| ------- | ------------- | ------- |
+| `MeshLibDistVS19/22/26_*.zip` | `Release` | `_ITERATOR_DEBUG_LEVEL=0` and `MR_ITERATOR_DEBUG_LEVEL=0` (the default, nothing to do) |
+| `MeshLibDist_*-IteratorDebug.zip` | `Debug` | `_ITERATOR_DEBUG_LEVEL=2` and `MR_ITERATOR_DEBUG_LEVEL=2` |
+
+\code
+cmake -S . -B build -A x64 ^
+  -D MESHLIB_INCLUDE_DIRS=C:/meshlib-built/install/include ^
+  -D MESHLIB_LIB_DIRS=C:/meshlib-built/install/lib/Debug ^
+  -D CMAKE_CXX_FLAGS="/D_ITERATOR_DEBUG_LEVEL=2 /DMR_ITERATOR_DEBUG_LEVEL=2"
+\endcode
+
+`MR_ITERATOR_DEBUG_LEVEL` is MeshLib's own acknowledgement flag: a non-zero iterator debug level can cost up to 100x in speed, so it has to be opted into explicitly rather than inherited from the build configuration.
+
+### Building from source with vcpkg
+
+For easier setup and dependency management, we recommend using \b vcpkg as outlined in our \ref MeshLibCppSetupGuide "C++ Setup Guide". Such a build installs the CMake config files, so the *Quick Integration Guide* below applies to it. You can configure your build with the following command:
 
 \code
 cmake -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
 \endcode
 
 ## Quick Integration Guide
+
+This section applies to the distributions that ship CMake config files: the Linux packages, the `linux-vcpkg` tarball, the macOS framework, and your own vcpkg build. For the Windows prebuilt archives, use the *Windows Integration Guide* above instead.
 
 ### Find MeshLib CMake Configuration Files
 

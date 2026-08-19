@@ -295,7 +295,7 @@ cd ~/MeshLib
   - `y` - Emscripten, multi-threaded
   - `s` - Emscripten, single-threaded
   - `l` - Emscripten, multi-threaded 64-bit (wasm64)
-  Pressing any other key or not pressing any key for 5 seconds will start a native, non-Emscripten build.
+  - any other key, or no keypress within 5 seconds - native, non-Emscripten build
 \code{.sh}
 ./scripts/build_thirdparty.sh
 \endcode
@@ -303,6 +303,7 @@ cd ~/MeshLib
 \code{.sh}
 ./scripts/build_source.sh
 \endcode
+
 \note **Non-interactive builds.** You may pre-set the environment variables to skip the prompt:
 \code{.sh}
 export MR_EMSCRIPTEN=ON               # same as 'y': multi-threaded

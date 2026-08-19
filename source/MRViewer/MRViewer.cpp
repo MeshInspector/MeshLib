@@ -643,7 +643,12 @@ int Viewer::launch( const LaunchParams& params )
 
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
+    {
+        // no command loop will ever run, so close the queue: otherwise every later blocking
+        // command (e.g. from mrviewerpy) waits for a loop that does not exist
+        CommandLoop::removeCommands( true );
         return res;
+    }
 
     CommandLoop::setState( CommandLoop::StartPosition::BeforeWindowAppear );
     CommandLoop::processCommands(); // execute pre init commands before first draw

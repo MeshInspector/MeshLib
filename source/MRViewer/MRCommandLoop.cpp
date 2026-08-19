@@ -3,6 +3,7 @@
 #include "MRPch/MRSpdlog.h"
 #include <GLFW/glfw3.h>
 #include <assert.h>
+#include <stdexcept>
 
 namespace MR
 {
@@ -81,6 +82,12 @@ void CommandLoop::processCommands()
         if ( cmd->threadId != inst.mainThreadId_ )
             commandsToNotifyAtTheEnd.emplace_back( std::move( cmd ) );
     }
+    if ( !commandsToNotifyAtTheEnd.empty() )
+    {
+        std::unique_lock<std::mutex> lock( inst.mutex_ );
+        for ( auto& cmdToNotify : commandsToNotifyAtTheEnd )
+            cmdToNotify->processed = true;
+    }
     for ( auto& cmdToNotify : commandsToNotifyAtTheEnd )
         cmdToNotify->callerThreadCV.notify_one();
 }
@@ -101,6 +108,7 @@ void CommandLoop::removeCommands( bool closeLoop )
     {
         auto cmd = std::move( inst.commands_.front() );
         inst.commands_.pop();
+        cmd->dropped = true; // the command is gone; a blocked caller must report that, not return as if it ran
         cmd->callerThreadCV.notify_one();
     }
     spdlog::debug( "CommandLoop::removeCommands(): queue size={}", inst.commands_.size() );
@@ -140,14 +148,30 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     if ( inst.queueClosed_ )
     {
         spdlog::debug( "CommandLoop::addCommand_: cannot accept new command because it is closed" );
+        // a non-blocking command is silently dropped as before (shutdown paths rely on that),
+        // but a blocking caller must not be told the command ran when it never will
+        if ( blockThread )
+            throw std::runtime_error( "Viewer command loop is stopped, cannot run the command" );
         return;
+    }
+    // an empty main thread id means no `launch` ever got far enough to call `setMainThreadId`,
+    // so nobody will ever call `processCommands` and the wait below would never return
+    if ( blockThread && inst.mainThreadId_ == std::thread::id{} )
+    {
+        spdlog::debug( "CommandLoop::addCommand_: cannot block on a command loop that was never started" );
+        throw std::runtime_error( "Viewer command loop is not running, cannot run the command" );
     }
     inst.commands_.push( cmd );
 
     getViewerInstance().postEmptyEvent();
     if ( blockThread )
     {
-        cmd->callerThreadCV.wait( lock );
+        // the predicate closes two holes of the bare wait: a spurious wakeup no longer looks like
+        // completion, and a wakeup from `removeCommands` is distinguishable from an actual execution
+        cmd->callerThreadCV.wait( lock, [&cmd] { return cmd->processed || cmd->dropped; } );
+
+        if ( cmd->dropped )
+            throw std::runtime_error( "Viewer command loop stopped before the command was executed" );
 
         if ( exception )
             std::rethrow_exception( exception );

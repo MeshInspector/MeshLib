@@ -187,11 +187,45 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     myStats.collectedNeis += neis.size();
 
     // the ball emptiness test below stops on the first point inside the ball,
-    // and the points closest to #v have the best chance to be there
+    // and the points closest to #v have the best chance to be there;
+    // the ordering by id makes the deduplication below keep the smallest id of a position
     std::sort( neis.begin(), neis.end(), []( const AlphaShapeNei & a, const AlphaShapeNei & b )
     {
-        return a.distSq < b.distSq;
+        return a.distSq < b.distSq || ( a.distSq == b.distSq && a.coords.id < b.coords.id );
     } );
+
+    // points sharing one position in the integer grid are merged: only the one with the smallest id
+    // participates in the search, so that the triangles found around all the points use the same
+    // representative of each position and together form a surface without cracks
+    for ( const auto & n : neis )
+    {
+        if ( n.coords.pt != p0.pt )
+            break; // the twins of #v have zero distance, so they are first after the sort
+        if ( n.coords.id < v )
+        {
+            // all the triangles of #v are made by this twin instead of it
+            neis.clear();
+            if ( stats )
+                *stats += myStats;
+            return;
+        }
+    }
+    size_t uniqueSize = 0;
+    for ( size_t i = 0; i < neis.size(); ++i )
+    {
+        if ( neis[i].coords.pt == p0.pt )
+            continue; // a twin of #v with a larger id
+        bool dup = false;
+        for ( size_t j = uniqueSize; j > 0 && neis[j - 1].distSq == neis[i].distSq; --j )
+            if ( neis[j - 1].coords.pt == neis[i].coords.pt )
+            {
+                dup = true;
+                break;
+            }
+        if ( !dup )
+            neis[uniqueSize++] = neis[i];
+    }
+    neis.resize( uniqueSize );
 
     // a neighbor p makes a farther neighbor x redundant if p is strictly inside every ball of the given
     // radius through #v having x inside or on it: then x can neither make a triangle with #v (p blocks

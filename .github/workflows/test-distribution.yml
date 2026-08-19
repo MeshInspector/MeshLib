@@ -131,6 +131,7 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
@@ -225,6 +226,7 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
@@ -329,6 +331,7 @@ jobs:
           fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
+          ./build/MeshModification
 
   windows-test:
     if: ${{ inputs.test_windows }}

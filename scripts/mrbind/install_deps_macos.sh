@@ -7,7 +7,7 @@
 brew update
 brew install --quiet make grep lld
 
-if [[ -z "${LLVM_VERSION}" ]] ; then
+if [[ -z "${LLVM_VERSION}" && -z "${LLVM_PREFIX}" ]] ; then
   # Read the Clang version from `clang_version_macos.txt`. `xargs` trims the whitespace.
   # Some versions of MacOS seem to lack `realpath`, so not using it here.
   SCRIPT_DIR="$(dirname "$BASH_SOURCE")"

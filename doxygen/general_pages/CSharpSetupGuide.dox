@@ -7,7 +7,7 @@
 
 This instruction will guide you through integrating MeshLib into your C# project using NuGet or the .NET Command-Line Interface.
 
-\note MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity.
+\note MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity — see \ref MeshLibCSharpUnity "Using MeshLib with Unity".
 
 \note As of January 2026, the C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all supported platforms (Windows x64, Linux x64/Arm, MacOS x64/Arm), ensuring feature parity with the native C++ API.
 
@@ -103,6 +103,52 @@ dotnet run
 
 
 By following these steps, you can integrate MeshLib into your project, giving you more control over the setup process.
+
+
+## Using MeshLib with Unity {#MeshLibCSharpUnity}
+
+Unity projects consume the same NuGet package via [NuGetForUnity](https://github.com/GlitchEnzo/NuGetForUnity); this setup is continuously tested with Unity 6 on Windows, Linux, and macOS. To install MeshLib into a Unity project:
+ 1. **Install NuGetForUnity**:
+  - In the Unity editor, open **Window → Package Manager**, click **+**, select "Install package from git URL...", and enter:
+\code{.cmd}
+https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity
+\endcode
+ 2. **Install MeshLib**:
+  - Open **NuGet → Manage NuGet Packages**, switch to the "Online" tab, search for "MeshLib", and click "Install".
+
+
+## Troubleshooting {#MeshLibCSharpTroubleshooting}
+
+The C# assembly is a thin managed wrapper over MeshLib's native libraries, so setup problems typically surface not when the package is installed or the project is built, but as one of the following exceptions on the first call into MeshLib.
+
+### DllNotFoundException
+\code{.txt}
+System.DllNotFoundException: Unable to load DLL 'MeshLibC2' or one of its dependencies: The specified module could not be found.
+\endcode
+(on Linux and macOS: `Unable to load shared library 'MeshLibC2' or one of its dependencies`)
+
+The native libraries were not found at run time:
+ - Check that your platform is supported: Windows x64, Linux x64/Arm64, macOS x64/Arm64. In particular, the package contains no native libraries for Windows on Arm — installing it there succeeds, but every call into MeshLib fails.
+ - Check that the native libraries reached your build output: on .NET they are placed under `runtimes/<rid>/native/` in the output directory, on .NET Framework next to the executable (`MeshLibC2.dll` and its dependencies on Windows).
+
+### BadImageFormatException
+\code{.txt}
+System.BadImageFormatException: An attempt was made to load a program with an incorrect format. (Exception from HRESULT: 0x8007000B)
+\endcode
+
+MeshLib's native libraries are 64-bit only, and this exception means your application runs as a 32-bit process. .NET Framework projects are prone to this: with the default `AnyCPU` platform and **Prefer 32-bit** checked, the application runs 32-bit even on 64-bit Windows. In the project properties (**Build** tab) set **Platform target** to `x64` or uncheck **Prefer 32-bit** — in the `.csproj` terms:
+\code{.xml}
+<PlatformTarget>x64</PlatformTarget>
+<Prefer32Bit>false</Prefer32Bit>
+\endcode
+
+### A rebuilt local package is ignored
+
+When installing from a local directory, NuGet extracts the package into its global cache and keeps serving the cached copy for the same version number, ignoring a rebuilt `.nupkg`. Delete the cached copy and restore again:
+\code{.sh}
+rm -rf ~/.nuget/packages/meshlib
+\endcode
+On Windows, delete `%USERPROFILE%\.nuget\packages\meshlib`.
 
 
 ## Try MeshLib with C# Examples

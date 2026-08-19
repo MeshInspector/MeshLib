@@ -92,7 +92,7 @@ using EpsPoly = SparsePolynomial<BigInt, std::int64_t, cMaxEpsDeg>;
 /// the sign of the polynomial for eps -> +0, which is the sign of its lowest-degree term
 int signOf( const EpsPoly & p )
 {
-    return p.empty() ? 0 : p.get().begin()->second.sign();
+    return p.empty() ? 0 : p.get().front().second.sign();
 }
 
 using EpsVec = std::array<EpsPoly, 3>;
@@ -156,9 +156,9 @@ SosQuantities buildSosQuantities( const Vector3i * pts, const VertId * ids, int 
     EpsVec M;
     for ( int i = 0; i < 3; ++i )
         M[i] = su * u[i] + sv * v[i];
-    std::map<std::int64_t, BigInt> rSq4;
+    std::vector<EpsPoly::Term> rSq4;
     if ( rSq > 0 )
-        rSq4.emplace( 0, BigInt( rSq ) * 4 );
+        rSq4.emplace_back( 0, BigInt( rSq ) * 4 );
     res.E = EpsPoly( std::move( rSq4 ) ) * res.W * res.W - dot( M, M );
     if ( n == 4 )
     {

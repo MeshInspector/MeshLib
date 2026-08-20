@@ -259,11 +259,12 @@ public:
     [[nodiscard]] MR_BIND_IGNORE const FastInt<384> & heightSq() const { return E; }
 
 protected:
-    VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
-    bool degenerateTriangle_ = false; ///< reset() got W == 0 with two coincident points and an existing perturbed sphere
-    Vector3i pairPt_;     ///< the position of the coincident pair
+    // the fields are ordered by descending alignment to minimize the padding
     Vector3i64 pairV_;    ///< the third point minus the pair
+    Vector3i pairPt_;     ///< the position of the coincident pair
+    VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
     int pairSigma_ = 0;   ///< the side of the limit sphere's center: +1 along ( -Vy, Vx, 0 ), -1 the opposite
+    bool degenerateTriangle_ = false; ///< reset() got W == 0 with two coincident points and an existing perturbed sphere
 };
 
 /// gives exactly the same answers as InSphereTesterSoS, only faster: the sphere's center is also

@@ -64,11 +64,11 @@ jobs:
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            # Use a specific PGO+LTO-optimized LLVM version.
-            # Held in place by `brew pin llvm` on the self-hosted runners.
-            llvm-prefix-template: BREW_PREFIX/Cellar/llvm/22.1.7
-            cxx-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang++
-            c-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang
+            # The -O3+PGO+ThinLTO keg, built on each runner via the local/pgo
+            # tap (llvm.rb with ENV.O3, installed with --build-bottle).
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
+            cxx-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang++
+            c-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:

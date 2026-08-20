@@ -245,9 +245,9 @@ MACOS_MIN_VER :=
 ifneq ($(HOST_IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(HOST_IS_MACOS),)
-# LLVM_VERSION selects an exact version (used for self-hosted runners).
-ifneq ($(LLVM_VERSION),)
-CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/Cellar/llvm/$(LLVM_VERSION)/bin/clang++
+# LLVM_PREFIX selects a keg by full path (used for self-hosted runners).
+ifneq ($(LLVM_PREFIX),)
+CXX_FOR_BINDINGS := $(LLVM_PREFIX)/bin/clang++
 else
 CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
 endif

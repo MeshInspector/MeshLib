@@ -80,10 +80,13 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 `\endcode
 
 ### macOS
- 1. **Download the Built Version**
- \n Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) and download the latest macOS built version.
- 2. **Install Using macOS Installer**
-  - Double-click the `.pkg` file included in the downloaded package, and follow the instructions to complete the installation.
+ 1. **Download the Installer**
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the `.pkg` for your CPU (run `uname -m` if you are unsure):
+  - Apple silicon (M-series, `arm64`): `meshlib_<version>_arm64.pkg`
+  - Intel (`x86_64`): `meshlib_<version>_x64.pkg`
+ 2. **Install**
+  - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
+  - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
   \n Open Terminal and run the following command:
 \code{.sh}

@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
+# This file is distributed under the same license as the MeshLib package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: PACKAGE VERSION\n"
+"Project-Id-Version: MeshLib\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-06-04 11:36+0200\n"
+"POT-Creation-Date: 2026-08-20 04:16+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -263,7 +263,7 @@ msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRAddCustomTheme.cpp:130
 #: source/MRViewer/ImGuiMenu.cpp:951 source/MRViewer/ImGuiMenu.cpp:1050
-#: source/MRViewer/MRProgressBar.cpp:228
+#: source/MRViewer/MRProgressBar.cpp:227
 #: source/MRViewer/MRUISaveChangesPopup.cpp:91
 #: source/MRViewer/MRUISaveChangesPopup.h:24
 #: source/MRViewer/MRViewerSettingsPlugin.cpp:1036
@@ -278,88 +278,92 @@ msgstr ""
 msgid "Cannot save theme with name"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:290
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:292
 msgid "Another operation in progress."
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:297
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:299
 #, c++-format
 msgid "Drop {}"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:354
 #: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:356
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:358
 msgid "Load as Scene"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:366
 #: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:368
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:370
 msgid "Add Files"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:455
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:457
 msgid "Open DICOMs"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:482
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:484
 msgid "This web browser doesn't support directory selection"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:507
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:509
 #: source/MRCommonPlugins/Voxels/MROpenVoxelsFromTiffPlugin.cpp:62
 msgid "Open Directory"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:598
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:600
 msgid ""
 "Select exactly one object of an exportable type (e.g. Mesh, Point Cloud or "
 "Volume)"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:601
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:603
 msgid "Select objects of the same type (e.g. Meshes, Point Clouds or Volumes)"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:666
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:808
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:668
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:810
 msgid "File name is not set"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:772
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:791
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:774
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:793
 msgid "Error saving selected:"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:821
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:823
 msgid "Error saving scene:"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:856
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:858
 msgid "Scene is empty - nothing to save"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:890
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:892
 msgid "Width"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:891
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:893
 msgid "Height"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:892
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:894
 msgid "Transparent Background"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:893
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:895
+msgid "Hide scene overlays"
+msgstr ""
+
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:896
 msgid "Capture"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:930
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:957
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:987
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:1014
 msgid "Error saving screenshot:"
 msgstr ""
 
-#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:971
+#: source/MRCommonPlugins/ViewerButtons/MRIOFilesMenuItems.cpp:1028
 msgid "This function is not currently supported in web edition"
 msgstr ""
 
@@ -1700,27 +1704,27 @@ msgstr ""
 msgid "Move Object"
 msgstr ""
 
-#: source/MRViewer/MRProgressBar.cpp:237
+#: source/MRViewer/MRProgressBar.cpp:236
 msgid "Canceling..."
 msgstr ""
 
-#: source/MRViewer/MRProgressBar.cpp:241 source/MRViewer/MRProgressBar.cpp:243
+#: source/MRViewer/MRProgressBar.cpp:240 source/MRViewer/MRProgressBar.cpp:242
 msgid "Operation is in progress, please wait..."
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:319
+#: source/MRViewer/MRRibbonMenu.cpp:320
 msgid "Unpin"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:332
+#: source/MRViewer/MRRibbonMenu.cpp:333
 msgid "Pin"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:389
+#: source/MRViewer/MRRibbonMenu.cpp:390
 msgid "Open help page"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:414
+#: source/MRViewer/MRRibbonMenu.cpp:415
 msgid "Change the language"
 msgstr ""
 
@@ -1905,6 +1909,10 @@ msgstr ""
 msgid "Hotkeys"
 msgstr ""
 
+#: source/MRViewer/MRRibbonMenuSearch.cpp:160
+msgid "Extended Search"
+msgstr ""
+
 #: source/MRViewer/MRSaveOnClose.cpp:33 source/MRViewer/MRSaveOnClose.cpp:70
 msgid "Application Close"
 msgstr ""
@@ -2087,7 +2095,7 @@ msgid "Degrees, minutes, seconds"
 msgstr ""
 
 #. TRANSLATORS: example string: Open .SVG as Polyline
-#: source/MRViewer/MRViewer.cpp:1289
+#: source/MRViewer/MRViewer.cpp:1292
 #, c++-format
 msgid "{} as {}"
 msgstr ""
@@ -2730,26 +2738,26 @@ msgstr ""
 msgid "Voxels Format"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:86
+#: source/MRViewer/MRViewportCornerController.cpp:99
 msgid "RIGHT"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:86
+#: source/MRViewer/MRViewportCornerController.cpp:99
 msgid "LEFT"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:87
+#: source/MRViewer/MRViewportCornerController.cpp:100
 msgid "TOP"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:87
+#: source/MRViewer/MRViewportCornerController.cpp:100
 msgid "BOTTOM"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:88
+#: source/MRViewer/MRViewportCornerController.cpp:101
 msgid "FRONT"
 msgstr ""
 
-#: source/MRViewer/MRViewportCornerController.cpp:88
+#: source/MRViewer/MRViewportCornerController.cpp:101
 msgid "BACK"
 msgstr ""

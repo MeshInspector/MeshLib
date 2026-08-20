@@ -349,8 +349,8 @@ bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCo
     // 4 rSq (Vx^2 + Vy^2) > |V|^4 at the leading order, V = the third point minus the pair
     // (V = -V for b == c, which does not change the rule)
     const Vector3i64 V = sameAB ? v : u;
-    const auto vxy = FastInt128( Int64Mul128( V.x ) * Int64Mul128( V.x ) )
-                   + FastInt128( Int64Mul128( V.y ) * Int64Mul128( V.y ) ); // <= 2^65
+    const auto vxy = Int64Mul128( V.x ) * Int64Mul128( V.x )
+                   + Int64Mul128( V.y ) * Int64Mul128( V.y ); // <= 2^65
     const auto vv2 = dot( Vector3i64mul{ V }, Vector3i64mul{ V } );         // <= 2^66
     const auto lhs = FastInt<192>( Int128Mul256( vxy ) * Int128Mul256( 4 * FastInt128( sqRadius ) ) ); // <= 2^131
     const auto rhs = FastInt<192>( Int128Mul256( vv2 ) * Int128Mul256( vv2 ) ); // <= 2^132
@@ -392,16 +392,16 @@ InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) cons
             // strictly inside or outside the limit sphere resolves the query in closed form,
             // and only the points exactly on it need the full evaluation
             const Vector3i64 g{ d.pt - pairPt_ };
-            const auto k = FastInt128( Int64Mul128( pairV_.x ) * Int64Mul128( pairV_.x ) )
-                         + FastInt128( Int64Mul128( pairV_.y ) * Int64Mul128( pairV_.y ) );
-            const auto ss = k + FastInt128( Int64Mul128( pairV_.z ) * Int64Mul128( pairV_.z ) );
+            const auto k = Int64Mul128( pairV_.x ) * Int64Mul128( pairV_.x )
+                         + Int64Mul128( pairV_.y ) * Int64Mul128( pairV_.y );
+            const auto ss = k + Int64Mul128( pairV_.z ) * Int64Mul128( pairV_.z );
             const BigInt bk{ k }, bs{ ss };
             const BigInt D = 4 * BigInt{ rSq } * bk - bs * bs; // >= 0 since the sphere exists
             const auto gg = dot( Vector3i64mul{ g }, Vector3i64mul{ g } );
-            const auto gvxy = FastInt128( Int64Mul128( g.x ) * Int64Mul128( pairV_.x ) )
-                            + FastInt128( Int64Mul128( g.y ) * Int64Mul128( pairV_.y ) );
-            const auto gcrs = FastInt128( Int64Mul128( g.y ) * Int64Mul128( pairV_.x ) )
-                            - FastInt128( Int64Mul128( g.x ) * Int64Mul128( pairV_.y ) );
+            const auto gvxy = Int64Mul128( g.x ) * Int64Mul128( pairV_.x )
+                            + Int64Mul128( g.y ) * Int64Mul128( pairV_.y );
+            const auto gcrs = Int64Mul128( g.y ) * Int64Mul128( pairV_.x )
+                            - Int64Mul128( g.x ) * Int64Mul128( pairV_.y );
             // |g - center|^2 - rSq multiplied by k: ( k |g|^2 - s (g.V)xy ) - sigma sqrt(D) ( gy Vx - gx Vy )
             const SqrtNum val{ bk * BigInt{ gg } - bs * BigInt{ gvxy },
                 BigInt{ std::int64_t( -pairSigma_ ) } * BigInt{ gcrs } };

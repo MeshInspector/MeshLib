@@ -17,11 +17,19 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+IF(APPLE)
+  list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
+ENDIF()
+
+# the settings plugin calls OpenGL directly
+find_package(glad REQUIRED)
+
 target_link_libraries(${PROJECT_NAME}
   PRIVATE
     MRMesh
     MRIOExtras
     MRViewer
+    glad::glad
 )
 IF(NOT WIN32 AND NOT EMSCRIPTEN)
   find_package(clip REQUIRED)

@@ -23,6 +23,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRCommonPluginsShortcuts.cpp" />
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRObjectInfo.cpp" />
@@ -43,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCommonPluginsShortcuts.h" />
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
     <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />

@@ -27,6 +27,9 @@
     <None Include="..\.editorconfig" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\MRCommonPlugins\MRCommonPlugins.vcxproj">
+      <Project>{05930596-6226-42ba-a449-bdf2123c0f3f}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>

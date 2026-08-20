@@ -9,7 +9,7 @@ jobs:
   update-pot-files:
     runs-on: ubuntu-latest
     container:
-      image: fedora:43  # gettext 0.25.1
+      image: fedora:44  # gettext 0.26
 
     env:
       GIT_BRANCH_NAME: auto-ci/update_pot_files

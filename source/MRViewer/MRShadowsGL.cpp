@@ -10,6 +10,8 @@
 namespace MR
 {
 
+ShadowsGL::ShadowsGL() = default;
+
 ShadowsGL::~ShadowsGL()
 {
     if ( enabled_ )

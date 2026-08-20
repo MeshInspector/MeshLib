@@ -64,6 +64,12 @@
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
+    <ClCompile Include="ViewerButtons\MRHistoryMenuItems.cpp">
+      <Filter>ViewerButtons</Filter>
+    </ClCompile>
+    <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp">
+      <Filter>ViewerButtons</Filter>
+    </ClCompile>
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp">
       <Filter>ViewerButtons</Filter>
     </ClCompile>
@@ -121,6 +127,12 @@
     </ClInclude>
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h">
       <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="ViewerButtons\MRHistoryMenuItems.h">
+      <Filter>ViewerButtons</Filter>
+    </ClInclude>
+    <ClInclude Include="ViewerButtons\MRViewerSettingsPlugin.h">
+      <Filter>ViewerButtons</Filter>
     </ClInclude>
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h">
       <Filter>ViewerButtons</Filter>

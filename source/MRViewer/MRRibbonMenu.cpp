@@ -2254,8 +2254,6 @@ void RibbonMenu::setupShortcuts_()
             sceneObjectsList_->changeVisible( true );
         } } );
     }
-
-    addRibbonItemShortcut( "Viewer settings", { GLFW_KEY_COMMA, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::Info );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

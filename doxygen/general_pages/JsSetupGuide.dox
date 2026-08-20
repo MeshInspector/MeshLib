@@ -30,7 +30,7 @@ MeshLib ships in two flavors with an identical API:
  - `@meshinspector/meshlib`: the single-threaded build. The simplest choice, and the right one for most applications.
  - `@meshinspector/meshlib-mt`: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput, and requires Node.js 21 or newer.
 
-The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; nothing else changes.
+The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; in Node.js nothing else changes. In the browser the page must additionally be \ref JsMtCrossOriginIsolation "cross-origin isolated".
 
 ## Installation
 ### Installation via npm
@@ -64,14 +64,33 @@ const { default: createMeshLib } = await import('@meshinspector/meshlib');
 const ml = await createMeshLib();
 \endcode
 
-## Cross-Origin Isolation for the Multi-Threaded Build
+## Cross-Origin Isolation for the Multi-Threaded Build in the Browser {#JsMtCrossOriginIsolation}
+This section applies to browsers only. In Node.js the multi-threaded build needs no headers, flags, or extra configuration.
+
 The multi-threaded package `@meshinspector/meshlib-mt` relies on `SharedArrayBuffer`, which browsers only enable on **cross-origin isolated** pages. The server that serves the page loading the module must send these headers:
 \code{.txt}
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 \endcode
 
-Without them `SharedArrayBuffer` is unavailable and the module fails to initialize; use the single-threaded `@meshinspector/meshlib` package in that case.
+Without them `crossOriginIsolated` is `false`, `SharedArrayBuffer` is unavailable, and the module fails to initialize.
+
+For a Vite dev server, set the headers in `vite.config.js` (whatever hosts the production build must send them too; `vite-plugin-cross-origin-isolation` can stamp them for `vite preview`):
+\code{.js}
+// vite.config.js
+export default {
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+};
+\endcode
+
+Where you cannot set response headers at all — GitHub Pages and similar static hosting — the usual workaround is a `coi-serviceworker`-style shim: a service worker that re-serves the page with the two headers and reloads it once. MeshLib's own [interactive demo](https://demo.meshlib.io/) is hosted exactly this way.
+
+So on a page that is not cross-origin isolated you have three options: send the headers, install the service-worker shim, or use the single-threaded `@meshinspector/meshlib` package, which has no such requirement.
 
 ## Getting Started: Your First Example
 The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:

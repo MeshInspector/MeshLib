@@ -97,7 +97,9 @@ public:
 
     MRVIEWER_API static const char* UINameSuffix();
 
-    virtual const std::string& uiName() const override { return plugin_name; }
+    /// returns the localized name shown in UI; resolves it from the ribbon schema on the first
+    /// call, because neither the schema nor the translations are ready when a plugin is constructed
+    MRVIEWER_API virtual const std::string& uiName() const override;
 
     // set plugin name that will be used for dialog in `ImGuiBeginWindow_`
     MRVIEWER_API void setUIName( std::string name );
@@ -114,9 +116,13 @@ public:
     // check if search mask satisfies for this plugin
     MRVIEWER_API bool checkStringMask( const std::string& mask ) const;
 
-    std::string plugin_name;
+    /// cache of uiName(); prefer uiName() over reading it directly, it can be empty before the first call
+    mutable std::string plugin_name;
 
 protected:
+    /// true once plugin_name holds a resolved name: either uiName() resolved it or setUIName set it
+    mutable bool uiNameResolved_{ false };
+
     // begin plugin with given parameters
     // sets params.collapsed from `dialogIsCollapsed_`
     MRVIEWER_API virtual bool ImGuiBeginWindow_( ImGui::CustomStatePluginWindowParameters params );

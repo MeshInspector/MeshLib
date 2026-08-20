@@ -1,6 +1,5 @@
 #include "MRStatePlugin.h"
 
-#include "MRCommandLoop.h"
 #include "MRI18n.h"
 #include "MRRibbonMenu.h"
 
@@ -30,8 +29,17 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
     ViewerPlugin(),
     RibbonMenuItem( name )
 {
-    CommandLoop::appendCommand( [this] ()
+    tab_ = tab;
+}
+
+const std::string& StateBasePlugin::uiName() const
+{
+    if ( !uiNameResolved_ )
     {
+        // the ribbon schema is only complete once every plugin library is loaded, and translations
+        // are only available once the locale is set up - both happen long after this plugin was
+        // constructed (plugins are constructed during static initialization of their library)
+        uiNameResolved_ = true;
         std::string name = this->name();
         LocaleDomainId localeDomainId;
         auto item = RibbonSchemaHolder::schema().items.find( name );
@@ -43,8 +51,8 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
         }
         plugin_name = Locale::translate( name.c_str(), localeDomainId );
         plugin_name += UINameSuffix();
-    }, CommandLoop::StartPosition::AfterPluginInit );
-    tab_ = tab;
+    }
+    return plugin_name;
 }
 
 void StateBasePlugin::drawDialog( ImGuiContext* )
@@ -105,6 +113,7 @@ void StateBasePlugin::setUIName( std::string name )
 {
     plugin_name = std::move( name );
     plugin_name += UINameSuffix();
+    uiNameResolved_ = true; // an explicitly set name is not overridden by the schema caption
 }
 
 StatePluginTabs  StateBasePlugin::getTab() const

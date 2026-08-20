@@ -203,7 +203,15 @@ protected:
     MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
 
+    /// binds the shortcut to the ribbon item registered by this library; the item must exist
     MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
+
+    /// binds the shortcut to the ribbon item registered by an optional plugin library (e.g. MRCommonPlugins);
+    /// such a library is not linked here, so a missing item means it is not loaded - legal, not a typo
+    MRVIEWER_API virtual void addOptionalRibbonItemShortcut_( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
+
+    /// binds the shortcut if the item is registered; returns false if it is not
+    bool setRibbonItemShortcut_( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 

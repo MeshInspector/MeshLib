@@ -2,27 +2,27 @@
 #ifndef MESHLIB_NO_MCP
 #include "MRMcp/MRMcp.h"
 #endif
-#include "MRRibbonMenu.h"
-#include "ImGuiHelpers.h"
-#include "MRColorTheme.h"
-#include "MRMouseController.h"
+#include "MRViewer/MRRibbonMenu.h"
+#include "MRViewer/ImGuiHelpers.h"
+#include "MRViewer/MRColorTheme.h"
+#include "MRViewer/MRMouseController.h"
 #include "MRViewer/MRMcpSettings.h"
-#include "MRViewport.h"
-#include "MRFileDialog.h"
-#include "MRModalDialog.h"
-#include "MRCommandLoop.h"
-#include "MRViewerSettingsManager.h"
-#include "MRGLMacro.h"
-#include "MRGladGlfw.h"
-#include "MRRibbonConstants.h"
-#include "MRViewer.h"
-#include "MRImGuiVectorOperators.h"
-#include "MRSpaceMouseHandlerHidapi.h"
-#include "MRUIStyle.h"
-#include "MRUnitSettings.h"
-#include "MRShowModal.h"
-#include "MRRibbonSceneObjectsListDrawer.h"
-#ifndef MRVIEWER_NO_VOXELS
+#include "MRViewer/MRViewport.h"
+#include "MRViewer/MRFileDialog.h"
+#include "MRViewer/MRModalDialog.h"
+#include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRViewerSettingsManager.h"
+#include "MRViewer/MRGLMacro.h"
+#include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRRibbonConstants.h"
+#include "MRViewer/MRViewer.h"
+#include "MRViewer/MRImGuiVectorOperators.h"
+#include "MRViewer/MRSpaceMouseHandlerHidapi.h"
+#include "MRViewer/MRUIStyle.h"
+#include "MRViewer/MRUnitSettings.h"
+#include "MRViewer/MRShowModal.h"
+#include "MRViewer/MRRibbonSceneObjectsListDrawer.h"
+#ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
 #endif
 #include "MRMesh/MRObjectsAccess.h"
@@ -36,15 +36,15 @@
 #include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRConfig.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRViewportGlobalBasis.h"
-#include "MRImGuiMultiViewport.h"
-#include "MRShortcutManager.h"
-#include "MRViewerConfigConstants.h"
-#include "MRSpaceMouseController.h"
-#include "MRTouchpadController.h"
-#include "MRI18n.h"
-#include "MRLocale.h"
-#include "MRRibbonFontHolder.h"
+#include "MRViewer/MRViewportGlobalBasis.h"
+#include "MRViewer/MRImGuiMultiViewport.h"
+#include "MRViewer/MRShortcutManager.h"
+#include "MRViewer/MRViewerConfigConstants.h"
+#include "MRViewer/MRSpaceMouseController.h"
+#include "MRViewer/MRTouchpadController.h"
+#include "MRViewer/MRI18n.h"
+#include "MRViewer/MRLocale.h"
+#include "MRViewer/MRRibbonFontHolder.h"
 
 namespace
 {
@@ -1358,7 +1358,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     else // format == ".ply"
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ply;
 
-    #ifndef MRVIEWER_NO_VOXELS
+    #ifndef MESHLIB_NO_VOXELS
     format = defaultSerializeVoxelsFormat();
     if ( format == ".raw" )
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Raw;
@@ -1399,7 +1399,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
         }
         setDefaultSerializePointsFormat( format );
     }
-    #ifndef MRVIEWER_NO_VOXELS
+    #ifndef MESHLIB_NO_VOXELS
     if ( UI::combo( _tr( "Voxels Format" ), ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
     {
         switch ( mruFormatParameters_.voxelsFormat )

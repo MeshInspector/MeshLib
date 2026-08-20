@@ -17,7 +17,7 @@
 #include "MRMesh/MRObjectDistanceMap.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
 #include "MRViewer/MRRibbonConstants.h"
-#include "MRViewer/MRViewerSettingsPlugin.h"
+#include "MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"

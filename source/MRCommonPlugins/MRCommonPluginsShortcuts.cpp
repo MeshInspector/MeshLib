@@ -32,6 +32,7 @@ void setupCommonPluginsShortcuts()
     menu->addRibbonItemShortcut( "New", { GLFW_KEY_N, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene );
     menu->addRibbonItemShortcut( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutCategory::Objects );
     menu->addRibbonItemShortcut( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutCategory::Objects );
+    menu->addRibbonItemShortcut( "Viewer settings", { GLFW_KEY_COMMA, getGlfwModPrimaryCtrl() }, ShortcutCategory::Info );
 }
 
 } //namespace MR

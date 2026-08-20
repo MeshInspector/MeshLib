@@ -35,6 +35,12 @@ ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
 ENDIF()
 
+IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRMcp)
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
+ENDIF()
+
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

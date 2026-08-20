@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ESNext",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "strict": true,
@@ -9,5 +9,5 @@
     "rootDir": ".",
     "noEmitOnError": true
   },
-  "include": ["main.ts"]
+  "include": ["main.ts", "using-snippet.ts"]
 }

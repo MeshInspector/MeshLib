@@ -75,16 +75,52 @@ const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 
 ## TypeScript
 
-The package ships type definitions, so `createMeshLib` and the whole module API are typed with
-no extra setup:
+The package ships type definitions, so `createMeshLib` and the whole module API are typed.
+
+The snippet below needs **TypeScript 5.2 or newer** (`using` was introduced there),
+`"type": "module"` in `package.json` (for top-level `await`), and this `tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "strict": true
+  }
+}
+```
+
+`target: esnext` is what supplies the `Disposable` types `using` relies on: with a lower target,
+and no `lib` entry for `esnext.disposable`, the compiler reports
+`error TS2318: Cannot find global type 'Disposable'`. If you free handles with `.delete()` instead
+of `using` (see [Memory management](#memory-management)), the defaults from `tsc --init` are enough.
 
 ```ts
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
-using mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
-const { valid, distSq } = ml.findProjection(point, mesh);
+
+using coords = ml.VertCoords.fromArray(new Float32Array([
+  -1, -1, -1,   1, -1, -1,   1, 1, -1,   -1, 1, -1,
+  -1, -1,  1,   1, -1,  1,   1, 1,  1,   -1, 1,  1,
+]));
+using tris = ml.Triangulation.fromArray(new Uint32Array([
+  0, 2, 1,  0, 3, 2,  4, 5, 6,  4, 6, 7,  0, 1, 5,  0, 5, 4,
+  3, 6, 2,  3, 7, 6,  0, 4, 7,  0, 7, 3,  1, 2, 6,  1, 6, 5,
+]));
+
+// fromTriangles is declared as `Mesh | null`, so narrow it before use.
+const built = ml.Mesh.fromTriangles(coords, tris);
+if (!built) throw new Error('failed to build mesh');
+using mesh: Mesh = built;
+
+const { valid, distSq } = ml.findProjection({ x: 5, y: 0, z: 0 }, mesh);
+console.log(valid, Math.sqrt(distSq)); // true 4
 ```
+
+> Generated factories such as `Mesh.fromTriangles` are declared as nullable (`Mesh | null`), so
+> narrow the handle before use — assigning it straight to a `Mesh` is `error TS2322`.
 
 ## Memory management
 

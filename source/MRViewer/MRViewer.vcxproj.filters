@@ -433,9 +433,6 @@
     <ClCompile Include="MRUINonOverlappingLabels.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
-    <ClCompile Include="MRViewerSettingsPlugin.cpp">
-      <Filter>Plugins</Filter>
-    </ClCompile>
     <ClCompile Include="MRGLTexture.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
@@ -534,9 +531,6 @@
     </ClCompile>
     <ClCompile Include="MRImGuiMultiViewport.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="MRSceneControlMenuItems.cpp">
-      <Filter>Plugins</Filter>
     </ClCompile>
     <ClCompile Include="MRFileDialogPortal.cpp">
       <Filter>CustomOpenDialog</Filter>
@@ -947,9 +941,6 @@
     <ClInclude Include="MRUINonOverlappingLabels.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
-    <ClInclude Include="MRViewerSettingsPlugin.h">
-      <Filter>Plugins</Filter>
-    </ClInclude>
     <ClInclude Include="MRGLTexture.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
@@ -1054,9 +1045,6 @@
     </ClInclude>
     <ClInclude Include="MRViewerConfigConstants.h">
       <Filter>Viewer</Filter>
-    </ClInclude>
-    <ClInclude Include="MRSceneControlMenuItems.h">
-      <Filter>Plugins</Filter>
     </ClInclude>
     <ClInclude Include="MRFileDialogPortal.h">
       <Filter>CustomOpenDialog</Filter>

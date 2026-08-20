@@ -104,6 +104,13 @@ enum class PythonKeyMod
 };
 MR_MAKE_FLAG_OPERATORS( PythonKeyMod )
 
+/// this viewer draws no ribbon, and the libraries owning the ribbon items are not loaded here,
+/// so reading the schema of their items would only warn that every one of them is not registered
+class MinimalRibbonMenu final : public RibbonMenu
+{
+    void readMenuItemsStructure_() override {}
+};
+
 /// viewer setup class for minimal configuration
 /// only loads config file (if available) and configures the scene and mouse controls
 class MinimalViewerSetup final : public ViewerSetup
@@ -111,7 +118,7 @@ class MinimalViewerSetup final : public ViewerSetup
 public:
     void setupBasePlugins( Viewer* viewer ) const override
     {
-        auto menu = std::make_shared<RibbonMenu>();
+        auto menu = std::make_shared<MinimalRibbonMenu>();
         menu->setMenuUIConfig( { .topLayout = RibbonTopPanelLayoutMode::None,.drawScenePanel = false,.drawToolbar = false } ); // no scene tree by default
         viewer->setMenuPlugin( menu );
     }

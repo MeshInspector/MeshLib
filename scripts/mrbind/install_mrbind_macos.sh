@@ -22,8 +22,8 @@ rm -rf build
 # Add `make` to PATH.
 export PATH="$HOMEBREW_DIR/opt/make/libexec/gnubin:$PATH"
 # Add Clang to PATH.
-if [[ -n "${LLVM_VERSION:-}" ]]; then
-    export PATH="$HOMEBREW_DIR/Cellar/llvm/$LLVM_VERSION/bin:$PATH"
+if [[ -n "${LLVM_PREFIX:-}" ]]; then
+    export PATH="$LLVM_PREFIX/bin:$PATH"
 else
     export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
 fi

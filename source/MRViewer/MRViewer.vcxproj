@@ -59,7 +59,6 @@
     <ClCompile Include="MRRibbonNotification.cpp" />
     <ClCompile Include="MRRibbonRegisterItem.cpp" />
     <ClCompile Include="MRRibbonSceneObjectsListDrawer.cpp" />
-    <ClCompile Include="MRSceneControlMenuItems.cpp" />
     <ClCompile Include="MRSpaceMouseDevice.cpp" />
     <ClCompile Include="MRSpaceMouseHandlerWinEvents.cpp" />
     <ClCompile Include="MRUISaveChangesPopup.cpp" />
@@ -112,7 +111,6 @@
     <ClCompile Include="MRViewerEventQueue.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />
     <ClCompile Include="MRSaveObjects.cpp" />
-    <ClCompile Include="MRViewerSettingsPlugin.cpp" />
     <ClCompile Include="MRViewerTitle.cpp" />
     <ClCompile Include="MRViewportCamera.cpp" />
     <ClCompile Include="MRRecentFilesStore.cpp" />
@@ -226,7 +224,6 @@
     <ClInclude Include="MRRibbonRegisterItem.h" />
     <ClInclude Include="MRRibbonSceneObjectsListDrawer.h" />
     <ClInclude Include="MRMruFormatParameters.h" />
-    <ClInclude Include="MRSceneControlMenuItems.h" />
     <ClInclude Include="MRSpaceMouseDevice.h" />
     <ClInclude Include="MRSpaceMouseHandlerWinEvents.h" />
     <ClInclude Include="MRUISaveChangesPopup.h" />
@@ -299,7 +296,6 @@
     <ClInclude Include="MRViewerFwd.h" />
     <ClInclude Include="MRViewerInstance.h" />
     <ClInclude Include="MRSaveObjects.h" />
-    <ClInclude Include="MRViewerSettingsPlugin.h" />
     <ClInclude Include="MRViewerSignals.h" />
     <ClInclude Include="MRViewerTitle.h" />
     <ClInclude Include="MRViewport.h" />

@@ -59,7 +59,7 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 
 ### A Complete Minimal Example
 
-Putting the steps above together, this is a complete `CMakeLists.txt` that compiles, links and runs a program including `<MRMesh/MRMesh.h>`. Nothing from the sections below is needed:
+Putting the steps above together, this is a complete `CMakeLists.txt` that compiles, links and runs a program including `<MRMesh/MRMesh.h>`. The **Linking Additional Third-Party Libraries** section below is not needed for it:
 
 \code{.cmake}
 cmake_minimum_required(VERSION 3.18)

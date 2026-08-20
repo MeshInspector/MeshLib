@@ -49,6 +49,21 @@ import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
 \endcode
 
+### Payload Size {#MeshLibJsPayloadSize}
+MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
+
+Two consequences for a browser application:
+
+ - The `.wasm` is a sidecar file fetched as a **second request**, separate from the `.mjs` module. Serve it as `application/wasm` with compression enabled, or the download is several times larger than it needs to be.
+ - `npm install` unpacks about 21 MB, because the browser and the Node.js wasm ship side by side in one package. Only one of them ever reaches the browser; the rest is bundler input, not payload.
+
+If the geometry is not needed on first paint, load the module lazily instead of at the top level, so the wasm download does not block startup:
+\code{.js}
+// load MeshLib only when the user actually needs geometry
+const { default: createMeshLib } = await import('@meshinspector/meshlib');
+const ml = await createMeshLib();
+\endcode
+
 ## Cross-Origin Isolation for the Multi-Threaded Build
 The multi-threaded package `@meshinspector/meshlib-mt` relies on `SharedArrayBuffer`, which browsers only enable on **cross-origin isolated** pages. The server that serves the page loading the module must send these headers:
 \code{.txt}
@@ -81,6 +96,8 @@ using mesh = ml.Mesh.fromTriangles(coords, tris);
 
 console.log('volume =', mesh.volume()); // ~8
 \endcode
+
+\note This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in \ref MeshLibJsPayloadSize "Payload Size".
 
 \note The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
 

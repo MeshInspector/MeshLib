@@ -33,12 +33,14 @@ find_package(MeshLib CONFIG REQUIRED)
 
 ### Include the MeshLib Headers
 
-Ensure that the `include` directory from the installed MeshLib package is added to your project's include directories. In your CMake configuration (`CMakeLists.txt`), add:
+Add \b both include directories from the installed MeshLib package to your project. In your CMake configuration (`CMakeLists.txt`):
 \code{.cmake}
-include_directories(${MESHLIB_INCLUDE_DIR})
+include_directories(${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 # or
-target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIR})
+target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 \endcode
+
+`MESHLIB_THIRDPARTY_INCLUDE_DIR` is required, not optional: MeshLib's public headers include third-party headers directly — `MRMesh/MRMeshFwd.h`, pulled in by essentially every MeshLib header, includes `<parallel_hashmap/phmap_fwd_decl.h>`. Without it even a hello-world fails to compile.
 
 ### Link the MeshLib Libraries
 
@@ -55,14 +57,32 @@ Or if you use the C API, instead link `MeshLib::MeshLibC2`:
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 \endcode
 
-### Find Third-Party Dependencies
+### A Complete Minimal Example
 
-MeshLib have extended functionality that may have additional dependencies that need to be linked.
-Check the example `CMakeLists.txt` provided in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) to see how to add required dependencies:
+Putting the steps above together, this is a complete `CMakeLists.txt` that compiles, links and runs a program including `<MRMesh/MRMesh.h>`. The **Linking Additional Third-Party Libraries** section below is not needed for it:
 
 \code{.cmake}
-target_include_directories(your_project_name PUBLIC ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+cmake_minimum_required(VERSION 3.18)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+project(hello CXX)
+
+find_package(MeshLib CONFIG REQUIRED)
+
+add_executable(hello main.cpp)
+target_include_directories(hello PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+target_link_libraries(hello PUBLIC MeshLib::MRMesh)
+\endcode
+
+### Linking Additional Third-Party Libraries
+
+Only if \b your \b own code links a third-party library bundled with MeshLib (rather than just using MeshLib's API), add the directory those libraries live in:
+
+\code{.cmake}
 target_link_directories(your_project_name PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
 \endcode
+
+The `MeshLib::*` imported targets already carry the paths of the third-party libraries \b they need, so this line is not required by the example above.
+See the `CMakeLists.txt` in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) for a working configuration.
 
 */

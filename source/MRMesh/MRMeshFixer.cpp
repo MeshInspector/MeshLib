@@ -19,47 +19,43 @@
 namespace MR
 {
 
-// given a vertex, returns two edges with the origin in this vertex consecutive in the vertex ring without left faces both;
-// both edges may be the same if there is only one edge without left face;
-// or both edges can be invalid if all vertex edges have left face
-static EdgePair getTwoSeqNoLeftAtVertex( const MeshTopology & m, VertId a )
+// returns the first edge with the origin in given vertex and without left face
+// if the number of such edges in the vertex ring is larger than given limit, otherwise returns invalid edge
+static EdgeId findNoLeftEdgeAboveLimit( const MeshTopology & m, VertId a, int limit )
 {
     EdgeId e0 = m.edgeWithOrg( a );
     if ( !e0.valid() )
         return {}; //invalid vertex
 
-    // find first hole edge
-    EdgeId eh = e0;
+    EdgeId eh; // first found edge without left face
+    int holes = 0;
+    EdgeId e = e0;
     for (;;)
     {
-        if ( !m.left( eh ).valid() )
-            break;
-        eh = m.next( eh );
-        if ( eh == e0 )
-            return {}; // no single hole near a
-    }
-
-    // find second hole edge
-    for ( EdgeId e = m.next( eh ); e != e0; e = m.next( e ) )
-    {
         if ( !m.left( e ).valid() )
-            return { eh, e }; // another hole near a
+        {
+            if ( !eh.valid() )
+                eh = e;
+            if ( ++holes > limit )
+                return eh;
+        }
+        e = m.next( e );
+        if ( e == e0 )
+            return {};
     }
-
-    return { eh, eh };
 }
 
-int duplicateMultiHoleVertices( Mesh & mesh )
+int duplicateMultiHoleVertices( Mesh & mesh, int maxHoles )
 {
+    assert( maxHoles >= 1 );
     int duplicates = 0;
     const auto lastVert = mesh.topology.lastValidVert();
     for ( VertId v{0}; v <= lastVert; ++v )
     {
-        auto ee = getTwoSeqNoLeftAtVertex( mesh.topology, v );
-        if ( ee.first == ee.second )
+        EdgeId e1 = findNoLeftEdgeAboveLimit( mesh.topology, v, maxHoles );
+        if ( !e1.valid() )
             continue;
 
-        EdgeId e1 = ee.first;
         EdgeId e0 = e1;
         while ( mesh.topology.right( e0 ).valid() )
             e0 = mesh.topology.prev( e0 );
@@ -76,6 +72,11 @@ int duplicateMultiHoleVertices( Mesh & mesh )
     }
 
     return duplicates;
+}
+
+int duplicateMultiHoleVertices( Mesh & mesh )
+{
+    return duplicateMultiHoleVertices( mesh, 1 );
 }
 
 Expected<std::vector<MultipleEdge>> findMultipleEdges( const MeshTopology& topology, ProgressCallback cb )

@@ -10,11 +10,7 @@ import pytest
 from helper import *
 
 # Imported by the `viewer` fixture, never at module scope, so nothing loads libMRViewer on the
-# platforms that skip below. `StateBasePlugin`'s constructor still queues an `AfterPluginInit`
-# `CommandLoop` command that only drains once the viewer's loop runs, and a process that loads
-# the library without ever launching would trip `assert( commands_.empty() )` in `~CommandLoop`
-# (MRCommandLoop.cpp) at interpreter exit, long after pytest reported success. MRViewer itself
-# no longer registers any ribbon item, so this is belt-and-braces today.
+# platforms that skip below.
 mrviewerpy = None
 
 

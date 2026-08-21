@@ -61,15 +61,11 @@ xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 \endcode
 
 ### Linux (Ubuntu)
-\note The published Linux packages are Ubuntu `.deb`s; no package is published for other distributions.
-
- 1. **Download the Built Version**
- \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the `.deb` for your Ubuntu version and CPU (run `uname -m` if you are unsure):
-  - Ubuntu 22.04: `meshlib_<version>_ubuntu22-dev.deb` (`x86_64`) or `meshlib_<version>_ubuntu22-arm64-dev.deb` (`aarch64`)
-  - Ubuntu 24.04: `meshlib_<version>_ubuntu24-dev.deb` (`x86_64`) or `meshlib_<version>_ubuntu24-arm64-dev.deb` (`aarch64`)
- 2. **Install Linux Build**
+ 1. **Download the Package for Your Ubuntu Release and CPU**
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links a `.deb` for every supported Ubuntu release and architecture. Take the one matching `lsb_release -rs` and `uname -m`.
+ 2. **Install the Package**
 \code{.sh}
-sudo apt install ./meshlib_<version>_ubuntu22-dev.deb
+sudo apt install ./<downloaded>.deb
 \endcode
  3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Add the following to your `CMakeLists.txt`:

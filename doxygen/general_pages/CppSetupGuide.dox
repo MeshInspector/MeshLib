@@ -22,7 +22,11 @@ There are two options: Download and Install release build or compile from source
 ### Installing the release build
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the latest **Windows built version archive** (E.g. MeshLibDist_v3.0.0.40.zip).
+  - Download the **Windows built version archive** matching your Visual Studio toolset:
+   - Visual Studio 2019: `MeshLibDistVS19_<version>.zip`
+   - Visual Studio 2022: `MeshLibDistVS22_<version>.zip`
+   - Visual Studio 2026: `MeshLibDistVS26_<version>.zip`
+   - Debug build with iterator debugging on: `MeshLibDist_<version>-IteratorDebug.zip` (see \ref CppSetupTroubleshooting "Troubleshooting")
   - Extract it to a directory, e.g., `C:\meshlib-built\`.
   \n **Directory Structure After Extraction**
 \code{.cmd}
@@ -111,20 +115,23 @@ cd vcpkg
   - Open `MeshLib/CMakeLists.txt` in Visual Studio (File - Open - CMake).
   - Build the project and run the application.
 
-\subsection CppSetupLinux Linux (Ubuntu/Fedora)
+\subsection CppSetupLinux Linux
 
 ### Installing the release build
- 1. **Download and Extract the Built Version**
-  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the latest Linux built version
- 2. Install Linux Build
-  - **For Ubuntu**:
+ 1. **Download the Package for Your Distribution and CPU**
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the `.deb` matching your Ubuntu release (`lsb_release -rs`) and architecture (`uname -m`):
+  - Ubuntu 22.04, `x86_64`: `meshlib_<version>_ubuntu22-dev.deb`
+  - Ubuntu 22.04, `aarch64`: `meshlib_<version>_ubuntu22-arm64-dev.deb`
+  - Ubuntu 24.04, `x86_64`: `meshlib_<version>_ubuntu24-dev.deb`
+  - Ubuntu 24.04, `aarch64`: `meshlib_<version>_ubuntu24-arm64-dev.deb`
+ \n On any other distribution use the portable vcpkg build instead, `meshlib_<version>_linux-vcpkg-x64.tar.xz` or `meshlib_<version>_linux-vcpkg-arm64.tar.xz`. It bundles its own dependencies and is not installed system-wide: unpack it and use the resulting directory as the MeshLib installation prefix, then skip to step 4.
 \code{.sh}
-sudo apt install ./meshlib-build-version-example.deb
+mkdir path_to_install && tar -xf meshlib_<version>_linux-vcpkg-x64.tar.xz -C path_to_install
 \endcode
-  - **For Fedora**:
+ 2. **Install the Package**
+ \n `apt` pulls in the remaining system dependencies itself. The leading `./` is required: without it `apt` looks for a repository package by that name.
 \code{.sh}
-sudo rpm -i ./meshlib-build-version-example.rpm
+sudo apt install ./meshlib_<version>_ubuntu24-dev.deb
 \endcode
  3. **Open MeshViewer**
  \n To verify that everything is fine you can run MeshViewer application:
@@ -284,20 +291,24 @@ source ./emsdk_env.sh
 
 ### Installing the release build
  1. **Download the Built Version**
- \n Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) and download the latest Emscripten built version.
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the Emscripten archive whose threading mode and pointer width match the build that will consume MeshLib:
+  - multi-threaded, wasm32: `meshlib_<version>_emscripten-multithreaded.zip`
+  - single-threaded: `meshlib_<version>_emscripten-singlethreaded.zip`
+  - multi-threaded, wasm64: `meshlib_<version>_emscripten-multithreaded-64bit.zip`
+ \n These are the same three modes that \ref CppSetupWASMLocalBuild "Compile locally" selects with `MR_EMSCRIPTEN` / `MR_EMSCRIPTEN_SINGLETHREAD` / `MR_EMSCRIPTEN_WASM64`. The archive has to match your own build: an Emscripten target links only against libraries built with the same `-pthread` and `MEMORY64` settings.
  2. **Extract the Package**
  \n Extract the package using an archiving tool or with the unzip command:
 \code{.sh}
-unzip -d path_to_install meshlib_package.zip
+unzip -d path_to_install meshlib_<version>_emscripten-multithreaded.zip
 \endcode
  3. **Integrate Using CMake**
  \n Specify the path to the extracted files with the `CMAKE_FIND_ROOT_PATH` option:
 \code{.sh}
-emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_meshlib_installation
+emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_install
 \endcode
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-### Compile locally
+### Compile locally {#CppSetupWASMLocalBuild}
 
  - Navigate to the MeshLib directory:
 \code{.sh}

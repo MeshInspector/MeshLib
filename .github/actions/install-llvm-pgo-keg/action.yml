@@ -1,0 +1,24 @@
+name: Install the llvm-pgo keg
+description: >
+  Fetch the PGO-optimized LLVM keg from MeshInspector/toolchains releases and
+  extract it into the homebrew Cellar. No-op when the keg is already present
+  (self-hosted runners build it locally). arm64 `/opt/homebrew` only.
+
+runs:
+  using: composite
+  steps:
+    - name: Install llvm-pgo keg
+      shell: bash
+      run: |
+        KEG=/opt/homebrew/Cellar/llvm-pgo/22.1.8_2
+        if [[ -d "$KEG" ]]; then
+          echo "llvm-pgo keg already present"
+          exit 0
+        fi
+        curl -fsSL -o /tmp/llvm-pgo.tar.gz \
+          https://github.com/MeshInspector/toolchains/releases/download/llvm-pgo-22.1.8_2-arm64/llvm-pgo-22.1.8_2.arm64_opt-homebrew.tar.gz
+        echo "94f76fb55ec64490605d0e68115259426a428a78f269f7e9160726d90a22e197  /tmp/llvm-pgo.tar.gz" | shasum -a 256 -c -
+        tar -xzf /tmp/llvm-pgo.tar.gz -C /opt/homebrew/Cellar
+        ln -sfn ../Cellar/llvm-pgo/22.1.8_2 /opt/homebrew/opt/llvm-pgo
+        brew install --quiet zstd xz
+        "$KEG/bin/clang++" --version | head -n1

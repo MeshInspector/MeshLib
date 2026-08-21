@@ -551,6 +551,9 @@ jobs:
             plat-name: macosx_12_0_arm64
             instance: macos-14
             brewpath: /opt/homebrew
+            # mrbind and the bindings use the PGO keg fetched from
+            # MeshInspector/toolchains releases.
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -584,6 +587,16 @@ jobs:
           cache-instance: ${{ matrix.instance }}
           cache-compiler: AppleClang
 
+      # LLVM_PREFIX selects the LLVM keg for the mrbind scripts; same scheme
+      # as build-test-macos.yml.
+      - name: Resolve LLVM prefix
+        if: ${{ matrix.llvm-prefix-template }}
+        run: echo "LLVM_PREFIX=$(echo '${{ matrix.llvm-prefix-template }}' | sed "s|BREW_PREFIX|$(brew --prefix)|")" >> $GITHUB_ENV
+
+      - name: Install llvm-pgo keg
+        if: ${{ contains(matrix.llvm-prefix-template, 'llvm-pgo') }}
+        uses: ./.github/actions/install-llvm-pgo-keg
+
       - name: Install MRBind deps
         env:
           HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed llvm/lld, no z3, no rebuild
@@ -597,7 +610,7 @@ jobs:
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ matrix.llvm-prefix-template }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Build
         run: ./scripts/build_source.sh

@@ -33,7 +33,7 @@ install/
   ├── app/           # Executables
 example_plugin/      # example solution for creating MeshLib/MeshInspector plugins
 \endcode
- 2. **Configure and integrate with Visual Studio** \include{doc} CommonDistributionProperties.dox \n
+ 2. **Configure and integrate with Visual Studio** \include{doc} CommonDistributionProperties.dox
        - **Copy DLLs**:
     \n Copy all `.dll` files from: `C:\meshlib-built\install\app\$(Configuration)` to your project’s output directory: `$(TargetDir)`
 \code{.pws}
@@ -161,18 +161,14 @@ You may also run the scripts in the non-interactive mode (see \ref CppSetupWASM 
 MR_EMSCRIPTEN=OFF ./scripts/build_thirdparty.sh
 MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
 \endcode
+\note Dependencies are installed automatically on Ubuntu only. Elsewhere `build_thirdparty.sh` prints *"Unsupported system. Installing dependencies is your responsibility."*, so install the equivalents of [`requirements/ubuntu.txt`](https://github.com/MeshInspector/MeshLib/blob/master/requirements/ubuntu.txt) yourself first.
  4. **Create and Install Package**:
  \n This step will create distribution package and install it to the system
- \n **For Ubuntu**:
 \code{.sh}
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
 \endcode
-**For Fedora**:
-\code{.sh}
-./scripts/distribution_rpm.sh
-sudo rpm -i ./distr/meshlib-dev.rpm
-\endcode
+\note `distribution.sh` builds a `.deb`, so this step is Ubuntu/Debian-only. On other distributions skip it and use the locally built binaries directly, as in the next step.
  5. **Open MeshViewer**
  \n To verify that everything is fine you can run MeshViewer application:
   - if you previously have installed `meshlib` to your system:
@@ -190,9 +186,7 @@ MeshViewer
 
 ### Installing the release build
  1. **Download the Installer**
- \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the `.pkg` for your CPU (run `uname -m` if you are unsure):
-  - Apple silicon (M-series, `arm64`): `meshlib_<version>_arm64.pkg`
-  - Intel (`x86_64`): `meshlib_<version>_x64.pkg`
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links one `.pkg` installer for macOS Arm (Apple silicon) and one for macOS x64 (Intel). Take the one matching `uname -m` (`arm64` or `x86_64`).
  2. **Install**
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
@@ -382,7 +376,7 @@ Failures most often hit while following the steps above, with the message each o
 
 | Path | Symptom | Cause | Fix |
 |------|---------|-------|-----|
-| Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. MeshLib defaults both `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `0` and refuses to compile when they disagree. | For Release, take `MeshLibDistVS19_<version>.zip` / `MeshLibDistVS22_<version>.zip` / `MeshLibDistVS26_<version>.zip` matching your toolset. For a Debug build with iterator debugging on, take `MeshLibDist_<version>-IteratorDebug.zip` and define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `2` — defining only the first one is what triggers the error. |
+| Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. MeshLib defaults both `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `0` and refuses to compile when they disagree. | For Release, take the archive matching your toolset from the release description's links, as in step 1 of \ref CppSetupWindows "Windows". For a Debug build with iterator debugging on, take the `IteratorDebug` archive from the release's asset list and define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `2` — defining only the first one is what triggers the error. |
 | Windows, from source | `thirdparty\install.bat` finishes, but the Visual Studio solution cannot find the third-party headers and libraries. | `VCPKG_DEFAULT_TRIPLET` was not set, so vcpkg installed the plain `x64-windows` triplet instead of MeshLib's triplet with its port overlays. | Set `VCPKG_DEFAULT_TRIPLET=x64-windows-vs2019-meshlib` (VS 2019) or `x64-windows-vs2022-meshlib` (VS 2022) in the environment and rerun the script. With VS 2026 leave it unset — `install.bat` then uses `x64-windows-meshlib`, which is correct; there is no `x64-windows-vs2026-meshlib`. See step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build". |
 | Linux, macOS, WASM (consuming an installed MeshLib) | `MRMeshFwd.h:70:10: fatal error: parallel_hashmap/phmap_fwd_decl.h: No such file or directory` | MeshLib's public headers include third-party headers, and `${MESHLIB_THIRDPARTY_INCLUDE_DIR}` is missing from your target's include directories. | Add it next to `${MESHLIB_INCLUDE_DIR}`: `target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})`. See \ref MeshLibCmakeSetupGuide and [examples/cpp-examples/CMakeLists.txt](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt). |
 | macOS | CMake configuration fails inside `MRMeshConfig.cmake` with `find_dependency`: `Could NOT find Boost (missing: Boost_INCLUDE_DIR)` (Boost is just the first of several such dependencies). | The Homebrew requirements were never installed — the `.pkg` installer does not pull them in. | `xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt` (for a current-user-only install, prefix the path with `~`). |

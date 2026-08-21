@@ -60,18 +60,16 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
 xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 \endcode
 
-### Linux (Ubuntu/Fedora)
- 1. **Download and Extract the Built Version**
-  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the latest Linux built version
- 2. Install Linux Build
-  - **For Ubuntu**:
+### Linux (Ubuntu)
+\note The published Linux packages are Ubuntu `.deb`s; no package is published for other distributions.
+
+ 1. **Download the Built Version**
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the `.deb` for your Ubuntu version and CPU (run `uname -m` if you are unsure):
+  - Ubuntu 22.04: `meshlib_<version>_ubuntu22-dev.deb` (`x86_64`) or `meshlib_<version>_ubuntu22-arm64-dev.deb` (`aarch64`)
+  - Ubuntu 24.04: `meshlib_<version>_ubuntu24-dev.deb` (`x86_64`) or `meshlib_<version>_ubuntu24-arm64-dev.deb` (`aarch64`)
+ 2. **Install Linux Build**
 \code{.sh}
-sudo apt install ./meshlib-build-version-example.deb
-\endcode
-  - **For Fedora**:
-\code{.sh}
-sudo rpm -i ./meshlib-build-version-example.rpm
+sudo apt install ./meshlib_<version>_ubuntu22-dev.deb
 \endcode
  3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Add the following to your `CMakeLists.txt`:

@@ -111,20 +111,19 @@ cd vcpkg
   - Open `MeshLib/CMakeLists.txt` in Visual Studio (File - Open - CMake).
   - Build the project and run the application.
 
-\subsection CppSetupLinux Linux (Ubuntu/Fedora)
+\subsection CppSetupLinux Linux (Ubuntu)
+\note Only Ubuntu is covered here: the published Linux packages are Ubuntu `.deb`s, and `scripts/build_thirdparty.sh` only installs dependencies automatically on Ubuntu.
+On other distributions, build from source: `build_thirdparty.sh` prints *"Unsupported system. Installing dependencies is your responsibility."*, so install the equivalents of
+[`requirements/ubuntu.txt`](https://github.com/MeshInspector/MeshLib/blob/master/requirements/ubuntu.txt) yourself first.
 
 ### Installing the release build
- 1. **Download and Extract the Built Version**
-  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the latest Linux built version
- 2. Install Linux Build
-  - **For Ubuntu**:
+ 1. **Download the Built Version**
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the `.deb` for your Ubuntu version and CPU (run `uname -m` if you are unsure):
+  - Ubuntu 22.04: `meshlib_<version>_ubuntu22-dev.deb` (`x86_64`) or `meshlib_<version>_ubuntu22-arm64-dev.deb` (`aarch64`)
+  - Ubuntu 24.04: `meshlib_<version>_ubuntu24-dev.deb` (`x86_64`) or `meshlib_<version>_ubuntu24-arm64-dev.deb` (`aarch64`)
+ 2. **Install Linux Build**
 \code{.sh}
-sudo apt install ./meshlib-build-version-example.deb
-\endcode
-  - **For Fedora**:
-\code{.sh}
-sudo rpm -i ./meshlib-build-version-example.rpm
+sudo apt install ./meshlib_<version>_ubuntu22-dev.deb
 \endcode
  3. **Open MeshViewer**
  \n To verify that everything is fine you can run MeshViewer application:
@@ -163,15 +162,9 @@ MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
 \endcode
  4. **Create and Install Package**:
  \n This step will create distribution package and install it to the system
- \n **For Ubuntu**:
 \code{.sh}
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
-\endcode
-**For Fedora**:
-\code{.sh}
-./scripts/distribution_rpm.sh
-sudo rpm -i ./distr/meshlib-dev.rpm
 \endcode
  5. **Open MeshViewer**
  \n To verify that everything is fine you can run MeshViewer application:

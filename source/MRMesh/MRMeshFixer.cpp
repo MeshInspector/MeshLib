@@ -1,4 +1,5 @@
 #include "MRMeshFixer.h"
+#include "MRVertDuplication.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRRingIterator.h"
@@ -45,10 +46,12 @@ static EdgeId findNoLeftEdgeAboveLimit( const MeshTopology & m, VertId a, int li
     }
 }
 
-int duplicateMultiHoleVertices( Mesh & mesh, int maxHoles )
+int duplicateMultiHoleVertices( Mesh & mesh, int maxHoles, std::vector<MeshBuilder::VertDuplication> * dups )
 {
     MR_TIMER;
     assert( maxHoles >= 1 );
+    if ( dups )
+        dups->clear();
 
     VertBitSet vertsForDup( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
@@ -76,6 +79,8 @@ int duplicateMultiHoleVertices( Mesh & mesh, int maxHoles )
 
             auto vDup = mesh.addPoint( mesh.points[v] );
             mesh.topology.setOrg( e0, vDup );
+            if ( dups )
+                dups->push_back( { .srcVert = v, .dupVert = vDup } );
 
             ++duplicates;
         }

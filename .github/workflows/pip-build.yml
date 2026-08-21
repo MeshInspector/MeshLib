@@ -547,6 +547,9 @@ jobs:
             plat-name: macosx_12_0_x86_64
             instance: macos-15-intel
             brewpath: /usr/local
+            # mrbind and the bindings use the PGO keg fetched from
+            # MeshInspector/toolchains releases.
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
             instance: macos-14

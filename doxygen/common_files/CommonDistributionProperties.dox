@@ -1,6 +1,7 @@
   - Debug only:
     - **Debug Configuration: C/C++ → Preprocessor → Preprocessor Definitions**:
-    \n Add: `_ITERATOR_DEBUG_LEVEL=0`
+    \n Add: `_ITERATOR_DEBUG_LEVEL=0;MR_ITERATOR_DEBUG_LEVEL=0` — for the per-Visual-Studio archives (`MeshLibDistVS19`, `MeshLibDistVS22`, `MeshLibDistVS26`).
+    \n For the `MeshLibDist-IteratorDebug` archive add `_ITERATOR_DEBUG_LEVEL=2;MR_ITERATOR_DEBUG_LEVEL=2` instead. Both defines must carry the same value: MeshLib stops compilation with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib` when they disagree.
   - For all configurations:
     - **Solution Platform**:
     \n Set: `x64`

@@ -48,6 +48,9 @@ jobs:
         with:
           submodules: true
 
+      - name: Locate Visual Studio
+        uses: ./.github/actions/locate-visual-studio
+
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:
@@ -76,6 +79,19 @@ jobs:
 
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
+
+      - name: Test find_package(MeshLib) # call it after archive not to pack build results
+        if: ${{ matrix.extract_release }}
+        shell: cmd
+        run: |
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 || exit /b 1
+          cmake ^
+            -S examples/cpp-examples ^
+            -B cpp-examples-build ^
+            -GNinja ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DCMAKE_PREFIX_PATH="%CD%/install" || exit /b 1
+          cmake --build cpp-examples-build -j || exit /b 1
 
       - name: Test Example Plugin # call it after archive not to pack build results
         env:

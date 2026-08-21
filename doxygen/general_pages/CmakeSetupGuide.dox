@@ -22,6 +22,13 @@ For easier setup and dependency management, we recommend using \b vcpkg as outli
 cmake -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
 \endcode
 
+If you use the prebuilt Windows archive (`MeshLibDistVS*.zip`), no vcpkg installation is needed:
+it ships its own CMake configuration files, so it is enough to point CMake at the extracted `install` directory:
+
+\code
+cmake -DCMAKE_PREFIX_PATH=C:\meshlib-built\install
+\endcode
+
 ## Quick Integration Guide
 
 ### Find MeshLib CMake Configuration Files

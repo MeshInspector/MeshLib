@@ -39,6 +39,8 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
 xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 \endcode
 
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+
 ### Compile Locally
 #### Prerequisites
  1. **Git**

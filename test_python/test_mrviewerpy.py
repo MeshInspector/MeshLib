@@ -2,7 +2,9 @@ import faulthandler
 import os
 import pathlib
 import platform
+import subprocess
 import sys
+import threading
 import time
 from contextlib import contextmanager
 
@@ -36,6 +38,8 @@ pytestmark = [
 # Generous: the first round-trip also covers viewer construction and GL init on a cold runner.
 LAUNCH_TIMEOUT_SEC = 180
 CALL_TIMEOUT_SEC = 60
+# how long before the `faulthandler` watchdog kills us the sidecar samples the thread table
+WATCHDOG_LEAD_SEC = 10
 
 # one of the fonts the ribbon loads during launch; see `_point_at_bundled_resources`
 FONT_NAME = "NotoSansCJK-Regular.ttc"
@@ -70,20 +74,134 @@ def _point_at_bundled_resources():
     pytest.skip(f"{FONT_NAME} not found next to the bindings, launching would crash")
 
 
+# Sidecar watchdog, run as a child process. `faulthandler` can name the Python frame a hang
+# is stuck on, but not why the viewer thread is not answering - and nothing in-process can look,
+# because the blocking call owns the GIL. A separate process can: it samples our whole thread
+# table twice, so the two shapes a stuck round-trip can have are told apart on the first CI hit.
+#  - viewer thread parked (S) with no CPU accruing while the command sits in the queue: the
+#    wakeup was lost, i.e. `postEmptyEvent()` never got the loop out of `glfwWaitEvents()`.
+#  - viewer or `llvmpipe-*` threads burning CPU (R, cpu > 0): GL work that has not finished,
+#    e.g. `captureSceneScreenShot`'s offscreen render plus `glGetTexImage` on llvmpipe.
+# `wchan` needs ptrace permission we may not have; state and CPU alone separate the two.
+_THREAD_DUMP_SRC = r"""
+import os
+import sys
+import time
+
+pid, delay, caller_tid, what = int(sys.argv[1]), float(sys.argv[2]), sys.argv[3], sys.argv[4]
+tasks = "/proc/%d/task" % pid
+
+
+def read(path):
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except OSError as e:
+        return "<%s>" % type(e).__name__
+
+
+def snapshot():
+    out = {}
+    try:
+        tids = sorted(os.listdir(tasks), key=int)
+    except OSError:
+        return out
+    for tid in tids:
+        # `comm` may hold spaces and parens, so the numbered fields start after the last ')'
+        fields = read("%s/%s/stat" % (tasks, tid)).rpartition(")")[2].split()
+        if len(fields) < 13:
+            continue
+        out[tid] = (
+            read("%s/%s/comm" % (tasks, tid)),
+            fields[0],  # state: R runnable, S sleeping, D uninterruptible
+            int(fields[11]) + int(fields[12]),  # utime + stime, in clock ticks
+            read("%s/%s/wchan" % (tasks, tid)),
+        )
+    return out
+
+
+# Fire before `faulthandler`'s own exit=True kill, and stay quiet if the call returned (pytest
+# kills us then) or the parent is gone - a dead pid can be reused by an unrelated process.
+deadline = time.monotonic() + delay
+while time.monotonic() < deadline:
+    if os.getppid() != pid:
+        sys.exit(0)
+    time.sleep(0.25)
+
+first = snapshot()
+time.sleep(2.0)
+second = snapshot()
+if not second:
+    sys.exit(0)
+
+ticks = os.sysconf("SC_CLK_TCK")
+lines = [
+    "",
+    "[mrviewerpy] watchdog: %s still blocked after %gs; thread table of pid %d,"
+    " cpu = seconds burned over a 2s window" % (what, delay, pid),
+    "%8s %-17s %-5s %6s  %s" % ("tid", "comm", "state", "cpu", "wchan"),
+]
+for tid, (comm, state, cpu, wchan) in second.items():
+    was = first.get(tid)
+    lines.append(
+        "%8s %-17s %-5s %6.2f  %s%s"
+        % (
+            tid,
+            comm,
+            state,
+            (cpu - was[2]) / ticks if was else float("nan"),
+            wchan,
+            "   <- caller" if tid == caller_tid else "",
+        )
+    )
+# straight to fd 2, like faulthandler: pytest runs with -s, and nothing buffered survives its kill
+os.write(2, ("\n".join(lines) + "\n").encode())
+"""
+
+
+def _start_thread_dump_watchdog(what, delay):
+    """Arm the sidecar above; `None` if it cannot run, which never fails a test."""
+    if not os.path.isdir("/proc/self/task"):
+        return None
+    try:
+        return subprocess.Popen(
+            [
+                sys.executable,
+                "-c",
+                _THREAD_DUMP_SRC,
+                str(os.getpid()),
+                str(delay),
+                str(threading.get_native_id()),
+                what,
+            ]
+        )
+    except OSError as e:
+        print(f"[mrviewerpy] watchdog not started: {e}", file=sys.stderr, flush=True)
+        return None
+
+
 @contextmanager
 def bounded(what, seconds=CALL_TIMEOUT_SEC):
     """Bound blocking `CommandLoop` round-trips so a hang fails fast and attributably.
 
     Those calls hold the GIL while they wait, so no Python-level timer can ever fire -
     `faulthandler`'s watchdog runs outside the GIL and is the only stdlib way to turn a
-    hang into a dumped traceback instead of letting it burn the whole step timeout.
+    hang into a dumped traceback instead of letting it burn the whole step timeout. It
+    dumps Python frames only, hence the out-of-process thread sampler alongside it.
     """
     print(f"[mrviewerpy] {what} (watchdog {seconds}s)", file=sys.stderr, flush=True)
     faulthandler.dump_traceback_later(seconds, exit=True)
+    watchdog = _start_thread_dump_watchdog(what, max(1.0, seconds - WATCHDOG_LEAD_SEC))
     try:
         yield
     finally:
         faulthandler.cancel_dump_traceback_later()
+        if watchdog is not None:
+            try:
+                watchdog.terminate()
+            except OSError:
+                pass
+            watchdog.wait()
 
 
 @pytest.fixture(scope="module")

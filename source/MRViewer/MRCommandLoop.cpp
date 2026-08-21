@@ -3,6 +3,7 @@
 #include "MRPch/MRSpdlog.h"
 #include <GLFW/glfw3.h>
 #include <assert.h>
+#include <chrono>
 
 namespace MR
 {
@@ -81,8 +82,15 @@ void CommandLoop::processCommands()
         if ( cmd->threadId != inst.mainThreadId_ )
             commandsToNotifyAtTheEnd.emplace_back( std::move( cmd ) );
     }
-    for ( auto& cmdToNotify : commandsToNotifyAtTheEnd )
-        cmdToNotify->callerThreadCV.notify_one();
+    if ( !commandsToNotifyAtTheEnd.empty() )
+    {
+        std::unique_lock<std::mutex> lock( inst.mutex_ );
+        for ( auto& cmdToNotify : commandsToNotifyAtTheEnd )
+        {
+            cmdToNotify->done = true;
+            cmdToNotify->callerThreadCV.notify_one();
+        }
+    }
 }
 
 bool CommandLoop::empty()
@@ -101,6 +109,7 @@ void CommandLoop::removeCommands( bool closeLoop )
     {
         auto cmd = std::move( inst.commands_.front() );
         inst.commands_.pop();
+        cmd->done = true;
         cmd->callerThreadCV.notify_one();
     }
     spdlog::debug( "CommandLoop::removeCommands(): queue size={}", inst.commands_.size() );
@@ -147,7 +156,21 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     getViewerInstance().postEmptyEvent();
     if ( blockThread )
     {
-        cmd->callerThreadCV.wait( lock );
+        // Wait on `done`, not on a bare notification: a spurious wakeup would otherwise return
+        // from a command that has not run yet, with `exception` above - a local of this frame -
+        // still captured by it.
+        // And wait with a timeout, because the main thread can be parked in glfwWaitEvents()
+        // having never woken on the event posted above; an untimed wait makes that an indefinite
+        // and silent block, while re-posting the event turns it into a logged retry.
+        constexpr auto cWaitStep = std::chrono::seconds( 5 );
+        for ( int step = 1; !cmd->done; ++step )
+        {
+            if ( cmd->callerThreadCV.wait_for( lock, cWaitStep, [&cmd] { return cmd->done; } ) )
+                break;
+            spdlog::warn( "CommandLoop::addCommand_: the main thread has not run a queued command in {} seconds, re-posting the wakeup event",
+                step * cWaitStep.count() );
+            getViewerInstance().postEmptyEvent();
+        }
 
         if ( exception )
             std::rethrow_exception( exception );

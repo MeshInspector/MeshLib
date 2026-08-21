@@ -64,6 +64,9 @@ private:
         StartPosition state{ StartPosition::BeforeWindowAppear };
         std::condition_variable callerThreadCV;
         std::thread::id threadId;
+        // set under CommandLoop::mutex_ once the command was executed or dropped;
+        // the predicate a blocked caller waits on, see addCommand_
+        bool done{ false };
     };
 
     StartPosition state_{ StartPosition::AfterWindowInit };

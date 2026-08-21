@@ -25,12 +25,12 @@ Every release publishes one Windows distributive per Visual Studio toolset, plus
 Take the row matching the toolset your own project is built with, or an older one: MSVC keeps its `v140` to `v145` build tools (Visual Studio 2015 to 2026) [binary-compatible](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017), so the `VS19` archive links into a Visual Studio 2022 or 2026 project as well — the link itself must be done by the newer toolset. The opposite direction does not work: older build tools accept a newer DLL only when its exports are `extern "C"`, and MeshLib exports C++.
 Matching your own toolset stays the tested configuration, though: MeshLib compiles with `/std:c++latest` (`source/common.props`), and MSVC's standard library excludes `/std:c++latest` features from that binary-compatibility promise.
 
-| Built with | Archive | vcpkg triplet | Debug `_ITERATOR_DEBUG_LEVEL` |
-|---------------|---------|---------------|-------------------------------|
-| 2019 | `MeshLibDistVS19_<version>.zip` | `x64-windows-vs2019-meshlib` | `0` |
-| 2022 | `MeshLibDistVS22_<version>.zip` | `x64-windows-vs2022-meshlib` | `0` |
-| 2026 | `MeshLibDistVS26_<version>.zip` | `x64-windows-meshlib` | `0` |
-| 2019 (toolset `v142`), **Debug configuration only** | `MeshLibDist_<version>-IteratorDebug.zip` | `x64-windows-meshlib-iterator-debug` | `2` |
+| Built with | Archive | Debug `_ITERATOR_DEBUG_LEVEL` |
+|------------|---------|-------------------------------|
+| 2019 | `MeshLibDistVS19_<version>.zip` | `0` |
+| 2022 | `MeshLibDistVS22_<version>.zip` | `0` |
+| 2026 | `MeshLibDistVS26_<version>.zip` | `0` |
+| 2019 (toolset `v142`), **Debug configuration only** | `MeshLibDist_<version>-IteratorDebug.zip` | `2` |
 
 The release description links the three per-Visual-Studio archives; `IteratorDebug` appears in the asset list only.
 Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it ships `install/app/Debug` without `install/app/Release`, so it covers no Release build — but being a `v142` build it serves a newer Visual Studio too, under the rule above.

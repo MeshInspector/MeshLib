@@ -1,8 +1,9 @@
 name: Install the llvm-pgo keg
 description: >
-  Fetch the PGO-optimized LLVM keg from MeshInspector/toolchains releases and
-  extract it into the homebrew Cellar. No-op when the keg is already present
-  (self-hosted runners build it locally). arm64 `/opt/homebrew` only.
+  Fetch the PGO-optimized LLVM keg for this runner's architecture from
+  MeshInspector/toolchains releases and extract it into the homebrew Cellar.
+  No-op when the keg is already present (self-hosted runners build it
+  locally).
 
 runs:
   using: composite
@@ -10,15 +11,24 @@ runs:
     - name: Install llvm-pgo keg
       shell: bash
       run: |
-        KEG=/opt/homebrew/Cellar/llvm-pgo/22.1.8_2
+        if [[ "$(uname -m)" == "arm64" ]]; then
+          PREFIX=/opt/homebrew
+          ASSET=llvm-pgo-22.1.8_2-arm64/llvm-pgo-22.1.8_2.arm64_opt-homebrew.tar.gz
+          SHA=94f76fb55ec64490605d0e68115259426a428a78f269f7e9160726d90a22e197
+        else
+          PREFIX=/usr/local
+          ASSET=llvm-pgo-22.1.8_2-x64/llvm-pgo-22.1.8_2.x86_64_usr-local.tar.gz
+          SHA=8f1f1d97e4a5391c7f871bc5cf9601a9b4a1262e6e61f1538327bb48d7ef71ed
+        fi
+        [[ "$(brew --prefix)" == "$PREFIX" ]] || { echo "unexpected brew prefix $(brew --prefix), keg targets $PREFIX" >&2; exit 1; }
+        KEG="$PREFIX/Cellar/llvm-pgo/22.1.8_2"
         if [[ -d "$KEG" ]]; then
           echo "llvm-pgo keg already present"
           exit 0
         fi
-        curl -fsSL -o /tmp/llvm-pgo.tar.gz \
-          https://github.com/MeshInspector/toolchains/releases/download/llvm-pgo-22.1.8_2-arm64/llvm-pgo-22.1.8_2.arm64_opt-homebrew.tar.gz
-        echo "94f76fb55ec64490605d0e68115259426a428a78f269f7e9160726d90a22e197  /tmp/llvm-pgo.tar.gz" | shasum -a 256 -c -
-        tar -xzf /tmp/llvm-pgo.tar.gz -C /opt/homebrew/Cellar
-        ln -sfn ../Cellar/llvm-pgo/22.1.8_2 /opt/homebrew/opt/llvm-pgo
+        curl -fsSL -o /tmp/llvm-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/$ASSET"
+        echo "$SHA  /tmp/llvm-pgo.tar.gz" | shasum -a 256 -c -
+        tar -xzf /tmp/llvm-pgo.tar.gz -C "$PREFIX/Cellar"
+        ln -sfn ../Cellar/llvm-pgo/22.1.8_2 "$PREFIX/opt/llvm-pgo"
         brew install --quiet zstd xz
         "$KEG/bin/clang++" --version | head -n1

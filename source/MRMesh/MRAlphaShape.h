@@ -111,11 +111,14 @@ struct AlphaShapeNei
 };
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius,
-/// where each triangle contains point #v and two other points
+/// where each triangle contains point #v and two other points;
+/// the valid points sharing one position in the integer grid are merged: only the point with
+/// the smallest id among them appears in the triangles (in particular, #v itself gets no
+/// triangles if it has such a twin), so the triangles found around all the points agree
 MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     Triangulation & appendTris,  ///< found triangles will be appended here
-    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point #v within data.searchRadius sorted by distance, except the ones redundant for the search
+    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point #v within data.searchRadius sorted by distance, except the duplicates and the ones redundant for the search; cleared if #v duplicates a point with a smaller id
     bool onlyLargerVids,         ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
     AlphaShapeStats * stats = nullptr ); ///< optional statistics of the work done, which is increased here
 

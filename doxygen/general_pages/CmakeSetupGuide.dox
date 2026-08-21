@@ -16,13 +16,21 @@ MeshLib supports \b Windows via CMake, including integration with **Visual Studi
 
 To enable support in Visual Studio, ensure the **CMake component** is installed in your Visual Studio setup. Once installed, standard CMake configuration should work seamlessly.
 
-For easier setup and dependency management, we recommend using \b vcpkg as outlined in our \ref MeshLibCppSetupGuide "C++ Setup Guide". You can configure your build with the following command:
+To build MeshLib \b itself from source, install its dependencies with \b vcpkg as described in \ref CppSetupWindowsLocalBuild "Installing the local build" in the C++ Setup Guide, then configure from the repository root:
 
-\code
-cmake -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
+\code{.cmd}
+cmake -S . -B build ^
+  -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+  -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
 \endcode
 
-## Quick Integration Guide
+The triplet must be the one the dependencies were actually installed with. `x64-windows-meshlib` is `install.bat`'s default, so it is the right value for **Visual Studio 2026**; on **Visual Studio 2019 or 2022**, step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build" has you set `VCPKG_DEFAULT_TRIPLET` to `x64-windows-vs2019-meshlib` or `x64-windows-vs2022-meshlib`, so pass that same value here.
+
+\warning Do not fall back to `x64-windows-meshlib` on an older toolset because it pins no `VCPKG_PLATFORM_TOOLSET` — that only governs what vcpkg builds itself. With the AWS CLI installed (step 3 of the same list), `install.bat` instead restores prebuilt packages from our public S3 cache at `s3://vcpkg-export/<vcpkg-tag>/<triplet>/`, keyed on the triplet \b name, not on your compiler. CI fills the `x64-windows-meshlib` folder from `msvc-2026` builds only, and the triplets set `VCPKG_DISABLE_COMPILER_TRACKING`, so vcpkg accepts those Visual Studio 2026 binaries on v142/v143 instead of rebuilding, and the link fails.
+
+\note This builds MeshLib from source (~40 GB). To consume a \b pre-built MeshLib in your own project, skip to the \ref CmakeQuickIntegration "Quick Integration Guide" below.
+
+## Quick Integration Guide {#CmakeQuickIntegration}
 
 ### Find MeshLib CMake Configuration Files
 
@@ -33,12 +41,14 @@ find_package(MeshLib CONFIG REQUIRED)
 
 ### Include the MeshLib Headers
 
-Ensure that the `include` directory from the installed MeshLib package is added to your project's include directories. In your CMake configuration (`CMakeLists.txt`), add:
+Add \b both include directories from the installed MeshLib package to your project. In your CMake configuration (`CMakeLists.txt`):
 \code{.cmake}
-include_directories(${MESHLIB_INCLUDE_DIR})
+include_directories(${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 # or
-target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIR})
+target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 \endcode
+
+`MESHLIB_THIRDPARTY_INCLUDE_DIR` is required, not optional: MeshLib's public headers include third-party headers directly — `MRMesh/MRMeshFwd.h`, pulled in by essentially every MeshLib header, includes `<parallel_hashmap/phmap_fwd_decl.h>`. Without it even a hello-world fails to compile.
 
 ### Link the MeshLib Libraries
 
@@ -55,14 +65,34 @@ Or if you use the C API, instead link `MeshLib::MeshLibC2`:
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 \endcode
 
-### Find Third-Party Dependencies
+### A Complete Minimal Example
 
-MeshLib have extended functionality that may have additional dependencies that need to be linked.
-Check the example `CMakeLists.txt` provided in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) to see how to add required dependencies:
+Putting the steps above together, this is a complete `CMakeLists.txt` that compiles, links and runs a program including `<MRMesh/MRMesh.h>`. The **Linking Additional Third-Party Libraries** section below is not needed for it:
 
 \code{.cmake}
-target_include_directories(your_project_name PUBLIC ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+cmake_minimum_required(VERSION 3.18)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+project(hello CXX)
+
+find_package(MeshLib CONFIG REQUIRED)
+
+add_executable(hello main.cpp)
+target_include_directories(hello PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
+target_link_libraries(hello PUBLIC MeshLib::MRMesh)
+\endcode
+
+For the `main.cpp` this expects, see \ref CppSetupVerify "Verify your setup" in the C++ Setup Guide: a self-contained program that builds a mesh, checks it, saves it and returns non-zero on failure.
+
+### Linking Additional Third-Party Libraries
+
+Only if \b your \b own code links a third-party library bundled with MeshLib (rather than just using MeshLib's API), add the directory those libraries live in:
+
+\code{.cmake}
 target_link_directories(your_project_name PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
 \endcode
+
+The `MeshLib::*` imported targets already carry the paths of the third-party libraries \b they need, so this line is not required by the example above.
+See the `CMakeLists.txt` in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) for a working configuration.
 
 */

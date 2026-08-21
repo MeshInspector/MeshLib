@@ -1,0 +1,36 @@
+name: Install the llvm-pgo keg
+description: >
+  Fetch the PGO-optimized LLVM keg for this runner's architecture from
+  MeshInspector/toolchains releases and extract it into the homebrew Cellar.
+  No-op when the keg is already present under this machine's brew prefix
+  (self-hosted runners build it locally, including non-standard prefixes).
+
+runs:
+  using: composite
+  steps:
+    - name: Install llvm-pgo keg
+      shell: bash
+      run: |
+        BP="$(brew --prefix)"
+        KEG="$BP/Cellar/llvm-pgo/22.1.8_2"
+        if [[ -d "$KEG" ]]; then
+          echo "llvm-pgo keg already present"
+          exit 0
+        fi
+        # The published kegs are built for the standard prefixes only.
+        if [[ "$(uname -m)" == "arm64" ]]; then
+          NEED=/opt/homebrew
+          ASSET=llvm-pgo-22.1.8_2-arm64/llvm-pgo-22.1.8_2.arm64_opt-homebrew.tar.gz
+          SHA=94f76fb55ec64490605d0e68115259426a428a78f269f7e9160726d90a22e197
+        else
+          NEED=/usr/local
+          ASSET=llvm-pgo-22.1.8_2-x64/llvm-pgo-22.1.8_2.x86_64_usr-local.tar.gz
+          SHA=8f1f1d97e4a5391c7f871bc5cf9601a9b4a1262e6e61f1538327bb48d7ef71ed
+        fi
+        [[ "$BP" == "$NEED" ]] || { echo "no published keg for brew prefix $BP (need $NEED) and none installed locally" >&2; exit 1; }
+        curl -fsSL -o /tmp/llvm-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/$ASSET"
+        echo "$SHA  /tmp/llvm-pgo.tar.gz" | shasum -a 256 -c -
+        tar -xzf /tmp/llvm-pgo.tar.gz -C "$BP/Cellar"
+        ln -sfn ../Cellar/llvm-pgo/22.1.8_2 "$BP/opt/llvm-pgo"
+        brew install --quiet zstd xz
+        "$KEG/bin/clang++" --version | head -n1

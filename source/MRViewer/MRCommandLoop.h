@@ -64,9 +64,14 @@ private:
         StartPosition state{ StartPosition::BeforeWindowAppear };
         std::condition_variable callerThreadCV;
         std::thread::id threadId;
-        // the two outcomes a blocked caller waits for; both are guarded by CommandLoop::mutex_
-        bool processed{ false }; // set in `processCommands`
-        bool dropped{ false };   // set in `removeCommands`: the command will never be executed
+        // set under CommandLoop::mutex_ just before func() is invoked; tells a blocked caller
+        // that the main thread is executing its command rather than not having reached it yet
+        bool started{ false };
+        // set under CommandLoop::mutex_ once the command was executed or dropped;
+        // the predicate a blocked caller waits on, see addCommand_
+        bool done{ false };
+        // set under CommandLoop::mutex_ in `removeCommands`: `done`, but never executed
+        bool dropped{ false };
     };
 
     StartPosition state_{ StartPosition::AfterWindowInit };

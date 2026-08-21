@@ -15,7 +15,15 @@ namespace MR
 /// \{
 
 /// Duplicates all vertices having more than two boundary edges (and returns the number of duplications);
+/// this is equivalent to duplicateMultiHoleVertices( mesh, 1 )
 MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh );
+
+/// Duplicates each vertex having more than \p maxHoles edges without left face in its edge ring
+/// until at most \p maxHoles such edges remain everywhere, and returns the number of duplications;
+/// (optional) \p dups receives the pair (source vertex, duplicate vertex) of every duplication made;
+/// after calling it with maxHoles = 2, MeshBuilder::fromTriangles can reconstruct this mesh from its triangulation
+/// without dropping any face, and the vertices with just two triangle fans are not duplicated unnecessarily
+MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh, int maxHoles, std::vector<MeshBuilder::VertDuplication> * dups = nullptr );
 
 /// finds multiple edges in the mesh
 using MultipleEdge = VertPair;

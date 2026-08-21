@@ -16,13 +16,26 @@ MeshLib supports \b Windows via CMake, including integration with **Visual Studi
 
 To enable support in Visual Studio, ensure the **CMake component** is installed in your Visual Studio setup. Once installed, standard CMake configuration should work seamlessly.
 
-For easier setup and dependency management, we recommend using \b vcpkg as outlined in our \ref MeshLibCppSetupGuide "C++ Setup Guide". You can configure your build with the following command:
+To build MeshLib \b itself from source, install its dependencies with \b vcpkg as described in \ref CppSetupWindowsLocalBuild "Installing the local build" in the C++ Setup Guide, then configure from the repository root:
 
-\code
-cmake -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
+\code{.cmd}
+cmake -S . -B build ^
+  -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+  -DVCPKG_TARGET_TRIPLET=x64-windows-vs2022-meshlib
 \endcode
 
-## Quick Integration Guide
+Replace the triplet with the one matching your toolset — it must be the same one the dependencies were installed with:
+
+| Visual Studio | Triplet | Platform toolset |
+| --- | --- | --- |
+| 2019 | `x64-windows-vs2019-meshlib` | v142 |
+| 2022 | `x64-windows-vs2022-meshlib` | v143 |
+| 2026 | `x64-windows-meshlib` | unpinned: newest installed |
+| 2019, Debug with `_ITERATOR_DEBUG_LEVEL=2` | `x64-windows-meshlib-iterator-debug` | v142 |
+
+\note This builds MeshLib from source (~40 GB). To consume a \b pre-built MeshLib in your own project, skip to the \ref CmakeQuickIntegration "Quick Integration Guide" below.
+
+## Quick Integration Guide {#CmakeQuickIntegration}
 
 ### Find MeshLib CMake Configuration Files
 

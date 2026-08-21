@@ -197,15 +197,16 @@ MeshViewer
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
-  \n Open Terminal and run the following command:
+  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
 \code{.sh}
-xargs brew install < /opt/meshlib/requirements/macos.txt
+xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 \endcode
+  - If you installed for the current user only, prefix the path with `~`: `~/Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`.
  3. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 ### Compile Locally
-#### Prerequisites
+#### Prerequisites {#CppSetupMacOSPrereq}
  1. **Install Homebrew**
   - Run the following command in your terminal to install Homebrew:
 \code{.sh}
@@ -383,7 +384,7 @@ Failures most often hit while following the steps above, with the message each o
 | Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. MeshLib defaults both `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `0` and refuses to compile when they disagree. | For Release, take `MeshLibDistVS19_<version>.zip` / `MeshLibDistVS22_<version>.zip` / `MeshLibDistVS26_<version>.zip` matching your toolset. For a Debug build with iterator debugging on, take `MeshLibDist_<version>-IteratorDebug.zip` and define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `2` — defining only the first one is what triggers the error. |
 | Windows, from source | `thirdparty\install.bat` finishes, but the Visual Studio solution cannot find the third-party headers and libraries. | `VCPKG_DEFAULT_TRIPLET` was not set, so vcpkg installed the plain `x64-windows` triplet instead of MeshLib's triplet with its port overlays. | Set `VCPKG_DEFAULT_TRIPLET=x64-windows-vs2019-meshlib` (VS 2019) or `x64-windows-vs2022-meshlib` (VS 2022) in the environment and rerun the script. With VS 2026 leave it unset — `install.bat` then uses `x64-windows-meshlib`, which is correct; there is no `x64-windows-vs2026-meshlib`. See step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build". |
 | Linux, macOS, WASM (consuming an installed MeshLib) | `MRMeshFwd.h:70:10: fatal error: parallel_hashmap/phmap_fwd_decl.h: No such file or directory` | MeshLib's public headers include third-party headers, and `${MESHLIB_THIRDPARTY_INCLUDE_DIR}` is missing from your target's include directories. | Add it next to `${MESHLIB_INCLUDE_DIR}`: `target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})`. See \ref MeshLibCmakeSetupGuide and [examples/cpp-examples/CMakeLists.txt](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt). |
-| macOS | CMake configuration fails inside `MRMeshConfig.cmake` with `find_dependency`: `Could NOT find Boost (missing: Boost_INCLUDE_DIR)` (Boost is just the first of several such dependencies). | The Homebrew requirements were never installed — the `.pkg` installer does not pull them in. | `xargs brew install < /opt/meshlib/requirements/macos.txt` |
+| macOS | CMake configuration fails inside `MRMeshConfig.cmake` with `find_dependency`: `Could NOT find Boost (missing: Boost_INCLUDE_DIR)` (Boost is just the first of several such dependencies). | The Homebrew requirements were never installed — the `.pkg` installer does not pull them in. | `xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt` (for a current-user-only install, prefix the path with `~`). |
 | WASM | `build_thirdparty.sh` or `build_source.sh` silently produces a native build although Emscripten was selected. | The prompt is a `read -t 5`: with no keypress within five seconds it falls back to `OFF`. Each script asks separately, so the two can disagree. | Skip the prompt entirely — `export MR_EMSCRIPTEN=ON` once, before running **both** scripts. Each script prints its resolved mode (`Emscripten ON …`); check that line before waiting on a long build. |
 | WASM, runtime | `SharedArrayBuffer is not defined` in the browser console. | The page is served without the cross-origin isolation headers that the multithreaded build needs for shared memory. | Serve with `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Opener-Policy: same-origin` — see \ref CppSetupWASMRun "Running the WebAssembly Build". |
 | Any, runtime | `glfw_error_callback: X11: The DISPLAY environment variable is missing`, then `glfwInit failed`. | `MeshViewer` was started without a graphical session. Expected over plain SSH or on a headless server — not a broken installation. | Open a desktop session, or run under a virtual display the way MeshLib CI does: `xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd` |

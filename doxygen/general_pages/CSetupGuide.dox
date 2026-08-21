@@ -86,10 +86,11 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
-  \n Open Terminal and run the following command:
+  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. This needs [Homebrew](https://brew.sh/) — install it first if you do not have it. Open Terminal and run the following command:
 \code{.sh}
-xargs brew install < /opt/meshlib/requirements/macos.txt
+xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 \endcode
+  - If you installed for the current user only, prefix the path with `~`: `~/Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`.
  3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Add the following to your `CMakeLists.txt`:
 \code{.cmake}

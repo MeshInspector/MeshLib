@@ -21,10 +21,23 @@ On Windows on Arm, use the x64 toolchain: no native Arm64 Windows build is publi
 
 There are two options: Download and Install release build or compile from sources:
 ### Installing the release build
+Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
+Take the row matching the toolset your own project is built with — a distributive built with a different MSVC toolset is not supported.
+
+| Visual Studio | Archive | vcpkg triplet | Debug `_ITERATOR_DEBUG_LEVEL` |
+|---------------|---------|---------------|-------------------------------|
+| 2019 | `MeshLibDistVS19_<version>.zip` | `x64-windows-vs2019-meshlib` | `0` |
+| 2022 | `MeshLibDistVS22_<version>.zip` | `x64-windows-vs2022-meshlib` | `0` |
+| 2026 | `MeshLibDistVS26_<version>.zip` | `x64-windows-meshlib` | `0` |
+| 2019 only (toolset `v142`), **Debug configuration only** | `MeshLibDist_<version>-IteratorDebug.zip` | `x64-windows-meshlib-iterator-debug` | `2` |
+
+The release description links the three per-Visual-Studio archives; `IteratorDebug` appears in the asset list only.
+Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it is built with the Visual Studio 2019 toolset and ships `install/app/Debug` without `install/app/Release`, so it covers neither a Release build nor another toolset.
+Whichever archive you pick, step 2 must define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to the value in the table — `0` for the three per-Visual-Studio archives, `2` for `IteratorDebug`.
+
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the **Windows built version archive** for your Visual Studio toolset: the release description links one archive per supported toolset (2019, 2022, 2026).
-  - For a Debug build with iterator debugging on, take the `IteratorDebug` archive instead. It is in the release's asset list but not in that table of links — see \ref CppSetupTroubleshooting "Troubleshooting".
+  - Download the archive for your Visual Studio toolset from the table above.
   - Extract it to a directory, e.g., `C:\meshlib-built\`.
   \n **Directory Structure After Extraction**
 \code{.cmd}
@@ -412,7 +425,7 @@ Failures most often hit while following the steps above, with the message each o
 
 | Path | Symptom | Cause | Fix |
 |------|---------|-------|-----|
-| Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. MeshLib defaults both `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `0` and refuses to compile when they disagree. | For Release, take the archive matching your toolset from the release description's links, as in step 1 of \ref CppSetupWindows "Windows". For a Debug build with iterator debugging on, take the `IteratorDebug` archive from the release's asset list and define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `2` — defining only the first one is what triggers the error. |
+| Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. MeshLib defaults both `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to `0` and refuses to compile when they disagree. | Take the archive matching your toolset and iterator-debug setting from the table in \ref CppSetupWindows "Windows", then define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to that row's value. Defining only the first one is what triggers the error. |
 | Windows, from source | `thirdparty\install.bat` finishes, but the Visual Studio solution cannot find the third-party headers and libraries. | `VCPKG_DEFAULT_TRIPLET` was not set, so vcpkg installed the plain `x64-windows` triplet instead of MeshLib's triplet with its port overlays. | Set `VCPKG_DEFAULT_TRIPLET=x64-windows-vs2019-meshlib` (VS 2019) or `x64-windows-vs2022-meshlib` (VS 2022) in the environment and rerun the script. With VS 2026 leave it unset — `install.bat` then uses `x64-windows-meshlib`, which is correct; there is no `x64-windows-vs2026-meshlib`. See step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build". |
 | Linux, macOS, WASM (consuming an installed MeshLib) | `MRMeshFwd.h:70:10: fatal error: parallel_hashmap/phmap_fwd_decl.h: No such file or directory` | MeshLib's public headers include third-party headers, and `${MESHLIB_THIRDPARTY_INCLUDE_DIR}` is missing from your target's include directories. | Add it next to `${MESHLIB_INCLUDE_DIR}`: `target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})`. See \ref MeshLibCmakeSetupGuide and [examples/cpp-examples/CMakeLists.txt](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt). |
 | macOS | CMake configuration fails inside `MRMeshConfig.cmake` with `find_dependency`: `Could NOT find Boost (missing: Boost_INCLUDE_DIR)` (Boost is just the first of several such dependencies). | The Homebrew requirements were never installed — the `.pkg` installer does not pull them in. | `xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt` (for a current-user-only install, prefix the path with `~`). |

@@ -21,10 +21,10 @@ To build MeshLib \b itself from source, install its dependencies with \b vcpkg a
 \code{.cmd}
 cmake -S . -B build ^
   -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake ^
-  -DVCPKG_TARGET_TRIPLET=x64-windows-vs2022-meshlib
+  -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
 \endcode
 
-The triplet is not the same for every toolset, and it must be the one the dependencies were actually installed with — step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build" says which applies to yours.
+`x64-windows-meshlib` is `install.bat`'s default and pins no platform toolset, so vcpkg uses the newest Visual Studio installed. The triplet must be the one the dependencies were actually installed with: if you set `VCPKG_DEFAULT_TRIPLET` in step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build" — to pin v142 or v143 on a machine that also has a newer Visual Studio — pass that same value here.
 
 \note This builds MeshLib from source (~40 GB). To consume a \b pre-built MeshLib in your own project, skip to the \ref CmakeQuickIntegration "Quick Integration Guide" below.
 

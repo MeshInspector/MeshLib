@@ -190,7 +190,8 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
         {
             auto nextWake = nextWarn;
 #ifdef __linux__
-            nextWake = std::min( nextWake, nextRepost );
+            if ( !cmd->started ) // no re-posts can help once the command is executing
+                nextWake = std::min( nextWake, nextRepost );
 #endif
             if ( cmd->callerThreadCV.wait_until( lock, nextWake, [&cmd] { return cmd->done; } ) )
                 break;

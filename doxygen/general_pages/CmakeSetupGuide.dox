@@ -16,13 +16,21 @@ MeshLib supports \b Windows via CMake, including integration with **Visual Studi
 
 To enable support in Visual Studio, ensure the **CMake component** is installed in your Visual Studio setup. Once installed, standard CMake configuration should work seamlessly.
 
-For easier setup and dependency management, we recommend using \b vcpkg as outlined in our \ref MeshLibCppSetupGuide "C++ Setup Guide". You can configure your build with the following command:
+To build MeshLib \b itself from source, install its dependencies with \b vcpkg as described in \ref CppSetupWindowsLocalBuild "Installing the local build" in the C++ Setup Guide, then configure from the repository root:
 
-\code
-cmake -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
+\code{.cmd}
+cmake -S . -B build ^
+  -DCMAKE_TOOLCHAIN_FILE=C:\path\to\vcpkg\scripts\buildsystems\vcpkg.cmake ^
+  -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
 \endcode
 
-## Quick Integration Guide
+The triplet must be the one the dependencies were actually installed with. `x64-windows-meshlib` is `install.bat`'s default, so it is the right value for **Visual Studio 2026**; on **Visual Studio 2019 or 2022**, step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build" has you set `VCPKG_DEFAULT_TRIPLET` to `x64-windows-vs2019-meshlib` or `x64-windows-vs2022-meshlib`, so pass that same value here.
+
+\warning Do not fall back to `x64-windows-meshlib` on an older toolset because it pins no `VCPKG_PLATFORM_TOOLSET` — that only governs what vcpkg builds itself. With the AWS CLI installed (step 3 of the same list), `install.bat` instead restores prebuilt packages from our public S3 cache at `s3://vcpkg-export/<vcpkg-tag>/<triplet>/`, keyed on the triplet \b name, not on your compiler. CI fills the `x64-windows-meshlib` folder from `msvc-2026` builds only, and the triplets set `VCPKG_DISABLE_COMPILER_TRACKING`, so vcpkg accepts those Visual Studio 2026 binaries on v142/v143 instead of rebuilding, and the link fails.
+
+\note This builds MeshLib from source (~40 GB). To consume a \b pre-built MeshLib in your own project, skip to the \ref CmakeQuickIntegration "Quick Integration Guide" below.
+
+## Quick Integration Guide {#CmakeQuickIntegration}
 
 ### Find MeshLib CMake Configuration Files
 
@@ -73,6 +81,8 @@ add_executable(hello main.cpp)
 target_include_directories(hello PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 target_link_libraries(hello PUBLIC MeshLib::MRMesh)
 \endcode
+
+For the `main.cpp` this expects, see \ref CppSetupVerify "Verify your setup" in the C++ Setup Guide: a self-contained program that builds a mesh, checks it, saves it and returns non-zero on failure.
 
 ### Linking Additional Third-Party Libraries
 

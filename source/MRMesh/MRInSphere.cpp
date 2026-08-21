@@ -1,9 +1,11 @@
 #include "MRInSphere.h"
 #include "MRVarBigInt.h"
+#include "MRSparsePolynomial.h"
 #include "MRInt64Mul128.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
+
 
 namespace MR
 {
@@ -63,6 +65,163 @@ SqrtVec cross( const SqrtVec & u, const SqrtVec & v, const BigInt & ew )
         mul( u[1], v[2], ew ) - mul( u[2], v[1], ew ),
         mul( u[2], v[0], ew ) - mul( u[0], v[2], ew ),
         mul( u[0], v[1], ew ) - mul( u[1], v[0], ew ) };
+}
+
+// ---------- exact graded simulation-of-simplicity evaluation on symbolically perturbed points ----------
+// used only when the not-perturbed sphere is degenerate: coincident or collinear triangle points
+// (W == 0) or rSq exactly equal to the squared circumradius (E == 0); each coordinate becomes
+// (value + eps^k), and the answer is given by the signs of the leading terms of the same predicate
+// polynomials in eps
+
+/// the ladder between the ranks, larger than the maximal degree-weight of one point (8 * 9 = 72)
+/// in the polynomials below, so the term order is lexicographic in the rank-weights and the
+/// existence sign does not depend on whether the ranks are computed among 3 or among 4 points
+constexpr std::int64_t cSosLadder = 128;
+
+/// everything above this degree is truncated in the polynomials below, which keeps the symbolic
+/// products small; it must exceed the leading (lowest surviving) degree of every polynomial whose
+/// sign is read, and the worst case over the degenerate classes and the rank permutations was
+/// found experimentally at 6 * ladder^2 + 2 (A^2 W - E t^2 for two coincident pairs of points) -
+/// value-dependent terms only appear at lower degrees than the surviving pure-perturbation terms;
+/// if it is ever not enough, the polynomial comes out empty and the asserts on the signs fire
+constexpr std::int64_t cMaxEpsDeg = 8 * cSosLadder * cSosLadder;
+
+/// sparse polynomial in the perturbation parameter, as in the other precise predicates
+using EpsPoly = SparsePolynomial<BigInt, std::int64_t, cMaxEpsDeg>;
+
+/// the sign of the polynomial for eps -> +0, which is the sign of its lowest-degree term
+int signOf( const EpsPoly & p )
+{
+    return p.empty() ? 0 : p.get().front().second.sign();
+}
+
+using EpsVec = std::array<EpsPoly, 3>;
+
+EpsPoly dot( const EpsVec & u, const EpsVec & v )
+{
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+}
+
+EpsVec cross( const EpsVec & u, const EpsVec & v )
+{
+    return {
+        u[1] * v[2] - u[2] * v[1],
+        u[2] * v[0] - u[0] * v[2],
+        u[0] * v[1] - u[1] * v[0] };
+}
+
+/// the base perturbation degrees: ladder^rank with the ranks by ascending ids
+std::array<std::int64_t, 4> sosDegrees( const VertId * ids, int n )
+{
+    std::array<int, 4> order = { 0, 1, 2, 3 };
+    std::sort( order.begin(), order.begin() + n, [&]( int l, int r ) { return ids[l] < ids[r]; } );
+    std::array<std::int64_t, 4> res = {};
+    std::int64_t deg = 1;
+    for ( int i = 0; i < n; ++i, deg *= cSosLadder )
+        res[order[i]] = deg;
+    return res;
+}
+
+/// ( pTo + delta( degTo ) ) - ( pFrom + delta( degFrom ) ), where delta( d ) = ( eps^9d, eps^3d, eps^d )
+EpsVec perturbedDiff( const Vector3i & pTo, const Vector3i & pFrom, std::int64_t degTo, std::int64_t degFrom )
+{
+    constexpr int axisMult[3] = { 9, 3, 1 };
+    EpsVec r;
+    for ( int i = 0; i < 3; ++i )
+        r[i] = EpsPoly( BigInt( std::int64_t( pTo[i] ) - pFrom[i] ),
+            axisMult[i] * degTo, BigInt( std::int64_t( 1 ) ),
+            axisMult[i] * degFrom, BigInt( std::int64_t( -1 ) ) );
+    return r;
+}
+
+struct SosQuantities
+{
+    EpsPoly W, E, A, t;
+};
+
+/// the predicate polynomials on the perturbed points; A and t are computed only for n == 4
+SosQuantities buildSosQuantities( const Vector3i * pts, const VertId * ids, int n, std::int64_t rSq )
+{
+    const auto dg = sosDegrees( ids, n );
+    const auto u = perturbedDiff( pts[1], pts[0], dg[1], dg[0] );
+    const auto v = perturbedDiff( pts[2], pts[0], dg[2], dg[0] );
+    const auto w = cross( u, v );
+    SosQuantities res;
+    res.W = dot( w, w );
+    const auto uu = dot( u, u );
+    const auto vv = dot( v, v );
+    const auto uv = dot( u, v );
+    const auto su = vv * ( uu - uv );
+    const auto sv = uu * ( vv - uv );
+    EpsVec M;
+    for ( int i = 0; i < 3; ++i )
+        M[i] = su * u[i] + sv * v[i];
+    std::vector<EpsPoly::Term> rSq4;
+    if ( rSq > 0 )
+        rSq4.emplace_back( 0, BigInt( rSq ) * 4 );
+    res.E = EpsPoly( std::move( rSq4 ) ) * res.W * res.W - dot( M, M );
+    if ( n == 4 )
+    {
+        const auto q = perturbedDiff( pts[3], pts[0], dg[3], dg[0] );
+        res.A = res.W * dot( q, q ) - dot( q, M );
+        res.t = dot( q, w );
+    }
+    return res;
+}
+
+/// resolves the existence of the sphere for the symbolically perturbed points of a degenerate triangle
+bool sosSphereExists( const Vector3i * pts, const VertId * ids, std::int64_t rSq )
+{
+    const auto qs = buildSosQuantities( pts, ids, 3, rSq );
+    assert( signOf( qs.W ) > 0 ); // the perturbed triangle is never degenerate for distinct ids
+    const int sE = signOf( qs.E );
+    assert( sE != 0 );
+    return sE > 0;
+}
+
+/// the full evaluation of the predicate on the symbolically perturbed points
+InSphereResult sosInSphereFull( const Vector3i * pts, const VertId * ids, std::int64_t rSq )
+{
+    const auto qs = buildSosQuantities( pts, ids, 4, rSq );
+    assert( signOf( qs.W ) > 0 );
+    const int sE = signOf( qs.E );
+    assert( sE != 0 );
+    if ( sE < 0 )
+        return InSphereResult::NoSphere;
+    const int sA = signOf( qs.A );
+    const int st = signOf( qs.t );
+    if ( sA < 0 && st >= 0 )
+        return InSphereResult::Inside;
+    if ( sA >= 0 && st <= 0 )
+    {
+        assert( sA != 0 || st != 0 ); // the perturbed query point is never exactly on the sphere
+        return InSphereResult::Outside;
+    }
+    // the comparison A^2 W <> E t^2 by the leading terms: a leading term of a product is the
+    // product of the leading terms, so the sign is known from the degrees alone unless they match
+    // (the leading coefficients of W and E are positive here), and the full products are expanded
+    // only on an exact tie of both the degrees and the coefficients
+    const auto & [dA, cA] = *qs.A.get().begin();
+    const auto & [dW, cW] = *qs.W.get().begin();
+    const auto & [dE, cE] = *qs.E.get().begin();
+    const auto & [dt, ct] = *qs.t.get().begin();
+    int sG;
+    if ( const auto degDiff = ( 2 * dA + dW ) - ( dE + 2 * dt ); degDiff != 0 )
+        sG = degDiff < 0 ? 1 : -1;
+    else
+    {
+        const auto coefX = cA * cA * cW;
+        const auto coefY = cE * ( ct * ct );
+        if ( coefX != coefY )
+            sG = coefX > coefY ? 1 : -1;
+        else
+        {
+            const auto G = qs.A * qs.A * qs.W - qs.E * ( qs.t * qs.t );
+            sG = signOf( G );
+            assert( sG != 0 );
+        }
+    }
+    return ( ( sA < 0 ) == ( sG > 0 ) ) ? InSphereResult::Inside : InSphereResult::Outside;
 }
 
 } // anonymous namespace
@@ -153,16 +312,121 @@ bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCo
     va_ = va.id;
     vb_ = vb.id;
     vc_ = vc.id;
-    return InSphereTester<int>::reset( va.pt, vb.pt, vc.pt, sqRadius );
+    degenerateTriangle_ = false;
+    const Vector3i pts[3] = { va.pt, vb.pt, vc.pt };
+    const VertId ids[3] = { va_, vb_, vc_ };
+    if ( InSphereTester<int>::reset( va.pt, vb.pt, vc.pt, sqRadius ) )
+    {
+        if ( E > 0 )
+            return true;
+        // rSq is exactly equal to the squared circumradius: the perturbation decides the existence
+        if ( sosSphereExists( pts, ids, sqRadius ) )
+            return true;
+        E = -1; // the perturbed sphere does not exist: poison the queries
+        return false;
+    }
+    // sides beyond the diameter and rSq strictly below the squared circumradius are stable under
+    // the perturbation, but a degenerate triangle (W == 0) must be resolved by it
+    const auto rSq4 = 4 * FastInt128( sqRadius );
+    if ( dot( Vector3i64mul{ u }, Vector3i64mul{ u } ) > rSq4
+      || dot( Vector3i64mul{ v }, Vector3i64mul{ v } ) > rSq4 )
+        return false;
+    const Vector3i64 bc = v - u;
+    if ( dot( Vector3i64mul{ bc }, Vector3i64mul{ bc } ) > rSq4 )
+        return false;
+    if ( cross( u, v ) != Vector3i64() )
+        return false; // W > 0, so the base failed on E < 0, which is stable
+
+    // closed-form resolutions of the degenerate triangles, validated against the full evaluation
+    const bool sameAB = u == Vector3i64();
+    const bool sameAC = v == Vector3i64();
+    const bool sameBC = u == v;
+    if ( int( sameAB ) + int( sameAC ) + int( sameBC ) >= 2 )
+        return false; // all three coincide: the perturbed needle-like triangle has diverging circumradius
+    if ( !( sameAB || sameAC || sameBC ) )
+        return false; // distinct collinear points: the perturbed circumradius diverges as well
+    // two coincident points separate along z after the perturbation, so the sphere exists iff
+    // 4 rSq (Vx^2 + Vy^2) > |V|^4 at the leading order, V = the third point minus the pair
+    // (V = -V for b == c, which does not change the rule)
+    const Vector3i64 V = sameAB ? v : u;
+    const auto vxy = Int64Mul128( V.x ) * Int64Mul128( V.x )
+                   + Int64Mul128( V.y ) * Int64Mul128( V.y ); // <= 2^65
+    const auto vv2 = dot( Vector3i64mul{ V }, Vector3i64mul{ V } );         // <= 2^66
+    const auto lhs = FastInt<192>( Int128Mul256( vxy ) * Int128Mul256( 4 * FastInt128( sqRadius ) ) ); // <= 2^131
+    const auto rhs = FastInt<192>( Int128Mul256( vv2 ) * Int128Mul256( vv2 ) ); // <= 2^132
+    if ( lhs < rhs )
+        return false;
+    if ( lhs == rhs && !sosSphereExists( pts, ids, sqRadius ) )
+        return false; // an exact tie of the leading rule is resolved by the full evaluation
+    // the perturbed sphere converges to the sphere via the pair and the third point, tangent to
+    // the z-axis at the pair; remember it for the closed-form queries, with the side of its center
+    // given by the leading direction of the perturbed normal (validated against the full evaluation)
+    if ( sameAB )
+    {
+        pairPt_ = a;
+        pairV_ = v;
+        pairSigma_ = vb_ < va_ ? 1 : -1;
+    }
+    else if ( sameAC )
+    {
+        pairPt_ = a;
+        pairV_ = u;
+        pairSigma_ = vc_ < va_ ? -1 : 1;
+    }
+    else
+    {
+        pairPt_ = a + Vector3i( u );
+        pairV_ = -u;
+        pairSigma_ = vc_ < vb_ ? 1 : -1;
+    }
+    degenerateTriangle_ = true;
+    return true;
 }
 
 InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) const
 {
+    if ( degenerateTriangle_ || E == 0 )
+    {
+        if ( degenerateTriangle_ )
+        {
+            // strictly inside or outside the limit sphere resolves the query in closed form,
+            // and only the points exactly on it need the full evaluation
+            const Vector3i64 g{ d.pt - pairPt_ };
+            const auto k = Int64Mul128( pairV_.x ) * Int64Mul128( pairV_.x )
+                         + Int64Mul128( pairV_.y ) * Int64Mul128( pairV_.y );
+            const auto ss = k + Int64Mul128( pairV_.z ) * Int64Mul128( pairV_.z );
+            const BigInt bk{ k }, bs{ ss };
+            const BigInt D = 4 * BigInt{ rSq } * bk - bs * bs; // >= 0 since the sphere exists
+            const auto gg = dot( Vector3i64mul{ g }, Vector3i64mul{ g } );
+            const auto gvxy = Int64Mul128( g.x ) * Int64Mul128( pairV_.x )
+                            + Int64Mul128( g.y ) * Int64Mul128( pairV_.y );
+            const auto gcrs = Int64Mul128( g.y ) * Int64Mul128( pairV_.x )
+                            - Int64Mul128( g.x ) * Int64Mul128( pairV_.y );
+            // |g - center|^2 - rSq multiplied by k: ( k |g|^2 - s (g.V)xy ) - sigma sqrt(D) ( gy Vx - gx Vy )
+            const SqrtNum val{ bk * BigInt{ gg } - bs * BigInt{ gvxy },
+                BigInt{ std::int64_t( -pairSigma_ ) } * BigInt{ gcrs } };
+            const int sg = D.sign() > 0 ? signOf( val, D ) : val.x.sign(); // D == 0 on the existence tie
+            if ( sg )
+                return sg < 0 ? InSphereResult::Inside : InSphereResult::Outside;
+        }
+        else
+        {
+            // an exact rSq == squared circumradius: only the "exactly on the sphere" queries
+            // reach the full evaluation
+            const auto res = InSphereTester<int>::operator()( d.pt );
+            if ( res != InSphereResult::OnSphere )
+                return res;
+        }
+        // b and c are reconstructed exactly from the stored differences
+        const Vector3i pts[4] = { a, a + Vector3i( u ), a + Vector3i( v ), d.pt };
+        const VertId ids[4] = { va_, vb_, vc_, d.id };
+        const auto res = sosInSphereFull( pts, ids, rSq );
+        assert( res != InSphereResult::NoSphere ); // the existence was resolved positively in reset()
+        return res;
+    }
     const auto res = InSphereTester<int>::operator()( d.pt );
     if ( res != InSphereResult::OnSphere )
         return res;
-    if ( E == 0 )
-        return InSphereResult::Outside; // a perturbation of the triangle breaks the sphere's existence here
 
     // the sphere points with their ids; b and c are reconstructed exactly from the stored differences
     const PreciseVertCoords vs[4] = { { va_, a }, { vb_, a + Vector3i( u ) }, { vc_, a + Vector3i( v ) }, d };
@@ -234,6 +498,15 @@ bool FastInSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVe
     if ( !InSphereTesterSoS::reset( va, vb, vc, sqRadius ) )
         return false;
 
+    if ( degenerateTriangle_ )
+    {
+        // only the perturbed sphere exists, there is no center to compute:
+        // every query goes via the full symbolic evaluation of the base class
+        cc_ = hn_ = {};
+        tol_ = 0;
+        return true;
+    }
+
     // circumcenter - a = M / (2W) lies in the plane of the triangle and the height S * w / (2W^2)
     // is orthogonal to it, so the sum below cannot lose precision to cancellation;
     // W, M, E cannot be recomputed in double: E = 4 rSq W^2 - |M|^2 is a difference of two values
@@ -265,6 +538,8 @@ bool FastInSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVe
 
 InSphereResult FastInSphereTesterSoS::operator()( const PreciseVertCoords & d ) const
 {
+    if ( degenerateTriangle_ )
+        return InSphereTesterSoS::operator()( d ); // no exact sphere to filter against
     assert( E >= 0 ); // the last reset() must have returned true
     // sqr( distance from d to the center ) - rSq, which is negative exactly when d is inside
     const auto e = ( Vector3d( Vector3i64{ d.pt - a } ) - cc_ - hn_ ).lengthSq() - double( rSq );
@@ -277,6 +552,8 @@ InSphereResult FastInSphereTesterSoS::operator()( const PreciseVertCoords & d ) 
 
 bool FastInSphereTesterSoS::outsideBothSpheres( const Vector3i & d ) const
 {
+    if ( degenerateTriangle_ )
+        return false; // the answer for the perturbed spheres would need the id of d: never prune
     assert( E >= 0 ); // the last reset() must have returned true
     const Vector3i64 q{ d - a };
 

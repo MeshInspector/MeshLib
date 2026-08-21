@@ -8,6 +8,7 @@
 This guide explains how to set up MeshLib for C++ development on \ref CppSetupWindows "Windows", \ref CppSetupLinux "Linux", and \ref CppSetupMacOS "macOS",
 and also shows how to \ref CppSetupWASM "build WebAssembly" modules using MeshLib with Emscripten.
 It covers all the prerequisites and setup steps for each platform, making it easy to get started.
+When you are done, confirm the result with \ref CppSetupVerify "Verify your setup" — two of its three checks need no graphical session and report failure through their exit status.
 If a step fails, see \ref CppSetupTroubleshooting "Troubleshooting" at the end of this page.
 
 \subsection CppSetupWindows Windows
@@ -39,6 +40,8 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
 \code{.cmd}
 xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 \endcode
+ 3. **Verify the installation**
+ \n Run the checks in \ref CppSetupVerify "Verify your setup": `C:\meshlib-built\install\app\Release\meshconv.exe --help` needs no display and its exit status is the signal, while `C:\meshlib-built\install\app\Release\MeshViewer.exe` is the interactive check.
 
 ### Compile Locally
 #### Prerequisites
@@ -111,6 +114,8 @@ cd vcpkg
   - Make sure you have the "C++ CMake tools for Windows" component installed.
   - Open `MeshLib/CMakeLists.txt` in Visual Studio (File - Open - CMake).
   - Build the project and run the application.
+ 7. **Verify the build**
+  - Run the checks in \ref CppSetupVerify "Verify your setup": `install\app\Release\meshconv.exe --help` (headless, exit status is the signal) and `install\app\Release\MeshViewer.exe` (interactive).
 
 \subsection CppSetupLinux Linux
 
@@ -126,10 +131,11 @@ mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
 \code{.sh}
 sudo apt install ./<downloaded>.deb
 \endcode
- 3. **Open MeshViewer**
- \n To verify that everything is fine you can run MeshViewer application:
+ 3. **Verify the installation**
+ \n Run the checks in \ref CppSetupVerify "Verify your setup". The `meshconv` one needs no graphical session and reports failure through its exit status:
 \code{.sh}
-MeshViewer
+meshconv --help   # headless, non-zero exit if the installation is incomplete
+MeshViewer        # interactive, requires a graphical session
 \endcode
  4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
@@ -169,16 +175,17 @@ MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
 sudo apt install ./distr/meshlib-dev.deb
 \endcode
 \note `distribution.sh` builds a `.deb`, so this step is Ubuntu/Debian-only. On other distributions skip it and use the locally built binaries directly, as in the next step.
- 5. **Open MeshViewer**
- \n To verify that everything is fine you can run MeshViewer application:
-  - if you previously have installed `meshlib` to your system:
+ 5. **Verify the build**
+ \n Run the checks in \ref CppSetupVerify "Verify your setup". The headless one, whose exit status is the signal:
+  - if you installed the package in the previous step:
 \code{.sh}
-MeshViewer
+meshconv --help
 \endcode
-  - or run locally built binary
+  - or the locally built binary:
 \code{.sh}
-./build/Release/bin/MeshViewer
+./build/Release/bin/meshconv --help
 \endcode
+ \n `MeshViewer` (`./build/Release/bin/MeshViewer`) is the interactive check and requires a graphical session.
  6. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
@@ -196,7 +203,13 @@ MeshViewer
 xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 \endcode
   - If you installed for the current user only, prefix the path with `~`: `~/Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`.
- 3. **Integrate Using CMake**
+ 3. **Verify the installation**
+ \n Run the checks in \ref CppSetupVerify "Verify your setup". `meshconv` is not on `PATH`; it lives in the framework and needs no graphical session:
+\code{.sh}
+/Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
+\endcode
+ \n A non-zero exit here usually means the Homebrew requirements above are missing.
+ 4. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 ### Compile Locally
@@ -232,9 +245,11 @@ cd MeshLib
 ./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 \endcode
- 4. **Run example**
+ 4. **Verify the build**
+ \n Run the checks in \ref CppSetupVerify "Verify your setup" — `./build/Release/bin/meshconv --help` needs no graphical session and its exit status is the signal.
+ 5. **Run example**
 We suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
- 5. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ 6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
 \subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
 
@@ -370,6 +385,26 @@ if __name__ == '__main__':
   - Open your browser and go to: `http://127.0.0.1:8000`
   - Ensure headers are set correctly for multithreading. Check the browser console for errors if needed.
 
+\subsection CppSetupVerify Verify your setup
+
+Two of the three checks below need no graphical session and report failure through their exit status — use those on a server, in a container, in CI or from a coding agent.
+
+**1. Run `meshconv`.** It ships in every package and needs no display. It exits `0` only if the binary and all of its shared libraries load, so a non-zero status means the installation is incomplete:
+\code{.sh}
+meshconv --help                                                              # Linux: on PATH from /usr/local/bin
+/Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help   # macOS: not on PATH
+\endcode
+\code{.cmd}
+install\app\Release\meshconv.exe --help
+\endcode
+A broken installation fails loudly here, e.g. `error while loading shared libraries: libMRIOExtras.so` with exit `127`.
+
+**2. Build and run a program against MeshLib.** The strongest check: it verifies the headers, the libraries and linking, which running a prebuilt binary does not. Take the complete `CMakeLists.txt` from \ref MeshLibCmakeSetupGuide "the CMake Setup Guide" and use this as `main.cpp`:
+\include VerifySetup.dox.cpp
+It prints `verts=8 faces=12`, writes a 684-byte `cube.stl` next to the executable, and returns non-zero on any mismatch or save error. MeshLib CI compiles it on every supported platform as `examples/cpp-examples/VerifySetup.dox.cpp`.
+
+**3. Open `MeshViewer`** — the interactive check, and the only one that **requires a graphical session**. Without one it logs `X11: The DISPLAY environment variable is missing` and `glfwInit failed`. Its exit status is not a dependable success signal (`1` on the Ubuntu package, reported as `0` on other builds), so never gate an automated check on it — use check 1 or 2 for that.
+
 \subsection CppSetupTroubleshooting Troubleshooting
 
 Failures most often hit while following the steps above, with the message each one actually produces.
@@ -382,7 +417,8 @@ Failures most often hit while following the steps above, with the message each o
 | macOS | CMake configuration fails inside `MRMeshConfig.cmake` with `find_dependency`: `Could NOT find Boost (missing: Boost_INCLUDE_DIR)` (Boost is just the first of several such dependencies). | The Homebrew requirements were never installed — the `.pkg` installer does not pull them in. | `xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt` (for a current-user-only install, prefix the path with `~`). |
 | WASM | `build_thirdparty.sh` or `build_source.sh` silently produces a native build although Emscripten was selected. | The prompt is a `read -t 5`: with no keypress within five seconds it falls back to `OFF`. Each script asks separately, so the two can disagree. | Skip the prompt entirely — `export MR_EMSCRIPTEN=ON` once, before running **both** scripts. Each script prints its resolved mode (`Emscripten ON …`); check that line before waiting on a long build. |
 | WASM, runtime | `SharedArrayBuffer is not defined` in the browser console. | The page is served without the cross-origin isolation headers that the multithreaded build needs for shared memory. | Serve with `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Opener-Policy: same-origin` — see \ref CppSetupWASMRun "Running the WebAssembly Build". |
-| Any, runtime | `glfw_error_callback: X11: The DISPLAY environment variable is missing`, then `glfwInit failed`. | `MeshViewer` was started without a graphical session. Expected over plain SSH or on a headless server — not a broken installation. | Open a desktop session, or run under a virtual display the way MeshLib CI does: `xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd` |
+| Any, runtime | `glfw_error_callback: X11: The DISPLAY environment variable is missing`, then `glfwInit failed`. | `MeshViewer` was started without a graphical session. Expected over plain SSH or on a headless server — not a broken installation. Its exit status is not a dependable success signal (`1` on the Ubuntu package, reported as `0` on other builds), so do not gate an automated check on it. | Open a desktop session, or run under a virtual display the way MeshLib CI does: `xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd`. To check an installation without a display, use \ref CppSetupVerify "Verify your setup" instead. |
+| Windows, runtime | `MeshViewer.exe` logs `icons path …\app\Release\resource\logos\X1 is not directory` (and `X3`). | Benign: those logo directories are not part of the release archive. The viewer still starts, creates its window and renders. | Nothing to fix — this is not an installation problem. |
 
 ### Where the logs are
 

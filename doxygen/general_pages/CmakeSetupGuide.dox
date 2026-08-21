@@ -74,6 +74,8 @@ target_include_directories(hello PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPA
 target_link_libraries(hello PUBLIC MeshLib::MRMesh)
 \endcode
 
+For the `main.cpp` this expects, see \ref CppSetupVerify "Verify your setup" in the C++ Setup Guide: a self-contained program that builds a mesh, checks it, saves it and returns non-zero on failure.
+
 ### Linking Additional Third-Party Libraries
 
 Only if \b your \b own code links a third-party library bundled with MeshLib (rather than just using MeshLib's API), add the directory those libraries live in:

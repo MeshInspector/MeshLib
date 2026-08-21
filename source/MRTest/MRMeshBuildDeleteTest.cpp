@@ -2,6 +2,7 @@
 #include <MRMesh/MRMeshTopology.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshFixer.h>
+#include <MRMesh/MRVertDuplication.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRExpandShrink.h>
 #include <MRMesh/MRRegionBoundary.h>
@@ -146,11 +147,16 @@ TEST(MRMesh, DuplicateMultiHoleVertices)
 
     // duplication of the central vertex alone makes the reconstruction lossless
     Mesh fixed = mesh;
-    EXPECT_EQ( duplicateMultiHoleVertices( fixed, 2 ), 1 );
+    std::vector<MeshBuilder::VertDuplication> dups;
+    EXPECT_EQ( duplicateMultiHoleVertices( fixed, 2, &dups ), 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].dupVert, 7_v );
     EXPECT_EQ( fixed.points.size(), 8 );
     EXPECT_EQ( fixed.topology.numValidVerts(), 8 );
     EXPECT_EQ( fixed.topology.numValidFaces(), 3 );
-    EXPECT_EQ( duplicateMultiHoleVertices( fixed, 2 ), 0 );
+    EXPECT_EQ( duplicateMultiHoleVertices( fixed, 2, &dups ), 0 );
+    EXPECT_TRUE( dups.empty() );
 
     const auto fixedTriangulation = fixed.topology.getTriangulation();
     auto rebuiltTopology = MeshBuilder::fromTriangles( fixedTriangulation );

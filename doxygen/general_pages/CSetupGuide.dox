@@ -35,7 +35,7 @@ On Windows on Arm, use the x64 toolchain: no native Arm64 Windows build is publi
 
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the latest **Windows built version archive** (E.g. MeshLibDist_v3.0.0.40.zip).
+  - Download the **Windows built version archive** for your Visual Studio toolset: the release description links one archive per supported toolset (2019, 2022, 2026).
   - Extract it to a directory, e.g., `C:\meshlib-built\`.
   \n **Directory Structure After Extraction**
 \code{.cmd}
@@ -71,13 +71,11 @@ sudo apt install ./<downloaded>.deb
  \n Add the following to your `CMakeLists.txt`:
 \code{.cmake}
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
-`\endcode
+\endcode
 
 ### macOS
  1. **Download the Installer**
- \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the `.pkg` for your CPU (run `uname -m` if you are unsure):
-  - Apple silicon (M-series, `arm64`): `meshlib_<version>_arm64.pkg`
-  - Intel (`x86_64`): `meshlib_<version>_x64.pkg`
+ \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links one `.pkg` installer for macOS Arm (Apple silicon) and one for macOS x64 (Intel). Take the one matching `uname -m` (`arm64` or `x86_64`).
  2. **Install**
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
@@ -91,7 +89,7 @@ xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requ
  \n Add the following to your `CMakeLists.txt`:
 \code{.cmake}
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
-`\endcode
+\endcode
 
 ## Try MeshLib with C Examples
 

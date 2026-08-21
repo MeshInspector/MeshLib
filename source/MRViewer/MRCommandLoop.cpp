@@ -3,6 +3,7 @@
 #include "MRPch/MRSpdlog.h"
 #include <GLFW/glfw3.h>
 #include <assert.h>
+#include <algorithm>
 #include <chrono>
 
 namespace MR
@@ -161,15 +162,25 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
         // still captured by it.
         // And wait with a timeout, because the main thread can be parked in glfwWaitEvents()
         // having never woken on the event posted above; an untimed wait makes that an indefinite
-        // and silent block, while re-posting the event turns it into a logged retry.
-        constexpr auto cWaitStep = std::chrono::seconds( 5 );
-        for ( int step = 1; !cmd->done; ++step )
+        // and silent block, while the warning below leaves a trace of it in the log.
+        // The step doubles up to cMaxWaitStep, so a main thread that is merely busy for a long
+        // time - or a process that never runs the loop at all - does not flood the log.
+        constexpr auto cMaxWaitStep = std::chrono::seconds( 300 );
+        auto waitStep = std::chrono::seconds( 5 );
+        auto waited = std::chrono::seconds( 0 );
+        while ( !cmd->callerThreadCV.wait_for( lock, waitStep, [&cmd] { return cmd->done; } ) )
         {
-            if ( cmd->callerThreadCV.wait_for( lock, cWaitStep, [&cmd] { return cmd->done; } ) )
-                break;
-            spdlog::warn( "CommandLoop::addCommand_: the main thread has not run a queued command in {} seconds, re-posting the wakeup event",
-                step * cWaitStep.count() );
+            waited += waitStep;
+            waitStep = std::min( waitStep * 2, cMaxWaitStep );
+            spdlog::warn( "CommandLoop::addCommand_: the main thread has not run a queued command in {} seconds",
+                waited.count() );
+#ifdef __linux__
+            // Re-post the wakeup only on Linux: there the event posted above can be genuinely lost,
+            // and re-posting it is what gets the main thread out of glfwWaitEvents(). Elsewhere the
+            // event is delivered reliably, so the main thread is busy or blocked for another reason
+            // and one more event would change nothing.
             getViewerInstance().postEmptyEvent();
+#endif
         }
 
         if ( exception )

@@ -47,28 +47,38 @@ static EdgeId findNoLeftEdgeAboveLimit( const MeshTopology & m, VertId a, int li
 
 int duplicateMultiHoleVertices( Mesh & mesh, int maxHoles )
 {
+    MR_TIMER;
     assert( maxHoles >= 1 );
-    int duplicates = 0;
-    const auto lastVert = mesh.topology.lastValidVert();
-    for ( VertId v{0}; v <= lastVert; ++v )
+
+    VertBitSet vertsForDup( mesh.topology.vertSize() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
-        EdgeId e1 = findNoLeftEdgeAboveLimit( mesh.topology, v, maxHoles );
-        if ( !e1.valid() )
-            continue;
+        if ( findNoLeftEdgeAboveLimit( mesh.topology, v, maxHoles ).valid() )
+            vertsForDup.set( v );
+    } );
 
-        EdgeId e0 = e1;
-        while ( mesh.topology.right( e0 ).valid() )
-            e0 = mesh.topology.prev( e0 );
+    int duplicates = 0;
+    for ( auto v : vertsForDup )
+    {
+        for (;;)
+        {
+            EdgeId e1 = findNoLeftEdgeAboveLimit( mesh.topology, v, maxHoles );
+            if ( !e1.valid() )
+                break;
 
-        // unsplice [e0, e1] and create new vertex for it
-        mesh.topology.splice( mesh.topology.prev( e0 ), e1 );
-        assert( !mesh.topology.org( e0 ).valid() );
+            EdgeId e0 = e1;
+            while ( mesh.topology.right( e0 ).valid() )
+                e0 = mesh.topology.prev( e0 );
 
-        auto vDup = mesh.addPoint( mesh.points[v] );
-        mesh.topology.setOrg( e0, vDup );
+            // unsplice [e0, e1] and create new vertex for it
+            mesh.topology.splice( mesh.topology.prev( e0 ), e1 );
+            assert( !mesh.topology.org( e0 ).valid() );
 
-        ++duplicates;
-        --v;
+            auto vDup = mesh.addPoint( mesh.points[v] );
+            mesh.topology.setOrg( e0, vDup );
+
+            ++duplicates;
+        }
     }
 
     return duplicates;

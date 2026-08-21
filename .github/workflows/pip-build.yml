@@ -348,7 +348,7 @@ jobs:
             PYTHON_LIB_DIR=$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBDIR)
 
             LD_LIBRARY_PATH=${PYTHON_LIB_DIR} \
-            uv run \
+            xvfb-run -a uv run \
               --python ${PYTHON_VER} \
               --with-requirements ${REQUIREMENTS_FILE} \
               --with pytest \

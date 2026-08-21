@@ -11,6 +11,7 @@
 #include "MRProgressCallback.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
+#include <cassert>
 
 namespace MR
 {
@@ -297,6 +298,8 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
             if ( !tester.reset( pj, p0, pi, data.intRadiusSq ) )
                 continue;
             ++myStats.touchableTris;
+            // the deduplication above guarantees three distinct points, whose sphere is never symbolic
+            assert( !tester.degenerateTriangle() );
             // the shadow depends only on the existence of the touching balls, not on their emptiness,
             // and dropping before the tests below shortens their scans as well
             dropShadowed( neis, i, j, p0.pt, tester, myStats );

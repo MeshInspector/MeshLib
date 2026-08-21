@@ -22,17 +22,18 @@ On Windows on Arm, use the x64 toolchain: no native Arm64 Windows build is publi
 There are two options: Download and Install release build or compile from sources:
 ### Installing the release build
 Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
-Take the row matching the toolset your own project is built with — a distributive built with a different MSVC toolset is not supported.
+Take the row matching the toolset your own project is built with, or an older one: MSVC keeps its `v140` to `v145` build tools (Visual Studio 2015 to 2026) [binary-compatible](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017), so the `VS19` archive links into a Visual Studio 2022 or 2026 project as well — the link itself must be done by the newer toolset. The opposite direction does not work: older build tools accept a newer DLL only when its exports are `extern "C"`, and MeshLib exports C++.
+Matching your own toolset stays the tested configuration, though: MeshLib compiles with `/std:c++latest` (`source/common.props`), and MSVC's standard library excludes `/std:c++latest` features from that binary-compatibility promise.
 
-| Visual Studio | Archive | vcpkg triplet | Debug `_ITERATOR_DEBUG_LEVEL` |
+| Built with | Archive | vcpkg triplet | Debug `_ITERATOR_DEBUG_LEVEL` |
 |---------------|---------|---------------|-------------------------------|
 | 2019 | `MeshLibDistVS19_<version>.zip` | `x64-windows-vs2019-meshlib` | `0` |
 | 2022 | `MeshLibDistVS22_<version>.zip` | `x64-windows-vs2022-meshlib` | `0` |
 | 2026 | `MeshLibDistVS26_<version>.zip` | `x64-windows-meshlib` | `0` |
-| 2019 only (toolset `v142`), **Debug configuration only** | `MeshLibDist_<version>-IteratorDebug.zip` | `x64-windows-meshlib-iterator-debug` | `2` |
+| 2019 (toolset `v142`), **Debug configuration only** | `MeshLibDist_<version>-IteratorDebug.zip` | `x64-windows-meshlib-iterator-debug` | `2` |
 
 The release description links the three per-Visual-Studio archives; `IteratorDebug` appears in the asset list only.
-Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it is built with the Visual Studio 2019 toolset and ships `install/app/Debug` without `install/app/Release`, so it covers neither a Release build nor another toolset.
+Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it ships `install/app/Debug` without `install/app/Release`, so it covers no Release build — but being a `v142` build it serves a newer Visual Studio too, under the rule above.
 Whichever archive you pick, step 2 must define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to the value in the table — `0` for the three per-Visual-Studio archives, `2` for `IteratorDebug`.
 
  1. **Download and Extract the Built Version**

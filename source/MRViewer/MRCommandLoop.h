@@ -70,6 +70,8 @@ private:
         // set under CommandLoop::mutex_ once the command was executed or dropped;
         // the predicate a blocked caller waits on, see addCommand_
         bool done{ false };
+        // set under CommandLoop::mutex_ in `removeCommands`: `done`, but never executed
+        bool dropped{ false };
     };
 
     StartPosition state_{ StartPosition::AfterWindowInit };

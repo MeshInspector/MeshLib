@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <algorithm>
 #include <chrono>
+#include <stdexcept>
 
 namespace MR
 {
@@ -24,7 +25,9 @@ void CommandLoop::setMainThreadId( const std::thread::id& id )
 
 std::thread::id CommandLoop::getMainThreadId()
 {
-    return instance_().mainThreadId_;
+    auto& inst = instance_();
+    std::unique_lock<std::mutex> lock( inst.mutex_ ); // `setMainThreadId` runs on the launch thread
+    return inst.mainThreadId_;
 }
 
 void CommandLoop::setState( StartPosition state )
@@ -117,6 +120,7 @@ void CommandLoop::removeCommands( bool closeLoop )
             auto cmd = std::move( inst.commands_.front() );
             inst.commands_.pop();
             cmd->done = true;
+            cmd->dropped = true; // woken, but the command will never be executed
             droppedCommands.emplace_back( std::move( cmd ) );
         }
     }
@@ -160,7 +164,16 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
     if ( inst.queueClosed_ )
     {
         spdlog::debug( "CommandLoop::addCommand_: cannot accept new command because it is closed" );
+        // a non-blocking command is dropped as before; a blocking caller must not be told it ran
+        if ( blockThread )
+            throw std::runtime_error( "Viewer command loop is stopped, cannot run the command" );
         return;
+    }
+    // no `setMainThreadId` yet: nobody will ever call `processCommands`, so the wait below cannot end
+    if ( blockThread && inst.mainThreadId_ == std::thread::id{} )
+    {
+        spdlog::debug( "CommandLoop::addCommand_: cannot block on a command loop that was never started" );
+        throw std::runtime_error( "Viewer command loop is not running, cannot run the command" );
     }
     inst.commands_.push( cmd );
 
@@ -227,6 +240,11 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
 #endif
             lock.lock();
         }
+
+        // `done` covers both outcomes, so tell them apart: a caller woken by `removeCommands`
+        // must not return as if its command had run
+        if ( cmd->dropped )
+            throw std::runtime_error( "Viewer command loop stopped before the command was executed" );
 
         if ( exception )
             std::rethrow_exception( exception );

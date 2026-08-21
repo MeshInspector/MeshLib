@@ -58,6 +58,9 @@ jobs:
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
+            # mrbind and the bindings use the PGO keg fetched from
+            # MeshInspector/toolchains releases; the app stays on AppleClang.
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
             # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
             runner: macos-14
             instance: macos-14
@@ -95,6 +98,10 @@ jobs:
           # https://github.com/actions/checkout/issues/1779
           # Retried via retry.sh: submodule endpoints occasionally 500.
           bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+
+      - name: Install llvm-pgo keg
+        if: ${{ contains(matrix.llvm-prefix-template, 'llvm-pgo') }}
+        uses: ./.github/actions/install-llvm-pgo-keg
 
       - name: Install thirdparty libs
         id: thirdparty

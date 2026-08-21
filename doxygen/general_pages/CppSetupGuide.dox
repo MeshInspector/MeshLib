@@ -112,6 +112,8 @@ git clone https://github.com/MeshInspector/MeshLib.git
  \n Run `scripts/clone_submodules_windows.ps1` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Windows.
  3. \b (Optional) **Speed Up with AWS CLI**
   - Optionally, [install AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to speed up the process before using the MeshLib Installation Script. Restart your terminal after installation.
+  - It also changes \b how the dependencies arrive: with the CLI on `PATH` the script restores prebuilt packages from our public S3 cache (`s3://vcpkg-export/<vcpkg-tag>/<triplet>/`, no credentials needed) instead of compiling them locally. That cache is keyed on the triplet \b name, not on your compiler, and the `x64-windows-meshlib` folder is written by Visual Studio 2026 builds only.
+  - So with the AWS CLI installed, the `VCPKG_DEFAULT_TRIPLET` of step 4 is what selects the toolset your dependencies were built with, not just their port overlays: on **Visual Studio 2019 or 2022** it is mandatory, or you link v145 binaries into a v142/v143 project and the link fails. Without the CLI the cache is off and every package is compiled with your own toolset.
  4. **Install MeshLib [Third-Party Dependencies](\ref ThirdParty)**
   - Execute the following commands to run the MeshLib third-party installation script:
 \code{.cmd}

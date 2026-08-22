@@ -97,11 +97,13 @@ jobs:
       - name: Enable GCC 11 toolset
         run: |
           source /opt/rh/gcc-toolset-11/enable
+          $(: A GITHUB_PATH entry would make the runner drop this PATH export,
+             losing the toolset, so the keg goes into the same export. )
+          PATH="${LLVM_PREFIX}/bin:${PATH}"
           for VAR in PATH ; do
             echo "${VAR}=${!VAR}" >> $GITHUB_ENV
             echo "${VAR}=${!VAR}"
           done
-          echo "${LLVM_PREFIX}/bin" >> $GITHUB_PATH
 
       - name: Checkout
         uses: actions/checkout@v7

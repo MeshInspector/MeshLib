@@ -22,9 +22,12 @@ export CMAKE_PREFIX_PATH="$LLVM_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 
 # The keg ships no libLLVM.so, so link LLVM statically; its archives hold
 # ThinLTO bitcode, which only the keg's own lld can link (and CMake < 3.29
-# ignores CMAKE_LINKER_TYPE). No libunwind.a in the keg: libgcc_eh unwinds.
-# Presetting ZSTD_STATIC keeps dynamic zstd (static-zstd is a macOS-only quirk).
+# ignores CMAKE_LINKER_TYPE). Preset the find_library vars with absolute paths
+# (relative values get absolutized against the source dir): no libunwind.a in
+# the keg -- libgcc_eh unwinds; dynamic zstd (static-zstd is a macOS quirk).
+GCC_EH="$(clang -print-file-name=libgcc_eh.a)"
 CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DMRBIND_STATIC_BUILD=ON -DMRBIND_FORCE_LLVM_STATIC=ON -DUNWIND_STATIC=-lgcc_eh -DZSTD_STATIC=-lzstd \
+    -DMRBIND_STATIC_BUILD=ON -DMRBIND_FORCE_LLVM_STATIC=ON \
+    -DUNWIND_STATIC="$GCC_EH" -DZSTD_STATIC=/usr/lib64/libzstd.so \
     -DCMAKE_EXE_LINKER_FLAGS=--ld-path="$LLVM_PREFIX/bin/ld.lld"
 cmake --build build -j$JOBS

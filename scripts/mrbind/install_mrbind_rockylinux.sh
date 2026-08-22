@@ -15,8 +15,9 @@ rm -rf build
 # Guess the number of build threads.
 [[ ${JOBS:=} ]] || JOBS=$(nproc)
 
-# LLVM_PREFIX selects a keg by full path; default to the image's PGO clang.
-[[ -n "${LLVM_PREFIX:-}" ]] || LLVM_PREFIX=/opt/llvm-pgo-dylib-22.1.8
+# The CI workflows pass LLVM_PREFIX in the environment (a single definition
+# next to the image's Dockerfile pin); local runs must set it explicitly.
+: "${LLVM_PREFIX:?point LLVM_PREFIX at the clang installation, e.g. /opt/llvm-pgo-dylib-22.1.8}"
 export PATH="$LLVM_PREFIX/bin:$PATH"
 export CMAKE_PREFIX_PATH="$LLVM_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 

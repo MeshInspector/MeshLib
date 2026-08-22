@@ -185,7 +185,7 @@ jobs:
             -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang 21' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
       - name: MRMesh Exported Symbols
-        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
+        run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | /opt/llvm-pgo-22.1.8/bin/llvm-cxxfilt
 
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind }}

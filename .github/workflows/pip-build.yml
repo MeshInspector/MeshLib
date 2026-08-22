@@ -87,6 +87,11 @@ on:
         required: false
         type: boolean
 
+env:
+  # The image's -O3+PGO clang keg (see docker/rockylinux8-vcpkgDockerfile). The
+  # rocky wheel job prepends its bin to PATH, so the matrix uses bare clang++.
+  LLVM_PREFIX: /opt/llvm-pgo-dylib-22.1.8
+
 jobs:
   setup:
     timeout-minutes: 5
@@ -132,18 +137,18 @@ jobs:
           rules: |
             - extend:
                 # gcc-install-dir: GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` makes the Build and
-                # bindings steps (always clang++) use libstdc++11 instead of Clang's default libstdc++15 -
+                # bindings steps (always clang++) use libstdc++11 instead of Clang's default libstdc++13 -
                 # matching the vcpkg deps, and compiling the bindings ~11% faster.
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
                   runner: ubuntu-latest
-                  compiler: /usr/bin/clang++
+                  compiler: clang++
                   container-prefix: ""
                   gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
                 - platform: aarch64
                   os: rockylinux8-vcpkg-arm64
                   runner: ubuntu-24.04-arm
-                  compiler: /usr/bin/clang++
+                  compiler: clang++
                   container-prefix: arm64v8/
                   gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/aarch64-redhat-linux/11
             - if: ${{ inputs.disable_manylinux }}
@@ -170,11 +175,11 @@ jobs:
             - extend:
                 - platform: x86_64
                   runner: ubuntu-latest
-                  compiler: /usr/bin/clang++
+                  compiler: clang++
                   container-prefix: ""
                 - platform: aarch64
                   runner: ubuntu-24.04-arm
-                  compiler: /usr/bin/clang++
+                  compiler: clang++
                   container-prefix: arm64v8/
             - extend:
                 - py-version: "3.8"
@@ -261,6 +266,11 @@ jobs:
           # Retried via retry.sh: submodule endpoints occasionally 500.
           bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
 
+      - name: Add the LLVM keg to PATH
+        # Via GITHUB_ENV, like build-test-linux-vcpkg.yml: a GITHUB_PATH entry
+        # makes the runner drop any PATH exported through GITHUB_ENV.
+        run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
+
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind
         with:
@@ -291,7 +301,7 @@ jobs:
         # The stub works around libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships
         # 11.2.1): Clang emits an extern ref to path::_List::type, which EL8 defines in no library.
         run: |
-          /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
+          clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
           make -f scripts/mrbind/generate.mk -B --trace \
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \

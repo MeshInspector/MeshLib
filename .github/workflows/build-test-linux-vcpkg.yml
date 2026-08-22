@@ -35,6 +35,12 @@ on:
         required: false
         type: boolean
 
+env:
+  # The image's -O3+PGO clang keg (see docker/rockylinux8-vcpkgDockerfile). The
+  # keg's bin is prepended to PATH below, so steps use bare clang++/clang/
+  # llvm-cxxfilt and the matrix stays version-free.
+  LLVM_PREFIX: /opt/llvm-pgo-dylib-22.1.8
+
 jobs:
   linux-vcpkg-build-test:
     timeout-minutes: 50
@@ -46,29 +52,29 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 21, GCC 11]
+        compiler: [Clang, GCC 11]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
-          # Do not run Debug Clang 21 build on every commit (but only once a day)
+          # Do not run Debug Clang build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 21
+            compiler: Clang
             config: Debug
           # Do not run Release GCC 11 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 11
             config: Release
         include:
-          - compiler: Clang 21
-            cxx-compiler: /usr/bin/clang++-21
-            c-compiler: /usr/bin/clang-21
+          - compiler: Clang
+            cxx-compiler: clang++
+            c-compiler: clang
             cxx-standard: 23
           - compiler: GCC 11
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
             c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
           # GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` (Clang 16+) makes the Build (Clang rows)
-          # and bindings steps use libstdc++11 instead of Clang's default libstdc++15 - matching g++ and
+          # and bindings steps use libstdc++11 instead of Clang's default libstdc++13 - matching g++ and
           # the vcpkg deps, and compiling the bindings ~11% faster.
           - arch: x64
             os: ubuntu-latest
@@ -91,6 +97,9 @@ jobs:
       - name: Enable GCC 11 toolset
         run: |
           source /opt/rh/gcc-toolset-11/enable
+          # A GITHUB_PATH entry would make the runner drop this PATH export,
+          # losing the toolset, so the keg goes into the same export.
+          PATH="${LLVM_PREFIX}/bin:${PATH}"
           for VAR in PATH ; do
             echo "${VAR}=${!VAR}" >> $GITHUB_ENV
             echo "${VAR}=${!VAR}"
@@ -181,7 +190,7 @@ jobs:
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_GTK=ON
             -DMRVIEWER_WITH_BUNDLED_CURL=ON
-            -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang 21' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
+            -DCMAKE_CXX_FLAGS=${{ matrix.compiler == 'Clang' && format('--gcc-install-dir={0}', matrix.gcc-install-dir) || '' }}
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | llvm-cxxfilt
@@ -194,8 +203,8 @@ jobs:
         # libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships 11.2.1): Clang emits an
         # extern ref to path::_List::type, which EL8 defines in no library.
         run: |
-          /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
+          clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"
@@ -252,19 +261,19 @@ jobs:
           cat unit_tests_report.csv
 
       - name: Create Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang' }}
         run: |
           ./scripts/distribution_vcpkg.sh ${{ inputs.app_version }}
           mv meshlib_linux-vcpkg.tar.xz meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz
 
       - name: Extract Package
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang' }}
         run: |
           mkdir meshlib_install
           tar -xf meshlib_linux-vcpkg-${{ matrix.arch }}.tar.xz -C meshlib_install
 
       - name: Build C++ examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -276,7 +285,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang 21'}}
+        if: ${{ matrix.config == 'Release' && matrix.compiler == 'Clang'}}
         run: |
           cmake \
             -S examples/c-examples \
@@ -288,7 +297,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload vcpkg Distribution
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
         uses: actions/upload-artifact@v7
         with:
           name: Distributives_linux-vcpkg-${{ matrix.arch }}
@@ -296,7 +305,7 @@ jobs:
           retention-days: 1
 
       - name: Collect artifact stats
-        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang 21' }}
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
@@ -305,7 +314,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang' && matrix.config == 'Release' }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -314,7 +323,7 @@ jobs:
           python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.so
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang 21' && matrix.config == 'Release' }}
+        if: ${{ inputs.nuget_build_patch && matrix.compiler == 'Clang' && matrix.config == 'Release' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveLinux-${{ matrix.arch }}

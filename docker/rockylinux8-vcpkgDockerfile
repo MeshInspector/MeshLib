@@ -40,8 +40,8 @@ RUN <<EOF
     # PGO-optimized clang/lld 22.1.8 (-O3 + IR-PGO + ThinLTO), built for this
     # image at MeshInspector/toolchains; replaces the distro clang 21 packages
     case "$(uname -m)" in
-        x86_64)  CLANG_ARCH=x64;   CLANG_SHA=7fb37f91d74b6660888d9514f565f6f3cb618939f1487fe8c0d3ad24aaf56cf0 ;;
-        aarch64) CLANG_ARCH=arm64; CLANG_SHA=35d601cc92397fa33e04324732e4ccbe9d5b313110643eac01990c0bf5079dcd ;;
+        x86_64)  CLANG_ARCH=x64;   CLANG_SHA=3deac7c02e46b7d048e80c78d097622eab7927671d99e4307d1c3a7a9f48a7d2 ;;
+        aarch64) CLANG_ARCH=arm64; CLANG_SHA=7867aa7d6603234d336caaf13bb629e3672cfe9aae7117ab43fe47f29c4af2b6 ;;
     esac
     retry.sh -- curl -fsSL -o /tmp/clang-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/clang-22.1.8-pgo-rockylinux8/clang-22.1.8-pgo-rockylinux8-${CLANG_ARCH}.tar.gz"
     echo "${CLANG_SHA}  /tmp/clang-pgo.tar.gz" | sha256sum -c -

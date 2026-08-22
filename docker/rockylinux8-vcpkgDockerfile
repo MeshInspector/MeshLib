@@ -40,14 +40,21 @@ RUN <<EOF
     # PGO-optimized clang/lld 22.1.8 (-O3 + IR-PGO + ThinLTO), built for this
     # image at MeshInspector/toolchains; replaces the distro clang 21 packages
     case "$(uname -m)" in
-        x86_64)  CLANG_ARCH=x64;   CLANG_SHA=3deac7c02e46b7d048e80c78d097622eab7927671d99e4307d1c3a7a9f48a7d2 ;;
-        aarch64) CLANG_ARCH=arm64; CLANG_SHA=7867aa7d6603234d336caaf13bb629e3672cfe9aae7117ab43fe47f29c4af2b6 ;;
+        x86_64)  CLANG_ARCH=x64;   CLANG_SHA=3deac7c02e46b7d048e80c78d097622eab7927671d99e4307d1c3a7a9f48a7d2; DYLIB_SHA=97b40230ff3c65e567b532b3a7cff009b0f3d397b3b5311816743a50f5641727 ;;
+        aarch64) CLANG_ARCH=arm64; CLANG_SHA=7867aa7d6603234d336caaf13bb629e3672cfe9aae7117ab43fe47f29c4af2b6; DYLIB_SHA=41e405b76822e19b7d6cf00db648d290ad78b274fd03a970b91a0bbbb76af5d7 ;;
     esac
     retry.sh -- curl -fsSL -o /tmp/clang-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/clang-22.1.8-pgo-rockylinux8/clang-22.1.8-pgo-rockylinux8-${CLANG_ARCH}.tar.gz"
     echo "${CLANG_SHA}  /tmp/clang-pgo.tar.gz" | sha256sum -c -
     tar -C /opt -xzf /tmp/clang-pgo.tar.gz
     rm /tmp/clang-pgo.tar.gz
     /opt/llvm-pgo-22.1.8/bin/clang++ --version
+    # the same clang without LTO but with libLLVM.so/libclang-cpp.so; only for
+    # building mrbind, which dynamically links those
+    retry.sh -- curl -fsSL -o /tmp/clang-pgo-dylib.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/clang-22.1.8-pgo-dylib-rockylinux8/clang-22.1.8-pgo-dylib-rockylinux8-${CLANG_ARCH}.tar.gz"
+    echo "${DYLIB_SHA}  /tmp/clang-pgo-dylib.tar.gz" | sha256sum -c -
+    tar -C /opt -xzf /tmp/clang-pgo-dylib.tar.gz
+    rm /tmp/clang-pgo-dylib.tar.gz
+    /opt/llvm-pgo-dylib-22.1.8/bin/clang++ --version
     # install aws cli
     curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
     unzip awscliv2.zip

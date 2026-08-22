@@ -46,22 +46,23 @@ jobs:
       matrix:
         config: [Debug, Release]
         arch: [x64, arm64]
-        compiler: [Clang 21, GCC 11]
+        compiler: [Clang 22, GCC 11]
         full_config_build:
           - ${{ fromJSON( inputs.full_config_build ) }}
         exclude:
-          # Do not run Debug Clang 21 build on every commit (but only once a day)
+          # Do not run Debug Clang 22 build on every commit (but only once a day)
           - full_config_build: false
-            compiler: Clang 21
+            compiler: Clang 22
             config: Debug
           # Do not run Release GCC 11 build on every commit (but only once a day)
           - full_config_build: false
             compiler: GCC 11
             config: Release
         include:
-          - compiler: Clang 21
-            cxx-compiler: /usr/bin/clang++-21
-            c-compiler: /usr/bin/clang-21
+          - compiler: Clang 22
+            # The image's -O3+PGO+ThinLTO keg (see docker/rockylinux8-vcpkgDockerfile)
+            cxx-compiler: /opt/llvm-pgo-22.1.8/bin/clang++
+            c-compiler: /opt/llvm-pgo-22.1.8/bin/clang
             cxx-standard: 23
           - compiler: GCC 11
             cxx-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/g++
@@ -194,8 +195,8 @@ jobs:
         # libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships 11.2.1): Clang emits an
         # extern ref to path::_List::type, which EL8 defines in no library.
         run: |
-          /usr/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/usr/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
+          /opt/llvm-pgo-22.1.8/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=/opt/llvm-pgo-22.1.8/bin/clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

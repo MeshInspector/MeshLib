@@ -21,7 +21,7 @@ RUN <<EOF
     retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo
     retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
     retry.sh -- dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-11 ninja-build clang-devel-21* \
+        git cmake gcc-toolset-11 ninja-build \
         $(: minimal CUDA toolkit - nvcc, cudart ) \
         cuda-nvcc-12-0 cuda-cudart-devel-12-0 cuda-driver-devel-12-0 cuda-cuxxfilt-12-0 \
         $(: vcpkg requirements ) \
@@ -29,10 +29,21 @@ RUN <<EOF
         $(: vcpkg package requirements ) \
         autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core \
         $(: mrbind requirements ) \
-        lld-21* llvm-devel-21* python3.12-devel which zlib-devel \
+        python3.12-devel which zlib-devel \
         $(: CI environment ) \
         gh time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
     dnf clean all
+    # PGO-optimized clang/lld 22.1.8 (-O3 + IR-PGO + ThinLTO), built for this
+    # image at MeshInspector/toolchains; replaces the distro clang 21 packages
+    case "$(uname -m)" in
+        x86_64)  CLANG_ARCH=x64;   CLANG_SHA=7fb37f91d74b6660888d9514f565f6f3cb618939f1487fe8c0d3ad24aaf56cf0 ;;
+        aarch64) CLANG_ARCH=arm64; CLANG_SHA=35d601cc92397fa33e04324732e4ccbe9d5b313110643eac01990c0bf5079dcd ;;
+    esac
+    retry.sh -- curl -fsSL -o /tmp/clang-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/clang-22.1.8-pgo-rockylinux8/clang-22.1.8-pgo-rockylinux8-${CLANG_ARCH}.tar.gz"
+    echo "${CLANG_SHA}  /tmp/clang-pgo.tar.gz" | sha256sum -c -
+    tar -C /opt -xzf /tmp/clang-pgo.tar.gz
+    rm /tmp/clang-pgo.tar.gz
+    /opt/llvm-pgo-22.1.8/bin/clang++ --version
     # install aws cli
     curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
     unzip awscliv2.zip

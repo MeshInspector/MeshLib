@@ -137,13 +137,13 @@ jobs:
                 - platform: x86_64
                   os: rockylinux8-vcpkg-x64
                   runner: ubuntu-latest
-                  compiler: /opt/llvm-pgo-22.1.8/bin/clang++
+                  compiler: /opt/llvm-pgo-dylib-22.1.8/bin/clang++
                   container-prefix: ""
                   gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/x86_64-redhat-linux/11
                 - platform: aarch64
                   os: rockylinux8-vcpkg-arm64
                   runner: ubuntu-24.04-arm
-                  compiler: /opt/llvm-pgo-22.1.8/bin/clang++
+                  compiler: /opt/llvm-pgo-dylib-22.1.8/bin/clang++
                   container-prefix: arm64v8/
                   gcc-install-dir: /opt/rh/gcc-toolset-11/root/usr/lib/gcc/aarch64-redhat-linux/11
             - if: ${{ inputs.disable_manylinux }}
@@ -170,11 +170,11 @@ jobs:
             - extend:
                 - platform: x86_64
                   runner: ubuntu-latest
-                  compiler: /opt/llvm-pgo-22.1.8/bin/clang++
+                  compiler: /opt/llvm-pgo-dylib-22.1.8/bin/clang++
                   container-prefix: ""
                 - platform: aarch64
                   runner: ubuntu-24.04-arm
-                  compiler: /opt/llvm-pgo-22.1.8/bin/clang++
+                  compiler: /opt/llvm-pgo-dylib-22.1.8/bin/clang++
                   container-prefix: arm64v8/
             - extend:
                 - py-version: "3.8"
@@ -291,7 +291,7 @@ jobs:
         # The stub works around libstdc++11's https://gcc.gnu.org/PR108636 (fixed in 11.4, EL8 ships
         # 11.2.1): Clang emits an extern ref to path::_List::type, which EL8 defines in no library.
         run: |
-          /opt/llvm-pgo-22.1.8/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
+          /opt/llvm-pgo-dylib-22.1.8/bin/clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
           make -f scripts/mrbind/generate.mk -B --trace \
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \

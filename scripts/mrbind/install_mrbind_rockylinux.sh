@@ -20,5 +20,10 @@ rm -rf build
 export PATH="$LLVM_PREFIX/bin:$PATH"
 export CMAKE_PREFIX_PATH="$LLVM_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 
-CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD
+# The keg ships no libLLVM.so, so link LLVM statically; its archives hold
+# ThinLTO bitcode, which only the keg's own lld can link (and CMake < 3.29
+# ignores CMAKE_LINKER_TYPE). No libunwind.a in the keg: libgcc_eh unwinds.
+CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+    -DMRBIND_STATIC_BUILD=ON -DMRBIND_FORCE_LLVM_STATIC=ON -DUNWIND_STATIC=-lgcc_eh \
+    -DCMAKE_EXE_LINKER_FLAGS=--ld-path="$LLVM_PREFIX/bin/ld.lld"
 cmake --build build -j$JOBS

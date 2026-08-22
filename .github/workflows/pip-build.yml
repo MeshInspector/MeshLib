@@ -267,7 +267,9 @@ jobs:
           bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
 
       - name: Add the LLVM keg to PATH
-        run: echo "${LLVM_PREFIX}/bin" >> $GITHUB_PATH
+        # Via GITHUB_ENV, like build-test-linux-vcpkg.yml: a GITHUB_PATH entry
+        # makes the runner drop any PATH exported through GITHUB_ENV.
+        run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
 
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind

@@ -42,12 +42,19 @@ npm install @meshinspector/meshlib
 ### Use from CDN
 In the browser you can skip npm entirely and import the module directly:
 \code{.js}
-// latest version
+// latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
-// or pin a specific version
-import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
+// or pin a release
+import createMeshLib from 'https://js.meshlib.io/meshlib@v3.1.3.429/meshlib.mjs';
+
+// multi-threaded build
+import createMeshLib from 'https://js.meshlib.io/meshlib-mt@v3.1.3.429/meshlib-mt.mjs';
 \endcode
+
+The pinned path uses the [GitHub release tag](https://github.com/MeshInspector/MeshLib/releases) — leading `v`, four components — which is **not** the npm version: release `v3.1.3.429` is npm `3.1.3-429`. Pinned URLs are immutable, so a pin never changes under you; the unpinned path always serves the latest release.
+
+In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
 
 ### Payload Size {#MeshLibJsPayloadSize}
 MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.

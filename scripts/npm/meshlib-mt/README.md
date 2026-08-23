@@ -23,12 +23,16 @@ npm install @meshinspector/meshlib-mt
 In the browser you can skip npm entirely and import the module directly:
 
 ```js
-// latest version
+// latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
 
-// or pin a specific version
-import createMeshLib from 'https://js.meshlib.io/meshlib-mt@1.2.3/meshlib-mt.mjs';
+// or pin a release
+import createMeshLib from 'https://js.meshlib.io/meshlib-mt@v3.1.3.429/meshlib-mt.mjs';
 ```
+
+The pinned path uses the [GitHub release tag](https://github.com/MeshInspector/MeshLib/releases) — leading `v`,
+four components — which is **not** the npm version: release `v3.1.3.429` is npm `3.1.3-429`. Pinned URLs are
+immutable, so a pin never changes under you; the unpinned path always serves the latest release.
 
 ## Browser requirements: cross-origin isolation
 

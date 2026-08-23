@@ -128,6 +128,12 @@ jobs:
             cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
           fi
 
+      - name: Put the LLVM keg on PATH
+        if: ${{ matrix.use-llvm-keg }}
+        # These rows build with the image's PGO Clang keg instead of a distro Clang,
+        # so the matrix stays version-free and the Dockerfile keeps the only pin.
+        run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
+
       - name: Build
         run: ./scripts/build_source.sh
         env:

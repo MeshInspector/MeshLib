@@ -55,6 +55,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Configure the LLVM keg rows
+        if: ${{ matrix.use-llvm-keg }}
+        # These rows build with the image's PGO Clang keg instead of a distro Clang,
+        # so the matrix stays version-free and the Dockerfile keeps the only pin.
+        # Must run before the stats step below, which invokes the compiler by name.
+        run: |
+          echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
+          # noble's fmt 9.1 predates fmt 10's fix for Clang's stricter constant
+          # evaluation, so spdlog's daily_file_sink trips FMT_STRING's consteval
+          # checker. Format strings stay compile-checked on every other row.
+          echo "CXXFLAGS=-DFMT_USE_CONSTEVAL=0" >> $GITHUB_ENV
+
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
         id: collect-runner-stats
@@ -127,12 +139,6 @@ jobs:
           else
             cp -r scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
           fi
-
-      - name: Put the LLVM keg on PATH
-        if: ${{ matrix.use-llvm-keg }}
-        # These rows build with the image's PGO Clang keg instead of a distro Clang,
-        # so the matrix stays version-free and the Dockerfile keeps the only pin.
-        run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
 
       - name: Build
         run: ./scripts/build_source.sh

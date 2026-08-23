@@ -287,6 +287,35 @@ def test_capture_screenshot(viewer, tmp_path):
         mrviewerpy.clearScene()
 
 
+def test_run_from_gui_thread(viewer):
+    """The callable must actually run, on the GUI thread, and the call must come back."""
+    ran_on = []
+
+    with bounded("runFromGUIThread"):
+        mrviewerpy.runFromGUIThread(lambda: ran_on.append(threading.get_ident()))
+
+    assert ran_on, "the callable never ran"
+    assert ran_on[0] != threading.get_ident(), "the callable ran on the calling thread"
+
+
+def test_run_from_gui_thread_propagates_exception(viewer):
+    """An exception raised inside the callable must reach the caller with its type intact."""
+
+    class Boom(Exception):
+        pass
+
+    def raiser():
+        raise Boom("raised on the GUI thread")
+
+    with bounded("runFromGUIThread raising"):
+        with pytest.raises(Boom, match="raised on the GUI thread"):
+            mrviewerpy.runFromGUIThread(raiser)
+
+    # the loop survived it, so the viewer is still usable
+    with bounded("skipFrames after the raising callable"):
+        viewer.skipFrames(1)
+
+
 # --- fail fast when no command loop can run the command --------------------------------
 #
 # Both cases below need a viewer state the module fixture cannot reach - never launched,

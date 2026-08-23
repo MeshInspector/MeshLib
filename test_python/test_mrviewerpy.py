@@ -298,6 +298,11 @@ def test_capture_screenshot(viewer, tmp_path):
 # the step timeout
 CHILD_TIMEOUT_SEC = 120
 
+# `skipFrames` is the blocking call throughout: it posts an empty C++ command, so it exercises
+# the wait in `addCommand_` and nothing else. `runFromGUIThread` would post a *Python* callable
+# instead, and the GUI thread has no Python thread state to call one with - an unrelated crash
+# that would say nothing about the loop.
+#
 # No `launch()` anywhere, so `CommandLoop` never gets a main thread id: nothing will ever
 # call `processCommands` and this command cannot run, whoever waits for it.
 _NEVER_LAUNCHED_SRC = r"""
@@ -306,7 +311,7 @@ import sys
 from meshlib import mrviewerpy
 
 try:
-    mrviewerpy.runFromGUIThread(lambda: None)
+    mrviewerpy.Viewer().skipFrames(1)
 except RuntimeError as e:
     print("RAISED %s" % e, flush=True)
     sys.exit(0)
@@ -347,7 +352,7 @@ viewer.shutdown()
 deadline = time.monotonic() + 30
 while time.monotonic() < deadline:
     try:
-        mrviewerpy.runFromGUIThread(lambda: None)
+        viewer.skipFrames(1)
     except RuntimeError as e:
         print("RAISED %s" % e, flush=True)
         sys.exit(0)
@@ -420,11 +425,11 @@ def test_blocking_call_without_launch_raises():
     )
 
     assert not run.timed_out, (
-        "runFromGUIThread() never returned: it is waiting for a command loop that will "
+        "the blocking call never returned: it is waiting for a command loop that will "
         "never run\n" + run.report()
     )
     assert run.returncode == 0 and "RAISED" in run.stdout, (
-        "runFromGUIThread() reported success without running the command\n" + run.report()
+        "the blocking call reported success without running the command\n" + run.report()
     )
 
 
@@ -450,10 +455,10 @@ def test_blocking_call_after_shutdown_raises():
         pytest.skip("the child could not launch a viewer to shut down\n" + run.report())
 
     assert not run.timed_out, (
-        "runFromGUIThread() never returned after shutdown(): it is waiting on a loop that "
+        "the blocking call never returned after shutdown(): it is waiting on a loop that "
         "has already stopped\n" + run.report()
     )
     assert run.returncode == 0 and "RAISED" in run.stdout, (
-        "runFromGUIThread() returned as if the command had run on a shut down viewer\n"
+        "the blocking call returned as if the command had run on a shut down viewer\n"
         + run.report()
     )

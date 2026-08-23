@@ -285,3 +285,175 @@ def test_capture_screenshot(viewer, tmp_path):
 
     with bounded("clearScene"):
         mrviewerpy.clearScene()
+
+
+# --- fail fast when no command loop can run the command --------------------------------
+#
+# Both cases below need a viewer state the module fixture cannot reach - never launched,
+# and already shut down - and `launchDefaultViewer` refuses a second launch per process,
+# so each gets its own interpreter. The parent bounds the child, so a regression back to
+# blocking forever fails the test in seconds instead of burning the whole pytest step.
+
+# generous enough for a cold launch under llvmpipe, small enough that a hang cannot eat
+# the step timeout
+CHILD_TIMEOUT_SEC = 120
+
+# No `launch()` anywhere, so `CommandLoop` never gets a main thread id: nothing will ever
+# call `processCommands` and this command cannot run, whoever waits for it.
+_NEVER_LAUNCHED_SRC = r"""
+import sys
+
+from meshlib import mrviewerpy
+
+try:
+    mrviewerpy.runFromGUIThread(lambda: None)
+except RuntimeError as e:
+    print("RAISED %s" % e, flush=True)
+    sys.exit(0)
+print("RETURNED", flush=True)
+sys.exit(1)
+"""
+
+# `Viewer::launch` drains and closes the queue on its way out, so a command posted after
+# `shutdown()` cannot run either. Retried until the detached launch thread gets there: a
+# call still serviced by the dying loop is not yet a verdict, an empty return after it is.
+_AFTER_SHUTDOWN_SRC = r"""
+import os
+import pathlib
+import sys
+import time
+
+import meshlib.mrmeshpy as mrmesh
+from meshlib import mrviewerpy
+
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Resources,
+    pathlib.Path(os.environ["MRVIEWERPY_RESOURCES"]),
+)
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Fonts,
+    pathlib.Path(os.environ["MRVIEWERPY_FONTS"]),
+)
+
+params = mrviewerpy.ViewerLaunchParams()
+params.windowMode = mrviewerpy.ViewerLaunchParamsMode.TryHidden
+params.name = "MeshLib test_mrviewerpy shutdown"
+mrviewerpy.launch(params, mrviewerpy.ViewerSetup())
+viewer = mrviewerpy.Viewer()
+viewer.skipFrames(1)
+print("STAGE alive", flush=True)
+
+viewer.shutdown()
+deadline = time.monotonic() + 30
+while time.monotonic() < deadline:
+    try:
+        mrviewerpy.runFromGUIThread(lambda: None)
+    except RuntimeError as e:
+        print("RAISED %s" % e, flush=True)
+        sys.exit(0)
+    time.sleep(0.25)
+print("RETURNED", flush=True)
+sys.exit(1)
+"""
+
+
+class _ChildRun:
+    def __init__(self, returncode, stdout, stderr, timed_out):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+        self.timed_out = timed_out
+
+    def report(self):
+        exit_state = (
+            "killed on timeout" if self.timed_out else f"exit {self.returncode}"
+        )
+        return (
+            f"child {exit_state}\n"
+            f"--- child stdout ---\n{self.stdout}"
+            f"--- child stderr ---\n{self.stderr}"
+        )
+
+
+def _run_in_child(what, source, env_extra=None, timeout=CHILD_TIMEOUT_SEC):
+    """Run `source` in a fresh interpreter, killing it if it blocks."""
+
+    def as_text(v):
+        # partial output on `TimeoutExpired` comes back undecoded even with text=True
+        if v is None:
+            return ""
+        return v.decode(errors="replace") if isinstance(v, bytes) else v
+
+    env = dict(os.environ)
+    # the child gets no conftest, so hand it whatever made the bindings importable here
+    env["PYTHONPATH"] = os.pathsep.join(
+        dict.fromkeys(p for p in sys.path + [os.getcwd()] if p)
+    )
+    env.update(env_extra or {})
+
+    print(
+        f"[mrviewerpy] {what} in a child (timeout {timeout}s)",
+        file=sys.stderr,
+        flush=True,
+    )
+    try:
+        done = subprocess.run(
+            [sys.executable, "-u", "-c", source],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            env=env,
+        )
+    except subprocess.TimeoutExpired as e:
+        return _ChildRun(None, as_text(e.stdout), as_text(e.stderr), True)
+    return _ChildRun(done.returncode, done.stdout, done.stderr, False)
+
+
+def test_blocking_call_without_launch_raises():
+    """A blocking call issued with no viewer launched must fail, not park forever."""
+    pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+
+    run = _run_in_child(
+        "blocking call with no launch()", _NEVER_LAUNCHED_SRC, timeout=60
+    )
+
+    assert not run.timed_out, (
+        "runFromGUIThread() never returned: it is waiting for a command loop that will "
+        "never run\n" + run.report()
+    )
+    assert run.returncode == 0 and "RAISED" in run.stdout, (
+        "runFromGUIThread() reported success without running the command\n" + run.report()
+    )
+
+
+def test_blocking_call_after_shutdown_raises():
+    """A blocking call issued after `shutdown()` must fail, not report a silent no-op."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    run = _run_in_child(
+        "blocking call after shutdown()",
+        _AFTER_SHUTDOWN_SRC,
+        env_extra={
+            "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
+            "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
+        },
+    )
+
+    # never got a running viewer: that is this environment, not the behaviour under test
+    if "STAGE alive" not in run.stdout:
+        pytest.skip("the child could not launch a viewer to shut down\n" + run.report())
+
+    assert not run.timed_out, (
+        "runFromGUIThread() never returned after shutdown(): it is waiting on a loop that "
+        "has already stopped\n" + run.report()
+    )
+    assert run.returncode == 0 and "RAISED" in run.stdout, (
+        "runFromGUIThread() returned as if the command had run on a shut down viewer\n"
+        + run.report()
+    )

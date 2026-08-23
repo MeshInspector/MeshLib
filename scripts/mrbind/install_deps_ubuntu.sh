@@ -15,6 +15,14 @@ SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
 CLANG_VER="$(cat $SCRIPT_DIR/clang_version.txt | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
+# With LLVM_PREFIX set (our PGO clang keg, see docker/ubuntu*Dockerfile) mrbind and
+# the generated bindings use that installation, so none of the apt LLVM packages
+# are needed here. The product build keeps using the distro compilers.
+if [[ -n "${LLVM_PREFIX:-}" ]]; then
+    apt install -y make cmake ninja-build gawk procps
+    exit 0
+fi
+
 # Add LLVM repositories if the required package is not accessible right now.
 # If it's accessible, either we have already added the same repos, or the version of Ubuntu is new enough to have it in the official repos.
 # `-s` means dry run (check if it's installable or not).

@@ -16,6 +16,10 @@ COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/
 
 ENV MR_STATE=DOCKER_BUILD
 
+# The PGO clang keg installed below; read by scripts/mrbind/* and generate.mk,
+# which build mrbind and compile the generated bindings with it.
+ENV LLVM_PREFIX=/opt/llvm-pgo-dylib-22.1.8
+
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu/ http://mirror.eu.ossplanet.net/ubuntu/
@@ -57,6 +61,24 @@ RUN <<EOF
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     ./scripts/install_apt_cuda.sh
+    # PGO-optimized clang/lld 22.1.8 (-O3 + IR-PGO, distro-style libLLVM.so/libclang-cpp.so
+    # that mrbind dynamically links) from MeshInspector/toolchains. Built in a rockylinux8
+    # container, whose glibc 2.28 is older than Ubuntu's, so the same tarball runs here.
+    # It compiles the bindings only (LLVM_PREFIX above); the product build keeps the distro Clang/GCC.
+    case "$(uname -m)" in
+        x86_64)  CLANG_ARCH=x64;   CLANG_SHA=97b40230ff3c65e567b532b3a7cff009b0f3d397b3b5311816743a50f5641727 ;;
+        aarch64) CLANG_ARCH=arm64; CLANG_SHA=41e405b76822e19b7d6cf00db648d290ad78b274fd03a970b91a0bbbb76af5d7 ;;
+    esac
+    curl -fsSL --retry 5 --retry-all-errors -o /tmp/clang-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/clang-22.1.8-pgo-dylib-rockylinux8/clang-22.1.8-pgo-dylib-rockylinux8-${CLANG_ARCH}.tar.gz"
+    echo "${CLANG_SHA}  /tmp/clang-pgo.tar.gz" | sha256sum -c -
+    tar -C /opt -xzf /tmp/clang-pgo.tar.gz
+    rm /tmp/clang-pgo.tar.gz
+    # Fail here, not mid-bindings, if the Red Hat-built driver cannot find Ubuntu's GCC
+    # installation (`-v` prints the one it selected) or its multiarch libstdc++.
+    echo '#include <filesystem>
+int main() { return !std::filesystem::path("/tmp").is_absolute(); }' | ${LLVM_PREFIX}/bin/clang++ -v -xc++ - -std=c++20 -o /tmp/keg-check
+    /tmp/keg-check
+    rm /tmp/keg-check
     ./scripts/mrbind/install_deps_ubuntu.sh
     ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
     # clean downloaded files

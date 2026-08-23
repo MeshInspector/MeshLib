@@ -19,7 +19,14 @@ rm -rf build
 # Guess the number of build threads.
 [[ ${JOBS:=} ]] || JOBS=$(nproc)
 
-# `Clang_DIR` is needed when several versions of libclang are installed.
-# By default CMake picks an arbitrary one. Supposedly whatever globbing `clang-*` returns first.
-CC=clang-$CLANG_VER CXX=clang++-$CLANG_VER cmake -B build -DClang_DIR=/usr/lib/cmake/clang-$CLANG_VER -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD
+if [[ -n "${LLVM_PREFIX:-}" ]]; then
+    # Our PGO clang keg (see docker/ubuntu*Dockerfile), used for the bindings only.
+    # mrbind links its libLLVM.so/libclang-cpp.so, so rpath them for runtime.
+    CC="$LLVM_PREFIX/bin/clang" CXX="$LLVM_PREFIX/bin/clang++" cmake -B build -DCMAKE_PREFIX_PATH="$LLVM_PREFIX" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath,"$LLVM_PREFIX/lib"
+else
+    # `Clang_DIR` is needed when several versions of libclang are installed.
+    # By default CMake picks an arbitrary one. Supposedly whatever globbing `clang-*` returns first.
+    CC=clang-$CLANG_VER CXX=clang++-$CLANG_VER cmake -B build -DClang_DIR=/usr/lib/cmake/clang-$CLANG_VER -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_LINKER_TYPE=LLD
+fi
 cmake --build build -j$JOBS

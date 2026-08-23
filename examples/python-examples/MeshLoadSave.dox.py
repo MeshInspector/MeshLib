@@ -1,8 +1,10 @@
 import meshlib.mrmeshpy as mrmeshpy
+import os
 import sys
 
-# This example needs an input mesh; create one so it runs standalone
-mrmeshpy.saveMesh(mrmeshpy.makeCube(), "mesh.stl")
+# This example needs an input mesh; create one if you do not have it already
+if not os.path.exists("mesh.stl"):
+    mrmeshpy.saveMesh(mrmeshpy.makeCube(), "mesh.stl")
 
 # Load mesh
 try:

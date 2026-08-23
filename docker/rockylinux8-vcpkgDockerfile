@@ -21,7 +21,11 @@ RUN <<EOF
     retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo
     retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
     retry.sh -- dnf -y install --enablerepo powertools \
-        git cmake gcc-toolset-11 ninja-build clang-devel-21* \
+        $(: gcc-toolset-13-gcc-c++ provides the libstdc++ headers that the PGO
+           clang picks by default -- clang 22 scans /opt/rh only up to
+           gcc-toolset-13, see Gnu.cpp GCCInstallationDetector.
+           Product builds keep pinning --gcc-install-dir to toolset-11 ) \
+        git cmake gcc-toolset-11 gcc-toolset-13-gcc-c++ ninja-build \
         $(: minimal CUDA toolkit - nvcc, cudart ) \
         cuda-nvcc-12-0 cuda-cudart-devel-12-0 cuda-driver-devel-12-0 cuda-cuxxfilt-12-0 \
         $(: vcpkg requirements ) \
@@ -29,10 +33,22 @@ RUN <<EOF
         $(: vcpkg package requirements ) \
         autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core \
         $(: mrbind requirements ) \
-        lld-21* llvm-devel-21* python3.12-devel which zlib-devel \
+        python3.12-devel which zlib-devel \
         $(: CI environment ) \
         gh time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
     dnf clean all
+    # PGO-optimized clang/lld 22.1.8 (-O3 + IR-PGO, distro-style
+    # libLLVM.so/libclang-cpp.so that mrbind dynamically links), built for
+    # this image at MeshInspector/toolchains
+    case "$(uname -m)" in
+        x86_64)  CLANG_ARCH=x64;   CLANG_SHA=97b40230ff3c65e567b532b3a7cff009b0f3d397b3b5311816743a50f5641727 ;;
+        aarch64) CLANG_ARCH=arm64; CLANG_SHA=41e405b76822e19b7d6cf00db648d290ad78b274fd03a970b91a0bbbb76af5d7 ;;
+    esac
+    retry.sh -- curl -fsSL -o /tmp/clang-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/clang-22.1.8-pgo-dylib-rockylinux8/clang-22.1.8-pgo-dylib-rockylinux8-${CLANG_ARCH}.tar.gz"
+    echo "${CLANG_SHA}  /tmp/clang-pgo.tar.gz" | sha256sum -c -
+    tar -C /opt -xzf /tmp/clang-pgo.tar.gz
+    rm /tmp/clang-pgo.tar.gz
+    /opt/llvm-pgo-dylib-22.1.8/bin/clang++ --version
     # install aws cli
     curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
     unzip awscliv2.zip

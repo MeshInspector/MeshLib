@@ -137,7 +137,7 @@ jobs:
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: xvfb-run -a python3 -m pytest -s -v
 
   linux-arm64-test:
     if: ${{ inputs.test_ubuntu_arm64 }}
@@ -232,7 +232,7 @@ jobs:
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: xvfb-run -a python3 -m pytest -s -v
 
   macos-test:
     if: ${{ inputs.test_macos }}

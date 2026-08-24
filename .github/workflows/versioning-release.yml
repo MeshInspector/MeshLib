@@ -41,7 +41,7 @@ jobs:
       - name: Create Release
         if: ${{ inputs.upload_artifacts }}
         id: create_release
-        uses: mikepenz/action-gh-release@2a00e201320fb618d8e705a736286b2e31aa48e2 # v3.0.0
+        uses: mikepenz/action-gh-release@7a1a2d94070db8d22681770f42cdb85a9c38d6ac # v3.1.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
           RELEASE_PATH: https://github.com/${{github.repository}}/releases/download/${{steps.version-tag.outputs.short_version}}

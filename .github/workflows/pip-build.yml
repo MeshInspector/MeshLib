@@ -358,7 +358,10 @@ jobs:
           for PYTHON_VER in ${PYTHON_VERSIONS} ; do
             PYTHON_LIB_DIR=$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBDIR)
 
-            LD_LIBRARY_PATH=${PYTHON_LIB_DIR} \
+            # The deps dir must come first: for the versions where uv picks the
+            # system interpreter, LIBDIR is /usr/lib64, and EL8's libcurl.so.4
+            # there lacks curl_multi_poll, which vcpkg's libcpr.so.1 needs.
+            LD_LIBRARY_PATH=${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}/lib:${PYTHON_LIB_DIR} \
             xvfb-run -a uv run \
               --python ${PYTHON_VER} \
               --with-requirements ${REQUIREMENTS_FILE} \

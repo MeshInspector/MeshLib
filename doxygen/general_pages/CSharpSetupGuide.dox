@@ -21,7 +21,7 @@ The NuGet package ships prebuilt native libraries, so your OS and CPU architectu
 | OS | Architectures | Minimum version |
 |---|---|---|
 | Windows | x64 | Windows 10 |
-| Linux | x64, Arm64 | glibc 2.27+ — e.g. Ubuntu 18.04+, Debian 10+, RHEL/Rocky/AlmaLinux 8+ |
+| Linux | x64, Arm64 | glibc 2.28+ — e.g. Ubuntu 20.04+, Debian 10+, RHEL/Rocky/AlmaLinux 8+, Fedora 29+ |
 | macOS | Arm64 (Apple silicon) | macOS 14 |
 | macOS | x64 (Intel) | macOS 15 |
 

@@ -44,8 +44,8 @@
       "os": "ubuntu24",
       "config": "Release",
       "compiler": "Clang",
-      "cxx-compiler": "/usr/bin/clang++-18",
-      "c-compiler": "/usr/bin/clang-18",
+      "cxx-compiler": "clang++",
+      "c-compiler": "clang",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
       "upload_release": "OFF"
@@ -54,8 +54,8 @@
       "os": "ubuntu24",
       "config": "Debug",
       "compiler": "Clang",
-      "cxx-compiler": "/usr/bin/clang++-18",
-      "c-compiler": "/usr/bin/clang-18",
+      "cxx-compiler": "clang++",
+      "c-compiler": "clang",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
       "upload_release": "OFF"

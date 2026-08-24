@@ -81,6 +81,13 @@ jobs:
           ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
           ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 
+      - name: Add our Clang to PATH
+        # Via GITHUB_ENV, like build-test-linux-vcpkg.yml: a GITHUB_PATH entry
+        # makes the runner drop any PATH exported through GITHUB_ENV.
+        run: |
+          : "${LLVM_PREFIX:?provided by docker/ubuntu2*Dockerfile}"
+          echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
+
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind

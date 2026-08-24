@@ -26,8 +26,6 @@ ubuntu=(
   scripts/install_apt_requirements.sh
   scripts/install_apt_cuda.sh
   scripts/install_thirdparty.sh
-  scripts/mrbind/install_deps_ubuntu.sh
-  scripts/mrbind/clang_version.txt
   scripts/mrbind-pybind11/python_versions.txt
   scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
 )

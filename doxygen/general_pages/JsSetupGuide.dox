@@ -45,14 +45,14 @@ In the browser you can skip npm entirely and import the module directly:
 // latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
-// or pin a release
-import createMeshLib from 'https://js.meshlib.io/meshlib@v3.1.3.429/meshlib.mjs';
+// multi-threaded build, latest release
+import createMeshLib from 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
 
-// multi-threaded build
-import createMeshLib from 'https://js.meshlib.io/meshlib-mt@v3.1.3.429/meshlib-mt.mjs';
+// or pin a release — v1.2.3.456 is an example tag, not a real one
+import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
 \endcode
 
-The pinned path uses the [GitHub release tag](https://github.com/MeshInspector/MeshLib/releases) — leading `v`, four components — which is **not** the npm version: release `v3.1.3.429` is npm `3.1.3-429`. Pinned URLs are immutable, so a pin never changes under you; the unpinned path always serves the latest release.
+To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`. Pinned URLs are immutable, so a pin never changes under you; the unpinned paths above always serve the latest release.
 
 In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
 

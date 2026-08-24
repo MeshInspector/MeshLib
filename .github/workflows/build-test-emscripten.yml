@@ -333,4 +333,4 @@ jobs:
             --browser-args="--headless" \
             --safe-firefox-profile \
             --kill-exit \
-            ./MRTest.html --gtest_filter=MRMesh.SceneLoadStress
+            ./MRTest.html -- --gtest_filter=MRMesh.SceneLoadStress

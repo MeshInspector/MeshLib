@@ -58,7 +58,7 @@ static nlohmann::json mcpSystemLog( const nlohmann::json& args )
 static nlohmann::json mcpSystemInfo( const nlohmann::json& )
 {
     nlohmann::json out;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         const Json::Value sys = MR::GetSystemInfoJson();
         Json::StreamWriterBuilder builder;

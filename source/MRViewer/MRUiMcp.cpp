@@ -31,7 +31,7 @@ static const char* mcpTypeStr( UI::TestEngine::Control::EntryType type )
 static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
 {
     std::vector<UI::TestEngine::Control::TypedEntry> list;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto ex = UI::TestEngine::Control::listEntries( args.at( "path" ).get<std::vector<std::string>>() );
         if ( !ex )
@@ -55,7 +55,7 @@ static nlohmann::json mcpToolListUiEntries( const nlohmann::json& args )
 static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
 {
     std::vector<UI::TestEngine::Control::PathedEntry> list;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto ex = UI::TestEngine::Control::listAllEntries( args.value( "path", std::vector<std::string>{} ) );
         if ( !ex )
@@ -83,7 +83,7 @@ static nlohmann::json mcpToolListAllUiEntries( const nlohmann::json& args )
 void surfaceTestEngineStatusMessages()
 {
     std::vector<std::string> msgs;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         msgs = UI::TestEngine::consumeStatusMessages();
     } );
@@ -98,7 +98,7 @@ void surfaceTestEngineStatusMessages()
 static nlohmann::json mcpToolPressButton( const nlohmann::json& args )
 {
     const auto path = args.at( "path" ).get<std::vector<std::string>>();
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto ex = UI::TestEngine::Control::pressButton( path );
         if ( !ex )
@@ -119,7 +119,7 @@ static nlohmann::json mcpToolStageFileDialogPaths( const nlohmann::json& args )
     for ( const auto& p : args.at( "paths" ) )
         paths.push_back( pathFromUtf8( p.get<std::string>() ) );
 
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         UI::TestEngine::stageFileDialogPaths( std::move( paths ) );
     } );
@@ -130,7 +130,7 @@ template <typename T>
 static nlohmann::json mcpToolReadValue( const nlohmann::json& args )
 {
     UI::TestEngine::Control::Value<T> value;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto ex = UI::TestEngine::Control::readValue<T>( args.at( "path" ).get<std::vector<std::string>>() );
         if ( !ex )
@@ -158,7 +158,7 @@ template <typename T>
 static nlohmann::json mcpToolWriteValue( const nlohmann::json& args )
 {
     const auto path = args.at( "path" ).get<std::vector<std::string>>();
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto ex = UI::TestEngine::Control::writeValue<T>( path, T( args.at( "value" ) ) );
         if ( !ex )

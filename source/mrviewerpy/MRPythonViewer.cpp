@@ -38,7 +38,7 @@ MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
 
 static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 {
-    MR::runCommandFromGUIThreadOrThrow( [&] ()
+    MR::CommandLoop::runCommandFromGUIThread( [&] ()
     {
         auto image = viewer->captureSceneScreenShot();
         (void)MR::ImageSave::toAnySupportedFormat( image, path ); //TODO: process potential error
@@ -48,7 +48,7 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 static void pythonCaptureUIScreenShot( MR::Viewer* viewer, const char* path )
 {
     auto filename = MR::pathFromUtf8( path );
-    MR::runCommandFromGUIThreadOrThrow( [filename, viewer] ()
+    MR::CommandLoop::runCommandFromGUIThread( [filename, viewer] ()
     {
         viewer->captureUIScreenShot( [filename] ( const MR::Image& image )
         {
@@ -63,7 +63,7 @@ static void pythonSkipFrames( MR::Viewer* viewer, int frames )
     while ( frames > 0 )
     {
         frames--;
-        MR::runCommandFromGUIThreadOrThrow( []{} );
+        MR::CommandLoop::runCommandFromGUIThread( []{} );
     }
 }
 
@@ -71,7 +71,7 @@ static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
 {
     if ( !viewer )
         return;
-    MR::runCommandFromGUIThreadOrThrow( [viewer,show]
+    MR::CommandLoop::runCommandFromGUIThread( [viewer,show]
     {
         if ( auto ribbonMenu = viewer->getMenuPluginAs<MR::RibbonMenu>() )
         {
@@ -96,7 +96,7 @@ static void pythonRunLambdaFromGUIThread( pybind11::function func )
         pybind11::gil_scoped_release gilRelease;
         // captured by reference: a blocking command outlives nothing, and a copy of `func` would
         // touch Python reference counts on a thread that holds no GIL
-        MR::runCommandFromGUIThreadOrThrow( [&func, &pyError, &otherError]
+        MR::CommandLoop::runCommandFromGUIThread( [&func, &pyError, &otherError]
         {
             pybind11::gil_scoped_acquire gilAcquire;
             try

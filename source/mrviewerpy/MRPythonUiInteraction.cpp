@@ -50,7 +50,7 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListEntries,
     []( const std::vector<std::string>& path )
     {
         std::vector<MR::UI::TestEngine::Control::TypedEntry> ret;
-        MR::runCommandFromGUIThreadOrThrow( [&]{ ret = MR::expectedValueOrThrow( MR::UI::TestEngine::Control::listEntries( path ) ); } );
+        MR::CommandLoop::runCommandFromGUIThread( [&]{ ret = MR::expectedValueOrThrow( MR::UI::TestEngine::Control::listEntries( path ) ); } );
         return ret;
     },
     "List existing UI entries at the specified path.\n"
@@ -62,7 +62,7 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListAllEntries,
     []( const std::vector<std::string>& rootPath )
     {
         std::vector<Control::PathedEntry> ret;
-        MR::runCommandFromGUIThreadOrThrow( [&]{ ret = MR::expectedValueOrThrow( Control::listAllEntries( rootPath ) ); } );
+        MR::CommandLoop::runCommandFromGUIThread( [&]{ ret = MR::expectedValueOrThrow( Control::listAllEntries( rootPath ) ); } );
         return ret;
     },
     "Flat depth-first list of every UI entry in the subtree rooted at `rootPath`.\n"
@@ -72,7 +72,7 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListAllEntries,
 MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
     []( const std::vector<std::string>& path )
     {
-        MR::runCommandFromGUIThreadOrThrow( [&]
+        MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             spdlog::info( "pressButton {}: frame {}", MR::UI::TestEngine::Control::pathToString( path ), MR::getViewerInstance().getTotalFrames() );
             // Empty status = OK (click simulated); non-empty = disabled (silent no-op — pre-#5961 test contract).
@@ -81,7 +81,7 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
                 spdlog::warn( "pressButton {}: {} (silent no-op)", MR::UI::TestEngine::Control::pathToString( path ), status );
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
-            MR::runCommandFromGUIThreadOrThrow( [] {} ); // Wait a few frames.
+            MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
     },
     "Simulate a button click. Use `uiListEntries()` to find button names."
 )
@@ -92,7 +92,7 @@ namespace
     Control::Value<T> readValue( const std::vector<std::string>& path )
     {
         Control::Value<T> ret;
-        MR::runCommandFromGUIThreadOrThrow( [&]
+        MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             ret = MR::expectedValueOrThrow( Control::readValue<T>( path ) );
         } );
@@ -118,7 +118,7 @@ namespace
     template <typename T>
     void writeValue( const std::vector<std::string>& path, T value )
     {
-        MR::runCommandFromGUIThreadOrThrow( [&]
+        MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             // Empty status = OK (write simulated); non-empty = disabled (silent no-op — pre-#5961 test contract).
             auto status = MR::expectedValueOrThrow( Control::writeValue<T>( path, std::move( value ) ) );

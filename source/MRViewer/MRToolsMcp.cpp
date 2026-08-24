@@ -70,7 +70,7 @@ static nlohmann::json mcpToolInfoJson( const std::string& id, const MenuItemInfo
 static nlohmann::json mcpToolsListAll( const nlohmann::json& )
 {
     std::vector<std::string> ids;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         const auto& items = RibbonSchemaHolder::schema().items;
         ids.reserve( items.size() );
@@ -84,7 +84,7 @@ static nlohmann::json mcpToolsListAll( const nlohmann::json& )
 static nlohmann::json mcpToolsListActive( const nlohmann::json& )
 {
     std::vector<std::string> ids;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         for ( const auto& [id, info] : RibbonSchemaHolder::schema().items )
         {
@@ -102,7 +102,7 @@ static nlohmann::json mcpToolsGetInfo( const nlohmann::json& args )
 
     nlohmann::json items   = nlohmann::json::array();
     nlohmann::json missing = nlohmann::json::array();
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         const auto& schemaItems = RibbonSchemaHolder::schema().items;
         // Snapshot once — same selection set every iteration.
@@ -129,7 +129,7 @@ static nlohmann::json mcpToolsAction( const nlohmann::json& args )
 {
     const auto id = args.at( "id" ).get<std::string>();
     bool nowActive = false;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto& items = RibbonSchemaHolder::schema().items;
         auto it = items.find( id );

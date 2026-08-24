@@ -113,7 +113,7 @@ static nlohmann::json mcpViewerFit( const nlohmann::json& args )
         for ( const auto& p : args["points"] )
             points.push_back( readVec3( p, "points[i]" ) );
 
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
         if ( ids.empty() && points.empty() )
@@ -157,7 +157,7 @@ static nlohmann::json mcpViewerSetupCamera( const nlohmann::json& args )
         throw std::runtime_error( "`upDir` is parallel to `forwardDir`; provide a non-parallel up vector." );
     up = up.normalized();
 
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto& vp = getViewerInstance().viewport();
         vp.cameraLookAlong( fwdN, up );
@@ -189,7 +189,7 @@ static nlohmann::json mcpViewerCaptureScreenshot( const nlohmann::json& args )
     }
     else
     {
-        MR::runCommandFromGUIThreadOrThrow( [&]
+        MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             img = getViewerInstance().captureSceneScreenShot( { width, height }, transparentBg );
         } );
@@ -324,7 +324,7 @@ static nlohmann::json mcpViewerSendKeyboardEvent( const nlohmann::json& args )
 
 static nlohmann::json mcpViewerShutdown( const nlohmann::json& )
 {
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         MR::getViewerInstance().stopEventLoop();
     } );

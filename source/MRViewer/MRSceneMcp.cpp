@@ -171,7 +171,7 @@ static nlohmann::json objectRow( const Object& obj, const Object* parent )
 static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 {
     nlohmann::json rows = nlohmann::json::array();
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto rootEx = pickRoot( args );
         if ( !rootEx )
@@ -187,7 +187,7 @@ static nlohmann::json mcpSceneListObjectTree( const nlohmann::json& args )
 static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 {
     nlohmann::json out;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         const uint64_t id = args.at( "id" ).get<uint64_t>();
         auto objEx = resolveId( id );
@@ -231,7 +231,7 @@ static nlohmann::json mcpSceneGetObjectInfo( const nlohmann::json& args )
 
 static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
 {
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -341,7 +341,7 @@ static nlohmann::json mcpSceneSetObjectState( const nlohmann::json& args )
 
 static nlohmann::json mcpSceneRemoveObject( const nlohmann::json& args )
 {
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -375,7 +375,7 @@ static std::string mimeForExt( std::string_view ext )
 static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 {
     nlohmann::json out = nlohmann::json::object();
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         auto objEx = resolveId( args.at( "id" ).get<uint64_t>() );
         if ( !objEx )
@@ -437,7 +437,7 @@ static nlohmann::json mcpSceneGetObject( const nlohmann::json& args )
 static nlohmann::json mcpSceneAddObject( const nlohmann::json& args )
 {
     std::vector<uint64_t> addedIds;
-    MR::runCommandFromGUIThreadOrThrow( [&]
+    MR::CommandLoop::runCommandFromGUIThread( [&]
     {
         std::shared_ptr<Object> parentHolder;
         Object* parent = &SceneRoot::get();

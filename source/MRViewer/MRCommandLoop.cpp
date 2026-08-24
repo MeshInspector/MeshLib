@@ -44,16 +44,35 @@ void CommandLoop::setState( StartPosition state )
 
 void CommandLoop::appendCommand( CommandFunc func, StartPosition pos )
 {
-    addCommand_( func, false, pos );
+    // a non-blocking command has no error channel: it is dropped silently on a closed queue, as before
+    (void)addCommand_( func, false, pos );
 }
 
 void CommandLoop::runCommandFromGUIThread( CommandFunc func )
 {
     bool blockThread = instance_().mainThreadId_ != std::this_thread::get_id();
-    if ( blockThread )
-        return addCommand_( func, true, StartPosition::BeforeWindowAppear );
-    else
+    if ( !blockThread )
         return func();
+
+    // store an exception thrown by the command and rethrow it below: addCommand_ does not throw,
+    // and this frame outlives the command, because the wait inside addCommand_ ends only once the
+    // command was executed or dropped
+    std::exception_ptr exception;
+    auto res = addCommand_( [&func, &exception]
+    {
+        try
+        {
+            func();
+        }
+        catch ( ... )
+        {
+            exception = std::current_exception();
+        }
+    }, true, StartPosition::BeforeWindowAppear );
+    if ( !res )
+        throw std::runtime_error( std::move( res.error() ) );
+    if ( exception )
+        std::rethrow_exception( exception );
 }
 
 void CommandLoop::processCommands()
@@ -136,25 +155,8 @@ CommandLoop& CommandLoop::instance_()
     return commadLoop_;
 }
 
-void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state )
+Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state )
 {
-    std::exception_ptr exception;
-    if ( blockThread )
-    {
-        // Adjust the `func` to store thrown exceptions.
-        func = [next = std::move( func ), &exception]
-        {
-            try
-            {
-                next();
-            }
-            catch ( ... )
-            {
-                exception = std::current_exception();
-            }
-        };
-    }
-
     auto& inst = instance_();
     std::shared_ptr<Command> cmd = std::make_shared<Command>();
     cmd->state = state;
@@ -166,14 +168,14 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
         spdlog::debug( "CommandLoop::addCommand_: cannot accept new command because it is closed" );
         // a non-blocking command is dropped as before; a blocking caller must not be told it ran
         if ( blockThread )
-            throw std::runtime_error( "Viewer command loop is stopped, cannot run the command" );
-        return;
+            return unexpected( std::string( "Viewer command loop is stopped, cannot run the command" ) );
+        return {};
     }
     // no `setMainThreadId` yet: nobody will ever call `processCommands`, so the wait below cannot end
     if ( blockThread && inst.mainThreadId_ == std::thread::id{} )
     {
         spdlog::debug( "CommandLoop::addCommand_: cannot block on a command loop that was never started" );
-        throw std::runtime_error( "Viewer command loop is not running, cannot run the command" );
+        return unexpected( std::string( "Viewer command loop is not running, cannot run the command" ) );
     }
     inst.commands_.push( cmd );
 
@@ -244,11 +246,9 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
         // `done` covers both outcomes, so tell them apart: a caller woken by `removeCommands`
         // must not return as if its command had run
         if ( cmd->dropped )
-            throw std::runtime_error( "Viewer command loop stopped before the command was executed" );
-
-        if ( exception )
-            std::rethrow_exception( exception );
+            return unexpected( std::string( "Viewer command loop stopped before the command was executed" ) );
     }
+    return {};
 }
 
 void skipFramesAfterInput()

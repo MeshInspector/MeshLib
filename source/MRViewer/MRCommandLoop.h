@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "MRMesh/MRExpected.h"
 #include <queue>
 #include <functional>
 #include <condition_variable>
@@ -61,7 +62,9 @@ private:
 
     static CommandLoop& instance_();
 
-    static void addCommand_( CommandFunc func, bool blockThread, StartPosition state );
+    // returns an error, rather than throwing or blocking forever, if no loop can ever run a blocking
+    // command: the queue is closed, it was never started, or removeCommands dropped the command
+    static Expected<void> addCommand_( CommandFunc func, bool blockThread, StartPosition state );
 
     struct Command
     {

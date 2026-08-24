@@ -17,15 +17,29 @@ Before installing MeshLib, ensure you have the following tools installed:
 
 ### .NET SDK
  - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website.
- MeshLib is compatible with .NET Framework 4.7 and higher, as well as .NET 5.0, 6.0, 7.0, 8.0, and additional versions outlined below.
+ MeshLib targets `netstandard2.0`, so it sets no upper bound on your .NET version: it is compatible with .NET Framework 4.7 and higher, and with .NET 5.0 and every later version.
  - Verify your installation by running:
 \code{.cmd}
 dotnet --version
 \endcode
 
-### Visual Studio
-For a more integrated development experience, you can use Visual Studio 2019 or later.
-Make sure to install the **.NET desktop development** workload.
+### IDE (optional)
+MeshLib needs no IDE: the .NET CLI path below is sufficient, and works the same way on Windows, macOS and Linux.
+For a more integrated development experience:
+ - **Windows**: Visual Studio, with the **.NET desktop development** workload. Which version you need is decided by *your project's* target framework, not by MeshLib — see the table below.
+ - **Windows, macOS and Linux**: [JetBrains Rider](https://www.jetbrains.com/rider/), or [Visual Studio Code](https://code.visualstudio.com/download) with the [C# Dev Kit](https://marketplace.visualstudio.com/items?itemName=ms-dotnettools.csdevkit) extension. Visual Studio itself is Windows-only — Visual Studio for Mac was retired in August 2024.
+
+Minimum Visual Studio version per target framework:
+
+| Your project's `<TargetFramework>` | Minimum Visual Studio |
+|------------------------------------|-----------------------|
+| .NET Framework 4.7+, `net5.0`, `net6.0` | Visual Studio 2019 |
+| `net7.0` | Visual Studio 2022 17.2+ |
+| `net8.0` | Visual Studio 2022 17.8+ |
+| `net9.0` | Visual Studio 2022 17.14+ |
+| `net10.0` | Visual Studio 2026 |
+
+\note Following the step above and installing the *latest* SDK means `dotnet new console` creates a `net10.0` project, which needs **Visual Studio 2026**. Older versions fail with errors that never mention Visual Studio: 2022 reports `error NETSDK1045: The current .NET SDK does not support targeting .NET 10.0`, and 2019 fails even earlier with `error MSB4236: The SDK 'Microsoft.NET.Sdk' specified could not be found`, because the SDK resolver rejects MSBuild 16 before the target framework is read. To keep an older Visual Studio, set `<TargetFramework>` in your `.csproj` to a version its row covers.
 
 ## Installation via NuGet
 Depending on your development environment and workflow preferences, you can choose from the following installation methods
@@ -79,6 +93,7 @@ dotnet run
 To install MeshLib via the .NET CLI, follow these steps:
  1. **Open a Terminal or Command Prompt**:
   - **On Windows**, use Command Prompt, PowerShell, or the Windows Terminal.
+  - **On macOS**, use Terminal or iTerm2. **On Linux**, use your distribution's terminal emulator.
  2. **Create a New Project Directory**:
  \n Run the following commands to create a new directory for your project and navigate into it:
 \code{.cmd}

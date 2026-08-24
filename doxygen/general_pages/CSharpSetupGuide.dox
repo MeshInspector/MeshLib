@@ -54,25 +54,47 @@ If you prefer to download the MeshLib package directly from the NuGet website, f
  2. **Create a Local Directory for NuGet Packages**:
   - Choose or create a directory on your system where you will store the `.nupkg` file. For example:
 \code{.cmd}
+:: Windows (Command Prompt)
+mkdir %USERPROFILE%\LocalNuGetPackages
+\endcode
+\code{.sh}
+# Linux / macOS
 mkdir ~/LocalNuGetPackages
 \endcode
-  - Move the downloaded `MeshLib.nupkg` file to this directory.
+  - Move the downloaded package to that directory **keeping its original `meshlib.<version>.nupkg` file name**: a
+    folder feed resolves packages by the `<id>.<version>.nupkg` naming convention, so renaming it to `MeshLib.nupkg`
+    makes the next step fail with `error: There are no versions available for the package 'MeshLib'`. If your file is
+    named `MeshLib_<version>.nupkg` (the GitHub release artifact), rename it to `MeshLib.<version>.nupkg`.
  3. **Install the MeshLib Package Locally**:
   - Use the command below to install the package:
 \code{.cmd}
-dotnet add package MeshLib --source /path/to/LocalNuGetPackages
+:: Windows (Command Prompt)
+dotnet add package MeshLib --source %USERPROFILE%\LocalNuGetPackages
+\endcode
+\code{.sh}
+# Linux / macOS
+dotnet add package MeshLib --source ~/LocalNuGetPackages
 \endcode
  4. **Alternative: Configure Local Source Globally**:
   - Add the local directory as a source using:
 \code{.cmd}
-dotnet nuget add source \path\to\LocalNuGetPackages --name LocalPackages
+:: Windows (Command Prompt)
+dotnet nuget add source %USERPROFILE%\LocalNuGetPackages --name LocalPackages
 \endcode
-  - After this, you can install the package normally without specifying `-source`.
+\code{.sh}
+# Linux / macOS
+dotnet nuget add source ~/LocalNuGetPackages --name LocalPackages
+\endcode
+  - After this, you can install the package normally without specifying `--source`.
  5. **Build and Run Your Project**:
 \code{.cmd}
 dotnet build
 dotnet run
 \endcode
+
+\note `dotnet nuget push <package> --source <feed-directory>` copies a package into a folder feed under the correct
+`<id>.<version>.nupkg` name for you, so it sidesteps the renaming above — see
+[Testing local NuGet packages](https://github.com/MeshInspector/MeshLib/blob/master/docs/testing_local_nuget_packages.md).
 
 ## Installation via .NET Command-Line Interface
 To install MeshLib via the .NET CLI, follow these steps:

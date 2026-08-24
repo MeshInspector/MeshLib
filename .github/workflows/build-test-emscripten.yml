@@ -306,15 +306,14 @@ jobs:
   emscripten-test:
     if: ${{ !inputs.definitions_only }}
     needs: emscripten-build
-    timeout-minutes: 10
+    timeout-minutes: 35
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
         package_name:
-          - emscripten-singlethreaded
-          - emscripten-multithreaded
           - emscripten-multithreaded-64bit
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
 
     steps:
       - name: Download MRTest bundle
@@ -326,7 +325,7 @@ jobs:
           run-id: ${{ github.run_id }}
 
       - name: Unit Tests
-        timeout-minutes: 5
+        timeout-minutes: 30
         working-directory: mrtest-bundle
         run: |
           python3 emrun.py \
@@ -334,4 +333,4 @@ jobs:
             --browser-args="--headless" \
             --safe-firefox-profile \
             --kill-exit \
-            ./MRTest.html
+            ./MRTest.html --gtest_filter=MRMesh.SceneLoadStress

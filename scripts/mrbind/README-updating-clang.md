@@ -3,8 +3,9 @@
 Update the number in `scripts/mrbind/clang_version.txt` for Linux and in `scripts/mrbind/clang_version_macos.txt` for macOS.
 
 The Linux images that set `LLVM_PREFIX` (`docker/rockylinux8-vcpkgDockerfile`,
-`docker/emscripten-generate-c-bindingsDockerfile`) build the bindings with our own PGO Clang keg
-instead, pinned in those Dockerfiles - bump it there. `clang_version.txt` still drives the apt
+`docker/emscripten-generate-c-bindingsDockerfile`) build the bindings with our own PGO-optimized
+Clang instead, unpacked into `/opt` from a [MeshInspector/toolchains](https://github.com/MeshInspector/toolchains)
+release and pinned in those Dockerfiles - bump it there. `clang_version.txt` still drives the apt
 packages everywhere else.
 
 On Windows (MSYS2), you can only lock the latest Clang version they offer.

@@ -23,6 +23,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRCommonPluginsShortcuts.cpp" />
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRObjectInfo.cpp" />
@@ -30,6 +31,8 @@
     <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp" />
     <ClCompile Include="Basic\MRToggleProjectionMode.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
+    <ClCompile Include="ViewerButtons\MRHistoryMenuItems.cpp" />
+    <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />
     <ClCompile Include="ViewerButtons\MRInvertView.cpp" />
@@ -43,11 +46,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCommonPluginsShortcuts.h" />
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
     <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />
     <ClInclude Include="Basic\MRDrawViewportWidgetsItem.h" />
     <ClInclude Include="Selectors\MRSelectObjectByClick.h" />
+    <ClInclude Include="ViewerButtons\MRHistoryMenuItems.h" />
+    <ClInclude Include="ViewerButtons\MRViewerSettingsPlugin.h" />
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h" />
     <ClInclude Include="ViewerButtons\MRIOFilesMenuItems.h" />
     <ClInclude Include="ViewerButtons\MRRibbonSceneButtons.h" />
@@ -61,6 +67,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
       <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRMcp\MRMcp.vcxproj">
+      <Project>{c8250f26-e01d-4a63-98cd-68069d818080}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>

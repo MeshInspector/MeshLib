@@ -238,6 +238,93 @@ TEST( MRMesh, PlanarTriangulationMergeSame3 )
     EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ), 1e-3 );
 }
 
+// Degenerate polygons quantized to a coarse grid: coincident vertices and doubled segments that
+// mergeSamePoints_ has to fold into a single sweep vertex. Each of these used to assert in the
+// sweep line, mostly as ccw called with duplicate vertex ids.
+
+TEST( MRMesh, PlanarTriangulationMergeSameCascade )
+{
+    // self-intersecting 6-gon visiting ( -4, 8 ) twice at non-adjacent positions
+    Contour2f cont = {
+        { -3, 6 }, { -8, 16 }, { -4, 8 }, { -6, 10 }, { -4, 8 }, { -7, 1 }
+    };
+    cont.push_back( cont.front() ); // close the contour
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationPinchedMonotoneBlock )
+{
+    // segment (-7,2)-(-13,3) traversed twice, then a tail through (-18,1): the doubled edge
+    // collapses on merge, so both its directions have to fold into one winding modifier
+    Contour2f cont = {
+        { -7, 2 }, { -13, 3 }, { -7, 2 }, { -13, 3 }, { -18, 1 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 ); // the net winding covers triangle (-7,2)(-13,3)(-18,1)
+}
+
+TEST( MRMesh, PlanarTriangulationPinchedMonotoneBlock2 )
+{
+    // the same doubled segment, this time preceded by a self-crossing cluster
+    Contour2f cont = {
+        { 14, 2 }, { 18, 2 }, { 9, 1 }, { 18, 3 },
+        { -7, 2 }, { -13, 3 }, { -7, 2 }, { -13, 3 }, { 18, -3 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges )
+{
+    // four points on one line with two coincident pairs: (-15,-1) and (-10,-1) each appear twice
+    Contour2f cont = {
+        { -9, 0 }, { -10, -1 }, { -15, -1 }, { -19, -2 },
+        { -15, -1 }, { -7, -1 }, { -11, -1 }, { -10, -1 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges2 )
+{
+    // four points on y=0 walked back and forth, plus two points above
+    Contour2f cont = {
+        { 14, 0 }, { 7, 0 }, { 15, 0 }, { 14, 3 }, { 18, 4 }, { 13, 0 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSameCascade2 )
+{
+    // one segment traversed back and forth three times: the merge cascade folds all three
+    // traversals into nothing
+    Contour2f cont = {
+        { 11, -12 }, { 7, -7 }, { 11, -12 }, { 7, -7 }, { 11, -12 }, { 7, -7 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 0 ); // zero-area input: survive and produce nothing
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges3 )
+{
+    // six points on one line walked back and forth, ( 0.4, 0 ) visited twice; zero area;
+    // keep the float literals exact - the repro is sensitive to the float->int quantization
+    Contour2f cont = {
+        { 0.800000012f, 0.f }, { 0.400000006f, 0.f }, { 0.5f, 0.f },
+        { 0.349999994f, 0.f }, { 0.600000024f, 0.f }, { 0.400000006f, 0.f }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GE( mesh.topology.numValidFaces(), 0 ); // completing without the assert is the test
+}
+
 namespace
 {
 

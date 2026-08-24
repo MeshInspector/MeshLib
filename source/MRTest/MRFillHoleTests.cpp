@@ -2,6 +2,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRMeshFixer.h>
+#include <MRMesh/MRRingIterator.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -249,6 +250,74 @@ TEST( MRMesh, HoleFillPlan4 )
     EXPECT_EQ( mesh1.topology.numValidFaces(), 4 );
     EXPECT_TRUE( mesh1.topology.isClosed() );
     EXPECT_FALSE( hasMultipleEdges( mesh1.topology ) );
+}
+
+// hexagonal hole, and the edges of the hole to the left of the returned one
+static Mesh makeHexagonHole( EdgeId & e, std::vector<EdgeId> & holeEdges )
+{
+    Mesh mesh;
+    e = mesh.addSeparateEdgeLoop
+    ( {
+        {  2,  0, 0 },
+        {  1,  2, 0 },
+        { -1,  2, 0 },
+        { -2,  0, 0 },
+        { -1, -2, 0 },
+        {  1, -2, 0 }
+    } );
+    holeEdges.clear();
+    for ( auto ei : leftRing( mesh.topology, e ) )
+        holeEdges.push_back( ei );
+    return mesh;
+}
+
+TEST( MRMesh, HoleFillPlanEdgesOnly )
+{
+    EdgeId e;
+    std::vector<EdgeId> he;
+    auto mesh = makeHexagonHole( e, he );
+    ASSERT_EQ( he.size(), 6 );
+    std::vector<VertId> v;
+    for ( auto ei : he )
+        v.push_back( mesh.topology.org( ei ) );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), 2 );
+
+    // numTris stays zero: the plan only splits the hole in parts and creates no face.
+    // the second chord starts where the first one ends, which is expressible only as the sym
+    // of the first item: -( 2 * item + sym + 1 ) == -2
+    HoleFillPlan plan;
+    plan.items.push_back( { (int)he[2], (int)he[0] } ); // chord org( he2 ) -> org( he0 )
+    plan.items.push_back( { FillHoleItemEdge{ .item = 0, .sym = true }.encode(), (int)he[4] } ); // org( he0 ) -> org( he4 )
+
+    executeHoleFillPlan( mesh, e, plan );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 0 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), 4 ); // 3 parts and the other side
+    EXPECT_TRUE( mesh.topology.findEdge( v[2], v[0] ).valid() );
+    EXPECT_TRUE( mesh.topology.findEdge( v[0], v[4] ).valid() );
+    // without the sym bit the second chord would have started at the other end of the first one
+    EXPECT_FALSE( mesh.topology.findEdge( v[2], v[4] ).valid() );
+}
+
+TEST( MRMesh, HoleFillPlanSymAnchorMultipleEdge )
+{
+    EdgeId e;
+    std::vector<EdgeId> he;
+    auto mesh = makeHexagonHole( e, he );
+    ASSERT_EQ( he.size(), 6 );
+    const auto v0 = mesh.topology.org( he[0] );
+    const auto v4 = mesh.topology.org( he[4] );
+
+    HoleFillPlan pre;
+    pre.items.push_back( { (int)he[0], (int)he[4] } );
+    executeHoleFillPlan( mesh, e, pre );
+    ASSERT_TRUE( mesh.topology.findEdge( v0, v4 ).valid() );
+
+    // the second item would add org( he0 ) -> org( he4 ) once more, which already exists;
+    // resolving its sym code by the first item's edgeCode1 would look at the other end and miss it
+    HoleFillPlan plan;
+    plan.items.push_back( { (int)he[2], (int)he[0] } );
+    plan.items.push_back( { FillHoleItemEdge{ .item = 0, .sym = true }.encode(), (int)he[4] } );
+    EXPECT_FALSE( isFillingMultipleEdgeFree( mesh.topology, plan ) );
 }
 
 } //namespace MR

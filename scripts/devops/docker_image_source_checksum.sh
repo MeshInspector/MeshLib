@@ -32,7 +32,6 @@ ubuntu=(
   scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
 )
 emscripten=( scripts/cmake_install.sh )
-generate=( scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/clang_version.txt )
 
 case "${distro}" in
   ubuntu22|ubuntu24)
@@ -40,7 +39,7 @@ case "${distro}" in
   emscripten|emscripten-build-c-bindings)
     files=( "docker/${distro}Dockerfile" "${common[@]}" "${emscripten[@]}" ) ;;
   emscripten-generate-c-bindings)
-    files=( "docker/${distro}Dockerfile" "${generate[@]}" ) ;;
+    files=( "docker/${distro}Dockerfile" ) ;;
   rockylinux8-vcpkg|rockylinux9-vcpkg)
     files=( docker/rockylinux8-vcpkgDockerfile docker/rockylinux9-vcpkgDockerfile thirdparty/vcpkg ) ;;
   *)

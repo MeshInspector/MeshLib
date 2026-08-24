@@ -1,8 +1,10 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
+#include "MRInt64Mul128.h"
 #include "MRPrecisePredicates3.h"
 #include "MRSparsePolynomial.h"
 #include "MRDivRound.h"
+#include "MRBox.h"
 
 namespace MR
 {
@@ -130,12 +132,12 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     const Vector3i64 c( c0.x, c0.y, sqr( std::int64_t( c0.x ) ) + sqr( std::int64_t( c0.y ) ) );
 
     //e**0
-    if ( auto v = mixed( Vector3i128fast( a ), Vector3i128fast( b ), Vector3i128fast( c ) ) )
+    if ( auto v = mixed( Vector3i128fast( a ), Vector3i64mul( b ), Vector3i64mul( c ) ) )
         return v > 0;
 
     // e**1
     const auto bxy_cxy = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
-    if ( auto v = -cross( Vector2i128fast{ b.x, b.z }, Vector2i128fast{ c.x, c.z } ) + 2 * a.y * FastInt128( bxy_cxy ) )
+    if ( auto v = -cross( Vector2i64mul{ b.x, b.z }, Vector2i64mul{ c.x, c.z } ) + Int64Mul128( 2 * a.y ) * Int64Mul128( bxy_cxy ) )
         return v > 0;
 
     // e**2
@@ -144,14 +146,14 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
 
     // e**3
     assert( bxy_cxy == 0 );
-    if ( auto v = cross( Vector2i128fast{ b.y, b.z }, Vector2i128fast{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
+    if ( auto v = cross( Vector2i64mul{ b.y, b.z }, Vector2i64mul{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
         return v > 0;
 
     // e**6 same as e**2
 
     // e**9
     const auto axy_cxy = cross( Vector2i64{ a.x, a.y }, Vector2i64{ c.x, c.y } );
-    if ( auto v = cross( Vector2i128fast{ a.x, a.z }, Vector2i128fast{ c.x, c.z } ) - 2 * b.y * FastInt128( axy_cxy ) )
+    if ( auto v = cross( Vector2i64mul{ a.x, a.z }, Vector2i64mul{ c.x, c.z } ) - Int64Mul128( 2 * b.y ) * Int64Mul128( axy_cxy ) )
         return v > 0;
 
     // e**10
@@ -177,7 +179,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     assert( c.x == 0 && c.y == 0 && c.z == 0 );
 
     // e**81
-    if ( auto v = b.x * FastInt128( a.z ) - a.x * FastInt128( b.z ) )
+    if ( auto v = Int64Mul128( b.x ) * Int64Mul128( a.z ) - Int64Mul128( a.x ) * Int64Mul128( b.z ) )
         return v > 0;
 
     // e**82
@@ -342,7 +344,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     const auto areaSbDest = area( vs[4].pt, vs[5].pt, vs[1].pt );
     assert( ( areaSbOrg <= 0 && areaSbDest >= 0 ) || ( areaSbOrg >= 0 && areaSbDest <= 0 ) );
 
-    const auto nomSimple = FastInt128( areaSaOrg ) * FastInt128( areaSbDest ) - FastInt128( areaSbOrg ) * FastInt128( areaSaDest );
+    const auto nomSimple = Int64Mul128( areaSaOrg ) * Int64Mul128( areaSbDest ) - Int64Mul128( areaSbOrg ) * Int64Mul128( areaSaDest );
     if ( nomSimple != 0 )
     {
         // happy not-degenerated path
@@ -385,6 +387,13 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     return res;
 }
 
+// intersection of segments (a,b) and (c,d) from the doubled areas abc = |area(a,b,c)| and
+// abd = |area(a,b,d)|, which must not be both zero
+static Vector2i intersectionByAreas( const Vector2i& ci, const Vector2i& di, std::int64_t abc, std::int64_t abd )
+{
+    return Vector2i( divRound( FastInt128( abc ) * Vector2i128fast( di ) + FastInt128( abd ) * Vector2i128fast( ci ), FastInt128( abc + abd ) ) );
+}
+
 Vector2i findSegmentSegmentIntersectionPrecise(
     const Vector2i& ai, const Vector2i& bi, const Vector2i& ci, const Vector2i& di )
 {
@@ -394,19 +403,40 @@ Vector2i findSegmentSegmentIntersectionPrecise(
     auto abd = cross( Vector2i64( ai - di ), Vector2i64( bi - di ) );
     if ( abd < 0 )
         abd = -abd;
-    const auto sum = abc + abd;
-    if ( sum != 0 )
-        return Vector2i( divRound( FastInt128( abc ) * Vector2i128fast( di ) + FastInt128( abd ) * Vector2i128fast( ci ), FastInt128( sum ) ) );
+    if ( abc + abd != 0 )
+        return intersectionByAreas( ci, di, abc, abd );
 
-    // degenerate case
-    auto adLSq = Vector2i64( di - ai ).lengthSq();
-    auto bcLSq = Vector2i64( bi - ci ).lengthSq();
-    if ( adLSq > bcLSq )
-        return ci;
-    else if ( bcLSq > adLSq )
-        return di;
-    else
-        return Vector2i( divRound( Vector2i64( ai ) + Vector2i64( bi ) + Vector2i64( ci ) + Vector2i64( di ), std::int64_t( 2 ) ) );
+    Box2i ab, cd;
+    ab.include( ai ); ab.include( bi );
+    cd.include( ci ); cd.include( di );
+    ab.intersect( cd );
+    return Vector2i( divRound( Vector2i64( ab.min ) + Vector2i64( ab.max ), std::int64_t( 2 ) ) );
+}
+
+Vector2i findSegmentSegmentIntersectionPrecise( const std::array<PreciseVertCoords2, 4> & vs )
+{
+    const auto& ai = vs[0].pt;
+    const auto& bi = vs[1].pt;
+    const auto& ci = vs[2].pt;
+    const auto& di = vs[3].pt;
+    auto abc = cross( Vector2i64( ai - ci ), Vector2i64( bi - ci ) );
+    if ( abc < 0 )
+        abc = -abc;
+    auto abd = cross( Vector2i64( ai - di ), Vector2i64( bi - di ) );
+    if ( abd < 0 )
+        abd = -abd;
+    if ( abc + abd != 0 )
+        return intersectionByAreas( ci, di, abc, abd );
+
+    // all four points lie on one line: simulation-of-simplicity lifts every point off the line
+    // by an amount steeply decreasing with the vertex id, so the two perturbed segments cross
+    // right next to the far end of the segment holding the smallest id; returning that end keeps
+    // the intersection on the same side of every other vertex as ccw reports
+    int m = 0;
+    for ( int i = 1; i < 4; ++i )
+        if ( vs[i].id < vs[m].id )
+            m = i;
+    return vs[m ^ 1].pt; // the other end of the segment of vs[m]
 }
 
 Vector2f findSegmentSegmentIntersectionPrecise(

@@ -131,12 +131,13 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: xvfb-run -a python3 -m pytest -s -v
 
   linux-arm64-test:
     if: ${{ inputs.test_ubuntu_arm64 }}
@@ -225,12 +226,13 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: xvfb-run -a python3 -m pytest -s -v
 
   macos-test:
     if: ${{ inputs.test_macos }}
@@ -329,6 +331,7 @@ jobs:
           fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
+          ./build/MeshModification
 
   windows-test:
     if: ${{ inputs.test_windows }}

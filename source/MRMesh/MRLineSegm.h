@@ -20,7 +20,7 @@ struct LineSegm
     /// returns directional vector of the line
     [[nodiscard]] V dir() const { return b - a; }
     /// returns squared length of this line segment
-    [[nodiscard]] T lengthSq() const { return dir().lengthSq(); }
+    [[nodiscard]] auto lengthSq() const -> decltype( std::declval<V>().lengthSq() ) { return dir().lengthSq(); }
     /// returns the length of this line segment
     [[nodiscard]] T length() const { return dir().length(); }
     /// returns point on the line, where param=0 returns a and param=1 returns b

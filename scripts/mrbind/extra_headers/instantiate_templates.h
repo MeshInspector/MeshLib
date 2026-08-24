@@ -27,7 +27,7 @@ namespace MR
     template Vector3<T> cross( const Vector3<T> & a, const Vector3<T> & b ); \
     template T dot( const Vector3<T> & a, const Vector3<T> & b ); \
     template T sqr( const Vector3<T> & a ); \
-    template T mixed( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c ); \
+    template T mixed<T, T>( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c ); \
     template Vector3<T> mult( const Vector3<T>& a, const Vector3<T>& b ); \
     template Vector3<T> div( const Vector3<T>& a, const Vector3<T>& b ); \
     template T angle( const Vector3<T> & a, const Vector3<T> & b ); \

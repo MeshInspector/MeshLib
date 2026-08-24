@@ -2,7 +2,7 @@
 
 #include "MRMeshFwd.h"
 #include "MRPrecisePredicates3.h"
-#include "MRHighPrecision.h"
+#include "MRFastInt128.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cstddef>
@@ -50,6 +50,18 @@ struct AlphaShapeData
 /// so the statistics of several calls can be accumulated in one object
 struct AlphaShapeStats
 {
+    /// the number of neighbours found within the search radius, before any of the filters below;
+    /// the searches around all the points are quadratic in this, so it explains most of the
+    /// difference in the time spent per point between one cloud and another
+    std::size_t collectedNeis = 0;
+
+    /// the number of pairs of neighbours checked for one of them making the other redundant,
+    /// which is quadratic in the neighbours of a point
+    std::size_t redundancyTests = 0;
+
+    /// the number of neighbours found redundant by those checks and excluded from the search
+    std::size_t redundantNeis = 0;
+
     /// the number of triangles considered: the triples of close enough points that were checked
     /// for the existence of a ball of the given radius passing via all three of them
     std::size_t consideredTris = 0;
@@ -63,11 +75,27 @@ struct AlphaShapeStats
     /// is not tested further as soon as the first point inside it is found
     std::size_t inBallTests = 0;
 
+    /// the number of neighbours tested for being shadowed by the balls of a touchable triangle
+    std::size_t shadowTests = 0;
+
+    /// the number of shadow tests not decided by the floating-point rejection,
+    /// which had to evaluate the exact predicates
+    std::size_t exactShadowTests = 0;
+
+    /// the number of neighbours found shadowed, which are excluded from the search
+    std::size_t shadowedNeis = 0;
+
     AlphaShapeStats & operator +=( const AlphaShapeStats & r )
     {
+        collectedNeis += r.collectedNeis;
+        redundancyTests += r.redundancyTests;
+        redundantNeis += r.redundantNeis;
         consideredTris += r.consideredTris;
         touchableTris += r.touchableTris;
         inBallTests += r.inBallTests;
+        shadowTests += r.shadowTests;
+        exactShadowTests += r.exactShadowTests;
+        shadowedNeis += r.shadowedNeis;
         return *this;
     }
 };
@@ -79,15 +107,18 @@ struct AlphaShapeNei
     PreciseVertCoords coords;
 
     /// the exact squared distance from #v in the units of the same integer grid
-    MR_BIND_IGNORE Int128 distSq;
+    MR_BIND_IGNORE FastInt128 distSq;
 };
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius,
-/// where each triangle contains point #v and two other points
+/// where each triangle contains point #v and two other points;
+/// the valid points sharing one position in the integer grid are merged: only the point with
+/// the smallest id among them appears in the triangles (in particular, #v itself gets no
+/// triangles if it has such a twin), so the triangles found around all the points agree
 MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     Triangulation & appendTris,  ///< found triangles will be appended here
-    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point #v within data.searchRadius sorted by distance, except the ones redundant for the search
+    std::vector<AlphaShapeNei> & neis, ///< temporary storage to avoid memory allocations, it will be filled with the neighbours of point #v within data.searchRadius sorted by distance, except the duplicates and the ones redundant for the search; cleared if #v duplicates a point with a smaller id
     bool onlyLargerVids,         ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
     AlphaShapeStats * stats = nullptr ); ///< optional statistics of the work done, which is increased here
 

@@ -44,16 +44,17 @@ void CommandLoop::setState( StartPosition state )
 
 void CommandLoop::appendCommand( CommandFunc func, StartPosition pos )
 {
-    addCommand_( func, false, pos );
+    // a non-blocking command has no error channel: it is dropped silently on a closed queue, as before
+    (void)addCommand_( func, false, pos );
 }
 
-void CommandLoop::runCommandFromGUIThread( CommandFunc func )
+Expected<void> CommandLoop::runCommandFromGUIThread( CommandFunc func )
 {
     bool blockThread = instance_().mainThreadId_ != std::this_thread::get_id();
     if ( blockThread )
         return addCommand_( func, true, StartPosition::BeforeWindowAppear );
-    else
-        return func();
+    func();
+    return {};
 }
 
 void CommandLoop::processCommands()
@@ -136,7 +137,7 @@ CommandLoop& CommandLoop::instance_()
     return commadLoop_;
 }
 
-void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state )
+Expected<void> CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition state )
 {
     std::exception_ptr exception;
     if ( blockThread )
@@ -166,14 +167,14 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
         spdlog::debug( "CommandLoop::addCommand_: cannot accept new command because it is closed" );
         // a non-blocking command is dropped as before; a blocking caller must not be told it ran
         if ( blockThread )
-            throw std::runtime_error( "Viewer command loop is stopped, cannot run the command" );
-        return;
+            return unexpected( std::string( "Viewer command loop is stopped, cannot run the command" ) );
+        return {};
     }
     // no `setMainThreadId` yet: nobody will ever call `processCommands`, so the wait below cannot end
     if ( blockThread && inst.mainThreadId_ == std::thread::id{} )
     {
         spdlog::debug( "CommandLoop::addCommand_: cannot block on a command loop that was never started" );
-        throw std::runtime_error( "Viewer command loop is not running, cannot run the command" );
+        return unexpected( std::string( "Viewer command loop is not running, cannot run the command" ) );
     }
     inst.commands_.push( cmd );
 
@@ -244,17 +245,26 @@ void CommandLoop::addCommand_( CommandFunc func, bool blockThread, StartPosition
         // `done` covers both outcomes, so tell them apart: a caller woken by `removeCommands`
         // must not return as if its command had run
         if ( cmd->dropped )
-            throw std::runtime_error( "Viewer command loop stopped before the command was executed" );
+            return unexpected( std::string( "Viewer command loop stopped before the command was executed" ) );
 
+        // an exception raised by the command itself keeps propagating as one, it is not this
+        // function's failure and its type carries information the caller may need (e.g. pybind11)
         if ( exception )
             std::rethrow_exception( exception );
     }
+    return {};
+}
+
+void runCommandFromGUIThreadOrThrow( CommandLoop::CommandFunc func )
+{
+    if ( auto res = CommandLoop::runCommandFromGUIThread( std::move( func ) ); !res )
+        throw std::runtime_error( std::move( res.error() ) );
 }
 
 void skipFramesAfterInput()
 {
     for ( int i = 0; i < getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
-        CommandLoop::runCommandFromGUIThread( [] {} );
+        runCommandFromGUIThreadOrThrow( [] {} );
 }
 
 }

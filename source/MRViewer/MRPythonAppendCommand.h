@@ -13,7 +13,7 @@ void pythonAppendOrRun( F func, Args&&... args )
     {
         funcLocal( std::forward<Args>( argsLocal )... );
     };
-    MR::CommandLoop::runCommandFromGUIThread( std::move( deferredAction ) );
+    MR::runCommandFromGUIThreadOrThrow( std::move( deferredAction ) );
 }
 
 // Returns lambda which runs specified function `f` on commandLoop

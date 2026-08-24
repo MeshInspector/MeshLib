@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "MRMesh/MRExpected.h"
 #include <queue>
 #include <functional>
 #include <condition_variable>
@@ -38,7 +39,9 @@ public:
 
     // If caller thread is main - instantly run command, otherwise add command to the end of loop with
     // StartPosition state = StartPosition::AfterSplash and blocks caller thread until command is done
-    MRVIEWER_API static void runCommandFromGUIThread( CommandFunc func );
+    // returns an error instead of blocking forever if no loop can ever run the command: the queue is
+    // closed, or it was never started; note that an exception thrown by func itself still propagates
+    MRVIEWER_API static Expected<void> runCommandFromGUIThread( CommandFunc func );
 
     // Execute all commands from loop
     MRVIEWER_API static void processCommands();
@@ -56,7 +59,7 @@ private:
 
     static CommandLoop& instance_();
 
-    static void addCommand_( CommandFunc func, bool blockThread, StartPosition state );
+    static Expected<void> addCommand_( CommandFunc func, bool blockThread, StartPosition state );
 
     struct Command
     {
@@ -82,6 +85,10 @@ private:
     std::queue<std::shared_ptr<Command>> commands_;
     std::mutex mutex_;
 };
+
+// Same as CommandLoop::runCommandFromGUIThread, but throws std::runtime_error if the command
+// cannot be run - for callers whose own error channel is an exception (python bindings, MCP tools)
+MRVIEWER_API void runCommandFromGUIThreadOrThrow( CommandLoop::CommandFunc func );
 
 // Push a handful of empty commands onto the main thread so the Viewer advances a few frames,
 // ensuring any UI state touched by a recent input (click, write, transform) is reflected before

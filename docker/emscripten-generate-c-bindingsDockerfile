@@ -18,12 +18,8 @@ RUN <<EOF
     export DEBIAN_FRONTEND=noninteractive
     # uncomment in case of problems with the Canonical mirrors
     # sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
-    case "$(uname -m)" in
-        x86_64)  CLANG_ARCH=x64 ;;
-        aarch64) CLANG_ARCH=arm64 ;;
-    esac
-    KEG=clang-${LLVM_VERSION}-pgo-dylib-rockylinux8
-    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${KEG}/${KEG}-${CLANG_ARCH}.tar.gz" | tar -C /opt -xz
+    TOOLCHAIN=clang-${LLVM_VERSION}-pgo-dylib-linux
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
     # MRBind dependencies
     ./scripts/mrbind/install_deps_ubuntu.sh
     # clean downloaded files

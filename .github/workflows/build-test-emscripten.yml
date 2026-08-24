@@ -307,12 +307,15 @@ jobs:
     if: ${{ !inputs.definitions_only }}
     needs: emscripten-build
     timeout-minutes: 35
-    runs-on: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         package_name:
           - emscripten-multithreaded-64bit
+        # the wasm bundle is architecture-independent, so the same build runs on both:
+        # x64 is where the stall was seen, arm is the control that came back clean
+        runner: [ubuntu-24.04, ubuntu-24.04-arm]
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
 
     steps:

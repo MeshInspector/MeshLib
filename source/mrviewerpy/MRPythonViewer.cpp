@@ -17,6 +17,7 @@
 #include "MRViewer/MRGladGlfw.h"
 #include <pybind11/stl.h>
 #include <memory>
+#include <optional>
 
 #pragma message("mrviewerpy pybind internals magic: " PYBIND11_INTERNALS_ID)
 
@@ -83,10 +84,39 @@ static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
 
 static void pythonRunLambdaFromGUIThread( pybind11::function func )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [func]
+    // the GUI thread holds no GIL and has no Python thread state of its own, so `func` must be
+    // called under `gil_scoped_acquire`; and the caller must drop the GIL for the whole blocking
+    // wait, or that acquire can never succeed
+    std::optional<pybind11::error_already_set> pyError;
+    std::exception_ptr otherError;
     {
-        func();
-    } );
+        pybind11::gil_scoped_release gilRelease;
+        // captured by reference: a blocking command outlives nothing, and a copy of `func` would
+        // touch Python reference counts on a thread that holds no GIL
+        MR::CommandLoop::runCommandFromGUIThread( [&func, &pyError, &otherError]
+        {
+            pybind11::gil_scoped_acquire gilAcquire;
+            try
+            {
+                func();
+            }
+            catch ( pybind11::error_already_set& e )
+            {
+                // must be stored while the GIL is held here, and rethrown by the caller below,
+                // which holds it again; letting it cross as an exception_ptr destroys it on
+                // whichever thread drops the last reference
+                pyError = std::move( e );
+            }
+            catch ( ... )
+            {
+                otherError = std::current_exception();
+            }
+        } );
+    }
+    if ( pyError )
+        throw std::move( *pyError ); // GIL reacquired, so pybind11 can restore the Python error
+    if ( otherError )
+        std::rethrow_exception( otherError );
 }
 
 namespace

@@ -36,6 +36,10 @@ The release description links the three per-Visual-Studio archives; `IteratorDeb
 Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it ships `install/app/Debug` without `install/app/Release`, so it covers no Release build — but being a `v142` build it serves a newer Visual Studio too, under the rule above.
 Whichever archive you pick, step 2 must define **both** `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to the value in the table — `0` for the three per-Visual-Studio archives, `2` for `IteratorDebug`.
 
+Debug symbols ship separately: every archive above has a companion `-PDB.zip` (`MeshLibDistVS26_<version>-PDB.zip`, `MeshLibDist_<version>-IteratorDebug-PDB.zip`, ...) holding only the `.pdb` files.
+Extract it over the same directory to put them back under `install/lib`, where the debugger looks for them.
+They are needed for symbolized call stacks only: without them the archive still compiles, links and runs, and is a few hundred megabytes smaller.
+
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
   - Download the archive for your Visual Studio toolset from the table above.

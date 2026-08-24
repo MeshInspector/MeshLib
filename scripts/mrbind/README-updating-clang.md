@@ -4,8 +4,8 @@ Update the number in `scripts/mrbind/clang_version.txt` for Linux and in `script
 
 The Linux images that set `LLVM_PREFIX` (`docker/rockylinux8-vcpkgDockerfile`,
 `docker/emscripten-generate-c-bindingsDockerfile`) build the bindings with our own PGO Clang keg
-instead, pinned by URL and sha256 in those Dockerfiles - bump it there. `clang_version.txt` still
-drives the apt packages everywhere else.
+instead, pinned in those Dockerfiles - bump it there. `clang_version.txt` still drives the apt
+packages everywhere else.
 
 On Windows (MSYS2), you can only lock the latest Clang version they offer.
 

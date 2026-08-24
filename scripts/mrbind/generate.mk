@@ -245,8 +245,7 @@ MACOS_MIN_VER :=
 ifneq ($(HOST_IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
 else ifneq ($(LLVM_PREFIX),)
-# LLVM_PREFIX selects a keg by full path: the Homebrew keg on the self-hosted macOS
-# runners, our PGO Clang keg in the Linux images.
+# LLVM_PREFIX selects a keg by full path (used for self-hosted runners).
 CXX_FOR_BINDINGS := $(LLVM_PREFIX)/bin/clang++
 else ifneq ($(HOST_IS_MACOS),)
 CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++

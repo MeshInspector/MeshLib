@@ -15,18 +15,10 @@ SCRIPT_DIR="$(realpath "$(dirname "$BASH_SOURCE")")"
 CLANG_VER="$(cat $SCRIPT_DIR/clang_version.txt | xargs)"
 [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
 
-# With LLVM_PREFIX set (our PGO clang keg, see docker/ubuntu*Dockerfile) mrbind and
-# the generated bindings use that installation, so none of the apt LLVM packages
-# are needed here. The product build keeps using the distro compilers.
-if [[ -n "${LLVM_PREFIX:-}" ]]; then
-    apt install -y make cmake ninja-build gawk procps
-    exit 0
-fi
-
 # Add LLVM repositories if the required package is not accessible right now.
 # If it's accessible, either we have already added the same repos, or the version of Ubuntu is new enough to have it in the official repos.
 # `-s` means dry run (check if it's installable or not).
-if ! apt-get install -s clang-$CLANG_VER >/dev/null 2>/dev/null; then
+if [[ -z "${LLVM_PREFIX:-}" ]] && ! apt-get install -s clang-$CLANG_VER >/dev/null 2>/dev/null; then
     # This is what `llvm.sh` needs (search `apt install` in it and see for yourself).
     apt install -y lsb-release wget software-properties-common gnupg
     # Download `llvm.sh`.
@@ -42,4 +34,9 @@ fi
 # Install the packages.
 # Could also add `sudo` here for `install_mrbind_ubuntu.sh`, but I think the user can do that themselves.
 # `procps` is for the `free` utility, to measure how much RAM we have.
-apt install -y make cmake ninja-build gawk procps clang-$CLANG_VER lld-$CLANG_VER clang-tools-$CLANG_VER libclang-$CLANG_VER-dev llvm-$CLANG_VER-dev
+apt install -y make cmake ninja-build gawk procps
+
+# LLVM_PREFIX points at a Clang installation to use instead of the apt one.
+[[ -z "${LLVM_PREFIX:-}" ]] || exit 0
+
+apt install -y clang-$CLANG_VER lld-$CLANG_VER clang-tools-$CLANG_VER libclang-$CLANG_VER-dev llvm-$CLANG_VER-dev

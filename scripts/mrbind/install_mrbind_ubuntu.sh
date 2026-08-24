@@ -20,8 +20,7 @@ rm -rf build
 [[ ${JOBS:=} ]] || JOBS=$(nproc)
 
 if [[ -n "${LLVM_PREFIX:-}" ]]; then
-    # Our PGO clang keg (see docker/ubuntu*Dockerfile), used for the bindings only.
-    # mrbind links its libLLVM.so/libclang-cpp.so, so rpath them for runtime.
+    # mrbind links the keg's libLLVM.so/libclang-cpp.so, so rpath them for runtime.
     CC="$LLVM_PREFIX/bin/clang" CXX="$LLVM_PREFIX/bin/clang++" cmake -B build -DCMAKE_PREFIX_PATH="$LLVM_PREFIX" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
         -DCMAKE_EXE_LINKER_FLAGS=-Wl,-rpath,"$LLVM_PREFIX/lib"
 else

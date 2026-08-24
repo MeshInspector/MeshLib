@@ -37,9 +37,6 @@ On \b macOS the floor differs by architecture: part of the file-format libraries
 against a newer SDK, so on an Intel Mac running macOS 14 the core API loads but the extra formats (E57, LAZ,
 CTM) fail.
 
-On \b Windows the natives use the Universal CRT, a component of Windows 10 and newer; earlier Windows
-versions are not supported.
-
 ### .NET SDK
  - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website.
  MeshLib is compatible with .NET Framework 4.7 and higher, as well as .NET 5.0, 6.0, 7.0, 8.0, and additional versions outlined below.

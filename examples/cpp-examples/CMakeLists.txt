@@ -34,6 +34,7 @@ set(EXAMPLES
   SignedDistances
   TerrainTriangulation
   Triangulation
+  VerifySetup
   # Viewer app example
   MRBasedMainFunc
 )

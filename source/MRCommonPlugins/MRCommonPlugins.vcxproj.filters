@@ -60,8 +60,15 @@
     <ClCompile Include="Voxels\MROpenRawVoxelsPlugin.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
+    <ClCompile Include="MRCommonPluginsShortcuts.cpp" />
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp">
       <Filter>Basic</Filter>
+    </ClCompile>
+    <ClCompile Include="ViewerButtons\MRHistoryMenuItems.cpp">
+      <Filter>ViewerButtons</Filter>
+    </ClCompile>
+    <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp">
+      <Filter>ViewerButtons</Filter>
     </ClCompile>
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp">
       <Filter>ViewerButtons</Filter>
@@ -96,6 +103,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCommonPluginsShortcuts.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h">
       <Filter>Basic</Filter>
     </ClInclude>
@@ -119,6 +127,12 @@
     </ClInclude>
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h">
       <Filter>Basic</Filter>
+    </ClInclude>
+    <ClInclude Include="ViewerButtons\MRHistoryMenuItems.h">
+      <Filter>ViewerButtons</Filter>
+    </ClInclude>
+    <ClInclude Include="ViewerButtons\MRViewerSettingsPlugin.h">
+      <Filter>ViewerButtons</Filter>
     </ClInclude>
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h">
       <Filter>ViewerButtons</Filter>

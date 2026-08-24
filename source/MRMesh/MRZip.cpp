@@ -5,6 +5,7 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRZlib.h"
+#include "MRPch/MRSpdlog.h"
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -315,7 +316,9 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
     zip_stat_t stats;
     zip_file_t* zfile;
     std::vector<char> fileBufer;
-    for ( int i = 0; i < zip_get_num_entries( zip, 0 ); ++i )
+    const auto numEntries = zip_get_num_entries( zip, 0 );
+    spdlog::info( "Decompressing {} zip entries into {}", numEntries, utf8string( targetFolder ) );
+    for ( zip_int64_t i = 0; i < numEntries; ++i )
     {
         if ( zip_stat_index( zip, i, 0, &stats ) == -1 )
             return unexpected( "Cannot process zip content" );
@@ -358,6 +361,7 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
             ofs.close();
         }
     }
+    spdlog::info( "Decompressed {} zip entries", numEntries );
     return {};
 }
 

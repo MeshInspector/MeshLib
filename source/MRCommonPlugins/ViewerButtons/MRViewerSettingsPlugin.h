@@ -1,17 +1,18 @@
 #pragma once
 
-#include "MRViewerFwd.h"
+#include "MRCommonPlugins/exports.h"
+#include "MRViewer/MRViewerFwd.h"
 #include "MRViewer/MRStatePlugin.h"
 #include "MRViewer/MRShadowsGL.h"
 #include "MRViewer/MRSpaceMouseParameters.h"
 #include "MRViewer/MRTouchpadParameters.h"
 #include "MRMesh/MRVector4.h"
-#include "MRMruFormatParameters.h"
+#include "MRViewer/MRMruFormatParameters.h"
 
 namespace MR
 {
 
-class MRVIEWER_CLASS ViewerSettingsPlugin : public StatePlugin
+class MRCOMMONPLUGINS_CLASS ViewerSettingsPlugin : public StatePlugin
 {
 public:
 
@@ -36,7 +37,7 @@ public:
     virtual bool blocking() const override { return false; }
 
     // call this function if you save/delete color theme, or change current theme outside of this plugin
-    MRVIEWER_API void updateThemes();
+    MRCOMMONPLUGINS_API void updateThemes();
 
     // basic class of external settings
     class ExternalSettings
@@ -54,17 +55,17 @@ public:
     };
 
     /// add external settings with UI combo box
-    MRVIEWER_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings );
+    MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings );
 
     /// delete external settings with UI combo box
-    MRVIEWER_API void delComboSettings( const TabType tab, const ExternalSettings * settings );
+    MRCOMMONPLUGINS_API void delComboSettings( const TabType tab, const ExternalSettings * settings );
 
     /// returns instance of this plugin if it is registered
     /// nullptr otherwise
-    MRVIEWER_API static ViewerSettingsPlugin* instance();
+    MRCOMMONPLUGINS_API static ViewerSettingsPlugin* instance();
 
     /// changes active tab
-    MRVIEWER_API void setActiveTab( TabType tab );
+    MRCOMMONPLUGINS_API void setActiveTab( TabType tab );
 private:
     virtual bool onEnable_() override;
     virtual bool onDisable_() override;

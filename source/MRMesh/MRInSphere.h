@@ -42,22 +42,21 @@ enum class InSphereResult
 /// checks whether the point vs[3] is strictly inside the sphere of radius sqrt(rSq) passing via
 /// points vs[0], vs[1], vs[2], with the center located on the positive side of plane vs[0]vs[1]vs[2]
 /// (same convention as in the overload above);
-/// resolves "vs[3] is exactly on the sphere" ties into Inside or Outside using simulation-of-simplicity:
-/// the points are symbolically perturbed (larger perturbations of points with smaller ids; per point the
-/// z-coordinate gets larger perturbation than y than x), and the first point whose perturbation moves
-/// vs[3] off the sphere decides the answer;
-/// known deviations from full simulation-of-simplicity semantics, all answered deterministically
-/// for now (covered by sosInSphereDeviations test, to be resolved by ids in the following PRs):
-///  * all three points of the triangle coincide: NoSphere now, while the perturbed triangle is not
-///    degenerate and its sphere exists;
-///  * two points of the triangle coincide and the third one is closer than the sphere's diameter:
-///    NoSphere now, while the perturbed sphere may exist depending on the perturbation directions;
-///  * rSq is exactly equal to the squared circumradius of a not-degenerate triangle: perturbations
-///    change the sphere's existence, affecting both "vs[3] strictly inside" (Inside now) and
-///    "vs[3] exactly on the sphere" (Outside now);
-/// the remaining degenerate NoSphere answers are exact under full simulation-of-simplicity, because
-/// no small perturbation can create the sphere: distinct collinear triangle points, two coincident
-/// triangle points with the third one at or beyond the sphere's diameter, rSq below the squared circumradius
+/// full simulation-of-simplicity semantics: the answer equals the answer of the plain predicate
+/// on the symbolically perturbed points, where the point with rank r among the four (by ascending
+/// ids) receives +eps^(9*L^r) to x, +eps^(3*L^r) to y, +eps^(L^r) to z with L = 128, eps -> +0
+/// (z gets the largest perturbation as in getPointDegrees, but the ladder between the ranks is 128:
+/// it exceeds the maximal degree-weight of one point in the predicate polynomials, which makes the
+/// resolution independent of whether the ranks are computed among 3 or among all 4 points);
+/// consequently:
+///  * "vs[3] exactly on the sphere" resolves into Inside or Outside by the ids;
+///  * rSq exactly equal to the squared circumradius: the perturbation decides the sphere's
+///    existence, so the answer can be NoSphere even for vs[3] strictly inside;
+///  * three coincident or distinct collinear triangle points always give NoSphere: the perturbed
+///    triangle is needle-like (the perturbation magnitudes differ vastly) and its circumradius
+///    diverges as eps -> +0;
+///  * two coincident triangle points: the sphere exists iff 4*rSq*(Vx^2+Vy^2) > |V|^4 at the
+///    leading order (the pair separates along z), V = the third point minus the pair
 [[nodiscard]] MRMESH_API InSphereResult inSphere( const std::array<PreciseVertCoords, 4> & vs, std::int64_t rSq );
 
 /// accelerates testing of many query points against one sphere given by the same three points
@@ -207,8 +206,10 @@ public:
     /// prepares the tester for the sphere of radius sqrt(rSq) passing via points a.pt, b.pt, c.pt,
     /// with the center located on the positive side of their plane (in the half-space pointed at by
     /// cross( b.pt - a.pt, c.pt - a.pt ) from the plane), remembering the ids for the queries;
-    /// returns false if no such sphere exists: the points are collinear or coincident,
-    /// or rSq is less than the squared circumradius of the triangle;
+    /// returns false if no such sphere exists for the symbolically perturbed points (see the
+    /// simulation-of-simplicity inSphere above): in particular, coincident and collinear triangle
+    /// points are resolved by the perturbation here, and rSq exactly equal to the squared
+    /// circumradius gives false whenever the perturbation of these ids breaks the existence;
     /// this hides the id-less reset of the base class, which would leave stale ids
     MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
 
@@ -217,7 +218,13 @@ public:
     /// this hides the id-less flip of the base class, which would leave stale ids
     void flip()
     {
-        InSphereTester<int>::flip();
+        if ( degenerateTriangle_ )
+        {
+            std::swap( u, v ); // w stays exactly zero for a degenerate triangle
+            pairSigma_ = -pairSigma_; // the mirror of the limit sphere
+        }
+        else
+            InSphereTester<int>::flip();
         std::swap( vb_, vc_ );
     }
 
@@ -227,6 +234,11 @@ public:
     /// (never returns OnSphere or NoSphere);
     /// shall be called only after reset() returned true, and all four ids must be distinct
     [[nodiscard]] MRMESH_API InSphereResult operator()( const PreciseVertCoords & d ) const;
+
+    /// whether the last successful reset() got a degenerate triangle (two coincident points), where
+    /// only the symbolically perturbed sphere exists; the exact sphere quantities of the base class
+    /// are not valid then
+    [[nodiscard]] bool degenerateTriangle() const { return degenerateTriangle_; }
 
     // the three accessors below describe the prepared sphere itself, for a caller that needs its own
     // exact predicate about it rather than the position of a point. With S = sqrt( heightSq() *
@@ -246,8 +258,13 @@ public:
     /// zero exactly when the circumradius equals the radius, so the center lies in the plane
     [[nodiscard]] MR_BIND_IGNORE const FastInt<384> & heightSq() const { return E; }
 
-private:
+protected:
+    // the fields are ordered by descending alignment to minimize the padding
+    Vector3i64 pairV_;    ///< the third point minus the pair
+    Vector3i pairPt_;     ///< the position of the coincident pair
     VertId va_, vb_, vc_; ///< the ids of the sphere points given in reset()
+    int pairSigma_ = 0;   ///< the side of the limit sphere's center: +1 along ( -Vy, Vx, 0 ), -1 the opposite
+    bool degenerateTriangle_ = false; ///< reset() got W == 0 with two coincident points and an existing perturbed sphere
 };
 
 /// gives exactly the same answers as InSphereTesterSoS, only faster: the sphere's center is also
@@ -278,7 +295,9 @@ public:
     /// of reset(): the selected one and its mirror in the plane of the triangle;
     /// the answer is exact, and a point lying on either of them is not strictly outside, so no tie
     /// arises and no simulation-of-simplicity is involved;
-    /// filtered in floating point as the query above, and equally exact
+    /// filtered in floating point as the query above, and equally exact;
+    /// for a degenerate triangle, where only the perturbed spheres exist and the answer would need
+    /// the id of d, returns false conservatively (never prunes)
     [[nodiscard]] MRMESH_API bool outsideBothSpheres( const Vector3i & d ) const;
 
 private:

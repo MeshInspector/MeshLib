@@ -50,6 +50,9 @@ jobs:
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
+            # mrbind and the bindings use the PGO keg fetched from
+            # MeshInspector/toolchains releases; the app stays on AppleClang.
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-15-intel # github hosted
             instance: macos-15-intel
@@ -58,21 +61,22 @@ jobs:
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
+            # mrbind and the bindings use the PGO keg fetched from
+            # MeshInspector/toolchains releases; the app stays on AppleClang.
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
             # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
             runner: macos-14
             instance: macos-14
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            # Use a specific PGO+LTO-optimized LLVM version.
-            # Held in place by `brew pin llvm` on the self-hosted runners.
-            llvm-version: 22.1.7
-            cxx-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang++
-            c-compiler-template: BREW_PREFIX/Cellar/llvm/22.1.7/bin/clang
+            # The -O3+PGO+ThinLTO keg, built on each runner via the local/pgo
+            # tap (llvm.rb with ENV.O3, installed with --build-bottle).
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
+            cxx-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang++
+            c-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
-    env:
-      LLVM_VERSION: ${{ matrix.llvm-version }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -84,12 +88,23 @@ jobs:
       - name: macOS Diagnostics
         uses: ./.github/actions/macos-diagnostics
 
+      # LLVM_PREFIX selects the LLVM keg for the build and the mrbind scripts;
+      # resolved per machine since the self-hosted label set spans runners
+      # with different homebrew prefixes.
+      - name: Resolve LLVM prefix
+        if: ${{ matrix.llvm-prefix-template }}
+        run: echo "LLVM_PREFIX=$(echo '${{ matrix.llvm-prefix-template }}' | sed "s|BREW_PREFIX|$(brew --prefix)|")" >> $GITHUB_ENV
+
       - name: Checkout third-party submodules
         run: |
           # Selective init -- parent Checkout drops submodules:true.
           # https://github.com/actions/checkout/issues/1779
           # Retried via retry.sh: submodule endpoints occasionally 500.
           bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+
+      - name: Install llvm-pgo keg
+        if: ${{ contains(matrix.llvm-prefix-template, 'llvm-pgo') }}
+        uses: ./.github/actions/install-llvm-pgo-keg
 
       - name: Install thirdparty libs
         id: thirdparty
@@ -127,7 +142,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ matrix.llvm-version }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ matrix.llvm-prefix-template }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -177,8 +192,8 @@ jobs:
 
       - name: MRMesh Exported Symbols
         run: |
-          if [[ -n "${LLVM_VERSION:-}" ]]; then
-            export PATH="$(brew --prefix)/Cellar/llvm/$LLVM_VERSION/bin:$PATH"
+          if [[ -n "${LLVM_PREFIX:-}" ]]; then
+            export PATH="$LLVM_PREFIX/bin:$PATH"
           else
             export PATH="$(brew --prefix llvm@22)/bin:$PATH"
           fi
@@ -279,6 +294,7 @@ jobs:
           cmake \
             --build c-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
+          ./c-examples-build/MeshModification
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}

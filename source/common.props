@@ -8,7 +8,12 @@
     <!--Create file named CustomMRProps.props in any directory above to override _ITERATOR_DEBUG_LEVEL or/and VcpkgTriplet setting-->
     <CustomPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRProps.props))</CustomPropertyDir>
     <IntDir>$(SolutionDir)TempOutput\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <VcpkgTriplet>x64-windows-meshlib</VcpkgTriplet>
+    <!--Default to the triplet the dependencies were installed with: thirdparty\install.bat reads the same
+       variable and vcpkg installs into a per-triplet folder, so honoring it here keeps the solution and vcpkg
+       from diverging on VS2019/VS2022 (see VcpkgCurrentInstalledDir below). An explicit -p:VcpkgTriplet= (what
+       CI passes) is a global property and wins over both lines, as does a CustomMRProps.props imported below.-->
+    <VcpkgTriplet Condition="'$(VCPKG_DEFAULT_TRIPLET)' != ''">$(VCPKG_DEFAULT_TRIPLET)</VcpkgTriplet>
+    <VcpkgTriplet Condition="'$(VcpkgTriplet)' == ''">x64-windows-meshlib</VcpkgTriplet>
     <MeshLibSourceDir>$(MSBuildThisFileDirectory)</MeshLibSourceDir>
     <MeshLibDir>$(MeshLibSourceDir)\..\</MeshLibDir>
     <MeshLibProjectName>MeshLib</MeshLibProjectName>

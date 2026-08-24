@@ -29,7 +29,6 @@ namespace
 {
 
 constexpr int cIterations = 2000;
-constexpr int cStallSeconds = 120;
 
 void addMesh( Object& root, std::string name, Mesh mesh )
 {
@@ -38,6 +37,10 @@ void addMesh( Object& root, std::string name, Mesh mesh )
     obj->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
     root.addChild( std::move( obj ) );
 }
+
+#if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
+
+constexpr int cStallSeconds = 120;
 
 // Keeps the calling thread awake without letting it fall asleep on a futex: on the
 // emscripten main thread this also drains the proxying queue, which is what the app's
@@ -59,6 +62,8 @@ void stayAwake( int ms )
 #endif
     std::_Exit( code );
 }
+
+#endif
 
 } // namespace
 

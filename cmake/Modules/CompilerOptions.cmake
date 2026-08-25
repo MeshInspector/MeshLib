@@ -186,6 +186,16 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
+# fmt before 12 cannot be compiled by Clang 20+: the `FMT_STRING` compile-time check
+# evaluates `&*context_.begin()`, no longer a constant expression. spdlog's
+# daily_file_sink.h uses FMT_STRING, and e.g. Ubuntu 24.04 ships fmt 9.1.
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
+  find_package(fmt QUIET)
+  IF(NOT fmt_VERSION OR fmt_VERSION VERSION_LESS 12)
+    add_compile_definitions(FMT_CONSTEVAL=)
+  ENDIF()
+ENDIF()
+
 # Apple Clang 17 conflicts with OpenVDB 12.1
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++23-attribute-extensions")

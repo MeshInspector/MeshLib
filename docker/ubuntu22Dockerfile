@@ -58,9 +58,6 @@ RUN <<EOF
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     ./scripts/install_apt_cuda.sh
-    # Our -O3 + IR-PGO clang/lld 18, in place of the distro / apt.llvm.org one.
-    # Built in rockylinux:8, so its glibc 2.28 floor is below jammy's 2.35 and
-    # noble's 2.39 - one tarball serves every Linux image.
     TOOLCHAIN=clang-${LLVM_VERSION}-pgo-dylib-linux
     curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
     ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh

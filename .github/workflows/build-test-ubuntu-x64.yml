@@ -56,15 +56,7 @@ jobs:
         uses: actions/checkout@v7
 
       - name: Add our Clang to PATH
-        # Via GITHUB_ENV, like build-test-linux-vcpkg.yml: a GITHUB_PATH entry
-        # makes the runner drop any PATH exported through GITHUB_ENV.
-        run: |
-          # LLVM_PREFIX is set by the image, see docker/ubuntu2*Dockerfile.
-          if [ -z "${LLVM_PREFIX:-}" ] ; then
-            echo "LLVM_PREFIX is empty: image predates the PGO clang switch" >&2
-            exit 1
-          fi
-          echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
+        run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -147,8 +139,7 @@ jobs:
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
-          # options to be passed to cmake; matrix.extra-cmake-options is the
-          # per-row hook (ubuntu24 Clang needs fmt 9.1 consteval disabled)
+          # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
@@ -156,7 +147,6 @@ jobs:
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
-            ${{ matrix.extra-cmake-options }}
 
       - name: PCH size (diagnostic)
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +

@@ -186,6 +186,16 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
+# Clang 20+ conflicts with fmt prior to 12
+# https://github.com/fmtlib/fmt/issues/4177
+# https://github.com/fmtlib/fmt/issues/4247
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
+  find_package(fmt QUIET)
+  IF(NOT fmt_VERSION OR fmt_VERSION VERSION_LESS 12)
+    add_compile_definitions(FMT_CONSTEVAL=)
+  ENDIF()
+ENDIF()
+
 # Apple Clang 17 conflicts with OpenVDB 12.1
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++23-attribute-extensions")

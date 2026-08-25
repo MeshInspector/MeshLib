@@ -8,23 +8,31 @@
 
 // Not-zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduces the performance of STL containers.
 //
-// Pre-build binaries from MeshLib distribution are prepared with _ITERATOR_DEBUG_LEVEL=0,
-// and if you build MeshLib by yourself then _ITERATOR_DEBUG_LEVEL=0 is also selected see
+// Most MeshLib binaries are prepared with _ITERATOR_DEBUG_LEVEL=0, see
 // 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
+// The exception is the MeshLibDist-IteratorDebug distribution, which is built with 2.
 // Please note that all other modules (.exe, .dll, .lib) with MS STL calls in your application also need
 // to define exactly the same value of _ITERATOR_DEBUG_LEVEL to be operational after linking.
 //
-// If you deliberately would like to work with not zero _ITERATOR_DEBUG_LEVEL, then please define
-// additionally MR_ITERATOR_DEBUG_LEVEL with the same value to indicate that it is done intentionally
-// (and you are ok with up to 100x slowdown).
+// MR_ITERATOR_DEBUG_LEVEL below is the level MeshLib itself was built with. A distribution
+// package states it in MRMesh/config_dist.h; defining it by hand overrides that and means
+// you take responsibility for the value matching the binaries you link against.
 //
 #if defined _MSC_VER
-    #if !defined _ITERATOR_DEBUG_LEVEL
-        #define _ITERATOR_DEBUG_LEVEL 0
-    #endif
     #if !defined MR_ITERATOR_DEBUG_LEVEL
-        #define MR_ITERATOR_DEBUG_LEVEL 0
+        #if defined MR_DIST_ITERATOR_DEBUG_LEVEL
+            #define MR_ITERATOR_DEBUG_LEVEL MR_DIST_ITERATOR_DEBUG_LEVEL
+        #else
+            #define MR_ITERATOR_DEBUG_LEVEL 0
+        #endif
+    #endif
+    // no CRT header has fixed the level yet, so this translation unit can still join MeshLib
+    #if !defined _ITERATOR_DEBUG_LEVEL
+        #define _ITERATOR_DEBUG_LEVEL MR_ITERATOR_DEBUG_LEVEL
+    #endif
+    #if defined MR_DIST_ITERATOR_DEBUG_LEVEL && MR_ITERATOR_DEBUG_LEVEL != MR_DIST_ITERATOR_DEBUG_LEVEL
+        #error MR_ITERATOR_DEBUG_LEVEL contradicts the MeshLib distribution being linked
     #endif
     #if _ITERATOR_DEBUG_LEVEL != MR_ITERATOR_DEBUG_LEVEL
         #error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib

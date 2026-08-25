@@ -9,7 +9,7 @@ This instruction will guide you through integrating MeshLib into your C# project
 
 \note MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity — see \ref MeshLibCSharpUnity "Using MeshLib with Unity".
 
-\note As of January 2026, the C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all \ref MeshLibCSharpPlatforms "supported platforms", ensuring feature parity with the native C++ API.
+\note The C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all \ref MeshLibCSharpPlatforms "supported platforms", ensuring feature parity with the native C++ API.
 
 
 ## Prerequisites
@@ -39,7 +39,13 @@ CTM) fail.
 
 ### .NET SDK
  - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website.
- MeshLib targets `netstandard2.0`, so it sets no upper bound on your .NET version: it is compatible with .NET Framework 4.7 and higher, and with .NET 5.0 and every later version.
+ MeshLib ships a single `lib/netstandard2.0` assembly and declares only a `netstandard2.0` dependency group,
+ so any runtime implementing .NET Standard 2.0 can consume it: there is no upper bound on your .NET version,
+ and a newly released .NET needs no package update. Pick a .NET release that is still in support — .NET 8 is
+ what CI builds and runs the C# tests on, and .NET 10 is verified to work.
+ On .NET Framework the floor is 4.7, and support there is **Windows x64 only**: for pre-.NET-5 targets the
+ package copies its native libraries from the `win-x64` runtime alone
+ (see \ref MeshLibCSharpPlatforms "Supported platforms").
  - Verify your installation by running:
 \code{.cmd}
 dotnet --version

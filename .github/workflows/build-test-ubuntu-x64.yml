@@ -59,7 +59,11 @@ jobs:
         # Via GITHUB_ENV, like build-test-linux-vcpkg.yml: a GITHUB_PATH entry
         # makes the runner drop any PATH exported through GITHUB_ENV.
         run: |
-          : "${LLVM_PREFIX:?provided by docker/ubuntu2*Dockerfile}"
+          # LLVM_PREFIX is set by the image, see docker/ubuntu2*Dockerfile.
+          if [ -z "${LLVM_PREFIX:-}" ] ; then
+            echo "LLVM_PREFIX is empty: image predates the PGO clang switch" >&2
+            exit 1
+          fi
           echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
 
       - name: Collect runner's system stats

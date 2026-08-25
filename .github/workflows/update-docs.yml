@@ -7,6 +7,11 @@ on:
         required: false
         type: string
         default: "MeshLib"
+      run_id:
+        description: "Run holding the binding artifacts. Empty = this run."
+        required: false
+        type: string
+        default: ""
 
 jobs:
   update-documentation:
@@ -44,6 +49,8 @@ jobs:
         with:
           name: PythonStubs
           path: MeshLib/scripts/wheel/meshlib/meshlib
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Download C bindings headers
         uses: actions/download-artifact@v8
@@ -51,6 +58,8 @@ jobs:
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Prepare C bindings folders
         run: |
@@ -63,6 +72,8 @@ jobs:
         with:
           name: CsharpBindings
           path: MeshLib/CsharpBindings
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Download Wasm definitions
         uses: actions/download-artifact@v8
@@ -70,6 +81,8 @@ jobs:
         with:
           name: WasmBindingsDts
           path: MeshLib/scripts/npm/meshlib
+          run-id: ${{ inputs.run_id || github.run_id }}
+          github-token: ${{ github.token }}
 
       - name: Check for bindings
         id: check_bindings

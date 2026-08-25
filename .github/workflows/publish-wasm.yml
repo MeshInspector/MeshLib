@@ -2,7 +2,7 @@ name: Publish Wasm module
 
 on:
   release:
-    types: [ published ]
+    types: [ released ]
   workflow_dispatch:
     inputs:
       release_tag:
@@ -27,7 +27,31 @@ env:
   IS_DRAFT: ${{ inputs.draft || false }}
 
 jobs:
+  # Only the highest release may move the unversioned CDN path and the npm
+  # `latest` tag. Publishing an older line is not supposed to happen, but it
+  # would silently point both at older code.
+  newest:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    outputs:
+      is_newest: ${{ steps.check.outputs.is_newest }}
+    steps:
+      - name: Compare against the highest published release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          highest=$(
+            gh api "repos/${GITHUB_REPOSITORY}/releases" --paginate \
+              | jq -r '.[] | select( ( .draft or .prerelease ) | not ) | .tag_name' \
+              | grep -E '^v[0-9]+(\.[0-9]+)+$' | sort -V | tail -n1
+          )
+          [ "${highest}" = "${TAG}" ] && is_newest=true || is_newest=false
+          echo "highest published: ${highest}; publishing: ${TAG}; is_newest=${is_newest}"
+          echo "is_newest=${is_newest}" >> $GITHUB_OUTPUT
+
   cdn:
+    needs: newest
     permissions:
       id-token: write   # OIDC -> AWS
       contents: write   # download the draft release asset
@@ -49,6 +73,7 @@ jobs:
       - name: Upload to S3
         env:
           BUCKET: s3://cdn-meshlib-js
+          IS_NEWEST: ${{ needs.newest.outputs.is_newest }}
         run: |
           for TGZ in js-meshlib-*.tgz ; do tar -xzf "${TGZ}" --strip-components=1 ; done
           upload() {
@@ -61,7 +86,9 @@ jobs:
               upload "${BUCKET}/${f}-draft"  --cache-control "public, max-age=300"
             else
               upload "${BUCKET}/${f}@${TAG}" --cache-control "public, max-age=31536000, immutable"
-              upload "${BUCKET}/${f}"        --cache-control "public, max-age=300"
+              if [ "${IS_NEWEST}" = "true" ] ; then
+                upload "${BUCKET}/${f}"      --cache-control "public, max-age=300"
+              fi
             fi
           done
 
@@ -73,13 +100,14 @@ jobs:
             --paths "/meshlib-draft/*" "/meshlib-mt-draft/*"
 
       - name: Invalidate latest
-        if: ${{ env.IS_DRAFT != 'true' }}
+        if: ${{ env.IS_DRAFT != 'true' && needs.newest.outputs.is_newest == 'true' }}
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CDN_CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/meshlib/*" "/meshlib-mt/*"
 
   npm:
+    needs: newest
     permissions:
       id-token: write   # OIDC -> npm trusted publishing
       contents: write   # download the draft release asset
@@ -99,12 +127,23 @@ jobs:
           gh release download "${TAG}" --pattern "js-meshlib-*.tgz" --repo ${{ github.repository }} --clobber
 
       - name: Publish npm packages
+        env:
+          IS_NEWEST: ${{ needs.newest.outputs.is_newest }}
         run: |
           if [ "${IS_DRAFT}" = "true" ] ; then
             ARGS="--dry-run"
           else
             ARGS="--provenance"
           fi
+          # An older line still gets published, just not as what `npm install`
+          # resolves to. `release-<series>` cannot be read as a semver range,
+          # which npm rejects as a dist-tag.
+          if [ "${IS_NEWEST}" = "true" ] ; then
+            DIST_TAG=latest
+          else
+            series="${TAG#v}"
+            DIST_TAG="release-${series%%.*}.$(echo "${series}" | cut -d. -f2)"
+          fi
           for TGZ in js-meshlib-*.tgz ; do
-            npm stage publish "./${TGZ}" --access public --tag latest ${ARGS}
+            npm stage publish "./${TGZ}" --access public --tag "${DIST_TAG}" ${ARGS}
           done

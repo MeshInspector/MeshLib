@@ -1,19 +1,16 @@
 name: Build Pip Wheels
 
 # When ran from the github UI, we build the target commit exactly.
-# When ran on release, we use the latest tagged commit in the `master` branch.
 # This doesn't run directly on pull request, because it's impossible to disable the whole file
 #   with a single condition (specific label present). Because of that, we conditionally run this from a separate `.yml` file.
 
 on:
-  release:
-    types: [ published ]
   # This is the manual run from the UI.
   workflow_dispatch:
     inputs:
       vcpkg_docker_image_tag:
         # Empty string means the same thing as "latest", but we use an empty string here to ensure this works,
-        #   because `types: [published]` can't have any inputs, so there we are forced to use an empty string, so it needs to work.
+        #   because a `workflow_call` from a release path can't pass inputs, so it needs to work.
         default: ""
         required: false
         type: string
@@ -100,7 +97,7 @@ jobs:
       version_tag:  ${{ steps.get-latest-tag.outputs.tag }}
       build-matrix: ${{ steps.build-matrix.outputs.matrix }}
       test-matrix:  ${{ steps.test-matrix.outputs.matrix }}
-      publish_prod:  ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
+      publish_prod:  ${{ inputs.publish == 'publish-prod' }}
       publish_test:  ${{ inputs.publish == 'publish-test' }}
       build_ref:     ${{ inputs.ref || steps.get-latest-tag.outputs.tag }}
       release_tag:   ${{ inputs.release_tag || steps.release-for-ref.outputs.tag }}
@@ -112,7 +109,7 @@ jobs:
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
       - uses: actions-ecosystem/action-get-latest-tag@v1
-        if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
+        if: ${{ inputs.publish == 'publish-prod' }}
         id: get-latest-tag
 
       # Attach to a release that already exists for this ref; never create one. No match leaves the
@@ -981,11 +978,6 @@ jobs:
 
       - name: Upload to TestPyPI
         run: twine upload --repository-url https://test.pypi.org/legacy/ ./meshlib*.whl -u __token__ -p ${{ secrets.TEST_PYPI_TOKEN }} --skip-existing
-
-  post-release-test:
-    if: ${{ needs.setup.outputs.publish_prod == 'true' }}
-    needs: [setup, upload-to-release]
-    uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
 
   delete-artifacts:
     timeout-minutes: 5

@@ -228,7 +228,7 @@ jobs:
       - name: Build and run TypeScript example
         working-directory: examples/typescript
         run: |
-          sed -i "s|@meshinspector/meshlib|@meshinspector/${{ matrix.wasm-module-name }}|g" main.ts using-snippet.ts package.json
+          sed -i "s|@meshinspector/meshlib|@meshinspector/${{ matrix.wasm-module-name }}|g" main.ts package.json
           npm install --no-audit --no-fund --no-save ../../js-${{ matrix.wasm-module-name }}-*.tgz
           npm start
 

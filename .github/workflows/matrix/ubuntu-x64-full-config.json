@@ -46,7 +46,7 @@
       "compiler": "Clang",
       "cxx-compiler": "clang++",
       "c-compiler": "clang",
-      "extra-cmake-options": "-D CMAKE_CXX_FLAGS=-DFMT_USE_CONSTEVAL=0",
+      "extra-cmake-options": "-D CMAKE_CXX_FLAGS=-DFMT_CONSTEVAL=",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
       "upload_release": "OFF"
@@ -57,7 +57,7 @@
       "compiler": "Clang",
       "cxx-compiler": "clang++",
       "c-compiler": "clang",
-      "extra-cmake-options": "-D CMAKE_CXX_FLAGS=-DFMT_USE_CONSTEVAL=0",
+      "extra-cmake-options": "-D CMAKE_CXX_FLAGS=-DFMT_CONSTEVAL=",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
       "upload_release": "OFF"

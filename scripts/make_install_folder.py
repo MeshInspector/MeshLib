@@ -60,7 +60,7 @@ def write_config_dist():
 	dst = os.path.join(it.path_to_includes, "MRMesh", "config_dist.h")
 	os.makedirs(os.path.dirname(dst), exist_ok=True)
 	with open(dst, "w", newline="\n") as f:
-		f.write("#pragma once\n\n#define MR_DIST_ITERATOR_DEBUG_LEVEL {}\n".format(level))
+		f.write("#pragma once\n\n#define MR_ITERATOR_DEBUG_LEVEL {}\n".format(level))
 
 def copy_includes():
 	prepare_includes_list()

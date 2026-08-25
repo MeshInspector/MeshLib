@@ -15,24 +15,16 @@
 // Please note that all other modules (.exe, .dll, .lib) with MS STL calls in your application also need
 // to define exactly the same value of _ITERATOR_DEBUG_LEVEL to be operational after linking.
 //
-// MR_ITERATOR_DEBUG_LEVEL below is the level MeshLib itself was built with. A distribution
-// package states it in MRMesh/config_dist.h; defining it by hand overrides that and means
-// you take responsibility for the value matching the binaries you link against.
+// MR_ITERATOR_DEBUG_LEVEL is the level MeshLib itself was built with: a distribution package
+// states it in MRMesh/config_dist.h, otherwise it defaults to zero as all our triplets select.
 //
 #if defined _MSC_VER
     #if !defined MR_ITERATOR_DEBUG_LEVEL
-        #if defined MR_DIST_ITERATOR_DEBUG_LEVEL
-            #define MR_ITERATOR_DEBUG_LEVEL MR_DIST_ITERATOR_DEBUG_LEVEL
-        #else
-            #define MR_ITERATOR_DEBUG_LEVEL 0
-        #endif
+        #define MR_ITERATOR_DEBUG_LEVEL 0
     #endif
     // no CRT header has fixed the level yet, so this translation unit can still join MeshLib
     #if !defined _ITERATOR_DEBUG_LEVEL
         #define _ITERATOR_DEBUG_LEVEL MR_ITERATOR_DEBUG_LEVEL
-    #endif
-    #if defined MR_DIST_ITERATOR_DEBUG_LEVEL && MR_ITERATOR_DEBUG_LEVEL != MR_DIST_ITERATOR_DEBUG_LEVEL
-        #error MR_ITERATOR_DEBUG_LEVEL contradicts the MeshLib distribution being linked
     #endif
     #if _ITERATOR_DEBUG_LEVEL != MR_ITERATOR_DEBUG_LEVEL
         #error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib

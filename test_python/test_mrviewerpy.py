@@ -351,6 +351,50 @@ sys.exit(1)
 # `Viewer::launch` drains and closes the queue on its way out, so a command posted after
 # `shutdown()` cannot run either. Retried until the detached launch thread gets there: a
 # call still serviced by the dying loop is not yet a verdict, an empty return after it is.
+_HEADLESS_LAUNCH_SRC = r"""
+import os
+import pathlib
+import sys
+
+import meshlib.mrmeshpy as mrmesh
+from meshlib import mrviewerpy
+
+# so a missing font, rather than the missing display, cannot be what fails the launch
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Resources,
+    pathlib.Path(os.environ["MRVIEWERPY_RESOURCES"]),
+)
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Fonts,
+    pathlib.Path(os.environ["MRVIEWERPY_FONTS"]),
+)
+
+params = mrviewerpy.ViewerLaunchParams()
+params.windowMode = mrviewerpy.ViewerLaunchParamsMode.TryHidden
+params.name = "MeshLib test_mrviewerpy headless launch"
+try:
+    mrviewerpy.launch(params, mrviewerpy.ViewerSetup())
+except RuntimeError as e:
+    print("LAUNCH_RAISED %s" % e, flush=True)
+except BaseException as e:
+    print("LAUNCH_RAISED_OTHER %r" % e, flush=True)
+    sys.exit(4)
+else:
+    print("LAUNCH_RETURNED", flush=True)
+    sys.exit(2)
+
+# the launch failed: a viewer call must now fail too, rather than park on a loop that never runs
+viewer = mrviewerpy.Viewer()
+try:
+    viewer.skipFrames(1)
+except RuntimeError as e:
+    print("CALL_RAISED %s" % e, flush=True)
+    sys.exit(0)
+print("CALL_RETURNED", flush=True)
+sys.exit(3)
+"""
+
+
 _AFTER_SHUTDOWN_SRC = r"""
 import os
 import pathlib
@@ -490,4 +534,77 @@ def test_blocking_call_after_shutdown_raises():
     assert run.returncode == 0 and "RAISED" in run.stdout, (
         "the blocking call returned as if the command had run on a shut down viewer\n"
         + run.report()
+    )
+
+
+def test_headless_launch_raises_and_survives():
+    """`launch()` with no display must raise, and must not take the interpreter with it.
+
+    The child gets an empty `DISPLAY`/`WAYLAND_DISPLAY` while this process keeps its own, so it
+    reproduces the headless case from inside an `xvfb-run` test session. It is a child rather than
+    an in-process call because a regression here either hangs or dies by signal.
+    """
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    run = _run_in_child(
+        "launch() with no display",
+        _HEADLESS_LAUNCH_SRC,
+        env_extra={
+            "DISPLAY": "",
+            "WAYLAND_DISPLAY": "",
+            "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
+            "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
+        },
+    )
+
+    assert not run.timed_out, (
+        "launch() never returned with no display available\n" + run.report()
+    )
+    # a viewer actually came up: the child was not headless after all, so nothing was tested
+    if "LAUNCH_RETURNED" in run.stdout:
+        pytest.skip(
+            "the child got a display despite an empty DISPLAY/WAYLAND_DISPLAY\n" + run.report()
+        )
+    assert "LAUNCH_RAISED" in run.stdout, (
+        "launch() failed without raising a RuntimeError\n" + run.report()
+    )
+    # SIGTRAP-by-AppKit is the macOS face of this bug (exit 133); this asserts the shape of the
+    # contract everywhere - a failed launch is an exception, never a dead interpreter
+    assert run.returncode is not None and run.returncode >= 0, (
+        "the interpreter died by signal instead of raising\n" + run.report()
+    )
+
+
+def test_call_after_failed_launch_raises():
+    """After a failed `launch()`, the next viewer call must fail promptly, not deadlock."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    run = _run_in_child(
+        "viewer call after a failed launch()",
+        _HEADLESS_LAUNCH_SRC,
+        env_extra={
+            "DISPLAY": "",
+            "WAYLAND_DISPLAY": "",
+            "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
+            "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
+        },
+    )
+
+    if "LAUNCH_RETURNED" in run.stdout:
+        pytest.skip(
+            "the child got a display despite an empty DISPLAY/WAYLAND_DISPLAY\n" + run.report()
+        )
+    assert not run.timed_out, (
+        "the call after a failed launch() never returned\n" + run.report()
+    )
+    assert run.returncode == 0 and "CALL_RAISED" in run.stdout, (
+        "the call after a failed launch() did not raise\n" + run.report()
     )

@@ -2,6 +2,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRMatrix3.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -111,6 +112,31 @@ TEST( MRMesh, shrinkwrapXf )
     // the result is returned in the coordinates of mesh, where the plane is in z=-5
     for ( auto v : mesh.topology.getValidVerts() )
         EXPECT_NEAR( mesh.points[v].z, -5.f, 1e-5f );
+}
+
+
+// MeshProjectionResult::proj.point is returned in the space of refMesh when refXf is rigid
+// and in world space otherwise, so shrinkwrap transfers the projection as MeshTriPoint;
+// with a non-rigid refXf the proj.point based variant would return 2 0 0 for 1_v below
+TEST( MRMesh, shrinkwrapNonRigidRefXf )
+{
+    const auto plane = makePlane();
+    auto mesh = makeProbe();
+
+    // anisotropic scaling of the reference mesh: the plane still occupies z=0 in world
+    Matrix3f m;
+    m.x.x = 2.f;
+    const AffineXf3f refXf( m, Vector3f{} );
+
+    ShrinkwrapParameters params;
+    params.refXf = &refXf;
+    PointsToMeshProjector projector;
+    EXPECT_TRUE( shrinkwrap( mesh, plane, params, &projector ) );
+
+    for ( auto v : mesh.topology.getValidVerts() )
+        EXPECT_NEAR( mesh.points[v].z, 0.f, 1e-5f );
+    EXPECT_NEAR( mesh.points[1_v].x, 1.f, 1e-5f );
+    EXPECT_NEAR( mesh.points[2_v].y, 1.f, 1e-5f );
 }
 
 } // namespace MR

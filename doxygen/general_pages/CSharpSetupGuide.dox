@@ -117,6 +117,20 @@ dotnet run
 By following these steps, you can integrate MeshLib into your project, giving you more control over the setup process.
 
 
+## Package Size and Native Runtimes {#MeshLibCSharpPackageSize}
+
+The NuGet package carries prebuilt native libraries for **all five** supported platforms, so it is large: 200+ MB Nuget download, 700+ MB copied to the build directory by default.
+
+For deployment, you might wish to publish for a single RID (single platform), which omits the unnecessary libraries for other platforms, e.g.:
+\code{.cmd}
+dotnet publish -r linux-x64 --self-contained false
+\endcode
+
+This copies only about 180 MB of libraries to the output directory, as opposed to 700+ MB.
+
+Supported platform IDs are: `win-x64`, `linux-x64`, `linux-arm64`, `osx-x64`, `osx-arm64`.
+
+
 ## Using MeshLib with Unity {#MeshLibCSharpUnity}
 
 Unity projects consume the same NuGet package via [NuGetForUnity](https://github.com/GlitchEnzo/NuGetForUnity); this setup is continuously tested with Unity 6 on Windows, Linux, and macOS. To install MeshLib into a Unity project:
@@ -141,7 +155,7 @@ System.DllNotFoundException: Unable to load DLL 'MeshLibC2' or one of its depend
 
 The native libraries were not found at run time:
  - Check that your platform is supported: Windows x64, Linux x64/Arm64, macOS x64/Arm64. In particular, the package contains no native libraries for Windows on Arm — installing it there succeeds, but every call into MeshLib fails.
- - Check that the native libraries reached your build output: on .NET they are placed under `runtimes/<rid>/native/` in the output directory, on .NET Framework next to the executable (`MeshLibC2.dll` and its dependencies on Windows).
+ - Check that the native libraries reached your build output: on .NET they are placed under `runtimes/<rid>/native/` in the output directory (see \ref MeshLibCSharpPackageSize "Package Size and Native Runtimes"), on .NET Framework next to the executable (`MeshLibC2.dll` and its dependencies on Windows).
 
 ### BadImageFormatException
 \code{.txt}

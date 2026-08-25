@@ -186,9 +186,9 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
-# fmt before 12 cannot be compiled by Clang 20+: the `FMT_STRING` compile-time check
-# evaluates `&*context_.begin()`, no longer a constant expression. spdlog's
-# daily_file_sink.h uses FMT_STRING, and e.g. Ubuntu 24.04 ships fmt 9.1.
+# Clang 20+ conflicts with fmt prior to 12
+# https://github.com/fmtlib/fmt/issues/4177
+# https://github.com/fmtlib/fmt/issues/4247
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
   find_package(fmt QUIET)
   IF(NOT fmt_VERSION OR fmt_VERSION VERSION_LESS 12)

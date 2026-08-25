@@ -128,14 +128,17 @@ console.log('volume =', mesh.volume()); // ~8
 \note The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
 
 ## TypeScript
-The package ships type definitions, so `createMeshLib` and the whole module API are typed with no extra setup:
+The package ships type definitions, so `createMeshLib` and the whole module API are typed with minimal setup:
 \code{.ts}
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
-using mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
+const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 const { valid, distSq } = ml.findProjection(point, mesh);
+mesh.delete();
 \endcode
+
+Also make sure to add `"type": "module"` to your package.json.
 
 ## Memory Management
 Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one must be freed explicitly.

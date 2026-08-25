@@ -16,8 +16,11 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRGladGlfw.h"
 #include <pybind11/stl.h>
+#include <atomic>
+#include <chrono>
 #include <memory>
 #include <optional>
+#include <thread>
 
 #pragma message("mrviewerpy pybind internals magic: " PYBIND11_INTERNALS_ID)
 
@@ -179,12 +182,19 @@ private:
 
 void pythonLaunch( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
 {
+    auto launchFinished = std::make_shared<std::atomic<bool>>( false );
     std::thread launchThread { [=]
     {
         MR::SetCurrentThreadName( "PythonAppLaunchThread" );
         MR::launchDefaultViewer( params, setup );
+        *launchFinished = true;
     } };
     launchThread.detach();
+    // `launchDefaultViewer` calls `setMainThreadId` from the new thread; return before that and a
+    // blocking call right after `launch()` would find no command loop
+    pybind11::gil_scoped_release gilRelease; // the launch thread must not be blocked by the GIL here
+    while ( MR::CommandLoop::getMainThreadId() == std::thread::id{} && !*launchFinished )
+        std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
 }
 
 } // namespace

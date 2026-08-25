@@ -1,5 +1,6 @@
 #pragma once
 #include "exports.h"
+#include "MRMesh/MRExpected.h"
 #include <queue>
 #include <functional>
 #include <condition_variable>
@@ -38,6 +39,11 @@ public:
 
     // If caller thread is main - instantly run command, otherwise add command to the end of loop with
     // StartPosition state = StartPosition::AfterSplash and blocks caller thread until command is done
+    // throws std::runtime_error if no loop can ever run the command: the queue is closed, it was never
+    // started, or removeCommands dropped the command while the caller was waiting;
+    // an exception thrown by func itself propagates to the caller as well;
+    // call it only where an exception is already the error channel - python bindings and MCP tools -
+    // and not from other C++ code, which must be exception-free: use appendCommand there
     MRVIEWER_API static void runCommandFromGUIThread( CommandFunc func );
 
     // Execute all commands from loop
@@ -56,7 +62,9 @@ private:
 
     static CommandLoop& instance_();
 
-    static void addCommand_( CommandFunc func, bool blockThread, StartPosition state );
+    // returns an error, rather than throwing or blocking forever, if no loop can ever run a blocking
+    // command: the queue is closed, it was never started, or removeCommands dropped the command
+    static Expected<void> addCommand_( CommandFunc func, bool blockThread, StartPosition state );
 
     struct Command
     {
@@ -70,6 +78,8 @@ private:
         // set under CommandLoop::mutex_ once the command was executed or dropped;
         // the predicate a blocked caller waits on, see addCommand_
         bool done{ false };
+        // set under CommandLoop::mutex_ in `removeCommands`: `done`, but never executed
+        bool dropped{ false };
     };
 
     StartPosition state_{ StartPosition::AfterWindowInit };
@@ -84,6 +94,7 @@ private:
 // Push a handful of empty commands onto the main thread so the Viewer advances a few frames,
 // ensuring any UI state touched by a recent input (click, write, transform) is reflected before
 // the caller's next observation.
+// throws like runCommandFromGUIThread, so it has the same callers-only-from-python-and-MCP restriction
 MRVIEWER_API void skipFramesAfterInput();
 
 }

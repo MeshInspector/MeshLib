@@ -9,11 +9,33 @@ This instruction will guide you through integrating MeshLib into your C# project
 
 \note MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity — see \ref MeshLibCSharpUnity "Using MeshLib with Unity".
 
-\note As of January 2026, the C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all supported platforms (Windows x64, Linux x64/Arm, MacOS x64/Arm), ensuring feature parity with the native C++ API.
+\note As of January 2026, the C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all \ref MeshLibCSharpPlatforms "supported platforms", ensuring feature parity with the native C++ API.
 
 
 ## Prerequisites
 Before installing MeshLib, ensure you have the following tools installed:
+
+### Supported platforms {#MeshLibCSharpPlatforms}
+The NuGet package ships prebuilt native libraries, so your OS and CPU architecture must be one it covers:
+
+| OS | Architectures | Minimum version |
+|---|---|---|
+| Windows | x64 | Windows 10 |
+| Linux | x64, Arm64 | glibc 2.28+ — e.g. Ubuntu 20.04+, Debian 10+, RHEL/Rocky/AlmaLinux 8+, Fedora 29+ |
+| macOS | Arm64 (Apple silicon) | macOS 14 |
+| macOS | x64 (Intel) | macOS 15 |
+
+\note Windows on Arm is not supported: the package ships no `win-arm64` native runtime. Installing it there
+succeeds, so the failure only surfaces on the first call into MeshLib. Building the project for `win-x64`
+instead runs it under the system's x64 emulation.
+
+On \b Linux no extra system packages are required: beyond the C and C++ runtimes the libraries need only
+`libexpat1` and `zlib1g`, which a standard desktop or server install already provides. Every other dependency
+is bundled in the package.
+
+On \b macOS the floor differs by architecture: part of the file-format libraries in the x64 runtime are built
+against a newer SDK, so on an Intel Mac running macOS 14 the core API loads but the extra formats (E57, LAZ,
+CTM) fail.
 
 ### .NET SDK
  - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website.
@@ -154,7 +176,7 @@ System.DllNotFoundException: Unable to load DLL 'MeshLibC2' or one of its depend
 (on Linux and macOS: `Unable to load shared library 'MeshLibC2' or one of its dependencies`)
 
 The native libraries were not found at run time:
- - Check that your platform is supported: Windows x64, Linux x64/Arm64, macOS x64/Arm64. In particular, the package contains no native libraries for Windows on Arm — installing it there succeeds, but every call into MeshLib fails.
+ - Check that your platform is \ref MeshLibCSharpPlatforms "supported" — in particular, the package contains no native libraries for Windows on Arm.
  - Check that the native libraries reached your build output: on .NET they are placed under `runtimes/<rid>/native/` in the output directory (see \ref MeshLibCSharpPackageSize "Package Size and Native Runtimes"), on .NET Framework next to the executable (`MeshLibC2.dll` and its dependencies on Windows).
 
 ### BadImageFormatException

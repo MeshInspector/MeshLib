@@ -66,6 +66,7 @@ To install MeshLib via Visual Studio, follow these steps:
   - Click "Install" and follow any prompts to complete the installation.
  5. **Start Using MeshLib**:
   - You should now have access to the static class `MR` and its members.
+  - Confirm the native libraries actually load: \ref MeshLibCSharpVerify "Verify Your Installation".
 
 ## Installation from a Downloaded NuGet Package
 If you prefer to download the MeshLib package directly from the NuGet website, follow these steps:
@@ -110,6 +111,8 @@ dotnet nuget add source ~/LocalNuGetPackages --name LocalPackages
 dotnet build
 dotnet run
 \endcode
+  - An untouched project prints only its template output, which says nothing about MeshLib. Continue with
+  \ref MeshLibCSharpVerify "Verify Your Installation".
 
 ## Installation via .NET Command-Line Interface
 To install MeshLib via the .NET CLI, follow these steps:
@@ -134,9 +137,41 @@ dotnet add package MeshLib
 \code{.cmd}
 dotnet run
 \endcode
+ 5. **Verify MeshLib Works**:
+ \n `dotnet new console` writes no MeshLib code, so the output above is the same whether MeshLib loaded or not.
+ Continue with \ref MeshLibCSharpVerify "Verify Your Installation".
 
 
 By following these steps, you can integrate MeshLib into your project, giving you more control over the setup process.
+
+## Verify Your Installation {#MeshLibCSharpVerify}
+
+Adding the package and building the project succeed even when the native libraries cannot be loaded, so the
+setup is only proven by a real MeshLib call. Replace the contents of `Program.cs` with:
+\code{.cs}
+var mesh = MR.makeCube();
+Console.WriteLine($"MeshLib OK: cube has {mesh.points.size()} points, "
+                + $"{mesh.topology.numValidFaces()} faces");
+MR.MeshSave.toAnySupportedFormat(mesh, "cube.stl");
+Console.WriteLine("Wrote cube.stl");
+\endcode
+\note These are top-level statements, matching the `Program.cs` that `dotnet new console` generates. In a
+project with an explicit `Main` method, put the same lines inside it.
+
+Then run:
+\code{.cmd}
+dotnet run
+\endcode
+
+The expected output is exactly:
+\code{.txt}
+MeshLib OK: cube has 8 points, 12 faces
+Wrote cube.stl
+\endcode
+
+and a `cube.stl` of about 700 bytes appears in the working directory. Every line of the snippet calls into the
+native libraries, so a broken setup raises an exception instead of passing silently — see
+\ref MeshLibCSharpTroubleshooting "Troubleshooting" for the exceptions to expect.
 
 
 ## Package Size and Native Runtimes {#MeshLibCSharpPackageSize}

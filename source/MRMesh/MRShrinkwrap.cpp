@@ -9,7 +9,7 @@ namespace MR
 {
 
 std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh & refMesh,
-    const ShrinkwrapParameters & params, IPointsToMeshProjector * projector )
+    const ShrinkwrapParameters & params, const ProgressCallback & cb )
 {
     MR_TIMER;
 
@@ -32,18 +32,18 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
             res[v] = refToMesh( refMesh.triPoint( proj.mtp ) );
     };
 
-    if ( projector )
+    if ( params.projector )
     {
-        projector->updateMeshData( &refMesh );
+        params.projector->updateMeshData( &refMesh );
         // the projections outside of the region are computed as well to keep one batch call here
         std::vector<MeshProjectionResult> projs( mesh.points.size() );
-        projector->findProjections( projs, mesh.points.vec_, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
+        params.projector->findProjections( projs, mesh.points.vec_, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
 
         if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
         {
             if ( moved( v ) )
                 setPos( v, projs[v.get()] );
-        }, params.callBack ) )
+        }, cb ) )
             return {};
     }
     else
@@ -52,17 +52,17 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
         {
             if ( moved( v ) )
                 setPos( v, findProjection( meshToRef( mesh.points[v] ), refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq ) );
-        }, params.callBack ) )
+        }, cb ) )
             return {};
     }
 
     return res;
 }
 
-bool shrinkwrap( Mesh & mesh, const Mesh & refMesh, const ShrinkwrapParameters & params, IPointsToMeshProjector * projector )
+bool shrinkwrap( Mesh & mesh, const Mesh & refMesh, const ShrinkwrapParameters & params, const ProgressCallback & cb )
 {
     MR_TIMER;
-    auto positions = findShrinkwrapPositions( mesh, refMesh, params, projector );
+    auto positions = findShrinkwrapPositions( mesh, refMesh, params, cb );
     if ( !positions )
         return false;
     mesh.points = std::move( *positions );

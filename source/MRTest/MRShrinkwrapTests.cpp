@@ -128,10 +128,11 @@ TEST( MRMesh, shrinkwrapNonRigidRefXf )
     m.x.x = 2.f;
     const AffineXf3f refXf( m, Vector3f{} );
 
+    PointsToMeshProjector projector;
     ShrinkwrapParameters params;
     params.refXf = &refXf;
-    PointsToMeshProjector projector;
-    EXPECT_TRUE( shrinkwrap( mesh, plane, params, &projector ) );
+    params.projector = &projector;
+    EXPECT_TRUE( shrinkwrap( mesh, plane, params ) );
 
     for ( auto v : mesh.topology.getValidVerts() )
         EXPECT_NEAR( mesh.points[v].z, 0.f, 1e-5f );

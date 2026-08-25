@@ -350,7 +350,12 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
             if ( !ofs || ofs.bad() )
                 return unexpected( "Cannot create file " + utf8string( newItemPath ) );
 
+            // the two lines around the buffer allocation split a stall here into
+            // "died growing the heap" and "died in libzip", which the surrounding
+            // start/end pair cannot distinguish
+            spdlog::info( "zip entry {}/{}: {}, {} bytes", i + 1, numEntries, nameFixed, stats.size );
             fileBufer.resize(stats.size);
+            spdlog::info( "zip entry {}/{}: buffer ready, reading", i + 1, numEntries );
             auto bitesRead = zip_fread(zfile,(void*)fileBufer.data(),fileBufer.size());
             if ( bitesRead != (zip_int64_t)stats.size )
                 return unexpected( "Cannot read file from zip " + nameFixed );

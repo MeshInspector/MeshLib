@@ -42,7 +42,7 @@ jobs:
           # toolchain inside the image changes (e.g. glibc, clang upgrade).
           cache-key-prefix: ubuntu-arm64-emscripten
           build-script: scripts/mrbind/install_mrbind_ubuntu.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', 'docker/emscripten-generate-c-bindingsDockerfile') }}
 
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.

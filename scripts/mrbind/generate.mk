@@ -244,13 +244,11 @@ MACOS_MIN_VER :=
 # That's because we need to run `clang++ -print-resource-dir` and feed that resource directory to libclang, so it can find its internal headers.
 ifneq ($(HOST_IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
-else ifneq ($(HOST_IS_MACOS),)
+else ifneq ($(LLVM_PREFIX),)
 # LLVM_PREFIX selects a keg by full path (used for self-hosted runners).
-ifneq ($(LLVM_PREFIX),)
 CXX_FOR_BINDINGS := $(LLVM_PREFIX)/bin/clang++
-else
+else ifneq ($(HOST_IS_MACOS),)
 CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
-endif
 else
 # Only on Ubuntu we don't want the default Clang version, as it can be outdated. Use the suffixed one.
 CXX_FOR_BINDINGS := clang++-$(strip $(file <$(makefile_dir)clang_version.txt))

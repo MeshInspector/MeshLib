@@ -7,16 +7,19 @@
 
 FROM emscripten/emsdk:4.0.19-arm64
 
-COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
-COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
+ENV LLVM_VERSION=22.1.8
+ENV LLVM_PREFIX=/opt/llvm-pgo-dylib-$LLVM_VERSION
 
 RUN <<EOF
     set -e
     export DEBIAN_FRONTEND=noninteractive
     # uncomment in case of problems with the Canonical mirrors
     # sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list
-    # MRBind dependencies
-    ./scripts/mrbind/install_deps_ubuntu.sh
+    TOOLCHAIN=clang-${LLVM_VERSION}-pgo-dylib-linux
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
+    # MRBind dependencies. `procps` is for the `free` utility, to measure how much RAM we have.
+    apt-get update
+    apt-get install -y make cmake ninja-build gawk procps
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*

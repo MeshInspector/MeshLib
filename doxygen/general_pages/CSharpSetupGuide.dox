@@ -39,15 +39,14 @@ CTM) fail.
 
 ### .NET SDK
  - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website.
- MeshLib is compatible with .NET Framework 4.7 and higher, as well as .NET 5.0, 6.0, 7.0, 8.0, and additional versions outlined below.
+ MeshLib targets `netstandard2.0`, so it sets no upper bound on your .NET version: it is compatible with .NET Framework 4.7 and higher, and with .NET 5.0 and every later version.
  - Verify your installation by running:
 \code{.cmd}
 dotnet --version
 \endcode
 
 ### Visual Studio
-For a more integrated development experience, you can use Visual Studio 2019 or later.
-Make sure to install the **.NET desktop development** workload.
+If you're using Visual Studio, make sure to install the **.NET desktop development** workload.
 
 ## Installation via NuGet
 Depending on your development environment and workflow preferences, you can choose from the following installation methods
@@ -99,25 +98,23 @@ dotnet run
 
 ## Installation via .NET Command-Line Interface
 To install MeshLib via the .NET CLI, follow these steps:
- 1. **Open a Terminal or Command Prompt**:
-  - **On Windows**, use Command Prompt, PowerShell, or the Windows Terminal.
- 2. **Create a New Project Directory**:
+ 1. **Create a New Project Directory**:
  \n Run the following commands to create a new directory for your project and navigate into it:
 \code{.cmd}
 mkdir TestProject
 cd TestProject
 \endcode
- 3. **Create a New .NET Console Project**:
+ 2. **Create a New .NET Console Project**:
  \n Inside the new directory, initialize a .NET console project by running:
 \code{.cmd}
 dotnet new console
 \endcode
- 4. **Install the MeshLib Package**:
+ 3. **Install the MeshLib Package**:
  \n Use the following command to add MeshLib to your project:
 \code{.cmd}
 dotnet add package MeshLib
 \endcode
- 5. **Build and Run Your Project**:
+ 4. **Build and Run Your Project**:
  \n After installing MeshLib, you can build and run your project using:
 \code{.cmd}
 dotnet run

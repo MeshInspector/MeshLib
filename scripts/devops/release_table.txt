@@ -9,19 +9,22 @@
     <tr>
       <td align="center">Windows x64 (Visual Studio 2019)</td>
       <td align="center">
-        <a href="RELEASE_PATH/MeshLibDistVS19_SHORT_VERSION.zip">zip</a>
+        <a href="RELEASE_PATH/MeshLibDistVS19_SHORT_VERSION.zip">zip</a> /
+        <a href="RELEASE_PATH/MeshLibDistVS19_SHORT_VERSION-PDB.zip">pdb</a>
       </td>
     </tr>
     <tr>
       <td align="center">Windows x64 (Visual Studio 2022)</td>
       <td align="center">
-        <a href="RELEASE_PATH/MeshLibDistVS22_SHORT_VERSION.zip">zip</a>
+        <a href="RELEASE_PATH/MeshLibDistVS22_SHORT_VERSION.zip">zip</a> /
+        <a href="RELEASE_PATH/MeshLibDistVS22_SHORT_VERSION-PDB.zip">pdb</a>
       </td>
     </tr>
     <tr>
       <td align="center">Windows x64 (Visual Studio 2026)</td>
       <td align="center">
-        <a href="RELEASE_PATH/MeshLibDistVS26_SHORT_VERSION.zip">zip</a>
+        <a href="RELEASE_PATH/MeshLibDistVS26_SHORT_VERSION.zip">zip</a> /
+        <a href="RELEASE_PATH/MeshLibDistVS26_SHORT_VERSION-PDB.zip">pdb</a>
       </td>
     </tr>
     <tr>

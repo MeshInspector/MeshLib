@@ -63,6 +63,7 @@
         <tab type="user" url="__BEGIN_URL__ExampleDicomFiles__END_URL__" title="Open Dicom Files"/>
       </tab>
     </tab>
+    <tab type="user" url="__BEGIN_URL__SwitchingFromOtherLibraries__END_URL__" title="Switching from Other Libraries"/>
     <tab type="usergroup" url="__BEGIN_URL__PackageOverview__END_URL__" title="Package Overview">
       <tab type="user" url="__BEGIN_URL__FileFormatSupport__END_URL__" title="File Format Support"/>
       <tab type="user" url="__BEGIN_URL__MeshStructureOverview__END_URL__" title="Mesh Structure"/>

@@ -53,21 +53,36 @@ If you prefer to download the MeshLib package directly from the NuGet website, f
   - Click "Download Package" to get the `.nupkg` file.
  2. **Create a Local Directory for NuGet Packages**:
   - Choose or create a directory on your system where you will store the `.nupkg` file. For example:
+   - **Windows (Command Prompt)**:
 \code{.cmd}
+mkdir %USERPROFILE%\LocalNuGetPackages
+\endcode
+   - **Linux / macOS**:
+\code{.sh}
 mkdir ~/LocalNuGetPackages
 \endcode
-  - Move the downloaded `MeshLib.nupkg` file to this directory.
+  - Move the downloaded package to that directory **keeping its `meshlib.<version>.nupkg` file name**.
  3. **Install the MeshLib Package Locally**:
   - Use the command below to install the package:
+   - **Windows (Command Prompt)**:
 \code{.cmd}
-dotnet add package MeshLib --source /path/to/LocalNuGetPackages
+dotnet add package MeshLib --source %USERPROFILE%\LocalNuGetPackages
+\endcode
+   - **Linux / macOS**:
+\code{.sh}
+dotnet add package MeshLib --source ~/LocalNuGetPackages
 \endcode
  4. **Alternative: Configure Local Source Globally**:
   - Add the local directory as a source using:
+   - **Windows (Command Prompt)**:
 \code{.cmd}
-dotnet nuget add source \path\to\LocalNuGetPackages --name LocalPackages
+dotnet nuget add source %USERPROFILE%\LocalNuGetPackages --name LocalPackages
 \endcode
-  - After this, you can install the package normally without specifying `-source`.
+   - **Linux / macOS**:
+\code{.sh}
+dotnet nuget add source ~/LocalNuGetPackages --name LocalPackages
+\endcode
+  - After this, you can install the package normally without specifying `--source`.
  5. **Build and Run Your Project**:
 \code{.cmd}
 dotnet build

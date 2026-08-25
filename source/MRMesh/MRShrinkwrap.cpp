@@ -1,0 +1,73 @@
+#include "MRShrinkwrap.h"
+#include "MRMesh.h"
+#include "MRMeshProject.h"
+#include "MRAffineXf3.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
+
+namespace MR
+{
+
+std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh & refMesh,
+    const ShrinkwrapParameters & params, IPointsToMeshProjector * projector )
+{
+    MR_TIMER;
+
+    // converts the coordinates of mesh in the coordinates of refMesh and back
+    AffineXf3f meshToRef;
+    if ( params.refXf )
+        meshToRef = params.refXf->inverse();
+    if ( params.xf )
+        meshToRef = meshToRef * ( *params.xf );
+    const auto refToMesh = meshToRef.inverse();
+
+    VertCoords res = mesh.points;
+    const auto & validVerts = mesh.topology.getValidVerts();
+    const auto moved = [&] ( VertId v ) { return validVerts.test( v ) && ( !params.region || params.region->test( v ) ); };
+
+    // MeshTriPoint does not depend on the transformations, so the projection is evaluated on refMesh itself
+    const auto setPos = [&] ( VertId v, const MeshProjectionResult & proj )
+    {
+        if ( proj.mtp.e )
+            res[v] = refToMesh( refMesh.triPoint( proj.mtp ) );
+    };
+
+    if ( projector )
+    {
+        projector->updateMeshData( &refMesh );
+        // the projections outside of the region are computed as well to keep one batch call here
+        std::vector<MeshProjectionResult> projs( mesh.points.size() );
+        projector->findProjections( projs, mesh.points.vec_, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
+
+        if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
+        {
+            if ( moved( v ) )
+                setPos( v, projs[v.get()] );
+        }, params.callBack ) )
+            return {};
+    }
+    else
+    {
+        if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
+        {
+            if ( moved( v ) )
+                setPos( v, findProjection( meshToRef( mesh.points[v] ), refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq ) );
+        }, params.callBack ) )
+            return {};
+    }
+
+    return res;
+}
+
+bool shrinkwrap( Mesh & mesh, const Mesh & refMesh, const ShrinkwrapParameters & params, IPointsToMeshProjector * projector )
+{
+    MR_TIMER;
+    auto positions = findShrinkwrapPositions( mesh, refMesh, params, projector );
+    if ( !positions )
+        return false;
+    mesh.points = std::move( *positions );
+    mesh.invalidateCaches();
+    return true;
+}
+
+} //namespace MR

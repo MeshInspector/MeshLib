@@ -76,7 +76,7 @@ const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 ## TypeScript
 
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with
-no extra setup:
+minimal setup:
 
 ```ts
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
@@ -86,6 +86,8 @@ const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 const { valid, distSq } = ml.findProjection(point, mesh);
 mesh.delete();
 ```
+
+Also make sure to add `"type": "module"` to your package.json.
 
 ## Memory management
 

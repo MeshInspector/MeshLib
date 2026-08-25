@@ -33,9 +33,13 @@ wrong, not that a library is missing: 32-bit name decoration (`__imp__NAME` inst
 nothing in the x64 import libraries. Visual Studio 2019 still defaults new C++ console projects to `Win32`.
 On Windows on Arm, use the x64 toolchain: no native Arm64 Windows build is published.
 
+Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
+The \ref CppSetupWindows "C++ guide's archive table" names all four and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
+a pure-C consumer needs no `_ITERATOR_DEBUG_LEVEL` define, whichever archive it picks, because C code passes no standard containers across the DLL boundary, so the mismatch that define guards against cannot arise. A project that also compiles C++ translation units against MeshLib's C++ headers does need it, at the value in that column.
+
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the **Windows built version archive** for your Visual Studio toolset: the release description links one archive per supported toolset (2019, 2022, 2026).
+  - Download the archive for your Visual Studio toolset from \ref CppSetupWindows "the C++ guide's table".
   - Extract it to a directory, e.g., `C:\meshlib-built\`.
   \n **Directory Structure After Extraction**
 \code{.cmd}

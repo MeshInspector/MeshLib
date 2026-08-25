@@ -102,20 +102,7 @@ Finally, copy the runtime libraries next to your executable, as described in the
 
 ### Iterator debug level
 
-Building your project with a non-zero iterator debug level needs \b both a different archive (`MeshLibDist_*-IteratorDebug.zip`) and extra compiler definitions. `MR_ITERATOR_DEBUG_LEVEL` is MeshLib's own acknowledgement flag: a non-zero iterator debug level can cost up to 100x in speed, so it has to be opted into explicitly rather than inherited from the build configuration.
-
-With MSVC, MeshLib checks that your `_ITERATOR_DEBUG_LEVEL` matches the one its binaries were built with and stops the build on a mismatch:
-
-\code
-fatal error C1189: #error:  _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib
-\endcode
-
-This is a \b compile error, not a link error. Define \b both macros to the value matching your archive:
-
-| archive | configuration | defines |
-| ------- | ------------- | ------- |
-| `MeshLibDistVS19/22/26_*.zip` | `Release` | `_ITERATOR_DEBUG_LEVEL=0` and `MR_ITERATOR_DEBUG_LEVEL=0` (the default, nothing to do) |
-| `MeshLibDist_*-IteratorDebug.zip` | `Debug` | `_ITERATOR_DEBUG_LEVEL=2` and `MR_ITERATOR_DEBUG_LEVEL=2` |
+Building with a non-zero iterator debug level needs \b both a different archive (`MeshLibDist_*-IteratorDebug.zip`) and extra compiler definitions — define \b both `_ITERATOR_DEBUG_LEVEL` and `MR_ITERATOR_DEBUG_LEVEL` to the archive's value, or the build stops with `fatal error C1189: _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`:
 
 \code{.cmd}
 cmake -S . -B build -A x64 ^

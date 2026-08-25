@@ -537,6 +537,139 @@ def test_blocking_call_after_shutdown_raises():
     )
 
 
+# --- a command dropped by `removeCommands` ---------------------------------------------
+#
+# The two cases above are refused *up front*: the loop had already closed its queue, or was
+# never started, so `addCommand_` never queues anything. This one is the third refusal, and
+# the only one where the caller is already parked in the wait: the queue was open when the
+# command was posted, `shutdown()` then took the loop down under it, and `removeCommands`
+# woke the caller with the command dropped unrun. That wake-up is indistinguishable from a
+# normal completion at the condition variable - both set `done` - so before the fail-fast
+# change the caller simply returned, reporting success for a command that never ran.
+#
+# The window is a race by nature: after `shutdown()` returns, the loop may still service a
+# command or two before it leaves the event loop, and once it has drained the queue further
+# commands are refused up front instead. So the child posts with no pause at all to keep a
+# command in flight across the drain, and the test hard-asserts what holds either way - the
+# call raises rather than returning, and the refusal is permanent - while reporting whether
+# the drop window itself was hit.
+_DROPPED_ON_SHUTDOWN_SRC = r"""
+import os
+import pathlib
+import sys
+import time
+
+import meshlib.mrmeshpy as mrmesh
+from meshlib import mrviewerpy
+
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Resources,
+    pathlib.Path(os.environ["MRVIEWERPY_RESOURCES"]),
+)
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Fonts,
+    pathlib.Path(os.environ["MRVIEWERPY_FONTS"]),
+)
+
+params = mrviewerpy.ViewerLaunchParams()
+params.windowMode = mrviewerpy.ViewerLaunchParamsMode.TryHidden
+params.name = "MeshLib test_mrviewerpy dropped"
+mrviewerpy.launch(params, mrviewerpy.ViewerSetup())
+viewer = mrviewerpy.Viewer()
+viewer.skipFrames(1)
+print("STAGE alive", flush=True)
+
+viewer.shutdown()
+
+# no sleep in the loop: a command must be queued at the instant `removeCommands` drains it
+served = 0
+refusal = None
+deadline = time.monotonic() + 30
+while time.monotonic() < deadline:
+    try:
+        viewer.skipFrames(1)
+    except RuntimeError as e:
+        refusal = str(e)
+        break
+    served += 1
+
+print("SERVED %d" % served, flush=True)
+if refusal is None:
+    print("RETURNED", flush=True)
+    sys.exit(1)
+print("REFUSED %s" % refusal, flush=True)
+
+# the loop is gone for good, so no later command may be reported as run either
+for _ in range(20):
+    try:
+        viewer.skipFrames(1)
+    except RuntimeError:
+        continue
+    print("SERVED AFTER REFUSAL", flush=True)
+    sys.exit(1)
+print("PERMANENT", flush=True)
+sys.exit(0)
+"""
+
+# `removeCommands` puts this in the error of a caller it woke without running its command
+DROPPED_MESSAGE = "stopped before the command was executed"
+
+
+def test_command_dropped_by_shutdown_raises():
+    """A command dropped while its caller waits must raise, not return as if it had run."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    run = _run_in_child(
+        "blocking calls racing shutdown()",
+        _DROPPED_ON_SHUTDOWN_SRC,
+        env_extra={
+            "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
+            "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
+        },
+    )
+
+    # never got a running viewer: that is this environment, not the behaviour under test
+    if "STAGE alive" not in run.stdout:
+        pytest.skip("the child could not launch a viewer to shut down\n" + run.report())
+
+    assert not run.timed_out, (
+        "a blocking call never returned while the loop was going down\n" + run.report()
+    )
+    assert "SERVED AFTER REFUSAL" not in run.stdout, (
+        "a blocking call was reported as run after an earlier one had already been "
+        "refused: the loop is gone, so nothing can have executed it\n" + run.report()
+    )
+    assert run.returncode == 0 and "REFUSED" in run.stdout, (
+        "a blocking call issued while the loop was shutting down returned as if the "
+        "command had run\n" + run.report()
+    )
+
+    refusal = next(
+        line[len("REFUSED ") :]
+        for line in run.stdout.splitlines()
+        if line.startswith("REFUSED ")
+    )
+    # Both refusals are correct behaviour; only the first one went through the drop path,
+    # so say which was actually exercised rather than implying the wider one.
+    if DROPPED_MESSAGE not in refusal:
+        print(
+            f"[mrviewerpy] the loop had already closed its queue, so the dropped-command "
+            f"path was not hit this run; refused with: {refusal}",
+            file=sys.stderr,
+            flush=True,
+        )
+
+
+# --- a launch that never comes up -------------------------------------------------------
+#
+# Above, the loop is the thing that is gone. Here it never starts: `launch()` itself fails,
+# so the report has to come from `launch()` rather than from the first command after it.
+
+
 def test_headless_launch_raises_and_survives():
     """`launch()` with no display must raise, and must not take the interpreter with it.
 

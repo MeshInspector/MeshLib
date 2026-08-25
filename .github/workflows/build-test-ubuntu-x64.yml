@@ -55,6 +55,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Add our Clang to PATH
+        run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
+
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
         id: collect-runner-stats

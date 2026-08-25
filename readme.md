@@ -24,7 +24,7 @@ The MeshLib SDK is an open-source library that provides advanced algorithms for 
 ![MeshLib_SDK_Mesh_Processing_Library](https://github.com/user-attachments/assets/a65dc95f-675d-4fb8-ac17-6857c9a91554)
 ## Why Choose Us
 
-**Fully Open Source.** You can also fork the code for your own unique use cases.
+**Source Available.** Read the code, fork it, and use it free for non-commercial and educational work — commercial use requires a license.
 
 **Multi-Language Support.** Written in C++ with bindings for C, C#, and Python, our library integrates easily into AI pipelines and workflows.
 
@@ -77,6 +77,24 @@ pip install meshlib
 If your choice is C++, C or C#, check out our [Installation Guide](https://meshlib.io/documentation/InstallationGuide.html).
 
 Here, you can find our [tutorials](https://meshlib.io/documentation/Tutorials.html) and [code samples](https://meshlib.io/documentation/Examples.html) to master our SDK quickly and with ease.
+
+## Citing MeshLib
+
+If MeshLib supports your research, please cite it. Cite the exact version you used — find it with `pip show meshlib`.
+
+```bibtex
+@software{meshlib,
+  author       = {{MeshLib Development Team}},
+  title        = {{MeshLib}: 3D Mesh Processing Library},
+  organization = {AMV Consulting LLC},
+  year         = {2026},
+  version      = {3.1.3.429},
+  url          = {https://meshlib.io},
+  note         = {Please cite the exact version used in your work}
+}
+```
+
+Other styles (APA, IEEE, Chicago) and guidance on citing a specific algorithm: [meshlib.io/citation-guide](https://meshlib.io/citation-guide/). Using MeshLib in a paper? Tell us in [GitHub Discussions](https://github.com/MeshInspector/MeshLib/discussions) — we list published work that uses MeshLib.
 
 ## **License**
 

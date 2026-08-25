@@ -8,11 +8,12 @@ WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/install_apt_cuda.sh scripts/install_apt_cuda.sh
-COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
-COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY requirements requirements
 COPY scripts/mrbind-pybind11/python_versions.txt scripts/mrbind-pybind11/python_versions.txt
 COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
+
+ENV LLVM_VERSION=18.1.8
+ENV LLVM_PREFIX=/opt/llvm-pgo-dylib-$LLVM_VERSION
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -53,11 +54,12 @@ RUN <<EOF
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
         gh g++-12 clang-14 \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext gawk procps
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     ./scripts/install_apt_cuda.sh
-    ./scripts/mrbind/install_deps_ubuntu.sh
+    TOOLCHAIN=clang-${LLVM_VERSION}-pgo-dylib-linux
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
     ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
     # clean downloaded files
     apt-get clean

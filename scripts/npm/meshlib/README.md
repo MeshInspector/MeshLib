@@ -82,7 +82,7 @@ no extra setup:
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
-const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!; // typed `Mesh | null`, never null here
+const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 const { valid, distSq } = ml.findProjection(point, mesh);
 mesh.delete();
 ```

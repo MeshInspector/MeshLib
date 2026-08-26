@@ -2,7 +2,6 @@
 #include "MRMesh.h"
 #include "MRMeshProject.h"
 #include "MRAffineXf3.h"
-#include "MRBox.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 
@@ -26,22 +25,14 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
     const auto & validVerts = mesh.topology.getValidVerts();
     const auto moved = [&] ( VertId v ) { return validVerts.test( v ) && ( !params.region || params.region->test( v ) ); };
 
-    // the direction from the projection toward the vertex is dominated by rounding errors when the
-    // vertex is that close to refMesh, and the pseudonormal is taken instead of it below this distance
-    const float minDirDist = params.offset != 0 ? 1e-5f * refMesh.getBoundingBox().diagonal() : 0;
-
     // MeshTriPoint does not depend on the transformations, so the projection is evaluated on refMesh itself
-    const auto setPos = [&] ( VertId v, const Vector3f & refPt, const MeshProjectionResult & proj )
+    const auto setPos = [&] ( VertId v, const MeshProjectionResult & proj )
     {
         if ( !proj.mtp.e )
             return;
         auto pt = refMesh.triPoint( proj.mtp );
         if ( params.offset != 0 )
-        {
-            const auto d = refPt - pt;
-            const auto dLen = d.length();
-            pt += params.offset * ( dLen > minDirDist ? d / dLen : refMesh.pseudonormal( proj.mtp ) );
-        }
+            pt += params.offset * refMesh.pseudonormal( proj.mtp ); // pseudonormal is of unit length
         res[v] = refToMesh( pt );
     };
 
@@ -55,7 +46,7 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
         if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
         {
             if ( moved( v ) )
-                setPos( v, meshToRef( mesh.points[v] ), projs[v.get()] );
+                setPos( v, projs[v.get()] );
         }, cb ) )
             return {};
     }
@@ -63,10 +54,8 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
     {
         if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
         {
-            if ( !moved( v ) )
-                return;
-            const auto refPt = meshToRef( mesh.points[v] );
-            setPos( v, refPt, findProjection( refPt, refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq ) );
+            if ( moved( v ) )
+                setPos( v, findProjection( meshToRef( mesh.points[v] ), refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq ) );
         }, cb ) )
             return {};
     }

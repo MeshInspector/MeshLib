@@ -20,10 +20,10 @@ RUN <<EOF
     TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
     curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
         | tar -C /emsdk/upstream --strip-components=1 -xz
-    $(: the only stock LLVM binary our toolchain does not replace; emscripten )
-    $(: never invokes it, while wasm-opt and the other binaryen tools stay )
+    # the only stock LLVM binary our toolchain does not replace, and emscripten
+    # never invokes it; wasm-opt and the other binaryen tools stay
     rm -f /emsdk/upstream/bin/clang-scan-deps
-    $(: a stable path for node, so PATH below does not hardcode its version )
+    # a stable path for node, so PATH below need not hardcode its version
     ln -s /emsdk/node/*/bin /emsdk/node-bin
     /emsdk/upstream/bin/clang --version | head -n1
     du -sh /emsdk /emsdk/upstream/bin

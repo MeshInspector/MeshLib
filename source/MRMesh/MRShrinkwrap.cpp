@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRMeshProject.h"
 #include "MRAffineXf3.h"
+#include "MRBox.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 
@@ -25,6 +26,10 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
     const auto & validVerts = mesh.topology.getValidVerts();
     const auto moved = [&] ( VertId v ) { return validVerts.test( v ) && ( !params.region || params.region->test( v ) ); };
 
+    // the direction from the projection toward the vertex is dominated by rounding errors when the
+    // vertex is that close to refMesh, and the pseudonormal is taken instead of it below this distance
+    const float minDirDist = params.offset != 0 ? 1e-5f * refMesh.getBoundingBox().diagonal() : 0;
+
     // MeshTriPoint does not depend on the transformations, so the projection is evaluated on refMesh itself
     const auto setPos = [&] ( VertId v, const Vector3f & refPt, const MeshProjectionResult & proj )
     {
@@ -33,10 +38,9 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
         auto pt = refMesh.triPoint( proj.mtp );
         if ( params.offset != 0 )
         {
-            auto dir = ( refPt - pt ).normalized();
-            if ( dir == Vector3f{} ) // the vertex is exactly on refMesh, so its own side is unknown
-                dir = refMesh.pseudonormal( proj.mtp );
-            pt += params.offset * dir;
+            const auto d = refPt - pt;
+            const auto dLen = d.length();
+            pt += params.offset * ( dLen > minDirDist ? d / dLen : refMesh.pseudonormal( proj.mtp ) );
         }
         res[v] = refToMesh( pt );
     };

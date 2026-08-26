@@ -90,14 +90,16 @@ TEST( MRMesh, shrinkwrapOffsetKeepsSide )
         EXPECT_NEAR( mesh.points[v].z, -2.f, 1e-5f );
 }
 
-// the vertices lying exactly on refMesh have no side of their own, so pseudonormal is used
+// the vertices lying on refMesh have no side of their own, so pseudonormal is used;
+// the direction toward the vertex is in-plane rounding noise here, and following it
+// would slide the vertex within the plane instead of offsetting it
 TEST( MRMesh, shrinkwrapOffsetOnSurface )
 {
     const auto plane = makePlane();
     Triangulation tris{ { 0_v, 1_v, 2_v } };
     VertCoords ps
     {
-        { 0.f, 0.f, 0.f }, // 0_v
+        { 0.f, 0.f, 0.f }, // 0_v, right on the diagonal edge of the plane
         { 1.f, 0.f, 0.f }, // 1_v
         { 0.f, 1.f, 0.f }  // 2_v
     };
@@ -108,6 +110,30 @@ TEST( MRMesh, shrinkwrapOffsetOnSurface )
     EXPECT_TRUE( shrinkwrap( mesh, plane, params ) );
     for ( auto v : mesh.topology.getValidVerts() )
         EXPECT_NEAR( mesh.points[v].z, 2.f, 1e-5f );
+}
+
+// a vertex just beyond the border of the plane is closer to it than the direction can be trusted,
+// so it is offset along the pseudonormal to z=2 and not in the plane to x=12
+TEST( MRMesh, shrinkwrapOffsetNearSurface )
+{
+    const auto plane = makePlane();
+    Triangulation tris{ { 0_v, 1_v, 2_v } };
+    VertCoords ps
+    {
+        { 10.f + 1e-5f, 0.f, 0.f }, // 0_v
+        { 10.f + 2e-5f, 0.f, 0.f }, // 1_v
+        { 10.f + 1e-5f, 1.f, 0.f }  // 2_v
+    };
+    auto mesh = Mesh::fromTriangles( std::move( ps ), tris );
+
+    ShrinkwrapParameters params;
+    params.offset = 2;
+    EXPECT_TRUE( shrinkwrap( mesh, plane, params ) );
+    for ( auto v : mesh.topology.getValidVerts() )
+    {
+        EXPECT_NEAR( mesh.points[v].z, 2.f, 1e-5f );
+        EXPECT_NEAR( mesh.points[v].x, 10.f, 1e-4f );
+    }
 }
 
 TEST( MRMesh, shrinkwrapUpDistLimit )

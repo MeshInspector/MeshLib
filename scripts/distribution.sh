@@ -58,6 +58,12 @@ REQUIREMENTS_FILE="${BASE_DIR}/requirements/ubuntu.txt"
 # convert multi-line file to comma-separated string
 DEPENDS_LINE=$(cat ${REQUIREMENTS_FILE} | tr '\n' ',' | sed -e "s/,\s*$//" -e "s/,/, /g")
 
+# both .deb legs build natively - ubuntu-x64 on an amd64 runner, ubuntu-arm64 on
+# an arm64 one - so the host's architecture is the package's architecture. Naming
+# it lets dpkg refuse the package on a foreign CPU instead of installing ELF
+# binaries it cannot run, which `Architecture: all` allowed.
+DEB_ARCHITECTURE=$(dpkg --print-architecture)
+
 #create control file
 mkdir -p distr/meshlib-dev/DEBIAN
 cat << EOF > ./distr/meshlib-dev/DEBIAN/control
@@ -66,7 +72,7 @@ Essential: no
 Priority: optional
 Section: model
 Maintainer: Adalisk team
-Architecture: all
+Architecture: ${DEB_ARCHITECTURE}
 Description: Advanced mesh modeling library
 Version: ${MR_VERSION}
 Depends: ${DEPENDS_LINE}

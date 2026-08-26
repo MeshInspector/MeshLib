@@ -6,6 +6,9 @@ on:
       app_version:
         required: true
         type: string
+      config_matrix:
+        required: true
+        type: string
       docker_image_tag:
         required: true
         type: string
@@ -30,27 +33,19 @@ on:
         default: true
         required: false
         type: boolean
-      stubs_only:
-        description: "Build only the leg that produces the artifacts the doc build needs"
-        default: false
-        required: false
-        type: boolean
 
 jobs:
   ubuntu-arm-build-test:
+    # the entries carry every compiler field, so spell out the two that identify a leg
+    name: ubuntu-arm-build-test (${{ matrix.os }}, ${{ matrix.config }})
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-${{matrix.os}}-arm64:${{inputs.docker_image_tag}}
     strategy:
       fail-fast: false
-      # `stubs_only` drops the ubuntu24/GCC leg: PythonStubs and CsharpBindings come
-      # from ubuntu22/clang alone. Whole-matrix expression rather than `os: ${{ ... }}`,
-      # because an `include` entry whose `os` is absent becomes an extra combination.
-      matrix: >-
-        ${{ fromJSON( inputs.stubs_only
-        && '{"os":["ubuntu22"],"config":["Release"],"include":[{"os":"ubuntu22","compiler":"clang","cxx-compiler":"/usr/bin/clang++-14","c-compiler":"/usr/bin/clang-14","cxx-standard":20}]}'
-        || '{"os":["ubuntu22","ubuntu24"],"config":["Release"],"include":[{"os":"ubuntu22","compiler":"clang","cxx-compiler":"/usr/bin/clang++-14","c-compiler":"/usr/bin/clang-14","cxx-standard":20},{"os":"ubuntu24","compiler":"GCC","cxx-compiler":"/usr/bin/g++-14","c-compiler":"/usr/bin/gcc-14","cxx-standard":23}]}' ) }}
+      matrix:
+        include: ${{ fromJSON( inputs.config_matrix ) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

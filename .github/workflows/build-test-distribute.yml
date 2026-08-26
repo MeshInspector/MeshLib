@@ -102,13 +102,12 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_arm64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      # keep every leg whenever the debs are actually published
-      stubs_only:            ${{ needs.config.outputs.update_doc_only == 'true' && needs.config.outputs.upload_artifacts != 'true' }}
     secrets: inherit
 
   ubuntu-x64-build-test:
@@ -378,6 +377,21 @@ jobs:
     # Reusable workflows do not see repository secrets unless the caller
     # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
     secrets: inherit
+
+  nuget-consumer-test:
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - upload-distributions
+    uses: ./.github/workflows/nuget-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
 
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.

@@ -84,7 +84,7 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
-  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. This needs [Homebrew](https://brew.sh/) — install it first if you do not have it. Open Terminal and run the following command:
+  \n Needed only if your project also compiles C++ against MeshLib's C++ headers: `MRMeshConfig.cmake` resolves Boost, TBB and six more via `find_dependency`, so CMake configuration fails without them. A C-only project can skip this step — `MeshLibC2Config.cmake` declares no dependencies, and the framework carries the Homebrew dylibs its binaries load. The step needs [Homebrew](https://brew.sh/) — install it first if you do not have it. Open Terminal and run the following command:
 \code{.sh}
 xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 \endcode

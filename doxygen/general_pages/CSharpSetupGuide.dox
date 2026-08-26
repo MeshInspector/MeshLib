@@ -155,8 +155,6 @@ Console.WriteLine($"MeshLib OK: cube has {mesh.points.size()} points, "
 MR.MeshSave.toAnySupportedFormat(mesh, "cube.stl");
 Console.WriteLine("Wrote cube.stl");
 \endcode
-\note These are top-level statements, matching the `Program.cs` that `dotnet new console` generates. In a
-project with an explicit `Main` method, put the same lines inside it.
 
 Then run:
 \code{.cmd}
@@ -169,9 +167,7 @@ MeshLib OK: cube has 8 points, 12 faces
 Wrote cube.stl
 \endcode
 
-and a `cube.stl` of about 700 bytes appears in the working directory. Every line of the snippet calls into the
-native libraries, so a broken setup raises an exception instead of passing silently — see
-\ref MeshLibCSharpTroubleshooting "Troubleshooting" for the exceptions to expect.
+and a `cube.stl` of about 700 bytes appears in the working directory.
 
 
 ## Package Size and Native Runtimes {#MeshLibCSharpPackageSize}

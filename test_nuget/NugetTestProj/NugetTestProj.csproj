@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <!-- net47 is the .NET Framework floor the C# Setup Guide documents and the
+         only thing that exercises build/MeshLib.targets, the shim that copies
+         the natives for pre-.NET-5 consumers. net10.0 rides along because
+         nothing else in CI builds .NET 10 (MRDotNet2Test is net8). -->
+    <TargetFrameworks>net47;net10.0</TargetFrameworks>
+    <!-- nuint appears in the package's public signatures (Mesh.points.size()),
+         so the consumer needs a language version that knows the keyword. -->
+    <LangVersion>12</LangVersion>
+    <!-- The natives ship for win-x64 only; an AnyCPU net47 exe would default to
+         a 32-bit host and fail to load them. -->
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <!-- netstandard2.0 facades need redirects under .NET Framework. -->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- CI passes the exact version it just packed; `*` lets a local run pick
+         up whatever nupkg sits in nuget_repo/. -->
+    <MeshLibVersion Condition="'$(MeshLibVersion)' == ''">*</MeshLibVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MeshLib" Version="$(MeshLibVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(TargetFrameworkIdentifier)' == '.NETFramework'">
+    <!-- Runners carry no 4.7 targeting pack; this supplies the reference assemblies. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

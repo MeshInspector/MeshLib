@@ -1,0 +1,4 @@
+# Build output and the local feed CI populates with the freshly packed nupkg
+NugetTestProj/bin/
+NugetTestProj/obj/
+NugetTestProj/nuget_repo/

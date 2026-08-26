@@ -377,6 +377,29 @@ jobs:
     # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
     secrets: inherit
 
+  nuget-consumer-test:
+    # Guards the .NET Framework floor the C# Setup Guide documents: nothing else in
+    # CI builds a net47 consumer of the package, so `build/MeshLib.targets` (the only
+    # mechanism that copies the natives for pre-.NET-5 targets) could regress
+    # unnoticed. net10.0 rides along -- also uncovered, since MRDotNet2Test is net8.
+    # Needs no license or serialization, so unlike `unity-nuget-test` it runs
+    # whenever a nupkg was built, not only under full-ci. Same `!cancelled()`
+    # reasoning as above: without it a disabled platform reached transitively
+    # through `upload-distributions` auto-skips this job.
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - upload-distributions
+    uses: ./.github/workflows/nuget-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.upload-distributions.result == 'success' }}

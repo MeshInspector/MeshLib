@@ -2,19 +2,19 @@ using System.Reflection;
 
 public class MeshBooleanExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
-        if (args.Length != 3)
+        if (args.Length != 2)
         {
-            Console.WriteLine("Usage: {0} MeshBooleanExample INPUT1 INPUT2", Assembly.GetExecutingAssembly().GetName().Name);
+            Console.WriteLine("Usage: {0} INPUT1 INPUT2", Assembly.GetExecutingAssembly().GetName().Name);
             return;
         }
 
         try
         {
             // load mesh
-            var mesh_a = MR.MeshLoad.fromAnySupportedFormat(args[1]);
-            var mesh_b = MR.MeshLoad.fromAnySupportedFormat(args[2]);
+            var mesh_a = MR.MeshLoad.fromAnySupportedFormat(args[0]);
+            var mesh_b = MR.MeshLoad.fromAnySupportedFormat(args[1]);
 
             // perform boolean operation
             MR.BooleanResult res = MR.boolean(mesh_a, mesh_b, MR.BooleanOperation.Intersection);

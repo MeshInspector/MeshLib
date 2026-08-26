@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
+    <!-- Every example declares its own Main so it can be pasted into a fresh
+         console project; name the harness dispatcher as the entry point here. -->
+    <StartupObject>Program</StartupObject>
     <TargetFramework>net8.0</TargetFramework>
     <RootNamespace>c_sharp_examples</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>

@@ -1,6 +1,6 @@
 ﻿public class MeshLoadSaveExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         try
         {

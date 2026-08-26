@@ -1,6 +1,6 @@
 public class MeshDecimateExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         try
         {

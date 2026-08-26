@@ -2,7 +2,7 @@ using static MR;
 
 public class CollisionSelfExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         var mesh = new MeshPart(MR.makeTorusWithSelfIntersections()); // make torus with self-intersections
 

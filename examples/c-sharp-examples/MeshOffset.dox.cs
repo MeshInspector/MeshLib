@@ -3,17 +3,17 @@ using System.Reflection;
 
 public class MeshOffsetExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
-        if (args.Length != 2)
+        if (args.Length != 1)
         {
-            Console.WriteLine("Usage: {0} MeshOffsetExample OFFSET_VALUE", Assembly.GetExecutingAssembly().GetName().Name);
+            Console.WriteLine("Usage: {0} OFFSET_VALUE", Assembly.GetExecutingAssembly().GetName().Name);
             return;
         }
 
         try
         {
-            float offsetValue = float.Parse(args[1],
+            float offsetValue = float.Parse(args[0],
                       System.Globalization.NumberStyles.AllowDecimalPoint,
                       CultureInfo.InvariantCulture);
 

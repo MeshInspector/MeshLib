@@ -1,6 +1,6 @@
 public class MeshICPExample
 {
-    public static void Run()
+    public static void Main(string[] args)
     {
         try
         {

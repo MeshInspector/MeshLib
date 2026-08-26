@@ -277,6 +277,7 @@
     <ClInclude Include="MRSceneSettings.h" />
     <ClInclude Include="MRSegmPoint.h" />
     <ClInclude Include="MRSharpenMarchingCubesMesh.h" />
+    <ClInclude Include="MRShrinkwrap.h" />
     <ClInclude Include="MRSignal.h" />
     <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRMakeSphereMesh.h" />
@@ -669,6 +670,7 @@
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSeparationPoint.cpp" />
     <ClCompile Include="MRSharedThreadSafeOwner.cpp" />
+    <ClCompile Include="MRShrinkwrap.cpp" />
     <ClCompile Include="MRSignDetectionMode.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
     <ClCompile Include="MRSplineProject.cpp" />

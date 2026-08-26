@@ -672,6 +672,9 @@
     <ClInclude Include="MRMeshRelax.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRShrinkwrap.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointCloudRelax.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
@@ -1839,6 +1842,9 @@
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshRelax.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRShrinkwrap.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudRelax.cpp">

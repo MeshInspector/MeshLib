@@ -224,7 +224,7 @@ meshconv --help
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
-  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
+  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project only uses the C bindings. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
 \code{.sh}
 xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 \endcode
@@ -234,7 +234,6 @@ xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requ
 \code{.sh}
 /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 \endcode
- \n A non-zero exit here usually means the Homebrew requirements above are missing.
  4. **Integrate Using CMake**
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 

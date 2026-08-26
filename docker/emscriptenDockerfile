@@ -25,6 +25,10 @@ RUN <<EOF
     rm -f /emsdk/upstream/bin/clang-scan-deps
     # a stable path for node, so PATH below need not hardcode its version
     ln -s /emsdk/node/*/bin /emsdk/node-bin
+    echo "unstripped: llvm $(du -sm /emsdk/upstream/bin | cut -f1) MB"
+    # emsdk strips its own toolchain (docker/Dockerfile in emscripten-core/emsdk);
+    # ours comes straight out of ninja install-distribution, so do the same
+    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
     /emsdk/upstream/bin/clang --version | head -n1
     echo "after:  /emsdk $(du -sm /emsdk | cut -f1) MB, llvm $(du -sm /emsdk/upstream/bin | cut -f1) MB"
 EOF

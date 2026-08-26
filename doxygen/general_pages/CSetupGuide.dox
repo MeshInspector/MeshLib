@@ -64,10 +64,15 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
 xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 \endcode
 
-### Linux (Ubuntu)
- 1. **Download the Package for Your Ubuntu Release and CPU**
+### Linux
+ 1. **Download the Package for Your Distribution and CPU**
  \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links a `.deb` for every supported Ubuntu release and architecture. Take the one matching `lsb_release -rs` and `uname -m`.
+ \n On any other distribution use the portable **Linux vcpkg** build instead. It bundles its own dependencies and is not installed system-wide: unpack it and use the resulting directory as the MeshLib installation prefix, then skip to step 3.
+\code{.sh}
+mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
+\endcode
  2. **Install the Package**
+ \n The `.deb` packages all declare `Architecture: all` and their `preinst` carries no release or CPU check, so `apt` cannot refuse a mismatched one: installing the arm64 build on x86-64, or the Ubuntu 22 build on Ubuntu 24, succeeds silently. Check the file name against your system first.
 \code{.sh}
 sudo apt install ./<downloaded>.deb
 \endcode

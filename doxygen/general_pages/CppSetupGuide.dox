@@ -153,6 +153,7 @@ mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
 \endcode
  2. **Install the Package**
  \n `apt` pulls in the remaining system dependencies itself. The leading `./` is required: without it `apt` looks for a repository package by that name.
+ \n The `.deb` packages all declare `Architecture: all` and their `preinst` carries no release or CPU check, so `apt` cannot refuse a mismatched one: installing the arm64 build on x86-64, or the Ubuntu 22 build on Ubuntu 24, succeeds silently. Check the file name against your system first.
 \code{.sh}
 sudo apt install ./<downloaded>.deb
 \endcode

@@ -2,12 +2,45 @@
 
 # Any changes in this file should probably be mirrored in `emscripten-build-c-bindings-X-Y-ZDockerfile`.
 
-FROM emscripten/emsdk:4.0.19-arm64 AS base
-
 # emsdk's clang is built with ThinLTO but no PGO. Ours is the same llvm-project
 # revision rebuilt with -O3 + PGO: -22.6% on an -O3 template-heavy TU.
+#
+# It replaces emsdk's copy in place rather than living beside it, and /emsdk is
+# then copied into a clean ubuntu base. Swapping the compiler in a layer on top
+# of emscripten/emsdk would ship both: a deleted or overwritten file still
+# occupies its bytes in the immutable lower layer, and emsdk keeps its whole
+# tree - LLVM included - in a single 533 MB layer.
+FROM emscripten/emsdk:4.0.19-arm64 AS emsdk
+
 ENV EMSDK_VERSION=4.0.19
-ENV EM_LLVM_ROOT=/opt/llvm-emsdk-$EMSDK_VERSION-pgo/bin
+
+RUN <<EOF
+    set -e
+    du -sh /emsdk /emsdk/upstream/bin
+    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
+        | tar -C /emsdk/upstream --strip-components=1 -xz
+    $(: the only stock LLVM binary our toolchain does not replace; emscripten )
+    $(: never invokes it, while wasm-opt and the other binaryen tools stay )
+    rm -f /emsdk/upstream/bin/clang-scan-deps
+    $(: a stable path for node, so PATH below does not hardcode its version )
+    ln -s /emsdk/node/*/bin /emsdk/node-bin
+    /emsdk/upstream/bin/clang --version | head -n1
+    du -sh /emsdk /emsdk/upstream/bin
+EOF
+
+
+FROM ubuntu:22.04 AS base
+
+# /emsdk carries emscripten, binaryen, node and now our clang; the packages
+# below are the ones the emscripten/emsdk image installed on top of the same
+# ubuntu, plus the handful this repository needs.
+COPY --from=emsdk /emsdk /emsdk
+
+ENV EMSDK=/emsdk
+ENV PATH=/emsdk:/emsdk/upstream/emscripten:/emsdk/node-bin:$PATH
+WORKDIR /src
+ENTRYPOINT ["/emsdk/docker/entrypoint.sh"]
 
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
 Types: deb
@@ -38,13 +71,14 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        tzdata curl git pkg-config ninja-build \
+        $(: the emscripten/emsdk image's own set ) \
+        ca-certificates python3 python3-pip cmake curl wget zip unzip git \
+        tzdata pkg-config ninja-build \
         $(: to compile translation files ) \
         gettext \
         $(: to generate TypeScript documentation ) \
         doxygen
-    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
-    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
+    emcc --version | head -n1
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*

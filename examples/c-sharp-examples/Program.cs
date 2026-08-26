@@ -24,14 +24,14 @@ internal class Program
         {
             if (type.Name == args[0])
             {
-                MethodInfo? runMethod = type.GetMethod("Run", BindingFlags.Static | BindingFlags.Public);
+                MethodInfo? runMethod = type.GetMethod("Main", BindingFlags.Static | BindingFlags.Public);
                 if (runMethod == null)
                 {
-                    Console.WriteLine($"Run Method not found in {type.Name}.");
+                    Console.WriteLine($"Main method not found in {type.Name}.");
                     return;
                 }
 
-                runMethod.Invoke(null, new object[] { args });
+                runMethod.Invoke(null, new object[] { args[1..] });
             }
         }
     }

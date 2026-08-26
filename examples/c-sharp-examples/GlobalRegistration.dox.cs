@@ -19,22 +19,22 @@ public class GlobalRegistrationExample
             Console.WriteLine($"RMS point-to-plane distance: {p2plMetric} ± {p2plInaccuracy}");
         }
     }
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
-        if (args.Length < 4)
+        if (args.Length < 3)
         {
-            Console.WriteLine("Usage: {0} GlobalRegistrationExample INPUT1 INPUT2 [INPUTS...] OUTPUT", Assembly.GetExecutingAssembly().GetName().Name);
+            Console.WriteLine("Usage: {0} INPUT1 INPUT2 [INPUTS...] OUTPUT", Assembly.GetExecutingAssembly().GetName().Name);
             return;
         }
 
         try
         {
-            int inputNum = args.Length - 2;
+            int inputNum = args.Length - 1;
             MR.Vector_MRMeshOrPointsXf_MRObjId inputs = new();
             MR.Box3f maxBBox = new();
             for (int i = 0; i < inputNum; ++i)
             {
-                var pc = MR.PointsLoad.fromAnySupportedFormat(args[i + 1]);
+                var pc = MR.PointsLoad.fromAnySupportedFormat(args[i]);
                 MR.MeshOrPointsXf obj = new MR.MeshOrPointsXf(pc, new MR.AffineXf3f());
                 inputs.pushBack(obj);
                 maxBBox.include(obj.obj.computeBoundingBox());

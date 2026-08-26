@@ -28,8 +28,12 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
     // MeshTriPoint does not depend on the transformations, so the projection is evaluated on refMesh itself
     const auto setPos = [&] ( VertId v, const MeshProjectionResult & proj )
     {
-        if ( proj.mtp.e )
-            res[v] = refToMesh( refMesh.triPoint( proj.mtp ) );
+        if ( !proj.mtp.e )
+            return;
+        auto pt = refMesh.triPoint( proj.mtp );
+        if ( params.offset != 0 )
+            pt += params.offset * refMesh.pseudonormal( proj.mtp ); // pseudonormal is of unit length
+        res[v] = refToMesh( pt );
     };
 
     if ( params.projector )

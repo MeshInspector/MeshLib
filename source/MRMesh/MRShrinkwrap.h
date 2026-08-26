@@ -12,6 +12,10 @@ namespace MR
 
 struct ShrinkwrapParameters : MeshProjectionParameters
 {
+    /// each vertex is displaced by this distance from the closest point found, along the pseudonormal
+    /// of refMesh there: positive - outside refMesh, negative - inside; measured in refMesh coordinates
+    float offset = 0;
+
     /// if provided then only the vertices from this region are moved, and the others remain in place
     const VertBitSet * region = nullptr;
 
@@ -22,7 +26,8 @@ struct ShrinkwrapParameters : MeshProjectionParameters
 /// moves every vertex of the mesh in the closest point on the reference mesh;
 /// the vertices having no projection within MeshProjectionParameters::upDistLimitSq remain in place;
 /// this function changes vertex coordinates only, keeping mesh topology intact, so the result
-/// can self-intersect where refMesh is concave; consider offsetMesh(...) if that is not acceptable
+/// can self-intersect where refMesh is concave, and a non-zero offset makes it much more likely;
+/// consider offsetMesh(...) if a self-intersection free result is required
 /// \return false if the operation was canceled by the progress callback
 MRMESH_API bool shrinkwrap( Mesh & mesh, const Mesh & refMesh, const ShrinkwrapParameters & params = {},
     const ProgressCallback & cb = {} );

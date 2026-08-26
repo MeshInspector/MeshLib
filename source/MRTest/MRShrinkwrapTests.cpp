@@ -51,6 +51,24 @@ TEST( MRMesh, shrinkwrap )
     EXPECT_NEAR( mesh.points[2_v].y, 1.f, 1e-5f );
 }
 
+TEST( MRMesh, shrinkwrapOffset )
+{
+    const auto plane = makePlane();
+
+    auto mesh = makeProbe();
+    ShrinkwrapParameters params;
+    params.offset = 2;
+    EXPECT_TRUE( shrinkwrap( mesh, plane, params ) );
+    for ( auto v : mesh.topology.getValidVerts() )
+        EXPECT_NEAR( mesh.points[v].z, 2.f, 1e-5f );
+
+    mesh = makeProbe();
+    params.offset = -2;
+    EXPECT_TRUE( shrinkwrap( mesh, plane, params ) );
+    for ( auto v : mesh.topology.getValidVerts() )
+        EXPECT_NEAR( mesh.points[v].z, -2.f, 1e-5f );
+}
+
 TEST( MRMesh, shrinkwrapUpDistLimit )
 {
     const auto plane = makePlane();

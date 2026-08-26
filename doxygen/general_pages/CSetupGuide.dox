@@ -6,17 +6,15 @@
 \tableofcontents
 
 \parblock
-\note Two versions of the C API currently coexist:
+\note The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`, `MRCMisc`, `MRCSymbolMesh`, `MRCVoxels`, ...).
 
-\note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the `MRC*` directories.
-
-\note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
+\note The older v1 C API (`MRMeshC`) has been **removed**: it is absent from the repository and from the releases. Code still using it has to move to `MeshLibC2`.
 \endparblock
 
 \parblock
-\note Currently, the only supported way of using the C API is via the binary releases of MeshLib.
+\note The C API is distributed in the [binary releases](https://github.com/MeshInspector/MeshLib/releases) of MeshLib, which is what this guide covers.
 
-\note Starting with the next release, you will be able to compile the C bindings directly from the source code.
+\note Building it from source is possible too, but takes an extra step: the bindings are generated, not written by hand, so generate them first (see [scripts/mrbind/README-generating.md](https://github.com/MeshInspector/MeshLib/blob/master/scripts/mrbind/README-generating.md#32-generate-c-bindings)), then configure MeshLib with `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` — it is `OFF` by default, and with it off no C library is built.
 \endparblock
 
 ## Installing binary releases of MeshLib

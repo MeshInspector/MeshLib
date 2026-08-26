@@ -107,6 +107,8 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      # keep every leg whenever the debs are actually published
+      stubs_only:            ${{ needs.config.outputs.update_doc_only == 'true' && needs.config.outputs.upload_artifacts != 'true' }}
     secrets: inherit
 
   ubuntu-x64-build-test:

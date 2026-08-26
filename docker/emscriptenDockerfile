@@ -16,7 +16,7 @@ ENV EMSDK_VERSION=4.0.19
 
 RUN <<EOF
     set -e
-    du -sh /emsdk /emsdk/upstream/bin
+    echo "before: /emsdk $(du -sm /emsdk | cut -f1) MB, llvm $(du -sm /emsdk/upstream/bin | cut -f1) MB"
     TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
     curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
         | tar -C /emsdk/upstream --strip-components=1 -xz
@@ -26,7 +26,7 @@ RUN <<EOF
     # a stable path for node, so PATH below need not hardcode its version
     ln -s /emsdk/node/*/bin /emsdk/node-bin
     /emsdk/upstream/bin/clang --version | head -n1
-    du -sh /emsdk /emsdk/upstream/bin
+    echo "after:  /emsdk $(du -sm /emsdk | cut -f1) MB, llvm $(du -sm /emsdk/upstream/bin | cut -f1) MB"
 EOF
 
 
@@ -71,7 +71,7 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        $(: the emscripten/emsdk image's own set ) \
+        $(: the same packages the emscripten/emsdk image installs ) \
         ca-certificates python3 python3-pip cmake curl wget zip unzip git \
         tzdata pkg-config ninja-build \
         $(: to compile translation files ) \

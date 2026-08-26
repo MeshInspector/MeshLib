@@ -677,8 +677,10 @@ jobs:
 
   upload-wheels-to-release:
     # On the `workflow_call` path the tag is empty unless the PR also carries `upload-binaries` (or `full-ci`).
+    # Nightly builds wheels only as a smoke test: on schedule `release_tag` is real, so
+    # without this ~350 MB of wheels would pile onto every nightly draft release.
     if: >-
-      ${{ !cancelled() && needs.setup.outputs.release_tag != ''
+      ${{ !cancelled() && github.event_name != 'schedule' && needs.setup.outputs.release_tag != ''
         && needs.manylinux-pip-build.result != 'failure'
         && needs.windows-pip-build.result != 'failure'
         && needs.macos-pip-build.result != 'failure' }}

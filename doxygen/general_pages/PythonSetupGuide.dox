@@ -49,7 +49,7 @@ Additionally, the Python library allows you to explore all the available functio
 
 After installing MeshLib, a great way to start exploring its capabilities is through interactive examples.
 
-- **On Windows and Linux**, we recommend beginning with the MeshLib Viewer. It allows you to open and manipulate 3D meshes using Python. You can follow this [**Viewer example**](\ref ExampleViewer) to get started.
+- **On Windows and Linux with a graphical session**, we recommend beginning with the MeshLib Viewer. It allows you to open and manipulate 3D meshes using Python. You can follow this [**Viewer example**](\ref ExampleViewer) to get started. On a headless machine (container, CI, WSL without an X server, SSH without X forwarding) the Viewer cannot open a window — start with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave) instead.
 - **On macOS**, the interactive Viewer is not supported yet. The `meshlib.mrviewerpy` module installs and imports, but `mrviewerpy.launch()` raises `RuntimeError: MeshLib Viewer is not supported on macOS yet` — and in releases before 3.1.3.566 it terminated the Python process outright, with no exception — so the [**Viewer example**](\ref ExampleViewer) will not run. Start with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave) instead, which demonstrates how to work with mesh files programmatically.
 
 These examples are a great entry point for integrating MeshLib into your workflow, regardless of your operating system.

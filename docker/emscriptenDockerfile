@@ -4,6 +4,11 @@
 
 FROM emscripten/emsdk:4.0.19-arm64 AS base
 
+# emsdk's clang is built with ThinLTO but no PGO. Ours is the same llvm-project
+# revision rebuilt with -O3 + PGO: -22.6% on an -O3 template-heavy TU.
+ENV EMSDK_VERSION=4.0.19
+ENV EM_LLVM_ROOT=/opt/llvm-emsdk-$EMSDK_VERSION-pgo/bin
+
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu/ http://mirror.eu.ossplanet.net/ubuntu/
@@ -38,40 +43,11 @@ RUN <<EOF
         gettext \
         $(: to generate TypeScript documentation ) \
         doxygen
+    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*
-EOF
-
-
-# Replace emsdk's stock clang/lld with our rebuild of the very same
-# llvm-project revision (12f392cff, clang 22.0.0git), which adds -O3 + IR-PGO
-# on top of upstream's ThinLTO-only release configuration. Measured -22.6% on
-# an -O3 template-heavy translation unit; see the release notes.
-#
-# Only bin/ is overlaid. The resource headers and the prebuilt wasm sysroot
-# under lib/ stay exactly as the image shipped them, which is safe precisely
-# because the revision is identical -- and the binaryen tools in bin/ that we
-# do not build (wasm-opt and friends) are left untouched for the same reason.
-ARG PGO_TOOLCHAIN=clang-emsdk-4.0.19-pgo
-ARG PGO_PREFIX=llvm-emsdk-4.0.19-pgo
-ARG PGO_SHA256=a740be411d2333189f28783af80a35b9efcbcabcdb5ef2ebd5d0650c9d9b764a
-RUN <<EOF
-    set -e
-    # this image is built on arm64 runners only; no other checksum is pinned
-    if [ "$(uname -m)" != aarch64 ]; then
-        echo "unexpected arch $(uname -m): no pinned toolchain checksum" >&2
-        exit 1
-    fi
-    asset="${PGO_TOOLCHAIN}-aarch64.tar.gz"
-    cd /tmp
-    curl -fsSL -O "https://github.com/MeshInspector/toolchains/releases/download/${PGO_TOOLCHAIN}/${asset}"
-    echo "${PGO_SHA256}  ${asset}" | sha256sum -c -
-    tar -xzf "${asset}"
-    cp -a "${PGO_PREFIX}/bin/." /emsdk/upstream/bin/
-    rm -rf "${PGO_PREFIX}" "${asset}"
-    /emsdk/upstream/bin/clang --version | head -1
-    emcc --version | head -1
 EOF
 
 

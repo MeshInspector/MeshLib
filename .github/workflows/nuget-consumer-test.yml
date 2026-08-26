@@ -1,0 +1,76 @@
+name: Test Nuget package with .NET consumers
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to test'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  nuget-consumer-test:
+    name: NuGet consumer test (net47, net10.0)
+    runs-on: windows-2025
+    timeout-minutes: 30
+    env:
+      PROJECT_DIR: test_nuget/NugetTestProj
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.x'
+
+      - name: Download nuget package
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
+
+      - name: Put package into local NuGet feed
+        id: feed
+        shell: pwsh
+        run: |
+          $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
+          if (!$pkg) {
+            Write-Error "No MeshLib*.nupkg file found"
+            exit 1
+          }
+          if ($pkg.Name -notmatch '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+') {
+            Write-Error "Cannot extract version from $($pkg.Name)"
+            exit 1
+          }
+          $pkgVersion = $Matches[0]
+          $feedDir = Join-Path $env:GITHUB_WORKSPACE "$env:PROJECT_DIR/nuget_repo"
+          New-Item -ItemType Directory -Force -Path $feedDir | Out-Null
+          Move-Item $pkg.FullName (Join-Path $feedDir "MeshLib.$pkgVersion.nupkg")
+          "package_version=$pkgVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Build consumers
+        shell: pwsh
+        run: |
+          dotnet build $env:PROJECT_DIR -c Release -p:MeshLibVersion=${{ steps.feed.outputs.package_version }}
+
+      - name: Run consumers
+        shell: pwsh
+        run: |
+          $exitCode = 0
+          foreach ($tfm in 'net47', 'net10.0') {
+            & "$env:PROJECT_DIR/bin/Release/$tfm/NugetTestProj.exe"
+            if ($LASTEXITCODE -ne 0) { $exitCode = $LASTEXITCODE }
+          }
+          exit $exitCode

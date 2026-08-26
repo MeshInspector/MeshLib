@@ -377,6 +377,21 @@ jobs:
     # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
     secrets: inherit
 
+  nuget-consumer-test:
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - upload-distributions
+    uses: ./.github/workflows/nuget-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.upload-distributions.result == 'success' }}

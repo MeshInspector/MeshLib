@@ -8,7 +8,7 @@
 \parblock
 \note Two versions of the C API currently coexist:
 
-\note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the the `MRC*` directories.
+\note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the `MRC*` directories.
 
 \note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
 \endparblock

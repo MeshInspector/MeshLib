@@ -9,7 +9,7 @@ This instruction will guide you through integrating MeshLib into your C# project
 
 \note MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity — see \ref MeshLibCSharpUnity "Using MeshLib with Unity".
 
-\note As of January 2026, the C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all \ref MeshLibCSharpPlatforms "supported platforms", ensuring feature parity with the native C++ API.
+\note The C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all \ref MeshLibCSharpPlatforms "supported platforms", ensuring feature parity with the native C++ API.
 
 
 ## Prerequisites

@@ -378,14 +378,6 @@ jobs:
     secrets: inherit
 
   nuget-consumer-test:
-    # Guards the .NET Framework floor the C# Setup Guide documents: nothing else in
-    # CI builds a net47 consumer of the package, so `build/MeshLib.targets` (the only
-    # mechanism that copies the natives for pre-.NET-5 targets) could regress
-    # unnoticed. net10.0 rides along -- also uncovered, since MRDotNet2Test is net8.
-    # Needs no license or serialization, so unlike `unity-nuget-test` it runs
-    # whenever a nupkg was built, not only under full-ci. Same `!cancelled()`
-    # reasoning as above: without it a disabled platform reached transitively
-    # through `upload-distributions` auto-skips this job.
     if: >-
       ${{ !cancelled()
         && needs.config.outputs.upload_artifacts == 'true'

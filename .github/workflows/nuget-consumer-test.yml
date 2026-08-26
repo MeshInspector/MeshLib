@@ -13,14 +13,12 @@ on:
         required: true
         type: string
 
-# pr-test releases are drafts; reading them requires a write token.
 permissions:
   contents: write
 
 jobs:
   nuget-consumer-test:
     name: NuGet consumer test (net47, net10.0)
-    # net47 needs .NET Framework, and the package's natives are win-x64 only.
     runs-on: windows-2025
     timeout-minutes: 30
     env:
@@ -29,13 +27,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          # Keep the write token out of .git/config.
           persist-credentials: false
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v6
         with:
-          # Newest TFM under test; the same SDK builds the net47 target.
           dotnet-version: '10.x'
 
       - name: Download nuget package
@@ -62,7 +58,6 @@ jobs:
           $feedDir = Join-Path $env:GITHUB_WORKSPACE "$env:PROJECT_DIR/nuget_repo"
           New-Item -ItemType Directory -Force -Path $feedDir | Out-Null
           Move-Item $pkg.FullName (Join-Path $feedDir "MeshLib.$pkgVersion.nupkg")
-          Write-Output "Testing MeshLib $pkgVersion"
           "package_version=$pkgVersion" >> $env:GITHUB_OUTPUT
 
       - name: Build consumers
@@ -76,22 +71,15 @@ jobs:
         run: |
           $failed = @()
           foreach ($tfm in 'net47', 'net10.0') {
-            $dir = Join-Path $env:GITHUB_WORKSPACE "$env:PROJECT_DIR/bin/Release/$tfm"
-            $exe = Join-Path $dir "NugetTestProj.exe"
-            Write-Output "--- $tfm ---"
+            $exe = Join-Path $env:GITHUB_WORKSPACE "$env:PROJECT_DIR/bin/Release/$tfm/NugetTestProj.exe"
             if (-not (Test-Path $exe)) {
               Write-Output "::error title=NuGet consumer test failed::$tfm produced no executable at $exe"
               $failed += $tfm
               continue
             }
-            # The natives have to reach the output dir for the run to work at all:
-            # flat next to the exe for net47, under runtimes/ for net10.0.
-            $flatDlls = (Get-ChildItem -Path $dir -Filter *.dll -File).Count
-            $sizeMb = [math]::Round((Get-ChildItem -Path $dir -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB)
-            Write-Output "output: $flatDlls dll(s) next to the exe, $sizeMb MB total"
             $out = (& $exe 2>&1) -join "`n"
             $code = $LASTEXITCODE
-            Write-Output $out
+            Write-Output "${tfm}: $out"
             if ($code -ne 0) {
               Write-Output "::error title=NuGet consumer test failed::$tfm exited with $code"
               $failed += $tfm
@@ -106,4 +94,3 @@ jobs:
             Write-Error "Failing target frameworks: $($failed -join ', ')"
             exit 1
           }
-          Write-Output "All target frameworks passed"

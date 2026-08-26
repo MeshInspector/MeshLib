@@ -4,8 +4,9 @@ public class MeshDecimateExample
     {
         try
         {
-            // Load mesh
-            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
+            // Make a mesh to decimate
+            // (to decimate your own mesh, load it with MR.MeshLoad.fromAnySupportedFormat("mesh.stl") instead)
+            var mesh = MR.makeUVSphere(1.0f, 64, 64);
 
             // Repack mesh optimally.
             // It's not necessary but highly recommended to achieve the best performance in parallel processing

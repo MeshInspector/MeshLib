@@ -12,8 +12,10 @@ namespace MR
 
 struct ShrinkwrapParameters : MeshProjectionParameters
 {
-    /// each vertex is displaced by this distance from the closest point found, along the pseudonormal
-    /// of refMesh there: positive - outside refMesh, negative - inside; measured in refMesh coordinates
+    /// each vertex is displaced by this distance from the closest point found, in the direction from
+    /// that point toward the original position of the vertex, so a positive offset keeps the vertex on
+    /// the side of refMesh it came from; the pseudonormal of refMesh is used instead for the vertices
+    /// lying exactly on refMesh; measured in the coordinates of refMesh
     float offset = 0;
 
     /// if provided then only the vertices from this region are moved, and the others remain in place

@@ -26,13 +26,18 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
     const auto moved = [&] ( VertId v ) { return validVerts.test( v ) && ( !params.region || params.region->test( v ) ); };
 
     // MeshTriPoint does not depend on the transformations, so the projection is evaluated on refMesh itself
-    const auto setPos = [&] ( VertId v, const MeshProjectionResult & proj )
+    const auto setPos = [&] ( VertId v, const Vector3f & refPt, const MeshProjectionResult & proj )
     {
         if ( !proj.mtp.e )
             return;
         auto pt = refMesh.triPoint( proj.mtp );
         if ( params.offset != 0 )
-            pt += params.offset * refMesh.pseudonormal( proj.mtp ); // pseudonormal is of unit length
+        {
+            auto dir = ( refPt - pt ).normalized();
+            if ( dir == Vector3f{} ) // the vertex is exactly on refMesh, so its own side is unknown
+                dir = refMesh.pseudonormal( proj.mtp );
+            pt += params.offset * dir;
+        }
         res[v] = refToMesh( pt );
     };
 
@@ -46,7 +51,7 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
         if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
         {
             if ( moved( v ) )
-                setPos( v, projs[v.get()] );
+                setPos( v, meshToRef( mesh.points[v] ), projs[v.get()] );
         }, cb ) )
             return {};
     }
@@ -54,8 +59,10 @@ std::optional<VertCoords> findShrinkwrapPositions( const Mesh & mesh, const Mesh
     {
         if ( !ParallelFor( 0_v, mesh.points.endId(), [&] ( VertId v )
         {
-            if ( moved( v ) )
-                setPos( v, findProjection( meshToRef( mesh.points[v] ), refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq ) );
+            if ( !moved( v ) )
+                return;
+            const auto refPt = meshToRef( mesh.points[v] );
+            setPos( v, refPt, findProjection( refPt, refMesh, params.upDistLimitSq, nullptr, params.loDistLimitSq ) );
         }, cb ) )
             return {};
     }

@@ -69,6 +69,47 @@ TEST( MRMesh, shrinkwrapOffset )
         EXPECT_NEAR( mesh.points[v].z, -2.f, 1e-5f );
 }
 
+// a positive offset keeps the vertices on their own side of refMesh:
+// the probe below the plane must stay below it, unlike with the pseudonormal direction
+TEST( MRMesh, shrinkwrapOffsetKeepsSide )
+{
+    const auto plane = makePlane();
+    Triangulation tris{ { 0_v, 1_v, 2_v } };
+    VertCoords ps
+    {
+        { 0.f, 0.f, -5.f }, // 0_v
+        { 1.f, 0.f, -5.f }, // 1_v
+        { 0.f, 1.f, -5.f }  // 2_v
+    };
+    auto mesh = Mesh::fromTriangles( std::move( ps ), tris );
+
+    ShrinkwrapParameters params;
+    params.offset = 2;
+    EXPECT_TRUE( shrinkwrap( mesh, plane, params ) );
+    for ( auto v : mesh.topology.getValidVerts() )
+        EXPECT_NEAR( mesh.points[v].z, -2.f, 1e-5f );
+}
+
+// the vertices lying exactly on refMesh have no side of their own, so pseudonormal is used
+TEST( MRMesh, shrinkwrapOffsetOnSurface )
+{
+    const auto plane = makePlane();
+    Triangulation tris{ { 0_v, 1_v, 2_v } };
+    VertCoords ps
+    {
+        { 0.f, 0.f, 0.f }, // 0_v
+        { 1.f, 0.f, 0.f }, // 1_v
+        { 0.f, 1.f, 0.f }  // 2_v
+    };
+    auto mesh = Mesh::fromTriangles( std::move( ps ), tris );
+
+    ShrinkwrapParameters params;
+    params.offset = 2;
+    EXPECT_TRUE( shrinkwrap( mesh, plane, params ) );
+    for ( auto v : mesh.topology.getValidVerts() )
+        EXPECT_NEAR( mesh.points[v].z, 2.f, 1e-5f );
+}
+
 TEST( MRMesh, shrinkwrapUpDistLimit )
 {
     const auto plane = makePlane();

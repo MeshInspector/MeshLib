@@ -6,11 +6,6 @@
 #include "MRTimer.h"
 #include "MRZlib.h"
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRFmt.h"
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten/heap.h>
-#endif
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -34,17 +29,6 @@ namespace MR
 {
 
 namespace {
-
-/// on wasm the heap size at the moment of an allocation, empty elsewhere; the suspicion
-/// is that a stall in decompressZip is the heap failing to grow
-std::string heapNote()
-{
-#ifdef __EMSCRIPTEN__
-    return fmt::format( ", heap {} MB", emscripten_get_heap_size() >> 20 );
-#else
-    return {};
-#endif
-}
 
 struct ProgressData
 {
@@ -352,7 +336,6 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
         }
         else
         {
-            spdlog::info( "zip entry {}/{}: {}", i + 1, numEntries, nameFixed );
             zfile = zip_fopen_index(zip,i,0);
             if ( !zfile )
                 return unexpected( "Cannot open zip file " + nameFixed );
@@ -367,18 +350,12 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
             if ( !ofs || ofs.bad() )
                 return unexpected( "Cannot create file " + utf8string( newItemPath ) );
 
-            // each line brackets one thing that can stall, so the last line surviving in
-            // a log says whether the entry died opening files, growing the heap, inside
-            // libzip, or writing the result out
-            spdlog::info( "zip entry {}/{}: opened, allocating {} bytes{}", i + 1, numEntries, stats.size, heapNote() );
             fileBufer.resize(stats.size);
-            spdlog::info( "zip entry {}/{}: buffer ready, reading", i + 1, numEntries );
             auto bitesRead = zip_fread(zfile,(void*)fileBufer.data(),fileBufer.size());
             if ( bitesRead != (zip_int64_t)stats.size )
                 return unexpected( "Cannot read file from zip " + nameFixed );
 
             zip_fclose(zfile);
-            spdlog::info( "zip entry {}/{}: read {} bytes, writing", i + 1, numEntries, bitesRead );
             if ( !ofs.write( fileBufer.data(), fileBufer.size() ) )
                 return unexpected( "Cannot write file from zip " + utf8string( newItemPath ) );
             ofs.close();

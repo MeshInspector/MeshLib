@@ -64,33 +64,13 @@ jobs:
         shell: pwsh
         run: |
           dotnet build $env:PROJECT_DIR -c Release -p:MeshLibVersion=${{ steps.feed.outputs.package_version }}
-          exit $LASTEXITCODE
 
       - name: Run consumers
         shell: pwsh
         run: |
-          $failed = @()
+          $exitCode = 0
           foreach ($tfm in 'net47', 'net10.0') {
-            $exe = Join-Path $env:GITHUB_WORKSPACE "$env:PROJECT_DIR/bin/Release/$tfm/NugetTestProj.exe"
-            if (-not (Test-Path $exe)) {
-              Write-Output "::error title=NuGet consumer test failed::$tfm produced no executable at $exe"
-              $failed += $tfm
-              continue
-            }
-            $out = (& $exe 2>&1) -join "`n"
-            $code = $LASTEXITCODE
-            Write-Output "${tfm}: $out"
-            if ($code -ne 0) {
-              Write-Output "::error title=NuGet consumer test failed::$tfm exited with $code"
-              $failed += $tfm
-              continue
-            }
-            if ($out -notmatch '8 points, 12 faces') {
-              Write-Output "::error title=NuGet consumer test failed::$tfm printed unexpected counts"
-              $failed += $tfm
-            }
+            & "$env:PROJECT_DIR/bin/Release/$tfm/NugetTestProj.exe"
+            if ($LASTEXITCODE -ne 0) { $exitCode = $LASTEXITCODE }
           }
-          if ($failed.Count -gt 0) {
-            Write-Error "Failing target frameworks: $($failed -join ', ')"
-            exit 1
-          }
+          exit $exitCode

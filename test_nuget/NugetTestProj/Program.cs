@@ -8,6 +8,9 @@ internal static class Program
         int points = (int)cube.points.size();
         int faces = (int)cube.topology.getValidFaces().count();
         Console.WriteLine("{0} points, {1} faces", points, faces);
-        return points == 8 && faces == 12 ? 0 : 1;
+        if (points == 8 && faces == 12)
+            return 0;
+        Console.Error.WriteLine("expected 8 points, 12 faces");
+        return 1;
     }
 }

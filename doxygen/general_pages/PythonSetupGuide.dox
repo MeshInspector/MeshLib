@@ -54,7 +54,9 @@ MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, m
 pip install meshlib
 \endcode
 
-It pulls in `numpy` (>= 1.19), MeshLib's only dependency.
+It installs two packages: `meshlib-core` — the headless core with `mrmeshpy`, `mrmeshnumpy`
+and `mrcudapy` — and the `meshlib` wheel on top of it, adding the interactive viewer
+(`mrviewerpy`) with its UI resources. `numpy` (>= 1.19) is the only external dependency.
 
 On \b Windows that command works as written. A virtual environment is still worth using once you
 have more than one project, so their dependencies cannot collide:
@@ -74,6 +76,18 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install meshlib
 \endcode
+
+### Headless installation {#PythonSetupHeadless}
+On servers, in docker images, and in CI — anywhere the interactive viewer is never opened —
+install just the core:
+\code{.sh}
+pip install meshlib-core
+\endcode
+The download is about 30% smaller and provides everything except `meshlib.mrviewerpy`; every other
+import (`from meshlib import mrmeshpy`, `mrmeshnumpy`, `mrcudapy`) works exactly as with the full
+package. Installing `meshlib` later adds the viewer on top, and `pip uninstall meshlib` removes
+only the viewer part again. Both packages are versioned in lockstep: `meshlib` of a given version
+requires exactly `meshlib-core` of the same version.
 
 ### Verify the installation {#PythonSetupVerify}
 `pip install` reporting success is not the same as a working install: the wheel is tens of megabytes of prebuilt native code, and it can install cleanly and still fail to load. This one command covers the whole chain — import the package, load the native module, run a real geometry call:

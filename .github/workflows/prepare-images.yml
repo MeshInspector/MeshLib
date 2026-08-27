@@ -314,6 +314,10 @@ jobs:
           - vs: vs2026
             runner: windows-2025
             vcpkg_triplet: x64-windows-meshlib
+          # windows-11-vs2026-arm carries VS2026 only, so arm64 has a single triplet
+          - vs: vs2026
+            runner: windows-11-vs2026-arm
+            vcpkg_triplet: arm64-windows-meshlib
           - vs: vs2022
             runner: windows-2025
             vcpkg_triplet: x64-windows-vs2022-meshlib

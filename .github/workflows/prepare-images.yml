@@ -287,6 +287,7 @@ jobs:
               -f docker/emscripten-build-c-bindingsDockerfile \
               -t "${repo}:${tag}" \
               --build-arg BASE_EMSDK_IMAGE=${{matrix.emsdk_image}} \
+              --build-arg USE_PGO_CLANG=${{ startsWith(matrix.emsdk_image, '4.') && '1' || '0' }} \
               --secret id=AWS_ACCESS_KEY_ID \
               --secret id=AWS_SECRET_ACCESS_KEY \
               --secret id=AWS_SESSION_TOKEN \

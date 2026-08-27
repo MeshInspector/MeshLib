@@ -5,16 +5,23 @@
 
 ARG BASE_EMSDK_IMAGE
 
-# Both emsdk images this file is built from (3.1.38 and 4.0.19) ship clang built
-# with ThinLTO but no PGO. Ours is clang 22 with -O3 + PGO, unpacked over
-# emsdk's copy; /emsdk is then carried into a clean ubuntu so only one compiler
-# is in the image (a file overwritten in a later layer still occupies its bytes
-# below). emsdk 3.1.38 expects LLVM 17 and only warns about the mismatch, hence
-# -Wno-version-check below; its sysroot is rebuilt by whichever clang is here.
+# emsdk ships clang without PGO; ours is clang 22 with -O3 + PGO, unpacked over
+# emsdk's copy, with /emsdk then carried into a clean ubuntu so only one compiler
+# is in the image. Enabled per emsdk version by the caller: clang 22 lowers
+# setjmp to __wasm_setjmp / __wasm_setjmp_test, which emscripten 3.1.38's libc
+# does not provide, so that leg keeps its own clang 17 (turbojpeg fails to link
+# otherwise).
 FROM emscripten/emsdk:$BASE_EMSDK_IMAGE AS emsdk
+
+ARG USE_PGO_CLANG=0
 
 RUN <<EOF
     set -e
+    if [ "${USE_PGO_CLANG}" != "1" ]; then
+        echo "keeping the emsdk toolchain"
+        ln -s /emsdk/node/*/bin /emsdk/node-bin
+        exit 0
+    fi
     TOOLCHAIN=clang-emsdk-4.0.19-pgo
     curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
         | tar -C /emsdk/upstream --strip-components=1 -xz
@@ -32,8 +39,6 @@ COPY --from=emsdk /emsdk /emsdk
 
 ENV EMSDK=/emsdk
 ENV PATH=/emsdk:/emsdk/upstream/emscripten:/emsdk/upstream/bin:/emsdk/node-bin:$PATH
-# 3.1.38 expects LLVM 17 and warns about clang 22; the build passes -Werror
-ENV EMCC_CFLAGS=-Wno-version-check
 WORKDIR /src
 ENTRYPOINT ["/emsdk/docker/entrypoint.sh"]
 

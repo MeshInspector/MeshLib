@@ -31,6 +31,7 @@ set(EXAMPLES
   SignedDistances
   TerrainTriangulation
   Triangulation
+  VerifyInstall
 )
 
 foreach(TARGET ${EXAMPLES})

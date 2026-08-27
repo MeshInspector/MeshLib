@@ -3,6 +3,8 @@
 
 Following code presents example of loading and saving mesh file
 
+\note Every version below reads `mesh.stl` from the working directory: put one there first, or it exits with `Cannot open file for reading mesh.stl`. The Python version is the exception — it writes a cube to `mesh.stl` when the file is missing.
+
 <div class="tabbed">
  
 - <b class="tab-title">C++</b>

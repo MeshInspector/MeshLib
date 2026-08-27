@@ -178,6 +178,33 @@ TEST( MRMesh, makeInterHoleBridgeEdges )
     EXPECT_TRUE( makeInterHoleBridgeEdges( mesh2, bdEdges ).empty() );
 }
 
+TEST( MRMesh, bridgeFillAllHoles )
+{
+    // two separate triangles, one on top of the other with opposite orientations, with a hole around each
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 5_v, 4_v }
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // VertId{0}
+    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // VertId{1}
+    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // VertId{2}
+    mesh.points.emplace_back( 0.f, 0.f, 1.f ); // VertId{3}
+    mesh.points.emplace_back( 1.f, 0.f, 1.f ); // VertId{4}
+    mesh.points.emplace_back( 0.f, 1.f, 1.f ); // VertId{5}
+
+    // three bridges appear and the three holes in between them get filled
+    EXPECT_TRUE( bridgeFillAllHoles( mesh ) );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
+    EXPECT_TRUE( mesh.topology.findHoleRepresentiveEdges().empty() );
+
+    // nothing to do in the closed mesh now
+    const auto numFaces = mesh.topology.numValidFaces();
+    EXPECT_FALSE( bridgeFillAllHoles( mesh ) );
+    EXPECT_EQ( mesh.topology.numValidFaces(), numFaces );
+}
+
 TEST( MRMesh, HoleFillPlan3 )
 {
     Mesh mesh;

@@ -40,6 +40,9 @@ supported by the latest release.
 ### Code Editor
 You can use any Python-compatible editor, such as Visual Studio Code, PyCharm, or any IDE you prefer.
 
+The wheel ships type stubs (`.pyi`) for every module, so editors such as VS Code (Pylance)
+and PyCharm offer completion and signature help for the MeshLib API with no extra setup.
+
 [Download Visual Studio Code](https://code.visualstudio.com/download)
 
 ## Installation Process
@@ -48,7 +51,37 @@ MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, m
 pip install meshlib
 \endcode
 
+### Your first script
+\code{.py}
+from meshlib import mrmeshpy as mm
+
+mesh = mm.makeCube()
+print(mesh.topology.numValidVerts(), "vertices", mesh.topology.numValidFaces(), "faces")
+
+mm.saveMesh(mesh, "cube.stl")
+\endcode
+
+Output:
+\code{.txt}
+8 vertices 12 faces
+\endcode
+
 ## How to use MeshLib Python Modules
+### Modules
+The `meshlib` package ships four importable modules:
+
+| Module | Purpose |
+| --- | --- |
+| `mrmeshpy` | Core geometry: mesh and point-cloud I/O, boolean operations, offsets, decimation, remeshing, measurements |
+| `mrmeshnumpy` | Conversion between MeshLib objects and NumPy arrays |
+| `mrviewerpy` | The interactive Viewer — open a window and display meshes from Python |
+| `mrcudapy` | CUDA-accelerated variants of selected algorithms |
+
+Import them from the package, for example `from meshlib import mrmeshpy`.
+
+\note `mrcudapy` imports on any machine, including one without a GPU, but its routines
+need an NVIDIA GPU with a working CUDA driver at runtime.
+
 ### Predefined Functions and Example Scripts
 MeshLib provides a set of example scripts that are available [here](\ref Examples).
 These examples are helpful for both developers and testers. 

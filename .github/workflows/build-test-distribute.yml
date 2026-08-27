@@ -102,6 +102,7 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_arm64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}

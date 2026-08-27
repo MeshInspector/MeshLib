@@ -302,7 +302,9 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe
+        # mrmeshpy.pyd comes from mrbind, which arm64 skips; without the flag MRTest
+        # exits 1 when its LoadLibrary of that module fails, before any test runs.
+        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe ${{ env.MRBIND_SUPPORTED == 'true' && '' || '--no-python-tests' }}
 
       - name: C Unit Tests
         if: ${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake' }}

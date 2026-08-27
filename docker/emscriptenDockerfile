@@ -61,9 +61,10 @@ RUN <<EOF
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
         $(: what the emscripten/emsdk image installs on the same ubuntu ) \
+        $(: minus ant and openjdk: emscripten runs the native closure ) \
+        $(: compiler and only falls back to java if that fails ) \
         sudo libxml2 ca-certificates python3 python3-pip wget curl zip unzip \
-        xz-utils git git-lfs ssh-client build-essential make ant libidn12 \
-        cmake openjdk-11-jre-headless \
+        xz-utils git git-lfs ssh-client build-essential make libidn12 cmake \
         tzdata pkg-config ninja-build \
         $(: to compile translation files ) \
         gettext \

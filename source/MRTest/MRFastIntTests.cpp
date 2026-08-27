@@ -735,7 +735,10 @@ TEST( MRMesh, DISABLED_FastIntMulWordsBench )
         full.emplace_back( a, b );
     }
 
-    const auto timeMs = []( const std::vector<std::pair<Words<4>, Words<4>>> & pairs, bool optimized )
+    // folded into the printf below, so the timed loops stay observable and cannot be
+    // optimized away - mulWords and mulWordsRef are both inlinable here
+    std::uint64_t checksum = 0;
+    const auto timeMs = [&checksum]( const std::vector<std::pair<Words<4>, Words<4>>> & pairs, bool optimized )
     {
         std::uint64_t sink = 0;
         const auto t0 = std::chrono::steady_clock::now();
@@ -745,7 +748,7 @@ TEST( MRMesh, DISABLED_FastIntMulWordsBench )
             sink ^= r[0] ^ r[7];
         }
         const auto t1 = std::chrono::steady_clock::now();
-        volatile std::uint64_t keep = sink; (void)keep;
+        checksum ^= sink;
         return std::chrono::duration<double, std::milli>( t1 - t0 ).count();
     };
 
@@ -758,8 +761,8 @@ TEST( MRMesh, DISABLED_FastIntMulWordsBench )
             ref = std::min( ref, timeMs( pairs, false ) );
             opt = std::min( opt, timeMs( pairs, true ) );
         }
-        std::printf( "[BENCH] mulWords %-12s pairs=%zu  ref=%8.3f  opt=%8.3f ms  speedup=%.2fx\n",
-            name, pairs.size(), ref, opt, ref / opt );
+        std::printf( "[BENCH] mulWords %-12s pairs=%zu  ref=%8.3f  opt=%8.3f ms  speedup=%.2fx  chk=%016llx\n",
+            name, pairs.size(), ref, opt, ref / opt, static_cast<unsigned long long>( checksum ) );
         std::fflush( stdout );
     };
 

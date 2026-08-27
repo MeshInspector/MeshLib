@@ -40,8 +40,7 @@
       "build_system": "CMake",
       "arch": "arm64",
       "vcpkg_triplet": "arm64-windows-meshlib",
-      "runner": ["windows-11-vs2026-arm"],
-      "timeout_minutes": 120
+      "runner": ["windows-11-vs2026-arm"]
     },
     {
       "cxx_compiler": "msvc-2022",

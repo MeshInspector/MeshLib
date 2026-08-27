@@ -34,9 +34,7 @@ on:
 
 jobs:
   windows-build-test:
-    # 70 min fits a warm vcpkg cache; arm64 raises it via the matrix while its
-    # S3 binary cache is still being filled by prepare-images.
-    timeout-minutes: ${{ matrix.timeout_minutes || 70 }}
+    timeout-minutes: 70
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -61,15 +59,11 @@ jobs:
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
       MRCUDA_PLATFORM_TOOLSET: ${{ matrix.mrcuda_platform_toolset }}
-      # Target architecture; drives VsDevCmd, the vcpkg triplet and the output dir.
-      # arm64 runs on windows-11-vs2026-arm, whose image has no CUDA and no MSYS2, so
-      # MRCuda and every mrbind-generated binding (Python/C/C#) is off on that leg.
-      # Paths still hard-coded as x64 below belong to MSBuild/C#/NuGet steps, which
-      # never run on arm64.
+      # the arm64 image has no CUDA and no MSYS2, so MRCuda and the mrbind-generated
+      # bindings are off there; x64 paths below belong to steps arm64 never runs
       MR_ARCH: ${{ matrix.arch || 'x64' }}
-      VS_DEV_ARCH: ${{ ( matrix.arch || 'x64' ) == 'arm64' && 'arm64' || 'amd64' }}
-      VS_DEV_HOST_ARCH: ${{ ( matrix.arch || 'x64' ) == 'arm64' && 'arm64' || 'x86' }}
-      MRBIND_SUPPORTED: ${{ ( matrix.arch || 'x64' ) != 'arm64' }}
+      VS_DEV_ARGS: ${{ matrix.arch == 'arm64' && '-arch=arm64 -host_arch=arm64' || '-arch=amd64 -host_arch=x86' }}
+      MRBIND_SUPPORTED: ${{ matrix.arch != 'arm64' }}
 
     steps:
       - name: Checkout
@@ -135,7 +129,6 @@ jobs:
           install-vs-integration: ${{ matrix.build_system == 'MSBuild' }}
 
       - name: Setup python
-        # Provisions the pytest requirements; nothing else here needs Python.
         if: ${{ env.MRBIND_SUPPORTED == 'true' }}
         run: py -3 scripts\setup_win_python_reqs.py
 
@@ -194,7 +187,7 @@ jobs:
         #   by the following dotnet build (see the Build step's note below).
         # `CSHARP_STATIC_DLLIMPORT=1` is used to build the version of the bindings that's suitable for use in Wasm in Unity.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=%VS_DEV_ARCH% -host_arch=%VS_DEV_HOST_ARCH% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 || exit /b 1
           dotnet build examples/c-sharp-examples -c ${{matrix.config}} || exit /b 1
@@ -212,7 +205,7 @@ jobs:
         # of `exit /b` from a for-loop body nested in the parenthesized IF block.
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=%VS_DEV_ARCH% -host_arch=%VS_DEV_HOST_ARCH% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake --version || exit /b 1
             cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind_c && 'ON' || 'OFF' }} -DMESHLIB_BUILD_MRCUDA=${{ env.CUDA_VERSION != '' && 'ON' || 'OFF' }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
@@ -259,7 +252,7 @@ jobs:
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=%VS_DEV_ARCH% -host_arch=%VS_DEV_HOST_ARCH% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
@@ -302,8 +295,7 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        # mrmeshpy.pyd comes from mrbind, which arm64 skips; without the flag MRTest
-        # exits 1 when its LoadLibrary of that module fails, before any test runs.
+        # mrmeshpy.pyd comes from mrbind, which arm64 skips; MRTest exits 1 without the flag
         run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe ${{ env.MRBIND_SUPPORTED == 'true' && '' || '--no-python-tests' }}
 
       - name: C Unit Tests
@@ -362,7 +354,7 @@ jobs:
           rem VsDevCmd.bat overrides VCPKG_ROOT with the VS-bundled vcpkg; preserve the
           rem step env: value so MESHLIB_INCLUDE_DIRS resolves to the project vcpkg.
           set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=%VS_DEV_ARCH% -host_arch=%VS_DEV_HOST_ARCH% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
           cmake --version || exit /b 1
           cmake ^
@@ -378,7 +370,7 @@ jobs:
         if: ${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=%VS_DEV_ARCH% -host_arch=%VS_DEV_HOST_ARCH% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           cmake --version || exit /b 1
           cmake ^
             -S examples/c-examples ^

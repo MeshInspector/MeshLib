@@ -75,9 +75,7 @@ IF(NOT WIN32 AND NOT EMSCRIPTEN)
 ENDIF()
 
 IF(MSVC)
-  # WRL's RuntimeClass refcounting does volatile accesses, which MSVC reports as C4746 on ARM64
-  # (/volatile:iso by default). It is a codegen warning generated where no `#pragma warning` can
-  # reach it, so the suppression has to come from the command line.
+  # C4746 on ARM64 from WRL's RuntimeClass refcounting; no `#pragma warning` reaches it
   set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/MRTouchpadWin32Handler.cpp" PROPERTIES
     COMPILE_FLAGS "/wd4746"
   )

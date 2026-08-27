@@ -735,8 +735,7 @@ TEST( MRMesh, DISABLED_FastIntMulWordsBench )
         full.emplace_back( a, b );
     }
 
-    // folded into the printf below, so the timed loops stay observable and cannot be
-    // optimized away - mulWords and mulWordsRef are both inlinable here
+    // printed below, so the inlinable timed loops cannot be optimized away
     std::uint64_t checksum = 0;
     const auto timeMs = [&checksum]( const std::vector<std::pair<Words<4>, Words<4>>> & pairs, bool optimized )
     {

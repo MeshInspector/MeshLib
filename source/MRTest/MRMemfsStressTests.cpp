@@ -66,10 +66,17 @@ bool fileRound( const std::filesystem::path& dir, int tid, long long i, std::vec
 
 #if !defined( __EMSCRIPTEN__ ) || defined( __EMSCRIPTEN_PTHREADS__ )
 
-/// deliberately above a CI runner's core count, so the pool has to hand out threads it
-/// does not have spare
-constexpr int cThreads = 8;
 constexpr int cStallSeconds = 60;
+
+/// PTHREAD_POOL_SIZE is navigator.hardwareConcurrency, and a thread past that one needs a
+/// Worker spawned on demand, which needs the main thread to reach the browser event loop --
+/// which this test's watchdog never does. Asking for more than the pool holds therefore
+/// deadlocks the test itself and says nothing about the filesystem.
+int poolSizedThreadCount()
+{
+    const unsigned hc = std::thread::hardware_concurrency();
+    return int( hc ? hc : 4 );
+}
 
 /// keeps this thread awake without parking it on a futex; on the emscripten main thread
 /// it also drains the proxying queue, which is what the app's UI thread does between frames
@@ -111,11 +118,13 @@ TEST( MRMesh, MemfsConcurrentStress )
     std::atomic<long long> done{ 0 };
     std::atomic<int> finished{ 0 };
     std::atomic<bool> broken{ false };
+    const int cThreads = poolSizedThreadCount();
+    spdlog::info( "{} threads, {} s", cThreads, cSeconds );
     std::vector<std::atomic<long long>> perThread( cThreads );
 
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds( cSeconds );
     std::vector<std::thread> threads;
-    threads.reserve( cThreads );
+    threads.reserve( size_t( cThreads ) );
     for ( int tid = 0; tid < cThreads; ++tid )
     {
         threads.emplace_back( [&, tid]

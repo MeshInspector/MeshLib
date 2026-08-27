@@ -74,6 +74,15 @@ IF(NOT WIN32 AND NOT EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
 ENDIF()
 
+IF(MSVC)
+  # WRL's RuntimeClass refcounting does volatile accesses, which MSVC reports as C4746 on ARM64
+  # (/volatile:iso by default). It is a codegen warning generated where no `#pragma warning` can
+  # reach it, so the suppression has to come from the command line.
+  set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/MRTouchpadWin32Handler.cpp" PROPERTIES
+    COMPILE_FLAGS "/wd4746"
+  )
+ENDIF()
+
 IF(APPLE)
   set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
     COMPILE_FLAGS "-x objective-c++"

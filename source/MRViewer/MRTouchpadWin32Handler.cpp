@@ -12,11 +12,6 @@
 #include <comdef.h>
 #pragma warning( pop )
 
-// WRL's RuntimeClass reference counting does volatile accesses, which MSVC reports as C4746 on
-// ARM64, where /volatile:iso is the default. C4746 is a codegen warning, so the state that applies
-// is the one at the closing brace of the function being generated - in this file, not in <wrl.h>.
-#pragma warning( disable: 4746 )
-
 #define TOUCHPAD_WIN32_EVENT_LOG 1
 #define TOUCHPAD_WIN32_VERBOSE_EVENT_LOG 0
 

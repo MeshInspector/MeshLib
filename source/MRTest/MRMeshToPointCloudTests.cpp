@@ -103,6 +103,26 @@ TEST( MRMesh, MeshToDensePointCloud )
     EXPECT_FALSE( meshToDensePointCloud( mesh, 0 ).has_value() );
 }
 
+// the deleted faces and the edges left without faces must not contribute any samples
+TEST( MRMesh, MeshToDensePointCloudPartial )
+{
+    auto mesh = makeTorus( 1.0f, 0.3f, 12, 10 );
+    FaceBitSet toDelete( mesh.topology.faceSize(), false );
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( int( f ) % 3 == 0 )
+            toDelete.set( f );
+    mesh.deleteFaces( toDelete );
+
+    const float radius = 0.1f;
+    const auto cloud = meshToDensePointCloud( mesh, radius );
+    ASSERT_TRUE( cloud.has_value() );
+    const auto full = meshToDensePointCloud( makeTorus( 1.0f, 0.3f, 12, 10 ), radius );
+    ASSERT_TRUE( full.has_value() );
+    EXPECT_LT( cloud->points.size(), full->points.size() ); // the deleted faces gave no samples
+    EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 16 ), radius );
+    EXPECT_LE( maxCloudToSurfaceDist( mesh, *cloud ), 1e-6f );
+}
+
 // a triangle with all vertices on one line has infinite circumradius, but it still requires
 // a finite number of samples, because it is covered by the circle on its longest side
 TEST( MRMesh, MeshToDensePointCloudDegenerate )

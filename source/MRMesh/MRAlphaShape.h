@@ -133,9 +133,12 @@ MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud,
     const AlphaShapeData & data, const ProgressCallback & cb, AlphaShapeStats * stats = nullptr );
 
-/// builds alpha-shape mesh with negative alpha = -1/radius
+/// builds alpha-shape mesh with negative alpha = -1/radius;
+/// the mesh vertices are the cloud points with the same ids plus the ones appended by the
+/// duplication of non-manifold vertices, which \param dups (if given) receives
 [[nodiscard]] MRMESH_API std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius,
-    const ProgressCallback & cb, AlphaShapeStats * stats = nullptr );
-[[nodiscard]] MRMESH_API Mesh findAlphaShape( const PointCloud & cloud, float radius, AlphaShapeStats * stats = nullptr );
+    std::vector<MeshBuilder::VertDuplication> * dups, const ProgressCallback & cb, AlphaShapeStats * stats = nullptr );
+[[nodiscard]] MRMESH_API Mesh findAlphaShape( const PointCloud & cloud, float radius,
+    std::vector<MeshBuilder::VertDuplication> * dups = nullptr, AlphaShapeStats * stats = nullptr );
 
 } //namespace MR

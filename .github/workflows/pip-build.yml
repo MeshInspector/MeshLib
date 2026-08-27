@@ -207,7 +207,6 @@ jobs:
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       version_tag: ${{needs.setup.outputs.version_tag}}
-      upload_artifacts: false
 
   generate-wasm-definitions:
     needs: setup

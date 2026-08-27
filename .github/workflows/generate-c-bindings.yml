@@ -13,6 +13,7 @@ on:
       upload_artifacts:
         required: true
         type: boolean
+        default: false
 
 jobs:
   generate-c-bindings:
@@ -77,12 +78,16 @@ jobs:
         if: ${{ inputs.upload_artifacts }}
         shell: bash
         run: |
-          mkdir meshlib_c-source
-          for x in MeshLibC2 MeshLibC2Wasm MeshLibC2Cuda; do
-              mkdir -p meshlib_c-source/$x
-              cp -r source/$x/{include,src} meshlib_c-source/$x
+          mkdir -p meshlib_c-source/MeshLibC2
+          mkdir -p meshlib_c-source/MeshLibC2Cuda
+          mkdir -p meshlib_c-source-wasm/MeshLibC2
+          for x in include src; do
+              cp -r source/MeshLibC2/$x meshlib_c-source/MeshLibC2/$x
+              cp -r source/MeshLibC2Cuda/$x meshlib_c-source/MeshLibC2Cuda/$x
+              cp -r source/MeshLibC2Wasm/$x meshlib_c-source-wasm/MeshLibC2/$x
           done
           zip -r meshlib_c-source.zip meshlib_c-source
+          zip -r meshlib_c-source-wasm.zip meshlib_c-source-wasm
 
       - name: Upload source distribution
         if: ${{ inputs.upload_artifacts }}
@@ -90,4 +95,12 @@ jobs:
         with:
           name: DistributivesCSource
           path: meshlib_c-source.zip
+          retention-days: 1
+
+      - name: Upload source distribution (Wasm)
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DistributivesCSource
+          path: meshlib_c-source-wasm.zip
           retention-days: 1

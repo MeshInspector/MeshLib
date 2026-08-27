@@ -145,7 +145,6 @@ jobs:
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
       docker_image_tag: latest
-      upload_artifacts: false
 
   update-dev-documentation:
     needs: [ create-stubs, generate-wasm-definitions, generate-c-bindings ]

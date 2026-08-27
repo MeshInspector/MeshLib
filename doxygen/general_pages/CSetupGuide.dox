@@ -19,13 +19,15 @@
 \note Starting with the next release, you will be able to compile the C bindings directly from the source code.
 \endparblock
 
+When the installation is done, confirm the result with \ref CSetupVerify "Verify the installation" — a short program, with the output to expect.
+
 ## Installing binary releases of MeshLib
 
 The installation process is \ref MeshLibCppSetupGuide "same as for C++", and is also explained below.
 
 The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
 
-### Windows
+### Windows {#CSetupGuideWindows}
 \note MeshLib for Windows is distributed for **x64** only: set the platform of your project to `x64`.
 A 32-bit (`Win32`) build of C code compiles, but fails at link with
 `LNK2019: unresolved external symbol __imp__MR_...` for every MeshLib function. That means the platform is
@@ -79,6 +81,7 @@ sudo apt install ./<downloaded>.deb
  3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Add the following to your `CMakeLists.txt`:
 \code{.cmake}
+target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIR})
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 \endcode
 
@@ -97,13 +100,48 @@ xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requ
  3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Add the following to your `CMakeLists.txt`:
 \code{.cmake}
+target_include_directories(your_project_name PUBLIC ${MESHLIB_INCLUDE_DIR})
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 \endcode
+
+## Verify the installation {#CSetupVerify}
+
+The installer or archive completing is not the same as a working setup: the headers, the import library and the runtime library are three separate things, and any one of them can be wrong while the other two look fine. This program covers the whole chain — compile against the headers, link against `MeshLibC2`, load it at startup, run a real geometry call, write a file. It needs no input data.
+
+\include VerifyInstall.dox.c
+
+### Build and run it on Windows
+Build it as the console project configured in \ref CSetupGuideWindows "Windows" above, then run it from the project's output directory.
+
+### Build and run it on Linux and macOS
+Save the program as `verify.c` next to this `CMakeLists.txt`:
+\code{.cmake}
+cmake_minimum_required(VERSION 3.18)
+project(verify C)
+find_package(MeshLib CONFIG REQUIRED)
+add_executable(verify verify.c)
+target_include_directories(verify PRIVATE ${MESHLIB_INCLUDE_DIR})
+target_link_libraries(verify PRIVATE MeshLib::MeshLibC2)
+\endcode
+\note `MeshLib::MeshLibC2` carries the library but not the header path, so the `target_include_directories` line is required — without it the build stops at `fatal error: MRCMesh/MRCube.h: No such file or directory`. Pure C needs nothing else; C++ consumers additionally need `${MESHLIB_THIRDPARTY_INCLUDE_DIR}`, as in \ref MeshLibCmakeSetupGuide "Integrate Using CMake".
+\code{.sh}
+cmake -S . -B build && cmake --build build && ./build/verify
+\endcode
+
+### Expected output
+\code{.txt}
+8 verts, 12 faces
+\endcode
+
+Exit code `0`, and a 684-byte `cube.stl` next to the binary — a cube is 12 triangles, and binary STL is a fixed `84 + 12 * 50` bytes, so the size is the same everywhere. If you see that line and that file, the installation is working. Anything else — a compiler error about a missing header, a linker error, a loader error at startup, no output — means it is not.
+
+\note On macOS, v3.1.3.429 and earlier fail at launch with `dyld: Library not loaded: @rpath/libMeshLibC2.dylib` even though the program compiles and links: the framework's C library was not on the runtime search path. The fix landed after that release, so if you are on it, run the program as
+\note `DYLD_LIBRARY_PATH=/Library/Frameworks/MeshLib.framework/Versions/Current/lib ./build/verify`
 
 ## Try MeshLib with C Examples
 
 MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
 
-We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.
+Note that most of them read a mesh from the working directory rather than building one — the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample, for instance, defaults to a file named `mesh.stl` next to the binary, and exits with an error without it. Its C version also takes the input path as an argument, so `./MeshLoadSave path/to/your.stl` works on any mesh you already have. Use \ref CSetupVerify "Verify the installation" above to check the installation itself.
 
 */

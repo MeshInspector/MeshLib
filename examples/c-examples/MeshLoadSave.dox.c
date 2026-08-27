@@ -11,22 +11,29 @@
 #include <stdlib.h>
 #include <string.h>
 
-int main( void )
+int main( int argc, char** argv )
 {
     int rc = EXIT_FAILURE;
 
+    // Both paths are optional: with no arguments this reads mesh.stl and writes mesh.ply
+    // in the working directory.
+    const char* inputPath = argc > 1 ? argv[1] : "mesh.stl";
+    const char* outputPath = argc > 2 ? argv[2] : "mesh.ply";
+
     // Load mesh.
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( inputPath, NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     if ( !mesh )
     {
         fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshEx ) ) );
+        if ( argc <= 1 )
+            fprintf( stderr, "Usage: MeshLoadSave [input mesh] [output mesh]\n" );
         goto fail_load;
     }
 
     // Save mesh.
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "mesh.ply", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, outputPath, NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

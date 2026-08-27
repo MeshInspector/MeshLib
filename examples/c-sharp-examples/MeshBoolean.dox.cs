@@ -4,13 +4,20 @@ public class MeshBooleanExample
     {
         try
         {
-            // Create the first sphere with a radius of 1 unit
-            // (to use your own meshes, load them with MR.MeshLoad.fromAnySupportedFormat instead)
-            var mesh_a = MR.makeUVSphere(1.0f, 64, 64);
-
-            // Create the second sphere and shift it along X, so the two spheres overlap
-            var mesh_b = MR.makeUVSphere(1.0f, 64, 64);
-            mesh_b.transform(MR.AffineXf3f.translation(new MR.Vector3f(0.7f, 0.0f, 0.0f)));
+            MR.Mesh mesh_a, mesh_b;
+            if (args.Length >= 2)
+            {
+                // load the two meshes given on the command line
+                mesh_a = MR.MeshLoad.fromAnySupportedFormat(args[0]);
+                mesh_b = MR.MeshLoad.fromAnySupportedFormat(args[1]);
+            }
+            else
+            {
+                // no input given: make two unit spheres shifted along X, so that they overlap
+                mesh_a = MR.makeUVSphere(1.0f, 64, 64);
+                mesh_b = MR.makeUVSphere(1.0f, 64, 64);
+                mesh_b.transform(MR.AffineXf3f.translation(new MR.Vector3f(0.7f, 0.0f, 0.0f)));
+            }
 
             // perform boolean operation
             MR.BooleanResult res = MR.boolean(mesh_a, mesh_b, MR.BooleanOperation.Intersection);

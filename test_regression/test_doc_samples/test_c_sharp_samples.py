@@ -25,18 +25,21 @@ from pytest_check import check
                                            },
                                           id="GlobalRegistration"),
                             pytest.param({'sample': "MeshBooleanExample",
-                                           'input_files': [],
-                                           'output_files': ['out_boolean.stl']
+                                           'input_files': ['mesh_a.stl', 'mesh_b.stl'],
+                                           'output_files': ['out_boolean.stl'],
+                                           'args': ['mesh_a.stl', 'mesh_b.stl']
                                            },
                                           id="MeshBoolean"),
                             pytest.param({'sample': "MeshDecimateExample",
-                                           'input_files': [],
-                                           'output_files': ['decimated_mesh_cs.stl']
+                                           'input_files': ['mesh.stl'],
+                                           'output_files': ['decimated_mesh_cs.stl'],
+                                           'args': ['mesh.stl']
                                            },
                                           id="MeshDecimate"),
                             pytest.param({'sample': "MeshOffsetExample",
-                                           'input_files': [],
-                                           'output_files': ['mesh_offset.stl']
+                                           'input_files': ['mesh.stl'],
+                                           'output_files': ['mesh_offset.stl'],
+                                           'args': ['mesh.stl', '2.5']
                                            },
                                           id="MeshOffset"),
                             pytest.param({'sample': "MeshFillHoleExample",

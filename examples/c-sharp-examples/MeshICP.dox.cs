@@ -4,10 +4,15 @@ public class MeshICPExample
     {
         try
         {
-            // Load meshes
+            // Make two meshes to align
+            // (to align your own meshes, load them with MR.MeshLoad.fromAnySupportedFormat instead)
+            var mesh_floating = MR.makeTorus(2.0f, 1.0f, 32, 32);
+            var mesh_fixed = MR.makeTorus(2.0f, 1.0f, 32, 32);
 
-            var mesh_floating = MR.MeshLoad.fromAnySupportedFormat("meshA.stl");
-            var mesh_fixed = MR.MeshLoad.fromAnySupportedFormat("meshB.stl");
+            // Displace the floating mesh, so ICP has a transformation to recover
+            mesh_floating.transform(new MR.AffineXf3f(
+                MR.Matrix3f.rotation(new MR.Vector3f(1.0f, 0.0f, 0.0f), 0.2f),
+                new MR.Vector3f(0.3f, 0.2f, 0.1f)));
 
             MR.MeshOrPointsXf mesh_xf_floating = new(mesh_floating, new MR.AffineXf3f());
             MR.MeshOrPointsXf mesh_xf_fixed = new(mesh_fixed, new MR.AffineXf3f());

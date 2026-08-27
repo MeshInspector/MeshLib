@@ -29,6 +29,7 @@ public class GlobalRegistrationExample
 
         try
         {
+            // INPUT1, INPUT2, ... are point cloud files you supply: partial scans of one object to be aligned
             int inputNum = args.Length - 1;
             MR.Vector_MRMeshOrPointsXf_MRObjId inputs = new();
             MR.Box3f maxBBox = new();

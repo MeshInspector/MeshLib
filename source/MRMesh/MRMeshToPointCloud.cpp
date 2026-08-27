@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRMeshNormals.h"
 #include "MRBitSetParallelFor.h"
+#include "MRBuffer.h"
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
@@ -74,15 +75,15 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
 
     // the samples of every edge and every face occupy a dedicated range in the resulting cloud
     size_t numPoints = mesh.points.size();
-    Vector<size_t, UndirectedEdgeId> edgeOffset( edgeDivs.size() );
-    for ( auto ue = 0_ue; ue < edgeOffset.endId(); ++ue )
+    Buffer<size_t, UndirectedEdgeId> edgeOffset( edgeDivs.size() ); // no initialization: every element is set below
+    for ( auto ue = 0_ue; ue < edgeDivs.endId(); ++ue )
     {
         edgeOffset[ue] = numPoints;
         if ( edgeDivs[ue] > 1 )
             numPoints += edgeDivs[ue] - 1;
     }
-    Vector<size_t, FaceId> faceOffset( faceDivs.size() );
-    for ( auto f = 0_f; f < faceOffset.endId(); ++f )
+    Buffer<size_t, FaceId> faceOffset( faceDivs.size() );
+    for ( auto f = 0_f; f < faceDivs.endId(); ++f )
     {
         faceOffset[f] = numPoints;
         if ( const auto divs = faceDivs[f]; divs > 2 )
@@ -91,14 +92,14 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
 
     PointCloud res;
     res.points = mesh.points;
-    res.points.resize( numPoints );
+    res.points.resizeNoInit( numPoints ); // the samples of the edges and the faces are set below
     res.validPoints = topology.getValidVerts();
     res.validPoints.resize( mesh.points.size(), false );
     res.validPoints.resize( numPoints, true );
     if ( saveNormals )
     {
         res.normals = computePerVertNormals( mesh );
-        res.normals.resize( numPoints );
+        res.normals.resizeNoInit( numPoints );
     }
 
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )

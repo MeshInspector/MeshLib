@@ -423,6 +423,16 @@ std::string GetCpuId()
         }
     }
 
+    // a cloud CPU's real name is only in SMBIOS, which needs root, so brand the known
+    // ones by DMI vendor: Azure's Cobalt 100 reports as a stock ARM Neoverse-N2 core
+    if ( implementer == 0x41 && part == 0xd49 )
+    {
+        std::ifstream sysVendor( "/sys/class/dmi/id/sys_vendor" );
+        if ( std::string vendor; std::getline( sysVendor, vendor )
+                && vendor.starts_with( "Microsoft Corporation" ) )
+            return "Cobalt 100";
+    }
+
     struct ArmCpuName { int implementer, part; const char* name; };
     static constexpr ArmCpuName armCpuNames[] = {
         { 0x41, 0xd03, "ARM Cortex-A53" },   { 0x41, 0xd05, "ARM Cortex-A55" },

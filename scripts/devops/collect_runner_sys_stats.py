@@ -44,7 +44,13 @@ ARM_VENDORS = {
     0x70: "Phytium", 0xc0: "Ampere",
 }
 
-def get_arm_cpu_model():
+# the real name of a cloud CPU lives in SMBIOS type 4, which is root-only, so brand
+# the known ones by DMI vendor + MIDR pair (Cobalt 100 is a stock Neoverse-N2 core)
+BRANDED_ARM_CPUS = {
+    ("Microsoft Corporation", 0x41, 0xd49): "Cobalt 100",
+}
+
+def read_arm_midr():
     implementer, part = -1, -1
     with open('/proc/cpuinfo') as f:
         for line in f:
@@ -54,6 +60,20 @@ def get_arm_cpu_model():
                 part = int(line.split(':', 1)[1], 0)
             if implementer >= 0 and part >= 0:
                 break
+    return implementer, part
+
+def get_dmi_sys_vendor():
+    try:
+        with open('/sys/class/dmi/id/sys_vendor') as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+def get_branded_arm_cpu_model():
+    return BRANDED_ARM_CPUS.get((get_dmi_sys_vendor(), *read_arm_midr()))
+
+def get_arm_cpu_model():
+    implementer, part = read_arm_midr()
 
     name = ARM_CPU_NAMES.get((implementer, part))
     if name:
@@ -83,6 +103,11 @@ def get_cpu_model():
         output = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
         return output.strip()
     elif system == "Linux":
+        if platform.machine() in ('aarch64', 'arm64'):
+            # must win over lscpu, which reports only the licensed core name
+            branded = get_branded_arm_cpu_model()
+            if branded:
+                return branded
         output = subprocess.check_output(['lscpu'], text=True)
         for line in output.splitlines():
             if line.startswith('Model name:'):

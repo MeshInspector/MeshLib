@@ -40,6 +40,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
         return unexpected( "meshToDensePointCloud: radius must be positive" );
     const float diameter = 2 * radius;
     const auto& topology = mesh.topology;
+    const auto [faceDivsCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
 
     // in how many equal parts each side of the triangle is divided to split it in a grid of similar triangles,
     // each covered by its own three corners; the number is a power of two, which makes the grid of a face
@@ -52,7 +53,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
         // no point of a triangle is farther from the nearest vertex than the radius of the minimal enclosing
         // circle, which is the circumcircle for non-obtuse triangles and half of the longest edge otherwise
         faceDivs[f] = ceilPow2( std::sqrt( mincircleDiameterSq( v[0], v[1], v[2] ) ) / diameter );
-    }, subprogress( cb, 0.0f, 0.1f ) ) )
+    }, faceDivsCb ) )
         return unexpectedOperationCanceled();
 
     // in how many equal parts each edge is divided: enough to make every part not longer than 2*radius,
@@ -68,7 +69,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
             if ( f )
                 divs = std::max( divs, faceDivs[f] );
         edgeDivs[ue] = divs;
-    }, subprogress( cb, 0.1f, 0.2f ) ) )
+    }, edgeDivsCb ) )
         return unexpectedOperationCanceled();
 
     // the samples of every edge and every face occupy a dedicated range in the resulting cloud
@@ -120,7 +121,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
             if ( saveNormals )
                 res.normals[v] = ( ( 1 - t ) * nOrg + t * nDest ).normalized();
         }
-    }, subprogress( cb, 0.2f, 0.6f ) ) )
+    }, edgePointsCb ) )
         return unexpectedOperationCanceled();
 
     if ( !BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
@@ -146,7 +147,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
                 if ( saveNormals )
                     res.normals[p] = ( ( 1 - a - b ) * n[0] + a * n[1] + b * n[2] ).normalized();
             }
-    }, subprogress( cb, 0.6f, 1.0f ) ) )
+    }, facePointsCb ) )
         return unexpectedOperationCanceled();
 
     return res;

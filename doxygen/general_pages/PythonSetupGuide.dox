@@ -13,7 +13,10 @@
 
 The first part of this video shows MeshLib Python Installation process on Windows
 
-## Prerequisites
+When `pip` is done, confirm the result with \ref PythonSetupVerify "Verify the installation" — one command, with the output to expect.
+If a step fails, see \ref PythonSetupTroubleshooting "Troubleshooting" at the end of the Installation Process section.
+
+## Prerequisites {#PythonSetupPrerequisites}
 Before installing MeshLib SDK for Python, ensure you have the following:
 
 ### Python
@@ -51,7 +54,22 @@ MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, m
 pip install meshlib
 \endcode
 
+### Verify the installation {#PythonSetupVerify}
+`pip install` reporting success is not the same as a working install: the wheel is tens of megabytes of prebuilt native code, and it can install cleanly and still fail to load. This one command covers the whole chain — import the package, load the native module, run a real geometry call:
+\code{.sh}
+python -c "from meshlib import mrmeshpy as mm; m = mm.makeCube(); print(mm.__file__); print(m.topology.numValidVerts(), 'verts', m.topology.numValidFaces(), 'faces')"
+\endcode
+
+Expected output — the path is yours and ends in `mrmeshpy.pyd` on Windows, while the two counts are fixed:
+\code{.txt}
+/path/to/.venv/lib/python3.12/site-packages/meshlib/mrmeshpy.so
+8 verts 12 faces
+\endcode
+
+If it prints those two lines and exits `0`, the installation is working. Anything else — a traceback, a loader error, no output — means it is not: see \ref PythonSetupTroubleshooting "Troubleshooting" below. The printed path is worth a glance too, since it names the environment that actually received the package.
+
 ### Your first script
+With the install confirmed, the same call is the starting point of a real script — this one also writes the cube to a file:
 \code{.py}
 from meshlib import mrmeshpy as mm
 
@@ -65,6 +83,18 @@ Output:
 \code{.txt}
 8 vertices 12 faces
 \endcode
+
+### Troubleshooting {#PythonSetupTroubleshooting}
+
+The failures new installations actually hit, with the message each one produces. One of them leaves `pip install` reporting success, which is what \ref PythonSetupVerify "Verify the installation" is for.
+
+| Path | Symptom | Cause | Fix |
+|------|---------|-------|-----|
+| Linux distribution Python, Homebrew Python on macOS | `pip install meshlib` stops before downloading anything with `error: externally-managed-environment`, then `× This environment is externally managed`. | Not a MeshLib problem: pip 23.0 and newer refuse to install any package into an interpreter the OS package manager owns (PEP 668, marked by a `EXTERNALLY-MANAGED` file next to the standard library). | Install into a virtual environment: `python3 -m venv .venv && . .venv/bin/activate && pip install meshlib` (on Windows, `.venv\Scripts\activate`). `pip install --break-system-packages meshlib` also installs, but into the system interpreter — prefer the virtual environment. |
+| Any | `ERROR: Could not find a version that satisfies the requirement meshlib (from versions: none)`, then `ERROR: No matching distribution found for meshlib`. | No published wheel matches this interpreter: the Python version is outside the range in \ref PythonSetupPrerequisites "Prerequisites" above, the interpreter is 32-bit, or the platform has no wheel at all — there is no `win_arm64` wheel, so Windows on Arm needs the x64 build of Python. | Check what pip is matching against — `python -c "import sys, sysconfig; print(sys.version, sysconfig.get_platform())"` — and install a Python listed in \ref PythonSetupPrerequisites "Prerequisites". |
+| Any, most likely macOS with Python 3.8 | Install and import both succeed, but a documented function is missing — `AttributeError: module 'meshlib.mrmeshpy' has no attribute ...` — or `pip show meshlib` prints a version well behind the latest. | The package requires Python 3.8 or newer overall, but each release's wheel tags are narrower than that and move forward over time. When no wheel of the newest release matches your interpreter, pip does not fail: it silently installs the newest *older* release that does. On macOS with Python 3.8 that is 3.0.8.247 instead of the current release, because the current macOS wheels are tagged 3.9 and up. | `pip show meshlib`, and compare with the version on the [PyPI page](https://pypi.org/project/meshlib/). If it is behind, move to a Python version listed in \ref PythonSetupPrerequisites "Prerequisites" and reinstall with `pip install --upgrade --force-reinstall meshlib`. |
+
+Anything not listed here: please open an issue at [MeshLib Issues](https://github.com/MeshInspector/MeshLib/issues), quoting the full `pip` output or traceback.
 
 ## How to use MeshLib Python Modules
 ### Modules

@@ -5,7 +5,37 @@
 
 ARG BASE_EMSDK_IMAGE
 
-FROM emscripten/emsdk:$BASE_EMSDK_IMAGE AS base
+# Both emsdk images this file is built from (3.1.38 and 4.0.19) ship clang built
+# with ThinLTO but no PGO. Ours is clang 22 with -O3 + PGO, unpacked over
+# emsdk's copy; /emsdk is then carried into a clean ubuntu so only one compiler
+# is in the image (a file overwritten in a later layer still occupies its bytes
+# below). emsdk 3.1.38 expects LLVM 17 and only warns about the mismatch, hence
+# -Wno-version-check below; its sysroot is rebuilt by whichever clang is here.
+FROM emscripten/emsdk:$BASE_EMSDK_IMAGE AS emsdk
+
+RUN <<EOF
+    set -e
+    TOOLCHAIN=clang-emsdk-4.0.19-pgo
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
+        | tar -C /emsdk/upstream --strip-components=1 -xz
+    rm -f /emsdk/upstream/bin/clang-scan-deps
+    # PATH below points here, keeping node's version out of it
+    ln -s /emsdk/node/*/bin /emsdk/node-bin
+    # emsdk strips its own toolchain, ours arrives unstripped
+    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
+EOF
+
+
+FROM ubuntu:22.04 AS base
+
+COPY --from=emsdk /emsdk /emsdk
+
+ENV EMSDK=/emsdk
+ENV PATH=/emsdk:/emsdk/upstream/emscripten:/emsdk/upstream/bin:/emsdk/node-bin:$PATH
+# 3.1.38 expects LLVM 17 and warns about clang 22; the build passes -Werror
+ENV EMCC_CFLAGS=-Wno-version-check
+WORKDIR /src
+ENTRYPOINT ["/emsdk/docker/entrypoint.sh"]
 
 ARG VERSION_CODENAME=jammy
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
@@ -37,7 +67,11 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        tzdata git pkg-config ninja-build gettext
+        $(: what the emscripten/emsdk image installs on the same ubuntu ) \
+        sudo libxml2 ca-certificates python3 python3-pip wget curl zip unzip \
+        xz-utils git git-lfs ssh-client build-essential make ant libidn12 \
+        cmake openjdk-11-jre-headless \
+        tzdata pkg-config ninja-build gettext
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*

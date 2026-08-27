@@ -83,6 +83,21 @@ TEST( MRMesh, MeshToDensePointCloud )
         EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 16 ), radius );
         // and every point of the cloud is on the mesh
         EXPECT_LE( maxCloudToSurfaceDist( mesh, *cloud ), 1e-6f );
+
+        // every point has a unit normal directed as the mesh normal in the same point
+        ASSERT_EQ( cloud->normals.size(), cloud->points.size() );
+        for ( auto v : cloud->validPoints )
+        {
+            EXPECT_NEAR( cloud->normals[v].length(), 1.f, 1e-5f );
+            const auto proj = findProjection( cloud->points[v], mesh );
+            EXPECT_GT( dot( cloud->normals[v], mesh.normal( proj.mtp ) ), 0.9f );
+        }
+
+        // the same cloud without normals
+        const auto noNormals = meshToDensePointCloud( mesh, radius, false );
+        ASSERT_TRUE( noNormals.has_value() );
+        EXPECT_TRUE( noNormals->normals.empty() );
+        EXPECT_EQ( noNormals->points.vec_, cloud->points.vec_ );
     }
 
     EXPECT_FALSE( meshToDensePointCloud( mesh, 0 ).has_value() );

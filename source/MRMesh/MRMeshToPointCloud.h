@@ -19,7 +19,10 @@ MRMESH_API PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals = tru
 /// 2) samples on each edge longer than 2*radius;
 /// 3) samples inside each triangle, which cannot be covered by its vertices alone.
 /// Please note that the number of samples grows as 1/radius^2.
+/// \param saveNormals if true then the normals of the cloud are set as well: the normals of the mesh
+///        vertices, and their interpolation in the samples on the edges and inside the triangles
 /// \ingroup MeshAlgorithmGroup
-[[nodiscard]] MRMESH_API Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, ProgressCallback cb = {} );
+[[nodiscard]] MRMESH_API Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius,
+    bool saveNormals = true, const ProgressCallback& cb = {} );
 
 }

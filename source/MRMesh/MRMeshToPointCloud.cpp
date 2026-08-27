@@ -33,7 +33,7 @@ int ceilPow2( float v )
 
 } // anonymous namespace
 
-Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, ProgressCallback cb )
+Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool saveNormals, const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( !( radius > 0 ) )
@@ -94,13 +94,32 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, Prog
     res.validPoints = topology.getValidVerts();
     res.validPoints.resize( mesh.points.size(), false );
     res.validPoints.resize( numPoints, true );
+    if ( saveNormals )
+    {
+        res.normals = computePerVertNormals( mesh );
+        res.normals.resize( numPoints );
+    }
 
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )
     {
         const auto divs = edgeDivs[ue];
+        if ( divs <= 1 )
+            return;
+        const EdgeId e = ue;
+        Vector3f nOrg, nDest;
+        if ( saveNormals )
+        {
+            nOrg = res.normals[ topology.org( e ) ];
+            nDest = res.normals[ topology.dest( e ) ];
+        }
         auto v = VertId( edgeOffset[ue] );
-        for ( int i = 1; i < divs; ++i )
-            res.points[v++] = mesh.edgePoint( EdgeId( ue ), float( i ) / divs );
+        for ( int i = 1; i < divs; ++i, ++v )
+        {
+            const float t = float( i ) / divs;
+            res.points[v] = mesh.edgePoint( e, t );
+            if ( saveNormals )
+                res.normals[v] = ( ( 1 - t ) * nOrg + t * nDest ).normalized();
+        }
     }, subprogress( cb, 0.2f, 0.6f ) ) )
         return unexpectedOperationCanceled();
 
@@ -111,12 +130,22 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, Prog
             return; // the grid of this face has no points strictly inside it
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        const auto d1 = ( v[1] - v[0] ) / float( divs );
-        const auto d2 = ( v[2] - v[0] ) / float( divs );
+        Vector3f n[3];
+        if ( saveNormals )
+        {
+            const auto vs = topology.getTriVerts( f );
+            for ( int i = 0; i < 3; ++i )
+                n[i] = res.normals[ vs[i] ];
+        }
         auto p = VertId( faceOffset[f] );
         for ( int i = 1; i + 2 <= divs; ++i )
-            for ( int j = 1; i + j + 1 <= divs; ++j )
-                res.points[p++] = v[0] + float( i ) * d1 + float( j ) * d2;
+            for ( int j = 1; i + j + 1 <= divs; ++j, ++p )
+            {
+                const float a = float( i ) / divs, b = float( j ) / divs;
+                res.points[p] = v[0] + a * ( v[1] - v[0] ) + b * ( v[2] - v[0] );
+                if ( saveNormals )
+                    res.normals[p] = ( ( 1 - a - b ) * n[0] + a * n[1] + b * n[2] ).normalized();
+            }
     }, subprogress( cb, 0.6f, 1.0f ) ) )
         return unexpectedOperationCanceled();
 

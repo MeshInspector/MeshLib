@@ -147,10 +147,11 @@ cd vcpkg
 ### Installing the release build
  1. **Download the Package for Your Distribution and CPU**
  \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links a `.deb` for every supported Ubuntu release and architecture. Take the one matching `lsb_release -rs` and `uname -m`.
- \n On any other distribution use the portable **Linux vcpkg** build instead. It bundles its own dependencies and is not installed system-wide: unpack it and use the resulting directory as the MeshLib installation prefix, then skip to step 4.
+ \n On any other distribution use the portable **Linux vcpkg** build instead. It bundles its own dependencies and is not installed system-wide: unpack it, then skip to step 4.
 \code{.sh}
 mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
 \endcode
+ \n `path_to_install` is then the MeshLib installation prefix, and CMake does not search it on its own — see \ref CmakeNonSystemPrefix "Point CMake at a Prefix That Is Not Installed System-Wide" for the flags it needs.
  2. **Install the Package**
  \n `apt` pulls in the remaining system dependencies itself. The leading `./` is required: without it `apt` looks for a repository package by that name.
  \n `apt` refuses a package built for another CPU, but nothing tells the Ubuntu releases apart: both declare the same dependencies and the `preinst` carries no release check, so installing the Ubuntu 22 build on Ubuntu 24 succeeds silently. Check the release in the file name first.

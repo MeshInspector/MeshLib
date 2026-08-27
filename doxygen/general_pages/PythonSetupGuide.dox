@@ -83,7 +83,7 @@ install just the core:
 \code{.sh}
 pip install meshlib-core
 \endcode
-The download is 25–31% smaller and provides everything except `meshlib.mrviewerpy`; every other
+The download is about 30% smaller and provides everything except `meshlib.mrviewerpy`; every other
 import (`from meshlib import mrmeshpy`, `mrmeshnumpy`, `mrcudapy`) works exactly as with the full
 package. Installing `meshlib` later adds the viewer on top, and `pip uninstall meshlib` removes
 only the viewer part again. Both packages are versioned in lockstep: `meshlib` of a given version

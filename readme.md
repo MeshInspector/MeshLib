@@ -74,7 +74,7 @@ For Python, simply install via pip:
 pip install meshlib
 ```
 
-For headless environments (servers, docker, CI), `pip install meshlib-core` provides everything except the interactive viewer at a 25–31% smaller download.
+For headless environments (servers, docker, CI), `pip install meshlib-core` provides everything except the interactive viewer at a about 30% smaller download.
 
 If your choice is C++, C or C#, check out our [Installation Guide](https://meshlib.io/documentation/InstallationGuide.html).
 

@@ -43,7 +43,7 @@ pip install meshlib
 \endcode
 
 For headless environments — servers, docker, CI — `pip install meshlib-core` provides everything
-except the interactive viewer at a 25–31% smaller download.
+except the interactive viewer at a about 30% smaller download.
 
 For C++, C#, and C developers, head to our \ref InstallationGuide "Installation Guide" for more details on integrating MeshLib into your environment.
 

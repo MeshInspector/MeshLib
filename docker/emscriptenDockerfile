@@ -2,43 +2,28 @@
 
 # Any changes in this file should probably be mirrored in `emscripten-build-c-bindings-X-Y-ZDockerfile`.
 
-# emsdk's clang is built with ThinLTO but no PGO. Ours is the same llvm-project
-# revision rebuilt with -O3 + PGO: -22.6% on an -O3 template-heavy TU.
-#
-# It replaces emsdk's copy in place rather than living beside it, and /emsdk is
-# then copied into a clean ubuntu base. Swapping the compiler in a layer on top
-# of emscripten/emsdk would ship both: a deleted or overwritten file still
-# occupies its bytes in the immutable lower layer, and emsdk keeps its whole
-# tree - LLVM included - in a single 533 MB layer.
+# emsdk ships clang without PGO; ours is the same llvm-project revision with
+# -O3 + PGO. It replaces emsdk's copy in place and /emsdk is then copied into a
+# clean ubuntu: swapped in a layer on top, both compilers would ship.
 FROM emscripten/emsdk:4.0.19-arm64 AS emsdk
 
 ENV EMSDK_VERSION=4.0.19
 
 RUN <<EOF
     set -e
-    echo "before: /emsdk $(du -sm /emsdk | cut -f1) MB, llvm $(du -sm /emsdk/upstream/bin | cut -f1) MB"
     TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
     curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
         | tar -C /emsdk/upstream --strip-components=1 -xz
-    # the only stock LLVM binary our toolchain does not replace, and emscripten
-    # never invokes it; wasm-opt and the other binaryen tools stay
     rm -f /emsdk/upstream/bin/clang-scan-deps
-    # a stable path for node, so PATH below need not hardcode its version
+    # PATH below points here, keeping node's version out of it
     ln -s /emsdk/node/*/bin /emsdk/node-bin
-    echo "unstripped: llvm $(du -sm /emsdk/upstream/bin | cut -f1) MB"
-    # emsdk strips its own toolchain (docker/Dockerfile in emscripten-core/emsdk);
-    # ours comes straight out of ninja install-distribution, so do the same
+    # emsdk strips its own toolchain, ours arrives unstripped
     find /emsdk/upstream/bin -type f -exec strip -s {} + || true
-    /emsdk/upstream/bin/clang --version | head -n1
-    echo "after:  /emsdk $(du -sm /emsdk | cut -f1) MB, llvm $(du -sm /emsdk/upstream/bin | cut -f1) MB"
 EOF
 
 
 FROM ubuntu:22.04 AS base
 
-# /emsdk carries emscripten, binaryen, node and now our clang; the packages
-# below are the ones the emscripten/emsdk image installed on top of the same
-# ubuntu, plus the handful this repository needs.
 COPY --from=emsdk /emsdk /emsdk
 
 ENV EMSDK=/emsdk
@@ -75,9 +60,7 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        $(: the same packages the emscripten/emsdk image installs, read out ) \
-        $(: of its own config blob; openjdk is needed by --closure=1 and ) \
-        $(: xz-utils by the thirdparty tarballs ) \
+        $(: what the emscripten/emsdk image installs on the same ubuntu ) \
         sudo libxml2 ca-certificates python3 python3-pip wget curl zip unzip \
         xz-utils git git-lfs ssh-client build-essential make ant libidn12 \
         cmake openjdk-11-jre-headless \
@@ -86,7 +69,6 @@ RUN <<EOF
         gettext \
         $(: to generate TypeScript documentation ) \
         doxygen
-    emcc --version | head -n1
     # clean downloaded files
     apt-get clean
     rm -rf /var/lib/apt/lists/*

@@ -424,13 +424,22 @@ std::string GetCpuId()
     }
 
     // a cloud CPU's real name is only in SMBIOS, which needs root, so brand the known
-    // ones by DMI vendor: Azure's Cobalt 100 reports as a stock ARM Neoverse-N2 core
-    if ( implementer == 0x41 && part == 0xd49 )
+    // ones by DMI vendor: Cobalt and Graviton both report as stock ARM cores
+    struct BrandedArmCpu { const char* vendor; int implementer, part; const char* name; };
+    static constexpr BrandedArmCpu brandedArmCpus[] = {
+        { "Microsoft Corporation", 0x41, 0xd49, "Cobalt 100" },
+        { "Amazon EC2",            0x41, 0xd08, "AWS Graviton" },
+        { "Amazon EC2",            0x41, 0xd0c, "AWS Graviton2" },
+        { "Amazon EC2",            0x41, 0xd40, "AWS Graviton3" },
+        { "Amazon EC2",            0x41, 0xd4f, "AWS Graviton4" },
+    };
     {
         std::ifstream sysVendor( "/sys/class/dmi/id/sys_vendor" );
-        if ( std::string vendor; std::getline( sysVendor, vendor )
-                && vendor.starts_with( "Microsoft Corporation" ) )
-            return "Cobalt 100";
+        if ( std::string vendor; std::getline( sysVendor, vendor ) )
+            for ( const auto& c : brandedArmCpus )
+                if ( c.implementer == implementer && c.part == part
+                        && vendor.starts_with( c.vendor ) )
+                    return c.name;
     }
 
     struct ArmCpuName { int implementer, part; const char* name; };

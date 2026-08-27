@@ -45,9 +45,13 @@ ARM_VENDORS = {
 }
 
 # the real name of a cloud CPU lives in SMBIOS type 4, which is root-only, so brand
-# the known ones by DMI vendor + MIDR pair (Cobalt 100 is a stock Neoverse-N2 core)
+# the known ones by DMI vendor + MIDR pair: Cobalt and Graviton are stock ARM cores
 BRANDED_ARM_CPUS = {
     ("Microsoft Corporation", 0x41, 0xd49): "Cobalt 100",
+    ("Amazon EC2",            0x41, 0xd08): "AWS Graviton",
+    ("Amazon EC2",            0x41, 0xd0c): "AWS Graviton2",
+    ("Amazon EC2",            0x41, 0xd40): "AWS Graviton3",
+    ("Amazon EC2",            0x41, 0xd4f): "AWS Graviton4",
 }
 
 def read_arm_midr():

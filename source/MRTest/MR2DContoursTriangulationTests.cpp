@@ -19,6 +19,12 @@
 #include <cmath>
 #include <limits>
 
+#ifdef _MSC_VER
+// the benchmarks below keep a `volatile` sink so the timed work cannot be optimized away;
+// on ARM64 MSVC reports C4746 for it, and the recommended __iso_volatile_load is not portable
+#pragma warning( disable: 4746 )
+#endif
+
 namespace MR
 {
 

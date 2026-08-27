@@ -9,7 +9,6 @@
 #pragma warning( disable: 4986 )
 #pragma warning( disable: 5204 )
 #pragma warning( disable: 5220 )
-#pragma warning( disable: 4746 ) //volatile access is subject to /volatile:<iso|ms>; emitted only on ARM64. A codegen warning, so /external:W0 does not reach it
 #include <directmanipulation.h>
 #include <wrl.h>
 #pragma warning( pop )

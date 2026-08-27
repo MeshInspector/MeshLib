@@ -10,6 +10,9 @@ on:
         required: false
         type: string
         default: ''
+      upload_artifacts:
+        required: true
+        type: boolean
 
 jobs:
   generate-c-bindings:
@@ -47,6 +50,7 @@ jobs:
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
 
+        # This version omits some extra IO formats, that's the only difference.
       - name: Generate C bindings (Wasm version)
         run: |
           cp -r source/MeshLibC2 source/MeshLibC2_orig
@@ -66,4 +70,24 @@ jobs:
             ./source/MeshLibC2
             ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
+          retention-days: 1
+
+        # Unlike the other artifact, here we strip some temporary files, and the project files.
+      - name: Prepare source distribution
+        if: ${{ inputs.upload_artifacts }}
+        shell: bash
+        run: |
+          mkdir meshlib_c-source
+          for x in MeshLibC2 MeshLibC2Wasm MeshLibC2Cuda; do
+              mkdir -p meshlib_c-source/$x
+              cp -r source/$x/{include,src} meshlib_c-source/$x
+          done
+          zip -r meshlib_c-source.zip meshlib_c-source
+
+      - name: Upload source distribution
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DistributivesCSource
+          path: meshlib_c-source.zip
           retention-days: 1

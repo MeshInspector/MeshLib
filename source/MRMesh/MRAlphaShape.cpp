@@ -379,7 +379,8 @@ Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius
     return res;
 }
 
-std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, const ProgressCallback& cb, AlphaShapeStats * stats )
+std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius,
+    const ProgressCallback& cb, std::vector<MeshBuilder::VertDuplication> * dups, AlphaShapeStats * stats )
 {
     MR_TIMER;
     const auto sd = getAlphaShapeData( cloud, radius, true );
@@ -399,15 +400,16 @@ std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius, cons
     };
 
     int skippedFaceCount = 0;
-    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, *maybeTris, nullptr,
+    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, *maybeTris, dups,
         { .skippedFaceCount = &skippedFaceCount }, betterCont );
     assert( skippedFaceCount == 0 );
     return res;
 }
 
-Mesh findAlphaShape( const PointCloud & cloud, float radius, AlphaShapeStats * stats )
+Mesh findAlphaShape( const PointCloud & cloud, float radius,
+    std::vector<MeshBuilder::VertDuplication> * dups, AlphaShapeStats * stats )
 {
-    auto maybe = findAlphaShape( cloud, radius, ProgressCallback{}, stats );
+    auto maybe = findAlphaShape( cloud, radius, ProgressCallback{}, dups, stats );
     assert( maybe.has_value() );
     Mesh res;
     if ( maybe.has_value() )

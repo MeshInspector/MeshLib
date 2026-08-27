@@ -19,12 +19,6 @@
 #include <cmath>
 #include <limits>
 
-#ifdef _MSC_VER
-// the benchmarks below keep a `volatile` sink so the timed work cannot be optimized away;
-// on ARM64 MSVC reports C4746 for it, and the recommended __iso_volatile_load is not portable
-#pragma warning( disable: 4746 )
-#endif
-
 namespace MR
 {
 
@@ -362,10 +356,8 @@ template <typename Contours>
 double triangulateOnceMs( const Contours& conts )
 {
     const auto t0 = std::chrono::steady_clock::now();
-    Mesh m = PlanarTriangulation::triangulateContours( conts );
+    [[maybe_unused]] const Mesh m = PlanarTriangulation::triangulateContours( conts );
     const auto t1 = std::chrono::steady_clock::now();
-    volatile size_t sink = m.topology.faceSize();
-    (void)sink;
     return std::chrono::duration<double, std::milli>( t1 - t0 ).count();
 }
 
@@ -480,17 +472,13 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
         auto once = [&] ()
         {
             double ms = 0.0;
-            size_t faces = 0;
             for ( const auto& s : slices )
             {
                 const auto t0 = std::chrono::steady_clock::now();
-                Mesh m = PlanarTriangulation::triangulateContours( s );
+                [[maybe_unused]] const Mesh m = PlanarTriangulation::triangulateContours( s );
                 const auto t1 = std::chrono::steady_clock::now();
                 ms += std::chrono::duration<double, std::milli>( t1 - t0 ).count();
-                faces += m.topology.faceSize();
             }
-            volatile size_t sink = faces;
-            (void)sink;
             return ms;
         };
         if ( !slices.empty() )

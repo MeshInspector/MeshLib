@@ -49,32 +49,31 @@ and PyCharm offer completion and signature help for the MeshLib API with no extr
 [Download Visual Studio Code](https://code.visualstudio.com/download)
 
 ## Installation Process {#PythonSetupInstall}
-MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, macOS, and Linux.
-Install it into a virtual environment.
-
-On \b Linux and \b macOS:
+MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, macOS, and Linux:
 \code{.sh}
-python3 -m venv .venv
-source .venv/bin/activate
 pip install meshlib
 \endcode
 
-On \b Windows:
+It pulls in `numpy` (>= 1.19), MeshLib's only dependency.
+
+On \b Windows that command works as written. A virtual environment is still worth using once you
+have more than one project, so their dependencies cannot collide:
 \code{.bat}
 py -m venv .venv
 .venv\Scripts\activate
 pip install meshlib
 \endcode
 
-The virtual environment is what makes that command behave the same on every machine.
-Installed into the system interpreter instead, `pip install meshlib` is refused outright on
-most Linux distributions and on Homebrew Python (PEP 668, `error: externally-managed-environment`),
-while on Apple's Command Line Tools Python it quietly succeeds into a per-user directory you did
-not choose. Inside a virtual environment the location is yours, and `deactivate` leaves the
-system Python untouched.
-
-The command downloads one wheel — 60 MB on Windows, 75-81 MB on Linux and macOS — plus
-`numpy` (>= 1.19), which is MeshLib's only dependency.
+On \b Linux, and on \b macOS with Homebrew Python, the plain command is refused before it
+downloads anything — `error: externally-managed-environment` — because pip will not install into
+an interpreter the system package manager owns (PEP 668); Apple's Command Line Tools Python
+instead accepts it quietly into a per-user directory you did not choose. There, install into a
+virtual environment:
+\code{.sh}
+python3 -m venv .venv
+source .venv/bin/activate
+pip install meshlib
+\endcode
 
 ### Verify the installation {#PythonSetupVerify}
 `pip install` reporting success is not the same as a working install: the wheel is tens of megabytes of prebuilt native code, and it can install cleanly and still fail to load. This one command covers the whole chain — import the package, load the native module, run a real geometry call:

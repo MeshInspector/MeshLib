@@ -145,8 +145,9 @@ jobs:
 
       - name: Create virtualenv
         run: |
-          # `venv` runs ensurepip itself and forwards only its exit code; bootstrap pip
-          # explicitly below so a failure there reports why
+          # `venv` installs pip by running ensurepip in a subprocess whose output it captures,
+          # so a failure there shows up as a bare exit status. Skipping it leaves the bootstrap
+          # to the explicit ensurepip below, whose stderr reaches the log.
           python3.12 -m venv --without-pip .venv
           . .venv/bin/activate
           python3 -m ensurepip --upgrade

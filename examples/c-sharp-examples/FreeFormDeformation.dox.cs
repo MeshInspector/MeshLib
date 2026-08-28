@@ -4,8 +4,9 @@
     {
         try
         {
-            // Load mesh
-            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
+            // Make a mesh to deform
+            // (to deform your own mesh, load it with MR.MeshLoad.fromAnySupportedFormat("mesh.stl") instead)
+            var mesh = MR.makeUVSphere(1.0f, 32, 32);
 
             // Compute mesh bounding box
             MR.Box3f box = mesh.getBoundingBox();

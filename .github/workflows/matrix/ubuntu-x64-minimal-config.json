@@ -24,8 +24,8 @@
       "os": "ubuntu24",
       "config": "Release",
       "compiler": "GCC",
-      "cxx-compiler": "/usr/bin/g++-14",
-      "c-compiler": "/usr/bin/gcc-14",
+      "cxx-compiler": "/usr/bin/g++-16",
+      "c-compiler": "/usr/bin/gcc-16",
       "cxx-standard": 23,
       "build_mrcuda": "OFF",
       "upload_release": "OFF"

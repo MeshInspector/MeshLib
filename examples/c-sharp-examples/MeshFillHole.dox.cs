@@ -12,6 +12,7 @@ public static class MeshFillHoleExample
                 return;
             }
 
+            // INPUT is a mesh file you supply; this example needs a mesh that has holes to fill
             string inputFile = args[0];
             string outputFile = args.Length == 2 ? args[1] : inputFile;
 

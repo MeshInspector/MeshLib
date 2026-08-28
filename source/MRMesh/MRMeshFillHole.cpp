@@ -1434,4 +1434,19 @@ std::vector<EdgeId> makeInterHoleBridgeEdges( Mesh& mesh, const std::vector<Edge
     return bridgesCreated;
 }
 
+bool bridgeFillAllHoles( Mesh& mesh, const FillHoleParams& params )
+{
+    MR_TIMER;
+    auto holes = mesh.topology.findHoleRepresentiveEdges();
+    if ( holes.empty() )
+        return false;
+
+    // every bridge merges two holes in one, so the representative edges have to be found again
+    if ( !makeInterHoleBridgeEdges( mesh, holes ).empty() )
+        holes = mesh.topology.findHoleRepresentiveEdges();
+
+    fillHoles( mesh, holes, params );
+    return true;
+}
+
 } //namespace MR

@@ -57,6 +57,7 @@ jobs:
     with:
       docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
       version_tag: ${{ needs.config.outputs.release_tag }}
+      upload_artifacts: true
 
   windows-build-test:
     needs: [ config ]
@@ -134,4 +135,3 @@ jobs:
         with:
           name: Distributives*
           failOnError: false
-

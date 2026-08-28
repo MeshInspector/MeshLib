@@ -147,7 +147,8 @@ TEST( MRMesh, AlphaShapeCrossingGrids )
     cloud.validPoints.autoResizeSet( 0_v, (int)cloud.points.size(), true );
 
     AlphaShapeStats stats;
-    const auto mesh = findAlphaShape( cloud, 0.1f, &stats );
+    std::vector<MeshBuilder::VertDuplication> dups;
+    const auto mesh = findAlphaShape( cloud, 0.1f, &dups, &stats );
     // the counters are about 99000, 47600 and 1324000 here, but not exactly the same on every
     // platform, because the neighbourhood of a point is searched in floating point
     EXPECT_GT( stats.consideredTris, stats.touchableTris );
@@ -155,6 +156,13 @@ TEST( MRMesh, AlphaShapeCrossingGrids )
     EXPECT_EQ( mesh.topology.numValidFaces(), 584 );
     EXPECT_EQ( mesh.topology.numValidVerts(), 322 );
     EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 1 );
+    EXPECT_EQ( mesh.points.size(), cloud.points.size() + dups.size() );
+    EXPECT_EQ( dups.size(), 136 );
+    for ( const auto & d : dups )
+    {
+        EXPECT_LT( (int)d.srcVert, (int)cloud.points.size() );
+        EXPECT_GE( (int)d.dupVert, (int)cloud.points.size() );
+    }
 }
 
 namespace

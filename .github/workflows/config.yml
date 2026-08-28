@@ -32,6 +32,9 @@ on:
       release_tag:
         description: "Version with namespace (if it exists): v1.2.3.4-namespace"
         value: ${{ jobs.prepare-config.outputs.release_tag }}
+      ubuntu_arm64_config_matrix:
+        description: "Config matrix for Ubuntu arm64 builds"
+        value: ${{ jobs.prepare-config.outputs.ubuntu_arm64_config_matrix }}
       ubuntu_x64_config_matrix:
         description: "Config matrix for Ubuntu x64 builds"
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
@@ -87,6 +90,7 @@ jobs:
       release_tag:              ${{ steps.version-tag.outputs.release_tag }}
       need-linux-image-rebuild: ${{ steps.select-docker-image-tag.outputs.need_rebuild }}
       need-linux-vcpkg-rebuild: ${{ steps.select-vcpkg-docker-image-tag.outputs.need_rebuild }}
+      ubuntu_arm64_config_matrix: ${{ steps.set-ubuntu-arm64-matrix.outputs.matrix }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
       windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
@@ -294,6 +298,34 @@ jobs:
           else
             echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set matrix for ubuntu-arm64 builds
+        id: set-ubuntu-arm64-matrix
+        uses: ./scripts/actions/matrix-builder
+        with:
+          matrix: |
+            os:
+              - ubuntu22
+              - ubuntu24
+            config:
+              - Release
+          rules: |
+            - extend:
+                - os: ubuntu22
+                  compiler: clang
+                  cxx-compiler: /usr/bin/clang++-14
+                  c-compiler: /usr/bin/clang-14
+                  cxx-standard: 20
+                - os: ubuntu24
+                  compiler: GCC
+                  cxx-compiler: /usr/bin/g++-13
+                  c-compiler: /usr/bin/gcc-13
+                  cxx-standard: 23
+            # A docs-only run still needs ubuntu22 - PythonStubs and CsharpBindings come from
+            # it - but nothing reads the ubuntu24 leg unless the debs are published.
+            - if: ${{ steps.live-labels.outputs.tag-update-doc-only == 'true' && env.upload_artifacts != 'true' }}
+              exclude:
+                os: ubuntu24
 
       - name: Set matrix for windows-x64 builds
         id: set-windows-x64-matrix

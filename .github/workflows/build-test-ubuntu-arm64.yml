@@ -6,6 +6,9 @@ on:
       app_version:
         required: true
         type: string
+      config_matrix:
+        required: true
+        type: string
       docker_image_tag:
         required: true
         type: string
@@ -33,6 +36,8 @@ on:
 
 jobs:
   ubuntu-arm-build-test:
+    # the entries carry every compiler field, so spell out the two that identify a leg
+    name: ubuntu-arm-build-test (${{ matrix.os }}, ${{ matrix.config }})
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     container:
@@ -40,19 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu22, ubuntu24 ]
-        config: [ Release ]
-        include:
-          - os: ubuntu22
-            compiler: clang
-            cxx-compiler: /usr/bin/clang++-14
-            c-compiler: /usr/bin/clang-14
-            cxx-standard: 20
-          - os: ubuntu24
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-14
-            c-compiler: /usr/bin/gcc-14
-            cxx-standard: 23
+        include: ${{ fromJSON( inputs.config_matrix ) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -160,6 +153,7 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake

@@ -5,6 +5,11 @@ inputs:
     description: "Build config (Release, Debug)"
     required: true
     type: string
+  build_arch:
+    description: "Windows only: arch segment of the output dir (x64, arm64)"
+    required: false
+    type: string
+    default: x64
   pytest_args:
     description: "Additional pytest arguments"
     required: false
@@ -70,7 +75,7 @@ runs:
     - name: Python Regression Tests (Windows)
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
-      working-directory: source\x64\${{ inputs.build_config }}
+      working-directory: source\${{ inputs.build_arch }}\${{ inputs.build_config }}
       run: >
         py -3 ..\..\..\scripts\run_python_test_script.py
         -d '..\test_regression'

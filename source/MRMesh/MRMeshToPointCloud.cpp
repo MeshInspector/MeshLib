@@ -70,7 +70,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
         }
         int divs = ceilPow2( mesh.edgeLength( ue ) / diameter );
         for ( auto f : { topology.left( e ), topology.right( e ) } )
-            if ( topology.hasFace( f ) )
+            if ( f )
                 divs = std::max( divs, faceDivs[f] );
         edgeDivs[ue] = divs;
     }, edgeDivsCb ) )

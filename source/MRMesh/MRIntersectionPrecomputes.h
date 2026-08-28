@@ -3,7 +3,9 @@
 #include "MRVector3.h"
 #include "MRPch/MRBindingMacros.h"
 
-#if defined(__x86_64__) || defined(_M_X64)
+// Emscripten emulates the SSE intrinsics on top of Wasm SIMD, but only with both -msimd128
+// (__wasm_simd128__) and one of the -msse* flags (__SSE__); without them the generic code is used
+#if defined(__x86_64__) || defined(_M_X64) || ( defined(__wasm_simd128__) && defined(__SSE__) )
 #include <xmmintrin.h> //SSE instructions
 #elif defined(__aarch64__) || defined(_M_ARM64)
 #include <arm_neon.h> //NEON instructions
@@ -150,8 +152,8 @@ struct IntersectionPrecomputes
 
 };
 
-/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
-#if defined(__x86_64__) || defined(_M_X64)
+/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit, and Wasm SIMD via Emscripten's SSE emulation */
+#if defined(__x86_64__) || defined(_M_X64) || ( defined(__wasm_simd128__) && defined(__SSE__) )
 template<>
 struct IntersectionPrecomputes<float>
 {

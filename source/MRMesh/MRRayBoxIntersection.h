@@ -20,8 +20,8 @@ struct RayOrigin
     RayOrigin( const Vector3<T> & ro ) : p( ro ) { }
 };
 
-/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
-#if defined(__x86_64__) || defined(_M_X64)
+/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit, and Wasm SIMD via Emscripten's SSE emulation */
+#if defined(__x86_64__) || defined(_M_X64) || ( defined(__wasm_simd128__) && defined(__SSE__) )
 template<>
 struct RayOrigin<float>
 {
@@ -48,7 +48,7 @@ bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0
 {
     assert( box.valid() );
 
-    #if defined(__x86_64__) || defined(_M_X64)
+    #if defined(__x86_64__) || defined(_M_X64) || ( defined(__wasm_simd128__) && defined(__SSE__) )
     if constexpr (std::is_same_v<T, float>)
     {
         // both loads stay within the box, and the second one is the max corner shifted by one lane

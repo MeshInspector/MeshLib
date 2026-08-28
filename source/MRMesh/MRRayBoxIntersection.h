@@ -27,6 +27,15 @@ struct RayOrigin<float>
     MR_BIND_IGNORE __m128 p;
     RayOrigin( const Vector3f & ro ) { p = _mm_set_ps( ro.x, ro.y, ro.z, 0 ); }
 };
+
+/* CPU(ARM64) - AArch64 */
+#elif defined(__aarch64__) || defined(_M_ARM64)
+template<>
+struct RayOrigin<float>
+{
+    MR_BIND_IGNORE float32x4_t p;
+    RayOrigin( const Vector3f & ro ) { p = toFloat32x4( ro.x, ro.y, ro.z, 0 ); }
+};
 #endif
 
 /// finds intersection between the Ray and the Box.
@@ -59,6 +68,21 @@ bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0
         __m128 bbb = _mm_shuffle_ps( bb, bb, 1 );
         bbb = _mm_min_ss( bbb, bb );
         t1 = _mm_cvtss_f32( bbb );
+
+        return t0 <= t1;
+    }
+    else
+    #elif defined(__aarch64__) || defined(_M_ARM64)
+    if constexpr (std::is_same_v<T, float>)
+    {
+        // the 4-th lane carries t0/t1 itself, since the origin is 0 and the inverted direction is 1 there
+        float32x4_t l = toFloat32x4( box.min.x, box.min.y, box.min.z, t0 );
+        float32x4_t r = toFloat32x4( box.max.x, box.max.y, box.max.z, t1 );
+        l = vmulq_f32( vsubq_f32( l, rayOrigin.p ), prec.invDir );
+        r = vmulq_f32( vsubq_f32( r, rayOrigin.p ), prec.invDir );
+
+        t0 = vmaxvq_f32( vminq_f32( l, r ) );
+        t1 = vminvq_f32( vmaxq_f32( l, r ) );
 
         return t0 <= t1;
     }

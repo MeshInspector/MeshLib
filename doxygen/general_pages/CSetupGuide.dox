@@ -6,15 +6,11 @@
 \tableofcontents
 
 \parblock
-\note The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`, `MRCMisc`, `MRCSymbolMesh`, `MRCVoxels`, ...).
-
-\note The older v1 C API (`MRMeshC`) has been **removed**: it is absent from the repository and from the releases. Code still using it has to move to `MeshLibC2`.
+\note The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`/etc, as opposed to `MRMesh`/etc for C++ API).
 \endparblock
 
 \parblock
-\note The C API is distributed in the [binary releases](https://github.com/MeshInspector/MeshLib/releases) of MeshLib, which is what this guide covers.
-
-\note Building it from source is possible too, but takes an extra step: the bindings are generated, not written by hand, so generate them first (see [scripts/mrbind/README-generating.md](https://github.com/MeshInspector/MeshLib/blob/master/scripts/mrbind/README-generating.md#32-generate-c-bindings)), then configure MeshLib with `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` — it is `OFF` by default, and with it off no C library is built.
+\note The recommended way of installing the C API is from the [binary releases](https://github.com/MeshInspector/MeshLib/releases) of MeshLib. It's also possible to build [from source](#CppBuildCBindingsFromSource).
 \endparblock
 
 ## Installing binary releases of MeshLib
@@ -103,5 +99,21 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
 
 We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.
+
+## Building C API from source {#CppBuildCBindingsFromSource}
+
+As an alternative to the binary distribution, you can build the C API from source, as a part of MeshLib.
+
+The C API sources are generated for each release, and must be downloaded from the [GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page.
+
+The source archive is called `meshlib_v1.2.3.4_c-source[-wasm].zip`. Use the `-wasm` variant if you're building for Wasm; it omits support for some additional IO formats that we don't support in Wasm builds.
+
+Extract `MeshLibC2/include`, `MeshLibC2/src` into `source/MeshLibC2`.
+
+Additionally, if you want Cuda support, similarly extract `MeshLibC2Cuda/{include,src}` into `source/MeshLibC2Cuda`. This is not available on Wasm.
+
+If you **don't** want Cuda support, you instead have to copy Cuda stubs from `scripts/mrbind/cuda_placeholder_generated_c/{include,src}` to `source/MeshLibC2Cuda`. This is the only option on Wasm.
+
+Lastly, build MeshLib with C API enabled by adding `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to CMake flags. We recommend using CMake for this, but VS project files are also available in `source/MeshLibC2` and `source/MeshLibC2Cuda`, but they aren't included in the VS solution by default.
 
 */

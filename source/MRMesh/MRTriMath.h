@@ -80,23 +80,23 @@ template <typename T>
     const auto lSq = d.lengthSq();
     if ( lSq <= 0 )
         return T( 0 );
-    const auto l = std::sqrt( lSq );
     const auto ac = c - a;
     const auto acSq = ac.lengthSq();
-    const auto s = dot( ac, d ) / l;                   // where C projects on the segment
-    const auto hSq = std::max( T( 0 ), acSq - s * s ); // squared distance from C to the line AB
+    const auto p = dot( ac, d ); // where C projects on the segment, times its length
 
-    // the distance to the nearest point is maximal where the two nearest of them are equidistant
+    // squared distance from the point in the given relative position to the nearest of A, B and C
     auto sqDistToNearest = [&]( T t )
     {
-        t = std::clamp( t, T( 0 ), l );
-        return std::min( { t * t, ( l - t ) * ( l - t ), hSq + ( t - s ) * ( t - s ) } );
+        t = std::clamp( t, T( 0 ), T( 1 ) );
+        return std::max( T( 0 ), std::min( { t * t * lSq, ( 1 - t ) * ( 1 - t ) * lSq,
+            acSq - 2 * t * p + t * t * lSq } ) );
     };
-    auto res = sqDistToNearest( l / 2 );                                          // A and B
-    if ( s > 0 )
-        res = std::max( res, sqDistToNearest( acSq / ( 2 * s ) ) );               // A and C
-    if ( s < l )
-        res = std::max( res, sqDistToNearest( ( lSq - acSq ) / ( 2 * ( l - s ) ) ) ); // B and C
+    // that distance is maximal where the two nearest of the points are equidistant
+    auto res = sqDistToNearest( T( 0.5 ) );                                         // A and B
+    if ( p > 0 )
+        res = std::max( res, sqDistToNearest( acSq / ( 2 * p ) ) );                 // A and C
+    if ( p < lSq )
+        res = std::max( res, sqDistToNearest( ( lSq - acSq ) / ( 2 * ( lSq - p ) ) ) ); // B and C
     return res;
 }
 

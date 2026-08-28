@@ -41,6 +41,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     MR_TIMER;
     if ( !( radius > 0 ) )
         return unexpected( "meshToDensePointCloud: radius must be positive" );
+    const float radiusSq = radius * radius;
     const auto& mesh = mp.mesh;
     const auto& topology = mesh.topology;
     const auto& faces = topology.getFaceIds( mp.region );
@@ -57,8 +58,10 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         // by definition no point of a triangle is farther from the nearest vertex than the covering
-        // radius, so a triangle with a smaller one is covered by its own vertices and is not divided
-        faceDivs[f] = ceilPow2( std::sqrt( coveringRadiusSq( v[0], v[1], v[2] ) ) / radius );
+        // radius, so a triangle with a smaller one is covered by its own vertices and is not divided;
+        // the minimal enclosing circle bounds that radius from above and is cheaper to find
+        faceDivs[f] = mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq ? 1
+            : ceilPow2( std::sqrt( coveringRadiusSq( v[0], v[1], v[2] ) ) / radius );
     }, faceDivsCb ) )
         return unexpectedOperationCanceled();
 

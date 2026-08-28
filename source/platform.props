@@ -21,11 +21,11 @@
     <MRCudaVersion Condition="'$(PlatformToolset)' == 'v145'">13.2</MRCudaVersion>
     <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH -->
     <PreferredToolArchitecture Condition="'$(Platform)'=='x64'">x86</PreferredToolArchitecture>
-    <!-- Never x86 for ARM64: a 32-bit compiler runs out of address space on our PCH (C3859
-         `Unable to commit memory across file map`, then C1076). When MSBuild itself runs as an
-         ARM64 process, Microsoft.Cpp.ToolsetLocation.props already defaults to the native arm64
-         host, so leave it alone there; otherwise ask for x64, because asking for arm64 from a
-         non-ARM64 process is silently downgraded to x86. -->
+    <!-- Only for cross-building ARM64 from an x64 machine. There Microsoft.Cpp.ToolsetLocation.props
+         would pick the x86 host, and a 32-bit compiler runs out of address space on our PCH:
+         C3859 `Unable to commit memory across file map`, then C1076. Naming arm64 instead would
+         not help - it is silently downgraded to x86 off an ARM64 process. On an ARM64 machine
+         this is inert and the native arm64 host is already the default. -->
     <PreferredToolArchitecture Condition="'$(Platform)'=='ARM64' AND '$(PROCESSOR_ARCHITECTURE)'!='ARM64'">x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(CustomPlatfotmPropertyDir)\CustomMRPlatform.props" Condition="'$(CustomPlatfotmPropertyDir)' != ''"/>

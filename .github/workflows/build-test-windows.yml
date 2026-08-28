@@ -64,10 +64,9 @@ jobs:
       MR_ARCH: ${{ matrix.arch || 'x64' }}
       VS_DEV_ARGS: ${{ matrix.arch == 'arm64' && '-arch=arm64 -host_arch=arm64' || '-arch=amd64 -host_arch=x86' }}
       # mrbind builds in the MSYS2 environment matching the target: CLANGARM64 is
-      # native aarch64, CLANG64 x86_64. The C and C# bindings stay x64-only for now.
+      # native aarch64, CLANG64 x86_64
       MSYS2_ENV: ${{ matrix.arch == 'arm64' && 'clangarm64' || 'clang64' }}
       MSYS2_PKGS: ${{ matrix.arch == 'arm64' && '_clangarm64' || '_clang22' }}
-      MRBIND_C_SUPPORTED: ${{ matrix.arch != 'arm64' }}
 
     steps:
       - name: Checkout
@@ -146,13 +145,13 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Install MSYS2 for MRBind
-        if: ${{ inputs.mrbind || (env.MRBIND_C_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/install-msys2-mrbind
         with:
           packages-suffix: ${{ env.MSYS2_PKGS }}
 
       - name: Build MRBind
-        if: ${{ inputs.mrbind || (env.MRBIND_C_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/build-mrbind
         with:
           cache-key-prefix: ${{ matrix.arch == 'arm64' && 'windows-clangarm64' || 'windows-clang22' }}
@@ -161,20 +160,20 @@ jobs:
           msys2-env: ${{ env.MSYS2_ENV }}
 
       - name: Wait for C bindings
-        if: ${{ env.MRBIND_C_SUPPORTED == 'true' && (inputs.mrbind_c || env.BUILD_C_SHARP == 'true') }}
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/wait-for-job
         with:
           job-name: generate-c-bindings
 
       - name: Download C bindings
-        if: ${{ env.MRBIND_C_SUPPORTED == 'true' && (inputs.mrbind_c || env.BUILD_C_SHARP == 'true') }}
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ env.MRBIND_C_SUPPORTED == 'true' && (inputs.mrbind_c || env.BUILD_C_SHARP == 'true') }}
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         run: |
           rm -r -force source/MeshLibC2
           rm -r -force source/MeshLibC2Cuda
@@ -213,7 +212,7 @@ jobs:
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake --version || exit /b 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ env.MRBIND_C_SUPPORTED == 'true' && inputs.mrbind_c && 'ON' || 'OFF' }} -DMESHLIB_BUILD_MRCUDA=${{ env.CUDA_VERSION != '' && 'ON' || 'OFF' }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} -DMESHLIB_BUILD_MRCUDA=${{ env.CUDA_VERSION != '' && 'ON' || 'OFF' }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
             rem Deploy vcpkg DLLs in one serial pass here: with VCPKG_APPLOCAL_DEPS=ON (default)
             rem every parallel Ninja link edge runs its own z-applocal into the shared bin dir,
@@ -304,9 +303,9 @@ jobs:
         run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe
 
       - name: C Unit Tests
-        if: ${{ env.MRBIND_C_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake' }}
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
         timeout-minutes: 10
-        run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }}
+        run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }} ${{ env.MR_ARCH }}
 
       - name: C# Unit Tests
         if: ${{ env.BUILD_C_SHARP == 'true' }}
@@ -373,7 +372,7 @@ jobs:
           cmake --build cpp-examples-build -j || exit /b 1
 
       - name: Build C examples
-        if: ${{ env.MRBIND_C_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake' }}
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd
         run: |
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1

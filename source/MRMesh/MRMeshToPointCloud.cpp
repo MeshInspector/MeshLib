@@ -45,6 +45,8 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     const auto& mesh = mp.mesh;
     const auto& topology = mesh.topology;
     const auto& faces = topology.getFaceIds( mp.region );
+    // whole mesh: left/right of an edge is never a face outside faces, so it needs no test
+    const bool wholeMesh = !mp.region;
     const auto [faceDivsCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
 
     // in how many equal parts each side of the triangle is divided to split it in a grid of similar triangles,
@@ -70,7 +72,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         const EdgeId e = ue;
         int divs = 0;
         for ( auto f : { topology.left( e ), topology.right( e ) } )
-            if ( f && faces.test( f ) )
+            if ( f && ( wholeMesh || faces.test( f ) ) )
                 divs = std::max( divs, faceDivs[f] );
         if ( divs > 0 )
             divs = std::max( divs, ceilPow2( mesh.edgeLength( ue ) / diameter ) );

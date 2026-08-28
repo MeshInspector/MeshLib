@@ -114,7 +114,11 @@
     <ClCompile Include="MRDemoPlugin.cpp" />
     <ClCompile Include="MRStatePluginUpdate.cpp" />
     <ClCompile Include="MRSurfacePointPicker.cpp" />
-    <ClCompile Include="MRTouchpadWin32Handler.cpp" />
+    <ClCompile Include="MRTouchpadWin32Handler.cpp">
+      <!-- C4746 on ARM64 from WRL's RuntimeClass refcounting, which no `#pragma warning`
+           reaches; mirrors the /wd4746 in CMakeLists.txt. Never emitted on x64. -->
+      <DisableSpecificWarnings>4746;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+    </ClCompile>
     <ClCompile Include="MRUIStyle.cpp" />
     <ClCompile Include="MRViewerEventQueue.cpp" />
     <ClCompile Include="MRViewerInstance.cpp" />

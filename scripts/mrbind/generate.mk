@@ -679,7 +679,7 @@ ifneq ($(IS_MACOS),)
 # and prints the bare name back when it finds nothing.
 ifeq ($(filter /%,$(shell $(CXX_FOR_BINDINGS) -print-prog-name=ld64.lld 2>/dev/null)),)
 $(info Found no ld64.lld, linking the bindings with the default linker)
-override LLD_FLAG :=
+LLD_FLAG :=
 endif
 endif
 

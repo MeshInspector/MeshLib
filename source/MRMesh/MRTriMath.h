@@ -70,6 +70,62 @@ template <typename T>
 MR_BIND_TEMPLATE(  float mincircleDiameterSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
 MR_BIND_TEMPLATE( double mincircleDiameterSq( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
 
+/// Computes the squared maximal distance from a point of the segment AB to the nearest of the points
+/// A, B and C: this is where the balls of that radius around the three points stop covering the segment
+/// \ingroup MathGroup
+template <typename T>
+[[nodiscard]] T edgeCoveringRadiusSq( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+{
+    const auto d = b - a;
+    const auto lSq = d.lengthSq();
+    if ( lSq <= 0 )
+        return T( 0 );
+    const auto l = std::sqrt( lSq );
+    const auto ac = c - a;
+    const auto acSq = ac.lengthSq();
+    const auto s = dot( ac, d ) / l;                   // where C projects on the segment
+    const auto hSq = std::max( T( 0 ), acSq - s * s ); // squared distance from C to the line AB
+
+    // the distance to the nearest point is maximal where the two nearest of them are equidistant
+    auto sqDistToNearest = [&]( T t )
+    {
+        t = std::clamp( t, T( 0 ), l );
+        return std::min( { t * t, ( l - t ) * ( l - t ), hSq + ( t - s ) * ( t - s ) } );
+    };
+    auto res = sqDistToNearest( l / 2 );                                          // A and B
+    if ( s > 0 )
+        res = std::max( res, sqDistToNearest( acSq / ( 2 * s ) ) );               // A and C
+    if ( s < l )
+        res = std::max( res, sqDistToNearest( ( lSq - acSq ) / ( 2 * ( l - s ) ) ) ); // B and C
+    return res;
+}
+
+MR_BIND_TEMPLATE(  float edgeCoveringRadiusSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double edgeCoveringRadiusSq( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
+
+/// Computes the squared maximal distance from a point of the triangle ABC to the nearest of its
+/// vertices, so the balls of that radius around the vertices cover the whole triangle.
+/// For non-obtuse triangles it is the squared circumradius, and for obtuse ones it can be much
+/// smaller than in the minimal enclosing circle, e.g. when the third vertex is near the longest edge
+/// \ingroup MathGroup
+template <typename T>
+[[nodiscard]] T coveringRadiusSq( const Vector3<T> & a, const Vector3<T> & b, const Vector3<T> & c )
+{
+    const auto ab = ( b - a ).lengthSq();
+    const auto ca = ( a - c ).lengthSq();
+    const auto bc = ( c - b ).lengthSq();
+    // a non-obtuse triangle contains its circumcenter, which is the farthest point from the vertices
+    if ( ca < bc + ab && bc < ab + ca && ab < ca + bc )
+        return circumcircleDiameterSq( a, b, c ) / T( 4 );
+    // otherwise that point is on the boundary, where the two nearest vertices are equidistant
+    return std::max( { edgeCoveringRadiusSq( a, b, c ),
+                       edgeCoveringRadiusSq( b, c, a ),
+                       edgeCoveringRadiusSq( c, a, b ) } );
+}
+
+MR_BIND_TEMPLATE(  float coveringRadiusSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );
+MR_BIND_TEMPLATE( double coveringRadiusSq( const Vector3d & a, const Vector3d & b, const Vector3d & c ) );
+
 /// Computes the center of the the triangle's 0AB circumcircle
 template <typename T>
 [[nodiscard]] Vector3<T> circumcircleCenter( const Vector3<T> & a, const Vector3<T> & b )

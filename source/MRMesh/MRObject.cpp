@@ -21,7 +21,11 @@ const std::filesystem::path cSharedFolder = "SharedModels";
 std::string composeKey( const std::string& objectName, const int prefix )
 {
     constexpr int maxFileNameLen = 12; // keep file names not too long to avoid hitting limit in some OSes
-    return std::to_string( prefix ) + "_" + utf8substr( replaceProhibitedChars( objectName ).c_str(), 0, maxFileNameLen );
+    auto name = utf8substr( replaceProhibitedChars( objectName ).c_str(), 0, maxFileNameLen );
+    // Windows silently drops trailing spaces and dots from a created folder, and then cannot find it by the original name
+    while ( !name.empty() && ( name.back() == ' ' || name.back() == '.' ) )
+        name.pop_back();
+    return std::to_string( prefix ) + "_" + name;
 }
 
 struct KeyObjectModel

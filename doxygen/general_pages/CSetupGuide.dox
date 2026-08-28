@@ -6,17 +6,11 @@
 \tableofcontents
 
 \parblock
-\note Two versions of the C API currently coexist:
-
-\note - v2 (the recommended default) — the library is called `MeshLibC2`, and the headers are in the `MRC*` directories.
-
-\note - v1 (deprecated) — the library is called `MRMeshC`, and the headers are in the `MRMeshC` directory. This version only exposes a small part of MeshLib. The support for v1 will be dropped by the end of 2025.
+\note The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`/etc, as opposed to `MRMesh`/etc for C++ API).
 \endparblock
 
 \parblock
-\note Currently, the only supported way of using the C API is via the binary releases of MeshLib.
-
-\note Starting with the next release, you will be able to compile the C bindings directly from the source code.
+\note The recommended way of installing the C API is from the [binary releases](https://github.com/MeshInspector/MeshLib/releases) of MeshLib. It's also possible to build [from source](#CppBuildCBindingsFromSource).
 \endparblock
 
 ## Installing binary releases of MeshLib
@@ -26,12 +20,7 @@ The installation process is \ref MeshLibCppSetupGuide "same as for C++", and is 
 The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
 
 ### Windows
-\note MeshLib for Windows is distributed for **x64** only: set the platform of your project to `x64`.
-A 32-bit (`Win32`) build of C code compiles, but fails at link with
-`LNK2019: unresolved external symbol __imp__MR_...` for every MeshLib function. That means the platform is
-wrong, not that a library is missing: 32-bit name decoration (`__imp__NAME` instead of `__imp_NAME`) matches
-nothing in the x64 import libraries. Visual Studio 2019 still defaults new C++ console projects to `Win32`.
-On Windows on Arm, use the x64 toolchain: no native Arm64 Windows build is published.
+\note MeshLib for Windows is distributed for x64 only. Make sure you're not targeting x32.
 
 Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
 The \ref CppSetupWindows "C++ guide's archive table" names all four and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
@@ -105,5 +94,21 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
 
 We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.
+
+## Building C API from source {#CppBuildCBindingsFromSource}
+
+As an alternative to the binary distribution, you can build the C API from source, as a part of MeshLib.
+
+The C API sources are generated for each release, and must be downloaded from the [GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page.
+
+The source archive is called `meshlib_v1.2.3.4_c-source[-wasm].zip`. Use the `-wasm` variant if you're building for Wasm; it omits support for some additional IO formats that we don't support in Wasm builds.
+
+Extract `MeshLibC2/include`, `MeshLibC2/src` into `source/MeshLibC2`.
+
+Additionally, if you want Cuda support, similarly extract `MeshLibC2Cuda/{include,src}` into `source/MeshLibC2Cuda`. This is not available on Wasm.
+
+If you **don't** want Cuda support, you instead have to copy Cuda stubs from `scripts/mrbind/cuda_placeholder_generated_c/{include,src}` to `source/MeshLibC2Cuda`. This is the only option on Wasm.
+
+Lastly, build MeshLib with C API enabled by adding `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to CMake flags. We recommend using CMake for this, but VS project files are also available in `source/MeshLibC2` and `source/MeshLibC2Cuda`, but they aren't included in the VS solution by default.
 
 */

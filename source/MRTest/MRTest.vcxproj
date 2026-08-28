@@ -52,6 +52,7 @@
     <ClCompile Include="MRMeshLoadSaveTest.cpp" />
     <ClCompile Include="MRMeshMeshDistanceTests.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />
+    <ClCompile Include="MRMeshToPointCloudTests.cpp" />
     <ClCompile Include="MRMeshTopologyTests.cpp" />
     <ClCompile Include="MRMultiwayICPTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
@@ -123,6 +124,7 @@
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />
     <ClCompile Include="MRPolylineTopologyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
+    <ClCompile Include="MRRayBoxIntersectionTests.cpp" />
     <ClCompile Include="MRRectIndexerTests.cpp" />
     <ClCompile Include="MRRegionBoundaryTests.cpp" />
     <ClCompile Include="MRRegularGridMeshTests.cpp" />

@@ -5,7 +5,14 @@
 #   especially because of the conflicts that happen if several users install it.
 
 brew update
-brew install --quiet make grep lld
+brew install --quiet make grep
+
+# `lld` links the bindings much faster than Apple's `ld`, but Homebrew has no bottle of it
+# for Intel macOS since that became a Tier 3 configuration, and building it from source
+# means building LLVM. Install it where it is bottled; `generate.mk` detects its absence.
+if [[ "$(uname -m)" == "arm64" ]] ; then
+  brew install --quiet lld
+fi
 
 if [[ -z "${LLVM_PREFIX}" ]] ; then
   # Read the Clang version from `clang_version_macos.txt`. `xargs` trims the whitespace.

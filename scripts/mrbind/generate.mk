@@ -668,7 +668,20 @@ endif # TARGETING_EMSCRIPTEN
 
 
 
-LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
+# Prefer lld, which links the bindings much faster than the default linker. There is no
+# Homebrew bottle of `lld` for Intel macOS since that became a Tier 3 configuration, so fall
+# back to Apple's `ld` when ld64.lld is absent; it consumes our ThinLTO bitcode via the
+# `libLTO.dylib` that Clang passes to it in `-lto_library`. Only macOS is probed, the other
+# platforms always have lld next to Clang.
+LLD_FLAG := -fuse-ld=lld
+ifneq ($(IS_MACOS),)
+ifeq ($(shell command -v ld64.lld >/dev/null 2>&1 && echo 1),)
+$(info Found no ld64.lld, linking the bindings with the default linker)
+override LLD_FLAG :=
+endif
+endif
+
+LINKER := $(CXX_FOR_BINDINGS) $(LLD_FLAG)
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)

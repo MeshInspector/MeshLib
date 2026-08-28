@@ -146,6 +146,24 @@ TEST( MRMesh, MeshToDensePointCloudPart )
     EXPECT_LE( maxCloudToSurfaceDist( { mesh, &region }, *part ), 1e-6f );
 }
 
+// a long thin quad of two triangles: both of them are covered by the samples of the long diagonal
+// they share, so nothing is put inside them or on their short edges
+TEST( MRMesh, MeshToDensePointCloudThin )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } );
+    t.push_back( { 0_v, 2_v, 3_v } );
+    const auto mesh = Mesh::fromTriangles( VertCoords{ Vector3f{ 0, 0, 0 }, Vector3f{ 10, 0, 0 },
+        Vector3f{ 10, 0.05f, 0 }, Vector3f{ 0, 0.05f, 0 } }, t );
+
+    const float radius = 1;
+    const auto cloud = meshToDensePointCloud( mesh, radius );
+    ASSERT_TRUE( cloud.has_value() );
+    // 4 vertices and 7 samples dividing the diagonal in 8 parts; a grid would need 42 per triangle
+    EXPECT_EQ( cloud->points.size(), 11 );
+    EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), radius );
+}
+
 // two triangles share a long edge, and the vertices opposite to it are close to it, so the balls
 // around the four vertices cover both triangles and no sample is needed at all
 TEST( MRMesh, MeshToDensePointCloudCloseApexes )
@@ -180,9 +198,9 @@ TEST( MRMesh, MeshToDensePointCloudDegenerate )
 
     const auto cloud = meshToDensePointCloud( mesh, 0.1f );
     ASSERT_TRUE( cloud.has_value() );
-    // the covering radius is 0.25, so every side is divided in 4 parts (as the face is),
-    // which gives 3 + 3*3 + 3*2/2 points
-    EXPECT_EQ( cloud->points.size(), 15 );
+    // the triangle is flat, so the samples of its longest side cover it: that side is divided
+    // in 8 parts, and the 3 vertices with the 7 samples between them is all the cloud has
+    EXPECT_EQ( cloud->points.size(), 10 );
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), 0.1f );
 }
 

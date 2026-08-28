@@ -49,19 +49,50 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     const bool wholeMesh = !mp.region;
     const auto [faceDivsCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
 
-    // in how many equal parts each side of the triangle is divided to split it in a grid of similar triangles,
-    // each covered by its own three corners; the number is a power of two, which makes the grid of a face
-    // conforming with (possibly finer) divisions of the face's edges
+    // in how many equal parts each side of the triangle is divided to split it in a grid of similar
+    // triangles, each covered by its own three corners; the number is a power of two, which makes the
+    // grid of a face conforming with (possibly finer) divisions of the face's edges
     Buffer<int, FaceId> faceDivs( topology.faceSize() );
+    // a thin triangle is instead covered by the samples of its longest edge alone: nothing is put
+    // inside it, and only that edge, kept here with the division it needs, has to be divided
+    Buffer<int, FaceId> faceStripDivs( topology.faceSize() );
+    Buffer<UndirectedEdgeId, FaceId> faceStripEdge( topology.faceSize() );
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
+        faceStripEdge[f] = UndirectedEdgeId{};
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         // by definition no point of a triangle is farther from the nearest vertex than the covering
         // radius, so a triangle with a smaller one is covered by its own vertices and is not divided;
         // the minimal enclosing circle bounds that radius from above and is cheaper to find
-        faceDivs[f] = mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq ? 1
-            : ceilPow2( std::sqrt( coveringRadiusSq( v[0], v[1], v[2] ) ) / radius );
+        if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq )
+        {
+            faceDivs[f] = 1;
+            return;
+        }
+        const int divs = ceilPow2( std::sqrt( coveringRadiusSq( v[0], v[1], v[2] ) ) / radius );
+        faceDivs[f] = divs;
+
+        // every point of a triangle projects on its longest edge inside it, because the angles at the
+        // ends of that edge are acute; being h away from the edge and no farther than half the division
+        // step along it, such a point is covered by the samples of that edge alone if h < radius
+        EdgeId es[3];
+        topology.getTriEdges( f, es );
+        int longest = 0;
+        for ( int i = 1; i < 3; ++i )
+            if ( ( v[( i + 1 ) % 3] - v[i] ).lengthSq() > ( v[( longest + 1 ) % 3] - v[longest] ).lengthSq() )
+                longest = i;
+        const auto len = ( v[( longest + 1 ) % 3] - v[longest] ).length();
+        const auto h = cross( v[1] - v[0], v[2] - v[0] ).length() / len; // twice the area over the edge
+        if ( h >= radius )
+            return;
+        const int stripDivs = ceilPow2( len / ( 2 * std::sqrt( radiusSq - h * h ) ) );
+        // the grid costs the samples of its three edges and of its interior, the strip only its edge
+        if ( stripDivs - 1 >= 3 * ( divs - 1 ) + ( divs - 1 ) * ( divs - 2 ) / 2 )
+            return;
+        faceDivs[f] = 1;
+        faceStripDivs[f] = stripDivs;
+        faceStripEdge[f] = es[longest].undirected();
     }, faceDivsCb ) )
         return unexpectedOperationCanceled();
 
@@ -74,8 +105,13 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         const EdgeId e = ue;
         int divs = 0;
         for ( auto f : { topology.left( e ), topology.right( e ) } )
-            if ( f && ( wholeMesh || faces.test( f ) ) )
-                divs = std::max( divs, faceDivs[f] );
+        {
+            if ( !f || !( wholeMesh || faces.test( f ) ) )
+                continue;
+            divs = std::max( divs, faceDivs[f] );
+            if ( faceStripEdge[f] == ue )
+                divs = std::max( divs, faceStripDivs[f] );
+        }
         edgeDivs[ue] = divs;
     }, edgeDivsCb ) )
         return unexpectedOperationCanceled();

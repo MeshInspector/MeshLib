@@ -45,7 +45,9 @@ jobs:
       actions: read   # This is required for wait-for-job
 
     env:
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
+      # x64-only: MRDotNet2{,Static,Test}.csproj hard-code BaseOutputPath ..\..\source\x64
+      # and PlatformTarget x64, so C# needs its own change before it can run on arm64.
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' && matrix.arch != 'arm64' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       # Upload a developer distributive per Visual Studio toolchain so
@@ -53,7 +55,8 @@ jobs:
       # VS2019/VS2022 ship the CMake build; VS2026 ships the MSBuild build
       # (which also produces the C#/.NET components). VS_TAG keeps the archive
       # names distinct.
-      job_upload_artifact: ${{ inputs.upload_artifacts && ( matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler != 'msvc-2026' && matrix.build_system == 'CMake' ) }}
+      # arm64 is not distributed yet, and its VS_TAG would collide with the x64 archive
+      job_upload_artifact: ${{ inputs.upload_artifacts && matrix.arch != 'arm64' && ( matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler != 'msvc-2026' && matrix.build_system == 'CMake' ) }}
       VS_TAG: ${{ fromJSON('{"msvc-2019":"VS19","msvc-2022":"VS22"}')[matrix.cxx_compiler] || 'VS26' }}
       CUDA_VERSION: ${{ matrix.cuda_version }}
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
@@ -63,6 +66,9 @@ jobs:
       # steps arm64 never runs
       MR_ARCH: ${{ matrix.arch || 'x64' }}
       VS_DEV_ARGS: ${{ matrix.arch == 'arm64' && '-arch=arm64 -host_arch=arm64' || '-arch=amd64 -host_arch=x86' }}
+      # MSBuild platform name, which must match a VS Platforms\ directory. It differs in
+      # case from MR_ARCH, but NTFS is case-insensitive so both name one output dir.
+      MSBUILD_PLATFORM: ${{ matrix.arch == 'arm64' && 'ARM64' || 'x64' }}
       # mrbind builds in the MSYS2 environment matching the target: CLANGARM64 is
       # native aarch64, CLANG64 x86_64
       MSYS2_ENV: ${{ matrix.arch == 'arm64' && 'clangarm64' || 'clang64' }}
@@ -231,7 +237,7 @@ jobs:
             if not exist source\%MR_ARCH% mkdir source\%MR_ARCH% || exit /b 1
             xcopy source\TempOutput\bin\* source\%MR_ARCH%\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
           )
 
       - name: Log precompiled header sizes
@@ -246,15 +252,16 @@ jobs:
         env:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
-        run: msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
+        run: msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Build C CUDA bindings with MSBuild
-        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
+        # ProjectReference to MRCuda, so it needs a CUDA toolkit
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' && env.CUDA_VERSION != '' }}
         shell: cmd
         env:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
-        run: msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
+        run: msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Generate and build Python bindings
         if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}

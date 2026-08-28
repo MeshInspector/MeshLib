@@ -19,9 +19,13 @@
     <MRCudaVersion Condition="'$(PlatformToolset)' == 'v142'">11.4</MRCudaVersion>
     <MRCudaVersion Condition="'$(PlatformToolset)' == 'v143'">12.0</MRCudaVersion>
     <MRCudaVersion Condition="'$(PlatformToolset)' == 'v145'">13.2</MRCudaVersion>
-    <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH.
-         Only for x64: an ARM64 target wants the native ARM64-hosted toolset, not the emulated x86 cross tools. -->
+    <!-- Using 32-bit build tools reduces memory consumption and fixes error C3859: Failed to create virtual memory for PCH -->
     <PreferredToolArchitecture Condition="'$(Platform)'=='x64'">x86</PreferredToolArchitecture>
+    <!-- ARM64 needs the opposite. VS already defaults to the x86-hosted cross compiler for this
+         target, and it runs out of address space on our PCH: C3859 `Unable to commit memory across
+         file map` plus C1076. x64 gives a 64-bit host from either machine - native on an x64 host,
+         emulated on an arm64 one. -->
+    <PreferredToolArchitecture Condition="'$(Platform)'=='ARM64'">x64</PreferredToolArchitecture>
   </PropertyGroup>
   <Import Project="$(CustomPlatfotmPropertyDir)\CustomMRPlatform.props" Condition="'$(CustomPlatfotmPropertyDir)' != ''"/>
   <!-- If the CUDA version selected above has no MSBuild integration in this Visual Studio, fall back

@@ -101,8 +101,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     PointCloud res;
     res.points = mesh.points;
     res.points.resizeNoInit( numPoints ); // the samples of the edges and the faces are set below
-    VertBitSet store;
-    res.validPoints = getIncidentVerts( topology, mp.region, store );
+    res.validPoints = wholeMesh ? topology.getValidVerts() : getIncidentVerts( topology, faces );
     res.validPoints.resize( mesh.points.size(), false );
     res.validPoints.resize( numPoints, true );
     if ( saveNormals )

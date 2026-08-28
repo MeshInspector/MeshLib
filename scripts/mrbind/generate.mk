@@ -675,7 +675,9 @@ endif # TARGETING_EMSCRIPTEN
 # platforms always have lld next to Clang.
 LLD_FLAG := -fuse-ld=lld
 ifneq ($(IS_MACOS),)
-ifeq ($(shell command -v ld64.lld >/dev/null 2>&1 && echo 1),)
+# Ask Clang itself: it looks for ld64.lld in its own directory and then in PATH,
+# and prints the bare name back when it finds nothing.
+ifeq ($(filter /%,$(shell $(CXX_FOR_BINDINGS) -print-prog-name=ld64.lld 2>/dev/null)),)
 $(info Found no ld64.lld, linking the bindings with the default linker)
 override LLD_FLAG :=
 endif

@@ -81,7 +81,8 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
-      docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}

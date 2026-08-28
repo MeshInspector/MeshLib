@@ -318,8 +318,8 @@ jobs:
                   cxx-standard: 20
                 - os: ubuntu24
                   compiler: GCC
-                  cxx-compiler: /usr/bin/g++-14
-                  c-compiler: /usr/bin/gcc-14
+                  cxx-compiler: /usr/bin/g++-13
+                  c-compiler: /usr/bin/gcc-13
                   cxx-standard: 23
             # A docs-only run still needs ubuntu22 - PythonStubs and CsharpBindings come from
             # it - but nothing reads the ubuntu24 leg unless the debs are published.

@@ -145,7 +145,9 @@ jobs:
 
       - name: Create virtualenv
         run: |
-          python3.12 -m venv .venv
+          # `venv` runs ensurepip itself and forwards only its exit code; bootstrap pip
+          # explicitly below so a failure there reports why
+          python3.12 -m venv --without-pip .venv
           . .venv/bin/activate
           python3 -m ensurepip --upgrade
           python3 -m pip install --upgrade pip

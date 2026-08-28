@@ -37,6 +37,15 @@ struct RayOrigin<float>
     MR_BIND_IGNORE float32x4_t p;
     RayOrigin( const Vector3f & ro ) { p = toFloat32x4( ro.x, ro.y, ro.z, 0 ); }
 };
+
+/* Wasm SIMD */
+#elif defined(__wasm_simd128__)
+template<>
+struct RayOrigin<float>
+{
+    MR_BIND_IGNORE v128_t p;
+    RayOrigin( const Vector3f & ro ) { p = wasm_f32x4_make( ro.x, ro.y, ro.z, 0 ); }
+};
 #endif
 
 /// finds intersection between the Ray and the Box.
@@ -92,6 +101,35 @@ bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0
 
         t0 = vmaxvq_f32( vminq_f32( l, r ) );
         t1 = vminvq_f32( vmaxq_f32( l, r ) );
+
+        return t0 <= t1;
+    }
+    else
+    #elif defined(__wasm_simd128__)
+    if constexpr (std::is_same_v<T, float>)
+    {
+        // both loads stay within the box, and the second one is the max corner shifted by one lane
+        static_assert( sizeof( Box3f ) == 6 * sizeof( float ) );
+        const float * const c = &box.min.x;
+        v128_t l = wasm_v128_load( c );
+        v128_t h = wasm_v128_load( c + 2 );
+        v128_t r = wasm_i32x4_shuffle( h, h, 1, 2, 3, 3 );
+
+        l = wasm_f32x4_mul( wasm_f32x4_sub( l, rayOrigin.p ), prec.invDir );
+        r = wasm_f32x4_mul( wasm_f32x4_sub( r, rayOrigin.p ), prec.invDir );
+
+        v128_t a = wasm_f32x4_pmin( l, r );
+        v128_t b = wasm_f32x4_pmax( l, r );
+
+        // Wasm has neither a cross-lane reduction nor an operation on the first lane alone,
+        // so the three lanes are reduced at full width and the 4-th one is left out
+        v128_t az = wasm_i32x4_shuffle( a, a, 2, 2, 2, 2 );
+        v128_t ay = wasm_i32x4_shuffle( a, a, 1, 1, 1, 1 );
+        v128_t bz = wasm_i32x4_shuffle( b, b, 2, 2, 2, 2 );
+        v128_t by = wasm_i32x4_shuffle( b, b, 1, 1, 1, 1 );
+
+        t0 = std::max( t0, wasm_f32x4_extract_lane( wasm_f32x4_pmax( wasm_f32x4_pmax( a, az ), ay ), 0 ) );
+        t1 = std::min( t1, wasm_f32x4_extract_lane( wasm_f32x4_pmin( wasm_f32x4_pmin( b, bz ), by ), 0 ) );
 
         return t0 <= t1;
     }

@@ -101,6 +101,6 @@ jobs:
         if: ${{ inputs.upload_artifacts }}
         uses: actions/upload-artifact@v7
         with:
-          name: DistributivesCSource
+          name: DistributivesCSourceWasm
           path: meshlib_c-source-wasm.zip
           retention-days: 1

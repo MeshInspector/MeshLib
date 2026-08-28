@@ -155,7 +155,7 @@ struct IntersectionPrecomputes
 template<>
 struct IntersectionPrecomputes<float>
 {
-    // {1.f / dir}
+    // {1.f / dir} in the first three lanes, the last one is unused
     MR_BIND_IGNORE __m128 invDir;
     // [0]max, [1]next, [2]next-next
     // f.e. {1,2,-3} => {2,1,0}
@@ -176,10 +176,10 @@ struct IntersectionPrecomputes<float>
         Sz = float( 1 ) / dir[maxDimIdxZ];
 
         invDir = _mm_set_ps(
-            ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
-            ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
+            1,
             ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
-            1 );
+            ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
+            ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x );
     }
 
 };

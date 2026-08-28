@@ -145,9 +145,7 @@ jobs:
 
       - name: Create virtualenv
         run: |
-          # `venv` bootstraps pip by running ensurepip itself and reports only its exit
-          # code, so create the env without pip and let the explicit call below fail loudly
-          python3.12 -m venv --without-pip .venv
+          python3.12 -m venv .venv
           . .venv/bin/activate
           python3 -m ensurepip --upgrade
           python3 -m pip install --upgrade pip

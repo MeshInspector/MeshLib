@@ -19,6 +19,9 @@ if not "%VCToolsInstallDir%" == "" (
 
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
+rem Which pinned package set to install; see msys2_package_hashes*.txt.
+if "%MRBIND_MSYS2_PKGS%" == "" set MRBIND_MSYS2_PKGS=_clang22
+
 rem ------ Ensure MSYS2 is installed
 
 if exist %MSYS2_DIR% (
@@ -47,7 +50,7 @@ if exist %MSYS2_DIR% (
 )
 
 rem ------ Install MSYS2 packages
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh' _clang22 && '%~dp0\msys2_install_packages.sh' _clang22"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -c "'%~dp0\msys2_download_packages.sh' %MRBIND_MSYS2_PKGS% && '%~dp0\msys2_install_packages.sh' %MRBIND_MSYS2_PKGS%"
 echo Please ignore the errors above, if any, after the words `:: Running post-transaction hooks...`.
 
 endlocal

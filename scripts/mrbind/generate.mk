@@ -221,6 +221,12 @@ endif
 VCPKG_TRIPLET := $(if $(VCPKG_DEFAULT_TRIPLET),$(VCPKG_DEFAULT_TRIPLET),x64-windows-meshlib)
 $(info Using vcpkg triplet: $(VCPKG_TRIPLET))
 
+# Target architecture, from the triplet (`x64-windows-meshlib`, `arm64-windows-meshlib`).
+# MSVC spells it x64/arm64 in output paths, Clang wants x86_64/aarch64 in the triple.
+MSVC_ARCH := $(firstword $(subst -, ,$(VCPKG_TRIPLET)))
+MSVC_TARGET_ARCH := $(if $(filter arm64,$(MSVC_ARCH)),aarch64,x86_64)
+$(info Targeting $(MSVC_TARGET_ARCH)-pc-windows-msvc)
+
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
@@ -284,7 +290,7 @@ ifeq ($(TARGET),python)
 
 # Where to find MeshLib.
 ifneq ($(IS_WINDOWS),)
-MESHLIB_SHLIB_DIR := source/x64/$(VS_MODE)
+MESHLIB_SHLIB_DIR := source/$(MSVC_ARCH)/$(VS_MODE)
 else
 MESHLIB_SHLIB_DIR := build/Release/bin
 endif
@@ -521,8 +527,9 @@ mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
 # Enable Cuda? You can set this to 0 if you don't have Cuda installed.
-# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
-ENABLE_CUDA := $(if $(IS_MACOS),0,1)
+# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use
+#   wherever there is no Cuda toolkit: Macs, and Windows on arm64.
+ENABLE_CUDA := $(if $(IS_MACOS),0,$(if $(filter arm64,$(MSVC_ARCH)),0,1))
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
 
@@ -566,8 +573,8 @@ INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.tx
 INPUT_FILES_WHITELIST := %
 ifneq ($(filter c csharp,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
-else ifneq ($(HOST_IS_WINDOWS),)
-TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/x64/$(VS_MODE)
+else ifneq ($(IS_WINDOWS),)
+TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/$(MSVC_ARCH)/$(VS_MODE)
 else
 TEMP_OUTPUT_DIR := build/binds_$(TARGET)
 endif
@@ -728,8 +735,8 @@ endif
 # Windows.
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
-COMPILER_FLAGS += --target=x86_64-pc-windows-msvc
-LINKER_FLAGS += --target=x86_64-pc-windows-msvc
+COMPILER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc
+LINKER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc
 # This seems to be undocumented?! MSYS2 CLANG64 needs it to successfully cross-compile, because the default `-rtlib=compiler-rt` causes it to choke.
 # For some reason MIGNW64 and UCRT64 correctly guess the right default.
 LINKER_FLAGS += -rtlib=platform

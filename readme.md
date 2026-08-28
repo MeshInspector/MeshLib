@@ -15,6 +15,7 @@
 [![build-test-distribute](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml/badge.svg?branch=master)](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml?branch=master)
 [![PyPI version](https://badge.fury.io/py/meshlib.svg)](https://pypi.org/project/meshlib/)
 [![PyPI downloads](https://img.shields.io/pypi/dm/meshlib?label=pypi%20downloads&color=blue)](https://pypi.org/project/meshlib/)
+[![Python versions](https://img.shields.io/pypi/pyversions/meshlib?label=python)](https://pypi.org/project/meshlib/)
 [![NuGet](https://img.shields.io/nuget/v/MeshLib?label=nuget&color=green)](https://www.nuget.org/packages/MeshLib)
 [![npm](https://img.shields.io/npm/v/%40meshinspector%2Fmeshlib?label=npm%20%28wasm%29&color=red)](https://www.npmjs.com/package/@meshinspector/meshlib)
 [![Stars](https://img.shields.io/github/stars/MeshInspector/MeshLib?style=flat&color=yellow)](https://github.com/MeshInspector/MeshLib)
@@ -97,24 +98,27 @@ in all five languages.
 | **Simplification** | Decimation within a set tolerance, remeshing and subdivision that keep the details you care about. |
 | **Offset** | Shell, partial and weighted offsets for 3D printing, machining and hollowing. |
 | **Registration** | Point-to-point and point-to-plane ICP, plus global registration of multiple scans. |
-| **Distance & SDF** | Signed distance fields, distance maps, height maps, iso-lines, projection and ray intersection. |
-| **Voxels & CT** | Volume conversion, semi-automatic segmentation by curvature, DICOM import, cone-beam CT reconstruction. |
+| **Distance & SDF** | Mesh to signed distance field and back by marching cubes, distance maps, iso-lines, projection and ray intersection. |
+| **Voxels & CT** | DICOM import/export, voxel-grid processing and 3D volume rendering. |
 | **Deformation** | Laplacian, freeform and relaxation smoothing, noise reduction. |
+| **Segmentation** | Semi-automatic mesh segmentation guided by a curvature metric; graph-cut segmentation of voxel volumes. |
 | **Collision detection** | Exact and precise self- and pairwise intersection tests. |
+| **Viewer** | An embeddable OpenGL/ImGui viewer with UI components, or run the algorithms fully headless. |
 | **File formats** | Meshes, point clouds, CT scans, polylines, distance maps and G-code — [full list](https://meshlib.io/feature/file-formats-supported-by-meshlib/). |
 
 Full feature reference: [meshlib.io/features](https://meshlib.io/features/).
 
 ## Why teams pick MeshLib
 
-**Measured, not claimed.** Our boolean benchmark compares MeshLib against nine
+**Measured, not claimed.** Our boolean benchmark compares MeshLib across nine
 libraries on 2M-triangle models — [method, data and input meshes](https://meshlib.io/blog/comparing-3d-boolean-libraries/).
 The [simplification benchmark](https://meshlib.io/blog/comparing-3d-simplification-libraries/)
 does the same for decimation across 11 libraries. Both are public and reproducible.
 
-**Manifold by construction.** Meshes use a half-edge data structure and *cannot* be
-made non-manifold. Broken topology is caught where it happens, not three pipeline
-stages later.
+**Manifold by construction.** Meshes use a half-edge data structure, in which most
+non-manifold situations are simply not representable — a non-manifold edge, or a
+vertex with two closed rings of triangles around it. Broken topology is caught where
+it happens, not three pipeline stages later.
 
 **One engine, five languages.** A native C++ core with official APIs for C, C#,
 Python and JavaScript/WebAssembly. The same algorithms, the same results — on the
@@ -127,9 +131,8 @@ NVIDIA GPUs.
 **We use it ourselves.** [MeshInspector](https://meshinspector.com/), our desktop and
 web application, and [SmileInspector](https://smileinspector.io/), our
 [FDA-cleared](https://smileinspector.io/news/smileinspector-launches-after-fda-clearance/)
-clear-aligner platform, are both built entirely on this SDK. Every release is
-dogfooded on real production data — including in a regulated medical workflow —
-before it ships.
+clear-aligner platform, are both built entirely on this SDK, so it is exercised every
+day on real production data.
 
 **Supported, not abandoned.** Backed by a full-time team with commercial support,
 regular releases and a responsive issue tracker.

@@ -230,9 +230,6 @@ $(info Targeting $(MSVC_TARGET_ARCH)-pc-windows-msvc)
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
-# A Windows host targeting something else (Emscripten) has no MSVC arch, but the
-# temp output path below is still keyed on it.
-MSVC_ARCH := $(if $(MSVC_ARCH),$(MSVC_ARCH),x64)
 # ] ----
 
 # ---- MacOS-only vars: [
@@ -576,7 +573,7 @@ INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.tx
 INPUT_FILES_WHITELIST := %
 ifneq ($(filter c csharp,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
-else ifneq ($(HOST_IS_WINDOWS),)
+else ifneq ($(IS_WINDOWS),)
 TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/$(MSVC_ARCH)/$(VS_MODE)
 else
 TEMP_OUTPUT_DIR := build/binds_$(TARGET)

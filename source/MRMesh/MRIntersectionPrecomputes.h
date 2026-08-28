@@ -3,12 +3,12 @@
 #include "MRVector3.h"
 #include "MRPch/MRBindingMacros.h"
 
-// Emscripten emulates the SSE intrinsics on top of Wasm SIMD, but only with both -msimd128
-// (__wasm_simd128__) and one of the -msse* flags (__SSE__); without them the generic code is used
-#if defined(__x86_64__) || defined(_M_X64) || ( defined(__wasm_simd128__) && defined(__SSE__) )
+#if defined(__x86_64__) || defined(_M_X64)
 #include <xmmintrin.h> //SSE instructions
 #elif defined(__aarch64__) || defined(_M_ARM64)
 #include <arm_neon.h> //NEON instructions
+#elif defined(__wasm_simd128__)
+#include <wasm_simd128.h> //Wasm SIMD instructions
 #endif
 
 namespace MR
@@ -152,8 +152,8 @@ struct IntersectionPrecomputes
 
 };
 
-/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit, and Wasm SIMD via Emscripten's SSE emulation */
-#if defined(__x86_64__) || defined(_M_X64) || ( defined(__wasm_simd128__) && defined(__SSE__) )
+/* CPU(X86_64) - AMD64 / Intel64 / x86_64 64-bit */
+#if defined(__x86_64__) || defined(_M_X64)
 template<>
 struct IntersectionPrecomputes<float>
 {
@@ -220,6 +220,40 @@ struct IntersectionPrecomputes<float>
         Sz = float( 1 ) / dir[maxDimIdxZ];
 
         invDir = toFloat32x4(
+            ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
+            ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
+            ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
+            1 );
+    }
+
+};
+
+/* Wasm SIMD */
+#elif defined(__wasm_simd128__)
+template<>
+struct IntersectionPrecomputes<float>
+{
+    // {1.f / dir} in the first three lanes, the last one is unused
+    MR_BIND_IGNORE v128_t invDir;
+    // [0]max, [1]next, [2]next-next
+    // f.e. {1,2,-3} => {2,1,0}
+    int maxDimIdxZ = 2;
+    int idxX = 0;
+    int idxY = 1;
+
+    /// precomputed factors
+    MR_BIND_IGNORE float Sx, Sy, Sz;
+
+    IntersectionPrecomputes() = default;
+    IntersectionPrecomputes( const Vector3<float>& dir )
+    {
+        findMaxVectorDim( idxX, idxY, maxDimIdxZ, dir );
+
+        Sx = dir[idxX] / dir[maxDimIdxZ];
+        Sy = dir[idxY] / dir[maxDimIdxZ];
+        Sz = float( 1 ) / dir[maxDimIdxZ];
+
+        invDir = wasm_f32x4_make(
             ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
             ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
             ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,

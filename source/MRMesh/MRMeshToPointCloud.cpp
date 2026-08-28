@@ -3,6 +3,8 @@
 #include "MRMeshNormals.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
+#include "MRMeshPart.h"
+#include "MRRegionBoundary.h"
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
@@ -34,20 +36,22 @@ int ceilPow2( float v )
 
 } // anonymous namespace
 
-Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool saveNormals, const ProgressCallback& cb )
+Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb )
 {
     MR_TIMER;
     if ( !( radius > 0 ) )
         return unexpected( "meshToDensePointCloud: radius must be positive" );
     const float diameter = 2 * radius;
+    const auto& mesh = mp.mesh;
     const auto& topology = mesh.topology;
+    const auto& faces = topology.getFaceIds( mp.region );
     const auto [faceDivsCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
 
     // in how many equal parts each side of the triangle is divided to split it in a grid of similar triangles,
     // each covered by its own three corners; the number is a power of two, which makes the grid of a face
     // conforming with (possibly finer) divisions of the face's edges
     Buffer<int, FaceId> faceDivs( topology.faceSize() );
-    if ( !BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         Vector3f v[3];
         mesh.getTriPoints( f, v );
@@ -58,20 +62,18 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
         return unexpectedOperationCanceled();
 
     // in how many equal parts each edge is divided: enough to make every part not longer than 2*radius,
-    // and not less than the incident faces divide it
+    // and not less than the sampled incident faces divide it; the edges without such faces
+    // (including the lone ones) are not sampled at all
     Buffer<int, UndirectedEdgeId> edgeDivs( topology.undirectedEdgeSize() );
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )
     {
         const EdgeId e = ue;
-        if ( topology.isLoneEdge( e ) )
-        {
-            edgeDivs[ue] = 0;
-            return;
-        }
-        int divs = ceilPow2( mesh.edgeLength( ue ) / diameter );
+        int divs = 0;
         for ( auto f : { topology.left( e ), topology.right( e ) } )
-            if ( f )
+            if ( f && faces.test( f ) )
                 divs = std::max( divs, faceDivs[f] );
+        if ( divs > 0 )
+            divs = std::max( divs, ceilPow2( mesh.edgeLength( ue ) / diameter ) );
         edgeDivs[ue] = divs;
     }, edgeDivsCb ) )
         return unexpectedOperationCanceled();
@@ -87,7 +89,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
             numPoints += edgeDivs[ue] - 1;
     }
     Buffer<size_t, FaceId> faceOffset( faceDivs.size() );
-    for ( auto f : topology.getValidFaces() )
+    for ( auto f : faces )
     {
         faceOffset[f] = numPoints;
         if ( const auto divs = faceDivs[f]; divs > 2 )
@@ -97,7 +99,8 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
     PointCloud res;
     res.points = mesh.points;
     res.points.resizeNoInit( numPoints ); // the samples of the edges and the faces are set below
-    res.validPoints = topology.getValidVerts();
+    VertBitSet store;
+    res.validPoints = getIncidentVerts( topology, mp.region, store );
     res.validPoints.resize( mesh.points.size(), false );
     res.validPoints.resize( numPoints, true );
     if ( saveNormals )
@@ -129,7 +132,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
     }, edgePointsCb ) )
         return unexpectedOperationCanceled();
 
-    if ( !BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         const auto divs = faceDivs[f];
         if ( divs <= 2 )

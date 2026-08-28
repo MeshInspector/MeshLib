@@ -3,6 +3,7 @@
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRPointsProject.h>
 #include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRMeshPart.h>
 #include <MRMesh/MRTorus.h>
 #include <gtest/gtest.h>
 #include <cmath>
@@ -16,15 +17,15 @@ namespace
 
 // the largest distance from a point of the mesh surface to the nearest point of the cloud;
 // each triangle is probed in its center, in the middles of its sides and in random points
-float maxSurfaceToCloudDist( const Mesh & mesh, const PointCloud & cloud, int randomProbesPerFace )
+float maxSurfaceToCloudDist( const MeshPart & mp, const PointCloud & cloud, int randomProbesPerFace )
 {
     std::mt19937 gen( 20260827 );
     std::uniform_real_distribution<float> uniform( 0, 1 );
     float res = 0;
-    for ( auto f : mesh.topology.getValidFaces() )
+    for ( auto f : mp.mesh.topology.getFaceIds( mp.region ) )
     {
         Vector3f v[3];
-        mesh.getTriPoints( f, v );
+        mp.mesh.getTriPoints( f, v );
         auto probe = [&]( float a, float b )
         {
             const auto p = v[0] + a * ( v[1] - v[0] ) + b * ( v[2] - v[0] );
@@ -49,12 +50,12 @@ float maxSurfaceToCloudDist( const Mesh & mesh, const PointCloud & cloud, int ra
     return res;
 }
 
-// the largest distance from a point of the cloud to the mesh surface
-float maxCloudToSurfaceDist( const Mesh & mesh, const PointCloud & cloud )
+// the largest distance from a point of the cloud to the sampled surface
+float maxCloudToSurfaceDist( const MeshPart & mp, const PointCloud & cloud )
 {
     float res = 0;
     for ( auto v : cloud.validPoints )
-        res = std::max( res, std::sqrt( findProjection( cloud.points[v], mesh ).distSq ) );
+        res = std::max( res, std::sqrt( findProjection( cloud.points[v], mp ).distSq ) );
     return res;
 }
 
@@ -121,6 +122,28 @@ TEST( MRMesh, MeshToDensePointCloudPartial )
     EXPECT_LT( cloud->points.size(), full->points.size() ); // the deleted faces gave no samples
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 16 ), radius );
     EXPECT_LE( maxCloudToSurfaceDist( mesh, *cloud ), 1e-6f );
+}
+
+// only the faces of the given part are sampled, and only their surface has to be covered
+TEST( MRMesh, MeshToDensePointCloudPart )
+{
+    const auto mesh = makeTorus( 1.0f, 0.3f, 12, 10 );
+    FaceBitSet region( mesh.topology.faceSize(), false );
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( int( f ) % 3 != 0 )
+            region.set( f );
+
+    const float radius = 0.1f;
+    const auto part = meshToDensePointCloud( { mesh, &region }, radius );
+    const auto whole = meshToDensePointCloud( mesh, radius );
+    ASSERT_TRUE( part.has_value() );
+    ASSERT_TRUE( whole.has_value() );
+    EXPECT_LT( part->points.size(), whole->points.size() );
+    // the vertices of the faces outside the part are not valid points of the cloud
+    EXPECT_LT( part->validPoints.count(), whole->validPoints.count() );
+    // the part is covered, and no point of the cloud is away from it
+    EXPECT_LE( maxSurfaceToCloudDist( { mesh, &region }, *part, 16 ), radius );
+    EXPECT_LE( maxCloudToSurfaceDist( { mesh, &region }, *part ), 1e-6f );
 }
 
 // a triangle with all vertices on one line has infinite circumradius, but it still requires

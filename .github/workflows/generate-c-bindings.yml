@@ -11,7 +11,7 @@ on:
         type: string
         default: ''
       upload_artifacts:
-        required: true
+        required: false
         type: boolean
         default: false
 

@@ -52,8 +52,10 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        gh g++-13 gcc-14 g++-14 \
+        gh gcc-13 g++-13 gcc-16 g++-16 \
         tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext gawk procps
+    # the GCC 16 snapshot ships cc1/cc1plus/lto1 unstripped so ICEs get symbolized backtraces; costs ~640 MB
+    bash -c 'strip --strip-debug /usr/libexec/gcc/*/16/{cc1,cc1plus,lto1}'
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     ./scripts/install_apt_cuda.sh

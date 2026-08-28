@@ -3,6 +3,7 @@
 #include "MRIntersectionPrecomputes.h"
 #include "MRMesh/MRMacros.h"
 #include "MRPch/MRBindingMacros.h"
+#include <cassert>
 
 namespace MR
 {
@@ -39,13 +40,14 @@ struct RayOrigin<float>
 #endif
 
 /// finds intersection between the Ray and the Box.
-/// The box must be valid: for a box with min greater than max in some dimension the answer is
-/// platform-dependent, because only the generic implementation reports no intersection there.
+/// The box must be valid, otherwise the result is undefined.
 /// Precomputed values could be useful for several calls with the same direction,
 /// see "An Efficient and Robust Ray-Box Intersection Algorithm" at https://people.csail.mit.edu/amy/papers/box-jgt.pdf
 template <typename T = float>
 bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0, T & t1, const IntersectionPrecomputes<T>& prec )
 {
+    assert( box.valid() );
+
     #if defined(__x86_64__) || defined(_M_X64)
     if constexpr (std::is_same_v<T, float>)
     {
@@ -115,7 +117,7 @@ bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0
     }
 }
 
-/// finds intersection between the Ray and the Box, which must be valid, see above
+/// finds intersection between the Ray and the Box, which must be valid
 template <typename T = float>
 bool rayBoxIntersect( const Box3<T>& box, const Line3<T>& line, T t0, T t1 )
 {

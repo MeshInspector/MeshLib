@@ -32,8 +32,8 @@ RUN <<EOF
         curl zip unzip tar \
         $(: vcpkg package requirements ) \
         autoconf2.7x autoconf-archive bison dbus-libs libtool libudev-devel libXcursor-devel libXi-devel libXinerama-devel libXrandr-devel libXtst-devel mesa-libGL-devel perl-core \
-        $(: mrbind requirements ) \
-        python3.12-devel which zlib-devel \
+        $(: mrbind requirements; expat is explicit because nothing else pulls it and a stale one breaks pyexpat ) \
+        python3.12-devel which zlib-devel expat \
         $(: CI environment ) \
         gh time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
     dnf clean all

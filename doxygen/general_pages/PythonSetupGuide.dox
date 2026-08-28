@@ -13,7 +13,10 @@
 
 The first part of this video shows MeshLib Python Installation process on Windows
 
-## Prerequisites
+When `pip` is done, confirm the result with \ref PythonSetupVerify "Verify the installation" — one command, with the output to expect.
+If a step fails, see \ref PythonSetupTroubleshooting "Troubleshooting" at the end of the Installation Process section.
+
+## Prerequisites {#PythonSetupPrerequisites}
 Before installing MeshLib SDK for Python, ensure you have the following:
 
 ### Python
@@ -40,15 +43,110 @@ supported by the latest release.
 ### Code Editor
 You can use any Python-compatible editor, such as Visual Studio Code, PyCharm, or any IDE you prefer.
 
+The wheel ships type stubs (`.pyi`) for every module, so editors such as VS Code (Pylance)
+and PyCharm offer completion and signature help for the MeshLib API with no extra setup.
+
 [Download Visual Studio Code](https://code.visualstudio.com/download)
 
-## Installation Process
-MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, macOS, and Linux. Install it with:
+## Installation Process {#PythonSetupInstall}
+MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, macOS, and Linux:
 \code{.sh}
 pip install meshlib
 \endcode
 
+It installs two packages: `meshlib-core` — the headless core with `mrmeshpy`, `mrmeshnumpy`
+and `mrcudapy` — and the `meshlib` wheel on top of it, adding the interactive viewer
+(`mrviewerpy`) with its UI resources. `numpy` (>= 1.19) is the only external dependency.
+
+On \b Windows that command works as written. A virtual environment is still worth using once you
+have more than one project, so their dependencies cannot collide:
+\code{.bat}
+py -m venv .venv
+.venv\Scripts\activate
+pip install meshlib
+\endcode
+
+On \b Linux, and on \b macOS with Homebrew Python, the plain command is refused before it
+downloads anything — `error: externally-managed-environment` — because pip will not install into
+an interpreter the system package manager owns (PEP 668); Apple's Command Line Tools Python
+instead accepts it quietly into a per-user directory you did not choose. There, install into a
+virtual environment:
+\code{.sh}
+python3 -m venv .venv
+source .venv/bin/activate
+pip install meshlib
+\endcode
+
+### Headless installation {#PythonSetupHeadless}
+On servers, in docker images, and in CI — anywhere the interactive viewer is never opened —
+install just the core:
+\code{.sh}
+pip install meshlib-core
+\endcode
+The download is about 30% smaller and provides everything except `meshlib.mrviewerpy`; every other
+import (`from meshlib import mrmeshpy`, `mrmeshnumpy`, `mrcudapy`) works exactly as with the full
+package. Installing `meshlib` later adds the viewer on top, and `pip uninstall meshlib` removes
+only the viewer part again. Both packages are versioned in lockstep: `meshlib` of a given version
+requires exactly `meshlib-core` of the same version.
+
+### Verify the installation {#PythonSetupVerify}
+`pip install` reporting success is not the same as a working install: the wheel is tens of megabytes of prebuilt native code, and it can install cleanly and still fail to load. This one command covers the whole chain — import the package, load the native module, run a real geometry call:
+\code{.sh}
+python -c "from meshlib import mrmeshpy as mm; m = mm.makeCube(); print(mm.__file__); print(m.topology.numValidVerts(), 'verts', m.topology.numValidFaces(), 'faces')"
+\endcode
+
+Expected output — the path is yours and ends in `mrmeshpy.pyd` on Windows, while the two counts are fixed:
+\code{.txt}
+/path/to/.venv/lib/python3.12/site-packages/meshlib/mrmeshpy.so
+8 verts 12 faces
+\endcode
+
+If it prints those two lines and exits `0`, the installation is working. Anything else — a traceback, a loader error, no output — means it is not: see \ref PythonSetupTroubleshooting "Troubleshooting" below. The printed path is worth a glance too, since it names the environment that actually received the package.
+
+### Your first script
+With the install confirmed, the same call is the starting point of a real script — this one also writes the cube to a file:
+\code{.py}
+from meshlib import mrmeshpy as mm
+
+mesh = mm.makeCube()
+print(mesh.topology.numValidVerts(), "vertices", mesh.topology.numValidFaces(), "faces")
+
+mm.saveMesh(mesh, "cube.stl")
+\endcode
+
+Output:
+\code{.txt}
+8 vertices 12 faces
+\endcode
+
+### Troubleshooting {#PythonSetupTroubleshooting}
+
+The failures new installations actually hit, with the message each one produces. One of them leaves `pip install` reporting success, which is what \ref PythonSetupVerify "Verify the installation" is for.
+
+| Path | Symptom | Cause | Fix |
+|------|---------|-------|-----|
+| Linux distribution Python, Homebrew Python on macOS | `pip install meshlib` stops before downloading anything with `error: externally-managed-environment`, then `× This environment is externally managed`. | Not a MeshLib problem: pip 23.0 and newer refuse to install any package into an interpreter the OS package manager owns (PEP 668, marked by a `EXTERNALLY-MANAGED` file next to the standard library). | Install into a virtual environment, as \ref PythonSetupInstall "Installation Process" above shows. `pip install --break-system-packages meshlib` also installs, but into the system interpreter — prefer the virtual environment. |
+| Any | `ERROR: Could not find a version that satisfies the requirement meshlib (from versions: none)`, then `ERROR: No matching distribution found for meshlib`. | No published wheel matches this interpreter: the Python version is outside the range in \ref PythonSetupPrerequisites "Prerequisites" above, the interpreter is 32-bit, or the platform has no wheel at all — there is no `win_arm64` wheel, so Windows on Arm needs the x64 build of Python. | Check what pip is matching against — `python -c "import sys, sysconfig; print(sys.version, sysconfig.get_platform())"` — and install a Python listed in \ref PythonSetupPrerequisites "Prerequisites". |
+| Any, most likely macOS with Python 3.8 | Install and import both succeed, but a documented function is missing — `AttributeError: module 'meshlib.mrmeshpy' has no attribute ...` — or `pip show meshlib` prints a version well behind the latest. | The package requires Python 3.8 or newer overall, but each release's wheel tags are narrower than that and move forward over time. When no wheel of the newest release matches your interpreter, pip does not fail: it silently installs the newest *older* release that does. On macOS with Python 3.8 that is 3.0.8.247 instead of the current release, because the current macOS wheels are tagged 3.9 and up. | `pip show meshlib`, and compare with the version on the [PyPI page](https://pypi.org/project/meshlib/). If it is behind, move to a Python version listed in \ref PythonSetupPrerequisites "Prerequisites" and reinstall with `pip install --upgrade --force-reinstall meshlib`. |
+
+Anything not listed here: please open an issue at [MeshLib Issues](https://github.com/MeshInspector/MeshLib/issues), quoting the full `pip` output or traceback.
+
 ## How to use MeshLib Python Modules
+### Modules
+The `meshlib` package ships four importable modules:
+
+| Module | Purpose |
+| --- | --- |
+| `mrmeshpy` | Core geometry: mesh and point-cloud I/O, boolean operations, offsets, decimation, remeshing, measurements |
+| `mrmeshnumpy` | Conversion between MeshLib objects and NumPy arrays |
+| `mrviewerpy` | The interactive Viewer — open a window and display meshes from Python |
+| `mrcudapy` | CUDA-accelerated variants of selected algorithms |
+
+Import them from the package, for example `from meshlib import mrmeshpy`.
+
+\note `mrcudapy` imports on any machine, including one without a GPU, but its routines
+need an NVIDIA GPU with a working CUDA driver at runtime.
+
 ### Predefined Functions and Example Scripts
 MeshLib provides a set of example scripts that are available [here](\ref Examples).
 These examples are helpful for both developers and testers. 

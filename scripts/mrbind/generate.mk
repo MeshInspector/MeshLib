@@ -668,11 +668,11 @@ endif # TARGETING_EMSCRIPTEN
 
 
 
-# Prefer lld, which links the bindings much faster than the default linker. There is no
-# Homebrew bottle of `lld` for Intel macOS since that became a Tier 3 configuration, so fall
-# back to Apple's `ld` when ld64.lld is absent; it consumes our ThinLTO bitcode via the
-# `libLTO.dylib` that Clang passes to it in `-lto_library`. Only macOS is probed, the other
-# platforms always have lld next to Clang.
+# lld is used wherever it exists, as on the other platforms. There is no Homebrew bottle of
+# `lld` for Intel macOS since that became a Tier 3 configuration, so fall back to Apple's `ld`
+# when ld64.lld is absent; it consumes our ThinLTO bitcode via the `libLTO.dylib` that Clang
+# passes to it in `-lto_library`, and it linked the bindings no slower than lld on the CI
+# runners. Only macOS is probed, the other platforms always have lld next to Clang.
 LLD_FLAG := -fuse-ld=lld
 ifneq ($(IS_MACOS),)
 # Ask Clang itself: it looks for ld64.lld in its own directory and then in PATH,

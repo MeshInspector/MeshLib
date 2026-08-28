@@ -1,6 +1,7 @@
 #include "MRMeshToPointCloud.h"
 #include "MRMesh.h"
 #include "MRMeshNormals.h"
+#include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
@@ -46,13 +47,8 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
     // each covered by its own three corners; the number is a power of two, which makes the grid of a face
     // conforming with (possibly finer) divisions of the face's edges
     Buffer<int, FaceId> faceDivs( topology.faceSize() );
-    if ( !ParallelFor( 0_f, faceDivs.endId(), [&]( FaceId f )
+    if ( !BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
-        if ( !topology.hasFace( f ) )
-        {
-            faceDivs[f] = 0;
-            return;
-        }
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         // no point of a triangle is farther from the nearest vertex than the radius of the minimal enclosing
@@ -74,14 +70,14 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
         }
         int divs = ceilPow2( mesh.edgeLength( ue ) / diameter );
         for ( auto f : { topology.left( e ), topology.right( e ) } )
-            if ( f )
+            if ( topology.hasFace( f ) )
                 divs = std::max( divs, faceDivs[f] );
         edgeDivs[ue] = divs;
     }, edgeDivsCb ) )
         return unexpectedOperationCanceled();
 
     // the samples of every edge and every face occupy a dedicated range in the resulting cloud;
-    // the arrays here are not initialized, because every their element is set right below
+    // the arrays here are not initialized, and the elements of missing faces are never touched at all
     size_t numPoints = mesh.points.size();
     Buffer<size_t, UndirectedEdgeId> edgeOffset( edgeDivs.size() );
     for ( auto ue = 0_ue; ue < edgeDivs.endId(); ++ue )
@@ -91,7 +87,7 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
             numPoints += edgeDivs[ue] - 1;
     }
     Buffer<size_t, FaceId> faceOffset( faceDivs.size() );
-    for ( auto f = 0_f; f < faceDivs.endId(); ++f )
+    for ( auto f : topology.getValidFaces() )
     {
         faceOffset[f] = numPoints;
         if ( const auto divs = faceDivs[f]; divs > 2 )
@@ -133,11 +129,11 @@ Expected<PointCloud> meshToDensePointCloud( const Mesh& mesh, float radius, bool
     }, edgePointsCb ) )
         return unexpectedOperationCanceled();
 
-    if ( !ParallelFor( 0_f, faceDivs.endId(), [&]( FaceId f )
+    if ( !BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
         const auto divs = faceDivs[f];
         if ( divs <= 2 )
-            return; // an invalid face, or the grid of this face has no points strictly inside it
+            return; // the grid of this face has no points strictly inside it
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         Vector3f n[3];

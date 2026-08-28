@@ -176,9 +176,17 @@ jobs:
         if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         run: |
           rm -r -force source/MeshLibC2
-          rm -r -force source/MeshLibC2Cuda
           move MeshLib/CbindingsTmp/MeshLibC2 source
-          move MeshLib/CbindingsTmp/MeshLibC2Cuda source
+          if ( $env:CUDA_VERSION ) {
+            rm -r -force source/MeshLibC2Cuda
+            move MeshLib/CbindingsTmp/MeshLibC2Cuda source
+          } else {
+            # No Cuda toolkit, so MRCuda is not built and the generated Cuda bindings cannot
+            # link. Keep this project's CMakeLists and stub its sources, as macOS does; see
+            # scripts/mrbind/cuda_placeholder_generated_c/README.md
+            cp -R scripts/mrbind/cuda_placeholder_generated_c/include source/MeshLibC2Cuda
+            cp -R scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
+          }
 
         # This consumes the JSON created by generating the C bindings.
       - name: Generate C# bindings

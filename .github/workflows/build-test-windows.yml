@@ -141,7 +141,9 @@ jobs:
         run: py -3 scripts\setup_win_python_reqs.py
 
       - name: Add msbuild to PATH
-        if: ${{ matrix.build_system == 'MSBuild' }}
+        # x64 only: the arm64 leg invokes the VS install's ARM64 MSBuild by full path, so that
+        # PROCESSOR_ARCHITECTURE is ARM64 and the VC props pick the native arm64 host compiler.
+        if: ${{ matrix.build_system == 'MSBuild' && matrix.arch != 'arm64' }}
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
       - name: Install .NET
@@ -237,7 +239,7 @@ jobs:
             if not exist source\%MR_ARCH% mkdir source\%MR_ARCH% || exit /b 1
             xcopy source\TempOutput\bin\* source\%MR_ARCH%\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
+            ${{ matrix.arch == 'arm64' && format('"{0}\MSBuild\Current\Bin\arm64\MSBuild.exe"', env.VC_PATH) || 'msbuild' }} -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
           )
 
       - name: Log precompiled header sizes
@@ -252,7 +254,8 @@ jobs:
         env:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
-        run: msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
+        # arm64 needs the ARM64 MSBuild; see the Build step
+        run: ${{ matrix.arch == 'arm64' && format('"{0}\MSBuild\Current\Bin\arm64\MSBuild.exe"', env.VC_PATH) || 'msbuild' }} -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Build C CUDA bindings with MSBuild
         # ProjectReference to MRCuda, so it needs a CUDA toolkit

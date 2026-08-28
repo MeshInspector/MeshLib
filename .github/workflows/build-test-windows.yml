@@ -59,6 +59,11 @@ jobs:
       VCVARS_VER: ${{ fromJSON('{"msvc-2019":"14.2","msvc-2022":"14.4"}')[matrix.cxx_compiler] || '14.5' }}
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
       MRCUDA_PLATFORM_TOOLSET: ${{ matrix.mrcuda_platform_toolset }}
+      # the arm64 image has no CUDA and no MSYS2, so MRCuda and the mrbind-generated
+      # bindings are off there; x64 paths below belong to steps arm64 never runs
+      MR_ARCH: ${{ matrix.arch || 'x64' }}
+      VS_DEV_ARGS: ${{ matrix.arch == 'arm64' && '-arch=arm64 -host_arch=arm64' || '-arch=amd64 -host_arch=x86' }}
+      MRBIND_SUPPORTED: ${{ matrix.arch != 'arm64' }}
 
     steps:
       - name: Checkout
@@ -84,7 +89,7 @@ jobs:
         uses: ./.github/actions/collect-runner-stats
         with:
           target_os: windows
-          target_arch: x64
+          target_arch: ${{ env.MR_ARCH }}
           cxx_compiler: ${{ matrix.cxx_compiler }}
           build_config: ${{ matrix.config }}
           build_system: ${{ matrix.build_system }}
@@ -99,6 +104,7 @@ jobs:
           internal-build: ${{ inputs.internal_build }}
 
       - name: Resolve CUDA major/minor
+        if: ${{ env.CUDA_VERSION != '' }}
         shell: bash
         run: |
           IFS=. read -r major minor _ <<< "$CUDA_VERSION"
@@ -106,6 +112,7 @@ jobs:
           echo "CUDA_MINOR=$minor" >> "$GITHUB_ENV"
 
       - name: Install CUDA
+        if: ${{ env.CUDA_VERSION != '' }}
         uses: ./.github/actions/install-cuda
         with:
           cuda-version: ${{ env.CUDA_VERSION }}
@@ -113,6 +120,7 @@ jobs:
           cuda-minor: ${{ env.CUDA_MINOR }}
 
       - name: Set up CUDA
+        if: ${{ env.CUDA_VERSION != '' }}
         uses: ./.github/actions/setup-cuda
         with:
           cuda-major: ${{ env.CUDA_MAJOR }}
@@ -121,6 +129,7 @@ jobs:
           install-vs-integration: ${{ matrix.build_system == 'MSBuild' }}
 
       - name: Setup python
+        if: ${{ env.MRBIND_SUPPORTED == 'true' }}
         run: py -3 scripts\setup_win_python_reqs.py
 
       - name: Add msbuild to PATH
@@ -134,11 +143,11 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Install MSYS2 for MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && (inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true') }}
         uses: ./.github/actions/install-msys2-mrbind
 
       - name: Build MRBind
-        if: ${{inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true'}}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && (inputs.mrbind || (inputs.mrbind_c && matrix.build_system == 'CMake') || env.BUILD_C_SHARP == 'true') }}
         uses: ./.github/actions/build-mrbind
         with:
           cache-key-prefix: windows-clang22
@@ -146,20 +155,20 @@ jobs:
           extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
 
       - name: Wait for C bindings
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && (inputs.mrbind_c || env.BUILD_C_SHARP == 'true') }}
         uses: ./.github/actions/wait-for-job
         with:
           job-name: generate-c-bindings
 
       - name: Download C bindings
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && (inputs.mrbind_c || env.BUILD_C_SHARP == 'true') }}
         uses: actions/download-artifact@v8
         with:
           name: CBindings
           path: MeshLib/CbindingsTmp
 
       - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && (inputs.mrbind_c || env.BUILD_C_SHARP == 'true') }}
         run: |
           rm -r -force source/MeshLibC2
           rm -r -force source/MeshLibC2Cuda
@@ -178,7 +187,7 @@ jobs:
         #   by the following dotnet build (see the Build step's note below).
         # `CSHARP_STATIC_DLLIMPORT=1` is used to build the version of the bindings that's suitable for use in Wasm in Unity.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 || exit /b 1
           dotnet build examples/c-sharp-examples -c ${{matrix.config}} || exit /b 1
@@ -196,9 +205,9 @@ jobs:
         # of `exit /b` from a for-loop body nested in the parenthesized IF block.
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
-            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+            call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake --version || exit /b 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind_c && 'ON' || 'OFF' }} -DMESHLIB_BUILD_MRCUDA=${{ env.CUDA_VERSION != '' && 'ON' || 'OFF' }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
             rem Deploy vcpkg DLLs in one serial pass here: with VCPKG_APPLOCAL_DEPS=ON (default)
             rem every parallel Ninja link edge runs its own z-applocal into the shared bin dir,
@@ -206,8 +215,8 @@ jobs:
             for %%b in (source\TempOutput\bin\*.exe source\TempOutput\bin\*.dll) do (
               %VCPKG_ROOT%\vcpkg.exe z-applocal --target-binary="%%b" --installed-bin-dir="%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%${{ matrix.config == 'Debug' && '\debug' || '' }}\bin" >nul || exit 1
             )
-            if not exist source\x64 mkdir source\x64 || exit /b 1
-            xcopy source\TempOutput\bin\* source\x64\${{matrix.config}}\* /s /e /i /Y || exit /b 1
+            if not exist source\%MR_ARCH% mkdir source\%MR_ARCH% || exit /b 1
+            xcopy source\TempOutput\bin\* source\%MR_ARCH%\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
           )
@@ -235,7 +244,7 @@ jobs:
         run: msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=x64 -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Generate and build Python bindings
-        if: ${{inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
         shell: cmd
         env:
           MSYS2_DIR: C:\msys64
@@ -243,21 +252,21 @@ jobs:
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}
         shell: pwsh
         continue-on-error: true
-        # Don't pin working-directory to source\x64\${{ matrix.config }} — when
+        # Don't pin working-directory to source\${{ env.MR_ARCH }}\${{ matrix.config }} — when
         # an upstream step fails before MSBuild runs, that directory does not
         # exist and the runner cannot start pwsh, which makes the failure
         # cascade look like the previous step is the failing one.
         # Instead enter the directory inside the script and bail out cleanly
         # if it doesn't exist.
         run: |
-          $buildDir = Join-Path $Env:GITHUB_WORKSPACE 'source\x64\${{ matrix.config }}'
+          $buildDir = Join-Path $Env:GITHUB_WORKSPACE 'source\${{ env.MR_ARCH }}\${{ matrix.config }}'
           if (-not (Test-Path $buildDir)) {
             Write-Host "Build output directory '$buildDir' does not exist — skipping diagnostic."
             exit 0
@@ -271,25 +280,26 @@ jobs:
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
-        working-directory: source\x64\${{ matrix.config }}
+        working-directory: source\${{ env.MR_ARCH }}\${{ matrix.config }}
         run: .\MeshViewer.exe -tryHidden -noEventLoop -unloadPluginsAtEnd
         shell: cmd
 
       - name: Verify meshlib.mrmeshpy import
-        if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
         timeout-minutes: 3
         uses: ./.github/actions/verify-meshlib-python-import
         with:
-          build-bin-dir: source\x64\${{ matrix.config }}
+          build-bin-dir: source\${{ env.MR_ARCH }}\${{ matrix.config }}
 
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: source\x64\${{ matrix.config }}\MRTest.exe
+        # mrmeshpy.pyd comes from mrbind, which arm64 skips; MRTest exits 1 without the flag
+        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe ${{ env.MRBIND_SUPPORTED == 'true' && '' || '--no-python-tests' }}
 
       - name: C Unit Tests
-        if: ${{inputs.mrbind_c && matrix.build_system == 'CMake'}}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake' }}
         timeout-minutes: 10
         run: py -3 scripts\run_c2_unit_test_script.py ${{ matrix.config }}
 
@@ -306,13 +316,13 @@ jobs:
           $xslt.Transform("_report_nunit.xml", "unit_tests_report_nunit.xml")
 
       - name: Python Sanity Tests
-        if: ${{matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
         timeout-minutes: 8
-        working-directory: source\x64\${{ matrix.config }}
+        working-directory: source\${{ env.MR_ARCH }}\${{ matrix.config }}
         run: py -3 -u ..\..\..\scripts\run_python_test_script.py -d '..\test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
-        if: ${{inputs.internal_build && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug'}}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && inputs.internal_build && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
@@ -331,8 +341,8 @@ jobs:
         # Those files should not exist when using CMake.
         shell: cmd
         run: |
-          if exist source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Debug\pybind11nonlimitedapi_meshlib_3*.dll
-          if exist source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\x64\Release\pybind11nonlimitedapi_meshlib_3*.dll
+          if exist source\%MR_ARCH%\Debug\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\%MR_ARCH%\Debug\pybind11nonlimitedapi_meshlib_3*.dll
+          if exist source\%MR_ARCH%\Release\pybind11nonlimitedapi_meshlib_3*.dll del /Q source\%MR_ARCH%\Release\pybind11nonlimitedapi_meshlib_3*.dll
 
       - name: Build C++ examples
         if: ${{ matrix.config == 'Release' }}  # debug builds not supported due to missing file 'tbb12_debug.lib'
@@ -344,7 +354,7 @@ jobs:
           rem VsDevCmd.bat overrides VCPKG_ROOT with the VS-bundled vcpkg; preserve the
           rem step env: value so MESHLIB_INCLUDE_DIRS resolves to the project vcpkg.
           set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
           cmake --version || exit /b 1
           cmake ^
@@ -353,14 +363,14 @@ jobs:
             -GNinja ^
             -DCMAKE_BUILD_TYPE=${{matrix.config}} ^
             -DMESHLIB_INCLUDE_DIRS="%CD%/source;%CD%/thirdparty/parallel-hashmap;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include;%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/include/eigen3" ^
-            -DMESHLIB_LIB_DIRS="%CD%/source/x64/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
+            -DMESHLIB_LIB_DIRS="%CD%/source/%MR_ARCH%/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
           cmake --build cpp-examples-build -j || exit /b 1
 
       - name: Build C examples
-        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
+        if: ${{ env.MRBIND_SUPPORTED == 'true' && inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd
         run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           cmake --version || exit /b 1
           cmake ^
             -S examples/c-examples ^
@@ -368,13 +378,13 @@ jobs:
             -GNinja ^
             -DCMAKE_BUILD_TYPE=${{matrix.config}} ^
             -DMESHLIB_INCLUDE_DIRS="%CD%/source/MeshLibC2/include" ^
-            -DMESHLIB_LIB_DIRS="%CD%/source/x64/${{matrix.config}}" || exit /b 1
+            -DMESHLIB_LIB_DIRS="%CD%/source/%MR_ARCH%/${{matrix.config}}" || exit /b 1
           cmake --build c-examples-build -j || exit /b 1
 
         # https://github.com/actions/download-artifact#maintaining-file-permissions-and-case-sensitive-files
       - name: Archive files
         if: ${{ env.job_upload_artifact == 'true' }}
-        run: tar --format zip -c -f MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip ./source/x64/${{ matrix.config }}
+        run: tar --format zip -c -f MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip ./source/${{ env.MR_ARCH }}/${{ matrix.config }}
 
       - name: Archive generated C headers
         # The C2 headers are compiler-independent; upload them once (from VS2019)

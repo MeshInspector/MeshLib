@@ -75,9 +75,14 @@ bool rayBoxIntersect( const Box3<T>& box, const RayOrigin<T> & rayOrigin, T & t0
     #elif defined(__aarch64__) || defined(_M_ARM64)
     if constexpr (std::is_same_v<T, float>)
     {
+        // both loads stay within the box, and the second one is the max corner shifted by one lane;
         // the 4-th lane carries t0/t1 itself, since the origin is 0 and the inverted direction is 1 there
-        float32x4_t l = toFloat32x4( box.min.x, box.min.y, box.min.z, t0 );
-        float32x4_t r = toFloat32x4( box.max.x, box.max.y, box.max.z, t1 );
+        static_assert( sizeof( Box3f ) == 6 * sizeof( float ) );
+        const float * const c = &box.min.x;
+        float32x4_t h = vld1q_f32( c + 2 );
+        float32x4_t l = vsetq_lane_f32( t0, vld1q_f32( c ), 3 );
+        float32x4_t r = vsetq_lane_f32( t1, vextq_f32( h, h, 1 ), 3 );
+
         l = vmulq_f32( vsubq_f32( l, rayOrigin.p ), prec.invDir );
         r = vmulq_f32( vsubq_f32( r, rayOrigin.p ), prec.invDir );
 

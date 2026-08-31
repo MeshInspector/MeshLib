@@ -20,6 +20,8 @@ rem an arm64 host also drops the older entries from the version list.
 if "%PY_ARCH%" == "" (
     if /i "%PROCESSOR_ARCHITECTURE%" == "ARM64" (set PY_ARCH=arm64) else (set PY_ARCH=amd64)
 )
+rem arm64 installers use a suffixed target directory, which the check below must match.
+if /i "%PY_ARCH%" == "arm64" (set PY_DIR_SUFFIX=-arm64) else (set PY_DIR_SUFFIX=)
 echo Installing %PY_ARCH% Pythons.
 powershell -Command "Get-Content '%~dp0python_versions.txt' | Where-Object { '%PY_ARCH%' -ne 'arm64' -or [version]$_ -ge [version]'3.11' } | Set-Content %tempfile%3"
 
@@ -32,7 +34,7 @@ for /f %%x in (%tempfile%3) do (
     rem Set `!ver_terse!` to the version number without the dot, such as `313`.
     set ver_terse=%%x
     set ver_terse=!ver_terse:.=!
-    if exist %localappdata%\Programs\Python\Python!ver_terse!\python.exe (
+    if exist %localappdata%\Programs\Python\Python!ver_terse!!PY_DIR_SUFFIX!\python.exe (
         echo Python %%x - already installed
     ) else (
         echo Python %%x - installing...

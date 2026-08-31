@@ -114,13 +114,19 @@ template <typename T>
     const auto ab = ( b - a ).lengthSq();
     const auto ca = ( a - c ).lengthSq();
     const auto bc = ( c - b ).lengthSq();
-    // a non-obtuse triangle contains its circumcenter, which is the farthest point from the vertices
+    // a non-obtuse triangle contains its circumcenter, which is the farthest point from the vertices;
+    // this is circumcircleDiameterSq / 4 written on the lengths already at hand, and none of the
+    // guards in it can trigger here: a triangle with a zero side or zero area is obtuse by the test
     if ( ca < bc + ab && bc < ab + ca && ab < ca + bc )
-        return circumcircleDiameterSq( a, b, c ) / T( 4 );
-    // otherwise that point is on the boundary, where the two nearest vertices are equidistant
-    return std::max( { edgeCoveringRadiusSq( a, b, c ),
-                       edgeCoveringRadiusSq( b, c, a ),
-                       edgeCoveringRadiusSq( c, a, b ) } );
+        return ab * ca * bc / ( 4 * cross( b - a, c - a ).lengthSq() );
+    // otherwise that point is on the boundary, where the two nearest vertices are equidistant, and
+    // always on the longest edge: the circumcenter is beyond it, the distance along every bisector
+    // grows towards the circumcenter, so each bisector is maximal where it meets that edge
+    if ( ab >= bc && ab >= ca )
+        return edgeCoveringRadiusSq( a, b, c );
+    if ( bc >= ca )
+        return edgeCoveringRadiusSq( b, c, a );
+    return edgeCoveringRadiusSq( c, a, b );
 }
 
 MR_BIND_TEMPLATE(  float coveringRadiusSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );

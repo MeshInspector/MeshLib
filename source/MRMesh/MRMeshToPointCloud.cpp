@@ -25,12 +25,16 @@ PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals /*= true */, con
 namespace
 {
 
-/// returns the smallest power of two, which is not less than given value (and not less than 1)
-int ceilPow2( float v )
+/// returns the smallest power of two n (and not less than 1) with n * n * bSq >= aSq, that is
+/// n >= sqrt( aSq / bSq ): no square root and no division are needed, and quadrupling is exact
+int ceilPow2Sq( float aSq, float bSq )
 {
     int res = 1;
-    while ( res < v && res < ( 1 << 24 ) )
+    while ( bSq < aSq && res < ( 1 << 24 ) )
+    {
         res <<= 1;
+        bSq *= 4;
+    }
     return res;
 }
 
@@ -53,7 +57,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     // triangles, each covered by its own three corners; the number is a power of two, which makes the
     // grid of a face conforming with (possibly finer) divisions of the face's edges
     Buffer<int, FaceId> faceDivs( topology.faceSize() );
-    // a thin triangle is instead covered by the samples of its longest edge alone: nothing is put
+    // a thin triangle is covered by the samples of its longest edge alone instead: nothing is put
     // inside it, and only that edge, kept here with the division it needs, has to be divided
     Buffer<int, FaceId> faceStripDivs( topology.faceSize() );
     Buffer<UndirectedEdgeId, FaceId> faceStripEdge( topology.faceSize() );
@@ -70,23 +74,30 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             faceDivs[f] = 1;
             return;
         }
-        const int divs = ceilPow2( std::sqrt( coveringRadiusSq( v[0], v[1], v[2] ) ) / radius );
+        const int divs = ceilPow2Sq( coveringRadiusSq( v[0], v[1], v[2] ), radiusSq );
         faceDivs[f] = divs;
 
         // every point of a triangle projects on its longest edge inside it, because the angles at the
-        // ends of that edge are acute; being h away from the edge and no farther than half the division
-        // step along it, such a point is covered by the samples of that edge alone if h < radius
+        // ends of that edge are acute; such a point is h away from the edge and no farther than half
+        // a division step along it, so the samples of that edge alone cover the triangle if h < radius
         EdgeId es[3];
         topology.getTriEdges( f, es );
         int longest = 0;
+        auto longestSq = ( v[1] - v[0] ).lengthSq();
         for ( int i = 1; i < 3; ++i )
-            if ( ( v[( i + 1 ) % 3] - v[i] ).lengthSq() > ( v[( longest + 1 ) % 3] - v[longest] ).lengthSq() )
+        {
+            const auto lenSq = ( v[( i + 1 ) % 3] - v[i] ).lengthSq();
+            if ( lenSq > longestSq )
+            {
                 longest = i;
-        const auto len = ( v[( longest + 1 ) % 3] - v[longest] ).length();
-        const auto h = cross( v[1] - v[0], v[2] - v[0] ).length() / len; // twice the area over the edge
-        if ( h >= radius )
+                longestSq = lenSq;
+            }
+        }
+        // twice the area over the length of that edge, squared
+        const auto hSq = cross( v[1] - v[0], v[2] - v[0] ).lengthSq() / longestSq;
+        if ( hSq >= radiusSq )
             return;
-        const int stripDivs = ceilPow2( len / ( 2 * std::sqrt( radiusSq - h * h ) ) );
+        const int stripDivs = ceilPow2Sq( longestSq, 4 * ( radiusSq - hSq ) );
         // the grid costs the samples of its three edges and of its interior, the strip only its edge
         if ( stripDivs - 1 >= 3 * ( divs - 1 ) + ( divs - 1 ) * ( divs - 2 ) / 2 )
             return;

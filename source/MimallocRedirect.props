@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!--
     Windows EXE-only: configure mimalloc's transparent CRT-allocator redirect.
@@ -31,13 +31,13 @@
     <MimallocReleaseLib Condition="Exists('$(VcpkgCurrentInstalledDir)\lib\mimalloc.dll.lib')">mimalloc.dll.lib</MimallocReleaseLib>
     <MimallocReleaseLib Condition="'$(MimallocReleaseLib)'=='' AND Exists('$(VcpkgCurrentInstalledDir)\lib\mimalloc.lib')">mimalloc.lib</MimallocReleaseLib>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <Link>
       <AdditionalDependencies>$(MimallocDebugLib);%(AdditionalDependencies)</AdditionalDependencies>
       <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <Link>
       <AdditionalDependencies>$(MimallocReleaseLib);%(AdditionalDependencies)</AdditionalDependencies>
       <ForceSymbolReferences>mi_version;%(ForceSymbolReferences)</ForceSymbolReferences>

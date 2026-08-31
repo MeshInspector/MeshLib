@@ -9,7 +9,7 @@
     <RootNamespace>c_sharp_examples</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <Platforms>x64</Platforms>
+    <Platforms>x64;ARM64</Platforms>
     <BaseOutputPath>..\..\source</BaseOutputPath>
   </PropertyGroup>
 
@@ -21,7 +21,7 @@
   <PropertyGroup>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget>$(Platform)</PlatformTarget>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

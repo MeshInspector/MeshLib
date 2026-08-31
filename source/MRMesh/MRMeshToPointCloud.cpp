@@ -25,12 +25,16 @@ PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals /*= true */, con
 namespace
 {
 
-/// returns the smallest power of two, which is not less than given value (and not less than 1)
-int ceilPow2( float v )
+/// returns the smallest power of two n (and not less than 1) with n * n * bSq >= aSq, that is
+/// n >= sqrt( aSq / bSq ): no square root and no division are needed, and quadrupling is exact
+int ceilPow2Sq( float aSq, float bSq )
 {
     int res = 1;
-    while ( res < v && res < ( 1 << 24 ) )
+    while ( bSq < aSq && res < ( 1 << 24 ) )
+    {
         res <<= 1;
+        bSq *= 4;
+    }
     return res;
 }
 
@@ -41,7 +45,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     MR_TIMER;
     if ( !( radius > 0 ) )
         return unexpected( "meshToDensePointCloud: radius must be positive" );
-    const float diameter = 2 * radius;
+    const float radiusSq = radius * radius;
     const auto& mesh = mp.mesh;
     const auto& topology = mesh.topology;
     const auto& faces = topology.getFaceIds( mp.region );
@@ -57,15 +61,17 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     {
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        // no point of a triangle is farther from the nearest vertex than the radius of the minimal enclosing
-        // circle, which is the circumcircle for non-obtuse triangles and half of the longest edge otherwise
-        faceDivs[f] = ceilPow2( std::sqrt( mincircleDiameterSq( v[0], v[1], v[2] ) ) / diameter );
+        // by definition no point of a triangle is farther from the nearest vertex than the covering
+        // radius, so a triangle with a smaller one is covered by its own vertices and is not divided;
+        // the minimal enclosing circle bounds that radius from above and is cheaper to find
+        faceDivs[f] = mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq ? 1
+            : ceilPow2Sq( coveringRadiusSq( v[0], v[1], v[2] ), radiusSq );
     }, faceDivsCb ) )
         return unexpectedOperationCanceled();
 
-    // in how many equal parts each edge is divided: enough to make every part not longer than 2*radius,
-    // and not less than the sampled incident faces divide it; the edges without such faces
-    // (including the lone ones) are not sampled at all
+    // in how many equal parts each edge is divided: as much as the sampled faces incident to it
+    // divide it, and not at all if there are no such faces (including the lone edges); the edges
+    // of an undivided face need no samples of their own, because that face covers them already
     Buffer<int, UndirectedEdgeId> edgeDivs( topology.undirectedEdgeSize() );
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )
     {
@@ -74,8 +80,6 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         for ( auto f : { topology.left( e ), topology.right( e ) } )
             if ( f && ( wholeMesh || faces.test( f ) ) )
                 divs = std::max( divs, faceDivs[f] );
-        if ( divs > 0 )
-            divs = std::max( divs, ceilPow2( mesh.edgeLength( ue ) / diameter ) );
         edgeDivs[ue] = divs;
     }, edgeDivsCb ) )
         return unexpectedOperationCanceled();

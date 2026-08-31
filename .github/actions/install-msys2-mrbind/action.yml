@@ -46,8 +46,11 @@ runs:
         if (-not (Test-Path 'C:\msys64\msys2_shell.cmd')) { throw 'MSYS2 extraction failed' }
         # first launch generates /etc and the user skeleton; pacman needs them
         & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'true'
-        # msys2-base carries no wget, which msys2_download_packages.sh uses
-        & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'pacman -Sy --noconfirm --needed wget'
+        # that init runs `pacman-key --populate msys2 || true` and intermittently
+        # dies before signing the keys, leaving every repo database at "unknown
+        # trust"; redo it here, plus the wget msys2-base lacks
+        & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'pacman-key --init && pacman-key --populate msys2 && pacman-key --updatedb && pacman -Sy --noconfirm --needed wget'
+        if ($LASTEXITCODE -ne 0) { throw "MSYS2 keyring setup exited with code $LASTEXITCODE" }
 
     - name: Install MSYS2 for MRBind
       # Pin clang to the version in the selected lockfile. Pinning only the

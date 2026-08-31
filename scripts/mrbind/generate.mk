@@ -683,22 +683,7 @@ endif # TARGETING_EMSCRIPTEN
 
 
 
-# lld is used wherever it exists, as on the other platforms. There is no Homebrew bottle of
-# `lld` for Intel macOS since that became a Tier 3 configuration, so fall back to Apple's `ld`
-# when ld64.lld is absent; it consumes our ThinLTO bitcode via the `libLTO.dylib` that Clang
-# passes to it in `-lto_library`, and it linked the bindings no slower than lld on the CI
-# runners. Only macOS is probed, the other platforms always have lld next to Clang.
-LLD_FLAG := -fuse-ld=lld
-ifneq ($(IS_MACOS),)
-# Ask Clang itself: it looks for ld64.lld in its own directory and then in PATH,
-# and prints the bare name back when it finds nothing.
-ifeq ($(filter /%,$(shell $(CXX_FOR_BINDINGS) -print-prog-name=ld64.lld 2>/dev/null)),)
-$(info Found no ld64.lld, linking the bindings with the default linker)
-LLD_FLAG :=
-endif
-endif
-
-LINKER := $(CXX_FOR_BINDINGS) $(LLD_FLAG)
+LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
@@ -1202,7 +1187,9 @@ generate:
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
-	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))
+# MeshLibArch places the assembly next to the native output; unset off Windows, where the
+# csproj default stands.
+	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE)) $(if $(MSVC_ARCH),-p:MeshLibArch=$(MSVC_ARCH))
 # # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
 # $(foreach m,$(MODULES),\
 # 	$(if $($m_CSharpSubLibraryOutputProject),\

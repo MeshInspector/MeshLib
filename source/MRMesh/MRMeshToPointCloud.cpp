@@ -25,15 +25,84 @@ PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals /*= true */, con
 namespace
 {
 
-/// returns the smallest power of two n (and not less than 1) with n * n * bSq >= aSq, that is
-/// n >= sqrt( aSq / bSq ): no square root and no division are needed, and quadrupling is exact
-int ceilPow2Sq( float aSq, float bSq )
+constexpr float cSqrt2 = 1.41421356f;
+
+/// returns the smallest number of equal parts, and not less than one, in which a segment of the
+/// given length has to be divided to make every part not longer than the given step
+int divsForStep( float len, float step )
 {
-    int res = 1;
-    while ( bSq < aSq && res < ( 1 << 24 ) )
+    if ( !( len > 0 ) || !( step > 0 ) )
+        return 1;
+    int res = int( len / step );
+    while ( res * step < len && res < ( 1 << 24 ) )
+        ++res;
+    return std::max( 1, res );
+}
+
+/// how a face is sampled inside: in rows parallel to its longest edge
+struct FaceLayout
+{
+    int base;      ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
+    int rows;      ///< the number of rows; zero if the longest edge alone covers the face
+    float first;   ///< the height of the first row over that edge
+    float band;    ///< the distance between the rows
+    float height;  ///< the height of the opposite vertex over that edge
+    float step;    ///< the distance between the samples within a row
+    bool covered;  ///< the three vertices alone cover the face, so it needs no samples at all
+};
+
+FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
+{
+    FaceLayout res{ 0, 0, 0, 0, 0, 0, false };
+    // no point of a triangle is farther from the nearest vertex than the covering radius, and the
+    // minimal enclosing circle bounds that radius from above and is cheaper to find
+    if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq
+        || coveringRadiusSq( v[0], v[1], v[2] ) <= radiusSq )
     {
-        res <<= 1;
-        bSq *= 4;
+        res.covered = true;
+        return res;
+    }
+
+    // the longest edge is the base: the angles at its ends are acute, so every point of the face
+    // projects on it inside it, and the sections parallel to it shrink towards the opposite vertex,
+    // which makes a row below a point never narrower than the face is at that point
+    float baseLenSq = 0;
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto lenSq = ( v[( i + 1 ) % 3] - v[i] ).lengthSq();
+        if ( lenSq > baseLenSq )
+        {
+            baseLenSq = lenSq;
+            res.base = i;
+        }
+    }
+    const float baseLen = std::sqrt( baseLenSq );
+    res.height = cross( v[1] - v[0], v[2] - v[0] ).length() / baseLen; // twice the area over the base
+
+    // no point of the base is farther than half a step from a sample of it, so those samples reach
+    // this far in the height; a face lower than that is covered by its longest edge alone
+    const float baseStep = baseLen / divsForStep( baseLen, 2 * radius );
+    res.first = std::sqrt( std::max( 0.0f, radiusSq - 0.25f * baseStep * baseStep ) );
+    if ( res.height <= res.first )
+        return res;
+
+    // a point above the rows is within a band from the row below it and within half a step along
+    // that row; sqrt(2)*radius along the row against radius/sqrt(2) between the rows keeps both
+    // within the radius and gives the fewest samples
+    res.step = radius * cSqrt2;
+    res.rows = divsForStep( res.height - res.first, radius / cSqrt2 );
+    res.band = ( res.height - res.first ) / res.rows;
+    return res;
+}
+
+/// the number of samples inside a face with the given layout
+int numFaceSamples( const FaceLayout & l, float baseLen )
+{
+    int res = 0;
+    for ( int i = 0; i < l.rows; ++i )
+    {
+        const float hf = ( l.first + i * l.band ) / l.height;
+        res += divsForStep( baseLen * ( 1 - hf ), l.step ) + 1;
     }
     return res;
 }
@@ -51,36 +120,47 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     const auto& faces = topology.getFaceIds( mp.region );
     // whole mesh: left/right of an edge is never a face outside faces, so it needs no test
     const bool wholeMesh = !mp.region;
-    const auto [faceDivsCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
+    const auto [faceLayoutCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
 
-    // in how many equal parts each side of the triangle is divided to split it in a grid of similar triangles,
-    // each covered by its own three corners; the number is a power of two, which makes the grid of a face
-    // conforming with (possibly finer) divisions of the face's edges
-    Buffer<int, FaceId> faceDivs( topology.faceSize() );
+    Buffer<FaceLayout, FaceId> layouts( topology.faceSize() );
+    Buffer<int, FaceId> faceSamples( topology.faceSize() );
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        // by definition no point of a triangle is farther from the nearest vertex than the covering
-        // radius, so a triangle with a smaller one is covered by its own vertices and is not divided;
-        // the minimal enclosing circle bounds that radius from above and is cheaper to find
-        faceDivs[f] = mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq ? 1
-            : ceilPow2Sq( coveringRadiusSq( v[0], v[1], v[2] ), radiusSq );
-    }, faceDivsCb ) )
+        const auto l = layoutFace( v, radius, radiusSq );
+        layouts[f] = l;
+        faceSamples[f] = l.rows <= 0 ? 0
+            : numFaceSamples( l, ( v[( l.base + 1 ) % 3] - v[l.base] ).length() );
+    }, faceLayoutCb ) )
         return unexpectedOperationCanceled();
 
-    // in how many equal parts each edge is divided: as much as the sampled faces incident to it
-    // divide it, and not at all if there are no such faces (including the lone edges); the edges
-    // of an undivided face need no samples of their own, because that face covers them already
+    // an edge is divided so that every point of it is within the radius from a sample of its own,
+    // and only if some incident face relies on that: a face covered by its vertices does not, and a
+    // face covered by its longest edge alone relies on that edge only
     Buffer<int, UndirectedEdgeId> edgeDivs( topology.undirectedEdgeSize() );
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )
     {
         const EdgeId e = ue;
-        int divs = 0;
+        bool need = false;
         for ( auto f : { topology.left( e ), topology.right( e ) } )
-            if ( f && ( wholeMesh || faces.test( f ) ) )
-                divs = std::max( divs, faceDivs[f] );
-        edgeDivs[ue] = divs;
+        {
+            if ( !f || !( wholeMesh || faces.test( f ) ) )
+                continue;
+            const auto & l = layouts[f];
+            if ( l.covered )
+                continue;
+            if ( l.rows > 0 )
+                need = true;
+            else
+            {
+                EdgeId es[3];
+                topology.getTriEdges( f, es );
+                if ( es[l.base].undirected() == ue )
+                    need = true;
+            }
+        }
+        edgeDivs[ue] = need ? divsForStep( mesh.edgeLength( ue ), 2 * radius ) : 0;
     }, edgeDivsCb ) )
         return unexpectedOperationCanceled();
 
@@ -94,12 +174,11 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         if ( edgeDivs[ue] > 1 )
             numPoints += edgeDivs[ue] - 1;
     }
-    Buffer<size_t, FaceId> faceOffset( faceDivs.size() );
+    Buffer<size_t, FaceId> faceOffset( layouts.size() );
     for ( auto f : faces )
     {
         faceOffset[f] = numPoints;
-        if ( const auto divs = faceDivs[f]; divs > 2 )
-            numPoints += size_t( divs - 1 ) * ( divs - 2 ) / 2;
+        numPoints += faceSamples[f];
     }
 
     PointCloud res;
@@ -139,27 +218,37 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
 
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
-        const auto divs = faceDivs[f];
-        if ( divs <= 2 )
-            return; // the grid of this face has no points strictly inside it
+        const auto & l = layouts[f];
+        if ( l.rows <= 0 )
+            return;
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        Vector3f n[3];
+        const auto & a = v[l.base], & b = v[( l.base + 1 ) % 3], & c = v[( l.base + 2 ) % 3];
+        Vector3f na, nb, nc;
         if ( saveNormals )
         {
             const auto vs = topology.getTriVerts( f );
-            for ( int i = 0; i < 3; ++i )
-                n[i] = res.normals[ vs[i] ];
+            na = res.normals[ vs[l.base] ];
+            nb = res.normals[ vs[( l.base + 1 ) % 3] ];
+            nc = res.normals[ vs[( l.base + 2 ) % 3] ];
         }
+        const float baseLen = ( b - a ).length();
         auto p = VertId( faceOffset[f] );
-        for ( int i = 1; i + 2 <= divs; ++i )
-            for ( int j = 1; i + j + 1 <= divs; ++j, ++p )
+        for ( int i = 0; i < l.rows; ++i )
+        {
+            const float hf = ( l.first + i * l.band ) / l.height;
+            const auto rowOrg = a + hf * ( c - a );
+            const auto rowDest = b + hf * ( c - b );
+            const int divs = divsForStep( baseLen * ( 1 - hf ), l.step );
+            for ( int j = 0; j <= divs; ++j, ++p )
             {
-                const float a = float( i ) / divs, b = float( j ) / divs;
-                res.points[p] = v[0] + a * ( v[1] - v[0] ) + b * ( v[2] - v[0] );
+                const float g = float( j ) / divs;
+                res.points[p] = rowOrg + g * ( rowDest - rowOrg );
                 if ( saveNormals )
-                    res.normals[p] = ( ( 1 - a - b ) * n[0] + a * n[1] + b * n[2] ).normalized();
+                    res.normals[p] = ( ( 1 - hf ) * ( 1 - g ) * na
+                        + ( 1 - hf ) * g * nb + hf * nc ).normalized();
             }
+        }
     }, facePointsCb ) )
         return unexpectedOperationCanceled();
 

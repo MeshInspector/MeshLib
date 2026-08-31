@@ -440,21 +440,54 @@ jobs:
     needs: setup
     if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
-    runs-on:  [windows-2025]
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
+      matrix:
+        platform: [x64, arm64]
+        include:
+          - platform: x64
+            runner: windows-2025
+            vcpkg-triplet: x64-windows-meshlib
+            msbuild-platform: x64
+            msbuild-architecture: x86
+            vs-dev-args: -arch=amd64 -host_arch=x86
+            plat-name: win-amd64
+            msys2-env: clang64
+            msys2-pkgs: _clang22
+            mrbind-cache-prefix: windows-clang22
+            cuda-version: '12.0.1'
+            cuda-major: '12'
+            cuda-minor: '0'
+            cuda-platform-toolset: v143
+          # no CUDA toolkit exists for Windows arm64, so MRCuda is not built there
+          - platform: arm64
+            runner: windows-11-vs2026-arm
+            vcpkg-triplet: arm64-windows-meshlib
+            msbuild-platform: ARM64
+            msbuild-architecture: arm64
+            vs-dev-args: -arch=arm64 -host_arch=arm64
+            plat-name: win-arm64
+            msys2-env: clangarm64
+            msys2-pkgs: _clangarm64
+            mrbind-cache-prefix: windows-clangarm64
+            cuda-version: ''
+            cuda-major: ''
+            cuda-minor: ''
+            cuda-platform-toolset: ''
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
       VCPKG-VERSION: '2026.07.29'
-      CUDA-VERSION: '12.0.1'
-      CUDA-MAJOR: '12'
-      CUDA-MINOR: '0'
-      VCPKG_DEFAULT_TRIPLET: x64-windows-meshlib
+      CUDA-VERSION: ${{ matrix.cuda-version }}
+      CUDA-MAJOR: ${{ matrix.cuda-major }}
+      CUDA-MINOR: ${{ matrix.cuda-minor }}
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg-triplet }}
       VCVARS_VER: '14.5'
       PLATFORM_TOOLSET: v145
-      CUDA_PLATFORM_TOOLSET: v143
+      CUDA_PLATFORM_TOOLSET: ${{ matrix.cuda-platform-toolset }}
+      MSYS2_ENV: ${{ matrix.msys2-env }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -477,6 +510,7 @@ jobs:
         run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
 
       - name: Install CUDA
+        if: ${{ matrix.cuda-version != '' }}
         uses: ./.github/actions/install-cuda
         with:
           cuda-version: ${{ env.CUDA-VERSION }}
@@ -484,6 +518,7 @@ jobs:
           cuda-minor: ${{ env.CUDA-MINOR }}
 
       - name: Set up CUDA
+        if: ${{ matrix.cuda-version != '' }}
         uses: ./.github/actions/setup-cuda
         with:
           cuda-major: ${{ env.CUDA-MAJOR }}
@@ -491,19 +526,26 @@ jobs:
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+        with:
+          # an x86 MSBuild would make the VC props pick an x86 host compiler, whose address
+          # space is too small for our PCH when targeting ARM64
+          msbuild-architecture: ${{ matrix.msbuild-architecture }}
 
       - name: Build
-        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON
+        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:Platform=${{ matrix.msbuild-platform }} -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Install MSYS2 for MRBind
         uses: ./.github/actions/install-msys2-mrbind
+        with:
+          packages-suffix: ${{ matrix.msys2-pkgs }}
 
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
-          cache-key-prefix: windows-clang22
+          cache-key-prefix: ${{ matrix.mrbind-cache-prefix }}
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
+          extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', matrix.msys2-pkgs)) }}
+          msys2-env: ${{ matrix.msys2-env }}
 
       - name: Generate and build MRBind bindings
         shell: cmd
@@ -512,25 +554,25 @@ jobs:
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 || exit /b 1
 
       - name: Run Test
-        working-directory: source\x64\Release
+        working-directory: source\${{ matrix.platform }}\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Verify meshlib.mrmeshpy import
         timeout-minutes: 3
         uses: ./.github/actions/verify-meshlib-python-import
         with:
-          build-bin-dir: source\x64\Release
+          build-bin-dir: source\${{ matrix.platform }}\Release
 
       - name: Unit Tests
         timeout-minutes: 10
-        run: source\x64\Release\MRTest.exe
+        run: source\${{ matrix.platform }}\Release\MRTest.exe
 
       - name: Python Tests
-        working-directory: source\x64\Release
+        working-directory: source\${{ matrix.platform }}\Release
         run: py -3 -u ..\..\..\scripts\run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
@@ -538,12 +580,12 @@ jobs:
           py -3.11 -m venv venv
           venv\Scripts\Activate
           python -m pip install --upgrade pip
-          python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{ needs.setup.outputs.wheel_version }}
+          python .\scripts\wheel\build_wheel.py --plat-name=${{ matrix.plat-name }} --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Windows
+          name: Windows-${{ matrix.platform }}
           path: wheelhouse_core\meshlib*.whl
           retention-days: 1
 
@@ -699,7 +741,7 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Windows
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
@@ -781,7 +823,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [windows-2022, windows-2025]
+        include:
+          - platform: x64
+            runner: windows-2022
+          - platform: x64
+            runner: windows-2025
+          - platform: arm64
+            runner: windows-11-vs2026-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -791,33 +839,30 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v8
         with:
-          name: Windows
+          name: Windows-${{ matrix.platform }}
           merge-multiple: true
 
       - name: Python setup
         uses: actions/setup-python@v7
         with:
-          python-version: |
-            3.8
-            3.9
-            3.10
-            3.11
-            3.12
-            3.13
-            3.14
+          # python.org publishes no win-arm64 build before 3.11
+          python-version: ${{ matrix.platform == 'arm64' && '3.11, 3.12, 3.13, 3.14' || '3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14' }}
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
       # shared `test_wheel_windows.ps1` script.
       - name: Test wheel against Python 3.8
+        if: ${{ matrix.platform != 'arm64' }}
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.8
 
       - name: Test wheel against Python 3.9
+        if: ${{ matrix.platform != 'arm64' }}
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.9
 
       - name: Test wheel against Python 3.10
+        if: ${{ matrix.platform != 'arm64' }}
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.10
 
@@ -926,7 +971,7 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Windows
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
@@ -969,7 +1014,7 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Windows
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts

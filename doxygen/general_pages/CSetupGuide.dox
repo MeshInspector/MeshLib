@@ -95,9 +95,9 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 
 ## Verify the installation {#CSetupVerify}
 
-The installer or archive completing is not the same as a working setup: the headers, the import library and the runtime library are three separate things, and any one of them can be wrong while the other two look fine. This program covers the whole chain — compile against the headers, link against `MeshLibC2`, load it at startup, run a real geometry call, write a file. It needs no input data.
+The installer or archive completing is not the same as a working setup: the headers, the import library and the runtime library are three separate things, and any one of them can be wrong while the other two look fine. The [Mesh export](\ref ExampleMeshExport) sample exercises the whole chain — compile against the headers, link against `MeshLibC2`, load it at startup, run a real geometry call — and it builds its mesh in memory, so it needs no input data and prints the same thing on every machine.
 
-\include VerifyInstall.dox.c
+\include MeshExport.dox.c
 
 ### Build and run it on Windows
 Build it as the console project configured in \ref CSetupGuideWindows "Windows" above, then run it from the project's output directory.
@@ -118,11 +118,33 @@ cmake -S . -B build && cmake --build build && ./build/verify
 \endcode
 
 ### Expected output
+The cube is 8 vertices and 12 triangles, so the program prints exactly these 22 lines and exits with code `0`:
 \code{.txt}
-8 verts, 12 faces
+Vertex coordinates:
+  vertex 0:  -0.500000; -0.500000; -0.500000
+  vertex 1:  -0.500000;  0.500000; -0.500000
+  vertex 2:   0.500000;  0.500000; -0.500000
+  vertex 3:   0.500000; -0.500000; -0.500000
+  vertex 4:  -0.500000; -0.500000;  0.500000
+  vertex 5:  -0.500000;  0.500000;  0.500000
+  vertex 6:   0.500000;  0.500000;  0.500000
+  vertex 7:   0.500000; -0.500000;  0.500000
+Face vertex IDs:
+  face 0:  0, 1, 2
+  face 1:  2, 3, 0
+  face 2:  0, 4, 5
+  face 3:  5, 1, 0
+  face 4:  0, 3, 7
+  face 5:  7, 4, 0
+  face 6:  6, 5, 4
+  face 7:  4, 7, 6
+  face 8:  1, 5, 6
+  face 9:  6, 2, 1
+  face 10:  6, 7, 3
+  face 11:  3, 2, 6
 \endcode
 
-Exit code `0`, and a 684-byte `cube.stl` next to the binary — a cube is 12 triangles, and binary STL is a fixed `84 + 12 * 50` bytes, so the size is the same everywhere. If you see that line and that file, the installation is working. Anything else — a compiler error about a missing header, a linker error, a loader error at startup, no output — means it is not.
+If you see that, the installation is working. Anything else — a compiler error about a missing header, a linker error, a loader error at startup, a truncated or empty listing — means it is not.
 
 \note On macOS, v3.1.3.429 and earlier fail at launch with `dyld: Library not loaded: @rpath/libMeshLibC2.dylib` even though the program compiles and links: the framework's C library was not on the runtime search path. The fix landed after that release, so if you are on it, run the program as
 \note `DYLD_LIBRARY_PATH=/Library/Frameworks/MeshLib.framework/Versions/Current/lib ./build/verify`

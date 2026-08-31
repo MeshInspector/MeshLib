@@ -132,7 +132,7 @@ jobs:
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
           ./build/MeshModification
-          ./build/VerifyInstall
+          ./build/MeshExport
 
       - name: Ubuntu python test
         env:
@@ -228,7 +228,7 @@ jobs:
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
           ./build/MeshModification
-          ./build/VerifyInstall
+          ./build/MeshExport
 
       - name: Ubuntu python test
         env:
@@ -334,7 +334,7 @@ jobs:
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
           ./build/MeshModification
-          ./build/VerifyInstall
+          ./build/MeshExport
 
   windows-test:
     if: ${{ inputs.test_windows }}
@@ -416,4 +416,4 @@ jobs:
           cmake --build build --config ${{ matrix.config }} --parallel $env:NUMBER_OF_PROCESSORS
           .\build\${{ matrix.config }}\MeshModification.exe
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          .\build\${{ matrix.config }}\VerifyInstall.exe
+          .\build\${{ matrix.config }}\MeshExport.exe

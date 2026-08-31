@@ -119,10 +119,14 @@ template <typename T>
     // guards in it can trigger here: a triangle with a zero side or zero area is obtuse by the test
     if ( ca < bc + ab && bc < ab + ca && ab < ca + bc )
         return ab * ca * bc / ( 4 * cross( b - a, c - a ).lengthSq() );
-    // otherwise that point is on the boundary, where the two nearest vertices are equidistant
-    return std::max( { edgeCoveringRadiusSq( a, b, c ),
-                       edgeCoveringRadiusSq( b, c, a ),
-                       edgeCoveringRadiusSq( c, a, b ) } );
+    // otherwise that point is on the boundary, where the two nearest vertices are equidistant, and
+    // always on the longest edge: the circumcenter is beyond it, the distance along every bisector
+    // grows towards the circumcenter, so each bisector is maximal where it meets that edge
+    if ( ab >= bc && ab >= ca )
+        return edgeCoveringRadiusSq( a, b, c );
+    if ( bc >= ca )
+        return edgeCoveringRadiusSq( b, c, a );
+    return edgeCoveringRadiusSq( c, a, b );
 }
 
 MR_BIND_TEMPLATE(  float coveringRadiusSq( const Vector3f & a, const Vector3f & b, const Vector3f & c ) );

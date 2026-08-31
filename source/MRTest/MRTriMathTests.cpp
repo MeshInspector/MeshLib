@@ -30,6 +30,20 @@ TEST( MRMesh, CoveringRadius )
     EXPECT_NEAR( std::sqrt( coveringRadiusSq( a, b, Vector3d{ 5, 0, 0 } ) ), 2.5, 1e-12 );
     EXPECT_EQ( coveringRadiusSq( a, a, a ), 0. );
 
+    // the value does not depend on the order of the vertices, which the choice of the edge to
+    // examine must respect
+    for ( double x = -2; x <= 12; x += 0.7 )
+        for ( double y = 0.01; y <= 8; y += 0.7 )
+        {
+            const Vector3d p{ x, y, 0 };
+            const auto expected = coveringRadiusSq( a, b, p );
+            EXPECT_NEAR( coveringRadiusSq( b, p, a ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( p, a, b ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( b, a, p ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( a, p, b ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( p, b, a ), expected, 1e-12 );
+        }
+
     // the covering radius never exceeds the radius of the minimal enclosing circle
     for ( double x = -2; x <= 12; x += 0.7 )
         for ( double y = 0; y <= 8; y += 0.7 )

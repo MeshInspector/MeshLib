@@ -39,28 +39,77 @@ int divsForStep( float len, float step )
     return std::max( 1, res );
 }
 
-/// how a face is sampled inside: in rows parallel to its longest edge
+/// returns the smallest power of two n (and not less than 1) with n * n * bSq >= aSq, that is
+/// n >= sqrt( aSq / bSq ): no square root and no division are needed, and quadrupling is exact
+int ceilPow2Sq( float aSq, float bSq )
+{
+    int res = 1;
+    while ( bSq < aSq && res < ( 1 << 24 ) )
+    {
+        res <<= 1;
+        bSq *= 4;
+    }
+    return res;
+}
+
+/// how a face is sampled: by a grid of triangles similar to it, or in rows parallel to its longest
+/// edge, or by the samples of that edge alone, whichever of the three costs the fewest samples
 struct FaceLayout
 {
     int base;      ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
-    int rows;      ///< the number of rows; zero if the longest edge alone covers the face
-    int wants;     ///< in how many parts this face wants its longest edge divided
-    float first;   ///< the height of the first row over that edge
+    int grid;      ///< in how many parts every side is divided for a grid; zero if it is not a grid
+    int rows;      ///< the number of rows; zero if there are none
+    int wants;     ///< in how many parts the face wants its longest edge; zero if it does not care
+    float first;   ///< the height of the first row over the longest edge
     float band;    ///< the distance between the rows
-    float height;  ///< the height of the opposite vertex over that edge
+    float height;  ///< the height of the opposite vertex over the longest edge
     float step;    ///< the distance between the samples within a row
     bool covered;  ///< the three vertices alone cover the face, so it needs no samples at all
 };
 
-/// \param baseDivs in how many parts the longest edge is divided; zero on the first pass, when the
-/// face only tells in `wants` how many it would need for that edge to cover it alone
-FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq, int baseDivs = 0 )
+/// the number of samples inside a face sampled in rows
+int numRowSamples( const FaceLayout & l, float baseLen )
 {
-    FaceLayout res{ 0, 0, 0, 0, 0, 0, 0, false };
+    int res = 0;
+    for ( int i = 0; i < l.rows; ++i )
+    {
+        const float hf = ( l.first + i * l.band ) / l.height;
+        res += divsForStep( baseLen * ( 1 - hf ), l.step ) + 1;
+    }
+    return res;
+}
+
+/// lays out the rows parallel to the longest edge, given in how many parts that edge is divided
+void layoutRows( FaceLayout & res, float baseLen, float radius, float radiusSq, int baseDivs )
+{
+    res.rows = 0;
+    // the samples of the base are not farther than half a step from any point of it, so they reach
+    // sqrt( radius^2 - (step/2)^2 ) up in the height, and a face flatter than that needs no rows
+    const float baseStep = baseLen / baseDivs;
+    res.first = std::sqrt( std::max( 0.0f, radiusSq - 0.25f * baseStep * baseStep ) );
+    if ( res.height <= res.first )
+        return;
+    // a point above the rows is within a band from the row below it, which is never narrower than
+    // the face is there, and within half a step along that row; sqrt(2)*radius along the row
+    // against radius/sqrt(2) between the rows keeps both within the radius with the fewest samples
+    res.step = radius * cSqrt2;
+    res.rows = divsForStep( res.height - res.first, radius / cSqrt2 );
+    res.band = ( res.height - res.first ) / res.rows;
+}
+
+/// chooses how a face is sampled, and what it needs of its longest edge
+FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
+{
+    FaceLayout res{ 0, 0, 0, 0, 0, 0, 0, 0, false };
     // no point of a triangle is farther from the nearest vertex than the covering radius, and the
     // minimal enclosing circle bounds that radius from above and is cheaper to find
-    if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq
-        || coveringRadiusSq( v[0], v[1], v[2] ) <= radiusSq )
+    if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq )
+    {
+        res.covered = true;
+        return res;
+    }
+    const auto coverSq = coveringRadiusSq( v[0], v[1], v[2] );
+    if ( coverSq <= radiusSq )
     {
         res.covered = true;
         return res;
@@ -69,47 +118,46 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq, int ba
     // the longest edge is the base: the angles at its ends are acute, so every point of the face
     // projects on it inside it, and the sections parallel to it shrink towards the opposite vertex,
     // which makes a row below a point never narrower than the face is at that point
-    float baseLenSq = 0;
+    float len[3];
+    int selfDivs[3];
     for ( int i = 0; i < 3; ++i )
-    {
-        const auto lenSq = ( v[( i + 1 ) % 3] - v[i] ).lengthSq();
-        if ( lenSq > baseLenSq )
-        {
-            baseLenSq = lenSq;
-            res.base = i;
-        }
-    }
-    const float baseLen = std::sqrt( baseLenSq );
+        len[i] = ( v[( i + 1 ) % 3] - v[i] ).length();
+    res.base = ( len[0] >= len[1] && len[0] >= len[2] ) ? 0 : ( len[1] >= len[2] ? 1 : 2 );
+    const float baseLen = len[res.base];
     res.height = cross( v[1] - v[0], v[2] - v[0] ).length() / baseLen; // twice the area over the base
+    for ( int i = 0; i < 3; ++i )
+        selfDivs[i] = divsForStep( len[i], 2 * radius ); // enough for an edge to cover itself
 
-    // the samples of the base are not farther than half a step from any point of it and reach
-    // sqrt( radius^2 - (step/2)^2 ) in the height, so dividing it in this many parts makes the base
-    // alone cover the face; a face flat enough gets that for free from the step of 2*radius
+    // a grid of triangles similar to the face is covered by its own corners, but its nodes on an
+    // edge must be among the division points of that edge, which is why the number is rounded to a
+    // power of two: the maximum of two such numbers is a multiple of both
+    // the three costs below count the samples inside the face plus half of those on its edges,
+    // since an edge is shared, and a grid needs no self-covering edges: it covers them itself
+    const int grid = ceilPow2Sq( coverSq, radiusSq );
+    int gridCost = 2 * ( grid - 1 ) * ( grid - 2 ) / 2 + 3 * ( grid - 1 );
+
+    // the samples of the base alone cover a face flatter than the radius, once it is divided finely
+    int stripCost = std::numeric_limits<int>::max(), wants = 0;
     if ( res.height < radius )
-        res.wants = divsForStep( baseLen, 2 * std::sqrt( radiusSq - res.height * res.height ) );
-
-    const float baseStep = baseLen / ( baseDivs > 0 ? baseDivs : divsForStep( baseLen, 2 * radius ) );
-    res.first = std::sqrt( std::max( 0.0f, radiusSq - 0.25f * baseStep * baseStep ) );
-    if ( res.height <= res.first )
-        return res;
-
-    // a point above the rows is within a band from the row below it and within half a step along
-    // that row; sqrt(2)*radius along the row against radius/sqrt(2) between the rows keeps both
-    // within the radius and gives the fewest samples
-    res.step = radius * cSqrt2;
-    res.rows = divsForStep( res.height - res.first, radius / cSqrt2 );
-    res.band = ( res.height - res.first ) / res.rows;
-    return res;
-}
-
-/// the number of samples inside a face with the given layout
-int numFaceSamples( const FaceLayout & l, float baseLen )
-{
-    int res = 0;
-    for ( int i = 0; i < l.rows; ++i )
     {
-        const float hf = ( l.first + i * l.band ) / l.height;
-        res += divsForStep( baseLen * ( 1 - hf ), l.step ) + 1;
+        wants = divsForStep( baseLen, 2 * std::sqrt( radiusSq - res.height * res.height ) );
+        stripCost = wants - 1;
+    }
+
+    layoutRows( res, baseLen, radius, radiusSq, selfDivs[res.base] );
+    int rowsCost = 2 * numRowSamples( res, baseLen );
+    for ( int i = 0; i < 3; ++i )
+        rowsCost += selfDivs[i] - 1;
+
+    if ( stripCost <= rowsCost && stripCost <= gridCost )
+    {
+        res.rows = 0;
+        res.wants = wants;
+    }
+    else if ( gridCost < rowsCost )
+    {
+        res.rows = 0;
+        res.grid = grid;
     }
     return res;
 }
@@ -127,38 +175,27 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     const auto& faces = topology.getFaceIds( mp.region );
     // whole mesh: left/right of an edge is never a face outside faces, so it needs no test
     const bool wholeMesh = !mp.region;
-    const auto [faceLayoutCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
+    const auto [layoutCb, edgeDivsCb, samplesCb, edgePointsCb, facePointsCb] =
+        splitProgress( cb, 0.1f, 0.2f, 0.25f, 0.6f );
 
     Buffer<FaceLayout, FaceId> layouts( topology.faceSize() );
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        auto l = layoutFace( v, radius, radiusSq );
-        const float baseLen = ( v[( l.base + 1 ) % 3] - v[l.base] ).length();
-        // asking the base for a finer division costs the samples it adds there, and saves all the
-        // rows; that trade is worth making only when the rows cost more
-        if ( l.rows > 0 && l.wants > 0 )
-        {
-            if ( l.wants - divsForStep( baseLen, 2 * radius ) < numFaceSamples( l, baseLen ) )
-                l.rows = 0; // the base will be divided finer, so no rows are needed at all, and
-                            // the other two edges of this face need no samples either
-            else
-                l.wants = 0;
-        }
-        layouts[f] = l;
-    }, faceLayoutCb ) )
+        layouts[f] = layoutFace( v, radius, radiusSq );
+    }, layoutCb ) )
         return unexpectedOperationCanceled();
 
-    // an edge is divided so that every point of it is within the radius from a sample of its own,
-    // and only if some incident face relies on that: a face covered by its vertices does not, and a
-    // face covered by its longest edge alone relies on that edge only
+    // an edge is divided only if some incident face relies on that: a face covered by its own
+    // vertices does not, and a face covered by its longest edge relies on that edge alone. The
+    // number of parts is a multiple of what the grids ask, since their nodes must be among the
+    // division points, and not less than what the others ask, which needs no divisibility
     Buffer<int, UndirectedEdgeId> edgeDivs( topology.undirectedEdgeSize() );
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )
     {
         const EdgeId e = ue;
-        bool need = false;
-        int wanted = 0;
+        int gridAsk = 0, plainAsk = 0;
         for ( auto f : { topology.left( e ), topology.right( e ) } )
         {
             if ( !f || !( wholeMesh || faces.test( f ) ) )
@@ -169,34 +206,41 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             EdgeId es[3];
             topology.getTriEdges( f, es );
             const bool isBase = es[l.base].undirected() == ue;
-            if ( l.rows > 0 || isBase )
-                need = true;
+            if ( l.grid > 0 )
+                gridAsk = std::max( gridAsk, l.grid );
+            else if ( l.rows > 0 || isBase ) // the rows rely on all three edges covering themselves
+                plainAsk = std::max( plainAsk, divsForStep( mesh.edgeLength( ue ), 2 * radius ) );
             if ( isBase )
-                wanted = std::max( wanted, l.wants ); // no divisibility here, so the maximum will do
+                plainAsk = std::max( plainAsk, l.wants );
         }
-        edgeDivs[ue] = need
-            ? std::max( wanted, divsForStep( mesh.edgeLength( ue ), 2 * radius ) ) : 0;
+        if ( gridAsk <= 0 )
+            edgeDivs[ue] = plainAsk;
+        else // the smallest multiple of what the grids ask that is not less than the rest
+            edgeDivs[ue] = gridAsk * ( ( std::max( plainAsk, gridAsk ) + gridAsk - 1 ) / gridAsk );
     }, edgeDivsCb ) )
         return unexpectedOperationCanceled();
 
-    // now that the edges are divided, a face may need fewer rows, or none at all
+    // with the edges divided, a face sampled in rows may need fewer of them, or none at all
     Buffer<int, FaceId> faceSamples( topology.faceSize() );
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         auto & l = layouts[f];
-        if ( l.covered )
+        if ( l.grid > 0 )
         {
-            faceSamples[f] = 0;
+            faceSamples[f] = ( l.grid - 1 ) * ( l.grid - 2 ) / 2;
             return;
         }
+        faceSamples[f] = 0;
+        if ( l.covered || l.wants > 0 )
+            return; // nothing inside: the vertices or the longest edge alone cover this face
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         EdgeId es[3];
         topology.getTriEdges( f, es );
-        l = layoutFace( v, radius, radiusSq, edgeDivs[es[l.base].undirected()] );
-        faceSamples[f] = l.rows <= 0 ? 0
-            : numFaceSamples( l, ( v[( l.base + 1 ) % 3] - v[l.base] ).length() );
-    }, faceLayoutCb ) )
+        const float baseLen = ( v[( l.base + 1 ) % 3] - v[l.base] ).length();
+        layoutRows( l, baseLen, radius, radiusSq, edgeDivs[es[l.base].undirected()] );
+        faceSamples[f] = numRowSamples( l, baseLen );
+    }, samplesCb ) )
         return unexpectedOperationCanceled();
 
     // the samples of every edge and every face occupy a dedicated range in the resulting cloud;
@@ -253,35 +297,47 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
 
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
-        const auto & l = layouts[f];
-        if ( l.rows <= 0 )
+        if ( faceSamples[f] <= 0 )
             return;
+        const auto & l = layouts[f];
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        const auto & a = v[l.base], & b = v[( l.base + 1 ) % 3], & c = v[( l.base + 2 ) % 3];
-        Vector3f na, nb, nc;
+        Vector3f n[3];
         if ( saveNormals )
         {
             const auto vs = topology.getTriVerts( f );
-            na = res.normals[ vs[l.base] ];
-            nb = res.normals[ vs[( l.base + 1 ) % 3] ];
-            nc = res.normals[ vs[( l.base + 2 ) % 3] ];
+            for ( int i = 0; i < 3; ++i )
+                n[i] = res.normals[ vs[i] ];
         }
-        const float baseLen = ( b - a ).length();
         auto p = VertId( faceOffset[f] );
+        if ( l.grid > 0 )
+        {
+            const int divs = l.grid;
+            for ( int i = 1; i + 2 <= divs; ++i )
+                for ( int j = 1; i + j + 1 <= divs; ++j, ++p )
+                {
+                    const float a = float( i ) / divs, b = float( j ) / divs;
+                    res.points[p] = v[0] + a * ( v[1] - v[0] ) + b * ( v[2] - v[0] );
+                    if ( saveNormals )
+                        res.normals[p] = ( ( 1 - a - b ) * n[0] + a * n[1] + b * n[2] ).normalized();
+                }
+            return;
+        }
+        const int bi = l.base, bj = ( l.base + 1 ) % 3, bk = ( l.base + 2 ) % 3;
+        const float baseLen = ( v[bj] - v[bi] ).length();
         for ( int i = 0; i < l.rows; ++i )
         {
             const float hf = ( l.first + i * l.band ) / l.height;
-            const auto rowOrg = a + hf * ( c - a );
-            const auto rowDest = b + hf * ( c - b );
+            const auto rowOrg = v[bi] + hf * ( v[bk] - v[bi] );
+            const auto rowDest = v[bj] + hf * ( v[bk] - v[bj] );
             const int divs = divsForStep( baseLen * ( 1 - hf ), l.step );
             for ( int j = 0; j <= divs; ++j, ++p )
             {
                 const float g = float( j ) / divs;
                 res.points[p] = rowOrg + g * ( rowDest - rowOrg );
                 if ( saveNormals )
-                    res.normals[p] = ( ( 1 - hf ) * ( 1 - g ) * na
-                        + ( 1 - hf ) * g * nb + hf * nc ).normalized();
+                    res.normals[p] = ( ( 1 - hf ) * ( 1 - g ) * n[bi]
+                        + ( 1 - hf ) * g * n[bj] + hf * n[bk] ).normalized();
             }
         }
     }, facePointsCb ) )

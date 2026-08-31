@@ -258,8 +258,9 @@ jobs:
         run: msbuild -m source\MeshLibC2\MeshLibC2.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Build C CUDA bindings with MSBuild
-        # ProjectReference to MRCuda, so it needs a CUDA toolkit
-        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' && env.CUDA_VERSION != '' }}
+        # Needs a CUDA toolkit for its MRCuda ProjectReference, except on arm64, where no
+        # toolkit exists and the project builds the placeholder stubs instead.
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' && ( env.CUDA_VERSION != '' || matrix.arch == 'arm64' ) }}
         shell: cmd
         env:
           VCPKG_ROOT: C:\vcpkg
@@ -438,25 +439,25 @@ jobs:
           compression-level: 0
 
       - name: Create and fix fake Wheel for NuGet
-        # x64 only: the paths below, the artifact names and the package layout all assume
-        # one architecture. An arm64 NuGet payload is a separate change.
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
           py -3 -m pip install delvewheel
-          py -3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./source/x64/Release/MeshLibC2.dll ./source/x64/Release/MeshLibC2Cuda.dll
+          py -3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./source/${{ env.MR_ARCH }}/Release/MeshLibC2.dll ./source/${{ env.MR_ARCH }}/Release/MeshLibC2Cuda.dll
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v7
         with:
-          name: DotNetPatchArchiveWindows-x64
+          name: DotNetPatchArchiveWindows-${{ env.MR_ARCH }}
           path: ./patched_content/*
           retention-days: 1
           overwrite: true
 
       - name: Upload NuGet library DLL and XML to Artifacts
+        # These are netstandard2.0 and carry no architecture, so take them from the x64
+        # leg only; the arm64 one would only overwrite them with equivalent assemblies.
         if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
         uses: actions/upload-artifact@v7
         with:

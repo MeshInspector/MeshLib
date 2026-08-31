@@ -345,12 +345,14 @@ $(info MODE: $(MODE))
 # When setting this manually, both spaces and commas work as separators.
 ifneq ($(IS_WINDOWS),)
 override localappdata := $(subst \,/,$(LOCALAPPDATA))
-# python.org installs win-arm64 Pythons into suffixed directories (`Python311-arm64`),
-# so the suffix belongs in the paths but must not leak into the version numbers.
-PYTHON_DIR_SUFFIX := $(if $(filter arm64,$(MSVC_ARCH)),-arm64)
+# Where python.org installs interpreters, as a pattern: the win-arm64 ones get a `-arm64`
+# directory suffix, which belongs in the paths but must not leak into the version numbers.
+# Substitute `3%` for what each use needs - `3*` to glob, `@XY@` for the compiler flags.
+PYTHON_DIR := $(localappdata)/Programs/Python/Python
+PYTHON_DIR_PATTERN := $(PYTHON_DIR)3%$(if $(filter arm64,$(MSVC_ARCH)),-arm64)
 ifneq ($(FOR_WHEEL),)
 # On Windows wheel we use all versions we can find in appdata.
-PYTHON_VERSIONS := $(patsubst $(localappdata)/Programs/Python/Python3%$(PYTHON_DIR_SUFFIX),3.%,$(filter $(localappdata)/Programs/Python/Python3%$(PYTHON_DIR_SUFFIX),$(wildcard $(localappdata)/Programs/Python/Python3*$(PYTHON_DIR_SUFFIX))))
+PYTHON_VERSIONS := $(patsubst $(PYTHON_DIR_PATTERN),3.%,$(filter $(PYTHON_DIR_PATTERN),$(wildcard $(subst 3%,3*,$(PYTHON_DIR_PATTERN)))))
 # with an empty suffix the glob also matches the suffixed dirs, so drop those
 PYTHON_VERSIONS := $(filter-out %-arm64 %-32,$(PYTHON_VERSIONS))
 else
@@ -387,8 +389,8 @@ PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
 ifneq ($(and $(IS_WINDOWS),$(BUILD_SHIMS)),)
 # On Windows wheel, hardcode the flags to point to appdata.
-PYTHON_CFLAGS := -I$(localappdata)/Programs/Python/Python@XY@$(PYTHON_DIR_SUFFIX)/Include
-PYTHON_LDFLAGS := -L$(localappdata)/Programs/Python/Python@XY@$(PYTHON_DIR_SUFFIX)/libs -lpython@XY@
+PYTHON_CFLAGS := -I$(subst 3%,@XY@,$(PYTHON_DIR_PATTERN))/Include
+PYTHON_LDFLAGS := -L$(subst 3%,@XY@,$(PYTHON_DIR_PATTERN))/libs -lpython@XY@
 endif
 
 ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified...

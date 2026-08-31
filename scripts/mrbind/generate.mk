@@ -349,9 +349,12 @@ override localappdata := $(subst \,/,$(LOCALAPPDATA))
 # directory suffix, which belongs in the paths but must not leak into the version numbers.
 # Substitute `3%` for what each use needs - `3*` to glob, `@XY@` for the compiler flags.
 PYTHON_DIR := $(localappdata)/Programs/Python/Python
-PYTHON_DIR_PATTERN := $(PYTHON_DIR)3%$(if $(filter arm64,$(MSVC_ARCH)),-arm64)
+# python.org installs win-arm64 Pythons into suffixed directories (`Python311-arm64`),
+# so the suffix belongs in the paths but must not leak into the version numbers.
+PYTHON_DIR_SUFFIX := $(if $(filter arm64,$(MSVC_ARCH)),-arm64)
 ifneq ($(FOR_WHEEL),)
 # On Windows wheel we use all versions we can find in appdata.
+PYTHON_DIR_PATTERN := $(PYTHON_DIR)3%$(PYTHON_DIR_SUFFIX)
 PYTHON_VERSIONS := $(patsubst $(PYTHON_DIR_PATTERN),3.%,$(filter $(PYTHON_DIR_PATTERN),$(wildcard $(subst 3%,3*,$(PYTHON_DIR_PATTERN)))))
 # with an empty suffix the glob also matches the suffixed dirs, so drop those
 PYTHON_VERSIONS := $(filter-out %-arm64 %-32,$(PYTHON_VERSIONS))
@@ -389,8 +392,8 @@ PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
 ifneq ($(and $(IS_WINDOWS),$(BUILD_SHIMS)),)
 # On Windows wheel, hardcode the flags to point to appdata.
-PYTHON_CFLAGS := -I$(subst 3%,@XY@,$(PYTHON_DIR_PATTERN))/Include
-PYTHON_LDFLAGS := -L$(subst 3%,@XY@,$(PYTHON_DIR_PATTERN))/libs -lpython@XY@
+PYTHON_CFLAGS := -I$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/Include
+PYTHON_LDFLAGS := -L$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/libs -lpython@XY@
 endif
 
 ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified...

@@ -842,11 +842,31 @@ jobs:
           name: Windows-${{ matrix.platform }}
           merge-multiple: true
 
+      # Two steps rather than one interpolated list: setup-python wants real newlines,
+      # and an expression cannot produce them.
       - name: Python setup
+        if: ${{ matrix.platform != 'arm64' }}
         uses: actions/setup-python@v7
         with:
-          # python.org publishes no win-arm64 build before 3.11
-          python-version: ${{ matrix.platform == 'arm64' && '3.11, 3.12, 3.13, 3.14' || '3.8, 3.9, 3.10, 3.11, 3.12, 3.13, 3.14' }}
+          python-version: |
+            3.8
+            3.9
+            3.10
+            3.11
+            3.12
+            3.13
+            3.14
+
+      - name: Python setup (arm64)
+        # python.org publishes no win-arm64 build before 3.11
+        if: ${{ matrix.platform == 'arm64' }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: |
+            3.11
+            3.12
+            3.13
+            3.14
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the

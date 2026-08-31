@@ -138,7 +138,10 @@ const { valid, distSq } = ml.findProjection(point, mesh);
 mesh.delete();
 \endcode
 
-Also make sure to add `"type": "module"` to your package.json.
+Also make sure the ES module support is enabled for your project:
+\code{.sh}
+npm pkg set type=module
+\endcode
 
 ## Memory Management
 Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one must be freed explicitly.

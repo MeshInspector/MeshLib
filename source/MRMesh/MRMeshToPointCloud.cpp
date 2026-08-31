@@ -52,8 +52,6 @@ int ceilPow2Sq( float aSq, float bSq )
     return res;
 }
 
-/// how a face is sampled: by a grid of triangles similar to it, or in rows parallel to its longest
-/// edge, or by the samples of that edge alone, whichever of the three costs the fewest samples
 /// what covers a face, one way or another; the four are mutually exclusive
 enum FaceKind
 {
@@ -67,9 +65,13 @@ enum FaceKind
 /// number serves them all, and 28 bits hold more parts than divsForStep can ever return
 struct FaceLayout
 {
-    unsigned base : 2; ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
-    unsigned kind : 2; ///< one of FaceKind
-    unsigned divs : 28;///< the number of parts fkGrid and fkEdge need; unused by the others
+    unsigned base : 2 = 0;           ///< local index of the longest edge, from v[base] to v[base+1]
+    unsigned kind : 2 = fkVertices;  ///< one of FaceKind
+    unsigned divs : 28 = 0;          ///< the parts fkGrid and fkEdge need; unused by the others
+
+    FaceLayout() noexcept = default;
+    /// leaves the fields as they were, for Buffer to allocate without touching them
+    explicit FaceLayout( NoInit ) noexcept {}
 };
 
 /// the samples within a row are this far from each other, on every face
@@ -121,7 +123,7 @@ int numRowSamples( const RowLayout & l, float baseLen, float radius )
 /// chooses how a face is sampled, and what it needs of its longest edge
 FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 {
-    FaceLayout res{ 0, fkVertices, 0 };
+    FaceLayout res;
     // no point of a triangle is farther from the nearest vertex than the covering radius, and the
     // minimal enclosing circle bounds that radius from above and is cheaper to find
     if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq )

@@ -38,6 +38,15 @@ int ceilPow2Sq( float aSq, float bSq )
     return res;
 }
 
+/// returns the smallest n (and not less than 1) with n * n * bSq >= aSq, that is n >= sqrt( aSq / bSq )
+int ceilSq( float aSq, float bSq )
+{
+    int res = 1;
+    while ( float( res ) * float( res ) * bSq < aSq && res < ( 1 << 24 ) )
+        ++res;
+    return res;
+}
+
 } // anonymous namespace
 
 Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb )
@@ -97,7 +106,9 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         const auto hSq = cross( v[1] - v[0], v[2] - v[0] ).lengthSq() / longestSq;
         if ( hSq >= radiusSq )
             return;
-        const int stripDivs = ceilPow2Sq( longestSq, 4 * ( radiusSq - hSq ) );
+        // unlike the grid, the strip needs no conforming nodes on the edge, only a small enough
+        // step along it, so any number of parts will do and this one is not rounded to a power of two
+        const int stripDivs = ceilSq( longestSq, 4 * ( radiusSq - hSq ) );
         // the grid costs the samples of its three edges and of its interior, the strip only its edge
         if ( stripDivs - 1 >= 3 * ( divs - 1 ) + ( divs - 1 ) * ( divs - 2 ) / 2 )
             return;
@@ -114,16 +125,19 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )
     {
         const EdgeId e = ue;
-        int divs = 0;
+        int grid = 0, strip = 0;
         for ( auto f : { topology.left( e ), topology.right( e ) } )
         {
             if ( !f || !( wholeMesh || faces.test( f ) ) )
                 continue;
-            divs = std::max( divs, faceDivs[f] );
+            grid = std::max( grid, faceDivs[f] );
             if ( faceStripEdge[f] == ue )
-                divs = std::max( divs, faceStripDivs[f] );
+                strip = std::max( strip, faceStripDivs[f] );
         }
-        edgeDivs[ue] = divs;
+        // the nodes of a face's grid on this edge must be among its division points, so the number of
+        // parts stays a multiple of what the grids ask, and grows to what the strips ask
+        edgeDivs[ue] = strip <= grid ? grid
+            : grid <= 1 ? strip : ( ( strip + grid - 1 ) / grid ) * grid;
     }, edgeDivsCb ) )
         return unexpectedOperationCanceled();
 

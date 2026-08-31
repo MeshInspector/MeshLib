@@ -159,8 +159,8 @@ TEST( MRMesh, MeshToDensePointCloudThin )
     const float radius = 1;
     const auto cloud = meshToDensePointCloud( mesh, radius );
     ASSERT_TRUE( cloud.has_value() );
-    // 4 vertices and 7 samples dividing the diagonal in 8 parts; a grid would need 42 per triangle
-    EXPECT_EQ( cloud->points.size(), 11 );
+    // 4 vertices and 5 samples dividing the diagonal in 6 parts; a grid would need 42 per triangle
+    EXPECT_EQ( cloud->points.size(), 9 );
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), radius );
 }
 
@@ -199,8 +199,8 @@ TEST( MRMesh, MeshToDensePointCloudDegenerate )
     const auto cloud = meshToDensePointCloud( mesh, 0.1f );
     ASSERT_TRUE( cloud.has_value() );
     // the triangle is flat, so the samples of its longest side cover it: that side is divided
-    // in 8 parts, and the 3 vertices with the 7 samples between them is all the cloud has
-    EXPECT_EQ( cloud->points.size(), 10 );
+    // in 5 parts, and the 3 vertices with the 4 samples between them is all the cloud has
+    EXPECT_EQ( cloud->points.size(), 7 );
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), 0.1f );
 }
 

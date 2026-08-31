@@ -426,15 +426,6 @@ jobs:
           # The payload is already a .zip; don't re-Deflate it (no size gain).
           compression-level: 0
 
-      - name: Collect artifact stats
-        if: ${{ inputs.internal_build && env.job_upload_artifact == 'true' }}
-        continue-on-error: true
-        uses: ./.github/actions/collect-artifact-stats
-        with:
-          artifact_path: ${{ github.workspace }}
-          artifact_glob: MREDist_${{ env.VS_TAG }}_${{ matrix.upload_name || matrix.config }}.zip
-          stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
-
       - name: Upload MeshLibC2 headers archive
         if: ${{ env.job_upload_artifact == 'true' && matrix.cxx_compiler == 'msvc-2019' && matrix.config == 'Release' && inputs.mrbind_c }}
         uses: actions/upload-artifact@v7

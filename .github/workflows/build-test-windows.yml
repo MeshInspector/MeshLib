@@ -278,6 +278,38 @@ jobs:
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
 
+      # TEMPORARY, not for merge: the bindings link with lld here too (clang64/MinGW driver,
+      # so GNU-style flags), and --icf=all is measured on macOS in the same PR. Windows builds
+      # them with MODE=none, i.e. no -Oz and no ThinLTO, so this is ICF on its own.
+      - name: Measure ICF on the bindings
+        if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
+        shell: pwsh
+        env:
+          MSYS2_DIR: C:\msys64
+        run: |
+          $bin = "source\${{ env.MR_ARCH }}\${{ matrix.config }}"
+          $pyd = "$bin\meshlib\mrmeshpy.pyd"
+          Copy-Item $pyd "$env:RUNNER_TEMP\baseline-mrmeshpy.pyd" -Force
+          function Sanity {
+            Push-Location $bin
+            py -3 -u ..\..\..\scripts\run_python_test_script.py -d '..\test_python' > "$env:RUNNER_TEMP\sanity.log" 2>&1
+            $ok = $LASTEXITCODE -eq 0
+            Pop-Location
+            if ( -not $ok ) { Select-String -Path "$env:RUNNER_TEMP\sanity.log" -Pattern 'error|Error|assert' | Select-Object -First 5 }
+            return $( if ( $ok ) { 'pass' } else { 'FAIL' } )
+          }
+          $rows = @()
+          $rows += '{0,-12} {1,12:N0} bytes  sanity {2}' -f 'baseline', (Get-Item $pyd).Length, (Sanity)
+
+          Remove-Item -Force $pyd
+          cmd /c 'call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} && call .\scripts\mrbind\generate_win.bat --trace MODE=none VS_MODE=${{matrix.config}} EXTRA_LDFLAGS=-Wl,--icf=all'
+          if ( $LASTEXITCODE -ne 0 ) { throw 'the --icf=all link failed' }
+          $rows += '{0,-12} {1,12:N0} bytes  sanity {2}' -f '--icf=all', (Get-Item $pyd).Length, (Sanity)
+
+          Copy-Item "$env:RUNNER_TEMP\baseline-mrmeshpy.pyd" $pyd -Force   # the rest of the job tests what we ship
+          Write-Host "=== ${{ env.MR_ARCH }} ${{ matrix.config }}"
+          $rows | ForEach-Object { Write-Host $_ }
+
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}
         shell: pwsh

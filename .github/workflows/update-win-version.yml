@@ -22,10 +22,8 @@ jobs:
       fail-fast: false
       matrix:
         # One developer distributive per Visual Studio toolchain. The MREDist_*
-        # inputs are produced by the matching VS build in build-test-windows.yml
-        # (named via its VS_TAG); `cxx_compiler`/`build_system`/`build_config`
-        # name that build, so the size of the distributive is reported against
-        # the toolchain it came from.
+        # inputs are produced by the matching VS CMake build in
+        # build-test-windows.yml (named via its VS_TAG).
         include:
           - vcpkg_triplet: x64-windows-vs2019-meshlib
             extract_release: MREDist_VS19_Release.zip
@@ -116,8 +114,6 @@ jobs:
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
 
-      # Measure the archive users actually download: the main distributive, whose
-      # symbols the `Archive Symbols` step above already moved into the companion.
       - name: Collect artifact stats
         if: ${{ inputs.internal_build }}
         continue-on-error: true

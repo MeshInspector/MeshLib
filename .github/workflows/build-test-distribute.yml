@@ -181,6 +181,7 @@ jobs:
     with:
       vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
+      internal_build: ${{ needs.config.outputs.internal_build == 'true' }}
     secrets: inherit
 
   create-nuget-package:

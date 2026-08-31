@@ -25,12 +25,16 @@ PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals /*= true */, con
 namespace
 {
 
-/// returns the smallest power of two, which is not less than given value (and not less than 1)
-int ceilPow2( float v )
+/// returns the smallest power of two n (and not less than 1) with n * n * bSq >= aSq, that is
+/// n >= sqrt( aSq / bSq ): no square root and no division are needed, and quadrupling is exact
+int ceilPow2Sq( float aSq, float bSq )
 {
     int res = 1;
-    while ( res < v && res < ( 1 << 24 ) )
+    while ( bSq < aSq && res < ( 1 << 24 ) )
+    {
         res <<= 1;
+        bSq *= 4;
+    }
     return res;
 }
 
@@ -61,7 +65,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         // radius, so a triangle with a smaller one is covered by its own vertices and is not divided;
         // the minimal enclosing circle bounds that radius from above and is cheaper to find
         faceDivs[f] = mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq ? 1
-            : ceilPow2( std::sqrt( coveringRadiusSq( v[0], v[1], v[2] ) ) / radius );
+            : ceilPow2Sq( coveringRadiusSq( v[0], v[1], v[2] ), radiusSq );
     }, faceDivsCb ) )
         return unexpectedOperationCanceled();
 

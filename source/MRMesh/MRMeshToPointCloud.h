@@ -16,8 +16,9 @@ MRMESH_API PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals = tru
 /// the cloud, because every point of that surface is within the radius from some point of the cloud.
 /// The cloud consists of
 /// 1) all vertices of the sampled faces, having the same ids as in the mesh;
-/// 2) samples on each edge longer than 2*radius;
-/// 3) samples inside each triangle, which cannot be covered by its vertices alone.
+/// 2) samples inside every triangle that its own vertices cannot cover, and on the edges of it.
+/// A triangle needs no samples at all, however long its edges are, if every point of it is within
+/// the radius from one of its vertices, as in a sliver with the third vertex near the longest edge.
 /// Please note that the number of samples grows as 1/radius^2.
 /// \param mp the mesh or the part of it to be covered; nothing outside the part is sampled
 /// \param saveNormals if true then the normals of the cloud are set as well: the normals of the mesh

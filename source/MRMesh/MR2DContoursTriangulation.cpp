@@ -201,22 +201,11 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
 }
 
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
-    const std::vector<EdgeId>& edges, bool left )
+    const std::vector<EdgeId>& edges, bool left, VertId baseId )
 {
     if ( edges.size() == 2 )
         return 1;
     const VertId org = tp.org( edges[1] );
-    VertId baseId; // origin of the reference ray; invalid => the ray points against the sweep
-    if ( edges[0] )
-    {
-        auto dest = tp.dest( edges[0] );
-        for ( int i = 1; i < edges.size(); ++i )
-        {
-            if ( dest == tp.dest( edges[i] ) )
-                return i;
-        }
-        baseId = dest;
-    }
     // orientation of vertex x around org relative to the reference ray
     auto ccwFromBase = [&] ( VertId x )
     {
@@ -266,6 +255,24 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
     return 0;
 }
 
+int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
+    const std::vector<EdgeId>& edges, bool left )
+{
+    if ( edges.size() == 2 )
+        return 1;
+    VertId baseId; // origin of the reference ray; invalid => the ray points against the sweep
+    if ( edges[0] )
+    {
+        auto dest = tp.dest( edges[0] );
+        for ( int i = 1; i < edges.size(); ++i )
+        {
+            if ( dest == tp.dest( edges[i] ) )
+                return i;
+        }
+        baseId = dest;
+    }
+    return findClosestToFront( tp, predicates, edges, left, baseId );
+}
 
 struct SweepLineParams
 {
@@ -1127,13 +1134,28 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     EdgeId prevFreshPE;
     UndirectedEdgeId prevInUE;
 
+    auto findCCWPrev = [&] ( EdgeId e, EdgeId n, VertId baseV )->EdgeId
+    {
+        auto p = tp_.prev( n );
+        if ( p == n )
+            return n;
+        findClosestCache_.clear();
+        findClosestCache_.push_back( e );
+        findClosestCache_.push_back( n );
+        findClosestCache_.push_back( p );
+        return findClosestCache_[findClosestToFront( tp_, predicates_, findClosestCache_, false, baseV )];
+    };
+
     auto addNewEdge = [&] ( EdgeId inE, int cId, int pId )
     {
         EdgeId newPE;
+        EdgeId orgNextP, destNextP;
+        VertId orgP, destP;
         if ( prevFreshPE && inE.undirected() != prevInUE )
         {
             // org is the previous edge's fresh dest: the carried edge is the only one to splice against
             newPE = tp_.makeEdge();
+            orgP = tp_.org( prevFreshPE );
             tp_.splice( tp_.prev( prevFreshPE ), newPE );
         }
         else
@@ -1165,17 +1187,18 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
             {
                 // another ring edge is added but not ours
                 auto existingInE = p2in[pFE];
-                auto pRE = existingInE == inFE ? EdgeId( pFE ) : EdgeId( pFE ).sym();
+                orgNextP = existingInE == inFE ? EdgeId( pFE ) : EdgeId( pFE ).sym();
                 newPE = tp_.makeEdge();
-                tp_.splice( tp_.prev( pRE ), newPE );
+                orgP = tp_.org( orgNextP );
+                // deffer splice untill we know dest point
             }
             else
             {
                 // no ring edges at all
-                VertId v = tp_.addVertId();
-                predicates_.addInputPoint( v, cId, pId );
+                orgP = tp_.addVertId();
+                predicates_.addInputPoint( orgP, cId, pId );
                 newPE = tp_.makeEdge();
-                tp_.setOrg( newPE, v );
+                tp_.setOrg( newPE, orgP );
             }
         }
         prevFreshPE = {};
@@ -1197,17 +1220,28 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
             if ( inSE )
             {
                 auto existingInE = p2in[pSE];
-                auto pe = existingInE == inSE ? EdgeId( pSE ) : EdgeId( pSE ).sym();
-                tp_.splice( tp_.prev( pe ), newPE.sym() );
+                destNextP = existingInE == inSE ? EdgeId( pSE ) : EdgeId( pSE ).sym();
+                destP = tp_.org( destNextP );
+                // deffer splice untill we set org point
             }
             else
             {
-                VertId v = tp_.addVertId();
+                destP = tp_.addVertId();
                 // `pId + 1` can never reach `size` because loops are closed and we will always be in previous "if" block
-                predicates_.addInputPoint( v, cId, pId + 1 );
-                tp_.setOrg( newPE.sym(), v );
+                predicates_.addInputPoint( destP, cId, pId + 1 );
+                tp_.setOrg( newPE.sym(), destP );
                 prevFreshPE = newPE.sym();
                 prevInUE = inE.undirected();
+            }
+            if ( orgNextP )
+            {
+                assert( destP );
+                tp_.splice( findCCWPrev( newPE, orgNextP, destP ), newPE );
+            }
+            if ( destNextP )
+            {
+                assert( orgP );
+                tp_.splice( findCCWPrev( newPE.sym(), destNextP, orgP ), newPE.sym() );
             }
         }
     };

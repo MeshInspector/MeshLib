@@ -64,10 +64,7 @@ enum FaceKind
 /// how a face is sampled, in one word: the patterns above never apply together, so a single
 /// number serves them all, and 28 bits hold more parts than divsForStep can ever return.
 /// The fields have no initializers on purpose: that would make the type not trivially
-/// constructible, and Buffer would then construct every element instead of only allocating,
-/// touching the whole array in one thread before the parallel passes below get to it - 2.9 ms
-/// against 3.2 at radius 0.2 on a mesh of 169k faces, and 2.3 against 3.0 at radius 0.5.
-/// Every field is set right where a layout is made, including on the paths that return early
+/// constructible, and Buffer would then construct every element instead of only allocating
 struct FaceLayout
 {
     unsigned base : 2; ///< local index of the longest edge, going from v[base] to v[(base+1)%3]

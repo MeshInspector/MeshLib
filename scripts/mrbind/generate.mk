@@ -338,10 +338,13 @@ $(info MODE: $(MODE))
 # -11% on Linux, -13.6% on macOS x86_64, -19.4% on macOS arm64 (fixed-width instructions
 # make more of the instantiations byte-identical there).
 # No -ffunction-sections needed: lld's LTO codegen always emits per-function sections.
-# Outside the MODE presets on purpose, because the Windows bindings are built with
-# MODE=none. Not for debug builds, where folded functions confuse breakpoints, and not for
-# Emscripten, whose wasm-ld has no ICF.
-ifeq ($(IS_EMSCRIPTEN),)
+# Outside the MODE presets on purpose, so that a MODE=none build folds too.
+# Not for debug builds, where folded functions confuse breakpoints; not for Emscripten,
+# whose wasm-ld has no ICF; and not for Windows, where lld-link is a COFF driver that
+# ignores this spelling (`lld-link: warning: ignoring unknown argument '--icf=all'`) and
+# would need `/opt:icf` plus something to fold - the Windows bindings are built with
+# MODE=none, so neither LTO nor -ffunction-sections gives it per-function sections.
+ifeq ($(IS_EMSCRIPTEN)$(IS_WINDOWS),)
 ifneq ($(MODE),debug)
 override EXTRA_LDFLAGS += -Wl,--icf=all
 endif

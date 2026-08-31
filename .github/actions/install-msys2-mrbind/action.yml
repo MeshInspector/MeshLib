@@ -46,15 +46,11 @@ runs:
         if (-not (Test-Path 'C:\msys64\msys2_shell.cmd')) { throw 'MSYS2 extraction failed' }
         # first launch generates /etc and the user skeleton; pacman needs them
         & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'true'
-        # that init intermittently skips the local key signing, leaving every repo
-        # database at "unknown trust"; redo the keyring until `pacman -Sy` takes
-        # it. wget comes along because msys2-base has none, the scripts below do.
-        foreach ($i in 1..3) {
-          & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'pacman-key --init && pacman-key --populate msys2 && pacman-key --updatedb && pacman -Sy --noconfirm --needed wget'
-          if ($LASTEXITCODE -eq 0) { break }
-          Write-Host "MSYS2 keyring setup exited with code $LASTEXITCODE (attempt $i of 3)"
-          if ($i -eq 3) { throw 'MSYS2 keyring setup failed' }
-        }
+        # that init runs `pacman-key --populate msys2 || true` and intermittently
+        # dies before signing the keys, leaving every repo database at "unknown
+        # trust"; redo it here, plus the wget msys2-base lacks
+        & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'pacman-key --init && pacman-key --populate msys2 && pacman-key --updatedb && pacman -Sy --noconfirm --needed wget'
+        if ($LASTEXITCODE -ne 0) { throw "MSYS2 keyring setup exited with code $LASTEXITCODE" }
 
     - name: Install MSYS2 for MRBind
       # Pin clang to the version in the selected lockfile. Pinning only the

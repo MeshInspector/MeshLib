@@ -54,15 +54,22 @@ int ceilPow2Sq( float aSq, float bSq )
 
 /// how a face is sampled: by a grid of triangles similar to it, or in rows parallel to its longest
 /// edge, or by the samples of that edge alone, whichever of the three costs the fewest samples
+/// what covers a face, one way or another; the four are mutually exclusive
+enum FaceKind
+{
+    fkVertices, ///< its own three vertices, so it needs no samples at all
+    fkGrid,     ///< a grid of triangles similar to it, with `divs` parts of every side
+    fkEdge,     ///< the samples of its longest edge, which it asks to divide in `divs` parts
+    fkRows      ///< rows parallel to its longest edge, laid out where they are needed
+};
+
+/// how a face is sampled, in one word: the patterns above never apply together, so a single
+/// number serves them all, and 28 bits hold more parts than divsForStep can ever return
 struct FaceLayout
 {
-    int base;   ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
-    int grid;   ///< in how many parts every side is divided for a grid; zero if it is not a grid
-    int wants;  ///< in how many parts the face wants its longest edge; zero if it does not care
-    bool rows;  ///< the face is sampled in rows parallel to its longest edge
-
-    /// the three vertices alone cover such a face, and it needs no samples of any kind
-    [[nodiscard]] bool covered() const { return grid <= 0 && wants <= 0 && !rows; }
+    unsigned base : 2; ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
+    unsigned kind : 2; ///< one of FaceKind
+    unsigned divs : 28;///< the number of parts fkGrid and fkEdge need; unused by the others
 };
 
 /// the samples within a row are this far from each other, on every face
@@ -114,7 +121,7 @@ int numRowSamples( const RowLayout & l, float baseLen, float radius )
 /// chooses how a face is sampled, and what it needs of its longest edge
 FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 {
-    FaceLayout res{ 0, 0, 0, false };
+    FaceLayout res{ 0, fkVertices, 0 };
     // no point of a triangle is farther from the nearest vertex than the covering radius, and the
     // minimal enclosing circle bounds that radius from above and is cheaper to find
     if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq )
@@ -158,16 +165,25 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
         rowsCost += selfDivs[i] - 1;
 
     if ( stripCost <= rowsCost && stripCost <= gridCost )
-        res.wants = wants;
+    {
+        res.kind = fkEdge;
+        res.divs = wants;
+    }
     else if ( gridCost < rowsCost )
-        res.grid = grid;
+    {
+        res.kind = fkGrid;
+        res.divs = grid;
+    }
     else if ( rowLayout.num > 0 )
-        res.rows = true;
+        res.kind = fkRows;
     else
+    {
         // the rows are the cheapest and there are none of them: the samples of the longest edge
         // already cover the face, but it has to ask for them, or it will look covered by its
         // vertices and that edge will not be divided at all
-        res.wants = divsForStep( baseLen, 2 * radius );
+        res.kind = fkEdge;
+        res.divs = divsForStep( baseLen, 2 * radius );
+    }
     return res;
 }
 
@@ -210,17 +226,17 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             if ( !f || !( wholeMesh || faces.test( f ) ) )
                 continue;
             const auto & l = layouts[f];
-            if ( l.covered() )
+            if ( l.kind == fkVertices )
                 continue;
             EdgeId es[3];
             topology.getTriEdges( f, es );
             const bool isBase = es[l.base].undirected() == ue;
-            if ( l.grid > 0 )
-                gridAsk = std::max( gridAsk, l.grid );
-            else if ( l.rows || isBase ) // the rows rely on all three edges covering themselves
+            if ( l.kind == fkGrid )
+                gridAsk = std::max( gridAsk, int( l.divs ) );
+            else if ( l.kind == fkRows || isBase ) // the rows rely on all three edges covering themselves
                 plainAsk = std::max( plainAsk, divsForStep( mesh.edgeLength( ue ), 2 * radius ) );
-            if ( isBase )
-                plainAsk = std::max( plainAsk, l.wants );
+            if ( isBase && l.kind == fkEdge )
+                plainAsk = std::max( plainAsk, int( l.divs ) );
         }
         if ( gridAsk <= 0 )
             edgeDivs[ue] = plainAsk;
@@ -245,13 +261,14 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         const auto & l = layouts[f];
-        if ( l.grid > 0 )
+        if ( l.kind == fkGrid )
         {
-            faceSamples[f] = ( l.grid - 1 ) * ( l.grid - 2 ) / 2;
+            const int divs = l.divs;
+            faceSamples[f] = ( divs - 1 ) * ( divs - 2 ) / 2;
             return;
         }
         faceSamples[f] = 0;
-        if ( !l.rows )
+        if ( l.kind != fkRows )
             return; // nothing inside: the vertices or the longest edge alone cover this face
         Vector3f v[3];
         mesh.getTriPoints( f, v );
@@ -328,9 +345,9 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
                 n[i] = res.normals[ vs[i] ];
         }
         auto p = VertId( faceOffset[f] );
-        if ( l.grid > 0 )
+        if ( l.kind == fkGrid )
         {
-            const int divs = l.grid;
+            const int divs = l.divs;
             for ( int i = 1; i + 2 <= divs; ++i )
                 for ( int j = 1; i + j + 1 <= divs; ++j, ++p )
                 {
@@ -341,7 +358,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
                 }
             return;
         }
-        const int bi = l.base, bj = ( l.base + 1 ) % 3, bk = ( l.base + 2 ) % 3;
+        const int bi = l.base, bj = ( bi + 1 ) % 3, bk = ( bi + 2 ) % 3;
         float baseLen = 0;
         const auto rows = rowsOf( f, v, baseLen );
         for ( int i = 0; i < rows.num; ++i )

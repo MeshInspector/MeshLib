@@ -180,9 +180,9 @@ TEST( MRMesh, MeshToDensePointCloudDegenerate )
 
     const auto cloud = meshToDensePointCloud( mesh, 0.1f );
     ASSERT_TRUE( cloud.has_value() );
-    // the covering radius is 0.25, so every side is divided in 4 parts (as the face is),
-    // which gives 3 + 3*3 + 3*2/2 points
-    EXPECT_EQ( cloud->points.size(), 15 );
+    // the triangle is flat, so the samples of its longest side cover it: that side is divided
+    // in 5 parts, and the 3 vertices with the 4 samples between them is all the cloud has
+    EXPECT_EQ( cloud->points.size(), 7 );
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), 0.1f );
 }
 

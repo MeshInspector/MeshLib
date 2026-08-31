@@ -20,19 +20,22 @@ npm install @meshinspector/meshlib-mt
 
 ## Use from CDN
 
-In the browser you can skip npm entirely and import the module directly:
+In the browser you can load the module from the CDN instead of npm, but the browser refuses to run a worker
+script from another origin, so pass the fetched module to the factory as a `Blob` and its worker pool starts
+from a same-origin `blob:` URL:
 
 ```js
 // latest release
-import createMeshLib from 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
+const url = 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
 
-// or pin a release — v1.2.3.456 is an example tag, not a real one
-import createMeshLib from 'https://js.meshlib.io/meshlib-mt@v1.2.3.456/meshlib-mt.mjs';
+// or pin a release
+// const url = 'https://js.meshlib.io/meshlib-mt@v1.2.3.456/meshlib-mt.mjs';
+
+const { default: createMeshLib } = await import( url );
+const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/javascript' } );
+
+const ml = await createMeshLib( { mainScriptUrlOrBlob: blob } );
 ```
-
-To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a
-leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`.
-Pinned URLs are immutable, so a pin never changes under you; the unpinned path always serves the latest release.
 
 ## Browser requirements: cross-origin isolation
 

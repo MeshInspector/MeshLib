@@ -11,6 +11,19 @@ It covers all the prerequisites and setup steps for each platform, making it eas
 When you are done, confirm the result with \ref CppSetupVerify "Verify your setup" — two of its three checks need no graphical session and report failure through their exit status.
 If a step fails, see \ref CppSetupTroubleshooting "Troubleshooting" at the end of this page.
 
+\subsection CppSetupPrerequisites Prerequisites
+
+### Compiler and language standard
+
+MeshLib uses C++20 standard and is tested to be compiled with:
+ - GCC 11 or newer
+ - Clang 14 or newer
+ - MSVC 2019 or newer
+
+### CMake
+
+Integrating MeshLib with CMake needs CMake 3.18 or newer. See \ref MeshLibCmakeSetupGuide "the CMake Setup Guide" for the full `CMakeLists.txt`.
+
 \subsection CppSetupWindows Windows
 \note MeshLib for Windows is distributed for **x64** only: set the platform of your project to `x64`.
 A 32-bit (`Win32`) build is not supported and fails while compiling `MRMesh/MRId.h` with
@@ -212,7 +225,7 @@ meshconv --help
 ./build/Release/bin/meshconv --help
 \endcode
  \n `MeshViewer` (`./build/Release/bin/MeshViewer`) is the interactive check and requires a graphical session.
- 6. **Integrate Using CMake**
+ 6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 \subsection CppSetupMacOS macOS
@@ -234,7 +247,7 @@ xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requ
 \code{.sh}
 /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 \endcode
- 4. **Integrate Using CMake**
+ 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 ### Compile Locally
@@ -326,7 +339,7 @@ source ./emsdk_env.sh
 \code{.sh}
 unzip -d path_to_install <downloaded>.zip
 \endcode
- 3. **Integrate Using CMake**
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Specify the path to the extracted files with the `CMAKE_FIND_ROOT_PATH` option:
 \code{.sh}
 emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_install

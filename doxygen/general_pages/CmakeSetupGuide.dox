@@ -11,6 +11,8 @@ MeshLib provides native CMake integration support for \b Linux and \b macOS; for
 Example CMake configuration files are available to demonstrate how to link against the pre-built libraries.
 You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt).
 
+MeshLib requires CMake 3.18 or newer.
+
 ### Find MeshLib CMake Configuration Files
 
 For a start, find the MeshLib package:
@@ -62,6 +64,23 @@ target_link_libraries(hello PUBLIC MeshLib::MRMesh)
 \endcode
 
 For the `main.cpp` this expects, see \ref CppSetupVerify "Verify your setup" in the C++ Setup Guide: a self-contained program that builds a mesh, checks it, saves it and returns non-zero on failure.
+
+A C project is the same shape, linking `MeshLib::MeshLibC2` instead. Note that it needs only `MESHLIB_INCLUDE_DIR` as the `MRC*` headers include no third-party header.
+
+\code{.cmake}
+cmake_minimum_required(VERSION 3.18)
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+project(hello C)
+
+find_package(MeshLib CONFIG REQUIRED)
+
+add_executable(hello main.c)
+target_include_directories(hello PUBLIC ${MESHLIB_INCLUDE_DIR})
+target_link_libraries(hello PUBLIC MeshLib::MeshLibC2)
+\endcode
+
+For the `main.c`, take one of the [C code samples](\ref Examples); \ref ExampleMeshLoadSave "Load and Save Meshes" is the shortest.
 
 ### Linking Additional Third-Party Libraries
 

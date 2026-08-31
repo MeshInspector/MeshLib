@@ -323,6 +323,18 @@ MODE := release
 ifeq ($(MODE),release)
 override EXTRA_CFLAGS += -Oz -flto=thin -DNDEBUG
 override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),-Wl$(comma)-x,-s)# Apple's ld rejects `-s`; `-Wl,-x` drops local Mach-O symbols (most of __LINKEDIT) instead.
+# Fold byte-identical functions: the bindings are ~190k tiny near-duplicate template
+# instantiations. Measured on mrmeshpy, with the Python sanity suite passing every time:
+# -11% on Linux, -13.6% on macOS x86_64, -19.4% on macOS arm64 (fixed-width instructions
+# make more of the instantiations byte-identical there).
+# No -ffunction-sections needed: lld's LTO codegen of this preset always emits per-function
+# sections, which is also why this lives here and not next to the other link flags.
+# Not for Emscripten, whose wasm-ld has no ICF, and not for Windows, where lld-link is a
+# COFF driver that answers this spelling with `ignoring unknown argument '--icf=all'`; the
+# wheel build there does use this preset, so `/opt:icf` remains to be measured.
+ifeq ($(IS_EMSCRIPTEN)$(IS_WINDOWS),)
+override EXTRA_LDFLAGS += -Wl,--icf=all
+endif
 else ifeq ($(MODE),debug)
 override EXTRA_CFLAGS += -g
 override EXTRA_LDFLAGS += -g
@@ -332,23 +344,6 @@ else
 $(error Unknown MODE=$(MODE))
 endif
 $(info MODE: $(MODE))
-
-# Fold byte-identical functions: the bindings are ~190k tiny near-duplicate template
-# instantiations. Measured on mrmeshpy, with the Python sanity suite passing every time:
-# -11% on Linux, -13.6% on macOS x86_64, -19.4% on macOS arm64 (fixed-width instructions
-# make more of the instantiations byte-identical there).
-# No -ffunction-sections needed: lld's LTO codegen always emits per-function sections.
-# Outside the MODE presets on purpose, so that a MODE=none build folds too.
-# Not for debug builds, where folded functions confuse breakpoints; not for Emscripten,
-# whose wasm-ld has no ICF; and not for Windows, where lld-link is a COFF driver that
-# ignores this spelling (`lld-link: warning: ignoring unknown argument '--icf=all'`) and
-# would need `/opt:icf` plus something to fold - the Windows bindings are built with
-# MODE=none, so neither LTO nor -ffunction-sections gives it per-function sections.
-ifeq ($(IS_EMSCRIPTEN)$(IS_WINDOWS),)
-ifneq ($(MODE),debug)
-override EXTRA_LDFLAGS += -Wl,--icf=all
-endif
-endif
 
 
 # The list of Python versions, in the format `X.Y`.

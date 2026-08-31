@@ -45,14 +45,20 @@ In the browser you can skip npm entirely and import the module directly:
 // latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
-// multi-threaded build, latest release
-import createMeshLib from 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
-
-// or pin a release — v1.2.3.456 is an example tag, not a real one
+// or pin a release
 import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
 \endcode
 
-To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`. Pinned URLs are immutable, so a pin never changes under you; the unpinned paths above always serve the latest release.
+#### Multi-Threaded Build
+The multi-threaded build cannot be imported straight from the CDN, because the browser refuses to run a worker script from another origin, so pass the fetched module to the factory as a `Blob` and its worker pool starts from a same-origin `blob:` URL:
+\code{.js}
+const url = 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
+
+const { default: createMeshLib } = await import( url );
+const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/javascript' } );
+
+const ml = await createMeshLib( { mainScriptUrlOrBlob: blob } );
+\endcode
 
 In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
 

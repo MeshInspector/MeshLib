@@ -212,41 +212,60 @@ jobs:
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       # TEMPORARY, not for merge: -Oz already leaves no alignment padding, so these two are
-      # the size levers left for the bindings. --icf=all is link-only and reuses the objects
-      # just built; -fomit-frame-pointer is a compile flag, so its fragments are rebuilt.
-      - name: Measure the size levers
+      # the size levers left for the bindings. Each variant is both measured and exercised by
+      # the Python sanity suite, because a smaller module that cannot unwind is worthless.
+      # The baseline module is restored afterwards, so the rest of the job is unaffected.
+      - name: Measure and test the size levers
         if: ${{ inputs.mrbind }}
         env:
           PATH: ${{ steps.thirdparty.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.thirdparty.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
           CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
-          target=build/${{matrix.config}}/bin/meshlib/mrmeshpy.so
-          MK="make -f scripts/mrbind/generate.mk PYTHON_PKGCONF_NAME=python-3.10-embed MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin"
-          report() # $1 = label
-          {
-            printf '%-26s %12s bytes   __text %12s\n' "$1" \
-              "$( stat -f%z "$target" )" "$( size -m "$target" | awk '/Section __text/ { print $3 }' )"
-          }
+          bin=build/${{matrix.config}}/bin
+          target=$bin/meshlib/mrmeshpy.so
+          MK="make -f scripts/mrbind/generate.mk PYTHON_PKGCONF_NAME=python-3.10-embed MESHLIB_SHLIB_DIR=$bin"
+          cp "$target" /tmp/baseline-mrmeshpy.so
+          results=""
+
           link_cmd() # $@ = extra make variables; prints the link recipe of the target
           {
             rm -f "$target"
             $MK "$@" -n "$target" | grep -E 'clang\+\+.* -o .*mrmeshpy\.so' | tail -n 1
           }
+          check() # $1 = label; the module to test is already in place
+          {
+            local size text verdict
+            size="$( stat -f%z "$target" )"
+            text="$( size -m "$target" | awk '/Section __text/ { print $3 }' )"
+            if ( cd "$bin" && python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' ) \
+                 > /tmp/pytest-$1.log 2>&1 ; then
+              verdict=pass
+            else
+              verdict=FAIL
+              echo "=== $1 failed the sanity suite:"
+              grep -aE "uncaught exception|Fatal Python error|ERROR|assert" /tmp/pytest-$1.log | head -n 5
+            fi
+            results="$results$( printf '%-22s %12s bytes  __text %12s  sanity %s\n' "$1" "$size" "$text" "$verdict" )"$'\n'
+          }
 
-          report "baseline (as built)"
+          check "baseline"
 
           cmd="$( link_cmd )"
           [[ -n "$cmd" ]] || { echo "no link command found" >&2 ; exit 1 ; }
           bash -c "$cmd -Wl,--icf=all"
-          report "--icf=all"
+          check "icf"
 
           rm -f build/binds_python/mrmesh.fragment.*.o "$target"
           $MK EXTRA_CFLAGS=-fomit-frame-pointer "$target" -j"$( sysctl -n hw.logicalcpu )"
-          report "-fomit-frame-pointer"
+          check "omit-frame-pointer"
 
           cmd="$( link_cmd EXTRA_CFLAGS=-fomit-frame-pointer )"
           bash -c "$cmd -Wl,--icf=all"
-          report "both"
+          check "both"
+
+          cp /tmp/baseline-mrmeshpy.so "$target"   # the rest of the job tests what we ship
+          echo "=== ${{matrix.arch}} ${{matrix.config}}"
+          printf '%s' "$results"
 
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3

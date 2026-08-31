@@ -345,12 +345,10 @@ $(info MODE: $(MODE))
 # When setting this manually, both spaces and commas work as separators.
 ifneq ($(IS_WINDOWS),)
 override localappdata := $(subst \,/,$(LOCALAPPDATA))
-# Where python.org installs interpreters, as a pattern: the win-arm64 ones get a `-arm64`
-# directory suffix, which belongs in the paths but must not leak into the version numbers.
-# Substitute `3%` for what each use needs - `3*` to glob, `@XY@` for the compiler flags.
+# Where python.org installs interpreters. The win-arm64 ones land in suffixed directories
+# (`Python311-arm64`), so the suffix belongs in the paths but must not leak into the
+# version numbers.
 PYTHON_DIR := $(localappdata)/Programs/Python/Python
-# python.org installs win-arm64 Pythons into suffixed directories (`Python311-arm64`),
-# so the suffix belongs in the paths but must not leak into the version numbers.
 PYTHON_DIR_SUFFIX := $(if $(filter arm64,$(MSVC_ARCH)),-arm64)
 ifneq ($(FOR_WHEEL),)
 # On Windows wheel we use all versions we can find in appdata.

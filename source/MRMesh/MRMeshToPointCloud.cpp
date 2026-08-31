@@ -62,16 +62,17 @@ enum FaceKind
 };
 
 /// how a face is sampled, in one word: the patterns above never apply together, so a single
-/// number serves them all, and 28 bits hold more parts than divsForStep can ever return
+/// number serves them all, and 28 bits hold more parts than divsForStep can ever return.
+/// The fields have no initializers on purpose: that would make the type not trivially
+/// constructible, and Buffer would then construct every element instead of only allocating,
+/// touching the whole array in one thread before the parallel passes below get to it - 2.9 ms
+/// against 3.2 at radius 0.2 on a mesh of 169k faces, and 2.3 against 3.0 at radius 0.5.
+/// Every field is set right where a layout is made, including on the paths that return early
 struct FaceLayout
 {
-    unsigned base : 2 = 0;           ///< local index of the longest edge, from v[base] to v[base+1]
-    unsigned kind : 2 = fkVertices;  ///< one of FaceKind
-    unsigned divs : 28 = 0;          ///< the parts fkGrid and fkEdge need; unused by the others
-
-    FaceLayout() noexcept = default;
-    /// leaves the fields as they were, for Buffer to allocate without touching them
-    explicit FaceLayout( NoInit ) noexcept {}
+    unsigned base : 2; ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
+    unsigned kind : 2; ///< one of FaceKind
+    unsigned divs : 28;///< the number of parts fkGrid and fkEdge need; unused by the others
 };
 
 /// the samples within a row are this far from each other, on every face
@@ -123,7 +124,7 @@ int numRowSamples( const RowLayout & l, float baseLen, float radius )
 /// chooses how a face is sampled, and what it needs of its longest edge
 FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 {
-    FaceLayout res;
+    FaceLayout res{ 0, fkVertices, 0 };
     // no point of a triangle is farther from the nearest vertex than the covering radius, and the
     // minimal enclosing circle bounds that radius from above and is cheaper to find
     if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq )

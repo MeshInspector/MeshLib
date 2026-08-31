@@ -56,64 +56,65 @@ int ceilPow2Sq( float aSq, float bSq )
 /// edge, or by the samples of that edge alone, whichever of the three costs the fewest samples
 struct FaceLayout
 {
-    int base;      ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
-    int grid;      ///< in how many parts every side is divided for a grid; zero if it is not a grid
-    int rows;      ///< the number of rows; zero if there are none
-    int wants;     ///< in how many parts the face wants its longest edge; zero if it does not care
-    float first;   ///< the height of the first row over the longest edge
-    float band;    ///< the distance between the rows
-    float height;  ///< the height of the opposite vertex over the longest edge
-    float step;    ///< the distance between the samples within a row
-    bool covered;  ///< the three vertices alone cover the face, so it needs no samples at all
+    int base;       ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
+    int grid;       ///< in how many parts every side is divided for a grid; zero if not a grid
+    int rows;       ///< the number of rows parallel to the longest edge; zero if there are none
+    int wants;      ///< in how many parts the face wants its longest edge; zero if it does not care
+    float firstRow; ///< where the first row is, as a fraction of the height over the longest edge
+    float rowStep;  ///< the distance between the rows, as a fraction of that height
+
+    /// the three vertices alone cover such a face, and it needs no samples of any kind
+    [[nodiscard]] bool covered() const { return grid <= 0 && rows <= 0 && wants <= 0; }
 };
 
+/// the samples within a row are this far from each other, on every face
+float rowSampleStep( float radius )
+{
+    return radius * cSqrt2;
+}
+
 /// the number of samples inside a face sampled in rows
-int numRowSamples( const FaceLayout & l, float baseLen )
+int numRowSamples( const FaceLayout & l, float baseLen, float radius )
 {
     int res = 0;
     for ( int i = 0; i < l.rows; ++i )
     {
-        const float hf = ( l.first + i * l.band ) / l.height;
-        res += divsForStep( baseLen * ( 1 - hf ), l.step ) + 1;
+        const float hf = l.firstRow + i * l.rowStep;
+        res += divsForStep( baseLen * ( 1 - hf ), rowSampleStep( radius ) ) + 1;
     }
     return res;
 }
 
-/// lays out the rows parallel to the longest edge, given in how many parts that edge is divided
-void layoutRows( FaceLayout & res, float baseLen, float radius, float radiusSq, int baseDivs )
+/// lays out the rows parallel to the longest edge of a face, given the height over that edge and
+/// in how many parts it is divided
+void layoutRows( FaceLayout & res, float baseLen, float height, float radius, float radiusSq, int baseDivs )
 {
     res.rows = 0;
     // the samples of the base are not farther than half a step from any point of it, so they reach
     // sqrt( radius^2 - (step/2)^2 ) up in the height, and a face flatter than that needs no rows
     const float baseStep = baseLen / baseDivs;
-    res.first = std::sqrt( std::max( 0.0f, radiusSq - 0.25f * baseStep * baseStep ) );
-    if ( res.height <= res.first )
+    const float first = std::sqrt( std::max( 0.0f, radiusSq - 0.25f * baseStep * baseStep ) );
+    if ( height <= first )
         return;
     // a point above the rows is within a band from the row below it, which is never narrower than
     // the face is there, and within half a step along that row; sqrt(2)*radius along the row
     // against radius/sqrt(2) between the rows keeps both within the radius with the fewest samples
-    res.step = radius * cSqrt2;
-    res.rows = divsForStep( res.height - res.first, radius / cSqrt2 );
-    res.band = ( res.height - res.first ) / res.rows;
+    res.rows = divsForStep( height - first, radius / cSqrt2 );
+    res.firstRow = first / height;
+    res.rowStep = ( height - first ) / ( res.rows * height );
 }
 
 /// chooses how a face is sampled, and what it needs of its longest edge
 FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 {
-    FaceLayout res{ 0, 0, 0, 0, 0, 0, 0, 0, false };
+    FaceLayout res{ 0, 0, 0, 0, 0, 0 };
     // no point of a triangle is farther from the nearest vertex than the covering radius, and the
     // minimal enclosing circle bounds that radius from above and is cheaper to find
     if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq )
-    {
-        res.covered = true;
         return res;
-    }
     const auto coverSq = coveringRadiusSq( v[0], v[1], v[2] );
     if ( coverSq <= radiusSq )
-    {
-        res.covered = true;
         return res;
-    }
 
     // the longest edge is the base: the angles at its ends are acute, so every point of the face
     // projects on it inside it, and the sections parallel to it shrink towards the opposite vertex,
@@ -124,7 +125,7 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
         len[i] = ( v[( i + 1 ) % 3] - v[i] ).length();
     res.base = ( len[0] >= len[1] && len[0] >= len[2] ) ? 0 : ( len[1] >= len[2] ? 1 : 2 );
     const float baseLen = len[res.base];
-    res.height = cross( v[1] - v[0], v[2] - v[0] ).length() / baseLen; // twice the area over the base
+    const float height = cross( v[1] - v[0], v[2] - v[0] ).length() / baseLen; // 2*area over the base
     for ( int i = 0; i < 3; ++i )
         selfDivs[i] = divsForStep( len[i], 2 * radius ); // enough for an edge to cover itself
 
@@ -138,14 +139,14 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 
     // the samples of the base alone cover a face flatter than the radius, once it is divided finely
     int stripCost = std::numeric_limits<int>::max(), wants = 0;
-    if ( res.height < radius )
+    if ( height < radius )
     {
-        wants = divsForStep( baseLen, 2 * std::sqrt( radiusSq - res.height * res.height ) );
+        wants = divsForStep( baseLen, 2 * std::sqrt( radiusSq - height * height ) );
         stripCost = wants - 1;
     }
 
-    layoutRows( res, baseLen, radius, radiusSq, selfDivs[res.base] );
-    int rowsCost = 2 * numRowSamples( res, baseLen );
+    layoutRows( res, baseLen, height, radius, radiusSq, selfDivs[res.base] );
+    int rowsCost = 2 * numRowSamples( res, baseLen, radius );
     for ( int i = 0; i < 3; ++i )
         rowsCost += selfDivs[i] - 1;
 
@@ -201,7 +202,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             if ( !f || !( wholeMesh || faces.test( f ) ) )
                 continue;
             const auto & l = layouts[f];
-            if ( l.covered )
+            if ( l.covered() )
                 continue;
             EdgeId es[3];
             topology.getTriEdges( f, es );
@@ -231,15 +232,16 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             return;
         }
         faceSamples[f] = 0;
-        if ( l.covered || l.wants > 0 )
+        if ( l.covered() || l.wants > 0 )
             return; // nothing inside: the vertices or the longest edge alone cover this face
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         EdgeId es[3];
         topology.getTriEdges( f, es );
         const float baseLen = ( v[( l.base + 1 ) % 3] - v[l.base] ).length();
-        layoutRows( l, baseLen, radius, radiusSq, edgeDivs[es[l.base].undirected()] );
-        faceSamples[f] = numRowSamples( l, baseLen );
+        const float height = cross( v[1] - v[0], v[2] - v[0] ).length() / baseLen;
+        layoutRows( l, baseLen, height, radius, radiusSq, edgeDivs[es[l.base].undirected()] );
+        faceSamples[f] = numRowSamples( l, baseLen, radius );
     }, samplesCb ) )
         return unexpectedOperationCanceled();
 
@@ -327,10 +329,10 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         const float baseLen = ( v[bj] - v[bi] ).length();
         for ( int i = 0; i < l.rows; ++i )
         {
-            const float hf = ( l.first + i * l.band ) / l.height;
+            const float hf = l.firstRow + i * l.rowStep;
             const auto rowOrg = v[bi] + hf * ( v[bk] - v[bi] );
             const auto rowDest = v[bj] + hf * ( v[bk] - v[bj] );
-            const int divs = divsForStep( baseLen * ( 1 - hf ), l.step );
+            const int divs = divsForStep( baseLen * ( 1 - hf ), rowSampleStep( radius ) );
             for ( int j = 0; j <= divs; ++j, ++p )
             {
                 const float g = float( j ) / divs;

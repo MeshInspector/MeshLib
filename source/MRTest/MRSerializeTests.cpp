@@ -58,6 +58,35 @@ TEST( MRMesh, SerializeObjectMesh )
     EXPECT_NE( m0->mesh(), m1->mesh() );
 }
 
+// Zendesk #1121: the name is cut to 12 characters, and the cut used to end with a space
+TEST( MRMesh, SerializeObjectNameCutOnSpace )
+{
+    Object o;
+    o.setName( "root" );
+    auto group = std::make_shared<Object>();
+    group->setName( "Planner FTA Teeth" ); // first 12 characters are "Planner FTA "
+    o.addChild( group );
+    auto om = std::make_shared<ObjectMesh>();
+    om->setName( "Tooth_UL1" );
+    om->setMesh( std::make_shared<Mesh>( makeCube() ) );
+    group->addChild( om );
+
+    UniqueTemporaryFolder f;
+    auto mruPath = f / "cutOnSpace.mru";
+    auto s = serializeObjectTree( o, mruPath );
+    EXPECT_TRUE( s.has_value() ) << ( s.has_value() ? "" : s.error() );
+    auto l = loadSceneFromAnySupportedFormat( mruPath );
+    EXPECT_TRUE( l.has_value() );
+    ASSERT_TRUE( l->obj );
+    ASSERT_EQ( l->obj->children().size(), 1 );
+    EXPECT_EQ( l->obj->children()[0]->name(), "Planner FTA Teeth" );
+    ASSERT_EQ( l->obj->children()[0]->children().size(), 1 );
+    auto m = dynamic_cast<const ObjectMesh*>( l->obj->children()[0]->children()[0].get() );
+    ASSERT_TRUE( m );
+    ASSERT_TRUE( m->mesh() );
+    EXPECT_EQ( m->mesh()->topology.numValidFaces(), 12 );
+}
+
 TEST( MRMesh, SerializeSharedObjectMesh )
 {
     auto cubeMesh = std::make_shared<Mesh>( makeCube() );

@@ -160,6 +160,11 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
         res.rows = 0;
         res.grid = grid;
     }
+    else if ( res.rows <= 0 )
+        // the rows are the cheapest and there are none of them: the samples of the longest edge
+        // already cover the face, but it has to ask for them, or it will look covered by its
+        // vertices and that edge will not be divided at all
+        res.wants = divsForStep( baseLen, 2 * radius );
     return res;
 }
 

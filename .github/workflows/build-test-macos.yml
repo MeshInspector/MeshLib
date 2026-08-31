@@ -211,6 +211,43 @@ jobs:
             PYTHON_PKGCONF_NAME=python-3.10-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
+      # TEMPORARY, not for merge: -Oz already leaves no alignment padding, so these two are
+      # the size levers left for the bindings. --icf=all is link-only and reuses the objects
+      # just built; -fomit-frame-pointer is a compile flag, so its fragments are rebuilt.
+      - name: Measure the size levers
+        if: ${{ inputs.mrbind }}
+        env:
+          PATH: ${{ steps.thirdparty.outputs.brew-prefix }}/opt/make/libexec/gnubin:${{ steps.thirdparty.outputs.brew-prefix }}/opt/grep/libexec/gnubin:${{env.PATH}}
+          CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
+        run: |
+          target=build/${{matrix.config}}/bin/meshlib/mrmeshpy.so
+          MK="make -f scripts/mrbind/generate.mk PYTHON_PKGCONF_NAME=python-3.10-embed MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin"
+          report() # $1 = label
+          {
+            printf '%-26s %12s bytes   __text %12s\n' "$1" \
+              "$( stat -f%z "$target" )" "$( size -m "$target" | awk '/Section __text/ { print $3 }' )"
+          }
+          link_cmd() # $@ = extra make variables; prints the link recipe of the target
+          {
+            rm -f "$target"
+            $MK "$@" -n "$target" | grep -E 'clang\+\+.* -o .*mrmeshpy\.so' | tail -n 1
+          }
+
+          report "baseline (as built)"
+
+          cmd="$( link_cmd )"
+          [[ -n "$cmd" ]] || { echo "no link command found" >&2 ; exit 1 ; }
+          bash -c "$cmd -Wl,--icf=all"
+          report "--icf=all"
+
+          rm -f build/binds_python/mrmesh.fragment.*.o "$target"
+          $MK EXTRA_CFLAGS=-fomit-frame-pointer "$target" -j"$( sysctl -n hw.logicalcpu )"
+          report "-fomit-frame-pointer"
+
+          cmd="$( link_cmd EXTRA_CFLAGS=-fomit-frame-pointer )"
+          bash -c "$cmd -Wl,--icf=all"
+          report "both"
+
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
         run: ./build/${{ matrix.config }}/bin/MeshViewer -tryHidden -noEventLoop -unloadPluginsAtEnd

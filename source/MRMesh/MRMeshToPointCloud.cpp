@@ -44,6 +44,7 @@ struct FaceLayout
 {
     int base;      ///< local index of the longest edge, going from v[base] to v[(base+1)%3]
     int rows;      ///< the number of rows; zero if the longest edge alone covers the face
+    int wants;     ///< in how many parts this face wants its longest edge divided
     float first;   ///< the height of the first row over that edge
     float band;    ///< the distance between the rows
     float height;  ///< the height of the opposite vertex over that edge
@@ -51,9 +52,11 @@ struct FaceLayout
     bool covered;  ///< the three vertices alone cover the face, so it needs no samples at all
 };
 
-FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
+/// \param baseDivs in how many parts the longest edge is divided; zero on the first pass, when the
+/// face only tells in `wants` how many it would need for that edge to cover it alone
+FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq, int baseDivs = 0 )
 {
-    FaceLayout res{ 0, 0, 0, 0, 0, 0, false };
+    FaceLayout res{ 0, 0, 0, 0, 0, 0, 0, false };
     // no point of a triangle is farther from the nearest vertex than the covering radius, and the
     // minimal enclosing circle bounds that radius from above and is cheaper to find
     if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq
@@ -79,9 +82,13 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
     const float baseLen = std::sqrt( baseLenSq );
     res.height = cross( v[1] - v[0], v[2] - v[0] ).length() / baseLen; // twice the area over the base
 
-    // no point of the base is farther than half a step from a sample of it, so those samples reach
-    // this far in the height; a face lower than that is covered by its longest edge alone
-    const float baseStep = baseLen / divsForStep( baseLen, 2 * radius );
+    // the samples of the base are not farther than half a step from any point of it and reach
+    // sqrt( radius^2 - (step/2)^2 ) in the height, so dividing it in this many parts makes the base
+    // alone cover the face; a face flat enough gets that for free from the step of 2*radius
+    if ( res.height < radius )
+        res.wants = divsForStep( baseLen, 2 * std::sqrt( radiusSq - res.height * res.height ) );
+
+    const float baseStep = baseLen / ( baseDivs > 0 ? baseDivs : divsForStep( baseLen, 2 * radius ) );
     res.first = std::sqrt( std::max( 0.0f, radiusSq - 0.25f * baseStep * baseStep ) );
     if ( res.height <= res.first )
         return res;
@@ -123,15 +130,23 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     const auto [faceLayoutCb, edgeDivsCb, edgePointsCb, facePointsCb] = splitProgress( cb, 0.1f, 0.2f, 0.6f );
 
     Buffer<FaceLayout, FaceId> layouts( topology.faceSize() );
-    Buffer<int, FaceId> faceSamples( topology.faceSize() );
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        const auto l = layoutFace( v, radius, radiusSq );
+        auto l = layoutFace( v, radius, radiusSq );
+        const float baseLen = ( v[( l.base + 1 ) % 3] - v[l.base] ).length();
+        // asking the base for a finer division costs the samples it adds there, and saves all the
+        // rows; that trade is worth making only when the rows cost more
+        if ( l.rows > 0 && l.wants > 0 )
+        {
+            if ( l.wants - divsForStep( baseLen, 2 * radius ) < numFaceSamples( l, baseLen ) )
+                l.rows = 0; // the base will be divided finer, so no rows are needed at all, and
+                            // the other two edges of this face need no samples either
+            else
+                l.wants = 0;
+        }
         layouts[f] = l;
-        faceSamples[f] = l.rows <= 0 ? 0
-            : numFaceSamples( l, ( v[( l.base + 1 ) % 3] - v[l.base] ).length() );
     }, faceLayoutCb ) )
         return unexpectedOperationCanceled();
 
@@ -143,6 +158,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     {
         const EdgeId e = ue;
         bool need = false;
+        int wanted = 0;
         for ( auto f : { topology.left( e ), topology.right( e ) } )
         {
             if ( !f || !( wholeMesh || faces.test( f ) ) )
@@ -150,18 +166,37 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             const auto & l = layouts[f];
             if ( l.covered )
                 continue;
-            if ( l.rows > 0 )
+            EdgeId es[3];
+            topology.getTriEdges( f, es );
+            const bool isBase = es[l.base].undirected() == ue;
+            if ( l.rows > 0 || isBase )
                 need = true;
-            else
-            {
-                EdgeId es[3];
-                topology.getTriEdges( f, es );
-                if ( es[l.base].undirected() == ue )
-                    need = true;
-            }
+            if ( isBase )
+                wanted = std::max( wanted, l.wants ); // no divisibility here, so the maximum will do
         }
-        edgeDivs[ue] = need ? divsForStep( mesh.edgeLength( ue ), 2 * radius ) : 0;
+        edgeDivs[ue] = need
+            ? std::max( wanted, divsForStep( mesh.edgeLength( ue ), 2 * radius ) ) : 0;
     }, edgeDivsCb ) )
+        return unexpectedOperationCanceled();
+
+    // now that the edges are divided, a face may need fewer rows, or none at all
+    Buffer<int, FaceId> faceSamples( topology.faceSize() );
+    if ( !BitSetParallelFor( faces, [&]( FaceId f )
+    {
+        auto & l = layouts[f];
+        if ( l.covered )
+        {
+            faceSamples[f] = 0;
+            return;
+        }
+        Vector3f v[3];
+        mesh.getTriPoints( f, v );
+        EdgeId es[3];
+        topology.getTriEdges( f, es );
+        l = layoutFace( v, radius, radiusSq, edgeDivs[es[l.base].undirected()] );
+        faceSamples[f] = l.rows <= 0 ? 0
+            : numFaceSamples( l, ( v[( l.base + 1 ) % 3] - v[l.base] ).length() );
+    }, faceLayoutCb ) )
         return unexpectedOperationCanceled();
 
     // the samples of every edge and every face occupy a dedicated range in the resulting cloud;

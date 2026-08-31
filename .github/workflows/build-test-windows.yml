@@ -45,10 +45,8 @@ jobs:
       actions: read   # This is required for wait-for-job
 
     env:
-      # x64-only: MRDotNet2{,Static,Test}.csproj hard-code BaseOutputPath ..\..\source\x64
-      # and PlatformTarget x64, so C# needs its own change before it can run on arm64.
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' && matrix.arch != 'arm64' }}
-      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\x64\${{ matrix.config }}
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
+      PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\${{ matrix.arch || 'x64' }}\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       # Upload a developer distributive per Visual Studio toolchain so
       # update-win-version can repackage each into MeshLibDistVS{19,22,26}.zip.
@@ -214,7 +212,7 @@ jobs:
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 || exit /b 1
-          dotnet build examples/c-sharp-examples -c ${{matrix.config}} || exit /b 1
+          dotnet build examples/c-sharp-examples -c ${{matrix.config}} -p:Platform=%MSBUILD_PLATFORM% -p:MeshLibArch=%MR_ARCH% || exit /b 1
 
       - name: Build
         shell: cmd
@@ -331,8 +329,8 @@ jobs:
         if: ${{ env.BUILD_C_SHARP == 'true' }}
         timeout-minutes: 10
         run: |
-          dotnet build source\MRDotNet2Test -c ${{ matrix.config }}
-          source\x64\${{ matrix.config }}\MRDotNet2Test.exe --result="_report_nunit.xml"
+          dotnet build source\MRDotNet2Test -c ${{ matrix.config }} -p:MeshLibArch=${{ env.MR_ARCH }}
+          source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRDotNet2Test.exe --result="_report_nunit.xml"
           # convert report to JUnit format
           [Environment]::CurrentDirectory = $pwd
           $xslt = New-Object System.Xml.Xsl.XslCompiledTransform
@@ -449,7 +447,9 @@ jobs:
           compression-level: 0
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
+        # x64 only: the paths below, the artifact names and the package layout all assume
+        # one architecture. An arm64 NuGet payload is a separate change.
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
@@ -457,7 +457,7 @@ jobs:
           py -3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./source/x64/Release/MeshLibC2.dll ./source/x64/Release/MeshLibC2Cuda.dll
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveWindows-x64
@@ -466,7 +466,7 @@ jobs:
           overwrite: true
 
       - name: Upload NuGet library DLL and XML to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetDllXml

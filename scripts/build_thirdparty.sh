@@ -86,13 +86,6 @@ if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
 
-# pybind11's FindPythonLibsNew delegates to FindPythonInterp, which can land on
-# an EOL deadsnakes python3.8 whose `distutils` resolves to the distro's much
-# newer setuptools shim and fails to import. Pin the distro interpreter.
-if [[ $OSTYPE == 'linux'* ]] && [ "${MR_EMSCRIPTEN}" != "ON" ] && command -v python3 >/dev/null 2>&1 ; then
-  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D PYTHON_EXECUTABLE=$(command -v python3)"
-fi
-
 if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   if [ -z "${EMSDK}" ] ; then
     echo "Emscripten SDK not found"

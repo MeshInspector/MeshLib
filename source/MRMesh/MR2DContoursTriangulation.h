@@ -114,6 +114,15 @@ MRMESH_API std::unique_ptr<ISweepLineCache> makeSweepLineCache();
 MR_BIND_IGNORE MRMESH_API EdgeLoops& sweepCacheLoops( ISweepLineCache& cache );
 MR_BIND_IGNORE MRMESH_API WholeEdgeMap& sweepCachePatchMap( ISweepLineCache& cache );
 
+/// one slot of the hole-fill-plan peel's polygon scratch (see sweepCachePeelSlots)
+struct MR_BIND_IGNORE SweepCachePeelSlot
+{
+    EdgeId cur;   ///< current polygon edge in the patch, invalid = consumed position
+    int refCode;  ///< plan code of cur: not-negative absolute mesh EdgeId, negative - earlier plan edge
+    int succ;     ///< next slot around the polygon
+};
+MR_BIND_IGNORE MRMESH_API std::vector<SweepCachePeelSlot>& sweepCachePeelSlots( ISweepLineCache& cache );
+
 /**
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)

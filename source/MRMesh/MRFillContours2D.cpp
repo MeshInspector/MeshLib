@@ -232,14 +232,10 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     // interior edges: of the 3 * numTris face sides, each boundary edge covers one and each interior edge two
     const int numChords = ( 3 * res.numTris - int( bd2mesh.size() ) ) / 2;
 
-    // the peel's current polygon: one slot per boundary edge, the rings implicit in succ
-    struct Slot
-    {
-        EdgeId cur;   // current polygon edge in the patch, invalid = consumed position
-        int refCode;  // plan code of cur: not-negative absolute mesh EdgeId, negative - earlier plan edge
-        int succ;     // next slot around the polygon
-    };
-    std::vector<Slot> slots;
+    // the peel's current polygon: one slot per boundary edge, the rings implicit in succ;
+    // the buffer lives in the cache, so planning many holes with one cache reuses it
+    auto& slots = PlanarTriangulation::sweepCachePeelSlots( *cache );
+    slots.clear();
     slots.reserve( n );
     // EdgeId( 0 ) is the first boundary edge the copy created, so a plain loop yields the loop order.
     // Turn::Leftmost keeps the walk in the same region corner at a pinch vertex (the input loop's own

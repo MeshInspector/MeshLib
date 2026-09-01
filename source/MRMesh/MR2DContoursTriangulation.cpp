@@ -3,7 +3,6 @@
 #include "MRVector.h"
 #include "MRVector2.h"
 #include "MRContour.h"
-#include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRConstants.h"
 #include "MRRegionBoundary.h"
@@ -72,8 +71,26 @@ struct SweepLinePredicates
             { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } ) );
     }
 
+    // input-point conversion state - the only per-factory difference on the input side: the exact
+    // int converter plus either the source 2D contours, or the source mesh loops with projection axes
+    ConvertToIntVector toInt;
+    const Contours2f* srcContours = nullptr;
+    const Mesh* srcMesh = nullptr;
+    const EdgeLoops* srcLoops = nullptr;
+    int kx = 0, ky = 0;
+
     // store the position of input vertex v, identified by its (contourId, pointId) in the source contours
-    std::function<void( VertId v, int contourId, int pointId )> addInputPoint;
+    void addInputPoint( VertId v, int contourId, int pointId ) const
+    {
+        if ( srcContours )
+        {
+            pts2->autoResizeSet( v, to2dim( toInt( to3dim( ( *srcContours )[contourId][pointId] ) ) ) );
+            return;
+        }
+        const Vector3i q = toInt( srcMesh->orgPnt( ( *srcLoops )[contourId][pointId] ) );
+        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
+    }
+
     // position of vertex v; tp is passed at call time because the queue's topology is moved into the output mesh
     std::function<Vector3f( const MeshTopology& tp, VertId v )> point;
 };
@@ -97,10 +114,6 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours, std::s
 
     pts->clear();
     pts->reserve( pointsSize );
-    auto toInt = [conv = getToIntConverter( Box3d( box ) )] ( const Vector2f& coord )
-    {
-        return to2dim( conv( to3dim( coord ) ) );
-    };
     auto toFloat = [conv = getToFloatConverter( Box3d( box ) )] ( const Vector2i& coord )
     {
         return to2dim( conv( to3dim( coord ) ) );
@@ -108,12 +121,10 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours, std::s
 
     SweepLinePredicates p;
     p.pts2 = pts.get(); // the cache-owned buffer outlives the run
-    // resolve an input vertex by (contourId, pointId); initMeshByContours_ drives the order, so
-    // `contours` only needs to outlive construction (every caller passes its own input by reference)
-    p.addInputPoint = [&contours, pts, toInt] ( VertId v, int contourId, int pointId )
-    {
-        pts->autoResizeSet( v, toInt( contours[contourId][pointId] ) );
-    };
+    p.toInt = getToIntConverter( Box3d( box ) );
+    // input vertices are resolved by (contourId, pointId); initMeshByContours_ drives the order, so
+    // `contours` only needs to outlive the run (every caller passes its own input by reference)
+    p.srcContours = &contours;
     p.point = [pts, toFloat] ( const MeshTopology&, VertId v )
     {
         return to3dim( toFloat( ( *pts )[v] ) );
@@ -162,15 +173,14 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
 
     pts2->clear();
     pts2->reserve( pointsSize );
-    auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
 
     SweepLinePredicates p;
     p.pts2 = pts2.get(); // the cache-owned buffer outlives the run
-    p.addInputPoint = [&mesh, &loops, pts2, toInt, kx, ky] ( VertId v, int contourId, int pointId )
-    {
-        const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
-        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
-    };
+    p.toInt = getToIntConverter( Box3d( box ) );
+    p.srcMesh = &mesh;
+    p.srcLoops = &loops;
+    p.kx = kx;
+    p.ky = ky;
     // every output vertex lies on a copied input edge (disjoint triangulation adds no intersection
     // vertices), so find one in its org ring, skipping the triangulation's own diagonals
     p.point = [&mesh, &patchToInEdges] ( const MeshTopology& patchTp, VertId v )
@@ -462,6 +472,9 @@ public:
         UndirectedEdgeHashMap in2p;
         WholeEdgeMap p2inCache;
         std::vector<int> contourSizes; // vertex count of every input contour
+        Vector<EdgeId, UndirectedEdgeId> oldToFirstNewEdgeMap; // scratch of injectIntersections()
+        EdgeLoop monotoneBlockLoop; // scratch boundary loop of triangulateMonotoneBlock_()
+        std::vector<SweepCachePeelSlot> peelSlots; // scratch of the hole-fill-plan peel (sweepCachePeelSlots())
         // scratch of pipeline callers (sweepCacheLoops()); the triangulation itself never touches it,
         // and resetCache_() must not clear it: it already holds this run's input when the queue starts
         EdgeLoops loopsScratch;
@@ -486,6 +499,11 @@ EdgeLoops& sweepCacheLoops( ISweepLineCache& cache )
 WholeEdgeMap& sweepCachePatchMap( ISweepLineCache& cache )
 {
     return static_cast<SweepLineQueue::Cache&>( cache ).p2inCache;
+}
+
+std::vector<SweepCachePeelSlot>& sweepCachePeelSlots( ISweepLineCache& cache )
+{
+    return static_cast<SweepLineQueue::Cache&>( cache ).peelSlots;
 }
 
 SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<int>& contourSizes, const SweepLineParams& params ) :
@@ -537,7 +555,6 @@ std::optional<MR::Mesh> SweepLineQueue::run( IntersectionsMap* interMap )
 
 MeshTopology* SweepLineQueue::runTopology( IntersectionsMap* interMap )
 {
-    MR_TIMER;
     if ( !findIntersections() )
         return nullptr;
     injectIntersections( interMap );
@@ -548,7 +565,6 @@ MeshTopology* SweepLineQueue::runTopology( IntersectionsMap* interMap )
 
 bool SweepLineQueue::findIntersections()
 {
-    MR_TIMER;
     stage_ = Stage::Intersections;
     cache_.events.clear();
     cache_.events.reserve( cache_.tp.numValidVerts() * 2 );
@@ -571,13 +587,14 @@ bool SweepLineQueue::findIntersections()
 
 void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
 {
-    MR_TIMER;
 
     if ( interMap )
         interMap->map.resize( cache_.intersections.size() );
 
     cache_.windingInfo.resize( cache_.windingInfo.size() + cache_.intersections.size() * 2 );
-    Vector<EdgeId, UndirectedEdgeId> oldToFirstNewEdgeMap( cache_.tp.undirectedEdgeSize() );
+    auto& oldToFirstNewEdgeMap = cache_.oldToFirstNewEdgeMap;
+    oldToFirstNewEdgeMap.clear(); // keeping capacity; resize() below fills the fresh part with invalid edges
+    oldToFirstNewEdgeMap.resize( cache_.tp.undirectedEdgeSize() );
 
     if ( interMap )
     {
@@ -679,7 +696,6 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
 
 void SweepLineQueue::makeMonotone()
 {
-    MR_TIMER;
     stage_ = Stage::Monotonation;
     startVertIndex_ = 0;
     sortedVertIndex_ = 0;
@@ -695,7 +711,6 @@ void SweepLineQueue::makeMonotone()
 
 void SweepLineQueue::triangulate()
 {
-    MR_TIMER;
     stage_ = Stage::Triangulation;
     if ( !params_.needOutline )
         cache_.reflexChainCache.reserve( 256 ); // reserve once to have less allocations later
@@ -1128,7 +1143,6 @@ void SweepLineQueue::checkIntersection_( int i )
 
 void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
 {
-    MR_TIMER;
     for ( int contourId = 0; contourId < int( contourSizes.size() ); ++contourId )
     {
         if ( contourSizes[contourId] > 3 )
@@ -1163,7 +1177,6 @@ void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
 
 void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops )
 {
-    MR_TIMER;
     auto& in2p = cache_.in2p; // input mesh edge -> patch edge, cleared by resetCache_()
     WholeEdgeMap& p2in = params_.outPatchMap ? *params_.outPatchMap : cache_.p2inCache;
 
@@ -1324,7 +1337,6 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
 
 void SweepLineQueue::mergeSamePoints_()
 {
-    MR_TIMER;
     cache_.sortedVerts.reserve( cache_.tp.vertSize() );
     for ( int i = 0; i < cache_.tp.vertSize(); ++i )
         cache_.sortedVerts.emplace_back( VertId( i ) );
@@ -1454,7 +1466,6 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
 
 void SweepLineQueue::removeMultipleAfterMerge_()
 {
-    MR_TIMER;
     auto multiples = findMultipleEdges( cache_.tp ).value();
     for ( const auto& multiple : multiples )
     {
@@ -1501,8 +1512,9 @@ void SweepLineQueue::calculateWinding_()
 // https://www.cs.umd.edu/class/spring2020/cmsc754/Lects/lect05-triangulate.pdf
 void SweepLineQueue::triangulateMonotoneBlock_( EdgeId holeEdgeId )
 {
-    MR_TIMER;
-    auto holeLoop = trackRightBoundaryLoop( cache_.tp, holeEdgeId );
+    auto& holeLoop = cache_.monotoneBlockLoop;
+    holeLoop.clear();
+    appendRightBoundaryLoop( holeLoop, cache_.tp, holeEdgeId );
     auto lessPred = [&] ( EdgeId l, EdgeId r )
     {
         return predicates_.less( cache_.tp.org( l ) , cache_.tp.org( r ) );

@@ -24,7 +24,6 @@ ubuntu=(
   requirements/ubuntu.txt
   requirements/python/requirements.txt
   scripts/install_apt_requirements.sh
-  scripts/install_apt_cuda.sh
   scripts/install_thirdparty.sh
   scripts/mrbind-pybind11/python_versions.txt
   scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh

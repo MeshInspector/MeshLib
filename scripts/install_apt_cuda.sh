@@ -26,15 +26,11 @@ dpkg -i cuda-keyring_1.1-1_all.deb
 rm cuda-keyring_1.1-1_all.deb
 popd
 
-case "$DISTRO" in
-    "ubuntu2004")
-        CUDA_VERSION="12-1" ;;
-    # the ubuntu2604 repo starts at 13.3
-    "ubuntu2604")
-        CUDA_VERSION="13-3" ;;
-    *)
-        CUDA_VERSION="12-6" ;;
-esac
+if [ $DISTRO = "ubuntu2004" ] ; then
+    CUDA_VERSION="12-1"
+else
+    CUDA_VERSION="12-6"
+fi
 
 apt update
 apt install -y "cuda-minimal-build-$CUDA_VERSION"

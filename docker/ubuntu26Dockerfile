@@ -7,7 +7,6 @@ RUN mkdir /usr/local/lib/meshlib-thirdparty-lib/
 WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
-COPY scripts/install_apt_cuda.sh scripts/install_apt_cuda.sh
 COPY requirements requirements
 COPY scripts/mrbind-pybind11/python_versions.txt scripts/mrbind-pybind11/python_versions.txt
 COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
@@ -47,14 +46,20 @@ RUN <<EOF
     # configure GitHub repo
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
+    # configure CUDA repo
+    ARCH="$(uname -m)"; [ "$ARCH" = aarch64 ] && ARCH=sbsa
+    wget "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2604/$ARCH/cuda-keyring_1.1-1_all.deb"
+    dpkg -i cuda-keyring_1.1-1_all.deb
+    rm cuda-keyring_1.1-1_all.deb
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
         gh gcc-15 g++-15 \
+        cuda-minimal-build-13-3 \
         tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext gawk procps
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
-    ./scripts/install_apt_cuda.sh
+    # install toolchain
     TOOLCHAIN=clang-${LLVM_VERSION}-pgo-dylib-linux
     curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
     ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh

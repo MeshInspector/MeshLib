@@ -42,7 +42,7 @@ RUN <<EOF
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
     # install prerequisites for additional repos
     apt update
-    apt install -y software-properties-common curl
+    apt install -y software-properties-common curl wget
     # configure GitHub repo
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
@@ -56,7 +56,7 @@ RUN <<EOF
     apt-get install -qqy --no-install-recommends \
         gh gcc-15 g++-15 \
         cuda-minimal-build-13-3 \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext gawk procps
+        tzdata git sudo time xvfb curl unzip ninja-build patchelf gettext gawk procps
     # work-around Python 3.8 + newer setuptools incompatibility
     MR_CMAKE_OPTIONS="-D PYTHON_EXECUTABLE=/usr/bin/python3" \
     ./scripts/install_apt_requirements.sh

@@ -45,7 +45,7 @@ RUN <<EOF
     echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
     # install prerequisites for additional repos
     apt update
-    apt install -y software-properties-common curl
+    apt install -y software-properties-common curl wget
     # configure GitHub repo
     curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg -o /usr/share/keyrings/githubcli-archive-keyring.gpg
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" > /etc/apt/sources.list.d/github-cli.list
@@ -58,7 +58,7 @@ RUN <<EOF
     apt-get install -qqy --no-install-recommends \
         gh g++-12 clang-14 \
         cuda-minimal-build-12-1 \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext gawk procps
+        tzdata git sudo time xvfb curl unzip ninja-build patchelf gettext gawk procps
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     # install toolchain

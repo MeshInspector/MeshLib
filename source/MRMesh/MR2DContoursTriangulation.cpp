@@ -202,6 +202,12 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     return p;
 }
 
+// among candidate edges[1..] sharing one origin and listed in their cyclic ring order, finds the index
+// of the one angularly closest to the reference ray from that origin toward baseId: the first candidate
+// on the left (counterclockwise) side of the ray if `left`, on the right side otherwise;
+// invalid baseId = the ray points against the sweep direction;
+// edges[0] is the edge being queried itself - only its slot is used, its topology is never read,
+// so it may be a lone edge still under construction
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
     const std::vector<EdgeId>& edges, bool left, VertId baseId )
 {
@@ -257,6 +263,9 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
     return 0;
 }
 
+// same as above, reading the reference ray target from edges[0]'s dest (so edges[0] must be a valid
+// spliced edge here, or invalid for the against-the-sweep ray); a candidate pointing to that same
+// dest is returned right away
 int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predicates,
     const std::vector<EdgeId>& edges, bool left )
 {
@@ -1136,6 +1145,10 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     EdgeId prevFreshPE;
     UndirectedEdgeId prevInUE;
 
+    // the ring edge to splice lone edge `e` (directed from the shared vertex toward baseV) right after:
+    // the one angularly closest to `e` clockwise among `n` and its ring predecessor - enough candidates,
+    // because `n` is angularly adjacent to `e` (it maps the input-mesh ring neighbor) and the ring being
+    // built stays angularly sorted by induction
     auto findCCWPrev = [&] ( EdgeId e, EdgeId n, VertId baseV )->EdgeId
     {
         auto p = tp_.prev( n );

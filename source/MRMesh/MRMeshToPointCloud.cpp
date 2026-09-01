@@ -8,6 +8,8 @@
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
+#include <cstdint>
+#include <limits>
 
 namespace MR
 {
@@ -26,6 +28,9 @@ namespace
 {
 
 constexpr float cSqrt2 = 1.41421356f;
+
+/// the resulting cloud cannot have more points than the maximal VertId
+constexpr size_t cMaxPoints = std::numeric_limits<int>::max();
 
 /// returns the smallest number of equal parts, and not less than one, in which a segment of the
 /// given length has to be divided to make every part not longer than the given step
@@ -257,54 +262,67 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         return layoutRows( baseLen, height, radius, radiusSq, edgeDivs[es[l.base].undirected()] );
     };
 
-    Buffer<int, FaceId> faceSamples( topology.faceSize() );
+    // until the scan below, faceOffset[f] holds the number of samples inside the face f; 32 bits
+    // are enough for it because every id in the resulting cloud has to fit in VertId anyway
+    Buffer<std::uint32_t, FaceId> faceOffset( topology.faceSize() );
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
         const auto & l = layouts[f];
         if ( l.kind == fkGrid )
         {
-            const int divs = l.divs;
-            faceSamples[f] = ( divs - 1 ) * ( divs - 2 ) / 2;
+            const size_t divs = l.divs;
+            faceOffset[f] = std::uint32_t( std::min( ( divs - 1 ) * ( divs - 2 ) / 2, cMaxPoints ) );
             return;
         }
-        faceSamples[f] = 0;
+        faceOffset[f] = 0;
         if ( l.kind != fkRows )
             return; // nothing inside: the vertices or the longest edge alone cover this face
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         float baseLen = 0;
         const auto rows = rowsOf( f, v, baseLen ); // sets baseLen, so not in the call below
-        faceSamples[f] = numRowSamples( rows, baseLen, radius );
+        faceOffset[f] = std::uint32_t( numRowSamples( rows, baseLen, radius ) );
     }, samplesCb ) )
         return unexpectedOperationCanceled();
 
     // the samples of every edge and every face occupy a dedicated range in the resulting cloud;
-    // the arrays here are not initialized, and the elements of missing faces are never touched at all
+    // the buffers here are not initialized, and the offsets of missing faces are never touched at all
     size_t numPoints = mesh.points.size();
-    Buffer<size_t, UndirectedEdgeId> edgeOffset( edgeDivs.size() );
+    Buffer<std::uint32_t, UndirectedEdgeId> edgeOffset( edgeDivs.size() );
     for ( auto ue = 0_ue; ue < edgeDivs.endId(); ++ue )
     {
-        edgeOffset[ue] = numPoints;
+        edgeOffset[ue] = std::uint32_t( numPoints );
         if ( edgeDivs[ue] > 1 )
             numPoints += edgeDivs[ue] - 1;
     }
-    Buffer<size_t, FaceId> faceOffset( layouts.size() );
     for ( auto f : faces )
     {
-        faceOffset[f] = numPoints;
-        numPoints += faceSamples[f];
+        const size_t samples = faceOffset[f];
+        faceOffset[f] = std::uint32_t( numPoints );
+        numPoints += samples;
     }
+    // past the maximal id, the offsets above are truncated, but the error leaves them unused
+    if ( numPoints > cMaxPoints )
+        return unexpected( "meshToDensePointCloud: too many points to sample, please increase the radius" );
 
     PointCloud res;
-    res.points = mesh.points;
     res.points.resizeNoInit( numPoints ); // the samples of the edges and the faces are set below
+    ParallelFor( mesh.points, [&]( VertId v )
+    {
+        res.points[v] = mesh.points[v];
+    } );
     res.validPoints = wholeMesh ? topology.getValidVerts() : getIncidentVerts( topology, faces );
     res.validPoints.resize( mesh.points.size(), false );
     res.validPoints.resize( numPoints, true );
     if ( saveNormals )
     {
-        res.normals = computePerVertNormals( mesh );
+        // the normals of the mesh vertices are computed right in the final buffer: a temporary
+        // vertex-sized vector would have to be copied on the growth to numPoints
         res.normals.resizeNoInit( numPoints );
+        BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
+        {
+            res.normals[v] = mesh.normal( v );
+        } );
     }
 
     if ( !ParallelFor( 0_ue, edgeDivs.endId(), [&]( UndirectedEdgeId ue )
@@ -332,9 +350,9 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
 
     if ( !BitSetParallelFor( faces, [&]( FaceId f )
     {
-        if ( faceSamples[f] <= 0 )
-            return;
         const auto & l = layouts[f];
+        if ( l.kind == fkVertices || l.kind == fkEdge )
+            return; // nothing inside: the vertices or the longest edge alone cover this face
         Vector3f v[3];
         mesh.getTriPoints( f, v );
         Vector3f n[3];

@@ -42,6 +42,7 @@ on:
 jobs:
   linux-x64-test:
     if: ${{ inputs.test_ubuntu_x64 }}
+    continue-on-error: ${{ matrix.experimental || false }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     container:
@@ -49,18 +50,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04", "ubuntu:26.04" ]
         include:
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
+            stdcxx-dev: libstdc++-10-dev
           - os: "ubuntu:24.04"
             name: "ubuntu24"
             compiler: clang-18
             c-compiler: /usr/bin/clang-18
             cxx-compiler: /usr/bin/clang++-18
+            stdcxx-dev: libstdc++-10-dev
+          # Forward-compatibility probe: the ubuntu24 deb on the next LTS. Not a
+          # supported combination, so continue-on-error keeps it from reddening
+          # a release; 26.04 has no libstdc++-10-dev and its clang is 21.
+          - os: "ubuntu:26.04"
+            name: "ubuntu24"
+            compiler: clang
+            c-compiler: /usr/bin/clang
+            cxx-compiler: /usr/bin/clang++
+            stdcxx-dev: libstdc++-15-dev
+            experimental: true
 
     steps:
       - name: Checkout
@@ -93,7 +106,7 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
-            apt-get -y install libstdc++-10-dev && \
+            apt-get -y install ${{ matrix.stdcxx-dev }} && \
             apt-get -y install ./*${{matrix.name}}-dev.deb
 
       - name: Create virtualenv

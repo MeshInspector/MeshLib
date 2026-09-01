@@ -1923,6 +1923,8 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     };
 
     UndirectedEdgeBitSet fromMappedEdges( from.undirectedEdgeSize() ); //one of fromContours' edge
+    HashMap<VertId, int> orgVisits; // how many stitched edges start in a target vertex; allocates only on first insert
+    bool multiVisit = false;
     // verify the contours while recording their mappings: nothing in this topology is modified
     // before all the checks pass, so a rejected call leaves it as it was
     for ( int i = 0; i < szContours; ++i )
@@ -1954,6 +1956,8 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 return fail();
             setAt( emap, e.undirected(), e.even() ? e1 : e1.sym() );
             fromMappedEdges.set( e.undirected() );
+            if ( ++orgVisits[org( e1 )] == 2 )
+                multiVisit = true;
         }
     }
 
@@ -1973,17 +1977,6 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     // by the stitching (e.g. filling a pinched hole loop with a patch pinched at the same vertex closes
     // each lobe into its own pillow); simulate the future ring at every such vertex and reject the call
     // unless all its stitched edges fall in one cycle
-    HashMap<VertId, int> orgVisits;
-    for ( const auto & thisContour : thisContours )
-        for ( EdgeId e1 : thisContour )
-            ++orgVisits[org( e1 )];
-    bool multiVisit = false;
-    for ( const auto & [v, n] : orgVisits )
-        if ( n > 1 )
-        {
-            multiVisit = true;
-            break;
-        }
     if ( multiVisit )
     {
         HashMap<VertId, std::vector<std::pair<EdgeId, EdgeId>>> ports; // vertex -> its stitched ( this-edge, from-edge ) pairs
@@ -2002,10 +1995,19 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             const auto & vports = vertPorts.second; // clang < 16 cannot capture a structured binding in a lambda
             // the same target edge stitched to two different from-edges would get its ring records
             // written twice (equal from-edges were rejected above via emap)
+            bool repeatedFromOrg = false;
             for ( int a = 0; a + 1 < int( vports.size() ); ++a )
                 for ( int b = a + 1; b < int( vports.size() ); ++b )
+                {
                     if ( vports[a].first == vports[b].first )
                         return fail();
+                    if ( from.org( vports[a].second ) == from.org( vports[b].second ) )
+                        repeatedFromOrg = true;
+                }
+            // every corner is filled by its own from-vertex: each patch fan is a linear splice into
+            // its own gap of the single present ring, so the result is a single ring for sure
+            if ( !repeatedFromOrg )
+                continue;
             auto pairedFrom = [&]( EdgeId e1 ) -> EdgeId
             {
                 for ( const auto & [te, fe] : vports )

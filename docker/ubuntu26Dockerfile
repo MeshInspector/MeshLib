@@ -55,6 +55,7 @@ RUN <<EOF
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
         gh gcc-15 g++-15 \
+        gfortran-15 $(: prevents libopenmpi-dev from installing GCC 16 ) \
         cuda-minimal-build-13-3 \
         tzdata git sudo time xvfb curl unzip ninja-build patchelf gettext gawk procps
     ./scripts/install_apt_requirements.sh

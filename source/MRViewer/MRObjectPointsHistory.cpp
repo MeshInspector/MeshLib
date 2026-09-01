@@ -20,21 +20,21 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
     auto packed = pack( *objPoints, reorder, newValidVerts );
 
     {
-        Historian<ChangePointCloudAction> h( "set cloud", objPoints );
+        AppendHistory<ChangePointCloudAction>( "set cloud", objPoints );
         std::shared_ptr<PointCloud> tmp;
         packed->swapPointCloud( tmp );    // tmp := packed
         objPoints->swapPointCloud( tmp ); // objPoints := tmp
     }
 
     {
-        Historian<ChangeVertsColorMapAction<ObjectPoints>> hCM( "color map update", objPoints );
+        AppendHistory<ChangeVertsColorMapAction<ObjectPoints>>( "color map update", objPoints );
         VertColors tmp;
         packed->updateVertsColorMap( tmp );    // tmp := packed
         objPoints->updateVertsColorMap( tmp ); // objPoints := tmp
     }
 
     {
-        Historian<ChangePointPointSelectionAction> hs( "selection", objPoints );
+        AppendHistory<ChangePointPointSelectionAction>( "selection", objPoints );
         VertBitSet tmp;
         packed->updateSelectedPoints( tmp );    // tmp := packed
         objPoints->updateSelectedPoints( tmp ); // objPoints := tmp

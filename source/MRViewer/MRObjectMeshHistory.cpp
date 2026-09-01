@@ -35,10 +35,10 @@ void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
         return;
 
     // remove all edges from the selection
-    AppendHistory<ChangeMeshEdgeSelectionAction>( "edge selection", objMesh, {} );
+    AppendHistory<ChangeMeshEdgeSelectionAction>( "edge selection", objMesh, UndirectedEdgeBitSet{} );
 
     // remove all edges from creases
-    AppendHistory<ChangeMeshCreasesAction>( "creases", objMesh, {} );
+    AppendHistory<ChangeMeshCreasesAction>( "creases", objMesh, UndirectedEdgeBitSet{} );
 }
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeMap & emap )

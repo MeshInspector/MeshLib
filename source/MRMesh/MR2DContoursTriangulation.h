@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include <memory>
 #include <optional>
 
 namespace MR
@@ -88,13 +89,30 @@ struct TriangulationParameters
 MRMESH_API Mesh triangulateContours( const Contours2d& contours, const TriangulationParameters& params = {} );
 MRMESH_API Mesh triangulateContours( const Contours2f& contours, const TriangulationParameters& params = {} );
 
+/// keeps the internal buffers of the sweep-line triangulation alive between runs,
+/// so a caller triangulating many contour sets one by one avoids re-allocating them on every call;
+/// one cache must not be used by several threads at once
+class ISweepLineCache
+{
+public:
+    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    ISweepLineCache() = default;
+    ISweepLineCache( const ISweepLineCache & ) = default;
+    ISweepLineCache( ISweepLineCache && ) noexcept = default;
+    /// pure to make the class abstract: instances are created by makeSweepLineCache() only
+    MRMESH_API virtual ~ISweepLineCache() = 0;
+};
+
+/// creates a cache for the sweep-line triangulation
+MRMESH_API std::unique_ptr<ISweepLineCache> makeSweepLineCache();
+
 /**
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
  * @return std::optional<Mesh> : if some contours intersect return false, otherwise return created mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours );
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, ISweepLineCache* cache = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, ISweepLineCache* cache = nullptr );
 
 /**
  * @brief triangulate hole boundary loops of \p mesh in the mesh's own 3d space, orienting faces around \p normal
@@ -105,7 +123,13 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
  *        directed along it; edges past its size are the triangulation's own
  * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap = nullptr, ISweepLineCache* cache = nullptr );
+
+/// same as triangulateDisjointContours( mesh, loops, normal, outPatchMap ) above, but returns only the patch
+/// connectivity, which lives inside \p cache until the next run on it (nullptr if the loops self-intersect);
+/// intended for planning: the patch vertex coordinates are not returned
+// This is skipped in the bindings: the result points inside the cache and must not outlive it.
+MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap, ISweepLineCache& cache );
 
 }
 }

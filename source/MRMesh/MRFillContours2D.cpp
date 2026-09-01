@@ -172,7 +172,7 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     return {};
 }
 
-Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
+Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, PlanarTriangulation::ISweepLineCache* cache /*= nullptr*/ )
 {
     assert( !mesh.topology.left( holeEdgeId ) );
     if ( mesh.topology.left( holeEdgeId ) )
@@ -201,13 +201,19 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
     if ( minEdgeLenSq < 1e-12f * loopBox.size().lengthSq() )
         return unexpected( "Hole boundary has a degenerate edge" );
 
+    // a plan needs only the patch connectivity: triangulate into the cache without creating a Mesh;
+    // the connectivity must live somewhere even if the caller gave no cache, hence the temporary one
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> tmpCache;
+    if ( !cache )
+        cache = ( tmpCache = PlanarTriangulation::makeSweepLineCache() ).get();
+
     // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel anchors through it
     WholeEdgeMap bd2mesh;
-    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), &bd2mesh );
-    if ( !patch )
+    auto* patchTp = PlanarTriangulation::triangulateDisjointContoursTopology( mesh, loops, Vector3f( sumCross.normalized() ), &bd2mesh, *cache );
+    if ( !patchTp )
         return unexpected( "Cannot triangulate contours with self-intersections" );
 
-    const auto& pTp = patch->topology;
+    const auto& pTp = *patchTp;
     HoleFillPlan res;
     res.numTris = pTp.numValidFaces();
     if ( res.numTris == 1 )

@@ -160,6 +160,18 @@ void MeshTopology::shrinkToFit()
     validFaces_.shrink_to_fit();
 }
 
+void MeshTopology::clear()
+{
+    edges_.clear();
+    edgePerVertex_.clear();
+    validVerts_.clear();
+    edgePerFace_.clear();
+    validFaces_.clear();
+    numValidVerts_ = 0;
+    numValidFaces_ = 0;
+    updateValids_ = true;
+}
+
 void MeshTopology::splice( EdgeId a, EdgeId b )
 {
     assert( a.valid() && b.valid() );

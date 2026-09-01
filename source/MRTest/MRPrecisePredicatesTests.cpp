@@ -394,6 +394,79 @@ TEST( MRMesh, inSphereTesterFlip )
             }
 }
 
+TEST( MRMesh, fastInSphereTesterSoS )
+{
+    // the fast tester must answer exactly as InSphereTesterSoS does, only sooner
+    InSphereTesterSoS exact;
+    FastInSphereTesterSoS fast;
+
+    // four concyclic points: every query is exactly on the sphere, so the fast path must always
+    // defer to the exact one and the ties must still be resolved by the ids
+    const PreciseVertCoords ps[4] = {
+        { 0_v, Vector3i{  5, 0, 0 } },
+        { 1_v, Vector3i{  0, 5, 0 } },
+        { 2_v, Vector3i{ -5, 0, 0 } },
+        { 3_v, Vector3i{  3, 4, 0 } }
+    };
+    for ( int i = 0; i < 4; ++i )
+        for ( int j = 0; j < 4; ++j )
+            for ( int k = 0; k < 4; ++k )
+            {
+                if ( i == j || j == k || i == k )
+                    continue;
+                ASSERT_TRUE( exact.reset( ps[i], ps[j], ps[k], 169 ) );
+                ASSERT_TRUE( fast.reset( ps[i], ps[j], ps[k], 169 ) );
+                const auto & d = ps[6 - i - j - k];
+                EXPECT_EQ( exact( d ), fast( d ) );
+                exact.flip();
+                fast.flip();
+                EXPECT_EQ( exact( d ), fast( d ) );
+            }
+
+    // pseudo-random spheres and queries, from tiny coordinates up to the magnitudes of getToIntConverter
+    std::uint64_t seed = 12345;
+    auto rnd = [&seed]( int mag )
+    {
+        seed = seed * 6364136223846793005ull + 1442695040888963407ull;
+        return int( std::int64_t( seed >> 33 ) % ( 2 * mag + 1 ) ) - mag;
+    };
+    int tested = 0;
+    for ( int mag : { 100, 1000000, 1000000000 } )
+        for ( int t = 0; t < 300; ++t )
+        {
+            const PreciseVertCoords vs[3] = {
+                { 0_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } },
+                { 1_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } },
+                { 2_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } }
+            };
+            const auto rSq = 4 * sqr( std::int64_t( mag ) );
+            const bool ok = exact.reset( vs[0], vs[1], vs[2], rSq );
+            ASSERT_EQ( ok, fast.reset( vs[0], vs[1], vs[2], rSq ) );
+            if ( !ok )
+                continue;
+            // outsideBothSpheres must agree with the plain tester asked on both sides
+            InSphereTesteri plain;
+            ASSERT_TRUE( plain.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) );
+            for ( int f = 0; f < 2; ++f )
+            {
+                for ( int q = 0; q < 10; ++q )
+                {
+                    const PreciseVertCoords d{ 3_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } };
+                    EXPECT_EQ( exact( d ), fast( d ) );
+                    const bool out0 = plain( d.pt ) == InSphereResult::Outside;
+                    plain.flip();
+                    const bool out1 = plain( d.pt ) == InSphereResult::Outside;
+                    plain.flip();
+                    EXPECT_EQ( fast.outsideBothSpheres( d.pt ), out0 && out1 );
+                    ++tested;
+                }
+                exact.flip();
+                fast.flip();
+            }
+        }
+    EXPECT_GT( tested, 10000 );
+}
+
 TEST( MRMesh, inSphereTesterFloat )
 {
     const auto In = InSphereResult::Inside;
@@ -513,12 +586,17 @@ TEST( MRMesh, sosInSphere )
     EXPECT_EQ( inSphere( { vc( 0_v, -2,1,1 ), vc( 1_v, 2,-1,-1 ), vc( 2_v, 1,1,-2 ), vc( 3_v, -1,-1,2 ) }, 9 ), In );
     EXPECT_EQ( inSphere( { vc( 3_v, -2,1,1 ), vc( 2_v, 2,-1,-1 ), vc( 1_v, 1,1,-2 ), vc( 0_v, -1,-1,2 ) }, 9 ), Out );
 
-    // rSq exactly equal to the squared circumradius: the tie resolves deterministically to Outside
-    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), Out );
+    // rSq exactly equal to the squared circumradius in the plane z = 0: any perturbation
+    // enlarges the circumradius, so the perturbed sphere does not exist
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), InSphereResult::NoSphere );
 
-    // no tie: same answers as the plain overload
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ), In );
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ), Out );
+    // no tie: same answers as the plain overload (rSq = 4 > squared circumradius 2)
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,2 ) }, 4 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 4 ), Out );
+    // while rSq exactly equal to the squared circumradius of this z = 0 triangle cannot survive
+    // the perturbation even for the points strictly inside or outside
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ), InSphereResult::NoSphere );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ), InSphereResult::NoSphere );
 
     // the same tie resolution via InSphereTesterSoS: the triangle ids are given once in reset
     InSphereTesterSoS tester;
@@ -562,50 +640,58 @@ TEST( MRMesh, sosInSphereConcyclic )
         PreciseVertCoords{ 1_v, Vector3i{ -1,  2, -1 } } }, 9 ), 12 );
 }
 
-TEST( MRMesh, sosInSphereDeviations )
+TEST( MRMesh, sosInSphereDegenerate )
 {
-    // documents the scenarios where the current deterministic answers deviate from full
-    // simulation-of-simplicity (see the comment on inSphere in MRInSphere.h);
-    // the expectations assert the current behavior and shall change when the corresponding
-    // perturbation cascades are implemented
+    // full simulation-of-simplicity semantics in the degenerate configurations: the answers equal
+    // the answers of the plain predicate for the symbolically perturbed points (see MRInSphere.h)
 
     const auto In = InSphereResult::Inside;
     const auto Out = InSphereResult::Outside;
     const auto NoS = InSphereResult::NoSphere;
 
     auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };
-    auto countInside = []( std::array<PreciseVertCoords, 4> vs, std::int64_t rSq )
-    {
-        auto less = []( const PreciseVertCoords & l, const PreciseVertCoords & r ) { return l.id < r.id; };
-        std::sort( vs.begin(), vs.end(), less );
-        int cnt = 0;
-        do
-        {
-            cnt += inSphere( vs, rSq ) == InSphereResult::Inside ? 1 : 0;
-        }
-        while ( std::next_permutation( vs.begin(), vs.end(), less ) );
-        return cnt;
-    };
 
-    // all points of the triangle coincide: currently NoSphere, while the perturbed triangle
-    // is not degenerate and its sphere exists, so full SoS would give id-dependent answers
-    EXPECT_EQ( countInside( {
-        vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), vc( 3_v, 1,2,3 ) }, 25 ), 0 );
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 3_v, 1,0,0 ) }, 25 ), NoS );
+    // three (or four) coincident triangle points: the perturbed points form a needle-like triangle
+    // with diverging circumradius, so the sphere never exists, independently of the ids
+    EXPECT_EQ( inSphere( { vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), vc( 3_v, 1,2,3 ) }, 25 ), NoS );
+    EXPECT_EQ( inSphere( { vc( 3_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 0_v, 0,0,0 ), vc( 2_v, 1,0,0 ) }, 25 ), NoS );
 
-    // two points of the triangle coincide, the third is closer than the sphere's diameter:
-    // currently NoSphere, while the perturbed sphere may exist depending on the ids
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 4,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS );
+    // two coincident triangle points: the perturbed pair separates along z, so the sphere exists
+    // iff 4*rSq*(Vx^2+Vy^2) > |V|^4 at the leading order, V = the third point minus the pair
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 4,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), Out ); // exists, the position is id-dependent:
+    EXPECT_EQ( inSphere( { vc( 3_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 0_v, 4,0,0 ), vc( 1_v, 0,3,0 ) }, 25 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 0,0,5 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // V along z: 4*rSq*(Vx^2+Vy^2) = 0 < |V|^4
 
-    // rSq exactly equal to the squared circumradius: a perturbation of the triangle changes
-    // the sphere's existence, so full SoS would make both answers below id-dependent
-    EXPECT_EQ( inSphere( { vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), vc( 3_v, 0,0,0 ) }, 25 ), In );    // strictly inside
-    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), Out ); // exactly on the sphere
+    // rSq exactly equal to the squared circumradius: the perturbation decides the existence;
+    // in the plane z = 0 any perturbation lifts a vertex and enlarges the circumradius
+    EXPECT_EQ( inSphere( { vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), vc( 3_v, 0,0,0 ) }, 25 ), NoS ); // even for the center point
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), NoS );
 
-    // the NoSphere answers below are exact under full SoS: no small perturbation creates the sphere
+    // on a tilted plane (x+y+z=0, circumradius^2 = 6 = rSq) the existence and the position
+    // depend on the ids: all three outcomes on the same four points
+    EXPECT_EQ( inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 6 ), NoS );
+    EXPECT_EQ( inSphere( { vc( 1_v, 1,-2,1 ), vc( 0_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 6 ), Out );
+    EXPECT_EQ( inSphere( { vc( 2_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 3_v, -2,1,1 ), vc( 0_v, -1,2,-1 ) }, 6 ), In );
+
+    // an exact tie of the pair existence rule: V = (3,4,5), 4*rSq*(Vx^2+Vy^2) == |V|^4 == 2500,
+    // resolved by the deeper terms of the perturbation, so it depends on the ids
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 3,4,5 ), vc( 3_v, 3,4,0 ) }, 25 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 3,4,5 ), vc( 3_v, 0,0,1 ) }, 25 ), Out );
+    EXPECT_EQ( inSphere( { vc( 2_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 0_v, 3,4,5 ), vc( 3_v, 3,4,0 ) }, 25 ), NoS );
+
+    // stable NoSphere answers: no perturbation creates the sphere
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 11,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point beyond the diameter
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 10,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point exactly at the diameter
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 1,0,0 ), vc( 2_v, 3,0,0 ), vc( 3_v, 0,1,0 ) }, 25 ), NoS );  // distinct collinear triangle
+
+    // the tester resolves the existence at reset() already
+    InSphereTesterSoS tester;
+    EXPECT_FALSE( tester.reset( vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), 25 ) ); // planar rSq == squared circumradius
+    EXPECT_FALSE( tester.reset( vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), 25 ) );  // coincident triple
+    ASSERT_TRUE( tester.reset( vc( 3_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 0_v, 4,0,0 ), 25 ) );   // coincident pair, the sphere exists
+    EXPECT_EQ( tester( vc( 1_v, 0,3,0 ) ), In );
+    ASSERT_TRUE( tester.reset( vc( 2_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 3_v, -2,1,1 ), 6 ) ); // tilted rSq == squared circumradius
+    EXPECT_EQ( tester( vc( 0_v, -1,2,-1 ) ), In );
 }
 
 TEST( MRMesh, segmentIntersectionOrder2b )

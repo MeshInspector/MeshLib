@@ -5,6 +5,8 @@
 #include <MRViewer/MRViewer.h>
 #include <MRViewer/MRSetupViewer.h>
 #include <MRViewer/MRSplashWindow.h>
+#include <MRViewer/MRCommandLoop.h>
+#include <MRCommonPlugins/MRCommonPluginsShortcuts.h>
 
 #ifdef _WIN32
 #include "MRViewer/MRConsoleWindows.h"
@@ -38,6 +40,9 @@ extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance
     // Starts console if needed, free it on destructor
     MR::ConsoleRunner console( launchParams.console );
 
+    // MRViewer knows nothing about the ribbon items of MRCommonPlugins, so bind their shortcuts here
+    MR::CommandLoop::appendCommand( &MR::setupCommonPluginsShortcuts, MR::CommandLoop::StartPosition::AfterPluginInit );
+
     return MR::launchDefaultViewer( launchParams, MR::ViewerSetup() );
 }
 
@@ -62,6 +67,9 @@ int main( int argc, char** argv )
     #if defined(__APPLE__)
     setenv("XDG_DATA_DIRS", "/Library/Frameworks/MeshLib.framework/Versions/Current/share", 1);
     #endif
+
+    // MRViewer knows nothing about the ribbon items of MRCommonPlugins, so bind their shortcuts here
+    MR::CommandLoop::appendCommand( &MR::setupCommonPluginsShortcuts, MR::CommandLoop::StartPosition::AfterPluginInit );
 
     return MR::launchDefaultViewer( launchParams, MR::ViewerSetup() );
 }

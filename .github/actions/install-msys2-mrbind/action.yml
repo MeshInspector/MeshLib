@@ -1,8 +1,18 @@
 name: Install MSYS2 for MRBind
 description: >
-  Restore (or download) the clang-22 MSYS2 toolchain pinned by
-  `scripts/mrbind/msys2_package_hashes_clang22.txt`, sha256-verify
-  it, and `pacman -U` against the runner's preinstalled `C:\msys64`.
+  Restore (or download) the pinned MSYS2 toolchain listed in
+  `scripts/mrbind/msys2_package_hashes<packages-suffix>.txt`, sha256-verify it,
+  and `pacman -U` into `C:\msys64`, installing MSYS2 first when the runner
+  image ships none (the arm64 images do not).
+
+inputs:
+  packages-suffix:
+    required: false
+    default: '_clang22'
+    description: >
+      Which pinned set to install: the `<suffix>` of
+      `scripts/mrbind/msys2_package_hashes<suffix>.txt`. `_clang22` is the x86_64
+      CLANG64 toolchain, `_clangarm64` the native aarch64 one.
 
 runs:
   using: composite
@@ -16,13 +26,36 @@ runs:
       continue-on-error: true
       with:
         path: scripts/mrbind/msys2_packages
-        key: msys2-mrbind-clang22-${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
+        key: msys2-mrbind${{ inputs.packages-suffix }}-${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', inputs.packages-suffix)) }}
+
+    - name: Install MSYS2 itself when the image has none
+      # Only the x64 runner images ship C:\msys64. MSYS2 publishes an x86_64 base
+      # only; on arm64 its runtime runs under emulation while the CLANGARM64
+      # packages installed below are native (https://www.msys2.org/docs/arm64/).
+      shell: pwsh
+      run: |
+        if (Test-Path 'C:\msys64\msys2_shell.cmd') {
+          Write-Host 'MSYS2 already present.'
+          exit 0
+        }
+        $sfx = Join-Path $Env:RUNNER_TEMP 'msys2-base.sfx.exe'
+        $url = 'https://github.com/msys2/msys2-installer/releases/latest/download/msys2-base-x86_64-latest.sfx.exe'
+        Invoke-WebRequest $url -OutFile $sfx
+        # the archive contains a top-level msys64/, so -oC:\ yields C:\msys64
+        & $sfx -y '-oC:\'
+        if (-not (Test-Path 'C:\msys64\msys2_shell.cmd')) { throw 'MSYS2 extraction failed' }
+        # first launch generates /etc and the user skeleton; pacman needs them
+        & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'true'
+        # that init runs `pacman-key --populate msys2 || true` and intermittently
+        # dies before signing the keys, leaving every repo database at "unknown
+        # trust"; redo it here, plus the wget msys2-base lacks
+        & 'C:\msys64\msys2_shell.cmd' -no-start -defterm -here -c 'pacman-key --init && pacman-key --populate msys2 && pacman-key --updatedb && pacman -Sy --noconfirm --needed wget'
+        if ($LASTEXITCODE -ne 0) { throw "MSYS2 keyring setup exited with code $LASTEXITCODE" }
 
     - name: Install MSYS2 for MRBind
-      # Pin clang to the version listed in msys2_package_hashes_clang22.txt
-      # (currently 22.1.4-3). Pinning only the clang/llvm packages fails
-      # with STATUS_DLL_NOT_FOUND from cc.exe; the lockfile carries the
-      # whole runtime stack.
+      # Pin clang to the version in the selected lockfile. Pinning only the
+      # clang/llvm packages fails with STATUS_DLL_NOT_FOUND from cc.exe, so the
+      # lockfile carries the whole runtime stack.
       #
       # Retried because the msys2/cygwin runtime intermittently dies
       # spawning pacman (silent exit 1 or 4 right after the sha256 OKs).
@@ -32,7 +65,7 @@ runs:
       run: |
         $attempts = 3
         foreach ($i in 1..$attempts) {
-          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh _clang22 && bash scripts/mrbind/msys2_install_packages.sh _clang22"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh ${{ inputs.packages-suffix }} && bash scripts/mrbind/msys2_install_packages.sh ${{ inputs.packages-suffix }}"
           $code = $LASTEXITCODE
           if ($code -eq 0) { break }
           # The msys2 shell dies without its console output reaching the

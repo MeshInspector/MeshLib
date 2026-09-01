@@ -8,7 +8,8 @@
 
 // Not-zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduces the performance of STL containers.
 //
-// Pre-build binaries from MeshLib distribution are prepared with _ITERATOR_DEBUG_LEVEL=0,
+// Pre-build binaries from MeshLib distribution are prepared with _ITERATOR_DEBUG_LEVEL=0
+// (except MeshLibDist-IteratorDebug, which uses 2 and states so in MRMesh/config_dist.h),
 // and if you build MeshLib by yourself then _ITERATOR_DEBUG_LEVEL=0 is also selected see
 // 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
@@ -17,14 +18,16 @@
 //
 // If you deliberately would like to work with not zero _ITERATOR_DEBUG_LEVEL, then please define
 // additionally MR_ITERATOR_DEBUG_LEVEL with the same value to indicate that it is done intentionally
-// (and you are ok with up to 100x slowdown).
+// (and you are ok with up to 100x slowdown), the way
+// vcpkg/triplets/x64-windows-meshlib-iterator-debug.cmake does it for our own build.
 //
 #if defined _MSC_VER
-    #if !defined _ITERATOR_DEBUG_LEVEL
-        #define _ITERATOR_DEBUG_LEVEL 0
-    #endif
     #if !defined MR_ITERATOR_DEBUG_LEVEL
         #define MR_ITERATOR_DEBUG_LEVEL 0
+    #endif
+    // no CRT header has fixed the level yet, so this translation unit can still join MeshLib
+    #if !defined _ITERATOR_DEBUG_LEVEL
+        #define _ITERATOR_DEBUG_LEVEL MR_ITERATOR_DEBUG_LEVEL
     #endif
     #if _ITERATOR_DEBUG_LEVEL != MR_ITERATOR_DEBUG_LEVEL
         #error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib

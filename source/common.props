@@ -8,7 +8,13 @@
     <!--Create file named CustomMRProps.props in any directory above to override _ITERATOR_DEBUG_LEVEL or/and VcpkgTriplet setting-->
     <CustomPropertyDir>$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), CustomMRProps.props))</CustomPropertyDir>
     <IntDir>$(SolutionDir)TempOutput\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <VcpkgTriplet>x64-windows-meshlib</VcpkgTriplet>
+    <!--Default to the triplet the dependencies were installed with: thirdparty\install.bat reads the same
+       variable and vcpkg installs into a per-triplet folder, so honoring it here keeps the solution and vcpkg
+       from diverging on VS2019/VS2022 (see VcpkgCurrentInstalledDir below). An explicit -p:VcpkgTriplet= (what
+       CI passes) is a global property and wins over both lines, as does a CustomMRProps.props imported below.-->
+    <VcpkgTriplet Condition="'$(VCPKG_DEFAULT_TRIPLET)' != ''">$(VCPKG_DEFAULT_TRIPLET)</VcpkgTriplet>
+    <VcpkgTriplet Condition="'$(VcpkgTriplet)' == '' AND '$(Platform)' == 'ARM64'">arm64-windows-meshlib</VcpkgTriplet>
+    <VcpkgTriplet Condition="'$(VcpkgTriplet)' == ''">x64-windows-meshlib</VcpkgTriplet>
     <MeshLibSourceDir>$(MSBuildThisFileDirectory)</MeshLibSourceDir>
     <MeshLibDir>$(MeshLibSourceDir)\..\</MeshLibDir>
     <MeshLibProjectName>MeshLib</MeshLibProjectName>
@@ -65,6 +71,10 @@
       <!-- Adding frequently used MeshLib headers to the PCH speeds up clean (CI) builds but slows local
            iterative development, so it is off by default and enabled only in CI via -p:MR_PCH_USE_EXTRA_HEADERS=ON -->
       <PreprocessorDefinitions Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">MR_PCH_USE_EXTRA_HEADERS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <!-- Mirrors DetectPlatform.cmake. Required, not cosmetic: without it MRSystem.cpp's
+           GetCpuId() takes its x86 branch, which calls the __cpuid intrinsic that MSVC does
+           not provide on ARM64. -->
+      <PreprocessorDefinitions Condition="'$(Platform)'=='ARM64'">__ARM_CPU__;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(MeshLibSourceDir);$(PythonIncludePath);$(MeshLibDir)thirdparty\mrbind-pybind11\include\;$(VcpkgCurrentInstalledDir)\include\suitesparse\;$(VcpkgCurrentInstalledDir)\include\eigen3;$(MeshLibDir)thirdparty\imgui\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

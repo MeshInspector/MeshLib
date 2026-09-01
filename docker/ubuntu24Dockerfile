@@ -8,11 +8,12 @@ WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
 
 COPY scripts/install_apt_requirements.sh scripts/install_apt_requirements.sh
 COPY scripts/install_apt_cuda.sh scripts/install_apt_cuda.sh
-COPY scripts/mrbind/install_deps_ubuntu.sh scripts/mrbind/install_deps_ubuntu.sh
-COPY scripts/mrbind/clang_version.txt scripts/mrbind/clang_version.txt
 COPY requirements requirements
 COPY scripts/mrbind-pybind11/python_versions.txt scripts/mrbind-pybind11/python_versions.txt
 COPY scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
+
+ENV LLVM_VERSION=22.1.8
+ENV LLVM_PREFIX=/opt/llvm-pgo-dylib-$LLVM_VERSION
 
 ENV MR_STATE=DOCKER_BUILD
 
@@ -51,12 +52,15 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        gh g++-13 gcc-14 g++-14 clang-18 \
-        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext
+        gh gcc-13 g++-13 gcc-16 g++-16 \
+        tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext gawk procps
+    # the GCC 16 snapshot ships cc1/cc1plus/lto1 unstripped so ICEs get symbolized backtraces; costs ~640 MB
+    bash -c 'strip --strip-debug /usr/libexec/gcc/*/16/{cc1,cc1plus,lto1}'
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     ./scripts/install_apt_cuda.sh
-    ./scripts/mrbind/install_deps_ubuntu.sh
+    TOOLCHAIN=clang-${LLVM_VERSION}-pgo-dylib-linux
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
     ./scripts/mrbind-pybind11/install_all_python_versions_ubuntu_pkgs.sh
     # clean downloaded files
     apt-get clean

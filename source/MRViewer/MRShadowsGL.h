@@ -15,7 +15,10 @@ namespace MR
 class MRVIEWER_CLASS ShadowsGL
 {
 public:
-    MR_ADD_CTOR_DELETE_MOVE( ShadowsGL );
+    /// out-of-line to keep the GL members of this class out of the modules using it
+    MRVIEWER_API ShadowsGL();
+    ShadowsGL( ShadowsGL&& ) noexcept = delete;
+    ShadowsGL& operator=( ShadowsGL&& ) noexcept = delete;
     MRVIEWER_API ~ShadowsGL();
 
     // subscribe to viewer events on enable, unsubscribe on disable

@@ -7,6 +7,7 @@ IF(NOT EMSCRIPTEN)
     PRIVATE
       MRMesh
       MRViewer
+      MRCommonPlugins
   )
 ELSE()
   target_link_libraries(${PROJECT_NAME}

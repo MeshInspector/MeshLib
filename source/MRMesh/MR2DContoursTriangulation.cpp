@@ -120,7 +120,8 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
     };
     p.addIntersectionPoint = [pts] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts )[a], ( *pts )[b], ( *pts )[c], ( *pts )[d] ) );
+        pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
+            { PreciseVertCoords2{ a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] }, { d, ( *pts )[d] } } ) );
     };
     p.point = [pts, toFloat] ( const MeshTopology&, VertId v )
     {
@@ -179,7 +180,8 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise( ( *pts2 )[a], ( *pts2 )[b], ( *pts2 )[c], ( *pts2 )[d] ) );
+        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
+            { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } ) );
     };
     // every output vertex lies on a copied input edge (disjoint triangulation adds no intersection
     // vertices), so find one in its org ring, skipping the triangulation's own diagonals
@@ -1365,6 +1367,8 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
         {
             findClosestCache_.emplace_back( eUnique );
         }
+        if ( findClosestCache_.size() == 1 )
+            return; // unique - lost all edges during merges
         auto minEUnique = findClosestCache_[findClosestToFront( tp_, predicates_, findClosestCache_, false )];
         auto prev = tp_.prev( eSame );
         if ( prev != eSame )
@@ -1402,6 +1406,23 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
                 tp_.splice( tp_.prev( minEUnique.sym() ), minEUnique.sym() );
                 tp_.setOrg( minEUnique, VertId{} );
                 tp_.setOrg( minEUnique.sym(), VertId{} );
+            }
+        }
+        else
+        {
+            // seating eSame here renamed its origin from `same` to `unique`; ids break exact
+            // coordinate ties in ccw, so the angular slot of eSame.sym() in its own origin ring
+            // can change with the rename - re-seat it to keep that ring in sweep order too
+            auto vFar = tp_.dest( eSame );
+            auto eFar = eSame.sym();
+            if ( auto p = tp_.prev( eFar ); vFar != unique && p != eFar )
+            {
+                tp_.splice( p, eFar ); // take eFar out (its org record clears automatically)
+                findClosestCache_.clear();
+                findClosestCache_.push_back( eFar );
+                for ( auto e : orgRing( tp_, vFar ) )
+                    findClosestCache_.emplace_back( e );
+                tp_.splice( findClosestCache_[findClosestToFront( tp_, predicates_, findClosestCache_, false )], eFar );
             }
         }
     }

@@ -6,6 +6,9 @@ on:
       app_version:
         required: true
         type: string
+      config_matrix:
+        required: true
+        type: string
       docker_image_tag:
         required: true
         type: string
@@ -33,6 +36,8 @@ on:
 
 jobs:
   ubuntu-arm-build-test:
+    # the entries carry every compiler field, so spell out the two that identify a leg
+    name: ubuntu-arm-build-test (${{ matrix.os }}, ${{ matrix.config }})
     timeout-minutes: 60
     runs-on: ubuntu-24.04-arm
     container:
@@ -40,19 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu22, ubuntu24 ]
-        config: [ Release ]
-        include:
-          - os: ubuntu22
-            compiler: clang
-            cxx-compiler: /usr/bin/clang++-14
-            c-compiler: /usr/bin/clang-14
-            cxx-standard: 20
-          - os: ubuntu24
-            compiler: GCC
-            cxx-compiler: /usr/bin/g++-14
-            c-compiler: /usr/bin/gcc-14
-            cxx-standard: 23
+        include: ${{ fromJSON( inputs.config_matrix ) }}
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -160,6 +153,7 @@ jobs:
         env:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
@@ -180,7 +174,10 @@ jobs:
           # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
           # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
           PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin PCH_CODEGEN=${{env.PCH_CODEGEN}}
+          # The bindings always compile with clang++, which takes the newest GCC in the image (16 since
+          # #6717) and so needs GLIBCXX_3.4.35 - absent from stock Ubuntu 24.04. Pin the deb's own GCC 13.
+          CLANG_GCC_PIN: ${{ matrix.os == 'ubuntu24' && '--gcc-install-dir=/usr/lib/gcc/aarch64-linux-gnu/13' || '' }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin PCH_CODEGEN=${{env.PCH_CODEGEN}} EXTRA_CFLAGS="${{env.CLANG_GCC_PIN}}" EXTRA_LDFLAGS="${{env.CLANG_GCC_PIN}}"
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
@@ -230,7 +227,7 @@ jobs:
         if: ${{ inputs.mrbind }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+        run: xvfb-run -a python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build && inputs.mrbind }}

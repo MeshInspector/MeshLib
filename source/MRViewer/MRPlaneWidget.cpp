@@ -255,6 +255,9 @@ bool PlaneWidget::importPlaneObj_( Object& obj )
         return false;
 
     plane_ = Plane3f::fromDirAndPt( planeObj->getNormal(), planeObj->getCenter() );
+    // the object's normal and center are in the parent's space, while the widget's plane is in the world space
+    if ( planeObj->parent() )
+        plane_ = transformed( plane_, planeObj->parent()->worldXf() );
     definePlane();
     updatePlane( plane_ );
     setLocalMode( true );

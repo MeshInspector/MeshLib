@@ -10,6 +10,10 @@ on:
         required: false
         type: string
         default: ''
+      upload_artifacts:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   generate-c-bindings:
@@ -42,11 +46,12 @@ jobs:
           # toolchain inside the image changes (e.g. glibc, clang upgrade).
           cache-key-prefix: ubuntu-arm64-emscripten
           build-script: scripts/mrbind/install_mrbind_ubuntu.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', 'docker/emscripten-generate-c-bindingsDockerfile') }}
 
         # We're not using the host headers here because it's more important to check that the normal way of building the bindings (i.e. using Emscripten headers) works,
         #   because you can do this on every OS, as opposed to using host headers, which only works on Linux x64.
 
+        # This version omits some extra IO formats, that's the only difference.
       - name: Generate C bindings (Wasm version)
         run: |
           cp -r source/MeshLibC2 source/MeshLibC2_orig
@@ -66,4 +71,36 @@ jobs:
             ./source/MeshLibC2
             ./source/MeshLibC2Wasm
             ./source/MeshLibC2Cuda
+          retention-days: 1
+
+        # Unlike the other artifact, here we strip some temporary files, and the project files.
+      - name: Prepare source distribution
+        if: ${{ inputs.upload_artifacts }}
+        shell: bash
+        run: |
+          mkdir -p meshlib_c-source/MeshLibC2
+          mkdir -p meshlib_c-source/MeshLibC2Cuda
+          mkdir -p meshlib_c-source-wasm/MeshLibC2
+          for x in include src; do
+              cp -r source/MeshLibC2/$x meshlib_c-source/MeshLibC2/$x
+              cp -r source/MeshLibC2Cuda/$x meshlib_c-source/MeshLibC2Cuda/$x
+              cp -r source/MeshLibC2Wasm/$x meshlib_c-source-wasm/MeshLibC2/$x
+          done
+          zip -r meshlib_c-source.zip meshlib_c-source
+          zip -r meshlib_c-source-wasm.zip meshlib_c-source-wasm
+
+      - name: Upload source distribution
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DistributivesCSource
+          path: meshlib_c-source.zip
+          retention-days: 1
+
+      - name: Upload source distribution (Wasm)
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: DistributivesCSourceWasm
+          path: meshlib_c-source-wasm.zip
           retention-days: 1

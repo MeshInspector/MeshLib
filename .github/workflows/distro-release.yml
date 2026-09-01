@@ -57,6 +57,7 @@ jobs:
     with:
       docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
       version_tag: ${{ needs.config.outputs.release_tag }}
+      upload_artifacts: true
 
   windows-build-test:
     needs: [ config ]
@@ -102,9 +103,11 @@ jobs:
           shopt -s nullglob
           for PKG_FILE in MeshLibDist*.zip ; do
             case "$PKG_FILE" in
-              # Keep the historical layout for the iterator-debug archive:
-              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
-              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
+              # Keep the historical layout for the iterator-debug archives:
+              # MeshLibDist-IteratorDebug[-PDB].zip -> MeshLibDist_<version>-IteratorDebug[-PDB].zip
+              *-IteratorDebug.zip|*-IteratorDebug-PDB.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
+              # Companion symbols archives: MeshLibDistVS19-PDB.zip -> MeshLibDistVS19_<version>-PDB.zip
+              *-PDB.zip) mv "$PKG_FILE" "${PKG_FILE%-PDB.zip}_${{ needs.config.outputs.app_version }}-PDB.zip" ;;
               # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
               *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
             esac
@@ -132,4 +135,3 @@ jobs:
         with:
           name: Distributives*
           failOnError: false
-

@@ -20,10 +20,13 @@ path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdpar
 
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 
-def vcpkg_dir():
-	vcpkg_triplet = "x64-windows-meshlib"
+def vcpkg_triplet_name():
 	if len(sys.argv) > 2:
-		vcpkg_triplet = sys.argv[2]
+		return sys.argv[2]
+	return "x64-windows-meshlib"
+
+def vcpkg_dir():
+	vcpkg_triplet = vcpkg_triplet_name()
 	vcpkg_exe_dir = ""
 	if len(sys.argv) > 3:
 		vcpkg_exe_dir = sys.argv[3]
@@ -50,6 +53,15 @@ def prepare_includes_list():
 	it.append_includes_list(path_to_pybind11, True)
 	it.append_includes_list(path_to_imgui, True)
 
+def write_config_dist():
+	# Tell consumers which _ITERATOR_DEBUG_LEVEL this package's binaries were built with,
+	# so MRMeshFwd.h can align their translation units instead of guessing zero.
+	level = 2 if "iterator-debug" in vcpkg_triplet_name() else 0
+	dst = os.path.join(it.path_to_includes, "MRMesh", "config_dist.h")
+	os.makedirs(os.path.dirname(dst), exist_ok=True)
+	with open(dst, "w", newline="\n") as f:
+		f.write("#pragma once\n\n#define MR_ITERATOR_DEBUG_LEVEL {}\n".format(level))
+
 def copy_includes():
 	prepare_includes_list()
 	for src,dst in it.includes_src_dst:
@@ -61,6 +73,7 @@ def copy_includes():
 		dst_folder = os.path.dirname(dst)
 		os.makedirs(dst_folder,exist_ok=True)
 		shutil.copyfile(src, dst)
+	write_config_dist()
 
 def copy_app():
 	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_app,dirs_exist_ok=True)

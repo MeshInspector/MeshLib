@@ -60,7 +60,7 @@ jobs:
         with:
           cache-key-prefix: ubuntu-docs-clang
           build-script: scripts/mrbind/install_mrbind_ubuntu.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt') }}
+          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', 'docker/ubuntu22Dockerfile') }}
 
       - name: Create virtualenv
         run: |

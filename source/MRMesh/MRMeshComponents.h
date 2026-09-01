@@ -37,6 +37,11 @@ enum FaceIncidence
 [[nodiscard]] MRMESH_API VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBitSet* region = nullptr );
 
 
+/// returns the area of the largest by surface area component, and zero if there are no components at all
+[[nodiscard]] MRMESH_API double getLargestComponentArea( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {}, FaceBitSet * largestComponent = nullptr, ///< optional output with the faces of the largest by area component
+    int * numSmallerComponents = nullptr ); ///< optional output: the number of components in addition to returned one
+
 /// returns the largest by surface area component or empty set if its area is smaller than \param minArea
 [[nodiscard]] MRMESH_API FaceBitSet getLargestComponent( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {}, float minArea = 0,

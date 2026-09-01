@@ -44,6 +44,38 @@ TEST(MRMesh, getAllComponentsEdges)
     ASSERT_EQ( comp[0].count(), 5 );
 }
 
+TEST(MRMesh, getLargestComponentArea)
+{
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 4_v, 5_v }
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f );
+    mesh.points.emplace_back( 1.f, 0.f, 0.f );
+    mesh.points.emplace_back( 0.f, 1.f, 0.f );
+    mesh.points.emplace_back( 10.f, 0.f, 0.f );
+    mesh.points.emplace_back( 12.f, 0.f, 0.f );
+    mesh.points.emplace_back( 10.f, 2.f, 0.f );
+
+    FaceBitSet largest;
+    int numSmallerComponents = -1;
+    ASSERT_NEAR( MeshComponents::getLargestComponentArea( mesh, MeshComponents::PerEdge, nullptr, &largest, &numSmallerComponents ), 2.0, 1e-6 );
+    ASSERT_EQ( numSmallerComponents, 1 );
+    ASSERT_EQ( largest.count(), 1 );
+    ASSERT_TRUE( largest.test( 1_f ) );
+
+    ASSERT_TRUE( MeshComponents::getLargestComponent( mesh, MeshComponents::PerEdge, nullptr, 1.0f, &numSmallerComponents ) == largest );
+    ASSERT_EQ( numSmallerComponents, 1 );
+    ASSERT_TRUE( MeshComponents::getLargestComponent( mesh, MeshComponents::PerEdge, nullptr, 3.0f, &numSmallerComponents ).none() );
+    ASSERT_EQ( numSmallerComponents, 2 ); // both components are smaller than requested
+
+    ASSERT_EQ( MeshComponents::getLargestComponentArea( Mesh{}, MeshComponents::PerEdge, nullptr, &largest, &numSmallerComponents ), 0 );
+    ASSERT_TRUE( largest.none() );
+    ASSERT_EQ( numSmallerComponents, 0 );
+}
+
 TEST(MRMesh, getLargestComponentVerts)
 {
     auto mesh = makeCube();

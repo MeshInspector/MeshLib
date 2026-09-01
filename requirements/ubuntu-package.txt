@@ -1,0 +1,30 @@
+build-essential
+cmake
+libblosc1
+libboost-dev
+libboost-locale-dev
+libboost-program-options-dev
+libcurl4
+libeigen3-dev
+libexpected-dev
+libfmt-dev
+libfreetype6
+libgdcm3.0
+libglfw3-dev
+libgtk-3-0
+libhidapi-dev
+libhpdf-2.3.0
+libjsoncpp-dev
+libocct-data-exchange-7.5 | libocct-data-exchange-7.6 | libocct-data-exchange-7.9
+libpython3-dev
+libspdlog-dev
+libssl3
+libtbb-dev
+libtiff5 | libtiff6
+libtinyxml2-9 | libtinyxml2-10 | libtinyxml2-11
+libturbojpeg | libturbojpeg0
+libzip4 | libzip5
+libzstd1
+occt-misc
+pkg-config
+python3-venv

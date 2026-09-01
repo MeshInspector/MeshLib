@@ -1,21 +1,28 @@
 build-essential
 cmake
-libblosc1
+libblosc-dev
+libboost-atomic-dev
+libboost-chrono-dev
 libboost-dev
+libboost-iostreams-dev
 libboost-locale-dev
 libboost-program-options-dev
+libboost-system-dev
+libboost-thread-dev
 libcurl4
 libeigen3-dev
 libexpected-dev
 libfmt-dev
-libfreetype6
+libfreetype-dev
 libgdcm3.0
 libglfw3-dev
+libglib2.0-0
 libgtk-3-0
 libhidapi-dev
 libhpdf-2.3.0
 libjsoncpp-dev
 libocct-data-exchange-7.5 | libocct-data-exchange-7.6 | libocct-data-exchange-7.9
+libpng16-16
 libpython3-dev
 libspdlog-dev
 libssl3
@@ -23,8 +30,9 @@ libtbb-dev
 libtiff5 | libtiff6
 libtinyxml2-9 | libtinyxml2-10 | libtinyxml2-11
 libturbojpeg | libturbojpeg0
+libxcb1
 libzip4 | libzip5
-libzstd1
 occt-misc
 pkg-config
 python3-venv
+zlib1g-dev

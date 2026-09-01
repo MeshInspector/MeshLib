@@ -101,7 +101,7 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
-            apt-get -y install libstdc++-${{stdcxx-version}}-dev && \
+            apt-get -y install libstdc++-${{matrix.stdcxx-version}}-dev && \
             apt-get -y install ./*${{matrix.name}}-dev.deb
 
       - name: Create virtualenv

@@ -1859,7 +1859,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     addPartByMask( from, fromFaces, false, {}, {}, map, vacant );
 }
 
-void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces0, bool flipOrientation,
+bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces0, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map,
@@ -1868,7 +1868,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
 {
     MR_TIMER;
     const auto szContours = thisContours.size();
-    assert( szContours == fromContours.size() );
+    if ( szContours != fromContours.size() )
+        return false;
 
     const auto & fromFaces = from.getFaceIds( fromFaces0 );
     const auto fcount = fromFaces.count();
@@ -1884,6 +1885,22 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     auto vmap = map.src2tgtVerts ? std::move( *map.src2tgtVerts ) : VertMapOrHashMap::createHashMap();
     vmap.resizeReserve( from.vertSize(), std::min( fcount, from.vertSize() ) ); // if whole connected component is copied then vcount=1/2*fcount; if unconnected triangles are copied then vcount=3*fcount
 
+    // gives the mappings taken from the caller back, whether filled or not
+    auto returnMaps = [&]()
+    {
+        if ( map.src2tgtFaces )
+            *map.src2tgtFaces = std::move( fmap );
+        if ( map.src2tgtVerts )
+            *map.src2tgtVerts = std::move( vmap );
+        if ( map.src2tgtEdges )
+            *map.src2tgtEdges = std::move( emap );
+    };
+    auto fail = [&]()
+    {
+        returnMaps();
+        return false;
+    };
+
     // maps: to index -> from index
     if ( map.tgt2srcEdges )
         map.tgt2srcEdges->resizeReserve( undirectedEdgeSize(), std::min( 2 * fcount, from.undirectedEdgeSize() ) );
@@ -1893,49 +1910,67 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         map.tgt2srcFaces->resizeReserve( faceSize(), fcount );
 
     VertBitSet fromMappedVerts( from.vertSize() );
+    // remembers the image of a from-vertex, or returns false if the contours prescribe two different images for it
     auto setVmap = [&] ( VertId key, VertId val )
     {
         if ( !fromMappedVerts.test_set( key ) )
         {
             assert( !getAt( vmap, key ) );
             setAt( vmap, key, val );
+            return true;
         }
-#ifndef NDEBUG
-        else
-        {
-            assert( getAt( vmap, key ) == val );
-        }
-#endif
+        return getAt( vmap, key ) == val;
     };
 
     UndirectedEdgeBitSet fromMappedEdges( from.undirectedEdgeSize() ); //one of fromContours' edge
+    EdgeBitSet thisStitched( edgeSize() );
+    // verify the contours while recording their mappings: nothing in this topology is modified
+    // before all the checks pass, so a rejected call leaves it as it was
     for ( int i = 0; i < szContours; ++i )
     {
         const auto & thisContour = thisContours[i];
         const auto & fromContour = fromContours[i];
         const auto sz = thisContour.size();
-        assert( sz == fromContour.size() );
+        if ( sz != fromContour.size() )
+            return fail();
         if ( thisContour.empty() )
             continue;
         // either both contours are closed or both are open
-        [[maybe_unused]] auto s0 = from.org( fromContour.front() );
-        [[maybe_unused]] auto t0 = from.dest( fromContour.back() );
-        [[maybe_unused]] auto s1 = org( thisContour.front() );
-        [[maybe_unused]] auto t1 = dest( thisContour.back() );
-        assert( ( s0 == t0 && s1 == t1 ) || ( s0 != t0 && s1 != t1 ) );
+        if ( ( from.org( fromContour.front() ) == from.dest( fromContour.back() ) ) !=
+             ( org( thisContour.front() ) == dest( thisContour.back() ) ) )
+            return fail();
         for ( int j = 0; j < sz; ++j )
         {
             auto e = fromContour[j];
             auto e1 = thisContour[j];
-            assert( !left( e1 ) );
-            assert( ( flipOrientation && !from.isLeftInRegion( e, fromFaces0 ) ) || ( !flipOrientation && !from.isLeftInRegion( e.sym(), fromFaces0 ) ) );
-            setVmap( from.org( e ), org( e1 ) );
-            setVmap( from.dest( e ), dest( e1 ) );
-            assert( !getAt( emap, e.undirected() ) );
+            if ( !e || !e1 || !from.hasEdge( e ) || !hasEdge( e1 ) )
+                return fail();
+            if ( left( e1 ) )
+                return fail(); // the side of this edge to be stitched is occupied
+            if ( flipOrientation ? from.isLeftInRegion( e, fromFaces0 ) : from.isLeftInRegion( e.sym(), fromFaces0 ) )
+                return fail(); // the side of from edge to be stitched is occupied
+            if ( thisStitched.test_set( e1 ) )
+                return fail(); // this edge is stitched twice
+            if ( getAt( emap, e.undirected() ) )
+                return fail(); // from edge is stitched twice
+            if ( !setVmap( from.org( e ), org( e1 ) ) || !setVmap( from.dest( e ), dest( e1 ) ) )
+                return fail();
             setAt( emap, e.undirected(), e.even() ? e1 : e1.sym() );
             fromMappedEdges.set( e.undirected() );
         }
     }
+
+    // a stitched edge takes its next/prev from its from-edge, so that neighbour must be stitched or copied here as well
+    auto addedFrom = [&]( EdgeId e )
+    {
+        return fromMappedEdges.test( e.undirected() ) ||
+            ( fromFaces0 ? from.isInnerOrBdEdge( e, fromFaces0 ) : !from.isLoneEdge( e ) );
+    };
+    for ( const auto & fromContour : fromContours )
+        for ( EdgeId e : fromContour )
+            if ( !addedFrom( flipOrientation ? from.prev( e ) : from.next( e ) ) ||
+                 !addedFrom( flipOrientation ? from.next( e.sym() ) : from.prev( e.sym() ) ) )
+                return fail();
 
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices
@@ -2222,12 +2257,8 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             assert( m->size() == faceSize() );
 #endif
 
-    if ( map.src2tgtFaces )
-        *map.src2tgtFaces = std::move( fmap );
-    if ( map.src2tgtVerts )
-        *map.src2tgtVerts = std::move( vmap );
-    if ( map.src2tgtEdges )
-        *map.src2tgtEdges = std::move( emap );
+    returnMaps();
+    return true;
 }
 
 void MeshTopology::rotateTriangles()

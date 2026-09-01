@@ -195,7 +195,7 @@ TEST(MRMesh, AddPartByMaskAndStitch)
     std::vector<EdgePath> c0 = { { topology0.findEdge( 1_v, 0_v ) } };
     std::vector<EdgePath> c1 = { { topology1.findEdge( 0_v, 1_v ) } };
     auto topologyRes = topology0;
-    topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 );
+    EXPECT_TRUE( topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 ) );
     EXPECT_TRUE( topologyRes.checkValidity() );
     EXPECT_EQ( topologyRes.numValidVerts(), 4 );
     EXPECT_EQ( topologyRes.numValidFaces(), 2 );
@@ -205,11 +205,42 @@ TEST(MRMesh, AddPartByMaskAndStitch)
     c0 = { { topology0.findEdge( 1_v, 0_v ) }, { topology0.findEdge( 0_v, 2_v ) }, { topology0.findEdge( 2_v, 1_v ) } };
     c1 = { { topology1.findEdge( 0_v, 1_v ) }, { topology1.findEdge( 1_v, 2_v ) }, { topology1.findEdge( 2_v, 0_v ) } };
     topologyRes = topology0;
-    topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 );
+    EXPECT_TRUE( topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 ) );
     EXPECT_TRUE( topologyRes.checkValidity() );
     EXPECT_EQ( topologyRes.numValidVerts(), 3 );
     EXPECT_EQ( topologyRes.numValidFaces(), 2 );
     EXPECT_EQ( topologyRes.lastNotLoneEdge(), 5_e ); // 3*2 = 6 half-edges in total
+}
+
+TEST(MRMesh, AddPartByMaskAndStitchBadInput)
+{
+    Triangulation t{ { 0_v, 1_v, 2_v } };
+    const auto topology0 = MeshBuilder::fromTriangles( t );
+    const auto topology1 = topology0;
+    const EdgePath good0 = { topology0.findEdge( 1_v, 0_v ) }; // no left face here
+    const EdgePath good1 = { topology1.findEdge( 0_v, 1_v ) }; // no right face here
+
+    auto topologyRes = topology0;
+    EXPECT_TRUE( topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, { good0 }, { good1 } ) );
+    EXPECT_TRUE( topologyRes.checkValidity() );
+
+    // each bad input must be rejected leaving the target topology intact
+    auto rejected = [&]( const std::vector<EdgePath> & c0, const std::vector<EdgePath> & c1, bool flipOrientation = false )
+    {
+        auto tgt = topology0;
+        const bool res = tgt.addPartByMask( topology1, topology1.getValidFaces(), flipOrientation, c0, c1 );
+        EXPECT_TRUE( tgt == topology0 );
+        EXPECT_TRUE( tgt.checkValidity() );
+        return res;
+    };
+
+    EXPECT_FALSE( rejected( { good0 }, {} ) );                                                    // different number of contours
+    EXPECT_FALSE( rejected( { good0 }, { { good1[0], topology1.findEdge( 1_v, 2_v ) } } ) );       // different contour sizes
+    EXPECT_FALSE( rejected( { { topology0.findEdge( 0_v, 1_v ) } }, { good1 } ) );                 // this edge has left face
+    EXPECT_FALSE( rejected( { good0 }, { good0 } ) );                                             // from edge is free on the stitched side
+    EXPECT_FALSE( rejected( { good0 }, { good1 }, true ) );                                       // flipOrientation swaps the sides required
+    EXPECT_FALSE( rejected( { good0, good0 }, { good1, { topology1.findEdge( 1_v, 2_v ) } } ) );   // this edge is stitched twice
+    EXPECT_FALSE( rejected( { good0, { topology0.findEdge( 0_v, 2_v ) } }, { good1, good1 } ) );   // from edge is stitched twice
 }
 
 TEST(MRMesh, AddMesh)

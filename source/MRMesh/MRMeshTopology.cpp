@@ -2028,8 +2028,9 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             }
             return {};
         };
-        for ( const auto & [v, vports] : ports )
+        for ( const auto & vertPorts : ports )
         {
+            const auto & vports = vertPorts.second; // clang < 16 cannot capture a structured binding in a lambda
             auto pairedFrom = [&]( EdgeId e1 ) -> EdgeId
             {
                 for ( const auto & [te, fe] : vports )

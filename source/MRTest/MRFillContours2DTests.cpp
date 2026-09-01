@@ -108,4 +108,33 @@ TEST( MRMesh, fillContours2DPlanPinchedHole )
     EXPECT_TRUE( multiples.has_value() && multiples->empty() );
 }
 
+// The classic sandclock: two triangles joined at one shared vertex, whose single pinched 6-edge hole
+// loop is filled from the other side. The 2-triangle mirror patch closes each lobe into its own
+// pillow, leaving the pinch vertex with two disjoint edge rings - a non-manifold vertex, so
+// checkValidity() FAILS (hence DISABLED_); the mesh-space rewrite (#6739) fails the same way.
+TEST( MRMesh, DISABLED_fillContours2DInvalidTopology )
+{
+    VertCoords points;
+    points.vec_ = {
+        { -1.f,  1.f, 0.f }, {  1.f,  1.f, 0.f },
+        {  0.f,  0.f, 0.f }, // the shared middle vertex
+        {  1.f, -1.f, 0.f }, { -1.f, -1.f, 0.f } };
+    const Triangulation t{
+        { VertId( 0 ), VertId( 2 ), VertId( 1 ) },
+        { VertId( 2 ), VertId( 4 ), VertId( 3 ) } };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    ASSERT_EQ( mesh.topology.numValidVerts(), 5 );
+    ASSERT_TRUE( mesh.topology.checkValidity() );
+    const auto holes = mesh.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( holes.size(), size_t( 1 ) );
+    ASSERT_EQ( trackRightBoundaryLoop( mesh.topology, holes[0] ).size(), size_t( 6 ) );
+
+    const auto res = fillContours2D( mesh, holes );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+
+    const auto multiples = findMultipleEdges( mesh.topology );
+    EXPECT_TRUE( multiples.has_value() && multiples->empty() );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+}
+
 }

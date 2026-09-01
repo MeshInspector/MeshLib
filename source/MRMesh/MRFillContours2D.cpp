@@ -134,7 +134,7 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
 
     // the holes wind counterclockwise around this direction, same as around the fitted plane's normal it replaces
     WholeEdgeMap patch2mesh;
-    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, paths, Vector3f( sumCross.normalized() ), nullptr, &patch2mesh );
+    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, paths, Vector3f( sumCross.normalized() ), &patch2mesh );
     if ( !patch )
         return unexpected( "Cannot triangulate contours with self-intersections" );
     // one patch edge per loop edge; fewer means the loops traverse a mesh edge twice, and that edge
@@ -202,7 +202,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
 
     // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel anchors through it
     WholeEdgeMap bd2mesh;
-    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), nullptr, &bd2mesh );
+    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), &bd2mesh );
     if ( !patch )
         return unexpected( "Cannot triangulate contours with self-intersections" );
 

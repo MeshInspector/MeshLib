@@ -124,8 +124,8 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     return maxAreaComponent;
 }
 
-double getLargestComponentVolume( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd,
-    FaceBitSet * largestComponent, int * numSmallerComponents )
+double getLargestComponentVolume( const MeshPart& meshPart, VolumeSelection selection, FaceIncidence incidence,
+    const UndirectedEdgeBitSet * isCompBd, FaceBitSet * largestComponent, int * numSmallerComponents )
 {
     MR_TIMER;
 
@@ -153,12 +153,41 @@ double getLargestComponentVolume( const MeshPart& meshPart, FaceIncidence incide
         sixVolumes[uniqueRootsMap[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
     }
 
-    // unlike area, volume is not accumulated monotonically, so the largest one is found only here
-    int maxI = 0;
-    for ( int i = 1; i < k; ++i )
+    // unlike area, volume is not accumulated monotonically, so the component is selected only here
+    int maxI = -1;
+    double maxKey = 0; // the larger the key, the better the component
+    for ( int i = 0; i < k; ++i )
     {
-        if ( std::abs( sixVolumes[i] ) > std::abs( sixVolumes[maxI] ) )
+        double key = 0;
+        switch ( selection )
+        {
+        case VolumeSelection::Positive:
+            if ( sixVolumes[i] <= 0 )
+                continue;
+            key = sixVolumes[i];
+            break;
+        case VolumeSelection::Negative:
+            if ( sixVolumes[i] >= 0 )
+                continue;
+            key = -sixVolumes[i];
+            break;
+        default:
+            assert( selection == VolumeSelection::Abs );
+            key = std::abs( sixVolumes[i] );
+            break;
+        }
+        if ( maxI < 0 || key > maxKey )
+        {
             maxI = i;
+            maxKey = key;
+        }
+    }
+    if ( maxI < 0 )
+    {
+        // no component satisfies the selection rule, so all of them are counted as smaller ones
+        if ( numSmallerComponents )
+            *numSmallerComponents = k;
+        return 0;
     }
 
     if ( numSmallerComponents )

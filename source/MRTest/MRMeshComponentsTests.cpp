@@ -78,23 +78,48 @@ TEST(MRMesh, getLargestComponentArea)
 
 TEST(MRMesh, getLargestComponentVolume)
 {
+    using MeshComponents::VolumeSelection;
+    // the small cube has volume 1 and its normals look outside, the large one has volume -8 and its normals look inside
     auto mesh = makeCube( Vector3f::diagonal( 1 ), Vector3f::diagonal( 0 ) );
-    mesh.addMesh( makeCube( Vector3f::diagonal( 2 ), Vector3f::diagonal( 10 ) ) );
+    mesh.addMeshPart( makeCube( Vector3f::diagonal( 2 ), Vector3f::diagonal( 10 ) ), true );
+    FaceBitSet smallCube( 24 ), largeCube( 24 );
+    for ( FaceId f = 0_f; f < 12_f; ++f )
+        smallCube.set( f );
+    for ( FaceId f = 12_f; f < 24_f; ++f )
+        largeCube.set( f );
 
-    FaceBitSet largest;
+    FaceBitSet component;
     int numSmallerComponents = -1;
-    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, MeshComponents::PerEdge, nullptr, &largest, &numSmallerComponents ), 8.0, 1e-5 );
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, VolumeSelection::Abs, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), -8.0, 1e-5 );
+    ASSERT_TRUE( component == largeCube );
     ASSERT_EQ( numSmallerComponents, 1 );
-    ASSERT_EQ( largest.count(), 12 );
-    ASSERT_NEAR( mesh.volume( &largest ), 8.0, 1e-5 );
 
-    // the components are selected by absolute volume, so the inverted mesh gives the same component with negative volume
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, VolumeSelection::Positive, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), 1.0, 1e-5 );
+    ASSERT_TRUE( component == smallCube );
+    ASSERT_EQ( numSmallerComponents, 1 );
+
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, VolumeSelection::Negative, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), -8.0, 1e-5 );
+    ASSERT_TRUE( component == largeCube );
+    ASSERT_EQ( numSmallerComponents, 1 );
+
+    // flipping the whole mesh swaps the signs of both components
     mesh.topology.flipOrientation();
-    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, MeshComponents::PerEdge, nullptr, &largest ), -8.0, 1e-5 );
-    ASSERT_EQ( largest.count(), 12 );
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, VolumeSelection::Positive, MeshComponents::PerEdge, nullptr, &component ), 8.0, 1e-5 );
+    ASSERT_TRUE( component == largeCube );
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, VolumeSelection::Negative, MeshComponents::PerEdge, nullptr, &component ), -1.0, 1e-5 );
+    ASSERT_TRUE( component == smallCube );
 
-    ASSERT_EQ( MeshComponents::getLargestComponentVolume( Mesh{}, MeshComponents::PerEdge, nullptr, &largest, &numSmallerComponents ), 0 );
-    ASSERT_TRUE( largest.none() );
+    // both cubes look outside, so there is no negative component at all
+    Mesh outward = makeCube( Vector3f::diagonal( 1 ), Vector3f::diagonal( 0 ) );
+    outward.addMesh( makeCube( Vector3f::diagonal( 2 ), Vector3f::diagonal( 10 ) ) );
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( outward, VolumeSelection::Abs, MeshComponents::PerEdge, nullptr, &component ), 8.0, 1e-5 );
+    ASSERT_TRUE( component == largeCube );
+    ASSERT_EQ( MeshComponents::getLargestComponentVolume( outward, VolumeSelection::Negative, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), 0 );
+    ASSERT_TRUE( component.none() );
+    ASSERT_EQ( numSmallerComponents, 2 );
+
+    ASSERT_EQ( MeshComponents::getLargestComponentVolume( Mesh{}, VolumeSelection::Abs, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), 0 );
+    ASSERT_TRUE( component.none() );
     ASSERT_EQ( numSmallerComponents, 0 );
 }
 

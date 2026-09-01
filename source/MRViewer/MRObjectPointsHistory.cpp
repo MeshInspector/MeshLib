@@ -27,10 +27,9 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
     }
 
     {
-        AppendHistory<ChangeVertsColorMapAction<ObjectPoints>>( "color map update", objPoints );
         VertColors tmp;
         packed->updateVertsColorMap( tmp );    // tmp := packed
-        objPoints->updateVertsColorMap( tmp ); // objPoints := tmp
+        AppendHistory<ChangeVertsColorMapAction<ObjectPoints>>( "color map update", objPoints, std::move( tmp ) );
     }
 
     {

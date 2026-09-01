@@ -47,6 +47,13 @@ enum FaceIncidence
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {}, float minArea = 0,
     int * numSmallerComponents = nullptr ); ///< optional output: the number of components in addition to returned one
 
+/// returns the volume of the largest by absolute volume component, and zero if there are no components at all;
+/// the volume of each component is computed as if it were closed, so the result is correct
+/// only for a closed mesh part (or if the area of holes in it is almost zero)
+[[nodiscard]] MRMESH_API double getLargestComponentVolume( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {}, FaceBitSet * largestComponent = nullptr, ///< optional output with the faces of the largest by absolute volume component
+    int * numSmallerComponents = nullptr ); ///< optional output: the number of components in addition to returned one
+
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );

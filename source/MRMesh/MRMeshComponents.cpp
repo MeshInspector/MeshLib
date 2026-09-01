@@ -124,6 +124,59 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     return maxAreaComponent;
 }
 
+double getLargestComponentVolume( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd,
+    FaceBitSet * largestComponent, int * numSmallerComponents )
+{
+    MR_TIMER;
+
+    if ( largestComponent )
+        largestComponent->clear();
+
+    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
+    if ( k <= 0 )
+    {
+        if ( numSmallerComponents )
+            *numSmallerComponents = 0;
+        return 0;
+    }
+
+    // six-fold volume of each component, valid if the component is closed
+    std::vector<double> sixVolumes( k, 0.0 );
+    for ( auto f : region )
+    {
+        const auto fp = mesh.getTriPoints( f );
+        sixVolumes[uniqueRootsMap[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
+    }
+
+    // unlike area, volume is not accumulated monotonically, so the largest one is found only here
+    int maxI = 0;
+    for ( int i = 1; i < k; ++i )
+    {
+        if ( std::abs( sixVolumes[i] ) > std::abs( sixVolumes[maxI] ) )
+            maxI = i;
+    }
+
+    if ( numSmallerComponents )
+        *numSmallerComponents = k - 1;
+    if ( largestComponent )
+    {
+        largestComponent->resize( region.find_last() + 1 );
+        for ( auto f : region )
+        {
+            auto index = uniqueRootsMap[f];
+            if ( index != maxI )
+                continue;
+            largestComponent->set( f );
+        }
+    }
+    return sixVolumes[maxI] / 6.0;
+}
+
 VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region /*= nullptr */ )
 {
     MR_TIMER;

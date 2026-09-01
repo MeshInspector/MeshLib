@@ -76,6 +76,28 @@ TEST(MRMesh, getLargestComponentArea)
     ASSERT_EQ( numSmallerComponents, 0 );
 }
 
+TEST(MRMesh, getLargestComponentVolume)
+{
+    auto mesh = makeCube( Vector3f::diagonal( 1 ), Vector3f::diagonal( 0 ) );
+    mesh.addMesh( makeCube( Vector3f::diagonal( 2 ), Vector3f::diagonal( 10 ) ) );
+
+    FaceBitSet largest;
+    int numSmallerComponents = -1;
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, MeshComponents::PerEdge, nullptr, &largest, &numSmallerComponents ), 8.0, 1e-5 );
+    ASSERT_EQ( numSmallerComponents, 1 );
+    ASSERT_EQ( largest.count(), 12 );
+    ASSERT_NEAR( mesh.volume( &largest ), 8.0, 1e-5 );
+
+    // the components are selected by absolute volume, so the inverted mesh gives the same component with negative volume
+    mesh.topology.flipOrientation();
+    ASSERT_NEAR( MeshComponents::getLargestComponentVolume( mesh, MeshComponents::PerEdge, nullptr, &largest ), -8.0, 1e-5 );
+    ASSERT_EQ( largest.count(), 12 );
+
+    ASSERT_EQ( MeshComponents::getLargestComponentVolume( Mesh{}, MeshComponents::PerEdge, nullptr, &largest, &numSmallerComponents ), 0 );
+    ASSERT_TRUE( largest.none() );
+    ASSERT_EQ( numSmallerComponents, 0 );
+}
+
 TEST(MRMesh, getLargestComponentVerts)
 {
     auto mesh = makeCube();

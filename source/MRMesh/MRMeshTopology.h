@@ -486,6 +486,7 @@ public:
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
     /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
     /// \return false if the given contours cannot be stitched (see the conditions on them above), and this topology is left unmodified then
+    ///         (the src2tgt mappings in (map) argument can be partially filled nevertheless)
     MRMESH_API bool addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {}, VacantElements * vacant = {} );

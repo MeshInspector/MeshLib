@@ -1,6 +1,6 @@
 build-essential
 cmake
-libblosc1
+libblosc-dev
 libboost-atomic-dev
 libboost-chrono-dev
 libboost-dev
@@ -13,7 +13,7 @@ libcurl4
 libeigen3-dev
 libexpected-dev
 libfmt-dev
-libfreetype6
+libfreetype-dev
 libgdcm3.0
 libglfw3-dev
 libglib2.0-0
@@ -35,4 +35,4 @@ libzip4 | libzip5
 occt-misc
 pkg-config
 python3-venv
-zlib1g
+zlib1g-dev

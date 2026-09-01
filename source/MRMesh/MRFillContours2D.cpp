@@ -178,10 +178,19 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     if ( mesh.topology.left( holeEdgeId ) )
         return unexpected( "Hole edge has left face" );
 
+    // a plan needs only the patch connectivity: triangulate into the cache without creating a Mesh;
+    // the connectivity must live somewhere even if the caller gave no cache, hence the temporary one
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> tmpCache;
+    if ( !cache )
+        cache = ( tmpCache = PlanarTriangulation::makeSweepLineCache() ).get();
+
     // triangulate the hole in the mesh's own 3d space: only the plan is needed, so the projection
-    // round-trip of the mesh-filling path above is avoided
-    EdgeLoops loops( 1 );
-    loops.front() = trackRightBoundaryLoop( mesh.topology, holeEdgeId );
+    // round-trip of the mesh-filling path above is avoided; the loop lives in the cache's scratch,
+    // so planning many holes with one cache tracks them into the same buffer
+    EdgeLoops& loops = PlanarTriangulation::sweepCacheLoops( *cache );
+    loops.resize( 1 );
+    loops.front().clear();
+    appendRightBoundaryLoop( loops.front(), mesh.topology, holeEdgeId );
 
     // the hole loop winds counterclockwise around this direction, same as around the fitted plane's normal it replaces
     Vector3d sumCross;
@@ -201,17 +210,12 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     if ( minEdgeLenSq < 1e-12f * loopBox.size().lengthSq() )
         return unexpected( "Hole boundary has a degenerate edge" );
 
-    // a plan needs only the patch connectivity: triangulate into the cache without creating a Mesh;
-    // the connectivity must live somewhere even if the caller gave no cache, hence the temporary one
-    std::unique_ptr<PlanarTriangulation::ISweepLineCache> tmpCache;
-    if ( !cache )
-        cache = ( tmpCache = PlanarTriangulation::makeSweepLineCache() ).get();
-
-    // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel anchors through it
-    WholeEdgeMap bd2mesh;
-    auto* patchTp = PlanarTriangulation::triangulateDisjointContoursTopology( mesh, loops, Vector3f( sumCross.normalized() ), &bd2mesh, *cache );
+    // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel anchors through it;
+    // with no explicit out-map the triangulation leaves it in the cache's own scratch
+    auto* patchTp = PlanarTriangulation::triangulateDisjointContoursTopology( mesh, loops, Vector3f( sumCross.normalized() ), nullptr, *cache );
     if ( !patchTp )
         return unexpected( "Cannot triangulate contours with self-intersections" );
+    const WholeEdgeMap& bd2mesh = PlanarTriangulation::sweepCachePatchMap( *cache );
 
     const auto& pTp = *patchTp;
     HoleFillPlan res;

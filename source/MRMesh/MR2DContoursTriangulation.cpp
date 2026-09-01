@@ -122,9 +122,10 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours, std::s
 }
 
 // per-contour vertex counts; lets the queue build the initial edge loops independently of coordinate dimension
-static std::vector<int> getContourSizes( const Contours2f& contours )
+// filled in the caller's buffer, which a caller triangulating many contour sets reuses
+static const std::vector<int>& getContourSizes( const Contours2f& contours, std::vector<int>& sizes )
 {
-    std::vector<int> sizes( contours.size() );
+    sizes.resize( contours.size() );
     for ( int i = 0; i < int( contours.size() ); ++i )
         sizes[i] = int( contours[i].size() );
     return sizes;
@@ -299,7 +300,7 @@ public:
     struct Cache; // all the buffers reused between runs, defined below
 
     // constructor makes initial mesh which simply contain input contours as edges
-    SweepLineQueue( Cache& cache, SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params );
+    SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<int>& contourSizes, const SweepLineParams& params );
 
     SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLinePredicates predicates, const EdgeLoops& holes, const SweepLineParams& params );
 
@@ -460,6 +461,10 @@ public:
         // scratch maps of initMeshByLoops_()
         UndirectedEdgeHashMap in2p;
         WholeEdgeMap p2inCache;
+        std::vector<int> contourSizes; // vertex count of every input contour
+        // scratch of pipeline callers (sweepCacheLoops()); the triangulation itself never touches it,
+        // and resetCache_() must not clear it: it already holds this run's input when the queue starts
+        EdgeLoops loopsScratch;
     };
 
 private:
@@ -473,7 +478,17 @@ std::unique_ptr<ISweepLineCache> makeSweepLineCache()
     return std::make_unique<SweepLineQueue::Cache>();
 }
 
-SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, std::vector<int> contourSizes, const SweepLineParams& params ) :
+EdgeLoops& sweepCacheLoops( ISweepLineCache& cache )
+{
+    return static_cast<SweepLineQueue::Cache&>( cache ).loopsScratch;
+}
+
+WholeEdgeMap& sweepCachePatchMap( ISweepLineCache& cache )
+{
+    return static_cast<SweepLineQueue::Cache&>( cache ).p2inCache;
+}
+
+SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<int>& contourSizes, const SweepLineParams& params ) :
     predicates_{ std::move( predicates ) },
     params_{ params },
     cache_( cache )
@@ -1615,7 +1630,7 @@ void SweepLineQueue::triangulateMonotoneBlock_( EdgeId holeEdgeId )
 Mesh getOutlineMesh( const Contours2f& conts, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
     SweepLineQueue::Cache cache;
-    SweepLineQueue triangulator( cache, precisePredicates( conts, cache.pts2Buffer ), getContourSizes( conts ),
+    SweepLineQueue triangulator( cache, precisePredicates( conts, cache.pts2Buffer ), getContourSizes( conts, cache.contourSizes ),
         { .windingMode = params.innerType, .needOutline = true, .allowMerge = params.allowMerge } );
 
     if ( interMap )
@@ -1688,7 +1703,7 @@ Mesh triangulateContours( const Contours2f& contours, const TriangulationParamet
     if ( contours.empty() )
         return {};
     SweepLineQueue::Cache cache;
-    SweepLineQueue triangulator( cache, precisePredicates( contours, cache.pts2Buffer ), getContourSizes( contours ),
+    SweepLineQueue triangulator( cache, precisePredicates( contours, cache.pts2Buffer ), getContourSizes( contours, cache.contourSizes ),
         { .outFaceWinding = params.outFaceWinding } );
     if ( params.outInterMap )
         params.outInterMap->shift = triangulator.vertSize();
@@ -1712,7 +1727,7 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, ISw
         return Mesh();
     std::optional<SweepLineQueue::Cache> localCache;
     auto& cacheImpl = cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace();
-    SweepLineQueue triangulator( cacheImpl, precisePredicates( contours, cacheImpl.pts2Buffer ), getContourSizes( contours ), { .abortWhenIntersect = true } );
+    SweepLineQueue triangulator( cacheImpl, precisePredicates( contours, cacheImpl.pts2Buffer ), getContourSizes( contours, cacheImpl.contourSizes ), { .abortWhenIntersect = true } );
     return triangulator.run();
 }
 

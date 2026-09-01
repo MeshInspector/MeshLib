@@ -47,6 +47,22 @@ enum FaceIncidence
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {}, float minArea = 0,
     int * numSmallerComponents = nullptr ); ///< optional output: the number of components in addition to returned one
 
+/// the rule of selecting one component by its signed volume
+enum class VolumeSelection
+{
+    Abs,      ///< the component with the largest absolute volume, whatever its sign is
+    Positive, ///< the component with the largest positive volume (its normals look outside)
+    Negative  ///< the component with the smallest negative volume (its normals look inside)
+};
+
+/// returns the signed volume of the component selected by given rule, and zero if no component satisfies it,
+/// which is possible for Positive and Negative rules only, since they never select a component of zero volume;
+/// the volume of each component is computed as if it were closed, so the result is correct
+/// only for a closed mesh part (or if the area of holes in it is almost zero)
+[[nodiscard]] MRMESH_API double getLargestComponentVolume( const MeshPart& meshPart, VolumeSelection selection = VolumeSelection::Abs,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {}, FaceBitSet * largestComponent = nullptr, ///< optional output with the faces of the selected component
+    int * numSmallerComponents = nullptr ); ///< optional output: the number of components in addition to returned one, so all components if none was selected
+
 /// returns union of connected components, each of which contains at least one seed face
 [[nodiscard]] MRMESH_API FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );

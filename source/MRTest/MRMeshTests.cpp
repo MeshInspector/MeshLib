@@ -212,6 +212,40 @@ TEST(MRMesh, AddPartByMaskAndStitch)
     EXPECT_EQ( topologyRes.lastNotLoneEdge(), 5_e ); // 3*2 = 6 half-edges in total
 }
 
+// The classic sandclock: two triangles joined at one shared vertex. Its single hole loop passes that
+// vertex twice, so stitching a mirrored copy along the loop closes each lobe into its own pillow and
+// leaves the shared vertex with two disjoint edge rings - checkValidity() FAILS (hence DISABLED_).
+// Same defect as MRMesh.DISABLED_fillContours2DInvalidTopology, with no hole filler involved.
+TEST(MRMesh, DISABLED_AddPartByMaskAndStitchPinched)
+{
+    Triangulation t{ { 0_v, 2_v, 1_v }, { 2_v, 4_v, 3_v } };
+    auto topology0 = MeshBuilder::fromTriangles( t );
+    ASSERT_EQ( topology0.numValidVerts(), 5 );
+    ASSERT_EQ( topology0.numValidFaces(), 2 );
+    ASSERT_TRUE( topology0.checkValidity() );
+    const auto topology1 = topology0;
+
+    // the only hole boundary loop, visiting the shared vertex 2_v twice
+    const std::vector<EdgePath> contours = { {
+        topology0.findEdge( 2_v, 0_v ), topology0.findEdge( 0_v, 1_v ), topology0.findEdge( 1_v, 2_v ),
+        topology0.findEdge( 2_v, 3_v ), topology0.findEdge( 3_v, 4_v ), topology0.findEdge( 4_v, 2_v ) } };
+    const EdgeId e0 = contours[0][0], e3 = contours[0][3]; // both start in 2_v
+    ASSERT_EQ( topology0.org( e0 ), 2_v );
+    ASSERT_EQ( topology0.org( e3 ), 2_v );
+    ASSERT_TRUE( topology0.fromSameOriginRing( e0, e3 ) );
+
+    // stitch a mirrored copy along that loop, exactly what a hole filler does
+    auto topologyRes = topology0;
+    topologyRes.addPartByMask( topology1, topology1.getValidFaces(), true, contours, contours );
+    EXPECT_EQ( topologyRes.numValidVerts(), 5 );
+    EXPECT_EQ( topologyRes.numValidFaces(), 4 );
+    EXPECT_EQ( topologyRes.lastNotLoneEdge(), 11_e ); // 6*2 = 12 half-edges in total
+
+    // both lobes are closed now, so 2_v has two disjoint edge rings and the topology is not valid
+    EXPECT_TRUE( topologyRes.fromSameOriginRing( e0, e3 ) );
+    EXPECT_TRUE( topologyRes.checkValidity() );
+}
+
 TEST(MRMesh, AddMesh)
 {
     auto cube = makeCube();

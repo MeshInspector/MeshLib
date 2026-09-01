@@ -109,6 +109,37 @@ TEST( MRMesh, fillContours2DPlanPinchedHole )
     EXPECT_TRUE( multiples.has_value() && multiples->empty() );
 }
 
+// The classic sandclock: two triangles joined at one shared vertex, whose single pinched 6-edge hole
+// loop is filled from the other side. The 2-triangle mirror patch is pinched at that vertex too, so
+// stitching it would close each lobe into its own pillow and split the vertex into two disjoint edge
+// rings; addPartByMask detects this and fillContours2D must fail cleanly, leaving the mesh unchanged.
+// The plan-based fillContours2DPlan bridges such loops disk-like instead (see fillContours2DPlanPinchedHole).
+TEST( MRMesh, fillContours2DPinchedHoleValidity )
+{
+    VertCoords points;
+    points.vec_ = {
+        { -1.f,  1.f, 0.f }, {  1.f,  1.f, 0.f },
+        {  0.f,  0.f, 0.f }, // the shared middle vertex
+        {  1.f, -1.f, 0.f }, { -1.f, -1.f, 0.f } };
+    const Triangulation t{
+        { VertId( 0 ), VertId( 2 ), VertId( 1 ) },
+        { VertId( 2 ), VertId( 4 ), VertId( 3 ) } };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    ASSERT_EQ( mesh.topology.numValidVerts(), 5 );
+    ASSERT_TRUE( mesh.topology.checkValidity() );
+    const auto holes = mesh.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( holes.size(), size_t( 1 ) );
+    ASSERT_EQ( trackRightBoundaryLoop( mesh.topology, holes[0] ).size(), size_t( 6 ) );
+
+    const auto res = fillContours2D( mesh, holes );
+    EXPECT_FALSE( res.has_value() );
+
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 5 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+}
+
 // The mesh both tests below fill: two triangular lobes (areas 0.141 and 0.029, generic position)
 // joined at one shared vertex, so the hole boundary is a single 6-edge loop passing that vertex
 // twice and winding counterclockwise around +Z - the configuration whose sweep frame is the
@@ -144,10 +175,9 @@ static void patchAreaAndFolding( const Mesh& mesh, FaceId first, double& area, b
     folded = sumAbs > 0 && sumDir.length() < sumAbs * ( 1 - 1e-6 );
 }
 
-// Filling a pinched boundary must mirror the two lobes: 2 triangles, total area equal to the mesh's
-// own, all facing the same way. The mesh-space fill instead tiles the whole quadrilateral (0.457) and
-// cancels the excess with two reversed triangles inside it (-0.287): the net signed area is right,
-// but the patch is a folded sheet of 4 triangles covering 0.744.
+// A pinched boundary cannot be closed by a per-lobe mirror patch in valid topology (the pinch vertex
+// would be split into two disjoint edge rings), so fillContours2D must reject it cleanly, leaving the
+// mesh unchanged; the triangulation itself is checked by the test below.
 TEST( MRMesh, fillContours2DPinchedBoundary )
 {
     Mesh mesh = makePinchedTwoLobeMesh();
@@ -156,22 +186,17 @@ TEST( MRMesh, fillContours2DPinchedBoundary )
     const auto holes = mesh.topology.findHoleRepresentiveEdges();
     ASSERT_EQ( holes.size(), size_t( 1 ) );
     ASSERT_EQ( trackRightBoundaryLoop( mesh.topology, holes[0] ).size(), size_t( 6 ) );
-    const double meshArea = mesh.area();
 
-    const FaceId firstNew = mesh.topology.lastValidFace() + 1;
     const auto res = fillContours2D( mesh, holes );
-    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_FALSE( res.has_value() );
 
-    double patchArea = 0;
-    bool folded = true;
-    patchAreaAndFolding( mesh, firstNew, patchArea, folded );
-    EXPECT_FALSE( folded );
-    EXPECT_NEAR( patchArea, meshArea, 1e-5 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 4 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
 }
 
-// The same defect one level down, independent of fillContours2D: the mesh-space triangulation itself
-// returns the folded patch for this loop, so this reproduces on master too.
+// The triangulation itself must mirror the two lobes: 2 triangles, total area equal to the mesh's
+// own, all facing the same way - not a folded sheet tiling the whole quadrilateral.
 TEST( MRMesh, triangulateDisjointContoursPinchedLoop )
 {
     const Mesh mesh = makePinchedTwoLobeMesh();

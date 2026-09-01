@@ -243,6 +243,44 @@ TEST(MRMesh, AddPartByMaskAndStitchBadInput)
     EXPECT_FALSE( rejected( { good0, { topology0.findEdge( 0_v, 2_v ) } }, { good1, good1 } ) );   // from edge is stitched twice
 }
 
+// The classic sandclock: two triangles joined at one shared vertex. Its single hole loop passes that
+// vertex twice, and stitching a mirrored copy of the same topology along the loop would close each
+// lobe into its own pillow, leaving the shared vertex with two disjoint edge rings. addPartByMask
+// must detect this and reject the call keeping the target topology intact.
+TEST(MRMesh, AddPartByMaskAndStitchPinched)
+{
+    Triangulation t{ { 0_v, 2_v, 1_v }, { 2_v, 4_v, 3_v } };
+    const auto topology0 = MeshBuilder::fromTriangles( t );
+    ASSERT_EQ( topology0.numValidVerts(), 5 );
+    ASSERT_EQ( topology0.numValidFaces(), 2 );
+    ASSERT_TRUE( topology0.checkValidity() );
+
+    // the only hole boundary loop, visiting the shared vertex 2_v twice
+    const std::vector<EdgePath> contours = { {
+        topology0.findEdge( 2_v, 0_v ), topology0.findEdge( 0_v, 1_v ), topology0.findEdge( 1_v, 2_v ),
+        topology0.findEdge( 2_v, 3_v ), topology0.findEdge( 3_v, 4_v ), topology0.findEdge( 4_v, 2_v ) } };
+
+    // a mirrored copy of the same topology pairs the two lobes with themselves: rejected
+    auto topologyRes = topology0;
+    EXPECT_FALSE( topologyRes.addPartByMask( topology0, topology0.getValidFaces(), true, contours, contours ) );
+    EXPECT_TRUE( topologyRes == topology0 );
+    EXPECT_TRUE( topologyRes.checkValidity() );
+
+    // while a fan patch reaching the pinch through two distinct vertices bridges the lobes: accepted
+    Triangulation ft{ { 0_v, 2_v, 1_v }, { 0_v, 3_v, 2_v }, { 0_v, 4_v, 3_v }, { 0_v, 5_v, 4_v } };
+    const auto fan = MeshBuilder::fromTriangles( ft ); // a hexagon fan around 0_v: boundary 0-1-2-3-4-5, hole on the left
+    ASSERT_TRUE( fan.checkValidity() );
+    const std::vector<EdgePath> fanContours = { {
+        fan.findEdge( 0_v, 1_v ), fan.findEdge( 1_v, 2_v ), fan.findEdge( 2_v, 3_v ),
+        fan.findEdge( 3_v, 4_v ), fan.findEdge( 4_v, 5_v ), fan.findEdge( 5_v, 0_v ) } };
+    topologyRes = topology0;
+    EXPECT_TRUE( topologyRes.addPartByMask( fan, fan.getValidFaces(), true, contours, fanContours ) );
+    EXPECT_EQ( topologyRes.numValidVerts(), 5 ); // two fan verts land in the pinch vertex
+    EXPECT_EQ( topologyRes.numValidFaces(), 6 );
+    EXPECT_EQ( topologyRes.findHoleRepresentiveEdges().size(), size_t( 0 ) );
+    EXPECT_TRUE( topologyRes.checkValidity() );
+}
+
 TEST(MRMesh, AddMesh)
 {
     auto cube = makeCube();

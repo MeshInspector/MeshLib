@@ -1923,7 +1923,8 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     };
 
     UndirectedEdgeBitSet fromMappedEdges( from.undirectedEdgeSize() ); //one of fromContours' edge
-    EdgeBitSet thisStitched( edgeSize() );
+    HashMap<VertId, int> orgVisits; // how many stitched edges start in a target vertex; allocates only on first insert
+    bool multiVisit = false;
     // verify the contours while recording their mappings: nothing in this topology is modified
     // before all the checks pass, so a rejected call leaves it as it was
     for ( int i = 0; i < szContours; ++i )
@@ -1949,14 +1950,14 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 return fail(); // the side of this edge to be stitched is occupied
             if ( flipOrientation ? from.isLeftInRegion( e, fromFaces0 ) : from.isLeftInRegion( e.sym(), fromFaces0 ) )
                 return fail(); // the side of from edge to be stitched is occupied
-            if ( thisStitched.test_set( e1 ) )
-                return fail(); // this edge is stitched twice
             if ( getAt( emap, e.undirected() ) )
                 return fail(); // from edge is stitched twice
             if ( !setVmap( from.org( e ), org( e1 ) ) || !setVmap( from.dest( e ), dest( e1 ) ) )
                 return fail();
             setAt( emap, e.undirected(), e.even() ? e1 : e1.sym() );
             fromMappedEdges.set( e.undirected() );
+            if ( ++orgVisits[org( e1 )] == 2 )
+                multiVisit = true;
         }
     }
 
@@ -1971,6 +1972,90 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             if ( !addedFrom( flipOrientation ? from.prev( e ) : from.next( e ) ) ||
                  !addedFrom( flipOrientation ? from.next( e.sym() ) : from.prev( e.sym() ) ) )
                 return fail();
+
+    // a target vertex the contours visit more than once can be left with several disjoint edge rings
+    // by the stitching (e.g. filling a pinched hole loop with a patch pinched at the same vertex closes
+    // each lobe into its own pillow); simulate the future ring at every such vertex and reject the call
+    // unless all its stitched edges fall in one cycle
+    if ( multiVisit )
+    {
+        HashMap<VertId, std::vector<std::pair<EdgeId, EdgeId>>> ports; // vertex -> its stitched ( this-edge, from-edge ) pairs
+        for ( int i = 0; i < szContours; ++i )
+            for ( int j = 0; j < int( thisContours[i].size() ); ++j )
+                if ( const EdgeId e1 = thisContours[i][j]; orgVisits[org( e1 )] > 1 )
+                    ports[org( e1 )].push_back( { e1, fromContours[i][j] } );
+
+        auto fromNbr = [&]( EdgeId p ) { return flipOrientation ? from.prev( p ) : from.next( p ); };
+        auto fromCopied = [&]( EdgeId p )
+        {
+            return fromFaces0 ? from.isInnerOrBdEdge( p, fromFaces0 ) : !from.isLoneEdge( p );
+        };
+        for ( const auto & vertPorts : ports )
+        {
+            const auto & vports = vertPorts.second; // clang < 16 cannot capture a structured binding in a lambda
+            // the same target edge stitched to two different from-edges would get its ring records
+            // written twice (equal from-edges were rejected above via emap)
+            bool repeatedFromOrg = false;
+            for ( int a = 0; a + 1 < int( vports.size() ); ++a )
+                for ( int b = a + 1; b < int( vports.size() ); ++b )
+                {
+                    if ( vports[a].first == vports[b].first )
+                        return fail();
+                    if ( from.org( vports[a].second ) == from.org( vports[b].second ) )
+                        repeatedFromOrg = true;
+                }
+            // every corner is filled by its own from-vertex: each patch fan is a linear splice into
+            // its own gap of the single present ring, so the result is a single ring for sure
+            if ( !repeatedFromOrg )
+                continue;
+            auto pairedFrom = [&]( EdgeId e1 ) -> EdgeId
+            {
+                for ( const auto & [te, fe] : vports )
+                    if ( te == e1 )
+                        return fe;
+                return {};
+            };
+            // the future ring successor of a stitched this-edge, jumping over the patch back to the
+            // next stitched this-edge of the same target vertex; invalid if the simulation cannot proceed
+            auto nextStitched = [&]( EdgeId fromEdge ) -> EdgeId
+            {
+                EdgeId x = fromNbr( fromEdge );
+                for ( auto guard = from.edgeSize(); guard > 0; --guard )
+                {
+                    if ( auto m = mapEdge( emap, x ) )
+                    {
+                        // in the target: walk the present ring to the next redirected edge
+                        for ( auto g1 = edgeSize(); g1 > 0; --g1 )
+                        {
+                            if ( pairedFrom( m ) )
+                                return m;
+                            m = next( m );
+                        }
+                        return {};
+                    }
+                    if ( !fromCopied( x ) )
+                        return {}; // a ring gap closed by the near-stitch fix-ups below: leave such inputs to them as before
+                    x = fromNbr( x );
+                }
+                return {};
+            };
+            int reached = 0;
+            EdgeId cur = vports.front().first;
+            bool unsupported = false;
+            do
+            {
+                ++reached;
+                cur = nextStitched( pairedFrom( cur ) );
+                if ( !cur || reached > int( vports.size() ) )
+                {
+                    unsupported = true; // cannot be simulated: keep the old behavior for such inputs
+                    break;
+                }
+            } while ( cur != vports.front().first );
+            if ( !unsupported && reached < int( vports.size() ) )
+                return fail(); // the vertex would be split into more than one edge ring
+        }
+    }
 
     // fill all maps
     VertBitSet fromCopiedVerts; // except for moved vertices

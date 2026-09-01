@@ -8,10 +8,6 @@
     "arch": "x64"
   },
   {
-    "distro": "ubuntu26",
-    "arch": "x64"
-  },
-  {
     "distro": "emscripten-generate-c-bindings",
     "arch": "arm64"
   }

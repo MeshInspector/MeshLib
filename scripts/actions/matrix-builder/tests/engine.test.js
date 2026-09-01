@@ -559,7 +559,6 @@ function dockerLinuxMatrix(dx64, darm64, demscr) {
       exclude: [
         { distro: 'ubuntu22', arch: 'x64' },
         { distro: 'ubuntu24', arch: 'x64' },
-        { distro: 'ubuntu26', arch: 'x64' },
       ],
     },
     {

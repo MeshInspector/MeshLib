@@ -55,7 +55,8 @@ enum class VolumeSelection
     Negative  ///< the component with the smallest negative volume (its normals look inside)
 };
 
-/// returns the signed volume of the component selected by given rule, and zero if no component with non-zero volume satisfies it;
+/// returns the signed volume of the component selected by given rule, and zero if no component satisfies it,
+/// which is possible for Positive and Negative rules only, since they never select a component of zero volume;
 /// the volume of each component is computed as if it were closed, so the result is correct
 /// only for a closed mesh part (or if the area of holes in it is almost zero)
 [[nodiscard]] MRMESH_API double getLargestComponentVolume( const MeshPart& meshPart, VolumeSelection selection = VolumeSelection::Abs,

@@ -155,7 +155,9 @@ double getLargestComponentVolume( const MeshPart& meshPart, VolumeSelection sele
 
     // unlike area, volume is not accumulated monotonically, so the component is selected only here
     int maxI = -1;
-    double maxKey = 0; // the larger the key, the better the component; not positive key means unsuitable component
+    // the larger the key, the better the component; not positive key means unsuitable component,
+    // and only Abs rule accepts a component of zero volume
+    double maxKey = selection == VolumeSelection::Abs ? -1.0 : 0.0;
     for ( int i = 0; i < k; ++i )
     {
         double key = 0;
@@ -180,7 +182,7 @@ double getLargestComponentVolume( const MeshPart& meshPart, VolumeSelection sele
     }
     if ( maxI < 0 )
     {
-        // no component with non-zero volume satisfies the selection rule, so all of them are counted as smaller ones
+        // no component satisfies the selection rule, so all of them are counted as smaller ones
         if ( numSmallerComponents )
             *numSmallerComponents = k;
         return 0;

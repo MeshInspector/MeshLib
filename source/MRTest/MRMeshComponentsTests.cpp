@@ -118,6 +118,15 @@ TEST(MRMesh, getLargestComponentVolume)
     ASSERT_TRUE( component.none() );
     ASSERT_EQ( numSmallerComponents, 2 );
 
+    // a degenerate component of zero volume is still returned by Abs rule, but never by the two others
+    const auto degenerate = makeCube( Vector3f::diagonal( 0 ), Vector3f::diagonal( 0 ) );
+    ASSERT_EQ( MeshComponents::getLargestComponentVolume( degenerate, VolumeSelection::Abs, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), 0 );
+    ASSERT_EQ( component.count(), 12 );
+    ASSERT_EQ( numSmallerComponents, 0 );
+    ASSERT_EQ( MeshComponents::getLargestComponentVolume( degenerate, VolumeSelection::Positive, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), 0 );
+    ASSERT_TRUE( component.none() );
+    ASSERT_EQ( numSmallerComponents, 1 );
+
     ASSERT_EQ( MeshComponents::getLargestComponentVolume( Mesh{}, VolumeSelection::Abs, MeshComponents::PerEdge, nullptr, &component, &numSmallerComponents ), 0 );
     ASSERT_TRUE( component.none() );
     ASSERT_EQ( numSmallerComponents, 0 );

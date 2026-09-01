@@ -14,7 +14,7 @@ on:
     - cron: '0 2 * * *'  # Run every day at 2 AM UTC
 
 # Supersede a PR's previous run instead of racing it (two live runs of one branch
-# collided pushing the same new Docker Hub repo). Push/schedule/dispatch get a
+# collided pushing the same new Docker Hub repo, #6738). Push/schedule/dispatch get
 # unique group, so a release run is never cancelled and never queues behind one.
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}

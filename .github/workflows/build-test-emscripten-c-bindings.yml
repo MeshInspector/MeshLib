@@ -133,9 +133,8 @@ jobs:
           #   link their own trimmed freetype/libpng/zlib whose globals collide with vanilla copies.
           EM_CACHE=$(${EMSDK}/upstream/emscripten/em-config CACHE)
           python3 scripts/wasm_namespace_deps.py \
-            --emscripten ${EMSDK}/upstream/emscripten \
+            --llvm-bin ${EMSDK}/upstream/bin \
             --package-dir ${OUT_DIR} \
-            --ports-dir ${EM_CACHE}/ports \
             --vanilla-libs ${EM_CACHE}/sysroot/lib/wasm32-emscripten \
             --out-dir namespaced_deps \
             ${{ matrix.config == 'Multithreaded' && '--pthread' || '' }}

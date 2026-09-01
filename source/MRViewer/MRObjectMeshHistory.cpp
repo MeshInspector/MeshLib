@@ -20,14 +20,12 @@ void excludeLoneEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
     // remove deleted edges from the selection
     auto selEdges = objMesh->getSelectedEdges();
     topology.excludeLoneEdges( selEdges );
-    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
-    objMesh->selectEdges( std::move( selEdges ) );
+    AppendHistory<ChangeMeshEdgeSelectionAction>( "edge selection", objMesh, std::move( selEdges ) );
 
     // remove deleted edges from creases
     auto creases = objMesh->creases();
     topology.excludeLoneEdges( creases );
-    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
-    objMesh->setCreases( std::move( creases ) );
+    AppendHistory<ChangeMeshCreasesAction>( "creases", objMesh, std::move( creases ) );
 }
 
 void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
@@ -37,12 +35,10 @@ void excludeAllEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
         return;
 
     // remove all edges from the selection
-    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
-    objMesh->selectEdges( {} );
+    AppendHistory<ChangeMeshEdgeSelectionAction>( "edge selection", objMesh, UndirectedEdgeBitSet{} );
 
     // remove all edges from creases
-    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
-    objMesh->setCreases( {} );
+    AppendHistory<ChangeMeshCreasesAction>( "creases", objMesh, UndirectedEdgeBitSet{} );
 }
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeMap & emap )
@@ -53,13 +49,11 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
 
     // update edges in the selection
     auto selEdges = mapEdges( emap, objMesh->getSelectedEdges() );
-    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
-    objMesh->selectEdges( std::move( selEdges ) );
+    AppendHistory<ChangeMeshEdgeSelectionAction>( "edge selection", objMesh, std::move( selEdges ) );
 
     // update edges in the creases
     auto creases = mapEdges( emap, objMesh->creases() );
-    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
-    objMesh->setCreases( std::move( creases ) );
+    AppendHistory<ChangeMeshCreasesAction>( "creases", objMesh, std::move( creases ) );
 }
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const WholeEdgeHashMap & emap )
@@ -70,13 +64,11 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Whol
 
     // update edges in the selection
     auto selEdges = mapEdges( emap, objMesh->getSelectedEdges() );
-    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
-    objMesh->selectEdges( std::move( selEdges ) );
+    AppendHistory<ChangeMeshEdgeSelectionAction>( "edge selection", objMesh, std::move( selEdges ) );
 
     // update edges in the creases
     auto creases = mapEdges( emap, objMesh->creases() );
-    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
-    objMesh->setCreases( std::move( creases ) );
+    AppendHistory<ChangeMeshCreasesAction>( "creases", objMesh, std::move( creases ) );
 }
 
 void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const UndirectedEdgeBMap & emap )
@@ -87,13 +79,11 @@ void mapEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh, const Undi
 
     // update edges in the selection
     auto selEdges = mapEdges( emap, objMesh->getSelectedEdges() );
-    Historian<ChangeMeshEdgeSelectionAction> hes( "edge selection", objMesh );
-    objMesh->selectEdges( std::move( selEdges ) );
+    AppendHistory<ChangeMeshEdgeSelectionAction>( "edge selection", objMesh, std::move( selEdges ) );
 
     // update edges in the creases
     auto creases = mapEdges( emap, objMesh->creases() );
-    Historian<ChangeMeshCreasesAction> hcr( "creases", objMesh );
-    objMesh->setCreases( std::move( creases ) );
+    AppendHistory<ChangeMeshCreasesAction>( "creases", objMesh, std::move( creases ) );
 }
 
 } //namespace MR

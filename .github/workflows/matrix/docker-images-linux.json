@@ -20,6 +20,10 @@
         "arch": "arm64"
     },
     {
+        "distro": "ubuntu26",
+        "arch": "arm64"
+    },
+    {
         "distro": "emscripten",
         "arch": "arm64"
     },

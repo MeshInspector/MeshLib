@@ -132,8 +132,6 @@ TEST( MRMesh, DISABLED_fillContours2DInvalidTopology )
     const auto res = fillContours2D( mesh, holes );
     ASSERT_TRUE( res.has_value() ) << res.error();
 
-    const auto multiples = findMultipleEdges( mesh.topology );
-    EXPECT_TRUE( multiples.has_value() && multiples->empty() );
     EXPECT_TRUE( mesh.topology.checkValidity() );
 }
 

@@ -1923,7 +1923,11 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     };
 
     UndirectedEdgeBitSet fromMappedEdges( from.undirectedEdgeSize() ); //one of fromContours' edge
-    EdgeBitSet thisStitched( edgeSize() );
+    size_t numContourEdges = 0;
+    for ( const auto & thisContour : thisContours )
+        numContourEdges += thisContour.size();
+    EdgeHashSet thisStitched; // scales with the contours, not with this whole topology
+    thisStitched.reserve( numContourEdges );
     // verify the contours while recording their mappings: nothing in this topology is modified
     // before all the checks pass, so a rejected call leaves it as it was
     for ( int i = 0; i < szContours; ++i )
@@ -1949,7 +1953,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 return fail(); // the side of this edge to be stitched is occupied
             if ( flipOrientation ? from.isLeftInRegion( e, fromFaces0 ) : from.isLeftInRegion( e.sym(), fromFaces0 ) )
                 return fail(); // the side of from edge to be stitched is occupied
-            if ( thisStitched.test_set( e1 ) )
+            if ( !thisStitched.insert( e1 ).second )
                 return fail(); // this edge is stitched twice
             if ( getAt( emap, e.undirected() ) )
                 return fail(); // from edge is stitched twice
@@ -2012,7 +2016,7 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                     // in the target: walk the present ring to the next redirected edge
                     for ( auto g1 = edgeSize(); g1 > 0; --g1 )
                     {
-                        if ( thisStitched.test( m ) )
+                        if ( thisStitched.count( m ) )
                             return m;
                         m = next( m );
                     }

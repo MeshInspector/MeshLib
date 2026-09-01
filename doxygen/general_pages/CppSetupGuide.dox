@@ -153,7 +153,7 @@ mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
 \endcode
  2. **Install the Package**
  \n `apt` pulls in the remaining system dependencies itself. The leading `./` is required: without it `apt` looks for a repository package by that name.
- \n `apt` refuses a package built for another CPU, but nothing tells the Ubuntu releases apart: both declare the same dependencies and the `preinst` carries no release check, so installing the Ubuntu 22 build on Ubuntu 24 succeeds silently. Check the release in the file name first.
+ \n `apt` refuses a package built for another CPU, but nothing tells the Ubuntu releases apart: the builds all declare the same dependencies and the `preinst` carries no release check, so installing the Ubuntu 22 build on Ubuntu 24 succeeds silently. Check the release in the file name first.
 \code{.sh}
 sudo apt install ./<downloaded>.deb
 \endcode

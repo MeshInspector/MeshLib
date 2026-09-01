@@ -32,7 +32,7 @@ ubuntu=(
 emscripten=( scripts/cmake_install.sh )
 
 case "${distro}" in
-  ubuntu22|ubuntu24)
+  ubuntu22|ubuntu24|ubuntu26)
     files=( "docker/${distro}Dockerfile" "${common[@]}" "${ubuntu[@]}" ) ;;
   emscripten|emscripten-build-c-bindings)
     files=( "docker/${distro}Dockerfile" "${common[@]}" "${emscripten[@]}" ) ;;

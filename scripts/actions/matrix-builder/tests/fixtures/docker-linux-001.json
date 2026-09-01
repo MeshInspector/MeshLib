@@ -8,6 +8,10 @@
     "arch": "x64"
   },
   {
+    "distro": "ubuntu26",
+    "arch": "x64"
+  },
+  {
     "distro": "ubuntu22",
     "arch": "arm64"
   },

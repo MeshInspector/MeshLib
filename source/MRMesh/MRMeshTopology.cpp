@@ -1923,11 +1923,6 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     };
 
     UndirectedEdgeBitSet fromMappedEdges( from.undirectedEdgeSize() ); //one of fromContours' edge
-    size_t numContourEdges = 0;
-    for ( const auto & thisContour : thisContours )
-        numContourEdges += thisContour.size();
-    EdgeHashSet thisStitched; // scales with the contours, not with this whole topology
-    thisStitched.reserve( numContourEdges );
     // verify the contours while recording their mappings: nothing in this topology is modified
     // before all the checks pass, so a rejected call leaves it as it was
     for ( int i = 0; i < szContours; ++i )
@@ -1953,8 +1948,6 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
                 return fail(); // the side of this edge to be stitched is occupied
             if ( flipOrientation ? from.isLeftInRegion( e, fromFaces0 ) : from.isLeftInRegion( e.sym(), fromFaces0 ) )
                 return fail(); // the side of from edge to be stitched is occupied
-            if ( !thisStitched.insert( e1 ).second )
-                return fail(); // this edge is stitched twice
             if ( getAt( emap, e.undirected() ) )
                 return fail(); // from edge is stitched twice
             if ( !setVmap( from.org( e ), org( e1 ) ) || !setVmap( from.dest( e ), dest( e1 ) ) )
@@ -2004,38 +1997,44 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         {
             return fromFaces0 ? from.isInnerOrBdEdge( p, fromFaces0 ) : !from.isLoneEdge( p );
         };
-        // the future ring successor of a stitched this-edge, jumping over the patch back to the next
-        // stitched this-edge of the same target vertex; invalid if the simulation cannot proceed
-        auto nextStitched = [&]( EdgeId fromEdge ) -> EdgeId
-        {
-            EdgeId x = fromNbr( fromEdge );
-            for ( auto guard = from.edgeSize(); guard > 0; --guard )
-            {
-                if ( auto m = mapEdge( emap, x ) )
-                {
-                    // in the target: walk the present ring to the next redirected edge
-                    for ( auto g1 = edgeSize(); g1 > 0; --g1 )
-                    {
-                        if ( thisStitched.count( m ) )
-                            return m;
-                        m = next( m );
-                    }
-                    return {};
-                }
-                if ( !fromCopied( x ) )
-                    return {}; // a ring gap closed by the near-stitch fix-ups below: leave such inputs to them as before
-                x = fromNbr( x );
-            }
-            return {};
-        };
         for ( const auto & vertPorts : ports )
         {
             const auto & vports = vertPorts.second; // clang < 16 cannot capture a structured binding in a lambda
+            // the same target edge stitched to two different from-edges would get its ring records
+            // written twice (equal from-edges were rejected above via emap)
+            for ( int a = 0; a + 1 < int( vports.size() ); ++a )
+                for ( int b = a + 1; b < int( vports.size() ); ++b )
+                    if ( vports[a].first == vports[b].first )
+                        return fail();
             auto pairedFrom = [&]( EdgeId e1 ) -> EdgeId
             {
                 for ( const auto & [te, fe] : vports )
                     if ( te == e1 )
                         return fe;
+                return {};
+            };
+            // the future ring successor of a stitched this-edge, jumping over the patch back to the
+            // next stitched this-edge of the same target vertex; invalid if the simulation cannot proceed
+            auto nextStitched = [&]( EdgeId fromEdge ) -> EdgeId
+            {
+                EdgeId x = fromNbr( fromEdge );
+                for ( auto guard = from.edgeSize(); guard > 0; --guard )
+                {
+                    if ( auto m = mapEdge( emap, x ) )
+                    {
+                        // in the target: walk the present ring to the next redirected edge
+                        for ( auto g1 = edgeSize(); g1 > 0; --g1 )
+                        {
+                            if ( pairedFrom( m ) )
+                                return m;
+                            m = next( m );
+                        }
+                        return {};
+                    }
+                    if ( !fromCopied( x ) )
+                        return {}; // a ring gap closed by the near-stitch fix-ups below: leave such inputs to them as before
+                    x = fromNbr( x );
+                }
                 return {};
             };
             int reached = 0;

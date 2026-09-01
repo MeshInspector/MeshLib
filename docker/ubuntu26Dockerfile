@@ -57,6 +57,8 @@ RUN <<EOF
         gh gcc-15 g++-15 \
         cuda-minimal-build-13-3 \
         tzdata git sudo time xvfb curl wget unzip ninja-build patchelf gettext gawk procps
+    # work-around Python 3.8 + newer setuptools incompatibility
+    MR_CMAKE_OPTIONS="-D PYTHON_EXECUTABLE=/usr/bin/python3" \
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     # install toolchain

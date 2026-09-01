@@ -7,11 +7,14 @@ Unity's WebGL player statically links its own trimmed freetype, libpng and
 zlib whose leaked globals collide with full copies of the same libraries, and
 its frozen emsdk cache cannot build the ports on the consumer's machine.
 
-Every symbol the port libraries export is renamed with PREFIX, except the
+Every symbol the listed libraries export is renamed with PREFIX, except the
 exact set the MeshLib package archives reference (computed with llvm-nm), so
 the already-compiled MeshLib objects link against these libraries unchanged.
-zlib is treated as private to libpng: MeshLib's own zlib references keep
-resolving to the archives that provide them today, never to this copy.
+All libraries of one package must be renamed by a single invocation: they
+share one rename map, so references between them (libpng calls zlib) are
+renamed consistently. A --private-lib is renamed in full even where the
+package references its symbols - used for zlib, whose standard names the
+package already resolves elsewhere (libgdcmzlib.a ships them).
 
 The renaming rewrites the wasm object files of the archives the MeshLib build
 already produced, so the shipped code is bit-identical to what was built and
@@ -244,10 +247,17 @@ def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--llvm-bin', default='', help='directory with llvm-nm and llvm-ar (default: from PATH)')
     p.add_argument('--package-dir', required=True, help='directory with the MeshLib .a files being shipped')
-    p.add_argument('--vanilla-libs', required=True, help='dir with the port builds to rename (libfreetype*.a, libpng*.a, libz*.a)')
+    p.add_argument('--vanilla-libs', required=True, help='dir where library stems are looked up (the emsdk cache lib dir for ports)')
     p.add_argument('--out-dir', required=True)
     p.add_argument('--pthread', action='store_true', help='prefer the -mt port variants (multithreaded package)')
+    p.add_argument('--lib', action='append', default=[], metavar='STEM[=OUT]',
+                   help='library to rename, as a stem globbed in --vanilla-libs (or a path to an archive); '
+                        'written to OUT-mrml.a (default: STEM-mrml.a); repeatable')
+    p.add_argument('--private-lib', action='append', default=[], metavar='STEM[=OUT]',
+                   help='like --lib, but renamed in full: none of its symbols join the kept API set')
     args = p.parse_args()
+    if not args.lib and not args.private_lib:
+        p.error('at least one --lib/--private-lib is required')
 
     bindir = Path(args.llvm_bin) if args.llvm_bin else None
 
@@ -274,26 +284,34 @@ def main():
             sys.exit(f'no {stem}*.a in {vanilla}; the MeshLib build should have built the ports')
         return cands[0]
 
-    src_libs = {
-        'libfreetype-mrml.a': vanilla_lib('libfreetype'),
-        'libpng-mrml.a': vanilla_lib('libpng'),
-        'libzlib-mrml.a': vanilla_lib('libz'),
-    }
+    def resolve(spec):
+        stem, _, out = spec.partition('=')
+        path = Path(stem)
+        src = path if path.suffix == '.a' and path.exists() else vanilla_lib(stem)
+        return (out or stem) + '-mrml.a', src
 
-    d_ft = nm_symbols(nm, src_libs['libfreetype-mrml.a'], '--defined-only')
-    d_png = nm_symbols(nm, src_libs['libpng-mrml.a'], '--defined-only')
-    d_z = nm_symbols(nm, src_libs['libzlib-mrml.a'], '--defined-only')
+    src_libs = {}
+    d_keepable = set()
+    d_all = set()
+    for spec in args.lib + args.private_lib:
+        name, src = resolve(spec)
+        src_libs[name] = src
+        defined = nm_symbols(nm, src, '--defined-only')
+        d_all |= defined
+        if spec in args.lib:
+            d_keepable |= defined
 
     u_pkg = set()
+    renamed_srcs = {s.resolve() for s in src_libs.values()}
     for a in sorted(Path(args.package_dir).glob('*.a')):
-        if a.name.endswith('-mrml.a'):
-            continue  # a previous run's own outputs
+        if a.name.endswith('-mrml.a') or a.resolve() in renamed_srcs:
+            continue  # our own outputs, or a library being renamed
         u_pkg |= nm_symbols(nm, a, '--undefined-only')
 
-    # The unrenamed surface: exactly what the package references from freetype
-    # and libpng. zlib stays fully renamed - it exists only to serve libpng.
-    s_api = u_pkg & (d_ft | d_png)
-    rename = (d_ft | d_png | d_z) - s_api
+    # The unrenamed surface: exactly what the package references from the
+    # non-private libraries.
+    s_api = u_pkg & d_keepable
+    rename = d_all - s_api
 
     (out / 'renamed_symbols.txt').write_text(''.join(s + '\n' for s in sorted(rename)))
     print(f'kept unrenamed (referenced by the package): {len(s_api)}')

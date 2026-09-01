@@ -131,12 +131,13 @@ jobs:
           #   ports themselves (Unity's WebGL emsdk has FROZEN_CACHE and ships none of them, leaving
           #   FT_*/png_* undefined). Ship them namespaced, because engines like Unity statically
           #   link their own trimmed freetype/libpng/zlib whose globals collide with vanilla copies.
-          EM_CACHE=$(${EMSDK}/upstream/emscripten/em-config CACHE)
-          python3 scripts/wasm_namespace_deps.py \
+          EMSDK_CACHE=$(${EMSDK}/upstream/emscripten/em-config CACHE)
+          python3 scripts/nuget_patch/wasm_namespace_deps.py \
             --llvm-bin ${EMSDK}/upstream/bin \
             --package-dir ${OUT_DIR} \
-            --vanilla-libs ${EM_CACHE}/sysroot/lib/wasm32-emscripten \
+            --vanilla-libs ${EMSDK_CACHE}/sysroot/lib/wasm32-emscripten \
             --out-dir namespaced_deps \
+            --lib libfreetype --lib libpng --private-lib libz=libzlib \
             ${{ matrix.config == 'Multithreaded' && '--pthread' || '' }}
           cp namespaced_deps/*.a ${OUT_DIR}
 

@@ -56,19 +56,19 @@ jobs:
             compiler: clang-14
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
-            stdcxx-dev: libstdc++-10-dev
+            stdcxx-version: 10
           - os: "ubuntu:24.04"
             name: "ubuntu24"
             compiler: clang-18
             c-compiler: /usr/bin/clang-18
             cxx-compiler: /usr/bin/clang++-18
-            stdcxx-dev: libstdc++-10-dev
+            stdcxx-version: 10
           - os: "ubuntu:26.04"
             name: "ubuntu26"
             compiler: clang-21
             c-compiler: /usr/bin/clang-21
             cxx-compiler: /usr/bin/clang++-21
-            stdcxx-dev: libstdc++-15-dev
+            stdcxx-version: 15
 
     steps:
       - name: Checkout
@@ -101,7 +101,7 @@ jobs:
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
-            apt-get -y install ${{ matrix.stdcxx-dev }} && \
+            apt-get -y install libstdc++-${{stdcxx-version}}-dev && \
             apt-get -y install ./*${{matrix.name}}-dev.deb
 
       - name: Create virtualenv

@@ -54,22 +54,25 @@ VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* reg
 
 }
 
-FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd, float minArea, int * numSmallerComponents )
+double getLargestComponentArea( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd,
+    FaceBitSet * largestComponent, int * numSmallerComponents )
 {
     MR_TIMER;
+
+    if ( largestComponent )
+        largestComponent->clear();
 
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
-    FaceBitSet maxAreaComponent;
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
     if ( k <= 0 )
     {
         if ( numSmallerComponents )
             *numSmallerComponents = 0;
-        return maxAreaComponent;
+        return 0;
     }
 
     double maxDblArea = -DBL_MAX;
@@ -79,29 +82,45 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     {
         auto index = uniqueRootsMap[f];
         auto& dblArea = dblAreas[index];
-        dblArea += meshPart.mesh.dblArea( f );
+        dblArea += mesh.dblArea( f );
         if ( dblArea > maxDblArea )
         {
             maxI = index;
             maxDblArea = dblArea;
         }
     }
-    if ( maxDblArea < 2 * minArea )
-    {
-        if ( numSmallerComponents )
-            *numSmallerComponents = k;
-        return maxAreaComponent;
-    }
     if ( numSmallerComponents )
         *numSmallerComponents = k - 1;
-    maxAreaComponent.resize( region.find_last() + 1 );
-    for ( auto f : region )
+    if ( largestComponent )
     {
-        auto index = uniqueRootsMap[f];
-        if ( index != maxI )
-            continue;
-        maxAreaComponent.set( f );
+        largestComponent->resize( region.find_last() + 1 );
+        for ( auto f : region )
+        {
+            auto index = uniqueRootsMap[f];
+            if ( index != maxI )
+                continue;
+            largestComponent->set( f );
+        }
     }
+    return 0.5 * maxDblArea;
+}
+
+FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd, float minArea, int * numSmallerComponents )
+{
+    MR_TIMER;
+
+    FaceBitSet maxAreaComponent;
+    int numOtherComponents = 0;
+    const auto maxArea = getLargestComponentArea( meshPart, incidence, isCompBd, &maxAreaComponent, &numOtherComponents );
+    if ( maxArea < minArea )
+    {
+        // the largest component is not returned, so it is counted among smaller ones (if it exists at all)
+        if ( numSmallerComponents )
+            *numSmallerComponents = maxAreaComponent.any() ? numOtherComponents + 1 : 0;
+        return {};
+    }
+    if ( numSmallerComponents )
+        *numSmallerComponents = numOtherComponents;
     return maxAreaComponent;
 }
 

@@ -167,7 +167,8 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
         return unexpected( std::move( v.error() ) );
 
     // patch vertices are the mesh's own, with the exact same coordinates, so no point fixup is needed
-    mesh.addMeshPart( *patch, false, paths, patchPaths );
+    if ( !mesh.addMeshPart( *patch, false, paths, patchPaths ) )
+        return unexpected( "Patch surface borders are incompatible with mesh borders" );
     return {};
 }
 

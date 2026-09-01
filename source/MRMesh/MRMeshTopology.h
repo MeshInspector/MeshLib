@@ -485,14 +485,15 @@ public:
     /// \param thisContours contours on this mesh (no left face) that have to be stitched with
     /// \param fromContours contours on from mesh during addition (no left face if flipOrientation otherwise no right face)
     /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
-    MRMESH_API void addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
+    /// \return false if the given contours cannot be stitched (see the conditions on them above), and this topology is left unmodified then
+    MRMESH_API bool addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
         const PartMapping & map = {}, VacantElements * vacant = {} );
 
     /// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
-    MR_BIND_IGNORE void addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
+    MR_BIND_IGNORE bool addPartByMask( const MeshTopology & from, const FaceBitSet & fromFaces, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, const std::vector<EdgePath> & fromContours = {},
-        const PartMapping & map = {}, VacantElements * vacant = {} ) { addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map, vacant ); }
+        const PartMapping & map = {}, VacantElements * vacant = {} ) { return addPartByMask( from, &fromFaces, flipOrientation, thisContours, fromContours, map, vacant ); }
 
     /// for each triangle selects edgeWithLeft with minimal origin vertex
     MRMESH_API void rotateTriangles();

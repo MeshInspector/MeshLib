@@ -404,7 +404,8 @@ struct [[nodiscard]] Mesh
     /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
     /// \param flipOrientation true means that every (from) triangle is inverted before adding
     /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
-    MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
+    /// \return false if the given contours cannot be stitched, and this mesh is left unmodified then
+    MRMESH_API bool addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id

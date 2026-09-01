@@ -1859,7 +1859,66 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     addPartByMask( from, fromFaces, false, {}, {}, map, vacant );
 }
 
-void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces0, bool flipOrientation,
+// checks the contours given to the stitching addPartByMask below: they must satisfy the conditions
+// the stitching code relies upon, otherwise it would produce an invalid topology
+static bool validStitchContours_( const MeshTopology & tgt, const MeshTopology & from, const FaceBitSet * fromFaces,
+    bool flipOrientation, const std::vector<EdgePath> & thisContours, const std::vector<EdgePath> & fromContours )
+{
+    if ( thisContours.size() != fromContours.size() )
+        return false;
+
+    UndirectedEdgeBitSet fromStitched( from.undirectedEdgeSize() );
+    EdgeBitSet thisStitched( tgt.edgeSize() );
+    VertHashMap from2this;
+    // the contours prescribe the image of every from-vertex on them, and it must be unique
+    auto sameImage = [&from2this]( VertId v, VertId v1 )
+    {
+        return from2this.try_emplace( v, v1 ).first->second == v1;
+    };
+    for ( int i = 0; i < int( thisContours.size() ); ++i )
+    {
+        const auto & thisContour = thisContours[i];
+        const auto & fromContour = fromContours[i];
+        if ( thisContour.size() != fromContour.size() )
+            return false;
+        if ( thisContour.empty() )
+            continue;
+        // either both contours are closed or both are open
+        if ( ( from.org( fromContour.front() ) == from.dest( fromContour.back() ) ) !=
+             ( tgt.org( thisContour.front() ) == tgt.dest( thisContour.back() ) ) )
+            return false;
+        for ( int j = 0; j < int( thisContour.size() ); ++j )
+        {
+            const EdgeId e = fromContour[j], e1 = thisContour[j];
+            if ( !e || !e1 || !from.hasEdge( e ) || !tgt.hasEdge( e1 ) )
+                return false;
+            if ( tgt.left( e1 ) )
+                return false; // the side of this edge to be stitched is occupied
+            if ( flipOrientation ? from.isLeftInRegion( e, fromFaces ) : from.isLeftInRegion( e.sym(), fromFaces ) )
+                return false; // the side of from edge to be stitched is occupied
+            if ( thisStitched.test_set( e1 ) || fromStitched.test_set( e.undirected() ) )
+                return false; // the same edge is stitched twice
+            if ( !sameImage( from.org( e ), tgt.org( e1 ) ) || !sameImage( from.dest( e ), tgt.dest( e1 ) ) )
+                return false;
+        }
+    }
+
+    // a stitched edge takes next/prev from its from-edge, so that neighbour must be added here as well
+    auto added = [&]( EdgeId e )
+    {
+        return fromStitched.test( e.undirected() ) ||
+            ( fromFaces ? from.isInnerOrBdEdge( e, fromFaces ) : !from.isLoneEdge( e ) );
+    };
+    for ( const auto & fromContour : fromContours )
+        for ( EdgeId e : fromContour )
+            if ( !added( flipOrientation ? from.prev( e ) : from.next( e ) ) ||
+                 !added( flipOrientation ? from.next( e.sym() ) : from.prev( e.sym() ) ) )
+                return false;
+
+    return true;
+}
+
+bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * fromFaces0, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
     const PartMapping & map,
@@ -1867,8 +1926,11 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
     )
 {
     MR_TIMER;
+    // the arguments are verified before anything here is modified, so a rejected call changes nothing
+    if ( !validStitchContours_( *this, from, fromFaces0, flipOrientation, thisContours, fromContours ) )
+        return false;
+
     const auto szContours = thisContours.size();
-    assert( szContours == fromContours.size() );
 
     const auto & fromFaces = from.getFaceIds( fromFaces0 );
     const auto fcount = fromFaces.count();
@@ -2228,6 +2290,7 @@ void MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
         *map.src2tgtVerts = std::move( vmap );
     if ( map.src2tgtEdges )
         *map.src2tgtEdges = std::move( emap );
+    return true;
 }
 
 void MeshTopology::rotateTriangles()

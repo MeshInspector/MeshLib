@@ -329,11 +329,10 @@ override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),-Wl$(comma)-x,-s)# App
 # make more of the instantiations byte-identical there).
 # No -ffunction-sections needed: lld's LTO codegen of this preset always emits per-function
 # sections, which is also why this lives here and not next to the other link flags.
-# Not for Emscripten, whose wasm-ld has no ICF, and not for Windows, where lld-link is a
-# COFF driver that answers this spelling with `ignoring unknown argument '--icf=all'` and
-# folds by default anyway: on the wheel build `/opt:noicf` grows mrmeshpy.pyd from 56.2 to
-# 63.0 MB, while `/opt:icf` changes nothing.
-ifeq ($(IS_EMSCRIPTEN)$(IS_WINDOWS),)
+# Not for Windows, where lld-link is a COFF driver that answers this spelling with
+# `ignoring unknown argument '--icf=all'` and folds by default anyway: on the wheel build
+# `/opt:noicf` grows mrmeshpy.pyd from 56.2 to 63.0 MB, while `/opt:icf` changes nothing.
+ifeq ($(IS_WINDOWS),)
 override EXTRA_LDFLAGS += -Wl,--icf=all
 endif
 else ifeq ($(MODE),debug)

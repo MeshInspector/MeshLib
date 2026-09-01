@@ -57,6 +57,12 @@ MR_CMAKE_OPTIONS="\
   -D CMAKE_BUILD_TYPE=Release \
 "
 
+# Cross-compilation target arch (e.g. x86_64 on an arm64 macOS host via Rosetta).
+# No-op when unset, so native builds are unaffected.
+if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+fi
+
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
   if [ -n "${CMAKE_C_COMPILER}" ] ; then
@@ -120,10 +126,14 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
-  NPROC=$(sysctl -n hw.logicalcpu)
-else
-  NPROC=$(nproc)
+# Respect a caller-provided NPROC (e.g. to cap parallelism / limit heat);
+# otherwise default to all available cores.
+if [ -z "${NPROC}" ]; then
+  if [[ $OSTYPE == 'darwin'* ]]; then
+    NPROC=$(sysctl -n hw.logicalcpu)
+  else
+    NPROC=$(nproc)
+  fi
 fi
 
 # build

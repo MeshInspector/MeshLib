@@ -7,6 +7,7 @@
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMeshFixer.h>
+#include <MRMesh/MR2DContoursTriangulation.h>
 #include <gtest/gtest.h>
 #include <limits>
 
@@ -106,6 +107,116 @@ TEST( MRMesh, fillContours2DPlanPinchedHole )
     EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) ); // the pentagon outline remains
     auto multiples = findMultipleEdges( mesh.topology );
     EXPECT_TRUE( multiples.has_value() && multiples->empty() );
+}
+
+// The classic sandclock: two triangles joined at one shared vertex, whose single pinched 6-edge hole
+// loop is filled from the other side. The 2-triangle mirror patch is pinched at that vertex too, so
+// stitching it would close each lobe into its own pillow and split the vertex into two disjoint edge
+// rings; addPartByMask detects this and fillContours2D must fail cleanly, leaving the mesh unchanged.
+// The plan-based fillContours2DPlan bridges such loops disk-like instead (see fillContours2DPlanPinchedHole).
+TEST( MRMesh, fillContours2DPinchedHoleValidity )
+{
+    VertCoords points;
+    points.vec_ = {
+        { -1.f,  1.f, 0.f }, {  1.f,  1.f, 0.f },
+        {  0.f,  0.f, 0.f }, // the shared middle vertex
+        {  1.f, -1.f, 0.f }, { -1.f, -1.f, 0.f } };
+    const Triangulation t{
+        { VertId( 0 ), VertId( 2 ), VertId( 1 ) },
+        { VertId( 2 ), VertId( 4 ), VertId( 3 ) } };
+    Mesh mesh = Mesh::fromTriangles( points, t );
+    ASSERT_EQ( mesh.topology.numValidVerts(), 5 );
+    ASSERT_TRUE( mesh.topology.checkValidity() );
+    const auto holes = mesh.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( holes.size(), size_t( 1 ) );
+    ASSERT_EQ( trackRightBoundaryLoop( mesh.topology, holes[0] ).size(), size_t( 6 ) );
+
+    const auto res = fillContours2D( mesh, holes );
+    EXPECT_FALSE( res.has_value() );
+
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 5 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+}
+
+// The mesh both tests below fill: two triangular lobes (areas 0.141 and 0.029, generic position)
+// joined at one shared vertex, so the hole boundary is a single 6-edge loop passing that vertex
+// twice and winding counterclockwise around +Z - the configuration whose sweep frame is the
+// identity (x,y) with no axis swap
+static Mesh makePinchedTwoLobeMesh()
+{
+    VertCoords points;
+    points.vec_ = {
+        { -0.381682f, -0.002250f, 0.f }, { -0.923765f,  0.363788f, 0.f },
+        {  0.057481f,  0.276528f, 0.f }, {  0.626216f,  0.839981f, 0.f },
+        { -0.037916f,  0.285011f, 0.f } }; // the pinch vertex, on neither lobe's outer edge
+    const Triangulation t{
+        { VertId( 3 ), VertId( 2 ), VertId( 4 ) },
+        { VertId( 4 ), VertId( 0 ), VertId( 1 ) } };
+    return Mesh::fromTriangles( points, t );
+}
+
+// total area of the faces starting at `first`, and whether they all face the same way
+static void patchAreaAndFolding( const Mesh& mesh, FaceId first, double& area, bool& folded )
+{
+    Vector3d sumDir;
+    double sumAbs = 0;
+    for ( FaceId f = first; f <= mesh.topology.lastValidFace(); ++f )
+    {
+        if ( !mesh.topology.hasFace( f ) )
+            continue;
+        const Vector3d d( mesh.dirDblArea( f ) );
+        sumDir += d;
+        sumAbs += d.length();
+    }
+    area = 0.5 * sumAbs;
+    // a patch that covers each region once has |sum of directed areas| == sum of their lengths
+    folded = sumAbs > 0 && sumDir.length() < sumAbs * ( 1 - 1e-6 );
+}
+
+// A pinched boundary cannot be closed by a per-lobe mirror patch in valid topology (the pinch vertex
+// would be split into two disjoint edge rings), so fillContours2D must reject it cleanly, leaving the
+// mesh unchanged; the triangulation itself is checked by the test below.
+TEST( MRMesh, fillContours2DPinchedBoundary )
+{
+    Mesh mesh = makePinchedTwoLobeMesh();
+    ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
+    ASSERT_EQ( mesh.topology.numValidVerts(), 5 ); // the pinch vertex is shared
+    const auto holes = mesh.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( holes.size(), size_t( 1 ) );
+    ASSERT_EQ( trackRightBoundaryLoop( mesh.topology, holes[0] ).size(), size_t( 6 ) );
+
+    const auto res = fillContours2D( mesh, holes );
+    EXPECT_FALSE( res.has_value() );
+
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+}
+
+// The triangulation itself must mirror the two lobes: 2 triangles, total area equal to the mesh's
+// own, all facing the same way - not a folded sheet tiling the whole quadrilateral.
+TEST( MRMesh, triangulateDisjointContoursPinchedLoop )
+{
+    const Mesh mesh = makePinchedTwoLobeMesh();
+    const auto holes = mesh.topology.findHoleRepresentiveEdges();
+    ASSERT_EQ( holes.size(), size_t( 1 ) );
+    EdgeLoops loops{ trackRightBoundaryLoop( mesh.topology, holes[0] ) };
+
+    Vector3d sumCross;
+    for ( EdgeId e : loops[0] )
+        sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+    EXPECT_GT( sumCross.z, 0. ); // the +Z configuration: identity sweep frame
+    const auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ) );
+    ASSERT_TRUE( patch.has_value() );
+
+    double patchArea = 0;
+    bool folded = true;
+    patchAreaAndFolding( *patch, FaceId( 0 ), patchArea, folded );
+    EXPECT_FALSE( folded );
+    EXPECT_NEAR( patchArea, mesh.area(), 1e-5 );
+    EXPECT_EQ( patch->topology.numValidFaces(), 2 );
 }
 
 }

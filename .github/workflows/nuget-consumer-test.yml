@@ -18,8 +18,16 @@ permissions:
 
 jobs:
   nuget-consumer-test:
-    name: NuGet consumer test (net47, net10.0)
-    runs-on: windows-2025
+    name: NuGet consumer test (${{ matrix.arch }}, net47, net10.0)
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            runner: windows-2025
+          - arch: ARM64
+            runner: windows-11-vs2026-arm
     timeout-minutes: 30
     env:
       PROJECT_DIR: test_nuget/NugetTestProj
@@ -63,7 +71,7 @@ jobs:
       - name: Build consumers
         shell: pwsh
         run: |
-          dotnet build $env:PROJECT_DIR -c Release -p:MeshLibVersion=${{ steps.feed.outputs.package_version }}
+          dotnet build $env:PROJECT_DIR -c Release -p:MeshLibVersion=${{ steps.feed.outputs.package_version }} -p:PlatformTarget=${{ matrix.arch }}
 
       - name: Run consumers
         shell: pwsh

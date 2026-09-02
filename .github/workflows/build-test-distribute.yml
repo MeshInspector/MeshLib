@@ -13,6 +13,13 @@ on:
   schedule:
     - cron: '0 2 * * *'  # Run every day at 2 AM UTC
 
+# Supersede a PR's previous run instead of racing it (two live runs of one branch
+# collided pushing the same new Docker Hub repo, #6738). Push/schedule/dispatch get
+# unique group, so a release run is never cancelled and never queues behind one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   id-token: write
   contents: write
@@ -202,7 +209,13 @@ jobs:
        uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveWindows-x64
-         path: windows_runtime
+         path: windows_x64_runtime
+
+     - name: Download NuGet Windows Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWindows-arm64
+         path: windows_arm64_runtime
 
      - name: Download NuGet Linux x64 Patch Archive
        uses: actions/download-artifact@v8
@@ -253,7 +266,7 @@ jobs:
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_x64_runtime windows_arm64_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe

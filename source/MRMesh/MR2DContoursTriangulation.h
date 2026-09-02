@@ -17,12 +17,6 @@ enum class WindingMode
     Negative
 };
 
-using HoleVertIds = std::vector<VertId>;
-using HolesVertIds = std::vector<HoleVertIds>;
-
-/// return vertices of holes that correspond internal contours representation of PlanarTriangulation
-MRMESH_API HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vector<EdgePath>& holePaths );
-
 /// Info about intersection point for mapping
 struct IntersectionInfo
 {
@@ -77,9 +71,6 @@ MRMESH_API Contours2f getOutline( const Contours2d& contours, const OutlineParam
 
 struct TriangulationParameters
 {
-    /// if set merge only points with same vertex id, otherwise merge all points with same coordinates
-    const HolesVertIds* holeVertsIds{ nullptr };
-
     /// optional output: winding number of the region each face belongs to;
     /// when set, Delone flips after triangulation are skipped, so each face stays strictly inside one winding region
     Vector<int, FaceId>* outFaceWinding{ nullptr };
@@ -97,21 +88,13 @@ struct TriangulationParameters
 MRMESH_API Mesh triangulateContours( const Contours2d& contours, const TriangulationParameters& params = {} );
 MRMESH_API Mesh triangulateContours( const Contours2f& contours, const TriangulationParameters& params = {} );
 
-/// triangulate 2d contours, C++-only overload for backward compatibility;
-/// hidden from generated bindings to keep their triangulateContours signatures unique
-/// \param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
-MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds );
-MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds );
-
 /**
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
- * @param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
- * @param outBoundaries optional output EdgePaths that correspond to initial contours
  * @return std::optional<Mesh> : if some contours intersect return false, otherwise return created mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours );
 
 /**
  * @brief triangulate hole boundary loops of \p mesh in the mesh's own 3d space, orienting faces around \p normal
@@ -119,10 +102,10 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
  * (no projection round-trip), and loops sharing a mesh vertex are merged by identity.
  * @param loops one closed EdgeLoop per contour (as produced by trackRightBoundaryLoop on each hole edge)
  * @param outPatchMap optional output: for each patch boundary edge (by undirected id) the mesh edge it copies,
- *        directed along it; edges past its size are the triangulation's own. Not produced with \p outBoundaries
+ *        directed along it; edges past its size are the triangulation's own
  * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries = nullptr, WholeEdgeMap* outPatchMap = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap = nullptr );
 
 }
 }

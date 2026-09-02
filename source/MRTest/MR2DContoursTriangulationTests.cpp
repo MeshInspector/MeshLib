@@ -107,9 +107,6 @@ TEST( MRMesh, PlanarTriangulationWindingAndIntersections )
         }
 
         checkWinding( conts, mesh, faceWinding, 6.0, 1.0 ); // union 7 = 6 + the [1,2]^2 overlap
-
-        // the holeVertsIds overload stays available and resolves without ambiguity
-        EXPECT_EQ( PlanarTriangulation::triangulateContours( conts, nullptr ).topology.numValidFaces(), mesh.topology.numValidFaces() );
     }
 
     {

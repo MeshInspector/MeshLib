@@ -11,6 +11,7 @@
 #include "MRTimer.h"
 #include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
+#include <array>
 
 namespace MR
 {
@@ -41,12 +42,18 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams
     positionVertsSmoothlySharpBd( mesh.topology, mesh.points, params );
 }
 
-void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params )
+namespace
+{
+
+/// finds N scalar fields on region vertices, where each value is the weighted mean of the values in neighbor vertices;
+/// getVal(v) returns the fixed values of not-region vertex or the original values of region vertex (for stabilization),
+/// getShift(v) returns additional shifts of the equation of region vertex v, setVal(v, vals) stores the solution
+template<size_t N, class GetVal, class GetShift, class SetVal>
+void solveLaplaceEquations( const MeshTopology& topology, const VertBitSet& verts,
+    float stabilizer, const VertMetric& vertStabilizers, const UndirectedEdgeMetric& edgeWeights,
+    GetVal getVal, GetShift getShift, SetVal setVal )
 {
     MR_TIMER;
-    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
-
-    const auto & verts = topology.getVertIds( params.region );
     const auto sz = verts.count();
     if ( sz <= 0 )
         return;
@@ -54,18 +61,24 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
     // vertex id -> position in the matrix
     HashMap<VertId, int> vertToMatPos = makeHashMapWithSeqNums( verts );
 
+    using Vals = std::array<double, N>;
     std::vector< Eigen::Triplet<double> > mTriplets;
-    Eigen::VectorXd rhs[3];
-    for ( int i = 0; i < 3; ++i )
-        rhs[i].resize( sz );
+    Eigen::VectorXd rhs[N];
+    for ( auto & r : rhs )
+        r.resize( sz );
     int n = 0;
     for ( auto v : verts )
     {
         double sumW = 0;
-        Vector3d sumFixed;
+        Vals sumFixed{};
+        auto addFixed = [&sumFixed]( double w, const Vals & vals )
+        {
+            for ( size_t i = 0; i < N; ++i )
+                sumFixed[i] += w * vals[i];
+        };
         for ( auto e : orgRing( topology, v ) )
         {
-            const double edgeW = params.edgeWeights ? params.edgeWeights( e ) : 1;
+            const double edgeW = edgeWeights ? edgeWeights( e ) : 1;
             sumW += edgeW;
             auto d = topology.dest( e );
             if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
@@ -78,26 +91,23 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
             else
             {
                 // fixed neighbor
-                sumFixed += edgeW * Vector3d( points[d] );
+                addFixed( edgeW, getVal( d ) );
             }
         }
-        if ( params.vertShifts )
-            sumFixed += sumW * Vector3d( (*params.vertShifts)[v] );
-        if ( params.vertStabilizers )
+        addFixed( sumW, getShift( v ) );
+        double s = stabilizer; //for VertexMass::Unit only
+        if ( vertStabilizers )
         {
-            const auto s = params.vertStabilizers( v ); //for VertexMass::Unit only
+            s = vertStabilizers( v );
             assert( s >= 0 );
-            sumW += s;
-            sumFixed += Vector3d( s * points[v] );
         }
-        else if ( params.stabilizer != 0 )
+        if ( s != 0 )
         {
-            const auto s = params.stabilizer; //for VertexMass::Unit only
             sumW += s;
-            sumFixed += Vector3d( s * points[v] );
+            addFixed( s, getVal( v ) );
         }
         mTriplets.emplace_back( n, n, sumW );
-        for ( int i = 0; i < 3; ++i )
+        for ( size_t i = 0; i < N; ++i )
             rhs[i][n] = sumFixed[i];
         ++n;
     }
@@ -109,22 +119,54 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
     Eigen::SimplicialLDLT<SparseMatrix> solver;
     solver.compute( A );
 
-    Eigen::VectorXd sol[3];
-    ParallelFor( 0, 3, [&]( int i )
+    Eigen::VectorXd sol[N];
+    ParallelFor( 0, (int)N, [&]( int i )
     {
         sol[i] = solver.solve( rhs[i] );
     } );
 
-    // copy solution back into mesh points
     n = 0;
     for ( auto v : verts )
     {
-        auto & pt = points[v];
-        pt.x = (float) sol[0][n];
-        pt.y = (float) sol[1][n];
-        pt.z = (float) sol[2][n];
+        Vals vals;
+        for ( size_t i = 0; i < N; ++i )
+            vals[i] = sol[i][n];
+        setVal( v, vals );
         ++n;
     }
+}
+
+} // anonymous namespace
+
+void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params )
+{
+    MR_TIMER;
+    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
+
+    solveLaplaceEquations<3>( topology, topology.getVertIds( params.region ), params.stabilizer, params.vertStabilizers, params.edgeWeights,
+        [&points]( VertId v ) { const auto & p = points[v]; return std::array<double, 3>{ p.x, p.y, p.z }; },
+        [&params]( VertId v )
+        {
+            std::array<double, 3> res{};
+            if ( params.vertShifts )
+            {
+                const auto & p = (*params.vertShifts)[v];
+                res = { p.x, p.y, p.z };
+            }
+            return res;
+        },
+        [&points]( VertId v, const std::array<double, 3> & vals ) { points[v] = Vector3f( (float)vals[0], (float)vals[1], (float)vals[2] ); } );
+}
+
+void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params )
+{
+    MR_TIMER;
+    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
+
+    solveLaplaceEquations<1>( topology, topology.getVertIds( params.region ), params.stabilizer, params.vertStabilizers, params.edgeWeights,
+        [&field]( VertId v ) { return std::array<double, 1>{ field[v] }; },
+        []( VertId ) { return std::array<double, 1>{}; },
+        [&field]( VertId v, const std::array<double, 1> & vals ) { field[v] = (float)vals[0]; } );
 }
 
 void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )

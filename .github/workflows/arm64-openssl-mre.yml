@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Checkout the reproducer only
-        uses: actions/checkout\v7
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             .github/actions

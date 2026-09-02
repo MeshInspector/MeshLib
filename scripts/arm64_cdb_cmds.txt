@@ -1,55 +1,34 @@
 $$ cdb script for the arm64 OpenSSL TLS 1.3 fault (throwaway diagnostic).
 $$
-$$ Established: sp is valid at every frame down to tls_parse_all_extensions entry
-$$ and after its own `sub sp,sp,#0x60`; four instructions later sp is outside the
-$$ thread stack and x15 holds garbage instead of the 1 just set. The only callee
-$$ in that window is __chkstk (_alloca_probe), which provably writes x16/x17 only.
+$$ Established: this is a WILD RETURN, not a bad argument.
+$$   1. tls_parse_all_extensions is called once, legitimately, and returns fine.
+$$   2. Later, execution arrives at tls_parse_all_extensions+0xc WITHOUT passing
+$$      its entry: some function executes `ret` while x30 still holds the stale
+$$      +0xc left by that function's own `bl __chkstk`.
+$$   3. +0xc is `sub sp,sp,x15,lsl #4`, so that function's garbage x15 wrecks sp.
+$$   4. +0x10 then reads [x0+0x878] with x0 = that function's return value (1),
+$$      which is the 0x879 access violation.
+$$ x13/x14 hold high-entropy values at that point, so the culprit is likely one of
+$$ libcrypto's hand-written aarch64 assembly routines returning without a valid
+$$ link register.
 $$
-$$ So single-step the prologue and through __chkstk. Stepping must happen at top
-$$ level: `t` inside a breakpoint command block makes cdb skip the rest of the list.
+$$ A hardware execute breakpoint at +0xc catches the instant of the wild transfer,
+$$ while sp still belongs to the culprit, so its frame and return chain are intact.
 .lines
-.echo ==== breakpoint
-bu libssl_3_arm64!tls_parse_all_extensions
+.echo ==== hardware breakpoint on the wild-jump landing site
+ba e1 libssl_3_arm64!tls_parse_all_extensions+0xc
+bl
+.echo ==== running
 g
-.echo ==== AT ENTRY
-~.
+.echo ==== CAUGHT THE WILD TRANSFER
 r
-.echo -- t1: sub sp,sp,#0x60
-t
-r @sp
-.echo -- t2: mov x15,#1
-t
-r @sp
-r @x15
-.echo -- t3: bl __chkstk, stepping in
-t
-r @pc
-r @sp
-r @x15
-.echo -- inside __chkstk, one instruction at a time
-t
-r
-t
-r
-t
-r
-t
-r
-t
-r
-t
-r
-t
-r
-t
-r
-.echo ==== where are we now
-r
+.echo ---- who owns this stack pointer
+!address @sp
+.echo ---- stack contents: return addresses of the culprit chain
+dps @sp L40
+.echo ---- unwind attempt
 k
-.echo ==== run to the fault
-g
-.echo ==== STOPPED
-r
-u @pc-0x10 L8
+.echo ---- and the same for every thread
+~*k
 .echo ==== done
 q

@@ -1,0 +1,41 @@
+name: arm64 MSVC prologue reduction
+
+# Throwaway diagnostic workflow (branch ci/arm64-curl-openssl-repro): compiles
+# scripts/arm64_prologue_repro.c for ARM64 at several optimization settings and
+# prints each function's prologue, to find the smallest shape where MSVC emits
+# `bl __chkstk` before storing x30. Compile-only, so it takes seconds.
+on:
+  push:
+    branches:
+      - ci/arm64-curl-openssl-repro
+  workflow_dispatch:
+
+jobs:
+  prologues:
+    runs-on: windows-11-vs2026-arm
+    timeout-minutes: 15
+    steps:
+      - name: Checkout the reproducer only
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github/actions
+            scripts
+
+      - name: Locate Visual Studio
+        uses: ./.github/actions/locate-visual-studio
+
+      - name: Compile at /O2 /Gs0, /O2, /O1, /Od and dump every prologue
+        shell: cmd
+        run: |
+          call "%VC_PATH%/Common7/Tools/VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
+          cl 2>&1 | findstr /C:"Version"
+          for %%F in ("/O2 /Gs0" "/O2" "/O1 /Gs0" "/Od /Gs0") do (
+            echo.
+            echo ================================================================
+            echo ==== flags: %%~F
+            echo ================================================================
+            cl /nologo /c %%~F /Fo:repro.obj scripts/arm64_prologue_repro.c || exit /b 1
+            dumpbin /nologo /disasm:nobytes repro.obj > repro.asm || exit /b 1
+            python scripts/arm64_prologue_report.py repro.asm || exit /b 1
+          )

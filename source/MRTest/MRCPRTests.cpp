@@ -5,6 +5,7 @@
 #include <curl/curl.h>
 #include "MRPch/MRSpdlog.h"
 #include <gtest/gtest.h>
+#include <string_view>
 
 constexpr int MAX_RETRIES = 10;
 constexpr std::chrono::seconds COOLDOWN_PERIOD { 10 };
@@ -44,6 +45,74 @@ TEST( MRViewer, CPRSslBackends )
     {
         spdlog::info( "libcurl reports a single SSL backend (no list available)" );
     }
+}
+
+namespace
+{
+
+size_t discardBody( char *, size_t size, size_t nmemb, void * )
+{
+    return size * nmemb;
+}
+
+int curlTrace( CURL *, curl_infotype type, char * data, size_t size, void * )
+{
+    if ( type == CURLINFO_TEXT )
+        spdlog::info( "curl: {}", std::string_view( data, size ) );
+    return 0;
+}
+
+} // namespace
+
+// Raw libcurl request without cpr: tells a cpr bug from a libcurl one.
+// Every step is logged so a crash points at the exact call that faulted.
+TEST( MRViewer, CurlRawGet )
+{
+    const char * backendEnv = std::getenv( "CURL_SSL_BACKEND" );
+    spdlog::info( "raw: env CURL_SSL_BACKEND={}", backendEnv ? backendEnv : "<unset>" );
+
+    spdlog::info( "raw: curl_global_init..." );
+    const auto initRes = curl_global_init( CURL_GLOBAL_ALL );
+    spdlog::info( "raw: curl_global_init -> {}", (int)initRes );
+    ASSERT_EQ( initRes, CURLE_OK );
+
+    spdlog::info( "raw: libcurl now reports: {}", curl_version() );
+
+    spdlog::info( "raw: curl_easy_init..." );
+    CURL * h = curl_easy_init();
+    spdlog::info( "raw: curl_easy_init -> {}", (const void *)h );
+    ASSERT_NE( h, nullptr );
+
+    curl_easy_setopt( h, CURLOPT_URL, "https://postman-echo.com/get" );
+    curl_easy_setopt( h, CURLOPT_TIMEOUT_MS, 8000L );
+    curl_easy_setopt( h, CURLOPT_WRITEFUNCTION, &discardBody );
+    curl_easy_setopt( h, CURLOPT_VERBOSE, 1L );
+    curl_easy_setopt( h, CURLOPT_DEBUGFUNCTION, &curlTrace );
+    spdlog::info( "raw: options set" );
+
+    spdlog::info( "raw: curl_easy_perform..." );
+    const auto res = curl_easy_perform( h );
+    spdlog::info( "raw: curl_easy_perform -> {} ({})", (int)res, curl_easy_strerror( res ) );
+
+    long code = 0;
+    curl_easy_getinfo( h, CURLINFO_RESPONSE_CODE, &code );
+    spdlog::info( "raw: response code {}", code );
+    curl_easy_cleanup( h );
+    EXPECT_EQ( res, CURLE_OK );
+}
+
+// CPRTestGet with curl's verbose trace, to see how far the request gets.
+TEST( MRViewer, CPRTestGetVerbose )
+{
+    spdlog::info( "cpr verbose: constructing session" );
+    cpr::Session session;
+    session.SetUrl( cpr::Url{ "https://postman-echo.com/get" } );
+    session.SetTimeout( cpr::Timeout{ 8000 } );
+    session.SetVerbose( cpr::Verbose{ true } );
+    spdlog::info( "cpr verbose: session ready, calling Get" );
+    const auto resp = session.Get();
+    spdlog::info( "cpr verbose: status {}, curl error {} ({})", resp.status_code,
+        (int32_t)resp.error.code, resp.error.message );
 }
 
 TEST( MRViewer, CPRTestGet )

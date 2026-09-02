@@ -315,11 +315,48 @@ jobs:
         with:
           build-bin-dir: source\${{ env.MR_ARCH }}\${{ matrix.config }}
 
+      # ---- DEBUG (throwaway branch): locate the arm64 MultiSSL libcurl crash ----
+      - name: DEBUG copy vcpkg PDBs next to the binaries
+        continue-on-error: true
+        run: |
+          $vcpkgDir = Split-Path (Get-Command vcpkg).Source
+          $src = Join-Path $vcpkgDir "installed/$env:VCPKG_DEFAULT_TRIPLET/bin"
+          Write-Host "PDB source dir: $src"
+          Get-ChildItem $src -Filter *.pdb -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host "  available: $($_.Name)" }
+          Copy-Item (Join-Path $src "*.pdb") "source/${{ env.MR_ARCH }}/${{ matrix.config }}" -Force -ErrorAction SilentlyContinue
+          Get-ChildItem "source/${{ env.MR_ARCH }}/${{ matrix.config }}/*.pdb" -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host "  copied: $($_.Name)" }
+
+      - name: DEBUG raw libcurl, default backend
+        continue-on-error: true
+        timeout-minutes: 3
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRSslBackends:MRViewer.CurlRawGet
+
+      - name: DEBUG raw libcurl, CURL_SSL_BACKEND=schannel
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          CURL_SSL_BACKEND: schannel
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRSslBackends:MRViewer.CurlRawGet
+
+      - name: DEBUG cpr verbose, default backend
+        continue-on-error: true
+        timeout-minutes: 3
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRTestGetVerbose
+
+      - name: DEBUG cpr verbose, CURL_SSL_BACKEND=schannel
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          CURL_SSL_BACKEND: schannel
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRTestGetVerbose
+
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRTest*
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}

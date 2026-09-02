@@ -98,7 +98,12 @@ TEST( MRMesh, MeshToDensePointCloud )
         const auto noNormals = meshToDensePointCloud( mesh, radius, false );
         ASSERT_TRUE( noNormals.has_value() );
         EXPECT_TRUE( noNormals->normals.empty() );
-        EXPECT_EQ( noNormals->points.vec_, cloud->points.vec_ );
+        // fuzzy compare to eliminate possible accumulated errors
+        ASSERT_EQ( noNormals->points.size(), cloud->points.size() );
+        auto maxPointDiffSq = 0.f;
+        for ( auto v : cloud->validPoints )
+            maxPointDiffSq = std::max( maxPointDiffSq, ( noNormals->points[v] - cloud->points[v] ).lengthSq() );
+        EXPECT_LE( maxPointDiffSq, 1e-12f );
     }
 
     EXPECT_FALSE( meshToDensePointCloud( mesh, 0 ).has_value() );

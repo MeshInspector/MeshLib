@@ -12,6 +12,7 @@ boost-stacktrace
 boost-url
 libjpeg-turbo
 cpr
+curl[openssl]
 eigen3
 fastmcpp
 freetype

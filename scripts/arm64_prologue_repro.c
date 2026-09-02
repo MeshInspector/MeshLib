@@ -144,3 +144,129 @@ int v6( Conn *s, int context )
         acc += ( unsigned long long )( defs[i % 29].context & context );
     return ( int )acc;
 }
+
+/* ---------------------------------------------------------------------------
+ * The real function's frame is 0x70, split by MSVC into `sub sp,sp,#0x60` for
+ * eleven callee-saved registers plus a probed 0x10 for locals - and it is that
+ * probed tail which pulls in `bl __chkstk`. v1..v6 above only reach a 0x50
+ * frame and get no probe at all, so the variants below add register pressure
+ * (many values live across the calls) and an address-taken local.
+ * ------------------------------------------------------------------------- */
+
+extern void sink( unsigned long long *p );
+
+/* v7: v1 plus eight extra values kept live across every call. */
+int v7( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
+    const Def *dd;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+            return 0;
+        g += a + b + c + d + e + f;
+        h ^= g + i;
+    }
+    if ( fin )
+    {
+        for ( i = 0, dd = defs; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( ( g ^ h ) & 1 );
+}
+
+/* v8: v7 plus an address-taken local, so the frame needs a locals area on top
+ * of the register saves. */
+int v8( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
+    unsigned long long local;
+    const Def *dd;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+            return 0;
+        g += a + b + c + d + e + f;
+        h ^= g + i;
+    }
+    local = g ^ h;
+    sink( &local );
+    if ( fin )
+    {
+        for ( i = 0, dd = defs; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( local & 1 );
+}
+
+/* v9: v8 with a two-element local array, pushing the locals area to 0x10. */
+int v9( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
+    unsigned long long local[2];
+    const Def *dd;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+            return 0;
+        g += a + b + c + d + e + f;
+        h ^= g + i;
+    }
+    local[0] = g;
+    local[1] = h;
+    sink( local );
+    if ( fin )
+    {
+        for ( i = 0, dd = defs; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( local[0] & 1 );
+}
+
+/* v10: v9 with the early-exit test written explicitly, which is the shape /O2
+ * hoists above the register saves in the real function. */
+int v10( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
+    unsigned long long local[2];
+    const Def *dd;
+
+    if ( numexts == 0 )
+        return 1;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+            return 0;
+        g += a + b + c + d + e + f;
+        h ^= g + i;
+    }
+    local[0] = g;
+    local[1] = h;
+    sink( local );
+    if ( fin )
+    {
+        for ( i = 0, dd = defs; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( local[0] & 1 );
+}

@@ -1,23 +1,25 @@
 $$ cdb script for the arm64 OpenSSL TLS 1.3 fault (throwaway diagnostic).
-$$ Log every entry to the suspect function with its argument and real return
-$$ address, then, when the access violation stops the debugger, dump the
-$$ faulting context and every thread's stack.
+$$ The fault is a corrupted stack pointer, not a bad argument: at the AV, sp is
+$$ outside the thread's stack and x15 no longer holds the 1 its own prologue put
+$$ there. So walk down the handshake call chain printing sp at each entry, to find
+$$ the frame where sp first leaves the legal range printed by !teb.
 .lines
+.echo ==== legal stack range for this thread
+!teb
 .echo ==== breakpoints
-bu libssl_3_arm64!tls_parse_all_extensions ".echo ==ENTRY==; r @x0; r @lr; ln @lr; ~.; gc"
+bu libssl_3_arm64!read_state_machine ".echo == read_state_machine; r @sp; gc"
+bu libssl_3_arm64!ossl_statem_client_process_message ".echo == process_message; r @sp; gc"
+bu libssl_3_arm64!tls_process_server_hello ".echo == server_hello; r @sp; gc"
+bu libssl_3_arm64!tls_collect_extensions ".echo == collect_extensions; r @sp; gc"
+bu libssl_3_arm64!tls_parse_all_extensions ".echo == parse_all_extensions; r @sp; r @x0; r @x15; gc"
 bl
 .echo ==== running
 g
 .echo ==== STOPPED
-.echo ---- faulting thread and registers
-~.
 r
+.echo ---- stack bounds again
+!teb
 .echo ---- faulting instruction
-ln @pc
 u @pc-0x10 L8
-.echo ---- exception record
-.exr -1
-.echo ---- all thread stacks
-~*kp
 .echo ==== done
 q

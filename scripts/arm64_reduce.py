@@ -46,7 +46,7 @@ def interesting(text):
     for line in r.stdout.decode("utf-8", "replace").splitlines():
         m = FUNC.match(line.strip())
         if m:
-            if name and chk is not None and (lrs is None or chk < lrs):
+            if name and chk is not None and lrs is not None and chk < lrs:
                 return True
             name, chk, lrs = m.group(1), None, None
             idx = 0
@@ -59,7 +59,7 @@ def interesting(text):
         if LR_SAVE.search(low) and lrs is None:
             lrs = idx
         idx += 1
-    return bool(name and chk is not None and (lrs is None or chk < lrs))
+    return bool(name and chk is not None and lrs is not None and chk < lrs)
 
 
 def ddmin(lines):

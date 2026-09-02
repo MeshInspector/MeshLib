@@ -52,8 +52,6 @@ def analyse(body):
 def main():
     lines = open(sys.argv[1], encoding="utf-8", errors="replace").read().splitlines()
     for name, body in functions(lines):
-        if not re.match(r"^v\d+$", name):
-            continue
         state, frame, chkstk_at, lr_save_at = analyse(body)
         print(
             "  %-4s %-32s frame=%-6s chkstk@%s lr-save@%s"

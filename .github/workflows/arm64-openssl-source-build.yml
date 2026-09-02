@@ -2,9 +2,11 @@ name: arm64 OpenSSL from-source check
 
 # Throwaway diagnostic workflow (branch ci/arm64-curl-openssl-repro): builds
 # OpenSSL 3.6.3 from the release tarball with `perl Configure VC-WIN64-ARM`,
-# release in one leg and debug in the other, then runs
-# scripts/arm64_openssl_mre.c against each. This removes vcpkg (and its port
-# patches) from the picture before the crash is reported upstream.
+# then runs scripts/arm64_openssl_mre.c against it, under cdb.
+#
+# The legs separate optimization from everything else `--debug` also changes
+# (CRT, NDEBUG, OpenSSL's own debug code): release-Od and release-O1 keep every
+# release setting and vary only the optimization level.
 on:
   push:
     branches:
@@ -16,9 +18,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config:
-          - release
-          - debug
+        include:
+          - name: release
+            opts: --release
+          - name: debug
+            opts: --debug
+          - name: release-Od
+            opts: --release -Od
+          - name: release-O1
+            opts: --release -O1
+    name: ${{ matrix.name }}
     runs-on: windows-11-vs2026-arm
     timeout-minutes: 120
     steps:
@@ -45,7 +54,6 @@ jobs:
           else
           {
             Write-Host "perl: $($perl.Source)"
-            & $perl.Source -v
           }
 
       - name: Gather the debug CRT that a debug OpenSSL needs
@@ -63,10 +71,8 @@ jobs:
           Invoke-WebRequest -Uri $u -OutFile openssl.tar.gz
           Write-Host "sha256: $((Get-FileHash openssl.tar.gz -Algorithm SHA256).Hash)"
           tar -xzf openssl.tar.gz
-          Write-Host "extracted:"
-          Get-ChildItem openssl-3.6.3 -Filter "Configure" | ForEach-Object { Write-Host "  $($_.Name)" }
 
-      - name: Configure and build OpenSSL (VC-WIN64-ARM, ${{ matrix.config }})
+      - name: Configure and build OpenSSL (VC-WIN64-ARM, ${{ matrix.name }})
         shell: cmd
         working-directory: openssl-3.6.3
         run: |
@@ -74,51 +80,53 @@ jobs:
           cl 2>&1 | findstr /C:"Version"
           rem no-apps/no-docs/no-tests only skip artefacts we do not use; they do not
           rem change how libssl and libcrypto themselves are compiled.
-          perl Configure VC-WIN64-ARM shared no-apps no-docs no-tests --${{ matrix.config }} || exit /b 1
-          perl configdata.pm --dump || exit /b 1
+          perl Configure VC-WIN64-ARM shared no-apps no-docs no-tests ${{ matrix.opts }} || exit /b 1
+          perl configdata.pm --dump | findstr /C:"CFLAGS" /C:"CPPDEFINES" /C:"LFLAGS"
           nmake || exit /b 1
           dir /b *.dll *.lib
 
-      - name: Symbolize the fault on this very build
+      - name: Stage the built OpenSSL next to the reproducer
+        shell: pwsh
+        run: |
+          Copy-Item openssl-3.6.3/*.dll . -Force
+          Copy-Item openssl-3.6.3/*.pdb . -Force -ErrorAction SilentlyContinue
+          Get-ChildItem *-arm64.dll | ForEach-Object { Write-Host "  $($_.Name)  $($_.Length) bytes" }
+
+      - name: Build the MRE and run it against this OpenSSL
+        shell: cmd
+        continue-on-error: true
+        run: |
+          call "%VC_PATH%/Common7/Tools/VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
+          rem the reproducer itself is always /O2 /MD, so only OpenSSL's configuration varies
+          cl /nologo /O2 /MD /W3 scripts/arm64_openssl_mre.c /I openssl-3.6.3/include /Fe:mre.exe /link /LIBPATH:openssl-3.6.3 libssl.lib libcrypto.lib ws2_32.lib crypt32.lib || exit /b 1
+          echo ==== MRE against a from-source ${{ matrix.name }} VC-WIN64-ARM OpenSSL
+          mre.exe
+          echo MRE exit code: %errorlevel%
+
+      - name: Name the faulting frame and its caller under cdb
         if: ${{ always() }}
         continue-on-error: true
         shell: pwsh
         run: |
-          # Debugging Tools for Windows, when the image carries them, name the
-          # faulting function without leaving the runner.
           $cdb = Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/Debuggers/arm64/cdb.exe" -ErrorAction SilentlyContinue |
             Select-Object -First 1
-          if ( $null -ne $cdb )
-          {
-            Write-Host "cdb: $($cdb.FullName)"
-            & $cdb.FullName -g -G -c '.lines; g; kp; ln @pc; r; q' mre.exe 2>&1 | Select-Object -Last 120
-          }
-          else
-          {
-            Write-Host "cdb.exe not on this image; rely on the uploaded pdb instead"
-          }
+          if ( $null -eq $cdb ) { Write-Host "cdb.exe not on this image"; exit 0 }
+          if ( -not ( Test-Path mre.exe ) ) { Write-Host "mre.exe was not built"; exit 0 }
+          Write-Host "cdb: $($cdb.FullName)"
+          # kp prints the stack WITH argument values, so the caller is observed rather
+          # than inferred; ln @pc names the faulting symbol; ub @pc disassembles back.
+          $out = & $cdb.FullName -g -G -lines -y "$pwd" -c '.lines; g; kp; ln @pc; r; ub @pc L8; q' mre.exe 2>&1
+          $out | Select-Object -Last 160 | ForEach-Object { Write-Host $_ }
 
       - name: Upload the built libssl and its pdb for offline symbolization
         if: ${{ always() }}
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
-          name: openssl-${{ matrix.config }}-arm64
+          name: openssl-${{ matrix.name }}-arm64
           path: |
             openssl-3.6.3/libssl-3-arm64.dll
             openssl-3.6.3/libssl-3-arm64.pdb
             openssl-3.6.3/libcrypto-3-arm64.dll
             openssl-3.6.3/libcrypto-3-arm64.pdb
-            openssl-3.6.3/configdata.pm
           if-no-files-found: warn
-
-      - name: Build the MRE and run it against the from-source OpenSSL
-        shell: cmd
-        run: |
-          call "%VC_PATH%/Common7/Tools/VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
-          rem the reproducer itself is always /O2 /MD, so only OpenSSL's configuration varies
-          cl /nologo /O2 /MD /W3 scripts/arm64_openssl_mre.c /I openssl-3.6.3/include /Fe:mre.exe /link /LIBPATH:openssl-3.6.3 libssl.lib libcrypto.lib ws2_32.lib crypt32.lib || exit /b 1
-          copy openssl-3.6.3\*.dll . >nul || exit /b 1
-          echo ==== MRE against a from-source ${{ matrix.config }} VC-WIN64-ARM OpenSSL
-          mre.exe
-          echo MRE exit code: %errorlevel%

@@ -57,7 +57,7 @@ RUN <<EOF
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
         gh g++-12 clang-14 \
-        cuda-minimal-build-12-1 \
+        cuda-minimal-build-12-6 \
         tzdata git sudo time xvfb curl unzip ninja-build patchelf gettext gawk procps
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'

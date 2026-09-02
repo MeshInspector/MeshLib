@@ -90,7 +90,9 @@ RUN <<EOF
                 -D CMAKE_BUILD_TYPE=${type} \
                 -D MR_EMSCRIPTEN=1 \
                 -D MR_EMSCRIPTEN_SINGLETHREAD=${single} \
-                -D MR_EMSCRIPTEN_WASM64=${wasm64}
+                -D MR_EMSCRIPTEN_WASM64=${wasm64} \
+                $(: this image builds with MR_EMSCRIPTEN_MIMALLOC=OFF, emsdk 3.1.38 has no mimalloc ) \
+                -D MR_EMSCRIPTEN_MIMALLOC=0
             cmake --build /tmp/warm
             rm -rf /tmp/warm
         done

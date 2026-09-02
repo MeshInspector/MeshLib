@@ -362,6 +362,33 @@ jobs:
         timeout-minutes: 3
         run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRSslBackends
 
+      - name: DEBUG 7 raw libcurl against the DEBUG OpenSSL DLLs
+        continue-on-error: true
+        timeout-minutes: 6
+        run: |
+          $bin = "source/${{ env.MR_ARCH }}/${{ matrix.config }}"
+          $vcpkgDir = Split-Path (Get-Command vcpkg).Source
+          $dbg = Join-Path $vcpkgDir "installed/$env:VCPKG_DEFAULT_TRIPLET/debug/bin"
+          Write-Host "debug bin: $dbg"
+          # The debug OpenSSL links the debug CRT, which is not on PATH by default.
+          $crt = @()
+          $crt += Get-ChildItem "C:/Program Files/Microsoft Visual Studio/*/*/VC/Redist/MSVC/*/debug_nonredist/arm64/Microsoft.VC*.DebugCRT/*.dll" -ErrorAction SilentlyContinue
+          $crt += Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/arm64/ucrt/ucrtbased.dll" -ErrorAction SilentlyContinue
+          foreach ( $f in $crt ) { Copy-Item $f.FullName $bin -Force; Write-Host "  crt: $($f.Name)" }
+          New-Item -ItemType Directory -Force relbak | Out-Null
+          $swap = @( "libssl-3-arm64.dll", "libcrypto-3-arm64.dll" )
+          foreach ( $f in $swap )
+          {
+            Copy-Item "$bin/$f" "relbak/$f" -Force
+            Copy-Item "$dbg/$f" "$bin/$f" -Force
+            Copy-Item "$dbg/$($f -replace '.dll$','.pdb')" $bin -Force -ErrorAction SilentlyContinue
+            Write-Host "  swapped in debug $f"
+          }
+          & "$bin/MRTest.exe" --gtest_filter=MRViewer.CurlRawGet
+          Write-Host "MRTest exit code with debug OpenSSL: $LASTEXITCODE"
+          foreach ( $f in $swap ) { Copy-Item "relbak/$f" "$bin/$f" -Force }
+          Write-Host "release DLLs restored"
+
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'

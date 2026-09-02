@@ -86,6 +86,20 @@ LONG NTAPI logFaultPc( EXCEPTION_POINTERS * info )
     for ( int i = 0; i < 29; ++i )
         regs += fmt::format( "x{}={:#x} ", i, (uintptr_t)c->X[i] );
     spdlog::critical( "FAULT regs {}", regs );
+    // Fingerprint the code that actually ran, so the disassembly can be matched offline.
+    if ( mod )
+    {
+        const auto * dos = (const IMAGE_DOS_HEADER *)mod;
+        const auto * nt = (const IMAGE_NT_HEADERS64 *)( (const char *)mod + dos->e_lfanew );
+        spdlog::critical( "FAULT module stamp={:#x} sizeOfImage={:#x} checksum={:#x}",
+            (unsigned)nt->FileHeader.TimeDateStamp, (unsigned)nt->OptionalHeader.SizeOfImage,
+            (unsigned)nt->OptionalHeader.CheckSum );
+    }
+    std::string code;
+    const auto * words = (const unsigned int *)( pc - 16 );
+    for ( int i = 0; i < 9; ++i )
+        code += fmt::format( "{}{:08x} ", i == 4 ? "[pc]" : "", words[i] );
+    spdlog::critical( "FAULT code {}", code );
     // Return addresses live on the stack; a raw scan beats a broken unwinder.
     std::string cands;
     const auto * stack = (const uintptr_t *)c->Sp;

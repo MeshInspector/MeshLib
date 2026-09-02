@@ -389,28 +389,6 @@ jobs:
           foreach ( $f in $swap ) { Copy-Item "relbak/$f" "$bin/$f" -Force }
           Write-Host "release DLLs restored"
 
-      - name: DEBUG 8 standalone OpenSSL-only MRE, release then debug DLLs
-        shell: cmd
-        continue-on-error: true
-        timeout-minutes: 6
-        run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          set INST=C:\vcpkg\installed\%VCPKG_DEFAULT_TRIPLET%
-          if not exist mre mkdir mre
-          cl /nologo /O2 /MD /W3 scripts\arm64_openssl_mre.c /I %INST%\include /Fo:mre\ /Fe:mre\mre.exe /link /LIBPATH:%INST%\lib libssl.lib libcrypto.lib ws2_32.lib crypt32.lib || exit /b 1
-          rem the debug OpenSSL needs the debug CRT, already gathered by the previous step
-          copy source\%MR_ARCH%\${{ matrix.config }}\*d.dll mre\ >nul 2>nul
-          copy %INST%\bin\libssl-3-arm64.dll mre\ >nul || exit /b 1
-          copy %INST%\bin\libcrypto-3-arm64.dll mre\ >nul || exit /b 1
-          echo ==== MRE against RELEASE OpenSSL
-          mre\mre.exe
-          echo MRE exit code: %errorlevel%
-          copy %INST%\debug\bin\libssl-3-arm64.dll mre\ >nul || exit /b 1
-          copy %INST%\debug\bin\libcrypto-3-arm64.dll mre\ >nul || exit /b 1
-          echo ==== MRE against DEBUG OpenSSL
-          mre\mre.exe
-          echo MRE exit code: %errorlevel%
-
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'

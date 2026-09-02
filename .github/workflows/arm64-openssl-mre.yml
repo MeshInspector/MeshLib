@@ -1,0 +1,61 @@
+name: arm64 OpenSSL MRE
+
+# Throwaway diagnostic workflow (branch ci/arm64-curl-openssl-repro): builds and
+# runs scripts/arm64_openssl_mre.c on a Windows ARM64 runner against the prebuilt
+# vcpkg OpenSSL 3.6.3 - release DLLs first, debug DLLs second. It needs headers,
+# import libs and DLLs only, so there is no vcpkg install, no submodule checkout
+# and no MeshLib build: ~2 minutes instead of ~25.
+on:
+  push:
+    branches:
+      - ci/arm64-curl-openssl-repro
+  workflow_dispatch:
+
+jobs:
+  mre:
+    runs-on: windows-11-vs2026-arm
+    timeout-minutes: 15
+    steps:
+      - name: Checkout the reproducer only
+        uses: actions/checkout\v7
+        with:
+          sparse-checkout: |
+            .github/actions
+            scripts
+
+      - name: Locate Visual Studio
+        uses: ./.github/actions/locate-visual-studio
+
+      - name: Fetch the prebuilt arm64 OpenSSL from the vcpkg binary cache
+        shell: pwsh
+        run: |
+          # The bucket allows unsigned reads. The path is <vcpkg tag>/<triplet>/<abi hash>.zip;
+          # the hash comes from any build log line "buildtrees\openssl_<64 hex>".
+          $u = 'https://vcpkg-export.s3.amazonaws.com/2026.07.29/arm64-windows-meshlib/f4d729b10c924de5eb6d339769ba73b05aef3d87bea5c04932b568778f14313f.zip'
+          Invoke-WebRequest -Uri $u -OutFile openssl.zip
+          Expand-Archive openssl.zip -DestinationPath ossl -Force
+          Get-ChildItem ossl/bin, ossl/debug/bin -Filter *-arm64.dll |
+            ForEach-Object { Write-Host "  $($_.Directory.Name)/$($_.Name)  $($_.Length) bytes" }
+
+      - name: Gather the debug CRT that the debug OpenSSL needs
+        shell: pwsh
+        run: |
+          $crt = \()
+          $crt += Get-ChildItem "C:/Program Files/Microsoft Visual Studio/*/*/VC/Redist/MSVC/*/debug_nonredist/arm64/Microsoft.VC*.DebugCRT/*.dll" -ErrorAction SilentlyContinue
+          $crt += Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/arm64/ucrt/ucrtbased.dll" -ErrorAction SilentlyContinue
+          foreach ( $f in $crt ) { Copy-Item $f.FullName . -Force; Write-Host "  $($f.Name)" }
+
+      - name: Build the MRE, run it against release then debug OpenSSL
+        shell: cmd
+        run: |
+          call "%VC_PATH%\Common7\Tools\VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
+          cl /nologo /O2 /MD /W3 scripts\arm64_openssl_mre.c /I ossl\include /Fe:mre.exe /link /LIBPATH:ossl\lib libssl.lib libcrypto.lib ws2_32.lib crypt32.lib || exit /b 1
+          copy ossl\bin\*.dll . >nul || exit /b 1
+          echo ==== MRE against RELEASE OpenSSL
+          mre.exe
+          echo MRE exit code: %errorlevel%
+          copy ossl\debug\bin\libssl-3-arm64.dll . >nul || exit /b 1
+          copy ossl\debug\bin\libcrypto-3-arm64.dll . >nul || exit /b 1
+          echo ==== MRE against DEBUG OpenSSL
+          mre.exe
+          echo MRE exit code: %errorlevel%

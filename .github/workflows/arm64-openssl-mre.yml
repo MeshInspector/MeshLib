@@ -68,7 +68,7 @@ jobs:
           # saved, so every unwinder follows a clobbered LR. Break on entry instead, where
           # LR still holds the real return address. `bu` defers resolution until libssl is
           # loaded, and no -g so the loader breakpoint is honoured first.
-          $cmd = '.lines; bu libssl_3_arm64!tls_parse_all_extensions ".if (\x0==1) {.echo CAUGHT_BAD_CALL; r; ln \lr; kp; ub \lr L10; q} .else {.echo ok-call x0=; r \x0; gc}"; g; q'
+          $cmd = '.lines; bu libssl_3_arm64!tls_parse_all_extensions ".if (@x0==1) {.echo CAUGHT_BAD_CALL; r; ln @lr; kp; ub @lr L10; q} .else {.echo ok-call x0=; r @x0; gc}"; g; q'
           $out = & $cdb.FullName -G -lines -y "$pwd" -c $cmd mre.exe 2>&1
           $out | ForEach-Object { Write-Host $_ }
 

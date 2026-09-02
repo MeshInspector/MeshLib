@@ -13,6 +13,14 @@ inputs:
       Which pinned set to install: the `<suffix>` of
       `scripts/mrbind/msys2_package_hashes<suffix>.txt`. `_clang22` is the x86_64
       CLANG64 toolchain, `_clangarm64` the native aarch64 one.
+  repo-dir:
+    required: false
+    default: '.'
+    description: >
+      Path to this repository from the workspace root. The default suits a
+      workflow whose workspace is MeshLib itself; a downstream repo that has
+      MeshLib as a submodule passes the submodule path (e.g. `MeshLib`), since
+      every path below is resolved against the workspace, not the action.
 
 runs:
   using: composite
@@ -25,8 +33,8 @@ runs:
       uses: actions/cache@v5
       continue-on-error: true
       with:
-        path: scripts/mrbind/msys2_packages
-        key: msys2-mrbind${{ inputs.packages-suffix }}-${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', inputs.packages-suffix)) }}
+        path: ${{ inputs.repo-dir }}/scripts/mrbind/msys2_packages
+        key: msys2-mrbind${{ inputs.packages-suffix }}-${{ hashFiles(format('{0}/scripts/mrbind/msys2_package_hashes{1}.txt', inputs.repo-dir, inputs.packages-suffix)) }}
 
     - name: Install MSYS2 itself when the image has none
       # Only the x64 runner images ship C:\msys64. MSYS2 publishes an x86_64 base
@@ -65,14 +73,14 @@ runs:
       run: |
         $attempts = 3
         foreach ($i in 1..$attempts) {
-          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash scripts/mrbind/msys2_download_packages.sh ${{ inputs.packages-suffix }} && bash scripts/mrbind/msys2_install_packages.sh ${{ inputs.packages-suffix }}"
+          C:\msys64\msys2_shell.cmd -no-start -defterm -here -c "set -e && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_download_packages.sh ${{ inputs.packages-suffix }} && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_install_packages.sh ${{ inputs.packages-suffix }}"
           $code = $LASTEXITCODE
           if ($code -eq 0) { break }
           # The msys2 shell dies without its console output reaching the
           # runner; recover what hit the disk instead.
           Write-Host "msys2_shell.cmd exited with code $code (attempt $i of $attempts)"
-          Write-Host '::group::scripts/mrbind/msys2_pacman_install.log'
-          $teeLog = 'scripts/mrbind/msys2_pacman_install.log'
+          Write-Host '::group::${{ inputs.repo-dir }}/scripts/mrbind/msys2_pacman_install.log'
+          $teeLog = '${{ inputs.repo-dir }}/scripts/mrbind/msys2_pacman_install.log'
           if (Test-Path $teeLog) { Get-Content $teeLog } else { Write-Host 'absent — died before pacman produced output' }
           Write-Host '::endgroup::'
           Write-Host '::group::C:\msys64\var\log\pacman.log (last 200 lines)'

@@ -21,12 +21,6 @@ jobs:
         include:
           - name: release
             opts: --release
-          - name: debug
-            opts: --debug
-          - name: release-Od
-            opts: --release -Od
-          - name: release-O1
-            opts: --release -O1
     name: ${{ matrix.name }}
     runs-on: windows-11-vs2026-arm
     timeout-minutes: 120
@@ -103,7 +97,7 @@ jobs:
           mre.exe
           echo MRE exit code: %errorlevel%
 
-      - name: Name the faulting frame and its caller under cdb
+      - name: Catch the bad call at function entry, where LR is still valid
         if: ${{ always() }}
         continue-on-error: true
         shell: pwsh
@@ -112,11 +106,13 @@ jobs:
             Select-Object -First 1
           if ( $null -eq $cdb ) { Write-Host "cdb.exe not on this image"; exit 0 }
           if ( -not ( Test-Path mre.exe ) ) { Write-Host "mre.exe was not built"; exit 0 }
-          Write-Host "cdb: $($cdb.FullName)"
-          # kp prints the stack WITH argument values, so the caller is observed rather
-          # than inferred; ln @pc names the faulting symbol; ub @pc disassembles back.
-          $out = & $cdb.FullName -g -G -lines -y "$pwd" -c '.lines; g; kp; ln @pc; r; ub @pc L8; q' mre.exe 2>&1
-          $out | Select-Object -Last 160 | ForEach-Object { Write-Host $_ }
+          # Unwinding from the fault is hopeless: it happens in the prologue before x30
+          # is saved, so every unwinder follows a clobbered LR. Breaking on entry instead
+          # catches the moment when LR still holds the real return address. The condition
+          # skips any well-formed call and stops only on the bad one.
+          $cmd = '.lines; bp libssl_3_arm64!tls_parse_all_extensions ".if (@x0==1) {.echo CAUGHT_BAD_CALL; r; ln @lr; kp; ub @lr L10; q} .else {.echo ok-call; gc}"; g; q'
+          $out = & $cdb.FullName -g -G -lines -y "$pwd" -c $cmd mre.exe 2>&1
+          $out | Select-Object -Last 120 | ForEach-Object { Write-Host $_ }
 
       - name: Upload the built libssl and its pdb for offline symbolization
         if: ${{ always() }}

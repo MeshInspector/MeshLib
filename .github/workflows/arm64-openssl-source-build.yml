@@ -1,0 +1,91 @@
+name: arm64 OpenSSL from-source check
+
+# Throwaway diagnostic workflow (branch ci/arm64-curl-openssl-repro): builds
+# OpenSSL 3.6.3 from the release tarball with `perl Configure VC-WIN64-ARM`,
+# release in one leg and debug in the other, then runs
+# scripts/arm64_openssl_mre.c against each. This removes vcpkg (and its port
+# patches) from the picture before the crash is reported upstream.
+on:
+  push:
+    branches:
+      - ci/arm64-curl-openssl-repro
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - release
+          - debug
+    runs-on: windows-11-vs2026-arm
+    timeout-minutes: 120
+    steps:
+      - name: Checkout the reproducer only
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            .github/actions
+            scripts
+
+      - name: Locate Visual Studio
+        uses: ./.github/actions/locate-visual-studio
+
+      - name: Ensure perl
+        shell: pwsh
+        run: |
+          $perl = Get-Command perl -ErrorAction SilentlyContinue
+          if ( $null -eq $perl )
+          {
+            Write-Host "perl not found, installing Strawberry Perl"
+            choco install strawberryperl -y --no-progress
+            "C:/Strawberry/perl/bin" | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
+          }
+          else
+          {
+            Write-Host "perl: $($perl.Source)"
+            & $perl.Source -v
+          }
+
+      - name: Gather the debug CRT that a debug OpenSSL needs
+        shell: pwsh
+        run: |
+          $crt = @()
+          $crt += Get-ChildItem "C:/Program Files/Microsoft Visual Studio/*/*/VC/Redist/MSVC/*/debug_nonredist/arm64/Microsoft.VC*.DebugCRT/*.dll" -ErrorAction SilentlyContinue
+          $crt += Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/arm64/ucrt/ucrtbased.dll" -ErrorAction SilentlyContinue
+          foreach ( $f in $crt ) { Copy-Item $f.FullName . -Force; Write-Host "  $($f.Name)" }
+
+      - name: Download the OpenSSL 3.6.3 release tarball
+        shell: pwsh
+        run: |
+          $u = 'https://github.com/openssl/openssl/releases/download/openssl-3.6.3/openssl-3.6.3.tar.gz'
+          Invoke-WebRequest -Uri $u -OutFile openssl.tar.gz
+          Write-Host "sha256: $((Get-FileHash openssl.tar.gz -Algorithm SHA256).Hash)"
+          tar -xzf openssl.tar.gz
+          Write-Host "extracted:"
+          Get-ChildItem openssl-3.6.3 -Filter "Configure" | ForEach-Object { Write-Host "  $($_.Name)" }
+
+      - name: Configure and build OpenSSL (VC-WIN64-ARM, ${{ matrix.config }})
+        shell: cmd
+        working-directory: openssl-3.6.3
+        run: |
+          call "%VC_PATH%/Common7/Tools/VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
+          cl 2>&1 | findstr /C:"Version"
+          rem no-apps/no-docs/no-tests only skip artefacts we do not use; they do not
+          rem change how libssl and libcrypto themselves are compiled.
+          perl Configure VC-WIN64-ARM shared no-apps no-docs no-tests --${{ matrix.config }} || exit /b 1
+          perl configdata.pm --dump || exit /b 1
+          nmake || exit /b 1
+          dir /b *.dll *.lib
+
+      - name: Build the MRE and run it against the from-source OpenSSL
+        shell: cmd
+        run: |
+          call "%VC_PATH%/Common7/Tools/VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
+          rem the reproducer itself is always /O2 /MD, so only OpenSSL's configuration varies
+          cl /nologo /O2 /MD /W3 scripts/arm64_openssl_mre.c /I openssl-3.6.3/include /Fe:mre.exe /link /LIBPATH:openssl-3.6.3 libssl.lib libcrypto.lib ws2_32.lib crypt32.lib || exit /b 1
+          copy openssl-3.6.3\*.dll . >nul || exit /b 1
+          echo ==== MRE against a from-source ${{ matrix.config }} VC-WIN64-ARM OpenSSL
+          mre.exe
+          echo MRE exit code: %errorlevel%

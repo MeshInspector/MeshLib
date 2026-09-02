@@ -1,0 +1,23 @@
+$$ cdb script for the arm64 OpenSSL TLS 1.3 fault (throwaway diagnostic).
+$$ Log every entry to the suspect function with its argument and real return
+$$ address, then, when the access violation stops the debugger, dump the
+$$ faulting context and every thread's stack.
+.lines
+.echo ==== breakpoints
+bu libssl_3_arm64!tls_parse_all_extensions ".echo ==ENTRY==; r @x0; r @lr; ln @lr; ~.; gc"
+bl
+.echo ==== running
+g
+.echo ==== STOPPED
+.echo ---- faulting thread and registers
+~.
+r
+.echo ---- faulting instruction
+ln @pc
+u @pc-0x10 L8
+.echo ---- exception record
+.exr -1
+.echo ---- all thread stacks
+~*kp
+.echo ==== done
+q

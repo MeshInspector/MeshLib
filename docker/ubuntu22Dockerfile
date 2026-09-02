@@ -53,6 +53,7 @@ RUN <<EOF
     ARCH="$(uname -m)"; [ "$ARCH" = aarch64 ] && ARCH=sbsa
     wget "https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/$ARCH/cuda-keyring_1.1-1_all.deb"
     dpkg -i cuda-keyring_1.1-1_all.deb
+    rm cuda-keyring_1.1-1_all.deb
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \

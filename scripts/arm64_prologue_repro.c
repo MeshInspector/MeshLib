@@ -1,15 +1,18 @@
 /*
- * Candidate shapes for the MSVC ARM64 /O2 /Gs0 prologue defect:
- * `bl __chkstk` is emitted before `str x30`, so the return address is destroyed
- * before it is spilled.
+ * Reducing the MSVC ARM64 /O2 /Gs0 prologue defect: `bl __chkstk` is emitted in
+ * the leading part of the prologue while the callee-saved spills - including lr -
+ * are deferred past an early-exit test, so the call destroys the return address
+ * before it is saved.
  *
  *   cl /c /O2 /Gs0 arm64_prologue_repro.c
  *   dumpbin /disasm:nobytes arm64_prologue_repro.obj
+ *   python arm64_prologue_report.py <listing>
  *
- * A function is BAD when its prologue shows `bl __chkstk` ahead of the
- * instruction that stores x30. v1 mirrors OpenSSL's tls_parse_all_extensions;
- * the others strip one ingredient each, to find which are required.
+ * v7 is the known-bad control (mirrors OpenSSL's tls_parse_all_extensions).
+ * v11..v18 strip one thing at a time to find the smallest form that reproduces.
  */
+
+/* ---- scaffolding used by the v7 control only ------------------------------- */
 
 typedef struct Cert
 {
@@ -30,132 +33,9 @@ typedef struct Def
 } Def;
 
 extern const Def defs[29];
-
 extern int parse_one( Conn *s, unsigned long long i, int ctx, void *exts, void *x, unsigned long long idx );
 
-/* v1: same shape as tls_parse_all_extensions - six parameters, a count read
- * through a two-level dereference of the first one, a loop of calls, then a
- * second loop calling through a table of function pointers. */
-int v1( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
-{
-    unsigned long long i, numexts = 29;
-    const Def *d;
-
-    numexts += s->cert->meths_count;
-
-    for ( i = 0; i < numexts; i++ )
-        if ( !parse_one( s, i, context, exts, x, chainidx ) )
-            return 0;
-
-    if ( fin )
-    {
-        for ( i = 0, d = defs; i < 29; i++, d++ )
-            if ( ( d->context & context ) != 0 && d->final != 0 && !d->final( s, context, 1 ) )
-                return 0;
-    }
-    return 1;
-}
-
-/* v2: v1 without the function-pointer loop. */
-int v2( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
-{
-    unsigned long long i, numexts = 29;
-
-    numexts += s->cert->meths_count;
-    ( void )fin;
-
-    for ( i = 0; i < numexts; i++ )
-        if ( !parse_one( s, i, context, exts, x, chainidx ) )
-            return 0;
-    return 1;
-}
-
-/* v3: v1 without the dereference that produces the loop bound, so no early-exit
- * test can be hoisted ahead of the register saves. */
-int v3( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
-{
-    unsigned long long i;
-    const Def *d;
-
-    for ( i = 0; i < 29; i++ )
-        if ( !parse_one( s, i, context, exts, x, chainidx ) )
-            return 0;
-
-    if ( fin )
-    {
-        for ( i = 0, d = defs; i < 29; i++, d++ )
-            if ( ( d->context & context ) != 0 && d->final != 0 && !d->final( s, context, 1 ) )
-                return 0;
-    }
-    return 1;
-}
-
-/* v4: v1 with fewer parameters. */
-int v4( Conn *s, int context, int fin )
-{
-    unsigned long long i, numexts = 29;
-    const Def *d;
-
-    numexts += s->cert->meths_count;
-
-    for ( i = 0; i < numexts; i++ )
-        if ( !parse_one( s, i, context, 0, 0, 0 ) )
-            return 0;
-
-    if ( fin )
-    {
-        for ( i = 0, d = defs; i < 29; i++, d++ )
-            if ( ( d->context & context ) != 0 && d->final != 0 && !d->final( s, context, 1 ) )
-                return 0;
-    }
-    return 1;
-}
-
-/* v5: the early-exit alone - a count of zero skips everything, which is the test
- * `cbz x7` that /O2 hoists above the register saves in the real function. */
-int v5( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
-{
-    unsigned long long i, numexts = s->cert->meths_count;
-    const Def *d;
-
-    if ( numexts == 0 )
-        return 1;
-
-    for ( i = 0; i < numexts; i++ )
-        if ( !parse_one( s, i, context, exts, x, chainidx ) )
-            return 0;
-
-    if ( fin )
-    {
-        for ( i = 0, d = defs; i < 29; i++, d++ )
-            if ( ( d->context & context ) != 0 && d->final != 0 && !d->final( s, context, 1 ) )
-                return 0;
-    }
-    return 1;
-}
-
-/* v6: no calls at all, so nothing needs x30 saved. Control shape only. */
-int v6( Conn *s, int context )
-{
-    unsigned long long i, numexts = 29, acc = 0;
-
-    numexts += s->cert->meths_count;
-    for ( i = 0; i < numexts; i++ )
-        acc += ( unsigned long long )( defs[i % 29].context & context );
-    return ( int )acc;
-}
-
-/* ---------------------------------------------------------------------------
- * The real function's frame is 0x70, split by MSVC into `sub sp,sp,#0x60` for
- * eleven callee-saved registers plus a probed 0x10 for locals - and it is that
- * probed tail which pulls in `bl __chkstk`. v1..v6 above only reach a 0x50
- * frame and get no probe at all, so the variants below add register pressure
- * (many values live across the calls) and an address-taken local.
- * ------------------------------------------------------------------------- */
-
-extern void sink( unsigned long long *p );
-
-/* v7: v1 plus eight extra values kept live across every call. */
+/* v7: control - known BAD at /O2 /Gs0. */
 int v7( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
 {
     unsigned long long i, numexts = 29 + s->cert->meths_count;
@@ -180,93 +60,143 @@ int v7( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, 
     return ( int )( ( g ^ h ) & 1 );
 }
 
-/* v8: v7 plus an address-taken local, so the frame needs a locals area on top
- * of the register saves. */
-int v8( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+/* ---- reduction candidates -------------------------------------------------- */
+
+extern int call1( unsigned long long i );
+extern void sink( unsigned long long *p );
+
+typedef struct Count
 {
-    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long n;
+} Count;
+
+/* v11: v7 with a plain one-field struct instead of the padded double dereference,
+ * and a one-argument callee. */
+int v11( Count *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->n;
     unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
     unsigned long long c = chainidx, d = ( unsigned long long )context;
     unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
-    unsigned long long local;
-    const Def *dd;
 
     for ( i = 0; i < numexts; i++ )
     {
-        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+        if ( !call1( i ) )
             return 0;
         g += a + b + c + d + e + f;
         h ^= g + i;
     }
-    local = g ^ h;
-    sink( &local );
-    if ( fin )
-    {
-        for ( i = 0, dd = defs; i < 29; i++, dd++ )
-            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
-                return 0;
-    }
-    return ( int )( local & 1 );
+    return ( int )( ( g ^ h ) & 1 );
 }
 
-/* v9: v8 with a two-element local array, pushing the locals area to 0x10. */
-int v9( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+/* v12: loop bound straight from a parameter - no struct, no dereference. */
+int v12( unsigned long long n, unsigned long long a, unsigned long long b, unsigned long long c,
+    unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long h )
 {
-    unsigned long long i, numexts = 29 + s->cert->meths_count;
-    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
-    unsigned long long c = chainidx, d = ( unsigned long long )context;
-    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
-    unsigned long long local[2];
-    const Def *dd;
+    unsigned long long i, g = 0, k = 0;
 
-    for ( i = 0; i < numexts; i++ )
+    for ( i = 0; i < n; i++ )
     {
-        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+        if ( !call1( i ) )
             return 0;
-        g += a + b + c + d + e + f;
-        h ^= g + i;
+        g += a + b + c + d + e + f + h;
+        k ^= g + i;
     }
-    local[0] = g;
-    local[1] = h;
-    sink( local );
-    if ( fin )
-    {
-        for ( i = 0, dd = defs; i < 29; i++, dd++ )
-            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
-                return 0;
-    }
-    return ( int )( local[0] & 1 );
+    return ( int )( ( g ^ k ) & 1 );
 }
 
-/* v10: v9 with the early-exit test written explicitly, which is the shape /O2
- * hoists above the register saves in the real function. */
-int v10( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+/* v13: v12 without the second accumulator. */
+int v13( unsigned long long n, unsigned long long a, unsigned long long b, unsigned long long c,
+    unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long h )
 {
-    unsigned long long i, numexts = 29 + s->cert->meths_count;
-    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
-    unsigned long long c = chainidx, d = ( unsigned long long )context;
-    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
-    unsigned long long local[2];
-    const Def *dd;
+    unsigned long long i, g = 0;
 
-    if ( numexts == 0 )
+    for ( i = 0; i < n; i++ )
+    {
+        if ( !call1( i ) )
+            return 0;
+        g += a + b + c + d + e + f + h + i;
+    }
+    return ( int )g;
+}
+
+/* v14: v13 with six parameters instead of eight. */
+int v14( unsigned long long n, unsigned long long a, unsigned long long b, unsigned long long c,
+    unsigned long long d, unsigned long long e )
+{
+    unsigned long long i, g = 0;
+
+    for ( i = 0; i < n; i++ )
+    {
+        if ( !call1( i ) )
+            return 0;
+        g += a + b + c + d + e + i;
+    }
+    return ( int )g;
+}
+
+/* v15: v13 with the sum hoisted out of the loop, so fewer values stay live. */
+int v15( unsigned long long n, unsigned long long a, unsigned long long b, unsigned long long c,
+    unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long h )
+{
+    unsigned long long i, g = 0, s = a + b + c + d + e + f + h;
+
+    for ( i = 0; i < n; i++ )
+    {
+        if ( !call1( i ) )
+            return 0;
+        g += s + i;
+    }
+    return ( int )g;
+}
+
+/* v16: v13 with the early exit written explicitly rather than left to the loop. */
+int v16( unsigned long long n, unsigned long long a, unsigned long long b, unsigned long long c,
+    unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long h )
+{
+    unsigned long long i, g = 0;
+
+    if ( n == 0 )
         return 1;
 
-    for ( i = 0; i < numexts; i++ )
+    for ( i = 0; i < n; i++ )
     {
-        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+        if ( !call1( i ) )
             return 0;
-        g += a + b + c + d + e + f;
-        h ^= g + i;
+        g += a + b + c + d + e + f + h + i;
     }
-    local[0] = g;
-    local[1] = h;
-    sink( local );
-    if ( fin )
+    return ( int )g;
+}
+
+/* v17: v13 with no early exit at all - the loop body always runs once. */
+int v17( unsigned long long n, unsigned long long a, unsigned long long b, unsigned long long c,
+    unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long h )
+{
+    unsigned long long i, g = 0;
+
+    for ( i = 0; i <= n; i++ )
     {
-        for ( i = 0, dd = defs; i < 29; i++, dd++ )
-            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
-                return 0;
+        if ( !call1( i ) )
+            return 0;
+        g += a + b + c + d + e + f + h + i;
     }
-    return ( int )( local[0] & 1 );
+    return ( int )g;
+}
+
+/* v18: v13 plus an address-taken local, which made the prologue correct at v7's
+ * size - included to confirm that still holds in the reduced form. */
+int v18( unsigned long long n, unsigned long long a, unsigned long long b, unsigned long long c,
+    unsigned long long d, unsigned long long e, unsigned long long f, unsigned long long h )
+{
+    unsigned long long i, g = 0, local;
+
+    for ( i = 0; i < n; i++ )
+    {
+        if ( !call1( i ) )
+            return 0;
+        g += a + b + c + d + e + f + h + i;
+    }
+    local = g;
+    sink( &local );
+    return ( int )local;
 }

@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Namespace the Emscripten port libraries MeshLib links against (freetype,
-libpng, zlib) so the C# wasm package can ship them without colliding with a
-host engine's own copies of the same libraries.
+libpng, zlib), and the lz4 that c-blosc bundles, so the C# wasm package can
+ship them without colliding with a host engine's own copies of the same
+libraries.
 
-Unity's WebGL player statically links its own trimmed freetype, libpng and
-zlib whose leaked globals collide with full copies of the same libraries, and
-its frozen emsdk cache cannot build the ports on the consumer's machine.
+Unity's WebGL player statically links its own trimmed freetype, libpng, zlib
+and lz4 whose leaked globals collide with full copies of the same libraries,
+and its frozen emsdk cache cannot build the ports on the consumer's machine.
 
 Every symbol the listed libraries export is renamed with PREFIX, and the
 package archives' references to them are rewritten to match, so nothing

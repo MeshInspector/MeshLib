@@ -132,6 +132,16 @@ jobs:
           #   FT_*/png_* undefined). Ship them namespaced, because engines like Unity statically
           #   link their own trimmed freetype/libpng/zlib whose globals collide with vanilla copies;
           #   the package archives referencing them are rewritten in place to the new names.
+          # Unity also links its own lz4, and its renaming of that library leaks a few globals
+          #   (`read_long_length_no_check`, `LZ4_decompress_safe_partial_*`) that collide with the lz4
+          #   c-blosc bundles into libblosc.a. Only the lz4 objects may be renamed: libblosc.a also
+          #   bundles a zlib under the standard names, and renaming it would redirect every zlib call
+          #   in the package to that copy. So the lz4 members are split into their own archive, which is
+          #   then namespaced like the ports (libblosc.a ends up referencing mrml_LZ4_*).
+          AR=${EMSDK}/upstream/bin/llvm-ar
+          mkdir -p lz4_split
+          (cd lz4_split && ${AR} x ../${OUT_DIR}/libblosc.a lz4.c.o lz4hc.c.o && ${AR} qc liblz4.a lz4.c.o lz4hc.c.o)
+          ${AR} d ${OUT_DIR}/libblosc.a lz4.c.o lz4hc.c.o
           EMSDK_CACHE=$(${EMSDK}/upstream/emscripten/em-config CACHE)
           python3 scripts/nuget_patch/wasm_namespace_deps.py \
             --llvm-bin ${EMSDK}/upstream/bin \
@@ -139,6 +149,7 @@ jobs:
             --vanilla-libs ${EMSDK_CACHE}/sysroot/lib/wasm32-emscripten \
             --out-dir namespaced_deps \
             --lib libfreetype --lib libpng --private-lib libz=libzlib \
+            --lib lz4_split/liblz4.a=liblz4 \
             ${{ matrix.config == 'Multithreaded' && '--pthread' || '' }}
           cp namespaced_deps/*.a ${OUT_DIR}
 

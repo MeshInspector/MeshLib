@@ -328,29 +328,39 @@ jobs:
           Get-ChildItem "source/${{ env.MR_ARCH }}/${{ matrix.config }}/*.pdb" -ErrorAction SilentlyContinue |
             ForEach-Object { Write-Host "  copied: $($_.Name)" }
 
-      - name: DEBUG raw libcurl, default backend
+      - name: DEBUG 1 raw libcurl, no options
         continue-on-error: true
         timeout-minutes: 3
-        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRSslBackends:MRViewer.CurlRawGet
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CurlRawGet
 
-      - name: DEBUG raw libcurl, CURL_SSL_BACKEND=schannel
+      - name: DEBUG 2 raw libcurl, CURLSSLOPT_NATIVE_CA
+        continue-on-error: true
+        timeout-minutes: 3
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CurlRawGetNativeCa
+
+      - name: DEBUG 3 raw libcurl, NATIVE_CA + CURL_SSL_BACKEND=schannel
         continue-on-error: true
         timeout-minutes: 3
         env:
           CURL_SSL_BACKEND: schannel
-        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRSslBackends:MRViewer.CurlRawGet
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CurlRawGetNativeCa
 
-      - name: DEBUG cpr verbose, default backend
+      - name: DEBUG 4 cpr verbose session
         continue-on-error: true
         timeout-minutes: 3
         run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRTestGetVerbose
 
-      - name: DEBUG cpr verbose, CURL_SSL_BACKEND=schannel
+      - name: DEBUG 5 cpr verbose session, CURL_SSL_BACKEND=schannel
         continue-on-error: true
         timeout-minutes: 3
         env:
           CURL_SSL_BACKEND: schannel
         run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRTestGetVerbose
+
+      - name: DEBUG 6 backend diagnostics
+        continue-on-error: true
+        timeout-minutes: 3
+        run: source/${{ env.MR_ARCH }}/${{ matrix.config }}/MRTest.exe --gtest_filter=MRViewer.CPRSslBackends
 
       - name: Unit Tests
         env:

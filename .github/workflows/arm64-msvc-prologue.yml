@@ -39,3 +39,38 @@ jobs:
             dumpbin /nologo /disasm:nobytes repro.obj > repro.asm || exit /b 1
             python scripts/arm64_prologue_report.py repro.asm || exit /b 1
           )
+
+      - name: Check for a reducer on the image
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          foreach ( $t in "creduce", "cvise", "clang-format", "llvm-reduce" )
+          {
+            $c = Get-Command $t -ErrorAction SilentlyContinue
+            if ( $null -ne $c ) { Write-Host "  $t : $($c.Source)" } else { Write-Host "  $t : absent" }
+          }
+
+      - name: Delta-debug the reproducer down
+        shell: cmd
+        timeout-minutes: 30
+        run: |
+          call "%VC_PATH%/Common7/Tools/VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
+          py -3 scripts/arm64_reduce.py scripts/arm64_reduce_input.c 800
+
+      - name: Show the reduced file's prologue
+        shell: cmd
+        continue-on-error: true
+        run: |
+          call "%VC_PATH%/Common7/Tools/VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
+          cl /nologo /c /O2 /Gs0 /Fo:reduced.obj reduced.c || exit /b 1
+          dumpbin /nologo /disasm:nobytes reduced.obj > reduced.asm || exit /b 1
+          py -3 scripts/arm64_prologue_report.py reduced.asm
+
+      - name: Upload the reduced source
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: reduced-c
+          path: reduced.c
+          if-no-files-found: warn

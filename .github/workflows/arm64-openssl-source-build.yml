@@ -79,6 +79,39 @@ jobs:
           nmake || exit /b 1
           dir /b *.dll *.lib
 
+      - name: Symbolize the fault on this very build
+        if: ${{ always() }}
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          # Debugging Tools for Windows, when the image carries them, name the
+          # faulting function without leaving the runner.
+          $cdb = Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/Debuggers/arm64/cdb.exe" -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if ( $null -ne $cdb )
+          {
+            Write-Host "cdb: $($cdb.FullName)"
+            & $cdb.FullName -g -G -c '.lines; g; kp; ln @pc; r; q' mre.exe 2>&1 | Select-Object -Last 120
+          }
+          else
+          {
+            Write-Host "cdb.exe not on this image; rely on the uploaded pdb instead"
+          }
+
+      - name: Upload the built libssl and its pdb for offline symbolization
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: openssl-${{ matrix.config }}-arm64
+          path: |
+            openssl-3.6.3/libssl-3-arm64.dll
+            openssl-3.6.3/libssl-3-arm64.pdb
+            openssl-3.6.3/libcrypto-3-arm64.dll
+            openssl-3.6.3/libcrypto-3-arm64.pdb
+            openssl-3.6.3/configdata.pm
+          if-no-files-found: warn
+
       - name: Build the MRE and run it against the from-source OpenSSL
         shell: cmd
         run: |

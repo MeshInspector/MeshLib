@@ -1,22 +1,55 @@
 $$ cdb script for the arm64 OpenSSL TLS 1.3 fault (throwaway diagnostic).
 $$
-$$ Established so far: sp is valid at every frame down to tls_parse_all_extensions
-$$ entry, and four instructions later sp is outside the thread stack and x15 holds
-$$ garbage instead of the 1 its own prologue just set. Those four instructions are
-$$   sub sp,sp,#0x60 / mov x15,#1 / bl __chkstk / sub sp,sp,x15,lsl #4
-$$ so this script single-steps them, dumping sp/x15/x0 after each, and steps
-$$ through __chkstk itself. If the corruption does not reproduce while stepping,
-$$ that points at an asynchronous cause rather than these instructions.
+$$ Established: sp is valid at every frame down to tls_parse_all_extensions entry
+$$ and after its own `sub sp,sp,#0x60`; four instructions later sp is outside the
+$$ thread stack and x15 holds garbage instead of the 1 just set. The only callee
+$$ in that window is __chkstk (_alloca_probe), which provably writes x16/x17 only.
+$$
+$$ So single-step the prologue and through __chkstk. Stepping must happen at top
+$$ level: `t` inside a breakpoint command block makes cdb skip the rest of the list.
 .lines
-!teb
-.echo ==== breakpoint on the suspect prologue
-bu libssl_3_arm64!tls_parse_all_extensions ".echo ==ENTRY==; r; .echo -- step 1: sub sp,sp,#0x60; t; r @sp; .echo -- step 2: mov x15,#1; t; r @sp; r @x15; .echo -- step 3: into __chkstk; t; r @sp; r @x15; .echo -- stepping through __chkstk; t; r; t; r; t; r; t; r; t; r; t; r; .echo -- back in caller?; r; k; .echo -- continue to the fault; g"
-bl
-.echo ==== running
+.echo ==== breakpoint
+bu libssl_3_arm64!tls_parse_all_extensions
+g
+.echo ==== AT ENTRY
+~.
+r
+.echo -- t1: sub sp,sp,#0x60
+t
+r @sp
+.echo -- t2: mov x15,#1
+t
+r @sp
+r @x15
+.echo -- t3: bl __chkstk, stepping in
+t
+r @pc
+r @sp
+r @x15
+.echo -- inside __chkstk, one instruction at a time
+t
+r
+t
+r
+t
+r
+t
+r
+t
+r
+t
+r
+t
+r
+t
+r
+.echo ==== where are we now
+r
+k
+.echo ==== run to the fault
 g
 .echo ==== STOPPED
 r
-!teb
 u @pc-0x10 L8
 .echo ==== done
 q

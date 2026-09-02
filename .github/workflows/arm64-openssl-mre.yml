@@ -40,7 +40,7 @@ jobs:
       - name: Gather the debug CRT that the debug OpenSSL needs
         shell: pwsh
         run: |
-          $crt = \()
+          $crt = @()
           $crt += Get-ChildItem "C:/Program Files/Microsoft Visual Studio/*/*/VC/Redist/MSVC/*/debug_nonredist/arm64/Microsoft.VC*.DebugCRT/*.dll" -ErrorAction SilentlyContinue
           $crt += Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/arm64/ucrt/ucrtbased.dll" -ErrorAction SilentlyContinue
           foreach ( $f in $crt ) { Copy-Item $f.FullName . -Force; Write-Host "  $($f.Name)" }

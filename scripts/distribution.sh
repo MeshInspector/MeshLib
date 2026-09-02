@@ -54,7 +54,7 @@ fi
 echo ${MR_VERSION} > distr/meshlib-dev${MR_INSTALL_RES_DIR}/mr.version
 
 BASE_DIR=$(realpath $(dirname "$0")/..)
-REQUIREMENTS_FILE="${BASE_DIR}/requirements/ubuntu.txt"
+REQUIREMENTS_FILE="${BASE_DIR}/requirements/ubuntu-package.txt"
 # convert multi-line file to comma-separated string
 DEPENDS_LINE=$(cat ${REQUIREMENTS_FILE} | tr '\n' ',' | sed -e "s/,\s*$//" -e "s/,/, /g")
 

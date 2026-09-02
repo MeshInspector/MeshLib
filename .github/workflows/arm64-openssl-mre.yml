@@ -45,15 +45,37 @@ jobs:
           $crt += Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/bin/*/arm64/ucrt/ucrtbased.dll" -ErrorAction SilentlyContinue
           foreach ( $f in $crt ) { Copy-Item $f.FullName . -Force; Write-Host "  $($f.Name)" }
 
-      - name: Build the MRE, run it against release then debug OpenSSL
+      - name: Build the MRE and run it against the release OpenSSL
         shell: cmd
+        continue-on-error: true
         run: |
           call "%VC_PATH%\Common7\Tools\VsDevCmd.bat" -arch=arm64 -host_arch=arm64 -vcvars_ver=14.5 || exit /b 1
           cl /nologo /O2 /MD /W3 scripts\arm64_openssl_mre.c /I ossl\include /Fe:mre.exe /link /LIBPATH:ossl\lib libssl.lib libcrypto.lib ws2_32.lib crypt32.lib || exit /b 1
           copy ossl\bin\*.dll . >nul || exit /b 1
+          copy ossl\bin\*.pdb . >nul
           echo ==== MRE against RELEASE OpenSSL
           mre.exe
           echo MRE exit code: %errorlevel%
+
+      - name: Catch the bad call at function entry, where LR is still valid
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $cdb = Get-ChildItem "C:/Program Files (x86)/Windows Kits/10/Debuggers/arm64/cdb.exe" -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if ( $null -eq $cdb ) { Write-Host "cdb.exe not on this image"; exit 0 }
+          # Unwinding from the fault is hopeless: it happens in the prologue before x30 is
+          # saved, so every unwinder follows a clobbered LR. Break on entry instead, where
+          # LR still holds the real return address. `bu` defers resolution until libssl is
+          # loaded, and no -g so the loader breakpoint is honoured first.
+          $cmd = '.lines; bu libssl_3_arm64!tls_parse_all_extensions ".if (\x0==1) {.echo CAUGHT_BAD_CALL; r; ln \lr; kp; ub \lr L10; q} .else {.echo ok-call x0=; r \x0; gc}"; g; q'
+          $out = & $cdb.FullName -G -lines -y "$pwd" -c $cmd mre.exe 2>&1
+          $out | ForEach-Object { Write-Host $_ }
+
+      - name: Now run it against the debug OpenSSL
+        shell: cmd
+        continue-on-error: true
+        run: |
           copy ossl\debug\bin\libssl-3-arm64.dll . >nul || exit /b 1
           copy ossl\debug\bin\libcrypto-3-arm64.dll . >nul || exit /b 1
           echo ==== MRE against DEBUG OpenSSL

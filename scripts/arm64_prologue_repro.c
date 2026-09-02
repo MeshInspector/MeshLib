@@ -200,3 +200,135 @@ int v18( unsigned long long n, unsigned long long a, unsigned long long b, unsig
     sink( &local );
     return ( int )local;
 }
+
+/* ---- second reduction round: exactly one change from v7 each --------------
+ * v11..v17 all failed to emit a probe because they allocate the frame with a
+ * pre-indexed `stp ...,[sp,#-N]!`, which saves registers as part of frame setup.
+ * The defect needs the split form (bare `sub sp,sp,#0x60`, saves deferred), so
+ * these vary one ingredient at a time to find which one produces it.
+ * ------------------------------------------------------------------------- */
+
+/* v19: v7 without the trailing function-pointer loop. */
+int v19( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+            return 0;
+        g += a + b + c + d + e + f;
+        h ^= g + i;
+    }
+    return ( int )( ( g ^ h ) & 1 );
+}
+
+/* v20: v7 with a one-field struct instead of the padded double dereference. */
+typedef struct Def2
+{
+    int context;
+    int ( *final )( Count *, int, int );
+} Def2;
+
+extern const Def2 defs2[29];
+
+int v20( Count *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->n;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
+    const Def2 *dd;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !call1( i ) )
+            return 0;
+        g += a + b + c + d + e + f;
+        h ^= g + i;
+    }
+    if ( fin )
+    {
+        for ( i = 0, dd = defs2; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( ( g ^ h ) & 1 );
+}
+
+/* v21: v7 with a one-argument callee in the first loop. */
+int v21( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0, h = 0;
+    const Def *dd;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !call1( i ) )
+            return 0;
+        g += a + b + c + d + e + f;
+        h ^= g + i;
+    }
+    if ( fin )
+    {
+        for ( i = 0, dd = defs; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( ( g ^ h ) & 1 );
+}
+
+/* v22: v7 with one fewer value live across the calls. */
+int v22( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, g = 0, h = 0;
+    const Def *dd;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+            return 0;
+        g += a + b + c + d + e;
+        h ^= g + i;
+    }
+    if ( fin )
+    {
+        for ( i = 0, dd = defs; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( ( g ^ h ) & 1 );
+}
+
+/* v23: v7 without the second accumulator h. */
+int v23( Conn *s, int context, void *exts, void *x, unsigned long long chainidx, int fin )
+{
+    unsigned long long i, numexts = 29 + s->cert->meths_count;
+    unsigned long long a = ( unsigned long long )exts, b = ( unsigned long long )x;
+    unsigned long long c = chainidx, d = ( unsigned long long )context;
+    unsigned long long e = ( unsigned long long )fin, f = numexts, g = 0;
+    const Def *dd;
+
+    for ( i = 0; i < numexts; i++ )
+    {
+        if ( !parse_one( s, i, context, exts, x, chainidx ) )
+            return 0;
+        g += a + b + c + d + e + f + i;
+    }
+    if ( fin )
+    {
+        for ( i = 0, dd = defs; i < 29; i++, dd++ )
+            if ( ( dd->context & context ) != 0 && dd->final != 0 && !dd->final( s, context, 1 ) )
+                return 0;
+    }
+    return ( int )( g & 1 );
+}

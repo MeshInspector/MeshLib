@@ -111,15 +111,48 @@ RUN <<EOF
 EOF
 
 
+# emcc keys its system libraries and ports on the flag combination, and cmake's
+# first try_compile already links with the full set, so a cold cache makes every
+# job build libc & co and fetch the -sUSE_* ports before it can configure.
+# cmake/emscripten-cache-warmup derives the flags from the modules the real
+# build uses; Debug covers the variants try_compile picks without optimisation.
+FROM base AS warm
+
+COPY cmake /src/cmake
+
+RUN <<EOF
+    set -e
+    for combo in 0:0 1:0 0:1 ; do
+        single=${combo%%:*}
+        wasm64=${combo##*:}
+        for type in Release Debug ; do
+            emcmake cmake -G Ninja -S /src/cmake/emscripten-cache-warmup -B /tmp/warm \
+                -D CMAKE_BUILD_TYPE=${type} \
+                -D MR_EMSCRIPTEN=1 \
+                -D MR_EMSCRIPTEN_SINGLETHREAD=${single} \
+                -D MR_EMSCRIPTEN_WASM64=${wasm64}
+            cmake --build /tmp/warm
+            rm -rf /tmp/warm
+        done
+    done
+    # Only needed to build a variant that is not already cached: a port counts as
+    # up to date when its unpacked dir holds .emscripten_url, and cache/build is
+    # written only by a port's create(), which a cache hit skips.
+    find /emsdk/upstream/emscripten/cache/ports -maxdepth 1 -type f -delete
+    rm -rf /emsdk/upstream/emscripten/cache/build
+EOF
+
+
 FROM base
 
 COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/emscripten-wasm64
 
-# Only cache/ needs to be writable (emcc regenerates system libs there); a
-# whole-tree chmod copies up every file on containerd-overlayfs docker hosts.
-RUN chmod -R 777 /emsdk/upstream/emscripten/cache
+# Only cache/ needs to be writable (emcc regenerates system libs there); copying
+# it in with a mode avoids a whole-tree chmod, which copies up every file on
+# containerd-overlayfs docker hosts.
+COPY --from=warm --chmod=777 /emsdk/upstream/emscripten/cache /emsdk/upstream/emscripten/cache
 
 RUN useradd -u 8877 -m aws-user
 RUN useradd -u 1001 -m github-user

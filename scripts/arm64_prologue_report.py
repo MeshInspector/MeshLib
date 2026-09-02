@@ -1,11 +1,17 @@
-"""Print each function's prologue from a dumpbin /disasm listing and flag the
-defect: `bl __chkstk` reached before x30 is stored.
+"""Print each candidate's prologue from a dumpbin /disasm listing and flag the
+defect: `bl __chkstk` reached before the link register is saved.
+
+dumpbin prints the fp/lr aliases, not x29/x30, so match both spellings.
 
 Usage: python arm64_prologue_report.py repro.asm
 """
 
 import re
 import sys
+
+LR_SAVE = re.compile(r"\b(str|stp)\b.*\b(x30|lr)\b")
+LR_LOAD = re.compile(r"\b(ldr|ldp)\b.*\b(x30|lr)\b")
+CHKSTK = re.compile(r"chkstk|alloca_probe")
 
 
 def functions(lines):
@@ -22,15 +28,25 @@ def functions(lines):
         yield name, body
 
 
-def verdict(body):
-    """Walk the prologue; report which of __chkstk / x30-store comes first."""
-    for line in body[:40]:
+def analyse(body):
+    frame = ""
+    chkstk_at = lr_save_at = None
+    for i, line in enumerate(body):
         low = line.lower()
-        if "chkstk" in low or "alloca_probe" in low:
-            return "BAD  - bl __chkstk before x30 is saved"
-        if re.search(r"\b(str|stp)\b.*\bx30\b", low):
-            return "ok   - x30 saved first"
-    return "n/a  - neither in the first 40 instructions"
+        m = re.search(r"sub\s+sp,sp,#(0x[0-9a-f]+)", low)
+        if m and not frame:
+            frame = m.group(1)
+        if chkstk_at is None and CHKSTK.search(low):
+            chkstk_at = i
+        if lr_save_at is None and LR_SAVE.search(low):
+            lr_save_at = i
+    if chkstk_at is None:
+        return "no-probe", frame, chkstk_at, lr_save_at
+    if lr_save_at is None:
+        return "BAD (lr never saved)", frame, chkstk_at, lr_save_at
+    if chkstk_at < lr_save_at:
+        return "BAD (chkstk destroys lr first)", frame, chkstk_at, lr_save_at
+    return "ok", frame, chkstk_at, lr_save_at
 
 
 def main():
@@ -38,11 +54,19 @@ def main():
     for name, body in functions(lines):
         if not re.match(r"^v\d+$", name):
             continue
-        print("  %-4s %s" % (name, verdict(body)))
-        for line in body[:8]:
-            text = line.strip()
-            if text:
-                print("         " + text)
+        state, frame, chkstk_at, lr_save_at = analyse(body)
+        print(
+            "  %-4s %-32s frame=%-6s chkstk@%s lr-save@%s"
+            % (name, state, frame or "-", chkstk_at, lr_save_at)
+        )
+        if state.startswith("BAD"):
+            for i, line in enumerate(body):
+                text = line.strip()
+                keep = i < 6 or CHKSTK.search(text.lower()) or LR_SAVE.search(
+                    text.lower()
+                ) or LR_LOAD.search(text.lower()) or "ret" in text.lower()
+                if text and keep:
+                    print("         " + text)
     return 0
 
 

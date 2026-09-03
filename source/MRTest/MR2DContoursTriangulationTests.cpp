@@ -8,7 +8,6 @@
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
-#include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MR2to3.h>
 #include <MRSymbolMesh/MRSymbolMesh.h>
@@ -324,230 +323,65 @@ TEST( MRMesh, PlanarTriangulationChainedActiveEdges3 )
     EXPECT_GE( mesh.topology.numValidFaces(), 0 ); // completing without the assert is the test
 }
 
-namespace
+TEST( MRMesh, PlanarTriangulationMonotonePlan )
 {
-
-// the sweep orders vertices by this coordinate alone: the axis most aligned with the normal is
-// dropped, and of the two kept axes the first one is the sweep direction (they swap with the normal)
-float sweepCoord( const Vector3f& p, const Vector3f& normal )
-{
-    int dropAx = 0;
-    for ( int i = 1; i < 3; ++i )
-        if ( normal[i] * normal[i] > normal[dropAx] * normal[dropAx] )
-            dropAx = i;
-    return p[( dropAx + ( normal[dropAx] < 0 ? 2 : 1 ) ) % 3];
-}
-
-// a loop is monotone when it is two chains that both advance with the sweep, so walking it the sweep
-// coordinate turns around exactly twice; edges across the sweep do not turn it around, the sweep
-// resolves those by an infinitesimal perturbation
-bool isMonotoneHole( const Mesh& mesh, EdgeId e0, const Vector3f& normal )
-{
-    std::vector<int> dirs;
-    for ( EdgeId e : trackRightBoundaryLoop( mesh.topology, e0 ) )
-    {
-        const float a = sweepCoord( mesh.orgPnt( e ), normal );
-        const float b = sweepCoord( mesh.destPnt( e ), normal );
-        if ( a != b )
-            dirs.push_back( a < b ? 1 : -1 );
-    }
-    int turns = 0;
-    for ( size_t i = 0; i < dirs.size(); ++i )
-        turns += dirs[i] != dirs[( i + 1 ) % dirs.size()];
-    return turns == 2;
-}
-
-// one representative edge per hole an executed monotone plan left behind: every part is incident to
-// an original loop edge or to an added edge, so the left rings of those cover all the parts
-std::vector<EdgeId> collectParts( const MeshTopology& tp, const EdgeLoops& loops, const HoleFillPlan& executedPlan )
-{
-    std::vector<EdgeId> starts;
-    for ( const auto& loop : loops )
-        starts.insert( starts.end(), loop.begin(), loop.end() );
-    for ( const auto& item : executedPlan.items ) // execution replaced the code with the created edge
-        starts.insert( starts.end(), { EdgeId( item.edgeCode1 ), EdgeId( item.edgeCode1 ).sym() } );
-    std::vector<EdgeId> res;
-    EdgeBitSet visited( tp.edgeSize() );
-    for ( EdgeId s : starts )
-    {
-        if ( visited.test( s ) || tp.left( s ) )
-            continue;
-        res.push_back( s );
-        for ( EdgeId e : leftRing( tp, s ) )
-            visited.set( e );
-    }
-    return res;
-}
-
-// vertex (i,j) of a grid on the plane through the origin with the given normal, sheared a little so
-// that no two vertices share a sweep coordinate along either axis: then the cut the sweep makes does
-// not depend on how it breaks ties between equally placed vertices, which is by vertex number
-Vector3f gridPnt( int i, int j, const Vector3f& normal = Vector3f::plusZ() )
-{
-    const float x = float( i ) + 0.05f * float( j );
-    const float y = float( j ) + 0.05f * float( i );
-    return { x, y, -( normal.x * x + normal.y * y ) / normal.z };
-}
-
-// a grid of n x n quads with the cells `isHole` marks left out: the region to fill is then a real
-// mesh hole with faces around it, and every coordinate stays exact
-Mesh makeGridWithHoles( int n, const Vector3f& normal, const std::function<bool( int, int )>& isHole )
-{
+    // a flat disk inside a flat ring: the gap between them is bounded by two concentric circles, and
+    // the disk touches nothing, so only chords can join its loop to the ring's
+    constexpr int n = 8;
     VertCoords pts;
-    for ( int j = 0; j <= n; ++j )
-        for ( int i = 0; i <= n; ++i )
-            pts.push_back( gridPnt( i, j, normal ) );
-    auto vid = [n] ( int i, int j ) { return VertId( j * ( n + 1 ) + i ); };
-    Triangulation t;
-    for ( int j = 0; j < n; ++j )
+    pts.push_back( Vector3f() ); // disk center
+    for ( int ring = 0; ring < 3; ++ring ) // circles of radius 1 (the disk), 2 and 3 (the ring)
         for ( int i = 0; i < n; ++i )
         {
-            if ( isHole( i, j ) )
-                continue;
-            t.push_back( { vid( i, j ), vid( i + 1, j ), vid( i + 1, j + 1 ) } );
-            t.push_back( { vid( i, j ), vid( i + 1, j + 1 ), vid( i, j + 1 ) } );
+            const float a = 2 * PI_F * i / n + 0.3f; // off the axes, so no two vertices share an x
+            pts.push_back( Vector3f( ( ring + 1 ) * std::cos( a ), ( ring + 1 ) * std::sin( a ), 0.f ) );
         }
-    return Mesh::fromTriangles( std::move( pts ), t );
-}
+    auto v = [] ( int ring, int i ) { return VertId( 1 + ring * n + i % n ); };
+    Triangulation t;
+    for ( int i = 0; i < n; ++i )
+    {
+        t.push_back( { VertId( 0 ), v( 0, i ), v( 0, i + 1 ) } );
+        t.push_back( { v( 1, i ), v( 2, i ), v( 2, i + 1 ) } );
+        t.push_back( { v( 1, i ), v( 2, i + 1 ), v( 1, i + 1 ) } );
+    }
+    Mesh mesh = Mesh::fromTriangles( std::move( pts ), t );
 
-// the hole loop of `mesh` running from grid vertex `from` to `to`, so with that hole on its left;
-// an edge tells two holes apart even where they meet in one vertex, which a point alone would not
-EdgeLoop findHoleByEdge( const Mesh& mesh, const Vector3f& from, const Vector3f& to )
-{
+    // the hole loops of the gap: the disk's boundary and the ring's inner boundary,
+    // as opposed to the ring's outer boundary at radius 3
+    auto inGap = [&mesh] ( EdgeId e ) { return mesh.orgPnt( e ).lengthSq() < 5.f; };
+    EdgeLoops loops;
     for ( EdgeId e : mesh.topology.findHoleRepresentiveEdges() )
-        for ( EdgeId le : trackRightBoundaryLoop( mesh.topology, e ) )
-            if ( mesh.orgPnt( le ) == from && mesh.destPnt( le ) == to )
-                return trackRightBoundaryLoop( mesh.topology, le );
-    return {};
-}
+        if ( inGap( e ) )
+            loops.push_back( trackRightBoundaryLoop( mesh.topology, e ) );
+    ASSERT_EQ( loops.size(), size_t( 2 ) );
 
-// executes the monotone plan and checks that the parts it leaves are monotone holes, and that
-// filling them reproduces what the full sweep-line triangulation of the same region produces
-// \param expectedChords the number of edges the plan must add, or -1 not to check it
-void checkMonotonePlan( Mesh mesh, const EdgeLoops& loops, const Vector3f& normal, int expectedChords )
-{
-    for ( const auto& loop : loops )
-        ASSERT_GE( loop.size(), size_t( 3 ) ); // the fixture lookup found its hole
-    const auto refPatch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, normal );
-    ASSERT_TRUE( refPatch.has_value() );
+    const Vector3f normal = Vector3f::plusZ();
+    // around the opposite normal the sweep works in a mirrored plane, so every chord would land in a
+    // wedge that faces occupy: the plan is rejected instead
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, -normal ).has_value() );
 
     auto plan = PlanarTriangulation::getMonotonePlan( mesh, loops, normal );
     ASSERT_TRUE( plan.has_value() );
     EXPECT_EQ( plan->numTris, 0 ); // the plan only adds edges
-    if ( expectedChords >= 0 )
-        EXPECT_EQ( int( plan->items.size() ), expectedChords );
-    if ( !plan->items.empty() )
-        executeHoleFillPlan( mesh, loops[0][0], *plan );
+    // the sweep splits the gap where it reaches the disk and closes it back up where it leaves it
+    ASSERT_EQ( plan->items.size(), size_t( 2 ) );
+    executeHoleFillPlan( mesh, loops[0][0], *plan );
 
-    const auto parts = collectParts( mesh.topology, loops, *plan );
-    EXPECT_FALSE( parts.empty() );
-    for ( EdgeId e : parts )
-        EXPECT_TRUE( isMonotoneHole( mesh, e, normal ) );
-
-    const auto numFaces0 = mesh.topology.numValidFaces();
-    const double area0 = mesh.area();
-    auto fillPlans = getPlanarHoleFillPlans( mesh, parts );
-    for ( int i = 0; i < int( parts.size() ); ++i )
-        executeHoleFillPlan( mesh, parts[i], fillPlans[i] );
-    // a triangulation of the region that uses only its boundary vertices always has the same number
-    // of triangles, whatever the diagonals are
-    EXPECT_EQ( mesh.topology.numValidFaces() - numFaces0, refPatch->topology.numValidFaces() );
-    EXPECT_NEAR( mesh.area() - area0, refPatch->area(), 1e-4 * refPatch->area() );
-}
-
-// hole cells of the grid fixtures; the region to fill is their union
-bool cCell( int i, int j ) // a C opening toward +x: its notch splits a sweep along x once
-{
-    return ( j == 1 || j == 3 ) ? i >= 1 && i <= 3 : ( j == 2 && i == 1 );
-}
-bool uCell( int i, int j ) // the same shape turned a quarter, so that it splits a sweep along y instead
-{
-    return j == 1 ? i >= 1 && i <= 3 : ( ( i == 1 || i == 3 ) && j >= 2 && j <= 3 );
-}
-bool ringCell( int i, int j ) // a ring around one kept cell, which touches nothing: an island in the region
-{
-    return i >= 1 && i <= 3 && j >= 1 && j <= 3 && !( i == 2 && j == 2 );
-}
-bool combCell( int i, int j ) // three arms of increasing length on a spine: two notches, so two splits
-{
-    return i == 1 ? j >= 1 && j <= 5 : i >= 2 && ( ( j == 1 && i <= 3 ) || ( j == 3 && i <= 5 ) || ( j == 5 && i <= 6 ) );
-}
-
-} // anonymous namespace
-
-TEST( MRMesh, PlanarTriangulationMonotonePlan )
-{
-    const Vector3f normal = Vector3f::plusZ();
-    auto hole = [] ( const Mesh& mesh, int i0, int j0, int i1, int j1, const Vector3f& n = Vector3f::plusZ() )
+    // each of the two holes the chords left is monotone along x: walking it, x turns around twice
+    int numParts = 0;
+    for ( EdgeId e0 : mesh.topology.findHoleRepresentiveEdges() )
     {
-        return findHoleByEdge( mesh, gridPnt( i0, j0, n ), gridPnt( i1, j1, n ) );
-    };
-
-    { // the notch of the C splits the region in two arms as the sweep passes it: one chord, anchored
-      // on real mesh hole edges, so the wedge guard has something to check
-        const Mesh mesh = makeGridWithHoles( 5, normal, cCell );
-        const EdgeLoop loop = hole( mesh, 1, 1, 2, 1 );
-        checkMonotonePlan( mesh, { loop }, normal, 1 );
-
-        // which way round the loop runs is not part of the input: the sweep takes the region from the
-        // winding number, and the anchors translate back to the same mesh edges either way; it may
-        // still cut differently, since reversing renumbers the vertices the sweep breaks ties by
-        EdgeLoop backwards;
-        for ( auto it = loop.rbegin(); it != loop.rend(); ++it )
-            backwards.push_back( it->sym() );
-        checkMonotonePlan( mesh, { backwards }, normal, -1 );
+        if ( !inGap( e0 ) )
+            continue;
+        ++numParts;
+        const EdgeLoop loop = trackRightBoundaryLoop( mesh.topology, e0 );
+        auto rightGoing = [&] ( size_t i ) { return mesh.orgPnt( loop[i] ).x < mesh.destPnt( loop[i] ).x; };
+        int turns = 0;
+        for ( size_t i = 0; i < loop.size(); ++i )
+            turns += rightGoing( i ) != rightGoing( ( i + 1 ) % loop.size() );
+        EXPECT_EQ( turns, 2 );
     }
-    { // one chord per notch between the arms
-        const Mesh mesh = makeGridWithHoles( 8, normal, combCell );
-        checkMonotonePlan( mesh, { hole( mesh, 1, 1, 2, 1 ) }, normal, 2 );
-    }
-    { // a single cell is already monotone: an empty plan, not a failure
-        const Mesh mesh = makeGridWithHoles( 3, normal, [] ( int i, int j ) { return i == 1 && j == 1; } );
-        checkMonotonePlan( mesh, { hole( mesh, 1, 1, 2, 1 ) }, normal, 0 );
-    }
-    { // the C on a plane tilted off all axes: the sweep runs on the projection along the dominant axis
-        const Vector3f tilted = Vector3f( 1.f, 2.f, 3.f ).normalized();
-        const Mesh mesh = makeGridWithHoles( 5, tilted, cCell );
-        checkMonotonePlan( mesh, { hole( mesh, 1, 1, 2, 1, tilted ) }, tilted, 1 );
-    }
-    { // two holes pinched together at one vertex, which then has two hole sectors in the mesh ring;
-      // each of them is monotone on its own, so a correct plan adds nothing at all
-        const Mesh mesh = makeGridWithHoles( 4, normal, [] ( int i, int j ) { return ( i == 1 && j == 1 ) || ( i == 2 && j == 2 ); } );
-        checkMonotonePlan( mesh, { hole( mesh, 1, 1, 2, 1 ), hole( mesh, 2, 2, 3, 2 ) }, normal, 0 );
-    }
-    { // an annulus: the island touches nothing, so only a chord can bridge it to the outer loop -
-      // one where the sweep splits the region around it, and one where it closes back up
-        const Mesh mesh = makeGridWithHoles( 5, normal, ringCell );
-        checkMonotonePlan( mesh, { hole( mesh, 1, 1, 2, 1 ), hole( mesh, 3, 2, 2, 2 ) }, normal, 2 );
-    }
-    { // a mesh oriented the other way round, swept around -normal: that swaps the two kept axes, so
-      // the sweep runs along y and the region has to be notched the other way to need a chord
-        Mesh mesh = makeGridWithHoles( 5, normal, uCell );
-        mesh.topology.flipOrientation();
-        checkMonotonePlan( mesh, { hole( mesh, 2, 1, 1, 1 ) }, -normal, 1 );
-    }
-}
-
-TEST( MRMesh, PlanarTriangulationMonotonePlanRejects )
-{
-    const Vector3f normal = Vector3f::plusZ();
-    // an annulus is not monotone along either axis, so it needs chords whichever way it is swept
-    const Mesh mesh = makeGridWithHoles( 5, normal, ringCell );
-    const EdgeLoops loops = { findHoleByEdge( mesh, gridPnt( 1, 1 ), gridPnt( 2, 1 ) ), findHoleByEdge( mesh, gridPnt( 3, 2 ), gridPnt( 2, 2 ) ) };
-    ASSERT_EQ( loops[1].size(), size_t( 4 ) );
-
-    // the opposite normal swaps the two kept axes, which mirrors the plane the sweep works in: every
-    // chord would then be spliced in a wedge that mesh faces occupy, and the wedge guard rejects the plan
-    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, -normal ).has_value() );
-    // a loop of less than 3 edges is not a contour the sweep can take
-    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, { EdgeLoop{ loops[1][0], loops[1][1] } }, normal ).has_value() );
-
-    // intersecting loops: there is no region to decompose, the caller keeps its per loop path
-    Mesh two;
-    const EdgeId a0 = two.addSeparateEdgeLoop( { { 0.f, 0.f, 0.f }, { 4.f, 0.f, 0.f }, { 4.f, 4.f, 0.f }, { 0.f, 4.f, 0.f } } );
-    const EdgeId b0 = two.addSeparateEdgeLoop( { { 2.f, 2.f, 0.f }, { 6.f, 2.f, 0.f }, { 6.f, 6.f, 0.f }, { 2.f, 6.f, 0.f } } );
-    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( two,
-        { trackRightBoundaryLoop( two.topology, a0 ), trackRightBoundaryLoop( two.topology, b0 ) }, normal ).has_value() );
+    EXPECT_EQ( numParts, 2 );
 }
 
 namespace

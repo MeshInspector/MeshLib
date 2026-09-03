@@ -40,8 +40,6 @@ If you also have installed MeshLib in Nuget-for-Unity (which is a good idea to b
 
      * Click `Apply`.
 
-     Unity links some libraries of its own into the Wasm build (FreeType, libpng, zlib, lz4, libjpeg). The copies we ship are renamed (`*-mrml.a`, `mrml_` symbol prefix) so they don't conflict with Unity's, and no library needs to be unchecked.
-
   4. Uncheck the unused libraries:
 
      * If you used `.../singlethreaded/` libraries, then delete or disable the `.../multithreaded/` ones, or vice versa.

@@ -114,13 +114,17 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, co
  * to add to \p mesh to realize the split, each connecting the origins of two already existing edges
  * @param loops one closed EdgeLoop per boundary of one region (as produced by trackRightBoundaryLoop
  *        on a hole edge); each loop must have at least 3 edges. Which way round a loop runs does not
- *        matter: the region is taken from the winding number of the loops, not from their direction
+ *        matter: the region is taken from the winding number of the loops, not from their direction.
+ *        The loops are expected to bound real holes of \p mesh (faces on their far side) lying close to
+ *        one plane; on a strongly non-planar region sharing a vertex between two loops a chord may be
+ *        placed into the wrong wedge, as in \ref triangulateDisjointContours
  * @param normal the orientation the region is monotone around, see \ref triangulateDisjointContours
  * @return std::nullopt if the loops intersect or do not bound holes of \p mesh, so that the caller can
  *         fall back on filling every loop separately; otherwise a plan with numTris == 0, to run with
- *         \ref executeHoleFillPlan which then only adds edges and creates no faces.
- *         The plan is empty if the region is a single already monotone loop; an empty plan must not be
- *         executed, there is nothing to add
+ *         \ref executeHoleFillPlan, which then only adds edges and creates no faces (an empty plan,
+ *         returned when the region is already monotone, is a valid no-op).
+ *         A chord may still duplicate an off-loop mesh edge, so validate the plan with
+ *         \ref isFillingMultipleEdgeFree before executing it
  */
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 

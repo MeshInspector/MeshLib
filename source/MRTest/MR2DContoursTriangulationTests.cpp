@@ -348,11 +348,9 @@ TEST( MRMesh, PlanarTriangulationMonotonePlan )
 
     // the hole loops of the gap: the disk's boundary and the ring's inner boundary,
     // as opposed to the ring's outer boundary at radius 3
-    auto inGap = [&mesh] ( EdgeId e ) { return mesh.orgPnt( e ).lengthSq() < 5.f; };
-    EdgeLoops loops;
-    for ( EdgeId e : mesh.topology.findHoleRepresentiveEdges() )
-        if ( inGap( e ) )
-            loops.push_back( trackRightBoundaryLoop( mesh.topology, e ) );
+    auto inGap = [&mesh] ( const EdgeLoop& l ) { return mesh.orgPnt( l.front() ).lengthSq() < 5.f; };
+    EdgeLoops loops = findRightBoundary( mesh.topology );
+    std::erase_if( loops, [&] ( const EdgeLoop& l ) { return !inGap( l ); } );
     ASSERT_EQ( loops.size(), size_t( 2 ) );
 
     const Vector3f normal = Vector3f::plusZ();
@@ -368,20 +366,17 @@ TEST( MRMesh, PlanarTriangulationMonotonePlan )
     executeHoleFillPlan( mesh, loops[0][0], *plan );
 
     // each of the two holes the chords left is monotone along x: walking it, x turns around twice
-    int numParts = 0;
-    for ( EdgeId e0 : mesh.topology.findHoleRepresentiveEdges() )
+    EdgeLoops parts = findRightBoundary( mesh.topology );
+    std::erase_if( parts, [&] ( const EdgeLoop& l ) { return !inGap( l ); } );
+    for ( const EdgeLoop& loop : parts )
     {
-        if ( !inGap( e0 ) )
-            continue;
-        ++numParts;
-        const EdgeLoop loop = trackRightBoundaryLoop( mesh.topology, e0 );
         auto rightGoing = [&] ( size_t i ) { return mesh.orgPnt( loop[i] ).x < mesh.destPnt( loop[i] ).x; };
         int turns = 0;
         for ( size_t i = 0; i < loop.size(); ++i )
             turns += rightGoing( i ) != rightGoing( ( i + 1 ) % loop.size() );
         EXPECT_EQ( turns, 2 );
     }
-    EXPECT_EQ( numParts, 2 );
+    EXPECT_EQ( parts.size(), size_t( 2 ) );
 }
 
 namespace

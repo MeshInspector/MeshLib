@@ -168,52 +168,6 @@ jobs:
           extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', env.MSYS2_PKGS)) }}
           msys2-env: ${{ env.MSYS2_ENV }}
 
-      - name: Wait for C bindings
-        if: ${{ matrix.build_system == 'MSBuild' && ( inputs.mrbind_c || env.BUILD_C_SHARP == 'true' ) }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ matrix.build_system == 'MSBuild' && ( inputs.mrbind_c || env.BUILD_C_SHARP == 'true' ) }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ matrix.build_system == 'MSBuild' && ( inputs.mrbind_c || env.BUILD_C_SHARP == 'true' ) }}
-        run: |
-          rm -r -force source/MeshLibC2
-          move MeshLib/CbindingsTmp/MeshLibC2 source
-          if ( $env:CUDA_VERSION ) {
-            rm -r -force source/MeshLibC2Cuda
-            move MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          } else {
-            # No Cuda toolkit, so MRCuda is not built and the generated Cuda bindings cannot
-            # link. Keep this project's CMakeLists and stub its sources, as macOS does; see
-            # scripts/mrbind/cuda_placeholder_generated_c/README.md
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/include source/MeshLibC2Cuda
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
-          }
-
-        # This consumes the JSON created by generating the C bindings.
-      - name: Generate C# bindings
-        if: ${{ env.BUILD_C_SHARP == 'true' }}
-        shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64
-        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
-        # Note `|| exit /b 1` after each command: cmd.exe does not stop on a failed
-        #   command, so without these a generate_win.bat failure would be masked
-        #   by the following dotnet build (see the Build step's note below).
-        # `CSHARP_STATIC_DLLIMPORT=1` is used to build the version of the bindings that's suitable for use in Wasm in Unity.
-        run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 || exit /b 1
-          dotnet build examples/c-sharp-examples -c ${{matrix.config}} -p:Platform=%MSBUILD_PLATFORM% -p:MeshLibArch=%MR_ARCH% || exit /b 1
-
       - name: Build
         shell: cmd
         env:
@@ -249,6 +203,55 @@ jobs:
         run: |
           & "$Env:GITHUB_WORKSPACE\scripts\diagnostics\windows-pch-sizes.ps1"
 
+      # Both build systems wait here rather than before the Build step, so the main build
+      # overlaps with generate-c-bindings: MeshLib.sln carries neither the C nor the C#
+      # bindings projects, and the CMake build configures its C bindings out until now.
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
+
+      - name: Download C bindings
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        uses: actions/download-artifact@v8
+        with:
+          name: CBindings
+          path: MeshLib/CbindingsTmp
+
+      - name: Prepare C bindings folders
+        if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
+        run: |
+          rm -r -force source/MeshLibC2
+          move MeshLib/CbindingsTmp/MeshLibC2 source
+          if ( $env:CUDA_VERSION ) {
+            rm -r -force source/MeshLibC2Cuda
+            move MeshLib/CbindingsTmp/MeshLibC2Cuda source
+          } else {
+            # No Cuda toolkit, so MRCuda is not built and the generated Cuda bindings cannot
+            # link. Keep this project's CMakeLists and stub its sources, as macOS does; see
+            # scripts/mrbind/cuda_placeholder_generated_c/README.md
+            cp -R scripts/mrbind/cuda_placeholder_generated_c/include source/MeshLibC2Cuda
+            cp -R scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
+          }
+
+        # This consumes the JSON created by generating the C bindings.
+      - name: Generate C# bindings
+        if: ${{ env.BUILD_C_SHARP == 'true' }}
+        shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
+        # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
+        # Note `|| exit /b 1` after each command: cmd.exe does not stop on a failed
+        #   command, so without these a generate_win.bat failure would be masked
+        #   by the following dotnet build (see the Build step's note above).
+        # `CSHARP_STATIC_DLLIMPORT=1` is used to build the version of the bindings that's suitable for use in Wasm in Unity.
+        run: |
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=csharp CSHARP_MODE=${{matrix.config}} CSHARP_STATIC_DLLIMPORT=1 || exit /b 1
+          dotnet build examples/c-sharp-examples -c ${{matrix.config}} -p:Platform=%MSBUILD_PLATFORM% -p:MeshLibArch=%MR_ARCH% || exit /b 1
+
       - name: Build C bindings with MSBuild
         if: ${{ inputs.mrbind_c && matrix.build_system == 'MSBuild' }}
         shell: cmd
@@ -266,38 +269,6 @@ jobs:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
         run: msbuild -m source\MeshLibC2Cuda\MeshLibC2Cuda.vcxproj -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:SolutionDir=%CD%\source\ -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON
-
-      # The CMake legs wait here instead of before the Build step above, so that the main
-      # build overlaps with generate-c-bindings. The MSBuild legs cannot: MeshLib.sln
-      # compiles the C# bindings generated from this same artifact.
-      - name: Wait for C bindings
-        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
-      - name: Download C bindings
-        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: CBindings
-          path: MeshLib/CbindingsTmp
-
-      - name: Prepare C bindings folders
-        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
-        run: |
-          rm -r -force source/MeshLibC2
-          move MeshLib/CbindingsTmp/MeshLibC2 source
-          if ( $env:CUDA_VERSION ) {
-            rm -r -force source/MeshLibC2Cuda
-            move MeshLib/CbindingsTmp/MeshLibC2Cuda source
-          } else {
-            # No Cuda toolkit, so MRCuda is not built and the generated Cuda bindings cannot
-            # link. Keep this project's CMakeLists and stub its sources, as macOS does; see
-            # scripts/mrbind/cuda_placeholder_generated_c/README.md
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/include source/MeshLibC2Cuda
-            cp -R scripts/mrbind/cuda_placeholder_generated_c/src source/MeshLibC2Cuda
-          }
 
       - name: Build C bindings with CMake
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}

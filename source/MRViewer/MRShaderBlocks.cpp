@@ -22,11 +22,18 @@ std::string getPickerFragmentShader( bool points, bool cornerMode )
   out highp uvec4 color;
 )";
 
+    // outside corner mode the id arrives in a flat integer varying: gl_PrimitiveID came back
+    // as garbage under llvmpipe 21.1.8 / Mesa 26.0.8. Declared only where read, so the pickers
+    // that stay in corner mode keep linking against vertex shaders without it.
     const std::string primId =
         cornerMode ? R"(
     uint primitiveId = ( uint(primitiveIdf1) << 20u ) + uint(primitiveIdf0);
 )" : R"(
-    uint primitiveId = uint(gl_PrimitiveID);
+    uint primitiveId = primitiveIdFlat;
+)";
+
+    const std::string idDecl = cornerMode ? "" : R"(
+  flat in uint primitiveIdFlat;
 )";
 
     const std::string tail = R"(
@@ -39,6 +46,7 @@ std::string getPickerFragmentShader( bool points, bool cornerMode )
 
     return
         head +
+        idDecl +
         getShaderMainBeginBlock( false ) +
         ( points ? getFragmentShaderPointSizeBlock() : R"()" ) +
         getFragmentShaderClippingBlock() +

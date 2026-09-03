@@ -182,7 +182,14 @@ void GLStaticHolder::createShader_( ShaderType type )
   out vec3 world_pos;
   out float primitiveIdf0;
   out float primitiveIdf1;
-
+)"
+#ifndef __EMSCRIPTEN__
+            // desktop GL has integer varyings, so the id needs no float round-trip
+            R"(
+  flat out uint primitiveIdFlat;
+)"
+#endif
+            R"(
   void main()
   {
     world_pos = vec3(model*vec4 (position, 1.0));
@@ -190,6 +197,13 @@ void GLStaticHolder::createShader_( ShaderType type )
     uint primId = uint(gl_VertexID) / primBucketSize;
     primitiveIdf1 = float( uint( primId >> 20u ) ) + 0.5;
     primitiveIdf0 = float( primId % uint( 1u << 20u ) ) + 0.5;
+)"
+#ifndef __EMSCRIPTEN__
+            R"(
+    primitiveIdFlat = primId;
+)"
+#endif
+            R"(
     gl_PointSize = pointSize;
   }
 )";

@@ -1,3 +1,5 @@
-numpy>=1.19.0
-pytest>=7.1.2
+numpy==2.5.2; python_version >= "3.12"
+numpy>=1.19.0; python_version < "3.12"
+pytest==9.1.1; python_version >= "3.10"
+pytest>=7.1.2; python_version < "3.10"
 pytest-check==2.3.1

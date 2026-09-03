@@ -469,6 +469,7 @@ public:
         // scratch maps of initMeshByLoops_()
         UndirectedEdgeHashMap in2p;
         WholeEdgeMap p2inCache;
+        DeloneFlipsCache deloneCache; // candidate sets of the Delone flips in triangulate()
     };
 
 private:
@@ -721,7 +722,7 @@ void SweepLineQueue::triangulate()
     } );
     // Delone flips could cross a contour edge between two inside regions and smear the face winding map
     if ( !params_.needOutline && !params_.outFaceWinding )
-        makeDeloneEdgeFlips( cache_.tp, cache_.pointsCache, {}, 300 );
+        makeDeloneEdgeFlips( cache_.tp, cache_.pointsCache, { .cache = &cache_.deloneCache }, 300 );
 }
 
 void SweepLineQueue::setupStartVertices_()

@@ -211,8 +211,20 @@ int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const
         return 0;
     MR_TIMER;
 
-    UndirectedEdgeBitSet flipCandidates( topology.undirectedEdgeSize() );
-    UndirectedEdgeBitSet nextFlipCandidates( topology.undirectedEdgeSize(), true );
+    // the candidate sets come from the caller's cache when it has one (keeping their capacity),
+    // so a caller flipping many small meshes one by one does not allocate them every time
+    DeloneFlipsCache localCache;
+    DeloneFlipsCache& cache = settings.cache ? *settings.cache : localCache;
+    auto& flipCandidates = cache.flipCandidates;
+    auto& nextFlipCandidates = cache.nextFlipCandidates;
+    flipCandidates.clear();
+    flipCandidates.resize( topology.undirectedEdgeSize() );
+    nextFlipCandidates.clear();
+    nextFlipCandidates.resize( topology.undirectedEdgeSize(), true );
+
+    // below this size the parallel scan spends more on entering the task arena than on the checks,
+    // and it only sets bits, so scanning the candidates right here gives the same set
+    constexpr size_t cMinParallelEdges = 256;
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )
@@ -221,11 +233,18 @@ int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const
             return flipsDone;
 
         flipCandidates.reset();
-        BitSetParallelFor( nextFlipCandidates, [&] ( UndirectedEdgeId e )
+        auto checkCandidate = [&] ( UndirectedEdgeId e )
         {
             if ( !checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
                 flipCandidates.set( e );
-        } );
+        };
+        if ( nextFlipCandidates.size() < cMinParallelEdges )
+        {
+            for ( UndirectedEdgeId e : nextFlipCandidates )
+                checkCandidate( e );
+        }
+        else
+            BitSetParallelFor( nextFlipCandidates, checkCandidate );
         nextFlipCandidates.reset();
         int flipsDoneBeforeThisIter = flipsDone;
         for ( UndirectedEdgeId e : flipCandidates )

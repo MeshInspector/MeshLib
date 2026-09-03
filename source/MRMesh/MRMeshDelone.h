@@ -1,11 +1,20 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRBitSet.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
 
 namespace MR
 {
+
+/// the buffers makeDeloneEdgeFlips grows on every call; a caller running it many times on small meshes
+/// (e.g. one hole patch after another) keeps one instance between the calls to allocate them just once
+struct DeloneFlipsCache
+{
+    UndirectedEdgeBitSet flipCandidates;
+    UndirectedEdgeBitSet nextFlipCandidates;
+};
 
 struct DeloneSettings
 {
@@ -27,6 +36,9 @@ struct DeloneSettings
 
     /// Only edges with origin or destination in this set before or after flip can be flipped
     const VertBitSet* vertRegion = nullptr;
+
+    /// optional buffers reused between calls, see DeloneFlipsCache
+    DeloneFlipsCache* cache = nullptr;
 };
 
 /// \defgroup MeshDeloneGroup Mesh Delone

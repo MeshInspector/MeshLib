@@ -52,8 +52,7 @@ COPY . .
 
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
-# build-test-emscripten-c-bindings.yml builds with this off, and emsdk
-# 3.1.38 has no mimalloc at all; the cache warm-up has to match.
+# emsdk 3.1.38 has no mimalloc at all
 ENV MR_EMSCRIPTEN_MIMALLOC=OFF
 
 # 32-bit multi-threaded
@@ -72,12 +71,15 @@ RUN <<EOF
     ./scripts/build_thirdparty.sh
     ./scripts/devops/warmup_wasm_cache.sh
     ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single
-    # Only needed to build a variant that is not already cached: a port counts as
-    # up to date when its unpacked dir holds .emscripten_url, and cache/build is
-    # written only by a port's create(), which a cache hit skips.
+    rm -rf bin include lib share thirdparty_build
+EOF
+
+
+# cleanup extra files from cache
+RUN <<EOF
+    set -e
     find /emsdk/upstream/emscripten/cache/ports -maxdepth 1 -type f -delete
     rm -rf /emsdk/upstream/emscripten/cache/build
-    rm -rf bin include lib share thirdparty_build
 EOF
 
 

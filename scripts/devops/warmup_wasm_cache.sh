@@ -1,31 +1,16 @@
 #!/bin/bash
 
-# Warms emcc's cache for the Emscripten configuration currently selected by
-# MR_EMSCRIPTEN_SINGLE / MR_EMSCRIPTEN_WASM64, so that no build has to generate
-# system libraries or download the -sUSE_* ports inside cmake's first
-# try_compile. Run it right after scripts/build_thirdparty.sh, which selects the
-# same configuration.
-#
-# The flags are not repeated here: the stub below includes DefaultOptions and
-# ConfigureEmscripten, the modules MeshLib itself includes, so it follows them.
-# Release covers what the build links; Debug covers what try_compile links,
-# which is unoptimised and so selects the assertions-enabled variants.
+# Warms emcc's cache so that no build generates system libraries or downloads
+# the -sUSE_* ports inside cmake's first try_compile. Run right after
+# scripts/build_thirdparty.sh, whose configuration it reuses.
 
 set -eo pipefail
-
-SCRIPT_DIR="$(dirname "$(realpath "$0")")"
-MESHLIB_ROOT="$(realpath "${SCRIPT_DIR}/../..")"
-
-. "${SCRIPT_DIR}/../ask_emscripten_mode.src"
-
-if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
-  echo "Not an Emscripten build, nothing to warm up"
-  exit 0
-fi
 
 WARMUP_DIR="$(mktemp -d)"
 trap 'rm -rf "${WARMUP_DIR}"' EXIT
 
+# The flags are not repeated here: this stub includes the same modules MeshLib's
+# own CMakeLists does, so it follows them.
 cat > "${WARMUP_DIR}/CMakeLists.txt" <<'EOF'
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
@@ -47,16 +32,20 @@ cat > "${WARMUP_DIR}/main.cpp" <<'EOF'
 int main() { return 0; }
 EOF
 
+MESHLIB_ROOT="$(realpath "$(dirname "$(realpath "$0")")/../..")"
+
 WARMUP_CMAKE_OPTIONS="\
   -D CMAKE_MODULE_PATH=${MESHLIB_ROOT}/cmake/Modules \
   -D MR_EMSCRIPTEN=1 \
-  -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
-  -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
+  -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLE:-OFF} \
+  -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64:-OFF} \
 "
 if [ -n "${MR_EMSCRIPTEN_MIMALLOC}" ] ; then
   WARMUP_CMAKE_OPTIONS="${WARMUP_CMAKE_OPTIONS} -D MR_EMSCRIPTEN_MIMALLOC=${MR_EMSCRIPTEN_MIMALLOC}"
 fi
 
+# Release is what the build links, Debug what try_compile links: it links
+# without optimisation and so selects the assertions-enabled variants.
 for WARMUP_CONFIG in Release Debug ; do
   emcmake cmake -G Ninja -S "${WARMUP_DIR}" -B "${WARMUP_DIR}/build" \
     -D CMAKE_BUILD_TYPE=${WARMUP_CONFIG} ${WARMUP_CMAKE_OPTIONS}

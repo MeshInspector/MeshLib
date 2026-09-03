@@ -43,8 +43,9 @@ TEST( MRMesh, InterpolateScalarsSmoothly )
     // by symmetry the values on the equator are in the middle
     for ( auto v : region )
     {
-        if ( std::abs( sphere.points[v].z ) < 1e-5f )
-            EXPECT_NEAR( field[v], 0.5f, 1e-5f );
+        if ( std::abs( sphere.points[v].z ) >= 1e-5f )
+            continue;
+        EXPECT_NEAR( field[v], 0.5f, 1e-5f );
     }
 }
 

@@ -119,10 +119,12 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, co
  *        one plane; on a strongly non-planar region sharing a vertex between two loops a chord may be
  *        placed into the wrong wedge, as in \ref triangulateDisjointContours
  * @param normal the orientation the region is monotone around, see \ref triangulateDisjointContours
- * @return std::nullopt if the loops intersect or do not bound holes of \p mesh, so that the caller can
- *         fall back on filling every loop separately; otherwise a plan with numTris == 0, to run with
- *         \ref executeHoleFillPlan, which then only adds edges and creates no faces (an empty plan,
- *         returned when the region is already monotone, is a valid no-op).
+ * @return std::nullopt if the loops intersect, or if realizing the split would place a chord into a
+ *         face of \p mesh instead of a hole (so the loops do not bound a region of it), so that the
+ *         caller can fall back on filling every loop separately. A region that needs no chord always
+ *         returns a valued plan, even should the loops not bound a hole. Otherwise a plan with
+ *         numTris == 0, to run with \ref executeHoleFillPlan, which then only adds edges and creates no
+ *         faces (an empty plan, returned when the region is already monotone, is a valid no-op).
  *         A chord may still duplicate an off-loop mesh edge, so validate the plan with
  *         \ref isFillingMultipleEdgeFree before executing it
  */

@@ -78,7 +78,7 @@ if ($dumpbin) {
     # original three plus the Python-embedding chain that runs in MRTest.exe
     # but not in MeshViewer.exe (so failures there are invisible to the
     # current Start-and-Exit smoke test).
-    foreach ($target in 'MeshViewer.exe','MRMesh.dll','MRTest.exe',
+    foreach ($target in 'MeshViewer.exe','MRMesh.dll','MRTest.exe','MRTestDiagnosticsPython.exe',
                         'python312.dll','python3.dll',
                         'MREmbeddedPython.dll','MRPython.dll',
                         'pybind11nonlimitedapi_stubs.dll') {

@@ -17,6 +17,9 @@ IGNORED_PROJECTS = {
     # auto-generated bindings
     "MeshLibC2",
     "MeshLibC2Cuda",
+    # single-source executables declared beside MRTest.vcxproj
+    "MRTestDiagnostics",
+    "MRTestDiagnosticsPython",
 }
 
 IGNORED_FILENAMES = {
@@ -27,6 +30,9 @@ IGNORED_FILENAMES = {
     "mrdragdropcocoahandler.h",
     "mrfiledialogcocoa.h",
     "mrtouchpadcocoahandler.h",
+    # compiled by their own vcxproj beside MRTest.vcxproj
+    "mrtestdiagnostics.cpp",
+    "mrtestdiagnosticspython.cpp",
 }
 
 

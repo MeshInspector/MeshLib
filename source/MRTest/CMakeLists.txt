@@ -1,8 +1,13 @@
 project(MRTest CXX)
 
 file(GLOB SOURCES "*.cpp")
+list(REMOVE_ITEM SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/MRTestDiagnostics.cpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/MRTestDiagnosticsPython.cpp"
+)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(MRTestDiagnostics MRTestDiagnostics.cpp)
 
 find_package(GTest REQUIRED)
 IF(NOT EMSCRIPTEN)
@@ -14,8 +19,8 @@ IF(NOT EMSCRIPTEN)
       MRSymbolMesh
       cpr::cpr
       GTest::gtest
-      ${CMAKE_DL_LIBS}
   )
+  target_link_libraries(MRTestDiagnostics PRIVATE MRViewer)
 ELSE()
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --emrun")
@@ -26,7 +31,12 @@ ELSE()
       -Wl,--no-whole-archive
       MRSymbolMesh
       GTest::gtest
-      ${CMAKE_DL_LIBS}
+  )
+  target_link_libraries(MRTestDiagnostics
+    PRIVATE
+      -Wl,--whole-archive
+      MRViewer
+      -Wl,--no-whole-archive
   )
 ENDIF()
 
@@ -47,17 +57,22 @@ ELSE()
 ENDIF()
 
 IF(MESHLIB_PYTHON_SUPPORT)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MREmbeddedPython
+  add_executable(MRTestDiagnosticsPython MRTestDiagnosticsPython.cpp)
+  target_link_libraries(MRTestDiagnosticsPython PRIVATE
+    MRMesh
     MRPython
+    MREmbeddedPython
+    ${CMAKE_DL_LIBS}
   )
   IF(NOT WIN32)
-    target_link_libraries(${PROJECT_NAME} PRIVATE Python::Python)
+    target_link_libraries(MRTestDiagnosticsPython PRIVATE Python::Python)
   ENDIF()
-ELSE()
-  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_PYTHON)
+  IF(MR_PCH)
+    target_precompile_headers(MRTestDiagnosticsPython REUSE_FROM MRPch)
+  ENDIF()
 ENDIF()
 
 IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(MRTestDiagnostics REUSE_FROM MRPch)
 ENDIF()

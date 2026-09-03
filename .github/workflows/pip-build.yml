@@ -344,6 +344,14 @@ jobs:
         with:
           build-bin-dir: ./build/Release/bin
 
+      - name: Diagnostics
+        timeout-minutes: 3
+        run: build/Release/bin/MRTestDiagnostics
+
+      - name: Embedded Python Diagnostics
+        timeout-minutes: 3
+        run: build/Release/bin/MRTestDiagnosticsPython
+
       - name: Unit Tests
         timeout-minutes: 10
         run: build/Release/bin/MRTest
@@ -567,6 +575,14 @@ jobs:
         with:
           build-bin-dir: source\${{ matrix.platform }}\Release
 
+      - name: Diagnostics
+        timeout-minutes: 3
+        run: source\${{ matrix.platform }}\Release\MRTestDiagnostics.exe
+
+      - name: Embedded Python Diagnostics
+        timeout-minutes: 3
+        run: source\${{ matrix.platform }}\Release\MRTestDiagnosticsPython.exe
+
       - name: Unit Tests
         timeout-minutes: 10
         run: source\${{ matrix.platform }}\Release\MRTest.exe
@@ -697,6 +713,14 @@ jobs:
         uses: ./.github/actions/verify-meshlib-python-import
         with:
           build-bin-dir: ./build/Release/bin
+
+      - name: Diagnostics
+        timeout-minutes: 3
+        run: build/Release/bin/MRTestDiagnostics
+
+      - name: Embedded Python Diagnostics
+        timeout-minutes: 3
+        run: build/Release/bin/MRTestDiagnosticsPython
 
       - name: Unit Tests
         timeout-minutes: 10

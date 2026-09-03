@@ -134,12 +134,6 @@
     <ClCompile Include="MRMimallocRedirectTests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
-      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\MREmbeddedPython\MREmbeddedPython.vcxproj">
-      <Project>{e0202297-edb2-4cdc-9cd0-8921eff08da0}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
       <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>
     </ProjectReference>
@@ -148,9 +142,6 @@
     </ProjectReference>
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
-    </ProjectReference>
-    <ProjectReference Include="..\MRPython\MRPython.vcxproj">
-      <Project>{90bc6971-76ca-4ecd-92e0-585fe3bd6672}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRSymbolMesh\MRSymbolMesh.vcxproj">
       <Project>{eaa47dfb-ecea-4d46-90be-718b190f06c4}</Project>

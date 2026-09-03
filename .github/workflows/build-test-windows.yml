@@ -315,6 +315,15 @@ jobs:
         with:
           build-bin-dir: source\${{ env.MR_ARCH }}\${{ matrix.config }}
 
+      - name: Diagnostics
+        timeout-minutes: 3
+        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTestDiagnostics.exe
+
+      - name: Embedded Python Diagnostics
+        if: ${{ inputs.mrbind && matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
+        timeout-minutes: 3
+        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTestDiagnosticsPython.exe
+
       - name: Unit Tests
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'

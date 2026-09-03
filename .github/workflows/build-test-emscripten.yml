@@ -325,6 +325,17 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.run_id }}
 
+      - name: Diagnostics
+        timeout-minutes: 3
+        working-directory: mrtest-bundle
+        run: |
+          python3 emrun.py \
+            --browser=/usr/bin/firefox \
+            --browser-args="--headless" \
+            --safe-firefox-profile \
+            --kill-exit \
+            ./MRTestDiagnostics.html
+
       - name: Unit Tests
         timeout-minutes: 5
         working-directory: mrtest-bundle

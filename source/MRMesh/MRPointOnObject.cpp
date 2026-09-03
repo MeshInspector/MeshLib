@@ -22,6 +22,7 @@ PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointO
         {
             spdlog::warn( "pointOnObjectToPickedPoint: not a valid mesh pick: face={}, faceSize={}",
                 int( pos.face ), mesh ? mesh->topology.faceSize() : 0 );
+            assert( false );
             return {};
         }
         return mesh->toTriPoint( pos );
@@ -34,6 +35,7 @@ PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointO
         {
             spdlog::warn( "pointOnObjectToPickedPoint: not a valid point pick: vert={}, numPoints={}",
                 int( pos.vert ), cloud ? cloud->points.size() : 0 );
+            assert( false );
             return {};
         }
         return pos.vert;
@@ -47,6 +49,7 @@ PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointO
         {
             spdlog::warn( "pointOnObjectToPickedPoint: not a valid polyline pick: uedge={}, edgeSize={}",
                 int( pos.uedge ), polyline ? polyline->topology.edgeSize() : 0 );
+            assert( false );
             return {};
         }
         return polyline->toEdgePoint( e, pos.point );

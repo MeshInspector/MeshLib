@@ -74,7 +74,6 @@ RUN <<EOF
     rm -rf bin include lib share thirdparty_build
 EOF
 
-
 # cleanup extra files from cache
 RUN <<EOF
     set -e

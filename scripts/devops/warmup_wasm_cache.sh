@@ -9,8 +9,6 @@ set -eo pipefail
 WARMUP_DIR="$(mktemp -d)"
 trap 'rm -rf "${WARMUP_DIR}"' EXIT
 
-# The flags are not repeated here: this stub includes the same modules MeshLib's
-# own CMakeLists does, so it follows them.
 cat > "${WARMUP_DIR}/CMakeLists.txt" <<'EOF'
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 

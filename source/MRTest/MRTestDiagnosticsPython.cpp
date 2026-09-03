@@ -1,8 +1,9 @@
-#include "MRMesh/MRLog.h"
+#include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRPython/MRPython.h"
 #include "MREmbeddedPython/MREmbeddedPython.h"
 #include "MRPch/MRSpdlog.h"
+#include <cstdlib>
 
 #ifdef _WIN32
 #include "MRPch/MRWinapi.h"

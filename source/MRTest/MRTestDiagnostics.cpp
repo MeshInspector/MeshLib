@@ -1,4 +1,4 @@
-#include "MRMesh/MRLog.h"
+#include "MRMesh/MRSystem.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRJson.h"

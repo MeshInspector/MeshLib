@@ -594,31 +594,6 @@ endif
 
 ifneq ($(TARGET),csharp) # Stuff below is for all languages except C#. C# logic is at the bottom of this makefile.
 
-# Dependency sources we parse MeshLib headers against. `thirdparty/fetch` downloads them at the
-# versions pinned in `thirdparty/package-lock.cmake` and writes `SRC_<name>=<path>` lines, which
-# make re-reads after remaking the include below. Nothing here is built.
-FETCH_PACKAGES := eigen
-ifneq ($(IS_WINDOWS),)
-FETCH_PACKAGES += parallel-hashmap
-endif
-ifneq ($(TARGETING_EMSCRIPTEN),)
-FETCH_PACKAGES += expected spdlog parallel-hashmap onetbb jsoncpp googletest openvdb
-endif
-
-# Both the sources and the CMake scratch have to stay out of `$(TEMP_OUTPUT_DIR)`: for TARGET=c
-# that is `source/MeshLibC2/temp`, which ships whole as the CBindings artifact and is fed to
-# Doxygen. The download location defaults to the one scripts/build_thirdparty.sh uses, so a
-# checkout that built the thirdparty libs already has these sources.
-CPM_SOURCE_CACHE ?= $(abspath $(makefile_dir)../../thirdparty_sources)
-THIRDPARTY_FETCH_DIR := $(makefile_dir)../../build/thirdparty_fetch
-THIRDPARTY_SOURCES_MK := $(THIRDPARTY_FETCH_DIR)/thirdparty_sources.mk
-$(THIRDPARTY_SOURCES_MK): $(makefile_dir)../../thirdparty/package-lock.cmake
-	cmake -S $(makefile_dir)../../thirdparty/fetch -B $(THIRDPARTY_FETCH_DIR) \
-		-D CPM_SOURCE_CACHE=$(CPM_SOURCE_CACHE) \
-		-D MESHLIB_FETCH_PACKAGES="$(subst $(space),;,$(sort $(FETCH_PACKAGES)))" \
-		-D MESHLIB_FETCH_OUTPUT=$(abspath $@)
-include $(THIRDPARTY_SOURCES_MK)
-
 INPUT_GLOBS := *.h
 
 ifeq ($(TARGET),python)
@@ -648,7 +623,7 @@ ifneq ($(DEPS_INCLUDE_DIR),)
 COMPILER_FLAGS += -I$(DEPS_INCLUDE_DIR)/eigen3
 endif
 # TODO: use system Eigen
-COMPILER_FLAGS += -isystem $(SRC_eigen)
+COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt)
 COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
@@ -691,19 +666,19 @@ COMPILER_FLAGS_LIBCLANG += -stdlib=libstdc++ $(default_include_paths)
 else
 COMPILER_FLAGS_LIBCLANG += --sysroot=$(call quote,$(EMSCRIPTEN_SYSROOT))
 COMPILER_FLAGS_LIBCLANG += -isystem $(call quote,$(EMSCRIPTEN_SYSROOT)/include/compat)# Mhm.
-COMPILER_FLAGS_LIBCLANG += -isystem $(SRC_expected)/include
-COMPILER_FLAGS_LIBCLANG += -isystem $(SRC_spdlog)/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/expected/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/spdlog/include
 
 #EMSCRIPTEN_THIRDPARTY_DIR := .
 #$(info EMSCRIPTEN_SYSROOT = `$(EMSCRIPTEN_THIRDPARTY_DIR)`)
 #COMPILER_FLAGS_LIBCLANG += -isystem $(call quote,$(EMSCRIPTEN_THIRDPARTY_DIR)/include)
 
 # Those would normally be in `./include`, but we try to avoid building third-party libraries...
-COMPILER_FLAGS_LIBCLANG += -isystem $(SRC_parallel_hashmap)
-COMPILER_FLAGS_LIBCLANG += -isystem $(SRC_onetbb)/include
-COMPILER_FLAGS_LIBCLANG += -isystem $(SRC_jsoncpp)/include
-COMPILER_FLAGS_LIBCLANG += -isystem $(SRC_googletest)/googletest/include
-COMPILER_FLAGS_LIBCLANG += -isystem $(SRC_openvdb)/openvdb
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/parallel-hashmap
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/onetbb/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/jsoncpp/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/googletest/googletest/include
+COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)../../thirdparty/openvdb/v10/openvdb/openvdb
 # OpenVDB generates a file called `openvdb/version.h` during build. To avoid having to generate it, we add our own copy of it to the include path.
 COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)emscripten_headers
 COMPILER_FLAGS_LIBCLANG += -isystem $(makefile_dir)emscripten_headers/openvdb
@@ -766,7 +741,7 @@ LINKER_FLAGS += -rtlib=platform
 # Don't generate .lib files.
 LINKER_FLAGS += -Wl,-noimplib
 # Library paths:
-COMPILER_FLAGS += -isystem $(SRC_parallel_hashmap)
+COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/parallel-hashmap
 COMPILER_FLAGS += -D_DLL -D_MT
 # Only seems to matter on VS2022 and not on VS2019, for some reason.
 COMPILER_FLAGS += -DNOMINMAX

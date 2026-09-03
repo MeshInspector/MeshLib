@@ -2,12 +2,14 @@
 set -eo pipefail
 
 SOURCE_DIR="$1"
-BUILD_DIR="${2:-./libE57Format_build}"
+BUILD_DIR="${2:-./libjpeg-turbo_build}"
 
 CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-  -D E57_BUILD_TEST=OFF \
-  -D E57_GIT_SUBMODULE_UPDATE=OFF \
-  -D E57_XML_PARSER=TinyXML2 \
+  -D WITH_JAVA=OFF \
+  -D WITH_JPEG8=ON \
+  -D WITH_SIMD=OFF \
+  -D BUILD_TESTING=OFF \
+  -D ENABLE_STATIC=OFF \
 "
 
 cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" -D CMAKE_C_FLAGS="${CFLAGS}" ${CMAKE_OPTIONS}

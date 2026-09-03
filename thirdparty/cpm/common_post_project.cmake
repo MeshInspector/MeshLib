@@ -20,8 +20,8 @@ ENDIF()
 
 # CPM.cmake reissues cmake_minimum_required(3.14), so include it after project() to keep that
 # out of the policy scope the stage files are configured under.
-include(${MESHLIB_THIRDPARTY_DIR}/cmake/CPM.cmake)
-include(${MESHLIB_THIRDPARTY_DIR}/package-lock.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/cmake/CPM.cmake)
+include(${CMAKE_CURRENT_LIST_DIR}/package-lock.cmake)
 
 macro(meshlib_add_package name)
   CPMAddPackage(NAME ${name} ${MESHLIB_PACKAGE_${name}} ${ARGN})

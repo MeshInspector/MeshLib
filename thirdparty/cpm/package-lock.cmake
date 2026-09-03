@@ -1,7 +1,7 @@
-# Version pins for every third-party library built by thirdparty/stage1 and thirdparty/stage2.
+# Version pins for every third-party library built by thirdparty/cpm/stage1 and thirdparty/cpm/stage2.
 #
 # Each entry is the CPMAddPackage argument list for one dependency, minus NAME, which the
-# caller supplies: the stages via meshlib_add_package(), thirdparty/fetch by appending
+# caller supplies: the stages via meshlib_add_package(), thirdparty/cpm/fetch by appending
 # DOWNLOAD_ONLY YES. Deliberately not CPMDeclarePackage -- a declaration *replaces* the
 # caller's arguments rather than extending them, which silently drops DOWNLOAD_ONLY.
 #

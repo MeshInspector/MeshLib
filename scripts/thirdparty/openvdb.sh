@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eo pipefail
+
+SOURCE_DIR="$1"
+BUILD_DIR="${2:-./openvdb_build}"
+
+CXXFLAGS="${CXXFLAGS} -Wno-missing-template-arg-list-after-template-kw"
+
+CMAKE_OPTIONS="${CMAKE_OPTIONS} \
+  -D OPENVDB_ENABLE_UNINSTALL=OFF \
+  -D OPENVDB_ENABLE_INSTALL=OFF \
+  -D OPENVDB_CORE_SHARED=ON \
+  -D OPENVDB_CORE_STATIC=OFF \
+  -D OPENVDB_BUILD_BINARIES=OFF \
+  -D OPENVDB_BUILD_VDB_PRINT=OFF \
+  -D OPENVDB_USE_DELAYED_LOADING=OFF \
+  -D USE_EXPLICIT_INSTANTIATION=OFF \
+  -D Tbb_VERSION=2021.12 \
+"
+
+cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" -D CMAKE_C_FLAGS="${CFLAGS}" ${CMAKE_OPTIONS}
+cmake --build "${BUILD_DIR}" -j `nproc`
+cmake --install "${BUILD_DIR}"

@@ -2,12 +2,11 @@
 set -eo pipefail
 
 SOURCE_DIR="$1"
-BUILD_DIR="${2:-./libE57Format_build}"
+BUILD_DIR="${2:-./mbedtls_build}"
 
 CMAKE_OPTIONS="${CMAKE_OPTIONS} \
-  -D E57_BUILD_TEST=OFF \
-  -D E57_GIT_SUBMODULE_UPDATE=OFF \
-  -D E57_XML_PARSER=TinyXML2 \
+  -D ENABLE_PROGRAMS=OFF \
+  -D ENABLE_TESTING=OFF \
 "
 
 cmake -S "${SOURCE_DIR}" -B "${BUILD_DIR}" -D CMAKE_C_FLAGS="${CFLAGS}" ${CMAKE_OPTIONS}

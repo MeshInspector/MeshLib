@@ -1,5 +1,10 @@
 git -C "$PSScriptRoot\.." submodule update --init --depth 1 `
     thirdparty/imgui `
+    thirdparty/eigen `
+    thirdparty/expected `
+    thirdparty/fastmcpp `
+    thirdparty/nlohmann-json `
+    thirdparty/cpp-httplib `
     thirdparty/mrbind `
     thirdparty/mrbind-pybind11 `
 

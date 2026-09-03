@@ -20,9 +20,8 @@ to** MeshLib's own top-level `LICENSE`, which covers only MeshLib itself.
   text was curated against**.
 
 The inclusion list is `doxygen/general_pages/ThirdpartyList.dox`, reconciled against
-`thirdparty/package-lock.cmake`, `.gitmodules` and `thirdparty/vcpkg/vcpkg.json`. Build- and
-test-only dependencies (googletest, mrbind) are not shipped and are excluded (see
-`EXCLUDED_PACKAGES` and `EXCLUDED_SUBMODULES` in the checker).
+`.gitmodules` and `thirdparty/vcpkg/vcpkg.json`. Build- and test-only submodules (googletest,
+mrbind) are not shipped and are excluded (see `EXCLUDED_SUBMODULES` in the checker).
 
 ## Shipping
 
@@ -37,10 +36,10 @@ Every channel copies the committed file unchanged:
 
 ## Why hand-maintained
 
-The texts cannot be harvested reliably from a clean checkout: CPM- and vcpkg-sourced licenses
-(Boost, OpenCASCADE, FreeType, ...) only appear after a fetch or a build, and some (fonts,
-Python, CUDA) ship no machine-readable license at all. So the file is maintained by hand --
-and guarded by a drift tripwire.
+The texts cannot be harvested reliably from a clean checkout: submodule licenses are in-tree,
+but vcpkg-sourced ones (Boost, OpenCASCADE, FreeType, ...) only appear after a build, and some
+(fonts, Python, CUDA) ship no machine-readable license at all. So the file is maintained by
+hand -- and guarded by a drift tripwire.
 
 ## Maintenance contract (the tripwire)
 
@@ -93,6 +92,5 @@ reaches the network.
 Append its section to `THIRD-PARTY-NOTICES.txt` (keeping manifest order), add an entry to
 `manifest.json` (pick the `source.type` that matches how it enters the build), run
 `--update-versions` to pin it, and confirm a green `python scripts/check_third_party_licenses.py`.
-A shippable dependency that is in neither the manifest nor the matching exclusion set
-(`EXCLUDED_PACKAGES` for `package-lock.cmake` entries, `EXCLUDED_SUBMODULES` for submodules)
-makes the checker warn.
+A shippable submodule that is neither in the manifest nor in `EXCLUDED_SUBMODULES` makes the
+checker warn.

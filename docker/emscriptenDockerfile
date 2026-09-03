@@ -83,7 +83,6 @@ COPY . .
 
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
-ENV CPM_SOURCE_CACHE=/opt/cpm-cache
 
 # 32-bit multi-threaded
 RUN <<EOF

@@ -11,7 +11,6 @@
 #include "MRTimer.h"
 #include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
-#include <array>
 
 namespace MR
 {
@@ -45,37 +44,27 @@ void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams
 namespace
 {
 
-/// finds N scalar fields on region vertices, where each value is the weighted mean of the values in neighbor vertices;
-/// getVal(v) returns the fixed values of not-region vertex or the original values of region vertex (for stabilization),
-/// getShift(v) returns additional shifts of the equation of region vertex v, setVal(v, vals) stores the solution
-template<size_t N, class GetVal, class GetShift, class SetVal>
-void solveLaplaceEquations( const MeshTopology& topology, const VertBitSet& verts,
-    float stabilizer, const VertMetric& vertStabilizers, const UndirectedEdgeMetric& edgeWeights,
-    GetVal getVal, GetShift getShift, SetVal setVal )
+using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
+
+/// prepares the matrix of Laplace equations, where each vertex from \p verts is the weighted mean of its neighbors;
+/// g(v) returns the value in fixed vertex v, or the original value in free vertex v (used with stabilizers),
+/// shift(v) returns additional shift of the equation of free vertex v, s(n, r) stores the right hand side r of n-th equation
+template <typename G, typename Sh, typename S>
+SparseMatrix prepareLaplaceEquations( const MeshTopology& topology, const VertBitSet& verts,
+    float stabilizer, const VertMetric& vertStabilizers, const UndirectedEdgeMetric& edgeWeights, G && g, Sh && shift, S && s )
 {
     MR_TIMER;
     const auto sz = verts.count();
-    if ( sz <= 0 )
-        return;
 
     // vertex id -> position in the matrix
     HashMap<VertId, int> vertToMatPos = makeHashMapWithSeqNums( verts );
 
-    using Vals = std::array<double, N>;
     std::vector< Eigen::Triplet<double> > mTriplets;
-    Eigen::VectorXd rhs[N];
-    for ( auto & r : rhs )
-        r.resize( sz );
     int n = 0;
     for ( auto v : verts )
     {
         double sumW = 0;
-        Vals sumFixed{};
-        auto addFixed = [&sumFixed]( double w, const Vals & vals )
-        {
-            for ( size_t i = 0; i < N; ++i )
-                sumFixed[i] += w * vals[i];
-        };
+        decltype( g( v ) ) sumFixed{};
         for ( auto e : orgRing( topology, v ) )
         {
             const double edgeW = edgeWeights ? edgeWeights( e ) : 1;
@@ -91,49 +80,30 @@ void solveLaplaceEquations( const MeshTopology& topology, const VertBitSet& vert
             else
             {
                 // fixed neighbor
-                addFixed( edgeW, getVal( d ) );
+                sumFixed += edgeW * g( d );
             }
         }
-        addFixed( sumW, getShift( v ) );
-        double s = stabilizer; //for VertexMass::Unit only
+        sumFixed += sumW * shift( v );
+        double st = stabilizer; //for VertexMass::Unit only
         if ( vertStabilizers )
         {
-            s = vertStabilizers( v );
-            assert( s >= 0 );
+            st = vertStabilizers( v );
+            assert( st >= 0 );
         }
-        if ( s != 0 )
+        if ( st != 0 )
         {
-            sumW += s;
-            addFixed( s, getVal( v ) );
+            sumW += st;
+            sumFixed += st * g( v );
         }
         mTriplets.emplace_back( n, n, sumW );
-        for ( size_t i = 0; i < N; ++i )
-            rhs[i][n] = sumFixed[i];
+        s( n, sumFixed );
         ++n;
     }
 
-    using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
     SparseMatrix A;
     A.resize( sz, sz );
     A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
-    Eigen::SimplicialLDLT<SparseMatrix> solver;
-    solver.compute( A );
-
-    Eigen::VectorXd sol[N];
-    ParallelFor( 0, (int)N, [&]( int i )
-    {
-        sol[i] = solver.solve( rhs[i] );
-    } );
-
-    n = 0;
-    for ( auto v : verts )
-    {
-        Vals vals;
-        for ( size_t i = 0; i < N; ++i )
-            vals[i] = sol[i][n];
-        setVal( v, vals );
-        ++n;
-    }
+    return A;
 }
 
 } // anonymous namespace
@@ -143,19 +113,41 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
     MR_TIMER;
     assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
 
-    solveLaplaceEquations<3>( topology, topology.getVertIds( params.region ), params.stabilizer, params.vertStabilizers, params.edgeWeights,
-        [&points]( VertId v ) { const auto & p = points[v]; return std::array<double, 3>{ p.x, p.y, p.z }; },
-        [&params]( VertId v )
+    const auto & verts = topology.getVertIds( params.region );
+    const auto sz = verts.count();
+    if ( sz <= 0 )
+        return;
+
+    Eigen::VectorXd rhs[3];
+    for ( int i = 0; i < 3; ++i )
+        rhs[i].resize( sz );
+
+    Eigen::SimplicialLDLT<SparseMatrix> solver;
+    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, params.vertStabilizers, params.edgeWeights,
+        [&]( VertId v ) { return Vector3d( points[v] ); },
+        [&]( VertId v ) { return params.vertShifts ? Vector3d( (*params.vertShifts)[v] ) : Vector3d{}; },
+        [&]( int n, const Vector3d & r )
         {
-            std::array<double, 3> res{};
-            if ( params.vertShifts )
-            {
-                const auto & p = (*params.vertShifts)[v];
-                res = { p.x, p.y, p.z };
-            }
-            return res;
-        },
-        [&points]( VertId v, const std::array<double, 3> & vals ) { points[v] = Vector3f( (float)vals[0], (float)vals[1], (float)vals[2] ); } );
+            for ( int i = 0; i < 3; ++i )
+                rhs[i][n] = r[i];
+        } ) );
+
+    Eigen::VectorXd sol[3];
+    ParallelFor( 0, 3, [&]( int i )
+    {
+        sol[i] = solver.solve( rhs[i] );
+    } );
+
+    // copy solution back into mesh points
+    int n = 0;
+    for ( auto v : verts )
+    {
+        auto & pt = points[v];
+        pt.x = (float) sol[0][n];
+        pt.y = (float) sol[1][n];
+        pt.z = (float) sol[2][n];
+        ++n;
+    }
 }
 
 void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params )
@@ -163,10 +155,22 @@ void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& fiel
     MR_TIMER;
     assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
 
-    solveLaplaceEquations<1>( topology, topology.getVertIds( params.region ), params.stabilizer, params.vertStabilizers, params.edgeWeights,
-        [&field]( VertId v ) { return std::array<double, 1>{ field[v] }; },
-        []( VertId ) { return std::array<double, 1>{}; },
-        [&field]( VertId v, const std::array<double, 1> & vals ) { field[v] = (float)vals[0]; } );
+    const auto & verts = topology.getVertIds( params.region );
+    const auto sz = verts.count();
+    if ( sz <= 0 )
+        return;
+
+    Eigen::VectorXd rhs( sz );
+    Eigen::SimplicialLDLT<SparseMatrix> solver;
+    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, params.vertStabilizers, params.edgeWeights,
+        [&]( VertId v ) { return double( field[v] ); },
+        []( VertId ) { return 0.0; },
+        [&]( int n, double r ) { rhs[n] = r; } ) );
+
+    Eigen::VectorXd sol = solver.solve( rhs );
+    int n = 0;
+    for ( auto v : verts )
+        field[v] = float( sol[n++] );
 }
 
 void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )

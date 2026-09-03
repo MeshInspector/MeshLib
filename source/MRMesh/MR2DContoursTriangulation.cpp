@@ -1750,9 +1750,6 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
                 return {};
         res.items[k] = { code1, code2 };
     }
-    // a chord could still duplicate an off-loop mesh edge already joining its two endpoints (e.g. a
-    // folded or coplanar patch); the caller runs isFillingMultipleEdgeFree() before committing the plan,
-    // exactly as it does for getPlanarHoleFillPlans() output
     return res;
 }
 

@@ -109,24 +109,15 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
 MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap = nullptr );
 
 /**
- * @brief splits the planar region bounded by \p loops in monotone parts, without triangulating them
- * this is the sweep-line triangulation stopped after monotonation: the returned plan lists the edges
- * to add to \p mesh to realize the split, each connecting the origins of two already existing edges
- * @param loops one closed EdgeLoop per boundary of one region (as produced by trackRightBoundaryLoop
- *        on a hole edge); each loop must have at least 3 edges. Which way round a loop runs does not
- *        matter: the region is taken from the winding number of the loops, not from their direction.
- *        The loops are expected to bound real holes of \p mesh (faces on their far side) lying close to
- *        one plane; on a strongly non-planar region sharing a vertex between two loops a chord may be
- *        placed into the wrong wedge, as in \ref triangulateDisjointContours
+ * @brief splits the near-planar region bounded by \p loops in monotone parts, without triangulating them
+ * this is the sweep-line triangulation stopped right after monotonation
+ * @param loops one closed EdgeLoop of at least 3 edges per boundary of one region, bounding holes of
+ *        \p mesh as trackRightBoundaryLoop returns them; which way round a loop runs does not matter
  * @param normal the orientation the region is monotone around, see \ref triangulateDisjointContours
- * @return std::nullopt if the loops intersect, or if realizing the split would place a chord into a
- *         face of \p mesh instead of a hole (so the loops do not bound a region of it), so that the
- *         caller can fall back on filling every loop separately. A region that needs no chord always
- *         returns a valued plan, even should the loops not bound a hole. Otherwise a plan with
- *         numTris == 0, to run with \ref executeHoleFillPlan, which then only adds edges and creates no
- *         faces (an empty plan, returned when the region is already monotone, is a valid no-op).
- *         A chord may still duplicate an off-loop mesh edge, so validate the plan with
- *         \ref isFillingMultipleEdgeFree before executing it
+ * @return std::nullopt if the loops intersect or a chord would land in a face instead of a hole, so that
+ *         the caller can fall back on filling every loop separately; otherwise a plan with numTris == 0
+ *         for \ref executeHoleFillPlan, which then only adds edges (empty if already monotone, a no-op).
+ *         Validate it with \ref isFillingMultipleEdgeFree: a chord may duplicate an off-loop mesh edge
  */
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 

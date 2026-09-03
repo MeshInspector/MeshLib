@@ -309,7 +309,12 @@ jobs:
         # The C bindings sources are globbed at configure time, so they can only enter the
         # build graph now, once downloaded; every other cache entry survives the reconfigure.
         run: |
+          rem VsDevCmd.bat overrides VCPKG_ROOT with the VS-bundled vcpkg; preserve the step
+          rem env: value for the z-applocal loop below (the Build step's own loop is inside a
+          rem parenthesized IF block, so cmd expands it before VsDevCmd runs).
+          set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          set "VCPKG_ROOT=%PROJ_VCPKG_ROOT%"
           cmake -S . -B source\TempOutput -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON || exit /b 1
           cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target MeshLibC2 MeshLibC2Cuda MRTestC2 || exit /b 1
           rem Only the new binaries need deploying; see the Build step's note on the serial pass.

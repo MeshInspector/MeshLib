@@ -10,7 +10,11 @@ IF(NOT CUDAToolkit_FOUND AND NOT CUDA_FOUND)
 
       # For our VS2022 CI:
       # 20011: VS2026's <cmath> calls the __host__-only __copysignf intrinsic from __host__ __device__ copysign
-      set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -diag-suppress 20011 -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH")
+      # Seed the cache entry instead of shadowing it with a normal variable: the entry does
+      # not exist yet on the first configure, but enable_language(CUDA) creates it, so a
+      # second configure of the same build directory would append to a different base and
+      # change every .cu command line.
+      set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -allow-unsupported-compiler -diag-suppress 20011 -D_ALLOW_COMPILER_AND_STL_VERSION_MISMATCH" CACHE STRING "Flags used by the CUDA compiler during all build types")
     ELSE()
       # https://cmake.org/cmake/help/latest/release/3.25.html#id2
       IF(CMAKE_VERSION VERSION_LESS 3.25.2)

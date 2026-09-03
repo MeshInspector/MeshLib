@@ -7,6 +7,7 @@
 #include "MREdgePoint.h"
 #include "MRPolyline.h"
 #include "MRMesh.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -14,13 +15,42 @@ namespace MR
 PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointOnObject& pos )
 {
     if ( auto* objMesh = dynamic_cast< const ObjectMeshHolder* >( object ) )
-        return objMesh->mesh()->toTriPoint( pos );
+    {
+        const auto & mesh = objMesh->mesh();
+        // toTriPoint() indexes edgePerFace_ by the face, so an out-of-range one reads out of bounds
+        if ( !mesh || !pos.face.valid() || !mesh->topology.hasFace( pos.face ) )
+        {
+            spdlog::warn( "pointOnObjectToPickedPoint: not a valid mesh pick: face={}, faceSize={}",
+                int( pos.face ), mesh ? mesh->topology.faceSize() : 0 );
+            return {};
+        }
+        return mesh->toTriPoint( pos );
+    }
 
-    if ( dynamic_cast< const ObjectPointsHolder* >( object ) )
+    if ( auto* objPoints = dynamic_cast< const ObjectPointsHolder* >( object ) )
+    {
+        const auto & cloud = objPoints->pointCloud();
+        if ( !cloud || !pos.vert.valid() || !cloud->validPoints.test( pos.vert ) )
+        {
+            spdlog::warn( "pointOnObjectToPickedPoint: not a valid point pick: vert={}, numPoints={}",
+                int( pos.vert ), cloud ? cloud->points.size() : 0 );
+            return {};
+        }
         return pos.vert;
+    }
 
     if ( auto* objLines  = dynamic_cast< const ObjectLinesHolder* >( object ) )
-        return objLines->polyline()->toEdgePoint( EdgeId( pos.uedge ), pos.point );
+    {
+        const auto & polyline = objLines->polyline();
+        const EdgeId e( pos.uedge );
+        if ( !polyline || !e.valid() || !polyline->topology.hasEdge( e ) )
+        {
+            spdlog::warn( "pointOnObjectToPickedPoint: not a valid polyline pick: uedge={}, edgeSize={}",
+                int( pos.uedge ), polyline ? polyline->topology.edgeSize() : 0 );
+            return {};
+        }
+        return polyline->toEdgePoint( e, pos.point );
+    }
 
     assert( false );
     return {};

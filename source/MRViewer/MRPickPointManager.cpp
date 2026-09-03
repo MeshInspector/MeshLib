@@ -489,7 +489,10 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
 
         if ( params.canAddPoint && !params.canAddPoint( objVisual, -1 ) )
             return false;
-        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ), params.startDraggingJustAddedPoint );
+        auto picked = pointOnObjectToPickedPoint( objVisual.get(), pick );
+        if ( std::holds_alternative<std::monostate>( picked ) )
+            return false;
+        return appendPoint( objVisual, picked, params.startDraggingJustAddedPoint );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case
     {

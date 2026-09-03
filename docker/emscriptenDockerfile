@@ -2,7 +2,34 @@
 
 # Any changes in this file should probably be mirrored in `emscripten-build-c-bindings-X-Y-ZDockerfile`.
 
-FROM emscripten/emsdk:4.0.19-arm64 AS base
+# emsdk ships clang without PGO; ours is the same llvm-project revision with
+# -O3 + PGO. It replaces emsdk's copy in place and /emsdk is then copied into a
+# clean ubuntu: swapped in a layer on top, both compilers would ship.
+FROM emscripten/emsdk:4.0.19-arm64 AS emsdk
+
+ENV EMSDK_VERSION=4.0.19
+
+RUN <<EOF
+    set -e
+    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
+        | tar -C /emsdk/upstream --strip-components=1 -xz
+    rm -f /emsdk/upstream/bin/clang-scan-deps
+    # PATH below points here, keeping node's version out of it
+    ln -s /emsdk/node/*/bin /emsdk/node-bin
+    # emsdk strips its own toolchain, ours arrives unstripped
+    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
+EOF
+
+
+FROM ubuntu:22.04 AS base
+
+COPY --from=emsdk /emsdk /emsdk
+
+ENV EMSDK=/emsdk
+ENV PATH=/emsdk:/emsdk/upstream/emscripten:/emsdk/node-bin:$PATH
+WORKDIR /src
+ENTRYPOINT ["/emsdk/docker/entrypoint.sh"]
 
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
 Types: deb
@@ -33,7 +60,11 @@ RUN <<EOF
     # install packages
     apt-get update -qqy
     apt-get install -qqy --no-install-recommends \
-        tzdata git pkg-config ninja-build \
+        $(: what the emscripten/emsdk image installs on the same ubuntu ) \
+        sudo libxml2 ca-certificates python3 python3-pip wget curl zip unzip \
+        xz-utils git git-lfs ssh-client build-essential make ant libidn12 \
+        cmake openjdk-11-jre-headless \
+        tzdata pkg-config ninja-build \
         $(: to compile translation files ) \
         gettext \
         $(: to generate TypeScript documentation ) \

@@ -672,6 +672,9 @@
     <ClInclude Include="MRMeshRelax.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
+    <ClInclude Include="MRShrinkwrap.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointCloudRelax.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
@@ -1332,6 +1335,9 @@
     <ClInclude Include="MRTripleFaceIntersections.h">
       <Filter>Source Files\Contours</Filter>
     </ClInclude>
+    <ClInclude Include="MRBitCast.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRFastInt128.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -1838,6 +1844,9 @@
     <ClCompile Include="MRMeshRelax.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
+    <ClCompile Include="MRShrinkwrap.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointCloudRelax.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
@@ -2050,6 +2059,9 @@
     </ClCompile>
     <ClCompile Include="MRConeObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFastInt.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>

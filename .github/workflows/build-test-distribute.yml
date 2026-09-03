@@ -13,6 +13,13 @@ on:
   schedule:
     - cron: '0 2 * * *'  # Run every day at 2 AM UTC
 
+# Supersede a PR's previous run instead of racing it (two live runs of one branch
+# collided pushing the same new Docker Hub repo, #6738). Push/schedule/dispatch get
+# unique group, so a release run is never cancelled and never queues behind one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   id-token: write
   contents: write
@@ -81,7 +88,8 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
-      docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
@@ -102,6 +110,7 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_arm64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
@@ -179,6 +188,7 @@ jobs:
     with:
       vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
+      internal_build: ${{ needs.config.outputs.internal_build == 'true' }}
     secrets: inherit
 
   create-nuget-package:
@@ -199,7 +209,13 @@ jobs:
        uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveWindows-x64
-         path: windows_runtime
+         path: windows_x64_runtime
+
+     - name: Download NuGet Windows Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWindows-arm64
+         path: windows_arm64_runtime
 
      - name: Download NuGet Linux x64 Patch Archive
        uses: actions/download-artifact@v8
@@ -250,7 +266,7 @@ jobs:
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_x64_runtime windows_arm64_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
@@ -321,9 +337,11 @@ jobs:
           shopt -s nullglob
           for PKG_FILE in MeshLibDist*.zip ; do
             case "$PKG_FILE" in
-              # Keep the historical layout for the iterator-debug archive:
-              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
-              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
+              # Keep the historical layout for the iterator-debug archives:
+              # MeshLibDist-IteratorDebug[-PDB].zip -> MeshLibDist_<version>-IteratorDebug[-PDB].zip
+              *-IteratorDebug.zip|*-IteratorDebug-PDB.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
+              # Companion symbols archives: MeshLibDistVS19-PDB.zip -> MeshLibDistVS19_<version>-PDB.zip
+              *-PDB.zip) mv "$PKG_FILE" "${PKG_FILE%-PDB.zip}_${{ needs.config.outputs.app_version }}-PDB.zip" ;;
               # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
               *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
             esac
@@ -374,6 +392,21 @@ jobs:
     # Reusable workflows do not see repository secrets unless the caller
     # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
     secrets: inherit
+
+  nuget-consumer-test:
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - upload-distributions
+    uses: ./.github/workflows/nuget-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
 
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.

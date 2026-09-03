@@ -1,5 +1,5 @@
 name: 'Set up vcpkg for MeshLib (Windows)'
-description: 'Looks up the vcpkg build cache and either restores it onto a clean C:\vcpkg or builds the tree from source. Always runs `vcpkg integrate install` at the end.'
+description: 'Looks up the vcpkg build cache and either restores it onto a clean C:\vcpkg or builds the tree from source. Runs `vcpkg integrate install` at the end, unless `cache-only` short-circuited the restore.'
 
 inputs:
   vcpkg-version:
@@ -15,6 +15,10 @@ inputs:
     default: ''
   internal-build:
     description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC (role hard-coded for the MeshInspector account) so install.bat can read/write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
+    required: false
+    default: 'false'
+  cache-only:
+    description: 'String boolean ("true" or "false"). Set it in jobs whose only purpose is to populate the cache and that never build against the restored tree. On a cache hit such a job has nothing left to do, so the restore (and the MSBuild integration that follows it) is skipped instead of downloading a tree no step in this job reads.'
     required: false
     default: 'false'
 
@@ -55,12 +59,18 @@ runs:
         Write-Host "cache-hit:  $hit"
         Write-Host "key:        ${{ env.VCPKG_CACHE_KEY }}"
 
+        # In cache-only mode a hit makes the rest of the action a no-op:
+        # nothing here consumes the tree, so don't pay for the download.
+        $skip = ($hit -eq 'true') -and ('${{ inputs.cache-only }}' -eq 'true')
+        "VCPKG_RESTORE_SKIPPED=$($skip.ToString().ToLower())" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+        if ($skip) { Write-Host "cache-only: cache already populated, skipping the restore." }
+
     # ----- cache HIT path: rename runner's vcpkg out of the way, then download -----
     - name: Stash runner's C:\vcpkg
       # Atomic same-volume rename so the cache restore extracts onto an
       # empty path with no leftover runner-image files. The stash is left
       # for runner teardown (this is an ephemeral runner).
-      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' && env.VCPKG_RESTORE_SKIPPED != 'true' }}
       shell: pwsh
       run: |
         if (Test-Path C:\vcpkg) {
@@ -74,7 +84,7 @@ runs:
       # Tolerate a failed/partial extraction (a known actions/cache flake on
       # Windows): don't fail here — let "Verify" below catch it and rebuild.
       continue-on-error: true
-      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' && env.VCPKG_RESTORE_SKIPPED != 'true' }}
       uses: actions/cache/restore@v5
       with:
         key: ${{ env.VCPKG_CACHE_KEY }}
@@ -85,7 +95,7 @@ runs:
     # but tar dropped files). Discard such a restore, put the runner's vcpkg
     # clone back, and fall through to the build path.
     - name: Verify Restored Vcpkg Cache
-      if: ${{ env.VCPKG_CACHE_HIT == 'true' }}
+      if: ${{ env.VCPKG_CACHE_HIT == 'true' && env.VCPKG_RESTORE_SKIPPED != 'true' }}
       shell: pwsh
       run: |
         # Discard if the restore step failed (its `outcome` stays 'failure' under
@@ -183,12 +193,13 @@ runs:
 
     # ----- always: register MSBuild integration and dump installed tree -----
     - name: Vcpkg integrate install
+      if: ${{ env.VCPKG_RESTORE_SKIPPED != 'true' }}
       shell: pwsh
       working-directory: C:\vcpkg
       run: vcpkg.exe integrate install
 
     - name: Diagnostic — vcpkg installed tree
-      if: always()
+      if: ${{ always() && env.VCPKG_RESTORE_SKIPPED != 'true' }}
       shell: pwsh
       continue-on-error: true
       run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ inputs.vcpkg-triplet }}"

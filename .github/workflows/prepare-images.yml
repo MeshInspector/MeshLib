@@ -83,11 +83,15 @@ jobs:
                   arch: x64
                 - distro: ubuntu24
                   arch: x64
+                - distro: ubuntu26
+                  arch: x64
             - if: ${{ inputs.disable_ubuntu_arm64 }}
               exclude:
                 - distro: ubuntu22
                   arch: arm64
                 - distro: ubuntu24
+                  arch: arm64
+                - distro: ubuntu26
                   arch: arm64
             - if: ${{ inputs.disable_emscripten }}
               exclude:
@@ -314,6 +318,10 @@ jobs:
           - vs: vs2026
             runner: windows-2025
             vcpkg_triplet: x64-windows-meshlib
+          # windows-11-vs2026-arm carries VS2026 only, so arm64 has a single triplet
+          - vs: vs2026
+            runner: windows-11-vs2026-arm
+            vcpkg_triplet: arm64-windows-meshlib
           - vs: vs2022
             runner: windows-2025
             vcpkg_triplet: x64-windows-vs2022-meshlib
@@ -337,9 +345,13 @@ jobs:
           aws-region: us-east-1
           retry-max-attempts: 5
 
+      # cache-only: this job exists to fill the cache, nothing here builds
+      # against the tree, so an already-populated cache means the action has
+      # nothing to do and must not spend minutes downloading it.
       - name: Build and cache vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
         with:
           vcpkg-version: ${{ inputs.vcpkg_version }}
           vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
           install-flags: '--write-s3'
+          cache-only: 'true'

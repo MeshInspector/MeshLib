@@ -9,6 +9,10 @@ on:
       app_version:
         required: true
         type: string
+      internal_build:
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   update-win-version:
@@ -25,21 +29,37 @@ jobs:
             extract_release: MREDist_VS19_Release.zip
             extract_debug: MREDist_VS19_Debug.zip
             output_zip: MeshLibDistVS19.zip
+            pdb_zip: MeshLibDistVS19-PDB.zip
             artifact_name: DistributivesWin-VS19
+            cxx_compiler: msvc-2019
+            build_system: CMake
+            build_config: Release
           - vcpkg_triplet: x64-windows-vs2022-meshlib
             extract_release: MREDist_VS22_Release.zip
             extract_debug: MREDist_VS22_Debug.zip
             output_zip: MeshLibDistVS22.zip
+            pdb_zip: MeshLibDistVS22-PDB.zip
             artifact_name: DistributivesWin-VS22
+            cxx_compiler: msvc-2022
+            build_system: CMake
+            build_config: Release
           - vcpkg_triplet: x64-windows-meshlib
             extract_release: MREDist_VS26_Release.zip
             extract_debug: MREDist_VS26_Debug.zip
             output_zip: MeshLibDistVS26.zip
+            pdb_zip: MeshLibDistVS26-PDB.zip
             artifact_name: DistributivesWin-VS26
+            cxx_compiler: msvc-2026
+            build_system: MSBuild
+            build_config: Release
           - vcpkg_triplet: x64-windows-meshlib-iterator-debug
             extract_debug: MREDist_VS19_Debug-IteratorDebug.zip
             output_zip: MeshLibDist-IteratorDebug.zip
+            pdb_zip: MeshLibDist-IteratorDebug-PDB.zip
             artifact_name: DistributivesWin-IteratorDebug
+            cxx_compiler: msvc-2019
+            build_system: CMake
+            build_config: Debug
     env:
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-vs2019-meshlib' }}
     steps:
@@ -47,6 +67,18 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: true
+
+      - name: Collect runner's system stats
+        if: ${{ inputs.internal_build }}
+        id: collect-runner-stats
+        continue-on-error: true
+        uses: ./.github/actions/collect-runner-stats
+        with:
+          target_os: windows
+          target_arch: x64
+          cxx_compiler: ${{ matrix.cxx_compiler }}
+          build_config: ${{ matrix.build_config }}
+          build_system: ${{ matrix.build_system }}
 
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-windows
@@ -74,8 +106,22 @@ jobs:
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
 
+      # The .pdb files are moved out of `install` first, so the main archive
+      # carries none of them and each toolchain gets a companion symbols archive.
+      - name: Archive Symbols
+        run: py -3.10 scripts\split_install_pdb.py install ${{ matrix.pdb_zip }}
+
       - name: Archive Distribution
         run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
+
+      - name: Collect artifact stats
+        if: ${{ inputs.internal_build }}
+        continue-on-error: true
+        uses: ./.github/actions/collect-artifact-stats
+        with:
+          artifact_path: ${{ github.workspace }}
+          artifact_glob: ${{ matrix.output_zip }}
+          stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Test Example Plugin # call it after archive not to pack build results
         env:
@@ -90,7 +136,9 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact_name }}
-          path: ${{ matrix.output_zip }}
+          path: |
+            ${{ matrix.output_zip }}
+            ${{ matrix.pdb_zip }}
           retention-days: 1
 
   cleanup-win-archives:

@@ -30,7 +30,7 @@ MeshLib ships in two flavors with an identical API:
  - `@meshinspector/meshlib`: the single-threaded build. The simplest choice, and the right one for most applications.
  - `@meshinspector/meshlib-mt`: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput, and requires Node.js 21 or newer.
 
-The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; nothing else changes.
+The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; in Node.js nothing else changes. In the browser the page must additionally be \ref JsMtCrossOriginIsolation "cross-origin isolated".
 
 ## Installation
 ### Installation via npm
@@ -42,21 +42,62 @@ npm install @meshinspector/meshlib
 ### Use from CDN
 In the browser you can skip npm entirely and import the module directly:
 \code{.js}
-// latest version
+// latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
-// or pin a specific version
-import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
+// multi-threaded build, latest release
+import createMeshLib from 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
+
+// or pin a release — v1.2.3.456 is an example tag, not a real one
+import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
 \endcode
 
-## Cross-Origin Isolation for the Multi-Threaded Build
+To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`. Pinned URLs are immutable, so a pin never changes under you; the unpinned paths above always serve the latest release.
+
+In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
+
+### Payload Size {#MeshLibJsPayloadSize}
+MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
+
+Two consequences for a browser application:
+
+ - The `.wasm` is a sidecar file fetched as a **second request**, separate from the `.mjs` module. Serve it as `application/wasm` with compression enabled, or the download is several times larger than it needs to be.
+ - `npm install` unpacks about 21 MB, because the browser and the Node.js wasm ship side by side in one package. Only one of them ever reaches the browser; the rest is bundler input, not payload.
+
+If the geometry is not needed on first paint, load the module lazily instead of at the top level, so the wasm download does not block startup:
+\code{.js}
+// load MeshLib only when the user actually needs geometry
+const { default: createMeshLib } = await import('@meshinspector/meshlib');
+const ml = await createMeshLib();
+\endcode
+
+## Cross-Origin Isolation for the Multi-Threaded Build in the Browser {#JsMtCrossOriginIsolation}
+This section applies to browsers only. In Node.js the multi-threaded build needs no headers, flags, or extra configuration.
+
 The multi-threaded package `@meshinspector/meshlib-mt` relies on `SharedArrayBuffer`, which browsers only enable on **cross-origin isolated** pages. The server that serves the page loading the module must send these headers:
 \code{.txt}
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 \endcode
 
-Without them `SharedArrayBuffer` is unavailable and the module fails to initialize; use the single-threaded `@meshinspector/meshlib` package in that case.
+Without them `crossOriginIsolated` is `false`, `SharedArrayBuffer` is unavailable, and the module fails to initialize.
+
+For a Vite dev server, set the headers in `vite.config.js` (whatever hosts the production build must send them too; `vite-plugin-cross-origin-isolation` can stamp them for `vite preview`):
+\code{.js}
+// vite.config.js
+export default {
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+};
+\endcode
+
+Where you cannot set response headers at all — GitHub Pages and similar static hosting — the usual workaround is a `coi-serviceworker`-style shim: a service worker that re-serves the page with the two headers and reloads it once. MeshLib's own [interactive demo](https://demo.meshlib.io/) is hosted exactly this way.
+
+So on a page that is not cross-origin isolated you have three options: send the headers, install the service-worker shim, or use the single-threaded `@meshinspector/meshlib` package, which has no such requirement.
 
 ## Getting Started: Your First Example
 The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:
@@ -82,17 +123,22 @@ using mesh = ml.Mesh.fromTriangles(coords, tris);
 console.log('volume =', mesh.volume()); // ~8
 \endcode
 
+\note This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in \ref MeshLibJsPayloadSize "Payload Size".
+
 \note The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
 
 ## TypeScript
-The package ships type definitions, so `createMeshLib` and the whole module API are typed with no extra setup:
+The package ships type definitions, so `createMeshLib` and the whole module API are typed with minimal setup:
 \code{.ts}
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
-using mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
+const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 const { valid, distSq } = ml.findProjection(point, mesh);
+mesh.delete();
 \endcode
+
+Also make sure to add `"type": "module"` to your package.json.
 
 ## Memory Management
 Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one must be freed explicitly.

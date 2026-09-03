@@ -55,6 +55,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Add our Clang to PATH
+        run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
+
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
         id: collect-runner-stats
@@ -159,7 +162,10 @@ jobs:
           # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
           # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
           PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}}
+          # The bindings always compile with clang++, which takes the newest GCC in the image (16 since
+          # #6717) and so needs GLIBCXX_3.4.35 - absent from stock Ubuntu 24.04. Pin the deb's own GCC 13.
+          CLANG_GCC_PIN: ${{ matrix.os == 'ubuntu24' && '--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13' || '' }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}} EXTRA_CFLAGS="${{env.CLANG_GCC_PIN}}" EXTRA_LDFLAGS="${{env.CLANG_GCC_PIN}}"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"
@@ -197,7 +203,7 @@ jobs:
         if: ${{ inputs.mrbind }}
         timeout-minutes: 8
         working-directory: ./build/${{ matrix.config }}/bin
-        run: python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
+        run: xvfb-run -a python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python' -a ' --junit-xml=../unit_tests_report_pytest.xml'
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build && inputs.mrbind }}

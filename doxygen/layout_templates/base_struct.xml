@@ -13,6 +13,7 @@
       <tab type="user" url="__BEGIN_URL__MeshLibCmakeSetupGuide__END_URL__" title="CMake"/>
     </tab>
     <tab type="user" url="__BEGIN_URL__License__END_URL__" title="License" />
+    <tab type="user" url="__BEGIN_URL__Citation__END_URL__" title="How to cite" />
     <tab type="usergroup" url="__BEGIN_URL__Tutorials__END_URL__" title="Tutorials">
       <tab type="user" url="__BEGIN_URL__FirstPluginTutorial__END_URL__" title="Create First Plugin using C++"/>
       <tab type="user" url="__BEGIN_URL__SupportGeneratorTutorial__END_URL__" title="Support Generator Tool using C++"/>
@@ -63,6 +64,7 @@
         <tab type="user" url="__BEGIN_URL__ExampleDicomFiles__END_URL__" title="Open Dicom Files"/>
       </tab>
     </tab>
+    <tab type="user" url="__BEGIN_URL__SwitchingFromOtherLibraries__END_URL__" title="Switching from Other Libraries"/>
     <tab type="usergroup" url="__BEGIN_URL__PackageOverview__END_URL__" title="Package Overview">
       <tab type="user" url="__BEGIN_URL__FileFormatSupport__END_URL__" title="File Format Support"/>
       <tab type="user" url="__BEGIN_URL__MeshStructureOverview__END_URL__" title="Mesh Structure"/>

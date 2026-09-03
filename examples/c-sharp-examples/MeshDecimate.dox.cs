@@ -1,11 +1,13 @@
 public class MeshDecimateExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         try
         {
-            // Load mesh
-            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
+            // Load the mesh given on the command line, or make a sphere to decimate if no path is given
+            var mesh = args.Length > 0
+                ? MR.MeshLoad.fromAnySupportedFormat(args[0])
+                : MR.makeUVSphere(1.0f, 64, 64);
 
             // Repack mesh optimally.
             // It's not necessary but highly recommended to achieve the best performance in parallel processing

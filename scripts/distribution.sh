@@ -24,7 +24,7 @@ if [ -d "./distr/" ]; then
  rm -rf distr
 fi
 
-cmake --install ./build/Release --prefix "./distr/meshlib-dev/usr/local"
+cmake --install ./build/Release --prefix "./distr/meshlib-dev/usr/local" --strip
 
 MR_INSTALL_LIB_DIR="/usr/local/lib/MeshLib"
 MR_INSTALL_INCLUDE_DIR="/usr/local/include/MeshLib"
@@ -33,14 +33,16 @@ MR_INSTALL_RES_DIR="/usr/local/share/MeshLib"
 # Install the generated bindings, if needed.
 if [ ! -f "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib/mrmeshpy.so" ] && [ -f "build/Release/bin/meshlib/mrmeshpy.so" ]; then
   echo "Installing the generated bindings..."
-  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so,__init__.py}
-  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"         build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so,__init__.py}
+  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/__init__.py
+  install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so}
+  install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"         build/Release/bin/meshlib/__init__.py
+  install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"        build/Release/bin/meshlib/{mrmeshpy.so,mrmeshnumpy.so}
   patchelf --set-rpath '' "distr/meshlib-dev$MR_INSTALL_LIB_DIR/"{,meshlib/}mrmeshpy.so
 
   if [ -f "build/Release/bin/meshlib/mrcudapy.so" ]; then
     echo "CUDA bindings found, installing with mrcudapy.so..."
-    install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/mrcudapy.so
-    install -Dt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"         build/Release/bin/meshlib/mrcudapy.so
+    install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR/meshlib" build/Release/bin/meshlib/mrcudapy.so
+    install -sDt "distr/meshlib-dev$MR_INSTALL_LIB_DIR"        build/Release/bin/meshlib/mrcudapy.so
     patchelf --set-rpath '' "distr/meshlib-dev$MR_INSTALL_LIB_DIR/"{,meshlib/}mrcudapy.so
   fi
 fi
@@ -52,9 +54,15 @@ fi
 echo ${MR_VERSION} > distr/meshlib-dev${MR_INSTALL_RES_DIR}/mr.version
 
 BASE_DIR=$(realpath $(dirname "$0")/..)
-REQUIREMENTS_FILE="${BASE_DIR}/requirements/ubuntu.txt"
+REQUIREMENTS_FILE="${BASE_DIR}/requirements/ubuntu-package.txt"
 # convert multi-line file to comma-separated string
 DEPENDS_LINE=$(cat ${REQUIREMENTS_FILE} | tr '\n' ',' | sed -e "s/,\s*$//" -e "s/,/, /g")
+
+# both .deb legs build natively - ubuntu-x64 on an amd64 runner, ubuntu-arm64 on
+# an arm64 one - so the host's architecture is the package's architecture. Naming
+# it lets dpkg refuse the package on a foreign CPU instead of installing ELF
+# binaries it cannot run, which `Architecture: all` allowed.
+DEB_ARCHITECTURE=$(dpkg --print-architecture)
 
 #create control file
 mkdir -p distr/meshlib-dev/DEBIAN
@@ -64,7 +72,7 @@ Essential: no
 Priority: optional
 Section: model
 Maintainer: Adalisk team
-Architecture: all
+Architecture: ${DEB_ARCHITECTURE}
 Description: Advanced mesh modeling library
 Version: ${MR_VERSION}
 Depends: ${DEPENDS_LINE}

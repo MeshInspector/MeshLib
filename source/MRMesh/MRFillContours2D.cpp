@@ -14,6 +14,7 @@
 #include "MRBox.h"
 #include "MRMapEdge.h"
 #include "MRBitSet.h"
+#include "MRphmap.h"
 #include <cfloat>
 
 namespace MR
@@ -70,69 +71,6 @@ AffineXf3f getXfFromOxyPlane( const Contours3f& contours )
     return AffineXf3f( c.getXf() );
 }
 
-struct ProjectFillInput
-{
-    std::vector<EdgeLoop> paths;
-    AffineXf3f fromPlaneXf;
-    Contours2f holes2d;
-};
-
-Expected<ProjectFillInput> projectHoles( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
-{
-    MR_TIMER;
-    assert( !holeRepresentativeEdges.empty() );
-    if ( holeRepresentativeEdges.empty() )
-        return unexpected( "No hole edges are given" );
-
-    // reorder to make edges ring with hole on left side
-    bool badEdge = false;
-    auto& meshTopology = mesh.topology;
-    for ( const auto& edge : holeRepresentativeEdges )
-    {
-        if ( meshTopology.left( edge ) )
-        {
-            badEdge = true;
-            break;
-        }
-    }
-    assert( !badEdge );
-    if ( badEdge )
-        return unexpected( "Some hole edges have left face" );
-
-    ProjectFillInput res;
-    // make border rings
-    res.paths.resize( holeRepresentativeEdges.size() );
-    for ( int i = 0; i < res.paths.size(); ++i )
-        res.paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
-
-    // find transformation from world to plane space and back
-    res.fromPlaneXf = getXfFromOxyPlane( mesh, res.paths );
-    const auto toPlane = res.fromPlaneXf.inverse();
-
-    // make contours2D (on plane) from border rings (in world)
-    res.holes2d.reserve( res.paths.size() );
-    for ( const auto& path : res.paths )
-    {
-        res.holes2d.emplace_back();
-        auto& contour = res.holes2d.back();
-        contour.reserve( path.size() + 1 );
-        for ( const auto& edge : path )
-        {
-            const auto localPoint = toPlane( mesh.orgPnt( edge ) );
-            contour.emplace_back( Vector2f( localPoint.x, localPoint.y ) );
-        }
-        contour.emplace_back( contour.front() );
-    }
-
-    return res;
-}
-
-struct ProjectedFillMesh
-{
-    Mesh mesh;
-    std::vector<EdgeLoop> paths;
-};
-
 // checks that patch boundary loops match the input hole loops one-to-one and re-orients inverted
 // degenerate holes (expected sometimes as far as planar triangulation does not now about input topology)
 static Expected<void> validateAndFixPatch( MeshTopology& patchTopology, const std::vector<EdgeLoop>& inputPaths, std::vector<EdgePath>& patchPaths )
@@ -166,53 +104,73 @@ static Expected<void> validateAndFixPatch( MeshTopology& patchTopology, const st
     return {};
 }
 
-Expected<ProjectedFillMesh> fillProjected( const MeshTopology& tp, const ProjectFillInput& input )
-{
-    MR_TIMER;
-    ProjectedFillMesh res;
-
-    auto holeVertIds = std::make_unique<PlanarTriangulation::HolesVertIds>(
-        PlanarTriangulation::findHoleVertIdsByHoleEdges( tp, input.paths ) );
-
-    auto fillResult = PlanarTriangulation::triangulateDisjointContours( input.holes2d, holeVertIds.get(), &res.paths );
-    holeVertIds.reset();
-    if ( !fillResult )
-        return unexpected( "Cannot triangulate contours with self-intersections" );
-
-    res.mesh = std::move( *fillResult );
-
-    if ( auto v = validateAndFixPatch( res.mesh.topology, input.paths, res.paths ); !v )
-        return unexpected( std::move( v.error() ) );
-    return res;
-}
-
 Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
     MR_TIMER;
+    assert( !holeRepresentativeEdges.empty() );
+    if ( holeRepresentativeEdges.empty() )
+        return unexpected( "No hole edges are given" );
 
-    auto projInput = projectHoles( mesh, holeRepresentativeEdges );
-    if ( !projInput.has_value() )
-        return unexpected( std::move( projInput.error() ) );
-
-    auto fillRes = fillProjected( mesh.topology, *projInput );
-    if ( !fillRes.has_value() )
-        return unexpected( std::move( fillRes.error() ) );
-
-    // move patch surface border points to original position (according original mesh)
-    auto& patchMeshPoints = fillRes->mesh.points;
-    auto& patchMeshTopology = fillRes->mesh.topology;
-    auto& meshPoints = mesh.points;
-    auto& meshTopology = mesh.topology;
-    for ( int i = 0; i < projInput->paths.size(); ++i )
+    const auto& meshTopology = mesh.topology;
+    for ( EdgeId e : holeRepresentativeEdges )
     {
-        auto& path = projInput->paths[i];
-        auto& newPath = fillRes->paths[i];
-        for ( int j = 0; j < path.size(); ++j )
-            patchMeshPoints[patchMeshTopology.org( newPath[j] )] = meshPoints[meshTopology.org( path[j] )];
+        assert( !meshTopology.left( e ) );
+        if ( meshTopology.left( e ) )
+            return unexpected( "Some hole edges have left face" );
     }
 
-    // add patch surface to original mesh
-    mesh.addMeshPart( fillRes->mesh, false, projInput->paths, fillRes->paths );
+    EdgeLoops paths( holeRepresentativeEdges.size() );
+    size_t numLoopEdges = 0;
+    Vector3d sumCross;
+    for ( int i = 0; i < int( paths.size() ); ++i )
+    {
+        paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
+        if ( paths[i].size() < 3 )
+            return unexpected( "Hole boundary is degenerate" );
+        numLoopEdges += paths[i].size();
+        for ( EdgeId e : paths[i] )
+            sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+    }
+
+    // the holes wind counterclockwise around this direction, same as around the fitted plane's normal it replaces
+    WholeEdgeMap patch2mesh;
+    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, paths, Vector3f( sumCross.normalized() ), &patch2mesh );
+    if ( !patch )
+        return unexpected( "Cannot triangulate contours with self-intersections" );
+    // one patch edge per loop edge; fewer means the loops traverse a mesh edge twice, and that edge
+    // has no second side to stitch the patch to
+    if ( patch2mesh.size() != numLoopEdges )
+        return unexpected( "Hole boundary has a duplicated edge" );
+
+    // the patch boundary aligned with the input loops by identity: the map is directed along the patch
+    // edge, so the mesh edge's own direction selects the direction of the patch edge stitched to it
+    HashMap<UndirectedEdgeId, EdgeId> mesh2patch;
+    mesh2patch.reserve( numLoopEdges );
+    for ( UndirectedEdgeId pue{ 0 }; pue < patch2mesh.size(); ++pue )
+    {
+        const EdgeId me = patch2mesh[pue];
+        mesh2patch[me.undirected()] = me.even() ? EdgeId( pue ) : EdgeId( pue ).sym();
+    }
+    std::vector<EdgePath> patchPaths( paths.size() );
+    for ( int i = 0; i < int( paths.size() ); ++i )
+    {
+        patchPaths[i].resize( paths[i].size() );
+        for ( int j = 0; j < int( paths[i].size() ); ++j )
+        {
+            const EdgeId me = paths[i][j];
+            const EdgeId pe = mesh2patch[me.undirected()];
+            patchPaths[i][j] = me.even() ? pe : pe.sym();
+        }
+    }
+
+    if ( auto v = validateAndFixPatch( patch->topology, paths, patchPaths ); !v )
+        return unexpected( std::move( v.error() ) );
+
+    // patch vertices are the mesh's own, with the exact same coordinates, so no point fixup is needed
+    // in particular rejected for a hole loop passing a vertex twice: the patch is pinched at that
+    // vertex too, and stitching it would split the mesh vertex into two disjoint edge rings
+    if ( !mesh.addMeshPart( *patch, false, paths, patchPaths ) )
+        return unexpected( "Patch surface borders are incompatible with mesh borders" );
     return {};
 }
 
@@ -247,7 +205,7 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId )
 
     // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel anchors through it
     WholeEdgeMap bd2mesh;
-    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), nullptr, &bd2mesh );
+    auto patch = PlanarTriangulation::triangulateDisjointContours( mesh, loops, Vector3f( sumCross.normalized() ), &bd2mesh );
     if ( !patch )
         return unexpected( "Cannot triangulate contours with self-intersections" );
 

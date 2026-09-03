@@ -23,12 +23,16 @@ npm install @meshinspector/meshlib
 In the browser you can skip npm entirely and import the module directly:
 
 ```js
-// latest version
+// latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
-// or pin a specific version
-import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
+// or pin a release — v1.2.3.456 is an example tag, not a real one
+import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
 ```
+
+To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a
+leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`.
+Pinned URLs are immutable, so a pin never changes under you; the unpinned path always serves the latest release.
 
 ## Usage
 
@@ -76,15 +80,18 @@ const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 ## TypeScript
 
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with
-no extra setup:
+minimal setup:
 
 ```ts
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
-using mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
+const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 const { valid, distSq } = ml.findProjection(point, mesh);
+mesh.delete();
 ```
+
+Also make sure to add `"type": "module"` to your package.json.
 
 ## Memory management
 

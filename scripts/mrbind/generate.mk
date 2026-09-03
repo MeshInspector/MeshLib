@@ -221,6 +221,12 @@ endif
 VCPKG_TRIPLET := $(if $(VCPKG_DEFAULT_TRIPLET),$(VCPKG_DEFAULT_TRIPLET),x64-windows-meshlib)
 $(info Using vcpkg triplet: $(VCPKG_TRIPLET))
 
+# Target architecture, from the triplet (`x64-windows-meshlib`, `arm64-windows-meshlib`).
+# MSVC spells it x64/arm64 in output paths, Clang wants x86_64/aarch64 in the triple.
+MSVC_ARCH := $(firstword $(subst -, ,$(VCPKG_TRIPLET)))
+MSVC_TARGET_ARCH := $(if $(filter arm64,$(MSVC_ARCH)),aarch64,x86_64)
+$(info Targeting $(MSVC_TARGET_ARCH)-pc-windows-msvc)
+
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
@@ -244,6 +250,9 @@ MACOS_MIN_VER :=
 # That's because we need to run `clang++ -print-resource-dir` and feed that resource directory to libclang, so it can find its internal headers.
 ifneq ($(HOST_IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
+else ifneq ($(LLVM_PREFIX),)
+# LLVM_PREFIX selects a keg by full path (used for self-hosted runners).
+CXX_FOR_BINDINGS := $(LLVM_PREFIX)/bin/clang++
 else ifneq ($(HOST_IS_MACOS),)
 CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
 else
@@ -281,7 +290,7 @@ ifeq ($(TARGET),python)
 
 # Where to find MeshLib.
 ifneq ($(IS_WINDOWS),)
-MESHLIB_SHLIB_DIR := source/x64/$(VS_MODE)
+MESHLIB_SHLIB_DIR := source/$(MSVC_ARCH)/$(VS_MODE)
 else
 MESHLIB_SHLIB_DIR := build/Release/bin
 endif
@@ -314,11 +323,16 @@ MODE := release
 ifeq ($(MODE),release)
 override EXTRA_CFLAGS += -Oz -flto=thin -DNDEBUG
 override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),-Wl$(comma)-x,-s)# Apple's ld rejects `-s`; `-Wl,-x` drops local Mach-O symbols (most of __LINKEDIT) instead.
-ifneq ($(IS_LINUX),)
 # Fold byte-identical functions: the bindings are ~190k tiny near-duplicate template
-# instantiations, and ICF removes 11% of mrmeshpy.so (7 MB unpacked, 2.3 MB compressed).
-# Linux-only until lld-link (Windows) and ld64.lld (macOS) get their own measurements.
-# No -ffunction-sections needed: lld's LTO codegen always emits per-function sections.
+# instantiations. Measured on mrmeshpy, with the Python sanity suite passing every time:
+# -11% on Linux, -13.6% on macOS x86_64, -19.4% on macOS arm64 (fixed-width instructions
+# make more of the instantiations byte-identical there).
+# No -ffunction-sections needed: lld's LTO codegen of this preset always emits per-function
+# sections, which is also why this lives here and not next to the other link flags.
+# Not for Windows, where lld-link is a COFF driver that answers this spelling with
+# `ignoring unknown argument '--icf=all'` and folds by default anyway: on the wheel build
+# `/opt:noicf` grows mrmeshpy.pyd from 56.2 to 63.0 MB, while `/opt:icf` changes nothing.
+ifeq ($(IS_WINDOWS),)
 override EXTRA_LDFLAGS += -Wl,--icf=all
 endif
 else ifeq ($(MODE),debug)
@@ -336,9 +350,17 @@ $(info MODE: $(MODE))
 # When setting this manually, both spaces and commas work as separators.
 ifneq ($(IS_WINDOWS),)
 override localappdata := $(subst \,/,$(LOCALAPPDATA))
+# Where python.org installs interpreters. The win-arm64 ones land in suffixed directories
+# (`Python311-arm64`), so the suffix belongs in the paths but must not leak into the
+# version numbers.
+PYTHON_DIR := $(localappdata)/Programs/Python/Python
+PYTHON_DIR_SUFFIX := $(if $(filter arm64,$(MSVC_ARCH)),-arm64)
 ifneq ($(FOR_WHEEL),)
 # On Windows wheel we use all versions we can find in appdata.
-PYTHON_VERSIONS := $(patsubst $(localappdata)/Programs/Python/Python3%,3.%,$(filter $(localappdata)/Programs/Python/Python3%,$(wildcard $(localappdata)/Programs/Python/Python3*)))
+PYTHON_DIR_PATTERN := $(PYTHON_DIR)3%$(PYTHON_DIR_SUFFIX)
+PYTHON_VERSIONS := $(patsubst $(PYTHON_DIR_PATTERN),3.%,$(filter $(PYTHON_DIR_PATTERN),$(wildcard $(subst 3%,3*,$(PYTHON_DIR_PATTERN)))))
+# with an empty suffix the glob also matches the suffixed dirs, so drop those
+PYTHON_VERSIONS := $(filter-out %-arm64 %-32,$(PYTHON_VERSIONS))
 else
 # On Windows non-wheel we detect only one version by default, the one in pkg-config.
 PYTHON_VERSIONS := $(patsubst python-%-embed,%,$(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc))))))
@@ -373,8 +395,8 @@ PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
 ifneq ($(and $(IS_WINDOWS),$(BUILD_SHIMS)),)
 # On Windows wheel, hardcode the flags to point to appdata.
-PYTHON_CFLAGS := -I$(localappdata)/Programs/Python/Python@XY@/Include
-PYTHON_LDFLAGS := -L$(localappdata)/Programs/Python/Python@XY@/libs -lpython@XY@
+PYTHON_CFLAGS := -I$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/Include
+PYTHON_LDFLAGS := -L$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/libs -lpython@XY@
 endif
 
 ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified...
@@ -518,8 +540,9 @@ mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
 # Enable Cuda? You can set this to 0 if you don't have Cuda installed.
-# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
-ENABLE_CUDA := $(if $(IS_MACOS),0,1)
+# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use
+#   wherever there is no Cuda toolkit: Macs, and Windows on arm64.
+ENABLE_CUDA := $(if $(IS_MACOS),0,$(if $(filter arm64,$(MSVC_ARCH)),0,1))
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
 
@@ -563,8 +586,8 @@ INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.tx
 INPUT_FILES_WHITELIST := %
 ifneq ($(filter c csharp,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
-else ifneq ($(HOST_IS_WINDOWS),)
-TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/x64/$(VS_MODE)
+else ifneq ($(IS_WINDOWS),)
+TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/$(MSVC_ARCH)/$(VS_MODE)
 else
 TEMP_OUTPUT_DIR := build/binds_$(TARGET)
 endif
@@ -735,8 +758,8 @@ endif
 # Windows.
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
-COMPILER_FLAGS += --target=x86_64-pc-windows-msvc
-LINKER_FLAGS += --target=x86_64-pc-windows-msvc
+COMPILER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc
+LINKER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc
 # This seems to be undocumented?! MSYS2 CLANG64 needs it to successfully cross-compile, because the default `-rtlib=compiler-rt` causes it to choke.
 # For some reason MIGNW64 and UCRT64 correctly guess the right default.
 LINKER_FLAGS += -rtlib=platform
@@ -1194,7 +1217,9 @@ generate:
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
-	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))
+# MeshLibArch places the assembly next to the native output; unset off Windows, where the
+# csproj default stands.
+	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE)) $(if $(MSVC_ARCH),-p:MeshLibArch=$(MSVC_ARCH))
 # # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
 # $(foreach m,$(MODULES),\
 # 	$(if $($m_CSharpSubLibraryOutputProject),\

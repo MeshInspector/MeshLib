@@ -22,7 +22,11 @@ rm -rf build
 # Add `make` to PATH.
 export PATH="$HOMEBREW_DIR/opt/make/libexec/gnubin:$PATH"
 # Add Clang to PATH.
-export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
+if [[ -n "${LLVM_PREFIX:-}" ]]; then
+    export PATH="$LLVM_PREFIX/bin:$PATH"
+else
+    export PATH="$HOMEBREW_DIR/opt/llvm@$CLANG_VER/bin:$PATH"
+fi
 
 
 # Guess the number of build threads.

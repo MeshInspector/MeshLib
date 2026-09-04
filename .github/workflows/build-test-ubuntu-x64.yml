@@ -119,7 +119,7 @@ jobs:
             -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
       - name: Wait for C bindings
@@ -150,13 +150,13 @@ jobs:
 
       - name: Build C bindings
         if: ${{ inputs.mrbind_c }}
-        # Reconfigure so the generated sources are globbed in; the targets are excluded from
-        # ALL, so they are built by name. MR_VERSION must repeat the Build step's value:
+        # C bindings sources are globbed at configure time, so they can only enter the build
+        # graph now, after the download. MR_VERSION must repeat the Build step's value:
         # config_cmake.h is generated into the source tree, and a change rebuilds everything.
         env:
           MR_VERSION: ${{ inputs.app_version }}
         run: |
-          cmake -S . -B build/${{ matrix.config }}
+          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
           cmake --build build/${{ matrix.config }} -j $(nproc) --target MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: PCH size (diagnostic)

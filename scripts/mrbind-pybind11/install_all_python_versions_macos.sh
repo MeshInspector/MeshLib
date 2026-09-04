@@ -32,14 +32,20 @@ elif [[ -d /Library/Frameworks/Python.framework/ ]]; then
 fi
 
 # Homebrew stopped bottling for Intel macOS (announced 2026-08), and a formula rebuilt
-# after that loses its existing x86_64 bottle, so it would be built from source and its
-# `post_install` then fails. Pin such formulae to the last revision that still has a
-# bottle: the bottle itself stays available, and its ghcr path comes from the formula
-# name, so it is poured even from our own tap.
+# after that loses the x86_64 bottles it already had, so it would be built from source
+# and its `post_install` then fails. That already happened to python@3.12 on 2026-09-02,
+# so pin every version to its newest revision that still has an x86_64 bottle: the
+# bottles stay published, and a bottle's ghcr path comes from the formula name, so it is
+# poured even from our own tap. Only the pinned formula is frozen, not its dependencies.
 PIN_TAP=meshlib/pins
 pinned_formula_commit() {
     case $1 in
-        3.12) echo 7b2c2f97093e29530dde60cf8bfd84f2ef2586a1 ;; # 3.12.14 before the 2026-09-02 rebuild
+        3.9)  echo 4e0140a8669ac57c55176fa96c85068e633ba93c ;; # 3.9.25_1
+        3.10) echo 7542533c9af6d6f24ff9dd80447f5d2711d7fde6 ;; # 3.10.21
+        3.11) echo 345885aec208c8cac4acc5c03457746df5187534 ;; # 3.11.16
+        3.12) echo 7b2c2f97093e29530dde60cf8bfd84f2ef2586a1 ;; # 3.12.14, before the 2026-09-02 rebuild
+        3.13) echo 6997357d29053aecb8f40eab3f583d209dcea1cc ;; # 3.13.15
+        3.14) echo 7187bb7ac10ba3a2661758624147584d24e79d6b ;; # 3.14.7
     esac
 }
 

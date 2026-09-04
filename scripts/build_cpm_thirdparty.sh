@@ -108,19 +108,6 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
     -D MR_EMSCRIPTEN_WASM2023=${MR_EMSCRIPTEN_WASM2023} \
   "
-  if [[ ${MR_EMSCRIPTEN_SINGLETHREAD} == 0 ]] ; then
-    CFLAGS="${CFLAGS} -pthread"
-    CXXFLAGS="${CFLAGS} -pthread"
-  fi
-  if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
-    CFLAGS="${CFLAGS} -s MEMORY64=1"
-    CXXFLAGS="${CFLAGS} -s MEMORY64=1"
-    LDFLAGS="${LDFLAGS} -s MEMORY64=1"
-  fi
-  if [[ ${MR_EMSCRIPTEN_WASM2023} == 1 ]] ; then
-    CFLAGS="${CFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"
-    CXXFLAGS="${CXXFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"
-  fi
 fi
 
 if [[ $OSTYPE == 'darwin'* ]]; then

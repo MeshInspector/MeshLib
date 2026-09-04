@@ -10,13 +10,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -w")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
 
-IF(MR_EMSCRIPTEN)
+if(EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-  IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
-  ENDIF()
-ENDIF()
+endif()
 
 # CPM.cmake reissues cmake_minimum_required(3.14), so include it after project() to keep that
 # out of the policy scope the stage files are configured under.

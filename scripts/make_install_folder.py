@@ -25,6 +25,11 @@ def vcpkg_triplet_name():
 		return sys.argv[2]
 	return "x64-windows-meshlib"
 
+def target_arch():
+	# Every triplet leads with the target architecture: x64-windows-meshlib, arm64-windows-meshlib.
+	# It also names the build output folder, source/<arch>/<config>.
+	return vcpkg_triplet_name().split('-')[0]
+
 def vcpkg_dir():
 	vcpkg_triplet = vcpkg_triplet_name()
 	vcpkg_exe_dir = ""
@@ -46,7 +51,7 @@ def prepare_includes_list():
 	it.includes_src_dst.clear()
 	it.includes_src_dst_thirdparty.clear()
 	it.append_includes_list(os.path.join(vcpkg_directory,"include"), True)
-	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile('x64(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?'), re.compile('MeshLibC2Cuda(/.*)?')])
+	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile(target_arch() + '(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?'), re.compile('MeshLibC2Cuda(/.*)?')])
 	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2/include"))
 	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2Cuda/include"))
 	it.append_includes_list(path_to_phmap, True,'parallel_hashmap')
@@ -76,7 +81,7 @@ def copy_includes():
 	write_config_dist()
 
 def copy_app():
-	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_app,dirs_exist_ok=True)
+	shutil.copytree(os.path.join(it.path_to_sources,target_arch()),it.path_to_app,dirs_exist_ok=True)
 	folder = os.walk(it.path_to_app)
 	for address, dirs, files in folder:
 		for file in files:
@@ -84,12 +89,12 @@ def copy_app():
 				os.remove(os.path.join(address,file))
 
 def copy_lib():
-	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_libs,dirs_exist_ok=True)
+	shutil.copytree(os.path.join(it.path_to_sources,target_arch()),it.path_to_libs,dirs_exist_ok=True)
 	shutil.copytree(os.path.join(os.path.join(vcpkg_directory,'debug'),'lib'),os.path.join(it.path_to_libs,"Debug"),dirs_exist_ok=True)
 	shutil.copytree(os.path.join(vcpkg_directory,'lib'),os.path.join(it.path_to_libs,"Release"),dirs_exist_ok=True)
 
 	# Drop the debug-symbol cache that the .NET (C#) test run leaves under
-	# x64/<config>/sym (coreclr/ntdll/kernelbase PDBs, indexed by GUID). Its
+	# <arch>/<config>/sym (coreclr/ntdll/kernelbase PDBs, indexed by GUID). Its
 	# files end in .pdb so the prune below would otherwise keep them, bloating
 	# the package with system symbols that must not ship.
 	for sym_dir in glob.glob(os.path.join(it.path_to_libs, "*", "sym")):

@@ -261,15 +261,24 @@ IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
   option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
   # These sources are generated (scripts/mrbind/generate.mk), and nothing but CMakeLists.txt
   # is committed, so a configure legitimately precedes them: configure, generate, then
-  # reconfigure to pick the new files up. EXCLUDE_FROM_ALL keeps them out of the default
-  # build once they are there, so they are always built by name.
+  # reconfigure to pick the new files up.
   # if(EXISTS) needs a full path, and PROJECT_SOURCE_DIR is the relative ./source here.
   IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_SOURCE_DIR}/MeshLibC2/src AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_SOURCE_DIR}/MeshLibC2Cuda/src)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2 EXCLUDE_FROM_ALL)
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2 EXCLUDE_FROM_ALL)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
 
     # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
-    add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda EXCLUDE_FROM_ALL)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda)
+
+    # Keep them out of the default build, so they are always built by name: the sources are
+    # only complete once generated. This is the target property, not add_subdirectory's
+    # EXCLUDE_FROM_ALL, which would drop these directories' install rules as well.
+    # Emscripten configures neither MRTestC2 nor MeshLibC2Cuda.
+    FOREACH(C_BINDINGS_TARGET MeshLibC2 MRTestC2 MeshLibC2Cuda)
+      IF(TARGET ${C_BINDINGS_TARGET})
+        set_target_properties(${C_BINDINGS_TARGET} PROPERTIES EXCLUDE_FROM_ALL ON)
+      ENDIF()
+    ENDFOREACH()
   ELSE()
     message(STATUS "C bindings are not generated yet: skipping MeshLibC2, MeshLibC2Cuda and MRTestC2")
   ENDIF()

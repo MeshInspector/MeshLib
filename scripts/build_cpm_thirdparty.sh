@@ -1,0 +1,138 @@
+#!/bin/bash
+
+# This script builds thirdparty with CPM from `thirdparty/cpm`
+# Usage: ./scripts/build_cpm_thirdparty.sh [INSTALL_PREFIX]
+
+# exit if any command failed
+set -eo pipefail
+
+dt=$(date '+%d-%m-%Y_%H:%M:%S');
+logfile="`pwd`/install_thirdparty_${dt}.log"
+echo "Thirdparty build script started."
+echo "You could find output in ${logfile}"
+
+# NOTE: realpath is not supported on older macOS versions
+BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
+SCRIPT_DIR=${BASE_DIR}/scripts/
+
+MESHLIB_THIRDPARTY_DIR=${BASE_DIR}/thirdparty/cpm/
+MESHLIB_THIRDPARTY_BUILD_DIR="${MESHLIB_THIRDPARTY_BUILD_DIR:-${BASE_DIR}/thirdparty_build/}"
+
+MESHLIB_THIRDPARTY_ROOT_DIR="${1:-./installed}"
+mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+MESHLIB_THIRDPARTY_ROOT_DIR=$( cd "${MESHLIB_THIRDPARTY_ROOT_DIR}" ; pwd -P )
+
+if [[ $OSTYPE == 'darwin'* ]]; then
+  echo "Host system: MacOS"
+  INSTALL_REQUIREMENTS="install_brew_requirements.sh"
+elif [[ $OSTYPE == 'linux'* ]]; then
+  source /etc/os-release
+  echo "Host system: ${NAME} ${DISTRIB_RELEASE}"
+  if [[ "${ID}" == "ubuntu" ]] || [[ "${ID_LIKE}" == *"ubuntu"* ]]; then
+    INSTALL_REQUIREMENTS="install_apt_requirements.sh"
+  fi
+else
+  echo "Host system: ${OSTYPE}"
+fi
+
+. "$SCRIPT_DIR/ask_emscripten_mode.src"
+
+if [ $MR_EMSCRIPTEN == "ON" ]; then
+  true # Nothing.
+elif [ -n "${INSTALL_REQUIREMENTS}" ]; then
+  echo "Check requirements. Running ${INSTALL_REQUIREMENTS} ..."
+  ${SCRIPT_DIR}/$INSTALL_REQUIREMENTS
+else
+  echo "Unsupported system. Installing dependencies is your responsibility."
+fi
+
+# FIXME: make it optional
+rm -rf "${MESHLIB_THIRDPARTY_BUILD_DIR}"
+mkdir -p "${MESHLIB_THIRDPARTY_BUILD_DIR}"
+# FIXME: make it optional
+for SUBDIR in lib include share ; do
+  rm -rf "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
+  mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
+done
+
+MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
+  -D CMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} \
+  -D CMAKE_BUILD_TYPE=Release \
+"
+
+if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
+  CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
+  if [ -n "${CMAKE_C_COMPILER}" ] ; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
+  fi
+
+  CMAKE_CXX_COMPILER="${CMAKE_CXX_COMPILER:-${CXX}}"
+  if [ -n "${CMAKE_CXX_COMPILER}" ] ; then
+    MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D CMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+
+    # special conditions for Clang on macOS
+    if [[ $OSTYPE == 'darwin'* ]] && command -v brew >/dev/null 2>&1; then
+      HOMEBREW_PREFIX=$(brew --prefix)
+      if [[ "${CMAKE_CXX_COMPILER}" == "${HOMEBREW_PREFIX}"* ]] ; then
+        # use system libc++ instead of Clang's one
+        MACOS_SDK_PATH=$(xcrun --show-sdk-path | xargs)  # trim trailing whitespace
+        CXXFLAGS="-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v1 -isysroot ${MACOS_SDK_PATH}"
+        LDFLAGS="-nostdlib++ -L${MACOS_SDK_PATH}/usr/lib -lc++ -lc++abi"
+        # use Homebrew zlib instead of system one
+        MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D ZLIB_ROOT=$(brew --prefix zlib)"
+      fi
+    fi
+  fi
+fi
+
+if command -v ninja >/dev/null 2>&1 ; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
+fi
+
+if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
+  if [ -z "${EMSDK}" ] ; then
+    echo "Emscripten SDK not found"
+    exit 1
+  fi
+  EMSCRIPTEN_ROOT="${EMSDK}/upstream/emscripten"
+
+  export CFLAGS=""
+  export CXXFLAGS=""
+  export LDFLAGS=""
+  [[ ${MR_EMSCRIPTEN_WASM2023:=} ]] || export MR_EMSCRIPTEN_WASM2023=1
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
+    -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
+    -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
+    -D MR_EMSCRIPTEN=1 \
+    -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
+    -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
+    -D MR_EMSCRIPTEN_WASM2023=${MR_EMSCRIPTEN_WASM2023} \
+  "
+fi
+
+if [[ $OSTYPE == 'darwin'* ]]; then
+  NPROC=$(sysctl -n hw.logicalcpu)
+else
+  NPROC=$(nproc)
+fi
+
+# CPM downloads dependency sources here. Kept outside MESHLIB_THIRDPARTY_BUILD_DIR, which is
+# wiped above, so a rebuild re-configures without re-downloading.
+export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE:-${BASE_DIR}/thirdparty_sources}"
+
+# build
+echo "Starting build..."
+pushd "${MESHLIB_THIRDPARTY_BUILD_DIR}"
+for STAGE in stage1 stage2 ; do
+  cmake -S ${MESHLIB_THIRDPARTY_DIR}/${STAGE} -B ${STAGE} ${MR_CMAKE_OPTIONS}
+  cmake --build ${STAGE} -j ${NPROC}
+  cmake --install ${STAGE}
+done
+
+if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
+  # remove excess header files as they're distributed by Emscripten
+  find ${MESHLIB_THIRDPARTY_ROOT_DIR}/include/boost -mindepth 1 -maxdepth 1 -not -name 'locale*' -exec rm -r "{}" \;
+fi
+popd
+
+printf "\rThirdparty build script successfully finished. Required libs located in ${MESHLIB_THIRDPARTY_ROOT_DIR} folder. You could run ./scripts/build_source.sh\n\n"

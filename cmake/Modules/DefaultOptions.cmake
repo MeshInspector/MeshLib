@@ -9,13 +9,6 @@ ENDIF()
 set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-IF(MR_EMSCRIPTEN AND MR_EMSCRIPTEN_WASM64)
-  # required to be set before `project()' command for correct platform detection
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s MEMORY64=1")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s MEMORY64=1")
-ENDIF()
-
 add_compile_definitions(MR_USE_CMAKE_CONFIGURE_FILE)
 
 # MSVC debug information format
@@ -23,3 +16,7 @@ IF(POLICY CMP0141)
   cmake_policy(SET CMP0141 NEW)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<$<CONFIG:Debug,RelWithDebInfo>:Embedded>")
 ENDIF()
+
+if(MR_EMSCRIPTEN)
+  include(DefaultEmscriptenOptions)
+endif()

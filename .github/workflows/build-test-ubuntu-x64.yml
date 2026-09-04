@@ -194,7 +194,7 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/${{ matrix.config }}/bin/MRTest --with-python-tests
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}

@@ -346,7 +346,7 @@ jobs:
 
       - name: Unit Tests
         timeout-minutes: 10
-        run: build/Release/bin/MRTest
+        run: build/Release/bin/MRTest --with-python-tests
 
       - name: Python Tests
         run: |
@@ -569,7 +569,7 @@ jobs:
 
       - name: Unit Tests
         timeout-minutes: 10
-        run: source\${{ matrix.platform }}\Release\MRTest.exe
+        run: source\${{ matrix.platform }}\Release\MRTest.exe --with-python-tests
 
       - name: Python Tests
         working-directory: source\${{ matrix.platform }}\Release
@@ -700,7 +700,7 @@ jobs:
 
       - name: Unit Tests
         timeout-minutes: 10
-        run: build/Release/bin/MRTest
+        run: build/Release/bin/MRTest --with-python-tests
 
       - name: Python Tests
         working-directory: ./build/Release/bin

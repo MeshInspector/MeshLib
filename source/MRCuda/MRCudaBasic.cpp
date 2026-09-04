@@ -13,31 +13,6 @@ namespace MR
 namespace Cuda
 {
 
-namespace {
-
-std::string cudaVersionString( int version )
-{
-    return fmt::format( "{}.{}", version / 1000, ( version % 1000 ) / 10 );
-}
-
-/// CUDA reports a missing driver and an outdated one alike, both as
-/// cudaErrorInsufficientDriver whose message speaks only of an insufficient version
-std::string driverDetails( cudaError_t code )
-{
-    if ( code != cudaErrorInsufficientDriver )
-        return {};
-
-    int driverVersion = 0, runtimeVersion = 0;
-    cudaDriverGetVersion( &driverVersion ); // zero if no driver is installed
-    cudaRuntimeGetVersion( &runtimeVersion );
-    if ( driverVersion <= 0 )
-        return fmt::format( " (no NVIDIA driver installed, CUDA runtime {})", cudaVersionString( runtimeVersion ) );
-    return fmt::format( " (NVIDIA driver supports CUDA {}, older than the runtime {})",
-        cudaVersionString( driverVersion ), cudaVersionString( runtimeVersion ) );
-}
-
-} // anonymous namespace
-
 Expected<DeviceInfo> getDeviceInfo()
 {
     DeviceInfo res;
@@ -51,7 +26,7 @@ Expected<DeviceInfo> getDeviceInfo()
         if ( code != cudaSuccess || n <= 0 )
         {
             auto err = ( code != cudaSuccess ) ? MR::Cuda::getError( code ) : "NVIDIA GPU error: no capable device found";
-            err += fmt::format( ", CUDA driver {}", cudaVersionString( res.driverVersion ) );
+            err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );
             return MR::unexpected( err );
         }
     }
@@ -133,7 +108,7 @@ size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector3i& block
 
 std::string getError( cudaError_t code )
 {
-    return fmt::format( "NVIDIA GPU error: {}{}", cudaGetErrorString( code ), driverDetails( code ) );
+    return fmt::format( "NVIDIA GPU error: {}", cudaGetErrorString( code ) );
 }
 
 cudaError_t logError( cudaError_t code, const char * file, int line )
@@ -143,12 +118,12 @@ cudaError_t logError( cudaError_t code, const char * file, int line )
 
     if ( file )
     {
-        spdlog::error("CUDA error {}: {}{}. In file: {} Line: {}", 
-            cudaGetErrorName( code ), cudaGetErrorString( code ), driverDetails( code ), file, line );
+        spdlog::error("CUDA error {}: {}. In file: {} Line: {}", 
+            cudaGetErrorName( code ), cudaGetErrorString( code ), file, line );
     }
     else
     {
-        spdlog::error( "CUDA error {}: {}{}", cudaGetErrorName( code ), cudaGetErrorString( code ), driverDetails( code ) );
+        spdlog::error( "CUDA error {}: {}", cudaGetErrorName( code ), cudaGetErrorString( code ) );
     }
     return code;
 }

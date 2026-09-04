@@ -183,7 +183,7 @@ jobs:
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
             cmake --version || exit /b 1
-            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF -DMESHLIB_BUILD_MRCUDA=${{ env.CUDA_VERSION != '' && 'ON' || 'OFF' }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
+            cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=${{matrix.config}} -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }} -DMESHLIB_BUILD_MRCUDA=${{ env.CUDA_VERSION != '' && 'ON' || 'OFF' }} -DMR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
             cmake --build source\TempOutput -j || exit /b 1
             rem Deploy vcpkg DLLs in one serial pass here: with VCPKG_APPLOCAL_DEPS=ON (default)
             rem every parallel Ninja link edge runs its own z-applocal into the shared bin dir,
@@ -205,7 +205,7 @@ jobs:
 
       # Both build systems wait here rather than before the Build step, so the main build
       # overlaps with generate-c-bindings: MeshLib.sln carries neither the C nor the C#
-      # bindings projects, and the CMake build configures its C bindings out until now.
+      # bindings projects, and the CMake build keeps its C bindings targets out of ALL.
       - name: Wait for C bindings
         if: ${{ inputs.mrbind_c || env.BUILD_C_SHARP == 'true' }}
         uses: ./.github/actions/wait-for-job
@@ -259,16 +259,16 @@ jobs:
           GETTEXT_ROOT: C:\msys64\clang64
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg_triplet }}
-        # The CMake branch reconfigures the directory the Build step left behind: the C bindings
-        # sources are globbed at configure time, so they can only enter the build graph now that
-        # they are downloaded; every other cache entry survives the reconfigure.
+        # The CMake branch reconfigures the directory the Build step left behind, so that the
+        # generated sources are globbed in; the targets are excluded from ALL, so they are
+        # built by name. Every other cache entry survives the reconfigure.
         # cmd expands %VCPKG_ROOT% when it parses the parenthesized block, i.e. before
         # VsDevCmd.bat replaces it with the VS-bundled vcpkg, whose path has a space - the same
         # reason the Build step's own z-applocal loop works.
         run: |
           if ${{ fromJSON('["1==0", "1==1"]')[matrix.build_system == 'CMake'] }} (
             call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-            cmake -S . -B source\TempOutput -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON || exit /b 1
+            cmake -S . -B source\TempOutput || exit /b 1
             cmake --build source\TempOutput -j %NUMBER_OF_PROCESSORS% --target MeshLibC2 MeshLibC2Cuda MRTestC2 || exit /b 1
             rem Only the new binaries need deploying; see the Build step's note on the serial pass.
             for %%b in (source\TempOutput\bin\MeshLibC2*.dll source\TempOutput\bin\MRTestC2.exe) do (

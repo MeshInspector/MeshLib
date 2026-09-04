@@ -87,7 +87,7 @@ option(MESHLIB_BUILD_SYMBOLMESH "Build symbol-to-mesh library" ON)
 option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
-option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
+option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Configure the generated C bindings targets; they stay out of ALL and are built by name" OFF)
 option(MESHLIB_BUILD_WASM_MODULE "Build the headless WebAssembly module" OFF)
 option(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY "Emit only the WebAssembly module's TypeScript definitions, leaving MeshLib unlinked" OFF)
 
@@ -259,11 +259,19 @@ ENDIF()
 
 IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
   option(MESHLIB_C_BINDINGS_UNITY_BUILD "Use unity build for C bindings" ON)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2)
-  add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2)
+  # These sources are generated (scripts/mrbind/generate.mk), and nothing but CMakeLists.txt
+  # is committed, so a configure legitimately precedes them: configure, generate, then
+  # reconfigure to pick the new files up. EXCLUDE_FROM_ALL keeps them out of the default
+  # build once they are there, so they are always built by name.
+  IF(EXISTS ${PROJECT_SOURCE_DIR}/MeshLibC2/src AND EXISTS ${PROJECT_SOURCE_DIR}/MeshLibC2Cuda/src)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2 EXCLUDE_FROM_ALL)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2 EXCLUDE_FROM_ALL)
 
-  # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
-  add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda)
+    # The Cuda is always enabled. Even if we don't want to actually build Cuda, we still need the stubs.
+    add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2Cuda ./MeshLibC2Cuda EXCLUDE_FROM_ALL)
+  ELSE()
+    message(STATUS "C bindings are not generated yet: skipping MeshLibC2, MeshLibC2Cuda and MRTestC2")
+  ENDIF()
 ENDIF()
 
 IF(MESHLIB_BUILD_SYMBOLMESH)

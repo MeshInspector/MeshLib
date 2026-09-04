@@ -211,8 +211,16 @@ int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const
         return 0;
     MR_TIMER;
 
-    UndirectedEdgeBitSet flipCandidates( topology.undirectedEdgeSize() );
-    UndirectedEdgeBitSet nextFlipCandidates( topology.undirectedEdgeSize(), true );
+    // the candidate sets come from the caller's cache when it has one (keeping their capacity),
+    // so a caller flipping many small meshes one by one does not allocate them every time
+    DeloneFlipsCache localCache;
+    DeloneFlipsCache& cache = settings.cache ? *settings.cache : localCache;
+    auto& flipCandidates = cache.flipCandidates;
+    auto& nextFlipCandidates = cache.nextFlipCandidates;
+    flipCandidates.clear();
+    flipCandidates.resize( topology.undirectedEdgeSize() );
+    nextFlipCandidates.clear();
+    nextFlipCandidates.resize( topology.undirectedEdgeSize(), true );
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )

@@ -121,10 +121,12 @@ jobs:
       - name: Prepare C bindings folders
         if: ${{ inputs.mrbind_c }}
         shell: bash
+        env:
+          BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
         run: |
           rm -rf source/MeshLibC2
           mv MeshLib/CbindingsTmp/MeshLibC2 source
-          if [[ $${matrix.build_mrcuda} == ON ]]; then
+          if [[ "${BUILD_MRCUDA}" == ON ]]; then
             rm -rf source/MeshLibC2Cuda
             mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
           else
@@ -192,7 +194,7 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/${{ matrix.config }}/bin/MRTest --with-python-tests
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}

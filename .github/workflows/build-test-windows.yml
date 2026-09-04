@@ -319,7 +319,7 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe
+        run: source\${{ env.MR_ARCH }}\${{ matrix.config }}\MRTest.exe --with-python-tests
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}

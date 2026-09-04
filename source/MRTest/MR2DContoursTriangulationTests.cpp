@@ -8,6 +8,7 @@
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MR2to3.h>
 #include <MRSymbolMesh/MRSymbolMesh.h>
 #include <gtest/gtest.h>
@@ -320,6 +321,62 @@ TEST( MRMesh, PlanarTriangulationChainedActiveEdges3 )
     cont.push_back( cont.front() );
     Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
     EXPECT_GE( mesh.topology.numValidFaces(), 0 ); // completing without the assert is the test
+}
+
+TEST( MRMesh, PlanarTriangulationMonotonePlan )
+{
+    // a flat disk inside a flat ring: the gap between them is bounded by two concentric circles, and
+    // the disk touches nothing, so only chords can join its loop to the ring's
+    constexpr int n = 8;
+    VertCoords pts;
+    pts.push_back( Vector3f() ); // disk center
+    for ( int ring = 0; ring < 3; ++ring ) // circles of radius 1 (the disk), 2 and 3 (the ring)
+        for ( int i = 0; i < n; ++i )
+        {
+            const float a = 2 * PI_F * i / n + 0.3f; // off the axes, so no two vertices share an x
+            pts.push_back( Vector3f( ( ring + 1 ) * std::cos( a ), ( ring + 1 ) * std::sin( a ), 0.f ) );
+        }
+    auto v = [] ( int ring, int i ) { return VertId( 1 + ring * n + i % n ); };
+    Triangulation t;
+    for ( int i = 0; i < n; ++i )
+    {
+        t.push_back( { VertId( 0 ), v( 0, i ), v( 0, i + 1 ) } );
+        t.push_back( { v( 1, i ), v( 2, i ), v( 2, i + 1 ) } );
+        t.push_back( { v( 1, i ), v( 2, i + 1 ), v( 1, i + 1 ) } );
+    }
+    Mesh mesh = Mesh::fromTriangles( std::move( pts ), t );
+
+    // the hole loops of the gap: the disk's boundary and the ring's inner boundary,
+    // as opposed to the ring's outer boundary at radius 3
+    auto inGap = [&mesh] ( const EdgeLoop& l ) { return mesh.orgPnt( l.front() ).lengthSq() < 5.f; };
+    EdgeLoops loops = findRightBoundary( mesh.topology );
+    std::erase_if( loops, [&] ( const EdgeLoop& l ) { return !inGap( l ); } );
+    ASSERT_EQ( loops.size(), size_t( 2 ) );
+
+    const Vector3f normal = Vector3f::plusZ();
+    // around the opposite normal the sweep works in a mirrored plane, so every chord would land in a
+    // wedge that faces occupy: the plan is rejected instead
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, -normal ).has_value() );
+
+    auto plan = PlanarTriangulation::getMonotonePlan( mesh, loops, normal );
+    ASSERT_TRUE( plan.has_value() );
+    EXPECT_EQ( plan->numTris, 0 ); // the plan only adds edges
+    // the sweep splits the gap where it reaches the disk and closes it back up where it leaves it
+    ASSERT_EQ( plan->items.size(), size_t( 2 ) );
+    executeHoleFillPlan( mesh, loops[0][0], *plan );
+
+    // each of the two holes the chords left is monotone along x: walking it, x turns around twice
+    EdgeLoops parts = findRightBoundary( mesh.topology );
+    std::erase_if( parts, [&] ( const EdgeLoop& l ) { return !inGap( l ); } );
+    for ( const EdgeLoop& loop : parts )
+    {
+        auto rightGoing = [&] ( size_t i ) { return mesh.orgPnt( loop[i] ).x < mesh.destPnt( loop[i] ).x; };
+        int turns = 0;
+        for ( size_t i = 0; i < loop.size(); ++i )
+            turns += rightGoing( i ) != rightGoing( ( i + 1 ) % loop.size() );
+        EXPECT_EQ( turns, 2 );
+    }
+    EXPECT_EQ( parts.size(), size_t( 2 ) );
 }
 
 namespace

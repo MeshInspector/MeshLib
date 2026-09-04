@@ -11,6 +11,7 @@
 #include "MREdgeIterator.h"
 #include "MRMeshMetrics.h"
 #include "MRMeshFillHole.h"
+#include "MRMapEdge.h"
 #include "MRMeshDelone.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRBox.h"
@@ -279,6 +280,14 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
     return findClosestToFront( tp, predicates, edges, left, baseId );
 }
 
+/// one edge added by makeMonotone() to split the region in monotone parts:
+/// it was created as `splice( anchor1, edge ); splice( anchor2, edge.sym() )`, so it connects
+/// org( anchor1 ) with org( anchor2 ) exactly like makeNewEdge( topology, anchor1, anchor2 ) does
+struct MonotoneChord
+{
+    EdgeId anchor1, anchor2, edge;
+};
+
 struct SweepLineParams
 {
     /// if not set - adds new vertices at intersection points
@@ -298,6 +307,11 @@ struct SweepLineParams
 
     /// optional map of patch topology edges->input topology edges
     WholeEdgeMap* outPatchMap{ nullptr };
+
+    /// optional output: the chords makeMonotone() adds, in creation order. Because makeEdge() only
+    /// appends, chord k is the undirected edge patchToInEdges.size() + k - but only while nothing is
+    /// injected between the loop edges and the chords (i.e. findIntersections() found no intersection)
+    std::vector<MonotoneChord>* outChords{ nullptr };
 };
 
 class SweepLineQueue
@@ -434,6 +448,9 @@ private:
     void updateStartRightGoingCache_();
     void processStartEvent_( int index );
     void processDestenationEvent_( int index );
+    // adds one monotonation chord org( anchor1 ) -> org( anchor2 ) with the parity of refEdge (which
+    // also sources its winding), records it for outChords, and returns the created edge
+    EdgeId addChord_( EdgeId anchor1, EdgeId anchor2, EdgeId refEdge );
     void processIntersectionEvent_( int index );
 
     struct IntersectionInfo
@@ -832,6 +849,19 @@ void SweepLineQueue::updateStartRightGoingCache_()
     std::rotate( rightGoingCache_.begin(), rightGoingCache_.begin() + pos, rightGoingCache_.end() );
 }
 
+EdgeId SweepLineQueue::addChord_( EdgeId anchor1, EdgeId anchor2, EdgeId refEdge )
+{
+    auto newEdge = tp_.makeEdge();
+    if ( refEdge.odd() )
+        newEdge = newEdge.sym();
+    tp_.splice( anchor1, newEdge );
+    tp_.splice( anchor2, newEdge.sym() );
+    if ( params_.outChords )
+        params_.outChords->push_back( { anchor1, anchor2, newEdge } );
+    windingInfo_.autoResizeSet( newEdge.undirected(), windingInfo_[refEdge.undirected()] );
+    return newEdge;
+}
+
 void SweepLineQueue::processStartEvent_( int index )
 {
     updateStartRightGoingCache_();
@@ -867,13 +897,7 @@ void SweepLineQueue::processStartEvent_( int index )
         }
         assert( helperId );
 
-        auto newEdge = tp_.makeEdge();
-        if ( activeSweepEdges_[index - 1].edgeId.odd() )
-            newEdge = newEdge.sym();
-        tp_.splice( helperId, newEdge );
-        tp_.splice( rightGoingCache_.back().edgeId, newEdge.sym() );
-
-        windingInfo_.autoResizeSet( newEdge.undirected(), windingInfo_[activeSweepEdges_[index - 1].edgeId.undirected()] );
+        addChord_( helperId, rightGoingCache_.back().edgeId, activeSweepEdges_[index - 1].edgeId );
     }
 
     activeSweepEdges_.insert( activeSweepEdges_.begin() + index, rightGoingCache_.begin(), rightGoingCache_.end() );
@@ -925,15 +949,10 @@ void SweepLineQueue::processDestenationEvent_( int index )
             else
                 connectorEdgeId = tp_.prev( activeSweepEdges_[i].edgeId.sym() );
 
-            auto newEdge = tp_.makeEdge();
-            if ( activeSweepEdges_[i].edgeId.odd() )
-                newEdge = newEdge.sym();
-            tp_.splice( lowerLone, newEdge );
-            tp_.splice( connectorEdgeId, newEdge.sym() );
+            const EdgeId newEdge = addChord_( lowerLone, connectorEdgeId, activeSweepEdges_[i].edgeId );
 
             lowerLone = upperLone = {};
 
-            windingInfo_.autoResizeSet( newEdge.undirected(), windingInfo_[activeSweepEdges_[i].edgeId.undirected()] );
             if ( i == minIndex - 1 )
                 lowestLeft = newEdge;
         }
@@ -1676,14 +1695,62 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
     // copy the boundary sub-topology from the mesh: shared vertices and slit edges arrive already shared
     WholeEdgeMap localMap;
     WholeEdgeMap& patchToInEdges = outPatchMap ? *outPatchMap : localMap;
-    patchToInEdges.clear();
-    size_t numLoopEdges = 0;
-    for ( const auto& loop : loops )
-        numLoopEdges += loop.size();
-    patchToInEdges.reserve( numLoopEdges );
+    patchToInEdges.clear(); // initMeshByLoops_ reserves it from the loop sizes
     SweepLineQueue triangulator( mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges ), loops,
         { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges } );
     return triangulator.run();
+}
+
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+{
+    MR_TIMER;
+    HoleFillPlan res;
+    if ( loops.empty() )
+        return res;
+    for ( const auto& loop : loops )
+        if ( loop.size() < 3 )
+            return {}; // the sweep skips such loops entirely, so their holes would stay unaddressed
+
+    WholeEdgeMap patchToInEdges; // initMeshByLoops_ reserves it from the loop sizes
+    std::vector<MonotoneChord> chords;
+    SweepLineQueue triangulator( mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges ), loops,
+        { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
+    if ( !triangulator.findIntersections() )
+        return {};
+    // passing findIntersections here means there is nothing to inject, so monotonation can run at
+    // once; and it is where to stop - monotone parts are what the caller fills
+    triangulator.makeMonotone();
+
+    // an anchor is a patch edge: either a loop edge copied from the mesh (patchToInEdges maps it back),
+    // or, past those, a chord referenced by the item that will create it
+    auto codeOf = [&] ( EdgeId patch )
+    {
+        if ( patch.undirected() < patchToInEdges.size() )
+        {
+            const EdgeId inE = mapEdge( patchToInEdges, patch );
+            assert( inE );
+            return int( inE );
+        }
+        // a chord: the item of the same index, reversed if directed against the recorded edge
+        const int k = int( patch.undirected() ) - int( patchToInEdges.size() );
+        return FillHoleItemEdge{ .item = k, .sym = patch.odd() != chords[k].edge.odd() }.encode();
+    };
+
+    res.items.resize( chords.size() );
+    for ( int k = 0; k < int( chords.size() ); ++k )
+    {
+        // makeEdge() only appends and nothing was injected, so chord k is the k-th edge past the loops
+        assert( chords[k].edge.undirected() == patchToInEdges.size() + k );
+        const int code1 = codeOf( chords[k].anchor1 );
+        const int code2 = codeOf( chords[k].anchor2 );
+        // the chord is spliced right after each of its anchors, so it lands in the wedge left( anchor );
+        // that wedge must be a hole of the mesh, otherwise the loops do not bound a region of this mesh
+        for ( const int code : { code1, code2 } )
+            if ( code >= 0 && mesh.topology.left( EdgeId( code ) ) )
+                return {};
+        res.items[k] = { code1, code2 };
+    }
+    return res;
 }
 
 }

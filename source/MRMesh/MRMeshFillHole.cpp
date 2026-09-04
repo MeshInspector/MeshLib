@@ -539,10 +539,10 @@ inline EdgeId executedPlanEdge( const HoleFillPlan & plan, int code )
     return sym ? e.sym() : e;
 }
 
-// adds the edges of the plan without creating any face
+// adds the edges of the plan without creating any face; an empty plan is a valid no-op (e.g. a region
+// getMonotonePlan() found already monotone)
 void executeEdgesOnlyPlan( MeshTopology & topology, HoleFillPlan & plan )
 {
-    assert( !plan.items.empty() ); // nothing to add, most likely a default-constructed plan
     for ( int i = 0; i < plan.items.size(); ++i )
     {
         EdgeId a = executedPlanEdge( plan, plan.items[i].edgeCode1 );

@@ -150,9 +150,6 @@ jobs:
 
       - name: Build C bindings
         if: ${{ inputs.mrbind_c }}
-        # C bindings sources are globbed at configure time, so they can only enter the build
-        # graph now, after the download. MR_VERSION must repeat the Build step's value:
-        # config_cmake.h is generated into the source tree, and a change rebuilds everything.
         env:
           MR_VERSION: ${{ inputs.app_version }}
         run: |

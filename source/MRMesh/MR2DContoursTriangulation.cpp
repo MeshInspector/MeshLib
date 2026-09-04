@@ -32,50 +32,69 @@ namespace PlanarTriangulation
 {
 
 // All coordinate-dependent operations of the sweep-line triangulation, factored out so a caller
-// can supply alternative geometry. The default implementation is precisePredicates() below, which
-// reproduces the historical exact-integer simulation-of-simplicity behavior.
+// can supply alternative geometry: precisePredicates() below for 2D contours, meshSpacePredicates()
+// for hole loops of a mesh. Both run the combinatorial predicates on the projected integer coordinates
+// `pts2`, reproducing the historical exact-integer simulation-of-simplicity behavior; the sweep calls
+// them on every comparison, so they are inline members rather than std::function
 struct SweepLinePredicates
 {
-    // strict order of vertices along the sweep direction (sweep advances toward the greater vertex)
-    std::function<bool( VertId l, VertId r )> less;
-    // whether two vertices share exactly the same position
-    std::function<bool( VertId l, VertId r )> samePos;
-    // orientation predicate, equivalent to MR::ccw( { a, b, c } )
-    std::function<bool( VertId a, VertId b, VertId c )> ccw;
-    // orientation of b around pivot relative to the direction the sweep arrives from
-    // (i.e. ccw with the first point placed far behind pivot, opposite to the sweep)
-    std::function<bool( VertId b, VertId pivot )> ccwFromBehind;
-    // store the position of input vertex v, identified by its (contourId, pointId) in the source contours
-    std::function<void( VertId v, int contourId, int pointId )> addInputPoint;
-    // compute and store the position of intersection vertex v of segments (a,b) and (c,d)
-    std::function<void( VertId v, VertId a, VertId b, VertId c, VertId d )> addIntersectionPoint;
-    // position of vertex v; tp is passed at call time because the queue's topology is moved into the output mesh
-    std::function<Vector3f( const MeshTopology& tp, VertId v )> point;
-};
+    // the projected integer position of every vertex, filled by addInputPoint/addIntersectionPoint;
+    // shared with the point() closure, which reads it after the queue's topology is moved out
+    std::shared_ptr<Vector<Vector2i, VertId>> pts2;
 
-// the sweep-line predicates that depend only on the projected integer coordinates `pts2`;
-// shared by precisePredicates (2D input) and meshSpacePredicates (3D mesh input projected on the dominant axis)
-static void setPts2Predicates( SweepLinePredicates& p, std::shared_ptr<Vector<Vector2i, VertId>> pts2 )
-{
-    p.less = [pts2] ( VertId l, VertId r )
+    // strict order of vertices along the sweep direction (sweep advances toward the greater vertex)
+    bool less( VertId l, VertId r ) const
     {
         return smaller( { .id = l, .pt = ( *pts2 )[l].x }, { .id = r, .pt = ( *pts2 )[r].x } );
-    };
-    p.samePos = [pts2] ( VertId l, VertId r )
+    }
+    // whether two vertices share exactly the same position
+    bool samePos( VertId l, VertId r ) const
     {
         return ( *pts2 )[l] == ( *pts2 )[r];
-    };
-    p.ccw = [pts2] ( VertId a, VertId b, VertId c )
+    }
+    // orientation predicate, equivalent to MR::ccw( { a, b, c } )
+    bool ccw( VertId a, VertId b, VertId c ) const
     {
         return MR::ccw( { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] } } );
-    };
-    p.ccwFromBehind = [pts2] ( VertId b, VertId pivot )
+    }
+    // orientation of b around pivot relative to the direction the sweep arrives from
+    // (i.e. ccw with the first point placed far behind pivot, opposite to the sweep)
+    bool ccwFromBehind( VertId b, VertId pivot ) const
     {
         Vector2i base = ( *pts2 )[pivot];
         base.x -= 10000; // far behind pivot along -X (the sweep axis), matching the historical reference
         return MR::ccw( { PreciseVertCoords2{ VertId{}, base }, { b, ( *pts2 )[b] }, { pivot, ( *pts2 )[pivot] } } );
-    };
-}
+    }
+    // compute and store the position of intersection vertex v of segments (a,b) and (c,d)
+    void addIntersectionPoint( VertId v, VertId a, VertId b, VertId c, VertId d ) const
+    {
+        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
+            { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } ) );
+    }
+
+    // where the input vertices come from, the only input-side difference between the two factories:
+    // either 2D contours, or hole loops of a mesh projected on the axes kx, ky; toInt maps to the exact grid
+    ConvertToIntVector toInt;
+    const Contours2f* srcContours = nullptr;
+    const Mesh* srcMesh = nullptr;
+    const EdgeLoops* srcLoops = nullptr;
+    int kx = 0, ky = 0;
+
+    // store the position of input vertex v, identified by its (contourId, pointId) in the source contours
+    void addInputPoint( VertId v, int contourId, int pointId ) const
+    {
+        if ( srcContours )
+        {
+            pts2->autoResizeSet( v, to2dim( toInt( to3dim( ( *srcContours )[contourId][pointId] ) ) ) );
+            return;
+        }
+        const Vector3i q = toInt( srcMesh->orgPnt( ( *srcLoops )[contourId][pointId] ) );
+        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
+    }
+
+    // position of vertex v; tp is passed at call time because the queue's topology is moved into the output mesh
+    std::function<Vector3f( const MeshTopology& tp, VertId v )> point;
+};
 
 // default predicates: exact integer arithmetic with simulation-of-simplicity (historical behavior)
 static SweepLinePredicates precisePredicates( const Contours2f& contours )
@@ -95,28 +114,17 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours )
 
     auto pts = std::make_shared<Vector<Vector2i, VertId>>();
     pts->reserve( pointsSize );
-    auto toInt = [conv = getToIntConverter( Box3d( box ) )] ( const Vector2f& coord )
-    {
-        return to2dim( conv( to3dim( coord ) ) );
-    };
     auto toFloat = [conv = getToFloatConverter( Box3d( box ) )] ( const Vector2i& coord )
     {
         return to2dim( conv( to3dim( coord ) ) );
     };
 
     SweepLinePredicates p;
-    setPts2Predicates( p, pts );
-    // resolve an input vertex by (contourId, pointId); initMeshByContours_ drives the order, so
+    p.pts2 = pts;
+    p.toInt = getToIntConverter( Box3d( box ) );
+    // input vertices are resolved by (contourId, pointId); initMeshByContours_ drives the order, so
     // `contours` only needs to outlive construction (every caller passes its own input by reference)
-    p.addInputPoint = [&contours, pts, toInt] ( VertId v, int contourId, int pointId )
-    {
-        pts->autoResizeSet( v, toInt( contours[contourId][pointId] ) );
-    };
-    p.addIntersectionPoint = [pts] ( VertId v, VertId a, VertId b, VertId c, VertId d )
-    {
-        pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
-            { PreciseVertCoords2{ a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] }, { d, ( *pts )[d] } } ) );
-    };
+    p.srcContours = &contours;
     p.point = [pts, toFloat] ( const MeshTopology&, VertId v )
     {
         return to3dim( toFloat( ( *pts )[v] ) );
@@ -134,8 +142,8 @@ static std::vector<int> getContourSizes( const Contours2f& contours )
 }
 
 // mesh-space predicates: triangulate hole boundary loops of `mesh` in the mesh's own 3D coordinates,
-// orienting around `normal`. Combinatorics run on the dominant-axis projection (reusing the exact 2D
-// predicates via setPts2Predicates). point() restores each output vertex's exact original mesh position
+// orienting around `normal`. Combinatorics run on the dominant-axis projection (the exact 2D
+// predicates read pts2 directly). point() restores each output vertex's exact original mesh position
 // through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
 // `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges )
@@ -163,20 +171,14 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
 
     auto pts2 = std::make_shared<Vector<Vector2i, VertId>>(); // dominant-axis projection, drives every predicate
     pts2->reserve( pointsSize );
-    auto toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
 
     SweepLinePredicates p;
-    setPts2Predicates( p, pts2 );
-    p.addInputPoint = [&mesh, &loops, pts2, toInt, kx, ky] ( VertId v, int contourId, int pointId )
-    {
-        const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
-        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
-    };
-    p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
-    {
-        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
-            { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } ) );
-    };
+    p.pts2 = pts2;
+    p.toInt = getToIntConverter( Box3d( box ) ); // Vector3f -> Vector3i
+    p.srcMesh = &mesh;
+    p.srcLoops = &loops;
+    p.kx = kx;
+    p.ky = ky;
     // every output vertex lies on a copied input edge (disjoint triangulation adds no intersection
     // vertices), so find one in its org ring, skipping the triangulation's own diagonals
     p.point = [&mesh, &patchToInEdges] ( const MeshTopology& patchTp, VertId v )

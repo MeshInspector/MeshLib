@@ -14,7 +14,7 @@ struct DeloneFlipsCache
 {
     UndirectedEdgeBitSet flipCandidates;
     UndirectedEdgeBitSet nextFlipCandidates;
-    std::vector<UndirectedEdgeId> worklist; ///< of the serial small-mesh path
+    std::vector<UndirectedEdgeId> worklist, nextWorklist; ///< the current and the next round of the serial small-mesh path
 };
 
 struct DeloneSettings

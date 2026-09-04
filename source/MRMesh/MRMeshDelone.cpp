@@ -9,6 +9,7 @@
 #include "MRReducePath.h"
 #include "MRTwoLineSegmDist.h"
 #include "MREdgeLengthMesh.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -205,36 +206,41 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
     return flipsDone;
 }
 
-// serial Delone flipping of a small mesh: every edge is checked once when popped from the worklist,
-// and a flip re-queues only the four edges around it, so unlike the parallel passes there is no rescan
-// of the whole candidate set and no second check before a flip; the flips come in another order though,
-// so where the result is not unique (cocircular vertices, or the constraints in settings) it can differ
+// serial Delone flipping of a small mesh in the same rounds as the parallel passes below: round 1 checks every
+// edge in id order, round r+1 the edges around the flips of round r; but the candidates are kept in a list
+// instead of rescanning bitsets, and each is checked once right before its flip, so an edge made non-Delone
+// by an earlier flip of the same round is flipped at once rather than a round later
 static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, DeloneFlipsCache& cache )
 {
     const auto ueSize = topology.undirectedEdgeSize();
-    auto& queued = cache.nextFlipCandidates; // the edges currently waiting in the worklist
+    auto& queued = cache.nextFlipCandidates; // the edges already in the next round
     queued.clear();
-    queued.resize( ueSize, true );
-    auto& work = cache.worklist;
-    work.clear();
-    work.reserve( ueSize );
-    for ( int i = int( ueSize ) - 1; i >= 0; --i ) // popped from the back: the first round goes in id order like a pass
-        work.push_back( UndirectedEdgeId( i ) );
-    // the passes check at most numIters * ueSize edges; the same budget guards against endless flipping
-    const size_t maxPops = size_t( numIters ) * ueSize;
+    queued.resize( ueSize );
+    auto& cur = cache.worklist;
+    auto& next = cache.nextWorklist;
+    cur.clear();
+    cur.reserve( ueSize );
+    for ( int i = 0; i < int( ueSize ); ++i )
+        cur.push_back( UndirectedEdgeId( i ) );
     int flipsDone = 0;
-    for ( size_t pops = 0; !work.empty() && pops < maxPops; ++pops )
+    for ( int iter = 0; iter < numIters; ++iter )
     {
-        const auto e = work.back();
-        work.pop_back();
-        queued.reset( e );
-        if ( checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
-            continue;
-        topology.flipEdge( e );
-        ++flipsDone;
-        for ( EdgeId ne : { topology.next( EdgeId( e ) ), topology.prev( EdgeId( e ) ), topology.next( EdgeId( e ).sym() ), topology.prev( EdgeId( e ).sym() ) } )
-            if ( !queued.test_set( ne.undirected() ) )
-                work.push_back( ne.undirected() );
+        next.clear();
+        for ( UndirectedEdgeId e : cur )
+        {
+            if ( checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
+                continue;
+            topology.flipEdge( e );
+            ++flipsDone;
+            for ( EdgeId ne : { topology.next( EdgeId( e ) ), topology.prev( EdgeId( e ) ), topology.next( EdgeId( e ).sym() ), topology.prev( EdgeId( e ).sym() ) } )
+                if ( !queued.test_set( ne.undirected() ) )
+                    next.push_back( ne.undirected() );
+        }
+        if ( next.empty() )
+            break;
+        queued.reset(); // a few words for such a mesh
+        std::sort( next.begin(), next.end() ); // id order within a round, like the passes
+        std::swap( cur, next );
     }
     return flipsDone;
 }

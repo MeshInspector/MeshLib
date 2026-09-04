@@ -205,16 +205,60 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
     return flipsDone;
 }
 
+// serial Delone flipping of a small mesh: every edge is checked once when popped from the worklist,
+// and a flip re-queues only the four edges around it, so unlike the parallel passes there is no rescan
+// of the whole candidate set and no second check before a flip; the flips come in another order though,
+// so where the result is not unique (cocircular vertices, or the constraints in settings) it can differ
+static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters,
+    const ProgressCallback& progressCallback, DeloneFlipsCache& cache )
+{
+    if ( progressCallback && !progressCallback( 0.0f ) )
+        return 0;
+    const auto ueSize = topology.undirectedEdgeSize();
+    auto& queued = cache.nextFlipCandidates; // the edges currently waiting in the worklist
+    queued.clear();
+    queued.resize( ueSize, true );
+    auto& work = cache.worklist;
+    work.clear();
+    work.reserve( ueSize );
+    for ( int i = int( ueSize ) - 1; i >= 0; --i ) // popped from the back: the first round goes in id order like a pass
+        work.push_back( UndirectedEdgeId( i ) );
+    // the passes check at most numIters * ueSize edges; the same budget guards against endless flipping
+    const size_t maxPops = size_t( numIters ) * ueSize;
+    int flipsDone = 0;
+    for ( size_t pops = 0; !work.empty() && pops < maxPops; ++pops )
+    {
+        const auto e = work.back();
+        work.pop_back();
+        queued.reset( e );
+        if ( checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
+            continue;
+        topology.flipEdge( e );
+        ++flipsDone;
+        for ( EdgeId ne : { topology.next( EdgeId( e ) ), topology.prev( EdgeId( e ) ), topology.next( EdgeId( e ).sym() ), topology.prev( EdgeId( e ).sym() ) } )
+            if ( !queued.test_set( ne.undirected() ) )
+                work.push_back( ne.undirected() );
+    }
+    return flipsDone;
+}
+
 int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, const ProgressCallback& progressCallback )
 {
     if ( numIters <= 0 )
         return 0;
-    MR_TIMER;
 
     // the candidate sets come from the caller's cache when it has one (keeping their capacity),
     // so a caller flipping many small meshes one by one does not allocate them every time
     DeloneFlipsCache localCache;
     DeloneFlipsCache& cache = settings.cache ? *settings.cache : localCache;
+
+    // below this size the passes spend more on entering the task arena and rescanning the candidate
+    // sets than on the checks themselves (and such a call is over too soon for the timer to matter)
+    constexpr size_t cMinParallelEdges = 256;
+    if ( topology.undirectedEdgeSize() < cMinParallelEdges )
+        return makeDeloneEdgeFlipsSerial( topology, points, settings, numIters, progressCallback, cache );
+    MR_TIMER;
+
     auto& flipCandidates = cache.flipCandidates;
     auto& nextFlipCandidates = cache.nextFlipCandidates;
     flipCandidates.clear();

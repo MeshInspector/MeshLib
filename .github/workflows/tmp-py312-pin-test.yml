@@ -1,0 +1,27 @@
+name: tmp py312 pin test
+
+on:
+  push:
+    branches: [ fedr/mac-x86-py312-pin ]
+  workflow_dispatch:
+
+jobs:
+  python-setup-x86:
+    runs-on: macos-15-intel
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Before
+        run: |
+          brew list --versions openssl@3 python@3.12 || true
+          brew config | head -20
+      - name: Python setup
+        env:
+          ENABLE_SUDO: '1'
+        run: scripts/mrbind-pybind11/install_all_python_versions_macos.sh
+      - name: After
+        run: |
+          brew list --versions openssl@3 python@3.12 python@3.13 python@3.14
+          which -a python3.12
+          python3.12 -c 'import ssl, sysconfig; print(ssl.OPENSSL_VERSION); print(sysconfig.get_platform())'
+          python3.12 -m pip --version

@@ -40,9 +40,20 @@ for ver in $PY_VERSIONS; do
         continue
     fi
 
+    FORMULA="python@$ver"
+    # Homebrew stopped bottling for Intel macOS (announced 2026-08), and a formula rebuilt
+    # after that loses its existing x86_64 bottle, so it is built from source and its
+    # `post_install` then fails, failing this whole script. Pin such formulae to the last
+    # revision that still has a bottle; the bottles themselves stay available.
+    if [[ $(uname -m) == x86_64 ]]; then
+        case $ver in
+            3.12) FORMULA='https://raw.githubusercontent.com/Homebrew/homebrew-core/7b2c2f97093e29530dde60cf8bfd84f2ef2586a1/Formula/p/python%403.12.rb' ;;
+        esac
+    fi
+
     # ??
     # Note that Brew doesn't want to be ran in `sudo`.
-    brew install python@$ver
+    brew install "$FORMULA"
     brew unlink python@$ver
     brew link --overwrite python@$ver
 done

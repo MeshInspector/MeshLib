@@ -6,6 +6,8 @@
 namespace MR
 {
 
+namespace PlanarTriangulation { class ISweepLineCache; }
+
 /**
  * @brief fill holes with border in same plane (i.e. after cut by plane)
  * @param mesh - mesh with holes
@@ -21,9 +23,11 @@ MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>&
  * @param mesh - mesh with hole
  * @param holeEdgeId - the edge here represents a hole borders that should be filled
  * edge should have invalid left face (FaceId == -1)
+ * @param cache - if not null, keeps the triangulation's internal buffers in it after the call,
+ * so a caller preparing plans for many holes one by one avoids re-allocating them on every call
  * @return Expected with has_value()=true if hole plan is prepared, otherwise - string error
  */
-MRMESH_API Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId );
+MRMESH_API Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, PlanarTriangulation::ISweepLineCache* cache = nullptr );
 
 /// computes the transformation that maps
 /// O into center mass of contours' points

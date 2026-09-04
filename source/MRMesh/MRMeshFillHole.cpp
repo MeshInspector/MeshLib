@@ -9,11 +9,13 @@
 #include "MRMarkedContour.h"
 #include "MRParallelFor.h"
 #include "MRFillContours2D.h"
+#include "MR2DContoursTriangulation.h"
 #include "MRAABBTreePoints.h"
 #include "MRPointsProject.h"
 #include "MRClosestPointInTriangle.h"
 #include "MRphmap.h"
 #include "MRPch/MRSpdlog.h"
+#include <memory>
 #include <queue>
 #include <functional>
 
@@ -654,6 +656,7 @@ public:
     HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
     unsigned concurrentSmallHoleSize = 0; ///< if hole size is smaller than this value preffer concurrent processing, sometimes it better than isolated parallelism overhead
 private:
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> sweepCache_; ///< keeps swept-line triangulation buffers alive between runPlanar() runs
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
     tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
@@ -848,7 +851,9 @@ HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowS
         if ( holeSize >= cMinSweptHoleSize )
         {
             // only use this for large holes
-            auto exRes = fillContours2DPlan( mesh, e );
+            if ( !sweepCache_ )
+                sweepCache_ = PlanarTriangulation::makeSweepLineCache();
+            auto exRes = fillContours2DPlan( mesh, e, sweepCache_.get() );
             if ( exRes.has_value() )
                 return *exRes;
         }
@@ -905,6 +910,15 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
         {
             fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
         } );
+    } );
+    // every worker's planner holds grown buffers (sweep-line cache, triangulation maps); freeing
+    // them all serially in the ETS destructor right here would dominate small batches
+    std::vector<HoleFillPlanner*> planners;
+    for ( auto& planner : threadData_ )
+        planners.push_back( &planner );
+    ParallelFor( size_t( 0 ), planners.size(), [&]( size_t i )
+    {
+        *planners[i] = HoleFillPlanner{};
     } );
     return fillPlans;
 }

@@ -213,11 +213,11 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, DeloneFlipsCache& cache )
 {
     const auto ueSize = topology.undirectedEdgeSize();
-    auto& queued = cache.nextFlipCandidates; // the edges already in the next round
+    auto& queued = cache.queuedEdges;
     queued.clear();
     queued.resize( ueSize );
-    auto& cur = cache.worklist;
-    auto& next = cache.nextWorklist;
+    auto& cur = cache.roundEdges;
+    auto& next = cache.nextRoundEdges;
     cur.clear();
     cur.reserve( ueSize );
     for ( int i = 0; i < int( ueSize ); ++i )
@@ -238,7 +238,7 @@ static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& 
         }
         if ( next.empty() )
             break;
-        queued.reset(); // a few words for such a mesh
+        queued.reset(); // a few 64-bit words on a mesh this small
         std::sort( next.begin(), next.end() ); // id order within a round, like the passes
         std::swap( cur, next );
     }

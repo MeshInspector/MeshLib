@@ -9,12 +9,16 @@ namespace MR
 {
 
 /// the buffers makeDeloneEdgeFlips grows on every call; a caller running it many times on small meshes
-/// (e.g. one hole patch after another) keeps one instance between the calls to allocate them just once
+/// (e.g. one hole patch after another) keeps one instance between the calls to allocate them just once;
+/// one cache must not be used by several threads at once
 struct DeloneFlipsCache
 {
-    UndirectedEdgeBitSet flipCandidates;
-    UndirectedEdgeBitSet nextFlipCandidates;
-    std::vector<UndirectedEdgeId> worklist, nextWorklist; ///< the current and the next round of the serial small-mesh path
+    /// of the parallel passes (a mesh of 256 undirected edges or more)
+    UndirectedEdgeBitSet flipCandidates, nextFlipCandidates;
+
+    /// of the serial rounds (a smaller mesh): the edges already queued for the next round, and the two rounds
+    UndirectedEdgeBitSet queuedEdges;
+    std::vector<UndirectedEdgeId> roundEdges, nextRoundEdges;
 };
 
 struct DeloneSettings
@@ -38,7 +42,8 @@ struct DeloneSettings
     /// Only edges with origin or destination in this set before or after flip can be flipped
     const VertBitSet* vertRegion = nullptr;
 
-    /// optional buffers reused between calls, see DeloneFlipsCache
+    /// optional buffers reused between calls, see DeloneFlipsCache;
+    /// flipping several meshes in parallel, give every thread its own cache
     DeloneFlipsCache* cache = nullptr;
 };
 

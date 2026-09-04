@@ -9,6 +9,7 @@
 #include "MRReducePath.h"
 #include "MRTwoLineSegmDist.h"
 #include "MREdgeLengthMesh.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -205,14 +206,69 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
     return flipsDone;
 }
 
+// serial Delone flipping of a small mesh in the same rounds as the parallel passes below: round 1 checks every
+// edge in id order, round r+1 the edges around the flips of round r; but the candidates are kept in a list
+// instead of rescanning bitsets, and each is checked once right before its flip, so an edge made non-Delone
+// by an earlier flip of the same round is flipped at once rather than a round later
+static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, DeloneFlipsCache& cache )
+{
+    const auto ueSize = topology.undirectedEdgeSize();
+    auto& queued = cache.queuedEdges;
+    queued.clear();
+    queued.resize( ueSize );
+    auto& cur = cache.roundEdges;
+    auto& next = cache.nextRoundEdges;
+    cur.clear();
+    cur.reserve( ueSize );
+    for ( int i = 0; i < int( ueSize ); ++i )
+        cur.push_back( UndirectedEdgeId( i ) );
+    int flipsDone = 0;
+    for ( int iter = 0; iter < numIters; ++iter )
+    {
+        next.clear();
+        for ( UndirectedEdgeId e : cur )
+        {
+            if ( checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
+                continue;
+            topology.flipEdge( e );
+            ++flipsDone;
+            for ( EdgeId ne : { topology.next( EdgeId( e ) ), topology.prev( EdgeId( e ) ), topology.next( EdgeId( e ).sym() ), topology.prev( EdgeId( e ).sym() ) } )
+                if ( !queued.test_set( ne.undirected() ) )
+                    next.push_back( ne.undirected() );
+        }
+        if ( next.empty() )
+            break;
+        queued.reset(); // a few 64-bit words on a mesh this small
+        std::sort( next.begin(), next.end() ); // id order within a round, like the passes
+        std::swap( cur, next );
+    }
+    return flipsDone;
+}
+
 int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, const ProgressCallback& progressCallback )
 {
     if ( numIters <= 0 )
         return 0;
+
+    // the candidate sets come from the caller's cache when it has one (keeping their capacity),
+    // so a caller flipping many small meshes one by one does not allocate them every time
+    DeloneFlipsCache localCache;
+    DeloneFlipsCache& cache = settings.cache ? *settings.cache : localCache;
+
+    // below this size the passes spend more on entering the task arena and rescanning the candidate
+    // sets than on the checks themselves; such a call is also over too soon for the timer or the
+    // progress callback to matter
+    constexpr size_t cMinParallelEdges = 256;
+    if ( topology.undirectedEdgeSize() < cMinParallelEdges )
+        return makeDeloneEdgeFlipsSerial( topology, points, settings, numIters, cache );
     MR_TIMER;
 
-    UndirectedEdgeBitSet flipCandidates( topology.undirectedEdgeSize() );
-    UndirectedEdgeBitSet nextFlipCandidates( topology.undirectedEdgeSize(), true );
+    auto& flipCandidates = cache.flipCandidates;
+    auto& nextFlipCandidates = cache.nextFlipCandidates;
+    flipCandidates.clear();
+    flipCandidates.resize( topology.undirectedEdgeSize() );
+    nextFlipCandidates.clear();
+    nextFlipCandidates.resize( topology.undirectedEdgeSize(), true );
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )

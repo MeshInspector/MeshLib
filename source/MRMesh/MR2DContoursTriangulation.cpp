@@ -3,7 +3,6 @@
 #include "MRVector.h"
 #include "MRVector2.h"
 #include "MRContour.h"
-#include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRConstants.h"
 #include "MRRegionBoundary.h"
@@ -486,7 +485,6 @@ SweepLineQueue::SweepLineQueue( const MeshTopology& inTp, SweepLinePredicates pr
 
 std::optional<MR::Mesh> SweepLineQueue::run( IntersectionsMap* interMap )
 {
-    MR_TIMER;
     if ( !findIntersections() )
         return {};
     injectIntersections( interMap );
@@ -496,7 +494,6 @@ std::optional<MR::Mesh> SweepLineQueue::run( IntersectionsMap* interMap )
 
 bool SweepLineQueue::findIntersections()
 {
-    MR_TIMER;
     stage_ = Stage::Intersections;
     events_.clear();
     events_.reserve( tp_.numValidVerts() * 2 );
@@ -519,8 +516,6 @@ bool SweepLineQueue::findIntersections()
 
 void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
 {
-    MR_TIMER;
-
     if ( interMap )
         interMap->map.resize( intersections_.size() );
 
@@ -627,7 +622,6 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
 
 void SweepLineQueue::makeMonotone()
 {
-    MR_TIMER;
     stage_ = Stage::Monotonation;
     startVertIndex_ = 0;
     sortedVertIndex_ = 0;
@@ -643,7 +637,6 @@ void SweepLineQueue::makeMonotone()
 
 Mesh SweepLineQueue::triangulate()
 {
-    MR_TIMER;
     stage_ = Stage::Triangulation;
     if ( !params_.needOutline )
         reflexChainCache_.reserve( 256 ); // reserve once to have less allocations later
@@ -1081,7 +1074,6 @@ void SweepLineQueue::checkIntersection_( int i )
 
 void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
 {
-    MR_TIMER;
     for ( int contourId = 0; contourId < int( contourSizes.size() ); ++contourId )
     {
         if ( contourSizes[contourId] > 3 )
@@ -1116,7 +1108,6 @@ void SweepLineQueue::initMeshByContours_( const std::vector<int>& contourSizes )
 
 void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops )
 {
-    MR_TIMER;
     //HashMap<>
     UndirectedEdgeHashMap in2p; // TODO: can be cached
     WholeEdgeMap p2inCache; // TODO: can be cached
@@ -1279,7 +1270,6 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
 
 void SweepLineQueue::mergeSamePoints_()
 {
-    MR_TIMER;
     sortedVerts_.reserve( tp_.vertSize() );
     for ( int i = 0; i < tp_.vertSize(); ++i )
         sortedVerts_.emplace_back( VertId( i ) );
@@ -1409,7 +1399,6 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
 
 void SweepLineQueue::removeMultipleAfterMerge_()
 {
-    MR_TIMER;
     auto multiples = findMultipleEdges( tp_ ).value();
     for ( const auto& multiple : multiples )
     {
@@ -1456,7 +1445,6 @@ void SweepLineQueue::calculateWinding_()
 // https://www.cs.umd.edu/class/spring2020/cmsc754/Lects/lect05-triangulate.pdf
 void SweepLineQueue::triangulateMonotoneBlock_( EdgeId holeEdgeId )
 {
-    MR_TIMER;
     auto holeLoop = trackRightBoundaryLoop( tp_, holeEdgeId );
     auto lessPred = [&] ( EdgeId l, EdgeId r )
     {
@@ -1703,7 +1691,6 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
 
 std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
 {
-    MR_TIMER;
     HoleFillPlan res;
     if ( loops.empty() )
         return res;

@@ -71,7 +71,7 @@ public:
     /// requests the removal of unused capacity
     MRMESH_API void shrinkToFit();
 
-    /// removes all vertices, edges and faces, keeping the buffers' capacity for reuse
+    /// resets to the default-constructed state (including resuming valids updating), keeping the buffers' capacity for reuse
     MRMESH_API void clear();
 
 

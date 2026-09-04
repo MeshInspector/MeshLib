@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # This script builds thirdparty with CPM from `thirdparty/cpm`
-# Output libraries are stored in `./lib` directory
+# Usage: ./scripts/build_cpm_thirdparty.sh [INSTALL_PREFIX]
 
 # exit if any command failed
 set -eo pipefail
@@ -17,7 +17,10 @@ SCRIPT_DIR=${BASE_DIR}/scripts/
 
 MESHLIB_THIRDPARTY_DIR=${BASE_DIR}/thirdparty/cpm/
 MESHLIB_THIRDPARTY_BUILD_DIR="${MESHLIB_THIRDPARTY_BUILD_DIR:-${BASE_DIR}/thirdparty_build/}"
-MESHLIB_THIRDPARTY_ROOT_DIR="${MESHLIB_THIRDPARTY_ROOT_DIR:-${BASE_DIR}}"
+
+MESHLIB_THIRDPARTY_ROOT_DIR="${1:-./installed}"
+mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+MESHLIB_THIRDPARTY_ROOT_DIR=$( cd "${MESHLIB_THIRDPARTY_ROOT_DIR}" ; pwd -P )
 
 if [[ $OSTYPE == 'darwin'* ]]; then
   echo "Host system: MacOS"
@@ -128,7 +131,7 @@ fi
 
 # CPM downloads dependency sources here. Kept outside MESHLIB_THIRDPARTY_BUILD_DIR, which is
 # wiped above, so a rebuild re-configures without re-downloading.
-export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE:-${MESHLIB_THIRDPARTY_ROOT_DIR}/thirdparty_sources}"
+export CPM_SOURCE_CACHE="${CPM_SOURCE_CACHE:-${BASE_DIR}/thirdparty_sources}"
 
 # build
 echo "Starting build..."
@@ -145,4 +148,4 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
 fi
 popd
 
-printf "\rThirdparty build script successfully finished. Required libs located in ./lib folder. You could run ./scripts/build_source.sh\n\n"
+printf "\rThirdparty build script successfully finished. Required libs located in ${MESHLIB_THIRDPARTY_ROOT_DIR} folder. You could run ./scripts/build_source.sh\n\n"

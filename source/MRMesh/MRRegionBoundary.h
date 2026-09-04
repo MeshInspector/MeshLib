@@ -14,6 +14,8 @@ namespace MR
 // This is skipped in the bindings to avoid complex function names for the overloads in C.
 [[nodiscard]] MR_BIND_IGNORE inline EdgeLoop trackLeftBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0, Turn turn = Turn::Rightmost )
     { return trackLeftBoundaryLoop( topology, e0, &region, turn ); }
+/// same as above, but writes the loop in \p outLoop (cleared first), so a caller tracking many loops one by one reuses its capacity
+MR_BIND_IGNORE MRMESH_API void trackLeftBoundaryLoop( const MeshTopology & topology, EdgeId e0, EdgeLoop & outLoop, const FaceBitSet * region = nullptr, Turn turn = Turn::Rightmost );
 
 /// returns closed loop of region boundary starting from given region boundary edge (region faces on the right, and not-region faces or holes on the left);
 /// if more than two boundary edges connect in one vertex, then the function makes the most abrupt turn to left
@@ -21,6 +23,8 @@ namespace MR
 // This is skipped in the bindings to avoid complex function names for the overloads in C.
 [[nodiscard]] MR_BIND_IGNORE inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0, Turn turn = Turn::Rightmost )
     { return trackRightBoundaryLoop( topology, e0, &region, turn ); }
+/// same as above, but writes the loop in \p outLoop (cleared first), so a caller tracking many loops one by one reuses its capacity
+MR_BIND_IGNORE MRMESH_API void trackRightBoundaryLoop( const MeshTopology & topology, EdgeId e0, EdgeLoop & outLoop, const FaceBitSet * region = nullptr, Turn turn = Turn::Rightmost );
 
 /// tracks the path of edges with set bits in (edges) starting from (e0);
 /// \return the last edge of the path or invalid edge if e0's bit in (edge) was reset;

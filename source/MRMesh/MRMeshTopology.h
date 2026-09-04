@@ -71,6 +71,9 @@ public:
     /// requests the removal of unused capacity
     MRMESH_API void shrinkToFit();
 
+    /// resets to the default-constructed state (including resuming valids updating), keeping the buffers' capacity for reuse
+    MRMESH_API void clear();
+
 
     /// given two half edges do either of two:
     /// 1) if a and b were from distinct rings, puts them in one ring;

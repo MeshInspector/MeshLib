@@ -116,6 +116,22 @@ jobs:
       - name: Setup python requirements
         run: python3 -m pip install -r ./requirements/python/requirements.txt
 
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
+          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          MR_VERSION: ${{ inputs.app_version }}
+          # options to be passed to cmake
+          MR_CMAKE_OPTIONS: >
+            -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
+            -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
+
       - name: Wait for C bindings
         if: ${{ inputs.mrbind_c }}
         uses: ./.github/actions/wait-for-job
@@ -136,6 +152,14 @@ jobs:
           mv MeshLib/CbindingsTmp/MeshLibC2 source
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
+      - name: Build C bindings
+        if: ${{ inputs.mrbind_c }}
+        env:
+          MR_VERSION: ${{ inputs.app_version }}
+        run: |
+          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+          cmake --build build/${{ matrix.config }} -j $(nproc) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+
       - name: Generate C# bindings # generate only sources
         if: ${{ matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
@@ -147,22 +171,6 @@ jobs:
           name: CsharpBindings
           path: ./source/MRDotNet2/src
           retention-days: 1
-
-      - name: Build
-        run: ./scripts/build_source.sh
-        env:
-          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
-          CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
-          MR_VERSION: ${{ inputs.app_version }}
-          # options to be passed to cmake
-          MR_CMAKE_OPTIONS: >
-            -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
-            -DMR_PCH_USE_EXTRA_HEADERS=ON
-            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
-            -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt

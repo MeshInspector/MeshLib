@@ -47,7 +47,9 @@ for ver in $PY_VERSIONS; do
     # revision that still has a bottle; the bottles themselves stay available.
     if [[ $(uname -m) == x86_64 ]]; then
         case $ver in
-            3.12) FORMULA='https://raw.githubusercontent.com/Homebrew/homebrew-core/7b2c2f97093e29530dde60cf8bfd84f2ef2586a1/Formula/p/python%403.12.rb' ;;
+            # Homebrew 6 dropped `brew install <URL>`, but a local formula file still works.
+            3.12) FORMULA="$(mktemp -d)/python@$ver.rb"
+                  curl -fsSL -o "$FORMULA" 'https://raw.githubusercontent.com/Homebrew/homebrew-core/7b2c2f97093e29530dde60cf8bfd84f2ef2586a1/Formula/p/python%403.12.rb' ;;
         esac
     fi
 

@@ -155,4 +155,9 @@ runs:
       env:
         CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
         CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
+        # build_thirdparty.sh runs install_brew_requirements.sh again, so it needs the
+        # same guards as the step above
+        HOMEBREW_NO_AUTO_UPDATE: '1'
+        HOMEBREW_NO_INSTALL_UPGRADE: '1'
+        HOMEBREW_NO_INSTALL_CLEANUP: '1'
       run: ./scripts/build_thirdparty.sh

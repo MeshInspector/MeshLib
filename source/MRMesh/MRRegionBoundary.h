@@ -21,6 +21,9 @@ namespace MR
 // This is skipped in the bindings to avoid complex function names for the overloads in C.
 [[nodiscard]] MR_BIND_IGNORE inline EdgeLoop trackRightBoundaryLoop( const MeshTopology & topology, const FaceBitSet & region, EdgeId e0, Turn turn = Turn::Rightmost )
     { return trackRightBoundaryLoop( topology, e0, &region, turn ); }
+/// same as trackRightBoundaryLoop, but appends the loop to given container,
+/// which allows a caller tracking many loops to reuse its capacity
+MRMESH_API void appendRightBoundaryLoop( EdgeLoop & res, const MeshTopology & topology, EdgeId e0, const FaceBitSet * region = nullptr, Turn turn = Turn::Rightmost );
 
 /// tracks the path of edges with set bits in (edges) starting from (e0);
 /// \return the last edge of the path or invalid edge if e0's bit in (edge) was reset;

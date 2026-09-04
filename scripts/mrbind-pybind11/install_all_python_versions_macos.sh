@@ -64,6 +64,11 @@ for ver in $PY_VERSIONS; do
         brew tap-new $PIN_TAP --no-git >/dev/null 2>&1 || true
         curl -fsSL -o "$(brew --repo $PIN_TAP)/Formula/python@$ver.rb" "https://raw.githubusercontent.com/Homebrew/homebrew-core/$PIN_COMMIT/Formula/p/python%40$ver.rb"
         FORMULA="$PIN_TAP/python@$ver"
+        # A keg of the same name installed from homebrew/core (the runner image ships
+        # some) blocks installing ours, so drop it; the pinned bottle replaces it.
+        if brew list --versions "python@$ver" >/dev/null 2>&1; then
+            brew uninstall --ignore-dependencies "python@$ver"
+        fi
     fi
 
     # ??

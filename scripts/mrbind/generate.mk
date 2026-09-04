@@ -1159,10 +1159,12 @@ override CSHARP_STATIC_DLLIMPORT := $(filter-out 0,$(CSHARP_STATIC_DLLIMPORT))
 # Where to output C# code.
 CSHARP_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MRDotNet2$(if $(CSHARP_STATIC_DLLIMPORT),Static)
 
+CSHARP_INPUT_JSON := $(TEMP_OUTPUT_DIR)/interop_desc.json
+
 .PHONY: generate
 generate:
 	$(strip $(MRBIND_GEN_CSHARP_EXE) \
-		--input-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json) \
+		--input-json $(call quote,$(CSHARP_INPUT_JSON)) \
 		--output-dir $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/src) \
 		--clean-output-dir \
 		--imported-lib-name $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,MeshLibC2) \

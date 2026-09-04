@@ -31,6 +31,18 @@ elif [[ -d /Library/Frameworks/Python.framework/ ]]; then
     echo "  Consider deleting it using the following command: sudo rm -rf /Library/Frameworks/Python.framework/"
 fi
 
+# Homebrew stopped bottling for Intel macOS (announced 2026-08), and a formula rebuilt
+# after that loses its existing x86_64 bottle, so it would be built from source and its
+# `post_install` then fails. Pin such formulae to the last revision that still has a
+# bottle: the bottle itself stays available, and its ghcr path comes from the formula
+# name, so it is poured even from our own tap.
+PIN_TAP=meshlib/pins
+pinned_formula_commit() {
+    case $1 in
+        3.12) echo 7b2c2f97093e29530dde60cf8bfd84f2ef2586a1 ;; # 3.12.14 before the 2026-09-02 rebuild
+    esac
+}
+
 brew update
 
 for ver in $PY_VERSIONS; do
@@ -41,21 +53,16 @@ for ver in $PY_VERSIONS; do
     fi
 
     FORMULA="python@$ver"
-    # Homebrew stopped bottling for Intel macOS (announced 2026-08), and a formula rebuilt
-    # after that loses its existing x86_64 bottle, so it is built from source and its
-    # `post_install` then fails, failing this whole script. Pin such formulae to the last
-    # revision that still has a bottle; the bottles themselves stay available.
-    if [[ $(uname -m) == x86_64 ]]; then
-        case $ver in
-            # Homebrew 6 dropped `brew install <URL>`, but a local formula file still works.
-            3.12) FORMULA="$(mktemp -d)/python@$ver.rb"
-                  curl -fsSL -o "$FORMULA" 'https://raw.githubusercontent.com/Homebrew/homebrew-core/7b2c2f97093e29530dde60cf8bfd84f2ef2586a1/Formula/p/python%403.12.rb' ;;
-        esac
+    PIN_COMMIT="$(pinned_formula_commit $ver)"
+    if [[ $(uname -m) == x86_64 && $PIN_COMMIT ]]; then
+        brew tap-new $PIN_TAP --no-git >/dev/null 2>&1 || true
+        curl -fsSL -o "$(brew --repo $PIN_TAP)/Formula/python@$ver.rb" "https://raw.githubusercontent.com/Homebrew/homebrew-core/$PIN_COMMIT/Formula/p/python%40$ver.rb"
+        FORMULA="$PIN_TAP/python@$ver"
     fi
 
     # ??
     # Note that Brew doesn't want to be ran in `sudo`.
     brew install "$FORMULA"
-    brew unlink python@$ver
-    brew link --overwrite python@$ver
+    brew unlink "$FORMULA"
+    brew link --overwrite "$FORMULA"
 done

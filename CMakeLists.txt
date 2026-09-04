@@ -263,7 +263,8 @@ IF(MESHLIB_BUILD_GENERATED_C_BINDINGS)
   # is committed, so a configure legitimately precedes them: configure, generate, then
   # reconfigure to pick the new files up. EXCLUDE_FROM_ALL keeps them out of the default
   # build once they are there, so they are always built by name.
-  IF(EXISTS ${PROJECT_SOURCE_DIR}/MeshLibC2/src AND EXISTS ${PROJECT_SOURCE_DIR}/MeshLibC2Cuda/src)
+  # if(EXISTS) needs a full path, and PROJECT_SOURCE_DIR is the relative ./source here.
+  IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_SOURCE_DIR}/MeshLibC2/src AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_SOURCE_DIR}/MeshLibC2Cuda/src)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MeshLibC2 ./MeshLibC2 EXCLUDE_FROM_ALL)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRTestC2 ./MRTestC2 EXCLUDE_FROM_ALL)
 

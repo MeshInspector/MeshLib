@@ -209,11 +209,8 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
 // and a flip re-queues only the four edges around it, so unlike the parallel passes there is no rescan
 // of the whole candidate set and no second check before a flip; the flips come in another order though,
 // so where the result is not unique (cocircular vertices, or the constraints in settings) it can differ
-static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters,
-    const ProgressCallback& progressCallback, DeloneFlipsCache& cache )
+static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, DeloneFlipsCache& cache )
 {
-    if ( progressCallback && !progressCallback( 0.0f ) )
-        return 0;
     const auto ueSize = topology.undirectedEdgeSize();
     auto& queued = cache.nextFlipCandidates; // the edges currently waiting in the worklist
     queued.clear();
@@ -253,10 +250,11 @@ int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const
     DeloneFlipsCache& cache = settings.cache ? *settings.cache : localCache;
 
     // below this size the passes spend more on entering the task arena and rescanning the candidate
-    // sets than on the checks themselves (and such a call is over too soon for the timer to matter)
+    // sets than on the checks themselves; such a call is also over too soon for the timer or the
+    // progress callback to matter
     constexpr size_t cMinParallelEdges = 256;
     if ( topology.undirectedEdgeSize() < cMinParallelEdges )
-        return makeDeloneEdgeFlipsSerial( topology, points, settings, numIters, progressCallback, cache );
+        return makeDeloneEdgeFlipsSerial( topology, points, settings, numIters, cache );
     MR_TIMER;
 
     auto& flipCandidates = cache.flipCandidates;

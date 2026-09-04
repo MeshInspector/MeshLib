@@ -624,7 +624,7 @@ jobs:
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
 
       - name: Install all Python versions
-        run: uv python install --no-bin $(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+        run: uv python install $(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
 
       - name: Create virtualenv
         run: |

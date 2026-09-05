@@ -185,7 +185,7 @@ jobs:
                 - py-version: "3.8"
                   os: "rockylinux:8"
                 - py-version: "3.9"
-                  os: "debian:11-slim"
+                  os: "rockylinux:9"
                 - py-version: "3.10"
                   os: "ubuntu:22.04"
                 - py-version: "3.11"
@@ -795,16 +795,16 @@ jobs:
         with:
           ref: ${{ needs.setup.outputs.build_ref }}
 
-      - name: Rocky Linux system setup
+      - name: Rocky Linux 8 system setup
         if: ${{ matrix.os == 'rockylinux:8' }}
         run: dnf -y install python38-pip
 
-      - name: Debian/Ubuntu system setup
-        if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' || matrix.os == 'ubuntu:25.10' }}
+      - name: Ubuntu system setup
+        if: ${{ matrix.os == 'ubuntu:22.04' || matrix.os == 'ubuntu:25.10' }}
         run: apt -y update && apt -y install curl libssl-dev python3-pip python${{ matrix.py-version }}-venv
 
-      - name: Fedora system setup
-        if: ${{ matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
+      - name: Fedora / Rocky Linux 9 system setup
+        if: ${{ matrix.os == 'rockylinux:9' || matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
         run: dnf -y install python3-pip
 
       - name: Create virtualenv

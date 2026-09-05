@@ -18,6 +18,22 @@ For a start, find the MeshLib package:
 find_package(MeshLib CONFIG REQUIRED)
 \endcode
 
+### Point CMake at a Prefix That Is Not Installed System-Wide {#CmakeNonSystemPrefix}
+
+The `.deb` and `.pkg` packages install into system directories, where `find_package` finds them unaided. A prefix you unpacked yourself — the portable **Linux vcpkg** tarball — is not on CMake's search path, and configuring stops with `Could not find a package configuration file provided by "MeshLib"`. Name the extraction directory:
+
+\code{.sh}
+cmake -S . -B build -D CMAKE_PREFIX_PATH=path_to_install
+\endcode
+
+That is all a build-tree binary needs: CMake gives it an RPATH of `path_to_install/lib/MeshLib`, so it runs as is. `cmake --install` strips that RPATH, and the installed copy then fails at startup with `error while loading shared libraries: libMeshLibC2.so`. Keep the path in the installed binary, or hand it to the loader at run time:
+
+\code{.sh}
+cmake -S . -B build -D CMAKE_PREFIX_PATH=path_to_install -D CMAKE_INSTALL_RPATH=path_to_install/lib/MeshLib
+# or
+export LD_LIBRARY_PATH=path_to_install/lib/MeshLib:$LD_LIBRARY_PATH
+\endcode
+
 ### Include the MeshLib Headers
 
 Add \b both include directories from the installed MeshLib package to your project. In your CMake configuration (`CMakeLists.txt`):

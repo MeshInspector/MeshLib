@@ -303,6 +303,7 @@ jobs:
             --build c-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
           ./c-examples-build/MeshModification
+          ./c-examples-build/MeshExport
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}

@@ -895,6 +895,7 @@
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRCameraPointsTriangulation.h">
+    <ClInclude Include="MRDelaunayTriangulationXY.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRPointOnObject.h">
@@ -1973,7 +1974,7 @@
     <ClCompile Include="MRTiffIO.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRTerrainTriangulation.cpp">
+    <ClCompile Include="MRDelaunayTriangulationXY.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRCameraPointsTriangulation.cpp">

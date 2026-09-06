@@ -1,4 +1,5 @@
 #include "MRTerrainTriangulation.h"
+#include "MRPointCloud.h"
 #include "MRMatrix3.h"
 #include "MRMatrix2.h"
 #include "MRPch/MRTBB.h"
@@ -25,12 +26,20 @@ struct OrderedVertTag{};
 using OVertId = Id<OrderedVertTag>;
 
 public:
-    Triangulator( Vector<Vector2i, VertId>&& points, ProgressCallback cb )
+    Triangulator( Vector<Vector2i, VertId>&& points, const VertBitSet* validPoints, ProgressCallback cb )
     {
         pts_ = std::move( points );
-        vertOrder_.resize( pts_.size() );
-        
-        std::iota( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), VertId( 0 ) );
+        if ( validPoints )
+        {
+            vertOrder_.reserve( validPoints->count() );
+            for ( auto v : *validPoints )
+                vertOrder_.push_back( v );
+        }
+        else
+        {
+            vertOrder_.resize( pts_.size() );
+            std::iota( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), VertId( 0 ) );
+        }
         if ( !reportProgress( cb, 0.1f ) )
         {
             canceled_ = true;
@@ -59,7 +68,7 @@ public:
     }
     MeshTopology&& run()
     {
-        if ( canceled_ )
+        if ( canceled_ || vertOrder_.size() < 2 )
             return std::move( tp_ );
         seqDelaunay_( OVertId( 0 ), OVertId( vertOrder_.size() ) );
         return std::move( tp_ );
@@ -283,6 +292,9 @@ private:
             const auto s = subtasks[stackSize-1];
             if ( s.isLeaf() )
             {
+                if ( s.parentIndex == INT_MAX )
+                    return leafDelaunay_( s.b, s.e );
+
                 bool left = s.parentIndex < 0;
                 auto indParent = s.parentIndex;
                 if ( left )
@@ -348,30 +360,41 @@ private:
 
 }
 
-Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, ProgressCallback cb /*= {} */ )
+static Expected<Mesh> terrainTriangulation( VertCoords points, const VertBitSet* validPoints, const ProgressCallback& cb )
 {
     MR_TIMER;
 
     Mesh resMesh;
     resMesh.points = std::move( points );
-    auto box = Box3d( computeBoundingBox( resMesh.points ) );
+    auto box = Box3d( computeBoundingBox( resMesh.points, validPoints ) );
 
     auto toInt = getToIntConverter( box );
     Vector<Vector2i, VertId> p2d( resMesh.points.size() );
     ParallelFor( p2d, [&] ( VertId v )
     {
-        p2d[v] = to2dim( toInt( resMesh.points[v] ) );
+        if ( !validPoints || validPoints->test( v ) )
+            p2d[v] = to2dim( toInt( resMesh.points[v] ) );
     } );
 
     if ( cb && !cb( 0.1f ) )
         return unexpectedOperationCanceled();
 
-    DivideConquerTriangulation::Triangulator t( std::move( p2d ), subprogress( cb, 0.1f, 1.0f ) );
+    DivideConquerTriangulation::Triangulator t( std::move( p2d ), validPoints, subprogress( cb, 0.1f, 1.0f ) );
     resMesh.topology = t.run();
     if ( t.isCanceled() )
         return unexpectedOperationCanceled();
 
     return resMesh;
+}
+
+Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, const ProgressCallback& cb )
+{
+    return terrainTriangulation( VertCoords( std::move( points ) ), nullptr, cb );
+}
+
+Expected<Mesh> terrainTriangulation( const PointCloud& cloud, const ProgressCallback& cb )
+{
+    return terrainTriangulation( cloud.points, &cloud.validPoints, cb );
 }
 
 }

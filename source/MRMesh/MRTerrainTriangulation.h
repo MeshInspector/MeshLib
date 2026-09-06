@@ -9,6 +9,10 @@ namespace MR
 
 /// Creates Delaunay triangulation using only XY components of points 
 /// points will be changed inside this function take argument by value
-[[nodiscard]] MRMESH_API Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, ProgressCallback cb = {} );
+[[nodiscard]] MRMESH_API Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, const ProgressCallback& cb = {} );
+
+/// Creates Delaunay triangulation of valid points of the cloud using only XY components of points,
+/// vertex ids in the resulting mesh are the same as in the cloud (invalid points become invalid vertices)
+[[nodiscard]] MRMESH_API Expected<Mesh> terrainTriangulation( const PointCloud& cloud, const ProgressCallback& cb = {} );
 
 }

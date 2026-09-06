@@ -1,0 +1,51 @@
+#include "MRMesh/MRTerrainTriangulation.h"
+#include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRMesh.h"
+#include <gtest/gtest.h>
+
+namespace MR
+{
+
+TEST( MRMesh, TerrainTriangulation )
+{
+    std::vector<Vector3f> points
+    {
+        { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 }, // square
+        { 0.5f, 0.5f, 1 }, // its center
+        { 3, 3, 0 } // far away point, will be invalid in the cloud
+    };
+
+    auto mesh = terrainTriangulation( points );
+    ASSERT_TRUE( mesh.has_value() );
+    EXPECT_EQ( mesh->topology.numValidVerts(), 6 );
+    EXPECT_EQ( mesh->topology.numValidFaces(), 6 );
+
+    PointCloud cloud;
+    cloud.points.vec_ = points;
+    cloud.validPoints.resize( points.size(), true );
+    cloud.validPoints.reset( VertId( 5 ) );
+    auto cloudMesh = terrainTriangulation( cloud );
+    ASSERT_TRUE( cloudMesh.has_value() );
+    EXPECT_EQ( cloudMesh->points, cloud.points );
+    EXPECT_EQ( cloudMesh->topology.numValidVerts(), 5 );
+    EXPECT_FALSE( cloudMesh->topology.hasVert( VertId( 5 ) ) );
+    EXPECT_EQ( cloudMesh->topology.numValidFaces(), 4 );
+    EXPECT_EQ( cloudMesh->topology.findNumHoles(), 1 );
+
+    cloud.validPoints.reset( VertId( 4 ) );
+    cloud.validPoints.reset( VertId( 3 ) );
+    cloud.validPoints.reset( VertId( 2 ) );
+    cloudMesh = terrainTriangulation( cloud );
+    ASSERT_TRUE( cloudMesh.has_value() );
+    EXPECT_EQ( cloudMesh->topology.numValidVerts(), 2 );
+    EXPECT_EQ( cloudMesh->topology.numValidFaces(), 0 );
+    EXPECT_EQ( cloudMesh->topology.undirectedEdgeSize(), 1 );
+
+    cloud.validPoints.reset( VertId( 1 ) );
+    cloudMesh = terrainTriangulation( cloud );
+    ASSERT_TRUE( cloudMesh.has_value() );
+    EXPECT_EQ( cloudMesh->topology.numValidVerts(), 0 );
+    EXPECT_EQ( cloudMesh->topology.undirectedEdgeSize(), 0 );
+}
+
+} //namespace MR

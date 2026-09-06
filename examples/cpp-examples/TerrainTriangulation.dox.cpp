@@ -17,7 +17,7 @@ int main()
         std::cerr << loadRes.error() << "\n";
         return 1; // error while loading file
     }
-    auto triangulationRes = MR::terrainTriangulation( loadRes->points.vec_ );
+    auto triangulationRes = MR::terrainTriangulation( *loadRes );
     if ( !triangulationRes.has_value() )
     {
         std::cerr << triangulationRes.error() << "\n";

@@ -30,6 +30,12 @@ TEST( MRMesh, TriangulateCameraPoints )
     for ( FaceId f : mesh->topology.getValidFaces() )
         EXPECT_LT( dot( mesh->normal( f ), mesh->triCenter( f ) ), 0 ); // toward the camera
 
+    // too few points for a triangle: a mesh with the points and without faces
+    auto tiny = triangulateCameraPoints( VertCoords{ points[0_v], points[1_v] }, settings );
+    ASSERT_TRUE( tiny.has_value() );
+    EXPECT_EQ( tiny->points.size(), 2 );
+    EXPECT_EQ( tiny->topology.numValidFaces(), 0 );
+
     // a shifted copy of every point (0.2 px away in the image) is welded into the original vertex, which moves to the average position,
     // and the copy becomes an invalid vertex; vertex ids are the same as point ids
     VertCoords doubled = points;

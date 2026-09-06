@@ -63,9 +63,6 @@ static Expected<Mesh> triangulateCameraPoints( VertCoords points, const VertBitS
             *settings.outSmallestMap = std::move( *smallestMap );
     }
 
-    if ( pixels.validPoints.count() < 3 )
-        return unexpected( "At least 3 distinct points are required" );
-
     auto res = delaunayTriangulationXY( std::move( pixels ), triCb );
     if ( !res )
         return res;

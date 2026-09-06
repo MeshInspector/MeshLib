@@ -34,8 +34,8 @@ inputs:
   extra-cache-key:
     description: >
       Extra text folded into the cache key. A downstream repo whose own files
-      change the installed tree passes their hash, e.g.
-      `${{ hashFiles('requirements/windows*.txt', 'thirdparty/install.bat') }}`.
+      change the installed tree passes their hash, computed by the caller with
+      hashFiles over e.g. requirements/windows*.txt and thirdparty/install.bat.
     required: false
     default: ''
 

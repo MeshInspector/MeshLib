@@ -498,7 +498,7 @@ void deleteFacesWithLongEdges( Mesh& mesh, float maxEdgeLength )
             }
         }
     } );
-    mesh.topology.deleteFaces( longFaces );
+    mesh.deleteFaces( longFaces );
 }
 
 bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e )

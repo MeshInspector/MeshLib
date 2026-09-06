@@ -31,4 +31,10 @@ struct CameraPointsTriangulationSettings
 ///         can be removed afterwards by deleteFacesWithLongEdges
 [[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb = {} );
 
+/// same as above, but only valid points of the cloud participate in the triangulation (invalid points become invalid vertices)
+[[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( const PointCloud & cloud, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb = {} );
+
+/// same as above, but moves cloud points into the resulting mesh instead of copying them
+[[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( PointCloud && cloud, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb = {} );
+
 } //namespace MR

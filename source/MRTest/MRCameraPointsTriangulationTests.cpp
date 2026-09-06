@@ -2,6 +2,7 @@
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMeshFixer.h"
+#include "MRMesh/MRPointCloud.h"
 #include <gtest/gtest.h>
 
 namespace MR
@@ -52,6 +53,25 @@ TEST( MRMesh, TriangulateCameraPoints )
         EXPECT_EQ( smallestMap[v], v );
         EXPECT_EQ( smallestMap[v + copies], v );
     }
+
+    // the same points as a cloud with the copies invalid: welding has nothing to merge, and the moving overload empties the cloud
+    PointCloud cloud;
+    cloud.points = doubled;
+    cloud.validPoints.resize( doubled.size() );
+    for ( VertId v( 0 ); v < points.size(); ++v )
+        cloud.validPoints.set( v );
+    auto fromCloud = triangulateCameraPoints( cloud, settings );
+    ASSERT_TRUE( fromCloud.has_value() );
+    EXPECT_EQ( fromCloud->points.size(), doubled.size() );
+    EXPECT_EQ( fromCloud->topology.numValidVerts(), cN * cN );
+    EXPECT_EQ( fromCloud->topology.numValidFaces(), 2 * ( cN - 1 ) * ( cN - 1 ) );
+    EXPECT_EQ( fromCloud->points[0_v], points[0_v] );
+    EXPECT_FALSE( fromCloud->topology.hasVert( copies ) );
+    EXPECT_EQ( cloud.points.size(), doubled.size() );
+    auto fromMovedCloud = triangulateCameraPoints( std::move( cloud ), settings );
+    ASSERT_TRUE( fromMovedCloud.has_value() );
+    EXPECT_EQ( fromMovedCloud->topology.numValidFaces(), fromCloud->topology.numValidFaces() );
+    EXPECT_TRUE( cloud.points.empty() );
 
     // without the points inside radius 3 the Delaunay bridges the gap, and deleteFacesWithLongEdges reopens it as a hole
     VertCoords holed;

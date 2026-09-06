@@ -295,6 +295,7 @@
     <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
     <ClInclude Include="MRTerrainTriangulation.h" />
+    <ClInclude Include="MRCameraPointsTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRTriMesh.h" />
     <ClInclude Include="MRTripleFaceIntersections.h" />
@@ -713,6 +714,7 @@
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
     <ClCompile Include="MRTerrainTriangulation.cpp" />
+    <ClCompile Include="MRCameraPointsTriangulation.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTwoLineSegmDist.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />

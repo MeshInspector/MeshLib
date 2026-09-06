@@ -21,6 +21,7 @@ TEST( MRMesh, TriangulateCameraPoints )
     CameraPointsTriangulationSettings settings;
     settings.intrinsics = Matrix3f( { 1000, 0, 500 }, { 0, 1000, 500 }, { 0, 0, 1 } );
     settings.weldPixels = 0;
+    settings.numDeloneIters = 0;
     auto mesh = triangulateCameraPoints( points, settings );
     ASSERT_TRUE( mesh.has_value() );
     EXPECT_EQ( mesh->points.size(), points.size() );
@@ -29,6 +30,16 @@ TEST( MRMesh, TriangulateCameraPoints )
     EXPECT_EQ( mesh->topology.findHoleRepresentiveEdges().size(), 1 );
     for ( FaceId f : mesh->topology.getValidFaces() )
         EXPECT_LT( dot( mesh->normal( f ), mesh->triCenter( f ) ), 0 ); // toward the camera
+
+    // Delone flips in space keep the counts, the boundary and the orientation
+    settings.numDeloneIters = 1;
+    auto flipped = triangulateCameraPoints( points, settings );
+    ASSERT_TRUE( flipped.has_value() );
+    EXPECT_EQ( flipped->topology.numValidFaces(), mesh->topology.numValidFaces() );
+    EXPECT_EQ( flipped->topology.findHoleRepresentiveEdges().size(), 1 );
+    for ( FaceId f : flipped->topology.getValidFaces() )
+        EXPECT_LT( dot( flipped->normal( f ), flipped->triCenter( f ) ), 0 );
+    settings.numDeloneIters = 0;
 
     // too few points for a triangle: a mesh with the points and without faces
     auto tiny = triangulateCameraPoints( VertCoords{ points[0_v], points[1_v] }, settings );

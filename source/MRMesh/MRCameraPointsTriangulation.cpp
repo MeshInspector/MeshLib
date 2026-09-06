@@ -13,7 +13,7 @@ static Expected<Mesh> triangulateCameraPoints( VertCoords points, const VertBitS
 {
     MR_TIMER;
 
-    auto [projectCb, weldCb, triCb] = splitProgress( cb, 0.05f, 0.2f );
+    auto [projectCb, weldCb, triCb, deloneCb] = splitProgress( cb, 0.05f, 0.2f, 0.8f );
 
     // y is mirrored so that counter-clockwise triangles in the image plane face the camera, which looks along +Z
     auto project = [&K = settings.intrinsics]( const Vector3f & p )
@@ -68,6 +68,13 @@ static Expected<Mesh> triangulateCameraPoints( VertCoords points, const VertBitS
     if ( !res )
         return res;
     res->points = std::move( points );
+
+    if ( settings.numDeloneIters > 0 )
+    {
+        makeDeloneEdgeFlips( *res, settings.deloneSettings, settings.numDeloneIters, deloneCb );
+        if ( !reportProgress( deloneCb, 1.0f ) )
+            return unexpectedOperationCanceled();
+    }
     return res;
 }
 

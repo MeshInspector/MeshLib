@@ -15,10 +15,11 @@ static Expected<Mesh> triangulateCameraPoints( VertCoords points, const VertBitS
 
     auto [projectCb, weldCb, triCb] = splitProgress( cb, 0.05f, 0.2f );
 
+    // y is mirrored so that counter-clockwise triangles in the image plane face the camera, which looks along +Z
     auto project = [&K = settings.intrinsics]( const Vector3f & p )
     {
         const auto q = K * p;
-        return Vector3f( q.x / q.z, q.y / q.z, 0 );
+        return Vector3f( q.x / q.z, -q.y / q.z, 0 );
     };
 
     // image-plane positions with zero third coordinate; valid points are the ones to triangulate
@@ -67,8 +68,6 @@ static Expected<Mesh> triangulateCameraPoints( VertCoords points, const VertBitS
     if ( !res )
         return res;
     res->points = std::move( points );
-    // counter-clockwise triangles in the image plane have normals along +Z, i.e. away from the camera
-    res->topology.flipOrientation();
     return res;
 }
 

@@ -2,9 +2,7 @@
 #include "MRMesh.h"
 #include "MRTerrainTriangulation.h"
 #include "MRCloseVertices.h"
-#include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
-#include "MRRingIterator.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -17,7 +15,7 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
     if ( points.size() < 3 )
         return unexpected( "At least 3 points are required" );
 
-    auto [projectCb, weldCb, triCb, filterCb] = splitProgress( cb, 0.05f, 0.2f, 0.9f );
+    auto [projectCb, weldCb, triCb] = splitProgress( cb, 0.05f, 0.2f );
 
     auto project = [&K = settings.intrinsics]( const Vector3f & p )
     {
@@ -71,28 +69,6 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
     mesh.points = std::move( weldedPoints );
     // counter-clockwise triangles in the image plane have normals along +Z, i.e. away from the camera
     mesh.topology.flipOrientation();
-
-    if ( settings.maxEdgeLength > 0 )
-    {
-        const float maxLenSq = sqr( settings.maxEdgeLength );
-        FaceBitSet longFaces( mesh.topology.faceSize() );
-        BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
-        {
-            for ( EdgeId e : leftRing( mesh.topology, f ) )
-            {
-                if ( mesh.edgeLengthSq( e.undirected() ) > maxLenSq )
-                {
-                    longFaces.set( f );
-                    break;
-                }
-            }
-        } );
-        mesh.topology.deleteFaces( longFaces );
-        mesh.pack();
-    }
-
-    if ( !reportProgress( filterCb, 1.0f ) )
-        return unexpectedOperationCanceled();
     return res;
 }
 

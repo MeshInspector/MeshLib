@@ -45,6 +45,9 @@ MRMESH_API void fixMultipleEdges( Mesh & mesh );
 /// finds edges having length <= criticalLength
 [[nodiscard]] MRMESH_API Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb = {} );
 
+/// deletes all faces having at least one edge longer than maxEdgeLength
+MRMESH_API void deleteFacesWithLongEdges( Mesh& mesh, float maxEdgeLength );
+
 struct FixMeshDegeneraciesParams
 {
     /// maximum permitted deviation from the original surface

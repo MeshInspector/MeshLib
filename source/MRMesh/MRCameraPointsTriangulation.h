@@ -16,17 +16,14 @@ struct CameraPointsTriangulationSettings
     /// points closer than this distance in the image plane are merged into one vertex located at their average position;
     /// non-positive value disables merging
     float weldPixels = 1;
-
-    /// triangles having an edge longer than this in 3D are removed from the result (they typically bridge holes or depth steps);
-    /// non-positive value keeps all triangles
-    float maxEdgeLength = 0;
 };
 
 /// Creates a mesh from points seen by one pinhole camera (e.g. the points obtained by stereo triangulation of a single frame):
 /// points are projected in the image plane, Delaunay-triangulated there (see terrainTriangulation), and the triangulation is lifted
 /// back on the original 3D points, so the result is a height field over the image without self-intersections
 /// \param points coordinates in the camera space (the camera is at the origin and looks along +Z), all points must have positive z
-/// \return mesh with triangles oriented toward the camera
+/// \return mesh with triangles oriented toward the camera; the triangles bridging holes in the sampling or depth steps
+///         can be removed afterwards by deleteFacesWithLongEdges
 [[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb = {} );
 
 } //namespace MR

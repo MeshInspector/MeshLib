@@ -1,6 +1,7 @@
 #include "MRMesh/MRCameraPointsTriangulation.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MREdgeIterator.h"
+#include "MRMesh/MRMeshFixer.h"
 #include <gtest/gtest.h>
 
 namespace MR
@@ -47,13 +48,12 @@ TEST( MRMesh, TriangulateCameraPoints )
     ASSERT_TRUE( bridged.has_value() );
     EXPECT_EQ( bridged->topology.numValidVerts(), holed.size() );
     EXPECT_EQ( bridged->topology.findHoleRepresentiveEdges().size(), 1 );
-    settings.maxEdgeLength = 1.5f;
-    auto open = triangulateCameraPoints( holed, settings );
-    ASSERT_TRUE( open.has_value() );
-    EXPECT_EQ( open->topology.findHoleRepresentiveEdges().size(), 2 );
-    EXPECT_LT( open->topology.numValidFaces(), bridged->topology.numValidFaces() );
-    for ( UndirectedEdgeId ue : undirectedEdges( open->topology ) )
-        EXPECT_LE( open->edgeLength( ue ), 1.5f );
+    Mesh open = *bridged;
+    deleteFacesWithLongEdges( open, 1.5f );
+    EXPECT_EQ( open.topology.findHoleRepresentiveEdges().size(), 2 );
+    EXPECT_LT( open.topology.numValidFaces(), bridged->topology.numValidFaces() );
+    for ( UndirectedEdgeId ue : undirectedEdges( open.topology ) )
+        EXPECT_LE( open.edgeLength( ue ), 1.5f );
 }
 
 } //namespace MR

@@ -21,22 +21,53 @@ inputs:
     description: 'String boolean ("true" or "false"). Set it in jobs whose only purpose is to populate the cache and that never build against the restored tree. On a cache hit such a job has nothing left to do, so the restore (and the MSBuild integration that follows it) is skipped instead of downloading a tree no step in this job reads.'
     required: false
     default: 'false'
+  repo-dir:
+    description: >
+      Path to this repository from the workspace root. The default suits a
+      workflow whose workspace is MeshLib itself; a downstream repo that has
+      MeshLib as a submodule passes the submodule path (e.g. `MeshLib`).
+      It locates the ports, the triplet file and the diagnostic script.
+      `thirdparty\install.bat` is deliberately NOT covered: it is run from the
+      workspace root, so a downstream repo runs its own wrapper.
+    required: false
+    default: '.'
+  extra-cache-key:
+    description: >
+      Extra text folded into the cache key. A downstream repo whose own files
+      change the installed tree passes their hash, e.g.
+      `${{ hashFiles('requirements/windows*.txt', 'thirdparty/install.bat') }}`.
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
   steps:
+    - name: Resolve repo prefix
+      shell: bash
+      run: |
+        d='${{ inputs.repo-dir }}'
+        if [ -z "$d" ] || [ "$d" = "." ]; then
+          echo "REPO_PREFIX=" >> "$GITHUB_ENV"
+        else
+          echo "REPO_PREFIX=${d%/}/" >> "$GITHUB_ENV"
+        fi
+
     - name: Compute Vcpkg Cache Key
       # Bust the cache when overlay ports, the active triplet, the package
       # list, or install.bat change. The VS2019 overlay glob is empty for
       # other triplets so it doesn't invalidate their caches.
       shell: bash
       env:
-        VS19_PORTS_GLOB: ${{ (inputs.vcpkg-triplet == 'x64-windows-vs2019-meshlib' || inputs.vcpkg-triplet == 'x64-windows-meshlib-iterator-debug') && 'thirdparty/vcpkg/ports-vs19/**' || '' }}
+        VS19_PORTS_GLOB: ${{ (inputs.vcpkg-triplet == 'x64-windows-vs2019-meshlib' || inputs.vcpkg-triplet == 'x64-windows-meshlib-iterator-debug') && format('{0}thirdparty/vcpkg/ports-vs19/**', env.REPO_PREFIX) || '' }}
       run: |
-        triplet_file="thirdparty/vcpkg/triplets/${{ inputs.vcpkg-triplet }}.cmake"
+        triplet_file="${REPO_PREFIX}thirdparty/vcpkg/triplets/${{ inputs.vcpkg-triplet }}.cmake"
         echo "Triplet file: $triplet_file"
         test -f "$triplet_file" || { echo "::error::Triplet file not found: $triplet_file"; exit 1; }
-        echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${{ hashFiles('thirdparty/vcpkg/ports/**', env.VS19_PORTS_GLOB, format('thirdparty/vcpkg/triplets/{0}.cmake', inputs.vcpkg-triplet), 'requirements/windows.txt', 'thirdparty/install.bat') }}-slim2" >> "$GITHUB_ENV"
+        files_hash='${{ hashFiles(format('{0}thirdparty/vcpkg/ports/**', env.REPO_PREFIX), env.VS19_PORTS_GLOB, format('{0}thirdparty/vcpkg/triplets/{1}.cmake', env.REPO_PREFIX, inputs.vcpkg-triplet), format('{0}requirements/windows.txt', env.REPO_PREFIX), format('{0}thirdparty/install.bat', env.REPO_PREFIX)) }}'
+        # An empty hash means every pattern matched nothing, which would pin the
+        # key to a constant and never bust it again. Fail instead.
+        test -n "$files_hash" || { echo "::error::cache key inputs matched no files under '${REPO_PREFIX:-<workspace>}'"; exit 1; }
+        echo "VCPKG_CACHE_KEY=vcpkg-cache-${{ inputs.vcpkg-version }}-${{ inputs.vcpkg-triplet }}-${files_hash}${{ inputs.extra-cache-key && format('-{0}', inputs.extra-cache-key) || '' }}-slim2" >> "$GITHUB_ENV"
 
     - name: Look up Vcpkg Cache
       id: lookup
@@ -154,6 +185,8 @@ runs:
       if: ${{ env.VCPKG_CACHE_HIT != 'true' }}
       shell: pwsh
       run: |
+        # Workspace-relative on purpose, not repo-dir-relative: a downstream
+        # repo's own install.bat wraps MeshLib's and adds its requirements.
         ./thirdparty/install.bat ${{ inputs.install-flags }}
 
         Write-Host "=== C:\vcpkg subfolder sizes (pre-trim) ==="
@@ -202,4 +235,4 @@ runs:
       if: ${{ always() && env.VCPKG_RESTORE_SKIPPED != 'true' }}
       shell: pwsh
       continue-on-error: true
-      run: ./scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ inputs.vcpkg-triplet }}"
+      run: ./${{ env.REPO_PREFIX }}scripts/diagnostics/windows-vcpkg-tree.ps1 -Triplet "${{ inputs.vcpkg-triplet }}"

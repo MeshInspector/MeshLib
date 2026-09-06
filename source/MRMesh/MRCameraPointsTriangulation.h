@@ -2,8 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRMatrix3.h"
-#include "MRMeshDelone.h"
-#include "MRConstants.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 
@@ -22,14 +20,6 @@ struct CameraPointsTriangulationSettings
     /// if not null, receives the result of findSmallestCloseVertices on the image-plane positions:
     /// each point is mapped to the point it was merged into (or to itself); left unchanged if weldPixels <= 0
     VertMap * outSmallestMap = nullptr;
-
-    /// the number of iterations of makeDeloneEdgeFlips at the end to improve the triangulation in 3D,
-    /// since Delaunay property in the image plane is not the same as in space; zero disables the flips
-    int numDeloneIters = 1;
-
-    /// parameters of these flips; the default limit on dihedral angle change keeps the mesh free of self-intersections,
-    /// which unlimited flips of the quadrangles non-convex in the image plane otherwise introduce
-    DeloneSettings deloneSettings{ .maxAngleChange = PI_F / 3 };
 };
 
 /// Creates a mesh from points seen by one pinhole camera (e.g. the points obtained by stereo triangulation of a single frame):

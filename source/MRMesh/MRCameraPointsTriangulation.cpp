@@ -10,12 +10,14 @@
 namespace MR
 {
 
-Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraPointsTriangulationSettings & settings )
+Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb )
 {
     MR_TIMER;
 
     if ( points.size() < 3 )
         return unexpected( "At least 3 points are required" );
+
+    auto [projectCb, weldCb, triCb, filterCb] = splitProgress( cb, 0.05f, 0.2f, 0.9f );
 
     auto project = [&K = settings.intrinsics]( const Vector3f & p )
     {
@@ -28,13 +30,13 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
     {
         pixels[v] = project( points[v] );
     } );
-    if ( !reportProgress( settings.cb, 0.05f ) )
+    if ( !reportProgress( projectCb, 1.0f ) )
         return unexpectedOperationCanceled();
 
     VertCoords weldedPoints;
     if ( settings.weldPixels > 0 )
     {
-        auto smallestMap = findSmallestCloseVertices( pixels, settings.weldPixels, nullptr, subprogress( settings.cb, 0.05f, 0.2f ) );
+        auto smallestMap = findSmallestCloseVertices( pixels, settings.weldPixels, nullptr, weldCb );
         if ( !smallestMap )
             return unexpectedOperationCanceled();
 
@@ -62,7 +64,7 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
     if ( pixels.size() < 3 )
         return unexpected( "At least 3 distinct points are required" );
 
-    auto res = terrainTriangulation( std::move( pixels.vec_ ), subprogress( settings.cb, 0.2f, 0.9f ) );
+    auto res = terrainTriangulation( std::move( pixels.vec_ ), triCb );
     if ( !res )
         return res;
     Mesh & mesh = *res;
@@ -89,7 +91,7 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
         mesh.pack();
     }
 
-    if ( !reportProgress( settings.cb, 1.0f ) )
+    if ( !reportProgress( filterCb, 1.0f ) )
         return unexpectedOperationCanceled();
     return res;
 }

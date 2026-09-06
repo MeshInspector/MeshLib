@@ -20,9 +20,6 @@ struct CameraPointsTriangulationSettings
     /// triangles having an edge longer than this in 3D are removed from the result (they typically bridge holes or depth steps);
     /// non-positive value keeps all triangles
     float maxEdgeLength = 0;
-
-    /// to report progress and cancel
-    ProgressCallback cb;
 };
 
 /// Creates a mesh from points seen by one pinhole camera (e.g. the points obtained by stereo triangulation of a single frame):
@@ -30,6 +27,6 @@ struct CameraPointsTriangulationSettings
 /// back on the original 3D points, so the result is a height field over the image without self-intersections
 /// \param points coordinates in the camera space (the camera is at the origin and looks along +Z), all points must have positive z
 /// \return mesh with triangles oriented toward the camera
-[[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraPointsTriangulationSettings & settings );
+[[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb = {} );
 
 } //namespace MR

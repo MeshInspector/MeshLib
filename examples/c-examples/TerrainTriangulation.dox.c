@@ -32,7 +32,7 @@ int main( void )
         goto fail_load; // error while loading file
     }
 
-    MR_expected_MR_Mesh_std_string* triangulationRes = MR_terrainTriangulation_MR_PointCloud( pc, NULL );
+    MR_expected_MR_Mesh_std_string* triangulationRes = MR_terrainTriangulation_const_MR_PointCloud_ref( pc, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( triangulationRes );
     if ( !mesh )
     {

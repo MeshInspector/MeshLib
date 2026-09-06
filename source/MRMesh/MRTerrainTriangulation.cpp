@@ -397,4 +397,9 @@ Expected<Mesh> terrainTriangulation( const PointCloud& cloud, const ProgressCall
     return terrainTriangulation( cloud.points, &cloud.validPoints, cb );
 }
 
+Expected<Mesh> terrainTriangulation( PointCloud&& cloud, const ProgressCallback& cb )
+{
+    return terrainTriangulation( std::move( cloud.points ), &cloud.validPoints, cb );
+}
+
 }

@@ -15,4 +15,7 @@ namespace MR
 /// vertex ids in the resulting mesh are the same as in the cloud (invalid points become invalid vertices)
 [[nodiscard]] MRMESH_API Expected<Mesh> terrainTriangulation( const PointCloud& cloud, const ProgressCallback& cb = {} );
 
+/// same as above, but moves cloud points into the resulting mesh instead of copying them
+[[nodiscard]] MRMESH_API Expected<Mesh> terrainTriangulation( PointCloud&& cloud, const ProgressCallback& cb = {} );
+
 }

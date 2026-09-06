@@ -32,6 +32,12 @@ TEST( MRMesh, TerrainTriangulation )
     EXPECT_EQ( cloudMesh->topology.numValidFaces(), 4 );
     EXPECT_EQ( cloudMesh->topology.findNumHoles(), 1 );
 
+    auto cloudCopy = cloud;
+    auto movedMesh = terrainTriangulation( std::move( cloudCopy ) );
+    ASSERT_TRUE( movedMesh.has_value() );
+    EXPECT_EQ( movedMesh->points, cloud.points );
+    EXPECT_EQ( movedMesh->topology.numValidFaces(), 4 );
+
     cloud.validPoints.reset( VertId( 4 ) );
     cloud.validPoints.reset( VertId( 3 ) );
     cloud.validPoints.reset( VertId( 2 ) );

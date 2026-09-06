@@ -1,4 +1,4 @@
-#include "MRTerrainTriangulation.h"
+#include "MRDelaunayTriangulationXY.h"
 #include "MRPointCloud.h"
 #include "MRMatrix3.h"
 #include "MRMatrix2.h"
@@ -360,7 +360,7 @@ private:
 
 }
 
-static Expected<Mesh> terrainTriangulation( VertCoords points, const VertBitSet* validPoints, const ProgressCallback& cb )
+static Expected<Mesh> delaunayTriangulationXY( VertCoords points, const VertBitSet* validPoints, const ProgressCallback& cb )
 {
     MR_TIMER;
 
@@ -387,19 +387,19 @@ static Expected<Mesh> terrainTriangulation( VertCoords points, const VertBitSet*
     return resMesh;
 }
 
-Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, const ProgressCallback& cb )
+Expected<Mesh> delaunayTriangulationXY( std::vector<Vector3f> points, const ProgressCallback& cb )
 {
-    return terrainTriangulation( VertCoords( std::move( points ) ), nullptr, cb );
+    return delaunayTriangulationXY( VertCoords( std::move( points ) ), nullptr, cb );
 }
 
-Expected<Mesh> terrainTriangulation( const PointCloud& cloud, const ProgressCallback& cb )
+Expected<Mesh> delaunayTriangulationXY( const PointCloud& cloud, const ProgressCallback& cb )
 {
-    return terrainTriangulation( cloud.points, &cloud.validPoints, cb );
+    return delaunayTriangulationXY( cloud.points, &cloud.validPoints, cb );
 }
 
-Expected<Mesh> terrainTriangulation( PointCloud&& cloud, const ProgressCallback& cb )
+Expected<Mesh> delaunayTriangulationXY( PointCloud&& cloud, const ProgressCallback& cb )
 {
-    return terrainTriangulation( std::move( cloud.points ), &cloud.validPoints, cb );
+    return delaunayTriangulationXY( std::move( cloud.points ), &cloud.validPoints, cb );
 }
 
 }

@@ -32,7 +32,7 @@
     <ClCompile Include="MRContourTests.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRDeloneTests.cpp" />
-    <ClCompile Include="MRTerrainTriangulationTests.cpp" />
+    <ClCompile Include="MRDelaunayTriangulationXYTests.cpp" />
     <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />

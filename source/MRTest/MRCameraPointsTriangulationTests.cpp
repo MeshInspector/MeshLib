@@ -22,24 +22,38 @@ TEST( MRMesh, TriangulateCameraPoints )
     settings.weldPixels = 0;
     auto mesh = triangulateCameraPoints( points, settings );
     ASSERT_TRUE( mesh.has_value() );
+    EXPECT_EQ( mesh->points.size(), points.size() );
     EXPECT_EQ( mesh->topology.numValidVerts(), cN * cN );
     EXPECT_EQ( mesh->topology.numValidFaces(), 2 * ( cN - 1 ) * ( cN - 1 ) );
     EXPECT_EQ( mesh->topology.findHoleRepresentiveEdges().size(), 1 );
     for ( FaceId f : mesh->topology.getValidFaces() )
         EXPECT_LT( dot( mesh->normal( f ), mesh->triCenter( f ) ), 0 ); // toward the camera
 
-    // a shifted copy of every point (0.2 px away in the image) is welded back into one vertex at the average position
+    // a shifted copy of every point (0.2 px away in the image) is welded into the original vertex, which moves to the average position,
+    // and the copy becomes an invalid vertex; vertex ids are the same as point ids
     VertCoords doubled = points;
     for ( const auto & p : points )
         doubled.push_back( p + Vector3f( 0.02f, 0, 0 ) );
     settings.weldPixels = 1;
+    VertMap smallestMap;
+    settings.outSmallestMap = &smallestMap;
     auto welded = triangulateCameraPoints( doubled, settings );
     ASSERT_TRUE( welded.has_value() );
+    EXPECT_EQ( welded->points.size(), doubled.size() );
     EXPECT_EQ( welded->topology.numValidVerts(), cN * cN );
     EXPECT_EQ( welded->topology.numValidFaces(), 2 * ( cN - 1 ) * ( cN - 1 ) );
     EXPECT_NEAR( welded->points[0_v].x, points[0_v].x + 0.01f, 1e-5f );
+    ASSERT_EQ( smallestMap.size(), doubled.size() );
+    const VertId copies( int( points.size() ) );
+    for ( VertId v( 0 ); v < points.size(); ++v )
+    {
+        EXPECT_TRUE( welded->topology.hasVert( v ) );
+        EXPECT_FALSE( welded->topology.hasVert( v + copies ) );
+        EXPECT_EQ( smallestMap[v], v );
+        EXPECT_EQ( smallestMap[v + copies], v );
+    }
 
-    // without the points inside radius 3 the Delaunay bridges the gap, and the edge-length limit reopens it as a hole
+    // without the points inside radius 3 the Delaunay bridges the gap, and deleteFacesWithLongEdges reopens it as a hole
     VertCoords holed;
     for ( const auto & p : points )
         if ( sqr( p.x ) + sqr( p.y ) >= 9 )

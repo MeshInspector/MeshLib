@@ -1,6 +1,7 @@
 #include "MRCameraPointsTriangulation.h"
 #include "MRMesh.h"
-#include "MRTerrainTriangulation.h"
+#include "MRPointCloud.h"
+#include "MRDelaunayTriangulationXY.h"
 #include "MRCloseVertices.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
@@ -23,18 +24,21 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
         return Vector3f( q.x / q.z, q.y / q.z, 0 );
     };
 
-    VertCoords pixels( points.size() );
-    ParallelFor( pixels, [&]( VertId v )
+    // image-plane positions with zero third coordinate; valid points are the ones to triangulate
+    PointCloud pixels;
+    pixels.points.resize( points.size() );
+    ParallelFor( pixels.points, [&]( VertId v )
     {
-        pixels[v] = project( points[v] );
+        pixels.points[v] = project( points[v] );
     } );
+    pixels.validPoints.resize( points.size(), true );
     if ( !reportProgress( projectCb, 1.0f ) )
         return unexpectedOperationCanceled();
 
-    VertCoords weldedPoints;
+    VertCoords meshPoints = points;
     if ( settings.weldPixels > 0 )
     {
-        auto smallestMap = findSmallestCloseVertices( pixels, settings.weldPixels, nullptr, weldCb );
+        auto smallestMap = findSmallestCloseVertices( pixels.points, settings.weldPixels, nullptr, weldCb );
         if ( !smallestMap )
             return unexpectedOperationCanceled();
 
@@ -45,30 +49,29 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
             const auto m = (*smallestMap)[v];
             sums[m] += points[v];
             ++counts[m];
+            if ( m != v )
+                pixels.validPoints.reset( v );
         }
-        pixels.clear();
-        for ( VertId v( 0 ); v < points.size(); ++v )
+        for ( VertId v : pixels.validPoints )
         {
-            if ( counts[v] == 0 )
+            if ( counts[v] <= 1 )
                 continue;
-            const auto p = sums[v] / float( counts[v] );
-            weldedPoints.push_back( p );
-            pixels.push_back( project( p ) );
+            meshPoints[v] = sums[v] / float( counts[v] );
+            pixels.points[v] = project( meshPoints[v] );
         }
+        if ( settings.outSmallestMap )
+            *settings.outSmallestMap = std::move( *smallestMap );
     }
-    else
-        weldedPoints = points;
 
-    if ( pixels.size() < 3 )
+    if ( pixels.validPoints.count() < 3 )
         return unexpected( "At least 3 distinct points are required" );
 
-    auto res = terrainTriangulation( std::move( pixels.vec_ ), triCb );
+    auto res = delaunayTriangulationXY( std::move( pixels ), triCb );
     if ( !res )
         return res;
-    Mesh & mesh = *res;
-    mesh.points = std::move( weldedPoints );
+    res->points = std::move( meshPoints );
     // counter-clockwise triangles in the image plane have normals along +Z, i.e. away from the camera
-    mesh.topology.flipOrientation();
+    res->topology.flipOrientation();
     return res;
 }
 

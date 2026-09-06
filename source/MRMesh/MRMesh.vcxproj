@@ -714,7 +714,6 @@
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
-    <ClCompile Include="MRTerrainTriangulation.cpp" />
     <ClCompile Include="MRCameraPointsTriangulation.cpp" />
     <ClCompile Include="MRDelaunayTriangulationXY.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />

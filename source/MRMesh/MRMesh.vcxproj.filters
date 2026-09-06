@@ -895,6 +895,8 @@
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRCameraPointsTriangulation.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
     <ClInclude Include="MRDelaunayTriangulationXY.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>

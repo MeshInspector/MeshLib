@@ -436,6 +436,7 @@ std::string GetCpuId()
         { "Amazon EC2",            0x41, 0xd0c, "AWS Graviton2" },
         { "Amazon EC2",            0x41, 0xd40, "AWS Graviton3" },
         { "Amazon EC2",            0x41, 0xd4f, "AWS Graviton4" },
+        { "Amazon EC2",            0x41, 0xd84, "AWS Graviton5" },
     };
     {
         std::ifstream sysVendor( "/sys/class/dmi/id/sys_vendor" );

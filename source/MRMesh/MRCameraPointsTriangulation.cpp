@@ -19,10 +19,10 @@ static Expected<Mesh> triangulateCameraPoints( VertCoords points, const VertBitS
     auto project = [&K = settings.intrinsics]( const Vector3f & p )
     {
         const auto q = K * p;
-        return Vector3f( q.x / q.z, -q.y / q.z, 0 );
+        return Vector3f( q.x / q.z, -q.y / q.z, 1 );
     };
 
-    // image-plane positions with zero third coordinate; valid points are the ones to triangulate
+    // image-plane positions; valid points are the ones to triangulate
     PointCloud pixels;
     pixels.points.resize( points.size() );
     if ( validPoints )
@@ -67,6 +67,8 @@ static Expected<Mesh> triangulateCameraPoints( VertCoords points, const VertBitS
     auto res = delaunayTriangulationXY( std::move( pixels ), triCb );
     if ( !res )
         return res;
+    if ( settings.outProjectedPoints )
+        *settings.outProjectedPoints = std::move( res->points );
     res->points = std::move( points );
     return res;
 }

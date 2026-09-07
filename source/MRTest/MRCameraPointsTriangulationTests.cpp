@@ -44,8 +44,14 @@ TEST( MRMesh, TriangulateCameraPoints )
     settings.weldPixels = 1;
     VertMap smallestMap;
     settings.outSmallestMap = &smallestMap;
+    VertCoords projected;
+    settings.outProjectedPoints = &projected;
     auto welded = triangulateCameraPoints( doubled, settings );
     ASSERT_TRUE( welded.has_value() );
+    ASSERT_EQ( projected.size(), doubled.size() );
+    const auto & p0 = welded->points[0_v];
+    EXPECT_LT( ( projected[0_v] - Vector3f( 1000 * p0.x / p0.z + 500, -( 1000 * p0.y / p0.z + 500 ), 1 ) ).length(), 1e-3f );
+    settings.outProjectedPoints = nullptr;
     EXPECT_EQ( welded->points.size(), doubled.size() );
     EXPECT_EQ( welded->topology.numValidVerts(), cN * cN );
     EXPECT_EQ( welded->topology.numValidFaces(), 2 * ( cN - 1 ) * ( cN - 1 ) );

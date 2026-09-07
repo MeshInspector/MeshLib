@@ -20,6 +20,10 @@ struct CameraPointsTriangulationSettings
     /// if not null, receives the result of findSmallestCloseVertices on the image-plane positions:
     /// each point is mapped to the point it was merged into (or to itself); left unchanged if weldPixels <= 0
     VertMap * outSmallestMap = nullptr;
+
+    /// if not null, receives the image-plane coordinates of all points as ( x, -y, 1 ) with y mirrored,
+    /// for welded points these are the coordinates of the averaged position, for invalid cloud points zeros
+    VertCoords * outProjectedPoints = nullptr;
 };
 
 /// Creates a mesh from points seen by one pinhole camera (e.g. the points obtained by stereo triangulation of a single frame):

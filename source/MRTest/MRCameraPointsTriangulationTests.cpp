@@ -106,17 +106,14 @@ TEST( MRMesh, TriangulateCameraPoints )
 
 TEST( MRMesh, SmoothCameraMeshDepth )
 {
-    // tilted plane (a harmonic depth field) sampled on a grid with a deterministic depth noise;
-    // the smoothing must bring the vertices closer to the plane while keeping their projections;
-    // the error is measured away from the boundary, where the one-sided neighborhoods bend the harmonic field
+    // constant depth (a harmonic field even at the grid boundary) sampled on a grid with a deterministic depth noise;
+    // the smoothing must bring the vertices closer to the plane while keeping their projections
     constexpr int cHalf = 10;
     VertCoords exact, noisy;
-    VertBitSet interior;
     for ( int i = -cHalf; i <= cHalf; ++i )
         for ( int j = -cHalf; j <= cHalf; ++j )
         {
-            const float z = 100 + 0.05f * i + 0.02f * j;
-            interior.autoResizeSet( VertId( int( exact.size() ) ), std::abs( i ) <= cHalf - 3 && std::abs( j ) <= cHalf - 3 );
+            const float z = 100;
             exact.emplace_back( float( i ), float( j ), z );
             const float noise = 0.1f * ( ( ( i * 7 + j * 13 ) % 5 + 5 ) % 5 - 2 ); // in [-0.2, 0.2]
             noisy.push_back( exact.back() * ( ( z + noise ) / z ) );      // along the viewing ray
@@ -131,9 +128,9 @@ TEST( MRMesh, SmoothCameraMeshDepth )
     auto rmsError = [&]( const VertCoords & pts )
     {
         double sum = 0;
-        for ( VertId v : interior )
+        for ( VertId v( 0 ); v < pts.size(); ++v )
             sum += sqr( pts[v].z - exact[v].z );
-        return std::sqrt( sum / interior.count() );
+        return std::sqrt( sum / pts.size() );
     };
     const auto errBefore = rmsError( mesh->points );
     smoothCameraMeshDepth( *mesh, { .stabilizer = 0.1f } );

@@ -4,6 +4,7 @@
 #include "MRImGui.h"
 #include "MRLocale.h"
 #include "MRRibbonMenu.h"
+#include "MRShortcutManager.h"
 #include "MRViewer.h"
 #include "MRSceneCache.h"
 #include "MRStatePlugin.h"

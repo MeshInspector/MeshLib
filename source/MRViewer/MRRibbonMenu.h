@@ -219,10 +219,12 @@ protected:
     MRVIEWER_API virtual HashSet<std::string> allowedShortcutTags_() const;
 
     /// binds the default shortcuts of the items in RibbonSchemaHolder::schema() (see MenuItemShortcut) having only allowed tags,
-    /// visiting the items in the order of their appearance in the UI,
-    /// so that of two items claiming the same key the later one in the UI wins;
-    /// the schema must be already read, so it is called after readMenuItemsStructure_ and not in setupShortcuts_;
-    /// call it again after every shortcutManager_->clear()
+    /// visiting the items in the order of their appearance in the UI (tabs, scene buttons, header quick access, quick access,
+    /// each button followed by the items of its drop list), so that of two items claiming the same key the later one in the UI wins;
+    /// the schema must be already read, so it is called after readMenuItemsStructure_ and not in setupShortcuts_,
+    /// and a key bound in setupShortcuts_ to another action is taken over by an item default using the same key:
+    /// to change the default of an item, give it another "Shortcut" in an items.json read later (see RibbonSchemaLoader::sortFilesByOrder_)
+    /// or bind after RibbonMenu::init; call it again after every shortcutManager_->clear()
     MRVIEWER_API void registerItemsShortcuts_( const HashSet<std::string>& allowedTags );
 
     MRVIEWER_API virtual void drawShortcutsWindow_() override;

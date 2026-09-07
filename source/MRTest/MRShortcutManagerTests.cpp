@@ -16,7 +16,9 @@ TEST( MRViewer, ShortcutParseKey )
     EXPECT_EQ( ShortcutManager::parseKey( "Num 7" ), GLFW_KEY_KP_7 );
     EXPECT_EQ( ShortcutManager::parseKey( "PageUp" ), GLFW_KEY_PAGE_UP );
     EXPECT_EQ( ShortcutManager::parseKey( "ArrowUp" ), GLFW_KEY_UP );
+#ifndef __EMSCRIPTEN__ // getGlfwKeyDelete() asks the page for is_mac(), which the test harness does not define
     EXPECT_EQ( ShortcutManager::parseKey( "PDelete" ), getGlfwKeyDelete() );
+#endif
 
     EXPECT_FALSE( ShortcutManager::parseKey( "" ) );
     EXPECT_FALSE( ShortcutManager::parseKey( " " ) );
@@ -46,7 +48,9 @@ TEST( MRViewer, ShortcutParseModifier )
     EXPECT_EQ( ShortcutManager::parseModifier( "Ctrl" ), GLFW_MOD_CONTROL );
     EXPECT_EQ( ShortcutManager::parseModifier( "Alt" ), GLFW_MOD_ALT );
     EXPECT_EQ( ShortcutManager::parseModifier( "Super" ), GLFW_MOD_SUPER );
+#ifndef __EMSCRIPTEN__ // getGlfwModPrimaryCtrl() asks the page for is_mac(), which the test harness does not define
     EXPECT_EQ( ShortcutManager::parseModifier( "PCtrl" ), getGlfwModPrimaryCtrl() );
+#endif
 
     EXPECT_FALSE( ShortcutManager::parseModifier( "" ) );
     EXPECT_FALSE( ShortcutManager::parseModifier( "Cmd" ) );

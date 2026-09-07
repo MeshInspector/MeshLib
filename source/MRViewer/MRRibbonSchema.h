@@ -1,7 +1,7 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRRibbonRegisterItem.h"
-#include "MRShortcutManager.h"
+#include "MRShortcutKey.h"
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRphmap.h"

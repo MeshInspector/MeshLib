@@ -2268,20 +2268,25 @@ void RibbonMenu::registerItemsShortcuts_( const HashSet<std::string>& allowedTag
     MR_TIMER;
     const auto& schema = RibbonSchemaHolder::schema();
     HashSet<const RibbonMenuItem*> visited;
-    auto registerItems = [&] ( const MenuItemsList& itemNames )
+    auto registerItems = [&] ( const MenuItemsList& itemNames, auto& self ) -> void
     {
         for ( const auto& itemName : itemNames )
         {
             auto itemIt = schema.items.find( itemName );
-            if ( itemIt == schema.items.end() || !itemIt->second.item || !itemIt->second.shortcut )
+            if ( itemIt == schema.items.end() || !itemIt->second.item )
                 continue;
-            // one item can appear in several places of the UI, bind it only once
+            // one item can appear in several places of the UI, visit it only once
             if ( !visited.insert( itemIt->second.item.get() ).second )
                 continue;
-            const auto& shortcut = *itemIt->second.shortcut;
-            if ( !std::all_of( shortcut.tags.begin(), shortcut.tags.end(), [&] ( const std::string& tag ) { return allowedTags.contains( tag ); } ) )
-                continue;
-            addRibbonItemShortcut( itemName, shortcut.shortcut );
+            if ( const auto& shortcut = itemIt->second.shortcut )
+                if ( std::all_of( shortcut->tags.begin(), shortcut->tags.end(), [&] ( const std::string& tag ) { return allowedTags.contains( tag ); } ) )
+                    addRibbonItemShortcut( itemName, shortcut->shortcut );
+            // the items of a drop list follow their button in the UI
+            MenuItemsList dropNames;
+            for ( const auto& dropItem : itemIt->second.item->dropItems() )
+                if ( dropItem )
+                    dropNames.push_back( dropItem->name() );
+            self( dropNames, self );
         }
     };
 
@@ -2295,12 +2300,12 @@ void RibbonMenu::registerItemsShortcuts_( const HashSet<std::string>& allowedTag
             auto itemsIt = schema.groupsMap.find( tab.name + groupName );
             if ( itemsIt == schema.groupsMap.end() )
                 continue;
-            registerItems( itemsIt->second );
+            registerItems( itemsIt->second, registerItems );
         }
     }
-    registerItems( schema.sceneButtonsList );
-    registerItems( schema.headerQuickAccessList );
-    registerItems( schema.defaultQuickAccessList );
+    registerItems( schema.sceneButtonsList, registerItems );
+    registerItems( schema.headerQuickAccessList, registerItems );
+    registerItems( schema.defaultQuickAccessList, registerItems );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

@@ -3,7 +3,9 @@
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMeshFixer.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRVector2.h"
 #include <gtest/gtest.h>
+#include <cmath>
 
 namespace MR
 {
@@ -100,6 +102,73 @@ TEST( MRMesh, TriangulateCameraPoints )
     EXPECT_LT( open.topology.numValidFaces(), bridged->topology.numValidFaces() );
     for ( UndirectedEdgeId ue : undirectedEdges( open.topology ) )
         EXPECT_LE( open.edgeLength( ue ), 1.5f );
+}
+
+TEST( MRMesh, SmoothCameraMeshDepth )
+{
+    // constant depth (a harmonic field even at the grid boundary) sampled on a grid with a deterministic depth noise;
+    // the smoothing must bring the vertices closer to the plane while keeping their projections
+    constexpr int cHalf = 10;
+    VertCoords exact, noisy;
+    for ( int i = -cHalf; i <= cHalf; ++i )
+        for ( int j = -cHalf; j <= cHalf; ++j )
+        {
+            const float z = 100;
+            exact.emplace_back( float( i ), float( j ), z );
+            const float noise = 0.1f * ( ( ( i * 7 + j * 13 ) % 5 + 5 ) % 5 - 2 ); // in [-0.2, 0.2]
+            noisy.push_back( exact.back() * ( ( z + noise ) / z ) );      // along the viewing ray
+        }
+    CameraPointsTriangulationSettings settings;
+    settings.intrinsics = Matrix3f( { 1000, 0, 500 }, { 0, 1000, 500 }, { 0, 0, 1 } );
+    settings.weldPixels = 0;
+    auto mesh = triangulateCameraPoints( noisy, settings );
+    ASSERT_TRUE( mesh.has_value() );
+    ASSERT_EQ( mesh->points.size(), exact.size() );
+
+    auto rmsError = [&]( const VertCoords & pts )
+    {
+        double sum = 0;
+        for ( VertId v( 0 ); v < pts.size(); ++v )
+            sum += sqr( pts[v].z - exact[v].z );
+        return std::sqrt( sum / pts.size() );
+    };
+    const auto errBefore = rmsError( mesh->points );
+    for ( auto edgeWeights : { EdgeWeights::Unit, EdgeWeights::Cotan } )
+        for ( auto type : { AreaStabilizer::Uniform, AreaStabilizer::Area, AreaStabilizer::AreaSq } )
+        {
+            Mesh smoothed = *mesh;
+            smoothCameraMeshDepth( smoothed, { .edgeWeights = edgeWeights, .bdStabilizer = 0.1f, .innerStabilizer = 0.1f, .innerStabilizerType = type } );
+            EXPECT_LT( rmsError( smoothed.points ), 0.5 * errBefore );
+            for ( VertId v( 0 ); v < exact.size(); ++v )
+            {
+                const auto & p = smoothed.points[v];
+                EXPECT_LT( ( Vector2f( p.x / p.z, p.y / p.z ) - Vector2f( exact[v].x / exact[v].z, exact[v].y / exact[v].z ) ).length(), 1e-6f );
+            }
+        }
+
+    // with the default settings the boundary vertices are attracted to their noisy depths much stronger than inner ones
+    Mesh smoothed = *mesh;
+    smoothCameraMeshDepth( smoothed );
+    VertCoords points2 = mesh->points;
+    smoothCameraMeshDepth( mesh->topology, points2 );
+    EXPECT_EQ( points2, smoothed.points );
+    double bdMove = 0, innerMove = 0;
+    int nBd = 0, nInner = 0;
+    for ( VertId v( 0 ); v < exact.size(); ++v )
+    {
+        const auto move = std::abs( smoothed.points[v].z - mesh->points[v].z );
+        if ( smoothed.topology.isBdVertex( v ) )
+        {
+            bdMove += move;
+            ++nBd;
+        }
+        else
+        {
+            innerMove += move;
+            ++nInner;
+        }
+    }
+    EXPECT_LT( bdMove / nBd, 0.5 * innerMove / nInner );
 }
 
 } //namespace MR

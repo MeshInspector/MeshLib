@@ -81,6 +81,16 @@ struct TriangleSegmentIntersectResult
 /// triangles ta and tb may share at most two vertices; all remaining vertices must be unique
 [[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs );
 
+/// given line segment s (vertices 0,1), triangle ta (vertices 2,3,4) known to be pierced by s,
+/// and infinite plane pb passing via vertices 5,6,7 and crossed by the line of s (not necessarily within s),
+/// returns the order in which that line meets ta and pb, using precise predicates.
+/// Here s^ta is the point where s crosses ta, and s^pb is the point where the line of s crosses pb.
+/// Walking the line in the direction from s[0] to s[1]:
+/// true:  s^ta is met before s^pb  (order is s[0], s^ta, s^pb)
+/// false: s^pb is met before s^ta  (order is s^pb, s^ta, s[1])
+/// ta and pb may share at most two vertices; all remaining vertices must be unique; s must not be parallel to pb
+[[nodiscard]] MRMESH_API bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs );
+
 /// translate then scale float-to-int coordinate converter
 struct ConvertToIntVector
 {

@@ -67,6 +67,8 @@ struct InterpolateScalarsParams
 /// with non-negative edge weights and zero stabilizers, the computed values never leave the range of the fixed values
 MRMESH_API void interpolateScalarsSmoothly( const Mesh& mesh, VertScalars& field, const InterpolateScalarsParams& params );
 MRMESH_API void interpolateScalarsSmoothly( const MeshTopology& topology, const VertCoords& points, VertScalars& field, const InterpolateScalarsParams& params );
+/// this overload has no access to mesh points, so it requires params.edgeWeights == EdgeWeights::Unit and params.vmass == VertexMass::Unit
+MRMESH_API void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params );
 
 struct SpacingSettings
 {

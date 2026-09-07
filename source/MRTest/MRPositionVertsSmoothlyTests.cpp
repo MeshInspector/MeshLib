@@ -23,7 +23,7 @@ TEST( MRMesh, InterpolateScalarsSmoothly )
         else if ( z > 0 )
             field[v] = 1;
     }
-    interpolateScalarsSmoothly( sphere, field, { .region = &region } );
+    interpolateScalarsSmoothly( topology, field, { .region = &region } );
 
     for ( auto v : region )
     {

@@ -23,12 +23,15 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 struct PointDegree
 {
     Vector3i pt;
-    int d = 0; // degree of epsilon for pt.z
+    std::int64_t d = 0; // degree of epsilon for pt.z; pt.y gets 3*d, pt.x gets 9*d
 };
 
-// this value was found experimentally for segmentIntersectionOrder with all 8 points have equal coordinates (but different ids),
-// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
-constexpr int cMaxPolyD = 14'941'836;
+// the largest degree of one vertex in getPointDegrees: 8 distinct vertices receive 27^rank by ascending ids
+constexpr std::int64_t cMaxPointD = 27LL * 27 * 27 * 27 * 27 * 27 * 27;
+
+// the largest degree in ( orient3d(ta,s[0])*orient3d(tb,s[1]) - orient3d(tb,s[0])*orient3d(ta,s[1]) ):
+// every term of orient3d determinant is a product of x, y and z differences with the degrees up to 9, 3 and 1 times cMaxPointD
+constexpr std::int64_t cMaxPolyD = 2 * ( 9 + 3 + 1 ) * cMaxPointD;
 
 std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
 {
@@ -43,33 +46,26 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
     std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
 
     std::array<PointDegree, 8> res;
-    int d = 1;
-    constexpr int maxD = INT_MAX / 9;
-    static_assert( maxD > cMaxPolyD );
-    constexpr int preMaxD = maxD / 27;
+    std::int64_t d = 1;
     for ( int i = 0; i < 8; ++i )
     {
         const auto n = as[i].n;
         res[n] = { vs[n].pt, d };
         if ( i < 7 && as[i].v < as[i+1].v ) // skip to support triangles with shared vertices
-        {
-            if ( d <= preMaxD )
-                d *= 27; // normal power up
-            else if ( d <= maxD )
-                d = maxD; // to avoid integer overflow in orient3dPoly, assuming that such huge powers will never be necessary
-        }
+            d *= 27;
     }
+    assert( d <= 27 * cMaxPointD );
     return res;
 }
 
 // 128 bits are enough to store all coefficients in ( orient3d(ta,s[0])*orient3d(tb,s[1]) - orient3d(tb,s[0])*orient3d(ta,s[1]) )
 // except for degree 0, which is computed separately.
-using Poly = SparsePolynomial<FastInt128, int, cMaxPolyD>;
+using Poly = SparsePolynomial<FastInt128, std::int64_t, cMaxPolyD>;
 
 Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
-    int dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
+    std::int64_t dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
 {
-    const int dx = dy * dy;
+    const std::int64_t dx = dy * dy;
 
     const Poly xx( a.pt.x - d.pt.x, a.d * dx, 1, d.d * dx, -1 );
     const Poly xy( a.pt.y - d.pt.y, a.d * dy, 1, d.d * dy, -1 );

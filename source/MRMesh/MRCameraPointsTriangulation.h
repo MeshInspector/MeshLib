@@ -4,6 +4,7 @@
 #include "MRMatrix3.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
+#include "MRPositionVertsSmoothly.h"
 
 namespace MR
 {
@@ -40,5 +41,11 @@ struct CameraPointsTriangulationSettings
 
 /// same as above, but moves cloud points into the resulting mesh instead of copying them
 [[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( PointCloud && cloud, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb = {} );
+
+/// Reduces the depth noise of a mesh produced by triangulateCameraPoints (camera at the origin looking along +Z):
+/// the depth (z) field is made smooth by interpolateScalarsSmoothly with given parameters (params.stabilizer > 0 keeps
+/// every vertex attracted to its measured depth), and every vertex is moved along its viewing ray to the new depth,
+/// so the projection of the mesh in the image plane and its absence of self-intersections are preserved
+MRMESH_API void smoothCameraMeshDepth( Mesh & mesh, const InterpolateScalarsParams & params );
 
 } //namespace MR

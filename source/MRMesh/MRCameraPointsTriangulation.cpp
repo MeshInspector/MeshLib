@@ -78,6 +78,25 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
     return triangulateCameraPoints( points, nullptr, settings, cb );
 }
 
+void smoothCameraMeshDepth( Mesh & mesh, const InterpolateScalarsParams & params )
+{
+    MR_TIMER;
+    const auto & verts = mesh.topology.getVertIds( params.region );
+    VertScalars depth( mesh.points.size() );
+    BitSetParallelFor( verts, [&]( VertId v )
+    {
+        depth[v] = mesh.points[v].z;
+    } );
+    interpolateScalarsSmoothly( mesh.topology, depth, params );
+    BitSetParallelFor( verts, [&]( VertId v )
+    {
+        auto & p = mesh.points[v];
+        if ( p.z > 0 && depth[v] > 0 )
+            p *= depth[v] / p.z;
+    } );
+    mesh.invalidateCaches();
+}
+
 Expected<Mesh> triangulateCameraPoints( const PointCloud & cloud, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb )
 {
     return triangulateCameraPoints( cloud.points, &cloud.validPoints, settings, cb );

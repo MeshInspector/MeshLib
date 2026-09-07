@@ -3,7 +3,9 @@
 #include "MRMesh/MREdgeIterator.h"
 #include "MRMesh/MRMeshFixer.h"
 #include "MRMesh/MRPointCloud.h"
+#include "MRMesh/MRVector2.h"
 #include <gtest/gtest.h>
+#include <cmath>
 
 namespace MR
 {
@@ -100,6 +102,48 @@ TEST( MRMesh, TriangulateCameraPoints )
     EXPECT_LT( open.topology.numValidFaces(), bridged->topology.numValidFaces() );
     for ( UndirectedEdgeId ue : undirectedEdges( open.topology ) )
         EXPECT_LE( open.edgeLength( ue ), 1.5f );
+}
+
+TEST( MRMesh, SmoothCameraMeshDepth )
+{
+    // tilted plane (a harmonic depth field) sampled on a grid with a deterministic depth noise;
+    // the smoothing must bring the vertices closer to the plane while keeping their projections;
+    // the error is measured away from the boundary, where the one-sided neighborhoods bend the harmonic field
+    constexpr int cHalf = 10;
+    VertCoords exact, noisy;
+    VertBitSet interior;
+    for ( int i = -cHalf; i <= cHalf; ++i )
+        for ( int j = -cHalf; j <= cHalf; ++j )
+        {
+            const float z = 100 + 0.05f * i + 0.02f * j;
+            interior.autoResizeSet( VertId( int( exact.size() ) ), std::abs( i ) <= cHalf - 3 && std::abs( j ) <= cHalf - 3 );
+            exact.emplace_back( float( i ), float( j ), z );
+            const float noise = 0.1f * ( ( ( i * 7 + j * 13 ) % 5 + 5 ) % 5 - 2 ); // in [-0.2, 0.2]
+            noisy.push_back( exact.back() * ( ( z + noise ) / z ) );      // along the viewing ray
+        }
+    CameraPointsTriangulationSettings settings;
+    settings.intrinsics = Matrix3f( { 1000, 0, 500 }, { 0, 1000, 500 }, { 0, 0, 1 } );
+    settings.weldPixels = 0;
+    auto mesh = triangulateCameraPoints( noisy, settings );
+    ASSERT_TRUE( mesh.has_value() );
+    ASSERT_EQ( mesh->points.size(), exact.size() );
+
+    auto rmsError = [&]( const VertCoords & pts )
+    {
+        double sum = 0;
+        for ( VertId v : interior )
+            sum += sqr( pts[v].z - exact[v].z );
+        return std::sqrt( sum / interior.count() );
+    };
+    const auto errBefore = rmsError( mesh->points );
+    smoothCameraMeshDepth( *mesh, { .stabilizer = 0.1f } );
+    const auto errAfter = rmsError( mesh->points );
+    EXPECT_LT( errAfter, 0.5 * errBefore );
+    for ( VertId v( 0 ); v < exact.size(); ++v )
+    {
+        const auto & p = mesh->points[v];
+        EXPECT_LT( ( Vector2f( p.x / p.z, p.y / p.z ) - Vector2f( exact[v].x / exact[v].z, exact[v].y / exact[v].z ) ).length(), 1e-6f );
+    }
 }
 
 } //namespace MR

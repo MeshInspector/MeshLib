@@ -30,7 +30,7 @@ public:
     virtual bool action() override;
 
     virtual const DropItemsList& dropItems() const override;
-    virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
+    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 private:
     virtual void dragEntrance_( bool entered ) override;
     virtual bool dragOver_( int x, int y ) override;
@@ -80,7 +80,7 @@ public:
     SaveSceneAsMenuItem( const std::string& pluginName = "Save Scene As" );
     virtual bool action() override;
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
-    virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
+    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 
 protected:
     void saveSceneAs_();
@@ -92,7 +92,7 @@ class SaveSceneMenuItem : public SaveSceneAsMenuItem
 public:
     SaveSceneMenuItem();
     virtual bool action() override;
-    virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
+    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 };
 
 class CaptureScreenshotMenuItem : public StatePlugin

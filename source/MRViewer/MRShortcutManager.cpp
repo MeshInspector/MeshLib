@@ -6,9 +6,10 @@
 namespace MR
 {
 
-void ShortcutManager::setShortcut( const ShortcutKey& key, const ShortcutCommand& command )
+void ShortcutManager::setShortcut( const Shortcut& shortcut, const ShortcutAction& action )
 {
-    auto newMapKey = mapKeyFromKeyAndMod( key, false );
+    const ShortcutCommand command{ shortcut.category, action.name, action.func, action.repeatable };
+    auto newMapKey = mapKeyFromKeyAndMod( shortcut.key, false );
     auto [backMapIt, insertedToBackMap] = backMap_.insert( { command.name,newMapKey } );
     if ( !insertedToBackMap )
     {

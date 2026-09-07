@@ -15,10 +15,10 @@ RibbonMenuItem::RibbonMenuItem( std::string name ) :
 void RibbonMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
 {
     if ( auto shortcut = defaultShortcut_( conf ) )
-        menu.addRibbonItemShortcut( name_, shortcut->key, shortcut->category );
+        menu.addRibbonItemShortcut( name_, *shortcut );
 }
 
-std::optional<ItemShortcut> RibbonMenuItem::defaultShortcut_( const ShortcutConfig& ) const
+std::optional<Shortcut> RibbonMenuItem::defaultShortcut_( const ShortcutConfig& ) const
 {
     return {}; // most items have no default shortcut
 }

@@ -19,7 +19,7 @@ public:
 
     virtual bool blocking() const override { return false; };
 
-    virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
+    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 
     virtual void drawDialog( ImGuiContext* ) override;
 private:

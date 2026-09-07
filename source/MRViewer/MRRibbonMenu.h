@@ -94,9 +94,14 @@ public:
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
-    /// binds given key to the ribbon item with given name;
-    /// normally an item binds its own default shortcut in RibbonMenuItem::registerShortcut instead
-    MRVIEWER_API virtual void addRibbonItemShortcut( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
+    /// binds given shortcut to the ribbon item with given name;
+    /// normally an item states its own default shortcut in RibbonMenuItem::defaultShortcut_ instead
+    MRVIEWER_API virtual void addRibbonItemShortcut( const std::string& itemName, const Shortcut& shortcut );
+
+    /// deprecated: pass the category in (shortcut)
+    [[deprecated( "use addRibbonItemShortcut( itemName, Shortcut )" )]]
+    void addRibbonItemShortcut( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category )
+        { addRibbonItemShortcut( itemName, { key, category } ); }
 
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
     int getActiveTabIndex() const { return activeTabIndex_; }

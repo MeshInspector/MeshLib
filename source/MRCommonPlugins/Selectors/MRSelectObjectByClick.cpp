@@ -21,11 +21,11 @@ SelectObjectByClick::SelectObjectByClick() :
 {
 }
 
-std::optional<ItemShortcut> SelectObjectByClick::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> SelectObjectByClick::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowBase )
         return {};
-    return ItemShortcut{ { GLFW_KEY_Q, getGlfwModPrimaryCtrl() }, ShortcutCategory::Objects };
+    return Shortcut{ { GLFW_KEY_Q, getGlfwModPrimaryCtrl() }, ShortcutCategory::Objects };
 }
 
 void SelectObjectByClick::drawDialog( ImGuiContext* )

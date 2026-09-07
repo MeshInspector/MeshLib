@@ -216,18 +216,18 @@ bool RibbonSceneRemoveSelected::action()
     return false;
 }
 
-std::optional<ItemShortcut> RibbonSceneRename::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> RibbonSceneRename::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowBase )
         return {};
-    return ItemShortcut{ { GLFW_KEY_F2, 0 }, ShortcutCategory::Objects };
+    return Shortcut{ { GLFW_KEY_F2, 0 }, ShortcutCategory::Objects };
 }
 
-std::optional<ItemShortcut> RibbonSceneRemoveSelected::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> RibbonSceneRemoveSelected::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowBase )
         return {};
-    return ItemShortcut{ { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutCategory::Objects };
+    return Shortcut{ { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutCategory::Objects };
 }
 
 MR_REGISTER_RIBBON_ITEM( RibbonSceneSortByName )

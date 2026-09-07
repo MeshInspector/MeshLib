@@ -194,18 +194,18 @@ void RedoMenuItem::updateRedoListCache_( const HistoryStore& store, HistoryStore
     }
 }
 
-std::optional<ItemShortcut> UndoMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> UndoMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowHistory )
         return {};
-    return ItemShortcut{ { GLFW_KEY_Z, getGlfwModPrimaryCtrl() }, ShortcutCategory::Edit };
+    return Shortcut{ { GLFW_KEY_Z, getGlfwModPrimaryCtrl() }, ShortcutCategory::Edit };
 }
 
-std::optional<ItemShortcut> RedoMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> RedoMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowHistory )
         return {};
-    return ItemShortcut{ { GLFW_KEY_Z, getGlfwModPrimaryCtrl() | GLFW_MOD_SHIFT }, ShortcutCategory::Edit };
+    return Shortcut{ { GLFW_KEY_Z, getGlfwModPrimaryCtrl() | GLFW_MOD_SHIFT }, ShortcutCategory::Edit };
 }
 
 MR_REGISTER_RIBBON_ITEM( UndoMenuItem )

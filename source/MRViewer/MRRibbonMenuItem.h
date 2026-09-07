@@ -26,13 +26,6 @@ struct ShortcutConfig
     bool allowHistory = true;
 };
 
-/// the default keyboard shortcut of a ribbon item
-struct ItemShortcut
-{
-    ShortcutKey key;
-    ShortcutCategory category{};
-};
-
 // class to hold menu items
 // some information stored in json (icons path, tab name, subtab name)
 class MRVIEWER_CLASS RibbonMenuItem : virtual public ISceneStateCheck
@@ -83,7 +76,7 @@ protected:
     /// returns the default keyboard shortcut of this item, or nothing if it has none
     /// or if (conf) forbids the group it belongs to;
     /// the base implementation returns nothing, since most items have no default shortcut
-    MRVIEWER_API virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const;
+    MRVIEWER_API virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const;
 
     RibbonItemType type_{ RibbonItemType::Button };
     DropItemsList dropList_;

@@ -11,14 +11,14 @@ class InvertViewMenuItem : public RibbonMenuItem
 public:
    InvertViewMenuItem() : RibbonMenuItem( "Invert View" ) {}
    virtual bool action() override;
-   virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
+   virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 };
 
-std::optional<ItemShortcut> InvertViewMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> InvertViewMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowBase )
         return {};
-    return ItemShortcut{ { GLFW_KEY_KP_9, 0 }, ShortcutCategory::View };
+    return Shortcut{ { GLFW_KEY_KP_9, 0 }, ShortcutCategory::View };
 }
 
 bool InvertViewMenuItem::action()

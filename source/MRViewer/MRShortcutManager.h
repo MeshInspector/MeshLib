@@ -35,6 +35,13 @@ enum class ShortcutCategory : char
     Count
 };
 
+/// a keyboard shortcut: the keys to press and the category it is listed under
+struct Shortcut
+{
+    ShortcutKey key;
+    ShortcutCategory category{};
+};
+
 // this class stores two maps:
 // 1) shortcut to action
 // 2) action name to shortcut
@@ -48,6 +55,15 @@ public:
     using ShortcutKey = MR::ShortcutKey;
     using Category = MR::ShortcutCategory;
 
+    /// what a shortcut does
+    struct ShortcutAction
+    {
+        std::string name; // name of action
+        std::function<void()> func;
+        bool repeatable = true; // shortcut shall be applied many times while the user holds the keys down
+    };
+
+    /// the parameter of the deprecated setShortcut overload, also the internal storage of an action
     struct ShortcutCommand
     {
         Category category;
@@ -61,7 +77,12 @@ public:
     // set shortcut
     // note: one action can have only one shortcut, one shortcut can have only one action
     // if action already has other shortcut, other one will be removed
-    MRVIEWER_API virtual void setShortcut( const ShortcutKey& key, const ShortcutCommand& command );
+    MRVIEWER_API virtual void setShortcut( const Shortcut& shortcut, const ShortcutAction& action );
+
+    /// deprecated: pass the category in (shortcut) and the rest in ShortcutAction
+    [[deprecated( "use setShortcut( Shortcut, ShortcutAction )" )]]
+    void setShortcut( const ShortcutKey& key, const ShortcutCommand& command )
+        { setShortcut( { key, command.category }, { command.name, command.action, command.repeatable } ); }
 
     using ShortcutList = std::vector<std::tuple<ShortcutKey, Category, std::string>>;
 

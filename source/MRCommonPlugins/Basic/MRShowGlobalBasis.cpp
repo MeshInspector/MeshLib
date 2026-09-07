@@ -81,11 +81,11 @@ public:
         return false;
     }
 
-    std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override
+    std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override
     {
         if ( !conf.allowBase )
             return {};
-        return ItemShortcut{ { GLFW_KEY_G, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
+        return Shortcut{ { GLFW_KEY_G, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
     }
 
     void providedViewportWidgets( ViewportWidgetInterface& in ) override

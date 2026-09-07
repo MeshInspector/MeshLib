@@ -12,7 +12,7 @@ public:
     virtual bool action() override;
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
     virtual std::string getDynamicTooltip() const override;
-    virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
+    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 
 
 private:
@@ -28,7 +28,7 @@ public:
     virtual bool action() override;
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
     virtual std::string getDynamicTooltip() const override;
-    virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
+    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 
 private:
     void updateRedoListCache_( const HistoryStore& store, HistoryStore::ChangeType, std::shared_ptr<HistoryAction> );

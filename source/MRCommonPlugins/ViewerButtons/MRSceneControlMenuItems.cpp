@@ -116,11 +116,11 @@ void ResetSceneMenuItem::resetScene_()
     getViewerInstance().onSceneSaved( {} );
 }
 
-std::optional<ItemShortcut> ResetSceneMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> ResetSceneMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowBase )
         return {};
-    return ItemShortcut{ { GLFW_KEY_N, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene };
+    return Shortcut{ { GLFW_KEY_N, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene };
 }
 
 FitDataMenuItem::FitDataMenuItem() :
@@ -145,11 +145,11 @@ std::string FitDataMenuItem::isAvailable( const std::vector<std::shared_ptr<cons
     return _tr( "There are no visible objects." );
 }
 
-std::optional<ItemShortcut> FitDataMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> FitDataMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowBase )
         return {};
-    return ItemShortcut{ { GLFW_KEY_F, getGlfwModPrimaryCtrl() | GLFW_MOD_ALT }, ShortcutCategory::View };
+    return Shortcut{ { GLFW_KEY_F, getGlfwModPrimaryCtrl() | GLFW_MOD_ALT }, ShortcutCategory::View };
 }
 
 FitSelectedObjectsMenuItem::FitSelectedObjectsMenuItem() :
@@ -224,24 +224,24 @@ bool SetViewPresetMenuItem::action()
     return false;
 }
 
-std::optional<ItemShortcut> SetViewPresetMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
+std::optional<Shortcut> SetViewPresetMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
     if ( !conf.allowBase )
         return {};
     switch ( type_ )
     {
     case Type::Front:
-        return ItemShortcut{ { GLFW_KEY_KP_1, 0 }, ShortcutCategory::View };
+        return Shortcut{ { GLFW_KEY_KP_1, 0 }, ShortcutCategory::View };
     case Type::Top:
-        return ItemShortcut{ { GLFW_KEY_KP_7, 0 }, ShortcutCategory::View };
+        return Shortcut{ { GLFW_KEY_KP_7, 0 }, ShortcutCategory::View };
     case Type::Bottom:
-        return ItemShortcut{ { GLFW_KEY_KP_7, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
+        return Shortcut{ { GLFW_KEY_KP_7, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
     case Type::Left:
-        return ItemShortcut{ { GLFW_KEY_KP_3, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
+        return Shortcut{ { GLFW_KEY_KP_3, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
     case Type::Back:
-        return ItemShortcut{ { GLFW_KEY_KP_1, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
+        return Shortcut{ { GLFW_KEY_KP_1, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
     case Type::Right:
-        return ItemShortcut{ { GLFW_KEY_KP_3, 0 }, ShortcutCategory::View };
+        return Shortcut{ { GLFW_KEY_KP_3, 0 }, ShortcutCategory::View };
     default:
         return {}; // Isometric View has no default shortcut
     }

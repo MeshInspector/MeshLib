@@ -1,6 +1,6 @@
   - Debug only:
     - **Debug Configuration: C/C++ → Preprocessor → Preprocessor Definitions**:
-    \n Add: `_ITERATOR_DEBUG_LEVEL=0;MR_ITERATOR_DEBUG_LEVEL=0` — for the per-Visual-Studio archives (`MeshLibDistVS19`, `MeshLibDistVS22`, `MeshLibDistVS26`).
+    \n Add: `_ITERATOR_DEBUG_LEVEL=0;MR_ITERATOR_DEBUG_LEVEL=0` — for the per-Visual-Studio archives (`MeshLibDistVS19`, `MeshLibDistVS22`, `MeshLibDistVS26`, `MeshLibDistVS26-arm64`).
     \n For the `MeshLibDist-IteratorDebug` archive add `_ITERATOR_DEBUG_LEVEL=2;MR_ITERATOR_DEBUG_LEVEL=2` instead. Both defines must carry the same value: MeshLib stops compilation with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib` when they disagree.
     \n Check whether your archive contains `install/include/MRMesh/config_dist.h`. If it does, that header already declares `MR_ITERATOR_DEBUG_LEVEL` for you, so only `_ITERATOR_DEBUG_LEVEL` is yours to set — and `IteratorDebug` then needs no define at all, MSVC's Debug default already being `2`. Setting `MR_ITERATOR_DEBUG_LEVEL` anyway is harmless as long as it matches the archive; a value that contradicts it is rejected at compile time.
   - For all configurations:

@@ -17,13 +17,15 @@ on:
 jobs:
   update-win-version:
     timeout-minutes: 60
-    runs-on: windows-2025
+    # arm64 is packaged on an arm64 runner: it builds the example plugin against the
+    # freshly made install folder, which only a native toolchain can link and run.
+    runs-on: ${{ matrix.runner || 'windows-2025' }}
     strategy:
       fail-fast: false
       matrix:
-        # One developer distributive per Visual Studio toolchain. The MREDist_*
-        # inputs are produced by the matching VS CMake build in
-        # build-test-windows.yml (named via its VS_TAG).
+        # One developer distributive per Visual Studio toolchain and target
+        # architecture. The MREDist_* inputs are produced by the matching VS build
+        # in build-test-windows.yml (named via its VS_TAG).
         include:
           - vcpkg_triplet: x64-windows-vs2019-meshlib
             extract_release: MREDist_VS19_Release.zip
@@ -52,6 +54,19 @@ jobs:
             cxx_compiler: msvc-2026
             build_system: MSBuild
             build_config: Release
+          # The `-arm64` suffix comes last so upload-distributions can insert the
+          # version ahead of it: MeshLibDistVS26_<version>[-PDB]-arm64.zip.
+          - vcpkg_triplet: arm64-windows-meshlib
+            arch: arm64
+            runner: windows-11-vs2026-arm
+            extract_release: MREDist_VS26-arm64_Release.zip
+            extract_debug: MREDist_VS26-arm64_Debug.zip
+            output_zip: MeshLibDistVS26-arm64.zip
+            pdb_zip: MeshLibDistVS26-PDB-arm64.zip
+            artifact_name: DistributivesWin-VS26-arm64
+            cxx_compiler: msvc-2026
+            build_system: MSBuild
+            build_config: Release
           - vcpkg_triplet: x64-windows-meshlib-iterator-debug
             extract_debug: MREDist_VS19_Debug-IteratorDebug.zip
             output_zip: MeshLibDist-IteratorDebug.zip
@@ -75,7 +90,7 @@ jobs:
         uses: ./.github/actions/collect-runner-stats
         with:
           target_os: windows
-          target_arch: x64
+          target_arch: ${{ matrix.arch || 'x64' }}
           cxx_compiler: ${{ matrix.cxx_compiler }}
           build_config: ${{ matrix.build_config }}
           build_system: ${{ matrix.build_system }}
@@ -100,19 +115,25 @@ jobs:
           tar -xvzf ${{ matrix.extract_debug }}
           tar -xvzf MeshLibC2Headers.zip
 
+      # The install folder is assembled from source/<arch>/<config>, which
+      # make_install_folder.py derives from the triplet name.
       - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.vcpkg_triplet }}
+        run: py -3 scripts\make_install_folder.py ${{ inputs.app_version }} ${{ matrix.vcpkg_triplet }}
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+        with:
+          # see the same note in build-test-windows.yml: the default x86 MSBuild
+          # makes the VC props pick an x86 host compiler when targeting ARM64
+          msbuild-architecture: ${{ matrix.arch == 'arm64' && 'arm64' || 'x86' }}
 
       # The .pdb files are moved out of `install` first, so the main archive
       # carries none of them and each toolchain gets a companion symbols archive.
       - name: Archive Symbols
-        run: py -3.10 scripts\split_install_pdb.py install ${{ matrix.pdb_zip }}
+        run: py -3 scripts\split_install_pdb.py install ${{ matrix.pdb_zip }}
 
       - name: Archive Distribution
-        run: py -3.10 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
+        run: py -3 scripts\zip_distribution.py install example_plugin ${{ matrix.output_zip }}
 
       - name: Collect artifact stats
         if: ${{ inputs.internal_build }}
@@ -127,9 +148,10 @@ jobs:
         env:
           IDL: ${{ matrix.vcpkg_triplet == 'x64-windows-meshlib-iterator-debug' && '2' || '0' }}
         run: |
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:MeshLibIteratorDebugLevel=$env:IDL
+          $platform = "${{ matrix.arch == 'arm64' && 'ARM64' || 'x64' }}"
+          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug -p:Platform=$platform -p:MeshLibIteratorDebugLevel=$env:IDL
           if ("${{ matrix.extract_release }}") {
-            msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
+            msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release -p:Platform=$platform
           }
 
       - name: Upload Windows Distribution

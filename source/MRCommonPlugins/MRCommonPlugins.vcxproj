@@ -54,7 +54,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
-    <ClInclude Include="MRCommonPluginsShortcuts.h" />
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
     <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />

@@ -70,6 +70,12 @@ std::string getItemCaption( const std::string& name )
     return Locale::translate( item.getCaption().c_str(), item.localeDomainId );
 }
 
+std::vector<WeakCallback<void( RibbonMenu& )>>& ribbonMenuShortcutsSetups()
+{
+    static std::vector<WeakCallback<void( RibbonMenu& )>> setups;
+    return setups;
+}
+
 } //anonymous namespace
 
 RibbonMenu::RibbonMenu() :
@@ -2155,6 +2161,13 @@ void RibbonMenu::addRibbonItemShortcut( const std::string& itemName, const Short
 #endif
 }
 
+CallbackConnection<void( RibbonMenu& )> RibbonMenu::addShortcutsSetup( std::function<void( RibbonMenu& )> func )
+{
+    CallbackConnection<void( RibbonMenu& )> connection( std::move( func ) );
+    ribbonMenuShortcutsSetups().push_back( connection );
+    return connection;
+}
+
 void RibbonMenu::setupShortcuts_()
 {
     ImGuiMenu::setupShortcuts_();
@@ -2254,6 +2267,10 @@ void RibbonMenu::setupShortcuts_()
             sceneObjectsList_->changeVisible( true );
         } } );
     }
+
+    for ( const auto& setup : ribbonMenuShortcutsSetups() )
+        if ( auto func = setup.lock() )
+            ( *func )( *this );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

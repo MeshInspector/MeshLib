@@ -174,10 +174,18 @@ void interpolateScalarsSmoothly( const MeshTopology& topology, const VertCoords&
 
     VertMetric vertStabilizers = params.vertStabilizers;
     if ( params.vmass == VertexMass::NeiArea )
-        vertStabilizers = [&topology, &points, s = params.stabilizer, vs = params.vertStabilizers]( VertId v )
-        {
-            return ( vs ? vs( v ) : s ) * dblArea( topology, points, v );
-        };
+    {
+        if ( params.vertStabilizers )
+            vertStabilizers = [&topology, &points, &vs = params.vertStabilizers]( VertId v )
+            {
+                return vs( v ) * dblArea( topology, points, v );
+            };
+        else
+            vertStabilizers = [&topology, &points, s = params.stabilizer]( VertId v )
+            {
+                return s * dblArea( topology, points, v );
+            };
+    }
 
     Eigen::VectorXd rhs( sz );
     Eigen::SimplicialLDLT<SparseMatrix> solver;

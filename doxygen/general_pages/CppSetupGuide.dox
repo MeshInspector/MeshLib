@@ -12,16 +12,16 @@ When you are done, confirm the result with \ref CppSetupVerify "Verify your setu
 If a step fails, see \ref CppSetupTroubleshooting "Troubleshooting" at the end of this page.
 
 \subsection CppSetupWindows Windows
-\note MeshLib for Windows is distributed for **x64** only: set the platform of your project to `x64`.
+\note MeshLib for Windows is distributed for **x64** and **Arm64**: set the platform of your project to `x64` or `ARM64`.
 A 32-bit (`Win32`) build is not supported and fails while compiling `MRMesh/MRId.h` with
 `C2535: member function already defined or declared` and `C2995: function template has already been defined`
 (on 32-bit MSVC `size_t` and `unsigned int` are the same type, so two `MR::Id` constructors collapse into one).
 Visual Studio 2019 still defaults new C++ console projects to `Win32`.
-On Windows on Arm, use the x64 toolchain: no native Arm64 Windows build is published.
+On Windows on Arm, take the `-arm64` archive; it is built with Visual Studio 2026 and ships no `MRCuda`, there being no CUDA toolkit for that platform.
 
 There are two options: Download and Install release build or compile from sources:
 ### Installing the release build
-Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
+Every release publishes one Windows distributive per Visual Studio toolset and target architecture, plus one for Debug builds that keep MSVC's iterator debugging on.
 Take the row matching the toolset your own project is built with, or an older one: MSVC keeps its `v140` to `v145` build tools (Visual Studio 2015 to 2026) [binary-compatible](https://learn.microsoft.com/en-us/cpp/porting/binary-compat-2015-2017), so the `VS19` archive links into a Visual Studio 2022 or 2026 project as well — the link itself must be done by the newer toolset. The opposite direction does not work: older build tools accept a newer DLL only when its exports are `extern "C"`, and MeshLib exports C++.
 Matching your own toolset stays the tested configuration, though: MeshLib compiles with `/std:c++latest` (`source/common.props`), and MSVC's standard library excludes `/std:c++latest` features from that binary-compatibility promise.
 
@@ -30,14 +30,15 @@ Matching your own toolset stays the tested configuration, though: MeshLib compil
 | 2019 | `MeshLibDistVS19_<version>.zip` | `0` |
 | 2022 | `MeshLibDistVS22_<version>.zip` | `0` |
 | 2026 | `MeshLibDistVS26_<version>.zip` | `0` |
+| 2026, Windows on Arm | `MeshLibDistVS26_<version>-arm64.zip` | `0` |
 | 2019 (toolset `v142`), **Debug configuration only** | `MeshLibDist_<version>-IteratorDebug.zip` | `2` |
 
-The release description links the three per-Visual-Studio archives; `IteratorDebug` appears in the asset list only.
+The release description links the per-Visual-Studio archives; `IteratorDebug` appears in the asset list only.
 Take it if your project builds Debug with MSVC's default `_ITERATOR_DEBUG_LEVEL=2`: it ships `install/app/Debug` without `install/app/Release`, so it covers no Release build — but being a `v142` build it serves a newer Visual Studio too, under the rule above.
-Whichever archive you pick, step 2 must define `_ITERATOR_DEBUG_LEVEL` to the value in the table — `0` for the three per-Visual-Studio archives, `2` for `IteratorDebug`.
+Whichever archive you pick, step 2 must define `_ITERATOR_DEBUG_LEVEL` to the value in the table — `0` for the per-Visual-Studio archives, `2` for `IteratorDebug`.
 Archives predating `install/include/MRMesh/config_dist.h` need `MR_ITERATOR_DEBUG_LEVEL` set to the same value as well; newer ones declare it themselves in that header, which leaves `IteratorDebug` needing no define at all.
 
-Debug symbols ship separately: every archive above has a companion `-PDB.zip` (`MeshLibDistVS26_<version>-PDB.zip`, `MeshLibDist_<version>-IteratorDebug-PDB.zip`, ...) holding only the `.pdb` files.
+Debug symbols ship separately: every archive above has a companion `-PDB` archive (`MeshLibDistVS26_<version>-PDB.zip`, `MeshLibDistVS26_<version>-PDB-arm64.zip`, `MeshLibDist_<version>-IteratorDebug-PDB.zip`, ...) holding only the `.pdb` files.
 Extract it over the same directory to put them back under `install/lib`, where the debugger looks for them.
 They are needed for symbolized call stacks only: without them the archive still compiles, links and runs, and is a few hundred megabytes smaller.
 

@@ -47,6 +47,17 @@ TEST( MRMesh, InterpolateScalarsSmoothly )
             continue;
         EXPECT_NEAR( field[v], 0.5f, 1e-5f );
     }
+
+    // cotangent weights are positive on a sphere, so the same properties hold
+    interpolateScalarsSmoothly( sphere, field, { .region = &region, .edgeWeights = EdgeWeights::Cotan } );
+    for ( auto v : region )
+    {
+        EXPECT_GE( field[v], 0 );
+        EXPECT_LE( field[v], 1 );
+        if ( std::abs( sphere.points[v].z ) >= 1e-5f )
+            continue;
+        EXPECT_NEAR( field[v], 0.5f, 1e-5f );
+    }
 }
 
 } //namespace MR

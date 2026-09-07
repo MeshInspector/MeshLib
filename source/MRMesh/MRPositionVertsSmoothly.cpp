@@ -150,7 +150,12 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
     }
 }
 
-void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params )
+void interpolateScalarsSmoothly( const Mesh& mesh, VertScalars& field, const InterpolateScalarsParams& params )
+{
+    interpolateScalarsSmoothly( mesh.topology, mesh.points, field, params );
+}
+
+void interpolateScalarsSmoothly( const MeshTopology& topology, const VertCoords& points, VertScalars& field, const InterpolateScalarsParams& params )
 {
     MR_TIMER;
     assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
@@ -160,9 +165,23 @@ void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& fiel
     if ( sz <= 0 )
         return;
 
+    UndirectedEdgeMetric edgeWeights = params.edgeWeightsMetric;
+    if ( !edgeWeights && params.edgeWeights == EdgeWeights::Cotan )
+        edgeWeights = [&topology, &points]( UndirectedEdgeId ue )
+        {
+            return std::clamp( cotan( topology, points, ue ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+        };
+
+    VertMetric vertStabilizers = params.vertStabilizers;
+    if ( params.vmass == VertexMass::NeiArea )
+        vertStabilizers = [&topology, &points, s = params.stabilizer, vs = params.vertStabilizers]( VertId v )
+        {
+            return ( vs ? vs( v ) : s ) * dblArea( topology, points, v );
+        };
+
     Eigen::VectorXd rhs( sz );
     Eigen::SimplicialLDLT<SparseMatrix> solver;
-    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, params.vertStabilizers, params.edgeWeights,
+    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, vertStabilizers, edgeWeights,
         [&]( VertId v ) { return double( field[v] ); },
         []( VertId ) { return 0.0; },
         [&]( int n, double r ) { rhs[n] = r; } ) );

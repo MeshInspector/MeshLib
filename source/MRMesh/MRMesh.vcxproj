@@ -459,7 +459,6 @@
     <ClInclude Include="MRProjectionMeshAttribute.h" />
     <ClInclude Include="MRUniqueTemporaryFolder.h" />
     <ClInclude Include="MROnInit.h" />
-    <ClInclude Include="MRCallbackConnection.h" />
     <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRScopedValue.h" />
     <ClInclude Include="MRChunkIterator.h" />

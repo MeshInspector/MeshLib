@@ -70,9 +70,9 @@ std::string getItemCaption( const std::string& name )
     return Locale::translate( item.getCaption().c_str(), item.localeDomainId );
 }
 
-std::vector<WeakCallback<void( RibbonMenu& )>>& ribbonMenuShortcutsSetups()
+std::vector<std::weak_ptr<RibbonMenu::ShortcutsSetup>>& ribbonMenuShortcutsSetups()
 {
-    static std::vector<WeakCallback<void( RibbonMenu& )>> setups;
+    static std::vector<std::weak_ptr<RibbonMenu::ShortcutsSetup>> setups;
     return setups;
 }
 
@@ -2161,11 +2161,11 @@ void RibbonMenu::addRibbonItemShortcut( const std::string& itemName, const Short
 #endif
 }
 
-CallbackConnection<void( RibbonMenu& )> RibbonMenu::addShortcutsSetup( std::function<void( RibbonMenu& )> func )
+std::shared_ptr<RibbonMenu::ShortcutsSetup> RibbonMenu::addShortcutsSetup( ShortcutsSetup func )
 {
-    CallbackConnection<void( RibbonMenu& )> connection( std::move( func ) );
-    ribbonMenuShortcutsSetups().push_back( connection );
-    return connection;
+    auto setup = std::make_shared<ShortcutsSetup>( std::move( func ) );
+    ribbonMenuShortcutsSetups().push_back( setup );
+    return setup;
 }
 
 void RibbonMenu::setupShortcuts_()

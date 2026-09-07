@@ -1209,9 +1209,6 @@
     <ClInclude Include="MROnInit.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
-    <ClInclude Include="MRCallbackConnection.h">
-      <Filter>Source Files\Basic</Filter>
-    </ClInclude>
     <ClInclude Include="MRPointsLoadSettings.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>

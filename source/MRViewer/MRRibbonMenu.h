@@ -7,11 +7,8 @@
 #include "MRAsyncTimer.h"
 #include "MRRibbonSchema.h"
 #include "MRRibbonMenuUIConfig.h"
-#include "MRRibbonNotification.h"
-
-#include "MRMesh/MRCallbackConnection.h"
 #include "MRMesh/MRSignal.h"
-
+#include "MRRibbonNotification.h"
 #include <type_traits>
 #include <array>
 
@@ -101,8 +98,10 @@ public:
     /// the items of other libraries are bound by the functions those libraries register via addShortcutsSetup
     MRVIEWER_API virtual void addRibbonItemShortcut( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
 
-    /// registers a function binding the shortcuts of the ribbon items of one module
-    [[nodiscard]] MRVIEWER_API static CallbackConnection<void( RibbonMenu& )> addShortcutsSetup( std::function<void( RibbonMenu& )> func );
+    using ShortcutsSetup = std::function<void( RibbonMenu& )>;
+
+    /// registers a function binding the shortcuts of the ribbon items of one module, called by setupShortcuts_() while the returned pointer is alive
+    [[nodiscard]] MRVIEWER_API static std::shared_ptr<ShortcutsSetup> addShortcutsSetup( ShortcutsSetup func );
 
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
     int getActiveTabIndex() const { return activeTabIndex_; }

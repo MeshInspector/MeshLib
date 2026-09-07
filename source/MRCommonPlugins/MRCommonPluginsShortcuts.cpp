@@ -2,8 +2,6 @@
 #include "MRViewer/MRShortcutManager.h"
 #include "MRViewer/MRGladGlfw.h"
 
-#include "MRMesh/MRCallbackConnection.h"
-
 namespace MR
 {
 
@@ -31,7 +29,7 @@ void setupCommonPluginsShortcuts( RibbonMenu& menu )
     menu.addRibbonItemShortcut( "Viewer settings", { GLFW_KEY_COMMA, getGlfwModPrimaryCtrl() }, ShortcutCategory::Info );
 }
 
-CallbackConnection<void( RibbonMenu& )> shortcutsSetupConnection = RibbonMenu::addShortcutsSetup( setupCommonPluginsShortcuts );
+std::shared_ptr<RibbonMenu::ShortcutsSetup> shortcutsSetup = RibbonMenu::addShortcutsSetup( setupCommonPluginsShortcuts );
 
 } //anonymous namespace
 

@@ -26,12 +26,10 @@ struct PointDegree
     std::int64_t d = 0; // degree of epsilon for pt.z; pt.y gets 3*d, pt.x gets 9*d
 };
 
-// the largest degree of one vertex in getPointDegrees: 8 distinct vertices receive 27^rank by ascending ids
-constexpr std::int64_t cMaxPointD = 27LL * 27 * 27 * 27 * 27 * 27 * 27;
-
-// the largest degree in ( orient3d(ta,s[0])*orient3d(tb,s[1]) - orient3d(tb,s[0])*orient3d(ta,s[1]) ):
-// every term of orient3d determinant is a product of x, y and z differences with the degrees up to 9, 3 and 1 times cMaxPointD
-constexpr std::int64_t cMaxPolyD = 2 * ( 9 + 3 + 1 ) * cMaxPointD;
+// this value was found experimentally for segmentIntersectionTriPlaneOrder with all 8 points have equal coordinates (but different ids),
+// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value;
+// all polynomial terms of higher degrees are not stored to save computation time
+constexpr std::int64_t cMaxPolyD = 430'473'771;
 
 std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
 {
@@ -54,7 +52,6 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
         if ( i < 7 && as[i].v < as[i+1].v ) // skip to support triangles with shared vertices
             d *= 27;
     }
-    assert( d <= 27 * cMaxPointD );
     return res;
 }
 

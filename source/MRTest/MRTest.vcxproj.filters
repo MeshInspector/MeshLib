@@ -202,6 +202,9 @@
     <ClCompile Include="MRDeloneTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRCameraPointsTriangulationTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRFillHoleTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -482,6 +482,25 @@ Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float critica
     return res;
 }
 
+void deleteFacesWithLongEdges( Mesh& mesh, float maxEdgeLength )
+{
+    MR_TIMER;
+    const auto maxEdgeLengthSq = sqr( maxEdgeLength );
+    FaceBitSet longFaces( mesh.topology.faceSize() );
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+    {
+        for ( EdgeId e : leftRing( mesh.topology, f ) )
+        {
+            if ( mesh.edgeLengthSq( e.undirected() ) > maxEdgeLengthSq )
+            {
+                longFaces.set( f );
+                break;
+            }
+        }
+    } );
+    mesh.deleteFaces( longFaces );
+}
+
 bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e )
 {
     return topology.next( e.sym() ) == topology.prev( e.sym() ) &&

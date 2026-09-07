@@ -126,6 +126,39 @@ TEST( MRMesh, PlanarTriangulationWindingAndIntersections )
     }
 }
 
+TEST( MRMesh, PlanarTriangulationCacheReuse )
+{
+    // stale state left in a cache would show up as a difference from the cache-less run
+    auto square = [] ( float x, float y, float s, bool ccw )
+    {
+        Contour2f c{ { x, y }, { x + s, y }, { x + s, y + s }, { x, y + s }, { x, y } };
+        if ( !ccw )
+            std::reverse( c.begin(), c.end() );
+        return c;
+    };
+    const std::vector<Contours2f> inputs{
+        { square( 0.f, 0.f, 1.f, true ) },                                    // one square
+        { square( 0.f, 0.f, 3.f, true ), square( 1.f, 1.f, 1.f, false ) },    // a square with a hole in it
+        { square( 0.f, 0.f, 1.f, true ) },                                    // the first input again
+        { square( 0.f, 0.f, 2.f, true ), square( 5.f, 0.f, 1.f, true ) },     // two disjoint squares
+    };
+    auto cache = PlanarTriangulation::makeSweepLineCache();
+    for ( const auto& conts : inputs )
+    {
+        const auto fresh = PlanarTriangulation::triangulateDisjointContours( conts );
+        const auto cached = PlanarTriangulation::triangulateDisjointContours( conts, cache.get() );
+        ASSERT_TRUE( fresh.has_value() );
+        ASSERT_TRUE( cached.has_value() );
+        EXPECT_EQ( fresh->topology.numValidVerts(), cached->topology.numValidVerts() );
+        EXPECT_EQ( fresh->topology.numValidFaces(), cached->topology.numValidFaces() );
+        EXPECT_EQ( fresh->topology.undirectedEdgeSize(), cached->topology.undirectedEdgeSize() );
+        ASSERT_EQ( fresh->points.size(), cached->points.size() );
+        for ( VertId v( 0 ); v < fresh->points.size(); ++v )
+            EXPECT_EQ( fresh->points[v], cached->points[v] );
+        EXPECT_EQ( fresh->area(), cached->area() );
+    }
+}
+
 TEST( MRMesh, PlanarTriangulationMeshSpace )
 {
     // a square boundary lying on a plane tilted off all axes, triangulated in its own 3d space

@@ -52,7 +52,7 @@ std::vector<EdgeLoop> splitOnSimpleLoops( const MeshTopology & topology, std::ve
                     break;
                 }
             }
-            vmap.clear();
+            vmap.erase( vmap.begin(), vmap.end() ); // unlike clear(), keeps the storage of a large table for the next pass
             if ( split )
                 continue;
             res.push_back( std::move( loop ) );

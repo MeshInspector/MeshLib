@@ -91,8 +91,6 @@ public:
 
     // returns true if state of item changed
     virtual bool action() override;
-
-    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 };
 
 class RibbonSceneRemoveSelected : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object, NoModelCheck>
@@ -104,8 +102,6 @@ public:
 
     // returns true if state of item changed
     virtual bool action() override;
-
-    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 };
 
 

@@ -129,13 +129,6 @@ void ViewerSettingsPlugin::drawDialog( ImGuiContext* )
     ImGui::EndCustomStatePlugin();
 }
 
-std::optional<Shortcut> ViewerSettingsPlugin::defaultShortcut_( const ShortcutConfig& conf ) const
-{
-    if ( !conf.allowBase )
-        return {};
-    return Shortcut{ { GLFW_KEY_COMMA, getGlfwModPrimaryCtrl() }, ShortcutCategory::Info };
-}
-
 void ViewerSettingsPlugin::updateThemes()
 {
     selectedUserPreset_ = -1;

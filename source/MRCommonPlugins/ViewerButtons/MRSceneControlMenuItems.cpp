@@ -23,8 +23,6 @@
 #include "MRViewer/MRUISaveChangesPopup.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
 #include "MRViewer/MRI18n.h"
-#include "MRViewer/MRShortcutManager.h"
-#include "MRViewer/MRGladGlfw.h"
 #include <array>
 
 namespace
@@ -116,13 +114,6 @@ void ResetSceneMenuItem::resetScene_()
     getViewerInstance().onSceneSaved( {} );
 }
 
-std::optional<Shortcut> ResetSceneMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
-{
-    if ( !conf.allowBase )
-        return {};
-    return Shortcut{ { GLFW_KEY_N, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene };
-}
-
 FitDataMenuItem::FitDataMenuItem() :
     RibbonMenuItem( "Fit data" )
 {
@@ -143,13 +134,6 @@ std::string FitDataMenuItem::isAvailable( const std::vector<std::shared_ptr<cons
     if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible() )
         return "";
     return _tr( "There are no visible objects." );
-}
-
-std::optional<Shortcut> FitDataMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
-{
-    if ( !conf.allowBase )
-        return {};
-    return Shortcut{ { GLFW_KEY_F, getGlfwModPrimaryCtrl() | GLFW_MOD_ALT }, ShortcutCategory::View };
 }
 
 FitSelectedObjectsMenuItem::FitSelectedObjectsMenuItem() :
@@ -222,29 +206,6 @@ bool SetViewPresetMenuItem::action()
 
     viewport.preciseFitDataToScreenBorder( { 0.9f } );
     return false;
-}
-
-std::optional<Shortcut> SetViewPresetMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
-{
-    if ( !conf.allowBase )
-        return {};
-    switch ( type_ )
-    {
-    case Type::Front:
-        return Shortcut{ { GLFW_KEY_KP_1, 0 }, ShortcutCategory::View };
-    case Type::Top:
-        return Shortcut{ { GLFW_KEY_KP_7, 0 }, ShortcutCategory::View };
-    case Type::Bottom:
-        return Shortcut{ { GLFW_KEY_KP_7, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
-    case Type::Left:
-        return Shortcut{ { GLFW_KEY_KP_3, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
-    case Type::Back:
-        return Shortcut{ { GLFW_KEY_KP_1, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
-    case Type::Right:
-        return Shortcut{ { GLFW_KEY_KP_3, 0 }, ShortcutCategory::View };
-    default:
-        return {}; // Isometric View has no default shortcut
-    }
 }
 
 template<SetViewPresetMenuItem::Type T>

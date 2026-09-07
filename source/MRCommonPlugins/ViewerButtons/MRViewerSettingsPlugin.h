@@ -36,8 +36,6 @@ public:
 
     virtual bool blocking() const override { return false; }
 
-    virtual std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
-
     // call this function if you save/delete color theme, or change current theme outside of this plugin
     MRCOMMONPLUGINS_API void updateThemes();
 

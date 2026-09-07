@@ -618,6 +618,75 @@ void RibbonSchemaLoader::readItemsJson_( const std::filesystem::path& path ) con
     readItemsJson_( *itemsStructRes, stem );
 }
 
+namespace
+{
+
+/// reads the "Shortcut" object of an item in items.json:
+/// { "Key": "S", "Mods": [ "PCtrl", "Shift" ], "Category": "Scene", "Tags": [ "base" ] }
+std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const std::string& itemName )
+{
+    auto fail = [&itemName] ( const std::string& what ) -> std::optional<MenuItemShortcut>
+    {
+        spdlog::warn( "\"Shortcut\" of item \"{}\": {}", itemName, what );
+        assert( false );
+        return {};
+    };
+    if ( !json.isObject() )
+        return fail( "not an object" );
+
+    MenuItemShortcut res;
+
+    const auto& key = json["Key"];
+    if ( !key.isString() )
+        return fail( "\"Key\" field is not valid or not present" );
+    const auto keyCode = ShortcutManager::parseKey( key.asString() );
+    if ( !keyCode )
+        return fail( fmt::format( "unknown key \"{}\"", key.asString() ) );
+    res.shortcut.key.key = *keyCode;
+
+    const auto& mods = json["Mods"];
+    if ( !mods.isNull() )
+    {
+        if ( !mods.isArray() )
+            return fail( "\"Mods\" field is not an array" );
+        for ( const auto& mod : mods )
+        {
+            if ( !mod.isString() )
+                return fail( "non-string modifier in \"Mods\"" );
+            const auto modCode = ShortcutManager::parseModifier( mod.asString() );
+            if ( !modCode )
+                return fail( fmt::format( "unknown modifier \"{}\"", mod.asString() ) );
+            res.shortcut.key.mod |= *modCode;
+        }
+    }
+
+    const auto& category = json["Category"];
+    if ( !category.isString() )
+        return fail( "\"Category\" field is not valid or not present" );
+    const auto categoryCode = ShortcutManager::parseCategory( category.asString() );
+    if ( !categoryCode )
+        return fail( fmt::format( "unknown category \"{}\"", category.asString() ) );
+    res.shortcut.category = *categoryCode;
+
+    const auto& tags = json["Tags"];
+    if ( tags.isNull() )
+        res.tags = { "base" };
+    else
+    {
+        if ( !tags.isArray() )
+            return fail( "\"Tags\" field is not an array" );
+        for ( const auto& tag : tags )
+        {
+            if ( !tag.isString() )
+                return fail( "non-string tag in \"Tags\"" );
+            res.tags.push_back( tag.asString() );
+        }
+    }
+    return res;
+}
+
+} // anonymous namespace
+
 void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const std::string& schemaName ) const
 {
 #ifndef MRVIEWER_NO_LOCALE
@@ -677,6 +746,11 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const s
         }
         else
             menuItem.tooltip = itemTooltip.asString();
+
+        const auto& itemShortcut = item["Shortcut"];
+        if ( !itemShortcut.isNull() )
+            if ( auto shortcut = readItemShortcut( itemShortcut, itemName.asString() ) )
+                menuItem.shortcut = std::move( shortcut );
 
         auto itemDropList = item["DropList"];
         if ( itemDropList.isArray() && menuItem.item )

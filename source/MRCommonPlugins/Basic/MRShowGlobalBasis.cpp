@@ -6,8 +6,6 @@
 #include "MRViewer/MRViewportGlobalBasis.h"
 #include "MRCommonPlugins/Basic/MRDrawViewportWidgetsItem.h"
 #include "MRViewer/MRI18n.h"
-#include "MRViewer/MRShortcutManager.h"
-#include "MRViewer/MRGladGlfw.h"
 
 namespace MR
 {
@@ -79,13 +77,6 @@ public:
     {
         cycleState( getViewerInstance().viewport().id );
         return false;
-    }
-
-    std::optional<Shortcut> defaultShortcut_( const ShortcutConfig& conf ) const override
-    {
-        if ( !conf.allowBase )
-            return {};
-        return Shortcut{ { GLFW_KEY_G, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
     }
 
     void providedViewportWidgets( ViewportWidgetInterface& in ) override

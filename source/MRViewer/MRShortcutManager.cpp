@@ -2,6 +2,9 @@
 #include "MRRibbonConstants.h"
 #include "MRImGui.h"
 #include "MRGladGlfw.h"
+#include <algorithm>
+#include <cctype>
+#include <string_view>
 
 namespace MR
 {
@@ -187,6 +190,79 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
     if ( respectKey )
         res += getKeyString( key.key );
     return res;
+}
+
+std::optional<int> ShortcutManager::parseKey( const std::string& name )
+{
+    // GLFW codes of letters, digits and punctuation are their upper-case ASCII codes
+    if ( name.size() == 1 && std::isprint( (unsigned char)name[0] ) && name[0] != ' ' )
+        return std::toupper( (unsigned char)name[0] );
+
+    // "Num 7" of getKeyString and "Num7" are the same key
+    std::string s;
+    for ( char c : name )
+        if ( c != ' ' )
+            s += c;
+
+    if ( s == "PDelete" )   return getGlfwKeyDelete();
+    if ( s == "Delete" )    return GLFW_KEY_DELETE;
+    if ( s == "Backspace" ) return GLFW_KEY_BACKSPACE;
+    if ( s == "Enter" || s == "Return" ) return GLFW_KEY_ENTER;
+    if ( s == "Escape" )    return GLFW_KEY_ESCAPE;
+    if ( s == "Space" )     return GLFW_KEY_SPACE;
+    if ( s == "Tab" )       return GLFW_KEY_TAB;
+    if ( s == "Home" )      return GLFW_KEY_HOME;
+    if ( s == "End" )       return GLFW_KEY_END;
+    if ( s == "PageUp" )    return GLFW_KEY_PAGE_UP;
+    if ( s == "PageDown" )  return GLFW_KEY_PAGE_DOWN;
+    if ( s == "Pause" )     return GLFW_KEY_PAUSE;
+    if ( s == "CapsLock" )  return GLFW_KEY_CAPS_LOCK;
+    if ( s == "Up" || s == "ArrowUp" )       return GLFW_KEY_UP;
+    if ( s == "Down" || s == "ArrowDown" )   return GLFW_KEY_DOWN;
+    if ( s == "Left" || s == "ArrowLeft" )   return GLFW_KEY_LEFT;
+    if ( s == "Right" || s == "ArrowRight" ) return GLFW_KEY_RIGHT;
+
+    if ( s.size() == 4 && s.starts_with( "Num" ) && std::isdigit( (unsigned char)s[3] ) )
+        return GLFW_KEY_KP_0 + ( s[3] - '0' );
+
+    if ( s.size() >= 2 && s[0] == 'F' )
+    {
+        int n = 0;
+        for ( size_t i = 1; i < s.size(); ++i )
+        {
+            if ( !std::isdigit( (unsigned char)s[i] ) )
+                return {};
+            n = 10 * n + ( s[i] - '0' );
+        }
+        if ( n >= 1 && n <= 25 )
+            return GLFW_KEY_F1 + ( n - 1 );
+    }
+    return {};
+}
+
+std::optional<int> ShortcutManager::parseModifier( const std::string& name )
+{
+    std::string s = name;
+    std::transform( s.begin(), s.end(), s.begin(), [] ( unsigned char c ) { return (char)std::tolower( c ); } );
+    if ( s == "pctrl" ) return getGlfwModPrimaryCtrl();
+    if ( s == "ctrl" )  return GLFW_MOD_CONTROL;
+    if ( s == "shift" ) return GLFW_MOD_SHIFT;
+    if ( s == "alt" )   return GLFW_MOD_ALT;
+    if ( s == "super" ) return GLFW_MOD_SUPER;
+    return {};
+}
+
+std::optional<ShortcutManager::Category> ShortcutManager::parseCategory( const std::string& name )
+{
+    for ( int i = 0; i < int( Category::Count ); ++i )
+    {
+        std::string_view categoryName = categoryNames[i];
+        while ( categoryName.ends_with( ' ' ) ) // "Selection "
+            categoryName.remove_suffix( 1 );
+        if ( categoryName == name )
+            return Category( i );
+    }
+    return {};
 }
 
 std::optional<ShortcutManager::ShortcutKey> ShortcutManager::findShortcutByName( const std::string& name ) const

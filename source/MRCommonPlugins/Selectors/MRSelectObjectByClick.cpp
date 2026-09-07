@@ -11,7 +11,6 @@
 #include "MRViewer/MRGladGlfw.h"
 #include "MRViewer/MRImGuiMultiViewport.h"
 #include "MRViewer/ImGuiMenu.h"
-#include "MRViewer/MRShortcutManager.h"
 
 namespace MR
 {
@@ -19,13 +18,6 @@ namespace MR
 SelectObjectByClick::SelectObjectByClick() :
     PluginParent( "Select objects", StatePluginTabs::Selection )
 {
-}
-
-std::optional<Shortcut> SelectObjectByClick::defaultShortcut_( const ShortcutConfig& conf ) const
-{
-    if ( !conf.allowBase )
-        return {};
-    return Shortcut{ { GLFW_KEY_Q, getGlfwModPrimaryCtrl() }, ShortcutCategory::Objects };
 }
 
 void SelectObjectByClick::drawDialog( ImGuiContext* )

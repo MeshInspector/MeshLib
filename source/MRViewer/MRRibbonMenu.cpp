@@ -101,7 +101,7 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     fontManager_.initFontManagerInstance( &fontManager_ );
     readMenuItemsStructure_();
     // not in setupShortcuts_, which ImGuiMenu::init calls before the schema with the UI order of the items is read
-    registerItemsShortcuts_( getShortcutConfig_() );
+    registerItemsShortcuts_( allowedShortcutTags_() );
 
     RibbonIcons::load();
 
@@ -2258,12 +2258,12 @@ void RibbonMenu::setupShortcuts_()
     }
 }
 
-ShortcutConfig RibbonMenu::getShortcutConfig_() const
+HashSet<std::string> RibbonMenu::allowedShortcutTags_() const
 {
-    return {};
+    return { "base", "history" };
 }
 
-void RibbonMenu::registerItemsShortcuts_( const ShortcutConfig& conf )
+void RibbonMenu::registerItemsShortcuts_( const HashSet<std::string>& allowedTags )
 {
     MR_TIMER;
     const auto& schema = RibbonSchemaHolder::schema();
@@ -2273,12 +2273,15 @@ void RibbonMenu::registerItemsShortcuts_( const ShortcutConfig& conf )
         for ( const auto& itemName : itemNames )
         {
             auto itemIt = schema.items.find( itemName );
-            if ( itemIt == schema.items.end() || !itemIt->second.item )
+            if ( itemIt == schema.items.end() || !itemIt->second.item || !itemIt->second.shortcut )
                 continue;
-            // one item can appear in several places of the UI, ask it only once
+            // one item can appear in several places of the UI, bind it only once
             if ( !visited.insert( itemIt->second.item.get() ).second )
                 continue;
-            itemIt->second.item->registerShortcut( *this, conf );
+            const auto& shortcut = *itemIt->second.shortcut;
+            if ( !std::all_of( shortcut.tags.begin(), shortcut.tags.end(), [&] ( const std::string& tag ) { return allowedTags.contains( tag ); } ) )
+                continue;
+            addRibbonItemShortcut( itemName, shortcut.shortcut );
         }
     };
 

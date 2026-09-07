@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRRibbonRegisterItem.h"
+#include "MRShortcutManager.h"
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRphmap.h"
@@ -9,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <optional>
 
 namespace MR
 {
@@ -22,6 +24,15 @@ struct MenuItemCaptionSize
     SplitCaptionInfo splitInfo;
 };
 
+/// the default keyboard shortcut of a ribbon item as given in items.json
+struct MenuItemShortcut
+{
+    Shortcut shortcut;
+    /// the shortcut is bound only if the application allows every tag (see RibbonMenu::registerItemsShortcuts_);
+    /// { "base" } unless items.json gives other tags
+    std::vector<std::string> tags;
+};
+
 struct MenuItemInfo
 {
     std::shared_ptr<RibbonMenuItem> item;
@@ -31,6 +42,7 @@ struct MenuItemInfo
     MenuItemCaptionSize captionSize; // already scaled
     std::string helpLink; // link to help page
     LocaleDomainId localeDomainId; // needed for translation
+    std::optional<MenuItemShortcut> shortcut; // default keyboard shortcut, if items.json gives one
 
     const std::string& getCaption() const { return !caption.empty() ? caption : item->name(); }
 };

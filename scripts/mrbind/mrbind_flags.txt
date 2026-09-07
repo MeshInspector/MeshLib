@@ -1,14 +1,20 @@
---format=macros
 --combine-types=cv,ref,ptr,smart_ptr
 --ignore ::
 --ignore MR::detail
+--ignore MR::FunctionRef
 --ignore MR::Signal
 --ignore MR::UniquePtr
 --ignore MR::RegisterRenderObjectConstructor
 --ignore MR::Config
 --ignore '/.*operator<=>.*/'
---ignore '/MR::(Vector|Matrix|SymMatrix)[234]<boost::multiprecision::.*/'
---ignore '/MR::AffineXf<MR::Vector[234]<boost::multiprecision::.*/'
---skip-base std::integral_constant
---skip-base boost::dynamic_bitset
---skip-base /openvdb::v[0-9][0-9_a-zA-Z]*::Grid/
+--skip-mentions-of '/std::integral_constant<.*>/'
+--skip-mentions-of '/boost::dynamic_bitset<.*>/'
+--skip-mentions-of '/openvdb::v[0-9][0-9_a-zA-Z]*::Grid<.*>/'
+--skip-mentions-of '/MR::FunctionRef<.*>/'
+--skip-mentions-of '/MR::Signal<.*>/'
+--skip-mentions-of '/Eigen::Matrix<.*>/'
+--skip-mentions-of Json::Value
+--skip-mentions-of '/(std|tl)::expected<Json::Value, .*>/'
+--skip-mentions-of '/std::initializer_list<.*>/'
+--adjust-comments 's@(^|(^///\s*)? )\\([{}]|(def|in|addto)group\s+).*@@g'
+--infer-lifetime-constructors

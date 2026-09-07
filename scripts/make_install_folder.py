@@ -2,6 +2,7 @@ import glob
 import os
 import shutil
 import sys
+import re
 
 import install_tools as it
 
@@ -19,17 +20,28 @@ path_to_pybind11 = os.path.join(os.path.join(os.path.join(it.base_path,'thirdpar
 
 not_app_extentions = ['.lib','.obj','.pdb','.obj','.exp','.iobj','.ipdb']
 
-def vcpkg_dir():
-	vcpkg_exe_dir = ""
+def vcpkg_triplet_name():
 	if len(sys.argv) > 2:
-		vcpkg_exe_dir = sys.argv[2]
+		return sys.argv[2]
+	return "x64-windows-meshlib"
+
+def target_arch():
+	# Every triplet leads with the target architecture: x64-windows-meshlib, arm64-windows-meshlib.
+	# It also names the build output folder, source/<arch>/<config>.
+	return vcpkg_triplet_name().split('-')[0]
+
+def vcpkg_dir():
+	vcpkg_triplet = vcpkg_triplet_name()
+	vcpkg_exe_dir = ""
+	if len(sys.argv) > 3:
+		vcpkg_exe_dir = sys.argv[3]
 	else:
 		vcpkg_exe_dir = os.popen("where vcpkg").read().strip()
 		if "vcpkg.exe" not in vcpkg_exe_dir:
 			vcpkg_exe_dir = "C:\\vcpkg"
 		else:
 			vcpkg_exe_dir = os.path.dirname( vcpkg_exe_dir )
-	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"),"x64-windows-meshlib")
+	return os.path.join(os.path.join(vcpkg_exe_dir, "installed"), vcpkg_triplet)
 
 
 vcpkg_directory = vcpkg_dir()
@@ -39,10 +51,21 @@ def prepare_includes_list():
 	it.includes_src_dst.clear()
 	it.includes_src_dst_thirdparty.clear()
 	it.append_includes_list(os.path.join(vcpkg_directory,"include"), True)
-	it.append_includes_list(it.path_to_sources)
+	it.append_includes_list(it.path_to_sources, skipped_dir_regexes = [re.compile(target_arch() + '(/.*)?'), re.compile('TempOutput(/.*)?'), re.compile('MeshLibC2(/.*)?'), re.compile('MeshLibC2Cuda(/.*)?')])
+	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2/include"))
+	it.append_includes_list(os.path.join(it.path_to_sources, "MeshLibC2Cuda/include"))
 	it.append_includes_list(path_to_phmap, True,'parallel_hashmap')
 	it.append_includes_list(path_to_pybind11, True)
 	it.append_includes_list(path_to_imgui, True)
+
+def write_config_dist():
+	# Tell consumers which _ITERATOR_DEBUG_LEVEL this package's binaries were built with,
+	# so MRMeshFwd.h can align their translation units instead of guessing zero.
+	level = 2 if "iterator-debug" in vcpkg_triplet_name() else 0
+	dst = os.path.join(it.path_to_includes, "MRMesh", "config_dist.h")
+	os.makedirs(os.path.dirname(dst), exist_ok=True)
+	with open(dst, "w", newline="\n") as f:
+		f.write("#pragma once\n\n#define MR_ITERATOR_DEBUG_LEVEL {}\n".format(level))
 
 def copy_includes():
 	prepare_includes_list()
@@ -55,9 +78,10 @@ def copy_includes():
 		dst_folder = os.path.dirname(dst)
 		os.makedirs(dst_folder,exist_ok=True)
 		shutil.copyfile(src, dst)
+	write_config_dist()
 
 def copy_app():
-	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_app,dirs_exist_ok=True)
+	shutil.copytree(os.path.join(it.path_to_sources,target_arch()),it.path_to_app,dirs_exist_ok=True)
 	folder = os.walk(it.path_to_app)
 	for address, dirs, files in folder:
 		for file in files:
@@ -65,9 +89,17 @@ def copy_app():
 				os.remove(os.path.join(address,file))
 
 def copy_lib():
-	shutil.copytree(os.path.join(it.path_to_sources,'x64'),it.path_to_libs,dirs_exist_ok=True)
+	shutil.copytree(os.path.join(it.path_to_sources,target_arch()),it.path_to_libs,dirs_exist_ok=True)
 	shutil.copytree(os.path.join(os.path.join(vcpkg_directory,'debug'),'lib'),os.path.join(it.path_to_libs,"Debug"),dirs_exist_ok=True)
 	shutil.copytree(os.path.join(vcpkg_directory,'lib'),os.path.join(it.path_to_libs,"Release"),dirs_exist_ok=True)
+
+	# Drop the debug-symbol cache that the .NET (C#) test run leaves under
+	# <arch>/<config>/sym (coreclr/ntdll/kernelbase PDBs, indexed by GUID). Its
+	# files end in .pdb so the prune below would otherwise keep them, bloating
+	# the package with system symbols that must not ship.
+	for sym_dir in glob.glob(os.path.join(it.path_to_libs, "*", "sym")):
+		shutil.rmtree(sym_dir, ignore_errors=True)
+
 	folder = os.walk(it.path_to_libs)
 	for address, dirs, files in folder:
 		for file in files:
@@ -84,9 +116,14 @@ def copy_lib():
 	for f in glob.glob(os.path.join(it.path_to_app, "*/*pybind11nonlimitedapi_meshlib_*")):
 		os.remove(f)
 
+def copy_licenses():
+	src = os.path.join(it.base_path, 'thirdparty', 'licenses', 'THIRD-PARTY-NOTICES.txt')
+	shutil.copyfile(src, os.path.join(it.path_to_install_folder, 'THIRD-PARTY-NOTICES.txt'))
+
 it.prepare_includes_list = prepare_includes_list
 it.copy_includes = copy_includes
 it.copy_app = copy_app
 it.copy_lib = copy_lib
+it.copy_licenses = copy_licenses
 
 it.main()

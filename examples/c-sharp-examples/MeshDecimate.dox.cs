@@ -1,26 +1,34 @@
-using static MR.DotNet;
-
 public class MeshDecimateExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         try
         {
-            // Load mesh
-            var mesh = MeshLoad.FromAnySupportedFormat("mesh.stl");
+            // Load the mesh given on the command line, or make a sphere to decimate if no path is given
+            var mesh = args.Length > 0
+                ? MR.MeshLoad.fromAnySupportedFormat(args[0])
+                : MR.makeUVSphere(1.0f, 64, 64);
+
+            // Repack mesh optimally.
+            // It's not necessary but highly recommended to achieve the best performance in parallel processing
+            mesh.packOptimally();
 
             // Setup decimate parameters
-            DecimateParameters dp = new DecimateParameters();
-            dp.strategy = DecimateStrategy.MinimizeError;
-            dp.maxError = 1e-5f * mesh.BoundingBox.Diagonal();
-            dp.tinyEdgeLength = 1e-3f;
-            dp.packMesh = true;
+            MR.DecimateSettings ds = new();
+
+            // Decimation stop thresholds, you may specify one or both
+            ds.maxDeletedFaces = 1000; // Number of faces to be deleted
+            ds.maxError = 0.05f; // Maximum error when decimation stops
+
+            // Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss.
+            // Recommended to set to the number of available CPU cores or more for the best performance
+            ds.subdivideParts = 64;
 
             // Decimate mesh
-            var result = Decimate(ref mesh, dp);
+            MR.decimateMesh(mesh, ds);
 
             // Save result
-            MeshSave.ToAnySupportedFormat(mesh, "decimated_mesh.stl");
+            MR.MeshSave.toAnySupportedFormat(mesh, "decimated_mesh_cs.stl");
         }
         catch (Exception e)
         {

@@ -3,8 +3,8 @@ from helper import *
 
 
 def test_icp():
-    torusRef = mrmesh.makeTorus(2, 1, 32, 32, None)
-    torusMove = mrmesh.makeTorus(2, 1, 32, 32, None)
+    torusRef = mrmesh.makeTorus(2.5, 0.7, 48, 48, None)
+    torusMove = mrmesh.makeTorus(2.5, 0.7, 48, 48, None)
 
     axis = mrmesh.Vector3f()
     axis.x = 1
@@ -20,6 +20,10 @@ def test_icp():
     icp = mrmesh.ICP(
         torusMove, torusRef, xf, mrmesh.AffineXf3f(), torusMove.topology.getValidVerts(), torusRef.topology.getValidVerts()
     )
+
+    props = mrmesh.ICPProperties()
+    props.iterLimit = 20
+    icp.setParams(props)
     newXf = icp.calculateTransformation()
     print(icp.getStatusInfo())
 

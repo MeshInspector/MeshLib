@@ -71,6 +71,42 @@ EdgeMetric edgeCurvMetric( const Mesh & mesh, float angleSinFactor, float angleS
     return edgeCurvMetric( mesh.topology, mesh.points, angleSinFactor, angleSinForBoundary );
 }
 
+EdgeMetric edgeAbsCurvMetric( const MeshTopology& topology, const VertCoords& points, float angleSinFactor, float angleSinForBoundary )
+{
+    const float bdFactor = exp( angleSinFactor * angleSinForBoundary );
+
+    return [&topology, &points, angleSinFactor, bdFactor ]( EdgeId e ) -> float
+    {
+        auto edgeLen = edgeLength( topology, points, e );
+        if ( topology.isBdEdge( e, nullptr ) )
+            return edgeLen * bdFactor;
+
+        return edgeLen * exp( angleSinFactor * std::abs( dihedralAngleSin( topology, points, e ) ) );
+    };
+}
+
+EdgeMetric edgeAbsCurvMetric( const Mesh & mesh, float angleSinFactor, float angleSinForBoundary )
+{
+    return edgeAbsCurvMetric( mesh.topology, mesh.points, angleSinFactor, angleSinForBoundary );
+}
+
+EdgeMetric edgeDihedralAngleMetric( const MeshTopology& topology, const VertCoords& points, const DihedralAngleProcessParams& params )
+{
+    return [&topology, &points, params]( EdgeId e ) -> float
+    {
+        if ( topology.isBdEdge( e, nullptr ) )
+            return params.boundaryValue;
+
+        auto a = dihedralAngle( topology, points, e );
+        return a >= 0 ? params.convexFactor * a : params.concaveFactor * a;
+    };
+}
+
+EdgeMetric edgeDihedralAngleMetric( const Mesh& mesh, const DihedralAngleProcessParams& params )
+{
+    return edgeDihedralAngleMetric( mesh.topology, mesh.points, params );
+}
+
 EdgeMetric edgeTableSymMetric( const MeshTopology & topology, const EdgeMetric & metric )
 {
     MR_TIMER;

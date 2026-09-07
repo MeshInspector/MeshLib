@@ -62,9 +62,7 @@ Expected<void> PointsProjector::findProjections( std::vector<MR::PointsProjectio
     if ( settings.valid )
     {
         assert( points.size() <= settings.valid->size() );
-        std::vector<uint64_t> validVec;
-        boost::to_block_range( *settings.valid, std::back_inserter( validVec ) );
-        CUDA_LOGE_RETURN_UNEXPECTED( cudaValid.fromVector( validVec ) );
+        CUDA_LOGE_RETURN_UNEXPECTED( cudaValid.fromVector( settings.valid->bits() ) );
     }
 
     const auto cudaXf = settings.xf ? fromXf( *settings.xf ) : Matrix4{};

@@ -9,6 +9,14 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
@@ -38,7 +46,10 @@
     <ClCompile Include="MRRebuildMesh.cpp" />
     <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRScanHelpers.cpp" />
+    <ClCompile Include="MRSequentialNester.cpp" />
+    <ClCompile Include="MRSweptVolume.cpp" />
     <ClCompile Include="MRTeethMaskToDirectionVolume.cpp" />
+    <ClCompile Include="MRTetrisNesting.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
     <ClCompile Include="MRVolumeSegment.cpp" />
@@ -52,7 +63,7 @@
     <ClCompile Include="MRVoxelsApplyTransform.cpp" />
     <ClCompile Include="MRVoxelFilter.cpp" />
     <ClCompile Include="MRWeightedPointsShell.cpp" />
-    <ClCompile Include="MRMinimalSurface.cpp" />
+    <ClCompile Include="MRFillingSurface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRBoolean.h" />
@@ -70,7 +81,6 @@
     <ClInclude Include="MRMoveMeshToVoxelMaxDeriv.h" />
     <ClInclude Include="MRObjectVoxels.h" />
     <ClInclude Include="MROffset.h" />
-    <ClInclude Include="MROpenVDB.h" />
     <ClInclude Include="MROpenVDBHelper.h" />
     <ClInclude Include="MRPartialOffset.h" />
     <ClInclude Include="MRPointsToDistanceVolume.h" />
@@ -79,7 +89,10 @@
     <ClInclude Include="MRRebuildMesh.h" />
     <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRScanHelpers.h" />
+    <ClInclude Include="MRSequentialNester.h" />
+    <ClInclude Include="MRSweptVolume.h" />
     <ClInclude Include="MRTeethMaskToDirectionVolume.h" />
+    <ClInclude Include="MRTetrisNesting.h" />
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
@@ -98,7 +111,7 @@
     <ClInclude Include="MRVoxelsVolumeCachingAccessor.h" />
     <ClInclude Include="MRVoxelFilter.h" />
     <ClInclude Include="MRWeightedPointsShell.h" />
-    <ClInclude Include="MRMinimalSurface.h" />
+    <ClInclude Include="MRFillingSurface.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -107,12 +120,12 @@
     <RootNamespace>MRVoxels</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -124,28 +137,25 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Debug'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Release'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>MRVoxels_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -153,22 +163,19 @@
       <AdditionalDependencies>ws2_32.lib;rpcrt4.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>MRVoxels_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

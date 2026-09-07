@@ -8,6 +8,10 @@
 #include "MRMeshDecimate.h"
 #include "MRMeshCollidePrecise.h"
 #include "MRBox.h"
+#include "MRParallelFor.h"
+#include "MRMeshComponents.h"
+#include "MRBitSetParallelFor.h"
+#include "MRMeshFillHole.h"
 #include <random>
 
 namespace MR
@@ -41,13 +45,20 @@ Expected<Mesh> unitePairOfMeshes( Mesh&& a, Mesh&& b, const UnitePairOfMehsesPar
     params.rigidB2A = unitePairParams.shift ? &xf : nullptr;
     params.mapper = unitePairParams.commonParams.fixDegeneracies || unitePairParams.mapper ? &mapper_ : nullptr;
     params.mergeAllNonIntersectingComponents = unitePairParams.commonParams.mergeMode;
-    params.forceCut = unitePairParams.commonParams.forceCut;
-    auto res = MR::boolean(
-        std::move( a ),
-        std::move( b ),
-        BooleanOperation::Union,
-        params
-    );
+    BooleanResult res;
+    if ( !unitePairParams.commonParams.forceCut )
+    {
+        res = MR::boolean(
+            std::move( a ),
+            std::move( b ),
+            BooleanOperation::Union,
+            params
+        );
+    }
+    else
+    {
+        res = MR::forceBoolean( a, b, BooleanOperation::Union, params );
+    }
     if ( !res.valid() )
         return unexpected( res.errorString );
 
@@ -286,27 +297,19 @@ Expected<Mesh> uniteManyMeshes(
     std::vector<Mesh> mergedMeshes( separateComponentsProcess ? nonIntersectingGroups.size() : meshes.size() );
     if ( separateComponentsProcess )
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( nonIntersectingGroups.size() ) ),
-                           [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( nonIntersectingGroups, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                auto& mergedMesh = mergedMeshes[i];
-                auto& mergeGroup = nonIntersectingGroups[i];
-                for ( auto meshIndex : mergeGroup )
-                    mergedMesh.addMesh( *meshes[meshIndex] );
-            }
+            auto& mergedMesh = mergedMeshes[i];
+            auto& mergeGroup = nonIntersectingGroups[i];
+            for ( auto meshIndex : mergeGroup )
+                mergedMesh.addMesh( *meshes[meshIndex] );
         } );
     }
     else
     {
-        tbb::parallel_for( tbb::blocked_range<int>( 0, int( meshes.size() ) ),
-                   [&] ( const tbb::blocked_range<int>& range )
+        ParallelFor( meshes, [&] ( size_t i )
         {
-            for ( int i = range.begin(); i < range.end(); ++i )
-            {
-                mergedMeshes[i] = *meshes[i];
-            }
+            mergedMeshes[i] = *meshes[i];
         } );
     }
 
@@ -345,6 +348,83 @@ Expected<Mesh> uniteManyMeshes(
     if ( params.newFaces != nullptr )
         *params.newFaces = std::move( reducer.newFaces );
     return reducer.resultMesh;
+}
+
+namespace
+{
+void normalizeUniteMesh( Mesh& mesh, bool needClosed, const UniteMeshNormalizationParams& params )
+{
+    if ( needClosed )
+    {
+        FillHoleParams fhp;
+        fhp.metric = getMinAreaMetric( mesh );
+        fillHoles( mesh, mesh.topology.findHoleRepresentiveEdges(), fhp );
+    }
+
+    if ( params.trySelfBoolean )
+    {
+        auto sbRes = selfBoolean( mesh );
+        if ( sbRes.has_value() )
+        {
+            sbRes->deleteFaces( sbRes->topology.getValidFaces() - MeshComponents::getLargestComponent( *sbRes ) );
+            mesh = std::move( *sbRes );
+        }
+    }
+    if ( params.flipInverted && mesh.volume() < 0.0f )
+        mesh.topology.flipOrientation();
+
+    if ( params.expansionRatio != 0.0f )
+    {
+        auto center = mesh.findCenterFromFaces();
+        mesh.transform( AffineXf3f::xfAround( Matrix3f::scale( 1.0f + params.expansionRatio ), center ) );
+    }
+}
+}
+
+Expected<Mesh> uniteManyMeshesMutable( const std::vector<Mesh*>& meshes,
+    const UniteManyMeshesParams& params, const UniteMeshNormalizationParams& normalizeParams )
+{
+    MR_TIMER;
+    auto keepGoing = ParallelFor( meshes, [&] ( size_t i )
+    {
+        normalizeUniteMesh( *meshes[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );
+    }, subprogress( params.progressCb, 0.0f, 0.3f ) );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+    UniteManyMeshesParams ump = params;
+    ump.progressCb = subprogress( params.progressCb, 0.3f, 1.0f );
+    // reinterpret_cast here to avoid allocation new vector with same pointers
+    return uniteManyMeshes( reinterpret_cast< const std::vector<const Mesh*>& >( meshes ), ump );
+}
+
+Expected<Mesh> uniteComponents( const Mesh& mesh,
+    const UniteManyMeshesParams& params, const UniteMeshNormalizationParams& normalizeParams )
+{
+    MR_TIMER;
+    auto mapAndNum = MeshComponents::getAllComponentsMap( mesh );
+    if ( !reportProgress( params.progressCb, 0.1f ) )
+        return unexpectedOperationCanceled();
+    std::vector<Mesh> components( mapAndNum.second );
+    std::vector<const Mesh*> meshPtrs( mapAndNum.second );
+    auto keepGoing = ParallelFor( components, [&] ( size_t i )
+    {
+        FaceBitSet compBs( mesh.topology.faceSize() );
+        BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
+        {
+            if ( RegionId( i ) == mapAndNum.first[f] )
+                compBs.set( f );
+        } );
+        components[i].addMeshPart( MeshPart( mesh, &compBs ) );
+        normalizeUniteMesh( components[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );
+        meshPtrs[i] = &components[i];
+
+        compBs = {}; // reduce peek memory
+    }, subprogress( params.progressCb, 0.1f, 0.4f ) );
+    if ( !keepGoing )
+        return unexpectedOperationCanceled();
+    auto np = params;
+    np.progressCb = subprogress( params.progressCb, 0.4f, 1.0f );
+    return uniteManyMeshes( meshPtrs, np );
 }
 
 }

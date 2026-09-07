@@ -1,32 +1,36 @@
 ﻿using System.Reflection;
-using static MR.DotNet;
 
 public static class MeshFillHoleExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         try
         {
-            if (args.Length != 2 && args.Length != 3)
+            if (args.Length != 1 && args.Length != 2)
             {
-                Console.WriteLine("Usage: {0} MeshFillHoleExample INPUT [OUTPUT]", Assembly.GetExecutingAssembly().GetName().Name);
+                Console.WriteLine("Usage: {0} INPUT [OUTPUT]", Assembly.GetExecutingAssembly().GetName().Name);
                 return;
             }
 
-            string inputFile = args[1];
-            string outputFile = args.Length == 3 ? args[2] : inputFile;
+            // INPUT is a mesh file you supply; this example needs a mesh that has holes to fill
+            string inputFile = args[0];
+            string outputFile = args.Length == 2 ? args[1] : inputFile;
 
-            var mesh = MeshLoad.FromAnySupportedFormat(inputFile);
-            var holes = mesh.HoleRepresentiveEdges;
+            var mesh = MR.MeshLoad.fromAnySupportedFormat(inputFile);
 
-            var fillHoleParams = new FillHoleParams();
-            fillHoleParams.Metric = FillHoleMetric.GetUniversalMetric( mesh );
-            fillHoleParams.OutNewFaces = new FaceBitSet();
-            
-            FillHoles(ref mesh, holes.ToList(), fillHoleParams);
-            Console.WriteLine("Number of new faces: {0}", fillHoleParams.OutNewFaces.Count());
+            MR.Std.Vector_MREdgeId holes = mesh.topology.findHoleRepresentiveEdges();
 
-            MeshSave.ToAnySupportedFormat(mesh, outputFile);
+            MR.FillHoleParams fillHoleParams = new();
+            fillHoleParams.metric.assign(MR.getUniversalMetric(mesh));
+            MR.FaceBitSet outfaces = new();
+            // TODO
+            // fillHoleParams.OutNewFaces = ...
+
+            MR.fillHoles(mesh, holes, fillHoleParams);
+            // TODO
+            // Console.WriteLine("Number of new faces: {0}", fillHoleParams.OutNewFaces.Count());
+
+            MR.MeshSave.toAnySupportedFormat(mesh, outputFile);
         }
         catch (Exception e)
         {

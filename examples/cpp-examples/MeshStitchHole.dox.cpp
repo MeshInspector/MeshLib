@@ -22,7 +22,7 @@ int main()
     // Connect two holes
     MR::StitchHolesParams params;
     params.metric = MR::getUniversalMetric( mesh );
-    MR::buildCylinderBetweenTwoHoles( mesh, edges.front(), edges.back(), params );
+    MR::stitchHoles( mesh, edges.front(), edges.back(), params );
 //! [0]    
 
     // Save result

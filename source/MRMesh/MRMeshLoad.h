@@ -7,13 +7,17 @@
 #include "MRExpected.h"
 #include "MRMeshLoadSettings.h"
 #include <filesystem>
-#include <istream>
+#include <iosfwd>
 #include <string>
 
 namespace MR
 {
 
 // new simpler names
+
+/// \defgroup MeshLoadGroup Mesh Load
+/// \ingroup IOGroup
+/// \{
 
 /// loads mesh from file in internal MeshLib format
 MRMESH_API Expected<Mesh> loadMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
@@ -55,6 +59,19 @@ MRMESH_API Expected<Mesh> loadASCIIStl( const std::filesystem::path& file, const
 /// loads mesh from stream in textual .STL format
 MRMESH_API Expected<Mesh> loadASCIIStl( std::istream& in, const MeshLoadSettings& settings = {} );
 
+/// loads mesh as TriMesh (without building topology) from stream in binary .STL format;
+/// important on Windows: in stream must be open in binary mode;
+/// only settings.callback and settings.telemetrySignal are used here
+MRMESH_API Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology) from file in textual .STL format;
+/// only settings.callback and settings.telemetrySignal are used here
+MRMESH_API Expected<TriMesh> loadASCIIStlAsTriMesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+
+/// loads mesh as TriMesh (without building topology) from stream in textual .STL format;
+/// only settings.callback and settings.telemetrySignal are used here
+MRMESH_API Expected<TriMesh> loadASCIIStlAsTriMesh( std::istream& in, const MeshLoadSettings& settings = {} );
+
 /// loads mesh from file in .PLY format;
 MRMESH_API Expected<Mesh> loadPly( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
@@ -78,10 +95,6 @@ MRMESH_API Expected<Mesh> loadMesh( std::istream& in, const std::string& extensi
 // compatibility names
 namespace MeshLoad
 {
-
-/// \defgroup MeshLoadGroup Mesh Load
-/// \ingroup IOGroup
-/// \{
 
 /// loads mesh from file in internal MeshLib format
 MRMESH_API Expected<Mesh> fromMrmesh( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
@@ -143,8 +156,12 @@ MRMESH_API Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& f
 /// important on Windows: in stream must be open in binary mode
 MRMESH_API Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings = {} );
 
+/// emits telemetry signal with the integer logarithm of mesh size
+MR_BIND_IGNORE MRMESH_API void telemetryLogSize( const Mesh& mesh );
+
+
+} // end namespace MeshLoad
+
 /// \}
 
-} // namespace MeshLoad
-
-} // namespace MR
+} // end namespace MR

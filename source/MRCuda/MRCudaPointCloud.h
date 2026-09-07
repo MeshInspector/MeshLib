@@ -1,5 +1,5 @@
 #pragma once
-#ifndef MR_PARSING_FOR_PB11_BINDINGS
+#ifndef MR_PARSING_FOR_ANY_BINDINGS
 
 #include "exports.h"
 

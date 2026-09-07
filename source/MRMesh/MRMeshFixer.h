@@ -15,7 +15,15 @@ namespace MR
 /// \{
 
 /// Duplicates all vertices having more than two boundary edges (and returns the number of duplications);
+/// this is equivalent to duplicateMultiHoleVertices( mesh, 1 )
 MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh );
+
+/// Duplicates each vertex having more than \p maxHoles edges without left face in its edge ring
+/// until at most \p maxHoles such edges remain everywhere, and returns the number of duplications;
+/// (optional) \p dups receives the pair (source vertex, duplicate vertex) of every duplication made;
+/// after calling it with maxHoles = 2, MeshBuilder::fromTriangles can reconstruct this mesh from its triangulation
+/// without dropping any face, and the vertices with just two triangle fans are not duplicated unnecessarily
+MRMESH_API int duplicateMultiHoleVertices( Mesh & mesh, int maxHoles, std::vector<MeshBuilder::VertDuplication> * dups = nullptr );
 
 /// finds multiple edges in the mesh
 using MultipleEdge = VertPair;
@@ -30,8 +38,15 @@ MRMESH_API void fixMultipleEdges( Mesh & mesh );
 /// finds faces having aspect ratio >= criticalAspectRatio
 [[nodiscard]] MRMESH_API Expected<FaceBitSet> findDegenerateFaces( const MeshPart& mp, float criticalAspectRatio = FLT_MAX, ProgressCallback cb = {} );
 
+/// find inner faces of the given mesh part, which has large angles with its 3 neighbours
+/// \param minAngle threshold in radians, which is used in comparison of angles of face's planes, the large minAngle the less number of faces will be found
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> findNotSmoothFaces( const MeshPart& mp, float minAngle = 0.3f, ProgressCallback cb = {} );
+
 /// finds edges having length <= criticalLength
 [[nodiscard]] MRMESH_API Expected<UndirectedEdgeBitSet> findShortEdges( const MeshPart& mp, float criticalLength, ProgressCallback cb = {} );
+
+/// deletes all faces having at least one edge longer than maxEdgeLength
+MRMESH_API void deleteFacesWithLongEdges( Mesh& mesh, float maxEdgeLength );
 
 struct FixMeshDegeneraciesParams
 {
@@ -62,14 +77,18 @@ struct FixMeshDegeneraciesParams
         RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes
     } mode{ Mode::Remesh };
 
+    /// trying to stay close to initial surface when patching
+    /// also disables smoothing on patch
+    bool mimicPatch = false;
+
     ProgressCallback cb;
 };
 
 /// Fixes degenerate faces and short edges in mesh (changes topology)
 MRMESH_API Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params );
 
-/// finds vertices in region with complete ring of N edges
-[[nodiscard]] MRMESH_API VertBitSet findNRingVerts( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );
+/// finds all inner vertices in region with the given number of incident edges each
+[[nodiscard]] MRMESH_API VertBitSet findInnerVertsOfDegree( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );
 
 /// returns true if the edge e has both left and right triangular faces and the degree of dest( e ) is 2
 [[nodiscard]] MRMESH_API bool isEdgeBetweenDoubleTris( const MeshTopology& topology, EdgeId e );

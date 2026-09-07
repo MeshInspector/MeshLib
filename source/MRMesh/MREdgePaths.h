@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRId.h"
-#include "MREdgeMetric.h"
 #include "MRProgressCallback.h"
 #include <cfloat>
 #include <vector>
@@ -29,7 +28,7 @@ MRMESH_API void reverse( std::vector<EdgePath> & paths );
 
 /// computes summed metric of all edges in the path
 [[nodiscard]] MRMESH_API double calcPathMetric( const EdgePath & path, EdgeMetric metric );
-[[nodiscard]] inline double calcPathLength( const EdgePath & path, const Mesh & mesh ) { return calcPathMetric( path, edgeLengthMetric( mesh ) ); }
+[[nodiscard]] MRMESH_API double calcPathLength( const EdgePath & path, const Mesh & mesh );
 
 /// returns the vector with the magnitude equal to the area surrounded by the loop (if the loop is planar),
 /// and directed to see the loop in ccw order from the vector tip
@@ -37,7 +36,7 @@ MRMESH_API void reverse( std::vector<EdgePath> & paths );
 
 /// sorts given paths in ascending order of their metrics
 MRMESH_API void sortPathsByMetric( std::vector<EdgePath> & paths, EdgeMetric metric );
-inline void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh ) { sortPathsByMetric( paths, edgeLengthMetric( mesh ) ); }
+MRMESH_API void sortPathsByLength( std::vector<EdgePath> & paths, const Mesh & mesh );
 
 /// adds all faces incident to loop vertices and located to the left from the loop to given FaceBitSet
 MRMESH_API void addLeftBand( const MeshTopology & topology, const EdgeLoop & loop, FaceBitSet & addHere );
@@ -151,6 +150,10 @@ MRMESH_API int getContourPlaneIntersections( const Contour3f & path, const Plane
 /// finds all path edges located in given plane with given tolerance, adds them in outInPlaneEdges and returns their number
 MRMESH_API int getPathEdgesInPlane( const Mesh & mesh, const EdgePath & path, const Plane3f & plane, float tolerance = 0.0f,
     std::vector<EdgeId> * outInPlaneEdges = nullptr );
+
+/// converts lines on mesh in 3D contours by computing coordinate of each point
+[[nodiscard]] MRMESH_API Contour3f edgePathToContour3f( const Mesh& mesh, const EdgePath& line );
+[[nodiscard]] MRMESH_API Contours3f edgePathsToContours3f( const Mesh& mesh, const std::vector<EdgePath>& lines );
 
 /// \}
 

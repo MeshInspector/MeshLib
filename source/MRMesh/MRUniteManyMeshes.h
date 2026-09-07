@@ -42,18 +42,50 @@ struct UniteManyMeshesParams
     /// If set - merges meshes instead of booleaning it if boolean operation fails
     bool mergeOnFail{ false };
 
-    /// If this option is enabled boolean will try to cut meshes even if there are self-intersections in intersecting area
-    /// it might work in some cases, but in general it might prevent fast error report and lead to other errors along the way
+    /// If this option is enabled boolean will cut meshes even if there are self-intersections in intersecting area
+    /// also applying \ref MR::MeshBuilder::uniteCloseVertices and \ref MR::fillHoles afterwards
+    /// \warning if enabled - closed meshes expected on input
     /// \warning not recommended in most cases
     bool forceCut = false;
 
     ProgressCallback progressCb;
 };
 
-// Computes the surface of objects' union each of which is defined by its own surface mesh
-// - merge non intersecting meshes first
-// - unite merged groups
+/// Computes the surface of objects' union each of which is defined by its own surface mesh
+/// - merge non intersecting meshes first
+/// - unite merged groups
 MRMESH_API Expected<Mesh> uniteManyMeshes( const std::vector<const Mesh*>& meshes, 
     const UniteManyMeshesParams& params = {} );
+
+/// Unite mesh normalization parameters
+/// also mandatory fill holes in case of `forceCut || flipInverted`
+struct UniteMeshNormalizationParams
+{
+    /// If !=0 each mesh is expanded on 1+expRatio around its own centroid
+    float expansionRatio = 0.0f;
+
+    /// If enabled flips orientation of mesh with negative volume
+    bool flipInverted = true;
+
+    /// Try experimental self-boolean for mesh
+    /// not recommended yet
+    /// TODO: update when self-boolean is finalized
+    bool trySelfBoolean = false;
+};
+
+/// Computes the surface of objects' union each of which is defined by its own surface mesh
+/// - normalizes each mesh
+/// - merge non intersecting meshes first
+/// - unite merged groups
+MRMESH_API Expected<Mesh> uniteManyMeshesMutable( const std::vector<Mesh*>& meshes,
+    const UniteManyMeshesParams& params = {}, const UniteMeshNormalizationParams& normalizeParams = {} );
+
+/// Unites components of single mesh together
+/// Computes the surface of object's components' union
+/// - normalizes each mesh
+/// - merge non intersecting meshes first
+/// - unite merged groups
+MRMESH_API Expected<Mesh> uniteComponents( const Mesh& mesh, 
+    const UniteManyMeshesParams& params = {}, const UniteMeshNormalizationParams& normalizeParams = {} );
 
 }

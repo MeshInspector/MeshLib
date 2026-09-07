@@ -6,7 +6,7 @@
 	url = https://github.com/greg7mdp/parallel-hashmap.git
 [submodule "thirdparty/eigen"]
 	path = thirdparty/eigen
-	url = https://gitlab.com/cantonios/eigen.git
+	url = https://gitlab.com/libeigen/eigen.git
 [submodule "thirdparty/expected"]
 	path = thirdparty/expected
 	url = https://github.com/Developer-Ecosystem-Engineering/expected.git
@@ -31,9 +31,6 @@
 [submodule "thirdparty/clip"]
 	path = thirdparty/clip
 	url = https://github.com/dacap/clip.git
-[submodule "thirdparty/openvdb/v9/openvdb"]
-	path = thirdparty/openvdb/v9/openvdb
-	url = https://github.com/AcademySoftwareFoundation/openvdb
 [submodule "thirdparty/openvdb/v10/openvdb"]
 	path = thirdparty/openvdb/v10/openvdb
 	url = https://github.com/AcademySoftwareFoundation/openvdb
@@ -76,3 +73,20 @@
 [submodule "thirdparty/OpenCTM-git"]
 	path = thirdparty/OpenCTM-git
 	url = https://github.com/MeshInspector/OpenCTM.git
+[submodule "thirdparty/fastmcpp"]
+	path = thirdparty/fastmcpp
+	url = https://github.com/MeshInspector/fastmcpp
+[submodule "thirdparty/nlohmann-json"]
+	path = thirdparty/nlohmann-json
+	url = https://github.com/nlohmann/json
+[submodule "thirdparty/cpp-httplib"]
+	path = thirdparty/cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib
+[submodule "thirdparty/zlib-ng"]
+	path = thirdparty/zlib-ng
+	url = https://github.com/zlib-ng/zlib-ng.git
+[submodule "test_data"]
+	path = test_data
+	url = https://github.com/MeshInspector/MeshLibTestData.git
+	update = none
+	shallow = true

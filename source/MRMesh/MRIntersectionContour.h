@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshCollidePrecise.h"
+#include "MRPch/MRBindingMacros.h"
 
 namespace MR
 {
@@ -45,7 +46,7 @@ MRMESH_API ContinuousContours orderIntersectionContours( const MeshTopology& top
 MRMESH_API ContinuousContours orderSelfIntersectionContours( const MeshTopology& topology, const std::vector<EdgeTri>& intersections );
 
 /// extracts coordinates from two meshes intersection contours
-[[deprecated( "Use getOneMeshIntersectionContours")]] MRMESH_API Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours, 
+[[deprecated( "Use getOneMeshIntersectionContours")]] MRMESH_API MR_BIND_IGNORE Contours3f extractIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& orientedContours,
 const CoordinateConverters& converters, const AffineXf3f* rigidB2A = nullptr );
 
 /// returns true if contour is closed
@@ -60,7 +61,7 @@ MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contou
 /// edgesTopology - topology on which contours are represented with edges
 /// faceContours - lone contours represented by faces (all intersections are in same mesh A face)
 /// edgeContours - lone contours represented by edges (all intersections are in mesh B edges, edgesTopology: meshB.topology)
-MRMESH_API void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, 
+MRMESH_API void removeLoneDegeneratedContours( const MeshTopology& edgesTopology,
     OneMeshContours& faceContours, OneMeshContours& edgeContours );
 
 /// Removes contours that fully lay inside one triangle from the contours

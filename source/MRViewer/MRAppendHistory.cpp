@@ -16,7 +16,7 @@ void FilterHistoryByCondition( HistoryStackFilter condition, bool deepFiltering 
     store->filterStack( condition, deepFiltering );
 }
 
-ScopeHistory::ScopeHistory( const std::string& name )
+ScopeHistory::ScopeHistory( const std::string& name, const std::function<std::string ()>& dynamicNameFunc )
 {
     auto viewer = Viewer::instance();
     if ( !viewer )
@@ -25,7 +25,7 @@ ScopeHistory::ScopeHistory( const std::string& name )
     if ( !store_ )
         return;
     parentScopePtr_ = store_->getScopeBlockPtr();
-    combinedAction_ = std::make_shared<CombinedHistoryAction>( name, HistoryActionsVector{} );
+    combinedAction_ = std::make_shared<CombinedHistoryAction>( name, HistoryActionsVector{}, dynamicNameFunc );
     store_->setScopeBlockPtr( &combinedAction_->getStack() );
 }
 

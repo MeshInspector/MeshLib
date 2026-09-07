@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRMeshFwd.h"
 #include "MRMeshProject.h"
 #include <cfloat>
@@ -10,7 +11,7 @@ namespace MR
 
 /// returns the distance from each vertex along minus normal to the nearest mesh intersection (or FLT_MAX if no intersection found)
 [[nodiscard]] MRMESH_API std::optional<VertScalars> computeRayThicknessAtVertices( const Mesh& mesh, const ProgressCallback & progress = {} );
-[[deprecated]] MRMESH_API VertScalars computeThicknessAtVertices( const Mesh& mesh );
+[[deprecated]] MRMESH_API MR_BIND_IGNORE VertScalars computeThicknessAtVertices( const Mesh& mesh );
 
 /// describes the point of measurement on mesh
 struct MeshPoint

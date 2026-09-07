@@ -13,6 +13,8 @@ Example of filling holes
 \include MeshFillHole.dox.c
 - <b class="tab-title">C#</b>
 \include MeshFillHole.dox.cs
+- <b class="tab-title">JavaScript</b>
+\include MeshFillHole.dox.js
 
 </div>
 

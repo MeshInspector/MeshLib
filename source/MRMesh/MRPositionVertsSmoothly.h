@@ -16,16 +16,59 @@ MRMESH_API void positionVertsSmoothly( const MeshTopology& topology, VertCoords&
     EdgeWeights edgeWeights = EdgeWeights::Cotan, VertexMass vmass = VertexMass::Unit,
     const VertBitSet * fixedSharpVertices = nullptr );
 
+struct PositionVertsSmoothlyParams
+{
+    /// which vertices on mesh are smoothed, nullptr means all vertices;
+    /// it must not include all vertices of a mesh connected component unless stabilizer > 0
+    const VertBitSet* region = nullptr;
+
+    /// optional additional shifts of each vertex relative to smooth position
+    const Vector<Vector3f, VertId>* vertShifts = nullptr;
+
+    /// the more the value, the bigger attraction of each vertex to its original position
+    float stabilizer = 0;
+
+    /// if specified then it is used instead of \p stabilizer
+    VertMetric vertStabilizers;
+
+    /// if specified then it is used for edge weights instead of default 1
+    UndirectedEdgeMetric edgeWeights;
+};
+
 /// Puts given vertices in such positions to make smooth surface inside verts-region, but sharp on its boundary;
-/// \param verts must not include all vertices of a mesh connected component unless vertStabilizers are given
-/// \param vertShifts optional additional shifts of each vertex relative to smooth position
-/// \param vertStabilizers optional per-vertex stabilizers: the more the value, the bigger vertex attraction to its original position
-MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts = nullptr,
-    const VertScalars* vertStabilizers = nullptr );
-MRMESH_API void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts = nullptr,
-    const VertScalars* vertStabilizers = nullptr );
+MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams& params );
+MRMESH_API void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params );
+[[deprecated]] MRMESH_API void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts );
+
+struct InterpolateScalarsParams
+{
+    /// vertices where the field values are computed, nullptr means all vertices;
+    /// it must not include all vertices of a mesh connected component unless stabilizer > 0
+    const VertBitSet* region = nullptr;
+
+    /// weights of edges in the equations, used unless \p edgeWeightsMetric is specified
+    EdgeWeights edgeWeights = EdgeWeights::Unit;
+
+    /// the stabilizer of each vertex is multiplied on the mass of that vertex
+    VertexMass vmass = VertexMass::Unit;
+
+    /// the more the value, the bigger attraction of each vertex to its original value
+    float stabilizer = 0;
+
+    /// if specified then it is used instead of \p stabilizer
+    VertMetric vertStabilizers;
+
+    /// if specified then it is used for edge weights instead of \p edgeWeights
+    UndirectedEdgeMetric edgeWeightsMetric;
+};
+
+/// Computes the values of scalar field in region vertices to make it harmonic there:
+/// each value becomes the weighted mean of the values in neighbor vertices, while the values in all other vertices remain fixed;
+/// with non-negative edge weights and zero stabilizers, the computed values never leave the range of the fixed values
+MRMESH_API void interpolateScalarsSmoothly( const Mesh& mesh, VertScalars& field, const InterpolateScalarsParams& params );
+MRMESH_API void interpolateScalarsSmoothly( const MeshTopology& topology, const VertCoords& points, VertScalars& field, const InterpolateScalarsParams& params );
+/// this overload has no access to mesh points, so it requires params.edgeWeights == EdgeWeights::Unit and params.vmass == VertexMass::Unit
+MRMESH_API void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params );
 
 struct SpacingSettings
 {

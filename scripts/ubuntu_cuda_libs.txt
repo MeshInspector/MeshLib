@@ -1,0 +1,7 @@
+libcudadevrt.a
+libcudart.so*
+libcudart_static.a
+libcufilt.a
+libculibos.a
+libnvptxcompiler_static.a
+stubs/libcuda.so

@@ -11,6 +11,11 @@ namespace MR
 class HistoryAction
 {
 public:
+    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    HistoryAction() = default;
+    HistoryAction( const HistoryAction & ) = default;
+    HistoryAction( HistoryAction && ) noexcept = default;
+
     virtual ~HistoryAction() = default;
 
     virtual std::string name() const = 0;

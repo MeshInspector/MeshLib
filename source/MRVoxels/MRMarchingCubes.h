@@ -32,6 +32,11 @@ struct MarchingCubesParams
     /// optional output map FaceId->VoxelId
     Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr };
 
+    /// optional output transform from integer grid locations to mesh reference frame:
+    /// the node with integer coordinates (i,j,k) is located in (*outGridToMeshXf)( Vector3f( i, j, k ) );
+    /// every vertex of output mesh is located on a grid edge
+    AffineXf3f* outGridToMeshXf{ nullptr };
+
     /// function to calculate position of result mesh points
     /// if the function isn't set, a linear positioner will be used
     /// note: this function is called in parallel from different threads
@@ -55,6 +60,9 @@ struct MarchingCubesParams
 
     /// this optional function is called when volume is no longer needed to deallocate it and reduce peak memory consumption
     std::function<void()> freeVolume;
+
+    // To allow passing Python lambdas into `positioner`.
+    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
 // makes Mesh from SimpleVolume with given settings using Marching Cubes algorithm

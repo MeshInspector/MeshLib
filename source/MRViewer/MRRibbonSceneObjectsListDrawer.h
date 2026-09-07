@@ -12,10 +12,10 @@ class RibbonMenu;
 class MRVIEWER_CLASS RibbonSceneObjectsListDrawer : public SceneObjectsListDrawer
 {
 public:
-    MRVIEWER_API virtual void draw( float height, float scaling ) override;
+    MRVIEWER_API virtual void draw( float height ) override;
 
     MRVIEWER_API void initRibbonMenu( RibbonMenu* ribbonMenu );
-    
+
     /// set closing scene context menu on any change
     void setCloseContextOnChange( bool deselect ) { closeContextOnChange_ = deselect; }
     /// get flag closing scene context menu on any change
@@ -41,7 +41,7 @@ private:
     void drawEyeButton_( Object& object, const std::string& uniqueStr, bool frameHovered );
 
     void drawHierarhyLine_( const Vector2f& startScreenPos, int depth, bool skipped );
-    
+
     struct LastDepthInfo
     {
         float screenPosY{ 0.0f };

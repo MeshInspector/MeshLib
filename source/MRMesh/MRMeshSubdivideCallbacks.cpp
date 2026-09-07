@@ -1,6 +1,7 @@
 #include "MRMeshSubdivideCallbacks.h"
 
 #include "MRMesh/MRColor.h"
+#include "MRMesh/MRVector2.h"
 
 namespace MR
 {
@@ -24,7 +25,7 @@ OnEdgeSplit meshOnEdgeSplitAttribute( const Mesh& mesh, const MeshAttributesToUp
         uvFunc_ = std::move( uvFunc ),
         colorFunc_ = std::move( colorFunc ),
         texturePerFaceFunc_ = std::move( texturePerFaceFunc ),
-        faceColorsFunc_ = std::move( faceColorsFunc )] 
+        faceColorsFunc_ = std::move( faceColorsFunc )]
         (EdgeId e1, EdgeId e)
     {
         if ( params.uvCoords )

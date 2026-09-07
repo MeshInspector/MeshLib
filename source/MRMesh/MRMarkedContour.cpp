@@ -1,40 +1,22 @@
 #include "MRMarkedContour.h"
 #include "MRTimer.h"
-#include "MRGTest.h"
 
-#pragma warning(push)
-#pragma warning(disable: 4068) // unknown pragmas
-#pragma warning(disable: 4127) // conditional expression is constant
-#pragma warning(disable: 4464) // relative include path contains '..'
-#pragma warning(disable: 5054) // operator '|': deprecated between enumerations of different types
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-anon-enum-enum-conversion"
-#pragma clang diagnostic ignored "-Wunknown-warning-option" // for next one
-#pragma clang diagnostic ignored "-Wunused-but-set-variable" // for newer clang
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#include <Eigen/SparseCore>
+#include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
-#pragma clang diagnostic pop
-#pragma warning(pop)
 
 namespace MR
 {
 
-namespace
+bool MarkedContour3f::firstLastMarked() const
 {
-
-[[maybe_unused]] bool firstLastMarked( const MarkedContour3f & in )
-{
-    if ( !in.marks.test( 0 ) )
+    if ( !marks.test( 0 ) )
         return false;
 
-    if ( in.marks.find_last() + 1 != in.contour.size() )
+    if ( marks.find_last() + 1 != contour.size() )
         return false;
 
     return true;
 }
-
-} // anonymous namespace
 
 MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f * normals )
 {
@@ -44,7 +26,7 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
     if ( in.contour.empty() )
         return res;
 
-    assert( firstLastMarked( in ) );
+    assert( in.firstLastMarked() );
     res.marks.autoResizeSet( res.contour.size() );
     res.contour.push_back( in.contour.front() );
     Contour3f resNormals;
@@ -98,7 +80,7 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
             resNormals.push_back( ( *normals )[i] );
     }
 
-    assert( firstLastMarked( res ) );
+    assert( res.firstLastMarked() );
     assert( in.marks.count() == res.marks.count() );
     if ( normals )
         *normals = std::move( resNormals );
@@ -116,7 +98,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability, const Conto
     assert( markStability > 0 );
     if ( mc.contour.empty() )
         return mc;
-    assert( firstLastMarked( mc ) );
+    assert( mc.firstLastMarked() );
     const bool closed = isClosed( mc.contour );
 
     const auto sz = mc.contour.size();
@@ -206,7 +188,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
     assert( markStability > 0 );
     if ( mc.contour.empty() )
         return mc;
-    assert( firstLastMarked( mc ) );
+    assert( mc.firstLastMarked() );
     const bool closed = isClosed( mc.contour );
 
     const auto sz = mc.contour.size();
@@ -357,36 +339,6 @@ MarkedContour3f makeSpline( const Contour3f & controlPoints, const SplineSetting
             settings.normalsAffectShape ? settings.normals : nullptr );
     }
     return res;
-}
-
-TEST(MRMesh, MarkedContour)
-{
-    auto mc = markedContour( Contour3f{ Vector3f{ 0, 0, 0 }, Vector3f{ 1, 0, 0 } } );
-    auto rc = resample( mc, 2 );
-    EXPECT_EQ( mc.contour, rc.contour );
-    EXPECT_EQ( mc.marks, rc.marks );
-
-    rc = resample( mc, 0.4f );
-    EXPECT_EQ( rc.contour.size(), 4 );
-
-    auto spline = makeSpline( rc );
-    EXPECT_EQ( spline.contour.size(), 4 );
-}
-
-TEST(MRMesh, MakeClosedSpline)
-{
-    Contour3f c{
-        Vector3f{ 0, 0, 0 },
-        Vector3f{ 1, 0, 0 },
-        Vector3f{ 1, 1, 0 },
-        Vector3f{ 0, 1, 0 },
-        Vector3f{ 0, 0, 0 }
-    };
-    SplineSettings s{ .samplingStep = 0.4f };
-    auto spline = makeSpline( c, s );
-    EXPECT_EQ( spline.contour.size(), 13 );
-    EXPECT_EQ( spline.contour.front(), spline.contour.back() );
-    EXPECT_EQ( spline.marks.count(), 5 );
 }
 
 } //namespace MR

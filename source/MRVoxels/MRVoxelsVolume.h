@@ -1,12 +1,15 @@
 #pragma once
 
 #include "MRVoxelsFwd.h"
+#include "MRFloatGrid.h"
 
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBox.h"
 #include "MRMesh/MRHeapBytes.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRVector.h"
+#include "MRMesh/MRBitSet.h"
+
 #include <limits>
 
 namespace MR

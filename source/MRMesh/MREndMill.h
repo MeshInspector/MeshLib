@@ -18,13 +18,20 @@ struct EndMillCutter
         Flat,
         /// ball end mill
         Ball,
-        // TODO: bull nose
-        // TODO: chamfer
+        /// bull nose end mill
+        BullNose,
+        /// chamfer end mill
+        Chamfer,
+
         Count
     };
     Type type = Type::Flat;
-    // TODO: corner radius
-    // TODO: cutting angle
+    /// (bull nose) corner radius
+    float cornerRadius = 0.f;
+    /// (chamfer) cutting angle
+    float cuttingAngle = 0.f;
+    /// (chamfer) end diameter
+    float endDiameter = 0.f;
 };
 
 /// end mill tool specifications
@@ -36,6 +43,9 @@ struct EndMillTool
     float diameter = 0.1f;
     /// cutter
     EndMillCutter cutter;
+
+    /// compute the minimal cut length based on the cutter parameters
+    [[nodiscard]] MRMESH_API float getMinimalCutLength() const;
 
     /// create a tool mesh
     [[nodiscard]] MRMESH_API Mesh toMesh( int horizontalResolution = 32, int verticalResolution = 32 ) const;

@@ -2,6 +2,7 @@
 #include "MRMeshSave.h"
 #include "MRStringConvert.h"
 #include "MRColor.h"
+#include <fstream>
 
 namespace MR
 {

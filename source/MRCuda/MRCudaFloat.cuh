@@ -64,6 +64,11 @@ __device__ inline float dot( const float2& a, const float2& b )
     return a.x * b.x + a.y * b.y;
 }
 
+__device__ inline float cross( const float2& a, const float2& b )
+{
+    return a.x * b.y - a.y * b.x;
+}
+
 __device__ inline float3 operator+( const float3& a, const float3& b )
 {
     return { a.x + b.x, a.y + b.y, a.z + b.z };

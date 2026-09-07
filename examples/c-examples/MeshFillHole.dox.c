@@ -1,96 +1,61 @@
-#include <MRMeshC/MRBitSet.h>
-#include <MRMeshC/MRMesh.h>
-#include <MRMeshC/MRMeshFillHole.h>
-#include <MRMeshC/MRMeshLoad.h>
-#include <MRMeshC/MRMeshSave.h>
-#include <MRMeshC/MRMeshTopology.h>
-#include <MRMeshC/MRString.h>
+#include <MRCMesh/MRMesh.h>
+#include <MRCMesh/MRMeshFillHole.h>
+#include <MRCMesh/MRMeshLoad.h>
+#include <MRCMesh/MRMeshMetrics.h>
+#include <MRCMesh/MRMeshSave.h>
+#include <MRCMesh/MRMeshTopology.h>
+#include <MRCMisc/expected_MR_Mesh_std_string.h>
+#include <MRCMisc/expected_void_std_string.h>
+#include <MRCMisc/std_string.h>
+#include <MRCMisc/std_vector_MR_EdgeId.h>
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MIN_HOLE_AREA 100.f
-
-int main( int argc, char* argv[] )
+int main( void )
 {
     int rc = EXIT_FAILURE;
-    if ( argc != 2 && argc != 3 )
+
+    // Load mesh
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
+    if ( !mesh )
     {
-        fprintf( stderr, "Usage: %s INPUT [OUTPUT]", argv[0] );
-        goto out;
+        fprintf( stderr, "Failed to load mesh: %s\n", MR_std_string_data( MR_expected_MR_Mesh_std_string_error( meshEx ) ) );
+        goto fail_mesh_loading;
     }
 
-    const char* input = argv[1];
-    const char* output = ( argc == 2 ) ? argv[1] : argv[2];
+    // Find single edge for each hole in mesh
+    MR_std_vector_MR_EdgeId* holeEdges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
 
-    // error messages will be stored here
-    MRString* errorString = NULL;
+    // Setup filling parameters
+    MR_FillHoleParams* params = MR_FillHoleParams_DefaultConstruct();
+    MR_FillHoleMetric* metric = MR_getUniversalMetric( mesh );
+    MR_FillHoleParams_Set_metric( params, MR_PassBy_Move, metric );
+    MR_FillHoleMetric_Destroy( metric );
 
-    MRMesh* mesh = mrMeshLoadFromAnySupportedFormat( input, &errorString );
-    if ( errorString )
+    // Alternatively, MR_fillHoles( mesh, holeEdges, params ) fills all holes at once.
+    for ( size_t i = 0; i < MR_std_vector_MR_EdgeId_size( holeEdges ); ++i )
     {
-        fprintf( stderr, "Failed to load mesh: %s", mrStringData( errorString ) );
-        mrStringFree( errorString );
-        goto out;
+        // Fill hole represented by `e`
+        MR_EdgeId e = *MR_std_vector_MR_EdgeId_at( holeEdges, i );
+        MR_fillHole( mesh, e, params );
     }
+    MR_FillHoleParams_Destroy( params );
 
-    // get list of existing holes; each hole is represented by a single edge lying on the hole's border
-    MREdgePath* holes = mrMeshFindHoleRepresentiveEdges( mesh );
-    if ( holes->size == 0 )
+    // Save result
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "filledMesh.stl", NULL, NULL);
+    if ( MR_expected_void_std_string_error( saveEx ) )
     {
-        printf( "Mesh doesn't have any holes" );
-        goto out_holes;
-    }
-
-    // you can set various parameters for the fill hole process; see the documentation for more info
-    MRFillHoleParams params = mrFillHoleParamsNew();
-    // think of a metric as a method to fill holes in a preferred way
-    // you can define one or choose from one of predefined metrics from MRMeshMetrics.h
-    MRFillHoleMetric* metric = mrGetUniversalMetric( mesh );
-    params.metric = metric;
-    // optionally get the bitset of created faces
-    MRFaceBitSet* newFaces = mrFaceBitSetNew( 0, false );
-    params.outNewFaces = newFaces;
-
-    // you can either fill all holes at once or one by one
-    // in the second case don't forget to check the output fields of params (e.g. outNewFaces) after every iteration
-    size_t newFaceCount = 0;
-#define FILL_ALL_HOLES 1
-#if FILL_ALL_HOLES
-    mrFillHoles( mesh, holes->data, holes->size, &params );
-    newFaceCount = mrBitSetCount( (const MRBitSet*)newFaces );
-#else
-    for ( int i = 0; i < mrEdgePathSize( holes ); i++ )
-    {
-        MREdgeId e = mrEdgePathData( holes )[i];
-        MRVector3f holeDirArea = mrMeshHoleDirArea( mesh, e );
-        if ( mrVector3Length( &holeDirArea ) >= MIN_HOLE_AREA )
-        {
-            mrFillHole( mesh, e, &params );
-            newFaceCount += mrBitSetCount( newFaces );
-        }
-    }
-#endif
-
-    printf( "Added new %zu faces", newFaceCount );
-    MRSaveSettings saveSettings = mrSaveSettingsNew();
-    mrMeshSaveToAnySupportedFormat( mesh, output, &saveSettings, &errorString);
-    if ( errorString )
-    {
-        fprintf( stderr, "Failed to save mesh: %s", mrStringData( errorString ) );
-        mrStringFree( errorString );
-        goto out_newFaces;
+        fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
+        goto fail_save;
     }
 
     rc = EXIT_SUCCESS;
-out_newFaces:
-    mrFaceBitSetFree( newFaces );
-out_metric:
-    mrFillHoleMetricFree( metric );
-out_holes:
-    mrEdgePathFree( holes );
-out_mesh:
-    mrMeshFree( mesh );
-out:
+fail_save:
+    MR_expected_void_std_string_Destroy( saveEx );
+    MR_std_vector_MR_EdgeId_Destroy( holeEdges );
+fail_mesh_loading:
+    MR_expected_MR_Mesh_std_string_Destroy( meshEx );
     return rc;
 }

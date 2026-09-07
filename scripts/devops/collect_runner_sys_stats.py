@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import platform
 import re
+import shutil
 import subprocess
 
 def get_ram_amount():
@@ -14,13 +15,133 @@ def get_ram_amount():
     elif system == "Linux":
         return os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES')
     elif system == "Windows":
-        output = subprocess.check_output(['wmic', 'ComputerSystem', 'get', 'TotalPhysicalMemory'], text=True)
-        return int(re.search(r'\d+', output).group())
+        ps_command = "(Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory"
+        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
+        return int(output.strip())
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
+# decoding as in GetCpuId (source/MRMesh/MRSystem.cpp), but names must match
+# lscpu (util-linux sys-utils/lscpu-arm.c) so old and new stats rows agree
+ARM_CPU_NAMES = {
+    (0x41, 0xd03): "Cortex-A53",     (0x41, 0xd05): "Cortex-A55",
+    (0x41, 0xd07): "Cortex-A57",     (0x41, 0xd08): "Cortex-A72",
+    (0x41, 0xd09): "Cortex-A73",     (0x41, 0xd0a): "Cortex-A75",
+    (0x41, 0xd0b): "Cortex-A76",     (0x41, 0xd0c): "Neoverse-N1",
+    (0x41, 0xd0d): "Cortex-A77",     (0x41, 0xd40): "Neoverse-V1",
+    (0x41, 0xd41): "Cortex-A78",     (0x41, 0xd44): "Cortex-X1",
+    (0x41, 0xd49): "Neoverse-N2",    (0x41, 0xd4f): "Neoverse-V2",
+    (0x41, 0xd84): "Neoverse-V3",    (0x41, 0xd8e): "Neoverse-N3",
+    (0xc0, 0xac3): "Ampere-1",       (0xc0, 0xac4): "Ampere-1a",
+    (0x43, 0x0af): "ThunderX2-99xx", (0x46, 0x001): "A64FX",
+    (0x51, 0xc01): "Saphira",        (0x6d, 0xd49): "Azure-Cobalt-100",
+}
+
+ARM_VENDORS = {
+    0x41: "ARM",     0x42: "Broadcom",
+    0x43: "Cavium",  0x48: "HiSilicon",
+    0x4e: "NVIDIA",  0x51: "Qualcomm",
+    0x53: "Samsung", 0x56: "Marvell",
+    0x6d: "Microsoft", 0x70: "Phytium",
+    0xc0: "Ampere",
+}
+
+# the real name of a cloud CPU lives in SMBIOS type 4, which is root-only, so brand
+# the known ones by DMI vendor + MIDR pair: Cobalt and Graviton are stock ARM cores
+# (bare-metal Cobalt uses Microsoft's own implementer 0x6d, Azure VMs show 0x41)
+BRANDED_ARM_CPUS = {
+    ("Microsoft Corporation", 0x41, 0xd49): "Cobalt 100",
+    ("Microsoft Corporation", 0x41, 0xd84): "Cobalt 200",
+    ("Microsoft Corporation", 0x6d, 0xd49): "Cobalt 100",
+    ("Microsoft Corporation", 0x6d, 0xd84): "Cobalt 200",
+    ("Amazon EC2",            0x41, 0xd08): "AWS Graviton",
+    ("Amazon EC2",            0x41, 0xd0c): "AWS Graviton2",
+    ("Amazon EC2",            0x41, 0xd40): "AWS Graviton3",
+    ("Amazon EC2",            0x41, 0xd4f): "AWS Graviton4",
+    ("Amazon EC2",            0x41, 0xd84): "AWS Graviton5",
+}
+
+def read_arm_midr():
+    implementer, part = -1, -1
+    with open('/proc/cpuinfo') as f:
+        for line in f:
+            if line.startswith('CPU implementer'):
+                implementer = int(line.split(':', 1)[1], 0)
+            elif line.startswith('CPU part'):
+                part = int(line.split(':', 1)[1], 0)
+            if implementer >= 0 and part >= 0:
+                break
+    return implementer, part
+
+def get_dmi_sys_vendor():
+    try:
+        with open('/sys/class/dmi/id/sys_vendor') as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+def get_branded_arm_cpu_model():
+    return BRANDED_ARM_CPUS.get((get_dmi_sys_vendor(), *read_arm_midr()))
+
+def get_arm_cpu_model():
+    implementer, part = read_arm_midr()
+
+    name = ARM_CPU_NAMES.get((implementer, part))
+    if name:
+        return name
+
+    vendor = ARM_VENDORS.get(implementer)
+    if vendor and part >= 0:
+        return f"{vendor} ARM CPU (part {part:#x})"
+
+    if implementer != -1 or part != -1:
+        return f"ARM CPU: {implementer:#x}, {part:#x}"
+
+    # single-board computers (Raspberry Pi etc.) expose a device-tree model name
+    try:
+        with open('/proc/device-tree/model') as f:
+            name = f.read().strip('\0').strip()
+            if name:
+                return name
+    except OSError:
+        pass
+
+    return "ARM CPU"
+
+def get_cpu_model():
+    system = platform.system()
+    if system == "Darwin":
+        output = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
+        return output.strip()
+    elif system == "Linux":
+        if platform.machine() in ('aarch64', 'arm64'):
+            # must win over lscpu, which reports only the licensed core name
+            branded = get_branded_arm_cpu_model()
+            if branded:
+                return branded
+        output = subprocess.check_output(['lscpu'], text=True)
+        for line in output.splitlines():
+            if line.startswith('Model name:'):
+                model = line.split(':', 1)[1].strip()
+                if model and model != '-':
+                    return model
+        if platform.machine() in ('aarch64', 'arm64'):
+            return get_arm_cpu_model()
+        return None
+    elif system == "Windows":
+        ps_command = "(Get-CimInstance Win32_Processor).Name"
+        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
+        return output.strip().splitlines()[0]
+    else:
+        raise RuntimeError(f"Unknown system: {system}")
+
+def get_free_disk_space():
+    return shutil.disk_usage(os.environ.get('GITHUB_WORKSPACE', os.getcwd())).free
+
 def get_compiler_id(compiler_path):
     # work-around for Windows runners
+    if compiler_path.startswith("msvc-"):
+        return compiler_path
     if compiler_path.startswith("windows-"):
         return compiler_path.replace("windows-", "msvc-")
 
@@ -64,13 +185,18 @@ if __name__ == "__main__":
 
         aws_instance_type = os.environ.get('AWS_INSTANCE_TYPE', '').lower()
 
+        cpu_model = get_cpu_model()
+        free_disk = math.floor(get_free_disk_space() / 1024 / 1024)
+
         results = {
             'target_os': os.environ.get('TARGET_OS'),
             'target_arch': os.environ.get('TARGET_ARCH'),
             'compiler': compiler_id,
             'build_config': os.environ.get('BUILD_CONFIG').lower(),
             'cpu_count': cpu_count,
+            'cpu_model': cpu_model,
             'ram_mb': ram_amount,
+            'free_disk_mb': free_disk,
             'build_system': build_system,
             'aws_instance_type': aws_instance_type or None,
         }

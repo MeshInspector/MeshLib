@@ -1,17 +1,15 @@
 name: Python regression tests
 
 inputs:
-  autotest_data_s3_url:
-    required: false
-    type: string
-    default: "s3://data-autotest/test_data_2025-05-13"
   build_config:
     description: "Build config (Release, Debug)"
     required: true
     type: string
-  mrbind:
-    required: true
-    type: boolean
+  build_arch:
+    description: "Windows only: arch segment of the output dir (x64, arm64)"
+    required: false
+    type: string
+    default: x64
   pytest_args:
     description: "Additional pytest arguments"
     required: false
@@ -24,11 +22,6 @@ inputs:
     description: "S3 path for test artifacts. Make sure it is unique for different jobs"
     required: true
     type: string
-  ubuntu20_arm_workaround:
-    description: "Disable specific tests incompatible with Ubuntu 20.04 ARM configuration"
-    required: false
-    type: boolean
-    default: false
   upload_test_artifacts:
     required: true
     type: boolean
@@ -41,13 +34,10 @@ runs:
       shell: bash
       run: |
         echo << EOF
-        autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}
         build_config: ${{ inputs.build_config }}
-        mrbind: ${{ inputs.mrbind }}
         pytest_args: ${{ inputs.pytest_args }}
         smoke: ${{ inputs.smoke }}
         test_artifacts_path: ${{ inputs.test_artifacts_path }}
-        ubuntu20_arm_workaround: ${{ inputs.ubuntu20_arm_workaround }}
         upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
         EOF
 
@@ -55,61 +45,50 @@ runs:
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
       run: |
-        Write-Output "autotest_data_s3_url: ${{ inputs.autotest_data_s3_url }}"
         Write-Output "build_config: ${{ inputs.build_config }}"
-        Write-Output "mrbind: ${{ inputs.mrbind }}"
         Write-Output "pytest_args: ${{ inputs.pytest_args }}"
         Write-Output "smoke: ${{ inputs.smoke }}"
         Write-Output "test_artifacts_path: ${{ inputs.test_artifacts_path }}"
-        Write-Output "ubuntu20_arm_workaround: ${{ inputs.ubuntu20_arm_workaround }}"
         Write-Output "upload_test_artifacts: ${{ inputs.upload_test_artifacts }}"
 
-    # cache management: https://github.com/MeshInspector/MeshLib/actions/caches
-    - name: Cache autotest data from S3 Tests
-      uses: actions/cache@v4
-      with:
-        path: test_data
-        key: ${{ inputs.autotest_data_s3_url }}
-
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
-      with:
-        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-        aws-region: us-east-1
-
-    - name: Copy autotest data from S3 Tests
-      if: ${{ runner.os != 'Windows' }}
+    # test_data is declared with `update = none`, so fetch it explicitly with --checkout.
+    - name: Fetch test data submodule
       shell: bash
-      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only --quiet
-
-    - name: Copy autotest data from S3 Tests (Windows)
-      if: ${{ runner.os == 'Windows' }}
-      shell: powershell
-      run: aws s3 sync ${{ inputs.autotest_data_s3_url }} test_data --delete --no-sign-request --size-only --quiet
+      run: |
+        # Linux jobs run in containers and need safe.directory set first.
+        if [ "$RUNNER_OS" = "Linux" ]; then
+          export HOME="${RUNNER_TEMP}"
+          git config --global --add safe.directory '*'
+        fi
+        bash scripts/retry.sh --timeout 300 -- git submodule update --init --checkout --depth 1 test_data
 
     - name: Python Regression Tests
       if: ${{ runner.os != 'Windows' }}
       shell: bash
       working-directory: build/${{ inputs.build_config }}/bin
-      env:
-        MR_REGRESSION_TESTS_UBUNTUARM2004_MRBIND_ABI_ISSUES: ${{ fromJSON( inputs.ubuntu20_arm_workaround ) && '1' || '0' }}
       run: >
         python3 ../../../scripts/run_python_test_script.py
         -d '../test_regression'
         -s ${{ inputs.smoke }}
-        -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
         -a='${{ inputs.pytest_args }}'
-        
+
     - name: Python Regression Tests (Windows)
       if: ${{ runner.os == 'Windows' }}
       shell: powershell
-      working-directory: source\x64\${{ inputs.build_config }}
+      working-directory: source\${{ inputs.build_arch }}\${{ inputs.build_config }}
       run: >
         py -3 ..\..\..\scripts\run_python_test_script.py
         -d '..\test_regression'
         -s ${{ inputs.smoke }}
-        -bv ${{ fromJSON( inputs.mrbind ) && '3' || '2' }}
         -a='${{ inputs.pytest_args }}'
+
+    - name: Configure AWS Credentials
+      if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}
+      uses: aws-actions/configure-aws-credentials@ec61189d14ec14c8efccab744f656cffd0e33f37 # v6.1.0
+      with:
+        role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+        aws-region: us-east-1
+        retry-max-attempts: 5
 
     - name: Copy test artifacts to S3
       if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() && runner.os != 'Windows' }}

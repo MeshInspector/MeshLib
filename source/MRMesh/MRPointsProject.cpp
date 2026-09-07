@@ -23,21 +23,15 @@ struct SubTask
 } //anonymous namespace
 
 
-PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloud& pc,
-    float upDistLimitSq /*= FLT_MAX*/,
-    const AffineXf3f* xf /*= nullptr*/,
-    float loDistLimitSq /*= 0*/,
-    VertPredicate skipCb /*= {}*/ )
+PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const PointCloudPart& pcp,
+    float upDistLimitSq, const AffineXf3f* xf, float loDistLimitSq, VertPredicate skipCb )
 {
-    const auto& tree = pc.getAABBTree();
-    return findProjectionOnPoints( pt, tree, upDistLimitSq, xf, loDistLimitSq, skipCb );
+    const auto& tree = pcp.cloud.getAABBTree();
+    return findProjectionOnPoints( pt, tree, upDistLimitSq, xf, loDistLimitSq, pcp.region, skipCb );
 }
 
 PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTreePoints& tree,
-    float upDistLimitSq /*= FLT_MAX*/,
-    const AffineXf3f* xf /*= nullptr*/,
-    float loDistLimitSq /*= 0*/,
-    VertPredicate skipCb /*= {}*/ )
+    float upDistLimitSq, const AffineXf3f* xf, float loDistLimitSq, const VertBitSet* region, VertPredicate skipCb )
 {
     const auto& orderedPoints = tree.orderedPoints();
 
@@ -77,6 +71,8 @@ PointsProjectionResult findProjectionOnPoints( const Vector3f& pt, const AABBTre
             bool lowBreak = false;
             for ( int i = first; i < last && !lowBreak; ++i )
             {
+                if ( region && !region->test( orderedPoints[i].id ) )
+                    continue;
                 if ( skipCb && skipCb( orderedPoints[i].id ) )
                     continue;
                 auto proj = xf ? ( *xf )( orderedPoints[i].coord ) : orderedPoints[i].coord;

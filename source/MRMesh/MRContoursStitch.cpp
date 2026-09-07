@@ -1,9 +1,6 @@
 #include "MRContoursStitch.h"
 #include "MRMesh.h"
 #include "MREdgePaths.h"
-#include "MRCube.h"
-#include "MRRingIterator.h"
-#include "MRGTest.h"
 
 namespace MR
 {
@@ -109,24 +106,6 @@ EdgeLoop cutAlongEdgeLoop( Mesh& mesh, const EdgeLoop& c0 )
         mesh.points.autoResizeSet( mesh.topology.org( res[i] ), mesh.orgPnt( c0[i] ) );
     }
     return res;
-}
-
-TEST(MRMesh, cutAlongEdgeLoop)
-{
-    Mesh mesh = makeCube();
-    auto & topology = mesh.topology;
-    const auto ueCntA = topology.computeNotLoneUndirectedEdges();
-
-    EdgeLoop c0;
-    for ( auto e : leftRing( mesh.topology, 0_f ) )
-        c0.push_back( e );
-    auto c1 = cutAlongEdgeLoop( mesh.topology, c0 );
-    const auto ueCntB = topology.computeNotLoneUndirectedEdges();
-    ASSERT_EQ( ueCntB, ueCntA + 3 );
-
-    stitchContours( mesh.topology, c0, c1 );
-    const auto ueCntC = topology.computeNotLoneUndirectedEdges();
-    ASSERT_EQ( ueCntC, ueCntA );
 }
 
 } //namespace MR

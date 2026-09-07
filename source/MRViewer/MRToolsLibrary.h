@@ -21,7 +21,7 @@ public:
 
     // draw dialog for creating end mill tools
     // must be called outside any BeginCustomStatePlugin/EndCustomStatePlugin blocks
-    MRVIEWER_API bool drawCreateToolDialog( float menuScaling );
+    MRVIEWER_API bool drawCreateToolDialog();
 
     // get selected tool as ObjectMesh
     [[nodiscard]] MRVIEWER_API const std::shared_ptr<ObjectMesh>& getToolObject();
@@ -64,6 +64,9 @@ private:
     int createToolType_ = 0;
     float createToolLength_ = 8.f;
     float createToolDiameter_ = 2.f;
+    float createToolCornerRadius_ = 0.5f;
+    float createToolCuttingAngle_ = 90.f;
+    float createToolEndDiameter_ = 0.f;
 };
 
 }

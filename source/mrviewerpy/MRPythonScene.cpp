@@ -15,7 +15,6 @@
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
-#include "MRVoxels/MRVDBFloatGrid.h"
 #endif
 
 // NOTE: see the disclaimer in the header file

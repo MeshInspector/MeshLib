@@ -1,0 +1,40 @@
+name: 'Set up CUDA'
+description: 'Export the CUDA toolkit environment variables (CUDA_PATH / CUDA_PATH_Vx_y / PATH) for an already-installed toolkit and, optionally, copy CUDA''s MSBuild integration files into Visual Studio.'
+inputs:
+  cuda-major:
+    description: 'CUDA major version (e.g. 12).'
+    required: true
+  cuda-minor:
+    description: 'CUDA minor version (e.g. 0).'
+    required: true
+  install-vs-integration:
+    description: >
+      Copy CUDA''s MSBuild BuildCustomizations into Visual Studio. Only needed
+      for MSBuild-based builds (CMake builds invoke nvcc directly). Requires
+      VC_PATH to be set, e.g. by the locate-visual-studio action.
+    required: false
+    default: 'true'
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup CUDA
+      shell: pwsh
+      run: |
+        $cudaRoot = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-major }}.${{ inputs.cuda-minor }}"
+        "CUDA_PATH=$cudaRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+        "CUDA_PATH_V${{ inputs.cuda-major }}_${{ inputs.cuda-minor }}=$cudaRoot" | Out-File -FilePath $env:GITHUB_ENV -Append
+        "CUDA_PATH_VX_Y=CUDA_PATH_V${{ inputs.cuda-major }}_${{ inputs.cuda-minor }}" | Out-File -FilePath $env:GITHUB_ENV -Append
+        "$cudaRoot\bin" | Out-File -FilePath $env:GITHUB_PATH -Append
+
+    - name: Install Visual Studio Integration
+      # CUDA's MSBuild integration files are only consumed by the MSBuild
+      # variant (source/MRCuda/MRCuda.vcxproj imports
+      # `$(VCTargetsPath)\BuildCustomizations\CUDA $(MRCudaVersion).props`).
+      # The CMake variants use `project(MRCuda CXX CUDA)` and call nvcc
+      # directly, so this step is a no-op for them.
+      if: ${{ inputs.install-vs-integration == 'true' }}
+      shell: pwsh
+      run: |
+        $x = (dir $env:CUDA_PATH -dir -recurse -depth 2).where({$_.name -eq 'visual_studio_integration'}).fullname
+        $y = (dir $x -dir -recurse).where({$_.name -eq 'MSBuildExtensions'}).fullname + '\*'
+        (gi "$env:VC_PATH\MSBuild\Microsoft\VC\*\BuildCustomizations").fullname.foreach({cp $y $_})

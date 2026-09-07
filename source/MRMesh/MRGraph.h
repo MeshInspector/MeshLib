@@ -48,6 +48,10 @@ public:
     /// constructs the graph from all valid vertices and edges
     MRMESH_API void construct( NeighboursPerVertex neighboursPerVertex, EndsPerEdge endsPerEdge );
 
+    /// constructs the graph from given data that can contain invalid vertices and edges
+    MRMESH_API void construct( NeighboursPerVertex neighboursPerVertex, VertBitSet validVerts,
+        EndsPerEdge endsPerEdge, EdgeBitSet validEdges );
+
     /// returns the number of vertex records, including invalid ones
     [[nodiscard]] size_t vertSize() const { return neighboursPerVertex_.size(); }
 

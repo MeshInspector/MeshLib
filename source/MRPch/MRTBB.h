@@ -2,12 +2,8 @@
 
 // this is to include all important for us Intel Threading Building Blocks (TBB) parts in a precompiled header and suppress warnings there
 
-#ifdef __EMSCRIPTEN__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-volatile"
-#pragma clang diagnostic ignored "-Wpedantic"
-#pragma clang diagnostic ignored "-W#warnings"
-#endif
+// otherwise precompiled header in CMake+MSVC cannot be used in TBB-free projects
+#define __TBB_NO_IMPLICIT_LINKAGE 1
 
 #define TBB_SUPPRESS_DEPRECATED_MESSAGES 1
 // disable constraints for OpenVDB 10 + TBB 2021.5 compatibility
@@ -24,6 +20,9 @@
 #if _MSC_VER >= 1937 // Visual Studio 2022 version 17.7
 #pragma warning(disable: 5267) //definition of implicit copy constructor is deprecated because it has a user-provided destructor
 #endif
+#if _MSC_VER >= 1950 // Visual Studio 2026 version 18.0
+#pragma warning(disable: 5259) //explicit specialization requires 'template <>' (VS2026 v18.0.0)
+#endif
 #include <tbb/enumerable_thread_specific.h>
 #include <tbb/parallel_for.h>
 #include <tbb/parallel_reduce.h>
@@ -33,7 +32,3 @@
 #include <tbb/global_control.h>
 #include <tbb/task_scheduler_observer.h>
 #pragma warning(pop)
-
-#ifdef __EMSCRIPTEN__
-#pragma clang diagnostic pop
-#endif

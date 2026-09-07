@@ -13,27 +13,6 @@ namespace MR
 namespace PointCloudComponents
 {
 
-/// returns
-/// 1. the mapping: VertId -> Root ID in [0, 1, 2, ...)
-/// 2. the total number of roots
-static std::pair<Vert2RegionMap, int> getUniqueRootIds( const VertMap& allRoots, const VertBitSet& region )
-{
-    MR_TIMER;
-    Vert2RegionMap uniqueRootsMap( allRoots.size() );
-    int k = 0;
-    for ( auto v : region )
-    {
-        auto& uniqIndex = uniqueRootsMap[allRoots[v]];
-        if ( uniqIndex < 0 )
-        {
-            uniqIndex = RegionId( k );
-            ++k;
-        }
-        uniqueRootsMap[v] = uniqIndex;
-    }
-    return { std::move( uniqueRootsMap ), k };
-}
-
 Expected<VertBitSet> getLargeComponentsUnion( const PointCloud& pointCloud, float maxDist, int minSize, ProgressCallback pc /*= {}*/ )
 {
     MR_TIMER;

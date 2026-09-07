@@ -11,12 +11,12 @@
 
 #include <type_traits>
 
+namespace std
+{
+
 /// \defgroup TupleBindingsGroup Tuple Bindings
 /// \ingroup MathGroup
 /// \{
-
-namespace std
-{
 
 template<size_t I, typename T>
 struct tuple_element<I, MR::Vector2<T>> { using type = typename MR::Vector2<T>::ValueType; };
@@ -74,10 +74,16 @@ struct tuple_size<MR::Id<T>> : integral_constant<size_t, 1> {};
 
 template <>
 struct tuple_size<MR::Color> : integral_constant<size_t, 4> {};
+
+/// \}
+
 }
 
 namespace MR
 {
+
+/// \ingroup TupleBindingsGroup
+/// \{
 
 template<size_t I, typename T>
 constexpr const T& get( const Vector2<T>& v ) noexcept { return v[int( I )]; }
@@ -161,7 +167,6 @@ constexpr uint8_t& get( Color& c ) noexcept
     return c[int( I )];
 }
 
+/// \}
 
 } // namespace MR
-
-/// \}

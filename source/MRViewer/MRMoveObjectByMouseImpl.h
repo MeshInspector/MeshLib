@@ -27,7 +27,7 @@ public:
 
     /// Drawing callback to draw lines and tooltips
     /// Should be called from `drawDialog`
-    MRVIEWER_API void onDrawDialog( float menuScaling ) const;
+    MRVIEWER_API void onDrawDialog() const;
 
     /// These functions should be called from corresponding mouse handlers
     /// Or mouse drag handlers, making it work together with mouseClick signal
@@ -66,7 +66,7 @@ protected:
     };
 
     /// if this value is > 0.0f, then Rotation and Scale will be blocked in this zone around xf center
-    /// (this value IS automatically modified by menuScaling)
+    /// (this value IS automatically modified by `UI::scale()`)
     float deadZonePixelRadius_{ 20.0f };
 
     /// This function is called from `onMouseMove` to update current active objects
@@ -84,6 +84,10 @@ protected:
 
     /// `centerPoint` - a point that will be used as center of rotation/scaling in world space
     MRVIEWER_API virtual void setCenterPoint_( const std::vector<std::shared_ptr<Object>>& objects, Vector3f& centerPoint ) const;
+
+    /// override this function to customize plane in which all movement will happen
+    /// default: screen plane moved to `xfCenterPoint`
+    MRVIEWER_API virtual Plane3f calcControlPlane_( const Viewport& vp, const Vector3f& viewportCenterPoint, const Vector3f& xfCenterPoint ) const;
 
     /// Helper function to calculate world bounding box for several objects
     /// Note: can be invalid (feature objects give an invalid box etc.)

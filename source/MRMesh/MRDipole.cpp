@@ -4,7 +4,6 @@
 #include "MRMesh.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
-#include "MRGTest.h"
 
 namespace MR
 {
@@ -126,34 +125,6 @@ float calcFastWindingNumber( const Dipoles& dipoles, const AABBTree& tree, const
     }
     constexpr float INV_4PI = 1.0f / ( 4 * PI_F );
     return INV_4PI * res;
-}
-
-TEST(MRMesh, TriangleSolidAngle)
-{
-    const Triangle3f tri =
-    {
-        Vector3f{ 0.0f, 0.0f, 0.0f },
-        Vector3f{ 1.0f, 0.0f, 0.0f },
-        Vector3f{ 0.0f, 1.0f, 0.0f }
-    };
-    const auto c = ( tri[0] + tri[1] + tri[2] ) / 3.0f;
-
-    // solid angle near triangle center abruptly changes from -2pi to 2pi when the point crosses the triangle plane
-    const auto x = triangleSolidAngle( c + Vector3f( 0, 0, 1e-5f ), tri );
-    EXPECT_NEAR( x, -2 * PI_F, 1e-3f );
-    auto y = triangleSolidAngle( c - Vector3f( 0, 0, 1e-5f ), tri );
-    EXPECT_NEAR( y,  2 * PI_F, 1e-3f );
-
-    // solid angle in triangle vertices is equal to zero exactly
-    for ( int i = 0; i < 3; ++i )
-    {
-        EXPECT_EQ( triangleSolidAngle( tri[i], tri ), 0 );
-    }
-
-    // solid angle in the triangle plane outside of triangle is equal to zero exactly
-    EXPECT_EQ( triangleSolidAngle( tri[1] + tri[2], tri ), 0 );
-    EXPECT_EQ( triangleSolidAngle( -tri[1], tri ), 0 );
-    EXPECT_EQ( triangleSolidAngle( -tri[2], tri ), 0 );
 }
 
 } //namespace MR

@@ -11,7 +11,7 @@ class OpenRawVoxelsPlugin : public StatePlugin
 public:
     OpenRawVoxelsPlugin();
 
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
 
 private:
     virtual bool onEnable_() override;

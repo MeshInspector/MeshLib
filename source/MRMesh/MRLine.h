@@ -1,10 +1,11 @@
 #pragma once
 
 #include "MRAffineXf.h"
+#include <iosfwd>
 
 namespace MR
 {
- 
+
 /// 2- or 3-dimensional line: cross( x - p, d ) = 0
 /// \ingroup MathGroup
 template <typename V>
@@ -23,18 +24,33 @@ struct Line
     [[nodiscard]] V operator()( T param ) const { return p + param * d; }
 
     /// returns squared distance from given point to this line
-    [[nodiscard]] T distanceSq( const V & x ) const 
+    [[nodiscard]] T distanceSq( const V & x ) const
         { return ( x - project( x ) ).lengthSq(); }
 
     /// returns same line represented with flipped direction of d-vector
     [[nodiscard]] Line operator -() const { return Line( p, -d ); }
+
     /// returns same representation
     [[nodiscard]] const Line & operator +() const { return *this; }
+
     /// returns same line represented with unit d-vector
     [[nodiscard]] Line normalized() const { return { p, d.normalized() }; }
 
-    /// finds the closest point on line
-    [[nodiscard]] V project( const V & x ) const { return p + dot( d, x - p ) / d.lengthSq() * d; }
+    /// finds the parameter of the closest point to the given one on this line
+    [[nodiscard]] T projectionParam( const V & x ) const { return dot( d, x - p ) / d.lengthSq(); }
+
+    /// finds the closest point to the given one on this line
+    [[nodiscard]] V project( const V & x ) const { return operator()( projectionParam( x ) ); }
+
+    friend std::ostream& operator<<( std::ostream& s, const Line& l )
+    {
+        return s << l.p << '\n' << l.d;
+    }
+
+    friend std::istream& operator>>( std::istream& s, Line& l )
+    {
+        return s >> l.p >> l.d;
+    }
 };
 
 /// \related Line

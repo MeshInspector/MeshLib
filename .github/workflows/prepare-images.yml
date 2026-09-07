@@ -18,45 +18,107 @@ on:
       vcpkg_docker_image_tag:
         required: true
         type: string
-      vs19_vcpkg_version:
+      vcpkg_version:
         required: true
         type: string
-      vs22_vcpkg_version:
-        required: true
-        type: string
+      # `disable-build-<platform>` PR labels (resolved upstream in
+      # config.yml) — skip the matching image build cells / jobs so we
+      # don't burn runner time producing images no consumer will use.
+      disable_ubuntu_x64:
+        type: boolean
+        default: false
+      disable_ubuntu_arm64:
+        type: boolean
+        default: false
+      disable_emscripten:
+        type: boolean
+        default: false
+      disable_linux_vcpkg:
+        type: boolean
+        default: false
+      disable_windows:
+        type: boolean
+        default: false
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
   always-success:
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     steps:
       - name: Do nothing
         run: echo
 
+  # Build the job matrices from the matrix/docker-images-*.json inventory
+  # (shared with scripts/devops/sync_docker_image_tags.sh). Cells disabled
+  # by PR labels must be dropped here: job-level `if:` cannot see `matrix`.
+  compute-image-matrices:
+    if: ${{ inputs.need_linux_image_rebuild || inputs.need_linux_vcpkg_rebuild }}
+    runs-on: ubuntu-latest
+    outputs:
+      linux_matrix: ${{ steps.linux.outputs.matrix }}
+      linux_empty:  ${{ steps.linux.outputs.matrix == '[]' }}
+      cbindings_matrix: ${{ steps.cbindings.outputs.matrix }}
+      vcpkg_matrix:     ${{ steps.vcpkg.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+            scripts/actions/matrix-builder
+            .github/workflows/matrix
+
+      # A new ubuntu distro needs a matching exclude rule (pinned by the
+      # action's parity tests); emscripten-generate-c-bindings has none:
+      # its consumer always runs.
+      - id: linux
+        uses: ./scripts/actions/matrix-builder
+        with:
+          matrix-file: .github/workflows/matrix/docker-images-linux.json
+          rules: |
+            - if: ${{ inputs.disable_ubuntu_x64 }}
+              exclude:
+                - distro: ubuntu22
+                  arch: x64
+                - distro: ubuntu24
+                  arch: x64
+                - distro: ubuntu26
+                  arch: x64
+            - if: ${{ inputs.disable_ubuntu_arm64 }}
+              exclude:
+                - distro: ubuntu22
+                  arch: arm64
+                - distro: ubuntu24
+                  arch: arm64
+                - distro: ubuntu26
+                  arch: arm64
+            - if: ${{ inputs.disable_emscripten }}
+              exclude:
+                distro: emscripten
+
+      - id: cbindings
+        uses: ./scripts/actions/matrix-builder
+        with:
+          matrix-file: .github/workflows/matrix/docker-images-emscripten-c-bindings.json
+
+      - id: vcpkg
+        uses: ./scripts/actions/matrix-builder
+        with:
+          matrix-file: .github/workflows/matrix/docker-images-linux-vcpkg.json
+
   linux-image-build-upload:
-    if: ${{ inputs.need_linux_image_rebuild }}
+    needs: compute-image-matrices
+    if: ${{ needs.compute-image-matrices.outputs.linux_empty == 'false' && inputs.need_linux_image_rebuild }}
     timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        distro: [ ubuntu20, ubuntu22, ubuntu24, emscripten ]
-        arch: [ x64, arm64 ]
-        exclude:
-          - distro: emscripten
-            arch: x64
-        include:
-          - arch: x64
-            image-suffix: ''
-            os: ubuntu-latest
-          - arch: arm64
-            image-suffix: '-arm64'
-            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
-    runs-on: ${{ matrix.os }}
+        include: ${{ fromJSON(needs.compute-image-matrices.outputs.linux_matrix) }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
-      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.image-suffix }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Work-around possible permission issues
         shell: bash
@@ -82,94 +144,214 @@ jobs:
           fi
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
 
       - name: Login to DockerHub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Linux image
-        run: docker build -f ./docker/${{ env.dockerfile }} -t ${{ env.image }} . --progress=plain
-
-      - name: Push Linux image
-        run: docker push ${{ env.image }}
+      # Build the image only if its content-addressed tag isn't already in the
+      # registry (reused as-is across PR commits and after merge), then point
+      # the conventional tag (latest on master, branch-name on a PR) at it so
+      # the build-test jobs pull it unchanged.
+      - name: Build, push and tag Linux image
+        run: |
+          repo="${image%:*}"
+          tag=$(scripts/devops/docker_image_source_checksum.sh "${{ matrix.distro }}")
+          if scripts/docker_image_exists.sh "${repo}:${tag}"; then
+            echo "Reusing existing ${repo}:${tag}"
+          else
+            docker build -f ./docker/${{ env.dockerfile }} -t "${repo}:${tag}" . --progress=plain
+            docker push "${repo}:${tag}"
+          fi
+          docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
 
   linux-vcpkg-build-upload:
-    if: ${{ inputs.need_linux_vcpkg_rebuild }}
+    needs: compute-image-matrices
+    if: ${{ inputs.need_linux_vcpkg_rebuild && !inputs.disable_linux_vcpkg }}
+    permissions:
+      id-token: write
+      contents: read
     timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
-        arch: [ x64, arm64 ]
-        include:
-          - arch: x64
-            os: ubuntu-latest
-          - arch: arm64
-            os: [ self-hosted, linux-arm64, on-demand, meshinspector ]
-    runs-on: ${{ matrix.os }}
+        include: ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_matrix) }}
+    runs-on: ${{ matrix.runner }}
     env:
-      image: meshlib/meshlib-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
       vcpkg_triplet: ${{ matrix.arch }}-linux-meshlib
     steps:
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Login to DockerHub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build Linux vcpkg image
-        run: docker build -f ./docker/vcpkgDockerfile -t ${{ env.image }} --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} . --progress=plain
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          role-duration-seconds: 7200
+          retry-max-attempts: 5
 
-      - name: Push Linux vcpkg image
-        run: docker push ${{ env.image }}
+      # Build the image only if its content-addressed tag isn't already in the
+      # registry (reused across PR commits and after merge), then point the
+      # conventional tag (latest on master, branch-name on a PR) at it so the
+      # build-test jobs pull it unchanged.
+      - name: Build, push and tag Linux vcpkg image
+        env:
+          DOCKER_BUILDKIT: 1
+        run: |
+          repo="${image%:*}"
+          tag=$(scripts/devops/docker_image_source_checksum.sh ${{ matrix.os }}-vcpkg)
+          if scripts/docker_image_exists.sh "${repo}:${tag}"; then
+            echo "Reusing existing ${repo}:${tag}"
+          else
+            docker build \
+              -f ./docker/${{ matrix.os }}-vcpkgDockerfile \
+              -t "${repo}:${tag}" \
+              --build-arg VCPKG_TRIPLET=${{ env.vcpkg_triplet }} \
+              --secret id=AWS_ACCESS_KEY_ID \
+              --secret id=AWS_SECRET_ACCESS_KEY \
+              --secret id=AWS_SESSION_TOKEN \
+              . --progress=plain
+            docker push "${repo}:${tag}"
+          fi
+          docker buildx imagetools create -t "${image}" "${repo}:${tag}"
+
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes
+
+  linux-emscripten-c-bindings-build-upload:
+    needs: compute-image-matrices
+    if: ${{ inputs.need_linux_image_rebuild && !inputs.disable_emscripten }}
+    permissions:
+      id-token: write
+      contents: read
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.compute-image-matrices.outputs.cbindings_matrix) }}
+    runs-on: ${{matrix.runner_image}}
+    env:
+      image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}
+    steps:
+      - name: Remove unused Docker data
+        run: docker system prune --force --all --volumes
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: true
+
+      - name: Login to DockerHub
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: meshlib
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        with:
+          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
+          role-duration-seconds: 7200
+          retry-max-attempts: 5
+
+      # Build the image only if its content-addressed tag isn't already in the
+      # registry (reused across PR commits and after merge), then point the
+      # conventional tag (latest on master, branch-name on a PR) at it so the
+      # build-test jobs pull it unchanged.
+      - name: Build, push and tag Linux vcpkg image
+        env:
+          DOCKER_BUILDKIT: 1
+        run: |
+          repo="${image%:*}"
+          tag=$(scripts/devops/docker_image_source_checksum.sh emscripten-build-c-bindings)
+          if scripts/docker_image_exists.sh "${repo}:${tag}"; then
+            echo "Reusing existing ${repo}:${tag}"
+          else
+            docker build \
+              -f docker/emscripten-build-c-bindingsDockerfile \
+              -t "${repo}:${tag}" \
+              --build-arg BASE_EMSDK_IMAGE=${{matrix.emsdk_image}} \
+              --secret id=AWS_ACCESS_KEY_ID \
+              --secret id=AWS_SECRET_ACCESS_KEY \
+              --secret id=AWS_SESSION_TOKEN \
+              . --progress=plain
+            docker push "${repo}:${tag}"
+          fi
+          docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
       - name: Remove unused Docker data
         run: docker system prune --force --all --volumes
 
   windows-vcpkg-build-upload:
-    if: ${{ inputs.need_windows_vcpkg_rebuild }}
+    if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}
     timeout-minutes: 240
     runs-on: ${{ matrix.runner }}
+    # install.bat (run inside the setup-vcpkg-windows action) picks the triplet
+    # from VCPKG_DEFAULT_TRIPLET; set it at the job level so it propagates into
+    # the composite action's steps (a step-level `env:` would not).
+    env:
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
     strategy:
       fail-fast: false
       matrix:
-        runner: [ windows-2022 ]
         include:
-          - runner: windows-2022
-            vcpkg-version: ${{ inputs.vs22_vcpkg_version }}
+          - vs: vs2026
+            runner: windows-2025
+            vcpkg_triplet: x64-windows-meshlib
+          # windows-11-vs2026-arm carries VS2026 only, so arm64 has a single triplet
+          - vs: vs2026
+            runner: windows-11-vs2026-arm
+            vcpkg_triplet: arm64-windows-meshlib
+          - vs: vs2022
+            runner: windows-2025
+            vcpkg_triplet: x64-windows-vs2022-meshlib
+          - vs: vs2019
+            runner: windows-2022
+            vcpkg_triplet: x64-windows-vs2019-meshlib
+          - vs: vs2019
+            runner: windows-2022
+            vcpkg_triplet: x64-windows-meshlib-iterator-debug
     steps:
-      - name: Setup vcpkg
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git checkout ${{ matrix.vcpkg-version }}
-          bootstrap-vcpkg.bat
-          vcpkg.exe integrate install
-
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: true
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
+          retry-max-attempts: 5
 
+      # cache-only: this job exists to fill the cache, nothing here builds
+      # against the tree, so an already-populated cache means the action has
+      # nothing to do and must not spend minutes downloading it.
       - name: Build and cache vcpkg
-        run: .\thirdparty\install.bat --write-s3
+        uses: ./.github/actions/setup-vcpkg-windows
+        with:
+          vcpkg-version: ${{ inputs.vcpkg_version }}
+          vcpkg-triplet: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
+          install-flags: '--write-s3'
+          cache-only: 'true'

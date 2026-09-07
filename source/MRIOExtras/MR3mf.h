@@ -1,7 +1,7 @@
 #pragma once
 
 #include "config.h"
-#ifndef MRIOEXTRAS_NO_3MF
+#ifndef MRIOEXTRAS_NO_XML
 #include "exports.h"
 
 #include <MRMesh/MRExpected.h>

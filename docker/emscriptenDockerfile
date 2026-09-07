@@ -1,62 +1,137 @@
-FROM emscripten/emsdk:4.0.10-arm64
+# syntax=docker/dockerfile:1.6
 
-# Update and install req
-# install yaru-theme-icon to fix `Icon 'dialog-warning' not present in theme Yaru: 'glib warning'` while testing
-RUN export DEBIAN_FRONTEND=noninteractive; \
-    export DEBCONF_NONINTERACTIVE_SEEN=true; \
-    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections; \
-    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections; \
-    apt-get update -qqy \
- && apt-get install -qqy --no-install-recommends gpg-agent software-properties-common \
- && echo '\
-Package: *\n\
-Pin: release o=LP-PPA-mozillateam\n\
-Pin-Priority: 1001\
-' | tee /etc/apt/preferences.d/mozilla-firefox \
- && add-apt-repository -y ppa:mozillateam/ppa \
- && apt-get install -qqy --no-install-recommends \
-        tzdata git firefox pkg-config xvfb yaru-theme-icon ninja-build dbus-x11 \
- && apt-get clean \
- && rm -rf /var/lib/apt/lists/*
+# Any changes in this file should probably be mirrored in `emscripten-build-c-bindings-X-Y-ZDockerfile`.
 
-## preprare thirdparty
-RUN mkdir /home/MeshLib
-WORKDIR "/home/MeshLib"
+# emsdk ships clang without PGO; ours is the same llvm-project revision with
+# -O3 + PGO. It replaces emsdk's copy in place and /emsdk is then copied into a
+# clean ubuntu: swapped in a layer on top, both compilers would ship.
+FROM emscripten/emsdk:4.0.19-arm64 AS emsdk
 
-#copy files
+ENV EMSDK_VERSION=4.0.19
+
+RUN <<EOF
+    set -e
+    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
+    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
+        | tar -C /emsdk/upstream --strip-components=1 -xz
+    rm -f /emsdk/upstream/bin/clang-scan-deps
+    # PATH below points here, keeping node's version out of it
+    ln -s /emsdk/node/*/bin /emsdk/node-bin
+    # emsdk strips its own toolchain, ours arrives unstripped
+    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
+EOF
+
+
+FROM ubuntu:22.04 AS base
+
+COPY --from=emsdk /emsdk /emsdk
+
+ENV EMSDK=/emsdk
+ENV PATH=/emsdk:/emsdk/upstream/emscripten:/emsdk/node-bin:$PATH
+WORKDIR /src
+ENTRYPOINT ["/emsdk/docker/entrypoint.sh"]
+
+COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
+Types: deb
+URIs: http://archive.ubuntu.com/ubuntu/ http://mirror.eu.ossplanet.net/ubuntu/
+Suites: jammy jammy-updates jammy-security jammy-backports
+Components: main restricted universe multiverse
+Architectures: amd64
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb
+URIs: http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/
+Suites: jammy jammy-updates jammy-security jammy-backports
+Components: main restricted universe multiverse
+Architectures: arm64
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+EOF
+
+COPY <<EOF /etc/apt/sources.list
+EOF
+
+RUN <<EOF
+    set -e
+    # configure timezone
+    export DEBIAN_FRONTEND=noninteractive
+    export DEBCONF_NONINTERACTIVE_SEEN=true
+    echo 'tzdata tzdata/Areas select Etc' | debconf-set-selections
+    echo 'tzdata tzdata/Zones/Etc select UTC' | debconf-set-selections
+    # install packages
+    apt-get update -qqy
+    apt-get install -qqy --no-install-recommends \
+        $(: what the emscripten/emsdk image installs on the same ubuntu ) \
+        sudo libxml2 ca-certificates python3 python3-pip wget curl zip unzip \
+        xz-utils git git-lfs ssh-client build-essential make ant libidn12 \
+        cmake openjdk-11-jre-headless \
+        tzdata pkg-config ninja-build \
+        $(: to compile translation files ) \
+        gettext \
+        $(: to generate TypeScript documentation ) \
+        doxygen
+    # clean downloaded files
+    apt-get clean
+    rm -rf /var/lib/apt/lists/*
+EOF
+
+
+FROM base AS builder
+
+WORKDIR /home/MeshLib
+
 COPY . .
 
-#build thirdparty
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten && \
+
+# 32-bit multi-threaded
+RUN <<EOF
+    set -e
+    ./scripts/build_thirdparty.sh
+    ./scripts/devops/warmup_wasm_cache.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
     rm -rf bin include lib share thirdparty_build
+EOF
 
-ENV MR_EMSCRIPTEN_SINGLE=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-single && \
+# 32-bit single-threaded
+RUN <<EOF
+    set -e
+    export MR_EMSCRIPTEN_SINGLE=ON
+    ./scripts/build_thirdparty.sh
+    ./scripts/devops/warmup_wasm_cache.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single
     rm -rf bin include lib share thirdparty_build
+EOF
 
-ENV MR_EMSCRIPTEN_SINGLE=OFF
-ENV MR_EMSCRIPTEN_WASM64=ON
-RUN ./scripts/build_thirdparty.sh && \
-    ./scripts/cmake_install.sh /usr/local/lib/emscripten-wasm64 && \
+# 64-bit multi-threaded
+RUN <<EOF
+    set -e
+    export MR_EMSCRIPTEN_WASM64=ON
+    ./scripts/build_thirdparty.sh
+    ./scripts/devops/warmup_wasm_cache.sh
+    ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-wasm64
     rm -rf bin include lib share thirdparty_build
+EOF
 
-ENV MR_EMSCRIPTEN_WASM64=OFF
+# cleanup extra files from cache
+RUN <<EOF
+    set -e
+    find /emsdk/upstream/emscripten/cache/ports -maxdepth 1 -type f -delete
+    rm -rf /emsdk/upstream/emscripten/cache/build
+EOF
 
-# install aws cli
-RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
-    unzip awscliv2.zip && \
-    sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
 
-WORKDIR "/home/"
-RUN rm -rf MeshLib
+FROM base
 
-# Add a new user "actions-runner" with user id 8877
-RUN useradd -u 8877 -m user && \
-    sudo chmod -R 777 /emsdk/upstream/emscripten/
+COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
+COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
+COPY --from=builder /opt/meshlib-thirdparty/emscripten-wasm64 /usr/local/lib/emscripten-wasm64
 
-# Change to non-root privilege
-USER user
+# Only cache/ needs to be writable (emcc regenerates system libs there); copying
+# it in with a mode avoids a whole-tree chmod, which copies up every file on
+# containerd-overlayfs docker hosts.
+COPY --from=builder --chmod=777 /emsdk/upstream/emscripten/cache /emsdk/upstream/emscripten/cache
+
+RUN useradd -u 8877 -m aws-user
+RUN useradd -u 1001 -m github-user
+USER github-user

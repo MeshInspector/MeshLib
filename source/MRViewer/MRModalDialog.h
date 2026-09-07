@@ -11,7 +11,7 @@ namespace MR
 /// \brief Settings for ModalDialog.
 struct ModalDialogSettings
 {
-    /// Dialog window width. If the value is zero or negative, defaults to cModalWindowWidth * menuScaling.
+    /// Dialog window width. If the value is zero or negative, defaults to cModalWindowWidth * UI::scale().
     float windowWidth = 0.f;
     /// Render a centered headline text at the beginning of the dialog. The RibbonFontManager::FontType::Headline font
     /// is used if exists.
@@ -38,15 +38,15 @@ public:
 
     /// Open the dialog and render its header (headline, close button, text).
     /// Returns true if the dialog window is open.
-    MRVIEWER_API bool beginPopup( float menuScaling );
+    MRVIEWER_API bool beginPopup();
     /// Render the dialog's footer ("Don't show again" checkbox) and finish the dialog.
-    MRVIEWER_API void endPopup( float menuScaling );
+    MRVIEWER_API void endPopup();
 
     /// Returns the current window width in pixels.
     [[nodiscard]] MRVIEWER_API static float windowWidth();
 
 private:
-    void setStyle_( float menuScaling );
+    void setStyle_();
     void unsetStyle_();
 
 private:

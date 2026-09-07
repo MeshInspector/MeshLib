@@ -1,12 +1,10 @@
 #include <gtest/gtest.h>
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRLog.h"
-#include "MRMesh/MRGTest.h"
 #include "MRMesh/MRQuadraticForm.h"
 #include "MRMesh/MRMeshBoolean.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
-#include "MRViewer/MRViewer.h"
 #include "MRViewer/MRGetSystemInfoJson.h"
 #include "MRViewer/MRCommandLoop.h"
 #include "MRPch/MRJson.h"
@@ -52,9 +50,6 @@ int main( int argc, char** argv )
         return true;
     };
 
-    MR::loadMeshDll();
-    MR::loadMRViewerDll();
-
     MR::setupLoggerByDefault();
 
     // print compiler info
@@ -80,7 +75,7 @@ int main( int argc, char** argv )
 
     spdlog::info( "System info:\n{}", MR::GetSystemInfoJson().toStyledString() );
 #ifndef MESHLIB_NO_PYTHON
-    if ( !consumeFlag( "--no-python-tests" ) )
+    if ( consumeFlag( "--with-python-tests" ) )
     {
         // Load mrmeshpy. We do it here instead of linking against it for two reasons:
         // 1. To allow not building the Python modules.
@@ -104,12 +99,6 @@ int main( int argc, char** argv )
 
         //Test python mrmeshpy
         {
-            #ifdef __APPLE__
-            // Fix the module path.
-            // We need this because our default behavior is to handle bundles (back out from `<AppName>.app/Contents/MacOS`, etc).
-            MR::SystemPath::overrideDirectory(MR::SystemPath::Directory::PythonModules, MR::SystemPath::getExecutableDirectory().value());
-            #endif
-
             auto str = "import mrmeshpy\n"
                 "print( \"List of python module functions available in mrmeshpy:\\n\" )\n"
                 "funcs = dir( mrmeshpy )\n"

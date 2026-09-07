@@ -3,6 +3,7 @@
 #include "MRMesh/MRMeshPart.h"
 #include "MRMesh/MRSignDetectionMode.h"
 #include "MRMesh/MRProgressCallback.h"
+#include "MRMesh/MRPartMapping.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MREnums.h"
 #include <optional>
@@ -26,7 +27,8 @@ struct BaseShellParameters
 
 struct OffsetParameters : BaseShellParameters
 {
-    /// determines the method to compute distance sign
+    /// determines the method to compute distance sign;
+    /// \ref offsetMesh implementing OffsetMode::Smooth supports only Unsigned, OpenVDB and HoleWindingRule here
     SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
     /// whether to construct closed mesh in signMode = SignDetectionModeShort::HoleWindingNumber
@@ -60,6 +62,8 @@ struct SharpOffsetParameters : OffsetParameters
 {
     /// if non-null then created sharp edges will be saved here
     UndirectedEdgeBitSet* outSharpEdges = nullptr;
+    /// if non-null then for each output mesh face maps its voxel id
+    Vector<VoxelId, FaceId>* outVoxelPerFace = nullptr;
     /// minimal surface deviation to introduce new vertex in a voxel, measured in voxelSize
     float minNewVertDev = 1.0f / 25;
     /// maximal surface deviation to introduce new rank 2 vertex (on intersection of 2 planes), measured in voxelSize
@@ -69,6 +73,10 @@ struct SharpOffsetParameters : OffsetParameters
     /// correct positions of the input vertices using reference mesh by not more than this distance, measured in voxelSize;
     /// big correction can be wrong and result from self-intersections in the reference mesh
     float maxOldVertPosCorrection = 0.5f;
+    /// if true, the displacement of a new vertex from the average point is shortened to keep the vertex
+    /// within its voxel's box (so the geometry of a voxel can never reach another one),
+    /// and the in-plane elevation check is skipped
+    bool voxelClamp = false;
 };
 
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
@@ -82,10 +90,25 @@ struct SharpOffsetParameters : OffsetParameters
 /// typically offsetA and offsetB have distinct signs
 [[nodiscard]] MRVOXELS_API Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
 
+/// optional outputs of mcOffsetMesh(...) describing the volume, from which the mesh was extracted
+struct McOffsetMeshOutputs
+{
+    /// optional output map FaceId->VoxelId
+    Vector<VoxelId, FaceId>* voxelPerFaceMap = nullptr;
+
+    /// optional output dimensions of the volume
+    Vector3i* dims = nullptr;
+
+    /// optional output transform from integer grid locations to mesh reference frame:
+    /// the node with integer coordinates (i,j,k) is located in (*gridToMeshXf)( Vector3f( i, j, k ) );
+    /// every vertex of output mesh is located on a grid edge
+    AffineXf3f* gridToMeshXf = nullptr;
+};
+
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
 [[nodiscard]] MRVOXELS_API Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
-    const OffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
+    const OffsetParameters& params = {}, const McOffsetMeshOutputs& outputs = {} );
 
 /// Constructs a shell around selected mesh region with the properties that every point on the shall must
 ///  1. be located not further than given distance from selected mesh part,
@@ -112,7 +135,8 @@ struct GeneralOffsetParameters : SharpOffsetParameters
 /// in case of negative offset, returns the mesh consisting of inversed offset mesh merged with original mesh (hollowing mode);
 /// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned, and you will get open mesh (with several components) on output
 /// if your input mesh is closed then please specify another sign detection mode, and you will get closed mesh (with several components) on output;
-[[nodiscard]] MRVOXELS_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {} );
+[[nodiscard]] MRVOXELS_API Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters & params = {},
+    const PartMapping & map = {} ); ///< mapping between original mesh and thicken result
 
 /// offsets given MeshPart in one direction only (positive or negative)
 /// if your input mesh is open then please specify params.signDetectionMode = SignDetectionMode::Unsigned

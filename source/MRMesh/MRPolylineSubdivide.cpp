@@ -4,7 +4,7 @@
 #include "MRBitSet.h"
 #include "MRTimer.h"
 #include "MRWriter.h"
-#include "MRGTest.h"
+#include "MRVector2.h"
 #include <queue>
 
 namespace MR
@@ -158,22 +158,6 @@ int subdividePolyline( Polyline2 & polyline, const PolylineSubdivideSettings & s
 int subdividePolyline( Polyline3 & polyline, const PolylineSubdivideSettings & settings )
 {
     return subdividePolylineT( polyline, settings );
-}
-
-TEST(MRMesh, SubdividePolyline)
-{
-    Contour2f cont;
-    cont.push_back( Vector2f( 0.f, 0.f ) );
-    cont.push_back( Vector2f( 1.f, 0.f ) );
-    cont.push_back( Vector2f( 0.f, 1.f ) );
-    cont.push_back( Vector2f( 0.f, 0.f ) );
-    Polyline2 polyline( { cont } );
-
-    PolylineSubdivideSettings settings;
-    settings.maxEdgeLen = 0.3f;
-    settings.maxEdgeSplits = 1000;
-    int splitsDone = subdividePolyline( polyline, settings );
-    EXPECT_TRUE( splitsDone > 11 && splitsDone < 15 );
 }
 
 } // namespace MR

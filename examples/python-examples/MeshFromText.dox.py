@@ -14,7 +14,7 @@ params.text = text
 params.pathToFontFile = font_path
 try:
     conv_res = mrmeshpy.createSymbolsMesh(params)
-except ValueError as e:
+except RuntimeError as e:
     print(f"Failed to convert text to mesh: {e}", file=sys.stderr)
     sys.exit(1)
 

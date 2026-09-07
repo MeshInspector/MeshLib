@@ -1,5 +1,8 @@
 #pragma once
 
+#include "MRMeshFwd.h"
+#include "MRAffineXf.h"
+#include "MRMatrix3.h"
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRMeshProject.h"
@@ -8,22 +11,32 @@
 namespace MR
 {
 
+/// this structure contains transformation for projection from one mesh to another and progress callback
 struct ProjectAttributeParams
 {
     MeshProjectionTransforms xfs;
     ProgressCallback progressCb;
 };
 
-// projecting the vertex attributes of the old onto the new one
-// returns false if canceled by progress bar
+/// projecting the vertex attributes of the old onto the new one
+/// returns false if canceled by progress bar
 template<typename F>
 bool projectVertAttribute( const MeshVertPart& mp, const Mesh& oldMesh, F&& func, const ProjectAttributeParams& params = {} );
 
-// projecting the face attributes of the old onto the new one
-// returns false if canceled by progress bar
+/// projecting the face attributes of the old onto the new one
+/// returns false if canceled by progress bar
 template<typename F>
 bool projectFaceAttribute( const MeshPart& mp, const Mesh& oldMesh, F&& func, const ProjectAttributeParams& params = {} );
 
+/// finds attributes of new mesh by projecting faces/vertices on old mesh
+/// \note for now clears edges attributes
+/// \param oldMeshData old mesh along with input attributes
+/// \param newMeshData new mesh along with output attributes
+/// \param region optional input region for projecting (useful if newMesh is changed part of old mesh)
+/// \param params parameters of projecting
+[[nodiscard]] MRMESH_API Expected<void> projectObjectMeshData(
+    const ObjectMeshData& oldMeshData, ObjectMeshData& newMeshData, const FaceBitSet* region = nullptr,
+    const ProjectAttributeParams& params = {} );
 
 template<typename F>
 bool projectVertAttribute( const MeshVertPart& mp, const Mesh& oldMesh, F&& func, const ProjectAttributeParams& params )

@@ -2,8 +2,9 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRCube.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRBitSetParallelFor.h>
+#include <MRMesh/MRPartMappingAdapters.h>
 
 namespace MR
 {
@@ -150,6 +151,40 @@ TEST(MRMesh, AddPartByMask)
     EXPECT_EQ( mesh.topology.lastNotLoneEdge(), 21_e ); // 11*2 = 22 half-edges in total
 }
 
+TEST(MRMesh, AddPartByMaskOnVacantElements)
+{
+    auto cube = makeCube();
+
+    // mesh1 has two cube components
+    Mesh mesh1;
+    mesh1.addMesh( cube );
+    FaceBitSet fs = mesh1.topology.getValidFaces();
+    mesh1.addMesh( cube );
+
+    // mesh2 has the first cube component deleted
+    Mesh mesh2 = mesh1;
+    EXPECT_EQ( mesh1, mesh2 );
+    auto vacant = mesh2.deleteFaces( fs );
+    EXPECT_EQ( vacant.faces, fs );
+    EXPECT_EQ( vacant.edges.count(), cube.topology.computeNotLoneUndirectedEdges() );
+    EXPECT_EQ( vacant.verts.count(), cube.topology.numValidVerts() );
+
+    // mesh3 = mesh2 + first cube from mesh1
+    Mesh mesh3 = mesh2;
+    EXPECT_EQ( mesh3, mesh2 );
+    mesh3.addMeshPart( { mesh1, &fs } );
+    EXPECT_EQ( mesh3.topology.numValidFaces(), mesh1.topology.numValidFaces() );
+    EXPECT_NE( mesh1.topology.getValidFaces(), mesh2.topology.getValidFaces() );
+    EXPECT_NE( mesh1.topology.getValidVerts(), mesh2.topology.getValidVerts() );
+
+    // put first cube from mesh1 in vacant space of mesh2
+    mesh2.addMeshPart( { mesh1, &fs }, {}, &vacant );
+    EXPECT_EQ( vacant.edges.count(), 0 );
+    EXPECT_EQ( vacant.verts.count(), 0 );
+    EXPECT_EQ( vacant.faces.count(), 0 );
+    EXPECT_EQ( mesh2, mesh1 );
+}
+
 TEST(MRMesh, AddPartByMaskAndStitch) 
 {
     Triangulation t{ { 0_v, 1_v, 2_v } };
@@ -160,7 +195,7 @@ TEST(MRMesh, AddPartByMaskAndStitch)
     std::vector<EdgePath> c0 = { { topology0.findEdge( 1_v, 0_v ) } };
     std::vector<EdgePath> c1 = { { topology1.findEdge( 0_v, 1_v ) } };
     auto topologyRes = topology0;
-    topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 );
+    EXPECT_TRUE( topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 ) );
     EXPECT_TRUE( topologyRes.checkValidity() );
     EXPECT_EQ( topologyRes.numValidVerts(), 4 );
     EXPECT_EQ( topologyRes.numValidFaces(), 2 );
@@ -170,11 +205,80 @@ TEST(MRMesh, AddPartByMaskAndStitch)
     c0 = { { topology0.findEdge( 1_v, 0_v ) }, { topology0.findEdge( 0_v, 2_v ) }, { topology0.findEdge( 2_v, 1_v ) } };
     c1 = { { topology1.findEdge( 0_v, 1_v ) }, { topology1.findEdge( 1_v, 2_v ) }, { topology1.findEdge( 2_v, 0_v ) } };
     topologyRes = topology0;
-    topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 );
+    EXPECT_TRUE( topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, c0, c1 ) );
     EXPECT_TRUE( topologyRes.checkValidity() );
     EXPECT_EQ( topologyRes.numValidVerts(), 3 );
     EXPECT_EQ( topologyRes.numValidFaces(), 2 );
     EXPECT_EQ( topologyRes.lastNotLoneEdge(), 5_e ); // 3*2 = 6 half-edges in total
+}
+
+TEST(MRMesh, AddPartByMaskAndStitchBadInput)
+{
+    Triangulation t{ { 0_v, 1_v, 2_v } };
+    const auto topology0 = MeshBuilder::fromTriangles( t );
+    const auto topology1 = topology0;
+    const EdgePath good0 = { topology0.findEdge( 1_v, 0_v ) }; // no left face here
+    const EdgePath good1 = { topology1.findEdge( 0_v, 1_v ) }; // no right face here
+
+    auto topologyRes = topology0;
+    EXPECT_TRUE( topologyRes.addPartByMask( topology1, topology1.getValidFaces(), false, { good0 }, { good1 } ) );
+    EXPECT_TRUE( topologyRes.checkValidity() );
+
+    // each bad input must be rejected leaving the target topology intact
+    auto rejected = [&]( const std::vector<EdgePath> & c0, const std::vector<EdgePath> & c1, bool flipOrientation = false )
+    {
+        auto tgt = topology0;
+        const bool res = tgt.addPartByMask( topology1, topology1.getValidFaces(), flipOrientation, c0, c1 );
+        EXPECT_TRUE( tgt == topology0 );
+        EXPECT_TRUE( tgt.checkValidity() );
+        return res;
+    };
+
+    EXPECT_FALSE( rejected( { good0 }, {} ) );                                                    // different number of contours
+    EXPECT_FALSE( rejected( { good0 }, { { good1[0], topology1.findEdge( 1_v, 2_v ) } } ) );       // different contour sizes
+    EXPECT_FALSE( rejected( { { topology0.findEdge( 0_v, 1_v ) } }, { good1 } ) );                 // this edge has left face
+    EXPECT_FALSE( rejected( { good0 }, { good0 } ) );                                             // from edge is free on the stitched side
+    EXPECT_FALSE( rejected( { good0 }, { good1 }, true ) );                                       // flipOrientation swaps the sides required
+    EXPECT_FALSE( rejected( { good0, good0 }, { good1, { topology1.findEdge( 1_v, 2_v ) } } ) );   // this edge is stitched twice
+    EXPECT_FALSE( rejected( { good0, { topology0.findEdge( 0_v, 2_v ) } }, { good1, good1 } ) );   // from edge is stitched twice
+}
+
+// The classic sandclock: two triangles joined at one shared vertex. Its single hole loop passes that
+// vertex twice, and stitching a mirrored copy of the same topology along the loop would close each
+// lobe into its own pillow, leaving the shared vertex with two disjoint edge rings. addPartByMask
+// must detect this and reject the call keeping the target topology intact.
+TEST(MRMesh, AddPartByMaskAndStitchPinched)
+{
+    Triangulation t{ { 0_v, 2_v, 1_v }, { 2_v, 4_v, 3_v } };
+    const auto topology0 = MeshBuilder::fromTriangles( t );
+    ASSERT_EQ( topology0.numValidVerts(), 5 );
+    ASSERT_EQ( topology0.numValidFaces(), 2 );
+    ASSERT_TRUE( topology0.checkValidity() );
+
+    // the only hole boundary loop, visiting the shared vertex 2_v twice
+    const std::vector<EdgePath> contours = { {
+        topology0.findEdge( 2_v, 0_v ), topology0.findEdge( 0_v, 1_v ), topology0.findEdge( 1_v, 2_v ),
+        topology0.findEdge( 2_v, 3_v ), topology0.findEdge( 3_v, 4_v ), topology0.findEdge( 4_v, 2_v ) } };
+
+    // a mirrored copy of the same topology pairs the two lobes with themselves: rejected
+    auto topologyRes = topology0;
+    EXPECT_FALSE( topologyRes.addPartByMask( topology0, topology0.getValidFaces(), true, contours, contours ) );
+    EXPECT_TRUE( topologyRes == topology0 );
+    EXPECT_TRUE( topologyRes.checkValidity() );
+
+    // while a fan patch reaching the pinch through two distinct vertices bridges the lobes: accepted
+    Triangulation ft{ { 0_v, 2_v, 1_v }, { 0_v, 3_v, 2_v }, { 0_v, 4_v, 3_v }, { 0_v, 5_v, 4_v } };
+    const auto fan = MeshBuilder::fromTriangles( ft ); // a hexagon fan around 0_v: boundary 0-1-2-3-4-5, hole on the left
+    ASSERT_TRUE( fan.checkValidity() );
+    const std::vector<EdgePath> fanContours = { {
+        fan.findEdge( 0_v, 1_v ), fan.findEdge( 1_v, 2_v ), fan.findEdge( 2_v, 3_v ),
+        fan.findEdge( 3_v, 4_v ), fan.findEdge( 4_v, 5_v ), fan.findEdge( 5_v, 0_v ) } };
+    topologyRes = topology0;
+    EXPECT_TRUE( topologyRes.addPartByMask( fan, fan.getValidFaces(), true, contours, fanContours ) );
+    EXPECT_EQ( topologyRes.numValidVerts(), 5 ); // two fan verts land in the pinch vertex
+    EXPECT_EQ( topologyRes.numValidFaces(), 6 );
+    EXPECT_EQ( topologyRes.findHoleRepresentiveEdges().size(), size_t( 0 ) );
+    EXPECT_TRUE( topologyRes.checkValidity() );
 }
 
 TEST(MRMesh, AddMesh)

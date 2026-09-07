@@ -3,6 +3,7 @@
 #if !defined( __EMSCRIPTEN__) && !defined( MRMESH_NO_TIFF )
 #include "MRExpected.h"
 #include "MRVector2.h"
+
 #include <filesystem>
 #include <string>
 
@@ -74,9 +75,24 @@ struct RawTiffOutput
 // load values from tiff to ouput.data
 MRMESH_API Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& output );
 
+struct WriteRawTiffParams
+{
+    BaseTiffParameters baseParams;
+    // optional transformation data written to GeoTIFF's ModelTransformationTag
+    const AffineXf3f* xf = nullptr;
+    // optional NoData value written to GDAL_NODATA
+    std::string noData;
+};
+
 // writes bytes to tiff file
 MRMESH_API Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path,
-    const BaseTiffParameters& params );
+    const WriteRawTiffParams& params );
+[[deprecated( "use WriteRawTiffParams version instead" )]]
+inline Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path,
+    const BaseTiffParameters& params, const AffineXf3f* xf )
+{
+    return writeRawTiff( bytes, path, { .baseParams = params, .xf = xf } );
+}
 
 }
 

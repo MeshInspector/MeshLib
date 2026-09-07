@@ -8,35 +8,14 @@
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
 #include "MRUnionFindParallel.h"
-#include <parallel_hashmap/phmap.h>
+#include "MRFaceFace.h"
+#include "MRphmap.h"
 #include <climits>
 
 namespace MR
 {
 namespace MeshComponents
 {
-
-/// returns
-/// 1. the mapping: Root Id -> Region Id in [0, 1, 2, ...)
-/// 2. the total number of roots/regions
-template<typename T>
-static std::pair<Vector<RegionId, Id<T>>, int> getUniqueRootIds( const Vector<Id<T>, Id<T>>& allRoots, const TaggedBitSet<T>& region )
-{
-    MR_TIMER;
-    Vector<RegionId, Id<T>> uniqueRootsMap( allRoots.size() );
-    int k = 0;
-    for ( auto f : region )
-    {
-        auto& uniqIndex = uniqueRootsMap[allRoots[f]];
-        if ( uniqIndex < 0 )
-        {
-            uniqIndex = RegionId( k );
-            ++k;
-        }
-        uniqueRootsMap[f] = uniqIndex;
-    }
-    return { std::move( uniqueRootsMap ), k };
-}
 
 FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
@@ -75,22 +54,25 @@ VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* reg
 
 }
 
-FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd, float minArea, int * numSmallerComponents )
+double getLargestComponentArea( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd,
+    FaceBitSet * largestComponent, int * numSmallerComponents )
 {
     MR_TIMER;
+
+    if ( largestComponent )
+        largestComponent->clear();
 
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
-    FaceBitSet maxAreaComponent;
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
     if ( k <= 0 )
     {
         if ( numSmallerComponents )
             *numSmallerComponents = 0;
-        return maxAreaComponent;
+        return 0;
     }
 
     double maxDblArea = -DBL_MAX;
@@ -100,30 +82,126 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     {
         auto index = uniqueRootsMap[f];
         auto& dblArea = dblAreas[index];
-        dblArea += meshPart.mesh.dblArea( f );
+        dblArea += mesh.dblArea( f );
         if ( dblArea > maxDblArea )
         {
             maxI = index;
             maxDblArea = dblArea;
         }
     }
-    if ( maxDblArea < 2 * minArea )
-    {
-        if ( numSmallerComponents )
-            *numSmallerComponents = k;
-        return maxAreaComponent;
-    }
     if ( numSmallerComponents )
         *numSmallerComponents = k - 1;
-    maxAreaComponent.resize( region.find_last() + 1 );
+    if ( largestComponent )
+    {
+        largestComponent->resize( region.find_last() + 1 );
+        for ( auto f : region )
+        {
+            auto index = uniqueRootsMap[f];
+            if ( index != maxI )
+                continue;
+            largestComponent->set( f );
+        }
+    }
+    return 0.5 * maxDblArea;
+}
+
+FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd, float minArea, int * numSmallerComponents )
+{
+    MR_TIMER;
+
+    FaceBitSet maxAreaComponent;
+    int numOtherComponents = 0;
+    const auto maxArea = getLargestComponentArea( meshPart, incidence, isCompBd, &maxAreaComponent, &numOtherComponents );
+    if ( maxArea < minArea )
+    {
+        // the largest component is not returned, so it is counted among smaller ones (if it exists at all)
+        if ( numSmallerComponents )
+            *numSmallerComponents = maxAreaComponent.any() ? numOtherComponents + 1 : 0;
+        return {};
+    }
+    if ( numSmallerComponents )
+        *numSmallerComponents = numOtherComponents;
+    return maxAreaComponent;
+}
+
+double getLargestComponentVolume( const MeshPart& meshPart, VolumeSelection selection, FaceIncidence incidence,
+    const UndirectedEdgeBitSet * isCompBd, FaceBitSet * largestComponent, int * numSmallerComponents )
+{
+    MR_TIMER;
+
+    if ( largestComponent )
+        largestComponent->clear();
+
+    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
+    if ( k <= 0 )
+    {
+        if ( numSmallerComponents )
+            *numSmallerComponents = 0;
+        return 0;
+    }
+
+    // six-fold volume of each component, valid if the component is closed
+    std::vector<double> sixVolumes( k, 0.0 );
     for ( auto f : region )
     {
-        auto index = uniqueRootsMap[f];
-        if ( index != maxI )
-            continue;
-        maxAreaComponent.set( f );
+        const auto fp = mesh.getTriPoints( f );
+        sixVolumes[uniqueRootsMap[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
     }
-    return maxAreaComponent;
+
+    // unlike area, volume is not accumulated monotonically, so the component is selected only here
+    int maxI = -1;
+    // the larger the key, the better the component; not positive key means unsuitable component,
+    // and only Abs rule accepts a component of zero volume
+    double maxKey = selection == VolumeSelection::Abs ? -1.0 : 0.0;
+    for ( int i = 0; i < k; ++i )
+    {
+        double key = 0;
+        switch ( selection )
+        {
+        case VolumeSelection::Positive:
+            key = sixVolumes[i];
+            break;
+        case VolumeSelection::Negative:
+            key = -sixVolumes[i];
+            break;
+        default:
+            assert( selection == VolumeSelection::Abs );
+            key = std::abs( sixVolumes[i] );
+            break;
+        }
+        if ( key > maxKey )
+        {
+            maxI = i;
+            maxKey = key;
+        }
+    }
+    if ( maxI < 0 )
+    {
+        // no component satisfies the selection rule, so all of them are counted as smaller ones
+        if ( numSmallerComponents )
+            *numSmallerComponents = k;
+        return 0;
+    }
+
+    if ( numSmallerComponents )
+        *numSmallerComponents = k - 1;
+    if ( largestComponent )
+    {
+        largestComponent->resize( region.find_last() + 1 );
+        for ( auto f : region )
+        {
+            auto index = uniqueRootsMap[f];
+            if ( index != maxI )
+                continue;
+            largestComponent->set( f );
+        }
+    }
+    return sixVolumes[maxI] / 6.0;
 }
 
 VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region /*= nullptr */ )
@@ -166,7 +244,8 @@ VertBitSet getLargeComponentVerts( const Mesh& mesh, int minVerts, const VertBit
     return res;
 }
 
-FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+FaceBitSet getComponents( const MeshTopology& topology, const FaceBitSet & seeds, const FaceBitSet* region0,
+    FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     MR_TIMER;
 
@@ -174,35 +253,56 @@ FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, Fa
     if ( seeds.none() )
         return res;
 
-    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
-    const FaceBitSet& region = meshPart.mesh.topology.getFaceIds( meshPart.region );
+    auto unionFindStruct = getUnionFindStructureFaces( topology, region0, incidence, isCompBd );
+    const FaceBitSet& region = topology.getFaceIds( region0 );
 
-    FaceId faceRoot;
+    const auto& allRoots = unionFindStruct.roots();
+    // collect the roots of all components that contain a seed
+    FaceBitSet seedRoots( allRoots.size() );
     for ( auto s : seeds )
-    {
-        if ( faceRoot < 0 )
-            faceRoot = unionFindStruct.find( s );
-        else
-            faceRoot = unionFindStruct.unite( faceRoot, s ).first;
-    }
+        seedRoots.set( allRoots[s] );
 
-    if ( faceRoot )
+    res.resize( allRoots.size() );
+    BitSetParallelFor( region, [&]( FaceId f )
     {
-        const auto& allRoots = unionFindStruct.roots();
-        res.resize( allRoots.size() );
-        BitSetParallelFor( region, [&]( FaceId f )
-        {
-            if ( allRoots[f] == faceRoot )
-                res.set( f );
-        } );
-    }
+        if ( seedRoots.test( allRoots[f] ) )
+            res.set( f );
+    } );
     return res;
+}
+
+FaceBitSet getComponents( const MeshPart& meshPart, const FaceBitSet & seeds, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    return getComponents( meshPart.mesh.topology, seeds, meshPart.region, incidence, isCompBd );
 }
 
 FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const UndirectedEdgeBitSet * isCompBd )
 {
     auto unionFind = getUnionFindStructureFacesPerEdge( mp, isCompBd );
     return getLargeByAreaComponents( mp, unionFind, minArea );
+}
+
+FaceBitSet getLargeByVolumeComponents( const MeshPart& mp, float minVolume )
+{
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+    {
+        assert( !"getLargeByVolumeComponents: require closed mesh part" );
+        return {};
+    }
+    auto mapAndNum = MeshComponents::getAllComponentsMap( mp );
+    Vector<double, RegionId> volumes( mapAndNum.second, 0.0 );
+    auto region = mp.mesh.topology.getFaceIds( mp.region );
+    for ( auto f : region )
+    {
+        auto fp = mp.mesh.getTriPoints( f );
+        volumes[mapAndNum.first[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
+    }
+    BitSetParallelFor( region, [&] ( FaceId f )
+    {
+        if ( std::abs( volumes[mapAndNum.first[f]] ) < minVolume )
+            region.reset( f );
+    } );
+    return region;
 }
 
 Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params /*= {} */ )
@@ -285,7 +385,7 @@ FaceBitSet getLargeByAreaSmoothComponents( const MeshPart& mp, float minArea, fl
     return MeshComponents::getLargeByAreaComponents( mp, unionFind, minArea, outBdEdgesBetweenLargeComps );
 }
 
-FaceBitSet getLargeByAreaComponents( const MeshPart& mp, UnionFind<FaceId> & unionFind, float minArea,
+FaceBitSet getLargeByAreaComponents( const MeshPart& mp, BaseUnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps )
 {
     MR_TIMER;
@@ -505,55 +605,55 @@ std::vector<MR::FaceBitSet> getAllComponents( const MeshPart& meshPart, FaceInci
     return getAllComponents( meshPart, INT_MAX, incidence, isCompBd ).first;
 }
 
-static void getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd, UnionFind<FaceId>& res )
+static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region0, const UndirectedEdgeBitSet* isCompBd, ParallelUnionFind<FaceId>& res )
 {
     MR_TIMER;
 
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
-    const FaceBitSet* lastPassFaces = &region;
+    const FaceBitSet& region = topology.getFaceIds( region0 );
     const auto numFaces = region.find_last() + 1;
     res.reset( numFaces );
-    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
 
-    FaceBitSet bdFaces;
-    if ( numThreads > 1 )
+    // single lock-free pass over all edges: each edge is united atomically (see ParallelUnionFind::uniteAtomic),
+    // so there is no interior/boundary classification and no sequential tail; processing order is irrelevant
+    const size_t undirSize = topology.undirectedEdgeSize();
+    tbb::parallel_for( tbb::blocked_range<size_t>( size_t( 0 ), undirSize ),
+        [&] ( const tbb::blocked_range<size_t>& range )
     {
-        bdFaces.resize( numFaces );
-        lastPassFaces = &bdFaces;
-
-        BitSetParallelForAllRanged( region, [&] ( FaceId f0, const auto & range )
+        for ( size_t i = range.begin(); i < range.end(); ++i )
         {
-            if ( !contains( region, f0 ) )
-                return;
-            EdgeId e[3];
-            mesh.topology.getTriEdges( f0, e );
-            for ( int i = 0; i < 3; ++i )
-            {
-                assert( mesh.topology.left( e[i] ) == f0 );
-                FaceId f1 = mesh.topology.right( e[i] );
-                if ( f0 < f1 && contains( meshPart.region, f1 ) )
-                {
-                    if ( f1 >= range.end )
-                        bdFaces.set( f0 ); // remember the face to unite later in a sequential region
-                    else if ( !isCompBd || !isCompBd->test( e[i].undirected() ) )
-                        res.unite( f0, f1 ); // our region
-                }
-            }
-        } );
-    }
-
-    for ( auto f0 : *lastPassFaces )
-    {
-        EdgeId e[3];
-        mesh.topology.getTriEdges( f0, e );
-        for ( int i = 0; i < 3; ++i )
-        {
-            assert( mesh.topology.left( e[i] ) == f0 );
-            FaceId f1 = mesh.topology.right( e[i] );
-            if ( f0 < f1 && contains( meshPart.region, f1 ) && ( !isCompBd || !isCompBd->test( e[i].undirected() ) ) )
-                res.unite( f0, f1 );
+            UndirectedEdgeId ue( i );
+            if ( isCompBd && isCompBd->test( ue ) )
+                continue;
+            auto l = topology.left( ue );
+            if ( !region.test( l ) )
+                continue;
+            auto r = topology.right( ue );
+            if ( !region.test( r ) )
+                continue;
+            res.uniteAtomic( l, r );
         }
+    } );
+}
+
+static void getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region0, const UndirectedEdgeBitSet* isCompBd, UnionFind<FaceId>& res )
+{
+    MR_TIMER;
+
+    const FaceBitSet& region = topology.getFaceIds( region0 );
+    const auto numFaces = region.find_last() + 1;
+    res.reset( numFaces );
+
+    for ( auto ue : undirectedEdges( topology ) )
+    {
+        if ( isCompBd && isCompBd->test( ue ) )
+            continue;
+        auto l = topology.left( ue );
+        if ( !region.test( l ) )
+            continue;
+        auto r = topology.right( ue );
+        if ( !region.test( r ) )
+            continue;
+        res.unite( l, r );
     }
 }
 
@@ -566,6 +666,27 @@ std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, Fa
 
     const auto& allRoots = unionFindStruct.roots();
     return getUniqueRootIds( allRoots, region );
+}
+
+std::pair<Face2RegionMap, int> getFacePairRegionMap( const Mesh& mesh, const std::vector<FaceFace>& facePairs,
+    FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    MR_TIMER;
+
+    FaceBitSet fs( mesh.topology.faceSize() );
+    for ( const auto & f : facePairs )
+    {
+        fs.set( f.aFace );
+        fs.set( f.bFace );
+    }
+
+    UnionFind<FaceId> unionFindStruct( getUnionFindStructureFaces( { mesh, &fs }, incidence, isCompBd ) );
+
+    for ( const auto & f : facePairs )
+        unionFindStruct.unite( f.aFace, f.bFace );
+
+    const auto& allRoots = unionFindStruct.roots();
+    return getUniqueRootIds( allRoots, fs );
 }
 
 Vector<double, RegionId> getRegionAreas( const MeshPart& meshPart,
@@ -752,33 +873,46 @@ void excludeFullySelectedComponents( const Mesh& mesh, VertBitSet& selection )
     }
 }
 
-UnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd )
+BaseUnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshTopology& topology, const FaceBitSet* region, const UndirectedEdgeBitSet * isCompBd )
 {
-    UnionFind<FaceId> res;
-    getUnionFindStructureFacesPerEdge( meshPart, isCompBd, res );
-    return res;
+    const auto numThreads = int( tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism ) );
+    if ( numThreads > 1 )
+    {
+        ParallelUnionFind<FaceId> res;
+        getUnionFindStructureFacesPerEdge( topology, region, isCompBd, res );
+        return res;
+    }
+    else
+    {
+        UnionFind<FaceId> res;
+        getUnionFindStructureFacesPerEdge( topology, region, isCompBd, res );
+        return res;
+    }
 }
 
-UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+BaseUnionFind<FaceId> getUnionFindStructureFacesPerEdge( const MeshPart& meshPart, const UndirectedEdgeBitSet * isCompBd )
 {
-    UnionFind<FaceId> res;
+    return getUnionFindStructureFacesPerEdge( meshPart.mesh.topology, meshPart.region, isCompBd );
+}
+
+BaseUnionFind<FaceId> getUnionFindStructureFaces( const MeshTopology& topology, const FaceBitSet* region0, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
     if ( incidence == FaceIncidence::PerEdge )
-        return getUnionFindStructureFacesPerEdge( meshPart, isCompBd );
+        return getUnionFindStructureFacesPerEdge( topology, region0, isCompBd );
 
     MR_TIMER;
     assert( !isCompBd );
-    const auto& mesh = meshPart.mesh;
-    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
-    res.reset( region.find_last() + 1 );
     assert ( incidence == FaceIncidence::PerVertex );
+    const FaceBitSet& region = topology.getFaceIds( region0 );
+    UnionFind<FaceId> res( region.find_last() + 1 );
     VertBitSet store;
-    for ( auto v : getIncidentVerts( mesh.topology, meshPart.region, store ) )
+    for ( auto v : getIncidentVerts( topology, region0, store ) )
     {
         FaceId f0;
-        for ( auto edge : orgRing( mesh.topology, v ) )
+        for ( auto edge : orgRing( topology, v ) )
         {
-            FaceId f1 = mesh.topology.left( edge );
-            if ( !contains( meshPart.region, f1 ) )
+            FaceId f1 = topology.left( edge );
+            if ( !contains( region0, f1 ) )
                 continue;
             if ( !f0 )
             {
@@ -789,6 +923,11 @@ UnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceInci
         }
     }
     return res;
+}
+
+BaseUnionFind<FaceId> getUnionFindStructureFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    return getUnionFindStructureFaces( meshPart.mesh.topology, meshPart.region, incidence, isCompBd );
 }
 
 UnionFind<VertId> getUnionFindStructureVerts( const MeshTopology& topology, const VertBitSet* region )
@@ -968,14 +1107,7 @@ UnionFind<UndirectedEdgeId> getUnionFindStructureUndirectedEdges( const Mesh& me
     }
 
     if ( allPointToRoots )
-    {
-        tbb::parallel_for( tbb::blocked_range( 0_ue, UndirectedEdgeId( res.size() ) ),
-            [&] ( const tbb::blocked_range<UndirectedEdgeId>& range )
-        {
-            for ( UndirectedEdgeId ue = range.begin(); ue < range.end(); ++ue )
-                res.findUpdateRange( ue, range.begin(), range.end() );
-        } );
-    }
+        updateRootsParallel( res );
 
     return res;
 }

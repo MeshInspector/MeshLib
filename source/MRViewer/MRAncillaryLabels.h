@@ -6,7 +6,9 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRPositionedText.h"
 #include "MRViewerEventsListener.h"
+#include "MRImGuiMeasurementIndicators.h"
 #include <memory>
+#include <optional>
 
 namespace MR
 {
@@ -80,6 +82,11 @@ public:
     Vector2f getPivot() const { return pivot_; }
     void setPivot( Vector2f pivot ) { pivot_ = pivot; }
 
+    /// Optionally override rendering params for this label
+    MRVIEWER_API void overrideParams( const ImGuiMeasurementIndicators::Params& params );
+
+    /// use default parameters instead of overridden ones
+    MRVIEWER_API void resetOverrideParams();
 private:
     MRVIEWER_API virtual void preDraw_() override;
 
@@ -87,6 +94,7 @@ private:
     Vector2f pivot_ = { 0.5f, 0.5f };
     Vector3f localPos_;
     PositionedText labelData_;
+    std::optional<ImGuiMeasurementIndicators::Params> overrideParams_;
     boost::signals2::scoped_connection parentXfConnection_;
 };
 

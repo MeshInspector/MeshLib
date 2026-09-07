@@ -1,5 +1,7 @@
 #include "MRRegularMapMesher.h"
 #include "MRRegularGridMesh.h"
+#include "MRMesh.h"
+#include <fstream>
 
 namespace MR
 {

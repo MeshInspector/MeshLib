@@ -1,5 +1,4 @@
 #include "MRPointsShader.h"
-#include "MRShaderBlocks.h"
 #include "MRGladGlfw.h"
 
 namespace MR
@@ -60,7 +59,7 @@ std::string getPointsVertexOutputArgumentBlock()
 std::string getPointsVertexMainBeginBlock()
 {
     return
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( false ) +
         R"(
     world_pos = vec3(model*vec4 (position, 1.0));
     position_eye = vec3 (view * vec4 (world_pos, 1.0));
@@ -106,7 +105,6 @@ std::string getPointsFragmentShaderArgumetsBlock()
   uniform vec4 backColor;            // (in from base) back face color
   uniform bool useClippingPlane;     // (in from base) clip primitive by plane if true
   uniform vec4 clippingPlane;        // (in from base) clipping plane
-  uniform bool invertNormals;        // (in from base) invert normals if true
 
   uniform float specExp;   // (in from base) lighting parameter
   uniform vec3 ligthPosEye;   // (in from base) light position transformed by view only (not proj)
@@ -151,7 +149,7 @@ std::string getPointsFragmentShaderColoringBlock()
     }
 
     bool frontFacing = dot_prod >= 0.0;
-    if ( frontFacing == invertNormals )
+    if ( gl_FrontFacing == false ) // don't use !gl_FrontFacing for some rare mac issue
     {
         if ( !selected )
             colorCpy = backColor;
@@ -213,17 +211,17 @@ std::string getPointsVertexShader()
         getPointsVertexMainEndBlock();
 }
 
-std::string getPointsFragmentShader( bool alphaSort )
+std::string getPointsFragmentShader( ShaderTransparencyMode mode )
 {
     return
-        getFragmentShaderHeaderBlock( alphaSort, alphaSort ) +
+        getFragmentShaderHeaderBlock( mode == ShaderTransparencyMode::AlphaSort, mode == ShaderTransparencyMode::AlphaSort ) +
         getPointsShaderViewBlock() +
         getPointsFragmentShaderArgumetsBlock() +
-        getShaderMainBeginBlock() +
+        getShaderMainBeginBlock( mode == ShaderTransparencyMode::DepthPeel ) +
         getFragmentShaderPointSizeBlock() +
         getFragmentShaderClippingBlock() +
         getPointsFragmentShaderColoringBlock() +
-        getFragmentShaderEndBlock( alphaSort );
+        getFragmentShaderEndBlock( mode );
 }
 
 } // namespace MR

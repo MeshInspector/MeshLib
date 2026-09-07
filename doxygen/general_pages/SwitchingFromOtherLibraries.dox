@@ -1,0 +1,347 @@
+/**
+
+\page SwitchingFromOtherLibraries Switching from Other Libraries to MeshLib
+
+\tableofcontents
+
+MeshLib is a C++/Python geometry library focused on robust boolean operations, offsets, voxel-based reconstruction, decimation and remeshing.
+If you already work with CGAL, libigl, Open3D, PCL or VTK, the pairs below show the equivalent MeshLib code for the operations users most often port over.
+Each snippet is minimal and self-contained — copy, adapt, compile.
+
+We do not benchmark on this page. For measured MeshLib vs VTK comparisons (decimation, boolean, subdivision), see [the benchmark article](https://meshlib.io/blog/vtk-alternative-comparison/).
+
+Every C++ snippet has a one-to-one equivalent in our Python bindings.
+
+# CGAL
+
+## Boolean union of two triangle meshes
+
+CGAL:
+\code{.cpp}
+#include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
+#include <CGAL/Surface_mesh.h>
+#include <CGAL/Polygon_mesh_processing/corefinement.h>
+#include <CGAL/Polygon_mesh_processing/IO/polygon_mesh_io.h>
+namespace PMP = CGAL::Polygon_mesh_processing;
+using Mesh = CGAL::Surface_mesh<CGAL::Exact_predicates_inexact_constructions_kernel::Point_3>;
+
+Mesh a, b, out;
+PMP::IO::read_polygon_mesh("a.off", a);
+PMP::IO::read_polygon_mesh("b.off", b);
+PMP::corefine_and_compute_union(a, b, out);
+CGAL::IO::write_polygon_mesh("out.off", out);
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshSave.h>
+#include <MRMesh/MRMeshBoolean.h>
+
+auto a = MR::MeshLoad::fromAnySupportedFormat("a.off").value();
+auto b = MR::MeshLoad::fromAnySupportedFormat("b.off").value();
+auto res = MR::boolean(a, b, MR::BooleanOperation::Union);
+MR::MeshSave::toAnySupportedFormat(res.mesh, "out.off");
+\endcode
+
+## Connected components of a mesh
+
+CGAL:
+\code{.cpp}
+#include <CGAL/Polygon_mesh_processing/connected_components.h>
+namespace PMP = CGAL::Polygon_mesh_processing;
+using face_descriptor = boost::graph_traits<Mesh>::face_descriptor;
+
+auto fccmap = mesh.add_property_map<face_descriptor, std::size_t>("f:CC").first;
+std::size_t n = PMP::connected_components(mesh, fccmap);
+// fccmap[f] = component id
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRMeshComponents.h>
+
+auto [labels, n] = MR::MeshComponents::getAllComponentsMap(mesh);
+// labels[face] = component id
+\endcode
+
+# libigl
+
+## Decimate a mesh to half its faces
+
+libigl:
+\code{.cpp}
+#include <igl/read_triangle_mesh.h>
+#include <igl/decimate.h>
+
+Eigen::MatrixXd V, U;
+Eigen::MatrixXi F, G;
+Eigen::VectorXi J, I;
+igl::read_triangle_mesh("in.obj", V, F);
+igl::decimate(V, F, F.rows() / 2, U, G, J, I);
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshDecimate.h>
+
+auto mesh = MR::MeshLoad::fromAnySupportedFormat("in.obj").value();
+MR::DecimateSettings s;
+s.maxDeletedFaces = int(mesh.topology.numValidFaces() / 2);
+MR::decimateMesh(mesh, s);
+\endcode
+
+## Signed distance from a point to a mesh
+
+libigl:
+\code{.cpp}
+#include <igl/signed_distance.h>
+
+Eigen::VectorXd S;
+Eigen::VectorXi I;
+Eigen::MatrixXd C, N;
+igl::signed_distance(P, V, F, igl::SIGNED_DISTANCE_TYPE_PSEUDONORMAL, S, I, C, N);
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRMeshProject.h>
+#include <MRMesh/MRMesh.h>
+
+auto sd = MR::findSignedDistance(point, mesh);
+float dist = sd->dist;
+\endcode
+
+# Open3D
+
+## Point-to-point ICP registration
+
+Open3D:
+\code{.cpp}
+#include <open3d/Open3D.h>
+using namespace open3d;
+
+auto src = io::CreatePointCloudFromFile("src.ply");
+auto tgt = io::CreatePointCloudFromFile("tgt.ply");
+auto result = pipelines::registration::RegistrationICP(
+    *src, *tgt, /*maxCorrDist=*/0.05,
+    Eigen::Matrix4d::Identity(),
+    pipelines::registration::TransformationEstimationPointToPoint());
+Eigen::Matrix4d xf = result.transformation_;
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRICP.h>
+
+auto src = MR::PointsLoad::fromAnySupportedFormat("src.ply").value();
+auto tgt = MR::PointsLoad::fromAnySupportedFormat("tgt.ply").value();
+MR::ICP icp( {src}, {tgt}, MR::AffineXf3f{}, MR::AffineXf3f{}, /*samplingVoxel=*/0.05f );
+auto xf = icp.calculateTransformation();
+\endcode
+
+## Point cloud to mesh (surface reconstruction)
+
+Open3D (Ball Pivoting):
+\code{.cpp}
+#include <open3d/Open3D.h>
+using namespace open3d;
+
+auto pcd = io::CreatePointCloudFromFile("cloud.ply");
+pcd->EstimateNormals();
+std::vector<double> radii = {0.005, 0.01, 0.02, 0.04};
+auto mesh = geometry::TriangleMesh::CreateFromPointCloudBallPivoting(*pcd, radii);
+\endcode
+
+MeshLib (voxel fusion):
+\code{.cpp}
+#include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRBox.h>
+#include <MRVoxels/MRPointsToMeshFusion.h>
+
+auto cloud = MR::PointsLoad::fromAnySupportedFormat("cloud.ply").value();
+MR::PointsToMeshParameters p;
+p.voxelSize = cloud.computeBoundingBox().diagonal() * 1e-2f;
+MR::Mesh mesh = MR::pointsToMeshFusion(cloud, p).value();
+\endcode
+
+# PCL
+
+## Voxel-grid downsampling of a point cloud
+
+PCL:
+\code{.cpp}
+#include <pcl/io/pcd_io.h>
+#include <pcl/filters/voxel_grid.h>
+
+pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+pcl::io::loadPCDFile("cloud.pcd", *cloud);
+pcl::VoxelGrid<pcl::PointXYZ> vg;
+vg.setInputCloud(cloud);
+vg.setLeafSize(0.05f, 0.05f, 0.05f);
+pcl::PointCloud<pcl::PointXYZ>::Ptr out(new pcl::PointCloud<pcl::PointXYZ>);
+vg.filter(*out);
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRPointCloud.h>
+#include <MRMesh/MRUniformSampling.h>
+
+// cloud.ply saved once from PCL: pcl::io::savePLYFile("cloud.ply", *cloud)
+auto cloud = MR::PointsLoad::fromAnySupportedFormat("cloud.ply").value();
+MR::UniformSamplingSettings s;
+s.distance = 0.05f;
+MR::PointCloud out = MR::makeUniformSampledCloud(cloud, s).value();
+\endcode
+
+## Estimate point-cloud normals
+
+PCL:
+\code{.cpp}
+#include <pcl/features/normal_3d.h>
+
+pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+ne.setInputCloud(cloud);
+pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+ne.setSearchMethod(tree);
+ne.setKSearch(20);
+pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+ne.compute(*normals);
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRPointCloudMakeNormals.h>
+
+auto normals = MR::makeNormals(cloud, /*avgNeighborhoodSize=*/20);
+cloud.normals = normals;
+\endcode
+
+# VTK
+
+MeshLib and VTK exchange data through standard mesh formats: write STL / PLY / OBJ from your VTK pipeline and load it in MeshLib — and the same way back.
+In Python the bridge is even shorter: vtkPolyData arrays go straight into MeshLib via numpy, no files at all (last example below).
+
+## Decimate a mesh
+
+VTK:
+\code{.cpp}
+#include <vtkPolyData.h>
+#include <vtkPolyDataReader.h>
+#include <vtkDecimatePro.h>
+#include <vtkSmartPointer.h>
+
+auto reader = vtkSmartPointer<vtkPolyDataReader>::New();
+reader->SetFileName("in.vtk");
+reader->Update();
+
+auto dec = vtkSmartPointer<vtkDecimatePro>::New();
+dec->SetInputData(reader->GetOutput());
+dec->SetTargetReduction(0.5);
+dec->Update();
+vtkPolyData* out = dec->GetOutput();
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshDecimate.h>
+
+// in.stl exported from the VTK pipeline (vtkSTLWriter / vtkPLYWriter / vtkOBJWriter)
+auto mesh = MR::MeshLoad::fromAnySupportedFormat("in.stl").value();
+MR::DecimateSettings s;
+s.maxDeletedFaces = int(mesh.topology.numValidFaces() / 2);
+MR::decimateMesh(mesh, s);
+\endcode
+
+## Boolean union of two meshes
+
+VTK:
+\code{.cpp}
+#include <vtkBooleanOperationPolyDataFilter.h>
+#include <vtkPolyDataReader.h>
+#include <vtkSmartPointer.h>
+
+auto ra = vtkSmartPointer<vtkPolyDataReader>::New(); ra->SetFileName("a.vtk"); ra->Update();
+auto rb = vtkSmartPointer<vtkPolyDataReader>::New(); rb->SetFileName("b.vtk"); rb->Update();
+
+auto boolOp = vtkSmartPointer<vtkBooleanOperationPolyDataFilter>::New();
+boolOp->SetOperationToUnion();
+boolOp->SetInputData(0, ra->GetOutput());
+boolOp->SetInputData(1, rb->GetOutput());
+boolOp->Update();
+vtkPolyData* out = boolOp->GetOutput();
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshBoolean.h>
+
+// a.stl / b.stl exported from VTK (vtkSTLWriter)
+auto a = MR::MeshLoad::fromAnySupportedFormat("a.stl").value();
+auto b = MR::MeshLoad::fromAnySupportedFormat("b.stl").value();
+auto res = MR::boolean(a, b, MR::BooleanOperation::Union);
+MR::Mesh out = res.mesh;
+\endcode
+
+## Read and write mesh files
+
+VTK:
+\code{.cpp}
+#include <vtkSTLReader.h>
+#include <vtkOBJWriter.h>
+#include <vtkSmartPointer.h>
+
+auto reader = vtkSmartPointer<vtkSTLReader>::New();
+reader->SetFileName("in.stl");
+reader->Update();
+
+auto writer = vtkSmartPointer<vtkOBJWriter>::New();
+writer->SetFileName("out.obj");
+writer->SetInputData(reader->GetOutput());
+writer->Write();
+\endcode
+
+MeshLib:
+\code{.cpp}
+#include <MRMesh/MRMeshLoad.h>
+#include <MRMesh/MRMeshSave.h>
+
+auto mesh = MR::MeshLoad::fromAnySupportedFormat("in.stl").value();
+MR::MeshSave::toAnySupportedFormat(mesh, "out.obj");
+\endcode
+
+## Moving data in memory (Python)
+
+In Python no files are needed: vtkPolyData arrays go straight into MeshLib via numpy and back.
+\code{.py}
+from vtk.util.numpy_support import vtk_to_numpy
+from meshlib import mrmeshpy, mrmeshnumpy
+
+# vtkPolyData -> MeshLib (triangulated; run vtkTriangleFilter first if needed)
+verts = vtk_to_numpy(poly.GetPoints().GetData())
+faces = vtk_to_numpy(poly.GetPolys().GetConnectivityArray()).reshape(-1, 3)
+mesh = mrmeshnumpy.meshFromFacesVerts(faces, verts)
+
+# ... any MeshLib processing: boolean, offset, decimate ...
+
+# MeshLib -> numpy (rebuild vtkPolyData with numpy_to_vtk)
+out_verts = mrmeshnumpy.getNumpyVerts(mesh)
+out_faces = mrmeshnumpy.getNumpyFaces(mesh.topology)
+\endcode
+
+# Missing your case?
+
+Don't see your library or your operation?
+[Open an issue](https://github.com/MeshInspector/MeshLib/issues) or [start a GitHub Discussion](https://github.com/MeshInspector/MeshLib/discussions) — we'll add the snippet.
+
+*/

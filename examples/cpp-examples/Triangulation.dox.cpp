@@ -1,7 +1,11 @@
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRPointCloudTriangulation.h>
 #include <MRMesh/MRUniformSampling.h>
 #include <MRVoxels/MROffset.h>
+
+#include <iostream>
 
 int main()
 {
@@ -38,4 +42,14 @@ int main()
     auto mesh = MR::offsetMesh( *triangulated, 0.f, { {
         .voxelSize = MR::suggestVoxelSize( *triangulated, 5e+6f ),
     } } );
+    assert( mesh );
+
+    // Save result
+    if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( *mesh, "result.stl" ); !saveRes )
+    {
+        std::cerr << saveRes.error() << std::endl;
+        return 1;
+    }
+
+    return 0;
 }

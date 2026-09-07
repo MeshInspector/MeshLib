@@ -1,7 +1,7 @@
 #pragma once
+
 #include "MRHistoryAction.h"
-#include "MRAffineXf3.h"
-#include <memory>
+#include <string>
 
 namespace MR
 {

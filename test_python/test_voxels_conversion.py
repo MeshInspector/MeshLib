@@ -36,18 +36,14 @@ def test_voxels_conversion():
 
     # Test mesh build functions
     radius = 8 * mul
-    if is_bindings_v3:
-        settings1 = mrmesh.GridToMeshSettings()
-        settings1.isoValue = max_value - radius * radius
-        settings1.voxelSize = vdb_volume.voxelSize
-        mesh1 = mrmesh.gridToMesh(vdb_volume.data, settings1)
-        settings2 = mrmesh.GridToMeshSettings()
-        settings2.isoValue = max_value - radius * radius
-        settings2.voxelSize = volume0.voxelSize
-        mesh2 = mrmesh.gridToMesh(grid, settings2)
-    else:
-        mesh1 = mrmesh.gridToMesh(vdb_volume, isoValue = max_value - radius * radius)
-        mesh2 = mrmesh.gridToMesh(grid, voxelSize = volume0.voxelSize, isoValue = max_value - radius * radius)
+    settings1 = mrmesh.GridToMeshSettings()
+    settings1.isoValue = max_value - radius * radius
+    settings1.voxelSize = vdb_volume.voxelSize
+    mesh1 = mrmesh.gridToMesh(vdb_volume.data, settings1)
+    settings2 = mrmesh.GridToMeshSettings()
+    settings2.isoValue = max_value - radius * radius
+    settings2.voxelSize = volume0.voxelSize
+    mesh2 = mrmesh.gridToMesh(grid, settings2)
     # Basic checks
     for mesh in (mesh1, mesh2):
         assert len(mrmesh.getAllComponents(mesh1)) == 1

@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD ${MR_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 project(MRCommonPlugins CXX)
 
 file(GLOB_RECURSE SOURCES "*.cpp")
@@ -21,63 +17,36 @@ ENDIF() # MR_EMSCRIPTEN
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
-IF(MR_EMSCRIPTEN)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tbb
-    MRMesh
-    MRIOExtras
-    MRViewer
-    glad
-    glfw
-    imgui
-    jsoncpp
-    spdlog
-  )
-ELSEIF(WIN32 OR MESHLIB_USE_VCPKG)
-  find_package(glad REQUIRED)
-  find_package(OpenVDB REQUIRED)
+IF(APPLE)
+  list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
+ENDIF()
 
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    TBB::tbb
+# the settings plugin calls OpenGL directly
+find_package(glad REQUIRED)
+
+target_link_libraries(${PROJECT_NAME}
+  PRIVATE
     MRMesh
     MRIOExtras
     MRViewer
     glad::glad
-    glfw
-    imgui
-    JsonCpp::JsonCpp
-    OpenVDB::openvdb
-    spdlog::spdlog
-    fmt::fmt
-  )
-  IF(NOT WIN32)
-    find_package(clip REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
-  ENDIF()
-ELSE()
+)
+IF(NOT WIN32 AND NOT EMSCRIPTEN)
+  find_package(clip REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
   target_compile_definitions(${PROJECT_NAME} PRIVATE CLIP_ENABLE_IMAGE=1)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    tbb
-    MRMesh
-    MRIOExtras
-    MRViewer
-    clip
-    glad
-    glfw
-    imgui
-    JsonCpp::JsonCpp
-    openvdb
-    spdlog
-    fmt
-  )
 ENDIF()
 
 IF(MESHLIB_BUILD_VOXELS)
-  target_link_libraries(${PROJECT_NAME} PRIVATE
-    MRVoxels
-  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRVoxels)
 ELSE()
   target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VOXELS)
+ENDIF()
+
+IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
+  target_link_libraries(${PROJECT_NAME} PRIVATE MRMcp)
+ELSE()
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_MCP)
 ENDIF()
 
 install(
@@ -111,5 +80,5 @@ install(
 )
 
 IF(MR_PCH)
-  TARGET_PRECOMPILE_HEADERS(${PROJECT_NAME} REUSE_FROM MRPch)
+  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()

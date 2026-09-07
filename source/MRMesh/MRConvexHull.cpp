@@ -10,8 +10,7 @@
 #include "MRMeshFixer.h"
 #include "MRHeap.h"
 #include "MRTimer.h"
-#include "MRTorus.h"
-#include "MRGTest.h"
+#include "MRVector2.h"
 
 namespace MR
 {
@@ -286,11 +285,12 @@ Contour2f makeConvexHull( Contour2f points )
     if ( points.size() < 2 )
         return points;
 
-    auto minPointIt = std::min_element( points.begin(), points.end(), [] ( auto&& a, auto&& b )
+    // sort points by coordinates to find a start point and to remove duplicates
+    std::sort( points.begin(), points.end(), [] ( auto&& a, auto&& b )
     {
         return std::tie( a.y, a.x ) < std::tie( b.y, b.x );
     } );
-    std::swap( *points.begin(), *minPointIt );
+    points.erase( std::unique( points.begin(), points.end() ), points.end() );
     const auto& minPoint = points.front();
 
     // sort points by polar angle and distance to the start point
@@ -325,15 +325,6 @@ Contour2f makeConvexHull( Contour2f points )
     points.erase( points.begin() + size, points.end() );
 
     return points;
-}
-
-TEST( MRMesh, ConvexHull )
-{
-    Mesh torus = makeTorus( 1.0f, 0.3f, 16, 16 );
-    Mesh discus = makeConvexHull( torus );
-    EXPECT_EQ( discus.topology.numValidVerts(), 144 );
-    EXPECT_EQ( discus.topology.numValidFaces(), 284 );
-    EXPECT_EQ( discus.topology.lastNotLoneEdge(), EdgeId( 426 * 2 - 1 ) );
 }
 
 } //namespace MR

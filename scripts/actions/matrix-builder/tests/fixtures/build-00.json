@@ -1,0 +1,1 @@
+[{"platform":"x86_64","container-options":"--user root","runner":"ubuntu-latest","compiler":"/usr/bin/clang++","container-prefix":"","os":"rockylinux8-vcpkg-x64"},{"platform":"aarch64","container-options":" ","runner":"ubuntu-24.04-arm","compiler":"/usr/bin/clang++","container-prefix":"arm64v8/","os":"rockylinux8-vcpkg-arm64"}]

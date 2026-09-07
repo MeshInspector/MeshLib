@@ -3,16 +3,12 @@
 #include "MRRingIterator.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
-#include "MRGTest.h"
 #include <algorithm>
 
 namespace MR
 {
 
-// consider triangle 0bc, where a linear scalar field is defined in two points: v(0) = 0, v(b) = b;
-// computes the field in c-point;
-// returns false if field gradient enters c-point not from inside of the triangle
-static bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
+bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc )
 {
     assert( vb >= 0 );
     const float dot_bc = dot( b, c );
@@ -197,30 +193,6 @@ float SurfaceDistanceBuilder::metricToPenalty_( float metric, VertId v ) const
     if ( !target_ )
         return metric;
     return metric + ( mesh_.points[v] - *target_ ).length();
-}
-
-TEST(MRMesh, SurfaceDistance)
-{
-    float vc = 0;
-    EXPECT_FALSE( getFieldAtC( Vector3f{ 1, 0, 0 }, Vector3f{ 0, 1, 0 }, 1, vc ) );
-
-    EXPECT_FALSE( getFieldAtC( Vector3f{ 2, 1, 0 }, Vector3f{ 3, 3, 0 }, 1, vc ) );
-
-    EXPECT_TRUE( getFieldAtC( Vector3f{ 1, 0, 0 }, Vector3f{ 0.5f, 1, 0 }, 0, vc ) );
-    EXPECT_NEAR( vc, 1, 1e-5f );
-    vc = 0;
-
-    EXPECT_TRUE( getFieldAtC( Vector3f{ 1, 0, 0 }, Vector3f{ 0.1f, 1, 0 }, 0, vc ) );
-    EXPECT_NEAR( vc, 1, 1e-5f );
-    vc = 0;
-
-    EXPECT_TRUE( getFieldAtC( Vector3f{ 1, 0, 0 }, Vector3f{ 0.9f, 1, 0 }, 0, vc ) );
-    EXPECT_NEAR( vc, 1, 1e-5f );
-    vc = 0;
-
-    EXPECT_TRUE( getFieldAtC( Vector3f{ 1, 0, 0 }, Vector3f{ 1, 0.5f, 0 }, 1 / std::sqrt(2.0f), vc ) );
-    EXPECT_NEAR( vc, 1.5f / std::sqrt(2.0f), 1e-5f );
-    vc = 0;
 }
 
 } //namespace MR

@@ -1,14 +1,13 @@
 #pragma once
-#include "MRMeshFwd.h"
-#include "MRMesh.h"
-#include "MRProgressCallback.h"
-#include "MRExpected.h"
+#include "MRDelaunayTriangulationXY.h"
 
 namespace MR
 {
 
-/// Creates Delaunay triangulation using only XY components of points 
-/// points will be changed inside this function take argument by value
-[[nodiscard]] MRMESH_API Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, ProgressCallback cb = {} );
+[[deprecated( "Use delaunayTriangulationXY( points, cb )" )]]
+MR_BIND_IGNORE inline Expected<Mesh> terrainTriangulation( std::vector<Vector3f> points, const ProgressCallback& cb = {} )
+{
+    return delaunayTriangulationXY( std::move( points ), cb );
+}
 
 }

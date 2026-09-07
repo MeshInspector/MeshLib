@@ -4,8 +4,8 @@
 #include "MRVoxelsVolume.h"
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRphmap.h"
 #include <cfloat>
-#include <parallel_hashmap/phmap.h>
 #include <queue>
 #include <cmath>
 #include <filesystem>

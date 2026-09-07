@@ -7,17 +7,18 @@
 #include "MRMesh/MRMeshFillHole.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
-#include "MRMesh/MRGTest.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MROffsetContours.h"
+#include "MRMesh/MRAlignContoursToMesh.h"
 #include "MRPch/MRSpdlog.h"
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include FT_OUTLINE_H
+#include <fstream>
 
 namespace MR
 {
@@ -277,30 +278,6 @@ Expected<Mesh> triangulateSymbolContours( const SymbolMeshParams& params )
     }
 
     return PlanarTriangulation::triangulateContours( contours.value() );
-}
-
-void addBaseToPlanarMesh( Mesh & mesh, float zOffset )
-{
-    MR_TIMER;
-    mesh.pack(); // for some hard fonts with duplicated points (if triangulated contours have same points, duplicates are not used)
-    // it's important to have all vertices valid:
-    // first half is upper points of text and second half is lower points of text
-
-    Mesh mesh2 = mesh;
-    for ( auto& p : mesh2.points )
-        p.z += zOffset;
-
-    mesh2.topology.flipOrientation();
-
-    mesh.addMesh( mesh2 );
-
-    auto edges = mesh.topology.findHoleRepresentiveEdges();
-    for ( int bi = 0; bi < edges.size() / 2; ++bi )
-    {
-        StitchHolesParams stitchParams;
-        stitchParams.metric = getVerticalStitchMetric( mesh, Vector3f::plusZ() );
-        buildCylinderBetweenTwoHoles( mesh, edges[bi], edges[edges.size() / 2 + bi], stitchParams );
-    }
 }
 
 Expected<Mesh> createSymbolsMesh( const SymbolMeshParams& params )

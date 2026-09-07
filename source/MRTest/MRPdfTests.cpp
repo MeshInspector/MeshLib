@@ -1,6 +1,6 @@
 #if !defined __EMSCRIPTEN__ && !defined MRIOEXTRAS_NO_PDF
 #include <MRIOExtras/MRPdf.h>
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <MRMesh/MRImage.h>
 #include <MRMesh/MRImageSave.h>
@@ -10,8 +10,8 @@ namespace MR
 
 TEST( MRMesh, Pdf )
 {
-    UniqueTemporaryFolder pathFolder( {} );
-    Pdf pdfTest( pathFolder / std::filesystem::path( "test.pdf" ) );
+    UniqueTemporaryFolder pathFolder;
+    Pdf pdfTest;
     pdfTest.addText( "Test Title", true );
     pdfTest.addText( "Test text"
         "\nstring 1"
@@ -40,8 +40,8 @@ TEST( MRMesh, Pdf )
     auto colorMapPath = pathFolder / std::filesystem::path( "color_map.png" );
     auto res = ImageSave::toAnySupportedFormat( { pixels, Vector2i( colorMapSizeX, colorMapSizeY ) }, colorMapPath );
 
-    pdfTest.addImageFromFile( colorMapPath, "test image" );
-    pdfTest.close();
+    pdfTest.addImageFromFile( colorMapPath, { .size = {-1, 0}, .caption = "test image", .uniformScale = Pdf::ImageParams::UniformScale::FromWidth } );
+    pdfTest.saveToFile( pathFolder / std::filesystem::path( "test.pdf" ) );
 }
 
 } //namespace MR

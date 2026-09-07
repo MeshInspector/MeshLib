@@ -1,37 +1,35 @@
 # this file must be included AFTER the `project' command because it relies on the detected compiler information
 
-set(MR_PCH_DEFAULT OFF)
-# for macOS, GCC, and Clang<15 builds: PCH not only does not give any speedup, but even vice versa
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15)
-  set(MR_PCH_DEFAULT ON)
-ELSEIF(MSVC)
-  set(MR_PCH_DEFAULT ON)
-#ELSEIF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-#  set(MR_PCH_DEFAULT ON)
-ENDIF()
-set(MR_PCH ${MR_PCH_DEFAULT} CACHE BOOL "Enable precompiled headers")
-IF(MR_PCH AND NOT MR_EMSCRIPTEN AND NOT MSVC)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-ENDIF()
-message("MR_PCH=${MR_PCH}")
-
 # make link to fail if there are unresolved symbols (GCC and Clang)
-IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
-  set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
+IF(NOT APPLE)
+  IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,defs")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-z,defs")
+  ENDIF()
+ELSE() # if APPLE
+  # add `-fno-assume-unique-vtables` to fix reinterpret cast of `spdlog::rotating_file_sink_mt`
+  # https://github.com/llvm/llvm-project/issues/120129
+  # https://stackoverflow.com/a/79378704/16680013
+  # the flag added in this commit https://github.com/llvm/llvm-project/commit/9d525bf94b255df89587db955b5fa2d3c03c2c3e
+  IF( CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17 ) # ethier AppleClang or Clang
+    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -fno-assume-unique-vtables")
+  ENDIF()
+  # Drop local Mach-O symbols in non-Debug builds (most of __LINKEDIT).
+  add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,-x>)
 ENDIF()
 
 # Warnings and misc compiler settings.
 IF(MSVC)
   # C++-specific flags.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}   /DImDrawIdx=unsigned /D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING /D_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING /D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DImDrawIdx=unsigned /D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING /D_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING /D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
 
   # Common C/C++ flags:
 
-  set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE")
+  # _CRT_SECURE_NO_WARNINGS is defined explicitly to match OCCT and avoid a C4005 clash in the shared PCH.
+  set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS")
 
   # Vcpkg automatically adds `/external:W0`, but we duplicate it here because it somehow doesn't propagate to Lazperf.
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /W4 /WX /external:W0 /external:env:INCLUDE")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /Wall /WX /external:W0 /external:env:INCLUDE")
 
   # Following warnings are silenced:
   # !! NOTE: Sync this list with `common.props` !!
@@ -50,12 +48,15 @@ IF(MSVC)
   #   warning C4623: default constructor was implicitly defined as deleted
   #   warning C4625: copy constructor was implicitly defined as deleted
   #   warning C4626: assignment operator was implicitly defined as deleted
+  #   warning C4651: 'MACRO' specified for precompiled header but not for current compile (e.g. imgui defines in the shared PCH that a non-viewer consumer reusing it lacks)
   #   warning C4866: compiler may not enforce left-to-right evaluation order for call to
   #   warning C4668: MACRO is not defined as a preprocessor macro, replacing with '0' for '#if/#elif'
   #   warning C4686: possible change in behavior, change in UDT return calling convention
   #   warning C4710: function not inlined
   #   warning C4711: function selected for automatic inline expansion
   #   warning C4820: N bytes padding added after data member
+  #   warning C4865: the underlying type will change from 'int' to '__int64' when '/Zc:enumTypes' is specified on the command line (VS2026 v18.0.0, https://developercommunity.visualstudio.com/t/VS2026-MSVC-Warning-C4865-lies-about-und/10966873)
+  #   warning C4866: compiler may not enforce left-to-right evaluation order for call to
   #   warning C4868: compiler may not enforce left-to-right evaluation order in braced initializer list
   #   warning C5026: move constructor was implicitly defined as deleted
   #   warning C5027: move assignment operator was implicitly defined as deleted
@@ -71,12 +72,19 @@ IF(MSVC)
   #   warning C5264: 'const' variable is not used
   #   warning C26451: Arithmetic overflow: Using operator '+' on a 4 byte value and then casting the result to a 8 byte value. Cast the value to the wider type before calling operator '+' to avoid overflow (io.2).
   # !! NOTE: Sync this list with `common.props` !!
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4651 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4865 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
 ELSE()
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wall -Wextra -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wall -Wextra -Wdeprecated -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
+  # command line option '-fvisibility-inlines-hidden' is valid for C++/ObjC++ but not for C, so we cannot put it in MESHLIB_COMMON_C_CXX_FLAGS
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
 
   IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wno-newline-eof")
+
+    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 22)
+      # required for __COUNTER__
+      set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wno-c2y-extensions")
+    endif()
   ENDIF()
 ENDIF()
 
@@ -102,7 +110,15 @@ ENDIF()
 
 IF(MSVC)
   add_definitions(-DUNICODE -D_UNICODE)
-  add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+  # Set _ITERATOR_DEBUG_LEVEL based on vcpkg triplet
+  # default val is 0 for backward compatibility
+  IF(DEFINED VCPKG_TARGET_TRIPLET AND VCPKG_TARGET_TRIPLET MATCHES ".*iterator-debug.*")
+    add_definitions(-D_ITERATOR_DEBUG_LEVEL=2)
+    add_definitions(-DMR_ITERATOR_DEBUG_LEVEL=2)
+  ELSE()
+    add_definitions(-D_ITERATOR_DEBUG_LEVEL=0)
+    add_definitions(-DMR_ITERATOR_DEBUG_LEVEL=0)
+  ENDIF()
 ENDIF()
 
 IF(NOT MSVC)
@@ -158,3 +174,67 @@ ENDIF()
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-uninitialized")
 ENDIF()
+
+# more info: https://bugs.openjdk.org/browse/JDK-8244653
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11 AND CMAKE_SYSTEM_PROCESSOR MATCHES "(aarch64|arm64)")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-psabi")
+ENDIF()
+
+# GCC 16 introduces a new diagnostic that leads to multiple hard-to-diagnose (oh, the irony) compile errors;
+# disable it for now and investigate these cases later
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
+ENDIF()
+
+# Clang 20+ conflicts with fmt prior to 12
+# https://github.com/fmtlib/fmt/issues/4177
+# https://github.com/fmtlib/fmt/issues/4247
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
+  find_package(fmt QUIET)
+  IF(NOT fmt_VERSION OR fmt_VERSION VERSION_LESS 12)
+    add_compile_definitions(FMT_CONSTEVAL=)
+  ENDIF()
+ENDIF()
+
+# Apple Clang 17 conflicts with OpenVDB 12.1
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++23-attribute-extensions")
+ENDIF()
+
+IF(MSVC)
+  # Disable incremental linking in debug modes, to avoid generating the large `.ilk` files.
+  # It already defaults to off in other configurations.
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_DEBUG "${CMAKE_MODULE_LINKER_FLAGS_DEBUG}")
+  string(REGEX REPLACE "/INCREMENTAL(:YES|:NO|)" "/INCREMENTAL:NO" CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO}")
+
+  # to overcome https://stackoverflow.com/q/68334645/7325599
+  # CMAKE_MSVC_DEBUG_INFORMATION_FORMAT doesn't seem to work properly
+  string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG}")
+  string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
+  string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
+  string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+
+  # Emit debug symbols in Release as well, matching `common.props`, which enables them in every
+  # configuration; they are packed into a separate archive, see `scripts/split_install_pdb.py`.
+  # `/OPT:REF /OPT:ICF` are the defaults that `/DEBUG` turns off, so the binaries stay unchanged.
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Z7")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Z7")
+  FOREACH(TARGET_KIND EXE SHARED MODULE)
+    set(CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE "${CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+  ENDFOREACH()
+ENDIF()
+
+# macOS: force Clang to use system libc++
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  execute_process(
+    COMMAND xcrun --show-sdk-path
+    OUTPUT_VARIABLE MACOS_SDK_PATH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  add_compile_options(-nostdinc++ -isystem ${MACOS_SDK_PATH}/usr/include/c++/v1 -isysroot ${MACOS_SDK_PATH})
+  add_link_options(-nostdlib++ -L${MACOS_SDK_PATH}/usr/lib -lc++ -lc++abi)
+endif()

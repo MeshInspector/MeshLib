@@ -62,15 +62,24 @@ struct BooleanResultMapper
 
     /// Returns faces bitset of result mesh corresponding input one
     MRMESH_API FaceBitSet map( const FaceBitSet& oldBS, MapObject obj ) const;
+
     /// Returns vertices bitset of result mesh corresponding input one
     MRMESH_API VertBitSet map( const VertBitSet& oldBS, MapObject obj ) const;
+
     /// Returns edges bitset of result mesh corresponding input one
     MRMESH_API EdgeBitSet map( const EdgeBitSet& oldBS, MapObject obj ) const;
+
+    /// Returns undirected edges bitset of result mesh corresponding input one
+    MRMESH_API UndirectedEdgeBitSet map( const UndirectedEdgeBitSet& oldBS, MapObject obj ) const;
+
     /// Returns only new faces that are created during boolean operation
     MRMESH_API FaceBitSet newFaces() const;
 
     /// returns updated oldBS leaving only faces that has corresponding ones in result mesh
-    MRMESH_API FaceBitSet filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj );
+    MRMESH_API FaceBitSet filteredOldFaceBitSet( const FaceBitSet& oldBS, MapObject obj ) const;
+
+    /// returns map: new_face_id->old_obj_face_id for faces from \param obj
+    [[nodiscard]] MRMESH_API FaceMap getNew2OldFaceMap( MapObject obj ) const;
 
     struct Maps
     {
@@ -83,8 +92,6 @@ struct BooleanResultMapper
         WholeEdgeMap old2newEdges;
         /// "origin" vertices to "after stitch" vertices (1-1)
         VertMap old2newVerts;
-        /// old topology indexes are valid if true
-        bool identity{false};
     };
     std::array<Maps, size_t( MapObject::Count )> maps;
 
@@ -100,13 +107,15 @@ struct BooleanInternalParameters
     const Mesh* originalMeshB{ nullptr };
     /// Optional output cut edges of booleaned meshes
     std::vector<EdgeLoop>* optionalOutCut{ nullptr };
+    /// If true uses graphcut for inside/outside separation
+    bool graphCutSeparation{ false };
 };
 
 /// Perform boolean operation on cut meshes
 /// \return mesh in space of meshA or error.
 /// \note: actually this function is meant to be internal, use "boolean" instead
 MRMESH_API Expected<Mesh> doBooleanOperation( Mesh&& meshACut, Mesh&& meshBCut,
-    const std::vector<EdgePath>& cutEdgesA, const std::vector<EdgePath>& cutEdgesB,
+    std::vector<EdgePath>&& cutEdgesA, std::vector<EdgePath>&& cutEdgesB,
     BooleanOperation operation, const AffineXf3f* rigidB2A = nullptr,
     BooleanResultMapper* mapper = nullptr,
     bool mergeAllNonIntersectingComponents = false,

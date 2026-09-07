@@ -239,6 +239,19 @@ std::shared_ptr<SurfacePointWidget> PickPointManager::createPickWidget_( const s
     newPoint->setBaseColor( params.ordinaryPointColor );
     newPoint->create( obj, pt );
 
+    newPoint->setCanMoveCallback( [this, obj = obj] ( SurfacePointWidget& pointWidget, const PickedPoint& )->bool
+    {
+        const int index = getPointIndex( obj, pointWidget );
+        if ( index < 0 )
+        {
+            assert( false );
+            return false;
+        }
+        if ( params.canMovePoint )
+            return params.canMovePoint( obj, index );
+        return true;
+    } );
+
     newPoint->setStartMoveCallback( [this, obj = obj] ( SurfacePointWidget & pointWidget, const PickedPoint& point )
     {
         const int index = getPointIndex( obj, pointWidget );
@@ -476,7 +489,10 @@ bool PickPointManager::onMouseDown_( Viewer::MouseButton button, int mod )
 
         if ( params.canAddPoint && !params.canAddPoint( objVisual, -1 ) )
             return false;
-        return appendPoint( objVisual, pointOnObjectToPickedPoint( objVisual.get(), pick ), params.startDraggingJustAddedPoint );
+        auto picked = pointOnObjectToPickedPoint( objVisual.get(), pick );
+        if ( std::holds_alternative<std::monostate>( picked ) )
+            return false;
+        return appendPoint( objVisual, picked, params.startDraggingJustAddedPoint );
     }
     else if ( mod == params.widgetContourCloseMod ) // close contour case
     {
@@ -675,10 +691,13 @@ void PickPointManager::setFullState( FullState s )
 
 PickPointManager::~PickPointManager()
 {
-    FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
+    if ( params.writeHistory )
     {
-        return bool( dynamic_cast<const WidgetHistoryAction *>( action.get() ) );
-    } );
+        FilterHistoryByCondition( [&] ( const std::shared_ptr<HistoryAction>& action )
+        {
+            return bool( dynamic_cast<const WidgetHistoryAction *>( action.get() ) );
+        } );
+    }
     disconnect();
 }
 

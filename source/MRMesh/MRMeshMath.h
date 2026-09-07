@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRVector.h"
 #include "MRMeshTopology.h"
 #include "MRPointOnFace.h"
@@ -50,7 +51,8 @@ MRMESH_API LineSegm3f edgeSegment( const MeshTopology & topology, const VertCoor
 MRMESH_API void getLeftTriPoints( const MeshTopology & topology, const VertCoords & points, EdgeId e, Vector3f & v0, Vector3f & v1, Vector3f & v2 );
 
 /// returns three points of left face of e: v[0] = orgPnt( e ), v[1] = destPnt( e )
-inline void getLeftTriPoints( const MeshTopology & topology, const VertCoords & points, EdgeId e, Vector3f (&v)[3] )
+/// This one is not in the bindings because of the reference-to-array parameter.
+MR_BIND_IGNORE inline void getLeftTriPoints( const MeshTopology & topology, const VertCoords & points, EdgeId e, Vector3f (&v)[3] )
 {
     getLeftTriPoints( topology, points, e, v[0], v[1], v[2] );
 }
@@ -70,7 +72,8 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 }
 
 /// returns three points of given face
-inline void getTriPoints( const MeshTopology & topology, const VertCoords & points, FaceId f, Vector3f (&v)[3] )
+/// This one is not in the bindings because of the reference-to-array parameter.
+MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const VertCoords & points, FaceId f, Vector3f (&v)[3] )
 {
     getTriPoints( topology, points, f, v[0], v[1], v[2] );
 }
@@ -91,7 +94,7 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 
 /// returns aspect ratio of given mesh triangle equal to the ratio of the circum-radius to twice its in-radius
 [[nodiscard]] MRMESH_API float triangleAspectRatio( const MeshTopology & topology, const VertCoords & points, FaceId f );
-    
+
 /// returns squared circumcircle diameter of given mesh triangle
 [[nodiscard]] MRMESH_API float circumcircleDiameterSq( const MeshTopology & topology, const VertCoords & points, FaceId f );
 
@@ -165,7 +168,8 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 }
 
 /// computes the area of given face-region
-[[nodiscard]] MRMESH_API double area( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE double area( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
 
 /// computes the area of given face-region (or whole mesh)
 [[nodiscard]] inline double area( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * fs = nullptr )
@@ -174,7 +178,8 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 }
 
 /// computes the sum of directed areas for faces from given region
-[[nodiscard]] MRMESH_API Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, const FaceBitSet & fs );
 
 /// computes the sum of directed areas for faces from given region (or whole mesh)
 [[nodiscard]] inline Vector3d dirArea( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * fs = nullptr )
@@ -183,7 +188,8 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 }
 
 /// computes the sum of absolute projected area of faces from given region as visible if look from given direction
-[[nodiscard]] MRMESH_API double projArea( const MeshTopology & topology, const VertCoords & points, const Vector3f & dir, const FaceBitSet & fs );
+/// This is skipped in the bindings because it conflicts with the overload taking a pointer in C#. Since that overload is strictly more useful, we're keeping that one.
+[[nodiscard]] MRMESH_API MR_BIND_IGNORE double projArea( const MeshTopology & topology, const VertCoords & points, const Vector3f & dir, const FaceBitSet & fs );
 
 /// computes the sum of absolute projected area of faces from given region (or whole mesh) as visible if look from given direction
 [[nodiscard]] inline double projArea( const MeshTopology & topology, const VertCoords & points, const Vector3f & dir, const FaceBitSet * fs = nullptr )
@@ -196,7 +202,7 @@ inline void getTriPoints( const MeshTopology & topology, const VertCoords & poin
 [[nodiscard]] MRMESH_API double volume( const MeshTopology & topology, const VertCoords & points, const FaceBitSet* region = nullptr );
 
 /// computes the perimeter of the hole specified by one of its edges with no valid left face (left is hole)
-[[nodiscard]] MRMESH_API double holePerimiter( const MeshTopology & topology, const VertCoords & points, EdgeId e );
+[[nodiscard]] MRMESH_API double holePerimeter( const MeshTopology & topology, const VertCoords & points, EdgeId e );
 
 /// computes directed area of the hole specified by one of its edges with no valid left face (left is hole);
 /// if the hole is planar then returned vector is orthogonal to the plane pointing outside and its magnitude is equal to hole area

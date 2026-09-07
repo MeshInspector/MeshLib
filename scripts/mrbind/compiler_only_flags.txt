@@ -1,6 +1,5 @@
 -Wno-deprecated-declarations
 -Wno-implicitly-unsigned-literal
--DMR_COMPILING_PB11_BINDINGS
 -DMRBIND_HEADER='"mrbind_target_pybind11.h"'
 -DMB_PB11_ADJUST_NAMES='"s/\\bMR:://g"'
 -DMB_PB11_STRIPPED_NAMESPACES='"MR","MR.Extra","MR.Cuda"'

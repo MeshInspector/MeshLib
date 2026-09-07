@@ -193,6 +193,9 @@ struct MeasureResult
         Vector3f closestPointB;
 
         [[nodiscard]] Vector3f closestPointFor( bool b ) const { return b ? closestPointB : closestPointA; }
+
+        [[nodiscard]] float distanceAlongAxis( int i ) const { return distanceAlongAxisAbs( i ) * ( distance < 0 ? -1 : 1 ); }
+        [[nodiscard]] float distanceAlongAxisAbs( int i ) const { return std::abs( closestPointA[i] - closestPointB[i] ); }
     };
     // Exact distance.
     Distance distance;

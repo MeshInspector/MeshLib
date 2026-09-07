@@ -1,7 +1,9 @@
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRCylinder3.h"
 #include "MRMesh/MRCylinderApproximator.h"
-
-#include "MRMesh/MRGTest.h"
+#include <gtest/gtest.h>
+#include "MRMesh/MRVector3.h"
+#include <cmath>
 
 namespace
 {

@@ -2,6 +2,7 @@
 
 #include "MRAppendHistory.h"
 #include "MRRibbonMenu.h"
+#include "MRSceneReorder.h"
 
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRMesh/MRObjectLines.h"
@@ -63,11 +64,34 @@ std::vector<FlatTree> getFlatSubtrees( const std::vector<std::shared_ptr<Object>
     return results;
 }
 
+/// moves all children (excluding meshes, points and lines) from one object to another
+/// \return false if the move failed
+static bool moveOtherChildrenWithUndo( Object& oldParent, Object& newParent )
+{
+    assert( &oldParent != &newParent );
+
+    SceneReorder task
+    {
+        .to = &newParent,
+    };
+    for ( const auto& child : oldParent.children() )
+    {
+        if ( child->isAncillary() )
+            continue;
+        if ( dynamic_cast<ObjectMesh*>( child.get() ) )
+            continue;
+        if ( dynamic_cast<ObjectLines*>( child.get() ) )
+            continue;
+        if ( dynamic_cast<ObjectPoints*>( child.get() ) )
+            continue;
+        task.who.push_back( child.get() );
+    }
+    return sceneReorderWithUndo( task );
+}
+
 void mergeSubtree( TypedFlatTree subtree )
 {
     MR_TIMER;
-
-    SCOPED_HISTORY( "Merge Objects" );
 
     auto& rootObj = subtree.root;
     assert( rootObj->parent() );
@@ -91,6 +115,9 @@ void mergeSubtree( TypedFlatTree subtree )
 
         AppendHistory<ChangeSceneAction>( "Add Object", newObjMesh, ChangeSceneAction::Type::AddObject );
         rootObj->parent()->addChild( newObjMesh );
+
+        for ( const auto & objMesh : objsMesh )
+            moveOtherChildrenWithUndo( *objMesh, *newObjMesh );
     }
 
     if ( !objsLines.empty() )
@@ -105,6 +132,9 @@ void mergeSubtree( TypedFlatTree subtree )
 
         AppendHistory<ChangeSceneAction>( "Add Object", newObjLines, ChangeSceneAction::Type::AddObject );
         rootObj->parent()->addChild( newObjLines );
+
+        for ( const auto & objLine : objsLines )
+            moveOtherChildrenWithUndo( *objLine, *newObjLines );
     }
 
     if ( !objsPoints.empty() )
@@ -141,10 +171,12 @@ void mergeSubtree( TypedFlatTree subtree )
 
         AppendHistory<ChangeSceneAction>( "Add Object", newObjPoints, ChangeSceneAction::Type::AddObject );
         rootObj->parent()->addChild( newObjPoints );
+
+        for ( const auto & objPoints : objsPoints )
+            moveOtherChildrenWithUndo( *objPoints, *newObjPoints );
     }
 
     AppendHistory<ChangeSceneAction>( "Remove Object", rootObj, ChangeSceneAction::Type::RemoveObject );
-    rootObj->parent()->removeChild( rootObj );
     rootObj->detachFromParent();
 }
 

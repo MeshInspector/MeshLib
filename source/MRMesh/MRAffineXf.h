@@ -2,14 +2,23 @@
 
 #include "MRMacros.h"
 #include "MRMeshFwd.h"
+#include <iosfwd>
 #include <type_traits>
+
+#if MR_COMPILING_ANY_BINDINGS
+// In C: Include the headers for the matrices that are otherwise missing in the C bindings.
+//     I'm not sure how the binding generator could possibly guess that it needs to include those.
+// In Python: Need those headers to generate the implementation for `operator<<` and `operator>>`, which call into the same operators of matrices.
+#include "MRMatrix2.h"
+#include "MRMatrix3.h"
+#endif
 
 namespace MR
 {
 
 /// affine transformation: y = A*x + b, where A in VxV, and b in V
 /// \ingroup MathGroup
-template <typename V>
+template <typename V> MR_REQUIRES_IF_SUPPORTED( detail::AffineXf3f::IsValidTemplateArg<V> )
 struct AffineXf
 {
     using T = typename V::ValueType;
@@ -20,8 +29,12 @@ struct AffineXf
 
     constexpr AffineXf() noexcept = default;
     constexpr AffineXf( const M & A, const V & b ) noexcept : A( A ), b( b ) { }
-    template <typename U>
+
+    // Here `U == V` doesn't seem to cause any issues in the C++ code, but we're still disabling it because it somehow gets emitted
+    //   when generating the bindings, and results in duplicate functions in C#.
+    template <typename U> MR_REQUIRES_IF_SUPPORTED( !std::is_same_v<U, V> )
     constexpr explicit AffineXf( const AffineXf<U> & xf ) noexcept : A( xf.A ), b( xf.b ) { }
+
     /// creates translation-only transformation (with identity linear component)
     [[nodiscard]] static constexpr AffineXf translation( const V & b ) noexcept { return AffineXf{ M{}, b }; }
     /// creates linear-only transformation (without translation)
@@ -35,7 +48,13 @@ struct AffineXf
     /// for example if this is a rigid transformation, then only rotates input vector
     [[nodiscard]] constexpr V linearOnly( const V & x ) const noexcept { return A * x; }
     /// computes inverse transformation
-    [[nodiscard]] constexpr AffineXf inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> );
+    [[nodiscard]] constexpr AffineXf inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
+    {
+        AffineXf<V> res;
+        res.A = A.inverse();
+        res.b = -( res.A * b );
+        return res;
+    }
 
     /// composition of two transformations:
     /// \f( y = (u * v) ( x ) = u( v( x ) ) = ( u.A * ( v.A * x + v.b ) + u.b ) = ( u.A * v.A ) * x + ( u.A * v.b + u.b ) \f)
@@ -53,20 +72,16 @@ struct AffineXf
     {
         return !( a == b );
     }
+
+    friend std::ostream& operator<<( std::ostream& s, const AffineXf& xf )
+    {
+        return s << xf.A << xf.b;
+    }
+
+    friend std::istream& operator>>( std::istream& s, AffineXf& xf )
+    {
+        return s >> xf.A >> xf.b;
+    }
 };
-
-/// \related AffineXf
-/// \{
-
-template <typename V>
-inline constexpr AffineXf<V> AffineXf<V>::inverse() const noexcept MR_REQUIRES_IF_SUPPORTED( !std::is_integral_v<T> )
-{
-    AffineXf<V> res;
-    res.A = A.inverse();
-    res.b = -( res.A * b );
-    return res;
-}
-
-/// \}
 
 } // namespace MR

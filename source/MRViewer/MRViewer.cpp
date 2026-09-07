@@ -1,8 +1,9 @@
 #include "MRViewer.h"
-#include "MRMesh/MRFinally.h"
+#include "MRViewerSignals.h"
 #include "MRViewerEventQueue.h"
 #include "MRSceneTextureGL.h"
 #include "MRAlphaSortGL.h"
+#include "MRDepthPeelingGL.h"
 #include "MRGLMacro.h"
 #include "MRSetupViewer.h"
 #include "MRGLStaticHolder.h"
@@ -16,6 +17,7 @@
 #include "MRSpaceMouseHandler.h"
 #include "MRDragDropHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
+#include "MRSpaceMouseHandlerWinEvents.h"
 #include "MRSpaceMouseHandler3dxMacDriver.h"
 #include "MRRenderGLHelpers.h"
 #include "MRTouchpadController.h"
@@ -29,6 +31,18 @@
 #include "MRColorTheme.h"
 #include "MRHistoryStore.h"
 #include "MRShowModal.h"
+#include "MRFileDialog.h"
+#include "MRSceneCache.h"
+#include "MRViewerTitle.h"
+#include "MRViewportCornerController.h"
+#include "MRViewportGlobalBasis.h"
+#include "MRFileLoadOptions.h"
+#include "MRWebRequest.h"
+#include "MRUnitSettings.h"
+#include "MROpenObjects.h"
+#include "MRI18n.h"
+#include "MRVoxels/MRDicom.h"
+#include <MRMesh/MRFinally.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRCylinder.h>
@@ -52,18 +66,15 @@
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSystem.h"
-#include "MRMesh/MRGTest.h"
 #include "MRSymbolMesh/MRObjectLabel.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRMesh/MRSceneColors.h"
 #include "MRPch/MRWasm.h"
 #include "MRMesh/MRGcodeLoad.h"
-#include "MRSceneCache.h"
-#include "MRViewerTitle.h"
-#include "MRViewportCornerController.h"
-#include "MRWebRequest.h"
+#include "MRMesh/MRSignal.h"
 #include "MRMesh/MRCube.h"
+#include "MRViewerConfigConstants.h"
 
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
@@ -74,12 +85,12 @@
 #include "MRAppendHistory.h"
 #include "MRSwapRootAction.h"
 #include "MRMesh/MRSceneLoad.h"
+#include "MRMesh/MRConfig.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/html5.h>
-#include "MRMesh/MRConfig.h"
 #define GLFW_INCLUDE_ES3
 
 namespace
@@ -214,6 +225,20 @@ static void glfw_window_pos( GLFWwindow* /*window*/, int xPos, int yPos )
         viewer->windowOldPos = viewer->windowSavePos;
         viewer->postSetPosition( xPos, yPos );
     } );
+
+    // It is necessary to redraw the contents of the window when moving the window in Windows OS
+    //
+    // (on Windows) The glfw_window_pos callback is called, but glfwWaitEvents does not pass,
+    // and event queue processing is not performed until the end of the move.
+    // For this reason, draw is called outside of EventQueue.
+    //
+    // "On some platforms, a window move, resize or menu operation will cause event processing to block. This is due to how event processing is designed on those platforms"
+    // https://www.glfw.org/docs/latest/group__window.html#ga37bd57223967b4211d60ca1a0bf3c832
+    //
+    // https://stackoverflow.com/questions/71243906/glfw-window-poll-events-lag
+#ifdef _WIN32
+    viewer->draw( true );
+#endif
 }
 
 static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
@@ -221,7 +246,7 @@ static void glfw_cursor_enter_callback( GLFWwindow* /*window*/, int entered )
     auto viewer = &MR::getViewerInstance();
     viewer->emplaceEvent( "Cursor enter", [entered, viewer] ()
     {
-        viewer->cursorEntranceSignal( bool( entered ) );
+        viewer->signals().cursorEntranceSignal( bool( entered ) );
     } );
 }
 
@@ -256,7 +281,7 @@ static void glfw_window_scale( GLFWwindow* /*window*/, float xscale, float yscal
 }
 
 #if defined(__EMSCRIPTEN__) && defined(MR_EMSCRIPTEN_ASYNCIFY)
-static constexpr int minEmsSleep = 3; // ms - more then 300 fps possible
+static constexpr int minEmsSleep = 3; // ms - more than 300 fps possible
 static EM_BOOL emsEmptyCallback( double, void* )
 {
     return EM_TRUE;
@@ -292,9 +317,6 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 
 static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, const char **filenames )
 {
-    if ( count == 0 )
-        return;
-
     std::vector<std::filesystem::path> paths( count );
     for ( int i = 0; i < count; ++i )
     {
@@ -308,17 +330,13 @@ static void glfw_drop_callback( [[maybe_unused]] GLFWwindow *window, int count, 
     viewer->postEmptyEvent();
 }
 
-static void glfw_joystick_callback( int jid, int event )
-{
-    auto viewer = &MR::getViewerInstance();
-    viewer->emplaceEvent( "Joystick", [jid, event, viewer] ()
-    {
-        viewer->joystickUpdateConnected( jid, event );
-    } );
-}
-
 namespace MR
 {
+
+struct Viewer::Connections
+{
+    std::vector<boost::signals2::scoped_connection> uiUpdateConnections;
+};
 
 void Viewer::emplaceEvent( std::string name, ViewerEventCallback cb, bool skipable )
 {
@@ -341,7 +359,7 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     label->setVisualizeProperty( depthTest, VisualizeMaskType::DepthTest, ViewportMask::all() );
     float fontSize = 20.0f;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        fontSize *= menu->menu_scaling();
+        fontSize *= menu->menuScaling();
     label->setFontHeight( fontSize );
     obj.addChild( label );
 }
@@ -363,16 +381,17 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
 
     auto& viewer = MR::Viewer::instanceRef();
 
-    MR::setupLoggerByDefault();
+    MR::setupLoggerByDefault( setup.setupCustomLogSink );
 
     setup.setupBasePlugins( &viewer );
     setup.setupCommonModifiers( &viewer );
     setup.setupCommonPlugins( &viewer );
-    setup.setupSettingsManager( &viewer, params.name );
+    setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
     setup.setupConfiguration( &viewer );
     CommandLoop::appendCommand( [&] ()
     {
         setup.setupExtendedLibraries();
+        setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
 
     int res = 0;
@@ -391,13 +410,12 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         res = 1;
     }
 #endif
+    setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
+    if ( setup.shutdownCustomLogSink )
+        setup.shutdownCustomLogSink();
     return res;
-}
-
-void loadMRViewerDll()
-{
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
@@ -437,8 +455,13 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-tryHidden" ||
             flag == "-transparentBgOn" ||
             flag == "-transparentBgOff" ||
+            flag == "-resetConfig" ||
             flag == "-noSplash" ||
+    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+            flag == "-showSplash" ||
+    #endif
             flag == "-console" ||
+            flag == "-noMultiViewport" ||
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
             flag == "-develop" ||
@@ -515,8 +538,14 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.enableTransparentBackground = true;
         else if ( flag == "-transparentBgOff" )
             params.enableTransparentBackground = false;
+        else if ( flag == "-resetConfig" )
+            params.resetConfig = true;
         else if ( flag == "-noSplash" )
             params.splashWindow.reset();
+    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+        else if ( flag == "-showSplash" )
+            params.splashWindow = std::make_shared<MR::DefaultSplashWindow>();
+    #endif
         else if ( flag == "-console" )
             params.console = true;
         else if ( flag == "-openGL3" )
@@ -525,6 +554,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.render3dSceneInTexture = false;
         else if ( flag == "-develop" )
             params.developerFeatures = true;
+        else if ( flag == "-noMultiViewport" )
+            params.multiViewport = false;
         else if ( flag == "-width" )
             nextW = true;
         else if ( flag == "-height" )
@@ -564,7 +595,7 @@ void Viewer::mainLoopFunc_()
         }
         else if ( !isAnimating && eventQueue_ && eventQueue_->empty() )
         {
-            emscripten_sleep( minEmsSleep ); // more then 300 fps possible
+            emscripten_sleep( minEmsSleep ); // more than 300 fps possible
             continue;
         }
 
@@ -602,18 +633,39 @@ int Viewer::launch( const LaunchParams& params )
     launchParams_ = params;
     isAnimating = params.isAnimating;
     animationMaxFps = params.animationMaxFps;
-    if ( params.developerFeatures )
-        experimentalFeatures = true;
+    experimentalFeatures = params.developerFeatures;
+
+    bool defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewportKey, true );
+    // tool windows detached from a never-shown main window become visible OS windows of their own
+    const bool hiddenWindow = params.windowMode == LaunchParams::Hide || params.windowMode == LaunchParams::TryHidden
+                           || params.windowMode == LaunchParams::NoWindow;
+    launchParams_.multiViewport = defaultMultiViewport && params.multiViewport && !hiddenWindow;
+
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
+    {
+        // no command loop will ever run here, so no command may wait for one
+        CommandLoop::removeCommands( true );
         return res;
+    }
 
-    CommandLoop::setState( CommandLoop::StartPosition::AfterSplashHide );
+    CommandLoop::setState( CommandLoop::StartPosition::BeforeWindowAppear );
     CommandLoop::processCommands(); // execute pre init commands before first draw
     focusRedrawReady_ = true;
 
+#ifdef _WIN32
+    // splash window must be hidden after main window appear, otherwise another application (e.g. Windows Explorer) is activated
     if ( params.windowMode == LaunchParams::HideInit && window )
         glfwShowWindow( window );
+#endif
+
+    if ( params.windowMode != LaunchParams::NoWindow && params.windowMode != LaunchParams::Hide && params.splashWindow )
+        params.splashWindow->stop();
+
+#ifndef _WIN32
+    if ( params.windowMode == LaunchParams::HideInit && window )
+        glfwShowWindow( window );
+#endif
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
     CommandLoop::processCommands(); // execute remaining commands in the queue, important for params.startEventLoop==false
@@ -684,8 +736,116 @@ bool Viewer::checkOpenGL_( const LaunchParams& params )
     return true;
 }
 
+bool Viewer::setupWindow_( const LaunchParams& params )
+{
+    MR_TIMER;
+    assert( window );
+    spdlog::info( "Setting up window" );
+
+    glfwMakeContextCurrent( window );
+    if ( !loadGL() )
+    {
+        spdlog::error( "Failed to load OpenGL and its extensions" );
+        return false;
+    }
+    glInitialized_ = true;
+#ifndef __EMSCRIPTEN__
+    spdlog::info( "OpenGL Version {}.{} loaded", GLVersion.major, GLVersion.minor );
+#endif
+    int major, minor, rev;
+    major = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MAJOR );
+    minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
+    rev = glfwGetWindowAttrib( window, GLFW_CONTEXT_REVISION );
+    spdlog::info( "OpenGL version received: {}.{}.{}", major, minor, rev );
+    if ( glInitialized_ )
+    {
+        spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
+        spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
+    }
+
+    if ( !windowTitle )
+        windowTitle = std::make_shared<ViewerTitle>();
+
+    windowTitle->setAppName( params.name );
+    if ( params.showMRVersionInTitle )
+        windowTitle->setVersion( GetMRVersionString() );
+
+    glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
+    // Register callbacks
+    glfwSetKeyCallback( window, glfw_key_callback );
+    glfwSetCursorPosCallback( window, glfw_mouse_move );
+    glfwSetFramebufferSizeCallback( window, glfw_framebuffer_size );
+    glfwSetWindowPosCallback( window, glfw_window_pos );
+    glfwSetCursorEnterCallback( window, glfw_cursor_enter_callback );
+#ifndef __EMSCRIPTEN__
+    glfwSetWindowMaximizeCallback( window, glfw_window_maximize );
+    glfwSetWindowIconifyCallback( window, glfw_window_iconify );
+    glfwSetWindowContentScaleCallback( window, glfw_window_scale );
+    glfwSetWindowFocusCallback( window, glfw_window_focus );
+    glfwSetWindowCloseCallback( window, glfw_window_close );
+#endif
+    glfwSetMouseButtonCallback( window, glfw_mouse_press );
+    glfwSetCharCallback( window, glfw_char_mods_callback );
+    glfwSetDropCallback( window, glfw_drop_callback );
+
+    // Handle retina displays (windows and mac)
+    int width, height;
+    glfwGetFramebufferSize( window, &width, &height );
+    // Initialize IGL viewer
+    glfw_framebuffer_size( window, width, height );
+
+    if ( hasScaledFramebuffer_ )
+        updatePixelRatio_();
+
+    float xscale{ 1.0f }, yscale{ 1.0f };
+#ifndef __EMSCRIPTEN__
+    glfwGetWindowContentScale( window, &xscale, &yscale );
+#endif
+    glfw_window_scale( window, xscale, yscale );
+    spdlog::info( "glfw configured" );
+
+    enableAlphaSort( true );
+    if ( sceneTexture_ )
+    {
+        sceneTexture_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ), isDepthPeelingEnabled() );
+        spdlog::info( "SceneTexture created" );
+    }
+
+    if ( depthPeeler_ )
+    {
+        depthPeeler_->reset( { width, height } );
+        spdlog::info( "DepthPeeler created" );
+    }
+
+    if ( alphaSorter_ )
+    {
+        alphaSorter_->init();
+        alphaSorter_->updateTransparencyTexturesSize( width, height );
+        spdlog::info( "AlphaSorter created" );
+    }
+
+    mouseController_->connect();
+
+    touchesController_->connect( this );
+    spdlog::info( "TouchesController created" );
+
+    spaceMouseController_->connect();
+    spdlog::info( "SpaceMouseController created" );
+
+    if ( !spaceMouseHandler_ )
+        initSpaceMouseHandler_();
+
+    touchpadController_->connect( this );
+    touchpadController_->initialize( window );
+    spdlog::info( "TouchpadController created" );
+
+    dragDropAdvancedHandler_ = getDragDropHandler( window );
+    return true;
+}
+
 int Viewer::launchInit_( const LaunchParams& params )
 {
+    MR_TIMER;
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
     spdlog::info( "Log file: {}", utf8string( Logger::instance().getLogFileName() ) );
     glfwSetErrorCallback( glfw_error_callback );
@@ -744,115 +904,22 @@ int Viewer::launchInit_( const LaunchParams& params )
             else
                 return EXIT_FAILURE;
         }
-    }
-
-    if ( windowMode )
-    {
-        assert( window );
-
-        glfwMakeContextCurrent( window );
-        if ( !loadGL() )
-        {
-            spdlog::error( "Failed to load OpenGL and its extensions" );
-            return( -1 );
-        }
-        glInitialized_ = true;
-#ifndef __EMSCRIPTEN__
-        spdlog::info( "OpenGL Version {}.{} loaded", GLVersion.major, GLVersion.minor );
-#endif
-        int major, minor, rev;
-        major = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MAJOR );
-        minor = glfwGetWindowAttrib( window, GLFW_CONTEXT_VERSION_MINOR );
-        rev = glfwGetWindowAttrib( window, GLFW_CONTEXT_REVISION );
-        spdlog::info( "OpenGL version received: {}.{}.{}", major, minor, rev );
-        if ( glInitialized_ )
-        {
-            spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
-            spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
-        }
-
-        if ( !windowTitle )
-            windowTitle = std::make_shared<ViewerTitle>();
-
-        windowTitle->setAppName( params.name );
-        if ( params.showMRVersionInTitle )
-            windowTitle->setVersion( GetMRVersionString() );
-
-        glfwSetInputMode( window, GLFW_CURSOR, GLFW_CURSOR_NORMAL );
-        // Register callbacks
-        glfwSetKeyCallback( window, glfw_key_callback );
-        glfwSetCursorPosCallback( window, glfw_mouse_move );
-        glfwSetFramebufferSizeCallback( window, glfw_framebuffer_size );
-        glfwSetWindowPosCallback( window, glfw_window_pos );
-        glfwSetCursorEnterCallback( window, glfw_cursor_enter_callback );
-#ifndef __EMSCRIPTEN__
-        glfwSetWindowMaximizeCallback( window, glfw_window_maximize );
-        glfwSetWindowIconifyCallback( window, glfw_window_iconify );
-        glfwSetWindowContentScaleCallback( window, glfw_window_scale );
-        glfwSetWindowFocusCallback( window, glfw_window_focus );
-        glfwSetWindowCloseCallback( window, glfw_window_close );
-#endif
-        glfwSetMouseButtonCallback( window, glfw_mouse_press );
-        glfwSetCharCallback( window, glfw_char_mods_callback );
-        glfwSetDropCallback( window, glfw_drop_callback );
-        glfwSetJoystickCallback( glfw_joystick_callback );
-
-        // Handle retina displays (windows and mac)
-        int width, height;
-        glfwGetFramebufferSize( window, &width, &height );
-        // Initialize IGL viewer
-        glfw_framebuffer_size( window, width, height );
-
-        if ( hasScaledFramebuffer_ )
-            updatePixelRatio_();
-
-        float xscale{ 1.0f }, yscale{ 1.0f };
-#ifndef __EMSCRIPTEN__
-        glfwGetWindowContentScale( window, &xscale, &yscale );
-#endif
-        glfw_window_scale( window, xscale, yscale );
-
-        enableAlphaSort( true );
         if ( sceneTexture_ )
-            sceneTexture_->reset( { width, height }, getMSAAPow( getRequiredMSAA_( true, true ) ) );
-
-        if ( alphaSorter_ )
-        {
-            alphaSorter_->init();
-            alphaSorter_->updateTransparencyTexturesSize( width, height );
-        }
-
-        mouseController_->connect();
-
-        if ( !touchesController_ )
-            touchesController_ = std::make_unique<TouchesController>();
-        touchesController_->connect( this );
-
-        if ( !spaceMouseController_ )
-            spaceMouseController_ = std::make_unique<SpaceMouseController>();
-        spaceMouseController_->connect();
-        initSpaceMouseHandler_();
-
-        if ( !touchpadController_ )
-            touchpadController_ = std::make_unique<TouchpadController>();
-        touchpadController_->connect( this );
-        touchpadController_->initialize( window );
-
-        dragDropAdvancedHandler_ = getDragDropHandler( window );
+            depthPeeler_ = std::make_unique<DepthPeelingGL>();
     }
+
+    if ( windowMode && !setupWindow_( params ) )
+        return -1;
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowInit );
     CommandLoop::processCommands();
 
-    std::future<void> splashMinTimer;
+    // current time plus minimum delay splash screen to stay present
+    decltype( std::chrono::steady_clock::now() + std::chrono::duration<float>( 0 ) ) continueTime;
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
     {
         params.splashWindow->start();
-        // minimum time splash screen to stay present
-        splashMinTimer = std::async( std::launch::async, [seconds = params.splashWindow->minimumTimeSec()] ()
-        {
-            std::this_thread::sleep_for( std::chrono::duration<float>( seconds ) );
-        } );
+        continueTime = std::chrono::steady_clock::now() + std::chrono::duration<float>( params.splashWindow->minimumTimeSec() );
     }
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterSplashAppear );
@@ -864,7 +931,7 @@ int Viewer::launchInit_( const LaunchParams& params )
         menuPlugin_->init( this );
     }
 
-    // print after menu init to know valid menu_scaling
+    // print after menu init to know valid menuScaling
     spdlog::info( "System info:\n{}", GetSystemInfoJson().toStyledString() );
 
     init_();
@@ -879,8 +946,9 @@ int Viewer::launchInit_( const LaunchParams& params )
 
     if ( windowMode && params.windowMode != LaunchParams::Hide && params.splashWindow )
     {
-        splashMinTimer.get();
-        params.splashWindow->stop();
+        spdlog::info( "Waiting for minimal splash screen time..." );
+        std::this_thread::sleep_until( continueTime );
+        spdlog::info( "Minimal splash screen time reached" );
     }
 
     // important to be after splash
@@ -899,6 +967,8 @@ void Viewer::launchEventLoop()
         spdlog::error( "Viewer is not launched!" );
         return;
     }
+
+    spdlog::info( "Launching event loop" );
 
     // Rendering loop
     while ( !windowShouldClose() )
@@ -942,6 +1012,8 @@ void Viewer::launchShut()
     if ( window )
         glfwHideWindow( window );
 
+    signals_->preShutdownSignal();
+
     if ( settingsMng_ )
     {
         spdlog::info( "Save user settings." );
@@ -973,7 +1045,7 @@ void Viewer::launchShut()
     basisAxes.reset();
     rotationSphere.reset();
     clippingPlaneObject.reset();
-    globalBasisAxes.reset();
+    globalBasis.reset();
     globalHistoryStore_.reset();
     basisViewController.reset();
 
@@ -981,9 +1053,9 @@ void Viewer::launchShut()
 
     alphaSorter_.reset();
     sceneTexture_.reset();
+    depthPeeler_.reset();
 
-    if ( touchpadController_ )
-        touchpadController_->reset();
+    touchpadController_->reset();
 
     dragDropAdvancedHandler_.reset();
 
@@ -1003,50 +1075,12 @@ void Viewer::launchShut()
     }
 
     /// disconnect all slots before shared libraries with plugins are unloaded
-    mouseDownSignal = {};
-    mouseUpSignal = {};
-    mouseMoveSignal = {};
-    mouseScrollSignal = {};
-    mouseClickSignal = {};
-    dragStartSignal = {};
-    dragEndSignal = {};
-    dragSignal = {};
-    cursorEntranceSignal = {};
-    charPressedSignal = {};
-    keyUpSignal = {};
-    keyDownSignal = {};
-    keyRepeatSignal = {};
-    spaceMouseMoveSignal = {};
-    spaceMouseDownSignal = {};
-    spaceMouseUpSignal = {};
-    spaceMouseRepeatSignal = {};
-    preDrawSignal = {};
-    preDrawPostViewportSignal = {};
-    drawSignal = {};
-    postDrawPreViewportSignal = {};
-    postDrawSignal = {};
-    objectsLoadedSignal = {};
-    dragDropSignal = {};
-    postResizeSignal = {};
-    postRescaleSignal = {};
-    interruptCloseSignal = {};
-    touchStartSignal = {};
-    touchMoveSignal = {};
-    touchEndSignal = {};
-    touchpadRotateGestureBeginSignal = {};
-    touchpadRotateGestureUpdateSignal = {};
-    touchpadRotateGestureEndSignal = {};
-    touchpadSwipeGestureBeginSignal = {};
-    touchpadSwipeGestureUpdateSignal = {};
-    touchpadSwipeGestureEndSignal = {};
-    touchpadZoomGestureBeginSignal = {};
-    touchpadZoomGestureUpdateSignal = {};
-    touchpadZoomGestureEndSignal = {};
-    postFocusSignal = {};
+    *signals_ = {};
 }
 
 void Viewer::init_()
 {
+    MR_TIMER;
     initBasisAxesObject_();
     initBasisViewControllerObject_();
     initClippingPlaneObject_();
@@ -1101,43 +1135,17 @@ void Viewer::postEmptyEvent()
     glfwPostEmptyEvent();
 }
 
-const TouchpadParameters & Viewer::getTouchpadParameters() const
-{
-    if ( !touchpadController_ )
-    {
-        const static TouchpadParameters empty;
-        return empty;
-    }
-    return touchpadController_->getParameters();
-}
-
-void Viewer::setTouchpadParameters( const TouchpadParameters & ps )
-{
-    if ( !touchpadController_ )
-        touchpadController_ = std::make_unique<TouchpadController>();
-    touchpadController_->setParameters( ps );
-}
-
-SpaceMouseParameters Viewer::getSpaceMouseParameters() const
-{
-    if ( !spaceMouseController_ )
-        return {};
-    return spaceMouseController_->getParameters();
-}
-
-void Viewer::setSpaceMouseParameters( const SpaceMouseParameters & ps )
-{
-    if ( !spaceMouseController_ )
-        spaceMouseController_ = std::make_unique<SpaceMouseController>();
-    spaceMouseController_->setParameters( ps );
-}
-
 Viewer::Viewer() :
     selected_viewport_index( 0 ),
     eventQueue_( std::make_unique<ViewerEventQueue>() ),
+    touchpadController_( std::make_unique<TouchpadController>() ),
+    spaceMouseController_( std::make_unique<SpaceMouse::Controller>() ),
+    touchesController_( std::make_unique<TouchesController>() ),
     mouseController_( std::make_unique<MouseController>() ),
     recentFilesStore_( std::make_unique<RecentFilesStore>() ),
-    frameCounter_( std::make_unique<FrameCounter>() )
+    frameCounter_( std::make_unique<FrameCounter>() ),
+    connections_( std::make_unique<Connections>() ),
+    signals_( std::make_unique<ViewerSignals>() )
 {
     window = nullptr;
 
@@ -1151,8 +1159,8 @@ Viewer::Viewer() :
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
         viewer->experimentalFeatures = false;
-        viewer->setSpaceMouseParameters( SpaceMouseParameters{} );
-        viewer->setTouchpadParameters( TouchpadParameters{} );
+        viewer->spaceMouseController().setParameters( SpaceMouse::Parameters{} );
+        viewer->touchpadController().setParameters( TouchpadParameters{} );
         viewer->enableAlphaSort( true );
 
         for ( ViewportId id : viewer->getPresentViewports() )
@@ -1185,6 +1193,7 @@ Viewer::~Viewer()
     glInitialized_ = false;
     alphaSorter_.reset();
     sceneTexture_.reset();
+    depthPeeler_.reset();
 }
 
 bool Viewer::isSupportedFormat( const std::filesystem::path& mesh_file_name )
@@ -1244,15 +1253,20 @@ static std::optional<std::string> commonClassName( const std::vector<std::shared
     if ( objs.empty() )
         return {};
 
-    auto cn = objs[0]->getClassName();
+    auto cn = objs[0]->className();
     if ( objs.size() == 1 )
         return cn;
 
     for ( int i = 1; i < objs.size(); ++i )
-        if ( cn != objs[i]->getClassName() )
+        if ( cn != objs[i]->className() )
             return {};
 
-    return objs[0]->getClassNameInPlural();
+    return objs[0]->classNameInPlural();
+}
+
+bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList )
+{
+    return loadFiles( filesList, {} );
 }
 
 bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, const FileLoadOptions & options )
@@ -1260,22 +1274,41 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     if ( filesList.empty() )
         return false;
 
-    const auto postProcess = [this, options] ( const SceneLoad::SceneLoadResult& result )
+    const auto postProcess = [this, options] ( const SceneLoad::Result& result )
     {
         if ( result.scene )
         {
             const bool wasEmptyScene = SceneRoot::get().children().empty();
             const bool wasEmptyUndo = globalHistoryStore_ && globalHistoryStore_->getStackPointer() == 0;
 
-            std::string undoName = options.undoPrefix + commonFilesName( result.loadedFiles );
-            if ( auto cn = commonClassName( result.scene->children() ) )
-                undoName += " as " + *cn;
+            const auto undoPrefix = options.undoPrefix;
+            const auto fileName = commonFilesName( result.loadedFiles );
+            const auto className = commonClassName( result.scene->children() );
+            auto undoName = fmt::format( fmt::runtime( undoPrefix ), fileName );
+            if ( className )
+                undoName = fmt::format( "{} as {}", undoName, *className );
+            const auto dynamicUndoName = [undoPrefix, fileName, className]
+            {
+                auto result = fmt::format( f_tr( undoPrefix ), fileName );
+                if ( className )
+                {
+                    // TRANSLATORS: example string: Open .SVG as Polyline
+                    result = fmt::format( f_tr( "{} as {}" ), result, _tr( *className ) );
+                }
+                return result;
+            };
 
-            if ( options.forceReplaceScene || wasEmptyScene )
+            bool singleSceneFile = result.loadedFiles.size() == 1 && !result.isSceneConstructed;
+            bool forceReplace = options.replaceMode == FileLoadOptions::ReplaceMode::ForceReplace;
+            bool forceAdd = options.replaceMode == FileLoadOptions::ReplaceMode::ForceAdd;
+
+            if ( forceReplace || wasEmptyScene || ( !forceAdd && singleSceneFile ) )
             {
                 {
+                    SCOPED_HISTORY( undoName, dynamicUndoName );
+
                     // the scene is taken as is from a single file, replace the current scene with it
-                    AppendHistory<SwapRootAction>( undoName );
+                    AppendHistory<SwapRootAction>( "swap root" );
                     auto newRoot = result.scene;
                     std::swap( newRoot, SceneRoot::getSharedPtr() );
                     setSceneDirty();
@@ -1283,7 +1316,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 }
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
-                objectsLoadedSignal( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
+                signals_->objectsLoadedSignal( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
             }
             else
             {
@@ -1292,7 +1325,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                     recentFilesStore().storeFile( file );
                 const auto children = result.scene->children();
                 {
-                    SCOPED_HISTORY( undoName );
+                    SCOPED_HISTORY( undoName, dynamicUndoName );
 
                     result.scene->removeAllChildren();
                     for ( const auto& obj : children )
@@ -1303,7 +1336,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                 }
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( children, result.errorSummary, result.warningSummary );
-                objectsLoadedSignal( children, result.errorSummary, result.warningSummary );
+                signals_->objectsLoadedSignal( children, result.errorSummary, result.warningSummary );
             }
 
             // if the original state was empty, avoid user confusion when they undo opening and see empty modified scene
@@ -1320,7 +1353,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         {
             if ( options.loadedCallback )
                 options.loadedCallback( {}, result.errorSummary, result.warningSummary );
-            objectsLoadedSignal( {}, result.errorSummary, result.warningSummary );
+            signals_->objectsLoadedSignal( {}, result.errorSummary, result.warningSummary );
         }
         if ( !result.errorSummary.empty() )
             showModal( result.errorSummary, NotificationType::Error );
@@ -1338,19 +1371,53 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
         }
     };
 
-#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
-    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess]
+    auto openFolder = []( const std::filesystem::path& filename, const ProgressCallback& callback ) -> Expected<LoadedObjects>
     {
-        SceneLoad::asyncFromAnySupportedFormat( filesList, [postProcess] ( SceneLoad::SceneLoadResult result )
+        auto loadRes = makeObjectTreeFromFolder( filename, false, callback );
+        if ( !loadRes )
+            return unexpected( std::move( loadRes.error() ) );
+        return LoadedObjects{
+            .objs = { loadRes->obj },
+            .warnings = std::move( loadRes->warnings ),
+            .lengthUnit = std::move( loadRes->lengthUnit )
+        };
+    };
+
+    auto checkDicomSlices = []( [[maybe_unused]] const std::vector<std::filesystem::path>& filesList )
+    {
+        SceneLoad::Result result;
+#ifndef MRVOXELS_NO_DICOM
+        for ( const auto& f : filesList )
         {
+            Vector3i dims;
+            if ( VoxelsLoad::isDicomFile( f, nullptr, &dims ) && dims.z == 1 )
+            {
+                result.errorSummary = "Please use Open Directory for loading multi-file DICOM volumes.";
+                break;
+            }
+        }
+#endif //MRVOXELS_NO_DICOM
+        return result;
+    };
+
+#if defined( __EMSCRIPTEN__ ) && !defined( __EMSCRIPTEN_PTHREADS__ )
+    ProgressBar::orderWithManualFinish( "Open files", [filesList, postProcess, openFolder, checkDicomSlices]
+    {
+        auto result = checkDicomSlices( filesList );
+        if ( result.errorSummary.empty() )
+            SceneLoad::asyncFromAnySupportedFormat( filesList, postProcess,
+                { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
+        else
             postProcess( result );
-            ProgressBar::finish();
-        }, ProgressBar::callBackSetProgress );
+        ProgressBar::finish();
     } );
 #else
-    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess]
+    ProgressBar::orderWithMainThreadPostProcessing( "Open files", [filesList, postProcess, openFolder, checkDicomSlices]
     {
-        auto result = SceneLoad::fromAnySupportedFormat( filesList, ProgressBar::callBackSetProgress );
+        auto result = checkDicomSlices( filesList );
+        if ( result.errorSummary.empty() )
+            result = SceneLoad::fromAnySupportedFormat( filesList,
+                { .targetUnit = UnitSettings::getActualModelLengthUnit(), .progress = ProgressBar::callBackSetProgress, .openFolder = openFolder } );
         return [result = std::move( result ), postProcess]
         {
             postProcess( result );
@@ -1358,6 +1425,7 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
     } );
 #endif
 
+    MR::FileDialog::setLastUsedDir( filesList[0].parent_path() );
     return true;
 }
 
@@ -1377,7 +1445,7 @@ bool Viewer::keyPressed( unsigned int unicode_key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::CharPressed )]++;
 
-    return charPressedSignal( unicode_key, modifiers );
+    return signals_->charPressedSignal( unicode_key, modifiers );
 }
 
 bool Viewer::keyDown( int key, int modifiers )
@@ -1386,7 +1454,7 @@ bool Viewer::keyDown( int key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::KeyDown )]++;
 
-    if ( keyDownSignal( key, modifiers ) )
+    if ( signals_->keyDownSignal( key, modifiers ) )
         return true;
 
     return false;
@@ -1398,7 +1466,7 @@ bool Viewer::keyUp( int key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::KeyUp )]++;
 
-    if ( keyUpSignal( key, modifiers ) )
+    if ( signals_->keyUpSignal( key, modifiers ) )
         return true;
 
     return false;
@@ -1411,7 +1479,7 @@ bool Viewer::keyRepeat( int key, int modifiers )
 
     eventsCounter_.counter[size_t( EventType::KeyRepeat )]++;
 
-    if ( keyRepeatSignal( key, modifiers ) )
+    if ( signals_->keyRepeatSignal( key, modifiers ) )
         return true;
 
     return false;
@@ -1426,7 +1494,7 @@ bool Viewer::mouseDown( MouseButton button, int modifier )
 
     eventsCounter_.counter[size_t( EventType::MouseDown )]++;
 
-    if ( mouseDownSignal( button, modifier ) )
+    if ( signals_->mouseDownSignal( button, modifier ) )
         return true;
 
     return true;
@@ -1441,7 +1509,7 @@ bool Viewer::mouseUp( MouseButton button, int modifier )
 
     eventsCounter_.counter[size_t( EventType::MouseUp )]++;
 
-    if ( mouseUpSignal( button, modifier ) )
+    if ( signals_->mouseUpSignal( button, modifier ) )
         return true;
 
     return true;
@@ -1451,7 +1519,7 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
 {
     eventsCounter_.counter[size_t( EventType::MouseMove )]++;
 
-    if ( mouseMoveSignal( mouse_x, mouse_y ) )
+    if ( signals_->mouseMoveSignal( mouse_x, mouse_y ) )
         return true;
 
     return false;
@@ -1459,69 +1527,69 @@ bool Viewer::mouseMove( int mouse_x, int mouse_y )
 
 bool Viewer::touchStart( int id, int x, int y )
 {
-    return touchStartSignal( id, x, y );
+    return signals_->touchStartSignal( id, x, y );
 }
 
 bool Viewer::touchMove( int id, int x, int y )
 {
-    return touchMoveSignal( id, x, y );
+    return signals_->touchMoveSignal( id, x, y );
 }
 
 bool Viewer::touchEnd( int id, int x, int y )
 {
-    return touchEndSignal( id, x, y );
+    return signals_->touchEndSignal( id, x, y );
 }
 
 bool Viewer::touchpadRotateGestureBegin()
 {
-    return touchpadRotateGestureBeginSignal();
+    return signals_->touchpadRotateGestureBeginSignal();
 }
 
 bool Viewer::touchpadRotateGestureUpdate( float angle )
 {
-    return touchpadRotateGestureUpdateSignal( angle );
+    return signals_->touchpadRotateGestureUpdateSignal( angle );
 }
 
 bool Viewer::touchpadRotateGestureEnd()
 {
-    return touchpadRotateGestureEndSignal();
+    return signals_->touchpadRotateGestureEndSignal();
 }
 
 bool Viewer::touchpadSwipeGestureBegin()
 {
-    return touchpadSwipeGestureBeginSignal();
+    return signals_->touchpadSwipeGestureBeginSignal();
 }
 
 bool Viewer::touchpadSwipeGestureUpdate( float dx, float dy, bool kinetic )
 {
-    return touchpadSwipeGestureUpdateSignal( dx, dy, kinetic );
+    return signals_->touchpadSwipeGestureUpdateSignal( dx, dy, kinetic );
 }
 
 bool Viewer::touchpadSwipeGestureEnd()
 {
-    return touchpadSwipeGestureEndSignal();
+    return signals_->touchpadSwipeGestureEndSignal();
 }
 
 bool Viewer::touchpadZoomGestureBegin()
 {
-    return touchpadZoomGestureBeginSignal();
+    return signals_->touchpadZoomGestureBeginSignal();
 }
 
 bool Viewer::touchpadZoomGestureUpdate( float scale, bool kinetic )
 {
-    return touchpadZoomGestureUpdateSignal( scale, kinetic );
+    return signals_->touchpadZoomGestureUpdateSignal( scale, kinetic );
 }
 
 bool Viewer::touchpadZoomGestureEnd()
 {
-    return touchpadZoomGestureEndSignal();
+    return signals_->touchpadZoomGestureEndSignal();
 }
 
 bool Viewer::mouseScroll( float delta_y )
 {
     eventsCounter_.counter[size_t( EventType::MouseScroll )]++;
 
-    if ( mouseScrollSignal( scrollForce * delta_y ) )
+    if ( signals_->mouseScrollSignal( scrollForce * delta_y ) )
         return true;
 
     return true;
@@ -1529,47 +1597,47 @@ bool Viewer::mouseScroll( float delta_y )
 
 bool Viewer::mouseClick( MouseButton button, int modifier )
 {
-    return mouseClickSignal( button, modifier );
+    return signals_->mouseClickSignal( button, modifier );
 }
 
 bool Viewer::dragStart( MouseButton button, int modifier )
 {
-    return dragStartSignal( button, modifier );
+    return signals_->dragStartSignal( button, modifier );
 }
 
 bool Viewer::dragEnd( MouseButton button, int modifier )
 {
-    return dragEndSignal( button, modifier );
+    return signals_->dragEndSignal( button, modifier );
 }
 
 bool Viewer::drag( int mouse_x, int mouse_y )
 {
-    return dragSignal( mouse_x, mouse_y );
+    return signals_->dragSignal( mouse_x, mouse_y );
 }
 
 bool Viewer::spaceMouseMove( const Vector3f& translate, const Vector3f& rotate )
 {
-    return spaceMouseMoveSignal( translate, rotate );
+    return signals_->spaceMouseMoveSignal( translate, rotate );
 }
 
 bool Viewer::spaceMouseDown( int key )
 {
-    return spaceMouseDownSignal( key );
+    return signals_->spaceMouseDownSignal( key );
 }
 
 bool Viewer::spaceMouseUp( int key )
 {
-    return spaceMouseUpSignal( key );
+    return signals_->spaceMouseUpSignal( key );
 }
 
 bool Viewer::spaceMouseRepeat( int key )
 {
-    return spaceMouseRepeatSignal( key );
+    return signals_->spaceMouseRepeatSignal( key );
 }
 
 bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
 {
-    if ( dragDropSignal( paths ) )
+    if ( signals_->dragDropSignal( paths ) )
         return true;
 
     return false;
@@ -1577,16 +1645,10 @@ bool Viewer::dragDrop( const std::vector<std::filesystem::path>& paths )
 
 bool Viewer::interruptWindowClose()
 {
-    if ( interruptCloseSignal() )
+    if ( signals_->interruptCloseSignal() )
         return true;
 
     return false;
-}
-
-void Viewer::joystickUpdateConnected( int jid, int event )
-{
-    if ( spaceMouseHandler_ )
-        spaceMouseHandler_->updateConnected( jid, event );
 }
 
 static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
@@ -1612,6 +1674,7 @@ static void resetRedrawFlagRecursive( const Object& obj )
 
 bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const std::string& name, int major, int minor )
 {
+    MR_TIMER;
     glfwWindowHint( GLFW_CONTEXT_VERSION_MAJOR, major );
     glfwWindowHint( GLFW_CONTEXT_VERSION_MINOR, minor );
     if ( fullscreen )
@@ -1637,6 +1700,7 @@ bool Viewer::tryCreateWindow_( bool fullscreen, int& width, int& height, const s
             height = 800;
         window = glfwCreateWindow( width, height, name.c_str(), nullptr, nullptr );
     }
+    spdlog::info( window ? "glfwCreateWindow succeeded" : "glfwCreateWindow failed" );
     return bool( window );
 }
 
@@ -1649,7 +1713,7 @@ bool Viewer::needRedraw_() const
         if ( viewport.getRedrawFlag() )
             return true;
 
-    if ( globalBasisAxes && globalBasisAxes->getRedrawFlag( presentViewportsMask_ ) )
+    if ( globalBasis && globalBasis->getRedrawFlag( presentViewportsMask_ ) )
         return true;
 
     if ( basisAxes && basisAxes->getRedrawFlag( presentViewportsMask_ ) )
@@ -1668,8 +1732,8 @@ void Viewer::resetRedraw_()
     for ( auto& viewport : viewport_list )
         viewport.resetRedrawFlag();
 
-    if ( globalBasisAxes )
-        globalBasisAxes->resetRedrawFlag();
+    if ( globalBasis )
+        globalBasis->resetRedrawFlag();
 
     if ( basisAxes )
         basisAxes->resetRedrawFlag();
@@ -1680,26 +1744,9 @@ void Viewer::resetRedraw_()
     resetRedrawFlagRecursive( SceneRoot::get() );
 }
 
-void Viewer::recursiveDraw_( const Viewport& vp, const Object& obj, const AffineXf3f& parentXf, RenderModelPassMask renderType, int* numDraws ) const
-{
-    if ( !obj.isVisible( vp.id ) )
-        return;
-    auto xfCopy = parentXf * obj.xf( vp.id );
-    auto visObj = obj.asType<VisualObject>();
-    if ( visObj )
-    {
-        if ( vp.draw( *visObj, xfCopy, DepthFunction::Default, renderType, alphaSortEnabled_ ) )
-        {
-            if ( numDraws )
-                ++( *numDraws );
-        }
-    }
-    for ( const auto& child : obj.children() )
-        recursiveDraw_( vp, *child, xfCopy, renderType, numDraws );
-}
-
 void Viewer::draw( bool force )
 {
+    MR_TIMER;
 #ifdef __EMSCRIPTEN__
     (void)force;
 #ifdef MR_EMSCRIPTEN_ASYNCIFY
@@ -1718,6 +1765,7 @@ void Viewer::draw( bool force )
 
 bool Viewer::draw_( bool force )
 {
+    MR_TIMER;
     SceneCache::invalidateAll();
     bool needSceneRedraw = needRedraw_();
     if ( !force && !needSceneRedraw )
@@ -1751,24 +1799,27 @@ bool Viewer::draw_( bool force )
         --forceRedrawFrames_;
     }
     if ( window && swapped )
+    {
+        Timer t( "glfwSwapBuffers" );
         glfwSwapBuffers( window );
+    }
     frameCounter_->endDraw( swapped );
     isInDraw_ = false;
     return ( window && swapped );
 }
 
-void Viewer::drawUiRenderObjects_()
+void Viewer::drawUiRenderObjects()
 {
     // Currently, a part of the contract of `IRenderObject::renderUi()` is that at most rendering task is in flight at any given time.
     // That's why each viewport is being drawn separately.
     if ( !window )
         return;
+    MR_TIMER;
     UiRenderManager& uiRenderManager = getMenuPlugin()->getUiRenderManager();
 
     for ( Viewport& viewport : getViewerInstance().viewport_list )
     {
         UiRenderParams renderParams{ viewport.getBaseRenderParams() };
-        renderParams.scale = menuPlugin_->menu_scaling();
 
         uiRenderManager.preRenderViewport( viewport.id );
         MR_FINALLY{ uiRenderManager.postRenderViewport( viewport.id ); };
@@ -1798,15 +1849,31 @@ void Viewer::drawUiRenderObjects_()
             --it;
             ( *it )->earlyBackwardPass( backwardPassParams );
         }
-        uiRenderManager.finishBackwardPass( backwardPassParams );
+        uiRenderManager.finishBackwardPass( viewport.id, backwardPassParams );
 
         for ( const auto& task : tasks )
             task->renderPass();
     }
 }
 
+bool Viewer::isMultiViewportAvailable()
+{
+#ifdef __EMSCRIPTEN__
+    return false;
+#elif GLFW_VERSION_MAJOR > 3 || ( GLFW_VERSION_MAJOR == 3 && GLFW_VERSION_MINOR >= 4 )
+    // ImGui multi-viewport has unresolved issues with tooltips on X11 (incorrect window class?)
+    // See also:
+    //  - https://github.com/ocornut/imgui/issues/7950
+    //  - https://github.com/ocornut/imgui/issues/8252
+    return !hasScaledFramebuffer_ && glfwGetPlatform() != GLFW_PLATFORM_X11;
+#else
+    return !hasScaledFramebuffer_;
+#endif
+}
+
 void Viewer::drawFull( bool dirtyScene )
 {
+    MR_TIMER;
     // unbind to clean main framebuffer
     if ( sceneTexture_ )
         sceneTexture_->unbind();
@@ -1822,17 +1889,18 @@ void Viewer::drawFull( bool dirtyScene )
         // need to clean it in texture too
         clearFramebuffers();
     }
-    preDrawSignal();
+    signals_->preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal
     bool renderScene = forceRedrawFramesWithoutSwap_ <= 1;
     if ( sceneTexture_ )
         renderScene = renderScene && dirtyScene;
     if ( renderScene )
-        drawScene();
-    postDrawSignal();
+        drawScene( sceneTexture_ ? &sceneTexture_->getFramebuffer() : nullptr );
+    signals_->postDrawSignal();
     if ( sceneTexture_ )
     {
+        Timer t( "sceneTexture" );
         sceneTexture_->unbind();
         if ( renderScene )
             sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
@@ -1841,13 +1909,14 @@ void Viewer::drawFull( bool dirtyScene )
     }
     if ( menuPlugin_ )
     {
-        drawUiRenderObjects_();
+        drawUiRenderObjects();
         menuPlugin_->finishFrame();
     }
 }
 
-void Viewer::drawScene()
+void Viewer::drawScene( FramebufferData* framebuffer )
 {
+    MR_TIMER;
     if ( alphaSortEnabled_ )
         alphaSorter_->clearTransparencyTextures();
 
@@ -1855,18 +1924,30 @@ void Viewer::drawScene()
     for ( auto& viewport : viewport_list )
         viewport.preDraw();
 
-    preDrawPostViewportSignal();
+    signals_->preDrawPostViewportSignal();
+
+    bool depthPeeling = isDepthPeelingEnabled();
 
     for ( const auto& viewport : viewport_list )
     {
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Opaque );
-#ifndef __EMSCRIPTEN__
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::VolumeRendering );
-#endif
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::Transparent, &numTransparent );
+        viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::Opaque, alphaSortEnabled_ );
+        viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::VolumeRendering, alphaSortEnabled_ );
+        if ( !depthPeeling )
+            viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::Transparent, alphaSortEnabled_, &numTransparent );
     }
 
-    drawSignal();
+    bool depthPeelerPostDrawNeeded = false;
+    if ( depthPeeling )
+    {
+        depthPeelerPostDrawNeeded = depthPeeler_->doPasses( framebuffer );
+    }
+
+    signals_->drawSignal();
+
+    if ( depthPeelerPostDrawNeeded )
+    {
+        depthPeeler_->draw();
+    }
 
     if ( numTransparent > 0 && alphaSortEnabled_ )
     {
@@ -1875,9 +1956,9 @@ void Viewer::drawScene()
     }
     // draw after alpha texture
     for ( const auto& viewport : viewport_list )
-        recursiveDraw_( viewport, SceneRoot::get(), AffineXf3f(), RenderModelPassMask::NoDepthTest );
+        viewport.recursiveDraw( SceneRoot::get(), DepthFunction::Default, AffineXf3f(), RenderModelPassMask::NoDepthTest, alphaSortEnabled_ );
 
-    postDrawPreViewportSignal();
+    signals_->postDrawPreViewportSignal();
 
     for ( const auto& viewport : viewport_list )
         viewport.postDraw();
@@ -1887,12 +1968,15 @@ void Viewer::drawScene()
 
 void Viewer::setupScene()
 {
+    MR_TIMER;
+    signals_->preSetupViewSignal();
     for ( auto& viewport : viewport_list )
         viewport.setupView();
 }
 
 void Viewer::clearFramebuffers()
 {
+    MR_TIMER;
     for ( auto& viewport : viewport_list )
         viewport.clearFramebuffers();
 }
@@ -1938,7 +2022,7 @@ void Viewer::postResize( int w, int h )
                 viewport.setViewportRect( rect );
             }
     }
-    postResizeSignal( w, h );
+    signals_->postResizeSignal( w, h );
     if ( w != 0 )
         framebufferSize.x = w;
     if ( h != 0 )
@@ -1949,7 +2033,9 @@ void Viewer::postResize( int w, int h )
     if ( alphaSorter_ )
         alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
     if ( sceneTexture_ )
-        sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ) );
+        sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ), isDepthPeelingEnabled() );
+    if ( depthPeeler_ )
+        depthPeeler_->reset( framebufferSize );
 
 #if !defined(__EMSCRIPTEN__) || defined(MR_EMSCRIPTEN_ASYNCIFY)
     if ( isLaunched_ && !isInDraw_ )
@@ -1997,12 +2083,12 @@ void Viewer::postFocus( bool focused )
         draw( true );
     }
 #endif
-    postFocusSignal( bool( focused ) );
+    signals_->postFocusSignal( bool( focused ) );
 }
 
 void Viewer::postRescale( float x, float y )
 {
-    postRescaleSignal( x, y );
+    signals_->postRescaleSignal( x, y );
 }
 
 void Viewer::postClose()
@@ -2022,61 +2108,7 @@ void Viewer::set_root( SceneRootObject& newRoot )
 
 void Viewer::initGlobalBasisAxesObject_()
 {
-    constexpr Vector3f PlusAxis[3] = {
-        Vector3f( 1.0f, 0.0f, 0.0f ),
-        Vector3f( 0.0f, 1.0f, 0.0f ),
-        Vector3f( 0.0f, 0.0f, 1.0f )};
-
-    Mesh mesh;
-    globalBasisAxes = std::make_shared<ObjectMesh>();
-    globalBasisAxes->setName( "World Global Basis" );
-    std::vector<Color> vertsColors;
-    auto translate = AffineXf3f::translation(Vector3f( 0.0f, 0.0f, 0.9f ));
-    for ( int i = 0; i < 3; ++i )
-    {
-        auto basis = makeCylinder( 0.01f, 0.9f );
-        auto cone = makeCone( 0.04f, 0.1f );
-        AffineXf3f rotTramsform;
-        if ( i != 2 )
-        {
-            rotTramsform = AffineXf3f::linear(
-                Matrix3f::rotation( i == 0 ? PlusAxis[1] : -1.0f * PlusAxis[0], PI_F * 0.5f )
-            );
-        }
-        basis.transform( rotTramsform );
-        cone.transform( rotTramsform * translate );
-        mesh.addMesh( basis );
-        mesh.addMesh( cone );
-        std::vector<Color> colors( basis.points.size(), Color( PlusAxis[i] ) );
-        std::vector<Color> colorsCone( cone.points.size(), Color( PlusAxis[i] ) );
-        vertsColors.insert( vertsColors.end(), colors.begin(), colors.end() );
-        vertsColors.insert( vertsColors.end(), colorsCone.begin(), colorsCone.end() );
-    }
-    addLabel( *globalBasisAxes, "X", 1.1f * Vector3f::plusX(), true );
-    addLabel( *globalBasisAxes, "Y", 1.1f * Vector3f::plusY(), true );
-    addLabel( *globalBasisAxes, "Z", 1.1f * Vector3f::plusZ(), true );
-
-    globalBasisAxes->setMesh( std::make_shared<Mesh>( std::move( mesh ) ) );
-    globalBasisAxes->setAncillary( true );
-    globalBasisAxes->setVisible( false );
-    globalBasisAxes->setVertsColorMap( std::move( vertsColors ) );
-    globalBasisAxes->setColoringType( ColoringType::VertsColorMap );
-    globalBasisAxes->setFlatShading( true );
-
-    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
-    {
-        if ( !globalBasisAxes )
-            return;
-
-        const Color& color = SceneColors::get( SceneColors::Type::Labels );
-
-        auto labels = getAllObjectsInTree<ObjectLabel>( globalBasisAxes.get(), ObjectSelectivityType::Any );
-        for ( const auto& label : labels )
-        {
-            label->setFrontColor( color, true );
-            label->setFrontColor( color, false );
-        }
-    } ) );
+    globalBasis = std::make_unique<ViewportGlobalBasis>();
 }
 
 void Viewer::initBasisAxesObject_()
@@ -2095,9 +2127,9 @@ void Viewer::initBasisAxesObject_()
 
     auto numF = basisAxesMesh->topology.edgePerFace().size();
     // setting color to faces
-    const Color colorX = Color::red();
-    const Color colorY = Color::green();
-    const Color colorZ = Color::blue();
+    const Color colorX = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX );
+    const Color colorY = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisY );
+    const Color colorZ = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisZ );
     FaceColors colorMap( numF );
     const auto arrowSize = numF / 3;
     for (int i = 0; i < arrowSize; i++)
@@ -2116,10 +2148,24 @@ void Viewer::initBasisAxesObject_()
     basisAxes->setVisualizeProperty( false, MeshVisualizePropertyType::EnableShading, ViewportMask::all() );
     basisAxes->setColoringType( ColoringType::FacesColorMap );
 
-    colorUpdateConnections_.push_back( ColorTheme::instance().onChanged( [this] ()
+    connections_->uiUpdateConnections.push_back( ColorTheme::instance().onChanged( [this, numF] ()
     {
         if ( !basisAxes )
             return;
+
+        const Color colorX = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisX );
+        const Color colorY = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisY );
+        const Color colorZ = ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::AxisZ );
+        FaceColors colorMap;
+        basisAxes->updateFacesColorMap( colorMap ); // swap with empty with real
+        const auto arrowSize = numF / 3;
+        for ( int i = 0; i < arrowSize; i++ ) // update real
+        {
+            colorMap[FaceId( i )] = colorX;
+            colorMap[FaceId( i + arrowSize )] = colorY;
+            colorMap[FaceId( i + arrowSize * 2 )] = colorZ;
+        }
+        basisAxes->updateFacesColorMap( colorMap ); // swap updated real with empty
 
         const Color& color = SceneColors::get( SceneColors::Type::Labels );
 
@@ -2129,6 +2175,14 @@ void Viewer::initBasisAxesObject_()
             label->setFrontColor( color, true );
             label->setFrontColor( color, false );
         }
+    } ) );
+    connections_->uiUpdateConnections.push_back( signals_->postRescaleSignal.connect( [this] ( float, float )
+    {
+        if ( !menuPlugin_ )
+            return;
+        auto labels = getAllObjectsInTree<ObjectLabel>( basisAxes.get(), ObjectSelectivityType::Any );
+        for ( const auto& label : labels )
+            label->setFontHeight( 20.0f * menuPlugin_->menuScaling() );
     } ) );
 }
 
@@ -2161,24 +2215,42 @@ void Viewer::initRotationCenterObject_()
 
 void Viewer::initSpaceMouseHandler_()
 {
+    spaceMouseHandler_.reset();
 #ifndef __EMSCRIPTEN__
 #ifdef __APPLE__
     // try to use the official driver first
-    auto driverHandler = std::make_unique<SpaceMouseHandler3dxMacDriver>();
+    auto driverHandler = std::make_unique<SpaceMouse::Handler3dxMacDriver>();
     driverHandler->setClientName( MR_PROJECT_NAME );
     if ( driverHandler->initialize() )
     {
         spaceMouseHandler_ = std::move( driverHandler );
+        spdlog::info( "SpaceMouse::Handler3dxMacDriver initialized" );
         return;
     }
 
     // fallback to the HIDAPI implementation
     spdlog::warn( "Failed to find or use the 3DxWare driver; falling back to the HIDAPI implementation" );
 #endif
-    spaceMouseHandler_ = std::make_unique<SpaceMouseHandlerHidapi>();
-    if ( !spaceMouseHandler_->initialize() )
+#ifdef _WIN32
+    auto winEventsHandler = std::make_unique<SpaceMouse::HandlerWinEvents>();
+    if ( winEventsHandler->initialize() )
     {
-        spdlog::warn( "Failed to initialize SpaceMouse handler" );
+        spaceMouseHandler_ = std::move( winEventsHandler );
+        spdlog::info( "SpaceMouse::HandlerWinEvents initialized" );
+        return;
+    }
+
+    // fallback to the HIDAPI implementation
+    spdlog::warn( "Failed to init Windows Raw Input handeler for SpaceMouse; falling back to the HIDAPI implementation" );
+#endif
+    spaceMouseHandler_ = std::make_unique<SpaceMouse::HandlerHidapi>();
+    if ( spaceMouseHandler_->initialize() )
+    {
+        spdlog::info( "SpaceMouse::HandlerHidapi initialized" );
+    }
+    else
+    {
+        spdlog::warn( "Failed to initialize SpaceMouseHandlerHidapi" );
     }
 #endif
 }
@@ -2320,6 +2392,14 @@ int Viewer::viewport_index( const ViewportId id ) const
 
 ViewportId Viewer::getHoveredViewportId() const
 {
+    if ( auto id = getHoveredViewportIdOrInvalid() )
+        return id;
+    else
+        return viewport_list[selected_viewport_index].id;
+}
+
+ViewportId Viewer::getHoveredViewportIdOrInvalid() const
+{
     const auto& currentPos = mouseController_->getMousePos();
     for ( int i = 0; i < viewport_list.size(); i++ )
     {
@@ -2337,7 +2417,7 @@ ViewportId Viewer::getHoveredViewportId() const
         }
     }
 
-    return viewport_list[selected_viewport_index].id;
+    return {}; // No viewport is hovered, return an invalid ID.
 }
 
 void Viewer::select_hovered_viewport()
@@ -2412,9 +2492,14 @@ void Viewer::incrementForceRedrawFrames( int i /*= 1 */, bool swapOnLastOnly /*=
         forceRedrawFramesWithoutSwap_ = std::max( i, forceRedrawFramesWithoutSwap_ );
 }
 
+void Viewer::forceSwapOnFrame( int i /*= 0*/ )
+{
+    forceRedrawFramesWithoutSwap_ = std::min( i, forceRedrawFramesWithoutSwap_ );
+}
+
 bool Viewer::isCurrentFrameSwapping() const
 {
-    return forceRedrawFramesWithoutSwap_ == 0;
+    return forceRedrawFramesWithoutSwap_ <= 1;
 }
 
 size_t Viewer::getEventsCount( EventType type ) const
@@ -2438,7 +2523,7 @@ void Viewer::resetAllCounters()
     frameCounter_->reset();
 }
 
-Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
+Image Viewer::captureSceneScreenShot( const Vector2i& resolution, bool transparentBg /*= false*/ )
 {
     if ( !glInitialized_ )
         return {};
@@ -2450,6 +2535,7 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
     // store old sizes
     auto vpBounbds = getViewportsBounds();
     std::vector<ViewportRectangle> rects;
+    std::vector<Viewport::Parameters> viewportParams;
     for ( auto& viewport : viewport_list )
     {
         auto rect = viewport.getViewportRect();
@@ -2460,28 +2546,45 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
         rect.max.y = float( rect.max.y - vpBounbds.min.y ) / height( vpBounbds ) * newRes.y;
         viewport.setViewportRect( rect );
     }
-    if ( newRes != framebufferSize && alphaSorter_ )
-        alphaSorter_->updateTransparencyTexturesSize( newRes.x, newRes.y );
+    if ( transparentBg )
+    {
+        for ( int i = 0; i < viewport_list.size(); ++i )
+        {
+            auto& viewport = viewport_list[i];
+            viewportParams.resize( viewport_list.size() );
+            auto viewportParamsNew = viewport.getParameters();
+            viewportParams[i] = viewportParamsNew;
+            viewportParamsNew.backgroundColor = Color::transparent();
+            viewportParamsNew.borderColor = Color::transparent();
+            viewport.setParameters( viewportParamsNew );
+        }
+    }
+    if ( newRes != framebufferSize )
+    {
+        if ( alphaSorter_ )
+            alphaSorter_->updateTransparencyTexturesSize( newRes.x, newRes.y );
+        if ( depthPeeler_ )
+            depthPeeler_->reset( newRes );
+    }
 
-
-    std::vector<Color> pixels( newRes.x * newRes.x );
+    std::vector<Color> pixels( newRes.x * newRes.y );
 
     FramebufferData fd;
-    fd.gen( newRes, true );
+    fd.gen( newRes, bool( depthPeeler_ ), -1 );
     fd.bind();
 
     setupScene();
     clearFramebuffers();
-    drawScene();
+    drawScene( &fd );
 
     fd.copyTextureBindDef();
-    fd.bindTexture();
+    fd.bindTexture( true, false ); // only bind color
 
 #ifdef __EMSCRIPTEN__
     GLuint fbo;
     GL_EXEC( glGenFramebuffers(1, &fbo) );
     GL_EXEC( glBindFramebuffer(GL_FRAMEBUFFER, fbo) );
-    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getTexture(), 0) );
+    GL_EXEC( glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fd.getColorTexture(), 0) );
 
     GL_EXEC( glReadPixels(0, 0, newRes.x, newRes.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* )( pixels.data() )) );
 
@@ -2496,11 +2599,20 @@ Image Viewer::captureSceneScreenShot( const Vector2i& resolution )
     bindSceneTexture( true );
 
     // restore sizes
-    int i = 0;
-    for ( auto& viewport : viewport_list )
-        viewport.setViewportRect( rects[i++] );
-    if ( newRes != framebufferSize && alphaSorter_ )
-        alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+    for ( int i = 0; i < viewport_list.size(); ++i )
+        viewport_list[i].setViewportRect(rects[i]);
+    if ( transparentBg )
+    {
+        for ( int i = 0; i < viewport_list.size(); ++i )
+            viewport_list[i].setParameters( viewportParams[i] );
+    }
+    if ( newRes != framebufferSize )
+    {
+        if ( alphaSorter_ )
+            alphaSorter_->updateTransparencyTexturesSize( framebufferSize.x, framebufferSize.y );
+        if ( depthPeeler_ )
+            depthPeeler_->reset( framebufferSize );
+    }
 
     return Image{ pixels, newRes };
 }
@@ -2543,6 +2655,18 @@ bool Viewer::enableAlphaSort( bool on )
 {
     if ( on == alphaSortEnabled_ )
         return false;
+
+    MR_FINALLY{
+        if ( sceneTexture_ && depthPeeler_ )
+        {
+            CommandLoop::appendCommand( [this] ()
+            {
+                sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ), isDepthPeelingEnabled() );
+                setSceneDirty();
+            } );
+        }
+    };
+
     if ( !on )
     {
         alphaSortEnabled_ = false;
@@ -2554,6 +2678,45 @@ bool Viewer::enableAlphaSort( bool on )
 
     alphaSortEnabled_ = true;
     return true;
+}
+
+int Viewer::getDepthPeelNumPasses() const
+{
+    if ( !depthPeeler_ )
+        return 0;
+    return depthPeeler_->getNumPasses();
+}
+
+void Viewer::setDepthPeelNumPasses( int numPasses )
+{
+    if ( !depthPeeler_ )
+        return;
+    auto prevNumPasses = depthPeeler_->getNumPasses();
+    if ( numPasses == prevNumPasses )
+        return;
+    bool prevEnabled = prevNumPasses > 0;
+    bool newEnabled = numPasses > 0;
+    depthPeeler_->setNumPasses( numPasses );
+    if ( prevEnabled != newEnabled )
+    {
+        if ( sceneTexture_ )
+        {
+            CommandLoop::appendCommand( [this] ()
+            {
+                sceneTexture_->reset( framebufferSize, getMSAAPow( getRequiredMSAA_( true, true ) ), isDepthPeelingEnabled() );
+                setSceneDirty();
+            } );
+        }
+    }
+    else
+    {
+        setSceneDirty();
+    }
+}
+
+bool Viewer::isDepthPeelingEnabled() const
+{
+    return !isAlphaSortEnabled() && depthPeeler_ && depthPeeler_->getNumPasses() > 0;
 }
 
 bool Viewer::isSceneTextureBound() const
@@ -2602,7 +2765,9 @@ void Viewer::requestChangeMSAA( int newMSAA )
     {
         CommandLoop::appendCommand( [newMSAA, this] ()
         {
-            sceneTexture_->reset( framebufferSize, getMSAAPow( newMSAA ) );
+            sceneTexture_->reset( framebufferSize, getMSAAPow( newMSAA ), isDepthPeelingEnabled() );
+            if ( depthPeeler_ )
+                depthPeeler_->reset( framebufferSize );
             setSceneDirty();
         } );
     }
@@ -2694,12 +2859,12 @@ void Viewer::enableGlobalHistory( bool on )
         return;
     if ( on )
     {
-        globalHistoryStore_ = std::make_shared<HistoryStore>();
-        globalHistoryStore_->changedSignal.connect( [this]( const HistoryStore&, HistoryStore::ChangeType type )
+        globalHistoryStore_ = std::make_unique<HistoryStore>();
+        globalHistoryStore_->changedSignal.connect( [this] ( const HistoryStore& st, HistoryStore::ChangeType type, std::shared_ptr<HistoryAction> )
         {
             if ( type == HistoryStore::ChangeType::PostUndo ||
                  type == HistoryStore::ChangeType::PostRedo ||
-                 type == HistoryStore::ChangeType::AppendAction )
+                 ( type == HistoryStore::ChangeType::PostAppendAction && !st.getScopeBlockPtr() ) )
                 makeTitleFromSceneRootPath();
         } );
     }
@@ -2780,7 +2945,7 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
     }
     if ( sceneTextureOn && !forSceneTexture )
         return 1; // disable msaa for main framebuffer if scene texture is used
-    
+
     int cDefaultMSAA = 8;
 #if defined(__EMSCRIPTEN__)
     cDefaultMSAA = 4;
@@ -2805,13 +2970,5 @@ void Viewer::GLPrimitivesCounter::reset()
     for ( size_t i = 0; i < size_t( GLPrimitivesType::Count ); ++i )
         counter[i] = 0;
 }
-
-// simple test to make sure this dll was linked and loaded to test project
-TEST( MRViewer, LoadTest )
-{
-    bool load = true;
-    ASSERT_EQ( load, true );
-}
-
 
 }

@@ -27,6 +27,7 @@
 #include "MRMeshFillHole.h"
 #include "MRTriMesh.h"
 #include "MRDipole.h"
+#include "MRPartMappingAdapters.h"
 
 namespace MR
 {
@@ -74,14 +75,16 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     VertCoords vertexCoordinates,
     Triangulation & t,
     std::vector<MeshBuilder::VertDuplication> * dups,
-    const MeshBuilder::BuildSettings & settings )
+    const MeshBuilder::BuildSettings & settings,
+    const MeshBuilder::BetterDupContinuation & betterCont )
 {
     MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     std::vector<MeshBuilder::VertDuplication> localDups;
-    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings );
-    res.points.resize( res.topology.vertSize() );
+    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings, betterCont );
+    if ( res.points.size() < res.topology.vertSize() ) // never shrink
+        res.points.resize( res.topology.vertSize() );
     for ( const auto & d : localDups )
         res.points[d.dupVert] = res.points[d.srcVert];
     if ( dups )
@@ -182,16 +185,6 @@ float Mesh::signedDistance( const Vector3f & pt, const MeshProjectionResult & pr
         return -std::sqrt( proj.distSq );
 }
 
-float Mesh::signedDistance( const Vector3f & pt, const MeshTriPoint & proj, const FaceBitSet * region ) const
-{
-    const auto projPt = triPoint( proj );
-    const float d = ( pt - projPt ).length();
-    if ( dot( projPt - pt, pseudonormal( proj, region ) ) <= 0 )
-        return d;
-    else
-        return -d;
-}
-
 float Mesh::signedDistance( const Vector3f & pt ) const
 {
     auto res = signedDistance( pt, FLT_MAX );
@@ -236,13 +229,10 @@ void Mesh::zeroUnusedPoints()
 {
     MR_TIMER;
 
-    tbb::parallel_for( tbb::blocked_range<VertId>( 0_v, VertId{ points.size() } ), [&] ( const tbb::blocked_range<VertId>& range )
+    ParallelFor( points, [&] ( VertId v )
     {
-        for ( VertId v = range.begin(); v < range.end(); ++v )
-        {
-            if ( !topology.hasVert( v ) )
-                points[v] = {};
-        }
+        if ( !topology.hasVert( v ) )
+            points[v] = {};
     } );
 }
 
@@ -376,15 +366,15 @@ void Mesh::addMesh( const Mesh & from, PartMapping map, bool rearrangeTriangles 
     map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.points[fromVert]; } );
 }
 
-void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map )
+void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map, VacantElements * vacant )
 {
-    addMeshPart( from, false, {}, {}, map );
+    addMeshPart( from, false, {}, {}, map, vacant );
 }
 
-void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
+bool Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
-    PartMapping map )
+    PartMapping map, VacantElements * vacant )
 {
     MR_TIMER;
     invalidateCaches();
@@ -392,11 +382,13 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     auto localVmap = VertMapOrHashMap::createHashMap();
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
-    topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map );
+    if ( !topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map, vacant ) )
+        return false;
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
     map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
+    return true;
 }
 
 Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const
@@ -508,12 +500,11 @@ Expected<PackMapping> Mesh::packOptimally( bool preserveAABBTree, ProgressCallba
     return map;
 }
 
-void Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
+VacantElements Mesh::deleteFaces( const FaceBitSet & fs, const UndirectedEdgeBitSet * keepEdges )
 {
-    if ( fs.none() )
-        return;
-    topology.deleteFaces( fs, keepEdges );
-    invalidateCaches(); // some points can be deleted as well
+    if ( fs.any() )
+        invalidateCaches(); // some points can be deleted as well
+    return topology.deleteFaces( fs, keepEdges );
 }
 
 bool Mesh::projectPoint( const Vector3f& point, PointOnFace& res, float maxDistSq, const FaceBitSet * region, const AffineXf3f * xf ) const

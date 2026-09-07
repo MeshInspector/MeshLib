@@ -1,18 +1,15 @@
-#include "MRPch/MRSpdlog.h"
 #include "MRCylinderObject.h"
 #include "MRMatrix3.h"
 #include "MRCylinder.h"
 #include "MRCylinder3.h"
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
-#include "MRPch/MRJson.h"
 #include "MRCylinderApproximator.h"
-#include "MRMeshFwd.h"
-#include "MRLine.h"
-#include "MRGTest.h"
-
-#include <iostream>
 #include "MRMeshNormals.h"
+#include "MRLine.h"
+#include "MRPch/MRSpdlog.h"
+#include "MRPch/MRJson.h"
+#include <iostream>
 
 namespace MR
 {
@@ -135,7 +132,7 @@ void CylinderObject::swapBase_( Object& other )
 void CylinderObject::serializeFields_( Json::Value& root ) const
 {
     FeatureObject::serializeFields_( root );
-    root["Type"].append( CylinderObject::TypeName() );
+    root["Type"].append( CylinderObject::StaticTypeName() );
 }
 
 void CylinderObject::setupRenderObject_() const

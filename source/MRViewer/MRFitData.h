@@ -12,6 +12,7 @@ enum class FitMode
     Visible, // fit all visible objects
     SelectedPrimitives, // fit only selected primitives
     SelectedObjects, // fit only selected objects
+    SelectableObjects, // fit only selectable objects (exclude ancillary objects)
     CustomObjectsList // fit only given objects (need additional objects list)
 };
 

@@ -34,8 +34,19 @@ struct CutMeshParameters
     /// it provides additional info from other mesh used in boolean operation, useful to solve some degeneration
     /// \note Most likely you don't need this in case you call MR::cutMesh manualy, use case of it is MR::boolean
     const SortIntersectionsData* sortData{nullptr};
+
     /// This is optional output - map from newly generated faces to old faces (N-1)
     FaceMap* new2OldMap{nullptr};
+
+    /// Caller can avoid filling non-needed part of cut faces to speedup cutting
+    /// still add pseudo FaceId to opposite side to keep connectivity
+    enum class FillPart
+    {
+        Both,
+        Left,
+        Right
+    } fillPart{ FillPart::Both };
+
     /// This enum defines the MR::cutMesh behaviour in case of bad faces acure
     /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
     /// 
@@ -86,8 +97,38 @@ MRMESH_API CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, c
 /// Cuts \p mesh by \p contour by projecting all the points
 /// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh
 /// \note \p mesh is modified, see \ref cutMesh for info
+/// \note it might be useful to subdivide mesh before cut, to avoid issues related to lone contours
 /// \return Faces to the left of the polyline
-MRMESH_API Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf = {} );
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> cutMeshByContour( Mesh& mesh, const Contour3f& contour, const AffineXf3f& xf = {} );
+
+/// Cuts \p mesh by \p contours by projecting all the points
+/// \param xf transformation from the CSYS of \p contour to the CSYS of \p mesh
+/// \note \p mesh is modified, see \ref cutMesh for info
+/// \note it might be useful to subdivide mesh before cut, to avoid issues related to lone contours
+/// \return Faces to the left of the polyline
+[[nodiscard]] MRMESH_API Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, const AffineXf3f& xf = {} );
+
+
+/// Settings structurer for cutMeshByProjection function
+struct CutByProjectionSettings
+{
+    /// direction of projection (in mesh space)
+    Vector3f direction;
+
+    /// if set - used to transform contours form its local space to mesh local space
+    const AffineXf3f* cont2mesh{ nullptr };
+};
+
+/// <summary>
+/// Performs orthographic projection with of given contours to mesh and cut result lines, 
+/// fails if any point of contours has missed mesh on projection stage or cut contours contains self-intersections
+/// \note it might be useful to subdivide mesh before cut, to avoid issues related to lone contours
+/// </summary>
+/// <param name="mesh"> for cutting, it will be changed</param>
+/// <param name="contours"> for projection onto mesh</param>
+/// <param name="settings"> to specify direction and \p contours to \p mesh space transformation</param>
+/// <returns>newly appeared edges on the mesh after cut or error</returns>
+[[nodiscard]] MRMESH_API Expected<std::vector<EdgePath>> cutMeshByProjection( Mesh& mesh, const Contours3f& contours, const CutByProjectionSettings& settings );
 
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour

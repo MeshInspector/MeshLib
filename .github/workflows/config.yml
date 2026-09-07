@@ -4,12 +4,9 @@ on:
   workflow_call:
     outputs:
       # manually defined values
-      vs19_vcpkg_version:
-        description: "vs19 vcpkg version"
-        value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
-      vs22_vcpkg_version:
-        description: "vs22 vcpkg version"
-        value: "2025.04.09" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+      vcpkg_version:
+        description: "vcpkg version"
+        value: "2026.07.29" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -25,25 +22,31 @@ on:
         value: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       need_linux_image_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.need-linux-image-rebuild == 'true' }}
       need_linux_vcpkg_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.need-linux-vcpkg-rebuild == 'true' }}
       need_windows_vcpkg_rebuild:
         description:
-        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       release_tag:
         description: "Version with namespace (if it exists): v1.2.3.4-namespace"
         value: ${{ jobs.prepare-config.outputs.release_tag }}
+      ubuntu_arm64_config_matrix:
+        description: "Config matrix for Ubuntu arm64 builds"
+        value: ${{ jobs.prepare-config.outputs.ubuntu_arm64_config_matrix }}
       ubuntu_x64_config_matrix:
         description: "Config matrix for Ubuntu x64 builds"
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
+      windows_x64_config_matrix:
+        description: "Config matrix for Windows builds"
+        value: ${{ jobs.prepare-config.outputs.windows_x64_config_matrix }}
       update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
       upload_artifacts:
         description:
-        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        value: ${{ github.event_name == 'push' || github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-upload-binaries == 'true' }}
       upload_test_artifacts:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-upload-test-artifacts == 'true' }}
@@ -51,11 +54,14 @@ on:
         description:
         value: ${{ jobs.prepare-config.outputs.vcpkg-docker-image-tag }}
       run_unity_nuget_test:
-        description: "expression to run unity-nuget-test.yml"
-        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' }}
+        description: "True when full-ci, scheduled, or tag-build-release-windows is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       test_pip_build:
-        description:
-        value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
+        description: "True when scheduled or tag-test-pip-build is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
+      build-release-win:
+        description: "True when full-ci, scheduled, or tag-build-release-windows is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       # flags for disabling builds for different systems
       build_enable_ubuntu_arm64:
         description:
@@ -82,67 +88,128 @@ jobs:
       app_version:              ${{ steps.version-tag.outputs.app_version }}
       docker-image-tag:         ${{ steps.select-docker-image-tag.outputs.image_tag }}
       release_tag:              ${{ steps.version-tag.outputs.release_tag }}
-      linux-changes:            ${{ steps.linux-changes.outputs.src }}
-      linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
+      need-linux-image-rebuild: ${{ steps.select-docker-image-tag.outputs.need_rebuild }}
+      need-linux-vcpkg-rebuild: ${{ steps.select-vcpkg-docker-image-tag.outputs.need_rebuild }}
+      ubuntu_arm64_config_matrix: ${{ steps.set-ubuntu-arm64-matrix.outputs.matrix }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
+      windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
-      # please list the required tags here
-      tag-bump-vcpkg:            ${{ contains( github.event.pull_request.labels.*.name, 'bump-vcpkg' ) }}
-      tag-full-ci:               ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      tag-skip-image-rebuild:    ${{ contains( github.event.pull_request.labels.*.name, 'skip-image-rebuild' ) }}
-      tag-update-doc:            ${{ contains( github.event.pull_request.labels.*.name, 'update-doc' ) }}
-      tag-update-doc-only:       ${{ contains( github.event.pull_request.labels.*.name, 'update-doc-only' ) }}
-      tag-upload-test-artifacts: ${{ contains( github.event.pull_request.labels.*.name, 'upload-test-artifacts' ) }}
-      tag-test-pip-build:        ${{ contains( github.event.pull_request.labels.*.name, 'test-pip-build' ) }}
+      # Read PR labels live; github.event.pull_request.labels is a
+      # trigger-time snapshot (POST /pulls has no labels param —
+      # see community#24724).
+      tag-bump-vcpkg:            ${{ steps.live-labels.outputs.tag-bump-vcpkg }}
+      tag-full-ci:               ${{ steps.live-labels.outputs.tag-full-ci }}
+      tag-skip-image-rebuild:    ${{ steps.live-labels.outputs.tag-skip-image-rebuild }}
+      tag-update-doc:            ${{ steps.live-labels.outputs.tag-update-doc }}
+      tag-update-doc-only:       ${{ steps.live-labels.outputs.tag-update-doc-only }}
+      tag-upload-binaries:       ${{ steps.live-labels.outputs.tag-upload-binaries }}
+      tag-upload-test-artifacts: ${{ steps.live-labels.outputs.tag-upload-test-artifacts }}
+      tag-test-pip-build:        ${{ steps.live-labels.outputs.tag-test-pip-build }}
       # tags for disabling builds for different systems
-      tag-disable-windows:       ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-windows' ) }}
-      tag-disable-ubuntu-x64:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-x64' ) }}
-      tag-disable-ubuntu-arm64:  ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-ubuntu-arm64' ) }}
-      tag-disable-linux-vcpkg:   ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-linux-vcpkg' ) }}
-      tag-disable-macos:         ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-macos' ) }}
-      tag-disable-emscripten:    ${{ contains( github.event.pull_request.labels.*.name, 'disable-build-emscripten' ) }}
+      tag-build-release-windows: ${{ steps.live-labels.outputs.tag-build-release-windows }}
+      tag-disable-windows:       ${{ steps.live-labels.outputs.tag-disable-windows }}
+      tag-disable-ubuntu-x64:     ${{ steps.live-labels.outputs.tag-disable-ubuntu-x64 }}
+      tag-disable-ubuntu-arm64:   ${{ steps.live-labels.outputs.tag-disable-ubuntu-arm64 }}
+      tag-disable-linux-vcpkg:    ${{ steps.live-labels.outputs.tag-disable-linux-vcpkg }}
+      tag-disable-macos:          ${{ steps.live-labels.outputs.tag-disable-macos }}
+      tag-disable-emscripten:     ${{ steps.live-labels.outputs.tag-disable-emscripten }}
 
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
 
     env:
-      # duplicate output values here since they cannot be accessed from steps
-      full_config_build: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      upload_artifacts: ${{ github.event_name == 'push' || github.event_name == 'schedule' || contains( github.event.pull_request.labels.*.name, 'full-ci' ) }}
-      version_namespace: ${{ contains( github.event.pull_request.labels.*.name, 'full-ci' ) && github.event_name != 'push' && 'pr-test' || '' }}
+      # false on fork and Dependabot PRs: they have no repository secrets
+      CAN_PUSH_DOCKER_TAGS: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
+        uses: actions/checkout@v7
 
-      - name: Filter Linux paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
-        id: linux-changes
-        with:
-          filters: |
-            src:
-              - 'docker/(ubuntu20|ubuntu22|ubuntu24|fedora39|emscripten)Dockerfile'
-              - 'requirements/(ubuntu|fedora|distribution_python).txt'
-              - 'scripts/build_thirdparty.sh'
-              - 'scripts/install_apt_requirements.sh'
-              - 'scripts/install_dnf_requirements.sh'
-              - 'scripts/mrbind/install_deps_ubuntu.sh'
-              - 'thirdparty/!(install.bat|vcpkg/**)'
+      # Read PR labels live (trigger payload is empty right after
+      # `gh pr create --label X`). Emits one step output per label and
+      # full_config_build / upload_artifacts / version_namespace to $GITHUB_ENV.
+      - name: Read live PR labels
+        id: live-labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read_labels() {
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              gh pr view ${{ github.event.pull_request.number }} \
+                --repo "${{ github.repository }}" \
+                --json labels --jq '.labels[].name'
+            fi
+          }
 
-      - name: Filter Linux vcpkg paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
-        id: linux-vcpkg-changes
-        with:
-          filters: |
-            src:
-              - 'docker/vcpkgDockerfile'
-              - 'requirements/vcpkg-linux.txt'
-              - 'thirdparty/vcpkg/**'
+          # Poll briefly on `pull_request.opened` to ride out the
+          # ~1–3 s gh-pr-create-label race. 3×2 s cap, so label-less PRs
+          # only pay ~4 s; synchronize/reopened runs skip the polling.
+          attempts=1
+          if [ "${{ github.event_name }}" = "pull_request" ] && \
+             [ "${{ github.event.action }}" = "opened" ]; then
+            attempts=3   # up to ~4 s of polling: 0, 2, 2
+          fi
+
+          LABELS=""
+          for i in $(seq 1 $attempts); do
+            LABELS=$(read_labels)
+            if [ -n "$LABELS" ] || [ "$i" = "$attempts" ]; then
+              break
+            fi
+            echo "  (no labels yet — retry $i/$attempts in 2 s)"
+            sleep 2
+          done
+
+          echo "Live labels:"
+          if [ -n "$LABELS" ]; then echo "$LABELS" | sed 's/^/  - /'; else echo "  (none)"; fi
+
+          has() { echo "$LABELS" | grep -qFx "$1" && echo true || echo false; }
+
+          # Emit `tag-<key>=true` per label present. The `disable-build-X`
+          # family drops the middle `build-` segment to match the existing
+          # workflow_call outputs (`tag-disable-X`). Absent outputs are falsy.
+          for label in $LABELS; do
+            echo "tag-${label/disable-build-/disable-}=true"
+          done >> "$GITHUB_OUTPUT"
+
+          # Derived env vars — replaces the removed job-level `env:`
+          # block. Referenced by `if:`/`env:` in later steps (Checkout
+          # full history, Versioning, Set matrix for ubuntu-x64, etc.).
+          FULL_CI=$(has full-ci)
+          UPLOAD_BIN=$(has upload-binaries)
+          EVT="${{ github.event_name }}"
+
+          full_config_build=false
+          if [ "$EVT" = "schedule" ] || [ "$EVT" = "workflow_dispatch" ] || [ "$FULL_CI" = "true" ]; then
+            full_config_build=true
+          fi
+
+          upload_artifacts=false
+          if [ "$EVT" = "push" ] || [ "$EVT" = "schedule" ] || [ "$FULL_CI" = "true" ] || [ "$UPLOAD_BIN" = "true" ]; then
+            upload_artifacts=true
+          fi
+
+          version_namespace=""
+          if { [ "$FULL_CI" = "true" ] || [ "$UPLOAD_BIN" = "true" ]; } && [ "$EVT" != "push" ]; then
+            version_namespace="pr-test"
+          fi
+
+          {
+            echo "full_config_build=$full_config_build"
+            echo "upload_artifacts=$upload_artifacts"
+            echo "version_namespace=$version_namespace"
+          } >> "$GITHUB_ENV"
+
+      # install helper utility for Python version management
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+
+      - name: Check for errors
+        run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
       - name: Filter Windows paths
-        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3
+        if: ${{ github.event_name != 'schedule' }}
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: windows-changes
         with:
           filters: |
@@ -151,43 +218,66 @@ jobs:
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
-      # if nothing to rebuild: "latest"
-      # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
-      # example: fix/mesh -> fix-mesh
+      - name: Login to DockerHub
+        if: ${{ env.CAN_PUSH_DOCKER_TAGS == 'true' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: meshlib
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Single criterion for image selection and rebuilds: every image's
+      # conventional tag (branch tag on PRs, `latest` otherwise) must point at
+      # its content-addressed source-checksum-* tag; sync_docker_image_tags.sh
+      # syncs it right here, and its exit code says whether prepare-images
+      # must run for images whose source-checksum-* tag is absent, i.e. that
+      # really must be built.
       - name: Select Docker image tag
         id: select-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
             # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+          if [ "${CAN_PUSH_DOCKER_TAGS}" != "true" ] || scripts/devops/sync_docker_image_tags.sh linux "${IMAGE_TAG}"; then
+            echo "need_rebuild=false" >> $GITHUB_OUTPUT
+          else
+            echo "need_rebuild=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-vcpkg-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
+            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
+          if [ "${CAN_PUSH_DOCKER_TAGS}" != "true" ] || scripts/devops/sync_docker_image_tags.sh linux-vcpkg "${IMAGE_TAG}"; then
+            echo "need_rebuild=false" >> $GITHUB_OUTPUT
+          else
+            echo "need_rebuild=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@a8f8f59fd7f0625188492e945240f12d7ad2dca3 # v5.4.0
+        uses: paulhatch/semantic-version@502226b17e3e242e4befd0a45690fcbb27dd1373 # v6.0.3
         id: version
         with:
           tag_prefix: "v"
+          major_pattern: "(MAJOR)"
+          minor_pattern: "(MINOR)"
           version_format: "v${major}.${minor}.${patch}.${increment}"
           bump_each_commit: false
           search_commit_body: true
@@ -200,7 +290,7 @@ jobs:
           echo "release_tag=${version}" >> $GITHUB_OUTPUT
           echo "app_version=${version%%-*}" >> $GITHUB_OUTPUT
 
-      - name: Set matrix for ubuntu-arm64 builds
+      - name: Set matrix for ubuntu-x64 builds
         id: set-ubuntu-x64-matrix
         run: |
           if [[ "${{ env.full_config_build }}" == "true" ]]; then
@@ -208,3 +298,56 @@ jobs:
           else
             echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set matrix for ubuntu-arm64 builds
+        id: set-ubuntu-arm64-matrix
+        uses: ./scripts/actions/matrix-builder
+        with:
+          matrix: |
+            os:
+              - ubuntu22
+              - ubuntu24
+              - ubuntu26
+            config:
+              - Release
+          rules: |
+            - extend:
+                - os: ubuntu22
+                  compiler: clang
+                  cxx-compiler: /usr/bin/clang++-14
+                  c-compiler: /usr/bin/clang-14
+                  cxx-standard: 20
+                - os: ubuntu24
+                  compiler: GCC
+                  cxx-compiler: /usr/bin/g++-13
+                  c-compiler: /usr/bin/gcc-13
+                  cxx-standard: 23
+                - os: ubuntu26
+                  compiler: GCC
+                  cxx-compiler: /usr/bin/g++-15
+                  c-compiler: /usr/bin/gcc-15
+                  cxx-standard: 23
+            # A docs-only run still needs ubuntu22 - PythonStubs and CsharpBindings come from
+            # it - but nothing reads the ubuntu24 leg unless the debs are published.
+            - if: ${{ steps.live-labels.outputs.tag-update-doc-only == 'true' && env.upload_artifacts != 'true' }}
+              exclude:
+                - os: ubuntu24
+                - os: ubuntu26
+
+      - name: Set matrix for windows-x64 builds
+        id: set-windows-x64-matrix
+        run: |
+          if [[ "${{ env.full_config_build }}" == "true" || github.event_name == 'schedule' ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-full-config.json"
+          elif [[ "${{ steps.live-labels.outputs.tag-build-release-windows }}" == "true" ]]; then
+            MATRIX_FILE=".github/workflows/matrix/windows-standard-config.json"
+          else
+            MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
+          fi
+
+          jq \
+            --arg vcpkg "2026.07.29" \
+            '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
+            "$MATRIX_FILE" > tmp.json
+
+          echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

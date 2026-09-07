@@ -5,7 +5,6 @@ from helpers.meshlib_helpers import compare_voxels
 
 import pytest
 
-@pytest.mark.bindingsV3
 def test_points_to_distance_volume(tmp_path):
     input_folder = Path(test_files_path) / "algorithms" / "points_to_dv"
 

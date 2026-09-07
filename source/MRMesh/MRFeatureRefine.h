@@ -13,9 +13,9 @@ struct MRMESH_CLASS RefineParameters
     /// Maximum angle between the source model's normal and the feature's normal
     float normalTolerance{ 30.f };
     /// (for meshes only) Reference faces used for filtering intermediate results that are too far from it
-    const FaceBitSet* faceRegion;
+    const FaceBitSet* faceRegion{};
     /// (for meshes only) Reference vertices used for filtering intermediate results that are too far from it
-    const VertBitSet* vertRegion;
+    const VertBitSet* vertRegion{};
     /// Maximum amount of iterations performed until a stable set of points is found
     int maxIterations{ 10 };
     /// Progress callback

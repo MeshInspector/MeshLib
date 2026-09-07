@@ -4,9 +4,10 @@
 namespace MR
 {
 
-CombinedHistoryAction::CombinedHistoryAction( const std::string& name, const std::vector<std::shared_ptr<HistoryAction>>& actions ) :
-    actions_{ actions },
-    name_{ name }
+CombinedHistoryAction::CombinedHistoryAction( const std::string& name, const std::vector<std::shared_ptr<HistoryAction>>& actions, const DynamicNameGetter& dynamicNameFunc )
+    : actions_{ actions }
+    , name_{ name }
+    , dynNameGetter_{ dynamicNameFunc }
 {
 }
 
@@ -33,12 +34,26 @@ bool CombinedHistoryAction::filter( HistoryStackFilter filteringCondition )
     return filterHistoryActionsVector( actions_, filteringCondition ).first;
 }
 
+std::optional<std::string> CombinedHistoryAction::getDynamicName() const
+{
+    if ( !dynNameGetter_ )
+        return {};
+    return dynNameGetter_();
+}
+
 size_t CombinedHistoryAction::heapBytes() const
 {
     auto res = name_.capacity() + MR::heapBytes( actions_ );
     for ( const auto & a : actions_ )
         res += MR::heapBytes( a );
     return res;
+}
+
+std::optional<std::string> getDynamicName( const std::shared_ptr<HistoryAction>& action )
+{
+    if ( auto combHist = std::dynamic_pointer_cast<CombinedHistoryAction>( action ) )
+        return combHist->getDynamicName();
+    return {};
 }
 
 }

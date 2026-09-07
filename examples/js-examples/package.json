@@ -1,0 +1,11 @@
+{
+  "name": "meshlib-js-examples",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@meshinspector/meshlib": "*"
+  }
+}

@@ -51,26 +51,26 @@ namespace MR
 namespace ImageLoad
 {
 
-Expected<Image> fromJpeg( const std::filesystem::path& path )
+Expected<Image> fromJpeg( const std::filesystem::path& path, bool ignoreDecompressErrors )
 {
     std::ifstream in( path, std::ios::binary );
     if ( !in )
         return unexpected( "Cannot open file " + utf8string( path ) );
 
-    return addFileNameInError( fromJpeg( in ), path );
+    return addFileNameInError( fromJpeg( in, ignoreDecompressErrors ), path );
 }
 
-Expected<Image> fromJpeg( std::istream& in )
+Expected<Image> fromJpeg( std::istream& in, bool ignoreDecompressErrors )
 {
     return
         readCharBuffer( in )
-        .and_then( [] ( auto&& buffer )
+        .and_then( [ignoreDecompressErrors] ( auto&& buffer )
         {
-            return fromJpeg( buffer.data(), buffer.size() );
+            return fromJpeg( buffer.data(), buffer.size(), ignoreDecompressErrors );
         } );
 }
 
-Expected<Image> fromJpeg( const char* data, size_t size )
+Expected<Image> fromJpeg( const char* data, size_t size, bool ignoreDecompressErrors )
 {
     JpegReader reader;
     if ( !reader.tjInstance )
@@ -85,13 +85,14 @@ Expected<Image> fromJpeg( const char* data, size_t size )
     image.pixels.resize( width * height );
     image.resolution = { width, height };
     res = tjDecompress2( reader.tjInstance, ( const unsigned char* )data, ( unsigned long )size, reinterpret_cast< unsigned char* >( image.pixels.data() ), width, 0, height, TJPF_RGBA, TJFLAG_BOTTOMUP );
-    if ( res != 0 )
+    if ( res != 0 && !ignoreDecompressErrors )
         return unexpected( "Failed to decompress JPEG file" );
 
     return image;
 }
 
-MR_ADD_IMAGE_LOADER_WITH_PRIORITY( IOFilter( "JPEG (.jpg,.jpeg)", "*.jpg;*.jpeg" ), fromJpeg, -1 )
+MR_ADD_IMAGE_LOADER_WITH_PRIORITY( IOFilter( "JPEG (.jpg,.jpeg)", "*.jpg;*.jpeg" ),
+    []( const std::filesystem::path& path ){ return fromJpeg( path ); }, -1 )
 
 } // namespace ImageLoad
 

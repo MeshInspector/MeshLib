@@ -1,0 +1,15 @@
+# Doxygen config that extracts the MeshLib C++ API doc comments as XML, for inject_tsdoc.py
+INPUT                = source/MRMesh source/MRVoxels
+RECURSIVE            = YES
+GENERATE_HTML        = NO
+GENERATE_LATEX       = NO
+GENERATE_XML         = YES
+XML_OUTPUT           = build/wasm_cpp_comments
+EXTRACT_ALL          = YES
+ENABLE_PREPROCESSING = YES
+MACRO_EXPANSION      = YES
+EXPAND_ONLY_PREDEF   = YES
+PREDEFINED           = MRMESH_API= MRVOXELS_API= MRIOEXTRAS_API= MRSYMBOLMESH_API= MRVIEWER_API= MR_CANONICAL_TYPEDEFS "MR_BIND_PREFERRED_NAME(x)="
+QUIET                = YES
+WARNINGS             = NO
+WARN_LOGFILE         = /dev/null

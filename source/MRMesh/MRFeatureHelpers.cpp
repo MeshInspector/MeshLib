@@ -12,7 +12,7 @@ std::unordered_set<std::string> getFeaturesTypeWithNormals()
         auto ret = std::make_shared<typename ObjKindTraits<thisKind.value>::type>();
         if constexpr ( HasGetNormalMethod<typename ObjKindTraits<thisKind.value>::type> )
         {
-            validTypes.insert( ret->TypeName() );
+            validTypes.insert( ret->StaticTypeName() );
         }
         return false;
     } );
@@ -27,7 +27,7 @@ std::unordered_set<std::string> getFeaturesTypeWithDirections()
         auto ret = std::make_shared<typename ObjKindTraits<thisKind.value>::type>();
         if constexpr ( HasGetDirectionMethod<typename ObjKindTraits<thisKind.value>::type> )
         {
-            validTypes.insert( ret->TypeName() );
+            validTypes.insert( ret->StaticTypeName() );
         }
         return false;
     } );

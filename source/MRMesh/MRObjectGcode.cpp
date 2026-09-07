@@ -154,7 +154,7 @@ void ObjectGcode::swapSignals_( Object& other )
 void ObjectGcode::serializeFields_( Json::Value& root ) const
 {
     ObjectLinesHolder::serializeBaseFields_( root );
-    root["Type"].append( ObjectGcode::TypeName() );
+    root["Type"].append( ObjectGcode::StaticTypeName() );
     root["FeedrateGradientEnable"] = feedrateGradientEnabled_;
     root["MaxFeedrate"] = maxFeedrate_;
     serializeToJson( idleColor_, root["IdleColor"] );

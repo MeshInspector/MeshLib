@@ -15,7 +15,7 @@ public:
     /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
     ViewerSetup() = default;
     ViewerSetup( const ViewerSetup & ) = default;
-    ViewerSetup( ViewerSetup && ) = default;
+    ViewerSetup( ViewerSetup && ) noexcept = default;
 
     virtual ~ViewerSetup() = default;
 
@@ -29,7 +29,8 @@ public:
     virtual void setupCommonPlugins( Viewer* /*viewer*/ ) const {}
 
     /// Sets custom viewer settings manager to viewer
-    MRVIEWER_API virtual void setupSettingsManager( Viewer* viewer, const std::string& appName ) const;
+    /// \param reset - flag indicates that user launched application with request for reseting config file
+    MRVIEWER_API virtual void setupSettingsManager( Viewer* viewer, const std::string& appName, bool reset = false ) const;
 
     /// Sets start configuration for viewer
     /// use to override default configuration of viewer
@@ -41,6 +42,22 @@ public:
 
     /// free all libraries loaded in setupExtendedLibraries()
     MRVIEWER_API virtual void unloadExtendedLibraries() const;
+
+    /// Launch the MCP server. Append this to the `CommandLoop` instead of calling immediately.
+    /// Returns false if the MCP support is not compiled in.
+    MRVIEWER_API virtual bool setupMcp() const;
+
+    /// Stop the MCP server and clear tool registrations. Called from `MRViewer.cpp` after
+    /// `viewer.launch()` returns, before `unloadExtendedLibraries()` — captured tool
+    /// callbacks live in plugin DLLs and dangle once those DLLs are unloaded.
+    /// Returns false if the MCP support is not compiled in.
+    MRVIEWER_API virtual bool shutdownMcp() const;
+
+    // functor to setup custom log sink, i.e. sending logs to web
+    std::function<void()> setupCustomLogSink;
+
+    // functor to shutdown custom log sink, i.e. send all remaining logs to web before exit
+    std::function<void()> shutdownCustomLogSink;
 
 private:
 #ifndef __EMSCRIPTEN__

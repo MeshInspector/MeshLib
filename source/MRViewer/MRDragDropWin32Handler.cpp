@@ -1,6 +1,7 @@
 #ifdef _WIN32
 #include "MRDragDropWin32Handler.h"
 #include "MRViewer.h"
+#include "MRViewerSignals.h"
 #include "MRPch/MRSpdlog.h"
 
 
@@ -95,7 +96,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragEnter(/* [unique][in] */ __RPC__in_
     auto& v = getViewerInstance();
     v.emplaceEvent( "Drag enter", [&v] ()
     {
-        v.dragEntranceSignal( true );
+        v.signals().dragEntranceSignal( true );
     } );
 
     return S_OK;
@@ -115,7 +116,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragOver(/* [in] */ DWORD grfKeyState, 
         glfwGetWindowPos( v.window, &posx, &posy );
         x -= posx;
         y -= posy;
-        v.dragOverSignal( int( std::round( x * v.pixelRatio ) ), int( std::round( y * v.pixelRatio ) ) );
+        v.signals().dragOverSignal( int( std::round( x * v.pixelRatio ) ), int( std::round( y * v.pixelRatio ) ) );
     }, true );
 
     return S_OK;
@@ -126,7 +127,7 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::DragLeave( void )
     auto& v = getViewerInstance();
     v.emplaceEvent( "Drag leave", [&v] ()
     {
-        v.dragEntranceSignal( false );
+        v.signals().dragEntranceSignal( false );
     } );
 
     return S_OK;
@@ -137,9 +138,13 @@ HRESULT STDMETHODCALLTYPE WinDropTarget::Drop(/* [unique][in] */ __RPC__in_opt I
     if ( !pdwEffect )
         return E_INVALIDARG;
     *pdwEffect = DROPEFFECT_NONE;
-    assert( false );
+
     // glfw_drop_callback still takes this, so we are never here
-    spdlog::warn( "Windows drag&drop handler overtook \"Drop\" event" );
+    // EDIT: apparently we can get here in some cases, for example Drag&Drop from windows explorer "Recent"
+    //       but glfw_drop_callback will also get the event so it works fine anyway 
+    //       (assert removed due to new information)
+    spdlog::debug( "Windows drag&drop handler overtook \"Drop\" event" );
+
     ( void )pDataObj;
     ( void )grfKeyState;
     ( void )pt;

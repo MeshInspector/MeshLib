@@ -1,6 +1,6 @@
 #pragma once
+
 #include "MRMeshFwd.h"
-#include "MRMesh.h"
 #include "MRVector3.h"
 #include "MRProgressCallback.h"
 #include "MRExpected.h"

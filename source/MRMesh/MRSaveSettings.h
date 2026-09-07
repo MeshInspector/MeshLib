@@ -4,7 +4,10 @@
 #include "MRAffineXf3.h"
 #include "MRId.h"
 #include "MRVector.h"
+#include "MRUnitInfo.h"
+#include "MRColor.h"
 #include <cassert>
+#include <optional>
 
 namespace MR
 {
@@ -14,29 +17,42 @@ struct SaveSettings
 {
     /// true - save valid points/vertices only (pack them);
     /// false - save all points/vertices preserving their indices
-    bool saveValidOnly = true;
+    bool onlyValidPoints = true;
 
-    /// whether to allow the pack or shuffle of triangles;
-    /// if it is turned on, then ids of invalid triangles are reused by the following valid triangles
-    /// and higher compression (in .ctm format) can be reached but the order of triangles is changed;
-    /// if it is turned off then all triangles maintain their ids, and invalid triangles are saved as (0,0,0) vertex triples;
-    /// currently affects .ctm and .ply formats only
-    bool rearrangeTriangles = true;
+    /// whether to allow packing or shuffling of primitives (triangles in meshes or edges in polylines);
+    /// if packPrimitives=true, then ids of invalid primitives are reused by valid primitives
+    /// and higher compression (in .ctm format) can be reached if the order of triangles is changed;
+    /// if packPrimitives=false then all primitives maintain their ids, and invalid primitives are saved with all vertex ids equal to zero;
+    /// currently this flag affects the saving in .ctm and .ply formats only
+    bool packPrimitives = true;
 
     /// optional per-vertex color to save with the geometry
     const VertColors * colors = nullptr;
 
+    /// per-face colors for meshes, per-undirected-edge colors for polylines, unused for point clouds and other
+    const std::vector<Color> * primitiveColors = nullptr;
+
     /// optional per-vertex uv coordinate to save with the geometry
     const VertUVCoords * uvMap = nullptr;
+
+    /// if a format supports both per-vertex and per-tri-corner UV-coordinates,
+    /// then prefer the later option (it takes more space but more supported in other software)
+    bool saveTriCornerUVCoords = true;
 
     /// optional texture to save with the geometry
     const MeshTexture * texture = nullptr;
 
-    /// used to save texture and material in some formats (obj)
+    /// the name of file (UTF8 encoded) without extension to save texture in some formats (e.g. .OBJ, .PLY)
     std::string materialName = "Default";
 
     /// this transformation can optionally be applied to all vertices (points) of saved object
     const AffineXf3d * xf = nullptr;
+
+    /// units of input coordinates and transformation, to be serialized if the format supports it
+    std::optional<LengthUnit> lengthUnit;
+
+    /// the color of whole object
+    std::optional<Color> solidColor;
 
     /// to report save progress and cancel saving if user desires
     ProgressCallback progress;

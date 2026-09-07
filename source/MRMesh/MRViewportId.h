@@ -29,7 +29,11 @@ public:
     ViewportId next() const { return ViewportId{ id_ << 1 }; }
     ViewportId prev() const { return ViewportId{ id_ >> 1 }; }
 
+// Allocating IDs on the heap in C is insufferable, so instead we bind them as single-member structs (via `--expose-as-struct`).
+// But since our parser only tracks public members, we have to make it public for C.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
     unsigned id_ = 0;
 };
 
@@ -61,7 +65,11 @@ public:
 
     void set( ViewportId id, bool on = true ) { on ? ( mask_ |= id.value() ) : ( mask_ &= ~id.value() ); }
 
+// Allocating IDs/masks on the heap in C is insufferable, so instead we bind them as single-member structs (via `--expose-as-struct`).
+// But since our parser only tracks public members, we have to make it public for C.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
     unsigned mask_ = 0;
 };
 

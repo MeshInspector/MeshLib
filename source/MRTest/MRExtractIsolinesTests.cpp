@@ -1,9 +1,10 @@
-#include <MRMesh/MRGTest.h>
+#include <gtest/gtest.h>
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRLineSegm.h>
+#include <MRMesh/MRPlane3.h>
 
 namespace MR
 {

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    Compiles .po -> .mo using msgfmt.
+
+    Importing projects must define TranslationLocaleDir items pointing to the
+    root locale directories (each containing <lang>/<domain>.po files), e.g.:
+      <TranslationLocaleDir Include="$(SolutionDir)locale" />
+
+    The target is silently skipped if msgfmt is not found.
+  -->
+
+  <!-- Find msgfmt: vcpkg tools, then GETTEXT_ROOT. Leave empty to skip the target. -->
+  <PropertyGroup>
+    <_MsgfmtExe Condition="Exists('$(VcpkgCurrentInstalledDir)\tools\gettext\bin\msgfmt.exe')">$(VcpkgCurrentInstalledDir)\tools\gettext\bin\msgfmt.exe</_MsgfmtExe>
+    <_MsgfmtExe Condition="'$(_MsgfmtExe)' == '' AND '$(GETTEXT_ROOT)' != '' AND Exists('$(GETTEXT_ROOT)\bin\msgfmt.exe')">$(GETTEXT_ROOT)\bin\msgfmt.exe</_MsgfmtExe>
+    <_MsgfmtExe Condition="'$(_MsgfmtExe)' == '' AND '$(GETTEXT_ROOT)' != '' AND Exists('$(GETTEXT_ROOT)\msgfmt.exe')">$(GETTEXT_ROOT)\msgfmt.exe</_MsgfmtExe>
+  </PropertyGroup>
+
+  <Target
+    Name="CompileTranslations"
+    BeforeTargets="Build"
+    Condition="'$(_MsgfmtExe)' != '' AND '@(TranslationLocaleDir)' != ''">
+    <ItemGroup>
+      <_TranslationPoFile Include="%(TranslationLocaleDir.Identity)\**\*.po" />
+    </ItemGroup>
+    <MakeDir Condition="'@(_TranslationPoFile)' != ''" Directories="$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES" />
+    <Exec Condition="'@(_TranslationPoFile)' != ''" Command="&quot;$(_MsgfmtExe)&quot; &quot;%(_TranslationPoFile.Identity)&quot; --output-file=&quot;$(OutDir)locale\%(_TranslationPoFile.RecursiveDir)LC_MESSAGES\%(_TranslationPoFile.Filename).mo&quot; --check" />
+  </Target>
+</Project>

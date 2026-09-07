@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRMacros.h"
 #include <vector>
 #include <memory>
 
@@ -64,7 +65,8 @@ template<typename T>
 }
 
 /// Needed for generic code, always returns zero.
-template<typename T>
+/// The constraint is needed to avoid hard errors in C bindings when using MSVC STL when calling `heapBytes<SomeNonfuncType>(...)`.
+template<typename T> MR_REQUIRES_IF_SUPPORTED( std::is_function_v<T> )
 [[nodiscard]] inline size_t heapBytes( const std::function<T> & )
 {
     return 0;

@@ -2,10 +2,8 @@
 #include "MRMeshNormals.h"
 #include "MRMesh.h"
 #include "MRVector.h"
-#include "MRCube.h"
 #include "MRTimer.h"
 #include "MRMeshBuilder.h"
-#include "MRGTest.h"
 
 namespace MR
 {
@@ -43,22 +41,6 @@ void deleteTargetFaces( Mesh & obj, const Mesh & target )
     // lets find the center of the tooth root
     Vector3f targetCenter = target.findCenterFromFaces();
     deleteTargetFaces( obj, targetCenter );
-}
-
-TEST(MRMesh, DeleteTargetFaces)
-{
-    Mesh meshObj = makeCube({ 1.f, 1.f, 1.f }, { 0.f, 0.f, 0.f });
-    Mesh meshRef = makeCube({ 1.f, 1.f, 1.f }, { -1.f, -1.f, -1.f });
-
-    EXPECT_EQ(meshObj.topology.numValidVerts(), 8);
-    EXPECT_EQ(meshObj.topology.numValidFaces(), 12);
-    EXPECT_EQ(meshObj.points.size(), 8);
-
-    deleteTargetFaces(meshObj, meshRef);
-
-    EXPECT_EQ(meshObj.topology.numValidVerts(), 7);
-    EXPECT_EQ(meshObj.topology.numValidFaces(), 6);
-    EXPECT_EQ(meshObj.points.size(), 8);
 }
 
 } //namespace MR

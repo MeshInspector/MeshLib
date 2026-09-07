@@ -3,7 +3,6 @@
 #include "MRObjectFactory.h"
 #include "MRMesh.h"
 #include "MRMeshComponents.h"
-#include "MRMeshSave.h"
 #include "MRSerializer.h"
 #include "MRMeshLoad.h"
 #include "MRSceneColors.h"
@@ -55,24 +54,21 @@ Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const s
         return {};
 
     SaveSettings saveSettings;
-    saveSettings.saveValidOnly = false;
-    saveSettings.rearrangeTriangles = false;
+    saveSettings.onlyValidPoints = false;
+    saveSettings.packPrimitives = false;
     if ( !data_.vertColors.empty() )
         saveSettings.colors = &data_.vertColors;
-    auto save = [mesh = data_.mesh, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat(), path, saveSettings]()
+    auto save = [mesh = data_.mesh, serializeFormat = std::string( actualSerializeFormat() ), path, saveSettings]() -> Expected<void>
     {
-        auto filename = path;
         const auto extension = std::string( "*" ) + serializeFormat;
-        if ( auto meshSaver = MeshSave::getMeshSaver( extension ); meshSaver.fileSave != nullptr )
+        auto meshSaver = MeshSave::getMeshSaver( extension );
+        if ( meshSaver.fileSave )
         {
+            auto filename = path;
             filename += serializeFormat;
             return meshSaver.fileSave( *mesh, filename, saveSettings );
         }
-        else
-        {
-            filename += ".ply";
-            return MR::MeshSave::toAnySupportedFormat( *mesh, filename, saveSettings );
-        }
+        return unexpectedUnsupportedFileExtension();
     };
     return std::async( getAsyncLaunchType(), save );
 }
@@ -104,6 +100,10 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
         root["ColoringType"] = "Solid";
     }
     serializeToJson( data_.faceColors.vec_, root["FaceColors"] );
+
+    const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
+    if ( !meshSaver.capabilities.storesVertexColors )
+        serializeToJson( data_.vertColors.vec_, root["VertColors"] );
 
     // texture
     if ( !textures_.empty() )
@@ -140,7 +140,23 @@ void ObjectMeshHolder::serializeFields_( Json::Value& root ) const
 
     root["PointSize"] = pointSize_;
 
-    root["Type"].append( ObjectMeshHolder::TypeName() );
+    root["Type"].append( ObjectMeshHolder::StaticTypeName() );
+}
+
+size_t ObjectMeshHolder::getModelHash() const
+{
+    return std::hash<std::shared_ptr<MR::Mesh>>()( data_.mesh );
+}
+bool ObjectMeshHolder::sameModels( const Object& other ) const
+{
+    if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
+    {
+        const auto meshSaver = MeshSave::getMeshSaver( std::string( "*" ) + actualSerializeFormat() );
+        if ( meshSaver.capabilities.storesVertexColors )
+            return data_.mesh == objectMeshHolder->data_.mesh && data_.vertColors == objectMeshHolder->data_.vertColors;
+        return data_.mesh == objectMeshHolder->data_.mesh;
+    }
+    return false;
 }
 
 void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
@@ -179,6 +195,7 @@ void ObjectMeshHolder::deserializeFields_( const Json::Value& root )
             setColoringType( ColoringType::FacesColorMap );
     }
     deserializeFromJson( root["FaceColors"], data_.faceColors.vec_ );
+    deserializeFromJson( root["VertColors"], data_.vertColors.vec_ );
 
     Vector4f resVec;
     deserializeFromJson( selectionColor["Diffuse"], resVec );
@@ -253,12 +270,24 @@ Expected<void> ObjectMeshHolder::deserializeModel_( const std::filesystem::path&
         if ( modelPath.empty() )
             return unexpected( "No mesh file found: " + utf8string( path ) );
     }
-    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &data_.vertColors, .callback = progressCb } );
+    auto res = MeshLoad::fromAnySupportedFormat( modelPath, { .colors = &data_.vertColors, .callback = progressCb, .telemetrySignal = false } );
     if ( !res.has_value() )
         return unexpected( res.error() );
 
     data_.mesh = std::make_shared<Mesh>( std::move( res.value() ) );
     return {};
+}
+
+Expected<void> ObjectMeshHolder::setSharedModel_( const Object& other )
+{
+    if ( const auto objectMeshHolder = dynamic_cast< const ObjectMeshHolder* >( &other ) )
+    {
+        // we don't use SetData() here because we set some fields of data_ from json, may be in future all model data saved to file move to separate struct ?
+        data_.mesh = objectMeshHolder->data_.mesh;
+        data_.vertColors = objectMeshHolder->data_.vertColors;
+        return{};
+    }
+    return unexpected("Invalid object type");
 }
 
 Box3f ObjectMeshHolder::computeBoundingBox_() const
@@ -434,44 +463,47 @@ void ObjectMeshHolder::copyColors( const ObjectMeshHolder& src, const VertMap& t
     setColoringType( src.getColoringType() );
 
     const auto& srcColorMap = src.getVertsColorMap();
-    if ( srcColorMap.empty() )
-        return;
-
-    VertColors colorMap;
-    colorMap.resizeNoInit( thisToSrc.size() );
-    ParallelFor( colorMap, [&] ( VertId id )
+    if ( !srcColorMap.empty() )
     {
-        auto curId = thisToSrc[id];
-        if( curId.valid() )
-            colorMap[id] = srcColorMap[curId];
-    } );
-    setVertsColorMap( std::move( colorMap ) );
+        VertColors colorMap;
+        colorMap.resizeNoInit( thisToSrc.size() );
+        ParallelFor( colorMap, [&] ( VertId id )
+        {
+            auto curId = thisToSrc[id];
+            if( curId.valid() )
+                colorMap[id] = srcColorMap[curId];
+        } );
+        setVertsColorMap( std::move( colorMap ) );
+    }
 
-    if ( !data_.faceColors.empty() && data_.mesh )
+    const auto& srcFaceColorMap = src.getFacesColorMap();
+    if ( !srcFaceColorMap.empty() && data_.mesh )
     {
-        const auto& validFace = data_.mesh->topology.getValidFaces();
+        const auto& validFaces = data_.mesh->topology.getValidFaces();
         FaceColors faceColors;
-        faceColors.resizeNoInit( validFace.size() );
+        faceColors.resizeNoInit( validFaces.size() );
 
-        Color color = data_.faceColors[thisToSrcFaces[validFace.backId()]];
-        bool differentColor = false;
+        std::optional<Color> commonColor;
+        bool differentColors = false;
 
-        for ( const auto& faceId : validFace )
+        for ( const auto& faceId : validFaces )
         {
             if ( !thisToSrcFaces[faceId].valid() )
                 continue;
 
-            auto& newColor = data_.faceColors[thisToSrcFaces[faceId]];
+            auto& newColor = srcFaceColorMap[thisToSrcFaces[faceId]];
             faceColors[faceId] = newColor;
-            if ( color != newColor )
-                differentColor = true;
+            if ( !commonColor )
+                commonColor = newColor;
+            else if ( *commonColor != newColor )
+                differentColors = true;
         }
 
-        if ( differentColor )
+        if ( differentColors )
             setFacesColorMap( std::move( faceColors ) );
-        else if ( src.getColoringType() == ColoringType::FacesColorMap )
+        else if ( commonColor && src.getColoringType() == ColoringType::FacesColorMap )
         {
-            setFrontColor( color, true );
+            setFrontColor( *commonColor, true );
             setColoringType( ColoringType::SolidColor );
         }
     }
@@ -485,33 +517,10 @@ void ObjectMeshHolder::clearAncillaryTexture()
         setAncillaryUVCoords( {} );
 }
 
-uint32_t ObjectMeshHolder::getNeededNormalsRenderDirtyValue( ViewportMask viewportMask ) const
-{
-    auto flatShading = getVisualizePropertyMask( MeshVisualizePropertyType::FlatShading );
-    uint32_t res = 0;
-    if ( !( flatShading & viewportMask ).empty() )
-    {
-        res |= ( getDirtyFlags() & DIRTY_FACES_RENDER_NORMAL );
-    }
-    if ( ( flatShading & viewportMask ) != viewportMask )
-    {
-        if ( !data_.creases.any() )
-        {
-            res |= ( getDirtyFlags() & DIRTY_VERTS_RENDER_NORMAL );
-        }
-        else
-        {
-            res |= ( getDirtyFlags() & DIRTY_CORNERS_RENDER_NORMAL );
-        }
-    }
-    return res;
-}
-
 bool ObjectMeshHolder::getRedrawFlag( ViewportMask viewportMask ) const
 {
     return Object::getRedrawFlag( viewportMask ) ||
-        ( isVisible( viewportMask ) &&
-          ( getDirtyFlags() & ( ~( DIRTY_CACHES | ( DIRTY_RENDER_NORMALS - getNeededNormalsRenderDirtyValue( viewportMask ) ) ) ) ) );
+        ( isVisible( viewportMask ) && getDirtyFlags() );
 }
 
 void ObjectMeshHolder::applyScale( float scaleFactor )
@@ -521,13 +530,9 @@ void ObjectMeshHolder::applyScale( float scaleFactor )
 
     auto& points = data_.mesh->points;
 
-    tbb::parallel_for( tbb::blocked_range<int>( 0, ( int )points.size() ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( points, [&] ( VertId i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            points[VertId( i )] *= scaleFactor;
-        }
+        points[i] *= scaleFactor;
     } );
     setDirtyFlags( DIRTY_POSITION );
 }
@@ -589,7 +594,7 @@ Box3f ObjectMeshHolder::getWorldBox( ViewportId id ) const
     auto & cache = worldBox_[id];
     if ( auto v = cache.get( worldXf ) )
         return *v;
-    const auto box = data_.mesh->computeBoundingBox( &worldXf );
+    const auto box = worldXf == AffineXf3f{} ? getBoundingBox() : data_.mesh->computeBoundingBox( &worldXf );
     cache.set( worldXf, box );
     return box;
 }
@@ -601,7 +606,7 @@ size_t ObjectMeshHolder::numSelectedFaces() const
         numSelectedFaces_ = data_.selectedFaces.count();
 #ifndef NDEBUG
         // check that there are no selected invalid faces
-        assert( !data_.mesh || !( data_.selectedFaces - data_.mesh->topology.getValidFaces() ).any() );
+        assert( !data_.mesh || data_.selectedFaces.is_subset_of( data_.mesh->topology.getValidFaces() ) );
 #endif
     }
 
@@ -615,7 +620,7 @@ size_t ObjectMeshHolder::numSelectedEdges() const
         numSelectedEdges_ = data_.selectedEdges.count();
 #ifndef NDEBUG
         // check that there are no selected invalid edges
-        assert( !data_.mesh || !( data_.selectedEdges - data_.mesh->topology.findNotLoneUndirectedEdges() ).any() );
+        assert( !data_.mesh || data_.selectedEdges.is_subset_of( data_.mesh->topology.findNotLoneUndirectedEdges() ) );
 #endif
     }
 
@@ -629,7 +634,7 @@ size_t ObjectMeshHolder::numCreaseEdges() const
         numCreaseEdges_ = data_.creases.count();
 #ifndef NDEBUG
         // check that there are no invalid edges among creases
-        assert( !data_.mesh || !( data_.creases - data_.mesh->topology.findNotLoneUndirectedEdges() ).any() );
+        assert( !data_.mesh || data_.creases.is_subset_of( data_.mesh->topology.findNotLoneUndirectedEdges() ) );
 #endif
     }
 
@@ -647,7 +652,7 @@ double ObjectMeshHolder::totalArea() const
 double ObjectMeshHolder::selectedArea() const
 {
     if ( !selectedArea_ )
-        selectedArea_ = data_.mesh ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
+        selectedArea_ = data_.mesh && data_.selectedFaces.any() ? data_.mesh->area( &data_.selectedFaces ) : 0.0;
 
     return *selectedArea_;
 }
@@ -677,6 +682,11 @@ size_t ObjectMeshHolder::heapBytes() const
         + ancillaryUVCoordinates_.heapBytes();
 }
 
+const char * ObjectMeshHolder::actualSerializeFormat() const
+{
+    return serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat().c_str();
+}
+
 void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
 {
     if ( newFormat && *newFormat != '.' )
@@ -685,6 +695,18 @@ void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
         return;
     }
     serializeFormat_ = newFormat;
+}
+
+void ObjectMeshHolder::resetFrontColor()
+{
+    setFrontColor( SceneColors::get( SceneColors::SelectedObjectMesh ), true );
+    setFrontColor( SceneColors::get( SceneColors::UnselectedObjectMesh ), false );
+}
+
+void ObjectMeshHolder::resetColors()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
 }
 
 size_t ObjectMeshHolder::numUndirectedEdges() const
@@ -718,8 +740,25 @@ size_t ObjectMeshHolder::numHandles() const
 
 void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 {
-    VisualObject::setDirtyFlags( mask, invalidateCaches );
+    invalidateMetricsCache( mask );
 
+    if ( invalidateCaches && ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        data_.mesh->invalidateCaches();
+
+    // must be after data_.mesh->invalidateCaches(); for the subscribers of meshChangedSignal
+    setDirtyFlagsFast( mask );
+}
+
+void ObjectMeshHolder::setDirtyFlagsFast( uint32_t mask )
+{
+    VisualObject::setDirtyFlagsFast_( mask );
+    if ( ( mask & DIRTY_POSITION || mask & DIRTY_FACE ) && data_.mesh )
+        meshChangedSignal( mask );
+}
+
+void ObjectMeshHolder::invalidateMetricsCache( uint32_t mask )
+{
+    VisualObject::invalidateMetricsCache_( mask );
     if ( mask & DIRTY_FACE )
     {
         numHoles_.reset();
@@ -737,9 +776,16 @@ void ObjectMeshHolder::setDirtyFlags( uint32_t mask, bool invalidateCaches )
         selectedArea_.reset();
         volume_.reset();
         avgEdgeLen_.reset();
-        if ( invalidateCaches && data_.mesh )
-            data_.mesh->invalidateCaches();
     }
+
+    if ( mask & DIRTY_SELECTION )
+        numSelectedFaces_.reset();
+
+    if ( mask & DIRTY_EDGES_SELECTION )
+        numSelectedEdges_.reset();
+
+    if ( mask & DIRTY_VERTS_RENDER_NORMAL )
+        numCreaseEdges_.reset();
 }
 
 void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
@@ -749,14 +795,7 @@ void ObjectMeshHolder::setCreases( UndirectedEdgeBitSet creases )
     data_.creases = std::move( creases );
     numCreaseEdges_.reset();
     creasesChangedSignal();
-    if ( data_.creases.any() )
-    {
-        setDirtyFlags( DIRTY_CORNERS_RENDER_NORMAL );
-    }
-    else
-    {
-        setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
-    }
+    setDirtyFlags( DIRTY_VERTS_RENDER_NORMAL );
 }
 
 void ObjectMeshHolder::swapBase_( Object& other )
@@ -775,6 +814,7 @@ void ObjectMeshHolder::swapSignals_( Object& other )
         std::swap( faceSelectionChangedSignal, otherMesh->faceSelectionChangedSignal );
         std::swap( edgeSelectionChangedSignal, otherMesh->edgeSelectionChangedSignal );
         std::swap( creasesChangedSignal, otherMesh->creasesChangedSignal );
+        std::swap( meshChangedSignal, otherMesh->meshChangedSignal );
     }
     else
         assert( false );
@@ -813,6 +853,16 @@ void ObjectMeshHolder::setBordersColorsForAllViewports( ViewportProperty<Color> 
     needRedraw_ = true;
 }
 
+void ObjectMeshHolder::copyAllSolidColors( const ObjectMeshHolder& other )
+{
+    VisualObject::copyAllSolidColors( other );
+    setSelectedFacesColorsForAllViewports( other.getSelectedFacesColorsForAllViewports() );
+    setSelectedEdgesColorsForAllViewports( other.getSelectedEdgesColorsForAllViewports() );
+    setEdgesColorsForAllViewports( other.getEdgesColorsForAllViewports() );
+    setPointsColorsForAllViewports( other.getPointsColorsForAllViewports() );
+    setBordersColorsForAllViewports( other.getBordersColorsForAllViewports() );
+}
+
 const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports() const
 {
     return edgesColor_;
@@ -821,6 +871,17 @@ const ViewportProperty<Color>& ObjectMeshHolder::getEdgesColorsForAllViewports()
 void ObjectMeshHolder::setEdgesColorsForAllViewports( ViewportProperty<Color> val )
 {
     edgesColor_ = std::move( val );
+    needRedraw_ = true;
+}
+
+const ViewportProperty<MR::Color>& ObjectMeshHolder::getPointsColorsForAllViewports() const
+{
+    return pointsColor_;
+}
+
+void ObjectMeshHolder::setPointsColorsForAllViewports( ViewportProperty<Color> val )
+{
+    pointsColor_ = std::move( val );
     needRedraw_ = true;
 }
 

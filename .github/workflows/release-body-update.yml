@@ -11,18 +11,22 @@ on:
     types:
       - released
 
+permissions:
+  contents: write
+
 jobs:
   update-release-body:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Determine latest release tag
         id: latest_release
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
           LATEST_RELEASE_TAG=$(gh release list --exclude-drafts --repo ${{ github.repository }} --limit 1 | awk '{print $4}')
           echo "::set-output name=tag::${LATEST_RELEASE_TAG}"
 

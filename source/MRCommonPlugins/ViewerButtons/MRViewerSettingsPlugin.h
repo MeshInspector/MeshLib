@@ -1,0 +1,133 @@
+#pragma once
+
+#include "MRCommonPlugins/exports.h"
+#include "MRViewer/MRViewerFwd.h"
+#include "MRViewer/MRStatePlugin.h"
+#include "MRViewer/MRShadowsGL.h"
+#include "MRViewer/MRSpaceMouseParameters.h"
+#include "MRViewer/MRTouchpadParameters.h"
+#include "MRMesh/MRVector4.h"
+#include "MRViewer/MRMruFormatParameters.h"
+
+namespace MR
+{
+
+class MRCOMMONPLUGINS_CLASS ViewerSettingsPlugin : public StatePlugin
+{
+public:
+
+    enum class TabType
+    {
+        Quick,
+        Application,
+        Control,
+        Viewport,
+        MeasurementUnits,
+        Mcp,
+        Features,
+
+        // When adding/reordering/renaming constants here, don't forget to add the name in `MRViewerSettingsPlugin.cpp` -> `getViewerSettingTabName()`.
+        Count
+    };
+
+    ViewerSettingsPlugin();
+
+    virtual void drawDialog( ImGuiContext* ctx ) override;
+
+    virtual bool blocking() const override { return false; }
+
+    // call this function if you save/delete color theme, or change current theme outside of this plugin
+    MRCOMMONPLUGINS_API void updateThemes();
+
+    // basic class of external settings
+    class ExternalSettings
+    {
+    public:
+        virtual ~ExternalSettings() {}
+        // returns the name of the setting, which is a unique value
+        virtual const std::string& getName() const = 0;
+        // the function of drawing the configuration UI
+        virtual void draw() = 0;
+        // restore the settings to their default values
+        virtual void reset() {}
+        // if not overriden this setting will be drawn in tools block
+        virtual const char* separatorName() const { return "Tools"; }
+    };
+
+    /// add external settings with UI combo box
+    MRCOMMONPLUGINS_API void addComboSettings( const TabType tab, std::shared_ptr<ExternalSettings> settings );
+
+    /// delete external settings with UI combo box
+    MRCOMMONPLUGINS_API void delComboSettings( const TabType tab, const ExternalSettings * settings );
+
+    /// returns instance of this plugin if it is registered
+    /// nullptr otherwise
+    MRCOMMONPLUGINS_API static ViewerSettingsPlugin* instance();
+
+    /// changes active tab
+    MRCOMMONPLUGINS_API void setActiveTab( TabType tab );
+private:
+    virtual bool onEnable_() override;
+    virtual bool onDisable_() override;
+
+    void drawTab_( float menuWidth );
+
+    void drawQuickTab_( float menuWidth );
+    void drawApplicationTab_( float menuWidth );
+    void drawControlTab_( float menuWidth );
+    void drawViewportTab_( float menuWidth );
+    void drawMeasurementUnitsTab_();
+    void drawFeaturesTab_();
+    void drawMcpTab_();
+
+    void drawLanguageSelector_();
+    void drawThemeSelector_();
+    void drawResetDialog_( bool activated );
+    void drawShadingModeCombo_( bool inGroup, float toolWidth );
+    void drawProjectionModeSelector_( float toolWidth );
+    void drawUpDirectionSelector_();
+    void drawBackgroundButton_( bool allViewports );
+    void drawRenderOptions_();
+    void drawShadowsOptions_( float menuWidth );
+    void drawMouseSceneControlsSettings_( float menuWidth );
+    void drawSpaceMouseSettings_( float menuWidth );
+    void drawTouchpadSettings_();
+    void drawMcpSettings_();
+
+    void drawMruInnerFormats_( float menuWidth );
+
+    void drawGlobalSettings_( float buttonWidth );
+    void drawCustomSettings_( const std::string& separatorName, bool needSeparator );
+    void drawSeparator_( const std::string& separatorName );
+
+
+    void updateDialog_();
+    void resetSettings_();
+
+    int storedSamples_{ 0 };
+    int maxSamples_{ 0 };
+    bool gpuOverridesMSAA_{ false };
+    float tempUserScaling_{ 1.0f };
+
+    Vector4f backgroundColor_;
+
+    int selectedLanguage_{ -1 };
+
+    int selectedUserPreset_{ 0 };
+    std::vector<std::string> userThemesPresets_;
+
+    std::unique_ptr<ShadowsGL> shadowGl_;
+
+    SpaceMouse::Parameters spaceMouseParams_;
+
+    TouchpadParameters touchpadParameters_;
+
+    TabType activeTab_ = TabType::Quick;
+    TabType orderedTab_ = TabType::Count; // invalid
+
+    std::array<std::vector<std::shared_ptr<ExternalSettings>>, size_t(TabType::Count)> comboSettings_;
+
+    MruFormatParameters mruFormatParameters_;
+};
+
+}

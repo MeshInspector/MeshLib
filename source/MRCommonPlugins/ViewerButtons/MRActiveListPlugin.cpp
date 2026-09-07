@@ -2,6 +2,7 @@
 #include "MRViewer/MRRibbonConstants.h"
 #include "MRViewer/ImGuiHelpers.h"
 #include "MRViewer/MRCommandLoop.h"
+#include "MRViewer/MRI18n.h"
 
 namespace MR
 {
@@ -17,9 +18,9 @@ public:
     {
         auto menu = RibbonMenu::instance();
         if ( !menu )
-            return "No menu present";
+            return _tr( "No menu present" );
         if ( !menu->hasAnyActiveItem() )
-            return "No active tools.";
+            return _tr( "No active tools." );
         return "";
     }
 

@@ -4,6 +4,9 @@
 #include "MRGLMacro.h"
 #include "MRGLStaticHolder.h"
 #include "MRMouseController.h"
+#include "MRViewer/MRUIStyle.h"
+#include "MRViewportCornerController.h"
+#include "MRViewportGlobalBasis.h"
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRArrow.h>
 #include <MRMesh/MRMakeSphereMesh.h>
@@ -20,9 +23,9 @@
 #include "MRMesh/MRSceneRoot.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRMeshNormals.h"
 #include "MRPch/MRSuppressWarning.h"
 #include "MRPch/MRTBB.h"
-#include "MRViewportCornerController.h"
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRObjectVoxels.h"
@@ -83,9 +86,10 @@ void Viewport::init()
     viewportGL_ = ViewportGL();
     initBaseAxes();
     updateSceneBox_();
-    setRotationPivot_( sceneBox_.valid() ? sceneBox_.center() : Vector3f() );
+    auto sceneCenter = sceneBox_.valid() ? sceneBox_.center() : Vector3f();
+    setRotationPivot_( params_.staticRotationPivot ? *params_.staticRotationPivot : sceneCenter );
     setupProjMatrix_();
-    setupAxesProjMatrix_();
+    setupAxesViewProjMatrix_();
 }
 
 void Viewport::shut()
@@ -428,6 +432,31 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
     return resMap;
 }
 
+FaceBitSet Viewport::findCameraLookingFaces( const Mesh& mesh, const AffineXf3f& meshToWorld ) const
+{
+    const auto normals = computePerFaceNormals( mesh );
+    FaceBitSet faces;
+    faces.resize( normals.size() );
+
+    const auto cameraPos =  getCameraPoint();
+
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
+    {
+        auto transformedNormal = meshToWorld.A * normals[f];
+        if ( params_.orthographic )
+        {
+            if ( ( dot( transformedNormal, cameraPos ) > 0.0f ) )
+                faces.set( f );
+        }
+        else
+        {
+            if ( dot( transformedNormal, cameraPos - mesh.triCenter( f ) ) > 0.0f )
+                faces.set( f );
+        }
+    } );
+    return faces;
+}
+
 ConstObjAndPick Viewport::const_pick_render_object() const
 {
     return pick_render_object();
@@ -451,7 +480,7 @@ void Viewport::setupView()
 {
     setupViewMatrix_();
     setupProjMatrix_();
-    setupAxesProjMatrix_();
+    setupAxesViewProjMatrix_();
 }
 
 void Viewport::preDraw()
@@ -459,7 +488,7 @@ void Viewport::preDraw()
     if ( !viewportGL_.checkInit() )
         viewportGL_.init();
     draw_rotation_center();
-    draw_global_basis();
+    drawGlobalBasis();
 }
 
 void Viewport::postDraw() const
@@ -555,11 +584,11 @@ void Viewport::rotationCenterMode( Parameters::RotationCenterMode mode )
 
 void Viewport::showGlobalBasis( bool on )
 {
-    if ( !Viewer::constInstance()->globalBasisAxes )
+    if ( !Viewer::constInstance()->globalBasis )
         return;
-    Viewer::constInstance()->globalBasisAxes->setVisible( on, id );
-    needRedraw_ |= Viewer::constInstance()->globalBasisAxes->getRedrawFlag( id );
-    Viewer::constInstance()->globalBasisAxes->resetRedrawFlag();
+    Viewer::constInstance()->globalBasis->setVisible( on, id );
+    needRedraw_ |= Viewer::constInstance()->globalBasis->getRedrawFlag( id );
+    Viewer::constInstance()->globalBasis->resetRedrawFlag();
 }
 
 void Viewport::setParameters( const Viewport::Parameters& params )
@@ -568,6 +597,12 @@ void Viewport::setParameters( const Viewport::Parameters& params )
         return;
     params_ = params;
     needRedraw_ = true;
+}
+
+void Viewport::resetStaticRotationPivot( const std::optional<Vector3f>& pivot /*= std::nullopt */ )
+{
+    // no need to set `needRedraw_` here, cause this parameter does not update current frame
+    params_.staticRotationPivot = pivot;
 }
 
 void Viewport::setAxesSize( const int axisPixSize )
@@ -616,7 +651,11 @@ void Viewport::initBaseAxes()
     // find relative points for axes
     auto scaling = 1.0f;
     if ( auto menu = getViewerInstance().getMenuPlugin() )
-        scaling = menu->menu_scaling();
+    {
+        menu->updateScaling(); // TODO rework it. Scaling update added here because this method is called before the normal scaling setup
+        scaling = UI::scale();
+    }
+
     float axesX, axesY;
     if(pixelXoffset_ < 0)
         axesX = width( viewportRect_ ) + pixelXoffset_ * scaling;
@@ -637,23 +676,23 @@ void Viewport::drawAxesAndViewController() const
     if ( basisVisible || getViewerInstance().basisViewController )
     {
         // compute inverse in double precision to avoid NaN for very small scales
-        auto fullInversedM = Matrix4f( ( Matrix4d( axesProjMat_ ) * Matrix4d( viewM_ ) ).inverse() );
+        auto fullInversedM = Matrix4f( ( Matrix4d( axesProjMat_ ) * Matrix4d( axesViewMat_ ) ).inverse() );
         auto pos = to3dim( basisAxesPos_ ); pos.z = 0.5f;
         auto transBase = fullInversedM( viewportSpaceToClipSpace( pos ) );
         auto transSide = fullInversedM( viewportSpaceToClipSpace( pos + to3dim( Vector2f::diagonal( basisAxesSize_ ) ) ) );
 
         auto invRot = AffineXf3f::linear( Matrix3f( params_.cameraTrackballAngle ) ).inverse();
 
-        float scale = (transSide - transBase).length();
+        float scale = ( transSide - transBase ).length();
         const auto basisAxesXf = AffineXf3f( Matrix3f::scale( scale ), transBase );
         if ( basisVisible )
         {
             getViewerInstance().basisAxes->setXf( basisAxesXf, id );
-            draw( *getViewerInstance().basisAxes, basisAxesXf, axesProjMat_, DepthFunction::Always );
+            drawOrthoFixedPos( *getViewerInstance().basisAxes, basisAxesXf, DepthFunction::Always );
             for ( const auto& child : getViewerInstance().basisAxes->children() )
             {
                 if ( auto visualChild = child->asType<VisualObject>() )
-                    draw( *visualChild, basisAxesXf, axesProjMat_, DepthFunction::Always );
+                    drawOrthoFixedPos( *visualChild, basisAxesXf, DepthFunction::Always );
             }
         }
         if ( getViewerInstance().basisViewController )
@@ -662,11 +701,11 @@ void Viewport::drawAxesAndViewController() const
         }
         if ( basisVisible )
         {
-            draw( *getViewerInstance().basisAxes, basisAxesXf, axesProjMat_ );
+            drawOrthoFixedPos( *getViewerInstance().basisAxes, basisAxesXf );
             for ( const auto& child : getViewerInstance().basisAxes->children() )
             {
                 if ( auto visualChild = child->asType<VisualObject>() )
-                    draw( *visualChild, basisAxesXf, axesProjMat_ );
+                    drawOrthoFixedPos( *visualChild, basisAxesXf );
             }
         }
     }
@@ -684,21 +723,18 @@ void Viewport::draw_clipping_plane() const
     draw( *Viewer::constInstance()->clippingPlaneObject, transform );
 }
 
-void Viewport::draw_global_basis() const
+void Viewport::drawGlobalBasis() const
 {
     auto& viewer = getViewerInstance();
-    if ( !viewer.globalBasisAxes->isVisible( id ) )
+    if ( !viewer.globalBasis || !viewer.globalBasis->isVisible( id ) )
         return;
 
+    auto length = viewer.globalBasis->getAxesLength( id );
     if ( params_.globalBasisScaleMode == Parameters::GlobalBasisScaleMode::Auto )
-        viewer.globalBasisAxes->setXf( AffineXf3f::linear( Matrix3f::scale( params_.objectScale * 0.5f ) ), id );
-    auto xf = viewer.globalBasisAxes->xf( id );
-    draw( *viewer.globalBasisAxes, xf );
-    for ( const auto& child : viewer.globalBasisAxes->children() )
-    {
-        if ( auto visualChild = child->asType<VisualObject>() )
-            draw( *visualChild, xf );
-    }
+        length = params_.objectScale * 0.5f;
+
+    viewer.globalBasis->setAxesProps( length, UI::scale() * getPixelSizeAtPoint( Vector3f() ) * 2.0f, id );
+    viewer.globalBasis->draw( *this );
 }
 
 }

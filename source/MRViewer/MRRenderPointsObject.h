@@ -3,6 +3,7 @@
 #include "MRMesh/MRIRenderObject.h"
 #include "MRRenderGLHelpers.h"
 #include "MRRenderHelpers.h"
+#include "MRGLStaticHolder.h"
 
 namespace MR
 {
@@ -47,7 +48,7 @@ private:
 
     int maxTexSize_{ 0 };
 
-    void bindPoints_( bool alphaSort );
+    void bindPoints_( GLStaticHolder::ShaderType shaderType );
     void bindPointsPicker_();
 
     // Create a new set of OpenGL buffer objects

@@ -1,6 +1,7 @@
 #include "MRStep.h"
 #ifndef MRIOEXTRAS_NO_STEP
 #include "MRMesh/MRFinally.h"
+#include "MRMesh/MRHexPalette.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
@@ -13,10 +14,14 @@
 
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
+#include <fstream>
 
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
 MR_SUPPRESS_WARNING( "-Wpedantic", 4996 )
+#ifdef __clang__
+#pragma clang diagnostic ignored "-Wdeprecated-copy-with-user-provided-dtor"
+#endif
 #if !defined( __GNUC__ ) || defined( __clang__ ) || __GNUC__ >= 11
 MR_SUPPRESS_WARNING( "-Wdeprecated-enum-enum-conversion", 5054 )
 #endif
@@ -203,6 +208,11 @@ AffineXf3d toXf( const gp_Trsf& transformation )
 struct StepLoader
 {
 public:
+    void setLoadSettings( const MeshLoad::StepLoadSettings& loadSettings )
+    {
+        loadSettings_ = loadSettings;
+    }
+
     [[nodiscard]] std::shared_ptr<Object> rootObject() const
     {
         return rootObj_;
@@ -276,7 +286,7 @@ public:
     {
         MR_TIMER;
 
-        const auto shapeTool = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
+        shapeTool_ = XCAFDoc_DocumentTool::ShapeTool( document->Main() );
 #if STEP_LOAD_COLORS
         colorTool_ = XCAFDoc_DocumentTool::ColorTool( document->Main() );
 #endif
@@ -286,7 +296,7 @@ public:
         objStack_.push( rootObj_ );
 
         TDF_LabelSequence shapes;
-        shapeTool->GetFreeShapes( shapes );
+        shapeTool_->GetFreeShapes( shapes );
 
 #if STEP_LOAD_COLORS
         TDF_LabelSequence colors;
@@ -369,10 +379,112 @@ public:
                 objMesh->setFacesColorMap( std::move( faceColors ) );
             }
         } );
+
+        if ( loadSettings_.autoColorize && meshTriangulationContexts_.size() > 1 )
+        {
+            bool anyColorPresent = false;
+            for ( const auto& ctx : meshTriangulationContexts_ )
+            {
+                if ( ctx.faceColor.has_value() )
+                {
+                    anyColorPresent = true;
+                    break;
+                }
+            }
+            if ( !anyColorPresent )
+            {
+                int i = 0;
+                for ( auto& objMesh : getAllObjectsInTree<ObjectMesh>( rootObj_.get() ) )
+                {
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), true );
+                    objMesh->setFrontColor( HexPalette::colorAtStep( i++ ), false );
+                }
+            }
+        }
     }
 
 private:
 #ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
+    std::pair<std::optional<Color>, std::optional<Color>> readShapeColors_( const TopoDS_Shape& shape ) const
+    {
+        std::optional<Color> faceColor, edgeColor;
+#if STEP_LOAD_COLORS
+        Quantity_ColorRGBA color;
+        if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
+            faceColor = edgeColor = toColor( color );
+        if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
+            faceColor = toColor( color );
+        if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
+            edgeColor = toColor( color );
+#endif
+        return { faceColor, edgeColor };
+    }
+
+    std::string resolveSplitBodyName_( const TopoDS_Shape& bodyShape, const std::string& fallbackName ) const
+    {
+        if ( shapeTool_.IsNull() )
+            return fallbackName;
+
+        TDF_Label bodyLabel;
+        if ( shapeTool_->FindShape( bodyShape, bodyLabel, true ) )
+        {
+            if ( const auto inheritedName = readName_( bodyLabel ); !inheritedName.empty() )
+                return inheritedName;
+        }
+
+        auto bodyShapeNoLocation = bodyShape;
+        bodyShapeNoLocation.Location( TopLoc_Location() );
+        if ( shapeTool_->FindShape( bodyShapeNoLocation, bodyLabel, true ) )
+        {
+            if ( const auto inheritedName = readName_( bodyLabel ); !inheritedName.empty() )
+                return inheritedName;
+        }
+
+        return fallbackName;
+    }
+
+    bool addSplitSimpleShapeChildren_( const TopoDS_Shape& shape, const std::shared_ptr<Object>& parent, std::optional<Color> faceColor, std::optional<Color> edgeColor )
+    {
+        std::vector<std::pair<TopoDS_Shape, std::string>> bodies;
+
+        auto solidIndex = 0;
+        for ( auto explorer = TopExp_Explorer( shape, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            bodies.emplace_back( explorer.Current(), fmt::format( "Solid{}", ++solidIndex ) );
+
+        auto shellIndex = 0;
+        for ( auto explorer = TopExp_Explorer( shape, TopAbs_SHELL, TopAbs_SOLID ); explorer.More(); explorer.Next() )
+            bodies.emplace_back( explorer.Current(), fmt::format( "Shell{}", ++shellIndex ) );
+
+        if ( bodies.size() <= 1 )
+            return false;
+
+        const auto& parentLocation = shape.Location();
+        for ( const auto& [bodyShape, bodyName] : bodies )
+        {
+            const auto bodyLocalLocation = bodyShape.Location().Predivided( parentLocation );
+            const auto bodyXf = AffineXf3f( toXf( bodyLocalLocation.Transformation() ) );
+            auto bodyShapeNoLocation = bodyShape;
+            bodyShapeNoLocation.Location( TopLoc_Location() );
+
+            auto [bodyFaceColor, bodyEdgeColor] = readShapeColors_( bodyShape );
+            if ( !bodyFaceColor )
+                bodyFaceColor = faceColor;
+            if ( !bodyEdgeColor )
+                bodyEdgeColor = edgeColor;
+
+            auto objMesh = std::make_shared<ObjectMesh>();
+            objMesh->setName( resolveSplitBodyName_( bodyShape, bodyName ) );
+            objMesh->setMesh( std::make_shared<Mesh>() );
+            objMesh->setXf( bodyXf );
+            objMesh->select( true );
+            parent->addChild( objMesh );
+
+            meshTriangulationContexts_.emplace_back( bodyShapeNoLocation, objMesh, bodyFaceColor, bodyEdgeColor );
+        }
+
+        return true;
+    }
+
     void readLabel_( const TDF_Label& label )
     {
         using ShapeTool = XCAFDoc_ShapeTool;
@@ -401,6 +513,34 @@ private:
             [[maybe_unused]] const auto isRef = ShapeTool::GetReferredShape( label, ref );
             assert( isRef );
 
+            if ( !ShapeTool::IsSimpleShape( ref ) )
+            {
+                auto obj = std::make_shared<Object>();
+                obj->setName( name );
+                obj->setXf( xf );
+                obj->select( true );
+                objStack_.top()->addChild( obj );
+
+                iterateLabel_( ref, obj );
+                return;
+            }
+
+            const auto refShape = ShapeTool::GetShape( ref );
+            auto [faceColor, edgeColor] = readShapeColors_( refShape );
+
+            {
+                auto obj = std::make_shared<Object>();
+                obj->setName( name );
+                obj->setXf( xf );
+                obj->select( true );
+
+                if ( addSplitSimpleShapeChildren_( refShape, obj, faceColor, edgeColor ) )
+                {
+                    objStack_.top()->addChild( obj );
+                    return;
+                }
+            }
+
             auto objMesh = std::make_shared<ObjectMesh>();
             objMesh->setName( name );
             objMesh->setMesh( std::make_shared<Mesh>() );
@@ -408,35 +548,14 @@ private:
             objMesh->select( true );
             objStack_.top()->addChild( objMesh );
 
-            iterateLabel_( ref, objMesh );
-            if ( ShapeTool::IsSimpleShape( ref ) )
-            {
-                const auto refShape = ShapeTool::GetShape( ref );
-
-                std::optional<Color> faceColor, edgeColor;
-#if STEP_LOAD_COLORS
-                Quantity_ColorRGBA color;
-                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorGen, color ) )
-                    faceColor = edgeColor = toColor( color );
-                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorSurf, color ) )
-                    faceColor = toColor( color );
-                if ( colorTool_->GetColor( refShape, XCAFDoc_ColorCurv, color ) )
-                    edgeColor = toColor( color );
-#endif
-
-                // remove existing sub-shape triangulations
-                std::erase_if( meshTriangulationContexts_, [&] ( const MeshTriangulationContext& ctx )
-                {
-                    return ctx.mesh == objMesh;
-                } );
                 meshTriangulationContexts_.emplace_back( refShape, objMesh, faceColor, edgeColor );
-            }
         }
         else
         {
             assert( ShapeTool::IsSimpleShape( label ) );
 
             std::shared_ptr<ObjectMesh> objMesh;
+            auto [faceColor, edgeColor] = readShapeColors_( shape );
             if ( ShapeTool::IsSubShape( label ) )
             {
                 objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack_.top() );
@@ -445,6 +564,17 @@ private:
             }
             else
             {
+                auto obj = std::make_shared<Object>();
+                obj->setName( name );
+                obj->setXf( xf );
+                obj->select( true );
+
+                if ( addSplitSimpleShapeChildren_( shape, obj, faceColor, edgeColor ) )
+                {
+                    objStack_.top()->addChild( obj );
+                    return;
+                }
+
                 objMesh = std::make_shared<ObjectMesh>();
                 objMesh->setName( name );
                 objMesh->setMesh( std::make_shared<Mesh>() );
@@ -452,17 +582,6 @@ private:
                 objMesh->select( true );
                 objStack_.top()->addChild( objMesh );
             }
-
-            std::optional<Color> faceColor, edgeColor;
-#if STEP_LOAD_COLORS
-            Quantity_ColorRGBA color;
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorGen, color ) )
-                faceColor = edgeColor = toColor( color );
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorSurf, color ) )
-                faceColor = toColor( color );
-            if ( colorTool_->GetColor( shape, XCAFDoc_ColorCurv, color ) )
-                edgeColor = toColor( color );
-#endif
 
             meshTriangulationContexts_.emplace_back( shape, objMesh, faceColor, edgeColor );
         }
@@ -505,7 +624,7 @@ private:
         return result;
     }
 
-    static TopoDS_Shape triangulateShape_( const TopoDS_Shape& shape )
+    [[nodiscard]] TopoDS_Shape triangulateShape_( const TopoDS_Shape& shape ) const
     {
         MR_TIMER;
 
@@ -514,9 +633,9 @@ private:
 #else
         BRepMesh_FastDiscret::Parameters parameters;
 #endif
-        parameters.Angle = 0.1;
-        parameters.Deflection = 0.5;
-        parameters.Relative = false;
+        parameters.Angle = loadSettings_.angularDeflection;
+        parameters.Deflection = loadSettings_.linearDeflection;
+        parameters.Relative = loadSettings_.relative;
         parameters.InParallel = true;
 
         BRepMesh_IncrementalMesh incMesh( shape, parameters );
@@ -615,9 +734,12 @@ private:
     }
 
 private:
+    MeshLoad::StepLoadSettings loadSettings_ = {};
+
 #if STEP_LOAD_COLORS
     Handle( XCAFDoc_ColorTool ) colorTool_;
 #endif
+    Handle( XCAFDoc_ShapeTool ) shapeTool_;
 
     std::shared_ptr<Object> rootObj_;
     std::stack<std::shared_ptr<Object>> objStack_;
@@ -737,7 +859,7 @@ Expected<void> repairStepFile( STEPControl_Reader& reader )
 
 std::mutex cOpenCascadeMutex = {};
 
-Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings, const MeshLoad::StepLoadSettings& stepSettings )
 {
     MR_TIMER;
 
@@ -754,6 +876,7 @@ Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Re
         return unexpectedOperationCanceled();
 
     StepLoader loader;
+    loader.setLoadSettings( stepSettings );
     if ( auto exp = loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) ); !exp )
         return unexpected( std::move( exp.error() ) );
     loader.loadMeshes();
@@ -769,7 +892,7 @@ Expected<Mesh> fromStepImpl( const std::function<Expected<void> ( STEPControl_Re
 }
 
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings, const MeshLoad::StepLoadSettings& stepSettings )
 {
     MR_TIMER;
 
@@ -786,6 +909,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
         return unexpectedOperationCanceled();
 
     StepLoader loader;
+    loader.setLoadSettings( stepSettings );
     if ( auto exp = loader.loadModelStructure( reader, subprogress( settings.callback, 0.50f, 1.00f ) ); !exp )
         return unexpected( std::move( exp.error() ) );
     loader.loadMeshes();
@@ -795,7 +919,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
 #endif
 
 #ifdef MRIOEXTRAS_OPENCASCADE_USE_XDE
-Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Expected<void> ( STEPControl_Reader& )>& readFunc, const MeshLoadSettings& settings, const MeshLoad::StepLoadSettings& stepSettings )
 {
     MR_TIMER;
 
@@ -832,6 +956,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
         return unexpectedOperationCanceled();
 
     StepLoader loader;
+    loader.setLoadSettings( stepSettings );
     loader.loadModelStructure( document );
     loader.loadMeshes();
 
@@ -847,7 +972,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
 namespace MR::MeshLoad
 {
 
-Expected<Mesh> fromStep( const std::filesystem::path& path, const MeshLoadSettings& settings )
+Expected<Mesh> fromStep( const std::filesystem::path& path, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromStepImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -856,10 +981,10 @@ Expected<Mesh> fromStep( const std::filesystem::path& path, const MeshLoadSettin
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings );
+    }, settings, stepSettings );
 }
 
-Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings )
+Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromStepImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -868,12 +993,21 @@ Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings )
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings );
+    }, settings, stepSettings );
 }
 
-MR_ADD_MESH_LOADER( IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ), fromStep )
+MR_ON_INIT {
+    using namespace MR::MeshLoad;
+    setMeshLoader(
+        IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ),
+        {
+            [] ( const std::filesystem::path& path, const MeshLoadSettings& settings ) { return fromStep( path, settings ); },
+            [] ( std::istream& in, const MeshLoadSettings& settings ) { return fromStep( in, settings ); },
+        }
+    );
+};
 
-Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path& path, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -882,7 +1016,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings )
+    }, settings, stepSettings )
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {
@@ -903,7 +1037,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( const std::filesystem::path
     ;
 }
 
-Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings )
+Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const MeshLoadSettings& settings, const StepLoadSettings& stepSettings )
 {
     return fromSceneStepFileImpl( [&] ( STEPControl_Reader& reader )
     {
@@ -912,7 +1046,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
         .and_then( [&] { return repairStepFile( reader ); } )
 #endif
         ;
-    }, settings )
+    }, settings, stepSettings )
 #ifndef MRIOEXTRAS_OPENCASCADE_USE_XDE
     .and_then( [&] ( std::shared_ptr<Object> result ) -> Expected<std::shared_ptr<Object>>
     {

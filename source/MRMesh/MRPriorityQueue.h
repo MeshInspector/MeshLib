@@ -22,7 +22,7 @@ public:
     explicit PriorityQueue( const P& pred ) : pred_( pred ) {}
 
     /// initializes queue elements from given vector
-    explicit PriorityQueue( const P& pred, Container&& v );
+    explicit PriorityQueue( const P& pred, Container&& v MR_LIFETIMEBOUND_NESTED );
 
     /// checks if the queue has no elements
     bool empty() const { return c.empty(); }
@@ -31,11 +31,11 @@ public:
     size_type size() const { return c.size(); }
 
     /// accesses the top element
-    const T & top() const { return c.front(); }
+    const T & top() const MR_LIFETIMEBOUND { return c.front(); }
 
     /// inserts element in the queue
-    void push( const value_type& value ) { c.push_back( value ); onPush_(); }
-    void push( value_type&& value ) { c.push_back( std::move( value ) ); onPush_(); }
+    void push( const value_type& value MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { c.push_back( value ); onPush_(); }
+    void push( value_type&& value MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { c.push_back( std::move( value ) ); onPush_(); }
     template< class... Args >
     void emplace( Args&&... args ) { c.emplace_back( std::forward<Args>(args)... ); onPush_(); }
 

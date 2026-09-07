@@ -22,7 +22,12 @@
 #endif
 
 #if MR_NODISCARD_TL_EXPECTED
+// fix unity builds
+#include "MRSuppressWarning.h"
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wattributes", 5240 )
 namespace tl { template <class T, class E> class [[nodiscard]] expected; }
+MR_SUPPRESS_WARNING_POP
 #endif
 
 #include <tl/expected.hpp>

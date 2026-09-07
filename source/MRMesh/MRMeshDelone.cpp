@@ -6,9 +6,10 @@
 #include "MRTimer.h"
 #include "MRTriMath.h"
 #include "MRVector2.h"
-#include "MRGeodesicPath.h"
-#include "MRTriDist.h"
+#include "MRReducePath.h"
+#include "MRTwoLineSegmDist.h"
 #include "MREdgeLengthMesh.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -17,30 +18,55 @@ constexpr float NoAngleChangeLimit = 2 * PI_F;
 
 bool checkDeloneQuadrangle( const Vector3d& a, const Vector3d& b, const Vector3d& c, const Vector3d& d, double maxAngleChange )
 {
-    const auto dirABD = dirDblArea( a, b, d );
-    const auto dirDBC = dirDblArea( d, b, c );
+    static constexpr double criticalDot = -0.9;
+    const auto nABC = normal( a, b, c );
+    const auto nACD = normal( a, c, d );
+    // true if the current triangles ABC and ACD are almost oppositely oriented
+    const bool oldPocket = dot( nABC, nACD ) < criticalDot;
 
-    if ( dot( dirABD, dirDBC ) < 0 )
-        return true; // flipping of given edge will create two faces with opposite normals
+    const auto nABD = normal( a, b, d );
+    const auto nDBC = normal( d, b, c );
+    // true if after flip the triangles ABD and DBC are almost oppositely oriented
+    const bool newPocket = dot( nABD, nDBC ) < criticalDot;
+
+    if ( oldPocket != newPocket )
+        return newPocket; // prefer the configuration without pocket
+
+    // there should be significant difference in metrics (above floating point error) to return false
+    static constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
+    if ( oldPocket )
+    {
+        // before and after flip there are pockets, select the configuration with the smallest triangles
+        const auto metricAC = std::max( mincircleDiameterSq( a, c, d ), mincircleDiameterSq( c, a, b ) );
+        const auto metricBD = std::max( mincircleDiameterSq( b, d, a ), mincircleDiameterSq( d, b, c ) );
+        return metricAC <= metricBD + eps * ( metricAC + metricBD );
+    }
+
+    // before and after flip there are no pockets
 
     if ( maxAngleChange < NoAngleChangeLimit )
     {
-        const auto oldAngle = dihedralAngle( dirABD, dirDBC, d - b );
-        const auto dirABC = dirDblArea( a, b, c );
-        const auto dirACD = dirDblArea( a, c, d );
-        const auto newAngle = dihedralAngle( dirABC, dirACD, a - c );
+        const auto oldAngle = dihedralAngle( nABD, nDBC, d - b );
+        const auto newAngle = dihedralAngle( nABC, nACD, a - c );
         const auto angleChange = std::abs( oldAngle - newAngle );
         if ( angleChange > maxAngleChange )
             return true;
     }
 
-    auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
-    auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
+    const auto metricAC = std::max( circumcircleDiameterSq( a, c, d ), circumcircleDiameterSq( c, a, b ) );
+    const auto metricBD = std::max( circumcircleDiameterSq( b, d, a ), circumcircleDiameterSq( d, b, c ) );
 
-    // there should be significant difference in metrics (above floating point error) to return false
-    constexpr double eps = 1e-7; // when we computed in floats then even 1e-5f was too small here and did not prevent infinite loop during resolveMeshDegenerations
     if ( !std::isfinite( metricAC ) )
-        return metricAC <= metricBD; // below line returns true if metricAC is +infinity
+    {
+        if ( !std::isfinite( metricBD ) )
+        {
+            // we are here if both configurations include a zero area obtuse triangle with all 3 vertices distinct;
+            // select the configuration with shorter diagonal
+            return distanceSq( a, c ) <= distanceSq( b, d );
+        }
+        return metricAC <= metricBD; // (metricAC <= metricBD + eps * ( metricAC + metricBD ))==true if metricAC is +infinity and metricBD is finite
+    }
+
     return metricAC <= metricBD + eps * ( metricAC + metricBD ); // this shall work even if metricAC and metricBD are infinities, unlike ( metricAC - metricBD ), which becomes NaN
 }
 
@@ -118,10 +144,11 @@ bool checkDeloneQuadrangleInMesh( const MeshTopology & topology, const VertCoord
 
     if ( deviationSqAfterFlip || settings.maxDeviationAfterFlip < FLT_MAX )
     {
-        Vector3f vec, closestOnAC, closestOnBD;
-        SegPoints( vec, closestOnAC, closestOnBD,
-            ap, cp - ap,   // first diagonal segment
-            bp, dp - bp ); // second diagonal segment
+        const auto sd = findTwoLineSegmClosestPoints(
+            { ap, cp },   // first diagonal segment
+            { bp, dp } ); // second diagonal segment
+        const auto closestOnAC = sd.a;
+        const auto closestOnBD = sd.b;
         const auto distSq = ( closestOnAC - closestOnBD ).lengthSq();
         if ( deviationSqAfterFlip )
             *deviationSqAfterFlip = distSq;
@@ -179,14 +206,69 @@ int makeDeloneEdgeFlips( Mesh & mesh, const DeloneSettings& settings, int numIte
     return flipsDone;
 }
 
+// serial Delone flipping of a small mesh in the same rounds as the parallel passes below: round 1 checks every
+// edge in id order, round r+1 the edges around the flips of round r; but the candidates are kept in a list
+// instead of rescanning bitsets, and each is checked once right before its flip, so an edge made non-Delone
+// by an earlier flip of the same round is flipped at once rather than a round later
+static int makeDeloneEdgeFlipsSerial( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, DeloneFlipsCache& cache )
+{
+    const auto ueSize = topology.undirectedEdgeSize();
+    auto& queued = cache.queuedEdges;
+    queued.clear();
+    queued.resize( ueSize );
+    auto& cur = cache.roundEdges;
+    auto& next = cache.nextRoundEdges;
+    cur.clear();
+    cur.reserve( ueSize );
+    for ( int i = 0; i < int( ueSize ); ++i )
+        cur.push_back( UndirectedEdgeId( i ) );
+    int flipsDone = 0;
+    for ( int iter = 0; iter < numIters; ++iter )
+    {
+        next.clear();
+        for ( UndirectedEdgeId e : cur )
+        {
+            if ( checkDeloneQuadrangleInMesh( topology, points, e, settings ) )
+                continue;
+            topology.flipEdge( e );
+            ++flipsDone;
+            for ( EdgeId ne : { topology.next( EdgeId( e ) ), topology.prev( EdgeId( e ) ), topology.next( EdgeId( e ).sym() ), topology.prev( EdgeId( e ).sym() ) } )
+                if ( !queued.test_set( ne.undirected() ) )
+                    next.push_back( ne.undirected() );
+        }
+        if ( next.empty() )
+            break;
+        queued.reset(); // a few 64-bit words on a mesh this small
+        std::sort( next.begin(), next.end() ); // id order within a round, like the passes
+        std::swap( cur, next );
+    }
+    return flipsDone;
+}
+
 int makeDeloneEdgeFlips( MeshTopology& topology, const VertCoords& points, const DeloneSettings& settings, int numIters, const ProgressCallback& progressCallback )
 {
     if ( numIters <= 0 )
         return 0;
+
+    // the candidate sets come from the caller's cache when it has one (keeping their capacity),
+    // so a caller flipping many small meshes one by one does not allocate them every time
+    DeloneFlipsCache localCache;
+    DeloneFlipsCache& cache = settings.cache ? *settings.cache : localCache;
+
+    // below this size the passes spend more on entering the task arena and rescanning the candidate
+    // sets than on the checks themselves; such a call is also over too soon for the timer or the
+    // progress callback to matter
+    constexpr size_t cMinParallelEdges = 256;
+    if ( topology.undirectedEdgeSize() < cMinParallelEdges )
+        return makeDeloneEdgeFlipsSerial( topology, points, settings, numIters, cache );
     MR_TIMER;
 
-    UndirectedEdgeBitSet flipCandidates( topology.undirectedEdgeSize() );
-    UndirectedEdgeBitSet nextFlipCandidates( topology.undirectedEdgeSize(), true );
+    auto& flipCandidates = cache.flipCandidates;
+    auto& nextFlipCandidates = cache.nextFlipCandidates;
+    flipCandidates.clear();
+    flipCandidates.resize( topology.undirectedEdgeSize() );
+    nextFlipCandidates.clear();
+    nextFlipCandidates.resize( topology.undirectedEdgeSize(), true );
 
     int flipsDone = 0;
     for ( int iter = 0; iter < numIters; ++iter )

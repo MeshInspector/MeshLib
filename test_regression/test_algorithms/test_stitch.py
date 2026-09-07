@@ -26,7 +26,7 @@ def test_stitch(tmp_path, input, metric):
     # Connect two holes
     params = mrmeshpy.StitchHolesParams()
     params.metric = getattr(mrmeshpy, metric)(mesh)
-    mrmeshpy.buildCylinderBetweenTwoHoles(mesh, edges[0], edges[1], params)
+    mrmeshpy.stitchHoles(mesh, edges[0], edges[1], params)
 
     # === Verification
     mrmeshpy.saveMesh(mesh, tmp_path / f"{case_name}.ctm")  # used to store

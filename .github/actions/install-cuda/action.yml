@@ -1,0 +1,44 @@
+name: 'Install CUDA Toolkit (subset)'
+description: 'Restore the cached CUDA toolkit (or install the nvcc/cudart/visual_studio_integration sub-packages on miss) at the standard NVIDIA install path.'
+inputs:
+  cuda-version:
+    description: 'CUDA version as major.minor.patch (e.g. 12.0.1), passed as-is to Jimver/cuda-toolkit.'
+    required: true
+  cuda-major:
+    description: 'CUDA major version (e.g. 12).'
+    required: true
+  cuda-minor:
+    description: 'CUDA minor version (e.g. 0).'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Resolve CUDA sub-packages
+      id: cuda-sub-packages
+      shell: pwsh
+      run: |
+        # CUDA 13 split pieces that used to live inside the nvcc package into
+        # standalone components: 'crt' (crt/host_config.h, pulled in by
+        # cuda_runtime.h) and 'nvvm' (the cicc device-compiler front-end).
+        # Install both on 13+ so nvcc can compile; on 11/12 they ship inside
+        # nvcc and no such components exist.
+        $sub = @('nvcc', 'cudart', 'visual_studio_integration')
+        if ([int]'${{ inputs.cuda-major }}' -ge 13) { $sub += 'crt', 'nvvm' }
+        $json = '[' + (($sub | ForEach-Object { '"' + $_ + '"' }) -join ',') + ']'
+        "sub-packages=$json" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+    - name: Restore CUDA Cache
+      uses: actions/cache@v5
+      id: cuda-cache
+      continue-on-error: true
+      with:
+        key: cuda-toolkit-subset-${{ inputs.cuda-version }}-v1
+        path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-major }}.${{ inputs.cuda-minor }}
+
+    - name: Install CUDA
+      if: steps.cuda-cache.outputs.cache-hit != 'true'
+      uses: Jimver/cuda-toolkit@3d45d157f327c09c04b50ee6ccdea2d9d017ec76 # v0.2.35
+      with:
+        cuda: ${{ inputs.cuda-version }}
+        method: network
+        sub-packages: ${{ steps.cuda-sub-packages.outputs.sub-packages }}

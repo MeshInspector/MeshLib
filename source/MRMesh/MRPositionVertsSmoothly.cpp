@@ -9,6 +9,7 @@
 #include "MRMeshRelax.h"
 #include "MRLaplacian.h"
 #include "MRTimer.h"
+#include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
 
 namespace MR
@@ -27,79 +28,109 @@ void positionVertsSmoothly( const MeshTopology& topology, VertCoords& points, co
     MR_TIMER;
 
     Laplacian laplacian( topology, points );
-    laplacian.init( verts, edgeWeights, vmass, Laplacian::RememberShape::No );
+    laplacian.init( verts, edgeWeights, vmass, RememberShape::No );
     if ( fixedSharpVertices )
         for ( auto v : *fixedSharpVertices )
             laplacian.fixVertex( v, false );
     laplacian.apply();
 }
 
-void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
+void positionVertsSmoothlySharpBd( Mesh& mesh, const PositionVertsSmoothlyParams& params )
 {
     mesh.invalidateCaches();
-    positionVertsSmoothlySharpBd( mesh.topology, mesh.points, verts, vertShifts, vertStabilizers );
+    positionVertsSmoothlySharpBd( mesh.topology, mesh.points, params );
 }
 
-void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts,
-    const Vector<Vector3f, VertId>* vertShifts, const VertScalars* vertStabilizers )
+namespace
+{
+
+using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
+
+/// prepares the matrix of Laplace equations, where each vertex from \p verts is the weighted mean of its neighbors;
+/// g(v) returns the value in fixed vertex v, or the original value in free vertex v (used with stabilizers),
+/// shift(v) returns additional shift of the equation of free vertex v, s(n, r) stores the right hand side r of n-th equation
+template <typename G, typename Sh, typename S>
+SparseMatrix prepareLaplaceEquations( const MeshTopology& topology, const VertBitSet& verts,
+    float stabilizer, const VertMetric& vertStabilizers, const UndirectedEdgeMetric& edgeWeights, G && g, Sh && shift, S && s )
 {
     MR_TIMER;
-    assert( vertStabilizers || !MeshComponents::hasFullySelectedComponent( topology, verts ) );
-
     const auto sz = verts.count();
-    if ( sz <= 0 )
-        return;
 
     // vertex id -> position in the matrix
     HashMap<VertId, int> vertToMatPos = makeHashMapWithSeqNums( verts );
 
     std::vector< Eigen::Triplet<double> > mTriplets;
-    Eigen::VectorXd rhs[3];
-    for ( int i = 0; i < 3; ++i )
-        rhs[i].resize( sz );
     int n = 0;
     for ( auto v : verts )
     {
         double sumW = 0;
-        Vector3d sumFixed;
+        decltype( g( v ) ) sumFixed{};
         for ( auto e : orgRing( topology, v ) )
         {
-            sumW += 1;
+            const double edgeW = edgeWeights ? edgeWeights( e ) : 1;
+            sumW += edgeW;
             auto d = topology.dest( e );
             if ( auto it = vertToMatPos.find( d ); it != vertToMatPos.end() )
             {
                 // free neighbor
                 int di = it->second;
                 if ( n > di ) // row > col: fill only lower left part of matrix
-                    mTriplets.emplace_back( n, di, -1 );
+                    mTriplets.emplace_back( n, di, -edgeW );
             }
             else
             {
                 // fixed neighbor
-                sumFixed += Vector3d( points[d] );
+                sumFixed += edgeW * g( d );
             }
         }
-        if ( vertShifts )
-            sumFixed += sumW * Vector3d( (*vertShifts)[v] );
+        sumFixed += sumW * shift( v );
+        double st = stabilizer; //for VertexMass::Unit only
         if ( vertStabilizers )
         {
-            const auto s = (*vertStabilizers)[v];
-            sumW += s;
-            sumFixed += Vector3d( s * points[v] );
+            st = vertStabilizers( v );
+            assert( st >= 0 );
+        }
+        if ( st != 0 )
+        {
+            sumW += st;
+            sumFixed += st * g( v );
         }
         mTriplets.emplace_back( n, n, sumW );
-        for ( int i = 0; i < 3; ++i )
-            rhs[i][n] = sumFixed[i];
+        s( n, sumFixed );
         ++n;
     }
 
-    using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
     SparseMatrix A;
     A.resize( sz, sz );
     A.setFromTriplets( mTriplets.begin(), mTriplets.end() );
+    return A;
+}
+
+} // anonymous namespace
+
+void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& points, const PositionVertsSmoothlyParams& params )
+{
+    MR_TIMER;
+    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
+
+    const auto & verts = topology.getVertIds( params.region );
+    const auto sz = verts.count();
+    if ( sz <= 0 )
+        return;
+
+    Eigen::VectorXd rhs[3];
+    for ( int i = 0; i < 3; ++i )
+        rhs[i].resize( sz );
+
     Eigen::SimplicialLDLT<SparseMatrix> solver;
-    solver.compute( A );
+    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, params.vertStabilizers, params.edgeWeights,
+        [&]( VertId v ) { return Vector3d( points[v] ); },
+        [&]( VertId v ) { return params.vertShifts ? Vector3d( (*params.vertShifts)[v] ) : Vector3d{}; },
+        [&]( int n, const Vector3d & r )
+        {
+            for ( int i = 0; i < 3; ++i )
+                rhs[i][n] = r[i];
+        } ) );
 
     Eigen::VectorXd sol[3];
     ParallelFor( 0, 3, [&]( int i )
@@ -108,7 +139,7 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
     } );
 
     // copy solution back into mesh points
-    n = 0;
+    int n = 0;
     for ( auto v : verts )
     {
         auto & pt = points[v];
@@ -117,6 +148,65 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
         pt.z = (float) sol[2][n];
         ++n;
     }
+}
+
+void interpolateScalarsSmoothly( const Mesh& mesh, VertScalars& field, const InterpolateScalarsParams& params )
+{
+    interpolateScalarsSmoothly( mesh.topology, mesh.points, field, params );
+}
+
+void interpolateScalarsSmoothly( const MeshTopology& topology, const VertCoords& points, VertScalars& field, const InterpolateScalarsParams& params0 )
+{
+    MR_TIMER;
+    InterpolateScalarsParams params = params0;
+
+    if ( !params.edgeWeightsMetric && params.edgeWeights == EdgeWeights::Cotan )
+        params.edgeWeightsMetric = [&topology, &points]( UndirectedEdgeId ue )
+        {
+            return std::clamp( cotan( topology, points, ue ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+        };
+    params.edgeWeights = EdgeWeights::Unit;
+
+    if ( params.vmass == VertexMass::NeiArea )
+    {
+        if ( params0.vertStabilizers )
+            params.vertStabilizers = [&topology, &points, &vs = params0.vertStabilizers]( VertId v )
+            {
+                return vs( v ) * dblArea( topology, points, v );
+            };
+        else
+            params.vertStabilizers = [&topology, &points, s = params0.stabilizer]( VertId v )
+            {
+                return s * dblArea( topology, points, v );
+            };
+        params.vmass = VertexMass::Unit;
+    }
+
+    interpolateScalarsSmoothly( topology, field, params );
+}
+
+void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params )
+{
+    MR_TIMER;
+    assert( params.edgeWeights == EdgeWeights::Unit && params.vmass == VertexMass::Unit ); // otherwise mesh points are required
+    assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
+
+    const auto & verts = topology.getVertIds( params.region );
+    const auto sz = verts.count();
+    if ( sz <= 0 )
+        return;
+
+    Eigen::VectorXd rhs( sz );
+    Eigen::SimplicialLDLT<SparseMatrix> solver;
+    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, params.vertStabilizers, params.edgeWeightsMetric,
+        [&]( VertId v ) { return double( field[v] ); },
+        []( VertId ) { return 0.0; },
+        [&]( int n, double r ) { rhs[n] = r; } ) );
+
+    Eigen::VectorXd sol = solver.solve( rhs );
+    int n = 0;
+    for ( auto v : verts )
+        field[v] = float( sol[n++] );
 }
 
 void positionVertsWithSpacing( Mesh& mesh, const SpacingSettings & settings )
@@ -300,6 +390,11 @@ void positionVertsWithSpacing( const MeshTopology& topology, VertCoords& points,
     }
 }
 
+void positionVertsSmoothlySharpBd( Mesh& mesh, const VertBitSet& verts )
+{
+    positionVertsSmoothlySharpBd( mesh, { .region = &verts } );
+}
+
 void inflate( Mesh& mesh, const VertBitSet& verts, const InflateSettings & settings )
 {
     mesh.invalidateCaches();
@@ -312,7 +407,7 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
     if ( !verts.any() )
         return;
     if ( settings.preSmooth )
-        positionVertsSmoothlySharpBd( topology, points, verts );
+        positionVertsSmoothlySharpBd( topology, points, { .region = &verts } );
     if ( settings.iterations <= 0 || settings.pressure == 0 )
         return;
 
@@ -327,7 +422,7 @@ void inflate( const MeshTopology& topology, VertCoords& points, const VertBitSet
 void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSet& verts, float pressure )
 {
     if ( pressure == 0 )
-        return positionVertsSmoothlySharpBd( topology, points, verts );
+        return positionVertsSmoothlySharpBd( topology, points, { .region = &verts } );
 
     MR_TIMER;
     auto vertShifts = dirDblAreas( topology, points, &verts );
@@ -349,7 +444,7 @@ void inflate1( const MeshTopology& topology, VertCoords& points, const VertBitSe
         vertShifts[v] *= k;
     } );
     // sum( abs( vertShifts[v] ) ) = currPressure
-    positionVertsSmoothlySharpBd( topology, points, verts, &vertShifts );
+    positionVertsSmoothlySharpBd( topology, points, { .region = &verts, .vertShifts = &vertShifts } );
 }
 
 } //namespace MR

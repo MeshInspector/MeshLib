@@ -294,16 +294,13 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     const auto layerSize = (size_t)dims.x * dims.y;
     const auto totalSize = layerSize * dims.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
-    if ( bufferSize != totalSize )
-    {
-        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
-        spdlog::debug(
-            "Required memory: {}, available memory: {}, iterations: {}",
-            bytesString( totalSize * sizeof( float ) ),
-            bytesString( bufferSize * sizeof( float ) ),
-            chunkCount( totalSize, bufferSize )
-        );
-    }
+    // not spdlog::debug to see it in Release logs
+    spdlog::info(
+        "CudaFastWindingNumber: Required memory: {}, available memory: {}, iterations: {}",
+        bytesString( totalSize * sizeof( float ) ),
+        bytesString( bufferSize * sizeof( float ) ),
+        chunkCount( totalSize, bufferSize )
+    );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -318,6 +315,7 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     return cudaPipeline( std::vector<float>{}, begin, end,
         [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
+            spdlog::info( "CudaFastWindingNumber: chunk [{}, {}) starting", chunk.offset, chunk.offset + chunk.size );
             fastWindingNumberFromGrid(
                 int3 { dims.x, dims.y, dims.z },
                 cudaGridToMeshXf,
@@ -330,6 +328,12 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
             CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
             CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( data ) );
+            spdlog::info( "CudaFastWindingNumber: chunk [{}, {}) computed", chunk.offset, chunk.offset + chunk.size );
+
+            // it has to be checked only after the initial chuck (iterIndex == 0) when CPU does nothing,
+            // for other chunks cancellation will be checked after CPU part
+            if ( iterIndex == 0 && !reportProgress( subprogress( cb1, 0, iterCount ), 0.5f ) )
+                return unexpectedOperationCanceled();
 
             return {};
         },
@@ -363,16 +367,13 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
     const auto layerSize = (size_t)dims.x * dims.y;
     const auto totalSize = layerSize * dims.z;
     const auto bufferSize = maxBufferSizeAlignedByBlock( getCudaSafeMemoryLimit(), dims, sizeof( float ) );
-    if ( bufferSize != totalSize )
-    {
-        spdlog::debug( "Not enough free GPU memory to process all data at once; processing in several iterations" );
-        spdlog::debug(
-            "Required memory: {}, available memory: {}, iterations: {}",
-            bytesString( totalSize * sizeof( float ) ),
-            bytesString( bufferSize * sizeof( float ) ),
-            chunkCount( totalSize, bufferSize )
-        );
-    }
+    // not spdlog::debug to see it in Release logs
+    spdlog::info(
+        "CudaFastWindingNumber+dist: Required memory: {}, available memory: {}, iterations: {}",
+        bytesString( totalSize * sizeof( float ) ),
+        bytesString( bufferSize * sizeof( float ) ),
+        chunkCount( totalSize, bufferSize )
+    );
 
     DynamicArrayF cudaResult;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.resize( bufferSize ) );
@@ -387,6 +388,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
     return cudaPipeline( std::vector<float>{}, begin, end,
         [&] ( std::vector<float>& data, Chunk chunk ) -> Expected<void>
         {
+            spdlog::info( "CudaFastWindingNumber+dist: chunk [{}, {}) starting", chunk.offset, chunk.offset + chunk.size );
             signedDistance(
                 int3 { dims.x, dims.y, dims.z },
                 cudaGridToMeshXf,
@@ -399,6 +401,12 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
             CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
             CUDA_LOGE_RETURN_UNEXPECTED( cudaResult.toVector( data ) );
+            spdlog::info( "CudaFastWindingNumber+dist: chunk [{}, {}) computed", chunk.offset, chunk.offset + chunk.size );
+
+            // it has to be checked only after the initial chuck (iterIndex == 0) when CPU does nothing,
+            // for other chunks cancellation will be checked after CPU part
+            if ( iterIndex == 0 && !reportProgress( subprogress( cb1, 0, iterCount ), 0.5f ) )
+                return unexpectedOperationCanceled();
 
             return {};
         },

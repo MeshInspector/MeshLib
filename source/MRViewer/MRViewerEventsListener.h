@@ -155,6 +155,15 @@ protected:
     virtual bool onKeyRepeat_( int key, int modifier ) = 0;
 };
 
+struct MRVIEWER_CLASS PreSetupViewListener : ConnectionHolder
+{
+    MR_ADD_CTOR_DELETE_MOVE( PreSetupViewListener );
+    virtual ~PreSetupViewListener() = default;
+    MRVIEWER_API virtual void connect( Viewer* viewer, int group, boost::signals2::connect_position pos ) override;
+protected:
+    virtual void preSetupView_() = 0;
+};
+
 struct MRVIEWER_CLASS PreDrawListener : ConnectionHolder
 {
     MR_ADD_CTOR_DELETE_MOVE( PreDrawListener );

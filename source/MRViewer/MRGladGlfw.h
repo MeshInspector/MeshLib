@@ -1,4 +1,5 @@
 #pragma once
+#include "MRViewerFwd.h"
 
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>
@@ -17,6 +18,27 @@
 #endif
 
 namespace MR {
+
+// Returns modifier id of SUPER on mac or wasm on macos, or CTRL otherwise
+MRVIEWER_API int getGlfwModPrimaryCtrl();
+
+// Returns GLFW key id for the "delete selection" shortcut:
+// macos / wasm-on-mac - GLFW_KEY_BACKSPACE (Mac keyboards lack a dedicated forward-Delete key)
+// otherwise           - GLFW_KEY_DELETE
+MRVIEWER_API int getGlfwKeyDelete();
+
+// Returns name of the SUPER modifier depending on current environment:
+// windows - Win
+// macos    - Command
+// wasm/mac - Command
+// otherwise - Super
+MRVIEWER_API const char* getSuperModName();
+
+// Returns name of the ALT modifier depending on current environment:
+// macos    - Option
+// wasm/mac - Option
+// otherwise - Alt
+MRVIEWER_API const char* getAltModName();
 
 // Load OpenGL and its extensions
 inline int loadGL()

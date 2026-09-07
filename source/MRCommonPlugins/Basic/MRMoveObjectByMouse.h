@@ -21,7 +21,7 @@ public:
     MRCOMMONPLUGINS_API static MoveObjectByMouse* instance();
 
     virtual bool onDisable_() override;
-    virtual void drawDialog( float menuScaling, ImGuiContext* ) override;
+    virtual void drawDialog( ImGuiContext* ) override;
 
     virtual bool blocking() const override { return false; };
 

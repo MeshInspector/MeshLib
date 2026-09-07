@@ -1,22 +1,21 @@
-import os
-
 import meshlib.mrmeshpy as mrmeshpy
 import sys
 
 
 def print_stats(icp):
     num_active_pairs = icp.getNumActivePairs()
-    print(f"Number of samples: {icp.getNumSamples()}")
-    print(f"Number of active pairs: {num_active_pairs}")
+    print(f"Samples: {icp.getNumSamples()}")
+    print(f"Active point pairs: {num_active_pairs}")
 
     if num_active_pairs > 0:
         p2pt_metric = icp.getMeanSqDistToPoint()
-        p2pt_inaccuracy = icp.getMeanSqDistToPoint(value=p2pt_metric)
+        p2pt_inaccuracy = icp.getMeanSqDistToPoint(p2pt_metric)
         print(f"RMS point-to-point distance: {p2pt_metric} ± {p2pt_inaccuracy}")
 
         p2pl_metric = icp.getMeanSqDistToPlane()
-        p2pl_inaccuracy = icp.getMeanSqDistToPlane(p2pt_metric)
+        p2pl_inaccuracy = icp.getMeanSqDistToPlane(p2pl_metric)
         print(f"RMS point-to-plane distance: {p2pl_metric} ± {p2pl_inaccuracy}")
+
 
 def main(argv):
     if len(argv) < 4:
@@ -24,44 +23,46 @@ def main(argv):
         return
     file_args = argv[1:]
 
-    # Loading inputs and finding max bounding box
+    # the global registration can be applied to meshes and point clouds
+    # to simplify the sample app, we will work with point clouds only
     input_clouds_num = len(file_args) - 1
     inputs = []
+    # as ICP and MultiwayICP classes accept both meshes and point clouds,
+    # the input data must be converted to special wrapper objects
+    # NB: the wrapper objects hold *references* to the source data, NOT their copies
     max_bbox = None
     for i in range(input_clouds_num):
         points = mrmeshpy.loadPoints(file_args[i])
-        transform = mrmeshpy.AffineXf3f()
-        points_with_transform = mrmeshpy.MeshOrPointsXf(points, transform)
-        inputs.append(points_with_transform)
+        # you may also set an affine transformation for each input as a second argument
+        inputs.append(mrmeshpy.MeshOrPointsXf(points, mrmeshpy.AffineXf3f()))
 
         bbox = points.getBoundingBox()
         if not max_bbox or bbox.volume() > max_bbox.volume():
             max_bbox = bbox
 
-    # ICP initialization
+    # you can set various parameters for the global registration; see the documentation for more info
     sampling_params = mrmeshpy.MultiwayICPSamplingParameters()
+    # set sampling voxel size
     sampling_params.samplingVoxelSize = max_bbox.diagonal() * 0.03
 
-    inputs_obj = mrmeshpy.Vector_MeshOrPointsXf_ObjId(inputs)
+    icp = mrmeshpy.MultiwayICP(mrmeshpy.Vector_MeshOrPointsXf_ObjId(inputs), sampling_params)
+    icp.setParams(mrmeshpy.ICPProperties())
 
-    icp = mrmeshpy.MultiwayICP(inputs_obj, sampling_params)
-    icp_properties = mrmeshpy.ICPProperties()
-    icp.setParams(icp_properties)
-
+    # gather statistics
     icp.updateAllPointPairs()
+    print_stats(icp)
 
     print("Calculating transformations...")
     xfs = icp.calculateTransformations()
     print_stats(icp)
 
-    # Saving result
     output = mrmeshpy.PointCloud()
     for i in range(input_clouds_num):
-        transform = xfs.vec_[i]
+        xf = xfs.vec_[i]
         for point in inputs[i].obj.points():
-            transformed_point = transform(point)
-            output.addPoint(transformed_point)
+            output.addPoint(xf(point))
 
     mrmeshpy.PointsSave.toAnySupportedFormat(output, file_args[-1])
+
 
 main(sys.argv)

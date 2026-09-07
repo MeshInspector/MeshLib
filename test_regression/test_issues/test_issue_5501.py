@@ -8,7 +8,6 @@ from helpers.meshlib_helpers import compare_meshes_similarity
 
 
 @pytest.mark.smoke
-@pytest.mark.bindingsV3
 def test_issue_5501_read(tmp_path):
     input_folder = Path(test_files_path) / "issues" / "5501"
     in_file = input_folder / "input.ctm"
@@ -19,7 +18,6 @@ def test_issue_5501_read(tmp_path):
     compare_meshes_similarity(in_file,  tmp_path / "out_read.ctm")
 
 @pytest.mark.smoke
-@pytest.mark.bindingsV3
 def test_issue_2899_write(tmp_path):
     input_folder = Path(test_files_path) / "issues" / "5501"
     in_file = input_folder / "input.ctm"

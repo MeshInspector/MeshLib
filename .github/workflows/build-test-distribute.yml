@@ -11,28 +11,53 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
   schedule:
-    - cron: '0 17 * * *'  # Run every day at 17:00 UTC
-    #- cron: '0 6 * * *'  # Run every day at 6 AM UTC
+    - cron: '0 2 * * *'  # Run every day at 2 AM UTC
+
+# Supersede a PR's previous run instead of racing it (two live runs of one branch
+# collided pushing the same new Docker Hub repo, #6738). Push/schedule/dispatch get
+# unique group, so a release run is never cancelled and never queues behind one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   id-token: write
-  contents: read
+  contents: write
+  actions: read  # This is required for wait-for-job
 
 jobs:
   # NOTE: all output values are strings
   # use the ${{ needs.config.outputs.bool-param == 'true' }} construction to check boolean values
   config:
     uses: ./.github/workflows/config.yml
+    secrets: inherit
 
   debug-config:
     needs: config
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     steps:
       - name: Print config
         run: |
           echo << EOF
           ${{ toJSON( needs.config.outputs ) }}
           EOF
+
+  # The bundled notices in thirdparty/licenses/ are hand-curated and guarded by a version
+  # tripwire (scripts/check_third_party_licenses.py). It needs no build, no submodule
+  # checkout and no network, so it takes no `needs:` and runs alongside the builds: a few
+  # seconds, and a failure marks the run red instead of skipping the whole matrix.
+  # Catching a dependency bump on the PR that makes it beats rediscovering it at release.
+  check-third-party-licenses:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check third-party license notices
+        run: python3 scripts/check_third_party_licenses.py
 
   prepare-image:
     needs: config
@@ -43,8 +68,12 @@ jobs:
       need_linux_vcpkg_rebuild:   ${{ needs.config.outputs.need_linux_vcpkg_rebuild == 'true' }}
       need_windows_vcpkg_rebuild: ${{ needs.config.outputs.need_windows_vcpkg_rebuild == 'true' }}
       vcpkg_docker_image_tag:     ${{ needs.config.outputs.vcpkg_docker_image_tag }}
-      vs19_vcpkg_version:         ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:         ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version:              ${{ needs.config.outputs.vcpkg_version }}
+      disable_ubuntu_x64:         ${{ needs.config.outputs.build_enable_ubuntu_x64 != 'true' }}
+      disable_ubuntu_arm64:       ${{ needs.config.outputs.build_enable_ubuntu_arm64 != 'true' }}
+      disable_emscripten:         ${{ needs.config.outputs.build_enable_emscripten != 'true' }}
+      disable_linux_vcpkg:        ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
+      disable_windows:            ${{ needs.config.outputs.build_enable_windows != 'true' }}
     secrets: inherit
 
   versioning-and-release-url:
@@ -54,21 +83,25 @@ jobs:
       app_version:       ${{ needs.config.outputs.app_version }}
       release_tag:       ${{ needs.config.outputs.release_tag }}
       upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+
+  generate-c-bindings:
+    needs: [ config, prepare-image ]
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-windows.yml
     with:
+      config_matrix:         ${{ needs.config.outputs.windows_x64_config_matrix }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' || needs.config.outputs.tag-build-release-windows == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      vs19_vcpkg_version:    ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version:    ${{ needs.config.outputs.vs22_vcpkg_version }}
-      nuget_build:           ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
+      nuget_build:           ${{ needs.config.outputs.build_enable_linux_vcpkg == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
     secrets: inherit
 
   ubuntu-arm64-build-test:
@@ -77,6 +110,7 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_arm64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
@@ -96,7 +130,6 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-      nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
   linux-vcpkg-build-test:
@@ -105,26 +138,37 @@ jobs:
     uses: ./.github/workflows/build-test-linux-vcpkg.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
-      # FIXME: revert before pushing to master!
-      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
+      docker_image_tag:      ${{ needs.config.outputs.vcpkg_docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
   emscripten-build-test:
-    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
+    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' || needs.config.outputs.update_doc == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
-      internal_build:   ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      app_version:       ${{ needs.config.outputs.app_version }}
+      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
+      upload_artifacts:  ${{ needs.config.outputs.upload_artifacts == 'true' }}
+      definitions_only:  ${{ needs.config.outputs.build_enable_emscripten != 'true' && needs.config.outputs.update_doc == 'true' }}
+
+  emscripten-c-bindings-build-test:
+    if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
+    needs: [ config, prepare-image ]
+    uses: ./.github/workflows/build-test-emscripten-c-bindings.yml
+    with:
+      docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
+      internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
 
   macos-build-test:
     if: ${{ needs.config.outputs.build_enable_macos == 'true' }}
-    needs: [ config ]
+    # Gate on prepare-image like the other build jobs: generate-c-bindings needs it, and macOS downloads that job's CBindings artifact (else the 'Wait for C bindings' step times out).
+    needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-macos.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
@@ -132,110 +176,97 @@ jobs:
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
+      nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
     secrets: inherit
 
   update-win-version:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' }}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     needs:
       - config
       - windows-build-test
-    timeout-minutes: 60
-    runs-on: [self-hosted, windows, x64, vs-2019, vcpkg-2024.10.21, meshinspector]
-    env:
-      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: true
-
-      - name: Checkout Vcpkg ${{env.vs19_vcpkg_version}}
-        working-directory: C:\vcpkg
-        run: |
-          git fetch
-          git checkout ${{env.vs19_vcpkg_version}}
-
-      - name: Restore Vcpkg Cache
-        uses: actions/cache@v4
-        id: vcpkg-cache
-        with:
-          key: vcpkg-cache-${{env.vs19_vcpkg_version}}
-          path: |
-            C:\vcpkg\*
-
-      - name: Update vcpkg packages
-        run: |
-          .\thirdparty\install.bat
-
-      - name: Download Windows Binaries Archive
-        uses: actions/download-artifact@v4
-        with:
-          pattern: WindowsArchive*
-          merge-multiple: true
-
-      - name: Extract Windows Binaries
-        run: |
-          tar -xvzf MREDist_Release.zip
-          tar -xvzf MREDist_Debug.zip
-
-      - name: Make Install Folder
-        run: py -3.10 scripts\make_install_folder.py ${{ needs.config.outputs.app_version }}
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce # v2
-
-      - name: Archive Distribution
-        run: py -3.10 scripts\zip_distribution.py install example_plugin MeshLibDist.zip
-
-      - name: Test Example Plugin # call it after archive not to pack build results
-        run: |
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Debug
-          msbuild -m example_plugin\example_plugin.sln -p:Configuration=Release
-
-      - name: Upload Windows Distribution
-        uses: actions/upload-artifact@v4
-        with:
-          name: DistributivesWin
-          path: MeshLibDist.zip
-          retention-days: 1
+    uses: ./.github/workflows/update-win-version.yml
+    with:
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
+      app_version: ${{ needs.config.outputs.app_version }}
+      internal_build: ${{ needs.config.outputs.internal_build == 'true' }}
+    secrets: inherit
 
   create-nuget-package:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build_enable_ubuntu_x64 == 'true'}}
+    if: ${{ needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build_enable_linux_vcpkg == 'true' }}
     needs:
       - config
       - windows-build-test
-      - ubuntu-x64-build-test
+      - linux-vcpkg-build-test
+      - macos-build-test
+      - emscripten-c-bindings-build-test
     timeout-minutes: 20
-    runs-on: windows-2022
+    runs-on: windows-2025
     steps:
      - name: Checkout
-       uses: actions/checkout@v4
+       uses: actions/checkout@v7
 
      - name: Download NuGet Windows Patch Archive
-       uses: actions/download-artifact@v4
+       uses: actions/download-artifact@v8
        with:
-         pattern: DotNetPatchArchiveWindows*
-         path: windows_runtime
-         merge-multiple: true
+         pattern: DotNetPatchArchiveWindows-x64
+         path: windows_x64_runtime
 
-     - name: Download NuGet Linux Patch Archive
-       uses: actions/download-artifact@v4
+     - name: Download NuGet Windows Arm Patch Archive
+       uses: actions/download-artifact@v8
        with:
-         pattern: DotNetPatchArchiveLinux*
-         path: linux_runtime
-         merge-multiple: true
+         pattern: DotNetPatchArchiveWindows-arm64
+         path: windows_arm64_runtime
 
-     - name: Download NuGet DLL
-       uses: actions/download-artifact@v4
+     - name: Download NuGet Linux x64 Patch Archive
+       uses: actions/download-artifact@v8
        with:
-         pattern: DotNetDll*
+         pattern: DotNetPatchArchiveLinux-x64
+         path: linux_x64_runtime
+
+     - name: Download NuGet Linux Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveLinux-arm64
+         path: linux_arm64_runtime
+
+     - name: Download NuGet MacOS x64 Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveMacOs-x64
+         path: macos_x64_runtime
+
+     - name: Download NuGet MacOS Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveMacOs-arm64
+         path: macos_arm64_runtime
+
+     - name: Download NuGet DLL and XML
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetDllXml
          path: dotnet_dll
          merge-multiple: true
+
+     - name: Download C# Wasm Archive (single thread)
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWasm-*
+         path: browser_wasm_runtime
+         merge-multiple: true
+
+     - name: Build C# Wasm package
+       run: |
+         mkdir meshlib_dotnet-wasm
+         mkdir meshlib_dotnet-wasm/native
+         move dotnet_dll/MRDotNet2Static.dll meshlib_dotnet-wasm
+         move browser_wasm_runtime/* meshlib_dotnet-wasm/native
+         Compress-Archive -Path meshlib_dotnet-wasm -DestinationPath meshlib_dotnet-wasm.zip
 
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_x64_runtime windows_arm64_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
@@ -244,19 +275,46 @@ jobs:
        run: nuget.exe pack Package.nuspec -OutputFileNamesWithoutVersion
 
      - name: Upload NuGet Package
-       uses: actions/upload-artifact@v4
+       uses: actions/upload-artifact@v7
        with:
          name: DistributivesNuGet
          path: MeshLib.nupkg
          retention-days: 1
 
+     - name: Upload C# Wasm Package
+       uses: actions/upload-artifact@v7
+       with:
+         name: DistributivesDotNetWasm
+         path: meshlib_dotnet-wasm.zip
+         retention-days: 1
+
+     - name: Delete consumed NuGet input artifacts
+       uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+       with:
+         name: |
+           DotNetPatchArchive*
+           DotNetDllXml
+         failOnError: false
+
   upload-distributions:
-    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' }}
+    # Don't publish if any build failed (its distributive is missing); skipped builds are fine.
+    # Don't need `emscripten-c-bindings-build-test` here, it doesn't upload any distributions of its own.
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.windows-build-test.result != 'failure'
+        && needs.ubuntu-x64-build-test.result != 'failure'
+        && needs.ubuntu-arm64-build-test.result != 'failure'
+        && needs.linux-vcpkg-build-test.result != 'failure'
+        && needs.emscripten-build-test.result != 'failure'
+        && needs.emscripten-c-bindings-build-test.result != 'failure'
+        && needs.macos-build-test.result != 'failure' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
       - config
       - versioning-and-release-url
+      - windows-build-test
       - update-win-version
       - create-nuget-package
       - ubuntu-x64-build-test
@@ -266,10 +324,10 @@ jobs:
       - macos-build-test
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download All Developer Distributives
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: Distributives*
           merge-multiple: true
@@ -277,8 +335,25 @@ jobs:
       - name: Rename Distributives
         run: |
           shopt -s nullglob
+          VERSION="${{ needs.config.outputs.app_version }}"
           for PKG_FILE in MeshLibDist*.zip ; do
-            mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}"
+            # An arm64 archive is named like its x64 sibling with `-arm64` appended
+            # last, so strip that suffix first and put it back at the end.
+            NAME="${PKG_FILE%.zip}"
+            ARCH_SUFFIX=""
+            case "$NAME" in
+              *-arm64) NAME="${NAME%-arm64}" ; ARCH_SUFFIX="-arm64" ;;
+            esac
+            case "$NAME" in
+              # Keep the historical layout for the iterator-debug archives:
+              # MeshLibDist-IteratorDebug[-PDB] -> MeshLibDist_<version>-IteratorDebug[-PDB]
+              *-IteratorDebug|*-IteratorDebug-PDB) NAME="${NAME/Dist/Dist_${VERSION}}" ;;
+              # Companion symbols archives: MeshLibDistVS26-PDB -> MeshLibDistVS26_<version>-PDB
+              *-PDB) NAME="${NAME%-PDB}_${VERSION}-PDB" ;;
+              # Per-VS archives: MeshLibDistVS26 -> MeshLibDistVS26_<version>
+              *) NAME="${NAME}_${VERSION}" ;;
+            esac
+            mv "$PKG_FILE" "${NAME}${ARCH_SUFFIX}.zip"
           done
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
@@ -288,16 +363,33 @@ jobs:
           done
 
       - name: Upload Distributives
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz js-meshlib-*.tgz"
           if [ -n "$(echo $PKG_FILES)" ] ; then
-            echo ${{ secrets.BUILD_MACHINE_TOKEN }} | gh auth login --with-token
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
 
-  windows-unity-test:
-    if: ${{ needs.config.outputs.run_unity_nuget_test == 'true' }}
+      - name: Delete consumed Distribution artifacts
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: Distributives*
+          failOnError: false
+
+  unity-nuget-test:
+    # Run whenever full-ci is requested and the Windows build is enabled, provided the
+    # NuGet package was actually built and uploaded to the release. `!cancelled()` keeps
+    # this job from being auto-skipped: without a status function the implicit success()
+    # gate skips it whenever a disabled platform (e.g. emscripten) is reached transitively
+    # through `upload-distributions`, which is why it never ran on pull_request events.
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.run_unity_nuget_test == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
     needs:
       - config
       - windows-build-test
@@ -306,23 +398,44 @@ jobs:
     uses: ./.github/workflows/unity-nuget-test.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
-    secrets:
-      BUILD_MACHINE_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+    # Reusable workflows do not see repository secrets unless the caller
+    # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
+    secrets: inherit
+
+  nuget-consumer-test:
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - upload-distributions
+    uses: ./.github/workflows/nuget-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
 
   test-distribution:
-    if: ${{ needs.config.outputs.upload_artifacts == 'true' }}
+    # Skip if publishing was skipped, so we don't test against an empty release.
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.upload-distributions.result == 'success' }}
     needs: [ config, upload-distributions ]
     uses: ./.github/workflows/test-distribution.yml
     with:
-      release_tag: ${{ needs.config.outputs.release_tag }}
+      release_tag:       ${{ needs.config.outputs.release_tag }}
+      test_ubuntu_x64:   ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
+      test_ubuntu_arm64: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
+      test_macos:        ${{ needs.config.outputs.build_enable_macos == 'true' }}
+      test_windows:      ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     secrets:
-      GH_TOKEN: ${{ secrets.BUILD_MACHINE_TOKEN }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   update-dev-documentation:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
     # and if this variant failed this job also will fail
     if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && !cancelled() }}
-    needs: [ config, ubuntu-arm64-build-test ]
+    needs: [ config, ubuntu-arm64-build-test, generate-c-bindings, emscripten-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev
@@ -333,33 +446,54 @@ jobs:
     if: ${{ needs.config.outputs.test_pip_build == 'true' }}
     uses: ./.github/workflows/pip-build.yml
     with:
-      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      vcpkg_docker_image_tag: ${{ needs.config.outputs.vcpkg_docker_image_tag }}
+      disable_manylinux:    ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
+      disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
+      disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
+      release_tag:          ${{ needs.config.outputs.release_tag }}
+      version:              ${{ needs.config.outputs.app_version }}
+
+  publish-wasm:
+    needs: [ config, upload-distributions ]
+    if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_emscripten == 'true' && needs.upload-distributions.result == 'success' }}
+    uses: ./.github/workflows/publish-wasm.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+    secrets: inherit
 
   collect-stats:
     timeout-minutes: 5
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     needs: [ config, upload-distributions ]
-    if: ${{ always() && needs.config.outputs.internal_build == 'true' }}
+    # Dependabot PRs lack the AWS / CI-stats secrets, so skip stats collection there.
+    if: ${{ always() && needs.config.outputs.internal_build == 'true' && github.actor != 'dependabot[bot]' }}
     continue-on-error: true
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download runners' system stats
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: RunnerSysStats*
           merge-multiple: true
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Download artifact stats
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ArtifactStats*
+          merge-multiple: true
+
+      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         id: aws-creds
         with:
           aws-region: us-east-1
           role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
           output-credentials: true
+          retry-max-attempts: 5
 
       - name: Install dependencies
-        run: python3 -m pip install boto3 botocore
+        run: python3 -m pip install boto3 botocore requests
 
       - name: Collect stats
         env:
@@ -371,50 +505,32 @@ jobs:
 
   update-artifacts:
     timeout-minutes: 15
-    runs-on: aws-micro
+    runs-on: ubuntu-latest
     needs: [ collect-stats, update-dev-documentation ]
     if: always()
     continue-on-error: true
     steps:
-      # all Windows
-      - name: Delete Windows Debug Install Archive artifact
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
-        with:
-          name: WindowsArchive*
-          failOnError: false
-      # .NET
-      - name: Delete .NET Binaries Archive artifact
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
-        with:
-          name: DotNetDll*
-          failOnError: false
-      - name: Delete NuGet Patches artifact
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
-        with:
-          name: DotNetPatchArchive*
-          failOnError: false
-      # Distributives
-      - name: Delete Distribution
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
-        with:
-          name: Distributives*
-          failOnError: false
-
       - name: Delete Wheelhouse
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Wheelhouse*
           failOnError: false
 
       - name: Delete runners' system stats
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: RunnerSysStats*
           failOnError: false
 
+      - name: Delete artifact stats
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: ArtifactStats*
+          failOnError: false
+
       # generate timing logs archive
       - name: Download Timing Logs Archive
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: Timing_Logs*
           merge-multiple: true
@@ -431,20 +547,34 @@ jobs:
           fi
 
       - name: Upload Timing Logs Archive
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: time_log
           path: time_log.tar.gz
           retention-days: 1
 
       - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Timing_Logs*
           failOnError: false
 
       - name: Delete Python Stubs
-        uses: geekyeggo/delete-artifact@f275313e70c08f6120db482d7a6b98377786765b # v5
+        if: needs.update-dev-documentation.result == 'success'
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: PythonStubs
+          failOnError: false
+
+      # NOTE: intentionally NOT deleting the CBindings artifact here.
+      # It already has retention-days: 1 (see generate-c-bindings.yml), and keeping it for
+      # that window lets us re-run individual failed build jobs — a partial re-run does not
+      # re-run generate-c-bindings, so the artifact would otherwise be gone and the re-run
+      # would fail at "Download C bindings" with "Artifact not found for name: CBindings".
+
+      - name: Delete Csharp bindings
+        if: needs.update-dev-documentation.result == 'success'
+        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
+        with:
+          name: CsharpBindings
           failOnError: false

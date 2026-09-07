@@ -17,8 +17,14 @@ public:
     ObjectGcode( ObjectGcode&& ) = default;
     ObjectGcode& operator=( ObjectGcode&& ) = default;
 
-    constexpr static const char* TypeName() noexcept { return "ObjectGcode"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "ObjectGcode"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
+
+    constexpr static const char* StaticClassName() noexcept { return "G-code"; }
+    virtual std::string className() const override { return StaticClassName(); }
+
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "G-codes"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
@@ -39,9 +45,6 @@ public:
     ObjectGcode( ProtectedStruct, const ObjectGcode& obj ) : ObjectGcode( obj ) {}
 
     MRMESH_API virtual std::vector<std::string> getInfoLines() const override;
-
-    std::string getClassName() const override { return "G-code"; }
-    std::string getClassNameInPlural() const override { return "G-codes"; }
 
     // set drawing feedrate as gradient of brightness
     MRMESH_API void switchFeedrateGradient( bool isFeedrateGradientEnabled );

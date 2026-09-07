@@ -18,6 +18,7 @@
 #include "ImGuiHelpers.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRUISaveChangesPopup.h"
+#include "MRI18n.h"
 #include <imgui_internal.h>
 #include <GLFW/glfw3.h>
 
@@ -29,9 +30,7 @@ void SaveOnClosePlugin::preDraw_()
     if ( !initialized_ )
         return;
 
-    float scaling = 1.0f;    
-    if ( auto menuInstance = getViewerInstance().getMenuPlugin() )
-        scaling = menuInstance->menu_scaling();
+    const auto popupId = s_tr( "Application Close" ) + "##modal";
 
     if ( showCloseModal_ )
     {
@@ -48,9 +47,9 @@ void SaveOnClosePlugin::preDraw_()
         {
             if ( int( activeModalHighlightTimer_ / 0.2f ) % 2 == 1 )
                 ImGui::GetForegroundDrawList()->AddRect(
-                    ImVec2( modal->Pos.x - 2.0f * scaling, modal->Pos.y - 2.0f * scaling ), 
-                    ImVec2( modal->Pos.x + modal->Size.x + 2.0f * scaling, modal->Pos.y + modal->Size.y + 2.0f * scaling ),
-                    Color::yellow().getUInt32(), 0.0f, 0, 2.0f * scaling );
+                    ImVec2( modal->Pos.x - 2.0f * UI::scale(), modal->Pos.y - 2.0f * UI::scale() ),
+                    ImVec2( modal->Pos.x + modal->Size.x + 2.0f * UI::scale(), modal->Pos.y + modal->Size.y + 2.0f * UI::scale() ),
+                    Color::yellow().getUInt32(), 0.0f, 0, 2.0f * UI::scale() );
             getViewerInstance().incrementForceRedrawFrames();
             activeModalHighlightTimer_ -= ImGui::GetIO().DeltaTime;
             if ( activeModalHighlightTimer_ < 0.0f )
@@ -58,7 +57,7 @@ void SaveOnClosePlugin::preDraw_()
         }
         else if ( noModalWasPresent )
         {
-            ImGui::OpenPopup( "Application Close##modal" );
+            ImGui::OpenPopup( popupId.c_str() );
             showCloseModal_ = false;
         }
         else
@@ -68,18 +67,17 @@ void SaveOnClosePlugin::preDraw_()
     }
 
     UI::SaveChangesPopupSettings settings;
-    settings.scaling = scaling;
-    settings.header = "Application Close";
-    settings.saveTooltip = "Save the current scene and close the application";
-    settings.dontSaveTooltip = "Close the application without saving";
-    settings.cancelTooltip = "Do not close the application";
+    settings.header = s_tr( "Application Close" );
+    settings.saveTooltip = s_tr( "Save the current scene and close the application" );
+    settings.dontSaveTooltip = s_tr( "Close the application without saving" );
+    settings.cancelTooltip = s_tr( "Do not close the application" );
     settings.onOk = [this] ()
     {
         glfwSetWindowShouldClose( Viewer::instance()->window, true );
         shouldClose_ = true;
     };
-    UI::saveChangesPopup( 
-        "Application Close##modal",
+    UI::saveChangesPopup(
+        popupId.c_str(),
         settings );
 }
 

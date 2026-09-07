@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRVector2.h"
 
 namespace MR
 {
@@ -19,7 +20,7 @@ struct LineSegm
     /// returns directional vector of the line
     [[nodiscard]] V dir() const { return b - a; }
     /// returns squared length of this line segment
-    [[nodiscard]] T lengthSq() const { return dir().lengthSq(); }
+    [[nodiscard]] auto lengthSq() const -> decltype( std::declval<V>().lengthSq() ) { return dir().lengthSq(); }
     /// returns the length of this line segment
     [[nodiscard]] T length() const { return dir().length(); }
     /// returns point on the line, where param=0 returns a and param=1 returns b
@@ -65,6 +66,26 @@ template <typename V>
     const auto xb = cross( yvec, x.b - y.a );
     if ( xa * xb > 0 )
         return false;
+
+    // degenerate cases
+    if ( cross( xvec, yvec ) == 0 )
+    {
+        // on the same line
+        if ( xvec != V() )
+        {
+            if ( dot( xvec, y.a - x.a ) * dot( xvec, y.b - x.a ) > 0 &&
+                dot( -xvec, y.a - x.b ) * dot( -xvec, y.b - x.b ) > 0 )
+                return false; // segments does not overlap
+        }
+        else if ( yvec != V() )
+        {
+            if ( dot( yvec, x.a - y.a ) * dot( yvec, x.b - y.a ) > 0 &&
+                dot( -yvec, x.a - y.b ) * dot( -yvec, x.b - y.b ) > 0 )
+                return false; // segments does not overlap
+        }
+        else if ( x.a != y.a )
+            return false; // fully degenerated
+    }
 
     if ( xPos )
     {
@@ -114,5 +135,11 @@ template <typename V>
     }
     return true;
 }
+
+MR_BIND_TEMPLATE( bool doSegmentsIntersect( const LineSegm<Vector2<float>>& x, const LineSegm<Vector2<float>>& y, float* xPos, float* yPos ) )
+MR_BIND_TEMPLATE( bool doSegmentsIntersect( const LineSegm<Vector2<double>>& x, const LineSegm<Vector2<double>>& y, double* xPos, double* yPos ) )
+
+MR_BIND_TEMPLATE( bool doSegmentLineIntersect( const LineSegm<Vector2<float>>& x, const Line<Vector2<float>>& y, float* xPos, float* yPos ) )
+MR_BIND_TEMPLATE( bool doSegmentLineIntersect( const LineSegm<Vector2<double>>& x, const Line<Vector2<double>>& y, double* xPos, double* yPos ) )
 
 } //namespace MR

@@ -9,7 +9,6 @@ from constants import test_files_path
 from pathlib import Path
 
 @pytest.mark.smoke
-@pytest.mark.bindingsV3
 def test_issue_2899(tmp_path):
     """
     Test for issue 2899 in MeshLib
@@ -26,7 +25,7 @@ def test_issue_2899(tmp_path):
 
     # Put input meshes in one as separate connected components
     mesh = slope
-    mesh.addPart(slide)
+    mesh.addMesh(slide)
 
     # Find cut contour as the edges having the same coordinates in both Slide and Slope
     twin_pairs = mr.findTwinEdgePairs(mesh, 0)

@@ -81,6 +81,11 @@ private:
     float metricToPenalty_( float metric, VertId v ) const;
 };
 
+/// consider triangle 0bc, where a linear scalar field is defined in two points: v(0) = 0, v(b) = b;
+/// computes the field in c-point;
+/// returns false if field gradient enters c-point not from inside of the triangle
+[[nodiscard]] MRMESH_API bool getFieldAtC( const Vector3f & b, const Vector3f & c, float vb, float & vc );
+
 /// \}
 
 } // namespace MR

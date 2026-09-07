@@ -4,6 +4,7 @@
 #include "MRSymbolMesh.h"
 
 #include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRPositionedText.h"
 
 namespace MR
 {
@@ -29,13 +30,13 @@ public:
     ObjectLabel( ObjectLabel&& ) noexcept = default;
     ObjectLabel& operator = ( ObjectLabel&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept
+    constexpr static const char* StaticTypeName() noexcept
     {
         return "ObjectLabel";
     }
     virtual const char* typeName() const override
     {
-        return TypeName();
+        return StaticTypeName();
     }
 
     MRSYMBOLMESH_API virtual void applyScale( float scaleFactor ) override;

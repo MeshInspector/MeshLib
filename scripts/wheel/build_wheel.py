@@ -11,6 +11,7 @@ from string import Template
 
 from build_constants import *
 import create_stubs
+import split_wheel
 
 def install_packages():
     create_stubs.install_packages()
@@ -55,15 +56,21 @@ def setup_workspace(version, modules, plat_name):
     shutil.copy(SOURCE_DIR / "LICENSE", WHEEL_ROOT_DIR)
     shutil.copy(SOURCE_DIR / "readme.md", WHEEL_ROOT_DIR)
 
+    shutil.copy(SOURCE_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", WHEEL_ROOT_DIR)
+
     print("Copying resource files...")
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRDarkTheme.json", WHEEL_SRC_DIR)
     shutil.copy(SOURCE_DIR / "source" / "MRViewer" / "MRLightTheme.json", WHEEL_SRC_DIR)
     shutil.copy(SOURCE_DIR / "thirdparty" / "fontawesome-free" / "fa-solid-900.ttf", WHEEL_SRC_DIR)
-    shutil.copy(SOURCE_DIR / "thirdparty" / "Noto_Sans" / "NotoSansSC-Regular.otf", WHEEL_SRC_DIR)
+    shutil.copytree(SOURCE_DIR / "thirdparty" / "Noto_Sans", WHEEL_SRC_DIR, dirs_exist_ok=True)
     shutil.copytree(SOURCE_DIR / "source" / "MRViewer" / "resource", WHEEL_SRC_DIR / "resource", dirs_exist_ok=True )
     icon_resources = [
         str(icon_resource.relative_to(WHEEL_SRC_DIR))
         for icon_resource in (WHEEL_SRC_DIR / "resource").rglob("*.*") # no folders
+    ]
+    font_resources = [
+        str(font_resources.relative_to(WHEEL_SRC_DIR))
+        for font_resources in (WHEEL_SRC_DIR).glob("NotoSans*.*") # no folders
     ]
     pybind_shims = []
     py_versions = []
@@ -83,7 +90,7 @@ def setup_workspace(version, modules, plat_name):
         "MRDarkTheme.json",
         "MRLightTheme.json",
         "fa-solid-900.ttf",
-        "NotoSansSC-Regular.otf"
+        *font_resources
     ]
     for module in modules:
         package_files += [
@@ -101,52 +108,78 @@ def setup_workspace(version, modules, plat_name):
         config_file.write(config)
 
 
+def strip_libraries():
+    # Only MeshLib's own libs need this: the vcpkg-built third-party libs are already stripped.
+    # Must run before `auditwheel repair`, not after (e.g. via its --strip flag): auditwheel
+    # patchelf's the grafted libs, and stripping a patchelf'ed lib breaks its load command
+    # alignment, making it unloadable.
+    if SYSTEM != "Linux":
+        return
+    libs = [
+        *LIB_DIR.glob("libMR*.so"),
+        *LIB_DIR.glob("libpybind11nonlimitedapi_stubs.so"),
+        *WHEEL_SRC_DIR.glob("*.so"),
+    ]
+    for lib in libs:
+        subprocess.check_call(["strip", "--strip-all", lib])
+
+
 def build_wheel():
     os.chdir(WHEEL_ROOT_DIR)
     subprocess.check_call(
         [sys.executable, "-m", "build", "--wheel"]
     )
 
-    wheel_file = list(WHEEL_ROOT_DIR.glob("dist/*.whl"))[0]
+    full_wheel_file = list(WHEEL_ROOT_DIR.glob("dist/*.whl"))[0]
+    core_wheel_file = split_wheel.make_core_input(full_wheel_file, WHEEL_ROOT_DIR / "dist_core")
 
     if SYSTEM == "Linux":
         # see also: https://github.com/mayeut/pep600_compliance
-        manylinux_version = "2_31"
+        manylinux_version = "2_28"
 
         os.chdir(WHEEL_ROOT_DIR)
-        subprocess.check_call(
-            [
-                sys.executable, "-m", "auditwheel",
-                "repair",
-                "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
-                wheel_file
-            ]
-        )
+        for wf, out_dir in ((full_wheel_file, "wheelhouse_full"), (core_wheel_file, "wheelhouse_core")):
+            subprocess.check_call(
+                [
+                    sys.executable, "-m", "auditwheel",
+                    "repair",
+                    "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
+                    "-w", out_dir,
+                    wf
+                ]
+            )
 
-        print("Wheel files are ready:")
-        for repaired_wheel_file in WHEEL_ROOT_DIR.glob("wheelhouse/meshlib-*.whl"):
-            print(repaired_wheel_file)
+        split_wheel.extract_meshlib_wheel(
+            next((WHEEL_ROOT_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
+            next((WHEEL_ROOT_DIR / "wheelhouse_core").glob("meshlib_core-*.whl")),
+        )
 
     elif SYSTEM == "Windows":
         os.chdir(SOURCE_DIR)
-        subprocess.check_call(
-            [
-                sys.executable, "-m", "delvewheel",
-                "repair",
-                # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
-                # that happens if we pack these dlls into whl.
-                # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
-                # to pack these dlls with original names and let system solve conflicts on import
-                # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
-                # UPDATE:
-                #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
-                #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
-                "--add-path", LIB_DIR,
-                # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
-                # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
-                "--analyze-existing",
-                wheel_file
-            ]
+        for wf, out_dir in ((full_wheel_file, "wheelhouse_full"), (core_wheel_file, "wheelhouse_core")):
+            subprocess.check_call(
+                [
+                    sys.executable, "-m", "delvewheel",
+                    "repair",
+                    # We use --no-dll "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll" here to avoid strange conflict
+                    # that happens if we pack these dlls into whl.
+                    # Another option is to use --no-mangle "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll"
+                    # to pack these dlls with original names and let system solve conflicts on import
+                    # https://stackoverflow.com/questions/78817088/vsruntime-dlls-conflict-after-delvewheel-repair
+                    # UPDATE:
+                    #  no longer needed due to https://github.com/adang1345/delvewheel/issues/49 fix with https://github.com/adang1345/delvewheel/commit/42a52cdcc15d424b030a94cb4b51a6b72e4a3d92
+                    #"--no-dll", "msvcp140.dll;vcruntime140_1.dll;vcruntime140.dll",
+                    "--add-path", LIB_DIR,
+                    # This is needed to catch our `pybind11nonlimitedapi_meshlib_3.X.dll` on Windows. Otherwise they don't get patched,
+                    # and then can't find `pybind11nonlimitedapi_stubs.dll`, which does get patched.
+                    "--analyze-existing",
+                    "-w", out_dir,
+                    wf
+                ]
+            )
+        split_wheel.extract_meshlib_wheel(
+            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
+            next((SOURCE_DIR / "wheelhouse_core").glob("meshlib_core-*.whl")),
         )
 
     elif SYSTEM == "Darwin":
@@ -155,8 +188,13 @@ def build_wheel():
             ["delocate-path", "meshlib"]
         )
         os.chdir(SOURCE_DIR)
-        subprocess.check_call(
-            ["delocate-wheel", "-w", ".", "-v", wheel_file]
+        for wf, out_dir in ((full_wheel_file, "./wheelhouse_full"), (core_wheel_file, "./wheelhouse_core")):
+            subprocess.check_call(
+                ["delocate-wheel", "-w", out_dir, "-v", wf]
+            )
+        split_wheel.extract_meshlib_wheel(
+            next((SOURCE_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
+            next((SOURCE_DIR / "wheelhouse_core").glob("meshlib_core-*.whl")),
         )
 
 
@@ -173,6 +211,7 @@ if __name__ == "__main__":
         install_packages()
         setup_workspace(version=args.version, modules=args.modules, plat_name=args.plat_name)
         create_stubs.generate_stubs(modules=args.modules)
+        strip_libraries()
         build_wheel()
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)

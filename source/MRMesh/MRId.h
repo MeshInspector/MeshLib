@@ -1,9 +1,12 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRMacros.h"
+#include "MRPch/MRBindingMacros.h"
 #include <cassert>
 #include <cstddef>
 #include <type_traits>
+#include <utility>
 
 namespace MR
 {
@@ -24,8 +27,13 @@ public:
     // We could also achieve that using `template <typename U> Id(Id<U>) = delete;`, but it turns out that that causes issues
     //   for the `EdgeId::operator UndirectedEdgeId` below. There, while `UndirectedEdgeId x = EdgeId{};` compiles with this approach,
     //   but `UndirectedEdgeId x(EdgeId{});` doesn't. So to allow both forms, this constructor must be written this way, as a template.
-    template <typename U, std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
-    explicit constexpr Id( U i ) noexcept : id_( ValueType( i ) ) { }
+    // The `= int` is there only to make the bindings emit this constructor, I don't think it affects anything else.
+    template <typename U = int, std::enable_if_t<std::is_integral_v<U>, std::nullptr_t> = nullptr>
+    MR_BIND_IGNORE explicit constexpr Id( U i ) noexcept : id_( ValueType( i ) ) { }
+    #ifdef MR_PARSING_FOR_ANY_BINDINGS
+    // For the parser, pretend it's not templated. Instantiating the template above in the parser is difficult.
+    explicit constexpr Id( int i ) noexcept : id_( ValueType( i ) ) {}
+    #endif
 
     constexpr operator ValueType() const { return id_; }
     constexpr bool valid() const { return id_ >= 0; }
@@ -52,7 +60,12 @@ public:
     constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
     constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
 
+// Allocating IDs on the heap in C is insufferable, so instead we bind them as single-member structs (via `--expose-as-struct`).
+// But since our parser only tracks public members, we have to make it public for C.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
+
     ValueType id_;
 };
 
@@ -66,7 +79,7 @@ public:
 };
 
 template <>
-class Id<MR::EdgeTag> // Need `MR::` here to simplify binding generation. See libclang bug: https://github.com/llvm/llvm-project/issues/92371
+class Id<EdgeTag>
 {
 public:
     using ValueType = int; //the type used for internal representation of Id
@@ -111,7 +124,11 @@ public:
     constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
     constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
 
+// See the primary template for explanation.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
+
     ValueType id_;
 };
 
@@ -150,7 +167,11 @@ public:
     constexpr Id & operator -=( ValueType a ) { id_ -= a; return * this; }
     constexpr Id & operator +=( ValueType a ) { id_ += a; return * this; }
 
+// See the primary template for explanation.
+#if !MR_PARSING_FOR_C_BINDINGS && !MR_COMPILING_C_BINDINGS
 private:
+#endif
+
     ValueType id_;
 };
 
@@ -175,3 +196,12 @@ inline constexpr UndirectedEdgeId operator ""_ue( unsigned long long i ) noexcep
 inline constexpr VoxelId operator ""_vox( unsigned long long i ) noexcept { return VoxelId{ size_t( i ) }; }
 
 } //namespace MR
+
+template <typename T>
+struct std::hash<MR::Id<T>>
+{
+    size_t operator() ( MR::Id<T> const& p ) const noexcept
+    {
+        return (int)p;
+    }
+};

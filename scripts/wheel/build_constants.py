@@ -3,13 +3,16 @@ from pathlib import Path
 
 SYSTEM = platform.system()
 
+# Windows output dirs are named after the target architecture; the building
+# interpreter is native, so its own machine tells us which one.
+WIN_ARCH = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
+
 MODULES = [
     "mrmeshpy",
     "mrmeshnumpy",
     "mrviewerpy",
+    "mrcudapy",
 ]
-if SYSTEM != "Darwin":
-    MODULES.append("mrcudapy")
 
 
 WHEEL_SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -25,6 +28,6 @@ LIB_EXTENSION = {
 LIB_DIR = {
     'Darwin': SOURCE_DIR / "build" / "Release" / "bin",
     'Linux': SOURCE_DIR / "build" / "Release" / "bin",
-    'Windows': SOURCE_DIR / "source" / "x64" / "Release",
+    'Windows': SOURCE_DIR / "source" / WIN_ARCH / "Release",
 }[SYSTEM]
 LIB_DIR_MESHLIB = LIB_DIR / "meshlib"

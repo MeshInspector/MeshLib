@@ -17,6 +17,7 @@
 #include "MRMesh/MREndMill.h"
 #include "MRMesh/MRSerializer.h"
 #include "MRPch/MRJson.h"
+#include "MRI18n.h"
 
 #include <imgui.h>
 
@@ -39,7 +40,7 @@ bool GcodeToolsLibrary::drawInterface()
 {
     bool result = false;
 
-    if ( UI::beginCombo( "Tool Mesh", selectedFileName_ ) )
+    if ( UI::beginCombo( _tr( "Tool Mesh" ), selectedFileName_, false ) )
     {
         bool selected = selectedFileName_ == defaultName;
         if ( ImGui::Selectable( defaultName, &selected ) )
@@ -99,12 +100,12 @@ bool GcodeToolsLibrary::drawInterface()
         }
         UI::endCombo();
     }
-    const float btnWidth = ImGui::CalcTextSize( "Remove" ).x + ImGui::GetStyle().FramePadding.x * 2.f;
+    const float btnWidth = ImGui::CalcTextSize( _tr( "Remove" ) ).x + ImGui::GetStyle().FramePadding.x * 2.f;
     const float btnHeight = ImGui::GetTextLineHeight() + StyleConsts::CustomCombo::framePadding.y * 2.f;
     const float btnPosX = ImGui::GetContentRegionAvail().x - btnWidth;
-    
+
     ImGui::SameLine( btnPosX );
-    if ( UI::button( "Remove", selectedFileName_ != defaultName, {btnWidth, btnHeight}) )
+    if ( UI::button( _tr( "Remove" ), selectedFileName_ != defaultName, {btnWidth, btnHeight}) )
     {
         removeSelectedTool_();
         result = true;
@@ -113,55 +114,68 @@ bool GcodeToolsLibrary::drawInterface()
     return result;
 }
 
-bool GcodeToolsLibrary::drawCreateToolDialog( float menuScaling )
+bool GcodeToolsLibrary::drawCreateToolDialog()
 {
     if ( !createToolDialogIsOpen_ )
         return false;
 
-    const auto menuWidth = 220.f * menuScaling;
-    if ( !ImGui::BeginCustomStatePlugin( "Create Tool", &createToolDialogIsOpen_, {
+    const auto menuWidth = 220.f * UI::scale();
+    if ( !ImGui::BeginCustomStatePlugin( _tr( "Create Tool" ), &createToolDialogIsOpen_, {
         .width = menuWidth,
-        .menuScaling = menuScaling,
     } ) )
         return false;
 
     bool result = false;
 
-    const auto itemWidth = 160.f * menuScaling;
+    const auto itemWidth = 160.f * UI::scale();
 
-    UI::inputTextCentered( "Name", createToolName_, itemWidth );
+    UI::inputTextCentered( _tr( "Name" ), createToolName_, itemWidth );
 
-    static const std::vector<std::string> cToolTypeNames {
-        "Flat End Mill",
-        "Ball End Mill",
+    const std::vector<std::string> cToolTypeNames {
+        _tr( "Flat End Mill" ),
+        _tr( "Ball End Mill" ),
+        _tr( "Bull Nose End Mill" ),
+        _tr( "Chamfer End Mill" ),
     };
     assert( cToolTypeNames.size() == (int)EndMillCutter::Type::Count );
     ImGui::SetNextItemWidth( itemWidth );
-    UI::combo( "Type", &createToolType_, cToolTypeNames );
+    UI::combo( _tr( "Type" ), &createToolType_, cToolTypeNames );
 
-    UI::separator( menuScaling, "Specifications" );
+    UI::separator( _tr( "Specifications" ) );
 
-    ImGui::PushItemWidth( 115.f * menuScaling );
-    UI::drag<LengthUnit>( "Length", createToolLength_, 1e-3f, 1e-3f, 1e+3f );
-    UI::drag<LengthUnit>( "Diameter", createToolDiameter_, 1e-3f, 1e-3f, 1e+3f );
+    ImGui::PushItemWidth( 115.f * UI::scale() );
+    UI::drag<LengthUnit>( _tr( "Length" ), createToolLength_, 1e-3f, 1e-3f, 1e+3f );
+    UI::drag<LengthUnit>( _tr( "Diameter" ), createToolDiameter_, 1e-3f, 1e-3f, 1e+3f );
     if ( createToolType_ == (int)EndMillCutter::Type::Ball )
     {
         auto radius = createToolDiameter_ / 2.f;
-        if ( UI::drag<LengthUnit>( "Cutter Radius", radius, 1e-3f, 1e-3f, 1e+3f ) )
+        if ( UI::drag<LengthUnit>( _tr( "Cutter Radius" ), radius, 1e-3f, 1e-3f, 1e+3f ) )
             createToolDiameter_ = radius * 2.f;
+    }
+    if ( createToolType_ == (int)EndMillCutter::Type::BullNose )
+    {
+        UI::drag<LengthUnit>( _tr( "Cutter Radius" ), createToolCornerRadius_, 1e-3f, 0.f, createToolDiameter_ / 2.f );
+    }
+    if ( createToolType_ == (int)EndMillCutter::Type::Chamfer )
+    {
+        UI::drag<AngleUnit>( _tr( "Cutting Angle" ), createToolCuttingAngle_, 1.f, 0.f, 180.f, { .sourceUnit = AngleUnit::degrees } );
+        UI::drag<LengthUnit>( _tr( "End Diameter" ), createToolEndDiameter_, 1e-3f, 0.f, createToolDiameter_ );
     }
     ImGui::PopItemWidth();
 
     // TODO: visualize tool
 
     const auto isValid = !createToolName_.empty() && createToolLength_ > 0.f && createToolDiameter_ > 0.f;
-    if ( UI::button( "Create", isValid, { -1.f, 0.f } ) )
+    if ( UI::button( _tr( "Create" ), isValid, { -1.f, 0.f } ) )
     {
         addNewTool_( createToolName_, {
             .length = createToolLength_,
             .diameter = createToolDiameter_,
             .cutter = EndMillCutter {
                 .type = (EndMillCutter::Type)createToolType_,
+                .cornerRadius = createToolType_ == (int)EndMillCutter::Type::BullNose ? createToolCornerRadius_ : 0.f,
+                .cuttingAngle = createToolType_ == (int)EndMillCutter::Type::Chamfer ? createToolCuttingAngle_ : 0.f,
+                .endDiameter = createToolType_ == (int)EndMillCutter::Type::Chamfer ? createToolEndDiameter_ : 0.f,
             },
         } );
         createToolDialogIsOpen_ = false;
@@ -202,14 +216,14 @@ void GcodeToolsLibrary::setAutoSize( float size )
 
 std::filesystem::path GcodeToolsLibrary::getFolder_()
 {
-    const std::filesystem::path path = getUserConfigDir() / libraryName_;
+    const std::filesystem::path path = getUserConfigDir() / asU8String( libraryName_ );
 
     std::error_code ec;
     if ( std::filesystem::exists( path, ec ) )
         return path;
     else if ( std::filesystem::create_directory( path, ec ) )
         return path;
-    
+
     return {};
 }
 
@@ -272,16 +286,10 @@ void GcodeToolsLibrary::addNewTool_( const std::string& name, const EndMillTool&
     if ( folderPath.empty() )
         return;
 
-    const auto jsonPath = folderPath / ( name + ".json" );
-    // although json is a textual format, we open the file in binary mode to get exactly the same result on Windows and Linux
-    std::ofstream ofs( jsonPath, std::ofstream::binary );
-    Json::StreamWriterBuilder builder;
-    std::unique_ptr<Json::StreamWriter> writer{ builder.newStreamWriter() };
     Json::Value root;
     serializeToJson( tool, root );
-    if ( !ofs || writer->write( root, &ofs ) != 0 )
+    if ( !serializeJsonValue( root, folderPath / ( name + ".json" ) ) )
         return;
-    ofs.close();
 
     toolMesh_ = std::make_shared<ObjectMesh>();
     toolMesh_->setName( name );

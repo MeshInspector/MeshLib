@@ -7,6 +7,7 @@
 #include "MREdgePoint.h"
 #include "MRPolyline.h"
 #include "MRMesh.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -14,13 +15,45 @@ namespace MR
 PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointOnObject& pos )
 {
     if ( auto* objMesh = dynamic_cast< const ObjectMeshHolder* >( object ) )
-        return objMesh->mesh()->toTriPoint( pos );
+    {
+        const auto & mesh = objMesh->mesh();
+        // toTriPoint() indexes edgePerFace_ by the face, so an out-of-range one reads out of bounds
+        if ( !mesh || !pos.face.valid() || !mesh->topology.hasFace( pos.face ) )
+        {
+            spdlog::warn( "pointOnObjectToPickedPoint: not a valid mesh pick: face={}, faceSize={}",
+                int( pos.face ), mesh ? mesh->topology.faceSize() : 0 );
+            assert( false );
+            return {};
+        }
+        return mesh->toTriPoint( pos );
+    }
 
-    if ( dynamic_cast< const ObjectPointsHolder* >( object ) )
+    if ( auto* objPoints = dynamic_cast< const ObjectPointsHolder* >( object ) )
+    {
+        const auto & cloud = objPoints->pointCloud();
+        if ( !cloud || !pos.vert.valid() || !cloud->validPoints.test( pos.vert ) )
+        {
+            spdlog::warn( "pointOnObjectToPickedPoint: not a valid point pick: vert={}, numPoints={}",
+                int( pos.vert ), cloud ? cloud->points.size() : 0 );
+            assert( false );
+            return {};
+        }
         return pos.vert;
+    }
 
     if ( auto* objLines  = dynamic_cast< const ObjectLinesHolder* >( object ) )
-        return objLines->polyline()->toEdgePoint( EdgeId( pos.uedge ), pos.point );
+    {
+        const auto & polyline = objLines->polyline();
+        const EdgeId e( pos.uedge );
+        if ( !polyline || !e.valid() || !polyline->topology.hasEdge( e ) )
+        {
+            spdlog::warn( "pointOnObjectToPickedPoint: not a valid polyline pick: uedge={}, edgeSize={}",
+                int( pos.uedge ), polyline ? polyline->topology.edgeSize() : 0 );
+            assert( false );
+            return {};
+        }
+        return polyline->toEdgePoint( e, pos.point );
+    }
 
     assert( false );
     return {};
@@ -77,14 +110,14 @@ std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, cons
     }, point );
 }
 
-std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point )
+std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const PickedPoint& point, bool interpolated )
 {
     return std::visit( overloaded{
         []( const std::monostate& ) -> std::optional<Vector3f>
         {
             return {};
         },
-        [&object]( const MeshTriPoint& triPoint ) -> std::optional<Vector3f>
+        [&object,interpolated] ( const MeshTriPoint& triPoint ) -> std::optional<Vector3f>
         {
             if ( auto objMesh = dynamic_cast< const ObjectMeshHolder* >( &object ) )
             {
@@ -94,7 +127,7 @@ std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const 
                     if ( topology.hasEdge( triPoint.e ) )
                     {
                         if ( triPoint.bary.b == 0 || topology.left( triPoint.e ) )
-                            return mesh->normal( triPoint );
+                            return interpolated ? mesh->normal( triPoint ) : mesh->pseudonormal( triPoint );
                     }
                 }
             }

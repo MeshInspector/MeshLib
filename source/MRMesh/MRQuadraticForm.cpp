@@ -52,12 +52,6 @@ QuadraticForm<V> sumAt(
     return q2;
 }
 
-// verifies that template can be instantiated with typical parameters
-template struct QuadraticForm<Vector2<float>>;
-template struct QuadraticForm<Vector2<double>>;
-template struct QuadraticForm<Vector3<float>>;
-template struct QuadraticForm<Vector3<double>>;
-
 template MRMESH_API std::pair< QuadraticForm<Vector2<float>>,  Vector2<float> >  sum( const QuadraticForm<Vector2<float>> & q0,  const Vector2<float> & x0,  const QuadraticForm<Vector2<float>> & q1,  const Vector2<float> & x1, bool minAmong01 );
 template MRMESH_API std::pair< QuadraticForm<Vector2<double>>, Vector2<double> > sum( const QuadraticForm<Vector2<double>> & q0, const Vector2<double> & x0, const QuadraticForm<Vector2<double>> & q1, const Vector2<double> & x1, bool minAmong01 );
 template MRMESH_API std::pair< QuadraticForm<Vector3<float>>,  Vector3<float> >  sum( const QuadraticForm<Vector3<float>> & q0,  const Vector3<float> & x0,  const QuadraticForm<Vector3<float>> & q1,  const Vector3<float> & x1, bool minAmong01 );

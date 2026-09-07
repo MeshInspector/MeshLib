@@ -2,6 +2,8 @@ build-essential
 cmake
 libblosc-dev
 libboost-all-dev
+libcurl4-openssl-dev
+libeigen3-dev
 libexpected-dev
 libfmt-dev
 libfreetype-dev
@@ -11,7 +13,6 @@ libgtest-dev
 libgtk-3-dev
 libhidapi-dev
 libhpdf-dev
-libilmbase-dev
 libjsoncpp-dev
 libocct-data-exchange-dev
 libpython3-dev

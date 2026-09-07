@@ -1,5 +1,6 @@
 #ifdef __APPLE__
 #include "MRSpaceMouseHandler3dxMacDriver.h"
+#include "MRMesh/MRTelemetry.h"
 #include "MRViewer.h"
 
 #include <MRPch/MRSpdlog.h>
@@ -8,6 +9,7 @@
 
 #include <dlfcn.h>
 
+#include <bit>
 #include <unordered_set>
 
 namespace
@@ -124,6 +126,7 @@ LibHandle lib;
 std::unordered_set<uint16_t> gKnownClientIds;
 std::unordered_map<uint32_t, ConnexionDevicePrefs> gKnownDevices;
 uint32_t gButtonState{ 0 };
+size_t gNumMsg{ 0 };
 
 float normalize( int16_t value )
 {
@@ -171,12 +174,14 @@ void updateDevicePrefs( uint32_t deviceId, ConnexionDevicePrefs& prefs )
 void onSpaceMouseDeviceAdded( uint32_t deviceId )
 {
     std::unique_lock lock( gStateMutex );
+    TelemetrySignal( fmt::format( "3DxWare SpaceMouseDeviceAdded: {:04x}", deviceId ) );
     updateDevicePrefs( deviceId, gKnownDevices[deviceId] );
 }
 
 void onSpaceMouseDeviceRemoved( uint32_t deviceId )
 {
     std::unique_lock lock( gStateMutex );
+    TelemetrySignal( fmt::format( "3DxWare SpaceMouseDeviceRemoved: {:04x}", deviceId ) );
     gKnownDevices.erase( deviceId );
 }
 
@@ -186,6 +191,11 @@ void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
     if ( type == kConnexionMsgDeviceState )
     {
         std::unique_lock lock( gStateMutex );
+        ++gNumMsg;
+        if ( gNumMsg == 1 )
+            TelemetrySignal( "3DxWare first SpaceMouseMessage" );
+        if ( std::popcount( gNumMsg ) == 1 ) // report every power of 2
+            TelemetrySignal( "SpaceMouse next log messages" );
 
         assert( arg );
         const auto* state = (ConnexionDeviceState*)arg;
@@ -246,15 +256,15 @@ void onSpaceMouseMessage( uint32_t deviceId, uint32_t type, void* arg )
 
 } // namespace
 
-namespace MR
+namespace MR::SpaceMouse
 {
 
-SpaceMouseHandler3dxMacDriver::SpaceMouseHandler3dxMacDriver()
+Handler3dxMacDriver::Handler3dxMacDriver()
 {
     setClientName( "MeshLib" );
 }
 
-SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
+Handler3dxMacDriver::~Handler3dxMacDriver()
 {
     std::unique_lock lock( gStateMutex );
     if ( lib.handle != nullptr )
@@ -270,7 +280,7 @@ SpaceMouseHandler3dxMacDriver::~SpaceMouseHandler3dxMacDriver()
     }
 }
 
-void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len )
+void Handler3dxMacDriver::setClientName( const char* name, size_t len )
 {
     if ( len == 0 )
         len = std::strlen( name );
@@ -281,7 +291,7 @@ void SpaceMouseHandler3dxMacDriver::setClientName( const char* name, size_t len 
     std::memcpy( clientName_.get() + 1, (const uint8_t *)name, len );
 }
 
-bool SpaceMouseHandler3dxMacDriver::initialize()
+bool Handler3dxMacDriver::initialize()
 {
     // TODO: better design (e.g. `auto lib = Handle::tryLoad()`)
     std::unique_lock lock( gStateMutex );
@@ -303,6 +313,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
 
     if ( !lib.loadSymbols() )
     {
+        spdlog::error( "Failed to load the 3DxWare client library symbols" );
         dlclose( lib.handle );
         lib.handle = nullptr;
         return false;
@@ -316,6 +327,7 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
         return false;
     }
 
+    gNumMsg = 0;
     lib.SetConnexionHandlers( onSpaceMouseMessage, onSpaceMouseDeviceAdded, onSpaceMouseDeviceRemoved, false );
 
     clientId_ = lib.RegisterConnexionClient( kConnexionClientWildcard, clientName_.get(), kConnexionClientModeTakeOver, kConnexionMaskAll );
@@ -330,10 +342,11 @@ bool SpaceMouseHandler3dxMacDriver::initialize()
     lib.SetConnexionClientButtonMask( clientId_, kConnexionMaskAllButtons );
 
     spdlog::info( "Successfully connected to the 3DxWare driver" );
+    TelemetrySignal( "3DxWare driver connect" );
     return true;
 }
 
-void SpaceMouseHandler3dxMacDriver::handle()
+void Handler3dxMacDriver::handle()
 {
     // all events are processed by the 3DxWare driver; nothing to do here
 }

@@ -1,0 +1,41 @@
+/**
+\page SupportGeneratorTutorial Building a Support Generator Plugin Using MeshLib C++ on Windows
+
+\htmlonly
+<div class="image">
+<iframe width="100%" style="aspect-ratio: 16 / 9;" src="https://www.youtube.com/embed/pNcoLue6LMY" title="Creating the First Plugin using MeshLib C++ on Windows" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
+\endhtmlonly
+
+### Overview
+
+This tutorial demonstrates how to create a practical support generator for 3D printing using the \b MeshLib \b SDK. 
+You will learn how to connect the dialog UI, handle user input, apply geometric algorithms (including mesh booleans), and render the result in one coherent workflow inside the MeshLib Viewer.
+
+## Prerequisites
+
+Before starting, complete the [First Plugin Tutorial](\ref FirstPluginTutorial), which introduces the MeshLib plugin architecture and shows how to build a basic tool.
+
+Requirements:
+ - Visual Studio 2019 or later
+ - Windows development environment
+
+## Setup
+Download the C++ project for this tutorial and verify the Visual Studio configuration:
+https://meshlib.io/building_support_generator
+
+## What You Will Learn
+
+ - Build a MeshLib plugin tool from scratch
+ - Design a dialog interface and process user parameters
+ - Apply geometric algorithms and use render helpers
+ - Generate cylindrical supports with conical tips based on local bottom curvature
+ - Perform boolean unions between supports and the model
+ - Integrate the plugin with MeshInspector for rapid testing and iteration
+
+## Summary
+
+By the end of this tutorial, you will understand how to combine user interaction, geometry processing, and rendering into one cohesive workflow using the MeshLib SDK. 
+This foundation enables development of more advanced 3D tools and plugins for MeshLib and MeshInspector.
+
+*/

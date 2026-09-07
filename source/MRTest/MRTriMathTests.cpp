@@ -1,8 +1,55 @@
 #include <MRMesh/MRTriMath.h>
-#include <MRMesh/MRGTest.h>
+#include <MRMesh/MRPlane3.h>
+#include <gtest/gtest.h>
+#include <MRMesh/MRClosestPointInTriangle.h>
 
 namespace MR
 {
+
+// the largest distance from a point of the triangle to the nearest vertex of it
+TEST( MRMesh, CoveringRadius )
+{
+    // equilateral triangle with side 1: the circumcenter is inside, and the circumradius is 1/sqrt(3)
+    EXPECT_NEAR( coveringRadiusSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 },
+        Vector3d{ 0.5, std::sqrt( 0.75 ), 0 } ), 1 / 3., 1e-15 );
+
+    // right triangle: the farthest point is the middle of the hypotenuse
+    EXPECT_NEAR( coveringRadiusSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ),
+        0.5, 1e-15 );
+
+    // a sliver with the third vertex right above the middle of the long edge: the minimal enclosing
+    // circle has radius 5, but the balls of radius ~2.5 around the vertices already cover it
+    const Vector3d a{ 0, 0, 0 }, b{ 10, 0, 0 }, c{ 5, 0.1, 0 };
+    EXPECT_NEAR( mincircleDiameterSq( a, b, c ) / 4, 25., 1e-12 );
+    EXPECT_NEAR( std::sqrt( coveringRadiusSq( a, b, c ) ), 2.5010, 1e-3 );
+
+    // ... and with the third vertex near an end of the long edge it does not help much
+    EXPECT_GT( std::sqrt( coveringRadiusSq( a, b, Vector3d{ 1, 0.1, 0 } ) ), 4.4 );
+
+    // degenerate triangles have infinite circumradius, but a finite covering one
+    EXPECT_NEAR( std::sqrt( coveringRadiusSq( a, b, Vector3d{ 5, 0, 0 } ) ), 2.5, 1e-12 );
+    EXPECT_EQ( coveringRadiusSq( a, a, a ), 0. );
+
+    // the value does not depend on the order of the vertices, which the choice of the edge to
+    // examine must respect
+    for ( double x = -2; x <= 12; x += 0.7 )
+        for ( double y = 0.01; y <= 8; y += 0.7 )
+        {
+            const Vector3d p{ x, y, 0 };
+            const auto expected = coveringRadiusSq( a, b, p );
+            EXPECT_NEAR( coveringRadiusSq( b, p, a ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( p, a, b ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( b, a, p ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( a, p, b ), expected, 1e-12 );
+            EXPECT_NEAR( coveringRadiusSq( p, b, a ), expected, 1e-12 );
+        }
+
+    // the covering radius never exceeds the radius of the minimal enclosing circle
+    for ( double x = -2; x <= 12; x += 0.7 )
+        for ( double y = 0; y <= 8; y += 0.7 )
+            EXPECT_LE( coveringRadiusSq( a, b, Vector3d{ x, y, 0 } ),
+                mincircleDiameterSq( a, b, Vector3d{ x, y, 0 } ) / 4 + 1e-12 );
+}
 
 TEST( MRMesh, TriMath )
 {
@@ -16,6 +63,12 @@ TEST( MRMesh, TriMath )
     EXPECT_TRUE(  circumballCenters( Vector3d{ 0, 0, 0 }, Vector3d{ 2, 0, 0 }, Vector3d{ 0, 2, 0 }, std::sqrt( 3.0 ), centerPos, centerNeg ) );
     EXPECT_NEAR( ( centerPos - Vector3d( 1, 1,  1 ) ).length(), 0.0, 1e-15 );
     EXPECT_NEAR( ( centerNeg - Vector3d( 1, 1, -1 ) ).length(), 0.0, 1e-15 );
+
+    EXPECT_NEAR( circumcircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), 2, 1e-15 );
+    EXPECT_NEAR(    mincircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 0, 1, 0 } ), 2, 1e-15 );
+
+    EXPECT_GT( circumcircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 2, 0, 0 } ), DBL_MAX );
+    EXPECT_EQ(    mincircleDiameterSq( Vector3d{ 0, 0, 0 }, Vector3d{ 1, 0, 0 }, Vector3d{ 2, 0, 0 } ), 4 );
 
     EXPECT_EQ( posFromTriEdgeLengths( 4., 5., 3. ), Vector2d( 4., 0. ) );
     EXPECT_EQ( posFromTriEdgeLengths( 5., 4., 3. ), Vector2d( 4., 3. ) );
@@ -155,6 +208,22 @@ TEST( MRMesh, triangleAnglesFromEdgeLengths )
 
     EXPECT_NEAR(            cotan( 5.f, 3.f, 4.f ), 0.f, 1e-6f );
     EXPECT_NEAR( tanSqOfHalfAngle( 5.f, 3.f, 4.f ), 1.f, 1e-6f );
+}
+
+TEST( MRMesh, closestPointInTriangle )
+{
+    // this case previously failed assert in closestPointInTriangle#5 and produced negative barycentric coordinates
+    Vector3d a( 0, 0, 0 );
+    Vector3d b( 0, 0, 1.6487993830814958 );
+    Vector3d c( 0, 0,-0.0025229454040527344 );
+    Vector3d x( 0, 0, 0.29875588417053223 );
+    Vector3d p = Vector3d(-0.17274856567382812, -0.092119634151458740, 0 ) + x;
+    auto res = closestPointInTriangle( p, a, b, c );
+    EXPECT_EQ( res.first, x );
+    EXPECT_GE( res.second.a, 0 );
+    EXPECT_GE( res.second.b, 0 );
+    EXPECT_LE( res.second.a + res.second.b, 1 );
+    EXPECT_NEAR( distance( res.second.interpolate( a, b, c ), x ), 0.0, 1e-15 );
 }
 
 } //namespace MR

@@ -169,9 +169,8 @@ MeshPointAndDistance findClosestWeightedMeshPoint( const Vector3f& loc,
             .w = c->w,
             .bidirectionalOrOutside = params.bidirectionalMode || dot( mesh.pseudonormal( mtp ), loc - c->pos ) >= 0
         };
-        if ( candidate < res )
+        if ( candidate.bidirDist() < params.maxBidirDist && candidate < res )
         {
-            assert( candidate.bidirDist() < params.maxBidirDist );
             res = candidate;
             if ( params.bidirectionalMode && res.dist() < params.minBidirDist )
                 return Processing::Stop;

@@ -510,8 +510,7 @@ std::shared_ptr<Object> ObjectVoxels::clone() const
     auto res = std::make_shared<ObjectVoxels>( ProtectedStruct{}, *this );
     if ( data_.mesh )
         res->data_.mesh = std::make_shared<Mesh>( *data_.mesh );
-    if ( vdbVolume_.data )
-        res->vdbVolume_.data = MakeFloatGrid( vdbVolume_.data->deepCopy() );
+    res->vdbVolume_.data = FloatGrid::deepCopy( vdbVolume_.data );
     return res;
 }
 
@@ -562,6 +561,12 @@ void ObjectVoxels::setSerializeFormat( const char * newFormat )
         return;
     }
     serializeFormat_ = newFormat;
+}
+
+void ObjectVoxels::resetFrontColor()
+{
+    // cannot implement in the opposite way to keep `setDefaultColors_()` non-virtual
+    setDefaultColors_();
 }
 
 void ObjectVoxels::swapBase_( Object& other )
@@ -630,7 +635,7 @@ void ObjectVoxels::serializeFields_( Json::Value& root ) const
 
     root["IsoValue"] = isoValue_;
     root["DualMarchingCubes"] = dualMarchingCubes_;
-    root["Type"].append( ObjectVoxels::TypeName() );
+    root["Type"].append( ObjectVoxels::StaticTypeName() );
 }
 
 Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::filesystem::path& path ) const

@@ -1,0 +1,111 @@
+name: Install MSYS2 for MRBind
+description: >
+  Restore (or download) the pinned MSYS2 toolchain listed in
+  `scripts/mrbind/msys2_package_hashes<packages-suffix>.txt`, sha256-verify it,
+  and `pacman -U` into `msys2-dir`, installing MSYS2 first when the runner
+  image ships none (the arm64 images do not).
+
+inputs:
+  packages-suffix:
+    required: false
+    default: '_clang22'
+    description: >
+      Which pinned set to install: the `<suffix>` of
+      `scripts/mrbind/msys2_package_hashes<suffix>.txt`. `_clang22` is the x86_64
+      CLANG64 toolchain, `_clangarm64` the native aarch64 one.
+  repo-dir:
+    required: false
+    default: '.'
+    description: >
+      Path to this repository from the workspace root. The default suits a
+      workflow whose workspace is MeshLib itself; a downstream repo that has
+      MeshLib as a submodule passes the submodule path (e.g. `MeshLib`), since
+      every path below is resolved against the workspace, not the action.
+  msys2-dir:
+    required: false
+    default: 'C:\msys64'
+    description: >
+      Where MSYS2 lives, or should be installed. Defaults to `C:\msys64`, the
+      path the runner images use. Override to match a runner whose image (or
+      whose downstream repo) puts it elsewhere, and pass the same value to
+      `build-mrbind`.
+
+runs:
+  using: composite
+  steps:
+    - name: Cache pinned MSYS2 packages
+      # Cache key tracks the lockfile; `wget -nc` makes cache-hit a no-op,
+      # and `sha256sum -c` in the install script is the integrity gate.
+      # Tolerate transient cache-service failures — the install step will
+      # redownload from scratch if nothing was restored.
+      uses: actions/cache@v5
+      continue-on-error: true
+      with:
+        path: ${{ inputs.repo-dir }}/scripts/mrbind/msys2_packages
+        key: msys2-mrbind${{ inputs.packages-suffix }}-${{ hashFiles(format('{0}/scripts/mrbind/msys2_package_hashes{1}.txt', inputs.repo-dir, inputs.packages-suffix)) }}
+
+    - name: Install MSYS2 itself when the image has none
+      # Only the x64 runner images ship C:\msys64. MSYS2 publishes an x86_64 base
+      # only; on arm64 its runtime runs under emulation while the CLANGARM64
+      # packages installed below are native (https://www.msys2.org/docs/arm64/).
+      shell: pwsh
+      env:
+        MSYS2_DIR: ${{ inputs.msys2-dir }}
+      run: |
+        if (Test-Path "$env:MSYS2_DIR\msys2_shell.cmd") {
+          Write-Host 'MSYS2 already present.'
+          exit 0
+        }
+        $sfx = Join-Path $Env:RUNNER_TEMP 'msys2-base.sfx.exe'
+        $url = 'https://github.com/msys2/msys2-installer/releases/latest/download/msys2-base-x86_64-latest.sfx.exe'
+        Invoke-WebRequest $url -OutFile $sfx
+        # the archive has a fixed top-level msys64/, so unpack it aside and move
+        # it to where the caller asked
+        & $sfx -y "-o$Env:RUNNER_TEMP"
+        if (-not (Test-Path "$Env:RUNNER_TEMP\msys64\msys2_shell.cmd")) { throw 'MSYS2 extraction failed' }
+        Move-Item "$Env:RUNNER_TEMP\msys64" $env:MSYS2_DIR
+        # first launch generates /etc and the user skeleton; pacman needs them
+        & "$env:MSYS2_DIR\msys2_shell.cmd" -no-start -defterm -here -c 'true'
+        # that init runs `pacman-key --populate msys2 || true` and intermittently
+        # dies before signing the keys, leaving every repo database at "unknown
+        # trust"; redo it here, plus the wget msys2-base lacks
+        & "$env:MSYS2_DIR\msys2_shell.cmd" -no-start -defterm -here -c 'pacman-key --init && pacman-key --populate msys2 && pacman-key --updatedb && pacman -Sy --noconfirm --needed wget'
+        if ($LASTEXITCODE -ne 0) { throw "MSYS2 keyring setup exited with code $LASTEXITCODE" }
+
+    - name: Install MSYS2 for MRBind
+      # Pin clang to the version in the selected lockfile. Pinning only the
+      # clang/llvm packages fails with STATUS_DLL_NOT_FOUND from cc.exe, so the
+      # lockfile carries the whole runtime stack.
+      #
+      # Retried because the msys2/cygwin runtime intermittently dies
+      # spawning pacman (silent exit 1 or 4 right after the sha256 OKs).
+      # Everything here is idempotent: `wget -nc` skips present files and
+      # `pacman -U --needed` skips already-installed packages.
+      shell: pwsh
+      env:
+        MSYS2_DIR: ${{ inputs.msys2-dir }}
+      run: |
+        $attempts = 3
+        foreach ($i in 1..$attempts) {
+          & "$env:MSYS2_DIR\msys2_shell.cmd" -no-start -defterm -here -c "set -e && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_download_packages.sh ${{ inputs.packages-suffix }} && bash ${{ inputs.repo-dir }}/scripts/mrbind/msys2_install_packages.sh ${{ inputs.packages-suffix }}"
+          $code = $LASTEXITCODE
+          if ($code -eq 0) { break }
+          # The msys2 shell dies without its console output reaching the
+          # runner; recover what hit the disk instead.
+          Write-Host "msys2_shell.cmd exited with code $code (attempt $i of $attempts)"
+          Write-Host '::group::${{ inputs.repo-dir }}/scripts/mrbind/msys2_pacman_install.log'
+          $teeLog = '${{ inputs.repo-dir }}/scripts/mrbind/msys2_pacman_install.log'
+          if (Test-Path $teeLog) { Get-Content $teeLog } else { Write-Host 'absent — died before pacman produced output' }
+          Write-Host '::endgroup::'
+          Write-Host "::group::$env:MSYS2_DIR\var\log\pacman.log (last 200 lines)"
+          $pacLog = "$env:MSYS2_DIR\var\log\pacman.log"
+          if (Test-Path $pacLog) { Get-Content $pacLog -Tail 200 } else { Write-Host 'absent — pacman never started a transaction' }
+          Write-Host '::endgroup::'
+          if ($i -lt $attempts) {
+            # A pacman killed mid-transaction leaves a stale db lock behind.
+            Remove-Item "$env:MSYS2_DIR\var\lib\pacman\db.lck" -Force -ErrorAction SilentlyContinue
+            Remove-Item $teeLog -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 10
+          }
+        }
+        if ($code -ne 0) { exit $code }

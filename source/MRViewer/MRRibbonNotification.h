@@ -65,10 +65,10 @@ class MRVIEWER_CLASS RibbonNotifier
 public:
     // adds new notification for drawing
     MRVIEWER_API void pushNotification( const RibbonNotification& notification );
-    
+
     // main draw function. draw actual notification or history, and history button
     // limitFramebuffer - available framebuffer space (usually same as `Viewer::getViewportsBounds()`)
-    MRVIEWER_API void draw( float scaling, const Box2i& limitFramebuffer );
+    MRVIEWER_API void draw( const Box2i& limitFramebuffer );
 
     // set maximum time while history button will be present on screen
     // negative value means that history button will never be hidden
@@ -102,19 +102,18 @@ private:
 #endif
 
     // draw button to show last notifications
-    void drawHistoryButton_( float scaling, const Box2i& limitFramebuffer );
+    void drawHistoryButton_( const Box2i& limitFramebuffer );
     // draw notification history
-    void drawHistory_( float scaling, const Box2i& limitFramebuffer );
+    void drawHistory_( const Box2i& limitFramebuffer );
     // draw floating notifications
-    void drawFloating_( float scaling, const Box2i& limitFramebuffer );
-    
+    void drawFloating_( const Box2i& limitFramebuffer );
+
     // set this true on open history and on new notification added
     bool scrollDownNeeded_ = false;
     float prevHistoryScrollMax_ = 0.0f;
     struct DrawNotificationSettings
     {
         int index{ 0 };
-        float scalig{ 1.0f };
         float width{ 0.0f };
         bool historyMode{ false };
         Vector2f* currentPos{ nullptr };

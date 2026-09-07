@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRFeatureObject.h"
+#include "MRMesh/MRObjectComparableWithReference.h"
 #include "MRMeshFwd.h"
 #include "MRVisualObject.h"
 
@@ -20,15 +21,18 @@ public:
     PointObject( PointObject&& ) noexcept = default;
     PointObject& operator = ( PointObject&& ) noexcept = default;
 
-    constexpr static const char* TypeName() noexcept { return "PointObject"; }
-    virtual const char* typeName() const override { return TypeName(); }
+    constexpr static const char* StaticTypeName() noexcept { return "PointObject"; }
+    virtual const char* typeName() const override { return StaticTypeName(); }
+
+    constexpr static const char* StaticClassName() noexcept { return "Point"; }
+    virtual std::string className() const override { return StaticClassName(); }
+
+    constexpr static const char* StaticClassNameInPlural() noexcept { return "Points"; }
+    virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
     /// \note this ctor is public only for std::make_shared used inside clone()
     PointObject( ProtectedStruct, const PointObject& obj ) : PointObject( obj )
     {}
-
-    std::string getClassName() const override { return "Point"; }
-    std::string getClassNameInPlural() const override { return "Points"; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
@@ -36,9 +40,9 @@ public:
     /// calculates point from xf
     [[nodiscard]] MRMESH_API Vector3f getPoint( ViewportId id = {} ) const;
     /// updates xf to fit given point
-    MRMESH_API void setPoint( const Vector3f& point, ViewportId id = {} );
+    MRMESH_API void setLocalPoint( const Vector3f& point, ViewportId id = {} );
 
-    MRMESH_API virtual  std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
+    MRMESH_API virtual std::vector<FeatureObjectSharedProperty>& getAllSharedProperties() const override;
 
     [[nodiscard]] MRMESH_API FeatureObjectProjectPointResult projectPoint( const Vector3f& /*point*/, ViewportId id = {} ) const override;
 

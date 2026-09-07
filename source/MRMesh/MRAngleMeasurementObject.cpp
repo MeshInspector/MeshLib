@@ -108,7 +108,7 @@ void AngleMeasurementObject::swapBase_( Object& other )
 void AngleMeasurementObject::serializeFields_( Json::Value& root ) const
 {
     MeasurementObject::serializeFields_( root );
-    root["Type"].append( TypeName() );
+    root["Type"].append( StaticTypeName() );
 
     root["IsConical"] = isConical_;
 

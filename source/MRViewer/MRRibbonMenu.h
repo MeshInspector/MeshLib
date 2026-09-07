@@ -50,10 +50,14 @@ public:
 
     MRVIEWER_API virtual void shutdown() override;
 
+    virtual void drawViewerWindow() override {}
+
+    MRVIEWER_API  virtual void drawAdditionalWindows() override;
+
     /// open Toolbar Customize modal popup
     MRVIEWER_API void openToolbarCustomize();
 
-    MRVIEWER_API virtual void load_font( int font_size = 13 ) override;
+    MRVIEWER_API virtual void loadFonts( int font_size = 13 ) override;
 
     MRVIEWER_API virtual std::filesystem::path getMenuFontPath() const override;
 
@@ -90,6 +94,10 @@ public:
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
+    /// binds given key to the ribbon item with given name;
+    /// the items of other libraries shall be bound by them, e.g. see MRCommonPlugins/MRCommonPluginsShortcuts.h
+    MRVIEWER_API virtual void addRibbonItemShortcut( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
+
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
     int getActiveTabIndex() const { return activeTabIndex_; }
 
@@ -107,7 +115,7 @@ public:
     RibbonNotifier& getRibbonNotifier() { return notifier_; };
 
     void setActiveListPos( const ImVec2& pos ) { activeListPos_ = pos; }
-    
+
     /// set active plugins list showed
     void showActiveList() { activeListPressed_ = true; };
 
@@ -197,9 +205,7 @@ protected:
     MRVIEWER_API virtual void drawRibbonSceneInformation_( const std::vector<std::shared_ptr<Object>>& selected );
 
     MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
-    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::shared_ptr<Object>& selected ) override;
-
-    MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
+    MRVIEWER_API virtual bool drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
 
     MRVIEWER_API virtual void setupShortcuts_() override;
 
@@ -218,7 +224,7 @@ protected:
 
     // updates viewport sizes with respect to ribbon top and left panels
     MRVIEWER_API virtual void fixViewportsSize_( int w, int h );
-    
+
     // need to be called if you override windows pipeline and use ActiveListPlugin
     MRVIEWER_API void drawActiveList_();
 
@@ -229,7 +235,7 @@ protected:
     MRVIEWER_API virtual void updateTopPanelSize_( bool drawTabs );
 
     // draw quick access bar at header level
-    MRVIEWER_API virtual void drawHeaderQuickAccess_( float menuScaling );
+    MRVIEWER_API virtual void drawHeaderQuickAccess_();
 
     // this functions draws header helpers:
     //  1. Active tools list
@@ -237,16 +243,18 @@ protected:
     //  3. Help button
     //  4. Ribbon pin/unpin button
     // returns width available for drawing tabs
-    MRVIEWER_API virtual float drawHeaderHelpers_( float requiredTabSize, float menuScaling );
+    MRVIEWER_API virtual float drawHeaderHelpers_( float requiredTabSize );
 
     // helper list of active tools
     MRVIEWER_API virtual void drawActiveListButton_( float btnSize );
-    // header helper search bar at panel 
+    // header helper search bar at panel
     MRVIEWER_API virtual void drawSearchButton_();
     // header helper button to pin/unpin ribbon
     MRVIEWER_API virtual void drawCollapseButton_();
     // header helper button link to help page
     MRVIEWER_API virtual void drawHelpButton_( const std::string& url );
+    // header helper button to change the UI language
+    MRVIEWER_API virtual void drawLanguageButton_();
 
     RibbonMenuSearch searcher_;
 

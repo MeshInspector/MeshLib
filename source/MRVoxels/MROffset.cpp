@@ -115,7 +115,7 @@ Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offset
 }
 
 Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
-    const OffsetParameters& params, Vector<VoxelId, FaceId> * outMap )
+    const OffsetParameters& params, const McOffsetMeshOutputs& outputs )
 {
     MR_TIMER;
 
@@ -140,12 +140,15 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
 
         VdbVolume volume = floatGridToVdbVolume( std::move( voxelRes ) );
         volume.voxelSize = Vector3f::diagonal( params.voxelSize );
+        if ( outputs.dims )
+            *outputs.dims = volume.dims;
 
         MarchingCubesParams vmParams;
         vmParams.iso = offsetInVoxels;
         vmParams.lessInside = true;
         vmParams.cb = subprogress( params.callBack, 0.4f, 1.0f );
-        vmParams.outVoxelPerFaceMap = outMap;
+        vmParams.outVoxelPerFaceMap = outputs.voxelPerFaceMap;
+        vmParams.outGridToMeshXf = outputs.gridToMeshXf;
         vmParams.freeVolume = [&volume]
         {
             Timer t( "~FloatGrid" );
@@ -160,6 +163,8 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
     const auto absOffset = std::abs( offset );
     const auto box = mp.mesh.computeBoundingBox( mp.region ).expanded( Vector3f::diagonal( absOffset ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
+    if ( outputs.dims )
+        *outputs.dims = dimensions;
 
     DistanceVolumeParams vol {
         .origin = origin,
@@ -182,13 +187,15 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         .cb = subprogress( params.callBack, 0.4f, 1.0f ),
         .iso = offset,
         .lessInside = true,
-        .outVoxelPerFaceMap = outMap,
+        .outVoxelPerFaceMap = outputs.voxelPerFaceMap,
+        .outGridToMeshXf = outputs.gridToMeshXf,
     };
 
     if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( params.fwn ); fwnByParts && isHoleWindingRule )
     {
-        vol.cb = {};
-        vmParams.cb = subprogress( params.callBack, 0.00f, 0.90f );
+        vol.cb = subprogress( params.callBack, 0.00f, 0.90f );
+        vmParams.cb = {}; // to avoid jumping progress between calcFromGridWithDistancesByParts and MarchingCubesByParts
+        // TODO: calcFromGridWithDistancesByParts passes subprogress into mesher.addPart
 
         assert( !mp.region ); // only whole mesh is supported for now
 
@@ -246,7 +253,7 @@ Expected<Mesh> mcShellMeshRegion( const Mesh& mesh, const FaceBitSet& region, fl
     DistanceVolumeParams dvParams;
     dvParams.cb = subprogress( params.callBack, 0.0f, 0.5f );
     auto absOffset = std::abs( offset );
-    const auto box = mesh.getBoundingBox().expanded( Vector3f::diagonal( absOffset ) );
+    const auto box = mesh.computeBoundingBox( &region ).expanded( Vector3f::diagonal( absOffset ) );
     const auto [origin, dimensions] = calcOriginAndDimensions( box, params.voxelSize );
     dvParams.origin = origin;
     dvParams.voxelSize = Vector3f::diagonal( params.voxelSize );
@@ -276,21 +283,28 @@ Expected<Mesh> sharpOffsetMesh( const MeshPart& mp, float offset, const SharpOff
     OffsetParameters mcParams = params;
     mcParams.callBack = subprogress( params.callBack, 0.0f, 0.7f );
     Vector<VoxelId, FaceId> map;
-    auto res = mcOffsetMesh( mp, offset, mcParams, &map );
+    SharpenMarchingCubesMeshSettings sharpenParams;
+    auto res = mcOffsetMesh( mp, offset, mcParams, {
+        .voxelPerFaceMap = &map,
+        .dims = &sharpenParams.dims,
+        .gridToMeshXf = &sharpenParams.gridToMeshXf } );
     if ( !res.has_value() )
         return res;
 
-    SharpenMarchingCubesMeshSettings sharpenParams;
     sharpenParams.minNewVertDev = params.voxelSize * params.minNewVertDev;
     sharpenParams.maxNewRank2VertDev = params.voxelSize * params.maxNewRank2VertDev;
     sharpenParams.maxNewRank3VertDev = params.voxelSize * params.maxNewRank3VertDev;
     sharpenParams.maxOldVertPosCorrection = params.voxelSize * params.maxOldVertPosCorrection;
     sharpenParams.offset = offset;
+    sharpenParams.voxelClamp = params.voxelClamp;
     sharpenParams.outSharpEdges = params.outSharpEdges;
 
     sharpenMarchingCubesMesh( mp, res.value(), map, sharpenParams );
     if ( !reportProgress( params.callBack, 0.99f ) )
         return unexpectedOperationCanceled();
+
+    if ( params.outVoxelPerFace )
+        *params.outVoxelPerFace = std::move( map );
 
     return res;
 }
@@ -311,7 +325,7 @@ Expected<Mesh> generalOffsetMesh( const MeshPart& mp, float offset, const Genera
     }
 }
 
-Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params )
+Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetParameters& params, const PartMapping & map )
 {
     MR_TIMER;
     auto res = offsetOneDirection( mesh, offset, params );
@@ -323,13 +337,13 @@ Expected<Mesh> thickenMesh( const Mesh& mesh, float offset, const GeneralOffsetP
     if ( offset >= 0 )
     {
         // add original mesh to the result with flipping
-        resMesh.addMeshPart( mesh, true ); // true = with flipping
+        resMesh.addMeshPart( mesh, true, {}, {}, map ); // true = with flipping
     }
     else
     {
         resMesh.topology.flipOrientation(); // flip to have inversed offset
         // add original mesh to the result without flipping
-        resMesh.addMesh( mesh );
+        resMesh.addMesh( mesh, map );
     }
     return res;
 }

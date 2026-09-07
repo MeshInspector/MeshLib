@@ -16,7 +16,7 @@ struct DrawButtonParams
 {
     enum class SizeType
     {
-        Big, // button is big, underline text is divided to 2 lines (maximum) to fit width 
+        Big, // button is big, underline text is divided to 2 lines (maximum) to fit width
         SmallText, // button is small, text is on same line
         Small // button is small, no text present
     } sizeType{ SizeType::Big }; // type of button to draw
@@ -75,12 +75,12 @@ public:
         float additionalWidth{ 0.0f }; // for small drop buttons
     };
     MRVIEWER_API ButtonItemWidth calcItemWidth( const MenuItemInfo& item, DrawButtonParams::SizeType sizeType ) const;
-    
+
     /// draw item button
     MRVIEWER_API void drawButtonItem( const MenuItemInfo& item, const DrawButtonParams& params ) const;
 
     /// draw item button
-    MRVIEWER_API void drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam, 
+    MRVIEWER_API void drawCustomButtonItem( const MenuItemInfo& item, const CustomButtonParameters& customParam,
         const DrawButtonParams& params ) const;
 
     /// draw item button icon
@@ -99,7 +99,6 @@ public:
 
     void setMenu( RibbonMenu* menu ) { menu_ = menu; };
     void setShortcutManager( const ShortcutManager* shortcutManager ) { shortcutManager_ = shortcutManager; };
-    void setScaling( float scaling ) { scaling_ = scaling; };
 
     /// returns num of pushed colors
     /// requires to pop it afterwards
@@ -117,7 +116,6 @@ private:
 
     std::optional<Color> monochrome_;
 
-    float scaling_ = 1.f;
     static std::vector<std::unique_ptr<MR::ImGuiImage>> textures_;
 };
 

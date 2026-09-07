@@ -9,6 +9,14 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
@@ -23,11 +31,16 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRCommonPluginsShortcuts.cpp" />
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />
     <ClCompile Include="Basic\MRMoveObjectByMouse.cpp" />
     <ClCompile Include="Basic\MRObjectInfo.cpp" />
     <ClCompile Include="Basic\MRShowGlobalBasis.cpp" />
+    <ClCompile Include="Basic\MRDrawViewportWidgetsItem.cpp" />
+    <ClCompile Include="Basic\MRToggleProjectionMode.cpp" />
     <ClCompile Include="Selectors\MRSelectObjectByClick.cpp" />
+    <ClCompile Include="ViewerButtons\MRHistoryMenuItems.cpp" />
+    <ClCompile Include="ViewerButtons\MRViewerSettingsPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRActiveListPlugin.cpp" />
     <ClCompile Include="ViewerButtons\MRAddCustomTheme.cpp" />
     <ClCompile Include="ViewerButtons\MRInvertView.cpp" />
@@ -41,10 +54,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
+    <ClInclude Include="MRCommonPluginsShortcuts.h" />
     <ClInclude Include="Basic\MRCameraOrientationPlugin.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h" />
     <ClInclude Include="Basic\MRWasmUnavailablePlugin.h" />
+    <ClInclude Include="Basic\MRDrawViewportWidgetsItem.h" />
     <ClInclude Include="Selectors\MRSelectObjectByClick.h" />
+    <ClInclude Include="ViewerButtons\MRHistoryMenuItems.h" />
+    <ClInclude Include="ViewerButtons\MRViewerSettingsPlugin.h" />
     <ClInclude Include="ViewerButtons\MRAddCustomTheme.h" />
     <ClInclude Include="ViewerButtons\MRIOFilesMenuItems.h" />
     <ClInclude Include="ViewerButtons\MRRibbonSceneButtons.h" />
@@ -58,6 +75,9 @@
     </ProjectReference>
     <ProjectReference Include="..\MRIOExtras\MRIOExtras.vcxproj">
       <Project>{99eb9674-abbf-47cd-a8d5-ee122eb5da0c}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\MRMcp\MRMcp.vcxproj">
+      <Project>{c8250f26-e01d-4a63-98cd-68069d818080}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
@@ -289,6 +309,16 @@
     <Image Include="resource\icons\X3\Top View.png" />
     <Image Include="resource\icons\X3\Vertical Viewports.png" />
     <Image Include="resource\icons\X3\Viewer settings.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis off.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis.png" />
+    <Image Include="resource\independent_icons\X1\Viewport basis and grid.png" />
+    <Image Include="resource\independent_icons\X1\Viewport projection orthographic.png" />
+    <Image Include="resource\independent_icons\X1\Viewport projection perspective.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis off.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis.png" />
+    <Image Include="resource\independent_icons\X3\Viewport basis and grid.png" />
+    <Image Include="resource\independent_icons\X3\Viewport projection orthographic.png" />
+    <Image Include="resource\independent_icons\X3\Viewport projection perspective.png" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -297,12 +327,12 @@
     <RootNamespace>MRCommonPlugins</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -314,27 +344,24 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Debug'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Release'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>MRCommonPlugins_EXPORTS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
@@ -347,22 +374,19 @@
       </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
-      <WarningLevel>EnableAllWarnings</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>MRCommonPlugins_EXPORTS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <TreatWarningAsError>true</TreatWarningAsError>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalOptions>/bigobj %(AdditionalOptions)</AdditionalOptions>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty;$(ProjectDir)\..\..\thirdparty\imgui\</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <DebugInformationFormat>OldStyle</DebugInformationFormat>
       <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>

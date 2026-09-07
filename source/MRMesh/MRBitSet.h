@@ -5,13 +5,9 @@
 #include "MRphmap.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
-#define BOOST_DYNAMIC_BITSET_DONT_USE_FRIENDS
-#pragma warning(push)
-#pragma warning(disable: 4643) //Forward declaring in namespace std is not permitted by the C++ Standard.
-#include <boost/dynamic_bitset.hpp>
-#pragma warning(pop)
-#include <iterator>
 #include <functional>
+#include <iosfwd>
+#include <iterator>
 
 namespace MR
 {
@@ -22,38 +18,119 @@ namespace MR
  * \{
  */
 
-/// container of bits
-class BitSet : public boost::dynamic_bitset<std::uint64_t>
+/// iterator to enumerate all indices with set bits in BitSet class or its derivatives
+template <typename T>
+class MR_BIND_IGNORE_PY SetBitIteratorT
 {
 public:
-    using base = boost::dynamic_bitset<std::uint64_t>;
-    using base::base;
+    using IndexType = typename T::IndexType;
+
+    using iterator_category = std::forward_iterator_tag;
+    using value_type        = IndexType;
+    using difference_type   = std::ptrdiff_t;
+    using reference         = IndexType; ///< intentionally not a reference
+    using pointer           = const IndexType *;
+
+    /// constructs end iterator
+    SetBitIteratorT() = default;
+
+    /// constructs begin iterator
+    SetBitIteratorT( const T & bitset )
+        : bitset_( &bitset ), index_( bitset.find_first() )
+    {
+    }
+
+    SetBitIteratorT & operator++()
+    {
+        index_ = bitset_->find_next( index_ );
+        return * this;
+    }
+
+    [[nodiscard]] SetBitIteratorT operator++( int )
+    {
+        SetBitIteratorT ret = *this;
+        operator++();
+        return ret;
+    }
+
+    [[nodiscard]] const T * bitset() const { return bitset_; }
+    [[nodiscard]] reference operator *() const { return index_; }
+
+    [[nodiscard]] friend bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b ) { return *a == *b; }
+
+private:
+    const T * bitset_ = nullptr;
+    IndexType index_ = IndexType( ~size_t( 0 ) );
+};
+
+/// std::vector<bool> like container (random-access, size_t - index type, bool - value type)
+/// with all bits after size() considered off during testing
+class BitSet
+{
+public:
+    using block_type = std::uint64_t;
+    inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
+    inline static constexpr size_t npos = (size_t)-1;
+
+    using size_type = size_t;
     using IndexType = size_t;
 
-    /// creates bitset of given size filled with given value
-    explicit BitSet( size_t numBits, bool fillValue ) { resize( numBits, fillValue ); }
+    /// creates empty bitset
+    BitSet() noexcept = default;
 
-    /// prohibit these constructors inherited from boost::dynamic_bitset, which can initialize only few initial bits
-    explicit BitSet( size_t, unsigned long ) = delete;
-    template<class T, std::enable_if_t<std::is_arithmetic<T>::value, std::nullptr_t> = nullptr>
-    explicit BitSet( T, T ) = delete;
+    /// creates bitset of given size filled with given value
+    explicit BitSet( size_t numBits, bool fillValue = false ) { resize( numBits, fillValue ); }
+
+    /// creates bitset from the given blocks of bits
+    static BitSet fromBlocks( std::vector<block_type> && blocks )
+    {
+        BitSet res;
+        res.blocks_ = std::move( blocks );
+        res.numBits_ = res.blocks_.size() * bits_per_block;
+        return res;
+    }
+
+    void reserve( size_type numBits ) { blocks_.reserve( calcNumBlocks_( numBits ) ); }
+    MRMESH_API void resize( size_type numBits, bool fillValue = false );
+    void clear() { numBits_ = 0; blocks_.clear(); }
+    void shrink_to_fit() { blocks_.shrink_to_fit(); }
+
+    [[nodiscard]] bool empty() const noexcept { return numBits_ == 0; }
+    [[nodiscard]] size_type size() const noexcept { return numBits_; }
+    [[nodiscard]] size_type num_blocks() const noexcept { return blocks_.size(); }
+    [[nodiscard]] size_type capacity() const noexcept { return blocks_.capacity() * bits_per_block; }
+
+    [[nodiscard]] bool uncheckedTest( IndexType n ) const { assert( n < size() ); return blocks_[blockIndex_( n )] & bitMask_( n ); }
+    [[nodiscard]] bool uncheckedTestSet( IndexType n, bool val = true ) { assert( n < size() ); bool b = uncheckedTest( n ); if ( b != val ) set( n, val ); return b; }
 
     // all bits after size() we silently consider as not-set
-    [[nodiscard]] bool test( IndexType n ) const { return n < size() && base::test( n ); }
-    [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? base::test_set( n, val ) : false; }
+    [[nodiscard]] bool test( IndexType n ) const { return n < size() ? uncheckedTest( n ) : false; } // return n < size() && uncheckedTest( n ); was compiled with extra conditional jump inside uncheckedTest() by MSVC
+    [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return ( val || n < size() ) ? uncheckedTestSet( n, val ) : false; }
 
-    BitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    BitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
-    BitSet & set() { base::set(); return * this; }
-    BitSet & reset( IndexType n, size_type len ) { if ( n < size() ) base::reset( n, len ); return * this; }
-    BitSet & reset( IndexType n ) { if ( n < size() ) base::reset( n ); return * this; }
-    BitSet & reset() { base::reset(); return * this; }
-    BitSet & flip( IndexType n, size_type len ) { base::flip( n, len ); return * this; }
-    BitSet & flip( IndexType n ) { base::flip( n ); return * this; }
-    BitSet & flip() { base::flip(); return * this; }
+    MRMESH_API BitSet & set( IndexType n, size_type len, bool val );
+    BitSet & set( IndexType n, bool val ) { return val ? set( n ) : reset( n ); } // Not using a default argument for `val` to get better C bindings.
+    BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] |= bitMask_( n ); return * this; }
+    MRMESH_API BitSet & set();
+
+    MRMESH_API BitSet & reset( IndexType n, size_type len );
+    BitSet & reset( IndexType n ) { if ( n < size() ) blocks_[blockIndex_( n )] &= ~bitMask_( n ); return * this; }
+    MRMESH_API BitSet & reset();
+
+    MRMESH_API BitSet & flip( IndexType n, size_type len );
+    BitSet & flip( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] ^= bitMask_( n ); return * this; }
+    MRMESH_API BitSet & flip();
+
+    /// changes the order of bits on the opposite
+    MRMESH_API void reverse();
+
+    /// adds one more bit with the given value in the container, increasing its size on 1
+    void push_back( bool val ) { auto n = numBits_++; if ( bitIndex_( n ) == 0 ) blocks_.push_back( block_type{} ); set( n, val ); }
+
+    /// removes last bit from the container, decreasing its size on 1
+    void pop_back() { assert( numBits_ > 0 ); { if ( bitIndex_( numBits_ ) == 1 ) blocks_.pop_back(); else reset( numBits_ - 1 ); } --numBits_; }
 
     /// read-only access to all bits stored as a vector of uint64 blocks
-    const auto & bits() const { return m_bits; }
+    [[nodiscard]] const auto & bits() const { return blocks_; }
 
     MRMESH_API BitSet & operator &= ( const BitSet & b );
     MRMESH_API BitSet & operator |= ( const BitSet & b );
@@ -63,11 +140,44 @@ public:
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     MRMESH_API BitSet & subtract( const BitSet & b, int bShiftInBlocks );
 
-    /// return the highest index i such as bit i is set, or npos if *this has no on bits.
+    /// returns true if all bits in this container are set
+    [[nodiscard]] MRMESH_API bool all() const;
+
+    /// returns true if at least one bits in this container is set
+    [[nodiscard]] MRMESH_API bool any() const;
+
+    /// returns true if all bits in this container are reset
+    [[nodiscard]] bool none() const { return !any(); }
+
+    /// computes the number of set bits in the whole set
+    [[nodiscard]] MRMESH_API size_type count() const noexcept;
+
+    /// return the smallest index i such that bit i is set, or npos if *this has no on bits.
+    [[nodiscard]] IndexType find_first() const { return findSetBitAfter_( 0 ); }
+
+    /// return the smallest index i>n such that bit i is set, or npos if *this has no on bits.
+    [[nodiscard]] IndexType find_next( IndexType n ) const { return findSetBitAfter_( n + 1 ); }
+
+    /// return the highest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] MRMESH_API IndexType find_last() const;
+
+    /// return the smallest index i such that bit i is NOT set, or npos if *this has no off bits.
+    [[nodiscard]] IndexType find_first_not_set() const { return findNonSetBitAfter_( 0 ); }
+
+    /// return the smallest index i>n such that bit i is NOT set, or npos if *this has no off bits.
+    [[nodiscard]] IndexType find_next_not_set( IndexType n ) const { return findNonSetBitAfter_( n + 1 ); }
+
+    /// return the highest index i such that bit i is NOT set, or npos if *this has no off bits.
+    [[nodiscard]] MRMESH_API IndexType find_last_not_set() const;
 
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or npos if there are less bit set
     [[nodiscard]] MRMESH_API size_t nthSetBit( size_t n ) const;
+
+    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    [[nodiscard]] MRMESH_API bool is_subset_of( const BitSet& a ) const;
+
+    /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
+    [[nodiscard]] MRMESH_API bool intersects( const BitSet & a ) const;
 
     /// doubles reserved memory until resize(newSize) can be done without reallocation
     void resizeWithReserve( size_t newSize )
@@ -110,23 +220,58 @@ public:
     [[nodiscard]] static IndexType beginId() { return IndexType{ 0 }; }
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
 
-    // Normally those are inherited from `boost::dynamic_bitset`, but MRBind currently chokes on it, so we provide those manually.
-    #if defined(MR_PARSING_FOR_PB11_BINDINGS) || defined(MR_COMPILING_PB11_BINDINGS)
-    std::size_t size() const { return dynamic_bitset::size(); }
-    std::size_t count() const { return dynamic_bitset::count(); }
-    void resize( std::size_t num_bits, bool value = false ) { dynamic_bitset::resize( num_bits, value ); }
-    void clear() { dynamic_bitset::clear(); }
-    void push_back( bool bit ) { dynamic_bitset::push_back( bit ); }
-    void pop_back() { dynamic_bitset::pop_back(); }
-    #endif
+private:
+    /// minimal number of blocks to store the given number of bits
+    [[nodiscard]] static size_type calcNumBlocks_( size_type numBits ) noexcept { return ( numBits + bits_per_block - 1 ) / bits_per_block; }
+
+    /// the block containing the given bit
+    [[nodiscard]] static size_type blockIndex_( IndexType n ) noexcept { return n / bits_per_block; }
+
+    /// the bit's shift within its block
+    [[nodiscard]] static size_type bitIndex_( IndexType n ) noexcept { return n % bits_per_block; }
+
+    /// block's mask with 1 at given bit's position and 0 at all other positions
+    [[nodiscard]] static block_type bitMask_( IndexType n ) noexcept { return block_type( 1 ) << bitIndex_( n ); }
+
+    /// block's mask with 1 at [firstBit, lastBit) positions and 0 at all other positions
+    [[nodiscard]] static block_type bitMask_( IndexType firstBit, IndexType lastBit ) noexcept
+    {
+        return ( ( block_type( 1 ) << firstBit ) - 1 ) // set all bits in [0, firstBit)
+            ^ //xor
+            ( lastBit == bits_per_block ? ~block_type{} : ( ( block_type( 1 ) << lastBit ) - 1 ) ); // set all bits in [0, lastBit)
+    }
+
+    /// set all unused bits in the last block to one
+    MRMESH_API void setUnusedBits_();
+
+    /// set all unused bits in the last block to zero
+    MRMESH_API void resetUnusedBits_();
+
+    /// performes some operation on [n, n+len) bits;
+    /// calls block = FullBlock( block ) for every block fully in range;
+    /// calls block = PartialBlock( block, firstBit, lastBit ) function for all blocks with only [firstBit, lastBit) in range;
+    template<class FullBlock, class PartialBlock>
+    BitSet & rangeOp_( IndexType n, size_type len, FullBlock&&, PartialBlock&& );
+
+    /// return the smallest index i>=n such that bit i is set, or npos if *this has no on bits.
+    MRMESH_API IndexType findSetBitAfter_( IndexType n ) const;
+
+    /// return the smallest index i>=n such that bit i is not set, or npos if *this has no off bits.
+    MRMESH_API IndexType findNonSetBitAfter_( IndexType n ) const;
+
+    MRMESH_API friend std::ostream& operator<<( std::ostream& s, const BitSet & bs );
+    MRMESH_API friend std::istream& operator>>( std::istream& s, BitSet & bs );
+
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const BitSet & a ) { return SetBitIteratorT<BitSet>(a); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const BitSet & ) { return SetBitIteratorT<BitSet>(); }
 
 private:
-    using base::m_highest_block;
-    using base::m_bits;
-    using base::m_num_bits;
+    std::vector<block_type> blocks_;
+    size_type numBits_ = 0;
 };
 
-/// container of bits representing specific indices (faces, verts or edges)
+/// Vector<bool, I> like container (random-access, I - index type, bool - value type)
+/// with all bits after size() considered off during testing
 template <typename I>
 class TypedBitSet : public BitSet
 {
@@ -142,7 +287,8 @@ public:
     explicit TypedBitSet( BitSet && src ) : BitSet( std::move( src ) ) {}
 
     TypedBitSet & set( IndexType n, size_type len, bool val ) { base::set( n, len, val ); return * this; }
-    TypedBitSet & set( IndexType n, bool val = true ) { base::set( n, val ); return * this; }
+    TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
+    TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
     TypedBitSet & set() { base::set(); return * this; }
     TypedBitSet & reset( IndexType n, size_type len ) { base::reset( n, len ); return * this; }
     TypedBitSet & reset( IndexType n ) { base::reset( n ); return * this; }
@@ -153,13 +299,12 @@ public:
     [[nodiscard]] bool test( IndexType n ) const { return base::test( n ); }
     [[nodiscard]] bool test_set( IndexType n, bool val = true ) { return base::test_set( n, val ); }
 
-    // Disable for python bindings, because MRBind chokes on `boost::dynamic_bitset::reference`.
-    [[nodiscard]] MR_BIND_IGNORE reference operator[]( IndexType pos ) { return base::operator[]( pos ); }
-    [[nodiscard]] bool operator[]( IndexType pos ) const { return base::operator[]( pos ); }
-
     [[nodiscard]] IndexType find_first() const { return IndexType( base::find_first() ); }
     [[nodiscard]] IndexType find_next( IndexType pos ) const { return IndexType( base::find_next( pos ) ); }
     [[nodiscard]] IndexType find_last() const { return IndexType( base::find_last() ); }
+    [[nodiscard]] IndexType find_first_not_set() const { return IndexType( base::find_first_not_set() ); }
+    [[nodiscard]] IndexType find_next_not_set( IndexType pos ) const { return IndexType( base::find_next_not_set( pos ) ); }
+    [[nodiscard]] IndexType find_last_not_set() const { return IndexType( base::find_last_not_set() ); }
     /// returns the location of nth set bit (where the first bit corresponds to n=0) or IndexType(npos) if there are less bit set
     [[nodiscard]] IndexType nthSetBit( size_t n ) const { return IndexType( base::nthSetBit( n ) ); }
 
@@ -173,17 +318,27 @@ public:
     [[nodiscard]] friend TypedBitSet operator ^ ( const TypedBitSet & a, const TypedBitSet & b ) { auto res{ a }; res ^= b; return res; }
     [[nodiscard]] friend TypedBitSet operator - ( const TypedBitSet & a, const TypedBitSet & b ) { auto res{ a }; res -= b; return res; }
 
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator & ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a &= b ); }
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator | ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a |= b ); }
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator ^ ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a ^= b ); }
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator - ( TypedBitSet && a, const TypedBitSet & b ) { return std::move( a -= b ); }
+
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator & ( const TypedBitSet & a, TypedBitSet && b ) { return std::move( b &= a ); }
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator | ( const TypedBitSet & a, TypedBitSet && b ) { return std::move( b |= a ); }
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator ^ ( const TypedBitSet & a, TypedBitSet && b ) { return std::move( b ^= a ); }
+
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator & ( TypedBitSet && a, TypedBitSet && b ) { return std::move( a &= b ); }
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator | ( TypedBitSet && a, TypedBitSet && b ) { return std::move( a |= b ); }
+    [[nodiscard]] MR_BIND_IGNORE friend TypedBitSet operator ^ ( TypedBitSet && a, TypedBitSet && b ) { return std::move( a ^= b ); }
+
     /// subtracts b from this, considering that bits in b are shifted right on bShiftInBlocks*bits_per_block
     TypedBitSet & subtract( const TypedBitSet & b, int bShiftInBlocks ) { base::subtract( b, bShiftInBlocks ); return * this; }
 
     /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set. Otherwise this function returns false.
-    bool is_subset_of( const TypedBitSet& a ) const { return base::is_subset_of( a ); }
-
-    /// returns true if, for every bit that is set in this bitset, the corresponding bit in bitset a is also set and if this->count() < a.count(). Otherwise this function returns false.
-    bool is_proper_subset_of( const TypedBitSet& a ) const { return base::is_proper_subset_of( a ); }
+    [[nodiscard]] bool is_subset_of( const TypedBitSet& a ) const { return base::is_subset_of( a ); }
 
     /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
-    bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
+    [[nodiscard]] bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
 
     void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
     void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
@@ -212,6 +367,9 @@ public:
     /// [beginId(), endId()) is the range of all bits in the set
     [[nodiscard]] static IndexType beginId() { return IndexType{ size_t( 0 ) }; }
     [[nodiscard]] IndexType endId() const { return IndexType{ size() }; }
+
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const TypedBitSet & a ) { return SetBitIteratorT<TypedBitSet>(a); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const TypedBitSet & ) { return SetBitIteratorT<TypedBitSet>(); }
 };
 
 
@@ -255,77 +413,27 @@ template <typename I>
     return id.valid() && bitset.test( id );
 }
 
-/// iterator to enumerate all indices with set bits in BitSet class or its derivatives
-template <typename T>
-class MR_BIND_IGNORE SetBitIteratorT
+
+/// for each set bit of input bitset, writes its sequential number starting from 0 in the given vector that shall have appropriate size
+template <typename I>
+void fillVectorWithSeqNums( const TypedBitSet<I> & bs, Vector<int, I> & vec )
 {
-public:
-    using IndexType = typename T::IndexType;
-
-    using iterator_category = std::forward_iterator_tag;
-    using value_type        = IndexType;
-    using difference_type   = std::ptrdiff_t;
-    using reference         = const IndexType; ///< intentionally not a reference
-    using pointer           = const IndexType *;
-
-    /// constructs end iterator
-    SetBitIteratorT() = default;
-    /// constructs begin iterator
-    SetBitIteratorT( const T & bitset )
-        : bitset_( &bitset ), index_( bitset.find_first() )
-    {
-    }
-    SetBitIteratorT & operator++( )
-    {
-        index_ = bitset_->find_next( index_ );
-        return * this;
-    }
-    [[nodiscard]] SetBitIteratorT operator++( int )
-    {
-        SetBitIteratorT ret = *this;
-        operator++();
-        return ret;
-    }
-
-    [[nodiscard]] const T * bitset() const { return bitset_; }
-    [[nodiscard]] reference operator *() const { return index_; }
-
-private:
-    const T * bitset_ = nullptr;
-    IndexType index_ = IndexType( ~size_t( 0 ) );
-};
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator ==( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a == *b; }
-
-template <typename T>
-[[nodiscard]] MR_BIND_IGNORE inline bool operator !=( const SetBitIteratorT<T> & a, const SetBitIteratorT<T> & b )
-    { return *a != *b; }
-
-
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( const BitSet & a )
-    { return SetBitIteratorT<BitSet>(a); }
-[[nodiscard]] MR_BIND_IGNORE inline auto end( const BitSet & )
-    { return SetBitIteratorT<BitSet>(); }
-
-template <typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto begin( const TypedBitSet<I> & a )
-    { return SetBitIteratorT<TypedBitSet<I>>(a); }
-template <typename I>
-[[nodiscard]] MR_BIND_IGNORE inline auto end( const TypedBitSet<I> & )
-    { return SetBitIteratorT<TypedBitSet<I>>(); }
+    int n = 0;
+    for ( auto v : bs )
+        vec[v] = n++;
+}
 
 /// creates a Vector where for each set bit of input bitset its sequential number starting from 0 is returned; and -1 for reset bits
 template <typename I>
 [[nodiscard]] Vector<int, I> makeVectorWithSeqNums( const TypedBitSet<I> & bs )
 {
     Vector<int, I> res( bs.size(), -1 );
-    int n = 0;
-    for ( auto v : bs )
-        res[v] = n++;
+    fillVectorWithSeqNums( bs, res );
     return res;
 }
+
+/// creates a HashMap where for each set bit of input bitset its sequential number starting from 0 is returned
+[[nodiscard]] MRMESH_API HashMap<size_t, size_t> makeHashMapWithSeqNums( const BitSet & bs );
 
 /// creates a HashMap where for each set bit of input bitset its sequential number starting from 0 is returned
 template <typename I>
@@ -367,6 +475,19 @@ template <typename M>
 [[nodiscard]] inline BitSet operator | ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res |= b; return res; }
 [[nodiscard]] inline BitSet operator ^ ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res ^= b; return res; }
 [[nodiscard]] inline BitSet operator - ( const BitSet & a, const BitSet & b ) { BitSet res{ a }; res -= b; return res; }
+
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator & ( BitSet && a, const BitSet & b ) { return std::move( a &= b ); }
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator | ( BitSet && a, const BitSet & b ) { return std::move( a |= b ); }
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator ^ ( BitSet && a, const BitSet & b ) { return std::move( a ^= b ); }
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator - ( BitSet && a, const BitSet & b ) { return std::move( a -= b ); }
+
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator & ( const BitSet & a, BitSet && b ) { return std::move( b &= a ); }
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator | ( const BitSet & a, BitSet && b ) { return std::move( b |= a ); }
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator ^ ( const BitSet & a, BitSet && b ) { return std::move( b ^= a ); }
+
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator & ( BitSet && a, BitSet && b ) { return std::move( a &= b ); }
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator | ( BitSet && a, BitSet && b ) { return std::move( a |= b ); }
+[[nodiscard]] MR_BIND_IGNORE inline BitSet operator ^ ( BitSet && a, BitSet && b ) { return std::move( a ^= b ); }
 
 /// \}
 

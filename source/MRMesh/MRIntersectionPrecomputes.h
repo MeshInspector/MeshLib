@@ -5,6 +5,10 @@
 
 #if defined(__x86_64__) || defined(_M_X64)
 #include <xmmintrin.h> //SSE instructions
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#include <arm_neon.h> //NEON instructions
+#elif defined(__wasm_simd128__)
+#include <wasm_simd128.h> //Wasm SIMD instructions
 #endif
 
 namespace MR
@@ -116,7 +120,7 @@ template<typename T>
 struct IntersectionPrecomputes
 {
     // {1 / dir}
-    Vector3<T> invDir;
+    MR_BIND_IGNORE Vector3<T> invDir;
     // [0]max, [1]next, [2]next-next
     // f.e. {1,2,-3} => {2,1,0}
     int maxDimIdxZ = 2;
@@ -124,7 +128,7 @@ struct IntersectionPrecomputes
     int idxY = 1;
 
     /// stores signs of direction vector;
-    Vector3i sign;
+    MR_BIND_IGNORE Vector3i sign;
 
     /// precomputed factors
     T Sx, Sy, Sz;
@@ -153,7 +157,7 @@ struct IntersectionPrecomputes
 template<>
 struct IntersectionPrecomputes<float>
 {
-    // {1.f / dir}
+    // {1.f / dir} in the first three lanes, the last one is unused
     MR_BIND_IGNORE __m128 invDir;
     // [0]max, [1]next, [2]next-next
     // f.e. {1,2,-3} => {2,1,0}
@@ -162,7 +166,8 @@ struct IntersectionPrecomputes<float>
     int idxY = 1;
 
     /// precomputed factors
-    float Sx, Sy, Sz;
+    MR_BIND_IGNORE float Sx, Sy, Sz;
+
     IntersectionPrecomputes() = default;
     IntersectionPrecomputes( const Vector3<float>& dir )
     {
@@ -173,6 +178,48 @@ struct IntersectionPrecomputes<float>
         Sz = float( 1 ) / dir[maxDimIdxZ];
 
         invDir = _mm_set_ps(
+            1,
+            ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
+            ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
+            ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x );
+    }
+
+};
+
+/* CPU(ARM64) - AArch64 */
+#elif defined(__aarch64__) || defined(_M_ARM64)
+
+/// packs three coordinates and one extra component in a NEON register
+MR_BIND_IGNORE inline float32x4_t toFloat32x4( float x, float y, float z, float w )
+{
+    const float a[4] = { x, y, z, w };
+    return vld1q_f32( a );
+}
+
+template<>
+struct IntersectionPrecomputes<float>
+{
+    // {1.f / dir} in the first three lanes, 1 in the last one
+    MR_BIND_IGNORE float32x4_t invDir;
+    // [0]max, [1]next, [2]next-next
+    // f.e. {1,2,-3} => {2,1,0}
+    int maxDimIdxZ = 2;
+    int idxX = 0;
+    int idxY = 1;
+
+    /// precomputed factors
+    MR_BIND_IGNORE float Sx, Sy, Sz;
+
+    IntersectionPrecomputes() = default;
+    IntersectionPrecomputes( const Vector3<float>& dir )
+    {
+        findMaxVectorDim( idxX, idxY, maxDimIdxZ, dir );
+
+        Sx = dir[idxX] / dir[maxDimIdxZ];
+        Sy = dir[idxY] / dir[maxDimIdxZ];
+        Sz = float( 1 ) / dir[maxDimIdxZ];
+
+        invDir = toFloat32x4(
             ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
             ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
             ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
@@ -181,9 +228,44 @@ struct IntersectionPrecomputes<float>
 
 };
 
-/// \}
+/* Wasm SIMD */
+#elif defined(__wasm_simd128__)
+template<>
+struct IntersectionPrecomputes<float>
+{
+    // {1.f / dir} in the first three lanes, the last one is unused
+    MR_BIND_IGNORE v128_t invDir;
+    // [0]max, [1]next, [2]next-next
+    // f.e. {1,2,-3} => {2,1,0}
+    int maxDimIdxZ = 2;
+    int idxX = 0;
+    int idxY = 1;
+
+    /// precomputed factors
+    MR_BIND_IGNORE float Sx, Sy, Sz;
+
+    IntersectionPrecomputes() = default;
+    IntersectionPrecomputes( const Vector3<float>& dir )
+    {
+        findMaxVectorDim( idxX, idxY, maxDimIdxZ, dir );
+
+        Sx = dir[idxX] / dir[maxDimIdxZ];
+        Sy = dir[idxY] / dir[maxDimIdxZ];
+        Sz = float( 1 ) / dir[maxDimIdxZ];
+
+        invDir = wasm_f32x4_make(
+            ( dir.x == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.x,
+            ( dir.y == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.y,
+            ( dir.z == 0 ) ? std::numeric_limits<float>::max() : 1 / dir.z,
+            1 );
+    }
+
+};
 
 #else
     #pragma message("IntersectionPrecomputes<float>: no hardware optimized instructions")
 #endif
+
+/// \}
+
 }

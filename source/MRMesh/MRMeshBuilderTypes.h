@@ -7,7 +7,7 @@ namespace MR
 {
 
 /// three vector3-coordinates describing a triangle geometry
-using ThreePoints [[deprecated]] = std::array<Vector3f, 3>;
+using ThreePoints [[deprecated]] MR_BIND_IGNORE = std::array<Vector3f, 3>;
 
 namespace MeshBuilder
 {

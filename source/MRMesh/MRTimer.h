@@ -17,10 +17,14 @@ class MR_BIND_IGNORE Timer
 {
 public:
     Timer( std::string name ) { start( std::move( name ) ); }
+    /// the name is converted in std::string only if the timing is enabled in this thread,
+    /// which is not the case in parallel worker threads, where MR_TIMER then costs nothing
+    Timer( const char * name ) { start( name ); }
     ~Timer() { finish(); }
 
     MRMESH_API void restart( std::string name );
     MRMESH_API void start( std::string name );
+    MRMESH_API void start( const char * name );
     MRMESH_API void finish();
 
     Timer( const Timer & ) = delete;
@@ -50,5 +54,9 @@ MRMESH_API void printTimingTree( double minTimeSec = 0.1 );
 
 } // namespace MR
 
+#ifdef __GNUC__ // __FUNCTION__ in GCC/Clang returns only short function name without class name and template parameters
+#define MR_TIMER MR::Timer _timer( __PRETTY_FUNCTION__ )
+#else
 #define MR_TIMER MR::Timer _timer( __FUNCTION__ )
+#endif
 #define MR_NAMED_TIMER(name) MR::Timer _named_timer( name )

@@ -3,15 +3,18 @@
 #include "MRImGui.h"
 #include "MRRibbonConstants.h"
 #include "ImGuiHelpers.h"
+#include "MRImGuiMultiViewport.h"
 #include "MRRibbonButtonDrawer.h"
 #include "MRRibbonSchema.h"
 #include "MRColorTheme.h"
 #include "MRRibbonMenu.h"
 #include "MRMesh/MRVector2.h"
-#include "imgui_internal.h"
 #include "MRUIStyle.h"
 #include "MRViewer.h"
+#include "MRRibbonFontHolder.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRI18n.h"
+#include <imgui_internal.h>
 
 namespace MR
 {
@@ -28,8 +31,6 @@ void Toolbar::openCustomize()
 void Toolbar::setRibbonMenu( RibbonMenu* ribbonMenu )
 {
     ribbonMenu_ = ribbonMenu;
-    if ( ribbonMenu_ )
-        setScaling( ribbonMenu_->menu_scaling() );
 }
 
 void Toolbar::drawToolbar()
@@ -38,11 +39,10 @@ void Toolbar::drawToolbar()
         return;
 
     const auto& buttonDrawer = ribbonMenu_->getRibbonButtonDrawer();
-    const auto& fontManager = ribbonMenu_->getFontManager();
 
-    auto windowPadding = ImVec2( 12 * scaling_, 4 * scaling_ );
-    auto itemSpacing = ImVec2( 12 * scaling_, 0 );
-    const ImVec2 itemSize = { cQuickAccessBarHeight * scaling_ - 2.0f * windowPadding.y, cQuickAccessBarHeight * scaling_ - 2.0f * windowPadding.y };
+    auto windowPadding = ImVec2( 12 * UI::scale(), 4 * UI::scale() );
+    auto itemSpacing = ImVec2( 12 * UI::scale(), 0 );
+    const ImVec2 itemSize = { cQuickAccessBarHeight * UI::scale() - 2.0f * windowPadding.y, cQuickAccessBarHeight * UI::scale() - 2.0f * windowPadding.y };
     const ImVec2 customizeBtnSize = ImVec2( itemSize.x / 2.f, itemSize.y );
 
     int itemCount = 0;
@@ -82,15 +82,15 @@ void Toolbar::drawToolbar()
     const float windowPosX = std::max( getViewerInstance().framebufferSize.x / 2.f - currentWidth_ / 2.f, sceneSize.x - 1.0f );
 
     const int currentTopPanelHeight = ribbonMenu_->getTopPanelCurrentHeight();
-    ImGui::SetNextWindowPos( ImVec2( windowPosX, float( currentTopPanelHeight ) * scaling_ - 1 ) );
-    ImGui::SetNextWindowSize( ImVec2( currentWidth_, cQuickAccessBarHeight * scaling_ ), ImGuiCond_Always );
+    ImGuiMV::SetNextWindowPosMainViewport( ImVec2( windowPosX, float( currentTopPanelHeight ) * UI::scale() - 1 ) );
+    ImGui::SetNextWindowSize( ImVec2( currentWidth_, cQuickAccessBarHeight * UI::scale() ), ImGuiCond_Always );
 
     ImGui::PushStyleColor( ImGuiCol_WindowBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
     ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, itemSpacing );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPadding );
     ImGui::PushStyleVar( ImGuiStyleVar_WindowBorderSize, 1.0f );
     ImGui::Begin(
-        "QuickAccess##[rect_allocator_ignore]", nullptr,
+        "Toolbar##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoFocusOnAppearing
     );
@@ -99,7 +99,7 @@ void Toolbar::drawToolbar()
 
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
 
-    ImGui::PushFont( fontManager.getFontByType( RibbonFontManager::FontType::Small ) );
+    RibbonFontHolder smallFont( RibbonFontManager::FontType::Small );
     UI::TestEngine::pushTree( "Toolbar" );
     for ( const auto& item : itemsList_ )
     {
@@ -143,7 +143,6 @@ void Toolbar::drawToolbar()
         buttonDrawer.drawCustomButtonItem( activeListIt->second, cParams, params );
         ImGui::SameLine();
     }
-    UI::TestEngine::popTree(); // "Toolbar"
 
     ImGui::SetCursorPosX( ImGui::GetCursorPosX() - ImGui::GetStyle().ItemSpacing.x / 2.f );
 
@@ -152,40 +151,33 @@ void Toolbar::drawToolbar()
     ImGui::PushStyleColor( ImGuiCol_Button, Color( 0, 0, 0, 0 ).getUInt32() );
     ImGui::PushStyleColor( ImGuiCol_Text, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Text ).getUInt32() );
 
-    ImFont* font = RibbonFontManager::getFontByTypeStatic( RibbonFontManager::FontType::Icons );
-    if ( font )
-    {
-        font->Scale = customizeBtnSize.y * 0.5f / ( cBigIconSize * scaling_ );
-        ImGui::PushFont( font );
-    }
+    RibbonFontHolder iconsFont( RibbonFontManager::FontType::Icons, customizeBtnSize.y * 0.5f / ( cBigIconSize * UI::scale() ) );
 
     const char* text = "\xef\x85\x82";
     auto textSize = ImGui::CalcTextSize( text );
     auto textPos = ImVec2( ImGui::GetCursorPosX() + ( customizeBtnSize.x - textSize.x ) / 2.f,
                            ImGui::GetCursorPosY() + ( customizeBtnSize.y - textSize.y ) / 2.f );
-    if ( ImGui::Button( "##ToolbarCustomizeBtn", customizeBtnSize ) )
+    if ( UI::buttonEx( "##ToolbarCustomizeBtn", customizeBtnSize, { .forceImGuiBackground = true } ) )
         openCustomize();
+
+    UI::TestEngine::popTree(); // "Toolbar"
 
     ImGui::SetCursorPos( textPos );
     ImGui::Text( "%s", text );
 
-    if ( font )
-    {
-        ImGui::PopFont();
-        font->Scale = 1.0f;
-    }
+    iconsFont.popFont();
 
     ImGui::PopStyleColor( 4 );
 
     ImGui::PopStyleVar();
-    ImGui::PopFont();
+    smallFont.popFont();
 
     ImGui::End();
 }
 
 void Toolbar::drawCustomize()
 {
-    ImGui::SetNextWindowPos( ImVec2( -100, -100 ) );
+    ImGuiMV::SetNextWindowPosMainViewport( ImVec2( -100, -100 ) );
     ImGui::SetNextWindowSize( ImVec2( 1, 1 ) );
     ImGui::Begin( "Toolbar Customize##BaseWindow", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs );
     UI::TestEngine::pushTree( "Toolbar Customize" );
@@ -222,20 +214,21 @@ void Toolbar::drawCustomizeModal_()
 
     const auto& buttonDrawer = ribbonMenu_->getRibbonButtonDrawer();
 
-    ImVec2 windowPaddingSize = ImVec2( 3 * cDefaultItemSpacing * scaling_, 3 * cDefaultItemSpacing * scaling_ );
-    ImVec2 childWindowPadding = ImVec2( 12 * scaling_, 4 * scaling_ );
-    ImVec2 itemSpacing = ImVec2( 12 * scaling_, 0 );
-    const ImVec2 smallItemSize = { cQuickAccessBarHeight * scaling_ - 2.0f * childWindowPadding.y, cQuickAccessBarHeight * scaling_ - 2.0f * childWindowPadding.y };
+    ImVec2 windowPaddingSize = ImVec2( 3 * cDefaultItemSpacing * UI::scale(), 3 * cDefaultItemSpacing * UI::scale() );
+    ImVec2 childWindowPadding = ImVec2( 12 * UI::scale(), 4 * UI::scale() );
+    ImVec2 itemSpacing = ImVec2( 12 * UI::scale(), 0 );
+    const ImVec2 smallItemSize = { cQuickAccessBarHeight * UI::scale() - 2.0f * childWindowPadding.y, cQuickAccessBarHeight * UI::scale() - 2.0f * childWindowPadding.y };
 
     const int virtualMaxItemCount = std::max( maxItemCount_, 14 );
     const float itemsWindowWidth = childWindowPadding.x * 2
         + smallItemSize.x * virtualMaxItemCount
         + itemSpacing.x * ( virtualMaxItemCount - 1 );
 
-    ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 530 * scaling_ );
+    ImVec2 windowSize( itemsWindowWidth + windowPaddingSize.x * 2, 530 * UI::scale() );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos( center, ImGuiCond_Appearing, ImVec2( 0.5f, 0.5f ) );
+    ImGui::SetNextWindowViewport( ImGui::GetMainViewport()->ID );
     ImGui::SetNextWindowSizeConstraints( ImVec2( windowSize.x, -1 ), ImVec2( windowSize.x, 0 ) );
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, windowPaddingSize );
@@ -245,7 +238,7 @@ void Toolbar::drawCustomizeModal_()
         return;
     }
 
-    bool shouldClose = ImGui::ModalBigTitle( "Customize Viewport Toolbar", scaling_ );
+    bool shouldClose = ImGui::ModalBigTitle( _tr( "Customize Viewport Toolbar" ) );
     if ( shouldClose )
         ImGui::CloseCurrentPopup();
 
@@ -256,14 +249,14 @@ void Toolbar::drawCustomizeModal_()
             searchString_.clear();
     };
 
-    ImGui::Text( "%s", "Select icons to show in Toolbar" );
+    ImGui::Text( "%s", _tr( "Select icons to show in Toolbar" ) );
 
     ImGui::SameLine();
     auto& style = ImGui::GetStyle();
-    float textPosX = windowSize.x - ImGui::CalcTextSize( "Icons in Toolbar : 00/00" ).x - style.WindowPadding.x;
+    float textPosX = windowSize.x - ( ImGui::CalcTextSize( _tr( "Icons in Toolbar" ) ).x + ImGui::CalcTextSize( " : 00/00" ).x ) - style.WindowPadding.x;
     ImGui::SetCursorPosX( textPosX );
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 12 * scaling_ ) );
-    ImGui::Text( "Icons in Toolbar : %02d/%02d", int( itemsListCustomize_.size() ), maxItemCount_ );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( 0, 12 * UI::scale() ) );
+    ImGui::Text( "%s : %02d/%02d", _tr( "Icons in Toolbar" ), int( itemsListCustomize_.size() ), maxItemCount_ );
     ImGui::PopStyleVar();
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, childWindowPadding );
@@ -272,11 +265,11 @@ void Toolbar::drawCustomizeModal_()
     DrawButtonParams params{ DrawButtonParams::SizeType::Small, smallItemSize, cMiddleIconSize, DrawButtonParams::RootType::Toolbar };
 
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::QuickAccessBackground ).getUInt32() );
-    ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), true );
+    ImGui::BeginChild( "##QuickAccessCustomizeItems", ImVec2( itemsWindowWidth, smallItemSize.y + childWindowPadding.y * 2 ), ImGuiChildFlags_Borders );
     ImGui::PopStyleColor();
 
-    ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 4 * scaling_ ) + Vector2f( params.itemSize ) );
-    Vector2f tooltipContourSize = Vector2f::diagonal( 2 * scaling_ ) + Vector2f( params.itemSize );
+    ImVec2 tooltipSize = ImVec2( Vector2f::diagonal( 4 * UI::scale() ) + Vector2f( params.itemSize ) );
+    Vector2f tooltipContourSize = Vector2f::diagonal( 2 * UI::scale() ) + Vector2f( params.itemSize );
     for ( int i = 0; i < itemsListCustomize_.size(); ++i )
     {
         const auto& itemPreview = itemsListCustomize_[i];
@@ -300,20 +293,21 @@ void Toolbar::drawCustomizeModal_()
         ImGui::SetNextItemAllowOverlap();
 
         ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2() );
-        ImGui::SetNextWindowSize( tooltipSize );
 
         ImGui::PushStyleColor( ImGuiCol_Border, 0 );
         ImGui::PushStyleColor( ImGuiCol_WindowBg, 0 );
         if ( ImGui::BeginDragDropSource( ImGuiDragDropFlags_AcceptNoDrawDefaultRect ) )
         {
+            ImGui::Dummy( tooltipSize );
+            ImGui::SetCursorPos( { 0, 0 } );
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
             const auto& item = itemsList_[i];
             auto iterItem = RibbonSchemaHolder::schema().items.find( item );
-            ImGui::SetCursorPos( ImVec2( 1 * scaling_, 1 * scaling_ ) );
+            ImGui::SetCursorPos( ImVec2( 1 * UI::scale(), 1 * UI::scale() ) );
             UI::button( "##ToolbarDragDropBtnHighlight", tooltipContourSize );
-            ImGui::SetCursorPos( ImVec2( 2 * scaling_, 2 * scaling_ ) );
+            ImGui::SetCursorPos( ImVec2( 2 * UI::scale(), 2 * UI::scale() ) );
             ImGui::Button( "##ToolbarDragDropBtn", params.itemSize);
-            ImGui::SetCursorPos( ImVec2( 2 * scaling_, 2 * scaling_ ) );
+            ImGui::SetCursorPos( ImVec2( 2 * UI::scale(), 2 * UI::scale() ) );
             if ( iterItem != RibbonSchemaHolder::schema().items.end() )
                 buttonDrawer.drawButtonIcon( iterItem->second, params );
             ImGui::EndDragDropSource();
@@ -355,11 +349,11 @@ void Toolbar::drawCustomizeModal_()
         ImGui::SetCursorPos( cursorPos );
 
         auto screenPos = Vector2f( ImGui::GetCursorScreenPos() );
-        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * scaling_ ), 10.f, 0.5f,
+        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * UI::scale() ), 10.f, 0.5f,
             ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ) );
         buttonDrawer.drawButtonIcon( iterItemPreview->second, params );
 
-        ImGui::SameLine( 0, childWindowPadding.x + 3 * scaling_ );
+        ImGui::SameLine( 0, childWindowPadding.x + 3 * UI::scale() );
     }
 
     for ( int i = int( itemsListCustomize_.size() ); i < maxItemCount_; ++i )
@@ -373,19 +367,19 @@ void Toolbar::drawCustomizeModal_()
         ImGui::Button( ( "##ItemBtn" + std::to_string( i ) ).c_str(), params.itemSize );
         ImGui::PopStyleVar();
         ImGui::PopStyleColor( 4 );
-        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * scaling_ ), 10.f, 0.5f,
+        dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * UI::scale() ), 10.f, 0.5f,
             ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ) );
 
         ImGui::SameLine( 0, childWindowPadding.x );
     }
 
     ImGui::PopStyleVar();
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 * scaling_ ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 * UI::scale() ) );
     ImGui::EndChild();
     ImGui::PopStyleVar();
 
-    float tabsListWidth = std::max( 130 * scaling_, ( itemsWindowWidth - childWindowPadding.x * 2 ) * 0.25f );
-    ImGui::BeginChild( "##QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ) );
+    float tabsListWidth = std::max( 130 * UI::scale(), ( itemsWindowWidth - childWindowPadding.x * 2 ) * 0.25f );
+    ImGui::BeginChild( "###QuickAccessCustomizeTabsList", ImVec2( tabsListWidth, -1 ), ImGuiChildFlags_Borders );
     drawCustomizeTabsList_();
     ImGui::EndChild();
 
@@ -394,11 +388,11 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
     ImGui::BeginChild( "##QuickAccessCustomizeAndSearch", ImVec2( -1, -1 ) );
     ImGui::PopStyleVar();
-    const float buttonWidth = cGradientButtonFramePadding * 2 * scaling_ + ImGui::CalcTextSize( "Reset to default" ).x;
+    const float buttonWidth = cGradientButtonFramePadding * 2 * UI::scale() + ImGui::CalcTextSize( _tr( "Reset to default" ) ).x;
     const float searchWidth = ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x - buttonWidth;
 
     ImGui::SetNextItemWidth( searchWidth );
-    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, 8 * scaling_ ) );
+    ImGui::PushStyleVar( ImGuiStyleVar_FramePadding, ImVec2( style.FramePadding.x, 8 * UI::scale() ) );
     if ( UI::inputText( "##QuickAccessSearch", searchString_ ) )
     {
         searchResult_.clear();
@@ -413,8 +407,8 @@ void Toolbar::drawCustomizeModal_()
     }
     ImGui::PopStyleVar();
     ImGui::SameLine();
-    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 * scaling_ ) );
-    if ( UI::button( "Reset to default", Vector2f( buttonWidth, 0 ) ) )
+    ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, ImVec2( ImGui::GetStyle().ItemSpacing.x, 12 * UI::scale() ) );
+    if ( UI::button( _tr( "Reset to default" ), Vector2f( buttonWidth, 0 ) ) )
     {
         resetItemsList();
         itemsListCustomize_ = itemsList_;
@@ -422,7 +416,7 @@ void Toolbar::drawCustomizeModal_()
     ImGui::PopStyleVar();
 
     ImGui::PushStyleColor( ImGuiCol_ChildBg, ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Background ).getUInt32() );
-    ImGui::BeginChild( "##QuickAccessCustomizeItemsList", ImVec2( -1, -1 ), true );
+    ImGui::BeginChild( "##QuickAccessCustomizeItemsList", ImVec2( -1, -1 ), ImGuiChildFlags_Borders );
     ImGui::PopStyleColor();
 
     drawCustomizeItemsList_();
@@ -503,7 +497,7 @@ void Toolbar::drawCustomizeTabsList_()
             ImGui::SameLine();
             ImVec2 pos = ImGui::GetCursorScreenPos();
             pos.y += circleShiftY;
-            ImGui::GetWindowDrawList()->AddCircleFilled( pos, 2 * scaling_, colorActive );
+            ImGui::GetWindowDrawList()->AddCircleFilled( pos, 2 * UI::scale(), colorActive );
             ImGui::NewLine();
         }
         if ( changedColor )

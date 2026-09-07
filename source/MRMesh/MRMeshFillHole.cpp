@@ -5,16 +5,25 @@
 #include "MRTimer.h"
 #include "MRRingIterator.h"
 #include "MRPlane3.h"
-#include "MRMeshBuilder.h"
 #include "MRMeshDelone.h"
-#include "MRHash.h"
 #include "MRMarkedContour.h"
-#include "MRGTest.h"
 #include "MRParallelFor.h"
+#include "MRFillContours2D.h"
+#include "MRAABBTreePoints.h"
+#include "MRPointsProject.h"
+#include "MRClosestPointInTriangle.h"
+#include "MRphmap.h"
 #include "MRPch/MRSpdlog.h"
-#include <parallel_hashmap/phmap.h>
+#include <tbb/parallel_for_each.h>
+#include <memory>
 #include <queue>
 #include <functional>
+
+namespace
+{
+// cMinSweptHoleSize: empirical is result of benchmarking on different hole sizes and threads nubmer
+constexpr int cMinSweptHoleSize = 14;
+}
 
 namespace MR
 {
@@ -48,7 +57,7 @@ bool operator<( const WeightedConn& left, const WeightedConn& right )
     return left.weight > right.weight;
 }
 
-typedef std::vector<std::vector<WeightedConn>> NewEdgesMap;
+typedef std::vector<std::vector<WeightedConn>> WeightedConnMap;
 
 bool sameEdgeExists( const MeshTopology& topology, EdgeId e1Org, EdgeId e2Org )
 {
@@ -111,8 +120,8 @@ void getOptimalSteps( std::vector<unsigned>& optimalSteps, unsigned start, unsig
 }
 
 // finds best candidate among all given steps
-void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,
-    const FillHoleMetric& metrics,
+void getTriangulationWeights( const MeshTopology& topology, const WeightedConnMap& map, const EdgePath& loop,
+    const FillHoleMetric& metrics, bool smoothBd,
     const std::vector<unsigned>& optimalStepsCache, WeightedConn& processedConn )
 {
     for ( unsigned s = 0; s < optimalStepsCache.size(); ++s )
@@ -140,7 +149,7 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
             VertId leftVert;
             if ( abConn.hasPrev() )
                 leftVert = topology.org( loop[abConn.prevA] );
-            else if ( topology.right( loop[processedConn.a] ) )
+            else if ( smoothBd && topology.right( loop[processedConn.a] ) )
                 leftVert = topology.dest( topology.prev( loop[processedConn.a] ) );
 
             if ( leftVert )
@@ -152,7 +161,7 @@ void getTriangulationWeights( const MeshTopology& topology, const NewEdgesMap& m
             VertId rightVert;
             if ( bcConn.hasPrev() )
                 rightVert = topology.org( loop[bcConn.prevA] );
-            else if ( topology.right( loop[v] ) )
+            else if ( smoothBd && topology.right( loop[v] ) )
                 rightVert = topology.dest( topology.prev( loop[v] ) );
 
             if ( rightVert )
@@ -180,7 +189,7 @@ using MapPatch = std::vector<MapPatchElement>;
 
 // this function go backward by given triangulation and tries to fix multiple edges
 // return false if triangulation has multiple edges that cannot be fixed
-bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const NewEdgesMap& map, const EdgePath& loop,  const FillHoleMetric& metricRef,
+bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const WeightedConnMap& map, const EdgePath& loop, const FillHoleMetric& metricRef, bool smoothBd,
     WeightedConn start, int maxPolygonSubdivisions, MapPatch& mapPatch )
 {
     MR_TIMER;
@@ -233,7 +242,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const N
             if ( optimalStepsCache.empty() )
                 return false;
             WeightedConn newPrev{ start.a,start.b,DBL_MAX,0 };
-            getTriangulationWeights( topology, map, loop, metricRef, optimalStepsCache, newPrev ); // find better among steps
+            getTriangulationWeights( topology, map, loop, metricRef, smoothBd, optimalStepsCache, newPrev ); // find better among steps
             if ( !newPrev.hasPrev() || !map[start.a][newPrev.prevA].hasPrev() || !map[start.prevA][newPrev.b].hasPrev() )
                 return false;
             start.prevA = newPrev.prevA;
@@ -251,7 +260,7 @@ bool removeMultipleEdgesFromTriangulation( const MeshTopology& topology, const N
 
 // add next candidate to queue
 void processCandidate( const Mesh& mesh, const WeightedConn& current,
-    std::priority_queue<WeightedConn>& queue, NewEdgesMap& map,
+    std::priority_queue<WeightedConn>& queue, WeightedConnMap& map,
     const std::vector<EdgeId>& aEdgesMap,
     const std::vector<EdgeId>& bEdgesMap,
     const FillHoleMetric& metrics,
@@ -363,7 +372,7 @@ void processCandidate( const Mesh& mesh, const WeightedConn& current,
     queue.push( nextConn );
 }
 
-void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
+void stitchHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
 {
     MR_TIMER;
     MR_WRITER( mesh );
@@ -378,7 +387,7 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     if ( mesh.topology.left( a0 ) || mesh.topology.left( b0 ) )
     {
         assert( false );
-        spdlog::error( "buildCylinderBetweenTwoHoles: edges do not represent holes" );
+        spdlog::error( "stitchHoles: edges do not represent holes" );
         return;
     }
     // stitch direction should be independent of input order
@@ -393,12 +402,12 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     EdgeId a = a0;
     do
     {
-        auto ap = mesh.orgPnt( a );
+        Vector3d ap( mesh.orgPnt( a ) );
         EdgeId b = b0;
         do
         {
-            auto bp = mesh.orgPnt( b );
-            double distSq = ( ap - bp ).lengthSq();
+            Vector3d bp( mesh.orgPnt( b ) );
+            double distSq = ( ap - bp ).lengthSq(); // compute lengthSq in double to avoid overflow even for very large floats in ap and bp
             if ( distSq < minDistSq )
             {
                 minDistSq = distSq;
@@ -412,6 +421,12 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
         a = mesh.topology.prev( a.sym() );
         ++aLoopEdgesCounter;
     } while ( a != a0 );
+
+    if ( !ac || !bc )
+    {
+        assert( false );
+        return;
+    }
 
     // Fill EdgeMaps
     std::vector<EdgeId> aEdgeMap( aLoopEdgesCounter );
@@ -437,7 +452,7 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
 
     // [0..aLoopEdgesCounter][0..bLoopEdgesCounter]
     // last one represents the same edge as first one, but reaching it means that algorithm has finished
-    NewEdgesMap newEdgesMap( aLoopEdgesCounter + 1, std::vector<WeightedConn>( bLoopEdgesCounter + 1 ) );
+    WeightedConnMap newEdgesMap( aLoopEdgesCounter + 1, std::vector<WeightedConn>( bLoopEdgesCounter + 1 ) );
 
     WeightedConn& firstWConn = newEdgesMap[0][0];
     firstWConn.a = 0; firstWConn.b = 0; firstWConn.weight = std::sqrt( minDistSq );
@@ -486,14 +501,24 @@ void buildCylinderBetweenTwoHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const Stit
     mesh.topology.setLeft( e1, newFace() );
 }
 
-bool buildCylinderBetweenTwoHoles( Mesh & mesh, const StitchHolesParams& params )
+bool stitchHoles( Mesh & mesh, const StitchHolesParams& params )
 {
     auto bdEdges = mesh.topology.findHoleRepresentiveEdges();
     if ( bdEdges.size() < 2 )
         return false;
 
-    buildCylinderBetweenTwoHoles( mesh, bdEdges[0], bdEdges[1], params );
+    stitchHoles( mesh, bdEdges[0], bdEdges[1], params );
     return true;
+}
+
+bool buildCylinderBetweenTwoHoles( Mesh& mesh, const StitchHolesParams& params )
+{
+    return stitchHoles( mesh, params );
+}
+
+void buildCylinderBetweenTwoHoles( Mesh& mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& params )
+{
+    stitchHoles( mesh, a0, b0, params );
 }
 
 // returns new edge connecting org(a) and org(b),
@@ -505,8 +530,36 @@ inline EdgeId makeNewEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     return newEdge;
 }
 
+// resolves the code of an already executed item into the edge it denotes,
+// which requires edgeCode1 of every earlier item to be overwritten with the created edge
+inline EdgeId executedPlanEdge( const HoleFillPlan & plan, int code )
+{
+    if ( code >= 0 )
+        return EdgeId( code );
+    const auto [item, sym] = FillHoleItemEdge::decode( code );
+    const EdgeId e( plan.items[item].edgeCode1 );
+    return sym ? e.sym() : e;
+}
+
+// adds the edges of the plan without creating any face; an empty plan is a valid no-op (e.g. a region
+// getMonotonePlan() found already monotone)
+void executeEdgesOnlyPlan( MeshTopology & topology, HoleFillPlan & plan )
+{
+    for ( int i = 0; i < plan.items.size(); ++i )
+    {
+        EdgeId a = executedPlanEdge( plan, plan.items[i].edgeCode1 );
+        EdgeId b = executedPlanEdge( plan, plan.items[i].edgeCode2 );
+        plan.items[i].edgeCode1 = (int)makeNewEdge( topology, a, b );
+    }
+}
+
 void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSet * outNewFaces )
 {
+    if ( plan.numTris == 0 )
+    {
+        executeEdgesOnlyPlan( mesh.topology, plan );
+        return;
+    }
     [[maybe_unused]] const auto fsz0 = mesh.topology.faceSize();
     const FaceId f0 = mesh.topology.left( a0 );
     if ( plan.items.empty() )
@@ -532,17 +585,11 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     {
         if ( f0 )
             mesh.topology.setLeft( a0, {} );
-        auto getEdge = [&]( int code )
-        {
-            if ( code >= 0 )
-                return EdgeId( code );
-            return EdgeId( plan.items[ -(code+1) ].edgeCode1 );
-        };
         // make new edges
         for ( int i = 0; i < plan.items.size(); ++i )
         {
-            EdgeId a = getEdge( plan.items[i].edgeCode1 );
-            EdgeId b = getEdge( plan.items[i].edgeCode2 );
+            EdgeId a = executedPlanEdge( plan, plan.items[i].edgeCode1 );
+            EdgeId b = executedPlanEdge( plan, plan.items[i].edgeCode2 );
             EdgeId c = makeNewEdge( mesh.topology, a, b );
             plan.items[i].edgeCode1 = (int)c;
         }
@@ -574,17 +621,42 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
     assert( plan.numTris == int( fsz - fsz0 + ( f0 ? 1 : 0 ) ) );
 }
 
+bool isFillingMultipleEdgeFree( const MeshTopology & topology, const HoleFillPlan & plan )
+{
+    if ( plan.items.empty() )
+        return true;
+
+    auto getVert = [&]( int code )
+    {
+        // makeNewEdge( a, b ) runs from org(a) to org(b), so the origin of a not yet created edge
+        // taken in the opposite direction is the origin of the second code of its item
+        while ( code < 0 )
+        {
+            const auto [item, sym] = FillHoleItemEdge::decode( code );
+            code = sym ? plan.items[item].edgeCode2 : plan.items[item].edgeCode1;
+        }
+        return topology.org( EdgeId( code ) );
+    };
+    for ( int i = 0; i < plan.items.size(); ++i )
+    {
+        auto v1 = getVert( plan.items[i].edgeCode1 );
+        auto v2 = getVert( plan.items[i].edgeCode2 );
+        if ( topology.findEdge( v1, v2 ) )
+            return false;
+    }
+    return true;
+}
+
 /// this class allows you to prepare fill plans for several holes with no new memory allocations on
 /// second and subsequent calls
 class HoleFillPlanner
 {
 public:
     HoleFillPlan run( const Mesh& mesh, EdgeId e, const FillHoleParams& params = {} );
-    HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e );
-
-    bool parallelProcessing = true;
-
+    HoleFillPlan runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine = true );
+    unsigned concurrentSmallHoleSize = 0; ///< if hole size is smaller than this value preffer concurrent processing, sometimes it better than isolated parallelism overhead
 private:
+    std::unique_ptr<IFillContours2DPlanCache> planCache_; ///< keeps the swept-line plan buffers alive between runPlanar() runs
     std::vector<EdgeId> edgeMap_;
     std::vector<std::vector<WeightedConn>> newEdgesMap_;
     tbb::enumerable_thread_specific<std::vector<unsigned>> optimalStepsCache_;
@@ -660,22 +732,21 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
                 sameEdgeExists( mesh.topology, aCur, cCur ) )
                 return;
             getOptimalSteps( optimalSteps, ( i + 1 ) % loopEdgesCounter, steps, loopEdgesCounter, params.maxPolygonSubdivisions );
-            getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, optimalSteps, current ); // find better among steps
+            getTriangulationWeights( mesh.topology, newEdgesMap_, edgeMap_, metrics, params.smoothBd, optimalSteps, current ); // find better among steps
         };
-        if ( parallelProcessing )
+        if ( loopEdgesCounter < concurrentSmallHoleSize ) // avoid parallelism for small holes since it is not worth overhead
+        {
+            auto& os = optimalStepsCache_.local();
+            for ( unsigned i( 0 ); i < loopEdgesCounter; ++i )
+                work( i, os );
+        }
+        else
         {
             ParallelFor( unsigned( 0 ), loopEdgesCounter, optimalStepsCache_, [&]( unsigned i, std::vector<unsigned>& optimalSteps )
             {
                 work( i, optimalSteps );
             } );
         }
-        else
-        {
-            auto & optimalSteps = optimalStepsCache_.local();
-            for ( unsigned i = 0; i < loopEdgesCounter; ++i )
-                work( i, optimalSteps );
-        }
-
     }
     // find minimum triangulation
     savedMapPatch_.clear();
@@ -690,13 +761,13 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
             VertId leftVert;
             if ( newEdgesMap_[i][cIndex].hasPrev() )
                 leftVert = mesh.topology.org( edgeMap_[newEdgesMap_[i][cIndex].prevA] );
-            else if ( mesh.topology.right( edgeMap_[i] ) )
+            else if ( params.smoothBd && mesh.topology.right( edgeMap_[i] ) )
                 leftVert = mesh.topology.dest( mesh.topology.prev( edgeMap_[i] ) );
 
             VertId rightVert;
             if ( newEdgesMap_[cIndex][i].hasPrev() )
                 rightVert = mesh.topology.org( edgeMap_[newEdgesMap_[cIndex][i].prevA] );
-            else if ( mesh.topology.right( edgeMap_[cIndex] ) )
+            else if ( params.smoothBd && mesh.topology.right( edgeMap_[cIndex] ) )
                 rightVert = mesh.topology.dest( mesh.topology.prev( edgeMap_[cIndex] ) );
 
             if ( leftVert && rightVert )
@@ -707,7 +778,7 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
         }
         if ( weight < finConn.weight &&
             ( params.multipleEdgesResolveMode != FillHoleParams::MultipleEdgesResolveMode::Strong || // try to fix multiple if needed
-                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap_, edgeMap_, metrics, newEdgesMap_[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch_ ) ) )
+                removeMultipleEdgesFromTriangulation( mesh.topology, newEdgesMap_, edgeMap_, metrics, params.smoothBd, newEdgesMap_[cIndex][i], params.maxPolygonSubdivisions, cachedMapPatch_ ) ) )
         {
             savedMapPatch_ = cachedMapPatch_;
             finConn = newEdgesMap_[cIndex][i];
@@ -751,14 +822,14 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
 
         if ( distA >= 2 && distA <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.items.size() + 1 );
+            auto newEdgeCode = FillHoleItemEdge{ .item = int( res.items.size() ) }.encode(); // the item about to be pushed
             res.items.push_back( { (int)edgeMap_[curConn.first.prevA], (int)edgeMap_[curConn.first.a] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.a][curConn.first.prevA], newEdgeCode } );
         }
 
         if ( distB >= 2 && distB <= loopEdgesCounter - 2 )
         {
-            auto newEdgeCode = -int( res.items.size() + 1 );
+            auto newEdgeCode = FillHoleItemEdge{ .item = int( res.items.size() ) }.encode(); // the item about to be pushed
             res.items.push_back( { (int)curConn.second, (int)edgeMap_[curConn.first.prevA] } );
             newEdgesQueue_.push( { newEdgesMap_[curConn.first.prevA][curConn.first.b], newEdgeCode } );
         }
@@ -768,8 +839,26 @@ HoleFillPlan HoleFillPlanner::run( const Mesh& mesh, EdgeId a0, const FillHolePa
     return res;
 }
 
-HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e )
+HoleFillPlan HoleFillPlanner::runPlanar( const Mesh& mesh, EdgeId e, bool allowSweptLine )
 {
+    if ( allowSweptLine )
+    {
+        int holeSize = 0;
+        for ( [[maybe_unused]] auto _ : leftRing( mesh.topology, e ) )
+            if ( ++holeSize >= cMinSweptHoleSize )
+                break; // fast break when we OK with hole size
+
+        if ( holeSize >= cMinSweptHoleSize )
+        {
+            // only use this for large holes
+            if ( !planCache_ )
+                planCache_ = makeFillContours2DPlanCache();
+            auto exRes = fillContours2DPlan( mesh, e, planCache_.get() );
+            if ( exRes.has_value() )
+                return *exRes;
+        }
+    }
+
     bool stopOnBad{ false };
     FillHoleParams params;
     params.metric = getPlaneNormalizedFillMetric( mesh, e );
@@ -793,15 +882,19 @@ std::vector<HoleFillPlan> getHoleFillPlans( const Mesh& mesh, const std::vector<
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        planner.parallelProcessing = false; // to prevent run() from calling this lambda for a different i-index
-        fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
+        // isolate keeps run()'s nested ParallelFor from stealing this thread onto another i-index
+        planner.concurrentSmallHoleSize = cMinSweptHoleSize;
+        tbb::this_task_arena::isolate( [&]
+        {
+            fillPlans[i] = planner.run( mesh, holeRepresentativeEdges[i], params );
+        } );
     } );
     return fillPlans;
 }
 
-HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e )
+HoleFillPlan getPlanarHoleFillPlan( const Mesh& mesh, EdgeId e, bool allowSwept )
 {
-    return HoleFillPlanner{}.runPlanar( mesh, e );
+    return HoleFillPlanner{}.runPlanar( mesh, e, allowSwept );
 }
 
 std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
@@ -811,8 +904,19 @@ std::vector<HoleFillPlan> getPlanarHoleFillPlans( const Mesh& mesh, const std::v
     tbb::enumerable_thread_specific<HoleFillPlanner> threadData_;
     ParallelFor( holeRepresentativeEdges, threadData_, [&]( size_t i, HoleFillPlanner& planner )
     {
-        planner.parallelProcessing = false; // to prevent run() from calling this lambda for a different i-index
-        fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
+        // isolate keeps run()'s nested ParallelFor from stealing this thread onto another i-index
+        planner.concurrentSmallHoleSize = cMinSweptHoleSize;
+        tbb::this_task_arena::isolate( [&]
+        {
+            fillPlans[i] = planner.runPlanar( mesh, holeRepresentativeEdges[i] );
+        } );
+    } );
+    // a planner holds buffers grown to the largest hole it saw (the plan cache, the metric-fill maps);
+    // with only a few holes per worker, freeing them one after another in the ETS destructor below costs
+    // more than the planning did, so free them in parallel here (measured: -35% on 30-hole batches)
+    tbb::parallel_for_each( threadData_.begin(), threadData_.end(), [] ( HoleFillPlanner& planner )
+    {
+        [[maybe_unused]] const auto dead = std::move( planner ); // takes the buffers away and frees them here
     } );
     return fillPlans;
 }
@@ -1258,115 +1362,103 @@ EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b )
     return res;
 }
 
-TEST( MRMesh, buildCylinderBetweenTwoHoles )
+// considers possible bridge between org(e0) and point p1 as good,
+// if org(e0) has barycentric weight not less than 0.5 in the point closest to p1 within every triangle incident to org(e0);
+// so bridges going deep inside existing triangles are bad
+static bool isGoodBridge( const MeshTopology& topology, const VertCoords& points, EdgeId e0, const Vector3f& p1 )
 {
-    Triangulation t{
-        { 0_v, 1_v, 2_v },
-        { 3_v, 4_v, 5_v }
-    };
-    Mesh mesh;
-    mesh.topology = MeshBuilder::fromTriangles( t );
-    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    assert( !topology.left( e0 ) );
 
-    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // VertId{0}
-    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // VertId{1}
-    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // VertId{2}
-    mesh.points.emplace_back( 0.f, 0.f, 1.f ); // VertId{3}
-    mesh.points.emplace_back( 1.f, 0.f, 1.f ); // VertId{4}
-    mesh.points.emplace_back( 0.f, 1.f, 1.f ); // VertId{5}
-    EXPECT_EQ( mesh.points.size(), 6 );
-
-    auto bdEdges = mesh.topology.findHoleRepresentiveEdges();
-    EXPECT_EQ( bdEdges.size(), 2 );
-    EXPECT_FALSE( mesh.topology.left( bdEdges[0] ).valid() );
-    EXPECT_FALSE( mesh.topology.left( bdEdges[1] ).valid() );
-
-    FaceBitSet newFaces;
-    StitchHolesParams params;
-    auto fsz0 = mesh.topology.faceSize();
-    params.outNewFaces = &newFaces;
-    buildCylinderBetweenTwoHoles( mesh, bdEdges[0], bdEdges[1], params );
-    auto numNewFaces = mesh.topology.faceSize() - fsz0;
-
-    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
-    EXPECT_EQ( mesh.topology.numValidFaces(), 8 );
-    EXPECT_EQ( mesh.points.size(), 6 );
-    EXPECT_EQ( numNewFaces, 6 );
-    EXPECT_EQ( newFaces.count(), 6 );
-    EXPECT_EQ( newFaces.size(), 8 );
-
-    bdEdges = mesh.topology.findHoleRepresentiveEdges();
-    EXPECT_EQ( bdEdges.size(), 0 );
+    for ( EdgeId e : orgRing( topology, e0 ) )
+    {
+        if ( !topology.left( e ) )
+            continue;
+        const auto ps = getLeftTriPoints( topology, points, e );
+        const auto pp = closestPointInTriangle( p1, ps[0], ps[1], ps[2] );
+        if ( pp.second.a + pp.second.b > 0.5f )
+            return false;
+    }
+    return true;
 }
 
-TEST( MRMesh, makeBridge )
+std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const VertCoords& points, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
-    MeshTopology topology;
-    auto a = topology.makeEdge();
-    topology.setOrg( a, topology.addVertId() );
-    topology.setOrg( a.sym(), topology.addVertId() );
-    auto b = topology.makeEdge();
-    topology.setOrg( b, topology.addVertId() );
-    topology.setOrg( b.sym(), topology.addVertId() );
-    EXPECT_EQ( topology.numValidFaces(), 0 );
-    FaceBitSet fbs;
-    auto bridgeRes = makeBridge( topology, a, b, &fbs );
-    EXPECT_TRUE( bridgeRes );
-    EXPECT_EQ( bridgeRes.newFaces, 2 );
-    EXPECT_TRUE( bridgeRes.na );
-    EXPECT_EQ( topology.org( a ), topology.org( bridgeRes.na ) );
-    EXPECT_TRUE( topology.left( a ) );
-    EXPECT_FALSE( topology.left( bridgeRes.na ) );
-    EXPECT_TRUE( bridgeRes.nb );
-    EXPECT_EQ( topology.org( b ), topology.org( bridgeRes.nb ) );
-    EXPECT_TRUE( topology.left( b ) );
-    EXPECT_FALSE( topology.left( bridgeRes.nb ) );
-    EXPECT_EQ( fbs.count(), 2 );
-    EXPECT_EQ( topology.numValidVerts(), 4 );
-    EXPECT_EQ( topology.numValidFaces(), 2 );
-    EXPECT_EQ( topology.edgeSize(), 5 * 2 );
+    MR_TIMER;
+    std::vector<EdgeId> bridgesCreated;
+    // at least two holes are required to make a bridge
+    if ( holeRepresentativeEdges.size() <= 1 )
+        return bridgesCreated;
 
-    topology = MeshTopology();
-    a = topology.makeEdge();
-    topology.setOrg( a, topology.addVertId() );
-    topology.setOrg( a.sym(), topology.addVertId() );
-    b = topology.makeEdge();
-    topology.splice( a.sym(), b );
-    topology.setOrg( b.sym(), topology.addVertId() );
-    EXPECT_EQ( topology.numValidFaces(), 0 );
-    fbs.reset();
-    bridgeRes = makeBridge( topology, a, b, &fbs );
-    EXPECT_TRUE( bridgeRes );
-    EXPECT_EQ( bridgeRes.newFaces, 1 );
-    EXPECT_TRUE( bridgeRes.na );
-    EXPECT_EQ( topology.org( a ), topology.org( bridgeRes.na ) );
-    EXPECT_TRUE( topology.left( a ) );
-    EXPECT_FALSE( topology.left( bridgeRes.na ) );
-    EXPECT_FALSE( bridgeRes.nb );
-    EXPECT_TRUE( topology.left( b ) );
-    EXPECT_EQ( fbs.count(), 1 );
-    EXPECT_EQ( topology.numValidVerts(), 3 );
-    EXPECT_EQ( topology.numValidFaces(), 1 );
-    EXPECT_EQ( topology.edgeSize(), 3 * 2 );
+    // virtual point cloud of boundary vertices from
+    VertCoords bdPoints;            // bdVertId -> 3d coordinate
+    Vector<EdgeId, VertId> bdEdges; // bdVertId -> boundary edge with that point in origin
+    Vector<int, VertId> holeIds;    // bdVertId -> hole index
+    for( int h = 0; h < holeRepresentativeEdges.size(); ++h )
+    {
+        assert( !topology.left( holeRepresentativeEdges[h] ) );
+        for ( EdgeId bdEdge : leftRing( topology, holeRepresentativeEdges[h] ) )
+        {
+            bdPoints.push_back( points[ topology.org( bdEdge ) ] );
+            bdEdges.push_back( bdEdge );
+            holeIds.push_back( h );
+        }
+    }
+
+    AABBTreePoints tree( bdPoints );
+
+    // for each boundary point store the closest point not from the same hole
+    Vector<VertId, VertId> closests;
+    closests.resizeNoInit( bdPoints.size() );
+    ParallelFor( closests, [&]( VertId v )
+    {
+        const auto proj = findProjectionOnPoints( bdPoints[v], tree, FLT_MAX, nullptr, 0, nullptr,
+            [myHole = holeIds[v], &holeIds]( VertId cv ) { return myHole == holeIds[cv]; } );
+        assert( proj.vId );
+        closests[v] = proj.vId;
+    } );
+
+    // find pairs of mutually closest points and create bridges between them
+    for ( auto v = 0_v; v < closests.size(); ++v )
+    {
+        auto v1 = closests[v];
+        assert( v != v1 );
+        if ( v1 <= v )
+            continue;
+        auto v2 = closests[v1];
+        if ( v != v2 )
+            continue;
+        if ( !isGoodBridge( topology, points, bdEdges[v], bdPoints[v1] ) )
+            continue;
+        if ( !isGoodBridge( topology, points, bdEdges[v1], bdPoints[v] ) )
+            continue;
+        if ( auto b = makeBridgeEdge( topology, bdEdges[v], bdEdges[v1] ) )
+            bridgesCreated.push_back( b );
+    }
+
+    return bridgesCreated;
 }
 
-TEST( MRMesh, makeBridgeEdge )
+std::vector<EdgeId> makeInterHoleBridgeEdges( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges )
 {
-    MeshTopology topology;
-    auto a = topology.makeEdge();
-    topology.setOrg( a, topology.addVertId() );
-    topology.setOrg( a.sym(), topology.addVertId() );
-    auto b = topology.makeEdge();
-    topology.setOrg( b, topology.addVertId() );
-    topology.setOrg( b.sym(), topology.addVertId() );
-    auto x = makeBridgeEdge( topology, a, b );
-    EXPECT_TRUE( topology.fromSameOriginRing( a, x ) );
-    EXPECT_TRUE( topology.fromSameOriginRing( b, x.sym() ) );
-    EXPECT_EQ( topology.edgeSize(), 3 * 2 );
+    auto bridgesCreated = makeInterHoleBridgeEdges( mesh.topology, mesh.points, holeRepresentativeEdges );
+    if ( !bridgesCreated.empty() )
+        mesh.invalidateCaches( false );
+    return bridgesCreated;
+}
 
-    x = makeBridgeEdge( topology, a, b );
-    EXPECT_FALSE( x.valid() );
+bool bridgeFillAllHoles( Mesh& mesh, const FillHoleParams& params )
+{
+    MR_TIMER;
+    auto holes = mesh.topology.findHoleRepresentiveEdges();
+    if ( holes.empty() )
+        return false;
+
+    // every bridge merges two holes in one, so the representative edges have to be found again
+    if ( !makeInterHoleBridgeEdges( mesh, holes ).empty() )
+        holes = mesh.topology.findHoleRepresentiveEdges();
+
+    fillHoles( mesh, holes, params );
+    return true;
 }
 
 } //namespace MR

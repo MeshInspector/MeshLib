@@ -8,6 +8,8 @@
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRQuaternion.h>
 #include <MRMesh/MRTimer.h>
+#include <MRMesh/MRPointsLoad.h>
+#include <MRMesh/MRTelemetry.h>
 #include <MRPch/MRFmt.h>
 
 #include <climits>
@@ -271,7 +273,7 @@ MR_ADD_POINTS_LOADER( IOFilter( "E57 (.e57)", "*.e57" ), fromE57 )
 
 Expected<LoadedObjects> loadObjectFromE57( const std::filesystem::path& path, const ProgressCallback& cb )
 {
-    return fromSceneE57File( path, { .progress = std::move( cb ) } )
+    return fromSceneE57File( path, { .progress = cb } )
     .transform( [&path] ( std::vector<NamedCloud>&& nclouds )
     {
         LoadedObjects res;
@@ -284,6 +286,21 @@ Expected<LoadedObjects> loadObjectFromE57( const std::filesystem::path& path, co
             else
                 objectPoints->setName( std::move( nclouds[i].name ) );
             objectPoints->select( true );
+
+            std::string signalString = "E57";
+            if ( nclouds[i].cloud.validPoints.any() )
+            {
+                signalString += " VP";
+                if ( nclouds[i].cloud.hasNormals() )
+                    signalString += 'N';
+                if ( nclouds[i].colors.size() >= nclouds[i].cloud.points.size() )
+                    signalString += 'C';
+            }
+            if ( nclouds[i].xf != AffineXf3f{} )
+                signalString += " XF";
+            TelemetrySignal( signalString );
+            telemetryLogSize( nclouds[i].cloud );
+
             objectPoints->setPointCloud( std::make_shared<PointCloud>( std::move( nclouds[i].cloud ) ) );
             objectPoints->setXf( nclouds[i].xf );
             if ( !nclouds[i].colors.empty() )

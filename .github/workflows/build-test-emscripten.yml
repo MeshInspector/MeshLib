@@ -3,6 +3,13 @@ name: Build and test Emscripten
 on:
   workflow_call:
     inputs:
+      app_version:
+        required: false
+        type: string
+      definitions_only:
+        required: false
+        type: boolean
+        default: false
       docker_image_tag:
         required: true
         type: string
@@ -12,11 +19,16 @@ on:
       upload_artifacts:
         required: true
         type: boolean
+      version_tag:
+        required: false
+        type: string
+        default: ''
 
 jobs:
   emscripten-build:
+    if: ${{ !inputs.definitions_only }}
     timeout-minutes: 40
-    runs-on: [ self-hosted, linux-arm64, spot, meshinspector ]
+    runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
     strategy:
@@ -28,17 +40,14 @@ jobs:
             target_name: emscripten-singlethreaded
             package_name: emscripten-singlethreaded
             thirdparty-dir: emscripten-single
-            aws-dir: RMISingle
           - config: Multithreaded
             target_name: emscripten
             package_name: emscripten-multithreaded
             thirdparty-dir: emscripten
-            aws-dir: RMI
           - config: Multithreaded-64Bit
             target_name: emscripten-wasm64
             package_name: emscripten-multithreaded-64bit
             thirdparty-dir: emscripten-wasm64
-            aws-dir: RMI64
 
     steps:
       - name: Work-around possible permission issues
@@ -51,30 +60,15 @@ jobs:
             mkdir ${GITHUB_WORKSPACE}
           fi
 
-        # https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instancedata-data-retrieval.html
-      - name: Get AWS instance type
-        run: |
-          TOKEN=$(curl -fsS --max-time 2 \
-            -X PUT "http://169.254.169.254/latest/api/token" \
-            -H "X-aws-ec2-metadata-token-ttl-seconds: 10" || true)
-
-          AWS_INSTANCE_TYPE=$(curl -fsS --max-time 2 \
-            -H "X-aws-ec2-metadata-token: $TOKEN" \
-            "http://169.254.169.254/latest/meta-data/instance-type" || true)
-          
-          # if not an EC2 instance
-          if test -z "$AWS_INSTANCE_TYPE" ; then
-            AWS_INSTANCE_TYPE="self-hosted"
-          fi
-
-          echo "AWS_INSTANCE_TYPE=$AWS_INSTANCE_TYPE" >> $GITHUB_ENV
-          echo $AWS_INSTANCE_TYPE
-
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+
+      - name: Get AWS instance type
+        uses: ./.github/actions/get-aws-instance-type
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
+        id: collect-runner-stats
         continue-on-error: true
         uses: ./.github/actions/collect-runner-stats
         with:
@@ -90,12 +84,14 @@ jobs:
           # related issue: https://github.com/actions/checkout/issues/1779
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
-          git submodule update --init --recursive --depth 1 thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11 thirdparty/mrbind
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
 
       - name: Install thirdparty libs
         run: |
-          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/include ./include
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
 
       - name: Build
         env:
@@ -110,20 +106,17 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
         run: ./scripts/build_source.sh
 
-      - name: Unit Tests
-        timeout-minutes: 5
+      - name: Stage MRTest bundle
         run: |
-          echo "check the \$HOME dir permissions in case of timeout issues"
-          echo ls -al \$HOME
-          ls -al $HOME
-          echo
+          mkdir mrtest-bundle
+          cp build/Release/bin/MRTest* /emsdk/upstream/emscripten/emrun.py mrtest-bundle/
 
-          emrun \
-            --browser=/usr/bin/firefox \
-            --browser-args="--headless" \
-            --safe-firefox-profile \
-            --kill-exit \
-            ./build/Release/bin/MRTest.html
+      - name: Upload MRTest bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: MRTest_${{ matrix.package_name }}
+          path: mrtest-bundle
+          retention-days: 1
 
       - name: Create Package
         run: |
@@ -144,8 +137,201 @@ jobs:
 
       - name: Upload Package
         if: ${{ inputs.upload_artifacts }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Distributives_${{ matrix.package_name }}
           path: meshlib_${{ matrix.package_name }}.zip
           retention-days: 1
+
+      - name: Collect artifact stats
+        if: ${{ inputs.internal_build && inputs.upload_artifacts }}
+        continue-on-error: true
+        uses: ./.github/actions/collect-artifact-stats
+        with:
+          artifact_path: ${{ github.workspace }}
+          artifact_glob: meshlib_${{ matrix.package_name }}.zip
+          stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
+
+  wasm-module-build:
+    if: ${{ !inputs.definitions_only }}
+    timeout-minutes: 40
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - config: Singlethreaded
+            thirdparty-dir: emscripten-single
+            wasm-module-name: meshlib
+            singlethread: 1
+          - config: Multithreaded
+            thirdparty-dir: emscripten
+            wasm-module-name: meshlib-mt
+            singlethread: 0
+    steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/include ./include
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
+          ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
+
+      - name: Build Wasm module
+        env:
+          MR_EMSCRIPTEN_SINGLETHREAD: ${{ matrix.singlethread }}
+        run: ./scripts/build_wasm_meshlib.sh
+
+      - name: Test Wasm module
+        env:
+          MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.node.mjs
+        run: node source/MRWasmTest/index.mjs
+
+        # Embind doesn't provide any way to define docstrings for the generated TypeScript definition file.
+        # `inject_tsdoc.py` manually updates it with docstrings extracted from the C++ code with Doxygen.
+        # The docstrings are then used both by the end users ("hover information") and for generating documentation.
+      - name: Document the TypeScript definition file
+        run: |
+          doxygen scripts/npm/Doxyfile
+          python3 scripts/npm/inject_tsdoc.py \
+            build/Release/bin/${{ matrix.wasm-module-name }}.d.mts \
+            --bindings source/MRWasmModule
+
+      - name: Assemble and pack npm package
+        run: |
+          scripts/npm/assemble.sh ${{ matrix.wasm-module-name }} "${{ inputs.app_version }}"
+          npm pack ./npm-distr/${{ matrix.wasm-module-name }}
+          for TGZ in meshinspector-*.tgz ; do mv "${TGZ}" "js-${TGZ#meshinspector-}" ; done
+
+      - name: Build and run TypeScript example
+        working-directory: examples/typescript
+        run: |
+          sed -i "s|@meshinspector/meshlib|@meshinspector/${{ matrix.wasm-module-name }}|g" main.ts package.json
+          npm install --no-audit --no-fund --no-save ../../js-${{ matrix.wasm-module-name }}-*.tgz
+          npm start
+
+      - name: Upload npm package
+        if: ${{ inputs.upload_artifacts }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Distributives_web_${{ matrix.wasm-module-name }}
+          path: js-meshlib-*.tgz
+          retention-days: 1
+
+      - name: Upload the TypeScript definition file for docs
+        if: ${{ inputs.upload_artifacts && matrix.wasm-module-name == 'meshlib' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: WasmBindingsDts
+          path: npm-distr/meshlib/bindings.d.mts
+          retention-days: 1
+
+  wasm-definitions-build:
+    if: ${{ inputs.definitions_only }}
+    timeout-minutes: 20
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
+    steps:
+      - name: Work-around possible permission issues
+        shell: bash
+        run: |
+          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
+          # Related issue: https://github.com/actions/runner/issues/2058
+          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
+            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
+            mkdir ${GITHUB_WORKSPACE}
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version_tag }}
+
+      - name: Checkout third-party submodules
+        run: |
+          # have to checkout selective submodules by our own
+          # related issue: https://github.com/actions/checkout/issues/1779
+          export HOME=${RUNNER_TEMP}
+          git config --global --add safe.directory ${GITHUB_WORKSPACE}
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
+
+      - name: Install thirdparty libs
+        run: |
+          ln -s /usr/local/lib/emscripten-single/include ./include
+          ln -s /usr/local/lib/emscripten-single/lib ./lib
+          ln -s /usr/local/lib/emscripten-single/share ./share
+
+      - name: Generate the TypeScript definition file
+        env:
+          MR_CMAKE_BUILD_OPTIONS: --target MRWasmModuleDefinitions
+        run: |
+          ./scripts/build_wasm_meshlib.sh -D MESHLIB_BUILD_WASM_DEFINITIONS_ONLY=ON
+          doxygen scripts/npm/Doxyfile
+          python3 scripts/npm/inject_tsdoc.py \
+            build/Release/bin/meshlib.d.mts \
+            --bindings source/MRWasmModule
+          install -D build/Release/bin/meshlib.d.mts npm-distr/meshlib/bindings.d.mts
+
+      - name: Upload the TypeScript definition file for docs
+        uses: actions/upload-artifact@v7
+        with:
+          name: WasmBindingsDts
+          path: npm-distr/meshlib/bindings.d.mts
+          retention-days: 1
+
+  emscripten-test:
+    if: ${{ !inputs.definitions_only }}
+    needs: emscripten-build
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04-arm
+    strategy:
+      fail-fast: false
+      matrix:
+        package_name:
+          - emscripten-singlethreaded
+          - emscripten-multithreaded
+          - emscripten-multithreaded-64bit
+
+    steps:
+      - name: Download MRTest bundle
+        uses: actions/download-artifact@v8
+        with:
+          name: MRTest_${{ matrix.package_name }}
+          path: mrtest-bundle
+          github-token: ${{ github.token }}
+          run-id: ${{ github.run_id }}
+
+      - name: Unit Tests
+        timeout-minutes: 5
+        working-directory: mrtest-bundle
+        run: |
+          python3 emrun.py \
+            --browser=/usr/bin/firefox \
+            --browser-args="--headless" \
+            --safe-firefox-profile \
+            --kill-exit \
+            ./MRTest.html

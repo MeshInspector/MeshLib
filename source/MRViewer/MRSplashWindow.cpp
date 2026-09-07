@@ -190,10 +190,15 @@ void DefaultSplashWindow::postInit_()
 
 void DefaultSplashWindow::positioning_( float )
 {
-    assert( splashImage_ );
+    if ( !splashImage_ )
+        return;
+
+    const auto pMonitor = glfwGetPrimaryMonitor();
+    if ( !pMonitor )
+        return;
 
     int workAreaX = 0, workAreaY = 0, workAreaW = 0, workAreaH = 0;
-    glfwGetMonitorWorkarea( glfwGetPrimaryMonitor(), &workAreaX, &workAreaY, &workAreaW, &workAreaH );
+    glfwGetMonitorWorkarea( pMonitor, &workAreaX, &workAreaY, &workAreaW, &workAreaH );
 
     int width = std::min( int( 0.6f * float( workAreaW ) ), splashImage_->getImageWidth() );
     int height = int( float( width ) * float( splashImage_->getImageHeight() ) / float( splashImage_->getImageWidth() ) );
@@ -219,22 +224,27 @@ void DefaultSplashWindow::reloadFont_( float hdpiScale, float pixelRatio )
     ImGui::GetIO().Fonts->AddFontFromMemoryCompressedTTF( droid_sans_compressed_data,
         droid_sans_compressed_size, 14.0f * hdpiScale );
 
-    io.FontGlobalScale = 1.0f / pixelRatio;
+    ImGui::GetStyle().FontScaleMain = 1.0f / pixelRatio;
 }
 
 bool DefaultSplashWindow::frame_( float /*scaling*/ )
 {
+    if ( !splashImage_ )
+        return false;
     ImGui::SetNextWindowSize( ImGui::GetIO().DisplaySize );
     ImGui::SetNextWindowPos( ImVec2( 0, 0 ) );
     ImGui::Begin( "Splash window", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoMove );
     auto availableSize = ImGui::GetContentRegionAvail();
     ImGui::Image( *splashImage_, availableSize );
+    // comment out copyright and version lines in splash
+    /*
     ImGui::SetCursorPos( ImVec2( ImGui::GetFrameHeight() * 3, availableSize.y - ImGui::GetFrameHeight() * 2 ) );
     ImGui::PushStyleColor( ImGuiCol_Text, Color( 90, 97, 105 ).getUInt32() );
     ImGui::Text( "Copyright 2025, MeshInspector/MeshLib" );
     ImGui::SameLine( availableSize.x * 0.5f + ImGui::GetFrameHeight() * 4 );
     ImGui::Text( "%s", versionStr_.c_str() );
     ImGui::PopStyleColor();
+    */
     ImGui::End();
     return true;
 }

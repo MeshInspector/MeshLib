@@ -12,6 +12,7 @@
 #include "MRPybind11.h"
 
 #include "MRMesh/MRExpected.h"
+#include "MRMesh/MRMacros.h"
 #include <functional>
 #include <filesystem>
 #include <unordered_map>
@@ -30,7 +31,7 @@ PYBIND11_MODULE( moduleName, m )\
 static MR::PythonFunctionAdder moduleName##_init_( #moduleName, &PyInit_##moduleName );
 
 #define MR_ADD_PYTHON_FUNCTION( moduleName , name , func , description ) \
-    static MR::PythonFunctionAdder name##_adder_( #moduleName, [](pybind11::module_& m){ m.def(#name, func, description);} );
+    static MR::PythonFunctionAdder MR_CONCAT3(name, _adder_, __LINE__)( #moduleName, [](pybind11::module_& m){ m.def(#name, func, description);} );
 
 #define MR_ADD_PYTHON_CUSTOM_DEF( moduleName , name , ... ) \
 _Pragma("warning(push)") \
@@ -128,17 +129,17 @@ MR_ADD_PYTHON_CUSTOM_DEF( moduleName, name, [] ( pybind11::module_& )      \
     using expectedType = Expected<type,errorType>;\
     MR_PYTHON_CUSTOM_CLASS( name ).\
         def( "has_value", []() \
-        { PyErr_WarnEx(PyExc_DeprecationWarning, ".has_value is deprecated. Please use 'try - except ValueError'", 1); \
+        { PyErr_WarnEx(PyExc_DeprecationWarning, ".has_value is deprecated. Please use 'try - except RuntimeError'", 1); \
             return &expectedType::has_value; \
         }).\
         def( "value", []() \
         { \
-            PyErr_WarnEx(PyExc_DeprecationWarning, ".value is deprecated. Please use 'try - except ValueError'", 1); \
+            PyErr_WarnEx(PyExc_DeprecationWarning, ".value is deprecated. Please use 'try - except RuntimeError'", 1); \
             return ( type& ( expectedType::* )( )& )& expectedType::value; \
         }, pybind11::return_value_policy::reference_internal ).\
         def( "error", []() \
         { \
-            PyErr_WarnEx(PyExc_DeprecationWarning, ".error is deprecated. Please use 'try - except ValueError'", 1); \
+            PyErr_WarnEx(PyExc_DeprecationWarning, ".error is deprecated. Please use 'try - except RuntimeError'", 1); \
             return ( const errorType& ( expectedType::* )( )const& )& expectedType::error; \
         } );\
 } )

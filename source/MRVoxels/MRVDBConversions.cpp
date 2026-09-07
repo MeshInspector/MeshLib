@@ -5,7 +5,7 @@
 #include "MRMesh/MRMeshBuilder.h"
 #include "MRMesh/MRTimer.h"
 #include "MRVoxelsVolume.h"
-#include "MROpenVDB.h"
+#include "MRPch/MROpenVDB.h"
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRRegionBoundary.h"
@@ -203,14 +203,9 @@ void evalGridMinMax( const FloatGrid& grid, float& min, float& max )
     if ( !grid )
         return;
     MR_TIMER;
-#if (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 9 && (OPENVDB_LIBRARY_MINOR_VERSION_NUMBER >= 1 || OPENVDB_LIBRARY_PATCH_VERSION_NUMBER >= 1)) || \
-    (OPENVDB_LIBRARY_MAJOR_VERSION_NUMBER >= 10)
     auto minMax = openvdb::tools::minMax( grid->tree() );
     min = minMax.min();
     max = minMax.max();
-#else
-    grid->evalMinMax( min, max );
-#endif
 }
 
 Expected<VdbVolume> meshToDistanceVdbVolume( const MeshPart& mp, const MeshToVolumeParams& params /*= {} */ )
@@ -310,7 +305,7 @@ void putVolumeInDenseGrid(
 
     for ( int z = 0; z < volume.dims.z; ++z )
     {
-        if ( subprogress( cb, ( size_t )z, ( size_t )volume.dims.z ) )
+        if ( !reportProgress( cb, ( float )z / ( float )volume.dims.z ) )
             return;
         for ( int y = 0; y < volume.dims.y; ++y )
         {

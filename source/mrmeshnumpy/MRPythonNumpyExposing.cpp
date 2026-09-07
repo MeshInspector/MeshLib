@@ -1,3 +1,4 @@
+#include "MRPythonNumpy.h"
 #include "MRPython/MRPython.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshBuilder.h"
@@ -6,12 +7,10 @@
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRBitSetParallelFor.h"
-#include "MRMesh/MRVertexAttributeGradient.h"
 #include "MRMesh/MRPolyline.h"
 #include "MRMesh/MRCloseVertices.h"
-
+#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRMacros.h"
-#include "MRPythonNumpy.h"
 
 MR_INIT_PYTHON_MODULE_PRECALL( mrmeshnumpy, [] ()
 {
@@ -191,13 +190,9 @@ MR::Mesh fromUVPoints( const pybind11::buffer& xArray, const pybind11::buffer& y
 
     MR::Mesh res;
     res.points.resize( shape.x * shape.y );
-    tbb::parallel_for( tbb::blocked_range<int>( 0, int( res.points.size() ) ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( res.points, [&]( MR::VertId i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            res.points[MR::VertId( i )] = MR::Vector3f( getter( 0, i ), getter( 1, i ), getter( 2, i ) );
-        }
+        res.points[i] = MR::Vector3f( getter( 0, i ), getter( 1, i ), getter( 2, i ) );
     } );
 
     int triangleCount = 2 * int( res.points.size() ) - 2 * shape.x;
@@ -323,25 +318,20 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
     // Allocate and initialize some data;
     const int size = numFaces * 3;
     int* data = new int[size];
-    tbb::parallel_for( tbb::blocked_range<int>( 0, numFaces ),
-    [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( 0_f, FaceId( numFaces), [&]( FaceId f )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
+        int ind = 3 * f;
+        if ( validFaces.test( f ) )
         {
-            FaceId f = FaceId( i );
-            int ind = 3 * i;
-            if ( validFaces.test( f ) )
-            {
-                VertId v[3];
-                topology.getTriVerts( f, v );
-                for ( int vi = 0; vi < 3; ++vi )
-                    data[ind + vi] = v[vi];
-            }
-            else
-            {
-                for ( int vi = 0; vi < 3; ++vi )
-                    data[ind + vi] = 0;
-            }
+            VertId v[3];
+            topology.getTriVerts( f, v );
+            for ( int vi = 0; vi < 3; ++vi )
+                data[ind + vi] = v[vi];
+        }
+        else
+        {
+            for ( int vi = 0; vi < 3; ++vi )
+                data[ind + vi] = 0;
         }
     } );
 
@@ -364,19 +354,15 @@ pybind11::array_t<int> getNumpyFaces( const MR::MeshTopology& topology )
 pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords )
 {
     using namespace MR;
-    int numVerts = (int)coords.size();
+    auto numVerts = coords.size();
     // Allocate and initialize some data;
-    const int size = numVerts * 3;
+    const auto size = numVerts * 3;
     double* data = new double[size];
-    tbb::parallel_for( tbb::blocked_range<int>( 0, numVerts ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( coords, [&]( size_t i )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            int ind = 3 * i;
-            for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = coords[i][vi];
-        }
+        auto ind = 3 * i;
+        for ( int vi = 0; vi < 3; ++vi )
+            data[ind + vi] = coords[i][vi];
     } );
 
     // Create a Python object that will free the allocated
@@ -388,7 +374,7 @@ pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords 
     } );
 
     return pybind11::array_t<double>(
-        { numVerts, 3 }, // shape
+        { (int)numVerts, 3 }, // shape
         { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
@@ -436,22 +422,18 @@ pybind11::array_t<bool> getNumpyBitSet( const MR::BitSet& bitSet )
         freeWhenDone ); // numpy array references this parent
 }
 
-pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
+pybind11::array_t<double> getNumpyMeanCurvature( const MR::Mesh& mesh )
 {
     using namespace MR;
     // Allocate and initialize some data;
     int numVerts = mesh.topology.lastValidVert() + 1;
     double* data = new double[numVerts];
-    tbb::parallel_for( tbb::blocked_range<int>( 0, numVerts ),
-        [&] ( const tbb::blocked_range<int>& range )
+    ParallelFor( 0_v, VertId( numVerts ), [&]( VertId v )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            if ( mesh.topology.hasVert( VertId( i ) ) )
-                data[i] = double( mesh.discreteMeanCurvature( VertId( i ) ) );
-            else
-                data[i] = 0.0;
-        }
+        if ( mesh.topology.hasVert( v ) )
+            data[v] = double( mesh.discreteMeanCurvature( v ) );
+        else
+            data[v] = 0.0;
     } );
 
     // Create a Python object that will free the allocated
@@ -469,33 +451,18 @@ pybind11::array_t<double> getNumpyCurvature( const MR::Mesh& mesh )
         freeWhenDone ); // numpy array references this parent
 }
 
-// returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh valid points
-pybind11::array_t<double> getNumpyCurvatureGradient( const MR::Mesh& mesh )
+pybind11::array_t<double> getNumpyGaussianCurvature( const MR::Mesh& mesh )
 {
     using namespace MR;
-    int numVerts = mesh.topology.lastValidVert() + 1;
-
-    VertScalars curv( numVerts );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
-    {
-        curv[v] = mesh.discreteMeanCurvature( v );
-    } );
-
-    auto gradient = vertexAttributeGradient( mesh, curv );
-
     // Allocate and initialize some data;
-    const int size = numVerts * 3;
-    double* data = new double[size];
-
-    tbb::parallel_for( tbb::blocked_range<int>( 0, numVerts ),
-        [&] ( const tbb::blocked_range<int>& range )
+    int numVerts = mesh.topology.lastValidVert() + 1;
+    double* data = new double[numVerts];
+    ParallelFor( 0_v, VertId( numVerts ), [&]( VertId v )
     {
-        for ( int i = range.begin(); i < range.end(); ++i )
-        {
-            int ind = 3 * i;
-            for ( int vi = 0; vi < 3; ++vi )
-                data[ind + vi] = gradient.vec_[i][vi];
-        }
+        if ( mesh.topology.hasVert( v ) )
+            data[v] = double( mesh.discreteGaussianCurvature( v ) );
+        else
+            data[v] = 0.0;
     } );
 
     // Create a Python object that will free the allocated
@@ -507,16 +474,17 @@ pybind11::array_t<double> getNumpyCurvatureGradient( const MR::Mesh& mesh )
     } );
 
     return pybind11::array_t<double>(
-        { numVerts, 3 }, // shape
-        { 3 * sizeof( double ), sizeof( double ) }, // C-style contiguous strides for double
+        { numVerts }, // shape
+        { sizeof( double ) }, // C-style contiguous strides for double
         data, // the data pointer
         freeWhenDone ); // numpy array references this parent
 }
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m )
 {
-    m.def( "getNumpyCurvature", &getNumpyCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with curvature for each valid vertex of given mesh" );
-    m.def( "getNumpyCurvatureGradient", &getNumpyCurvatureGradient, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents gradient of mean curvature of mesh valid points" );
+    m.def( "getNumpyCurvature", &getNumpyMeanCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with discrete mean curvature for each vertex of a mesh" ); // to be deprecated
+    m.def( "getNumpyMeanCurvature", &getNumpyMeanCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with discrete mean curvature for each vertex of a mesh" );
+    m.def( "getNumpyGaussianCurvature", &getNumpyGaussianCurvature, pybind11::arg( "mesh" ), "retunrs numpy array with discrete Gaussian curvature for each vertex of a mesh" );
     m.def( "getNumpyFaces", &getNumpyFaces, pybind11::arg( "topology" ), "returns numpy array shapes [num faces,3] which represents vertices of mesh valid faces " );
     m.def( "getNumpyVerts", &getNumpyVerts, pybind11::arg( "mesh" ), "returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)" );
     m.def( "getNumpyBitSet", &getNumpyBitSet, pybind11::arg( "bitset" ), "returns numpy array with bools for each bit of given bitset" );

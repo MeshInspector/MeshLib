@@ -75,6 +75,7 @@
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "MRViewer/MRGladGlfw.h"
+#include "MRViewer/MRShortcutManager.h"
 #include <GLFW/glfw3native.h>
 #endif
 
@@ -259,6 +260,12 @@ bool OpenFilesMenuItem::action()
 const RibbonMenuItem::DropItemsList& OpenFilesMenuItem::dropItems() const
 {
     return dropList_;
+}
+
+void OpenFilesMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_O, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene );
 }
 
 void OpenFilesMenuItem::dragEntrance_( bool entered )
@@ -859,9 +866,21 @@ std::string SaveSceneAsMenuItem::isAvailable( const std::vector<std::shared_ptr<
     return {};
 }
 
+void SaveSceneAsMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_S, getGlfwModPrimaryCtrl() | GLFW_MOD_SHIFT }, ShortcutCategory::Scene );
+}
+
 SaveSceneMenuItem::SaveSceneMenuItem() :
     SaveSceneAsMenuItem( "Save Scene" )
 {
+}
+
+void SaveSceneMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_S, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene );
 }
 
 bool SaveSceneMenuItem::action()

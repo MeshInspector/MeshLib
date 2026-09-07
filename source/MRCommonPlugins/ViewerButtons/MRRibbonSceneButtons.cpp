@@ -11,6 +11,8 @@
 #include "MRMesh/MRChangeSceneAction.h"
 #include "MRViewer/MRSceneObjectsListDrawer.h"
 #include "MRViewer/MRI18n.h"
+#include "MRViewer/MRShortcutManager.h"
+#include "MRViewer/MRGladGlfw.h"
 
 namespace MR
 {
@@ -212,6 +214,18 @@ bool RibbonSceneRemoveSelected::action()
             selected[i]->detachFromParent();
         }
     return false;
+}
+
+void RibbonSceneRename::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_F2, 0 }, ShortcutCategory::Objects );
+}
+
+void RibbonSceneRemoveSelected::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutCategory::Objects );
 }
 
 MR_REGISTER_RIBBON_ITEM( RibbonSceneSortByName )

@@ -1,5 +1,6 @@
 #include "MRRibbonMenuItem.h"
 #include "MRRibbonSchema.h"
+#include "MRRibbonMenu.h"
 #include <cassert>
 
 namespace MR
@@ -9,6 +10,16 @@ namespace MR
 RibbonMenuItem::RibbonMenuItem( std::string name ) :
     name_{ std::move( name ) }
 {
+}
+
+void RibbonMenuItem::registerShortcut( RibbonMenu&, const ShortcutConfig& )
+{
+    // most items have no default shortcut
+}
+
+void RibbonMenuItem::registerShortcut_( RibbonMenu& menu, const ShortcutKey& key, ShortcutCategory category )
+{
+    menu.addRibbonItemShortcut( name_, key, category );
 }
 
 void RibbonMenuItem::setDropItemsFromItemList( const MenuItemsList& itemsList )

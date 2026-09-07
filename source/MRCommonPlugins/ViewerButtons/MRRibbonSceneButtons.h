@@ -91,6 +91,8 @@ public:
 
     // returns true if state of item changed
     virtual bool action() override;
+
+    virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
 };
 
 class RibbonSceneRemoveSelected : public RibbonMenuItem, public SceneStateAtLeastCheck<1, Object, NoModelCheck>
@@ -102,6 +104,8 @@ public:
 
     // returns true if state of item changed
     virtual bool action() override;
+
+    virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
 };
 
 

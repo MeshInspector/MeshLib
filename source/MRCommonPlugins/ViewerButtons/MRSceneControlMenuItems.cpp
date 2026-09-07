@@ -23,6 +23,8 @@
 #include "MRViewer/MRUISaveChangesPopup.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
 #include "MRViewer/MRI18n.h"
+#include "MRViewer/MRShortcutManager.h"
+#include "MRViewer/MRGladGlfw.h"
 #include <array>
 
 namespace
@@ -114,6 +116,12 @@ void ResetSceneMenuItem::resetScene_()
     getViewerInstance().onSceneSaved( {} );
 }
 
+void ResetSceneMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_N, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene );
+}
+
 FitDataMenuItem::FitDataMenuItem() :
     RibbonMenuItem( "Fit data" )
 {
@@ -134,6 +142,12 @@ std::string FitDataMenuItem::isAvailable( const std::vector<std::shared_ptr<cons
     if ( getViewerInstance().globalBasis && getViewerInstance().globalBasis->isVisible() )
         return "";
     return _tr( "There are no visible objects." );
+}
+
+void FitDataMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_F, getGlfwModPrimaryCtrl() | GLFW_MOD_ALT }, ShortcutCategory::View );
 }
 
 FitSelectedObjectsMenuItem::FitSelectedObjectsMenuItem() :
@@ -206,6 +220,35 @@ bool SetViewPresetMenuItem::action()
 
     viewport.preciseFitDataToScreenBorder( { 0.9f } );
     return false;
+}
+
+void SetViewPresetMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( !conf.allowBase )
+        return;
+    switch ( type_ )
+    {
+    case Type::Front:
+        registerShortcut_( menu, { GLFW_KEY_KP_1, 0 }, ShortcutCategory::View );
+        break;
+    case Type::Top:
+        registerShortcut_( menu, { GLFW_KEY_KP_7, 0 }, ShortcutCategory::View );
+        break;
+    case Type::Bottom:
+        registerShortcut_( menu, { GLFW_KEY_KP_7, getGlfwModPrimaryCtrl() }, ShortcutCategory::View );
+        break;
+    case Type::Left:
+        registerShortcut_( menu, { GLFW_KEY_KP_3, getGlfwModPrimaryCtrl() }, ShortcutCategory::View );
+        break;
+    case Type::Back:
+        registerShortcut_( menu, { GLFW_KEY_KP_1, getGlfwModPrimaryCtrl() }, ShortcutCategory::View );
+        break;
+    case Type::Right:
+        registerShortcut_( menu, { GLFW_KEY_KP_3, 0 }, ShortcutCategory::View );
+        break;
+    default:
+        break; // Isometric View has no default shortcut
+    }
 }
 
 template<SetViewPresetMenuItem::Type T>

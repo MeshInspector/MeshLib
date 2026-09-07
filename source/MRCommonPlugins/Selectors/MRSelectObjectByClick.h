@@ -19,6 +19,8 @@ public:
 
     virtual bool blocking() const override { return false; };
 
+    virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
+
     virtual void drawDialog( ImGuiContext* ) override;
 private:
     virtual bool onMouseDown_( MouseButton button, int modifiers ) override;

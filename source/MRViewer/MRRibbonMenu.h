@@ -95,7 +95,7 @@ public:
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
     /// binds given key to the ribbon item with given name;
-    /// the items of other libraries shall be bound by them, e.g. see MRCommonPlugins/MRCommonPluginsShortcuts.h
+    /// normally an item binds its own default shortcut in RibbonMenuItem::registerShortcut instead
     MRVIEWER_API virtual void addRibbonItemShortcut( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
 
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
@@ -208,6 +208,17 @@ protected:
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
 
     MRVIEWER_API virtual void setupShortcuts_() override;
+
+    /// returns the configuration given to RibbonMenuItem::registerShortcut of every item;
+    /// override to suppress some groups of the item shortcuts
+    MRVIEWER_API virtual ShortcutConfig getShortcutConfig_() const;
+
+    /// asks every item of RibbonSchemaHolder::schema() to register its default shortcut,
+    /// visiting the items in the order of their appearance in the UI,
+    /// so that of two items claiming the same key the later one in the UI wins;
+    /// the schema must be already read, so it is called after readMenuItemsStructure_ and not in setupShortcuts_;
+    /// call it again after every shortcutManager_->clear()
+    MRVIEWER_API void registerItemsShortcuts_( const ShortcutConfig& conf );
 
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description

@@ -1,5 +1,7 @@
 #include <MRViewer/MRRibbonRegisterItem.h>
 #include <MRViewer/MRViewport.h>
+#include <MRViewer/MRShortcutManager.h>
+#include <MRViewer/MRGladGlfw.h>
 
 namespace MR
 {
@@ -9,7 +11,14 @@ class InvertViewMenuItem : public RibbonMenuItem
 public:
    InvertViewMenuItem() : RibbonMenuItem( "Invert View" ) {}
    virtual bool action() override;
+   virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
 };
+
+void InvertViewMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowBase )
+        registerShortcut_( menu, { GLFW_KEY_KP_9, 0 }, ShortcutCategory::View );
+}
 
 bool InvertViewMenuItem::action()
 {

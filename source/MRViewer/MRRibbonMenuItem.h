@@ -14,6 +14,16 @@ enum class RibbonItemType
     ButtonWithDrop
 };
 
+/// tells which groups of the default item shortcuts an application wants to have;
+/// every item consults it in RibbonMenuItem::registerShortcut
+struct ShortcutConfig
+{
+    /// ordinary item shortcuts, e.g. Ctrl+O of "Open files"
+    bool allowBase = true;
+    /// the shortcuts undoing and redoing the actions, e.g. Ctrl+Z of "Undo"
+    bool allowHistory = true;
+};
+
 // class to hold menu items
 // some information stored in json (icons path, tab name, subtab name)
 class MRVIEWER_CLASS RibbonMenuItem : virtual public ISceneStateCheck
@@ -57,7 +67,16 @@ public:
     // return not-empty string with tooltip that shall replace the static tooltip from json
     virtual std::string getDynamicTooltip() const { return {}; }
 
+    /// registers the default keyboard shortcut of this item in the given menu, if (conf) permits it;
+    /// the base implementation registers nothing, since most items have no default shortcut;
+    /// an override shall call registerShortcut_ under the (conf) flag of the group it belongs to
+    MRVIEWER_API virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf );
+
 protected:
+    /// registers (key) in the given menu as the shortcut pressing this item;
+    /// to be called from registerShortcut overrides
+    MRVIEWER_API virtual void registerShortcut_( RibbonMenu& menu, const ShortcutKey& key, ShortcutCategory category );
+
     RibbonItemType type_{ RibbonItemType::Button };
     DropItemsList dropList_;
 

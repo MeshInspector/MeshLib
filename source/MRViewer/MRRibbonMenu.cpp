@@ -100,6 +100,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // should init instance before load schema (as far as some font are used inside)
     fontManager_.initFontManagerInstance( &fontManager_ );
     readMenuItemsStructure_();
+    // not in setupShortcuts_, which ImGuiMenu::init calls before the schema with the UI order of the items is read
+    registerItemsShortcuts_( getShortcutConfig_() );
 
     RibbonIcons::load();
 
@@ -2254,6 +2256,48 @@ void RibbonMenu::setupShortcuts_()
             sceneObjectsList_->changeVisible( true );
         } } );
     }
+}
+
+ShortcutConfig RibbonMenu::getShortcutConfig_() const
+{
+    return {};
+}
+
+void RibbonMenu::registerItemsShortcuts_( const ShortcutConfig& conf )
+{
+    MR_TIMER;
+    const auto& schema = RibbonSchemaHolder::schema();
+    HashSet<const RibbonMenuItem*> visited;
+    auto registerItems = [&] ( const MenuItemsList& itemNames )
+    {
+        for ( const auto& itemName : itemNames )
+        {
+            auto itemIt = schema.items.find( itemName );
+            if ( itemIt == schema.items.end() || !itemIt->second.item )
+                continue;
+            // one item can appear in several places of the UI, ask it only once
+            if ( !visited.insert( itemIt->second.item.get() ).second )
+                continue;
+            itemIt->second.item->registerShortcut( *this, conf );
+        }
+    };
+
+    for ( const auto& tab : schema.tabsOrder )
+    {
+        auto groupsIt = schema.tabsMap.find( tab.name );
+        if ( groupsIt == schema.tabsMap.end() )
+            continue;
+        for ( const auto& groupName : groupsIt->second )
+        {
+            auto itemsIt = schema.groupsMap.find( tab.name + groupName );
+            if ( itemsIt == schema.groupsMap.end() )
+                continue;
+            registerItems( itemsIt->second );
+        }
+    }
+    registerItems( schema.sceneButtonsList );
+    registerItems( schema.headerQuickAccessList );
+    registerItems( schema.defaultQuickAccessList );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

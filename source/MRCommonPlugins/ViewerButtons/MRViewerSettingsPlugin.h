@@ -36,6 +36,8 @@ public:
 
     virtual bool blocking() const override { return false; }
 
+    virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
+
     // call this function if you save/delete color theme, or change current theme outside of this plugin
     MRCOMMONPLUGINS_API void updateThemes();
 

@@ -14,6 +14,8 @@
 #include "MRViewer/MRI18n.h"
 #include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRPch/MRSpdlog.h"
+#include "MRViewer/MRShortcutManager.h"
+#include "MRViewer/MRGladGlfw.h"
 #include <array>
 
 namespace
@@ -190,6 +192,18 @@ void RedoMenuItem::updateRedoListCache_( const HistoryStore& store, HistoryStore
                     history->redo();
         } );
     }
+}
+
+void UndoMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowHistory )
+        registerShortcut_( menu, { GLFW_KEY_Z, getGlfwModPrimaryCtrl() }, ShortcutCategory::Edit );
+}
+
+void RedoMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+{
+    if ( conf.allowHistory )
+        registerShortcut_( menu, { GLFW_KEY_Z, getGlfwModPrimaryCtrl() | GLFW_MOD_SHIFT }, ShortcutCategory::Edit );
 }
 
 MR_REGISTER_RIBBON_ITEM( UndoMenuItem )

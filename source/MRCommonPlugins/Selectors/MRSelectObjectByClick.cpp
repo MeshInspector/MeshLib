@@ -21,10 +21,11 @@ SelectObjectByClick::SelectObjectByClick() :
 {
 }
 
-void SelectObjectByClick::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+std::optional<ItemShortcut> SelectObjectByClick::defaultShortcut_( const ShortcutConfig& conf ) const
 {
-    if ( conf.allowBase )
-        registerShortcut_( menu, { GLFW_KEY_Q, getGlfwModPrimaryCtrl() }, ShortcutCategory::Objects );
+    if ( !conf.allowBase )
+        return {};
+    return ItemShortcut{ { GLFW_KEY_Q, getGlfwModPrimaryCtrl() }, ShortcutCategory::Objects };
 }
 
 void SelectObjectByClick::drawDialog( ImGuiContext* )

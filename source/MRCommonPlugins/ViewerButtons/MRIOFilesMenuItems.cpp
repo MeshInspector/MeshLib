@@ -262,10 +262,11 @@ const RibbonMenuItem::DropItemsList& OpenFilesMenuItem::dropItems() const
     return dropList_;
 }
 
-void OpenFilesMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+std::optional<ItemShortcut> OpenFilesMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
-    if ( conf.allowBase )
-        registerShortcut_( menu, { GLFW_KEY_O, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene );
+    if ( !conf.allowBase )
+        return {};
+    return ItemShortcut{ { GLFW_KEY_O, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene };
 }
 
 void OpenFilesMenuItem::dragEntrance_( bool entered )
@@ -866,10 +867,11 @@ std::string SaveSceneAsMenuItem::isAvailable( const std::vector<std::shared_ptr<
     return {};
 }
 
-void SaveSceneAsMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+std::optional<ItemShortcut> SaveSceneAsMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
-    if ( conf.allowBase )
-        registerShortcut_( menu, { GLFW_KEY_S, getGlfwModPrimaryCtrl() | GLFW_MOD_SHIFT }, ShortcutCategory::Scene );
+    if ( !conf.allowBase )
+        return {};
+    return ItemShortcut{ { GLFW_KEY_S, getGlfwModPrimaryCtrl() | GLFW_MOD_SHIFT }, ShortcutCategory::Scene };
 }
 
 SaveSceneMenuItem::SaveSceneMenuItem() :
@@ -877,10 +879,11 @@ SaveSceneMenuItem::SaveSceneMenuItem() :
 {
 }
 
-void SaveSceneMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
+std::optional<ItemShortcut> SaveSceneMenuItem::defaultShortcut_( const ShortcutConfig& conf ) const
 {
-    if ( conf.allowBase )
-        registerShortcut_( menu, { GLFW_KEY_S, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene );
+    if ( !conf.allowBase )
+        return {};
+    return ItemShortcut{ { GLFW_KEY_S, getGlfwModPrimaryCtrl() }, ShortcutCategory::Scene };
 }
 
 bool SaveSceneMenuItem::action()

@@ -13,7 +13,7 @@ public:
    ResetSceneMenuItem();
    virtual bool action() override;
     virtual bool blocking()const override { return true; }
-    virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
+    virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 private:
     virtual void preDraw_() override;
     void resetScene_();
@@ -27,7 +27,7 @@ public:
    FitDataMenuItem();
    virtual bool action() override;
    virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const override;
-   virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
+   virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 };
 
 class FitSelectedObjectsMenuItem : public RibbonMenuItem
@@ -63,7 +63,7 @@ public:
     };
    SetViewPresetMenuItem( Type type );
    virtual bool action() override;
-   virtual void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override;
+   virtual std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override;
 private:
     Type type_;
 };

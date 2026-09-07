@@ -81,10 +81,11 @@ public:
         return false;
     }
 
-    void registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf ) override
+    std::optional<ItemShortcut> defaultShortcut_( const ShortcutConfig& conf ) const override
     {
-        if ( conf.allowBase )
-            registerShortcut_( menu, { GLFW_KEY_G, getGlfwModPrimaryCtrl() }, ShortcutCategory::View );
+        if ( !conf.allowBase )
+            return {};
+        return ItemShortcut{ { GLFW_KEY_G, getGlfwModPrimaryCtrl() }, ShortcutCategory::View };
     }
 
     void providedViewportWidgets( ViewportWidgetInterface& in ) override

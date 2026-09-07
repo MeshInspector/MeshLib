@@ -12,14 +12,15 @@ RibbonMenuItem::RibbonMenuItem( std::string name ) :
 {
 }
 
-void RibbonMenuItem::registerShortcut( RibbonMenu&, const ShortcutConfig& )
+void RibbonMenuItem::registerShortcut( RibbonMenu& menu, const ShortcutConfig& conf )
 {
-    // most items have no default shortcut
+    if ( auto shortcut = defaultShortcut_( conf ) )
+        menu.addRibbonItemShortcut( name_, shortcut->key, shortcut->category );
 }
 
-void RibbonMenuItem::registerShortcut_( RibbonMenu& menu, const ShortcutKey& key, ShortcutCategory category )
+std::optional<ItemShortcut> RibbonMenuItem::defaultShortcut_( const ShortcutConfig& ) const
 {
-    menu.addRibbonItemShortcut( name_, key, category );
+    return {}; // most items have no default shortcut
 }
 
 void RibbonMenuItem::setDropItemsFromItemList( const MenuItemsList& itemsList )

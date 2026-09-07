@@ -105,6 +105,7 @@
     <ClInclude Include="MRAffineXf.h" />
     <ClInclude Include="MRAffineXf2.h" />
     <ClInclude Include="MR2DContoursTriangulation.h" />
+    <ClInclude Include="MR2DContoursTriangulationInternal.h" />
     <ClInclude Include="MRAABBTreeMaker.h" />
     <ClInclude Include="MRAABBTreeNode.h" />
     <ClInclude Include="MRAABBTreePoints.h" />

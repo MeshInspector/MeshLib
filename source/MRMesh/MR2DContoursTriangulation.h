@@ -107,23 +107,6 @@ public:
 /// creates a cache for the sweep-line triangulation
 MRMESH_API std::unique_ptr<ISweepLineCache> makeSweepLineCache();
 
-/// scratch buffers living in the cache for a caller composing a pipeline around the triangulation
-/// (e.g. tracking the hole loops to triangulate), so its per-call locals do not allocate either;
-/// the loops scratch is never touched by the triangulation itself, the patch map scratch is where
-/// triangulateDisjointContours*( ..., outPatchMap = nullptr, cache ) leaves the patch->input map
-/// of the last run. C++-only: the references point inside the cache and must not outlive it.
-MR_BIND_IGNORE MRMESH_API EdgeLoops& sweepCacheLoops( ISweepLineCache& cache );
-MR_BIND_IGNORE MRMESH_API WholeEdgeMap& sweepCachePatchMap( ISweepLineCache& cache );
-
-/// one slot of the hole-fill-plan peel's polygon scratch (see sweepCachePeelSlots)
-struct MR_BIND_IGNORE SweepCachePeelSlot
-{
-    EdgeId cur;   ///< current polygon edge in the patch, invalid = consumed position
-    int refCode;  ///< plan code of cur: not-negative absolute mesh EdgeId, negative - earlier plan edge
-    int succ;     ///< next slot around the polygon
-};
-MR_BIND_IGNORE MRMESH_API std::vector<SweepCachePeelSlot>& sweepCachePeelSlots( ISweepLineCache& cache );
-
 /**
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)

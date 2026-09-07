@@ -1,4 +1,5 @@
 #include "MR2DContoursTriangulation.h"
+#include "MR2DContoursTriangulationInternal.h"
 #include "MRMesh.h"
 #include "MRVector.h"
 #include "MRVector2.h"

@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MR2DContoursTriangulation.h"
+#include "MR2DContoursTriangulationInternal.h"
 #include "MRRingIterator.h"
 #include "MREdgePaths.h"
 #include "MRAffineXf3.h"

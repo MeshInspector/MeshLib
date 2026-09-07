@@ -461,6 +461,10 @@ override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
 PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates $(if $(PCH_CODEGEN),-fpch-codegen)
 
 
+# Will those C bindings be used on Wasm? Then we disable some libraries that don't work there, and disable Cuda.
+C_FOR_WASM := 0
+override C_FOR_WASM := $(filter-out 0,$(C_FOR_WASM))
+
 
 # --- Guess the build settings for the optimal speed:
 
@@ -541,8 +545,8 @@ mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
 # Enable Cuda? You can set this to 0 if you don't have Cuda installed.
 # Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use
-#   wherever there is no Cuda toolkit: Macs, and Windows on arm64.
-ENABLE_CUDA := $(if $(IS_MACOS),0,$(if $(filter arm64,$(MSVC_ARCH)),0,1))
+#   wherever there is no Cuda toolkit: Macs, Windows Arm, Wasm.
+ENABLE_CUDA := $(if $(IS_MACOS)$(filter arm64,$(MSVC_ARCH))$(and $(is_c),$(C_FOR_WASM)),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
 
@@ -643,8 +647,6 @@ COMPILER += -DMR_COMPILING_C_BINDINGS
 endif
 
 ifeq ($(TARGET),c)
-C_FOR_WASM := 0
-override C_FOR_WASM := $(filter-out 0,$(C_FOR_WASM))
 ifneq ($(C_FOR_WASM),)
 # Those libraries not built for wasm.
 # Those flags are similar to those in `source/MRIOExtras/CMakeLists.txt`.

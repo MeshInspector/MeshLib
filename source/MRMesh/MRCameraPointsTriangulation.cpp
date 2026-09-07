@@ -81,31 +81,37 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
 
 void smoothCameraMeshDepth( Mesh & mesh, const SmoothCameraMeshDepthSettings & settings )
 {
+    mesh.invalidateCaches();
+    smoothCameraMeshDepth( mesh.topology, mesh.points, settings );
+}
+
+void smoothCameraMeshDepth( const MeshTopology & topology, VertCoords & points, const SmoothCameraMeshDepthSettings & settings )
+{
     MR_TIMER;
-    const auto & verts = mesh.topology.getVertIds( settings.region );
-    VertScalars depth( mesh.points.size() );
+    const auto & verts = topology.getVertIds( settings.region );
+    VertScalars depth( points.size() );
     // the mesh projected in the image plane (normalized coordinates), where edge weights and vertex areas are computed
-    VertCoords projected( mesh.points.size() );
-    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    VertCoords projected( points.size() );
+    BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
     {
-        const auto & p = mesh.points[v];
+        const auto & p = points[v];
         depth[v] = p.z;
         projected[v] = Vector3f( p.x / p.z, -p.y / p.z, 1 );
     } );
 
-    VertScalars stabilizers( mesh.points.size(), settings.innerStabilizer );
+    VertScalars stabilizers( points.size(), settings.innerStabilizer );
     if ( settings.innerStabilizerType != AreaStabilizer::Uniform )
     {
         BitSetParallelFor( verts, [&]( VertId v )
         {
-            const auto a = dblArea( mesh.topology, projected, v );
+            const auto a = dblArea( topology, projected, v );
             stabilizers[v] = settings.innerStabilizerType == AreaStabilizer::Area ? a : sqr( a );
         } );
         double sum = 0;
         int n = 0;
         for ( auto v : verts )
         {
-            if ( mesh.topology.isBdVertex( v ) )
+            if ( topology.isBdVertex( v ) )
                 continue;
             sum += stabilizers[v];
             ++n;
@@ -117,7 +123,7 @@ void smoothCameraMeshDepth( Mesh & mesh, const SmoothCameraMeshDepthSettings & s
         } );
     }
     for ( auto v : verts )
-        if ( mesh.topology.isBdVertex( v ) )
+        if ( topology.isBdVertex( v ) )
             stabilizers[v] = settings.bdStabilizer;
 
     InterpolateScalarsParams params
@@ -126,14 +132,13 @@ void smoothCameraMeshDepth( Mesh & mesh, const SmoothCameraMeshDepthSettings & s
         .edgeWeights = settings.edgeWeights,
         .vertStabilizers = [&stabilizers]( VertId v ) { return stabilizers[v]; }
     };
-    interpolateScalarsSmoothly( mesh.topology, projected, depth, params );
+    interpolateScalarsSmoothly( topology, projected, depth, params );
     BitSetParallelFor( verts, [&]( VertId v )
     {
-        auto & p = mesh.points[v];
+        auto & p = points[v];
         if ( p.z > 0 && depth[v] > 0 )
             p *= depth[v] / p.z;
     } );
-    mesh.invalidateCaches();
 }
 
 Expected<Mesh> triangulateCameraPoints( const PointCloud & cloud, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb )

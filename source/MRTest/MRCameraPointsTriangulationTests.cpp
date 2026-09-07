@@ -149,6 +149,9 @@ TEST( MRMesh, SmoothCameraMeshDepth )
     // with the default settings the boundary vertices are attracted to their noisy depths much stronger than inner ones
     Mesh smoothed = *mesh;
     smoothCameraMeshDepth( smoothed );
+    VertCoords points2 = mesh->points;
+    smoothCameraMeshDepth( mesh->topology, points2 );
+    EXPECT_EQ( points2, smoothed.points );
     double bdMove = 0, innerMove = 0;
     int nBd = 0, nInner = 0;
     for ( VertId v( 0 ); v < exact.size(); ++v )

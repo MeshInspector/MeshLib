@@ -73,5 +73,6 @@ struct SmoothCameraMeshDepthSettings
 /// (computed on the mesh projected in the image plane), and every vertex is moved along its viewing ray to the new depth,
 /// so the projection of the mesh in the image plane and its absence of self-intersections are preserved
 MRMESH_API void smoothCameraMeshDepth( Mesh & mesh, const SmoothCameraMeshDepthSettings & settings = {} );
+MRMESH_API void smoothCameraMeshDepth( const MeshTopology & topology, VertCoords & points, const SmoothCameraMeshDepthSettings & settings = {} );
 
 } //namespace MR

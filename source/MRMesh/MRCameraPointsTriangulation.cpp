@@ -3,6 +3,7 @@
 #include "MRPointCloud.h"
 #include "MRDelaunayTriangulationXY.h"
 #include "MRCloseVertices.h"
+#include "MRMeshMath.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 
@@ -78,12 +79,12 @@ Expected<Mesh> triangulateCameraPoints( const VertCoords & points, const CameraP
     return triangulateCameraPoints( points, nullptr, settings, cb );
 }
 
-void smoothCameraMeshDepth( Mesh & mesh, const InterpolateScalarsParams & params )
+void smoothCameraMeshDepth( Mesh & mesh, const SmoothCameraMeshDepthSettings & settings )
 {
     MR_TIMER;
-    const auto & verts = mesh.topology.getVertIds( params.region );
+    const auto & verts = mesh.topology.getVertIds( settings.region );
     VertScalars depth( mesh.points.size() );
-    // the mesh projected in the image plane (normalized coordinates), where edge weights and vertex masses are computed
+    // the mesh projected in the image plane (normalized coordinates), where edge weights and vertex areas are computed
     VertCoords projected( mesh.points.size() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
@@ -91,6 +92,40 @@ void smoothCameraMeshDepth( Mesh & mesh, const InterpolateScalarsParams & params
         depth[v] = p.z;
         projected[v] = Vector3f( p.x / p.z, -p.y / p.z, 1 );
     } );
+
+    VertScalars stabilizers( mesh.points.size(), settings.innerStabilizer );
+    if ( settings.innerStabilizerType != AreaStabilizer::Uniform )
+    {
+        BitSetParallelFor( verts, [&]( VertId v )
+        {
+            const auto a = dblArea( mesh.topology, projected, v );
+            stabilizers[v] = settings.innerStabilizerType == AreaStabilizer::Area ? a : sqr( a );
+        } );
+        double sum = 0;
+        int n = 0;
+        for ( auto v : verts )
+        {
+            if ( mesh.topology.isBdVertex( v ) )
+                continue;
+            sum += stabilizers[v];
+            ++n;
+        }
+        const float k = sum > 0 ? float( settings.innerStabilizer * n / sum ) : 0;
+        BitSetParallelFor( verts, [&]( VertId v )
+        {
+            stabilizers[v] *= k;
+        } );
+    }
+    for ( auto v : verts )
+        if ( mesh.topology.isBdVertex( v ) )
+            stabilizers[v] = settings.bdStabilizer;
+
+    InterpolateScalarsParams params
+    {
+        .region = settings.region,
+        .edgeWeights = settings.edgeWeights,
+        .vertStabilizers = [&stabilizers]( VertId v ) { return stabilizers[v]; }
+    };
     interpolateScalarsSmoothly( mesh.topology, projected, depth, params );
     BitSetParallelFor( verts, [&]( VertId v )
     {

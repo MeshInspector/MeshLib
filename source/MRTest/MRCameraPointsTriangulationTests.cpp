@@ -134,16 +134,38 @@ TEST( MRMesh, SmoothCameraMeshDepth )
     };
     const auto errBefore = rmsError( mesh->points );
     for ( auto edgeWeights : { EdgeWeights::Unit, EdgeWeights::Cotan } )
-    {
-        Mesh smoothed = *mesh;
-        smoothCameraMeshDepth( smoothed, { .edgeWeights = edgeWeights, .stabilizer = 0.1f } );
-        EXPECT_LT( rmsError( smoothed.points ), 0.5 * errBefore );
-        for ( VertId v( 0 ); v < exact.size(); ++v )
+        for ( auto type : { AreaStabilizer::Uniform, AreaStabilizer::Area, AreaStabilizer::AreaSq } )
         {
-            const auto & p = smoothed.points[v];
-            EXPECT_LT( ( Vector2f( p.x / p.z, p.y / p.z ) - Vector2f( exact[v].x / exact[v].z, exact[v].y / exact[v].z ) ).length(), 1e-6f );
+            Mesh smoothed = *mesh;
+            smoothCameraMeshDepth( smoothed, { .edgeWeights = edgeWeights, .bdStabilizer = 0.1f, .innerStabilizer = 0.1f, .innerStabilizerType = type } );
+            EXPECT_LT( rmsError( smoothed.points ), 0.5 * errBefore );
+            for ( VertId v( 0 ); v < exact.size(); ++v )
+            {
+                const auto & p = smoothed.points[v];
+                EXPECT_LT( ( Vector2f( p.x / p.z, p.y / p.z ) - Vector2f( exact[v].x / exact[v].z, exact[v].y / exact[v].z ) ).length(), 1e-6f );
+            }
+        }
+
+    // with the default settings the boundary vertices are attracted to their noisy depths much stronger than inner ones
+    Mesh smoothed = *mesh;
+    smoothCameraMeshDepth( smoothed );
+    double bdMove = 0, innerMove = 0;
+    int nBd = 0, nInner = 0;
+    for ( VertId v( 0 ); v < exact.size(); ++v )
+    {
+        const auto move = std::abs( smoothed.points[v].z - mesh->points[v].z );
+        if ( smoothed.topology.isBdVertex( v ) )
+        {
+            bdMove += move;
+            ++nBd;
+        }
+        else
+        {
+            innerMove += move;
+            ++nInner;
         }
     }
+    EXPECT_LT( bdMove / nBd, 0.5 * innerMove / nInner );
 }
 
 } //namespace MR

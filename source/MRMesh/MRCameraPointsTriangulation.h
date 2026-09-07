@@ -42,11 +42,36 @@ struct CameraPointsTriangulationSettings
 /// same as above, but moves cloud points into the resulting mesh instead of copying them
 [[nodiscard]] MRMESH_API Expected<Mesh> triangulateCameraPoints( PointCloud && cloud, const CameraPointsTriangulationSettings & settings, const ProgressCallback & cb = {} );
 
+/// how the stabilizer of an inner vertex depends on the area of its neighborhood in the image plane
+enum class AreaStabilizer
+{
+    Uniform,  ///< all inner vertices have the same stabilizer
+    Area,     ///< proportional to the neighborhood area (dense regions are smoothed the same as sparse ones)
+    AreaSq    ///< proportional to the squared neighborhood area (dense regions are smoothed more than sparse ones)
+};
+
+struct SmoothCameraMeshDepthSettings
+{
+    /// vertices where the depth is smoothed, nullptr means all vertices
+    const VertBitSet * region = nullptr;
+
+    /// weights of edges in the equations, computed on the mesh projected in the image plane
+    EdgeWeights edgeWeights = EdgeWeights::Cotan;
+
+    /// stabilizer of every boundary vertex of the mesh: the more the value, the bigger attraction of the vertex to its measured depth
+    float bdStabilizer = 10;
+
+    /// average stabilizer of inner vertices
+    float innerStabilizer = 1;
+
+    /// distribution of innerStabilizer among inner vertices
+    AreaStabilizer innerStabilizerType = AreaStabilizer::AreaSq;
+};
+
 /// Reduces the depth noise of a mesh produced by triangulateCameraPoints (camera at the origin looking along +Z):
-/// the depth (z) field is made smooth by interpolateScalarsSmoothly with given parameters (params.stabilizer > 0 keeps
-/// every vertex attracted to its measured depth; params.edgeWeights and params.vmass are computed on the mesh projected
-/// in the image plane), and every vertex is moved along its viewing ray to the new depth,
+/// the depth (z) field is made smooth by interpolateScalarsSmoothly with the stabilizers and edge weights given above
+/// (computed on the mesh projected in the image plane), and every vertex is moved along its viewing ray to the new depth,
 /// so the projection of the mesh in the image plane and its absence of self-intersections are preserved
-MRMESH_API void smoothCameraMeshDepth( Mesh & mesh, const InterpolateScalarsParams & params );
+MRMESH_API void smoothCameraMeshDepth( Mesh & mesh, const SmoothCameraMeshDepthSettings & settings = {} );
 
 } //namespace MR

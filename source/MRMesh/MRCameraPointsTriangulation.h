@@ -44,7 +44,8 @@ struct CameraPointsTriangulationSettings
 
 /// Reduces the depth noise of a mesh produced by triangulateCameraPoints (camera at the origin looking along +Z):
 /// the depth (z) field is made smooth by interpolateScalarsSmoothly with given parameters (params.stabilizer > 0 keeps
-/// every vertex attracted to its measured depth), and every vertex is moved along its viewing ray to the new depth,
+/// every vertex attracted to its measured depth; params.edgeWeights and params.vmass are computed on the mesh projected
+/// in the image plane), and every vertex is moved along its viewing ray to the new depth,
 /// so the projection of the mesh in the image plane and its absence of self-intersections are preserved
 MRMESH_API void smoothCameraMeshDepth( Mesh & mesh, const InterpolateScalarsParams & params );
 

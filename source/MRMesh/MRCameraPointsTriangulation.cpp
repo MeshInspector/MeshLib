@@ -83,11 +83,15 @@ void smoothCameraMeshDepth( Mesh & mesh, const InterpolateScalarsParams & params
     MR_TIMER;
     const auto & verts = mesh.topology.getVertIds( params.region );
     VertScalars depth( mesh.points.size() );
-    BitSetParallelFor( verts, [&]( VertId v )
+    // the mesh projected in the image plane (normalized coordinates), where edge weights and vertex masses are computed
+    VertCoords projected( mesh.points.size() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
-        depth[v] = mesh.points[v].z;
+        const auto & p = mesh.points[v];
+        depth[v] = p.z;
+        projected[v] = Vector3f( p.x / p.z, -p.y / p.z, 1 );
     } );
-    interpolateScalarsSmoothly( mesh.topology, depth, params );
+    interpolateScalarsSmoothly( mesh.topology, projected, depth, params );
     BitSetParallelFor( verts, [&]( VertId v )
     {
         auto & p = mesh.points[v];

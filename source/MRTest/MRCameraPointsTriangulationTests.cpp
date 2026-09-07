@@ -133,13 +133,16 @@ TEST( MRMesh, SmoothCameraMeshDepth )
         return std::sqrt( sum / pts.size() );
     };
     const auto errBefore = rmsError( mesh->points );
-    smoothCameraMeshDepth( *mesh, { .stabilizer = 0.1f } );
-    const auto errAfter = rmsError( mesh->points );
-    EXPECT_LT( errAfter, 0.5 * errBefore );
-    for ( VertId v( 0 ); v < exact.size(); ++v )
+    for ( auto edgeWeights : { EdgeWeights::Unit, EdgeWeights::Cotan } )
     {
-        const auto & p = mesh->points[v];
-        EXPECT_LT( ( Vector2f( p.x / p.z, p.y / p.z ) - Vector2f( exact[v].x / exact[v].z, exact[v].y / exact[v].z ) ).length(), 1e-6f );
+        Mesh smoothed = *mesh;
+        smoothCameraMeshDepth( smoothed, { .edgeWeights = edgeWeights, .stabilizer = 0.1f } );
+        EXPECT_LT( rmsError( smoothed.points ), 0.5 * errBefore );
+        for ( VertId v( 0 ); v < exact.size(); ++v )
+        {
+            const auto & p = smoothed.points[v];
+            EXPECT_LT( ( Vector2f( p.x / p.z, p.y / p.z ) - Vector2f( exact[v].x / exact[v].z, exact[v].y / exact[v].z ) ).length(), 1e-6f );
+        }
     }
 }
 

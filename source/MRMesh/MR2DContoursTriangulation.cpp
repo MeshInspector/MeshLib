@@ -551,14 +551,13 @@ void SweepLineQueue::resetCache_()
     tp_.clear(); // empty husk if the previous run() moved it out, filled if runTopology() kept it
     windingInfo_.clear(); // stale winding modifiers would leak into this run through resize()
     intersections_.clear();
-    // erase-all instead of clear(): some hash table versions drop the storage in clear()
-    intersectionsMap_.erase( intersectionsMap_.begin(), intersectionsMap_.end() ); // keyed by the previous run's edge ids
+    intersectionsMap_.clear(); // keyed by the previous run's edge ids
     startVerts_.clear();
     startVertLowestRight_.clear();
     sortedVerts_.clear();
     activeSweepEdges_.clear();
     events_.clear();
-    in2p_.erase( in2p_.begin(), in2p_.end() ); // keyed by the previous run's input mesh edges
+    in2p_.clear(); // keyed by the previous run's input mesh edges
     p2inCache_.clear();
 }
 

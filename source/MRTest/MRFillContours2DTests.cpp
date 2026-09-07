@@ -109,10 +109,6 @@ TEST( MRMesh, fillContours2DPlanPinchedHole )
     EXPECT_TRUE( multiples.has_value() && multiples->empty() );
 }
 
-// The classic sandclock: two triangles joined at one shared vertex, whose single pinched 6-edge hole
-// loop is filled from the other side. The 2-triangle mirror patch is pinched at that vertex too, so
-// stitching it would close each lobe into its own pillow and split the vertex into two disjoint edge
-// rings; addPartByMask detects this and fillContours2D must fail cleanly, leaving the mesh unchanged.
 TEST( MRMesh, fillContours2DPlanCacheReuse )
 {
     // the plan path is where the cache really retains state between runs (the patch topology, its
@@ -165,6 +161,10 @@ TEST( MRMesh, fillContours2DPlanCacheReuse )
     }
 }
 
+// The classic sandclock: two triangles joined at one shared vertex, whose single pinched 6-edge hole
+// loop is filled from the other side. The 2-triangle mirror patch is pinched at that vertex too, so
+// stitching it would close each lobe into its own pillow and split the vertex into two disjoint edge
+// rings; addPartByMask detects this and fillContours2D must fail cleanly, leaving the mesh unchanged.
 // The plan-based fillContours2DPlan bridges such loops disk-like instead (see fillContours2DPlanPinchedHole).
 TEST( MRMesh, fillContours2DPinchedHoleValidity )
 {

@@ -26,11 +26,11 @@ struct PointDegree
     std::int64_t d = 0; // degree of epsilon for pt.z; pt.y gets 3*d, pt.x gets 9*d
 };
 
-// this value was found experimentally as the largest leading degree of the polynomials in segmentIntersectionOrder tests
-// (all 8 points have equal coordinates but different ids, and random degenerate inputs with 7 or 8 distinct ids),
-// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value;
-// all polynomial terms of higher degrees are not stored to save computation time
-constexpr std::int64_t cMaxPolyD = 430'467'210;
+// this value was found experimentally as the largest degree of a polynomial term that must be stored in segmentIntersectionOrder
+// (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
+// in the tests and in a random sweep of degenerate inputs; if it is not enough then we will get assert violation inside
+// poly.isPositive(), and increase the value; all polynomial terms of higher degrees are not stored to save computation time
+constexpr std::int64_t cMaxPolyD = 15'943'959;
 
 std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
 {

@@ -150,9 +150,45 @@ void positionVertsSmoothlySharpBd( const MeshTopology& topology, VertCoords& poi
     }
 }
 
+void interpolateScalarsSmoothly( const Mesh& mesh, VertScalars& field, const InterpolateScalarsParams& params )
+{
+    interpolateScalarsSmoothly( mesh.topology, mesh.points, field, params );
+}
+
+void interpolateScalarsSmoothly( const MeshTopology& topology, const VertCoords& points, VertScalars& field, const InterpolateScalarsParams& params0 )
+{
+    MR_TIMER;
+    InterpolateScalarsParams params = params0;
+
+    if ( !params.edgeWeightsMetric && params.edgeWeights == EdgeWeights::Cotan )
+        params.edgeWeightsMetric = [&topology, &points]( UndirectedEdgeId ue )
+        {
+            return std::clamp( cotan( topology, points, ue ), -1.0f, 10.0f ); // cotan() can be arbitrary high for degenerate edges
+        };
+    params.edgeWeights = EdgeWeights::Unit;
+
+    if ( params.vmass == VertexMass::NeiArea )
+    {
+        if ( params0.vertStabilizers )
+            params.vertStabilizers = [&topology, &points, &vs = params0.vertStabilizers]( VertId v )
+            {
+                return vs( v ) * dblArea( topology, points, v );
+            };
+        else
+            params.vertStabilizers = [&topology, &points, s = params0.stabilizer]( VertId v )
+            {
+                return s * dblArea( topology, points, v );
+            };
+        params.vmass = VertexMass::Unit;
+    }
+
+    interpolateScalarsSmoothly( topology, field, params );
+}
+
 void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params )
 {
     MR_TIMER;
+    assert( params.edgeWeights == EdgeWeights::Unit && params.vmass == VertexMass::Unit ); // otherwise mesh points are required
     assert( params.stabilizer > 0 || params.vertStabilizers || ( params.region && !MeshComponents::hasFullySelectedComponent( topology, *params.region ) ) );
 
     const auto & verts = topology.getVertIds( params.region );
@@ -162,7 +198,7 @@ void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& fiel
 
     Eigen::VectorXd rhs( sz );
     Eigen::SimplicialLDLT<SparseMatrix> solver;
-    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, params.vertStabilizers, params.edgeWeights,
+    solver.compute( prepareLaplaceEquations( topology, verts, params.stabilizer, params.vertStabilizers, params.edgeWeightsMetric,
         [&]( VertId v ) { return double( field[v] ); },
         []( VertId ) { return 0.0; },
         [&]( int n, double r ) { rhs[n] = r; } ) );

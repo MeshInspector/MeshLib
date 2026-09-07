@@ -46,19 +46,28 @@ struct InterpolateScalarsParams
     /// it must not include all vertices of a mesh connected component unless stabilizer > 0
     const VertBitSet* region = nullptr;
 
+    /// weights of edges in the equations, used unless \p edgeWeightsMetric is specified
+    EdgeWeights edgeWeights = EdgeWeights::Unit;
+
+    /// the stabilizer of each vertex is multiplied on the mass of that vertex
+    VertexMass vmass = VertexMass::Unit;
+
     /// the more the value, the bigger attraction of each vertex to its original value
     float stabilizer = 0;
 
     /// if specified then it is used instead of \p stabilizer
     VertMetric vertStabilizers;
 
-    /// if specified then it is used for edge weights instead of default 1
-    UndirectedEdgeMetric edgeWeights;
+    /// if specified then it is used for edge weights instead of \p edgeWeights
+    UndirectedEdgeMetric edgeWeightsMetric;
 };
 
 /// Computes the values of scalar field in region vertices to make it harmonic there:
 /// each value becomes the weighted mean of the values in neighbor vertices, while the values in all other vertices remain fixed;
 /// with non-negative edge weights and zero stabilizers, the computed values never leave the range of the fixed values
+MRMESH_API void interpolateScalarsSmoothly( const Mesh& mesh, VertScalars& field, const InterpolateScalarsParams& params );
+MRMESH_API void interpolateScalarsSmoothly( const MeshTopology& topology, const VertCoords& points, VertScalars& field, const InterpolateScalarsParams& params );
+/// this overload has no access to mesh points, so it requires params.edgeWeights == EdgeWeights::Unit and params.vmass == VertexMass::Unit
 MRMESH_API void interpolateScalarsSmoothly( const MeshTopology& topology, VertScalars& field, const InterpolateScalarsParams& params );
 
 struct SpacingSettings

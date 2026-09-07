@@ -90,16 +90,19 @@ struct TriangulationParameters
 MRMESH_API Mesh triangulateContours( const Contours2d& contours, const TriangulationParameters& params = {} );
 MRMESH_API Mesh triangulateContours( const Contours2f& contours, const TriangulationParameters& params = {} );
 
-/// keeps the internal buffers of the sweep-line triangulation alive between runs,
-/// so a caller triangulating many contour sets one by one avoids re-allocating them on every call;
+/// keeps the internal buffers of the sweep-line triangulation alive between runs, so a caller
+/// triangulating many contour sets one by one avoids re-allocating them on every call;
+/// the entries returning a Mesh move the topology and the points out into it, so those two grow again
+/// on the next run, while \ref triangulateDisjointContoursTopology keeps everything;
 /// one cache must not be used by several threads at once
 class ISweepLineCache
 {
 public:
-    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
     ISweepLineCache() = default;
-    ISweepLineCache( const ISweepLineCache & ) = default;
-    ISweepLineCache( ISweepLineCache && ) noexcept = default;
+    /// not copyable: the cache is its owner's private scratch, and a copy would silently duplicate
+    /// every buffer (this also silences warning C5267 about the user-provided destructor below)
+    ISweepLineCache( const ISweepLineCache & ) = delete;
+    ISweepLineCache & operator =( const ISweepLineCache & ) = delete;
     /// pure to make the class abstract: instances are created by makeSweepLineCache() only
     MRMESH_API virtual ~ISweepLineCache() = 0;
 };
@@ -126,11 +129,12 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
  */
 MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap = nullptr, ISweepLineCache* cache = nullptr );
 
-/// same as triangulateDisjointContours( mesh, loops, normal, outPatchMap ) above, but returns only the patch
-/// connectivity, which lives inside \p cache until the next run on it (nullptr if the loops self-intersect);
-/// intended for planning: the patch vertex coordinates are not returned
+/// same as triangulateDisjointContours( mesh, loops, normal, &outPatchMap ) above, but returns only the
+/// patch connectivity, which lives inside \p cache until the next run on it, and no vertex coordinates;
+/// intended for planning
+/// \return nullptr if the loops self-intersect; an empty topology if \p loops is empty
 // This is skipped in the bindings: the result points inside the cache and must not outlive it.
-MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap, ISweepLineCache& cache );
+MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap& outPatchMap, ISweepLineCache& cache );
 
 /**
  * @brief splits the near-planar region bounded by \p loops in monotone parts, without triangulating them

@@ -1,5 +1,4 @@
 #include "MR2DContoursTriangulation.h"
-#include "MR2DContoursTriangulationInternal.h"
 #include "MRMesh.h"
 #include "MRVector.h"
 #include "MRVector2.h"
@@ -56,7 +55,7 @@ struct SweepLinePredicates
 
 // the sweep-line predicates that depend only on the projected integer coordinates `pts2`;
 // shared by precisePredicates (2D input) and meshSpacePredicates (3D mesh input projected on the dominant axis)
-static void setPts2Predicates( SweepLinePredicates& p, std::shared_ptr<Vector<Vector2i, VertId>> pts2 )
+static void setPts2Predicates( SweepLinePredicates& p, Vector<Vector2i, VertId>* pts2 )
 {
     p.less = [pts2] ( VertId l, VertId r )
     {
@@ -80,7 +79,7 @@ static void setPts2Predicates( SweepLinePredicates& p, std::shared_ptr<Vector<Ve
 
 // default predicates: exact integer arithmetic with simulation-of-simplicity (historical behavior)
 // `pts` is the storage for the projected points, cleared here; a cached buffer keeps its capacity
-static SweepLinePredicates precisePredicates( const Contours2f& contours, std::shared_ptr<Vector<Vector2i, VertId>> pts )
+static SweepLinePredicates precisePredicates( const Contours2f& contours, Vector<Vector2i, VertId>* pts )
 {
     Box3f box;
     int pointsSize = 0;
@@ -142,7 +141,7 @@ static const std::vector<int>& getContourSizes( const Contours2f& contours, std:
 // through `patchToInEdges`, the patch->input edge map (no separate coordinate copy, no projection round-trip).
 // `mesh`, `loops` and `patchToInEdges` only need to outlive the run; the map may be filled after construction.
 static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, const WholeEdgeMap& patchToInEdges,
-    std::shared_ptr<Vector<Vector2i, VertId>> pts2 ) // storage for the dominant-axis projection that drives every predicate
+    Vector<Vector2i, VertId>* pts2 ) // storage for the dominant-axis projection that drives every predicate
 {
     Box3f box;
     int pointsSize = 0;
@@ -465,8 +464,9 @@ public:
     {
         MeshTopology tp;
         VertCoords pointsCache; // scratch positions of tp's vertices for the Delone flips in triangulate()
-        // storage for the projected points of the predicates built for the runs on this cache
-        std::shared_ptr<Vector<Vector2i, VertId>> pts2Buffer = std::make_shared<Vector<Vector2i, VertId>>();
+        // the projected points of the predicates built for the runs on this cache; they hold a plain
+        // pointer to it, which is enough because a run's predicates never outlive the cache
+        Vector<Vector2i, VertId> pts2Buffer;
         Vector<EdgeWindingInfo, UndirectedEdgeId> windingInfo;
         std::vector<int> reflexChainCache;
         std::vector<Intersection> intersections;
@@ -490,11 +490,7 @@ public:
         std::vector<int> contourSizes; // vertex count of every input contour
         Vector<EdgeId, UndirectedEdgeId> oldToFirstNewEdgeMap; // scratch of injectIntersections()
         EdgeLoop monotoneBlockLoop; // scratch boundary loop of triangulateMonotoneBlock_()
-        std::vector<SweepCachePeelSlot> peelSlots; // scratch of the hole-fill-plan peel (sweepCachePeelSlots())
         DeloneFlipsCache deloneCache; // candidate sets of the Delone flips in triangulate()
-        // scratch of pipeline callers (sweepCacheLoops()); the triangulation itself never touches it,
-        // and resetCache_() must not clear it: it already holds this run's input when the queue starts
-        EdgeLoops loopsScratch;
     };
 
 private:
@@ -506,21 +502,6 @@ ISweepLineCache::~ISweepLineCache() = default;
 std::unique_ptr<ISweepLineCache> makeSweepLineCache()
 {
     return std::make_unique<SweepLineQueue::Cache>();
-}
-
-EdgeLoops& sweepCacheLoops( ISweepLineCache& cache )
-{
-    return static_cast<SweepLineQueue::Cache&>( cache ).loopsScratch;
-}
-
-WholeEdgeMap& sweepCachePatchMap( ISweepLineCache& cache )
-{
-    return static_cast<SweepLineQueue::Cache&>( cache ).p2inCache;
-}
-
-std::vector<SweepCachePeelSlot>& sweepCachePeelSlots( ISweepLineCache& cache )
-{
-    return static_cast<SweepLineQueue::Cache&>( cache ).peelSlots;
 }
 
 SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, const std::vector<int>& contourSizes, const SweepLineParams& params ) :
@@ -1659,7 +1640,7 @@ void SweepLineQueue::triangulateMonotoneBlock_( EdgeId holeEdgeId )
 Mesh getOutlineMesh( const Contours2f& conts, IntersectionsMap* interMap /*= nullptr */, const BaseOutlineParameters& params )
 {
     SweepLineQueue::Cache cache;
-    SweepLineQueue triangulator( cache, precisePredicates( conts, cache.pts2Buffer ), getContourSizes( conts, cache.contourSizes ),
+    SweepLineQueue triangulator( cache, precisePredicates( conts, &cache.pts2Buffer ), getContourSizes( conts, cache.contourSizes ),
         { .windingMode = params.innerType, .needOutline = true, .allowMerge = params.allowMerge } );
 
     if ( interMap )
@@ -1732,7 +1713,7 @@ Mesh triangulateContours( const Contours2f& contours, const TriangulationParamet
     if ( contours.empty() )
         return {};
     SweepLineQueue::Cache cache;
-    SweepLineQueue triangulator( cache, precisePredicates( contours, cache.pts2Buffer ), getContourSizes( contours, cache.contourSizes ),
+    SweepLineQueue triangulator( cache, precisePredicates( contours, &cache.pts2Buffer ), getContourSizes( contours, cache.contourSizes ),
         { .outFaceWinding = params.outFaceWinding } );
     if ( params.outInterMap )
         params.outInterMap->shift = triangulator.vertSize();
@@ -1756,7 +1737,7 @@ std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, ISw
         return Mesh();
     std::optional<SweepLineQueue::Cache> localCache;
     auto& cacheImpl = cache ? static_cast<SweepLineQueue::Cache&>( *cache ) : localCache.emplace();
-    SweepLineQueue triangulator( cacheImpl, precisePredicates( contours, cacheImpl.pts2Buffer ), getContourSizes( contours, cacheImpl.contourSizes ), { .abortWhenIntersect = true } );
+    SweepLineQueue triangulator( cacheImpl, precisePredicates( contours, &cacheImpl.pts2Buffer ), getContourSizes( contours, cacheImpl.contourSizes ), { .abortWhenIntersect = true } );
     return triangulator.run();
 }
 
@@ -1775,21 +1756,23 @@ std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoo
     // copy the boundary sub-topology from the mesh: shared vertices and slit edges arrive already shared
     WholeEdgeMap& patchToInEdges = outPatchMap ? *outPatchMap : cacheImpl.p2inCache;
     patchToInEdges.clear(); // initMeshByLoops_ reserves it from the loop sizes
-    SweepLineQueue triangulator( cacheImpl, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, cacheImpl.pts2Buffer ), loops,
+    SweepLineQueue triangulator( cacheImpl, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cacheImpl.pts2Buffer ), loops,
         { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges } );
     return triangulator.run();
 }
 
-MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap, ISweepLineCache& cache )
+MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap& outPatchMap, ISweepLineCache& cache )
 {
-    if ( loops.empty() )
-        return nullptr;
     auto& cacheImpl = static_cast<SweepLineQueue::Cache&>( cache );
+    outPatchMap.clear(); // initMeshByLoops_ reserves it from the loop sizes
+    if ( loops.empty() )
+    {
+        cacheImpl.tp.clear();
+        return &cacheImpl.tp;
+    }
     // copy the boundary sub-topology from the mesh: shared vertices and slit edges arrive already shared
-    WholeEdgeMap& patchToInEdges = outPatchMap ? *outPatchMap : cacheImpl.p2inCache;
-    patchToInEdges.clear(); // initMeshByLoops_ reserves it from the loop sizes
-    SweepLineQueue triangulator( cacheImpl, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, cacheImpl.pts2Buffer ), loops,
-        { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges } );
+    SweepLineQueue triangulator( cacheImpl, mesh.topology, meshSpacePredicates( mesh, loops, normal, outPatchMap, &cacheImpl.pts2Buffer ), loops,
+        { .abortWhenIntersect = true, .outPatchMap = &outPatchMap } );
     return triangulator.runTopology();
 }
 
@@ -1805,7 +1788,7 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     SweepLineQueue::Cache cache;
     WholeEdgeMap patchToInEdges; // initMeshByLoops_ reserves it from the loop sizes
     std::vector<MonotoneChord> chords;
-    SweepLineQueue triangulator( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, cache.pts2Buffer ), loops,
+    SweepLineQueue triangulator( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer ), loops,
         { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
     if ( !triangulator.findIntersections() )
         return {};

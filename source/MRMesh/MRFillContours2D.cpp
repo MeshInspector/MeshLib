@@ -2,7 +2,6 @@
 #include "MRMesh.h"
 #include "MRVector2.h"
 #include "MR2DContoursTriangulation.h"
-#include "MR2DContoursTriangulationInternal.h"
 #include "MRRingIterator.h"
 #include "MREdgePaths.h"
 #include "MRAffineXf3.h"
@@ -175,7 +174,30 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     return {};
 }
 
-Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, PlanarTriangulation::ISweepLineCache* cache /*= nullptr*/ )
+IFillContours2DPlanCache::~IFillContours2DPlanCache() = default;
+
+// all the buffers fillContours2DPlan reuses between calls; the only implementation of the interface
+struct FillContours2DPlanCache final : IFillContours2DPlanCache
+{
+    std::unique_ptr<PlanarTriangulation::ISweepLineCache> sweep; // of the triangulation itself
+    EdgeLoops loops;           // the tracked hole boundary loop
+    WholeEdgeMap patchToMesh;  // patch boundary edge (by undirected id) -> the mesh edge it copies
+    // the peel's current polygon: one slot per boundary edge, the rings implicit in succ
+    struct Slot
+    {
+        EdgeId cur;   // current polygon edge in the patch, invalid = consumed position
+        int refCode;  // plan code of cur: not-negative absolute mesh EdgeId, negative - earlier plan edge
+        int succ;     // next slot around the polygon
+    };
+    std::vector<Slot> slots;
+};
+
+std::unique_ptr<IFillContours2DPlanCache> makeFillContours2DPlanCache()
+{
+    return std::make_unique<FillContours2DPlanCache>();
+}
+
+Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, IFillContours2DPlanCache* cache /*= nullptr*/ )
 {
     assert( !mesh.topology.left( holeEdgeId ) );
     if ( mesh.topology.left( holeEdgeId ) )
@@ -183,14 +205,17 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
 
     // a plan needs only the patch connectivity: triangulate into the cache without creating a Mesh;
     // the connectivity must live somewhere even if the caller gave no cache, hence the temporary one
-    std::unique_ptr<PlanarTriangulation::ISweepLineCache> tmpCache;
+    std::unique_ptr<IFillContours2DPlanCache> tmpCache;
     if ( !cache )
-        cache = ( tmpCache = PlanarTriangulation::makeSweepLineCache() ).get();
+        cache = ( tmpCache = makeFillContours2DPlanCache() ).get();
+    auto& planCache = static_cast<FillContours2DPlanCache&>( *cache );
+    if ( !planCache.sweep )
+        planCache.sweep = PlanarTriangulation::makeSweepLineCache();
 
     // triangulate the hole in the mesh's own 3d space: only the plan is needed, so the projection
-    // round-trip of the mesh-filling path above is avoided; the loop lives in the cache's scratch,
+    // round-trip of the mesh-filling path above is avoided; the loop lives in the cache,
     // so planning many holes with one cache tracks them into the same buffer
-    EdgeLoops& loops = PlanarTriangulation::sweepCacheLoops( *cache );
+    EdgeLoops& loops = planCache.loops;
     loops.resize( 1 );
     trackRightBoundaryLoop( mesh.topology, holeEdgeId, loops.front() );
 
@@ -212,12 +237,11 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     if ( minEdgeLenSq < 1e-12f * loopBox.size().lengthSq() )
         return unexpected( "Hole boundary has a degenerate edge" );
 
-    // patch boundary edge (by undirected id) -> the mesh edge it copies; the peel anchors through it;
-    // with no explicit out-map the triangulation leaves it in the cache's own scratch
-    auto* patchTp = PlanarTriangulation::triangulateDisjointContoursTopology( mesh, loops, Vector3f( sumCross.normalized() ), nullptr, *cache );
+    // bd2mesh maps a patch boundary edge (by undirected id) to the mesh edge it copies; the peel anchors through it
+    WholeEdgeMap& bd2mesh = planCache.patchToMesh;
+    auto* patchTp = PlanarTriangulation::triangulateDisjointContoursTopology( mesh, loops, Vector3f( sumCross.normalized() ), bd2mesh, *planCache.sweep );
     if ( !patchTp )
         return unexpected( "Cannot triangulate contours with self-intersections" );
-    const WholeEdgeMap& bd2mesh = PlanarTriangulation::sweepCachePatchMap( *cache );
 
     const auto& pTp = *patchTp;
     HoleFillPlan res;
@@ -234,9 +258,8 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     // interior edges: of the 3 * numTris face sides, each boundary edge covers one and each interior edge two
     const int numChords = ( 3 * res.numTris - int( bd2mesh.size() ) ) / 2;
 
-    // the peel's current polygon: one slot per boundary edge, the rings implicit in succ;
-    // the buffer lives in the cache, so planning many holes with one cache reuses it
-    auto& slots = PlanarTriangulation::sweepCachePeelSlots( *cache );
+    // the peel walks the polygon in the cache's slot buffer, so planning many holes with one cache reuses it
+    auto& slots = planCache.slots;
     slots.clear();
     slots.reserve( n );
     // EdgeId( 0 ) is the first boundary edge the copy created, so a plain loop yields the loop order.

@@ -113,6 +113,58 @@ TEST( MRMesh, fillContours2DPlanPinchedHole )
 // loop is filled from the other side. The 2-triangle mirror patch is pinched at that vertex too, so
 // stitching it would close each lobe into its own pillow and split the vertex into two disjoint edge
 // rings; addPartByMask detects this and fillContours2D must fail cleanly, leaving the mesh unchanged.
+TEST( MRMesh, fillContours2DPlanCacheReuse )
+{
+    // the plan path is where the cache really retains state between runs (the patch topology, its
+    // points, and the input->patch edge maps all survive), so plan several holes through one cache
+    // and compare every plan with the same call on a fresh cache
+    VertCoords points;
+    points.vec_ = {
+        { 0.f, 0.f, 0.f },                                                     // the pinch vertex
+        { 1.2f, -0.4f, 0.f }, { 1.5f, 0.9f, 0.f }, { 0.2f, 1.6f, 0.f }, { -1.1f, 0.9f, 0.f }, // outer arc
+        { 0.7f, 0.3f, 0.f }, { 0.1f, 0.75f, 0.f },                             // island touching the pinch
+        { 1.9f, -1.4f, 0.f }, { 2.8f, 1.5f, 0.f }, { 0.3f, 2.8f, 0.f },        // outer pentagon
+        { -2.6f, 0.6f, 0.f }, { -1.2f, -1.7f, 0.f }
+    };
+    const Triangulation t{
+        { VertId( 0 ), VertId( 5 ), VertId( 6 ) },   // the island
+        { VertId( 0 ), VertId( 4 ), VertId( 10 ) }, { VertId( 0 ), VertId( 10 ), VertId( 11 ) },
+        { VertId( 0 ), VertId( 11 ), VertId( 7 ) }, { VertId( 0 ), VertId( 7 ), VertId( 1 ) },
+        { VertId( 1 ), VertId( 7 ), VertId( 2 ) }, { VertId( 2 ), VertId( 7 ), VertId( 8 ) },
+        { VertId( 2 ), VertId( 8 ), VertId( 3 ) }, { VertId( 3 ), VertId( 8 ), VertId( 9 ) },
+        { VertId( 3 ), VertId( 9 ), VertId( 4 ) }, { VertId( 4 ), VertId( 9 ), VertId( 10 ) } };
+    const Mesh mesh = Mesh::fromTriangles( points, t );
+
+    // the pinched 8-edge cavity and the outer pentagon outline
+    EdgeId pinched, pentagon;
+    for ( EdgeId e : mesh.topology.findHoleRepresentiveEdges() )
+    {
+        if ( trackRightBoundaryLoop( mesh.topology, e ).size() == 8 )
+            pinched = e;
+        else
+            pentagon = e;
+    }
+    ASSERT_TRUE( pinched.valid() && pentagon.valid() );
+
+    // the same hole twice in a row, then the other one, then back: every run must see a clean cache
+    const std::vector<EdgeId> order{ pinched, pinched, pentagon, pinched, pentagon };
+    auto cache = makeFillContours2DPlanCache();
+    for ( EdgeId e : order )
+    {
+        const auto fresh = fillContours2DPlan( mesh, e );
+        const auto cached = fillContours2DPlan( mesh, e, cache.get() );
+        ASSERT_TRUE( fresh.has_value() ) << fresh.error();
+        ASSERT_TRUE( cached.has_value() ) << cached.error();
+        EXPECT_EQ( fresh->numTris, cached->numTris );
+        ASSERT_EQ( fresh->items.size(), cached->items.size() );
+        for ( size_t i = 0; i < fresh->items.size(); ++i )
+        {
+            EXPECT_EQ( fresh->items[i].edgeCode1, cached->items[i].edgeCode1 );
+            EXPECT_EQ( fresh->items[i].edgeCode2, cached->items[i].edgeCode2 );
+        }
+    }
+}
+
 // The plan-based fillContours2DPlan bridges such loops disk-like instead (see fillContours2DPlanPinchedHole).
 TEST( MRMesh, fillContours2DPinchedHoleValidity )
 {

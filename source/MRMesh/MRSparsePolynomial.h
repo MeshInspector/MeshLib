@@ -24,6 +24,13 @@ SparsePolynomialProduct<T,D,M> mulAs( const SparsePolynomial<C,D,M>& a, const Sp
 template <typename C, typename D, D M>
 SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b ) { return mulAs<C>( a, b ); }
 
+/// returns the sign of the polynomial ( a * b - c * d ) for infinitesimal positive argument, i.e. the sign of its lowest-degree not-zero coefficient,
+/// or 0 if the difference is zero polynomial; every coefficient is converted into type T before multiplication;
+/// the coefficients of the difference are computed in the order of increasing degree and only till the first not-zero one
+template <typename T, typename C, typename D, D M>
+[[nodiscard]] int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
+    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d );
+
 /// The class to store a polynomial with a large number of zero coefficients
 /// (only non-zeros are stored in a vector of terms sorted by ascending degree)
 /// \tparam C - type of coefficients
@@ -49,6 +56,9 @@ public:
 
     /// constructs polynomial c0 + c1*x^d1 + c2*x^d2
     SparsePolynomial( C c0, D d1, C c1, D d2, C c2 );
+
+    /// constructs polynomial from arbitrary terms: sorts them by degree, sums the coefficients of equal degrees, drops zero coefficients and the degrees above M
+    [[nodiscard]] static SparsePolynomial fromUnsortedTerms( std::vector<Term> && terms );
 
     /// sets coefficient for given degree to zero
     void setZeroCoeff( D d )
@@ -125,6 +135,18 @@ SparsePolynomial<C,D,M>::SparsePolynomial( C c0, D d1, C c1, D d2, C c2 )
         terms_.emplace_back( d1, c1 );
     if ( d2 <= M )
         terms_.emplace_back( d2, c2 );
+}
+
+template <typename C, typename D, D M>
+SparsePolynomial<C,D,M> SparsePolynomial<C,D,M>::fromUnsortedTerms( std::vector<Term> && terms )
+{
+    std::sort( terms.begin(), terms.end(), []( const Term & x, const Term & y ) { return x.first < y.first; } );
+    while ( !terms.empty() && terms.back().first > M )
+        terms.pop_back();
+    SparsePolynomial res;
+    res.terms_ = std::move( terms );
+    res.mergeTerms_();
+    return res;
 }
 
 template <typename C, typename D, D M>
@@ -214,12 +236,62 @@ template <typename T, typename C, typename D, D M>
             res.emplace_back( deg, T( cfA ) * T( cfB ) );
         }
     }
-    std::sort( res.begin(), res.end(),
-        []( const Term & x, const Term & y ) { return x.first < y.first; } );
-    Res r;
-    r.terms_ = std::move( res );
-    r.mergeTerms_();
-    return r;
+    return Res::fromUnsortedTerms( std::move( res ) );
+}
+
+template <typename T, typename C, typename D, D M>
+int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
+    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d )
+{
+    // the terms of a*b (and of c*d) form rows: the i-th term of a times all the terms of b in the order of increasing degree;
+    // the heap keeps the current term of every row, so all terms of both products are visited in the order of increasing degree
+    struct RowTerm
+    {
+        D deg;
+        int i, j; // indices of the terms in the two factors
+        bool neg; // true for the terms of c*d
+    };
+    auto greater = []( const RowTerm & x, const RowTerm & y ) { return x.deg > y.deg; };
+    std::vector<RowTerm> heap;
+    heap.reserve( a.get().size() + c.get().size() );
+    if ( !b.get().empty() )
+        for ( int i = 0; i < (int)a.get().size(); ++i )
+            heap.push_back( { a.get()[i].first + b.get()[0].first, i, 0, false } );
+    if ( !d.get().empty() )
+        for ( int i = 0; i < (int)c.get().size(); ++i )
+            heap.push_back( { c.get()[i].first + d.get()[0].first, i, 0, true } );
+    std::make_heap( heap.begin(), heap.end(), greater );
+
+    while ( !heap.empty() )
+    {
+        const auto deg = heap.front().deg;
+        decltype( std::declval<T>() * std::declval<T>() ) coeff{};
+        do
+        {
+            std::pop_heap( heap.begin(), heap.end(), greater );
+            auto r = heap.back();
+            heap.pop_back();
+            const auto & f = ( r.neg ? c : a ).get();
+            const auto & g = ( r.neg ? d : b ).get();
+            const auto prod = T( f[r.i].second ) * T( g[r.j].second );
+            if ( r.neg )
+                coeff -= prod;
+            else
+                coeff += prod;
+            if ( ++r.j < (int)g.size() )
+            {
+                r.deg = f[r.i].first + g[r.j].first;
+                heap.push_back( r );
+                std::push_heap( heap.begin(), heap.end(), greater );
+            }
+        }
+        while ( !heap.empty() && heap.front().deg == deg );
+        if ( coeff > 0 )
+            return 1;
+        if ( coeff < 0 )
+            return -1;
+    }
+    return 0;
 }
 
 } //namespace MR

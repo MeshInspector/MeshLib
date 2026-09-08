@@ -26,12 +26,8 @@ struct PointDegree
     std::int64_t d = 0; // degree of epsilon for pt.z; pt.y gets 3*d, pt.x gets 9*d
 };
 
-// these values were found experimentally as the largest degree of a polynomial term that must be stored in the predicates
-// (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
-// in the tests and in a random sweep of degenerate inputs; if it is not enough then we will get assert violation inside
-// poly.isPositive(), and increase the value; all polynomial terms of higher degrees are not stored to save computation time
-constexpr std::int64_t cMaxPolyDTriTri   = 15'943'959; // segmentIntersectionOrder
-constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTriPlaneOrder: it reaches the polynomial path with all three largest ids in the plane
+// the largest degree of a term in orient3d-polynomial: x, y and z perturbations of the vertex with the largest rank 7
+constexpr std::int64_t cMaxPolyD = ( 9 + 3 + 1 ) * 27LL * 27 * 27 * 27 * 27 * 27 * 27;
 
 std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
 {
@@ -58,43 +54,54 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
 }
 
 // 128 bits are enough to store all coefficients of one orient3d-polynomial (products of three coordinate differences),
-// while the coefficients of the products of two such polynomials need up to 256 bits, see mulAs<Int128Mul256> below
-template <std::int64_t M>
-using Poly = SparsePolynomial<FastInt128, std::int64_t, M>;
+// while the products of two such polynomials are computed in 256 bits, see signOfProductsDiff<Int128Mul256> below
+using Poly = SparsePolynomial<FastInt128, std::int64_t, cMaxPolyD>;
 
-template <std::int64_t M>
-Poly<M> orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
+Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
     std::int64_t dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
 {
-    const std::int64_t dx = dy * dy;
+    // every element of the matrix with the rows (a-d), (b-d), (c-d) is a polynomial: delta + eps^degP - eps^degD,
+    // whose terms are stored below (skipping zero delta), the last term is always -eps^degD
+    struct Element
+    {
+        Poly::Term terms[3];
+        int numTerms = 0;
+    };
+    Element m[3][3];
+    const PointDegree * rows[3] = { &a, &b, &c };
+    const std::int64_t w[3] = { dy * dy, dy, 1 };
+    for ( int r = 0; r < 3; ++r )
+        for ( int col = 0; col < 3; ++col )
+        {
+            auto & e = m[r][col];
+            if ( const std::int64_t delta = std::int64_t( rows[r]->pt[col] ) - d.pt[col] )
+                e.terms[e.numTerms++] = { 0, delta };
+            e.terms[e.numTerms++] = { w[col] * rows[r]->d, 1 };
+            e.terms[e.numTerms++] = { w[col] * d.d, -1 };
+        }
 
-    const Poly<M> xx( a.pt.x - d.pt.x, a.d * dx, 1, d.d * dx, -1 );
-    const Poly<M> xy( a.pt.y - d.pt.y, a.d * dy, 1, d.d * dy, -1 );
-    const Poly<M> xz( a.pt.z - d.pt.z, a.d     , 1, d.d     , -1 );
-
-    const Poly<M> yx( b.pt.x - d.pt.x, b.d * dx, 1, d.d * dx, -1 );
-    const Poly<M> yy( b.pt.y - d.pt.y, b.d * dy, 1, d.d * dy, -1 );
-    const Poly<M> yz( b.pt.z - d.pt.z, b.d     , 1, d.d     , -1 );
-
-    const Poly<M> zx( c.pt.x - d.pt.x, c.d * dx, 1, d.d * dx, -1 );
-    const Poly<M> zy( c.pt.y - d.pt.y, c.d * dy, 1, d.d * dy, -1 );
-    const Poly<M> zz( c.pt.z - d.pt.z, c.d     , 1, d.d     , -1 );
-
-    Poly<M> t;
-
-    t  = yy * zz;
-    t -= yz * zy;
-    Poly<M> det = xx * t;
-
-    t  = yx * zz;
-    t -= yz * zx;
-    det -= xy * t;
-
-    t  = yx * zy;
-    t -= yy * zx;
-    det += xz * t;
-
-    return det;
+    // the determinant is the sum over 6 permutations of the signed products of three elements, each product has up to 27 monomials;
+    // the product of the last terms of three elements (eps^(13*degD) with the sign of permutation) is excluded, since 6 of them cancel one another
+    constexpr int perms[6][4] = { { 0, 1, 2, 1 }, { 1, 2, 0, 1 }, { 2, 0, 1, 1 }, { 0, 2, 1, -1 }, { 2, 1, 0, -1 }, { 1, 0, 2, -1 } };
+    std::vector<Poly::Term> terms;
+    terms.reserve( 6 * 26 );
+    for ( const auto & p : perms )
+    {
+        const Element & e0 = m[0][p[0]];
+        const Element & e1 = m[1][p[1]];
+        const Element & e2 = m[2][p[2]];
+        for ( int k0 = 0; k0 < e0.numTerms; ++k0 )
+            for ( int k1 = 0; k1 < e1.numTerms; ++k1 )
+            {
+                // all coefficients are not larger than 2^32 by absolute value, so the product of two of them fits in int64
+                const std::int64_t c01 = p[3] * std::int64_t( e0.terms[k0].second ) * std::int64_t( e1.terms[k1].second );
+                const std::int64_t d01 = e0.terms[k0].first + e1.terms[k1].first;
+                const int last2 = k0 + 1 == e0.numTerms && k1 + 1 == e1.numTerms ? e2.numTerms - 1 : e2.numTerms;
+                for ( int k2 = 0; k2 < last2; ++k2 )
+                    terms.emplace_back( d01 + e2.terms[k2].first, Int64Mul128( c01 ) * Int64Mul128( std::int64_t( e2.terms[k2].second ) ) );
+            }
+    }
+    return Poly::fromUnsortedTerms( std::move( terms ) );
 }
 
 FastInt128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
@@ -163,7 +170,6 @@ std::optional<bool> oneSideOfPlane( const std::array<PreciseVertCoords, 8> & vs,
 
 /// slow processing of the general case of segment intersection order, when both ta=234 and tb=567 are crossed by segment s=01,
 /// and neither triangle is on one side of the other's plane
-template <std::int64_t M>
 bool segmentIntersectionOrderGeneral( const std::array<PreciseVertCoords, 8> & vs )
 {
     // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
@@ -192,23 +198,22 @@ bool segmentIntersectionOrderGeneral( const std::array<PreciseVertCoords, 8> & v
 
     const auto ds = getPointDegrees( vs );
 
-    const auto polyTaOrg  = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[0], 3 );
-    const auto polyTaDest = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[1], 3 );
+    const auto polyTaOrg  = orient3dPoly( ds[2], ds[3], ds[4], ds[0], 3 );
+    const auto polyTaDest = orient3dPoly( ds[2], ds[3], ds[4], ds[1], 3 );
     assert( !polyTaOrg.empty() || !polyTaDest.empty() );
     assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
     const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
 
-    const auto polyTbOrg  = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[0], 3 );
-    const auto polyTbDest = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[1], 3 );
+    const auto polyTbOrg  = orient3dPoly( ds[5], ds[6], ds[7], ds[0], 3 );
+    const auto polyTbDest = orient3dPoly( ds[5], ds[6], ds[7], ds[1], 3 );
     assert( !polyTbOrg.empty() || !polyTbDest.empty() );
     assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
     const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
 
-    // the coefficient of zero degree is nomSimple == 0, and it is automatically excluded from nom
-    auto nom = mulAs<Int128Mul256>( polyTaOrg, polyTbDest );
-    nom -= mulAs<Int128Mul256>( polyTbOrg, polyTaDest );
-
-    bool res = nom.isPositive();
+    // the sign of the leading term of nom = polyTaOrg * polyTbDest - polyTbOrg * polyTaDest, whose zero-degree coefficient is nomSimple == 0
+    const int nomSign = signOfProductsDiff<Int128Mul256>( polyTaOrg, polyTbDest, polyTbOrg, polyTaDest );
+    assert( nomSign != 0 );
+    bool res = nomSign > 0;
     if ( posTaOrg != posTbOrg ) // denominator is negative
         res = !res;
     return res;
@@ -343,7 +348,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
         return *sideB == orient3d( { vs[2], vs[3], vs[4], vs[1] } ); // tb is on one side of ta's plane
 
     // triangles ta and tb intersect one another
-    return segmentIntersectionOrderGeneral<cMaxPolyDTriTri>( vs );
+    return segmentIntersectionOrderGeneral( vs );
 }
 
 bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs )
@@ -363,8 +368,8 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
 
         // s is parallel to pb, and the perturbation of the points decides, which end of s is closer to pb
         const auto ds = getPointDegrees( vs );
-        auto diff = orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[0], 3 );
-        diff -= orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[1], 3 );
+        auto diff = orient3dPoly( ds[5], ds[6], ds[7], ds[0], 3 );
+        diff -= orient3dPoly( ds[5], ds[6], ds[7], ds[1], 3 );
         return diff.isPositive() == o0;
     }
 
@@ -374,7 +379,7 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
         return *sideA == o0; // ta is on one side of pb
 
     // pb is infinite, so even if all its three points are on one side of ta, pb can cross s on either side of s^ta
-    return segmentIntersectionOrderGeneral<cMaxPolyDTriPlane>( vs );
+    return segmentIntersectionOrderGeneral( vs );
 }
 
 ConvertToIntVector getToIntConverter( const Box3d& box )

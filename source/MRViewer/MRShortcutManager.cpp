@@ -263,21 +263,22 @@ std::optional<ShortcutManager::Category> ShortcutManager::parseCategory( std::st
 
 std::optional<ShortcutKey> ShortcutManager::parseShortcutKey( std::string_view keys )
 {
-    // the key is the last "+"-separated part, or "+" itself if the string ends with it
-    auto rest = trim( keys );
-    std::string_view keyName;
-    if ( rest.ends_with( '+' ) )
+    keys = trim( keys );
+    if ( keys.empty() )
+        return {};
+
+    std::vector<std::string_view> parts;
+    split( keys, "+", [&parts] ( std::string_view part ) { parts.push_back( part ); return false; } );
+
+    // every part but the last is a modifier;
+    // an empty last part means the key "+" itself, e.g. "Ctrl++", where the doubled separator leaves one more empty part to drop
+    auto keyName = parts.back();
+    parts.pop_back();
+    if ( keyName.empty() )
     {
-        keyName = rest.substr( rest.size() - 1 );
-        rest.remove_suffix( 1 );
-        if ( rest.ends_with( '+' ) )
-            rest.remove_suffix( 1 );
-    }
-    else
-    {
-        const auto plus = rest.rfind( '+' );
-        keyName = plus == std::string_view::npos ? rest : rest.substr( plus + 1 );
-        rest = plus == std::string_view::npos ? std::string_view{} : rest.substr( 0, plus );
+        keyName = "+";
+        if ( !parts.empty() && parts.back().empty() )
+            parts.pop_back();
     }
 
     ShortcutKey res;
@@ -285,14 +286,12 @@ std::optional<ShortcutKey> ShortcutManager::parseShortcutKey( std::string_view k
     if ( !key )
         return {};
     res.key = *key;
-    while ( !rest.empty() )
+    for ( auto part : parts )
     {
-        const auto plus = rest.find( '+' );
-        const auto mod = parseModifier( trim( rest.substr( 0, plus ) ) );
+        const auto mod = parseModifier( trim( part ) );
         if ( !mod )
             return {};
         res.mod |= *mod;
-        rest = plus == std::string_view::npos ? std::string_view{} : rest.substr( plus + 1 );
     }
     return res;
 }

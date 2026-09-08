@@ -1025,6 +1025,38 @@ TEST( MRMesh, segmentIntersectionOrder3b )
     EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[2], vs[2], vs[3], vs[4] } ) );
 }
 
+TEST( MRMesh, segmentIntersectionOrder3c )
+{
+    // degenerate inputs reaching the polynomial path with 7 or 8 distinct vertex ids,
+    // so the vertices with the largest ids must receive distinct (and huge) epsilon degrees
+    auto check = []( const std::array<PreciseVertCoords, 8> & vs, bool expected )
+    {
+        ASSERT_TRUE( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
+        ASSERT_TRUE( doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) );
+        EXPECT_EQ( segmentIntersectionOrder( vs ), expected );
+        // swapped triangles
+        EXPECT_EQ( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[7], vs[2], vs[3], vs[4] } ), !expected );
+        // reversed segment
+        EXPECT_EQ( segmentIntersectionOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ), !expected );
+    };
+
+    // 8 distinct ids
+    check( {
+        PreciseVertCoords{ 12_v, Vector3i( 0,-1,-1 ) }, PreciseVertCoords{  1_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 11_v, Vector3i( 1, 0, 0 ) }, PreciseVertCoords{  5_v, Vector3i(-1,-1,-1 ) }, PreciseVertCoords{ 0_v, Vector3i( 1, 0, 0 ) },
+        PreciseVertCoords{  4_v, Vector3i( 1, 0, 0 ) }, PreciseVertCoords{ 13_v, Vector3i(-1, 1, 1 ) }, PreciseVertCoords{ 6_v, Vector3i( 0,-1, 0 ) } }, true );
+
+    // 7 distinct ids: one shared vertex in ta and tb
+    check( {
+        PreciseVertCoords{  8_v, Vector3i( 1,-1, 0 ) }, PreciseVertCoords{ 10_v, Vector3i( 1,-1, 1 ) },
+        PreciseVertCoords{ 14_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{  2_v, Vector3i( 0, 1, 0 ) }, PreciseVertCoords{ 4_v, Vector3i( 1, 1, 1 ) },
+        PreciseVertCoords{  5_v, Vector3i( 1, 1, 1 ) }, PreciseVertCoords{  0_v, Vector3i( 0, 1, 1 ) }, PreciseVertCoords{ 14_v, Vector3i( 1,-1, 1 ) } }, false );
+    check( {
+        PreciseVertCoords{ 12_v, Vector3i( 0, 0, 0 ) }, PreciseVertCoords{  8_v, Vector3i( 0, 0,-1 ) },
+        PreciseVertCoords{ 14_v, Vector3i( 0, 0, 0 ) }, PreciseVertCoords{  1_v, Vector3i( 0, 0,-1 ) }, PreciseVertCoords{ 0_v, Vector3i(-1, 1, 1 ) },
+        PreciseVertCoords{  2_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  4_v, Vector3i(-1, 0, 1 ) }, PreciseVertCoords{ 14_v, Vector3i( 0, 0, 0 ) } }, false );
+}
+
 TEST( MRMesh, segmentIntersectionTriPlaneOrder )
 {
     PreciseVertCoords vs[8] =

@@ -246,7 +246,7 @@ void telemetryStlHead( const char* prefix, std::string s )
     // e.g. 'RACK_INLET_COLD_017', 'A - TO.Ankylos X_Geo-65' - per-file sequence numbers;
     // a space separator is not accepted, it would eat model numbers like 'CS 3600'
     if ( const auto sep = s.find_last_not_of( "0123456789" );
-         sep != std::string::npos && sep > 0 && sep + 1 < s.size() && s.size() - sep <= 7 &&
+         sep != std::string::npos && sep > 0 && sep + 1 < s.size() &&
          ( s[sep] == '_' || s[sep] == '-' ) )
         s.resize( sep );
 

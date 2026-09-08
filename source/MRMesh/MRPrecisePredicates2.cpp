@@ -165,12 +165,13 @@ bool segmentIntersectionOrderPoly( const std::array<PreciseVertCoords2, 6> & vs 
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:
 // a=(pi_i,1, pi_i,2)
 // b=(pi_j,1, pi_j,2)
-bool ccw( const Vector2i & a, const Vector2i & b )
+namespace
 {
-    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
-        return v > 0; // points are in general position
 
-    // points 0, a, b are on the same line
+/// ccw( a, b ) for the points 0, a, b known to be on the same line, resolved by simulation-of-simplicity
+bool ccwDegenerate( const Vector2i & a, const Vector2i & b )
+{
+    assert( cross( Vector2i64{ a }, Vector2i64{ b } ) == 0 );
 
     // permute points:
     // da.y >> da.x >> db.y >> db.x > 0
@@ -197,6 +198,15 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     // the smallest permutation db.x does not change anything here, and
     // the rotation from a to b is always ccw independently on a.y sign
     return true;
+}
+
+} // anonymous namespace
+
+bool ccw( const Vector2i & a, const Vector2i & b )
+{
+    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
+        return v > 0; // points are in general position
+    return ccwDegenerate( a, b );
 }
 
 bool smaller2( const std::array<PreciseVertCoords2, 4> & vs )
@@ -342,7 +352,7 @@ bool ccw( const PreciseVertCoords2* vs )
         }
     }
 
-    return odd != ccw( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt );
+    return odd != ccwDegenerate( vs[order[0]].pt - vs[order[2]].pt, vs[order[1]].pt - vs[order[2]].pt );
 }
 
 bool inCircle( const std::array<PreciseVertCoords2, 4>& vs )

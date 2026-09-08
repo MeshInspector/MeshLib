@@ -232,10 +232,13 @@ bool segmentIntersectionOrderPoly( const std::array<PreciseVertCoords, 8> & vs )
 
 } // anonymous namespace
 
-bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
+namespace
 {
-    auto vhp = dot( Vector3i64mul{ a }, Vector3i64mul{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
-    if ( vhp ) return vhp > 0;
+
+/// orient3d( a, b, c ) for the points 0, a, b, c known to be on the same plane, resolved by simulation-of-simplicity
+bool orient3dDegenerate( const Vector3i & a, const Vector3i& b, const Vector3i& c )
+{
+    assert( dot( Vector3i64mul{ a }, Vector3i64mul{ cross( Vector3i64{ b }, Vector3i64{ c } ) } ) == 0 );
 
     auto v = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
     if ( v ) return v > 0;
@@ -276,6 +279,15 @@ bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
     return true;
 }
 
+} // anonymous namespace
+
+bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
+{
+    auto vhp = dot( Vector3i64mul{ a }, Vector3i64mul{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
+    if ( vhp ) return vhp > 0;
+    return orient3dDegenerate( a, b, c );
+}
+
 bool orient3d( const PreciseVertCoords* vs )
 {
     // the exact answer first, the perturbation of the points is necessary only if all four points are exactly coplanar
@@ -298,7 +310,8 @@ bool orient3d( const PreciseVertCoords* vs )
         }
     }
 
-    return odd != orient3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
+    const auto & d = vs[order[3]].pt;
+    return odd != orient3dDegenerate( vs[order[0]].pt - d, vs[order[1]].pt - d, vs[order[2]].pt - d );
 }
 
 bool ccwAroundLine( const PreciseVertCoords* vs )

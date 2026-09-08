@@ -1201,7 +1201,7 @@ TEST( MRMesh, segmentIntersectionTriPlaneOrder )
         EXPECT_NE( r,  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } ) );
     }
 
-    // 8 distinct ids with the three largest ones in pb: the leading term of nom has the degree ~27^6 here
+    // 8 distinct ids with the three largest ones in pb: the polynomials here have the largest degrees that must be considered (cMaxPolyDTriPlane)
     const std::array<PreciseVertCoords, 8> deg =
     {
         PreciseVertCoords{  9_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  0_v, Vector3i( 0,-1, 1 ) },

@@ -25,7 +25,8 @@ template <typename C, typename D, D M>
 SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b ) { return mulAs<C>( a, b ); }
 
 /// returns the sign of the polynomial ( a * b - c * d ) for infinitesimal positive argument, i.e. the sign of its lowest-degree not-zero coefficient,
-/// or 0 if the difference is zero polynomial; every coefficient is converted into type T before multiplication;
+/// or 0 if all its coefficients of degrees not above M are zeros (the terms of higher degrees are not considered, since the arguments store the terms of degrees not above M only);
+/// every coefficient is converted into type T before multiplication, and the coefficients of the products have the type of T*T;
 /// the coefficients of the difference are computed in the order of increasing degree and only till the first not-zero one
 template <typename T, typename C, typename D, D M>
 [[nodiscard]] int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
@@ -140,9 +141,8 @@ SparsePolynomial<C,D,M>::SparsePolynomial( C c0, D d1, C c1, D d2, C c2 )
 template <typename C, typename D, D M>
 SparsePolynomial<C,D,M> SparsePolynomial<C,D,M>::fromUnsortedTerms( std::vector<Term> && terms )
 {
+    terms.erase( std::remove_if( terms.begin(), terms.end(), []( const Term & t ) { return t.first > M; } ), terms.end() );
     std::sort( terms.begin(), terms.end(), []( const Term & x, const Term & y ) { return x.first < y.first; } );
-    while ( !terms.empty() && terms.back().first > M )
-        terms.pop_back();
     SparsePolynomial res;
     res.terms_ = std::move( terms );
     res.mergeTerms_();
@@ -265,6 +265,8 @@ int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial
     while ( !heap.empty() )
     {
         const auto deg = heap.front().deg;
+        if ( deg > M )
+            break;
         decltype( std::declval<T>() * std::declval<T>() ) coeff{};
         do
         {

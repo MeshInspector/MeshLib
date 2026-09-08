@@ -11,14 +11,18 @@ namespace MR
 template <typename C, typename D, D M>
 class SparsePolynomial;
 
-/// the type of the product of two polynomials with coefficients of types C1 and C2
-template <typename C1, typename C2, typename D, D M>
-using SparsePolynomialProduct = SparsePolynomial<decltype( std::declval<C1>() * std::declval<C2>() ), D, M>;
+/// the type of the polynomial with coefficients of the type of the product of two values of type T
+template <typename T, typename D, D M>
+using SparsePolynomialProduct = SparsePolynomial<decltype( std::declval<T>() * std::declval<T>() ), D, M>;
 
-/// the coefficients of the product have the type of the product of coefficients,
-/// so e.g. two polynomials with Int128Mul256 coefficients are multiplied without overflow into a polynomial with FastInt256 coefficients
-template <typename C1, typename C2, typename D, D M>
-SparsePolynomialProduct<C1,C2,D,M> operator *( const SparsePolynomial<C1,D,M>& a, const SparsePolynomial<C2,D,M>& b );
+/// computes the product of two polynomials, converting every coefficient into type T before multiplication;
+/// e.g. T=Int128Mul256 multiplies FastInt128 coefficients without overflow into a polynomial with FastInt256 coefficients
+template <typename T, typename C, typename D, D M>
+SparsePolynomialProduct<T,D,M> mulAs( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b );
+
+/// computes the product of two polynomials with the coefficients of the same type
+template <typename C, typename D, D M>
+SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b ) { return mulAs<C>( a, b ); }
 
 /// The class to store a polynomial with a large number of zero coefficients
 /// (only non-zeros are stored in a vector of terms sorted by ascending degree)
@@ -68,8 +72,8 @@ public:
     SparsePolynomial& operator -=( const SparsePolynomial& b );
     [[nodiscard]] friend SparsePolynomial operator +( SparsePolynomial a, const SparsePolynomial& b ) { a += b; return a; }
     [[nodiscard]] friend SparsePolynomial operator -( SparsePolynomial a, const SparsePolynomial& b ) { a -= b; return a; }
-    template <typename C1, typename C2, typename D2, D2 M2>
-    friend SparsePolynomialProduct<C1,C2,D2,M2> operator *( const SparsePolynomial<C1,D2,M2>& a, const SparsePolynomial<C2,D2,M2>& b );
+    template <typename T, typename C2, typename D2, D2 M2>
+    friend SparsePolynomialProduct<T,D2,M2> mulAs( const SparsePolynomial<C2,D2,M2>& a, const SparsePolynomial<C2,D2,M2>& b );
 
 private:
     /// merges the terms of a degree-sorted sequence, dropping the vanished ones
@@ -191,10 +195,10 @@ SparsePolynomial<C,D,M>& SparsePolynomial<C,D,M>::operator -=( const SparsePolyn
     return * this;
 }
 
-template <typename C1, typename C2, typename D, D M>
-[[nodiscard]] SparsePolynomialProduct<C1,C2,D,M> operator *( const SparsePolynomial<C1,D,M>& a, const SparsePolynomial<C2,D,M>& b )
+template <typename T, typename C, typename D, D M>
+[[nodiscard]] SparsePolynomialProduct<T,D,M> mulAs( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b )
 {
-    using Res = SparsePolynomialProduct<C1,C2,D,M>;
+    using Res = SparsePolynomialProduct<T,D,M>;
     using Term = typename Res::Term;
     std::vector<Term> res;
     res.reserve( a.terms_.size() * b.terms_.size() );
@@ -207,7 +211,7 @@ template <typename C1, typename C2, typename D, D M>
             const auto deg = degA + degB;
             if ( deg > M )
                 break;
-            res.emplace_back( deg, cfA * cfB );
+            res.emplace_back( deg, T( cfA ) * T( cfB ) );
         }
     }
     std::sort( res.begin(), res.end(),

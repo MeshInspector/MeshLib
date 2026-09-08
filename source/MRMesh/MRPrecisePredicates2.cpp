@@ -44,7 +44,7 @@ std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords2,
 }
 
 // 64 bits are enough to store all coefficients of one ccw-polynomial (products of two coordinate differences),
-// while the coefficients of the products of two such polynomials need up to 128 bits, see mulAs<Int64Mul128> below
+// while the products of two such polynomials are computed in 128 bits, see signOfProductsDiff<Int64Mul128> below
 template<int M>
 using Poly = SparsePolynomial<std::int64_t, int, M>;
 
@@ -52,13 +52,44 @@ template<int M>
 Poly<M> ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c,
     int db ) // degree.x = degree.y * db
 {
-    const Poly<M> xx( a.pt.x - c.pt.x, a.d * db, 1, c.d * db, -1 );
-    const Poly<M> xy( a.pt.y - c.pt.y, a.d     , 1, c.d     , -1 );
-    const Poly<M> yx( b.pt.x - c.pt.x, b.d * db, 1, c.d * db, -1 );
-    const Poly<M> yy( b.pt.y - c.pt.y, b.d     , 1, c.d     , -1 );
-    auto det = xx * yy;
-    det -= xy * yx;
-    return det;
+    // every element of the matrix with the rows (a-c), (b-c) is a polynomial: delta + eps^degP - eps^degC,
+    // whose terms are stored below (skipping zero delta), the last term is always -eps^degC
+    struct Element
+    {
+        typename Poly<M>::Term terms[3];
+        int numTerms = 0;
+    };
+    Element m[2][2];
+    const PointDegree * rows[2] = { &a, &b };
+    const int w[2] = { db, 1 };
+    for ( int r = 0; r < 2; ++r )
+        for ( int col = 0; col < 2; ++col )
+        {
+            auto & e = m[r][col];
+            if ( const std::int64_t delta = std::int64_t( rows[r]->pt[col] ) - c.pt[col] )
+                e.terms[e.numTerms++] = { 0, delta };
+            e.terms[e.numTerms++] = { w[col] * rows[r]->d, 1 };
+            e.terms[e.numTerms++] = { w[col] * c.d, -1 };
+        }
+
+    // the determinant is m00*m11 - m01*m10, each product has up to 9 monomials;
+    // the product of the last terms of two elements (eps^((db+1)*degC) with the sign of the permutation) is excluded, since the two of them cancel one another
+    std::vector<typename Poly<M>::Term> terms;
+    terms.reserve( 2 * 8 );
+    for ( int perm = 0; perm < 2; ++perm )
+    {
+        const Element & e0 = m[0][perm];
+        const Element & e1 = m[1][1 - perm];
+        const std::int64_t sign = perm ? -1 : 1;
+        for ( int k0 = 0; k0 < e0.numTerms; ++k0 )
+        {
+            const int last1 = k0 + 1 == e0.numTerms ? e1.numTerms - 1 : e1.numTerms;
+            for ( int k1 = 0; k1 < last1; ++k1 )
+                if ( const auto deg = e0.terms[k0].first + e1.terms[k1].first; deg <= M )
+                    terms.emplace_back( deg, sign * e0.terms[k0].second * e1.terms[k1].second ); // all coefficients are within 2^32 by absolute value, so the product fits in int64
+        }
+    }
+    return Poly<M>::fromUnsortedTerms( std::move( terms ) );
 }
 
 std::int64_t area( const Vector2i & a, const Vector2i & b, const Vector2i & c )
@@ -362,7 +393,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     const auto ds = getPointDegrees( vs );
 
     // 840 was found experimentally to be enough for all cases with 6 points having equal coordinates (but different ids);
-    // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
+    // if it is not enough then we will get assert violation on nomSign below, and increase the value
     constexpr int MaxD = 840;
     const auto polySaOrg  = ccwPoly<MaxD>( ds[2], ds[3], ds[0], 3 );
     const auto polySaDest = ccwPoly<MaxD>( ds[2], ds[3], ds[1], 3 );
@@ -376,11 +407,10 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     assert( polySbOrg.empty() || polySbDest.empty() || polySbOrg.isPositive() != polySbDest.isPositive() );
     const bool posSbOrg = polySbOrg.empty() ? !polySbDest.isPositive() : polySbOrg.isPositive();
 
-    // the coefficient of zero degree is nomSimple == 0, and it is automatically excluded from nom
-    auto nom = mulAs<Int64Mul128>( polySaOrg, polySbDest );
-    nom -= mulAs<Int64Mul128>( polySbOrg, polySaDest );
-
-    bool res = nom.isPositive();
+    // the sign of the leading term of nom = polySaOrg * polySbDest - polySbOrg * polySaDest, whose zero-degree coefficient is nomSimple == 0
+    const int nomSign = signOfProductsDiff<Int64Mul128>( polySaOrg, polySbDest, polySbOrg, polySaDest );
+    assert( nomSign != 0 );
+    bool res = nomSign > 0;
     if ( posSaOrg != posSbOrg ) // denominator is negative
         res = !res;
     return res;

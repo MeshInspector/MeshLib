@@ -1,6 +1,7 @@
 #include <MRMesh/MRPrecisePredicates2.h>
 #include <MRMesh/MRPrecisePredicates3.h>
 #include <MRMesh/MRInSphere.h>
+#include <MRMesh/MRSparsePolynomial.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -1086,6 +1087,26 @@ TEST( MRMesh, segmentIntersectionOrder3c )
         PreciseVertCoords{  2_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  4_v, Vector3i(-1, 0, 1 ) }, PreciseVertCoords{ 14_v, Vector3i( 0, 0, 0 ) } }, false );
 }
 
+TEST( MRMesh, signOfProductsDiff )
+{
+    using P = SparsePolynomial<std::int64_t, int, 1000>;
+    const P one( std::vector<P::Term>{ { 0, 1 } } );
+    const P onePlusX( 1, 1, 1 );
+    const P oneMinusX( 1, 1, -1 );
+    const P a( 1, 1, 1, 2, 1 ); // 1 + x + x^2
+    const P b( 1, 1, 2, 2, 3 ); // 1 + 2x + 3x^2 = the first three terms of a*a
+
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( onePlusX, oneMinusX, one, one ), -1 ); // -x^2
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( one, one, onePlusX, oneMinusX ), 1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( onePlusX, onePlusX, onePlusX, onePlusX ), 0 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, a, b, one ), 1 );  // 2x^3 + x^4
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( b, one, a, a ), -1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, one, one, a ), 0 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, one, P{}, one ), 1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, one, a, one ), -1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, P{}, P{}, P{} ), 0 );
+}
+
 TEST( MRMesh, segmentIntersectionOrder3Scale )
 {
     // two triangles crossing the segment at the same point (x=0): ta is the plane x=0, tb is the plane y=x;
@@ -1209,7 +1230,7 @@ TEST( MRMesh, segmentIntersectionTriPlaneOrder )
         EXPECT_NE( r,  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } ) );
     }
 
-    // 8 distinct ids with the three largest ones in pb: the polynomials here have the largest degrees that must be stored (cMaxPolyD)
+    // 8 distinct ids with the three largest ones in pb: the polynomials here have the largest degrees that must be considered (cMaxPolyDTriPlane)
     const std::array<PreciseVertCoords, 8> deg =
     {
         PreciseVertCoords{  9_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  0_v, Vector3i( 0,-1, 1 ) },

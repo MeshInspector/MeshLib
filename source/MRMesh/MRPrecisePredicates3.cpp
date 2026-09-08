@@ -175,10 +175,9 @@ std::optional<bool> oneSideOfPlane( const std::array<PreciseVertCoords, 8> & vs,
     return side;
 }
 
-/// slow processing of the general case of segment intersection order, when both ta=234 and tb=567 are crossed by segment s=01,
-/// and neither triangle is on one side of the other's plane
-template <std::int64_t M>
-bool segmentIntersectionOrderGeneral( const std::array<PreciseVertCoords, 8> & vs )
+/// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 given by exact coordinates,
+/// or nullopt if the intersection points coincide exactly
+std::optional<bool> segmentIntersectionOrderExact( const std::array<PreciseVertCoords, 8> & vs )
 {
     // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
     //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
@@ -191,21 +190,25 @@ bool segmentIntersectionOrderGeneral( const std::array<PreciseVertCoords, 8> & v
     assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
 
     const auto nomSimple = Int128Mul256( volumeTaOrg ) * Int128Mul256( volumeTbDest ) - Int128Mul256( volumeTbOrg ) * Int128Mul256( volumeTaDest );
-    if ( nomSimple != 0 )
-    {
-        // happy not-degenerated path
-        bool res = nomSimple > 0;
-        assert( volumeTaOrg || volumeTaDest );
-        if ( volumeTaOrg < volumeTaDest )
-            res = !res;
-        assert( volumeTbOrg || volumeTbDest );
-        if ( volumeTbOrg < volumeTbDest )
-            res = !res;
-        return res;
-    }
+    if ( nomSimple == 0 )
+        return {};
 
+    bool res = nomSimple > 0;
+    assert( volumeTaOrg || volumeTaDest );
+    if ( volumeTaOrg < volumeTaDest )
+        res = !res;
+    assert( volumeTbOrg || volumeTbDest );
+    if ( volumeTbOrg < volumeTbDest )
+        res = !res;
+    return res;
+}
+
+/// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 when the intersection points coincide exactly,
+/// which is resolved by the perturbation of the points; the caller must have checked that neither triangle is on one side of the other's plane
+template <std::int64_t M>
+bool segmentIntersectionOrderPoly( const std::array<PreciseVertCoords, 8> & vs )
+{
     const auto ds = getPointDegrees( vs );
-
     const auto polyTaOrg  = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[0], 3 );
     const auto polyTaDest = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[1], 3 );
     assert( !polyTaOrg.empty() || !polyTaDest.empty() );
@@ -275,6 +278,10 @@ bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 
 bool orient3d( const PreciseVertCoords* vs )
 {
+    // the exact answer first, the perturbation of the points is necessary only if all four points are exactly coplanar
+    if ( const auto v = volume( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt ); v != 0 )
+        return v > 0;
+
     bool odd = false;
     std::array<int, 4> order = { 0, 1, 2, 3 };
 
@@ -348,6 +355,10 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
     assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
     assert( doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) );
 
+    if ( auto res = segmentIntersectionOrderExact( vs ) )
+        return *res;
+
+    // the intersection points coincide exactly, and the perturbation of the points decides;
     // shared vertices are on both planes, so only not-shared vertices define the side of a triangle
     const auto sp = findSharedPoints( vs );
     if ( auto sideA = oneSideOfPlane( vs, 5, 6, 7, sp.otherA, 3 - sp.numShared ) )
@@ -356,7 +367,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
         return *sideB == orient3d( { vs[2], vs[3], vs[4], vs[1] } ); // tb is on one side of ta's plane
 
     // triangles ta and tb intersect one another
-    return segmentIntersectionOrderGeneral<cMaxPolyDTriTri>( vs );
+    return segmentIntersectionOrderPoly<cMaxPolyDTriTri>( vs );
 }
 
 bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs )
@@ -382,12 +393,16 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
     }
 
     // segment s crosses plane pb
+    if ( auto res = segmentIntersectionOrderExact( vs ) )
+        return *res;
+
+    // the intersection points coincide exactly, and the perturbation of the points decides
     const auto sp = findSharedPoints( vs );
     if ( auto sideA = oneSideOfPlane( vs, 5, 6, 7, sp.otherA, 3 - sp.numShared ) )
         return *sideA == o0; // ta is on one side of pb
 
     // pb is infinite, so even if all its three points are on one side of ta, pb can cross s on either side of s^ta
-    return segmentIntersectionOrderGeneral<cMaxPolyDTriPlane>( vs );
+    return segmentIntersectionOrderPoly<cMaxPolyDTriPlane>( vs );
 }
 
 ConvertToIntVector getToIntConverter( const Box3d& box )

@@ -131,8 +131,8 @@ std::optional<bool> segmentIntersectionOrderExact( const std::array<PreciseVertC
 }
 
 /// the order of intersections of segment s=01 with the lines of sa=23 and sb=45 when the intersection points coincide exactly,
-/// which is resolved by the perturbation of the points; the caller must have checked that neither segment is on one side of the other's line
-bool segmentIntersectionOrderPoly( const std::array<PreciseVertCoords2, 6> & vs )
+/// resolved by simulation-of-simplicity; the caller must have checked that neither segment is on one side of the other's line
+bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords2, 6> & vs )
 {
     const auto ds = getPointDegrees( vs );
 
@@ -443,7 +443,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
         // segments sa and sb intersect one another, process it as general case
     }
 
-    return segmentIntersectionOrderPoly( vs );
+    return segmentIntersectionOrderDegenerate( vs );
 }
 
 // intersection of segments (a,b) and (c,d) from the doubled areas abc = |area(a,b,c)| and

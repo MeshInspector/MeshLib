@@ -205,9 +205,9 @@ std::optional<bool> segmentIntersectionOrderExact( const SegmentVolumes & v )
 }
 
 /// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 when the intersection points coincide exactly,
-/// which is resolved by the perturbation of the points; the caller must have checked that neither triangle is on one side of the other's plane
+/// resolved by simulation-of-simplicity; the caller must have checked that neither triangle is on one side of the other's plane
 template <std::int64_t M>
-bool segmentIntersectionOrderPoly( const std::array<PreciseVertCoords, 8> & vs )
+bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords, 8> & vs )
 {
     const auto ds = getPointDegrees( vs );
     const auto polyTaOrg  = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[0], 3 );
@@ -395,7 +395,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
         return *sideB == ( v.taDest != 0 ? v.taDest > 0 : orient3dDegenerate( { vs[2], vs[3], vs[4], vs[1] } ) ); // tb is on one side of ta's plane
 
     // triangles ta and tb intersect one another
-    return segmentIntersectionOrderPoly<cMaxPolyDTriTri>( vs );
+    return segmentIntersectionOrderDegenerate<cMaxPolyDTriTri>( vs );
 }
 
 bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs )
@@ -438,7 +438,7 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
         return *sideA == o0; // ta is on one side of pb
 
     // pb is infinite, so even if all its three points are on one side of ta, pb can cross s on either side of s^ta
-    return segmentIntersectionOrderPoly<cMaxPolyDTriPlane>( vs );
+    return segmentIntersectionOrderDegenerate<cMaxPolyDTriPlane>( vs );
 }
 
 ConvertToIntVector getToIntConverter( const Box3d& box )

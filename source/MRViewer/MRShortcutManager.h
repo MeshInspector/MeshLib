@@ -80,18 +80,18 @@ public:
     // make string from all modifiers and with/without key and returns it
     MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );    
 
-    /// parses the name of a key as written in items.json: one printable character ("S", ","), "F1".."F25", "Num0".."Num9",
+    /// parses the name of a key: one printable character ("S", ","), "F1".."F25", "Num0".."Num9",
     /// "Escape", "Enter", "Space", "Tab", "Backspace", "Delete", "Home", "End", "PageUp", "PageDown", "Up", "Down", "Left", "Right",
     /// and "PDelete" - the delete key of this platform (see getGlfwKeyDelete); spaces are ignored, so the output of getKeyString parses back;
     /// returns nothing for an unknown name
     MRVIEWER_API static std::optional<int> parseKey( const std::string& name );
 
-    /// parses the name of a modifier as written in items.json (case-insensitive): "Ctrl", "Shift", "Alt", "Super",
+    /// parses the name of a modifier (case-insensitive): "Ctrl", "Shift", "Alt", "Super",
     /// and "PCtrl" - the primary control of this platform (see getGlfwModPrimaryCtrl);
     /// returns nothing for an unknown name
     MRVIEWER_API static std::optional<int> parseModifier( const std::string& name );
 
-    /// parses the name of a category as written in items.json: one of categoryNames without trailing spaces;
+    /// parses the name of a category: one of categoryNames without trailing spaces;
     /// returns nothing for an unknown name
     MRVIEWER_API static std::optional<Category> parseCategory( const std::string& name );
 

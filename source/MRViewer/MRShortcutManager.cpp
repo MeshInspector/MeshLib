@@ -2,9 +2,10 @@
 #include "MRRibbonConstants.h"
 #include "MRImGui.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRString.h"
+#include "MRMesh/MRStringConvert.h"
 #include <algorithm>
 #include <cctype>
-#include <string_view>
 
 namespace MR
 {
@@ -242,8 +243,7 @@ std::optional<int> ShortcutManager::parseKey( const std::string& name )
 
 std::optional<int> ShortcutManager::parseModifier( const std::string& name )
 {
-    std::string s = name;
-    std::transform( s.begin(), s.end(), s.begin(), [] ( unsigned char c ) { return (char)std::tolower( c ); } );
+    const auto s = toLower( name );
     if ( s == "pctrl" ) return getGlfwModPrimaryCtrl();
     if ( s == "ctrl" )  return GLFW_MOD_CONTROL;
     if ( s == "shift" ) return GLFW_MOD_SHIFT;
@@ -255,13 +255,8 @@ std::optional<int> ShortcutManager::parseModifier( const std::string& name )
 std::optional<ShortcutManager::Category> ShortcutManager::parseCategory( const std::string& name )
 {
     for ( int i = 0; i < int( Category::Count ); ++i )
-    {
-        std::string_view categoryName = categoryNames[i];
-        while ( categoryName.ends_with( ' ' ) ) // "Selection "
-            categoryName.remove_suffix( 1 );
-        if ( categoryName == name )
+        if ( trimRight( categoryNames[i] ) == name ) // "Selection " has a trailing space
             return Category( i );
-    }
     return {};
 }
 

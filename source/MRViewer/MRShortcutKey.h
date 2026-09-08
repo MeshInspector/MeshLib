@@ -1,5 +1,6 @@
 #pragma once
 #include "MRViewerFwd.h"
+#include <compare>
 
 namespace MR
 {
@@ -9,14 +10,7 @@ struct ShortcutKey
     int key{ 0 };
     int mod{ 0 };
 
-    bool operator<( const ShortcutKey& other ) const
-    {
-        if ( key < other.key )
-            return true;
-        if ( key == other.key )
-            return mod < other.mod;
-        return false;
-    }
+    auto operator<=>( const ShortcutKey& ) const = default;
 };
 
 enum class ShortcutCategory : char

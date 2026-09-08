@@ -24,12 +24,13 @@ struct MenuItemCaptionSize
     SplitCaptionInfo splitInfo;
 };
 
-/// the default keyboard shortcut of a ribbon item as given in items.json
+/// the default keyboard shortcut of a ribbon item
 struct MenuItemShortcut
 {
     Shortcut shortcut;
-    /// the shortcut is bound only if the application allows every tag (see RibbonMenu::registerItemsShortcuts_);
-    /// { "base" } unless items.json gives other tags
+    /// the shortcut is bound only if the application allows every tag of it, so a group of shortcuts is switched off as a whole;
+    /// { "base" } by default
+    /// \sa RibbonMenu::allowedShortcutTags_
     std::vector<std::string> tags;
 };
 
@@ -42,7 +43,7 @@ struct MenuItemInfo
     MenuItemCaptionSize captionSize; // already scaled
     std::string helpLink; // link to help page
     LocaleDomainId localeDomainId; // needed for translation
-    std::optional<MenuItemShortcut> shortcut; // default keyboard shortcut, if items.json gives one
+    std::optional<MenuItemShortcut> shortcut; // default keyboard shortcut, if any
 
     const std::string& getCaption() const { return !caption.empty() ? caption : item->name(); }
 };

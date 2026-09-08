@@ -11,6 +11,7 @@
 #include "MRMeshTexture.h"
 #include "MRImageSave.h"
 #include "MRSerializer.h"
+#include "MRTelemetry.h"
 #include <fstream>
 
 namespace MR
@@ -586,6 +587,50 @@ Expected<void> toPly( const TriMesh & mesh, std::ostream & out, const SaveSettin
     return toPlyImpl( mesh, out, settings );
 }
 
+static void telemetryLogSize( const Mesh& mesh )
+{
+    if ( int logFaces = intLog2( mesh.topology.numValidFaces() ) )
+        TelemetrySignal( "Save Mesh Log Tris " + std::to_string( logFaces ) );
+    else if ( int logPoints = intLog2( mesh.points.size() ) ) // if saved mesh contains no triangles but only points
+        TelemetrySignal( "Save Mesh Log Pnts " + std::to_string( logPoints ) );
+}
+
+static void telemetrySaveMesh( const std::string& ext, const Mesh& mesh, const SaveSettings& settings )
+{
+    std::string signalString = "Save " + ext;
+
+    if ( auto lv = mesh.points.size() ) // not lv = mesh.topology.lastValidVert(), since topology can be empty
+    {
+        signalString += " VP";
+        if ( settings.colors && settings.colors->size() >= lv )
+            signalString += 'C';
+        if ( settings.uvMap && settings.uvMap->size() >= lv )
+            signalString += "UV";
+    }
+
+    if ( auto lf = mesh.topology.lastValidFace() )
+    {
+        signalString += " TRI";
+        if ( settings.primitiveColors && settings.primitiveColors->size() >= lf )
+            signalString += 'C';
+    }
+
+    if ( settings.texture && !settings.texture->pixels.empty() )
+        signalString += " TEX";
+
+    if ( settings.solidColor )
+        signalString += " SOLIDC";
+
+    if ( settings.lengthUnit )
+        signalString += " UNITS";
+
+    if ( settings.xf && *settings.xf != AffineXf3d{} )
+        signalString += " XF";
+
+    TelemetrySignal( signalString );
+    telemetryLogSize( mesh );
+}
+
 Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::path& file, const SaveSettings & settings )
 {
     auto ext = utf8string( file.extension() );
@@ -597,7 +642,10 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::filesystem::pa
     if ( !saver.fileSave )
         return unexpectedUnsupportedFileExtension();
 
-    return saver.fileSave( mesh, file, settings );
+    auto res = saver.fileSave( mesh, file, settings );
+    if ( res )
+        telemetrySaveMesh( ext, mesh, settings );
+    return res;
 }
 
 Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extension, std::ostream& out, const SaveSettings & settings )
@@ -610,7 +658,10 @@ Expected<void> toAnySupportedFormat( const Mesh& mesh, const std::string& extens
     if ( !saver.streamSave )
         return unexpected( std::string( "unsupported stream extension" ) );
 
-    return saver.streamSave( mesh, out, settings );
+    auto res = saver.streamSave( mesh, out, settings );
+    if ( res )
+        telemetrySaveMesh( ext, mesh, settings );
+    return res;
 }
 
 /// One can call this function from VS interpreter window during debuging

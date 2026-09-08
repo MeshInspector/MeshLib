@@ -31,9 +31,10 @@ ARM_CPU_NAMES = {
     (0x41, 0xd0d): "Cortex-A77",     (0x41, 0xd40): "Neoverse-V1",
     (0x41, 0xd41): "Cortex-A78",     (0x41, 0xd44): "Cortex-X1",
     (0x41, 0xd49): "Neoverse-N2",    (0x41, 0xd4f): "Neoverse-V2",
+    (0x41, 0xd84): "Neoverse-V3",    (0x41, 0xd8e): "Neoverse-N3",
     (0xc0, 0xac3): "Ampere-1",       (0xc0, 0xac4): "Ampere-1a",
     (0x43, 0x0af): "ThunderX2-99xx", (0x46, 0x001): "A64FX",
-    (0x51, 0xc01): "Saphira",
+    (0x51, 0xc01): "Saphira",        (0x6d, 0xd49): "Azure-Cobalt-100",
 }
 
 ARM_VENDORS = {
@@ -41,17 +42,23 @@ ARM_VENDORS = {
     0x43: "Cavium",  0x48: "HiSilicon",
     0x4e: "NVIDIA",  0x51: "Qualcomm",
     0x53: "Samsung", 0x56: "Marvell",
-    0x70: "Phytium", 0xc0: "Ampere",
+    0x6d: "Microsoft", 0x70: "Phytium",
+    0xc0: "Ampere",
 }
 
 # the real name of a cloud CPU lives in SMBIOS type 4, which is root-only, so brand
 # the known ones by DMI vendor + MIDR pair: Cobalt and Graviton are stock ARM cores
+# (bare-metal Cobalt uses Microsoft's own implementer 0x6d, Azure VMs show 0x41)
 BRANDED_ARM_CPUS = {
     ("Microsoft Corporation", 0x41, 0xd49): "Cobalt 100",
+    ("Microsoft Corporation", 0x41, 0xd84): "Cobalt 200",
+    ("Microsoft Corporation", 0x6d, 0xd49): "Cobalt 100",
+    ("Microsoft Corporation", 0x6d, 0xd84): "Cobalt 200",
     ("Amazon EC2",            0x41, 0xd08): "AWS Graviton",
     ("Amazon EC2",            0x41, 0xd0c): "AWS Graviton2",
     ("Amazon EC2",            0x41, 0xd40): "AWS Graviton3",
     ("Amazon EC2",            0x41, 0xd4f): "AWS Graviton4",
+    ("Amazon EC2",            0x41, 0xd84): "AWS Graviton5",
 }
 
 def read_arm_midr():

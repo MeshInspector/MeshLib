@@ -323,11 +323,16 @@ MODE := release
 ifeq ($(MODE),release)
 override EXTRA_CFLAGS += -Oz -flto=thin -DNDEBUG
 override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),-Wl$(comma)-x,-s)# Apple's ld rejects `-s`; `-Wl,-x` drops local Mach-O symbols (most of __LINKEDIT) instead.
-ifneq ($(IS_LINUX),)
 # Fold byte-identical functions: the bindings are ~190k tiny near-duplicate template
-# instantiations, and ICF removes 11% of mrmeshpy.so (7 MB unpacked, 2.3 MB compressed).
-# Linux-only until lld-link (Windows) and ld64.lld (macOS) get their own measurements.
-# No -ffunction-sections needed: lld's LTO codegen always emits per-function sections.
+# instantiations. Measured on mrmeshpy, with the Python sanity suite passing every time:
+# -11% on Linux, -13.6% on macOS x86_64, -19.4% on macOS arm64 (fixed-width instructions
+# make more of the instantiations byte-identical there).
+# No -ffunction-sections needed: lld's LTO codegen of this preset always emits per-function
+# sections, which is also why this lives here and not next to the other link flags.
+# Not for Windows, where lld-link is a COFF driver that answers this spelling with
+# `ignoring unknown argument '--icf=all'` and folds by default anyway: on the wheel build
+# `/opt:noicf` grows mrmeshpy.pyd from 56.2 to 63.0 MB, while `/opt:icf` changes nothing.
+ifeq ($(IS_WINDOWS),)
 override EXTRA_LDFLAGS += -Wl,--icf=all
 endif
 else ifeq ($(MODE),debug)
@@ -345,9 +350,17 @@ $(info MODE: $(MODE))
 # When setting this manually, both spaces and commas work as separators.
 ifneq ($(IS_WINDOWS),)
 override localappdata := $(subst \,/,$(LOCALAPPDATA))
+# Where python.org installs interpreters. The win-arm64 ones land in suffixed directories
+# (`Python311-arm64`), so the suffix belongs in the paths but must not leak into the
+# version numbers.
+PYTHON_DIR := $(localappdata)/Programs/Python/Python
+PYTHON_DIR_SUFFIX := $(if $(filter arm64,$(MSVC_ARCH)),-arm64)
 ifneq ($(FOR_WHEEL),)
 # On Windows wheel we use all versions we can find in appdata.
-PYTHON_VERSIONS := $(patsubst $(localappdata)/Programs/Python/Python3%,3.%,$(filter $(localappdata)/Programs/Python/Python3%,$(wildcard $(localappdata)/Programs/Python/Python3*)))
+PYTHON_DIR_PATTERN := $(PYTHON_DIR)3%$(PYTHON_DIR_SUFFIX)
+PYTHON_VERSIONS := $(patsubst $(PYTHON_DIR_PATTERN),3.%,$(filter $(PYTHON_DIR_PATTERN),$(wildcard $(subst 3%,3*,$(PYTHON_DIR_PATTERN)))))
+# with an empty suffix the glob also matches the suffixed dirs, so drop those
+PYTHON_VERSIONS := $(filter-out %-arm64 %-32,$(PYTHON_VERSIONS))
 else
 # On Windows non-wheel we detect only one version by default, the one in pkg-config.
 PYTHON_VERSIONS := $(patsubst python-%-embed,%,$(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc))))))
@@ -382,8 +395,8 @@ PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
 ifneq ($(and $(IS_WINDOWS),$(BUILD_SHIMS)),)
 # On Windows wheel, hardcode the flags to point to appdata.
-PYTHON_CFLAGS := -I$(localappdata)/Programs/Python/Python@XY@/Include
-PYTHON_LDFLAGS := -L$(localappdata)/Programs/Python/Python@XY@/libs -lpython@XY@
+PYTHON_CFLAGS := -I$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/Include
+PYTHON_LDFLAGS := -L$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/libs -lpython@XY@
 endif
 
 ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified...
@@ -675,22 +688,7 @@ endif # TARGETING_EMSCRIPTEN
 
 
 
-# lld is used wherever it exists, as on the other platforms. There is no Homebrew bottle of
-# `lld` for Intel macOS since that became a Tier 3 configuration, so fall back to Apple's `ld`
-# when ld64.lld is absent; it consumes our ThinLTO bitcode via the `libLTO.dylib` that Clang
-# passes to it in `-lto_library`, and it linked the bindings no slower than lld on the CI
-# runners. Only macOS is probed, the other platforms always have lld next to Clang.
-LLD_FLAG := -fuse-ld=lld
-ifneq ($(IS_MACOS),)
-# Ask Clang itself: it looks for ld64.lld in its own directory and then in PATH,
-# and prints the bare name back when it finds nothing.
-ifeq ($(filter /%,$(shell $(CXX_FOR_BINDINGS) -print-prog-name=ld64.lld 2>/dev/null)),)
-$(info Found no ld64.lld, linking the bindings with the default linker)
-LLD_FLAG :=
-endif
-endif
-
-LINKER := $(CXX_FOR_BINDINGS) $(LLD_FLAG)
+LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
@@ -1161,10 +1159,12 @@ override CSHARP_STATIC_DLLIMPORT := $(filter-out 0,$(CSHARP_STATIC_DLLIMPORT))
 # Where to output C# code.
 CSHARP_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MRDotNet2$(if $(CSHARP_STATIC_DLLIMPORT),Static)
 
+CSHARP_INPUT_JSON := $(TEMP_OUTPUT_DIR)/interop_desc.json
+
 .PHONY: generate
 generate:
 	$(strip $(MRBIND_GEN_CSHARP_EXE) \
-		--input-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json) \
+		--input-json $(call quote,$(CSHARP_INPUT_JSON)) \
 		--output-dir $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/src) \
 		--clean-output-dir \
 		--imported-lib-name $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,MeshLibC2) \
@@ -1194,7 +1194,9 @@ generate:
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
-	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))
+# MeshLibArch places the assembly next to the native output; unset off Windows, where the
+# csproj default stands.
+	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE)) $(if $(MSVC_ARCH),-p:MeshLibArch=$(MSVC_ARCH))
 # # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
 # $(foreach m,$(MODULES),\
 # 	$(if $($m_CSharpSubLibraryOutputProject),\

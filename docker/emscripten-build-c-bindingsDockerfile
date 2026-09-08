@@ -52,11 +52,14 @@ COPY . .
 
 ENV MR_STATE=DOCKER_BUILD
 ENV MR_EMSCRIPTEN=ON
+# emsdk 3.1.38 has no mimalloc at all
+ENV MR_EMSCRIPTEN_MIMALLOC=OFF
 
 # 32-bit multi-threaded
 RUN <<EOF
     set -e
     ./scripts/build_thirdparty.sh
+    ./scripts/devops/warmup_wasm_cache.sh
     ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten
     rm -rf bin include lib share thirdparty_build
 EOF
@@ -66,18 +69,28 @@ RUN <<EOF
     set -e
     export MR_EMSCRIPTEN_SINGLE=ON
     ./scripts/build_thirdparty.sh
+    ./scripts/devops/warmup_wasm_cache.sh
     ./scripts/cmake_install.sh /opt/meshlib-thirdparty/emscripten-single
     rm -rf bin include lib share thirdparty_build
 EOF
+
+# cleanup extra files from cache
+RUN <<EOF
+    set -e
+    find /emsdk/upstream/emscripten/cache/ports -maxdepth 1 -type f -delete
+    rm -rf /emsdk/upstream/emscripten/cache/build
+EOF
+
 
 FROM base
 
 COPY --from=builder /opt/meshlib-thirdparty/emscripten        /usr/local/lib/emscripten
 COPY --from=builder /opt/meshlib-thirdparty/emscripten-single /usr/local/lib/emscripten-single
 
-# Only cache/ needs to be writable (emcc regenerates system libs there); a
-# whole-tree chmod copies up every file on containerd-overlayfs docker hosts.
-RUN chmod -R 777 /emsdk/upstream/emscripten/cache
+# Only cache/ needs to be writable (emcc regenerates system libs there); copying
+# it in with a mode avoids a whole-tree chmod, which copies up every file on
+# containerd-overlayfs docker hosts.
+COPY --from=builder --chmod=777 /emsdk/upstream/emscripten/cache /emsdk/upstream/emscripten/cache
 
 RUN useradd -u 8877 -m aws-user
 RUN useradd -u 1001 -m github-user

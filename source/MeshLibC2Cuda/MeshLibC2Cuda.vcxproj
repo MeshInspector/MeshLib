@@ -25,7 +25,9 @@
     <ProjectReference Include="..\MRPch\MRPch.vcxproj">
       <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\MRCuda\MRCuda.vcxproj">
+    <!-- No CUDA toolkit exists for Windows arm64, so MRCuda is not built there and
+         this project links only the placeholder stubs, as the CMake build does. -->
+    <ProjectReference Include="..\MRCuda\MRCuda.vcxproj" Condition="'$(Platform)'!='ARM64'">
       <Project>{16e3daf5-b110-4812-a3b8-495ba172089e}</Project>
     </ProjectReference>
     <ProjectReference Include="..\MeshLibC2\MeshLibC2.vcxproj">

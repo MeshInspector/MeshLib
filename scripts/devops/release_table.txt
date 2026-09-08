@@ -28,6 +28,13 @@
       </td>
     </tr>
     <tr>
+      <td align="center">Windows arm64 (Visual Studio 2026)</td>
+      <td align="center">
+        <a href="RELEASE_PATH/MeshLibDistVS26_SHORT_VERSION-arm64.zip">zip</a> /
+        <a href="RELEASE_PATH/MeshLibDistVS26_SHORT_VERSION-PDB-arm64.zip">pdb</a>
+      </td>
+    </tr>
+    <tr>
       <td align="center">Ubuntu 22 LTS x64</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu22-dev.deb">deb</a>

@@ -98,7 +98,12 @@ TEST( MRMesh, MeshToDensePointCloud )
         const auto noNormals = meshToDensePointCloud( mesh, radius, false );
         ASSERT_TRUE( noNormals.has_value() );
         EXPECT_TRUE( noNormals->normals.empty() );
-        EXPECT_EQ( noNormals->points.vec_, cloud->points.vec_ );
+        // fuzzy compare to eliminate possible accumulated errors
+        ASSERT_EQ( noNormals->points.size(), cloud->points.size() );
+        auto maxPointDiffSq = 0.f;
+        for ( auto v : cloud->validPoints )
+            maxPointDiffSq = std::max( maxPointDiffSq, ( noNormals->points[v] - cloud->points[v] ).lengthSq() );
+        EXPECT_LE( maxPointDiffSq, 1e-12f );
     }
 
     EXPECT_FALSE( meshToDensePointCloud( mesh, 0 ).has_value() );
@@ -146,8 +151,32 @@ TEST( MRMesh, MeshToDensePointCloudPart )
     EXPECT_LE( maxCloudToSurfaceDist( { mesh, &region }, *part ), 1e-6f );
 }
 
+// two triangles share a long edge, and the vertices opposite to it are close to it, so the balls
+// around the four vertices cover both triangles and no sample is needed at all
+TEST( MRMesh, MeshToDensePointCloudCloseApexes )
+{
+    Triangulation t;
+    t.push_back( { 0_v, 1_v, 2_v } );
+    t.push_back( { 1_v, 0_v, 3_v } );
+    const auto mesh = Mesh::fromTriangles( VertCoords{
+        Vector3f{ 0, 0, 0 }, Vector3f{ 10, 0, 0 }, Vector3f{ 5, 0.05f, 0 }, Vector3f{ 5, -0.05f, 0 } }, t );
+
+    // the covering radius of both triangles is about 2.5, while the edge is 10 long
+    const float radius = 3;
+    const auto cloud = meshToDensePointCloud( mesh, radius );
+    ASSERT_TRUE( cloud.has_value() );
+    EXPECT_EQ( cloud->points.size(), 4 );
+    EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), radius );
+
+    // a smaller radius does require samples
+    const auto dense = meshToDensePointCloud( mesh, 1.0f );
+    ASSERT_TRUE( dense.has_value() );
+    EXPECT_GT( dense->points.size(), 4 );
+    EXPECT_LE( maxSurfaceToCloudDist( mesh, *dense, 64 ), 1.0f );
+}
+
 // a triangle with all vertices on one line has infinite circumradius, but it still requires
-// a finite number of samples, because it is covered by the circle on its longest side
+// a finite number of samples, because its own vertices cover it within 1/4 of its length
 TEST( MRMesh, MeshToDensePointCloudDegenerate )
 {
     Triangulation t;
@@ -156,8 +185,9 @@ TEST( MRMesh, MeshToDensePointCloudDegenerate )
 
     const auto cloud = meshToDensePointCloud( mesh, 0.1f );
     ASSERT_TRUE( cloud.has_value() );
-    // every side is divided in 8 parts (as the face is), which gives 3 + 3*7 + 7*6/2 points
-    EXPECT_EQ( cloud->points.size(), 45 );
+    // the triangle is flat, so the samples of its longest side cover it: that side is divided
+    // in 5 parts, and the 3 vertices with the 4 samples between them is all the cloud has
+    EXPECT_EQ( cloud->points.size(), 7 );
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), 0.1f );
 }
 

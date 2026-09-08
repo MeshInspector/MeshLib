@@ -1,6 +1,8 @@
 #pragma once
 #include "MRMeshFwd.h"
 #include "MRId.h"
+#include "MRHoleFillPlan.h"
+#include <memory>
 #include <optional>
 
 namespace MR
@@ -16,12 +18,6 @@ enum class WindingMode
     Positive,
     Negative
 };
-
-using HoleVertIds = std::vector<VertId>;
-using HolesVertIds = std::vector<HoleVertIds>;
-
-/// return vertices of holes that correspond internal contours representation of PlanarTriangulation
-MRMESH_API HolesVertIds findHoleVertIdsByHoleEdges( const MeshTopology& tp, const std::vector<EdgePath>& holePaths );
 
 /// Info about intersection point for mapping
 struct IntersectionInfo
@@ -77,9 +73,6 @@ MRMESH_API Contours2f getOutline( const Contours2d& contours, const OutlineParam
 
 struct TriangulationParameters
 {
-    /// if set merge only points with same vertex id, otherwise merge all points with same coordinates
-    const HolesVertIds* holeVertsIds{ nullptr };
-
     /// optional output: winding number of the region each face belongs to;
     /// when set, Delone flips after triangulation are skipped, so each face stays strictly inside one winding region
     Vector<int, FaceId>* outFaceWinding{ nullptr };
@@ -97,21 +90,33 @@ struct TriangulationParameters
 MRMESH_API Mesh triangulateContours( const Contours2d& contours, const TriangulationParameters& params = {} );
 MRMESH_API Mesh triangulateContours( const Contours2f& contours, const TriangulationParameters& params = {} );
 
-/// triangulate 2d contours, C++-only overload for backward compatibility;
-/// hidden from generated bindings to keep their triangulateContours signatures unique
-/// \param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
-MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2d& contours, const HolesVertIds* holeVertsIds );
-MR_BIND_IGNORE MRMESH_API Mesh triangulateContours( const Contours2f& contours, const HolesVertIds* holeVertsIds );
+/// keeps the internal buffers of the sweep-line triangulation alive between runs, so a caller
+/// triangulating many contour sets one by one avoids re-allocating them on every call;
+/// the entries returning a Mesh move the topology and the points out into it, so those two grow again
+/// on the next run, while \ref triangulateDisjointContoursTopology keeps everything;
+/// one cache must not be used by several threads at once
+class ISweepLineCache
+{
+public:
+    ISweepLineCache() = default;
+    /// not copyable: the cache is its owner's private scratch, and a copy would silently duplicate
+    /// every buffer (this also silences warning C5267 about the user-provided destructor below)
+    ISweepLineCache( const ISweepLineCache & ) = delete;
+    ISweepLineCache & operator =( const ISweepLineCache & ) = delete;
+    /// pure to make the class abstract: instances are created by makeSweepLineCache() only
+    MRMESH_API virtual ~ISweepLineCache() = 0;
+};
+
+/// creates a cache for the sweep-line triangulation
+MRMESH_API std::unique_ptr<ISweepLineCache> makeSweepLineCache();
 
 /**
  * @brief triangulate 2d contours
  * only closed contours are allowed (first point of each contour should be the same as last point of the contour)
- * @param holeVertsIds if set merge only points with same vertex id, otherwise merge all points with same coordinates
- * @param outBoundaries optional output EdgePaths that correspond to initial contours
  * @return std::optional<Mesh> : if some contours intersect return false, otherwise return created mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, const HolesVertIds* holeVertsIds = nullptr, std::vector<EdgePath>* outBoundaries = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2d& contours, ISweepLineCache* cache = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& contours, ISweepLineCache* cache = nullptr );
 
 /**
  * @brief triangulate hole boundary loops of \p mesh in the mesh's own 3d space, orienting faces around \p normal
@@ -119,10 +124,30 @@ MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Contours2f& co
  * (no projection round-trip), and loops sharing a mesh vertex are merged by identity.
  * @param loops one closed EdgeLoop per contour (as produced by trackRightBoundaryLoop on each hole edge)
  * @param outPatchMap optional output: for each patch boundary edge (by undirected id) the mesh edge it copies,
- *        directed along it; edges past its size are the triangulation's own. Not produced with \p outBoundaries
+ *        directed along it; edges past its size are the triangulation's own
  * @return std::nullopt if the loops self-intersect, otherwise the patch mesh
  */
-MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, std::vector<EdgePath>* outBoundaries = nullptr, WholeEdgeMap* outPatchMap = nullptr );
+MRMESH_API std::optional<Mesh> triangulateDisjointContours( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap* outPatchMap = nullptr, ISweepLineCache* cache = nullptr );
+
+/// same as triangulateDisjointContours( mesh, loops, normal, &outPatchMap ) above, but returns only the
+/// patch connectivity, which lives inside \p cache until the next run on it, and no vertex coordinates;
+/// intended for planning
+/// \return nullptr if the loops self-intersect; an empty topology if \p loops is empty
+// This is skipped in the bindings: the result points inside the cache and must not outlive it.
+MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal, WholeEdgeMap& outPatchMap, ISweepLineCache& cache );
+
+/**
+ * @brief splits the near-planar region bounded by \p loops in monotone parts, without triangulating them
+ * this is the sweep-line triangulation stopped right after monotonation
+ * @param loops one closed EdgeLoop of at least 3 edges per boundary of one region, bounding holes of
+ *        \p mesh as trackRightBoundaryLoop returns them; which way round a loop runs does not matter
+ * @param normal the orientation the region is monotone around, see \ref triangulateDisjointContours
+ * @return std::nullopt if the loops intersect or a chord would land in a face instead of a hole, so that
+ *         the caller can fall back on filling every loop separately; otherwise a plan with numTris == 0
+ *         for \ref executeHoleFillPlan, which then only adds edges (empty if already monotone, a no-op).
+ *         Validate it with \ref isFillingMultipleEdgeFree: a chord may duplicate an off-loop mesh edge
+ */
+MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
 }
 }

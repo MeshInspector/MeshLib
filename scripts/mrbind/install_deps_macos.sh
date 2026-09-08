@@ -7,19 +7,18 @@
 brew update
 brew install --quiet make grep
 
-# `lld` links the bindings on the other platforms too, but Homebrew has no bottle of it
-# for Intel macOS since that became a Tier 3 configuration, and building it from source
-# means building LLVM. Install it where it is bottled; `generate.mk` detects its absence.
-if [[ "$(uname -m)" == "arm64" ]] ; then
-  brew install --quiet lld
+# Nothing LLVM is installed from brew: the compiler and the linker both come from the
+# llvm-pgo keg of https://github.com/MeshInspector/toolchains. Homebrew has no `lld`
+# bottle for Intel macOS since it became a Tier 3 configuration, and its `llvm@N` builds
+# clang;clang-tools-extra;mlir;polly, so it contains no ld64.lld to fall back on either.
+if [[ -z "${LLVM_PREFIX}" ]] ; then
+  echo "LLVM_PREFIX is unset: install the llvm-pgo keg (see the toolchains repo) and" >&2
+  echo "point LLVM_PREFIX at it, e.g. \$(brew --prefix)/Cellar/llvm-pgo/22.1.8_2" >&2
+  exit 1
 fi
 
-if [[ -z "${LLVM_PREFIX}" ]] ; then
-  # Read the Clang version from `clang_version_macos.txt`. `xargs` trims the whitespace.
-  # Some versions of MacOS seem to lack `realpath`, so not using it here.
-  SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
-  CLANG_VER="$(cat $SCRIPT_DIR/clang_version_macos.txt | xargs)"
-  [[ $CLANG_VER ]] || (echo "Not sure what version of Clang to use." && false)
-
-  brew install --quiet llvm@$CLANG_VER
+if [[ ! -x "${LLVM_PREFIX}/bin/ld64.lld" ]] ; then
+  echo "no ld64.lld in ${LLVM_PREFIX}/bin: the bindings are linked with lld, install it" >&2
+  echo "from the lld-22.1.8-pgo-macos release of the toolchains repo" >&2
+  exit 1
 fi

@@ -6,12 +6,13 @@ from string import Template
 
 WORK_DIR = Path(".")
 DOTNET_DLL_DIR = WORK_DIR / sys.argv[1]
-WINDOWS_RUNTIME_DIR = WORK_DIR / sys.argv[2]
-LINUX_X64_RUNTIME_DIR = WORK_DIR / sys.argv[3]
-LINUX_ARM_RUNTIME_DIR = WORK_DIR / sys.argv[4]
-MACOS_X64_RUNTIME_DIR = WORK_DIR / sys.argv[5]
-MACOS_ARM_RUNTIME_DIR = WORK_DIR / sys.argv[6]
-VERSION = sys.argv[7][1:]
+WINDOWS_X64_RUNTIME_DIR = WORK_DIR / sys.argv[2]
+WINDOWS_ARM_RUNTIME_DIR = WORK_DIR / sys.argv[3]
+LINUX_X64_RUNTIME_DIR = WORK_DIR / sys.argv[4]
+LINUX_ARM_RUNTIME_DIR = WORK_DIR / sys.argv[5]
+MACOS_X64_RUNTIME_DIR = WORK_DIR / sys.argv[6]
+MACOS_ARM_RUNTIME_DIR = WORK_DIR / sys.argv[7]
+VERSION = sys.argv[8][1:]
 
 SPEC_FILE = WORK_DIR / "Package.nuspec"
 LICENSE_FILE = WORK_DIR / "LICENSE"
@@ -34,7 +35,8 @@ FILES = ""
 add_files( DOTNET_DLL_DIR, "lib/netstandard2.0/" )
 
 # For platform names, see: https://learn.microsoft.com/en-us/dotnet/core/rid-catalog
-add_files( WINDOWS_RUNTIME_DIR, "runtimes/win-x64/native/" )
+add_files( WINDOWS_X64_RUNTIME_DIR, "runtimes/win-x64/native/" )
+add_files( WINDOWS_ARM_RUNTIME_DIR, "runtimes/win-arm64/native/" )
 add_files( LINUX_X64_RUNTIME_DIR, "runtimes/linux-x64/native/" )
 add_files( LINUX_ARM_RUNTIME_DIR, "runtimes/linux-arm64/native/" )
 add_files( MACOS_X64_RUNTIME_DIR, "runtimes/osx-x64/native/" )

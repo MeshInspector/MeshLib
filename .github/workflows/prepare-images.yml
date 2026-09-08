@@ -83,11 +83,15 @@ jobs:
                   arch: x64
                 - distro: ubuntu24
                   arch: x64
+                - distro: ubuntu26
+                  arch: x64
             - if: ${{ inputs.disable_ubuntu_arm64 }}
               exclude:
                 - distro: ubuntu22
                   arch: arm64
                 - distro: ubuntu24
+                  arch: arm64
+                - distro: ubuntu26
                   arch: arm64
             - if: ${{ inputs.disable_emscripten }}
               exclude:
@@ -198,7 +202,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           aws-region: us-east-1
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -263,7 +267,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           aws-region: us-east-1
           role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
@@ -334,7 +338,7 @@ jobs:
           submodules: true
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c # v6.2.3
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}

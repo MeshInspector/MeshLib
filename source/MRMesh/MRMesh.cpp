@@ -371,7 +371,7 @@ void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map, VacantEl
     addMeshPart( from, false, {}, {}, map, vacant );
 }
 
-void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
+bool Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
     PartMapping map, VacantElements * vacant )
@@ -382,11 +382,13 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     auto localVmap = VertMapOrHashMap::createHashMap();
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
-    topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map, vacant );
+    if ( !topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map, vacant ) )
+        return false;
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
     map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
+    return true;
 }
 
 Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const

@@ -185,7 +185,7 @@ jobs:
                 - py-version: "3.8"
                   os: "rockylinux:8"
                 - py-version: "3.9"
-                  os: "debian:11-slim"
+                  os: "rockylinux:9"
                 - py-version: "3.10"
                   os: "ubuntu:22.04"
                 - py-version: "3.11"
@@ -346,7 +346,7 @@ jobs:
 
       - name: Unit Tests
         timeout-minutes: 10
-        run: build/Release/bin/MRTest
+        run: build/Release/bin/MRTest --with-python-tests
 
       - name: Python Tests
         run: |
@@ -440,21 +440,54 @@ jobs:
     needs: setup
     if: ${{ inputs.disable_windows != true }}
     timeout-minutes: 90
-    runs-on:  [windows-2025]
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
+      matrix:
+        platform: [x64, arm64]
+        include:
+          - platform: x64
+            runner: windows-2025
+            vcpkg-triplet: x64-windows-meshlib
+            msbuild-platform: x64
+            msbuild-architecture: x86
+            vs-dev-args: -arch=amd64 -host_arch=x86
+            plat-name: win-amd64
+            msys2-env: clang64
+            msys2-pkgs: _clang22
+            mrbind-cache-prefix: windows-clang22
+            cuda-version: '12.0.1'
+            cuda-major: '12'
+            cuda-minor: '0'
+            cuda-platform-toolset: v143
+          # no CUDA toolkit exists for Windows arm64, so MRCuda is not built there
+          - platform: arm64
+            runner: windows-11-vs2026-arm
+            vcpkg-triplet: arm64-windows-meshlib
+            msbuild-platform: ARM64
+            msbuild-architecture: arm64
+            vs-dev-args: -arch=arm64 -host_arch=arm64
+            plat-name: win-arm64
+            msys2-env: clangarm64
+            msys2-pkgs: _clangarm64
+            mrbind-cache-prefix: windows-clangarm64
+            cuda-version: ''
+            cuda-major: ''
+            cuda-minor: ''
+            cuda-platform-toolset: ''
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
       VCPKG-VERSION: '2026.07.29'
-      CUDA-VERSION: '12.0.1'
-      CUDA-MAJOR: '12'
-      CUDA-MINOR: '0'
-      VCPKG_DEFAULT_TRIPLET: x64-windows-meshlib
+      CUDA-VERSION: ${{ matrix.cuda-version }}
+      CUDA-MAJOR: ${{ matrix.cuda-major }}
+      CUDA-MINOR: ${{ matrix.cuda-minor }}
+      VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg-triplet }}
       VCVARS_VER: '14.5'
       PLATFORM_TOOLSET: v145
-      CUDA_PLATFORM_TOOLSET: v143
+      CUDA_PLATFORM_TOOLSET: ${{ matrix.cuda-platform-toolset }}
+      MSYS2_ENV: ${{ matrix.msys2-env }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -477,6 +510,7 @@ jobs:
         run: scripts/mrbind-pybind11/install_all_python_versions_windows.bat
 
       - name: Install CUDA
+        if: ${{ matrix.cuda-version != '' }}
         uses: ./.github/actions/install-cuda
         with:
           cuda-version: ${{ env.CUDA-VERSION }}
@@ -484,6 +518,7 @@ jobs:
           cuda-minor: ${{ env.CUDA-MINOR }}
 
       - name: Set up CUDA
+        if: ${{ matrix.cuda-version != '' }}
         uses: ./.github/actions/setup-cuda
         with:
           cuda-major: ${{ env.CUDA-MAJOR }}
@@ -491,19 +526,26 @@ jobs:
 
       - name: Add msbuild to PATH
         uses: microsoft/setup-msbuild@30375c66a4eea26614e0d39710365f22f8b0af57 # v3.0.0
+        with:
+          # an x86 MSBuild would make the VC props pick an x86 host compiler, whose address
+          # space is too small for our PCH when targeting ARM64
+          msbuild-architecture: ${{ matrix.msbuild-architecture }}
 
       - name: Build
-        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON
+        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:Platform=${{ matrix.msbuild-platform }} -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON
 
       - name: Install MSYS2 for MRBind
         uses: ./.github/actions/install-msys2-mrbind
+        with:
+          packages-suffix: ${{ matrix.msys2-pkgs }}
 
       - name: Build MRBind
         uses: ./.github/actions/build-mrbind
         with:
-          cache-key-prefix: windows-clang22
+          cache-key-prefix: ${{ matrix.mrbind-cache-prefix }}
           build-script: scripts/mrbind/install_mrbind_windows_msys2.bat
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/msys2_package_hashes_clang22.txt') }}
+          extra-cache-key: ${{ hashFiles(format('scripts/mrbind/msys2_package_hashes{0}.txt', matrix.msys2-pkgs)) }}
+          msys2-env: ${{ matrix.msys2-env }}
 
       - name: Generate and build MRBind bindings
         shell: cmd
@@ -512,25 +554,25 @@ jobs:
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
-          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" -arch=amd64 -host_arch=x86 -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 || exit /b 1
 
       - name: Run Test
-        working-directory: source\x64\Release
+        working-directory: source\${{ matrix.platform }}\Release
         run: .\MeshViewer.exe -tryHidden -noEventLoop
 
       - name: Verify meshlib.mrmeshpy import
         timeout-minutes: 3
         uses: ./.github/actions/verify-meshlib-python-import
         with:
-          build-bin-dir: source\x64\Release
+          build-bin-dir: source\${{ matrix.platform }}\Release
 
       - name: Unit Tests
         timeout-minutes: 10
-        run: source\x64\Release\MRTest.exe
+        run: source\${{ matrix.platform }}\Release\MRTest.exe --with-python-tests
 
       - name: Python Tests
-        working-directory: source\x64\Release
+        working-directory: source\${{ matrix.platform }}\Release
         run: py -3 -u ..\..\..\scripts\run_python_test_script.py -multi-cmd
 
       - name: Create and fix Wheel
@@ -538,12 +580,12 @@ jobs:
           py -3.11 -m venv venv
           venv\Scripts\Activate
           python -m pip install --upgrade pip
-          python .\scripts\wheel\build_wheel.py --plat-name=win-amd64 --version ${{ needs.setup.outputs.wheel_version }}
+          python .\scripts\wheel\build_wheel.py --plat-name=${{ matrix.plat-name }} --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload to Test Artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: Windows
+          name: Windows-${{ matrix.platform }}
           path: wheelhouse_core\meshlib*.whl
           retention-days: 1
 
@@ -578,11 +620,11 @@ jobs:
           submodules: recursive
           ref: ${{ needs.setup.outputs.build_ref }}
 
-      - name: Python setup
-        env:
-          ENABLE_SUDO: ${{ fromJSON('["1", "0"]')[matrix.platform == 'arm64'] }}
-        run: |
-          scripts/mrbind-pybind11/install_all_python_versions_macos.sh
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+
+      - name: Install all Python versions
+        run: uv python install $(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
 
       - name: Create virtualenv
         run: |
@@ -647,8 +689,17 @@ jobs:
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
+          PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+          GET_SYSCONFIG_VAR=${PWD}/scripts/wheel/get_sysconfig_var.py
+
+          PKG_CONFIG_PATH=
+          for PYTHON_VER in ${PYTHON_VERSIONS} ; do
+            PKG_CONFIG_PATH=${PKG_CONFIG_PATH}:$(uv run --no-project --python ${PYTHON_VER} ${GET_SYSCONFIG_VAR} LIBPC)
+          done
+          export PKG_CONFIG_PATH=${PKG_CONFIG_PATH#:}
+
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7
+          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}"
 
       - name: Verify meshlib.mrmeshpy import
         timeout-minutes: 3
@@ -658,11 +709,21 @@ jobs:
 
       - name: Unit Tests
         timeout-minutes: 10
-        run: build/Release/bin/MRTest
+        run: build/Release/bin/MRTest --with-python-tests
 
       - name: Python Tests
-        working-directory: ./build/Release/bin
-        run: python3 -u ./../../../scripts/run_python_test_script.py -multi-cmd -create-venv
+        run: |
+          PYTHON_VERSIONS=$(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
+          REQUIREMENTS_FILE=${PWD}/requirements/python/requirements.txt
+
+          cd build/Release/bin
+          for PYTHON_VER in ${PYTHON_VERSIONS} ; do
+            uv run --no-project \
+              --python ${PYTHON_VER} \
+              --with-requirements ${REQUIREMENTS_FILE} \
+              --with pytest \
+              python3 -u ./../../../scripts/run_python_test_script.py -d '../test_python'
+          done
 
       - name: Create and fix Wheel
         run: |
@@ -699,7 +760,7 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Windows
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
@@ -734,16 +795,16 @@ jobs:
         with:
           ref: ${{ needs.setup.outputs.build_ref }}
 
-      - name: Rocky Linux system setup
+      - name: Rocky Linux 8 system setup
         if: ${{ matrix.os == 'rockylinux:8' }}
         run: dnf -y install python38-pip
 
-      - name: Debian/Ubuntu system setup
-        if: ${{ matrix.os == 'debian:11-slim' || matrix.os == 'ubuntu:22.04' || matrix.os == 'ubuntu:25.10' }}
+      - name: Ubuntu system setup
+        if: ${{ matrix.os == 'ubuntu:22.04' || matrix.os == 'ubuntu:25.10' }}
         run: apt -y update && apt -y install curl libssl-dev python3-pip python${{ matrix.py-version }}-venv
 
-      - name: Fedora system setup
-        if: ${{ matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
+      - name: Fedora / Rocky Linux 9 system setup
+        if: ${{ matrix.os == 'rockylinux:9' || matrix.os == 'fedora:37' || matrix.os == 'fedora:39' || matrix.os == 'fedora:42' }}
         run: dnf -y install python3-pip
 
       - name: Create virtualenv
@@ -781,7 +842,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        runner: [windows-2022, windows-2025]
+        include:
+          - platform: x64
+            runner: windows-2022
+          - platform: x64
+            runner: windows-2025
+          - platform: arm64
+            runner: windows-11-vs2026-arm
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -791,10 +858,13 @@ jobs:
       - name: Download Meshlib wheel from Artifact
         uses: actions/download-artifact@v8
         with:
-          name: Windows
+          name: Windows-${{ matrix.platform }}
           merge-multiple: true
 
+      # Two steps rather than one interpolated list: setup-python wants real newlines,
+      # and an expression cannot produce them.
       - name: Python setup
+        if: ${{ matrix.platform != 'arm64' }}
         uses: actions/setup-python@v7
         with:
           python-version: |
@@ -806,18 +876,32 @@ jobs:
             3.13
             3.14
 
+      - name: Python setup (arm64)
+        # python.org publishes no win-arm64 build before 3.11
+        if: ${{ matrix.platform == 'arm64' }}
+        uses: actions/setup-python@v7
+        with:
+          python-version: |
+            3.11
+            3.12
+            3.13
+            3.14
+
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
       # shared `test_wheel_windows.ps1` script.
       - name: Test wheel against Python 3.8
+        if: ${{ matrix.platform != 'arm64' }}
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.8
 
       - name: Test wheel against Python 3.9
+        if: ${{ matrix.platform != 'arm64' }}
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.9
 
       - name: Test wheel against Python 3.10
+        if: ${{ matrix.platform != 'arm64' }}
         shell: pwsh
         run: ./scripts/wheel/test_wheel_windows.ps1 -Version 3.10
 
@@ -885,29 +969,32 @@ jobs:
           name: Macos-${{matrix.platform}}
           merge-multiple: true
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
-      # shared `test_wheel_macos.sh` script. `runner-tier` is forwarded so
-      # the script can scope the macos-15-intel 3.11 brew-skip to the
-      # GitHub-hosted runner only (self-hosted x86 does need the install).
-      # python 3.8 disabled on macOS since 2024-10-14
+      # shared `test_wheel_macos.sh` script.
+      - name: Test wheel against Python 3.8
+        run: scripts/wheel/test_wheel_macos.sh 3.8 ${{ matrix.platform }}
+
       - name: Test wheel against Python 3.9
-        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+        run: scripts/wheel/test_wheel_macos.sh 3.9 ${{ matrix.platform }}
 
       - name: Test wheel against Python 3.10
-        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+        run: scripts/wheel/test_wheel_macos.sh 3.10 ${{ matrix.platform }}
 
       - name: Test wheel against Python 3.11
-        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+        run: scripts/wheel/test_wheel_macos.sh 3.11 ${{ matrix.platform }}
 
       - name: Test wheel against Python 3.12
-        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+        run: scripts/wheel/test_wheel_macos.sh 3.12 ${{ matrix.platform }}
 
       - name: Test wheel against Python 3.13
-        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+        run: scripts/wheel/test_wheel_macos.sh 3.13 ${{ matrix.platform }}
 
       - name: Test wheel against Python 3.14
-        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }} ${{ matrix.runner-tier }}
+        run: scripts/wheel/test_wheel_macos.sh 3.14 ${{ matrix.platform }}
 
   upload-to-release:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
@@ -926,7 +1013,7 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Windows
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts
@@ -969,7 +1056,7 @@ jobs:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
         with:
-          pattern: Windows
+          pattern: Windows-*
           merge-multiple: true
 
       - name: Download Wheels Artifacts

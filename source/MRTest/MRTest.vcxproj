@@ -32,6 +32,8 @@
     <ClCompile Include="MRContourTests.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRDeloneTests.cpp" />
+    <ClCompile Include="MRDelaunayTriangulationXYTests.cpp" />
+    <ClCompile Include="MRCameraPointsTriangulationTests.cpp" />
     <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
@@ -123,6 +125,7 @@
     <ClCompile Include="MRPolylineDecimateTests.cpp" />
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />
     <ClCompile Include="MRPolylineTopologyTests.cpp" />
+    <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
     <ClCompile Include="MRRayBoxIntersectionTests.cpp" />
     <ClCompile Include="MRRectIndexerTests.cpp" />

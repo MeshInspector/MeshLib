@@ -2,7 +2,14 @@
     This file is included for .NET Framework projects (as opposed to newer .NET) to ensure that the native libraries get copied to the build output directory.
 -->
 <Project>
+  <PropertyGroup>
+    <!-- Which runtimes/ folder to copy from. .NET Framework 4.8.1 is the first version
+         that runs natively on Windows arm64; anything else (including AnyCPU) keeps the
+         x64 natives it has always got. MSBuild string comparison is case-insensitive. -->
+    <MeshLibNativeRid>win-x64</MeshLibNativeRid>
+    <MeshLibNativeRid Condition="'$(PlatformTarget)' == 'ARM64'">win-arm64</MeshLibNativeRid>
+  </PropertyGroup>
   <ItemGroup Condition="$([MSBuild]::VersionLessThan('$([MSBuild]::GetTargetFrameworkVersion('$(TargetFramework)'))','5.0'))">
-    <ContentWithTargetPath Include="$(MSBuildThisFileDirectory)\..\runtimes\win-x64\native\*" TargetPath="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <ContentWithTargetPath Include="$(MSBuildThisFileDirectory)\..\runtimes\$(MeshLibNativeRid)\native\*" TargetPath="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

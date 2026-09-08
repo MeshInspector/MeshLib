@@ -418,6 +418,8 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         }
     }
 
+    spdlog::info( "Compressing {} files into {}", files.size(), utf8string( zipFile ) );
+
     // pass #2: deflate each file in parallel, then hand libzip pre-deflated bytes via a source
     // callback — libzip's trust-source fast path copies them into the archive without recompressing.
     // level 0 (the settings-level "use default") normalizes to 6 — zlib's internal default is 6,
@@ -463,11 +465,14 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     if ( hadError.load() )
         return unexpected( std::move( firstError ) );
 
+    spdlog::info( "Deflated {} files, writing the archive", files.size() );
+
     // Phase B — serial hand-off to libzip; the AutoCloseZip keeps entries alive through zip_close
     if ( auto res = zip.addPreDeflatedEntries( std::move( entries ), files, level, settings.password ); !res )
         return res;
 
     auto closeRes = zip.close();
+    spdlog::info( "Compressed {} files into {}", files.size(), utf8string( zipFile ) );
 
     if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();

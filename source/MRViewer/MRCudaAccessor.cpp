@@ -98,10 +98,13 @@ int CudaAccessor::getComputeCapabilityMinor()
     return instance_().computeMinor_;
 }
 
+// The CUDA functors below are registered whether or not CUDA turned out to be usable, so every
+// getter checks availability itself: otherwise the plugins' capability checks call into CUDA on a
+// machine with no driver, and each call logs an error that reads as an outdated driver.
 size_t CudaAccessor::getCudaFreeMemory()
 {
     auto& inst = instance_();
-    if ( !inst.freeMemFunc_ )
+    if ( !inst.isCudaAvailable_ || !inst.freeMemFunc_ )
         return 0;
     return inst.freeMemFunc_();
 }
@@ -109,7 +112,7 @@ size_t CudaAccessor::getCudaFreeMemory()
 std::unique_ptr<IFastWindingNumber> CudaAccessor::getCudaFastWindingNumber( const Mesh& mesh )
 {
     auto& inst = instance_();
-    if ( !inst.fwnCtor_ )
+    if ( !inst.isCudaAvailable_ || !inst.fwnCtor_ )
         return {};
     return inst.fwnCtor_( mesh );
 }
@@ -117,7 +120,7 @@ std::unique_ptr<IFastWindingNumber> CudaAccessor::getCudaFastWindingNumber( cons
 std::unique_ptr<IPointsToMeshProjector> CudaAccessor::getCudaPointsToMeshProjector()
 {
     auto& inst = instance_();
-    if ( !inst.mpCtor_ )
+    if ( !inst.isCudaAvailable_ || !inst.mpCtor_ )
         return {};
     return inst.mpCtor_();
 }
@@ -125,7 +128,7 @@ std::unique_ptr<IPointsToMeshProjector> CudaAccessor::getCudaPointsToMeshProject
 std::unique_ptr<MR::IPointsProjector> CudaAccessor::getCudaPointsProjector()
 {
     auto& inst = instance_();
-    if ( !inst.ppCtor_ )
+    if ( !inst.isCudaAvailable_ || !inst.ppCtor_ )
         return {};
     return inst.ppCtor_();
 }
@@ -134,7 +137,7 @@ std::unique_ptr<MR::IPointsProjector> CudaAccessor::getCudaPointsProjector()
 CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDistanceVolumeCallback()
 {
     auto& inst = instance_();
-    if ( !inst.pointsToDistanceVolumeCallback_ )
+    if ( !inst.isCudaAvailable_ || !inst.pointsToDistanceVolumeCallback_ )
         return {};
 
     return inst.pointsToDistanceVolumeCallback_;
@@ -143,7 +146,7 @@ CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDi
 CudaAccessor::CudaPointsToDistanceVolumeByPartsCallback CudaAccessor::getCudaPointsToDistanceVolumeByPartsCallback()
 {
     auto& inst = instance_();
-    if ( !inst.pointsToDistanceVolumeByPartsCallback_ )
+    if ( !inst.isCudaAvailable_ || !inst.pointsToDistanceVolumeByPartsCallback_ )
         return {};
 
     return inst.pointsToDistanceVolumeByPartsCallback_;
@@ -152,7 +155,7 @@ CudaAccessor::CudaPointsToDistanceVolumeByPartsCallback CudaAccessor::getCudaPoi
 std::unique_ptr<IComputeToolDistance> CudaAccessor::getCudaComputeToolDistance()
 {
     auto& inst = instance_();
-    if ( !inst.ctdCtor_ )
+    if ( !inst.isCudaAvailable_ || !inst.ctdCtor_ )
         return {};
 
     return inst.ctdCtor_();

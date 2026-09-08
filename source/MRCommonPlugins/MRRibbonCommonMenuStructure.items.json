@@ -3,25 +3,29 @@
     {
       "Name": "Undo",
       "Tooltip": "Undo the last action.",
-      "Icon": "\uF0E2"
+      "Icon": "\uF0E2",
+      "Shortcut": { "Keys": "Primary+Z", "Category": "Edit", "Tags": [ "history" ] }
     },
     {
       "Name": "Redo",
       "Tooltip": "Redo last undone action.",
-      "Icon": "\uF01E"
-    }, 
+      "Icon": "\uF01E",
+      "Shortcut": { "Keys": "Primary+Shift+Z", "Category": "Edit", "Tags": [ "history" ] }
+    },
     {
       "Name": "New",
       "Tooltip": "Remove all objects from the scene.",
       "Icon": "\uF021",
-      "HelpLink": "https://meshinspector.com/inappvideo/new"
+      "HelpLink": "https://meshinspector.com/inappvideo/new",
+      "Shortcut": { "Keys": "Primary+N", "Category": "Scene" }
     },
     {
       "Name": "Open files",
       "Caption": "Open Files",
       "Tooltip": "Select files from the dialog and open them in the viewer window.",
       "Icon": "\uF15B",
-      "HelpLink": "https://meshinspector.com/inappvideo/openfiles"
+      "HelpLink": "https://meshinspector.com/inappvideo/openfiles",
+      "Shortcut": { "Keys": "Primary+O", "Category": "Scene" }
     },
     {
       "Name": "Open directory",
@@ -72,13 +76,15 @@
       "Name": "Save Scene",
       "Tooltip": "Save MRU scene to the file from which it was opened.",
       "Icon": "\uF0C7",
-      "HelpLink": "https://meshinspector.com/inappvideo/savescene"
+      "HelpLink": "https://meshinspector.com/inappvideo/savescene",
+      "Shortcut": { "Keys": "Primary+S", "Category": "Scene" }
     },
     {
       "Name": "Save Scene As",
       "Tooltip": "Saves scene in a file.",
       "Icon": "\uF0C7",
-      "HelpLink": "https://meshinspector.com/inappvideo/savesceneas"
+      "HelpLink": "https://meshinspector.com/inappvideo/savesceneas",
+      "Shortcut": { "Keys": "Primary+Shift+S", "Category": "Scene" }
     },
     {
       "Name": "Capture screenshot",
@@ -122,7 +128,8 @@
           "Name": "Fit selected primitives"
         }
       ],
-      "HelpLink": "https://meshinspector.com/inappvideo/fitdata"
+      "HelpLink": "https://meshinspector.com/inappvideo/fitdata",
+      "Shortcut": { "Keys": "Primary+Alt+F", "Category": "View" }
     },
     {
       "Name": "Fit selected objects",
@@ -148,37 +155,43 @@
       "Name": "Front View",
       "Tooltip": "A view of XZ plane with camera looking along Y.",
       "Icon": "\uF102",
-      "HelpLink": "https://meshinspector.com/inappvideo/frontview"
+      "HelpLink": "https://meshinspector.com/inappvideo/frontview",
+      "Shortcut": { "Keys": "Num1", "Category": "View" }
     },
     {
       "Name": "Top View",
       "Tooltip": "A view of XY plane with Z axis looking in camera.",
       "Icon": "\uF107",
-      "HelpLink": "https://meshinspector.com/inappvideo/topview"
+      "HelpLink": "https://meshinspector.com/inappvideo/topview",
+      "Shortcut": { "Keys": "Num7", "Category": "View" }
     },
     {
       "Name": "Bottom View",
       "Tooltip": "A view of XY plane with camera looking along Z.",
       "Icon": "\uF106",
-      "HelpLink": "https://meshinspector.com/inappvideo/bottomview"
+      "HelpLink": "https://meshinspector.com/inappvideo/bottomview",
+      "Shortcut": { "Keys": "Primary+Num7", "Category": "View" }
     },
     {
       "Name": "Left View",
       "Tooltip": "A view of YZ plane with camera looking along X.",
       "Icon": "\uF105",
-      "HelpLink": "https://meshinspector.com/inappvideo/leftview"
+      "HelpLink": "https://meshinspector.com/inappvideo/leftview",
+      "Shortcut": { "Keys": "Primary+Num3", "Category": "View" }
     },
     {
       "Name": "Back View",
       "Tooltip": "A view of XZ plane with Y axis looking in camera.",
       "Icon": "\uF103",
-      "HelpLink": "https://meshinspector.com/inappvideo/backview"
+      "HelpLink": "https://meshinspector.com/inappvideo/backview",
+      "Shortcut": { "Keys": "Primary+Num1", "Category": "View" }
     },
     {
       "Name": "Right View",
       "Tooltip": "A view of YZ plane with X axis looking in camera.",
       "Icon": "\uF104",
-      "HelpLink": "https://meshinspector.com/inappvideo/rightview"
+      "HelpLink": "https://meshinspector.com/inappvideo/rightview",
+      "Shortcut": { "Keys": "Num3", "Category": "View" }
     },
     {
       "Name": "Isometric View",
@@ -190,7 +203,8 @@
       "Name": "Invert View",
       "Tooltip": "Rotates the camera 180 degrees around the current vertical axis.",
       "Icon": "\uF2F1",
-      "HelpLink": "https://meshinspector.com/inappvideo/invertview"
+      "HelpLink": "https://meshinspector.com/inappvideo/invertview",
+      "Shortcut": { "Keys": "Num9", "Category": "View" }
     },
     {
       "Name": "Single Viewport",
@@ -228,21 +242,24 @@
       "Caption": "Toggle Global Basis",
       "Tooltip": "Show or hide global 0 and X,Y,Z axes, also allows showing 3d grid.",
       "Icon": "\uf546",
-      "HelpLink": "https://meshinspector.com/inappvideo/showhideglobalbasis"
+      "HelpLink": "https://meshinspector.com/inappvideo/showhideglobalbasis",
+      "Shortcut": { "Keys": "Primary+G", "Category": "View" }
     },
     {
       "Name": "Viewer settings",
       "Caption": "Settings",
       "Tooltip": "Show application settings window.",
       "Icon": "\uF013",
-      "HelpLink": "https://meshinspector.com/inappvideo/viewerasettings"
+      "HelpLink": "https://meshinspector.com/inappvideo/viewerasettings",
+      "Shortcut": { "Keys": "Primary+,", "Category": "Info" }
     },
     {
       "Name": "Select objects",
       "Caption": "Select Objects",
       "Tooltip": "Selects objects by clicking them in the scene",
       "Icon": "\uF245",
-      "HelpLink": "https://meshinspector.com/inappvideo/selectobjects"
+      "HelpLink": "https://meshinspector.com/inappvideo/selectobjects",
+      "Shortcut": { "Keys": "Primary+Q", "Category": "Objects" }
     },
     {
       "Name": "Move object",
@@ -297,13 +314,15 @@
       "Name": "Ribbon Scene Rename",
       "Caption": "Rename",
       "Tooltip": "Rename object",
-      "Icon": "\uF044"
+      "Icon": "\uF044",
+      "Shortcut": { "Keys": "F2", "Category": "Objects" }
     },
     {
       "Name": "Ribbon Scene Remove selected objects",
       "Caption": "Remove Selected",
       "Tooltip": "Remove selected objects",
-      "Icon": "\uF2ED"
+      "Icon": "\uF2ED",
+      "Shortcut": { "Keys": "Shift+R", "Category": "Objects" }
     },
     {
       "Name": "Active Plugins List",

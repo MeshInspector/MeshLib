@@ -23,6 +23,7 @@
     <ClCompile Include="MRAABBTreePointsTests.cpp" />
     <ClCompile Include="MRAlphaShapeTests.cpp" />
     <ClCompile Include="MRBase64Tests.cpp" />
+    <ClCompile Include="MRShortcutManagerTests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBitSetTests.cpp" />

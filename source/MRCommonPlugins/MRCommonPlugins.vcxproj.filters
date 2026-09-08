@@ -60,7 +60,6 @@
     <ClCompile Include="Voxels\MROpenRawVoxelsPlugin.cpp">
       <Filter>Voxels</Filter>
     </ClCompile>
-    <ClCompile Include="MRCommonPluginsShortcuts.cpp" />
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp">
       <Filter>Basic</Filter>
     </ClCompile>
@@ -103,7 +102,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="exports.h" />
-    <ClInclude Include="MRCommonPluginsShortcuts.h" />
     <ClInclude Include="Basic\MRMoveObjectByMouse.h">
       <Filter>Basic</Filter>
     </ClInclude>

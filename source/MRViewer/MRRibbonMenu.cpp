@@ -100,6 +100,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // should init instance before load schema (as far as some font are used inside)
     fontManager_.initFontManagerInstance( &fontManager_ );
     readMenuItemsStructure_();
+    // not in setupShortcuts_, which ImGuiMenu::init calls before the schema with the UI order of the items is read
+    registerItemsShortcuts_( allowedShortcutTags_() );
 
     RibbonIcons::load();
 
@@ -2131,7 +2133,7 @@ bool RibbonMenu::drawTransformContextMenu_( const std::vector<std::shared_ptr<Ob
     return true;
 }
 
-void RibbonMenu::addRibbonItemShortcut( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )
+void RibbonMenu::addRibbonItemShortcut( const std::string& itemName, const Shortcut& shortcut )
 {
     if ( !shortcutManager_ )
     {
@@ -2141,7 +2143,7 @@ void RibbonMenu::addRibbonItemShortcut( const std::string& itemName, const Short
     auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
     if ( itemIt != RibbonSchemaHolder::schema().items.end() )
     {
-        shortcutManager_->setShortcut( key, { category, itemIt->first, [item = itemIt->second.item, this]()
+        shortcutManager_->setShortcut( shortcut, { itemIt->first, [item = itemIt->second.item, this]()
         {
             itemPressed_( item, getRequirements_( item ) );
         } } );
@@ -2164,7 +2166,7 @@ void RibbonMenu::setupShortcuts_()
         return;
     }
 
-    shortcutManager_->setShortcut( { GLFW_KEY_H,0 }, { ShortcutManager::Category::View, _tr( "Toggle selected objects visibility" ), [] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_H,0 }, ShortcutCategory::View }, { _tr( "Toggle selected objects visibility" ), [] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2181,15 +2183,15 @@ void RibbonMenu::setupShortcuts_()
             if ( data )
                 data->setVisible( !atLeastOne, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F1,0 }, { ShortcutManager::Category::Info, _tr( "Show this help with hot keys" ),[this] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_F1,0 }, ShortcutCategory::Info }, { _tr( "Show this help with hot keys" ),[this] ()
     {
         showShortcuts_ = !showShortcuts_;
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_D,0 }, { ShortcutManager::Category::Info, _tr( "Toggle statistics window" ),[this] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_D,0 }, ShortcutCategory::Info }, { _tr( "Toggle statistics window" ),[this] ()
     {
         showStatistics_ = !showStatistics_;
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F,0 }, { ShortcutManager::Category::View, _tr( "Toggle shading of selected objects" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_F,0 }, ShortcutCategory::View }, { _tr( "Toggle shading of selected objects" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2197,12 +2199,12 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F, getGlfwModPrimaryCtrl() }, {ShortcutManager::Category::Info, _tr( "Search plugin by name or description" ),[this] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_F, getGlfwModPrimaryCtrl() }, ShortcutCategory::Info }, { _tr( "Search plugin by name or description" ),[this] ()
     {
         if ( menuUIConfig_.drawSearchBar )
             searcher_.activate();
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_L,0 }, { ShortcutManager::Category::View, _tr( "Toggle edges on selected meshes" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_L,0 }, ShortcutCategory::View }, { _tr( "Toggle edges on selected meshes" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2210,12 +2212,12 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_KP_5,0 }, { ShortcutManager::Category::View, _tr( "Toggle Orthographic/Perspective View" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_KP_5,0 }, ShortcutCategory::View }, { _tr( "Toggle Orthographic/Perspective View" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         viewport.setOrthographic( !viewport.getParameters().orthographic );
     } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_T,0 }, { ShortcutManager::Category::View, _tr( "Toggle faces on selected meshes" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_T,0 }, ShortcutCategory::View }, { _tr( "Toggle faces on selected meshes" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2225,35 +2227,85 @@ void RibbonMenu::setupShortcuts_()
     } }  );
     if ( sceneObjectsList_ )
     {
-        shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { ShortcutManager::Category::Objects, _tr( "Select next object" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_DOWN,0 }, ShortcutCategory::Objects }, { _tr( "Select next object" ),[&] ()
         {
             sceneObjectsList_->changeSelection( true, false );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, _tr( "Add next object to selection" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, ShortcutCategory::Objects }, { _tr( "Add next object to selection" ),[&] ()
         {
             sceneObjectsList_->changeSelection( true, true );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { ShortcutManager::Category::Objects, _tr( "Select previous object" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_UP,0 }, ShortcutCategory::Objects }, { _tr( "Select previous object" ),[&] ()
         {
             sceneObjectsList_->changeSelection( false, false );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, _tr( "Add previous object to selection" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_UP,GLFW_MOD_SHIFT }, ShortcutCategory::Objects }, { _tr( "Add previous object to selection" ),[&] ()
         {
             sceneObjectsList_->changeSelection( false, true );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_A, getGlfwModPrimaryCtrl() }, { ShortcutManager::Category::Objects, _tr( "Ribbon Scene Select all" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_A, getGlfwModPrimaryCtrl() }, ShortcutCategory::Objects }, { _tr( "Ribbon Scene Select all" ),[&] ()
         {
             sceneObjectsList_->selectAllObjects();
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_F3, 0 }, { ShortcutManager::Category::View, _tr( "Ribbon Scene Show only previous" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_F3, 0 }, ShortcutCategory::View }, { _tr( "Ribbon Scene Show only previous" ),[&] ()
         {
             sceneObjectsList_->changeVisible( false );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_F4, 0 }, { ShortcutManager::Category::View, _tr( "Ribbon Scene Show only next" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_F4, 0 }, ShortcutCategory::View }, { _tr( "Ribbon Scene Show only next" ),[&] ()
         {
             sceneObjectsList_->changeVisible( true );
         } } );
     }
+}
+
+HashSet<std::string> RibbonMenu::allowedShortcutTags_() const
+{
+    return { "base", "history" };
+}
+
+void RibbonMenu::registerItemsShortcuts_( const HashSet<std::string>& allowedTags )
+{
+    MR_TIMER;
+    const auto& schema = RibbonSchemaHolder::schema();
+    HashSet<const RibbonMenuItem*> visited;
+    auto registerItems = [&] ( const MenuItemsList& itemNames, auto& self ) -> void
+    {
+        for ( const auto& itemName : itemNames )
+        {
+            auto itemIt = schema.items.find( itemName );
+            if ( itemIt == schema.items.end() || !itemIt->second.item )
+                continue;
+            // one item can appear in several places of the UI, visit it only once
+            if ( !visited.insert( itemIt->second.item.get() ).second )
+                continue;
+            if ( const auto& shortcut = itemIt->second.shortcut )
+                if ( std::all_of( shortcut->tags.begin(), shortcut->tags.end(), [&] ( const std::string& tag ) { return allowedTags.contains( tag ); } ) )
+                    addRibbonItemShortcut( itemName, shortcut->shortcut );
+            // the items of a drop list follow their button in the UI
+            MenuItemsList dropNames;
+            for ( const auto& dropItem : itemIt->second.item->dropItems() )
+                if ( dropItem )
+                    dropNames.push_back( dropItem->name() );
+            self( dropNames, self );
+        }
+    };
+
+    for ( const auto& tab : schema.tabsOrder )
+    {
+        auto groupsIt = schema.tabsMap.find( tab.name );
+        if ( groupsIt == schema.tabsMap.end() )
+            continue;
+        for ( const auto& groupName : groupsIt->second )
+        {
+            auto itemsIt = schema.groupsMap.find( tab.name + groupName );
+            if ( itemsIt == schema.groupsMap.end() )
+                continue;
+            registerItems( itemsIt->second, registerItems );
+        }
+    }
+    registerItems( schema.sceneButtonsList, registerItems );
+    registerItems( schema.headerQuickAccessList, registerItems );
+    registerItems( schema.defaultQuickAccessList, registerItems );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

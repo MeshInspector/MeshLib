@@ -597,6 +597,9 @@ static void telemetryLogSize( const Mesh& mesh )
 
 static void telemetrySaveMesh( const std::string& ext, const Mesh& mesh, const SaveSettings& settings )
 {
+    if ( !settings.telemetrySignal )
+        return;
+
     std::string signalString = "Save " + ext;
 
     if ( auto lv = mesh.points.size() ) // not lv = mesh.topology.lastValidVert(), since topology can be empty

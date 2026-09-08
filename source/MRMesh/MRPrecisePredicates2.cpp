@@ -43,7 +43,8 @@ std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords2,
     return res;
 }
 
-// std::int64_t is enough to store all coefficients in ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
+// 64 bits are enough to store all coefficients of one ccw-polynomial (products of two coordinate differences),
+// while the coefficients of the products of two such polynomials need up to 128 bits, see mulAs<Int64Mul128> below
 template<int M>
 using Poly = SparsePolynomial<std::int64_t, int, M>;
 
@@ -375,11 +376,9 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     assert( polySbOrg.empty() || polySbDest.empty() || polySbOrg.isPositive() != polySbDest.isPositive() );
     const bool posSbOrg = polySbOrg.empty() ? !polySbDest.isPositive() : polySbOrg.isPositive();
 
-    auto nom = polySaOrg * polySbDest;
-    nom -= polySbOrg * polySaDest;
-
-    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 64-bit arithmetic
-    nom.setZeroCoeff( 0 );
+    // the coefficient of zero degree is nomSimple == 0, and it is automatically excluded from nom
+    auto nom = mulAs<Int64Mul128>( polySaOrg, polySbDest );
+    nom -= mulAs<Int64Mul128>( polySbOrg, polySaDest );
 
     bool res = nom.isPositive();
     if ( posSaOrg != posSbOrg ) // denominator is negative

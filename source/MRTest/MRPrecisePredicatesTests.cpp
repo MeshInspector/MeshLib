@@ -694,6 +694,35 @@ TEST( MRMesh, sosInSphereDegenerate )
     EXPECT_EQ( tester( vc( 0_v, -1,2,-1 ) ), In );
 }
 
+TEST( MRMesh, segmentIntersectionOrder2Scale )
+{
+    // two segments crossing the third one at the same point (the origin): sa is the line x=0, sb is the line y=x;
+    // the answer of a simulation-of-simplicity predicate must not depend on the scale of the coordinates
+    // (and the coefficients of the polynomials at the large scale do not fit in 64 bits)
+    const Vector2i pts[6] = { { -1, 0 }, { 1, 0 }, { 0,-1 }, { 0, 1 }, { -1,-1 }, { 1, 1 } };
+    std::array<VertId, 6> ids;
+    for ( int i = 0; i < 6; ++i )
+        ids[i] = VertId( i );
+    int mismatches = 0;
+    do
+    {
+        int prev = -1;
+        for ( int scale : { 1, 1 << 29 } )
+        {
+            std::array<PreciseVertCoords2, 6> vs;
+            for ( int i = 0; i < 6; ++i )
+                vs[i] = { ids[i], pts[i] * scale };
+            if ( !doSegmentSegmentIntersect( { vs[2], vs[3], vs[0], vs[1] } ) || !doSegmentSegmentIntersect( { vs[4], vs[5], vs[0], vs[1] } ) )
+                break;
+            const int r = segmentIntersectionOrder( vs );
+            mismatches += prev >= 0 && prev != r;
+            prev = r;
+        }
+    }
+    while ( std::next_permutation( ids.begin(), ids.end() ) );
+    EXPECT_EQ( mismatches, 0 );
+}
+
 TEST( MRMesh, segmentIntersectionOrder2b )
 {
     PreciseVertCoords2 vs[6] =

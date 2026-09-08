@@ -3,6 +3,22 @@
 namespace MR
 {
 
+namespace
+{
+
+bool digitsAt( const std::string& s, size_t pos, size_t cnt )
+{
+    if ( pos + cnt > s.size() )
+        return false;
+    for ( size_t i = 0; i < cnt; ++i )
+        if ( s[pos + i] < '0' || s[pos + i] > '9' )
+            return false;
+    return true;
+}
+
+} //anonymous namespace
+
+
 /// removes white spaces, meaningless or case-specific information from a comment line, then calls telemetry signal
 void telemetryStlHead( const char* prefix, std::string s )
 {
@@ -186,6 +202,63 @@ void telemetryStlHead( const char* prefix, std::string s )
     const char SCANIVERSE[] = "Scaniverse ";
     if ( s.starts_with( SCANIVERSE ) )
         s.resize( sizeof( SCANIVERSE ) - 2 );
+
+    // e.g. 'Untitled-6E4A1B39'
+    const char UNTITLED[] = "Untitled-";
+    if ( s.starts_with( UNTITLED ) )
+        s.resize( sizeof( UNTITLED ) - 2 );
+
+    // e.g. 'Exported from UVtools v5.1.6 @ 2026-02-14 22:21:37Z' - keep the version, drop the export time
+    const char UVTOOLS[] = "Exported from UVtools ";
+    if ( s.starts_with( UVTOOLS ) )
+    {
+        const auto at = s.find( " @ " );
+        if ( at != std::string::npos )
+            s.resize( at );
+    }
+
+    // e.g. 'exocad GmbH 2026 - DentalCAD' - the release year varies per installation
+    const char EXOCAD_DE[] = "exocad GmbH ";
+    const char EXOCAD_US[] = "exocad North America ";
+    auto dropYear = [&s]( const char* pref, size_t len )
+    {
+        if ( s.starts_with( pref ) && digitsAt( s, len, 4 ) && len + 4 < s.size() && s[len + 4] == ' ' )
+            s.erase( len, 5 );
+    };
+    dropYear( EXOCAD_DE, sizeof( EXOCAD_DE ) - 1 );
+    dropYear( EXOCAD_US, sizeof( EXOCAD_US ) - 1 );
+
+    // e.g. 'TopoMiller 2026-01-02 15:59:18' - trailing export date, with optional time
+    for ( size_t i = 0; i + 10 <= s.size(); ++i )
+    {
+        if ( !digitsAt( s, i, 4 ) || ( s[i + 4] != '-' && s[i + 4] != '/' ) ||
+             !digitsAt( s, i + 5, 2 ) || s[i + 7] != s[i + 4] || !digitsAt( s, i + 8, 2 ) )
+            continue;
+        size_t e = i + 10;
+        if ( e < s.size() && ( s[e] == ' ' || s[e] == 'T' ) )
+        {
+            size_t t = e + 1;
+            while ( t < s.size() && ( digitsAt( s, t, 1 ) || s[t] == ':' || s[t] == '.' ) )
+                ++t;
+            if ( t < s.size() && s[t] == 'Z' )
+                ++t;
+            if ( t > e + 1 )
+                e = t;
+        }
+        if ( e != s.size() )
+            continue; // the date is not trailing, it is a part of the name
+        while ( i > 0 && ( s[i - 1] == ' ' || s[i - 1] == '-' || s[i - 1] == ',' || s[i - 1] == ':' ) )
+            --i;
+        s.resize( i );
+        break;
+    }
+
+    // e.g. 'RACK_INLET_COLD_017', 'A - TO.Ankylos X_Geo-65' - per-file sequence numbers;
+    // a space separator is not accepted, it would eat model numbers like 'CS 3600'
+    if ( const auto sep = s.find_last_not_of( "0123456789" );
+         sep != std::string::npos && sep > 0 && sep + 1 < s.size() && s.size() - sep <= 7 &&
+         ( s[sep] == '_' || s[sep] == '-' ) )
+        s.resize( sep );
 
     TelemetrySignal( prefix + s );
 }

@@ -1057,6 +1057,43 @@ TEST( MRMesh, segmentIntersectionOrder3c )
         PreciseVertCoords{  2_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  4_v, Vector3i(-1, 0, 1 ) }, PreciseVertCoords{ 14_v, Vector3i( 0, 0, 0 ) } }, false );
 }
 
+TEST( MRMesh, segmentIntersectionOrder3Scale )
+{
+    // two triangles crossing the segment at the same point (x=0): ta is the plane x=0, tb is the plane y=x;
+    // the answer of a simulation-of-simplicity predicate must not depend on the scale of the coordinates
+    // (and the coefficients of the polynomials at the large scale do not fit in 128 bits)
+    const Vector3i pts[8] =
+    {
+        { -1, 0, 0 }, { 1, 0, 0 },             // s
+        { 0,-1,-1 }, { 0, 1,-1 }, { 0, 0, 1 }, // ta
+        { 1, 1,-1 }, {-1,-1,-1 }, { 0, 0, 1 }  // tb
+    };
+    std::array<VertId, 8> ids;
+    for ( int i = 0; i < 8; ++i )
+        ids[i] = VertId( i );
+    int mismatches = 0, n = 0;
+    do
+    {
+        if ( ++n % 101 != 0 ) // every permutation is too slow here, since all polynomials are full
+            continue;
+        int prev = -1;
+        for ( int scale : { 1, 1 << 29 } )
+        {
+            std::array<PreciseVertCoords, 8> vs;
+            for ( int i = 0; i < 8; ++i )
+                vs[i] = { ids[i], pts[i] * scale };
+            if ( !doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
+              || !doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) )
+                break;
+            const int r = segmentIntersectionOrder( vs );
+            mismatches += prev >= 0 && prev != r;
+            prev = r;
+        }
+    }
+    while ( std::next_permutation( ids.begin(), ids.end() ) );
+    EXPECT_EQ( mismatches, 0 );
+}
+
 TEST( MRMesh, segmentIntersectionTriPlaneOrder )
 {
     PreciseVertCoords vs[8] =

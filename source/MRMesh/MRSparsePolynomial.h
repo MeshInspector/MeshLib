@@ -10,8 +10,15 @@ namespace MR
 
 template <typename C, typename D, D M>
 class SparsePolynomial;
-template <typename C, typename D, D M>
-SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b );
+
+/// the type of the product of two polynomials with coefficients of types C1 and C2
+template <typename C1, typename C2, typename D, D M>
+using SparsePolynomialProduct = SparsePolynomial<decltype( std::declval<C1>() * std::declval<C2>() ), D, M>;
+
+/// the coefficients of the product have the type of the product of coefficients,
+/// so e.g. two polynomials with Int128Mul256 coefficients are multiplied without overflow into a polynomial with FastInt256 coefficients
+template <typename C1, typename C2, typename D, D M>
+SparsePolynomialProduct<C1,C2,D,M> operator *( const SparsePolynomial<C1,D,M>& a, const SparsePolynomial<C2,D,M>& b );
 
 /// The class to store a polynomial with a large number of zero coefficients
 /// (only non-zeros are stored in a vector of terms sorted by ascending degree)
@@ -61,7 +68,8 @@ public:
     SparsePolynomial& operator -=( const SparsePolynomial& b );
     [[nodiscard]] friend SparsePolynomial operator +( SparsePolynomial a, const SparsePolynomial& b ) { a += b; return a; }
     [[nodiscard]] friend SparsePolynomial operator -( SparsePolynomial a, const SparsePolynomial& b ) { a -= b; return a; }
-    friend SparsePolynomial operator *<>( const SparsePolynomial& a, const SparsePolynomial& b );
+    template <typename C1, typename C2, typename D2, D2 M2>
+    friend SparsePolynomialProduct<C1,C2,D2,M2> operator *( const SparsePolynomial<C1,D2,M2>& a, const SparsePolynomial<C2,D2,M2>& b );
 
 private:
     /// merges the terms of a degree-sorted sequence, dropping the vanished ones
@@ -183,10 +191,11 @@ SparsePolynomial<C,D,M>& SparsePolynomial<C,D,M>::operator -=( const SparsePolyn
     return * this;
 }
 
-template <typename C, typename D, D M>
-[[nodiscard]] SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b )
+template <typename C1, typename C2, typename D, D M>
+[[nodiscard]] SparsePolynomialProduct<C1,C2,D,M> operator *( const SparsePolynomial<C1,D,M>& a, const SparsePolynomial<C2,D,M>& b )
 {
-    using Term = typename SparsePolynomial<C,D,M>::Term;
+    using Res = SparsePolynomialProduct<C1,C2,D,M>;
+    using Term = typename Res::Term;
     std::vector<Term> res;
     res.reserve( a.terms_.size() * b.terms_.size() );
     for ( const auto & [degA, cfA] : a.terms_ )
@@ -203,7 +212,7 @@ template <typename C, typename D, D M>
     }
     std::sort( res.begin(), res.end(),
         []( const Term & x, const Term & y ) { return x.first < y.first; } );
-    SparsePolynomial<C,D,M> r;
+    Res r;
     r.terms_ = std::move( res );
     r.mergeTerms_();
     return r;

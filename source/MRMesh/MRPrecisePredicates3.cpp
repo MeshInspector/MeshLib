@@ -57,10 +57,23 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
     return res;
 }
 
-// 128 bits are enough to store all coefficients in ( orient3d(ta,s[0])*orient3d(tb,s[1]) - orient3d(tb,s[0])*orient3d(ta,s[1]) )
-// except for degree 0, which is computed separately.
+// 128 bits are enough to store all coefficients of one orient3d-polynomial (products of three coordinate differences),
+// while the coefficients of the products of two such polynomials need up to 256 bits
 template <std::int64_t M>
 using Poly = SparsePolynomial<FastInt128, std::int64_t, M>;
+template <std::int64_t M>
+using PolyMul = SparsePolynomial<Int128Mul256, std::int64_t, M>;
+
+/// the same polynomial, but ready to be multiplied by another one into 256-bit coefficients
+template <std::int64_t M>
+PolyMul<M> toMul( const Poly<M> & p )
+{
+    std::vector<typename PolyMul<M>::Term> terms;
+    terms.reserve( p.get().size() );
+    for ( const auto & [d, c] : p.get() )
+        terms.emplace_back( d, Int128Mul256( c ) );
+    return PolyMul<M>( std::move( terms ) );
+}
 
 template <std::int64_t M>
 Poly<M> orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
@@ -204,11 +217,9 @@ bool segmentIntersectionOrderGeneral( const std::array<PreciseVertCoords, 8> & v
     assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
     const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
 
-    auto nom = polyTaOrg * polyTbDest;
-    nom -= polyTbOrg * polyTaDest;
-
-    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 128-bit arithmetic
-    nom.setZeroCoeff( 0 );
+    // the coefficient of zero degree is nomSimple == 0, and it is automatically excluded from nom
+    auto nom = toMul( polyTaOrg ) * toMul( polyTbDest );
+    nom -= toMul( polyTbOrg ) * toMul( polyTaDest );
 
     bool res = nom.isPositive();
     if ( posTaOrg != posTbOrg ) // denominator is negative

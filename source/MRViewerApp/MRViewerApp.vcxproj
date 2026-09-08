@@ -44,6 +44,10 @@
     <ProjectReference Include="..\MRViewer\MRViewer.vcxproj">
       <Project>{cecb9185-ff38-461f-ba20-654399edc67e}</Project>
     </ProjectReference>
+    <ProjectReference Include="..\MRCommonPlugins\MRCommonPlugins.vcxproj">
+      <Project>{05930596-6226-42ba-a449-bdf2123c0f3f}</Project>
+      <LinkLibraryDependencies>false</LinkLibraryDependencies>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

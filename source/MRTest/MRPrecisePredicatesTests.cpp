@@ -1057,6 +1057,169 @@ TEST( MRMesh, segmentIntersectionOrder3c )
         PreciseVertCoords{  2_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  4_v, Vector3i(-1, 0, 1 ) }, PreciseVertCoords{ 14_v, Vector3i( 0, 0, 0 ) } }, false );
 }
 
+TEST( MRMesh, segmentIntersectionOrder3Scale )
+{
+    // two triangles crossing the segment at the same point (x=0): ta is the plane x=0, tb is the plane y=x;
+    // the answer of a simulation-of-simplicity predicate must not depend on the scale of the coordinates
+    // (and the coefficients of the polynomials at the large scale do not fit in 128 bits)
+    const Vector3i pts[8] =
+    {
+        { -1, 0, 0 }, { 1, 0, 0 },             // s
+        { 0,-1,-1 }, { 0, 1,-1 }, { 0, 0, 1 }, // ta
+        { 1, 1,-1 }, {-1,-1,-1 }, { 0, 0, 1 }  // tb
+    };
+    std::array<VertId, 8> ids;
+    for ( int i = 0; i < 8; ++i )
+        ids[i] = VertId( i );
+    int mismatches = 0, n = 0;
+    do
+    {
+        if ( ++n % 101 != 0 ) // every permutation is too slow here, since all polynomials are full
+            continue;
+        int prev = -1;
+        for ( int scale : { 1, 1 << 29 } )
+        {
+            std::array<PreciseVertCoords, 8> vs;
+            for ( int i = 0; i < 8; ++i )
+                vs[i] = { ids[i], pts[i] * scale };
+            if ( !doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
+              || !doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) )
+                break;
+            const int r = segmentIntersectionOrder( vs );
+            mismatches += prev >= 0 && prev != r;
+            prev = r;
+        }
+    }
+    while ( std::next_permutation( ids.begin(), ids.end() ) );
+    EXPECT_EQ( mismatches, 0 );
+}
+
+TEST( MRMesh, segmentIntersectionTriPlaneOrder )
+{
+    PreciseVertCoords vs[8] =
+    {
+        // s:
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 3, 0, 0 ) },
+        // ta:
+        PreciseVertCoords{ 2_v, Vector3i( 1,-1,-1 ) },
+        PreciseVertCoords{ 3_v, Vector3i( 1, 1,-1 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 1, 0, 1 ) },
+        // tb:
+        PreciseVertCoords{ 5_v, Vector3i( 2,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 2, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 2, 0, 1 ) }
+    };
+
+    // pb is the plane of tb, s crosses it: the answer must be the same as for segmentIntersectionOrder
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[3], vs[2], vs[4], vs[6], vs[5], vs[7] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[5], vs[6], vs[7], vs[2], vs[3], vs[4] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[5], vs[6], vs[7], vs[2], vs[4], vs[3] } ) );
+
+    // one shared point in ta and pb
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[2], vs[6], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[4] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[6], vs[4] } ) );
+
+    // two shared points in ta and pb
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[2], vs[3], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[4], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[4], vs[3] } ) );
+
+    // plane pb crosses the line of s outside of s (beyond s[1] at x=5 or before s[0] at x=-2)
+    PreciseVertCoords outer[6] =
+    {
+        PreciseVertCoords{ 5_v, Vector3i( 5,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 5, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 5, 0, 1 ) },
+        PreciseVertCoords{ 5_v, Vector3i(-2,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i(-2, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i(-2, 0, 1 ) }
+    };
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[0], outer[1], outer[2] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[1], outer[0], outer[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], outer[0], outer[1], outer[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[3], outer[4], outer[5] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[4], outer[3], outer[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], outer[3], outer[4], outer[5] } ) );
+
+    // plane pb crosses triangle ta (general case): 3x+2z=4 meets the line of s at x=4/3 (after ta), 8x-6z=6 at x=3/4 (before ta)
+    PreciseVertCoords tilted[6] =
+    {
+        PreciseVertCoords{ 5_v, Vector3i( 2,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 2, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 0, 0, 2 ) },
+        PreciseVertCoords{ 5_v, Vector3i( 0,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 0, 3 ) }
+    };
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[0], tilted[1], tilted[2] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[1], tilted[0], tilted[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], tilted[0], tilted[1], tilted[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[3], tilted[4], tilted[5] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[4], tilted[3], tilted[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], tilted[3], tilted[4], tilted[5] } ) );
+
+    // s is parallel to pb (plane z=1 or plane y=1), and the perturbation of the points decides the order;
+    // still reversing s must flip the answer, and the orientation of pb must not matter
+    PreciseVertCoords par[6] =
+    {
+        PreciseVertCoords{ 5_v, Vector3i( 0,-1, 1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 0, 1 ) },
+        PreciseVertCoords{ 5_v, Vector3i( 0, 1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 1, 0 ) }
+    };
+    for ( int i = 0; i < 6; i += 3 )
+    {
+        const bool r = segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } );
+        EXPECT_EQ( r,  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], par[i+1], par[i], par[i+2] } ) );
+        EXPECT_NE( r,  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } ) );
+    }
+
+    // 8 distinct ids with the three largest ones in pb: the polynomials here have the largest degrees that must be stored (cMaxPolyD)
+    const std::array<PreciseVertCoords, 8> deg =
+    {
+        PreciseVertCoords{  9_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  0_v, Vector3i( 0,-1, 1 ) },
+        PreciseVertCoords{  4_v, Vector3i( 0, 1, 0 ) }, PreciseVertCoords{  1_v, Vector3i( 1,-1, 0 ) }, PreciseVertCoords{  6_v, Vector3i( 1, 1,-1 ) },
+        PreciseVertCoords{ 14_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{ 15_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{ 12_v, Vector3i( 1,-1, 0 ) }
+    };
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( deg ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { deg[1], deg[0], deg[2], deg[3], deg[4], deg[5], deg[6], deg[7] } ) );
+}
+
+TEST( MRMesh, segmentIntersectionTriPlaneOrderFullDegen )
+{
+    std::array<PreciseVertCoords, 8> vs;
+    for ( VertId i = 0_v; i < 8; ++i )
+        vs[i].id = i; //and point coordinate is (0,0,0)
+
+    // test that maximum degree in segmentIntersectionTriPlaneOrder can cope with most degenerate situation possible
+
+    // no shared vertices
+    do
+    {
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) )
+        {
+            (void)segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+
+    // one shared vertex
+    do
+    {
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) )
+        {
+            (void)segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[2] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end() - 1, []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
 TEST( MRMesh, getToIntConverter )
 {
     auto toInt = getToIntConverter( Box3d( {0,0,-1.0}, {0,0,1.0} ) );

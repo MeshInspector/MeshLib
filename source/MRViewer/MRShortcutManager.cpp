@@ -193,7 +193,7 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
     return res;
 }
 
-std::optional<int> ShortcutManager::parseKey( const std::string& name )
+std::optional<int> ShortcutManager::parseKey( std::string_view name )
 {
     // GLFW codes of letters, digits and punctuation are their upper-case ASCII codes
     if ( name.size() == 1 && std::isprint( (unsigned char)name[0] ) && name[0] != ' ' )
@@ -205,8 +205,8 @@ std::optional<int> ShortcutManager::parseKey( const std::string& name )
         if ( c != ' ' )
             s += c;
 
-    if ( s == "PDelete" )   return getGlfwKeyDelete();
-    if ( s == "Delete" )    return GLFW_KEY_DELETE;
+    if ( s == "Delete" )        return getGlfwKeyDelete();
+    if ( s == "ForwardDelete" ) return GLFW_KEY_DELETE;
     if ( s == "Backspace" ) return GLFW_KEY_BACKSPACE;
     if ( s == "Enter" || s == "Return" ) return GLFW_KEY_ENTER;
     if ( s == "Escape" )    return GLFW_KEY_ESCAPE;
@@ -241,10 +241,11 @@ std::optional<int> ShortcutManager::parseKey( const std::string& name )
     return {};
 }
 
-std::optional<int> ShortcutManager::parseModifier( const std::string& name )
+std::optional<int> ShortcutManager::parseModifier( std::string_view name )
 {
-    const auto s = toLower( name );
-    if ( s == "pctrl" ) return getGlfwModPrimaryCtrl();
+    const auto s = toLower( std::string( name ) );
+    if ( s == "primary" )   return getGlfwModPrimaryCtrl();
+    if ( s == "secondary" ) return getGlfwModPrimaryCtrl() == GLFW_MOD_SUPER ? GLFW_MOD_CONTROL : GLFW_MOD_SUPER;
     if ( s == "ctrl" )  return GLFW_MOD_CONTROL;
     if ( s == "shift" ) return GLFW_MOD_SHIFT;
     if ( s == "alt" )   return GLFW_MOD_ALT;
@@ -252,12 +253,48 @@ std::optional<int> ShortcutManager::parseModifier( const std::string& name )
     return {};
 }
 
-std::optional<ShortcutManager::Category> ShortcutManager::parseCategory( const std::string& name )
+std::optional<ShortcutManager::Category> ShortcutManager::parseCategory( std::string_view name )
 {
     for ( int i = 0; i < int( Category::Count ); ++i )
         if ( trimRight( categoryNames[i] ) == name ) // "Selection " has a trailing space
             return Category( i );
     return {};
+}
+
+std::optional<ShortcutKey> ShortcutManager::parseShortcutKey( std::string_view keys )
+{
+    // the key is the last "+"-separated part, or "+" itself if the string ends with it
+    auto rest = trim( keys );
+    std::string_view keyName;
+    if ( rest.ends_with( '+' ) )
+    {
+        keyName = rest.substr( rest.size() - 1 );
+        rest.remove_suffix( 1 );
+        if ( rest.ends_with( '+' ) )
+            rest.remove_suffix( 1 );
+    }
+    else
+    {
+        const auto plus = rest.rfind( '+' );
+        keyName = plus == std::string_view::npos ? rest : rest.substr( plus + 1 );
+        rest = plus == std::string_view::npos ? std::string_view{} : rest.substr( 0, plus );
+    }
+
+    ShortcutKey res;
+    const auto key = parseKey( trim( keyName ) );
+    if ( !key )
+        return {};
+    res.key = *key;
+    while ( !rest.empty() )
+    {
+        const auto plus = rest.find( '+' );
+        const auto mod = parseModifier( trim( rest.substr( 0, plus ) ) );
+        if ( !mod )
+            return {};
+        res.mod |= *mod;
+        rest = plus == std::string_view::npos ? std::string_view{} : rest.substr( plus + 1 );
+    }
+    return res;
 }
 
 std::optional<ShortcutManager::ShortcutKey> ShortcutManager::findShortcutByName( const std::string& name ) const

@@ -623,7 +623,7 @@ namespace
 {
 
 /// reads the "Shortcut" object of an item in items.json:
-/// { "Key": "S", "Mods": [ "PCtrl", "Shift" ], "Category": "Scene", "Tags": [ "base" ] }
+/// { "Keys": "Primary+Shift+S", "Category": "Scene", "Tags": [ "base" ] }
 std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const std::string& itemName )
 {
     auto fail = [&itemName] ( const std::string& what ) -> std::optional<MenuItemShortcut>
@@ -637,29 +637,13 @@ std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const
 
     MenuItemShortcut res;
 
-    const auto& key = json["Key"];
-    if ( !key.isString() )
-        return fail( "\"Key\" field is not valid or not present" );
-    const auto keyCode = ShortcutManager::parseKey( key.asString() );
-    if ( !keyCode )
-        return fail( fmt::format( "unknown key \"{}\"", key.asString() ) );
-    res.shortcut.key.key = *keyCode;
-
-    const auto& mods = json["Mods"];
-    if ( !mods.isNull() )
-    {
-        if ( !mods.isArray() )
-            return fail( "\"Mods\" field is not an array" );
-        for ( const auto& mod : mods )
-        {
-            if ( !mod.isString() )
-                return fail( "non-string modifier in \"Mods\"" );
-            const auto modCode = ShortcutManager::parseModifier( mod.asString() );
-            if ( !modCode )
-                return fail( fmt::format( "unknown modifier \"{}\"", mod.asString() ) );
-            res.shortcut.key.mod |= *modCode;
-        }
-    }
+    const auto& keys = json["Keys"];
+    if ( !keys.isString() )
+        return fail( "\"Keys\" field is not valid or not present" );
+    const auto shortcutKey = ShortcutManager::parseShortcutKey( keys.asString() );
+    if ( !shortcutKey )
+        return fail( fmt::format( "cannot parse keys \"{}\"", keys.asString() ) );
+    res.shortcut.key = *shortcutKey;
 
     const auto& category = json["Category"];
     if ( !category.isString() )

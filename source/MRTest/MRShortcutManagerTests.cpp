@@ -16,8 +16,9 @@ TEST( MRViewer, ShortcutParseKey )
     EXPECT_EQ( ShortcutManager::parseKey( "Num 7" ), GLFW_KEY_KP_7 );
     EXPECT_EQ( ShortcutManager::parseKey( "PageUp" ), GLFW_KEY_PAGE_UP );
     EXPECT_EQ( ShortcutManager::parseKey( "ArrowUp" ), GLFW_KEY_UP );
+    EXPECT_EQ( ShortcutManager::parseKey( "ForwardDelete" ), GLFW_KEY_DELETE );
 #ifndef __EMSCRIPTEN__ // getGlfwKeyDelete() asks the page for is_mac(), which the test harness does not define
-    EXPECT_EQ( ShortcutManager::parseKey( "PDelete" ), getGlfwKeyDelete() );
+    EXPECT_EQ( ShortcutManager::parseKey( "Delete" ), getGlfwKeyDelete() );
 #endif
 
     EXPECT_FALSE( ShortcutManager::parseKey( "" ) );
@@ -29,12 +30,13 @@ TEST( MRViewer, ShortcutParseKey )
     EXPECT_FALSE( ShortcutManager::parseKey( "Foo" ) );
 }
 
-// every key with a textual display name parses back from it
+// every key with a platform-independent textual display name parses back from it
+// (GLFW_KEY_DELETE is displayed as "Delete", which parses to the delete key of the platform)
 TEST( MRViewer, ShortcutKeyNameRoundTrip )
 {
     for ( int key : { GLFW_KEY_A, GLFW_KEY_Z, GLFW_KEY_0, GLFW_KEY_9, GLFW_KEY_COMMA, GLFW_KEY_MINUS, GLFW_KEY_EQUAL,
                       GLFW_KEY_F1, GLFW_KEY_F12, GLFW_KEY_F25, GLFW_KEY_KP_0, GLFW_KEY_KP_9,
-                      GLFW_KEY_DELETE, GLFW_KEY_TAB, GLFW_KEY_HOME, GLFW_KEY_END, GLFW_KEY_PAGE_UP, GLFW_KEY_PAGE_DOWN,
+                      GLFW_KEY_TAB, GLFW_KEY_HOME, GLFW_KEY_END, GLFW_KEY_PAGE_UP, GLFW_KEY_PAGE_DOWN,
                       GLFW_KEY_PAUSE, GLFW_KEY_CAPS_LOCK, GLFW_KEY_BACKSPACE, GLFW_KEY_ENTER } )
     {
         EXPECT_EQ( ShortcutManager::parseKey( ShortcutManager::getKeyString( key ) ), key ) << "key " << key;
@@ -49,11 +51,33 @@ TEST( MRViewer, ShortcutParseModifier )
     EXPECT_EQ( ShortcutManager::parseModifier( "Alt" ), GLFW_MOD_ALT );
     EXPECT_EQ( ShortcutManager::parseModifier( "Super" ), GLFW_MOD_SUPER );
 #ifndef __EMSCRIPTEN__ // getGlfwModPrimaryCtrl() asks the page for is_mac(), which the test harness does not define
-    EXPECT_EQ( ShortcutManager::parseModifier( "PCtrl" ), getGlfwModPrimaryCtrl() );
+    const auto primary = getGlfwModPrimaryCtrl();
+    const auto secondary = primary == GLFW_MOD_SUPER ? GLFW_MOD_CONTROL : GLFW_MOD_SUPER;
+    EXPECT_EQ( ShortcutManager::parseModifier( "Primary" ), primary );
+    EXPECT_EQ( ShortcutManager::parseModifier( "Secondary" ), secondary );
 #endif
 
     EXPECT_FALSE( ShortcutManager::parseModifier( "" ) );
     EXPECT_FALSE( ShortcutManager::parseModifier( "Cmd" ) );
+}
+
+TEST( MRViewer, ShortcutParseShortcutKey )
+{
+    using SK = ShortcutKey;
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "S" ), ( SK{ GLFW_KEY_S, 0 } ) );
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "Ctrl+Shift+S" ), ( SK{ GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT } ) );
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( " shift + Num 7 " ), ( SK{ GLFW_KEY_KP_7, GLFW_MOD_SHIFT } ) );
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "Ctrl++" ), ( SK{ '+', GLFW_MOD_CONTROL } ) );
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "+" ), ( SK{ '+', 0 } ) );
+
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "" ) );
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Ctrl+Shift" ) ); // no key
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Foo+S" ) );      // unknown modifier
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Ctrl+Foo" ) );   // unknown key
+
+    // round trip through getKeyFullString for the modifiers with platform-independent display names
+    for ( SK sk : { SK{ GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, SK{ GLFW_KEY_F2, 0 }, SK{ GLFW_KEY_KP_7, GLFW_MOD_SHIFT }, SK{ GLFW_KEY_COMMA, GLFW_MOD_CONTROL } } )
+        EXPECT_EQ( ShortcutManager::parseShortcutKey( ShortcutManager::getKeyFullString( sk ) ), sk );
 }
 
 TEST( MRViewer, ShortcutParseCategory )

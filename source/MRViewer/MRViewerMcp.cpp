@@ -56,7 +56,7 @@ int parseModifiers( const nlohmann::json& args )
         if ( auto mod = ShortcutManager::parseModifier( m ) )
             mods |= *mod;
         else
-            throw std::runtime_error( fmt::format( "Unknown modifier `{}` (expected `ctrl`/`shift`/`alt`/`super`/`pctrl`)", m ) );
+            throw std::runtime_error( fmt::format( "Unknown modifier `{}` (expected `ctrl`/`shift`/`alt`/`super`/`primary`/`secondary`)", m ) );
     }
     return mods;
 }
@@ -73,7 +73,7 @@ int parseKey( const std::string& s )
 {
     if ( auto key = ShortcutManager::parseKey( s ) )
         return *key;
-    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`, `Num7`)", s ) );
+    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`, `Num7`, `Delete`, `ForwardDelete`)", s ) );
 }
 
 } // namespace

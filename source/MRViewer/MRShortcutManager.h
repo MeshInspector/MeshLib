@@ -3,6 +3,7 @@
 #include "MRMesh/MRphmap.h"
 #include "MRViewer/MRViewerEventsListener.h"
 #include <string>
+#include <string_view>
 #include <functional>
 #include <optional>
 
@@ -81,19 +82,23 @@ public:
     MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );    
 
     /// parses the name of a key: one printable character ("S", ","), "F1".."F25", "Num0".."Num9",
-    /// "Escape", "Enter", "Space", "Tab", "Backspace", "Delete", "Home", "End", "PageUp", "PageDown", "Up", "Down", "Left", "Right",
-    /// and "PDelete" - the delete key of this platform (see getGlfwKeyDelete); spaces are ignored, so the output of getKeyString parses back;
-    /// returns nothing for an unknown name
-    MRVIEWER_API static std::optional<int> parseKey( const std::string& name );
+    /// "Escape", "Enter", "Space", "Tab", "Backspace", "Home", "End", "PageUp", "PageDown", "Up", "Down", "Left", "Right",
+    /// "Delete" - the delete key of this platform (Backspace on macOS, see getGlfwKeyDelete), and "ForwardDelete" - the Delete key on every platform;
+    /// spaces are ignored, so the output of getKeyString parses back; returns nothing for an unknown name
+    MRVIEWER_API static std::optional<int> parseKey( std::string_view name );
 
     /// parses the name of a modifier (case-insensitive): "Ctrl", "Shift", "Alt", "Super",
-    /// and "PCtrl" - the primary control of this platform (see getGlfwModPrimaryCtrl);
+    /// "Primary" - the main control of this platform (Cmd on macOS, Ctrl otherwise, see getGlfwModPrimaryCtrl), and "Secondary" - the other of the two;
     /// returns nothing for an unknown name
-    MRVIEWER_API static std::optional<int> parseModifier( const std::string& name );
+    MRVIEWER_API static std::optional<int> parseModifier( std::string_view name );
 
     /// parses the name of a category: one of categoryNames without trailing spaces;
     /// returns nothing for an unknown name
-    MRVIEWER_API static std::optional<Category> parseCategory( const std::string& name );
+    MRVIEWER_API static std::optional<Category> parseCategory( std::string_view name );
+
+    /// parses a shortcut written as its modifiers and key separated by "+", e.g. "Primary+Shift+S", the inverse of getKeyFullString;
+    /// returns nothing if any part is unknown
+    MRVIEWER_API static std::optional<ShortcutKey> parseShortcutKey( std::string_view keys );
 
     // if action with given name is present in shortcut list - returns it
     MRVIEWER_API std::optional<ShortcutKey> findShortcutByName( const std::string& name ) const;

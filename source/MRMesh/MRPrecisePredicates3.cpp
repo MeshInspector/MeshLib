@@ -360,8 +360,14 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
         // it is after s[1] iff s[1] is closer to pb than s[0]
         const auto volumeOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
         const auto volumeDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
-        assert( volumeOrg != volumeDest ); // otherwise s is parallel to pb
-        return ( volumeOrg > volumeDest ) == o0;
+        if ( volumeOrg != volumeDest )
+            return ( volumeOrg > volumeDest ) == o0;
+
+        // s is parallel to pb, and the perturbation of the points decides, which end of s is closer to pb
+        const auto ds = getPointDegrees( vs );
+        auto diff = orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[0], 3 );
+        diff -= orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[1], 3 );
+        return diff.isPositive() == o0;
     }
 
     // segment s crosses plane pb

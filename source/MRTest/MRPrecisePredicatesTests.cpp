@@ -1125,6 +1125,24 @@ TEST( MRMesh, segmentIntersectionTriPlaneOrder )
     EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[4], tilted[3], tilted[5] } ) );
     EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], tilted[3], tilted[4], tilted[5] } ) );
 
+    // s is parallel to pb (plane z=1 or plane y=1), and the perturbation of the points decides the order;
+    // still reversing s must flip the answer, and the orientation of pb must not matter
+    PreciseVertCoords par[6] =
+    {
+        PreciseVertCoords{ 5_v, Vector3i( 0,-1, 1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 0, 1 ) },
+        PreciseVertCoords{ 5_v, Vector3i( 0, 1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 1, 0 ) }
+    };
+    for ( int i = 0; i < 6; i += 3 )
+    {
+        const bool r = segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } );
+        EXPECT_EQ( r,  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], par[i+1], par[i], par[i+2] } ) );
+        EXPECT_NE( r,  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } ) );
+    }
+
     // 8 distinct ids with the three largest ones in pb: the polynomials here have the largest degrees that must be stored (cMaxPolyD)
     const std::array<PreciseVertCoords, 8> deg =
     {
@@ -1142,14 +1160,12 @@ TEST( MRMesh, segmentIntersectionTriPlaneOrderFullDegen )
     for ( VertId i = 0_v; i < 8; ++i )
         vs[i].id = i; //and point coordinate is (0,0,0)
 
-    // test that maximum degree in segmentIntersectionTriPlaneOrder can cope with most degenerate situation possible;
-    // the segment must cross the plane, because all points coincide and its line cannot cross the plane outside
+    // test that maximum degree in segmentIntersectionTriPlaneOrder can cope with most degenerate situation possible
 
     // no shared vertices
     do
     {
-        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
-         && orient3d( { vs[5], vs[6], vs[7], vs[0] } ) != orient3d( { vs[5], vs[6], vs[7], vs[1] } ) )
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) )
         {
             (void)segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } );
         }
@@ -1159,8 +1175,7 @@ TEST( MRMesh, segmentIntersectionTriPlaneOrderFullDegen )
     // one shared vertex
     do
     {
-        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
-         && orient3d( { vs[5], vs[6], vs[2], vs[0] } ) != orient3d( { vs[5], vs[6], vs[2], vs[1] } ) )
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) )
         {
             (void)segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[2] } );
         }

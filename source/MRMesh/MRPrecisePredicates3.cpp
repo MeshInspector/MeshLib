@@ -175,30 +175,38 @@ std::optional<bool> oneSideOfPlane( const std::array<PreciseVertCoords, 8> & vs,
     return side;
 }
 
+/// orient3d( vs ) given the exact volume of the same tetrahedron computed before
+bool orient3d( FastInt128 exactVolume, const std::array<PreciseVertCoords, 4> & vs )
+{
+    assert( exactVolume == volume( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt ) );
+    return exactVolume != 0 ? exactVolume > 0 : orient3d( vs );
+}
+
+/// the volumes of the tetrahedra formed by two triangles ta, tb (or planes) and the ends of segment s
+struct SegmentVolumes
+{
+    FastInt128 taOrg, taDest, tbOrg, tbDest;
+};
+
 /// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 given by exact coordinates,
 /// or nullopt if the intersection points coincide exactly
-std::optional<bool> segmentIntersectionOrderExact( const std::array<PreciseVertCoords, 8> & vs )
+std::optional<bool> segmentIntersectionOrderExact( const SegmentVolumes & v )
 {
     // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
     //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
-    const auto volumeTaOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt );
-    const auto volumeTaDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt );
-    assert( ( volumeTaOrg <= 0 && volumeTaDest >= 0 ) || ( volumeTaOrg >= 0 && volumeTaDest <= 0 ) );
+    assert( ( v.taOrg <= 0 && v.taDest >= 0 ) || ( v.taOrg >= 0 && v.taDest <= 0 ) );
+    assert( ( v.tbOrg <= 0 && v.tbDest >= 0 ) || ( v.tbOrg >= 0 && v.tbDest <= 0 ) );
 
-    const auto volumeTbOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
-    const auto volumeTbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
-    assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
-
-    const auto nomSimple = Int128Mul256( volumeTaOrg ) * Int128Mul256( volumeTbDest ) - Int128Mul256( volumeTbOrg ) * Int128Mul256( volumeTaDest );
+    const auto nomSimple = Int128Mul256( v.taOrg ) * Int128Mul256( v.tbDest ) - Int128Mul256( v.tbOrg ) * Int128Mul256( v.taDest );
     if ( nomSimple == 0 )
         return {};
 
     bool res = nomSimple > 0;
-    assert( volumeTaOrg || volumeTaDest );
-    if ( volumeTaOrg < volumeTaDest )
+    assert( v.taOrg || v.taDest );
+    if ( v.taOrg < v.taDest )
         res = !res;
-    assert( volumeTbOrg || volumeTbDest );
-    if ( volumeTbOrg < volumeTbDest )
+    assert( v.tbOrg || v.tbDest );
+    if ( v.tbOrg < v.tbDest )
         res = !res;
     return res;
 }
@@ -368,16 +376,23 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
     assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
     assert( doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) );
 
-    if ( auto res = segmentIntersectionOrderExact( vs ) )
+    const SegmentVolumes v
+    {
+        .taOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt ),
+        .taDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt ),
+        .tbOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt ),
+        .tbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt )
+    };
+    if ( auto res = segmentIntersectionOrderExact( v ) )
         return *res;
 
     // the intersection points coincide exactly, and the perturbation of the points decides;
     // shared vertices are on both planes, so only not-shared vertices define the side of a triangle
     const auto sp = findSharedPoints( vs );
     if ( auto sideA = oneSideOfPlane( vs, 5, 6, 7, sp.otherA, 3 - sp.numShared ) )
-        return *sideA == orient3d( { vs[5], vs[6], vs[7], vs[0] } ); // ta is on one side of tb's plane
+        return *sideA == orient3d( v.tbOrg, { vs[5], vs[6], vs[7], vs[0] } ); // ta is on one side of tb's plane
     if ( auto sideB = oneSideOfPlane( vs, 2, 3, 4, sp.otherB, 3 - sp.numShared ) )
-        return *sideB == orient3d( { vs[2], vs[3], vs[4], vs[1] } ); // tb is on one side of ta's plane
+        return *sideB == orient3d( v.taDest, { vs[2], vs[3], vs[4], vs[1] } ); // tb is on one side of ta's plane
 
     // triangles ta and tb intersect one another
     return segmentIntersectionOrderPoly<cMaxPolyDTriTri>( vs );
@@ -388,13 +403,13 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
     // s=01, ta=234, pb=567
     assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
 
-    const bool o0 = orient3d( { vs[5], vs[6], vs[7], vs[0] } );
-    if ( o0 == orient3d( { vs[5], vs[6], vs[7], vs[1] } ) )
+    const auto volumeOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
+    const auto volumeDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
+    const bool o0 = orient3d( volumeOrg, { vs[5], vs[6], vs[7], vs[0] } );
+    if ( o0 == orient3d( volumeDest, { vs[5], vs[6], vs[7], vs[1] } ) )
     {
         // entire segment s is on one side of plane pb, so the line of s crosses pb either before s[0] or after s[1];
         // it is after s[1] iff s[1] is closer to pb than s[0]
-        const auto volumeOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
-        const auto volumeDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
         if ( volumeOrg != volumeDest )
             return ( volumeOrg > volumeDest ) == o0;
 
@@ -406,7 +421,14 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
     }
 
     // segment s crosses plane pb
-    if ( auto res = segmentIntersectionOrderExact( vs ) )
+    const SegmentVolumes v
+    {
+        .taOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt ),
+        .taDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt ),
+        .tbOrg  = volumeOrg,
+        .tbDest = volumeDest
+    };
+    if ( auto res = segmentIntersectionOrderExact( v ) )
         return *res;
 
     // the intersection points coincide exactly, and the perturbation of the points decides

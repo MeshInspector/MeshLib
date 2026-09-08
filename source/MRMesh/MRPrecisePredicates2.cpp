@@ -5,6 +5,7 @@
 #include "MRSparsePolynomial.h"
 #include "MRDivRound.h"
 #include "MRBox.h"
+#include <optional>
 
 namespace MR
 {
@@ -101,17 +102,76 @@ std::int64_t area( const Vector2i & a, const Vector2i & b, const Vector2i & c )
     return xx * yy - xy * yx;
 }
 
+/// the order of intersections of segment s=01 with the lines of sa=23 and sb=45 given by exact coordinates,
+/// or nullopt if the intersection points coincide exactly
+std::optional<bool> segmentIntersectionOrderExact( const std::array<PreciseVertCoords2, 6> & vs )
+{
+    // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /
+    //       ( ccw(sa,s[0])-ccw(sa,s[1]) ) * ( ccw(sb,s[0])-ccw(sb,s[1]) )
+    const auto areaSaOrg  = area( vs[2].pt, vs[3].pt, vs[0].pt );
+    const auto areaSaDest = area( vs[2].pt, vs[3].pt, vs[1].pt );
+    assert( ( areaSaOrg <= 0 && areaSaDest >= 0 ) || ( areaSaOrg >= 0 && areaSaDest <= 0 ) );
+
+    const auto areaSbOrg  = area( vs[4].pt, vs[5].pt, vs[0].pt );
+    const auto areaSbDest = area( vs[4].pt, vs[5].pt, vs[1].pt );
+    assert( ( areaSbOrg <= 0 && areaSbDest >= 0 ) || ( areaSbOrg >= 0 && areaSbDest <= 0 ) );
+
+    const auto nomSimple = Int64Mul128( areaSaOrg ) * Int64Mul128( areaSbDest ) - Int64Mul128( areaSbOrg ) * Int64Mul128( areaSaDest );
+    if ( nomSimple == 0 )
+        return {};
+
+    bool res = nomSimple > 0;
+    assert( areaSaOrg || areaSaDest );
+    if ( areaSaOrg < areaSaDest )
+        res = !res;
+    assert( areaSbOrg || areaSbDest );
+    if ( areaSbOrg < areaSbDest )
+        res = !res;
+    return res;
+}
+
+/// the order of intersections of segment s=01 with the lines of sa=23 and sb=45 when the intersection points coincide exactly,
+/// resolved by simulation-of-simplicity; the caller must have checked that neither segment is on one side of the other's line
+bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords2, 6> & vs )
+{
+    const auto ds = getPointDegrees( vs );
+
+    // 840 was found experimentally to be enough for all cases with 6 points having equal coordinates (but different ids);
+    // if it is not enough then we will get assert violation on nomSign below, and increase the value
+    constexpr int MaxD = 840;
+    const auto polySaOrg  = ccwPoly<MaxD>( ds[2], ds[3], ds[0], 3 );
+    const auto polySaDest = ccwPoly<MaxD>( ds[2], ds[3], ds[1], 3 );
+    assert( !polySaOrg.empty() || !polySaDest.empty() );
+    assert( polySaOrg.empty() || polySaDest.empty() || polySaOrg.isPositive() != polySaDest.isPositive() );
+    const bool posSaOrg = polySaOrg.empty() ? !polySaDest.isPositive() : polySaOrg.isPositive();
+
+    const auto polySbOrg  = ccwPoly<MaxD>( ds[4], ds[5], ds[0], 3 );
+    const auto polySbDest = ccwPoly<MaxD>( ds[4], ds[5], ds[1], 3 );
+    assert( !polySbOrg.empty() || !polySbDest.empty() );
+    assert( polySbOrg.empty() || polySbDest.empty() || polySbOrg.isPositive() != polySbDest.isPositive() );
+    const bool posSbOrg = polySbOrg.empty() ? !polySbDest.isPositive() : polySbOrg.isPositive();
+
+    // the sign of the leading term of nom = polySaOrg * polySbDest - polySbOrg * polySaDest, whose zero-degree coefficient is nomSimple == 0
+    const int nomSign = signOfProductsDiff<Int64Mul128>( polySaOrg, polySbDest, polySbOrg, polySaDest );
+    assert( nomSign != 0 );
+    bool res = nomSign > 0;
+    if ( posSaOrg != posSbOrg ) // denominator is negative
+        res = !res;
+    return res;
+}
+
 } // anonymous namespace
 
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:
 // a=(pi_i,1, pi_i,2)
 // b=(pi_j,1, pi_j,2)
-bool ccw( const Vector2i & a, const Vector2i & b )
+namespace
 {
-    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
-        return v > 0; // points are in general position
 
-    // points 0, a, b are on the same line
+/// ccw( a, b ) for the points 0, a, b known to be on the same line, resolved by simulation-of-simplicity
+bool ccwDegenerate( const Vector2i & a, const Vector2i & b )
+{
+    assert( cross( Vector2i64{ a }, Vector2i64{ b } ) == 0 );
 
     // permute points:
     // da.y >> da.x >> db.y >> db.x > 0
@@ -138,6 +198,15 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     // the smallest permutation db.x does not change anything here, and
     // the rotation from a to b is always ccw independently on a.y sign
     return true;
+}
+
+} // anonymous namespace
+
+bool ccw( const Vector2i & a, const Vector2i & b )
+{
+    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
+        return v > 0; // points are in general position
+    return ccwDegenerate( a, b );
 }
 
 bool smaller2( const std::array<PreciseVertCoords2, 4> & vs )
@@ -263,6 +332,10 @@ bool ccw( const std::array<PreciseVertCoords2, 3> & vs )
 
 bool ccw( const PreciseVertCoords2* vs )
 {
+    // the exact answer first, the perturbation of the points is necessary only if all three points are exactly collinear
+    if ( const auto a = area( vs[0].pt, vs[1].pt, vs[2].pt ); a != 0 )
+        return a > 0;
+
     bool odd = false;
     std::array<int, 3> order = {0, 1, 2};
 
@@ -279,7 +352,7 @@ bool ccw( const PreciseVertCoords2* vs )
         }
     }
 
-    return odd != ccw( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt );
+    return odd != ccwDegenerate( vs[order[0]].pt - vs[order[2]].pt, vs[order[1]].pt - vs[order[2]].pt );
 }
 
 bool inCircle( const std::array<PreciseVertCoords2, 4>& vs )
@@ -327,6 +400,10 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ) );
     assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[4], vs[5] } ) );
 
+    if ( auto res = segmentIntersectionOrderExact( vs ) )
+        return *res;
+
+    // the intersection points coincide exactly, and the perturbation of the points decides;
     // if sa and sb have a shared point
     PreciseVertCoords2 sharedPoint;
     for ( auto va : { vs[2], vs[3] } )
@@ -366,54 +443,7 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
         // segments sa and sb intersect one another, process it as general case
     }
 
-    // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /
-    //       ( ccw(sa,s[0])-ccw(sa,s[1]) ) * ( ccw(sb,s[0])-ccw(sb,s[1]) )
-    const auto areaSaOrg  = area( vs[2].pt, vs[3].pt, vs[0].pt );
-    const auto areaSaDest = area( vs[2].pt, vs[3].pt, vs[1].pt );
-    assert( ( areaSaOrg <= 0 && areaSaDest >= 0 ) || ( areaSaOrg >= 0 && areaSaDest <= 0 ) );
-
-    const auto areaSbOrg  = area( vs[4].pt, vs[5].pt, vs[0].pt );
-    const auto areaSbDest = area( vs[4].pt, vs[5].pt, vs[1].pt );
-    assert( ( areaSbOrg <= 0 && areaSbDest >= 0 ) || ( areaSbOrg >= 0 && areaSbDest <= 0 ) );
-
-    const auto nomSimple = Int64Mul128( areaSaOrg ) * Int64Mul128( areaSbDest ) - Int64Mul128( areaSbOrg ) * Int64Mul128( areaSaDest );
-    if ( nomSimple != 0 )
-    {
-        // happy not-degenerated path
-        bool res = nomSimple > 0;
-        assert( areaSaOrg || areaSaDest );
-        if ( areaSaOrg < areaSaDest )
-            res = !res;
-        assert( areaSbOrg || areaSbDest );
-        if ( areaSbOrg < areaSbDest )
-            res = !res;
-        return res;
-    }
-
-    const auto ds = getPointDegrees( vs );
-
-    // 840 was found experimentally to be enough for all cases with 6 points having equal coordinates (but different ids);
-    // if it is not enough then we will get assert violation on nomSign below, and increase the value
-    constexpr int MaxD = 840;
-    const auto polySaOrg  = ccwPoly<MaxD>( ds[2], ds[3], ds[0], 3 );
-    const auto polySaDest = ccwPoly<MaxD>( ds[2], ds[3], ds[1], 3 );
-    assert( !polySaOrg.empty() || !polySaDest.empty() );
-    assert( polySaOrg.empty() || polySaDest.empty() || polySaOrg.isPositive() != polySaDest.isPositive() );
-    const bool posSaOrg = polySaOrg.empty() ? !polySaDest.isPositive() : polySaOrg.isPositive();
-
-    const auto polySbOrg  = ccwPoly<MaxD>( ds[4], ds[5], ds[0], 3 );
-    const auto polySbDest = ccwPoly<MaxD>( ds[4], ds[5], ds[1], 3 );
-    assert( !polySbOrg.empty() || !polySbDest.empty() );
-    assert( polySbOrg.empty() || polySbDest.empty() || polySbOrg.isPositive() != polySbDest.isPositive() );
-    const bool posSbOrg = polySbOrg.empty() ? !polySbDest.isPositive() : polySbOrg.isPositive();
-
-    // the sign of the leading term of nom = polySaOrg * polySbDest - polySbOrg * polySaDest, whose zero-degree coefficient is nomSimple == 0
-    const int nomSign = signOfProductsDiff<Int64Mul128>( polySaOrg, polySbDest, polySbOrg, polySaDest );
-    assert( nomSign != 0 );
-    bool res = nomSign > 0;
-    if ( posSaOrg != posSbOrg ) // denominator is negative
-        res = !res;
-    return res;
+    return segmentIntersectionOrderDegenerate( vs );
 }
 
 // intersection of segments (a,b) and (c,d) from the doubled areas abc = |area(a,b,c)| and

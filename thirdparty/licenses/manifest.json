@@ -315,7 +315,7 @@
         "type": "submodule",
         "path": "thirdparty/OpenCTM-git"
       },
-      "version": "2b444a4c70c432c1f4990fb32b0fcb11d0d81aad"
+      "version": "eae87a4d9ac229bdc7c32492c84bd7cb1329e5c4"
     },
     {
       "id": "LAZperf",

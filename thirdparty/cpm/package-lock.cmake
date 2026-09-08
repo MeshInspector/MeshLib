@@ -125,7 +125,7 @@ set(MESHLIB_PACKAGE_onetbb
 
 set(MESHLIB_PACKAGE_OpenCTM
   GIT_REPOSITORY https://github.com/MeshInspector/OpenCTM.git
-  GIT_TAG 2b444a4c70c432c1f4990fb32b0fcb11d0d81aad
+  GIT_TAG eae87a4d9ac229bdc7c32492c84bd7cb1329e5c4
 )
 
 set(MESHLIB_PACKAGE_openvdb

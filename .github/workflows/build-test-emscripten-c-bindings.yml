@@ -116,7 +116,7 @@ jobs:
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
           MR_CMAKE_BUILD_OPTIONS: >
-            --target MeshLibC2
+            --target MeshLibC2 MeshLibC2Cuda
         run: ./scripts/build_source.sh
 
       - name: Prepare output files

@@ -4,7 +4,9 @@
 
 project(MeshLibC2Cuda CXX)
 
-IF(NOT EMSCRIPTEN)
+# This is also built for Emscripten, even though Cuda itself never is. The C# bindings always
+#   declare `MR_Cuda_isCudaAvailable()`, and its dummy implementation (always returning false)
+#   lives here, so skipping this project leaves that symbol undefined for wasm consumers.
 
 IF(MSVC)
   # Disabling following warnings:
@@ -86,5 +88,3 @@ install(
   NAMESPACE MeshLib::
   DESTINATION ${MR_CONFIG_DIR}
 )
-
-ENDIF() # NOT EMSCRIPTEN

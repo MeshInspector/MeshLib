@@ -58,7 +58,7 @@ public:
     /// constructs polynomial c0 + c1*x^d1 + c2*x^d2
     SparsePolynomial( C c0, D d1, C c1, D d2, C c2 );
 
-    /// constructs polynomial from arbitrary terms: sorts them by degree, sums the coefficients of equal degrees, drops zero coefficients and the degrees above M
+    /// constructs polynomial from arbitrary terms with degrees not above M: sorts them by degree, sums the coefficients of equal degrees and drops zero coefficients
     [[nodiscard]] static SparsePolynomial fromUnsortedTerms( std::vector<Term> && terms );
 
     /// sets coefficient for given degree to zero
@@ -141,8 +141,8 @@ SparsePolynomial<C,D,M>::SparsePolynomial( C c0, D d1, C c1, D d2, C c2 )
 template <typename C, typename D, D M>
 SparsePolynomial<C,D,M> SparsePolynomial<C,D,M>::fromUnsortedTerms( std::vector<Term> && terms )
 {
-    terms.erase( std::remove_if( terms.begin(), terms.end(), []( const Term & t ) { return t.first > M; } ), terms.end() );
     std::sort( terms.begin(), terms.end(), []( const Term & x, const Term & y ) { return x.first < y.first; } );
+    assert( terms.empty() || terms.back().first <= M );
     SparsePolynomial res;
     res.terms_ = std::move( terms );
     res.mergeTerms_();

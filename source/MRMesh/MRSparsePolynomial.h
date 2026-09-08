@@ -254,19 +254,18 @@ int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial
     auto greater = []( const RowTerm & x, const RowTerm & y ) { return x.deg > y.deg; };
     std::vector<RowTerm> heap;
     heap.reserve( a.get().size() + c.get().size() );
+    // the terms of degrees above M are never considered, and since the terms of every polynomial are sorted, the initialization stops at the first such row
     if ( !b.get().empty() )
-        for ( int i = 0; i < (int)a.get().size(); ++i )
+        for ( int i = 0; i < (int)a.get().size() && a.get()[i].first + b.get()[0].first <= M; ++i )
             heap.push_back( { a.get()[i].first + b.get()[0].first, i, 0, false } );
     if ( !d.get().empty() )
-        for ( int i = 0; i < (int)c.get().size(); ++i )
+        for ( int i = 0; i < (int)c.get().size() && c.get()[i].first + d.get()[0].first <= M; ++i )
             heap.push_back( { c.get()[i].first + d.get()[0].first, i, 0, true } );
     std::make_heap( heap.begin(), heap.end(), greater );
 
     while ( !heap.empty() )
     {
         const auto deg = heap.front().deg;
-        if ( deg > M )
-            break;
         decltype( std::declval<T>() * std::declval<T>() ) coeff{};
         do
         {
@@ -280,9 +279,8 @@ int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial
                 coeff -= prod;
             else
                 coeff += prod;
-            if ( ++r.j < (int)g.size() )
+            if ( ++r.j < (int)g.size() && ( r.deg = f[r.i].first + g[r.j].first ) <= M )
             {
-                r.deg = f[r.i].first + g[r.j].first;
                 heap.push_back( r );
                 std::push_heap( heap.begin(), heap.end(), greater );
             }

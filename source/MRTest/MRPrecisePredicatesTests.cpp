@@ -1124,6 +1124,16 @@ TEST( MRMesh, segmentIntersectionTriPlaneOrder )
     EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[3], tilted[4], tilted[5] } ) );
     EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[4], tilted[3], tilted[5] } ) );
     EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], tilted[3], tilted[4], tilted[5] } ) );
+
+    // 8 distinct ids with the three largest ones in pb: the polynomials here have the largest degrees that must be stored (cMaxPolyD)
+    const std::array<PreciseVertCoords, 8> deg =
+    {
+        PreciseVertCoords{  9_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  0_v, Vector3i( 0,-1, 1 ) },
+        PreciseVertCoords{  4_v, Vector3i( 0, 1, 0 ) }, PreciseVertCoords{  1_v, Vector3i( 1,-1, 0 ) }, PreciseVertCoords{  6_v, Vector3i( 1, 1,-1 ) },
+        PreciseVertCoords{ 14_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{ 15_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{ 12_v, Vector3i( 1,-1, 0 ) }
+    };
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( deg ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { deg[1], deg[0], deg[2], deg[3], deg[4], deg[5], deg[6], deg[7] } ) );
 }
 
 TEST( MRMesh, segmentIntersectionTriPlaneOrderFullDegen )

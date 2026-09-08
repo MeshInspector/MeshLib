@@ -217,17 +217,6 @@ void telemetryStlHead( const char* prefix, std::string s )
             s.resize( at );
     }
 
-    // e.g. 'exocad GmbH 2026 - DentalCAD' - the release year varies per installation
-    const char EXOCAD_DE[] = "exocad GmbH ";
-    const char EXOCAD_US[] = "exocad North America ";
-    auto dropYear = [&s]( const char* pref, size_t len )
-    {
-        if ( s.starts_with( pref ) && digitsAt( s, len, 4 ) && len + 4 < s.size() && s[len + 4] == ' ' )
-            s.erase( len, 5 );
-    };
-    dropYear( EXOCAD_DE, sizeof( EXOCAD_DE ) - 1 );
-    dropYear( EXOCAD_US, sizeof( EXOCAD_US ) - 1 );
-
     // e.g. 'TopoMiller 2026-01-02 15:59:18' - trailing export date, with optional time
     for ( size_t i = 0; i + 10 <= s.size(); ++i )
     {

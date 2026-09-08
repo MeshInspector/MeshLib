@@ -16,6 +16,7 @@
       "Name": "New",
       "Tooltip": "Remove all objects from the scene.",
       "Icon": "\uF021",
+      "HelpLink": "https://meshinspector.com/inappvideo/new",
       "Shortcut": { "Keys": "Primary+N", "Category": "Scene" }
     },
     {
@@ -36,7 +37,8 @@
     {
       "Name": "Open DICOMs",
       "Tooltip": "Load all DICOM volumes from a given directory and its subdirectories.",
-      "Icon": "\uF07C"
+      "Icon": "\uF07C",
+      "HelpLink": "https://meshinspector.com/inappvideo/opendicoms"
     },
     {
       "Name": "Open RAW Voxels",

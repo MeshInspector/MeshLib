@@ -858,6 +858,12 @@ int Viewer::launchInit_( const LaunchParams& params )
 #endif
 #endif
 
+#if defined( __APPLE__ )
+    // Otherwise glfwInit() chdirs into Contents/Resources of the .app bundle,
+    // and every relative path given on the command line resolves from there.
+    glfwInitHint( GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE );
+#endif
+
     if ( !glfwInit() )
     {
         spdlog::error( "glfwInit failed" );

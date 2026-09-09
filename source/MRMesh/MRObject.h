@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRAffineXf3.h"
-#include "MRBitSet.h"
 #include "MRBox.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"

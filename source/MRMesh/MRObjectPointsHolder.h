@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRPch/MRBindingMacros.h"
+#include "MRBitSet.h"
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
 #include "MRPointCloudPart.h"

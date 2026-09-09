@@ -4,6 +4,7 @@
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
 #include "MRHeapBytes.h"
+#include "MRphmap.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 

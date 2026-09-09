@@ -1,6 +1,8 @@
 #pragma once
 #include "MRHistoryAction.h"
 #include "MRVisualObject.h" //Color and DIRTY_VERTS_COLORMAP
+#include "MRHeapBytes.h"
+#include "MRVector.h"
 #include <memory>
 
 namespace MR

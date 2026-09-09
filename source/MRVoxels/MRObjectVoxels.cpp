@@ -19,6 +19,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRFmt.h"
+#include "MRMesh/MRIRenderObject.h"
 #include <filesystem>
 #include <thread>
 

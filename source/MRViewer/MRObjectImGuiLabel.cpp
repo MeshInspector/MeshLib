@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRObjectFactory.h"
 #include "MRPch/MRJson.h"
+#include "MRMesh/MRIRenderObject.h"
 
 namespace MR
 {

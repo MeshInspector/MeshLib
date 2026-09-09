@@ -5,6 +5,7 @@
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
 #include "MRPointCloudPart.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {

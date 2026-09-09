@@ -3,6 +3,7 @@
 #include "MRObjectMesh.h"
 #include "MRMesh.h"
 #include "MRHeapBytes.h"
+#include "MRMeshTexture.h"
 #include <memory>
 
 namespace MR

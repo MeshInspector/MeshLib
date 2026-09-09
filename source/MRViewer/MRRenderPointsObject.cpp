@@ -14,6 +14,7 @@
 #include "MRGladGlfw.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRViewer/MRRenderDefaultObjects.h"
+#include "MRMesh/MRHeapBytes.h"
 
 namespace MR
 {

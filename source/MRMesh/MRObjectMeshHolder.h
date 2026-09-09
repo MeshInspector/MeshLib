@@ -5,6 +5,8 @@
 #include "MRXfBasedCache.h"
 #include "MRMeshPart.h"
 #include "MRObjectMeshData.h"
+#include "MRHeapBytes.h"
+#include "MRMeshTexture.h"
 
 namespace MR
 {

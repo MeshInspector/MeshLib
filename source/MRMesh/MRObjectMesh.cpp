@@ -13,6 +13,8 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRFmt.h"
+#include "MRHeapBytes.h"
+#include "MRMeshTexture.h"
 
 namespace MR
 {

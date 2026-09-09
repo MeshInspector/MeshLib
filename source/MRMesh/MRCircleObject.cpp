@@ -5,6 +5,7 @@
 #include "MRPch/MRJson.h"
 #include "MRConstants.h"
 #include "MRBestFit.h"
+#include "MRIRenderObject.h"
 #include <MRPch/MREigenCore.h>
 #include <Eigen/QR>
 

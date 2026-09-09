@@ -51,6 +51,7 @@ enum class BooleanOperation
   * \details Structure to easily map topology of MR::boolean input meshes to result mesh
   *
   * This structure allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MR::boolean to result mesh topology primitives
+  * \snippet cpp-examples/MeshBoolean.dox.cpp 1
   * \sa \ref MR::boolean
   */
 struct BooleanResultMapper

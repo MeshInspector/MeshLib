@@ -16,13 +16,28 @@ int main()
     MR::AffineXf3f xf = MR::AffineXf3f::translation( MR::Vector3f( 0.7f, 0.0f, 0.0f ) );
     sphere2.transform( xf );
 
+    // optional mapper relating the primitives of the input meshes to the primitives of the result
+    MR::BooleanResultMapper mapper;
+
     // perform boolean operation
-    MR::BooleanResult result = MR::boolean( sphere1, sphere2, MR::BooleanOperation::Intersection );
+    MR::BooleanResult result = MR::boolean( sphere1, sphere2, MR::BooleanOperation::Intersection, { .mapper = &mapper } );
     if ( !result.valid() )
         std::cerr << result.errorString << std::endl;
 
     MR::Mesh resultMesh = *result;
 //! [0]
+
+//! [1]
+    // find the faces of the result produced by each input sphere, and the faces the cut created
+    using MapObject = MR::BooleanResultMapper::MapObject;
+    MR::FaceBitSet facesOfSphere1 = mapper.map( sphere1.topology.getValidFaces(), MapObject::A );
+    MR::FaceBitSet facesOfSphere2 = mapper.map( sphere2.topology.getValidFaces(), MapObject::B );
+    MR::FaceBitSet newFaces = mapper.newFaces();
+
+    std::cout << "faces from sphere1: " << facesOfSphere1.count() << "\n"
+              << "faces from sphere2: " << facesOfSphere2.count() << "\n"
+              << "faces created by the cut: " << newFaces.count() << std::endl;
+//! [1]
 
     // save result to STL file
     if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( resultMesh, "out_boolean.stl" ); !saveRes )

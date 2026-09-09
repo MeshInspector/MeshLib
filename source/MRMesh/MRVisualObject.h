@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRObject.h"
+#include "MRBox.h"
 #include "MRMeshTexture.h"
 #include "MRVector.h"
 #include "MRColor.h"

@@ -450,6 +450,9 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
         return;
     }
 
+    if ( unitedBox.diagonal() == 0.0f )
+        unitedBox = unitedBox.expanded( Vector3f::diagonal( 0.5f ) );
+
     if ( params_.orthographic )
     {
         sceneBox_ = transformed( unitedBox, getViewXf_().inverse() );

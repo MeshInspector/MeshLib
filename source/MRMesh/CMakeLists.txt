@@ -13,6 +13,8 @@ ENDIF()
 
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h" "*.hpp")
+# MRPchCreate.cpp only drives the MSVC/MSBuild precompiled header; CMake generates its own.
+list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
@@ -30,6 +32,7 @@ ENDIF()
 find_package(Eigen3 REQUIRED)
 find_package(fmt 8 REQUIRED)
 find_package(JsonCpp REQUIRED)
+find_package(phmap 2.0 REQUIRED)
 find_package(spdlog 1.9 REQUIRED)
 find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 find_package(tl-expected REQUIRED)
@@ -41,6 +44,7 @@ target_link_libraries(${PROJECT_NAME}
     Eigen3::Eigen
     fmt::fmt
     JsonCpp::JsonCpp
+    phmap::phmap
     spdlog::spdlog
     TBB::tbb
     tl::expected
@@ -67,12 +71,6 @@ ELSE()
 ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
-# TODO: CMake config
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
-)
-
 IF(APPLE)
   # for Boost.Stacktrace
   target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)
@@ -94,7 +92,18 @@ IF(NOT MRMESH_NO_TIFF)
 ENDIF()
 
 IF(MR_PCH)
-  target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  IF(MSVC AND MR_PCH_USE_EXTRA_HEADERS)
+    # MRMesh exports MRMESH_API, so it cannot reuse the shared (dllimport) PCH once that PCH
+    # contains MeshLib headers; it builds its own from MRPch.h in its (dllexport) context.
+    # MESHLIB_NO_VIEWER drops the viewer/imgui section of MRPch.h, which MRMesh (a lower layer)
+    # neither needs nor has on its include path. See cmake/Modules/ConfigurePch.cmake.
+    # Without the extra headers the shared PCH holds no MeshLib headers, so MRMesh just reuses it.
+    target_compile_definitions(${PROJECT_NAME} PRIVATE MESHLIB_NO_VIEWER)
+    target_precompile_headers(${PROJECT_NAME} PRIVATE
+      "$<$<COMPILE_LANGUAGE:CXX>:${CMAKE_CURRENT_SOURCE_DIR}/../MRPch/MRPch.h>")
+  ELSE()
+    target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
+  ENDIF()
 ENDIF()
 
 install(

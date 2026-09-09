@@ -28,6 +28,18 @@ public:
         }
     }
 
+    /// use this constructor to remember object's point cloud and immediately set new point cloud
+    ChangePointCloudAction( std::string name, const std::shared_ptr<ObjectPoints>& obj, std::shared_ptr<PointCloud> newPointCloud ) :
+        objPoints_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( objPoints_ )
+        {
+            clonePointCloud_ = std::move( newPointCloud );
+            objPoints_->swapPointCloud( clonePointCloud_ );
+        }
+    }
+
     virtual std::string name() const override { return name_; }
 
     virtual void action( HistoryAction::Type ) override

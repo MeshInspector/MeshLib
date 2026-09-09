@@ -3,8 +3,13 @@
 #include "MRMesh/MRObjectSave.h"
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRMeshSave.h"
+#include "MRMesh/MRMeshToPointCloud.h"
+#include "MRMesh/MRPointsSave.h"
+#include "MRMesh/MRTelemetry.h"
 #include <gtest/gtest.h>
 
 namespace MR
@@ -56,6 +61,75 @@ TEST( MRMesh, SerializeObjectMesh )
     // meshes are equal but not shared
     EXPECT_EQ( *m0->mesh(), *m1->mesh() );
     EXPECT_NE( m0->mesh(), m1->mesh() );
+}
+
+// writing a scene in .mru file must not report any telemetry about the models saved inside it
+TEST( MRMesh, SerializeNoTelemetry )
+{
+    Object o;
+    o.setName( "root" );
+    auto om = std::make_shared<ObjectMesh>();
+    om->setName( "mesh" );
+    om->setMesh( std::make_shared<Mesh>( makeCube() ) );
+    o.addChild( om );
+    auto cloud = std::make_shared<PointCloud>( meshToPointCloud( *om->mesh() ) );
+    auto op = std::make_shared<ObjectPoints>();
+    op->setName( "points" );
+    op->setPointCloud( cloud );
+    o.addChild( op );
+    auto op1 = std::make_shared<ObjectPoints>();
+    op1->setName( "points1" );
+    op1->setPointCloud( cloud );
+    op1->setSerializeFormat( ".unknown" ); // the only way to reach PointsSave::toAnySupportedFormat from here
+    o.addChild( op1 );
+
+    std::vector<std::string> signals;
+    boost::signals2::scoped_connection con = TelemetrySignal.connect(
+        [&signals]( const std::string& s ) { signals.push_back( s ); } );
+
+    UniqueTemporaryFolder f;
+    auto s = serializeObjectTree( o, f / "noTelemetry.mru" );
+    EXPECT_TRUE( s.has_value() ) << ( s.has_value() ? "" : s.error() );
+    for ( const auto & signal : signals )
+        ADD_FAILURE() << "unexpected telemetry during .mru saving: " << signal;
+
+    // in contrast, ordinary saving of the same models is reported
+    signals.clear();
+    EXPECT_TRUE( MeshSave::toAnySupportedFormat( *om->mesh(), f / "cube.ply" ).has_value() );
+    EXPECT_EQ( signals, std::vector<std::string>( { "Save *.ply VP TRI", "Save Mesh Log Tris 4" } ) );
+
+    signals.clear();
+    EXPECT_TRUE( PointsSave::toAnySupportedFormat( *cloud, f / "cube.xyz" ).has_value() );
+    EXPECT_EQ( signals, std::vector<std::string>( { "Save *.xyz VPN", "Save Pnts Log Pnts 4" } ) );
+}
+
+// Zendesk #1121: the name is cut to 12 characters, and the cut used to end with a space
+TEST( MRMesh, SerializeObjectNameCutOnSpace )
+{
+    Object o;
+    o.setName( "root" );
+    auto group = std::make_shared<Object>();
+    group->setName( "Planner FTA Teeth" ); // first 12 characters are "Planner FTA "
+    o.addChild( group );
+    auto om = std::make_shared<ObjectMesh>();
+    om->setName( "Tooth_UL1" );
+    om->setMesh( std::make_shared<Mesh>( makeCube() ) );
+    group->addChild( om );
+
+    UniqueTemporaryFolder f;
+    auto mruPath = f / "cutOnSpace.mru";
+    auto s = serializeObjectTree( o, mruPath );
+    EXPECT_TRUE( s.has_value() ) << ( s.has_value() ? "" : s.error() );
+    auto l = loadSceneFromAnySupportedFormat( mruPath );
+    EXPECT_TRUE( l.has_value() );
+    ASSERT_TRUE( l->obj );
+    ASSERT_EQ( l->obj->children().size(), 1 );
+    EXPECT_EQ( l->obj->children()[0]->name(), "Planner FTA Teeth" );
+    ASSERT_EQ( l->obj->children()[0]->children().size(), 1 );
+    auto m = dynamic_cast<const ObjectMesh*>( l->obj->children()[0]->children()[0].get() );
+    ASSERT_TRUE( m );
+    ASSERT_TRUE( m->mesh() );
+    EXPECT_EQ( m->mesh()->topology.numValidFaces(), 12 );
 }
 
 TEST( MRMesh, SerializeSharedObjectMesh )

@@ -8,15 +8,20 @@ int main( int argc, char** argv )
 {
     MR::setupLoggerByDefault();
 
-    int driverVersion, runtimeVersion, computeMajor, computeMinor;
-    if ( !MR::Cuda::isCudaAvailable( &driverVersion, &runtimeVersion, &computeMajor, &computeMinor ) )
+    auto info = MR::Cuda::getDeviceInfo();
+    if ( !info )
     {
-        spdlog::critical( "No CUDA-capable device found" );
+        spdlog::critical( "CUDA error: {}", info.error() );
         return EXIT_FAILURE;
     }
-    spdlog::info( "Driver version: {}.{}", driverVersion / 1000, ( driverVersion % 1000 ) / 10 );
-    spdlog::info( "Runtime version: {}.{}", runtimeVersion / 1000, ( runtimeVersion % 1000 ) / 10 );
-    spdlog::info( "Compute version: {}.{}", computeMajor, computeMinor );
+    spdlog::info( "Driver version: {}.{}", info->driverVersion / 1000, ( info->driverVersion % 1000 ) / 10 );
+    spdlog::info( "Runtime version: {}.{}", info->runtimeVersion / 1000, ( info->runtimeVersion % 1000 ) / 10 );
+    spdlog::info( "Compute version: {}.{}", info->computeMajor, info->computeMinor );
+    if ( !info->fitForComputations() )
+    {
+        spdlog::critical( "CUDA does not fit for computations" );
+        return EXIT_FAILURE;
+    }
 
     testing::InitGoogleTest( &argc, argv );
     return RUN_ALL_TESTS();

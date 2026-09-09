@@ -2,6 +2,20 @@ name: Post Release Tests
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "meshlib version to install; only used with index `test` (prod always tests the latest release)"
+        default: ""
+        required: false
+        type: string
+      index:
+        description: "package index to install from"
+        default: prod
+        required: false
+        type: choice
+        options:
+          - prod
+          - test
   workflow_call:
 
 jobs:
@@ -12,7 +26,7 @@ jobs:
       version_tag: ${{ steps.get-latest-tag.outputs.tag }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - uses: actions-ecosystem/action-get-latest-tag@v1
         id: get-latest-tag
@@ -23,20 +37,24 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{matrix.container-prefix}}${{matrix.os}}
-      options: ${{ matrix.container-options }}
     strategy:
       fail-fast: false
       matrix:
+        config: [ "${{ inputs.index || 'prod' }}" ]
         platform: ["x86_64", "aarch64"]
-        os: ["ubuntu:20.04", "ubuntu:22.04", "debian:11-slim", "fedora:37"]
+        os: ["ubuntu:20.04", "ubuntu:22.04", "rockylinux:9", "fedora:37"]
         include:
+          - config: prod
+            pip-options: meshlib
+          # --extra-index-url: TestPyPI does not mirror numpy
+          - config: test
+            pip-options: -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ meshlib==${{ inputs.version }}
+
           - platform: "x86_64"
             runner: ubuntu-latest
-            container-options: "--user root"
             container-prefix: ""
           - platform: "aarch64"
             runner: ubuntu-24.04-arm
-            container-options: " " # empty
             container-prefix: "arm64v8/"
           - os: "ubuntu:20.04"
             py-version: "3.8"
@@ -44,7 +62,7 @@ jobs:
           - os: "ubuntu:22.04"
             py-version: "3.10"
             py-cmd: "python3.10"
-          - os: "debian:11-slim"
+          - os: "rockylinux:9"
             py-version: "3.9"
             py-cmd: "python3.9"
           - os: "fedora:37"
@@ -52,17 +70,17 @@ jobs:
             py-cmd: "python3.11"
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Ubuntu system setup
-        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' || matrix.os == 'debian:11-slim' }}
+        if: ${{ matrix.os == 'ubuntu:20.04' || matrix.os == 'ubuntu:22.04' }}
         run: apt -y update && apt -y upgrade && apt -y install curl libssl-dev python3-pip
 
-      - name: Fedora 37 system setup
-        if: ${{matrix.os == 'fedora:37'}}
-        run: dnf -y install python3 pip
+      - name: Fedora 37 / Rocky Linux 9 system setup
+        if: ${{ matrix.os == 'fedora:37' || matrix.os == 'rockylinux:9' }}
+        run: dnf -y install python3 python3-pip
 
       - name: Pip setup
         run: |
@@ -70,7 +88,7 @@ jobs:
           ${{ matrix.py-cmd }} -m pip install pytest
 
       - name: Meshlib wheel install
-        run:  ${{ matrix.py-cmd }} -m pip install meshlib
+        run:  ${{ matrix.py-cmd }} -m pip install ${{ matrix.pip-options }}
 
       - name: Run Python tests
         working-directory: test_python
@@ -83,15 +101,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        config: [ "${{ inputs.index || 'prod' }}" ]
         py-version: ["3.8", "3.9", "3.10", "3.11"]
+        include:
+          - config: prod
+            pip-options: meshlib
+          # --extra-index-url: TestPyPI does not mirror numpy
+          - config: test
+            pip-options: -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ meshlib==${{ inputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Python setup
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.py-version }}
 
@@ -99,7 +124,7 @@ jobs:
         run: |
           py -${{matrix.py-version}} -m pip install --upgrade pip
           py -${{matrix.py-version}} -m pip install pytest
-          py -${{matrix.py-version}} -m pip install meshlib
+          py -${{matrix.py-version}} -m pip install ${{ matrix.pip-options }}
 
       - name: Run Python tests
         working-directory: test_python
@@ -112,10 +137,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        config: [ "${{ inputs.index || 'prod' }}" ]
         py-version: ["3.9", "3.10", "3.11"]
+        include:
+          - config: prod
+            pip-options: meshlib
+          # --extra-index-url: TestPyPI does not mirror numpy
+          - config: test
+            pip-options: -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ meshlib==${{ inputs.version }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -129,7 +161,7 @@ jobs:
           python${{matrix.py-version}} -m pip install pytest
 
       - name: Meshlib wheel install
-        run:  python${{matrix.py-version}} -m pip install meshlib
+        run:  python${{matrix.py-version}} -m pip install ${{ matrix.pip-options }}
 
       - name: Run Python tests
         working-directory: test_python

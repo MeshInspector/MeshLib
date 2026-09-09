@@ -54,6 +54,9 @@ struct SaveSettings
     /// the color of whole object
     std::optional<Color> solidColor;
 
+    /// permit telemetry signal about saving
+    bool telemetrySignal = true;
+
     /// to report save progress and cancel saving if user desires
     ProgressCallback progress;
 };

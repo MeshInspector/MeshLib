@@ -437,7 +437,7 @@ __device__ inline void setBit( uint64_t* bitSet, const size_t bitNumber )
 }
 
 template <typename T>
-__device__ inline T sqr( T x )
+__device__ inline auto sqr( T x ) -> decltype( x * x )
 {
     return x * x;
 }

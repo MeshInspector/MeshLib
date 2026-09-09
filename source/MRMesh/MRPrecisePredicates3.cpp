@@ -1,5 +1,11 @@
 #include "MRPrecisePredicates3.h"
+#include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
+#include "MRVector.h"
+#include "MRFastInt.h"
 #include "MRHighPrecision.h"
+#include "MRInt64Mul128.h"
 #include "MRVector2.h"
 #include "MRBox.h"
 #include "MRDivRound.h"
@@ -17,12 +23,15 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 struct PointDegree
 {
     Vector3i pt;
-    int d = 0; // degree of epsilon for pt.z
+    std::int64_t d = 0; // degree of epsilon for pt.z; pt.y gets 3*d, pt.x gets 9*d
 };
 
-// this value was found experimentally for segmentIntersectionOrder with all 8 points have equal coordinates (but different ids),
-// if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
-constexpr int cMaxPolyD = 14'941'836;
+// these values were found experimentally as the largest degree of a polynomial term that must be considered in the predicates
+// (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
+// in the tests and in a random sweep of degenerate inputs; the terms of higher degrees are not stored to save computation time,
+// and if it is not enough then signOfProductsDiff returns 0 with assert violation after it, increase the value in that case
+constexpr std::int64_t cMaxPolyDTriTri   = 15'943'959; // segmentIntersectionOrder
+constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTriPlaneOrder: it reaches the polynomial path with all three largest ids in the plane
 
 std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
 {
@@ -37,81 +46,200 @@ std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 
     std::sort( begin( as ), end( as ), []( const auto & a, const auto & b ) { return a.v < b.v; } );
 
     std::array<PointDegree, 8> res;
-    int d = 1;
-    constexpr int maxD = INT_MAX / 9;
-    static_assert( maxD > cMaxPolyD );
-    constexpr int preMaxD = maxD / 27;
+    std::int64_t d = 1;
     for ( int i = 0; i < 8; ++i )
     {
         const auto n = as[i].n;
         res[n] = { vs[n].pt, d };
         if ( i < 7 && as[i].v < as[i+1].v ) // skip to support triangles with shared vertices
-        {
-            if ( d <= preMaxD )
-                d *= 27; // normal power up
-            else if ( d <= maxD )
-                d = maxD; // to avoid integer overflow in orient3dPoly, assuming that such huge powers will never be necessary
-        }
+            d *= 27;
     }
     return res;
 }
 
-// 128 bits are enough to store all coefficients in ( orient3d(ta,s[0])*orient3d(tb,s[1]) - orient3d(tb,s[0])*orient3d(ta,s[1]) )
-// except for degree 0, which is computed separately.
-using Poly = SparsePolynomial<FastInt128, int, cMaxPolyD>;
+// 128 bits are enough to store all coefficients of one orient3d-polynomial (products of three coordinate differences),
+// while the products of two such polynomials are computed in 256 bits, see signOfProductsDiff<Int128Mul256> below
+template <std::int64_t M>
+using Poly = SparsePolynomial<FastInt128, std::int64_t, M>;
 
-Poly orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
-    int dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
+template <std::int64_t M>
+Poly<M> orient3dPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c, const PointDegree & d,
+    std::int64_t dy ) // degree.x = ( degree.y = degree.z * dy ) * dy
 {
-    const int dx = dy * dy;
+    // every element of the matrix with the rows (a-d), (b-d), (c-d) is a polynomial: delta + eps^degP - eps^degD,
+    // whose terms are stored below (skipping zero delta), the last term is always -eps^degD
+    struct Element
+    {
+        typename Poly<M>::Term terms[3];
+        int numTerms = 0;
+    };
+    Element m[3][3];
+    const PointDegree * rows[3] = { &a, &b, &c };
+    const std::int64_t w[3] = { dy * dy, dy, 1 };
+    for ( int r = 0; r < 3; ++r )
+        for ( int col = 0; col < 3; ++col )
+        {
+            auto & e = m[r][col];
+            if ( const std::int64_t delta = std::int64_t( rows[r]->pt[col] ) - d.pt[col] )
+                e.terms[e.numTerms++] = { 0, delta };
+            e.terms[e.numTerms++] = { w[col] * rows[r]->d, 1 };
+            e.terms[e.numTerms++] = { w[col] * d.d, -1 };
+        }
 
-    const Poly xx( a.pt.x - d.pt.x, a.d * dx, 1, d.d * dx, -1 );
-    const Poly xy( a.pt.y - d.pt.y, a.d * dy, 1, d.d * dy, -1 );
-    const Poly xz( a.pt.z - d.pt.z, a.d     , 1, d.d     , -1 );
-
-    const Poly yx( b.pt.x - d.pt.x, b.d * dx, 1, d.d * dx, -1 );
-    const Poly yy( b.pt.y - d.pt.y, b.d * dy, 1, d.d * dy, -1 );
-    const Poly yz( b.pt.z - d.pt.z, b.d     , 1, d.d     , -1 );
-
-    const Poly zx( c.pt.x - d.pt.x, c.d * dx, 1, d.d * dx, -1 );
-    const Poly zy( c.pt.y - d.pt.y, c.d * dy, 1, d.d * dy, -1 );
-    const Poly zz( c.pt.z - d.pt.z, c.d     , 1, d.d     , -1 );
-
-    Poly t;
-
-    t  = yy * zz;
-    t -= yz * zy;
-    Poly det = xx * t;
-
-    t  = yx * zz;
-    t -= yz * zx;
-    det -= xy * t;
-
-    t  = yx * zy;
-    t -= yy * zx;
-    det += xz * t;
-
-    return det;
+    // the determinant is the sum over 6 permutations of the signed products of three elements, each product has up to 27 monomials;
+    // the product of the last terms of three elements (eps^(13*degD) with the sign of permutation) is excluded, since 6 of them cancel one another
+    constexpr int perms[6][4] = { { 0, 1, 2, 1 }, { 1, 2, 0, 1 }, { 2, 0, 1, 1 }, { 0, 2, 1, -1 }, { 2, 1, 0, -1 }, { 1, 0, 2, -1 } };
+    std::vector<typename Poly<M>::Term> terms;
+    terms.reserve( 6 * 26 );
+    for ( const auto & p : perms )
+    {
+        const Element & e0 = m[0][p[0]];
+        const Element & e1 = m[1][p[1]];
+        const Element & e2 = m[2][p[2]];
+        for ( int k0 = 0; k0 < e0.numTerms; ++k0 )
+            for ( int k1 = 0; k1 < e1.numTerms; ++k1 )
+            {
+                // all coefficients are not larger than 2^32 by absolute value, so the product of two of them fits in int64
+                const std::int64_t c01 = p[3] * std::int64_t( e0.terms[k0].second ) * std::int64_t( e1.terms[k1].second );
+                const std::int64_t d01 = e0.terms[k0].first + e1.terms[k1].first;
+                const int last2 = k0 + 1 == e0.numTerms && k1 + 1 == e1.numTerms ? e2.numTerms - 1 : e2.numTerms;
+                for ( int k2 = 0; k2 < last2; ++k2 )
+                    if ( const auto deg = d01 + e2.terms[k2].first; deg <= M )
+                        terms.emplace_back( deg, Int64Mul128( c01 ) * Int64Mul128( std::int64_t( e2.terms[k2].second ) ) );
+            }
+    }
+    return Poly<M>::fromUnsortedTerms( std::move( terms ) );
 }
 
-Int128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+FastInt128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
 {
     const Vector3i64 x( a - d );
     const Vector3i64 y( b - d );
     const Vector3i64 z( c - d );
 
     return
-        x.x * Int128( y.y * z.z - y.z * z.y )
-     -  x.y * Int128( y.x * z.z - y.z * z.x )
-     +  x.z * Int128( y.x * z.y - y.y * z.x );
+        Int64Mul128( x.x ) * Int64Mul128( y.y * z.z - y.z * z.y )
+     -  Int64Mul128( x.y ) * Int64Mul128( y.x * z.z - y.z * z.x )
+     +  Int64Mul128( x.z ) * Int64Mul128( y.x * z.y - y.y * z.x );
+}
+
+
+/// vertices of two triangles ta=234 and tb=567 split into shared and not-shared ones
+struct SharedPoints
+{
+    int numShared = 0;           ///< number of vertices shared by ta and tb (0, 1 or 2)
+    PreciseVertCoords otherA[3]; ///< first 3-numShared elements are the vertices of ta not in tb
+    PreciseVertCoords otherB[3]; ///< first 3-numShared elements are the vertices of tb not in ta
+};
+
+SharedPoints findSharedPoints( const std::array<PreciseVertCoords, 8> & vs )
+{
+    SharedPoints res;
+    int na = 0, nb = 0;
+    for ( int i = 2; i < 5; ++i )
+    {
+        bool shared = false;
+        for ( int j = 5; j < 8; ++j )
+        {
+            if ( vs[i].id != vs[j].id )
+                continue;
+            assert( vs[i].pt == vs[j].pt );
+            shared = true;
+        }
+        if ( shared )
+            ++res.numShared;
+        else
+            res.otherA[na++] = vs[i];
+    }
+    assert( res.numShared <= 2 ); // triangles sharing all three vertices are not allowed
+    for ( int j = 5; j < 8; ++j )
+    {
+        bool shared = false;
+        for ( int i = 2; i < 5; ++i )
+            shared = shared || vs[i].id == vs[j].id;
+        if ( !shared )
+            res.otherB[nb++] = vs[j];
+    }
+    assert( na == nb && na + res.numShared == 3 );
+    return res;
+}
+
+/// if all given points are on one side of the plane passing via vertices t0, t1, t2 then returns that side, otherwise returns nullopt
+std::optional<bool> oneSideOfPlane( const std::array<PreciseVertCoords, 8> & vs, int t0, int t1, int t2, const PreciseVertCoords * pts, int numPts )
+{
+    assert( numPts > 0 );
+    const bool side = orient3d( { vs[t0], vs[t1], vs[t2], pts[0] } );
+    for ( int i = 1; i < numPts; ++i )
+        if ( side != orient3d( { vs[t0], vs[t1], vs[t2], pts[i] } ) )
+            return {};
+    return side;
+}
+
+/// the volumes of the tetrahedra formed by two triangles ta, tb (or planes) and the ends of segment s
+struct SegmentVolumes
+{
+    FastInt128 taOrg, taDest, tbOrg, tbDest;
+};
+
+/// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 given by exact coordinates,
+/// or nullopt if the intersection points coincide exactly
+std::optional<bool> segmentIntersectionOrderExact( const SegmentVolumes & v )
+{
+    // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
+    //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
+    assert( ( v.taOrg <= 0 && v.taDest >= 0 ) || ( v.taOrg >= 0 && v.taDest <= 0 ) );
+    assert( ( v.tbOrg <= 0 && v.tbDest >= 0 ) || ( v.tbOrg >= 0 && v.tbDest <= 0 ) );
+
+    const auto nomSimple = Int128Mul256( v.taOrg ) * Int128Mul256( v.tbDest ) - Int128Mul256( v.tbOrg ) * Int128Mul256( v.taDest );
+    if ( nomSimple == 0 )
+        return {};
+
+    bool res = nomSimple > 0;
+    assert( v.taOrg || v.taDest );
+    if ( v.taOrg < v.taDest )
+        res = !res;
+    assert( v.tbOrg || v.tbDest );
+    if ( v.tbOrg < v.tbDest )
+        res = !res;
+    return res;
+}
+
+/// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 when the intersection points coincide exactly,
+/// resolved by simulation-of-simplicity; the caller must have checked that neither triangle is on one side of the other's plane
+template <std::int64_t M>
+bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords, 8> & vs )
+{
+    const auto ds = getPointDegrees( vs );
+    const auto polyTaOrg  = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[0], 3 );
+    const auto polyTaDest = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[1], 3 );
+    assert( !polyTaOrg.empty() || !polyTaDest.empty() );
+    assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
+    const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
+
+    const auto polyTbOrg  = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[0], 3 );
+    const auto polyTbDest = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[1], 3 );
+    assert( !polyTbOrg.empty() || !polyTbDest.empty() );
+    assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
+    const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
+
+    // the sign of the leading term of nom = polyTaOrg * polyTbDest - polyTbOrg * polyTaDest, whose zero-degree coefficient is nomSimple == 0
+    const int nomSign = signOfProductsDiff<Int128Mul256>( polyTaOrg, polyTbDest, polyTbOrg, polyTaDest );
+    assert( nomSign != 0 );
+    bool res = nomSign > 0;
+    if ( posTaOrg != posTbOrg ) // denominator is negative
+        res = !res;
+    return res;
 }
 
 } // anonymous namespace
 
-bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
+namespace
 {
-    auto vhp = dot( Vector3i128fast{ a }, Vector3i128fast{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
-    if ( vhp ) return vhp > 0;
+
+/// orient3d( a, b, c ) for the points 0, a, b, c known to be on the same plane, resolved by simulation-of-simplicity
+bool orient3dDegenerate( const Vector3i & a, const Vector3i& b, const Vector3i& c )
+{
+    assert( dot( Vector3i64mul{ a }, Vector3i64mul{ cross( Vector3i64{ b }, Vector3i64{ c } ) } ) == 0 );
 
     auto v = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
     if ( v ) return v > 0;
@@ -152,8 +280,11 @@ bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
     return true;
 }
 
-bool orient3d( const PreciseVertCoords* vs )
+/// orient3d( vs ) for four points known to be exactly coplanar, resolved by simulation-of-simplicity
+bool orient3dDegenerate( const std::array<PreciseVertCoords, 4> & vs )
 {
+    assert( volume( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt ) == 0 );
+
     bool odd = false;
     std::array<int, 4> order = { 0, 1, 2, 3 };
 
@@ -170,12 +301,38 @@ bool orient3d( const PreciseVertCoords* vs )
         }
     }
 
-    return odd != orient3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
+    const auto & d = vs[order[3]].pt;
+    return odd != orient3dDegenerate( vs[order[0]].pt - d, vs[order[1]].pt - d, vs[order[2]].pt - d );
 }
 
-bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
+} // anonymous namespace
+
+bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 {
-    return orient3d( vs.data() );
+    auto vhp = dot( Vector3i64mul{ a }, Vector3i64mul{ cross( Vector3i64{ b }, Vector3i64{ c } ) } );
+    if ( vhp ) return vhp > 0;
+    return orient3dDegenerate( a, b, c );
+}
+
+bool orient3d( const PreciseVertCoords* vs )
+{
+    // the exact answer first, the perturbation of the points is necessary only if all four points are exactly coplanar
+    if ( const auto v = volume( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt ); v != 0 )
+        return v > 0;
+    return orient3dDegenerate( { vs[0], vs[1], vs[2], vs[3] } );
+}
+
+bool ccwAroundLine( const PreciseVertCoords* vs )
+{
+    // orient3d( vs[0], vs[1], x, y ) is true iff the rotation around the line from the half-plane
+    // via x to the half-plane via y is clockwise, and the three half-planes are counter-clockwise
+    // iff at least two of the pairs (2,3), (3,4), (4,2) are counter-clockwise
+    const bool l3 = orient3d( { vs[0], vs[1], vs[2], vs[3] } );
+    const bool l4 = orient3d( { vs[0], vs[1], vs[2], vs[4] } );
+    if ( l3 != l4 )
+        return l4; // the pairs (2,3) and (4,2) agree, and give the answer
+
+    return orient3d( { vs[0], vs[1], vs[4], vs[3] } ); // they disagree, so the pair (3,4) decides
 }
 
 TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<PreciseVertCoords, 5> & vs )
@@ -216,152 +373,72 @@ TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<Prec
 bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
 {
     // s=01, ta=234, tb=567
-    auto as = { vs[2], vs[3], vs[4] };
-    auto bs = { vs[5], vs[6], vs[7] };
-
     assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
     assert( doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) );
 
-    // check for shared points in ta and tb
-    PreciseVertCoords firstSharedPoint;
-    for ( auto va : as )
-        for ( auto vb : bs )
-            if ( va.id == vb.id )
-            {
-                assert( va.pt == vb.pt );
-                firstSharedPoint = va;
-                goto exitLoop1;
-            }
-    exitLoop1:
-
-    if ( firstSharedPoint.id )
+    const SegmentVolumes v
     {
-        PreciseVertCoords secondSharedPoint;
-        for ( auto va : as )
-            for ( auto vb : bs )
-                if ( va.id == vb.id && va.id != firstSharedPoint.id )
-                {
-                    assert( va.pt == vb.pt );
-                    secondSharedPoint = va;
-                    goto exitLoop2;
-                }
-        exitLoop2:
+        .taOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt ),
+        .taDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt ),
+        .tbOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt ),
+        .tbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt )
+    };
+    if ( auto res = segmentIntersectionOrderExact( v ) )
+        return *res;
 
-        if ( secondSharedPoint.id )
-        {
-            PreciseVertCoords thirdPointB;
-            for ( auto vb : bs )
-                if ( vb.id != firstSharedPoint.id && vb.id != secondSharedPoint.id )
-                {
-                    thirdPointB = vb;
-                    break;
-                }
-            assert( thirdPointB.id );
-            assert( thirdPointB.id != vs[2].id && thirdPointB.id != vs[3].id && thirdPointB.id != vs[4].id ); // the case when both triangles share all 3 points is not valid
-            return orient3d( { vs[2], vs[3], vs[4], thirdPointB } )
-                == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
-        }
+    // the intersection points coincide exactly, and the perturbation of the points decides;
+    // shared vertices are on both planes, so only not-shared vertices define the side of a triangle
+    const auto sp = findSharedPoints( vs );
+    if ( auto sideA = oneSideOfPlane( vs, 5, 6, 7, sp.otherA, 3 - sp.numShared ) )
+        return *sideA == ( v.tbOrg != 0 ? v.tbOrg > 0 : orient3dDegenerate( { vs[5], vs[6], vs[7], vs[0] } ) ); // ta is on one side of tb's plane
+    if ( auto sideB = oneSideOfPlane( vs, 2, 3, 4, sp.otherB, 3 - sp.numShared ) )
+        return *sideB == ( v.taDest != 0 ? v.taDest > 0 : orient3dDegenerate( { vs[2], vs[3], vs[4], vs[1] } ) ); // tb is on one side of ta's plane
 
-        // only one shared point in ta and tb
+    // triangles ta and tb intersect one another
+    return segmentIntersectionOrderDegenerate<cMaxPolyDTriTri>( vs );
+}
 
-        PreciseVertCoords secondPointA, thirdPointA;
-        for ( auto va : as )
-            if ( va.id != firstSharedPoint.id )
-            {
-                if ( !secondPointA.id )
-                    secondPointA = va;
-                else
-                    thirdPointA = va;
-            }
-        assert( secondPointA.id && thirdPointA.id );
-        const bool a2 = orient3d( { vs[5], vs[6], vs[7], secondPointA } );
-        if ( a2 == orient3d( { vs[5], vs[6], vs[7], thirdPointA } ) ) //both not-shared a-points are on one side of tb
-            return a2 == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
+bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs )
+{
+    // s=01, ta=234, pb=567
+    assert( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
 
-        PreciseVertCoords secondPointB, thirdPointB;
-        for ( auto vb : bs )
-            if ( vb.id != firstSharedPoint.id )
-            {
-                if ( !secondPointB.id )
-                    secondPointB = vb;
-                else
-                    thirdPointB = vb;
-            }
-        assert( secondPointB.id && thirdPointB.id );
-        const bool b2 = orient3d( { vs[2], vs[3], vs[4], secondPointB } );
-        if ( b2 == orient3d( { vs[2], vs[3], vs[4], thirdPointB } ) ) //both not-shared b-points are on one side of ta
-            return b2 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
-
-        // triangles ta and tb intersect one another, process it as general case
-    }
-    else
+    const auto volumeOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
+    const auto volumeDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
+    const bool o0 = volumeOrg  != 0 ? volumeOrg  > 0 : orient3dDegenerate( { vs[5], vs[6], vs[7], vs[0] } );
+    const bool o1 = volumeDest != 0 ? volumeDest > 0 : orient3dDegenerate( { vs[5], vs[6], vs[7], vs[1] } );
+    if ( o0 == o1 )
     {
-        // no shared points in ta and tb
-        const bool a1 = orient3d( { vs[5], vs[6], vs[7], vs[2] } );
-        if ( a1 == orient3d( { vs[5], vs[6], vs[7], vs[3] } ) && a1 == orient3d( { vs[5], vs[6], vs[7], vs[4] } ) )
-        {
-            // all a-points are on one side of tb
-            return a1 == orient3d( { vs[5], vs[6], vs[7], vs[0] } );
-        }
+        // entire segment s is on one side of plane pb, so the line of s crosses pb either before s[0] or after s[1];
+        // it is after s[1] iff s[1] is closer to pb than s[0]
+        if ( volumeOrg != volumeDest )
+            return ( volumeOrg > volumeDest ) == o0;
 
-        const bool b1 = orient3d( { vs[2], vs[3], vs[4], vs[5] } );
-        if ( b1 == orient3d( { vs[2], vs[3], vs[4], vs[6] } ) && b1 == orient3d( { vs[2], vs[3], vs[4], vs[7] } ) )
-        {
-            // all b-points are on one side of ta
-            return b1 == orient3d( { vs[2], vs[3], vs[4], vs[1] } );
-        }
-
-        // triangles ta and tb intersect one another, process it as general case
+        // s is parallel to pb, and the perturbation of the points decides, which end of s is closer to pb
+        const auto ds = getPointDegrees( vs );
+        auto diff = orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[0], 3 );
+        diff -= orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[1], 3 );
+        return diff.isPositive() == o0;
     }
 
-    // res = ( orient3d(ta,s[0])*orient3d(tb,s[1])   -   orient3d(tb,s[0])*orient3d(ta,s[1]) ) /
-    //       ( orient3d(ta,s[0])-orient3d(ta,s[1]) ) * ( orient3d(tb,s[0])-orient3d(tb,s[1]) )
-    const auto volumeTaOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt );
-    const auto volumeTaDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt );
-    assert( ( volumeTaOrg <= 0 && volumeTaDest >= 0 ) || ( volumeTaOrg >= 0 && volumeTaDest <= 0 ) );
-
-    const auto volumeTbOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
-    const auto volumeTbDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
-    assert( ( volumeTbOrg <= 0 && volumeTbDest >= 0 ) || ( volumeTbOrg >= 0 && volumeTbDest <= 0 ) );
-
-    const auto nomSimple = Int256( volumeTaOrg ) * Int256( volumeTbDest ) - Int256( volumeTbOrg ) * Int256( volumeTaDest );
-    if ( nomSimple != 0 )
+    // segment s crosses plane pb
+    const SegmentVolumes v
     {
-        // happy not-degenerated path
-        bool res = nomSimple > 0;
-        assert( volumeTaOrg || volumeTaDest );
-        if ( volumeTaOrg < volumeTaDest )
-            res = !res;
-        assert( volumeTbOrg || volumeTbDest );
-        if ( volumeTbOrg < volumeTbDest )
-            res = !res;
-        return res;
-    }
+        .taOrg  = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[0].pt ),
+        .taDest = volume( vs[2].pt, vs[3].pt, vs[4].pt, vs[1].pt ),
+        .tbOrg  = volumeOrg,
+        .tbDest = volumeDest
+    };
+    if ( auto res = segmentIntersectionOrderExact( v ) )
+        return *res;
 
-    const auto ds = getPointDegrees( vs );
+    // the intersection points coincide exactly, and the perturbation of the points decides
+    const auto sp = findSharedPoints( vs );
+    if ( auto sideA = oneSideOfPlane( vs, 5, 6, 7, sp.otherA, 3 - sp.numShared ) )
+        return *sideA == o0; // ta is on one side of pb
 
-    const auto polyTaOrg  = orient3dPoly( ds[2], ds[3], ds[4], ds[0], 3 );
-    const auto polyTaDest = orient3dPoly( ds[2], ds[3], ds[4], ds[1], 3 );
-    assert( !polyTaOrg.empty() || !polyTaDest.empty() );
-    assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
-    const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
-
-    const auto polyTbOrg  = orient3dPoly( ds[5], ds[6], ds[7], ds[0], 3 );
-    const auto polyTbDest = orient3dPoly( ds[5], ds[6], ds[7], ds[1], 3 );
-    assert( !polyTbOrg.empty() || !polyTbDest.empty() );
-    assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
-    const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
-
-    auto nom = polyTaOrg * polyTbDest;
-    nom -= polyTbOrg * polyTaDest;
-
-    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 128-bit arithmetic
-    nom.setZeroCoeff( 0 );
-
-    bool res = nom.isPositive();
-    if ( posTaOrg != posTbOrg ) // denominator is negative
-        res = !res;
-    return res;
+    // pb is infinite, so even if all its three points are on one side of ta, pb can cross s on either side of s^ta
+    return segmentIntersectionOrderDegenerate<cMaxPolyDTriPlane>( vs );
 }
 
 ConvertToIntVector getToIntConverter( const Box3d& box )
@@ -374,13 +451,7 @@ ConvertToIntVector getToIntConverter( const Box3d& box )
     // so the difference of any two points will be within [-max; +max] range
     double invRange = cRangeIntMax / maxDim;
 
-    return [invRange, center] ( const Vector3f& v )
-    {
-        // perform intermediate operations in double for better precision
-        const auto d = ( Vector3d{ v } - center ) * invRange;
-        // and round to the nearest integer instead of truncating to zero
-        return Vector3i( (int)std::round( d.x ), (int)std::round( d.y ), (int)std::round( d.z ) );
-    };
+    return ConvertToIntVector{ center, invRange };
 }
 
 ConvertToFloatVector getToFloatConverter( const Box3d& box )
@@ -393,10 +464,53 @@ ConvertToFloatVector getToFloatConverter( const Box3d& box )
     // so the difference of any two points will be within [-max; +max] range
     double range = maxDim / cRangeIntMax;
 
-    return [range, center] ( const Vector3i& v )
+    return ConvertToFloatVector{ range, center };
+}
+
+Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,
+    const VertCoords& points, const VertBitSet* valid )
+{
+    MR_TIMER;
+    Vector<Vector3i, VertId> res;
+    res.resizeNoInit( points.size() );
+    if ( valid )
     {
-        return Vector3f( Vector3d{ v }*range + center );
-    };
+        BitSetParallelFor( *valid, [&]( VertId v )
+        {
+            res[v] = conv( points[v] );
+        } );
+    }
+    else
+    {
+        ParallelFor( res, [&]( VertId v )
+        {
+            res[v] = conv( points[v] );
+        } );
+    }
+    return res;
+}
+
+VertCoords computeFloatCoords( const ConvertToFloatVector& conv,
+    const Vector<Vector3i, VertId>& intCoords, const VertBitSet* valid )
+{
+    MR_TIMER;
+    VertCoords res;
+    res.resizeNoInit( intCoords.size() );
+    if ( valid )
+    {
+        BitSetParallelFor( *valid, [&]( VertId v )
+        {
+            res[v] = conv( intCoords[v] );
+        } );
+    }
+    else
+    {
+        ParallelFor( res, [&]( VertId v )
+        {
+            res[v] = conv( intCoords[v] );
+        } );
+    }
+    return res;
 }
 
 std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di )
@@ -407,14 +521,14 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
     const auto abc = cross( ab, ac );
     const auto abd = cross( ab, ad );
 
-    if ( dot( Vector3i128fast( abc ), Vector3i128fast( abd ) ) > 0 )
+    if ( dot( Vector3i64mul( abc ), Vector3i64mul( abd ) ) > 0 )
         return std::nullopt; // CD is on one side of AB
 
     const auto cd = Vector3i64{ di - ci };
     const auto cb = Vector3i64{ bi - ci };
     const auto cda = cross( cd, -ac );
     const auto cdb = cross( cd, cb );
-    if ( dot( Vector3i128fast( cda ), Vector3i128fast( cdb ) ) > 0 )
+    if ( dot( Vector3i64mul( cda ), Vector3i64mul( cdb ) ) > 0 )
         return std::nullopt; // AB is on one side of CD
 
     constexpr Vector3i64 zero;
@@ -438,8 +552,8 @@ std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const V
 
     // common intersection - AB and CD are non-collinear
     const Vector3i64 n = abc - abd; // not unit
-    FastInt128 ck = dot( Vector3i128fast( n ), Vector3i128fast( abc ) );
-    FastInt128 dk = dot( Vector3i128fast( n ), Vector3i128fast( abd ) );
+    FastInt128 ck = dot( Vector3i64mul( n ), Vector3i64mul( abc ) );
+    FastInt128 dk = dot( Vector3i64mul( n ), Vector3i64mul( abd ) );
     assert( ck >=0 && dk <= 0 );
 
     // scale down ck and dk to make sure that below products can be computed in 128 bits
@@ -463,10 +577,10 @@ Vector3f findTriangleSegmentIntersectionPrecise(
     auto ci = converters.toInt( c );
     auto di = converters.toInt( d );
     auto ei = converters.toInt( e );
-    auto abcd = dot( Vector3i128fast{ ai - di }, Vector3i128fast{ cross( Vector3i64{ bi - di }, Vector3i64{ ci - di } ) } );
+    auto abcd = dot( Vector3i64mul{ ai - di }, Vector3i64mul{ cross( Vector3i64{ bi - di }, Vector3i64{ ci - di } ) } );
     if ( abcd < 0 )
         abcd = -abcd;
-    auto abce = dot( Vector3i128fast{ ai - ei }, Vector3i128fast{ cross( Vector3i64{ bi - ei }, Vector3i64{ ci - ei } ) } );
+    auto abce = dot( Vector3i64mul{ ai - ei }, Vector3i64mul{ cross( Vector3i64{ bi - ei }, Vector3i64{ ci - ei } ) } );
     if ( abce < 0 )
         abce = -abce;
     auto sum = abcd + abce;

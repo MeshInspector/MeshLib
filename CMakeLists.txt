@@ -49,13 +49,19 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
       add_link_options("-fuse-ld=lld")
     ENDIF()
     add_link_options("LINKER:-z,separate-loadable-segments")
+    # Fold byte-identical functions. `safe` folds only the address-insignificant
+    # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
+    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
+    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
+    # Widen what ICF can reach: without this only COMDAT functions (templates,
+    # inlines) get their own section, so plain out-of-line ones never fold.
+    # `-fdata-sections` would add nothing -- lld folds executable sections only.
+    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
   ENDIF()
 ENDIF()
 
 include(CompilerOptions)
-IF(EMSCRIPTEN)
-  include(ConfigureEmscripten)
-ENDIF()
+include(ConfigurePch)
 
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -82,6 +88,8 @@ option(MESHLIB_BUILD_VOXELS "Build voxels library" ON)
 option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON)
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
+option(MESHLIB_BUILD_WASM_MODULE "Build the headless WebAssembly module" OFF)
+option(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY "Emit only the WebAssembly module's TypeScript definitions, leaving MeshLib unlinked" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -96,11 +104,14 @@ IF(MESHLIB_BUILD_MRCUDA)
   ENDIF()
 ENDIF()
 
-IF(MR_EMSCRIPTEN)
+IF(EMSCRIPTEN)
+  include(ConfigureEmscripten)
   set(MESHLIB_PYTHON_SUPPORT OFF)
   set(MESHLIB_BUILD_PYTHON_MODULES OFF)
   set(MESHLIB_BUILD_MESHCONV OFF)
   set(MESHLIB_BUILD_MCP OFF)
+ELSE()
+  set(MESHLIB_BUILD_WASM_MODULE OFF)
 ENDIF()
 
 # Python modules are incompatible with _ITERATOR_DEBUG_LEVEL=2 because the
@@ -159,6 +170,8 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
           set(MESHLIB_PYTHON_VERSION "3.10")
         ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_24")
           set(MESHLIB_PYTHON_VERSION "3.12")
+        ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_26")
+          set(MESHLIB_PYTHON_VERSION "3.14")
         ENDIF()
       ENDIF()
     ENDIF()
@@ -325,6 +338,10 @@ IF(MESHLIB_BUILD_MCP AND NOT MR_EMSCRIPTEN)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRMCPGateway ./MRMCPGateway)
 ENDIF()
 
+IF(MESHLIB_BUILD_WASM_MODULE)
+  add_subdirectory(${PROJECT_SOURCE_DIR}/MRWasmModule ./MRWasmModule)
+ENDIF()
+
 IF(BUILD_TESTING)
   enable_testing()
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRTest ./MRTest)
@@ -354,6 +371,11 @@ install(
 install(
   DIRECTORY cmake/Modules
   DESTINATION ${MR_CONFIG_DIR}
+)
+
+install(
+  FILES ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/licenses/THIRD-PARTY-NOTICES.txt
+  DESTINATION ${MR_RESOURCES_DIR}
 )
 
 IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)

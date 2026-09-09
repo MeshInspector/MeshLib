@@ -17,28 +17,6 @@ namespace MR
 namespace MeshComponents
 {
 
-/// returns
-/// 1. the mapping: Root Id -> Region Id in [0, 1, 2, ...)
-/// 2. the total number of roots/regions
-template<typename T>
-static std::pair<Vector<RegionId, Id<T>>, int> getUniqueRootIds( const Vector<Id<T>, Id<T>>& allRoots, const TaggedBitSet<T>& region )
-{
-    MR_TIMER;
-    Vector<RegionId, Id<T>> uniqueRootsMap( allRoots.size() );
-    int k = 0;
-    for ( auto f : region )
-    {
-        auto& uniqIndex = uniqueRootsMap[allRoots[f]];
-        if ( uniqIndex < 0 )
-        {
-            uniqIndex = RegionId( k );
-            ++k;
-        }
-        uniqueRootsMap[f] = uniqIndex;
-    }
-    return { std::move( uniqueRootsMap ), k };
-}
-
 FaceBitSet getComponent( const MeshPart& meshPart, FaceId id, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     MR_TIMER;
@@ -76,22 +54,25 @@ VertBitSet getComponentVerts( const Mesh& mesh, VertId id, const VertBitSet* reg
 
 }
 
-FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd, float minArea, int * numSmallerComponents )
+double getLargestComponentArea( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd,
+    FaceBitSet * largestComponent, int * numSmallerComponents )
 {
     MR_TIMER;
+
+    if ( largestComponent )
+        largestComponent->clear();
 
     auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
     const auto& mesh = meshPart.mesh;
     const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
 
-    FaceBitSet maxAreaComponent;
     const auto& allRoots = unionFindStruct.roots();
     auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
     if ( k <= 0 )
     {
         if ( numSmallerComponents )
             *numSmallerComponents = 0;
-        return maxAreaComponent;
+        return 0;
     }
 
     double maxDblArea = -DBL_MAX;
@@ -101,30 +82,126 @@ FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidenc
     {
         auto index = uniqueRootsMap[f];
         auto& dblArea = dblAreas[index];
-        dblArea += meshPart.mesh.dblArea( f );
+        dblArea += mesh.dblArea( f );
         if ( dblArea > maxDblArea )
         {
             maxI = index;
             maxDblArea = dblArea;
         }
     }
-    if ( maxDblArea < 2 * minArea )
-    {
-        if ( numSmallerComponents )
-            *numSmallerComponents = k;
-        return maxAreaComponent;
-    }
     if ( numSmallerComponents )
         *numSmallerComponents = k - 1;
-    maxAreaComponent.resize( region.find_last() + 1 );
+    if ( largestComponent )
+    {
+        largestComponent->resize( region.find_last() + 1 );
+        for ( auto f : region )
+        {
+            auto index = uniqueRootsMap[f];
+            if ( index != maxI )
+                continue;
+            largestComponent->set( f );
+        }
+    }
+    return 0.5 * maxDblArea;
+}
+
+FaceBitSet getLargestComponent( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd, float minArea, int * numSmallerComponents )
+{
+    MR_TIMER;
+
+    FaceBitSet maxAreaComponent;
+    int numOtherComponents = 0;
+    const auto maxArea = getLargestComponentArea( meshPart, incidence, isCompBd, &maxAreaComponent, &numOtherComponents );
+    if ( maxArea < minArea )
+    {
+        // the largest component is not returned, so it is counted among smaller ones (if it exists at all)
+        if ( numSmallerComponents )
+            *numSmallerComponents = maxAreaComponent.any() ? numOtherComponents + 1 : 0;
+        return {};
+    }
+    if ( numSmallerComponents )
+        *numSmallerComponents = numOtherComponents;
+    return maxAreaComponent;
+}
+
+double getLargestComponentVolume( const MeshPart& meshPart, VolumeSelection selection, FaceIncidence incidence,
+    const UndirectedEdgeBitSet * isCompBd, FaceBitSet * largestComponent, int * numSmallerComponents )
+{
+    MR_TIMER;
+
+    if ( largestComponent )
+        largestComponent->clear();
+
+    auto unionFindStruct = getUnionFindStructureFaces( meshPart, incidence, isCompBd );
+    const auto& mesh = meshPart.mesh;
+    const FaceBitSet& region = mesh.topology.getFaceIds( meshPart.region );
+
+    const auto& allRoots = unionFindStruct.roots();
+    auto [uniqueRootsMap, k] = getUniqueRootIds( allRoots, region );
+    if ( k <= 0 )
+    {
+        if ( numSmallerComponents )
+            *numSmallerComponents = 0;
+        return 0;
+    }
+
+    // six-fold volume of each component, valid if the component is closed
+    std::vector<double> sixVolumes( k, 0.0 );
     for ( auto f : region )
     {
-        auto index = uniqueRootsMap[f];
-        if ( index != maxI )
-            continue;
-        maxAreaComponent.set( f );
+        const auto fp = mesh.getTriPoints( f );
+        sixVolumes[uniqueRootsMap[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
     }
-    return maxAreaComponent;
+
+    // unlike area, volume is not accumulated monotonically, so the component is selected only here
+    int maxI = -1;
+    // the larger the key, the better the component; not positive key means unsuitable component,
+    // and only Abs rule accepts a component of zero volume
+    double maxKey = selection == VolumeSelection::Abs ? -1.0 : 0.0;
+    for ( int i = 0; i < k; ++i )
+    {
+        double key = 0;
+        switch ( selection )
+        {
+        case VolumeSelection::Positive:
+            key = sixVolumes[i];
+            break;
+        case VolumeSelection::Negative:
+            key = -sixVolumes[i];
+            break;
+        default:
+            assert( selection == VolumeSelection::Abs );
+            key = std::abs( sixVolumes[i] );
+            break;
+        }
+        if ( key > maxKey )
+        {
+            maxI = i;
+            maxKey = key;
+        }
+    }
+    if ( maxI < 0 )
+    {
+        // no component satisfies the selection rule, so all of them are counted as smaller ones
+        if ( numSmallerComponents )
+            *numSmallerComponents = k;
+        return 0;
+    }
+
+    if ( numSmallerComponents )
+        *numSmallerComponents = k - 1;
+    if ( largestComponent )
+    {
+        largestComponent->resize( region.find_last() + 1 );
+        for ( auto f : region )
+        {
+            auto index = uniqueRootsMap[f];
+            if ( index != maxI )
+                continue;
+            largestComponent->set( f );
+        }
+    }
+    return sixVolumes[maxI] / 6.0;
 }
 
 VertBitSet getLargestComponentVerts( const Mesh& mesh, const VertBitSet* region /*= nullptr */ )
@@ -203,6 +280,29 @@ FaceBitSet getLargeByAreaComponents( const MeshPart& mp, float minArea, const Un
 {
     auto unionFind = getUnionFindStructureFacesPerEdge( mp, isCompBd );
     return getLargeByAreaComponents( mp, unionFind, minArea );
+}
+
+FaceBitSet getLargeByVolumeComponents( const MeshPart& mp, float minVolume )
+{
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+    {
+        assert( !"getLargeByVolumeComponents: require closed mesh part" );
+        return {};
+    }
+    auto mapAndNum = MeshComponents::getAllComponentsMap( mp );
+    Vector<double, RegionId> volumes( mapAndNum.second, 0.0 );
+    auto region = mp.mesh.topology.getFaceIds( mp.region );
+    for ( auto f : region )
+    {
+        auto fp = mp.mesh.getTriPoints( f );
+        volumes[mapAndNum.first[f]] += mixed( Vector3d( fp[0] ), Vector3d( fp[1] ), Vector3d( fp[2] ) );
+    }
+    BitSetParallelFor( region, [&] ( FaceId f )
+    {
+        if ( std::abs( volumes[mapAndNum.first[f]] ) < minVolume )
+            region.reset( f );
+    } );
+    return region;
 }
 
 Expected<FaceBitSet> expandToComponents( const MeshPart& mp, const FaceBitSet& seeds, const ExpandToComponentsParams& params /*= {} */ )

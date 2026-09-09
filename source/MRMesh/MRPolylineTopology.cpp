@@ -3,6 +3,8 @@
 #include "MRMapEdge.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
+#include <istream>
+#include <ostream>
 
 namespace MR
 {

@@ -7,21 +7,16 @@
 namespace MR
 {
 
-namespace
+bool MarkedContour3f::firstLastMarked() const
 {
-
-[[maybe_unused]] bool firstLastMarked( const MarkedContour3f & in )
-{
-    if ( !in.marks.test( 0 ) )
+    if ( !marks.test( 0 ) )
         return false;
 
-    if ( in.marks.find_last() + 1 != in.contour.size() )
+    if ( marks.find_last() + 1 != contour.size() )
         return false;
 
     return true;
 }
-
-} // anonymous namespace
 
 MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f * normals )
 {
@@ -31,7 +26,7 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
     if ( in.contour.empty() )
         return res;
 
-    assert( firstLastMarked( in ) );
+    assert( in.firstLastMarked() );
     res.marks.autoResizeSet( res.contour.size() );
     res.contour.push_back( in.contour.front() );
     Contour3f resNormals;
@@ -85,7 +80,7 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
             resNormals.push_back( ( *normals )[i] );
     }
 
-    assert( firstLastMarked( res ) );
+    assert( res.firstLastMarked() );
     assert( in.marks.count() == res.marks.count() );
     if ( normals )
         *normals = std::move( resNormals );
@@ -103,7 +98,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, float markStability, const Conto
     assert( markStability > 0 );
     if ( mc.contour.empty() )
         return mc;
-    assert( firstLastMarked( mc ) );
+    assert( mc.firstLastMarked() );
     const bool closed = isClosed( mc.contour );
 
     const auto sz = mc.contour.size();
@@ -193,7 +188,7 @@ MarkedContour3f makeSpline( MarkedContour3f mc, const Contour3f & normals, float
     assert( markStability > 0 );
     if ( mc.contour.empty() )
         return mc;
-    assert( firstLastMarked( mc ) );
+    assert( mc.firstLastMarked() );
     const bool closed = isClosed( mc.contour );
 
     const auto sz = mc.contour.size();

@@ -2,6 +2,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRMeshFixer.h>
+#include <MRMesh/MRRingIterator.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -118,6 +119,92 @@ TEST( MRMesh, makeBridgeEdge )
     EXPECT_FALSE( x.valid() );
 }
 
+TEST( MRMesh, makeInterHoleBridgeEdges )
+{
+    // two separate triangles, one on top of the other with opposite orientations, with a hole around each
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 5_v, 4_v }
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // VertId{0}
+    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // VertId{1}
+    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // VertId{2}
+    mesh.points.emplace_back( 0.f, 0.f, 1.f ); // VertId{3}
+    mesh.points.emplace_back( 1.f, 0.f, 1.f ); // VertId{4}
+    mesh.points.emplace_back( 0.f, 1.f, 1.f ); // VertId{5}
+
+    auto bdEdges = mesh.topology.findHoleRepresentiveEdges();
+    EXPECT_EQ( bdEdges.size(), 2 );
+
+    // no bridges if less than two holes are given
+    EXPECT_TRUE( makeInterHoleBridgeEdges( mesh, {} ).empty() );
+    EXPECT_TRUE( makeInterHoleBridgeEdges( mesh, { bdEdges[0] } ).empty() );
+
+    // a bridge appears between each pair of mutually closest vertices: (0,3), (1,4), (2,5)
+    auto bridges = makeInterHoleBridgeEdges( mesh, bdEdges );
+    EXPECT_EQ( bridges.size(), 3 );
+    for ( EdgeId b : bridges )
+    {
+        EXPECT_FALSE( mesh.topology.left( b ).valid() );
+        EXPECT_FALSE( mesh.topology.right( b ).valid() );
+        const auto d = mesh.destPnt( b ) - mesh.orgPnt( b );
+        EXPECT_EQ( d.x, 0.f );
+        EXPECT_EQ( d.y, 0.f );
+        EXPECT_EQ( d.lengthSq(), 1.f );
+    }
+    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), 3 );
+
+    // vertices 0 and 3 are mutually closest, but no bridge is created between them,
+    // because it would go deep inside the triangle 0-1-2 incident to vertex 0
+    Triangulation t2{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 4_v, 5_v }
+    };
+    Mesh mesh2;
+    mesh2.topology = MeshBuilder::fromTriangles( t2 );
+    mesh2.points.emplace_back(   0.f, 0.f, 0.f ); // VertId{0}
+    mesh2.points.emplace_back(  10.f, 0.f, 1.f ); // VertId{1}
+    mesh2.points.emplace_back( -10.f, 0.f, 1.f ); // VertId{2}
+    mesh2.points.emplace_back(   0.f, 0.f, 2.f ); // VertId{3}
+    mesh2.points.emplace_back(   1.f, 3.f, 3.f ); // VertId{4}
+    mesh2.points.emplace_back(  -1.f, 3.f, 3.f ); // VertId{5}
+
+    bdEdges = mesh2.topology.findHoleRepresentiveEdges();
+    EXPECT_EQ( bdEdges.size(), 2 );
+    EXPECT_TRUE( makeInterHoleBridgeEdges( mesh2, bdEdges ).empty() );
+}
+
+TEST( MRMesh, bridgeFillAllHoles )
+{
+    // two separate triangles, one on top of the other with opposite orientations, with a hole around each
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 3_v, 5_v, 4_v }
+    };
+    Mesh mesh;
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    mesh.points.emplace_back( 0.f, 0.f, 0.f ); // VertId{0}
+    mesh.points.emplace_back( 1.f, 0.f, 0.f ); // VertId{1}
+    mesh.points.emplace_back( 0.f, 1.f, 0.f ); // VertId{2}
+    mesh.points.emplace_back( 0.f, 0.f, 1.f ); // VertId{3}
+    mesh.points.emplace_back( 1.f, 0.f, 1.f ); // VertId{4}
+    mesh.points.emplace_back( 0.f, 1.f, 1.f ); // VertId{5}
+
+    // three bridges appear and the three holes in between them get filled
+    EXPECT_TRUE( bridgeFillAllHoles( mesh ) );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 6 );
+    EXPECT_TRUE( mesh.topology.findHoleRepresentiveEdges().empty() );
+
+    // nothing to do in the closed mesh now
+    const auto numFaces = mesh.topology.numValidFaces();
+    EXPECT_FALSE( bridgeFillAllHoles( mesh ) );
+    EXPECT_EQ( mesh.topology.numValidFaces(), numFaces );
+}
+
 TEST( MRMesh, HoleFillPlan3 )
 {
     Mesh mesh;
@@ -190,6 +277,74 @@ TEST( MRMesh, HoleFillPlan4 )
     EXPECT_EQ( mesh1.topology.numValidFaces(), 4 );
     EXPECT_TRUE( mesh1.topology.isClosed() );
     EXPECT_FALSE( hasMultipleEdges( mesh1.topology ) );
+}
+
+// hexagonal hole, and the edges of the hole to the left of the returned one
+static Mesh makeHexagonHole( EdgeId & e, std::vector<EdgeId> & holeEdges )
+{
+    Mesh mesh;
+    e = mesh.addSeparateEdgeLoop
+    ( {
+        {  2,  0, 0 },
+        {  1,  2, 0 },
+        { -1,  2, 0 },
+        { -2,  0, 0 },
+        { -1, -2, 0 },
+        {  1, -2, 0 }
+    } );
+    holeEdges.clear();
+    for ( auto ei : leftRing( mesh.topology, e ) )
+        holeEdges.push_back( ei );
+    return mesh;
+}
+
+TEST( MRMesh, HoleFillPlanEdgesOnly )
+{
+    EdgeId e;
+    std::vector<EdgeId> he;
+    auto mesh = makeHexagonHole( e, he );
+    ASSERT_EQ( he.size(), 6 );
+    std::vector<VertId> v;
+    for ( auto ei : he )
+        v.push_back( mesh.topology.org( ei ) );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), 2 );
+
+    // numTris stays zero: the plan only splits the hole in parts and creates no face.
+    // the second chord starts where the first one ends, which is expressible only as the sym
+    // of the first item: -( 2 * item + sym + 1 ) == -2
+    HoleFillPlan plan;
+    plan.items.push_back( { (int)he[2], (int)he[0] } ); // chord org( he2 ) -> org( he0 )
+    plan.items.push_back( { FillHoleItemEdge{ .item = 0, .sym = true }.encode(), (int)he[4] } ); // org( he0 ) -> org( he4 )
+
+    executeHoleFillPlan( mesh, e, plan );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 0 );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), 4 ); // 3 parts and the other side
+    EXPECT_TRUE( mesh.topology.findEdge( v[2], v[0] ).valid() );
+    EXPECT_TRUE( mesh.topology.findEdge( v[0], v[4] ).valid() );
+    // without the sym bit the second chord would have started at the other end of the first one
+    EXPECT_FALSE( mesh.topology.findEdge( v[2], v[4] ).valid() );
+}
+
+TEST( MRMesh, HoleFillPlanSymAnchorMultipleEdge )
+{
+    EdgeId e;
+    std::vector<EdgeId> he;
+    auto mesh = makeHexagonHole( e, he );
+    ASSERT_EQ( he.size(), 6 );
+    const auto v0 = mesh.topology.org( he[0] );
+    const auto v4 = mesh.topology.org( he[4] );
+
+    HoleFillPlan pre;
+    pre.items.push_back( { (int)he[0], (int)he[4] } );
+    executeHoleFillPlan( mesh, e, pre );
+    ASSERT_TRUE( mesh.topology.findEdge( v0, v4 ).valid() );
+
+    // the second item would add org( he0 ) -> org( he4 ) once more, which already exists;
+    // resolving its sym code by the first item's edgeCode1 would look at the other end and miss it
+    HoleFillPlan plan;
+    plan.items.push_back( { (int)he[2], (int)he[0] } );
+    plan.items.push_back( { FillHoleItemEdge{ .item = 0, .sym = true }.encode(), (int)he[4] } );
+    EXPECT_FALSE( isFillingMultipleEdgeFree( mesh.topology, plan ) );
 }
 
 } //namespace MR

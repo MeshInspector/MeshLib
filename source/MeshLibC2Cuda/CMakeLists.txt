@@ -4,6 +4,10 @@
 
 project(MeshLibC2Cuda CXX)
 
+# This is also built for Emscripten, even though Cuda itself never is. The C# bindings always
+#   declare `MR_Cuda_isCudaAvailable()`, and its dummy implementation (always returning false)
+#   lives here, so skipping this project leaves that symbol undefined for wasm consumers.
+
 IF(MSVC)
   # Disabling following warnings:
   #   warning C4244: '+=': conversion from 'T' to 'unsigned short', possible loss of data
@@ -68,8 +72,13 @@ install(
   DESTINATION "${MR_INCLUDE_DIR}"
 )
 
+include(CMakePackageConfigHelpers)
+configure_package_config_file(${PROJECT_NAME}Config.cmake.in ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
+  INSTALL_DESTINATION ${MR_CONFIG_DIR}
+  PATH_VARS MR_MAIN_LIB_DIR
+)
 install(
-  FILES ${CMAKE_CURRENT_SOURCE_DIR}/${PROJECT_NAME}Config.cmake
+  FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   DESTINATION ${MR_CONFIG_DIR}
 )
 

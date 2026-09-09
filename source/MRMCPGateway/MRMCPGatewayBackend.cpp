@@ -4,6 +4,7 @@
 #include "MRMCPGatewaySpawn.h"
 
 #pragma warning(push)
+#pragma warning(disable: 4127) //conditional expression is constant
 #pragma warning(disable: 4800) //Implicit conversion from 'BrotliDecoderState *const ' to bool. Possible information loss (Visual Studio Build Tools 2019 16.11.32510.428)
 #include <httplib.h>
 #pragma warning(pop)

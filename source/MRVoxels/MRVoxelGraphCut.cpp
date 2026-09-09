@@ -13,6 +13,7 @@
 
 #include <array>
 #include <cfloat>
+#include <fstream>
 
 namespace MR
 {

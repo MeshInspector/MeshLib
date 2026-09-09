@@ -1,3 +1,5 @@
+#pragma once // This is needed solely to make C bindings happy, as only they include this file directly.
+
 #include <stack>
 
 namespace MR
@@ -97,7 +99,7 @@ std::shared_ptr<ObjectT> getDepthFirstObject( Object* root, const ObjectSelectiv
 {
     if ( !root )
         return {};
-    
+
     std::stack<Object*> todo;
     todo.push( root );
     while ( !todo.empty() )

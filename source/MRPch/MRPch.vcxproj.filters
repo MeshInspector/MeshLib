@@ -4,6 +4,7 @@
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MREigen.h" />
     <ClInclude Include="MRJson.h" />
+    <ClInclude Include="MROpenVDB.h" />
     <ClInclude Include="MRPch.h" />
     <ClInclude Include="MRTBB.h" />
     <ClInclude Include="MRSpdlog.h" />

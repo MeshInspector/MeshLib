@@ -6,26 +6,117 @@
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
+#include "MRReducePath.h"
+#include "MRLineSegm.h"
+#include "MRVolumeIndexer.h"
+#include "MRBox.h"
+#include "MRMeshIntersect.h"
 
 namespace MR
 {
 
-void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
-    const SharpenMarchingCubesMeshSettings & settings )
+namespace
+{
+/// returns the two lattice nodes bounding the lattice edge, on which the vertex (v) of marching cubes mesh is located;
+/// valid for original marching cubes vertices only (all faces around a vertex introduced later are in one voxel);
+/// returns degenerate segment if the vertex is not surrounded by four voxels
+LineSegm3f findLatticeEdgeEnds( const MeshTopology& t, VertId v, const Vector<VoxelId, FaceId>& face2voxel,
+    const VolumeIndexer& vi, const AffineXf3f& gridToMeshXf )
+{
+    // every marching cubes vertex is located on a lattice edge, which is shared by exactly four voxels
+    VoxelId v0, v1, v2, v3;
+    for ( auto e : orgRing( t, v ) )
+    {
+        auto f = t.left( e );
+        assert( f );
+        auto vc = face2voxel[f];
+        if ( vc == v0 || vc == v1 || vc == v2 )
+            continue;
+        if ( !v0 ) v0 = vc;
+        else if ( !v1 ) v1 = vc;
+        else if ( !v2 ) v2 = vc;
+        else if ( !v3 )
+        {
+            v3 = vc;
+            break;
+        }
+    }
+    assert( v0 && v1 && v2 && v3 );
+    if ( !v3 )
+        return {};
+
+    // the origins of the four voxels are the corners of a unit square orthogonal to the lattice edge
+    Box3i box;
+    for ( VoxelId vc : { v0, v1, v2, v3 } )
+        box.include( vi.toPos( vc ) );
+
+    // the lattice edge is directed along the only axis, where all four voxels have equal coordinate
+    const auto sz = box.size();
+    int dir = -1, numEqualAxes = 0;
+    for ( int i = 0; i < 3; ++i )
+    {
+        if ( sz[i] != 0 )
+            continue;
+        dir = i;
+        ++numEqualAxes;
+    }
+    assert( numEqualAxes == 1 ); // otherwise the voxels do not share one lattice edge
+    if ( numEqualAxes != 1 )
+        return {};
+
+    // and it starts in the node with maximal coordinates among the voxels' origins
+    auto n1 = box.max;
+    ++n1[dir];
+    return { gridToMeshXf( Vector3f( box.max ) ), gridToMeshXf( Vector3f( n1 ) ) };
+}
+}
+
+void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, FaceId>& face2voxel,
+    const SharpenMarchingCubesMeshSettings& settings )
 {
     MR_TIMER;
     assert( settings.minNewVertDev < settings.maxNewRank2VertDev );
     assert( settings.minNewVertDev < settings.maxNewRank3VertDev );
     VertNormals normals( vox.topology.vertSize() );
+    VolumeIndexer vi( settings.dims );
     // find normals and correct points
     ParallelFor( normals, [&] ( VertId v )
     {
         if ( !vox.topology.hasVert( v ) )
             return;
-        const auto proj = findProjection( vox.points[v], ref );
 
-        Vector3f n = ( vox.points[v] - proj.proj.point ).normalized();
-        Vector3f np = ref.mesh.pseudonormal( proj.mtp, ref.region );
+        MeshTriPoint rp;
+        Vector3f refPt;
+        // the vertex is located on the lattice edge, and its position there was found by linear interpolation
+        // of the values in the edge's ends; if the reference mesh crosses that edge, then the crossing
+        // is the exact point, which the interpolation approximates;
+        // this is valid for zero offset only, where the volume stores the distances to the reference mesh itself
+        if ( settings.offset == 0 )
+        {
+            const auto latticeSegm = findLatticeEdgeEnds( vox.topology, v, face2voxel, vi, settings.gridToMeshXf );
+            if ( latticeSegm.lengthSq() > 0 ) // otherwise no lattice edge was found for the vertex
+            {
+                const auto p = vox.points[v];
+                const auto d = latticeSegm.dir();
+                // the ray starts in the vertex and spans the edge in both directions,
+                // so the crossing closest to the vertex is found
+                const auto rayStart = dot( latticeSegm.a - p, d ) / d.lengthSq();
+                if ( const auto isect = rayMeshIntersect( ref, Line3f{ p, d }, rayStart, rayStart + 1 ) )
+                {
+                    rp = isect.mtp;
+                    refPt = ref.mesh.triPoint( rp );
+                }
+            }
+        }
+        if ( !rp.valid() )
+        {
+            const auto proj = findProjection( vox.points[v], ref );
+            rp = proj.mtp;
+            refPt = proj.proj.point;
+        }
+
+        Vector3f n = ( vox.points[v] - refPt ).normalized();
+        Vector3f np = ref.mesh.pseudonormal( rp, ref.region );
         if ( settings.offset == 0 || n.lengthSq() <= 0 )
             n = np;
         else if ( dot( n, np ) < 0 )
@@ -33,8 +124,12 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
 
         if ( settings.maxOldVertPosCorrection > 0 )
         {
-            const auto newPos = proj.proj.point + settings.offset * n;
-            if ( ( newPos - vox.points[v] ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
+            const auto newPos = refPt + settings.offset * n;
+            // at zero offset the reference point is the exact crossing of the vertex's lattice edge
+            // with the reference mesh, so a correction of any length is trustworthy there;
+            // for other offsets a large correction can be wrong and the limit is respected
+            if ( settings.offset == 0 ||
+                 ( newPos - vox.points[v] ).lengthSq() <= sqr( settings.maxOldVertPosCorrection ) )
                 vox.points[v] = newPos;
             else
                 n = Vector3f{}; //undefined
@@ -67,6 +162,7 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
         e0 = e; // an edge with this voxel on the left and another voxel on the right
         Vector3f sumAC;
         float sumArea = 0;
+        Vector3f sumDirArea; // area-weighted normal sum of the voxel's faces
         PlaneAccumulator pacc;
         do
         {
@@ -81,9 +177,11 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
                     break;
                 if ( facesToProcess.test_set( l, false ) )
                 {
-                    auto a = vox.dblArea( l );
+                    const auto da = vox.dirDblArea( l ); // length = 2x face area
+                    const auto a = da.length();
                     sumArea += a;
                     sumAC += a * vox.triCenter( l );
+                    sumDirArea += da;
                 }
                 ei = vox.topology.next( ei );
             }
@@ -108,6 +206,28 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
         auto sharpPt = pacc.findBestCrossPoint( avgPt, tol, &rank, &dir );
         if ( rank <= 1 )
             continue; // the surface is planar within the voxel
+
+        if ( settings.voxelClamp )
+        {
+            // every marching cubes triangle is located within its own voxel, and the new vertex must not
+            // break that: shorten the displacement to sharpPt, keeping its direction, until the point
+            // is within the voxel's box, so the geometry of a voxel can never reach another one
+            const auto pos = vi.toPos( voxel );
+            Box3f voxBox;
+            voxBox.include( settings.gridToMeshXf( Vector3f( pos ) + Vector3f::diagonal( 1e-3f ) ) );
+            voxBox.include( settings.gridToMeshXf( Vector3f( pos ) + Vector3f::diagonal( 1.0f - 1e-3f ) ) );
+            const auto shift = sharpPt - avgPt;
+            float part = 1;
+            for ( int i = 0; i < 3; ++i )
+            {
+                if ( shift[i] > 0 )
+                    part = std::min( part, ( voxBox.max[i] - avgPt[i] ) / shift[i] );
+                else if ( shift[i] < 0 )
+                    part = std::min( part, ( voxBox.min[i] - avgPt[i] ) / shift[i] );
+            }
+            sharpPt = avgPt + std::max( 0.0f, part ) * shift;
+        }
+
         const auto distSq = ( avgPt - sharpPt ).lengthSq();
         if ( distSq < sqr( settings.minNewVertDev ) )
             continue; //too little deviation of new point to introduce a vertex in mesh
@@ -115,6 +235,16 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
             continue; //new point is too from existing mesh triangles
         if ( rank == 3 && distSq > sqr( settings.maxNewRank3VertDev ) )
             continue; //new point is too from existing mesh triangles
+
+        if ( !settings.voxelClamp )
+        {
+            // forbid in-plane shifts: the displacement to sharpPt must rise off the voxel's mean
+            // surface plane, not slide along it; an in-plane sharpPt is a phantom feature and a fold source
+            constexpr float minElevSin = 0.1f; // ~6 deg minimal angle between the displacement and the plane
+            const Vector3f d = sharpPt - avgPt;
+            if ( sqr( dot( d, sumDirArea ) ) < sqr( minElevSin ) * d.lengthSq() * sumDirArea.lengthSq() )
+                continue; //sharpPt shifts (nearly) within the surface plane
+        }
 
         auto v = vox.splitFace( f, sharpPt );
         assert( v == dirs.size() + firstNewVert );
@@ -144,6 +274,8 @@ void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId,
             auto b = vox.topology.dest( vox.topology.prev( e ) );
             auto c = vox.topology.dest( e );
             auto d = vox.topology.dest( vox.topology.next( e ) );
+            if ( !isUnfoldQuadrangleConvex( vox.points[v], vox.points[b], vox.points[c], vox.points[d] ) )
+                return false;
             SymMatrix3f mat;
             mat += outerSquare( normals[b] );
             mat += outerSquare( normals[c] );

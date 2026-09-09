@@ -4,6 +4,7 @@ option(MRVOXELS_NO_DICOM "Disable DICOM format support" OFF)
 option(MRVOXELS_NO_TIFF "Disable TIFF format support" OFF)
 
 IF(MR_EMSCRIPTEN)
+  # Sync this with `scripts/mrbind/generate.mk`.
   set(MRVOXELS_NO_TIFF ON)
 ENDIF()
 

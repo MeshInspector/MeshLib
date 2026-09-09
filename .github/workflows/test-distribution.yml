@@ -21,6 +21,23 @@ on:
     secrets:
       GH_TOKEN:
         required: true
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+      test_ubuntu_x64:
+        type: boolean
+        default: false
+      test_ubuntu_arm64:
+        type: boolean
+        default: false
+      test_macos:
+        type: boolean
+        default: false
+      test_windows:
+        type: boolean
+        default: false
 
 jobs:
   linux-x64-test:
@@ -32,22 +49,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04", "ubuntu:26.04" ]
         include:
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
+            stdcxx-version: 10
           - os: "ubuntu:24.04"
             name: "ubuntu24"
             compiler: clang-18
             c-compiler: /usr/bin/clang-18
             cxx-compiler: /usr/bin/clang++-18
+            stdcxx-version: 10
+          - os: "ubuntu:26.04"
+            name: "ubuntu26"
+            compiler: clang-21
+            c-compiler: /usr/bin/clang-21
+            cxx-compiler: /usr/bin/clang++-21
+            stdcxx-version: 15
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -67,15 +92,16 @@ jobs:
           fi
 
       - name: Download Ubuntu x86-64 Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu x86-64 Release
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
-            apt-get -y install libstdc++-10-dev && \
+            apt-get -y install libstdc++-${{matrix.stdcxx-version}}-dev && \
             apt-get -y install ./*${{matrix.name}}-dev.deb
 
       - name: Create virtualenv
@@ -113,12 +139,13 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: xvfb-run -a python3 -m pytest -s -v
 
   linux-arm64-test:
     if: ${{ inputs.test_ubuntu_arm64 }}
@@ -129,22 +156,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ "ubuntu:22.04", "ubuntu:24.04" ]
+        os: [ "ubuntu:22.04", "ubuntu:24.04", "ubuntu:26.04" ]
         include:
           - os: "ubuntu:22.04"
             name: "ubuntu22"
             compiler: clang-14
             c-compiler: /usr/bin/clang-14
             cxx-compiler: /usr/bin/clang++-14
+            stdcxx-version: 10
           - os: "ubuntu:24.04"
             name: "ubuntu24"
             compiler: clang-18
             c-compiler: /usr/bin/clang-18
             cxx-compiler: /usr/bin/clang++-18
+            stdcxx-version: 10
+          - os: "ubuntu:26.04"
+            name: "ubuntu26"
+            compiler: clang-21
+            c-compiler: /usr/bin/clang-21
+            cxx-compiler: /usr/bin/clang++-21
+            stdcxx-version: 15
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
@@ -161,15 +196,16 @@ jobs:
           apt-get install -y gh
 
       - name: Download Ubuntu arm64 Release
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu arm64 Release
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
-            apt-get -y install libstdc++-10-dev && \
+            apt-get -y install libstdc++-${{matrix.stdcxx-version}}-dev && \
             apt-get -y install ./*${{matrix.name}}-arm64-dev.deb
 
       - name: Create virtualenv
@@ -206,12 +242,13 @@ jobs:
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
+          ./build/MeshModification
 
       - name: Ubuntu python test
         env:
           PYTHONPATH: /usr/local/lib/MeshLib/
         working-directory: test_python
-        run: python3 -m pytest -s -v
+        run: xvfb-run -a python3 -m pytest -s -v
 
   macos-test:
     if: ${{ inputs.test_macos }}
@@ -244,22 +281,20 @@ jobs:
             pkg_pattern: '*x64.pkg'
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
+
       - name: Download Distributive
-        # `gh auth login --with-token` validates the token by calling the
-        # GraphQL `viewer` query, which intermittently returns HTTP 401
-        # ("Bad credentials") even for a perfectly valid token -- a known
-        # transient on GitHub's side. See community discussion #101661;
-        # GitHub's official guidance is to retry after a short delay.
-        # Auth and download are wrapped in independent retry loops so a
-        # flake in one does not force the other to re-run. `--clobber`
-        # lets a download retry overwrite a partial file from a previous
-        # attempt.
+        # GH_TOKEN instead of `gh auth login`: the login stores the token in
+        # the macOS keychain, which is locked in self-hosted runner sessions
+        # ("failed to move active token in keyring: exit status 36").
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          scripts/retry.sh -- bash -c 'echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token'
           scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.pkg_pattern }}" --repo ${{ github.repository }} --clobber
 
       # Self-hosted runners have no passwordless sudo, so they install into
@@ -276,6 +311,8 @@ jobs:
             installer -pkg meshlib_*.pkg -target CurrentUserHomeDirectory
             MESHLIB_FW="${HOME}/Library/Frameworks/MeshLib.framework/Versions/Current"
           fi
+          # aws/tap ships untrusted in GH images and warns on every brew command
+          brew untap aws/tap 2>/dev/null || true
           xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
@@ -310,6 +347,7 @@ jobs:
           fi
           cmake -S . -B build -DCMAKE_C_COMPILER=/usr/bin/clang && \
           cmake --build build
+          ./build/MeshModification
 
   windows-test:
     if: ${{ inputs.test_windows }}
@@ -337,13 +375,14 @@ jobs:
             idl: 2
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Distributive
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          echo ${{ secrets.GH_TOKEN }} | gh auth login --with-token
           gh release download ${{ inputs.release_tag }} --pattern "${{ matrix.dist_pattern }}" --repo ${{ github.repository }}
 
       - name: Unpack Distributive

@@ -10,6 +10,7 @@
 #include <GLFW/glfw3native.h>
 
 #include "MRPch/MRWinapi.h"
+#include "MRPch/MRSpdlog.h"
 
 #pragma comment(lib, "hid.lib")
 #pragma warning(push)

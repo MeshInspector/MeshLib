@@ -4,7 +4,6 @@ boost-functional
 boost-integer
 boost-locale
 boost-move
-boost-multiprecision
 boost-program-options
 boost-range
 boost-serialization

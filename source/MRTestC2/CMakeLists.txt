@@ -1,5 +1,7 @@
 project(MRTestC2 C)
 
+IF(NOT EMSCRIPTEN)
+
 file(GLOB HEADERS "*.h")
 file(GLOB SOURCES "*.c")
 
@@ -18,3 +20,5 @@ add_test(
   NAME ${PROJECT_NAME}
   COMMAND ${PROJECT_NAME}
 )
+
+ENDIF() # NOT EMSCRIPTEN

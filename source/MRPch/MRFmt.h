@@ -1,7 +1,9 @@
 #pragma once
 
 #pragma warning(push)
+#pragma warning(disable:4127) // conditional expression is constant
 #pragma warning(disable:4275) // non dll-interface class 'std::runtime_error' used as base for dll-interface class 'fmt::v10::format_error'
+#pragma warning(disable:4459) // declaration of 'formattable' hides global declaration
 #if defined(__GNUC__) && !defined(__clang__) && __GNUC__ >= 13
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Warray-bounds"

@@ -9,15 +9,28 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRAlignContoursToMesh.h" />
+    <ClInclude Include="MRAlphaShape.h" />
+    <ClInclude Include="MRBitCast.h" />
     <ClInclude Include="MRBoxNesting.h" />
     <ClInclude Include="MRCurve.h" />
     <ClInclude Include="MRDivRound.h" />
     <ClInclude Include="MRFastInt128.h" />
+    <ClInclude Include="MRFastInt.h" />
+    <ClInclude Include="MRVarBigInt.h" />
     <ClInclude Include="MRHoleFillPlan.h" />
     <ClInclude Include="MRImageTransform.h" />
+    <ClInclude Include="MRInt64Mul128.h" />
     <ClInclude Include="MRLinesLoadSettings.h" />
     <ClInclude Include="MRLoadedMeshData.h" />
     <ClInclude Include="MRMapOrHashMap.h" />
@@ -140,6 +153,7 @@
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRInnerShell.h" />
+    <ClInclude Include="MRInSphere.h" />
     <ClInclude Include="MRIOParsing.h" />
     <ClInclude Include="MRIsNaN.h" />
     <ClInclude Include="MRMapEdge.h" />
@@ -250,6 +264,8 @@
     <ClInclude Include="MRRigidXf3.h" />
     <ClInclude Include="MRSaveSettings.h" />
     <ClInclude Include="MRSceneLoad.h" />
+    <ClInclude Include="MRSplineProject.h" />
+    <ClInclude Include="MRStitchOpenTwins.h" />
     <ClInclude Include="MRTwoLineSegmDist.h" />
     <ClInclude Include="MRSeparationPoint.h" />
     <ClInclude Include="MRSharedThreadSafeOwner.h" />
@@ -269,6 +285,7 @@
     <ClInclude Include="MRSceneSettings.h" />
     <ClInclude Include="MRSegmPoint.h" />
     <ClInclude Include="MRSharpenMarchingCubesMesh.h" />
+    <ClInclude Include="MRShrinkwrap.h" />
     <ClInclude Include="MRSignal.h" />
     <ClInclude Include="MRSignDetectionMode.h" />
     <ClInclude Include="MRMakeSphereMesh.h" />
@@ -278,6 +295,8 @@
     <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
     <ClInclude Include="MRTerrainTriangulation.h" />
+    <ClInclude Include="MRDelaunayTriangulationXY.h" />
+    <ClInclude Include="MRCameraPointsTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />
     <ClInclude Include="MRTriMesh.h" />
     <ClInclude Include="MRTripleFaceIntersections.h" />
@@ -336,6 +355,7 @@
     <ClInclude Include="MRPointCloudRadius.h" />
     <ClInclude Include="MRPointsInBall.h" />
     <ClInclude Include="MRPointsLoad.h" />
+    <ClInclude Include="MRMultiScanLoad.h" />
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
@@ -391,6 +411,7 @@
     <ClInclude Include="MRTorus.h" />
     <ClInclude Include="MRMeshTopology.h" />
     <ClInclude Include="MRMeshBuilder.h" />
+    <ClInclude Include="MRVertDuplication.h" />
     <ClInclude Include="MRMeshFwd.h" />
     <ClInclude Include="MRMeshLoad.h" />
     <ClInclude Include="MRObject.h" />
@@ -454,7 +475,20 @@
     <ClInclude Include="MRFunctional.h" />
   </ItemGroup>
   <ItemGroup>
+    <!-- Reuse the shared MRPch PCH when extra headers are off: reference MRPch so it builds first and
+         its PCH object is linked. With extra headers on, MRMesh builds its own PCH and needs no reference. -->
+    <ProjectReference Include="..\MRPch\MRPch.vcxproj" Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">
+      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="MRPchCreate.cpp">
+      <!-- Build our own PCH only with the extra headers (MSVC); otherwise reuse the shared MRPch PCH. -->
+      <PrecompiledHeader Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">Create</PrecompiledHeader>
+      <ExcludedFromBuild Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="MRAlignContoursToMesh.cpp" />
+    <ClCompile Include="MRAlphaShape.cpp" />
     <ClCompile Include="MRBoxNesting.cpp" />
     <ClCompile Include="MRChangeMeshDataAction.cpp" />
     <ClCompile Include="MRDirMax.cpp" />
@@ -523,6 +557,7 @@
     <ClCompile Include="MRExpected.cpp" />
     <ClCompile Include="MRExtractIsolines.cpp" />
     <ClCompile Include="MRFaceDistance.cpp" />
+    <ClCompile Include="MRFastInt.cpp" />
     <ClCompile Include="MRFastWindingNumber.cpp" />
     <ClCompile Include="MRFeatures.cpp" />
     <ClCompile Include="MRFile.cpp" />
@@ -549,6 +584,7 @@
     <ClCompile Include="MRImageSave.cpp" />
     <ClCompile Include="MRImproveSampling.cpp" />
     <ClCompile Include="MRInnerShell.cpp" />
+    <ClCompile Include="MRInSphere.cpp" />
     <ClCompile Include="MRIntersectionContour.cpp" />
     <ClCompile Include="MRInTreePathBuilder.cpp" />
     <ClCompile Include="MRIOFormatsRegistry.cpp" />
@@ -611,6 +647,7 @@
     <ClCompile Include="MRPointObject.cpp" />
     <ClCompile Include="MRPointsInBall.cpp" />
     <ClCompile Include="MRPointsLoad.cpp" />
+    <ClCompile Include="MRMultiScanLoad.cpp" />
     <ClCompile Include="MRPointsSave.cpp" />
     <ClCompile Include="MRPointToPlaneAligningTransform.cpp" />
     <ClCompile Include="MRPointToPointAligningTransform.cpp" />
@@ -643,9 +680,12 @@
     <ClCompile Include="MRSceneLoad.cpp" />
     <ClCompile Include="MRSeparationPoint.cpp" />
     <ClCompile Include="MRSharedThreadSafeOwner.cpp" />
+    <ClCompile Include="MRShrinkwrap.cpp" />
     <ClCompile Include="MRSignDetectionMode.cpp" />
     <ClCompile Include="MRSolarRadiation.cpp" />
+    <ClCompile Include="MRSplineProject.cpp" />
     <ClCompile Include="MRStacktrace.cpp" />
+    <ClCompile Include="MRStitchOpenTwins.cpp" />
     <ClCompile Include="MRSurfaceLineOffset.cpp" />
     <ClCompile Include="MRSystemPath.cpp" />
     <ClCompile Include="MRTelemetry.cpp" />
@@ -674,7 +714,8 @@
     <ClCompile Include="MRString.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilder.cpp" />
     <ClCompile Include="MRSurroundingContour.cpp" />
-    <ClCompile Include="MRTerrainTriangulation.cpp" />
+    <ClCompile Include="MRDelaunayTriangulationXY.cpp" />
+    <ClCompile Include="MRCameraPointsTriangulation.cpp" />
     <ClCompile Include="MRTunnelDetector.cpp" />
     <ClCompile Include="MRTwoLineSegmDist.cpp" />
     <ClCompile Include="MRUniformSampling.cpp" />
@@ -709,6 +750,7 @@
     <ClCompile Include="MRMeshSubdivide.cpp" />
     <ClCompile Include="MRMeshTopology.cpp" />
     <ClCompile Include="MRMeshBuilder.cpp" />
+    <ClCompile Include="MRVertDuplication.cpp" />
     <ClCompile Include="MRMeshLoad.cpp" />
     <ClCompile Include="MRObject.cpp" />
     <ClCompile Include="MRObjectLoad.cpp" />
@@ -751,12 +793,8 @@
     <ClCompile Include="MRBitSetParallelFor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\MRPch\MRPch.vcxproj">
-      <Project>{36516aee-2fb9-41c0-a176-a2d49c1c26b2}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="..\.editorconfig" />
+    <None Include="MRUnicodeCaseFold.inl" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
@@ -765,12 +803,12 @@
     <RootNamespace>MRMesh</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -782,25 +820,26 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Debug'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Release'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRMesh_EXPORTS;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRMesh_EXPORTS;MESHLIB_NO_VIEWER;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -810,19 +849,20 @@
       </DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>MRMesh_EXPORTS;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>MRMesh_EXPORTS;MESHLIB_NO_VIEWER;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>$(ProjectDir)..\MRPch\MRPch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(ProjectDir)..\..\thirdparty</AdditionalIncludeDirectories>
       <ForcedIncludeFiles>$(ProjectDir)..\MRPch\MRPch.h</ForcedIncludeFiles>
-      <PrecompiledHeaderOutputFile>$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'=='ON'">$(IntDir)MRPch.pch</PrecompiledHeaderOutputFile>
+      <PrecompiledHeaderOutputFile Condition="'$(MR_PCH_USE_EXTRA_HEADERS)'!='ON'">$(SolutionDir)TempOutput\MRPch\$(Platform)\$(Configuration)\MRPch.pch</PrecompiledHeaderOutputFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

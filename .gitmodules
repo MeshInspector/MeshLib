@@ -6,7 +6,7 @@
 	url = https://github.com/greg7mdp/parallel-hashmap.git
 [submodule "thirdparty/eigen"]
 	path = thirdparty/eigen
-	url = https://gitlab.com/cantonios/eigen.git
+	url = https://gitlab.com/libeigen/eigen.git
 [submodule "thirdparty/expected"]
 	path = thirdparty/expected
 	url = https://github.com/Developer-Ecosystem-Engineering/expected.git
@@ -31,9 +31,6 @@
 [submodule "thirdparty/clip"]
 	path = thirdparty/clip
 	url = https://github.com/dacap/clip.git
-[submodule "thirdparty/openvdb/v9/openvdb"]
-	path = thirdparty/openvdb/v9/openvdb
-	url = https://github.com/AcademySoftwareFoundation/openvdb
 [submodule "thirdparty/openvdb/v10/openvdb"]
 	path = thirdparty/openvdb/v10/openvdb
 	url = https://github.com/AcademySoftwareFoundation/openvdb

@@ -14,7 +14,7 @@ if mrmeshpy.findRightBoundary(mesh.topology).empty():
 offset = mesh.computeBoundingBox().diagonal() * 0.05
 try:
     result_mesh = mrmeshpy.offsetMesh(mesh, offset, params)
-except ValueError as e:
+except RuntimeError as e:
     print(e)
     sys.exit(1)
 

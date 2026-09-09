@@ -22,5 +22,11 @@ for ENTRY in "${ENTRIES[@]}"; do
     FILES+=("${ENTRY#*" *"}")
 done
 
-# Adding `|| true` because this is prone to crashing after install, if the core packages were touched. Though I haven't checked if the crash affects the exit code or not.
-pacman -U --noconfirm --needed "${FILES[@]}" || true
+# pacman sometimes dies here taking the whole msys2 shell (and any
+# not-yet-flushed console output) with it, so tee to a file the caller
+# can dump post-mortem. Its exit code is deliberately tolerated: it's
+# prone to crashing after install when the core packages were touched.
+echo "Installing ${#FILES[@]} packages with pacman -U..."
+RC=0
+pacman -U --noconfirm --needed "${FILES[@]}" 2>&1 | tee msys2_pacman_install.log || RC=$?
+echo "pacman exit status: ${RC}"

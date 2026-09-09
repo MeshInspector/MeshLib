@@ -41,7 +41,8 @@ struct PointOnObject
 // --- std::monostate means not valid pick (pick in empty space).
 using PickedPoint = std::variant<std::monostate, MeshTriPoint, EdgePoint, VertId>;
 
-/// Converts PointOnObject coordinates depending on the object type to the PickedPoint variant
+/// Converts PointOnObject coordinates depending on the object type to the PickedPoint variant;
+/// returns std::monostate if the pick does not address an existing element of the object
 MRMESH_API PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointOnObject& pos );
 
 /// Converts given point into local coordinates of its object,

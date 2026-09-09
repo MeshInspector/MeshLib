@@ -1,0 +1,10 @@
+[
+    {
+        "emsdk_image": "3.1.38",
+        "runner_image": "ubuntu-latest"
+    },
+    {
+        "emsdk_image": "4.0.19-arm64",
+        "runner_image": "ubuntu-24.04-arm"
+    }
+]

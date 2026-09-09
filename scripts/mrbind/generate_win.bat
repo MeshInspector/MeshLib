@@ -5,6 +5,8 @@ rem Must run this inside of the Visual Studio developer command prompt!
 rem Any additional arguments are forwarded to that makefile.
 
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
+rem MSYS2 environment to build in: clang64 targets x86_64, clangarm64 targets aarch64.
+if "%MSYS2_ENV%" == "" set MSYS2_ENV=clang64
 
 rem Here we save all additional arguments to a variable, and then apply string replacement to it to escape `"` as `""`.
 rem Note that this variable must be here and not in `(...)` below. If moved there, for some reason it's new value is not respected until
@@ -17,4 +19,4 @@ if not exist %MSYS2_DIR% (
 )
 
 echo Found MSYS2 at `%MSYS2_DIR%`.
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -full-path -here -clang64 -c "time make -f '%~dp0generate.mk' %args:"=""% "
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -full-path -here -%MSYS2_ENV% -c "time make -f '%~dp0generate.mk' %args:"=""% "

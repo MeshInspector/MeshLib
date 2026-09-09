@@ -34,7 +34,9 @@ MR_SUPPRESS_WARNING_PUSH
 
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#if __clang_major__ >= 17
+// The second part of this condition is here to reject Clang 17.0.0 from EMSDK 3.1.38. Those two warnings are known to Clang 17.0.1 on godbolt, and there's no 17.0.0 on godbolt to check.
+// They were either added in 17.0.1, or the old Emscripten used a patched Clang without those flags.
+#if __clang_major__ >= 17 && !(__clang_major__ == 17 && __clang_minor__ == 0 && __clang_patchlevel__ == 0)
 #pragma clang diagnostic ignored "-Wdeprecated-redundant-constexpr-static-def"
 #pragma clang diagnostic ignored "-Wdeprecated-literal-operator"
 #else

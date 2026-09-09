@@ -32,6 +32,11 @@ struct MarchingCubesParams
     /// optional output map FaceId->VoxelId
     Vector<VoxelId, FaceId>* outVoxelPerFaceMap{ nullptr };
 
+    /// optional output transform from integer grid locations to mesh reference frame:
+    /// the node with integer coordinates (i,j,k) is located in (*outGridToMeshXf)( Vector3f( i, j, k ) );
+    /// every vertex of output mesh is located on a grid edge
+    AffineXf3f* outGridToMeshXf{ nullptr };
+
     /// function to calculate position of result mesh points
     /// if the function isn't set, a linear positioner will be used
     /// note: this function is called in parallel from different threads

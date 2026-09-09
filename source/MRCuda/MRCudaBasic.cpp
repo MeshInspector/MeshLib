@@ -13,58 +13,72 @@ namespace MR
 namespace Cuda
 {
 
-bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
+Expected<DeviceInfo> getDeviceInfo()
 {
-    int n;
-    cudaError_t err = cudaGetDeviceCount( &n );
-    if ( err != cudaSuccess )
-        return false;
-    if ( n <= 0 )
-        return false;
-    int driverVersion{ 0 };
-    int runtimeVersion{ 0 };
-    err = cudaDriverGetVersion( &driverVersion );
-    if ( err != cudaSuccess )
-        return false;
-    
-    err = cudaRuntimeGetVersion( &runtimeVersion );
-    if ( err != cudaSuccess )
-        return false;
+    DeviceInfo res;
+    CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &res.driverVersion ) );
+    if ( res.driverVersion <= 0 )
+        return MR::unexpected( "NVIDIA GPU error: no CUDA driver found" );
 
-    int computeMajor{ 0 };
-    int computeMinor{ 0 };
-    err = cudaDeviceGetAttribute( &computeMajor, cudaDevAttrComputeCapabilityMajor, 0 );
-    if ( err != cudaSuccess )
-        return false;
-    err = cudaDeviceGetAttribute( &computeMinor, cudaDevAttrComputeCapabilityMinor, 0 );
-    if ( err != cudaSuccess )
-        return false;
+    {
+        int n = 0;
+        auto code = cudaGetDeviceCount( &n );
+        if ( code != cudaSuccess || n <= 0 )
+        {
+            auto err = ( code != cudaSuccess ) ? MR::Cuda::getError( code ) : "NVIDIA GPU error: no capable device found";
+            err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );
+            return MR::unexpected( err );
+        }
+    }
 
-    if ( driverVersionOut )
-        *driverVersionOut = driverVersion;
-    if ( runtimeVersionOut )
-        *runtimeVersionOut = runtimeVersion;
-    if ( computeMajorOut )
-        *computeMajorOut = computeMajor;
-    if ( computeMinorOut )
-        *computeMinorOut = computeMinor;
+    CUDA_RETURN_UNEXPECTED( cudaRuntimeGetVersion( &res.runtimeVersion ) );
 
+    cudaDeviceProp prop;
+    CUDA_RETURN_UNEXPECTED( cudaGetDeviceProperties( &prop, 0 ) );
+    res.computeMajor = prop.major;
+    res.computeMinor = prop.minor;
+    res.totalGlobalMem = prop.totalGlobalMem;
+    res.name = prop.name;
+
+    return res;
+}
+
+bool DeviceInfo::fitForComputations() const
+{
     // according to https://en.wikipedia.org/wiki/CUDA Compute Capability (CUDA SDK support vs. Microarchitecture) table
     if ( runtimeVersion / 1000 >= 12 && computeMajor < 5 )
         return false;
-    else if ( runtimeVersion / 1000 > 10 && ( computeMajor < 3 || ( computeMajor == 3 && computeMinor < 5 ) ) )
+    if ( runtimeVersion / 1000 > 10 && ( computeMajor < 3 || ( computeMajor == 3 && computeMinor < 5 ) ) )
         return false;
 
     return runtimeVersion <= driverVersion;
 }
 
+bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
+{
+     auto info = MR::Cuda::getDeviceInfo();
+     if ( !info )
+         return false;
+
+    if ( driverVersionOut )
+        *driverVersionOut = info->driverVersion;
+    if ( runtimeVersionOut )
+        *runtimeVersionOut = info->runtimeVersion;
+    if ( computeMajorOut )
+        *computeMajorOut = info->computeMajor;
+    if ( computeMinorOut )
+        *computeMinorOut = info->computeMinor;
+
+    return info->fitForComputations();
+}
+
 size_t getCudaAvailableMemory()
 {
-    if ( !isCudaAvailable() )
+    if ( CUDA_EXEC( cudaSetDevice( 0 ) ) != cudaSuccess )
         return 0;
-    CUDA_EXEC( cudaSetDevice( 0 ) );
     size_t memFree = 0, memTot = 0;
-    CUDA_EXEC( cudaMemGetInfo( &memFree, &memTot ) );
+    if ( CUDA_EXEC( cudaMemGetInfo( &memFree, &memTot ) ) )
+        return 0;
     // minus extra 128 MB
     return memFree - 128 * 1024 * 1024;
 }

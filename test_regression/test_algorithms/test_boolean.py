@@ -9,7 +9,7 @@ import pytest
 
 @pytest.mark.smoke
 @pytest.mark.parametrize("input_case", ["sphere", "fox"])
-@pytest.mark.parametrize("operation_type", (x for x in mrmeshpy.BooleanOperation.__members__.keys() if x != "Count"))
+@pytest.mark.parametrize("operation_type", [x for x in mrmeshpy.BooleanOperation.__members__.keys() if x != "Count"])
 def test_boolean(tmp_path, operation_type, input_case):
     """
     Test boolean algorithm with all operation types

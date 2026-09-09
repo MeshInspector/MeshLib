@@ -28,7 +28,7 @@ Lets have a closer look at each of these points:
 `example_plugin.sln` - This can be used to build an example with Visual Studio, it only includes `example_plugin.vcxproj` in it.
 
 ### Visual Studio Project File
-`example_plugin.vcxproj` - This file is configured so project can work with MeshLib distribuiton \include{doc} CommonDistributionProperties.dox \n
+`example_plugin.vcxproj` - This file is configured so project can work with MeshLib distribuiton \include{doc} CommonDistributionProperties.dox
        - Define `IMGUI_DISABLE_OBSOLETE_FUNCTIONS`
        - Copy other files to target directory:
 \code{.xml}

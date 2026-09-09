@@ -141,6 +141,10 @@ runs:
     # so brew packages must be installed on hosted runners even on cache hit.
     - name: Install brew requirements
       shell: bash
+      env:
+        HOMEBREW_NO_AUTO_UPDATE: '1'       # don't pull new formulae mid-job
+        HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed keg (no openssl@3 source rebuild)
+        HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
       run: |
         ./scripts/install_brew_requirements.sh
         ./scripts/strip_brew_dylibs.sh

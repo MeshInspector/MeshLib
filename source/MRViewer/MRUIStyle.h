@@ -344,7 +344,9 @@ MRVIEWER_API bool inputTextIntoArrayMultilineFullyScrollable( CachedTextSize& ca
 MRVIEWER_API bool inputTextCentered( const char* label, std::string& str, float width = 0.0f, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = nullptr, void* user_data = nullptr );
 
 /// draw read-only text box with text aligned by center
-MRVIEWER_API void inputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {}, const std::optional<ImVec4>& labelColor = {} );
+/// \param selectable if true (default) the value is a read-only input box whose text can be selected/copied;
+/// if false the value is drawn as a non-selectable label (ImGui::LabelText), making clear it cannot be edited
+MRVIEWER_API void inputTextCenteredReadOnly( const char* label, const std::string& str, float width = 0.0f, const std::optional<ImVec4>& textColor = {}, const std::optional<ImVec4>& labelColor = {}, bool selectable = true );
 
 
 namespace detail
@@ -603,6 +605,17 @@ public:
     {
     }
 };
+
+// drag<>() is heavy (its internal value-formatting lambdas, plus getDragRangeTooltip<>,
+// dominate UI code generation) and is instantiated in many TUs. Declare the common scalar
+// instantiations extern template here and define them once in MRUIStyle.cpp. Vector
+// overloads and rarer combos stay header-instantiated.
+#define MR_X( E ) \
+    extern template MRVIEWER_API bool drag<E, float, float, float>( const char*, float&, float, const float&, const float&, UnitToStringParams<E>, ImGuiSliderFlags, const float&, const float& ); \
+    extern template MRVIEWER_API bool drag<E, int, int, int>( const char*, int&, int, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& ); \
+    extern template MRVIEWER_API bool drag<E, int, float, int>( const char*, int&, float, const int&, const int&, UnitToStringParams<E>, ImGuiSliderFlags, const int&, const int& );
+DETAIL_MR_UNIT_ENUMS( MR_X )
+#undef MR_X
 
 } // namespace UI
 

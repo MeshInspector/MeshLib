@@ -79,6 +79,8 @@ def copy_app():
 	print('Not implemented')
 def copy_lib():
 	print('Not implemented')
+def copy_licenses():
+	print('Not implemented')
 
 def main():
 	if (not check_python_version()):
@@ -94,6 +96,7 @@ def main():
 	copy_includes()
 	copy_app()
 	copy_lib()
+	copy_licenses()
 	version = "0.0.0.0"
 	if len(sys.argv) > 1:
 		version = sys.argv[1][1:]

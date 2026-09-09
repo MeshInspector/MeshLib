@@ -8,7 +8,7 @@
 #include "MRAffineXf3.h"
 #include "MRLoadedObjects.h"
 #include <filesystem>
-#include <istream>
+#include <iosfwd>
 #include <string>
 
 namespace MR

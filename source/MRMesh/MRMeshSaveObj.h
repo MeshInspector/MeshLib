@@ -4,7 +4,7 @@
 #include "MRAffineXf3.h"
 #include "MRExpected.h"
 #include <filesystem>
-#include <ostream>
+#include <iosfwd>
 #include <string>
 
 namespace MR

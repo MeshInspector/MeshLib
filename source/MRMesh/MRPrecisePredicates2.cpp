@@ -1,8 +1,11 @@
 #include "MRPrecisePredicates2.h"
 #include "MRHighPrecision.h"
+#include "MRInt64Mul128.h"
 #include "MRPrecisePredicates3.h"
 #include "MRSparsePolynomial.h"
 #include "MRDivRound.h"
+#include "MRBox.h"
+#include <optional>
 
 namespace MR
 {
@@ -41,7 +44,8 @@ std::array<PointDegree, N> getPointDegrees( const std::array<PreciseVertCoords2,
     return res;
 }
 
-// std::int64_t is enough to store all coefficients in ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) except for degree 0, which is computed separately.
+// 64 bits are enough to store all coefficients of one ccw-polynomial (products of two coordinate differences),
+// while the products of two such polynomials are computed in 128 bits, see signOfProductsDiff<Int64Mul128> below
 template<int M>
 using Poly = SparsePolynomial<std::int64_t, int, M>;
 
@@ -49,13 +53,44 @@ template<int M>
 Poly<M> ccwPoly( const PointDegree & a, const PointDegree & b, const PointDegree & c,
     int db ) // degree.x = degree.y * db
 {
-    const Poly<M> xx( a.pt.x - c.pt.x, a.d * db, 1, c.d * db, -1 );
-    const Poly<M> xy( a.pt.y - c.pt.y, a.d     , 1, c.d     , -1 );
-    const Poly<M> yx( b.pt.x - c.pt.x, b.d * db, 1, c.d * db, -1 );
-    const Poly<M> yy( b.pt.y - c.pt.y, b.d     , 1, c.d     , -1 );
-    auto det = xx * yy;
-    det -= xy * yx;
-    return det;
+    // every element of the matrix with the rows (a-c), (b-c) is a polynomial: delta + eps^degP - eps^degC,
+    // whose terms are stored below (skipping zero delta), the last term is always -eps^degC
+    struct Element
+    {
+        typename Poly<M>::Term terms[3];
+        int numTerms = 0;
+    };
+    Element m[2][2];
+    const PointDegree * rows[2] = { &a, &b };
+    const int w[2] = { db, 1 };
+    for ( int r = 0; r < 2; ++r )
+        for ( int col = 0; col < 2; ++col )
+        {
+            auto & e = m[r][col];
+            if ( const std::int64_t delta = std::int64_t( rows[r]->pt[col] ) - c.pt[col] )
+                e.terms[e.numTerms++] = { 0, delta };
+            e.terms[e.numTerms++] = { w[col] * rows[r]->d, 1 };
+            e.terms[e.numTerms++] = { w[col] * c.d, -1 };
+        }
+
+    // the determinant is m00*m11 - m01*m10, each product has up to 9 monomials;
+    // the product of the last terms of two elements (eps^((db+1)*degC) with the sign of the permutation) is excluded, since the two of them cancel one another
+    std::vector<typename Poly<M>::Term> terms;
+    terms.reserve( 2 * 8 );
+    for ( int perm = 0; perm < 2; ++perm )
+    {
+        const Element & e0 = m[0][perm];
+        const Element & e1 = m[1][1 - perm];
+        const std::int64_t sign = perm ? -1 : 1;
+        for ( int k0 = 0; k0 < e0.numTerms; ++k0 )
+        {
+            const int last1 = k0 + 1 == e0.numTerms ? e1.numTerms - 1 : e1.numTerms;
+            for ( int k1 = 0; k1 < last1; ++k1 )
+                if ( const auto deg = e0.terms[k0].first + e1.terms[k1].first; deg <= M )
+                    terms.emplace_back( deg, sign * e0.terms[k0].second * e1.terms[k1].second ); // all coefficients are within 2^32 by absolute value, so the product fits in int64
+        }
+    }
+    return Poly<M>::fromUnsortedTerms( std::move( terms ) );
 }
 
 std::int64_t area( const Vector2i & a, const Vector2i & b, const Vector2i & c )
@@ -67,17 +102,76 @@ std::int64_t area( const Vector2i & a, const Vector2i & b, const Vector2i & c )
     return xx * yy - xy * yx;
 }
 
+/// the order of intersections of segment s=01 with the lines of sa=23 and sb=45 given by exact coordinates,
+/// or nullopt if the intersection points coincide exactly
+std::optional<bool> segmentIntersectionOrderExact( const std::array<PreciseVertCoords2, 6> & vs )
+{
+    // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /
+    //       ( ccw(sa,s[0])-ccw(sa,s[1]) ) * ( ccw(sb,s[0])-ccw(sb,s[1]) )
+    const auto areaSaOrg  = area( vs[2].pt, vs[3].pt, vs[0].pt );
+    const auto areaSaDest = area( vs[2].pt, vs[3].pt, vs[1].pt );
+    assert( ( areaSaOrg <= 0 && areaSaDest >= 0 ) || ( areaSaOrg >= 0 && areaSaDest <= 0 ) );
+
+    const auto areaSbOrg  = area( vs[4].pt, vs[5].pt, vs[0].pt );
+    const auto areaSbDest = area( vs[4].pt, vs[5].pt, vs[1].pt );
+    assert( ( areaSbOrg <= 0 && areaSbDest >= 0 ) || ( areaSbOrg >= 0 && areaSbDest <= 0 ) );
+
+    const auto nomSimple = Int64Mul128( areaSaOrg ) * Int64Mul128( areaSbDest ) - Int64Mul128( areaSbOrg ) * Int64Mul128( areaSaDest );
+    if ( nomSimple == 0 )
+        return {};
+
+    bool res = nomSimple > 0;
+    assert( areaSaOrg || areaSaDest );
+    if ( areaSaOrg < areaSaDest )
+        res = !res;
+    assert( areaSbOrg || areaSbDest );
+    if ( areaSbOrg < areaSbDest )
+        res = !res;
+    return res;
+}
+
+/// the order of intersections of segment s=01 with the lines of sa=23 and sb=45 when the intersection points coincide exactly,
+/// resolved by simulation-of-simplicity; the caller must have checked that neither segment is on one side of the other's line
+bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords2, 6> & vs )
+{
+    const auto ds = getPointDegrees( vs );
+
+    // 840 was found experimentally to be enough for all cases with 6 points having equal coordinates (but different ids);
+    // if it is not enough then we will get assert violation on nomSign below, and increase the value
+    constexpr int MaxD = 840;
+    const auto polySaOrg  = ccwPoly<MaxD>( ds[2], ds[3], ds[0], 3 );
+    const auto polySaDest = ccwPoly<MaxD>( ds[2], ds[3], ds[1], 3 );
+    assert( !polySaOrg.empty() || !polySaDest.empty() );
+    assert( polySaOrg.empty() || polySaDest.empty() || polySaOrg.isPositive() != polySaDest.isPositive() );
+    const bool posSaOrg = polySaOrg.empty() ? !polySaDest.isPositive() : polySaOrg.isPositive();
+
+    const auto polySbOrg  = ccwPoly<MaxD>( ds[4], ds[5], ds[0], 3 );
+    const auto polySbDest = ccwPoly<MaxD>( ds[4], ds[5], ds[1], 3 );
+    assert( !polySbOrg.empty() || !polySbDest.empty() );
+    assert( polySbOrg.empty() || polySbDest.empty() || polySbOrg.isPositive() != polySbDest.isPositive() );
+    const bool posSbOrg = polySbOrg.empty() ? !polySbDest.isPositive() : polySbOrg.isPositive();
+
+    // the sign of the leading term of nom = polySaOrg * polySbDest - polySbOrg * polySaDest, whose zero-degree coefficient is nomSimple == 0
+    const int nomSign = signOfProductsDiff<Int64Mul128>( polySaOrg, polySbDest, polySbOrg, polySaDest );
+    assert( nomSign != 0 );
+    bool res = nomSign > 0;
+    if ( posSaOrg != posSbOrg ) // denominator is negative
+        res = !res;
+    return res;
+}
+
 } // anonymous namespace
 
 // see https://arxiv.org/pdf/math/9410209 Table 4-i:
 // a=(pi_i,1, pi_i,2)
 // b=(pi_j,1, pi_j,2)
-bool ccw( const Vector2i & a, const Vector2i & b )
+namespace
 {
-    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
-        return v > 0; // points are in general position
 
-    // points 0, a, b are on the same line
+/// ccw( a, b ) for the points 0, a, b known to be on the same line, resolved by simulation-of-simplicity
+bool ccwDegenerate( const Vector2i & a, const Vector2i & b )
+{
+    assert( cross( Vector2i64{ a }, Vector2i64{ b } ) == 0 );
 
     // permute points:
     // da.y >> da.x >> db.y >> db.x > 0
@@ -106,6 +200,15 @@ bool ccw( const Vector2i & a, const Vector2i & b )
     return true;
 }
 
+} // anonymous namespace
+
+bool ccw( const Vector2i & a, const Vector2i & b )
+{
+    if ( auto v = cross( Vector2i64{ a }, Vector2i64{ b } ) )
+        return v > 0; // points are in general position
+    return ccwDegenerate( a, b );
+}
+
 bool smaller2( const std::array<PreciseVertCoords2, 4> & vs )
 {
     if ( auto d = area( vs[0].pt, vs[1].pt, vs[2].pt ) - area( vs[0].pt, vs[1].pt, vs[3].pt ) )
@@ -130,12 +233,12 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     const Vector3i64 c( c0.x, c0.y, sqr( std::int64_t( c0.x ) ) + sqr( std::int64_t( c0.y ) ) );
 
     //e**0
-    if ( auto v = mixed( Vector3i128fast( a ), Vector3i128fast( b ), Vector3i128fast( c ) ) )
+    if ( auto v = mixed( Vector3i128fast( a ), Vector3i64mul( b ), Vector3i64mul( c ) ) )
         return v > 0;
 
     // e**1
     const auto bxy_cxy = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
-    if ( auto v = -cross( Vector2i128fast{ b.x, b.z }, Vector2i128fast{ c.x, c.z } ) + 2 * a.y * FastInt128( bxy_cxy ) )
+    if ( auto v = -cross( Vector2i64mul{ b.x, b.z }, Vector2i64mul{ c.x, c.z } ) + Int64Mul128( 2 * a.y ) * Int64Mul128( bxy_cxy ) )
         return v > 0;
 
     // e**2
@@ -144,14 +247,14 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
 
     // e**3
     assert( bxy_cxy == 0 );
-    if ( auto v = cross( Vector2i128fast{ b.y, b.z }, Vector2i128fast{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
+    if ( auto v = cross( Vector2i64mul{ b.y, b.z }, Vector2i64mul{ c.y, c.z } ) ) // + 2 * a.x * bxy_cxy;
         return v > 0;
 
     // e**6 same as e**2
 
     // e**9
     const auto axy_cxy = cross( Vector2i64{ a.x, a.y }, Vector2i64{ c.x, c.y } );
-    if ( auto v = cross( Vector2i128fast{ a.x, a.z }, Vector2i128fast{ c.x, c.z } ) - 2 * b.y * FastInt128( axy_cxy ) )
+    if ( auto v = cross( Vector2i64mul{ a.x, a.z }, Vector2i64mul{ c.x, c.z } ) - Int64Mul128( 2 * b.y ) * Int64Mul128( axy_cxy ) )
         return v > 0;
 
     // e**10
@@ -177,7 +280,7 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     assert( c.x == 0 && c.y == 0 && c.z == 0 );
 
     // e**81
-    if ( auto v = b.x * FastInt128( a.z ) - a.x * FastInt128( b.z ) )
+    if ( auto v = Int64Mul128( b.x ) * Int64Mul128( a.z ) - Int64Mul128( a.x ) * Int64Mul128( b.z ) )
         return v > 0;
 
     // e**82
@@ -229,6 +332,10 @@ bool ccw( const std::array<PreciseVertCoords2, 3> & vs )
 
 bool ccw( const PreciseVertCoords2* vs )
 {
+    // the exact answer first, the perturbation of the points is necessary only if all three points are exactly collinear
+    if ( const auto a = area( vs[0].pt, vs[1].pt, vs[2].pt ); a != 0 )
+        return a > 0;
+
     bool odd = false;
     std::array<int, 3> order = {0, 1, 2};
 
@@ -245,7 +352,7 @@ bool ccw( const PreciseVertCoords2* vs )
         }
     }
 
-    return odd != ccw( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt );
+    return odd != ccwDegenerate( vs[order[0]].pt - vs[order[2]].pt, vs[order[1]].pt - vs[order[2]].pt );
 }
 
 bool inCircle( const std::array<PreciseVertCoords2, 4>& vs )
@@ -293,6 +400,10 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
     assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[2], vs[3] } ) );
     assert( doSegmentSegmentIntersect( { vs[0], vs[1], vs[4], vs[5] } ) );
 
+    if ( auto res = segmentIntersectionOrderExact( vs ) )
+        return *res;
+
+    // the intersection points coincide exactly, and the perturbation of the points decides;
     // if sa and sb have a shared point
     PreciseVertCoords2 sharedPoint;
     for ( auto va : { vs[2], vs[3] } )
@@ -332,57 +443,14 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords2, 6> & vs )
         // segments sa and sb intersect one another, process it as general case
     }
 
-    // res = ( ccw(sa,s[0])*ccw(sb,s[1])   -   ccw(sb,s[0])*ccw(sa,s[1]) ) /
-    //       ( ccw(sa,s[0])-ccw(sa,s[1]) ) * ( ccw(sb,s[0])-ccw(sb,s[1]) )
-    const auto areaSaOrg  = area( vs[2].pt, vs[3].pt, vs[0].pt );
-    const auto areaSaDest = area( vs[2].pt, vs[3].pt, vs[1].pt );
-    assert( ( areaSaOrg <= 0 && areaSaDest >= 0 ) || ( areaSaOrg >= 0 && areaSaDest <= 0 ) );
+    return segmentIntersectionOrderDegenerate( vs );
+}
 
-    const auto areaSbOrg  = area( vs[4].pt, vs[5].pt, vs[0].pt );
-    const auto areaSbDest = area( vs[4].pt, vs[5].pt, vs[1].pt );
-    assert( ( areaSbOrg <= 0 && areaSbDest >= 0 ) || ( areaSbOrg >= 0 && areaSbDest <= 0 ) );
-
-    const auto nomSimple = FastInt128( areaSaOrg ) * FastInt128( areaSbDest ) - FastInt128( areaSbOrg ) * FastInt128( areaSaDest );
-    if ( nomSimple != 0 )
-    {
-        // happy not-degenerated path
-        bool res = nomSimple > 0;
-        assert( areaSaOrg || areaSaDest );
-        if ( areaSaOrg < areaSaDest )
-            res = !res;
-        assert( areaSbOrg || areaSbDest );
-        if ( areaSbOrg < areaSbDest )
-            res = !res;
-        return res;
-    }
-
-    const auto ds = getPointDegrees( vs );
-
-    // 840 was found experimentally to be enough for all cases with 6 points having equal coordinates (but different ids);
-    // if it is not enough then we will get assert violation inside poly.isPositive(), and increase the value
-    constexpr int MaxD = 840;
-    const auto polySaOrg  = ccwPoly<MaxD>( ds[2], ds[3], ds[0], 3 );
-    const auto polySaDest = ccwPoly<MaxD>( ds[2], ds[3], ds[1], 3 );
-    assert( !polySaOrg.empty() || !polySaDest.empty() );
-    assert( polySaOrg.empty() || polySaDest.empty() || polySaOrg.isPositive() != polySaDest.isPositive() );
-    const bool posSaOrg = polySaOrg.empty() ? !polySaDest.isPositive() : polySaOrg.isPositive();
-
-    const auto polySbOrg  = ccwPoly<MaxD>( ds[4], ds[5], ds[0], 3 );
-    const auto polySbDest = ccwPoly<MaxD>( ds[4], ds[5], ds[1], 3 );
-    assert( !polySbOrg.empty() || !polySbDest.empty() );
-    assert( polySbOrg.empty() || polySbDest.empty() || polySbOrg.isPositive() != polySbDest.isPositive() );
-    const bool posSbOrg = polySbOrg.empty() ? !polySbDest.isPositive() : polySbOrg.isPositive();
-
-    auto nom = polySaOrg * polySbDest;
-    nom -= polySbOrg * polySaDest;
-
-    // nomSimple == 0 means that zero degree coefficient is zero, but it can be computed incorrectly due overflow errors in 64-bit arithmetic
-    nom.setZeroCoeff( 0 );
-
-    bool res = nom.isPositive();
-    if ( posSaOrg != posSbOrg ) // denominator is negative
-        res = !res;
-    return res;
+// intersection of segments (a,b) and (c,d) from the doubled areas abc = |area(a,b,c)| and
+// abd = |area(a,b,d)|, which must not be both zero
+static Vector2i intersectionByAreas( const Vector2i& ci, const Vector2i& di, std::int64_t abc, std::int64_t abd )
+{
+    return Vector2i( divRound( FastInt128( abc ) * Vector2i128fast( di ) + FastInt128( abd ) * Vector2i128fast( ci ), FastInt128( abc + abd ) ) );
 }
 
 Vector2i findSegmentSegmentIntersectionPrecise(
@@ -394,19 +462,40 @@ Vector2i findSegmentSegmentIntersectionPrecise(
     auto abd = cross( Vector2i64( ai - di ), Vector2i64( bi - di ) );
     if ( abd < 0 )
         abd = -abd;
-    const auto sum = abc + abd;
-    if ( sum != 0 )
-        return Vector2i( divRound( FastInt128( abc ) * Vector2i128fast( di ) + FastInt128( abd ) * Vector2i128fast( ci ), FastInt128( sum ) ) );
+    if ( abc + abd != 0 )
+        return intersectionByAreas( ci, di, abc, abd );
 
-    // degenerate case
-    auto adLSq = Vector2i64( di - ai ).lengthSq();
-    auto bcLSq = Vector2i64( bi - ci ).lengthSq();
-    if ( adLSq > bcLSq )
-        return ci;
-    else if ( bcLSq > adLSq )
-        return di;
-    else
-        return Vector2i( divRound( Vector2i64( ai ) + Vector2i64( bi ) + Vector2i64( ci ) + Vector2i64( di ), std::int64_t( 2 ) ) );
+    Box2i ab, cd;
+    ab.include( ai ); ab.include( bi );
+    cd.include( ci ); cd.include( di );
+    ab.intersect( cd );
+    return Vector2i( divRound( Vector2i64( ab.min ) + Vector2i64( ab.max ), std::int64_t( 2 ) ) );
+}
+
+Vector2i findSegmentSegmentIntersectionPrecise( const std::array<PreciseVertCoords2, 4> & vs )
+{
+    const auto& ai = vs[0].pt;
+    const auto& bi = vs[1].pt;
+    const auto& ci = vs[2].pt;
+    const auto& di = vs[3].pt;
+    auto abc = cross( Vector2i64( ai - ci ), Vector2i64( bi - ci ) );
+    if ( abc < 0 )
+        abc = -abc;
+    auto abd = cross( Vector2i64( ai - di ), Vector2i64( bi - di ) );
+    if ( abd < 0 )
+        abd = -abd;
+    if ( abc + abd != 0 )
+        return intersectionByAreas( ci, di, abc, abd );
+
+    // all four points lie on one line: simulation-of-simplicity lifts every point off the line
+    // by an amount steeply decreasing with the vertex id, so the two perturbed segments cross
+    // right next to the far end of the segment holding the smallest id; returning that end keeps
+    // the intersection on the same side of every other vertex as ccw reports
+    int m = 0;
+    for ( int i = 1; i < 4; ++i )
+        if ( vs[i].id < vs[m].id )
+            m = i;
+    return vs[m ^ 1].pt; // the other end of the segment of vs[m]
 }
 
 Vector2f findSegmentSegmentIntersectionPrecise(

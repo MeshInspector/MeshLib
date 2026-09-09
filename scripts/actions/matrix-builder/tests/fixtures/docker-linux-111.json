@@ -1,0 +1,6 @@
+[
+  {
+    "distro": "emscripten-generate-c-bindings",
+    "arch": "arm64"
+  }
+]

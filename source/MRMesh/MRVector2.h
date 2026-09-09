@@ -59,7 +59,7 @@ struct Vector2
     constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
     constexpr       T & operator []( int e )       noexcept { return *( ( ValueType *)this + e ); }
 
-    T lengthSq() const { return x * x + y * y; }
+    auto lengthSq() const -> decltype( std::declval<T>() * std::declval<T>() ) { return x * x + y * y; }
     auto length() const
     {
         // Calling `sqrt` this way to hopefully support boost.multiprecision numbers.
@@ -157,7 +157,7 @@ inline T distance( const Vector2<T> & a, const Vector2<T> & b )
 
 /// cross product
 template <typename T>
-inline T cross( const Vector2<T> & a, const Vector2<T> & b )
+inline auto cross( const Vector2<T> & a, const Vector2<T> & b ) -> decltype( a.x * b.x )
 {
     return a.x * b.y - a.y * b.x;
 }
@@ -171,7 +171,7 @@ inline auto dot( const Vector2<T> & a, const Vector2<T> & b ) -> decltype( a.x *
 
 /// squared length
 template <typename T>
-inline T sqr( const Vector2<T> & a )
+inline auto sqr( const Vector2<T> & a ) -> decltype( a.lengthSq() )
 {
     return a.lengthSq();
 }

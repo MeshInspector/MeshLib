@@ -2,7 +2,7 @@ using static MR;
 
 public class CollisionPreciseExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         var meshA = MR.makeUVSphere(); // make mesh A
         var meshB = MR.makeUVSphere(); // make mesh B

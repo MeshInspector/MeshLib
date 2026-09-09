@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -9,11 +9,21 @@
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|ARM64">
+      <Configuration>Debug</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|ARM64">
+      <Configuration>Release</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="MRAABBTreeTests.cpp" />
     <ClCompile Include="MRAABBTreePointsTests.cpp" />
+    <ClCompile Include="MRAlphaShapeTests.cpp" />
     <ClCompile Include="MRBase64Tests.cpp" />
+    <ClCompile Include="MRShortcutManagerTests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBitSetTests.cpp" />
@@ -23,10 +33,13 @@
     <ClCompile Include="MRContourTests.cpp" />
     <ClCompile Include="MRCPRTests.cpp" />
     <ClCompile Include="MRDeloneTests.cpp" />
+    <ClCompile Include="MRDelaunayTriangulationXYTests.cpp" />
+    <ClCompile Include="MRCameraPointsTriangulationTests.cpp" />
     <ClCompile Include="MRDicomTests.cpp" />
     <ClCompile Include="MREdgeLengthMeshTests.cpp" />
     <ClCompile Include="MRExampleTest.cpp" />
     <ClCompile Include="MRExtractIsolinesTests.cpp" />
+    <ClCompile Include="MRFastIntTests.cpp" />
     <ClCompile Include="MRFeaturesTests.cpp" />
     <ClCompile Include="MRFillHoleTests.cpp" />
     <ClCompile Include="MRFixSelfIntersectionsTests.cpp" />
@@ -42,6 +55,7 @@
     <ClCompile Include="MRMeshLoadSaveTest.cpp" />
     <ClCompile Include="MRMeshMeshDistanceTests.cpp" />
     <ClCompile Include="MRMeshTests.cpp" />
+    <ClCompile Include="MRMeshToPointCloudTests.cpp" />
     <ClCompile Include="MRMeshTopologyTests.cpp" />
     <ClCompile Include="MRMultiwayICPTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
@@ -54,6 +68,7 @@
     <ClCompile Include="MRPrecisePredicatesTests.cpp" />
     <ClCompile Include="MRReducePathTests.cpp" />
     <ClCompile Include="MRSerializeTests.cpp" />
+    <ClCompile Include="MRShrinkwrapTests.cpp" />
     <ClCompile Include="MRSpdlog.cpp" />
     <ClCompile Include="MRStreamOperatorsTests.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilderTests.cpp" />
@@ -91,6 +106,7 @@
     <ClCompile Include="MRFillContours2DTests.cpp" />
     <ClCompile Include="MRFinallyTests.cpp" />
     <ClCompile Include="MRIdTests.cpp" />
+    <ClCompile Include="MRInt64Mul128Tests.cpp" />
     <ClCompile Include="MRIntersectionTests.cpp" />
     <ClCompile Include="MRIterativeSamplingTests.cpp" />
     <ClCompile Include="MRLine3Tests.cpp" />
@@ -110,7 +126,9 @@
     <ClCompile Include="MRPolylineDecimateTests.cpp" />
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />
     <ClCompile Include="MRPolylineTopologyTests.cpp" />
+    <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
+    <ClCompile Include="MRRayBoxIntersectionTests.cpp" />
     <ClCompile Include="MRRectIndexerTests.cpp" />
     <ClCompile Include="MRRegionBoundaryTests.cpp" />
     <ClCompile Include="MRRegularGridMeshTests.cpp" />
@@ -158,12 +176,12 @@
     <RootNamespace>MRTest</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>false</WholeProgramOptimization>
@@ -175,16 +193,16 @@
   </ImportGroup>
   <ImportGroup Label="Shared">
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Debug'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)'=='Release'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
   <Import Project="$(ProjectDir)\..\MimallocRedirect.props" />
   <PropertyGroup Label="UserMacros" />
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>Disabled</Optimization>
@@ -201,7 +219,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>

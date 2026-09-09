@@ -58,6 +58,9 @@
     <ClCompile Include="MRBoxTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRRayBoxIntersectionTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRMeshIntersectTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -115,6 +118,9 @@
     <ClCompile Include="MRPrecisePredicatesTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRInt64Mul128Tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRCylinderApproximation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -166,13 +172,25 @@
     <ClCompile Include="MRMeshCollideTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRShrinkwrapTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRBase64Tests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRShortcutManagerTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRContourTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRAABBTreeTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRAlphaShapeTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshToPointCloudTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshMeshDistanceTest.cpp">
@@ -185,6 +203,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRDeloneTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCameraPointsTriangulationTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRFillHoleTests.cpp">
@@ -326,6 +347,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMimallocRedirectTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFastIntTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

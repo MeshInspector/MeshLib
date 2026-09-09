@@ -4,7 +4,6 @@ boost-functional
 boost-integer
 boost-locale
 boost-move
-boost-multiprecision
 boost-program-options
 boost-range
 boost-serialization
@@ -28,6 +27,7 @@ mimalloc[override]
 opencascade-minimal
 openctm
 openvdb
+parallel-hashmap
 python3
 spdlog
 tiff

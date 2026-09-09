@@ -86,6 +86,15 @@ public:
             clonePoints_ = p->points;
     }
 
+    /// use this constructor to remember object's lines points and immediate set new value
+    ChangePolylinePointsAction( std::string name, const std::shared_ptr<ObjectLines>& obj, VertCoords && newPoints ) :
+        objLines_{ obj },
+        clonePoints_{ std::move( newPoints ) },
+        name_{ std::move( name ) }
+    {
+        action( HistoryAction::Type::Redo );
+    }
+
     virtual std::string name() const override
     {
         return name_;

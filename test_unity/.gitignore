@@ -1,0 +1,36 @@
+# Unity generated state (NugetTestProj is opened/imported fresh in CI)
+NugetTestProj/[Ll]ibrary/
+NugetTestProj/[Tt]emp/
+NugetTestProj/[Oo]bj/
+NugetTestProj/[Bb]uilds/
+NugetTestProj/[Ll]ogs/
+NugetTestProj/[Uu]ser[Ss]ettings/
+
+# .meta files are regenerated on import; nothing here is referenced by GUID
+NugetTestProj/**/*.meta
+
+# Editor-generated project settings (recreated with defaults by the prime
+# session in CI); only the version pin and the NuGetForUnity native runtime
+# map are tracked
+NugetTestProj/ProjectSettings/*
+!NugetTestProj/ProjectSettings/ProjectVersion.txt
+!NugetTestProj/ProjectSettings/Packages/
+NugetTestProj/ProjectSettings/Packages/*
+!NugetTestProj/ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/
+NugetTestProj/ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/*
+!NugetTestProj/ProjectSettings/Packages/com.github-glitchenzo.nugetforunity/NativeRuntimeSettings.json
+
+# Packages restored by NuGetForUnity and the local feed CI populates
+NugetTestProj/Assets/Packages/
+NugetTestProj/nuget_repo/
+
+# IDE-generated files (recreated whenever the project is opened locally)
+NugetTestProj/*.csproj
+NugetTestProj/*.sln
+NugetTestProj/.vsconfig
+NugetTestProj/.vs/
+NugetTestProj/.idea/
+NugetTestProj/UpgradeLog*.htm
+
+# Unity test runner residue (temp scene of an interrupted playmode run)
+NugetTestProj/Assets/InitTestScene*

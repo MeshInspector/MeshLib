@@ -72,7 +72,7 @@ enum class OrientNormals
 
 enum class OffsetMode : int
 {
-    Smooth,     ///< create mesh using dual marching cubes from OpenVDB library
+    Smooth,     ///< create mesh using dual marching cubes from OpenVDB library (supports only Unsigned, OpenVDB and HoleWindingRule sign detection modes)
     Standard,   ///< create mesh using standard marching cubes implemented in MeshLib
     Sharpening  ///< create mesh using standard marching cubes with additional sharpening implemented in MeshLib
 };

@@ -16,6 +16,9 @@ if not "%VCToolsInstallDir%" == "" (
 
 if "%MSYS2_DIR%" == "" set MSYS2_DIR=C:\msys64_meshlib_mrbind
 
+rem MSYS2 environment to build in: clang64 targets x86_64, clangarm64 targets aarch64.
+if "%MSYS2_ENV%" == "" set MSYS2_ENV=clang64
+
 if "%MRBIND_DIR%" == "" set MRBIND_DIR=%~dp0\..\..\thirdparty\mrbind
 
 rem Preserve the current directory. We'll do `popd` at the end...
@@ -37,7 +40,7 @@ cd %MRBIND_DIR%
 
 rem --- Build MRBind
 rmdir /S /Q build
-call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -clang64 -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build"
+call %MSYS2_DIR%\msys2_shell.cmd -no-start -defterm -here -%MSYS2_ENV% -c "cmake -B build -DCMAKE_BUILD_TYPE=RelWithDebugInfo -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build"
 
 rem Restore the original directory.
 popd

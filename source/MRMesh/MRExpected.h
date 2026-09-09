@@ -17,7 +17,7 @@ template<class E = std::string>
 using Unexpected = std::unexpected<E>;
 
 template <class E>
-MR_BIND_IGNORE inline auto unexpected( E &&e )
+[[nodiscard]] MR_BIND_IGNORE inline auto unexpected( E &&e )
 {
     return std::unexpected( std::forward<E>( e ) );
 }
@@ -31,7 +31,7 @@ template<class E = std::string>
 using Unexpected = tl::unexpected<E>;
 
 template <class E>
-MR_BIND_IGNORE inline auto unexpected( E &&e )
+[[nodiscard]] MR_BIND_IGNORE inline auto unexpected( E &&e )
 {
     return tl::make_unexpected( std::forward<E>( e ) );
 }
@@ -45,7 +45,7 @@ MR_BIND_IGNORE inline std::string stringOperationCanceled()
 }
 
 /// returns Expected error with `stringOperationCanceled()`
-MR_BIND_IGNORE inline auto unexpectedOperationCanceled()
+[[nodiscard]] MR_BIND_IGNORE inline auto unexpectedOperationCanceled()
 {
     return MR::unexpected( stringOperationCanceled() );
 }
@@ -57,7 +57,7 @@ MR_BIND_IGNORE inline std::string stringUnsupportedFileExtension()
 }
 
 /// returns Expected error with `stringUnsupportedFileExtension()`
-MR_BIND_IGNORE inline auto unexpectedUnsupportedFileExtension()
+[[nodiscard]] MR_BIND_IGNORE inline auto unexpectedUnsupportedFileExtension()
 {
     return MR::unexpected( stringUnsupportedFileExtension() );
 }
@@ -69,7 +69,7 @@ MR_BIND_IGNORE inline std::string stringUnsupportedFileFormat()
 }
 
 /// returns Expected error with `stringUnsupportedFileFormat()`
-MR_BIND_IGNORE inline auto unexpectedUnsupportedFileFormat()
+[[nodiscard]] MR_BIND_IGNORE inline auto unexpectedUnsupportedFileFormat()
 {
     return MR::unexpected( stringUnsupportedFileFormat() );
 }

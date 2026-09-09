@@ -75,14 +75,16 @@ Mesh Mesh::fromTrianglesDuplicatingNonManifoldVertices(
     VertCoords vertexCoordinates,
     Triangulation & t,
     std::vector<MeshBuilder::VertDuplication> * dups,
-    const MeshBuilder::BuildSettings & settings )
+    const MeshBuilder::BuildSettings & settings,
+    const MeshBuilder::BetterDupContinuation & betterCont )
 {
     MR_TIMER;
     Mesh res;
     res.points = std::move( vertexCoordinates );
     std::vector<MeshBuilder::VertDuplication> localDups;
-    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings );
-    res.points.resize( res.topology.vertSize() );
+    res.topology = MeshBuilder::fromTrianglesDuplicatingNonManifoldVertices( t, &localDups, settings, betterCont );
+    if ( res.points.size() < res.topology.vertSize() ) // never shrink
+        res.points.resize( res.topology.vertSize() );
     for ( const auto & d : localDups )
         res.points[d.dupVert] = res.points[d.srcVert];
     if ( dups )
@@ -369,7 +371,7 @@ void Mesh::addMeshPart( const MeshPart & from, const PartMapping & map, VacantEl
     addMeshPart( from, false, {}, {}, map, vacant );
 }
 
-void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
+bool Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     const std::vector<EdgePath> & thisContours,
     const std::vector<EdgePath> & fromContours,
     PartMapping map, VacantElements * vacant )
@@ -380,11 +382,13 @@ void Mesh::addMeshPart( const MeshPart & from, bool flipOrientation,
     auto localVmap = VertMapOrHashMap::createHashMap();
     if ( !map.src2tgtVerts )
         map.src2tgtVerts = &localVmap;
-    topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map, vacant );
+    if ( !topology.addPartByMask( from.mesh.topology, from.region, flipOrientation, thisContours, fromContours, map, vacant ) )
+        return false;
     VertId lastPointId = topology.lastValidVert();
     if ( points.size() < lastPointId + 1 )
         points.resize( lastPointId + 1 );
     map.src2tgtVerts->forEach( [&]( VertId fromVert, VertId thisVert ) { points[thisVert] = from.mesh.points[fromVert]; } );
+    return true;
 }
 
 Mesh Mesh::cloneRegion( const FaceBitSet & region, bool flipOrientation, const PartMapping & map ) const

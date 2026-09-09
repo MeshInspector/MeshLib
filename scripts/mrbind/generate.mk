@@ -130,10 +130,15 @@ override IS_EMSCRIPTEN := 1
 # Must special-case Windows because there `em++` is actually `em++.py`, and Bash doesn't want to run it without the extension.
 # `MSYS2_ARG_CONV_EXCL=*` guards `/c`.
 # Note that we have to poke some libraries here too, to add them to the sysroot.
-EMSCRIPTEN_SYSROOT := $(shell echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - -sUSE_BOOST_HEADERS=1 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
+override EMSCRIPTEN_SYSROOT_PROBE := echo |$(if $(IS_WINDOWS), MSYS2_ARG_CONV_EXCL=* cmd /c) em++ -fsyntax-only -v -xc++ - -sUSE_BOOST_HEADERS=1
+EMSCRIPTEN_SYSROOT := $(shell $(EMSCRIPTEN_SYSROOT_PROBE) 2>&1 | grep -oP '(?<=^ ).*(?=/include/c\+\+/v1$$)')
 ifneq ($(EMSCRIPTEN_SYSROOT),)
 $(info Determined EMSCRIPTEN_SYSROOT = `$(EMSCRIPTEN_SYSROOT)`)
 else
+$(info Failed to parse the Emscripten sysroot out of the following probe, its output follows:)
+$(info $(EMSCRIPTEN_SYSROOT_PROBE))
+# `$(shell)` doesn't capture stderr, so sending stdout there too puts the whole output in our log, newlines intact.
+$(call ,$(shell $(EMSCRIPTEN_SYSROOT_PROBE) 1>&2))
 $(error Unable to find Emscripten SDK, ensure you have `em++` in the PATH. In powershell run `emsdk/emsdk_env.ps1`; or in bash run `. emsdk/emsdk_env.sh`)
 endif
 endif
@@ -216,6 +221,12 @@ endif
 VCPKG_TRIPLET := $(if $(VCPKG_DEFAULT_TRIPLET),$(VCPKG_DEFAULT_TRIPLET),x64-windows-meshlib)
 $(info Using vcpkg triplet: $(VCPKG_TRIPLET))
 
+# Target architecture, from the triplet (`x64-windows-meshlib`, `arm64-windows-meshlib`).
+# MSVC spells it x64/arm64 in output paths, Clang wants x86_64/aarch64 in the triple.
+MSVC_ARCH := $(firstword $(subst -, ,$(VCPKG_TRIPLET)))
+MSVC_TARGET_ARCH := $(if $(filter arm64,$(MSVC_ARCH)),aarch64,x86_64)
+$(info Targeting $(MSVC_TARGET_ARCH)-pc-windows-msvc)
+
 else
 VCPKG_DIR = $(error We're only using vcpkg on Windows)
 endif
@@ -239,6 +250,9 @@ MACOS_MIN_VER :=
 # That's because we need to run `clang++ -print-resource-dir` and feed that resource directory to libclang, so it can find its internal headers.
 ifneq ($(HOST_IS_WINDOWS),)
 CXX_FOR_BINDINGS := clang++
+else ifneq ($(LLVM_PREFIX),)
+# LLVM_PREFIX selects a keg by full path (used for self-hosted runners).
+CXX_FOR_BINDINGS := $(LLVM_PREFIX)/bin/clang++
 else ifneq ($(HOST_IS_MACOS),)
 CXX_FOR_BINDINGS := $(HOMEBREW_DIR)/opt/llvm@$(strip $(file <$(makefile_dir)clang_version_macos.txt))/bin/clang++
 else
@@ -276,7 +290,7 @@ ifeq ($(TARGET),python)
 
 # Where to find MeshLib.
 ifneq ($(IS_WINDOWS),)
-MESHLIB_SHLIB_DIR := source/x64/$(VS_MODE)
+MESHLIB_SHLIB_DIR := source/$(MSVC_ARCH)/$(VS_MODE)
 else
 MESHLIB_SHLIB_DIR := build/Release/bin
 endif
@@ -309,6 +323,18 @@ MODE := release
 ifeq ($(MODE),release)
 override EXTRA_CFLAGS += -Oz -flto=thin -DNDEBUG
 override EXTRA_LDFLAGS += -Oz -flto=thin $(if $(IS_MACOS),-Wl$(comma)-x,-s)# Apple's ld rejects `-s`; `-Wl,-x` drops local Mach-O symbols (most of __LINKEDIT) instead.
+# Fold byte-identical functions: the bindings are ~190k tiny near-duplicate template
+# instantiations. Measured on mrmeshpy, with the Python sanity suite passing every time:
+# -11% on Linux, -13.6% on macOS x86_64, -19.4% on macOS arm64 (fixed-width instructions
+# make more of the instantiations byte-identical there).
+# No -ffunction-sections needed: lld's LTO codegen of this preset always emits per-function
+# sections, which is also why this lives here and not next to the other link flags.
+# Not for Windows, where lld-link is a COFF driver that answers this spelling with
+# `ignoring unknown argument '--icf=all'` and folds by default anyway: on the wheel build
+# `/opt:noicf` grows mrmeshpy.pyd from 56.2 to 63.0 MB, while `/opt:icf` changes nothing.
+ifeq ($(IS_WINDOWS),)
+override EXTRA_LDFLAGS += -Wl,--icf=all
+endif
 else ifeq ($(MODE),debug)
 override EXTRA_CFLAGS += -g
 override EXTRA_LDFLAGS += -g
@@ -319,20 +345,22 @@ $(error Unknown MODE=$(MODE))
 endif
 $(info MODE: $(MODE))
 
-ifeq ($(MODE),release)
-CSHARP_MODE=Release
-else
-CSHARP_MODE=Debug
-endif
-
 
 # The list of Python versions, in the format `X.Y`.
 # When setting this manually, both spaces and commas work as separators.
 ifneq ($(IS_WINDOWS),)
 override localappdata := $(subst \,/,$(LOCALAPPDATA))
+# Where python.org installs interpreters. The win-arm64 ones land in suffixed directories
+# (`Python311-arm64`), so the suffix belongs in the paths but must not leak into the
+# version numbers.
+PYTHON_DIR := $(localappdata)/Programs/Python/Python
+PYTHON_DIR_SUFFIX := $(if $(filter arm64,$(MSVC_ARCH)),-arm64)
 ifneq ($(FOR_WHEEL),)
 # On Windows wheel we use all versions we can find in appdata.
-PYTHON_VERSIONS := $(patsubst $(localappdata)/Programs/Python/Python3%,3.%,$(filter $(localappdata)/Programs/Python/Python3%,$(wildcard $(localappdata)/Programs/Python/Python3*)))
+PYTHON_DIR_PATTERN := $(PYTHON_DIR)3%$(PYTHON_DIR_SUFFIX)
+PYTHON_VERSIONS := $(patsubst $(PYTHON_DIR_PATTERN),3.%,$(filter $(PYTHON_DIR_PATTERN),$(wildcard $(subst 3%,3*,$(PYTHON_DIR_PATTERN)))))
+# with an empty suffix the glob also matches the suffixed dirs, so drop those
+PYTHON_VERSIONS := $(filter-out %-arm64 %-32,$(PYTHON_VERSIONS))
 else
 # On Windows non-wheel we detect only one version by default, the one in pkg-config.
 PYTHON_VERSIONS := $(patsubst python-%-embed,%,$(basename $(notdir $(lastword $(sort $(wildcard $(DEPS_BASE_DIR)/lib/pkgconfig/python-*-embed.pc))))))
@@ -367,8 +395,8 @@ PYTHON_CFLAGS :=
 PYTHON_LDFLAGS :=
 ifneq ($(and $(IS_WINDOWS),$(BUILD_SHIMS)),)
 # On Windows wheel, hardcode the flags to point to appdata.
-PYTHON_CFLAGS := -I$(localappdata)/Programs/Python/Python@XY@/Include
-PYTHON_LDFLAGS := -L$(localappdata)/Programs/Python/Python@XY@/libs -lpython@XY@
+PYTHON_CFLAGS := -I$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/Include
+PYTHON_LDFLAGS := -L$(PYTHON_DIR)@XY@$(PYTHON_DIR_SUFFIX)/libs -lpython@XY@
 endif
 
 ifeq ($(PYTHON_CFLAGS)$(PYTHON_LDFLAGS),) # If no custom flags are specified...
@@ -432,6 +460,10 @@ override PCH_CODEGEN := $(filter-out 0,$(PCH_CODEGEN))
 # If this is non-empty and has any flags other than `-fpch-instantiate-templates`, we compile an additional `.o` for the PCH and link it into the module.
 PCH_CODEGEN_FLAGS := -fpch-debuginfo -fpch-instantiate-templates $(if $(PCH_CODEGEN),-fpch-codegen)
 
+
+# Will those C bindings be used on Wasm? Then we disable some libraries that don't work there, and disable Cuda.
+C_FOR_WASM := 0
+override C_FOR_WASM := $(filter-out 0,$(C_FOR_WASM))
 
 
 # --- Guess the build settings for the optimal speed:
@@ -512,8 +544,9 @@ mrmesh_PyExtraInputFiles := $(makefile_dir)helpers.cpp
 mrmesh_PyExtraSourceFiles := $(makefile_dir)aliases.cpp
 
 # Enable Cuda? You can set this to 0 if you don't have Cuda installed.
-# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use on Macs where there is no Cuda.
-ENABLE_CUDA := $(if $(IS_MACOS),0,1)
+# Even if this is false, we emit a dummy `isCudaAvailable()` that always returns false. That's what we use
+#   wherever there is no Cuda toolkit: Macs, Windows Arm, Wasm.
+ENABLE_CUDA := $(if $(IS_MACOS)$(filter arm64,$(MSVC_ARCH))$(and $(is_c),$(C_FOR_WASM)),0,1)
 override ENABLE_CUDA := $(filter-out 0,$(ENABLE_CUDA))
 $(info Enable Cuda: $(if $(ENABLE_CUDA),YES,NO))
 
@@ -552,16 +585,13 @@ endif
 ifeq ($(TARGET),c)
 C_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2
 endif
-ifeq ($(TARGET),csharp)
-CSHARP_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MRDotNet2
-endif
 
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
 ifneq ($(filter c csharp,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
-else ifneq ($(HOST_IS_WINDOWS),)
-TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/x64/$(VS_MODE)
+else ifneq ($(IS_WINDOWS),)
+TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/$(MSVC_ARCH)/$(VS_MODE)
 else
 TEMP_OUTPUT_DIR := build/binds_$(TARGET)
 endif
@@ -588,6 +618,10 @@ COMPILER_FLAGS := $(ABI_COMPAT_FLAG) $(EXTRA_CFLAGS) $(call load_file,$(makefile
 # Add `-frelaxed-template-template-args` if Clang is old enough to support it. Newer versions have this behavior by default.
 # Clang 18 and older need this flag. Clang 19 and 20 do the right thing by default, but still allow the flag with a deprecation warning. Clang 21 and newer consider this an unknown flag and error.
 COMPILER_FLAGS += $(shell $(CXX_FOR_BINDINGS) --help | grep -o -- -frelaxed-template-template-args)
+# `-Wno-enum-constexpr-conversion` is only needed by the older Clang versions (18, 19); pass it only there.
+ifneq ($(filter 18 19,$(call safe_shell,$(CXX_FOR_BINDINGS) -dumpversion | cut -d. -f1)),)
+COMPILER_FLAGS += -Wno-enum-constexpr-conversion
+endif
 ifneq ($(DEPS_INCLUDE_DIR),)
 # Required for vcpkg environments
 COMPILER_FLAGS += -I$(DEPS_INCLUDE_DIR)/eigen3
@@ -610,6 +644,17 @@ COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_C_BINDINGS
 # This doesn't actually get used, since this makefile doesn't compile the C bindings, it only generates them
 # We have to set those flags in CMake.
 COMPILER += -DMR_COMPILING_C_BINDINGS
+endif
+
+ifeq ($(TARGET),c)
+ifneq ($(C_FOR_WASM),)
+# Those libraries not built for wasm.
+# Those flags are similar to those in `source/MRIOExtras/CMakeLists.txt`.
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_PDF
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_STEP
+COMPILER_FLAGS_LIBCLANG += -DMRIOEXTRAS_NO_TIFF
+COMPILER_FLAGS_LIBCLANG += -DMRVOXELS_NO_TIFF
+endif
 endif
 
 
@@ -690,8 +735,8 @@ endif
 # Windows.
 ifneq ($(IS_WINDOWS),)
 # "Cross"-compile to MSVC.
-COMPILER_FLAGS += --target=x86_64-pc-windows-msvc
-LINKER_FLAGS += --target=x86_64-pc-windows-msvc
+COMPILER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc
+LINKER_FLAGS += --target=$(MSVC_TARGET_ARCH)-pc-windows-msvc
 # This seems to be undocumented?! MSYS2 CLANG64 needs it to successfully cross-compile, because the default `-rtlib=compiler-rt` causes it to choke.
 # For some reason MIGNW64 and UCRT64 correctly guess the right default.
 LINKER_FLAGS += -rtlib=platform
@@ -798,6 +843,13 @@ rpath_origin := $(if $(IS_MACOS),@loader_path,$$$$ORIGIN)
 LINKER_FLAGS += -Wl,-rpath,'$(rpath_origin)' -Wl,-rpath,'$(rpath_origin)/..' -Wl,-rpath,$(call quote,$(abspath $(MODULE_OUTPUT_DIR))) -Wl,-rpath,$(call quote,$(abspath $(MESHLIB_SHLIB_DIR))) -Wl,-rpath,$(call quote,$(abspath $(DEPS_LIB_DIR)))
 endif # Linux or MacOS.
 endif # Python-only.
+
+
+# Log which C++ standard library the flags select: the parser (extra flags first, like the real parse call)
+# can differ from the compiler. Probed via $(CXX_FOR_BINDINGS); `\043` = `#`, unwritable in a Make function.
+override stdlib_macros = $(strip $(shell printf '\043include <version>\n' | $(CXX_FOR_BINDINGS) -xc++ - -E -dM $1 2>/dev/null | grep -E '^.define (__GLIBCXX__|_GLIBCXX_RELEASE|_LIBCPP_VERSION|_MSVC_STL_VERSION|_MSVC_STL_UPDATE) ' | tr '\n' ' '))
+$(info Stdlib for parsing:     $(call stdlib_macros,$(COMPILER_FLAGS_LIBCLANG) $(COMPILER_FLAGS)))
+$(info Stdlib for compilation: $(call stdlib_macros,$(COMPILER_FLAGS)))
 
 
 # Directories:
@@ -1094,13 +1146,30 @@ else # If C#:
 
 # C# needs almost none of the logic in this file, just one simple rule.
 
+# Here we support specifying `CSHARP_MODE` as `MODE` for simplicity.
+ifeq ($(MODE),release)
+CSHARP_MODE=Release
+else
+CSHARP_MODE=Debug
+endif
+
+# Set to 1 if this C# assembly (`MRDotNet2.dll`) is intended to be consumed by Wasm (e.g. in Unity).
+# This replaces the library names passed to `[[DllImport(...)]]` with the string "__Internal", which is special-cased at compile-time (by C# and/or Unity) to import the functions from statically linked libraries.
+CSHARP_STATIC_DLLIMPORT := 0
+override CSHARP_STATIC_DLLIMPORT := $(filter-out 0,$(CSHARP_STATIC_DLLIMPORT))
+
+# Where to output C# code.
+CSHARP_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MRDotNet2$(if $(CSHARP_STATIC_DLLIMPORT),Static)
+
+CSHARP_INPUT_JSON := $(TEMP_OUTPUT_DIR)/interop_desc.json
+
 .PHONY: generate
 generate:
 	$(strip $(MRBIND_GEN_CSHARP_EXE) \
-		--input-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json) \
+		--input-json $(call quote,$(CSHARP_INPUT_JSON)) \
 		--output-dir $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/src) \
 		--clean-output-dir \
-		--imported-lib-name MeshLibC2 \
+		--imported-lib-name $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,MeshLibC2) \
 		--helpers-namespace MR::Misc \
 		--force-namespace MR \
 		--dotnet-version=std2.0 \
@@ -1108,7 +1177,7 @@ generate:
 		--wrap-doc-comments-in-summary-tag \
 		--fat-objects \
 		$(call, ### Handle sub-libraries) \
-		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
+		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $(if $(CSHARP_STATIC_DLLIMPORT),__Internal,$($m_CSubLibraryOutputProject)))) \
 	)
 # # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
 # $(call, ### Now copy over the generated sub-libraries)
@@ -1127,7 +1196,9 @@ generate:
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
-	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))
+# MeshLibArch places the assembly next to the native output; unset off Windows, where the
+# csproj default stands.
+	dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE)) $(if $(MSVC_ARCH),-p:MeshLibArch=$(MSVC_ARCH))
 # # Can't compile sub-libraries separately yet, because we can't define the same C# partial class (which we use as namespaces) in different C# assemblies.
 # $(foreach m,$(MODULES),\
 # 	$(if $($m_CSharpSubLibraryOutputProject),\

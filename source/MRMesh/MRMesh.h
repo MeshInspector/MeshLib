@@ -3,6 +3,7 @@
 #include "MRPch/MRBindingMacros.h"
 #include "MRMeshMath.h"
 #include "MRMeshBuilderTypes.h"
+#include "MRVertDuplication.h"
 #include "MRMeshProject.h"
 #include "MREdgePoint.h"
 #include "MRSharedThreadSafeOwner.h"
@@ -35,12 +36,14 @@ struct [[nodiscard]] Mesh
         const MeshBuilder::BuildSettings& settings = {}, ProgressCallback cb = {} );
 
     /// construct mesh from vertex coordinates and a set of triangles with given ids;
-    /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices
+    /// unlike simple fromTriangles() it tries to resolve non-manifold vertices by creating duplicate vertices;
+    /// `betterCont` (if given) selects the best triangle among several possible continuations during the duplication
     [[nodiscard]] MRMESH_API static Mesh fromTrianglesDuplicatingNonManifoldVertices(
         VertCoords vertexCoordinates,
         Triangulation & t,
         std::vector<MeshBuilder::VertDuplication> * dups = nullptr,
-        const MeshBuilder::BuildSettings & settings = {} );
+        const MeshBuilder::BuildSettings & settings = {},
+        const MeshBuilder::BetterDupContinuation & betterCont = {} );
 
     /// construct mesh from vertex coordinates and construct mesh topology from face soup,
     /// where each face can have arbitrary degree (not only triangles);
@@ -401,7 +404,9 @@ struct [[nodiscard]] Mesh
     /// appends whole or part of another mesh to this joining added faces with existed ones along given contours
     /// \param flipOrientation true means that every (from) triangle is inverted before adding
     /// optional \param vacant can be passed to copy elements not at the end, but over given ones, which the user guaranties to be free/lone
-    MRMESH_API void addMeshPart( const MeshPart & from, bool flipOrientation = false,
+    /// \return false if the given contours cannot be stitched, and this mesh is left unmodified then
+    ///         (the src2tgt mappings in (map) argument can be partially filled nevertheless)
+    MRMESH_API bool addMeshPart( const MeshPart & from, bool flipOrientation = false,
         const std::vector<EdgePath> & thisContours = {}, // contours on this mesh that have to be stitched with
         const std::vector<EdgePath> & fromContours = {}, // contours on from mesh during addition
         // optionally returns mappings: from.id -> this.id

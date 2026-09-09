@@ -16,6 +16,7 @@ include/*
 share/*
 bin/*
 thirdparty_build/*
+thirdparty_sources/*
 .vscode/*
 distr/*
 *.log
@@ -46,6 +47,9 @@ compile_commands.json
 /source/MRDotNet2/bin
 /source/MRDotNet2/obj
 /source/MRDotNet2/src
+/source/MRDotNet2Static/bin
+/source/MRDotNet2Static/obj
+/source/MRDotNet2Static/src
 /source/MRDotNet2Test/obj
 # `MRDotNet2Test` places binaries there on Linux: [
 /source/Debug
@@ -53,4 +57,6 @@ compile_commands.json
 # ]
 /thirdparty/boost-libs/
 /scripts/mrbind/msys2_packages
+/scripts/mrbind/msys2_pacman_install.log
 /vcpkg_installed
+/installed

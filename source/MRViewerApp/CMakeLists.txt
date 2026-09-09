@@ -8,6 +8,9 @@ IF(NOT EMSCRIPTEN)
       MRMesh
       MRViewer
   )
+  add_dependencies(${PROJECT_NAME}
+    MRCommonPlugins
+  )
 ELSE()
   target_link_libraries(${PROJECT_NAME}
     PRIVATE

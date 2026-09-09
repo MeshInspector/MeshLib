@@ -63,7 +63,7 @@ runs:
       run: ""
 
     - name: Upload sys stats
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}
         path: "${{ runner.temp }}/RunnerSysStats-${{ steps.fetch_job_id.outputs.job_id }}.json"

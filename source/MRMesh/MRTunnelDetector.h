@@ -39,6 +39,17 @@ MRMESH_API Expected<EdgeLoop> findShortestCoLoop( const MeshPart& mp, const Edge
 /// same as \ref findSmallestMetricEquivalentLoops with euclidean edge length metric
 [[nodiscard]] MRMESH_API std::vector<EdgeLoop> findShortestEquivalentLoops( const MeshPart& mp, const EdgeLoop& loop );
 
+/// returns true if the loop mostly surrounds a mesh (loop's geometrical center is located inside of mesh at an average loop's point),
+/// or false if the loop mostly surrounds a tunnel inside mesh (loop's geometrical center is located outside of mesh at an average loop's point)
+[[nodiscard]] MRMESH_API bool isLoopOuter( const Mesh& mesh, const EdgeLoop& loop );
+
+enum class TunnelLoopType
+{
+    Any,
+    Outer, ///< handle-like
+    Inner  ///< tunnel-like
+};
+
 struct DetectTunnelSettings
 {
     /// maximal euclidean length of tunnel loops to detect
@@ -61,6 +72,9 @@ struct DetectTunnelSettings
     /// if ( buildCoLoops ) then some tunnel loops can be equivalent (e.g. they cut the same handle twice),
     /// this option activates their filtering out, but it is very slow
     bool filterEquivalentCoLoops = false;
+
+    /// selects what kind of loops to return
+    TunnelLoopType loopType = TunnelLoopType::Any;
 
     /// to report algorithm progress and cancel from outside
     ProgressCallback progress;

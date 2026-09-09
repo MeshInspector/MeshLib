@@ -1,6 +1,7 @@
 #pragma once
+
 #include "MRHistoryAction.h"
-#include <memory>
+#include <string>
 
 namespace MR
 {

@@ -50,6 +50,9 @@ jobs:
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
+            # mrbind and the bindings use the PGO keg fetched from
+            # MeshInspector/toolchains releases; the app stays on AppleClang.
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-15-intel # github hosted
             instance: macos-15-intel
@@ -58,46 +61,50 @@ jobs:
             compiler: AppleClang
             cxx-compiler-template: /usr/bin/clang++
             c-compiler-template: /usr/bin/clang
+            # mrbind and the bindings use the PGO keg fetched from
+            # MeshInspector/toolchains releases; the app stays on AppleClang.
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
             # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
             runner: macos-14
             instance: macos-14
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
-            cxx-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang++
-            c-compiler-template: BREW_PREFIX/opt/llvm@22/bin/clang
+            # The -O3+PGO+ThinLTO keg, built on each runner via the local/pgo
+            # tap (llvm.rb with ENV.O3, installed with --build-bottle).
+            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
+            cxx-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang++
+            c-compiler-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
             instance: self-hosted-arm
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
+      actions: read   # This is required for wait-for-job
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
+
+      - name: macOS Diagnostics
+        uses: ./.github/actions/macos-diagnostics
+
+      # LLVM_PREFIX selects the LLVM keg for the build and the mrbind scripts;
+      # resolved per machine since the self-hosted label set spans runners
+      # with different homebrew prefixes.
+      - name: Resolve LLVM prefix
+        if: ${{ matrix.llvm-prefix-template }}
+        run: echo "LLVM_PREFIX=$(echo '${{ matrix.llvm-prefix-template }}' | sed "s|BREW_PREFIX|$(brew --prefix)|")" >> $GITHUB_ENV
 
       - name: Checkout third-party submodules
         run: |
           # Selective init -- parent Checkout drops submodules:true.
           # https://github.com/actions/checkout/issues/1779
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh -- git submodule update --init --depth 1 \
-            thirdparty/imgui \
-            thirdparty/eigen \
-            thirdparty/parallel-hashmap \
-            thirdparty/expected \
-            thirdparty/OpenCTM-git \
-            thirdparty/libE57Format \
-            thirdparty/glad \
-            thirdparty/tinygltf \
-            thirdparty/laz-perf \
-            thirdparty/clip \
-            thirdparty/fastmcpp \
-            thirdparty/nlohmann-json \
-            thirdparty/cpp-httplib \
-            thirdparty/mrbind \
-            thirdparty/mrbind-pybind11
-          # mrbind needs deps/cppdecl; recurse only there
-          bash scripts/retry.sh -- git -C thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+
+      - name: Install llvm-pgo keg
+        if: ${{ contains(matrix.llvm-prefix-template, 'llvm-pgo') }}
+        uses: ./.github/actions/install-llvm-pgo-keg
 
       - name: Install thirdparty libs
         id: thirdparty
@@ -135,7 +142,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ matrix.llvm-prefix-template }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -148,6 +155,25 @@ jobs:
           curl -sS https://bootstrap.pypa.io/get-pip.py | python3
           python3 -m pip install -r ./requirements/python/requirements.txt
           python3 -m pip install pytest
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ steps.thirdparty.outputs.cxx-compiler }}
+          MR_VERSION: ${{ inputs.app_version }}
+          MR_CMAKE_OPTIONS: >
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+            -DMR_CXX_STANDARD=23
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+
+      - name: Wait for C bindings
+        if: ${{ inputs.mrbind_c }}
+        uses: ./.github/actions/wait-for-job
+        with:
+          job-name: generate-c-bindings
 
       - name: Download C bindings
         if: ${{ inputs.mrbind_c }}
@@ -164,22 +190,21 @@ jobs:
           # Cuda placeholders:
           cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
-      - name: Build
-        run: ./scripts/build_source.sh
+      - name: Build C bindings
+        if: ${{ inputs.mrbind_c }}
         env:
-          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ steps.thirdparty.outputs.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
-          MR_CMAKE_OPTIONS: >
-            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
-            -DMR_CXX_STANDARD=23
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
-            -DMR_PCH_USE_EXTRA_HEADERS=ON
+        run: |
+          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+          cmake --build build/${{ matrix.config }} -j $(sysctl -n hw.logicalcpu) --target MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: MRMesh Exported Symbols
         run: |
-          export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          if [[ -n "${LLVM_PREFIX:-}" ]]; then
+            export PATH="$LLVM_PREFIX/bin:$PATH"
+          else
+            export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          fi
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings
@@ -209,7 +234,7 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/${{ matrix.config }}/bin/MRTest --with-python-tests
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}
@@ -277,6 +302,7 @@ jobs:
           cmake \
             --build c-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
+          ./c-examples-build/MeshModification
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}

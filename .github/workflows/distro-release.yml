@@ -9,13 +9,14 @@ on:
 
 permissions:
   contents: write
+  id-token: write # This is required for requesting the JWT (windows-build-test)
+  actions: read   # This is required for wait-for-job (windows-build-test)
 
 jobs:
   config:
     runs-on: ubuntu-latest
     env:
-      vs19_vcpkg_version: "2024.10.21"
-      vs22_vcpkg_version: "2026.06.01"
+      vcpkg_version: "2026.07.29"
     outputs:
       app_version: ${{ steps.set.outputs.app_version }}
       release_tag: ${{ steps.set.outputs.release_tag }}
@@ -24,11 +25,10 @@ jobs:
       internal_build: "false"
       upload_test_artifacts: "false"
       nuget_build: "false"
-      vs19_vcpkg_version: ${{ env.vs19_vcpkg_version }}
-      vs22_vcpkg_version: ${{ env.vs22_vcpkg_version }}
+      vcpkg_version: ${{ env.vcpkg_version }}
     steps:
       - name: Checkout matrix file
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           sparse-checkout: .github/workflows/matrix/windows-finalize-release-config.json
           sparse-checkout-cone-mode: false
@@ -44,15 +44,20 @@ jobs:
           # Minimal matrix: Release only
           MATRIX_FILE=".github/workflows/matrix/windows-finalize-release-config.json"
 
-          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
-          # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
-            --arg vs19 "${{ env.vs19_vcpkg_version }}" \
-            --arg vs22 "${{ env.vs22_vcpkg_version }}" \
-            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
+            --arg vcpkg "${{ env.vcpkg_version }}" \
+            '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT
+
+  generate-c-bindings:
+    needs: config
+    uses: ./.github/workflows/generate-c-bindings.yml
+    with:
+      docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
+      version_tag: ${{ needs.config.outputs.release_tag }}
+      upload_artifacts: true
 
   windows-build-test:
     needs: [ config ]
@@ -72,8 +77,7 @@ jobs:
       - windows-build-test
     uses: ./.github/workflows/update-win-version.yml
     with:
-      vs19_vcpkg_version: ${{ needs.config.outputs.vs19_vcpkg_version }}
-      vs22_vcpkg_version: ${{ needs.config.outputs.vs22_vcpkg_version }}
+      vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
     secrets: inherit
 
@@ -86,7 +90,7 @@ jobs:
       - update-win-version
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Download All Developer Distributives
         uses: actions/download-artifact@v8
@@ -97,14 +101,25 @@ jobs:
       - name: Rename Distributives
         run: |
           shopt -s nullglob
+          VERSION="${{ needs.config.outputs.app_version }}"
           for PKG_FILE in MeshLibDist*.zip ; do
-            case "$PKG_FILE" in
-              # Keep the historical layout for the iterator-debug archive:
-              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
-              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
-              # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
-              *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
+            # An arm64 archive is named like its x64 sibling with `-arm64` appended
+            # last, so strip that suffix first and put it back at the end.
+            NAME="${PKG_FILE%.zip}"
+            ARCH_SUFFIX=""
+            case "$NAME" in
+              *-arm64) NAME="${NAME%-arm64}" ; ARCH_SUFFIX="-arm64" ;;
             esac
+            case "$NAME" in
+              # Keep the historical layout for the iterator-debug archives:
+              # MeshLibDist-IteratorDebug[-PDB] -> MeshLibDist_<version>-IteratorDebug[-PDB]
+              *-IteratorDebug|*-IteratorDebug-PDB) NAME="${NAME/Dist/Dist_${VERSION}}" ;;
+              # Companion symbols archives: MeshLibDistVS26-PDB -> MeshLibDistVS26_<version>-PDB
+              *-PDB) NAME="${NAME%-PDB}_${VERSION}-PDB" ;;
+              # Per-VS archives: MeshLibDistVS26 -> MeshLibDistVS26_<version>
+              *) NAME="${NAME}_${VERSION}" ;;
+            esac
+            mv "$PKG_FILE" "${NAME}${ARCH_SUFFIX}.zip"
           done
 
       - name: Upload Distributives
@@ -129,4 +144,3 @@ jobs:
         with:
           name: Distributives*
           failOnError: false
-

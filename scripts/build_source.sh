@@ -36,6 +36,8 @@ fi
 
 # add env options to cmake
 MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS:-}"
+# Extra flags for `cmake --build`.
+MR_CMAKE_BUILD_OPTIONS="${MR_CMAKE_BUILD_OPTIONS:-}"
 
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
@@ -68,7 +70,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
   EMSCRIPTEN_ROOT="${EMSDK}/upstream/emscripten"
 
-  [[ ${MR_EMSCRIPTEN_SIMD:=} ]] || export MR_EMSCRIPTEN_SIMD=1
+  [[ ${MR_EMSCRIPTEN_WASM2023:=} ]] || export MR_EMSCRIPTEN_WASM2023=1
   [[ ${MR_EMSCRIPTEN_MIMALLOC:=} ]] || export MR_EMSCRIPTEN_MIMALLOC=1
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
@@ -76,7 +78,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     -D MR_EMSCRIPTEN=1 \
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \
     -D MR_EMSCRIPTEN_WASM64=${MR_EMSCRIPTEN_WASM64} \
-    -D MR_EMSCRIPTEN_SIMD=${MR_EMSCRIPTEN_SIMD} \
+    -D MR_EMSCRIPTEN_WASM2023=${MR_EMSCRIPTEN_WASM2023} \
     -D MR_EMSCRIPTEN_MIMALLOC=${MR_EMSCRIPTEN_MIMALLOC} \
   "
 fi
@@ -92,7 +94,10 @@ if [[ $OSTYPE == 'darwin'* ]]; then
   PYTHON_LIBRARY=${PYTHON_PREFIX}/lib/libpython${PYTHON_VERSION}.dylib
   PYTHON_INCLUDE_DIR=${PYTHON_PREFIX}/include/python${PYTHON_VERSION}
 
+  # pin FindPython to this prefix: /usr/local/Frameworks (e.g. Rosetta Homebrew) must not shadow it
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
+    -D Python_ROOT_DIR=${PYTHON_PREFIX} \
+    -D Python_FIND_FRAMEWORK=LAST \
     -D PYTHON_LIBRARY=${PYTHON_LIBRARY} \
     -D PYTHON_INCLUDE_DIR=${PYTHON_INCLUDE_DIR} \
     -D PYTHON_EXECUTABLE:FILEPATH=${PYTHON_EXECUTABLE} \
@@ -121,7 +126,7 @@ if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
   fi
   cd build/Release
     cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Release ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
-    cmake --build . -j ${NPROC} | tee ${logfile}
+    cmake --build . -j ${NPROC} ${MR_CMAKE_BUILD_OPTIONS} | tee ${logfile}
   cd ../..
 fi
 
@@ -132,15 +137,15 @@ if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
   fi
   cd build/Debug
     cmake -S ../.. -B . -D CMAKE_BUILD_TYPE=Debug ${MR_CMAKE_OPTIONS} $@ | tee ${logfile}
-    cmake --build . -j ${NPROC} | tee ${logfile}
+    cmake --build . -j ${NPROC} ${MR_CMAKE_BUILD_OPTIONS} | tee ${logfile}
   cd ../..
 fi
 
 if [ "${MESHLIB_BUILD_RELEASE}" = "ON" ]; then
-  printf "\rAutoinstall script successfully finished. You could run ./build/Release/bin/MRTest next\n\n"
+  printf "\rBuild script successfully finished. You could run ./build/Release/bin/MRTest next\n\n"
 else
   if [ "${MESHLIB_BUILD_DEBUG}" = "ON" ]; then
-    printf "\rAutoinstall script successfully finished. You could run ./build/Debug/bin/MRTest next\n\n"
+    printf "\rBuild script successfully finished. You could run ./build/Debug/bin/MRTest next\n\n"
   else
     printf "\rNothing was built\n\n"
   fi

@@ -20,6 +20,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRAffineXf3.h>
+#include <MRMesh/MRTriDist.h>
 #include <gtest/gtest.h>
 
 #include <cfloat>
@@ -421,6 +422,28 @@ TEST( MRMesh, MeshMeshDistance_OneInsideOther )
         EXPECT_FLOAT_EQ( sd.signedDist, 0.0f );
         EXPECT_EQ( sd.status, MeshMeshCollisionStatus::NotColliding );
     }
+}
+
+TEST( MRMesh, findTriTriDistance )
+{
+    const Triangle3f a =
+    {
+        Vector3f{ 74.35837f, -9.789432f, 159.f },
+        Vector3f{ 75.f, 0.f, 159.f },
+        Vector3f{ 0.f, 0.f, 159.f }
+    };
+    const Triangle3f b =
+    {
+        Vector3f{ 32.463974f, -0.012975672f, 436.5f },
+        Vector3f{ 31.64795f, -0.01495606f, 437.36945f },
+        Vector3f{ 32.438614f, -0.012028802f, 436.49982f }
+    };
+
+    const auto td0 = findTriTriDistance( a, b );
+    EXPECT_NEAR( std::sqrt( td0.distSq ), 277.5f, 0.001f );
+
+    const auto td1 = findTriTriDistance( a, b, { .upDistLimitSq = td0.distSq + 0.1f, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
+    EXPECT_EQ( td0.distSq, td1.distSq );
 }
 
 } // namespace MR

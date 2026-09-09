@@ -8,7 +8,8 @@
 
 // Not-zero _ITERATOR_DEBUG_LEVEL in Microsoft STL greatly reduces the performance of STL containers.
 //
-// Pre-build binaries from MeshLib distribution are prepared with _ITERATOR_DEBUG_LEVEL=0,
+// Pre-build binaries from MeshLib distribution are prepared with _ITERATOR_DEBUG_LEVEL=0
+// (except MeshLibDist-IteratorDebug, which uses 2 and states so in MRMesh/config_dist.h),
 // and if you build MeshLib by yourself then _ITERATOR_DEBUG_LEVEL=0 is also selected see
 // 1) vcpkg/triplets/x64-windows-meshlib.cmake and
 // 2) MeshLib/source/common.props
@@ -17,14 +18,16 @@
 //
 // If you deliberately would like to work with not zero _ITERATOR_DEBUG_LEVEL, then please define
 // additionally MR_ITERATOR_DEBUG_LEVEL with the same value to indicate that it is done intentionally
-// (and you are ok with up to 100x slowdown).
+// (and you are ok with up to 100x slowdown), the way
+// vcpkg/triplets/x64-windows-meshlib-iterator-debug.cmake does it for our own build.
 //
 #if defined _MSC_VER
-    #if !defined _ITERATOR_DEBUG_LEVEL
-        #define _ITERATOR_DEBUG_LEVEL 0
-    #endif
     #if !defined MR_ITERATOR_DEBUG_LEVEL
         #define MR_ITERATOR_DEBUG_LEVEL 0
+    #endif
+    // no CRT header has fixed the level yet, so this translation unit can still join MeshLib
+    #if !defined _ITERATOR_DEBUG_LEVEL
+        #define _ITERATOR_DEBUG_LEVEL MR_ITERATOR_DEBUG_LEVEL
     #endif
     #if _ITERATOR_DEBUG_LEVEL != MR_ITERATOR_DEBUG_LEVEL
         #error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib
@@ -141,7 +144,6 @@ struct PackMapping;
 class ViewportId;
 class ViewportMask;
 template<typename T> class ViewportProperty;
-
 
 struct UnorientedTriangle;
 struct SomeLocalTriangulations;
@@ -371,6 +373,8 @@ using Contour2d = Contour2<double>;
 using Contour2f = Contour2<float>;
 using Contour3d = Contour3<double>;
 using Contour3f = Contour3<float>;
+
+struct MarkedContour3f;
 
 template <typename V> using Contours = std::vector<Contour<V>>;
 template <typename T> using Contours2 = Contours<Vector2<T>>;
@@ -752,9 +756,9 @@ enum class Reorder : char;
 
 struct TransparencyMode;
 
-/// squared value
+/// squared value; the result type is the type of x*x, which is int for small integer types (char, short)
 template <typename T>
-constexpr inline T sqr( T x ) noexcept { return x * x; }
+constexpr inline auto sqr( T x ) noexcept -> decltype( x * x ) { return x * x; }
 
 /// sign of given value in { -1, 0, 1 }
 template <typename T>
@@ -764,9 +768,10 @@ constexpr inline int sgn( T x ) noexcept { return x > 0 ? 1 : ( x < 0 ? -1 : 0 )
 template <typename T>
 constexpr inline T distance( T x, T y ) noexcept { return x >= y ? x - y : y - x; }
 
-/// squared difference between two value
+/// squared difference between two value; the result type is the type of the product
+/// (spelled via * and not via sqr, so that vector types with their own distanceSq do not match here)
 template <typename T>
-constexpr inline T distanceSq( T x, T y ) noexcept { return sqr( x - y ); }
+constexpr inline auto distanceSq( T x, T y ) noexcept -> decltype( ( x - y ) * ( x - y ) ) { return sqr( x - y ); }
 
 /// Linear interpolation: returns v0 when t==0 and v1 when t==1
 template <typename V, typename T>

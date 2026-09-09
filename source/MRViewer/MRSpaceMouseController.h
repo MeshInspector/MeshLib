@@ -1,5 +1,6 @@
 #pragma once
 
+#include "exports.h"
 #include "MRSpaceMouseParameters.h"
 #include "MRMesh/MRMeshFwd.h"
 
@@ -18,7 +19,7 @@ public:
 
     /// returns true if there is a device connected with raw handler
     /// while installed driver can send excessive scroll events
-    bool canDriverSendScroll() const;
+    MRVIEWER_API bool canDriverSendScroll() const;
 private:
     bool spaceMouseMove_( const Vector3f& translate, const Vector3f& rotate );
     bool spaceMouseDown_( int key );

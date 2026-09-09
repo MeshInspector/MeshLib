@@ -2,18 +2,19 @@
 
 public static class MeshFixDegeneraciesExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
         try
         {
-            if (args.Length != 2 && args.Length != 3)
+            if (args.Length != 1 && args.Length != 2)
             {
-                Console.WriteLine("Usage: {0} MeshFixDegeneraciesExample INPUT [OUTPUT]", Assembly.GetExecutingAssembly().GetName().Name);
+                Console.WriteLine("Usage: {0} INPUT [OUTPUT]", Assembly.GetExecutingAssembly().GetName().Name);
                 return;
             }
 
-            string inputFile = args[1];
-            string outputFile = args.Length == 3 ? args[2] : inputFile;
+            // INPUT is a mesh file you supply; this example needs a mesh that has degeneracies to fix
+            string inputFile = args[0];
+            string outputFile = args.Length == 2 ? args[1] : inputFile;
 
             var mesh = MR.MeshLoad.fromAnySupportedFormat(inputFile);
 

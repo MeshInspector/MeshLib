@@ -23,7 +23,6 @@
 #include <boost/archive/iterators/base64_from_binary.hpp>
 #include <boost/archive/iterators/transform_width.hpp>
 #include <boost/exception/diagnostic_information.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <boost/signals2/signal.hpp>
 #include <boost/signals2/connection.hpp>
 #include <boost/stacktrace.hpp>
@@ -50,6 +49,7 @@
 #pragma warning(disable:4355) //'this': used in base member initializer list
 #pragma warning(disable:5204) //class has virtual functions, but its trivial destructor is not virtual; instances of objects derived from this class may not be destructed correctly
 #pragma warning(disable:5220) //a non-static data member with a volatile qualified type no longer implies that compiler generated copy/move constructors and copy/move assignment operators are not trivial
+#pragma warning(disable:4746) //volatile access is subject to /volatile:<iso|ms>; ARM64 only
 #include <ppltasks.h>
 #pragma warning(pop)
 #endif
@@ -73,7 +73,9 @@
 #include "MRMesh/MRIOFilters.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRObject.h"
+#include "MRMesh/MRObjectLines.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRObjectPoints.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRParallel.h"
 #include "MRMesh/MRParallelFor.h"
@@ -91,6 +93,12 @@
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRUIStyle.h"
 #endif
+#endif
+
+// in MSVC it dramaticcaly increases the size of PCH file (from 400Mb to 800Mb),
+// but greatly improves compilation time of TUs that include OpenVDB
+#ifdef MR_PCH_USE_OPENVDB
+#include "MROpenVDB.h"
 #endif
 
 #pragma warning(pop)

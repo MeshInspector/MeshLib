@@ -4,12 +4,9 @@ on:
   workflow_call:
     outputs:
       # manually defined values
-      vs19_vcpkg_version:
-        description: "vs19 vcpkg version"
-        value: "2024.10.21" # fixed version - refer 'vcpkg-auto-update.yml' for more info
-      vs22_vcpkg_version:
-        description: "vs22 vcpkg version"
-        value: "2026.06.01" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
+      vcpkg_version:
+        description: "vcpkg version"
+        value: "2026.07.29" # VCPKG-AUTO-UPDATE - refer 'vcpkg-auto-update.yml' for more info
       # automatically computed or tag-based values
       app_version:
         description: "Version without namespace: v1.2.3.4"
@@ -25,16 +22,19 @@ on:
         value: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
       need_linux_image_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.need-linux-image-rebuild == 'true' }}
       need_linux_vcpkg_rebuild:
         description:
-        value: ${{ jobs.prepare-config.outputs.linux-vcpkg-changes == 'true' && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
+        value: ${{ jobs.prepare-config.outputs.need-linux-vcpkg-rebuild == 'true' }}
       need_windows_vcpkg_rebuild:
         description:
         value: ${{ ( jobs.prepare-config.outputs.windows-changes == 'true' || jobs.prepare-config.outputs.tag-bump-vcpkg == 'true' ) && github.event_name != 'schedule' && jobs.prepare-config.outputs.tag-skip-image-rebuild != 'true' }}
       release_tag:
         description: "Version with namespace (if it exists): v1.2.3.4-namespace"
         value: ${{ jobs.prepare-config.outputs.release_tag }}
+      ubuntu_arm64_config_matrix:
+        description: "Config matrix for Ubuntu arm64 builds"
+        value: ${{ jobs.prepare-config.outputs.ubuntu_arm64_config_matrix }}
       ubuntu_x64_config_matrix:
         description: "Config matrix for Ubuntu x64 builds"
         value: ${{ jobs.prepare-config.outputs.ubuntu_x64_config_matrix }}
@@ -57,8 +57,8 @@ on:
         description: "True when full-ci, scheduled, or tag-build-release-windows is set"
         value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
       test_pip_build:
-        description:
-        value: ${{ jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
+        description: "True when scheduled or tag-test-pip-build is set"
+        value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-test-pip-build == 'true' }}
       build-release-win:
         description: "True when full-ci, scheduled, or tag-build-release-windows is set"
         value: ${{ github.event_name == 'schedule' || jobs.prepare-config.outputs.tag-full-ci == 'true' || jobs.prepare-config.outputs.tag-build-release-windows == 'true' }}
@@ -88,8 +88,9 @@ jobs:
       app_version:              ${{ steps.version-tag.outputs.app_version }}
       docker-image-tag:         ${{ steps.select-docker-image-tag.outputs.image_tag }}
       release_tag:              ${{ steps.version-tag.outputs.release_tag }}
-      linux-changes:            ${{ steps.linux-changes.outputs.src }}
-      linux-vcpkg-changes:      ${{ steps.linux-vcpkg-changes.outputs.src }}
+      need-linux-image-rebuild: ${{ steps.select-docker-image-tag.outputs.need_rebuild }}
+      need-linux-vcpkg-rebuild: ${{ steps.select-vcpkg-docker-image-tag.outputs.need_rebuild }}
+      ubuntu_arm64_config_matrix: ${{ steps.set-ubuntu-arm64-matrix.outputs.matrix }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
       windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
@@ -116,13 +117,13 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    # `env:` block removed — its three label-derived booleans
-    # (full_config_build / upload_artifacts / version_namespace) are
-    # written to $GITHUB_ENV by the live-labels step below.
+    env:
+      # false on fork and Dependabot PRs: they have no repository secrets
+      CAN_PUSH_DOCKER_TAGS: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && github.actor != 'dependabot[bot]' }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # Read PR labels live (trigger payload is empty right after
       # `gh pr create --label X`). Emits one step output per label and
@@ -201,35 +202,14 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
 
-      - name: Filter Linux paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
-        id: linux-changes
-        with:
-          filters: |
-            src:
-              - 'docker/(ubuntu22|ubuntu24|emscripten-c-bindings|emscripten)Dockerfile'
-              - 'requirements/(ubuntu|distribution_python).txt'
-              - 'scripts/build_thirdparty.sh'
-              - 'scripts/install_apt_requirements.sh'
-              - 'scripts/mrbind/install_deps_ubuntu.sh'
-              - 'thirdparty/!(install.bat|vcpkg/**|mrbind|mrbind/**|Noto_Sans/**)'
-
-      - name: Filter Linux vcpkg paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
-        id: linux-vcpkg-changes
-        with:
-          filters: |
-            src:
-              - 'docker/(rockylinux8|rockylinux9)-vcpkgDockerfile'
-              - 'thirdparty/vcpkg/**'
-
       - name: Filter Windows paths
-        uses: dorny/paths-filter@fbd0ab8f3e69293af611ebaee6363fc25e6d187d # v4.0.1
+        if: ${{ github.event_name != 'schedule' }}
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
         id: windows-changes
         with:
           filters: |
@@ -238,40 +218,61 @@ jobs:
               - 'thirdparty/vcpkg/**'
               - 'thirdparty/install.bat'
 
-      # if nothing to rebuild: "latest"
-      # else: $branch-name | sed -r 's/[^a-zA-Z0-9._-]+/-/
-      # example: fix/mesh -> fix-mesh
+      - name: Login to DockerHub
+        if: ${{ env.CAN_PUSH_DOCKER_TAGS == 'true' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: meshlib
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Single criterion for image selection and rebuilds: every image's
+      # conventional tag (branch tag on PRs, `latest` otherwise) must point at
+      # its content-addressed source-checksum-* tag; sync_docker_image_tags.sh
+      # syncs it right here, and its exit code says whether prepare-images
+      # must run for images whose source-checksum-* tag is absent, i.e. that
+      # really must be built.
       - name: Select Docker image tag
         id: select-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
             # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+          if [ "${CAN_PUSH_DOCKER_TAGS}" != "true" ] || scripts/devops/sync_docker_image_tags.sh linux "${IMAGE_TAG}"; then
+            echo "need_rebuild=false" >> $GITHUB_OUTPUT
+          else
+            echo "need_rebuild=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: Select vcpkg Docker image tag
         id: select-vcpkg-docker-image-tag
         run: |
-          if [[ ${{ steps.linux-vcpkg-changes.outputs.src }} == 'true' ]] && [[ ${{ github.event_name }} != 'push' && ${{ github.event_name }} != 'schedule' ]]; then
-            # https://stackoverflow.com/q/58033366/7325599
-            IMAGE_TAG=$(echo "${{ github.head_ref || github.ref_name }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
+          if [ "${{ github.event_name }}" = "pull_request" ] && [ "${CAN_PUSH_DOCKER_TAGS}" = "true" ]; then
+            IMAGE_TAG=$(echo "${{ github.head_ref }}" | sed -r 's/[^a-zA-Z0-9._-]+/-/g')
           else
             IMAGE_TAG="latest"
           fi
           echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
+          if [ "${CAN_PUSH_DOCKER_TAGS}" != "true" ] || scripts/devops/sync_docker_image_tags.sh linux-vcpkg "${IMAGE_TAG}"; then
+            echo "need_rebuild=false" >> $GITHUB_OUTPUT
+          else
+            echo "need_rebuild=true" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout full history
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@9f72830310d5ed81233b641ee59253644cd8a8fc # v6.0.2
+        uses: paulhatch/semantic-version@502226b17e3e242e4befd0a45690fcbb27dd1373 # v6.0.3
         id: version
         with:
           tag_prefix: "v"
@@ -298,6 +299,41 @@ jobs:
             echo "matrix=$(jq -c . < .github/workflows/matrix/ubuntu-x64-minimal-config.json)" >> $GITHUB_OUTPUT
           fi
 
+      - name: Set matrix for ubuntu-arm64 builds
+        id: set-ubuntu-arm64-matrix
+        uses: ./scripts/actions/matrix-builder
+        with:
+          matrix: |
+            os:
+              - ubuntu22
+              - ubuntu24
+              - ubuntu26
+            config:
+              - Release
+          rules: |
+            - extend:
+                - os: ubuntu22
+                  compiler: clang
+                  cxx-compiler: /usr/bin/clang++-14
+                  c-compiler: /usr/bin/clang-14
+                  cxx-standard: 20
+                - os: ubuntu24
+                  compiler: GCC
+                  cxx-compiler: /usr/bin/g++-13
+                  c-compiler: /usr/bin/gcc-13
+                  cxx-standard: 23
+                - os: ubuntu26
+                  compiler: GCC
+                  cxx-compiler: /usr/bin/g++-15
+                  c-compiler: /usr/bin/gcc-15
+                  cxx-standard: 23
+            # A docs-only run still needs ubuntu22 - PythonStubs and CsharpBindings come from
+            # it - but nothing reads the ubuntu24 leg unless the debs are published.
+            - if: ${{ steps.live-labels.outputs.tag-update-doc-only == 'true' && env.upload_artifacts != 'true' }}
+              exclude:
+                - os: ubuntu24
+                - os: ubuntu26
+
       - name: Set matrix for windows-x64 builds
         id: set-windows-x64-matrix
         run: |
@@ -309,12 +345,9 @@ jobs:
             MATRIX_FILE=".github/workflows/matrix/windows-minimal-config.json"
           fi
 
-          # Derive vcpkg-version from the compiler: msvc-2019 entries use the
-          # VS2019 vcpkg baseline, everything else the VS2022 one.
           jq \
-            --arg vs19 "2024.10.21" \
-            --arg vs22 "2026.06.01" \
-            '.include[] |= (. + {"vcpkg-version": (if .cxx_compiler == "msvc-2019" then $vs19 else $vs22 end)})' \
+            --arg vcpkg "2026.07.29" \
+            '.include[] |= (. + {"vcpkg-version": $vcpkg})' \
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT

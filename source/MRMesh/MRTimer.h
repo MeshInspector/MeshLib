@@ -17,10 +17,14 @@ class MR_BIND_IGNORE Timer
 {
 public:
     Timer( std::string name ) { start( std::move( name ) ); }
+    /// the name is converted in std::string only if the timing is enabled in this thread,
+    /// which is not the case in parallel worker threads, where MR_TIMER then costs nothing
+    Timer( const char * name ) { start( name ); }
     ~Timer() { finish(); }
 
     MRMESH_API void restart( std::string name );
     MRMESH_API void start( std::string name );
+    MRMESH_API void start( const char * name );
     MRMESH_API void finish();
 
     Timer( const Timer & ) = delete;

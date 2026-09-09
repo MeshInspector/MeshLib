@@ -342,20 +342,29 @@ void FanOptimizer::optimize( int steps, float critAng, float boundaryAngle )
         queue.pop();
 
     int currentFanSize = int( fanData_.neighbors.size() );
+
+    // remove points coinciding with center one
     for ( int i = 0; i < fanData_.neighbors.size(); ++i )
     {
         if ( points_[fanData_.neighbors[i]] == points_[centerVert_] )
         {
-            fanData_.neighbors[i] = {}; // remove points coinciding with center one
+            fanData_.neighbors[i] = {};
             --currentFanSize;
         }
-        else if ( auto x = calcQueueElement_( i, critAng ); !x.stable )
-            queue.emplace( std::move( x ) );
     }
     if ( currentFanSize < 2 )
     {
         fanData_.neighbors.clear();
         return;
+    }
+
+    // intialize the queue
+    for ( int i = 0; i < fanData_.neighbors.size(); ++i )
+    {
+        if ( !fanData_.neighbors[i].valid() )
+            continue;
+        if ( auto x = calcQueueElement_( i, critAng ); !x.stable )
+            queue.emplace( std::move( x ) );
     }
 
     // optimize fan

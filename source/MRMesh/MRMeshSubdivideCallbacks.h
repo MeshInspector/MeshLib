@@ -34,6 +34,11 @@ MRMESH_API OnEdgeSplit meshOnEdgeSplitVertAttribute( const Mesh& mesh, const Mes
 
 MRMESH_API OnEdgeSplit meshOnEdgeSplitFaceAttribute( const Mesh& mesh, const MeshAttributesToUpdate& params );
 
+#if __GNUC__ == 13 // false positive stringop-overflow from GCC 13 on the push_back below, arm64 only
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstringop-overflow"
+#endif
+
 template <typename T>
 auto onEdgeSplitVertAttribute( const Mesh& mesh, Vector<T, VertId>& data )
 {
@@ -47,6 +52,10 @@ auto onEdgeSplitVertAttribute( const Mesh& mesh, Vector<T, VertId>& data )
 
     return onEdgeSplit;
 }
+
+#if __GNUC__ == 13
+#pragma GCC diagnostic pop
+#endif
 
 template <typename T>
 auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data )

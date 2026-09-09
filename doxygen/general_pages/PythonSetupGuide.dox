@@ -13,6 +13,8 @@
 
 The first part of this video shows MeshLib Python Installation process on Windows
 
+Not ready to install yet? [Open the live demo](https://demo.meshlib.io/) to watch MeshLib run in the browser first.
+
 When `pip` is done, confirm the result with \ref PythonSetupVerify "Verify the installation" — one command, with the output to expect.
 If a step fails, see \ref PythonSetupTroubleshooting "Troubleshooting" at the end of the Installation Process section.
 

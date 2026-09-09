@@ -5,3 +5,46 @@ div#nav-tree-contents > ul > li > div.item {
 div#nav-tree-contents > div#nav-sync {
   display:none;
 }
+
+/* "Live demo" button under the project name in the page header
+   (the markup is in html_header.html of MeshInspector/MeshInspector.github.io) */
+#livedemo {
+  margin-top: 6px;
+  line-height: 1;
+}
+
+/* doxygen-awesome sets the link colour with !important, so the button text needs it too */
+#livedemo a,
+#livedemo a:link,
+#livedemo a:visited,
+#livedemo a:hover,
+#livedemo a:focus,
+#livedemo a:active {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: var(--border-radius-small, 5px);
+  background: var(--primary-color, #1779c4);
+  color: #ffffff !important;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+#livedemo a:hover,
+#livedemo a:focus {
+  filter: brightness(0.92);
+}
+
+/* doxygen-awesome-sidebar-only.css fixes the header height on desktop (120px);
+   the button row adds 6px, so grow the header by the same amount and keep
+   the content column where it was */
+@media screen and (min-width: 768px) {
+  :root {
+    --top-height: 126px;
+  }
+
+  div#doc-content {
+    padding-top: 40px;
+  }
+}

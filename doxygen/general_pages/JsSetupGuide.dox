@@ -8,6 +8,7 @@
 [MeshLib](https://meshlib.io/) is available for JavaScript as the geometry library compiled to WebAssembly.
 It runs both in Node.js and in the browser, and is published to npm as two packages that share an identical API:
 `@meshinspector/meshlib` (single-threaded) and `@meshinspector/meshlib-mt` (multi-threaded).
+To see it running in the browser before you install anything, open [demo.meshlib.io](https://demo.meshlib.io/) — the live demo is built on the multi-threaded package.
 
 ## Prerequisites
 Before installing MeshLib SDK for JavaScript, ensure you have the following:

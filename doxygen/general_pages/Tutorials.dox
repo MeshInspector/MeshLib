@@ -5,6 +5,8 @@ Welcome to the MeshLib SDK Tutorials! Here you'll find guides, examples, and ste
 
 Prefer video? Check out our [YouTube tutorial playlist](https://youtube.com/playlist?list=PLof8xz4oQS-Cb26IQEnb_HBRZEnT8ze9w&si=KGAiYjxA6qFOCpd8) for visual walkthroughs and demonstrations.
 
+Prefer to click first? [Open the live demo](https://demo.meshlib.io/) — interactive booleans, repair, decimation and ICP, no install.
+
 ## Available Tutorials
 
 ### How to Create a First Plugin Using MeshLib C++ on Windows

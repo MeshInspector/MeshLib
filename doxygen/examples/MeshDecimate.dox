@@ -3,6 +3,8 @@
 
 Example of mesh decimation
 
+▶ [See it live in the browser](https://demo.meshlib.io/#decimate)
+
 <div class="tabbed">
  
 - <b class="tab-title">C++</b>

@@ -50,12 +50,15 @@ public class MeshBooleanExample
 
             // and backward: the face of mesh A each face of the result came from
             // (invalid id for the faces that came from mesh B)
-            if (producedFaces.count() > 0)
+            var new2OldFaces = mapper.getNew2OldFaceMap(MR.BooleanResultMapper.MapObject.A);
+            for (int f = 0; f < (int)new2OldFaces.size(); ++f)
             {
-                var new2OldFaces = mapper.getNew2OldFaceMap(MR.BooleanResultMapper.MapObject.A);
-                var resultFace = producedFaces.find_first();
+                var resultFace = new MR.FaceId(f);
+                if (!producedFaces.test(resultFace))
+                    continue;
                 Console.WriteLine("face {0} of the result came from face {1} of mesh A",
-                    resultFace.id, new2OldFaces[resultFace].id);
+                    f, new2OldFaces[resultFace].id);
+                break;
             }
 
             // save result to STL file

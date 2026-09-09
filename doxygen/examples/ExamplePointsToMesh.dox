@@ -16,6 +16,7 @@ Example of generating a triangulation from a pointcloud.
 
 - <b class="tab-title">JavaScript</b>
 \include PointsToMesh.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

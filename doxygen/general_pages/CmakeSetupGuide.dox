@@ -12,6 +12,7 @@ Example CMake configuration files are available to demonstrate how to link again
 You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt).
 
 MeshLib requires CMake 3.18 or newer.
+If configuration or the build fails, see \ref CppSetupTroubleshooting "Troubleshooting" in the C++ Setup Guide.
 
 ### Find MeshLib CMake Configuration Files
 
@@ -19,6 +20,12 @@ For a start, find the MeshLib package:
 \code{.cmake}
 find_package(MeshLib CONFIG REQUIRED)
 \endcode
+
+The Ubuntu `.deb` and the macOS `.pkg` install the package where CMake searches by default. For the portable Linux vcpkg build, pass the directory it was unpacked to:
+\code{.sh}
+cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_install
+\endcode
+`MeshLib_DIR` alone is not sufficient, since the bundled third-party libraries are looked up in the same directory.
 
 ### Include the MeshLib Headers
 
@@ -45,6 +52,15 @@ Or if you use the C API, instead link `MeshLib::MeshLibC2`:
 \code{.cmake}
 target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 \endcode
+
+The package defines the following targets, each guarded by the variable in parentheses. A distribution sets it to `ON` for every module it ships, and only those targets exist.
+ - `MeshLib::MRMesh`: core data structures and algorithms, needed by every C++ project.
+ - `MeshLib::MRIOExtras` (`MESHLIB_BUILD_EXTRA_IO_FORMATS`): additional file formats such as 3MF, CTM, E57, glTF, LAS, and STEP.
+ - `MeshLib::MRSymbolMesh` (`MESHLIB_BUILD_SYMBOLMESH`): text converted to meshes.
+ - `MeshLib::MRVoxels` (`MESHLIB_BUILD_VOXELS`): voxel volumes and the algorithms built on them: offsets, fusion, marching cubes.
+ - `MeshLib::MRCuda` (`MESHLIB_BUILD_MRCUDA`): CUDA implementations of several algorithms; unavailable for macOS and Emscripten.
+ - `MeshLib::MRViewer` and `MeshLib::MRCommonPlugins` (`MESHLIB_BUILD_MRVIEWER`): the viewer framework and its standard plugins.
+ - `MeshLib::MeshLibC2` (`MESHLIB_BUILD_GENERATED_C_BINDINGS`): the C API.
 
 ### A Complete Minimal Example
 

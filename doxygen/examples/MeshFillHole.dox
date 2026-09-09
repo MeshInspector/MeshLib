@@ -15,6 +15,7 @@ Example of filling holes
 \include MeshFillHole.dox.cs
 - <b class="tab-title">JavaScript</b>
 \include MeshFillHole.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

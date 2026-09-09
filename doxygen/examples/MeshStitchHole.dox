@@ -13,6 +13,7 @@ Example of stitching holes (connect two holes with a cylinder)
 \include MeshStitchHole.dox.c
 - <b class="tab-title">JavaScript</b>
 \include MeshStitchHole.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

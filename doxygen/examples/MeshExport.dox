@@ -19,6 +19,7 @@ See a more relevant example \ref ExampleNumpy
 
 - <b class="tab-title">JavaScript</b>
 \include MeshExport.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

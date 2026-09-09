@@ -34,9 +34,10 @@ The examples below use `@meshinspector/meshlib`. To use the multi-threaded build
 
 ## Installation
 ### Installation via npm
-Install the package from npm:
+Install the package from npm and enable ES module support in your project:
 \code{.sh}
 npm install @meshinspector/meshlib
+npm pkg set type=module
 \endcode
 
 ### Use from CDN
@@ -58,6 +59,17 @@ const { default: createMeshLib } = await import( url );
 const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/javascript' } );
 
 const ml = await createMeshLib( { mainScriptUrlOrBlob: blob } );
+\endcode
+
+In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
+
+### Bundlers
+Vite 8 and webpack 5 resolve `meshlib.wasm` from the module and emit it as an asset, so a plain `import` needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL and hand it to the loader via `locateFile`:
+\code{.js}
+import createMeshLib from '@meshinspector/meshlib';
+import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
+
+const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 \endcode
 
 In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
@@ -86,7 +98,7 @@ Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
 \endcode
 
-Without them `crossOriginIsolated` is `false`, `SharedArrayBuffer` is unavailable, and the module fails to initialize.
+Without them `crossOriginIsolated` is `false`, `SharedArrayBuffer` is unavailable, and `createMeshLib()` never resolves.
 
 For a Vite dev server, set the headers in `vite.config.js` (whatever hosts the production build must send them too; `vite-plugin-cross-origin-isolation` can stamp them for `vite preview`):
 \code{.js}
@@ -144,12 +156,7 @@ const { valid, distSq } = ml.findProjection(point, mesh);
 mesh.delete();
 \endcode
 
-Also make sure the ES module support is enabled for your project:
-\code{.sh}
-npm pkg set type=module
-\endcode
-
-## Memory Management
+## Memory Management {#JsMemoryManagement}
 Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one must be freed explicitly.
 
 The preferred way is JavaScript's explicit resource management: declare a handle with [`using`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using) and it is freed automatically when its scope ends, even if an exception is thrown.

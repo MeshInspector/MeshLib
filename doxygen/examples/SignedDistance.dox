@@ -18,6 +18,7 @@ Example of usage to get signed distance from mesh to mesh
 
 - <b class="tab-title">JavaScript</b>
 \include SignedDistance.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

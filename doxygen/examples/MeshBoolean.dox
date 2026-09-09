@@ -35,6 +35,7 @@ Boolean intersection
 
 - <b class="tab-title">JavaScript</b>
 \include MeshBoolean.dox.js
+\include{doc} JsUsingNote.dox
 Source meshes
 \image html boolean_before.png
 Boolean intersection

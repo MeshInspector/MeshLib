@@ -18,6 +18,7 @@ Example of using Laplacian deformer
 
 - <b class="tab-title">JavaScript</b>
 \include LaplacianDeformation.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

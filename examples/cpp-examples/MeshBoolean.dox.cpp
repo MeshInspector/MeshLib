@@ -39,6 +39,25 @@ int main()
               << "faces created by the cut: " << newFaces.count() << std::endl;
 //! [1]
 
+//! [2]
+    // map one particular face of sphere1 forward: the cut can split it in several faces of the
+    // result, or drop it completely if that part of sphere1 is not in the result
+    MR::FaceId faceOfSphere1( 793 );
+    MR::FaceBitSet oneFace;
+    oneFace.autoResizeSet( faceOfSphere1 );
+    MR::FaceBitSet producedFaces = mapper.map( oneFace, MapObject::A );
+    std::cout << "face " << faceOfSphere1 << " of sphere1 produced " << producedFaces.count() << " faces of the result:";
+    for ( MR::FaceId f : producedFaces )
+        std::cout << ' ' << f;
+    std::cout << std::endl;
+
+    // and backward: the face of sphere1 each face of the result came from
+    // (invalid id for the faces that came from sphere2)
+    MR::FaceMap new2OldFaces = mapper.getNew2OldFaceMap( MapObject::A );
+    MR::FaceId resultFace = producedFaces.find_first();
+    std::cout << "face " << resultFace << " of the result came from face " << new2OldFaces[resultFace] << " of sphere1" << std::endl;
+//! [2]
+
     // save result to STL file
     if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( resultMesh, "out_boolean.stl" ); !saveRes )
     {

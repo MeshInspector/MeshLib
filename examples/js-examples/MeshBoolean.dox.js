@@ -31,6 +31,20 @@ console.log(`faces from sphere1: ${facesOfSphere1.count()}`);
 console.log(`faces from sphere2: ${facesOfSphere2.count()}`);
 console.log(`faces created by the cut: ${newFaces.count()}`);
 
+// map one particular face of sphere1 forward: the cut can split it in several faces of the
+// result, or drop it completely if that part of sphere1 is not in the result
+const faceOfSphere1 = 793;
+using oneFace = ml.FaceBitSet.fromIndices([faceOfSphere1]);
+using producedFaces = mapper.mapFaces(oneFace, ml.BooleanMapObject.A);
+console.log(`face ${faceOfSphere1} of sphere1 produced ${producedFaces.count()} faces of the result`);
+
+// and backward: the face of sphere1 each face of the result came from
+// (4294967295, i.e. an invalid id, for the faces that came from sphere2)
+using new2OldFaces = mapper.getNew2OldFaceMap(ml.BooleanMapObject.A);
+const new2OldFacesArray = new2OldFaces.toArray();
+const resultFace = producedFaces.find_first();
+console.log(`face ${resultFace} of the result came from face ${new2OldFacesArray[resultFace]} of sphere1`);
+
 // save result to STL file
 using resultMesh = result.mesh;
 ml.MeshSave.toAnySupportedFormat(resultMesh, 'out_boolean.stl');

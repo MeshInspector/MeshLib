@@ -3,8 +3,9 @@
 
 Example of boolean operation
 
-The optional \ref MR::BooleanResultMapper "BooleanResultMapper" passed to the operation maps
-faces, vertices and edges of the input meshes to the primitives of the result mesh.
+The optional \ref MR::BooleanResultMapper "BooleanResultMapper" passed to the operation maps faces,
+vertices and edges of the input meshes to the primitives of the result mesh, and its
+\ref MR::BooleanResultMapper::getNew2OldFaceMap "getNew2OldFaceMap" maps the faces back.
 
 <div class="tabbed">
  

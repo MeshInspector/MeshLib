@@ -33,10 +33,10 @@ void AncillaryLines::make( Object &parent, const Contours3f& contours )
 
 void AncillaryLines::colorizeAxes()
 {
-    if ( !obj || !obj->polyline() )
+    if ( !obj || !obj->polylineConstPtr() )
         return;
 
-    const auto& polyline = *obj->polyline();
+    const auto& polyline = *obj->polylineConstPtr();
     const auto ueCount = polyline.topology.lastNotLoneUndirectedEdge() + 1;
     UndirectedEdgeColors colorMap( ueCount, Color::black() );
     for ( auto ue = 0_ue; ue < ueCount; ++ue )

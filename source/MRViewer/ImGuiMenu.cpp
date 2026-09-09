@@ -1249,13 +1249,13 @@ void ImGuiMenu::draw_selection_properties_content( const std::vector<std::shared
         if ( !obj )
             return false;
         auto objMesh = obj->asType<ObjectMesh>();
-        if ( objMesh && objMesh->mesh() )
+        if ( objMesh && objMesh->meshConstPtr() )
             return true;
         auto objPoints = obj->asType<ObjectPoints>();
-        if ( objPoints && objPoints->pointCloud() )
+        if ( objPoints && objPoints->pointCloudConstPtr() )
             return true;
         auto objLines = obj->asType<ObjectLines>();
-        if ( objLines && objLines->polyline() )
+        if ( objLines && objLines->polylineConstPtr() )
             return true;
         return false;
     } );
@@ -1465,12 +1465,12 @@ float ImGuiMenu::drawSelectionInformation_()
         {
             totalPoints += pObj->numValidPoints();
             totalSelectedPoints += pObj->numSelectedPoints();
-            if ( auto pointCloud = pObj->pointCloud() )
+            if ( auto pointCloud = pObj->pointCloudConstPtr() )
                 pointsHaveNormals |= pointCloud->hasNormals();
         }
         else if ( auto mObj = obj->asType<ObjectMesh>() )
         {
-            if ( auto mesh = mObj->mesh() )
+            if ( auto mesh = mObj->meshConstPtr() )
             {
                 totalFaces += mesh->topology.numValidFaces();
                 totalSelectedFaces += mObj->numSelectedFaces();
@@ -1487,7 +1487,7 @@ float ImGuiMenu::drawSelectionInformation_()
         }
         else if ( auto lObj = obj->asType<ObjectLines>() )
         {
-            if ( auto polyline = lObj->polyline() )
+            if ( auto polyline = lObj->polylineConstPtr() )
             {
                 totalVerts += polyline->topology.numValidVerts();
                 totalEdges += lObj->numUndirectedEdges();

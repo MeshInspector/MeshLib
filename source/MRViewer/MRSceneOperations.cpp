@@ -150,11 +150,11 @@ void mergeSubtree( TypedFlatTree subtree )
         const auto hadNormals = std::any_of( objsPoints.begin(), objsPoints.end(), [] ( auto&& objPoints )
         {
             assert( objPoints );
-            assert( objPoints->pointCloud() );
-            return objPoints->pointCloud()->hasNormals();
+            assert( objPoints->pointCloudConstPtr() );
+            return objPoints->pointCloudConstPtr()->hasNormals();
         } );
-        assert( newObjPoints->pointCloud() );
-        if ( !newObjPoints->pointCloud()->hasNormals() && hadNormals )
+        assert( newObjPoints->pointCloudConstPtr() );
+        if ( !newObjPoints->pointCloudConstPtr()->hasNormals() && hadNormals )
         {
             pushNotification( {
                 .text = "Some input point have normals and some others do not, all normals are lost",

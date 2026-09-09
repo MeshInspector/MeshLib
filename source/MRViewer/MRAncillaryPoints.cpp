@@ -33,7 +33,7 @@ void AncillaryPoints::addPoint( const Vector3f& point )
 void AncillaryPoints::addPoint( const Vector3f& point, const Color& color )
 {
     auto colorMap = obj->getVertsColorMap();
-    assert( colorMap.size() == obj->pointCloud()->points.size() );
+    assert( colorMap.size() == obj->pointCloudConstPtr()->points.size() );
     obj->varPointCloud()->addPoint( point );
     colorMap.push_back( color );
     obj->setVertsColorMap( colorMap );
@@ -52,7 +52,7 @@ void AncillaryPoints::addPoints( const std::vector<Vector3f>& points, const std:
     assert( points.size() == colors.size() );
 
     auto colorMap = obj->getVertsColorMap();
-    assert( colorMap.size() == obj->pointCloud()->points.size() );
+    assert( colorMap.size() == obj->pointCloudConstPtr()->points.size() );
     colorMap.reserve( colorMap.size() + points.size() );
     auto& oldPoints = obj->varPointCloud()->points;
     oldPoints.reserve( oldPoints.size() + points.size() );

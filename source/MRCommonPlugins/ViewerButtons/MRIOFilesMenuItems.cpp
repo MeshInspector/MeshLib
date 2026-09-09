@@ -778,7 +778,7 @@ bool SaveSelectedMenuItem::action()
     {
         std::vector<MeshSave::NamedXfMesh> objs;
         for ( auto obj : selectedMeshes )
-            objs.push_back( MeshSave::NamedXfMesh{ obj->name(),obj->worldXf(),obj->mesh() } );
+            objs.push_back( MeshSave::NamedXfMesh{ obj->name(),obj->worldXf(),obj->varMesh() } );
 
         ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, objs] ()->std::function<void()>
         {

@@ -63,42 +63,42 @@ Expected<void> saveObjectToFile( const Object& obj, const std::filesystem::path&
     Expected<void> result;
     if ( auto objPoints = obj.asType<ObjectPoints>() )
     {
-        if ( objPoints->pointCloud() )
+        if ( objPoints->pointCloudConstPtr() )
         {
             const auto& colors = objPoints->getVertsColorMap();
             if ( !colors.empty() )
                 saveSettings.colors = &colors;
-            result = PointsSave::toAnySupportedFormat( *objPoints->pointCloud(), filename, { saveSettings } );
+            result = PointsSave::toAnySupportedFormat( *objPoints->pointCloudConstPtr(), filename, { saveSettings } );
         }
         else
             result = unexpected( std::string( "ObjectPoints has no PointCloud in it" ) );
     }
     else if ( auto objLines = obj.asType<ObjectLines>() )
     {
-        if ( objLines->polyline() )
+        if ( objLines->polylineConstPtr() )
         {
             const auto& colors = objLines->getVertsColorMap();
             if ( !colors.empty() )
                 saveSettings.colors = &colors;
-            result = LinesSave::toAnySupportedFormat( *objLines->polyline(), filename, saveSettings );
+            result = LinesSave::toAnySupportedFormat( *objLines->polylineConstPtr(), filename, saveSettings );
         }
         else
             result = unexpected( std::string( "ObjectLines has no Polyline in it" ) );
     }
     else if ( auto objMesh = obj.asType<ObjectMesh>() )
     {
-        if ( objMesh->mesh() )
+        if ( objMesh->meshConstPtr() )
         {
             if ( objMesh->getColoringType() == ColoringType::VertsColorMap )
                 saveSettings.colors = &objMesh->getVertsColorMap();
             else if ( objMesh->getColoringType() == ColoringType::PrimitivesColorMap )
                 saveSettings.primitiveColors = &objMesh->getFacesColorMap().vec_;
-            if ( objMesh->getUVCoords().size() >= objMesh->mesh()->topology.lastValidVert() )
+            if ( objMesh->getUVCoords().size() >= objMesh->meshConstPtr()->topology.lastValidVert() )
                 saveSettings.uvMap = &objMesh->getUVCoords();
             if ( !objMesh->getTexture().pixels.empty() )
                 saveSettings.texture = &objMesh->getTexture();
             saveSettings.materialName = utf8string( filename.stem() );
-            result = MeshSave::toAnySupportedFormat( *objMesh->mesh(), filename, saveSettings );
+            result = MeshSave::toAnySupportedFormat( *objMesh->meshConstPtr(), filename, saveSettings );
         }
         else
             result = unexpected( std::string( "ObjectMesh has no Mesh in it" ) );

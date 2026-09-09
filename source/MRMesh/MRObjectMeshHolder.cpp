@@ -442,7 +442,7 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     }
 
     const auto& srcUVCoords = src.getUVCoords();
-    const auto lastVert = src.mesh()->topology.lastValidVert();
+    const auto lastVert = src.meshConstPtr()->topology.lastValidVert();
     const bool updateUV = lastVert < srcUVCoords.size();
 
     if ( !updateUV )

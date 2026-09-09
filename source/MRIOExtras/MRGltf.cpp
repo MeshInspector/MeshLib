@@ -639,7 +639,7 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
                                b[0], b[1], b[2], 1 };
 
             auto curObjectMesh = curObj->asType<ObjectMesh>();
-            if ( curObjectMesh && curObjectMesh->mesh() )
+            if ( curObjectMesh && curObjectMesh->meshConstPtr() )
             {
                 Material material;
                 material.baseColor = curObjectMesh->getFrontColor( false );
@@ -675,7 +675,7 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
                     materialIndex = materialIt->second;
                 }
 
-                const auto mesh = curObjectMesh->mesh();
+                const auto mesh = curObjectMesh->meshConstPtr();
                 const auto points = mesh->points;
                 const auto triangles = mesh->topology.getAllTriVerts();
 

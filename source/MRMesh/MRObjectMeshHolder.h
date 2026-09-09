@@ -48,10 +48,15 @@ public:
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( data_.mesh ); }
 
+    /// returns the mesh of this object, or nullptr if it is not set
+    [[nodiscard]] const Mesh* meshConstPtr() const { return data_.mesh.get(); }
+
     #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
+    /// \deprecated the cast inside is undefined behaviour, use meshConstPtr() instead
+    [[deprecated( "use meshConstPtr() instead" )]]
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( data_.mesh ); } // reinterpret_cast to avoid making a copy of shared_ptr
     #ifdef __GNUC__

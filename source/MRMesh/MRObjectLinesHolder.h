@@ -44,10 +44,15 @@ public:
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;
     MRMESH_API virtual std::shared_ptr<Object> shallowClone() const override;
 
+    /// returns the polyline of this object, or nullptr if it is not set
+    [[nodiscard]] const Polyline3* polylineConstPtr() const { return polyline_.get(); }
+
     #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
+    /// \deprecated the cast inside is undefined behaviour, use polylineConstPtr() instead
+    [[deprecated( "use polylineConstPtr() instead" )]]
     const std::shared_ptr<const Polyline3>& polyline() const
     { return reinterpret_cast< const std::shared_ptr<const Polyline3>& >( polyline_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
     #ifdef __GNUC__

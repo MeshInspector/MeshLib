@@ -251,7 +251,7 @@ public:
     [[nodiscard]] virtual bool hasVisualRepresentation() const { return false; }
 
     /// does the object have any model available (but possibly empty),
-    /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
+    /// e.g. ObjectMesh has valid meshConstPtr() or ObjectPoints has valid pointCloudConstPtr()
     [[nodiscard]] virtual bool hasModel() const { return false; }
 
     /// provides read-only access to the tag storage

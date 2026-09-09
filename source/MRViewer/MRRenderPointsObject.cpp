@@ -36,7 +36,7 @@ bool RenderPointsObject::render( const ModelRenderParams& renderParams )
 {
     MR_TIMER;
     bool isColorTransparent = objPoints_->getFrontColor( objPoints_->isSelected(), renderParams.viewportId ).a < 255;
-    if ( !isColorTransparent && objPoints_->pointCloud() && objPoints_->pointCloud()->hasNormals() )
+    if ( !isColorTransparent && objPoints_->pointCloudConstPtr() && objPoints_->pointCloudConstPtr()->hasNormals() )
     {
         isColorTransparent = objPoints_->getBackColor( renderParams.viewportId ).a < 255;
     }
@@ -192,12 +192,12 @@ void RenderPointsObject::forceBindAll()
 RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->pointCloud() )
+    if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->pointCloudConstPtr() )
         return glBuffer.prepareBuffer<Vector3f>( vertPosSize_, false );
 
     const auto step = objPoints_->getRenderDiscretization();
-    const auto& points = objPoints_->pointCloud()->points;
-    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
+    const auto& points = objPoints_->pointCloudConstPtr()->points;
+    const auto num = objPoints_->pointCloudConstPtr()->validPoints.find_last() + 1;
     if ( step == 1 )
         // we are sure that points will not be changed, so can do const_cast
         return RenderBufferRef<Vector3f>( const_cast< Vector3f* >( points.data() ), vertPosSize_ = num, !points.empty() );
@@ -215,11 +215,11 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertPosBuffer_()
 RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_RENDER_NORMALS ) || !objPoints_->pointCloud() )
+    if ( !( dirty_ & DIRTY_RENDER_NORMALS ) || !objPoints_->pointCloudConstPtr() )
         return glBuffer.prepareBuffer<Vector3f>( vertNormalsSize_, false );
 
-    const auto& normals = objPoints_->pointCloud()->normals;
-    int num = int( objPoints_->pointCloud()->validPoints.find_last() ) + 1;
+    const auto& normals = objPoints_->pointCloudConstPtr()->normals;
+    int num = int( objPoints_->pointCloudConstPtr()->validPoints.find_last() ) + 1;
     if ( normals.size() < num )
         num = 0;
     const auto step = objPoints_->getRenderDiscretization();
@@ -240,11 +240,11 @@ RenderBufferRef<Vector3f> RenderPointsObject::loadVertNormalsBuffer_()
 RenderBufferRef<Color> RenderPointsObject::loadVertColorsBuffer_()
 {
     auto& glBuffer = GLStaticHolder::getStaticGLBuffer();
-    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objPoints_->pointCloud() || objPoints_->getVertsColorMap().empty() )
+    if ( !( dirty_ & DIRTY_VERTS_COLORMAP ) || !objPoints_->pointCloudConstPtr() || objPoints_->getVertsColorMap().empty() )
         return glBuffer.prepareBuffer<Color>( vertColorsSize_, false );
 
     const auto& colors = objPoints_->getVertsColorMap();
-    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;
+    const auto num = objPoints_->pointCloudConstPtr()->validPoints.find_last() + 1;
     const auto step = objPoints_->getRenderDiscretization();
     if ( step == 1 )
         // we are sure that colors will not be changed, so can do const_cast
@@ -269,7 +269,7 @@ void RenderPointsObject::bindPoints_( GLStaticHolder::ShaderType shaderType )
     GL_EXEC( glUseProgram( shader ) );
     if ( objPoints_->hasVisualRepresentation() )
     {
-        auto pointCloud = objPoints_->pointCloud();
+        auto pointCloud = objPoints_->pointCloudConstPtr();
 
         const auto positions = loadVertPosBuffer_();
         bindVertexAttribArray( shader, "position", vertPosBuffer_, positions, 3, positions.dirty(), positions.glSize() != 0 );
@@ -368,9 +368,9 @@ RenderBufferRef<VertId> RenderPointsObject::loadValidIndicesBuffer_()
     if ( !( dirty_ & DIRTY_POSITION ) || !objPoints_->hasVisualRepresentation() )
         return glBuffer.prepareBuffer<VertId>( validIndicesSize_, !validIndicesBuffer_.valid() );
 
-    const auto& points = objPoints_->pointCloud();
+    const auto* points = objPoints_->pointCloudConstPtr();
     const auto step = objPoints_->getRenderDiscretization();
-    const auto num = objPoints_->pointCloud()->validPoints.find_last() + 1;    
+    const auto num = objPoints_->pointCloudConstPtr()->validPoints.find_last() + 1;    
 
     const auto& validPoints = points->validPoints;
     auto firstValid = validPoints.find_first();
@@ -423,7 +423,7 @@ RenderBufferRef<unsigned> RenderPointsObject::loadVertSelectionTextureBuffer_()
         return glBuffer.prepareBuffer<unsigned>( vertSelectionTextureSize_.x * vertSelectionTextureSize_.y,
             ( dirty_ & DIRTY_SELECTION ) && vertSelectionTextureSize_.x * vertSelectionTextureSize_.y == 0 );
 
-    const auto& points = objPoints_->pointCloud();
+    const auto* points = objPoints_->pointCloudConstPtr();
     const auto step = objPoints_->getRenderDiscretization();
     const int num = points->validPoints.find_last() + 1;
     const auto numV = num / int( step );

@@ -32,8 +32,8 @@ public:
         name_{ std::move( name ) }
     {
         assert( objMesh_ );
-        if ( objMesh_ && objMesh_->mesh() )
-            meshDiff_ = MeshDiff( *objMesh_->mesh(), oldMesh );
+        if ( objMesh_ && objMesh_->meshConstPtr() )
+            meshDiff_ = MeshDiff( *objMesh_->meshConstPtr(), oldMesh );
     }
 
     /// use this constructor to set new object's mesh and remember its difference from existed mesh for future undoing
@@ -45,8 +45,8 @@ public:
         if ( objMesh_ )
         {
             auto oldMesh = objMesh_->updateMesh( std::move( newMesh ) );
-            if ( oldMesh && objMesh_->mesh() )
-                meshDiff_ = MeshDiff( *objMesh_->mesh(), *oldMesh );
+            if ( oldMesh && objMesh_->meshConstPtr() )
+                meshDiff_ = MeshDiff( *objMesh_->meshConstPtr(), *oldMesh );
         }
     }
 

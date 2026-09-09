@@ -24,7 +24,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto p = obj->polyline() )
+            if ( auto p = obj->polylineConstPtr() )
                 clonePolyline_ = std::make_shared<Polyline3>( *p );
         }
     }
@@ -82,7 +82,7 @@ public:
     {
         if ( !objLines_ )
             return;
-        if ( auto p = objLines_->polyline() )
+        if ( auto p = objLines_->polylineConstPtr() )
             clonePoints_ = p->points;
     }
 
@@ -143,7 +143,7 @@ public:
     {
         if ( !objLines_ )
             return;
-        if ( auto p = objLines_->polyline() )
+        if ( auto p = objLines_->polylineConstPtr() )
             cloneTopology_ = p->topology;
     }
 
@@ -198,7 +198,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->polyline() )
+            if ( auto m = obj->polylineConstPtr() )
                 if ( m->points.size() > pointId_ )
                     safeCoords_ = m->points[pointId_];
         }

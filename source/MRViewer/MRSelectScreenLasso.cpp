@@ -210,7 +210,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
         std::vector<Line3fMesh> lineMeshes;
         xfMeshToOccMesh.emplace_back();
         cameraEyes.push_back( xf.inverse()( viewport.getCameraPoint() ) );
-        lineMeshes.push_back( Line3fMesh{ .mesh = mesh.get(), .tree = &mesh->getAABBTree() } );
+        lineMeshes.push_back( Line3fMesh{ .mesh = mesh, .tree = &mesh->getAABBTree() } );
         if ( occludingMeshes )
         {
             for ( const auto * occ : *occludingMeshes )

@@ -3,6 +3,8 @@
 
 Example of usage to get signed distance from mesh to mesh
 
+▶ [See it live in the browser](https://demo.meshlib.io/#closest-points)
+
 \note Please note that unlike findSignedDistances, this function return minimal distance between two meshes
 
 <div class="tabbed">

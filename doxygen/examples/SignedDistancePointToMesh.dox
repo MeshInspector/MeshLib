@@ -3,6 +3,8 @@
 
 Example of usage to get signed distance from point to mesh
 
+▶ [See it live in the browser](https://demo.meshlib.io/#closest-points)
+
 <div class="tabbed">
 
 - <b class="tab-title">C++</b>

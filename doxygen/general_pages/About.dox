@@ -35,6 +35,8 @@ Features illustration is available in [the features section](https://meshlib.io/
 
 ## Getting Started
 
+Before installing anything, you can try MeshLib in your browser: the [live demo](https://demo.meshlib.io/) runs boolean operations, hole filling, decimation, and ICP registration.
+
 MeshLib SDK offers a simple installation process and extensive documentation to get you up and running quickly. Choose your preferred language, explore the available tutorials, and start creating with MeshLib!
 
 For Python users, install MeshLib via pip:

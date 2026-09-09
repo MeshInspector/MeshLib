@@ -7,6 +7,7 @@
 MeshLib is a C++/Python geometry library focused on robust boolean operations, offsets, voxel-based reconstruction, decimation and remeshing.
 If you already work with CGAL, libigl, Open3D, PCL or VTK, the pairs below show the equivalent MeshLib code for the operations users most often port over.
 Each snippet is minimal and self-contained — copy, adapt, compile.
+To see these operations running before you port any code, open the [live demo](https://demo.meshlib.io/): it runs boolean operations, decimation, and ICP registration in the browser.
 
 We do not benchmark on this page. For measured MeshLib vs VTK comparisons (decimation, boolean, subdivision), see [the benchmark article](https://meshlib.io/blog/vtk-alternative-comparison/).
 

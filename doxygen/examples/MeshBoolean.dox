@@ -7,6 +7,8 @@ The optional \ref MR::BooleanResultMapper "BooleanResultMapper" passed to the op
 vertices and edges of the input meshes to the primitives of the result mesh, and its
 \ref MR::BooleanResultMapper::getNew2OldFaceMap "getNew2OldFaceMap" maps the faces back.
 
+▶ [See it live in the browser](https://demo.meshlib.io/#boolean)
+
 <div class="tabbed">
  
 - <b class="tab-title">C++</b>

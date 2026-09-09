@@ -3,6 +3,8 @@
 
 Following code presents example of finding preceise collision triangles and edges of two meshes
 
+▶ [See it live in the browser](https://demo.meshlib.io/#collision)
+
 <div class="tabbed">
  
 - <b class="tab-title">C++</b>

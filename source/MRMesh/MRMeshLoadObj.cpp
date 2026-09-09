@@ -947,8 +947,8 @@ void trimComment( std::string_view& line )
         return;
     }
 
-    //'Vertices: 1168' or '10154639 vertices' - per-instance element counts
-    if ( line.starts_with( "Vertices: " )
+    //'Vertices: 1168', 'Number of vertex: 5123' or '10154639 vertices' - per-instance element counts
+    if ( line.starts_with( "Vertices: " ) || line.starts_with( "Number of vertex: " )
         || ( ( line.ends_with( " vertices" ) || line.ends_with( " faces" ) ) && line[0] >= '0' && line[0] <= '9' ) )
     {
         line = std::string_view{};
@@ -959,6 +959,27 @@ void trimComment( std::string_view& line )
     if ( const auto p = line.find( " OBJ File:" ); p != std::string_view::npos )
     {
         line = line.substr( 0, p + 9 ); // keep through '... OBJ File', drop ': <name>'
+        return;
+    }
+    //'OBJ dataFile simple version. File name: /private/var/mobile/.../231106-123617.obj'
+    if ( const auto p = line.find( "File name: " ); p != std::string_view::npos )
+    {
+        line = line.substr( 0, p + 10 ); // keep through 'File name:', drop the path
+        return;
+    }
+
+    //'File mod1.obj', 'cube.obj' - a bare file name carries no software info
+    if ( line.ends_with( ".obj" ) &&
+        ( line.starts_with( "File " ) || line.find( ' ' ) == std::string_view::npos ) )
+    {
+        line = std::string_view{};
+        return;
+    }
+
+    //'6475' - a lone number
+    if ( line.find_first_not_of( "0123456789" ) == std::string_view::npos )
+    {
+        line = std::string_view{};
         return;
     }
 }

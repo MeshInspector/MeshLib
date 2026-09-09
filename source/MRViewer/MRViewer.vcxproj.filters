@@ -668,6 +668,9 @@
     <ClInclude Include="MRGladGlfw.h">
       <Filter>Render</Filter>
     </ClInclude>
+    <ClInclude Include="MRShortcutKey.h">
+      <Filter>UserInputs</Filter>
+    </ClInclude>
     <ClInclude Include="MRShortcutManager.h">
       <Filter>UserInputs</Filter>
     </ClInclude>

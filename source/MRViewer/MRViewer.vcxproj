@@ -279,6 +279,7 @@
     <ClInclude Include="MRSceneStateCheck.h" />
     <ClInclude Include="MRSelectScreenLasso.h" />
     <ClInclude Include="MRShadowsGL.h" />
+    <ClInclude Include="MRShortcutKey.h" />
     <ClInclude Include="MRShortcutManager.h" />
     <ClInclude Include="MRSpaceMouseController.h" />
     <ClInclude Include="MRSpaceMouseHandler.h" />

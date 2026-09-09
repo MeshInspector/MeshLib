@@ -16,6 +16,7 @@
 #include "MRViewer/MRFitData.h"
 #include "MRViewer/MRMcpCommon.h"
 #include "MRViewer/MRMouse.h"
+#include "MRViewer/MRShortcutManager.h"
 #include "MRViewer/MRViewer.h"
 #include "MRViewer/MRViewport.h"
 
@@ -52,11 +53,10 @@ int parseModifiers( const nlohmann::json& args )
     for ( const auto& j : args["modifiers"] )
     {
         const std::string m = j.get<std::string>();
-        if ( m == "ctrl" )       mods |= GLFW_MOD_CONTROL;
-        else if ( m == "shift" ) mods |= GLFW_MOD_SHIFT;
-        else if ( m == "alt" )   mods |= GLFW_MOD_ALT;
-        else if ( m == "super" ) mods |= GLFW_MOD_SUPER;
-        else throw std::runtime_error( fmt::format( "Unknown modifier `{}` (expected `ctrl`/`shift`/`alt`/`super`)", m ) );
+        if ( auto mod = ShortcutManager::parseModifier( m ) )
+            mods |= *mod;
+        else
+            throw std::runtime_error( fmt::format( "Unknown modifier `{}` (expected `ctrl`/`shift`/`alt`/`super`/`primary`/`secondary`)", m ) );
     }
     return mods;
 }
@@ -71,29 +71,9 @@ MouseButton parseMouseButton( const std::string& b )
 
 int parseKey( const std::string& s )
 {
-    // Single printable ASCII char — GLFW key codes are ASCII-uppercase for letters/digits/punctuation.
-    if ( s.size() == 1 && std::isprint( static_cast<unsigned char>( s[0] ) ) )
-        return std::toupper( static_cast<unsigned char>( s[0] ) );
-    if ( s == "Escape" )    return GLFW_KEY_ESCAPE;
-    if ( s == "Enter" || s == "Return" ) return GLFW_KEY_ENTER;
-    if ( s == "Space" )     return GLFW_KEY_SPACE;
-    if ( s == "Tab" )       return GLFW_KEY_TAB;
-    if ( s == "Backspace" ) return GLFW_KEY_BACKSPACE;
-    if ( s == "Delete" )    return GLFW_KEY_DELETE;
-    if ( s == "Home" )      return GLFW_KEY_HOME;
-    if ( s == "End" )       return GLFW_KEY_END;
-    if ( s == "PageUp" )    return GLFW_KEY_PAGE_UP;
-    if ( s == "PageDown" )  return GLFW_KEY_PAGE_DOWN;
-    if ( s == "Left" || s == "ArrowLeft" )   return GLFW_KEY_LEFT;
-    if ( s == "Right" || s == "ArrowRight" ) return GLFW_KEY_RIGHT;
-    if ( s == "Up" || s == "ArrowUp" )       return GLFW_KEY_UP;
-    if ( s == "Down" || s == "ArrowDown" )   return GLFW_KEY_DOWN;
-    if ( s.size() >= 2 && s[0] == 'F' )
-    {
-        const int n = std::atoi( s.c_str() + 1 );
-        if ( n >= 1 && n <= 25 ) return GLFW_KEY_F1 + ( n - 1 );
-    }
-    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`)", s ) );
+    if ( auto key = ShortcutManager::parseKey( s ) )
+        return *key;
+    throw std::runtime_error( fmt::format( "Unknown key `{}` (use a single printable char or a name like `Escape`, `Enter`, `ArrowUp`, `F5`, `Num7`, `Delete`, `ForwardDelete`)", s ) );
 }
 
 } // namespace

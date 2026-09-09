@@ -384,7 +384,8 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
 
     bool loadedFromSceneFile = false;
 
-    auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
+    std::string ext = "*";
+    ext += utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
@@ -530,7 +531,8 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
 
 Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback )
 {
-    auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
+    std::string ext = "*";
+    ext += utf8string( path.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 

@@ -33,7 +33,7 @@ int main( void )
     size_t facesNum = MR_Triangulation_size( t );
     // faces are stored as vertex id triples...
     printf( "Face vertex IDs:\n" );
-    for ( size_t i = 0; i < verticesNum; ++i )
+    for ( size_t i = 0; i < facesNum; ++i )
         printf( "  face %d:  %d, %d, %d\n", (int)i, faces[i].elems[0].id_, faces[i].elems[1].id_, faces[i].elems[2].id_ );
     // ...and can also be cast to an integer array
     int* faceData = malloc( sizeof( int ) * 3 * facesNum );

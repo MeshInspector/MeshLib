@@ -3,8 +3,9 @@
 #include "MRObjectTagEventDispatcher.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
-#include "MRHeapBytes.h"
 #include "MRBox.h"
+#include "MRHeapBytes.h"
+#include "MRphmap.h"
 #include "MRViewportProperty.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
@@ -897,7 +898,7 @@ void Object::swap( Object& other )
 
 Box3f Object::getWorldBox( ViewportId ) const
 {
-    return {}; //empty box
+    return {}; // empty box
 }
 
 Box3f Object::getWorldTreeBox( ViewportId id ) const

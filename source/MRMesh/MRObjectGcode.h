@@ -2,6 +2,7 @@
 #include "MRObjectLinesHolder.h"
 #include "MRGcodeProcessor.h"
 #include "MRColor.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {

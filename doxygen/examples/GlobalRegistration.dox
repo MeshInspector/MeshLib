@@ -15,6 +15,7 @@ Example of Global Registration
 \include GlobalRegistration.dox.cs
 - <b class="tab-title">JavaScript</b>
 \include GlobalRegistration.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

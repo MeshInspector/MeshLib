@@ -21,6 +21,7 @@ Example of using Free Form deformation of the mesh
 
 - <b class="tab-title">JavaScript</b>
 \include FreeFormDeformation.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

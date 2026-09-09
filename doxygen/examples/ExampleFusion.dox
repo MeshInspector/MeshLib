@@ -16,6 +16,7 @@ Example of Fusion.
 
 - <b class="tab-title">JavaScript</b>
 \include Fusion.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

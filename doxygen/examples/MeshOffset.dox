@@ -35,6 +35,7 @@ After offset
 
 - <b class="tab-title">JavaScript</b>
 \include MeshOffset.dox.js
+\include{doc} JsUsingNote.dox
 Source mesh
 \image html offset_before.png
 After offset

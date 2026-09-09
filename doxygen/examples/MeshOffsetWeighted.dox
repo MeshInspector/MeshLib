@@ -16,6 +16,7 @@ Example of mesh weighted offset
 
 - <b class="tab-title">JavaScript</b>
 \include MeshOffsetWeighted.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

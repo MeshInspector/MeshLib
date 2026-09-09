@@ -13,6 +13,7 @@ Some examples of mesh modification are presented here
 \include MeshModification.dox.c
 - <b class="tab-title">JavaScript</b>
 \include MeshModification.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

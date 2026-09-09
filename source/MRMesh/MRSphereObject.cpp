@@ -2,6 +2,7 @@
 #include "MRMatrix3.h"
 #include "MRMesh.h"
 #include "MRObjectFactory.h"
+#include "MRIRenderObject.h"
 #include <MRPch/MREigenCore.h>
 #include <Eigen/QR>
 #include <MRPch/MRJson.h>

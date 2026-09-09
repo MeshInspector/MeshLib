@@ -15,6 +15,7 @@ Example of fixing degenerated faces
 \include MeshFixDegeneracies.dox.cs
 - <b class="tab-title">JavaScript</b>
 \include MeshFixDegeneracies.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

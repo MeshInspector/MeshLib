@@ -3,6 +3,10 @@
 
 Example of boolean operation
 
+The optional \ref MR::BooleanResultMapper "BooleanResultMapper" passed to the operation maps faces,
+vertices and edges of the input meshes to the primitives of the result mesh, and its
+\ref MR::BooleanResultMapper::getNew2OldFaceMap "getNew2OldFaceMap" maps the faces back.
+
 <div class="tabbed">
  
 - <b class="tab-title">C++</b>
@@ -35,6 +39,7 @@ Boolean intersection
 
 - <b class="tab-title">JavaScript</b>
 \include MeshBoolean.dox.js
+\include{doc} JsUsingNote.dox
 Source meshes
 \image html boolean_before.png
 Boolean intersection

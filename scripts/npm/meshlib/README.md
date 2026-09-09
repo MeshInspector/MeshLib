@@ -67,12 +67,13 @@ console.log('volume =', mesh.volume()); // ~8
 
 ## Using with bundlers
 
-Bundlers (Vite, webpack, Rollup) hash and relocate the sidecar `meshlib.wasm`, so the module can't
-locate it on its own. Import the wasm as an asset URL and hand it to the loader via `locateFile`:
+Vite 8 and webpack 5 resolve `meshlib.wasm` from the module and emit it as an asset, so a plain `import`
+needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL
+and hand it to the loader via `locateFile`:
 
 ```js
 import createMeshLib from '@meshinspector/meshlib';
-import wasmUrl from '@meshinspector/meshlib/meshlib.wasm?url';
+import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
 
 const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 ```

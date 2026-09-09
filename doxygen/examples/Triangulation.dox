@@ -19,6 +19,7 @@ Simple triangulation
 
 - <b class="tab-title">JavaScript</b>
 \include Triangulation.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

@@ -22,6 +22,7 @@ Further examples won't check return values for sake of clarity
 
 - <b class="tab-title">JavaScript</b>
 \include MeshLoadSave.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

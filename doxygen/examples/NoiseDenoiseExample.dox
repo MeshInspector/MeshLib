@@ -18,6 +18,7 @@
 
 - <b class="tab-title">JavaScript</b>
 \include NoiseDenoise.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

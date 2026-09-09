@@ -1,6 +1,7 @@
 #pragma once
 #include "MRHistoryAction.h"
 #include "MRVisualObject.h"
+#include "MRHeapBytes.h"
 #include <memory>
 
 namespace MR

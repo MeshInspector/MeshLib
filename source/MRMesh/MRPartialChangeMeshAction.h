@@ -4,6 +4,7 @@
 #include "MRMesh.h"
 #include "MRMeshDiff.h"
 #include "MRObjectMesh.h"
+#include "MRHeapBytes.h"
 #include <cassert>
 
 namespace MR

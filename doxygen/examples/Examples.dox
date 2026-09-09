@@ -6,7 +6,7 @@
 
 This page contains some examples of using MeshLib
 
-Nine of these operations also run interactively in the browser — open the [live demo](https://demo.meshlib.io/): [Boolean](https://demo.meshlib.io/#boolean), [Patch](https://demo.meshlib.io/#patch), [Decimation](https://demo.meshlib.io/#decimate), [Mesh Registration](https://demo.meshlib.io/#registration), [Deviation Map](https://demo.meshlib.io/#deviation), [Collision](https://demo.meshlib.io/#collision), [Closest Points](https://demo.meshlib.io/#closest-points), [Free-Form Deformation](https://demo.meshlib.io/#deform), [Voxel Offset](https://demo.meshlib.io/#offset).
+A number of these operations also run interactively in the browser: see the [live demo](https://demo.meshlib.io/).
 
 \subsection CppApplication C++ Application Based on MeshLib
 

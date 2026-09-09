@@ -5,8 +5,6 @@
 
 \tableofcontents
 
-Not ready to install yet? [Open the live demo](https://demo.meshlib.io/) to watch MeshLib run in the browser first.
-
 \parblock
 \note The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`/etc, as opposed to `MRMesh`/etc for C++ API).
 \endparblock

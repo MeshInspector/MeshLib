@@ -11,8 +11,6 @@ It covers all the prerequisites and setup steps for each platform, making it eas
 When you are done, confirm the result with \ref CppSetupVerify "Verify your setup" — two of its three checks need no graphical session and report failure through their exit status.
 If a step fails, see \ref CppSetupTroubleshooting "Troubleshooting" at the end of this page.
 
-Not ready to install yet? [Open the live demo](https://demo.meshlib.io/) to watch MeshLib run in the browser first.
-
 \subsection CppSetupPrerequisites Prerequisites
 
 ### Compiler and language standard

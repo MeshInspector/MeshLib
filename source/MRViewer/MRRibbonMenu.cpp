@@ -63,11 +63,10 @@ constexpr auto cTransformContextName = "TransformContextWindow";
 
 std::string getItemCaption( const std::string& name )
 {
-    auto it = RibbonSchemaHolder::schema().items.find( name );
-    if ( it == RibbonSchemaHolder::schema().items.end() )
+    const auto * item = RibbonSchemaHolder::findItem( name );
+    if ( !item )
         return name;
-    const auto& item = it->second;
-    return Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+    return Locale::translate( item->getCaption().c_str(), item->localeDomainId );
 }
 
 } //anonymous namespace
@@ -226,11 +225,11 @@ void RibbonMenu::setSceneSize( const Vector2i& size )
 
 void RibbonMenu::updateItemStatus( const std::string& itemName )
 {
-    auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
-    if ( itemIt == RibbonSchemaHolder::schema().items.end() )
+    const auto * itemInfo = RibbonSchemaHolder::findItem( itemName );
+    if ( !itemInfo )
         return;
 
-    auto& item = itemIt->second.item;
+    const auto& item = itemInfo->item;
     assert( item );
     if ( item->isActive() )
     {
@@ -520,10 +519,10 @@ void RibbonMenu::drawHeaderQuickAccess_()
     int dropCount = 0;
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
             continue;
-        if ( it->second.item && it->second.item->type() == RibbonItemType::ButtonWithDrop )
+        if ( itemInfo->item && itemInfo->item->type() == RibbonItemType::ButtonWithDrop )
             dropCount++;
     }
 
@@ -545,8 +544,8 @@ void RibbonMenu::drawHeaderQuickAccess_()
     UI::TestEngine::pushTree( "QuickAccess" );
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Plugin \"{}\" not found!", item );
@@ -554,7 +553,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
             continue;
         }
 
-        buttonDrawer_.drawButtonItem( it->second, params );
+        buttonDrawer_.drawButtonItem( *itemInfo, params );
         ImGui::SameLine();
     }
     UI::TestEngine::popTree(); // "QuickAccess"
@@ -828,8 +827,7 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize )
 
 void RibbonMenu::drawActiveListButton_( float btnSize )
 {
-    auto activeListIt = RibbonSchemaHolder::schema().items.find( "Active Plugins List" );
-    if ( activeListIt != RibbonSchemaHolder::schema().items.end() )
+    if ( const auto * activeListInfo = RibbonSchemaHolder::findItem( "Active Plugins List" ) )
     {
         setActiveListPos( ImGui::GetCursorScreenPos() );
         CustomButtonParameters cParams;
@@ -854,7 +852,7 @@ void RibbonMenu::drawActiveListButton_( float btnSize )
         };
         const ImVec2 itemSize = { btnSize, btnSize };
         DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
-        buttonDrawer_.drawCustomButtonItem( activeListIt->second, cParams, params );
+        buttonDrawer_.drawCustomButtonItem( *activeListInfo, cParams, params );
     }
 }
 
@@ -1311,13 +1309,13 @@ void RibbonMenu::drawSmallButtonsSet_( const std::vector<std::string>& group, in
     auto type = withText ? DrawButtonParams::SizeType::SmallText : DrawButtonParams::SizeType::Small;
     for ( int i = setFrontIndex; i < setFrontIndex + setLength; ++i )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( group[i] );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( group[i] );
+        if ( !itemInfo )
             continue; // TODO: assert or log
 
-        widths[i - setFrontIndex] = buttonDrawer_.calcItemWidth( it->second, type );
+        widths[i - setFrontIndex] = buttonDrawer_.calcItemWidth( *itemInfo, type );
         auto sumWidth = widths[i - setFrontIndex].baseWidth + widths[i - setFrontIndex].additionalWidth;
-        items[i - setFrontIndex] = &it->second;
+        items[i - setFrontIndex] = itemInfo;
         if ( sumWidth > maxSetWidth )
             maxSetWidth = sumWidth;
     }
@@ -1370,12 +1368,12 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
         {
             if ( config.numBig > 0 )
             {
-                auto itemIt = RibbonSchemaHolder::schema().items.find( items[i] );
+                const auto * itemInfo = RibbonSchemaHolder::findItem( items[i] );
                 ++i;
                 --config.numBig;
-                if ( itemIt == RibbonSchemaHolder::schema().items.end() )
+                if ( !itemInfo )
                     continue; // TODO: asserts or log
-                resWidth += buttonDrawer_.calcItemWidth( itemIt->second, DrawButtonParams::SizeType::Big ).baseWidth;
+                resWidth += buttonDrawer_.calcItemWidth( *itemInfo, DrawButtonParams::SizeType::Big ).baseWidth;
                 resWidth += style.ItemSpacing.x;
                 continue;
             }
@@ -1388,10 +1386,10 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
                 float maxWidth = 0.0f;
                 for ( int j = i; j < i + n; ++j )
                 {
-                    auto itemIt = RibbonSchemaHolder::schema().items.find( items[j] );
-                    if ( itemIt == RibbonSchemaHolder::schema().items.end() )
+                    const auto * itemInfo = RibbonSchemaHolder::findItem( items[j] );
+                    if ( !itemInfo )
                         continue; // TODO: asserts or log
-                    auto width = buttonDrawer_.calcItemWidth( itemIt->second,
+                    auto width = buttonDrawer_.calcItemWidth( *itemInfo,
                                                               smallText ?
                                                               DrawButtonParams::SizeType::SmallText :
                                                               DrawButtonParams::SizeType::Small );
@@ -1497,8 +1495,8 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
     for ( int i = 0; i < size; )
     {
         const auto& item = groupIt->second[i];
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
         {
             ++i;
             assert( false );
@@ -1508,7 +1506,7 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
         ImGui::SetCursorPosY( defaultYPos - itemSpacing.y );
         if ( config.numBig > 0 )
         {
-            drawBigButtonItem_( it->second );
+            drawBigButtonItem_( *itemInfo );
             config.numBig--;
             i++;
             if ( i < size )
@@ -1566,11 +1564,11 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
             pushNotification( {
                 .onButtonClick = []
                 {
-                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                    const auto * viewerSettings = RibbonSchemaHolder::findItem( "Viewer settings" );
+                    if ( !viewerSettings )
                         return;
-                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
-                        viewerSettingsIt->second.item->action();
+                    if ( viewerSettings->item && !viewerSettings->item->isActive() )
+                        viewerSettings->item->action();
                 },
                 .buttonName = _tr( "Open Settings" ),
                 .text = _tr( "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in the Settings." ),
@@ -1588,11 +1586,11 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
                 pushNotification( {
                 .onButtonClick = []
                 {
-                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                    const auto * viewerSettings = RibbonSchemaHolder::findItem( "Viewer settings" );
+                    if ( !viewerSettings )
                         return;
-                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
-                        viewerSettingsIt->second.item->action();
+                    if ( viewerSettings->item && !viewerSettings->item->isActive() )
+                        viewerSettings->item->action();
                 },
                 .buttonName = _tr( "Open Settings" ),
                 .text = _tr( "That tool was closed due to other tool start.\nIt can be changed in the Settings." ),
@@ -1662,8 +1660,8 @@ void RibbonMenu::drawSceneListButtons_()
     UI::TestEngine::pushTree( "RibbonSceneButtons" );
     for ( const auto& item : RibbonSchemaHolder::schema().sceneButtonsList )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Plugin \"{}\" not found!", item ); // TODO don't flood same message
@@ -1671,7 +1669,7 @@ void RibbonMenu::drawSceneListButtons_()
             continue;
         }
 
-        buttonDrawer_.drawButtonItem( it->second, params );
+        buttonDrawer_.drawButtonItem( *itemInfo, params );
         ImGui::SameLine();
     }
     UI::TestEngine::popTree(); // "RibbonSceneButtons"
@@ -1950,10 +1948,9 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
         UI::setTooltipIfHovered( _tr( "Resets transform value to identity." ) );
         iconsFont.pushFont();
 
-        auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        bool drawApplyBtn = numButtons >=3.0f &&
-            item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty();
+        const auto * item = RibbonSchemaHolder::findItem( "Apply Transform" );
+        bool drawApplyBtn = numButtons >=3.0f && item &&
+            item->item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty();
 
         if ( drawApplyBtn )
         {
@@ -1961,7 +1958,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
             ImGui::SetCursorPos( contextBtnPos );
 
             if ( ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
-                item->second.item->action();
+                item->item->action();
             iconsFont.popFont();
             UI::setTooltipIfHovered( _tr( "Transforms object and resets transform value to identity." ) );
             iconsFont.pushFont();
@@ -2112,12 +2109,12 @@ bool RibbonMenu::drawTransformContextMenu_( const std::vector<std::shared_ptr<Ob
 
     if ( anyNonIdentity )
     {
-        auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        if ( item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty() &&
+        const auto * item = RibbonSchemaHolder::findItem( "Apply Transform" );
+        if ( item &&
+            item->item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty() &&
             UI::button( _tr( "Apply" ), Vector2f( buttonSize, 0 ) ) )
         {
-            item->second.item->action();
+            item->item->action();
             ImGui::CloseCurrentPopup();
         }
         UI::setTooltipIfHovered( _tr( "Transforms object and resets transform value to identity." ) );
@@ -2140,10 +2137,10 @@ void RibbonMenu::addRibbonItemShortcut( const std::string& itemName, const Short
         assert( false );
         return;
     }
-    auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
-    if ( itemIt != RibbonSchemaHolder::schema().items.end() )
+    const auto * itemInfo = RibbonSchemaHolder::findItem( itemName );
+    if ( itemInfo )
     {
-        shortcutManager_->setShortcut( shortcut, { itemIt->first, [item = itemIt->second.item, this]()
+        shortcutManager_->setShortcut( shortcut, { itemName, [item = itemInfo->item, this]()
         {
             itemPressed_( item, getRequirements_( item ) );
         } } );

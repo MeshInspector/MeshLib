@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
-"""Bundle Homebrew dylib dependencies into a MeshLib.framework version dir.
+"""Bundle dylib dependencies into a MeshLib.framework or a macOS .app.
 
-Walks all Mach-O files under <framework_version_dir>/bin and /lib, copies any
-dependency that resolves under a Homebrew prefix into <framework>/lib, and
-rewrites the LC_LOAD_DYLIB / LC_ID_DYLIB entries to @rpath/<basename>. An
-LC_RPATH is added so the bundled libs are found relative to the binary:
-  - executables in bin/ get @executable_path/../lib
-  - dylibs in lib/ (incl. just-bundled ones) get @loader_path/.
+Walks all Mach-O files in the layout's seed directories, copies any dependency
+that resolves under a Homebrew prefix (or a --search-dir) into the layout's
+destination directory, and rewrites the LC_LOAD_DYLIB / LC_ID_DYLIB entries to
+@rpath/<basename>. Each binary gets an LC_RPATH pointing at that destination,
+computed from where the binary sits, so the bundled libs are found relative to
+it:
+
+  framework   bin/            -> @executable_path/../lib
+              lib/            -> @loader_path/.
+  app         Contents/MacOS/ -> @executable_path/../Frameworks
+              Contents/Frameworks/         -> @loader_path/.
+              Contents/Frameworks/meshlib/ -> @loader_path/..
+
+The .app layout also needs --search-dir for the build tree and any prebuilt
+thirdparty directory, since a .app is assembled from those rather than from an
+install tree: dependencies found there are bundled like Homebrew ones.
 
 System libraries (/usr/lib, /System) and libpython* are intentionally left as
 external references.
@@ -16,7 +26,7 @@ This makes the produced .pkg robust against Homebrew bottle SONAME drift
 on every dep in requirements/macos.txt.
 
 Why a script rather than dylibbundler / CMake BundleUtilities
-(`fixup_bundle`):
+(`fixup_bundle`), for the framework and for the .app alike:
 
   - fixup_bundle's containment check requires every bundled item's
     filesystem path to be string-prefixed by the bundle's "dotapp_dir"
@@ -39,7 +49,17 @@ Why a script rather than dylibbundler / CMake BundleUtilities
   - dylibbundler 1.0.5 (the version Homebrew ships) hardcodes /usr/local
     and /opt/homebrew as the only search prefixes; the arm64 self-hosted
     build runner installs Homebrew at /Users/runner/.homebrew. This
-    script calls `brew --prefix` at startup.
+    script calls `brew --prefix` at startup. It also drops absolute
+    LC_RPATH entries while resolving @rpath references, which is what
+    makes it warn "can't get path for '@rpath/...'" on well-formed
+    binaries, and it skips .framework dependencies outright.
+  - `fixup_bundle` copies every prerequisite it can resolve, with no way
+    to exempt one: prerequisites get copyflag 1 unconditionally and
+    `IGNORE_ITEM` only filters which items are scanned. Since
+    `get_item_key` keys them by file name, a bundle referencing Python
+    through several paths gets whichever framework was resolved first
+    copied in, duplicating an interpreter that is already shipped.
+    SKIP_BASENAME_RE below is this script's answer to the same problem.
   - Primitive install_name_tool / otool calls are made via
     delocate.tools (already a build-time dep used by the NuGet-patch
     pipeline). The remaining bespoke code is the algorithm: BFS over
@@ -51,6 +71,7 @@ Why a script rather than dylibbundler / CMake BundleUtilities
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 import stat
@@ -97,6 +118,10 @@ def _detect_homebrew_prefixes() -> tuple[str, ...]:
 
 
 HOMEBREW_PREFIXES = _detect_homebrew_prefixes()
+# Extra directories holding libraries to bundle, from --search-dir. Needed for
+# the .app layout, whose payload comes from a build tree rather than an install
+# tree; empty for the framework.
+SEARCH_DIRS: tuple[Path, ...] = ()
 SYSTEM_PREFIXES = ("/usr/lib/", "/System/")
 RELATIVE_PREFIXES = ("@rpath/", "@loader_path/", "@executable_path/")
 # Leave these to the host system / Homebrew
@@ -135,7 +160,9 @@ def should_bundle(load_path: str) -> bool:
         return False
     if load_path.startswith(SYSTEM_PREFIXES):
         return False
-    if not load_path.startswith(HOMEBREW_PREFIXES):
+    if not load_path.startswith(HOMEBREW_PREFIXES) and not any(
+        load_path.startswith(f"{d}/") for d in map(str, SEARCH_DIRS)
+    ):
         return False
     if SKIP_BASENAME_RE.match(Path(load_path).name):
         return False
@@ -158,13 +185,18 @@ def codesign_adhoc(p: Path) -> None:
     ])
 
 
-def _resolve_homebrew_basename(name: str) -> Path | None:
-    """Find a dylib by basename in any Homebrew lib dir (cached glob)."""
+def _resolve_by_basename(name: str) -> Path | None:
+    """Find a dylib by basename in a --search-dir or Homebrew lib dir."""
     if SKIP_BASENAME_RE.match(name):
         return None
-    cached = _resolve_homebrew_basename._cache  # type: ignore[attr-defined]
+    cached = _resolve_by_basename._cache  # type: ignore[attr-defined]
     if name in cached:
         return cached[name]
+    for extra in SEARCH_DIRS:
+        cand = extra / name
+        if cand.exists():
+            cached[name] = cand.resolve()
+            return cached[name]
     for pref in HOMEBREW_PREFIXES:
         for sub in ("lib", "opt/*/lib", "Cellar/*/*/lib"):
             for cand in Path(pref).glob(f"{sub}/{name}"):
@@ -180,15 +212,28 @@ def _resolve_homebrew_basename(name: str) -> Path | None:
     return None
 
 
-_resolve_homebrew_basename._cache = {}  # type: ignore[attr-defined]
+_resolve_by_basename._cache = {}  # type: ignore[attr-defined]
 
 
-def bundle(framework_dir: Path) -> None:
-    bin_dir = framework_dir / "bin"
-    lib_dir = framework_dir / "lib"
+def _rpath_for(p: Path, dest_dir: Path, exe_dirs: list[Path]) -> str:
+    """Where this binary should look for dest_dir, relative to itself.
+
+    @executable_path for the executables, so a plugin loaded from a
+    subdirectory still resolves against the app; @loader_path for everything
+    else, so a dylib keeps working whichever process loads it.
+    """
+    anchor = "@executable_path" if any(
+        p.is_relative_to(d) for d in exe_dirs
+    ) else "@loader_path"
+    rel = Path(os.path.relpath(dest_dir, p.parent)).as_posix()
+    return f"{anchor}/{rel}"
+
+
+def bundle(seed_dirs: list[Path], dest_dir: Path, exe_dirs: list[Path]) -> None:
+    lib_dir = dest_dir
     lib_dir.mkdir(parents=True, exist_ok=True)
 
-    seeds = collect_machos(bin_dir) + collect_machos(lib_dir)
+    seeds = [m for d in seed_dirs for m in collect_machos(d)]
     log(f"seed mach-o files: {len(seeds)}")
 
     # Pre-index Mach-O basenames already present in the framework's lib tree
@@ -241,7 +286,7 @@ def bundle(framework_dir: Path) -> None:
                     # Original link-time path is gone from the current bottle
                     # (the very drift we're guarding against). Fall back to
                     # the basename under the standard Homebrew lib dir.
-                    fallback = _resolve_homebrew_basename(req_name)
+                    fallback = _resolve_by_basename(req_name)
                     if fallback is None:
                         log(f"WARN: cannot resolve {dep}; skipping")
                         continue
@@ -266,7 +311,7 @@ def bundle(framework_dir: Path) -> None:
                         if cand.exists():
                             target = bundle_from(cand.resolve(), name)
                     if target is None:
-                        fb = _resolve_homebrew_basename(name)
+                        fb = _resolve_by_basename(name)
                         if fb is not None:
                             target = bundle_from(fb, name)
             if target is not None and target not in visited:
@@ -276,7 +321,7 @@ def bundle(framework_dir: Path) -> None:
     # delocate.tools.* helpers wrap install_name_tool and ad-hoc sign after
     # each call; the final codesign_adhoc preserves entitlements/flags that
     # delocate's default signing would drop.
-    all_files = collect_machos(bin_dir) + collect_machos(lib_dir)
+    all_files = [m for d in seed_dirs for m in collect_machos(d)]
     for p in all_files:
         make_writable(p)
         sp = str(p)
@@ -291,7 +336,7 @@ def bundle(framework_dir: Path) -> None:
                 sp, dep, f"@rpath/{Path(dep).name}", ad_hoc_sign=False,
             )
 
-        rpath = "@executable_path/../lib" if p.is_relative_to(bin_dir) else "@loader_path/."
+        rpath = _rpath_for(p, lib_dir, exe_dirs)
         if rpath not in get_rpaths(sp):
             add_rpath(sp, rpath, ad_hoc_sign=False)
 
@@ -300,15 +345,53 @@ def bundle(framework_dir: Path) -> None:
     log(f"bundled {len(bundled)} dylibs into {lib_dir}")
 
 
+def bundle_framework(framework_dir: Path) -> None:
+    bundle(
+        seed_dirs=[framework_dir / "bin", framework_dir / "lib"],
+        dest_dir=framework_dir / "lib",
+        exe_dirs=[framework_dir / "bin"],
+    )
+
+
+def bundle_app(app_dir: Path) -> None:
+    contents = app_dir / "Contents"
+    bundle(
+        seed_dirs=[contents / "MacOS", contents / "Frameworks"],
+        dest_dir=contents / "Frameworks",
+        exe_dirs=[contents / "MacOS"],
+    )
+
+
 def main() -> None:
+    global SEARCH_DIRS
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument(
-        "framework_version_dir",
+        "root",
         type=Path,
-        help="Path to MeshLib.framework/Versions/<X.Y.Z.W>",
+        help="MeshLib.framework/Versions/<X.Y.Z.W>, or a .app directory",
+    )
+    ap.add_argument(
+        "--layout",
+        choices=("framework", "app"),
+        default="framework",
+        help="Bundle layout of `root` (default: framework)",
+    )
+    ap.add_argument(
+        "--search-dir",
+        type=Path,
+        action="append",
+        default=[],
+        help="Extra directory to bundle libraries from; repeatable",
     )
     args = ap.parse_args()
-    bundle(args.framework_version_dir.resolve())
+    SEARCH_DIRS = tuple(d.resolve() for d in args.search_dir if d.is_dir())
+    if SEARCH_DIRS:
+        log(f"search dirs: {', '.join(map(str, SEARCH_DIRS))}")
+    root = args.root.resolve()
+    if args.layout == "app":
+        bundle_app(root)
+    else:
+        bundle_framework(root)
 
 
 if __name__ == "__main__":

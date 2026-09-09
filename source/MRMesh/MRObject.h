@@ -1,7 +1,6 @@
 #pragma once
 
 #include "MRAffineXf3.h"
-#include "MRBox.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRSignal.h"
@@ -244,7 +243,7 @@ public:
     MRMESH_API void swap( Object& other );
 
     /// returns bounding box of this object in world coordinates for default or specific viewport
-    virtual Box3f getWorldBox( ViewportId = {} ) const { return {}; } ///empty box
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const;
     /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 

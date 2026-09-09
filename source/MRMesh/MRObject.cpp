@@ -174,31 +174,25 @@ struct Object::Data
     ViewportProperty<AffineXf3f> xf;
 };
 
-Object::Object() : data_( std::make_unique<Data>() )
+Object::DataPtr::DataPtr() : p_( std::make_unique<Data>() )
 {
 }
 
-Object::Object( const Object& obj ) : ObjectChildrenHolder( obj ), data_( std::make_unique<Data>( *obj.data_ ) )
+Object::DataPtr::DataPtr( const DataPtr& b ) : p_( std::make_unique<Data>( *b.p_ ) )
 {
 }
 
-Object::Object( ProtectedStruct, const Object& obj ) : Object( obj )
+Object::DataPtr& Object::DataPtr::operator =( const DataPtr& b )
 {
-}
-
-Object::Object( Object&& s ) noexcept : Object()
-{
-    data_.swap( s.data_ );
-}
-
-Object& Object::operator = ( Object&& s ) noexcept
-{
-    data_ = std::make_unique<Data>();
-    data_.swap( s.data_ );
+    p_ = std::make_unique<Data>( *b.p_ );
     return *this;
 }
 
-Object::~Object() = default;
+Object::DataPtr::DataPtr( DataPtr&& b ) noexcept = default;
+
+Object::DataPtr& Object::DataPtr::operator =( DataPtr&& b ) noexcept = default;
+
+Object::DataPtr::~DataPtr() = default;
 
 std::shared_ptr<const Object> Object::find( const std::string_view & name ) const
 {

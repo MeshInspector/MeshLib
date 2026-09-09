@@ -58,10 +58,10 @@ protected:
 class MRMESH_CLASS Object : public ObjectChildrenHolder
 {
 public:
-    MRMESH_API Object();
-    MRMESH_API Object( Object && ) noexcept;
-    MRMESH_API Object & operator = ( Object && ) noexcept;
-    MRMESH_API virtual ~Object();
+    Object() = default;
+    Object( Object && ) noexcept = default;
+    Object & operator = ( Object && ) noexcept = default;
+    virtual ~Object() = default;
 
     // return name of subtype for serialization purposes
     constexpr static const char* StaticTypeName() noexcept { return "Object"; }
@@ -281,11 +281,11 @@ protected:
     struct ProtectedStruct{ explicit ProtectedStruct() = default; };
 public:
     /// \note this ctor is public only for std::make_shared used inside clone()
-    MRMESH_API Object( ProtectedStruct, const Object& obj );
+    Object( ProtectedStruct, const Object& obj ) : Object( obj ) {}
 
 protected:
     /// user should not be able to call copy implicitly, use clone() function instead
-    MRMESH_API Object( const Object& obj );
+    Object( const Object& obj ) = default;
 
     /// swaps whole object (signals too)
     MRMESH_API virtual void swapBase_( Object& other );
@@ -329,7 +329,26 @@ protected:
 
 private:
     struct Data;
-    std::unique_ptr<Data> data_;
+
+    /// std::unique_ptr<Data> with value semantics, which keeps Object's copy and move
+    /// operations defaulted despite Data being incomplete here
+    class DataPtr
+    {
+    public:
+        MRMESH_API DataPtr();
+        MRMESH_API DataPtr( const DataPtr& b );
+        MRMESH_API DataPtr& operator =( const DataPtr& b );
+        MRMESH_API DataPtr( DataPtr&& b ) noexcept;
+        MRMESH_API DataPtr& operator =( DataPtr&& b ) noexcept;
+        MRMESH_API ~DataPtr();
+              Data& operator *()       { return *p_; }
+        const Data& operator *() const { return *p_; }
+              Data* operator ->()       { return p_.get(); }
+        const Data* operator ->() const { return p_.get(); }
+    private:
+        std::unique_ptr<Data> p_;
+    };
+    DataPtr data_;
 
 private:
     struct MapSharedObjects;

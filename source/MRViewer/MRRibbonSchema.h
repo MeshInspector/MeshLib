@@ -108,6 +108,9 @@ public:
     /// returns false if item was not present
     MRVIEWER_API static bool delItem( const std::shared_ptr<RibbonMenuItem>& item );
 
+    /// returns the information about the item with given name, or nullptr if there is no such item
+    MRVIEWER_API static MenuItemInfo * findItem( const std::string& name );
+
     /// struct to hold information for search result presentation
     struct SearchResult
     {

@@ -34,12 +34,11 @@ StateBasePlugin::StateBasePlugin( std::string name, StatePluginTabs tab ):
     {
         std::string name = this->name();
         LocaleDomainId localeDomainId;
-        auto item = RibbonSchemaHolder::schema().items.find( name );
-        if ( item != RibbonSchemaHolder::schema().items.end() )
+        if ( const auto * item = RibbonSchemaHolder::findItem( name ) )
         {
-            if ( !item->second.caption.empty() )
-                name = item->second.caption;
-            localeDomainId = item->second.localeDomainId;
+            if ( !item->caption.empty() )
+                name = item->caption;
+            localeDomainId = item->localeDomainId;
         }
         plugin_name = Locale::translate( name.c_str(), localeDomainId );
         plugin_name += UINameSuffix();
@@ -136,9 +135,9 @@ bool StateBasePlugin::ImGuiBeginWindow_( ImGui::CustomStatePluginWindowParameter
 
     if ( !params.helpBtnFn )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( name() );
-        if ( it != RibbonSchemaHolder::schema().items.end() && !it->second.helpLink.empty() )
-            params.helpBtnFn = [&] () { OpenLink( it->second.helpLink ); };
+        const auto * it = RibbonSchemaHolder::findItem( name() );
+        if ( it && !it->helpLink.empty() )
+            params.helpBtnFn = [&] () { OpenLink( it->helpLink ); };
     }
 
     return BeginCustomStatePlugin( uiName().c_str(), &dialogIsOpen_, params );

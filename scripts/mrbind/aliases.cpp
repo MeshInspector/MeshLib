@@ -27,9 +27,9 @@ static const char MRBIND_UNIQUE_VAR = []
     MR_ALIAS( MeshBuilderSettings,                  MeshBuilder.BuildSettings                           );
     MR_ALIAS( MeshToVolumeParamsType,               MeshToVolumeParams.Type                             );
     MR_ALIAS( ObjectDistanceMap.extractDistanceMap, ObjectDistanceMap.getDistanceMap                    );
-    MR_ALIAS( ObjectLines.extractLines,             ObjectLines.polyline                                );
-    MR_ALIAS( ObjectMesh.extractMesh,               ObjectMesh.mesh                                     );
-    MR_ALIAS( ObjectPoints.extractPoints,           ObjectPoints.pointCloud                             );
+    MR_ALIAS( ObjectLines.extractLines,             ObjectLines.polylineConstPtr                        );
+    MR_ALIAS( ObjectMesh.extractMesh,               ObjectMesh.meshConstPtr                             );
+    MR_ALIAS( ObjectPoints.extractPoints,           ObjectPoints.pointCloudConstPtr                     );
     MR_ALIAS( objectSave,                           ObjectSave.toAnySupportedFormat                     );
     MR_ALIAS( ObjectVoxels.extractVoxels,           ObjectVoxels.vdbVolume                              );
     MR_ALIAS( saveAllSlicesToImage,                 VoxelsSave.saveAllSlicesToImage                     );

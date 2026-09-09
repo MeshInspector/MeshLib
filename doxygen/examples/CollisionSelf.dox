@@ -19,6 +19,7 @@ Following code presents example of finding self-intersecting triangles of single
 
 - <b class="tab-title">JavaScript</b>
 \include CollisionSelf.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

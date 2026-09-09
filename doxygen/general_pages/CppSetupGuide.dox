@@ -11,6 +11,19 @@ It covers all the prerequisites and setup steps for each platform, making it eas
 When you are done, confirm the result with \ref CppSetupVerify "Verify your setup" — two of its three checks need no graphical session and report failure through their exit status.
 If a step fails, see \ref CppSetupTroubleshooting "Troubleshooting" at the end of this page.
 
+\subsection CppSetupPrerequisites Prerequisites
+
+### Compiler and language standard
+
+MeshLib uses C++20 standard and is tested to be compiled with:
+ - GCC 11 or newer
+ - Clang 14 or newer
+ - MSVC 2019 or newer
+
+### CMake
+
+Integrating MeshLib with CMake needs CMake 3.18 or newer. See \ref MeshLibCmakeSetupGuide "the CMake Setup Guide" for the full `CMakeLists.txt`.
+
 \subsection CppSetupWindows Windows
 \note MeshLib for Windows is distributed for **x64** and **Arm64**: set the platform of your project to `x64` or `ARM64`.
 A 32-bit (`Win32`) build is not supported and fails while compiling `MRMesh/MRId.h` with
@@ -213,7 +226,7 @@ meshconv --help
 ./build/Release/bin/meshconv --help
 \endcode
  \n `MeshViewer` (`./build/Release/bin/MeshViewer`) is the interactive check and requires a graphical session.
- 6. **Integrate Using CMake**
+ 6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 \subsection CppSetupMacOS macOS
@@ -225,7 +238,7 @@ meshconv --help
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
-  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project only uses the C bindings. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
+  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project enables only the C language. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
 \code{.sh}
 xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 \endcode
@@ -235,7 +248,7 @@ xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requ
 \code{.sh}
 /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 \endcode
- 4. **Integrate Using CMake**
+ 4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 ### Compile Locally
@@ -327,7 +340,7 @@ source ./emsdk_env.sh
 \code{.sh}
 unzip -d path_to_install <downloaded>.zip
 \endcode
- 3. **Integrate Using CMake**
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  \n Specify the path to the extracted files with the `CMAKE_FIND_ROOT_PATH` option:
 \code{.sh}
 emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_install
@@ -440,6 +453,7 @@ Failures most often hit while following the steps above, with the message each o
 | Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. `MR_ITERATOR_DEBUG_LEVEL` is the level MeshLib's own binaries were built with — taken from `install/include/MRMesh/config_dist.h` when the archive ships one, otherwise defaulting to `0` — and MeshLib refuses to compile when your `_ITERATOR_DEBUG_LEVEL` differs from it. A Debug configuration implies `_ITERATOR_DEBUG_LEVEL=2`, which is why an unconfigured Debug build hits this against the per-Visual-Studio archives. | Take the archive matching your toolset and iterator-debug setting from the table in \ref CppSetupWindows "Windows", then define `_ITERATOR_DEBUG_LEVEL` to that row's value, plus `MR_ITERATOR_DEBUG_LEVEL` to the same value if the archive has no `config_dist.h`. |
 | Windows, from source | `thirdparty\install.bat` finishes, but the Visual Studio solution stops with `fatal error C1083: Cannot open include file` on a third-party header. Hits **Visual Studio 2019 and 2022** builds, i.e. the ones step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build" has set `VCPKG_DEFAULT_TRIPLET` for. | The solution and vcpkg disagree on the triplet. `source/common.props` takes `VcpkgTriplet` from `VCPKG_DEFAULT_TRIPLET` and reads `<vcpkg>\installed\$(VcpkgTriplet)`, so this needs the variable to have reached `install.bat` but not the build: set with `set` in the one terminal that ran the script, or set after Visual Studio was started, so the build fell back to the `x64-windows-meshlib` default while the packages are in `installed\x64-windows-vs2019-meshlib`. A stale `CustomMRProps.props` above `source\` naming a third triplet does the same. Rerunning the script cannot help. | Name the triplet vcpkg actually installed — check which folder exists under `<vcpkg>\installed\` — and do not edit `common.props`. For the IDE, `setx VCPKG_DEFAULT_TRIPLET x64-windows-vs2022-meshlib` and restart Visual Studio; from the command line, `msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=x64-windows-vs2022-meshlib`, which overrides the environment. Both are step 5 of the same list. |
 | Linux, macOS, WASM (consuming an installed MeshLib) | `MRMeshFwd.h:70:10: fatal error: parallel_hashmap/phmap_fwd_decl.h: No such file or directory` | MeshLib's public headers include third-party headers, and `${MESHLIB_THIRDPARTY_INCLUDE_DIR}` is missing from your target's include directories. | Add it next to `${MESHLIB_INCLUDE_DIR}`: `target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})`. See \ref MeshLibCmakeSetupGuide and [examples/cpp-examples/CMakeLists.txt](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt). |
+| Linux, macOS (consuming an installed MeshLib) | CMake configuration stops with `Target "..." links to: MeshLib::MeshLibC2 but the target was not found`, suggesting a typo. | `meshlib-config.cmake` defines the C API target only when the project has the C language enabled. | Add `C` to the languages of your `project()` call. |
 | macOS | CMake configuration fails inside `MRMeshConfig.cmake` with `find_dependency`: `Could NOT find Boost (missing: Boost_INCLUDE_DIR)` (Boost is just the first of several such dependencies). | The Homebrew requirements were never installed — the `.pkg` installer does not pull them in. | `xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt` (for a current-user-only install, prefix the path with `~`). |
 | WASM | `build_thirdparty.sh` or `build_source.sh` silently produces a native build although Emscripten was selected. | The prompt is a `read -t 5`: with no keypress within five seconds it falls back to `OFF`. Each script asks separately, so the two can disagree. | Skip the prompt entirely — `export MR_EMSCRIPTEN=ON` once, before running **both** scripts. Each script prints its resolved mode (`Emscripten ON …`); check that line before waiting on a long build. |
 | WASM, runtime | `SharedArrayBuffer is not defined` in the browser console. | The page is served without the cross-origin isolation headers that the multithreaded build needs for shared memory. | Serve with `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Opener-Policy: same-origin` — see \ref CppSetupWASMRun "Running the WebAssembly Build". |

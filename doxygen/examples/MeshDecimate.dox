@@ -35,6 +35,7 @@ After decimate
 
 - <b class="tab-title">JavaScript</b>
 \include MeshDecimate.dox.js
+\include{doc} JsUsingNote.dox
 Source mesh
 \image html decimate_before.png
 After decimate

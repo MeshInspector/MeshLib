@@ -13,6 +13,7 @@ Example of extrude faces on mesh
 \include MeshExtrude.dox.c
 - <b class="tab-title">JavaScript</b>
 \include MeshExtrude.dox.js
+\include{doc} JsUsingNote.dox
 
 </div>
 

@@ -36,9 +36,21 @@ div#nav-tree-contents > div#nav-sync {
   filter: brightness(0.92);
 }
 
-/* doxygen-awesome-sidebar-only.css fixes the header height on desktop (120px);
-   the button row adds 6px, so grow the header by the same amount and keep
-   the content column where it was */
+/* dark theme: --primary-color #1982d2 gives only 4.07:1 against white text, so pin a darker blue */
+html.dark-mode #livedemo a {
+  background: #14669f;
+}
+
+@media (prefers-color-scheme: dark) {
+  html:not(.light-mode) #livedemo a {
+    background: #14669f;
+  }
+}
+
+/* doxygen-awesome-sidebar-only.css fixes the header height on desktop (120px, overflow hidden).
+   Measured: the header content grows from 107px to 112px with the button (the title row
+   was previously pinned by the 44px logo), so 126px keeps the original slack under the
+   search box; the content column keeps its 40px top padding */
 @media screen and (min-width: 768px) {
   :root {
     --top-height: 126px;

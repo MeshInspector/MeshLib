@@ -11,15 +11,15 @@ Whether you are working in C++, Python, C#, or C, MeshLib offers a versatile, cr
 ## Key Features
 
  - \b 3D \b Data \b Handling: Supports meshes, voxels, and point clouds for creation, modification, and conversion.
- - \b Boolean \b Operations: Fast, highly optimized mesh and voxel-based approaches. — [see it live](https://demo.meshlib.io/#boolean)
- - \b Mesh \b Fixing: Includes removing self-intersections, filling holes, and component separation. — [see it live](https://demo.meshlib.io/#patch)
- - \b Simplification \b & \b Subdivision: Optimize mesh complexity with decimation, remeshing, and subdivision. — [see it live](https://demo.meshlib.io/#decimate)
- - \b Offsets: Multiple modes for precise surface thickness control, ideal for 3D printing and machining. — [see it live](https://demo.meshlib.io/#offset)
+ - \b Boolean \b Operations: Fast, highly optimized mesh and voxel-based approaches — [see it live](https://demo.meshlib.io/#boolean)
+ - \b Mesh \b Fixing: Includes removing self-intersections, filling holes, and component separation — [see it live](https://demo.meshlib.io/#patch)
+ - \b Simplification \b & \b Subdivision: Optimize mesh complexity with decimation, remeshing, and subdivision — [see it live](https://demo.meshlib.io/#decimate)
+ - \b Offsets: Multiple modes for precise surface thickness control, ideal for 3D printing and machining — [see it live](https://demo.meshlib.io/#offset)
  - \b Triangulation: Accurate, fast conversion of point clouds to meshes with normal creation.
- - \b ICP: Precise mesh alignment using point-to-point and point-to-plane transformations. — [see it live](https://demo.meshlib.io/#registration)
+ - \b ICP: Precise mesh alignment using point-to-point and point-to-plane transformations — [see it live](https://demo.meshlib.io/#registration)
  - \b Segmentation: Semi-automatic segmentation based on curvature for meshes and voxels.
- - \b Deformations: Supports Laplacian, freeform, and relax smoothing for fine mesh adjustments. — [see it live](https://demo.meshlib.io/#deform)
- - \b Distance \b Maps \b & \b Polylines: Generate distance maps, iso-lines, and perform projection and intersection. — [see it live](https://demo.meshlib.io/#deviation)
+ - \b Deformations: Supports Laplacian, freeform, and relax smoothing for fine mesh adjustments — [see it live](https://demo.meshlib.io/#deform)
+ - \b Distance \b Maps \b & \b Polylines: Generate distance maps, iso-lines, and perform projection and intersection — [see it live](https://demo.meshlib.io/#deviation)
 
 Features illustration is available in [the features section](https://meshlib.io/features/) or in the sections of this documentation.
 

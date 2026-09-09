@@ -1,5 +1,5 @@
 /**
-\mainpage MeshLib JavaScript Docs
+\mainpage MeshLib for JavaScript
 
 MeshLib running in the browser and in Node.js as JavaScript and WebAssembly, published to npm as `@meshinspector/meshlib` and `@meshinspector/meshlib-mt`.
 This is the API behind the [live demo](https://demo.meshlib.io/) — open it to watch booleans, hole patching, decimation and ICP registration run in the browser, no install, no sign-up.
@@ -12,7 +12,7 @@ This is the API behind the [live demo](https://demo.meshlib.io/) — open it to 
 /**
 \page APIJsPage JavaScript
 
-This is the API behind the [live demo](https://demo.meshlib.io/) — MeshLib running in the browser as JavaScript and WebAssembly.
+Reference for the API behind the [live demo](https://demo.meshlib.io/): MeshLib running in the browser as JavaScript and WebAssembly.
 
  - [Classes](classes.html)
  - [Files](files.html)

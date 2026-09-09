@@ -371,6 +371,13 @@ std::vector<RibbonSchemaHolder::SearchResult> RibbonSchemaHolder::search( const 
     return res;
 }
 
+MenuItemInfo * RibbonSchemaHolder::findItem( const std::string& name )
+{
+    auto& items = schema().items;
+    const auto it = items.find( name );
+    return it != items.end() ? &it->second : nullptr;
+}
+
 int RibbonSchemaHolder::findItemTab( const std::shared_ptr<RibbonMenuItem>& item )
 {
     if ( !item )
@@ -452,8 +459,7 @@ void RibbonSchemaLoader::readMenuItemsList( const Json::Value& root, MenuItemsLi
             assert( false );
             continue;
         }
-        auto findIt = RibbonSchemaHolder::schema().items.find( itemName.asString() );
-        if ( findIt == RibbonSchemaHolder::schema().items.end() )
+        if ( !RibbonSchemaHolder::findItem( itemName.asString() ) )
         {
             spdlog::warn( "Ribbon item \"{}\" is not registered", itemName.asString() );
             // do not assert here because item may have been saved (in user config) before MI version update
@@ -693,8 +699,8 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const s
     {
         auto item = items[i];
         auto& itemName = item["Name"];
-        auto findIt = RibbonSchemaHolder::schema().items.find( itemName.asString() );
-        if ( findIt == RibbonSchemaHolder::schema().items.end() )
+        auto * findIt = RibbonSchemaHolder::findItem( itemName.asString() );
+        if ( !findIt )
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Ribbon item \"{}\" is not registered", itemName.asString() );
@@ -702,7 +708,7 @@ void RibbonSchemaLoader::readItemsJson_( const Json::Value& itemsStruct, const s
 #endif
             continue;
         }
-        auto& [_, menuItem] = *findIt;
+        auto& menuItem = *findIt;
 
         menuItem.localeDomainId = domainId;
 

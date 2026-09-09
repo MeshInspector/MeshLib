@@ -212,10 +212,9 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
     // required to be deferred, resent items store to be initialized
     CommandLoop::appendCommand( [&] ()
     {
-        auto openDirIt = RibbonSchemaHolder::schema().items.find( "Open directory" );
-        if ( openDirIt != RibbonSchemaHolder::schema().items.end() )
+        if ( const auto * openDirInfo = RibbonSchemaHolder::findItem( "Open directory" ) )
         {
-            openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirIt->second.item );
+            openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirInfo->item );
         }
         else
         {

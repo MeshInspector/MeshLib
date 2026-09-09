@@ -16,6 +16,7 @@
 
 #include <MRMesh/MRRingIterator.h>
 #include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRHeapBytes.h"
 #include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRSceneRoot.h>
 

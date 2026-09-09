@@ -16,6 +16,7 @@
 #include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRMeshTexture.h"
 
 namespace MR
 {

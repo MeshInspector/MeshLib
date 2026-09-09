@@ -2,6 +2,7 @@
 #include "MRHistoryAction.h"
 #include "MRObjectMesh.h"
 #include "MRObjectPoints.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {

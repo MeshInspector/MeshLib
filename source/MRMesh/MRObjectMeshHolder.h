@@ -56,7 +56,7 @@ public:
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
     /// \deprecated the cast inside is undefined behaviour, use meshConstPtr() instead
-    [[deprecated( "use meshConstPtr() instead" )]]
+    [[deprecated( "use meshConstPtr() instead" )]] MR_BIND_IGNORE
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( data_.mesh ); } // reinterpret_cast to avoid making a copy of shared_ptr
     #ifdef __GNUC__

@@ -1,12 +1,10 @@
 #pragma once
 
-#include "MRAffineXf3.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRSignal.h"
-#include "MRViewportProperty.h"
+#include "MRViewportId.h"
 
-#include <array>
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -102,13 +100,13 @@ public:
 
     /// this space to parent space transformation (to world space if no parent) for default or given viewport
     /// \param isDef receives true if the object has default transformation in this viewport (same as xf() returns)
-    const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const { return xf_.get( id, isDef ); }
+    MRMESH_API const AffineXf3f & xf( ViewportId id = {}, bool * isDef = nullptr ) const;
     MRMESH_API virtual void setXf( const AffineXf3f& xf, ViewportId id = {} );
     /// forgets specific transform in given viewport (or forgets all specific transforms for {} input)
     MRMESH_API virtual void resetXf( ViewportId id = {} );
 
     /// returns xfs for all viewports, combined into a single object
-    const ViewportProperty<AffineXf3f> & xfsForAllViewports() const { return xf_; }
+    MRMESH_API const ViewportProperty<AffineXf3f> & xfsForAllViewports() const;
     /// modifies xfs for all viewports at once
     MRMESH_API virtual void setXfsForAllViewports( ViewportProperty<AffineXf3f> xf );
 
@@ -312,7 +310,6 @@ protected:
     MRMESH_API virtual void deserializeFields_( const Json::Value& root );
 
     std::string name_;
-    ViewportProperty<AffineXf3f> xf_;
     ViewportMask visibilityMask_ = ViewportMask::all(); // Prefer to not read directly. Use the getter, as it can be overridden.
     bool locked_ = false;
     bool parentLocked_ = false;
@@ -328,6 +325,29 @@ protected:
 
     // Emits `worldXfChangedSignal`, but derived classes can add additional behavior to it.
     MRMESH_API virtual void onWorldXfChanged_();
+
+private:
+    struct Data;
+
+    /// std::unique_ptr<Data> with value semantics, which keeps Object's copy and move
+    /// operations defaulted despite Data being incomplete here
+    class DataPtr
+    {
+    public:
+        MRMESH_API DataPtr();
+        MRMESH_API DataPtr( const DataPtr& b );
+        MRMESH_API DataPtr& operator =( const DataPtr& b );
+        MRMESH_API DataPtr( DataPtr&& b ) noexcept;
+        MRMESH_API DataPtr& operator =( DataPtr&& b ) noexcept;
+        MRMESH_API ~DataPtr();
+              Data& operator *()       { return *p_; }
+        const Data& operator *() const { return *p_; }
+              Data* operator ->()       { return p_.get(); }
+        const Data* operator ->() const { return p_.get(); }
+    private:
+        std::unique_ptr<Data> p_;
+    };
+    DataPtr data_;
 
 private:
     struct MapSharedObjects;

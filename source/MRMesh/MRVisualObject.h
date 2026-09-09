@@ -5,6 +5,7 @@
 #include "MRColor.h"
 #include "MRUniquePtr.h"
 #include "MREnums.h"
+#include "MRViewportProperty.h"
 
 #include <optional>
 #include <typeindex>

@@ -9,6 +9,7 @@
 #include "MRLine.h"
 
 #include "MRArrow.h"
+#include "MRIRenderObject.h"
 
 namespace MR
 {

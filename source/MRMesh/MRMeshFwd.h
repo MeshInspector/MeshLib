@@ -681,6 +681,11 @@ struct SignedDistanceToMeshOptions;
 
 using GcodeSource = std::vector<std::string>;
 
+class IRenderObject;
+struct BaseRenderParams;
+struct ModelBaseRenderParams;
+struct ModelRenderParams;
+struct UiRenderParams;
 class Object;
 class SceneRootObject;
 class VisualObject;

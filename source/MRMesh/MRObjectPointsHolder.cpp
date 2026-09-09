@@ -14,6 +14,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRIRenderObject.h"
 
 namespace MR
 {

@@ -8,6 +8,8 @@
 #include "MRUniquePtr.h"
 #include "MREnums.h"
 
+#include <optional>
+
 namespace MR
 {
 

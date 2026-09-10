@@ -1,5 +1,4 @@
 #pragma once
-#include "MRPch/MRBindingMacros.h"
 #include "MRVisualObject.h"
 #include "MRXfBasedCache.h"
 #include "MRHeapBytes.h"
@@ -53,7 +52,7 @@ public:
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
     /// \deprecated the cast inside is undefined behaviour, use polylineConstPtr() instead
-    [[deprecated( "use polylineConstPtr() instead" )]] MR_BIND_IGNORE
+    [[deprecated( "use polylineConstPtr() instead" )]]
     const std::shared_ptr<const Polyline3>& polyline() const
     { return reinterpret_cast< const std::shared_ptr<const Polyline3>& >( polyline_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
     #ifdef __GNUC__

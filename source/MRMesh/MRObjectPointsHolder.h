@@ -44,7 +44,7 @@ public:
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
     /// \deprecated the cast inside is undefined behaviour, use pointCloudConstPtr() instead
-    [[deprecated( "use pointCloudConstPtr() instead" )]] MR_BIND_IGNORE
+    [[deprecated( "use pointCloudConstPtr() instead" )]]
     const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
     #ifdef __GNUC__

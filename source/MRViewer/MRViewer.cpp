@@ -13,6 +13,7 @@
 #include "MRViewerSettingsManager.h"
 #include "MRGladGlfw.h"
 #include "MRRibbonMenu.h"
+#include "MRSceneObjectsListDrawer.h"
 #include "MRGetSystemInfoJson.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRDragDropHandler.h"
@@ -1320,6 +1321,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                     setSceneDirty();
                     onSceneSaved( result.loadedFiles.front() );
                 }
+                if ( menuPlugin_ )
+                    if ( const auto & sceneList = menuPlugin_->getSceneObjectsList() )
+                        sceneList->collapseSceneTree();
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
                 signals_->objectsLoadedSignal( SceneRoot::get().children(), result.errorSummary, result.warningSummary );

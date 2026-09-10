@@ -34,7 +34,9 @@ on:
 
 jobs:
   windows-build-test:
-    timeout-minutes: 70
+    # 70 was ~30 min of headroom; the optimized bindings preset eats into it on the
+    # uploading cells (the step goes from ~8 min to ~25).
+    timeout-minutes: 100
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -292,12 +294,17 @@ jobs:
         shell: cmd
         env:
           MSYS2_DIR: C:\msys64
+          # `MREDist_*.zip` is the whole `source/<arch>/<config>` tree, `.pyd` modules
+          # included, and update-win-version turns it into the released distribution.
+          # So the cells that upload build the bindings with the optimized preset.
+          # Keep this condition in sync with `Upload Windows Binaries Archive`.
+          BINDINGS_MODE: ${{ env.job_upload_artifact == 'true' && 'release' || 'none' }}
         # Note that `\` doesn't work here as a line continuation, and will lead to weird errors.
         # `|| exit /b 1` — cmd.exe does not stop on a failed command, so guard each
         # one to fail the step on a generation error instead of swallowing it.
         run: |
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace MODE=none VS_MODE=${{matrix.config}} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=%BINDINGS_MODE% VS_MODE=${{matrix.config}} || exit /b 1
 
       - name: Diagnostic — output bin DLL inventory + MRMesh imports
         if: ${{ always() }}

@@ -304,6 +304,7 @@ jobs:
         run: |
           clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
           make -f scripts/mrbind/generate.mk -B --trace \
+            MODE=release \
             FOR_WHEEL=1 \
             CXX_FOR_ABI=${{ matrix.compiler }} \
             CXX_FOR_BINDINGS=${{ matrix.compiler }} \
@@ -326,6 +327,7 @@ jobs:
             export PKG_CONFIG_PATH
 
             make shims -f scripts/mrbind/generate.mk -B --trace \
+              MODE=release \
               FOR_WHEEL=1 \
               CXX_FOR_ABI=${{ matrix.compiler }} \
               CXX_FOR_BINDINGS=${{ matrix.compiler }} \
@@ -555,7 +557,7 @@ jobs:
         # one to fail the step on a generation error instead of swallowing it.
         run: |
           call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace FOR_WHEEL=1 || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace MODE=release FOR_WHEEL=1 || exit /b 1
 
       - name: Run Test
         working-directory: source\${{ matrix.platform }}\Release
@@ -699,7 +701,7 @@ jobs:
           export PKG_CONFIG_PATH=${PKG_CONFIG_PATH#:}
 
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}"
+          make -f scripts/mrbind/generate.mk -B --trace MODE=release FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}"
 
       - name: Verify meshlib.mrmeshpy import
         timeout-minutes: 3

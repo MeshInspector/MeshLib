@@ -214,8 +214,12 @@ jobs:
           CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
           make --version
+          # Nothing uploads these: distribution_apple.sh only runs `cmake --install`,
+          # which never sees mrbind's output, so the .pkg carries no mrmeshpy. Build
+          # them unoptimized - they are used only by this job's own tests.
           make -f scripts/mrbind/generate.mk \
             -B --trace \
+            MODE=none \
             PYTHON_PKGCONF_NAME=python-3.10-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 

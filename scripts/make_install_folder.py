@@ -116,6 +116,15 @@ def copy_lib():
 	for f in glob.glob(os.path.join(it.path_to_app, "*/*pybind11nonlimitedapi_meshlib_*")):
 		os.remove(f)
 
+	# The mrbind-generated modules are not part of the distribution, matching the
+	# macOS .pkg and the vcpkg archive, which are built from `cmake --install` alone.
+	for pattern in ("*/meshlib/mrmeshpy.pyd", "*/meshlib/mrcudapy.pyd",
+	                "*/meshlib/__init__.py", "*/__init__.py"):
+		for f in glob.glob(os.path.join(it.path_to_app, pattern)):
+			os.remove(f)
+	for d in glob.glob(os.path.join(it.path_to_app, "*/meshlib/__pycache__")):
+		shutil.rmtree(d, ignore_errors=True)
+
 def copy_licenses():
 	src = os.path.join(it.base_path, 'thirdparty', 'licenses', 'THIRD-PARTY-NOTICES.txt')
 	shutil.copyfile(src, os.path.join(it.path_to_install_folder, 'THIRD-PARTY-NOTICES.txt'))

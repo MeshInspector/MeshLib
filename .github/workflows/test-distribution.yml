@@ -141,12 +141,6 @@ jobs:
           cmake --build build
           ./build/MeshModification
 
-      - name: Ubuntu python test
-        env:
-          PYTHONPATH: /usr/local/lib/MeshLib/
-        working-directory: test_python
-        run: xvfb-run -a python3 -m pytest -s -v
-
   linux-arm64-test:
     if: ${{ inputs.test_ubuntu_arm64 }}
     timeout-minutes: 30
@@ -243,12 +237,6 @@ jobs:
           cmake -S . -B build -DCMAKE_C_COMPILER=${{matrix.c-compiler}} && \
           cmake --build build
           ./build/MeshModification
-
-      - name: Ubuntu python test
-        env:
-          PYTHONPATH: /usr/local/lib/MeshLib/
-        working-directory: test_python
-        run: xvfb-run -a python3 -m pytest -s -v
 
   macos-test:
     if: ${{ inputs.test_macos }}

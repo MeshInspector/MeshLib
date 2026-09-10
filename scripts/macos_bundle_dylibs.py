@@ -234,6 +234,7 @@ def bundle(
     dest_dir: Path,
     exe_dirs: list[Path],
     sign_exes: bool = True,
+    drop_absolute_rpaths: bool = False,
 ) -> None:
     lib_dir = dest_dir
     lib_dir.mkdir(parents=True, exist_ok=True)
@@ -341,6 +342,18 @@ def bundle(
                 sp, dep, f"@rpath/{Path(dep).name}", ad_hoc_sign=False,
             )
 
+        # A .app is assembled from a build tree, so its binaries arrive with
+        # rpaths into it. dyld searches them on the user's machine, and they
+        # leak build paths, so drop anything not @-relative. An install tree,
+        # which the framework comes from, has none to drop.
+        if drop_absolute_rpaths:
+            for rp in get_rpaths(sp):
+                if not rp.startswith("@"):
+                    log(f"drop rpath {rp} from {p.name}")
+                    subprocess.check_call(
+                        ["install_name_tool", "-delete_rpath", rp, sp],
+                    )
+
         rpath = _rpath_for(p, lib_dir, exe_dirs)
         if rpath not in get_rpaths(sp):
             add_rpath(sp, rpath, ad_hoc_sign=False)
@@ -370,6 +383,7 @@ def bundle_app(app_dir: Path) -> None:
         dest_dir=contents / "Frameworks",
         exe_dirs=[contents / "MacOS"],
         sign_exes=False,
+        drop_absolute_rpaths=True,
     )
 
 

@@ -23,7 +23,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->pointCloudConstPtr() )
+            if ( auto m = obj->pointCloudPtr() )
                 clonePointCloud_ = std::make_shared<PointCloud>( *m );
         }
     }
@@ -80,7 +80,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->pointCloudConstPtr() )
+            if ( auto m = obj->pointCloudPtr() )
                 clonePoints_ = m->points;
         }
     }
@@ -144,7 +144,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->pointCloudConstPtr() )
+            if ( auto m = obj->pointCloudPtr() )
                 if ( m->points.size() > pointId_ )
                     safeCoords_ = m->points[pointId_];
         }

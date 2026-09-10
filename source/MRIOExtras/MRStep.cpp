@@ -560,7 +560,7 @@ private:
             {
                 objMesh = std::dynamic_pointer_cast<ObjectMesh>( objStack_.top() );
                 assert( objMesh );
-                assert( objMesh->meshConstPtr() );
+                assert( objMesh->meshPtr() );
             }
             else
             {

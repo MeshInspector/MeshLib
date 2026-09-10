@@ -176,7 +176,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
 {
     MR_TIMER;
     std::shared_ptr<ObjectMesh> res;
-    const auto firstNotEmptyIt = std::find_if( objsMesh.begin(), objsMesh.end(), []( const auto & p ) { return p && p->meshConstPtr(); } );
+    const auto firstNotEmptyIt = std::find_if( objsMesh.begin(), objsMesh.end(), []( const auto & p ) { return p && p->meshPtr(); } );
     if ( firstNotEmptyIt == objsMesh.end() )
         return res; // if no input object, then no output
     res = std::make_shared<ObjectMesh>();
@@ -198,7 +198,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     size_t numObject = 0;
     for ( const auto& obj : objsMesh )
     {
-        if ( auto curMesh = obj->meshConstPtr() )
+        if ( auto curMesh = obj->meshPtr() )
         {
             totalVerts += curMesh->topology.numValidVerts();
             totalFaces += curMesh->topology.numValidFaces();
@@ -277,12 +277,12 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
     for ( int i = 0; i < objsMesh.size(); ++i )
     {
         const auto& obj = objsMesh[i];
-        if ( !obj->meshConstPtr() )
+        if ( !obj->meshPtr() )
             continue;
 
         VertMap vertMap;
         FaceMap faceMap;
-        mesh->addMesh( *obj->meshConstPtr(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
+        mesh->addMesh( *obj->meshPtr(), hasFaceColorMap || needTexturePerFace ? &faceMap : nullptr, &vertMap );
 
         auto worldXf = options.overrideXfs && i < options.overrideXfs->size() ? ( *options.overrideXfs )[i] : obj->worldXf();
         for ( const auto& vInd : vertMap )
@@ -413,7 +413,7 @@ std::shared_ptr<MR::ObjectMesh> cloneRegion( const std::shared_ptr<ObjectMesh>& 
         partMapping.tgt2srcVerts = &vertMap;
     if ( !objMesh->getFacesColorMap().empty() || !objMesh->getTexturePerFace().empty() )
         partMapping.tgt2srcFaces = &faceMap;
-    std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( objMesh->meshConstPtr()->cloneRegion( region, false, partMapping ) );
+    std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( objMesh->meshPtr()->cloneRegion( region, false, partMapping ) );
     std::shared_ptr<ObjectMesh> newObj = std::make_shared<ObjectMesh>();
     newObj->setFrontColor( objMesh->getFrontColor( true ), true );
     newObj->setFrontColor( objMesh->getFrontColor( false ), false );

@@ -29,7 +29,7 @@ Mesh mergeToMesh( const Object& object )
     Mesh result;
     if ( const auto* objMesh = dynamic_cast<const ObjectMesh*>( &object ) )
     {
-        if ( const auto* mesh = objMesh->meshConstPtr() )
+        if ( const auto* mesh = objMesh->meshPtr() )
         {
             result = *mesh;
             result.transform( objMesh->worldXf() );
@@ -37,11 +37,11 @@ Mesh mergeToMesh( const Object& object )
     }
     for ( const auto& objMesh : getAllObjectsInTree<ObjectMesh>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable ) )
     {
-        if ( !objMesh || !objMesh->meshConstPtr() )
+        if ( !objMesh || !objMesh->meshPtr() )
             continue;
 
         VertMap vmap;
-        result.addMesh( *objMesh->meshConstPtr(), nullptr, &vmap );
+        result.addMesh( *objMesh->meshPtr(), nullptr, &vmap );
 
         const auto xf = objMesh->worldXf();
         for ( const auto v : vmap )
@@ -57,7 +57,7 @@ PointCloud mergeToPoints( const Object& object )
     PointCloud result;
     if ( const auto* objPoints = dynamic_cast<const ObjectPoints*>( &object ) )
     {
-        if ( const auto* pointCloud = objPoints->pointCloudConstPtr() )
+        if ( const auto* pointCloud = objPoints->pointCloudPtr() )
         {
             result = *pointCloud;
             const auto xf = objPoints->worldXf();
@@ -70,11 +70,11 @@ PointCloud mergeToPoints( const Object& object )
     }
     for ( const auto& objPoints : getAllObjectsInTree<ObjectPoints>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable ) )
     {
-        if ( !objPoints || !objPoints->pointCloudConstPtr() )
+        if ( !objPoints || !objPoints->pointCloudPtr() )
             continue;
 
         VertMap vmap;
-        result.addPartByMask( result, objPoints->pointCloudConstPtr()->validPoints, { .src2tgtVerts = &vmap } );
+        result.addPartByMask( result, objPoints->pointCloudPtr()->validPoints, { .src2tgtVerts = &vmap } );
 
         const auto xf = objPoints->worldXf();
         for ( const auto v : vmap )
@@ -90,7 +90,7 @@ Polyline3 mergeToLines( const Object& object )
     Polyline3 result;
     if ( const auto* objLines = dynamic_cast<const ObjectLines*>( &object ) )
     {
-        if ( const auto* polyline = objLines->polylineConstPtr() )
+        if ( const auto* polyline = objLines->polylinePtr() )
         {
             result = *polyline;
             result.transform( objLines->worldXf() );
@@ -98,11 +98,11 @@ Polyline3 mergeToLines( const Object& object )
     }
     for ( const auto& objLines : getAllObjectsInTree<ObjectLines>( const_cast<Object*>( &object ), ObjectSelectivityType::Selectable ) )
     {
-        if ( !objLines || !objLines->polylineConstPtr() )
+        if ( !objLines || !objLines->polylinePtr() )
             continue;
 
         VertMap vmap;
-        result.addPart( *objLines->polylineConstPtr(), &vmap );
+        result.addPart( *objLines->polylinePtr(), &vmap );
 
         const auto xf = objLines->worldXf();
         for ( const auto& v : vmap )

@@ -14,7 +14,7 @@ static void packPointsWithHistoryCore( const std::shared_ptr<ObjectPoints>& objP
 {
     MR_TIMER;
 
-    if ( !objPoints || !objPoints->pointCloudConstPtr() )
+    if ( !objPoints || !objPoints->pointCloudPtr() )
         return;
 
     auto packed = pack( *objPoints, reorder, newValidVerts );

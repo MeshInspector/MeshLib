@@ -175,7 +175,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->meshConstPtr() )
+            if ( auto m = obj->meshPtr() )
                 cloneSurface_ = std::make_shared<Mesh>( *m );
         }
     }

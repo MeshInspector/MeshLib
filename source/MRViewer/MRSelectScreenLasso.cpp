@@ -112,7 +112,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
     if ( pixBs.none() )
         return {};
 
-    const auto* mesh = obj.meshConstPtr();
+    const auto* mesh = obj.meshPtr();
     const auto& vpRect = viewport.getViewportRect();
     const auto xf = obj.worldXf();
 
@@ -220,7 +220,7 @@ FaceBitSet findIncidentFaces( const Viewport& viewport, const BitSet& pixBs, con
                 const auto worldToOccMesh = occ->worldXf().inverse();
                 xfMeshToOccMesh.push_back( worldToOccMesh * xf );
                 cameraEyes.push_back( worldToOccMesh( viewport.getCameraPoint() ) );
-                const auto * occmesh = occ->meshConstPtr();
+                const auto * occmesh = occ->meshPtr();
                 lineMeshes.push_back( Line3fMesh{ .mesh = occmesh, .tree = &occmesh->getAABBTree() } );
             }
         }
@@ -297,12 +297,12 @@ void appendGPUVisibleFaces( const Viewport& viewport, const BitSet& pixBs,
             const auto xf = selMesh->worldXf();
             BitSetParallelFor( it->second, [&] ( FaceId f )
             {
-                auto n = selMesh->meshConstPtr()->dirDblArea( f );
+                auto n = selMesh->meshPtr()->dirDblArea( f );
                 Vector3f cameraDir;
                 if ( viewport.getParameters().orthographic )
                     cameraDir = orthoBackwards;
                 else
-                    cameraDir = -viewport.unprojectPixelRay( to2dim( viewport.projectToViewportSpace( selMesh->meshConstPtr()->triCenter( f ) ) ) ).d;
+                    cameraDir = -viewport.unprojectPixelRay( to2dim( viewport.projectToViewportSpace( selMesh->meshPtr()->triCenter( f ) ) ) ).d;
                 if ( dot( xf.A * n, cameraDir ) < 0 )
                     it->second.set( f, false );
             } );
@@ -317,7 +317,7 @@ VertBitSet findVertsInViewportArea( const Viewport& viewport, const BitSet& pixB
     if ( pixBs.none() )
         return {};
 
-    const auto* pointCloud = obj.pointCloudConstPtr();
+    const auto* pointCloud = obj.pointCloudPtr();
     const auto& vpRect = viewport.getViewportRect();
     const auto xf = obj.worldXf();
 

@@ -23,7 +23,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto pc = obj->pointCloudConstPtr() )
+            if ( auto pc = obj->pointCloudPtr() )
                 backupNormals_ = pc->normals;
         }
     }
@@ -84,7 +84,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->pointCloudConstPtr() )
+            if ( auto m = obj->pointCloudPtr() )
                 if ( m->normals.size() > pointId_ )
                     safeNormal_ = m->normals[pointId_];
         }

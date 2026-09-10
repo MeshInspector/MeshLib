@@ -24,7 +24,7 @@ public:
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Meshes"; }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
-    /// returns variable mesh, if const mesh is needed use `meshConstPtr()` instead
+    /// returns variable mesh, if const mesh is needed use `meshPtr()` instead
     virtual const std::shared_ptr< Mesh > & varMesh() { return data_.mesh; }
 
     /// sets given mesh to this, resets selection and creases

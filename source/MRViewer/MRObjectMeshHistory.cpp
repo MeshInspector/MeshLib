@@ -13,9 +13,9 @@ namespace MR
 void excludeLoneEdgesWithHistory( const std::shared_ptr<ObjectMesh>& objMesh )
 {
     MR_TIMER;
-    if ( !objMesh || !objMesh->meshConstPtr() )
+    if ( !objMesh || !objMesh->meshPtr() )
         return;
-    const auto & topology = objMesh->meshConstPtr()->topology;
+    const auto & topology = objMesh->meshPtr()->topology;
 
     // remove deleted edges from the selection
     auto selEdges = objMesh->getSelectedEdges();

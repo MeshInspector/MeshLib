@@ -605,10 +605,10 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
         {
             if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
             {
-                if ( !objMesh->meshConstPtr() )
+                if ( !objMesh->meshPtr() )
                     continue;
 
-                const auto& mesh = *objMesh->meshConstPtr();
+                const auto& mesh = *objMesh->meshPtr();
                 const auto region =
                     getIncidentVerts( mesh.topology, objMesh->getSelectedEdges() )
                     | getIncidentVerts( mesh.topology, objMesh->getSelectedFaces() );
@@ -638,26 +638,26 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
 #endif
         if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
         {
-            if ( !objMesh->meshConstPtr() )
+            if ( !objMesh->meshPtr() )
                 continue;
 
-            const auto& mesh = *objMesh->meshConstPtr();
+            const auto& mesh = *objMesh->meshPtr();
             expandBox( mesh.points, mesh.topology.getValidVerts(), obj2cam );
         }
         else if ( auto* objLines = obj->asType<ObjectLinesHolder>() )
         {
-            if ( !objLines->polylineConstPtr() )
+            if ( !objLines->polylinePtr() )
                 continue;
 
-            const auto& polyline = *objLines->polylineConstPtr();
+            const auto& polyline = *objLines->polylinePtr();
             expandBox( polyline.points, polyline.topology.getValidVerts(), obj2cam );
         }
         else if ( auto objPoints = obj->asType<ObjectPointsHolder>() )
         {
-            if ( !objPoints->pointCloudConstPtr() )
+            if ( !objPoints->pointCloudPtr() )
                 continue;
 
-            const auto& pointCloud = *objPoints->pointCloudConstPtr();
+            const auto& pointCloud = *objPoints->pointCloudPtr();
             expandBox( pointCloud.points, pointCloud.validPoints, obj2cam );
         }
         else if ( const auto objBox = obj->getBoundingBox(); objBox.valid() )

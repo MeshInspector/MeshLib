@@ -245,9 +245,9 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
     m.def( "unselectAll", &pythonUnselect, "unselect all objects in scene tree" );
 
     m.def( "getSelectedObjects", []{ return MR::getAllObjectsInTree( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected ); } );
-    m.def( "getSelectedMeshes", &pythonGetSelectedModels<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::meshConstPtr>, "Get copies of all selected meshes in the scene." );
-    m.def( "getSelectedPointClouds", &pythonGetSelectedModels<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloudConstPtr>, "Get copies of all selected point clouds in the scene." );
-    m.def( "getSelectedPolylines", &pythonGetSelectedModels<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polylineConstPtr>, "Get copies of all selected polylines in the scene." );
+    m.def( "getSelectedMeshes", &pythonGetSelectedModels<MR::ObjectMeshHolder, &MR::ObjectMeshHolder::meshPtr>, "Get copies of all selected meshes in the scene." );
+    m.def( "getSelectedPointClouds", &pythonGetSelectedModels<MR::ObjectPointsHolder, &MR::ObjectPointsHolder::pointCloudPtr>, "Get copies of all selected point clouds in the scene." );
+    m.def( "getSelectedPolylines", &pythonGetSelectedModels<MR::ObjectLinesHolder, &MR::ObjectLinesHolder::polylinePtr>, "Get copies of all selected polylines in the scene." );
     m.def( "getSelectedDistanceMaps", &pythonGetSelectedModels<MR::ObjectDistanceMap, &MR::ObjectDistanceMap::getDistanceMap>, "Get copies of all selected voxel grids in the scene." );
 } )
 

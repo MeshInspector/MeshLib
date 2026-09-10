@@ -16,11 +16,11 @@ MR_ADD_CLASS_FACTORY( ObjectPoints )
 
 ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, bool saveNormals/*=true*/ )
 {
-    if ( !objMesh.meshConstPtr() )
+    if ( !objMesh.meshPtr() )
         return;
 
-    const auto verts = getInnerVerts( objMesh.meshConstPtr()->topology, objMesh.getSelectedFaces() );
-    setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( *objMesh.meshConstPtr(), saveNormals, verts.any() ? &verts : nullptr) ) );
+    const auto verts = getInnerVerts( objMesh.meshPtr()->topology, objMesh.getSelectedFaces() );
+    setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( *objMesh.meshPtr(), saveNormals, verts.any() ? &verts : nullptr) ) );
     setName( objMesh.name() + " Points" );
     setVertsColorMap( objMesh.getVertsColorMap() );
     setFrontColor( objMesh.getFrontColor( true ), true );
@@ -120,13 +120,13 @@ std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoi
     bool anyWithColors = false;
     for ( const auto& obj : objsPoints )
     {
-        const auto * pc = obj->pointCloudConstPtr();
+        const auto * pc = obj->pointCloudPtr();
         if ( !pc || !pc->validPoints.any() )
             continue;
         if ( !pc->hasNormals() )
             allWithNormals = false;
         if ( ( obj->getColoringType() == ColoringType::VertsColorMap ) &&
-             ( obj->getVertsColorMap().size() > int( obj->pointCloudConstPtr()->validPoints.find_last() ) ) )
+             ( obj->getVertsColorMap().size() > int( obj->pointCloudPtr()->validPoints.find_last() ) ) )
             anyWithColors = true;
     }
     const VertNormals emptyNormals;
@@ -134,15 +134,15 @@ std::shared_ptr<ObjectPoints> merge( const std::vector<std::shared_ptr<ObjectPoi
     VertColors colors;
     for ( const auto& obj : objsPoints )
     {
-        if ( !obj->pointCloudConstPtr() )
+        if ( !obj->pointCloudPtr() )
             continue;
 
         VertMap vertMap{};
-        pointCloud->addPartByMask( *obj->pointCloudConstPtr(), obj->pointCloudConstPtr()->validPoints, { .src2tgtVerts = &vertMap },
+        pointCloud->addPartByMask( *obj->pointCloudPtr(), obj->pointCloudPtr()->validPoints, { .src2tgtVerts = &vertMap },
             allWithNormals ? nullptr : &emptyNormals );
 
         const bool withColors = ( obj->getColoringType() == ColoringType::VertsColorMap ) &&
-            ( obj->getVertsColorMap().size() > int( obj->pointCloudConstPtr()->validPoints.find_last() ) ) ;
+            ( obj->getVertsColorMap().size() > int( obj->pointCloudPtr()->validPoints.find_last() ) ) ;
         const auto& objColors = obj->getVertsColorMap();
         if ( anyWithColors )
             colors.resize( size_t( vertMap.back() ) + 1, obj->getFrontColor( true ) );
@@ -178,7 +178,7 @@ std::shared_ptr<MR::ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoint
     if ( !objPoints->getVertsColorMap().empty() )
         partMapping.tgt2srcVerts = &vertMap;
     std::shared_ptr<PointCloud> newCloud = std::make_shared<PointCloud>();
-    newCloud->addPartByMask( *objPoints->pointCloudConstPtr(), region, partMapping );
+    newCloud->addPartByMask( *objPoints->pointCloudPtr(), region, partMapping );
 
     std::shared_ptr<ObjectPoints> newObj = std::make_shared<ObjectPoints>();
     newObj->setFrontColor( objPoints->getFrontColor( true ), true );
@@ -194,7 +194,7 @@ std::shared_ptr<MR::ObjectPoints> cloneRegion( const std::shared_ptr<ObjectPoint
 std::shared_ptr<ObjectPoints> pack( const ObjectPoints& pts, Reorder reorder, VertBitSet* newValidVerts, const ProgressCallback & cb )
 {
     MR_TIMER;
-    if ( !pts.pointCloudConstPtr() )
+    if ( !pts.pointCloudPtr() )
     {
         assert( false );
         return {};
@@ -204,7 +204,7 @@ std::shared_ptr<ObjectPoints> pack( const ObjectPoints& pts, Reorder reorder, Ve
     if ( !reportProgress( cb, 0.0f ) )
         return {};
 
-    res->setPointCloud( std::make_shared<PointCloud>( *pts.pointCloudConstPtr() ) );
+    res->setPointCloud( std::make_shared<PointCloud>( *pts.pointCloudPtr() ) );
     if ( newValidVerts )
         res->varPointCloud()->validPoints = std::move( *newValidVerts );
     if ( !reportProgress( cb, 0.05f ) )

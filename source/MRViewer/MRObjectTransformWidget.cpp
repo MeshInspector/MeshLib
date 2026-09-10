@@ -842,7 +842,7 @@ void TransformControls::updateRotation( Axis ax, const AffineXf3f& xf, float sta
     if ( ( endAngle - startAngle ) < 0.0f )
         step = -1;
 
-    auto radius = ( rotateControls_[int( ax )]->xf( vpId ).A * ( rotateLines_[0]->polylineConstPtr()->points.vec_[0] - getCenter() ) ).length();
+    auto radius = ( rotateControls_[int( ax )]->xf( vpId ).A * ( rotateLines_[0]->polylinePtr()->points.vec_[0] - getCenter() ) ).length();
     Vector3f basisXTransfomed = xf.A * baseAxis[( int( ax ) + 1 ) % 3];
     Vector3f basisYTransfomed = xf.A * baseAxis[( int( ax ) + 2 ) % 3];
 

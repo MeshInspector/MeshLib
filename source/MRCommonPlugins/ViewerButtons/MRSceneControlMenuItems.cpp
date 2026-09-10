@@ -172,7 +172,7 @@ std::string FitSelectedPrimitivesMenuItem::isAvailable( const std::vector<std::s
 {
     auto allObjs = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Any );
     for ( const auto& obj : allObjs )
-        if ( obj->globalVisibility() && obj->meshConstPtr() && ( obj->getSelectedEdges().any() || obj->getSelectedFaces().any() ) )
+        if ( obj->globalVisibility() && obj->meshPtr() && ( obj->getSelectedEdges().any() || obj->getSelectedFaces().any() ) )
             return "";
 
     return _tr( "There are no visible selected primitives." );

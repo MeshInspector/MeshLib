@@ -1151,14 +1151,14 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     std::string name;
     if ( auto selectedMesh = std::dynamic_pointer_cast< ObjectMesh >( object ) )
     {
-        if ( !selectedMesh->meshConstPtr() )
+        if ( !selectedMesh->meshPtr() )
             return;
         newObj = cloneRegion( selectedMesh, selectedMesh->getSelectedFaces() );
         name = "ObjectMesh";
     }
     else if ( auto selectedPoints = std::dynamic_pointer_cast< ObjectPoints >( object ) )
     {
-        if ( !selectedPoints->pointCloudConstPtr() )
+        if ( !selectedPoints->pointCloudPtr() )
             return;
         newObj = cloneRegion( selectedPoints, selectedPoints->getSelectedPoints() );
         name = "ObjectPoints";

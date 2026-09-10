@@ -25,7 +25,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->meshConstPtr() )
+            if ( auto m = obj->meshPtr() )
                 cloneMesh_ = std::make_shared<Mesh>( *m );
         }
     }
@@ -199,7 +199,7 @@ public:
     {
         if ( !objMesh_ )
             return;
-        if ( auto m = objMesh_->meshConstPtr() )
+        if ( auto m = objMesh_->meshPtr() )
             clonePoints_ = m->points;
     }
 
@@ -263,7 +263,7 @@ public:
     {
         if ( !objMesh_ )
             return;
-        if ( auto m = objMesh_->meshConstPtr() )
+        if ( auto m = objMesh_->meshPtr() )
             cloneTopology_ = m->topology;
     }
 

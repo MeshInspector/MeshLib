@@ -24,7 +24,7 @@ public:
     constexpr static const char* StaticClassNameInPlural() noexcept { return "Point Clouds"; }
     virtual std::string classNameInPlural() const override { return StaticClassNameInPlural(); }
 
-    /// returns variable point cloud, if const point cloud is needed use `pointCloud()` instead
+    /// returns variable point cloud, if const point cloud is needed use `pointCloudPtr()` instead
     virtual const std::shared_ptr<PointCloud>& varPointCloud() { return points_; }
 
     MRMESH_API virtual std::shared_ptr<Object> clone() const override;

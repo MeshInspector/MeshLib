@@ -36,10 +36,18 @@ public:
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( points_ ); }
 
+    /// returns the point cloud of this object for modification, or nullptr if it is not set
+    [[nodiscard]]       PointCloud* varPointCloudPtr() { return points_.get(); }
+
+    /// returns the point cloud of this object, or nullptr if it is not set
+    [[nodiscard]] const PointCloud* pointCloudPtr() const { return points_.get(); }
+
     #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
+    /// \deprecated the cast inside is undefined behaviour, use pointCloudPtr() instead
+    [[deprecated( "use pointCloudPtr() instead" )]]
     const std::shared_ptr<const PointCloud>& pointCloud() const
     { return reinterpret_cast< const std::shared_ptr<const PointCloud>& >( points_ ); } // reinterpret_cast to avoid making a copy of shared_ptr
     #ifdef __GNUC__

@@ -215,8 +215,8 @@ void SurfacePointWidget::updatePositionAndRadiusMesh_( MeshTriPoint mtp )
     assert( pickSphere_ );
     auto baseSurface = std::dynamic_pointer_cast<ObjectMeshHolder>( baseObject_ );
     assert( baseSurface );
-    assert( baseSurface->mesh() );
-    const auto& mesh = *baseSurface->mesh();
+    assert( baseSurface->meshPtr() );
+    const auto& mesh = *baseSurface->meshPtr();
 
     const auto f = mesh.topology.left( mtp.e );
     switch ( params_.positionType )
@@ -349,7 +349,7 @@ bool SurfacePointWidget::isPickIntoBackFace( const std::shared_ptr<MR::VisualObj
 
     if ( auto objMesh = std::dynamic_pointer_cast< const ObjectMeshHolder >( obj ) )
     {
-        const auto& n = objMesh->mesh()->dirDblArea( pick.face );
+        const auto& n = objMesh->meshPtr()->dirDblArea( pick.face );
         if ( dot( xf.A * n, cameraEye ) < 0 )
             return true;
         else
@@ -359,9 +359,9 @@ bool SurfacePointWidget::isPickIntoBackFace( const std::shared_ptr<MR::VisualObj
 
     if ( auto objPoints = std::dynamic_pointer_cast< const ObjectPointsHolder >( obj ) )
     {
-        if ( objPoints->pointCloud()->normals.size() > static_cast< int > ( pick.vert ) )
+        if ( objPoints->pointCloudPtr()->normals.size() > static_cast< int > ( pick.vert ) )
         {
-            const auto& n = objPoints->pointCloud()->normals[pick.vert];
+            const auto& n = objPoints->pointCloudPtr()->normals[pick.vert];
             auto dt = dot( xf.A * n, cameraEye );
             if ( dt < 0 )
                 return true;

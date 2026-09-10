@@ -95,7 +95,7 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
         bool flat;
         if ( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::AutoDetect )
             flat = extension == ".step" || extension == ".stp" ||
-                   ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
+                   ( mesh->meshPtr() && detectFlatShading( *mesh->meshPtr() ) );
         else
             flat = SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat;
         mesh->setVisualizeProperty( flat, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
@@ -480,7 +480,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             postImportObject( o, filename );
             if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints )
             {
-                if ( !objectPoints->pointCloud()->hasNormals() )
+                if ( !objectPoints->pointCloudPtr()->hasNormals() )
                     result->warnings += "Point cloud " + o->name() + " has no normals.\n";
                 if ( objectPoints->getRenderDiscretization() > 1 )
                     result->warnings += "Point cloud " + o->name() + " has too many points in PointCloud:\n"

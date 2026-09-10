@@ -16,7 +16,7 @@ PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointO
 {
     if ( auto* objMesh = dynamic_cast< const ObjectMeshHolder* >( object ) )
     {
-        const auto & mesh = objMesh->mesh();
+        const auto * mesh = objMesh->meshPtr();
         // toTriPoint() indexes edgePerFace_ by the face, so an out-of-range one reads out of bounds
         if ( !mesh || !pos.face.valid() || !mesh->topology.hasFace( pos.face ) )
         {
@@ -30,7 +30,7 @@ PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointO
 
     if ( auto* objPoints = dynamic_cast< const ObjectPointsHolder* >( object ) )
     {
-        const auto & cloud = objPoints->pointCloud();
+        const auto * cloud = objPoints->pointCloudPtr();
         if ( !cloud || !pos.vert.valid() || !cloud->validPoints.test( pos.vert ) )
         {
             spdlog::warn( "pointOnObjectToPickedPoint: not a valid point pick: vert={}, numPoints={}",
@@ -43,7 +43,7 @@ PickedPoint pointOnObjectToPickedPoint( const VisualObject* object, const PointO
 
     if ( auto* objLines  = dynamic_cast< const ObjectLinesHolder* >( object ) )
     {
-        const auto & polyline = objLines->polyline();
+        const auto * polyline = objLines->polylinePtr();
         const EdgeId e( pos.uedge );
         if ( !polyline || !e.valid() || !polyline->topology.hasEdge( e ) )
         {
@@ -70,7 +70,7 @@ std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, cons
         {
             if ( auto objMesh = dynamic_cast< const ObjectMeshHolder* >( &object ) )
             {
-                if ( const auto& mesh = objMesh->mesh() )
+                if ( const auto* mesh = objMesh->meshPtr() )
                 {
                     const auto & topology = mesh->topology;
                     if ( topology.hasEdge( triPoint.e ) )
@@ -86,11 +86,11 @@ std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, cons
         {
             if ( auto objLines = dynamic_cast< const ObjectLinesHolder* >( &object ) )
             {
-                if ( const auto& polyline = objLines->polyline() )
+                if ( const auto* polyline = objLines->polylinePtr() )
                 {
                     const auto & topology = polyline->topology;
                     if ( topology.hasEdge( edgePoint.e ) )
-                        return objLines->polyline()->edgePoint( edgePoint );
+                        return objLines->polylinePtr()->edgePoint( edgePoint );
                 }
             }
             return {};
@@ -99,7 +99,7 @@ std::optional<Vector3f> getPickedPointPosition( const VisualObject& object, cons
         {
             if ( auto objPoints = dynamic_cast< const ObjectPointsHolder* >( &object ) )
             {
-                if ( const auto& pointCloud = objPoints->pointCloud() )
+                if ( const auto* pointCloud = objPoints->pointCloudPtr() )
                 {
                     if ( pointCloud->validPoints.test( vertId ) )
                         return pointCloud->points[vertId];
@@ -121,7 +121,7 @@ std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const 
         {
             if ( auto objMesh = dynamic_cast< const ObjectMeshHolder* >( &object ) )
             {
-                if ( const auto& mesh = objMesh->mesh() )
+                if ( const auto* mesh = objMesh->meshPtr() )
                 {
                     const auto & topology = mesh->topology;
                     if ( topology.hasEdge( triPoint.e ) )
@@ -141,7 +141,7 @@ std::optional<Vector3f> getPickedPointNormal( const VisualObject& object, const 
         {
             if ( auto objPoints = dynamic_cast< const ObjectPointsHolder* >( &object ) )
             {
-                if ( const auto& pointCloud = objPoints->pointCloud() )
+                if ( const auto* pointCloud = objPoints->pointCloudPtr() )
                 {
                     if ( vertId < pointCloud->normals.size() && pointCloud->validPoints.test( vertId ) )
                         return pointCloud->normals[vertId];

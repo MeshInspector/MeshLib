@@ -12,6 +12,8 @@
 namespace MR
 {
 
+static_assert( std::forward_iterator<ConstChildren::Iterator> );
+
 namespace
 {
 

@@ -37,20 +37,23 @@ public:
     class MR_BIND_IGNORE_PY Iterator
     {
     public:
+        /// dereference produces a prvalue, so the C++17 category can only be input,
+        /// but the iterator is multi-pass and models std::forward_iterator
+        using iterator_concept = std::forward_iterator_tag;
         using iterator_category = std::input_iterator_tag;
         using value_type = std::shared_ptr<const Object>;
         using difference_type = std::ptrdiff_t;
 
-        Iterator() = default;
+        Iterator() {}
         explicit Iterator( Storage::const_iterator it ) : it_( it ) {}
 
         [[nodiscard]] value_type operator *() const { return *it_; }
         Iterator & operator ++() { ++it_; return *this; }
         Iterator operator ++( int ) { auto res = *this; ++it_; return res; }
-        [[nodiscard]] friend bool operator ==( const Iterator & a, const Iterator & b ) { return a.it_ == b.it_; }
+        [[nodiscard]] bool operator ==( const Iterator & ) const = default;
 
     private:
-        Storage::const_iterator it_;
+        Storage::const_iterator it_{};
     };
 
     explicit ConstChildren( const Storage & children ) : children_( children ) {}

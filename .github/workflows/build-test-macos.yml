@@ -214,9 +214,7 @@ jobs:
           CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
           make --version
-          # Nothing uploads these: distribution_apple.sh only runs `cmake --install`,
-          # which never sees mrbind's output, so the .pkg carries no mrmeshpy. Build
-          # them unoptimized - they are used only by this job's own tests.
+          # No distribution carries these; only this job's own tests use them.
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             MODE=none \

@@ -175,13 +175,7 @@ jobs:
           # The bindings always compile with clang++, which takes the newest GCC in the image - 16 on
           # ubuntu26 - while the deb is built with GCC 15. Pin clang to that same 15.
           CLANG_GCC_PIN: ${{ matrix.os == 'ubuntu26' && '--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/15' || '' }}
-          # The .deb carries the mrbind bindings (scripts/distribution.sh installs them
-          # alongside the CMake ones), so the cells whose .deb ships build them with the
-          # optimized preset. The rest keep MODE=none: nothing uploads them, and the
-          # unoptimized build is ~3x faster.
-          # Keep this condition in sync with `Upload Ubuntu Developer Distribution`.
-          BINDINGS_MODE: ${{ (inputs.upload_artifacts && matrix.upload_release == 'ON' && matrix.compiler == 'GCC' && matrix.config == 'Release') && 'release' || 'none' }}
-        run: make -f scripts/mrbind/generate.mk MODE=${{env.BINDINGS_MODE}} -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}} EXTRA_CFLAGS="${{env.CLANG_GCC_PIN}}" EXTRA_LDFLAGS="${{env.CLANG_GCC_PIN}}"
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}} EXTRA_CFLAGS="${{env.CLANG_GCC_PIN}}" EXTRA_LDFLAGS="${{env.CLANG_GCC_PIN}}"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}} ${{matrix.config}} "${{matrix.cxx-compiler}}"

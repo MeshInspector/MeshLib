@@ -140,6 +140,15 @@ def is_macho(p: Path) -> bool:
         return False
 
 
+def is_under(p: Path, d: Path) -> bool:
+    # Path.is_relative_to needs Python 3.9; the macOS runners' python3 varies.
+    try:
+        p.relative_to(d)
+    except ValueError:
+        return False
+    return True
+
+
 def collect_machos(root: Path) -> list[Path]:
     if not root.exists():
         return []
@@ -212,7 +221,7 @@ def _rpath_for(p: Path, dest_dir: Path, exe_dirs: list[Path]) -> str:
     @loader_path for the dylibs, so they resolve whichever process loads them.
     """
     anchor = "@executable_path" if any(
-        p.is_relative_to(d) for d in exe_dirs
+        is_under(p, d) for d in exe_dirs
     ) else "@loader_path"
     rel = Path(os.path.relpath(dest_dir, p.parent)).as_posix()
     return f"{anchor}/{rel}"
@@ -320,7 +329,7 @@ def bundle(
     for p in all_files:
         make_writable(p)
         sp = str(p)
-        is_dylib = p.suffix == ".dylib" or p.is_relative_to(lib_dir)
+        is_dylib = p.suffix == ".dylib" or is_under(p, lib_dir)
         if is_dylib:
             set_install_id(sp, f"@rpath/{p.name}", ad_hoc_sign=False)
 
@@ -347,7 +356,7 @@ def bundle(
         # Signing a bundle's main executable signs the whole bundle and fails
         # on nested items it does not consider code; those callers sign the
         # bundle as a unit themselves.
-        if sign_exes or not any(p.is_relative_to(d) for d in exe_dirs):
+        if sign_exes or not any(is_under(p, d) for d in exe_dirs):
             codesign_adhoc(p)
 
     log(f"bundled {len(bundled)} dylibs into {lib_dir}")

@@ -134,7 +134,7 @@ Json::Value prepareJsonObjHierarchyRecursive( const MR::Object& obj )
 {
     Json::Value root;
     root["Name"] = obj.name();
-    for (const auto& child : obj.children())
+    for (const auto& child : obj.constChildren())
     {
         root["Children"].append( prepareJsonObjHierarchyRecursive( *child ) );
     }

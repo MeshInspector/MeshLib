@@ -2,6 +2,7 @@
 #include "MRSceneCache.h"
 #include "MRViewer.h"
 #include "MRViewerInstance.h"
+#include "MRViewerSignals.h"
 #include "MRViewport.h"
 #include "MRUIStyle.h"
 #include "MRShowModal.h"
@@ -79,9 +80,19 @@ private:
 
 ////////////////////////////////////////////////////
 
+SceneObjectsListDrawer::SceneObjectsListDrawer()
+{
+    objectsLoadedConnection_ = getViewerInstance().signals().objectsLoadedSignal.connect(
+        [this] ( const std::vector<std::shared_ptr<Object>>& objs, const std::string&, const std::string& )
+    {
+        collapseObjectSubtrees( objs );
+    } );
+}
+
 void SceneObjectsListDrawer::draw( float height )
 {
     ImGui::BeginChild( "SceneObjectsList", ImVec2( -1, height ), ImGuiChildFlags_None );
+    applyCollapseRequests_();
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
@@ -250,6 +261,35 @@ void SceneObjectsListDrawer::expandObjectTreeAndScroll( const Object* obj )
     const auto itAll = std::find( all.begin(), all.end(), obj->getSharedPtr() );
     nextVisible_.index = int( std::distance( all.begin(), itAll ) );
     setNextFrameFixScroll( 2 );
+}
+
+void SceneObjectsListDrawer::collapseObjectSubtrees( const std::vector<std::shared_ptr<Object>>& objs )
+{
+    collapseRequests_.insert( collapseRequests_.end(), objs.begin(), objs.end() );
+}
+
+void SceneObjectsListDrawer::applyCollapseRequests_()
+{
+    if ( collapseRequests_.empty() )
+        return;
+
+    auto* window = ImGui::GetCurrentWindow();
+    const auto collapse = [this, window] ( const Object& obj )
+    {
+        const auto uniqueStr = std::to_string( intptr_t( &obj ) );
+        ImGui::TreeNodeSetOpen( window->GetID( objectLineStrId_( obj, uniqueStr ).c_str() ), false );
+    };
+    for ( const auto& obj : collapseRequests_ )
+    {
+        if ( !obj )
+            continue;
+        collapse( *obj );
+        // the descendants are collapsed as well, since they are not necessarily drawn this frame,
+        // and would appear expanded when the user opens their parent
+        for ( const auto& child : getAllObjectsInTree( *obj, ObjectSelectivityType::Any ) )
+            collapse( *child );
+    }
+    collapseRequests_.clear();
 }
 
 void SceneObjectsListDrawer::allowSceneReorder( bool allow )
@@ -438,13 +478,13 @@ bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::stri
         ImGui::SetNextItemOpen( openCommandIt->second );
     }
     auto res = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
-                    ( hasRealChildren ? sDefaultGroupState : 0 ) );
+                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
     if ( resetOpenFlag )
     {
         // as far as `TreeNodeUpdateNextOpen` uses `SetNextItemOpen` but does not clear it, we clear it manually
         auto ctx = ImGui::GetCurrentContext();
         ctx->NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasOpen;
-        ctx->NextItemData.OpenVal = sDefaultGroupState;
+        ctx->NextItemData.OpenVal = false;
         ctx->NextItemData.OpenCond = ImGuiCond_None;
     }
     return res;
@@ -493,7 +533,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     const ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_SpanAvailWidth |
         ImGuiTreeNodeFlags_Framed |
-        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | sDefaultGroupState : ImGuiTreeNodeFlags_Bullet ) |
+        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
     const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );

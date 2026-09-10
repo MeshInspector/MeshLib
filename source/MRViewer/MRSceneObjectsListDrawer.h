@@ -2,9 +2,11 @@
 
 #include "exports.h"
 #include "MRSceneReorder.h"
+#include <boost/signals2/connection.hpp>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace MR
 {
@@ -15,6 +17,7 @@ class Object;
 class MRVIEWER_CLASS SceneObjectsListDrawer
 {
 public:
+    MRVIEWER_API SceneObjectsListDrawer();
     virtual ~SceneObjectsListDrawer() = default;
 
     /// Main method for drawing all
@@ -50,6 +53,10 @@ public:
 
     /// expands all `obj`s parents in tree and scroll scene tree window so selection becomes visible
     MRVIEWER_API void expandObjectTreeAndScroll( const Object* obj );
+
+    /// collapses given objects and all their descendants, the tree is updated during the next draw;
+    /// this is called on file loading, where deep hierarchies (e.g. of STEP files) would otherwise flood the tree
+    MRVIEWER_API void collapseObjectSubtrees( const std::vector<std::shared_ptr<Object>>& objs );
 
     /// set possibility change object order
     MRVIEWER_API void allowSceneReorder( bool allow );
@@ -149,10 +156,15 @@ private:
     // dragging either just started, or just stopped
     bool dragModeTrigger_{ false };
 
+    /// applies and clears collapseRequests_; must be called inside the scene tree window
+    void applyCollapseRequests_();
+
+    // subtrees to collapse on the next draw, see collapseObjectSubtrees()
+    std::vector<std::shared_ptr<Object>> collapseRequests_;
+    boost::signals2::scoped_connection objectsLoadedConnection_;
+
 protected:
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 };
-
-constexpr inline int sDefaultGroupState = 0; // 0 means closed; the other option is ImGuiTreeNodeFlags_DefaultOpen
 
 } //namespace MR

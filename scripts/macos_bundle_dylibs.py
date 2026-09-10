@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Bundle dylib dependencies into a MeshLib.framework or a macOS .app.
 
-Walks all Mach-O files in the layout's seed directories, copies any dependency
-that resolves under a Homebrew prefix (or a --search-dir) into the layout's
-destination directory, and rewrites the LC_LOAD_DYLIB / LC_ID_DYLIB entries to
-@rpath/<basename>. Each binary gets an LC_RPATH pointing at that destination,
-computed from where the binary sits, so the bundled libs are found relative to
-it:
+Walks the layout's seed directories, copies any dependency resolving under a
+Homebrew prefix or a --search-dir into its destination directory, and rewrites
+LC_LOAD_DYLIB / LC_ID_DYLIB to @rpath/<basename>. Each binary gets an LC_RPATH
+pointing at that destination, computed from where it sits:
 
   framework   bin/            -> @executable_path/../lib
               lib/            -> @loader_path/.
@@ -14,9 +12,8 @@ it:
               Contents/Frameworks/         -> @loader_path/.
               Contents/Frameworks/meshlib/ -> @loader_path/..
 
-The .app layout also needs --search-dir for the build tree and any prebuilt
-thirdparty directory, since a .app is assembled from those rather than from an
-install tree: dependencies found there are bundled like Homebrew ones.
+A .app is assembled from a build tree rather than an install tree, so it needs
+--search-dir for the build and prebuilt thirdparty directories.
 
 System libraries (/usr/lib, /System) and libpython* are intentionally left as
 external references.
@@ -50,16 +47,12 @@ Why a script rather than dylibbundler / CMake BundleUtilities
     and /opt/homebrew as the only search prefixes; the arm64 self-hosted
     build runner installs Homebrew at /Users/runner/.homebrew. This
     script calls `brew --prefix` at startup. It also drops absolute
-    LC_RPATH entries while resolving @rpath references, which is what
-    makes it warn "can't get path for '@rpath/...'" on well-formed
-    binaries, and it skips .framework dependencies outright.
-  - `fixup_bundle` copies every prerequisite it can resolve, with no way
-    to exempt one: prerequisites get copyflag 1 unconditionally and
-    `IGNORE_ITEM` only filters which items are scanned. Since
-    `get_item_key` keys them by file name, a bundle referencing Python
-    through several paths gets whichever framework was resolved first
-    copied in, duplicating an interpreter that is already shipped.
-    SKIP_BASENAME_RE below is this script's answer to the same problem.
+    LC_RPATH entries while resolving @rpath references, which is where
+    its "can't get path for '@rpath/...'" warnings come from.
+  - `fixup_bundle` copies every prerequisite it can resolve and keys them
+    by file name, so a bundle referencing Python through more than one
+    path ends up shipping a second interpreter. SKIP_BASENAME_RE below is
+    this script's answer to the same problem.
   - Primitive install_name_tool / otool calls are made via
     delocate.tools (already a build-time dep used by the NuGet-patch
     pipeline). The remaining bespoke code is the algorithm: BFS over
@@ -118,9 +111,7 @@ def _detect_homebrew_prefixes() -> tuple[str, ...]:
 
 
 HOMEBREW_PREFIXES = _detect_homebrew_prefixes()
-# Extra directories holding libraries to bundle, from --search-dir. Needed for
-# the .app layout, whose payload comes from a build tree rather than an install
-# tree; empty for the framework.
+# From --search-dir; empty for the framework.
 SEARCH_DIRS: tuple[Path, ...] = ()
 SYSTEM_PREFIXES = ("/usr/lib/", "/System/")
 RELATIVE_PREFIXES = ("@rpath/", "@loader_path/", "@executable_path/")
@@ -218,9 +209,7 @@ _resolve_by_basename._cache = {}  # type: ignore[attr-defined]
 def _rpath_for(p: Path, dest_dir: Path, exe_dirs: list[Path]) -> str:
     """Where this binary should look for dest_dir, relative to itself.
 
-    @executable_path for the executables, so a plugin loaded from a
-    subdirectory still resolves against the app; @loader_path for everything
-    else, so a dylib keeps working whichever process loads it.
+    @loader_path for the dylibs, so they resolve whichever process loads them.
     """
     anchor = "@executable_path" if any(
         p.is_relative_to(d) for d in exe_dirs
@@ -342,10 +331,7 @@ def bundle(
                 sp, dep, f"@rpath/{Path(dep).name}", ad_hoc_sign=False,
             )
 
-        # A .app is assembled from a build tree, so its binaries arrive with
-        # rpaths into it. dyld searches them on the user's machine, and they
-        # leak build paths, so drop anything not @-relative. An install tree,
-        # which the framework comes from, has none to drop.
+        # dyld searches these on the user's machine, and they leak build paths.
         if drop_absolute_rpaths:
             for rp in get_rpaths(sp):
                 if not rp.startswith("@"):
@@ -358,10 +344,9 @@ def bundle(
         if rpath not in get_rpaths(sp):
             add_rpath(sp, rpath, ad_hoc_sign=False)
 
-        # Signing a .app's main executable makes codesign sign the enclosing
-        # bundle and seal its resources, which fails on a nested item it does
-        # not consider code (meshlib/__init__.py). Those callers sign the
-        # bundle as a unit afterwards instead.
+        # Signing a bundle's main executable signs the whole bundle and fails
+        # on nested items it does not consider code; those callers sign the
+        # bundle as a unit themselves.
         if sign_exes or not any(p.is_relative_to(d) for d in exe_dirs):
             codesign_adhoc(p)
 

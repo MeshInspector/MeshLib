@@ -20,12 +20,9 @@ echo "prefix: ${FRAMEWORK_DIR}"
 cp -rL ./lib "${FRAMEWORK_DIR}/lib/"
 cp -rL ./include "${FRAMEWORK_DIR}/include/"
 
-# The mrbind-generated bindings are built outside CMake, so the `cmake --install`
-# above never sees them; mrmeshnumpy/mrviewerpy alone are useless without mrmeshpy.
-# Mirrors the same block in scripts/distribution.sh. Must run before
-# macos_bundle_dylibs.py so the modules get their Homebrew deps rewritten and an
-# @loader_path rpath like every other Mach-O in the framework. No `install -D`/`-s`
-# here: those are GNU coreutils spellings, and macOS ships BSD install.
+# mrbind's modules are built outside CMake, so `cmake --install` above misses them.
+# Must precede macos_bundle_dylibs.py, which fixes up their deps and rpath.
+# BSD install has no -D/-s, hence plain cp.
 PY_LIB_DIR="${FRAMEWORK_DIR}/lib/meshlib"
 if [ -f build/Release/bin/meshlib/mrmeshpy.so ] ; then
   echo "Installing the generated bindings..."

@@ -212,7 +212,7 @@ jobs:
         # extern ref to path::_List::type, which EL8 defines in no library.
         run: |
           clang -O2 -c scripts/mrbind/libstdcxx_fs_path_compat.c -o libstdcxx_fs_path_compat.o
-          make -f scripts/mrbind/generate.mk MODE=release -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin CXX_FOR_BINDINGS=clang++ DEPS_BASE_DIR=/opt/vcpkg_installed/${{ matrix.arch }}-linux-meshlib EXTRA_CFLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }} EXTRA_LDFLAGS="--gcc-install-dir=${{ matrix.gcc-install-dir }} $PWD/libstdcxx_fs_path_compat.o"
 
       - name: Collect Timings
         run: ./scripts/devops/collect_timing_logs.sh linux-vcpkg-${{ matrix.arch }} ${{matrix.config}} "${{matrix.compiler}}"

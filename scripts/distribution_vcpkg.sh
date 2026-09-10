@@ -33,14 +33,9 @@ VCPKG_INSTALLED_DIR=${VCPKG_INSTALLED_DIR:=${VCPKG_ROOT}/installed}
 cp -a ${VCPKG_INSTALLED_DIR}/${VCPKG_TRIPLET}/* ${DISTR_DIR}/
 # install MeshLib files
 cmake --install ./build/Release --prefix ${DISTR_DIR} --strip
-# The mrbind-generated bindings are built outside CMake, so the `cmake --install`
-# above never sees them; mrmeshnumpy/mrviewerpy alone are useless without mrmeshpy.
-# Mirrors the same block in scripts/distribution.sh. `lib/MeshLib/meshlib` is
-# MR_PY_LIB_DIR for the vcpkg layout (CMakeLists.txt, MESHLIB_USE_VCPKG branch).
-# The rpath is left alone: generate.mk already puts $ORIGIN and $ORIGIN/.. first,
-# and $ORIGIN/.. is lib/MeshLib, where the .so files live. It also bakes in absolute
-# build paths, which are dead entries on a user's machine; stripping them would need
-# patchelf, which the rockylinux-vcpkg images do not carry.
+# mrbind's modules are built outside CMake, so `cmake --install` above misses them.
+# lib/MeshLib/meshlib is MR_PY_LIB_DIR for the vcpkg layout; the rpath generate.mk
+# baked in already resolves there via $ORIGIN/.. so it is left alone.
 PY_LIB_DIR="${DISTR_DIR}/lib/MeshLib/meshlib"
 if [ -f build/Release/bin/meshlib/mrmeshpy.so ] ; then
   echo "Installing the generated bindings..."

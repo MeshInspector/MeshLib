@@ -95,7 +95,7 @@ int collectLinks( const Object& rootObject, Obj2FirstSharedObj& links )
             // map current object to first met object
             links.insert( { node, { it->object, numFile } } );
         }
-        auto children = node->children();
+        auto children = node->constChildren();
         for ( int i = int( children.size() ) - 1; i >= 0; --i )
         {
             sceneGraphVisitedList.push( children[i].get() );

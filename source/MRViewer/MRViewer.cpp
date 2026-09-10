@@ -1663,7 +1663,7 @@ static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
         return true;
     if ( !obj.isVisible( mask ) )
         return false;
-    for ( const auto& child : obj.children() )
+    for ( const auto& child : obj.constChildren() )
     {
         if ( getRedrawFlagRecursive( *child, mask ) )
             return true;
@@ -1674,7 +1674,7 @@ static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
 static void resetRedrawFlagRecursive( const Object& obj )
 {
     obj.resetRedrawFlag();
-    for ( const auto& child : obj.children() )
+    for ( const auto& child : obj.constChildren() )
         resetRedrawFlagRecursive( *child );
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "MRPch/MRBindingMacros.h"
 #include "MRAffineXf3.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
@@ -9,6 +10,7 @@
 #include <array>
 #include <filesystem>
 #include <future>
+#include <iterator>
 #include <memory>
 #include <set>
 #include <vector>
@@ -26,6 +28,44 @@ namespace MR
  * \brief This chapter represents documentation about data models
  * \{
  */
+
+/// read-only access to the children of an Object, see Object::constChildren()
+class ConstChildren
+{
+public:
+    using Storage = std::vector<std::shared_ptr<Object>>;
+
+    class MR_BIND_IGNORE_PY Iterator
+    {
+    public:
+        using iterator_category = std::input_iterator_tag;
+        using value_type = std::shared_ptr<const Object>;
+        using difference_type = std::ptrdiff_t;
+
+        Iterator() = default;
+        explicit Iterator( Storage::const_iterator it ) : it_( it ) {}
+
+        [[nodiscard]] value_type operator *() const { return *it_; }
+        Iterator & operator ++() { ++it_; return *this; }
+        Iterator operator ++( int ) { auto res = *this; ++it_; return res; }
+        [[nodiscard]] friend bool operator ==( const Iterator & a, const Iterator & b ) { return a.it_ == b.it_; }
+
+    private:
+        Storage::const_iterator it_;
+    };
+
+    explicit ConstChildren( const Storage & children ) : children_( children ) {}
+
+    [[nodiscard]] MR_BIND_IGNORE_PY Iterator begin() const { return Iterator( children_.begin() ); }
+    [[nodiscard]] MR_BIND_IGNORE_PY Iterator end() const { return Iterator( children_.end() ); }
+
+    [[nodiscard]] bool empty() const { return children_.empty(); }
+    [[nodiscard]] size_t size() const { return children_.size(); }
+    [[nodiscard]] std::shared_ptr<const Object> operator []( size_t i ) const { return children_[i]; }
+
+private:
+    const Storage & children_;
+};
 
 /// the main purpose of this class is to avoid copy and move constructor and assignment operator
 /// implementation in Object class, which has too many fields for that;
@@ -158,10 +198,16 @@ public:
     /// an object can hold other sub-objects
     const std::vector<std::shared_ptr<Object>>& children() { return children_; }
 
+    /// the same sub-objects without the ability to modify them; the returned view is
+    /// invalidated by anything that changes the children of this object
+    [[nodiscard]] ConstChildren constChildren() const { return ConstChildren( children_ ); }
+
     #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
+    /// \deprecated the cast inside is undefined behaviour, use constChildren() instead
+    [[deprecated( "use constChildren() instead" )]]
     const std::vector<std::shared_ptr<const Object>>& children() const { return reinterpret_cast<const std::vector< std::shared_ptr< const Object > > &>( children_ ); }
     #ifdef __GNUC__
     #pragma GCC diagnostic pop

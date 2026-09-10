@@ -99,22 +99,20 @@ def parse_jobs(jobs: List[dict]):
     ]
 
 def fetch_page(url, headers, attempts=3, cooldown=30):
+    """Return the page and the URL of the next one, taken from the Link header."""
     request = urllib.request.Request(url, headers=headers)
     for attempt in range(1, attempts + 1):
         try:
             with urllib.request.urlopen(request) as resp:
-                return json.loads(resp.read()), resp.headers.get('Link', '')
-        except urllib.error.HTTPError:
+                next_page = re.search(r'<([^>]+)>; rel="next"', resp.headers.get('Link', ''))
+                return json.loads(resp.read()), next_page.group(1) if next_page else None
+        except urllib.error.HTTPError:  # a bad status is final, unlike a connection failure
             raise
         except urllib.error.URLError as e:
             if attempt == attempts:
                 raise
             print(f'fetch_page: attempt {attempt}/{attempts} failed ({e}); retrying in {cooldown}s...')
             time.sleep(cooldown)
-
-def next_page_url(link_header: str):
-    match = re.search(r'<([^>]+)>\s*;\s*rel="next"', link_header)
-    return match.group(1) if match else None
 
 def fetch_jobs(repo: str, run_id: str):
     url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
@@ -125,49 +123,37 @@ def fetch_jobs(repo: str, run_id: str):
     }
     jobs = []
     while url:
-        page, link_header = fetch_page(url, headers)
+        page, url = fetch_page(url, headers)
         jobs += page['jobs']
-        url = next_page_url(link_header)
     return jobs
 
 def sign_api_request(url, method, headers, body: bytes, region, service):
-    """Return the headers of an AWS SigV4-signed request; credentials come from the environment."""
+    """Add AWS SigV4 headers, following https://docs.aws.amazon.com/IAM/latest/UserGuide/create-signed-request.html"""
+    url = urllib.parse.urlsplit(url)
     now = datetime.datetime.now(datetime.timezone.utc)
-    amz_date = now.strftime('%Y%m%dT%H%M%SZ')
     scope = f"{now.strftime('%Y%m%d')}/{region}/{service}/aws4_request"
 
-    signed = {k: v for k, v in headers.items() if k.lower() != 'authorization'}
-    signed['Host'] = urllib.parse.urlsplit(url).netloc
-    signed['X-Amz-Date'] = amz_date
+    signed = {key.lower(): value for key, value in headers.items()}
+    signed['host'] = url.netloc
+    signed['x-amz-date'] = now.strftime('%Y%m%dT%H%M%SZ')
     if os.environ.get('AWS_SESSION_TOKEN'):
-        signed['X-Amz-Security-Token'] = os.environ['AWS_SESSION_TOKEN']
+        signed['x-amz-security-token'] = os.environ['AWS_SESSION_TOKEN']
+    names = ';'.join(sorted(signed))
 
-    names = sorted(k.lower() for k in signed)
-    values = {k.lower(): ' '.join(v.split()) for k, v in signed.items()}
-    canonical_request = '\n'.join([
-        method,
-        urllib.parse.quote(urllib.parse.urlsplit(url).path or '/', safe='/~'),
-        urllib.parse.urlsplit(url).query,
-        ''.join(f'{name}:{values[name]}\n' for name in names),
-        ';'.join(names),
-        hashlib.sha256(body).hexdigest(),
-    ])
-    to_sign = '\n'.join([
-        'AWS4-HMAC-SHA256',
-        amz_date,
-        scope,
-        hashlib.sha256(canonical_request.encode()).hexdigest(),
-    ])
+    canonical = '\n'.join(
+        [method, url.path, url.query]
+        + [f'{name}:{signed[name]}' for name in sorted(signed)]
+        + ['', names, hashlib.sha256(body).hexdigest()])
+    to_sign = '\n'.join(['AWS4-HMAC-SHA256', signed['x-amz-date'], scope,
+                         hashlib.sha256(canonical.encode()).hexdigest()])
 
     key = f"AWS4{os.environ['AWS_SECRET_ACCESS_KEY']}".encode()
-    for part in scope.split('/'):
+    for part in scope.split('/') + [to_sign]:
         key = hmac.new(key, part.encode(), hashlib.sha256).digest()
-    signature = hmac.new(key, to_sign.encode(), hashlib.sha256).hexdigest()
 
-    signed['Authorization'] = (
+    signed['authorization'] = (
         f"AWS4-HMAC-SHA256 Credential={os.environ['AWS_ACCESS_KEY_ID']}/{scope}, "
-        f"SignedHeaders={';'.join(names)}, Signature={signature}"
-    )
+        f"SignedHeaders={names}, Signature={key.hex()}")
     return signed
 
 if __name__ == "__main__":

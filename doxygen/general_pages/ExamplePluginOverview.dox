@@ -173,7 +173,7 @@ cmake --build example_plugin_build -j
 mkdir -p ~/Apps
 cp -R /Applications/MeshInspector.app ~/Apps/MI-MyPlugin     # NB: drop the .app suffix
 
-cp example_plugin_build/libMyPlugin.dylib            ~/Apps/MI-MyPlugin/Contents/libs/
+cp example_plugin_build/libMyPlugin.dylib            ~/Apps/MI-MyPlugin/Contents/Frameworks/
 cp example_plugin/MyPlugin.items.json                ~/Apps/MI-MyPlugin/Contents/Resources/
 cp example_plugin/MyPlugin.ui.json                   ~/Apps/MI-MyPlugin/Contents/Resources/
 cp -R example_plugin/resource                        ~/Apps/MI-MyPlugin/Contents/Resources/

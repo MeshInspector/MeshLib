@@ -2,7 +2,6 @@
 #include "MRSceneCache.h"
 #include "MRViewer.h"
 #include "MRViewerInstance.h"
-#include "MRViewerSignals.h"
 #include "MRViewport.h"
 #include "MRUIStyle.h"
 #include "MRShowModal.h"
@@ -80,19 +79,10 @@ private:
 
 ////////////////////////////////////////////////////
 
-SceneObjectsListDrawer::SceneObjectsListDrawer()
-{
-    objectsLoadedConnection_ = getViewerInstance().signals().objectsLoadedSignal.connect(
-        [this] ( const std::vector<std::shared_ptr<Object>>& objs, const std::string&, const std::string& )
-    {
-        collapseObjectSubtrees( objs );
-    } );
-}
-
 void SceneObjectsListDrawer::draw( float height )
 {
     ImGui::BeginChild( "SceneObjectsList", ImVec2( -1, height ), ImGuiChildFlags_None );
-    applyCollapseRequests_();
+    applyCollapseSceneTree_();
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
@@ -263,33 +253,25 @@ void SceneObjectsListDrawer::expandObjectTreeAndScroll( const Object* obj )
     setNextFrameFixScroll( 2 );
 }
 
-void SceneObjectsListDrawer::collapseObjectSubtrees( const std::vector<std::shared_ptr<Object>>& objs )
+void SceneObjectsListDrawer::collapseSceneTree()
 {
-    collapseRequests_.insert( collapseRequests_.end(), objs.begin(), objs.end() );
+    collapseSceneTreeRequested_ = true;
 }
 
-void SceneObjectsListDrawer::applyCollapseRequests_()
+void SceneObjectsListDrawer::applyCollapseSceneTree_()
 {
-    if ( collapseRequests_.empty() )
+    if ( !collapseSceneTreeRequested_ )
         return;
+    collapseSceneTreeRequested_ = false;
 
     auto* window = ImGui::GetCurrentWindow();
-    const auto collapse = [this, window] ( const Object& obj )
+    // every object is collapsed, not only the visible ones: objects below a closed header are not drawn at all,
+    // and would open by default flag once the user expands their parent
+    for ( const auto& obj : getAllObjectsInTree( SceneRoot::get(), ObjectSelectivityType::Any ) )
     {
-        const auto uniqueStr = std::to_string( intptr_t( &obj ) );
-        ImGui::TreeNodeSetOpen( window->GetID( objectLineStrId_( obj, uniqueStr ).c_str() ), false );
-    };
-    for ( const auto& obj : collapseRequests_ )
-    {
-        if ( !obj )
-            continue;
-        collapse( *obj );
-        // the descendants are collapsed as well, since they are not necessarily drawn this frame,
-        // and would appear expanded when the user opens their parent
-        for ( const auto& child : getAllObjectsInTree( *obj, ObjectSelectivityType::Any ) )
-            collapse( *child );
+        const auto uniqueStr = std::to_string( intptr_t( obj.get() ) );
+        ImGui::TreeNodeSetOpen( window->GetID( objectLineStrId_( *obj, uniqueStr ).c_str() ), false );
     }
-    collapseRequests_.clear();
 }
 
 void SceneObjectsListDrawer::allowSceneReorder( bool allow )

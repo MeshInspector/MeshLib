@@ -10,6 +10,12 @@ inputs:
   cuda-minor:
     description: 'CUDA minor version (e.g. 0).'
     required: true
+  arch:
+    description: >
+      Target architecture, 'x64' or 'arm64'. The network installer Jimver
+      drives is x86_64-only, so arm64 takes the redistributable archives.
+    required: false
+    default: 'x64'
 runs:
   using: 'composite'
   steps:
@@ -32,13 +38,40 @@ runs:
       id: cuda-cache
       continue-on-error: true
       with:
-        key: cuda-toolkit-subset-${{ inputs.cuda-version }}-v1
+        key: cuda-toolkit-subset-${{ inputs.cuda-version }}${{ inputs.arch == 'arm64' && '-arm64' || '' }}-v1
         path: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-major }}.${{ inputs.cuda-minor }}
 
     - name: Install CUDA
-      if: steps.cuda-cache.outputs.cache-hit != 'true'
+      if: ${{ steps.cuda-cache.outputs.cache-hit != 'true' && inputs.arch != 'arm64' }}
       uses: Jimver/cuda-toolkit@3d45d157f327c09c04b50ee6ccdea2d9d017ec76 # v0.2.35
       with:
         cuda: ${{ inputs.cuda-version }}
         method: network
         sub-packages: ${{ steps.cuda-sub-packages.outputs.sub-packages }}
+
+    - name: Install CUDA (arm64)
+      # Redist archives are the only Windows-on-Arm channel: plain zips, laid
+      # out where the installer would have put them. Their component names are
+      # not the installer's sub-package names -- nvvm ships as `libnvvm`, and
+      # without it nvcc has no cicc and fails with "The system cannot find the
+      # path specified".
+      if: ${{ steps.cuda-cache.outputs.cache-hit != 'true' && inputs.arch == 'arm64' }}
+      shell: pwsh
+      env:
+        CUDA_ROOT: 'C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v${{ inputs.cuda-major }}.${{ inputs.cuda-minor }}'
+      run: |
+        $base = 'https://developer.download.nvidia.com/compute/cuda/redist'
+        $man = Invoke-RestMethod "$base/redistrib_${{ inputs.cuda-version }}.json"
+        New-Item -ItemType Directory -Force $env:CUDA_ROOT | Out-Null
+        foreach ($c in 'cuda_nvcc', 'cuda_cudart', 'cuda_crt', 'libnvvm', 'visual_studio_integration') {
+          $rel = $man.$c.'windows-arm64'.relative_path
+          if (-not $rel) { throw "$c has no windows-arm64 build in redistrib_${{ inputs.cuda-version }}.json" }
+          $zip = Join-Path $env:RUNNER_TEMP "$c.zip"
+          Invoke-WebRequest "$base/$rel" -OutFile $zip
+          Expand-Archive $zip -DestinationPath $env:RUNNER_TEMP -Force
+          $dir = Get-ChildItem $env:RUNNER_TEMP -Directory |
+                 Where-Object Name -like "$c-windows-arm64-*archive" | Select-Object -First 1
+          Copy-Item (Join-Path $dir.FullName '*') $env:CUDA_ROOT -Recurse -Force
+        }
+        $cicc = Join-Path $env:CUDA_ROOT 'nvvm\bin\cicc.exe'
+        if (-not (Test-Path $cicc)) { throw "cicc missing after unpack: $cicc" }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRAffineXf3.h"
+#include "MRConstChildren.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRSignal.h"
@@ -158,10 +159,16 @@ public:
     /// an object can hold other sub-objects
     const std::vector<std::shared_ptr<Object>>& children() { return children_; }
 
+    /// the same sub-objects without the ability to modify them; the returned view is
+    /// invalidated by anything that changes the children of this object
+    [[nodiscard]] ConstChildren constChildren() const { return ConstChildren( children_ ); }
+
     #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
+    /// \deprecated the cast inside is undefined behaviour, use constChildren() instead
+    [[deprecated( "use constChildren() instead" )]]
     const std::vector<std::shared_ptr<const Object>>& children() const { return reinterpret_cast<const std::vector< std::shared_ptr< const Object > > &>( children_ ); }
     #ifdef __GNUC__
     #pragma GCC diagnostic pop

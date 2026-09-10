@@ -216,6 +216,7 @@ jobs:
           make --version
           make -f scripts/mrbind/generate.mk \
             -B --trace \
+            MODE=release \
             PYTHON_PKGCONF_NAME=python-3.10-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 

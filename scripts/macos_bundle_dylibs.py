@@ -229,7 +229,12 @@ def _rpath_for(p: Path, dest_dir: Path, exe_dirs: list[Path]) -> str:
     return f"{anchor}/{rel}"
 
 
-def bundle(seed_dirs: list[Path], dest_dir: Path, exe_dirs: list[Path]) -> None:
+def bundle(
+    seed_dirs: list[Path],
+    dest_dir: Path,
+    exe_dirs: list[Path],
+    sign_exes: bool = True,
+) -> None:
     lib_dir = dest_dir
     lib_dir.mkdir(parents=True, exist_ok=True)
 
@@ -340,7 +345,12 @@ def bundle(seed_dirs: list[Path], dest_dir: Path, exe_dirs: list[Path]) -> None:
         if rpath not in get_rpaths(sp):
             add_rpath(sp, rpath, ad_hoc_sign=False)
 
-        codesign_adhoc(p)
+        # Signing a .app's main executable makes codesign sign the enclosing
+        # bundle and seal its resources, which fails on a nested item it does
+        # not consider code (meshlib/__init__.py). Those callers sign the
+        # bundle as a unit afterwards instead.
+        if sign_exes or not any(p.is_relative_to(d) for d in exe_dirs):
+            codesign_adhoc(p)
 
     log(f"bundled {len(bundled)} dylibs into {lib_dir}")
 
@@ -359,6 +369,7 @@ def bundle_app(app_dir: Path) -> None:
         seed_dirs=[contents / "MacOS", contents / "Frameworks"],
         dest_dir=contents / "Frameworks",
         exe_dirs=[contents / "MacOS"],
+        sign_exes=False,
     )
 
 

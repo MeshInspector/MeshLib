@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
 import datetime
+import hashlib
+import hmac
 import json
 import os
 import pprint
+import re
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 from typing import List
-
-import boto3
-from botocore.auth import SigV4Auth
-from botocore.awsrequest import AWSRequest
-import requests
 
 API_URL = "https://api.meshinspector.com/ci-stats/v2/log"
 
@@ -98,17 +99,22 @@ def parse_jobs(jobs: List[dict]):
     ]
 
 def fetch_page(url, headers, attempts=3, cooldown=30):
+    request = urllib.request.Request(url, headers=headers)
     for attempt in range(1, attempts + 1):
         try:
-            resp = requests.get(url, headers=headers)
-        except requests.exceptions.RequestException as e:
+            with urllib.request.urlopen(request) as resp:
+                return json.loads(resp.read()), resp.headers.get('Link', '')
+        except urllib.error.HTTPError:
+            raise
+        except urllib.error.URLError as e:
             if attempt == attempts:
                 raise
             print(f'fetch_page: attempt {attempt}/{attempts} failed ({e}); retrying in {cooldown}s...')
             time.sleep(cooldown)
-            continue
-        resp.raise_for_status()
-        return resp
+
+def next_page_url(link_header: str):
+    match = re.search(r'<([^>]+)>\s*;\s*rel="next"', link_header)
+    return match.group(1) if match else None
 
 def fetch_jobs(repo: str, run_id: str):
     url = f'https://api.github.com/repos/{repo}/actions/runs/{run_id}/jobs?per_page=100'
@@ -119,27 +125,50 @@ def fetch_jobs(repo: str, run_id: str):
     }
     jobs = []
     while url:
-        resp = fetch_page(url, headers)
-        jobs += resp.json()['jobs']
-        url = resp.links.get('next', {}).get('url')
+        page, link_header = fetch_page(url, headers)
+        jobs += page['jobs']
+        url = next_page_url(link_header)
     return jobs
 
-def sign_api_request(url, method, headers, body, region, service):
-    # Use the credentials from the assumed role
-    session = boto3.Session()
-    credentials = session.get_credentials().get_frozen_credentials()
+def sign_api_request(url, method, headers, body: bytes, region, service):
+    """Return the headers of an AWS SigV4-signed request; credentials come from the environment."""
+    now = datetime.datetime.now(datetime.timezone.utc)
+    amz_date = now.strftime('%Y%m%dT%H%M%SZ')
+    scope = f"{now.strftime('%Y%m%d')}/{region}/{service}/aws4_request"
 
-    request = AWSRequest(
-        method=method,
-        url=url,
-        headers=headers,
-        data=json.dumps(body)
+    signed = {k: v for k, v in headers.items() if k.lower() != 'authorization'}
+    signed['Host'] = urllib.parse.urlsplit(url).netloc
+    signed['X-Amz-Date'] = amz_date
+    if os.environ.get('AWS_SESSION_TOKEN'):
+        signed['X-Amz-Security-Token'] = os.environ['AWS_SESSION_TOKEN']
+
+    names = sorted(k.lower() for k in signed)
+    values = {k.lower(): ' '.join(v.split()) for k, v in signed.items()}
+    canonical_request = '\n'.join([
+        method,
+        urllib.parse.quote(urllib.parse.urlsplit(url).path or '/', safe='/~'),
+        urllib.parse.urlsplit(url).query,
+        ''.join(f'{name}:{values[name]}\n' for name in names),
+        ';'.join(names),
+        hashlib.sha256(body).hexdigest(),
+    ])
+    to_sign = '\n'.join([
+        'AWS4-HMAC-SHA256',
+        amz_date,
+        scope,
+        hashlib.sha256(canonical_request.encode()).hexdigest(),
+    ])
+
+    key = f"AWS4{os.environ['AWS_SECRET_ACCESS_KEY']}".encode()
+    for part in scope.split('/'):
+        key = hmac.new(key, part.encode(), hashlib.sha256).digest()
+    signature = hmac.new(key, to_sign.encode(), hashlib.sha256).hexdigest()
+
+    signed['Authorization'] = (
+        f"AWS4-HMAC-SHA256 Credential={os.environ['AWS_ACCESS_KEY_ID']}/{scope}, "
+        f"SignedHeaders={';'.join(names)}, Signature={signature}"
     )
-
-    # Sign the request with the SigV4Auth class
-    SigV4Auth(credentials, service, region).add_auth(request)
-
-    return request
+    return signed
 
 if __name__ == "__main__":
     branch = os.environ.get('GIT_BRANCH')
@@ -162,29 +191,21 @@ if __name__ == "__main__":
     if stats_file_count != len(result['jobs']):
         print(f"WARNING: found {stats_file_count} RunnerSysStats files but the payload has {len(result['jobs'])} jobs")
 
-    headers = {
-        'Content-Type': 'application/json',
-    }
-
-    if os.environ.get("CI_STATS_AUTH_TOKEN"):
-        headers['Authorization'] = f'Bearer {os.environ.get("CI_STATS_AUTH_TOKEN")}'
-
-    signed_request = sign_api_request(
+    body = json.dumps(result).encode()
+    headers = sign_api_request(
         API_URL,
         'POST',
-        headers,
-        result,
+        {'Content-Type': 'application/json'},
+        body,
         'us-east-1',
         'execute-api' # Service name for API Gateway
     )
 
-    response = requests.post(
-        API_URL,
-        headers=dict(signed_request.headers.items()),  # Use signed headers
-        data=signed_request.body
-    )
-
-    if response.status_code == 200:
-        print("Successfully sent the CI stats to the API")
-    else:
-        raise RuntimeError(f'{response.status_code}: {response.text}')
+    request = urllib.request.Request(API_URL, data=body, headers=headers, method='POST')
+    try:
+        with urllib.request.urlopen(request) as resp:
+            if resp.status != 200:
+                raise RuntimeError(f'{resp.status}: {resp.read().decode(errors="replace")}')
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f'{e.code}: {e.read().decode(errors="replace")}')
+    print("Successfully sent the CI stats to the API")

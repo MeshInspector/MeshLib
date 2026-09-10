@@ -24,6 +24,8 @@
 namespace MR
 {
 
+static_assert( sDefaultGroupState == ImGuiTreeNodeFlags_DefaultOpen );
+
 // helper class to optimaze render (skip elements outside draw area)
 class SkippableRenderer
 {
@@ -460,7 +462,7 @@ bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::stri
         ImGui::SetNextItemOpen( openCommandIt->second );
     }
     auto res = ImGui::TreeNodeUpdateNextOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( object, uniqueStr ).c_str() ),
-                    ( hasRealChildren ? ImGuiTreeNodeFlags_DefaultOpen : 0 ) );
+                    ( hasRealChildren ? sDefaultGroupState : 0 ) );
     if ( resetOpenFlag )
     {
         // as far as `TreeNodeUpdateNextOpen` uses `SetNextItemOpen` but does not clear it, we clear it manually
@@ -515,7 +517,7 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     const ImGuiTreeNodeFlags flags =
         ImGuiTreeNodeFlags_SpanAvailWidth |
         ImGuiTreeNodeFlags_Framed |
-        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_DefaultOpen : ImGuiTreeNodeFlags_Bullet ) |
+        ( hasRealChildren ? ImGuiTreeNodeFlags_OpenOnArrow | sDefaultGroupState : ImGuiTreeNodeFlags_Bullet ) |
         ( isSelected ? ImGuiTreeNodeFlags_Selected : 0 );
 
     const bool isOpen = collapsingHeader_( objectLineStrId_( object, uniqueStr ).c_str(), flags );

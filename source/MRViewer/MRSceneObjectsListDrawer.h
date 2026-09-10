@@ -163,4 +163,7 @@ protected:
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 };
 
+// ImGuiTreeNodeFlags_DefaultOpen; the value is spelled out not to include imgui.h here, see the static_assert in the .cpp
+constexpr inline int sDefaultGroupState = 1 << 5;
+
 } //namespace MR

@@ -145,8 +145,8 @@ if __name__ == "__main__":
     branch = os.environ.get('GIT_BRANCH')
     commit = os.environ.get('GIT_COMMIT')
     repo = os.environ.get("GITHUB_REPOSITORY")
-    ref = os.environ.get("GITHUB_REF")
-    run_id = os.environ.get("GITHUB_RUN_ID")
+    ref = os.environ.get("GIT_REF")
+    run_id = os.environ.get("RUN_ID")
 
     result = {
         'id':          int(run_id),

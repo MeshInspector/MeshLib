@@ -463,50 +463,32 @@ jobs:
 
   collect-stats:
     timeout-minutes: 5
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-slim
     needs: [ config, upload-distributions ]
     # Dependabot PRs lack the AWS / CI-stats secrets, so skip stats collection there.
     if: ${{ always() && needs.config.outputs.internal_build == 'true' && github.actor != 'dependabot[bot]' }}
     continue-on-error: true
+    permissions:
+      actions: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download runners' system stats
-        uses: actions/download-artifact@v8
-        with:
-          pattern: RunnerSysStats*
-          merge-multiple: true
-
-      - name: Download artifact stats
-        uses: actions/download-artifact@v8
-        with:
-          pattern: ArtifactStats*
-          merge-multiple: true
-
-      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
-        id: aws-creds
-        with:
-          aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
-          output-credentials: true
-          retry-max-attempts: 5
-
-      - name: Install dependencies
-        run: python3 -m pip install boto3 botocore requests
-
-      - name: Collect stats
+      - name: Dispatch stats collection
         env:
-          CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}
-          GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
-          GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/devops/collect_ci_stats.py
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          gh workflow run collect-stats.yml \
+            --repo ${{ github.repository }} \
+            --ref $BRANCH \
+            -f run_id=${{ github.run_id }} \
+            -f ref=${{ github.ref }} \
+            -f branch=$BRANCH \
+            -f commit=$COMMIT
 
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-latest
-    needs: [ collect-stats, update-dev-documentation ]
+    needs: [ update-dev-documentation ]
     if: always()
     continue-on-error: true
     steps:
@@ -514,18 +496,6 @@ jobs:
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Wheelhouse*
-          failOnError: false
-
-      - name: Delete runners' system stats
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: RunnerSysStats*
-          failOnError: false
-
-      - name: Delete artifact stats
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: ArtifactStats*
           failOnError: false
 
       # generate timing logs archive

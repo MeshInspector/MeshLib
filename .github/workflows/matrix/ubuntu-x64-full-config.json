@@ -81,26 +81,6 @@
       "upload_release": "OFF"
     },
     {
-      "os": "ubuntu24",
-      "config": "Release",
-      "compiler": "GCC",
-      "cxx-compiler": "/usr/bin/g++-16",
-      "c-compiler": "/usr/bin/gcc-16",
-      "cxx-standard": 23,
-      "build_mrcuda": "OFF",
-      "upload_release": "OFF"
-    },
-    {
-      "os": "ubuntu24",
-      "config": "Debug",
-      "compiler": "GCC",
-      "cxx-compiler": "/usr/bin/g++-16",
-      "c-compiler": "/usr/bin/gcc-16",
-      "cxx-standard": 23,
-      "build_mrcuda": "OFF",
-      "upload_release": "OFF"
-    },
-    {
       "os": "ubuntu26",
       "config": "Release",
       "compiler": "Clang",
@@ -138,6 +118,26 @@
       "c-compiler": "/usr/bin/gcc-15",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "upload_release": "OFF"
+    },
+    {
+      "os": "ubuntu26",
+      "config": "Release",
+      "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-16",
+      "c-compiler": "/usr/bin/gcc-16",
+      "cxx-standard": 23,
+      "build_mrcuda": "OFF",
+      "upload_release": "OFF"
+    },
+    {
+      "os": "ubuntu26",
+      "config": "Debug",
+      "compiler": "GCC",
+      "cxx-compiler": "/usr/bin/g++-16",
+      "c-compiler": "/usr/bin/gcc-16",
+      "cxx-standard": 23,
+      "build_mrcuda": "OFF",
       "upload_release": "OFF"
     }
   ]

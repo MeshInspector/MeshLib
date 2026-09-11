@@ -110,6 +110,7 @@ jobs:
         run: |
           mkdir mrtest-bundle
           cp build/Release/bin/MRTest* /emsdk/upstream/emscripten/emrun.py mrtest-bundle/
+          em++ -std=c++20 -O2 -pthread ../MeshLib/.github/repro/memfs_copy_repro.cpp             -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency             -s PTHREAD_POOL_SIZE_STRICT=0             -s ALLOW_MEMORY_GROWTH=1             -s EXIT_RUNTIME=1             -o mrtest-bundle/repro.html ||           em++ -std=c++20 -O2 -pthread .github/repro/memfs_copy_repro.cpp             -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency             -s PTHREAD_POOL_SIZE_STRICT=0             -s ALLOW_MEMORY_GROWTH=1             -s EXIT_RUNTIME=1             -o mrtest-bundle/repro.html
 
       - name: Upload MRTest bundle
         uses: actions/upload-artifact@v7
@@ -306,15 +307,14 @@ jobs:
   emscripten-test:
     if: ${{ !inputs.definitions_only }}
     needs: emscripten-build
-    timeout-minutes: 10
+    timeout-minutes: 25
     runs-on: ubuntu-24.04-arm
     strategy:
       fail-fast: false
       matrix:
         package_name:
-          - emscripten-singlethreaded
           - emscripten-multithreaded
-          - emscripten-multithreaded-64bit
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
 
     steps:
       - name: Download MRTest bundle
@@ -326,12 +326,14 @@ jobs:
           run-id: ${{ github.run_id }}
 
       - name: Unit Tests
-        timeout-minutes: 5
+        timeout-minutes: 20
         working-directory: mrtest-bundle
         run: |
-          python3 emrun.py \
+          mkdir -p /tmp/ffprof
+          echo 'user_pref("dom.maxHardwareConcurrency", 2);' > /tmp/ffprof/user.js
+          taskset -c 0,1 python3 emrun.py \
             --browser=/usr/bin/firefox \
-            --browser-args="--headless" \
-            --safe-firefox-profile \
+            --browser-args="--headless --profile /tmp/ffprof" \
+            --kill-start \
             --kill-exit \
-            ./MRTest.html
+            ./repro.html

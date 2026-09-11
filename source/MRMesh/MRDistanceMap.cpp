@@ -398,61 +398,64 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
         if ( params.withSign && ( !options.offsetParameters || options.offsetParameters->type != ContoursDistanceMapOffset::OffsetType::Shell ) )
         {
             bool positive = true;
-            // res.line stays invalid when maxDist/minDist rejected every candidate
-            if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::ContourOrientation
-                && res.line.valid() )
+            if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::ContourOrientation )
             {
-                const EdgeId e = res.line;
-                const auto& v0 = polyline.points[polyline.topology.org( e )];
-                const auto& v1 = polyline.points[polyline.topology.dest( e )];
-                auto vecA = v1 - v0;
-                auto ray = res.point - p;
-
-                // get next that is not zero for sign calculation
-                auto findNextNonZero = [&] ( EdgeId e, bool next )
+                // no closest edge means no sign to determine; res.line stays
+                // invalid when maxDist/minDist rejected every candidate
+                if ( res.line.valid() )
                 {
-                    float lengthSq = 0.0f;
-                    EdgeId prev = e;
-                    EdgeId res;
-                    do
-                    {
-                        res = next ?
-                            polyline.topology.next( prev.sym() ) :
-                            polyline.topology.next( prev ).sym();
-                        if ( res == prev.sym() || res == e )
-                            return e.sym();
-                        lengthSq = polyline.edgeLengthSq( res );
-                        prev = res;
-                    } while ( lengthSq <= 0.0f );
-                    return res;
-                };
+                    const EdgeId e = res.line;
+                    const auto& v0 = polyline.points[polyline.topology.org( e )];
+                    const auto& v1 = polyline.points[polyline.topology.dest( e )];
+                    auto vecA = v1 - v0;
+                    auto ray = res.point - p;
 
-                auto lengthSq = vecA.lengthSq();
-                float ratio = 0.0f;
-                if ( lengthSq > 0.0f )
-                    ratio = dot( res.point - v0, vecA ) / lengthSq;
-                if ( ratio <= 0.0f || ratio >= 1.0f || lengthSq <= 0.0f )
-                {
-                    Vector2f vecB;
-                    const EdgeId prevEdge = findNextNonZero( e, false );
-                    const EdgeId nextEdge = findNextNonZero( e, true );
-                    if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
+                    // get next that is not zero for sign calculation
+                    auto findNextNonZero = [&] ( EdgeId e, bool next )
                     {
-                        const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];
-                        vecB = v0 - v2;
-                    }
-                    if ( ( ratio >= 1.0f || lengthSq <= 0.0f ) && e.sym() != nextEdge )
+                        float lengthSq = 0.0f;
+                        EdgeId prev = e;
+                        EdgeId res;
+                        do
+                        {
+                            res = next ?
+                                polyline.topology.next( prev.sym() ) :
+                                polyline.topology.next( prev ).sym();
+                            if ( res == prev.sym() || res == e )
+                                return e.sym();
+                            lengthSq = polyline.edgeLengthSq( res );
+                            prev = res;
+                        } while ( lengthSq <= 0.0f );
+                        return res;
+                    };
+
+                    auto lengthSq = vecA.lengthSq();
+                    float ratio = 0.0f;
+                    if ( lengthSq > 0.0f )
+                        ratio = dot( res.point - v0, vecA ) / lengthSq;
+                    if ( ratio <= 0.0f || ratio >= 1.0f || lengthSq <= 0.0f )
                     {
-                        const auto& v2 = polyline.points[polyline.topology.dest( nextEdge )];
-                        if ( lengthSq <= 0.0f )
-                            vecA = v2 - v1; // degenerated edge, replace with neighbor
-                        else
-                            vecB = v2 - v1;
+                        Vector2f vecB;
+                        const EdgeId prevEdge = findNextNonZero( e, false );
+                        const EdgeId nextEdge = findNextNonZero( e, true );
+                        if ( ( ratio <= 0.0f || lengthSq <= 0.0f ) && e.sym() != prevEdge )
+                        {
+                            const auto& v2 = polyline.points[polyline.topology.org( prevEdge )];
+                            vecB = v0 - v2;
+                        }
+                        if ( ( ratio >= 1.0f || lengthSq <= 0.0f ) && e.sym() != nextEdge )
+                        {
+                            const auto& v2 = polyline.points[polyline.topology.dest( nextEdge )];
+                            if ( lengthSq <= 0.0f )
+                                vecA = v2 - v1; // degenerated edge, replace with neighbor
+                            else
+                                vecB = v2 - v1;
+                        }
+                        vecA = ( vecA.normalized() + vecB.normalized() ) * 0.5f;
                     }
-                    vecA = ( vecA.normalized() + vecB.normalized() ) * 0.5f;
+                    if ( cross( vecA, ray ) > 0.0f )
+                        positive = false;
                 }
-                if ( cross( vecA, ray ) > 0.0f )
-                    positive = false;
             }
             else if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::WindingRule )
             {

@@ -32,7 +32,7 @@ It has base functions:
 ```
 
 ## How to make your first plugin
-To create you plugin you need to inherit class from MR::StatePlugin or MR::StateListenerPlugin (in case you need to get some events)\n
+To create you plugin you need to inherit class from MR::StatePlugin or MR::StateListenerPlugin (in case you need to get some events)<br/>
 Example:
 ```cpp
 class MyOwnPlugin : public MR::StatePlugin
@@ -86,7 +86,7 @@ Register your plugin with
 MR_REGISTER_RIBBON_ITEM( MyOwnPlugin )
 ```
 To show this item on Ribbon menu, it should be present in MenuSchema.ui.json file (special page about these files are coming soon)
-\n
+<br/>
 \ref StateListenerPlugin is more simple way to make plugin listen to some events:
 ```cpp
 // This plugin will listen to mouse move and mouse down, also isAvailable function will be imlemented with SceneStateExactCheck

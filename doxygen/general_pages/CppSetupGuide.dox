@@ -59,7 +59,7 @@ They are needed for symbolized call stacks only: without them the archive still 
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
   - Download the archive for your Visual Studio toolset from the table above.
   - Extract it to a directory, e.g., `C:\meshlib-built\`.
-  \n **Directory Structure After Extraction**
+  <br/> **Directory Structure After Extraction**
 ```cmd
 install/
   ├── include/       # Header files
@@ -69,12 +69,12 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
 ```
  2. **Configure and integrate with Visual Studio** \include{doc} CommonDistributionProperties.dox
        - **Copy DLLs**:
-    \n Copy all `.dll` files from: `C:\meshlib-built\install\app\$(Configuration)` to your project’s output directory: `$(TargetDir)`
+    <br/> Copy all `.dll` files from: `C:\meshlib-built\install\app\$(Configuration)` to your project’s output directory: `$(TargetDir)`
 ```cmd
 xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 ```
  3. **Verify the installation**
- \n Run the checks in \ref CppSetupVerify "Verify your setup": `C:\meshlib-built\install\app\Release\meshconv.exe --help` needs no display and its exit status is the signal, while `C:\meshlib-built\install\app\Release\MeshViewer.exe` is the interactive check.
+ <br/> Run the checks in \ref CppSetupVerify "Verify your setup": `C:\meshlib-built\install\app\Release\meshconv.exe --help` needs no display and its exit status is the signal, while `C:\meshlib-built\install\app\Release\MeshViewer.exe` is the interactive check.
 
 ### Compile Locally
 #### Prerequisites
@@ -128,7 +128,7 @@ vcpkg integrate install
 git clone https://github.com/MeshInspector/MeshLib.git
 ```
  2. **Clone submodules**:
- \n Run `scripts/clone_submodules_windows.ps1` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Windows.
+ <br/> Run `scripts/clone_submodules_windows.ps1` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Windows.
  3. **(Optional) Speed Up with AWS CLI**
   - Optionally, [install AWS CLI v2](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) to speed up the process before using the MeshLib Installation Script. Restart your terminal after installation.
   - It also changes **how** the dependencies arrive: with the CLI on `PATH` the script restores prebuilt packages from our public S3 cache (`s3://vcpkg-export/<vcpkg-tag>/<triplet>/`, no credentials needed) instead of compiling them locally. That cache is keyed on the triplet **name**, not on your compiler, and the `x64-windows-meshlib` folder is written by Visual Studio 2026 builds only.
@@ -160,19 +160,19 @@ cd vcpkg
 
 ### Installing the release build
  1. **Download the Package for Your Distribution and CPU**
- \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links a `.deb` for every supported Ubuntu release and architecture. Take the one matching `lsb_release -rs` and `uname -m`.
- \n On any other distribution use the portable **Linux vcpkg** build instead. It bundles its own dependencies and is not installed system-wide: unpack it and use the resulting directory as the MeshLib installation prefix, then skip to step 4.
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links a `.deb` for every supported Ubuntu release and architecture. Take the one matching `lsb_release -rs` and `uname -m`.
+ <br/> On any other distribution use the portable **Linux vcpkg** build instead. It bundles its own dependencies and is not installed system-wide: unpack it and use the resulting directory as the MeshLib installation prefix, then skip to step 4.
 ```sh
 mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
 ```
  2. **Install the Package**
- \n `apt` pulls in the remaining system dependencies itself. The leading `./` is required: without it `apt` looks for a repository package by that name.
- \n `apt` refuses a package built for another CPU, but nothing tells the Ubuntu releases apart: the builds all declare the same dependencies and the `preinst` carries no release check, so installing the Ubuntu 22 build on Ubuntu 24 succeeds silently. Check the release in the file name first.
+ <br/> `apt` pulls in the remaining system dependencies itself. The leading `./` is required: without it `apt` looks for a repository package by that name.
+ <br/> `apt` refuses a package built for another CPU, but nothing tells the Ubuntu releases apart: the builds all declare the same dependencies and the `preinst` carries no release check, so installing the Ubuntu 22 build on Ubuntu 24 succeeds silently. Check the release in the file name first.
 ```sh
 sudo apt install ./<downloaded>.deb
 ```
  3. **Verify the installation**
- \n Run the checks in \ref CppSetupVerify "Verify your setup". The `meshconv` one needs no graphical session and reports failure through its exit status:
+ <br/> Run the checks in \ref CppSetupVerify "Verify your setup". The `meshconv` one needs no graphical session and reports failure through its exit status:
 ```sh
 meshconv --help   # headless, non-zero exit if the installation is incomplete
 MeshViewer        # interactive, requires a graphical session
@@ -196,7 +196,7 @@ git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 ```
  2. **Clone submodules**:
- \n Run `scripts/clone_submodules_linux.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Linux.
+ <br/> Run `scripts/clone_submodules_linux.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Linux.
  3. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 ```sh
 ./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
@@ -209,14 +209,14 @@ MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
 ```
 \note Dependencies are installed automatically on Ubuntu only. Elsewhere `build_thirdparty.sh` prints *"Unsupported system. Installing dependencies is your responsibility."*, so install the equivalents of [`requirements/ubuntu.txt`](https://github.com/MeshInspector/MeshLib/blob/master/requirements/ubuntu.txt) yourself first.
  4. **Create and Install Package**:
- \n This step will create distribution package and install it to the system
+ <br/> This step will create distribution package and install it to the system
 ```sh
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
 ```
 \note `distribution.sh` builds a `.deb`, so this step is Ubuntu/Debian-only. On other distributions skip it and use the locally built binaries directly, as in the next step.
  5. **Verify the build**
- \n Run the checks in \ref CppSetupVerify "Verify your setup". The headless one, whose exit status is the signal:
+ <br/> Run the checks in \ref CppSetupVerify "Verify your setup". The headless one, whose exit status is the signal:
   - if you installed the package in the previous step:
 ```sh
 meshconv --help
@@ -225,31 +225,31 @@ meshconv --help
 ```sh
 ./build/Release/bin/meshconv --help
 ```
- \n `MeshViewer` (`./build/Release/bin/MeshViewer`) is the interactive check and requires a graphical session.
+ <br/> `MeshViewer` (`./build/Release/bin/MeshViewer`) is the interactive check and requires a graphical session.
  6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ <br/> Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 \subsection CppSetupMacOS macOS
 
 ### Installing the release build
  1. **Download the Installer**
- \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links one `.pkg` installer for macOS Arm (Apple silicon) and one for macOS x64 (Intel). Take the one matching `uname -m` (`arm64` or `x86_64`).
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links one `.pkg` installer for macOS Arm (Apple silicon) and one for macOS x64 (Intel). Take the one matching `uname -m` (`arm64` or `x86_64`).
  2. **Install**
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
-  \n The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project enables only the C language. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
+  <br/> The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project enables only the C language. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
 ```sh
 xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 ```
   - If you installed for the current user only, prefix the path with `~`: `~/Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`.
  3. **Verify the installation**
- \n Run the checks in \ref CppSetupVerify "Verify your setup". `meshconv` is not on `PATH`; it lives in the framework and needs no graphical session:
+ <br/> Run the checks in \ref CppSetupVerify "Verify your setup". `meshconv` is not on `PATH`; it lives in the framework and needs no graphical session:
 ```sh
 /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 ```
  4. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ <br/> Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 ### Compile Locally
 #### Prerequisites {#CppSetupMacOSPrereq}
@@ -278,14 +278,14 @@ git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 ```
  2. **Clone submodules**:
- \n Run `scripts/clone_submodules_macos.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on MacOS.
+ <br/> Run `scripts/clone_submodules_macos.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on MacOS.
  3. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 ```sh
 ./scripts/build_thirdparty.sh
 ./scripts/build_source.sh
 ```
  4. **Verify the build**
- \n Run the checks in \ref CppSetupVerify "Verify your setup" — `./build/Release/bin/meshconv --help` needs no graphical session and its exit status is the signal.
+ <br/> Run the checks in \ref CppSetupVerify "Verify your setup" — `./build/Release/bin/meshconv --help` needs no graphical session and its exit status is the signal.
  5. **Run example**
 We suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
  6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
@@ -301,7 +301,7 @@ This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. 
 Emscripten is required to compile C++ code into WebAssembly. You can install Emscripten by following the steps below.
 For more details, refer to the [Emscripten official page](https://emscripten.org/docs/getting_started/downloads.html).
  - Clone the Emscripten SDK Repository
- \n Run the following command on **all platforms**:
+ <br/> Run the following command on **all platforms**:
 ```sh
 git clone https://github.com/emscripten-core/emsdk.git
 ```
@@ -310,7 +310,7 @@ git clone https://github.com/emscripten-core/emsdk.git
 cd emsdk
 ```
  - Update the SDK (Optional)
- \n This step ensures you have the latest updates:
+ <br/> This step ensures you have the latest updates:
 ```sh
 git pull origin
 ```
@@ -329,23 +329,23 @@ source ./emsdk_env.sh
 ```
 
 \note **For Windows Users:**
-\n Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
+<br/> Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
 
 ### Installing the release build
  1. **Download the Built Version**
- \n Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the Emscripten archive whose threading mode and pointer width match the build that will consume MeshLib: the release description links a multi-thread, a single-thread and a multi-thread Wasm64 variant.
- \n These are the same three modes that \ref CppSetupWASMLocalBuild "Compile locally" selects with `MR_EMSCRIPTEN` / `MR_EMSCRIPTEN_SINGLETHREAD` / `MR_EMSCRIPTEN_WASM64`. The archive has to match your own build: an Emscripten target links only against libraries built with the same `-pthread` and `MEMORY64` settings.
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the Emscripten archive whose threading mode and pointer width match the build that will consume MeshLib: the release description links a multi-thread, a single-thread and a multi-thread Wasm64 variant.
+ <br/> These are the same three modes that \ref CppSetupWASMLocalBuild "Compile locally" selects with `MR_EMSCRIPTEN` / `MR_EMSCRIPTEN_SINGLETHREAD` / `MR_EMSCRIPTEN_WASM64`. The archive has to match your own build: an Emscripten target links only against libraries built with the same `-pthread` and `MEMORY64` settings.
  2. **Extract the Package**
- \n Extract the package using an archiving tool or with the unzip command:
+ <br/> Extract the package using an archiving tool or with the unzip command:
 ```sh
 unzip -d path_to_install <downloaded>.zip
 ```
  3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
- \n Specify the path to the extracted files with the `CMAKE_FIND_ROOT_PATH` option:
+ <br/> Specify the path to the extracted files with the `CMAKE_FIND_ROOT_PATH` option:
 ```sh
 emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_install
 ```
- \n Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
+ <br/> Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
 ### Compile locally {#CppSetupWASMLocalBuild}
 
@@ -376,7 +376,7 @@ export MR_EMSCRIPTEN=ON               # same as 'y': multi-threaded
 ```
 
 \note **For Windows Users:**
-\n You may encounter compatibility issues if building directly on Windows. Consider using WSL (Windows Subsystem for Linux) to follow Linux-like instructions.
+<br/> You may encounter compatibility issues if building directly on Windows. Consider using WSL (Windows Subsystem for Linux) to follow Linux-like instructions.
 
 #### Running the WebAssembly Build {#CppSetupWASMRun}
 
@@ -396,7 +396,7 @@ python -m http.server
 python3 -m http.server
 ```
  - Configuring COEP and COOP for Multithreading
- \n If using multithreading, set these headers:
+ <br/> If using multithreading, set these headers:
   - **Cross-Origin Embedder Policy** (COEP): `require-corp`
   - **Cross-Origin Opener Policy** (COOP): `same-origin`
 

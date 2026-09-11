@@ -17,8 +17,8 @@ In MeshLib Mesh structure consists of two major parts:
 Is ordered array of (x,y,z) values for each point (vertex) indexed by `VertId` (integer value that indicates vertex position in the array)
 
 ### Topology
-Topology in Meshlib is represented as "Half-Edge structure" which means that core primitives are "Half-Edges". \n
-"Half-Edges" are called "Half" because a pair of half edges represent one "Oriented Edge" (one for origin vertex and left face, and the other for destination vertex and right face) \n
+Topology in Meshlib is represented as "Half-Edge structure" which means that core primitives are "Half-Edges". <br/>
+"Half-Edges" are called "Half" because a pair of half edges represent one "Oriented Edge" (one for origin vertex and left face, and the other for destination vertex and right face) <br/>
 `MeshTopology` consists of 3 major parts:
  - "Half-Edge" records (4 attributes for each "Half-Edge")
  - Face to Edge map (for each `FaceId` stores one `EdgeId` with this `FaceId` to the left)

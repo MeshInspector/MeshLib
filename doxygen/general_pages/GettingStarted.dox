@@ -11,24 +11,24 @@ MeshLib also runs in the browser: the [live demo](https://demo.meshlib.io/) need
 ## Choose Your Setup Guide
 
 1. \ref MeshLibPythonSetupGuide "\b MeshLib \b Python \b Setup \b Guide"
-\n Follow this guide to set up MeshLib for Python on Windows, macOS, and Linux. It includes details on supported Python versions, installation via pip, and usage examples.
+<br/> Follow this guide to set up MeshLib for Python on Windows, macOS, and Linux. It includes details on supported Python versions, installation via pip, and usage examples.
 
 2. \ref MeshLibCppSetupGuide "\b MeshLib \b C++ \b Setup \b Guide"
-\n Learn how to install and configure MeshLib for C++ development on Windows, Linux, and macOS.
+<br/> Learn how to install and configure MeshLib for C++ development on Windows, Linux, and macOS.
 This guide covers prerequisites, dependency management, and building the library from source.
 
 3. \ref MeshLibCSharpSetupGuide "\b MeshLib \b C# \b Setup \b Guide"
-\n This guide provides instructions for integrating MeshLib into C# projects via the NuGet package — from nuget.org, or from a locally downloaded package file.
+<br/> This guide provides instructions for integrating MeshLib into C# projects via the NuGet package — from nuget.org, or from a locally downloaded package file.
 It covers the .NET CLI on Windows, macOS, and Linux, and the NuGet package manager in Visual Studio, JetBrains Rider, and Visual Studio Code.
 
 4. \ref MeshLibCSetupGuide "\b MeshLib \b C \b Setup \b Guide"
-\n Learn how to install and configure MeshLib for C development on Windows, Linux, and macOS.
+<br/> Learn how to install and configure MeshLib for C development on Windows, Linux, and macOS.
 
 5. \ref MeshLibJsSetupGuide "\b MeshLib \b JavaScript \b Setup \b Guide"
-\n Set up MeshLib for JavaScript and TypeScript in Node.js or the browser.
+<br/> Set up MeshLib for JavaScript and TypeScript in Node.js or the browser.
 
 6. \ref MeshLibCmakeSetupGuide "\b MeshLib \b CMake \b Setup \b Guide"
-\n Simple way of integrating MeshLib to your project via CMake.
+<br/> Simple way of integrating MeshLib to your project via CMake.
 
 Each of these setup guides is tailored to help you quickly and efficiently integrate MeshLib into your development environment.
 Choose the guide that matches your preferred language and platform, and start building sophisticated 3D applications with MeshLib.

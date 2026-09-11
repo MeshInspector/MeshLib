@@ -147,28 +147,28 @@ dotnet run
 ## Installation via .NET Command-Line Interface {#MeshLibCSharpDotnetCli}
 To install MeshLib via the .NET CLI, follow these steps:
  1. **Create a New Project Directory**:
- \n Run the following commands to create a new directory for your project and navigate into it:
+ <br/> Run the following commands to create a new directory for your project and navigate into it:
 ```cmd
 mkdir TestProject
 cd TestProject
 ```
  2. **Create a New .NET Console Project**:
- \n Inside the new directory, initialize a .NET console project by running:
+ <br/> Inside the new directory, initialize a .NET console project by running:
 ```cmd
 dotnet new console
 ```
  3. **Install the MeshLib Package**:
- \n Use the following command to add MeshLib to your project:
+ <br/> Use the following command to add MeshLib to your project:
 ```cmd
 dotnet add package MeshLib
 ```
  4. **Build and Run Your Project**:
- \n After installing MeshLib, you can build and run your project using:
+ <br/> After installing MeshLib, you can build and run your project using:
 ```cmd
 dotnet run
 ```
  5. **Verify MeshLib Works**:
- \n `dotnet new console` writes no MeshLib code, so the output above is the same whether MeshLib loaded or not.
+ <br/> `dotnet new console` writes no MeshLib code, so the output above is the same whether MeshLib loaded or not.
  Continue with \ref MeshLibCSharpVerify "Verify Your Installation".
 
 

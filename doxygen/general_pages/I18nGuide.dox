@@ -341,7 +341,7 @@ Each entry in the `"Items"` array may contain:
 }
 ```
 
-See \ref ExamplePluginOverview for a complete plugin JSON example.
+See [C++ Example Plugin Overview](\ref ExamplePluginOverview) for a complete plugin JSON example.
 
 ## .ui.json
 

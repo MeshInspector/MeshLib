@@ -462,7 +462,6 @@ jobs:
             cuda-major: '12'
             cuda-minor: '0'
             cuda-platform-toolset: v143
-          # no CUDA toolkit exists for Windows arm64, so MRCuda is not built there
           - platform: arm64
             runner: windows-11-vs2026-arm
             vcpkg-triplet: arm64-windows-meshlib
@@ -473,9 +472,9 @@ jobs:
             msys2-env: clangarm64
             msys2-pkgs: _clangarm64
             mrbind-cache-prefix: windows-clangarm64
-            cuda-version: ''
-            cuda-major: ''
-            cuda-minor: ''
+            cuda-version: '13.4.1'
+            cuda-major: '13'
+            cuda-minor: '4'
             cuda-platform-toolset: ''
     permissions:
       id-token: write # This is required for requesting the JWT
@@ -518,6 +517,7 @@ jobs:
           cuda-version: ${{ env.CUDA-VERSION }}
           cuda-major: ${{ env.CUDA-MAJOR }}
           cuda-minor: ${{ env.CUDA-MINOR }}
+          arch: ${{ matrix.platform }}
 
       - name: Set up CUDA
         if: ${{ matrix.cuda-version != '' }}

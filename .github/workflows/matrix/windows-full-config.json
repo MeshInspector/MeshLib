@@ -40,6 +40,7 @@
       "build_system": "CMake",
       "arch": "arm64",
       "vcpkg_triplet": "arm64-windows-meshlib",
+      "cuda_version": "13.4.1",
       "runner": ["windows-11-vs2026-arm"]
     },
     {
@@ -48,6 +49,7 @@
       "build_system": "CMake",
       "arch": "arm64",
       "vcpkg_triplet": "arm64-windows-meshlib",
+      "cuda_version": "13.4.1",
       "runner": ["windows-11-vs2026-arm"]
     },
     {
@@ -56,6 +58,7 @@
       "build_system": "MSBuild",
       "arch": "arm64",
       "vcpkg_triplet": "arm64-windows-meshlib",
+      "cuda_version": "13.4.1",
       "runner": ["windows-11-vs2026-arm"]
     },
     {
@@ -64,6 +67,7 @@
       "build_system": "MSBuild",
       "arch": "arm64",
       "vcpkg_triplet": "arm64-windows-meshlib",
+      "cuda_version": "13.4.1",
       "runner": ["windows-11-vs2026-arm"]
     },
     {

@@ -128,7 +128,7 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - id: build-matrix
-        uses: ./scripts/actions/matrix-builder
+        uses: ./.github/actions/matrix-builder
         with:
           matrix: |
             platform:
@@ -157,7 +157,7 @@ jobs:
                 - platform: aarch64
 
       - id: test-matrix
-        uses: ./scripts/actions/matrix-builder
+        uses: ./.github/actions/matrix-builder
         with:
           matrix: |
             platform:

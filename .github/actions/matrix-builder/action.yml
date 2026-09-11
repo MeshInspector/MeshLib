@@ -37,7 +37,25 @@ inputs:
 outputs:
   matrix:
     description: JSON-encoded array of the resulting matrix combinations.
+    value: ${{ steps.build.outputs.matrix }}
 
 runs:
-  using: node24
-  main: dist/index.js
+  using: composite
+  steps:
+    - id: build
+      shell: bash
+      env:
+        MATRIX: ${{ inputs.matrix }}
+        MATRIX_FILE: ${{ inputs.matrix-file }}
+        RULES: ${{ inputs.rules }}
+      run: |
+        if [ -n "$MATRIX_FILE" ] && [ -n "$MATRIX" ]; then
+          echo "::error::'matrix' and 'matrix-file' are mutually exclusive"
+          exit 1
+        fi
+        if [ -n "$MATRIX_FILE" ]; then
+          MATRIX=$(cat "$MATRIX_FILE")
+        fi
+        MATRIX=$(yq -o json . <<<"$MATRIX")
+        RULES=$(yq -o json . <<<"$RULES")
+        echo "$MATRIX" | python3 "${{ github.action_path }}/matrix_builder.py" --rules="$RULES" -

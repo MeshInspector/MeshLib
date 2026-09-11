@@ -36,7 +36,7 @@ For example "Oriented Edge" can be considered as a vector from the "Half-Edge" o
 Each "Half-Edge" is indexed by its unique `EdgeId`
 "The Other Half" also have unique `EdgeId` which is always equal to `"Half-Edge" XOR 1`
 
-\image html mesh_structure/Half-Edge.png
+![](mesh_structure/Half-Edge.png)
 
 ## Mesh Navigation
 `EdgeId e = ...` is unique identifier of an oriented edge in mesh ("Half-Edge").
@@ -55,9 +55,9 @@ Each "Half-Edge" is indexed by its unique `EdgeId`
 
 `MeshTopology::dest( e )` - returns the identifier of the vertex in the destination of `e`. It is assumed that all edges either have valid vertices on the ends, or "lone" (not connected to the mesh) (Origin `VertId` of "The Other Half").
 
-\image html mesh_structure/navigation_base.png
+![](mesh_structure/navigation_base.png)
 
-\image html mesh_structure/navigation_hole.png
+![](mesh_structure/navigation_hole.png)
 
 ### Iterating over valid vertices
 ```cpp
@@ -97,7 +97,7 @@ In this [paper](https://www.cs.cornell.edu/courses/cs4620/2017sp/slides/03trimes
 
 In this [paper](http://www.sccg.sk/%7Esamuelcik/dgs/quad_edge.pdf), one can find description of more advanced "Quad-Edge" structure, please find some basic edge functions mapping bellow:
 
-\image html mesh_structure/Quad-Edge.png
+![](mesh_structure/Quad-Edge.png)
 
 |Quad-Edge paper|MeshLib|
 |---------------|-------|

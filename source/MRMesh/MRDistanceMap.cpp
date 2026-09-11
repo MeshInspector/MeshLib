@@ -398,7 +398,9 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
         if ( params.withSign && ( !options.offsetParameters || options.offsetParameters->type != ContoursDistanceMapOffset::OffsetType::Shell ) )
         {
             bool positive = true;
-            if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::ContourOrientation )
+            // res.line stays invalid when maxDist/minDist rejected every candidate
+            if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::ContourOrientation
+                && res.line.valid() )
             {
                 const EdgeId e = res.line;
                 const auto& v0 = polyline.points[polyline.topology.org( e )];

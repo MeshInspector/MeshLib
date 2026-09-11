@@ -41,7 +41,8 @@ struct DriverDevice
     std::string name;
 };
 
-/// Asks the driver itself about device 0, bypassing the CUDA runtime.
+/// Asks the driver itself about the most capable device present, bypassing the
+/// CUDA runtime.
 /// cudaGetDeviceCount() refuses outright when the driver predates the runtime, so
 /// the runtime cannot tell a merely out-of-date driver from a card that CUDA no
 /// longer supports at all; the driver API still answers in both cases.
@@ -61,6 +62,21 @@ Expected<DriverDevice> queryDriverApi()
     if ( !lib )
         return MR::unexpected( fmt::format( "cannot load {}: {}", libName, libError() ) );
 
+    // the driver stays loaded for the process either way, but do not add a
+    // reference on every call: getDeviceInfo() is not called only once
+    struct LibGuard
+    {
+        decltype( lib ) h;
+        ~LibGuard()
+        {
+#ifdef _WIN32
+            FreeLibrary( h );
+#else
+            dlclose( h );
+#endif
+        }
+    } libGuard{ lib };
+
     auto sym = [lib] ( const char * name )
     {
 #ifdef _WIN32
@@ -74,10 +90,12 @@ Expected<DriverDevice> queryDriverApi()
     // and these entry points have never been versioned
     const auto cuInit = (int (*)( unsigned ))sym( "cuInit" );
     const auto cuDriverGetVersion = (int (*)( int * ))sym( "cuDriverGetVersion" );
+    const auto cuDeviceGetCount = (int (*)( int * ))sym( "cuDeviceGetCount" );
     const auto cuDeviceGet = (int (*)( int *, int ))sym( "cuDeviceGet" );
     const auto cuDeviceGetAttribute = (int (*)( int *, int, int ))sym( "cuDeviceGetAttribute" );
     const auto cuDeviceGetName = (int (*)( char *, int, int ))sym( "cuDeviceGetName" );
-    if ( !cuInit || !cuDriverGetVersion || !cuDeviceGet || !cuDeviceGetAttribute || !cuDeviceGetName )
+    if ( !cuInit || !cuDriverGetVersion || !cuDeviceGetCount || !cuDeviceGet ||
+         !cuDeviceGetAttribute || !cuDeviceGetName )
         return MR::unexpected( fmt::format( "{} misses an expected entry point", libName ) );
 
     constexpr int cCudaSuccess = 0;
@@ -87,20 +105,37 @@ Expected<DriverDevice> queryDriverApi()
     if ( const auto code = cuInit( 0 ); code != cCudaSuccess )
         return MR::unexpected( fmt::format( "cuInit failed with code {}", code ) );
 
-    int dev = 0;
-    if ( const auto code = cuDeviceGet( &dev, 0 ); code != cCudaSuccess )
-        return MR::unexpected( fmt::format( "cuDeviceGet failed with code {}", code ) );
-
     DriverDevice res;
     if ( const auto code = cuDriverGetVersion( &res.driverVersion ); code != cCudaSuccess )
         return MR::unexpected( fmt::format( "cuDriverGetVersion failed with code {}", code ) );
-    if ( const auto code = cuDeviceGetAttribute( &res.computeMajor, cAttrComputeMajor, dev ); code != cCudaSuccess )
-        return MR::unexpected( fmt::format( "cuDeviceGetAttribute(compute major) failed with code {}", code ) );
-    if ( const auto code = cuDeviceGetAttribute( &res.computeMinor, cAttrComputeMinor, dev ); code != cCudaSuccess )
-        return MR::unexpected( fmt::format( "cuDeviceGetAttribute(compute minor) failed with code {}", code ) );
+
+    int devCount = 0;
+    if ( const auto code = cuDeviceGetCount( &devCount ); code != cCudaSuccess )
+        return MR::unexpected( fmt::format( "cuDeviceGetCount failed with code {}", code ) );
+    if ( devCount <= 0 )
+        return MR::unexpected( "the driver reports no CUDA devices" );
+
+    // the most capable device decides: saying a card is unsupported is only true
+    // of the machine if every card in it is
+    int best = -1;
+    for ( int i = 0; i < devCount; ++i )
+    {
+        int dev = 0, major = 0, minor = 0;
+        if ( cuDeviceGet( &dev, i ) != cCudaSuccess ||
+             cuDeviceGetAttribute( &major, cAttrComputeMajor, dev ) != cCudaSuccess ||
+             cuDeviceGetAttribute( &minor, cAttrComputeMinor, dev ) != cCudaSuccess )
+            continue;
+        if ( major < res.computeMajor || ( major == res.computeMajor && minor <= res.computeMinor ) )
+            continue;
+        res.computeMajor = major;
+        res.computeMinor = minor;
+        best = dev;
+    }
+    if ( best < 0 )
+        return MR::unexpected( fmt::format( "no compute capability could be read from {} device(s)", devCount ) );
 
     char name[256] = {};
-    if ( cuDeviceGetName( name, (int)sizeof( name ) - 1, dev ) == cCudaSuccess )
+    if ( cuDeviceGetName( name, (int)sizeof( name ) - 1, best ) == cCudaSuccess )
         res.name = name;
     return res;
 }
@@ -121,7 +156,8 @@ Expected<DeviceInfo> getDeviceInfo()
         if ( code != cudaSuccess || n <= 0 )
         {
             int runtimeVersion = 0;
-            cudaRuntimeGetVersion( &runtimeVersion );
+            if ( cudaRuntimeGetVersion( &runtimeVersion ) != cudaSuccess )
+                runtimeVersion = 0; // leaves computeTooOldForRuntime() false, so we fall through
             // the runtime blames the driver whatever the reason, so ask the driver
             // whether this card is supported at all before telling anyone to update
             const auto dev = queryDriverApi();

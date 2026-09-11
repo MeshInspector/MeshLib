@@ -4,7 +4,7 @@
 Triangulation of regular numpy grid
 
 <div class="tabbed">
-
+ 
 - <b class="tab-title">Python</b>
 \include NumpyTriangulation.dox.py
 

@@ -9,16 +9,16 @@ Following code presents example of finding preceise collision triangles and edge
  
 - <b class="tab-title">C++</b>
 \include CollisionPrecise.dox.cpp
-
+ 
 - <b class="tab-title">Python</b>
 \include CollisionPrecise.dox.py
-
+ 
 - <b class="tab-title">C</b>
 \include CollisionPrecise.dox.c
-
+ 
 - <b class="tab-title">C#</b>
 \include CollisionPrecise.dox.cs
-
+ 
 - <b class="tab-title">JavaScript</b>
 \include CollisionPrecise.dox.js
 \include{doc} JsUsingNote.dox

@@ -47,6 +47,7 @@
     <ClCompile Include="MRGridSamplingTests.cpp" />
     <ClCompile Include="MRICPTests.cpp" />
     <ClCompile Include="MRLaplacianTests.cpp" />
+    <ClCompile Include="MRMemfsCopyTests.cpp" />
     <ClCompile Include="MRMarchingCubesTests.cpp" />
     <ClCompile Include="MRMeshBooleanTests.cpp" />
     <ClCompile Include="MRMeshComponentsTests.cpp" />

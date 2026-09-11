@@ -144,7 +144,6 @@ Expected<DriverDevice> queryDriverApi()
 
 Expected<DeviceInfo> getDeviceInfo()
 {
-    const auto dev0 = queryDriverApi();
     DeviceInfo res;
     CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &res.driverVersion ) );
     if ( res.driverVersion <= 0 )

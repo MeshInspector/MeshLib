@@ -23,11 +23,11 @@ Compile your own code as C11 or newer:
 
 ### CMake
 
-Integrating MeshLib with CMake needs CMake 3.18 or newer. See \ref MeshLibCmakeSetupGuide "the CMake Setup Guide".
+Integrating MeshLib with CMake needs CMake 3.18 or newer. See [the CMake Setup Guide](\ref MeshLibCmakeSetupGuide).
 
 ## Installing binary releases of MeshLib
 
-The installation process is \ref MeshLibCppSetupGuide "same as for C++", and is also explained below.
+The installation process is [same as for C++](\ref MeshLibCppSetupGuide), and is also explained below.
 
 The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
 
@@ -36,12 +36,12 @@ The release archives include the C headers (in the directory called `MRCMesh` an
 > MeshLib for Windows is distributed for x64 only. Make sure you're not targeting x32.
 
 Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
-The \ref CppSetupWindows "C++ guide's archive table" names all four and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
+The [C++ guide's archive table](\ref CppSetupWindows) names all four and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
 a pure-C consumer needs no `_ITERATOR_DEBUG_LEVEL` define, whichever archive it picks, because C code passes no standard containers across the DLL boundary, so the mismatch that define guards against cannot arise. A project that also compiles C++ translation units against MeshLib's C++ headers does need it, at the value in that column.
 
  1. **Download and Extract the Built Version**
   - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
-  - Download the archive for your Visual Studio toolset from \ref CppSetupWindows "the C++ guide's table".
+  - Download the archive for your Visual Studio toolset from [the C++ guide's table](\ref CppSetupWindows).
   - Extract it to a directory, e.g., `C:\meshlib-built\`.
   <br/> **Directory Structure After Extraction**
 ```cmd

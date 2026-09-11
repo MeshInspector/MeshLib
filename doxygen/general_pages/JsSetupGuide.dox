@@ -31,7 +31,7 @@ MeshLib ships in two flavors with an identical API:
  - `@meshinspector/meshlib`: the single-threaded build. The simplest choice, and the right one for most applications.
  - `@meshinspector/meshlib-mt`: the multi-threaded build. It uses worker threads to parallelize geometry operations for higher throughput, and requires Node.js 21 or newer.
 
-The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; in Node.js nothing else changes. In the browser the page must additionally be \ref JsMtCrossOriginIsolation "cross-origin isolated".
+The examples below use `@meshinspector/meshlib`. To use the multi-threaded build instead, install `@meshinspector/meshlib-mt` and change the import specifier; in Node.js nothing else changes. In the browser the page must additionally be [cross-origin isolated](\ref JsMtCrossOriginIsolation).
 
 ## Installation
 ### Installation via npm
@@ -62,7 +62,7 @@ const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/ja
 const ml = await createMeshLib( { mainScriptUrlOrBlob: blob } );
 ```
 
-In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
+In the browser the multi-threaded build additionally requires the page to be [cross-origin isolated](\ref JsMtCrossOriginIsolation).
 
 ### Bundlers
 Vite 8 and webpack 5 resolve `meshlib.wasm` from the module and emit it as an asset, so a plain `import` needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL and hand it to the loader via `locateFile`:
@@ -73,7 +73,7 @@ import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
 const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 ```
 
-In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
+In the browser the multi-threaded build additionally requires the page to be [cross-origin isolated](\ref JsMtCrossOriginIsolation).
 
 ### Payload Size {#MeshLibJsPayloadSize}
 MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
@@ -143,7 +143,7 @@ console.log('volume =', mesh.volume()); // ~8
 ```
 
 > [!NOTE]
-> This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in \ref MeshLibJsPayloadSize "Payload Size".
+> This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in [Payload Size](\ref MeshLibJsPayloadSize).
 
 > [!NOTE]
 > The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).

@@ -17,7 +17,7 @@ A plugin is a separately compiled module that extends the functionality of MeshL
 
 ### Prerequisites and pointers
 
-Before deploying anything, make sure your build matches the host you are deploying to — see \ref HowtoAddPluginOverview_VersionCompatibility "Version compatibility" at the end of this page.
+Before deploying anything, make sure your build matches the host you are deploying to — see [Version compatibility](\ref HowtoAddPluginOverview_VersionCompatibility) at the end of this page.
 
 To actually build a plugin, see:
 - \ref FirstPluginTutorial — step-by-step Visual Studio walkthrough for your first "Hello World" plugin.
@@ -44,7 +44,7 @@ Whether you built the plugin yourself or received it as an archive, it must cont
 2. **Two JSON descriptors**: `*.items.json` (ribbon item definitions — name, tooltip, icon glyph) and `*.ui.json` (where items appear in the ribbon — tab/group, plus the host-relative load `Order`).
 3. *Optionally* a `resource/icons/{X0_5,X0_75,X1,X3}/` folder with PNG icons in four sizes. If absent, the host falls back to the FontAwesome glyph specified in `items.json`.
 
-If a colleague handed you a zip, expect that exact layout. If you compiled it yourself, see \ref ExamplePluginOverview "C++ Example Plugin Overview" for what the build output should look like and how to wire `*.items.json` / `*.ui.json` to the source.
+If a colleague handed you a zip, expect that exact layout. If you compiled it yourself, see [C++ Example Plugin Overview](\ref ExamplePluginOverview) for what the build output should look like and how to wire `*.items.json` / `*.ui.json` to the source.
 
 ## How to install the plugin
 

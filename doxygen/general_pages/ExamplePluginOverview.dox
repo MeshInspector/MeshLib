@@ -182,7 +182,7 @@ cp example_plugin/MyPlugin.ui.json                   ~/Apps/MI-MyPlugin/Contents
 cp -R example_plugin/resource                        ~/Apps/MI-MyPlugin/Contents/Resources/
 ```
 
-The system-wide alternative (writes into the notarized `MeshInspector.app` bundle) is documented under \ref HowtoAddPluginOverview "How to Add Plugin" → macOS option B, including the signature trade-off.
+The system-wide alternative (writes into the notarized `MeshInspector.app` bundle) is documented under [How to Add Plugin](\ref HowtoAddPluginOverview) → macOS option B, including the signature trade-off.
 
 ### WebAssembly
 1. [Install and activate Emscripten SDK](https://emscripten.org/docs/tools_reference/emsdk.html#emsdk-howto)
@@ -214,6 +214,6 @@ If instead you get:
 [error] dlopen(...): Library not loaded: ...
 [warning] Ribbon item "My Tool" is not registered
 ```
-the plugin's transitive dependencies didn't resolve from the host bundle (so the dylib never loaded, and therefore no items got registered). See \ref HowtoAddPluginOverview "How to Add Plugin" → "Verifying the install" for fix paths.
+the plugin's transitive dependencies didn't resolve from the host bundle (so the dylib never loaded, and therefore no items got registered). See [How to Add Plugin](\ref HowtoAddPluginOverview) → "Verifying the install" for fix paths.
 
 */

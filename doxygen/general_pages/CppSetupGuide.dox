@@ -5,11 +5,11 @@
 
 [TOC]
 
-This guide explains how to set up MeshLib for C++ development on \ref CppSetupWindows "Windows", \ref CppSetupLinux "Linux", and \ref CppSetupMacOS "macOS",
-and also shows how to \ref CppSetupWASM "build WebAssembly" modules using MeshLib with Emscripten.
+This guide explains how to set up MeshLib for C++ development on [Windows](\ref CppSetupWindows), [Linux](\ref CppSetupLinux), and [macOS](\ref CppSetupMacOS),
+and also shows how to [build WebAssembly](\ref CppSetupWASM) modules using MeshLib with Emscripten.
 It covers all the prerequisites and setup steps for each platform, making it easy to get started.
-When you are done, confirm the result with \ref CppSetupVerify "Verify your setup" — two of its three checks need no graphical session and report failure through their exit status.
-If a step fails, see \ref CppSetupTroubleshooting "Troubleshooting" at the end of this page.
+When you are done, confirm the result with [Verify your setup](\ref CppSetupVerify) — two of its three checks need no graphical session and report failure through their exit status.
+If a step fails, see [Troubleshooting](\ref CppSetupTroubleshooting) at the end of this page.
 
 ## Prerequisites {#CppSetupPrerequisites}
 
@@ -22,7 +22,7 @@ MeshLib uses C++20 standard and is tested to be compiled with:
 
 ### CMake
 
-Integrating MeshLib with CMake needs CMake 3.18 or newer. See \ref MeshLibCmakeSetupGuide "the CMake Setup Guide" for the full `CMakeLists.txt`.
+Integrating MeshLib with CMake needs CMake 3.18 or newer. See [the CMake Setup Guide](\ref MeshLibCmakeSetupGuide) for the full `CMakeLists.txt`.
 
 ## Windows {#CppSetupWindows}
 > [!NOTE]
@@ -75,7 +75,7 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
 xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
 ```
  3. **Verify the installation**
- <br/> Run the checks in \ref CppSetupVerify "Verify your setup": `C:\meshlib-built\install\app\Release\meshconv.exe --help` needs no display and its exit status is the signal, while `C:\meshlib-built\install\app\Release\MeshViewer.exe` is the interactive check.
+ <br/> Run the checks in [Verify your setup](\ref CppSetupVerify): `C:\meshlib-built\install\app\Release\meshconv.exe --help` needs no display and its exit status is the signal, while `C:\meshlib-built\install\app\Release\MeshViewer.exe` is the interactive check.
 
 ### Compile Locally
 #### Prerequisites
@@ -156,7 +156,7 @@ cd vcpkg
   - Open `MeshLib/CMakeLists.txt` in Visual Studio (File - Open - CMake).
   - Build the project and run the application.
  7. **Verify the build**
-  - Run the checks in \ref CppSetupVerify "Verify your setup": `install\app\Release\meshconv.exe --help` (headless, exit status is the signal) and `install\app\Release\MeshViewer.exe` (interactive).
+  - Run the checks in [Verify your setup](\ref CppSetupVerify): `install\app\Release\meshconv.exe --help` (headless, exit status is the signal) and `install\app\Release\MeshViewer.exe` (interactive).
 
 ## Linux {#CppSetupLinux}
 
@@ -174,7 +174,7 @@ mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
 sudo apt install ./<downloaded>.deb
 ```
  3. **Verify the installation**
- <br/> Run the checks in \ref CppSetupVerify "Verify your setup". The `meshconv` one needs no graphical session and reports failure through its exit status:
+ <br/> Run the checks in [Verify your setup](\ref CppSetupVerify). The `meshconv` one needs no graphical session and reports failure through its exit status:
 ```sh
 meshconv --help   # headless, non-zero exit if the installation is incomplete
 MeshViewer        # interactive, requires a graphical session
@@ -190,7 +190,7 @@ MeshViewer        # interactive, requires a graphical session
  3. **CUDA Toolkit**
   - Install [CUDA v12.6](https://developer.nvidia.com/cuda-12-6-3-download-archive) from the official website. Follow the Linux installation instructions provided on the CUDA page.
 > [!NOTE]
-> You might need to execute `export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/mnt' | tr '\n' ':' | sed 's/:$//')` if you are on WSL to prevent interfearing with host machine CUDA Toolkit (this command will filter host machine paths from PATH enviroment)
+> You might need to execute ``export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/mnt' | tr '\n' ':' | sed 's/:$//')`` if you are on WSL to prevent interfearing with host machine CUDA Toolkit (this command will filter host machine paths from PATH enviroment)
 
 #### Installing the local build
  1. **Clone the MeshLib Repository**:
@@ -205,7 +205,7 @@ cd MeshLib
 ./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
 ./scripts/build_source.sh      # Do not select emscripten in the corresponding question
 ```
-You may also run the scripts in the non-interactive mode (see \ref CppSetupWASM "Building WebAssembly with MeshLib Using Emscripten" for more info):
+You may also run the scripts in the non-interactive mode (see [Building WebAssembly with MeshLib Using Emscripten](\ref CppSetupWASM) for more info):
 ```sh
 MR_EMSCRIPTEN=OFF ./scripts/build_thirdparty.sh
 MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
@@ -221,7 +221,7 @@ sudo apt install ./distr/meshlib-dev.deb
 > [!NOTE]
 > `distribution.sh` builds a `.deb`, so this step is Ubuntu/Debian-only. On other distributions skip it and use the locally built binaries directly, as in the next step.
  5. **Verify the build**
- <br/> Run the checks in \ref CppSetupVerify "Verify your setup". The headless one, whose exit status is the signal:
+ <br/> Run the checks in [Verify your setup](\ref CppSetupVerify). The headless one, whose exit status is the signal:
   - if you installed the package in the previous step:
 ```sh
 meshconv --help
@@ -243,13 +243,13 @@ meshconv --help
   - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
   - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
   - **Install Dependencies via Homebrew**
-  <br/> The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project enables only the C language. This needs Homebrew — if you do not have it, install it first as described under \ref CppSetupMacOSPrereq "Prerequisites". Open Terminal and run the following command:
+  <br/> The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project enables only the C language. This needs Homebrew — if you do not have it, install it first as described under [Prerequisites](\ref CppSetupMacOSPrereq). Open Terminal and run the following command:
 ```sh
 xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
 ```
   - If you installed for the current user only, prefix the path with `~`: `~/Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`.
  3. **Verify the installation**
- <br/> Run the checks in \ref CppSetupVerify "Verify your setup". `meshconv` is not on `PATH`; it lives in the framework and needs no graphical session:
+ <br/> Run the checks in [Verify your setup](\ref CppSetupVerify). `meshconv` is not on `PATH`; it lives in the framework and needs no graphical session:
 ```sh
 /Library/Frameworks/MeshLib.framework/Versions/Current/bin/meshconv --help
 ```
@@ -290,7 +290,7 @@ cd MeshLib
 ./scripts/build_source.sh
 ```
  4. **Verify the build**
- <br/> Run the checks in \ref CppSetupVerify "Verify your setup" — `./build/Release/bin/meshconv --help` needs no graphical session and its exit status is the signal.
+ <br/> Run the checks in [Verify your setup](\ref CppSetupVerify) — `./build/Release/bin/meshconv --help` needs no graphical session and its exit status is the signal.
  5. **Run example**
 We suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
  6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
@@ -341,7 +341,7 @@ source ./emsdk_env.sh
 ### Installing the release build
  1. **Download the Built Version**
  <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download the Emscripten archive whose threading mode and pointer width match the build that will consume MeshLib: the release description links a multi-thread, a single-thread and a multi-thread Wasm64 variant.
- <br/> These are the same three modes that \ref CppSetupWASMLocalBuild "Compile locally" selects with `MR_EMSCRIPTEN` / `MR_EMSCRIPTEN_SINGLETHREAD` / `MR_EMSCRIPTEN_WASM64`. The archive has to match your own build: an Emscripten target links only against libraries built with the same `-pthread` and `MEMORY64` settings.
+ <br/> These are the same three modes that [Compile locally](\ref CppSetupWASMLocalBuild) selects with `MR_EMSCRIPTEN` / `MR_EMSCRIPTEN_SINGLETHREAD` / `MR_EMSCRIPTEN_WASM64`. The archive has to match your own build: an Emscripten target links only against libraries built with the same `-pthread` and `MEMORY64` settings.
  2. **Extract the Package**
  <br/> Extract the package using an archiving tool or with the unzip command:
 ```sh
@@ -447,7 +447,7 @@ install\app\Release\meshconv.exe --help
 ```
 A broken installation fails loudly here, e.g. `error while loading shared libraries: libMRIOExtras.so` with exit `127`.
 
-**2. Build and run a program against MeshLib.** The strongest check: it verifies the headers, the libraries and linking, which running a prebuilt binary does not. Take the complete `CMakeLists.txt` from \ref MeshLibCmakeSetupGuide "the CMake Setup Guide" and use this as `main.cpp`:
+**2. Build and run a program against MeshLib.** The strongest check: it verifies the headers, the libraries and linking, which running a prebuilt binary does not. Take the complete `CMakeLists.txt` from [the CMake Setup Guide](\ref MeshLibCmakeSetupGuide) and use this as `main.cpp`:
 \include VerifySetup.dox.cpp
 It prints `verts=8 faces=12`, writes a 684-byte `cube.stl` next to the executable, and returns non-zero on any mismatch or save error. MeshLib CI compiles it on every supported platform as `examples/cpp-examples/VerifySetup.dox.cpp`.
 
@@ -459,14 +459,14 @@ Failures most often hit while following the steps above, with the message each o
 
 | Path | Symptom | Cause | Fix |
 |------|---------|-------|-----|
-| Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. `MR_ITERATOR_DEBUG_LEVEL` is the level MeshLib's own binaries were built with — taken from `install/include/MRMesh/config_dist.h` when the archive ships one, otherwise defaulting to `0` — and MeshLib refuses to compile when your `_ITERATOR_DEBUG_LEVEL` differs from it. A Debug configuration implies `_ITERATOR_DEBUG_LEVEL=2`, which is why an unconfigured Debug build hits this against the per-Visual-Studio archives. | Take the archive matching your toolset and iterator-debug setting from the table in \ref CppSetupWindows "Windows", then define `_ITERATOR_DEBUG_LEVEL` to that row's value, plus `MR_ITERATOR_DEBUG_LEVEL` to the same value if the archive has no `config_dist.h`. |
-| Windows, from source | `thirdparty\install.bat` finishes, but the Visual Studio solution stops with `fatal error C1083: Cannot open include file` on a third-party header. Hits **Visual Studio 2019 and 2022** builds, i.e. the ones step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build" has set `VCPKG_DEFAULT_TRIPLET` for. | The solution and vcpkg disagree on the triplet. `source/common.props` takes `VcpkgTriplet` from `VCPKG_DEFAULT_TRIPLET` and reads `<vcpkg>\installed\$(VcpkgTriplet)`, so this needs the variable to have reached `install.bat` but not the build: set with `set` in the one terminal that ran the script, or set after Visual Studio was started, so the build fell back to the `x64-windows-meshlib` default while the packages are in `installed\x64-windows-vs2019-meshlib`. A stale `CustomMRProps.props` above `source\` naming a third triplet does the same. Rerunning the script cannot help. | Name the triplet vcpkg actually installed — check which folder exists under `<vcpkg>\installed\` — and do not edit `common.props`. For the IDE, `setx VCPKG_DEFAULT_TRIPLET x64-windows-vs2022-meshlib` and restart Visual Studio; from the command line, `msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=x64-windows-vs2022-meshlib`, which overrides the environment. Both are step 5 of the same list. |
+| Windows, prebuilt | Compilation of any file including MeshLib stops with `#error _ITERATOR_DEBUG_LEVEL is inconsistent with MeshLib`. This is a **compile** error raised by MeshLib itself, not a linker error. | The archive was built for a different iterator-debug setting than your project uses. `MR_ITERATOR_DEBUG_LEVEL` is the level MeshLib's own binaries were built with — taken from `install/include/MRMesh/config_dist.h` when the archive ships one, otherwise defaulting to `0` — and MeshLib refuses to compile when your `_ITERATOR_DEBUG_LEVEL` differs from it. A Debug configuration implies `_ITERATOR_DEBUG_LEVEL=2`, which is why an unconfigured Debug build hits this against the per-Visual-Studio archives. | Take the archive matching your toolset and iterator-debug setting from the table in [Windows](\ref CppSetupWindows), then define `_ITERATOR_DEBUG_LEVEL` to that row's value, plus `MR_ITERATOR_DEBUG_LEVEL` to the same value if the archive has no `config_dist.h`. |
+| Windows, from source | `thirdparty\install.bat` finishes, but the Visual Studio solution stops with `fatal error C1083: Cannot open include file` on a third-party header. Hits **Visual Studio 2019 and 2022** builds, i.e. the ones step 4 of [Installing the local build](\ref CppSetupWindowsLocalBuild) has set `VCPKG_DEFAULT_TRIPLET` for. | The solution and vcpkg disagree on the triplet. `source/common.props` takes `VcpkgTriplet` from `VCPKG_DEFAULT_TRIPLET` and reads `<vcpkg>\installed\$(VcpkgTriplet)`, so this needs the variable to have reached `install.bat` but not the build: set with `set` in the one terminal that ran the script, or set after Visual Studio was started, so the build fell back to the `x64-windows-meshlib` default while the packages are in `installed\x64-windows-vs2019-meshlib`. A stale `CustomMRProps.props` above `source\` naming a third triplet does the same. Rerunning the script cannot help. | Name the triplet vcpkg actually installed — check which folder exists under `<vcpkg>\installed\` — and do not edit `common.props`. For the IDE, `setx VCPKG_DEFAULT_TRIPLET x64-windows-vs2022-meshlib` and restart Visual Studio; from the command line, `msbuild -m source\MeshLib.sln -p:Configuration=Release -p:VcpkgTriplet=x64-windows-vs2022-meshlib`, which overrides the environment. Both are step 5 of the same list. |
 | Linux, macOS, WASM (consuming an installed MeshLib) | `MRMeshFwd.h:70:10: fatal error: parallel_hashmap/phmap_fwd_decl.h: No such file or directory` | MeshLib's public headers include third-party headers, and `${MESHLIB_THIRDPARTY_INCLUDE_DIR}` is missing from your target's include directories. | Add it next to `${MESHLIB_INCLUDE_DIR}`: `target_include_directories(${TARGET} PUBLIC ${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})`. See \ref MeshLibCmakeSetupGuide and [examples/cpp-examples/CMakeLists.txt](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt). |
 | Linux, macOS (consuming an installed MeshLib) | CMake configuration stops with `Target "..." links to: MeshLib::MeshLibC2 but the target was not found`, suggesting a typo. | `meshlib-config.cmake` defines the C API target only when the project has the C language enabled. | Add `C` to the languages of your `project()` call. |
 | macOS | CMake configuration fails inside `MRMeshConfig.cmake` with `find_dependency`: `Could NOT find Boost (missing: Boost_INCLUDE_DIR)` (Boost is just the first of several such dependencies). | The Homebrew requirements were never installed — the `.pkg` installer does not pull them in. | `xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt` (for a current-user-only install, prefix the path with `~`). |
 | WASM | `build_thirdparty.sh` or `build_source.sh` silently produces a native build although Emscripten was selected. | The prompt is a `read -t 5`: with no keypress within five seconds it falls back to `OFF`. Each script asks separately, so the two can disagree. | Skip the prompt entirely — `export MR_EMSCRIPTEN=ON` once, before running **both** scripts. Each script prints its resolved mode (`Emscripten ON …`); check that line before waiting on a long build. |
-| WASM, runtime | `SharedArrayBuffer is not defined` in the browser console. | The page is served without the cross-origin isolation headers that the multithreaded build needs for shared memory. | Serve with `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Opener-Policy: same-origin` — see \ref CppSetupWASMRun "Running the WebAssembly Build". |
-| Any, runtime | `glfw_error_callback: X11: The DISPLAY environment variable is missing`, then `glfwInit failed`. | `MeshViewer` was started without a graphical session. Expected over plain SSH or on a headless server — not a broken installation. Its exit status is not a dependable success signal (`1` on the Ubuntu package, reported as `0` on other builds), so do not gate an automated check on it. | Open a desktop session, or run under a virtual display the way MeshLib CI does: `xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd`. To check an installation without a display, use \ref CppSetupVerify "Verify your setup" instead. |
+| WASM, runtime | `SharedArrayBuffer is not defined` in the browser console. | The page is served without the cross-origin isolation headers that the multithreaded build needs for shared memory. | Serve with `Cross-Origin-Embedder-Policy: require-corp` and `Cross-Origin-Opener-Policy: same-origin` — see [Running the WebAssembly Build](\ref CppSetupWASMRun). |
+| Any, runtime | `glfw_error_callback: X11: The DISPLAY environment variable is missing`, then `glfwInit failed`. | `MeshViewer` was started without a graphical session. Expected over plain SSH or on a headless server — not a broken installation. Its exit status is not a dependable success signal (`1` on the Ubuntu package, reported as `0` on other builds), so do not gate an automated check on it. | Open a desktop session, or run under a virtual display the way MeshLib CI does: `xvfb-run -a MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd`. To check an installation without a display, use [Verify your setup](\ref CppSetupVerify) instead. |
 | Windows, runtime | `MeshViewer.exe` logs `icons path …\app\Release\resource\logos\X1 is not directory` (and `X3`). | Benign: those logo directories are not part of the release archive. The viewer still starts, creates its window and renders. | Nothing to fix — this is not an installation problem. |
 
 ### Where the logs are

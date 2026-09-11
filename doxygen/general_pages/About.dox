@@ -47,10 +47,10 @@ pip install meshlib
 For headless environments — servers, docker, CI — `pip install meshlib-core` provides everything
 except the interactive viewer at a about 30% smaller download.
 
-For C++, C#, and C developers, head to our \ref InstallationGuide "Installation Guide" for more details on integrating MeshLib into your environment.
+For C++, C#, and C developers, head to our [Installation Guide](\ref InstallationGuide) for more details on integrating MeshLib into your environment.
 
 ## Tutorials
-Explore \ref Tutorials "MeshLib's tutorials" and \ref Examples "code samples" to get started quickly and master advanced features.
+Explore [MeshLib's tutorials](\ref Tutorials) and [code samples](\ref Examples) to get started quickly and master advanced features.
 
 ## License
 MeshLib offers Non-Commercial Free License with a Commercial License Requirement.

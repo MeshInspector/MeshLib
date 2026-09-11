@@ -27,7 +27,8 @@ To actually build a plugin, see:
 
 A plugin is **native code** that is dynamically loaded into the host process and runs with the **same privileges as MeshInspector itself**: it can read and write the user's files, open network connections, access cameras and microphones, and call any system API. There is no sandbox.
 
-\warning Treat plugin binaries the way you treat any other executable from the internet.
+> [!WARNING]
+> Treat plugin binaries the way you treat any other executable from the internet.
 - Install only plugins from sources you trust.
 - For binaries from third parties, prefer those distributed with source code or signed by a known developer.
 - Verify checksums when offered; refuse zip files that contain unexpected extra binaries.
@@ -47,7 +48,8 @@ If a colleague handed you a zip, expect that exact layout. If you compiled it yo
 
 ## How to install the plugin
 
-\warning Quit the host application before copying. Running processes hold the dylibs open; the copy will fail or — worse — appear to succeed but be silently ignored until next restart anyway.
+> [!WARNING]
+> Quit the host application before copying. Running processes hold the dylibs open; the copy will fail or — worse — appear to succeed but be silently ignored until next restart anyway.
 
 The exact target locations differ per platform.
 
@@ -66,7 +68,8 @@ xcopy /E /I resource       "C:\Program Files\MeshInspector\MeshInspector\resourc
 
 For the MeshLib SDK archive, copy the same files into `install\app\Release` (or `install\app\Debug`).
 
-\warning On Windows, mismatching CRT (Debug-built plugin against Release-installed app, or vice versa) crashes on load. Build with the same configuration as the host you target. If the host is the official MeshInspector installer, that is **Release**.
+> [!WARNING]
+> On Windows, mismatching CRT (Debug-built plugin against Release-installed app, or vice versa) crashes on load. Build with the same configuration as the host you target. If the host is the official MeshInspector installer, that is **Release**.
 
 > [!NOTE]
 > **Antivirus / SmartScreen**: a freshly written `.dll` in `C:\Program Files\` may be flagged or quarantined. If your plugin disappears immediately after copying, check the Windows Security → Protection History and add an exception, or sign the dylib with a developer certificate.
@@ -129,7 +132,8 @@ If Gatekeeper subsequently refuses to launch the app, re-sign the bundle with an
 sudo codesign --force --deep --sign - /Applications/MeshInspector.app
 ```
 
-\warning Only do this with a plugin from a source you trust. A malicious `.dylib` placed in `/Applications/MeshInspector.app/Contents/Frameworks/` runs every time anyone on the machine launches MeshInspector.
+> [!WARNING]
+> Only do this with a plugin from a source you trust. A malicious `.dylib` placed in `/Applications/MeshInspector.app/Contents/Frameworks/` runs every time anyone on the machine launches MeshInspector.
 
 \section HowtoAddPluginOverview_VerifyInstall Verifying the install
 

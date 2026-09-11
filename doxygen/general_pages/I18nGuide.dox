@@ -215,7 +215,8 @@ All macros are defined in `MRViewer/MRI18n.h`, except `_t`, which is in `MRMesh/
 - `f_tr("text {}")` - Format strings for `fmt::format()`.
 - `_t("text")` - Marking strings for extraction in contexts where the original value must be returned (see an example below).
 
-\warning `_tr()` returns a pointer into a **temporary** `std::string` that is destroyed at the end of the full expression. Always consume `_tr()` in the same expression, or use `s_tr()` / `MR::Locale::translate()` to store the result.
+> [!WARNING]
+> `_tr()` returns a pointer into a **temporary** `std::string` that is destroyed at the end of the full expression. Always consume `_tr()` in the same expression, or use `s_tr()` / `MR::Locale::translate()` to store the result.
 
 ```cpp
 // CORRECT: consumed in the same expression

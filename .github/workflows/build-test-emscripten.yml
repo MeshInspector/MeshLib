@@ -329,9 +329,11 @@ jobs:
         timeout-minutes: 20
         working-directory: mrtest-bundle
         run: |
+          mkdir -p /tmp/ffprof
+          echo 'user_pref("dom.maxHardwareConcurrency", 2);' > /tmp/ffprof/user.js
           taskset -c 0,1 python3 emrun.py \
             --browser=/usr/bin/firefox \
-            --browser-args="--headless" \
-            --safe-firefox-profile \
+            --browser-args="--headless --profile /tmp/ffprof" \
+            --kill-start \
             --kill-exit \
             ./MRTest.html -- --gtest_filter=MRMesh.MemfsCopyStress

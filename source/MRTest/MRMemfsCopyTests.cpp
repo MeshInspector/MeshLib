@@ -68,6 +68,8 @@ TEST( MRMesh, MemfsCopyStress )
     ASSERT_TRUE( bool( folder ) );
     const std::filesystem::path dir = folder;
 
+    spdlog::info( "hardware_concurrency {}", std::thread::hardware_concurrency() );
+
     const auto src = dir / "src.bin";
     {
         std::ofstream ofs( src, std::ios::binary );

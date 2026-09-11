@@ -110,7 +110,7 @@ jobs:
         run: |
           mkdir mrtest-bundle
           cp build/Release/bin/MRTest* /emsdk/upstream/emscripten/emrun.py mrtest-bundle/
-          em++ -std=c++20 -O2 -pthread ../MeshLib/.github/repro/memfs_copy_repro.cpp             -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency             -s PTHREAD_POOL_SIZE_STRICT=0             -s ALLOW_MEMORY_GROWTH=1             -s EXIT_RUNTIME=1 --emrun -lGL -s MAX_WEBGL_VERSION=2             -o mrtest-bundle/repro.html ||           em++ -std=c++20 -O2 -pthread .github/repro/memfs_copy_repro.cpp             -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency             -s PTHREAD_POOL_SIZE_STRICT=0             -s ALLOW_MEMORY_GROWTH=1             -s EXIT_RUNTIME=1 --emrun -lGL -s MAX_WEBGL_VERSION=2             -o mrtest-bundle/repro.html
+          em++ -std=c++20 -O2 -pthread ../MeshLib/.github/repro/memfs_copy_repro.cpp             -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency             -s PTHREAD_POOL_SIZE_STRICT=0             -s ALLOW_MEMORY_GROWTH=1             -s EXIT_RUNTIME=1 --emrun             -o mrtest-bundle/repro.html ||           em++ -std=c++20 -O2 -pthread .github/repro/memfs_copy_repro.cpp             -s PTHREAD_POOL_SIZE=navigator.hardwareConcurrency             -s PTHREAD_POOL_SIZE_STRICT=0             -s ALLOW_MEMORY_GROWTH=1             -s EXIT_RUNTIME=1 --emrun             -o mrtest-bundle/repro.html
 
       - name: Upload MRTest bundle
         uses: actions/upload-artifact@v7
@@ -331,8 +331,6 @@ jobs:
         run: |
           mkdir -p /tmp/ffprof
           echo 'user_pref("dom.maxHardwareConcurrency", 2);' > /tmp/ffprof/user.js
-          echo 'user_pref("webgl.force-enabled", true);' >> /tmp/ffprof/user.js
-          echo 'user_pref("webgl.disable-fail-if-major-performance-caveat", true);' >> /tmp/ffprof/user.js
           taskset -c 0,1 python3 emrun.py \
             --browser=/usr/bin/firefox \
             --browser-args="--headless --profile /tmp/ffprof" \

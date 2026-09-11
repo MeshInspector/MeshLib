@@ -3,15 +3,11 @@
 // it. No application code, no framework -- the main thread only has to be in a real browser
 // event loop, which emscripten_set_main_loop gives it.
 #include <emscripten.h>
-#include <emscripten/html5_webgl.h>
-
-#include <GLES2/gl2.h>
 
 #include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -23,8 +19,6 @@ namespace
 constexpr int cSeconds = 480;
 constexpr int cStallSeconds = 60;
 constexpr int cFileKiB = 100;
-/// the application stalls with a heap around this size
-constexpr size_t cBallastMiB = 600;
 
 std::atomic<long long> gCopies{ 0 };
 std::atomic<bool> gStop{ false };
@@ -39,16 +33,8 @@ int secondsSince( std::chrono::steady_clock::time_point t )
         std::chrono::steady_clock::now() - t ).count() );
 }
 
-EMSCRIPTEN_WEBGL_CONTEXT_HANDLE gGl = 0;
-
 void frame()
 {
-    if ( gGl )
-    {
-        glClearColor( 0.1f, 0.1f, 0.1f, 1.0f );
-        glClear( GL_COLOR_BUFFER_BIT );
-    }
-
     const long long now = gCopies.load( std::memory_order_relaxed );
     if ( now != gSeen )
     {
@@ -86,24 +72,6 @@ void frame()
 int main()
 {
     std::printf( "hardware_concurrency %u", std::thread::hardware_concurrency() );
-    std::putchar( 10 );
-    std::fflush( stdout );
-
-    // a WebGL context and a heap the size of the application's, the two things the
-    // application still has that this program did not
-    EmscriptenWebGLContextAttributes attrs;
-    emscripten_webgl_init_context_attributes( &attrs );
-    attrs.majorVersion = 2;
-    gGl = emscripten_webgl_create_context( "#canvas", &attrs );
-    if ( gGl )
-        emscripten_webgl_make_context_current( gGl );
-    std::printf( "webgl context %d", int( gGl ) );
-    std::putchar( 10 );
-
-    auto ballast = static_cast<char*>( std::malloc( cBallastMiB << 20 ) );
-    if ( ballast )
-        std::memset( ballast, 1, cBallastMiB << 20 );
-    std::printf( "ballast %s", ballast ? "allocated" : "FAILED" );
     std::putchar( 10 );
     std::fflush( stdout );
 

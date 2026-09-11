@@ -4,7 +4,7 @@
 Using MeshLib with C# {#UsingMeshLibwithCSharp}
 ===============================================
 
-\tableofcontents
+[TOC]
 
 This instruction will guide you through integrating MeshLib into your C# project using NuGet or the .NET Command-Line Interface.
 

@@ -2,7 +2,7 @@
 
 \page I18nGuide Internationalization Guide
 
-\tableofcontents
+[TOC]
 
 MeshLib uses a <a href="https://www.gnu.org/software/gettext/">gettext</a>-compatible localization system backed by
 <a href="https://www.boost.org/doc/libs/release/libs/locale/">Boost.Locale</a>.

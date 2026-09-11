@@ -3,7 +3,7 @@
 
 # Installing MeshLib SDK for JavaScript
 
-\tableofcontents
+[TOC]
 
 [MeshLib](https://meshlib.io/) is available for JavaScript as the geometry library compiled to WebAssembly.
 It runs both in Node.js and in the browser, and is published to npm as two packages that share an identical API:

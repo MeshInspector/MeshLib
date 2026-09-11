@@ -3,7 +3,7 @@
 
 # Setting Up MeshLib for C Development
 
-\tableofcontents
+[TOC]
 
 > [!NOTE]
 > The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`/etc, as opposed to `MRMesh`/etc for C++ API).

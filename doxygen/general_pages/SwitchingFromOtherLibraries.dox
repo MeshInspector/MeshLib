@@ -2,7 +2,7 @@
 
 \page SwitchingFromOtherLibraries Switching from Other Libraries to MeshLib
 
-\tableofcontents
+[TOC]
 
 MeshLib is a C++/Python geometry library focused on robust boolean operations, offsets, voxel-based reconstruction, decimation and remeshing.
 If you already work with CGAL, libigl, Open3D, PCL or VTK, the pairs below show the equivalent MeshLib code for the operations users most often port over.

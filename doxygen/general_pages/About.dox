@@ -2,7 +2,7 @@
 
 \mainpage About
 
-\tableofcontents
+[TOC]
 
 ## Welcome to MeshLib’s documentation!
 The MeshLib SDK is an open-source 3D geometry processing library designed to provide developers with a comprehensive toolkit for building robust 3D applications.

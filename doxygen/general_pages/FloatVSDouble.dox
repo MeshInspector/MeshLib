@@ -2,7 +2,7 @@
 
 \page FloatVSDouble Float vs Double
 
-\tableofcontents
+[TOC]
 
 # Float vs Double: A Design Choice for Precision and Performance in C++
 

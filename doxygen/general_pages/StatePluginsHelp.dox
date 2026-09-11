@@ -18,7 +18,7 @@ It has base functions:
     // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return ""; }
 ```
-\b On **Enable function** - will be called if user enables plugin (only possible if `isAvailable` has returned true), if \c onEnable_ function returns false plugin will not be enabled (useful for some expensive checks, not to do them in each frame \c available function)
+\b On **Enable function** - will be called if user enables plugin (only possible if `isAvailable` has returned true), if `onEnable_` function returns false plugin will not be enabled (useful for some expensive checks, not to do them in each frame `available` function)
 ```cpp
     MRVIEWER_API virtual bool onEnable_();
 ```
@@ -26,7 +26,7 @@ It has base functions:
 ```cpp
     MRVIEWER_API virtual bool onDisable_();
 ```
-\b Draw **Dialog function** - this function is called in each frame, only if plugin is enabled (will not be called after \c onDisable_ function). It is necessary to show plugin custom UI.
+\b Draw **Dialog function** - this function is called in each frame, only if plugin is enabled (will not be called after `onDisable_` function). It is necessary to show plugin custom UI.
 ```cpp
     MRVIEWER_API virtual void drawDialog( ImGuiContext* ctx );
 ```

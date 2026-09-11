@@ -474,16 +474,17 @@ jobs:
       - name: Dispatch stats collection
         env:
           GH_TOKEN: ${{ github.token }}
+          REF: ${{ github.ref }}
           BRANCH: ${{ github.head_ref || github.ref_name }}
           COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           gh workflow run collect-stats.yml \
             --repo ${{ github.repository }} \
-            --ref $BRANCH \
+            --ref "$BRANCH" \
             -f run_id=${{ github.run_id }} \
-            -f ref=${{ github.ref }} \
-            -f branch=$BRANCH \
-            -f commit=$COMMIT
+            -f ref="$REF" \
+            -f branch="$BRANCH" \
+            -f commit="$COMMIT"
 
   update-artifacts:
     timeout-minutes: 15

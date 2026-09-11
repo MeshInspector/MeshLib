@@ -206,9 +206,16 @@ size_t maxBufferSizeAlignedByBlock( size_t availableBytes, const Vector3i& block
     return std::min( availableBytes / elementBytes / layerSize, (size_t)blockDims.z ) * layerSize;
 }
 
+/// cudaGetErrorString/-Name return nullptr for an unrecognized code, and
+/// formatting a null string pointer throws fmt::format_error
+static const char * cudaStrOrUnknown( const char * str )
+{
+    return str ? str : "unknown error";
+}
+
 std::string getError( cudaError_t code )
 {
-    return fmt::format( "NVIDIA GPU error: {}", cudaGetErrorString( code ) );
+    return fmt::format( "NVIDIA GPU error: {}", cudaStrOrUnknown( cudaGetErrorString( code ) ) );
 }
 
 cudaError_t logError( cudaError_t code, const char * file, int line )
@@ -219,11 +226,12 @@ cudaError_t logError( cudaError_t code, const char * file, int line )
     if ( file )
     {
         spdlog::error("CUDA error {}: {}. In file: {} Line: {}", 
-            cudaGetErrorName( code ), cudaGetErrorString( code ), file, line );
+            cudaStrOrUnknown( cudaGetErrorName( code ) ), cudaStrOrUnknown( cudaGetErrorString( code ) ), file, line );
     }
     else
     {
-        spdlog::error( "CUDA error {}: {}", cudaGetErrorName( code ), cudaGetErrorString( code ) );
+        spdlog::error( "CUDA error {}: {}",
+            cudaStrOrUnknown( cudaGetErrorName( code ) ), cudaStrOrUnknown( cudaGetErrorString( code ) ) );
     }
     return code;
 }

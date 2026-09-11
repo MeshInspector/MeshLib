@@ -65,6 +65,20 @@ TEST( MRMesh, DistanceMapBoolean2D )
     EXPECT_EQ( subContours.size(), 2 );
 }
 
+TEST( MRMesh, DistanceMapFromContoursNoProjection )
+{
+    // maxDist below the pixel-to-contour distance leaves every projection
+    // unfound, so the signed branch must not dereference res.line
+    const Contours2f c{ { {2.f,1.f},{2.f,4.f},{3.f,4.f},{3.f,1.f},{2.f,1.f} } };
+    const ContourToDistanceMapParams params( { 16,16 }, Vector2f( 0.5f, 0.5f ), Vector2f( 4.f, 4.f ), true );
+
+    ContoursDistanceMapOptions options;
+    options.maxDist = 1e-6f;
+    const auto dm = distanceMapFromContours( Polyline2( c ), params, options );
+    EXPECT_EQ( dm.resX(), 16 );
+    EXPECT_EQ( dm.resY(), 16 );
+}
+
 TEST( MRMesh, DistanceMapContours )
 {
     Contours2f conts;

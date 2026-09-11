@@ -36,6 +36,8 @@ struct DriverDevice
 {
     int computeMajor = 0;
     int computeMinor = 0;
+    /// maximum CUDA version the driver supports, as the driver itself reports it
+    int driverVersion = 0;
     std::string name;
 };
 
@@ -71,10 +73,11 @@ Expected<DriverDevice> queryDriverApi()
     // declared here rather than via <cuda.h>: that header is absent in HIP builds,
     // and these entry points have never been versioned
     const auto cuInit = (int (*)( unsigned ))sym( "cuInit" );
+    const auto cuDriverGetVersion = (int (*)( int * ))sym( "cuDriverGetVersion" );
     const auto cuDeviceGet = (int (*)( int *, int ))sym( "cuDeviceGet" );
     const auto cuDeviceGetAttribute = (int (*)( int *, int, int ))sym( "cuDeviceGetAttribute" );
     const auto cuDeviceGetName = (int (*)( char *, int, int ))sym( "cuDeviceGetName" );
-    if ( !cuInit || !cuDeviceGet || !cuDeviceGetAttribute || !cuDeviceGetName )
+    if ( !cuInit || !cuDriverGetVersion || !cuDeviceGet || !cuDeviceGetAttribute || !cuDeviceGetName )
         return MR::unexpected( fmt::format( "{} misses an expected entry point", libName ) );
 
     constexpr int cCudaSuccess = 0;
@@ -89,6 +92,8 @@ Expected<DriverDevice> queryDriverApi()
         return MR::unexpected( fmt::format( "cuDeviceGet failed with code {}", code ) );
 
     DriverDevice res;
+    if ( const auto code = cuDriverGetVersion( &res.driverVersion ); code != cCudaSuccess )
+        return MR::unexpected( fmt::format( "cuDriverGetVersion failed with code {}", code ) );
     if ( const auto code = cuDeviceGetAttribute( &res.computeMajor, cAttrComputeMajor, dev ); code != cCudaSuccess )
         return MR::unexpected( fmt::format( "cuDeviceGetAttribute(compute major) failed with code {}", code ) );
     if ( const auto code = cuDeviceGetAttribute( &res.computeMinor, cAttrComputeMinor, dev ); code != cCudaSuccess )
@@ -104,6 +109,7 @@ Expected<DriverDevice> queryDriverApi()
 
 Expected<DeviceInfo> getDeviceInfo()
 {
+    const auto dev0 = queryDriverApi();
     DeviceInfo res;
     CUDA_RETURN_UNEXPECTED( cudaDriverGetVersion( &res.driverVersion ) );
     if ( res.driverVersion <= 0 )
@@ -122,9 +128,11 @@ Expected<DeviceInfo> getDeviceInfo()
             if ( dev && computeTooOldForRuntime( runtimeVersion, dev->computeMajor, dev->computeMinor ) )
             {
                 return MR::unexpected( fmt::format(
-                    "NVIDIA GPU error: {} has compute capability {}.{}, dropped by CUDA {}; no driver update will help",
+                    "NVIDIA GPU error: {} has compute capability {}.{}, dropped by CUDA {}; "
+                    "no driver update will help, CUDA driver {}.{}",
                     dev->name.empty() ? "the GPU" : dev->name, dev->computeMajor, dev->computeMinor,
-                    runtimeVersion / 1000 ) );
+                    runtimeVersion / 1000,
+                    dev->driverVersion / 1000, ( dev->driverVersion % 1000 ) / 10 ) );
             }
             auto err = ( code != cudaSuccess ) ? MR::Cuda::getError( code ) : "NVIDIA GPU error: no capable device found";
             err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );

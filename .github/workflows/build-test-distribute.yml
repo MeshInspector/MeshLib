@@ -463,7 +463,7 @@ jobs:
 
   collect-stats:
     timeout-minutes: 5
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     needs: [ config, upload-distributions ]
     # Dependabot PRs lack the AWS / CI-stats secrets, so skip stats collection there.
     if: ${{ always() && needs.config.outputs.internal_build == 'true' && github.actor != 'dependabot[bot]' }}

@@ -108,6 +108,17 @@ int main()
             ofs << chunk;
     }
 
+    std::thread( [dir]
+    {
+        std::ofstream log( dir / "log.txt", std::ios::binary | std::ios::app );
+        while ( log )
+        {
+            log << "[info] a line of about the length the application writes";
+            log.put( char( 10 ) );
+            log.flush();
+        }
+    } ).detach();
+
     std::thread( [src, dir]
     {
         std::error_code workerEc;

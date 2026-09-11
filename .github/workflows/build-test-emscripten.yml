@@ -331,6 +331,8 @@ jobs:
         run: |
           mkdir -p /tmp/ffprof
           echo 'user_pref("dom.maxHardwareConcurrency", 2);' > /tmp/ffprof/user.js
+          echo 'user_pref("webgl.force-enabled", true);' >> /tmp/ffprof/user.js
+          echo 'user_pref("webgl.disable-fail-if-major-performance-caveat", true);' >> /tmp/ffprof/user.js
           taskset -c 0,1 python3 emrun.py \
             --browser=/usr/bin/firefox \
             --browser-args="--headless --profile /tmp/ffprof" \

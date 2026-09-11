@@ -5,15 +5,13 @@
 
 \tableofcontents
 
-\parblock
 > [!NOTE]
 > The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`/etc, as opposed to `MRMesh`/etc for C++ API).
-\endparblock
 
-\parblock
+<p></p>
+
 > [!NOTE]
 > The recommended way of installing the C API is from the [binary releases](https://github.com/MeshInspector/MeshLib/releases) of MeshLib. It's also possible to build [from source](#CppBuildCBindingsFromSource).
-\endparblock
 
 ## Prerequisites {#CSetupPrerequisites}
 

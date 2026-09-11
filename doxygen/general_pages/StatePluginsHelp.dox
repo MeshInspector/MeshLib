@@ -10,10 +10,8 @@ It has base functions:
 
 \b Available **function** - \ref ISceneStateCheck interface function that block plugin in UI
 
-\parblock
 > [!NOTE]
 > This fuction can be inherited from some helper classes \ref SceneStateExactCheck \ref SceneStateAtLeastCheck \ref SceneStateAtMostCheck \ref SceneStateOrCheck \ref SceneStateAndCheck
-\endparblock
 
 ```cpp
     // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement

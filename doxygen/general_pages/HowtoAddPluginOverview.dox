@@ -53,7 +53,8 @@ The exact target locations differ per platform.
 
 ### Windows
 
-\note On Windows, dropping files into `C:\Program Files\` requires Administrator. Open `cmd.exe` or PowerShell with **Run as administrator** (right-click the icon → "Run as administrator"), then run `copy` from there. Alternatively, use Explorer — it will pop a UAC prompt for the same purpose.
+> [!NOTE]
+> On Windows, dropping files into `C:\Program Files\` requires Administrator. Open `cmd.exe` or PowerShell with **Run as administrator** (right-click the icon → "Run as administrator"), then run `copy` from there. Alternatively, use Explorer — it will pop a UAC prompt for the same purpose.
 
 For an installed MeshInspector:
 ```bat
@@ -67,7 +68,8 @@ For the MeshLib SDK archive, copy the same files into `install\app\Release` (or 
 
 \warning On Windows, mismatching CRT (Debug-built plugin against Release-installed app, or vice versa) crashes on load. Build with the same configuration as the host you target. If the host is the official MeshInspector installer, that is **Release**.
 
-\note **Antivirus / SmartScreen**: a freshly written `.dll` in `C:\Program Files\` may be flagged or quarantined. If your plugin disappears immediately after copying, check the Windows Security → Protection History and add an exception, or sign the dylib with a developer certificate.
+> [!NOTE]
+> **Antivirus / SmartScreen**: a freshly written `.dll` in `C:\Program Files\` may be flagged or quarantined. If your plugin disappears immediately after copying, check the Windows Security → Protection History and add an exception, or sign the dylib with a developer certificate.
 
 ### Linux
 
@@ -79,8 +81,9 @@ sudo cp MyPlugin.items.json MyPlugin.ui.json /usr/share/MeshInspector/
 sudo cp -R resource                        /usr/share/MeshInspector/
 ```
 
-\note If you installed MeshInspector via a different channel (tarball, AppImage, source build), the directory layout differs.
-For an SDK archive build, copy into `install/app/Release/` — same layout as Windows.
+> [!NOTE]
+> If you installed MeshInspector via a different channel (tarball, AppImage, source build), the directory layout differs.
+> For an SDK archive build, copy into `install/app/Release/` — same layout as Windows.
 
 ### macOS (arm64 / Intel)
 
@@ -102,12 +105,14 @@ cp -R resource                          ~/Apps/MI-MyPlugin/Contents/Resources/
 ~/Apps/MI-MyPlugin/Contents/MacOS/MeshInspector
 ```
 
-\note Why drop the `.app` suffix? macOS App Bundle Protection blocks writes inside any `.app` directory — even when you own it — unless the call comes from `sudo`. A directory without the `.app` extension is treated as a regular folder and is freely writable.
+> [!NOTE]
+> Why drop the `.app` suffix? macOS App Bundle Protection blocks writes inside any `.app` directory — even when you own it — unless the call comes from `sudo`. A directory without the `.app` extension is treated as a regular folder and is freely writable.
 
-\note **Gatekeeper warning on first launch.** macOS may attach `com.apple.quarantine` to files copied via `cp -R`. Launching the binary from the clone may show a "developer cannot be verified" prompt the first time, which goes away after you accept it. To suppress in advance:
-```sh
-xattr -dr com.apple.quarantine ~/Apps/MI-MyPlugin
-```
+> [!NOTE]
+> **Gatekeeper warning on first launch.** macOS may attach `com.apple.quarantine` to files copied via `cp -R`. Launching the binary from the clone may show a "developer cannot be verified" prompt the first time, which goes away after you accept it. To suppress in advance:
+> ```sh
+> xattr -dr com.apple.quarantine ~/Apps/MI-MyPlugin
+> ```
 
 #### macOS — option B: install into the system MeshInspector.app (advanced)
 

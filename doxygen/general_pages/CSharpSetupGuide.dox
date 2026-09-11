@@ -7,9 +7,11 @@
 
 This instruction will guide you through integrating MeshLib into your C# project using NuGet or the .NET Command-Line Interface.
 
-\note MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity — see \ref MeshLibCSharpUnity "Using MeshLib with Unity".
+> [!NOTE]
+> MeshLib C# bindings are fully generated from the C++ codebase and expose the complete public API, with the exception of the `MR.Viewer` module. The C# API is fully compatible with Unity — see \ref MeshLibCSharpUnity "Using MeshLib with Unity".
 
-\note The C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all \ref MeshLibCSharpPlatforms "supported platforms", ensuring feature parity with the native C++ API.
+> [!NOTE]
+> The C# bindings are production-ready. The full, stable C# API reference and comprehensive code samples are available and maintained. C# support is provided consistently across all \ref MeshLibCSharpPlatforms "supported platforms", ensuring feature parity with the native C++ API.
 
 
 ## Prerequisites
@@ -25,10 +27,11 @@ The NuGet package ships prebuilt native libraries, so your OS and CPU architectu
 | macOS | Arm64 (Apple silicon) | macOS 14 |
 | macOS | x64 (Intel) | macOS 15 |
 
-\note On Windows on Arm, .NET 5 and newer resolve `win-arm64` by themselves. A **.NET Framework**
-project instead gets the runtime named by its `PlatformTarget`, so set `<PlatformTarget>ARM64</PlatformTarget>`
-to run natively; any other value gives it the `win-x64` libraries and the x64 emulation. Native Arm64
-.NET Framework requires 4.8.1, i.e. Windows 11.
+> [!NOTE]
+> On Windows on Arm, .NET 5 and newer resolve `win-arm64` by themselves. A **.NET Framework**
+> project instead gets the runtime named by its `PlatformTarget`, so set `<PlatformTarget>ARM64</PlatformTarget>`
+> to run natively; any other value gives it the `win-x64` libraries and the x64 emulation. Native Arm64
+> .NET Framework requires 4.8.1, i.e. Windows 11.
 
 On **Linux** no extra system packages are required: beyond the C and C++ runtimes the libraries need only
 `libexpat1` and `zlib1g`, which a standard desktop or server install already provides. Every other dependency
@@ -96,7 +99,8 @@ VS Code runs on Windows, macOS, and Linux; the steps are the same on all three:
  5. **Start Using MeshLib**:
   - You should now have access to the static class `MR` and its members.
 
-\note Using another editor, or no editor at all? The \ref MeshLibCSharpDotnetCli ".NET Command-Line Interface" works the same way on Windows, macOS, and Linux, and needs nothing but the .NET SDK.
+> [!NOTE]
+> Using another editor, or no editor at all? The \ref MeshLibCSharpDotnetCli ".NET Command-Line Interface" works the same way on Windows, macOS, and Linux, and needs nothing but the .NET SDK.
 
 ## Installation from a Downloaded NuGet Package
 If you prefer to download the MeshLib package directly from the NuGet website, follow these steps:

@@ -41,7 +41,8 @@ At build time, `.po` files are compiled to `.mo` and placed in the output direct
 
 For example: `build/Release/bin/locale/de/LC_MESSAGES/MyPlugin.mo`.
 
-\note The domain name is always derived from the filename stem: `MyPlugin.po` belongs to domain `"MyPlugin"`.
+> [!NOTE]
+> The domain name is always derived from the filename stem: `MyPlugin.po` belongs to domain `"MyPlugin"`.
 
 # Gettext utilities and helper scripts {#I18nTooling}
 
@@ -313,7 +314,8 @@ To use this header in your plugin:
 2. Register the domain at startup: `MR::Locale::addDomain( MY_PLUGIN_I18N_DOMAIN );`
 3. All `_tr()`, `s_tr()`, and `f_tr()` calls will now use your domain.
 
-\note `findDomain()` performs a cache lookup by pointer address for `const char*` literals, so the runtime cost is minimal.
+> [!NOTE]
+> `findDomain()` performs a cache lookup by pointer address for `const char*` literals, so the runtime cost is minimal.
 
 # Translating JSON menu files {#I18nJSON}
 

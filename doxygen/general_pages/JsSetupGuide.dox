@@ -142,9 +142,11 @@ using mesh = ml.Mesh.fromTriangles(coords, tris);
 console.log('volume =', mesh.volume()); // ~8
 ```
 
-\note This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in \ref MeshLibJsPayloadSize "Payload Size".
+> [!NOTE]
+> This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in \ref MeshLibJsPayloadSize "Payload Size".
 
-\note The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
+> [!NOTE]
+> The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
 
 ## TypeScript
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with minimal setup:

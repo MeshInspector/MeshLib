@@ -65,7 +65,8 @@ And although the computation of the predicates can be inaccurate in float-arithm
 And if input to Boolean operations is degenerate like exactly coinciding triangles, both float and double computations will have the same issues. 
 That is why **MeshLib utilizes intermediate conversion of point coordinates into integers**, and performs evaluation of predicates in integer numbers as well, **where no inaccuracies are possible**. 
 On top of that, **Simulation-of-Simplicity (SoS)** approach is utilized to avoid numerous corner-cases, otherwise extremely hard to tackle correctly. 
-\note In the example of a triangle and a segment, SoS ensures that they can either intersect or not-intersect, but never just touch one another.
+> [!NOTE]
+> In the example of a triangle and a segment, SoS ensures that they can either intersect or not-intersect, but never just touch one another.
 
 ## Conclusion
 The decision between float and double depends on the specific requirements of the application. 

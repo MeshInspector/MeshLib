@@ -25,12 +25,13 @@ MeshLib uses C++20 standard and is tested to be compiled with:
 Integrating MeshLib with CMake needs CMake 3.18 or newer. See \ref MeshLibCmakeSetupGuide "the CMake Setup Guide" for the full `CMakeLists.txt`.
 
 \subsection CppSetupWindows Windows
-\note MeshLib for Windows is distributed for **x64** and **Arm64**: set the platform of your project to `x64` or `ARM64`.
-A 32-bit (`Win32`) build is not supported and fails while compiling `MRMesh/MRId.h` with
-`C2535: member function already defined or declared` and `C2995: function template has already been defined`
-(on 32-bit MSVC `size_t` and `unsigned int` are the same type, so two `MR::Id` constructors collapse into one).
-Visual Studio 2019 still defaults new C++ console projects to `Win32`.
-On Windows on Arm, take the `-arm64` archive; it is built with Visual Studio 2026 and ships no `MRCuda`, there being no CUDA toolkit for that platform.
+> [!NOTE]
+> MeshLib for Windows is distributed for **x64** and **Arm64**: set the platform of your project to `x64` or `ARM64`.
+> A 32-bit (`Win32`) build is not supported and fails while compiling `MRMesh/MRId.h` with
+> `C2535: member function already defined or declared` and `C2995: function template has already been defined`
+> (on 32-bit MSVC `size_t` and `unsigned int` are the same type, so two `MR::Id` constructors collapse into one).
+> Visual Studio 2019 still defaults new C++ console projects to `Win32`.
+> On Windows on Arm, take the `-arm64` archive; it is built with Visual Studio 2026 and ships no `MRCuda`, there being no CUDA toolkit for that platform.
 
 There are two options: Download and Install release build or compile from sources:
 ### Installing the release build
@@ -121,7 +122,8 @@ vcpkg integrate install
 [Learn more about](https://github.com/Microsoft/vcpkg) `vcpkg`
 
 #### Installing the local build {#CppSetupWindowsLocalBuild}
-\note The following steps will require approximately 40 GB of disk space.
+> [!NOTE]
+> The following steps will require approximately 40 GB of disk space.
 
  1. **Clone the MeshLib Repository**:
 ```cmd
@@ -187,7 +189,8 @@ MeshViewer        # interactive, requires a graphical session
   - Ensure [CMake](https://cmake.org/download/#latest) is installed for managing the build process.
  3. **CUDA Toolkit**
   - Install [CUDA v12.6](https://developer.nvidia.com/cuda-12-6-3-download-archive) from the official website. Follow the Linux installation instructions provided on the CUDA page.
-\note You might need to execute `export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/mnt' | tr '\n' ':' | sed 's/:$//')` if you are on WSL to prevent interfearing with host machine CUDA Toolkit (this command will filter host machine paths from PATH enviroment)
+> [!NOTE]
+> You might need to execute `export PATH=$(echo $PATH | tr ':' '\n' | grep -v '/mnt' | tr '\n' ':' | sed 's/:$//')` if you are on WSL to prevent interfearing with host machine CUDA Toolkit (this command will filter host machine paths from PATH enviroment)
 
 #### Installing the local build
  1. **Clone the MeshLib Repository**:
@@ -207,14 +210,16 @@ You may also run the scripts in the non-interactive mode (see \ref CppSetupWASM 
 MR_EMSCRIPTEN=OFF ./scripts/build_thirdparty.sh
 MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
 ```
-\note Dependencies are installed automatically on Ubuntu only. Elsewhere `build_thirdparty.sh` prints *"Unsupported system. Installing dependencies is your responsibility."*, so install the equivalents of [`requirements/ubuntu.txt`](https://github.com/MeshInspector/MeshLib/blob/master/requirements/ubuntu.txt) yourself first.
+> [!NOTE]
+> Dependencies are installed automatically on Ubuntu only. Elsewhere `build_thirdparty.sh` prints *"Unsupported system. Installing dependencies is your responsibility."*, so install the equivalents of [`requirements/ubuntu.txt`](https://github.com/MeshInspector/MeshLib/blob/master/requirements/ubuntu.txt) yourself first.
  4. **Create and Install Package**:
  <br/> This step will create distribution package and install it to the system
 ```sh
 ./scripts/distribution.sh
 sudo apt install ./distr/meshlib-dev.deb
 ```
-\note `distribution.sh` builds a `.deb`, so this step is Ubuntu/Debian-only. On other distributions skip it and use the locally built binaries directly, as in the next step.
+> [!NOTE]
+> `distribution.sh` builds a `.deb`, so this step is Ubuntu/Debian-only. On other distributions skip it and use the locally built binaries directly, as in the next step.
  5. **Verify the build**
  <br/> Run the checks in \ref CppSetupVerify "Verify your setup". The headless one, whose exit status is the signal:
   - if you installed the package in the previous step:
@@ -294,7 +299,8 @@ We suggest starting with the [**mesh loading and saving example**](\ref ExampleM
 
 This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
 
-\note Only web and worker environments (i.e. web browsers) are officially supported.
+> [!NOTE]
+> Only web and worker environments (i.e. web browsers) are officially supported.
 
 ### Install Emscripten
 
@@ -328,8 +334,9 @@ git pull origin
 source ./emsdk_env.sh
 ```
 
-\note **For Windows Users:**
-<br/> Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
+> [!NOTE]
+> **For Windows Users:**
+> <br/> Make sure you are using Git Bash, WSL, or another Unix-like environment if you want to follow the exact same steps as on Linux/macOS.
 
 ### Installing the release build
  1. **Download the Built Version**
@@ -366,17 +373,19 @@ cd ~/MeshLib
 ./scripts/build_source.sh
 ```
 
-\note **Non-interactive builds.** You may pre-set the environment variables to skip the prompt:
-```sh
-export MR_EMSCRIPTEN=ON               # same as 'y': multi-threaded
-#export MR_EMSCRIPTEN_SINGLETHREAD=1  # ...plus this for 's': single-threaded
-#export MR_EMSCRIPTEN_WASM64=1        # ...plus this for 'l': multi-threaded 64-bit
-./scripts/build_thirdparty.sh
-./scripts/build_source.sh
-```
+> [!NOTE]
+> **Non-interactive builds.** You may pre-set the environment variables to skip the prompt:
+> ```sh
+> export MR_EMSCRIPTEN=ON               # same as 'y': multi-threaded
+> #export MR_EMSCRIPTEN_SINGLETHREAD=1  # ...plus this for 's': single-threaded
+> #export MR_EMSCRIPTEN_WASM64=1        # ...plus this for 'l': multi-threaded 64-bit
+> ./scripts/build_thirdparty.sh
+> ./scripts/build_source.sh
+> ```
 
-\note **For Windows Users:**
-<br/> You may encounter compatibility issues if building directly on Windows. Consider using WSL (Windows Subsystem for Linux) to follow Linux-like instructions.
+> [!NOTE]
+> **For Windows Users:**
+> <br/> You may encounter compatibility issues if building directly on Windows. Consider using WSL (Windows Subsystem for Linux) to follow Linux-like instructions.
 
 #### Running the WebAssembly Build {#CppSetupWASMRun}
 

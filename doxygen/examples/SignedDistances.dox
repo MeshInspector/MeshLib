@@ -5,7 +5,8 @@ Example of usage to get signed distances from points of mesh to another referenc
 
 ▶ [See it live in the browser](https://demo.meshlib.io/#deviation)
 
-\note Please note that unlike findSignedDistance, this function return distances for each valid points
+> [!NOTE]
+> Please note that unlike findSignedDistance, this function return distances for each valid points
 
 <div class="tabbed">
 

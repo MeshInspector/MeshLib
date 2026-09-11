@@ -9,7 +9,8 @@
 \include NoiseDenoise.dox.cpp
 
 - <b class="tab-title">Python</b>
-\note Python API version 3 and later
+> [!NOTE]
+> Python API version 3 and later
 
 \include NoiseDenoiseExample.dox.py
 

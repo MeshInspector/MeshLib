@@ -8,7 +8,8 @@
 
 ## Introduction
 This page describes what is present in `example_plugin` directory of the Windows and WebAssembly distribution archive and how to use it.
-\note Please have a look at [MeshLib С++ setup guide](\ref CppSetupWindows) first.
+> [!NOTE]
+> Please have a look at [MeshLib С++ setup guide](\ref CppSetupWindows) first.
 
 ## Content
 This example contains several files:
@@ -118,7 +119,8 @@ Lets have a closer look at each of these points:
     - X1 (32x32 px)
     - X3 (96x96 px)
 
-\note Icons should have same name as tool in the code, in `items.json` file and in `ui.json` file
+> [!NOTE]
+> Icons should have same name as tool in the code, in `items.json` file and in `ui.json` file
 
 ### Source Code File
 `MyPlugin.cpp` - this file contains two simple tools:
@@ -139,7 +141,8 @@ For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
 3. Copy content of just appeared `x64\Release\` folder to MeshLib or MeshInspector app folder
   - MeshLib: `install\app\Release`
   - MeshInspector: `C:\Program Files\MeshInspector\MeshInspector`, please note that you should use same version of MeshLib that is used in MeshInspector to avoid unexpected errors
-\note take `x64\Debug\` if you want to test it in MeshLib debug app folder: `install\app\Debug`
+> [!NOTE]
+> take `x64\Debug\` if you want to test it in MeshLib debug app folder: `install\app\Debug`
 
 ### Linux
 
@@ -190,7 +193,8 @@ emcmake cmake -S example_plugin -B example_plugin_build -D CMAKE_FIND_ROOT_PATH=
 cmake --build example_plugin_build --config Release
 ```
 4. Copy the result files from the `example_plugin_build/html` directory to your web server location.
-\note Make sure your web server enables [cross-origin isolation](https://web.dev/articles/coop-coep) for these files.
+> [!NOTE]
+> Make sure your web server enables [cross-origin isolation](https://web.dev/articles/coop-coep) for these files.
 
 ## After install — quick sanity check
 

@@ -145,8 +145,9 @@ The `meshlib` package ships four importable modules:
 
 Import them from the package, for example `from meshlib import mrmeshpy`.
 
-\note `mrcudapy` imports on any machine, including one without a GPU, but its routines
-need an NVIDIA GPU with a working CUDA driver at runtime.
+> [!NOTE]
+> `mrcudapy` imports on any machine, including one without a GPU, but its routines
+> need an NVIDIA GPU with a working CUDA driver at runtime.
 
 ### Predefined Functions and Example Scripts
 MeshLib provides a set of example scripts that are available [here](\ref Examples).

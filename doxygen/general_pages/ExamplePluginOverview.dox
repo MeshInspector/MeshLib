@@ -31,7 +31,7 @@ Lets have a closer look at each of these points:
 `example_plugin.vcxproj` - This file is configured so project can work with MeshLib distribuiton \include{doc} CommonDistributionProperties.dox
        - Define `IMGUI_DISABLE_OBSOLETE_FUNCTIONS`
        - Copy other files to target directory:
-\code{.xml}
+```xml
    <ItemGroup>
     <CopyFileToFolders Include="MyPlugin.items.json">
       <FileType>Document</FileType>
@@ -43,7 +43,7 @@ Lets have a closer look at each of these points:
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-\endcode
+```
 
 ### Tools Configuration File
 `MyPlugin.items.json` - this file contains information about each tool that is present in the plugin:
@@ -54,7 +54,7 @@ Lets have a closer look at each of these points:
  - \b "HelpLink" - optional: link to web page that will be opened if "Help" button is pressed in UI
  - \b "DropList" - optional: array with other tools that will be available in this tool drop list (see "List" in next section)
 
-\code{.json}
+```json
 {
   "Items": [
     {
@@ -69,7 +69,7 @@ Lets have a closer look at each of these points:
     }
   ]
 }
-\endcode
+```
 
 ### Tools Visualization Order File
 `MyPlugin.ui.json` - this file has information about order of the plugin loading, and UI schema for present tools:
@@ -83,7 +83,7 @@ Lets have a closer look at each of these points:
        - \b "List" - list of the tools in this group
            - \b "Name" - name of the tool, should be same as in the code and in the `items.json` file
 
-\code{.json}
+```json
 {
 	"Order": 999,
 	"LibName": "example_plugin",
@@ -107,7 +107,7 @@ Lets have a closer look at each of these points:
 		}
 	]
 }
-\endcode
+```
 
 ### Resoure Directory
 `resource` - directory with icons that is used in UI, it should have same structure as in example:
@@ -145,18 +145,18 @@ For more information have a look at [State Plugin Page](\ref StatePluginsHelp)
 
 1. Install MeshLib (`apt install meshlib`) or unpack the SDK archive next to your plugin source.
 2. Build:
-\code{.sh}
+```sh
 cmake -S example_plugin -B example_plugin_build -D CMAKE_BUILD_TYPE=Release \
       -D MeshLib_DIR=/usr/lib/cmake/meshlib                       # adjust to your install
 cmake --build example_plugin_build -j
-\endcode
+```
 3. Deploy:
-\code{.sh}
+```sh
 sudo cp example_plugin_build/libMyPlugin.so          /usr/lib/MeshInspector/
 sudo cp example_plugin/MyPlugin.items.json           /usr/share/MeshInspector/
 sudo cp example_plugin/MyPlugin.ui.json              /usr/share/MeshInspector/
 sudo cp -R example_plugin/resource                   /usr/share/MeshInspector/
-\endcode
+```
 
 ### macOS (arm64 / Intel)
 
@@ -164,12 +164,12 @@ The MeshLib SDK ships as a framework at `/Library/Frameworks/MeshLib.framework`.
 
 1. Install MeshLib SDK.
 2. Build:
-\code{.sh}
+```sh
 cmake -S example_plugin -B example_plugin_build -D CMAKE_BUILD_TYPE=Release
 cmake --build example_plugin_build -j
-\endcode
+```
 4. Deploy. **Recommended (safer):** install into a writable clone of the host app — does not touch the system bundle and does not break its code signature.
-\code{.sh}
+```sh
 mkdir -p ~/Apps
 cp -R /Applications/MeshInspector.app ~/Apps/MI-MyPlugin     # NB: drop the .app suffix
 
@@ -177,7 +177,7 @@ cp example_plugin_build/libMyPlugin.dylib            ~/Apps/MI-MyPlugin/Contents
 cp example_plugin/MyPlugin.items.json                ~/Apps/MI-MyPlugin/Contents/Resources/
 cp example_plugin/MyPlugin.ui.json                   ~/Apps/MI-MyPlugin/Contents/Resources/
 cp -R example_plugin/resource                        ~/Apps/MI-MyPlugin/Contents/Resources/
-\endcode
+```
 
 The system-wide alternative (writes into the notarized `MeshInspector.app` bundle) is documented under \ref HowtoAddPluginOverview "How to Add Plugin" → macOS option B, including the signature trade-off.
 
@@ -185,10 +185,10 @@ The system-wide alternative (writes into the notarized `MeshInspector.app` bundl
 1. [Install and activate Emscripten SDK](https://emscripten.org/docs/tools_reference/emsdk.html#emsdk-howto)
 2. [Download and unpack MeshLib SDK](https://github.com/MeshInspector/MeshLib/releases)
 3. Configure and build the project using CMake and emcmake:
-\code{.sh}
+```sh
 emcmake cmake -S example_plugin -B example_plugin_build -D CMAKE_FIND_ROOT_PATH=/path/to/meshlib/sdk/
 cmake --build example_plugin_build --config Release
-\endcode
+```
 4. Copy the result files from the `example_plugin_build/html` directory to your web server location.
 \note Make sure your web server enables [cross-origin isolation](https://web.dev/articles/coop-coep) for these files.
 
@@ -200,16 +200,16 @@ Restart the host app and look at the log:
 - macOS: `$TMPDIR/MeshInspector/Logs/MRLog_*.txt`
 
 You should see two lines per plugin:
-\code{.unparsed}
+```unparsed
 [info] Loading library MyPlugin with priority 999
 [info] Load library MyPlugin was successful
-\endcode
+```
 
 If instead you get:
-\code{.unparsed}
+```unparsed
 [error] dlopen(...): Library not loaded: ...
 [warning] Ribbon item "My Tool" is not registered
-\endcode
+```
 the plugin's transitive dependencies didn't resolve from the host bundle (so the dylib never loaded, and therefore no items got registered). See \ref HowtoAddPluginOverview "How to Add Plugin" → "Verifying the install" for fix paths.
 
 */

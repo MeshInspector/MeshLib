@@ -14,27 +14,27 @@ It has base functions:
 \note This fuction can be inherited from some helper classes \ref SceneStateExactCheck \ref SceneStateAtLeastCheck \ref SceneStateAtMostCheck \ref SceneStateOrCheck \ref SceneStateAndCheck
 \endparblock
 
-\code
+```cpp
     // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return ""; }
-\endcode
+```
 \b On \b Enable \b function - will be called if user enables plugin (only possible if `isAvailable` has returned true), if \c onEnable_ function returns false plugin will not be enabled (useful for some expensive checks, not to do them in each frame \c available function)
-\code
+```cpp
     MRVIEWER_API virtual bool onEnable_();
-\endcode
+```
 \b On \b Disable \b function - will be called if user disable plugin, it is necessary to clear all plugin data
-\code
+```cpp
     MRVIEWER_API virtual bool onDisable_();
-\endcode
+```
 \b Draw \b Dialog \b function - this function is called in each frame, only if plugin is enabled (will not be called after \c onDisable_ function). It is necessary to show plugin custom UI.
-\code
+```cpp
     MRVIEWER_API virtual void drawDialog( ImGuiContext* ctx );
-\endcode
+```
 
 ## How to make your first plugin
 To create you plugin you need to inherit class from MR::StatePlugin or MR::StateListenerPlugin (in case you need to get some events)\n
 Example:
-\code
+```cpp
 class MyOwnPlugin : public MR::StatePlugin
 {
 public:
@@ -79,19 +79,19 @@ private:
 		return true;
 	}
 }
-\endcode
+```
 
 Register your plugin with
-\code
+```cpp
 MR_REGISTER_RIBBON_ITEM( MyOwnPlugin )
-\endcode
+```
 To show this item on Ribbon menu, it should be present in MenuSchema.ui.json file (special page about these files are coming soon)
 \n
 \ref StateListenerPlugin is more simple way to make plugin listen to some events:
-\code
+```cpp
 // This plugin will listen to mouse move and mouse down, also isAvailable function will be imlemented with SceneStateExactCheck
 class MyListenerPlugin : public StateListenerPlugin<MouseMoveListener,MouseDownListener>, public SceneStateExactCheck<1, ObjectMesh>
-\endcode
+```
 
 Find more:
 \ref RibbonMenuItem

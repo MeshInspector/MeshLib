@@ -60,16 +60,16 @@ Each "Half-Edge" is indexed by its unique `EdgeId`
 \image html mesh_structure/navigation_hole.png
 
 ### Iterating over valid vertices
-\code{.cpp}
+```cpp
 for ( VertId v : mesh.topology.getValidVerts() )
 {
     std::cout << mesh.points[v].x << ", " << mesh.points[v].y << ", " << mesh.points[v].z << "\n";
     //...
 }
-\endcode
+```
 
 ### Iterating over valid faces
-\code{.cpp}
+```cpp
 for ( FaceId f : mesh.topology.getValidFaces() )
 {
     ThreeVertIds vertIds;
@@ -77,15 +77,15 @@ for ( FaceId f : mesh.topology.getValidFaces() )
     std::cout << vertIds[0] << ", " << vertIds[1] << ", " << vertIds[2] << "\n";
     //...
 }
-\endcode
+```
 
 ### Iterating ofer vertex edges ring
-\code{.cpp}
+```cpp
 for ( EdgeId e : orgRing( mesh.topology, vertId ) )
 {
     //...
 }
-\endcode
+```
 
 Find more advanced mesh navigation techniques in this [discussion](https://github.com/MeshInspector/MeshLib/issues/1377)
 

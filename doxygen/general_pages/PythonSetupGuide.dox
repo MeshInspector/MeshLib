@@ -51,9 +51,9 @@ and PyCharm offer completion and signature help for the MeshLib API with no extr
 
 ## Installation Process {#PythonSetupInstall}
 MeshLib is available on [PyPI](https://pypi.org/project/meshlib/) for Windows, macOS, and Linux:
-\code{.sh}
+```sh
 pip install meshlib
-\endcode
+```
 
 It installs two packages: `meshlib-core` — the headless core with `mrmeshpy`, `mrmeshnumpy`
 and `mrcudapy` — and the `meshlib` wheel on top of it, adding the interactive viewer
@@ -61,29 +61,29 @@ and `mrcudapy` — and the `meshlib` wheel on top of it, adding the interactive 
 
 On \b Windows that command works as written. A virtual environment is still worth using once you
 have more than one project, so their dependencies cannot collide:
-\code{.bat}
+```bat
 py -m venv .venv
 .venv\Scripts\activate
 pip install meshlib
-\endcode
+```
 
 On \b Linux, and on \b macOS with Homebrew Python, the plain command is refused before it
 downloads anything — `error: externally-managed-environment` — because pip will not install into
 an interpreter the system package manager owns (PEP 668); Apple's Command Line Tools Python
 instead accepts it quietly into a per-user directory you did not choose. There, install into a
 virtual environment:
-\code{.sh}
+```sh
 python3 -m venv .venv
 source .venv/bin/activate
 pip install meshlib
-\endcode
+```
 
 ### Headless installation {#PythonSetupHeadless}
 On servers, in docker images, and in CI — anywhere the interactive viewer is never opened —
 install just the core:
-\code{.sh}
+```sh
 pip install meshlib-core
-\endcode
+```
 The download is about 30% smaller and provides everything except `meshlib.mrviewerpy`; every other
 import (`from meshlib import mrmeshpy`, `mrmeshnumpy`, `mrcudapy`) works exactly as with the full
 package. Installing `meshlib` later adds the viewer on top, and `pip uninstall meshlib` removes
@@ -92,33 +92,33 @@ requires exactly `meshlib-core` of the same version.
 
 ### Verify the installation {#PythonSetupVerify}
 `pip install` reporting success is not the same as a working install: the wheel is tens of megabytes of prebuilt native code, and it can install cleanly and still fail to load. This one command covers the whole chain — import the package, load the native module, run a real geometry call:
-\code{.sh}
+```sh
 python -c "from meshlib import mrmeshpy as mm; m = mm.makeCube(); print(mm.__file__); print(m.topology.numValidVerts(), 'verts', m.topology.numValidFaces(), 'faces')"
-\endcode
+```
 
 Expected output — the path is yours and ends in `mrmeshpy.pyd` on Windows, while the two counts are fixed:
-\code{.txt}
+```unparsed
 /path/to/.venv/lib/python3.12/site-packages/meshlib/mrmeshpy.so
 8 verts 12 faces
-\endcode
+```
 
 If it prints those two lines and exits `0`, the installation is working. Anything else — a traceback, a loader error, no output — means it is not: see \ref PythonSetupTroubleshooting "Troubleshooting" below. The printed path is worth a glance too, since it names the environment that actually received the package.
 
 ### Your first script
 With the install confirmed, the same call is the starting point of a real script — this one also writes the cube to a file:
-\code{.py}
+```py
 from meshlib import mrmeshpy as mm
 
 mesh = mm.makeCube()
 print(mesh.topology.numValidVerts(), "vertices", mesh.topology.numValidFaces(), "faces")
 
 mm.saveMesh(mesh, "cube.stl")
-\endcode
+```
 
 Output:
-\code{.txt}
+```unparsed
 8 vertices 12 faces
-\endcode
+```
 
 ### Troubleshooting {#PythonSetupTroubleshooting}
 

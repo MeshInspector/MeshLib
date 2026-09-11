@@ -42,9 +42,9 @@ CTM) fail.
  - Install the latest version of the [.NET SDK](https://dotnet.microsoft.com/download) from the .NET website.
  MeshLib targets `netstandard2.0`, so it sets no upper bound on your .NET version: it is compatible with .NET Framework 4.7 and higher, and with .NET 5.0 and every later version.
  - Verify your installation by running:
-\code{.cmd}
+```cmd
 dotnet --version
-\endcode
+```
 
 ### Visual Studio
 If you're using Visual Studio, make sure to install the **.NET desktop development** workload.
@@ -107,40 +107,40 @@ If you prefer to download the MeshLib package directly from the NuGet website, f
  2. **Create a Local Directory for NuGet Packages**:
   - Choose or create a directory on your system where you will store the `.nupkg` file. For example:
    - **Windows (Command Prompt)**:
-\code{.cmd}
+```cmd
 mkdir %USERPROFILE%\LocalNuGetPackages
-\endcode
+```
    - **Linux / macOS**:
-\code{.sh}
+```sh
 mkdir ~/LocalNuGetPackages
-\endcode
+```
   - Move the downloaded package to that directory **keeping its `meshlib.<version>.nupkg` file name**.
  3. **Install the MeshLib Package Locally**:
   - Use the command below to install the package:
    - **Windows (Command Prompt)**:
-\code{.cmd}
+```cmd
 dotnet add package MeshLib --source %USERPROFILE%\LocalNuGetPackages
-\endcode
+```
    - **Linux / macOS**:
-\code{.sh}
+```sh
 dotnet add package MeshLib --source ~/LocalNuGetPackages
-\endcode
+```
  4. **Alternative: Configure Local Source Globally**:
   - Add the local directory as a source using:
    - **Windows (Command Prompt)**:
-\code{.cmd}
+```cmd
 dotnet nuget add source %USERPROFILE%\LocalNuGetPackages --name LocalPackages
-\endcode
+```
    - **Linux / macOS**:
-\code{.sh}
+```sh
 dotnet nuget add source ~/LocalNuGetPackages --name LocalPackages
-\endcode
+```
   - After this, you can install the package normally without specifying `--source`.
  5. **Build and Run Your Project**:
-\code{.cmd}
+```cmd
 dotnet build
 dotnet run
-\endcode
+```
   - An untouched project prints only its template output, which says nothing about MeshLib. Continue with
   \ref MeshLibCSharpVerify "Verify Your Installation".
 
@@ -148,25 +148,25 @@ dotnet run
 To install MeshLib via the .NET CLI, follow these steps:
  1. **Create a New Project Directory**:
  \n Run the following commands to create a new directory for your project and navigate into it:
-\code{.cmd}
+```cmd
 mkdir TestProject
 cd TestProject
-\endcode
+```
  2. **Create a New .NET Console Project**:
  \n Inside the new directory, initialize a .NET console project by running:
-\code{.cmd}
+```cmd
 dotnet new console
-\endcode
+```
  3. **Install the MeshLib Package**:
  \n Use the following command to add MeshLib to your project:
-\code{.cmd}
+```cmd
 dotnet add package MeshLib
-\endcode
+```
  4. **Build and Run Your Project**:
  \n After installing MeshLib, you can build and run your project using:
-\code{.cmd}
+```cmd
 dotnet run
-\endcode
+```
  5. **Verify MeshLib Works**:
  \n `dotnet new console` writes no MeshLib code, so the output above is the same whether MeshLib loaded or not.
  Continue with \ref MeshLibCSharpVerify "Verify Your Installation".
@@ -178,24 +178,24 @@ By following these steps, you can integrate MeshLib into your project, giving yo
 
 Adding the package and building the project succeed even when the native libraries cannot be loaded, so the
 setup is only proven by a real MeshLib call. Replace the contents of `Program.cs` with:
-\code{.cs}
+```cs
 var mesh = MR.makeCube();
 Console.WriteLine($"MeshLib OK: cube has {mesh.points.size()} points, "
                 + $"{mesh.topology.numValidFaces()} faces");
 MR.MeshSave.toAnySupportedFormat(mesh, "cube.stl");
 Console.WriteLine("Wrote cube.stl");
-\endcode
+```
 
 Then run:
-\code{.cmd}
+```cmd
 dotnet run
-\endcode
+```
 
 The expected output is exactly:
-\code{.txt}
+```unparsed
 MeshLib OK: cube has 8 points, 12 faces
 Wrote cube.stl
-\endcode
+```
 
 and a `cube.stl` of about 700 bytes appears in the working directory.
 
@@ -205,9 +205,9 @@ and a `cube.stl` of about 700 bytes appears in the working directory.
 The NuGet package carries prebuilt native libraries for **all six** supported platforms, so it is large: 200+ MB Nuget download, 700+ MB copied to the build directory by default.
 
 For deployment, you might wish to publish for a single RID (single platform), which omits the unnecessary libraries for other platforms, e.g.:
-\code{.cmd}
+```cmd
 dotnet publish -r linux-x64 --self-contained false
-\endcode
+```
 
 This copies only about 180 MB of libraries to the output directory, as opposed to 700+ MB.
 
@@ -219,9 +219,9 @@ Supported platform IDs are: `win-x64`, `win-arm64`, `linux-x64`, `linux-arm64`, 
 Unity projects consume the same NuGet package via [NuGetForUnity](https://github.com/GlitchEnzo/NuGetForUnity); this setup is continuously tested with Unity 6 on Windows, Linux, and macOS. To install MeshLib into a Unity project:
  1. **Install NuGetForUnity**:
   - In the Unity editor, open **Window → Package Manager**, click **+**, select "Install package from git URL...", and enter:
-\code{.cmd}
+```cmd
 https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity
-\endcode
+```
  2. **Install MeshLib**:
   - Open **NuGet → Manage NuGet Packages**, switch to the "Online" tab, search for "MeshLib", and click "Install".
 
@@ -231,9 +231,9 @@ https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity
 The C# assembly is a thin managed wrapper over MeshLib's native libraries, so setup problems typically surface not when the package is installed or the project is built, but as one of the following exceptions on the first call into MeshLib.
 
 ### DllNotFoundException
-\code{.txt}
+```unparsed
 System.DllNotFoundException: Unable to load DLL 'MeshLibC2' or one of its dependencies: The specified module could not be found.
-\endcode
+```
 (on Linux and macOS: `Unable to load shared library 'MeshLibC2' or one of its dependencies`)
 
 The native libraries were not found at run time:
@@ -241,24 +241,24 @@ The native libraries were not found at run time:
  - Check that the native libraries reached your build output: on .NET they are placed under `runtimes/<rid>/native/` in the output directory (see \ref MeshLibCSharpPackageSize "Package Size and Native Runtimes"), on .NET Framework next to the executable (`MeshLibC2.dll` and its dependencies on Windows).
 
 ### BadImageFormatException
-\code{.txt}
+```unparsed
 System.BadImageFormatException: An attempt was made to load a program with an incorrect format. (Exception from HRESULT: 0x8007000B)
-\endcode
+```
 
 MeshLib's native libraries are 64-bit only, and this exception means your application runs as a 32-bit process. .NET Framework projects are prone to this: with the default `AnyCPU` platform and **Prefer 32-bit** checked, the application runs 32-bit even on 64-bit Windows. In the project properties (**Build** tab) set **Platform target** to `x64` or uncheck **Prefer 32-bit** — in the `.csproj` terms:
-\code{.xml}
+```xml
 <PlatformTarget>x64</PlatformTarget>
 <Prefer32Bit>false</Prefer32Bit>
-\endcode
+```
 On Windows on Arm use `ARM64` rather than `x64` there: for .NET Framework projects that value also
 selects which of the package's native runtimes gets copied.
 
 ### A rebuilt local package is ignored
 
 When installing from a local directory, NuGet extracts the package into its global cache and keeps serving the cached copy for the same version number, ignoring a rebuilt `.nupkg`. Delete the cached copy and restore again:
-\code{.sh}
+```sh
 rm -rf ~/.nuget/packages/meshlib
-\endcode
+```
 On Windows, delete `%USERPROFILE%\.nuget\packages\meshlib`.
 
 

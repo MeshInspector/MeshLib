@@ -21,7 +21,7 @@ The gettext toolchain uses three file types:
 
 Source translations live under a `locale/` directory at the project root:
 
-\code
+```unparsed
 locale/
   MyPlugin.pot                           <- template (all extractable strings)
   MRRibbonMyMenu.pot                     <- template for ribbon JSON strings
@@ -31,13 +31,13 @@ locale/
   fr/
     MyPlugin.po                          <- French translations
     MRRibbonMyMenu.po
-\endcode
+```
 
 At build time, `.po` files are compiled to `.mo` and placed in the output directory:
 
-\code
+```unparsed
 <build>/locale/<lang>/LC_MESSAGES/<Domain>.mo
-\endcode
+```
 
 For example: `build/Release/bin/locale/de/LC_MESSAGES/MyPlugin.mo`.
 
@@ -61,29 +61,29 @@ All scripts are in `scripts/gettext/`:
 
 ### Extracting C++ strings
 
-\code{.sh}
+```sh
 python3 scripts/gettext/update_translations.py \
     locale/MyPlugin.pot \
     source/MyPlugin/
-\endcode
+```
 
 This scans all `.cpp`, `.h`, and `.hpp` files and extracts strings marked by the recognized macros.
 
 ### Extracting JSON strings
 
-\code{.sh}
+```sh
 python3 scripts/gettext/update_json_translations.py \
     locale/MRRibbonMyMenu.pot \
     source/MyPlugin/MRRibbonMyMenu.items.json
-\endcode
+```
 
 ### Compiling translations
 
-\code{.sh}
+```sh
 python3 scripts/gettext/compile_translations.py \
     locale/ \
     build/Release/bin/locale/
-\endcode
+```
 
 This produces `build/Release/bin/locale/<lang>/LC_MESSAGES/<Domain>.mo` for every `.po` found.
 
@@ -91,7 +91,7 @@ This produces `build/Release/bin/locale/<lang>/LC_MESSAGES/<Domain>.mo` for ever
 
 `cmake/Modules/I18nHelpers.cmake` provides the `mr_add_translations()` function:
 
-\code{.cmake}
+```cmake
 include(I18nHelpers)
 
 mr_add_translations(myplugin_translations
@@ -104,7 +104,7 @@ mr_add_translations(myplugin_translations
 if(TARGET myplugin_translations)
   add_dependencies(MyApp myplugin_translations)
 endif()
-\endcode
+```
 
 The function:
 1. Finds `msgfmt` (respects `GETTEXT_ROOT` / `$ENV{GETTEXT_ROOT}`).
@@ -120,7 +120,7 @@ If `msgfmt` is not found, the function silently does nothing and no target is cr
 `source/CompileTranslations.targets` provides an equivalent build-time `.po` → `.mo` compilation step for Visual Studio projects.
 Import the targets file and declare one or more `TranslationLocaleDir` items pointing at your `locale/` root directories:
 
-\code{.xml}
+```xml
 <Project>
   <!-- Tell CompileTranslations where your .po files live. -->
   <ItemGroup>
@@ -129,7 +129,7 @@ Import the targets file and declare one or more `TranslationLocaleDir` items poi
 
   <Import Project="$(MeshLibDir)\source\CompileTranslations.targets" />
 </Project>
-\endcode
+```
 
 MeshLib's own `common.props` already adds `$(MeshLibDir)\locale` to `TranslationLocaleDir`, so projects that import `common.props` inherit MeshLib's translations automatically.
 
@@ -155,13 +155,13 @@ The initial locale is `"en"` (i.e. no translations applied).
 
 Call `addDomain()` once and use a returned value from `findDomain()`, before any translations from that domain are needed:
 
-\code{.cpp}
+```cpp
 #include <MRViewer/MRLocale.h>
 
 MR::Locale::addDomain( "MyPlugin" );
 
 static const int kMyDomainId = MR::Locale::findDomain( "MyPlugin" );
-\endcode
+```
 
 The returned integer is stable for the process lifetime. You can pass it to `translate()` via `MR::Locale::Domain{ kMyDomainId }`.
 
@@ -169,39 +169,39 @@ The returned integer is stable for the process lifetime. You can pass it to `tra
 
 If your plugin stores `.mo` files outside the standard resources directory, register the path before any UI is shown:
 
-\code{.cpp}
+```cpp
 MR::Locale::addCatalogPath( myPlugin.resourceDir() / "locale" );
-\endcode
+```
 
 Paths are deduplicated. Every call to `addCatalogPath` or `addDomain` regenerates the active locale object, so new catalogs are available immediately.
 
 ## Switching locale at runtime
 
-\code{.cpp}
+```cpp
 MR::Locale::set( "ko" );   // switch to Korean
 MR::Locale::set( "en" );   // back to English
-\endcode
+```
 
 `set()` fires the `onChanged` signal synchronously before returning.
 
 ## Reacting to locale changes
 
-\code{.cpp}
+```cpp
 boost::signals2::connection conn = MR::Locale::onChanged( [&]( const std::string& localeName )
 {
     // rebuild cached translated strings, tooltips, etc.
     rebuildUI();
 } );
-\endcode
+```
 
 ## Defining human-readable locale names
 
 Many common languages and regions already have a pre-loaded human-readable name provided by CLDR.
 If your locale is not in the list, you can add it in runtime.
 
-\code{.cpp}
+```cpp
 MR::Locale::setDisplayName( "my_variant", "My Language (Special)" );
-\endcode
+```
 
 # Translation functions and macros {#I18nAPI}
 
@@ -216,7 +216,7 @@ All macros are defined in `MRViewer/MRI18n.h`, except `_t`, which is in `MRMesh/
 
 \warning `_tr()` returns a pointer into a **temporary** `std::string` that is destroyed at the end of the full expression. Always consume `_tr()` in the same expression, or use `s_tr()` / `MR::Locale::translate()` to store the result.
 
-\code{.cpp}
+```cpp
 // CORRECT: consumed in the same expression
 UI::button( _tr( "Save" ), size );
 ImGui::Text( "%s", _tr( "Label" ) );
@@ -228,13 +228,13 @@ UI::button( label, size );              // undefined behavior
 // CORRECT: store as std::string
 const auto label = s_tr( "Save" );
 UI::button( label.c_str(), size );
-\endcode
+```
 
 ## Direct translate functions
 
 `MR::Locale::translate()` accepts an optional `Domain` parameter:
 
-\code{.cpp}
+```cpp
 // simple message (default MeshLib domain)
 std::string t = MR::Locale::translate( "Open" );
 
@@ -250,13 +250,13 @@ std::string t = MR::Locale::translate( "%d item", "%d items", count );
 // batch translation for combo lists
 auto items = MR::Locale::translateAll( kModeNames );
 auto items = MR::Locale::translateAll( "context", kModeNames );
-\endcode
+```
 
 ## Static arrays and deferred translation
 
 Mark strings with `_t()` at declaration time so `xgettext` extracts them, then translate at display time:
 
-\code{.cpp}
+```cpp
 // declaration: _t() is a no-op, strings are stored untranslated
 static const std::vector<std::string> kModeNames {
     _t( "Append" ),
@@ -265,25 +265,25 @@ static const std::vector<std::string> kModeNames {
 
 // display: translate on every frame
 UI::combo( _tr( "Mode" ), &idx, MR::Locale::translateAll( kModeNames ) );
-\endcode
+```
 
 ## Context disambiguation
 
 When the same English string has different meanings, use the context overload:
 
-\code{.cpp}
+```cpp
 // "View" as a noun (saved camera view) vs. verb (to view something)
 ImGui::Text( "%s", _tr( "Camera", "View" ) );
 ImGui::Text( "%s", _tr( "Action", "View" ) );
-\endcode
+```
 
 In the `.po` file these appear as separate entries with different `msgctxt` values.
 
 ## Plural forms
 
-\code{.cpp}
+```cpp
 auto label = MR::Locale::translate( "%d item", "%d items", count );
-\endcode
+```
 
 The correct form is selected by Boost.Locale based on the `Plural-Forms:` rule in the `.po` header.
 
@@ -292,10 +292,10 @@ The correct form is selected by Boost.Locale based on the `Plural-Forms:` rule i
 Place a `// TRANSLATORS:` comment on the line immediately before a translatable string to give translators context.
 `xgettext` picks these up and includes them as `#.` comment lines in the `.pot` file:
 
-\code{.cpp}
+```cpp
 // TRANSLATORS: Shown when the mesh has no faces after repair
 ImGui::Text( "%s", _tr( "Empty result" ) );
-\endcode
+```
 
 ## Custom header file for your domain {#I18nCustomHeader}
 
@@ -326,7 +326,7 @@ Each entry in the `"Items"` array may contain:
 - **"Caption"** - the display label (falls back to **"Name"** if absent).
 - **"Tooltip"** - the tooltip text.
 
-\code{.json}
+```json
 {
   "Items": [
     {
@@ -336,7 +336,7 @@ Each entry in the `"Items"` array may contain:
     }
   ]
 }
-\endcode
+```
 
 See \ref ExamplePluginOverview for a complete plugin JSON example.
 
@@ -344,7 +344,7 @@ See \ref ExamplePluginOverview for a complete plugin JSON example.
 
 Tab names in the `"Tabs"` array are extracted with the context `"Tab name"`:
 
-\code{.json}
+```json
 {
   "Order": 10,
   "LibName": "MyPlugin",
@@ -355,7 +355,7 @@ Tab names in the `"Tabs"` array are extracted with the context `"Tab name"`:
     }
   ]
 }
-\endcode
+```
 
 ## Domain auto-registration
 
@@ -369,11 +369,11 @@ This means ribbon menu strings are translated from their own domain catalog, sep
 
 Run `update_json_translations.py` for each JSON pair:
 
-\code{.sh}
+```sh
 python3 scripts/gettext/update_json_translations.py \
     locale/MRRibbonMyMenu.pot \
     source/MyPlugin/MRRibbonMyMenu.items.json
-\endcode
+```
 
 The script extracts `"Caption"` (or `"Name"`) and `"Tooltip"` from `.items.json`, and tab `"Name"` fields
 (with context `"Tab name"`) from the matching `.ui.json`.

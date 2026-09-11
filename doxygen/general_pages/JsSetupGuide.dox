@@ -36,42 +36,42 @@ The examples below use `@meshinspector/meshlib`. To use the multi-threaded build
 ## Installation
 ### Installation via npm
 Install the package from npm and enable ES module support in your project:
-\code{.sh}
+```sh
 npm install @meshinspector/meshlib
 npm pkg set type=module
-\endcode
+```
 
 ### Use from CDN
 In the browser you can skip npm entirely and import the module directly:
-\code{.js}
+```js
 // latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
 // or pin a release
 import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
-\endcode
+```
 
 #### Multi-Threaded Build
 The multi-threaded build cannot be imported straight from the CDN, because the browser refuses to run a worker script from another origin, so pass the fetched module to the factory as a `Blob` and its worker pool starts from a same-origin `blob:` URL:
-\code{.js}
+```js
 const url = 'https://js.meshlib.io/meshlib-mt/meshlib-mt.mjs';
 
 const { default: createMeshLib } = await import( url );
 const blob = new Blob( [ await ( await fetch( url ) ).text() ], { type: 'text/javascript' } );
 
 const ml = await createMeshLib( { mainScriptUrlOrBlob: blob } );
-\endcode
+```
 
 In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
 
 ### Bundlers
 Vite 8 and webpack 5 resolve `meshlib.wasm` from the module and emit it as an asset, so a plain `import` needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL and hand it to the loader via `locateFile`:
-\code{.js}
+```js
 import createMeshLib from '@meshinspector/meshlib';
 import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
 
 const ml = await createMeshLib( { locateFile: () => wasmUrl } );
-\endcode
+```
 
 In the browser the multi-threaded build additionally requires the page to be \ref JsMtCrossOriginIsolation "cross-origin isolated".
 
@@ -84,25 +84,25 @@ Two consequences for a browser application:
  - `npm install` unpacks about 21 MB, because the browser and the Node.js wasm ship side by side in one package. Only one of them ever reaches the browser; the rest is bundler input, not payload.
 
 If the geometry is not needed on first paint, load the module lazily instead of at the top level, so the wasm download does not block startup:
-\code{.js}
+```js
 // load MeshLib only when the user actually needs geometry
 const { default: createMeshLib } = await import('@meshinspector/meshlib');
 const ml = await createMeshLib();
-\endcode
+```
 
 ## Cross-Origin Isolation for the Multi-Threaded Build in the Browser {#JsMtCrossOriginIsolation}
 This section applies to browsers only. In Node.js the multi-threaded build needs no headers, flags, or extra configuration.
 
 The multi-threaded package `@meshinspector/meshlib-mt` relies on `SharedArrayBuffer`, which browsers only enable on **cross-origin isolated** pages. The server that serves the page loading the module must send these headers:
-\code{.txt}
+```unparsed
 Cross-Origin-Opener-Policy: same-origin
 Cross-Origin-Embedder-Policy: require-corp
-\endcode
+```
 
 Without them `crossOriginIsolated` is `false`, `SharedArrayBuffer` is unavailable, and `createMeshLib()` never resolves.
 
 For a Vite dev server, set the headers in `vite.config.js` (whatever hosts the production build must send them too; `vite-plugin-cross-origin-isolation` can stamp them for `vite preview`):
-\code{.js}
+```js
 // vite.config.js
 export default {
   server: {
@@ -112,7 +112,7 @@ export default {
     },
   },
 };
-\endcode
+```
 
 Where you cannot set response headers at all — GitHub Pages and similar static hosting — the usual workaround is a `coi-serviceworker`-style shim: a service worker that re-serves the page with the two headers and reloads it once. MeshLib's own [interactive demo](https://demo.meshlib.io/) is hosted exactly this way.
 
@@ -120,7 +120,7 @@ So on a page that is not cross-origin isolated you have three options: send the 
 
 ## Getting Started: Your First Example
 The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:
-\code{.js}
+```js
 import createMeshLib from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
@@ -140,7 +140,7 @@ using tris = ml.Triangulation.fromArray(indices);
 using mesh = ml.Mesh.fromTriangles(coords, tris);
 
 console.log('volume =', mesh.volume()); // ~8
-\endcode
+```
 
 \note This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in \ref MeshLibJsPayloadSize "Payload Size".
 
@@ -148,40 +148,40 @@ console.log('volume =', mesh.volume()); // ~8
 
 ## TypeScript
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with minimal setup:
-\code{.ts}
+```ts
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
 const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 const { valid, distSq } = ml.findProjection(point, mesh);
 mesh.delete();
-\endcode
+```
 
 ## Memory Management {#JsMemoryManagement}
 Values returned from the API (meshes, bit sets, settings, result objects, and so on) hold WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one must be freed explicitly.
 
 The preferred way is JavaScript's explicit resource management: declare a handle with [`using`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using) and it is freed automatically when its scope ends, even if an exception is thrown.
-\code{.js}
+```js
 using mesh = ml.Mesh.fromTriangles(coords, tris);
 // ... use mesh; it is freed at the end of this scope
-\endcode
+```
 
 When the number of handles is dynamic (for example built in a loop), collect them in a [`DisposableStack`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DisposableStack), which frees everything it holds, in reverse order, at the end of the scope:
-\code{.js}
+```js
 using stack = new DisposableStack();
 for (const path of inputPaths) {
   const cloud = stack.use(ml.PointsLoad.fromAnySupportedFormat(path));
   // ... use cloud
 }
 // every handle passed to stack.use(...) is freed here
-\endcode
+```
 
 `using` and `DisposableStack` are part of JavaScript's Explicit Resource Management, available in Node.js 24+ and current browsers. On older runtimes and browsers, call `.delete()` on each object when you are done instead:
-\code{.js}
+```js
 const mesh = ml.Mesh.fromTriangles(coords, tris);
 // ... use mesh
 mesh.delete();
-\endcode
+```
 
 ## Try Interactive MeshLib Examples
 You can check how MeshLib works in a browser environment with live interactive examples: https://demo.meshlib.io/

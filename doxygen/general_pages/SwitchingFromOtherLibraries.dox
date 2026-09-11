@@ -18,7 +18,7 @@ Every C++ snippet has a one-to-one equivalent in our Python bindings.
 ## Boolean union of two triangle meshes
 
 CGAL:
-\code{.cpp}
+```cpp
 #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
 #include <CGAL/Surface_mesh.h>
 #include <CGAL/Polygon_mesh_processing/corefinement.h>
@@ -31,10 +31,10 @@ PMP::IO::read_polygon_mesh("a.off", a);
 PMP::IO::read_polygon_mesh("b.off", b);
 PMP::corefine_and_compute_union(a, b, out);
 CGAL::IO::write_polygon_mesh("out.off", out);
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 #include <MRMesh/MRMeshBoolean.h>
@@ -43,12 +43,12 @@ auto a = MR::MeshLoad::fromAnySupportedFormat("a.off").value();
 auto b = MR::MeshLoad::fromAnySupportedFormat("b.off").value();
 auto res = MR::boolean(a, b, MR::BooleanOperation::Union);
 MR::MeshSave::toAnySupportedFormat(res.mesh, "out.off");
-\endcode
+```
 
 ## Connected components of a mesh
 
 CGAL:
-\code{.cpp}
+```cpp
 #include <CGAL/Polygon_mesh_processing/connected_components.h>
 namespace PMP = CGAL::Polygon_mesh_processing;
 using face_descriptor = boost::graph_traits<Mesh>::face_descriptor;
@@ -56,22 +56,22 @@ using face_descriptor = boost::graph_traits<Mesh>::face_descriptor;
 auto fccmap = mesh.add_property_map<face_descriptor, std::size_t>("f:CC").first;
 std::size_t n = PMP::connected_components(mesh, fccmap);
 // fccmap[f] = component id
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRMeshComponents.h>
 
 auto [labels, n] = MR::MeshComponents::getAllComponentsMap(mesh);
 // labels[face] = component id
-\endcode
+```
 
 # libigl
 
 ## Decimate a mesh to half its faces
 
 libigl:
-\code{.cpp}
+```cpp
 #include <igl/read_triangle_mesh.h>
 #include <igl/decimate.h>
 
@@ -80,10 +80,10 @@ Eigen::MatrixXi F, G;
 Eigen::VectorXi J, I;
 igl::read_triangle_mesh("in.obj", V, F);
 igl::decimate(V, F, F.rows() / 2, U, G, J, I);
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshDecimate.h>
@@ -92,35 +92,35 @@ auto mesh = MR::MeshLoad::fromAnySupportedFormat("in.obj").value();
 MR::DecimateSettings s;
 s.maxDeletedFaces = int(mesh.topology.numValidFaces() / 2);
 MR::decimateMesh(mesh, s);
-\endcode
+```
 
 ## Signed distance from a point to a mesh
 
 libigl:
-\code{.cpp}
+```cpp
 #include <igl/signed_distance.h>
 
 Eigen::VectorXd S;
 Eigen::VectorXi I;
 Eigen::MatrixXd C, N;
 igl::signed_distance(P, V, F, igl::SIGNED_DISTANCE_TYPE_PSEUDONORMAL, S, I, C, N);
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRMesh.h>
 
 auto sd = MR::findSignedDistance(point, mesh);
 float dist = sd->dist;
-\endcode
+```
 
 # Open3D
 
 ## Point-to-point ICP registration
 
 Open3D:
-\code{.cpp}
+```cpp
 #include <open3d/Open3D.h>
 using namespace open3d;
 
@@ -131,10 +131,10 @@ auto result = pipelines::registration::RegistrationICP(
     Eigen::Matrix4d::Identity(),
     pipelines::registration::TransformationEstimationPointToPoint());
 Eigen::Matrix4d xf = result.transformation_;
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRPointsLoad.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRICP.h>
@@ -143,12 +143,12 @@ auto src = MR::PointsLoad::fromAnySupportedFormat("src.ply").value();
 auto tgt = MR::PointsLoad::fromAnySupportedFormat("tgt.ply").value();
 MR::ICP icp( {src}, {tgt}, MR::AffineXf3f{}, MR::AffineXf3f{}, /*samplingVoxel=*/0.05f );
 auto xf = icp.calculateTransformation();
-\endcode
+```
 
 ## Point cloud to mesh (surface reconstruction)
 
 Open3D (Ball Pivoting):
-\code{.cpp}
+```cpp
 #include <open3d/Open3D.h>
 using namespace open3d;
 
@@ -156,10 +156,10 @@ auto pcd = io::CreatePointCloudFromFile("cloud.ply");
 pcd->EstimateNormals();
 std::vector<double> radii = {0.005, 0.01, 0.02, 0.04};
 auto mesh = geometry::TriangleMesh::CreateFromPointCloudBallPivoting(*pcd, radii);
-\endcode
+```
 
 MeshLib (voxel fusion):
-\code{.cpp}
+```cpp
 #include <MRMesh/MRPointsLoad.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRBox.h>
@@ -169,14 +169,14 @@ auto cloud = MR::PointsLoad::fromAnySupportedFormat("cloud.ply").value();
 MR::PointsToMeshParameters p;
 p.voxelSize = cloud.computeBoundingBox().diagonal() * 1e-2f;
 MR::Mesh mesh = MR::pointsToMeshFusion(cloud, p).value();
-\endcode
+```
 
 # PCL
 
 ## Voxel-grid downsampling of a point cloud
 
 PCL:
-\code{.cpp}
+```cpp
 #include <pcl/io/pcd_io.h>
 #include <pcl/filters/voxel_grid.h>
 
@@ -187,10 +187,10 @@ vg.setInputCloud(cloud);
 vg.setLeafSize(0.05f, 0.05f, 0.05f);
 pcl::PointCloud<pcl::PointXYZ>::Ptr out(new pcl::PointCloud<pcl::PointXYZ>);
 vg.filter(*out);
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRPointsLoad.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRUniformSampling.h>
@@ -200,12 +200,12 @@ auto cloud = MR::PointsLoad::fromAnySupportedFormat("cloud.ply").value();
 MR::UniformSamplingSettings s;
 s.distance = 0.05f;
 MR::PointCloud out = MR::makeUniformSampledCloud(cloud, s).value();
-\endcode
+```
 
 ## Estimate point-cloud normals
 
 PCL:
-\code{.cpp}
+```cpp
 #include <pcl/features/normal_3d.h>
 
 pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
@@ -215,15 +215,15 @@ ne.setSearchMethod(tree);
 ne.setKSearch(20);
 pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
 ne.compute(*normals);
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRPointCloudMakeNormals.h>
 
 auto normals = MR::makeNormals(cloud, /*avgNeighborhoodSize=*/20);
 cloud.normals = normals;
-\endcode
+```
 
 # VTK
 
@@ -233,7 +233,7 @@ In Python the bridge is even shorter: vtkPolyData arrays go straight into MeshLi
 ## Decimate a mesh
 
 VTK:
-\code{.cpp}
+```cpp
 #include <vtkPolyData.h>
 #include <vtkPolyDataReader.h>
 #include <vtkDecimatePro.h>
@@ -248,10 +248,10 @@ dec->SetInputData(reader->GetOutput());
 dec->SetTargetReduction(0.5);
 dec->Update();
 vtkPolyData* out = dec->GetOutput();
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshDecimate.h>
@@ -261,12 +261,12 @@ auto mesh = MR::MeshLoad::fromAnySupportedFormat("in.stl").value();
 MR::DecimateSettings s;
 s.maxDeletedFaces = int(mesh.topology.numValidFaces() / 2);
 MR::decimateMesh(mesh, s);
-\endcode
+```
 
 ## Boolean union of two meshes
 
 VTK:
-\code{.cpp}
+```cpp
 #include <vtkBooleanOperationPolyDataFilter.h>
 #include <vtkPolyDataReader.h>
 #include <vtkSmartPointer.h>
@@ -280,10 +280,10 @@ boolOp->SetInputData(0, ra->GetOutput());
 boolOp->SetInputData(1, rb->GetOutput());
 boolOp->Update();
 vtkPolyData* out = boolOp->GetOutput();
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshBoolean.h>
 
@@ -292,12 +292,12 @@ auto a = MR::MeshLoad::fromAnySupportedFormat("a.stl").value();
 auto b = MR::MeshLoad::fromAnySupportedFormat("b.stl").value();
 auto res = MR::boolean(a, b, MR::BooleanOperation::Union);
 MR::Mesh out = res.mesh;
-\endcode
+```
 
 ## Read and write mesh files
 
 VTK:
-\code{.cpp}
+```cpp
 #include <vtkSTLReader.h>
 #include <vtkOBJWriter.h>
 #include <vtkSmartPointer.h>
@@ -310,21 +310,21 @@ auto writer = vtkSmartPointer<vtkOBJWriter>::New();
 writer->SetFileName("out.obj");
 writer->SetInputData(reader->GetOutput());
 writer->Write();
-\endcode
+```
 
 MeshLib:
-\code{.cpp}
+```cpp
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshSave.h>
 
 auto mesh = MR::MeshLoad::fromAnySupportedFormat("in.stl").value();
 MR::MeshSave::toAnySupportedFormat(mesh, "out.obj");
-\endcode
+```
 
 ## Moving data in memory (Python)
 
 In Python no files are needed: vtkPolyData arrays go straight into MeshLib via numpy and back.
-\code{.py}
+```py
 from vtk.util.numpy_support import vtk_to_numpy
 from meshlib import mrmeshpy, mrmeshnumpy
 
@@ -338,7 +338,7 @@ mesh = mrmeshnumpy.meshFromFacesVerts(faces, verts)
 # MeshLib -> numpy (rebuild vtkPolyData with numpy_to_vtk)
 out_verts = mrmeshnumpy.getNumpyVerts(mesh)
 out_faces = mrmeshnumpy.getNumpyFaces(mesh.topology)
-\endcode
+```
 
 # Missing your case?
 

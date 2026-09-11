@@ -119,9 +119,7 @@ Expected<DeviceInfo> getDeviceInfo()
             // the runtime blames the driver whatever the reason, so ask the driver
             // whether this card is supported at all before telling anyone to update
             const auto dev = queryDriverApi();
-            if ( !dev )
-                spdlog::info( "CUDA driver API unavailable, cannot check compute capability: {}", dev.error() );
-            else if ( computeTooOldForRuntime( runtimeVersion, dev->computeMajor, dev->computeMinor ) )
+            if ( dev && computeTooOldForRuntime( runtimeVersion, dev->computeMajor, dev->computeMinor ) )
             {
                 return MR::unexpected( fmt::format(
                     "NVIDIA GPU error: {} has compute capability {}.{}, dropped by CUDA {}; no driver update will help",
@@ -130,6 +128,8 @@ Expected<DeviceInfo> getDeviceInfo()
             }
             auto err = ( code != cudaSuccess ) ? MR::Cuda::getError( code ) : "NVIDIA GPU error: no capable device found";
             err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );
+            if ( !dev )
+                err += fmt::format( "; compute capability unknown: {}", dev.error() );
             return MR::unexpected( err );
         }
     }

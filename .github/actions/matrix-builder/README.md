@@ -304,3 +304,6 @@ stdin and the rules in `--rules`; the script appends the `matrix` output to
   - `action.yml` — action metadata (inputs, outputs) and the step above.
   - `matrix_builder.py` — the rules engine and the script entry point. Read
     this for the canonical semantics.
+  - `tests/test_matrix_builder.py` — `unittest` suite for the engine, the
+    script's command line, and the step body run through `bash` and `yq`.
+    Run from this directory: `python3 -m unittest discover -s tests`.

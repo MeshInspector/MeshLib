@@ -31,6 +31,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          sparse-checkout: scripts/devops/collect_ci_stats.py
+          sparse-checkout-cone-mode: false
+          filter: blob:none
 
       - name: Download runners' system stats
         uses: actions/download-artifact@v8

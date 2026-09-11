@@ -11,7 +11,7 @@ It covers all the prerequisites and setup steps for each platform, making it eas
 When you are done, confirm the result with \ref CppSetupVerify "Verify your setup" — two of its three checks need no graphical session and report failure through their exit status.
 If a step fails, see \ref CppSetupTroubleshooting "Troubleshooting" at the end of this page.
 
-\subsection CppSetupPrerequisites Prerequisites
+## Prerequisites {#CppSetupPrerequisites}
 
 ### Compiler and language standard
 
@@ -24,7 +24,7 @@ MeshLib uses C++20 standard and is tested to be compiled with:
 
 Integrating MeshLib with CMake needs CMake 3.18 or newer. See \ref MeshLibCmakeSetupGuide "the CMake Setup Guide" for the full `CMakeLists.txt`.
 
-\subsection CppSetupWindows Windows
+## Windows {#CppSetupWindows}
 > [!NOTE]
 > MeshLib for Windows is distributed for **x64** and **Arm64**: set the platform of your project to `x64` or `ARM64`.
 > A 32-bit (`Win32`) build is not supported and fails while compiling `MRMesh/MRId.h` with
@@ -158,7 +158,7 @@ cd vcpkg
  7. **Verify the build**
   - Run the checks in \ref CppSetupVerify "Verify your setup": `install\app\Release\meshconv.exe --help` (headless, exit status is the signal) and `install\app\Release\MeshViewer.exe` (interactive).
 
-\subsection CppSetupLinux Linux
+## Linux {#CppSetupLinux}
 
 ### Installing the release build
  1. **Download the Package for Your Distribution and CPU**
@@ -234,7 +234,7 @@ meshconv --help
  6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
  <br/> Examples of integration with CMake can be found in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) on GitHub.
 
-\subsection CppSetupMacOS macOS
+## macOS {#CppSetupMacOS}
 
 ### Installing the release build
  1. **Download the Installer**
@@ -295,7 +295,7 @@ cd MeshLib
 We suggest starting with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave), which demonstrates how to work with mesh files programmatically.
  6. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
 
-\subsection CppSetupWASM Building WebAssembly with MeshLib Using Emscripten
+## Building WebAssembly with MeshLib Using Emscripten {#CppSetupWASM}
 
 This guide will help you build WebAssembly (WASM) using MeshLib and Emscripten. Please follow the instructions step by step.
 
@@ -433,7 +433,7 @@ if __name__ == '__main__':
   - Open your browser and go to: `http://127.0.0.1:8000`
   - Ensure headers are set correctly for multithreading. Check the browser console for errors if needed.
 
-\subsection CppSetupVerify Verify your setup
+## Verify your setup {#CppSetupVerify}
 
 Two of the three checks below need no graphical session and report failure through their exit status — use those on a server, in a container, in CI or from a coding agent.
 
@@ -453,7 +453,7 @@ It prints `verts=8 faces=12`, writes a 684-byte `cube.stl` next to the executabl
 
 **3. Open `MeshViewer`** — the interactive check, and the only one that **requires a graphical session**. Without one it logs `X11: The DISPLAY environment variable is missing` and `glfwInit failed`. Its exit status is not a dependable success signal (`1` on the Ubuntu package, reported as `0` on other builds), so never gate an automated check on it — use check 1 or 2 for that.
 
-\subsection CppSetupTroubleshooting Troubleshooting
+## Troubleshooting {#CppSetupTroubleshooting}
 
 Failures most often hit while following the steps above, with the message each one actually produces.
 

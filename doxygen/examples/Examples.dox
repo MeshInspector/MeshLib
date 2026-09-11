@@ -8,11 +8,11 @@ This page contains some examples of using MeshLib
 
 A number of these operations also run interactively in the browser: see the [live demo](https://demo.meshlib.io/).
 
-\subsection CppApplication C++ Application Based on MeshLib
+## C++ Application Based on MeshLib {#CppApplication}
 
  - \ref BasedApplication
 
-\subsection GeneralExamples General Samples
+## General Samples {#GeneralExamples}
 
  - \ref ExampleMeshLoadSave
  - \ref ExampleMeshExport
@@ -40,13 +40,13 @@ A number of these operations also run interactively in the browser: see the [liv
  - \ref ExampleFusion
  - \ref ExampleMeshFromText
 
-\subsection Collisions Collisions
+## Collisions {#Collisions}
 
  - \ref ExampleDetectCollisions
  - \ref ExampleDetectCollisionsPrecise
  - \ref ExampleDetectSelfIntersections
 
-\subsection PythonSpecificExamples Python Specific Samples
+## Python Specific Samples {#PythonSpecificExamples}
 
  - \ref ExampleViewer
  - \ref ExampleViewerVolumeRender

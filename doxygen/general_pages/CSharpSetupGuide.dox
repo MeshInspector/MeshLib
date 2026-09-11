@@ -1,7 +1,8 @@
 /**
 \page MeshLibCSharpSetupGuide Integrating MeshLib with C#
 
-\section UsingMeshLibwithCSharp Using MeshLib with C#
+Using MeshLib with C# {#UsingMeshLibwithCSharp}
+===============================================
 
 \tableofcontents
 

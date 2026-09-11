@@ -23,7 +23,7 @@ To actually build a plugin, see:
 - \ref FirstPluginTutorial — step-by-step Visual Studio walkthrough for your first "Hello World" plugin.
 - \ref ExamplePluginOverview — a fully-fledged C++ sample with CMake, source, JSON and icons.
 
-\section HowtoAddPluginOverview_TrustModel Trust & safety
+# Trust & safety {#HowtoAddPluginOverview_TrustModel}
 
 A plugin is **native code** that is dynamically loaded into the host process and runs with the **same privileges as MeshInspector itself**: it can read and write the user's files, open network connections, access cameras and microphones, and call any system API. There is no sandbox.
 
@@ -135,7 +135,7 @@ sudo codesign --force --deep --sign - /Applications/MeshInspector.app
 > [!WARNING]
 > Only do this with a plugin from a source you trust. A malicious `.dylib` placed in `/Applications/MeshInspector.app/Contents/Frameworks/` runs every time anyone on the machine launches MeshInspector.
 
-\section HowtoAddPluginOverview_VerifyInstall Verifying the install
+# Verifying the install {#HowtoAddPluginOverview_VerifyInstall}
 
 Launch the host application and inspect the log file:
 
@@ -159,7 +159,7 @@ A successful install shows two lines per plugin:
 
 **Plugin loads but no items show** — your `LibName` in `*.ui.json` does not match the produced library file name (without the `lib` prefix and `.dylib`/`.so`/`.dll` suffix). For `libMyPlugin.dylib`, `LibName` must be `MyPlugin`.
 
-\section HowtoAddPluginOverview_Uninstall Uninstall
+# Uninstall {#HowtoAddPluginOverview_Uninstall}
 
 Quit the host, then delete the three sets of files you copied during install. Example for the macOS user-clone case:
 
@@ -174,7 +174,7 @@ For the macOS option B install, the same three `rm` commands prefixed with `sudo
 
 For Windows and Linux, delete the same three sets of files from the install directory you copied them to.
 
-\section HowtoAddPluginOverview_VersionCompatibility Version compatibility
+# Version compatibility {#HowtoAddPluginOverview_VersionCompatibility}
 
 A plugin is ABI-coupled to the MeshLib version it was compiled against. Mismatched versions typically manifest as either an immediate `dlopen`/`LoadLibrary` failure or a crash inside the plugin on first call.
 

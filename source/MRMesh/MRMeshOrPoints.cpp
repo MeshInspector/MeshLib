@@ -275,7 +275,7 @@ MeshOrPoints::ProjectionResult projectWorldPointOntoObjectsRecursive(
 
         if ( !recursePred || recursePred( cur ) )
         {
-            for ( const auto& child : cur.children() )
+            for ( const auto& child : cur.constChildren() )
                 lambda( lambda, *child );
         }
     };

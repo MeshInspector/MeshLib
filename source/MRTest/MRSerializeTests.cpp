@@ -52,15 +52,15 @@ TEST( MRMesh, SerializeObjectMesh )
     EXPECT_EQ( l->obj->children().size(), 2 );
     auto m0 = dynamic_cast<const ObjectMesh*>( l->obj->children()[0].get() );
     EXPECT_TRUE( m0 );
-    EXPECT_TRUE( m0->mesh() );
-    EXPECT_EQ( m0->mesh()->topology.numValidFaces(), 12 );
+    EXPECT_TRUE( m0->meshPtr() );
+    EXPECT_EQ( m0->meshPtr()->topology.numValidFaces(), 12 );
     auto m1 = dynamic_cast<const ObjectMesh*>( l->obj->children()[1].get() );
     EXPECT_TRUE( m1 );
-    EXPECT_TRUE( m1->mesh() );
-    EXPECT_EQ( m1->mesh()->topology.numValidFaces(), 12 );
+    EXPECT_TRUE( m1->meshPtr() );
+    EXPECT_EQ( m1->meshPtr()->topology.numValidFaces(), 12 );
     // meshes are equal but not shared
-    EXPECT_EQ( *m0->mesh(), *m1->mesh() );
-    EXPECT_NE( m0->mesh(), m1->mesh() );
+    EXPECT_EQ( *m0->meshPtr(), *m1->meshPtr() );
+    EXPECT_NE( m0->meshPtr(), m1->meshPtr() );
 }
 
 // writing a scene in .mru file must not report any telemetry about the models saved inside it
@@ -72,7 +72,7 @@ TEST( MRMesh, SerializeNoTelemetry )
     om->setName( "mesh" );
     om->setMesh( std::make_shared<Mesh>( makeCube() ) );
     o.addChild( om );
-    auto cloud = std::make_shared<PointCloud>( meshToPointCloud( *om->mesh() ) );
+    auto cloud = std::make_shared<PointCloud>( meshToPointCloud( *om->meshPtr() ) );
     auto op = std::make_shared<ObjectPoints>();
     op->setName( "points" );
     op->setPointCloud( cloud );
@@ -95,7 +95,7 @@ TEST( MRMesh, SerializeNoTelemetry )
 
     // in contrast, ordinary saving of the same models is reported
     signals.clear();
-    EXPECT_TRUE( MeshSave::toAnySupportedFormat( *om->mesh(), f / "cube.ply" ).has_value() );
+    EXPECT_TRUE( MeshSave::toAnySupportedFormat( *om->meshPtr(), f / "cube.ply" ).has_value() );
     EXPECT_EQ( signals, std::vector<std::string>( { "Save *.ply VP TRI", "Save Mesh Log Tris 4" } ) );
 
     signals.clear();
@@ -128,8 +128,8 @@ TEST( MRMesh, SerializeObjectNameCutOnSpace )
     ASSERT_EQ( l->obj->children()[0]->children().size(), 1 );
     auto m = dynamic_cast<const ObjectMesh*>( l->obj->children()[0]->children()[0].get() );
     ASSERT_TRUE( m );
-    ASSERT_TRUE( m->mesh() );
-    EXPECT_EQ( m->mesh()->topology.numValidFaces(), 12 );
+    ASSERT_TRUE( m->meshPtr() );
+    EXPECT_EQ( m->meshPtr()->topology.numValidFaces(), 12 );
 }
 
 TEST( MRMesh, SerializeSharedObjectMesh )
@@ -156,14 +156,14 @@ TEST( MRMesh, SerializeSharedObjectMesh )
     EXPECT_EQ( l->obj->children().size(), 2 );
     auto m0 = dynamic_cast<const ObjectMesh*>( l->obj->children()[0].get() );
     EXPECT_TRUE( m0 );
-    EXPECT_TRUE( m0->mesh() );
-    EXPECT_EQ( m0->mesh()->topology.numValidFaces(), 12 );
+    EXPECT_TRUE( m0->meshPtr() );
+    EXPECT_EQ( m0->meshPtr()->topology.numValidFaces(), 12 );
     auto m1 = dynamic_cast<const ObjectMesh*>( l->obj->children()[1].get() );
     EXPECT_TRUE( m1 );
-    EXPECT_TRUE( m1->mesh() );
-    EXPECT_EQ( m1->mesh()->topology.numValidFaces(), 12 );
+    EXPECT_TRUE( m1->meshPtr() );
+    EXPECT_EQ( m1->meshPtr()->topology.numValidFaces(), 12 );
     // meshes are shared among two objects
-    EXPECT_EQ( m0->mesh(), m1->mesh() );
+    EXPECT_EQ( m0->meshPtr(), m1->meshPtr() );
 }
 
 } //namespace MR

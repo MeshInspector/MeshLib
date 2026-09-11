@@ -6,7 +6,7 @@ from constants import test_files_path
 
 
 def _collect_meshes(obj, out):
-    if isinstance(obj, mrmeshpy.ObjectMesh) and obj.mesh() is not None:
+    if isinstance(obj, mrmeshpy.ObjectMesh) and obj.meshPtr() is not None:
         out.append(obj)
     for child in obj.children():
         _collect_meshes(child, out)
@@ -31,7 +31,7 @@ def test_step_multibody_split():
     assert len(meshes) == 2
 
     # geometry is preserved, nothing lost or duplicated: two tetrahedra, 4 triangles each
-    assert sum(m.mesh().topology.numValidFaces() for m in meshes) == 8
+    assert sum(m.meshPtr().topology.numValidFaces() for m in meshes) == 8
 
     # placement is preserved: the bodies are not collapsed onto each other
     max_x = max(m.getWorldBox().max.x for m in meshes)

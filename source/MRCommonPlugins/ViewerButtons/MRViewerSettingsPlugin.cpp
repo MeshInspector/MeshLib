@@ -185,10 +185,10 @@ ViewerSettingsPlugin* ViewerSettingsPlugin::instance()
 {
     static ViewerSettingsPlugin* self = [&]()->ViewerSettingsPlugin*
     {
-      auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-      if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+      const auto * viewerSettings = RibbonSchemaHolder::findItem( "Viewer settings" );
+      if ( !viewerSettings )
           return nullptr;
-      return dynamic_cast< ViewerSettingsPlugin* >( viewerSettingsIt->second.item.get() );
+      return dynamic_cast< ViewerSettingsPlugin* >( viewerSettings->item.get() );
       }();
     return self;
 }
@@ -997,17 +997,16 @@ void ViewerSettingsPlugin::drawThemeSelector_()
         }
         backgroundColor_ = Vector4f( ColorTheme::getViewportColor( ColorTheme::ViewportColorsType::Background ) );
     }
-    auto item = RibbonSchemaHolder::schema().items.find( "Add custom theme" );
-    if ( item != RibbonSchemaHolder::schema().items.end() )
+    if ( const auto * item = RibbonSchemaHolder::findItem( "Add custom theme" ) )
     {
         ImGui::SameLine( 300.0f * UI::scale() );
         if ( UI::button( _tr( "Add" ),
-            item->second.item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
+            item->item->isAvailable( getAllObjectsInTree<const Object>( &SceneRoot::get(), ObjectSelectivityType::Selected ) ).empty(),
             Vector2f( 50.0f * UI::scale(), 0 ) ) )
         {
-            item->second.item->action();
+            item->item->action();
         }
-        UI::setTooltipIfHovered( _tr( item->second.tooltip.c_str(), item->second.localeDomainId ) );
+        UI::setTooltipIfHovered( _tr( item->tooltip.c_str(), item->localeDomainId ) );
     }
 }
 

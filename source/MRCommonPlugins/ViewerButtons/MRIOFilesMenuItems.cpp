@@ -134,7 +134,7 @@ Json::Value prepareJsonObjHierarchyRecursive( const MR::Object& obj )
 {
     Json::Value root;
     root["Name"] = obj.name();
-    for (const auto& child : obj.children())
+    for (const auto& child : obj.constChildren())
     {
         root["Children"].append( prepareJsonObjHierarchyRecursive( *child ) );
     }
@@ -212,10 +212,9 @@ OpenFilesMenuItem::OpenFilesMenuItem() :
     // required to be deferred, resent items store to be initialized
     CommandLoop::appendCommand( [&] ()
     {
-        auto openDirIt = RibbonSchemaHolder::schema().items.find( "Open directory" );
-        if ( openDirIt != RibbonSchemaHolder::schema().items.end() )
+        if ( const auto * openDirInfo = RibbonSchemaHolder::findItem( "Open directory" ) )
         {
-            openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirIt->second.item );
+            openDirectoryItem_ = std::dynamic_pointer_cast<OpenDirectoryMenuItem>( openDirInfo->item );
         }
         else
         {
@@ -779,7 +778,7 @@ bool SaveSelectedMenuItem::action()
     {
         std::vector<MeshSave::NamedXfMesh> objs;
         for ( auto obj : selectedMeshes )
-            objs.push_back( MeshSave::NamedXfMesh{ obj->name(),obj->worldXf(),obj->mesh() } );
+            objs.push_back( MeshSave::NamedXfMesh{ obj->name(),obj->worldXf(),obj->varMesh() } );
 
         ProgressBar::orderWithMainThreadPostProcessing( "Saving selected", [savePath, objs] ()->std::function<void()>
         {

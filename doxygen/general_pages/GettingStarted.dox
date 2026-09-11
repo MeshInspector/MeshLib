@@ -6,6 +6,8 @@ MeshLib is a powerful, open-source 3D geometry library designed for developers a
 Whether you're working in C++, Python, C#, C, or JavaScript, MeshLib offers robust tools for creating, manipulating, and analyzing 3D data, e.g. meshes, voxels, point clouds.
 This guide will help you get started with setting up MeshLib for your preferred development environment.
 
+MeshLib also runs in the browser: the [live demo](https://demo.meshlib.io/) needs no installation.
+
 ## Choose Your Setup Guide
 
 1. \ref MeshLibPythonSetupGuide "\b MeshLib \b Python \b Setup \b Guide"

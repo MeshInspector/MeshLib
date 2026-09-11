@@ -1,12 +1,13 @@
 #pragma once
 
 #include "MRObject.h"
-#include "MRMeshTexture.h"
-#include "MRVector.h"
+#include "MRBox.h"
 #include "MRColor.h"
-#include "MRIRenderObject.h"
 #include "MRUniquePtr.h"
 #include "MREnums.h"
+
+#include <optional>
+#include <typeindex>
 
 namespace MR
 {
@@ -116,9 +117,9 @@ class MRMESH_CLASS VisualObject : public Object
 public:
     MRMESH_API VisualObject();
 
-    VisualObject( VisualObject&& ) = default;
-    VisualObject& operator = ( VisualObject&& ) = default;
-    virtual ~VisualObject() = default;
+    MRMESH_API VisualObject( VisualObject&& );
+    MRMESH_API VisualObject& operator = ( VisualObject&& );
+    MRMESH_API virtual ~VisualObject();
 
     constexpr static const char* StaticTypeName() noexcept { return "VisualObject"; }
     virtual const char* typeName() const override { return StaticTypeName(); }
@@ -284,7 +285,7 @@ public:
     MRMESH_API virtual void resetColors();
 
 protected:
-    VisualObject( const VisualObject& obj ) = default;
+    MRMESH_API VisualObject( const VisualObject& obj );
 
     /// swaps this object with other
     MRMESH_API virtual void swapBase_( Object& other ) override;

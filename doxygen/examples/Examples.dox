@@ -6,6 +6,8 @@
 
 This page contains some examples of using MeshLib
 
+A number of these operations also run interactively in the browser: see the [live demo](https://demo.meshlib.io/).
+
 \subsection CppApplication C++ Application Based on MeshLib
 
  - \ref BasedApplication

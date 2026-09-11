@@ -94,7 +94,7 @@ Copy the host application to a writable folder, deploy the plugin there, and lau
 mkdir -p ~/Apps
 cp -R /Applications/MeshInspector.app ~/Apps/MI-MyPlugin     # NB: drop the .app suffix
 
-cp libMyPlugin.dylib                    ~/Apps/MI-MyPlugin/Contents/libs/
+cp libMyPlugin.dylib                    ~/Apps/MI-MyPlugin/Contents/Frameworks/
 cp MyPlugin.items.json MyPlugin.ui.json ~/Apps/MI-MyPlugin/Contents/Resources/
 cp -R resource                          ~/Apps/MI-MyPlugin/Contents/Resources/
 
@@ -114,7 +114,7 @@ xattr -dr com.apple.quarantine ~/Apps/MI-MyPlugin
 This writes directly into the notarized app bundle. **It is system-wide and breaks the bundle's code signature** — Gatekeeper may block subsequent launches or warn that the app is "damaged", and the auto-updater (Sparkle) may overwrite your plugin on the next MeshInspector update. Use this only if you understand the trade-off.
 
 \code{.sh}
-sudo cp libMyPlugin.dylib                    /Applications/MeshInspector.app/Contents/libs/
+sudo cp libMyPlugin.dylib                    /Applications/MeshInspector.app/Contents/Frameworks/
 sudo cp MyPlugin.items.json MyPlugin.ui.json /Applications/MeshInspector.app/Contents/Resources/
 sudo cp -R resource                          /Applications/MeshInspector.app/Contents/Resources/
 \endcode
@@ -124,7 +124,7 @@ If Gatekeeper subsequently refuses to launch the app, re-sign the bundle with an
 sudo codesign --force --deep --sign - /Applications/MeshInspector.app
 \endcode
 
-\warning Only do this with a plugin from a source you trust. A malicious `.dylib` placed in `/Applications/MeshInspector.app/Contents/libs/` runs every time anyone on the machine launches MeshInspector.
+\warning Only do this with a plugin from a source you trust. A malicious `.dylib` placed in `/Applications/MeshInspector.app/Contents/Frameworks/` runs every time anyone on the machine launches MeshInspector.
 
 \section HowtoAddPluginOverview_VerifyInstall Verifying the install
 
@@ -155,7 +155,7 @@ A successful install shows two lines per plugin:
 Quit the host, then delete the three sets of files you copied during install. Example for the macOS user-clone case:
 
 \code{.sh}
-rm ~/Apps/MI-MyPlugin/Contents/libs/libMyPlugin.dylib
+rm ~/Apps/MI-MyPlugin/Contents/Frameworks/libMyPlugin.dylib
 rm ~/Apps/MI-MyPlugin/Contents/Resources/MyPlugin.items.json
 rm ~/Apps/MI-MyPlugin/Contents/Resources/MyPlugin.ui.json
 rm -rf ~/Apps/MI-MyPlugin/Contents/Resources/resource     # only if you copied it

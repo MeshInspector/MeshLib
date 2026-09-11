@@ -9,6 +9,7 @@
 #include "MRDirectory.h"
 #include "MRLinesLoad.h"
 #include "MRPch/MRJson.h"
+#include "MRIRenderObject.h"
 #include <filesystem>
 
 namespace MR

@@ -16,6 +16,7 @@
 #include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRMeshTexture.h"
 
 namespace MR
 {
@@ -441,7 +442,7 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     }
 
     const auto& srcUVCoords = src.getUVCoords();
-    const auto lastVert = src.mesh()->topology.lastValidVert();
+    const auto lastVert = src.meshPtr()->topology.lastValidVert();
     const bool updateUV = lastVert < srcUVCoords.size();
 
     if ( !updateUV )

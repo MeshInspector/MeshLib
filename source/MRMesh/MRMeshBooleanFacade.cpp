@@ -7,7 +7,7 @@ namespace MR
 
 TransformedMesh MeshMeshConverter::operator() ( const ObjectMesh & obj ) const
 {
-    return TransformedMesh( *obj.mesh(), obj.xf() );
+    return TransformedMesh( *obj.meshPtr(), obj.xf() );
 }
 
 TransformedMesh & operator += ( TransformedMesh & a, const TransformedMesh& b )

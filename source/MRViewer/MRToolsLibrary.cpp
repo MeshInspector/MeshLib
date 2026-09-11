@@ -275,7 +275,7 @@ void GcodeToolsLibrary::addNewToolFromMesh_( const std::shared_ptr<ObjectMesh>& 
         return;
 
     toolMesh_ = std::dynamic_pointer_cast< ObjectMesh >( objMesh->clone() );
-    (void)MeshSave::toMrmesh( *toolMesh_->mesh(), folderPath / ( toolMesh_->name() + ".mrmesh" ) ); //TODO: process potential error
+    (void)MeshSave::toMrmesh( *toolMesh_->meshPtr(), folderPath / ( toolMesh_->name() + ".mrmesh" ) ); //TODO: process potential error
     endMillTool_.reset();
     selectedFileName_ = toolMesh_->name();
 }

@@ -100,9 +100,9 @@ std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLine
     bool hasVertColorMap = false; // least one input line has
     for ( const auto& obj : objsLines )
     {
-        if ( !obj->polyline() )
+        if ( !obj->polylinePtr() )
             continue;
-        totalVerts += obj->polyline()->topology.numValidVerts();
+        totalVerts += obj->polylinePtr()->topology.numValidVerts();
         if ( !obj->getVertsColorMap().empty() )
             hasVertColorMap = true;
     }
@@ -118,13 +118,13 @@ std::shared_ptr<ObjectLines> merge( const std::vector<std::shared_ptr<ObjectLine
 
     for ( const auto& obj : objsLines )
     {
-        if ( !obj->polyline() )
+        if ( !obj->polylinePtr() )
             continue;
 
         VertMap srcToMergeVmap;
         UndirectedEdgeBitSet validPoints;
-        validPoints.resize( obj->polyline()->topology.undirectedEdgeSize(), true );
-        line->addPartByMask( *obj->polyline(), validPoints, &srcToMergeVmap );
+        validPoints.resize( obj->polylinePtr()->topology.undirectedEdgeSize(), true );
+        line->addPartByMask( *obj->polylinePtr(), validPoints, &srcToMergeVmap );
 
         auto worldXf = obj->worldXf();
         for ( const auto& vInd : srcToMergeVmap )
@@ -160,7 +160,7 @@ std::shared_ptr<ObjectLines> cloneRegion( const std::shared_ptr<ObjectLines>& ob
     MR_TIMER;
     std::shared_ptr<Polyline3> newPolyline = std::make_shared<Polyline3>();
     VertMap src2clone;
-    newPolyline->addPartByMask( *objLines->polyline(), region, &src2clone );
+    newPolyline->addPartByMask( *objLines->polylinePtr(), region, &src2clone );
     std::shared_ptr<ObjectLines> newObj = std::make_shared<ObjectLines>();
     newObj->setFrontColor( objLines->getFrontColor( true ), true );
     newObj->setFrontColor( objLines->getFrontColor( false ), false );

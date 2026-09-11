@@ -2,6 +2,7 @@
 #include "MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRVector3.h"
+#include "MRIRenderObject.h"
 
 #include <cassert>
 

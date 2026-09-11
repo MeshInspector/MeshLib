@@ -24,7 +24,7 @@ void Viewport::recursiveDraw( const Object& obj, DepthFunction depthFunc, const 
                 ++( *numDraws );
         }
     }
-    for ( const auto& child : obj.children() )
+    for ( const auto& child : obj.constChildren() )
         recursiveDraw( *child, depthFunc, xfCopy, renderType, transparentMode, numDraws );
 }
 

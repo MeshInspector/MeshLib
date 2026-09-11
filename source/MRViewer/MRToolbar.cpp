@@ -50,11 +50,11 @@ void Toolbar::drawToolbar()
     //TODO calc if list changes
     for ( const auto& item : itemsList_ )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
             continue;
         ++itemCount;
-        if ( it->second.item->type() == RibbonItemType::ButtonWithDrop )
+        if ( itemInfo->item->type() == RibbonItemType::ButtonWithDrop )
             ++droppedItemCount;
     }
 
@@ -103,8 +103,8 @@ void Toolbar::drawToolbar()
     UI::TestEngine::pushTree( "Toolbar" );
     for ( const auto& item : itemsList_ )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Plugin \"{}\" not found!", item ); // TODO don't flood same message
@@ -112,12 +112,11 @@ void Toolbar::drawToolbar()
             continue;
         }
 
-        buttonDrawer.drawButtonItem( it->second, params );
+        buttonDrawer.drawButtonItem( *itemInfo, params );
         ImGui::SameLine();
     }
 
-    auto activeListIt = RibbonSchemaHolder::schema().items.find( "Active Plugins List" );
-    if ( activeListIt != RibbonSchemaHolder::schema().items.end() )
+    if ( const auto * activeListInfo = RibbonSchemaHolder::findItem( "Active Plugins List" ) )
     {
         ribbonMenu_->setActiveListPos( ImGui::GetCursorScreenPos() );
         CustomButtonParameters cParams;
@@ -140,7 +139,7 @@ void Toolbar::drawToolbar()
             }
             return 4;
         };
-        buttonDrawer.drawCustomButtonItem( activeListIt->second, cParams, params );
+        buttonDrawer.drawCustomButtonItem( *activeListInfo, cParams, params );
         ImGui::SameLine();
     }
 
@@ -273,8 +272,8 @@ void Toolbar::drawCustomizeModal_()
     for ( int i = 0; i < itemsListCustomize_.size(); ++i )
     {
         const auto& itemPreview = itemsListCustomize_[i];
-        auto iterItemPreview = RibbonSchemaHolder::schema().items.find( itemPreview );
-        if ( iterItemPreview == RibbonSchemaHolder::schema().items.end() )
+        const auto * iterItemPreview = RibbonSchemaHolder::findItem( itemPreview );
+        if ( !iterItemPreview )
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Plugin \"{}\" not found!", itemPreview ); // TODO don't flood same message
@@ -302,14 +301,14 @@ void Toolbar::drawCustomizeModal_()
             ImGui::SetCursorPos( { 0, 0 } );
             ImGui::SetDragDropPayload( "ToolbarItemNumber", &i, sizeof( int ) );
             const auto& item = itemsList_[i];
-            auto iterItem = RibbonSchemaHolder::schema().items.find( item );
+            const auto * iterItem = RibbonSchemaHolder::findItem( item );
             ImGui::SetCursorPos( ImVec2( 1 * UI::scale(), 1 * UI::scale() ) );
             UI::button( "##ToolbarDragDropBtnHighlight", tooltipContourSize );
             ImGui::SetCursorPos( ImVec2( 2 * UI::scale(), 2 * UI::scale() ) );
             ImGui::Button( "##ToolbarDragDropBtn", params.itemSize);
             ImGui::SetCursorPos( ImVec2( 2 * UI::scale(), 2 * UI::scale() ) );
-            if ( iterItem != RibbonSchemaHolder::schema().items.end() )
-                buttonDrawer.drawButtonIcon( iterItem->second, params );
+            if ( iterItem )
+                buttonDrawer.drawButtonIcon( *iterItem, params );
             ImGui::EndDragDropSource();
             dragDrop_ = true;
         }
@@ -351,7 +350,7 @@ void Toolbar::drawCustomizeModal_()
         auto screenPos = Vector2f( ImGui::GetCursorScreenPos() );
         dashedRect_( screenPos, screenPos + Vector2f::diagonal( params.itemSize.x - 1 * UI::scale() ), 10.f, 0.5f,
             ColorTheme::getRibbonColor( ColorTheme::RibbonColorsType::Borders ) );
-        buttonDrawer.drawButtonIcon( iterItemPreview->second, params );
+        buttonDrawer.drawButtonIcon( *iterItemPreview, params );
 
         ImGui::SameLine( 0, childWindowPadding.x + 3 * UI::scale() );
     }
@@ -554,9 +553,9 @@ void Toolbar::drawCustomizeItemsList_()
         }
 
         bool checkboxChanged = false;
-        auto schemaItem = RibbonSchemaHolder::schema().items.find( item );
-        if ( schemaItem != RibbonSchemaHolder::schema().items.end() )
-            checkboxChanged = buttonDrawer.GradientCheckboxItem( schemaItem->second, &itemInQA );
+        const auto * schemaItem = RibbonSchemaHolder::findItem( item );
+        if ( schemaItem )
+            checkboxChanged = buttonDrawer.GradientCheckboxItem( *schemaItem, &itemInQA );
         else
             checkboxChanged = UI::checkbox( item.c_str(), &itemInQA );
 

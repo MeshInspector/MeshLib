@@ -51,6 +51,10 @@ public:
     /// expands all `obj`s parents in tree and scroll scene tree window so selection becomes visible
     MRVIEWER_API void expandObjectTreeAndScroll( const Object* obj );
 
+    /// collapses every group of the scene tree during the next draw;
+    /// this is called when a scene is opened from a file, where deep hierarchies (e.g. of STEP files) would otherwise flood the tree
+    MRVIEWER_API void collapseSceneTree();
+
     /// set possibility change object order
     MRVIEWER_API void allowSceneReorder( bool allow );
 
@@ -149,10 +153,17 @@ private:
     // dragging either just started, or just stopped
     bool dragModeTrigger_{ false };
 
+    /// applies and resets collapseSceneTreeRequested_; must be called inside the scene tree window
+    void applyCollapseSceneTree_();
+
+    // see collapseSceneTree()
+    bool collapseSceneTreeRequested_ = false;
+
 protected:
     std::unordered_map<const Object*, bool> sceneOpenCommands_;
 };
 
-constexpr inline int sDefaultGroupState = 0; // 0 means closed; the other option is ImGuiTreeNodeFlags_DefaultOpen
+// ImGuiTreeNodeFlags_DefaultOpen; the value is spelled out not to include imgui.h here, see the static_assert in the .cpp
+constexpr inline int sDefaultGroupState = 1 << 5;
 
 } //namespace MR

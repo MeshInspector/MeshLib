@@ -463,6 +463,7 @@
     <ClInclude Include="MRPointsLoadSettings.h" />
     <ClInclude Include="MRScopedValue.h" />
     <ClInclude Include="MRChunkIterator.h" />
+    <ClInclude Include="MRConstChildren.h" />
     <ClInclude Include="MRTbbThreadMutex.h" />
     <ClInclude Include="MRInplaceStack.h" />
     <ClInclude Include="MROffsetVerts.h" />

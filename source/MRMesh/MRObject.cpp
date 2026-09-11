@@ -3,12 +3,16 @@
 #include "MRObjectTagEventDispatcher.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
+#include "MRBox.h"
 #include "MRHeapBytes.h"
+#include "MRphmap.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
+
+static_assert( std::forward_iterator<ConstChildren::Iterator> );
 
 namespace
 {
@@ -93,7 +97,7 @@ int collectLinks( const Object& rootObject, Obj2FirstSharedObj& links )
             // map current object to first met object
             links.insert( { node, { it->object, numFile } } );
         }
-        auto children = node->children();
+        auto children = node->constChildren();
         for ( int i = int( children.size() ) - 1; i >= 0; --i )
         {
             sceneGraphVisitedList.push( children[i].get() );
@@ -856,6 +860,11 @@ void Object::swap( Object& other )
     swapBase_( other );
     // swap signals second time to return in place
     swapSignals_( other );
+}
+
+Box3f Object::getWorldBox( ViewportId ) const
+{
+    return {}; // empty box
 }
 
 Box3f Object::getWorldTreeBox( ViewportId id ) const

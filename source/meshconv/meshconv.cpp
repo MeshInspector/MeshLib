@@ -145,11 +145,11 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
             else if ( resType != Type::Mesh )
                 return MR::unexpected( "Error: File contains objects of different types!" );
             
-            if ( !objMesh->mesh() )
+            if ( !objMesh->meshPtr() )
                 continue;
 
             MR::VertMap vmap;
-            resMeshPtr->addMesh( *objMesh->mesh(), nullptr, &vmap );
+            resMeshPtr->addMesh( *objMesh->meshPtr(), nullptr, &vmap );
 
             auto& points = resMeshPtr->points;
             const auto xf = objMesh->worldXf();
@@ -164,11 +164,11 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
             else if ( resType != Type::Lines )
                 return MR::unexpected( "Error: File contains objects of different types!" );
 
-            if ( !objLines->polyline() )
+            if ( !objLines->polylinePtr() )
                 continue;
 
             MR::VertMap vmap;
-            resLinesPtr->addPart( *objLines->polyline(), &vmap );
+            resLinesPtr->addPart( *objLines->polylinePtr(), &vmap );
 
             auto& points = resLinesPtr->points;
             const auto xf = objLines->worldXf();
@@ -183,11 +183,11 @@ MR::Expected<MR::ObjectPtr> combineObjs( const std::vector<std::shared_ptr<MR::O
             else if ( resType != Type::Points )
                 return MR::unexpected( "Error: File contains objects of different types!" );
 
-            if ( !objPoints->pointCloud() )
+            if ( !objPoints->pointCloudPtr() )
                 continue;
 
             MR::VertMap vmap;
-            resPointsPtr->addPartByMask( *objPoints->pointCloud(), objPoints->pointCloud()->validPoints, { .src2tgtVerts = &vmap } );
+            resPointsPtr->addPartByMask( *objPoints->pointCloudPtr(), objPoints->pointCloudPtr()->validPoints, { .src2tgtVerts = &vmap } );
 
             auto& points = resPointsPtr->points;
             const auto xf = objPoints->worldXf();
@@ -372,7 +372,7 @@ static int mainInternal( int argc, char **argv )
     else if ( auto tryObjLinesPtr = std::dynamic_pointer_cast<MR::ObjectLines>( firstObjPtr ) )
     {
         objLinesPtr = tryObjLinesPtr;
-        if ( !objLinesPtr->polyline() )
+        if ( !objLinesPtr->polylinePtr() )
         {
             std::cerr << "Error: polyline not found!\n";
             MC_EXIT( 1 );
@@ -381,7 +381,7 @@ static int mainInternal( int argc, char **argv )
     else if ( auto tryObjPointsPtr = std::dynamic_pointer_cast<MR::ObjectPoints>( firstObjPtr ) )
     {
         objPointsPtr = tryObjPointsPtr;
-        if ( !objPointsPtr->pointCloud() )
+        if ( !objPointsPtr->pointCloudPtr() )
         {
             std::cerr << "Error: point cloud not found!\n";
             MC_EXIT( 1 );
@@ -405,11 +405,11 @@ static int mainInternal( int argc, char **argv )
         t.restart( "SaveFile" );
         MR::Expected<void> saveRes;
         if ( objMeshPtr )
-            saveRes = MR::MeshSave::toAnySupportedFormat( *objMeshPtr->mesh(), outFilePath);
+            saveRes = MR::MeshSave::toAnySupportedFormat( *objMeshPtr->meshPtr(), outFilePath);
         else if ( objLinesPtr )
-            saveRes = MR::LinesSave::toAnySupportedFormat( *objLinesPtr->polyline(), outFilePath );
+            saveRes = MR::LinesSave::toAnySupportedFormat( *objLinesPtr->polylinePtr(), outFilePath );
         else if ( objPointsPtr )
-            saveRes = MR::PointsSave::toAnySupportedFormat( *objPointsPtr->pointCloud(), outFilePath );
+            saveRes = MR::PointsSave::toAnySupportedFormat( *objPointsPtr->pointCloudPtr(), outFilePath );
         if ( !saveRes.has_value() )
         {
             std::cerr << "File save error: " << saveRes.error() << "\n";

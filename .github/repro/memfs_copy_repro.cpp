@@ -27,6 +27,8 @@ constexpr int cFileKiB = 100;
 constexpr size_t cBallastMiB = 600;
 
 std::atomic<long long> gCopies{ 0 };
+std::atomic<bool> gStop{ false };
+int gExitCountdown = -1;
 std::chrono::steady_clock::time_point gStart;
 std::chrono::steady_clock::time_point gLastProgress;
 long long gSeen = 0;
@@ -61,12 +63,21 @@ void frame()
         emscripten_force_exit( 3 );
     }
 
+    if ( gExitCountdown > 0 )
+    {
+        if ( --gExitCountdown == 0 )
+            emscripten_force_exit( 0 );
+        return;
+    }
+
     if ( secondsSince( gStart ) >= cSeconds )
     {
         std::printf( "done: %lld copies in %d s", gSeen, cSeconds );
         std::putchar( 10 );
         std::fflush( stdout );
-        emscripten_force_exit( 0 );
+        // let both threads leave their loops first: exiting with one still running hangs
+        gStop.store( true, std::memory_order_release );
+        gExitCountdown = 60;
     }
 }
 
@@ -111,7 +122,7 @@ int main()
     std::thread( [dir]
     {
         std::ofstream log( dir / "log.txt", std::ios::binary | std::ios::app );
-        while ( log )
+        while ( log && !gStop.load( std::memory_order_acquire ) )
         {
             log << "[info] a line of about the length the application writes";
             log.put( char( 10 ) );
@@ -123,7 +134,7 @@ int main()
     {
         std::error_code workerEc;
         const auto dst = dir / "dst.bin";
-        for ( ;; )
+        while ( !gStop.load( std::memory_order_acquire ) )
         {
             std::filesystem::remove( dst, workerEc );
             std::filesystem::copy( src, dst, workerEc );

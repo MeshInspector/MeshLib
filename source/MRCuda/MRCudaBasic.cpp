@@ -7,11 +7,94 @@
 #include <MRMesh/MRVector3.h>
 #include <MRPch/MRSpdlog.h>
 
+#include <optional>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
 namespace MR
 {
 
 namespace Cuda
 {
+
+namespace
+{
+
+/// https://en.wikipedia.org/wiki/CUDA Compute Capability (CUDA SDK support vs. Microarchitecture)
+bool computeTooOldForRuntime( int runtimeVersion, int computeMajor, int computeMinor )
+{
+    if ( runtimeVersion / 1000 >= 12 && computeMajor < 5 )
+        return true;
+    if ( runtimeVersion / 1000 > 10 && ( computeMajor < 3 || ( computeMajor == 3 && computeMinor < 5 ) ) )
+        return true;
+    return false;
+}
+
+struct DriverDevice
+{
+    int computeMajor = 0;
+    int computeMinor = 0;
+    std::string name;
+};
+
+/// Asks the driver itself about device 0, bypassing the CUDA runtime.
+/// cudaGetDeviceCount() refuses outright when the driver predates the runtime, so
+/// the runtime cannot tell a merely out-of-date driver from a card that CUDA no
+/// longer supports at all; the driver API still answers in both cases.
+/// The library ships with the NVIDIA driver, so this yields nothing on HIP/AMD
+/// builds or when no driver is installed, and the caller keeps the runtime error.
+std::optional<DriverDevice> queryDriverApi()
+{
+#ifdef _WIN32
+    const auto lib = LoadLibraryA( "nvcuda.dll" );
+#else
+    const auto lib = dlopen( "libcuda.so.1", RTLD_LAZY );
+#endif
+    if ( !lib )
+        return {};
+
+    auto sym = [lib] ( const char * name )
+    {
+#ifdef _WIN32
+        return (void *)GetProcAddress( lib, name );
+#else
+        return dlsym( lib, name );
+#endif
+    };
+
+    // declared here rather than via <cuda.h>: that header is absent in HIP builds,
+    // and these entry points have never been versioned
+    const auto cuInit = (int (*)( unsigned ))sym( "cuInit" );
+    const auto cuDeviceGet = (int (*)( int *, int ))sym( "cuDeviceGet" );
+    const auto cuDeviceGetAttribute = (int (*)( int *, int, int ))sym( "cuDeviceGetAttribute" );
+    const auto cuDeviceGetName = (int (*)( char *, int, int ))sym( "cuDeviceGetName" );
+    if ( !cuInit || !cuDeviceGet || !cuDeviceGetAttribute || !cuDeviceGetName )
+        return {};
+
+    constexpr int cCudaSuccess = 0;
+    constexpr int cAttrComputeMajor = 75; // CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR
+    constexpr int cAttrComputeMinor = 76; // CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR
+
+    int dev = 0;
+    DriverDevice res;
+    if ( cuInit( 0 ) != cCudaSuccess || cuDeviceGet( &dev, 0 ) != cCudaSuccess )
+        return {};
+    if ( cuDeviceGetAttribute( &res.computeMajor, cAttrComputeMajor, dev ) != cCudaSuccess )
+        return {};
+    if ( cuDeviceGetAttribute( &res.computeMinor, cAttrComputeMinor, dev ) != cCudaSuccess )
+        return {};
+
+    char name[256] = {};
+    if ( cuDeviceGetName( name, (int)sizeof( name ) - 1, dev ) == cCudaSuccess )
+        res.name = name;
+    return res;
+}
+
+} //anonymous namespace
 
 Expected<DeviceInfo> getDeviceInfo()
 {
@@ -25,6 +108,18 @@ Expected<DeviceInfo> getDeviceInfo()
         auto code = cudaGetDeviceCount( &n );
         if ( code != cudaSuccess || n <= 0 )
         {
+            int runtimeVersion = 0;
+            cudaRuntimeGetVersion( &runtimeVersion );
+            // the runtime blames the driver whatever the reason, so ask the driver
+            // whether this card is supported at all before telling anyone to update
+            if ( const auto dev = queryDriverApi();
+                 dev && computeTooOldForRuntime( runtimeVersion, dev->computeMajor, dev->computeMinor ) )
+            {
+                return MR::unexpected( fmt::format(
+                    "NVIDIA GPU error: {} has compute capability {}.{}, dropped by CUDA {}; no driver update will help",
+                    dev->name.empty() ? "the GPU" : dev->name, dev->computeMajor, dev->computeMinor,
+                    runtimeVersion / 1000 ) );
+            }
             auto err = ( code != cudaSuccess ) ? MR::Cuda::getError( code ) : "NVIDIA GPU error: no capable device found";
             err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );
             return MR::unexpected( err );
@@ -45,10 +140,7 @@ Expected<DeviceInfo> getDeviceInfo()
 
 bool DeviceInfo::fitForComputations() const
 {
-    // according to https://en.wikipedia.org/wiki/CUDA Compute Capability (CUDA SDK support vs. Microarchitecture) table
-    if ( runtimeVersion / 1000 >= 12 && computeMajor < 5 )
-        return false;
-    if ( runtimeVersion / 1000 > 10 && ( computeMajor < 3 || ( computeMajor == 3 && computeMinor < 5 ) ) )
+    if ( computeTooOldForRuntime( runtimeVersion, computeMajor, computeMinor ) )
         return false;
 
     return runtimeVersion <= driverVersion;

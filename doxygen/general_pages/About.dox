@@ -10,26 +10,26 @@ Whether you are working in C++, Python, C#, or C, MeshLib offers a versatile, cr
 
 ## Key Features
 
- - \b 3D \b Data \b Handling: Supports meshes, voxels, and point clouds for creation, modification, and conversion.
- - \b Boolean \b Operations: Fast, highly optimized mesh and voxel-based approaches.
- - \b Mesh \b Fixing: Includes removing self-intersections, filling holes, and component separation.
- - \b Simplification \b & \b Subdivision: Optimize mesh complexity with decimation, remeshing, and subdivision.
- - \b Offsets: Multiple modes for precise surface thickness control, ideal for 3D printing and machining.
- - \b Triangulation: Accurate, fast conversion of point clouds to meshes with normal creation.
- - \b ICP: Precise mesh alignment using point-to-point and point-to-plane transformations.
- - \b Segmentation: Semi-automatic segmentation based on curvature for meshes and voxels.
- - \b Deformations: Supports Laplacian, freeform, and relax smoothing for fine mesh adjustments.
- - \b Distance \b Maps \b & \b Polylines: Generate distance maps, iso-lines, and perform projection and intersection.
+ - **3D Data Handling:** Supports meshes, voxels, and point clouds for creation, modification, and conversion.
+ - **Boolean Operations:** Fast, highly optimized mesh and voxel-based approaches.
+ - **Mesh Fixing:** Includes removing self-intersections, filling holes, and component separation.
+ - **Simplification & Subdivision:** Optimize mesh complexity with decimation, remeshing, and subdivision.
+ - **Offsets:** Multiple modes for precise surface thickness control, ideal for 3D printing and machining.
+ - **Triangulation:** Accurate, fast conversion of point clouds to meshes with normal creation.
+ - **ICP:** Precise mesh alignment using point-to-point and point-to-plane transformations.
+ - **Segmentation:** Semi-automatic segmentation based on curvature for meshes and voxels.
+ - **Deformations:** Supports Laplacian, freeform, and relax smoothing for fine mesh adjustments.
+ - **Distance Maps & Polylines:** Generate distance maps, iso-lines, and perform projection and intersection.
 
 Features illustration is available in [the features section](https://meshlib.io/features/) or in the sections of this documentation.
 
 ## Modern Applications
 
- - \b Automation, \b AI, \b and \b Robotics. Essential for 3D scanning in robotics, AI, and autonomous systems, MeshLib enables real-time mesh processing for environment mapping, object detection, and path planning. Mesh repair tools prepare models by fixing holes and intersections, ideal for automated systems handling large datasets.
- - \b Manufacturing \b and \b 3D \b Printing. MeshLib's Boolean operations and mesh offsetting ensure accuracy and manufacturability for 3D prints, optimizing models with decimation for industrial-scale applications.
- - \b Dental \b Applications. MeshLib provides specialized tools for dental workflows, offering precise mesh repair and customization for dental prosthetics, aligners, and implants. These capabilities ensure accurate, patient-specific designs ready for manufacturing.
- - \b Game \b Development \b and \b VR. Optimized for real-time rendering, MeshLib's simplification tools maintain visual quality, and Boolean operations allow dynamic model manipulation.
- - \b Scientific \b Visualization \b and \b Medical \b Imaging. MeshLib supports large datasets, crucial for scientific and medical visualization, with mesh repair and simplification for detailed, real-time models in fields like geophysics and medical planning.
+ - **Automation, AI, and Robotics.** Essential for 3D scanning in robotics, AI, and autonomous systems, MeshLib enables real-time mesh processing for environment mapping, object detection, and path planning. Mesh repair tools prepare models by fixing holes and intersections, ideal for automated systems handling large datasets.
+ - **Manufacturing and 3D Printing.** MeshLib's Boolean operations and mesh offsetting ensure accuracy and manufacturability for 3D prints, optimizing models with decimation for industrial-scale applications.
+ - **Dental Applications.** MeshLib provides specialized tools for dental workflows, offering precise mesh repair and customization for dental prosthetics, aligners, and implants. These capabilities ensure accurate, patient-specific designs ready for manufacturing.
+ - **Game Development and VR.** Optimized for real-time rendering, MeshLib's simplification tools maintain visual quality, and Boolean operations allow dynamic model manipulation.
+ - **Scientific Visualization and Medical Imaging.** MeshLib supports large datasets, crucial for scientific and medical visualization, with mesh repair and simplification for detailed, real-time models in fields like geophysics and medical planning.
 
  See more [application examples](https://meshlib.io/applications/).
 

@@ -4,11 +4,11 @@ namespace MR {
 
 ## Base Functions
 
-\b State \b plugins is simple objects to work with MeshLib scene and/or objects. It is one of possible inheritance of \ref RibbonMenuItem
+\b State **plugins** is simple objects to work with MeshLib scene and/or objects. It is one of possible inheritance of \ref RibbonMenuItem
 
 It has base functions:
 
-\b Available \b function - \ref ISceneStateCheck interface function that block plugin in UI
+\b Available **function** - \ref ISceneStateCheck interface function that block plugin in UI
 
 \parblock
 \note This fuction can be inherited from some helper classes \ref SceneStateExactCheck \ref SceneStateAtLeastCheck \ref SceneStateAtMostCheck \ref SceneStateOrCheck \ref SceneStateAndCheck
@@ -18,15 +18,15 @@ It has base functions:
     // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement
     virtual std::string isAvailable( const std::vector<std::shared_ptr<const Object>>& ) const { return ""; }
 ```
-\b On \b Enable \b function - will be called if user enables plugin (only possible if `isAvailable` has returned true), if \c onEnable_ function returns false plugin will not be enabled (useful for some expensive checks, not to do them in each frame \c available function)
+\b On **Enable function** - will be called if user enables plugin (only possible if `isAvailable` has returned true), if \c onEnable_ function returns false plugin will not be enabled (useful for some expensive checks, not to do them in each frame \c available function)
 ```cpp
     MRVIEWER_API virtual bool onEnable_();
 ```
-\b On \b Disable \b function - will be called if user disable plugin, it is necessary to clear all plugin data
+\b On **Disable function** - will be called if user disable plugin, it is necessary to clear all plugin data
 ```cpp
     MRVIEWER_API virtual bool onDisable_();
 ```
-\b Draw \b Dialog \b function - this function is called in each frame, only if plugin is enabled (will not be called after \c onDisable_ function). It is necessary to show plugin custom UI.
+\b Draw **Dialog function** - this function is called in each frame, only if plugin is enabled (will not be called after \c onDisable_ function). It is necessary to show plugin custom UI.
 ```cpp
     MRVIEWER_API virtual void drawDialog( ImGuiContext* ctx );
 ```

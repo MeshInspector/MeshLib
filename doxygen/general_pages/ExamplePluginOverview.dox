@@ -47,12 +47,12 @@ Lets have a closer look at each of these points:
 
 ### Tools Configuration File
 `MyPlugin.items.json` - this file contains information about each tool that is present in the plugin:
- - \b "Name" - name of the tool, should be same as in the code
- - \b "Tooltip" - tooltip that is shown when user hover tool in UI
- - \b "Icon" - unicode symbol from [Fontawesome](https://fontawesome.com), it is shown in UI for the tool if there is no actual icon present in `resource` folder
- - \b "Caption" - optional: label that is displayed instead of name in UI, if not present "Name" is used intead
- - \b "HelpLink" - optional: link to web page that will be opened if "Help" button is pressed in UI
- - \b "DropList" - optional: array with other tools that will be available in this tool drop list (see "List" in next section)
+ - **"Name"** - name of the tool, should be same as in the code
+ - **"Tooltip"** - tooltip that is shown when user hover tool in UI
+ - **"Icon"** - unicode symbol from [Fontawesome](https://fontawesome.com), it is shown in UI for the tool if there is no actual icon present in `resource` folder
+ - **"Caption"** - optional: label that is displayed instead of name in UI, if not present "Name" is used intead
+ - **"HelpLink"** - optional: link to web page that will be opened if "Help" button is pressed in UI
+ - **"DropList"** - optional: array with other tools that will be available in this tool drop list (see "List" in next section)
 
 ```json
 {
@@ -73,15 +73,15 @@ Lets have a closer look at each of these points:
 
 ### Tools Visualization Order File
 `MyPlugin.ui.json` - this file has information about order of the plugin loading, and UI schema for present tools:
- - \b "Order" - order of loading dll produced by this plugin, it can be used to determine constuction of tools in diferent plugins
- - \b "LibName" - name of the dll that contains provided tools (in this case it is same dll)
- - \b "Tabs" - tabs where tools are located in UI, could be new tabs or existing ones (specified plugins with less "Order" number)
-   - \b "Name" - name of the tab
-   - \b "Priority" - optional: tabs are ordered by this number
-   - \b "Groups" - specify groups of tools in single tab, could be new groups or existing ones (specified plugins with less "Order" number)
-       - \b "Name" - name of the group (it is not used now)
-       - \b "List" - list of the tools in this group
-           - \b "Name" - name of the tool, should be same as in the code and in the `items.json` file
+ - **"Order"** - order of loading dll produced by this plugin, it can be used to determine constuction of tools in diferent plugins
+ - **"LibName"** - name of the dll that contains provided tools (in this case it is same dll)
+ - **"Tabs"** - tabs where tools are located in UI, could be new tabs or existing ones (specified plugins with less "Order" number)
+   - **"Name"** - name of the tab
+   - **"Priority"** - optional: tabs are ordered by this number
+   - **"Groups"** - specify groups of tools in single tab, could be new groups or existing ones (specified plugins with less "Order" number)
+       - **"Name"** - name of the group (it is not used now)
+       - **"List"** - list of the tools in this group
+           - **"Name"** - name of the tool, should be same as in the code and in the `items.json` file
 
 ```json
 {

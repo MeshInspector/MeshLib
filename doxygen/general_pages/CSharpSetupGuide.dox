@@ -25,16 +25,16 @@ The NuGet package ships prebuilt native libraries, so your OS and CPU architectu
 | macOS | Arm64 (Apple silicon) | macOS 14 |
 | macOS | x64 (Intel) | macOS 15 |
 
-\note On Windows on Arm, .NET 5 and newer resolve `win-arm64` by themselves. A \b .NET \b Framework
+\note On Windows on Arm, .NET 5 and newer resolve `win-arm64` by themselves. A **.NET Framework**
 project instead gets the runtime named by its `PlatformTarget`, so set `<PlatformTarget>ARM64</PlatformTarget>`
 to run natively; any other value gives it the `win-x64` libraries and the x64 emulation. Native Arm64
 .NET Framework requires 4.8.1, i.e. Windows 11.
 
-On \b Linux no extra system packages are required: beyond the C and C++ runtimes the libraries need only
+On **Linux** no extra system packages are required: beyond the C and C++ runtimes the libraries need only
 `libexpat1` and `zlib1g`, which a standard desktop or server install already provides. Every other dependency
 is bundled in the package.
 
-On \b macOS the floor differs by architecture: part of the file-format libraries in the x64 runtime are built
+On **macOS** the floor differs by architecture: part of the file-format libraries in the x64 runtime are built
 against a newer SDK, so on an Intel Mac running macOS 14 the core API loads but the extra formats (E57, LAZ,
 CTM) fail.
 

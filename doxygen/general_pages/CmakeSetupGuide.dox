@@ -7,7 +7,7 @@
 
 ## Quick Integration Guide {#CmakeQuickIntegration}
 
-MeshLib provides native CMake integration support for \b Linux and \b macOS; for \b Windows see the \ref CmakeWindowsIntegration "Windows Integration Guide" below.
+MeshLib provides native CMake integration support for **Linux** and **macOS**; for **Windows** see the \ref CmakeWindowsIntegration "Windows Integration Guide" below.
 Example CMake configuration files are available to demonstrate how to link against the pre-built libraries.
 You can find these examples in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt).
 
@@ -29,7 +29,7 @@ cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_install
 
 ### Include the MeshLib Headers
 
-Add \b both include directories from the installed MeshLib package to your project. In your CMake configuration (`CMakeLists.txt`):
+Add **both** include directories from the installed MeshLib package to your project. In your CMake configuration (`CMakeLists.txt`):
 ```cmake
 include_directories(${MESHLIB_INCLUDE_DIR} ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 # or
@@ -100,22 +100,22 @@ For the `main.c`, take one of the [C code samples](\ref Examples); \ref ExampleM
 
 ### Linking Additional Third-Party Libraries
 
-Only if \b your \b own code links a third-party library bundled with MeshLib (rather than just using MeshLib's API), add the directory those libraries live in:
+Only if **your own** code links a third-party library bundled with MeshLib (rather than just using MeshLib's API), add the directory those libraries live in:
 
 ```cmake
 target_link_directories(your_project_name PUBLIC ${MESHLIB_THIRDPARTY_LIB_DIR})
 ```
 
-The `MeshLib::*` imported targets already carry the paths of the third-party libraries \b they need, so this line is not required by the example above.
+The `MeshLib::*` imported targets already carry the paths of the third-party libraries **they** need, so this line is not required by the example above.
 See the `CMakeLists.txt` in the [examples directory](https://github.com/MeshInspector/MeshLib/blob/master/examples/cpp-examples/CMakeLists.txt) for a working configuration.
 
 ## Windows Integration Guide {#CmakeWindowsIntegration}
 
-MeshLib supports \b Windows via CMake, including integration with **Visual Studio**: ensure the **CMake component** is installed in your Visual Studio setup.
+MeshLib supports **Windows** via CMake, including integration with **Visual Studio**: ensure the **CMake component** is installed in your Visual Studio setup.
 
 ### Prebuilt archive from GitHub Releases
 
-The `MeshLibDistVS*.zip` archives contain no CMake config files, so `find_package(MeshLib CONFIG REQUIRED)` fails at \b configure time. Point CMake at the extracted tree instead — assuming the archive was extracted to `C:/meshlib-built` as described in the \ref MeshLibCppSetupGuide "C++ Setup Guide":
+The `MeshLibDistVS*.zip` archives contain no CMake config files, so `find_package(MeshLib CONFIG REQUIRED)` fails at **configure** time. Point CMake at the extracted tree instead — assuming the archive was extracted to `C:/meshlib-built` as described in the \ref MeshLibCppSetupGuide "C++ Setup Guide":
 
 ```cmd
 cmake -S . -B build -A x64 ^
@@ -149,7 +149,7 @@ cmake -S . -B build -A x64 ^
 
 ### Building MeshLib from source with vcpkg
 
-To build MeshLib \b itself from source, install its dependencies with \b vcpkg as described in \ref CppSetupWindowsLocalBuild "Installing the local build" in the C++ Setup Guide, then configure from the repository root:
+To build MeshLib **itself** from source, install its dependencies with **vcpkg** as described in \ref CppSetupWindowsLocalBuild "Installing the local build" in the C++ Setup Guide, then configure from the repository root:
 
 ```cmd
 cmake -S . -B build ^
@@ -159,8 +159,8 @@ cmake -S . -B build ^
 
 The triplet must be the one the dependencies were actually installed with. `x64-windows-meshlib` is `install.bat`'s default, so it is the right value for **Visual Studio 2026**; on **Visual Studio 2019 or 2022**, step 4 of \ref CppSetupWindowsLocalBuild "Installing the local build" has you set `VCPKG_DEFAULT_TRIPLET` to `x64-windows-vs2019-meshlib` or `x64-windows-vs2022-meshlib`, so pass that same value here.
 
-\warning Do not fall back to `x64-windows-meshlib` on an older toolset because it pins no `VCPKG_PLATFORM_TOOLSET` — that only governs what vcpkg builds itself. With the AWS CLI installed (step 3 of the same list), `install.bat` instead restores prebuilt packages from our public S3 cache at `s3://vcpkg-export/<vcpkg-tag>/<triplet>/`, keyed on the triplet \b name, not on your compiler. CI fills the `x64-windows-meshlib` folder from `msvc-2026` builds only, and the triplets set `VCPKG_DISABLE_COMPILER_TRACKING`, so vcpkg accepts those Visual Studio 2026 binaries on v142/v143 instead of rebuilding, and the link fails.
+\warning Do not fall back to `x64-windows-meshlib` on an older toolset because it pins no `VCPKG_PLATFORM_TOOLSET` — that only governs what vcpkg builds itself. With the AWS CLI installed (step 3 of the same list), `install.bat` instead restores prebuilt packages from our public S3 cache at `s3://vcpkg-export/<vcpkg-tag>/<triplet>/`, keyed on the triplet **name**, not on your compiler. CI fills the `x64-windows-meshlib` folder from `msvc-2026` builds only, and the triplets set `VCPKG_DISABLE_COMPILER_TRACKING`, so vcpkg accepts those Visual Studio 2026 binaries on v142/v143 instead of rebuilding, and the link fails.
 
-\note This builds MeshLib from source (~40 GB) and does install the CMake config files, so the \ref CmakeQuickIntegration "Quick Integration Guide" above applies to the result. To consume a \b pre-built MeshLib in your own project instead, use *Prebuilt archive from GitHub Releases* above.
+\note This builds MeshLib from source (~40 GB) and does install the CMake config files, so the \ref CmakeQuickIntegration "Quick Integration Guide" above applies to the result. To consume a **pre-built** MeshLib in your own project instead, use *Prebuilt archive from GitHub Releases* above.
 
 */

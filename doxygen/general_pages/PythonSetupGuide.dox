@@ -25,12 +25,12 @@ Python 3.8 (end-of-life since October 2024) and 3.9 (end-of-life since October 2
 no longer receive security updates, and remain listed only because the published
 wheels still install on them.
 
- - On \b Windows: 3.8 to 3.14 on x64, and 3.11 to 3.14 on ARM64. There is no
+ - On **Windows:** 3.8 to 3.14 on x64, and 3.11 to 3.14 on ARM64. There is no
    32-bit wheel. ARM64 starts at 3.11 because python.org publishes no earlier
    win-arm64 installer; on ARM64 with an older Python, use the x64 build instead.
- - On \b macOS: 3.8 to 3.14, on macOS 12 or newer. Both arm64 (Apple Silicon)
+ - On **macOS:** 3.8 to 3.14, on macOS 12 or newer. Both arm64 (Apple Silicon)
    and x86_64 (Intel) are supported.
- - On \b Linux: 3.8 to 3.14 for distributions
+ - On **Linux:** 3.8 to 3.14 for distributions
    with glibc 2.28 or newer (manylinux_2_28) — e.g. Ubuntu 20.04+, Debian 10+,
    RHEL/Rocky/AlmaLinux 8+, Fedora 29+. Both x86_64 and aarch64 are supported.
 
@@ -59,7 +59,7 @@ It installs two packages: `meshlib-core` — the headless core with `mrmeshpy`, 
 and `mrcudapy` — and the `meshlib` wheel on top of it, adding the interactive viewer
 (`mrviewerpy`) with its UI resources. `numpy` (>= 1.19) is the only external dependency.
 
-On \b Windows that command works as written. A virtual environment is still worth using once you
+On **Windows** that command works as written. A virtual environment is still worth using once you
 have more than one project, so their dependencies cannot collide:
 ```bat
 py -m venv .venv
@@ -67,7 +67,7 @@ py -m venv .venv
 pip install meshlib
 ```
 
-On \b Linux, and on \b macOS with Homebrew Python, the plain command is refused before it
+On **Linux**, and on **macOS** with Homebrew Python, the plain command is refused before it
 downloads anything — `error: externally-managed-environment` — because pip will not install into
 an interpreter the system package manager owns (PEP 668); Apple's Command Line Tools Python
 instead accepts it quietly into a per-user directory you did not choose. There, install into a

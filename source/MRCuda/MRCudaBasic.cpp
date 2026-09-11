@@ -7,8 +7,6 @@
 #include <MRMesh/MRVector3.h>
 #include <MRPch/MRSpdlog.h>
 
-#include <optional>
-
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -45,17 +43,21 @@ struct DriverDevice
 /// cudaGetDeviceCount() refuses outright when the driver predates the runtime, so
 /// the runtime cannot tell a merely out-of-date driver from a card that CUDA no
 /// longer supports at all; the driver API still answers in both cases.
-/// The library ships with the NVIDIA driver, so this yields nothing on HIP/AMD
-/// builds or when no driver is installed, and the caller keeps the runtime error.
-std::optional<DriverDevice> queryDriverApi()
+/// The library ships with the NVIDIA driver, so this fails on HIP/AMD builds or
+/// when no driver is installed, and the caller keeps the runtime error.
+Expected<DriverDevice> queryDriverApi()
 {
 #ifdef _WIN32
-    const auto lib = LoadLibraryA( "nvcuda.dll" );
+    const char * libName = "nvcuda.dll";
+    const auto lib = LoadLibraryA( libName );
+    const auto libError = [] { return std::to_string( GetLastError() ); };
 #else
-    const auto lib = dlopen( "libcuda.so.1", RTLD_LAZY );
+    const char * libName = "libcuda.so.1";
+    const auto lib = dlopen( libName, RTLD_LAZY );
+    const auto libError = [] { const char * e = dlerror(); return std::string( e ? e : "unknown" ); };
 #endif
     if ( !lib )
-        return {};
+        return MR::unexpected( fmt::format( "cannot load {}: {}", libName, libError() ) );
 
     auto sym = [lib] ( const char * name )
     {
@@ -73,20 +75,24 @@ std::optional<DriverDevice> queryDriverApi()
     const auto cuDeviceGetAttribute = (int (*)( int *, int, int ))sym( "cuDeviceGetAttribute" );
     const auto cuDeviceGetName = (int (*)( char *, int, int ))sym( "cuDeviceGetName" );
     if ( !cuInit || !cuDeviceGet || !cuDeviceGetAttribute || !cuDeviceGetName )
-        return {};
+        return MR::unexpected( fmt::format( "{} misses an expected entry point", libName ) );
 
     constexpr int cCudaSuccess = 0;
     constexpr int cAttrComputeMajor = 75; // CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR
     constexpr int cAttrComputeMinor = 76; // CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR
 
+    if ( const auto code = cuInit( 0 ); code != cCudaSuccess )
+        return MR::unexpected( fmt::format( "cuInit failed with code {}", code ) );
+
     int dev = 0;
+    if ( const auto code = cuDeviceGet( &dev, 0 ); code != cCudaSuccess )
+        return MR::unexpected( fmt::format( "cuDeviceGet failed with code {}", code ) );
+
     DriverDevice res;
-    if ( cuInit( 0 ) != cCudaSuccess || cuDeviceGet( &dev, 0 ) != cCudaSuccess )
-        return {};
-    if ( cuDeviceGetAttribute( &res.computeMajor, cAttrComputeMajor, dev ) != cCudaSuccess )
-        return {};
-    if ( cuDeviceGetAttribute( &res.computeMinor, cAttrComputeMinor, dev ) != cCudaSuccess )
-        return {};
+    if ( const auto code = cuDeviceGetAttribute( &res.computeMajor, cAttrComputeMajor, dev ); code != cCudaSuccess )
+        return MR::unexpected( fmt::format( "cuDeviceGetAttribute(compute major) failed with code {}", code ) );
+    if ( const auto code = cuDeviceGetAttribute( &res.computeMinor, cAttrComputeMinor, dev ); code != cCudaSuccess )
+        return MR::unexpected( fmt::format( "cuDeviceGetAttribute(compute minor) failed with code {}", code ) );
 
     char name[256] = {};
     if ( cuDeviceGetName( name, (int)sizeof( name ) - 1, dev ) == cCudaSuccess )
@@ -112,8 +118,10 @@ Expected<DeviceInfo> getDeviceInfo()
             cudaRuntimeGetVersion( &runtimeVersion );
             // the runtime blames the driver whatever the reason, so ask the driver
             // whether this card is supported at all before telling anyone to update
-            if ( const auto dev = queryDriverApi();
-                 dev && computeTooOldForRuntime( runtimeVersion, dev->computeMajor, dev->computeMinor ) )
+            const auto dev = queryDriverApi();
+            if ( !dev )
+                spdlog::info( "CUDA driver API unavailable, cannot check compute capability: {}", dev.error() );
+            else if ( computeTooOldForRuntime( runtimeVersion, dev->computeMajor, dev->computeMinor ) )
             {
                 return MR::unexpected( fmt::format(
                     "NVIDIA GPU error: {} has compute capability {}.{}, dropped by CUDA {}; no driver update will help",

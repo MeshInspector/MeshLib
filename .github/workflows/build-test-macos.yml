@@ -214,8 +214,10 @@ jobs:
           CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
           make --version
+          # No distribution carries these; only this job's own tests use them.
           make -f scripts/mrbind/generate.mk \
             -B --trace \
+            MODE=none \
             PYTHON_PKGCONF_NAME=python-3.10-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 

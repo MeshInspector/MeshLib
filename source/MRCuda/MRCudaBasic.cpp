@@ -174,6 +174,9 @@ Expected<DeviceInfo> getDeviceInfo()
             err += fmt::format( ", CUDA driver {}.{}", res.driverVersion / 1000, ( res.driverVersion % 1000 ) / 10 );
             if ( !dev )
                 err += fmt::format( "; compute capability unknown: {}", dev.error() );
+            else // supported card, so the driver really is what needs updating
+                err += fmt::format( "; {} has compute capability {}.{}",
+                    dev->name.empty() ? "the GPU" : dev->name, dev->computeMajor, dev->computeMinor );
             return MR::unexpected( err );
         }
     }

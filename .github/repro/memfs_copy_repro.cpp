@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -19,6 +20,8 @@ namespace
 constexpr int cSeconds = 480;
 constexpr int cStallSeconds = 60;
 constexpr int cFileKiB = 100;
+/// the application stalls with a heap around this size
+constexpr size_t cBallastMiB = 600;
 
 std::atomic<long long> gCopies{ 0 };
 std::atomic<bool> gStop{ false };
@@ -72,6 +75,15 @@ void frame()
 int main()
 {
     std::printf( "hardware_concurrency %u", std::thread::hardware_concurrency() );
+    std::putchar( 10 );
+    std::fflush( stdout );
+
+    // a heap the size of the application's: with it and the log writer the stall
+    // appears, with either one alone it does not
+    auto ballast = static_cast<char*>( std::malloc( cBallastMiB << 20 ) );
+    if ( ballast )
+        std::memset( ballast, 1, cBallastMiB << 20 );
+    std::printf( "ballast %s", ballast ? "allocated" : "FAILED" );
     std::putchar( 10 );
     std::fflush( stdout );
 

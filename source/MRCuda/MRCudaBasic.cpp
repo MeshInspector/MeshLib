@@ -56,30 +56,20 @@ bool DeviceInfo::fitForComputations() const
 
 bool isCudaAvailable( int* driverVersionOut, int* runtimeVersionOut, int* computeMajorOut, int* computeMinorOut )
 {
-    // callers treat this as a question, not an operation, and some ask it while
-    // loading a plugin, where an escaping exception would end the process
-    try
-    {
-        auto info = MR::Cuda::getDeviceInfo();
-        if ( !info )
-            return false;
+     auto info = MR::Cuda::getDeviceInfo();
+     if ( !info )
+         return false;
 
-        if ( driverVersionOut )
-            *driverVersionOut = info->driverVersion;
-        if ( runtimeVersionOut )
-            *runtimeVersionOut = info->runtimeVersion;
-        if ( computeMajorOut )
-            *computeMajorOut = info->computeMajor;
-        if ( computeMinorOut )
-            *computeMinorOut = info->computeMinor;
+    if ( driverVersionOut )
+        *driverVersionOut = info->driverVersion;
+    if ( runtimeVersionOut )
+        *runtimeVersionOut = info->runtimeVersion;
+    if ( computeMajorOut )
+        *computeMajorOut = info->computeMajor;
+    if ( computeMinorOut )
+        *computeMinorOut = info->computeMinor;
 
-        return info->fitForComputations();
-    }
-    catch ( const std::exception& e )
-    {
-        spdlog::warn( "CUDA availability check failed: {}", e.what() );
-        return false;
-    }
+    return info->fitForComputations();
 }
 
 size_t getCudaAvailableMemory()

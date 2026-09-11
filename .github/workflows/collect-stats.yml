@@ -1,0 +1,87 @@
+name: Collect Stats
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Id of the Build Test Distribute run
+        required: true
+        type: string
+      ref:
+        description: GITHUB_REF of that run
+        required: true
+        type: string
+      branch:
+        description: Branch of that run
+        required: true
+        type: string
+      commit:
+        description: Commit of that run
+        required: true
+        type: string
+
+jobs:
+  collect-stats:
+    timeout-minutes: 5
+    runs-on: ubuntu-slim
+    permissions:
+      id-token: write
+      contents: read
+      actions: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download runners' system stats
+        uses: actions/download-artifact@v8
+        with:
+          pattern: RunnerSysStats*
+          merge-multiple: true
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifact stats
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ArtifactStats*
+          merge-multiple: true
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        id: aws-creds
+        with:
+          aws-region: us-east-1
+          role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
+          output-credentials: true
+          retry-max-attempts: 5
+
+      - name: Install dependencies
+        run: python3 -m pip install boto3 botocore requests
+
+      - name: Collect stats
+        env:
+          CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}
+          RUN_ID: ${{ inputs.run_id }}
+          GIT_REF: ${{ inputs.ref }}
+          GIT_BRANCH: ${{ inputs.branch }}
+          GIT_COMMIT: ${{ inputs.commit }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/devops/collect_ci_stats.py
+
+      - name: Delete stats artifacts
+        if: always()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const runId = Number(${{ toJSON(inputs.run_id) }});
+            const artifacts = await github.paginate(
+              github.rest.actions.listWorkflowRunArtifacts,
+              { owner, repo, run_id: runId, per_page: 100 },
+            );
+            for (const artifact of artifacts) {
+              if (artifact.name.startsWith('RunnerSysStats-') || artifact.name.startsWith('ArtifactStats-')) {
+                await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: artifact.id });
+              }
+            }

@@ -122,6 +122,10 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CFLAGS="${CFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"
     CXXFLAGS="${CXXFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"
   fi
+  # fmt 11.x calls bare malloc/free in format.h and leaned on a transitive <cstdlib> that
+  # libc++ no longer provides; fmt 12.0.0 fixed it. Drop this when the fmt pin moves.
+  # Has to come after the blocks above - they rebuild CXXFLAGS from CFLAGS, and this is C++ only.
+  CXXFLAGS="${CXXFLAGS} -include cstdlib"
 fi
 
 if [[ $OSTYPE == 'darwin'* ]]; then

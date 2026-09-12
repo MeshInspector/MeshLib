@@ -10,6 +10,9 @@ string(JOIN " " EXTRA_CXX_FLAGS
   "-sUSE_FREETYPE" # TODO: make optional
   "-sUSE_LIBPNG" # TODO: make optional
   "-sUSE_ZLIB" # TODO: make optional
+  # fmt 11.x calls bare malloc/free in format.h and leaned on a transitive <cstdlib> that
+  # libc++ no longer provides; fmt 12.0.0 fixed it. Drop this when the fmt pin moves.
+  "-include cstdlib"
 )
 
 string(JOIN " " EXTRA_EXE_LINKER_FLAGS

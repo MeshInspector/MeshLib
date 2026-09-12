@@ -5,24 +5,28 @@
 # emsdk ships clang without PGO; ours is the same llvm-project revision with
 # -O3 + PGO. It replaces emsdk's copy in place and /emsdk is then copied into a
 # clean ubuntu: swapped in a layer on top, both compilers would ship.
-FROM emscripten/emsdk:4.0.19-arm64 AS emsdk
+FROM emscripten/emsdk:5.0.7-arm64 AS emsdk
 
-ENV EMSDK_VERSION=4.0.19
+ENV EMSDK_VERSION=5.0.7
 
+# TEMPORARY: build on emsdk's own clang while clang-emsdk-5.0.7-pgo is still building in
+# MeshInspector/toolchains. Restore the block below before merging - without it this image
+# ships the stock ThinLTO-only clang and loses the PGO build-time win.
 RUN <<EOF
     set -e
-    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
-    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
-        | tar -C /emsdk/upstream --strip-components=1 -xz
-    rm -f /emsdk/upstream/bin/clang-scan-deps
+#    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
+#    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
+#        | tar -C /emsdk/upstream --strip-components=1 -xz
+#    rm -f /emsdk/upstream/bin/clang-scan-deps
     # PATH below points here, keeping node's version out of it
     ln -s /emsdk/node/*/bin /emsdk/node-bin
     # emsdk strips its own toolchain, ours arrives unstripped
-    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
+#    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
 EOF
 
 
-FROM ubuntu:22.04 AS base
+# noble, matching the emsdk image: its binaries link glibc 2.39 and will not run on jammy
+FROM ubuntu:24.04 AS base
 
 COPY --from=emsdk /emsdk /emsdk
 
@@ -34,14 +38,14 @@ ENTRYPOINT ["/emsdk/docker/entrypoint.sh"]
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu/ http://mirror.eu.ossplanet.net/ubuntu/
-Suites: jammy jammy-updates jammy-security jammy-backports
+Suites: noble noble-updates noble-security noble-backports
 Components: main restricted universe multiverse
 Architectures: amd64
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb
 URIs: http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/
-Suites: jammy jammy-updates jammy-security jammy-backports
+Suites: noble noble-updates noble-security noble-backports
 Components: main restricted universe multiverse
 Architectures: arm64
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg

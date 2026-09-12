@@ -194,7 +194,9 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
     } );
 }
 
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
 static bool gWindowSizeInitialized = false;
+#endif
 
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
@@ -2058,7 +2060,9 @@ void Viewer::postResize( int w, int h )
     if ( hasScaledFramebuffer_ )
         updatePixelRatio_();
 
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
     gWindowSizeInitialized = true;
+#endif
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )

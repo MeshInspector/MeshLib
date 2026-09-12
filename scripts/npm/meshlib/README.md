@@ -78,6 +78,15 @@ import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
 const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 ```
 
+The bundler must treat `.wasm` files as static assets, so that the import resolves to the URL of the
+emitted file; the option is usually called an asset or file loader. For example:
+
+- **Vite**: append `?url` to the import specifier: `import wasmUrl from '@meshinspector/meshlib/meshlib.wasm?url';`
+- **webpack**, **Rspack**: add a module rule `{ test: /\.wasm$/, type: 'asset/resource' }`
+- **esbuild**: pass `--loader:.wasm=file`
+- **Rollup**: add `@rollup/plugin-url` with `include: /\.wasm$/`
+- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/meshlib.wasm';`
+
 ## TypeScript
 
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with

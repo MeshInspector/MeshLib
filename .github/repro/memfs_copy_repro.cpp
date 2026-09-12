@@ -78,15 +78,6 @@ int main()
     std::putchar( 10 );
     std::fflush( stdout );
 
-    // a heap the size of the application's: with it and the log writer the stall
-    // appears, with either one alone it does not
-    auto ballast = static_cast<char*>( std::malloc( cBallastMiB << 20 ) );
-    if ( ballast )
-        std::memset( ballast, 1, cBallastMiB << 20 );
-    std::printf( "ballast %s", ballast ? "allocated" : "FAILED" );
-    std::putchar( 10 );
-    std::fflush( stdout );
-
     std::error_code ec;
     const std::filesystem::path dir = "/tmp/repro";
     std::filesystem::create_directories( dir, ec );

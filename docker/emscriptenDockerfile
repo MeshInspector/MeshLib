@@ -5,11 +5,11 @@
 # emsdk ships clang without PGO; ours is the same llvm-project revision with
 # -O3 + PGO. It replaces emsdk's copy in place and /emsdk is then copied into a
 # clean ubuntu: swapped in a layer on top, both compilers would ship.
-FROM emscripten/emsdk:6.0.9-arm64 AS emsdk
+FROM emscripten/emsdk:5.0.7-arm64 AS emsdk
 
-ENV EMSDK_VERSION=6.0.9
+ENV EMSDK_VERSION=5.0.7
 
-# TEMPORARY: build on emsdk's own clang while clang-emsdk-6.0.9-pgo is still building in
+# TEMPORARY: build on emsdk's own clang while clang-emsdk-5.0.7-pgo is still building in
 # MeshInspector/toolchains. Restore the block below before merging - without it this image
 # ships the stock ThinLTO-only clang and loses the PGO build-time win.
 RUN <<EOF

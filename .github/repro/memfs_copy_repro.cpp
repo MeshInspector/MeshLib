@@ -99,15 +99,11 @@ int main()
             ofs << chunk;
     }
 
-    std::thread( [dir]
+    std::thread( []
     {
-        std::ofstream log( dir / "log.txt", std::ios::binary | std::ios::app );
-        while ( log && !gStop.load( std::memory_order_acquire ) )
-        {
-            log << "[info] a line of about the length the application writes";
-            log.put( char( 10 ) );
-            log.flush();
-        }
+        // no filesystem work: this thread exists only to force the on-demand Worker spawn
+        while ( !gStop.load( std::memory_order_acquire ) )
+            std::this_thread::sleep_for( std::chrono::milliseconds( 50 ) );
     } ).detach();
 
     std::thread( [src, dir]

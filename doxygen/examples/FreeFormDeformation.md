@@ -1,0 +1,28 @@
+# Free Form Deformation Example {#ExampleFreeForm}
+
+Example of using Free Form deformation of the mesh
+
+▶ [See it live in the browser](https://demo.meshlib.io/#deform)
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include FreeFormDeformation.dox.cpp
+ 
+- <b class="tab-title">Python</b>
+> [!NOTE]
+> Python API version 3 and later
+ 
+\include FreeFormDeformation.dox.py
+ 
+- <b class="tab-title">C</b>
+\include FreeFormDeformation.dox.c
+ 
+- <b class="tab-title">C#</b>
+\include FreeFormDeformation.dox.cs
+ 
+- <b class="tab-title">JavaScript</b>
+\include FreeFormDeformation.dox.js
+\include{doc} JsUsingNote.md
+
+</div>

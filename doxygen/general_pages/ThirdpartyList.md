@@ -1,0 +1,137 @@
+# Third-Party Dependencies {#ThirdParty}
+
+# List of dependencies
+
+MeshLib is modular by design. Our goal is to provide only what you need, so you can avoid what you do not and keep your project lightweight. The only mandatory module is MRMesh. All others are optional.
+
+Below is a summary of all modules and their dependencies, so you can see what each requires before including it in your build
+
+|Module|Task|Required modules|Optional?|
+|------|----|----------------|---------|
+|MRMesh|Core geometry|-|No, Mandatory|
+|MRIOExtras|Input/Output|MRMesh|Yes|
+|MRSymbolMesh|Text-to-mesh|MRMesh|Yes|
+|MRPython|Python|MRMesh|Yes|
+|MRVoxels|Volumetric|MRMesh|Yes|
+|MRCuda|GPU acceleration|MRMesh and MRVoxels|Yes|
+|MRViewer|Rendering and user interface|MRMesh, MRVoxels, MRSymbolMesh and MRIOExtras|Yes|
+|MRMcp|MCP server / REST API|MRMesh|Yes|
+|MRMCPGateway|stdio MCP proxy executable|-|Yes|
+
+### MRMesh
+
+**MRMesh** is our core module, handling geometry operations. Since it is mandatory, its dependencies are required for every build.
+
+|Name                                                                                   |Description                                                                  |License                        |
+|---------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------|
+|<a rel="nofollow" href="https://www.boost.org">Boost</a>                               |C++ Libraries - provides free peer-reviewed portable C++ source libraries    |Boost Software License         |
+|<a rel="nofollow" href="https://eigen.tuxfamily.org/index.php?title=Main_Page">Eigen</a>  |a C++ template library for linear algebra                                    |MPL2                           |
+|<a rel="nofollow" href="https://github.com/gabime/spdlog">spdlog</a>                   |very fast, header-only/compiled, C++ logging library                         |MIT                            |
+|<a rel="nofollow" href="https://github.com/fmtlib/fmt">fmt</a>                         |a library providing a fast and safe alternative to C stdio and C++ iostreams |MIT                            |
+|<a rel="nofollow" href="https://github.com/google/googletest">gtest</a>                |Google Test - C++ testing and mocking framework                              |BSD-3-Clause                   |
+|<a rel="nofollow" href="https://libtiff.gitlab.io/libtiff/">tiff</a>                   |provides support for the Tag Image File Format (TIFF)                        |MIT                            |
+|<a rel="nofollow" href="https://github.com/open-source-parsers/jsoncpp">jsoncpp</a>    |manipulating JSON values, including serialization and deserialization        |MIT                            |
+|<a rel="nofollow" href="https://libzip.org">libzip</a>                                 |libzip - reading, creating, and modifying zip archives                       |BSD-3-Clause                   |
+|<a rel="nofollow" href="https://github.com/zlib-ng/zlib-ng">zlib-ng</a>                |zlib data compression library for the next generation systems                |zlib                           |
+|<a rel="nofollow" href="https://github.com/vilya/miniply">minply</a>                   |a simple and fast parser for PLY files                                       |MIT                            |
+|<a rel="nofollow" href="https://github.com/uxlfoundation/oneTBB">oneTBB</a>            |simplifies the work of adding parallelism to complex applications            |Apache-2.0                     |
+|<a rel="nofollow" href="https://github.com/greg7mdp/parallel-hashmap">phmap</a>        |fast and memory-friendly hashmap and btree containers                        |Apache 2.0                     |
+|<a rel="nofollow" href="https://github.com/TartanLlama/expected">expected</a>          |implementation of std::expected with functional-style extensions            |CC0-1.0                        |
+|<a rel="nofollow" href="https://github.com/Mbed-TLS/mbedtls">Mbed TLS</a>              |a C library that implements cryptographic primitives                         |Apache-2.0 or GPL-2.0-or-later |
+
+### MRIOExtras
+
+**MRIOExtras** adds support for the input and output of additional file formats (e.g., glTF, STEP, PDF). It requires MRMesh and includes:
+
+|Name                                                                                |Description                                                                  |License                                    |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="http://libharu.org">libHaru</a>                             |free, cross platform, open source library for generating PDF files           |zlib                                       |
+|<a rel="nofollow" href="https://libjpeg-turbo.org">libjpeg-turbo</a>                |is a JPEG image codec that uses SIMD instructions                            |BSD-3-Clause, IJG (Independent JPEG Group) |
+|<a rel="nofollow" href="https://libpng.sourceforge.io">libpng</a>                   |library for use in applications that read, create, and manipulate PNG        |libpng2                                    |
+|<a rel="nofollow" href="https://dev.opencascade.org">opencascade</a>                |open-source full-scale 3D geometry library                                   |LGPL-2.1                                   |
+|<a rel="nofollow" href="https://github.com/syoyo/tinygltf">tinygltf</a>             |is a header only C++11 glTF 2.0                                              |MIT                                        |
+|<a rel="nofollow" href="https://sourceforge.net/projects/openctm/">OpenCTM</a>      |the Open Compressed Triangle Mesh file format                                |zlib/libpng                                |
+|<a rel="nofollow" href="https://github.com/hobuinc/laz-perf">LAZperf</a>            |alternative LAZ implementation for C++ and JavaScript                        |Apache 2.0                                 |
+|<a rel="nofollow" href="https://github.com/asmaloney/libE57Format">libe57format</a> |library for reading & writing the E57 file format                            |Boost Software License                     |
+|<a rel="nofollow" href="https://leethomason.github.io/tinyxml2/">tinyxml2</a>       |an efficient, C++ XML parser                                                 |zlib                                       |
+|<a rel="nofollow" href="https://github.com/nlohmann/json">nlohmann-json</a>       |JSON for Modern C++ — used by the glTF reader/writer                         |MIT                                        |
+
+### MRSymbolMesh
+
+**MRSymbolMesh** is our module responsible for text-to-mesh conversion operations. As such, it requires MRMesh plus:
+
+|Name                                                       |Description                                                                  |License                                    |
+|-----------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="https://freetype.org">FreeType</a> |a freely available software library to render fonts                          |GPL-2.0, FTL(BSD like)                     |
+
+### MRPython
+
+**MRPython** enables Python bindings and embedded Python scripting for MeshLib. It depends on MRMesh and: 
+
+|Name                                                                     |Description                                                                  |License                                    |
+|-------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="https://www.python.org">python3</a>              |is a high-level, general-purpose programming language.                       |PSF                                        |
+|<a rel="nofollow" href="https://github.com/pybind/pybind11">pybind11</a> |a library that exposes C++ types in Python and vice versa                    |BSD-3-Clause                               |
+
+
+### MRVoxels
+
+**MRVoxels** provides functionality for volumetric operations. It depends on MRMesh plus: 
+
+|Name                                                                                      |Description                                                                  |License             |
+|------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|--------------------|
+|<a rel="nofollow" href="https://github.com/AcademySoftwareFoundation/openvdb">OpenVDB</a> |efficient manipulation of sparse, time-varying, volumetric data discretized  |Apache-2.0          |
+|<a rel="nofollow" href="https://sourceforge.net/projects/gdcm/">gdcm</a>                             |C++ library dedicated to reading/parsing and writing DICOM medical files     |BSD                 |
+|<a rel="nofollow" href="https://github.com/Blosc/c-blosc">c-blosc</a>                   |a blocking, shuffling and lossless compression library, used by OpenVDB      |BSD-3-Clause        |
+
+### MRCuda
+
+**MRCuda** enables GPU-accelerated algorithms using NVIDIA CUDA. Here, you need MRMesh, MRVoxels, and:
+
+|Name                                                                        |Description                                                                                          |License                                              |
+|----------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------------|-----------------------------------------------------|
+|<a rel="nofollow" href="https://developer.nvidia.com/cuda-toolkit">CUDA</a> |GPU-accelerated libraries, debugging and optimization tools, a C/C++ compiler, and a runtime library |<a rel="nofollow" href="https://docs.nvidia.com/cuda/eula/index.html#license">CUDA License</a> |
+
+
+### MRViewer
+
+**MRViewer** is MeshLib’s module for rendering and UI. It handles window creation, input, and GUI elements. It needs MRMesh, MRVoxels, MRSymbolMesh, MRIOExtras, and:
+
+|Name                                                                                   |Description                                                                                         |License                      |
+|---------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------|-----------------------------|
+|<a rel="nofollow" href="https://github.com/Dav1dde/glad">glad</a>                      |GL/GLES/EGL/GLX/WGL Loader-Generator based on the official specs                                    |MIT                          |
+|<a rel="nofollow" href="https://www.glfw.org">GLFW</a>                                 |library for OpenGL, OpenGL ES and Vulkan development on the desktop                                 |zlib                         |
+|<a rel="nofollow" href="https://github.com/ocornut/imgui">Dear ImGui</a>               |a bloat-free graphical user interface library for C++                                               |MIT                          |
+|<a rel="nofollow" href="https://github.com/libcpr/cpr">Curl for People</a>             |Curl for People - a simple wrapper around libcurl                                                   |MIT                          |
+|<a rel="nofollow" href="https://github.com/dacap/clip">clip</a>                        |cross-platform C++ library to copy/paste clipboard content                                          |MIT                          |
+|<a rel="nofollow" href="https://github.com/libusb/hidapi">hidapi</a>                  |is a Simple library for communicating with USB and Bluetooth HID devices on Linux, Mac, and Windows |HIDAPI, BSD-3-Clause, GPL-3.0|
+|<a rel="nofollow" href="https://fontawesome.com">Fontawesome</a>                       |is the Internet's icon library and toolkit, used by millions of designers, developers, and content creators |<a rel="nofollow" href="https://fontawesome.com/license/free">Fontawesome License</a>|
+|<a rel="nofollow" href="https://fonts.google.com/noto/specimen/Noto+Sans">NotoSans</a> |is a global font collection for writing in all modern and ancient languages                         |OPEN FONT|
+|<a rel="nofollow" href="https://www.freedesktop.org/wiki/Software/dbus/">D-Bus</a>      |message bus system, used for xdg-desktop-portal file dialogs (Linux only)                           |AFL-2.1 or GPL-2.0-or-later|
+
+### MRMcp
+
+**MRMcp** exposes MeshLib functionality through the Model Context Protocol (HTTP + SSE) and a parallel REST API. It depends on MRMesh and:
+
+|Name                                                                                |Description                                                                  |License                                    |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="https://github.com/MeshInspector/fastmcpp">fastmcpp</a>     |a C++ implementation of the Model Context Protocol                           |Apache-2.0                                 |
+|<a rel="nofollow" href="https://github.com/yhirose/cpp-httplib">cpp-httplib</a>     |single-file C++ HTTP/HTTPS server and client library                         |MIT                                        |
+|<a rel="nofollow" href="https://github.com/nlohmann/json">nlohmann-json</a>         |JSON for Modern C++                                                          |MIT                                        |
+
+### MRMCPGateway
+
+**MRMCPGateway** is a small standalone executable (`McpGateway[.exe]`) that proxies stdio-based MCP clients onto the HTTP MCP server hosted by MeshInspector. It has no MeshLib dependencies and pulls in:
+
+|Name                                                                                |Description                                                                  |License                                    |
+|------------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="https://github.com/MeshInspector/fastmcpp">fastmcpp</a>     |a C++ implementation of the Model Context Protocol                           |Apache-2.0                                 |
+|<a rel="nofollow" href="https://github.com/yhirose/cpp-httplib">cpp-httplib</a>     |single-file C++ HTTP/HTTPS server and client library                         |MIT                                        |
+
+### Bundled executables
+
+The Windows distribution ships its executables (MeshViewer, meshconv, MRTest) with the mimalloc allocator enabled; WebAssembly builds embed Emscripten's bundled copy of it.
+
+|Name                                                                              |Description                                                                  |License                                    |
+|-----------------------------------------------------------------------------------|-----------------------------------------------------------------------------|-------------------------------------------|
+|<a rel="nofollow" href="https://github.com/microsoft/mimalloc">mimalloc</a>       |a compact general purpose allocator with excellent performance               |MIT                                        |

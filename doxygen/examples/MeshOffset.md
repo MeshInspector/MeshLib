@@ -1,0 +1,45 @@
+# Mesh Offset {#ExampleMeshOffset}
+
+Example of mesh offset
+
+▶ [See it live in the browser](https://demo.meshlib.io/#offset)
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include MeshOffset.dox.cpp
+Source mesh
+\image html offset_before.png
+After offset
+\image html offset_after.png
+ 
+- <b class="tab-title">Python</b>
+\include MeshOffset.dox.py
+Source mesh
+\image html offset_before.png
+After offset
+\image html offset_after.png
+ 
+- <b class="tab-title">C</b>
+\include MeshOffset.dox.c
+Source mesh
+\image html offset_before.png
+After offset
+\image html offset_after.png
+ 
+- <b class="tab-title">C#</b>
+\include MeshOffset.dox.cs
+Source mesh
+\image html offset_before.png
+After offset
+\image html offset_after.png
+ 
+- <b class="tab-title">JavaScript</b>
+\include MeshOffset.dox.js
+\include{doc} JsUsingNote.md
+Source mesh
+\image html offset_before.png
+After offset
+\image html offset_after.png
+
+</div>

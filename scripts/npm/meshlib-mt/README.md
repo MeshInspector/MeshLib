@@ -72,6 +72,9 @@ export default {
 The default export is an async factory. Await it once to get the module instance, then call
 MeshLib functions on it:
 
+> `using` requires Node.js 24+ or a current browser. On older runtimes, call `.delete()`
+> instead — see [Memory management](#memory-management).
+
 ```js
 import createMeshLib from '@meshinspector/meshlib-mt';
 
@@ -94,9 +97,6 @@ using mesh = ml.Mesh.fromTriangles(coords, tris);
 console.log('volume =', mesh.volume()); // ~8
 // `using` frees these WebAssembly-backed objects automatically at the end of scope
 ```
-
-> `using` requires Node.js 24+ or a current browser. On older runtimes, call `.delete()`
-> instead — see [Memory management](#memory-management).
 
 ## Using with bundlers
 

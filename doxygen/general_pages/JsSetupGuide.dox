@@ -126,6 +126,8 @@ So on a page that is not cross-origin isolated you have three options: send the 
 
 ## Getting Started: Your First Example
 The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:
+\note The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
+
 \code{.js}
 import createMeshLib from '@meshinspector/meshlib';
 
@@ -149,8 +151,6 @@ console.log('volume =', mesh.volume()); // ~8
 \endcode
 
 \note This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in \ref MeshLibJsPayloadSize "Payload Size".
-
-\note The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
 
 ## TypeScript
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with minimal setup:

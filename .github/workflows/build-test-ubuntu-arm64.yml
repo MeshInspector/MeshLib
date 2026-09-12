@@ -199,16 +199,6 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
-      - name: Collect Timings
-        run: ./scripts/devops/collect_timing_logs.sh ${{matrix.os}}-arm64 ${{matrix.config}} "${{matrix.compiler}}"
-
-      #Save timing in artifact
-      - name: Upload Timings
-        uses: actions/upload-artifact@v7
-        with:
-          name: Timing_Logs_${{matrix.os}}-arm64_${{matrix.config}}_${{matrix.compiler}}
-          path: time_log/
-
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd

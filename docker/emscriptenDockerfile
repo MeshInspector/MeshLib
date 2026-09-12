@@ -9,16 +9,19 @@ FROM emscripten/emsdk:6.0.9-arm64 AS emsdk
 
 ENV EMSDK_VERSION=6.0.9
 
+# TEMPORARY: build on emsdk's own clang while clang-emsdk-6.0.9-pgo is still building in
+# MeshInspector/toolchains. Restore the block below before merging - without it this image
+# ships the stock ThinLTO-only clang and loses the PGO build-time win.
 RUN <<EOF
     set -e
-    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
-    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
-        | tar -C /emsdk/upstream --strip-components=1 -xz
-    rm -f /emsdk/upstream/bin/clang-scan-deps
+#    TOOLCHAIN=clang-emsdk-${EMSDK_VERSION}-pgo
+#    curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" \
+#        | tar -C /emsdk/upstream --strip-components=1 -xz
+#    rm -f /emsdk/upstream/bin/clang-scan-deps
     # PATH below points here, keeping node's version out of it
     ln -s /emsdk/node/*/bin /emsdk/node-bin
     # emsdk strips its own toolchain, ours arrives unstripped
-    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
+#    find /emsdk/upstream/bin -type f -exec strip -s {} + || true
 EOF
 
 

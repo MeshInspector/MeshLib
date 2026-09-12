@@ -9,6 +9,10 @@ ENDIF()
 
 IF(MR_EMSCRIPTEN)
   set(MRMESH_NO_TIFF ON)
+  # the libc++ in emsdk 5.x reports the std::wstring_convert deprecation against its own
+  # header rather than against our call, so the MR_SUPPRESS_WARNING pragma inside the file
+  # cannot reach it. The intent to use the deprecated API is already stated there.
+  set_source_files_properties(MRStringConvert.cpp PROPERTIES COMPILE_OPTIONS "-Wno-deprecated-declarations")
 ENDIF()
 
 file(GLOB SOURCES "*.cpp")

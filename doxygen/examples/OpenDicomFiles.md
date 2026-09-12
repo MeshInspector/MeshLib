@@ -1,0 +1,10 @@
+# Open Dicom Files {#ExampleDicomFiles}
+
+Example of opening Dicom files
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Python</b>
+\include OpenDicomFiles.dox.py
+
+</div>

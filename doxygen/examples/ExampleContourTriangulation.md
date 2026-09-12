@@ -1,0 +1,16 @@
+# Contour Triangulation Example {#ExampleContourTriangulation}
+
+Example of generating a triangulation from a contour.
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include ContourTriangulation.dox.cpp
+ 
+- <b class="tab-title">Python</b>
+\include ContourTriangulation.dox.py
+ 
+- <b class="tab-title">C</b>
+\include ContourTriangulation.dox.c
+
+</div>

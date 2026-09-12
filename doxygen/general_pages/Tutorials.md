@@ -1,0 +1,22 @@
+# MeshLib SDK Tutorials {#Tutorials}
+
+Welcome to the MeshLib SDK Tutorials! Here you'll find guides, examples, and step-by-step instructions to help you get started with MeshLib and explore its features.
+
+Prefer video? Check out our [YouTube tutorial playlist](https://youtube.com/playlist?list=PLof8xz4oQS-Cb26IQEnb_HBRZEnT8ze9w&si=KGAiYjxA6qFOCpd8) for visual walkthroughs and demonstrations.
+
+You can also try these operations in the browser: the [live demo](https://demo.meshlib.io/) runs boolean operations, hole filling, decimation, and ICP registration interactively.
+
+## Available Tutorials
+
+### How to Create a First Plugin Using MeshLib C++ on Windows
+In just a few minutes, you'll learn how to set up your development environment, write your first plugin, and get it running with MeshLib. 
+This tutorial will help you establish a solid foundation for more advanced plugin development.
+
+[Start Tutorial](\ref FirstPluginTutorial)
+
+
+### Building a Support Generator Plugin Using MeshLib C++ on Windows
+In this extended tutorial, you'll learn how to expand MeshLib's capabilities by developing custom tools. 
+Through a practical, hands-on session, you'll build a fully functional support generator that combines user interaction, geometric processing, and real-time visualization within the MeshLib Viewer.
+
+[Support Generator Tutorial](\ref SupportGeneratorTutorial)

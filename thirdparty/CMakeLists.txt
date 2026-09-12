@@ -32,6 +32,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -w")
 
 IF(MR_EMSCRIPTEN)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
+  # fmt 11.x calls bare malloc/free in format.h and leaned on a transitive <cstdlib> that
+  # the libc++ in emsdk 5.x no longer provides; fmt 12.0.0 fixed it. Drop when the pin moves.
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -include cstdlib")
   IF(NOT MR_EMSCRIPTEN_SINGLETHREAD)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")

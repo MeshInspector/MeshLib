@@ -110,14 +110,14 @@ int main()
         }
     } ).detach();
 
-    std::thread( [src, dir]
+    std::thread( [dir]
     {
-        std::error_code workerEc;
-        const auto dst = dir / "dst.bin";
-        while ( !gStop.load( std::memory_order_acquire ) )
+        std::ofstream log( dir / "log2.txt", std::ios::binary | std::ios::app );
+        while ( log && !gStop.load( std::memory_order_acquire ) )
         {
-            std::filesystem::remove( dst, workerEc );
-            std::filesystem::copy( src, dst, workerEc );
+            log << "[info] a second writer, no copy anywhere in this build";
+            log.put( char( 10 ) );
+            log.flush();
             gCopies.fetch_add( 1, std::memory_order_relaxed );
         }
     } ).detach();

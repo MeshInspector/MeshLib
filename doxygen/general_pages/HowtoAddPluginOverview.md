@@ -18,8 +18,8 @@ A plugin is a separately compiled module that extends the functionality of MeshL
 Before deploying anything, make sure your build matches the host you are deploying to — see [Version compatibility](\ref HowtoAddPluginOverview_VersionCompatibility) at the end of this page.
 
 To actually build a plugin, see:
-- [How to create a first plugin using MeshLib C++ on Windows](\ref FirstPluginTutorial) — step-by-step Visual Studio walkthrough for your first "Hello World" plugin.
-- [C++ Example Plugin Overview](\ref ExamplePluginOverview) — a fully-fledged C++ sample with CMake, source, JSON and icons.
+- \ref FirstPluginTutorial — step-by-step Visual Studio walkthrough for your first "Hello World" plugin.
+- \ref ExamplePluginOverview — a fully-fledged C++ sample with CMake, source, JSON and icons.
 
 # Trust & safety {#HowtoAddPluginOverview_TrustModel}
 

@@ -6,7 +6,7 @@ Following code presents example of converting text to mesh
  
 - <b class="tab-title">C++</b>
 \include MeshFromText.dox.cpp
-\sa [MR::createSymbolsMesh](\ref MR::createSymbolsMesh)
+\sa \ref MR::createSymbolsMesh
  
 - <b class="tab-title">Python</b>
 \include MeshFromText.dox.py

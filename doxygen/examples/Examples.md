@@ -8,48 +8,48 @@ A number of these operations also run interactively in the browser: see the [liv
 
 ## C++ Application Based on MeshLib {#CppApplication}
 
- - [Basing your application on MeshLib](\ref BasedApplication)
+ - \ref BasedApplication
 
 ## General Samples {#GeneralExamples}
 
- - [Loading and saving mesh files](\ref ExampleMeshLoadSave)
- - [Mesh export](\ref ExampleMeshExport)
- - [Mesh modification](\ref ExampleMeshModification)
- - [Mesh Boolean](\ref ExampleMeshBoolean)
- - [Mesh Decimation](\ref ExampleMeshDecimate)
- - [Mesh Offset](\ref ExampleMeshOffset)
- - [Mesh Weighted Offset](\ref ExampleMeshOffsetWeighted)
- - [Filling Holes](\ref ExampleMeshFillHole)
- - [Stitching holes](\ref ExampleMeshStitchHole)
- - [Fixing Mesh Degeneracies](\ref ExampleMeshFixDegeneracies)
- - [Signed Distance](\ref ExampleSignedDistance)
- - [Signed Distance Point To Mesh](\ref ExampleSignedDistancePointToMesh)
- - [Signed Distances](\ref ExampleSignedDistances)
- - [Global Registration](\ref ExampleGlobalRegistration)
- - [Mesh ICP](\ref ExampleMeshICP)
- - [Mesh extrude](\ref ExampleMeshExtrude)
- - [Free Form Deformation Example](\ref ExampleFreeForm)
- - [Laplacian deformation Example](\ref ExampleLaplacian)
- - [Adding and removing noise Example](\ref ExampleNoiseDenoise)
- - [Simple triangulation](\ref ExampleTriangulation)
- - [Points to Mesh Example](\ref ExamplePointsToMesh)
- - [Contour Triangulation Example](\ref ExampleContourTriangulation)
- - [Terrain Triangulation Example](\ref ExampleTerrainTriangulation)
- - [Fusion Example](\ref ExampleFusion)
- - [Convert text to mesh](\ref ExampleMeshFromText)
+ - \ref ExampleMeshLoadSave
+ - \ref ExampleMeshExport
+ - \ref ExampleMeshModification
+ - \ref ExampleMeshBoolean
+ - \ref ExampleMeshDecimate
+ - \ref ExampleMeshOffset
+ - \ref ExampleMeshOffsetWeighted
+ - \ref ExampleMeshFillHole
+ - \ref ExampleMeshStitchHole
+ - \ref ExampleMeshFixDegeneracies
+ - \ref ExampleSignedDistance
+ - \ref ExampleSignedDistancePointToMesh
+ - \ref ExampleSignedDistances
+ - \ref ExampleGlobalRegistration
+ - \ref ExampleMeshICP
+ - \ref ExampleMeshExtrude
+ - \ref ExampleFreeForm
+ - \ref ExampleLaplacian
+ - \ref ExampleNoiseDenoise
+ - \ref ExampleTriangulation
+ - \ref ExamplePointsToMesh
+ - \ref ExampleContourTriangulation
+ - \ref ExampleTerrainTriangulation
+ - \ref ExampleFusion
+ - \ref ExampleMeshFromText
 
 ## Collisions {#Collisions}
 
- - [Detect collisions of two meshes](\ref ExampleDetectCollisions)
- - [Precise detect collisions of two meshes](\ref ExampleDetectCollisionsPrecise)
- - [Find self-intersecting triangles of single mesh](\ref ExampleDetectSelfIntersections)
+ - \ref ExampleDetectCollisions
+ - \ref ExampleDetectCollisionsPrecise
+ - \ref ExampleDetectSelfIntersections
 
 ## Python Specific Samples {#PythonSpecificExamples}
 
- - [Viewer Example](\ref ExampleViewer)
- - [Viewer Example Volume Rendering](\ref ExampleViewerVolumeRender)
- - [Plotly visualization](\ref ExamplePlotly)
- - [Numpy support](\ref ExampleNumpy)
- - [Triangulation of a regular Numpy grid](\ref ExampleNumpyTriangulation)
- - [Offset with Cuda](\ref ExampleCudaOffset)
- - [Open Dicom Files](\ref ExampleDicomFiles)
+ - \ref ExampleViewer
+ - \ref ExampleViewerVolumeRender
+ - \ref ExamplePlotly
+ - \ref ExampleNumpy
+ - \ref ExampleNumpyTriangulation
+ - \ref ExampleCudaOffset
+ - \ref ExampleDicomFiles

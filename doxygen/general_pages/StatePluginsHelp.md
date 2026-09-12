@@ -2,14 +2,14 @@
 
 ## Base Functions
 
-**State plugins** is simple objects to work with MeshLib scene and/or objects. It is one of possible inheritance of [RibbonMenuItem](\ref MR::RibbonMenuItem)
+**State plugins** is simple objects to work with MeshLib scene and/or objects. It is one of possible inheritance of \ref MR::RibbonMenuItem
 
 It has base functions:
 
-**Available function** - [ISceneStateCheck](\ref MR::ISceneStateCheck) interface function that block plugin in UI
+**Available function** - \ref MR::ISceneStateCheck interface function that block plugin in UI
 
 > [!NOTE]
-> This fuction can be inherited from some helper classes [SceneStateExactCheck](\ref MR::SceneStateExactCheck) [SceneStateAtLeastCheck](\ref MR::SceneStateAtLeastCheck) [SceneStateAtMostCheck](\ref MR::SceneStateAtMostCheck) [SceneStateOrCheck](\ref MR::SceneStateOrCheck) [SceneStateAndCheck](\ref MR::SceneStateAndCheck)
+> This fuction can be inherited from some helper classes \ref MR::SceneStateExactCheck \ref MR::SceneStateAtLeastCheck \ref MR::SceneStateAtMostCheck \ref MR::SceneStateOrCheck \ref MR::SceneStateAndCheck
 
 ```cpp
     // return empty string if all requirements are satisfied, otherwise return first unsatisfied requirement
@@ -84,13 +84,13 @@ MR_REGISTER_RIBBON_ITEM( MyOwnPlugin )
 ```
 To show this item on Ribbon menu, it should be present in MenuSchema.ui.json file (special page about these files are coming soon)
 <br/>
-[StateListenerPlugin](\ref MR::StateListenerPlugin) is more simple way to make plugin listen to some events:
+\ref MR::StateListenerPlugin is more simple way to make plugin listen to some events:
 ```cpp
 // This plugin will listen to mouse move and mouse down, also isAvailable function will be imlemented with SceneStateExactCheck
 class MyListenerPlugin : public StateListenerPlugin<MouseMoveListener,MouseDownListener>, public SceneStateExactCheck<1, ObjectMesh>
 ```
 
 Find more:
-[RibbonMenuItem](\ref MR::RibbonMenuItem)
-[StateBasePlugin](\ref MR::StateBasePlugin)
-[StateListenerPlugin](\ref MR::StateListenerPlugin)
+\ref MR::RibbonMenuItem
+\ref MR::StateBasePlugin
+\ref MR::StateListenerPlugin

@@ -499,37 +499,6 @@ jobs:
           name: Wheelhouse*
           failOnError: false
 
-      # generate timing logs archive
-      - name: Download Timing Logs Archive
-        uses: actions/download-artifact@v8
-        with:
-          pattern: Timing_Logs*
-          merge-multiple: true
-
-      - name: Generate Timing Logs Archive
-        run: |
-          shopt -s nullglob
-          if [ -n "$(echo *.csv)" ] ; then
-            tar -cvzf time_log.tar.gz *.csv
-          else
-            # create empty tar archive
-            # https://superuser.com/questions/448623/how-to-get-an-empty-tar-archive
-            tar -czf time_log.tar.gz -T /dev/null
-          fi
-
-      - name: Upload Timing Logs Archive
-        uses: actions/upload-artifact@v7
-        with:
-          name: time_log
-          path: time_log.tar.gz
-          retention-days: 1
-
-      - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: Timing_Logs*
-          failOnError: false
-
       - name: Delete Python Stubs
         if: needs.update-dev-documentation.result == 'success'
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0

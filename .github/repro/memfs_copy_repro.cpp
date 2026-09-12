@@ -21,7 +21,7 @@ constexpr int cSeconds = 480;
 constexpr int cStallSeconds = 60;
 constexpr int cFileKiB = 100;
 /// the application stalls with a heap around this size
-constexpr size_t cBallastMiB = 600;
+constexpr size_t cBallastMiB = 100;
 
 std::atomic<long long> gCopies{ 0 };
 std::atomic<bool> gStop{ false };

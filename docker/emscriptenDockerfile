@@ -22,7 +22,6 @@ RUN <<EOF
 EOF
 
 
-# noble, matching the emsdk image: its binaries link glibc 2.39 and will not run on jammy
 FROM ubuntu:24.04 AS base
 
 COPY --from=emsdk /emsdk /emsdk

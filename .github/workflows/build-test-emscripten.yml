@@ -204,20 +204,6 @@ jobs:
           MR_EMSCRIPTEN_SINGLETHREAD: ${{ matrix.singlethread }}
         run: ./scripts/build_wasm_meshlib.sh
 
-      - name: TEMPORARY - locate exception landing pads
-        if: always()
-        run: |
-          NM=$(command -v llvm-nm || echo /emsdk/upstream/bin/llvm-nm)
-          echo "NM=$NM"; $NM --version | head -1 || echo "NM MISSING"
-          n=0
-          for f in $(find lib build /emsdk/upstream/emscripten/cache/sysroot/lib -name "*.a" -o -name "*.o" 2>/dev/null); do
-            n=$((n+1))
-            if $NM --undefined-only "$f" 2>/dev/null | grep -q __cxa_find_matching_catch; then
-              echo "LANDINGPADS $f"
-            fi
-          done
-          echo "scanned $n files"
-
       - name: Test Wasm module
         env:
           MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.node.mjs

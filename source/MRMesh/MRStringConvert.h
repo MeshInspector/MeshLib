@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include <filesystem>
 #include <string>
+#include <string_view>
 #include "MRExpected.h"
 #include "MRPch/MRBindingMacros.h"
 
@@ -78,7 +79,14 @@ std::string utf8string( const std::string & ) = delete;
 [[nodiscard]] MR_BIND_IGNORE MRMESH_API std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size );
 
 /// Converts the given UTF-8 encoded string to a UTF-32 encoded string.
-[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::u32string utf8ToUtf32( const std::string& str );
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::u32string utf8ToUtf32( std::string_view str );
+
+/// Appends the given code point to the string in UTF-8 encoding;
+/// the code points not representable in UTF-8 are replaced with U+FFFD.
+MR_BIND_IGNORE MRMESH_API void appendUtf8( std::string& str, char32_t cp );
+
+/// Converts the given UTF-32 encoded string to a UTF-8 encoded string.
+[[nodiscard]] MR_BIND_IGNORE MRMESH_API std::string utf32ToUtf8( std::u32string_view str );
 
 /// converts given size in string:
 /// [0,1024) -> nnn bytes

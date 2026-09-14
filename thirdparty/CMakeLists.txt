@@ -144,6 +144,10 @@ IF(EMSCRIPTEN)
   # fmt 12 defaults FMT_INSTALL to FMT_MASTER_PROJECT, so as a subproject it generates no
   # install/export target - and spdlog's export set below refers to fmt. 11.x forced it ON.
   set(FMT_INSTALL ON)
+  # fmt 12 asks for cxx_std_20, which makes CMake scan its sources for C++20 modules via
+  # clang-scan-deps - a binary the emscripten image drops when it swaps in our PGO clang.
+  # We do not build fmt as a module (FMT_MODULE is off), so the scan has nothing to find.
+  set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
   add_subdirectory(./fmt)
   #install(DIRECTORY fmt/include/fmt DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 

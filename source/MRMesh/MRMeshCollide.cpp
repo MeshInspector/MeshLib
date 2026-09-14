@@ -384,10 +384,14 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
     if ( !aFace )
         return true; //consider empty mesh always inside
 
+    const auto bBox = b.mesh.getBoundingBox();
+    if ( !bBox.valid() )
+        return false; //nothing is inside an empty mesh
+
     const auto a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
     // in the area where a touches b the distance is zero and its sign is defined by rounding errors only,
     // so the faces connected to aFace are visited until the distance becomes reliably non-zero
-    const float minReliableDist = 1e-5f * b.mesh.getBoundingBox().diagonal();
+    const float minReliableDist = 1e-5f * bBox.diagonal();
     float bestDist = 0;
     FaceBitSet visited( a.topology.faceSize() );
     visited.set( aFace );
@@ -399,13 +403,13 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
         auto aPoint = a.triCenter( f );
         if ( rigidB2A )
             aPoint = a2b( aPoint );
-        if ( const auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region ) )
-        {
-            if ( std::abs( *signDist ) >= minReliableDist )
-                return *signDist < 0;
-            if ( std::abs( *signDist ) > std::abs( bestDist ) )
-                bestDist = *signDist;
-        }
+        const auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
+        if ( !signDist )
+            return false; //no projection on b at all
+        if ( std::abs( *signDist ) >= minReliableDist )
+            return *signDist < 0;
+        if ( std::abs( *signDist ) > std::abs( bestDist ) )
+            bestDist = *signDist;
         for ( EdgeId e : leftRing( a.topology, f ) )
             if ( auto n = a.topology.right( e ); n && !visited.test_set( n ) )
                 stack.push_back( n );

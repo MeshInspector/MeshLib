@@ -141,6 +141,9 @@ IF(EMSCRIPTEN)
   add_subdirectory(./jsoncpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
+  # fmt 12 defaults FMT_INSTALL to FMT_MASTER_PROJECT, so as a subproject it generates no
+  # install/export target - and spdlog's export set below refers to fmt. 11.x forced it ON.
+  set(FMT_INSTALL ON)
   add_subdirectory(./fmt)
   #install(DIRECTORY fmt/include/fmt DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 

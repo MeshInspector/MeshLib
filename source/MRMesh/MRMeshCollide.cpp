@@ -9,8 +9,10 @@
 #include "MRTriDist.h"
 #include "MRExpected.h"
 #include "MRProcessSelfTreeSubtasks.h"
+#include "MRRingIterator.h"
 
 #include <atomic>
+#include <cmath>
 #include <thread>
 
 namespace MR
@@ -382,12 +384,33 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
     if ( !aFace )
         return true; //consider empty mesh always inside
 
-    Vector3f aPoint = a.triCenter( aFace );
-    if ( rigidB2A )
-        aPoint = rigidB2A->inverse()( aPoint );
-
-    auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
-    return signDist && signDist < 0;
+    const auto a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
+    // in the area where a touches b the distance is zero and its sign is defined by rounding errors only,
+    // so the faces connected to aFace are visited until the distance becomes reliably non-zero
+    const float minReliableDist = 1e-5f * b.mesh.getBoundingBox().diagonal();
+    float bestDist = 0;
+    FaceBitSet visited( a.topology.faceSize() );
+    visited.set( aFace );
+    std::vector<FaceId> stack{ aFace };
+    while ( !stack.empty() )
+    {
+        const auto f = stack.back();
+        stack.pop_back();
+        auto aPoint = a.triCenter( f );
+        if ( rigidB2A )
+            aPoint = a2b( aPoint );
+        if ( const auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region ) )
+        {
+            if ( std::abs( *signDist ) >= minReliableDist )
+                return *signDist < 0;
+            if ( std::abs( *signDist ) > std::abs( bestDist ) )
+                bestDist = *signDist;
+        }
+        for ( EdgeId e : leftRing( a.topology, f ) )
+            if ( auto n = a.topology.right( e ); n && !visited.test_set( n ) )
+                stack.push_back( n );
+    }
+    return bestDist < 0;
 }
 
 } //namespace MR

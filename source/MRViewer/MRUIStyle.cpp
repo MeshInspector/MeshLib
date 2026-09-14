@@ -1524,6 +1524,7 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
         for ( int i = 0; i < int( options.size() ); ++i )
         {
             ImGui::PushID( ( label + std::to_string( i ) ).c_str() );
+            MR_FINALLY{ ImGui::PopID(); };
 
             // Not using `comboElem()`, because that would add Test Engine integration, and we already have our own here.
             if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
@@ -1534,8 +1535,6 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
 
             if ( !tooltips.empty() )
                 UI::setTooltipIfHovered( tooltips[i] );
-
-            ImGui::PopID();
         }
     }
 
@@ -1607,6 +1606,7 @@ bool beginCombo( const char* label, const std::string& text, bool enableTestEngi
 
         if ( res )
         {
+            // popped in `endCombo()`, the drop-down list is open in between
             ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, StyleConsts::CustomCombo::popupItemSpacingY * UI::scale() } );
             activeCombo.itemSpacingPushed = true;
         }

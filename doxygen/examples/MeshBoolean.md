@@ -1,0 +1,49 @@
+# Mesh Boolean {#ExampleMeshBoolean}
+
+Example of boolean operation
+
+The optional [BooleanResultMapper](\ref MR::BooleanResultMapper) passed to the operation maps faces,
+vertices and edges of the input meshes to the primitives of the result mesh, and its
+[getNew2OldFaceMap](\ref MR::BooleanResultMapper::getNew2OldFaceMap) maps the faces back.
+
+▶ [See it live in the browser](https://demo.meshlib.io/#boolean)
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include MeshBoolean.dox.cpp
+Source meshes
+\image html boolean_before.png
+Boolean intersection
+\image html boolean_after.png
+ 
+- <b class="tab-title">Python</b>
+\include MeshBoolean.dox.py
+Source meshes
+\image html boolean_before.png
+Boolean intersection
+\image html boolean_after.png
+ 
+- <b class="tab-title">C</b>
+\include MeshBoolean.dox.c
+Source meshes
+\image html boolean_before.png
+Boolean intersection
+\image html boolean_after.png
+ 
+- <b class="tab-title">C#</b>
+\include MeshBoolean.dox.cs
+Source meshes
+\image html boolean_before.png
+Boolean intersection
+\image html boolean_after.png
+ 
+- <b class="tab-title">JavaScript</b>
+\include MeshBoolean.dox.js
+\include{doc} JsUsingNote.md
+Source meshes
+\image html boolean_before.png
+Boolean intersection
+\image html boolean_after.png
+
+</div>

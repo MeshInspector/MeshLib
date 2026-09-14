@@ -1,0 +1,126 @@
+# MeshLib C Setup Guide {#MeshLibCSetupGuide}
+
+# Setting Up MeshLib for C Development
+
+[TOC]
+
+> [!NOTE]
+> The C API library is called `MeshLibC2`, and its headers are in the `MRC*` directories (`MRCMesh`/etc, as opposed to `MRMesh`/etc for C++ API).
+
+<p></p>
+
+> [!NOTE]
+> The recommended way of installing the C API is from the [binary releases](https://github.com/MeshInspector/MeshLib/releases) of MeshLib. It's also possible to build [from source](#CppBuildCBindingsFromSource).
+
+## Prerequisites {#CSetupPrerequisites}
+
+### Compiler and language standard
+
+Compile your own code as C11 or newer:
+- `/std:c11` in Visual Studio (2019 version 16.8 or newer)
+- `-std=c11` with GCC or Clang
+
+### CMake
+
+Integrating MeshLib with CMake needs CMake 3.18 or newer. See [the CMake Setup Guide](\ref MeshLibCmakeSetupGuide).
+
+## Installing binary releases of MeshLib
+
+The installation process is [same as for C++](\ref MeshLibCppSetupGuide), and is also explained below.
+
+The release archives include the C headers (in the directory called `MRCMesh` and several other `MRC...` directories), and a compiled library named `MeshLibC2` (`MeshLibC2.dll` on Windows, `libMeshLibC2.so` on Linux, etc). This library links against our C++ libraries (`MRMesh` and others) and provides C wrappers for them.
+
+### Windows
+> [!NOTE]
+> MeshLib for Windows is distributed for x64 only. Make sure you're not targeting x32.
+
+Every release publishes one Windows distributive per Visual Studio toolset, plus one for Debug builds that keep MSVC's iterator debugging on.
+The [C++ guide's archive table](\ref CppSetupWindows) names all four and says which one to take, including the binary-compatibility rule that lets an older toolset's archive serve a newer Visual Studio. It applies to C unchanged, except for its `_ITERATOR_DEBUG_LEVEL` column:
+a pure-C consumer needs no `_ITERATOR_DEBUG_LEVEL` define, whichever archive it picks, because C code passes no standard containers across the DLL boundary, so the mismatch that define guards against cannot arise. A project that also compiles C++ translation units against MeshLib's C++ headers does need it, at the value in that column.
+
+ 1. **Download and Extract the Built Version**
+  - Visit the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases).
+  - Download the archive for your Visual Studio toolset from [the C++ guide's table](\ref CppSetupWindows).
+  - Extract it to a directory, e.g., `C:\meshlib-built\`.
+  <br/> **Directory Structure After Extraction**
+```cmd
+install/
+  ├── include/       # Header files
+  ├── lib/           # Static and shared libraries
+  ├── app/           # Executables
+example_plugin/      # example solution for creating MeshLib/MeshInspector plugins
+```
+ 2. **Configure and integrate with Visual Studio**
+    - **Solution Platform**:
+    <br/> Set: `x64`
+    - **C/C++ → Language → C Language Standard**:
+    <br/> Set: `/std:c11` or later
+    - **C/C++ → General → Additional Include Directories**:
+    <br/> Add: `C:\meshlib-built\install\include`
+    - **C/C++ → All Options → Additional Options**:
+    <br/> Add: `/bigobj /utf-8`
+    - **Linker → Input → Additional Dependencies**:
+    <br/> Add: `C:\meshlib-built\install\lib\$(Configuration)\*.lib`
+    - **Copy DLLs**:
+    <br/> Copy all `.dll` files from: `C:\meshlib-built\install\app\$(Configuration)` to your project’s output directory: `$(TargetDir)`
+```cmd
+xcopy C:\meshlib-built\install\app\$(Configuration)\*.dll $(TargetDir)
+```
+
+### Linux
+ 1. **Download the Package for Your Distribution and CPU**
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links a `.deb` for every supported Ubuntu release and architecture. Take the one matching `lsb_release -rs` and `uname -m`.
+ <br/> On any other distribution use the portable **Linux vcpkg** build instead. It bundles its own dependencies and is not installed system-wide: unpack it and use the resulting directory as the MeshLib installation prefix, then skip to step 3.
+```sh
+mkdir path_to_install && tar -xf <downloaded>.tar.xz -C path_to_install
+```
+ 2. **Install the Package**
+ <br/> `apt` refuses a package built for another CPU, but nothing tells the Ubuntu releases apart: the builds all declare the same dependencies and the `preinst` carries no release check, so installing the Ubuntu 22 build on Ubuntu 24 succeeds silently. Check the release in the file name first.
+```sh
+sudo apt install ./<downloaded>.deb
+```
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ <br/> Add the following to your `CMakeLists.txt`:
+```cmake
+target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
+```
+
+### macOS
+ 1. **Download the Installer**
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page: the release description links one `.pkg` installer for macOS Arm (Apple silicon) and one for macOS x64 (Intel). Take the one matching `uname -m` (`arm64` or `x86_64`).
+ 2. **Install**
+  - Double-click the downloaded `.pkg` and follow the installer. The release asset is the installer itself, so there is nothing to unpack first.
+  - The framework is installed into `/Library/Frameworks/MeshLib.framework`, or into `~/Library/Frameworks/MeshLib.framework` if you choose to install for the current user only.
+  - **Install Dependencies via Homebrew**
+  <br/> The `.pkg` does not pull in the Homebrew formulae MeshLib links against, so install them yourself. Skip this step if your project enables only the C language. This needs [Homebrew](https://brew.sh/) — install it first if you do not have it. Open Terminal and run the following command:
+```sh
+xargs brew install < /Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt
+```
+  - If you installed for the current user only, prefix the path with `~`: `~/Library/Frameworks/MeshLib.framework/Versions/Current/requirements/macos.txt`.
+ 3. [**Integrate Using CMake**](\ref MeshLibCmakeSetupGuide)
+ <br/> Add the following to your `CMakeLists.txt`:
+```cmake
+target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
+```
+
+## Try MeshLib with C Examples
+
+MeshLib provides a [collection of C code samples](\ref Examples) to help you get started quickly with common mesh processing tasks.
+
+We suggest running one of them to confirm that the installation was performed correctly, for example the [Load and Save Meshes](\ref ExampleMeshLoadSave) sample.
+
+## Building C API from source {#CppBuildCBindingsFromSource}
+
+As an alternative to the binary distribution, you can build the C API from source, as a part of MeshLib.
+
+The C API sources are generated for each release, and must be downloaded from the [GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page.
+
+The source archive is called `meshlib_v1.2.3.4_c-source[-wasm].zip`. Use the `-wasm` variant if you're building for Wasm; it omits support for some additional IO formats that we don't support in Wasm builds.
+
+Extract `MeshLibC2/include`, `MeshLibC2/src` into `source/MeshLibC2`.
+
+Additionally, if you want Cuda support, similarly extract `MeshLibC2Cuda/{include,src}` into `source/MeshLibC2Cuda`. This is not available on Wasm.
+
+If you **don't** want Cuda support, you instead have to copy Cuda stubs from `scripts/mrbind/cuda_placeholder_generated_c/{include,src}` to `source/MeshLibC2Cuda`. This is the only option on Wasm.
+
+Lastly, build MeshLib with C API enabled by adding `-DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON` to CMake flags. We recommend using CMake for this, but VS project files are also available in `source/MeshLibC2` and `source/MeshLibC2Cuda`, but they aren't included in the VS solution by default.

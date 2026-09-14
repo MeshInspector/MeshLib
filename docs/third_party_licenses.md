@@ -19,7 +19,7 @@ to** MeshLib's own top-level `LICENSE`, which covers only MeshLib itself.
   the modules that bundle it, the SPDX-ish license id, the upstream, and the **version the
   text was curated against**.
 
-The inclusion list is `doxygen/general_pages/ThirdpartyList.dox`, reconciled against
+The inclusion list is `doxygen/general_pages/ThirdpartyList.md`, reconciled against
 `.gitmodules` and `thirdparty/vcpkg/vcpkg.json`. Build- and test-only submodules (googletest,
 mrbind) are not shipped and are excluded (see `EXCLUDED_SUBMODULES` in the checker).
 

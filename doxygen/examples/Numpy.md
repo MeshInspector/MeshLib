@@ -1,0 +1,10 @@
+# Numpy support {#ExampleNumpy}
+
+Using numpy to create mesh and get back its primitives
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Python</b>
+\include Numpy.dox.py
+
+</div>

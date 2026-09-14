@@ -1,0 +1,16 @@
+# Terrain Triangulation Example {#ExampleTerrainTriangulation}
+
+Example of generating a triangulation from a terrain scan (specific pointcloud).
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include TerrainTriangulation.dox.cpp
+ 
+- <b class="tab-title">Python</b>
+\include TerrainTriangulation.dox.py
+ 
+- <b class="tab-title">C</b>
+\include TerrainTriangulation.dox.c
+
+</div>

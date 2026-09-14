@@ -100,7 +100,7 @@
         "type": "submodule",
         "path": "thirdparty/fmt"
       },
-      "version": "47a66c5eccc0cce71ad81b4a681a2032d86ca951"
+      "version": "1be298e1bd68957e4cd352e1f676f00e07dcfb57"
     },
     {
       "id": "libtiff",

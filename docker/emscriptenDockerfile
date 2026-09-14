@@ -22,6 +22,22 @@ RUN <<EOF
 EOF
 
 
+# 4.0.19 predates emscripten-core/emscripten#26582: emscripten_proxy_finish signals the proxy
+# context's condvar after unlocking its mutex, so the waiter can return and destroy the ctx off
+# its own stack before the signal lands, and the thread that should have woken never does. Every
+# syscall is proxied under -pthread, so any worker touching the filesystem can hang. Upstream
+# shipped the fix in 5.0.5; drop this whole stage when EMSDK_VERSION reaches it.
+#
+# proxying.c is compiled into libc, and the image ships that prebuilt, so the patch only takes
+# effect once the cached archive is gone - warmup_wasm_cache.sh rebuilds it per variant.
+COPY scripts/devops/patch_emsdk_proxying.py /tmp/patch_emsdk_proxying.py
+RUN <<EOF
+    set -e
+    python3 /tmp/patch_emsdk_proxying.py
+    find /emsdk/upstream/emscripten/cache/sysroot -name 'libc-mt*.a' -print -delete
+    rm -f /tmp/patch_emsdk_proxying.py
+EOF
+
 FROM ubuntu:22.04 AS base
 
 COPY --from=emsdk /emsdk /emsdk

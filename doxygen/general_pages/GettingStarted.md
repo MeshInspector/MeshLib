@@ -6,7 +6,7 @@ This guide will help you get started with setting up MeshLib for your preferred 
 
 MeshLib also runs in the browser: the [live demo](https://demo.meshlib.io/) needs no installation.
 
-## Choose Your Setup Guide
+### Choose Your Setup Guide
 
 1. [**MeshLib Python Setup Guide**](\ref MeshLibPythonSetupGuide)
 <br/> Follow this guide to set up MeshLib for Python on Windows, macOS, and Linux. It includes details on supported Python versions, installation via pip, and usage examples.

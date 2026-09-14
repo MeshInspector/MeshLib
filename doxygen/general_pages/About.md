@@ -2,11 +2,11 @@
 
 [TOC]
 
-## Welcome to MeshLib’s documentation!
+### Welcome to MeshLib’s documentation!
 The MeshLib SDK is an open-source 3D geometry processing library designed to provide developers with a comprehensive toolkit for building robust 3D applications.
 Whether you are working in C++, Python, C#, or C, MeshLib offers a versatile, cross-platform solution available on Windows, macOS, and Linux, enabling the development of cutting-edge solutions with ease and precision.
 
-## Key Features
+### Key Features
 
  - **3D Data Handling:** Supports meshes, voxels, and point clouds for creation, modification, and conversion.
  - **Boolean Operations:** Fast, highly optimized mesh and voxel-based approaches.
@@ -21,7 +21,7 @@ Whether you are working in C++, Python, C#, or C, MeshLib offers a versatile, cr
 
 Features illustration is available in [the features section](https://meshlib.io/features/) or in the sections of this documentation.
 
-## Modern Applications
+### Modern Applications
 
  - **Automation, AI, and Robotics.** Essential for 3D scanning in robotics, AI, and autonomous systems, MeshLib enables real-time mesh processing for environment mapping, object detection, and path planning. Mesh repair tools prepare models by fixing holes and intersections, ideal for automated systems handling large datasets.
  - **Manufacturing and 3D Printing.** MeshLib's Boolean operations and mesh offsetting ensure accuracy and manufacturability for 3D prints, optimizing models with decimation for industrial-scale applications.
@@ -31,7 +31,7 @@ Features illustration is available in [the features section](https://meshlib.io/
 
  See more [application examples](https://meshlib.io/applications/).
 
-## Getting Started
+### Getting Started
 
 Before installing anything, you can try MeshLib in your browser: the [live demo](https://demo.meshlib.io/) runs boolean operations, hole filling, decimation, and ICP registration.
 
@@ -47,14 +47,14 @@ except the interactive viewer at a about 30% smaller download.
 
 For C++, C#, and C developers, head to our [Installation Guide](\ref InstallationGuide) for more details on integrating MeshLib into your environment.
 
-## Tutorials
+### Tutorials
 Explore [MeshLib's tutorials](\ref Tutorials) and [code samples](\ref Examples) to get started quickly and master advanced features.
 
-## License
+### License
 MeshLib offers Non-Commercial Free License with a Commercial License Requirement.
 Learn more on [the MeshLib License page](https://meshlib.io/license).
 
-## Join the Community
+### Join the Community
 MeshLib thrives on contributions from developers like you! Explore our GitHub repository, submit pull requests, and be a part of shaping the future of 3D geometry development.
 
 [Visit GitHub](https://github.com/MeshInspector/MeshLib/discussions)

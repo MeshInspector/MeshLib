@@ -1,6 +1,6 @@
 # State Plugins Overview {#StatePluginsHelp}
 
-## Base Functions
+### Base Functions
 
 **State plugins** is simple objects to work with MeshLib scene and/or objects. It is one of possible inheritance of \ref MR::RibbonMenuItem
 
@@ -28,7 +28,7 @@ It has base functions:
     MRVIEWER_API virtual void drawDialog( ImGuiContext* ctx );
 ```
 
-## How to make your first plugin
+### How to make your first plugin
 To create you plugin you need to inherit class from MR::StatePlugin or MR::StateListenerPlugin (in case you need to get some events)<br/>
 Example:
 ```cpp

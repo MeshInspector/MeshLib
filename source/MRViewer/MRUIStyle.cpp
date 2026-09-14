@@ -1517,21 +1517,25 @@ bool combo( const char* label, int* v, const std::vector<std::string>& options, 
         return valueOverridden;
 
     bool selected = false;
-    for ( int i = 0; i < int( options.size() ); ++i )
     {
-        ImGui::PushID( ( label + std::to_string( i ) ).c_str() );
+        StyleParamHolder shPopup;
+        shPopup.addVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, StyleConsts::CustomCombo::popupItemSpacingY * UI::scale() } );
 
-        // Not using `comboElem()`, because that would add Test Engine integration, and we already have our own here.
-        if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
+        for ( int i = 0; i < int( options.size() ); ++i )
         {
-            selected = true;
-            *v = i;
+            ImGui::PushID( ( label + std::to_string( i ) ).c_str() );
+            MR_FINALLY{ ImGui::PopID(); };
+
+            // Not using `comboElem()`, because that would add Test Engine integration, and we already have our own here.
+            if ( ImGui::Selectable( options[i].c_str(), *v == i ) )
+            {
+                selected = true;
+                *v = i;
+            }
+
+            if ( !tooltips.empty() )
+                UI::setTooltipIfHovered( tooltips[i] );
         }
-
-        if ( !tooltips.empty() )
-            UI::setTooltipIfHovered( tooltips[i] );
-
-        ImGui::PopID();
     }
 
     ImGui::EndCombo();
@@ -1552,6 +1556,8 @@ namespace
 
         // Don't render the UI, but collect the calls to `comboElem()`, and possibly override their return values.
         bool uiIsHidden = false;
+
+        bool itemSpacingPushed = false;
 
         bool testEngineEnabled = false;
 
@@ -1598,6 +1604,13 @@ bool beginCombo( const char* label, const std::string& text, bool enableTestEngi
         activeCombo.label = label;
         activeCombo.value = text;
 
+        if ( res )
+        {
+            // popped in `endCombo()`, the drop-down list is open in between
+            ImGui::PushStyleVar( ImGuiStyleVar_ItemSpacing, { style.ItemSpacing.x, StyleConsts::CustomCombo::popupItemSpacingY * UI::scale() } );
+            activeCombo.itemSpacingPushed = true;
+        }
+
         if ( enableTestEngine )
         {
             activeCombo.simulateClickForElem = TestEngine::createValueTentative<std::string>( label );
@@ -1628,6 +1641,9 @@ void endCombo()
             (void)TestEngine::createValue( active.label, active.value, true, active.collectedElems );
 
         callEndCombo = !active.uiIsHidden;
+
+        if ( active.itemSpacingPushed )
+            ImGui::PopStyleVar();
 
         activeCombos.pop_back();
     }

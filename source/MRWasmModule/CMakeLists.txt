@@ -42,10 +42,7 @@ function(mr_add_wasm_module TARGET_NAME)
     "-sALLOW_MEMORY_GROWTH=1"
     "-sEXIT_RUNTIME=0"
     "-sINVOKE_RUN=0"
-    # emscripten declares $findMatchingCatch's dependency on $setTempRet0 only when exception
-    # catching is ENABLED, but it is the catching-disabled stub that calls setTempRet0. So the
-    # symbol is never emitted and closure fails on it. Pull it in by hand.
-    # https://github.com/emscripten-core/emscripten/blob/5.0.7/src/lib/libexceptions.js#L246
+    # https://github.com/emscripten-core/emscripten/issues/27703
     # (quoted through SHELL: so the generator does not hand a bare $ to /bin/sh)
     "SHELL:-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='$setTempRet0'"
     "--closure=1"

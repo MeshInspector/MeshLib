@@ -9,14 +9,6 @@ ENDIF()
 
 IF(MR_EMSCRIPTEN)
   set(MRMESH_NO_TIFF ON)
-  # libc++ reports the std::wstring_convert deprecation against its own header - at the
-  # out-of-line to_bytes definition - so the MR_SUPPRESS_WARNING pragma inside the file
-  # cannot reach it. It stayed quiet until emsdk 5.0.0 only by luck: llvm/llvm-project#146650
-  # (granularize <locale>) moved wstring_convert into its own header, out of the one our PCH
-  # first includes inside a -Wdeprecated-declarations-ignored region, and clang stamps that
-  # state per source location. Fixed upstream in llvm/llvm-project#201633, which is not in
-  # emsdk 6.0.9 yet - drop this once a vendored libc++ carries it.
-  set_source_files_properties(MRStringConvert.cpp PROPERTIES COMPILE_OPTIONS "-Wno-deprecated-declarations")
 ENDIF()
 
 file(GLOB SOURCES "*.cpp")

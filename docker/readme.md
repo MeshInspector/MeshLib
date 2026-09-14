@@ -13,5 +13,3 @@ Build an image locally:
 ```
 $ docker build -f ./docker/ubuntu24Dockerfile -t meshlib/meshlib-ubuntu24 .
 ```
-
-The emscripten images patch their emsdk with `docker/patches/emscripten-26582.patch` — a backport of the fix for multi-threaded file system access, needed before emsdk 5.0.5.

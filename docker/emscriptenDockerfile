@@ -22,14 +22,8 @@ RUN <<EOF
 EOF
 
 
-# emsdk before 5.0.5 hangs worker threads in proxied syscalls, and under -pthread every syscall
-# is proxied, so any worker touching the filesystem can stop. The patch is upstream's own commit
-# for emscripten-core/emscripten#26582, taken verbatim; its test/codesize hunks are for a tree we
-# do not have here, hence --include. Delete all this when EMSDK_VERSION reaches 5.0.5 - git apply
-# will fail on the already-fixed source and say so.
-#
-# proxying.c is compiled into libc and the image ships that prebuilt, so the patch only takes
-# effect once the cached archives are gone; the cache warmup rebuilds them per variant.
+# backport fix for multi-threaded file system access
+# more info: https://github.com/emscripten-core/emscripten/pull/26582
 COPY docker/patches/emscripten-26582.patch /tmp/
 RUN <<EOF
     set -e

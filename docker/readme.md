@@ -14,10 +14,4 @@ Build an image locally:
 $ docker build -f ./docker/ubuntu24Dockerfile -t meshlib/meshlib-ubuntu24 .
 ```
 
-#### The emscripten images carry a patched emsdk
-
-`emscriptenDockerfile` applies `docker/patches/emsdk-4.0.19-proxying-26582.patch` to the emsdk it starts from. It is [emscripten-core/emscripten#26582](https://github.com/emscripten-core/emscripten/pull/26582): `emscripten_proxy_finish` signalled the proxy context's condition variable after releasing its mutex, so the waiting thread could return and destroy the context off its own stack before the signal landed, and the thread that should have woken waited forever. Every syscall is proxied to the main thread under `-pthread`, so any worker thread touching the filesystem could hang — about one 8-minute run in three on two cores.
-
-The patch only takes effect because the cached `libc-mt*.a` archives are deleted along with it: `proxying.c` is compiled into libc, and the emsdk image ships that prebuilt. The cache warmup in the builder stage rebuilds them from the patched sources, and the final stage copies that cache into the image, so consumers get the fix without rebuilding anything.
-
-Upstream shipped the fix in emsdk 5.0.5. When `EMSDK_VERSION` reaches it, `patch` will fail on the unmatched context and the image build will stop — delete the patch file and its `COPY`/`RUN` block at that point.
+The emscripten images patch their emsdk with `docker/patches/emscripten-26582.patch` — a backport of the fix for multi-threaded file system access, needed before emsdk 5.0.5.

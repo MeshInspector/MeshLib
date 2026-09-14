@@ -322,6 +322,8 @@ git pull origin
 \code{.sh}
 ./emsdk activate 4.0.19
 \endcode
+
+\note Emscripten before 5.0.5 has a race in syscall proxying that can hang a worker thread for good: under `-pthread` every syscall is proxied to the main thread, so a worker doing file I/O may stop and never resume. Version 5.0.5 or newer is the simplest answer. If you stay on an older one, apply [emscripten-core/emscripten#26582](https://github.com/emscripten-core/emscripten/pull/26582) to `system/lib/pthread/proxying.c` and delete the cached `libc-mt*.a` under `upstream/emscripten/cache/sysroot` so it gets rebuilt from the fixed source — MeshLib's own Emscripten image does exactly that.
  - Set Up Environment Variables
   - **macOS and Linux**:
 \code{.sh}

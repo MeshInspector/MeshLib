@@ -22,20 +22,21 @@ RUN <<EOF
 EOF
 
 
-# 4.0.19 predates emscripten-core/emscripten#26582: emscripten_proxy_finish signals the proxy
-# context's condvar after unlocking its mutex, so the waiter can return and destroy the ctx off
-# its own stack before the signal lands, and the thread that should have woken never does. Every
-# syscall is proxied under -pthread, so any worker touching the filesystem can hang. Upstream
-# shipped the fix in 5.0.5; drop this whole stage when EMSDK_VERSION reaches it.
+# emsdk before 5.0.5 hangs worker threads in proxied syscalls, and under -pthread every syscall
+# is proxied, so any worker touching the filesystem can stop. The patch is upstream's own commit
+# for emscripten-core/emscripten#26582, taken verbatim; its test/codesize hunks are for a tree we
+# do not have here, hence --include. Delete all this when EMSDK_VERSION reaches 5.0.5 - git apply
+# will fail on the already-fixed source and say so.
 #
-# proxying.c is compiled into libc, and the image ships that prebuilt, so the patch only takes
-# effect once the cached archive is gone - warmup_wasm_cache.sh rebuilds it per variant.
-COPY docker/patches/emsdk-4.0.19-proxying-26582.patch /tmp/
+# proxying.c is compiled into libc and the image ships that prebuilt, so the patch only takes
+# effect once the cached archives are gone; the cache warmup rebuilds them per variant.
+COPY docker/patches/emscripten-26582.patch /tmp/
 RUN <<EOF
     set -e
-    patch -p1 --batch --forward -d /emsdk/upstream/emscripten < /tmp/emsdk-4.0.19-proxying-26582.patch
+    cd /emsdk/upstream/emscripten
+    git apply -p1 --include='system/lib/pthread/proxying.c' /tmp/emscripten-26582.patch
     find /emsdk/upstream/emscripten/cache/sysroot -name 'libc-mt*.a' -print -delete
-    rm -f /tmp/emsdk-4.0.19-proxying-26582.patch
+    rm -f /tmp/emscripten-26582.patch
 EOF
 
 FROM ubuntu:22.04 AS base

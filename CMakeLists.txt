@@ -4,12 +4,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(DefaultOptions)
 include(ConfigureVcpkg)
 
-IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
-  # print compile time of each translation unit in the CSV format (user time, system time, command)
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
-ENDIF()
-
 IF(APPLE)
     # assume built-in pthreads on macOS
     # https://stackoverflow.com/a/54606606/7325599

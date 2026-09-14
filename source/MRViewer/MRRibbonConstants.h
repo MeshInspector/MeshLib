@@ -93,6 +93,8 @@ namespace CustomCombo
 {
 
 constexpr Vector2f framePadding{ 13, 8 };
+// the drop-down list looks the same regardless of the item spacing set by the caller
+constexpr float popupItemSpacingY = 6.0f;
 
 } // CustomCombo
 

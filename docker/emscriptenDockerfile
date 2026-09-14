@@ -30,12 +30,12 @@ EOF
 #
 # proxying.c is compiled into libc, and the image ships that prebuilt, so the patch only takes
 # effect once the cached archive is gone - warmup_wasm_cache.sh rebuilds it per variant.
-COPY scripts/devops/patch_emsdk_proxying.py /tmp/patch_emsdk_proxying.py
+COPY docker/patches/emsdk-4.0.19-proxying-26582.patch /tmp/
 RUN <<EOF
     set -e
-    python3 /tmp/patch_emsdk_proxying.py
+    patch -p1 --batch --forward -d /emsdk/upstream/emscripten < /tmp/emsdk-4.0.19-proxying-26582.patch
     find /emsdk/upstream/emscripten/cache/sysroot -name 'libc-mt*.a' -print -delete
-    rm -f /tmp/patch_emsdk_proxying.py
+    rm -f /tmp/emsdk-4.0.19-proxying-26582.patch
 EOF
 
 FROM ubuntu:22.04 AS base

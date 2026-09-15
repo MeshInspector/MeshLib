@@ -995,6 +995,11 @@ void Viewer::runEventLoopIteration( double maxWaitSec )
         CommandLoop::processCommands();
     } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
+    // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none):
+    // the caller re-checks windowShouldClose() at once
+    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
+        return;
+
     if ( isAnimating )
     {
         const double minDuration = 1.0 / double( animationMaxFps );

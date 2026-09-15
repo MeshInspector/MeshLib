@@ -472,6 +472,9 @@
     <ClCompile Include="MRViewerTitle.cpp">
       <Filter>Viewer</Filter>
     </ClCompile>
+    <ClCompile Include="MRGLDriverKnownIssues.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
     <ClCompile Include="MROpenObjects.cpp">
       <Filter>IO</Filter>
     </ClCompile>
@@ -982,6 +985,9 @@
     </ClInclude>
     <ClInclude Include="MRSceneReorder.h">
       <Filter>Source Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGLDriverKnownIssues.h">
+      <Filter>Render</Filter>
     </ClInclude>
     <ClInclude Include="MROpenObjects.h">
       <Filter>IO</Filter>

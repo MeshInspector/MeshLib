@@ -83,11 +83,6 @@ jobs:
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/lib ./lib
           ln -s /usr/local/lib/${{ matrix.thirdparty-dir }}/share ./share
 
-      - name: Wait for C bindings
-        uses: ./.github/actions/wait-for-job
-        with:
-          job-name: generate-c-bindings
-
       - name: Download C bindings
         uses: actions/download-artifact@v8
         with:

@@ -1791,6 +1791,15 @@ bool Viewer::draw_( bool force )
     if ( !force && !needSceneRedraw )
         return false;
 
+    if ( !isGLInitialized() )
+    {
+        // NoWindow mode: nothing to draw into; only consume the redraw requests, or the event loop spins on them
+        resetRedraw_();
+        forceRedrawFrames_ = 0;
+        forceRedrawFramesWithoutSwap_ = 0;
+        return false;
+    }
+
     if ( !isInDraw_ )
         isInDraw_ = true;
     else

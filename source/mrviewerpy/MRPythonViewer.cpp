@@ -24,6 +24,9 @@
 #include <optional>
 #include <stdexcept>
 #include <thread>
+#ifdef __APPLE__
+#include <pthread.h>
+#endif
 
 #pragma message("mrviewerpy pybind internals magic: " PYBIND11_INTERNALS_ID)
 
@@ -183,9 +186,7 @@ private:
     }
 };
 
-// What `pythonLaunch` learned about the launch it started. The launch thread is detached, so this
-// is held by shared_ptr: it must outlive the `pythonLaunch` frame if that frame threw and returned
-// while the thread was still running.
+// What a launch has reported so far, shared between the thread running the viewer and the one waiting on it
 struct LaunchStatus
 {
     std::mutex mutex;
@@ -195,42 +196,61 @@ struct LaunchStatus
     // `launchDefaultViewer` returned; with `ready` still false that means it failed
     bool finished{ false };
     int exitCode{ 0 };
-};
 
-void pythonLaunch( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
-{
-#ifdef __APPLE__
-    (void)params;
-    (void)setup;
-    // AppKit requires `[NSApplication run]` on the process main thread, and this is never it: GLFW
-    // traps inside `glfwInit` and takes the whole interpreter down with it (SIGTRAP, exit 133).
-    // `glfwInit` is called for every window mode, NoWindow included, so there is nothing to allow here.
-    throw std::runtime_error( "MeshLib Viewer is not supported on macOS yet" );
-#else
-    auto status = std::make_shared<LaunchStatus>();
+    // Queued before the launch, so it is already in the queue when the loop reaches this state; the
+    // command runs on the viewer thread once the viewer is up, and is dropped by the
+    // `removeCommands( true )` on `Viewer::launch`'s failure path if it never gets there.
+    static void queueReadyReport( std::shared_ptr<LaunchStatus> status )
+    {
+        MR::CommandLoop::appendCommand( [status]
+        {
+            {
+                std::unique_lock lock( status->mutex );
+                status->ready = true;
+            }
+            status->cv.notify_all();
+        }, MR::CommandLoop::StartPosition::AfterWindowAppear );
+    }
 
-    // queued before the thread starts, so it is already in the queue when the loop reaches this state;
-    // the command runs on the launch thread once the viewer is up, and is dropped by the
-    // `removeCommands( true )` on `Viewer::launch`'s failure path if it never gets there
-    MR::CommandLoop::appendCommand( [status]
+    void reportFinished( int code )
     {
         {
-            std::unique_lock lock( status->mutex );
-            status->ready = true;
+            std::unique_lock lock( mutex );
+            finished = true;
+            exitCode = code;
         }
-        status->cv.notify_all();
-    }, MR::CommandLoop::StartPosition::AfterWindowAppear );
+        cv.notify_all();
+    }
+
+    /// blocks until the viewer is up (true) or the launch has failed (false)
+    bool waitReady()
+    {
+        std::unique_lock lock( mutex );
+        cv.wait( lock, [this] { return ready || finished; } );
+        return ready;
+    }
+};
+
+[[noreturn]] void throwLaunchFailed( int exitCode )
+{
+    // The usual cause by far is a headless session, where `launchInit_` logs "glfwInit failed" and
+    // returns non-zero. `launchDefaultViewer` also returns 1 for a second `launch()` call.
+    throw std::runtime_error(
+        "Viewer could not start: glfwInit failed (no display available?), or the viewer was already "
+        "launched once in this process; exit code " + std::to_string( exitCode ) );
+}
+
+// The viewer on a detached thread; the caller continues and drives it with blocking calls.
+void launchDetached( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
+{
+    // held by shared_ptr: it must outlive this frame if that threw while the detached thread was still running
+    auto status = std::make_shared<LaunchStatus>();
+    LaunchStatus::queueReadyReport( status );
 
     std::thread launchThread { [params, setup, status]
     {
         MR::SetCurrentThreadName( "PythonAppLaunchThread" );
-        const int exitCode = MR::launchDefaultViewer( params, setup );
-        {
-            std::unique_lock lock( status->mutex );
-            status->finished = true;
-            status->exitCode = exitCode;
-        }
-        status->cv.notify_all();
+        status->reportFinished( MR::launchDefaultViewer( params, setup ) );
     } };
     launchThread.detach();
 
@@ -239,18 +259,79 @@ void pythonLaunch( const MR::Viewer::LaunchParams& params, const MinimalViewerSe
     // blocking call right after `launch()` with no command loop, and a failed launch used to be
     // indistinguishable from a successful one.
     pybind11::gil_scoped_release gilRelease; // the launch thread must not be blocked by the GIL here
-    std::unique_lock lock( status->mutex );
-    status->cv.wait( lock, [&status] { return status->ready || status->finished; } );
-    if ( status->ready )
-        return; // the viewer is up; `finished` may also be set if params.startEventLoop is false
+    if ( !status->waitReady() )
+        throwLaunchFailed( status->exitCode ); // `finished` alone; both may be set if params.startEventLoop is false
+}
 
-    const int exitCode = status->exitCode;
-    lock.unlock();
-    // The usual cause by far is a headless session, where `launchInit_` logs "glfwInit failed" and
-    // returns non-zero. `launchDefaultViewer` also returns 1 for a second `launch()` call.
-    throw std::runtime_error(
-        "Viewer could not start: glfwInit failed (no display available?), or the viewer was already "
-        "launched once in this process; exit code " + std::to_string( exitCode ) );
+// The viewer on the calling thread and `script` on a worker thread. The only way on macOS, where
+// AppKit runs a GUI on the process main thread and nowhere else: GLFW traps inside `glfwInit` on
+// any other thread and takes the interpreter down with it (SIGTRAP, exit 133), NoWindow mode included.
+void launchWithScript( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup, const pybind11::object& script )
+{
+#ifdef __APPLE__
+    if ( !pthread_main_np() )
+        throw std::runtime_error( "On macOS launch( script ) must be called from the main thread" );
+#endif
+    auto status = std::make_shared<LaunchStatus>();
+    LaunchStatus::queueReadyReport( status );
+
+    // the script's exception, re-raised on this thread once it holds the GIL again
+    std::optional<pybind11::error_already_set> scriptError;
+    std::exception_ptr otherError;
+    std::thread scriptThread { [&]
+    {
+        MR::SetCurrentThreadName( "PythonScriptThread" );
+        if ( !status->waitReady() )
+            return; // the launch failed, and the calling thread reports it
+        {
+            pybind11::gil_scoped_acquire gilAcquire;
+            try
+            {
+                script();
+            }
+            catch ( pybind11::error_already_set& e )
+            {
+                scriptError = std::move( e ); // stored under the GIL, see `pythonRunLambdaFromGUIThread`
+            }
+            catch ( ... )
+            {
+                otherError = std::current_exception();
+            }
+        }
+        // The script is over, so is the viewer, like the interpreter exit that ends a detached launch.
+        // Dropped silently if the loop has already closed, e.g. because the user closed the window.
+        MR::CommandLoop::appendCommand( [] { MR::getViewerInstance().stopEventLoop(); } );
+        MR::getViewerInstance().postEmptyEvent();
+    } };
+
+    {
+        pybind11::gil_scoped_release gilRelease; // the script thread runs Python while this one runs the viewer
+        status->reportFinished( MR::launchDefaultViewer( params, setup ) );
+        // a script still running when the window is closed finishes first: its next viewer call raises
+        scriptThread.join();
+    }
+    if ( scriptError )
+        throw std::move( *scriptError ); // GIL reacquired, so pybind11 can restore the Python error
+    if ( otherError )
+        std::rethrow_exception( otherError );
+    if ( !status->ready )
+        throwLaunchFailed( status->exitCode );
+}
+
+void pythonLaunch( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup, const pybind11::object& script )
+{
+    if ( !script.is_none() )
+    {
+        if ( !PyCallable_Check( script.ptr() ) )
+            throw std::invalid_argument( "launch(): `script` must be callable" );
+        launchWithScript( params, setup, script );
+        return;
+    }
+#ifdef __APPLE__
+    throw std::runtime_error( "On macOS launch() needs a `script` callable: AppKit runs the viewer on the main thread only, "
+        "so launch( script=main ) runs the viewer here and `main` on a worker thread, and returns when `main` does" );
+#else
+    launchDetached( params, setup );
 #endif
 }
 
@@ -412,10 +493,16 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
     m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
         pybind11::arg_v( "setup", MinimalViewerSetup(), "ViewerSetup()" ),
-        "Starts default viewer with given params and setup, and returns once it is up and can accept calls.\n"
+        pybind11::arg_v( "script", pybind11::none(), "None" ),
+        "Starts default viewer with given params and setup.\n"
+        "Without `script`: the viewer runs on a background thread, and this returns once it is up and can accept calls.\n"
+        "With `script`, a callable taking no arguments: the viewer runs on the calling thread and `script` on a worker thread, "
+        "which drives it with the same calls; this returns once `script` has returned, closing the viewer, "
+        "or once the window was closed and `script` has finished. An exception raised by `script` is re-raised here.\n"
+        "On macOS `script` is required and this must be called from the main thread, "
+        "because macOS runs a GUI on the process main thread only.\n"
         "Raises RuntimeError if the viewer could not start - with no display available, for instance - "
-        "or if it was already launched once in this process.\n"
-        "Always raises on macOS, where the viewer is not supported yet." );
+        "or if it was already launched once in this process." );
 
     m.def( "runFromGUIThread", &pythonRunLambdaFromGUIThread, pybind11::arg( "lambda" ), "Executes given function from GUI thread, and returns after it is done" );
 } )

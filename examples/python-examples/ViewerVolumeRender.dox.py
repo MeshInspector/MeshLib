@@ -1,7 +1,5 @@
-import sys
 from meshlib import mrmeshpy as mm
 from meshlib import mrviewerpy as mv
-import os
 
 # load volume file
 volume = mm.loadVoxels("stag_beetle.dcm")[0]
@@ -16,27 +14,30 @@ ov.select(True)
 # add it to scene
 mm.SceneRoot.get().addChild(ov)
 
-# start viewer
-mv.launch(mv.ViewerLaunchParams(),mv.ViewerSetup())
+# everything driving the viewer goes into a function, see the Viewer example
+def main():
+    # enable volume rendering (important to do in GUI thread)
+    mv.runFromGUIThread( lambda : ov.enableVolumeRendering(True) )
 
-# enable volume rendering (important to do in GUI thread)
-mv.runFromGUIThread( lambda : ov.enableVolumeRendering(True) )
+    mv.Viewer().preciseFitDataViewport()
 
-mv.Viewer().preciseFitDataViewport()
+    # setup volume rendering settings
+    vrp = mm.ObjectVoxels.VolumeRenderingParams()
+    vrp.alphaType = mm.ObjectVoxels.VolumeRenderingParams.AlphaType.LinearIncreasing
+    vrp.min = volume.min
+    vrp.max = volume.max
+    vrp.alphaLimit = 150
+    vrp.lutType = mm.ObjectVoxels.VolumeRenderingParams.LutType.Rainbow
+    vrp.shadingType = mm.ObjectVoxels.VolumeRenderingParams.ShadingType.ValueGradient
 
-# setup volume rendering settings
-vrp = mm.ObjectVoxels.VolumeRenderingParams()
-vrp.alphaType = mm.ObjectVoxels.VolumeRenderingParams.AlphaType.LinearIncreasing
-vrp.min = volume.min
-vrp.max = volume.max
-vrp.alphaLimit = 150
-vrp.lutType = mm.ObjectVoxels.VolumeRenderingParams.LutType.Rainbow
-vrp.shadingType = mm.ObjectVoxels.VolumeRenderingParams.ShadingType.ValueGradient
+    # apply volume rendering settings in GUI thread
+    mv.runFromGUIThread( lambda : ov.setVolumeRenderingParams(vrp) )
 
-# apply volume rendering settings in GUI thread
-mv.runFromGUIThread( lambda : ov.setVolumeRenderingParams(vrp) )
+    # fit camera
+    mv.Viewer().preciseFitDataViewport()
 
-# fit camera
-mv.Viewer().preciseFitDataViewport()
+    input("Press Enter to close the viewer...")
 
-os.system("pause")
+
+# start viewer: the window runs on this thread, `main` on a worker thread
+mv.launch(mv.ViewerLaunchParams(), mv.ViewerSetup(), script=main)

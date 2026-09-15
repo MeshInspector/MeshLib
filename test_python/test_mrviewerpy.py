@@ -16,24 +16,26 @@ from helper import *
 mrviewerpy = None
 
 
-# The viewer can only be launched from Python headless on Linux:
-#  - macOS: `launch()` runs the viewer on a detached thread, but GLFW/Cocoa insists on
-#    owning the main thread, so the first blocking round-trip never returns.
+# The classic `launch()` - viewer on a background thread, the caller drives it - can only be
+# exercised headless on Linux:
+#  - macOS: AppKit runs a GUI on the process main thread only, so that form raises there and
+#    `launch( script )` below is the one to test.
 #  - Windows CI has no OpenGL driver at all ("WGL: The driver does not appear to support
 #    OpenGL"), so window creation fails for both 4.3 and 3.3 and the viewer gives up.
 # Linux under `xvfb-run -a` gets a real GL 4.5 context from llvmpipe, which is enough for
 # both the command loop and `captureScreenShot`.
-pytestmark = [
-    pytest.mark.skipif(
-        platform.system() != "Linux",
-        reason="the viewer is only launchable from Python headless on Linux: macOS needs "
-        "the GUI on the main thread, Windows CI has no OpenGL driver",
-    ),
-    pytest.mark.skipif(
-        not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")),
-        reason="no DISPLAY/WAYLAND_DISPLAY, run the tests under `xvfb-run -a`",
-    ),
-]
+_has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+classic_launch = pytest.mark.skipif(
+    platform.system() != "Linux" or not _has_display,
+    reason="the classic launch() is only exercised on Linux under a display: macOS needs "
+    "the GUI on the main thread, Windows CI has no OpenGL driver; run under `xvfb-run -a`",
+)
+# `launch( script )` runs the viewer on the calling thread, which is what macOS needs
+script_launch = pytest.mark.skipif(
+    platform.system() not in ("Linux", "Darwin") or (platform.system() == "Linux" and not _has_display),
+    reason="launch( script ) is exercised on Linux under a display and on macOS; "
+    "Windows CI has no OpenGL driver",
+)
 
 # Generous: the first round-trip also covers viewer construction and GL init on a cold runner.
 LAUNCH_TIMEOUT_SEC = 180
@@ -240,6 +242,7 @@ def viewer():
     time.sleep(1)
 
 
+@classic_launch
 def test_blocking_round_trips(viewer):
     cube = mrmesh.makeCube(mrmesh.Vector3f.diagonal(1), mrmesh.Vector3f.diagonal(-0.5))
 
@@ -268,6 +271,7 @@ def test_blocking_round_trips(viewer):
         assert len(mrviewerpy.getSelectedObjects()) == 0
 
 
+@classic_launch
 def test_capture_screenshot(viewer, tmp_path):
     with bounded("scene setup"):
         mrviewerpy.clearScene()
@@ -287,6 +291,7 @@ def test_capture_screenshot(viewer, tmp_path):
         mrviewerpy.clearScene()
 
 
+@classic_launch
 def test_run_from_gui_thread(viewer):
     """The callable must actually run, on the GUI thread, and the call must come back."""
     ran_on = []
@@ -298,6 +303,7 @@ def test_run_from_gui_thread(viewer):
     assert ran_on[0] != threading.get_ident(), "the callable ran on the calling thread"
 
 
+@classic_launch
 def test_run_from_gui_thread_propagates_exception(viewer):
     """An exception raised inside the callable must reach the caller with its type intact."""
 
@@ -487,6 +493,7 @@ def _run_in_child(what, source, env_extra=None, timeout=CHILD_TIMEOUT_SEC):
     return _ChildRun(done.returncode, done.stdout, done.stderr, False)
 
 
+@classic_launch
 def test_blocking_call_without_launch_raises():
     """A blocking call issued with no viewer launched must fail, not park forever."""
     pytest.importorskip(
@@ -506,6 +513,7 @@ def test_blocking_call_without_launch_raises():
     )
 
 
+@classic_launch
 def test_blocking_call_after_shutdown_raises():
     """A blocking call issued after `shutdown()` must fail, not report a silent no-op."""
     global mrviewerpy
@@ -615,6 +623,7 @@ sys.exit(0)
 DROPPED_MESSAGE = "stopped before the command was executed"
 
 
+@classic_launch
 def test_command_dropped_by_shutdown_raises():
     """A command dropped while its caller waits must raise, not return as if it had run."""
     global mrviewerpy
@@ -670,6 +679,7 @@ def test_command_dropped_by_shutdown_raises():
 # so the report has to come from `launch()` rather than from the first command after it.
 
 
+@classic_launch
 def test_headless_launch_raises_and_survives():
     """`launch()` with no display must raise, and must not take the interpreter with it.
 
@@ -712,6 +722,7 @@ def test_headless_launch_raises_and_survives():
     )
 
 
+@classic_launch
 def test_call_after_failed_launch_raises():
     """After a failed `launch()`, the next viewer call must fail promptly, not deadlock."""
     global mrviewerpy
@@ -741,3 +752,175 @@ def test_call_after_failed_launch_raises():
     assert run.returncode == 0 and "CALL_RAISED" in run.stdout, (
         "the call after a failed launch() did not raise\n" + run.report()
     )
+
+
+# --- launch( script ): the viewer on the calling thread, the script on a worker -------------
+#
+# The form macOS needs, offered everywhere. `launch()` blocks running the viewer, `script`
+# runs on a worker thread and drives it with the same blocking calls as the classic form,
+# and `launch()` returns once `script` has - the viewer closes with it. One launch per
+# process, so each case is a child interpreter; the resource overrides are the same story
+# as in the shutdown tests above.
+
+_SCRIPT_LAUNCH_PROLOGUE = r"""
+import os
+import pathlib
+import sys
+import threading
+
+import meshlib.mrmeshpy as mrmesh
+from meshlib import mrviewerpy
+
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Resources,
+    pathlib.Path(os.environ["MRVIEWERPY_RESOURCES"]),
+)
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Fonts,
+    pathlib.Path(os.environ["MRVIEWERPY_FONTS"]),
+)
+
+params = mrviewerpy.ViewerLaunchParams()
+params.windowMode = mrviewerpy.ViewerLaunchParamsMode.TryHidden
+params.name = "MeshLib test_mrviewerpy launch( script )"
+
+
+def on_main():
+    return threading.current_thread() is threading.main_thread()
+"""
+
+_SCRIPT_LAUNCH_SRC = _SCRIPT_LAUNCH_PROLOGUE + r"""
+
+def script():
+    print("SCRIPT_ON_MAIN %s" % on_main(), flush=True)
+    viewer = mrviewerpy.Viewer()
+    viewer.skipFrames(1)
+    cube = mrmesh.makeCube(mrmesh.Vector3f.diagonal(1), mrmesh.Vector3f.diagonal(-0.5))
+    mrviewerpy.addMeshToScene(cube, "cube")
+    mrviewerpy.selectByName("cube")
+    print("SELECTED %d" % len(mrviewerpy.getSelectedMeshes()), flush=True)
+    gui_on_main = []
+    mrviewerpy.runFromGUIThread(lambda: gui_on_main.append(on_main()))
+    print("GUI_ON_MAIN %s" % gui_on_main[0], flush=True)
+    mrviewerpy.clearScene()
+    print("SCRIPT_DONE", flush=True)
+
+
+try:
+    mrviewerpy.launch(params, mrviewerpy.ViewerSetup(), script=script)
+except RuntimeError as e:
+    print("LAUNCH_RAISED %s" % e, flush=True)
+    sys.exit(2)
+print("LAUNCH_RETURNED", flush=True)
+
+# the script is over, so is the viewer: nothing may run a command any more
+try:
+    mrviewerpy.Viewer().skipFrames(1)
+except RuntimeError as e:
+    print("AFTER_RAISED %s" % e, flush=True)
+    sys.exit(0)
+print("AFTER_RETURNED", flush=True)
+sys.exit(3)
+"""
+
+_SCRIPT_RAISES_SRC = _SCRIPT_LAUNCH_PROLOGUE + r"""
+
+class Boom(Exception):
+    pass
+
+
+def script():
+    mrviewerpy.Viewer().skipFrames(1)
+    raise Boom("raised in the script")
+
+
+try:
+    mrviewerpy.launch(params, mrviewerpy.ViewerSetup(), script=script)
+except Boom as e:
+    print("RAISED_BOOM %s" % e, flush=True)
+    sys.exit(0)
+except RuntimeError as e:
+    print("LAUNCH_RAISED %s" % e, flush=True)
+    sys.exit(2)
+print("RETURNED", flush=True)
+sys.exit(1)
+"""
+
+
+def _run_script_launch_child(what, source):
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    run = _run_in_child(
+        what,
+        source,
+        env_extra={
+            "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
+            "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
+        },
+    )
+    assert not run.timed_out, f"{what}: the child never finished\n" + run.report()
+    # a dead interpreter is the one outcome that is a bug wherever it happens: this is the
+    # SIGTRAP-by-AppKit shape (exit 133) that the macOS refusal used to stand in for
+    assert run.returncode is not None and run.returncode >= 0, (
+        f"{what}: the interpreter died by signal\n" + run.report()
+    )
+    # no viewer at all is this environment, not the behaviour under test
+    if "LAUNCH_RAISED Viewer could not start" in run.stdout:
+        pytest.skip(f"{what}: the child could not start a viewer\n" + run.report())
+    return run
+
+
+@script_launch
+def test_launch_script_drives_viewer_then_closes_it():
+    """`script` runs on a worker while the viewer holds the calling thread, and both end together."""
+    run = _run_script_launch_child("launch( script )", _SCRIPT_LAUNCH_SRC)
+
+    assert "SCRIPT_ON_MAIN False" in run.stdout, (
+        "the script did not run on a worker thread\n" + run.report()
+    )
+    assert "GUI_ON_MAIN True" in run.stdout, (
+        "the viewer did not run on the thread that called launch()\n" + run.report()
+    )
+    assert "SELECTED 1" in run.stdout and "SCRIPT_DONE" in run.stdout, (
+        "the script's blocking calls did not all come back\n" + run.report()
+    )
+    assert "LAUNCH_RETURNED" in run.stdout, (
+        "launch() did not return after the script had\n" + run.report()
+    )
+    assert run.returncode == 0 and "AFTER_RAISED" in run.stdout, (
+        "a viewer call after launch() returned was served: the viewer outlived its script\n"
+        + run.report()
+    )
+
+
+@script_launch
+def test_launch_script_exception_reaches_caller():
+    """An exception raised by `script` comes out of `launch()` with its type intact."""
+    run = _run_script_launch_child("launch( script ) raising", _SCRIPT_RAISES_SRC)
+
+    assert run.returncode == 0 and "RAISED_BOOM raised in the script" in run.stdout, (
+        "the script's exception did not come out of launch()\n" + run.report()
+    )
+
+
+def test_launch_rejects_non_callable_script():
+    """Refused before anything is launched, so this runs in-process on every platform."""
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    with pytest.raises(ValueError, match="callable"):
+        mrviewerpy.launch(script=42)
+
+
+@pytest.mark.skipif(platform.system() != "Darwin", reason="the classic launch() is refused on macOS only")
+def test_launch_without_script_raises_on_macos():
+    """The classic form cannot work on macOS; the refusal must name the form that does."""
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    with pytest.raises(RuntimeError, match="script"):
+        mrviewerpy.launch()

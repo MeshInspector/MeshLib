@@ -31,30 +31,33 @@ offset = mesh.computeBoundingBox().diagonal() * 0.05
 result_mesh = mm.offsetMesh(mesh, offset, params)
 
 
-# Open a window; raises where the Viewer is unavailable, e.g. on macOS
+# Everything driving the Viewer goes into a function: `mv.launch(script=main)` runs the Viewer
+# window on this (main) thread - the only thread macOS allows a GUI on - and `main` on a
+# worker thread, and returns once `main` has returned, closing the window with it.
+def main():
+    mv.addMeshToScene(mesh, "Mesh 1") # show initial mesh
+    mv.Viewer().preciseFitDataViewport() # fit viewer to the mesh
+    mv.selectByName("Mesh 1")
+
+    mv.Viewer().preciseFitDataViewport() # fit viewer to the mesh
+    mv.Viewer().showSceneTree(True) # enables Scene Tree in Viewer window
+    # user can manipulate with viewer window while this python is on pause
+    input("Press Enter to continue...")
+
+    # remove all objects from scene
+    mv.clearScene()
+
+    # add offset mesh to scene
+    mv.addMeshToScene(result_mesh, "Mesh Offset")
+    mv.selectByName("Mesh Offset")
+    mv.Viewer().showSceneTree(False) # disables Scene Tree in Viewer window
+    # user can manipulate with viewer window while this python is on pause
+    input("Press Enter to continue...")
+    # returning closes the viewer window
+
+
+# Open a window; raises where no window can be opened
 try:
-    mv.launch()
+    mv.launch(script=main)
 except RuntimeError as e:
     sys.exit(f"Could not start MeshLib Viewer: {e}")
-
-mv.addMeshToScene(mesh, "Mesh 1") # show initial mesh
-mv.Viewer().preciseFitDataViewport() # fit viewer to the mesh
-mv.selectByName("Mesh 1")
-
-mv.Viewer().preciseFitDataViewport() # fit viewer to the mesh
-mv.Viewer().showSceneTree(True) # enables Scene Tree in Viewer window
-# user can manipulate with viewer window while this python is on pause
-input("Press Enter to continue...")
-
-# remove all objects from scene
-mv.clearScene()
-
-# add offset mesh to scene
-mv.addMeshToScene(result_mesh, "Mesh Offset")
-mv.selectByName("Mesh Offset")
-mv.Viewer().showSceneTree(False) # disables Scene Tree in Viewer window
-# user can manipulate with viewer window while this python is on pause
-input("Press Enter to continue...")
-
-# close viewer window nicely
-mv.Viewer().shutdown()

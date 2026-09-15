@@ -135,6 +135,26 @@ def get_cpu_model():
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
+def get_memory_stats():
+    """(free_bytes, wired_bytes). Wired is kernel memory that can never be paged
+    out, so it is a hard subtraction from what a build can use; macOS-only."""
+    system = platform.system()
+    if system == "Darwin":
+        output = subprocess.check_output(['vm_stat'], text=True)
+        page_size = int(re.search(r"page size of (\d+) bytes", output).group(1))
+        pages = {k: int(v) for k, v in re.findall(r"^(.+?):\s+(\d+)\.", output, re.MULTILINE)}
+        return pages['Pages free'] * page_size, pages['Pages wired down'] * page_size
+    elif system == "Linux":
+        with open('/proc/meminfo') as f:
+            meminfo = {k: int(v) for k, v in re.findall(r"^(\w+):\s+(\d+) kB", f.read(), re.MULTILINE)}
+        return meminfo['MemFree'] * 1024, None
+    elif system == "Windows":
+        ps_command = "(Get-CimInstance Win32_OperatingSystem).FreePhysicalMemory"
+        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
+        return int(output.strip()) * 1024, None
+    else:
+        raise RuntimeError(f"Unknown system: {system}")
+
 def get_free_disk_space():
     return shutil.disk_usage(os.environ.get('GITHUB_WORKSPACE', os.getcwd())).free
 
@@ -187,6 +207,9 @@ if __name__ == "__main__":
 
         cpu_model = get_cpu_model()
         free_disk = math.floor(get_free_disk_space() / 1024 / 1024)
+        free_mem_bytes, wired_bytes = get_memory_stats()
+        free_mem = math.floor(free_mem_bytes / 1024 / 1024)
+        wired = math.floor(wired_bytes / 1024 / 1024) if wired_bytes is not None else None
 
         results = {
             'target_os': os.environ.get('TARGET_OS'),
@@ -196,6 +219,8 @@ if __name__ == "__main__":
             'cpu_count': cpu_count,
             'cpu_model': cpu_model,
             'ram_mb': ram_amount,
+            'free_mem_mb': free_mem,
+            'wired_mb': wired,
             'free_disk_mb': free_disk,
             'build_system': build_system,
             'aws_instance_type': aws_instance_type or None,

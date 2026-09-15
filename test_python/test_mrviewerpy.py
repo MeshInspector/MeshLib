@@ -813,14 +813,26 @@ except RuntimeError as e:
     sys.exit(2)
 print("LAUNCH_RETURNED", flush=True)
 
-# the script is over, so is the viewer: nothing may run a command any more
-try:
-    mrviewerpy.Viewer().skipFrames(1)
-except RuntimeError as e:
-    print("AFTER_RAISED %s" % e, flush=True)
-    sys.exit(0)
-print("AFTER_RETURNED", flush=True)
-sys.exit(3)
+# The script is over, so is the viewer: from any other thread a command is refused now. Not
+# from this one: it is the GUI thread, where `runCommandFromGUIThread` runs a command inline,
+# loop or no loop, exactly as it does for C++ callers.
+outcome = []
+
+
+def probe():
+    try:
+        mrviewerpy.Viewer().skipFrames(1)
+    except RuntimeError as e:
+        outcome.append("AFTER_RAISED %s" % e)
+    else:
+        outcome.append("AFTER_RETURNED")
+
+
+prober = threading.Thread(target=probe, daemon=True)
+prober.start()
+prober.join(30)
+print(outcome[0] if outcome else "AFTER_HUNG", flush=True)
+sys.exit(0 if outcome and outcome[0].startswith("AFTER_RAISED") else 3)
 """
 
 _SCRIPT_RAISES_SRC = _SCRIPT_LAUNCH_PROLOGUE + r"""
@@ -892,8 +904,8 @@ def test_launch_script_drives_viewer_then_closes_it():
         "launch() did not return after the script had\n" + run.report()
     )
     assert run.returncode == 0 and "AFTER_RAISED" in run.stdout, (
-        "a viewer call after launch() returned was served: the viewer outlived its script\n"
-        + run.report()
+        "a viewer call from another thread after launch() returned was served or hung: "
+        "the viewer outlived its script\n" + run.report()
     )
 
 

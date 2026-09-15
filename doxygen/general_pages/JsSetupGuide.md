@@ -72,7 +72,11 @@ import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
 const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 ```
 
-In the browser the multi-threaded build additionally requires the page to be [cross-origin isolated](\ref JsMtCrossOriginIsolation).
+The bundler must treat `.wasm` files as static assets, so that the import resolves to the URL of the emitted file; the option is usually called an asset or file loader. For example:
+
+- **esbuild**: pass `--loader:.wasm=file`
+- **Rollup**: add `@rollup/plugin-url` with `include: /\.wasm$/`
+- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/meshlib.wasm';`
 
 ### Payload Size {#MeshLibJsPayloadSize}
 MeshLib is a WebAssembly build of the full geometry library, so a browser downloads roughly **11 MB of wasm, about 3 MB gzipped over the wire**, before the first geometry call. `@meshinspector/meshlib-mt` is the same order of magnitude.
@@ -119,6 +123,10 @@ So on a page that is not cross-origin isolated you have three options: send the 
 
 ## Getting Started: Your First Example
 The default export is an async factory. Await it once to get the module instance, then call MeshLib functions on it:
+
+> [!NOTE]
+> The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
+
 ```js
 import createMeshLib from '@meshinspector/meshlib';
 
@@ -143,9 +151,6 @@ console.log('volume =', mesh.volume()); // ~8
 
 > [!NOTE]
 > This example loads the module at the top level, which downloads the wasm on startup. In the browser, consider the lazy alternative in [Payload Size](\ref MeshLibJsPayloadSize).
-
-> [!NOTE]
-> The `using` declaration requires Node.js 24+ or a current browser. On older runtimes, call `.delete()` on each object instead (see the **Memory Management** section below).
 
 ## TypeScript
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with minimal setup:

@@ -434,7 +434,7 @@ public:
 
     // return true if window should close
     // calls interrupt signal and if no slot interrupts return true, otherwise return false
-    bool windowShouldClose();
+    MRVIEWER_API bool windowShouldClose();
 
     // returns true if viewer has valid GL context
     // note that sometimes it is not enough, for example to free GL memory in destructor,

@@ -16,9 +16,7 @@
 
 ### Compiler and language standard
 
-Compile your own code as C11 or newer:
-- `/std:c11` in Visual Studio (2019 version 16.8 or newer)
-- `-std=c11` with GCC or Clang
+With GCC or Clang, compile your own code as C11 or newer (`-std=c11`). MSVC needs no flag.
 
 ### CMake
 
@@ -53,8 +51,6 @@ example_plugin/      # example solution for creating MeshLib/MeshInspector plugi
  2. **Configure and integrate with Visual Studio**
     - **Solution Platform**:
     <br/> Set: `x64`
-    - **C/C++ → Language → C Language Standard**:
-    <br/> Set: `/std:c11` or later
     - **C/C++ → General → Additional Include Directories**:
     <br/> Add: `C:\meshlib-built\install\include`
     - **C/C++ → All Options → Additional Options**:

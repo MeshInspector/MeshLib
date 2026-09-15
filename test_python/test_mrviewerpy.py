@@ -820,8 +820,11 @@ threading.Thread(target=close_later, daemon=True).start()
 mrviewerpy.showViewer()
 print("SHOW_RETURNED", flush=True)
 
-# the viewer is over: from any other thread a command is refused now (from this one it would
-# run inline where this is the GUI thread, loop or no loop, as for any C++ caller)
+# The viewer is over: a command from any thread but the GUI one is refused now. On the GUI
+# thread `runCommandFromGUIThread` runs a command inline, loop or no loop, as for any C++
+# caller - and the id of a GUI thread that has exited can be handed to a new thread, which is
+# then taken for it. So probe from the main thread where the GUI thread was a background one,
+# and from a fresh thread on macOS, where the main thread itself is the GUI thread.
 outcome = []
 
 
@@ -834,9 +837,12 @@ def probe():
         outcome.append("AFTER_RETURNED")
 
 
-prober = threading.Thread(target=probe, daemon=True)
-prober.start()
-prober.join(30)
+if sys.platform == "darwin":
+    prober = threading.Thread(target=probe, daemon=True)
+    prober.start()
+    prober.join(30)
+else:
+    probe()
 print(outcome[0] if outcome else "AFTER_HUNG", flush=True)
 sys.exit(0 if outcome and outcome[0].startswith("AFTER_RAISED") else 3)
 """

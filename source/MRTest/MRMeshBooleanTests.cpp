@@ -63,7 +63,7 @@ static Mesh makeBox( const Vector3f& min, const Vector3f& max )
 // whatever the order of the arguments and the transformation of the second mesh are
 static void expectUnionKeepsBoth( const Mesh& meshA, const Mesh& meshB )
 {
-    const float expected = meshA.volume() + meshB.volume();
+    const double expected = meshA.volume() + meshB.volume();
     const auto xf = AffineXf3f::translation( { 7.3f, -2.1f, 0.6f } ) *
         AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1.f, 2.f, 3.f ).normalized(), 0.7f ) );
 
@@ -74,13 +74,13 @@ static void expectUnionKeepsBoth( const Mesh& meshA, const Mesh& meshB )
 
         const auto res = boolean( m0, m1, BooleanOperation::Union );
         ASSERT_TRUE( res.valid() );
-        EXPECT_NEAR( res.mesh.volume(), expected, 1e-3f * expected );
+        EXPECT_NEAR( res.mesh.volume(), expected, 1e-3 * expected );
 
         Mesh m1xf = m1;
         m1xf.transform( xf.inverse() );
         const auto resXf = boolean( m0, m1xf, BooleanOperation::Union, &xf );
         ASSERT_TRUE( resXf.valid() );
-        EXPECT_NEAR( resXf.mesh.volume(), expected, 1e-3f * expected );
+        EXPECT_NEAR( resXf.mesh.volume(), expected, 1e-3 * expected );
     }
 }
 

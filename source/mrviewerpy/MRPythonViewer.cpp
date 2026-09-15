@@ -301,9 +301,24 @@ void launchWithScript( const MR::Viewer::LaunchParams& params, const MinimalView
             }
         }
         // The script is over, so is the viewer, like the interpreter exit that ends a detached launch.
-        // Dropped silently if the loop has already closed, e.g. because the user closed the window.
-        MR::CommandLoop::appendCommand( [] { MR::getViewerInstance().stopEventLoop(); } );
-        MR::getViewerInstance().postEmptyEvent();
+        try
+        {
+            MR::CommandLoop::runCommandFromGUIThread( [] { MR::getViewerInstance().stopEventLoop(); } );
+        }
+        catch ( const std::exception& )
+        {
+            // the loop is already closed, e.g. the user closed the window
+        }
+        // Keep waking the loop until it is gone: it needs one more event after the stop to leave
+        // glfwWaitEvents(), on Linux a posted event can be lost (see CommandLoop::addCommand_),
+        // and nobody else posts any now.
+        std::unique_lock lock( status->mutex );
+        while ( !status->cv.wait_for( lock, std::chrono::milliseconds( 100 ), [&status] { return status->finished; } ) )
+        {
+            lock.unlock();
+            MR::getViewerInstance().postEmptyEvent();
+            lock.lock();
+        }
     } };
 
     {

@@ -1,6 +1,8 @@
 /**
 \page APIJsPage JavaScript
 
+MeshLib for JavaScript runs in the browser as WebAssembly and powers the [live demo](https://demo.meshlib.io/).
+
  - [Classes](classes.html)
  - [Files](files.html)
 

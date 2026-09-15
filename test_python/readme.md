@@ -12,7 +12,15 @@ To run this yourself you can do:
 ## Setup Instructions
 
 To run these tests please build MeshLib first, then do following commands
-on linux or mac:
+on linux:
+```sh
+python3 -m pip install pytest numpy
+cd build/Debug/bin # or build/Release/bin
+# `xvfb-run -a` gives the mrviewerpy tests a display; without it they skip themselves
+xvfb-run -a python3 ./../../../scripts/run_python_test_script.py -d '../test_python'
+```
+
+on mac:
 ```sh
 python3 -m pip install pytest numpy
 cd build/Debug/bin # or build/Release/bin

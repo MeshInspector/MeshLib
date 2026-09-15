@@ -3,6 +3,7 @@
 #include "MRObjectMesh.h"
 #include "MRMesh.h"
 #include "MRHeapBytes.h"
+#include "MRMeshTexture.h"
 #include <memory>
 
 namespace MR
@@ -24,7 +25,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->mesh() )
+            if ( auto m = obj->meshPtr() )
                 cloneMesh_ = std::make_shared<Mesh>( *m );
         }
     }
@@ -198,7 +199,7 @@ public:
     {
         if ( !objMesh_ )
             return;
-        if ( auto m = objMesh_->mesh() )
+        if ( auto m = objMesh_->meshPtr() )
             clonePoints_ = m->points;
     }
 
@@ -262,7 +263,7 @@ public:
     {
         if ( !objMesh_ )
             return;
-        if ( auto m = objMesh_->mesh() )
+        if ( auto m = objMesh_->meshPtr() )
             cloneTopology_ = m->topology;
     }
 

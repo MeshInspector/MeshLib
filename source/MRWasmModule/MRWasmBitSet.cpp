@@ -12,17 +12,17 @@ using namespace MR;
 namespace
 {
 
-emscripten::val bitSetToIndices( const BitSet& bs )
+Wasm::Uint32ArrayVal bitSetToIndices( const BitSet& bs )
 {
     std::vector<uint32_t> idx;
     idx.reserve( bs.count() );
     for ( size_t i = bs.find_first(); i != BitSet::npos; i = bs.find_next( i ) )
         idx.push_back( static_cast<uint32_t>( i ) );
-    return Wasm::makeTypedArray<uint32_t>( idx.data(), idx.size() );
+    return Wasm::Uint32ArrayVal( Wasm::makeTypedArray<uint32_t>( idx.data(), idx.size() ) );
 }
 
 template <typename BS>
-BS bitSetFromIndices( emscripten::val arr )
+BS bitSetFromIndices( Wasm::IndicesInputVal arr )
 {
     const size_t len = arr["length"].as<size_t>();
     std::vector<uint32_t> idx( len );

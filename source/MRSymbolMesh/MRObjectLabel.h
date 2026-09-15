@@ -5,6 +5,7 @@
 
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRPositionedText.h"
+#include "MRMesh/MRHeapBytes.h"
 
 namespace MR
 {

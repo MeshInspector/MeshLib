@@ -37,7 +37,7 @@ void testMeshCollidePrecise( void )
     MR_MeshPart* meshBPart = MR_MeshPart_Construct( meshB, NULL );
     MR_CoordinateConverters* conv = MR_getVectorConverters_3( meshAPart, meshBPart, NULL );
 
-    MR_std_vector_MR_VarEdgeTri* intersections = MR_findCollidingEdgeTrisPrecise_5( meshAPart, meshBPart, MR_PassBy_Copy, MR_CoordinateConverters_GetMutable_toInt( conv ), NULL, false );
+    MR_std_vector_MR_VarEdgeTri* intersections = MR_findCollidingEdgeTrisPrecise_5( meshAPart, meshBPart, MR_CoordinateConverters_Get_toInt( conv ), NULL, NULL );
 
     MR_MeshPart_Destroy( meshAPart );
     MR_MeshPart_Destroy( meshBPart );

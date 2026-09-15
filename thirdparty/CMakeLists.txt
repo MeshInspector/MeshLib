@@ -103,19 +103,16 @@ IF(NOT APPLE)
   set(WITH_GTEST        OFF CACHE BOOL "")
   set(WITH_GZFILEOP     OFF CACHE BOOL "")
   IF(EMSCRIPTEN)
-    # Force static: undefined BUILD_SHARED_LIBS makes zlib-ng emit duplicate
-    # libz-ng.a rules under Emscripten. Restore to undefined (not empty)
-    # afterwards -- jsoncpp downstream breaks on empty BUILD_SHARED_LIBS.
     set(BUILD_SHARED_LIBS OFF)
     add_subdirectory(./zlib-ng)
     unset(BUILD_SHARED_LIBS)
   ELSE()
     add_subdirectory(./zlib-ng)
   ENDIF()
-ENDIF()
 
-option(PHMAP_INSTALL "" ON)
-add_subdirectory(./parallel-hashmap)
+  option(PHMAP_INSTALL "" ON)
+  add_subdirectory(./parallel-hashmap)
+ENDIF()
 
 IF(EMSCRIPTEN)
   add_subdirectory(./expected ./expected)
@@ -141,6 +138,9 @@ IF(EMSCRIPTEN)
   add_subdirectory(./jsoncpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
+  set(FMT_INSTALL ON)
+  set(FMT_MODULE OFF)
+  set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
   add_subdirectory(./fmt)
   #install(DIRECTORY fmt/include/fmt DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 

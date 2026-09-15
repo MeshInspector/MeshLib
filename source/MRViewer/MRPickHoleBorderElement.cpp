@@ -56,7 +56,7 @@ HoleEdgePoint findClosestToMouseHoleEdge( const Vector2i& mousePos, const std::s
                                           const std::vector<EdgeId>& holeRepresentativeEdges,
                                           float accuracy /*= 5.5f*/, bool attractToVert /*= false*/, float cornerAccuracy /*= 10.5f*/ )
 {
-    const Mesh& mesh = *objMesh->mesh();
+    const Mesh& mesh = *objMesh->meshPtr();
     HoleEdgePoint result;
     Viewer& viewerRef = Viewer::instanceRef();
     Viewport& viewport = viewerRef.viewport();
@@ -136,7 +136,7 @@ HoleEdgePoint findClosestToMouseEdge( const Vector2i& mousePos, const std::vecto
     for ( int i = 0; i < objsLines.size(); ++i )
     {
         const auto& objLines = objsLines[i];
-        const Polyline3& polyline = *objLines->polyline();
+        const Polyline3& polyline = *objLines->polylinePtr();
         auto xf = objLines->worldXf();
         for ( auto ue : undirectedEdges( polyline.topology ) )
         {

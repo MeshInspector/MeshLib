@@ -16,6 +16,7 @@ include/*
 share/*
 bin/*
 thirdparty_build/*
+thirdparty_sources/*
 .vscode/*
 distr/*
 *.log
@@ -58,3 +59,4 @@ compile_commands.json
 /scripts/mrbind/msys2_packages
 /scripts/mrbind/msys2_pacman_install.log
 /vcpkg_installed
+/installed

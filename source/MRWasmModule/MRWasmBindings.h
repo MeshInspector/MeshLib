@@ -28,6 +28,17 @@ template <> struct TypedArrayName<float>    { static constexpr const char* value
 template <> struct TypedArrayName<uint32_t> { static constexpr const char* value = "Uint32Array";  };
 template <> struct TypedArrayName<uint8_t>  { static constexpr const char* value = "Uint8Array";   };
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( Float32ArrayVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( Uint32ArrayVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( Uint8ArrayVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( IndicesInputVal )
+
+template <typename S> struct TypedArrayValType;
+template <> struct TypedArrayValType<float>    { using type = Float32ArrayVal; };
+template <> struct TypedArrayValType<uint32_t> { using type = Uint32ArrayVal; };
+template <> struct TypedArrayValType<uint8_t>  { using type = Uint8ArrayVal;  };
+template <typename S> using TypedArrayVal = typename TypedArrayValType<S>::type;
+
 template <typename S>
 emscripten::val makeTypedArray( const S* data, size_t count )
 {
@@ -39,19 +50,19 @@ emscripten::val makeTypedArray( const S* data, size_t count )
 }
 
 template <typename V, typename S, size_t Arity = 1>
-emscripten::val packedToTypedArray( const V& v )
+TypedArrayVal<S> packedToTypedArray( const V& v )
 {
     using Elem = typename V::value_type;
     static_assert( std::is_trivially_copyable_v<Elem> && sizeof( Elem ) == Arity * sizeof( S ) );
-    return makeTypedArray<S>( reinterpret_cast<const S*>( v.data() ), v.size() * Arity );
+    return TypedArrayVal<S>( makeTypedArray<S>( reinterpret_cast<const S*>( v.data() ), v.size() * Arity ) );
 }
 
 template <typename V, typename S, size_t Arity = 1>
-V packedFromTypedArray( emscripten::val arr )
+V packedFromTypedArray( TypedArrayVal<S> arr )
 {
     using Elem = typename V::value_type;
     static_assert( std::is_trivially_copyable_v<Elem> && sizeof( Elem ) == Arity * sizeof( S ) );
-    const size_t len = arr["length"].as<size_t>();
+    const size_t len = arr["length"].template as<size_t>();
     V v;
     v.vec_.resize( len / Arity );
     if ( len != 0 )

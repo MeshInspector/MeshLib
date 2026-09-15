@@ -5,6 +5,7 @@
 #include "MRSerializer.h"
 #include "MRSceneSettings.h"
 #include "MRTimer.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {

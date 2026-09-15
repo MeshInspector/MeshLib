@@ -13,6 +13,13 @@ on:
   schedule:
     - cron: '0 2 * * *'  # Run every day at 2 AM UTC
 
+# Supersede a PR's previous run instead of racing it (two live runs of one branch
+# collided pushing the same new Docker Hub repo, #6738). Push/schedule/dispatch get
+# unique group, so a release run is never cancelled and never queues behind one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   id-token: write
   contents: write
@@ -34,6 +41,23 @@ jobs:
           echo << EOF
           ${{ toJSON( needs.config.outputs ) }}
           EOF
+
+  # The bundled notices in thirdparty/licenses/ are hand-curated and guarded by a version
+  # tripwire (scripts/check_third_party_licenses.py). It needs no build, no submodule
+  # checkout and no network, so it takes no `needs:` and runs alongside the builds: a few
+  # seconds, and a failure marks the run red instead of skipping the whole matrix.
+  # Catching a dependency bump on the PR that makes it beats rediscovering it at release.
+  check-third-party-licenses:
+    timeout-minutes: 5
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Check third-party license notices
+        run: python3 scripts/check_third_party_licenses.py
 
   prepare-image:
     needs: config
@@ -64,7 +88,8 @@ jobs:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
     with:
-      docker_image_tag:           ${{ needs.config.outputs.docker_image_tag }}
+      docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
+      upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
 
   windows-build-test:
     if: ${{ needs.config.outputs.build_enable_windows == 'true' }}
@@ -85,6 +110,7 @@ jobs:
     uses: ./.github/workflows/build-test-ubuntu-arm64.yml
     with:
       app_version:           ${{ needs.config.outputs.app_version }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_arm64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
@@ -162,6 +188,7 @@ jobs:
     with:
       vcpkg_version: ${{ needs.config.outputs.vcpkg_version }}
       app_version: ${{ needs.config.outputs.app_version }}
+      internal_build: ${{ needs.config.outputs.internal_build == 'true' }}
     secrets: inherit
 
   create-nuget-package:
@@ -182,7 +209,13 @@ jobs:
        uses: actions/download-artifact@v8
        with:
          pattern: DotNetPatchArchiveWindows-x64
-         path: windows_runtime
+         path: windows_x64_runtime
+
+     - name: Download NuGet Windows Arm Patch Archive
+       uses: actions/download-artifact@v8
+       with:
+         pattern: DotNetPatchArchiveWindows-arm64
+         path: windows_arm64_runtime
 
      - name: Download NuGet Linux x64 Patch Archive
        uses: actions/download-artifact@v8
@@ -233,7 +266,7 @@ jobs:
      - name: Generate NuGet specification
        run: |
         echo ${{ needs.config.outputs.app_version }}
-        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
+        py -3 scripts\nuget_patch\generate_nuget_spec.py dotnet_dll windows_x64_runtime windows_arm64_runtime linux_x64_runtime linux_arm64_runtime macos_x64_runtime macos_arm64_runtime ${{ needs.config.outputs.app_version }}
 
      - name: Download NuGet Executable
        run:  curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe -o nuget.exe
@@ -302,19 +335,30 @@ jobs:
       - name: Rename Distributives
         run: |
           shopt -s nullglob
+          VERSION="${{ needs.config.outputs.app_version }}"
           for PKG_FILE in MeshLibDist*.zip ; do
-            case "$PKG_FILE" in
-              # Keep the historical layout for the iterator-debug archive:
-              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
-              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
-              # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
-              *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
+            # An arm64 archive is named like its x64 sibling with `-arm64` appended
+            # last, so strip that suffix first and put it back at the end.
+            NAME="${PKG_FILE%.zip}"
+            ARCH_SUFFIX=""
+            case "$NAME" in
+              *-arm64) NAME="${NAME%-arm64}" ; ARCH_SUFFIX="-arm64" ;;
             esac
+            case "$NAME" in
+              # Keep the historical layout for the iterator-debug archives:
+              # MeshLibDist-IteratorDebug[-PDB] -> MeshLibDist_<version>-IteratorDebug[-PDB]
+              *-IteratorDebug|*-IteratorDebug-PDB) NAME="${NAME/Dist/Dist_${VERSION}}" ;;
+              # Companion symbols archives: MeshLibDistVS26-PDB -> MeshLibDistVS26_<version>-PDB
+              *-PDB) NAME="${NAME%-PDB}_${VERSION}-PDB" ;;
+              # Per-VS archives: MeshLibDistVS26 -> MeshLibDistVS26_<version>
+              *) NAME="${NAME}_${VERSION}" ;;
+            esac
+            mv "$PKG_FILE" "${NAME}${ARCH_SUFFIX}.zip"
           done
           for PKG_FILE in MeshLib*.nupkg ; do
             mv "$PKG_FILE" "${PKG_FILE/MeshLib/MeshLib_${{ needs.config.outputs.app_version }}}"
           done
-          for PKG_FILE in meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz; do
+          for PKG_FILE in meshlib*-dev.deb meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz; do
             mv "$PKG_FILE" "${PKG_FILE/meshlib/meshlib_${{ needs.config.outputs.app_version }}}"
           done
 
@@ -323,7 +367,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           shopt -s nullglob
-          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*-dev.rpm meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz js-meshlib-*.tgz"
+          PKG_FILES="MeshLibDist*.zip MeshLib*.nupkg meshlib*-dev.deb meshlib*.pkg meshlib_*.zip meshlib_*.tar.xz js-meshlib-*.tgz"
           if [ -n "$(echo $PKG_FILES)" ] ; then
             gh release upload ${{ needs.config.outputs.release_tag }} $PKG_FILES --clobber
           fi
@@ -358,6 +402,21 @@ jobs:
     # passes them; the unity test needs UNITY_USERNAME / UNITY_PASSWORD.
     secrets: inherit
 
+  nuget-consumer-test:
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_windows == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - upload-distributions
+    uses: ./.github/workflows/nuget-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.upload-distributions.result == 'success' }}
@@ -391,6 +450,8 @@ jobs:
       disable_manylinux:    ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}
       disable_macos:        ${{ needs.config.outputs.build_enable_macos != 'true' }}
       disable_windows:      ${{ needs.config.outputs.build_enable_windows != 'true' }}
+      release_tag:          ${{ needs.config.outputs.release_tag }}
+      version:              ${{ needs.config.outputs.app_version }}
 
   publish-wasm:
     needs: [ config, upload-distributions ]
@@ -407,45 +468,28 @@ jobs:
     # Dependabot PRs lack the AWS / CI-stats secrets, so skip stats collection there.
     if: ${{ always() && needs.config.outputs.internal_build == 'true' && github.actor != 'dependabot[bot]' }}
     continue-on-error: true
+    permissions:
+      actions: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Download runners' system stats
-        uses: actions/download-artifact@v8
-        with:
-          pattern: RunnerSysStats*
-          merge-multiple: true
-
-      - name: Download artifact stats
-        uses: actions/download-artifact@v8
-        with:
-          pattern: ArtifactStats*
-          merge-multiple: true
-
-      - uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d # v6.2.2
-        id: aws-creds
-        with:
-          aws-region: us-east-1
-          role-to-assume: ${{ secrets.AWS_CI_STAT_API_ROLE_ARN }}
-          output-credentials: true
-          retry-max-attempts: 5
-
-      - name: Install dependencies
-        run: python3 -m pip install boto3 botocore requests
-
-      - name: Collect stats
+      - name: Dispatch stats collection
         env:
-          CI_STATS_AUTH_TOKEN: ${{ secrets.CI_STATS_AUTH_TOKEN }}
-          GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
-          GIT_COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: python3 scripts/devops/collect_ci_stats.py
+          GH_TOKEN: ${{ github.token }}
+          REF: ${{ github.ref }}
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          gh workflow run collect-stats.yml \
+            --repo ${{ github.repository }} \
+            --ref "$BRANCH" \
+            -f run_id=${{ github.run_id }} \
+            -f ref="$REF" \
+            -f branch="$BRANCH" \
+            -f commit="$COMMIT"
 
   update-artifacts:
     timeout-minutes: 15
     runs-on: ubuntu-latest
-    needs: [ collect-stats, update-dev-documentation ]
+    needs: [ update-dev-documentation ]
     if: always()
     continue-on-error: true
     steps:
@@ -453,49 +497,6 @@ jobs:
         uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
         with:
           name: Wheelhouse*
-          failOnError: false
-
-      - name: Delete runners' system stats
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: RunnerSysStats*
-          failOnError: false
-
-      - name: Delete artifact stats
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: ArtifactStats*
-          failOnError: false
-
-      # generate timing logs archive
-      - name: Download Timing Logs Archive
-        uses: actions/download-artifact@v8
-        with:
-          pattern: Timing_Logs*
-          merge-multiple: true
-
-      - name: Generate Timing Logs Archive
-        run: |
-          shopt -s nullglob
-          if [ -n "$(echo *.csv)" ] ; then
-            tar -cvzf time_log.tar.gz *.csv
-          else
-            # create empty tar archive
-            # https://superuser.com/questions/448623/how-to-get-an-empty-tar-archive
-            tar -czf time_log.tar.gz -T /dev/null
-          fi
-
-      - name: Upload Timing Logs Archive
-        uses: actions/upload-artifact@v7
-        with:
-          name: time_log
-          path: time_log.tar.gz
-          retention-days: 1
-
-      - name: Delete Timing Logs Source
-        uses: geekyeggo/delete-artifact@176a747ab7e287e3ff4787bf8a148716375ca118 # v6.0.0
-        with:
-          name: Timing_Logs*
           failOnError: false
 
       - name: Delete Python Stubs

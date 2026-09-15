@@ -8,6 +8,7 @@
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MR2to3.h>
 #include <MRSymbolMesh/MRSymbolMesh.h>
 #include <gtest/gtest.h>
@@ -107,9 +108,6 @@ TEST( MRMesh, PlanarTriangulationWindingAndIntersections )
         }
 
         checkWinding( conts, mesh, faceWinding, 6.0, 1.0 ); // union 7 = 6 + the [1,2]^2 overlap
-
-        // the holeVertsIds overload stays available and resolves without ambiguity
-        EXPECT_EQ( PlanarTriangulation::triangulateContours( conts, nullptr ).topology.numValidFaces(), mesh.topology.numValidFaces() );
     }
 
     {
@@ -125,6 +123,39 @@ TEST( MRMesh, PlanarTriangulationWindingAndIntersections )
         const Mesh mesh = PlanarTriangulation::triangulateContours( conts, { .outFaceWinding = &faceWinding } );
 
         checkWinding( conts, mesh, faceWinding, 41.0, 3.0 ); // areas 23 + 24 with the strip counted once per winding
+    }
+}
+
+TEST( MRMesh, PlanarTriangulationCacheReuse )
+{
+    // stale state left in a cache would show up as a difference from the cache-less run
+    auto square = [] ( float x, float y, float s, bool ccw )
+    {
+        Contour2f c{ { x, y }, { x + s, y }, { x + s, y + s }, { x, y + s }, { x, y } };
+        if ( !ccw )
+            std::reverse( c.begin(), c.end() );
+        return c;
+    };
+    const std::vector<Contours2f> inputs{
+        { square( 0.f, 0.f, 1.f, true ) },                                    // one square
+        { square( 0.f, 0.f, 3.f, true ), square( 1.f, 1.f, 1.f, false ) },    // a square with a hole in it
+        { square( 0.f, 0.f, 1.f, true ) },                                    // the first input again
+        { square( 0.f, 0.f, 2.f, true ), square( 5.f, 0.f, 1.f, true ) },     // two disjoint squares
+    };
+    auto cache = PlanarTriangulation::makeSweepLineCache();
+    for ( const auto& conts : inputs )
+    {
+        const auto fresh = PlanarTriangulation::triangulateDisjointContours( conts );
+        const auto cached = PlanarTriangulation::triangulateDisjointContours( conts, cache.get() );
+        ASSERT_TRUE( fresh.has_value() );
+        ASSERT_TRUE( cached.has_value() );
+        EXPECT_EQ( fresh->topology.numValidVerts(), cached->topology.numValidVerts() );
+        EXPECT_EQ( fresh->topology.numValidFaces(), cached->topology.numValidFaces() );
+        EXPECT_EQ( fresh->topology.undirectedEdgeSize(), cached->topology.undirectedEdgeSize() );
+        ASSERT_EQ( fresh->points.size(), cached->points.size() );
+        for ( VertId v( 0 ); v < fresh->points.size(); ++v )
+            EXPECT_EQ( fresh->points[v], cached->points[v] );
+        EXPECT_EQ( fresh->area(), cached->area() );
     }
 }
 
@@ -173,9 +204,8 @@ TEST( MRMesh, PlanarTriangulationMeshSpace )
 
 namespace
 {
-
 // circle of n points (closed: first == last)
-Contour2d benchCircle( int n, double r, const Vector2d& center )
+Contour2d circle( int n, double r, const Vector2d& center )
 {
     Contour2d cont;
     cont.reserve( n + 1 );
@@ -187,6 +217,203 @@ Contour2d benchCircle( int n, double r, const Vector2d& center )
     cont.push_back( cont.front() );
     return cont;
 }
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSame1 )
+{
+    Contours2d conts( 2 );
+    conts[0] = circle( 10, 20, Vector2d( 100, 100 ) );
+    conts[1] =
+    {
+        {0.0,0.0},
+        {0.0,0.0},
+
+        {5.0,10.0},
+        {15.0,15.0},
+        {20.0,5.0},
+
+        {0.0,0.0},
+        {0.0,0.0}
+    };
+    auto mesh = PlanarTriangulation::triangulateContours( conts );
+    EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ) + calcOrientedArea( conts[1] ), 1e-3 );
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSame2 )
+{
+    Contours2d conts( 2 );
+    conts[0] = circle( 10, 20, Vector2d( 100, 100 ) );
+    conts[1] =
+    {
+        {0.0,0.0},
+        {0.0,0.0},
+        {0.0,0.0},
+        {0.0,0.0}
+    };
+    auto mesh = PlanarTriangulation::triangulateContours( conts );
+    EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ), 1e-3 );
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSame3 )
+{
+    Contours2d conts( 2 );
+    conts[0] = circle( 10, 20, Vector2d( 0.0, 0.0 ) );
+    conts[1] =
+    {
+        {0.0,0.0},
+        {45.0,45.0},
+        {0.0,0.0},
+        {0.0,0.0}
+    };
+    auto mesh = PlanarTriangulation::triangulateContours( conts );
+    EXPECT_NEAR( mesh.area(), -calcOrientedArea( conts[0] ), 1e-3 );
+}
+
+// Degenerate polygons quantized to a coarse grid: coincident vertices and doubled segments that
+// mergeSamePoints_ has to fold into a single sweep vertex. Each of these used to assert in the
+// sweep line, mostly as ccw called with duplicate vertex ids.
+
+TEST( MRMesh, PlanarTriangulationMergeSameCascade )
+{
+    // self-intersecting 6-gon visiting ( -4, 8 ) twice at non-adjacent positions
+    Contour2f cont = {
+        { -3, 6 }, { -8, 16 }, { -4, 8 }, { -6, 10 }, { -4, 8 }, { -7, 1 }
+    };
+    cont.push_back( cont.front() ); // close the contour
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationPinchedMonotoneBlock )
+{
+    // segment (-7,2)-(-13,3) traversed twice, then a tail through (-18,1): the doubled edge
+    // collapses on merge, so both its directions have to fold into one winding modifier
+    Contour2f cont = {
+        { -7, 2 }, { -13, 3 }, { -7, 2 }, { -13, 3 }, { -18, 1 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 ); // the net winding covers triangle (-7,2)(-13,3)(-18,1)
+}
+
+TEST( MRMesh, PlanarTriangulationPinchedMonotoneBlock2 )
+{
+    // the same doubled segment, this time preceded by a self-crossing cluster
+    Contour2f cont = {
+        { 14, 2 }, { 18, 2 }, { 9, 1 }, { 18, 3 },
+        { -7, 2 }, { -13, 3 }, { -7, 2 }, { -13, 3 }, { 18, -3 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges )
+{
+    // four points on one line with two coincident pairs: (-15,-1) and (-10,-1) each appear twice
+    Contour2f cont = {
+        { -9, 0 }, { -10, -1 }, { -15, -1 }, { -19, -2 },
+        { -15, -1 }, { -7, -1 }, { -11, -1 }, { -10, -1 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges2 )
+{
+    // four points on y=0 walked back and forth, plus two points above
+    Contour2f cont = {
+        { 14, 0 }, { 7, 0 }, { 15, 0 }, { 14, 3 }, { 18, 4 }, { 13, 0 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GT( mesh.topology.numValidFaces(), 0 );
+}
+
+TEST( MRMesh, PlanarTriangulationMergeSameCascade2 )
+{
+    // one segment traversed back and forth three times: the merge cascade folds all three
+    // traversals into nothing
+    Contour2f cont = {
+        { 11, -12 }, { 7, -7 }, { 11, -12 }, { 7, -7 }, { 11, -12 }, { 7, -7 }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 0 ); // zero-area input: survive and produce nothing
+}
+
+TEST( MRMesh, PlanarTriangulationChainedActiveEdges3 )
+{
+    // six points on one line walked back and forth, ( 0.4, 0 ) visited twice; zero area;
+    // keep the float literals exact - the repro is sensitive to the float->int quantization
+    Contour2f cont = {
+        { 0.800000012f, 0.f }, { 0.400000006f, 0.f }, { 0.5f, 0.f },
+        { 0.349999994f, 0.f }, { 0.600000024f, 0.f }, { 0.400000006f, 0.f }
+    };
+    cont.push_back( cont.front() );
+    Mesh mesh = PlanarTriangulation::triangulateContours( { cont } );
+    EXPECT_GE( mesh.topology.numValidFaces(), 0 ); // completing without the assert is the test
+}
+
+TEST( MRMesh, PlanarTriangulationMonotonePlan )
+{
+    // a flat disk inside a flat ring: the gap between them is bounded by two concentric circles, and
+    // the disk touches nothing, so only chords can join its loop to the ring's
+    constexpr int n = 8;
+    VertCoords pts;
+    pts.push_back( Vector3f() ); // disk center
+    for ( int ring = 0; ring < 3; ++ring ) // circles of radius 1 (the disk), 2 and 3 (the ring)
+        for ( int i = 0; i < n; ++i )
+        {
+            const float a = 2 * PI_F * i / n + 0.3f; // off the axes, so no two vertices share an x
+            pts.push_back( Vector3f( ( ring + 1 ) * std::cos( a ), ( ring + 1 ) * std::sin( a ), 0.f ) );
+        }
+    auto v = [] ( int ring, int i ) { return VertId( 1 + ring * n + i % n ); };
+    Triangulation t;
+    for ( int i = 0; i < n; ++i )
+    {
+        t.push_back( { VertId( 0 ), v( 0, i ), v( 0, i + 1 ) } );
+        t.push_back( { v( 1, i ), v( 2, i ), v( 2, i + 1 ) } );
+        t.push_back( { v( 1, i ), v( 2, i + 1 ), v( 1, i + 1 ) } );
+    }
+    Mesh mesh = Mesh::fromTriangles( std::move( pts ), t );
+
+    // the hole loops of the gap: the disk's boundary and the ring's inner boundary,
+    // as opposed to the ring's outer boundary at radius 3
+    auto inGap = [&mesh] ( const EdgeLoop& l ) { return mesh.orgPnt( l.front() ).lengthSq() < 5.f; };
+    EdgeLoops loops = findRightBoundary( mesh.topology );
+    std::erase_if( loops, [&] ( const EdgeLoop& l ) { return !inGap( l ); } );
+    ASSERT_EQ( loops.size(), size_t( 2 ) );
+
+    const Vector3f normal = Vector3f::plusZ();
+    // around the opposite normal the sweep works in a mirrored plane, so every chord would land in a
+    // wedge that faces occupy: the plan is rejected instead
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, -normal ).has_value() );
+
+    auto plan = PlanarTriangulation::getMonotonePlan( mesh, loops, normal );
+    ASSERT_TRUE( plan.has_value() );
+    EXPECT_EQ( plan->numTris, 0 ); // the plan only adds edges
+    // the sweep splits the gap where it reaches the disk and closes it back up where it leaves it
+    ASSERT_EQ( plan->items.size(), size_t( 2 ) );
+    executeHoleFillPlan( mesh, loops[0][0], *plan );
+
+    // each of the two holes the chords left is monotone along x: walking it, x turns around twice
+    EdgeLoops parts = findRightBoundary( mesh.topology );
+    std::erase_if( parts, [&] ( const EdgeLoop& l ) { return !inGap( l ); } );
+    for ( const EdgeLoop& loop : parts )
+    {
+        auto rightGoing = [&] ( size_t i ) { return mesh.orgPnt( loop[i] ).x < mesh.destPnt( loop[i] ).x; };
+        int turns = 0;
+        for ( size_t i = 0; i < loop.size(); ++i )
+            turns += rightGoing( i ) != rightGoing( ( i + 1 ) % loop.size() );
+        EXPECT_EQ( turns, 2 );
+    }
+    EXPECT_EQ( parts.size(), size_t( 2 ) );
+}
+
+namespace
+{
 
 // star polygon {n/step} as a single self-intersecting closed contour (needs gcd(n,step)==1)
 Contour2d benchStar( int n, int step, double r, const Vector2d& center )
@@ -216,10 +443,8 @@ template <typename Contours>
 double triangulateOnceMs( const Contours& conts )
 {
     const auto t0 = std::chrono::steady_clock::now();
-    Mesh m = PlanarTriangulation::triangulateContours( conts );
+    [[maybe_unused]] const Mesh m = PlanarTriangulation::triangulateContours( conts );
     const auto t1 = std::chrono::steady_clock::now();
-    volatile size_t sink = m.topology.faceSize();
-    (void)sink;
     return std::chrono::duration<double, std::milli>( t1 - t0 ).count();
 }
 
@@ -254,7 +479,7 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
     // 1) one big circle: single large monotone polygon -> dominated by the `less` sort.
     //    This is the path the predicate refactor regressed and parallel_sort targets.
     {
-        Contours2d conts{ benchCircle( 100000, 1.0, Vector2d() ) };
+        Contours2d conts{ circle( 100000, 1.0, Vector2d() ) };
         runBench( "one-big-circle", countVerts( conts ), warmup, iters,
             [&] { return triangulateOnceMs( conts ); } );
     }
@@ -265,7 +490,7 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
         constexpr int grid = 24, ptsPer = 48;
         for ( int gx = 0; gx < grid; ++gx )
             for ( int gy = 0; gy < grid; ++gy )
-                conts.push_back( benchCircle( ptsPer, 0.4, Vector2d( double( gx ), double( gy ) ) ) );
+                conts.push_back( circle( ptsPer, 0.4, Vector2d( double( gx ), double( gy ) ) ) );
         runBench( "disjoint-circles", countVerts( conts ), warmup, iters,
             [&] { return triangulateOnceMs( conts ); } );
     }
@@ -276,7 +501,7 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
         constexpr int grid = 10, ptsPer = 40;
         for ( int gx = 0; gx < grid; ++gx )
             for ( int gy = 0; gy < grid; ++gy )
-                conts.push_back( benchCircle( ptsPer, 0.5, Vector2d( 0.8 * gx, 0.8 * gy ) ) );
+                conts.push_back( circle( ptsPer, 0.5, Vector2d( 0.8 * gx, 0.8 * gy ) ) );
         runBench( "overlapping-circles", countVerts( conts ), warmup, iters,
             [&] { return triangulateOnceMs( conts ); } );
     }
@@ -334,17 +559,13 @@ TEST( MRMesh, DISABLED_PlanarTriangulationBench )
         auto once = [&] ()
         {
             double ms = 0.0;
-            size_t faces = 0;
             for ( const auto& s : slices )
             {
                 const auto t0 = std::chrono::steady_clock::now();
-                Mesh m = PlanarTriangulation::triangulateContours( s );
+                [[maybe_unused]] const Mesh m = PlanarTriangulation::triangulateContours( s );
                 const auto t1 = std::chrono::steady_clock::now();
                 ms += std::chrono::duration<double, std::milli>( t1 - t0 ).count();
-                faces += m.topology.faceSize();
             }
-            volatile size_t sink = faces;
-            (void)sink;
             return ms;
         };
         if ( !slices.empty() )

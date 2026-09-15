@@ -397,7 +397,7 @@ FaceMap BooleanResultMapper::getNew2OldFaceMap( MapObject obj ) const
     } );
 
     // fill map in parallel
-    FaceMap outMap( maxNewFace );
+    FaceMap outMap( maxNewFace + 1 );
     ParallelFor( map.cut2origin, [&] ( FaceId cf )
     {
         auto of = map.cut2origin[cf];

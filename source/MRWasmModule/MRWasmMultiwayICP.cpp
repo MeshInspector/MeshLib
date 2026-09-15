@@ -11,8 +11,14 @@
 
 using namespace MR;
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( AffineXf3fArrayVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( MeshOrPointsXfArrayVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_multiway_icp )
 {
+    emscripten::register_type<AffineXf3fArrayVal>( "AffineXf3f[]" );
+    emscripten::register_type<MeshOrPointsXfArrayVal>( "readonly MeshOrPointsXf[]" );
+
     emscripten::enum_<MultiwayICPSamplingParameters::CascadeMode>( "CascadeMode" )
         .value( "Sequential", MultiwayICPSamplingParameters::CascadeMode::Sequential )
         .value( "AABBTreeBased", MultiwayICPSamplingParameters::CascadeMode::AABBTreeBased );
@@ -24,7 +30,7 @@ EMSCRIPTEN_BINDINGS( meshlib_multiway_icp )
         .property( "cascadeMode", &MultiwayICPSamplingParameters::cascadeMode );
 
     emscripten::class_<MultiwayICP>( "MultiwayICP" )
-        .constructor( +[]( const emscripten::val& objects, const MultiwayICPSamplingParameters& params )
+        .constructor( +[]( MeshOrPointsXfArrayVal objects, const MultiwayICPSamplingParameters& params )
         {
             ICPObjects objs;
             const size_t n = objects[ "length" ].as<size_t>();
@@ -39,7 +45,7 @@ EMSCRIPTEN_BINDINGS( meshlib_multiway_icp )
             emscripten::val arr = emscripten::val::array();
             for ( const auto& xf : xfs )
                 arr.call<void>( "push", xf );
-            return arr;
+            return AffineXf3fArrayVal( arr );
         } )
         .function( "resamplePoints", &MultiwayICP::resamplePoints )
         .function( "updateAllPointPairs", +[]( MultiwayICP& self ) { return self.updateAllPointPairs(); } )

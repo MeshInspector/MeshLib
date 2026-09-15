@@ -23,8 +23,20 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->pointCloud() )
+            if ( auto m = obj->pointCloudPtr() )
                 clonePointCloud_ = std::make_shared<PointCloud>( *m );
+        }
+    }
+
+    /// use this constructor to remember object's point cloud and immediately set new point cloud
+    ChangePointCloudAction( std::string name, const std::shared_ptr<ObjectPoints>& obj, std::shared_ptr<PointCloud> newPointCloud ) :
+        objPoints_{ obj },
+        name_{ std::move( name ) }
+    {
+        if ( objPoints_ )
+        {
+            clonePointCloud_ = std::move( newPointCloud );
+            objPoints_->swapPointCloud( clonePointCloud_ );
         }
     }
 
@@ -68,7 +80,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->pointCloud() )
+            if ( auto m = obj->pointCloudPtr() )
                 clonePoints_ = m->points;
         }
     }
@@ -132,7 +144,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->pointCloud() )
+            if ( auto m = obj->pointCloudPtr() )
                 if ( m->points.size() > pointId_ )
                     safeCoords_ = m->points[pointId_];
         }

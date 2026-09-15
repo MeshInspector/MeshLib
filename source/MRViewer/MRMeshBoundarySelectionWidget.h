@@ -10,6 +10,7 @@
 #include "MRViewer/MRAncillaryLines.h"
 #include "MRMesh/MRRingIterator.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRHeapBytes.h"
 
 namespace MR
 {

@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use MeshLib in research, please cite it using the metadata below. Always cite the exact version you used."
+title: "MeshLib: 3D Mesh Processing Library"
+abstract: "MeshLib is a cross-platform 3D mesh and point-cloud processing SDK written in C++ with bindings for C, C#, Python and WebAssembly: boolean operations, mesh healing, decimation, offsetting, registration (ICP), voxel/volumetric processing and 3D file I/O."
+type: software
+authors:
+  - name: "MeshLib Development Team"
+    website: "https://meshlib.io"
+repository-code: "https://github.com/MeshInspector/MeshLib"
+url: "https://meshlib.io"
+version: 3.1.3.429
+date-released: "2026-08-03"
+license-url: "https://github.com/MeshInspector/MeshLib/blob/master/LICENSE"
+keywords:
+  - mesh processing
+  - computational geometry
+  - mesh boolean
+  - point cloud
+  - 3D

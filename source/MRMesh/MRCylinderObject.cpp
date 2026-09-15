@@ -9,6 +9,7 @@
 #include "MRLine.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRJson.h"
+#include "MRIRenderObject.h"
 #include <iostream>
 
 namespace MR

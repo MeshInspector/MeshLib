@@ -4,12 +4,6 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
 include(DefaultOptions)
 include(ConfigureVcpkg)
 
-IF(NOT MR_EMSCRIPTEN AND NOT APPLE AND EXISTS /usr/bin/time)
-  # print compile time of each translation unit in the CSV format (user time, system time, command)
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "/usr/bin/time -f \",%U,%S,%C\" -a -o compile_timings.txt")
-  set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "/usr/bin/time -f \",%U,%S,%C\" -a -o link_timings.txt")
-ENDIF()
-
 IF(APPLE)
     # assume built-in pthreads on macOS
     # https://stackoverflow.com/a/54606606/7325599
@@ -49,6 +43,14 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
       add_link_options("-fuse-ld=lld")
     ENDIF()
     add_link_options("LINKER:-z,separate-loadable-segments")
+    # Fold byte-identical functions. `safe` folds only the address-insignificant
+    # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
+    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
+    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
+    # Widen what ICF can reach: without this only COMDAT functions (templates,
+    # inlines) get their own section, so plain out-of-line ones never fold.
+    # `-fdata-sections` would add nothing -- lld folds executable sections only.
+    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
   ENDIF()
 ENDIF()
 
@@ -81,6 +83,7 @@ option(MESHLIB_BUILD_EXTRA_IO_FORMATS "Build extra IO format support library" ON
 option(MESHLIB_BUILD_MCP "Enable MCP server" ON)
 option(MESHLIB_BUILD_GENERATED_C_BINDINGS "Build C bindings (assuming they are already generated)" OFF)
 option(MESHLIB_BUILD_WASM_MODULE "Build the headless WebAssembly module" OFF)
+option(MESHLIB_BUILD_WASM_DEFINITIONS_ONLY "Emit only the WebAssembly module's TypeScript definitions, leaving MeshLib unlinked" OFF)
 
 option(MESHLIB_BUILD_MRCUDA "Build MRCuda library" ON)
 option(MESHLIB_EXPERIMENTAL_HIP "(experimental) Use HIP toolkit for MRCuda library" OFF)
@@ -161,6 +164,8 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
           set(MESHLIB_PYTHON_VERSION "3.10")
         ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_24")
           set(MESHLIB_PYTHON_VERSION "3.12")
+        ELSEIF(${MR_PLATFORM} STREQUAL "Ubuntu_26")
+          set(MESHLIB_PYTHON_VERSION "3.14")
         ENDIF()
       ENDIF()
     ENDIF()

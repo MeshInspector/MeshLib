@@ -1,4 +1,5 @@
 #include "MRMeshLoad.h"
+#include "MRBitCast.h"
 #include "MRMeshBuilder.h"
 #include "MRIdentifyVertices.h"
 #include "MRMesh.h"
@@ -25,7 +26,6 @@
 #include "MRString.h"
 
 #include <array>
-#include <bit>
 #include <future>
 #include <sstream>
 #include <fstream>
@@ -155,13 +155,7 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
         // floats in Vector3f must be 4-bytes aligned on some platforms, so we use chars and cast them in Vector3f on access
         Vector3f vertex( int i ) const
         {
-        #if __cpp_lib_bit_cast >= 201806L
-            return std::bit_cast<Vector3f>( coords[i] );
-        #else
-            Vector3f v;
-            std::memcpy( &v, &coords[i], sizeof( coords[i] ) );
-            return v;
-        #endif
+            return MR::bit_cast<Vector3f>( coords[i] );
         }
     };
     static_assert( sizeof( StlTriangle ) == 50 );
@@ -181,6 +175,8 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
 
     while ( !buffer.empty() )
     {
+        auto preNumTris = vi.numTris(); // must be read before the task below starts adding more triangles in (vi)
+
         // decode previously read buffer in a worked thread
         tbb::task_group taskGroup;
         taskGroup.run( [&chunk, &vi, &buffer] ()
@@ -192,9 +188,9 @@ Expected<TriMesh> loadBinaryStlAsTriMesh( std::istream& in, const MeshLoadSettin
             vi.addTriangles( chunk );
         } );
 
-        if ( vi.numTris() + buffer.size() < numTris )
+        if ( preNumTris + buffer.size() < numTris )
         {
-            const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( vi.numTris() + buffer.size() ), itemsInBuffer );
+            const auto itemsInNextChuck = std::min( numTris - (std::uint32_t)( preNumTris + buffer.size() ), itemsInBuffer );
             nextBuffer.resize( itemsInNextChuck );
             const size_t size = sizeof( StlTriangle ) * nextBuffer.size();
             // read from stream in the current thread to be compatible with PythonIstreamBuf

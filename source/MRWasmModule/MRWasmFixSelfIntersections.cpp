@@ -14,8 +14,12 @@ namespace
 struct SelfIntersectionsModule {};
 }
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( SelfIntersectionsCallbackVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_fix_self_intersections )
 {
+    emscripten::register_type<SelfIntersectionsCallbackVal>( "( progress: number ) => boolean" );
+
     emscripten::enum_<SelfIntersections::Settings::Method>( "SelfIntersectionsMethod" )
         .value( "Relax", SelfIntersections::Settings::Method::Relax )
         .value( "CutAndFill", SelfIntersections::Settings::Method::CutAndFill );
@@ -29,8 +33,8 @@ EMSCRIPTEN_BINDINGS( meshlib_fix_self_intersections )
         .property( "subdivideEdgeLen", &SelfIntersections::Settings::subdivideEdgeLen )
         .property( "mimicPatch", &SelfIntersections::Settings::mimicPatch )
         .property( "callback",
-            +[]( const SelfIntersections::Settings& ) { return emscripten::val::undefined(); },
-            +[]( SelfIntersections::Settings& s, emscripten::val cb ) { s.callback = Wasm::jsToCppCallback( cb ); } );
+            +[]( const SelfIntersections::Settings& ) -> SelfIntersectionsCallbackVal { return SelfIntersectionsCallbackVal( emscripten::val::undefined() ); },
+            +[]( SelfIntersections::Settings& s, SelfIntersectionsCallbackVal cb ) { s.callback = Wasm::jsToCppCallback( cb ); } );
 
     emscripten::class_<SelfIntersectionsModule>( "SelfIntersections" )
         .class_function( "getFaces", +[]( const Mesh& mesh, bool touchIsIntersection )

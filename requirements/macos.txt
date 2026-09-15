@@ -19,6 +19,7 @@ nlohmann-json
 opencascade
 openssl@3
 openvdb
+parallel-hashmap
 pkgconfig
 python@3.10
 spdlog

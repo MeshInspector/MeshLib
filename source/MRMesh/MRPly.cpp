@@ -26,6 +26,8 @@ bool ignoreComment( const std::string & comment )
         || comment.starts_with( "#" )
         || comment.starts_with( "--" ) // e.g. reconstruction CLI args '--depth 13', '--in /tmp/...ply'
         || comment.ends_with( ".jpg" ) || comment.ends_with( ".jpeg" ) || comment.ends_with( ".png" ) // source image file lists
+        || comment.starts_with( "camera_app_index " )
+        || comment.starts_with( "camera_frame_number " )
         || comment.starts_with( "Coordinate Orientation: " )
         || comment.starts_with( "dataType " )
         || comment.starts_with( "Density: " )
@@ -33,6 +35,7 @@ bool ignoreComment( const std::string & comment )
         || comment.starts_with( "epsg " ) // coordinate reference system code
         || comment.starts_with( "FOV: " )
         || comment.starts_with( "geotag " )
+        || comment.starts_with( "local origin " ) // per-file coordinates, like origin_x below
         || comment.starts_with( "maxx " )
         || comment.starts_with( "maxy " )
         || comment.starts_with( "maxz " )
@@ -54,6 +57,10 @@ bool ignoreComment( const std::string & comment )
         || comment.starts_with( "shifty " )
         || comment.starts_with( "shiftz " )
         || comment.starts_with( "source " ) // e.g. 'source PortalCam' - per-instance capture metadata
+        || comment.starts_with( "source_tactile_frame_number " )
+        || comment.starts_with( "source_vertex_count " )
+        || comment.starts_with( "tactile_minus_camera_ms " )
+        || comment.starts_with( "Time stamp: " )
         || comment.starts_with( "Timestamp: " ) // e.g. 'Timestamp: 2026-02-06 15:12:26'
         || comment.starts_with( "unit = " )
         || comment.starts_with( "Unit: " )

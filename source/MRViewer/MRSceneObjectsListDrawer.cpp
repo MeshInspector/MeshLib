@@ -24,6 +24,8 @@
 namespace MR
 {
 
+static_assert( sDefaultGroupState == ImGuiTreeNodeFlags_DefaultOpen );
+
 // helper class to optimaze render (skip elements outside draw area)
 class SkippableRenderer
 {
@@ -82,6 +84,7 @@ private:
 void SceneObjectsListDrawer::draw( float height )
 {
     ImGui::BeginChild( "SceneObjectsList", ImVec2( -1, height ), ImGuiChildFlags_None );
+    applyCollapseSceneTree_();
     updateSceneWindowScrollIfNeeded_();
     drawObjectsList_();
     // any click on empty space below Scene Tree removes object selection
@@ -250,6 +253,27 @@ void SceneObjectsListDrawer::expandObjectTreeAndScroll( const Object* obj )
     const auto itAll = std::find( all.begin(), all.end(), obj->getSharedPtr() );
     nextVisible_.index = int( std::distance( all.begin(), itAll ) );
     setNextFrameFixScroll( 2 );
+}
+
+void SceneObjectsListDrawer::collapseSceneTree()
+{
+    collapseSceneTreeRequested_ = true;
+}
+
+void SceneObjectsListDrawer::applyCollapseSceneTree_()
+{
+    if ( !collapseSceneTreeRequested_ )
+        return;
+    collapseSceneTreeRequested_ = false;
+
+    auto* window = ImGui::GetCurrentWindow();
+    // every object is collapsed, not only the visible ones: objects below a closed header are not drawn at all,
+    // and would open by default flag once the user expands their parent
+    for ( const auto& obj : getAllObjectsInTree( SceneRoot::get(), ObjectSelectivityType::Any ) )
+    {
+        const auto uniqueStr = std::to_string( intptr_t( obj.get() ) );
+        ImGui::TreeNodeSetOpen( window->GetID( objectLineStrId_( *obj, uniqueStr ).c_str() ), false );
+    }
 }
 
 void SceneObjectsListDrawer::allowSceneReorder( bool allow )
@@ -444,7 +468,7 @@ bool SceneObjectsListDrawer::drawSkippedObject_( Object& object, const std::stri
         // as far as `TreeNodeUpdateNextOpen` uses `SetNextItemOpen` but does not clear it, we clear it manually
         auto ctx = ImGui::GetCurrentContext();
         ctx->NextItemData.HasFlags &= ~ImGuiNextItemDataFlags_HasOpen;
-        ctx->NextItemData.OpenVal = sDefaultGroupState;
+        ctx->NextItemData.OpenVal = false;
         ctx->NextItemData.OpenCond = ImGuiCond_None;
     }
     return res;

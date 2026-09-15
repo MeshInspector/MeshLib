@@ -25,8 +25,17 @@ void AppendHistory( Args&&... args )
     AppendHistory( std::make_shared<HistoryActionType>( std::forward<Args>( args )... ) );
 }
 
-// if undo history is enabled, creates given action in the constructor;
-// and always mark the object as dirty in the destructor
+/// The main objective of this class is to save object's state in the constructor,
+/// then let the caller modify object's data in-place,
+/// and finally append the action in the history store and automatically call appropriate setDirty in the destructor.
+/// If HistoryStore::getViewerInstance() is missing, it does not allocate memory for undo (the action is not created at all).
+/// If the operation fails midway, call cancelAction() to revert the modifications made so far
+/// and to skip both appending in the history store and setDirty in the destructor.
+/// If the new state is already allocated, then AppendHistory with immediate-setting action constructor
+/// is a simpler alternative (no memory waste anyway, since such constructors keep the old state for undo via swap).
+/// Always create a named Historian variable and never a nameless temporary such as `Historian<ChangeMeshPointsAction>( "name", obj );`
+/// because a temporary is destroyed at the end of the same statement, calling setDirty before any data modification;
+/// the constructor is marked [[nodiscard]] so a discarded temporary produces a compiler warning (an error with -Werror / /WX).
 template<class HistoryActionType>
 class Historian
 {
@@ -35,7 +44,7 @@ public:
     using Obj = typename HistoryActionType::Obj;
 
     template<typename... Args>
-    Historian( std::string name, std::shared_ptr<Obj> obj, Args&&... args ) : obj_( std::move( obj ) )
+    [[nodiscard]] Historian( std::string name, std::shared_ptr<Obj> obj, Args&&... args ) : obj_( std::move( obj ) )
     {
         if ( HistoryStore::getViewerInstance() )
             action_ = std::make_shared<HistoryActionType>( std::move( name ), obj_, std::forward<Args>( args )... );

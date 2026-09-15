@@ -59,25 +59,30 @@ TEST( MRMesh, duplicateDoubleHoleVertex )
     EXPECT_EQ( topology.numValidFaces(), 2 );
 }
 
-// duplication of one vertex can resolve non-manifoldness in its neighbor vertex, which shall not be duplicated then
-TEST( MRMesh, duplicateResolvedNeighborVertex )
+// the vertices of an edge shared by three triangles are both duplicated, fully detaching the third triangle
+TEST( MRMesh, duplicateTripleEdgeVertices )
 {
     Triangulation t;
     t.push_back( { 1_v, 2_v, 3_v } ); //0_f
     t.push_back( { 2_v, 1_v, 4_v } ); //1_f
     t.push_back( { 1_v, 2_v, 5_v } ); //2_f
-    // the edge (1,2) is shared by three triangles, so both vertices 1 and 2 have repeated neighbor vertices;
-    // duplication of vertex 1 in one of the triangles resolves vertex 2 into two open chains requiring nothing
+    // duplication of vertex 1 formally resolves vertex 2 into two open chains,
+    // but vertex 2 is still duplicated to avoid two neighbor vertices with equal coordinates
 
     std::vector<VertDuplication> dups;
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
-    EXPECT_EQ( duplicatedVerticesCnt, 1 );
-    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( duplicatedVerticesCnt, 2 );
+    ASSERT_EQ( dups.size(), 2 );
     EXPECT_EQ( dups[0].srcVert, 1_v );
     EXPECT_EQ( dups[0].dupVert, 6_v );
+    EXPECT_EQ( dups[1].srcVert, 2_v );
+    EXPECT_EQ( dups[1].dupVert, 7_v );
+
+    // the last triangle is fully detached from the first two
+    EXPECT_EQ( t[2_f], ( ThreeVertIds{ 6_v, 7_v, 5_v } ) );
 
     const auto topology = fromTrianglesDuplicatingNonManifoldVertices( t );
-    EXPECT_EQ( topology.numValidVerts(), 6 );
+    EXPECT_EQ( topology.numValidVerts(), 7 );
     EXPECT_EQ( topology.numValidFaces(), 3 );
 }
 
@@ -111,7 +116,7 @@ TEST( MRMesh, duplicateClosedPlusOpenChainVertex )
 }
 
 // a closed ring around #0 plus one opposite-orientation triangle sharing the ring's rim pair (2,3):
-// the duplicated chain must take its own triangle 4_f, not the ring's 1_f with the same rim vertices
+// the lone triangle 4_f is fully detached: all its three vertices are duplicated
 TEST( MRMesh, duplicateVertexOppositeOrientedTri )
 {
     Triangulation t;
@@ -123,15 +128,19 @@ TEST( MRMesh, duplicateVertexOppositeOrientedTri )
 
     std::vector<VertDuplication> dups;
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
-    EXPECT_EQ( duplicatedVerticesCnt, 1 );
-    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( duplicatedVerticesCnt, 3 );
+    ASSERT_EQ( dups.size(), 3 );
     EXPECT_EQ( dups[0].srcVert, 0_v );
     EXPECT_EQ( dups[0].dupVert, 5_v );
+    EXPECT_EQ( dups[1].srcVert, 2_v );
+    EXPECT_EQ( dups[1].dupVert, 6_v );
+    EXPECT_EQ( dups[2].srcVert, 3_v );
+    EXPECT_EQ( dups[2].dupVert, 7_v );
 
-    // the ring is intact and only the lone triangle got the duplicate
+    // the ring is intact and the lone triangle is fully detached
     for ( FaceId i{ 0 }; i < 4; ++i )
         EXPECT_EQ( t[i][0], 0_v );
-    EXPECT_EQ( t[4_f][0], 5_v );
+    EXPECT_EQ( t[4_f], ( ThreeVertIds{ 5_v, 7_v, 6_v } ) );
 
     // the result is manifold
     dups.clear();
@@ -139,35 +148,83 @@ TEST( MRMesh, duplicateVertexOppositeOrientedTri )
     EXPECT_EQ( dups.size(), 0 );
 }
 
-// a vertex with three chains around it, where the walk enters the closed ring via shared rim vertex #3,
-// so the ring is extracted mid-walk as the first found chain, and both open chains get duplicates
+// a fan around #0 with two continuation options from the shared rim vertex #2;
+// the given predicate prefers the triangle with the remaining vertex #4,
+// so the other continuation 1_f is fully detached; without the predicate the first option by face id wins instead
+TEST( MRMesh, duplicateVertexPreferredContinuation )
+{
+    Triangulation initT;
+    initT.push_back( { 0_v, 1_v, 2_v } ); //0_f
+    initT.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    initT.push_back( { 0_v, 2_v, 4_v } ); //2_f
+
+    {
+        auto t = initT;
+        auto prefer4 = []( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )
+        {
+            if ( e1 == 0_v )
+            {
+                // the branching during the walk around #0: the reference triangle is (2, 0, 1) = 0_f up to rotation,
+                // and the candidates are (0, 2, 3) = 1_f and (0, 2, 4) = 2_f
+                EXPECT_EQ( e0, 2_v );
+                EXPECT_EQ( vRef, 1_v );
+                EXPECT_EQ( vBest, 3_v );
+            }
+            return vCand == 4_v;
+        };
+        std::vector<VertDuplication> dups;
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, prefer4 ), 2 );
+        ASSERT_EQ( dups.size(), 2 );
+        EXPECT_EQ( dups[0].srcVert, 0_v );
+        EXPECT_EQ( dups[0].dupVert, 5_v );
+        EXPECT_EQ( dups[1].srcVert, 2_v );
+        EXPECT_EQ( dups[1].dupVert, 6_v );
+        EXPECT_EQ( t[0_f], ( ThreeVertIds{ 0_v, 1_v, 2_v } ) );
+        EXPECT_EQ( t[1_f], ( ThreeVertIds{ 5_v, 6_v, 3_v } ) );
+        EXPECT_EQ( t[2_f], ( ThreeVertIds{ 0_v, 2_v, 4_v } ) );
+
+        // the result is manifold
+        dups.clear();
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, prefer4 ), 0 );
+    }
+    {
+        auto t = initT;
+        std::vector<VertDuplication> dups;
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups ), 2 );
+        EXPECT_EQ( t[1_f], ( ThreeVertIds{ 0_v, 2_v, 3_v } ) );
+        EXPECT_EQ( t[2_f], ( ThreeVertIds{ 5_v, 6_v, 4_v } ) );
+    }
+}
+
+// a hub vertex #3 with two open chains (1-2-0, 6-7-8) and a closed ring (0-4-5) sharing rim vertex #0;
+// duplicating #0 opens the ring into one long chain around the hub,
+// and the chain 6-7-8 is split off with its own duplicate of the hub
 TEST( MRMesh, duplicateVertexWithThreeChains )
 {
     Triangulation t;
-    t.push_back( { 0_v, 1_v, 2_v } ); //0_f open chain 1-2-3
-    t.push_back( { 0_v, 2_v, 3_v } ); //1_f
-    t.push_back( { 0_v, 3_v, 4_v } ); //2_f closed ring 3-4-5-3
-    t.push_back( { 0_v, 4_v, 5_v } ); //3_f
-    t.push_back( { 0_v, 5_v, 3_v } ); //4_f
-    t.push_back( { 0_v, 6_v, 7_v } ); //5_f open chain 6-7-8
-    t.push_back( { 0_v, 7_v, 8_v } ); //6_f
+    t.push_back( { 3_v, 1_v, 2_v } ); //0_f open chain 1-2-0
+    t.push_back( { 3_v, 2_v, 0_v } ); //1_f
+    t.push_back( { 3_v, 0_v, 4_v } ); //2_f closed ring 0-4-5-0
+    t.push_back( { 3_v, 4_v, 5_v } ); //3_f
+    t.push_back( { 3_v, 5_v, 0_v } ); //4_f
+    t.push_back( { 3_v, 6_v, 7_v } ); //5_f open chain 6-7-8
+    t.push_back( { 3_v, 7_v, 8_v } ); //6_f
 
     std::vector<VertDuplication> dups;
     size_t duplicatedVerticesCnt = duplicateNonManifoldVertices( t, nullptr, &dups );
     EXPECT_EQ( duplicatedVerticesCnt, 2 );
     ASSERT_EQ( dups.size(), 2 );
-    // both duplicates must originate from the true central vertex #0
     EXPECT_EQ( dups[0].srcVert, 0_v );
     EXPECT_EQ( dups[0].dupVert, 9_v );
-    EXPECT_EQ( dups[1].srcVert, 0_v );
+    EXPECT_EQ( dups[1].srcVert, 3_v );
     EXPECT_EQ( dups[1].dupVert, 10_v );
 
-    // the closed ring was found first and keeps #0, each open chain got its own duplicate
-    EXPECT_EQ( t[0_f][0], 9_v );
-    EXPECT_EQ( t[1_f][0], 9_v );
-    EXPECT_EQ( t[2_f][0], 0_v );
-    EXPECT_EQ( t[3_f][0], 0_v );
-    EXPECT_EQ( t[4_f][0], 0_v );
+    // the first chain and the opened ring keep the hub vertex #3, the second chain gets its duplicate #10
+    EXPECT_EQ( t[0_f][0], 3_v );
+    EXPECT_EQ( t[1_f][0], 3_v );
+    EXPECT_EQ( t[2_f][0], 3_v );
+    EXPECT_EQ( t[3_f][0], 3_v );
+    EXPECT_EQ( t[4_f], ( ThreeVertIds{ 3_v, 5_v, 9_v } ) );
     EXPECT_EQ( t[5_f][0], 10_v );
     EXPECT_EQ( t[6_f][0], 10_v );
 
@@ -264,12 +321,13 @@ TEST( MRMesh, inspectVertNeighbourhoodSaturation )
     }
 }
 
-static void testBuildWithDups( const char * objMesh, int numVerts, int numComps )
+static void testBuildWithDups( const char * objMesh, int numFaces, int numVerts, int numComps )
 {
     std::istringstream s( objMesh );
     auto maybeMesh = MeshLoad::fromObj( s );
     EXPECT_TRUE( maybeMesh );
 
+    EXPECT_EQ( maybeMesh->topology.numValidFaces(), numFaces );
     EXPECT_EQ( maybeMesh->topology.numValidVerts(), numVerts );
     EXPECT_EQ( MeshComponents::getNumComponents( *maybeMesh ), numComps );
 }
@@ -279,7 +337,7 @@ TEST( MRMesh, MeshBuildWithDups )
     // first 4 triangles subdivide a square with center point,
     // following 4 triangles subdivide the opposite side of same triangle,
     // all 5 points are shared,
-    // expected that only center vetrex is duplicated and single connected component remains
+    // the two identical oppositely oriented sides are fully separated in two components
     testBuildWithDups
     (
         "v 0 0.5 0\n"
@@ -294,7 +352,7 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 3 5 1\n"
         "f 2 1 3\n"
         "f 3 1 5\n"
-        "f 1 4 5\n", 6, 1
+        "f 1 4 5\n", 8, 10, 2
     );
 
     // same situation as above with the order of triangles changed
@@ -312,13 +370,13 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 1 4 2\n"
         "f 2 3 1\n"
         "f 1 5 4\n"
-        "f 3 5 1\n", 6, 1
+        "f 3 5 1\n", 8, 10, 2
     );
 
     // first 4 triangles subdivide a square with center point,
     // following 4 triangles subdivide same square with center point,
     // 3 points on one diagonal are shared,
-    // it is divided properly on two components if the rings are computed from the smallest by id next triangle
+    // the two squares are fully separated in two components
     testBuildWithDups
     (
         "v -1 0 -1\n"
@@ -335,7 +393,68 @@ TEST( MRMesh, MeshBuildWithDups )
         "f 5 7 2\n"
         "f 7 3 6\n"
         "f 2 7 6\n"
-        "f 7 5 3\n", 10, 2
+        "f 7 5 3\n", 8, 10, 2
+    );
+
+    // two cubes with mirrored triangulations sharing all 8 vertices;
+    // every vertex must be duplicated exactly once giving two separate cube components
+    testBuildWithDups
+    (
+        "v -0.5 -0.5 -0.5\n"
+        "v -0.5 0.5 -0.5\n"
+        "v 0.5 0.5 -0.5\n"
+        "v 0.5 -0.5 -0.5\n"
+        "v -0.5 -0.5 0.5\n"
+        "v -0.5 0.5 0.5\n"
+        "v 0.5 0.5 0.5\n"
+        "v 0.5 -0.5 0.5\n"
+        "f 7 5 6\n"
+        "f 5 7 8\n"
+        "f 2 7 6\n"
+        "f 7 2 3\n"
+        "f 7 4 8\n"
+        "f 4 7 3\n"
+        "f 1 2 3\n"
+        "f 3 4 1\n"
+        "f 1 5 6\n"
+        "f 6 2 1\n"
+        "f 1 4 8\n"
+        "f 8 5 1\n"
+        "f 7 6 5\n"
+        "f 5 8 7\n"
+        "f 2 6 7\n"
+        "f 7 3 2\n"
+        "f 7 8 4\n"
+        "f 4 3 7\n"
+        "f 1 3 2\n"
+        "f 3 1 4\n"
+        "f 1 6 5\n"
+        "f 6 1 2\n"
+        "f 1 8 4\n"
+        "f 8 1 5\n", 24, 16, 2
+    );
+
+    // a soup of mirrored and repeated triangles over 6 vertices mixing twin chains and neighbourhoods
+    // with unevenly repeated vertices, sensitive to the processing order and chain construction rules
+    testBuildWithDups
+    (
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "v 1 1 0\n"
+        "v 1 0 1\n"
+        "f 3 2 5\n"
+        "f 3 5 6\n"
+        "f 4 1 6\n"
+        "f 4 2 3\n"
+        "f 3 6 4\n"
+        "f 2 4 1\n"
+        "f 5 2 3\n"
+        "f 4 6 5\n"
+        "f 3 4 5\n"
+        "f 1 3 6\n"
+        "f 6 2 4\n", 11, 13, 2
     );
 }
 

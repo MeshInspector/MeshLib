@@ -608,12 +608,12 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
     if ( !reportProgress( settings.progress, 0.1f ) )
         return unexpectedOperationCanceled();
 
-    for ( size_t childIndex = 0; childIndex < root.children().size(); ++childIndex )
+    for ( size_t childIndex = 0; childIndex < root.constChildren().size(); ++childIndex )
     {
-        if ( root.children()[childIndex]->isAncillary() )
+        if ( root.constChildren()[childIndex]->isAncillary() )
             continue;
 
-        objectStack.push( root.children()[childIndex] );
+        objectStack.push( root.constChildren()[childIndex] );
         size_t lastIndex = model.nodes.size();
         indexStack.push( lastIndex );
         model.scenes[0].nodes.push_back( int( lastIndex ) );
@@ -639,7 +639,7 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
                                b[0], b[1], b[2], 1 };
 
             auto curObjectMesh = curObj->asType<ObjectMesh>();
-            if ( curObjectMesh && curObjectMesh->mesh() )
+            if ( curObjectMesh && curObjectMesh->meshPtr() )
             {
                 Material material;
                 material.baseColor = curObjectMesh->getFrontColor( false );
@@ -675,7 +675,7 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
                     materialIndex = materialIt->second;
                 }
 
-                const auto mesh = curObjectMesh->mesh();
+                const auto mesh = curObjectMesh->meshPtr();
                 const auto points = mesh->points;
                 const auto triangles = mesh->topology.getAllTriVerts();
 
@@ -731,7 +731,7 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
                 }
             }
 
-            for ( auto child : curObj->children() )
+            for ( auto child : curObj->constChildren() )
             {
                 if ( child->isAncillary() )
                     continue;
@@ -742,7 +742,7 @@ Expected<void> serializeObjectTreeToGltf( const Object& root, const std::filesys
             }
         }
 
-        if ( !reportProgress( settings.progress, 0.1f + 0.7f * childIndex / root.children().size() ) )
+        if ( !reportProgress( settings.progress, 0.1f + 0.7f * childIndex / root.constChildren().size() ) )
             return unexpectedOperationCanceled();
     }
 

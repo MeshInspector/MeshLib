@@ -1,0 +1,63 @@
+name: Install the llvm-pgo keg
+description: >
+  Fetch the PGO-optimized LLVM keg and the PGO ld64.lld for this runner's
+  architecture from MeshInspector/toolchains releases and put them into the
+  homebrew Cellar. Each half is a no-op when the machine already has it
+  (self-hosted runners carry both, including under non-standard prefixes).
+
+runs:
+  using: composite
+  steps:
+    - name: Install llvm-pgo keg
+      shell: bash
+      run: |
+        BP="$(brew --prefix)"
+        KEG="$BP/Cellar/llvm-pgo/22.1.8_2"
+        if [[ -d "$KEG" ]]; then
+          echo "llvm-pgo keg already present"
+          exit 0
+        fi
+        # The published kegs are built for the standard prefixes only.
+        if [[ "$(uname -m)" == "arm64" ]]; then
+          NEED=/opt/homebrew
+          ASSET=llvm-pgo-22.1.8_2-arm64/llvm-pgo-22.1.8_2.arm64_opt-homebrew.tar.gz
+          SHA=94f76fb55ec64490605d0e68115259426a428a78f269f7e9160726d90a22e197
+        else
+          NEED=/usr/local
+          ASSET=llvm-pgo-22.1.8_2-x64/llvm-pgo-22.1.8_2.x86_64_usr-local.tar.gz
+          SHA=8f1f1d97e4a5391c7f871bc5cf9601a9b4a1262e6e61f1538327bb48d7ef71ed
+        fi
+        [[ "$BP" == "$NEED" ]] || { echo "no published keg for brew prefix $BP (need $NEED) and none installed locally" >&2; exit 1; }
+        curl -fsSL -o /tmp/llvm-pgo.tar.gz "https://github.com/MeshInspector/toolchains/releases/download/$ASSET"
+        echo "$SHA  /tmp/llvm-pgo.tar.gz" | shasum -a 256 -c -
+        tar -xzf /tmp/llvm-pgo.tar.gz -C "$BP/Cellar"
+        ln -sfn ../Cellar/llvm-pgo/22.1.8_2 "$BP/opt/llvm-pgo"
+        brew install --quiet zstd xz
+        "$KEG/bin/clang++" --version | head -n1
+
+    - name: Install the PGO ld64.lld into the keg
+      shell: bash
+      run: |
+        KEG="$(brew --prefix)/Cellar/llvm-pgo/22.1.8_2"
+        # Homebrew has no `lld` bottle for Intel macOS since it became a Tier 3
+        # configuration, and brew's llvm@22 carries no ld64.lld either, so the linker
+        # comes from our own release. Next to clang++, which resolves `-fuse-ld=lld`
+        # in its own directory before PATH.
+        if [[ -x "$KEG/bin/ld64.lld" ]]; then
+          echo "ld64.lld already in the keg"
+        else
+          if [[ "$(uname -m)" == "arm64" ]]; then
+            ASSET=ld64.lld-22.1.8-pgo.arm64-macos13
+            SHA=8abf0ba324dea357ae4fbd8baee835353b560f62e9b1d001588a6df888755550
+          else
+            ASSET=ld64.lld-22.1.8-pgo.x86_64-macos12
+            SHA=8c329488b4f53141933d9688eb01311f84fa1df0937098f0b50620a0fb989311
+          fi
+          curl -fsSL -o /tmp/ld64.lld "https://github.com/MeshInspector/toolchains/releases/download/lld-22.1.8-pgo-macos/$ASSET"
+          echo "$SHA  /tmp/ld64.lld" | shasum -a 256 -c -
+          chmod +x /tmp/ld64.lld
+          mv -f /tmp/ld64.lld "$KEG/bin/ld64.lld"
+        fi
+        RESOLVED="$("$KEG/bin/clang++" -print-prog-name=ld64.lld)"
+        [[ "$RESOLVED" == "$KEG/bin/ld64.lld" ]] || { echo "clang resolves ld64.lld to $RESOLVED" >&2; exit 1; }
+        "$RESOLVED" --version

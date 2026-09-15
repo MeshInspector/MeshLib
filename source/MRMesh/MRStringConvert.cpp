@@ -1,34 +1,73 @@
 #include "MRStringConvert.h"
-#include <codecvt>
-#include <locale>
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRSuppressWarning.h"
 
 #include "MRPch/MRWinapi.h"
 
 namespace MR
 {
 
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+namespace
+{
+
+// one code unit per code point, so only for UTF-32 output
+template <typename S>
+S decodeUtf8( std::string_view str )
+{
+    S res;
+    for ( size_t cur = 0; cur < str.size(); )
+    {
+        const auto [ch, read] = utf8ToCodepoint( str.data() + cur, str.size() - cur );
+        if ( read == 0 )
+            break;
+        res.push_back( typename S::value_type( ch ) );
+        cur += read;
+    }
+    return res;
+}
+
+} // anonymous namespace
 
 std::wstring utf8ToWide( const char* utf8 )
 {
-    // FIXME: std::wstring_convert will be removed in C++26
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.from_bytes( utf8 );
+    if ( !utf8 || !*utf8 )
+        return {};
+#ifdef _WIN32
+    static_assert( sizeof( wchar_t ) == 2 ); // UTF-16
+    const std::string_view str( utf8 );
+    auto sz = MultiByteToWideChar( CP_UTF8, 0, str.data(), int( str.size() ), nullptr, 0 );
+    if ( sz <= 0 )
+    {
+        spdlog::error( GetLastError() );
+        return {};
+    }
+    std::wstring res( size_t( sz ), L'\0' );
+    sz = MultiByteToWideChar( CP_UTF8, 0, str.data(), int( str.size() ), res.data(), sz );
+    if ( sz == 0 )
+    {
+        spdlog::error( GetLastError() );
+        return {};
+    }
+    res.resize( size_t( sz ) );
+    return res;
+#else
+    static_assert( sizeof( wchar_t ) == 4 ); // UTF-32
+    return decodeUtf8<std::wstring>( utf8 );
+#endif
 }
 
 std::string wideToUtf8( const wchar_t * wide )
 {
-    if ( !wide )
+    if ( !wide || !*wide )
         return {};
-    // FIXME: std::wstring_convert will be removed in C++26
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> conv;
-    return conv.to_bytes( wide );
+#ifdef _WIN32
+    return Utf16ToUtf8( wide );
+#else
+    std::string res;
+    for ( ; *wide; ++wide )
+        appendUtf8( res, char32_t( *wide ) );
+    return res;
+#endif
 }
-
-MR_SUPPRESS_WARNING_POP
 
 #ifdef _WIN32
 std::string Utf16ToUtf8( const std::wstring_view & utf16 )
@@ -94,7 +133,14 @@ std::string utf8substr( const char * s, size_t pos, size_t count )
         assert( false );
         return {};
     }
-    return wideToUtf8( utf8ToWide( s ).substr( pos, count ).c_str() );
+    const std::string_view str( s );
+    size_t begin = 0;
+    for ( ; pos > 0 && begin < str.size(); --pos )
+        begin += utf8ToCodepoint( str.data() + begin, str.size() - begin ).second;
+    size_t end = begin;
+    for ( ; count > 0 && end < str.size(); --count )
+        end += utf8ToCodepoint( str.data() + end, str.size() - end ).second;
+    return std::string( str.substr( begin, end - begin ) );
 }
 
 // based on https://github.com/skeeto/branchless-utf8 and ImTextCharFromUtf8 from ImGui
@@ -140,18 +186,44 @@ std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size )
     return { ch, read };
 }
 
-std::u32string utf8ToUtf32( const std::string& str )
+std::u32string utf8ToUtf32( std::string_view str )
 {
-    std::u32string result;
-    for ( size_t cur = 0; cur < str.size(); )
+    return decodeUtf8<std::u32string>( str );
+}
+
+void appendUtf8( std::string& str, char32_t cp )
+{
+    if ( cp > 0x10FFFF || ( cp >= 0xD800 && cp <= 0xDFFF ) )
+        cp = U'\xFFFD';
+    if ( cp < 0x80 )
+        str.push_back( char( cp ) );
+    else if ( cp < 0x800 )
     {
-        const auto [ch, read] = utf8ToCodepoint( str.data() + cur, str.size() - cur );
-        if ( read == 0 )
-            return result;
-        result.append( 1, ch );
-        cur += read;
+        str.push_back( char( 0xC0 | ( cp >> 6 ) ) );
+        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
     }
-    return result;
+    else if ( cp < 0x10000 )
+    {
+        str.push_back( char( 0xE0 | ( cp >> 12 ) ) );
+        str.push_back( char( 0x80 | ( ( cp >> 6 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
+    }
+    else
+    {
+        str.push_back( char( 0xF0 | ( cp >> 18 ) ) );
+        str.push_back( char( 0x80 | ( ( cp >> 12 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( ( cp >> 6 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
+    }
+}
+
+std::string utf32ToUtf8( std::u32string_view str )
+{
+    std::string res;
+    res.reserve( str.size() );
+    for ( auto cp : str )
+        appendUtf8( res, cp );
+    return res;
 }
 
 std::string bytesString( size_t size )
@@ -264,8 +336,7 @@ double roundToPrecision( double v, int precision )
 std::string toLower( std::string str )
 {
     for ( auto& ch : str )
-        if ( (unsigned char)ch <= 127 )
-            ch = (char)std::tolower( ch );
+        ch = toLower( ch );
     return str;
 }
 

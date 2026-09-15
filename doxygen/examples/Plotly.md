@@ -1,0 +1,11 @@
+# Plotly visualization {#ExamplePlotly}
+
+Using plotly to visualize mesh
+
+<div class="tabbed">
+ 
+- <b class="tab-title">Python</b>
+\include Plotly.dox.py
+\image html plotly_visualization.png "Plotly visualization" width = 300cm
+
+</div>

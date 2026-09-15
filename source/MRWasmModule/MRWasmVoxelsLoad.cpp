@@ -15,15 +15,19 @@ namespace
 struct VoxelsLoadModule {};
 }
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( VdbVolumeArrayVal )
+
 EMSCRIPTEN_BINDINGS( meshlib_voxels_load )
 {
+    emscripten::register_type<VdbVolumeArrayVal>( "VdbVolume[]" );
+
     emscripten::class_<VoxelsLoadModule>( "VoxelsLoad" )
-        .class_function( "fromAnySupportedFormat", +[]( const std::string& path ) -> emscripten::val
+        .class_function( "fromAnySupportedFormat", +[]( const std::string& path ) -> VdbVolumeArrayVal
         {
             auto volumes = Wasm::unwrap( VoxelsLoad::fromAnySupportedFormat( std::filesystem::path( path ) ) );
             auto out = emscripten::val::array();
             for ( auto& volume : volumes )
                 out.call<void>( "push", volume );
-            return out;
+            return VdbVolumeArrayVal( out );
         } );
 }

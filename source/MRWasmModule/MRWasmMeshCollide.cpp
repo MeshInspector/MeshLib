@@ -14,10 +14,13 @@
 
 using namespace MR;
 
+EMSCRIPTEN_DECLARE_VAL_TYPE( FaceFaceArrayVal )
+EMSCRIPTEN_DECLARE_VAL_TYPE( CollidingTriangleBitsetsVal )
+
 namespace
 {
 
-emscripten::val faceFacesToArray( const std::vector<FaceFace>& pairs )
+FaceFaceArrayVal faceFacesToArray( const std::vector<FaceFace>& pairs )
 {
     emscripten::val arr = emscripten::val::array();
     for ( const FaceFace& ff : pairs )
@@ -27,13 +30,17 @@ emscripten::val faceFacesToArray( const std::vector<FaceFace>& pairs )
         o.set( "bFace", (int)ff.bFace );
         arr.call<void>( "push", o );
     }
-    return arr;
+    return FaceFaceArrayVal( arr );
 }
 
 }
 
 EMSCRIPTEN_BINDINGS( meshlib_mesh_collide )
 {
+    emscripten::register_type<FaceFaceArrayVal>( "FaceFace[]" );
+    emscripten::register_type<CollidingTriangleBitsetsVal>( "CollidingTriangleBitsets",
+        "{ a: FaceBitSet; b: FaceBitSet }" );
+
     emscripten::function( "isInside", +[]( std::shared_ptr<Mesh> a, std::shared_ptr<Mesh> b )
     {
         return isInside( *a, *b );
@@ -55,7 +62,7 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_collide )
         emscripten::val out = emscripten::val::object();
         out.set( "a", bitsets.first );
         out.set( "b", bitsets.second );
-        return out;
+        return CollidingTriangleBitsetsVal( out );
     } );
 
     emscripten::function( "findSelfCollidingTriangles", +[]( std::shared_ptr<Mesh> mp )

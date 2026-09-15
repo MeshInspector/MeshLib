@@ -6,7 +6,7 @@ lps = mm.PointsLoadSettings()
 lps.colors = colors
 pc = mm.loadPoints("TerrainPoints.ply",lps)
 
-terrain_mesh = mm.terrainTriangulation(pc.points.vec)
+terrain_mesh = mm.delaunayTriangulationXY(pc)
 
 mss = mm.SaveSettings()
 if (pc.points.vec.size() == colors.size()):

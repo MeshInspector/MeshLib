@@ -6,6 +6,7 @@
 #include "MRPch/MRJson.h"
 #include "MRMatrix3.h"
 #include "MRVector3.h"
+#include "MRIRenderObject.h"
 
 namespace MR
 {

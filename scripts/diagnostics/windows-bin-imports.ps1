@@ -17,8 +17,8 @@ Get-ChildItem . -File -Include *.dll,*.exe -Recurse -ErrorAction SilentlyContinu
 
 # Locate dumpbin.exe via the VC path hint, then fall back to whatever is on
 # PATH (Visual Studio Integration step earlier populates MSBuild PATH, not
-# VC bin).
-$dumpbin = (Get-ChildItem "$VcPath\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue |
+# VC bin). The Host* glob covers both x64 and arm64 hosts.
+$dumpbin = (Get-ChildItem "$VcPath\VC\Tools\MSVC\*\bin\Host*\*\dumpbin.exe" -ErrorAction SilentlyContinue |
             Select-Object -First 1).FullName
 if (-not $dumpbin) {
     $dumpbin = (Get-Command dumpbin.exe -ErrorAction SilentlyContinue).Source

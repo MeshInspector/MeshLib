@@ -5,6 +5,7 @@
 #include "MRStringConvert.h"
 #include "MRTimer.h"
 #include "MRZlib.h"
+#include "MRPch/MRSpdlog.h"
 
 #if (defined(__APPLE__) && defined(__clang__)) || defined(__EMSCRIPTEN__)
 #pragma clang diagnostic push
@@ -315,7 +316,9 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
     zip_stat_t stats;
     zip_file_t* zfile;
     std::vector<char> fileBufer;
-    for ( int i = 0; i < zip_get_num_entries( zip, 0 ); ++i )
+    const auto numEntries = zip_get_num_entries( zip, 0 );
+    spdlog::info( "Decompressing {} zip entries into {}", numEntries, utf8string( targetFolder ) );
+    for ( zip_int64_t i = 0; i < numEntries; ++i )
     {
         if ( zip_stat_index( zip, i, 0, &stats ) == -1 )
             return unexpected( "Cannot process zip content" );
@@ -358,6 +361,7 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
             ofs.close();
         }
     }
+    spdlog::info( "Decompressed {} zip entries", numEntries );
     return {};
 }
 
@@ -414,6 +418,8 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
         }
     }
 
+    spdlog::info( "Compressing {} files into {}", files.size(), utf8string( zipFile ) );
+
     // pass #2: deflate each file in parallel, then hand libzip pre-deflated bytes via a source
     // callback — libzip's trust-source fast path copies them into the archive without recompressing.
     // level 0 (the settings-level "use default") normalizes to 6 — zlib's internal default is 6,
@@ -459,11 +465,14 @@ Expected<void> compressZip( const std::filesystem::path& zipFile, const std::fil
     if ( hadError.load() )
         return unexpected( std::move( firstError ) );
 
+    spdlog::info( "Deflated {} files, writing the archive", files.size() );
+
     // Phase B — serial hand-off to libzip; the AutoCloseZip keeps entries alive through zip_close
     if ( auto res = zip.addPreDeflatedEntries( std::move( entries ), files, level, settings.password ); !res )
         return res;
 
     auto closeRes = zip.close();
+    spdlog::info( "Compressed {} files into {}", files.size(), utf8string( zipFile ) );
 
     if ( !reportProgress( settings.cb, 1.0f ) )
         return unexpectedOperationCanceled();

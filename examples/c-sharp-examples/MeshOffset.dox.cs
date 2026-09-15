@@ -1,24 +1,20 @@
 using System.Globalization;
-using System.Reflection;
 
 public class MeshOffsetExample
 {
-    public static void Run(string[] args)
+    public static void Main(string[] args)
     {
-        if (args.Length != 2)
-        {
-            Console.WriteLine("Usage: {0} MeshOffsetExample OFFSET_VALUE", Assembly.GetExecutingAssembly().GetName().Name);
-            return;
-        }
-
         try
         {
-            float offsetValue = float.Parse(args[1],
-                      System.Globalization.NumberStyles.AllowDecimalPoint,
-                      CultureInfo.InvariantCulture);
+            // Load the mesh given as the first argument, or make a sphere to offset if no path is given
+            var mesh = args.Length > 0
+                ? MR.MeshLoad.fromAnySupportedFormat(args[0])
+                : MR.makeUVSphere(1.0f, 32, 32);
 
-            // Load mesh
-            var mesh = MR.MeshLoad.fromAnySupportedFormat("mesh.stl");
+            // Offset value: the second argument if given, otherwise 5% of the bounding box diagonal
+            float offsetValue = args.Length > 1
+                ? float.Parse(args[1], NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture)
+                : mesh.computeBoundingBox().diagonal() * 0.05f;
 
             MR.MeshPart mp = new(mesh);
 

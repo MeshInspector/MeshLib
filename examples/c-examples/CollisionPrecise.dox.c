@@ -29,7 +29,7 @@ int main( void )
     MR_CoordinateConverters* converters = MR_getVectorConverters_3( mpA, mpB, NULL );
     // find each intersecting edge/triangle pair
     MR_std_vector_MR_VarEdgeTri* collidingFaceEdges = MR_findCollidingEdgeTrisPrecise_5(
-        mpA, mpB, MR_PassBy_Copy, MR_CoordinateConverters_GetMutable_toInt( converters ), NULL, NULL );
+        mpA, mpB, MR_CoordinateConverters_Get_toInt( converters ), NULL, NULL );
 
     // print pairs of edges triangles
     for ( size_t i = 0; i < MR_std_vector_MR_VarEdgeTri_size( collidingFaceEdges ); ++i )

@@ -95,7 +95,7 @@ void postImportObject( const std::shared_ptr<Object> &o, const std::filesystem::
         bool flat;
         if ( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::AutoDetect )
             flat = extension == ".step" || extension == ".stp" ||
-                   ( mesh->mesh() && detectFlatShading( *mesh->mesh().get() ) );
+                   ( mesh->meshPtr() && detectFlatShading( *mesh->meshPtr() ) );
         else
             flat = SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat;
         mesh->setVisualizeProperty( flat, MeshVisualizePropertyType::FlatShading, ViewportMask::all() );
@@ -384,7 +384,8 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
 
     bool loadedFromSceneFile = false;
 
-    auto ext = std::string( "*" ) + utf8string( filename.extension().u8string() );
+    std::string ext = "*";
+    ext += utf8string( filename.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 
@@ -479,7 +480,7 @@ Expected<LoadedObjects> loadObjectFromFile( const std::filesystem::path& filenam
             postImportObject( o, filename );
             if ( auto objectPoints = o->asType<ObjectPoints>(); objectPoints )
             {
-                if ( !objectPoints->pointCloud()->hasNormals() )
+                if ( !objectPoints->pointCloudPtr()->hasNormals() )
                     result->warnings += "Point cloud " + o->name() + " has no normals.\n";
                 if ( objectPoints->getRenderDiscretization() > 1 )
                     result->warnings += "Point cloud " + o->name() + " has too many points in PointCloud:\n"
@@ -530,7 +531,8 @@ bool isSupportedFileInSubfolders( const std::filesystem::path& folder )
 
 Expected<LoadedObject> loadSceneFromAnySupportedFormat( const std::filesystem::path& path, const ProgressCallback& callback )
 {
-    auto ext = std::string( "*" ) + utf8string( path.extension().u8string() );
+    std::string ext = "*";
+    ext += utf8string( path.extension().u8string() );
     for ( auto& c : ext )
         c = ( char )tolower( c );
 

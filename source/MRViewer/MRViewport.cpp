@@ -285,7 +285,7 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* cons
         if ( auto pointObj = renderVector[pickRes.geomId]->asType<ObjectPointsHolder>() )
         {
             res.primId = int( pickRes.primId ) * pointObj->getRenderDiscretization();
-            if ( auto pc = pointObj->pointCloud() )
+            if ( auto pc = pointObj->pointCloudPtr() )
             {
                 VertId vid( res.primId );
                 if ( pc->validPoints.test( vid ) )
@@ -302,14 +302,14 @@ std::vector<ObjAndPick> Viewport::multiPickObjects( std::span<VisualObject* cons
         {
             res.point = renderVector[pickRes.geomId]->worldXf( id ).inverse()( unprojectFromViewportSpace( Vector3f( viewportPoints[i].x, viewportPoints[i].y, pickRes.zBuffer ) ) );
             UndirectedEdgeId ue{ int( pickRes.primId ) };
-            if ( auto pl = linesObj->polyline() )
+            if ( auto pl = linesObj->polylinePtr() )
                 res.point = closestPointOnLineSegm( res.point, pl->edgeSegment( ue ) );
         }
         else if ( auto meshObj = renderVector[pickRes.geomId]->asType<ObjectMeshHolder>() )
         {
             if ( res.face.valid() )
             {
-                const auto& mesh = meshObj->mesh();
+                const auto* mesh = meshObj->meshPtr();
                 if ( mesh && !mesh->topology.hasFace( res.face ) )
                 {
                     assert( false );
@@ -426,7 +426,7 @@ std::unordered_map<std::shared_ptr<MR::ObjectMesh>, MR::FaceBitSet> Viewport::fi
 
         auto& fbs = resMap[meshObj];
         if ( fbs.empty() )
-            fbs.resize( meshObj->mesh()->topology.lastValidFace() + 1 );
+            fbs.resize( meshObj->meshPtr()->topology.lastValidFace() + 1 );
         fbs.set( FaceId( int( pId ) ) );
     }
     return resMap;

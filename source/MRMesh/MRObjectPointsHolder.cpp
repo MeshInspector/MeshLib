@@ -14,6 +14,7 @@
 #include "MRPch/MRJson.h"
 #include "MRPch/MRTBB.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRIRenderObject.h"
 
 namespace MR
 {
@@ -298,6 +299,7 @@ Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const
     SaveSettings saveSettings;
     saveSettings.onlyValidPoints = false;
     saveSettings.packPrimitives = false;
+    saveSettings.telemetrySignal = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
     auto save = [points = points_, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializePointsFormat(), path, saveSettings]()

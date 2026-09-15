@@ -3,6 +3,7 @@
 #include "MRGLStaticHolder.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRVisualObject.h"
 #include "MRMesh/MRMatrix4.h"

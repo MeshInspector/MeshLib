@@ -5,8 +5,11 @@
     <TargetFramework>net8</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <BaseOutputPath>..\x64</BaseOutputPath>
-    <Platforms>x64</Platforms>
+    <!-- Architecture of the native MeshLib output dir these assemblies sit next to.
+         CI passes -p:MeshLibArch=arm64 on the arm64 leg. -->
+    <MeshLibArch Condition="'$(MeshLibArch)' == ''">x64</MeshLibArch>
+    <BaseOutputPath>..\$(MeshLibArch)</BaseOutputPath>
+    <Platforms>x64;ARM64</Platforms>
 	<LangVersion>12</LangVersion>
   </PropertyGroup>
 
@@ -22,7 +25,8 @@
   <PropertyGroup>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
-    <PlatformTarget>x64</PlatformTarget>
+    <PlatformTarget Condition="'$(MeshLibArch)' == 'arm64'">ARM64</PlatformTarget>
+    <PlatformTarget Condition="'$(PlatformTarget)' == ''">x64</PlatformTarget>
     <Nullable>enable</Nullable>
   </PropertyGroup>
 

@@ -63,11 +63,10 @@ constexpr auto cTransformContextName = "TransformContextWindow";
 
 std::string getItemCaption( const std::string& name )
 {
-    auto it = RibbonSchemaHolder::schema().items.find( name );
-    if ( it == RibbonSchemaHolder::schema().items.end() )
+    const auto * item = RibbonSchemaHolder::findItem( name );
+    if ( !item )
         return name;
-    const auto& item = it->second;
-    return Locale::translate( item.getCaption().c_str(), item.localeDomainId );
+    return Locale::translate( item->getCaption().c_str(), item->localeDomainId );
 }
 
 } //anonymous namespace
@@ -100,6 +99,8 @@ void RibbonMenu::init( MR::Viewer* _viewer )
     // should init instance before load schema (as far as some font are used inside)
     fontManager_.initFontManagerInstance( &fontManager_ );
     readMenuItemsStructure_();
+    // not in setupShortcuts_, which ImGuiMenu::init calls before the schema with the UI order of the items is read
+    registerItemsShortcuts_( allowedShortcutTags_() );
 
     RibbonIcons::load();
 
@@ -224,11 +225,11 @@ void RibbonMenu::setSceneSize( const Vector2i& size )
 
 void RibbonMenu::updateItemStatus( const std::string& itemName )
 {
-    auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
-    if ( itemIt == RibbonSchemaHolder::schema().items.end() )
+    const auto * itemInfo = RibbonSchemaHolder::findItem( itemName );
+    if ( !itemInfo )
         return;
 
-    auto& item = itemIt->second.item;
+    const auto& item = itemInfo->item;
     assert( item );
     if ( item->isActive() )
     {
@@ -518,10 +519,10 @@ void RibbonMenu::drawHeaderQuickAccess_()
     int dropCount = 0;
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
             continue;
-        if ( it->second.item && it->second.item->type() == RibbonItemType::ButtonWithDrop )
+        if ( itemInfo->item && itemInfo->item->type() == RibbonItemType::ButtonWithDrop )
             dropCount++;
     }
 
@@ -543,8 +544,8 @@ void RibbonMenu::drawHeaderQuickAccess_()
     UI::TestEngine::pushTree( "QuickAccess" );
     for ( const auto& item : RibbonSchemaHolder::schema().headerQuickAccessList )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Plugin \"{}\" not found!", item );
@@ -552,7 +553,7 @@ void RibbonMenu::drawHeaderQuickAccess_()
             continue;
         }
 
-        buttonDrawer_.drawButtonItem( it->second, params );
+        buttonDrawer_.drawButtonItem( *itemInfo, params );
         ImGui::SameLine();
     }
     UI::TestEngine::popTree(); // "QuickAccess"
@@ -826,8 +827,7 @@ float RibbonMenu::drawHeaderHelpers_( float requiredTabSize )
 
 void RibbonMenu::drawActiveListButton_( float btnSize )
 {
-    auto activeListIt = RibbonSchemaHolder::schema().items.find( "Active Plugins List" );
-    if ( activeListIt != RibbonSchemaHolder::schema().items.end() )
+    if ( const auto * activeListInfo = RibbonSchemaHolder::findItem( "Active Plugins List" ) )
     {
         setActiveListPos( ImGui::GetCursorScreenPos() );
         CustomButtonParameters cParams;
@@ -852,7 +852,7 @@ void RibbonMenu::drawActiveListButton_( float btnSize )
         };
         const ImVec2 itemSize = { btnSize, btnSize };
         DrawButtonParams params{ DrawButtonParams::SizeType::Small, itemSize, cMiddleIconSize,DrawButtonParams::RootType::Toolbar };
-        buttonDrawer_.drawCustomButtonItem( activeListIt->second, cParams, params );
+        buttonDrawer_.drawCustomButtonItem( *activeListInfo, cParams, params );
     }
 }
 
@@ -1151,14 +1151,14 @@ void RibbonMenu::cloneSelectedPart( const std::shared_ptr<Object>& object )
     std::string name;
     if ( auto selectedMesh = std::dynamic_pointer_cast< ObjectMesh >( object ) )
     {
-        if ( !selectedMesh->mesh() )
+        if ( !selectedMesh->meshPtr() )
             return;
         newObj = cloneRegion( selectedMesh, selectedMesh->getSelectedFaces() );
         name = "ObjectMesh";
     }
     else if ( auto selectedPoints = std::dynamic_pointer_cast< ObjectPoints >( object ) )
     {
-        if ( !selectedPoints->pointCloud() )
+        if ( !selectedPoints->pointCloudPtr() )
             return;
         newObj = cloneRegion( selectedPoints, selectedPoints->getSelectedPoints() );
         name = "ObjectPoints";
@@ -1309,13 +1309,13 @@ void RibbonMenu::drawSmallButtonsSet_( const std::vector<std::string>& group, in
     auto type = withText ? DrawButtonParams::SizeType::SmallText : DrawButtonParams::SizeType::Small;
     for ( int i = setFrontIndex; i < setFrontIndex + setLength; ++i )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( group[i] );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( group[i] );
+        if ( !itemInfo )
             continue; // TODO: assert or log
 
-        widths[i - setFrontIndex] = buttonDrawer_.calcItemWidth( it->second, type );
+        widths[i - setFrontIndex] = buttonDrawer_.calcItemWidth( *itemInfo, type );
         auto sumWidth = widths[i - setFrontIndex].baseWidth + widths[i - setFrontIndex].additionalWidth;
-        items[i - setFrontIndex] = &it->second;
+        items[i - setFrontIndex] = itemInfo;
         if ( sumWidth > maxSetWidth )
             maxSetWidth = sumWidth;
     }
@@ -1368,12 +1368,12 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
         {
             if ( config.numBig > 0 )
             {
-                auto itemIt = RibbonSchemaHolder::schema().items.find( items[i] );
+                const auto * itemInfo = RibbonSchemaHolder::findItem( items[i] );
                 ++i;
                 --config.numBig;
-                if ( itemIt == RibbonSchemaHolder::schema().items.end() )
+                if ( !itemInfo )
                     continue; // TODO: asserts or log
-                resWidth += buttonDrawer_.calcItemWidth( itemIt->second, DrawButtonParams::SizeType::Big ).baseWidth;
+                resWidth += buttonDrawer_.calcItemWidth( *itemInfo, DrawButtonParams::SizeType::Big ).baseWidth;
                 resWidth += style.ItemSpacing.x;
                 continue;
             }
@@ -1386,10 +1386,10 @@ RibbonMenu::DrawTabConfig RibbonMenu::setupItemsGroupConfig_( const std::vector<
                 float maxWidth = 0.0f;
                 for ( int j = i; j < i + n; ++j )
                 {
-                    auto itemIt = RibbonSchemaHolder::schema().items.find( items[j] );
-                    if ( itemIt == RibbonSchemaHolder::schema().items.end() )
+                    const auto * itemInfo = RibbonSchemaHolder::findItem( items[j] );
+                    if ( !itemInfo )
                         continue; // TODO: asserts or log
-                    auto width = buttonDrawer_.calcItemWidth( itemIt->second,
+                    auto width = buttonDrawer_.calcItemWidth( *itemInfo,
                                                               smallText ?
                                                               DrawButtonParams::SizeType::SmallText :
                                                               DrawButtonParams::SizeType::Small );
@@ -1495,8 +1495,8 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
     for ( int i = 0; i < size; )
     {
         const auto& item = groupIt->second[i];
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
         {
             ++i;
             assert( false );
@@ -1506,7 +1506,7 @@ void RibbonMenu::drawItemsGroup_( const std::string& tabName, const std::string&
         ImGui::SetCursorPosY( defaultYPos - itemSpacing.y );
         if ( config.numBig > 0 )
         {
-            drawBigButtonItem_( it->second );
+            drawBigButtonItem_( *itemInfo );
             config.numBig--;
             i++;
             if ( i < size )
@@ -1564,11 +1564,11 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
             pushNotification( {
                 .onButtonClick = []
                 {
-                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                    const auto * viewerSettings = RibbonSchemaHolder::findItem( "Viewer settings" );
+                    if ( !viewerSettings )
                         return;
-                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
-                        viewerSettingsIt->second.item->action();
+                    if ( viewerSettings->item && !viewerSettings->item->isActive() )
+                        viewerSettings->item->action();
                 },
                 .buttonName = _tr( "Open Settings" ),
                 .text = _tr( "Unable to activate this tool because another blocking tool is already active.\nIt can be changed in the Settings." ),
@@ -1586,11 +1586,11 @@ bool RibbonMenu::itemPressed_( const std::shared_ptr<RibbonMenuItem>& item, cons
                 pushNotification( {
                 .onButtonClick = []
                 {
-                    auto viewerSettingsIt = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-                    if ( viewerSettingsIt == RibbonSchemaHolder::schema().items.end() )
+                    const auto * viewerSettings = RibbonSchemaHolder::findItem( "Viewer settings" );
+                    if ( !viewerSettings )
                         return;
-                    if ( viewerSettingsIt->second.item && !viewerSettingsIt->second.item->isActive() )
-                        viewerSettingsIt->second.item->action();
+                    if ( viewerSettings->item && !viewerSettings->item->isActive() )
+                        viewerSettings->item->action();
                 },
                 .buttonName = _tr( "Open Settings" ),
                 .text = _tr( "That tool was closed due to other tool start.\nIt can be changed in the Settings." ),
@@ -1660,8 +1660,8 @@ void RibbonMenu::drawSceneListButtons_()
     UI::TestEngine::pushTree( "RibbonSceneButtons" );
     for ( const auto& item : RibbonSchemaHolder::schema().sceneButtonsList )
     {
-        auto it = RibbonSchemaHolder::schema().items.find( item );
-        if ( it == RibbonSchemaHolder::schema().items.end() )
+        const auto * itemInfo = RibbonSchemaHolder::findItem( item );
+        if ( !itemInfo )
         {
 #ifndef __EMSCRIPTEN__
             spdlog::warn( "Plugin \"{}\" not found!", item ); // TODO don't flood same message
@@ -1669,7 +1669,7 @@ void RibbonMenu::drawSceneListButtons_()
             continue;
         }
 
-        buttonDrawer_.drawButtonItem( it->second, params );
+        buttonDrawer_.drawButtonItem( *itemInfo, params );
         ImGui::SameLine();
     }
     UI::TestEngine::popTree(); // "RibbonSceneButtons"
@@ -1948,10 +1948,9 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
         UI::setTooltipIfHovered( _tr( "Resets transform value to identity." ) );
         iconsFont.pushFont();
 
-        auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        bool drawApplyBtn = numButtons >=3.0f &&
-            item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty();
+        const auto * item = RibbonSchemaHolder::findItem( "Apply Transform" );
+        bool drawApplyBtn = numButtons >=3.0f && item &&
+            item->item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty();
 
         if ( drawApplyBtn )
         {
@@ -1959,7 +1958,7 @@ bool RibbonMenu::drawCollapsingHeaderTransform_()
             ImGui::SetCursorPos( contextBtnPos );
 
             if ( ImGui::Button( "\xef\x80\x8c", smallBtnSize ) ) // V(apply) icon for apply
-                item->second.item->action();
+                item->item->action();
             iconsFont.popFont();
             UI::setTooltipIfHovered( _tr( "Transforms object and resets transform value to identity." ) );
             iconsFont.pushFont();
@@ -2110,12 +2109,12 @@ bool RibbonMenu::drawTransformContextMenu_( const std::vector<std::shared_ptr<Ob
 
     if ( anyNonIdentity )
     {
-        auto item = RibbonSchemaHolder::schema().items.find( "Apply Transform" );
-        if ( item != RibbonSchemaHolder::schema().items.end() &&
-            item->second.item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty() &&
+        const auto * item = RibbonSchemaHolder::findItem( "Apply Transform" );
+        if ( item &&
+            item->item->isAvailable( SceneCache::getAllObjects<const Object, ObjectSelectivityType::Selected>() ).empty() &&
             UI::button( _tr( "Apply" ), Vector2f( buttonSize, 0 ) ) )
         {
-            item->second.item->action();
+            item->item->action();
             ImGui::CloseCurrentPopup();
         }
         UI::setTooltipIfHovered( _tr( "Transforms object and resets transform value to identity." ) );
@@ -2131,17 +2130,17 @@ bool RibbonMenu::drawTransformContextMenu_( const std::vector<std::shared_ptr<Ob
     return true;
 }
 
-void RibbonMenu::addRibbonItemShortcut_( const std::string& itemName, const ShortcutManager::ShortcutKey& key, ShortcutManager::Category category )
+void RibbonMenu::addRibbonItemShortcut( const std::string& itemName, const Shortcut& shortcut )
 {
     if ( !shortcutManager_ )
     {
         assert( false );
         return;
     }
-    auto itemIt = RibbonSchemaHolder::schema().items.find( itemName );
-    if ( itemIt != RibbonSchemaHolder::schema().items.end() )
+    const auto * itemInfo = RibbonSchemaHolder::findItem( itemName );
+    if ( itemInfo )
     {
-        shortcutManager_->setShortcut( key, { category, itemIt->first, [item = itemIt->second.item, this]()
+        shortcutManager_->setShortcut( shortcut, { itemName, [item = itemInfo->item, this]()
         {
             itemPressed_( item, getRequirements_( item ) );
         } } );
@@ -2164,7 +2163,7 @@ void RibbonMenu::setupShortcuts_()
         return;
     }
 
-    shortcutManager_->setShortcut( { GLFW_KEY_H,0 }, { ShortcutManager::Category::View, _tr( "Toggle selected objects visibility" ), [] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_H,0 }, ShortcutCategory::View }, { _tr( "Toggle selected objects visibility" ), [] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2181,15 +2180,15 @@ void RibbonMenu::setupShortcuts_()
             if ( data )
                 data->setVisible( !atLeastOne, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F1,0 }, { ShortcutManager::Category::Info, _tr( "Show this help with hot keys" ),[this] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_F1,0 }, ShortcutCategory::Info }, { _tr( "Show this help with hot keys" ),[this] ()
     {
         showShortcuts_ = !showShortcuts_;
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_D,0 }, { ShortcutManager::Category::Info, _tr( "Toggle statistics window" ),[this] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_D,0 }, ShortcutCategory::Info }, { _tr( "Toggle statistics window" ),[this] ()
     {
         showStatistics_ = !showStatistics_;
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F,0 }, { ShortcutManager::Category::View, _tr( "Toggle shading of selected objects" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_F,0 }, ShortcutCategory::View }, { _tr( "Toggle shading of selected objects" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2197,12 +2196,12 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
             sel->toggleVisualizeProperty( MeshVisualizePropertyType::FlatShading, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_F, getGlfwModPrimaryCtrl() }, {ShortcutManager::Category::Info, _tr( "Search plugin by name or description" ),[this] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_F, getGlfwModPrimaryCtrl() }, ShortcutCategory::Info }, { _tr( "Search plugin by name or description" ),[this] ()
     {
         if ( menuUIConfig_.drawSearchBar )
             searcher_.activate();
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_L,0 }, { ShortcutManager::Category::View, _tr( "Toggle edges on selected meshes" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_L,0 }, ShortcutCategory::View }, { _tr( "Toggle edges on selected meshes" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2210,12 +2209,12 @@ void RibbonMenu::setupShortcuts_()
         for ( const auto& sel : selected )
                 sel->toggleVisualizeProperty( MeshVisualizePropertyType::Edges, viewportid );
     } } );
-    shortcutManager_->setShortcut( { GLFW_KEY_KP_5,0 }, { ShortcutManager::Category::View, _tr( "Toggle Orthographic/Perspective View" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_KP_5,0 }, ShortcutCategory::View }, { _tr( "Toggle Orthographic/Perspective View" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         viewport.setOrthographic( !viewport.getParameters().orthographic );
     } }  );
-    shortcutManager_->setShortcut( { GLFW_KEY_T,0 }, { ShortcutManager::Category::View, _tr( "Toggle faces on selected meshes" ),[] ()
+    shortcutManager_->setShortcut( { { GLFW_KEY_T,0 }, ShortcutCategory::View }, { _tr( "Toggle faces on selected meshes" ),[] ()
     {
         auto& viewport = getViewerInstance().viewport();
         const auto& viewportid = viewport.id;
@@ -2225,53 +2224,85 @@ void RibbonMenu::setupShortcuts_()
     } }  );
     if ( sceneObjectsList_ )
     {
-        shortcutManager_->setShortcut( { GLFW_KEY_DOWN,0 }, { ShortcutManager::Category::Objects, _tr( "Select next object" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_DOWN,0 }, ShortcutCategory::Objects }, { _tr( "Select next object" ),[&] ()
         {
             sceneObjectsList_->changeSelection( true, false );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, _tr( "Add next object to selection" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_DOWN,GLFW_MOD_SHIFT }, ShortcutCategory::Objects }, { _tr( "Add next object to selection" ),[&] ()
         {
             sceneObjectsList_->changeSelection( true, true );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_UP,0 }, { ShortcutManager::Category::Objects, _tr( "Select previous object" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_UP,0 }, ShortcutCategory::Objects }, { _tr( "Select previous object" ),[&] ()
         {
             sceneObjectsList_->changeSelection( false, false );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_UP,GLFW_MOD_SHIFT }, { ShortcutManager::Category::Objects, _tr( "Add previous object to selection" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_UP,GLFW_MOD_SHIFT }, ShortcutCategory::Objects }, { _tr( "Add previous object to selection" ),[&] ()
         {
             sceneObjectsList_->changeSelection( false, true );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_A, getGlfwModPrimaryCtrl() }, { ShortcutManager::Category::Objects, _tr( "Ribbon Scene Select all" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_A, getGlfwModPrimaryCtrl() }, ShortcutCategory::Objects }, { _tr( "Ribbon Scene Select all" ),[&] ()
         {
             sceneObjectsList_->selectAllObjects();
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_F3, 0 }, { ShortcutManager::Category::View, _tr( "Ribbon Scene Show only previous" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_F3, 0 }, ShortcutCategory::View }, { _tr( "Ribbon Scene Show only previous" ),[&] ()
         {
             sceneObjectsList_->changeVisible( false );
         } } );
-        shortcutManager_->setShortcut( { GLFW_KEY_F4, 0 }, { ShortcutManager::Category::View, _tr( "Ribbon Scene Show only next" ),[&] ()
+        shortcutManager_->setShortcut( { { GLFW_KEY_F4, 0 }, ShortcutCategory::View }, { _tr( "Ribbon Scene Show only next" ),[&] ()
         {
             sceneObjectsList_->changeVisible( true );
         } } );
     }
+}
 
-    addRibbonItemShortcut_( "Fit data", { GLFW_KEY_F, getGlfwModPrimaryCtrl() | GLFW_MOD_ALT }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Top View", { GLFW_KEY_KP_7, 0 }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Front View", { GLFW_KEY_KP_1, 0 }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Right View", { GLFW_KEY_KP_3, 0 }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Invert View", { GLFW_KEY_KP_9, 0 }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Bottom View", { GLFW_KEY_KP_7, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Back View", { GLFW_KEY_KP_1, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Left View", { GLFW_KEY_KP_3, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Show_Hide Global Basis", { GLFW_KEY_G, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::View );
-    addRibbonItemShortcut_( "Select objects", { GLFW_KEY_Q, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::Objects );
-    addRibbonItemShortcut_( "Open files", { GLFW_KEY_O, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "Save Scene", { GLFW_KEY_S, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "Save Scene As", { GLFW_KEY_S, getGlfwModPrimaryCtrl() | GLFW_MOD_SHIFT }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "New", { GLFW_KEY_N, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::Scene );
-    addRibbonItemShortcut_( "Ribbon Scene Rename", { GLFW_KEY_F2, 0 }, ShortcutManager::Category::Objects );
-    addRibbonItemShortcut_( "Ribbon Scene Remove selected objects", { GLFW_KEY_R, GLFW_MOD_SHIFT }, ShortcutManager::Category::Objects );
-    addRibbonItemShortcut_( "Viewer settings", { GLFW_KEY_COMMA, getGlfwModPrimaryCtrl() }, ShortcutManager::Category::Info );
+HashSet<std::string> RibbonMenu::allowedShortcutTags_() const
+{
+    return { "base", "history" };
+}
+
+void RibbonMenu::registerItemsShortcuts_( const HashSet<std::string>& allowedTags )
+{
+    MR_TIMER;
+    const auto& schema = RibbonSchemaHolder::schema();
+    HashSet<const RibbonMenuItem*> visited;
+    auto registerItems = [&] ( const MenuItemsList& itemNames, auto& self ) -> void
+    {
+        for ( const auto& itemName : itemNames )
+        {
+            auto itemIt = schema.items.find( itemName );
+            if ( itemIt == schema.items.end() || !itemIt->second.item )
+                continue;
+            // one item can appear in several places of the UI, visit it only once
+            if ( !visited.insert( itemIt->second.item.get() ).second )
+                continue;
+            if ( const auto& shortcut = itemIt->second.shortcut )
+                if ( std::all_of( shortcut->tags.begin(), shortcut->tags.end(), [&] ( const std::string& tag ) { return allowedTags.contains( tag ); } ) )
+                    addRibbonItemShortcut( itemName, shortcut->shortcut );
+            // the items of a drop list follow their button in the UI
+            MenuItemsList dropNames;
+            for ( const auto& dropItem : itemIt->second.item->dropItems() )
+                if ( dropItem )
+                    dropNames.push_back( dropItem->name() );
+            self( dropNames, self );
+        }
+    };
+
+    for ( const auto& tab : schema.tabsOrder )
+    {
+        auto groupsIt = schema.tabsMap.find( tab.name );
+        if ( groupsIt == schema.tabsMap.end() )
+            continue;
+        for ( const auto& groupName : groupsIt->second )
+        {
+            auto itemsIt = schema.groupsMap.find( tab.name + groupName );
+            if ( itemsIt == schema.groupsMap.end() )
+                continue;
+            registerItems( itemsIt->second, registerItems );
+        }
+    }
+    registerItems( schema.sceneButtonsList, registerItems );
+    registerItems( schema.headerQuickAccessList, registerItems );
+    registerItems( schema.defaultQuickAccessList, registerItems );
 }
 
 void RibbonMenu::drawShortcutsWindow_()

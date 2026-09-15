@@ -1,0 +1,15 @@
+diff -rup a/tools/cmake/include/BoostRoot.cmake b/tools/cmake/include/BoostRoot.cmake
+--- a/tools/cmake/include/BoostRoot.cmake
++++ b/tools/cmake/include/BoostRoot.cmake
+@@ -107,8 +107,11 @@
+     set(BOOST_ENABLE_PYTHON OFF)
+   endif()
+
++  if(NOT DEFINED BOOST_SKIP_INSTALL_RULES)
++    set(BOOST_SKIP_INSTALL_RULES ON)
++  endif()
++
+   set(BUILD_TESTING OFF)
+-  set(BOOST_SKIP_INSTALL_RULES ON)
+
+ endif()

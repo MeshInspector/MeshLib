@@ -98,12 +98,12 @@ void applyRibbonConfig( const RibbonConfig& config )
                 {
                     const auto& item = items[i];
                     auto& itemName = item["Name"];
-                    auto findIt = RibbonSchemaHolder::schema().items.find( itemName.asString() );
-                    if ( findIt == RibbonSchemaHolder::schema().items.end() )
+                    auto * findIt = RibbonSchemaHolder::findItem( itemName.asString() );
+                    if ( !findIt )
                         continue;
-                    findIt->second.caption = "";
-                    findIt->second.helpLink = "";
-                    findIt->second.item->setDropItemsFromItemList( {} );
+                    findIt->caption = "";
+                    findIt->helpLink = "";
+                    findIt->item->setDropItemsFromItemList( {} );
                 }
                 readItemsJson_( root );
             }

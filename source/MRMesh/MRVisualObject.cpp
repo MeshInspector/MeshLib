@@ -1,4 +1,5 @@
 #include "MRVisualObject.h"
+#include "MRIRenderObject.h"
 #include "MRObjectFactory.h"
 #include "MRSerializer.h"
 #include "MRSceneColors.h"
@@ -385,6 +386,14 @@ Box3f VisualObject::getWorldBox( ViewportId id ) const
 {
     return transformed( getBoundingBox(), worldXf( id ) );
 }
+
+VisualObject::VisualObject( VisualObject&& ) = default;
+
+VisualObject::VisualObject( const VisualObject& ) = default;
+
+VisualObject& VisualObject::operator = ( VisualObject&& ) = default;
+
+VisualObject::~VisualObject() = default;
 
 size_t VisualObject::heapBytes() const
 {

@@ -423,6 +423,30 @@ std::string GetCpuId()
         }
     }
 
+    // a cloud CPU's real name is only in SMBIOS, which needs root, so brand the known
+    // ones by DMI vendor: Cobalt and Graviton both report as stock ARM cores
+    // (bare-metal Cobalt uses Microsoft's own implementer 0x6d, Azure VMs show 0x41)
+    struct BrandedArmCpu { const char* vendor; int implementer, part; const char* name; };
+    static constexpr BrandedArmCpu brandedArmCpus[] = {
+        { "Microsoft Corporation", 0x41, 0xd49, "Cobalt 100" },
+        { "Microsoft Corporation", 0x41, 0xd84, "Cobalt 200" },
+        { "Microsoft Corporation", 0x6d, 0xd49, "Cobalt 100" },
+        { "Microsoft Corporation", 0x6d, 0xd84, "Cobalt 200" },
+        { "Amazon EC2",            0x41, 0xd08, "AWS Graviton" },
+        { "Amazon EC2",            0x41, 0xd0c, "AWS Graviton2" },
+        { "Amazon EC2",            0x41, 0xd40, "AWS Graviton3" },
+        { "Amazon EC2",            0x41, 0xd4f, "AWS Graviton4" },
+        { "Amazon EC2",            0x41, 0xd84, "AWS Graviton5" },
+    };
+    {
+        std::ifstream sysVendor( "/sys/class/dmi/id/sys_vendor" );
+        if ( std::string vendor; std::getline( sysVendor, vendor ) )
+            for ( const auto& c : brandedArmCpus )
+                if ( c.implementer == implementer && c.part == part
+                        && vendor.starts_with( c.vendor ) )
+                    return c.name;
+    }
+
     struct ArmCpuName { int implementer, part; const char* name; };
     static constexpr ArmCpuName armCpuNames[] = {
         { 0x41, 0xd03, "ARM Cortex-A53" },   { 0x41, 0xd05, "ARM Cortex-A55" },
@@ -432,9 +456,10 @@ std::string GetCpuId()
         { 0x41, 0xd0d, "ARM Cortex-A77" },   { 0x41, 0xd40, "ARM Neoverse-V1" },
         { 0x41, 0xd41, "ARM Cortex-A78" },   { 0x41, 0xd44, "ARM Cortex-X1" },
         { 0x41, 0xd49, "ARM Neoverse-N2" },  { 0x41, 0xd4f, "ARM Neoverse-V2" },
+        { 0x41, 0xd84, "ARM Neoverse-V3" },  { 0x41, 0xd8e, "ARM Neoverse-N3" },
         { 0xc0, 0xac3, "Ampere-1" },         { 0xc0, 0xac4, "Ampere-1a" },
         { 0x43, 0x0af, "Marvell ThunderX2" },{ 0x46, 0x001, "Fujitsu A64FX" },
-        { 0x51, 0xc01, "Qualcomm Kryo" },
+        { 0x51, 0xc01, "Qualcomm Kryo" },      { 0x6d, 0xd49, "Azure Cobalt 100" },
     };
     for ( const auto& c : armCpuNames )
         if ( c.implementer == implementer && c.part == part )
@@ -448,7 +473,8 @@ std::string GetCpuId()
     case 0x43: vendor = "Cavium";    break;  case 0x48: vendor = "HiSilicon"; break;
     case 0x4e: vendor = "NVIDIA";    break;  case 0x51: vendor = "Qualcomm";  break;
     case 0x53: vendor = "Samsung";   break;  case 0x56: vendor = "Marvell";   break;
-    case 0x70: vendor = "Phytium";   break;  case 0xc0: vendor = "Ampere";    break;
+    case 0x6d: vendor = "Microsoft"; break;  case 0x70: vendor = "Phytium";   break;
+    case 0xc0: vendor = "Ampere";    break;
     }
     if ( vendor && part >= 0 )
         return fmt::format( "{} ARM CPU (part {:#x})", vendor, part );
@@ -664,6 +690,17 @@ SystemMemory getSystemMemory()
     return res;
 }
 
+std::uint32_t getCurrentProcessId()
+{
+#if defined __EMSCRIPTEN__
+    return 0;
+#elif defined  _WIN32
+    return GetCurrentProcessId();
+#else
+    return getpid();
+#endif
+}
+
 #ifdef _WIN32
 ProccessMemoryInfo getProccessMemoryInfo()
 {
@@ -712,8 +749,8 @@ void setupLoggerByDefault( const std::function<void()>& customLogSinkAdder )
     fileName /= "Logs";
     removeOldLogs( fileName );
 
-    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", LocaltimeOrZero( t ),
-                std::chrono::milliseconds( now.time_since_epoch().count() ).count() % 1000 );
+    const auto tm = LocaltimeOrZero( t );
+    fileName /= fmt::format( "MRLog_{:%Y-%m-%d_%H-%M-%S}_{}.txt", tm, getCurrentProcessId() );
 
     auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>( utf8string( fileName ), 1024 * 1024 * 5, 1, true );
     file_sink->set_level( minLevel );

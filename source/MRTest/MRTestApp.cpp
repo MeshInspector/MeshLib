@@ -75,7 +75,7 @@ int main( int argc, char** argv )
 
     spdlog::info( "System info:\n{}", MR::GetSystemInfoJson().toStyledString() );
 #ifndef MESHLIB_NO_PYTHON
-    if ( !consumeFlag( "--no-python-tests" ) )
+    if ( consumeFlag( "--with-python-tests" ) )
     {
         // Load mrmeshpy. We do it here instead of linking against it for two reasons:
         // 1. To allow not building the Python modules.

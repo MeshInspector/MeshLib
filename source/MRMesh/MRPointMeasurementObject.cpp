@@ -4,6 +4,7 @@
 #include "MRSerializer.h"
 
 #include "MRPch/MRJson.h"
+#include "MRIRenderObject.h"
 
 namespace MR
 {

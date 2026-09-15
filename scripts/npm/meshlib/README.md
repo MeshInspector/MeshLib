@@ -23,17 +23,24 @@ npm install @meshinspector/meshlib
 In the browser you can skip npm entirely and import the module directly:
 
 ```js
-// latest version
+// latest release
 import createMeshLib from 'https://js.meshlib.io/meshlib/meshlib.mjs';
 
-// or pin a specific version
-import createMeshLib from 'https://js.meshlib.io/meshlib@1.2.3/meshlib.mjs';
+// or pin a release — v1.2.3.456 is an example tag, not a real one
+import createMeshLib from 'https://js.meshlib.io/meshlib@v1.2.3.456/meshlib.mjs';
 ```
+
+To pin, take a real tag from the [releases page](https://github.com/MeshInspector/MeshLib/releases): it has a
+leading `v` and four components, and is **not** the npm version — the tag `v1.2.3.456` would be npm `1.2.3-456`.
+Pinned URLs are immutable, so a pin never changes under you; the unpinned path always serves the latest release.
 
 ## Usage
 
 The default export is an async factory. Await it once to get the module instance, then
 call MeshLib functions on it:
+
+> `using` requires Node.js 24+ or a current browser. On older runtimes, call `.delete()`
+> instead — see [Memory management](#memory-management).
 
 ```js
 import createMeshLib from '@meshinspector/meshlib';
@@ -50,48 +57,87 @@ const indices = new Uint32Array([
   3, 6, 2,  3, 7, 6,  0, 4, 7,  0, 7, 3,  1, 2, 6,  1, 6, 5,
 ]);
 
-const coords = ml.VertCoords.fromArray(positions);
-const tris = ml.Triangulation.fromArray(indices);
-const mesh = ml.Mesh.fromTriangles(coords, tris);
+using coords = ml.VertCoords.fromArray(positions);
+using tris = ml.Triangulation.fromArray(indices);
+using mesh = ml.Mesh.fromTriangles(coords, tris);
 
 console.log('volume =', mesh.volume()); // ~8
-
-// Objects are backed by WebAssembly memory — free them explicitly.
-coords.delete();
-tris.delete();
-mesh.delete();
+// `using` frees these WebAssembly-backed objects automatically at the end of scope
 ```
 
 ## Using with bundlers
 
-Bundlers (Vite, webpack, Rollup) hash and relocate the sidecar `meshlib.wasm`, so the module can't
-locate it on its own. Import the wasm as an asset URL and hand it to the loader via `locateFile`:
+Vite 8 and webpack 5 resolve `meshlib.wasm` from the module and emit it as an asset, so a plain `import`
+needs no configuration. For other bundlers, such as esbuild or Rollup, import the wasm as an asset URL
+and hand it to the loader via `locateFile`:
 
 ```js
 import createMeshLib from '@meshinspector/meshlib';
-import wasmUrl from '@meshinspector/meshlib/meshlib.wasm?url';
+import wasmUrl from '@meshinspector/meshlib/meshlib.wasm';
 
 const ml = await createMeshLib( { locateFile: () => wasmUrl } );
 ```
 
+The bundler must treat `.wasm` files as static assets, so that the import resolves to the URL of the
+emitted file; the option is usually called an asset or file loader. For example:
+
+- **esbuild**: pass `--loader:.wasm=file`
+- **Rollup**: add `@rollup/plugin-url` with `include: /\.wasm$/`
+- **Parcel**: use the `url:` scheme on the import specifier: `import wasmUrl from 'url:@meshinspector/meshlib/meshlib.wasm';`
+
 ## TypeScript
 
 The package ships type definitions, so `createMeshLib` and the whole module API are typed with
-no extra setup:
+minimal setup:
 
 ```ts
 import createMeshLib, { type Mesh } from '@meshinspector/meshlib';
 
 const ml = await createMeshLib();
-const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris);
+const mesh: Mesh = ml.Mesh.fromTriangles(coords, tris)!;
 const { valid, distSq } = ml.findProjection(point, mesh);
+mesh.delete();
 ```
+
+Also make sure to add `"type": "module"` to your package.json.
 
 ## Memory management
 
 Values returned from the API (meshes, bit sets, settings, result objects, …) hold
-WebAssembly memory that the JavaScript garbage collector does not reclaim. Call
-`.delete()` on them when you are done to avoid leaks.
+WebAssembly memory that the JavaScript garbage collector does not reclaim, so each one
+must be freed explicitly.
+
+The preferred way is JavaScript's explicit resource management: declare a handle with
+`using` and it is freed automatically when its scope ends — even if an exception is thrown.
+
+```js
+using mesh = ml.Mesh.fromTriangles(coords, tris);
+// ... use mesh; it is freed at the end of this scope
+```
+
+When the number of handles is dynamic (for example built in a loop), collect them in a
+`DisposableStack`, which frees everything it holds, in reverse order, at the end of the scope:
+
+```js
+using stack = new DisposableStack();
+for (const path of inputPaths) {
+  const cloud = stack.use(ml.PointsLoad.fromAnySupportedFormat(path));
+  // ... use cloud
+}
+// every handle passed to stack.use(...) is freed here
+```
+
+`using` and `DisposableStack` are part of JavaScript's Explicit Resource Management,
+available in Node.js 24+ and current browsers. On older runtimes and browsers, call
+`.delete()` on each object when you are done instead:
+
+```js
+const mesh = ml.Mesh.fromTriangles(coords, tris);
+// ... use mesh
+mesh.delete();
+```
+
+See also, on MDN: [`using`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using) and [`DisposableStack`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/DisposableStack).
 
 ## License
 

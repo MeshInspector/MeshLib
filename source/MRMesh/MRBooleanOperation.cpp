@@ -96,11 +96,11 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             // a connected component without any cut
             const Mesh* otherPtr = originIsA ? intParams.originalMeshB : intParams.originalMeshA;
             const MeshPart other( otherPtr ? *otherPtr : otherMesh );
-            const bool inside = intParams.converters ?
-                isNonIntersectingInsidePrecise( origin, f, other, *intParams.converters,
-                    originIsA ? nullptr : rigidB2A, originIsA ? rigidB2A : nullptr ) :
-                isNonIntersectingInside( origin, f, other, originIsA ? rigidB2A : &a2b );
-            if ( mergeAllNonIntersectingComponents || inside == needInsideComps )
+            if ( mergeAllNonIntersectingComponents ||
+                ( intParams.converters ?
+                    isNonIntersectingInsidePrecise( origin, f, other, *intParams.converters,
+                        originIsA ? nullptr : rigidB2A, originIsA ? rigidB2A : nullptr ) :
+                    isNonIntersectingInside( origin, f, other, originIsA ? rigidB2A : &a2b ) ) == needInsideComps )
             {
                 includeRoot = includeRoot ? unionFind.uniteUnbalanced( includeRoot, f ).first : unionFind.find( f );
                 res.set( f );

@@ -202,7 +202,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
 
       - name: Check for errors
         run: uvx --python 3.12 pre-commit run --all-files --hook-stage manual
@@ -272,7 +272,7 @@ jobs:
 
       - name: Versioning
         if: ${{ env.upload_artifacts == 'true' }}
-        uses: paulhatch/semantic-version@502226b17e3e242e4befd0a45690fcbb27dd1373 # v6.0.3
+        uses: paulhatch/semantic-version@4d6da96a9bc3116da3613309a11ff75fba58eb8d # v6.0.4
         id: version
         with:
           tag_prefix: "v"

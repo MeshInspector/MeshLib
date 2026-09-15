@@ -226,15 +226,26 @@ bool smaller2( const std::array<PreciseVertCoords2, 4> & vs )
     return !poly.isPositive();
 }
 
-bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )
+namespace
 {
-    const Vector3i64 a( a0.x, a0.y, sqr( std::int64_t( a0.x ) ) + sqr( std::int64_t( a0.y ) ) );
-    const Vector3i64 b( b0.x, b0.y, sqr( std::int64_t( b0.x ) ) + sqr( std::int64_t( b0.y ) ) );
-    const Vector3i64 c( c0.x, c0.y, sqr( std::int64_t( c0.x ) ) + sqr( std::int64_t( c0.y ) ) );
 
-    //e**0
-    if ( auto v = mixed( Vector3i128fast( a ), Vector3i64mul( b ), Vector3i64mul( c ) ) )
-        return v > 0;
+/// the point lifted on the paraboloid z = x^2 + y^2, where the in-circle predicate becomes the orientation of the lifted points
+Vector3i64 lift( const Vector2i & p )
+{
+    return { p.x, p.y, sqr( std::int64_t( p.x ) ) + sqr( std::int64_t( p.y ) ) };
+}
+
+/// the exact orientation determinant of three lifted differences; with all differences within +-0.99*2^31 as getToIntConverter
+/// guarantees, its magnitude is at most 8 * (0.99*2^31)^4 = 0.96 * 2^127 (attained at the corners), so it fits in 128 bits only thanks to the 0.99
+FastInt128 orientParaboloid3dExact( const Vector3i64 & a, const Vector3i64 & b, const Vector3i64 & c )
+{
+    return mixed( Vector3i128fast( a ), Vector3i64mul( b ), Vector3i64mul( c ) );
+}
+
+/// orientation of the lifted points 0, a, b, c known to be exactly coplanar (the original four points are cocircular), resolved by simulation-of-simplicity
+bool orientParaboloid3dDegenerate( const Vector3i64 & a, const Vector3i64 & b, const Vector3i64 & c )
+{
+    assert( orientParaboloid3dExact( a, b, c ) == 0 );
 
     // e**1
     const auto bxy_cxy = cross( Vector2i64{ b.x, b.y }, Vector2i64{ c.x, c.y } );
@@ -304,8 +315,22 @@ bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2
     return false;
 }
 
+} // anonymous namespace
+
+bool orientParaboloid3d( const Vector2i & a0, const Vector2i & b0, const Vector2i & c0 )
+{
+    const auto a = lift( a0 ), b = lift( b0 ), c = lift( c0 );
+    if ( auto v = orientParaboloid3dExact( a, b, c ) )
+        return v > 0;
+    return orientParaboloid3dDegenerate( a, b, c );
+}
+
 bool orientParaboloid3d( const PreciseVertCoords2* vs )
 {
+    // the exact answer first, the perturbation of the points is necessary only if all four points are exactly cocircular
+    if ( auto v = orientParaboloid3dExact( lift( vs[0].pt - vs[3].pt ), lift( vs[1].pt - vs[3].pt ), lift( vs[2].pt - vs[3].pt ) ) )
+        return v > 0;
+
     bool odd = false;
     std::array<int, 4> order = { 0, 1, 2, 3 };
 
@@ -322,7 +347,8 @@ bool orientParaboloid3d( const PreciseVertCoords2* vs )
         }
     }
 
-    return odd != orientParaboloid3d( vs[order[0]].pt, vs[order[1]].pt, vs[order[2]].pt, vs[order[3]].pt );
+    const auto & d = vs[order[3]].pt;
+    return odd != orientParaboloid3dDegenerate( lift( vs[order[0]].pt - d ), lift( vs[order[1]].pt - d ), lift( vs[order[2]].pt - d ) );
 }
 
 bool ccw( const std::array<PreciseVertCoords2, 3> & vs )

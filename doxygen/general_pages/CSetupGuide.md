@@ -16,7 +16,7 @@
 
 ### Compiler and language standard
 
-With GCC or Clang, compile your own code as C11 or newer (`-std=c11`).
+With GCC or Clang, compile your own code as C11 or newer (`-std=c11`). MSVC needs no flag.
 
 ### CMake
 

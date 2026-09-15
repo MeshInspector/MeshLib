@@ -240,6 +240,7 @@ struct LaunchStatus
         "launched once in this process; exit code " + std::to_string( exitCode ) );
 }
 
+#ifndef __APPLE__ // the form AppKit forbids, see `launchWithScript`
 // The viewer on a detached thread; the caller continues and drives it with blocking calls.
 void launchDetached( const MR::Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
 {
@@ -262,6 +263,7 @@ void launchDetached( const MR::Viewer::LaunchParams& params, const MinimalViewer
     if ( !status->waitReady() )
         throwLaunchFailed( status->exitCode ); // `finished` alone; both may be set if params.startEventLoop is false
 }
+#endif
 
 // The viewer on the calling thread and `script` on a worker thread. The only way on macOS, where
 // AppKit runs a GUI on the process main thread and nowhere else: GLFW traps inside `glfwInit` on

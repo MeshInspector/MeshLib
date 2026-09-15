@@ -1,0 +1,64 @@
+#include "MRGLDriverKnownIssues.h"
+#include "MRViewer.h"
+#include "MRGladGlfw.h"
+#include "MRPch/MRFmt.h"
+#include <compare>
+#include <cstdio>
+
+namespace
+{
+
+struct version_t
+{
+    int major = 0;
+    int minor = 0;
+    int patch = 0;
+
+    static version_t fromString( const char* str )
+    {
+        version_t result;
+        std::sscanf( str, "%d.%d.%d", &result.major, &result.minor, &result.patch );
+        return result;
+    }
+
+    std::string toString() const
+    {
+        return fmt::format( "{}.{}.{}", major, minor, patch );
+    }
+
+    auto operator <=>( const version_t& ) const = default;
+};
+
+}
+
+namespace MR
+{
+
+std::optional<GLDriverIssue> glDriverKnownIssues()
+{
+    if ( !getViewerInstance().isGLInitialized() )
+        return {};
+
+    const std::string_view renderer = ( const char* )glGetString( GL_RENDERER );
+    const std::string_view version = ( const char* )glGetString( GL_VERSION );
+
+    // https://gitlab.freedesktop.org/mesa/mesa/-/issues/15660 , fixed in Mesa 26.1.6
+    if ( renderer.starts_with( "llvmpipe" ) )
+    {
+        constexpr std::string_view mesaPrefix = "Mesa ";
+        const auto mesaPos = version.find( mesaPrefix );
+        if ( mesaPos != std::string_view::npos )
+        {
+            const auto mesaVersion = version_t::fromString( version.data() + mesaPos + mesaPrefix.size() );
+            if ( version_t{ 25, 3, 0 } <= mesaVersion && mesaVersion <= version_t{ 26, 1, 5 } )
+                return GLDriverIssue{
+                    .id = "mesa-15660",
+                    .description = fmt::format( "Mesa {} llvmpipe causes rendering issues and might lead to the app crash; upgrade Mesa to version 26.1.6 or newer or enable the hardware rendering.", mesaVersion.toString() ),
+                };
+        }
+    }
+
+    return {};
+}
+
+}

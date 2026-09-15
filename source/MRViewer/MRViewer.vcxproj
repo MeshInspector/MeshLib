@@ -60,6 +60,7 @@
     <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
+    <ClCompile Include="MRGLDriverKnownIssues.cpp" />
     <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
@@ -229,6 +230,7 @@
     <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRObjectImGuiLabel.h" />
+    <ClInclude Include="MRGLDriverKnownIssues.h" />
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRRibbonLayoutConfig.h" />

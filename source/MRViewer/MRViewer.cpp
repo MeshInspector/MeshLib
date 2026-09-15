@@ -2290,7 +2290,8 @@ bool Viewer::windowShouldClose()
     if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
         return false;
 
-    if ( !interruptWindowClose() )
+    // without a window nothing can ask the user, and nothing draws the answer either
+    if ( !window || !interruptWindowClose() )
         return true;
 
     if ( window )

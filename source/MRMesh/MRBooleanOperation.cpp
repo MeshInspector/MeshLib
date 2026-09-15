@@ -27,7 +27,8 @@ namespace
 std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     const std::vector<EdgePath>& cutPaths, const Mesh& otherMesh, bool needInsideComps,
     bool originIsA, const AffineXf3f* rigidB2A,
-    bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams )
+    bool mergeAllNonIntersectingComponents, const BooleanInternalParameters& intParams,
+    int bVertShift )
 {
     MR_TIMER;
     BaseUnionFind<FaceId> unionFind;
@@ -99,6 +100,7 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
             if ( mergeAllNonIntersectingComponents ||
                 ( intParams.converters ?
                     isNonIntersectingInsidePrecise( origin, f, other, *intParams.converters,
+                        originIsA ? 0 : bVertShift, originIsA ? bVertShift : 0,
                         originIsA ? nullptr : rigidB2A, originIsA ? rigidB2A : nullptr ) :
                     isNonIntersectingInside( origin, f, other, originIsA ? rigidB2A : &a2b ) ) == needInsideComps )
             {
@@ -205,17 +207,22 @@ Expected<MR::Mesh> doBooleanOperation(
     if ( needStitch )
         assert( cutEdgesA.size() == cutEdgesB.size() );
 
+    // the vertex ids of mesh B are shifted by this value in the precise predicates to make them
+    // distinct from the ids of mesh A, equally in both calls of findMeshPart below
+    const int bVertShift = int( std::max( meshACut.topology.vertSize(),
+        intParams.originalMeshA ? intParams.originalMeshA->topology.vertSize() : size_t( 0 ) ) );
+
     // bPart
     tbb::task_group taskGroup;
     taskGroup.run( [&] ()
     {
         if ( onlyCutA )
             return;
-        bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+        bPart = findMeshPart( meshBCut, cutEdgesB, meshACut, needInsideB, false, rigidB2A, mergeAllNonIntersectingComponents, intParams, bVertShift );
     } );
     // aPart
     if ( !onlyCutB )
-        aPart = findMeshPart( meshACut, cutEdgesA, meshBCut, needInsideA, true, rigidB2A, mergeAllNonIntersectingComponents, intParams );
+        aPart = findMeshPart( meshACut, cutEdgesA, meshBCut, needInsideA, true, rigidB2A, mergeAllNonIntersectingComponents, intParams, bVertShift );
     taskGroup.wait();
 
     if ( ( onlyCutA && !aPart ) ||

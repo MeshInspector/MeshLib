@@ -393,7 +393,8 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
 }
 
 bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart& b,
-    const CoordinateConverters& conv, const AffineXf3f* xfA, const AffineXf3f* xfB )
+    const CoordinateConverters& conv, int aVertShift, int bVertShift,
+    const AffineXf3f* xfA, const AffineXf3f* xfB )
 {
     if ( !aFace )
         return true; //consider empty mesh always inside
@@ -425,10 +426,10 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
     {
         const auto& bPoint = b.mesh.points[vs[i].id];
         vs[i].pt = conv.toInt( xfB ? ( *xfB )( bPoint ) : bPoint );
-        vs[i].id = VertId( int( vs[i].id ) + int( a.topology.vertSize() ) ); //the ids of two meshes must be distinct
+        vs[i].id = VertId( int( vs[i].id ) + bVertShift );
     }
     const auto& aPoint = a.points[aVert];
-    vs[3].id = aVert;
+    vs[3].id = VertId( int( aVert ) + aVertShift );
     vs[3].pt = conv.toInt( xfA ? ( *xfA )( aPoint ) : aPoint );
 
     // getTriVerts orders the vertices so that their right-hand normal looks outside of b,

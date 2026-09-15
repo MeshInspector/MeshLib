@@ -682,9 +682,7 @@ int Viewer::launch( const LaunchParams& params )
 #endif
     }
     if ( params.close )
-        launchShut();
-
-    CommandLoop::removeCommands( true );
+        launchShut(); // closes the command loop too; with `close` false, the caller's own launchShut does
 
     return EXIT_SUCCESS;
 }
@@ -981,34 +979,35 @@ void Viewer::launchEventLoop()
 
     // Rendering loop
     while ( !windowShouldClose() )
-    {
-        do
-        {
-            draw( true );
-            glfwPollEvents();
-            if ( eventQueue_ )
-                eventQueue_->execute();
-            if ( spaceMouseHandler_ )
-                spaceMouseHandler_->handle();
-            CommandLoop::processCommands();
-        } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
+        runEventLoopIteration();
+}
 
-        if ( isAnimating )
-        {
-            const double minDuration = 1.0 / double( animationMaxFps );
-            glfwWaitEventsTimeout( minDuration );
-            if ( eventQueue_ )
-                eventQueue_->execute();
-        }
-        else
-        {
-            glfwWaitEvents();
-            if ( eventQueue_ )
-                eventQueue_->execute();
-        }
+void Viewer::runEventLoopIteration( double maxWaitSec )
+{
+    do
+    {
+        draw( true );
+        glfwPollEvents();
+        if ( eventQueue_ )
+            eventQueue_->execute();
         if ( spaceMouseHandler_ )
             spaceMouseHandler_->handle();
+        CommandLoop::processCommands();
+    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
+
+    if ( isAnimating )
+    {
+        const double minDuration = 1.0 / double( animationMaxFps );
+        maxWaitSec = maxWaitSec < 0 ? minDuration : std::min( maxWaitSec, minDuration );
     }
+    if ( maxWaitSec < 0 )
+        glfwWaitEvents();
+    else
+        glfwWaitEventsTimeout( maxWaitSec );
+    if ( eventQueue_ )
+        eventQueue_->execute();
+    if ( spaceMouseHandler_ )
+        spaceMouseHandler_->handle();
 }
 
 void Viewer::launchShut()
@@ -1085,6 +1084,9 @@ void Viewer::launchShut()
 
     /// disconnect all slots before shared libraries with plugins are unloaded
     *signals_ = {};
+
+    // no loop will run them any more, and a blocking caller must be told so rather than wait
+    CommandLoop::removeCommands( true );
 }
 
 void Viewer::init_()

@@ -31,7 +31,7 @@ offset = mesh.computeBoundingBox().diagonal() * 0.05
 result_mesh = mm.offsetMesh(mesh, offset, params)
 
 
-# Open a window; raises where the Viewer is unavailable, e.g. on macOS
+# Open a window; raises where no window can be opened
 try:
     mv.launch()
 except RuntimeError as e:
@@ -56,5 +56,5 @@ mv.Viewer().showSceneTree(False) # disables Scene Tree in Viewer window
 # user can manipulate with viewer window while this python is on pause
 input("Press Enter to continue...")
 
-# close viewer window nicely
-mv.Viewer().shutdown()
+# keep the window until the user closes it
+mv.showViewer()

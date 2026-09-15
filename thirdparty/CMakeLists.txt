@@ -103,9 +103,6 @@ IF(NOT APPLE)
   set(WITH_GTEST        OFF CACHE BOOL "")
   set(WITH_GZFILEOP     OFF CACHE BOOL "")
   IF(EMSCRIPTEN)
-    # Force static: undefined BUILD_SHARED_LIBS makes zlib-ng emit duplicate
-    # libz-ng.a rules under Emscripten. Restore to undefined (not empty)
-    # afterwards -- jsoncpp downstream breaks on empty BUILD_SHARED_LIBS.
     set(BUILD_SHARED_LIBS OFF)
     add_subdirectory(./zlib-ng)
     unset(BUILD_SHARED_LIBS)
@@ -141,13 +138,7 @@ IF(EMSCRIPTEN)
   add_subdirectory(./jsoncpp)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
-  # fmt 12 defaults FMT_INSTALL to FMT_MASTER_PROJECT, so as a subproject it generates no
-  # install/export target - and spdlog's export set below refers to fmt. 11.x forced it ON.
   set(FMT_INSTALL ON)
-  # fmt 12 turns FMT_MODULE on by itself given CMake 3.28+, C++20, Ninja and Clang 16+, and
-  # asks for cxx_std_20 on the ordinary target too. Both make CMake scan for C++20 modules
-  # with clang-scan-deps, which the emscripten image drops when it swaps in our PGO clang.
-  # Nothing here consumes fmt as a module, so build neither the module library nor the scan.
   set(FMT_MODULE OFF)
   set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
   add_subdirectory(./fmt)

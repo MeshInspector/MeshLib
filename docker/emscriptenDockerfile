@@ -22,6 +22,17 @@ RUN <<EOF
 EOF
 
 
+# backport fix for multi-threaded file system access
+# more info: https://github.com/emscripten-core/emscripten/pull/26582
+COPY docker/patches/emscripten-26582.patch /tmp/
+RUN <<EOF
+    set -e
+    cd /emsdk/upstream/emscripten
+    git apply -p1 --include='system/lib/pthread/proxying.c' /tmp/emscripten-26582.patch
+    find /emsdk/upstream/emscripten/cache/sysroot -name 'libc-mt*.a' -print -delete
+    rm -f /tmp/emscripten-26582.patch
+EOF
+
 FROM ubuntu:22.04 AS base
 
 COPY --from=emsdk /emsdk /emsdk

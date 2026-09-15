@@ -77,6 +77,10 @@ public:
     MRVIEWER_API int launch( const LaunchParams& params );
     // Starts event loop
     MRVIEWER_API void launchEventLoop();
+    // One iteration of the event loop: draws while a redraw is needed, handling the events and commands
+    // received meanwhile, then waits for the next event - at most `maxWaitSec` seconds if it is not negative;
+    // an animating viewer waits at most one frame anyway. `launchEventLoop` repeats it until `windowShouldClose`.
+    MRVIEWER_API void runEventLoopIteration( double maxWaitSec = -1 );
     // Terminate window
     MRVIEWER_API void launchShut();
 
@@ -430,7 +434,7 @@ public:
 
     // return true if window should close
     // calls interrupt signal and if no slot interrupts return true, otherwise return false
-    bool windowShouldClose();
+    MRVIEWER_API bool windowShouldClose();
 
     // returns true if viewer has valid GL context
     // note that sometimes it is not enough, for example to free GL memory in destructor,

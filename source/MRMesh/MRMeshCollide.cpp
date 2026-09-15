@@ -9,6 +9,8 @@
 #include "MRTriDist.h"
 #include "MRExpected.h"
 #include "MRProcessSelfTreeSubtasks.h"
+#include "MRMeshProject.h"
+#include "MRPrecisePredicates3.h"
 
 #include <atomic>
 #include <thread>
@@ -388,6 +390,51 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
 
     auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
     return signDist && signDist < 0;
+}
+
+bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart& b,
+    const CoordinateConverters& conv, int aVertShift, int bVertShift,
+    const AffineXf3f* xfA, const AffineXf3f* xfB )
+{
+    if ( !aFace )
+        return true; //consider empty mesh always inside
+
+    // only mesh vertices have the exact integer coordinates and the ids that the precise predicates need,
+    // so the closest to b vertex of aFace is taken as the probe point
+    VertId aVerts[3];
+    a.topology.getTriVerts( aFace, aVerts[0], aVerts[1], aVerts[2] );
+    VertId aVert;
+    MeshProjectionResult bProj;
+    bProj.distSq = FLT_MAX;
+    for ( VertId v : aVerts )
+    {
+        auto aPoint = a.points[v];
+        if ( xfA )
+            aPoint = ( *xfA )( aPoint );
+        auto proj = findProjection( aPoint, b, bProj.distSq, xfB );
+        if ( !proj )
+            continue;
+        bProj = proj;
+        aVert = v;
+    }
+    if ( !aVert )
+        return false; //no projection on b at all
+
+    std::array<PreciseVertCoords, 4> vs;
+    b.mesh.topology.getTriVerts( bProj.proj.face, vs[0].id, vs[1].id, vs[2].id );
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto& bPoint = b.mesh.points[vs[i].id];
+        vs[i].pt = conv.toInt( xfB ? ( *xfB )( bPoint ) : bPoint );
+        vs[i].id = VertId( int( vs[i].id ) + bVertShift );
+    }
+    const auto& aPoint = a.points[aVert];
+    vs[3].id = VertId( int( aVert ) + aVertShift );
+    vs[3].pt = conv.toInt( xfA ? ( *xfA )( aPoint ) : aPoint );
+
+    // getTriVerts orders the vertices so that their right-hand normal looks outside of b,
+    // and orient3d is true when the fourth point is on the other side of the triangle, i.e. inside b
+    return orient3d( vs );
 }
 
 } //namespace MR

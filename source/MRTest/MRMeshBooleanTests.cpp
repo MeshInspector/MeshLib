@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MRBox.h>
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
@@ -49,6 +50,37 @@ TEST( MRMesh, MeshBoolean )
     }
 }
 
+
+static Mesh makeBox( const Vector3f& min, const Vector3f& max )
+{
+    Box3f box;
+    box.include( min );
+    box.include( max );
+    return makeCube( box.size(), box.min );
+}
+
+// the boxes touch one another by the plane z = -41.50188 and no triangle of one crosses another,
+// so the distance from any face of meshA there is zero and its sign is defined by rounding errors only
+TEST( MRMesh, BooleanTouchingMeshes )
+{
+    const Mesh meshA = makeBox( { 11.3763f, -0.418446f, -41.50188f }, { 19.5763f, 7.61f, -36.20188f } );
+    const Mesh meshB = makeBox( { 10.0763f, -3.418446f, -47.60188f }, { 21.0763f, 9.61f, -41.50188f } );
+
+    const auto res = boolean( meshA, meshB, BooleanOperation::Union );
+    ASSERT_TRUE( res.valid() );
+    EXPECT_NEAR( res.mesh.volume(), meshA.volume() + meshB.volume(), 1e-3f );
+}
+
+// the boxes are far from one another, and Union must keep both of them
+TEST( MRMesh, BooleanDisjointMeshes )
+{
+    const Mesh meshA = makeBox( { 0.f, 0.f, 0.f }, { 1.f, 1.f, 1.f } );
+    const Mesh meshB = makeBox( { 5.f, 5.f, 5.f }, { 6.f, 6.f, 6.f } );
+
+    const auto res = boolean( meshA, meshB, BooleanOperation::Union );
+    ASSERT_TRUE( res.valid() );
+    EXPECT_NEAR( res.mesh.volume(), meshA.volume() + meshB.volume(), 1e-3f );
+}
 
 TEST( MRMesh, BooleanMultipleEdgePropogationSort )
 {

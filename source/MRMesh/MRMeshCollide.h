@@ -60,6 +60,17 @@ namespace MR
  */
 [[nodiscard]] MRMESH_API bool isNonIntersectingInside( const Mesh& a, FaceId partFace, const MeshPart& b, const AffineXf3f* rigidB2A = nullptr );
 
+/**
+ * \brief checks that arbitrary mesh A part (whole part is represented by one face `partFace`) is inside of closed mesh part B
+ * The version of `isNonIntersectingInside` deciding by the precise orient3d predicate, which is never undefined,
+ * unlike the sign of the distance in the area where the meshes touch one another
+ * \param conv float-to-int converter valid for the points of both meshes after the transformations below
+ * \param xfA transformation of mesh a into the space of conv, nullptr considered as identity transformation
+ * \param xfB transformation of mesh b into the space of conv, nullptr considered as identity transformation
+ */
+[[nodiscard]] MRMESH_API bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId partFace, const MeshPart& b,
+    const CoordinateConverters& conv, const AffineXf3f* xfA = nullptr, const AffineXf3f* xfB = nullptr );
+
 /// \}
 
 } // namespace MR

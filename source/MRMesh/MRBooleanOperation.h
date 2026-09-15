@@ -111,6 +111,9 @@ struct BooleanInternalParameters
     std::vector<EdgeLoop>* optionalOutCut{ nullptr };
     /// If true uses graphcut for inside/outside separation
     bool graphCutSeparation{ false };
+    /// Float-to-int converters of both meshes in the space of mesh A; if given, the inside/outside
+    /// test of the components without cuts is made by the precise orient3d predicate
+    const CoordinateConverters* converters{ nullptr };
 };
 
 /// Perform boolean operation on cut meshes

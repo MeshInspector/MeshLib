@@ -204,6 +204,19 @@ jobs:
           MR_EMSCRIPTEN_SINGLETHREAD: ${{ matrix.singlethread }}
         run: ./scripts/build_wasm_meshlib.sh
 
+      - name: TEMPORARY - importers of the exception-catch ABI
+        if: always()
+        run: |
+          NM=/emsdk/upstream/bin/llvm-nm
+          n=0
+          for f in $(find -L lib build -name '*.a' -o -name '*.o' 2>/dev/null); do
+            n=$((n+1))
+            if $NM --undefined-only "$f" 2>/dev/null | grep -q '__cxa_find_matching_catch'; then
+              echo "IMPORTS $f"
+            fi
+          done
+          echo "scanned $n files"
+
       - name: Test Wasm module
         env:
           MESHLIB_MODULE: build/Release/bin/${{ matrix.wasm-module-name }}.node.mjs

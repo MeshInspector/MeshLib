@@ -43,6 +43,10 @@ function(mr_add_wasm_module TARGET_NAME)
     "-sEXIT_RUNTIME=0"
     "-sINVOKE_RUN=0"
     "--closure=1"
+    # TEMPORARY probe: name the archive members that import the exception-catch ABI
+    "-Wl,--trace-symbol=__cxa_find_matching_catch_2"
+    "-Wl,--trace-symbol=__cxa_find_matching_catch_3"
+    "-Wl,--trace-symbol=__cxa_begin_catch"
     ${ARG_LINK_OPTIONS}
   )
 

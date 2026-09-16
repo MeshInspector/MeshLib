@@ -432,6 +432,68 @@ bool isConvexEdgePrecise( const Mesh& m, EdgeId e, const CoordinateConverters& c
     return orient3d( vs );
 }
 
+/// tells whether given vertex of mesh a is inside closed mesh b, or std::nullopt if this vertex
+/// cannot tell, being in the normal cone of a vertex of b with the faces on the both sides of it;
+/// \param outFacePlane receives the answer of the plane of the closest triangle alone, valid if nullopt is returned
+std::optional<bool> isVertInsidePrecise( const Mesh& a, VertId aVert, const MeshPart& b,
+    const CoordinateConverters& conv, int aVertShift, int bVertShift,
+    const AffineXf3f* xfA, const AffineXf3f* xfB, bool& outFacePlane )
+{
+    auto aPoint = a.points[aVert];
+    if ( xfA )
+        aPoint = ( *xfA )( aPoint );
+    const auto proj = findProjection( aPoint, b, FLT_MAX, xfB );
+    if ( !proj )
+        return false; //no projection on b at all
+
+    PreciseVertCoords probe;
+    probe.id = VertId( int( aVert ) + aVertShift );
+    probe.pt = conv.toInt( aPoint );
+    const auto& btopo = b.mesh.topology;
+
+    // the plane of one triangle decides only if the projection is strictly inside that triangle;
+    // otherwise the probe point is in the normal cone of the edge or the vertex it projects on,
+    // and the faces incident to them can be on the both sides of the probe point
+    if ( auto bVert = proj.mtp.inVertex( btopo ) )
+    {
+        std::optional<bool> behind;
+        for ( EdgeId e : orgRing( btopo, bVert ) )
+        {
+            const auto l = btopo.left( e );
+            if ( !l )
+                continue;
+            const bool cur = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB );
+            if ( !behind )
+                behind = cur;
+            else if ( *behind != cur )
+            {
+                // the normal cone of this vertex looks outside of b if the vertex is supported
+                // from outside and inside if from inside, and the planes of the faces cannot tell which
+                outFacePlane = isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB );
+                return {};
+            }
+        }
+        if ( behind )
+            return behind;
+    }
+    else if ( auto bEdgePoint = proj.mtp.onEdge( btopo ) )
+    {
+        const auto l = btopo.left( bEdgePoint.e );
+        const auto r = btopo.right( bEdgePoint.e );
+        if ( l && r )
+        {
+            const bool lBehind = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB );
+            if ( lBehind == isBehindFacePrecise( b.mesh, r, probe, conv, bVertShift, xfB ) )
+                return lBehind;
+            // the faces disagree, so the edge is not flat, and the both wedges of an edge
+            // cannot be non-empty: the probe point is outside of a convex edge and inside of a concave one
+            return !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, bVertShift, xfB );
+        }
+    }
+
+    return isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB );
+}
+
 } //anonymous namespace
 
 bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart& b,
@@ -442,84 +504,45 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
         return true; //consider empty mesh always inside
 
     // only mesh vertices have the exact integer coordinates and the ids that the precise predicates need,
-    // so the closest to b vertex of aFace is taken as the probe point
-    VertId aVerts[3];
-    a.topology.getTriVerts( aFace, aVerts[0], aVerts[1], aVerts[2] );
-    VertId aVert;
-    MeshProjectionResult bProj;
-    bProj.distSq = FLT_MAX;
-    for ( VertId v : aVerts )
+    // and every vertex of the component gives the same answer, so any of them can serve as the probe point
+    std::optional<bool> facePlane;
+    auto tryFace = [&]( FaceId f ) -> std::optional<bool>
     {
-        auto aPoint = a.points[v];
-        if ( xfA )
-            aPoint = ( *xfA )( aPoint );
-        auto proj = findProjection( aPoint, b, bProj.distSq, xfB );
-        if ( !proj )
-            continue;
-        bProj = proj;
-        aVert = v;
-    }
-    if ( !aVert )
-        return false; //no projection on b at all
-
-    PreciseVertCoords probe;
-    probe.id = VertId( int( aVert ) + aVertShift );
-    {
-        const auto& aPoint = a.points[aVert];
-        probe.pt = conv.toInt( xfA ? ( *xfA )( aPoint ) : aPoint );
-    }
-    const auto& btopo = b.mesh.topology;
-
-    // the plane of one triangle decides only if the projection is strictly inside that triangle;
-    // otherwise the probe point is in the normal cone of the edge or the vertex it projects on,
-    // and the faces incident to that edge or vertex can be on the both sides of it
-    if ( auto bVert = bProj.mtp.inVertex( btopo ) )
-    {
-        int behind = -1, convex = 0, reflex = 0;
-        bool agree = true;
-        for ( EdgeId e : orgRing( btopo, bVert ) )
+        VertId aVerts[3];
+        a.topology.getTriVerts( f, aVerts[0], aVerts[1], aVerts[2] );
+        for ( VertId v : aVerts )
         {
-            if ( const auto l = btopo.left( e ) )
-            {
-                const int cur = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB ) ? 1 : 0;
-                if ( behind < 0 )
-                    behind = cur;
-                else if ( behind != cur )
-                    agree = false;
-            }
-            if ( btopo.left( e ) && btopo.right( e ) )
-            {
-                if ( isConvexEdgePrecise( b.mesh, e, conv, bVertShift, xfB ) )
-                    ++convex;
-                else
-                    ++reflex;
-            }
+            bool curFacePlane = false;
+            if ( auto res = isVertInsidePrecise( a, v, b, conv, aVertShift, bVertShift, xfA, xfB, curFacePlane ) )
+                return res;
+            if ( !facePlane )
+                facePlane = curFacePlane;
         }
-        if ( behind >= 0 && agree )
-            return behind != 0;
-        // the faces disagree, so the vertex is neither flat nor a saddle one:
-        // its normal cone looks outside of b if the vertex is convex, and inside if it is concave
-        if ( convex > 0 && reflex == 0 )
-            return false;
-        if ( reflex > 0 && convex == 0 )
-            return true;
-    }
-    else if ( auto bEdgePoint = bProj.mtp.onEdge( btopo ) )
+        return {};
+    };
+
+    if ( auto res = tryFace( aFace ) )
+        return *res;
+
+    // all the vertices of aFace happened to be indecisive, so the neighbour faces are tried
+    FaceBitSet visited( a.topology.faceSize() );
+    visited.set( aFace );
+    std::vector<FaceId> stack{ aFace };
+    while ( !stack.empty() )
     {
-        const auto l = btopo.left( bEdgePoint.e );
-        const auto r = btopo.right( bEdgePoint.e );
-        if ( l && r )
+        const auto f = stack.back();
+        stack.pop_back();
+        for ( EdgeId e : leftRing( a.topology, f ) )
         {
-            const bool lBehind = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB );
-            if ( lBehind == isBehindFacePrecise( b.mesh, r, probe, conv, bVertShift, xfB ) )
-                return lBehind;
-            // the faces disagree, so the edge is not flat: its normal cone looks outside of b
-            // if the edge is convex, and inside if it is concave
-            return !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, bVertShift, xfB );
+            const auto n = a.topology.right( e );
+            if ( !n || visited.test_set( n ) )
+                continue;
+            if ( auto res = tryFace( n ) )
+                return *res;
+            stack.push_back( n );
         }
     }
-
-    return isBehindFacePrecise( b.mesh, bProj.proj.face, probe, conv, bVertShift, xfB );
+    return facePlane.value_or( false );
 }
 
 } //namespace MR

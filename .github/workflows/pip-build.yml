@@ -128,7 +128,7 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
 
       - id: build-matrix
-        uses: ./scripts/actions/matrix-builder
+        uses: ./.github/actions/matrix-builder
         with:
           matrix: |
             platform:
@@ -157,7 +157,7 @@ jobs:
                 - platform: aarch64
 
       - id: test-matrix
-        uses: ./scripts/actions/matrix-builder
+        uses: ./.github/actions/matrix-builder
         with:
           matrix: |
             platform:
@@ -314,7 +314,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
 
       - name: Build Python shim libs
         run: |
@@ -623,7 +623,7 @@ jobs:
           ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
 
       - name: Install all Python versions
         run: uv python install $(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
@@ -972,7 +972,7 @@ jobs:
           merge-multiple: true
 
       - name: Install uv
-        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the

@@ -5,6 +5,7 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRBox.h>
+#include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
@@ -91,6 +92,38 @@ TEST( MRMesh, BooleanTouchingMeshes )
     expectUnionKeepsBoth(
         makeBox( { 11.3763f, -0.418446f, -41.50188f }, { 19.5763f, 7.61f, -36.20188f } ),
         makeBox( { 10.0763f, -3.418446f, -47.60188f }, { 21.0763f, 9.61f, -41.50188f } ) );
+}
+
+// closed wedge with a sharp convex edge along Y in the origin, opening towards -X
+static Mesh makeWedge( float length, float halfWidth, float halfAngle )
+{
+    const float h = length * std::tan( halfAngle );
+    Mesh res;
+    res.points = std::vector<Vector3f>{
+        { 0.f, -halfWidth, 0.f }, { 0.f, halfWidth, 0.f },
+        { -length, -halfWidth, h }, { -length, halfWidth, h },
+        { -length, -halfWidth, -h }, { -length, halfWidth, -h } };
+    const Triangulation t = {
+        { 0_v, 1_v, 3_v }, { 0_v, 3_v, 2_v },
+        { 0_v, 4_v, 5_v }, { 0_v, 5_v, 1_v },
+        { 2_v, 3_v, 5_v }, { 2_v, 5_v, 4_v },
+        { 0_v, 2_v, 4_v }, { 1_v, 5_v, 3_v } };
+    res.topology = MeshBuilder::fromTriangles( t );
+    return res;
+}
+
+// the boxes are beyond the sharp edge of the wedge, where the planes of the two faces of that edge
+// are on the opposite sides of them, and only the convexity of the edge tells inside from outside
+TEST( MRMesh, BooleanBeyondSharpEdge )
+{
+    const Mesh wedge = makeWedge( 10.f, 5.f, 10.f * PI_F / 180.f );
+    ASSERT_EQ( wedge.topology.findNumHoles(), 0 );
+
+    for ( float angle : { 0.f, 1.05f, 1.31f, -1.05f, -1.31f } )
+    {
+        const Vector3f c = 2.f * Vector3f( std::cos( angle ), 0.f, std::sin( angle ) );
+        expectUnionKeepsBoth( makeBox( c - Vector3f::diagonal( 0.05f ), c + Vector3f::diagonal( 0.05f ) ), wedge );
+    }
 }
 
 TEST( MRMesh, BooleanDisjointMeshes )

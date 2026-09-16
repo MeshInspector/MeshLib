@@ -11,6 +11,7 @@
 #include "MRProcessSelfTreeSubtasks.h"
 #include "MRMeshProject.h"
 #include "MRPrecisePredicates3.h"
+#include "MRRingIterator.h"
 
 #include <atomic>
 #include <thread>
@@ -392,6 +393,47 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
     return signDist && signDist < 0;
 }
 
+namespace
+{
+
+// true if given point is on the side of the plane of given face that its outer normal points away from
+bool isBehindFacePrecise( const Mesh& m, FaceId f, const PreciseVertCoords& p,
+    const CoordinateConverters& conv, int vertShift, const AffineXf3f* xf )
+{
+    std::array<PreciseVertCoords, 4> vs;
+    m.topology.getTriVerts( f, vs[0].id, vs[1].id, vs[2].id );
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto& q = m.points[vs[i].id];
+        vs[i].pt = conv.toInt( xf ? ( *xf )( q ) : q );
+        vs[i].id = VertId( int( vs[i].id ) + vertShift );
+    }
+    vs[3] = p;
+    return orient3d( vs );
+}
+
+// true if the material of the mesh near given edge is not wider than a half-space;
+// both faces of the edge must be present
+bool isConvexEdgePrecise( const Mesh& m, EdgeId e, const CoordinateConverters& conv, int vertShift, const AffineXf3f* xf )
+{
+    std::array<PreciseVertCoords, 4> vs;
+    vs[0].id = m.topology.org( e );
+    vs[1].id = m.topology.dest( e );
+    vs[2].id = m.topology.dest( m.topology.next( e ) );        // apex of the left face
+    vs[3].id = m.topology.dest( m.topology.next( e.sym() ) );  // apex of the right face
+    for ( auto& v : vs )
+    {
+        const auto& q = m.points[v.id];
+        v.pt = conv.toInt( xf ? ( *xf )( q ) : q );
+        v.id = VertId( int( v.id ) + vertShift );
+    }
+    // the left face is oriented so that its right-hand normal looks outside, and orient3d is true
+    // when the apex of the right face is behind it, which makes the edge convex
+    return orient3d( vs );
+}
+
+} //anonymous namespace
+
 bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart& b,
     const CoordinateConverters& conv, int aVertShift, int bVertShift,
     const AffineXf3f* xfA, const AffineXf3f* xfB )
@@ -420,21 +462,64 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
     if ( !aVert )
         return false; //no projection on b at all
 
-    std::array<PreciseVertCoords, 4> vs;
-    b.mesh.topology.getTriVerts( bProj.proj.face, vs[0].id, vs[1].id, vs[2].id );
-    for ( int i = 0; i < 3; ++i )
+    PreciseVertCoords probe;
+    probe.id = VertId( int( aVert ) + aVertShift );
     {
-        const auto& bPoint = b.mesh.points[vs[i].id];
-        vs[i].pt = conv.toInt( xfB ? ( *xfB )( bPoint ) : bPoint );
-        vs[i].id = VertId( int( vs[i].id ) + bVertShift );
+        const auto& aPoint = a.points[aVert];
+        probe.pt = conv.toInt( xfA ? ( *xfA )( aPoint ) : aPoint );
     }
-    const auto& aPoint = a.points[aVert];
-    vs[3].id = VertId( int( aVert ) + aVertShift );
-    vs[3].pt = conv.toInt( xfA ? ( *xfA )( aPoint ) : aPoint );
+    const auto& btopo = b.mesh.topology;
 
-    // getTriVerts orders the vertices so that their right-hand normal looks outside of b,
-    // and orient3d is true when the fourth point is on the other side of the triangle, i.e. inside b
-    return orient3d( vs );
+    // the plane of one triangle decides only if the projection is strictly inside that triangle;
+    // otherwise the probe point is in the normal cone of the edge or the vertex it projects on,
+    // and the faces incident to that edge or vertex can be on the both sides of it
+    if ( auto bVert = bProj.mtp.inVertex( btopo ) )
+    {
+        int behind = -1, convex = 0, reflex = 0;
+        bool agree = true;
+        for ( EdgeId e : orgRing( btopo, bVert ) )
+        {
+            if ( const auto l = btopo.left( e ) )
+            {
+                const int cur = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB ) ? 1 : 0;
+                if ( behind < 0 )
+                    behind = cur;
+                else if ( behind != cur )
+                    agree = false;
+            }
+            if ( btopo.left( e ) && btopo.right( e ) )
+            {
+                if ( isConvexEdgePrecise( b.mesh, e, conv, bVertShift, xfB ) )
+                    ++convex;
+                else
+                    ++reflex;
+            }
+        }
+        if ( behind >= 0 && agree )
+            return behind != 0;
+        // the faces disagree, so the vertex is neither flat nor a saddle one:
+        // its normal cone looks outside of b if the vertex is convex, and inside if it is concave
+        if ( convex > 0 && reflex == 0 )
+            return false;
+        if ( reflex > 0 && convex == 0 )
+            return true;
+    }
+    else if ( auto bEdgePoint = bProj.mtp.onEdge( btopo ) )
+    {
+        const auto l = btopo.left( bEdgePoint.e );
+        const auto r = btopo.right( bEdgePoint.e );
+        if ( l && r )
+        {
+            const bool lBehind = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB );
+            if ( lBehind == isBehindFacePrecise( b.mesh, r, probe, conv, bVertShift, xfB ) )
+                return lBehind;
+            // the faces disagree, so the edge is not flat: its normal cone looks outside of b
+            // if the edge is convex, and inside if it is concave
+            return !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, bVertShift, xfB );
+        }
+    }
+
+    return isBehindFacePrecise( b.mesh, bProj.proj.face, probe, conv, bVertShift, xfB );
 }
 
 } //namespace MR

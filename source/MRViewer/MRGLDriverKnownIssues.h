@@ -1,7 +1,9 @@
 #pragma once
+
 #include "MRViewerFwd.h"
-#include <optional>
+
 #include <string>
+#include <vector>
 
 namespace MR
 {
@@ -16,7 +18,7 @@ struct GLDriverIssue
     std::string description;
 };
 
-/// returns the known issue of the current OpenGL driver, or nullopt when no issue is known for it
-MRVIEWER_API std::optional<GLDriverIssue> glDriverKnownIssues();
+/// returns the known issues of the current OpenGL driver
+MRVIEWER_API std::vector<GLDriverIssue> glDriverKnownIssues();
 
 } // namespace MR

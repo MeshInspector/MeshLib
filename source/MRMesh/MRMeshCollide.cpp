@@ -413,8 +413,9 @@ bool isBehindFacePrecise( const Mesh& m, FaceId f, const PreciseVertCoords& p,
 }
 
 // true if the material of the mesh near given edge is not wider than a half-space;
-// both faces of the edge must be present
-bool isConvexEdgePrecise( const Mesh& m, EdgeId e, const CoordinateConverters& conv, int vertShift, const AffineXf3f* xf )
+// both faces of the edge must be present;
+// all four points here are from the same mesh, so no shift of their ids is necessary
+bool isConvexEdgePrecise( const Mesh& m, EdgeId e, const CoordinateConverters& conv, const AffineXf3f* xf )
 {
     std::array<PreciseVertCoords, 4> vs;
     vs[0].id = m.topology.org( e );
@@ -425,7 +426,6 @@ bool isConvexEdgePrecise( const Mesh& m, EdgeId e, const CoordinateConverters& c
     {
         const auto& q = m.points[v.id];
         v.pt = conv.toInt( xf ? ( *xf )( q ) : q );
-        v.id = VertId( int( v.id ) + vertShift );
     }
     // the left face is oriented so that its right-hand normal looks outside, and orient3d is true
     // when the apex of the right face is behind it, which makes the edge convex
@@ -487,7 +487,7 @@ std::optional<bool> isVertInsidePrecise( const Mesh& a, VertId aVert, const Mesh
                 return lBehind;
             // the faces disagree, so the edge is not flat, and the both wedges of an edge
             // cannot be non-empty: the probe point is outside of a convex edge and inside of a concave one
-            return !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, bVertShift, xfB );
+            return !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, xfB );
         }
     }
 

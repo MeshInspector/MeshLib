@@ -129,6 +129,18 @@ IF(EMSCRIPTEN)
   set(CMAKE_SYSTEM_PROCESSOR "unknown")
   meshlib_add_package(onetbb)
   set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
+
+  # oneTBB 2021.12 forces -fexceptions under Emscripten (cmake/compilers/Clang.cmake) although
+  # the link disables catching; the landing pads it leaves behind trip emscripten#27703
+  FOREACH(tbb_target tbb tbbmalloc tbbmalloc_proxy)
+    IF(TARGET ${tbb_target})
+      get_target_property(tbb_compile_options ${tbb_target} COMPILE_OPTIONS)
+      IF(tbb_compile_options)
+        list(REMOVE_ITEM tbb_compile_options -fexceptions)
+        set_target_properties(${tbb_target} PROPERTIES COMPILE_OPTIONS "${tbb_compile_options}")
+      ENDIF()
+    ENDIF()
+  ENDFOREACH()
   install(DIRECTORY ${onetbb_SOURCE_DIR}/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   meshlib_add_package(tinyxml2)

@@ -276,29 +276,16 @@ void ObjectTransformWidget::activeMove_( bool press )
     auto activeControl = controls_->getHoveredControl();
     assert( activeControl != ControlBit::None );
 
-    if ( press )
+    const auto newEditMode = editModeFor_( activeControl );
+    if ( !press && newEditMode != activeEditMode_ )
     {
-        // we now know who is picked
-        if ( bool( activeControl & ControlBit::MoveMask ) )
-        {
-            switch ( axisTransformMode_ )
-            {
-            case AxisTranslation:
-                activeEditMode_ = TranslationMode;
-                break;
-            case AxisScaling:
-                activeEditMode_ = ScalingMode;
-                break;
-            case UniformScaling:
-                activeEditMode_ = UniformScalingMode;
-                break;
-            }
-        }
-        else
-        {
-            activeEditMode_ = RotationMode;
-        }
+        // modifier keys changed during drag: restart in the new mode from the current mouse position
+        controls_->stopModify( false );
+        press = true;
     }
+    if ( press )
+        activeEditMode_ = newEditMode;
+
     Axis activeAxis;
     switch ( activeControl )
     {
@@ -333,6 +320,22 @@ void ObjectTransformWidget::activeMove_( bool press )
         processRotation_( activeAxis, press );
         break;
     }
+}
+
+ObjectTransformWidget::ActiveEditMode ObjectTransformWidget::editModeFor_( ControlBit control ) const
+{
+    if ( !bool( control & ControlBit::MoveMask ) )
+        return RotationMode;
+    switch ( axisTransformMode_ )
+    {
+    case AxisScaling:
+        return ScalingMode;
+    case UniformScaling:
+        return UniformScalingMode;
+    case AxisTranslation:
+        break;
+    }
+    return TranslationMode;
 }
 
 void ObjectTransformWidget::processScaling_( Axis ax, bool press )

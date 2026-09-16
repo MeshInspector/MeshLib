@@ -60,7 +60,7 @@ void Viewport::setupViewMatrix_()
 {
     viewM_ = getViewXf_();
 
-    if ( rotation_ )
+    if ( rotationDepth_ > 0 )
         rotateView_();
 }
 
@@ -113,13 +113,16 @@ void Viewport::setupAxesViewProjMatrix_()
 
 void Viewport::setRotation( bool state )
 {
-    if ( rotation_ == state )
+    if ( !state )
+    {
+        if ( rotationDepth_ > 0 && --rotationDepth_ == 0 )
+            needRedraw_ = true;
         return;
+    }
+    if ( rotationDepth_++ > 0 )
+        return; // rotation is already in progress, keep its pivot
 
     needRedraw_ = true;
-    rotation_ = state;
-    if ( !rotation_ )
-        return;
 
     bool boxUpdated = false;
     if ( !sceneBox_.valid() )
@@ -833,7 +836,7 @@ void Viewport::cameraRotateAround( const Line3f& axis, float angle )
 
 void Viewport::draw_rotation_center() const
 {
-    if ( !rotation_ || !Viewer::constInstance()->rotationSphere->isVisible( id ) )
+    if ( rotationDepth_ <= 0 || !Viewer::constInstance()->rotationSphere->isVisible( id ) )
         return;
 
     auto factor = params_.orthographic ? 0.1f / (cameraEye - cameraCenter).length() : 0.1f;

@@ -301,7 +301,7 @@ jobs:
 
       - name: Set matrix for ubuntu-arm64 builds
         id: set-ubuntu-arm64-matrix
-        uses: ./scripts/actions/matrix-builder
+        uses: ./.github/actions/matrix-builder
         with:
           matrix: |
             os:

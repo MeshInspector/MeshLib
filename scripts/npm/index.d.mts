@@ -18,9 +18,9 @@ export * from './bindings.mjs';
 /** Options for the module factory (the Emscripten `Module` object). All optional. */
 export interface CreateMeshLibOptions {
   /**
-   * Resolve the URL of a runtime file — most importantly the sidecar `.wasm`. Bundlers should
-   * pass this pointing at a `?url` import of the wasm; see "Using with Vite / bundlers" in the
-   * README.
+   * Resolve the URL of a runtime file — most importantly the sidecar `.wasm`. Bundlers that do
+   * not emit the wasm on their own should pass this pointing at an asset-URL import of the wasm;
+   * see "Using with bundlers" in the README.
    */
   locateFile?: ( path: string, scriptDirectory: string ) => string;
   /** Multi-threaded build only: URL or Blob of the main script, so pthread workers can load it. */

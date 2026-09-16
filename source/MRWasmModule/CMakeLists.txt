@@ -46,6 +46,10 @@ function(mr_add_wasm_module TARGET_NAME)
     # (quoted through SHELL: so the generator does not hand a bare $ to /bin/sh)
     "SHELL:-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='$setTempRet0'"
     "--closure=1"
+    # TEMPORARY probe: name the archive members that import the exception-catch ABI
+    "-Wl,--trace-symbol=__cxa_find_matching_catch_2"
+    "-Wl,--trace-symbol=__cxa_find_matching_catch_3"
+    "-Wl,--trace-symbol=__cxa_begin_catch"
     ${ARG_LINK_OPTIONS}
   )
 

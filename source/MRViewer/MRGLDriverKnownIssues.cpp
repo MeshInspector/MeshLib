@@ -53,7 +53,11 @@ std::optional<GLDriverIssue> glDriverKnownIssues()
             if ( version_t{ 25, 3, 0 } <= mesaVersion && mesaVersion <= version_t{ 26, 1, 5 } )
                 return GLDriverIssue{
                     .id = "mesa-15660",
-                    .description = fmt::format( "Mesa {} llvmpipe causes rendering issues and might lead to the app crash; upgrade Mesa to version 26.1.6 or newer or enable the hardware rendering.", mesaVersion.toString() ),
+                    .description = fmt::format(
+                        "Mesa {} llvmpipe causes rendering issues and might lead to the app crash. "
+                        "Upgrade Mesa to 26.1.6 or newer, or enable the hardware rendering.",
+                        mesaVersion.toString()
+                    ),
                 };
         }
     }

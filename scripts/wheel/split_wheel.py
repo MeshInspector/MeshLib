@@ -13,17 +13,24 @@ would reference `libMRMesh.so` while the core ships `libMRMesh-<hash>.so`), whic
 also why the version pin is exact. Both wheels install into the same site-packages
 directories, so the core's rpaths / DLL directory / `@loader_path` references
 resolve the viewer's libraries without extra wiring.
+
+Each wheel carries the platform tag of the repair run that produced its libraries:
+the viewer's dependencies are what need the newer glibc, so tagging both wheels
+alike would either over-promise for `meshlib` or under-promise for the core.
 """
 
 import base64
 import csv
 import hashlib
 import io
+import re
 import zipfile
 from pathlib import Path
 
 # only the viewer UI renders the CJK font; label rendering treats it as optional
 VIEWER_FILE_PREFIXES = ("mrviewerpy.", "NotoSansCJK-Regular.ttc")
+
+MANYLINUX_TAG_RE = re.compile(r"manylinux_(\d+)_(\d+)_\w+")
 
 
 def _is_viewer_source_file(zip_name):
@@ -54,6 +61,60 @@ def _record_entry(name, data):
     return [name, f"sha256={digest}", str(len(data))]
 
 
+def _write_record(out, dist_info, rows):
+    record = io.StringIO()
+    writer = csv.writer(record, lineterminator="\n")
+    writer.writerows(rows)
+    writer.writerow([f"{dist_info}/RECORD", "", ""])
+    out.writestr(f"{dist_info}/RECORD", record.getvalue())
+
+
+def _platform_tags(wheel_path):
+    return Path(wheel_path).stem.split("-")[-1].split(".")
+
+
+def _lowest_glibc_tag(tags):
+    """The single tag a repair run's tag set collapses to: auditwheel adds every
+    manylinux policy the wheel turned out to satisfy, and the oldest glibc one
+    implies all the newer ones."""
+    if len(tags) == 1:
+        return tags[0]
+    assert all(MANYLINUX_TAG_RE.fullmatch(tag) for tag in tags), f"cannot order tags: {tags}"
+    return min(tags, key=lambda tag: tuple(int(n) for n in MANYLINUX_TAG_RE.fullmatch(tag).groups()))
+
+
+def _narrow_wheel_tags(wheel_metadata, plat_tag):
+    """The WHEEL file with its `Tag:` lines narrowed to one platform."""
+    lines = [
+        line for line in wheel_metadata.decode().splitlines(keepends=True)
+        if not line.startswith("Tag: ") or line.rstrip().rsplit("-", 1)[-1] == plat_tag
+    ]
+    assert any(line.startswith("Tag: ") for line in lines), f"no {plat_tag} tag in WHEEL"
+    return "".join(lines).encode()
+
+
+def retag_wheel(wheel_path, plat_tag):
+    """Rewrite a repaired wheel to carry `plat_tag` alone, renamed to match."""
+    wheel_path = Path(wheel_path)
+    if _platform_tags(wheel_path) == [plat_tag]:
+        return wheel_path
+    new_path = wheel_path.with_name("-".join([*wheel_path.stem.split("-")[:-1], plat_tag]) + ".whl")
+    with zipfile.ZipFile(wheel_path) as src, zipfile.ZipFile(new_path, "w", zipfile.ZIP_DEFLATED) as out:
+        dist_info = next(n for n in src.namelist() if n.endswith(".dist-info/WHEEL")).rsplit("/", 1)[0]
+        rows = []
+        for info in src.infolist():
+            if info.filename == f"{dist_info}/RECORD":
+                continue
+            data = src.read(info)
+            if info.filename == f"{dist_info}/WHEEL":
+                data = _narrow_wheel_tags(data, plat_tag)
+            out.writestr(info, data)
+            rows.append(_record_entry(info.filename, data))
+        _write_record(out, dist_info, rows)
+    wheel_path.unlink()
+    return new_path
+
+
 def make_meshlib_metadata(core_metadata, version):
     """The `meshlib` METADATA is the core's setuptools-generated one (readme,
     classifiers, license refs) renamed, with the core pin replacing direct deps."""
@@ -77,9 +138,12 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
     """Write the `meshlib` wheel (next to the repaired core wheel) from the files
     that the full repair produced and the core repair did not."""
     full_repaired, core_repaired = Path(full_repaired), Path(core_repaired)
-    name, version, rest = core_repaired.name.split("-", 2)
-    assert name == "meshlib_core", core_repaired
-    meshlib_path = core_repaired.with_name(f"meshlib-{version}-{rest}")
+    assert core_repaired.name.split("-")[0] == "meshlib_core", core_repaired
+    # the core keeps the policy its own repair run found it eligible for
+    core_repaired = retag_wheel(core_repaired, _lowest_glibc_tag(_platform_tags(core_repaired)))
+    meshlib_plat = _lowest_glibc_tag(_platform_tags(full_repaired))
+    _, version, *py_abi_tags, _ = core_repaired.stem.split("-")
+    meshlib_path = core_repaired.with_name("-".join(["meshlib", version, *py_abi_tags, meshlib_plat]) + ".whl")
 
     with zipfile.ZipFile(full_repaired) as full, zipfile.ZipFile(core_repaired) as core:
         def payload(names):
@@ -93,6 +157,7 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
             f"unexpected viewer file set: {sorted(viewer_names)}"
 
         core_dist_info = next(n for n in core.namelist() if n.endswith(".dist-info/METADATA")).rsplit("/", 1)[0]
+        full_dist_info = next(n for n in full.namelist() if n.endswith(".dist-info/WHEEL")).rsplit("/", 1)[0]
         dist_info = f"meshlib-{version}.dist-info"
         with zipfile.ZipFile(meshlib_path, "w", zipfile.ZIP_DEFLATED) as out:
             rows = []
@@ -104,7 +169,7 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
                 rows.append(_record_entry(info.filename, data))
             extra_entries = [
                 (f"{dist_info}/METADATA", make_meshlib_metadata(core.read(f"{core_dist_info}/METADATA"), version)),
-                (f"{dist_info}/WHEEL", core.read(f"{core_dist_info}/WHEEL")),
+                (f"{dist_info}/WHEEL", _narrow_wheel_tags(full.read(f"{full_dist_info}/WHEEL"), meshlib_plat)),
             ]
             # license files referenced by METADATA's License-File fields
             extra_entries += [
@@ -115,8 +180,4 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
             for name_, data in extra_entries:
                 out.writestr(name_, data)
                 rows.append(_record_entry(name_, data))
-            record = io.StringIO()
-            writer = csv.writer(record, lineterminator="\n")
-            writer.writerows(rows)
-            writer.writerow([f"{dist_info}/RECORD", "", ""])
-            out.writestr(f"{dist_info}/RECORD", record.getvalue())
+            _write_record(out, dist_info, rows)

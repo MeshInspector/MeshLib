@@ -73,6 +73,20 @@ def make_meshlib_metadata(core_metadata, version):
     return "".join(out).encode()
 
 
+def validate_record(wheel_path):
+    """PyPI rejects a wheel whose RECORD does not list exactly the archive's real files;
+    directory entries are not files and must stay out of it. Mirrors warehouse's
+    `warehouse/utils/wheel.py::_validate_record`, which only warns by email for now."""
+    with zipfile.ZipFile(wheel_path) as wheel:
+        record_name = next(n for n in wheel.namelist() if n.endswith(".dist-info/RECORD"))
+        listed = {row[0] for row in csv.reader(wheel.read(record_name).decode().splitlines()) if row}
+        present = {n for n in wheel.namelist() if not n.endswith("/")}
+        assert listed == present, (
+            f"{Path(wheel_path).name}: RECORD lists {sorted(listed - present)} with nothing to match; "
+            f"archive has unlisted {sorted(present - listed)}"
+        )
+
+
 def extract_meshlib_wheel(full_repaired, core_repaired):
     """Write the `meshlib` wheel (next to the repaired core wheel) from the files
     that the full repair produced and the core repair did not."""
@@ -80,10 +94,13 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
     name, version, rest = core_repaired.name.split("-", 2)
     assert name == "meshlib_core", core_repaired
     meshlib_path = core_repaired.with_name(f"meshlib-{version}-{rest}")
+    validate_record(core_repaired)
 
     with zipfile.ZipFile(full_repaired) as full, zipfile.ZipFile(core_repaired) as core:
         def payload(names):
-            return { n for n in names if ".dist-info/" not in n }
+            # directory entries hold no content, and a RECORD row for one has no file to
+            # match it -- which is exactly what PyPI rejects, see validate_record()
+            return { n for n in names if ".dist-info/" not in n and not n.endswith("/") }
         core_names = payload(core.namelist())
         full_names = payload(full.namelist())
         # common libraries must have identical mangled names in both repair runs
@@ -110,7 +127,7 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
             extra_entries += [
                 (f"{dist_info}/licenses/{n.rsplit('/', 1)[-1]}", core.read(n))
                 for n in core.namelist()
-                if n.startswith(f"{core_dist_info}/licenses/")
+                if n.startswith(f"{core_dist_info}/licenses/") and not n.endswith("/")
             ]
             for name_, data in extra_entries:
                 out.writestr(name_, data)
@@ -120,3 +137,4 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
             writer.writerows(rows)
             writer.writerow([f"{dist_info}/RECORD", "", ""])
             out.writestr(f"{dist_info}/RECORD", record.getvalue())
+    validate_record(meshlib_path)

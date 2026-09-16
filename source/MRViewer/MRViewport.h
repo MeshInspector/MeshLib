@@ -360,7 +360,8 @@ public:
         bool operator==( const Viewport::Parameters& other ) const = default;
     };
 
-    // Starts or stop rotation
+    /// starts (true) or stops (false) rotation; the calls nest, so with two input devices
+    /// rotating at once (e.g. mouse and touchpad) it ends only when the last of them stops
     MRVIEWER_API void setRotation( bool state );
 
     // Note, Y is up for this box.
@@ -608,7 +609,7 @@ private:
     // getBoxFn/globalBasis - if true then getBoxFn should return box of global basis object (separately, not to interfere with actual scene size)
     void preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, bool globalBasis )> getBoxFn, const BaseFitParams& params );
 
-    bool rotation_{ false };
+    int rotationDepth_{ 0 }; // rotation is in progress while it is positive, see setRotation
     Vector3f rotationPivot_;
     Vector3f static_point_;
     Vector2f static_viewport_point;

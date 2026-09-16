@@ -432,19 +432,26 @@ bool isConvexEdgePrecise( const Mesh& m, EdgeId e, const CoordinateConverters& c
     return orient3d( vs );
 }
 
-/// tells whether given vertex of mesh a is inside closed mesh b, or std::nullopt if this vertex
-/// cannot tell, being in the normal cone of a vertex of b with the faces on the both sides of it;
-/// \param outFacePlane receives the answer of the plane of the closest triangle alone, valid if nullopt is returned
-std::optional<bool> isVertInsidePrecise( const Mesh& a, VertId aVert, const MeshPart& b,
+struct VertInsideResult
+{
+    /// whether the vertex is inside the other mesh
+    bool inside = false;
+    /// false if the vertex projects in a vertex of the other mesh with the faces on the both sides of it,
+    /// and `inside` is only what the plane of the closest triangle says, which cannot be trusted there
+    bool decisive = false;
+};
+
+/// tells whether given vertex of mesh a is inside closed mesh b
+VertInsideResult isVertInsidePrecise( const Mesh& a, VertId aVert, const MeshPart& b,
     const CoordinateConverters& conv, int aVertShift, int bVertShift,
-    const AffineXf3f* xfA, const AffineXf3f* xfB, bool& outFacePlane )
+    const AffineXf3f* xfA, const AffineXf3f* xfB )
 {
     auto aPoint = a.points[aVert];
     if ( xfA )
         aPoint = ( *xfA )( aPoint );
     const auto proj = findProjection( aPoint, b, FLT_MAX, xfB );
     if ( !proj )
-        return false; //no projection on b at all
+        return { .inside = false, .decisive = true }; //no projection on b at all
 
     PreciseVertCoords probe;
     probe.id = VertId( int( aVert ) + aVertShift );
@@ -469,12 +476,12 @@ std::optional<bool> isVertInsidePrecise( const Mesh& a, VertId aVert, const Mesh
             {
                 // the normal cone of this vertex looks outside of b if the vertex is supported
                 // from outside and inside if from inside, and the planes of the faces cannot tell which
-                outFacePlane = isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB );
-                return {};
+                return { .inside = isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB ),
+                         .decisive = false };
             }
         }
         if ( behind )
-            return behind;
+            return { .inside = *behind, .decisive = true };
     }
     else if ( auto bEdgePoint = proj.mtp.onEdge( btopo ) )
     {
@@ -484,14 +491,14 @@ std::optional<bool> isVertInsidePrecise( const Mesh& a, VertId aVert, const Mesh
         {
             const bool lBehind = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB );
             if ( lBehind == isBehindFacePrecise( b.mesh, r, probe, conv, bVertShift, xfB ) )
-                return lBehind;
+                return { .inside = lBehind, .decisive = true };
             // the faces disagree, so the edge is not flat, and the both wedges of an edge
             // cannot be non-empty: the probe point is outside of a convex edge and inside of a concave one
-            return !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, xfB );
+            return { .inside = !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, xfB ), .decisive = true };
         }
     }
 
-    return isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB );
+    return { .inside = isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB ), .decisive = true };
 }
 
 } //anonymous namespace
@@ -512,11 +519,11 @@ bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart
         a.topology.getTriVerts( f, aVerts[0], aVerts[1], aVerts[2] );
         for ( VertId v : aVerts )
         {
-            bool curFacePlane = false;
-            if ( auto res = isVertInsidePrecise( a, v, b, conv, aVertShift, bVertShift, xfA, xfB, curFacePlane ) )
-                return res;
+            const auto res = isVertInsidePrecise( a, v, b, conv, aVertShift, bVertShift, xfA, xfB );
+            if ( res.decisive )
+                return res.inside;
             if ( !facePlane )
-                facePlane = curFacePlane;
+                facePlane = res.inside;
         }
         return {};
     };

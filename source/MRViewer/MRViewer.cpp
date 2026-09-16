@@ -15,6 +15,7 @@
 #include "MRRibbonMenu.h"
 #include "MRSceneObjectsListDrawer.h"
 #include "MRGetSystemInfoJson.h"
+#include "MRGLDriverKnownIssues.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRDragDropHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
@@ -764,6 +765,13 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     {
         spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
         spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
+
+        if ( const auto issues = glDriverKnownIssues(); !issues.empty() )
+        {
+            spdlog::warn( "The current OpenGL driver has known issue(s):" );
+            for ( const auto& issue : issues )
+                spdlog::warn( "- {}", issue.description );
+        }
     }
 
     if ( !windowTitle )

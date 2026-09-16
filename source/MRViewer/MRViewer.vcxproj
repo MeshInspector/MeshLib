@@ -60,7 +60,6 @@
     <ClCompile Include="MRFrameCounter.cpp" />
     <ClCompile Include="MRMoveObjectByMouseImpl.cpp" />
     <ClCompile Include="MRObjectImGuiLabel.cpp" />
-    <ClCompile Include="MRGLDriverKnownIssues.cpp" />
     <ClCompile Include="MROpenObjects.cpp" />
     <ClCompile Include="MRPointsShader.cpp" />
     <ClCompile Include="MRRenderDefaultObjects.cpp" />
@@ -184,6 +183,7 @@
     <ClCompile Include="MRSystemMcp.cpp" />
     <ClCompile Include="MRMcpCommon.cpp" />
     <ClCompile Include="MRMcpSettings.cpp" />
+    <ClCompile Include="MRGLDriverKnownIssues.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -230,7 +230,6 @@
     <ClInclude Include="MRMoveObjectByMouseImpl.h" />
     <ClInclude Include="MRNotificationType.h" />
     <ClInclude Include="MRObjectImGuiLabel.h" />
-    <ClInclude Include="MRGLDriverKnownIssues.h" />
     <ClInclude Include="MROpenObjects.h" />
     <ClInclude Include="MRPointsShader.h" />
     <ClInclude Include="MRRibbonLayoutConfig.h" />
@@ -367,6 +366,7 @@
     <ClInclude Include="MRUITestEngineControl.h" />
     <ClInclude Include="MRMcpCommon.h" />
     <ClInclude Include="MRMcpSettings.h" />
+    <ClInclude Include="MRGLDriverKnownIssues.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

@@ -29,7 +29,7 @@ struct Version
     auto operator <=>( const Version& ) const = default;
 };
 
-}
+} // namespace
 
 namespace MR
 {
@@ -65,4 +65,4 @@ std::optional<GLDriverIssue> glDriverKnownIssues()
     return {};
 }
 
-}
+} // namespace MR

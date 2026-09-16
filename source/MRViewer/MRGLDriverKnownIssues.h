@@ -19,4 +19,4 @@ struct GLDriverIssue
 /// returns the known issue of the current OpenGL driver, or nullopt when no issue is known for it
 MRVIEWER_API std::optional<GLDriverIssue> glDriverKnownIssues();
 
-}
+} // namespace MR

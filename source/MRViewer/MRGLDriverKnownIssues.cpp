@@ -8,15 +8,15 @@
 namespace
 {
 
-struct version_t
+struct Version
 {
     int major = 0;
     int minor = 0;
     int patch = 0;
 
-    static version_t fromString( const char* str )
+    static Version fromString( const char* str )
     {
-        version_t result;
+        Version result;
         std::sscanf( str, "%d.%d.%d", &result.major, &result.minor, &result.patch );
         return result;
     }
@@ -26,7 +26,7 @@ struct version_t
         return fmt::format( "{}.{}.{}", major, minor, patch );
     }
 
-    auto operator <=>( const version_t& ) const = default;
+    auto operator <=>( const Version& ) const = default;
 };
 
 }
@@ -49,8 +49,8 @@ std::optional<GLDriverIssue> glDriverKnownIssues()
         const auto mesaPos = version.find( mesaPrefix );
         if ( mesaPos != std::string_view::npos )
         {
-            const auto mesaVersion = version_t::fromString( version.data() + mesaPos + mesaPrefix.size() );
-            if ( version_t{ 25, 3, 0 } <= mesaVersion && mesaVersion <= version_t{ 26, 1, 5 } )
+            const auto mesaVersion = Version::fromString( version.data() + mesaPos + mesaPrefix.size() );
+            if ( Version{ 25, 3, 0 } <= mesaVersion && mesaVersion <= Version{ 26, 1, 5 } )
                 return GLDriverIssue{
                     .id = "mesa-15660",
                     .description = fmt::format(

@@ -9,6 +9,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake/Modules")
 include(ConfigureVcpkg)
+include(EmscriptenHelpers)
 
 IF(MR_EMSCRIPTEN_WASM64)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
@@ -130,13 +131,10 @@ IF(EMSCRIPTEN)
   set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip)
 
-  set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   set(JSONCPP_WITH_TESTS OFF)
   set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
   set(BUILD_STATIC_LIBS OFF)
   add_subdirectory(./jsoncpp)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
   set(FMT_INSTALL ON)
   set(FMT_MODULE OFF)
@@ -153,6 +151,10 @@ IF(EMSCRIPTEN)
   set(CMAKE_SYSTEM_PROCESSOR "unknown")
   add_subdirectory(./onetbb)
   set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
+
+  # oneTBB 2021.12 forces -fexceptions under Emscripten (cmake/compilers/Clang.cmake) although
+  # the link disables catching; the landing pads it leaves behind trip emscripten#27703
+  mr_emscripten_remove_compile_option(-fexceptions tbb tbbmalloc tbbmalloc_proxy)
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   add_subdirectory(./tinyxml2)

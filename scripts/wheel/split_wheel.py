@@ -102,6 +102,8 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
     full_repaired, core_repaired = Path(full_repaired), Path(core_repaired)
     name, version, rest = core_repaired.name.split("-", 2)
     assert name == "meshlib_core", core_repaired
+    # the meshlib wheel takes the core's tags, so the two repair runs must agree on them
+    assert rest == full_repaired.name.split("-", 2)[2], (core_repaired.name, full_repaired.name)
     meshlib_path = core_repaired.with_name(f"meshlib-{version}-{rest}")
     validate_record(core_repaired)
 

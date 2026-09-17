@@ -96,13 +96,20 @@ def validate_record(wheel_path):
     assert not problems, f"{wheel_path.name}: " + "; ".join(problems)
 
 
+def wheel_tags(wheel_path):
+    """The python-abi-platform tag triple of a wheel file name."""
+    return Path(wheel_path).stem.split("-", 2)[2]
+
+
 def extract_meshlib_wheel(full_repaired, core_repaired):
     """Write the `meshlib` wheel (next to the repaired core wheel) from the files
     that the full repair produced and the core repair did not."""
     full_repaired, core_repaired = Path(full_repaired), Path(core_repaired)
-    name, version, rest = core_repaired.name.split("-", 2)
+    name, version, _ = core_repaired.name.split("-", 2)
     assert name == "meshlib_core", core_repaired
-    meshlib_path = core_repaired.with_name(f"meshlib-{version}-{rest}")
+    core_tags, full_tags = wheel_tags(core_repaired), wheel_tags(full_repaired)
+    assert core_tags == full_tags, f"the repair runs disagree on wheel tags: {core_tags} != {full_tags}"
+    meshlib_path = core_repaired.with_name(f"meshlib-{version}-{core_tags}.whl")
     validate_record(core_repaired)
 
     with zipfile.ZipFile(full_repaired) as full, zipfile.ZipFile(core_repaired) as core:

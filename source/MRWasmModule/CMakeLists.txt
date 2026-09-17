@@ -42,9 +42,6 @@ function(mr_add_wasm_module TARGET_NAME)
     "-sALLOW_MEMORY_GROWTH=1"
     "-sEXIT_RUNTIME=0"
     "-sINVOKE_RUN=0"
-    # https://github.com/emscripten-core/emscripten/issues/27703
-    # (quoted through SHELL: so the generator does not hand a bare $ to /bin/sh)
-    "SHELL:-sDEFAULT_LIBRARY_FUNCS_TO_INCLUDE='$setTempRet0'"
     "--closure=1"
     ${ARG_LINK_OPTIONS}
   )

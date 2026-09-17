@@ -9,7 +9,6 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/../cmake/Modules")
 include(ConfigureVcpkg)
-include(EmscriptenHelpers)
 
 IF(MR_EMSCRIPTEN_WASM64)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s MEMORY64=1")
@@ -147,14 +146,16 @@ IF(EMSCRIPTEN)
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
+  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
   set(CMAKE_SYSTEM_PROCESSOR "unknown")
   add_subdirectory(./onetbb)
   set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
 
-  # oneTBB 2021.12 forces -fexceptions under Emscripten (cmake/compilers/Clang.cmake) although
-  # the link disables catching; the landing pads it leaves behind trip emscripten#27703
-  mr_emscripten_remove_compile_option(-fexceptions tbb tbbmalloc tbbmalloc_proxy)
+  # oneTBB forces -fexceptions under Emscripten
+  get_target_property(tbb_compile_options tbb COMPILE_OPTIONS)
+  list(REMOVE_ITEM tbb_compile_options -fexceptions)
+  set_target_properties(tbb PROPERTIES COMPILE_OPTIONS "${tbb_compile_options}")
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   add_subdirectory(./tinyxml2)

@@ -436,8 +436,9 @@ struct VertInsideResult
 {
     /// whether the vertex is inside the other mesh
     bool inside = false;
-    /// false if the vertex projects in a vertex of the other mesh with the faces on the both sides of it,
-    /// and `inside` is only what the plane of the closest triangle says, which cannot be trusted there
+    /// false if the vertex projects in a vertex of the other mesh, the planes of the faces incident
+    /// to it disagreeing about the side this vertex is on; `inside` is then only what the plane
+    /// of the closest triangle says, which cannot be trusted there
     bool decisive = false;
 };
 
@@ -460,7 +461,7 @@ VertInsideResult isVertInsidePrecise( const Mesh& a, VertId aVert, const MeshPar
 
     // the plane of one triangle decides only if the projection is strictly inside that triangle;
     // otherwise the probe point is in the normal cone of the edge or the vertex it projects on,
-    // and the faces incident to them can be on the both sides of the probe point
+    // where the planes of the incident faces can disagree about the side the probe point is on
     if ( auto bVert = proj.mtp.inVertex( btopo ) )
     {
         std::optional<bool> behind;
@@ -475,7 +476,7 @@ VertInsideResult isVertInsidePrecise( const Mesh& a, VertId aVert, const MeshPar
             else if ( *behind != cur )
             {
                 // the normal cone of this vertex looks outside of b if the vertex is supported
-                // from outside and inside if from inside, and the planes of the faces cannot tell which
+                // by a plane from outside and inside if from inside, and the faces cannot tell which
                 return { .inside = isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB ),
                          .decisive = false };
             }

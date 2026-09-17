@@ -74,17 +74,26 @@ def make_meshlib_metadata(core_metadata, version):
 
 
 def validate_record(wheel_path):
-    """PyPI rejects a wheel whose RECORD does not list exactly the archive's real files;
-    directory entries are not files and must stay out of it. Mirrors warehouse's
-    `warehouse/utils/wheel.py::_validate_record`, which only warns by email for now."""
+    """PyPI rejects a wheel with no RECORD at the path its filename implies, and emails a
+    warning for one whose RECORD does not list exactly the archive's real files; directory
+    entries are not files and must stay out of it. Mirrors warehouse's
+    `warehouse/utils/wheel.py::_validate_record`, separator normalization included."""
+    wheel_path = Path(wheel_path)
+    name, version, _ = wheel_path.name.split("-", 2)
+    record_name = f"{name}-{version}.dist-info/RECORD"
+    # a signature over RECORD cannot be listed inside it, so PyPI exempts both from the check
+    exempt = {f"{record_name}.jws", f"{record_name}.p7s"}
     with zipfile.ZipFile(wheel_path) as wheel:
-        record_name = next(n for n in wheel.namelist() if n.endswith(".dist-info/RECORD"))
-        listed = {row[0] for row in csv.reader(wheel.read(record_name).decode().splitlines()) if row}
-        present = {n for n in wheel.namelist() if not n.endswith("/")}
-        assert listed == present, (
-            f"{Path(wheel_path).name}: RECORD lists {sorted(listed - present)} with nothing to match; "
-            f"archive has unlisted {sorted(present - listed)}"
-        )
+        names = wheel.namelist()
+        assert record_name in names, f"{wheel_path.name}: no {record_name}"
+        listed = {row[0].replace("\\", "/") for row in csv.reader(wheel.read(record_name).decode().splitlines()) if row}
+        present = {n for n in names if not n.endswith(("/", "\\")) and n not in exempt}
+    problems = []
+    if listed - present:
+        problems.append(f"RECORD lists {sorted(listed - present)} with nothing to match")
+    if present - listed:
+        problems.append(f"archive has unlisted {sorted(present - listed)}")
+    assert not problems, f"{wheel_path.name}: " + "; ".join(problems)
 
 
 def extract_meshlib_wheel(full_repaired, core_repaired):

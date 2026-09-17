@@ -147,6 +147,7 @@ IF(EMSCRIPTEN)
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
+  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
   set(CMAKE_SYSTEM_PROCESSOR "unknown")
   add_subdirectory(./onetbb)
@@ -154,7 +155,7 @@ IF(EMSCRIPTEN)
 
   # oneTBB 2021.12 forces -fexceptions under Emscripten (cmake/compilers/Clang.cmake) although
   # the link disables catching; the landing pads it leaves behind trip emscripten#27703
-  mr_emscripten_remove_compile_option(-fexceptions tbb tbbmalloc tbbmalloc_proxy)
+  mr_emscripten_remove_compile_option(-fexceptions tbb)
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   add_subdirectory(./tinyxml2)

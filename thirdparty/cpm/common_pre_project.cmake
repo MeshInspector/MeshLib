@@ -18,6 +18,7 @@ set(MESHLIB_THIRDPARTY_INCLUDE_DIR "include")
 
 list(APPEND CMAKE_MODULE_PATH "${MESHLIB_THIRDPARTY_DIR}/../cmake/Modules")
 include(ConfigureVcpkg)
+include(EmscriptenHelpers)
 if(MR_EMSCRIPTEN)
   include(DefaultEmscriptenOptions)
 endif()

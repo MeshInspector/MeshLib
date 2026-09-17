@@ -143,9 +143,7 @@ def build_wheel():
                 [
                     sys.executable, "-m", "auditwheel",
                     "repair",
-                    # without this auditwheel also tags a wheel with every older policy it
-                    # happens to satisfy, and the two runs do not satisfy the same ones
-                    "--only-plat",
+                    "--only-plat", # disable the platform auto-detection
                     "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
                     "-w", out_dir,
                     wf

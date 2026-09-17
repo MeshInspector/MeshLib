@@ -25,6 +25,49 @@ S decodeUtf8( std::string_view str )
     return res;
 }
 
+MR_FORCE_INLINE void appendUtf8_( std::string& str, char32_t ch )
+{
+    if ( ch < 0x80 )
+    {
+        str.push_back( char( ch ) );
+    }
+    else if ( ch < 0x800 )
+    {
+        str.push_back( char( 0xC0 | ( ch >> 6 ) ) );
+        str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+    }
+    else if ( ch < 0x10000 )
+    {
+        if ( 0xD800 <= ch && ch <= 0xDFFF )
+        {
+            // U+FFFD REPLACEMENT CHARACTER
+            str.push_back( '\xEF' );
+            str.push_back( '\xBF' );
+            str.push_back( '\xBD' );
+        }
+        else
+        {
+            str.push_back( char( 0xE0 | ( ch >> 12 ) ) );
+            str.push_back( char( 0x80 | ( ( ch >> 6 ) & 0x3F ) ) );
+            str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+        }
+    }
+    else if ( ch < 0x110000 )
+    {
+        str.push_back( char( 0xF0 | ( ch >> 18 ) ) );
+        str.push_back( char( 0x80 | ( ( ch >> 12 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( ( ch >> 6 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+    }
+    else
+    {
+        // U+FFFD REPLACEMENT CHARACTER
+        str.push_back( '\xEF' );
+        str.push_back( '\xBF' );
+        str.push_back( '\xBD' );
+    }
+}
+
 } // anonymous namespace
 
 std::wstring utf8ToWide( const char* utf8 )
@@ -64,7 +107,7 @@ std::string wideToUtf8( const wchar_t * wide )
 #else
     std::string res;
     for ( ; *wide; ++wide )
-        appendUtf8( res, char32_t( *wide ) );
+        appendUtf8_( res, char32_t( *wide ) );
     return res;
 #endif
 }
@@ -193,28 +236,7 @@ std::u32string utf8ToUtf32( std::string_view str )
 
 void appendUtf8( std::string& str, char32_t cp )
 {
-    if ( cp > 0x10FFFF || ( cp >= 0xD800 && cp <= 0xDFFF ) )
-        cp = U'\xFFFD';
-    if ( cp < 0x80 )
-        str.push_back( char( cp ) );
-    else if ( cp < 0x800 )
-    {
-        str.push_back( char( 0xC0 | ( cp >> 6 ) ) );
-        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
-    }
-    else if ( cp < 0x10000 )
-    {
-        str.push_back( char( 0xE0 | ( cp >> 12 ) ) );
-        str.push_back( char( 0x80 | ( ( cp >> 6 ) & 0x3F ) ) );
-        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
-    }
-    else
-    {
-        str.push_back( char( 0xF0 | ( cp >> 18 ) ) );
-        str.push_back( char( 0x80 | ( ( cp >> 12 ) & 0x3F ) ) );
-        str.push_back( char( 0x80 | ( ( cp >> 6 ) & 0x3F ) ) );
-        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
-    }
+    appendUtf8_( str, cp );
 }
 
 std::string utf32ToUtf8( std::u32string_view str )
@@ -222,7 +244,7 @@ std::string utf32ToUtf8( std::u32string_view str )
     std::string res;
     res.reserve( str.size() );
     for ( auto cp : str )
-        appendUtf8( res, cp );
+        appendUtf8_( res, cp );
     return res;
 }
 

@@ -72,8 +72,9 @@ public:
     virtual void update() = 0;
     // Called for hover checks
     void hover() { hoveredControl_ = hover_( pickThrough_ ); }
-    // This is called to stop drawing active visualization when modification is stopped
-    void stopModify() { stopModify_(); hover(); }
+    // This is called to stop drawing active visualization when modification is stopped,
+    // or (rehover = false) when it restarts in another mode with the mouse button still pressed
+    void stopModify( bool rehover = true ) { stopModify_(); if ( rehover ) hover(); }
 
     // Called each frame for each viewport to update available transformation modes
     MRVIEWER_API void updateVisualTransformMode( ControlBit showMask, ViewportMask viewportMask, const AffineXf3f& xf );
@@ -235,7 +236,8 @@ public:
     // Sets transform mode mask (enabling or disabling corresponding widget controls)
     MRVIEWER_API void setTransformMode( ControlBit mask, ViewportId id = {} );
 
-    // Transform operation applying to object while dragging an axis. This parameter does not apply to active operation.
+    // Transform operation applying to object while dragging an axis.
+    // Changing it during an active drag restarts the operation in the new mode from the current mouse position.
     enum AxisTransformMode
     {
         // object moves along an axis
@@ -362,6 +364,8 @@ private:
         RotationMode,
     };
     ActiveEditMode activeEditMode_{ TranslationMode };
+    // edit mode of dragging given control in current axisTransformMode_
+    ActiveEditMode editModeFor_( ControlBit control ) const;
 
     // Initial box diagonal vector (before transformation),
     // it is needed to correctly convert non-uniform scaling to uniform one and apply it to this widget

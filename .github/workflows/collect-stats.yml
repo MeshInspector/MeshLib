@@ -85,6 +85,12 @@ jobs:
             );
             for (const artifact of artifacts) {
               if (artifact.name.startsWith('RunnerSysStats-') || artifact.name.startsWith('ArtifactStats-')) {
-                await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: artifact.id });
+                try {
+                  await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: artifact.id });
+                } catch (error) {
+                  // a re-run of the source run drops the previous attempt's artifacts under us
+                  if (error.status !== 404 && error.status !== 410)
+                    throw error;
+                }
               }
             }

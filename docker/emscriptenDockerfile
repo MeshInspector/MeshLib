@@ -5,9 +5,9 @@
 # emsdk ships clang without PGO; ours is the same llvm-project revision with
 # -O3 + PGO. It replaces emsdk's copy in place and /emsdk is then copied into a
 # clean ubuntu: swapped in a layer on top, both compilers would ship.
-FROM emscripten/emsdk:4.0.19-arm64 AS emsdk
+FROM emscripten/emsdk:6.0.9-arm64 AS emsdk
 
-ENV EMSDK_VERSION=4.0.19
+ENV EMSDK_VERSION=6.0.9
 
 RUN <<EOF
     set -e
@@ -22,18 +22,18 @@ RUN <<EOF
 EOF
 
 
-# backport fix for multi-threaded file system access
-# more info: https://github.com/emscripten-core/emscripten/pull/26582
-COPY docker/patches/emscripten-26582.patch /tmp/
+# noble, matching the emsdk image: its binaries link glibc 2.39 and will not run on jammy
+# 4.0.19 and 5.x set this in their toolchain, so every add_library(... SHARED) came out as a
+# static archive. 6.0.9 sets it only for a couple of broken cmake versions, so those targets
+# become real wasm side modules, and a side module link needs every input PIC - including the
+# ports emsdk ships, which are not. Nothing we build wants a side module.
 RUN <<EOF
     set -e
-    cd /emsdk/upstream/emscripten
-    git apply -p1 --include='system/lib/pthread/proxying.c' /tmp/emscripten-26582.patch
-    find /emsdk/upstream/emscripten/cache/sysroot -name 'libc-mt*.a' -print -delete
-    rm -f /tmp/emscripten-26582.patch
+    echo "set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS FALSE)" \
+        >> /emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
 EOF
 
-FROM ubuntu:22.04 AS base
+FROM ubuntu:24.04 AS base
 
 COPY --from=emsdk /emsdk /emsdk
 
@@ -45,14 +45,14 @@ ENTRYPOINT ["/emsdk/docker/entrypoint.sh"]
 COPY <<EOF /etc/apt/sources.list.d/ubuntu.sources
 Types: deb
 URIs: http://archive.ubuntu.com/ubuntu/ http://mirror.eu.ossplanet.net/ubuntu/
-Suites: jammy jammy-updates jammy-security jammy-backports
+Suites: noble noble-updates noble-security noble-backports
 Components: main restricted universe multiverse
 Architectures: amd64
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
 
 Types: deb
 URIs: http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/
-Suites: jammy jammy-updates jammy-security jammy-backports
+Suites: noble noble-updates noble-security noble-backports
 Components: main restricted universe multiverse
 Architectures: arm64
 Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg

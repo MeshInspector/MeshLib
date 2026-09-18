@@ -130,10 +130,9 @@ IF(EMSCRIPTEN)
   set(LIBZIP_DO_INSTALL ON)
   # the wasm module links libzip.a; the shared build only pulls emsdk's own libz.a into a
   # relocatable link, and that one is not PIC
-  set(BUILD_SHARED_LIBS_BACKUP "${BUILD_SHARED_LIBS}")
   set(BUILD_SHARED_LIBS OFF)
   add_subdirectory(./libzip)
-  set(BUILD_SHARED_LIBS "${BUILD_SHARED_LIBS_BACKUP}")
+  unset(BUILD_SHARED_LIBS)
 
   set(JSONCPP_WITH_TESTS OFF)
   set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)

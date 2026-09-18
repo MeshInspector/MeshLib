@@ -110,9 +110,9 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CXXFLAGS="${CFLAGS} -pthread"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
-    CFLAGS="${CFLAGS} -s MEMORY64=1"
-    CXXFLAGS="${CFLAGS} -s MEMORY64=1"
-    LDFLAGS="${LDFLAGS} -s MEMORY64=1"
+    CFLAGS="${CFLAGS} -m64"
+    CXXFLAGS="${CFLAGS} -m64"
+    LDFLAGS="${LDFLAGS} -m64"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM2023} == 1 ]] ; then
     CFLAGS="${CFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"

@@ -187,11 +187,11 @@ std::string utf8substr( const char * s, size_t pos, size_t count )
         assert( false );
         return {};
     }
-    const auto iterate = [] ( std::string_view str, size_t& pos )
+    const auto iterate = [] ( std::string_view str, size_t& offset )
     {
-        assert( pos < str.size() );
-        const auto len = utf8Length( char8_t( str[pos] ) );
-        pos += size_t( len + !len ); // at least 1 byte
+        assert( offset < str.size() );
+        const auto len = utf8Length( char8_t( str[offset] ) );
+        offset += size_t( len + !len ); // at least 1 byte
     };
     const std::string_view str( s );
     size_t begin = 0;

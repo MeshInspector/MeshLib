@@ -110,9 +110,17 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CXXFLAGS="${CFLAGS} -pthread"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
-    CFLAGS="${CFLAGS} -s MEMORY64=1"
-    CXXFLAGS="${CFLAGS} -s MEMORY64=1"
-    LDFLAGS="${LDFLAGS} -s MEMORY64=1"
+    # emcc accepts -m64 from 5.0.7 on and deprecates -s MEMORY64 in 6.0; older SDKs pass -m64
+    # through to clang, so the spelling has to follow the SDK
+    EM_VERSION=$(sed -n "s/[^0-9.]//gp" "${EMSCRIPTEN_ROOT}/emscripten-version.txt" | head -1)
+    if [ "$(printf '%s\n5.0.7\n' "${EM_VERSION:-0}" | sort -V | head -1)" = "5.0.7" ] ; then
+      WASM64_FLAG="-m64"
+    else
+      WASM64_FLAG="-s MEMORY64=1"
+    fi
+    CFLAGS="${CFLAGS} ${WASM64_FLAG}"
+    CXXFLAGS="${CFLAGS} ${WASM64_FLAG}"
+    LDFLAGS="${LDFLAGS} ${WASM64_FLAG}"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM2023} == 1 ]] ; then
     CFLAGS="${CFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"

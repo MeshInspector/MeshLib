@@ -2,11 +2,33 @@
 
 if(MR_EMSCRIPTEN)
   if(MR_EMSCRIPTEN_WASM64)
+    # emcc accepts -m64 from 5.0.7 on and deprecates -s MEMORY64 in 6.0, where -Wdeprecated
+    # -Werror turns the deprecation into an error that fails every compiler probe. Older SDKs
+    # pass -m64 through to clang and fail just as hard, so the spelling has to follow the SDK.
+    set(MESHLIB_EMSCRIPTEN_VERSION_FILE "$ENV{EMSDK}/upstream/emscripten/emscripten-version.txt")
+    if(NOT EXISTS "${MESHLIB_EMSCRIPTEN_VERSION_FILE}" AND DEFINED CMAKE_TOOLCHAIN_FILE)
+      # <emscripten root>/cmake/Modules/Platform/Emscripten.cmake
+      get_filename_component(MESHLIB_EMSCRIPTEN_ROOT "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
+      get_filename_component(MESHLIB_EMSCRIPTEN_ROOT "${MESHLIB_EMSCRIPTEN_ROOT}/../../.." ABSOLUTE)
+      set(MESHLIB_EMSCRIPTEN_VERSION_FILE "${MESHLIB_EMSCRIPTEN_ROOT}/emscripten-version.txt")
+    endif()
+    if(EXISTS "${MESHLIB_EMSCRIPTEN_VERSION_FILE}")
+      file(READ "${MESHLIB_EMSCRIPTEN_VERSION_FILE}" MESHLIB_EMSCRIPTEN_VERSION)
+      string(REGEX MATCH "[0-9]+[.][0-9]+[.][0-9]+" MESHLIB_EMSCRIPTEN_VERSION "${MESHLIB_EMSCRIPTEN_VERSION}")
+    else()
+      message(WARNING "Cannot read the Emscripten version; assuming it predates -m64")
+      set(MESHLIB_EMSCRIPTEN_VERSION "0")
+    endif()
+    if(MESHLIB_EMSCRIPTEN_VERSION VERSION_LESS "5.0.7")
+      set(MESHLIB_EMSCRIPTEN_WASM64_FLAG "-s MEMORY64=1")
+    else()
+      set(MESHLIB_EMSCRIPTEN_WASM64_FLAG "-m64")
+    endif()
     string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}
-      "-s MEMORY64=1"
+      "${MESHLIB_EMSCRIPTEN_WASM64_FLAG}"
     )
     string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}
-      "-s MEMORY64=1"
+      "${MESHLIB_EMSCRIPTEN_WASM64_FLAG}"
     )
   endif()
 

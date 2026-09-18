@@ -15,9 +15,10 @@ string(JOIN " " EXTRA_CXX_FLAGS
 # openvdb is built static here, see scripts/thirdparty/openvdb.sh
 set(OPENVDB_USE_STATIC_LIBS ON)
 
-# thirdparty is built PIC (scripts/build_thirdparty.sh); the PCH and the objects that use it
-# have to agree on the PIC level, so keep the whole build on one setting
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+# emsdk 4.0.19 set this FALSE in its toolchain, so every add_library(... SHARED) here came out
+# static; 6.0.9 honours SHARED and builds side modules instead, which then need every input PIC
+# - including the ports emsdk ships. Nothing here wants a side module.
+set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS FALSE)
 
 string(JOIN " " EXTRA_EXE_LINKER_FLAGS
   "-s ALLOW_MEMORY_GROWTH=1"

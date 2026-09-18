@@ -97,11 +97,8 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   export CXXFLAGS=""
   export LDFLAGS=""
   [[ ${MR_EMSCRIPTEN_WASM2023:=} ]] || export MR_EMSCRIPTEN_WASM2023=1
-  # every library here gets its own cmake run, so the property goes in through an injected
-  # module rather than a set_property() in one CMakeLists
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
-    -D CMAKE_PROJECT_TOP_LEVEL_INCLUDES=${BASE_DIR}/cmake/Modules/EmscriptenNoSideModules.cmake \
-    -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
+    -D CMAKE_TOOLCHAIN_FILE=${BASE_DIR}/cmake/Modules/EmscriptenToolchain.cmake \
     -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
     -D MR_EMSCRIPTEN=1 \
     -D MR_EMSCRIPTEN_SINGLETHREAD=${MR_EMSCRIPTEN_SINGLETHREAD} \

@@ -22,8 +22,8 @@ TEST( MRMesh, Utf8Conversions )
     EXPECT_TRUE( wideToUtf8( nullptr ).empty() );
     EXPECT_TRUE( wideToUtf8( L"" ).empty() );
 
-    EXPECT_EQ( utf32ToUtf8( std::u32string{ U'\\xD800' } ), "\\xEF\\xBF\\xBD" );
-    EXPECT_EQ( utf32ToUtf8( std::u32string{ char32_t( 0x110000 ) } ), "\\xEF\\xBF\\xBD" );
+    EXPECT_EQ( utf32ToUtf8( std::u32string{ U'\xD800' } ), "\xEF\xBF\xBD" );
+    EXPECT_EQ( utf32ToUtf8( std::u32string{ char32_t( 0x110000 ) } ), "\xEF\xBF\xBD" );
 }
 
 TEST( MRMesh, Utf8Substr )

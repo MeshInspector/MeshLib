@@ -68,6 +68,17 @@ MR_FORCE_INLINE void appendUtf8_( std::string& str, char32_t ch )
     }
 }
 
+/// returns the length of the UTF-8 multi-byte sequence for its first byte
+/// returns 0 if the first byte is invalid
+size_t utf8Length( char8_t ch )
+{
+    constexpr int lengths[] = {
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0,
+    };
+    return lengths[ch >> 3];
+}
+
 } // anonymous namespace
 
 std::wstring utf8ToWide( const char* utf8 )
@@ -176,13 +187,21 @@ std::string utf8substr( const char * s, size_t pos, size_t count )
         assert( false );
         return {};
     }
+    const auto iterate = [] ( std::string_view str, size_t& pos )
+    {
+        assert( pos < str.size() );
+        const auto len = utf8Length( char8_t( str[pos] ) );
+        pos += size_t( len + !len ); // at least 1 byte
+    };
     const std::string_view str( s );
     size_t begin = 0;
     for ( ; pos > 0 && begin < str.size(); --pos )
-        begin += utf8ToCodepoint( str.data() + begin, str.size() - begin ).second;
+        iterate( str, begin );
+    begin = std::min( begin, str.size() );
     size_t end = begin;
     for ( ; count > 0 && end < str.size(); --count )
-        end += utf8ToCodepoint( str.data() + end, str.size() - end ).second;
+        iterate( str, end );
+    end = std::min( end, str.size() );
     return std::string( str.substr( begin, end - begin ) );
 }
 

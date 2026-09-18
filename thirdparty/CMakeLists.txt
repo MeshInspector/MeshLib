@@ -128,7 +128,11 @@ IF(EMSCRIPTEN)
   set(BUILD_EXAMPLES OFF CACHE BOOL "")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -s USE_ZLIB=1")
   set(LIBZIP_DO_INSTALL ON)
+  # a side module link would pull in emsdk's own zlib, which is not built PIC. CACHE because
+  # libzip predates CMP0077: its option() clears a normal variable of the same name.
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
   add_subdirectory(./libzip)
+  unset(BUILD_SHARED_LIBS CACHE)
 
   set(JSONCPP_WITH_TESTS OFF)
   set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)

@@ -44,7 +44,13 @@ file(GLOB MISC_HEADERS
   "${IMGUI_ROOT}/misc/cpp/*.h"
 )
 
-add_library(imgui SHARED ${SOURCES} ${HEADERS} ${BACKEND_HEADERS} ${FREETYPE_HEADERS} ${MISC_HEADERS})
+# a side module link would pull in emsdk's own freetype port, which is not built PIC
+IF(MR_EMSCRIPTEN)
+  set(MR_IMGUI_LIBRARY_TYPE STATIC)
+ELSE()
+  set(MR_IMGUI_LIBRARY_TYPE SHARED)
+ENDIF()
+add_library(imgui ${MR_IMGUI_LIBRARY_TYPE} ${SOURCES} ${HEADERS} ${BACKEND_HEADERS} ${FREETYPE_HEADERS} ${MISC_HEADERS})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
   $<BUILD_INTERFACE:${IMGUI_ROOT}>

@@ -215,11 +215,7 @@ std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size )
         size > 3 ? (unsigned char)s[3] : (unsigned char)0,
     };
 
-    constexpr int lengths[] = {
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0
-    };
-    const auto len = lengths[buf[0] >> 3];
+    const auto len = utf8Length( buf[0] );
     const auto read = std::min( size_t( len + !len ), size ); // at least 1 byte
 
     constexpr int masks[]  = {0x00, 0x7f, 0x1f, 0x0f, 0x07};

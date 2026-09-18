@@ -124,6 +124,14 @@ jobs:
           ./scripts/cmake_install.sh ./meshlib_install
           ( cd ./meshlib_install ; zip -r ../meshlib_${{ matrix.package_name }} * )
 
+      - name: TEMPORARY - show the configure error
+        if: failure()
+        run: |
+          for f in $(find build -name CMakeError.log -o -name CMakeConfigureLog.yaml 2>/dev/null); do
+            echo "=== $f"
+            tail -120 "$f"
+          done
+
       - name: Build C++ examples
         run: |
           emcmake cmake \

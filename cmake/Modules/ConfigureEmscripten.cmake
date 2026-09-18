@@ -15,6 +15,10 @@ string(JOIN " " EXTRA_CXX_FLAGS
 # openvdb is built static here, see scripts/thirdparty/openvdb.sh
 set(OPENVDB_USE_STATIC_LIBS ON)
 
+# thirdparty is built PIC (scripts/build_thirdparty.sh); the PCH and the objects that use it
+# have to agree on the PIC level, so keep the whole build on one setting
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 string(JOIN " " EXTRA_EXE_LINKER_FLAGS
   "-s ALLOW_MEMORY_GROWTH=1"
   "-s LLD_REPORT_UNDEFINED=1"

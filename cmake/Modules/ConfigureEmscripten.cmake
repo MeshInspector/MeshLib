@@ -12,6 +12,9 @@ string(JOIN " " EXTRA_CXX_FLAGS
   "-sUSE_ZLIB" # TODO: make optional
 )
 
+# openvdb is built static here, see scripts/thirdparty/openvdb.sh
+set(OPENVDB_USE_STATIC_LIBS ON)
+
 string(JOIN " " EXTRA_EXE_LINKER_FLAGS
   "-s ALLOW_MEMORY_GROWTH=1"
   "-s LLD_REPORT_UNDEFINED=1"

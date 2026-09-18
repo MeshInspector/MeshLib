@@ -18,13 +18,6 @@ ENDIF()
 
 project(MeshLib_thirdparty CXX)
 
-IF(EMSCRIPTEN)
-  # emsdk 4.0.19 set this FALSE in its toolchain, so every add_library(... SHARED) came out
-  # static; 6.0.9 honours SHARED and builds side modules, whose link wants every input PIC -
-  # including the ports emsdk ships. Nothing here wants a side module.
-  set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS FALSE)
-ENDIF()
-
 # all binaries will be located in ./build/Release/bin
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})

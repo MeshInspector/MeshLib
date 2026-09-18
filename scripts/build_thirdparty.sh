@@ -97,7 +97,11 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   export CXXFLAGS=""
   export LDFLAGS=""
   [[ ${MR_EMSCRIPTEN_WASM2023:=} ]] || export MR_EMSCRIPTEN_WASM2023=1
+  # some thirdparty libs here are built shared and link others statically; a wasm .so is a
+  # side module, so wasm-ld wants every object in it PIC. 4.0.19 tolerated non-PIC archives,
+  # 6.0.9 rejects them (libzip.so against libmbedcrypto.a, and libjpeg-turbo).
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
+    -D CMAKE_POSITION_INDEPENDENT_CODE=ON \
     -D CMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN_ROOT}/cmake/Modules/Platform/Emscripten.cmake \
     -D CMAKE_FIND_ROOT_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} \
     -D MR_EMSCRIPTEN=1 \

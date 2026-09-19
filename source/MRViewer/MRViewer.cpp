@@ -683,9 +683,7 @@ int Viewer::launch( const LaunchParams& params )
 #endif
     }
     if ( params.close )
-        launchShut();
-
-    CommandLoop::removeCommands( true );
+        launchShut(); // closes the command loop too; with `close` false, the caller's own launchShut does
 
     return EXIT_SUCCESS;
 }
@@ -1001,6 +999,10 @@ void Viewer::launchEventLoop()
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
+        // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
+        if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
+            continue;
+
         if ( isAnimating )
         {
             const double minDuration = 1.0 / double( animationMaxFps );
@@ -1093,6 +1095,9 @@ void Viewer::launchShut()
 
     /// disconnect all slots before shared libraries with plugins are unloaded
     *signals_ = {};
+
+    // no loop will run them any more, and a blocking caller must be told so rather than wait
+    CommandLoop::removeCommands( true );
 }
 
 void Viewer::init_()
@@ -2291,7 +2296,8 @@ bool Viewer::windowShouldClose()
     if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
         return false;
 
-    if ( !interruptWindowClose() )
+    // without a window nothing can ask the user, and nothing draws the answer either
+    if ( !window || !interruptWindowClose() )
         return true;
 
     if ( window )

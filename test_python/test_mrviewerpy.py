@@ -16,24 +16,24 @@ from helper import *
 mrviewerpy = None
 
 
-# The viewer can only be launched from Python headless on Linux:
-#  - macOS: `launch()` runs the viewer on a detached thread, but GLFW/Cocoa insists on
-#    owning the main thread, so the first blocking round-trip never returns.
+# The in-process tests below drive a viewer on a background thread, which is Linux-only:
+#  - macOS runs the viewer on the calling thread instead (a GUI can run on the main thread
+#    only), so it is covered by the child-process test at the end of this module.
 #  - Windows CI has no OpenGL driver at all ("WGL: The driver does not appear to support
 #    OpenGL"), so window creation fails for both 4.3 and 3.3 and the viewer gives up.
 # Linux under `xvfb-run -a` gets a real GL 4.5 context from llvmpipe, which is enough for
 # both the command loop and `captureScreenShot`.
-pytestmark = [
-    pytest.mark.skipif(
-        platform.system() != "Linux",
-        reason="the viewer is only launchable from Python headless on Linux: macOS needs "
-        "the GUI on the main thread, Windows CI has no OpenGL driver",
-    ),
-    pytest.mark.skipif(
-        not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")),
-        reason="no DISPLAY/WAYLAND_DISPLAY, run the tests under `xvfb-run -a`",
-    ),
-]
+_has_display = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+background_viewer = pytest.mark.skipif(
+    platform.system() != "Linux" or not _has_display,
+    reason="a viewer on a background thread is exercised on Linux under a display only: "
+    "macOS runs it on the main thread, Windows CI has no OpenGL driver; run under `xvfb-run -a`",
+)
+# a launched viewer of either kind
+any_viewer = pytest.mark.skipif(
+    platform.system() not in ("Linux", "Darwin") or (platform.system() == "Linux" and not _has_display),
+    reason="a viewer is launched on Linux under a display and on macOS; Windows CI has no OpenGL driver",
+)
 
 # Generous: the first round-trip also covers viewer construction and GL init on a cold runner.
 LAUNCH_TIMEOUT_SEC = 180
@@ -240,6 +240,7 @@ def viewer():
     time.sleep(1)
 
 
+@background_viewer
 def test_blocking_round_trips(viewer):
     cube = mrmesh.makeCube(mrmesh.Vector3f.diagonal(1), mrmesh.Vector3f.diagonal(-0.5))
 
@@ -268,6 +269,7 @@ def test_blocking_round_trips(viewer):
         assert len(mrviewerpy.getSelectedObjects()) == 0
 
 
+@background_viewer
 def test_capture_screenshot(viewer, tmp_path):
     with bounded("scene setup"):
         mrviewerpy.clearScene()
@@ -287,6 +289,7 @@ def test_capture_screenshot(viewer, tmp_path):
         mrviewerpy.clearScene()
 
 
+@background_viewer
 def test_run_from_gui_thread(viewer):
     """The callable must actually run, on the GUI thread, and the call must come back."""
     ran_on = []
@@ -298,6 +301,7 @@ def test_run_from_gui_thread(viewer):
     assert ran_on[0] != threading.get_ident(), "the callable ran on the calling thread"
 
 
+@background_viewer
 def test_run_from_gui_thread_propagates_exception(viewer):
     """An exception raised inside the callable must reach the caller with its type intact."""
 
@@ -487,6 +491,7 @@ def _run_in_child(what, source, env_extra=None, timeout=CHILD_TIMEOUT_SEC):
     return _ChildRun(done.returncode, done.stdout, done.stderr, False)
 
 
+@background_viewer
 def test_blocking_call_without_launch_raises():
     """A blocking call issued with no viewer launched must fail, not park forever."""
     pytest.importorskip(
@@ -506,6 +511,7 @@ def test_blocking_call_without_launch_raises():
     )
 
 
+@background_viewer
 def test_blocking_call_after_shutdown_raises():
     """A blocking call issued after `shutdown()` must fail, not report a silent no-op."""
     global mrviewerpy
@@ -615,6 +621,7 @@ sys.exit(0)
 DROPPED_MESSAGE = "stopped before the command was executed"
 
 
+@background_viewer
 def test_command_dropped_by_shutdown_raises():
     """A command dropped while its caller waits must raise, not return as if it had run."""
     global mrviewerpy
@@ -670,6 +677,7 @@ def test_command_dropped_by_shutdown_raises():
 # so the report has to come from `launch()` rather than from the first command after it.
 
 
+@background_viewer
 def test_headless_launch_raises_and_survives():
     """`launch()` with no display must raise, and must not take the interpreter with it.
 
@@ -712,6 +720,7 @@ def test_headless_launch_raises_and_survives():
     )
 
 
+@background_viewer
 def test_call_after_failed_launch_raises():
     """After a failed `launch()`, the next viewer call must fail promptly, not deadlock."""
     global mrviewerpy
@@ -740,4 +749,142 @@ def test_call_after_failed_launch_raises():
     )
     assert run.returncode == 0 and "CALL_RAISED" in run.stdout, (
         "the call after a failed launch() did not raise\n" + run.report()
+    )
+
+
+# --- showViewer(), and the main-thread viewer of macOS ---------------------------------
+#
+# `showViewer()` hands the window to the user and returns once it is closed; on macOS it is
+# also where the window runs, on the calling thread, because a GUI can run on the main thread
+# only. The user is not here, so a helper thread closes the window through the loop. One
+# launch per process, so this is a child interpreter; the resource overrides are the same
+# story as in the shutdown tests above.
+
+_SHOW_VIEWER_SRC = r"""
+import os
+import pathlib
+import sys
+import threading
+import time
+
+import meshlib.mrmeshpy as mrmesh
+from meshlib import mrviewerpy
+
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Resources,
+    pathlib.Path(os.environ["MRVIEWERPY_RESOURCES"]),
+)
+mrmesh.SystemPath.overrideDirectory(
+    mrmesh.SystemPath.Directory.Fonts,
+    pathlib.Path(os.environ["MRVIEWERPY_FONTS"]),
+)
+
+params = mrviewerpy.ViewerLaunchParams()
+params.windowMode = mrviewerpy.ViewerLaunchParamsMode.TryHidden
+params.name = "MeshLib test_mrviewerpy showViewer"
+
+
+def on_main():
+    return threading.current_thread() is threading.main_thread()
+
+
+try:
+    mrviewerpy.launch(params, mrviewerpy.ViewerSetup())
+except RuntimeError as e:
+    print("LAUNCH_RAISED %s" % e, flush=True)
+    sys.exit(2)
+print("LAUNCHED", flush=True)
+
+viewer = mrviewerpy.Viewer()
+viewer.skipFrames(1)
+cube = mrmesh.makeCube(mrmesh.Vector3f.diagonal(1), mrmesh.Vector3f.diagonal(-0.5))
+mrviewerpy.addMeshToScene(cube, "cube")
+mrviewerpy.selectByName("cube")
+print("SELECTED %d" % len(mrviewerpy.getSelectedMeshes()), flush=True)
+gui_on_main = []
+mrviewerpy.runFromGUIThread(lambda: gui_on_main.append(on_main()))
+print("GUI_ON_MAIN %s" % gui_on_main[0], flush=True)
+mrviewerpy.clearScene()
+
+
+def close_later():
+    time.sleep(1.0)
+    mrviewerpy.Viewer().shutdown()
+    print("SHUTDOWN_SENT", flush=True)
+
+
+threading.Thread(target=close_later, daemon=True).start()
+mrviewerpy.showViewer()
+print("SHOW_RETURNED", flush=True)
+
+# The viewer is over: a command from any thread but the GUI one is refused now. On the GUI
+# thread `runCommandFromGUIThread` runs a command inline, loop or no loop, as for any C++
+# caller - and the id of a GUI thread that has exited can be handed to a new thread, which is
+# then taken for it. So probe from the main thread where the GUI thread was a background one,
+# and from a fresh thread on macOS, where the main thread itself is the GUI thread.
+outcome = []
+
+
+def probe():
+    try:
+        mrviewerpy.Viewer().skipFrames(1)
+    except RuntimeError as e:
+        outcome.append("AFTER_RAISED %s" % e)
+    else:
+        outcome.append("AFTER_RETURNED")
+
+
+if sys.platform == "darwin":
+    prober = threading.Thread(target=probe, daemon=True)
+    prober.start()
+    prober.join(30)
+else:
+    probe()
+print(outcome[0] if outcome else "AFTER_HUNG", flush=True)
+sys.exit(0 if outcome and outcome[0].startswith("AFTER_RAISED") else 3)
+"""
+
+
+@any_viewer
+def test_show_viewer_runs_until_shutdown():
+    """The calls are served, `showViewer()` returns on shutdown(), and the viewer is gone then."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    what = "showViewer() closed by a helper thread"
+    run = _run_in_child(
+        what,
+        _SHOW_VIEWER_SRC,
+        env_extra={
+            "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
+            "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
+        },
+    )
+    assert not run.timed_out, f"{what}: the child never finished\n" + run.report()
+    # a dead interpreter is a bug wherever it happens: this is the SIGTRAP-by-AppKit shape
+    # (exit 133) that the macOS refusal used to stand in for
+    assert run.returncode is not None and run.returncode >= 0, (
+        f"{what}: the interpreter died by signal\n" + run.report()
+    )
+    # no viewer at all is this environment, not the behaviour under test
+    if "LAUNCH_RAISED Viewer could not start" in run.stdout:
+        pytest.skip(f"{what}: the child could not start a viewer\n" + run.report())
+
+    # the GUI thread is the caller's own on macOS, a background one elsewhere
+    expected_gui_on_main = platform.system() == "Darwin"
+    assert f"GUI_ON_MAIN {expected_gui_on_main}" in run.stdout, (
+        "the viewer runs on the wrong thread for this platform\n" + run.report()
+    )
+    assert "SELECTED 1" in run.stdout, (
+        "the blocking calls before showViewer() did not all come back\n" + run.report()
+    )
+    assert "SHUTDOWN_SENT" in run.stdout and "SHOW_RETURNED" in run.stdout, (
+        "showViewer() did not return after shutdown() from another thread\n" + run.report()
+    )
+    assert run.returncode == 0 and "AFTER_RAISED" in run.stdout, (
+        "a command after showViewer() returned was served or hung: the viewer outlived it\n"
+        + run.report()
     )

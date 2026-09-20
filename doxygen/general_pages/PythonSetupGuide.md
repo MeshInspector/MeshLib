@@ -89,6 +89,26 @@ package. Installing `meshlib` later adds the viewer on top, and `pip uninstall m
 only the viewer part again. Both packages are versioned in lockstep: `meshlib` of a given version
 requires exactly `meshlib-core` of the same version.
 
+### Upgrading from 3.1.3 or older {#PythonSetupUpgrade}
+Releases up to 3.1.3 shipped a single `meshlib` wheel that owned every file `meshlib-core` provides
+now. Over such an installation `pip install --upgrade meshlib` reports success and leaves a broken
+package: pip installs the new `meshlib-core` first, then removes the old `meshlib` together with
+every file it used to own, including the `mrmeshpy` module that `meshlib-core` has just written,
+and finally installs the new viewer-only `meshlib`. Afterwards `pip show meshlib-core` prints the
+new version, but `from meshlib import mrmeshpy` fails with
+`ModuleNotFoundError: No module named 'meshlib.mrmeshpy'`.
+
+Uninstall the old version before installing the new one:
+```sh
+pip uninstall -y meshlib
+pip install meshlib
+```
+If the upgrade has already happened, a forced reinstall repairs it in place:
+```sh
+pip install --force-reinstall meshlib
+```
+Clean installs into a new environment, and upgrades between 3.1.4 and later versions, are not affected.
+
 ### Verify the installation {#PythonSetupVerify}
 `pip install` reporting success is not the same as a working install: the wheel is tens of megabytes of prebuilt native code, and it can install cleanly and still fail to load. This one command covers the whole chain — import the package, load the native module, run a real geometry call:
 ```sh
@@ -121,13 +141,14 @@ Output:
 
 ### Troubleshooting {#PythonSetupTroubleshooting}
 
-The failures new installations actually hit, with the message each one produces. One of them leaves `pip install` reporting success, which is what [Verify the installation](\ref PythonSetupVerify) is for.
+The failures installations actually hit, with the message each one produces. Two of them leave `pip install` reporting success, which is what [Verify the installation](\ref PythonSetupVerify) is for.
 
 | Path | Symptom | Cause | Fix |
 |------|---------|-------|-----|
 | Linux distribution Python, Homebrew Python on macOS | `pip install meshlib` stops before downloading anything with `error: externally-managed-environment`, then `× This environment is externally managed`. | Not a MeshLib problem: pip 23.0 and newer refuse to install any package into an interpreter the OS package manager owns (PEP 668, marked by a `EXTERNALLY-MANAGED` file next to the standard library). | Install into a virtual environment, as [Installation Process](\ref PythonSetupInstall) above shows. `pip install --break-system-packages meshlib` also installs, but into the system interpreter — prefer the virtual environment. |
 | Any | `ERROR: Could not find a version that satisfies the requirement meshlib (from versions: none)`, then `ERROR: No matching distribution found for meshlib`. | No published wheel matches this interpreter: the Python version is outside the range in [Prerequisites](\ref PythonSetupPrerequisites) above, the interpreter is 32-bit, or the platform has no wheel at all — on ARM64 Windows the wheels start at Python 3.11, so an older interpreter there needs the x64 build. | Check what pip is matching against — `python -c "import sys, sysconfig; print(sys.version, sysconfig.get_platform())"` — and install a Python listed in [Prerequisites](\ref PythonSetupPrerequisites). |
 | Any | Install and import both succeed, but a documented function is missing — ``AttributeError: module 'meshlib.mrmeshpy' has no attribute ...`` — or `pip show meshlib` prints a version well behind the latest. | The package requires Python 3.8 or newer overall, but each release's wheel tags are narrower than that and change over time. When no wheel of the newest release matches your interpreter, pip does not fail: it silently installs the newest *older* release that does. | `pip show meshlib`, and compare with the version on the [PyPI page](https://pypi.org/project/meshlib/). If it is behind, move to a Python version listed in [Prerequisites](\ref PythonSetupPrerequisites) and reinstall with `pip install --upgrade --force-reinstall meshlib`. |
+| Any, after `pip install --upgrade meshlib` over 3.1.3 or older | `pip` reports success and `pip show meshlib-core` prints the new version, but `from meshlib import mrmeshpy` fails with `ModuleNotFoundError: No module named 'meshlib.mrmeshpy'`; `site-packages/meshlib/` holds only `mrviewerpy` and a font. | Removing the old single-wheel `meshlib` deleted the files the new `meshlib-core` had just installed into the same directory, see [Upgrading from 3.1.3 or older](\ref PythonSetupUpgrade). | `pip install --force-reinstall meshlib`. |
 
 Anything not listed here: please open an issue at [MeshLib Issues](https://github.com/MeshInspector/MeshLib/issues), quoting the full `pip` output or traceback.
 

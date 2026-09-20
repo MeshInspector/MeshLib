@@ -3,20 +3,24 @@
 Builds the **Intel (`x86_64`)** macOS target of MeshLib on an **Apple Silicon (`arm64`)** self-hosted
 runner, using a **native arm64 toolchain that cross-targets x86_64**: cmake/ninja/clang run natively
 (fast compiles) and emit x86_64 via `-arch x86_64`, linking the x86_64 Homebrew at `/usr/local`. The
-binaries run on Intel Macs — and on the build host under Rosetta, which is how CI runs their tests.
+binaries run on Intel Macs — and on the build host under Rosetta, which is how CI tests them.
 
 ## Where it lives in CI
 
-- Job `macos-build-test-crossplatform` in
-  [`build-test-macos.yml`](../../.github/workflows/build-test-macos.yml) — a separate, gated copy of
-  the macOS build/test steps for the single `x64-cross` config.
-- Gated by `build_enable_macos_crossplatform` (in [`config.yml`](../../.github/workflows/config.yml)):
-  on by default. Add the `disable-macos-crossplatform` PR label to skip just this job (e.g. when the
-  self-hosted runner is down) so it can't hang the hosted macOS legs; `disable-macos` skips all macOS.
+- The `x64-cross` leg of the `macos-build-test` job in
+  [`build-test-macos.yml`](../../.github/workflows/build-test-macos.yml). The matrix is
+  [`matrix/macos-config.json`](../../.github/workflows/matrix/macos-config.json);
+  [`config.yml`](../../.github/workflows/config.yml) (step `set-macos-matrix`) selects it and **drops the
+  `x64-cross` leg when the PR carries the `disable-build-macos-crossplatform` label**, so a down or busy
+  self-hosted runner can never hang the hosted macOS legs (`disable-build-macos` skips all of macOS).
+  The cross-only steps — the shim setup, `-DMR_PLATFORM=APPLE_x86_64`, `Verify x86_64 output` — are
+  gated on `matrix.cross-osx-arch`, which only that leg sets.
 - Runs on a runner labelled `[self-hosted, macos, arm64, crossplatform-build]`, provisioned by
   [`provision-runner.sh`](provision-runner.sh).
 - Produces `meshlib_x64-cross.pkg`; [`test-distribution.yml`](../../.github/workflows/test-distribution.yml)
-  installs and smoke-tests it on a real Intel Mac.
+  installs and smoke-tests it on a real Intel Mac. That leg is gated by its `test_macos_crossplatform`
+  input (= `build_enable_macos_crossplatform` from `config.yml`), so disabling the cross build also
+  disables the distro test that would otherwise look for a `.pkg` that was never published.
 
 > **Intent:** once proven, this replaces the GitHub-hosted `macos-15-intel` x64 leg (Intel runners are
 > being retired). Until then both run, and both `.pkg`s are published (the cross one suffixed
@@ -30,6 +34,24 @@ binaries run on Intel Macs — and on the build host under Rosetta, which is how
 - x86_64 dependencies come from the **x86_64 Homebrew at `/usr/local`** (coexisting with the native
   arm64 Homebrew). [`ConfigureHomebrew.cmake`](../../cmake/Modules/ConfigureHomebrew.cmake) honors
   `-D HOMEBREW_PREFIX=/usr/local`.
+
+## What still runs under Rosetta
+
+Compilation is native; Rosetta is used for four things, only the last of which is fundamental:
+
+1. **The `/usr/local` Homebrew itself.** Its Portable Ruby is an x86_64 binary, so every `brew` call
+   there (install, `--prefix`, config) is translated, as are formula post-install hooks.
+2. **Configure-time execution of x86_64 programs:** `python3.10-config` / CMake's FindPython (the
+   `/usr/local` interpreter is x86_64) and CMake `try_run` probes.
+3. **The bindings step.** `scripts/mrbind/generate.mk` has no macOS target-arch flag; it yields an
+   x86_64 `mrmeshpy.so` because the x86_64 GNU `make` from `/usr/local` is first on `PATH` and its
+   children (`clang++`, `mrbind`) inherit the translated execution. It works, but it is not native —
+   a candidate follow-up is a native `make` plus an explicit `-arch x86_64`.
+4. **Running the Intel output** for `MRTest`, `MRTestC2`, the MeshViewer smoke test and the Python
+   tests. Intel code cannot run on Apple Silicon hardware any other way.
+
+A fully Rosetta-free runner would therefore be build-only (different x86_64 dependency source, a
+toolchain file with pre-seeded `try_run` results) with all testing on real Intel hardware.
 
 ## Critical gotchas (why a naive attempt silently falls back to Rosetta)
 
@@ -45,14 +67,43 @@ binaries run on Intel Macs — and on the build host under Rosetta, which is how
 4. **`CMAKE_SYSTEM_PROCESSOR` stays `arm64`** (it reflects the host, since cmake is native). Harmless
    for MeshLib's own SIMD (gated on the target macros `__x86_64__`/`__aarch64__`); `MR_PLATFORM` is
    set explicitly to compensate for the label.
-5. Configure-time `try_run` probes execute x86_64 test binaries, which the OS runs via Rosetta
-   transparently. Only these brief probes touch Rosetta; the bulk compilation is native.
+5. **A translated parent makes every child translated.** Anything started from an x86_64 process
+   (the `/usr/local` `make`, a translated shell) runs `/usr/bin/clang++` as x86_64 too. Keep the
+   compile driven by the native `ninja` (gotcha 1); this is also why the bindings step is translated.
 
 ## Provisioning a runner
 
-Run [`provision-runner.sh`](provision-runner.sh) once per host (see its header for prerequisites). It
-ensures a native arm64 Homebrew (cmake + ninja), Rosetta 2, and an x86_64 Homebrew at `/usr/local`
-with the `requirements/macos.txt` formulae (`--prewarm` also installs the binding-generation deps).
+Two accounts are involved: an **administrator** (has sudo) and the CI **service account** (`runner`, no
+sudo, runs the jobs). Run [`provision-runner.sh`](provision-runner.sh) as the service account; wherever
+root is required it prints the exact one-time command for the administrator and exits 1:
+
+1. **Rosetta 2** — `sudo softwareupdate --install-rosetta --agree-to-license`. Needed *before* the first
+   `/usr/local` brew command (brew's Ruby there is x86_64).
+2. **`/usr/local` skeleton owned by the service account** — `sudo mkdir -p /usr/local/{…}` plus
+   `sudo chown -R runner:staff /usr/local/{…}` over Homebrew's directory set (the script prints the
+   full list). `/usr/local` itself stays `root:wheel`.
+
+The service account's re-run then `git clone`s Homebrew into `/usr/local/Homebrew`, links
+`/usr/local/bin/brew` and runs `brew update --force --quiet`. The official installer is deliberately
+not used: since 2026-09 it is Apple-Silicon-only (it aborts on an x86_64 `uname`, and natively it only
+targets `/opt/homebrew`) and it hard-requires sudo. No `arch -x86_64` is needed anywhere: brew at
+`/usr/local` selects its x86_64 Ruby by prefix and serves Intel bottles regardless of the caller's
+architecture (`/usr/local/bin/brew config` reports `macOS: …-x86_64`), which is exactly how the CI shim
+(`exec /usr/local/bin/brew`) invokes it. `--prewarm` installs the `requirements/macos.txt` formulae and
+the binding-generation deps up front.
+
+## Support horizon
+
+Homebrew 7.0 (2026-09-13) moved Intel macOS to **Tier 3: no new Intel bottles**. Existing bottles keep
+installing, but an updated formula may build from source — under Rosetta on this runner, which for
+`llvm@22` means hours — and Homebrew intends to stop running on Intel in or after September 2027. This
+applies equally to the GitHub-hosted `macos-15-intel` leg, which installs the same Intel bottles.
+Consequences:
+
+- Keep the runner's `/usr/local` formulae pinned: CI already sets `HOMEBREW_NO_AUTO_UPDATE=1` and
+  `HOMEBREW_NO_INSTALL_UPGRADE=1`; never `brew upgrade` that prefix by hand.
+- `brew doctor` on `/usr/local` prints an expected Tier-3 notice; it is not an error.
+- The Intel target as a whole has a bounded life; plan its retirement alongside the runner.
 
 ## Reproducing locally
 
@@ -82,7 +133,7 @@ this). The thirdparty-from-source libraries build the same way (native tools + t
 
 ## Source changes this requires
 
-Everything else is CI wiring (the workflow job, the `config.yml` gate, the runner shim in the
+Everything else is CI wiring (the matrix JSON, the `config.yml` gate, the runner shim in the
 workflow); the only non-CI source changes are:
 
 | Change | File |

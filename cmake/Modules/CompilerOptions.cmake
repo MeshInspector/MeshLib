@@ -186,6 +186,16 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
+# Clang 20+ conflicts with fmt prior to 12
+# https://github.com/fmtlib/fmt/issues/4177
+# https://github.com/fmtlib/fmt/issues/4247
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 20)
+  find_package(fmt QUIET)
+  IF(NOT fmt_VERSION OR fmt_VERSION VERSION_LESS 12)
+    add_compile_definitions(FMT_CONSTEVAL=)
+  ENDIF()
+ENDIF()
+
 # Apple Clang 17 conflicts with OpenVDB 12.1
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 17)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-c++23-attribute-extensions")
@@ -207,6 +217,15 @@ IF(MSVC)
   string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}")
   string(REPLACE "/Zi" "/Z7" CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO}")
   string(REPLACE "/Zi" "/Z7" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+
+  # Emit debug symbols in Release as well, matching `common.props`, which enables them in every
+  # configuration; they are packed into a separate archive, see `scripts/split_install_pdb.py`.
+  # `/OPT:REF /OPT:ICF` are the defaults that `/DEBUG` turns off, so the binaries stay unchanged.
+  set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /Z7")
+  set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /Z7")
+  FOREACH(TARGET_KIND EXE SHARED MODULE)
+    set(CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE "${CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
+  ENDFOREACH()
 ENDIF()
 
 # macOS: force Clang to use system libc++

@@ -1,6 +1,5 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRVertDuplication.h>
-#include <MRMesh/MRVector3.h>
 #include <MRMesh/MRMeshBuilderTypes.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshComponents.h>
@@ -149,28 +148,32 @@ TEST( MRMesh, duplicateVertexOppositeOrientedTri )
     EXPECT_EQ( dups.size(), 0 );
 }
 
-// a fan around #0 with two continuation options from the shared rim vertex #2:
-// folded triangle 1_f (normal opposite to 0_f) and flat triangle 2_f (normal equal to 0_f);
-// with given coordinates the walk prefers the flat continuation (maximal normals' dot-product),
-// so the folded triangle is fully detached; without coordinates the first option by face id wins instead
-TEST( MRMesh, duplicateVertexSmoothContinuation )
+// a fan around #0 with two continuation options from the shared rim vertex #2;
+// the given predicate prefers the triangle with the remaining vertex #4,
+// so the other continuation 1_f is fully detached; without the predicate the first option by face id wins instead
+TEST( MRMesh, duplicateVertexPreferredContinuation )
 {
     Triangulation initT;
     initT.push_back( { 0_v, 1_v, 2_v } ); //0_f
-    initT.push_back( { 0_v, 2_v, 3_v } ); //1_f folded
-    initT.push_back( { 0_v, 2_v, 4_v } ); //2_f flat
-
-    VertCoords points;
-    points.push_back( Vector3f( 0, 0, 0 ) );  //0
-    points.push_back( Vector3f( 1, 0, 0 ) );  //1
-    points.push_back( Vector3f( 0, 1, 0 ) );  //2
-    points.push_back( Vector3f( 1, 1, 0 ) );  //3
-    points.push_back( Vector3f( -1, 1, 0 ) ); //4
+    initT.push_back( { 0_v, 2_v, 3_v } ); //1_f
+    initT.push_back( { 0_v, 2_v, 4_v } ); //2_f
 
     {
         auto t = initT;
+        auto prefer4 = []( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )
+        {
+            if ( e1 == 0_v )
+            {
+                // the branching during the walk around #0: the reference triangle is (2, 0, 1) = 0_f up to rotation,
+                // and the candidates are (0, 2, 3) = 1_f and (0, 2, 4) = 2_f
+                EXPECT_EQ( e0, 2_v );
+                EXPECT_EQ( vRef, 1_v );
+                EXPECT_EQ( vBest, 3_v );
+            }
+            return vCand == 4_v;
+        };
         std::vector<VertDuplication> dups;
-        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, &points ), 2 );
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, prefer4 ), 2 );
         ASSERT_EQ( dups.size(), 2 );
         EXPECT_EQ( dups[0].srcVert, 0_v );
         EXPECT_EQ( dups[0].dupVert, 5_v );
@@ -182,7 +185,7 @@ TEST( MRMesh, duplicateVertexSmoothContinuation )
 
         // the result is manifold
         dups.clear();
-        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, &points ), 0 );
+        EXPECT_EQ( duplicateNonManifoldVertices( t, nullptr, &dups, {}, prefer4 ), 0 );
     }
     {
         auto t = initT;

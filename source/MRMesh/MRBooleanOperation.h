@@ -51,6 +51,8 @@ enum class BooleanOperation
   * \details Structure to easily map topology of MR::boolean input meshes to result mesh
   *
   * This structure allows to map faces, vertices and edges of mesh `A` and mesh `B` input of MR::boolean to result mesh topology primitives
+  * \snippet cpp-examples/MeshBoolean.dox.cpp 1
+  * \snippet cpp-examples/MeshBoolean.dox.cpp 2
   * \sa \ref MR::boolean
   */
 struct BooleanResultMapper
@@ -109,6 +111,9 @@ struct BooleanInternalParameters
     std::vector<EdgeLoop>* optionalOutCut{ nullptr };
     /// If true uses graphcut for inside/outside separation
     bool graphCutSeparation{ false };
+    /// Float-to-int converters of both meshes in the space of mesh A; if given, the inside/outside
+    /// test of the components without cuts is made by the precise orient3d predicate
+    const CoordinateConverters* converters{ nullptr };
 };
 
 /// Perform boolean operation on cut meshes

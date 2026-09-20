@@ -6,7 +6,6 @@ SUBMODULES=(
     thirdparty/imgui
     thirdparty/mrbind
     thirdparty/mrbind-pybind11
-    thirdparty/parallel-hashmap
 )
 
 if [[ $1 != --skip-prebuilt-thirdparty ]]; then
@@ -24,6 +23,7 @@ if [[ $1 != --skip-prebuilt-thirdparty ]]; then
         thirdparty/libzip
         thirdparty/onetbb
         thirdparty/OpenCTM-git
+        thirdparty/parallel-hashmap
         thirdparty/spdlog
         thirdparty/tinygltf
         thirdparty/tinyxml2

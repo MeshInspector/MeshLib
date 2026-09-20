@@ -24,7 +24,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto p = obj->polyline() )
+            if ( auto p = obj->polylinePtr() )
                 clonePolyline_ = std::make_shared<Polyline3>( *p );
         }
     }
@@ -82,8 +82,17 @@ public:
     {
         if ( !objLines_ )
             return;
-        if ( auto p = objLines_->polyline() )
+        if ( auto p = objLines_->polylinePtr() )
             clonePoints_ = p->points;
+    }
+
+    /// use this constructor to remember object's lines points and immediate set new value
+    ChangePolylinePointsAction( std::string name, const std::shared_ptr<ObjectLines>& obj, VertCoords && newPoints ) :
+        objLines_{ obj },
+        clonePoints_{ std::move( newPoints ) },
+        name_{ std::move( name ) }
+    {
+        action( HistoryAction::Type::Redo );
     }
 
     virtual std::string name() const override
@@ -134,7 +143,7 @@ public:
     {
         if ( !objLines_ )
             return;
-        if ( auto p = objLines_->polyline() )
+        if ( auto p = objLines_->polylinePtr() )
             cloneTopology_ = p->topology;
     }
 
@@ -189,7 +198,7 @@ public:
     {
         if ( obj )
         {
-            if ( auto m = obj->polyline() )
+            if ( auto m = obj->polylinePtr() )
                 if ( m->points.size() > pointId_ )
                     safeCoords_ = m->points[pointId_];
         }

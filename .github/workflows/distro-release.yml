@@ -57,6 +57,7 @@ jobs:
     with:
       docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
       version_tag: ${{ needs.config.outputs.release_tag }}
+      upload_artifacts: true
 
   windows-build-test:
     needs: [ config ]
@@ -100,14 +101,25 @@ jobs:
       - name: Rename Distributives
         run: |
           shopt -s nullglob
+          VERSION="${{ needs.config.outputs.app_version }}"
           for PKG_FILE in MeshLibDist*.zip ; do
-            case "$PKG_FILE" in
-              # Keep the historical layout for the iterator-debug archive:
-              # MeshLibDist-IteratorDebug.zip -> MeshLibDist_<version>-IteratorDebug.zip
-              *-IteratorDebug.zip) mv "$PKG_FILE" "${PKG_FILE/Dist/Dist_${{ needs.config.outputs.app_version }}}" ;;
-              # Per-VS archives: MeshLibDistVS19.zip -> MeshLibDistVS19_<version>.zip
-              *) mv "$PKG_FILE" "${PKG_FILE%.zip}_${{ needs.config.outputs.app_version }}.zip" ;;
+            # An arm64 archive is named like its x64 sibling with `-arm64` appended
+            # last, so strip that suffix first and put it back at the end.
+            NAME="${PKG_FILE%.zip}"
+            ARCH_SUFFIX=""
+            case "$NAME" in
+              *-arm64) NAME="${NAME%-arm64}" ; ARCH_SUFFIX="-arm64" ;;
             esac
+            case "$NAME" in
+              # Keep the historical layout for the iterator-debug archives:
+              # MeshLibDist-IteratorDebug[-PDB] -> MeshLibDist_<version>-IteratorDebug[-PDB]
+              *-IteratorDebug|*-IteratorDebug-PDB) NAME="${NAME/Dist/Dist_${VERSION}}" ;;
+              # Companion symbols archives: MeshLibDistVS26-PDB -> MeshLibDistVS26_<version>-PDB
+              *-PDB) NAME="${NAME%-PDB}_${VERSION}-PDB" ;;
+              # Per-VS archives: MeshLibDistVS26 -> MeshLibDistVS26_<version>
+              *) NAME="${NAME}_${VERSION}" ;;
+            esac
+            mv "$PKG_FILE" "${NAME}${ARCH_SUFFIX}.zip"
           done
 
       - name: Upload Distributives
@@ -132,4 +144,3 @@ jobs:
         with:
           name: Distributives*
           failOnError: false
-

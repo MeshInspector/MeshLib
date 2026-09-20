@@ -7,3 +7,8 @@
 #if defined( MR_USE_CMAKE_CONFIGURE_FILE ) && __has_include( "config_cmake.h" )
 #include "config_cmake.h"
 #endif
+
+// written by scripts/make_install_folder.py, present in distribution packages only
+#if __has_include( "config_dist.h" )
+#include "config_dist.h"
+#endif

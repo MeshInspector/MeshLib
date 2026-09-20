@@ -54,10 +54,21 @@ if args.cmd:
     python_cmds = [str(args.cmd).strip()]
 elif args.multi_cmd:
     with open(os.path.dirname(os.path.realpath(__file__)) + "/mrbind-pybind11/python_versions.txt") as file:
-        if platform.system() == "Windows":
-            python_cmds = ["py -" + line.rstrip() for line in file]
-        else:
-            python_cmds = ["python" + line.rstrip() for line in file]
+        versions = [line.rstrip() for line in file if line.strip()]
+    if platform.system() == "Windows":
+        # Not every listed version exists on every host: python.org ships no win-arm64
+        # installer before 3.11, so ask the launcher which ones are actually here.
+        installed = []
+        for v in versions:
+            probe = subprocess.run(f"py -{v} --version", shell=True,
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if probe.returncode == 0:
+                installed.append(v)
+            else:
+                print(f"Python {v} is not installed, skipping")
+        python_cmds = ["py -" + v for v in installed]
+    else:
+        python_cmds = ["python" + v for v in versions]
 
 directory = os.getcwd()
 try:

@@ -2,13 +2,18 @@
 #include "MRRibbonConstants.h"
 #include "MRImGui.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRString.h"
+#include "MRMesh/MRStringConvert.h"
+#include <algorithm>
+#include <cctype>
 
 namespace MR
 {
 
-void ShortcutManager::setShortcut( const ShortcutKey& key, const ShortcutCommand& command )
+void ShortcutManager::setShortcut( const Shortcut& shortcut, const ShortcutAction& action )
 {
-    auto newMapKey = mapKeyFromKeyAndMod( key, false );
+    const ShortcutCommand command{ shortcut.category, action.name, action.func, action.repeatable };
+    auto newMapKey = mapKeyFromKeyAndMod( shortcut.key, false );
     auto [backMapIt, insertedToBackMap] = backMap_.insert( { command.name,newMapKey } );
     if ( !insertedToBackMap )
     {
@@ -185,6 +190,109 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
         res += getModifierString( GLFW_MOD_SUPER ) + std::string( "+" );
     if ( respectKey )
         res += getKeyString( key.key );
+    return res;
+}
+
+std::optional<int> ShortcutManager::parseKey( std::string_view name )
+{
+    // GLFW codes of letters, digits and punctuation are their upper-case ASCII codes
+    if ( name.size() == 1 && std::isprint( (unsigned char)name[0] ) && name[0] != ' ' )
+        return std::toupper( (unsigned char)name[0] );
+
+    // "Num 7" of getKeyString and "Num7" are the same key
+    std::string s;
+    for ( char c : name )
+        if ( c != ' ' )
+            s += c;
+
+    if ( s == "Delete" )        return getGlfwKeyDelete();
+    if ( s == "ForwardDelete" ) return GLFW_KEY_DELETE;
+    if ( s == "Backspace" ) return GLFW_KEY_BACKSPACE;
+    if ( s == "Enter" || s == "Return" ) return GLFW_KEY_ENTER;
+    if ( s == "Escape" )    return GLFW_KEY_ESCAPE;
+    if ( s == "Space" )     return GLFW_KEY_SPACE;
+    if ( s == "Tab" )       return GLFW_KEY_TAB;
+    if ( s == "Home" )      return GLFW_KEY_HOME;
+    if ( s == "End" )       return GLFW_KEY_END;
+    if ( s == "PageUp" )    return GLFW_KEY_PAGE_UP;
+    if ( s == "PageDown" )  return GLFW_KEY_PAGE_DOWN;
+    if ( s == "Pause" )     return GLFW_KEY_PAUSE;
+    if ( s == "CapsLock" )  return GLFW_KEY_CAPS_LOCK;
+    if ( s == "Up" || s == "ArrowUp" )       return GLFW_KEY_UP;
+    if ( s == "Down" || s == "ArrowDown" )   return GLFW_KEY_DOWN;
+    if ( s == "Left" || s == "ArrowLeft" )   return GLFW_KEY_LEFT;
+    if ( s == "Right" || s == "ArrowRight" ) return GLFW_KEY_RIGHT;
+
+    if ( s.size() == 4 && s.starts_with( "Num" ) && std::isdigit( (unsigned char)s[3] ) )
+        return GLFW_KEY_KP_0 + ( s[3] - '0' );
+
+    if ( s.size() >= 2 && s[0] == 'F' )
+    {
+        int n = 0;
+        for ( size_t i = 1; i < s.size(); ++i )
+        {
+            if ( !std::isdigit( (unsigned char)s[i] ) )
+                return {};
+            n = 10 * n + ( s[i] - '0' );
+        }
+        if ( n >= 1 && n <= 25 )
+            return GLFW_KEY_F1 + ( n - 1 );
+    }
+    return {};
+}
+
+std::optional<int> ShortcutManager::parseModifier( std::string_view name )
+{
+    const auto s = toLower( std::string( name ) );
+    if ( s == "primary" )   return getGlfwModPrimaryCtrl();
+    if ( s == "secondary" ) return getGlfwModPrimaryCtrl() == GLFW_MOD_SUPER ? GLFW_MOD_CONTROL : GLFW_MOD_SUPER;
+    if ( s == "ctrl" )  return GLFW_MOD_CONTROL;
+    if ( s == "shift" ) return GLFW_MOD_SHIFT;
+    if ( s == "alt" )   return GLFW_MOD_ALT;
+    if ( s == "super" ) return GLFW_MOD_SUPER;
+    return {};
+}
+
+std::optional<ShortcutManager::Category> ShortcutManager::parseCategory( std::string_view name )
+{
+    for ( int i = 0; i < int( Category::Count ); ++i )
+        if ( trimRight( categoryNames[i] ) == name ) // "Selection " has a trailing space
+            return Category( i );
+    return {};
+}
+
+std::optional<ShortcutKey> ShortcutManager::parseShortcutKey( std::string_view keys )
+{
+    keys = trim( keys );
+    if ( keys.empty() )
+        return {};
+
+    std::vector<std::string_view> parts;
+    split( keys, "+", [&parts] ( std::string_view part ) { parts.push_back( part ); return false; } );
+
+    // every part but the last is a modifier;
+    // an empty last part means the key "+" itself, e.g. "Ctrl++", where the doubled separator leaves one more empty part to drop
+    auto keyName = parts.back();
+    parts.pop_back();
+    if ( keyName.empty() )
+    {
+        keyName = "+";
+        if ( !parts.empty() && parts.back().empty() )
+            parts.pop_back();
+    }
+
+    ShortcutKey res;
+    const auto key = parseKey( trim( keyName ) );
+    if ( !key )
+        return {};
+    res.key = *key;
+    for ( auto part : parts )
+    {
+        const auto mod = parseModifier( trim( part ) );
+        if ( !mod )
+            return {};
+        res.mod |= *mod;
+    }
     return res;
 }
 

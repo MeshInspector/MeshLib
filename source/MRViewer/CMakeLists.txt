@@ -74,6 +74,13 @@ IF(NOT WIN32 AND NOT EMSCRIPTEN)
   target_link_libraries(${PROJECT_NAME} PRIVATE clip::clip)
 ENDIF()
 
+IF(MSVC)
+  # C4746 on ARM64 from WRL's RuntimeClass refcounting; no `#pragma warning` reaches it
+  set_source_files_properties("${CMAKE_CURRENT_SOURCE_DIR}/MRTouchpadWin32Handler.cpp" PROPERTIES
+    COMPILE_FLAGS "/wd4746"
+  )
+ENDIF()
+
 IF(APPLE)
   set_source_files_properties(${OBJCPP_SOURCES} PROPERTIES
     COMPILE_FLAGS "-x objective-c++"

@@ -14,7 +14,8 @@ runs:
     # The pybind11 shim filename (pybind11nonlimitedapi_meshlib_X.Y.{dll,so,dylib})
     # encodes the Python version the bindings target; pip-build jobs produce
     # one shim per version. Run verify against each shim using the matching
-    # interpreter; skip versions whose interpreter isn't on the runner.
+    # interpreter, from PATH or from uv's launcher directory; skip versions
+    # that have neither.
 
     - name: Verify meshlib.mrmeshpy import (Windows)
       if: runner.os == 'Windows'
@@ -68,6 +69,12 @@ runs:
         for shim in "${shims[@]}"; do
           ver=$(basename "$shim" | sed -E 's/^libpybind11nonlimitedapi_meshlib_([0-9]+\.[0-9]+)\.(so|dylib)$/\1/')
           py_cmd="python${ver}"
+          if ! command -v "$py_cmd" >/dev/null 2>&1 && command -v uv >/dev/null 2>&1; then
+            uv_bin=$(uv python dir --bin)
+            if [ -x "$uv_bin/$py_cmd" ]; then
+              py_cmd="$uv_bin/$py_cmd"
+            fi
+          fi
           echo
           echo "===== verify with $py_cmd  (shim: $(basename "$shim")) ====="
           if ! command -v "$py_cmd" >/dev/null 2>&1; then

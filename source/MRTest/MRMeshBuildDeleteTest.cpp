@@ -1,5 +1,8 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRMeshTopology.h>
+#include <MRMesh/MRMesh.h>
+#include <MRMesh/MRMeshFixer.h>
+#include <MRMesh/MRVertDuplication.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRExpandShrink.h>
 #include <MRMesh/MRRegionBoundary.h>
@@ -103,6 +106,67 @@ TEST(MRMesh, BuildQuadDelete)
     EXPECT_EQ( topology.numValidFaces(), 0 );
     EXPECT_EQ( topology.getValidVerts().count(), 0 );
     EXPECT_EQ( topology.computeNotLoneUndirectedEdges(), 0 );
+}
+
+TEST(MRMesh, DuplicateMultiHoleVertices)
+{
+    // fan of 6 triangles around central vertex #0
+    Triangulation t{
+        { 0_v, 1_v, 2_v },
+        { 0_v, 2_v, 3_v },
+        { 0_v, 3_v, 4_v },
+        { 0_v, 4_v, 5_v },
+        { 0_v, 5_v, 6_v },
+        { 0_v, 6_v, 1_v }
+    };
+    Mesh mesh;
+    mesh.points = {
+        {  0.f,  0.f, 0.f },
+        {  2.f,  0.f, 0.f },
+        {  1.f,  2.f, 0.f },
+        { -1.f,  2.f, 0.f },
+        { -2.f,  0.f, 0.f },
+        { -1.f, -2.f, 0.f },
+        {  1.f, -2.f, 0.f }
+    };
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 6 );
+
+    // delete every other face, leaving three triangle fans joined at the central vertex only
+    FaceBitSet fs( 6 );
+    fs.set( 1_f );
+    fs.set( 3_f );
+    fs.set( 5_f );
+    mesh.topology.deleteFaces( fs );
+    EXPECT_EQ( mesh.topology.numValidVerts(), 7 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 3 );
+
+    // fromTriangles cannot attach the third fan to the central vertex and skips one triangle
+    auto lossyTopology = MeshBuilder::fromTriangles( mesh.topology.getTriangulation() );
+    EXPECT_EQ( lossyTopology.numValidFaces(), 2 );
+
+    // duplication of the central vertex alone makes the reconstruction lossless
+    Mesh fixed = mesh;
+    std::vector<MeshBuilder::VertDuplication> dups;
+    EXPECT_EQ( duplicateMultiHoleVertices( fixed, 2, &dups ), 1 );
+    ASSERT_EQ( dups.size(), 1 );
+    EXPECT_EQ( dups[0].srcVert, 0_v );
+    EXPECT_EQ( dups[0].dupVert, 7_v );
+    EXPECT_EQ( fixed.points.size(), 8 );
+    EXPECT_EQ( fixed.topology.numValidVerts(), 8 );
+    EXPECT_EQ( fixed.topology.numValidFaces(), 3 );
+    EXPECT_EQ( duplicateMultiHoleVertices( fixed, 2, &dups ), 0 );
+    EXPECT_TRUE( dups.empty() );
+
+    const auto fixedTriangulation = fixed.topology.getTriangulation();
+    auto rebuiltTopology = MeshBuilder::fromTriangles( fixedTriangulation );
+    EXPECT_EQ( rebuiltTopology.numValidFaces(), 3 );
+    EXPECT_EQ( rebuiltTopology.getTriangulation(), fixedTriangulation );
+
+    // classic version duplicates the central vertex twice, leaving a single fan everywhere
+    EXPECT_EQ( duplicateMultiHoleVertices( mesh ), 2 );
+    EXPECT_EQ( mesh.points.size(), 9 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 3 );
 }
 
 TEST(MRMesh, FlipEdge) 

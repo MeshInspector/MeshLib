@@ -3,6 +3,7 @@
 #include "MRMesh/MRObjectFactory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRFmt.h"
+#include "MRIRenderObject.h"
 
 #include <cassert>
 

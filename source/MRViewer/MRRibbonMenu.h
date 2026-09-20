@@ -94,6 +94,14 @@ public:
     /// updates status of item if it was changed outside of menu
     MRVIEWER_API void updateItemStatus( const std::string& itemName );
 
+    /// binds given shortcut to the ribbon item with given name
+    MRVIEWER_API virtual void addRibbonItemShortcut( const std::string& itemName, const Shortcut& shortcut );
+
+    /// deprecated: pass the category in (shortcut)
+    [[deprecated( "use addRibbonItemShortcut( itemName, Shortcut )" )]]
+    void addRibbonItemShortcut( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category )
+        { addRibbonItemShortcut( itemName, { key, category } ); }
+
     /// returns index of active tab in RibbonSchemaHolder::schema().tabsOrder
     int getActiveTabIndex() const { return activeTabIndex_; }
 
@@ -203,9 +211,16 @@ protected:
     MRVIEWER_API virtual bool drawCollapsingHeaderTransform_() override;
     MRVIEWER_API virtual bool drawTransformContextMenu_( const std::vector<std::shared_ptr<Object>>& selected ) override;
 
-    MRVIEWER_API virtual void addRibbonItemShortcut_( const std::string& itemName, const ShortcutKey& key, ShortcutCategory category );
-
     MRVIEWER_API virtual void setupShortcuts_() override;
+
+    /// returns the tags of the item shortcuts this application wants to have, { "base", "history" } by default;
+    /// override to switch off a group of them
+    MRVIEWER_API virtual HashSet<std::string> allowedShortcutTags_() const;
+
+    /// binds the default shortcuts of the items having only allowed tags, in the order of their appearance in the UI,
+    /// so of two items claiming the same key the later one wins; runs after setupShortcuts_ and takes over the keys bound there;
+    /// call it again after shortcutManager_->clear()
+    MRVIEWER_API void registerItemsShortcuts_( const HashSet<std::string>& allowedTags );
 
     MRVIEWER_API virtual void drawShortcutsWindow_() override;
     // reads files with panel description

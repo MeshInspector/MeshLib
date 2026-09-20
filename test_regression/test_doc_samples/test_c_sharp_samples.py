@@ -32,13 +32,14 @@ from pytest_check import check
                                           id="MeshBoolean"),
                             pytest.param({'sample': "MeshDecimateExample",
                                            'input_files': ['mesh.stl'],
-                                           'output_files': ['decimated_mesh_cs.stl']
+                                           'output_files': ['decimated_mesh_cs.stl'],
+                                           'args': ['mesh.stl']
                                            },
                                           id="MeshDecimate"),
                             pytest.param({'sample': "MeshOffsetExample",
                                            'input_files': ['mesh.stl'],
                                            'output_files': ['mesh_offset.stl'],
-                                           'args': ['2.5']
+                                           'args': ['mesh.stl', '2.5']
                                            },
                                           id="MeshOffset"),
                             pytest.param({'sample': "MeshFillHoleExample",

@@ -49,6 +49,12 @@ inputs:
       `install-msys2-mrbind` puts it). Override when MSYS2 is installed
       elsewhere -- e.g. `C:\msys64_meshlib_mrbind` for runners pre-baked
       with the bat script's default layout.
+  msys2-env:
+    required: false
+    default: 'clang64'
+    description: >
+      Windows-only. MSYS2 environment to build in: `clang64` targets x86_64,
+      `clangarm64` targets aarch64. Also selects the `strip` used below.
 
 runs:
   using: composite
@@ -78,6 +84,7 @@ runs:
       shell: bash
       env:
         MSYS2_DIR: ${{ inputs.msys2-dir }}
+        MSYS2_ENV: ${{ inputs.msys2-env }}
       run: |
         if [ "$RUNNER_OS" = Windows ]; then
           # cmd.exe needs a Windows-style path; `call` + `/c` propagate the
@@ -119,7 +126,7 @@ runs:
         case "$RUNNER_OS" in
           Windows)
             # Git Bash has no `strip` of its own, so use MSYS2's.
-            STRIP_EXE="$(cygpath -u '${{ inputs.msys2-dir }}')/clang64/bin/strip.exe"
+            STRIP_EXE="$(cygpath -u '${{ inputs.msys2-dir }}')/${{ inputs.msys2-env }}/bin/strip.exe"
             "$STRIP_EXE" "${{ inputs.mrbind-dir }}"/build/{mrbind,mrbind_gen_c,mrbind_gen_csharp}.exe ;;
           macOS)
             # -S drops debug symbols but keeps the dynamic symbol table.

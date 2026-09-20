@@ -2,7 +2,7 @@
 #include <MRCMesh/MRPointsLoadSettings.h>
 #include <MRCMesh/MRVector.h>
 #include <MRCMesh/MRPointCloud.h>
-#include <MRCMesh/MRTerrainTriangulation.h>
+#include <MRCMesh/MRDelaunayTriangulationXY.h>
 #include <MRCMesh/MRMeshSave.h>
 #include <MRCMesh/MRSaveSettings.h>
 #include <MRCMesh/MRColor.h>
@@ -32,10 +32,7 @@ int main( void )
         goto fail_load; // error while loading file
     }
 
-    MR_expected_MR_Mesh_std_string* triangulationRes = MR_terrainTriangulation(
-        MR_PassBy_Copy,
-        MR_VertCoords_GetMutable_vec_( MR_PointCloud_GetMutable_points( pc ) ),
-        MR_PassBy_DefaultArgument, NULL );
+    MR_expected_MR_Mesh_std_string* triangulationRes = MR_delaunayTriangulationXY_const_MR_PointCloud_ref( pc, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( triangulationRes );
     if ( !mesh )
     {

@@ -12,33 +12,39 @@
 namespace MR
 {
 
-static EdgeLoop trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region /*= nullptr */, bool left, Turn turn )
+static void trackBoundaryLoop( const MeshTopology& topology, EdgeId e0, EdgeLoop& outLoop, const FaceBitSet* region, bool left, Turn turn )
 {
-    std::function<EdgeId( EdgeId )> next;
-    if ( left )
-        next = [&] ( EdgeId e ) { return topology.nextLeftBd( e, region, turn ); };
-    else
-        next = [&] ( EdgeId e ) { return topology.prevLeftBd( e.sym(), region, turn ).sym(); };
-
-    EdgeLoop res;
+    outLoop.clear();
     auto e = e0;
     do
     {
-        res.push_back( e );
-        e = next( e );
+        outLoop.push_back( e );
+        e = left ? topology.nextLeftBd( e, region, turn ) : topology.prevLeftBd( e.sym(), region, turn ).sym();
     } while ( e != e0 );
+}
 
-    return res;
+void trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, EdgeLoop& outLoop, const FaceBitSet* region, Turn turn )
+{
+    trackBoundaryLoop( topology, e0, outLoop, region, true, turn );
 }
 
 EdgeLoop trackLeftBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, Turn turn )
 {
-    return trackBoundaryLoop( topology, e0, region, true, turn );
+    EdgeLoop res;
+    trackLeftBoundaryLoop( topology, e0, res, region, turn );
+    return res;
+}
+
+void trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, EdgeLoop& outLoop, const FaceBitSet* region, Turn turn )
+{
+    trackBoundaryLoop( topology, e0, outLoop, region, false, turn );
 }
 
 EdgeLoop trackRightBoundaryLoop( const MeshTopology& topology, EdgeId e0, const FaceBitSet* region, Turn turn )
 {
-    return trackBoundaryLoop( topology, e0, region, false, turn );
+    EdgeLoop res;
+    trackRightBoundaryLoop( topology, e0, res, region, turn );
+    return res;
 }
 
 EdgeId extractPath( const MeshTopology& topology, EdgeId e, EdgeBitSet& edges, EdgePath* outPath, Turn turn )
@@ -177,38 +183,26 @@ static std::vector<EdgeLoop> findRegionBoundary( const MeshTopology& topology, c
 
     std::vector<EdgeLoop> res;
     HashSet<EdgeId> reportedBdEdges;
-
-    std::function<bool( EdgeId )> insert;
-    std::function<EdgeLoop( EdgeId )> track;
-    if ( left )
-    {
-        insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e ).second; };
-        track = [&] ( EdgeId e ) { return trackLeftBoundaryLoop( topology, e, region, turn ); };
-    }
-    else
-    {
-        insert = [&] ( EdgeId e ) { return reportedBdEdges.insert( e.sym() ).second; };
-        track = [&] ( EdgeId e ) { return trackRightBoundaryLoop( topology, e.sym(), region, turn ); };
-    }
+    // a left boundary loop starts from the left-boundary edge itself, a right one from its opposite
+    auto loopEdge = [left] ( EdgeId e ) { return left ? e : e.sym(); };
 
     EdgeBitSet bdEdges = findAllLeftBdEdges( topology, region );
 
     for ( auto e : bdEdges )
     {
         assert ( topology.isLeftBdEdge( e, region ) );
-        if ( !insert( e ) )
+        if ( !reportedBdEdges.insert( loopEdge( e ) ).second )
             continue;
-        auto loop = track( e );
+        auto & loop = res.emplace_back();
+        trackBoundaryLoop( topology, loopEdge( e ), loop, region, left, turn );
         for ( int i = 1; i < loop.size(); ++i )
         {
             [[maybe_unused]] bool inserted = reportedBdEdges.insert( loop[i] ).second;
             assert( inserted );
         }
-        res.push_back( std::move( loop ) );
     }
 
     return res;
-
 }
 
 std::vector<EdgeLoop> findLeftBoundary( const MeshTopology& topology, const FaceBitSet* region, Turn turn )

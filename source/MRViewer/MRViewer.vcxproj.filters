@@ -433,9 +433,6 @@
     <ClCompile Include="MRUINonOverlappingLabels.cpp">
       <Filter>UIStyle</Filter>
     </ClCompile>
-    <ClCompile Include="MRViewerSettingsPlugin.cpp">
-      <Filter>Plugins</Filter>
-    </ClCompile>
     <ClCompile Include="MRGLTexture.cpp">
       <Filter>Render\Implementations</Filter>
     </ClCompile>
@@ -535,9 +532,6 @@
     <ClCompile Include="MRImGuiMultiViewport.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRSceneControlMenuItems.cpp">
-      <Filter>Plugins</Filter>
-    </ClCompile>
     <ClCompile Include="MRFileDialogPortal.cpp">
       <Filter>CustomOpenDialog</Filter>
     </ClCompile>
@@ -564,6 +558,9 @@
     </ClCompile>
     <ClCompile Include="MRMcpSettings.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRGLDriverKnownIssues.cpp">
+      <Filter>Render</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -673,6 +670,9 @@
     </ClInclude>
     <ClInclude Include="MRGladGlfw.h">
       <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShortcutKey.h">
+      <Filter>UserInputs</Filter>
     </ClInclude>
     <ClInclude Include="MRShortcutManager.h">
       <Filter>UserInputs</Filter>
@@ -947,9 +947,6 @@
     <ClInclude Include="MRUINonOverlappingLabels.h">
       <Filter>UIStyle</Filter>
     </ClInclude>
-    <ClInclude Include="MRViewerSettingsPlugin.h">
-      <Filter>Plugins</Filter>
-    </ClInclude>
     <ClInclude Include="MRGLTexture.h">
       <Filter>Render\Implementations</Filter>
     </ClInclude>
@@ -1055,9 +1052,6 @@
     <ClInclude Include="MRViewerConfigConstants.h">
       <Filter>Viewer</Filter>
     </ClInclude>
-    <ClInclude Include="MRSceneControlMenuItems.h">
-      <Filter>Plugins</Filter>
-    </ClInclude>
     <ClInclude Include="MRFileDialogPortal.h">
       <Filter>CustomOpenDialog</Filter>
     </ClInclude>
@@ -1095,6 +1089,9 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRVisualObjectTag.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGLDriverKnownIssues.h">
       <Filter>Render</Filter>
     </ClInclude>
   </ItemGroup>

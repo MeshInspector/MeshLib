@@ -1,34 +1,127 @@
 #include "MRStringConvert.h"
-#include <codecvt>
-#include <locale>
 #include "MRPch/MRSpdlog.h"
-#include "MRPch/MRSuppressWarning.h"
 
 #include "MRPch/MRWinapi.h"
 
 namespace MR
 {
 
-MR_SUPPRESS_WARNING_PUSH
-MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+namespace
+{
+
+// one code unit per code point, so only for UTF-32 output
+template <typename S>
+S decodeUtf8( std::string_view str )
+{
+    S res;
+    for ( size_t cur = 0; cur < str.size(); )
+    {
+        const auto [ch, read] = utf8ToCodepoint( str.data() + cur, str.size() - cur );
+        if ( read == 0 )
+            break;
+        res.push_back( typename S::value_type( ch ) );
+        cur += read;
+    }
+    return res;
+}
+
+MR_FORCE_INLINE void appendUtf8_( std::string& str, char32_t ch )
+{
+    if ( ch < 0x80 )
+    {
+        str.push_back( char( ch ) );
+    }
+    else if ( ch < 0x800 )
+    {
+        str.push_back( char( 0xC0 | ( ch >> 6 ) ) );
+        str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+    }
+    else if ( ch < 0x10000 )
+    {
+        if ( 0xD800 <= ch && ch <= 0xDFFF )
+        {
+            // U+FFFD REPLACEMENT CHARACTER
+            str.push_back( '\xEF' );
+            str.push_back( '\xBF' );
+            str.push_back( '\xBD' );
+        }
+        else
+        {
+            str.push_back( char( 0xE0 | ( ch >> 12 ) ) );
+            str.push_back( char( 0x80 | ( ( ch >> 6 ) & 0x3F ) ) );
+            str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+        }
+    }
+    else if ( ch < 0x110000 )
+    {
+        str.push_back( char( 0xF0 | ( ch >> 18 ) ) );
+        str.push_back( char( 0x80 | ( ( ch >> 12 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( ( ch >> 6 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+    }
+    else
+    {
+        // U+FFFD REPLACEMENT CHARACTER
+        str.push_back( '\xEF' );
+        str.push_back( '\xBF' );
+        str.push_back( '\xBD' );
+    }
+}
+
+/// returns the length of the UTF-8 multi-byte sequence for its first byte
+/// returns 0 if the first byte is invalid
+size_t utf8Length( char8_t ch )
+{
+    constexpr int lengths[] = {
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0,
+    };
+    return lengths[ch >> 3];
+}
+
+} // anonymous namespace
 
 std::wstring utf8ToWide( const char* utf8 )
 {
-    // FIXME: std::wstring_convert will be removed in C++26
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-    return converter.from_bytes( utf8 );
+    if ( !utf8 || !*utf8 )
+        return {};
+#ifdef _WIN32
+    static_assert( sizeof( wchar_t ) == 2 ); // UTF-16
+    const std::string_view str( utf8 );
+    auto sz = MultiByteToWideChar( CP_UTF8, 0, str.data(), int( str.size() ), nullptr, 0 );
+    if ( sz <= 0 )
+    {
+        spdlog::error( GetLastError() );
+        return {};
+    }
+    std::wstring res( size_t( sz ), L'\0' );
+    sz = MultiByteToWideChar( CP_UTF8, 0, str.data(), int( str.size() ), res.data(), sz );
+    if ( sz == 0 )
+    {
+        spdlog::error( GetLastError() );
+        return {};
+    }
+    res.resize( size_t( sz ) );
+    return res;
+#else
+    static_assert( sizeof( wchar_t ) == 4 ); // UTF-32
+    return decodeUtf8<std::wstring>( utf8 );
+#endif
 }
 
 std::string wideToUtf8( const wchar_t * wide )
 {
-    if ( !wide )
+    if ( !wide || !*wide )
         return {};
-    // FIXME: std::wstring_convert will be removed in C++26
-    std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> conv;
-    return conv.to_bytes( wide );
+#ifdef _WIN32
+    return Utf16ToUtf8( wide );
+#else
+    std::string res;
+    for ( ; *wide; ++wide )
+        appendUtf8_( res, char32_t( *wide ) );
+    return res;
+#endif
 }
-
-MR_SUPPRESS_WARNING_POP
 
 #ifdef _WIN32
 std::string Utf16ToUtf8( const std::wstring_view & utf16 )
@@ -94,7 +187,22 @@ std::string utf8substr( const char * s, size_t pos, size_t count )
         assert( false );
         return {};
     }
-    return wideToUtf8( utf8ToWide( s ).substr( pos, count ).c_str() );
+    const auto iterate = [] ( std::string_view str, size_t& offset )
+    {
+        assert( offset < str.size() );
+        const auto len = utf8Length( char8_t( str[offset] ) );
+        offset += size_t( len + !len ); // at least 1 byte
+    };
+    const std::string_view str( s );
+    size_t begin = 0;
+    for ( ; pos > 0 && begin < str.size(); --pos )
+        iterate( str, begin );
+    begin = std::min( begin, str.size() );
+    size_t end = begin;
+    for ( ; count > 0 && end < str.size(); --count )
+        iterate( str, end );
+    end = std::min( end, str.size() );
+    return std::string( str.substr( begin, end - begin ) );
 }
 
 // based on https://github.com/skeeto/branchless-utf8 and ImTextCharFromUtf8 from ImGui
@@ -107,11 +215,7 @@ std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size )
         size > 3 ? (unsigned char)s[3] : (unsigned char)0,
     };
 
-    constexpr int lengths[] = {
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0
-    };
-    const auto len = lengths[buf[0] >> 3];
+    const auto len = utf8Length( buf[0] );
     const auto read = std::min( size_t( len + !len ), size ); // at least 1 byte
 
     constexpr int masks[]  = {0x00, 0x7f, 0x1f, 0x0f, 0x07};
@@ -140,18 +244,23 @@ std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size )
     return { ch, read };
 }
 
-std::u32string utf8ToUtf32( const std::string& str )
+std::u32string utf8ToUtf32( std::string_view str )
 {
-    std::u32string result;
-    for ( size_t cur = 0; cur < str.size(); )
-    {
-        const auto [ch, read] = utf8ToCodepoint( str.data() + cur, str.size() - cur );
-        if ( read == 0 )
-            return result;
-        result.append( 1, ch );
-        cur += read;
-    }
-    return result;
+    return decodeUtf8<std::u32string>( str );
+}
+
+void appendUtf8( std::string& str, char32_t cp )
+{
+    appendUtf8_( str, cp );
+}
+
+std::string utf32ToUtf8( std::u32string_view str )
+{
+    std::string res;
+    res.reserve( str.size() );
+    for ( auto cp : str )
+        appendUtf8_( res, cp );
+    return res;
 }
 
 std::string bytesString( size_t size )

@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include "MRRibbonRegisterItem.h"
+#include "MRShortcutKey.h"
 #include "MRMesh/MRId.h"
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRphmap.h"
@@ -9,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include <optional>
 
 namespace MR
 {
@@ -22,6 +24,16 @@ struct MenuItemCaptionSize
     SplitCaptionInfo splitInfo;
 };
 
+/// the default keyboard shortcut of a ribbon item
+struct MenuItemShortcut
+{
+    Shortcut shortcut;
+    /// the shortcut is bound only if the application allows every tag of it, so a group of shortcuts is switched off as a whole;
+    /// { "base" } by default
+    /// \sa RibbonMenu::allowedShortcutTags_
+    std::vector<std::string> tags;
+};
+
 struct MenuItemInfo
 {
     std::shared_ptr<RibbonMenuItem> item;
@@ -31,6 +43,7 @@ struct MenuItemInfo
     MenuItemCaptionSize captionSize; // already scaled
     std::string helpLink; // link to help page
     LocaleDomainId localeDomainId; // needed for translation
+    std::optional<MenuItemShortcut> shortcut; // default keyboard shortcut, if any
 
     const std::string& getCaption() const { return !caption.empty() ? caption : item->name(); }
 };
@@ -94,6 +107,9 @@ public:
     /// removes item from the static holder
     /// returns false if item was not present
     MRVIEWER_API static bool delItem( const std::shared_ptr<RibbonMenuItem>& item );
+
+    /// returns the information about the item with given name, or nullptr if there is no such item
+    MRVIEWER_API static MenuItemInfo * findItem( const std::string& name );
 
     /// struct to hold information for search result presentation
     struct SearchResult

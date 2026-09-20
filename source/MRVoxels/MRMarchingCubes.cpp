@@ -443,6 +443,20 @@ Expected<void> VolumeMesher::addPart( const V& part )
     const int layerCount = indexer_.dims().z;
 
     constexpr bool binary = std::is_same_v<V, SimpleBinaryVolume>;
+
+    if ( params_.outGridToMeshXf && partFirstZ == 0 ) // the first part starts in the grid's zero point
+    {
+        // the same shift as in addPartBlock_/addBinaryPartBlock_ below
+        const auto shift = [&]
+        {
+            if constexpr ( binary )
+                return Vector3f::diagonal( 0.5f );
+            else
+                return VoxelsVolumeAccessor<V>( part ).shift();
+        }();
+        *params_.outGridToMeshXf = { Matrix3f::scale( part.voxelSize ), params_.origin + mult( shift, part.voxelSize ) };
+    }
+
     if constexpr ( binary )
     {
         int fillFirstZ = partFirstZ;

@@ -13,6 +13,7 @@
 #include "MRRenderHelpers.h"
 #include "MRViewer.h"
 #include "MRGladGlfw.h"
+#include "MRMesh/MRHeapBytes.h"
 
 namespace
 {

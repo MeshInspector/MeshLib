@@ -5,6 +5,8 @@
 #include "MRXfBasedCache.h"
 #include "MRMeshPart.h"
 #include "MRObjectMeshData.h"
+#include "MRHeapBytes.h"
+#include "MRMeshTexture.h"
 
 namespace MR
 {
@@ -46,10 +48,18 @@ public:
 
     [[nodiscard]] virtual bool hasModel() const override { return bool( data_.mesh ); }
 
+    /// returns the mesh of this object for modification, or nullptr if it is not set
+    [[nodiscard]]       Mesh* varMeshPtr() { return data_.mesh.get(); }
+
+    /// returns the mesh of this object, or nullptr if it is not set
+    [[nodiscard]] const Mesh* meshPtr() const { return data_.mesh.get(); }
+
     #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
+    /// \deprecated the cast inside is undefined behaviour, use meshPtr() instead
+    [[deprecated( "use meshPtr() instead" )]]
     const std::shared_ptr< const Mesh >& mesh() const
     { return reinterpret_cast< const std::shared_ptr<const Mesh>& >( data_.mesh ); } // reinterpret_cast to avoid making a copy of shared_ptr
     #ifdef __GNUC__

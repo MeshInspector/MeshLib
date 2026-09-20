@@ -31,9 +31,10 @@ ARM_CPU_NAMES = {
     (0x41, 0xd0d): "Cortex-A77",     (0x41, 0xd40): "Neoverse-V1",
     (0x41, 0xd41): "Cortex-A78",     (0x41, 0xd44): "Cortex-X1",
     (0x41, 0xd49): "Neoverse-N2",    (0x41, 0xd4f): "Neoverse-V2",
+    (0x41, 0xd84): "Neoverse-V3",    (0x41, 0xd8e): "Neoverse-N3",
     (0xc0, 0xac3): "Ampere-1",       (0xc0, 0xac4): "Ampere-1a",
     (0x43, 0x0af): "ThunderX2-99xx", (0x46, 0x001): "A64FX",
-    (0x51, 0xc01): "Saphira",
+    (0x51, 0xc01): "Saphira",        (0x6d, 0xd49): "Azure-Cobalt-100",
 }
 
 ARM_VENDORS = {
@@ -41,10 +42,26 @@ ARM_VENDORS = {
     0x43: "Cavium",  0x48: "HiSilicon",
     0x4e: "NVIDIA",  0x51: "Qualcomm",
     0x53: "Samsung", 0x56: "Marvell",
-    0x70: "Phytium", 0xc0: "Ampere",
+    0x6d: "Microsoft", 0x70: "Phytium",
+    0xc0: "Ampere",
 }
 
-def get_arm_cpu_model():
+# the real name of a cloud CPU lives in SMBIOS type 4, which is root-only, so brand
+# the known ones by DMI vendor + MIDR pair: Cobalt and Graviton are stock ARM cores
+# (bare-metal Cobalt uses Microsoft's own implementer 0x6d, Azure VMs show 0x41)
+BRANDED_ARM_CPUS = {
+    ("Microsoft Corporation", 0x41, 0xd49): "Cobalt 100",
+    ("Microsoft Corporation", 0x41, 0xd84): "Cobalt 200",
+    ("Microsoft Corporation", 0x6d, 0xd49): "Cobalt 100",
+    ("Microsoft Corporation", 0x6d, 0xd84): "Cobalt 200",
+    ("Amazon EC2",            0x41, 0xd08): "AWS Graviton",
+    ("Amazon EC2",            0x41, 0xd0c): "AWS Graviton2",
+    ("Amazon EC2",            0x41, 0xd40): "AWS Graviton3",
+    ("Amazon EC2",            0x41, 0xd4f): "AWS Graviton4",
+    ("Amazon EC2",            0x41, 0xd84): "AWS Graviton5",
+}
+
+def read_arm_midr():
     implementer, part = -1, -1
     with open('/proc/cpuinfo') as f:
         for line in f:
@@ -54,6 +71,20 @@ def get_arm_cpu_model():
                 part = int(line.split(':', 1)[1], 0)
             if implementer >= 0 and part >= 0:
                 break
+    return implementer, part
+
+def get_dmi_sys_vendor():
+    try:
+        with open('/sys/class/dmi/id/sys_vendor') as f:
+            return f.read().strip()
+    except OSError:
+        return None
+
+def get_branded_arm_cpu_model():
+    return BRANDED_ARM_CPUS.get((get_dmi_sys_vendor(), *read_arm_midr()))
+
+def get_arm_cpu_model():
+    implementer, part = read_arm_midr()
 
     name = ARM_CPU_NAMES.get((implementer, part))
     if name:
@@ -83,6 +114,11 @@ def get_cpu_model():
         output = subprocess.check_output(['sysctl', '-n', 'machdep.cpu.brand_string'], text=True)
         return output.strip()
     elif system == "Linux":
+        if platform.machine() in ('aarch64', 'arm64'):
+            # must win over lscpu, which reports only the licensed core name
+            branded = get_branded_arm_cpu_model()
+            if branded:
+                return branded
         output = subprocess.check_output(['lscpu'], text=True)
         for line in output.splitlines():
             if line.startswith('Model name:'):
@@ -96,6 +132,31 @@ def get_cpu_model():
         ps_command = "(Get-CimInstance Win32_Processor).Name"
         output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
         return output.strip().splitlines()[0]
+    else:
+        raise RuntimeError(f"Unknown system: {system}")
+
+def get_memory_stats():
+    """(available_bytes, wired_bytes). Wired is memory the kernel cannot page out
+    or compress; each OS counts a different thing, so the sums below are the
+    definition -- the column is only comparable between like machines."""
+    system = platform.system()
+    if system == "Darwin":
+        output = subprocess.check_output(['vm_stat'], text=True)
+        page_size = int(re.search(r"page size of (\d+) bytes", output).group(1))
+        pages = {k: int(v) for k, v in re.findall(r"^(.+?):\s+(\d+)\.", output, re.MULTILINE)}
+        available = sum(pages.get(k, 0) for k in ('Pages free', 'Pages inactive', 'Pages speculative'))
+        return available * page_size, pages['Pages wired down'] * page_size
+    elif system == "Linux":
+        with open('/proc/meminfo') as f:
+            meminfo = {k: int(v) for k, v in re.findall(r"^(\w+):\s+(\d+) kB", f.read(), re.MULTILINE)}
+        wired = sum(meminfo.get(k, 0) for k in ('SUnreclaim', 'KernelStack', 'PageTables', 'Unevictable'))
+        return meminfo.get('MemAvailable', meminfo['MemFree']) * 1024, wired * 1024
+    elif system == "Windows":
+        ps_command = ("$m = Get-CimInstance Win32_PerfRawData_PerfOS_Memory; "
+                      "'{0} {1}' -f $m.AvailableBytes, $m.PoolNonpagedBytes")
+        output = subprocess.check_output(['powershell', '-Command', ps_command], text=True)
+        available, wired = output.split()
+        return int(available), int(wired)
     else:
         raise RuntimeError(f"Unknown system: {system}")
 
@@ -151,6 +212,9 @@ if __name__ == "__main__":
 
         cpu_model = get_cpu_model()
         free_disk = math.floor(get_free_disk_space() / 1024 / 1024)
+        available_mem_bytes, wired_bytes = get_memory_stats()
+        available_mem = math.floor(available_mem_bytes / 1024 / 1024)
+        wired = math.floor(wired_bytes / 1024 / 1024)
 
         results = {
             'target_os': os.environ.get('TARGET_OS'),
@@ -160,6 +224,8 @@ if __name__ == "__main__":
             'cpu_count': cpu_count,
             'cpu_model': cpu_model,
             'ram_mb': ram_amount,
+            'available_mem_mb': available_mem,
+            'wired_mb': wired,
             'free_disk_mb': free_disk,
             'build_system': build_system,
             'aws_instance_type': aws_instance_type or None,

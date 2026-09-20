@@ -50,7 +50,7 @@ struct Vector4
     constexpr const T & operator []( int e ) const noexcept { return *( ( ValueType *)this + e ); }
     constexpr       T & operator []( int e )       noexcept { return *( ( ValueType* )this + e ); }
 
-    T lengthSq() const
+    auto lengthSq() const -> decltype( std::declval<T>() * std::declval<T>() )
     {
         return x * x + y * y + z * z + w * w;
     }
@@ -158,7 +158,7 @@ inline auto dot( const Vector4<T> & a, const Vector4<T> & b ) -> decltype( a.x *
 
 /// squared length
 template <typename T>
-inline T sqr( const Vector4<T> & a )
+inline auto sqr( const Vector4<T> & a ) -> decltype( a.lengthSq() )
 {
     return a.lengthSq();
 }

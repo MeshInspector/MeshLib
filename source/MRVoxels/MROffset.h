@@ -27,7 +27,8 @@ struct BaseShellParameters
 
 struct OffsetParameters : BaseShellParameters
 {
-    /// determines the method to compute distance sign
+    /// determines the method to compute distance sign;
+    /// \ref offsetMesh implementing OffsetMode::Smooth supports only Unsigned, OpenVDB and HoleWindingRule here
     SignDetectionMode signDetectionMode = SignDetectionMode::OpenVDB;
 
     /// whether to construct closed mesh in signMode = SignDetectionModeShort::HoleWindingNumber
@@ -72,6 +73,10 @@ struct SharpOffsetParameters : OffsetParameters
     /// correct positions of the input vertices using reference mesh by not more than this distance, measured in voxelSize;
     /// big correction can be wrong and result from self-intersections in the reference mesh
     float maxOldVertPosCorrection = 0.5f;
+    /// if true, the displacement of a new vertex from the average point is shortened to keep the vertex
+    /// within its voxel's box (so the geometry of a voxel can never reach another one),
+    /// and the in-plane elevation check is skipped
+    bool voxelClamp = false;
 };
 
 /// Offsets mesh by converting it to distance field in voxels using OpenVDB library,
@@ -85,10 +90,25 @@ struct SharpOffsetParameters : OffsetParameters
 /// typically offsetA and offsetB have distinct signs
 [[nodiscard]] MRVOXELS_API Expected<Mesh> doubleOffsetMesh( const MeshPart& mp, float offsetA, float offsetB, const OffsetParameters& params = {} );
 
+/// optional outputs of mcOffsetMesh(...) describing the volume, from which the mesh was extracted
+struct McOffsetMeshOutputs
+{
+    /// optional output map FaceId->VoxelId
+    Vector<VoxelId, FaceId>* voxelPerFaceMap = nullptr;
+
+    /// optional output dimensions of the volume
+    Vector3i* dims = nullptr;
+
+    /// optional output transform from integer grid locations to mesh reference frame:
+    /// the node with integer coordinates (i,j,k) is located in (*gridToMeshXf)( Vector3f( i, j, k ) );
+    /// every vertex of output mesh is located on a grid edge
+    AffineXf3f* gridToMeshXf = nullptr;
+};
+
 /// Offsets mesh by converting it to distance field in voxels (using OpenVDB library if SignDetectionMode::OpenVDB or our implementation otherwise)
 /// and back using standard Marching Cubes, as opposed to Dual Marching Cubes in offsetMesh(...)
 [[nodiscard]] MRVOXELS_API Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
-    const OffsetParameters& params = {}, Vector<VoxelId, FaceId>* outMap = nullptr );
+    const OffsetParameters& params = {}, const McOffsetMeshOutputs& outputs = {} );
 
 /// Constructs a shell around selected mesh region with the properties that every point on the shall must
 ///  1. be located not further than given distance from selected mesh part,

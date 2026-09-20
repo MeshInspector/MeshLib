@@ -8,7 +8,7 @@ namespace MR
 
 FloatGrid MeshVoxelsConverter::operator() ( const ObjectMesh & obj ) const
 { 
-    return meshToLevelSet( *obj.mesh(), obj.xf(), Vector3f::diagonal( voxelSize ), surfaceOffset, callBack );
+    return meshToLevelSet( *obj.meshPtr(), obj.xf(), Vector3f::diagonal( voxelSize ), surfaceOffset, callBack );
 }
 
 Mesh MeshVoxelsConverter::operator() ( const FloatGrid & grid ) const

@@ -60,7 +60,7 @@ void Viewport::setupViewMatrix_()
 {
     viewM_ = getViewXf_();
 
-    if ( rotation_ )
+    if ( rotationDepth_ > 0 )
         rotateView_();
 }
 
@@ -113,13 +113,16 @@ void Viewport::setupAxesViewProjMatrix_()
 
 void Viewport::setRotation( bool state )
 {
-    if ( rotation_ == state )
+    if ( !state )
+    {
+        if ( rotationDepth_ > 0 && --rotationDepth_ == 0 )
+            needRedraw_ = true;
         return;
+    }
+    if ( rotationDepth_++ > 0 )
+        return; // rotation is already in progress, keep its pivot
 
     needRedraw_ = true;
-    rotation_ = state;
-    if ( !rotation_ )
-        return;
 
     bool boxUpdated = false;
     if ( !sceneBox_.valid() )
@@ -450,6 +453,9 @@ void Viewport::preciseFitToScreenBorder_( std::function<Box3f( bool zoomFOV, boo
         return;
     }
 
+    if ( unitedBox.diagonal() == 0.0f )
+        unitedBox = unitedBox.expanded( Vector3f::diagonal( 0.5f ) );
+
     if ( params_.orthographic )
     {
         sceneBox_ = transformed( unitedBox, getViewXf_().inverse() );
@@ -602,10 +608,10 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
         {
             if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
             {
-                if ( !objMesh->mesh() )
+                if ( !objMesh->meshPtr() )
                     continue;
 
-                const auto& mesh = *objMesh->mesh();
+                const auto& mesh = *objMesh->meshPtr();
                 const auto region =
                     getIncidentVerts( mesh.topology, objMesh->getSelectedEdges() )
                     | getIncidentVerts( mesh.topology, objMesh->getSelectedFaces() );
@@ -635,26 +641,26 @@ Box3f Viewport::calcBox_( const std::vector<std::shared_ptr<VisualObject>>& objs
 #endif
         if ( auto* objMesh = obj->asType<ObjectMeshHolder>() )
         {
-            if ( !objMesh->mesh() )
+            if ( !objMesh->meshPtr() )
                 continue;
 
-            const auto& mesh = *objMesh->mesh();
+            const auto& mesh = *objMesh->meshPtr();
             expandBox( mesh.points, mesh.topology.getValidVerts(), obj2cam );
         }
         else if ( auto* objLines = obj->asType<ObjectLinesHolder>() )
         {
-            if ( !objLines->polyline() )
+            if ( !objLines->polylinePtr() )
                 continue;
 
-            const auto& polyline = *objLines->polyline();
+            const auto& polyline = *objLines->polylinePtr();
             expandBox( polyline.points, polyline.topology.getValidVerts(), obj2cam );
         }
         else if ( auto objPoints = obj->asType<ObjectPointsHolder>() )
         {
-            if ( !objPoints->pointCloud() )
+            if ( !objPoints->pointCloudPtr() )
                 continue;
 
-            const auto& pointCloud = *objPoints->pointCloud();
+            const auto& pointCloud = *objPoints->pointCloudPtr();
             expandBox( pointCloud.points, pointCloud.validPoints, obj2cam );
         }
         else if ( const auto objBox = obj->getBoundingBox(); objBox.valid() )
@@ -830,7 +836,7 @@ void Viewport::cameraRotateAround( const Line3f& axis, float angle )
 
 void Viewport::draw_rotation_center() const
 {
-    if ( !rotation_ || !Viewer::constInstance()->rotationSphere->isVisible( id ) )
+    if ( rotationDepth_ <= 0 || !Viewer::constInstance()->rotationSphere->isVisible( id ) )
         return;
 
     auto factor = params_.orthographic ? 0.1f / (cameraEye - cameraCenter).length() : 0.1f;

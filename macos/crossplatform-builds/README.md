@@ -43,10 +43,11 @@ Compilation is native; Rosetta is used for four things, only the last of which i
    there (install, `--prefix`, config) is translated, as are formula post-install hooks.
 2. **Configure-time execution of x86_64 programs:** `python3.10-config` / CMake's FindPython (the
    `/usr/local` interpreter is x86_64) and CMake `try_run` probes.
-3. **The bindings step.** `scripts/mrbind/generate.mk` has no macOS target-arch flag; it yields an
-   x86_64 `mrmeshpy.so` because the x86_64 GNU `make` from `/usr/local` is first on `PATH` and its
-   children (`clang++`, `mrbind`) inherit the translated execution. It works, but it is not native —
-   a candidate follow-up is a native `make` plus an explicit `-arch x86_64`.
+3. **mrbind and the bindings.** They use the `llvm-pgo` keg, which on this leg is the **x86_64** keg
+   in `/usr/local/Cellar` (see below), so `mrbind` and the bindings compiler are translated.
+   `scripts/mrbind/generate.mk` has no macOS target-arch flag either; it yields an x86_64
+   `mrmeshpy.so` because the x86_64 GNU `make` from `/usr/local` is first on `PATH` and its children
+   inherit the translated execution. It works, but it is not native — a candidate follow-up.
 4. **Running the Intel output** for `MRTest`, `MRTestC2`, the MeshViewer smoke test and the Python
    tests. Intel code cannot run on Apple Silicon hardware any other way.
 
@@ -70,6 +71,11 @@ toolchain file with pre-seeded `try_run` results) with all testing on real Intel
 5. **A translated parent makes every child translated.** Anything started from an x86_64 process
    (the `/usr/local` `make`, a translated shell) runs `/usr/bin/clang++` as x86_64 too. Keep the
    compile driven by the native `ninja` (gotcha 1); this is also why the bindings step is translated.
+6. **The LLVM keg follows the Homebrew prefix, not the host CPU.** The shim makes `brew --prefix`
+   report `/usr/local`, so `LLVM_PREFIX` resolves to the Intel keg there, which is the right one: the
+   bindings are x86_64 and Homebrew ships no Intel `lld` any more. `install-llvm-pgo-keg` therefore
+   selects its published asset by prefix (`/usr/local` → x86_64, `/opt/homebrew` → arm64) rather than
+   by `uname -m`, which on this runner reports the arm64 *host*.
 
 ## Provisioning a runner
 
@@ -134,9 +140,11 @@ this). The thirdparty-from-source libraries build the same way (native tools + t
 ## Source changes this requires
 
 Everything else is CI wiring (the matrix JSON, the `config.yml` gate, the runner shim in the
-workflow); the only non-CI source changes are:
+workflow); the remaining changes are:
 
 | Change | File |
 |---|---|
 | Honor `-D HOMEBREW_PREFIX=<prefix>` (falls back to `brew --prefix`) and validate it | [`ConfigureHomebrew.cmake`](../../cmake/Modules/ConfigureHomebrew.cmake) |
 | Forward the cross knobs (`CMAKE_OSX_ARCHITECTURES`, `CMAKE_MAKE_PROGRAM`, `HOMEBREW_PREFIX`) and honor a caller `NPROC` | [`build_source.sh`](../../scripts/build_source.sh), [`build_thirdparty.sh`](../../scripts/build_thirdparty.sh) |
+| Key the thirdparty cache on the target arch | [`install-macos-thirdparty`](../../.github/actions/install-macos-thirdparty/action.yml) |
+| Pick the published LLVM keg by Homebrew prefix instead of `uname -m` (gotcha 6) | [`install-llvm-pgo-keg`](../../.github/actions/install-llvm-pgo-keg/action.yml) |

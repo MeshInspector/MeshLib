@@ -642,6 +642,9 @@
     <ClInclude Include="MRPointCloudTriangulation.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
+    <ClInclude Include="MRAlphaShape.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
     <ClInclude Include="MRPointCloudTriangulationHelpers.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
@@ -667,6 +670,9 @@
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRMeshRelax.h">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
+    <ClInclude Include="MRShrinkwrap.h">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>
     <ClInclude Include="MRPointCloudRelax.h">
@@ -886,6 +892,12 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRTerrainTriangulation.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRDelaunayTriangulationXY.h">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClInclude>
+    <ClInclude Include="MRCameraPointsTriangulation.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>
     <ClInclude Include="MRPointOnObject.h">
@@ -1329,7 +1341,19 @@
     <ClInclude Include="MRTripleFaceIntersections.h">
       <Filter>Source Files\Contours</Filter>
     </ClInclude>
+    <ClInclude Include="MRBitCast.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRFastInt128.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRFastInt.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRVarBigInt.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
+    <ClInclude Include="MRInt64Mul128.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
     <ClInclude Include="MREndMill.h">
@@ -1802,6 +1826,9 @@
     <ClCompile Include="MRPointCloudTriangulation.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
+    <ClCompile Include="MRAlphaShape.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
     <ClCompile Include="MRPointCloudTriangulationHelpers.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
@@ -1821,6 +1848,9 @@
       <Filter>Source Files\Polyline</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshRelax.cpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClCompile>
+    <ClCompile Include="MRShrinkwrap.cpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudRelax.cpp">
@@ -1946,7 +1976,10 @@
     <ClCompile Include="MRTiffIO.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
-    <ClCompile Include="MRTerrainTriangulation.cpp">
+    <ClCompile Include="MRDelaunayTriangulationXY.cpp">
+      <Filter>Source Files\Triangulation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCameraPointsTriangulation.cpp">
       <Filter>Source Files\Triangulation</Filter>
     </ClCompile>
     <ClCompile Include="MRPointsProject.cpp">
@@ -2035,6 +2068,9 @@
     </ClCompile>
     <ClCompile Include="MRConeObject.cpp">
       <Filter>Source Files\DataModel\Features</Filter>
+    </ClCompile>
+    <ClCompile Include="MRFastInt.cpp">
+      <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRFeatures.cpp">
       <Filter>Source Files\Math</Filter>

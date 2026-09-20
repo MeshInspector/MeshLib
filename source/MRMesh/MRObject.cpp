@@ -3,12 +3,16 @@
 #include "MRObjectTagEventDispatcher.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
+#include "MRBox.h"
 #include "MRHeapBytes.h"
+#include "MRphmap.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
+
+static_assert( std::forward_iterator<ConstChildren::Iterator> );
 
 namespace
 {
@@ -21,7 +25,11 @@ const std::filesystem::path cSharedFolder = "SharedModels";
 std::string composeKey( const std::string& objectName, const int prefix )
 {
     constexpr int maxFileNameLen = 12; // keep file names not too long to avoid hitting limit in some OSes
-    return std::to_string( prefix ) + "_" + utf8substr( replaceProhibitedChars( objectName ).c_str(), 0, maxFileNameLen );
+    auto name = utf8substr( replaceProhibitedChars( objectName ).c_str(), 0, maxFileNameLen );
+    // Windows silently drops trailing spaces and dots from a created folder, and then cannot find it by the original name
+    while ( !name.empty() && ( name.back() == ' ' || name.back() == '.' ) )
+        name.pop_back();
+    return std::to_string( prefix ) + "_" + name;
 }
 
 struct KeyObjectModel
@@ -89,7 +97,7 @@ int collectLinks( const Object& rootObject, Obj2FirstSharedObj& links )
             // map current object to first met object
             links.insert( { node, { it->object, numFile } } );
         }
-        auto children = node->children();
+        auto children = node->constChildren();
         for ( int i = int( children.size() ) - 1; i >= 0; --i )
         {
             sceneGraphVisitedList.push( children[i].get() );
@@ -852,6 +860,11 @@ void Object::swap( Object& other )
     swapBase_( other );
     // swap signals second time to return in place
     swapSignals_( other );
+}
+
+Box3f Object::getWorldBox( ViewportId ) const
+{
+    return {}; // empty box
 }
 
 Box3f Object::getWorldTreeBox( ViewportId id ) const

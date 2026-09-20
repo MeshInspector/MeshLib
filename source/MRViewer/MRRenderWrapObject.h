@@ -2,6 +2,7 @@
 
 #include "MRMesh/MRMeshFwd.h"
 #include "MRMesh/MRVisualObject.h"
+#include "MRMesh/MRIRenderObject.h"
 
 namespace MR::RenderWrapObject
 {

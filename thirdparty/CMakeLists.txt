@@ -103,19 +103,16 @@ IF(NOT APPLE)
   set(WITH_GTEST        OFF CACHE BOOL "")
   set(WITH_GZFILEOP     OFF CACHE BOOL "")
   IF(EMSCRIPTEN)
-    # Force static: undefined BUILD_SHARED_LIBS makes zlib-ng emit duplicate
-    # libz-ng.a rules under Emscripten. Restore to undefined (not empty)
-    # afterwards -- jsoncpp downstream breaks on empty BUILD_SHARED_LIBS.
     set(BUILD_SHARED_LIBS OFF)
     add_subdirectory(./zlib-ng)
     unset(BUILD_SHARED_LIBS)
   ELSE()
     add_subdirectory(./zlib-ng)
   ENDIF()
-ENDIF()
 
-option(PHMAP_INSTALL "" ON)
-add_subdirectory(./parallel-hashmap)
+  option(PHMAP_INSTALL "" ON)
+  add_subdirectory(./parallel-hashmap)
+ENDIF()
 
 IF(EMSCRIPTEN)
   add_subdirectory(./expected ./expected)
@@ -133,14 +130,14 @@ IF(EMSCRIPTEN)
   set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip)
 
-  set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   set(JSONCPP_WITH_TESTS OFF)
   set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
   set(BUILD_STATIC_LIBS OFF)
   add_subdirectory(./jsoncpp)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
+  set(FMT_INSTALL ON)
+  set(FMT_MODULE OFF)
+  set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
   add_subdirectory(./fmt)
   #install(DIRECTORY fmt/include/fmt DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
@@ -149,10 +146,16 @@ IF(EMSCRIPTEN)
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
+  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
   set(CMAKE_SYSTEM_PROCESSOR "unknown")
   add_subdirectory(./onetbb)
   set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
+
+  # oneTBB forces -fexceptions under Emscripten
+  get_target_property(tbb_compile_options tbb COMPILE_OPTIONS)
+  list(REMOVE_ITEM tbb_compile_options -fexceptions)
+  set_target_properties(tbb PROPERTIES COMPILE_OPTIONS "${tbb_compile_options}")
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   add_subdirectory(./tinyxml2)

@@ -16,6 +16,7 @@
 #include "MRMesh/MRImageLoad.h"
 #include "MRMesh/MR2DContoursTriangulation.h"
 #include "MRMesh/MR2to3.h"
+#include "MRMesh/MRFinally.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRViewer/MRMouseController.h"
@@ -81,9 +82,12 @@ void flipVertically( Image& img )
 Expected<Image> renderControllerSideText( const Vector2i& resolution )
 {
     // TODO: disconnect from ImGui
-    static auto* font = loadControllerCubeFont( cControllerCubeFontSize );
+    // the font lives in the atlas only for this call: caching it is unsafe, since every
+    // ImFontAtlas::Clear() (font reload, display rescale) deletes all ImFont objects
+    auto* font = loadControllerCubeFont( cControllerCubeFontSize );
     if ( !font )
         return unexpected( "Could not load font" );
+    MR_FINALLY { ImGui::GetIO().Fonts->RemoveFont( font ); };
 
     auto* baked = font->GetFontBaked( cControllerCubeFontSize );
     if ( !baked )
@@ -798,24 +802,25 @@ void CornerControllerObject::initDefault()
     } ) );
 
 #ifndef MRVIEWER_NO_LOCALE
-    [[maybe_unused]] static auto onLocaleChanged = Locale::onChanged( [hoverable = std::weak_ptr{ basisViewControllerHoverable }, nonhoverable = std::weak_ptr{ basisViewControllerNonHoverable }] ( const std::string& )
+    connections_.push_back( Locale::onChanged( [hoverable = std::weak_ptr{ basisViewControllerHoverable }, nonhoverable = std::weak_ptr{ basisViewControllerNonHoverable }] ( const std::string& )
     {
+        auto hoverableObj = hoverable.lock();
+        auto nonhoverableObj = nonhoverable.lock();
+        if ( !hoverableObj && !nonhoverableObj )
+            return; // loading textures is expensive, skip it if there is nothing to update
         const auto textures = loadCornerControllerTextures();
-        if ( auto obj = hoverable.lock() )
+        if ( hoverableObj )
         {
-            obj->setTextures( textures );
-            obj->setDirtyFlags( DIRTY_TEXTURE );
+            hoverableObj->setTextures( textures );
+            hoverableObj->setDirtyFlags( DIRTY_TEXTURE );
         }
-        if ( auto obj = nonhoverable.lock() )
+        if ( nonhoverableObj && !textures.empty() )
         {
-            if ( !textures.empty() )
-            {
-                obj->setTextures( { textures.front() } );
-                obj->setDirtyFlags( DIRTY_TEXTURE );
-            }
+            nonhoverableObj->setTextures( { textures.front() } );
+            nonhoverableObj->setDirtyFlags( DIRTY_TEXTURE );
         }
         getViewerInstance().setSceneDirty();
-    } );
+    } ) );
 #endif
 
     rootObj_ = std::make_shared<Object>();

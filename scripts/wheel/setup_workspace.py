@@ -8,7 +8,11 @@ WHEEL_SRC_DIR = os.path.join(os.getcwd(), "scripts/wheel/meshlib/meshlib/")
 WHEEL_ROOT_DIR = os.path.join(os.getcwd(), "scripts/wheel/meshlib/")
 WHEEL_SCRIPT_DIR = os.path.join(os.getcwd(), "scripts/wheel/")
 
-PYLIB_PATH = {"Windows": r'./source/x64/Release/*.pyd',
+# Windows output dirs are named after the target architecture; the building
+# interpreter is native, so its own machine tells us which one.
+WIN_ARCH = "arm64" if platform.machine().lower() in ("arm64", "aarch64") else "x64"
+
+PYLIB_PATH = {"Windows": f'./source/{WIN_ARCH}/Release/*.pyd',
               "Linux": r'./build/Release/bin/meshlib/mr*.so',
               "Darwin": r'./build/Release/bin/meshlib/mr*.so'}
 

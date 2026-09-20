@@ -1,8 +1,7 @@
 #pragma once
 
 #include "MRAffineXf3.h"
-#include "MRBitSet.h"
-#include "MRBox.h"
+#include "MRConstChildren.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 #include "MRSignal.h"
@@ -160,10 +159,16 @@ public:
     /// an object can hold other sub-objects
     const std::vector<std::shared_ptr<Object>>& children() { return children_; }
 
+    /// the same sub-objects without the ability to modify them; the returned view is
+    /// invalidated by anything that changes the children of this object
+    [[nodiscard]] ConstChildren constChildren() const { return ConstChildren( children_ ); }
+
     #ifdef __GNUC__
     #pragma GCC diagnostic push
     #pragma GCC diagnostic ignored "-Wstrict-aliasing" // Fingers crossed.
     #endif
+    /// \deprecated the cast inside is undefined behaviour, use constChildren() instead
+    [[deprecated( "use constChildren() instead" )]]
     const std::vector<std::shared_ptr<const Object>>& children() const { return reinterpret_cast<const std::vector< std::shared_ptr< const Object > > &>( children_ ); }
     #ifdef __GNUC__
     #pragma GCC diagnostic pop
@@ -245,7 +250,7 @@ public:
     MRMESH_API void swap( Object& other );
 
     /// returns bounding box of this object in world coordinates for default or specific viewport
-    virtual Box3f getWorldBox( ViewportId = {} ) const { return {}; } ///empty box
+    MRMESH_API virtual Box3f getWorldBox( ViewportId = {} ) const;
     /// returns bounding box of this object and all children visible in given (or default) viewport in world coordinates
     MRMESH_API Box3f getWorldTreeBox( ViewportId = {} ) const;
 
@@ -253,7 +258,7 @@ public:
     [[nodiscard]] virtual bool hasVisualRepresentation() const { return false; }
 
     /// does the object have any model available (but possibly empty),
-    /// e.g. ObjectMesh has valid mesh() or ObjectPoints has valid pointCloud()
+    /// e.g. ObjectMesh has valid meshPtr() or ObjectPoints has valid pointCloudPtr()
     [[nodiscard]] virtual bool hasModel() const { return false; }
 
     /// provides read-only access to the tag storage

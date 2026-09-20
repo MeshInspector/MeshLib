@@ -1,0 +1,23 @@
+# Mesh export {#ExampleMeshExport}
+
+Export example of points and triangles from mesh (e.g. for rendering)
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include MeshExport.dox.cpp
+ 
+- <b class="tab-title">Python</b>
+See a more relevant example: \ref ExampleNumpy
+ 
+- <b class="tab-title">C</b>
+\include MeshExport.dox.c
+ 
+- <b class="tab-title">C#</b>
+\include MeshExport.dox.cs
+ 
+- <b class="tab-title">JavaScript</b>
+\include MeshExport.dox.js
+\include{doc} JsUsingNote.md
+
+</div>

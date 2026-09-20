@@ -1,6 +1,6 @@
 public class TriangulationExample
 {
-    public static void Run()
+    public static void Main(string[] args)
     {
         try
         {

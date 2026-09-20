@@ -47,12 +47,12 @@ fi
 rm -rf "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 mkdir -p "${MESHLIB_THIRDPARTY_BUILD_DIR}"
 # FIXME: make it optional
-for SUBDIR in lib include ; do
+for SUBDIR in lib include share ; do
   rm -rf "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
   mkdir -p "${MESHLIB_THIRDPARTY_ROOT_DIR}"/${SUBDIR}
 done
 
-MR_CMAKE_OPTIONS="\
+MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
   -D CMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} \
   -D CMAKE_BUILD_TYPE=Release \
 "

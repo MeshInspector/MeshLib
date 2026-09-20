@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
+#include "MRAffineXf3.h"
 
 namespace MR
 {
@@ -25,6 +26,15 @@ struct SharpenMarchingCubesMeshSettings
     /// the number of iterations to best select positions for new vertices,
     /// the probability of self-intersections and spikes are higher if posSelIters = 0
     int posSelIters = 3;
+    /// if true, the displacement of a new vertex from the average point is shortened to keep the vertex
+    /// within its voxel's box (so the geometry of a voxel can never reach another one),
+    /// and the in-plane elevation check is skipped; requires dims and gridToMeshXf to be set
+    bool voxelClamp = false;
+    /// Marching Cubes volume dimensions
+    Vector3i dims;
+    /// transform from integer Marching Cubes grid locations to the mesh reference frame:
+    /// the node with integer coordinates (i,j,k) is located in gridToMeshXf( Vector3f( i, j, k ) )
+    AffineXf3f gridToMeshXf;
     /// if non-null then created sharp edges will be saved here
     UndirectedEdgeBitSet * outSharpEdges = nullptr;
 };
@@ -33,7 +43,7 @@ struct SharpenMarchingCubesMeshSettings
 /// 1) correcting positions of all vertices to given offset relative to \param ref mesh (if correctOldVertPos == true);
 /// 2) introducing new vertices in the voxels where the normals change abruptly.
 /// \param face2voxel mapping from Face Id to Voxel Id where it is located
-MRMESH_API void sharpenMarchingCubesMesh( const MeshPart & ref, Mesh & vox, Vector<VoxelId, FaceId> & face2voxel,
-    const SharpenMarchingCubesMeshSettings & settings );
+MRMESH_API void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, FaceId>& face2voxel,
+    const SharpenMarchingCubesMeshSettings& settings );
 
 } //namespace MR

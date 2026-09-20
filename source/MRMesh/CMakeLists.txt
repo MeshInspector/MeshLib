@@ -32,6 +32,7 @@ ENDIF()
 find_package(Eigen3 REQUIRED)
 find_package(fmt 8 REQUIRED)
 find_package(JsonCpp REQUIRED)
+find_package(phmap 2.0 REQUIRED)
 find_package(spdlog 1.9 REQUIRED)
 find_package(TBB 2020.1 COMPONENTS tbb REQUIRED)
 find_package(tl-expected REQUIRED)
@@ -43,6 +44,7 @@ target_link_libraries(${PROJECT_NAME}
     Eigen3::Eigen
     fmt::fmt
     JsonCpp::JsonCpp
+    phmap::phmap
     spdlog::spdlog
     TBB::tbb
     tl::expected
@@ -68,12 +70,6 @@ ELSE()
   add_library(libzip::zip ALIAS PkgConfig::libzip)
 ENDIF()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
-
-# TODO: CMake config
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
-)
 
 IF(APPLE)
   # for Boost.Stacktrace

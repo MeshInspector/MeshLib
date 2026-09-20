@@ -10,12 +10,11 @@ install(
 IF(MR_PCH)
   add_library(${PROJECT_NAME} STATIC "MRPch.cpp" ${HEADERS})
 
+  find_package(phmap 2.0 REQUIRED)
   find_package(tl-expected REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE tl::expected)
-  # TODO: CMake config
-  target_include_directories(${PROJECT_NAME}
-    PRIVATE
-    $<BUILD_INTERFACE:${MESHLIB_THIRDPARTY_DIR}/parallel-hashmap>
+  target_link_libraries(${PROJECT_NAME} PRIVATE
+    phmap::phmap
+    tl::expected
   )
 
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")

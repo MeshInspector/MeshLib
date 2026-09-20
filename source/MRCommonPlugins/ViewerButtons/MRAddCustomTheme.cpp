@@ -17,7 +17,7 @@
 #include "MRMesh/MRObjectDistanceMap.h"
 #include "MRViewer/MRRibbonButtonDrawer.h"
 #include "MRViewer/MRRibbonConstants.h"
-#include "MRViewer/MRViewerSettingsPlugin.h"
+#include "MRViewerSettingsPlugin.h"
 #include "MRViewer/MRUIStyle.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
@@ -203,10 +203,9 @@ void AddCustomThemePlugin::updateThemeNames_()
         }
     }
 
-    auto itemId = RibbonSchemaHolder::schema().items.find( "Viewer settings" );
-    if ( itemId != RibbonSchemaHolder::schema().items.end() )
+    if ( const auto * itemInfo = RibbonSchemaHolder::findItem( "Viewer settings" ) )
     {
-        if ( auto viewerSettingsPlugin = std::dynamic_pointer_cast< ViewerSettingsPlugin >( itemId->second.item ) )
+        if ( auto viewerSettingsPlugin = std::dynamic_pointer_cast< ViewerSettingsPlugin >( itemInfo->item ) )
         {
             if ( viewerSettingsPlugin->isActive() )
                 viewerSettingsPlugin->updateThemes();

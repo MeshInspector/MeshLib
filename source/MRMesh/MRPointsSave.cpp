@@ -5,6 +5,7 @@
 #include "MRIOFormatsRegistry.h"
 #include "MRStringConvert.h"
 #include "MRProgressReadWrite.h"
+#include "MRTelemetry.h"
 #include "MRPch/MRFmt.h"
 #include <fstream>
 
@@ -204,6 +205,40 @@ Expected<void> toPly( const PointCloud& cloud, std::ostream& out, const SaveSett
     return {};
 }
 
+static void telemetryLogSize( const PointCloud& cloud )
+{
+    TelemetrySignal( "Save Pnts Log Pnts " + std::to_string( intLog2( cloud.calcNumValidPoints() ) ) );
+}
+
+static void telemetrySavePoints( const std::string& ext, const PointCloud& cloud, const SaveSettings& settings )
+{
+    if ( !settings.telemetrySignal )
+        return;
+
+    std::string signalString = "Save " + ext;
+
+    if ( cloud.validPoints.any() )
+    {
+        signalString += " VP";
+        if ( cloud.hasNormals() )
+            signalString += 'N';
+        if ( settings.colors && settings.colors->size() >= cloud.points.size() )
+            signalString += 'C';
+    }
+
+    if ( settings.solidColor )
+        signalString += " SOLIDC";
+
+    if ( settings.lengthUnit )
+        signalString += " UNITS";
+
+    if ( settings.xf && *settings.xf != AffineXf3d{} )
+        signalString += " XF";
+
+    TelemetrySignal( signalString );
+    telemetryLogSize( cloud );
+}
+
 Expected<void> toAnySupportedFormat( const PointCloud& points, const std::filesystem::path& file, const SaveSettings& settings )
 {
     auto ext = utf8string( file.extension() );
@@ -215,7 +250,10 @@ Expected<void> toAnySupportedFormat( const PointCloud& points, const std::filesy
     if ( !saver.fileSave )
         return unexpectedUnsupportedFileExtension();
 
-    return saver.fileSave( points, file, settings );
+    auto res = saver.fileSave( points, file, settings );
+    if ( res )
+        telemetrySavePoints( ext, points, settings );
+    return res;
 }
 Expected<void> toAnySupportedFormat( const PointCloud& points, const std::string& extension, std::ostream& out, const SaveSettings& settings )
 {
@@ -227,7 +265,10 @@ Expected<void> toAnySupportedFormat( const PointCloud& points, const std::string
     if ( !saver.streamSave )
         return unexpected( std::string( "unsupported stream extension" ) );
 
-    return saver.streamSave( points, out, settings );
+    auto res = saver.streamSave( points, out, settings );
+    if ( res )
+        telemetrySavePoints( ext, points, settings );
+    return res;
 }
 
 MR_ADD_POINTS_SAVER( IOFilter( "XYZ (.xyz)", "*.xyz" ), toXyz )

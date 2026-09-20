@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import argparse
 import fileinput
 import itertools
 import os
@@ -24,13 +25,14 @@ def find_gettext_command(cmd):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: update_translations.py POT_FILE INPUT_DIR")
-        sys.exit(0)
+    parser = argparse.ArgumentParser(description="Extract translatable strings from C++ sources into a .pot template.")
+    parser.add_argument("pot_file", type=Path, help="output .pot file; its stem is the domain name")
+    parser.add_argument("input_dir", type=Path, help="directory to scan recursively for .cpp/.h/.hpp")
+    parser.add_argument("--package-name", help="value for the Project-Id-Version header field")
+    args = parser.parse_args()
 
-    _, pot_file, input_dir = sys.argv
-    pot_file = Path(pot_file)
-    input_dir = Path(input_dir)
+    pot_file = args.pot_file
+    input_dir = args.input_dir
 
     xgettext = find_gettext_command('xgettext')
     if not xgettext:
@@ -54,6 +56,8 @@ if __name__ == "__main__":
             line.strip()
             for line in options_file
         ]
+    if args.package_name:
+        xgettext_options.append(f"--package-name={args.package_name}")
     # use temporary file to bypass Windows' command line length limitations
     with tempfile.NamedTemporaryFile('w', delete_on_close=False) as input_list:
         input_list.writelines(line + "\n" for line in input_files)

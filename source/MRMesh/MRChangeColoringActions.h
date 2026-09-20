@@ -4,6 +4,7 @@
 #include "MRObjectLinesHolder.h"
 #include <memory>
 #include "MRChangeVertsColorMapAction.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {

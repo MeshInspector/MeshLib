@@ -134,7 +134,7 @@ Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params )
     FT_Set_Char_Size( face, 128 << 6, 128 << 6, 72, 72 );
     OutlineDecomposer decomposer( params.fontDetalization );
 
-    std::wstring wideStr = utf8ToWide( params.text.c_str() );
+    const std::u32string str = utf8ToUtf32( params.text );
 
     // Find space width
     const std::wstring spaceSymbol = L" ";
@@ -179,9 +179,9 @@ Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params )
     FT_Pos yOffset{ 0 };
     FT_UInt previous = 0;
     FT_Bool kerning = FT_HAS_KERNING( face );
-    for ( int i = 0; i < wideStr.length(); ++i )
+    for ( int i = 0; i < str.length(); ++i )
     {
-        if ( wideStr[i] == '\n' )
+        if ( str[i] == U'\n' )
         {
             updateContourSizeAndWidth();
             xOffset = 0;
@@ -192,7 +192,7 @@ Expected<Contours2f> createSymbolContours( const SymbolMeshParams& params )
             continue;
         }
 
-        index = FT_Get_Char_Index( face, wideStr[i] );
+        index = FT_Get_Char_Index( face, str[i] );
         if ( kerning && previous && index )
         {
             FT_Vector delta;

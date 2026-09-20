@@ -15,7 +15,17 @@ echo Finished downloading to: %tempfile%
 rem Extract the version numbers from the page and version-sort them. Write the result to `%tempfile%2`.
 powershell (type %tempfile%) -match 'href=""""3\.' -replace '.*^>(.*)/^<.*','$1' "|" Sort-Object { $_ -as [version] } -Descending >%tempfile%2
 
-for /f %%x in (%~dp0\python_versions.txt) do (
+rem Installer architecture. python.org ships win-arm64 installers only from 3.11 on, so
+rem an arm64 host also drops the older entries from the version list.
+if "%PY_ARCH%" == "" (
+    if /i "%PROCESSOR_ARCHITECTURE%" == "ARM64" (set PY_ARCH=arm64) else (set PY_ARCH=amd64)
+)
+rem arm64 installers use a suffixed target directory, which the check below must match.
+if /i "%PY_ARCH%" == "arm64" (set PY_DIR_SUFFIX=-arm64) else (set PY_DIR_SUFFIX=)
+echo Installing %PY_ARCH% Pythons.
+powershell -Command "Get-Content '%~dp0python_versions.txt' | Where-Object { '%PY_ARCH%' -ne 'arm64' -or [version]$_ -ge [version]'3.11' } | Set-Content %tempfile%3"
+
+for /f %%x in (%tempfile%3) do (
     echo.
     echo -----------------------
     echo.
@@ -24,7 +34,7 @@ for /f %%x in (%~dp0\python_versions.txt) do (
     rem Set `!ver_terse!` to the version number without the dot, such as `313`.
     set ver_terse=%%x
     set ver_terse=!ver_terse:.=!
-    if exist %localappdata%\Programs\Python\Python!ver_terse!\python.exe (
+    if exist %localappdata%\Programs\Python\Python!ver_terse!!PY_DIR_SUFFIX!\python.exe (
         echo Python %%x - already installed
     ) else (
         echo Python %%x - installing...
@@ -57,9 +67,9 @@ rem --- Now some functions:
 for /f %%y in ('findstr %1\. %tempfile%2') do (
     if !done! == 0 (
         echo Trying version: %%y
-        set installer=%tmp%\python-%%y-amd64.exe
+        set installer=%tmp%\python-%%y-!PY_ARCH!.exe
         del /S /Q "!installer!" >nul 2>nul
-        powershell -Command "Invoke-WebRequest https://www.python.org/ftp/python/%%y/python-%%y-amd64.exe -OutFile !installer!" >nul
+        powershell -Command "Invoke-WebRequest https://www.python.org/ftp/python/%%y/python-%%y-!PY_ARCH!.exe -OutFile !installer!" >nul
         if exist "!installer!" (
             echo Download successful.
 

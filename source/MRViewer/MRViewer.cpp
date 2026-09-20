@@ -13,7 +13,9 @@
 #include "MRViewerSettingsManager.h"
 #include "MRGladGlfw.h"
 #include "MRRibbonMenu.h"
+#include "MRSceneObjectsListDrawer.h"
 #include "MRGetSystemInfoJson.h"
+#include "MRGLDriverKnownIssues.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRDragDropHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
@@ -193,7 +195,9 @@ static void glfw_key_callback( GLFWwindow* /*window*/, int key, int /*scancode*/
     } );
 }
 
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
 static bool gWindowSizeInitialized = false;
+#endif
 
 static void glfw_framebuffer_size( GLFWwindow* /*window*/, int width, int height )
 {
@@ -636,11 +640,18 @@ int Viewer::launch( const LaunchParams& params )
     experimentalFeatures = params.developerFeatures;
 
     bool defaultMultiViewport = Config::instance().getBool( cDefaultMultiViewportKey, true );
-    launchParams_.multiViewport = defaultMultiViewport && params.multiViewport;
+    // tool windows detached from a never-shown main window become visible OS windows of their own
+    const bool hiddenWindow = params.windowMode == LaunchParams::Hide || params.windowMode == LaunchParams::TryHidden
+                           || params.windowMode == LaunchParams::NoWindow;
+    launchParams_.multiViewport = defaultMultiViewport && params.multiViewport && !hiddenWindow;
 
     auto res = launchInit_( params );
     if ( res != EXIT_SUCCESS )
+    {
+        // no command loop will ever run here, so no command may wait for one
+        CommandLoop::removeCommands( true );
         return res;
+    }
 
     CommandLoop::setState( CommandLoop::StartPosition::BeforeWindowAppear );
     CommandLoop::processCommands(); // execute pre init commands before first draw
@@ -754,6 +765,13 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     {
         spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
         spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
+
+        if ( const auto issues = glDriverKnownIssues(); !issues.empty() )
+        {
+            spdlog::warn( "The current OpenGL driver has known issue(s):" );
+            for ( const auto& issue : issues )
+                spdlog::warn( "- {}", issue.description );
+        }
     }
 
     if ( !windowTitle )
@@ -849,6 +867,12 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( glfwPlatformSupported( GLFW_PLATFORM_X11 ) )
         glfwInitHint( GLFW_PLATFORM, GLFW_PLATFORM_X11 );
 #endif
+#endif
+
+#if defined( __APPLE__ )
+    // Otherwise glfwInit() chdirs into Contents/Resources of the .app bundle,
+    // and every relative path given on the command line resolves from there.
+    glfwInitHint( GLFW_COCOA_CHDIR_RESOURCES, GLFW_FALSE );
 #endif
 
     if ( !glfwInit() )
@@ -1307,6 +1331,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
                     setSceneDirty();
                     onSceneSaved( result.loadedFiles.front() );
                 }
+                if ( menuPlugin_ )
+                    if ( const auto & sceneList = menuPlugin_->getSceneObjectsList() )
+                        sceneList->collapseSceneTree();
                 if ( options.loadedCallback ) // strictly after history is added
                     options.loadedCallback( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
                 signals_->objectsLoadedSignal( SceneRoot::get().children(), result.errorSummary, result.warningSummary );
@@ -1650,7 +1677,7 @@ static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
         return true;
     if ( !obj.isVisible( mask ) )
         return false;
-    for ( const auto& child : obj.children() )
+    for ( const auto& child : obj.constChildren() )
     {
         if ( getRedrawFlagRecursive( *child, mask ) )
             return true;
@@ -1661,7 +1688,7 @@ static bool getRedrawFlagRecursive( const Object& obj, ViewportMask mask )
 static void resetRedrawFlagRecursive( const Object& obj )
 {
     obj.resetRedrawFlag();
-    for ( const auto& child : obj.children() )
+    for ( const auto& child : obj.constChildren() )
         resetRedrawFlagRecursive( *child );
 }
 
@@ -2041,7 +2068,9 @@ void Viewer::postResize( int w, int h )
     if ( hasScaledFramebuffer_ )
         updatePixelRatio_();
 
+#if defined( __linux__ ) && !defined( __EMSCRIPTEN__ )
     gWindowSizeInitialized = true;
+#endif
 }
 
 void Viewer::postSetPosition( int xPos, int yPos )

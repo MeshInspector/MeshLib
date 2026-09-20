@@ -7,6 +7,7 @@
 #include "MRMesh/MRChangeXfAction.h"
 #include "MRMesh/MRColor.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRMesh/MRHeapBytes.h"
 
 namespace MR
 {

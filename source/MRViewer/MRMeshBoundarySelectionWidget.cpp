@@ -16,6 +16,7 @@
 
 #include <MRMesh/MRRingIterator.h>
 #include "MRMesh/MRPolyline.h"
+#include "MRMesh/MRHeapBytes.h"
 #include <MRMesh/MRObjectsAccess.h>
 #include <MRMesh/MRSceneRoot.h>
 
@@ -52,7 +53,7 @@ std::shared_ptr<MR::Polyline3> BoundarySelectionWidget::getHoleBorder_( const st
         return {};
 
     EdgePath path;
-    const auto& mesh = *obj->mesh();
+    const auto& mesh = *obj->meshPtr();
     for ( auto e : leftRing( mesh.topology, initEdge ) )
     {
         path.push_back( e );
@@ -194,7 +195,7 @@ std::vector<MR::Vector3f> BoundarySelectionWidget::getPointsForSelectedHole() co
 
     std::vector<MR::Vector3f> result;
     const auto hole = holes[selectedHoleIndex_];
-    auto& mesh = *selectedHoleObject_->mesh();
+    auto& mesh = *selectedHoleObject_->meshPtr();
     for ( auto e : leftRing( mesh.topology, hole ) )
     {
         auto v = mesh.topology.org( e );
@@ -277,7 +278,7 @@ void BoundarySelectionWidget::calculateHoles_()
             auto& holes = holes_[object];
             auto& polylines = holeLines_[object];
 
-            holes = object->mesh()->topology.findHoleRepresentiveEdges();
+            holes = object->meshPtr()->topology.findHoleRepresentiveEdges();
             polylines.reserve( holes.size() );
             for ( auto hole : holes )
                 polylines.push_back( createAncillaryLines_( object, hole ) );

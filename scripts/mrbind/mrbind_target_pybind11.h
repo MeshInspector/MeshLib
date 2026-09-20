@@ -12,8 +12,6 @@
 #include "MRPch/MRJson.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
 
-#include <boost/multiprecision/number.hpp>
-
 // Disable all functions accepting some problematic types.
 
 namespace MR::MrbindDetail
@@ -32,7 +30,6 @@ namespace MR::MrbindDetail
     struct IgnoreTypeInBindings : std::bool_constant<
         std::same_as<T, Json::Value> ||
         IsEigenMatrix<T>::value ||
-        boost::multiprecision::is_number<T>::value ||
         IsSignal<T>::value
     > {};
 

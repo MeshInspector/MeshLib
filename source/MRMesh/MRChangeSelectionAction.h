@@ -2,6 +2,7 @@
 #include "MRHistoryAction.h"
 #include "MRObjectMesh.h"
 #include "MRObjectPoints.h"
+#include "MRHeapBytes.h"
 
 namespace MR
 {
@@ -185,6 +186,17 @@ public:
         if ( !objPoints_ )
             return;
         selection_ = objPoints_->getSelectedPoints();
+    }
+
+    /// use this constructor to remember object's vertex selection and immediately set new selection
+    ChangePointPointSelectionAction( const std::string& name, const std::shared_ptr<ObjectPoints>& objPoints, VertBitSet&& newSelection ) :
+        name_{ name },
+        objPoints_{ objPoints }
+    {
+        if ( !objPoints_ )
+            return;
+        selection_ = objPoints_->getSelectedPoints();
+        objPoints_->selectPoints( std::move( newSelection ) );
     }
 
     virtual std::string name() const override { return name_; }

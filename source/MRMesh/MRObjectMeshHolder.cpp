@@ -16,6 +16,7 @@
 #include "MRDirectory.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
+#include "MRMeshTexture.h"
 
 namespace MR
 {
@@ -56,6 +57,7 @@ Expected<std::future<Expected<void>>> ObjectMeshHolder::serializeModel_( const s
     SaveSettings saveSettings;
     saveSettings.onlyValidPoints = false;
     saveSettings.packPrimitives = false;
+    saveSettings.telemetrySignal = false;
     if ( !data_.vertColors.empty() )
         saveSettings.colors = &data_.vertColors;
     auto save = [mesh = data_.mesh, serializeFormat = std::string( actualSerializeFormat() ), path, saveSettings]() -> Expected<void>
@@ -440,7 +442,7 @@ void ObjectMeshHolder::copyTextureAndColors( const ObjectMeshHolder & src, const
     }
 
     const auto& srcUVCoords = src.getUVCoords();
-    const auto lastVert = src.mesh()->topology.lastValidVert();
+    const auto lastVert = src.meshPtr()->topology.lastValidVert();
     const bool updateUV = lastVert < srcUVCoords.size();
 
     if ( !updateUV )

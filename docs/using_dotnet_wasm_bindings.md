@@ -40,15 +40,7 @@ If you also have installed MeshLib in Nuget-for-Unity (which is a good idea to b
 
      * Click `Apply`.
 
-  4. Uncheck specific libraries that conflcit with Unity:
-
-     * Select only `libblosc.a` and uncheck `WebGL`. Click `Apply`.
-
-     Unity links some libraries of its own into the Wasm build, which conflict with ours, and need to be disabled.
-
-     We still add them to the distribution for use outside of Unity.
-
-  5. Uncheck the unused libraries:
+  4. Uncheck the unused libraries:
 
      * If you used `.../singlethreaded/` libraries, then delete or disable the `.../multithreaded/` ones, or vice versa.
 

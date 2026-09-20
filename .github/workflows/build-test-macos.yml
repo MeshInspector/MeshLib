@@ -60,13 +60,8 @@ jobs:
       - name: macOS Diagnostics
         uses: ./.github/actions/macos-diagnostics
 
-      - name: Checkout third-party submodules
-        run: |
-          # Selective init -- parent Checkout drops submodules:true.
-          # https://github.com/actions/checkout/issues/1779
-          # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
-
+      # Before `Resolve LLVM prefix` and every other `brew --prefix`: the shim makes
+      # them resolve the x86_64 /usr/local brew whose bottles this target links.
       - name: Configure native x86_64 cross-build environment
         if: ${{ matrix.cross-osx-arch == 'x86_64' }}
         run: |
@@ -94,12 +89,32 @@ jobs:
           printf '#!/bin/bash\nexec /usr/local/bin/brew "$@"\n' > "$SHIM/brew"
           chmod +x "$SHIM/brew"
           echo "$SHIM" >> "$GITHUB_PATH"
-          echo "CMAKE_OSX_ARCHITECTURES=${{ matrix.cross-osx-arch }}" >> "$GITHUB_ENV"
-          echo "CMAKE_MAKE_PROGRAM=$ARM_BREW/bin/ninja" >> "$GITHUB_ENV"
-          echo "CMAKE_PREFIX_PATH=/usr/local" >> "$GITHUB_ENV"
-          echo "MESHLIB_HOMEBREW_PREFIX=/usr/local" >> "$GITHUB_ENV"
-          echo "HOMEBREW_DIR=/usr/local" >> "$GITHUB_ENV"
-          echo "PKG_CONFIG_PATH=$(/usr/local/bin/brew --prefix python@$PYVER)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
+          {
+            echo "CMAKE_OSX_ARCHITECTURES=${{ matrix.cross-osx-arch }}"
+            echo "CMAKE_MAKE_PROGRAM=$ARM_BREW/bin/ninja"
+            echo "CMAKE_PREFIX_PATH=/usr/local"
+            echo "MESHLIB_HOMEBREW_PREFIX=/usr/local"
+            echo "HOMEBREW_DIR=/usr/local"
+            echo "PKG_CONFIG_PATH=$(/usr/local/bin/brew --prefix python@$PYVER)/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}"
+          } >> "$GITHUB_ENV"
+
+      # LLVM_PREFIX selects the LLVM keg for the build and the mrbind scripts;
+      # resolved per machine since the self-hosted label set spans runners
+      # with different homebrew prefixes.
+      - name: Resolve LLVM prefix
+        if: ${{ matrix.llvm-prefix-template }}
+        run: echo "LLVM_PREFIX=$(echo '${{ matrix.llvm-prefix-template }}' | sed "s|BREW_PREFIX|$(brew --prefix)|")" >> $GITHUB_ENV
+
+      - name: Checkout third-party submodules
+        run: |
+          # Selective init -- parent Checkout drops submodules:true.
+          # https://github.com/actions/checkout/issues/1779
+          # Retried via retry.sh: submodule endpoints occasionally 500.
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+
+      - name: Install llvm-pgo keg
+        if: ${{ contains(matrix.llvm-prefix-template, 'llvm-pgo') }}
+        uses: ./.github/actions/install-llvm-pgo-keg
 
       - name: Install thirdparty libs
         id: thirdparty
@@ -137,7 +152,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: ${{ matrix.llvm-prefix-template }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |
@@ -150,6 +165,24 @@ jobs:
           curl -sS https://bootstrap.pypa.io/get-pip.py | python3
           python3 -m pip install -r ./requirements/python/requirements.txt
           python3 -m pip install pytest
+
+      - name: Build
+        run: ./scripts/build_source.sh
+        env:
+          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
+          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
+          CMAKE_CXX_COMPILER: ${{ steps.thirdparty.outputs.cxx-compiler }}
+          MR_VERSION: ${{ inputs.app_version }}
+          MR_CMAKE_OPTIONS: >
+            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
+            -DMR_CXX_STANDARD=23
+            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
+            -DMR_PCH_USE_EXTRA_HEADERS=ON
+            ${{ matrix.cross-osx-arch == 'x86_64' && '-DMR_PLATFORM=APPLE_x86_64' || '' }}
+
+      - name: Verify x86_64 output
+        if: ${{ matrix.cross-osx-arch == 'x86_64' }}
+        run: lipo -archs build/${{ matrix.config }}/bin/libMRMesh.dylib | grep -qx x86_64
 
       - name: Wait for C bindings
         if: ${{ inputs.mrbind_c }}
@@ -172,27 +205,21 @@ jobs:
           # Cuda placeholders:
           cp -R scripts/mrbind/cuda_placeholder_generated_c/{include,src} source/MeshLibC2Cuda
 
-      - name: Build
-        run: ./scripts/build_source.sh
+      - name: Build C bindings
+        if: ${{ inputs.mrbind_c }}
         env:
-          MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
-          MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
-          CMAKE_CXX_COMPILER: ${{ steps.thirdparty.outputs.cxx-compiler }}
           MR_VERSION: ${{ inputs.app_version }}
-          MR_CMAKE_OPTIONS: >
-            -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
-            -DMR_CXX_STANDARD=23
-            -DMESHLIB_BUILD_GENERATED_C_BINDINGS=${{ fromJSON('["OFF", "ON"]')[inputs.mrbind_c] }}
-            -DMR_PCH_USE_EXTRA_HEADERS=ON
-            ${{ matrix.cross-osx-arch == 'x86_64' && '-DMR_PLATFORM=APPLE_x86_64' || '' }}
-
-      - name: Verify x86_64 output
-        if: ${{ matrix.cross-osx-arch == 'x86_64' }}
-        run: lipo -archs build/${{ matrix.config }}/bin/libMRMesh.dylib | grep -qx x86_64
+        run: |
+          cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
+          cmake --build build/${{ matrix.config }} -j $(sysctl -n hw.logicalcpu) --target MeshLibC2 MeshLibC2Cuda MRTestC2
 
       - name: MRMesh Exported Symbols
         run: |
-          export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          if [[ -n "${LLVM_PREFIX:-}" ]]; then
+            export PATH="$LLVM_PREFIX/bin:$PATH"
+          else
+            export PATH="$(brew --prefix llvm@22)/bin:$PATH"
+          fi
           nm -gU ./build/${{ matrix.config }}/bin/libMRMesh.dylib | llvm-cxxfilt
 
       - name: Generate and build Python bindings
@@ -202,8 +229,10 @@ jobs:
           CXX: ${{ steps.thirdparty.outputs.cxx-compiler }}
         run: |
           make --version
+          # No distribution carries these; only this job's own tests use them.
           make -f scripts/mrbind/generate.mk \
             -B --trace \
+            MODE=none \
             PYTHON_PKGCONF_NAME=python-3.10-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
@@ -222,7 +251,7 @@ jobs:
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
-        run: ./build/${{ matrix.config }}/bin/MRTest
+        run: ./build/${{ matrix.config }}/bin/MRTest --with-python-tests
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}
@@ -290,6 +319,7 @@ jobs:
           cmake \
             --build c-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
+          ./c-examples-build/MeshModification
 
       - name: Upload Macos Distribution
         if: ${{ inputs.upload_artifacts && matrix.config == 'Release' }}

@@ -1,0 +1,45 @@
+# Mesh Decimation {#ExampleMeshDecimate}
+
+Example of mesh decimation
+
+▶ [See it live in the browser](https://demo.meshlib.io/#decimate)
+
+<div class="tabbed">
+ 
+- <b class="tab-title">C++</b>
+\include MeshDecimate.dox.cpp
+Source mesh
+\image html decimate_before.png
+After decimate
+\image html decimate_after.png
+ 
+- <b class="tab-title">Python</b>
+\include MeshDecimate.dox.py
+Source mesh
+\image html decimate_before.png
+After decimate
+\image html decimate_after.png
+ 
+- <b class="tab-title">C</b>
+\include MeshDecimate.dox.c
+Source mesh
+\image html decimate_before.png
+After decimate
+\image html decimate_after.png
+ 
+- <b class="tab-title">C#</b>
+\include MeshDecimate.dox.cs
+Source mesh
+\image html decimate_before.png
+After decimate
+\image html decimate_after.png
+ 
+- <b class="tab-title">JavaScript</b>
+\include MeshDecimate.dox.js
+\include{doc} JsUsingNote.md
+Source mesh
+\image html decimate_before.png
+After decimate
+\image html decimate_after.png
+
+</div>

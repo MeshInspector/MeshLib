@@ -1,6 +1,7 @@
 #include <MRMesh/MRPrecisePredicates2.h>
 #include <MRMesh/MRPrecisePredicates3.h>
 #include <MRMesh/MRInSphere.h>
+#include <MRMesh/MRSparsePolynomial.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -345,6 +346,128 @@ TEST( MRMesh, inSphereTester )
     EXPECT_EQ( tester( b ), On );
 }
 
+TEST( MRMesh, inSphereTesterFlip )
+{
+    const Vector3i a{ 0, 0, 0 }, b{ 2, 0, 0 }, c{ 0, 2, 0 };
+    InSphereTesteri flipped, mirror;
+    ASSERT_TRUE( flipped.reset( a, b, c, 4 ) );
+    ASSERT_TRUE( mirror.reset( a, c, b, 4 ) );
+    flipped.flip();
+
+    // flip must give the answers of the tester reset with the swapped second and third points
+    for ( int z = -2; z <= 4; ++z )
+        for ( int y = -2; y <= 4; ++y )
+            for ( int x = -2; x <= 4; ++x )
+            {
+                const Vector3i d{ x, y, z };
+                EXPECT_EQ( flipped( d ), mirror( d ) );
+            }
+    flipped.flip();
+    EXPECT_EQ( flipped( Vector3i{ 1, 1, 2 } ), InSphereResult::Inside ); // the initial sphere is back
+
+    const Vector3d ad{ 0, 0, 0 }, bd{ 2, 0, 0 }, cd{ 0, 2, 0 };
+    InSphereTesterd flippedd, mirrord;
+    ASSERT_TRUE( flippedd.reset( ad, bd, cd, 4.0 ) );
+    ASSERT_TRUE( mirrord.reset( ad, cd, bd, 4.0 ) );
+    flippedd.flip();
+    EXPECT_EQ( flippedd( Vector3d{ 1, 1, -1 } ), mirrord( Vector3d{ 1, 1, -1 } ) );
+
+    // four concyclic points: every query point is exactly on the both spheres passing via three
+    // others, so the ties of all the arrangements are resolved by ids and must survive the flip
+    const PreciseVertCoords ps[4] = {
+        { 0_v, Vector3i{  5, 0, 0 } },
+        { 1_v, Vector3i{  0, 5, 0 } },
+        { 2_v, Vector3i{ -5, 0, 0 } },
+        { 3_v, Vector3i{  3, 4, 0 } }
+    };
+    InSphereTesterSoS flippedSos, mirrorSos;
+    for ( int i = 0; i < 4; ++i )
+        for ( int j = 0; j < 4; ++j )
+            for ( int k = 0; k < 4; ++k )
+            {
+                if ( i == j || j == k || i == k )
+                    continue;
+                ASSERT_TRUE( flippedSos.reset( ps[i], ps[j], ps[k], 169 ) );
+                ASSERT_TRUE( mirrorSos.reset( ps[i], ps[k], ps[j], 169 ) );
+                flippedSos.flip();
+                const auto & d = ps[6 - i - j - k];
+                EXPECT_EQ( flippedSos( d ), mirrorSos( d ) );
+            }
+}
+
+TEST( MRMesh, fastInSphereTesterSoS )
+{
+    // the fast tester must answer exactly as InSphereTesterSoS does, only sooner
+    InSphereTesterSoS exact;
+    FastInSphereTesterSoS fast;
+
+    // four concyclic points: every query is exactly on the sphere, so the fast path must always
+    // defer to the exact one and the ties must still be resolved by the ids
+    const PreciseVertCoords ps[4] = {
+        { 0_v, Vector3i{  5, 0, 0 } },
+        { 1_v, Vector3i{  0, 5, 0 } },
+        { 2_v, Vector3i{ -5, 0, 0 } },
+        { 3_v, Vector3i{  3, 4, 0 } }
+    };
+    for ( int i = 0; i < 4; ++i )
+        for ( int j = 0; j < 4; ++j )
+            for ( int k = 0; k < 4; ++k )
+            {
+                if ( i == j || j == k || i == k )
+                    continue;
+                ASSERT_TRUE( exact.reset( ps[i], ps[j], ps[k], 169 ) );
+                ASSERT_TRUE( fast.reset( ps[i], ps[j], ps[k], 169 ) );
+                const auto & d = ps[6 - i - j - k];
+                EXPECT_EQ( exact( d ), fast( d ) );
+                exact.flip();
+                fast.flip();
+                EXPECT_EQ( exact( d ), fast( d ) );
+            }
+
+    // pseudo-random spheres and queries, from tiny coordinates up to the magnitudes of getToIntConverter
+    std::uint64_t seed = 12345;
+    auto rnd = [&seed]( int mag )
+    {
+        seed = seed * 6364136223846793005ull + 1442695040888963407ull;
+        return int( std::int64_t( seed >> 33 ) % ( 2 * mag + 1 ) ) - mag;
+    };
+    int tested = 0;
+    for ( int mag : { 100, 1000000, 1000000000 } )
+        for ( int t = 0; t < 300; ++t )
+        {
+            const PreciseVertCoords vs[3] = {
+                { 0_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } },
+                { 1_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } },
+                { 2_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } }
+            };
+            const auto rSq = 4 * sqr( std::int64_t( mag ) );
+            const bool ok = exact.reset( vs[0], vs[1], vs[2], rSq );
+            ASSERT_EQ( ok, fast.reset( vs[0], vs[1], vs[2], rSq ) );
+            if ( !ok )
+                continue;
+            // outsideBothSpheres must agree with the plain tester asked on both sides
+            InSphereTesteri plain;
+            ASSERT_TRUE( plain.reset( vs[0].pt, vs[1].pt, vs[2].pt, rSq ) );
+            for ( int f = 0; f < 2; ++f )
+            {
+                for ( int q = 0; q < 10; ++q )
+                {
+                    const PreciseVertCoords d{ 3_v, Vector3i{ rnd( mag ), rnd( mag ), rnd( mag ) } };
+                    EXPECT_EQ( exact( d ), fast( d ) );
+                    const bool out0 = plain( d.pt ) == InSphereResult::Outside;
+                    plain.flip();
+                    const bool out1 = plain( d.pt ) == InSphereResult::Outside;
+                    plain.flip();
+                    EXPECT_EQ( fast.outsideBothSpheres( d.pt ), out0 && out1 );
+                    ++tested;
+                }
+                exact.flip();
+                fast.flip();
+            }
+        }
+    EXPECT_GT( tested, 10000 );
+}
+
 TEST( MRMesh, inSphereTesterFloat )
 {
     const auto In = InSphereResult::Inside;
@@ -464,12 +587,17 @@ TEST( MRMesh, sosInSphere )
     EXPECT_EQ( inSphere( { vc( 0_v, -2,1,1 ), vc( 1_v, 2,-1,-1 ), vc( 2_v, 1,1,-2 ), vc( 3_v, -1,-1,2 ) }, 9 ), In );
     EXPECT_EQ( inSphere( { vc( 3_v, -2,1,1 ), vc( 2_v, 2,-1,-1 ), vc( 1_v, 1,1,-2 ), vc( 0_v, -1,-1,2 ) }, 9 ), Out );
 
-    // rSq exactly equal to the squared circumradius: the tie resolves deterministically to Outside
-    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), Out );
+    // rSq exactly equal to the squared circumradius in the plane z = 0: any perturbation
+    // enlarges the circumradius, so the perturbed sphere does not exist
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), InSphereResult::NoSphere );
 
-    // no tie: same answers as the plain overload
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ), In );
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ), Out );
+    // no tie: same answers as the plain overload (rSq = 4 > squared circumradius 2)
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,2 ) }, 4 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 4 ), Out );
+    // while rSq exactly equal to the squared circumradius of this z = 0 triangle cannot survive
+    // the perturbation even for the points strictly inside or outside
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 1,1,1 ) }, 2 ), InSphereResult::NoSphere );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 2,0,0 ), vc( 2_v, 0,2,0 ), vc( 3_v, 3,3,0 ) }, 2 ), InSphereResult::NoSphere );
 
     // the same tie resolution via InSphereTesterSoS: the triangle ids are given once in reset
     InSphereTesterSoS tester;
@@ -513,50 +641,87 @@ TEST( MRMesh, sosInSphereConcyclic )
         PreciseVertCoords{ 1_v, Vector3i{ -1,  2, -1 } } }, 9 ), 12 );
 }
 
-TEST( MRMesh, sosInSphereDeviations )
+TEST( MRMesh, sosInSphereDegenerate )
 {
-    // documents the scenarios where the current deterministic answers deviate from full
-    // simulation-of-simplicity (see the comment on inSphere in MRInSphere.h);
-    // the expectations assert the current behavior and shall change when the corresponding
-    // perturbation cascades are implemented
+    // full simulation-of-simplicity semantics in the degenerate configurations: the answers equal
+    // the answers of the plain predicate for the symbolically perturbed points (see MRInSphere.h)
 
     const auto In = InSphereResult::Inside;
     const auto Out = InSphereResult::Outside;
     const auto NoS = InSphereResult::NoSphere;
 
     auto vc = []( VertId id, int x, int y, int z ) { return PreciseVertCoords{ id, Vector3i{ x, y, z } }; };
-    auto countInside = []( std::array<PreciseVertCoords, 4> vs, std::int64_t rSq )
-    {
-        auto less = []( const PreciseVertCoords & l, const PreciseVertCoords & r ) { return l.id < r.id; };
-        std::sort( vs.begin(), vs.end(), less );
-        int cnt = 0;
-        do
-        {
-            cnt += inSphere( vs, rSq ) == InSphereResult::Inside ? 1 : 0;
-        }
-        while ( std::next_permutation( vs.begin(), vs.end(), less ) );
-        return cnt;
-    };
 
-    // all points of the triangle coincide: currently NoSphere, while the perturbed triangle
-    // is not degenerate and its sphere exists, so full SoS would give id-dependent answers
-    EXPECT_EQ( countInside( {
-        vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), vc( 3_v, 1,2,3 ) }, 25 ), 0 );
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 3_v, 1,0,0 ) }, 25 ), NoS );
+    // three (or four) coincident triangle points: the perturbed points form a needle-like triangle
+    // with diverging circumradius, so the sphere never exists, independently of the ids
+    EXPECT_EQ( inSphere( { vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), vc( 3_v, 1,2,3 ) }, 25 ), NoS );
+    EXPECT_EQ( inSphere( { vc( 3_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 0_v, 0,0,0 ), vc( 2_v, 1,0,0 ) }, 25 ), NoS );
 
-    // two points of the triangle coincide, the third is closer than the sphere's diameter:
-    // currently NoSphere, while the perturbed sphere may exist depending on the ids
-    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 4,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS );
+    // two coincident triangle points: the perturbed pair separates along z, so the sphere exists
+    // iff 4*rSq*(Vx^2+Vy^2) > |V|^4 at the leading order, V = the third point minus the pair
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 4,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), Out ); // exists, the position is id-dependent:
+    EXPECT_EQ( inSphere( { vc( 3_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 0_v, 4,0,0 ), vc( 1_v, 0,3,0 ) }, 25 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 0,0,5 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // V along z: 4*rSq*(Vx^2+Vy^2) = 0 < |V|^4
 
-    // rSq exactly equal to the squared circumradius: a perturbation of the triangle changes
-    // the sphere's existence, so full SoS would make both answers below id-dependent
-    EXPECT_EQ( inSphere( { vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), vc( 3_v, 0,0,0 ) }, 25 ), In );    // strictly inside
-    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), Out ); // exactly on the sphere
+    // rSq exactly equal to the squared circumradius: the perturbation decides the existence;
+    // in the plane z = 0 any perturbation lifts a vertex and enlarges the circumradius
+    EXPECT_EQ( inSphere( { vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), vc( 3_v, 0,0,0 ) }, 25 ), NoS ); // even for the center point
+    EXPECT_EQ( inSphere( { vc( 0_v, 3,4,0 ), vc( 1_v, 5,0,0 ), vc( 2_v, 0,-5,0 ), vc( 3_v, -3,-4,0 ) }, 25 ), NoS );
 
-    // the NoSphere answers below are exact under full SoS: no small perturbation creates the sphere
+    // on a tilted plane (x+y+z=0, circumradius^2 = 6 = rSq) the existence and the position
+    // depend on the ids: all three outcomes on the same four points
+    EXPECT_EQ( inSphere( { vc( 0_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 6 ), NoS );
+    EXPECT_EQ( inSphere( { vc( 1_v, 1,-2,1 ), vc( 0_v, 1,1,-2 ), vc( 2_v, -2,1,1 ), vc( 3_v, -1,2,-1 ) }, 6 ), Out );
+    EXPECT_EQ( inSphere( { vc( 2_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 3_v, -2,1,1 ), vc( 0_v, -1,2,-1 ) }, 6 ), In );
+
+    // an exact tie of the pair existence rule: V = (3,4,5), 4*rSq*(Vx^2+Vy^2) == |V|^4 == 2500,
+    // resolved by the deeper terms of the perturbation, so it depends on the ids
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 3,4,5 ), vc( 3_v, 3,4,0 ) }, 25 ), In );
+    EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 3,4,5 ), vc( 3_v, 0,0,1 ) }, 25 ), Out );
+    EXPECT_EQ( inSphere( { vc( 2_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 0_v, 3,4,5 ), vc( 3_v, 3,4,0 ) }, 25 ), NoS );
+
+    // stable NoSphere answers: no perturbation creates the sphere
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 11,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point beyond the diameter
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 0,0,0 ), vc( 2_v, 10,0,0 ), vc( 3_v, 0,3,0 ) }, 25 ), NoS ); // third point exactly at the diameter
     EXPECT_EQ( inSphere( { vc( 0_v, 0,0,0 ), vc( 1_v, 1,0,0 ), vc( 2_v, 3,0,0 ), vc( 3_v, 0,1,0 ) }, 25 ), NoS );  // distinct collinear triangle
+
+    // the tester resolves the existence at reset() already
+    InSphereTesterSoS tester;
+    EXPECT_FALSE( tester.reset( vc( 0_v, 5,0,0 ), vc( 1_v, 0,5,0 ), vc( 2_v, -5,0,0 ), 25 ) ); // planar rSq == squared circumradius
+    EXPECT_FALSE( tester.reset( vc( 0_v, 1,2,3 ), vc( 1_v, 1,2,3 ), vc( 2_v, 1,2,3 ), 25 ) );  // coincident triple
+    ASSERT_TRUE( tester.reset( vc( 3_v, 0,0,0 ), vc( 2_v, 0,0,0 ), vc( 0_v, 4,0,0 ), 25 ) );   // coincident pair, the sphere exists
+    EXPECT_EQ( tester( vc( 1_v, 0,3,0 ) ), In );
+    ASSERT_TRUE( tester.reset( vc( 2_v, 1,-2,1 ), vc( 1_v, 1,1,-2 ), vc( 3_v, -2,1,1 ), 6 ) ); // tilted rSq == squared circumradius
+    EXPECT_EQ( tester( vc( 0_v, -1,2,-1 ) ), In );
+}
+
+TEST( MRMesh, segmentIntersectionOrder2Scale )
+{
+    // two segments crossing the third one at the same point (the origin): sa is the line x=0, sb is the line y=x;
+    // the answer of a simulation-of-simplicity predicate must not depend on the scale of the coordinates
+    // (and the coefficients of the polynomials at the large scale do not fit in 64 bits)
+    const Vector2i pts[6] = { { -1, 0 }, { 1, 0 }, { 0,-1 }, { 0, 1 }, { -1,-1 }, { 1, 1 } };
+    std::array<VertId, 6> ids;
+    for ( int i = 0; i < 6; ++i )
+        ids[i] = VertId( i );
+    int mismatches = 0;
+    do
+    {
+        int prev = -1;
+        for ( int scale : { 1, 1 << 29 } )
+        {
+            std::array<PreciseVertCoords2, 6> vs;
+            for ( int i = 0; i < 6; ++i )
+                vs[i] = { ids[i], pts[i] * scale };
+            if ( !doSegmentSegmentIntersect( { vs[2], vs[3], vs[0], vs[1] } ) || !doSegmentSegmentIntersect( { vs[4], vs[5], vs[0], vs[1] } ) )
+                break;
+            const int r = segmentIntersectionOrder( vs );
+            mismatches += prev >= 0 && prev != r;
+            prev = r;
+        }
+    }
+    while ( std::next_permutation( ids.begin(), ids.end() ) );
+    EXPECT_EQ( mismatches, 0 );
 }
 
 TEST( MRMesh, segmentIntersectionOrder2b )
@@ -634,6 +799,84 @@ TEST( MRMesh, orientParaboloid3d )
     const Vector2i a{ 54209929, -710917541 };
     const Vector2i b{ 0, -365379885 };
     EXPECT_FALSE( orientParaboloid3d( a, b, b ) );
+}
+
+TEST( MRMesh, ccwAroundLine )
+{
+    const std::array<PreciseVertCoords, 5> vs =
+    {
+        PreciseVertCoords{ 0_v, Vector3i(  0,  0,  0 ) }, // the line is the z-axis directed up
+        PreciseVertCoords{ 1_v, Vector3i(  0,  0,  1 ) },
+
+        PreciseVertCoords{ 2_v, Vector3i(  2,  0,  7 ) }, // rotation 0 degrees
+        PreciseVertCoords{ 3_v, Vector3i( -1,  2, -3 ) }, // rotation ~117 degrees
+        PreciseVertCoords{ 4_v, Vector3i( -1, -2,  5 ) }  // rotation ~243 degrees
+    };
+
+    EXPECT_TRUE(  ccwAroundLine( vs ) );
+    EXPECT_FALSE( ccwAroundLine( { vs[0], vs[1], vs[2], vs[4], vs[3] } ) ); // swapped half-planes
+    EXPECT_FALSE( ccwAroundLine( { vs[1], vs[0], vs[2], vs[3], vs[4] } ) ); // reversed line
+    EXPECT_TRUE(  ccwAroundLine( { vs[0], vs[1], vs[3], vs[4], vs[2] } ) ); // cyclic permutations
+    EXPECT_TRUE(  ccwAroundLine( { vs[0], vs[1], vs[4], vs[2], vs[3] } ) );
+
+    // all three half-planes within one half-space: rotations 0, ~11 and ~22 degrees
+    const PreciseVertCoords a{ 2_v, Vector3i( 10, 0, 0 ) };
+    const PreciseVertCoords b{ 3_v, Vector3i( 10, 2, 0 ) };
+    const PreciseVertCoords c{ 4_v, Vector3i( 10, 4, 0 ) };
+    EXPECT_TRUE(  ccwAroundLine( { vs[0], vs[1], a, b, c } ) );
+    EXPECT_FALSE( ccwAroundLine( { vs[0], vs[1], a, c, b } ) );
+
+    // the same three half-planes around an oblique line
+    const PreciseVertCoords p{ 0_v, Vector3i( 1, 1, 1 ) };
+    const PreciseVertCoords q{ 1_v, Vector3i( 3, 3, 3 ) };
+    EXPECT_TRUE(  ccwAroundLine( { p, q, PreciseVertCoords{ 2_v, Vector3i(  1, -1,  0 ) },
+                                         PreciseVertCoords{ 3_v, Vector3i(  0,  1, -1 ) },
+                                         PreciseVertCoords{ 4_v, Vector3i( -1,  0,  1 ) } } ) );
+    EXPECT_FALSE( ccwAroundLine( { p, q, PreciseVertCoords{ 2_v, Vector3i(  1, -1,  0 ) },
+                                         PreciseVertCoords{ 4_v, Vector3i( -1,  0,  1 ) },
+                                         PreciseVertCoords{ 3_v, Vector3i(  0,  1, -1 ) } } ) );
+}
+
+TEST( MRMesh, ccwAroundLineCircle )
+{
+    // 16 directions with strictly increasing rotation around the z-axis
+    constexpr int cNum = 16;
+    const Vector2i dirs[cNum] =
+    {
+        { 1, 0 }, { 2, 1 }, { 1, 1 }, { 1, 2 }, { 0, 1 }, { -1, 2 }, { -1, 1 }, { -2, 1 },
+        { -1, 0 }, { -2, -1 }, { -1, -1 }, { -1, -2 }, { 0, -1 }, { 1, -2 }, { 1, -1 }, { 2, -1 }
+    };
+    std::array<PreciseVertCoords, cNum> ps;
+    for ( int i = 0; i < cNum; ++i )
+        ps[i] = { VertId( i + 2 ), Vector3i( dirs[i].x, dirs[i].y, i - cNum / 2 ) }; // z varies on purpose
+
+    const PreciseVertCoords p{ 0_v, Vector3i( 0, 0, -5 ) };
+    const PreciseVertCoords q{ 1_v, Vector3i( 0, 0,  7 ) };
+    for ( int i = 0; i < cNum; ++i )
+        for ( int j = i + 1; j < cNum; ++j )
+            for ( int k = j + 1; k < cNum; ++k )
+            {
+                EXPECT_TRUE(  ccwAroundLine( { p, q, ps[i], ps[j], ps[k] } ) );
+                EXPECT_FALSE( ccwAroundLine( { p, q, ps[i], ps[k], ps[j] } ) );
+            }
+}
+
+TEST( MRMesh, sosCcwAroundLine )
+{
+    std::array<PreciseVertCoords, 5> vs;
+    for ( VertId i = 0_v; i < 5; ++i )
+        vs[i].id = i; //and point coordinate is (0,0,0)
+
+    // simulation-of-simplicity must answer consistently in the most degenerate situation possible
+    do
+    {
+        const bool res = ccwAroundLine( vs );
+        EXPECT_NE( res, ccwAroundLine( { vs[0], vs[1], vs[2], vs[4], vs[3] } ) ); // swapped half-planes
+        EXPECT_NE( res, ccwAroundLine( { vs[1], vs[0], vs[2], vs[3], vs[4] } ) ); // reversed line
+        EXPECT_EQ( res, ccwAroundLine( { vs[0], vs[1], vs[3], vs[4], vs[2] } ) ); // cyclic permutations
+        EXPECT_EQ( res, ccwAroundLine( { vs[0], vs[1], vs[4], vs[2], vs[3] } ) );
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
 TEST( MRMesh, doTriangleSegmentIntersect )
@@ -810,6 +1053,221 @@ TEST( MRMesh, segmentIntersectionOrder3b )
 
     EXPECT_TRUE(  segmentIntersectionOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[2] } ) );
     EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[2], vs[2], vs[3], vs[4] } ) );
+}
+
+TEST( MRMesh, segmentIntersectionOrder3c )
+{
+    // degenerate inputs reaching the polynomial path with 7 or 8 distinct vertex ids,
+    // so the vertices with the largest ids must receive distinct (and huge) epsilon degrees
+    auto check = []( const std::array<PreciseVertCoords, 8> & vs, bool expected )
+    {
+        ASSERT_TRUE( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) );
+        ASSERT_TRUE( doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) );
+        EXPECT_EQ( segmentIntersectionOrder( vs ), expected );
+        // swapped triangles
+        EXPECT_EQ( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[7], vs[2], vs[3], vs[4] } ), !expected );
+        // reversed segment
+        EXPECT_EQ( segmentIntersectionOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ), !expected );
+    };
+
+    // 8 distinct ids
+    check( {
+        PreciseVertCoords{ 12_v, Vector3i( 0,-1,-1 ) }, PreciseVertCoords{  1_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 11_v, Vector3i( 1, 0, 0 ) }, PreciseVertCoords{  5_v, Vector3i(-1,-1,-1 ) }, PreciseVertCoords{ 0_v, Vector3i( 1, 0, 0 ) },
+        PreciseVertCoords{  4_v, Vector3i( 1, 0, 0 ) }, PreciseVertCoords{ 13_v, Vector3i(-1, 1, 1 ) }, PreciseVertCoords{ 6_v, Vector3i( 0,-1, 0 ) } }, true );
+
+    // 7 distinct ids: one shared vertex in ta and tb
+    check( {
+        PreciseVertCoords{  8_v, Vector3i( 1,-1, 0 ) }, PreciseVertCoords{ 10_v, Vector3i( 1,-1, 1 ) },
+        PreciseVertCoords{ 14_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{  2_v, Vector3i( 0, 1, 0 ) }, PreciseVertCoords{ 4_v, Vector3i( 1, 1, 1 ) },
+        PreciseVertCoords{  5_v, Vector3i( 1, 1, 1 ) }, PreciseVertCoords{  0_v, Vector3i( 0, 1, 1 ) }, PreciseVertCoords{ 14_v, Vector3i( 1,-1, 1 ) } }, false );
+    check( {
+        PreciseVertCoords{ 12_v, Vector3i( 0, 0, 0 ) }, PreciseVertCoords{  8_v, Vector3i( 0, 0,-1 ) },
+        PreciseVertCoords{ 14_v, Vector3i( 0, 0, 0 ) }, PreciseVertCoords{  1_v, Vector3i( 0, 0,-1 ) }, PreciseVertCoords{ 0_v, Vector3i(-1, 1, 1 ) },
+        PreciseVertCoords{  2_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  4_v, Vector3i(-1, 0, 1 ) }, PreciseVertCoords{ 14_v, Vector3i( 0, 0, 0 ) } }, false );
+}
+
+TEST( MRMesh, signOfProductsDiff )
+{
+    using P = SparsePolynomial<std::int64_t, int, 1000>;
+    const P one( std::vector<P::Term>{ { 0, 1 } } );
+    const P onePlusX( 1, 1, 1 );
+    const P oneMinusX( 1, 1, -1 );
+    const P a( 1, 1, 1, 2, 1 ); // 1 + x + x^2
+    const P b( 1, 1, 2, 2, 3 ); // 1 + 2x + 3x^2 = the first three terms of a*a
+
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( onePlusX, oneMinusX, one, one ), -1 ); // -x^2
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( one, one, onePlusX, oneMinusX ), 1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( onePlusX, onePlusX, onePlusX, onePlusX ), 0 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, a, b, one ), 1 );  // 2x^3 + x^4
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( b, one, a, a ), -1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, one, one, a ), 0 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, one, P{}, one ), 1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, one, a, one ), -1 );
+    EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, P{}, P{}, P{} ), 0 );
+}
+
+TEST( MRMesh, segmentIntersectionOrder3Scale )
+{
+    // two triangles crossing the segment at the same point (x=0): ta is the plane x=0, tb is the plane y=x;
+    // the answer of a simulation-of-simplicity predicate must not depend on the scale of the coordinates
+    // (and the coefficients of the polynomials at the large scale do not fit in 128 bits)
+    const Vector3i pts[8] =
+    {
+        { -1, 0, 0 }, { 1, 0, 0 },             // s
+        { 0,-1,-1 }, { 0, 1,-1 }, { 0, 0, 1 }, // ta
+        { 1, 1,-1 }, {-1,-1,-1 }, { 0, 0, 1 }  // tb
+    };
+    std::array<VertId, 8> ids;
+    for ( int i = 0; i < 8; ++i )
+        ids[i] = VertId( i );
+    int mismatches = 0, n = 0;
+    do
+    {
+        if ( ++n % 101 != 0 ) // every permutation is too slow here, since all polynomials are full
+            continue;
+        int prev = -1;
+        for ( int scale : { 1, 1 << 29 } )
+        {
+            std::array<PreciseVertCoords, 8> vs;
+            for ( int i = 0; i < 8; ++i )
+                vs[i] = { ids[i], pts[i] * scale };
+            if ( !doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } )
+              || !doTriangleSegmentIntersect( { vs[5], vs[6], vs[7], vs[0], vs[1] } ) )
+                break;
+            const int r = segmentIntersectionOrder( vs );
+            mismatches += prev >= 0 && prev != r;
+            prev = r;
+        }
+    }
+    while ( std::next_permutation( ids.begin(), ids.end() ) );
+    EXPECT_EQ( mismatches, 0 );
+}
+
+TEST( MRMesh, segmentIntersectionTriPlaneOrder )
+{
+    PreciseVertCoords vs[8] =
+    {
+        // s:
+        PreciseVertCoords{ 0_v, Vector3i( 0, 0, 0 ) },
+        PreciseVertCoords{ 1_v, Vector3i( 3, 0, 0 ) },
+        // ta:
+        PreciseVertCoords{ 2_v, Vector3i( 1,-1,-1 ) },
+        PreciseVertCoords{ 3_v, Vector3i( 1, 1,-1 ) },
+        PreciseVertCoords{ 4_v, Vector3i( 1, 0, 1 ) },
+        // tb:
+        PreciseVertCoords{ 5_v, Vector3i( 2,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 2, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 2, 0, 1 ) }
+    };
+
+    // pb is the plane of tb, s crosses it: the answer must be the same as for segmentIntersectionOrder
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[3], vs[2], vs[4], vs[6], vs[5], vs[7] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[5], vs[6], vs[7], vs[2], vs[3], vs[4] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[5], vs[6], vs[7], vs[2], vs[4], vs[3] } ) );
+
+    // one shared point in ta and pb
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[2], vs[6], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[4] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[6], vs[4] } ) );
+
+    // two shared points in ta and pb
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[2], vs[3], vs[7] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[4], vs[3] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[4], vs[3] } ) );
+
+    // plane pb crosses the line of s outside of s (beyond s[1] at x=5 or before s[0] at x=-2)
+    PreciseVertCoords outer[6] =
+    {
+        PreciseVertCoords{ 5_v, Vector3i( 5,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 5, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 5, 0, 1 ) },
+        PreciseVertCoords{ 5_v, Vector3i(-2,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i(-2, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i(-2, 0, 1 ) }
+    };
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[0], outer[1], outer[2] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[1], outer[0], outer[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], outer[0], outer[1], outer[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[3], outer[4], outer[5] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], outer[4], outer[3], outer[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], outer[3], outer[4], outer[5] } ) );
+
+    // plane pb crosses triangle ta (general case): 3x+2z=4 meets the line of s at x=4/3 (after ta), 8x-6z=6 at x=3/4 (before ta)
+    PreciseVertCoords tilted[6] =
+    {
+        PreciseVertCoords{ 5_v, Vector3i( 2,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 2, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 0, 0, 2 ) },
+        PreciseVertCoords{ 5_v, Vector3i( 0,-1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1,-1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 0, 3 ) }
+    };
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[0], tilted[1], tilted[2] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[1], tilted[0], tilted[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], tilted[0], tilted[1], tilted[2] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[3], tilted[4], tilted[5] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], tilted[4], tilted[3], tilted[5] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], tilted[3], tilted[4], tilted[5] } ) );
+
+    // s is parallel to pb (plane z=1 or plane y=1), and the perturbation of the points decides the order;
+    // still reversing s must flip the answer, and the orientation of pb must not matter
+    PreciseVertCoords par[6] =
+    {
+        PreciseVertCoords{ 5_v, Vector3i( 0,-1, 1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 0, 1 ) },
+        PreciseVertCoords{ 5_v, Vector3i( 0, 1,-1 ) },
+        PreciseVertCoords{ 6_v, Vector3i( 0, 1, 1 ) },
+        PreciseVertCoords{ 7_v, Vector3i( 3, 1, 0 ) }
+    };
+    for ( int i = 0; i < 6; i += 3 )
+    {
+        const bool r = segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } );
+        EXPECT_EQ( r,  segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], par[i+1], par[i], par[i+2] } ) );
+        EXPECT_NE( r,  segmentIntersectionTriPlaneOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], par[i], par[i+1], par[i+2] } ) );
+    }
+
+    // 8 distinct ids with the three largest ones in pb: the polynomials here have the largest degrees that must be considered (cMaxPolyDTriPlane)
+    const std::array<PreciseVertCoords, 8> deg =
+    {
+        PreciseVertCoords{  9_v, Vector3i( 1, 1,-1 ) }, PreciseVertCoords{  0_v, Vector3i( 0,-1, 1 ) },
+        PreciseVertCoords{  4_v, Vector3i( 0, 1, 0 ) }, PreciseVertCoords{  1_v, Vector3i( 1,-1, 0 ) }, PreciseVertCoords{  6_v, Vector3i( 1, 1,-1 ) },
+        PreciseVertCoords{ 14_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{ 15_v, Vector3i( 1,-1, 1 ) }, PreciseVertCoords{ 12_v, Vector3i( 1,-1, 0 ) }
+    };
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( deg ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { deg[1], deg[0], deg[2], deg[3], deg[4], deg[5], deg[6], deg[7] } ) );
+}
+
+TEST( MRMesh, segmentIntersectionTriPlaneOrderFullDegen )
+{
+    std::array<PreciseVertCoords, 8> vs;
+    for ( VertId i = 0_v; i < 8; ++i )
+        vs[i].id = i; //and point coordinate is (0,0,0)
+
+    // test that maximum degree in segmentIntersectionTriPlaneOrder can cope with most degenerate situation possible
+
+    // no shared vertices
+    do
+    {
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) )
+        {
+            (void)segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end(), []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+
+    // one shared vertex
+    do
+    {
+        if( doTriangleSegmentIntersect( { vs[2], vs[3], vs[4], vs[0], vs[1] } ) )
+        {
+            (void)segmentIntersectionTriPlaneOrder( { vs[0], vs[1], vs[2], vs[3], vs[4], vs[5], vs[6], vs[2] } );
+        }
+    }
+    while ( std::next_permutation( vs.begin(), vs.end() - 1, []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
 }
 
 TEST( MRMesh, getToIntConverter )

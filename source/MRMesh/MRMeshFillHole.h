@@ -269,6 +269,10 @@ MRMESH_API EdgeId makeBridgeEdge( MeshTopology & topology, EdgeId a, EdgeId b );
 MRMESH_API std::vector<EdgeId> makeInterHoleBridgeEdges( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 MRMESH_API std::vector<EdgeId> makeInterHoleBridgeEdges( MeshTopology& topology, const VertCoords& points, const std::vector<EdgeId>& holeRepresentativeEdges );
 
+/// creates bridge edges between all holes of the mesh by calling makeInterHoleBridgeEdges, and fills all remaining holes;
+/// \return false if the mesh had no holes and was not changed, true otherwise
+MRMESH_API bool bridgeFillAllHoles( Mesh& mesh, const FillHoleParams& params = {} );
+
 /// given quadrangle face to the left of a, splits it in two triangles with new diagonal edge via dest(a)
 MRMESH_API void splitQuad( MeshTopology & topology, EdgeId a, FaceBitSet * outNewFaces = nullptr );
 

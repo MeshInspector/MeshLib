@@ -22,11 +22,11 @@ RUN <<EOF
 EOF
 
 
-# noble, matching the emsdk image: its binaries link glibc 2.39 and will not run on jammy
-# 4.0.19 and 5.x set this in their toolchain, so every add_library(... SHARED) came out as a
-# static archive. 6.0.9 sets it only for a couple of broken cmake versions, so those targets
-# become real wasm side modules, and a side module link needs every input PIC - including the
-# ports emsdk ships, which are not. Nothing we build wants a side module.
+# 4.0.19 and 5.x set TARGET_SUPPORTS_SHARED_LIBS FALSE in their own toolchain, so every
+# add_library(... SHARED) came out as a static archive. 6.0.9 sets it only for a couple of
+# broken cmake versions, so those targets become real wasm side modules, and a side module
+# link needs every input PIC - including the ports emsdk ships, which are not. Nothing we
+# build wants a side module.
 RUN <<EOF
     set -e
     echo "set_property(GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS FALSE)" \

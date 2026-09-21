@@ -19,12 +19,13 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap );
 
 /// returns pointsToDistanceVolume as an object assignable to PointsToMeshParameters::createVolumeCallback;
-/// the languages without implicit conversion from a callable to std::function (e.g. Python) need it, as in
+/// Python needs it because the generated wrappers of std::function returning Expected<...> cannot be constructed
+/// from a Python callable (the wrappers of other std::function types can), so use it as in
 ///     params.createVolumeCallback = mrcudapy.pointsToDistanceVolumeCallback()
 [[nodiscard]] MRCUDA_API MR::PointsToMeshParameters::CreateVolumeCallback pointsToDistanceVolumeCallback();
 
 /// returns pointsToDistanceVolumeByParts as an object assignable to PointsToMeshParameters::createVolumeCallbackByParts;
-/// the languages without implicit conversion from a callable to std::function (e.g. Python) need it, as in
+/// Python needs it for the same reason as pointsToDistanceVolumeCallback(), so use it as in
 ///     params.createVolumeCallbackByParts = mrcudapy.pointsToDistanceVolumeByPartsCallback()
 [[nodiscard]] MRCUDA_API MR::PointsToMeshParameters::CreateVolumeCallbackByParts pointsToDistanceVolumeByPartsCallback();
 

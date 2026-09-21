@@ -110,8 +110,6 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CXXFLAGS="${CFLAGS} -pthread"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
-    # emcc accepts -m64 from 5.0.7 on and deprecates -s MEMORY64 in 6.0; older SDKs pass -m64
-    # through to clang, so the spelling has to follow the SDK
     EM_VERSION=$("${EMSCRIPTEN_ROOT}/emcc" -v 2>&1 | sed -n "s/^emcc (.*) \([0-9][0-9.]*\).*/\1/p" | head -1)
     if [ "$(printf '%s\n5.0.7\n' "${EM_VERSION:-0}" | sort -V | head -1)" = "5.0.7" ] ; then
       WASM64_FLAG="-m64"

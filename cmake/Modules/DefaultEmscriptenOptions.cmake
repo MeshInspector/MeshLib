@@ -2,11 +2,6 @@
 
 if(MR_EMSCRIPTEN)
   if(MR_EMSCRIPTEN_WASM64)
-    # emcc accepts -m64 from 5.0.7 on and deprecates -s MEMORY64 in 6.0, where -Wdeprecated
-    # -Werror turns the deprecation into an error that fails every compiler probe. Older SDKs
-    # pass -m64 through to clang and fail just as hard, so the spelling has to follow the SDK.
-    # This runs before project(), so the toolchain file has not set EMSCRIPTEN_VERSION yet;
-    # derive it the same way it does. It only sets the variable if we leave it empty.
     if(NOT EMSCRIPTEN_VERSION)
       find_program(MESHLIB_EMCC NAMES emcc HINTS "$ENV{EMSDK}/upstream/emscripten" REQUIRED)
       execute_process(COMMAND "${MESHLIB_EMCC}" -v ERROR_VARIABLE MESHLIB_EMCC_OUTPUT OUTPUT_QUIET)

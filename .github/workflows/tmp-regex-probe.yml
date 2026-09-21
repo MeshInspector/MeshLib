@@ -1,0 +1,53 @@
+name: TEMP cmake regex probe
+
+on:
+  pull_request:
+
+jobs:
+  probe:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Probe
+        run: |
+          cmake --version | head -1
+
+          cat > banner.txt <<'BANNER'
+          emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 6.0.9 (4e4223852a)
+          clang version 24.0.0git (https:/github.com/llvm/llvm-project 5101262)
+          Target: wasm32-unknown-emscripten
+          Thread model: posix
+          InstalledDir: /emsdk/upstream/bin
+          BANNER
+
+          cat > A.cmake <<'EOF'
+          file(READ "banner.txt" OUT)
+          string(REGEX MATCH "emcc \\(.*\\) ([0-9.]+)" W "${OUT}")
+          message(STATUS "A unescaped-dot   g1=[${CMAKE_MATCH_1}]")
+          EOF
+
+          cat > B.cmake <<'EOF'
+          file(READ "banner.txt" OUT)
+          string(REGEX MATCH "emcc \\(.*\\) ([0-9\\.]+)" W "${OUT}")
+          message(STATUS "B escaped-dot     g1=[${CMAKE_MATCH_1}]")
+          EOF
+
+          cat > C.cmake <<'EOF'
+          file(READ "banner.txt" OUT)
+          string(REGEX MATCH "emcc [(].*[)] ([0-9.]+)" W "${OUT}")
+          message(STATUS "C brackets        g1=[${CMAKE_MATCH_1}]")
+          EOF
+
+          cat > D.cmake <<'EOF'
+          file(READ "banner.txt" OUT)
+          string(REGEX MATCH "emcc [^\n]*[)] ([0-9.]+)" W "${OUT}")
+          message(STATUS "D line-limited    g1=[${CMAKE_MATCH_1}]")
+          EOF
+
+          for f in A B C D ; do cmake -P $f.cmake ; done
+
+          echo "--- and the shell form used by build_thirdparty.sh:"
+          sed -nE 's/^emcc \(.*\) ([0-9.]+).*/\1/p' banner.txt | head -1

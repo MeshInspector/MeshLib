@@ -685,8 +685,6 @@ int Viewer::launch( const LaunchParams& params )
     if ( params.close )
         launchShut();
 
-    CommandLoop::removeCommands( true );
-
     return EXIT_SUCCESS;
 }
 
@@ -1001,6 +999,10 @@ void Viewer::launchEventLoop()
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
+        // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
+        if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
+            continue;
+
         if ( isAnimating )
         {
             const double minDuration = 1.0 / double( animationMaxFps );
@@ -1093,6 +1095,8 @@ void Viewer::launchShut()
 
     /// disconnect all slots before shared libraries with plugins are unloaded
     *signals_ = {};
+
+    CommandLoop::removeCommands( true );
 }
 
 void Viewer::init_()
@@ -1791,6 +1795,14 @@ bool Viewer::draw_( bool force )
     if ( !force && !needSceneRedraw )
         return false;
 
+    if ( !isGLInitialized() )
+    {
+        resetRedraw_();
+        forceRedrawFrames_ = 0;
+        forceRedrawFramesWithoutSwap_ = 0;
+        return false;
+    }
+
     if ( !isInDraw_ )
         isInDraw_ = true;
     else
@@ -2282,7 +2294,7 @@ bool Viewer::windowShouldClose()
     if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
         return false;
 
-    if ( !interruptWindowClose() )
+    if ( !window || !interruptWindowClose() )
         return true;
 
     if ( window )

@@ -3,6 +3,7 @@
 #include "exports.h"
 #include "MRVoxels/MRVoxelsVolume.h"
 #include "MRVoxels/MRPointsToDistanceVolume.h"
+#include "MRVoxels/MRPointsToMeshFusion.h"
 
 namespace MR
 {
@@ -16,6 +17,21 @@ MRCUDA_API Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointC
 /// populate the volume by parts to the given callback
 MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
     std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap );
+
+/// returns pointsToDistanceVolume as an object assignable to PointsToMeshParameters::createVolumeCallback;
+/// the languages without implicit conversion from a callable to std::function (e.g. Python) need it, as in
+///     params.createVolumeCallback = mrcudapy.pointsToDistanceVolumeCallback()
+[[nodiscard]] MRCUDA_API decltype( MR::PointsToMeshParameters::createVolumeCallback ) pointsToDistanceVolumeCallback();
+
+/// returns pointsToDistanceVolumeByParts as an object assignable to PointsToMeshParameters::createVolumeCallbackByParts;
+/// the languages without implicit conversion from a callable to std::function (e.g. Python) need it, as in
+///     params.createVolumeCallbackByParts = mrcudapy.pointsToDistanceVolumeByPartsCallback()
+[[nodiscard]] MRCUDA_API decltype( MR::PointsToMeshParameters::createVolumeCallbackByParts ) pointsToDistanceVolumeByPartsCallback();
+
+/// makes the subsequent pointsToMeshFusion( cloud, params ) compute the distance volume on GPU, as in
+///     mrcudapy.setupPointsToMeshFusion( params )
+/// the by-parts callback takes precedence, and it streams the volume instead of allocating it whole
+MRCUDA_API void setupPointsToMeshFusion( MR::PointsToMeshParameters& params );
 
 }
 }

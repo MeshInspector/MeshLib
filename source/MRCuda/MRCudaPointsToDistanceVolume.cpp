@@ -147,6 +147,29 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     );
 }
 
+decltype( MR::PointsToMeshParameters::createVolumeCallback ) pointsToDistanceVolumeCallback()
+{
+    return [] ( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params )
+    {
+        return MR::Cuda::pointsToDistanceVolume( cloud, params );
+    };
+}
+
+decltype( MR::PointsToMeshParameters::createVolumeCallbackByParts ) pointsToDistanceVolumeByPartsCallback()
+{
+    return [] ( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
+        std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )
+    {
+        return MR::Cuda::pointsToDistanceVolumeByParts( cloud, params, std::move( addPart ), layerOverlap );
+    };
+}
+
+void setupPointsToMeshFusion( MR::PointsToMeshParameters& params )
+{
+    params.createVolumeCallback = pointsToDistanceVolumeCallback();
+    params.createVolumeCallbackByParts = pointsToDistanceVolumeByPartsCallback();
+}
+
 } //namespace Cuda
 
 } //namespace MR

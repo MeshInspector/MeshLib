@@ -5,21 +5,18 @@ if(MR_EMSCRIPTEN)
     # emcc accepts -m64 from 5.0.7 on and deprecates -s MEMORY64 in 6.0, where -Wdeprecated
     # -Werror turns the deprecation into an error that fails every compiler probe. Older SDKs
     # pass -m64 through to clang and fail just as hard, so the spelling has to follow the SDK.
-    set(MESHLIB_EMSCRIPTEN_VERSION_FILE "$ENV{EMSDK}/upstream/emscripten/emscripten-version.txt")
-    if(NOT EXISTS "${MESHLIB_EMSCRIPTEN_VERSION_FILE}" AND DEFINED CMAKE_TOOLCHAIN_FILE)
-      # <emscripten root>/cmake/Modules/Platform/Emscripten.cmake
-      get_filename_component(MESHLIB_EMSCRIPTEN_ROOT "${CMAKE_TOOLCHAIN_FILE}" DIRECTORY)
-      get_filename_component(MESHLIB_EMSCRIPTEN_ROOT "${MESHLIB_EMSCRIPTEN_ROOT}/../../.." ABSOLUTE)
-      set(MESHLIB_EMSCRIPTEN_VERSION_FILE "${MESHLIB_EMSCRIPTEN_ROOT}/emscripten-version.txt")
+    # This runs before project(), so the toolchain file has not set EMSCRIPTEN_VERSION yet;
+    # derive it the same way it does. It only sets the variable if we leave it empty.
+    if(NOT EMSCRIPTEN_VERSION)
+      find_program(MESHLIB_EMCC NAMES emcc HINTS "$ENV{EMSDK}/upstream/emscripten" REQUIRED)
+      execute_process(COMMAND "${MESHLIB_EMCC}" -v ERROR_VARIABLE MESHLIB_EMCC_OUTPUT OUTPUT_QUIET)
+      string(REGEX MATCH "emcc [(].*[)] ([0-9.]+)" MESHLIB_EMCC_UNUSED "${MESHLIB_EMCC_OUTPUT}")
+      if(NOT CMAKE_MATCH_1)
+        message(FATAL_ERROR "Cannot parse the Emscripten version from \"${MESHLIB_EMCC} -v\"")
+      endif()
+      set(EMSCRIPTEN_VERSION "${CMAKE_MATCH_1}")
     endif()
-    if(EXISTS "${MESHLIB_EMSCRIPTEN_VERSION_FILE}")
-      file(READ "${MESHLIB_EMSCRIPTEN_VERSION_FILE}" MESHLIB_EMSCRIPTEN_VERSION)
-      string(REGEX MATCH "[0-9]+[.][0-9]+[.][0-9]+" MESHLIB_EMSCRIPTEN_VERSION "${MESHLIB_EMSCRIPTEN_VERSION}")
-    else()
-      message(WARNING "Cannot read the Emscripten version; assuming it predates -m64")
-      set(MESHLIB_EMSCRIPTEN_VERSION "0")
-    endif()
-    if(MESHLIB_EMSCRIPTEN_VERSION VERSION_LESS "5.0.7")
+    if(EMSCRIPTEN_VERSION VERSION_LESS "5.0.7")
       set(MESHLIB_EMSCRIPTEN_WASM64_FLAG "-s MEMORY64=1")
     else()
       set(MESHLIB_EMSCRIPTEN_WASM64_FLAG "-m64")

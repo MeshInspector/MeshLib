@@ -683,7 +683,7 @@ int Viewer::launch( const LaunchParams& params )
 #endif
     }
     if ( params.close )
-        launchShut(); // closes the command loop too; with `close` false, the caller's own launchShut does
+        launchShut();
 
     return EXIT_SUCCESS;
 }
@@ -1096,7 +1096,6 @@ void Viewer::launchShut()
     /// disconnect all slots before shared libraries with plugins are unloaded
     *signals_ = {};
 
-    // no loop will run them any more, and a blocking caller must be told so rather than wait
     CommandLoop::removeCommands( true );
 }
 
@@ -1798,7 +1797,6 @@ bool Viewer::draw_( bool force )
 
     if ( !isGLInitialized() )
     {
-        // NoWindow mode: nothing to draw into; only consume the redraw requests, or the event loop spins on them
         resetRedraw_();
         forceRedrawFrames_ = 0;
         forceRedrawFramesWithoutSwap_ = 0;
@@ -2296,7 +2294,6 @@ bool Viewer::windowShouldClose()
     if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
         return false;
 
-    // without a window nothing can ask the user, and nothing draws the answer either
     if ( !window || !interruptWindowClose() )
         return true;
 

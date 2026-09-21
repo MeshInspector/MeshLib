@@ -49,5 +49,10 @@ jobs:
 
           for f in A B C D ; do cmake -P $f.cmake ; done
 
+          echo "=== now with the distro cmake (what the emscripten image uses)"
+          sudo apt-get update -qq && sudo apt-get install -y -qq cmake >/dev/null
+          /usr/bin/cmake --version | head -1
+          for f in A B C D ; do /usr/bin/cmake -P $f.cmake ; done
+
           echo "--- and the shell form used by build_thirdparty.sh:"
           sed -nE 's/^emcc \(.*\) ([0-9.]+).*/\1/p' banner.txt | head -1

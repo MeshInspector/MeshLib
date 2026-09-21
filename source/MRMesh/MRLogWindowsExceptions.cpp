@@ -78,7 +78,21 @@ LONG WINAPI logWindowsException( LPEXCEPTION_POINTERS pExInfo )
     else
         spdlog::warn( "Windows exception {:#010x}", pExceptionRecord->ExceptionCode );
 
-    if ( numMoreStacktraces > 0 )
+    // Debug-print "exceptions" are not failures at all: they are how OutputDebugString delivers text
+    // (third-party DLLs loaded into our process emit them routinely, e.g. NVIDIA's nvspcap64). They
+    // carry no useful stack, so capturing one only costs time -- and on Windows it costs much more
+    // than time: getCurrentStacktrace() makes this module a std::stacktrace client, which creates a
+    // dbgeng IDebugClient owned by a static in whichever module resolved the symbols. At process exit
+    // RtlExitUserProcess kills every other thread before LdrShutdownProcess runs the DLL detach
+    // sequence, so a dbgeng critical section held by one of them is left orphaned; that static's
+    // destructor then blocks on it during MRMesh.dll's DLL_PROCESS_DETACH and ntdll terminates the
+    // process instead of hanging. Everything registered later in this module's atexit table -- most
+    // visibly Config's destructor, which is what writes config.json -- is silently skipped.
+    const bool debugPrintException =
+        pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_C ||
+        pExceptionRecord->ExceptionCode == DBG_PRINTEXCEPTION_WIDE_C;
+
+    if ( !debugPrintException && numMoreStacktraces > 0 )
     {
         --numMoreStacktraces;
         spdlog::info( "Windows exception stacktrace:\n{}", getCurrentStacktrace() );

@@ -2,6 +2,7 @@
 
 #ifndef __EMSCRIPTEN__
 
+#include "MRSystem.h"
 #include "MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 
@@ -13,7 +14,7 @@ namespace
 void crashSignalHandler( int signal )
 {
     spdlog::critical( "Crash signal: {}", signal );
-    spdlog::info( "Crash stacktrace:\n{}", MR::getCurrentStacktraceInline() );
+    spdlog::info( "Crash stacktrace:\n{}", MR::getCurrentStacktrace() );
     MR::printCurrentTimerBranch();
     std::exit( signal );
 }

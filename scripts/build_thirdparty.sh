@@ -111,6 +111,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   fi
   if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
     EMSCRIPTEN_VERSION=$("${EMSCRIPTEN_ROOT}/emcc" -v 2>&1 | sed -nE 's/^emcc \(.*\) ([0-9.]+).*/\1/p' | head -1)
+    # that's how the version comparison works in Bash
     if [ "$(printf '%s\n6.0.0\n' "${EMSCRIPTEN_VERSION:-0}" | sort -V | head -1)" = "6.0.0" ] ; then
       WASM64_FLAG="-m64"
     else

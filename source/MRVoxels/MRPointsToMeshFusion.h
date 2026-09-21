@@ -45,10 +45,12 @@ struct PointsToMeshParameters
 
     /// Callback for volume creation by parts. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
     /// This callback takes precedence over createVolumeCallback
-    std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )> createVolumeCallbackByParts;
+    using CreateVolumeCallbackByParts = std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )>;
+    CreateVolumeCallbackByParts createVolumeCallbackByParts;
 
     /// Callback for volume creation. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
-    std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> createVolumeCallback;
+    using CreateVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
+    CreateVolumeCallback createVolumeCallback;
 
     /// Callback for checking whether it's possible to use the volume creation function
     std::function<bool ( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> canCreateVolume;

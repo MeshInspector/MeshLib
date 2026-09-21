@@ -147,7 +147,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     );
 }
 
-decltype( MR::PointsToMeshParameters::createVolumeCallback ) pointsToDistanceVolumeCallback()
+MR::PointsToMeshParameters::CreateVolumeCallback pointsToDistanceVolumeCallback()
 {
     return [] ( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params )
     {
@@ -155,7 +155,7 @@ decltype( MR::PointsToMeshParameters::createVolumeCallback ) pointsToDistanceVol
     };
 }
 
-decltype( MR::PointsToMeshParameters::createVolumeCallbackByParts ) pointsToDistanceVolumeByPartsCallback()
+MR::PointsToMeshParameters::CreateVolumeCallbackByParts pointsToDistanceVolumeByPartsCallback()
 {
     return [] ( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
         std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )

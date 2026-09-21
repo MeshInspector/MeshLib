@@ -21,12 +21,12 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
 /// returns pointsToDistanceVolume as an object assignable to PointsToMeshParameters::createVolumeCallback;
 /// the languages without implicit conversion from a callable to std::function (e.g. Python) need it, as in
 ///     params.createVolumeCallback = mrcudapy.pointsToDistanceVolumeCallback()
-[[nodiscard]] MRCUDA_API decltype( MR::PointsToMeshParameters::createVolumeCallback ) pointsToDistanceVolumeCallback();
+[[nodiscard]] MRCUDA_API MR::PointsToMeshParameters::CreateVolumeCallback pointsToDistanceVolumeCallback();
 
 /// returns pointsToDistanceVolumeByParts as an object assignable to PointsToMeshParameters::createVolumeCallbackByParts;
 /// the languages without implicit conversion from a callable to std::function (e.g. Python) need it, as in
 ///     params.createVolumeCallbackByParts = mrcudapy.pointsToDistanceVolumeByPartsCallback()
-[[nodiscard]] MRCUDA_API decltype( MR::PointsToMeshParameters::createVolumeCallbackByParts ) pointsToDistanceVolumeByPartsCallback();
+[[nodiscard]] MRCUDA_API MR::PointsToMeshParameters::CreateVolumeCallbackByParts pointsToDistanceVolumeByPartsCallback();
 
 /// makes the subsequent pointsToMeshFusion( cloud, params ) compute the distance volume on GPU, as in
 ///     mrcudapy.setupPointsToMeshFusion( params )

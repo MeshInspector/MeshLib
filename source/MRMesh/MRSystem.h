@@ -83,16 +83,11 @@ using FileNamesStack = std::vector<std::filesystem::path>;
 /// returns string representation of the current stacktrace
 [[nodiscard]] MRMESH_API std::string getCurrentStacktrace();
 
-/// makes getCurrentStacktrace() delegate to (*provider)(); pass nullptr to restore the default
-/// implementation.
-///
-/// Call it from the executable at startup. Resolving symbols for a stacktrace creates a debug engine
-/// client owned by a static in whichever module did the resolving. Statics of a DLL are destroyed in
-/// DLL_PROCESS_DETACH, which RtlExitUserProcess reaches only after terminating every other thread, so
-/// a debug engine lock still held by one of them is orphaned and that destructor deadlocks on it; the
-/// OS then kills the process, silently skipping every static destructor registered after it in that
-/// DLL. Statics of the executable are destroyed by exit() while all threads are still alive, so
-/// keeping the provider there avoids the problem entirely.
+/// makes getCurrentStacktrace() delegate to (*provider)(); pass nullptr to restore the default.
+/// Mostly a Windows workaround: std::stacktrace parks a debug engine client in a static of whichever
+/// module resolved symbols, and tearing that down during the DLL's detach deadlocks and kills the
+/// process, skipping the remaining static destructors. Install it from the executable, whose statics
+/// are destroyed earlier, by exit(). See https://github.com/microsoft/STL/issues/4855
 MR_BIND_IGNORE MRMESH_API void setStacktraceProvider( std::string (*provider)() );
 #endif
 

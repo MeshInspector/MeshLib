@@ -82,6 +82,21 @@ using FileNamesStack = std::vector<std::filesystem::path>;
 #ifndef __EMSCRIPTEN__
 /// returns string representation of the current stacktrace
 [[nodiscard]] MRMESH_API std::string getCurrentStacktrace();
+
+/// a function producing a string representation of the current stacktrace
+using StacktraceProvider = std::string (*)();
+
+/// makes getCurrentStacktrace() delegate to (*provider)(), and returns the previously installed one;
+/// pass nullptr to restore the default implementation.
+///
+/// Call it from the executable at startup. Resolving symbols for a stacktrace creates a debug engine
+/// client owned by a static in whichever module did the resolving. Statics of a DLL are destroyed in
+/// DLL_PROCESS_DETACH, which RtlExitUserProcess reaches only after terminating every other thread, so
+/// a debug engine lock still held by one of them is orphaned and that destructor deadlocks on it; the
+/// OS then kills the process, silently skipping every static destructor registered after it in that
+/// DLL. Statics of the executable are destroyed by exit() while all threads are still alive, so
+/// keeping the provider there avoids the problem entirely.
+MRMESH_API StacktraceProvider setStacktraceProvider( StacktraceProvider provider );
 #endif
 
 struct SystemMemory

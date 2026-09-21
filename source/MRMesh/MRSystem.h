@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRColor.h"
 #include <filesystem>
+#include <functional>
 #include <string>
 
 namespace MR
@@ -84,10 +85,10 @@ using FileNamesStack = std::vector<std::filesystem::path>;
 [[nodiscard]] MRMESH_API std::string getCurrentStacktrace();
 
 /// a function producing a string representation of the current stacktrace
-using StacktraceProvider = std::string (*)();
+using StacktraceProvider = std::function<std::string()>;
 
-/// makes getCurrentStacktrace() delegate to (*provider)(), and returns the previously installed one;
-/// pass nullptr to restore the default implementation.
+/// makes getCurrentStacktrace() delegate to the given provider, and returns the previously installed
+/// one; pass an empty provider to restore the default implementation.
 ///
 /// Call it from the executable at startup. Resolving symbols for a stacktrace creates a debug engine
 /// client owned by a static in whichever module did the resolving. Statics of a DLL are destroyed in

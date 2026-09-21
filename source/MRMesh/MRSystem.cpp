@@ -8,6 +8,7 @@
 #include "MRRestoringStreamsSink.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
+#include <atomic>
 #include <cstring>
 #include <cstdlib>
 #include <filesystem>
@@ -649,21 +650,22 @@ void setNewHandlerIfNeeded()
 #ifndef __EMSCRIPTEN__
 namespace
 {
-// expected to be installed once at startup, before other threads exist
-StacktraceProvider gStacktraceProvider;
+using StacktraceProvider = std::string (*)();
+// read from a vectored exception handler and from a crash signal handler, either of which may run on
+// any thread at any time, so it must stay lock-free; being trivially destructible, it also stays
+// readable after this module's static destruction has begun
+std::atomic<StacktraceProvider> gStacktraceProvider{ nullptr };
 }
 
-StacktraceProvider setStacktraceProvider( StacktraceProvider provider )
+void setStacktraceProvider( std::string (*provider)() )
 {
-    auto prev = std::move( gStacktraceProvider );
-    gStacktraceProvider = std::move( provider );
-    return prev;
+    gStacktraceProvider.store( provider, std::memory_order_release );
 }
 
 std::string getCurrentStacktrace()
 {
-    if ( gStacktraceProvider )
-        return gStacktraceProvider();
+    if ( const auto provider = gStacktraceProvider.load( std::memory_order_acquire ) )
+        return provider();
     return getCurrentStacktraceInline();
 }
 #endif

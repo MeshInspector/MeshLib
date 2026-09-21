@@ -3,6 +3,12 @@
 IF(DEFINED ENV{MR_USE_CPP_23} AND "$ENV{MR_USE_CPP_23}" STREQUAL "ON")
   message("MR_USE_CPP_23 variable is deprecated; consider setting MR_CXX_STANDARD to 23")
   set(MR_CXX_STANDARD 23 CACHE STRING "Version of the C++ standard used to compile the project")
+ELSEIF(CMAKE_HOST_WIN32 AND NOT MR_EMSCRIPTEN)
+  # the MSBuild projects compile with /std:c++latest (LanguageStandard in source/common.props), so
+  # keep the CMake build on the same standard. Otherwise the two disagree about what the standard
+  # library provides -- <stacktrace> for one -- and the same source file takes a different branch
+  # depending on which build system compiled it. CMake maps C++23 to /std:c++latest for MSVC.
+  set(MR_CXX_STANDARD 23 CACHE STRING "Version of the C++ standard used to compile the project")
 ELSE()
   set(MR_CXX_STANDARD 20 CACHE STRING "Version of the C++ standard used to compile the project")
 ENDIF()

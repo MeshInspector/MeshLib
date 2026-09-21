@@ -1,12 +1,30 @@
-# this file must be included BEFORE the `project' command: MEMORY64 has to be in effect while CMake probes the compiler
+# this file must be included BEFORE the `project' command: MEMORY64/m64 has to be in effect while CMake probes the compiler
 
+# neither EMSCRIPTEN nor EMSCRIPTEN_VERSION are set until the Emscripten toolchain is loaded
 if(MR_EMSCRIPTEN)
+  if(NOT EMSCRIPTEN_VERSION)
+    find_program(EMCC NAMES emcc HINTS "$ENV{EMSDK}/upstream/emscripten" REQUIRED)
+    execute_process(COMMAND "${EMCC}" -v ERROR_VARIABLE EMCC_OUTPUT OUTPUT_QUIET)
+    string(REGEX MATCH "emcc \\(.*\\) ([0-9.]+)" EMCC_OUTPUT "${EMCC_OUTPUT}")
+    if(NOT CMAKE_MATCH_1)
+      message(FATAL_ERROR "Cannot parse the Emscripten version")
+    endif()
+    unset(EMCC)
+    unset(EMCC_OUTPUT)
+    set(EMSCRIPTEN_VERSION "${CMAKE_MATCH_1}")
+  endif()
+
   if(MR_EMSCRIPTEN_WASM64)
+    if(EMSCRIPTEN_VERSION VERSION_LESS "6.0.0")
+      set(MESHLIB_EMSCRIPTEN_WASM64_FLAG "-s MEMORY64=1")
+    else()
+      set(MESHLIB_EMSCRIPTEN_WASM64_FLAG "-m64")
+    endif()
     string(JOIN " " MESHLIB_EMSCRIPTEN_CXX_FLAGS ${MESHLIB_EMSCRIPTEN_CXX_FLAGS}
-      "-m64"
+      "${MESHLIB_EMSCRIPTEN_WASM64_FLAG}"
     )
     string(JOIN " " MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS ${MESHLIB_EMSCRIPTEN_EXE_LINKER_FLAGS}
-      "-m64"
+      "${MESHLIB_EMSCRIPTEN_WASM64_FLAG}"
     )
   endif()
 

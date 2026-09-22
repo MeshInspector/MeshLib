@@ -24,41 +24,36 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
     if ( sz <= 0 )
         return;
 
+    // perimeter of every face, also counting boundary edges for better results on mesh boundary
+    Vector<float, FaceId> perimeter( sz, 0 );
+    ParallelFor( perimeter, [&]( FaceId f )
+    {
+        if ( !mesh.topology.hasFace( f ) )
+            return;
+        for ( auto e : leftRing( mesh.topology, f ) )
+            perimeter[f] += mesh.edgeLength( e );
+    } );
+
     std::vector< Eigen::Triplet<double> > mTriplets;
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
     for ( auto f = 0_f; f < sz; ++f )
     {
-        int n = 0;
-        FaceId rf[3];
-        float w[3];
-        float sumLen = 0;
+        float centralWeight = 1;
         if ( mesh.topology.hasFace( f ) )
         {
             for ( auto e : leftRing( mesh.topology, f ) )
             {
                 assert( mesh.topology.left( e ) == f );
                 const auto r = mesh.topology.right( e );
-                // even if there is no right face (r), increment sumLen for better results on mesh boundary
-                auto len = mesh.edgeLength( e );
-                assert( n < 3 );
-                rf[n] = r;
-                w[n] = gamma * len * sqr( v[e.undirected()] );
-                sumLen += len;
-                ++n;
-            }
-        }
-        float centralWeight = 1;
-        if ( sumLen > 0 )
-        {
-            for ( int i = 0; i < 3; ++i )
-            {
-                if ( !rf[i] )
+                const auto sumPerimeter = r ? perimeter[f] + perimeter[r] : 0.0f;
+                if ( sumPerimeter <= 0 )
                     continue;
-                float weight = w[i] / sumLen;
+                // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
+                const float weight = gamma * mesh.edgeLength( e ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
                 centralWeight += weight;
-                mTriplets.emplace_back( f, rf[i], -weight );
+                mTriplets.emplace_back( f, r, -weight );
             }
         }
         mTriplets.emplace_back( f, f, centralWeight );

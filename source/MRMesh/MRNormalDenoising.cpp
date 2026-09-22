@@ -259,4 +259,24 @@ Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettin
     return {};
 }
 
+void meshDenoiseViaNormals( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseViaCreasesSettings & settings )
+{
+    MR_TIMER;
+
+    Vector<float, UndirectedEdgeId> v( mesh.topology.undirectedEdgeSize() );
+    ParallelFor( v, [&]( UndirectedEdgeId ue )
+    {
+        v[ue] = creases.test( ue ) ? 0.0f : 1.0f;
+    } );
+
+    auto fnormals = computePerFaceNormals( mesh );
+    denoiseNormals( mesh, fnormals, v, settings.gamma );
+
+    const auto guide = mesh.points;
+    NormalsToPoints n2p;
+    n2p.prepare( mesh.topology, settings.guideWeight );
+    for ( int i = 0; i < settings.pointIters; ++i )
+        n2p.run( guide, fnormals, mesh.points );
+}
+
 } //namespace MR

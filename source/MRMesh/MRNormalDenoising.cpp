@@ -5,6 +5,7 @@
 #include "MRMeshNormals.h"
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
+#include "MRBuffer.h"
 #include "MRTimer.h"
 #include <limits>
 
@@ -24,41 +25,38 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
     if ( sz <= 0 )
         return;
 
+    // perimeter of every face, also counting boundary edges for better results on mesh boundary
+    Buffer<float, FaceId> perimeter( sz );
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
+    {
+        float p = 0;
+        for ( auto e : leftRing( mesh.topology, f ) )
+            p += mesh.edgeLength( e );
+        perimeter[f] = p;
+    } );
+
     std::vector< Eigen::Triplet<double> > mTriplets;
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
     for ( auto f = 0_f; f < sz; ++f )
     {
-        int n = 0;
-        FaceId rf[3];
-        float w[3];
-        float sumLen = 0;
+        float centralWeight = 1;
         if ( mesh.topology.hasFace( f ) )
         {
             for ( auto e : leftRing( mesh.topology, f ) )
             {
                 assert( mesh.topology.left( e ) == f );
                 const auto r = mesh.topology.right( e );
-                // even if there is no right face (r), increment sumLen for better results on mesh boundary
-                auto len = mesh.edgeLength( e );
-                assert( n < 3 );
-                rf[n] = r;
-                w[n] = gamma * len * sqr( v[e.undirected()] );
-                sumLen += len;
-                ++n;
-            }
-        }
-        float centralWeight = 1;
-        if ( sumLen > 0 )
-        {
-            for ( int i = 0; i < 3; ++i )
-            {
-                if ( !rf[i] )
+                if ( !r )
                     continue;
-                float weight = w[i] / sumLen;
+                const auto sumPerimeter = perimeter[f] + perimeter[r];
+                if ( sumPerimeter <= 0 )
+                    continue;
+                // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
+                const float weight = gamma * mesh.edgeLength( e ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
                 centralWeight += weight;
-                mTriplets.emplace_back( f, rf[i], -weight );
+                mTriplets.emplace_back( f, r, -weight );
             }
         }
         mTriplets.emplace_back( f, f, centralWeight );

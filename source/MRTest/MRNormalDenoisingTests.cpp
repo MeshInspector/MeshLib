@@ -38,6 +38,19 @@ Mesh noisySphere()
 
 } //anonymous namespace
 
+TEST( MRMesh, DenoiseNormalsStrong )
+{
+    const Mesh sphere = makeUVSphere( 1, 16, 16 );
+    const auto normals0 = computePerFaceNormals( sphere );
+    const Vector<float, UndirectedEdgeId> v( sphere.topology.undirectedEdgeSize(), 1 );
+
+    // strong smoothing of an already smooth normal field must not change it much
+    auto normals = normals0;
+    denoiseNormals( sphere, normals, v, 100 );
+    for ( auto f : sphere.topology.getValidFaces() )
+        EXPECT_GT( dot( normals[f], normals0[f] ), 0.9f );
+}
+
 TEST( MRMesh, MeshDenoiseWithCreasesAllSharp )
 {
     const Mesh noisy = noisySphere();

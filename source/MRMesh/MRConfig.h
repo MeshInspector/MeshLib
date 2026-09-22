@@ -30,7 +30,7 @@ public:
     /// the name of the application, UTF8 encoded
     MRMESH_API const std::string& getAppName() const;
 
-    /// writes current config to file. (implicitly called from destructor)
+    /// writes current config to file; must be called explicitly, the destructor does not do it
     MRMESH_API void writeToFile();
 
 private:
@@ -40,9 +40,7 @@ private:
     void reset( const std::filesystem::path& filePath );
 
 
-    /// stores configuration depends on constructor call: (<filepath>) or
-    /// (~/.local/share/<appname>/config.json) or (AppData\<appname>\config.json)
-    ~Config();
+    ~Config() = default;
 
 public:
 

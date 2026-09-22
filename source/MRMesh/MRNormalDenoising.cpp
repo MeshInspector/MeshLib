@@ -5,6 +5,7 @@
 #include "MRMeshNormals.h"
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
+#include "MRBuffer.h"
 #include "MRTimer.h"
 #include <limits>
 
@@ -25,13 +26,14 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
         return;
 
     // perimeter of every face, also counting boundary edges for better results on mesh boundary
-    Vector<float, FaceId> perimeter( sz, 0 );
+    Buffer<float, FaceId> perimeter( sz );
     ParallelFor( perimeter, [&]( FaceId f )
     {
-        if ( !mesh.topology.hasFace( f ) )
-            return;
-        for ( auto e : leftRing( mesh.topology, f ) )
-            perimeter[f] += mesh.edgeLength( e );
+        float p = 0;
+        if ( mesh.topology.hasFace( f ) )
+            for ( auto e : leftRing( mesh.topology, f ) )
+                p += mesh.edgeLength( e );
+        perimeter[f] = p;
     } );
 
     std::vector< Eigen::Triplet<double> > mTriplets;

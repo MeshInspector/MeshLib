@@ -239,6 +239,7 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
 
         shutdownDefaultViewer( params, setup );
     } };
+    launchThread.detach();
 
     int exitCode;
     {
@@ -272,7 +273,7 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        setupDefaultViewer( params, setup );
+        setupDefaultViewer( params, *gLaunchSetup );
         exitCode = getViewerInstance().launch( params );
     }
     if ( exitCode != EXIT_SUCCESS )
@@ -307,15 +308,16 @@ void pythonShowViewer()
 
     pybind11::gil_scoped_release gilRelease; // commands from other Python threads take the GIL themselves
 
+    const auto& params = *gLaunchParams;
     using Mode = MR::Viewer::LaunchParams::WindowMode;
-    if ( gLaunchParams->windowMode == Mode::Show || gLaunchParams->windowMode == Mode::HideInit )
+    if ( params.windowMode == Mode::Show || params.windowMode == Mode::HideInit )
         viewer.showWindow();
-    if ( gLaunchParams->startEventLoop )
+    if ( params.startEventLoop )
         viewer.launchEventLoop();
-    if ( gLaunchParams->close )
+    if ( params.close )
         viewer.launchShut();
 
-    shutdownDefaultViewer( *gLaunchParams, *gLaunchSetup );
+    shutdownDefaultViewer( params, *gLaunchSetup );
 #endif
 }
 

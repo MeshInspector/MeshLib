@@ -2677,7 +2677,7 @@ void Viewer::captureUIScreenShot( std::function<void( const Image& )> callback,
 
         Image image;
         image.resolution = size;
-        image.pixels.resize( size.x * size.x );
+        image.pixels.resize( size.x * size.y );
 
         if ( glInitialized_ )
         {

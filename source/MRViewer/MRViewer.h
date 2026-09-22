@@ -654,5 +654,11 @@ private:
 
 // starts default viewer with given params and setup
 MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
+// sets default viewer up with given params and setup
+// this function can be used for more grained viewer launch process; generally you should prefer `launchDefaultViewer`
+MRVIEWER_API void setupDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
+// shuts default viewer down with given params and setup
+// this function can be used for more grained viewer launch process; generally you should prefer `launchDefaultViewer`
+MRVIEWER_API void shutdownDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
 
 } // end namespace

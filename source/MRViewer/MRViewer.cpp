@@ -381,23 +381,9 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         firstLaunch = false;
     }
 
-    CommandLoop::setMainThreadId( std::this_thread::get_id() );
+    setupDefaultViewer( params, setup );
 
     auto& viewer = MR::Viewer::instanceRef();
-
-    MR::setupLoggerByDefault( setup.setupCustomLogSink );
-
-    setup.setupBasePlugins( &viewer );
-    setup.setupCommonModifiers( &viewer );
-    setup.setupCommonPlugins( &viewer );
-    setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
-    setup.setupConfiguration( &viewer );
-    CommandLoop::appendCommand( [&] ()
-    {
-        setup.setupExtendedLibraries();
-        setup.setupMcp();
-    }, CommandLoop::StartPosition::AfterSplashAppear );
-
     int res = 0;
 #if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
     res = viewer.launch( params );
@@ -414,12 +400,39 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         res = 1;
     }
 #endif
-    setup.shutdownMcp();
+
+    shutdownDefaultViewer( params, setup );
+
+    return res;
+}
+
+void setupDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+{
+    CommandLoop::setMainThreadId( std::this_thread::get_id() );
+
+    auto& viewer = MR::Viewer::instanceRef();
+
+    MR::setupLoggerByDefault( setup.setupCustomLogSink );
+
+    setup.setupBasePlugins( &viewer );
+    setup.setupCommonModifiers( &viewer );
+    setup.setupCommonPlugins( &viewer );
+    setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
+    setup.setupConfiguration( &viewer );
+    CommandLoop::appendCommand( [&] ()
+    {
+        setup.setupExtendedLibraries();
+        std::ignore = setup.setupMcp();
+    }, CommandLoop::StartPosition::AfterSplashAppear );
+}
+
+void shutdownDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+{
+    std::ignore = setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     if ( setup.shutdownCustomLogSink )
         setup.shutdownCustomLogSink();
-    return res;
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )

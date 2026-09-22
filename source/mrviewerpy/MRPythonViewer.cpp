@@ -202,7 +202,7 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
     std::promise<int> launchedPromise;
     std::promise<void> finishedPromise;
     auto launched = launchedPromise.get_future();
-    gViewerFinished = finishedPromise.get_future();
+    auto finished = finishedPromise.get_future();
 
     std::thread guiThread { [params, setup, launched = std::move( launchedPromise ), finished = std::move( finishedPromise )] () mutable
     {
@@ -221,7 +221,6 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        launched.wait();
         exitCode = launched.get();
     }
     if ( exitCode != EXIT_SUCCESS )
@@ -231,10 +230,17 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
             "launched once in this process; exit code " + std::to_string( exitCode )
         );
     }
+
+    gViewerFinished = std::move( finished );
 #else
     // more info: https://stackoverflow.com/questions/74893322
     if ( !pthread_main_np() )
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
+
+    gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
+    gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
+    if ( params.windowMode == LaunchParams::Show )
+        gLaunchParams->windowMode = LaunchParams::HideInit;
 
     int exitCode;
     {
@@ -248,9 +254,6 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
             "launched once in this process; exit code " + std::to_string( exitCode )
         );
     }
-
-    gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
-    gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
 #endif
 }
 
@@ -263,7 +266,7 @@ void pythonShowViewer()
 
 #ifndef __APPLE__
     pybind11::gil_scoped_release gilRelease;
-    gViewerFinished.wait();
+    gViewerFinished.get();
 #else
     // more info: https://stackoverflow.com/questions/74893322
     if ( !pthread_main_np() )

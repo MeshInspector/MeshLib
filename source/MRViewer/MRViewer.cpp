@@ -423,6 +423,11 @@ int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetu
 
 int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
+    auto& viewer = MR::Viewer::instanceRef();
+    if ( !viewer.isPreLaunched() )
+        if ( auto rc = preLaunchDefaultViewer( params, setup ); rc != EXIT_SUCCESS )
+            return 1;
+
     static bool firstLaunch = true;
     if ( !firstLaunch )
     {
@@ -434,15 +439,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         firstLaunch = false;
     }
 
-    CommandLoop::setMainThreadId( std::this_thread::get_id() );
-
-    auto& viewer = MR::Viewer::instanceRef();
-
-    if ( !viewer.isPreLaunched() )
-        if ( auto rc = preLaunchDefaultViewer( params, setup ); rc != EXIT_SUCCESS )
-            return 1;
-
-    auto res = wrapUnsafeCall( [&] { return viewer.preLaunch( params ); } );
+    auto res = wrapUnsafeCall( [&] { return viewer.launch( params ); } );
 
     setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
@@ -1127,6 +1124,7 @@ void Viewer::launchShut()
     glfwTerminate();
     glInitialized_ = false;
     isLaunched_ = false;
+    isPreLaunched_ = false;
     spaceMouseHandler_.reset();
 
     /// removes references on all cached objects before shared libraries with plugins are unloaded

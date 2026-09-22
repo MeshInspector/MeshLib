@@ -8,6 +8,7 @@
 #include "MRMesh/MRDipole.h"
 
 #ifndef MRVIEWER_NO_VOXELS
+#include "MRVoxels/MRPointsToDistanceVolume.h"
 #include "MRVoxels/MRVoxelsVolume.h"
 #endif
 

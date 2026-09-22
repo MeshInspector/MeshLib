@@ -2,7 +2,6 @@
 
 #include "MRVoxelsFwd.h"
 
-#include "MRPointsToDistanceVolume.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
 
@@ -10,6 +9,8 @@
 
 namespace MR
 {
+
+class IComputePointsToDistanceVolume;
 
 struct PointsToMeshParameters
 {
@@ -42,7 +43,7 @@ struct PointsToMeshParameters
     ProgressCallback progress;
 
     /// builds the intermediate volume, e.g. MR::Cuda::ComputePointsToDistanceVolume to build it on GPU;
-    /// if it is not set or cannot process this input, memory efficient pointsToDistanceFunctionVolume is used
+    /// if it is not set or cannot process this input, MR::ComputePointsToDistanceVolume is used
     std::shared_ptr<IComputePointsToDistanceVolume> computeVolume;
 };
 

@@ -8,12 +8,15 @@
 
 #ifndef MRVIEWER_NO_VOXELS
 #include "MRVoxels/MRVoxelsFwd.h"
-#include "MRVoxels/MRPointsToDistanceVolume.h"
 #include "MRVoxels/MRSweptVolume.h"
 #endif
 
 namespace MR
 {
+
+#ifndef MRVIEWER_NO_VOXELS
+class IComputePointsToDistanceVolume;
+#endif
 
 /// The purpose of this class is to access CUDA algorithms without explicit dependency on MRCuda
 class MRVIEWER_CLASS CudaAccessor

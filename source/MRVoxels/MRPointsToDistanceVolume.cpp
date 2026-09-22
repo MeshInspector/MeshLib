@@ -65,14 +65,9 @@ Expected<SimpleVolumeMinMax> ComputePointsToDistanceVolume::compute( const Point
     return functionVolumeToSimpleVolume( pointsToDistanceFunctionVolume( cloud, params ), params.cb );
 }
 
-bool ComputePointsToDistanceVolume::supportsByParts() const
+FunctionVolume ComputePointsToDistanceVolume::computeFunctionVolume( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const
 {
-    return false;
-}
-
-Expected<void> ComputePointsToDistanceVolume::computeByParts( const PointCloud&, const PointsToDistanceVolumeParams&, AddPartFunc, int ) const
-{
-    return unexpected( "Computation by parts is not supported" );
+    return pointsToDistanceFunctionVolume( cloud, params );
 }
 
 Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors & colors,

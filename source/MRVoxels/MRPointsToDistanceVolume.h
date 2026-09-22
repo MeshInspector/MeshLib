@@ -42,35 +42,53 @@ struct PointsToDistanceVolumeParams : DistanceVolumeParams
 class MRVOXELS_CLASS IComputePointsToDistanceVolume
 {
 public:
-    virtual ~IComputePointsToDistanceVolume() = default;
+    /// explicitly define ctors to avoid warning C5267: definition of implicit copy constructor is deprecated because it has a user-provided destructor
+    IComputePointsToDistanceVolume() = default;
+    IComputePointsToDistanceVolume( const IComputePointsToDistanceVolume& ) = default;
+    IComputePointsToDistanceVolume( IComputePointsToDistanceVolume&& ) noexcept = default;
 
-    /// gets one z-slab of the volume, starting at z-layer zOffset
-    using AddPartFunc = std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )>;
+    IComputePointsToDistanceVolume & operator = ( const IComputePointsToDistanceVolume& ) = default;
+    IComputePointsToDistanceVolume & operator = ( IComputePointsToDistanceVolume&& ) noexcept = default;
+
+    virtual ~IComputePointsToDistanceVolume() = default;
 
     /// whether this implementation can process given input, e.g. it fits in GPU memory
     virtual bool canCompute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const = 0;
 
     /// makes the whole volume at once
     virtual Expected<SimpleVolumeMinMax> compute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const = 0;
+};
 
-    /// whether \ref computeByParts is implemented; it is preferred over \ref compute since it needs less memory
-    virtual bool supportsByParts() const = 0;
+/// complements \ref IComputePointsToDistanceVolume with computation in z-slabs, which needs less memory
+class MRVOXELS_CLASS IComputePointsToDistanceVolumeByParts : public IComputePointsToDistanceVolume
+{
+public:
+    /// gets one z-slab of the volume, starting at z-layer zOffset
+    using AddPartFunc = std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )>;
 
     /// makes the volume by z-slabs, passing each of them in addPart with layerOverlap layers shared by neighbours
     virtual Expected<void> computeByParts( const PointCloud& cloud, const PointsToDistanceVolumeParams& params,
         AddPartFunc addPart, int layerOverlap ) const = 0;
 };
 
-/// CPU implementation of IComputePointsToDistanceVolume
-class MRVOXELS_CLASS ComputePointsToDistanceVolume : public IComputePointsToDistanceVolume
+/// complements \ref IComputePointsToDistanceVolume with a lazily evaluated volume,
+/// which needs the least memory since the consumer evaluates only the voxels it reads
+class MRVOXELS_CLASS IComputePointsToDistanceFunctionVolume : public IComputePointsToDistanceVolume
 {
 public:
-    // see methods' descriptions in IComputePointsToDistanceVolume
+    /// makes a volume evaluated on demand; it is valid as long as cloud and params are alive
+    virtual FunctionVolume computeFunctionVolume( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const = 0;
+};
+
+/// CPU implementation of IComputePointsToDistanceVolume, used by pointsToMeshFusion when no other one is given;
+/// prefer its lazy computeFunctionVolume over compute, which materializes the whole volume in memory
+class MRVOXELS_CLASS ComputePointsToDistanceVolume : public IComputePointsToDistanceFunctionVolume
+{
+public:
+    // see methods' descriptions in the interfaces above
     MRVOXELS_API bool canCompute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const override;
     MRVOXELS_API Expected<SimpleVolumeMinMax> compute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const override;
-    MRVOXELS_API bool supportsByParts() const override;
-    MRVOXELS_API Expected<void> computeByParts( const PointCloud& cloud, const PointsToDistanceVolumeParams& params,
-        AddPartFunc addPart, int layerOverlap ) const override;
+    MRVOXELS_API FunctionVolume computeFunctionVolume( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const override;
 };
 
 /// given

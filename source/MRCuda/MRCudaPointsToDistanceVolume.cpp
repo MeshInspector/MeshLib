@@ -165,30 +165,23 @@ size_t pointsToDistanceVolumeMemory( const PointCloud& cloud, const Vector3i& di
 
 bool ComputePointsToDistanceVolume::canCompute( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params ) const
 {
-    const auto required = pointsToDistanceVolumeMemory( cloud, params.dimensions, params.ptNormals );
+    const auto required = MR::Cuda::pointsToDistanceVolumeMemory( cloud, params.dimensions, params.ptNormals );
     const auto available = getCudaAvailableMemory();
-    if ( required < available )
-        return true;
-
-    spdlog::info( "Not enough GPU memory to build distance volume: required {}, available {}",
-        bytesString( required ), bytesString( available ) );
-    return false;
+    const bool res = required < available;
+    spdlog::info( "{} GPU memory to build distance volume: required {}, available {}",
+        res ? "Enough" : "Not enough", bytesString( required ), bytesString( available ) );
+    return res;
 }
 
 Expected<MR::SimpleVolumeMinMax> ComputePointsToDistanceVolume::compute( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params ) const
 {
-    return pointsToDistanceVolume( cloud, params );
-}
-
-bool ComputePointsToDistanceVolume::supportsByParts() const
-{
-    return true;
+    return MR::Cuda::pointsToDistanceVolume( cloud, params );
 }
 
 Expected<void> ComputePointsToDistanceVolume::computeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
     AddPartFunc addPart, int layerOverlap ) const
 {
-    return pointsToDistanceVolumeByParts( cloud, params, std::move( addPart ), layerOverlap );
+    return MR::Cuda::pointsToDistanceVolumeByParts( cloud, params, std::move( addPart ), layerOverlap );
 }
 
 } //namespace Cuda

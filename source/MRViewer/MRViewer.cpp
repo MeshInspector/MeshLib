@@ -368,20 +368,30 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     obj.addChild( label );
 }
 
+namespace
+{
+
+struct DefaultViewerState
+{
+    enum class Stage
+    {
+        NotStarted,
+        SetUp,
+        ShutDown,
+    } stage = Stage::NotStarted;
+    // pointer to ViewerSetup instance
+    const ViewerSetup* setup = nullptr;
+    // some of Viewer::LaunchParams
+    bool unloadPluginsAtEnd = false;
+};
+DefaultViewerState gDefaultViewerState;
+
+} // namespace
+
 int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
-    static bool firstLaunch = true;
-    if ( !firstLaunch )
-    {
-        spdlog::error( "Viewer can be launched only once" );
+    if ( !setupDefaultViewer( params, setup ) )
         return 1;
-    }
-    else
-    {
-        firstLaunch = false;
-    }
-
-    setupDefaultViewer( params, setup );
 
     auto& viewer = MR::Viewer::instanceRef();
     int res = 0;
@@ -401,13 +411,21 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
     }
 #endif
 
-    shutdownDefaultViewer( params, setup );
-
+    shutdownDefaultViewer();
     return res;
 }
 
-void setupDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+bool setupDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
+    auto& state = gDefaultViewerState;
+    if ( state.stage != DefaultViewerState::Stage::NotStarted )
+    {
+        spdlog::error( "Viewer can be launched only once" );
+        return false;
+    }
+    state.setup = &setup;
+    state.unloadPluginsAtEnd = params.unloadPluginsAtEnd;
+
     CommandLoop::setMainThreadId( std::this_thread::get_id() );
 
     auto& viewer = MR::Viewer::instanceRef();
@@ -424,15 +442,28 @@ void setupDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         setup.setupExtendedLibraries();
         std::ignore = setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
+
+    state.stage = DefaultViewerState::Stage::SetUp;
+    return true;
 }
 
-void shutdownDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+void shutdownDefaultViewer()
 {
-    std::ignore = setup.shutdownMcp();
-    if ( params.unloadPluginsAtEnd )
-        setup.unloadExtendedLibraries();
-    if ( setup.shutdownCustomLogSink )
-        setup.shutdownCustomLogSink();
+    auto& state = gDefaultViewerState;
+    if ( state.stage != DefaultViewerState::Stage::SetUp )
+    {
+        spdlog::error( "Viewer is not set up properly" );
+        return;
+    }
+    const auto* setup = state.setup;
+
+    std::ignore = setup->shutdownMcp();
+    if ( state.unloadPluginsAtEnd )
+        setup->unloadExtendedLibraries();
+    if ( setup->shutdownCustomLogSink )
+        setup->shutdownCustomLogSink();
+
+    state.stage = DefaultViewerState::Stage::ShutDown;
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )

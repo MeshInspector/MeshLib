@@ -200,7 +200,6 @@ std::shared_ptr<LaunchStatus> gLaunch;
 #else
 // the original launch params, for `showViewer()` to wait on
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
-std::shared_ptr<MinimalViewerSetup> gLaunchSetup;
 #endif
 
 // The viewer on a detached thread; the caller continues and drives it with blocking calls.
@@ -223,7 +222,11 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
         params.startEventLoop = false;
         params.close = false;
 
-        setupDefaultViewer( params, setup );
+        if ( !setupDefaultViewer( params, setup ) )
+        {
+            launched.set_value( 1 );
+            return;
+        }
 
         auto& viewer = getViewerInstance();
         const auto exitCode = viewer.launch( params );
@@ -237,7 +240,7 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
             finished.set_value();
         }
 
-        shutdownDefaultViewer( params, setup );
+        shutdownDefaultViewer();
     } };
     launchThread.detach();
 
@@ -262,7 +265,6 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 
     gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
-    gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
     // don't start the event loop on this stage
     params.startEventLoop = false;
     params.close = false;
@@ -273,8 +275,10 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        setupDefaultViewer( params, *gLaunchSetup );
-        exitCode = getViewerInstance().launch( params );
+        if ( setupDefaultViewer( params, setup ) )
+            exitCode = getViewerInstance().launch( params );
+        else
+            exitCode = 1;
     }
     if ( exitCode != EXIT_SUCCESS )
     {
@@ -317,7 +321,7 @@ void pythonShowViewer()
     if ( params.close )
         viewer.launchShut();
 
-    shutdownDefaultViewer( params, *gLaunchSetup );
+    shutdownDefaultViewer();
 #endif
 }
 

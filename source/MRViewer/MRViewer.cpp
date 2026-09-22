@@ -469,7 +469,8 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
             flag == "-develop" ||
-            flag == "-unloadPluginsAtEnd"
+            flag == "-unloadPluginsAtEnd" ||
+            flag == "-noSwapBuffers"
             )
             reserved = true;
         else if ( flag == "-width" )
@@ -568,6 +569,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextFPS = true;
         else if ( flag == "-unloadPluginsAtEnd" )
             params.unloadPluginsAtEnd = true;
+        else if ( flag == "-noSwapBuffers" )
+            params.noSwapBuffers = true;
     }
 }
 
@@ -1830,7 +1833,7 @@ bool Viewer::draw_( bool force )
         // everything was rendered, reduce the counter
         --forceRedrawFrames_;
     }
-    if ( window && swapped )
+    if ( window && swapped && !launchParams_.noSwapBuffers )
     {
         Timer t( "glfwSwapBuffers" );
         glfwSwapBuffers( window );

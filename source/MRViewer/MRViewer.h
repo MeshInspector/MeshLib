@@ -561,6 +561,9 @@ private:
     // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.
     int forceRedrawFramesWithoutSwap_{ 0 };
 
+    // false if drawFull() has skipped the drawing invisible in a frame that is not swapped
+    bool frameFullyDrawn_{ true };
+
     // if set, is called at the end of a frame that is shown on screen, when the back buffer is complete
     std::function<void()> beforeSwapCallback_;
 

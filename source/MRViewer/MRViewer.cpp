@@ -1830,6 +1830,14 @@ bool Viewer::draw_( bool force )
         // everything was rendered, reduce the counter
         --forceRedrawFrames_;
     }
+    if ( swapped && !frameFullyDrawn_ )
+    {
+        // ImGuiMenu::finishFrame() can force the swap after drawFull() has already skipped
+        // everything invisible in this frame; show the next frame instead of an empty one
+        swapped = false;
+        incrementForceRedrawFrames();
+    }
+
     if ( swapped && beforeSwapCallback_ )
         beforeSwapCallback_();
     if ( window && swapped )
@@ -1908,40 +1916,42 @@ bool Viewer::isMultiViewportAvailable()
 void Viewer::drawFull( bool dirtyScene )
 {
     MR_TIMER;
+    // a frame that is not swapped is never shown, so everything drawn in it is thrown away
+    const bool swapping = isCurrentFrameSwapping();
+    frameFullyDrawn_ = swapping;
+
+    // unbind to clean main framebuffer
     if ( sceneTexture_ )
         sceneTexture_->unbind();
-    else
-        clearFramebuffers(); // the scene is drawn right in the main framebuffer
+    // clean main framebuffer
+    if ( swapping )
+        clearFramebuffers();
 
     if ( menuPlugin_ )
         menuPlugin_->startFrame();
 
-    if ( sceneTexture_ )
-        sceneTexture_->bind( true );
-
-    signals_->preDrawSignal();
-    // check dirty scene and need swap
-    // important to check after preDrawSignal
-    const bool swapping = isCurrentFrameSwapping();
-    bool renderScene = swapping;
-    if ( sceneTexture_ )
-        renderScene = renderScene && dirtyScene;
-    if ( renderScene )
+    if ( swapping )
     {
         if ( sceneTexture_ )
-            clearFramebuffers(); // fill the background in the texture
-        drawScene( sceneTexture_ ? &sceneTexture_->getFramebuffer() : nullptr );
-    }
-    signals_->postDrawSignal();
-    if ( sceneTexture_ )
-    {
-        Timer t( "sceneTexture" );
-        sceneTexture_->unbind();
-        if ( renderScene )
-            sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
-        if ( swapping )
         {
-            clearFramebuffers(); // clean main framebuffer
+            sceneTexture_->bind( true );
+            // need to clean it in texture too
+            clearFramebuffers();
+        }
+        signals_->preDrawSignal(); // may draw, so must be called after clearFramebuffers()
+        // check dirty scene
+        // important to check after preDrawSignal
+        const bool renderScene = !sceneTexture_ || dirtyScene;
+        if ( renderScene )
+            drawScene( sceneTexture_ ? &sceneTexture_->getFramebuffer() : nullptr );
+        signals_->postDrawSignal();
+        if ( sceneTexture_ )
+        {
+            Timer t( "sceneTexture" );
+            sceneTexture_->unbind();
+            if ( renderScene )
+                sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
+
             sceneTexture_->draw();
         }
     }

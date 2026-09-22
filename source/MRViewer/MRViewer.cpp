@@ -78,6 +78,8 @@
 #include "MRMesh/MRCube.h"
 #include "MRViewerConfigConstants.h"
 
+#include <string_view>
+
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
 #endif
@@ -2978,6 +2980,20 @@ void Viewer::updatePixelRatio_()
     pixelRatio = float( framebufferSize.x ) / float( winWidth );
 }
 
+namespace
+{
+
+bool isSoftwareRenderer()
+{
+    const auto* renderer = ( const char* )glGetString( GL_RENDERER );
+    if ( !renderer )
+        return false;
+    const std::string_view name = renderer;
+    return name.starts_with( "llvmpipe" ) || name.starts_with( "softpipe" ) || name.starts_with( "swrast" );
+}
+
+} // namespace
+
 int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
 {
     if ( !sceneTextureOn && forSceneTexture )
@@ -2998,6 +3014,8 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
 #elif defined(__APPLE__)
     cDefaultMSAA = 2;
 #endif
+    if ( glInitialized_ && isSoftwareRenderer() )
+        cDefaultMSAA = 2;
     if ( !settingsMng_ )
         return cDefaultMSAA;
     return settingsMng_->loadInt( "multisampleAntiAliasing", cDefaultMSAA );

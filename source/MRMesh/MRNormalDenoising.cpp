@@ -9,6 +9,7 @@
 #include "MRBuffer.h"
 #include "MRTimer.h"
 #include <limits>
+#include <tuple>
 
 #include <MRPch/MREigenSparseCore.h>
 #include <Eigen/SparseCholesky>
@@ -289,7 +290,21 @@ void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, 
 
 void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings )
 {
+    std::ignore = meshDenoiseWithCreases( topology, points, creases, settings, {} );
+}
+
+Expected<void> meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+{
+    mesh.invalidateCaches();
+    return meshDenoiseWithCreases( mesh.topology, mesh.points, creases, settings, cb );
+}
+
+Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+{
     MR_TIMER;
+
+    if ( !reportProgress( cb, 0.0f ) )
+        return unexpectedOperationCanceled();
 
     Vector<float, UndirectedEdgeId> v( topology.undirectedEdgeSize() );
     ParallelFor( v, [&]( UndirectedEdgeId ue )
@@ -299,12 +314,23 @@ void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points,
 
     auto fnormals = computePerFaceNormals( topology, points );
     denoiseNormals( topology, points, fnormals, v, settings.gamma );
+    if ( !reportProgress( cb, 0.5f ) )
+        return unexpectedOperationCanceled();
 
     const auto guide = points;
     NormalsToPoints n2p;
     n2p.prepare( topology, settings.guideWeight );
+
+    auto sp = subprogress( cb, 0.5f, 1.0f );
     for ( int i = 0; i < settings.pointIters; ++i )
+    {
+        if ( !reportProgress( sp, float( i ) / settings.pointIters ) )
+            return unexpectedOperationCanceled();
         n2p.run( guide, fnormals, points );
+    }
+
+    reportProgress( cb, 1.0f );
+    return {};
 }
 
 } //namespace MR

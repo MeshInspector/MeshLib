@@ -85,4 +85,8 @@ struct DenoiseWithCreasesSettings
 MRMESH_API void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 MRMESH_API void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 
+/// the same, reporting the progress in (cb) and returning error if the operation was canceled from it
+MRMESH_API Expected<void> meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
+MRMESH_API Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
+
 } //namespace MR

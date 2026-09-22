@@ -96,4 +96,34 @@ TEST( MRMesh, MeshDenoiseWithCreasesTopologyAndPoints )
     EXPECT_EQ( maxDiff, 0 );
 }
 
+TEST( MRMesh, MeshDenoiseWithCreasesProgress )
+{
+    const Mesh noisy = noisySphere();
+
+    Mesh mesh = noisy;
+    float last = -1;
+    bool ordered = true;
+    const auto res = meshDenoiseWithCreases( mesh, {}, {}, [&]( float p )
+    {
+        ordered = ordered && p >= last && p <= 1;
+        last = p;
+        return true;
+    } );
+    EXPECT_TRUE( res.has_value() );
+    EXPECT_TRUE( ordered );
+    EXPECT_EQ( last, 1.0f ); // the progress must reach the end
+
+    // the same denoising without a callback must give the same points
+    Mesh quiet = noisy;
+    meshDenoiseWithCreases( quiet, {} );
+    float maxDiff = 0;
+    for ( auto v : noisy.topology.getValidVerts() )
+        maxDiff = std::max( maxDiff, ( quiet.points[v] - mesh.points[v] ).length() );
+    EXPECT_EQ( maxDiff, 0 );
+
+    // canceling from the callback must leave an error
+    Mesh canceled = noisy;
+    EXPECT_FALSE( meshDenoiseWithCreases( canceled, {}, {}, []( float ) { return false; } ).has_value() );
+}
+
 } //namespace MR

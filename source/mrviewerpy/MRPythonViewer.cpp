@@ -186,27 +186,75 @@ private:
     }
 };
 
+#ifndef __APPLE__
+// What `pythonLaunch` learned about the launch it started. The launch thread is detached, so this
+// is held by shared_ptr: it must outlive the `pythonLaunch` frame if that frame threw and returned
+// while the thread was still running.
+struct LaunchStatus
+{
+    std::thread thread;
+    std::once_flag joinFlag;
+};
+
+// the running launch, for `showViewer()` to wait on
+std::shared_ptr<LaunchStatus> gLaunch;
+#else
 // the original launch params, for `showViewer()` to wait on
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
-
-void pythonShowViewer();
+#endif
 
 // The viewer on a detached thread; the caller continues and drives it with blocking calls.
 void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup )
 {
-    gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
+#ifndef __APPLE__
+    std::promise<int> launchedPromise;
+    auto launched = launchedPromise.get_future();
 
-    // don't start the event loop on this stage
-    params.startEventLoop = false;
-    params.close = false;
-#ifdef __APPLE__
+    auto status = std::make_shared<LaunchStatus>();
+    status->thread = std::thread( [params, setup, launched = std::move( launchedPromise )] () mutable
+    {
+        MR::SetCurrentThreadName( "PythonAppLaunchThread" );
+
+        const auto startEventLoop = params.startEventLoop;
+        const auto close = params.close;
+        params.startEventLoop = false;
+        params.close = false;
+
+        const auto exitCode = MR::launchDefaultViewer( params, setup );
+        launched.set_value( exitCode );
+        if ( exitCode == EXIT_SUCCESS )
+        {
+            auto& viewer = getViewerInstance();
+            if ( startEventLoop )
+                viewer.launchEventLoop();
+            if ( close )
+                viewer.launchShut();
+        }
+    } );
+
+    launched.wait();
+    const auto exitCode = launched.get();
+    if ( exitCode != EXIT_SUCCESS )
+    {
+        throw std::runtime_error(
+            "Viewer could not start: glfwInit failed (no display available?), or the viewer was already "
+            "launched once in this process; exit code " + std::to_string( exitCode )
+        );
+    }
+
+    gLaunch = std::move( status );
+#else
     // more info: https://stackoverflow.com/questions/74893322
     if ( !pthread_main_np() )
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
+
+    gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
+    // don't start the event loop on this stage
+    params.startEventLoop = false;
+    params.close = false;
     // never show window on this stage on macOS
     if ( params.windowMode != LaunchParams::NoWindow )
         params.windowMode = LaunchParams::Hide;
-#endif
 
     int exitCode;
     {
@@ -220,34 +268,28 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
             "launched once in this process; exit code " + std::to_string( exitCode )
         );
     }
-
-#ifndef __APPLE__
-    pythonShowViewer();
 #endif
 }
 
 // the window is up since launch(); this waits until the user closes it or shutdown() is called
 void pythonShowViewer()
 {
-    auto& viewer = getViewerInstance();
-    if ( !viewer.isLaunched() )
+#ifndef __APPLE__
+    if ( !gLaunch )
         throw std::runtime_error( "Viewer is not launched: call launch() first" );
 
-#ifndef __APPLE__
-    std::thread launchThread { []
+    std::call_once( gLaunch->joinFlag, []
     {
-        SetCurrentThreadName( "PythonAppLaunchThread" );
-        auto& viewer = getViewerInstance();
-        if ( gLaunchParams->startEventLoop )
-            viewer.launchEventLoop();
-        if ( gLaunchParams->close )
-            viewer.launchShut();
-    } };
-    launchThread.detach();
+        gLaunch->thread.join();
+    } );
 #else
     // more info: https://stackoverflow.com/questions/74893322
     if ( !pthread_main_np() )
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
+
+    auto& viewer = getViewerInstance();
+    if ( !viewer.isLaunched() )
+        throw std::runtime_error( "Viewer is not launched: call launch() first" );
 
     using Mode = MR::Viewer::LaunchParams::WindowMode;
     if ( gLaunchParams->windowMode == Mode::Show || gLaunchParams->windowMode == Mode::HideInit )

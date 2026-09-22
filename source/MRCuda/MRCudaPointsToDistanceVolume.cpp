@@ -13,6 +13,8 @@
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRSpdlog.h"
 
+#include <algorithm>
+
 namespace MR
 {
 
@@ -145,6 +147,41 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
             return addPart( part, int( chunk.offset / layerSize ) );
         }
     );
+}
+
+size_t pointsToDistanceVolumeMemory( const PointCloud& cloud, const Vector3i& dims, const VertNormals* ptNormals )
+{
+    constexpr size_t cMinLayerCount = 10;
+
+    const auto& tree = cloud.getAABBTree();
+
+    return
+        tree.nodes().size() * sizeof( Node3 )
+        + tree.orderedPoints().size() * sizeof( OrderedPoint )
+        + ( ptNormals ? ptNormals->size() : cloud.normals.size() ) * sizeof( float3 )
+        + std::min( (size_t)dims.z, cMinLayerCount ) * dims.x * dims.y * sizeof( float )
+    ;
+}
+
+bool ComputePointsToDistanceVolume::canCompute( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params ) const
+{
+    const auto required = MR::Cuda::pointsToDistanceVolumeMemory( cloud, params.dimensions, params.ptNormals );
+    const auto available = getCudaAvailableMemory();
+    const bool res = required < available;
+    spdlog::info( "{} GPU memory to build distance volume: required {}, available {}",
+        res ? "Enough" : "Not enough", bytesString( required ), bytesString( available ) );
+    return res;
+}
+
+Expected<MR::SimpleVolumeMinMax> ComputePointsToDistanceVolume::compute( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params ) const
+{
+    return MR::Cuda::pointsToDistanceVolume( cloud, params );
+}
+
+Expected<void> ComputePointsToDistanceVolume::computeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,
+    AddPartFunc addPart, int layerOverlap ) const
+{
+    return MR::Cuda::pointsToDistanceVolumeByParts( cloud, params, std::move( addPart ), layerOverlap );
 }
 
 } //namespace Cuda

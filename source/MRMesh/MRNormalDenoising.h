@@ -67,7 +67,7 @@ struct DenoiseViaNormalsSettings
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
 MRMESH_API Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
 
-struct DenoiseViaCreasesSettings
+struct DenoiseWithCreasesSettings
 {
     /// the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
     float gamma = 5.f;
@@ -81,7 +81,7 @@ struct DenoiseViaCreasesSettings
 
 /// Reduces noise in given mesh, keeping the edges from (creases) sharp,
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework";
-/// unlike the overload above, the creases are given by the caller and not detected automatically
-MRMESH_API void meshDenoiseViaNormals( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseViaCreasesSettings & settings = {} );
+/// unlike meshDenoiseViaNormals, the creases are given by the caller and not detected automatically
+MRMESH_API void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 
 } //namespace MR

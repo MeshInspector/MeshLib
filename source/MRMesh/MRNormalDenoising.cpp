@@ -259,7 +259,7 @@ Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettin
     return {};
 }
 
-void meshDenoiseViaNormals( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseViaCreasesSettings & settings )
+void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings )
 {
     MR_TIMER;
 

@@ -38,14 +38,14 @@ Mesh noisySphere()
 
 } //anonymous namespace
 
-TEST( MRMesh, MeshDenoiseViaCreasesAllSharp )
+TEST( MRMesh, MeshDenoiseWithCreasesAllSharp )
 {
     const Mesh noisy = noisySphere();
 
     // every edge is a crease, so the normals have nothing to be smoothed with and the points stay put
     const UndirectedEdgeBitSet creases( noisy.topology.undirectedEdgeSize(), true );
     Mesh mesh = noisy;
-    meshDenoiseViaNormals( mesh, creases );
+    meshDenoiseWithCreases( mesh, creases );
 
     float maxShift = 0;
     for ( auto v : mesh.topology.getValidVerts() )
@@ -53,12 +53,12 @@ TEST( MRMesh, MeshDenoiseViaCreasesAllSharp )
     EXPECT_LT( maxShift, 1e-5f );
 }
 
-TEST( MRMesh, MeshDenoiseViaCreasesNoneSharp )
+TEST( MRMesh, MeshDenoiseWithCreasesNoneSharp )
 {
     const Mesh noisy = noisySphere();
 
     Mesh mesh = noisy;
-    meshDenoiseViaNormals( mesh, UndirectedEdgeBitSet{} );
+    meshDenoiseWithCreases( mesh, {} );
 
     EXPECT_LT( normalRoughness( mesh ), 0.5f * normalRoughness( noisy ) );
 }

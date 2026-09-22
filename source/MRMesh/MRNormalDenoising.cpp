@@ -29,10 +29,11 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
     Buffer<float, FaceId> perimeter( sz );
     ParallelFor( perimeter, [&]( FaceId f )
     {
+        if ( !mesh.topology.hasFace( f ) )
+            return; // never read below
         float p = 0;
-        if ( mesh.topology.hasFace( f ) )
-            for ( auto e : leftRing( mesh.topology, f ) )
-                p += mesh.edgeLength( e );
+        for ( auto e : leftRing( mesh.topology, f ) )
+            p += mesh.edgeLength( e );
         perimeter[f] = p;
     } );
 
@@ -49,7 +50,9 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
             {
                 assert( mesh.topology.left( e ) == f );
                 const auto r = mesh.topology.right( e );
-                const auto sumPerimeter = r ? perimeter[f] + perimeter[r] : 0.0f;
+                if ( !r )
+                    continue;
+                const auto sumPerimeter = perimeter[f] + perimeter[r];
                 if ( sumPerimeter <= 0 )
                     continue;
                 // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires

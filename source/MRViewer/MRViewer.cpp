@@ -1032,10 +1032,6 @@ void Viewer::launchShut()
 
     signals_->preShutdownSignal();
 
-    // plugins must be shut down before the settings are saved: some of them store their state
-    // in the config on deactivation, and saveSettings() writes the config to file
-    shutdownPlugins_();
-
     if ( settingsMng_ )
     {
         spdlog::info( "Save user settings." );
@@ -1056,6 +1052,7 @@ void Viewer::launchShut()
 
     for ( auto& viewport : viewport_list )
         viewport.shut();
+    shutdownPlugins_();
 
     // Clear plugins
     plugins.clear();
@@ -1099,6 +1096,10 @@ void Viewer::launchShut()
     *signals_ = {};
 
     CommandLoop::removeCommands( true );
+
+    // plugins store part of their state in the config while shutting down, which happens after
+    // saveSettings() above, so write the config once more
+    Config::instance().writeToFile();
 }
 
 void Viewer::init_()

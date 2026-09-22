@@ -469,7 +469,8 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
             flag == "-develop" ||
-            flag == "-unloadPluginsAtEnd"
+            flag == "-unloadPluginsAtEnd" ||
+            flag == "-noMSAA"
             )
             reserved = true;
         else if ( flag == "-width" )
@@ -568,6 +569,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextFPS = true;
         else if ( flag == "-unloadPluginsAtEnd" )
             params.unloadPluginsAtEnd = true;
+        else if ( flag == "-noMSAA" )
+            params.noMSAA = true;
     }
 }
 
@@ -2979,6 +2982,8 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
     }
     if ( sceneTextureOn && !forSceneTexture )
         return 1; // disable msaa for main framebuffer if scene texture is used
+    if ( launchParams_.noMSAA )
+        return 1;
 
     int cDefaultMSAA = 8;
 #if defined(__EMSCRIPTEN__)

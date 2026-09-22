@@ -52,6 +52,16 @@ TEST( MRMesh, DenoiseNormalsStrong )
         EXPECT_GT( dot( normals[f], normals0[f] ), 0.9f );
 }
 
+TEST( MRMesh, MeshDenoiseViaNormalsInvalidatesCaches )
+{
+    Mesh sphere = makeUVSphere( 1, 16, 16 );
+    sphere.getAABBTree();
+    EXPECT_TRUE( sphere.getAABBTreeNotCreate() );
+
+    EXPECT_TRUE( meshDenoiseViaNormals( sphere ).has_value() );
+    EXPECT_FALSE( sphere.getAABBTreeNotCreate() );
+}
+
 TEST( MRMesh, MeshDenoiseWithCreasesAllSharp )
 {
     const Mesh noisy = noisySphere();

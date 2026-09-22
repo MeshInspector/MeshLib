@@ -54,6 +54,27 @@ Expected<SimpleVolume> pointsToDistanceVolume( const PointCloud & cloud, const P
     return functionVolumeToSimpleVolume( pointsToDistanceFunctionVolume( cloud, params ), params.cb );
 }
 
+bool ComputePointsToDistanceVolume::canCompute( const PointCloud&, const PointsToDistanceVolumeParams& ) const
+{
+    return true;
+}
+
+Expected<SimpleVolumeMinMax> ComputePointsToDistanceVolume::compute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const
+{
+    MR_TIMER;
+    return functionVolumeToSimpleVolume( pointsToDistanceFunctionVolume( cloud, params ), params.cb );
+}
+
+bool ComputePointsToDistanceVolume::supportsByParts() const
+{
+    return false;
+}
+
+Expected<void> ComputePointsToDistanceVolume::computeByParts( const PointCloud&, const PointsToDistanceVolumeParams&, AddPartFunc, int ) const
+{
+    return unexpected( "Computation by parts is not supported" );
+}
+
 Expected<VertColors> calcAvgColors( const PointCloud & cloud, const VertColors & colors,
     const VertCoords & tgtPoints, const VertBitSet & tgtVerts, float sigma, const ProgressCallback & cb )
 {

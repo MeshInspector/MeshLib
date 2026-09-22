@@ -4,8 +4,6 @@
 #include "MRMesh/MRFastWindingNumber.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRAABBTreePoints.h"
-#include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRAABBTreeMaker.h"
 #include "MRMesh/MRDipole.h"
 
@@ -47,14 +45,9 @@ void CudaAccessor::setCudaPointsProjectorConstructor( CudaPointsProjectorConstru
 }
 
 #ifndef MRVIEWER_NO_VOXELS
-void CudaAccessor::setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback )
+void CudaAccessor::setCudaComputePointsToDistanceVolumeConstructor( CudaComputePointsToDistanceVolumeConstructor cpdvCtor )
 {
-    instance_().pointsToDistanceVolumeCallback_ = callback;
-}
-
-void CudaAccessor::setCudaPointsToDistanceVolumeByPartsCallback( CudaPointsToDistanceVolumeByPartsCallback callback )
-{
-    instance_().pointsToDistanceVolumeByPartsCallback_ = callback;
+    instance_().cpdvCtor_ = std::move( cpdvCtor );
 }
 
 void CudaAccessor::setCudaComputeToolDistanceConstructor( CudaComputeToolDistanceConstructor ctdCtor )
@@ -134,22 +127,13 @@ std::unique_ptr<MR::IPointsProjector> CudaAccessor::getCudaPointsProjector()
 }
 
 #ifndef MRVIEWER_NO_VOXELS
-CudaAccessor::CudaPointsToDistanceVolumeCallback CudaAccessor::getCudaPointsToDistanceVolumeCallback()
+std::unique_ptr<IComputePointsToDistanceVolume> CudaAccessor::getCudaComputePointsToDistanceVolume()
 {
     auto& inst = instance_();
-    if ( !inst.isCudaAvailable_ || !inst.pointsToDistanceVolumeCallback_ )
+    if ( !inst.isCudaAvailable_ || !inst.cpdvCtor_ )
         return {};
 
-    return inst.pointsToDistanceVolumeCallback_;
-}
-
-CudaAccessor::CudaPointsToDistanceVolumeByPartsCallback CudaAccessor::getCudaPointsToDistanceVolumeByPartsCallback()
-{
-    auto& inst = instance_();
-    if ( !inst.isCudaAvailable_ || !inst.pointsToDistanceVolumeByPartsCallback_ )
-        return {};
-
-    return inst.pointsToDistanceVolumeByPartsCallback_;
+    return inst.cpdvCtor_();
 }
 
 std::unique_ptr<IComputeToolDistance> CudaAccessor::getCudaComputeToolDistance()
@@ -194,21 +178,6 @@ size_t CudaAccessor::selfIntersectionsMemory( const Mesh& mesh )
     return
         fastWindingNumberMeshMemory( mesh )
         + std::min( mesh.topology.faceSize() * sizeof( float ), cMinCudaBufferSize );
-}
-
-size_t CudaAccessor::pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals )
-{
-    constexpr size_t cMinLayerCount = 10;
-
-    const auto& tree = pointCloud.getAABBTree();
-    const auto& nodes = tree.nodes();
-
-    return
-        nodes.size() * sizeof( AABBTreePoints::Node )
-        + tree.orderedPoints().size() * sizeof( AABBTreePoints::Point )
-        + ( ptNormals ? ptNormals->size() : pointCloud.normals.size() ) * sizeof( Vector3f )
-        + std::min( (size_t)dims.z, cMinLayerCount ) * dims.x * dims.y * sizeof( float )
-    ;
 }
 
 CudaAccessor& CudaAccessor::instance_()

@@ -61,15 +61,18 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.cb = subprogress( triCb, 0.50f, 1.00f );
     vmParams.lessInside = true;
 
+    const auto * computeVolume = params.computeVolume && params.computeVolume->canCompute( cloud, p2vParams ) ?
+        params.computeVolume.get() : nullptr;
+
     Expected<Mesh> res;
-    if ( params.createVolumeCallbackByParts && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
+    if ( computeVolume && computeVolume->supportsByParts() )
     {
         p2vParams.cb = {};
         vmParams.cb = subprogress( triCb, 0.00f, 0.90f );
 
         MarchingCubesByParts mesher( p2vParams.dimensions, vmParams );
         res =
-            params.createVolumeCallbackByParts( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume, [[maybe_unused]] int zOffset )
+            computeVolume->computeByParts( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume, [[maybe_unused]] int zOffset )
             {
                 assert( zOffset == mesher.nextZ() );
                 return mesher.addPart( volume );
@@ -82,9 +85,9 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
                 return Mesh::fromTriMesh( std::move( mesh ), {}, subprogress( triCb, 0.90f, 1.00f ) );
             } );
     }
-    else if ( params.createVolumeCallback && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
+    else if ( computeVolume )
     {
-        res = params.createVolumeCallback( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
+        res = computeVolume->compute( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
         {
             vmParams.freeVolume = [&volume]
             {

@@ -2,14 +2,15 @@
 
 #include "MRVoxelsFwd.h"
 
+#include "MRPointsToDistanceVolume.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
 #include "MRPch/MRBindingMacros.h"
 
+#include <memory>
+
 namespace MR
 {
-
-struct PointsToDistanceVolumeParams;
 
 struct PointsToMeshParameters
 {
@@ -43,15 +44,11 @@ struct PointsToMeshParameters
     /// Progress callback
     ProgressCallback progress;
 
-    /// Callback for volume creation by parts. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
-    /// This callback takes precedence over createVolumeCallback
-    std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )> createVolumeCallbackByParts;
-
-    /// Callback for volume creation. If both volume creation functions are null - volume will be created with memory efficient pointsToDistanceFunctionVolume function
-    std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> createVolumeCallback;
-
-    /// Callback for checking whether it's possible to use the volume creation function
-    std::function<bool ( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )> canCreateVolume;
+    /// defines particular implementation of IComputePointsToDistanceVolume interface that will build the intermediate volume,
+    /// e.g. MR::Cuda::ComputePointsToDistanceVolume to build it on GPU;
+    /// if it is not specified, or it reports that it cannot process this input, then the volume is built with
+    /// memory efficient pointsToDistanceFunctionVolume function
+    std::shared_ptr<IComputePointsToDistanceVolume> computeVolume;
 };
 
 /// makes mesh from points with normals by constructing intermediate volume with signed distances

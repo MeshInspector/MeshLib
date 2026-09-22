@@ -3,6 +3,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
+#include "MRQuaternion.h"
 #include "MRTimer.h"
 #include "MRRelaxParams.h" //getLimitedPos
 #include <limits>
@@ -15,6 +16,21 @@ namespace MR
 
 namespace
 {
+
+/// rotates given triangle about its centroid so that its normal becomes (n), keeping the triangle's shape and size;
+/// if the triangle is degenerate or its normal is opposite to (n), returns it unchanged
+Triangle3f triangleRotatedToNormal( const Triangle3f & t, const Vector3f & n )
+{
+    const auto dblArea = dirDblArea( t );
+    if ( dot( dblArea, n ) <= 0 )
+        return t;
+    const Quaternionf q( dblArea.normalized(), n );
+    const auto c = ( t[0] + t[1] + t[2] ) / 3.0f;
+    Triangle3f res;
+    for ( int i = 0; i < 3; ++i )
+        res[i] = c + q( t[i] - c );
+    return res;
+}
 
 class Solver : public NormalsToPoints::ISolver
 {
@@ -93,14 +109,16 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
             rhs_[i][v] = guideWeight_ * guide[v][i];
     } );
 
-    // add 2 equations per triangle for relative position of projected triangle points
+    // add 2 equations per triangle for relative position of rotated triangle points
     BitSetParallelFor( topology_->getValidFaces(), [&]( FaceId f )
     {
         VertId vs[3];
         topology_->getTriVerts( f, vs );
-        const auto projectedTri = triangleWithNormal( { points[vs[0]], points[vs[1]], points[vs[2]], }, normals[f] );
-        const auto d0 = 2.0f * projectedTri[0] - projectedTri[1] - projectedTri[2];
-        const auto d1 = 2.0f * projectedTri[1] - projectedTri[0] - projectedTri[2];
+        // rotation instead of projection: the projection shrinks a tilted triangle by the cosine of its tilt,
+        // and the accumulated demand for smaller triangles pulled the surface inward near creases
+        const auto rotatedTri = triangleRotatedToNormal( { points[vs[0]], points[vs[1]], points[vs[2]], }, normals[f] );
+        const auto d0 = 2.0f * rotatedTri[0] - rotatedTri[1] - rotatedTri[2];
+        const auto d1 = 2.0f * rotatedTri[1] - rotatedTri[0] - rotatedTri[2];
         const int row = face2row_[f];
         for ( int i = 0; i < 3; ++i )
         {

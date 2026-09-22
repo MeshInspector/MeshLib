@@ -16,7 +16,7 @@ public:
     /// \param guideWeight how much resulting points must be attracted to initial points, must be > 0
     MRMESH_API void prepare( const MeshTopology & topology, float guideWeight = 1 );
 
-    /// performs one iteration consisting of projection of all triangles on planes with given normals and finding best points from them
+    /// performs one iteration consisting of rotation of all triangles about their centroids to given normals and finding best points from them
     /// \param guide target vertex positions to avoid under-determined system
     /// \param normals target face normals
     /// \param points initial approximation on input, updated approximation on output

@@ -55,7 +55,8 @@ public:
     /// whether this implementation can process given input, e.g. it fits in GPU memory
     virtual bool canCompute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const = 0;
 
-    /// makes the whole volume at once
+    /// makes the whole volume at once, which needs the entire grid in memory;
+    /// the derived interfaces below offer cheaper ways to obtain the same data
     virtual Expected<SimpleVolumeMinMax> compute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const = 0;
 };
 

@@ -27,6 +27,8 @@ class MRCUDA_CLASS ComputePointsToDistanceVolume : public MR::IComputePointsToDi
 {
 public:
     // see methods' descriptions in the MR::IComputePointsToDistanceVolume interfaces
+    /// both compute() and computeByParts() upload the same data and process the grid in chunks
+    /// sized to the free GPU memory, so this answers for either of them
     MRCUDA_API bool canCompute( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params ) const override;
     MRCUDA_API Expected<MR::SimpleVolumeMinMax> compute( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params ) const override;
     MRCUDA_API Expected<void> computeByParts( const PointCloud& cloud, const MR::PointsToDistanceVolumeParams& params,

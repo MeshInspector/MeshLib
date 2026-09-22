@@ -1830,6 +1830,8 @@ bool Viewer::draw_( bool force )
         // everything was rendered, reduce the counter
         --forceRedrawFrames_;
     }
+    if ( swapped && beforeSwapCallback_ )
+        beforeSwapCallback_();
     if ( window && swapped )
     {
         Timer t( "glfwSwapBuffers" );
@@ -1906,29 +1908,30 @@ bool Viewer::isMultiViewportAvailable()
 void Viewer::drawFull( bool dirtyScene )
 {
     MR_TIMER;
-    // unbind to clean main framebuffer
     if ( sceneTexture_ )
         sceneTexture_->unbind();
-    // clean main framebuffer
-    clearFramebuffers();
+    else
+        clearFramebuffers(); // the scene is drawn right in the main framebuffer
 
     if ( menuPlugin_ )
         menuPlugin_->startFrame();
 
     if ( sceneTexture_ )
-    {
         sceneTexture_->bind( true );
-        // need to clean it in texture too
-        clearFramebuffers();
-    }
+
     signals_->preDrawSignal();
     // check dirty scene and need swap
     // important to check after preDrawSignal
-    bool renderScene = forceRedrawFramesWithoutSwap_ <= 1;
+    const bool swapping = isCurrentFrameSwapping();
+    bool renderScene = swapping;
     if ( sceneTexture_ )
         renderScene = renderScene && dirtyScene;
     if ( renderScene )
+    {
+        if ( sceneTexture_ )
+            clearFramebuffers(); // fill the background in the texture
         drawScene( sceneTexture_ ? &sceneTexture_->getFramebuffer() : nullptr );
+    }
     signals_->postDrawSignal();
     if ( sceneTexture_ )
     {
@@ -1936,8 +1939,11 @@ void Viewer::drawFull( bool dirtyScene )
         sceneTexture_->unbind();
         if ( renderScene )
             sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
-
-        sceneTexture_->draw(); // always draw scene texture
+        if ( swapping )
+        {
+            clearFramebuffers(); // clean main framebuffer
+            sceneTexture_->draw();
+        }
     }
     if ( menuPlugin_ )
     {
@@ -2656,6 +2662,9 @@ void Viewer::captureUIScreenShot( std::function<void( const Image& )> callback,
 {
     CommandLoop::appendCommand( [callback, pos, sizeP, this] ()
     {
+        if ( !glInitialized_ )
+            return;
+
         Vector2i size = sizeP;
         if ( !size.x )
             size.x = framebufferSize.x - pos.x;
@@ -2669,14 +2678,19 @@ void Viewer::captureUIScreenShot( std::function<void( const Image& )> callback,
 
         Image image;
         image.resolution = size;
-        image.pixels.resize( size.x * size.x );
+        image.pixels.resize( size.x * size.y );
 
-        if ( glInitialized_ )
+        // the previously drawn frame could be one of those that are not shown on screen, and they leave
+        // the back buffer incomplete, see drawFull(); so draw one more frame and read it before the swap
+        beforeSwapCallback_ = [&]
         {
             GL_EXEC( glReadPixels( pos.x, pos.y, size.x, size.y, GL_RGBA, GL_UNSIGNED_BYTE, ( void* ) ( image.pixels.data() ) ) );
+        };
+        MR_FINALLY{ beforeSwapCallback_ = {}; };
+        forceSwapOnFrame();
+        draw( true );
 
-            callback( image );
-        }
+        callback( image );
     } );
 }
 

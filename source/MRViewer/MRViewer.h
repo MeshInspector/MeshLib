@@ -320,7 +320,7 @@ public:
     MRVIEWER_API Image captureSceneScreenShot( const Vector2i& resolution = Vector2i(), bool transparentBg = false );
 
     /**
-     * Captures part of window in the beginning of next frame, capturing all that was drawn in this frame
+     * Draws one more frame and captures a part of the window from it
      * @param callback will be called right when screenshot is taken
      * @param pos left-bottom corner of capturing area relative of left-down corner of window. default = size(0, 0)
      * @param size size of capturing area. default = size(0, 0) - auto size to right-top corner of window.
@@ -560,6 +560,9 @@ private:
     int forceRedrawFrames_{ 0 };
     // Should be `<= forceRedrawFrames_`. The next N frames will not be shown on screen.
     int forceRedrawFramesWithoutSwap_{ 0 };
+
+    // if set, is called at the end of a frame that is shown on screen, when the back buffer is complete
+    std::function<void()> beforeSwapCallback_;
 
     std::unique_ptr<ViewerEventQueue> eventQueue_;
 

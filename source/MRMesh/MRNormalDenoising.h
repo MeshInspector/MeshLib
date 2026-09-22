@@ -83,5 +83,6 @@ struct DenoiseWithCreasesSettings
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework";
 /// unlike meshDenoiseViaNormals, the creases are given by the caller and not detected automatically
 MRMESH_API void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
+MRMESH_API void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 
 } //namespace MR

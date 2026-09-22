@@ -1,4 +1,5 @@
 #include <MRMesh/MRNormalDenoising.h>
+#include <MRMesh/MRConstants.h>
 #include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
@@ -74,6 +75,25 @@ TEST( MRMesh, MeshDenoiseWithCreasesNoneSharp )
     meshDenoiseWithCreases( mesh, {} );
 
     EXPECT_LT( normalRoughness( mesh ), 0.5f * normalRoughness( noisy ) );
+}
+
+TEST( MRMesh, MeshDenoiseWithCreasesTopologyAndPoints )
+{
+    const Mesh noisy = noisySphere();
+    const UndirectedEdgeBitSet creases = noisy.findCreaseEdges( PI_F / 6 );
+    EXPECT_GT( creases.count(), 0 ); // the noise must produce some creases, or the test is trivial
+
+    Mesh mesh = noisy;
+    meshDenoiseWithCreases( mesh, creases );
+
+    // the same denoising through the topology-and-points overload must give the same points
+    VertCoords points = noisy.points;
+    meshDenoiseWithCreases( noisy.topology, points, creases );
+
+    float maxDiff = 0;
+    for ( auto v : noisy.topology.getValidVerts() )
+        maxDiff = std::max( maxDiff, ( points[v] - mesh.points[v] ).length() );
+    EXPECT_EQ( maxDiff, 0 );
 }
 
 } //namespace MR

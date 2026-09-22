@@ -187,16 +187,8 @@ private:
 };
 
 #ifndef __APPLE__
-// What `pythonLaunch` learned about the launch it started. The launch thread is detached, so this
-// is held by shared_ptr: it must outlive the `pythonLaunch` frame if that frame threw and returned
-// while the thread was still running.
-struct LaunchStatus
-{
-    std::shared_future<void> finished;
-};
-
-// the running launch, for `showViewer()` to wait on
-std::shared_ptr<LaunchStatus> gLaunch;
+// the finish future from the GUI thread, for `showViewer()` to wait on
+std::shared_future<void> gViewerFinished;
 #else
 // the original launch params, for `showViewer()` to wait on
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
@@ -204,46 +196,27 @@ std::shared_ptr<MinimalViewerSetup> gLaunchSetup;
 #endif
 
 // The viewer on a detached thread; the caller continues and drives it with blocking calls.
-void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup )
+void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup& setup )
 {
 #ifndef __APPLE__
     std::promise<int> launchedPromise;
     std::promise<void> finishedPromise;
     auto launched = launchedPromise.get_future();
+    gViewerFinished = finishedPromise.get_future();
 
-    auto status = std::make_shared<LaunchStatus>();
-    status->finished = finishedPromise.get_future();
-
-    std::thread launchThread { [params, setup, launched = std::move( launchedPromise ), finished = std::move( finishedPromise )] () mutable
+    std::thread guiThread { [params, setup, launched = std::move( launchedPromise ), finished = std::move( finishedPromise )] () mutable
     {
         MR::SetCurrentThreadName( "PythonAppLaunchThread" );
 
-        const auto startEventLoop = params.startEventLoop;
-        const auto close = params.close;
-        params.startEventLoop = false;
-        params.close = false;
-
-        if ( !setupDefaultViewer( params, setup ) )
-        {
-            launched.set_value( 1 );
-            return;
-        }
-
-        auto& viewer = getViewerInstance();
-        const auto exitCode = viewer.launch( params );
+        const auto exitCode = MR::preLaunchDefaultViewer( params, setup );
         launched.set_value( exitCode );
         if ( exitCode == EXIT_SUCCESS )
         {
-            if ( startEventLoop )
-                viewer.launchEventLoop();
-            if ( close )
-                viewer.launchShut();
+            MR::launchDefaultViewer( params, setup );
             finished.set_value();
         }
-
-        shutdownDefaultViewer();
     } };
-    launchThread.detach();
+    guiThread.detach();
 
     int exitCode;
     {
@@ -258,29 +231,15 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
             "launched once in this process; exit code " + std::to_string( exitCode )
         );
     }
-
-    gLaunch = std::move( status );
 #else
     // more info: https://stackoverflow.com/questions/74893322
     if ( !pthread_main_np() )
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 
-    gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
-    gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
-    // don't start the event loop on this stage
-    params.startEventLoop = false;
-    params.close = false;
-    // never show window on this stage on macOS
-    if ( params.windowMode != LaunchParams::NoWindow )
-        params.windowMode = LaunchParams::Hide;
-
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        if ( setupDefaultViewer( params, *gLaunchSetup ) )
-            exitCode = getViewerInstance().launch( params );
-        else
-            exitCode = 1;
+        exitCode = MR::preLaunchDefaultViewer( params, setup );
     }
     if ( exitCode != EXIT_SUCCESS )
     {
@@ -289,41 +248,29 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
             "launched once in this process; exit code " + std::to_string( exitCode )
         );
     }
+
+    gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
+    gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
 #endif
 }
 
 // the window is up since launch(); this waits until the user closes it or shutdown() is called
 void pythonShowViewer()
 {
-#ifndef __APPLE__
-    if ( !gLaunch )
+    auto& viewer = getViewerInstance();
+    if ( !viewer.isPreLaunched() )
         throw std::runtime_error( "Viewer is not launched: call launch() first" );
 
-    {
-        pybind11::gil_scoped_release gilRelease;
-        gLaunch->finished.wait();
-    }
+#ifndef __APPLE__
+    pybind11::gil_scoped_release gilRelease;
+    gViewerFinished.wait();
 #else
     // more info: https://stackoverflow.com/questions/74893322
     if ( !pthread_main_np() )
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 
-    auto& viewer = getViewerInstance();
-    if ( !viewer.isLaunched() )
-        throw std::runtime_error( "Viewer is not launched: call launch() first" );
-
-    pybind11::gil_scoped_release gilRelease; // commands from other Python threads take the GIL themselves
-
-    const auto& params = *gLaunchParams;
-    using Mode = MR::Viewer::LaunchParams::WindowMode;
-    if ( params.windowMode == Mode::Show || params.windowMode == Mode::HideInit )
-        viewer.showWindow();
-    if ( params.startEventLoop )
-        viewer.launchEventLoop();
-    if ( params.close )
-        viewer.launchShut();
-
-    shutdownDefaultViewer();
+    pybind11::gil_scoped_release gilRelease;
+    MR::launchDefaultViewer( *gLaunchParams, *gLaunchSetup );
 #endif
 }
 

@@ -245,7 +245,7 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        exitCode = MR::preLaunchDefaultViewer( params, setup );
+        exitCode = MR::preLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
     }
     if ( exitCode != EXIT_SUCCESS )
     {

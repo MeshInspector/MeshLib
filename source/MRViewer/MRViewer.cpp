@@ -140,6 +140,8 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
     auto& settingsManager = viewer.getViewerSettingsManager();
     if ( settingsManager )
         settingsManager->saveSettings( viewer );
+    // the emscripten main loop never returns, so launchShut() is not reached in wasm
+    MR::Config::instance().writeToFile();
 }
 
 }
@@ -1097,8 +1099,8 @@ void Viewer::launchShut()
 
     CommandLoop::removeCommands( true );
 
-    // plugins store part of their state in the config while shutting down, which happens after
-    // saveSettings() above, so write the config once more
+    // the only place where the config is written to file: saveSettings() and the plugin teardown
+    // above only update it in memory
     Config::instance().writeToFile();
 }
 

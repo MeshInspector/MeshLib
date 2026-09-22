@@ -200,6 +200,7 @@ std::shared_ptr<LaunchStatus> gLaunch;
 #else
 // the original launch params, for `showViewer()` to wait on
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
+std::shared_ptr<MinimalViewerSetup> gLaunchSetup;
 #endif
 
 // The viewer on a detached thread; the caller continues and drives it with blocking calls.
@@ -265,6 +266,7 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 
     gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
+    gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
     // don't start the event loop on this stage
     params.startEventLoop = false;
     params.close = false;
@@ -275,7 +277,7 @@ void pythonLaunch( Viewer::LaunchParams params, const MinimalViewerSetup& setup 
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        if ( setupDefaultViewer( params, setup ) )
+        if ( setupDefaultViewer( params, *gLaunchSetup ) )
             exitCode = getViewerInstance().launch( params );
         else
             exitCode = 1;

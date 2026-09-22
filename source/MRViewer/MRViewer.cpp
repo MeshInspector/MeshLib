@@ -1916,7 +1916,9 @@ bool Viewer::isMultiViewportAvailable()
 void Viewer::drawFull( bool dirtyScene )
 {
     MR_TIMER;
-    // a frame that is not swapped is never shown, so everything drawn in it is thrown away
+    // a frame that is not swapped is never shown, so everything drawn in the main framebuffer in it is
+    // thrown away; the scene texture on the contrary outlives the frame and can be read or drawn in the
+    // following ones, so it is rendered in full in every frame
     const bool swapping = isCurrentFrameSwapping();
     frameFullyDrawn_ = swapping;
 
@@ -1930,14 +1932,16 @@ void Viewer::drawFull( bool dirtyScene )
     if ( menuPlugin_ )
         menuPlugin_->startFrame();
 
-    if ( swapping )
+    if ( sceneTexture_ )
     {
-        if ( sceneTexture_ )
-        {
-            sceneTexture_->bind( true );
-            // need to clean it in texture too
-            clearFramebuffers();
-        }
+        sceneTexture_->bind( true );
+        // need to clean it in texture too
+        clearFramebuffers();
+    }
+    // without the scene texture the scene goes right in the main framebuffer, so nothing of it is needed
+    // in a frame that is not swapped
+    if ( sceneTexture_ || swapping )
+    {
         signals_->preDrawSignal(); // may draw, so must be called after clearFramebuffers()
         // check dirty scene
         // important to check after preDrawSignal
@@ -1952,7 +1956,8 @@ void Viewer::drawFull( bool dirtyScene )
             if ( renderScene )
                 sceneTexture_->copyTexture(); // copy scene texture only if scene was rendered
 
-            sceneTexture_->draw();
+            if ( swapping )
+                sceneTexture_->draw();
         }
     }
     if ( menuPlugin_ )

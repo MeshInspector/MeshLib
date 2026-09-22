@@ -2983,7 +2983,6 @@ void Viewer::updatePixelRatio_()
 namespace
 {
 
-// llvmpipe and friends rasterize every MSAA sample on the CPU
 bool isSoftwareRenderer()
 {
     const auto* renderer = ( const char* )glGetString( GL_RENDERER );

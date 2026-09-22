@@ -44,27 +44,24 @@ class MRVOXELS_CLASS IComputePointsToDistanceVolume
 public:
     virtual ~IComputePointsToDistanceVolume() = default;
 
-    /// callback that gets one z-slab of the volume
-    /// \param volume the slab itself
-    /// \param zOffset the slab's offset along z-axis within the whole volume
+    /// gets one z-slab of the volume, starting at z-layer zOffset
     using AddPartFunc = std::function<Expected<void>( const SimpleVolumeMinMax& volume, int zOffset )>;
 
-    /// returns true if this implementation is able to process given input, e.g. it fits in GPU memory
+    /// whether this implementation can process given input, e.g. it fits in GPU memory
     virtual bool canCompute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const = 0;
 
-    /// makes the whole volume filled with signed distances to the points
+    /// makes the whole volume at once
     virtual Expected<SimpleVolumeMinMax> compute( const PointCloud& cloud, const PointsToDistanceVolumeParams& params ) const = 0;
 
-    /// returns true if \ref computeByParts is implemented; it is preferred over \ref compute since it needs less memory
+    /// whether \ref computeByParts is implemented; it is preferred over \ref compute since it needs less memory
     virtual bool supportsByParts() const = 0;
 
-    /// makes the volume by z-slabs, passing each of them in addPart; fails if \ref supportsByParts returns false
-    /// \param layerOverlap the number of z-layers shared by two consecutive slabs
+    /// makes the volume by z-slabs, passing each of them in addPart with layerOverlap layers shared by neighbours
     virtual Expected<void> computeByParts( const PointCloud& cloud, const PointsToDistanceVolumeParams& params,
         AddPartFunc addPart, int layerOverlap ) const = 0;
 };
 
-/// default implementation of IComputePointsToDistanceVolume computing on CPU
+/// CPU implementation of IComputePointsToDistanceVolume
 class MRVOXELS_CLASS ComputePointsToDistanceVolume : public IComputePointsToDistanceVolume
 {
 public:

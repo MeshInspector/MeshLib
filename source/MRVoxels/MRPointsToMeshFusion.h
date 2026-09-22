@@ -5,7 +5,6 @@
 #include "MRPointsToDistanceVolume.h"
 #include "MRMesh/MRExpected.h"
 #include "MRMesh/MRProgressCallback.h"
-#include "MRPch/MRBindingMacros.h"
 
 #include <memory>
 
@@ -14,8 +13,6 @@ namespace MR
 
 struct PointsToMeshParameters
 {
-    MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
-
     /// it the distance of highest influence of a point;
     /// the maximal influence distance is 3*sigma; beyond that distance the influence is strictly zero
     float sigma = 1;
@@ -44,10 +41,8 @@ struct PointsToMeshParameters
     /// Progress callback
     ProgressCallback progress;
 
-    /// defines particular implementation of IComputePointsToDistanceVolume interface that will build the intermediate volume,
-    /// e.g. MR::Cuda::ComputePointsToDistanceVolume to build it on GPU;
-    /// if it is not specified, or it reports that it cannot process this input, then the volume is built with
-    /// memory efficient pointsToDistanceFunctionVolume function
+    /// builds the intermediate volume, e.g. MR::Cuda::ComputePointsToDistanceVolume to build it on GPU;
+    /// if it is not set or cannot process this input, memory efficient pointsToDistanceFunctionVolume is used
     std::shared_ptr<IComputePointsToDistanceVolume> computeVolume;
 };
 

@@ -20,7 +20,6 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap );
 
 /// returns the minimal amount of free GPU memory required to build a distance volume with given dimensions
-/// \param ptNormals (optional) point normals to be used instead of the ones stored in the cloud
 MRCUDA_API size_t pointsToDistanceVolumeMemory( const PointCloud& cloud, const Vector3i& dims, const VertNormals* ptNormals );
 
 /// CUDA implementation of IComputePointsToDistanceVolume

@@ -710,6 +710,8 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
 #ifndef MRVIEWER_NO_LOCALE
     cfg.setJsonValue( cLanguage, Locale::getName() );
 #endif
+
+    cfg.writeToFile();
 }
 
 const std::string & ViewerSettingsManager::getLastExtention( ObjType objType )

@@ -140,7 +140,6 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
     auto& settingsManager = viewer.getViewerSettingsManager();
     if ( settingsManager )
         settingsManager->saveSettings( viewer );
-    MR::Config::instance().writeToFile();
 }
 
 }

@@ -250,6 +250,7 @@ Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettin
     n2p.prepare( mesh.topology, settings.guideWeight );
     auto maxInitialDistSq = settings.limitNearInitial ? sqr( settings.maxInitialDist )
         : std::numeric_limits<float>::infinity();
+    mesh.invalidateCaches();
     for ( int i = 0; i < settings.pointIters; ++i )
         n2p.run( guide, fnormals, mesh.points, maxInitialDistSq );
 

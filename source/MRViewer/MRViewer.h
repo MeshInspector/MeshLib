@@ -73,6 +73,9 @@ public:
     // Accumulate launch params from cmd args
     MRVIEWER_API static void parseLaunchParams( LaunchParams& params );
 
+    // Pre-launch viewer with given params
+    // Generally you should just call `launch` instead.
+    MRVIEWER_API int preLaunch( const LaunchParams& params );
     // Launch viewer with given params
     MRVIEWER_API int launch( const LaunchParams& params );
     // Starts event loop
@@ -80,6 +83,7 @@ public:
     // Terminate window
     MRVIEWER_API void launchShut();
 
+    bool isPreLaunched() const { return isPreLaunched_; }
     bool isLaunched() const { return isLaunched_; }
 
     // get full parameters with witch viewer was launched
@@ -613,6 +617,7 @@ private:
 
     bool stopEventLoop_{ false };
 
+    bool isPreLaunched_{ false };
     bool isLaunched_{ false };
     // this flag is needed to know if all viewer setup was already done, and we can call draw
     bool focusRedrawReady_{ false };
@@ -650,14 +655,10 @@ private:
     friend MRVIEWER_API Viewer& getViewerInstance();
 };
 
-/// the stages of the default viewer's launch process
-enum class LaunchViewerStage
-{
-    InitWindow,
-    ExecEventLoop,
-};
-/// starts default viewer with given params and setup
-/// \param stage - run only the specific stage
-MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup, std::optional<LaunchViewerStage> stage = std::nullopt );
+// initializes default viewer with given params and setup
+// generally you should just call `launchDefaultViewer` instead
+MRVIEWER_API int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
+// starts default viewer with given params and setup
+MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
 
 } // end namespace

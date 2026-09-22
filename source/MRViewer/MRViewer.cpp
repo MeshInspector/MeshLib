@@ -368,7 +368,27 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     obj.addChild( label );
 }
 
-int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup, std::optional<LaunchViewerStage> stage )
+template <typename Func>
+int wrapUnsafeCall( Func&& func )
+{
+#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
+    return std::forward<Func>( func )();
+#else
+    try
+    {
+        return std::forward<Func>( func )();
+    }
+    catch ( ... )
+    {
+        spdlog::critical( boost::current_exception_diagnostic_information() );
+        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
+        printCurrentTimerBranch();
+        return EXIT_FAILURE;
+    }
+#endif
+}
+
+int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
     static bool firstLaunch = true;
     if ( !firstLaunch )
@@ -398,27 +418,38 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
 
-    int res = 0;
-#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
-    res = viewer.launch( params );
-#else
-    try
+    return wrapUnsafeCall( [&] { return viewer.preLaunch( params ); } );
+}
+
+int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+{
+    static bool firstLaunch = true;
+    if ( !firstLaunch )
     {
-        res = viewer.launch( params );
+        spdlog::error( "Viewer can be launched only once" );
+        return 1;
     }
-    catch ( ... )
+    else
     {
-        spdlog::critical( boost::current_exception_diagnostic_information() );
-        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
-        printCurrentTimerBranch();
-        res = 1;
+        firstLaunch = false;
     }
-#endif
+
+    CommandLoop::setMainThreadId( std::this_thread::get_id() );
+
+    auto& viewer = MR::Viewer::instanceRef();
+
+    if ( !viewer.isPreLaunched() )
+        if ( auto rc = preLaunchDefaultViewer( params, setup ); rc != EXIT_SUCCESS )
+            return 1;
+
+    auto res = wrapUnsafeCall( [&] { return viewer.preLaunch( params ); } );
+
     setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     if ( setup.shutdownCustomLogSink )
         setup.shutdownCustomLogSink();
+
     return res;
 }
 
@@ -617,11 +648,11 @@ void Viewer::mainLoopFunc_()
 }
 #endif
 
-int Viewer::launch( const LaunchParams& params )
+int Viewer::preLaunch( const LaunchParams& params )
 {
-    if ( isLaunched_ )
+    if ( isPreLaunched_ )
     {
-        spdlog::error( "Viewer is already launched!" );
+        spdlog::error( "Viewer is already pre-launched!" );
         return 1;
     }
 
@@ -650,8 +681,22 @@ int Viewer::launch( const LaunchParams& params )
     {
         // no command loop will ever run here, so no command may wait for one
         CommandLoop::removeCommands( true );
-        return res;
     }
+    return res;
+}
+
+int Viewer::launch( const LaunchParams& params )
+{
+    if ( isLaunched_ )
+    {
+        spdlog::error( "Viewer is already launched!" );
+        return 1;
+    }
+    if ( !isPreLaunched_ )
+        if ( auto rc = preLaunch( params ); rc != EXIT_SUCCESS )
+            return rc;
+
+    isLaunched_ = true;
 
     CommandLoop::setState( CommandLoop::StartPosition::BeforeWindowAppear );
     CommandLoop::processCommands(); // execute pre init commands before first draw
@@ -970,7 +1015,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( menuPlugin_ )
         menuPlugin_->initBackend();
 
-    isLaunched_ = true;
+    isPreLaunched_ = true;
 
     return EXIT_SUCCESS;
 }

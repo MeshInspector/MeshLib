@@ -27,10 +27,8 @@ void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<floa
 
     // perimeter of every face, also counting boundary edges for better results on mesh boundary
     Buffer<float, FaceId> perimeter( sz );
-    ParallelFor( perimeter, [&]( FaceId f )
+    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
     {
-        if ( !mesh.topology.hasFace( f ) )
-            return; // never read below
         float p = 0;
         for ( auto e : leftRing( mesh.topology, f ) )
             p += mesh.edgeLength( e );

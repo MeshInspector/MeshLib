@@ -368,32 +368,36 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     obj.addChild( label );
 }
 
-namespace
+int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup, std::optional<LaunchViewerStage> stage )
 {
-
-struct DefaultViewerState
-{
-    enum class Stage
+    static bool firstLaunch = true;
+    if ( !firstLaunch )
     {
-        NotStarted,
-        SetUp,
-        ShutDown,
-    } stage = Stage::NotStarted;
-    // pointer to ViewerSetup instance
-    const ViewerSetup* setup = nullptr;
-    // some of Viewer::LaunchParams
-    bool unloadPluginsAtEnd = false;
-};
-DefaultViewerState gDefaultViewerState;
-
-} // namespace
-
-int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
-{
-    if ( !setupDefaultViewer( params, setup ) )
+        spdlog::error( "Viewer can be launched only once" );
         return 1;
+    }
+    else
+    {
+        firstLaunch = false;
+    }
+
+    CommandLoop::setMainThreadId( std::this_thread::get_id() );
 
     auto& viewer = MR::Viewer::instanceRef();
+
+    MR::setupLoggerByDefault( setup.setupCustomLogSink );
+
+    setup.setupBasePlugins( &viewer );
+    setup.setupCommonModifiers( &viewer );
+    setup.setupCommonPlugins( &viewer );
+    setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
+    setup.setupConfiguration( &viewer );
+    CommandLoop::appendCommand( [&] ()
+    {
+        setup.setupExtendedLibraries();
+        setup.setupMcp();
+    }, CommandLoop::StartPosition::AfterSplashAppear );
+
     int res = 0;
 #if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
     res = viewer.launch( params );
@@ -410,60 +414,12 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         res = 1;
     }
 #endif
-
-    shutdownDefaultViewer();
+    setup.shutdownMcp();
+    if ( params.unloadPluginsAtEnd )
+        setup.unloadExtendedLibraries();
+    if ( setup.shutdownCustomLogSink )
+        setup.shutdownCustomLogSink();
     return res;
-}
-
-bool setupDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
-{
-    auto& state = gDefaultViewerState;
-    if ( state.stage != DefaultViewerState::Stage::NotStarted )
-    {
-        spdlog::error( "Viewer can be launched only once" );
-        return false;
-    }
-    state.setup = &setup;
-    state.unloadPluginsAtEnd = params.unloadPluginsAtEnd;
-
-    CommandLoop::setMainThreadId( std::this_thread::get_id() );
-
-    auto& viewer = MR::Viewer::instanceRef();
-
-    MR::setupLoggerByDefault( setup.setupCustomLogSink );
-
-    setup.setupBasePlugins( &viewer );
-    setup.setupCommonModifiers( &viewer );
-    setup.setupCommonPlugins( &viewer );
-    setup.setupSettingsManager( &viewer, params.name, params.resetConfig );
-    setup.setupConfiguration( &viewer );
-    CommandLoop::appendCommand( [&] ()
-    {
-        setup.setupExtendedLibraries();
-        std::ignore = setup.setupMcp();
-    }, CommandLoop::StartPosition::AfterSplashAppear );
-
-    state.stage = DefaultViewerState::Stage::SetUp;
-    return true;
-}
-
-void shutdownDefaultViewer()
-{
-    auto& state = gDefaultViewerState;
-    if ( state.stage != DefaultViewerState::Stage::SetUp )
-    {
-        spdlog::error( "Viewer is not set up properly" );
-        return;
-    }
-    const auto* setup = state.setup;
-
-    std::ignore = setup->shutdownMcp();
-    if ( state.unloadPluginsAtEnd )
-        setup->unloadExtendedLibraries();
-    if ( setup->shutdownCustomLogSink )
-        setup->shutdownCustomLogSink();
-
-    state.stage = DefaultViewerState::Stage::ShutDown;
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
@@ -730,12 +686,6 @@ int Viewer::launch( const LaunchParams& params )
         launchShut();
 
     return EXIT_SUCCESS;
-}
-
-void Viewer::showWindow()
-{
-    if ( window )
-        glfwShowWindow( window );
 }
 
 bool Viewer::checkOpenGL_( const LaunchParams& params )

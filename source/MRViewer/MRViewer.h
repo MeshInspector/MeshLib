@@ -75,8 +75,6 @@ public:
 
     // Launch viewer with given params
     MRVIEWER_API int launch( const LaunchParams& params );
-    // Show window explicitly (required only for 'Hide' window mode)
-    MRVIEWER_API void showWindow();
     // Starts event loop
     MRVIEWER_API void launchEventLoop();
     // Terminate window
@@ -652,14 +650,14 @@ private:
     friend MRVIEWER_API Viewer& getViewerInstance();
 };
 
-// starts default viewer with given params and setup
-MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
-// sets the default viewer up with given params and setup
-// returns false if it was already called
-// this function can be used for more grained viewer launch process; generally you should prefer `launchDefaultViewer`
-MRVIEWER_API bool setupDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
-// shuts the default viewer down with params and setup previously used by `setupDefaultViewer`
-// this function can be used for more grained viewer launch process; generally you should prefer `launchDefaultViewer`
-MRVIEWER_API void shutdownDefaultViewer();
+/// the stages of the default viewer's launch process
+enum class LaunchViewerStage
+{
+    InitWindow,
+    ExecEventLoop,
+};
+/// starts default viewer with given params and setup
+/// \param stage - run only the specific stage
+MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup, std::optional<LaunchViewerStage> stage = std::nullopt );
 
 } // end namespace

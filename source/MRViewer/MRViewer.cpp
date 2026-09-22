@@ -688,6 +688,12 @@ int Viewer::launch( const LaunchParams& params )
     return EXIT_SUCCESS;
 }
 
+void Viewer::showWindow()
+{
+    if ( window )
+        glfwShowWindow( window );
+}
+
 bool Viewer::checkOpenGL_( const LaunchParams& params )
 {
     int windowWidth = params.width;

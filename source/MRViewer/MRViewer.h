@@ -75,6 +75,8 @@ public:
 
     // Launch viewer with given params
     MRVIEWER_API int launch( const LaunchParams& params );
+    // Show window explicitly (required only for 'Hide' window mode)
+    MRVIEWER_API void showWindow();
     // Starts event loop
     MRVIEWER_API void launchEventLoop();
     // Terminate window

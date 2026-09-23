@@ -1,6 +1,7 @@
 #include <MRMesh/MRFixSelfIntersections.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRCube.h>
 #include <MRMesh/MRBitSet.h>
 #include <gtest/gtest.h>
 
@@ -27,6 +28,31 @@ TEST( MRMesh, FixSelfIntersections )
     intersections = SelfIntersections::getFaces( mesh, false );
     EXPECT_TRUE( intersections.has_value() );
     EXPECT_EQ( intersections->count(), 0 );
+}
+
+TEST( MRMesh, CutAndFillSelfIntersectionGroups )
+{
+    Mesh mesh = makeCube();
+    FaceBitSet faces( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        const auto n = mesh.normal( f );
+        if ( n.z > 0.9f || n.x > 0.9f )
+            faces.set( f );
+    }
+    EXPECT_EQ( faces.count(), 4 );
+
+    auto groups = SelfIntersections::splitOnGroups( mesh, faces );
+    EXPECT_EQ( groups.size(), 2 );
+    for ( const auto& g : groups )
+        EXPECT_EQ( g.count(), 2 );
+
+    // each planar side is refilled separately, so the cube keeps its shape
+    auto newFaces = SelfIntersections::cutAndFillGroups( mesh, faces );
+    EXPECT_EQ( newFaces.count(), 4 );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 12 );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_NEAR( mesh.volume(), 1.0, 1e-5 );
 }
 
 } //namespace MR

@@ -8,6 +8,8 @@
 #include "MRMeshRelax.h"
 #include "MRMeshComponents.h"
 #include "MRMeshSubdivide.h"
+#include "MRMeshPatch.h"
+#include "MRConstants.h"
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRMapOrHashMap.h"
@@ -259,6 +261,41 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
             return unexpectedOperationCanceled();
     }
     return {};
+}
+
+std::vector<FaceBitSet> splitOnGroups( const Mesh& mesh, const FaceBitSet& faces, float angleThreshold )
+{
+    MR_TIMER;
+    assert( angleThreshold > 0 && angleThreshold < PI2_F );
+    const auto sharpEdges = mesh.findCreaseEdges( angleThreshold ) - mesh.findCreaseEdges( PI_F - angleThreshold );
+    return MeshComponents::getAllComponents( { mesh, &faces }, MeshComponents::FaceIncidence::PerEdge, &sharpEdges );
+}
+
+FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThreshold, const FillHoleNicelySettings& settings )
+{
+    MR_TIMER;
+    const auto groups = splitOnGroups( mesh, faces, angleThreshold );
+
+    // faces of not yet patched groups and of the patches made so far
+    FaceBitSet protectedFaces = faces & mesh.topology.getValidFaces();
+    FaceBitSet newFaces;
+
+    auto s = settings;
+    s.subdivideSettings.beforeEdgeSplit = [&] ( EdgeId e )
+    {
+        if ( contains( protectedFaces, mesh.topology.left( e ) ) || contains( protectedFaces, mesh.topology.right( e ) ) )
+            return false;
+        return !settings.subdivideSettings.beforeEdgeSplit || settings.subdivideSettings.beforeEdgeSplit( e );
+    };
+
+    for ( const auto& group : groups )
+    {
+        protectedFaces -= group;
+        const auto patch = patchMesh( mesh, group, s );
+        newFaces |= patch;
+        protectedFaces |= patch;
+    }
+    return newFaces;
 }
 
 // Helper function to find own self-intersections on a mesh part

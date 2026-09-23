@@ -142,7 +142,7 @@ IF(NOT MESHLIB_KEEP_CTEST_TARGETS)
 ENDIF()
 include(CTest)
 
-IF(APPLE)
+IF(APPLE AND NOT MESHLIB_USE_VCPKG)
   include(ConfigureHomebrew)
 
   # need to hardcode some path to fix wheel (no option to pass path)
@@ -155,7 +155,7 @@ include(DetectPlatform)
 IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   IF(NOT DEFINED MESHLIB_PYTHON_VERSION)
     # TODO: drop Python version hard-coding; set -DMESHLIB_PYTHON_VERSION explicitly in the CI config if needed
-    IF(APPLE)
+    IF(APPLE AND MESHLIB_USE_HOMEBREW)
       set(MESHLIB_PYTHON_VERSION "3.10")
     ELSEIF(DEFINED MR_LINUX_DISTRO)
       IF(${MR_LINUX_DISTRO} STREQUAL "Ubuntu")
@@ -175,7 +175,7 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
     ENDIF()
   ENDIF()
 
-  IF(APPLE)
+  IF(APPLE AND MESHLIB_USE_HOMEBREW)
     set(Python_ROOT_DIR "${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}")
   ENDIF()
 
@@ -185,7 +185,7 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
     find_package(Python REQUIRED COMPONENTS Interpreter Development)
   ENDIF()
 
-  IF(APPLE)
+  IF(APPLE AND MESHLIB_USE_HOMEBREW)
     # TODO: revise
     link_directories(${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MESHLIB_PYTHON_VERSION}/lib/)
   ENDIF()

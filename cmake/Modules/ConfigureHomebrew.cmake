@@ -12,6 +12,7 @@ IF(APPLE)
     message("Homebrew not found!")
     message(FATAL_ERROR "${CMD_ERROR} ${HOMEBREW_PREFIX}")
   ENDIF()
+  set(MESHLIB_USE_HOMEBREW ON)
 
   include_directories(${HOMEBREW_PREFIX}/include)
   link_directories(${HOMEBREW_PREFIX}/lib)

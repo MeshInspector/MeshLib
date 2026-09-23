@@ -265,6 +265,9 @@
     <ClCompile Include="MRFinallyTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRStacktraceTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRIdTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

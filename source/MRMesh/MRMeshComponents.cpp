@@ -575,17 +575,17 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsInGroup };
 }
 
-Components getAllComponentsFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+ComponentsFaces getAllComponentsFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     MR_TIMER;
     const auto [componentsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
     return getAllComponentsFaces( componentsMap, componentsCount, meshPart.mesh.topology.getFaceIds( meshPart.region ) );
 }
 
-Components getAllComponentsFaces( const Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region )
+ComponentsFaces getAllComponentsFaces( const Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region )
 {
     MR_TIMER;
-    Components res;
+    ComponentsFaces res;
     res.starts.resize( componentsCount + 1, 0 );
     for ( auto f : region )
         ++res.starts[int( componentsMap[f] ) + 1];

@@ -22,6 +22,9 @@ MESHLIB_THIRDPARTY_ROOT_DIR="${MESHLIB_THIRDPARTY_ROOT_DIR:-${BASE_DIR}}"
 if [[ $OSTYPE == 'darwin'* ]]; then
   echo "Host system: MacOS"
   INSTALL_REQUIREMENTS="install_brew_requirements.sh"
+  # thirdparty/ is a separate CMake project, so the 12.7 pin in the root CMakeLists.txt
+  # does not reach it; without this the dylibs get the build host's version as minos
+  export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.7}"
 elif [[ $OSTYPE == 'linux'* ]]; then
   source /etc/os-release
   echo "Host system: ${NAME} ${DISTRIB_RELEASE}"

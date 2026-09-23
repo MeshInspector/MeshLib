@@ -8,8 +8,44 @@
 
 #include <csignal>
 
+#ifdef _WIN32
+#include "MRPch/MRWinapi.h"
+#include <filesystem>
+#endif
+
 namespace
 {
+
+#ifdef _WIN32
+std::wstring moduleDirectory( HMODULE module )
+{
+    wchar_t path[MAX_PATH];
+    const auto size = GetModuleFileNameW( module, path, MAX_PATH );
+    if ( size == 0 || size == MAX_PATH )
+        return {};
+    return std::filesystem::path( path ).parent_path().wstring();
+}
+
+// MSBuild links with /PDBALTPATH:%_PDB%, so the debug engine behind stacktraces looks for PDB files only
+// in the current directory and in _NT_SYMBOL_PATH; add the folders of the executable and of MRMesh.dll to the latter
+const bool symbolPathExtended = []
+{
+    std::wstring symbolPath( 32767, L'\0' );
+    symbolPath.resize( GetEnvironmentVariableW( L"_NT_SYMBOL_PATH", symbolPath.data(), DWORD( symbolPath.size() ) ) );
+    HMODULE mrmesh = nullptr;
+    GetModuleHandleExW( GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCWSTR)&moduleDirectory, &mrmesh );
+    for ( const auto& dir : { moduleDirectory( nullptr ), moduleDirectory( mrmesh ) } )
+    {
+        if ( dir.empty() || symbolPath.find( dir ) != std::wstring::npos )
+            continue;
+        if ( !symbolPath.empty() )
+            symbolPath += L';';
+        symbolPath += dir;
+    }
+    return SetEnvironmentVariableW( L"_NT_SYMBOL_PATH", symbolPath.c_str() ) != 0;
+}();
+#endif
 
 void crashSignalHandler( int signal )
 {

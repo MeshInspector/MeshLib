@@ -157,6 +157,22 @@ struct LargeByAreaComponentsSettings
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
+/// faces of all components in one array:
+/// the faces of component i are faces[starts[i]], ..., faces[starts[i+1]-1] in increasing order
+struct Components
+{
+    std::vector<FaceId> faces;
+    std::vector<int> starts; ///< the number of components + 1 elements, starts.back() == faces.size()
+};
+
+/// gets all connected components of mesh part as a list of faces per component;
+/// unlike getAllComponents, the memory is proportional to the number of faces in the part and not to the number of components
+[[nodiscard]] MRMESH_API Components getAllComponentsFaces( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
+
+/// gets all connected components from components map ( FaceId => RegionId in [0, componentsCount) ) for the faces of given region
+[[nodiscard]] MRMESH_API Components getAllComponentsFaces( const Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region );
+
 /// given some face pairs, collects them in regions, where for each face in a region
 /// its pair face and its incident faces from other pairs are also attributed to that region;
 /// returns 1. the mapping: FaceId -> RegionId, 2. the total number of regions

@@ -44,6 +44,44 @@ TEST(MRMesh, getAllComponentsEdges)
     ASSERT_EQ( comp[0].count(), 5 );
 }
 
+TEST(MRMesh, getAllComponentsFaces)
+{
+    Mesh mesh = makeCube();
+    const auto creases = mesh.findCreaseEdges( 0.1f );
+
+    // one component per cube side
+    auto comps = MeshComponents::getAllComponentsFaces( mesh, MeshComponents::FaceIncidence::PerEdge, &creases );
+    ASSERT_EQ( comps.starts.size(), 7 );
+    EXPECT_EQ( comps.starts.front(), 0 );
+    EXPECT_EQ( comps.starts.back(), 12 );
+    ASSERT_EQ( comps.faces.size(), 12 );
+    FaceBitSet all;
+    for ( size_t i = 0; i + 1 < comps.starts.size(); ++i )
+    {
+        EXPECT_EQ( comps.starts[i + 1] - comps.starts[i], 2 );
+        const auto n = mesh.normal( comps.faces[comps.starts[i]] );
+        for ( int j = comps.starts[i]; j < comps.starts[i + 1]; ++j )
+        {
+            EXPECT_GT( dot( mesh.normal( comps.faces[j] ), n ), 0.99f );
+            all.autoResizeSet( comps.faces[j] );
+        }
+    }
+    EXPECT_EQ( all.count(), 12 ); // every face exactly once
+
+    // region: the whole cube without two faces of different sides
+    FaceBitSet region = mesh.topology.getValidFaces();
+    region.reset( comps.faces[0] );
+    region.reset( comps.faces[2] );
+    comps = MeshComponents::getAllComponentsFaces( { mesh, &region }, MeshComponents::FaceIncidence::PerEdge, &creases );
+    ASSERT_EQ( comps.starts.size(), 7 );
+    EXPECT_EQ( comps.faces.size(), 10 );
+
+    // without component boundaries the cube is one component
+    comps = MeshComponents::getAllComponentsFaces( mesh );
+    ASSERT_EQ( comps.starts.size(), 2 );
+    EXPECT_EQ( comps.faces.size(), 12 );
+}
+
 TEST(MRMesh, getLargestComponentArea)
 {
     Triangulation t{

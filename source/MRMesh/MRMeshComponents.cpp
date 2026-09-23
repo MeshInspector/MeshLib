@@ -11,6 +11,7 @@
 #include "MRFaceFace.h"
 #include "MRphmap.h"
 #include <climits>
+#include <numeric>
 
 namespace MR
 {
@@ -572,6 +573,29 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
         return { {}, 0 };
     const int componentsInGroup = ( maxComponentCount == INT_MAX ) ? 1 : ( componentsCount + maxComponentCount - 1 ) / maxComponentCount;
     return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsInGroup };
+}
+
+ComponentsFaces getAllComponentsFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    MR_TIMER;
+    const auto [componentsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
+    return getAllComponentsFaces( componentsMap, componentsCount, meshPart.mesh.topology.getFaceIds( meshPart.region ) );
+}
+
+ComponentsFaces getAllComponentsFaces( const Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region )
+{
+    MR_TIMER;
+    ComponentsFaces res;
+    res.offsets.resize( componentsCount + 1, 0 );
+    for ( auto f : region )
+        ++res.offsets[int( componentsMap[f] ) + 1];
+    std::partial_sum( res.offsets.begin(), res.offsets.end(), res.offsets.begin() );
+
+    res.faces.resize( res.offsets.back() );
+    auto pos = res.offsets;
+    for ( auto f : region )
+        res.faces[pos[int( componentsMap[f] )]++] = f;
+    return res;
 }
 
 std::vector<MR::FaceBitSet> getAllComponents( Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region,

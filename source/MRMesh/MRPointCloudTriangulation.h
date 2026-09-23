@@ -59,8 +59,8 @@ struct TriangulationParameters
     float boundaryAngle = 0.9f * PI_F;
 
     /**
-     * \brief Critical length of hole (all holes with length less then this value will be filled)
-     * \details If value is subzero it is set automaticly to 0.7*bbox.diagonal()
+     * \brief Critical length of hole (all holes with perimeter up to this value will be filled)
+     * \details If value is negative, it is set automatically to 0.1 * (bounding box diagonal of the point cloud)
      */
     float critHoleLength = -FLT_MAX;
 

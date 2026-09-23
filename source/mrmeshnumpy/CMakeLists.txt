@@ -23,6 +23,7 @@ ENDIF()
 
 IF(APPLE)
   set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+  target_link_options(${PROJECT_NAME} PRIVATE -undefined dynamic_lookup)
 ENDIF()
 
 target_link_libraries(${PROJECT_NAME}

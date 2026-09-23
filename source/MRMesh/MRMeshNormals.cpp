@@ -1,5 +1,6 @@
 #include "MRMeshNormals.h"
 #include "MRMesh.h"
+#include "MRMeshMath.h"
 #include "MRRingIterator.h"
 #include "MRBuffer.h"
 #include "MRVector4.h"
@@ -12,11 +13,16 @@ namespace MR
 
 FaceNormals computePerFaceNormals( const Mesh & mesh )
 {
+    return computePerFaceNormals( mesh.topology, mesh.points );
+}
+
+FaceNormals computePerFaceNormals( const MeshTopology & topology, const VertCoords & points )
+{
     MR_TIMER;
-    std::vector<Vector3f> res( mesh.topology.faceSize() );
-    BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
+    std::vector<Vector3f> res( topology.faceSize() );
+    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
-        res[f] = mesh.normal( f );
+        res[f] = normal( topology, points, f );
     } );
     return res;
 }

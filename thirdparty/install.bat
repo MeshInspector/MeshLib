@@ -80,13 +80,17 @@ if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
 )
 
 REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
+REM Reading via HTTP is batched and thus usually faster than via x-aws
+set "S3_REGION=us-east-1"
+set "S3_URL=s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/"
+set "HTTP_URL=https://vcpkg-export.s3.!S3_REGION!.amazonaws.com/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/{sha}.zip"
 if "!aws_cli_available!"=="true" (
     if "!write_s3_option!"=="true" (
         echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
+        set "VCPKG_BINARY_SOURCES=clear;http,!HTTP_URL!,read;x-aws,!S3_URL!,write;"
     ) else (
         echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,read;"
+        set "VCPKG_BINARY_SOURCES=clear;http,!HTTP_URL!,read;"
     )
 ) else (
     echo "Mode: build from source (no S3 binary cache)."

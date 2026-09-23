@@ -16,7 +16,7 @@ void testMeshNormals( void )
     MR_VertCoords* vertNormals = MR_computePerVertNormals( cube );
     TEST_ASSERT( MR_VertCoords_size( vertNormals ) == 8 )
 
-    MR_FaceNormals* faceNormals = MR_computePerFaceNormals( cube );
+    MR_FaceNormals* faceNormals = MR_computePerFaceNormals_1( cube );
     TEST_ASSERT( MR_FaceNormals_size( faceNormals ) == 12 )
 
     MR_FaceNormals_Destroy( faceNormals );

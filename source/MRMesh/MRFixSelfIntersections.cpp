@@ -13,6 +13,7 @@
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRMapOrHashMap.h"
+#include "MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include <algorithm>
 #include <numeric>
@@ -264,12 +265,23 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     return {};
 }
 
-std::pair<Face2RegionMap, int> getGroupsMap( const Mesh& mesh, const FaceBitSet& faces, float angleThreshold )
+std::pair<Face2RegionMap, int> getGroupsMap( const MeshPart& mp, float angleThreshold )
 {
     MR_TIMER;
     assert( angleThreshold > 0 && angleThreshold < PI2_F );
-    const auto sharpEdges = mesh.findCreaseEdges( angleThreshold ) - mesh.findCreaseEdges( PI_F - angleThreshold );
-    return MeshComponents::getAllComponentsMap( { mesh, &faces }, MeshComponents::FaceIncidence::PerEdge, &sharpEdges );
+    const auto& topology = mp.mesh.topology;
+    const float maxSharpCos = std::cos( angleThreshold );
+    const float minSharpCos = std::cos( PI_F - angleThreshold );
+
+    // only the edges inside the region can separate its faces
+    auto sharpEdges = getInnerEdges( topology, topology.getFaceIds( mp.region ) );
+    BitSetParallelFor( sharpEdges, [&] ( UndirectedEdgeId ue )
+    {
+        const auto c = dihedralAngleCos( topology, mp.mesh.points, ue );
+        if ( c > maxSharpCos || c <= minSharpCos )
+            sharpEdges.reset( ue );
+    } );
+    return MeshComponents::getAllComponentsMap( mp, MeshComponents::FaceIncidence::PerEdge, &sharpEdges );
 }
 
 FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThreshold, const FillHoleNicelySettings& settings )
@@ -277,7 +289,7 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
     MR_TIMER;
     // faces of not yet patched groups and of the patches made so far
     FaceBitSet protectedFaces = faces & mesh.topology.getValidFaces();
-    const auto [groupsMap, numGroups] = getGroupsMap( mesh, protectedFaces, angleThreshold );
+    const auto [groupsMap, numGroups] = getGroupsMap( { mesh, &protectedFaces }, angleThreshold );
 
     // faces of group r are groupFaces[groupStart[r]..groupStart[r+1])
     std::vector<int> groupStart( numGroups + 1, 0 );

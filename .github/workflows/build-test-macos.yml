@@ -164,6 +164,14 @@ jobs:
           scripts/build_vcpkg_thirdparty.sh
           echo "VCPKG_TRIPLET=${VCPKG_TRIPLET}" >> $GITHUB_ENV
 
+      - name: Thirdparty footprint
+        run: |
+          for dir in vcpkg_installed /usr/local/share/vcpkg/packages ; do
+            if [ -d "${dir}" ] ; then
+              echo "$(du -sh "${dir}" | cut -f 1) $(find "${dir}" | wc -l | tr -d ' ') files ${dir}"
+            fi
+          done
+
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
         id: collect-runner-stats
@@ -251,6 +259,15 @@ jobs:
         run: |
           cmake -S . -B build/${{ matrix.config }} -DMESHLIB_BUILD_GENERATED_C_BINDINGS=ON
           cmake --build build/${{ matrix.config }} -j $(sysctl -n hw.logicalcpu) --target MeshLibC2 MeshLibC2Cuda MRTestC2
+
+      - name: Upload build timings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: NinjaLog-macos-${{ matrix.arch }}-${{ matrix.config }}-${{ matrix.lib-source }}
+          path: build/${{ matrix.config }}/.ninja_log
+          retention-days: 7
+          if-no-files-found: ignore
 
       - name: MRMesh Exported Symbols
         run: |

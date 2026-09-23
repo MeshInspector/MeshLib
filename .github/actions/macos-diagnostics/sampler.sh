@@ -8,6 +8,6 @@ while :; do
   echo "-- load averages --"
   uptime
   echo "-- top processes by CPU --"
-  ps -Ao %cpu,comm -r | head -8
+  top -l 2 -o cpu -n 8 -stats pid,cpu,command | awk '/^Processes:/ { n++ } n == 2'
   sleep 10
 done

@@ -20,6 +20,8 @@ echo "--- pmset -g batt: power source & battery ---"
 pmset -g batt
 echo "--- pmset -g therm: thermal throttling / CPU speed limits ---"
 pmset -g therm
+echo "--- mdutil -s /: Spotlight indexing state ---"
+mdutil -s /
 echo "--- uptime & load averages ---"
 uptime
 echo "--- top processes by CPU ---"

@@ -586,13 +586,13 @@ ComponentsFaces getAllComponentsFaces( const Face2RegionMap& componentsMap, int 
 {
     MR_TIMER;
     ComponentsFaces res;
-    res.starts.resize( componentsCount + 1, 0 );
+    res.offsets.resize( componentsCount + 1, 0 );
     for ( auto f : region )
-        ++res.starts[int( componentsMap[f] ) + 1];
-    std::partial_sum( res.starts.begin(), res.starts.end(), res.starts.begin() );
+        ++res.offsets[int( componentsMap[f] ) + 1];
+    std::partial_sum( res.offsets.begin(), res.offsets.end(), res.offsets.begin() );
 
-    res.faces.resize( res.starts.back() );
-    auto pos = res.starts;
+    res.faces.resize( res.offsets.back() );
+    auto pos = res.offsets;
     for ( auto f : region )
         res.faces[pos[int( componentsMap[f] )]++] = f;
     return res;

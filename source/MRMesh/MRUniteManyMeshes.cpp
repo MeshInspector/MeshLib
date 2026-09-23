@@ -403,13 +403,13 @@ Expected<Mesh> uniteComponents( const Mesh& mesh,
     const auto comps = MeshComponents::getAllComponentsFaces( mesh );
     if ( !reportProgress( params.progressCb, 0.1f ) )
         return unexpectedOperationCanceled();
-    const auto numComps = comps.starts.size() - 1;
+    const auto numComps = comps.offsets.size() - 1;
     std::vector<Mesh> components( numComps );
     std::vector<const Mesh*> meshPtrs( numComps );
     auto keepGoing = ParallelFor( components, [&] ( size_t i )
     {
         FaceBitSet compBs( mesh.topology.faceSize() );
-        for ( int j = comps.starts[i]; j < comps.starts[i + 1]; ++j )
+        for ( int j = comps.offsets[i]; j < comps.offsets[i + 1]; ++j )
             compBs.set( comps.faces[j] );
         components[i].addMeshPart( MeshPart( mesh, &compBs ) );
         normalizeUniteMesh( components[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );

@@ -157,12 +157,13 @@ struct LargeByAreaComponentsSettings
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
-/// faces of all components in one array:
-/// the faces of component i are faces[starts[i]], ..., faces[starts[i+1]-1] in increasing order
+/// faces of all components in one flat array
 struct ComponentsFaces
 {
+    /// faces of component 0, then faces of component 1, ...;
+    /// the faces of component i are faces[offsets[i]], ..., faces[offsets[i+1]-1] in increasing order
     std::vector<FaceId> faces;
-    std::vector<int> starts; ///< the number of components + 1 elements, starts.back() == faces.size()
+    std::vector<int> offsets; ///< the number of components + 1 elements, offsets.back() == faces.size()
 };
 
 /// gets all connected components of mesh part as a list of faces per component;

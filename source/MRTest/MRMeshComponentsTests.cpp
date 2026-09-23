@@ -51,16 +51,16 @@ TEST(MRMesh, getAllComponentsFaces)
 
     // one component per cube side
     auto comps = MeshComponents::getAllComponentsFaces( mesh, MeshComponents::FaceIncidence::PerEdge, &creases );
-    ASSERT_EQ( comps.starts.size(), 7 );
-    EXPECT_EQ( comps.starts.front(), 0 );
-    EXPECT_EQ( comps.starts.back(), 12 );
+    ASSERT_EQ( comps.offsets.size(), 7 );
+    EXPECT_EQ( comps.offsets.front(), 0 );
+    EXPECT_EQ( comps.offsets.back(), 12 );
     ASSERT_EQ( comps.faces.size(), 12 );
     FaceBitSet all;
-    for ( size_t i = 0; i + 1 < comps.starts.size(); ++i )
+    for ( size_t i = 0; i + 1 < comps.offsets.size(); ++i )
     {
-        EXPECT_EQ( comps.starts[i + 1] - comps.starts[i], 2 );
-        const auto n = mesh.normal( comps.faces[comps.starts[i]] );
-        for ( int j = comps.starts[i]; j < comps.starts[i + 1]; ++j )
+        EXPECT_EQ( comps.offsets[i + 1] - comps.offsets[i], 2 );
+        const auto n = mesh.normal( comps.faces[comps.offsets[i]] );
+        for ( int j = comps.offsets[i]; j < comps.offsets[i + 1]; ++j )
         {
             EXPECT_GT( dot( mesh.normal( comps.faces[j] ), n ), 0.99f );
             all.autoResizeSet( comps.faces[j] );
@@ -73,12 +73,12 @@ TEST(MRMesh, getAllComponentsFaces)
     region.reset( comps.faces[0] );
     region.reset( comps.faces[2] );
     comps = MeshComponents::getAllComponentsFaces( { mesh, &region }, MeshComponents::FaceIncidence::PerEdge, &creases );
-    ASSERT_EQ( comps.starts.size(), 7 );
+    ASSERT_EQ( comps.offsets.size(), 7 );
     EXPECT_EQ( comps.faces.size(), 10 );
 
     // without component boundaries the cube is one component
     comps = MeshComponents::getAllComponentsFaces( mesh );
-    ASSERT_EQ( comps.starts.size(), 2 );
+    ASSERT_EQ( comps.offsets.size(), 2 );
     EXPECT_EQ( comps.faces.size(), 12 );
 }
 

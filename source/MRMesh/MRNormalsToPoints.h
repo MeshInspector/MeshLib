@@ -16,10 +16,10 @@ public:
     /// \param guideWeight how much resulting points must be attracted to initial points, must be > 0
     MRMESH_API void prepare( const MeshTopology & topology, float guideWeight = 1 );
 
-    /// performs one iteration consisting of projection of all triangles on planes with given normals and finding best points from them
+    /// finds the points closest to (guide) such that the edges of each triangle are as orthogonal to its target normal as possible
     /// \param guide target vertex positions to avoid under-determined system
     /// \param normals target face normals
-    /// \param points initial approximation on input, updated approximation on output
+    /// \param points found positions on output
     /// \param maxInitialDistSq the maximum squared distance between a point and its position in (guide)
     MRMESH_API void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points );
     MRMESH_API void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points, float maxInitialDistSq );

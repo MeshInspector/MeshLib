@@ -197,6 +197,12 @@ IF(MSVC)
   FOREACH(TARGET_KIND EXE SHARED MODULE)
     set(CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE "${CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
   ENDFOREACH()
+
+  # Record only the PDB file name in the binaries, as `common.props` does, so that the PDBs are found next to
+  # the installed binaries; the Visual Studio generator mangles `%_PDB%`, so it is left with the full paths
+  IF(NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+    add_link_options($<HOST_LINK:/PDBALTPATH:%_PDB%>)
+  ENDIF()
 ENDIF()
 
 # macOS: force Clang to use system libc++

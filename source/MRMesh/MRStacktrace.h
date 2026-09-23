@@ -8,7 +8,7 @@
 
 #include <version>
 // on systems other than Windows, std::stacktrace needs extra flags and libraries: https://stackoverflow.com/q/78395268/7325599
-// MRMesh/CMakeLists.txt finds them and then defines MR_USE_STD_STACKTRACE
+// MRMesh/CMakeLists.txt links them and defines MR_USE_STD_STACKTRACE where they are available
 #if __cpp_lib_stacktrace >= 202011 && ( defined _WIN32 || defined MR_USE_STD_STACKTRACE )
 #ifdef _MSC_VER
 #pragma message("std::stacktrace is available")

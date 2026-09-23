@@ -79,39 +79,10 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
 ENDIF()
 
-# std::stacktrace of libstdc++ lives in a separate library (stdc++_libbacktrace in GCC 12-13, stdc++exp since GCC 14),
-# and Clang before 19 compiles its header only with -fsized-deallocation; libc++ has no std::stacktrace at all
-IF(NOT WIN32 AND NOT EMSCRIPTEN AND MR_CXX_STANDARD GREATER_EQUAL 23)
-  include(CheckCXXSourceCompiles)
-  foreach(STACKTRACE_FLAGS IN ITEMS "" "-fsized-deallocation")
-    foreach(STACKTRACE_LIB IN ITEMS "" stdc++exp stdc++_libbacktrace)
-      string(MAKE_C_IDENTIFIER "MR_STD_STACKTRACE${STACKTRACE_FLAGS}_${STACKTRACE_LIB}" STACKTRACE_VAR)
-      # MRMesh is a shared library, and some builds of these static libraries are not position-independent
-      set(CMAKE_REQUIRED_FLAGS "${STACKTRACE_FLAGS} -fPIC")
-      set(CMAKE_REQUIRED_LINK_OPTIONS -shared)
-      set(CMAKE_REQUIRED_LIBRARIES ${STACKTRACE_LIB})
-      check_cxx_source_compiles("
-        #include <version>
-        #if __cpp_lib_stacktrace < 202011
-        #error no std::stacktrace
-        #endif
-        #include <stacktrace>
-        int f() { return int( to_string( std::stacktrace::current() ).size() ); }
-      " ${STACKTRACE_VAR})
-      unset(CMAKE_REQUIRED_FLAGS)
-      unset(CMAKE_REQUIRED_LINK_OPTIONS)
-      unset(CMAKE_REQUIRED_LIBRARIES)
-      IF(${STACKTRACE_VAR})
-        target_compile_definitions(${PROJECT_NAME} PUBLIC MR_USE_STD_STACKTRACE)
-        target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${STACKTRACE_FLAGS}>)
-        target_link_libraries(${PROJECT_NAME} PUBLIC ${STACKTRACE_LIB})
-        break()
-      ENDIF()
-    endforeach()
-    IF(${STACKTRACE_VAR})
-      break()
-    ENDIF()
-  endforeach()
+# std::stacktrace of libstdc++ lives in a separate library, shipped by Ubuntu since 24.04 (GCC 13)
+IF(MR_PLATFORM MATCHES "^Ubuntu_(24|26)$" AND MR_CXX_STANDARD GREATER_EQUAL 23)
+  target_compile_definitions(${PROJECT_NAME} PUBLIC MR_USE_STD_STACKTRACE)
+  target_link_libraries(${PROJECT_NAME} PUBLIC stdc++exp)
 ENDIF()
 
 IF(EMSCRIPTEN)

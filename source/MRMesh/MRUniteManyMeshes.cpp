@@ -10,7 +10,6 @@
 #include "MRBox.h"
 #include "MRParallelFor.h"
 #include "MRMeshComponents.h"
-#include "MRBitSetParallelFor.h"
 #include "MRMeshFillHole.h"
 #include <random>
 
@@ -401,19 +400,17 @@ Expected<Mesh> uniteComponents( const Mesh& mesh,
     const UniteManyMeshesParams& params, const UniteMeshNormalizationParams& normalizeParams )
 {
     MR_TIMER;
-    auto mapAndNum = MeshComponents::getAllComponentsMap( mesh );
+    const auto comps = MeshComponents::getAllComponentsFaces( mesh );
     if ( !reportProgress( params.progressCb, 0.1f ) )
         return unexpectedOperationCanceled();
-    std::vector<Mesh> components( mapAndNum.second );
-    std::vector<const Mesh*> meshPtrs( mapAndNum.second );
+    const auto numComps = comps.starts.size() - 1;
+    std::vector<Mesh> components( numComps );
+    std::vector<const Mesh*> meshPtrs( numComps );
     auto keepGoing = ParallelFor( components, [&] ( size_t i )
     {
         FaceBitSet compBs( mesh.topology.faceSize() );
-        BitSetParallelFor( mesh.topology.getValidFaces(), [&] ( FaceId f )
-        {
-            if ( RegionId( i ) == mapAndNum.first[f] )
-                compBs.set( f );
-        } );
+        for ( int j = comps.starts[i]; j < comps.starts[i + 1]; ++j )
+            compBs.set( comps.faces[j] );
         components[i].addMeshPart( MeshPart( mesh, &compBs ) );
         normalizeUniteMesh( components[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );
         meshPtrs[i] = &components[i];

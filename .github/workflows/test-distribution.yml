@@ -15,6 +15,10 @@ on:
       test_macos:
         required: true
         type: boolean
+      test_macos_crossplatform:
+        # The *x64-cross.pkg exists only when the self-hosted cross build ran.
+        required: true
+        type: boolean
       test_windows:
         required: true
         type: boolean
@@ -33,6 +37,9 @@ on:
         type: boolean
         default: false
       test_macos:
+        type: boolean
+        default: false
+      test_macos_crossplatform:
         type: boolean
         default: false
       test_windows:
@@ -244,29 +251,19 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - arch: arm64
-            runner: macos-13
-            pkg_pattern: '*arm64.pkg'
-          - arch: arm64
-            runner: macos-14
-            pkg_pattern: '*arm64.pkg'
-          - arch: arm64
-            runner: macos-15
-            pkg_pattern: '*arm64.pkg'
-          - arch: arm64
-            runner: macos-26
-            pkg_pattern: '*arm64.pkg'
-          - arch: x64
-            runner: macos-12-intel
-            pkg_pattern: '*x64.pkg'
-          - arch: x64
-            runner: macos-15-intel
-            pkg_pattern: '*x64.pkg'
-          - arch: x64
-            runner: macos-26-intel
-            pkg_pattern: '*x64.pkg'
+      # One leg per (runner, pkg). The x64-cross leg is appended only when that build
+      # ran, else `gh release download` finds no *x64-cross.pkg. An include-only matrix
+      # can't be trimmed with `exclude` (include is applied after it), hence the JSON.
+      matrix: >-
+        ${{ fromJSON(format('{{"include":[{0}{1}]}}',
+        '{"arch":"arm64","runner":"macos-13","pkg_pattern":"*arm64.pkg"},
+        {"arch":"arm64","runner":"macos-14","pkg_pattern":"*arm64.pkg"},
+        {"arch":"arm64","runner":"macos-15","pkg_pattern":"*arm64.pkg"},
+        {"arch":"arm64","runner":"macos-26","pkg_pattern":"*arm64.pkg"},
+        {"arch":"x64","runner":"macos-12-intel","pkg_pattern":"*x64.pkg"},
+        {"arch":"x64","runner":"macos-15-intel","pkg_pattern":"*x64.pkg"},
+        {"arch":"x64","runner":"macos-26-intel","pkg_pattern":"*x64.pkg"}',
+        inputs.test_macos_crossplatform && ',{"arch":"x64-cross","runner":"macos-15-intel","pkg_pattern":"*x64-cross.pkg"}' || '')) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7

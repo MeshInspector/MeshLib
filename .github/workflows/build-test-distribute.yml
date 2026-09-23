@@ -177,6 +177,7 @@ jobs:
       upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
       upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
       nuget_build_patch:     ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.upload_artifacts == 'true'}}
+      config_matrix:         ${{ needs.config.outputs.macos_config_matrix }}
     secrets: inherit
 
   update-win-version:
@@ -427,6 +428,7 @@ jobs:
       test_ubuntu_x64:   ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
       test_ubuntu_arm64: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
       test_macos:        ${{ needs.config.outputs.build_enable_macos == 'true' }}
+      test_macos_crossplatform: ${{ needs.config.outputs.build_enable_macos_crossplatform == 'true' }}
       test_windows:      ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

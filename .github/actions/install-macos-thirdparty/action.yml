@@ -104,6 +104,8 @@ runs:
         echo "brew-hash=$(printf %s "$BREW_PREFIX" | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
         echo "thirdparty-hash=$( {
           printf '%s\n' "$BREW_PREFIX"
+          # Discriminate the cross (x86_64) outputs from a same-instance native build.
+          if [ -n "${CMAKE_OSX_ARCHITECTURES}" ]; then printf 'osx-arch=%s\n' "${CMAKE_OSX_ARCHITECTURES}"; fi
           git ls-tree HEAD \
             thirdparty/googletest \
             thirdparty/OpenCTM-git \

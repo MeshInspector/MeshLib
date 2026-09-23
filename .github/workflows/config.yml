@@ -41,6 +41,9 @@ on:
       windows_x64_config_matrix:
         description: "Config matrix for Windows builds"
         value: ${{ jobs.prepare-config.outputs.windows_x64_config_matrix }}
+      macos_config_matrix:
+        description: "Config matrix for macOS builds; the self-hosted x64-cross leg is dropped when disabled"
+        value: ${{ jobs.prepare-config.outputs.macos_config_matrix }}
       update_doc:
         description:
         value: ${{ jobs.prepare-config.outputs.tag-update-doc == 'true' || jobs.prepare-config.outputs.tag-update-doc-only == 'true' }}
@@ -78,6 +81,9 @@ on:
       build_enable_macos:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' ) }}
+      build_enable_macos_crossplatform:
+        description: "macOS native x86_64 cross leg (label disable-build-macos-crossplatform); also off whenever macOS is disabled. Gates its distro test; the build leg itself is dropped from macos_config_matrix"
+        value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-macos == 'true' || jobs.prepare-config.outputs.tag-disable-macos-crossplatform == 'true' ) }}
       build_enable_emscripten:
         description:
         value: ${{ !( jobs.prepare-config.outputs.tag-update-doc-only == 'true' || jobs.prepare-config.outputs.tag-disable-emscripten == 'true' ) }}
@@ -93,6 +99,7 @@ jobs:
       ubuntu_arm64_config_matrix: ${{ steps.set-ubuntu-arm64-matrix.outputs.matrix }}
       ubuntu_x64_config_matrix: ${{ steps.set-ubuntu-x64-matrix.outputs.matrix }}
       windows_x64_config_matrix: ${{ steps.set-windows-x64-matrix.outputs.matrix }}
+      macos_config_matrix:      ${{ steps.set-macos-matrix.outputs.matrix }}
       vcpkg-docker-image-tag:   ${{ steps.select-vcpkg-docker-image-tag.outputs.image_tag }}
       windows-changes:          ${{ steps.windows-changes.outputs.src }}
       # Read PR labels live; github.event.pull_request.labels is a
@@ -113,6 +120,7 @@ jobs:
       tag-disable-ubuntu-arm64:   ${{ steps.live-labels.outputs.tag-disable-ubuntu-arm64 }}
       tag-disable-linux-vcpkg:    ${{ steps.live-labels.outputs.tag-disable-linux-vcpkg }}
       tag-disable-macos:          ${{ steps.live-labels.outputs.tag-disable-macos }}
+      tag-disable-macos-crossplatform: ${{ steps.live-labels.outputs.tag-disable-macos-crossplatform }}
       tag-disable-emscripten:     ${{ steps.live-labels.outputs.tag-disable-emscripten }}
 
     runs-on: ubuntu-latest
@@ -351,3 +359,15 @@ jobs:
             "$MATRIX_FILE" > tmp.json
 
           echo "matrix=$(jq -c . tmp.json)" >> $GITHUB_OUTPUT
+
+      - name: Set matrix for macos builds
+        id: set-macos-matrix
+        run: |
+          # The x64-cross leg needs the self-hosted crossplatform-build runner; drop it
+          # (never scheduled) when the disable-build-macos-crossplatform label is set.
+          if [[ "${{ steps.live-labels.outputs.tag-disable-macos-crossplatform }}" == "true" ]]; then
+            FILTER='del(.include[] | select(.arch == "x64-cross"))'
+          else
+            FILTER='.'
+          fi
+          echo "matrix=$(jq -c "$FILTER" .github/workflows/matrix/macos-config.json)" >> "$GITHUB_OUTPUT"

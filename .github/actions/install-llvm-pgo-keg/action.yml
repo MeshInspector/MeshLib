@@ -17,8 +17,17 @@ runs:
           echo "llvm-pgo keg already present"
           exit 0
         fi
-        # The published kegs are built for the standard prefixes only.
-        if [[ "$(uname -m)" == "arm64" ]]; then
+        # The published kegs are built for the standard prefixes only, and each one is
+        # tied to a prefix: /opt/homebrew is arm64, /usr/local is x86_64. Pick by prefix,
+        # not by `uname -m`, so the x86_64-on-arm64 cross runner (arm64 host, Intel brew
+        # at /usr/local) gets the Intel keg. Custom prefixes fall back to the host arch;
+        # those machines carry the keg already and returned above.
+        case "$BP" in
+          /usr/local)    KEG_ARCH=x86_64 ;;
+          /opt/homebrew) KEG_ARCH=arm64 ;;
+          *)             KEG_ARCH="$(uname -m)" ;;
+        esac
+        if [[ "$KEG_ARCH" == "arm64" ]]; then
           NEED=/opt/homebrew
           ASSET=llvm-pgo-22.1.8_2-arm64/llvm-pgo-22.1.8_2.arm64_opt-homebrew.tar.gz
           SHA=94f76fb55ec64490605d0e68115259426a428a78f269f7e9160726d90a22e197
@@ -38,7 +47,8 @@ runs:
     - name: Install the PGO ld64.lld into the keg
       shell: bash
       run: |
-        KEG="$(brew --prefix)/Cellar/llvm-pgo/22.1.8_2"
+        BP="$(brew --prefix)"
+        KEG="$BP/Cellar/llvm-pgo/22.1.8_2"
         # Homebrew has no `lld` bottle for Intel macOS since it became a Tier 3
         # configuration, and brew's llvm@22 carries no ld64.lld either, so the linker
         # comes from our own release. Next to clang++, which resolves `-fuse-ld=lld`
@@ -46,7 +56,13 @@ runs:
         if [[ -x "$KEG/bin/ld64.lld" ]]; then
           echo "ld64.lld already in the keg"
         else
-          if [[ "$(uname -m)" == "arm64" ]]; then
+          # Match the keg's architecture, which follows the prefix (see above).
+          case "$BP" in
+            /usr/local)    KEG_ARCH=x86_64 ;;
+            /opt/homebrew) KEG_ARCH=arm64 ;;
+            *)             KEG_ARCH="$(uname -m)" ;;
+          esac
+          if [[ "$KEG_ARCH" == "arm64" ]]; then
             ASSET=ld64.lld-22.1.8-pgo.arm64-macos13
             SHA=8abf0ba324dea357ae4fbd8baee835353b560f62e9b1d001588a6df888755550
           else

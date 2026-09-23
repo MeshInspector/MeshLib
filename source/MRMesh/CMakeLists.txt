@@ -79,6 +79,38 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
 ENDIF()
 
+# std::stacktrace of libstdc++ lives in a separate library (stdc++_libbacktrace in GCC 12-13, stdc++exp since GCC 14),
+# and Clang before 19 compiles its header only with -fsized-deallocation; libc++ has no std::stacktrace at all
+IF(NOT WIN32 AND NOT EMSCRIPTEN AND MR_CXX_STANDARD GREATER_EQUAL 23)
+  include(CheckCXXSourceCompiles)
+  foreach(STACKTRACE_FLAGS IN ITEMS "" "-fsized-deallocation")
+    foreach(STACKTRACE_LIB IN ITEMS "" stdc++exp stdc++_libbacktrace)
+      string(MAKE_C_IDENTIFIER "MR_STD_STACKTRACE${STACKTRACE_FLAGS}_${STACKTRACE_LIB}" STACKTRACE_VAR)
+      set(CMAKE_REQUIRED_FLAGS ${STACKTRACE_FLAGS})
+      set(CMAKE_REQUIRED_LIBRARIES ${STACKTRACE_LIB})
+      check_cxx_source_compiles("
+        #include <version>
+        #if __cpp_lib_stacktrace < 202011
+        #error no std::stacktrace
+        #endif
+        #include <stacktrace>
+        int main() { return int( to_string( std::stacktrace::current() ).size() ); }
+      " ${STACKTRACE_VAR})
+      unset(CMAKE_REQUIRED_FLAGS)
+      unset(CMAKE_REQUIRED_LIBRARIES)
+      IF(${STACKTRACE_VAR})
+        target_compile_definitions(${PROJECT_NAME} PUBLIC MR_USE_STD_STACKTRACE)
+        target_compile_options(${PROJECT_NAME} PUBLIC $<$<COMPILE_LANGUAGE:CXX>:${STACKTRACE_FLAGS}>)
+        target_link_libraries(${PROJECT_NAME} PUBLIC ${STACKTRACE_LIB})
+        break()
+      ENDIF()
+    endforeach()
+    IF(${STACKTRACE_VAR})
+      break()
+    ENDIF()
+  endforeach()
+ENDIF()
+
 IF(EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     EIGEN_STACK_ALLOCATION_LIMIT=0

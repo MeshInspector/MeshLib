@@ -6,19 +6,20 @@
 
 #include <string>
 
-#ifdef _WIN32
-// it is tricky to use std::stacktrace on other systems: https://stackoverflow.com/q/78395268/7325599
 #include <version>
-#if __cpp_lib_stacktrace >= 202011
+// on systems other than Windows, std::stacktrace needs extra flags and libraries: https://stackoverflow.com/q/78395268/7325599
+// MRMesh/CMakeLists.txt finds them and then defines MR_USE_STD_STACKTRACE
+#if __cpp_lib_stacktrace >= 202011 && ( defined _WIN32 || defined MR_USE_STD_STACKTRACE )
+#ifdef _MSC_VER
 #pragma message("std::stacktrace is available")
+#endif
 #include <stacktrace>
 #else
+#ifdef _MSC_VER
 #pragma message("std::stacktrace is NOT available, using boost::stacktrace instead")
+#endif
 #include <boost/stacktrace.hpp>
 #endif
-#else //not _WIN32
-#include <boost/stacktrace.hpp>
-#endif //_WIN32
 
 namespace MR
 {
@@ -28,7 +29,7 @@ namespace MR
 /// if std::stacktrace is first called from MRMesh.dll then it is not unloaded propely
 [[nodiscard]] inline std::string getCurrentStacktraceInline()
 {
-#if defined _WIN32 && __cpp_lib_stacktrace >= 202011
+#if __cpp_lib_stacktrace >= 202011 && ( defined _WIN32 || defined MR_USE_STD_STACKTRACE )
     return to_string( std::stacktrace::current() );
 #else
     return to_string( boost::stacktrace::stacktrace() );

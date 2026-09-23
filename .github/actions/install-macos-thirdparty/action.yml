@@ -1,9 +1,9 @@
 name: Install macOS thirdparty libs
 description: >
-  Resolve the Homebrew prefix and compiler paths, cache the thirdparty
-  build outputs (./lib and ./include), install brew requirements, and
-  build the thirdparty libs on a cache miss. Shared between
-  build-test-macos.yml and pip-build.yml so both reuse the same cache.
+  Resolve the Homebrew prefix, cache the thirdparty build outputs
+  (./lib and ./include), install brew requirements, and build the
+  thirdparty libs on a cache miss. Shared between build-test-macos.yml
+  and pip-build.yml so both reuse the same cache.
 
 inputs:
   cache-instance:
@@ -18,18 +18,14 @@ inputs:
       Compiler identifier baked into the cache key (e.g. `AppleClang`,
       `brew-llvm22`). Different compilers produce incompatible thirdparty
       .dylibs, so this discriminates their caches.
-  cxx-compiler-template:
+  cxx-compiler:
     required: false
     default: /usr/bin/clang++
-    description: >
-      C++ compiler path template; literal `BREW_PREFIX` is replaced with
-      the resolved homebrew prefix.
-  c-compiler-template:
+    description: C++ compiler the thirdparty libs are built with.
+  c-compiler:
     required: false
     default: /usr/bin/clang
-    description: >
-      C compiler path template; literal `BREW_PREFIX` is replaced with
-      the resolved homebrew prefix.
+    description: C compiler the thirdparty libs are built with.
   cache-prefix:
     required: false
     default: v1-thirdparty
@@ -40,12 +36,6 @@ outputs:
   brew-prefix:
     description: Output of `brew --prefix`.
     value: ${{ steps.setup.outputs.brew-prefix }}
-  cxx-compiler:
-    description: Resolved C++ compiler path (with BREW_PREFIX substituted).
-    value: ${{ steps.setup.outputs.cxx-compiler }}
-  c-compiler:
-    description: Resolved C compiler path (with BREW_PREFIX substituted).
-    value: ${{ steps.setup.outputs.c-compiler }}
   brew-hash:
     description: >
       16-char hash of the brew prefix. Use as part of the build-mrbind
@@ -64,7 +54,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Setup Homebrew prefix and resolve compiler paths
+    - name: Setup Homebrew prefix
       id: setup
       shell: bash
       run: |
@@ -72,16 +62,6 @@ runs:
         echo "Brew prefix: $BREW_PREFIX"
         echo "brew-prefix=$BREW_PREFIX" >> $GITHUB_OUTPUT
         echo "BREW_PREFIX=$BREW_PREFIX" >> $GITHUB_ENV
-
-        # Substitute BREW_PREFIX in templates and set actual compiler paths
-        CXX_COMPILER=$(echo "${{ inputs.cxx-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
-        C_COMPILER=$(echo "${{ inputs.c-compiler-template }}" | sed "s|BREW_PREFIX|$BREW_PREFIX|g")
-
-        echo "CXX compiler: $CXX_COMPILER"
-        echo "C compiler: $C_COMPILER"
-
-        echo "cxx-compiler=$CXX_COMPILER" >> $GITHUB_OUTPUT
-        echo "c-compiler=$C_COMPILER" >> $GITHUB_OUTPUT
 
     # Cache key inputs:
     # - brew-hash: hash of the homebrew prefix, used by Build MRBind in the
@@ -153,6 +133,6 @@ runs:
       if: ${{ steps.thirdparty-cache.outputs.cache-hit != 'true' }}
       shell: bash
       env:
-        CMAKE_CXX_COMPILER: ${{ steps.setup.outputs.cxx-compiler }}
-        CMAKE_C_COMPILER: ${{ steps.setup.outputs.c-compiler }}
+        CMAKE_CXX_COMPILER: ${{ inputs.cxx-compiler }}
+        CMAKE_C_COMPILER: ${{ inputs.c-compiler }}
       run: ./scripts/build_thirdparty.sh

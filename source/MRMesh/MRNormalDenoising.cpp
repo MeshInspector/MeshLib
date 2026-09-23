@@ -17,11 +17,11 @@
 namespace MR
 {
 
-namespace
+void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
 {
+    denoiseNormals( mesh.topology, mesh.points, normals, v, gamma );
+}
 
-// the (topology, points) forms of denoiseNormals and computePerFaceNormals, kept file-local
-// so that the public overload sets stay single-function and their C bindings keep their plain names
 void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
 {
     MR_TIMER;
@@ -94,24 +94,6 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
             (float) sol[1][f],
             (float) sol[2][f] ).normalized();
     } );
-}
-
-FaceNormals computePerFaceNormals( const MeshTopology & topology, const VertCoords & points )
-{
-    MR_TIMER;
-    FaceNormals res( topology.faceSize() );
-    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
-    {
-        res[f] = normal( topology, points, f );
-    } );
-    return res;
-}
-
-} //anonymous namespace
-
-void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
-{
-    denoiseNormals( mesh.topology, mesh.points, normals, v, gamma );
 }
 
 constexpr float eps = 0.001f;

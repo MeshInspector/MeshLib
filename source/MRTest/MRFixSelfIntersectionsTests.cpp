@@ -42,10 +42,13 @@ TEST( MRMesh, CutAndFillSelfIntersectionGroups )
     }
     EXPECT_EQ( faces.count(), 4 );
 
-    auto groups = SelfIntersections::splitOnGroups( mesh, faces );
-    EXPECT_EQ( groups.size(), 2 );
-    for ( const auto& g : groups )
-        EXPECT_EQ( g.count(), 2 );
+    auto [groupsMap, numGroups] = SelfIntersections::getGroupsMap( mesh, faces );
+    EXPECT_EQ( numGroups, 2 );
+    int groupSize[2] = {};
+    for ( auto f : faces )
+        ++groupSize[int( groupsMap[f] )];
+    EXPECT_EQ( groupSize[0], 2 );
+    EXPECT_EQ( groupSize[1], 2 );
 
     // each planar side is refilled separately, so the cube keeps its shape
     auto newFaces = SelfIntersections::cutAndFillGroups( mesh, faces );

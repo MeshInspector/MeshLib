@@ -15,6 +15,7 @@
 #include "MRMapOrHashMap.h"
 #include "MRPch/MRSpdlog.h"
 #include <algorithm>
+#include <numeric>
 
 namespace MR
 {
@@ -263,21 +264,31 @@ Expected<void> fix( Mesh& mesh, const Settings& settings )
     return {};
 }
 
-std::vector<FaceBitSet> splitOnGroups( const Mesh& mesh, const FaceBitSet& faces, float angleThreshold )
+std::pair<Face2RegionMap, int> getGroupsMap( const Mesh& mesh, const FaceBitSet& faces, float angleThreshold )
 {
     MR_TIMER;
     assert( angleThreshold > 0 && angleThreshold < PI2_F );
     const auto sharpEdges = mesh.findCreaseEdges( angleThreshold ) - mesh.findCreaseEdges( PI_F - angleThreshold );
-    return MeshComponents::getAllComponents( { mesh, &faces }, MeshComponents::FaceIncidence::PerEdge, &sharpEdges );
+    return MeshComponents::getAllComponentsMap( { mesh, &faces }, MeshComponents::FaceIncidence::PerEdge, &sharpEdges );
 }
 
 FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThreshold, const FillHoleNicelySettings& settings )
 {
     MR_TIMER;
-    const auto groups = splitOnGroups( mesh, faces, angleThreshold );
-
     // faces of not yet patched groups and of the patches made so far
     FaceBitSet protectedFaces = faces & mesh.topology.getValidFaces();
+    const auto [groupsMap, numGroups] = getGroupsMap( mesh, protectedFaces, angleThreshold );
+
+    // faces of group r are groupFaces[groupStart[r]..groupStart[r+1])
+    std::vector<int> groupStart( numGroups + 1, 0 );
+    for ( auto f : protectedFaces )
+        ++groupStart[int( groupsMap[f] ) + 1];
+    std::partial_sum( groupStart.begin(), groupStart.end(), groupStart.begin() );
+    std::vector<FaceId> groupFaces( groupStart.back() );
+    auto pos = groupStart;
+    for ( auto f : protectedFaces )
+        groupFaces[pos[int( groupsMap[f] )]++] = f;
+
     FaceBitSet newFaces;
 
     auto s = settings;
@@ -288,12 +299,19 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
         return !settings.subdivideSettings.beforeEdgeSplit || settings.subdivideSettings.beforeEdgeSplit( e );
     };
 
-    for ( const auto& group : groups )
+    FaceBitSet group( mesh.topology.faceSize() );
+    for ( int r = 0; r < numGroups; ++r )
     {
-        protectedFaces -= group;
+        for ( int i = groupStart[r]; i < groupStart[r + 1]; ++i )
+        {
+            group.set( groupFaces[i] );
+            protectedFaces.reset( groupFaces[i] );
+        }
         const auto patch = patchMesh( mesh, group, s );
         newFaces |= patch;
         protectedFaces |= patch;
+        for ( int i = groupStart[r]; i < groupStart[r + 1]; ++i )
+            group.reset( groupFaces[i] );
     }
     return newFaces;
 }

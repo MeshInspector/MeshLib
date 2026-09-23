@@ -83,7 +83,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   "
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
+if [[ $OSTYPE == 'darwin'* && "${MESHLIB_USE_VCPKG}" != "ON" ]]; then
   PYTHON_VERSION="3.10"
   if [ "${MESHLIB_PYTHON_VERSION}" != "" ]; then
     PYTHON_VERSION="${MESHLIB_PYTHON_VERSION}"

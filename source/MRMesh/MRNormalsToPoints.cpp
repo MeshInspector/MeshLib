@@ -2,7 +2,8 @@
 #include "MRMesh.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
-#include "MRTriMath.h"
+#include "MRRingIterator.h"
+#include "MRBestFit.h"
 #include "MRTimer.h"
 #include "MRRelaxParams.h" //getLimitedPos
 #include <limits>
@@ -93,14 +94,41 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
             rhs_[i][v] = guideWeight_ * guide[v][i];
     } );
 
-    // add 2 equations per triangle for relative position of projected triangle points
+    // approximate position of each vertex: the best crossing point of the planes
+    // with target normals passing via the centers of its incident triangles
+    VertCoords approxPoints( points.size() );
+    ParallelFor( 0_v, guide.endId(), [&]( VertId v )
+    {
+        if ( !topology_->hasVert( v ) )
+        {
+            approxPoints[v] = points[v];
+            return;
+        }
+        PlaneAccumulator acc;
+        for ( auto e : orgRing( *topology_, v ) )
+        {
+            const auto f = topology_->left( e );
+            if ( !f )
+                continue;
+            VertId vs[3];
+            topology_->getTriVerts( f, vs );
+            const auto center = ( points[vs[0]] + points[vs[1]] + points[vs[2]] ) / 3.0f;
+            acc.addPlane( Plane3f::fromDirAndPt( normals[f], center ) );
+        }
+        constexpr float tol = 0.01f; // tolerance for comparing eigenvalues
+        approxPoints[v] = acc.findBestCrossPoint( points[v], tol );
+    } );
+
+    // add 2 equations per triangle for relative position of approximate triangle points
     BitSetParallelFor( topology_->getValidFaces(), [&]( FaceId f )
     {
         VertId vs[3];
         topology_->getTriVerts( f, vs );
-        const auto projectedTri = triangleWithNormal( { points[vs[0]], points[vs[1]], points[vs[2]], }, normals[f] );
-        const auto d0 = 2.0f * projectedTri[0] - projectedTri[1] - projectedTri[2];
-        const auto d1 = 2.0f * projectedTri[1] - projectedTri[0] - projectedTri[2];
+        const auto & p0 = approxPoints[vs[0]];
+        const auto & p1 = approxPoints[vs[1]];
+        const auto & p2 = approxPoints[vs[2]];
+        const auto d0 = 2.0f * p0 - p1 - p2;
+        const auto d1 = 2.0f * p1 - p0 - p2;
         const int row = face2row_[f];
         for ( int i = 0; i < 3; ++i )
         {

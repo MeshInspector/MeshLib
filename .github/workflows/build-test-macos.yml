@@ -92,6 +92,12 @@ jobs:
       contents: read  # This is required for actions/checkout
       actions: read   # This is required for wait-for-job
     steps:
+      # GitHub-hosted runners enable Spotlight by default
+      # https://github.com/actions/runner-images/discussions/5032
+      - name: Disable Spotlight indexing
+        if: ${{ runner.environment == 'github-hosted' }}
+        run: sudo mdutil -a -i off
+
       - name: Checkout
         uses: actions/checkout@v7
 

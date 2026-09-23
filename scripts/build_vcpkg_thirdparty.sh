@@ -8,7 +8,7 @@ if [ -z "${VCPKG_DEFAULT_HOST_TRIPLET}" ] ; then
   if [ -z "${VCPKG_TRIPLET}" ] ; then
     VCPKG_TRIPLET=$("${BASE_DIR}/scripts/detect_vcpkg_triplet.sh")
   fi
-  VCPKG_DEFAULT_HOST_TRIPLET="${VCPKG_TRIPLET}"
+  export VCPKG_DEFAULT_HOST_TRIPLET="${VCPKG_TRIPLET}"
 fi
 
 # some vcpkg packages have host dependencies

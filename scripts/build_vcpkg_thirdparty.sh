@@ -1,19 +1,12 @@
 #!/bin/sh
 set -e
 
+# NOTE: realpath is not supported on older macOS versions
+BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
+
 if [ -z "${VCPKG_DEFAULT_HOST_TRIPLET}" ] ; then
   if [ -z "${VCPKG_TRIPLET}" ] ; then
-    case "$(uname -m)" in
-      x86_64|amd64)  arch=x64 ;;
-      arm64|aarch64) arch=arm64 ;;
-    esac
-
-    case "$(uname -s)" in
-      Linux)  os=linux ;;
-      Darwin) os=osx ;;
-    esac
-
-    VCPKG_TRIPLET="${arch}-${os}-meshlib"
+    VCPKG_TRIPLET=$("${BASE_DIR}/scripts/detect_vcpkg_triplet.sh")
   fi
   VCPKG_DEFAULT_HOST_TRIPLET="${VCPKG_TRIPLET}"
 fi
@@ -26,9 +19,6 @@ else
   echo "    autoconf autoconf-archive automake libtool"
 fi
 
-# NOTE: realpath is not supported on older macOS versions
-BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
-
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \
-    --x-install-root=./vcpkg_installed
+    --x-install-root=${BASE_DIR}/vcpkg_installed

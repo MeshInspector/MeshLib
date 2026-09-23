@@ -19,7 +19,15 @@ FRAMEWORK_DIR="${FRAMEWORK_BASE_DIR}/Versions/${VERSION}"
 mkdir -p "${FRAMEWORK_DIR}"
 
 cp -a "${VCPKG_DIR}"/* "${FRAMEWORK_DIR}/"
-cmake --install build/Release --prefix="${FRAMEWORK_DIR}"
+pushd "${FRAMEWORK_DIR}"
+  # remove extra files
+  rm -r lib/pkgconfig tools
+  find lib/python3.* -name __pycache__ -type d -prune -exec rm -r {} +
+  # strip dynamic libraries
+  find lib -name '*.dylib' -exec strip -x {} +
+popd
+
+cmake --install build/Release --prefix "${FRAMEWORK_DIR}" --strip
 echo "version: ${VERSION}"
 echo "prefix: ${FRAMEWORK_DIR}"
 

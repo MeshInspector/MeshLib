@@ -59,6 +59,18 @@
       </td>
     </tr>
     <tr>
+      <td align="center">Ubuntu 26 LTS x64</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu26-dev.deb">deb</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Ubuntu 26 LTS arm64</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu26-arm64-dev.deb">deb</a>
+      </td>
+    </tr>
+    <tr>
       <td align="center">Linux vcpkg (glibc 2.28) x64</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_linux-vcpkg-x64.tar.xz">tar.xz</a>
@@ -79,7 +91,7 @@
     <tr>
       <td align="center">macOS Arm (Apple Silicon)</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_arm.pkg">arm pkg</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_arm64.pkg">arm64 pkg</a>
       </td>
     </tr>
     <tr>

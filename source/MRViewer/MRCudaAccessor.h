@@ -14,7 +14,10 @@
 namespace MR
 {
 
-struct PointsToDistanceVolumeParams;
+#ifndef MRVIEWER_NO_VOXELS
+class IComputePointsToDistanceVolume;
+#endif
+
 /// The purpose of this class is to access CUDA algorithms without explicit dependency on MRCuda
 class MRVIEWER_CLASS CudaAccessor
 {
@@ -29,8 +32,8 @@ public:
     using CudaPointsProjectorConstructor = std::function<std::unique_ptr<IPointsProjector>()>;
 
 #ifndef MRVIEWER_NO_VOXELS
-    using CudaPointsToDistanceVolumeCallback = std::function<Expected<SimpleVolumeMinMax>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params )>;
-    using CudaPointsToDistanceVolumeByPartsCallback = std::function<Expected<void>( const PointCloud& cloud, const PointsToDistanceVolumeParams& params, std::function<Expected<void> ( const SimpleVolumeMinMax& volume, int zOffset )> addPart, int layerOverlap )>;
+    /// Returns specific implementation of IComputePointsToDistanceVolume interface that computes on GPU
+    using CudaComputePointsToDistanceVolumeConstructor = std::function<std::unique_ptr<IComputePointsToDistanceVolume>()>;
     /// Returns specific implementation of IComputeToolDistance interface that computes on GPU
     using CudaComputeToolDistanceConstructor = std::function<std::unique_ptr<IComputeToolDistance>()>;
 #endif
@@ -43,8 +46,7 @@ public:
     MRVIEWER_API static void setCudaPointsProjectorConstructor( CudaPointsProjectorConstructor ppCtor );
 
 #ifndef MRVIEWER_NO_VOXELS
-    MRVIEWER_API static void setCudaPointsToDistanceVolumeCallback( CudaPointsToDistanceVolumeCallback callback );
-    MRVIEWER_API static void setCudaPointsToDistanceVolumeByPartsCallback( CudaPointsToDistanceVolumeByPartsCallback callback );
+    MRVIEWER_API static void setCudaComputePointsToDistanceVolumeConstructor( CudaComputePointsToDistanceVolumeConstructor cpdvCtor );
     MRVIEWER_API static void setCudaComputeToolDistanceConstructor( CudaComputeToolDistanceConstructor ctdCtor );
 #endif
 
@@ -80,11 +82,8 @@ public:
     [[nodiscard]] MRVIEWER_API static std::unique_ptr<IPointsProjector> getCudaPointsProjector();
 
 #ifndef MRVIEWER_NO_VOXELS
-    // Returns cuda implementation of PointsToDistanceVolumeCallback
-    [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeCallback getCudaPointsToDistanceVolumeCallback();
-
-    // Returns cuda implementation of PointsToDistanceVolumeByPartsCallback
-    [[nodiscard]] MRVIEWER_API static CudaPointsToDistanceVolumeByPartsCallback getCudaPointsToDistanceVolumeByPartsCallback();
+    // Returns cuda implementation of IComputePointsToDistanceVolume
+    [[nodiscard]] MRVIEWER_API static std::unique_ptr<IComputePointsToDistanceVolume> getCudaComputePointsToDistanceVolume();
 
     /// Returns CUDA implementation of IComputeToolDistance
     [[nodiscard]] MRVIEWER_API static std::unique_ptr<IComputeToolDistance> getCudaComputeToolDistance();
@@ -110,12 +109,6 @@ public:
     /// <param name="mesh">input mesh</param>
     [[nodiscard]] MRVIEWER_API static size_t selfIntersectionsMemory( const Mesh& mesh );
 
-    /// \brief returns amount of required GPU memory for Cuda::pointsToDistanceVolume
-    /// \param pointCloud - input point cloud
-    /// \param dims - dimensions of the volume
-    /// \param ptNormals - (optional) point normals
-    [[nodiscard]] MRVIEWER_API static size_t pointsToDistanceVolumeMemory( const PointCloud& pointCloud, const Vector3i& dims, const VertNormals* ptNormals );
-
 private:
     CudaAccessor() = default;
     ~CudaAccessor() = default;
@@ -132,8 +125,7 @@ private:
     CudaMeshProjectorConstructor mpCtor_;
     CudaPointsProjectorConstructor ppCtor_;
 #ifndef MRVIEWER_NO_VOXELS
-    CudaPointsToDistanceVolumeCallback pointsToDistanceVolumeCallback_;
-    CudaPointsToDistanceVolumeByPartsCallback pointsToDistanceVolumeByPartsCallback_;
+    CudaComputePointsToDistanceVolumeConstructor cpdvCtor_;
     CudaComputeToolDistanceConstructor ctdCtor_;
 #endif
 };

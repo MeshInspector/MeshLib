@@ -78,6 +78,8 @@
 #include "MRMesh/MRCube.h"
 #include "MRViewerConfigConstants.h"
 
+#include <string_view>
+
 #ifndef __EMSCRIPTEN__
 #include <boost/exception/diagnostic_information.hpp>
 #endif
@@ -140,6 +142,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
     auto& settingsManager = viewer.getViewerSettingsManager();
     if ( settingsManager )
         settingsManager->saveSettings( viewer );
+    // the emscripten main loop never returns, so launchShut() is not reached in wasm
     MR::Config::instance().writeToFile();
 }
 
@@ -469,7 +472,8 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
             flag == "-develop" ||
-            flag == "-unloadPluginsAtEnd"
+            flag == "-unloadPluginsAtEnd" ||
+            flag == "-noMSAA"
             )
             reserved = true;
         else if ( flag == "-width" )
@@ -568,6 +572,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextFPS = true;
         else if ( flag == "-unloadPluginsAtEnd" )
             params.unloadPluginsAtEnd = true;
+        else if ( flag == "-noMSAA" )
+            params.noMSAA = true;
     }
 }
 
@@ -684,8 +690,6 @@ int Viewer::launch( const LaunchParams& params )
     }
     if ( params.close )
         launchShut();
-
-    CommandLoop::removeCommands( true );
 
     return EXIT_SUCCESS;
 }
@@ -1001,6 +1005,10 @@ void Viewer::launchEventLoop()
             CommandLoop::processCommands();
         } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
+        // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
+        if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
+            continue;
+
         if ( isAnimating )
         {
             const double minDuration = 1.0 / double( animationMaxFps );
@@ -1093,6 +1101,12 @@ void Viewer::launchShut()
 
     /// disconnect all slots before shared libraries with plugins are unloaded
     *signals_ = {};
+
+    CommandLoop::removeCommands( true );
+
+    // the only place where the config is written to file: saveSettings() and the plugin teardown
+    // above only update it in memory
+    Config::instance().writeToFile();
 }
 
 void Viewer::init_()
@@ -1791,6 +1805,14 @@ bool Viewer::draw_( bool force )
     if ( !force && !needSceneRedraw )
         return false;
 
+    if ( !isGLInitialized() )
+    {
+        resetRedraw_();
+        forceRedrawFrames_ = 0;
+        forceRedrawFramesWithoutSwap_ = 0;
+        return false;
+    }
+
     if ( !isInDraw_ )
         isInDraw_ = true;
     else
@@ -2282,7 +2304,7 @@ bool Viewer::windowShouldClose()
     if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
         return false;
 
-    if ( !interruptWindowClose() )
+    if ( !window || !interruptWindowClose() )
         return true;
 
     if ( window )
@@ -2657,7 +2679,7 @@ void Viewer::captureUIScreenShot( std::function<void( const Image& )> callback,
 
         Image image;
         image.resolution = size;
-        image.pixels.resize( size.x * size.x );
+        image.pixels.resize( size.x * size.y );
 
         if ( glInitialized_ )
         {
@@ -2958,6 +2980,20 @@ void Viewer::updatePixelRatio_()
     pixelRatio = float( framebufferSize.x ) / float( winWidth );
 }
 
+namespace
+{
+
+bool isSoftwareRenderer()
+{
+    const auto* renderer = ( const char* )glGetString( GL_RENDERER );
+    if ( !renderer )
+        return false;
+    const std::string_view name = renderer;
+    return name.starts_with( "llvmpipe" ) || name.starts_with( "softpipe" ) || name.starts_with( "swrast" );
+}
+
+} // namespace
+
 int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
 {
     if ( !sceneTextureOn && forSceneTexture )
@@ -2967,6 +3003,8 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
     }
     if ( sceneTextureOn && !forSceneTexture )
         return 1; // disable msaa for main framebuffer if scene texture is used
+    if ( launchParams_.noMSAA )
+        return 1;
 
     int cDefaultMSAA = 8;
 #if defined(__EMSCRIPTEN__)
@@ -2976,6 +3014,8 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
 #elif defined(__APPLE__)
     cDefaultMSAA = 2;
 #endif
+    if ( glInitialized_ && isSoftwareRenderer() )
+        cDefaultMSAA = 2;
     if ( !settingsMng_ )
         return cDefaultMSAA;
     return settingsMng_->loadInt( "multisampleAntiAliasing", cDefaultMSAA );

@@ -115,9 +115,16 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CXXFLAGS="${CFLAGS} -pthread"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
-    CFLAGS="${CFLAGS} -s MEMORY64=1"
-    CXXFLAGS="${CFLAGS} -s MEMORY64=1"
-    LDFLAGS="${LDFLAGS} -s MEMORY64=1"
+    EMSCRIPTEN_VERSION=$("${EMSCRIPTEN_ROOT}/emcc" -v 2>&1 | sed -nE 's/^emcc \(.*\) ([0-9.]+).*/\1/p' | head -1)
+    # that's how the version comparison works in Bash
+    if [ "$(printf '%s\n6.0.0\n' "${EMSCRIPTEN_VERSION:-0}" | sort -V | head -1)" = "6.0.0" ] ; then
+      WASM64_FLAG="-m64"
+    else
+      WASM64_FLAG="-s MEMORY64=1"
+    fi
+    CFLAGS="${CFLAGS} ${WASM64_FLAG}"
+    CXXFLAGS="${CFLAGS} ${WASM64_FLAG}"
+    LDFLAGS="${LDFLAGS} ${WASM64_FLAG}"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM2023} == 1 ]] ; then
     CFLAGS="${CFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"

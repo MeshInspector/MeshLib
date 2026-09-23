@@ -52,7 +52,7 @@ jobs:
           run-id: ${{ inputs.run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
         id: aws-creds
         with:
           aws-region: us-east-1
@@ -85,6 +85,12 @@ jobs:
             );
             for (const artifact of artifacts) {
               if (artifact.name.startsWith('RunnerSysStats-') || artifact.name.startsWith('ArtifactStats-')) {
-                await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: artifact.id });
+                try {
+                  await github.rest.actions.deleteArtifact({ owner, repo, artifact_id: artifact.id });
+                } catch (error) {
+                  // a re-run of the source run drops the previous attempt's artifacts under us
+                  if (error.status !== 404 && error.status !== 410)
+                    throw error;
+                }
               }
             }

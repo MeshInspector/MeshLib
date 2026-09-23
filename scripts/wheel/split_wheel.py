@@ -73,17 +73,50 @@ def make_meshlib_metadata(core_metadata, version):
     return "".join(out).encode()
 
 
+def validate_record(wheel_path):
+    """PyPI rejects a wheel with no RECORD at the path its filename implies, and emails a
+    warning for one whose RECORD does not list exactly the archive's real files; directory
+    entries are not files and must stay out of it. Mirrors warehouse's
+    `warehouse/utils/wheel.py::_validate_record`, separator normalization included."""
+    wheel_path = Path(wheel_path)
+    name, version, _ = wheel_path.name.split("-", 2)
+    record_name = f"{name}-{version}.dist-info/RECORD"
+    # a signature over RECORD cannot be listed inside it, so PyPI exempts both from the check
+    exempt = {f"{record_name}.jws", f"{record_name}.p7s"}
+    with zipfile.ZipFile(wheel_path) as wheel:
+        names = wheel.namelist()
+        assert record_name in names, f"{wheel_path.name}: no {record_name}"
+        listed = {row[0].replace("\\", "/") for row in csv.reader(wheel.read(record_name).decode().splitlines()) if row}
+        present = {n for n in names if not n.endswith(("/", "\\")) and n not in exempt}
+    problems = []
+    if listed - present:
+        problems.append(f"RECORD lists {sorted(listed - present)} with nothing to match")
+    if present - listed:
+        problems.append(f"archive has unlisted {sorted(present - listed)}")
+    assert not problems, f"{wheel_path.name}: " + "; ".join(problems)
+
+
+def wheel_tags(wheel_path):
+    """The python-abi-platform tag triple of a wheel file name."""
+    return Path(wheel_path).stem.split("-", 2)[2]
+
+
 def extract_meshlib_wheel(full_repaired, core_repaired):
     """Write the `meshlib` wheel (next to the repaired core wheel) from the files
     that the full repair produced and the core repair did not."""
     full_repaired, core_repaired = Path(full_repaired), Path(core_repaired)
-    name, version, rest = core_repaired.name.split("-", 2)
+    name, version, _ = core_repaired.name.split("-", 2)
     assert name == "meshlib_core", core_repaired
-    meshlib_path = core_repaired.with_name(f"meshlib-{version}-{rest}")
+    core_tags, full_tags = wheel_tags(core_repaired), wheel_tags(full_repaired)
+    assert core_tags == full_tags, f"the repair runs disagree on wheel tags: {core_tags} != {full_tags}"
+    meshlib_path = core_repaired.with_name(f"meshlib-{version}-{core_tags}.whl")
+    validate_record(core_repaired)
 
     with zipfile.ZipFile(full_repaired) as full, zipfile.ZipFile(core_repaired) as core:
         def payload(names):
-            return { n for n in names if ".dist-info/" not in n }
+            # directory entries hold no content, and a RECORD row for one has no file to
+            # match it -- which is exactly what PyPI rejects, see validate_record()
+            return { n for n in names if ".dist-info/" not in n and not n.endswith("/") }
         core_names = payload(core.namelist())
         full_names = payload(full.namelist())
         # common libraries must have identical mangled names in both repair runs
@@ -110,7 +143,7 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
             extra_entries += [
                 (f"{dist_info}/licenses/{n.rsplit('/', 1)[-1]}", core.read(n))
                 for n in core.namelist()
-                if n.startswith(f"{core_dist_info}/licenses/")
+                if n.startswith(f"{core_dist_info}/licenses/") and not n.endswith("/")
             ]
             for name_, data in extra_entries:
                 out.writestr(name_, data)
@@ -120,3 +153,4 @@ def extract_meshlib_wheel(full_repaired, core_repaired):
             writer.writerows(rows)
             writer.writerow([f"{dist_info}/RECORD", "", ""])
             out.writestr(f"{dist_info}/RECORD", record.getvalue())
+    validate_record(meshlib_path)

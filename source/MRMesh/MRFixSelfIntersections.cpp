@@ -16,7 +16,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include <algorithm>
-#include <numeric>
 
 namespace MR
 {
@@ -290,16 +289,7 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
     // faces of not yet patched groups and of the patches made so far
     FaceBitSet protectedFaces = faces & mesh.topology.getValidFaces();
     const auto [groupsMap, numGroups] = getGroupsMap( { mesh, &protectedFaces }, angleThreshold );
-
-    // faces of group r are groupFaces[groupStart[r]..groupStart[r+1])
-    std::vector<int> groupStart( numGroups + 1, 0 );
-    for ( auto f : protectedFaces )
-        ++groupStart[int( groupsMap[f] ) + 1];
-    std::partial_sum( groupStart.begin(), groupStart.end(), groupStart.begin() );
-    std::vector<FaceId> groupFaces( groupStart.back() );
-    auto pos = groupStart;
-    for ( auto f : protectedFaces )
-        groupFaces[pos[int( groupsMap[f] )]++] = f;
+    const auto groups = MeshComponents::getAllComponentsFaces( groupsMap, numGroups, protectedFaces );
 
     FaceBitSet newFaces;
 
@@ -314,16 +304,16 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
     FaceBitSet group( mesh.topology.faceSize() );
     for ( int r = 0; r < numGroups; ++r )
     {
-        for ( int i = groupStart[r]; i < groupStart[r + 1]; ++i )
+        for ( int i = groups.offsets[r]; i < groups.offsets[r + 1]; ++i )
         {
-            group.set( groupFaces[i] );
-            protectedFaces.reset( groupFaces[i] );
+            group.set( groups.faces[i] );
+            protectedFaces.reset( groups.faces[i] );
         }
         const auto patch = patchMesh( mesh, group, s );
         newFaces |= patch;
         protectedFaces |= patch;
-        for ( int i = groupStart[r]; i < groupStart[r + 1]; ++i )
-            group.reset( groupFaces[i] );
+        for ( int i = groups.offsets[r]; i < groups.offsets[r + 1]; ++i )
+            group.reset( groups.faces[i] );
     }
     return newFaces;
 }

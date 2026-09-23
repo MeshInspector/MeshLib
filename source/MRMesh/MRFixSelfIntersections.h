@@ -48,9 +48,9 @@ MRMESH_API Expected<void> fix( Mesh& mesh, const Settings& settings );
 /// \param angleThreshold in (0, PI/2)
 [[nodiscard]] MRMESH_API std::vector<FaceBitSet> splitOnGroups( const Mesh& mesh, const FaceBitSet& faces, float angleThreshold = 0.5f );
 
-/// splits given faces on groups (see splitOnGroups), then deletes each group and fills the appeared holes separately using ef patchMesh;
+/// splits given faces on groups (see splitOnGroups), then deletes each group and fills the appeared holes separately using \ref patchMesh;
 /// the edges near not yet patched groups and near the patches of other groups are never split
-/// eturn all new faces
+/// \return all new faces
 MRMESH_API FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThreshold = 0.5f, const FillHoleNicelySettings& settings = {} );
 }
 

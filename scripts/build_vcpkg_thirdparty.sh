@@ -21,4 +21,4 @@ fi
 
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \
-    --x-install-root=${BASE_DIR}/vcpkg_installed
+    --x-install-root=./vcpkg_installed

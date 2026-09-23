@@ -86,7 +86,9 @@ IF(NOT WIN32 AND NOT EMSCRIPTEN AND MR_CXX_STANDARD GREATER_EQUAL 23)
   foreach(STACKTRACE_FLAGS IN ITEMS "" "-fsized-deallocation")
     foreach(STACKTRACE_LIB IN ITEMS "" stdc++exp stdc++_libbacktrace)
       string(MAKE_C_IDENTIFIER "MR_STD_STACKTRACE${STACKTRACE_FLAGS}_${STACKTRACE_LIB}" STACKTRACE_VAR)
-      set(CMAKE_REQUIRED_FLAGS ${STACKTRACE_FLAGS})
+      # MRMesh is a shared library, and some builds of these static libraries are not position-independent
+      set(CMAKE_REQUIRED_FLAGS "${STACKTRACE_FLAGS} -fPIC")
+      set(CMAKE_REQUIRED_LINK_OPTIONS -shared)
       set(CMAKE_REQUIRED_LIBRARIES ${STACKTRACE_LIB})
       check_cxx_source_compiles("
         #include <version>
@@ -94,9 +96,10 @@ IF(NOT WIN32 AND NOT EMSCRIPTEN AND MR_CXX_STANDARD GREATER_EQUAL 23)
         #error no std::stacktrace
         #endif
         #include <stacktrace>
-        int main() { return int( to_string( std::stacktrace::current() ).size() ); }
+        int f() { return int( to_string( std::stacktrace::current() ).size() ); }
       " ${STACKTRACE_VAR})
       unset(CMAKE_REQUIRED_FLAGS)
+      unset(CMAKE_REQUIRED_LINK_OPTIONS)
       unset(CMAKE_REQUIRED_LIBRARIES)
       IF(${STACKTRACE_VAR})
         target_compile_definitions(${PROJECT_NAME} PUBLIC MR_USE_STD_STACKTRACE)

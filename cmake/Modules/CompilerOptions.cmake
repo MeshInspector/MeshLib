@@ -198,8 +198,9 @@ IF(MSVC)
     set(CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE "${CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
   ENDFOREACH()
 
-  # Record only the PDB file name in the binaries, as `common.props` does, so that the PDBs are found next to
-  # the installed binaries; the Visual Studio generator mangles `%_PDB%`, so it is left with the full paths
+  # Ninja: the binaries record bare PDB file names, e.g. MRMesh.pdb.
+  # Visual Studio generator: CMake mangles the option into %%%MRMesh.pdb%%%, a name the PDB cannot be found by, so the option is skipped there and those builds keep full paths.
+  # $<HOST_LINK:...> keeps the option away from CUDA device-link steps.
   IF(NOT CMAKE_GENERATOR MATCHES "Visual Studio")
     add_link_options($<HOST_LINK:/PDBALTPATH:%_PDB%>)
   ENDIF()

@@ -156,10 +156,10 @@ cmake -S . -B build ^
   -DVCPKG_TARGET_TRIPLET=x64-windows-meshlib
 ```
 
-The triplet must be the one the dependencies were actually installed with. `x64-windows-meshlib` is `install.bat`'s default, so it is the right value for **Visual Studio 2026**; on **Visual Studio 2019 or 2022**, step 4 of [Installing the local build](\ref CppSetupWindowsLocalBuild) has you set `VCPKG_DEFAULT_TRIPLET` to `x64-windows-vs2019-meshlib` or `x64-windows-vs2022-meshlib`, so pass that same value here.
+The triplet must be the one the dependencies were actually installed with. `x64-windows-meshlib` is `install.bat`'s default, so it is the right value for **Visual Studio 2026**; on **Visual Studio 2019 or 2022**, step 3 of [Installing the local build](\ref CppSetupWindowsLocalBuild) has you set `VCPKG_DEFAULT_TRIPLET` to `x64-windows-vs2019-meshlib` or `x64-windows-vs2022-meshlib`, so pass that same value here.
 
 > [!WARNING]
-> Do not fall back to `x64-windows-meshlib` on an older toolset because it pins no `VCPKG_PLATFORM_TOOLSET` — that only governs what vcpkg builds itself. With the AWS CLI installed (step 3 of the same list), `install.bat` instead restores prebuilt packages from our public S3 cache at `s3://vcpkg-export/<vcpkg-tag>/<triplet>/`, keyed on the triplet **name**, not on your compiler. CI fills the `x64-windows-meshlib` folder from `msvc-2026` builds only, and the triplets set `VCPKG_DISABLE_COMPILER_TRACKING`, so vcpkg accepts those Visual Studio 2026 binaries on v142/v143 instead of rebuilding, and the link fails.
+> Do not fall back to `x64-windows-meshlib` on an older toolset: its prebuilt packages are Visual Studio 2026 binaries, and the link fails.
 
 > [!NOTE]
 > This builds MeshLib from source (~40 GB) and does install the CMake config files, so the [Quick Integration Guide](\ref CmakeQuickIntegration) above applies to the result. To consume a **pre-built** MeshLib in your own project instead, use *Prebuilt archive from GitHub Releases* above.

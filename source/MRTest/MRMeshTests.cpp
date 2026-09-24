@@ -9,6 +9,22 @@
 namespace MR
 {
 
+TEST(MRMesh, FindSharpEdges)
+{
+    Mesh mesh = makeCube();
+    EXPECT_EQ( mesh.topology.undirectedEdgeSize(), 18 ); // 12 cube edges and 6 diagonals of its sides
+
+    // cube edges have the cosine 0, the diagonals have the cosine 1
+    EXPECT_EQ( mesh.findSharpEdges( -0.5f, 0.5f ).count(), 12 );
+    EXPECT_EQ( mesh.findSharpEdges( 0.5f, 1.0f ).count(), 6 );
+    EXPECT_EQ( mesh.findSharpEdges( -1.0f, 1.0f ).count(), 18 );
+    EXPECT_EQ( mesh.findSharpEdges( 0.1f, 0.5f ).count(), 0 );
+
+    EXPECT_EQ( mesh.findCreaseEdges( 0.1f ), mesh.findSharpEdges( -1.0f, std::cos( 0.1f ) ) );
+    EXPECT_EQ( mesh.findCreaseEdges( 0.1f ).count(), 12 );
+    EXPECT_EQ( mesh.findCreaseEdges( 2.0f ).count(), 0 );
+}
+
 TEST(MRMesh, Pack)
 {
     Triangulation t{

@@ -72,8 +72,10 @@ cp "./scripts/70-space-mouse-meshlib.rules" ./distr/meshlib-dev/usr/local/lib/ud
 
 #copy lib dir
 CURRENT_DIR="`pwd`"
-# keep the soname symlinks: dereferenced copies make ldconfig warn "is not a symbolic link"
-cp -a ./lib "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/"
+# keep the soname symlinks: dereferenced copies make ldconfig warn "is not a symbolic link";
+# `./lib/.` because CI's ./lib is itself a symlink to the docker image's thirdparty dir
+mkdir -p "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib"
+cp -a ./lib/. "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib/"
 BAD_LINKS=$(find "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib" -type l \( -lname '/*' -o -xtype l \))
 if [ -n "${BAD_LINKS}" ]; then
   echo "Absolute or dangling symlinks in the packaged lib dir:"

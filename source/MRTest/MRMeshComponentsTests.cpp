@@ -68,6 +68,11 @@ TEST(MRMesh, getAllComponentsFaces)
     }
     EXPECT_EQ( all.count(), 12 ); // every face exactly once
 
+    FaceBitSet comp1( mesh.topology.faceSize() );
+    comps.setComponentBits( 1, comp1 );
+    EXPECT_EQ( comp1.count(), 2 );
+    EXPECT_TRUE( comp1.test( comps.faces[2] ) && comp1.test( comps.faces[3] ) );
+
     // region: the whole cube without two faces of different sides
     FaceBitSet region = mesh.topology.getValidFaces();
     region.reset( comps.faces[0] );

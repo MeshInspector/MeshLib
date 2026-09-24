@@ -164,6 +164,9 @@ struct ComponentsFaces
     /// the faces of component i are faces[offsets[i]], ..., faces[offsets[i+1]-1] in increasing order
     std::vector<FaceId> faces;
     std::vector<int> offsets; ///< the number of components + 1 elements, offsets.back() == faces.size()
+
+    /// sets in given bit set the bits of all faces of component compId; bs must be large enough to contain them
+    MRMESH_API void setComponentBits( int compId, FaceBitSet& bs ) const;
 };
 
 /// gets all connected components of mesh part as a list of faces per component;

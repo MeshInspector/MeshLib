@@ -575,6 +575,12 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsInGroup };
 }
 
+void ComponentsFaces::setComponentBits( int compId, FaceBitSet& bs ) const
+{
+    for ( int i = offsets[compId]; i < offsets[compId + 1]; ++i )
+        bs.set( faces[i] );
+}
+
 ComponentsFaces getAllComponentsFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
 {
     MR_TIMER;

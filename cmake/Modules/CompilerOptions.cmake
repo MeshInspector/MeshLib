@@ -157,6 +157,29 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
+# required for older libstdc++'s <stacktrace>
+# fixed for 13.4+, 14.2+, 15+
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114940
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsized-deallocation")
+ENDIF()
+
+# libstdc++ keeps the implementation of std::stacktrace in the separate library stdc++exp;
+# the check links a shared library against it, as MRMesh is one
+IF(NOT MSVC AND NOT EMSCRIPTEN)
+  include(CheckCXXSourceCompiles)
+  set(CMAKE_REQUIRED_FLAGS -fPIC)
+  set(CMAKE_REQUIRED_LINK_OPTIONS -shared)
+  set(CMAKE_REQUIRED_LIBRARIES stdc++exp)
+  check_cxx_source_compiles("
+    #include <stacktrace>
+    int f() { return int( to_string( std::stacktrace::current() ).size() ); }
+  " HAVE_STD_STACKTRACE)
+  unset(CMAKE_REQUIRED_FLAGS)
+  unset(CMAKE_REQUIRED_LINK_OPTIONS)
+  unset(CMAKE_REQUIRED_LIBRARIES)
+ENDIF()
+
 # Clang 20+ conflicts with fmt prior to 12
 # https://github.com/fmtlib/fmt/issues/4177
 # https://github.com/fmtlib/fmt/issues/4247

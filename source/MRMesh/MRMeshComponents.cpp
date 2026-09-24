@@ -10,6 +10,7 @@
 #include "MRUnionFindParallel.h"
 #include "MRFaceFace.h"
 #include "MRphmap.h"
+#include "MRConstants.h"
 #include <climits>
 #include <numeric>
 
@@ -696,6 +697,14 @@ std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, Fa
 
     const auto& allRoots = unionFindStruct.roots();
     return getUniqueRootIds( allRoots, region );
+}
+
+std::pair<Face2RegionMap, int> getAllComponentsMapBySharpEdges( const MeshPart& meshPart, float angleThreshold )
+{
+    MR_TIMER;
+    assert( angleThreshold > 0 && angleThreshold < PI2_F );
+    const auto sharpEdges = meshPart.mesh.findSharpEdges( std::cos( PI_F - angleThreshold ), std::cos( angleThreshold ) );
+    return getAllComponentsMap( meshPart, FaceIncidence::PerEdge, &sharpEdges );
 }
 
 std::pair<Face2RegionMap, int> getFacePairRegionMap( const Mesh& mesh, const std::vector<FaceFace>& facePairs,

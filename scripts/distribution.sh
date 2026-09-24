@@ -72,7 +72,14 @@ cp "./scripts/70-space-mouse-meshlib.rules" ./distr/meshlib-dev/usr/local/lib/ud
 
 #copy lib dir
 CURRENT_DIR="`pwd`"
-cp -rL ./lib "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/"
+# keep the soname symlinks: dereferenced copies make ldconfig warn "is not a symbolic link"
+cp -a ./lib "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/"
+BAD_LINKS=$(find "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib" -type l \( -lname '/*' -o -xtype l \))
+if [ -n "${BAD_LINKS}" ]; then
+  echo "Absolute or dangling symlinks in the packaged lib dir:"
+  echo "${BAD_LINKS}"
+  exit 9
+fi
 cp -rL ./include "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}/"
 echo "Thirdparty libs and include copy done"
 

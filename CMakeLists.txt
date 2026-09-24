@@ -211,7 +211,7 @@ if(APPLE)
     set(MR_RESOURCES_DIR "Resources")
     set(MR_CONFIG_DIR    "Resources/cmake")
     set(MR_FONTS_DIR     "Resources/fonts")
-    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib")
+    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../Frameworks")
   else()
     # TODO: correct directory structure for macOS
     # TODO: https://cmake.org/cmake/help/latest/prop_tgt/RESOURCE.html

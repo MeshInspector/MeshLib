@@ -59,6 +59,22 @@ TEST( MRMesh, CutAndFillSelfIntersectionGroups )
     EXPECT_EQ( mesh.topology.numValidFaces(), 12 );
     EXPECT_TRUE( mesh.topology.isClosed() );
     EXPECT_NEAR( mesh.volume(), 1.0, 1e-5 );
+
+    // fine subdivision splits the edge between the groups: all faces of the top and the side must still be replaced
+    mesh = makeCube();
+    FillHoleNicelySettings fine;
+    fine.subdivideSettings.maxEdgeLen = 0.2f;
+    fine.smoothCurvature = false;
+    newFaces = SelfIntersections::cutAndFillGroups( mesh, faces, 0.5f, fine );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_NEAR( mesh.volume(), 1.0, 1e-5 );
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        const auto n = mesh.normal( f );
+        const auto c = mesh.triCenter( f );
+        const bool topOrSide = ( n.z > 0.999f && c.z > 0.4999f ) || ( n.x > 0.999f && c.x > 0.4999f );
+        EXPECT_EQ( topOrSide, newFaces.test( f ) );
+    }
 }
 
 } //namespace MR

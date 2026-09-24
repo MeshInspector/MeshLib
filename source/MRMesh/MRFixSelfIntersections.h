@@ -50,7 +50,7 @@ MRMESH_API Expected<void> fix( Mesh& mesh, const Settings& settings );
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getGroupsMap( const MeshPart& mp, float angleThreshold = 0.5f );
 
 /// splits given faces on groups (see getGroupsMap), then deletes each group and fills the appeared holes separately using \ref patchMesh;
-/// the edges near not yet patched groups and near the patches of other groups are never split
+/// if patch subdivision splits a face of a not yet patched group or of an earlier patch, the new half is added to that group or to the result
 /// \return all new faces
 MRMESH_API FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThreshold = 0.5f, const FillHoleNicelySettings& settings = {} );
 }

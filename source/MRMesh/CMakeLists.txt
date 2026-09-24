@@ -79,27 +79,9 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
 ENDIF()
 
-# std::stacktrace of libstdc++ lives in the separate library stdc++exp; the check links a shared library, as MRMesh is one
 IF(NOT WIN32 AND NOT EMSCRIPTEN)
-  include(CheckCXXSourceCompiles)
-  set(CMAKE_REQUIRED_FLAGS -fPIC)
-  set(CMAKE_REQUIRED_LINK_OPTIONS -shared)
-  set(CMAKE_REQUIRED_LIBRARIES stdc++exp)
-  check_cxx_source_compiles("
-    #include <version>
-    #if __cpp_lib_stacktrace < 202011
-    #error no std::stacktrace
-    #endif
-    #include <stacktrace>
-    int f() { return int( to_string( std::stacktrace::current() ).size() ); }
-  " MR_STD_STACKTRACE_WITH_STDCXXEXP)
-  unset(CMAKE_REQUIRED_FLAGS)
-  unset(CMAKE_REQUIRED_LINK_OPTIONS)
-  unset(CMAKE_REQUIRED_LIBRARIES)
-  IF(MR_STD_STACKTRACE_WITH_STDCXXEXP)
-    target_compile_definitions(${PROJECT_NAME} PUBLIC MR_USE_STD_STACKTRACE)
-    target_link_libraries(${PROJECT_NAME} PUBLIC stdc++exp)
-  ENDIF()
+  include(StdStacktrace)
+  mr_use_std_stacktrace(${PROJECT_NAME})
 ENDIF()
 
 IF(EMSCRIPTEN)

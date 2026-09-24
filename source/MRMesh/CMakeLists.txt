@@ -81,7 +81,7 @@ ENDIF()
 
 IF(NOT WIN32 AND NOT EMSCRIPTEN)
   include(StdStacktrace)
-  mr_use_std_stacktrace(${PROJECT_NAME})
+  mr_link_std_stacktrace(${PROJECT_NAME})
 ENDIF()
 
 IF(EMSCRIPTEN)

@@ -157,6 +157,11 @@ IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_G
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
 ENDIF()
 
+# Clang enables sized deallocation by default only since 19; libstdc++'s <stacktrace> does not compile without it
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsized-deallocation")
+ENDIF()
+
 # Clang 20+ conflicts with fmt prior to 12
 # https://github.com/fmtlib/fmt/issues/4177
 # https://github.com/fmtlib/fmt/issues/4247

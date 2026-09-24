@@ -49,9 +49,6 @@
     <ClCompile Include="MRPdfTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRStepTests.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MRVolumeToMeshByPartsTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

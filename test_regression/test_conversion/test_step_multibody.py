@@ -36,3 +36,36 @@ def test_step_multibody_split():
     # placement is preserved: the bodies are not collapsed onto each other
     max_x = max(m.getWorldBox().max.x for m in meshes)
     assert max_x == pytest.approx(110.0, abs=1.0)
+
+
+@pytest.mark.smoke
+def test_step_force_load_sub_shapes():
+    """
+    A single-body STEP part loads as one ObjectMesh; with
+    StepLoadSettings.forceLoadSubShapes it is split into per-body children instead.
+
+    The fixture is a single part holding one tetrahedron placed near x=100.
+    """
+    input_file = Path(test_files_path) / "conversion" / "step_multibody" / "one_body.step"
+
+    # default: no extra group level, the part itself is the mesh object
+    scene = mrmeshpy.MeshLoad.fromSceneStepFile(input_file)
+    assert len(scene.children()) == 1
+    part = scene.children()[0]
+    assert isinstance(part, mrmeshpy.ObjectMesh)
+    assert part.meshPtr().topology.numValidFaces() == 4
+    assert len(part.children()) == 0
+
+    step_settings = mrmeshpy.MeshLoad.StepLoadSettings()
+    step_settings.forceLoadSubShapes = True
+    scene = mrmeshpy.MeshLoad.fromSceneStepFile(input_file, stepSettings=step_settings)
+    assert len(scene.children()) == 1
+    group = scene.children()[0]
+    assert not isinstance(group, mrmeshpy.ObjectMesh)
+    assert len(group.children()) == 1
+
+    # only the scene structure changes: same geometry, same placement
+    body = group.children()[0]
+    assert isinstance(body, mrmeshpy.ObjectMesh)
+    assert body.meshPtr().topology.numValidFaces() == 4
+    assert body.getWorldBox().max.x == pytest.approx(110.0, abs=1e-3)

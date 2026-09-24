@@ -90,7 +90,7 @@ cd distr
 dpkg-deb --build -Zxz ./meshlib-dev
 
 if [ -f "./meshlib-dev.deb" ]; then
-  echo "Dev deb package has been built."
+  echo "Dev deb package has been built: $(stat -c %s ./meshlib-dev.deb) bytes."
 else
   echo "Failed to build dev.deb package!"
   exit 8

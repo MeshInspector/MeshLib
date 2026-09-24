@@ -13,7 +13,6 @@
 #include "MRTimer.h"
 #include "MRBox.h"
 #include "MRMapOrHashMap.h"
-#include "MRBitSetParallelFor.h"
 #include "MRPch/MRSpdlog.h"
 #include <algorithm>
 
@@ -268,18 +267,7 @@ std::pair<Face2RegionMap, int> getGroupsMap( const MeshPart& mp, float angleThre
 {
     MR_TIMER;
     assert( angleThreshold > 0 && angleThreshold < PI2_F );
-    const auto& topology = mp.mesh.topology;
-    const float maxSharpCos = std::cos( angleThreshold );
-    const float minSharpCos = std::cos( PI_F - angleThreshold );
-
-    // only the edges inside the region can separate its faces
-    auto sharpEdges = getInnerEdges( topology, topology.getFaceIds( mp.region ) );
-    BitSetParallelFor( sharpEdges, [&] ( UndirectedEdgeId ue )
-    {
-        const auto c = dihedralAngleCos( topology, mp.mesh.points, ue );
-        if ( c > maxSharpCos || c <= minSharpCos )
-            sharpEdges.reset( ue );
-    } );
+    const auto sharpEdges = mp.mesh.findSharpEdges( std::cos( PI_F - angleThreshold ), std::cos( angleThreshold ) );
     return MeshComponents::getAllComponentsMap( mp, MeshComponents::FaceIncidence::PerEdge, &sharpEdges );
 }
 

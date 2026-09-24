@@ -172,10 +172,6 @@ IF(NOT MSVC AND NOT EMSCRIPTEN)
   set(CMAKE_REQUIRED_LINK_OPTIONS -shared)
   set(CMAKE_REQUIRED_LIBRARIES stdc++exp)
   check_cxx_source_compiles("
-    #include <version>
-    #if __cpp_lib_stacktrace < 202011
-    #error no std::stacktrace
-    #endif
     #include <stacktrace>
     int f() { return int( to_string( std::stacktrace::current() ).size() ); }
   " HAVE_STD_STACKTRACE)

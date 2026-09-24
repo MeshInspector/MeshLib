@@ -27,12 +27,16 @@ struct StepLoadSettings
     bool autoColorize = true;
 };
 
-/// returns the STEP load settings applied when a STEP file is loaded through the format registry,
-/// i.e. by the generic mesh/scene loading functions that take no STEP-specific arguments
-MRIOEXTRAS_API const StepLoadSettings& getStepLoadSettings();
+/// returns a copy of the STEP load settings applied when a STEP file is loaded through the format
+/// registry, i.e. by the generic mesh/scene loading functions that take no STEP-specific arguments;
+/// thread-safe: the settings are returned by value under a lock, so a concurrent
+/// setStepLoadSettings() call cannot be observed half-applied
+MRIOEXTRAS_API StepLoadSettings getStepLoadSettings();
 
 /// sets the STEP load settings applied when a STEP file is loaded through the format registry;
-/// does not affect the overloads below that are given \p stepSettings explicitly
+/// does not affect the overloads below that are given \p stepSettings explicitly;
+/// thread-safe, but note that concurrent loads through the registry share these settings:
+/// each load reads the value that is set when it starts, so change them before starting the load
 MRIOEXTRAS_API void setStepLoadSettings( const StepLoadSettings& settings );
 
 /// load mesh data from STEP file using OpenCASCADE

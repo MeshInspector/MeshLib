@@ -15,6 +15,7 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include <fstream>
+#include <mutex>
 
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
@@ -999,17 +1000,20 @@ Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings, con
 namespace
 {
 
+std::mutex sStepLoadSettingsMutex;
 StepLoadSettings sStepLoadSettings;
 
 } // namespace
 
-const StepLoadSettings& getStepLoadSettings()
+StepLoadSettings getStepLoadSettings()
 {
+    std::unique_lock lock( sStepLoadSettingsMutex );
     return sStepLoadSettings;
 }
 
 void setStepLoadSettings( const StepLoadSettings& settings )
 {
+    std::unique_lock lock( sStepLoadSettingsMutex );
     sStepLoadSettings = settings;
 }
 

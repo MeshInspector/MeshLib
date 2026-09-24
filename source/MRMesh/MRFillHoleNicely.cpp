@@ -99,8 +99,10 @@ static VertBitSet subdivideFillingNicely( Mesh& mesh, FaceBitSet& newFaces,
         outAttribs.colorMap : nullptr;
     if ( uvCoords || colorMap || outAttribs.faceColors )
     {
-        subset.onEdgeSplit = [&mesh, uvCoords, colorMap, faceColors = outAttribs.faceColors] ( EdgeId e1, EdgeId e )
+        subset.onEdgeSplit = [&mesh, uvCoords, colorMap, faceColors = outAttribs.faceColors, onEdgeSplit = settings.onEdgeSplit] ( EdgeId e1, EdgeId e )
         {
+            if ( onEdgeSplit )
+                onEdgeSplit( e1, e );
             const auto org = mesh.topology.org( e1 );
             const auto dest = mesh.topology.dest( e );
             const auto newV = mesh.topology.org( e );

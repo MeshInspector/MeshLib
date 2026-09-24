@@ -106,6 +106,7 @@
     <ClCompile Include="MREdgePathsTests.cpp" />
     <ClCompile Include="MRFillContours2DTests.cpp" />
     <ClCompile Include="MRFinallyTests.cpp" />
+    <ClCompile Include="MRStacktraceTests.cpp" />
     <ClCompile Include="MRIdTests.cpp" />
     <ClCompile Include="MRInt64Mul128Tests.cpp" />
     <ClCompile Include="MRIntersectionTests.cpp" />

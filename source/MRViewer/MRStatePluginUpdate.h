@@ -43,6 +43,10 @@ protected:
     /// plugin can override it to make this helper class also react on face selections updates
     MRVIEWER_API virtual bool reactOnFaceSelectionChanges_() const { return false; }
 
+    /// dirty flags of mesh changes that close the plugin, DIRTY_POSITION | DIRTY_FACE by default;
+    /// plugin can override it to return only DIRTY_FACE and stay open when only vertex coordinates change
+    MRVIEWER_API virtual uint32_t closeOnDirtyMask_() const;
+
     MRVIEWER_API virtual void onPluginEnable_() override;
     MRVIEWER_API virtual void onPluginDisable_() override;
     MRVIEWER_API virtual bool shouldClose_() const override;

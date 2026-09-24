@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18 FATAL_ERROR)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/Modules")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 include(DefaultOptions)
 include(ConfigureVcpkg)
 

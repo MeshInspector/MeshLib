@@ -616,6 +616,12 @@ jobs:
             # MeshInspector/toolchains releases.
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
     steps:
+      # GitHub-hosted runners enable Spotlight by default
+      # https://github.com/actions/runner-images/discussions/5032
+      - name: Disable Spotlight indexing
+        if: ${{ runner.environment == 'github-hosted' }}
+        run: sudo mdutil -a -i off
+
       - name: Checkout
         uses: actions/checkout@v7
         with:

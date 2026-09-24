@@ -7,8 +7,6 @@
 #include <string>
 
 #include <version>
-// with libstdc++, std::stacktrace needs an extra library (https://stackoverflow.com/q/78395268/7325599),
-// which cmake/Modules/StdStacktrace.cmake links
 #if __cpp_lib_stacktrace >= 202011
 #pragma message("std::stacktrace is available")
 #include <stacktrace>

@@ -79,10 +79,9 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
 ENDIF()
 
-IF(NOT WIN32 AND NOT EMSCRIPTEN)
-  include(StdStacktrace)
-  mr_link_std_stacktrace(${PROJECT_NAME})
-ENDIF()
+if(HAVE_STD_STACKTRACE AND NOT MSVC)
+  target_link_libraries(${PROJECT_NAME} PUBLIC stdc++exp)
+endif()
 
 IF(EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC

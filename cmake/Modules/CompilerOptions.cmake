@@ -197,6 +197,13 @@ IF(MSVC)
   FOREACH(TARGET_KIND EXE SHARED MODULE)
     set(CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE "${CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
   ENDFOREACH()
+
+  # Ninja: the binaries record bare PDB file names, e.g. MRMesh.pdb.
+  # Visual Studio generator: CMake mangles the option into %%%MRMesh.pdb%%%, a name the PDB cannot be found by, so the option is skipped there and those builds keep full paths.
+  # $<HOST_LINK:...> keeps the option away from CUDA device-link steps.
+  IF(NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+    add_link_options($<HOST_LINK:/PDBALTPATH:%_PDB%>)
+  ENDIF()
 ENDIF()
 
 # macOS: force Clang to use system libc++

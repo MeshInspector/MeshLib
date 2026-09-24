@@ -10,4 +10,10 @@ namespace MR
 /// returns new faces
 MRMESH_API FaceBitSet patchMesh( Mesh& mesh, const FaceBitSet& patchBS, const FillHoleNicelySettings& settings = {} );
 
+/// splits given faces on groups separated by sharp edges (see MeshComponents::getAllComponentsMapBySharpEdges),
+/// then removes each group and fills the appeared holes separately using \ref patchMesh;
+/// if patch subdivision splits a face of a not yet patched group or of an earlier patch, the new half is added to that group or to the result
+/// \return all new faces
+MRMESH_API FaceBitSet patchMeshByGroups( Mesh& mesh, const FaceBitSet& faces, float angleThreshold = 0.5f, const FillHoleNicelySettings& settings = {} );
+
 } //namespace MR

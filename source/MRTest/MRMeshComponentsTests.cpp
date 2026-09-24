@@ -87,6 +87,30 @@ TEST(MRMesh, getAllComponentsFaces)
     EXPECT_EQ( comps.faces.size(), 12 );
 }
 
+TEST(MRMesh, getAllComponentsMapBySharpEdges)
+{
+    Mesh mesh = makeCube();
+    FaceBitSet topAndSide( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+    {
+        const auto n = mesh.normal( f );
+        if ( n.z > 0.9f || n.x > 0.9f )
+            topAndSide.set( f );
+    }
+    EXPECT_EQ( topAndSide.count(), 4 );
+
+    auto [map, num] = MeshComponents::getAllComponentsMapBySharpEdges( { mesh, &topAndSide } );
+    EXPECT_EQ( num, 2 );
+    int compSize[2] = {};
+    for ( auto f : topAndSide )
+        ++compSize[int( map[f] )];
+    EXPECT_EQ( compSize[0], 2 );
+    EXPECT_EQ( compSize[1], 2 );
+
+    // whole cube: one component per side
+    EXPECT_EQ( MeshComponents::getAllComponentsMapBySharpEdges( { mesh } ).second, 6 );
+}
+
 TEST(MRMesh, getLargestComponentArea)
 {
     Triangulation t{

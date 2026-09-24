@@ -157,6 +157,12 @@ struct LargeByAreaComponentsSettings
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
+/// gets all components of mesh part separated by sharp edges with dihedral angle in [angleThreshold, PI-angleThreshold]
+/// (see findSharpEdges); nearly planar and nearly folded edges do not separate components, so overlapping coplanar triangles stay together
+/// \param angleThreshold in (0, PI/2)
+/// \return the mapping FaceId -> component id (meaningful only for the faces of mesh part) and the number of components
+[[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMapBySharpEdges( const MeshPart& meshPart, float angleThreshold = 0.5f );
+
 /// faces of all components in one flat array
 struct ComponentsFaces
 {

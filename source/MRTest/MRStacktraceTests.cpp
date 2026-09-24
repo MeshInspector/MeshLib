@@ -13,8 +13,9 @@ TEST( MRMesh, Stacktrace )
     const auto stacktrace = getCurrentStacktrace();
     spdlog::info( "Test stacktrace:\n{}", stacktrace );
     EXPECT_FALSE( stacktrace.empty() );
-#if !defined NDEBUG && __cpp_lib_stacktrace >= 202011 && ( defined _WIN32 || defined MR_USE_STD_STACKTRACE )
-    // std::stacktrace reports source files and lines of the frames with debug info
+#if !defined NDEBUG && ( defined _WIN32 || ( __cpp_lib_stacktrace >= 202011 && defined MR_USE_STD_STACKTRACE ) )
+    // on Windows both std::stacktrace and Boost.Stacktrace report source files and lines of the frames with debug info,
+    // elsewhere only std::stacktrace does
     EXPECT_NE( stacktrace.find( "MRStacktraceTests.cpp" ), std::string::npos );
 #endif
 }

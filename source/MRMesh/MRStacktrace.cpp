@@ -26,7 +26,7 @@ std::wstring moduleDirectory( HMODULE module )
     return std::filesystem::path( path ).parent_path().wstring();
 }
 
-// MSBuild links with /PDBALTPATH:%_PDB%, so the debug engine behind stacktraces looks for PDB files only
+// the binaries are linked with /PDBALTPATH:%_PDB%, so the debug engine behind stacktraces looks for PDB files only
 // in the current directory and in _NT_SYMBOL_PATH; add the folders of the executable and of MRMesh.dll to the latter
 const bool symbolPathExtended = []
 {

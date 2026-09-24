@@ -1000,21 +1000,21 @@ Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings, con
 namespace
 {
 
-std::mutex sStepLoadSettingsMutex;
-StepLoadSettings sStepLoadSettings;
+std::mutex sDefaultStepLoadSettingsMutex;
+StepLoadSettings sDefaultStepLoadSettings;
 
 } // namespace
 
-StepLoadSettings getStepLoadSettings()
+StepLoadSettings defaultStepLoadSettings()
 {
-    std::unique_lock lock( sStepLoadSettingsMutex );
-    return sStepLoadSettings;
+    std::unique_lock lock( sDefaultStepLoadSettingsMutex );
+    return sDefaultStepLoadSettings;
 }
 
-void setStepLoadSettings( const StepLoadSettings& settings )
+void setDefaultStepLoadSettings( const StepLoadSettings& settings )
 {
-    std::unique_lock lock( sStepLoadSettingsMutex );
-    sStepLoadSettings = settings;
+    std::unique_lock lock( sDefaultStepLoadSettingsMutex );
+    sDefaultStepLoadSettings = settings;
 }
 
 MR_ON_INIT {
@@ -1022,8 +1022,8 @@ MR_ON_INIT {
     setMeshLoader(
         IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ),
         {
-            [] ( const std::filesystem::path& path, const MeshLoadSettings& settings ) { return fromStep( path, settings, getStepLoadSettings() ); },
-            [] ( std::istream& in, const MeshLoadSettings& settings ) { return fromStep( in, settings, getStepLoadSettings() ); },
+            [] ( const std::filesystem::path& path, const MeshLoadSettings& settings ) { return fromStep( path, settings, defaultStepLoadSettings() ); },
+            [] ( std::istream& in, const MeshLoadSettings& settings ) { return fromStep( in, settings, defaultStepLoadSettings() ); },
         }
     );
 };
@@ -1088,7 +1088,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
 
 Expected<LoadedObject> loadSceneFromStp( const std::filesystem::path& path, const ProgressCallback& progressCb )
 {
-    return fromSceneStepFile( path, { .callback = ProgressCallback{ progressCb } }, getStepLoadSettings() ).and_then(
+    return fromSceneStepFile( path, { .callback = ProgressCallback{ progressCb } }, defaultStepLoadSettings() ).and_then(
         []( ObjectPtr && obj ) -> Expected<LoadedObject> { return LoadedObject{ .obj = std::move( obj ) }; } );
 }
 

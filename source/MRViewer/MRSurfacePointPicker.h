@@ -185,6 +185,10 @@ private:
 
     PickedPoint currentPos_;
 
+    // exact point on the surface in base object's coordinates; pickSphere_'s own center
+    // may be shifted towards the camera for visibility, so it is not authoritative
+    Vector3f exactCenter_;
+
     std::shared_ptr<SphereObject> pickSphere_;
     std::shared_ptr<VisualObject> baseObject_;
 
@@ -197,6 +201,9 @@ private:
 
     // Depending on the type of selected size, sets the point size
     void setPointRadius_();
+
+    // Keeps the sphere visibly above the surface at any zoom, see the definition
+    void updateDepthShift_( float radius );
 
     // set color of pick sphere from the current state and parameters
     void setSphereColor_();

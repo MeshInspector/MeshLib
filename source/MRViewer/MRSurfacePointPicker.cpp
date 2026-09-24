@@ -16,6 +16,7 @@
 #include "MRMesh/MRPointCloud.h"
 #include "MRMesh/MRMatrix3Decompose.h"
 
+#include <algorithm>
 #include <variant>
 
 namespace MR
@@ -276,7 +277,8 @@ void SurfacePointWidget::updatePositionAndRadius_()
 
     if ( auto p = findCoords() )
     {
-        pickSphere_->setCenter( *p );
+        exactCenter_ = *p;
+        pickSphere_->setCenter( exactCenter_ );
         setPointRadius_();
     }
 }
@@ -296,7 +298,7 @@ void SurfacePointWidget::setPointRadius_()
 
             // This assertion should probably be true always, not only here. But here I rely on them being the same (for the scale calculation), so better check.
             assert( baseObject_.get() == pickSphere_->parent() );
-            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( baseObjectWorldXf( pickSphere_->getCenter( getViewerInstance().viewport().id ) ) );
+            float cameraScale = getViewerInstance().viewport().getPixelSizeAtPoint( baseObjectWorldXf( exactCenter_ ) );
 
             Matrix3f r, s;
             decomposeMatrix3( baseObjectWorldXf.A, r, s );
@@ -313,6 +315,31 @@ void SurfacePointWidget::setPointRadius_()
             break;
     }
     pickSphere_->setRadius( radius );
+    updateDepthShift_( radius );
+}
+
+// The sphere is centered exactly on the surface, so it sticks out of it by one radius.
+// In the default orthographic projection the depth range stays pinned to
+// [cameraDnear, cameraDfar] whatever cameraZoom is, so one depth-buffer unit is a fixed
+// world length while a Pixel-sized sphere shrinks as 1/zoom. Zoom in far enough and the
+// protrusion drops below that unit: the surface z-fights over the sphere and then hides it
+// completely. Lift the *rendered* center towards the camera just enough to keep the
+// protrusion zoom-independent; getCoords() still reports the exact point on the surface.
+void SurfacePointWidget::updateDepthShift_( float radius )
+{
+    const float minProtrusion = baseObject_->getBoundingBox().diagonal() * 1e-3f;
+    const float shift = std::max( 0.f, minProtrusion - radius );
+    if ( shift <= 0.f )
+    {
+        // zoomed out enough for the sphere to clear the surface on its own
+        pickSphere_->setCenter( exactCenter_ );
+        return;
+    }
+
+    Matrix3f r, s;
+    decomposeMatrix3( baseObject_->worldXf().A, r, s );
+    const auto dirLocal = r.inverse() * getViewerInstance().viewport().getBackwardDirection();
+    pickSphere_->setCenter( exactCenter_ + shift * dirLocal.normalized() );
 }
 
 void SurfacePointWidget::preDraw_()
@@ -322,7 +349,7 @@ void SurfacePointWidget::preDraw_()
 
 Vector3f SurfacePointWidget::getCoords() const
 {
-    return pickSphere_ ? pickSphere_->getCenter() : Vector3f{};
+    return pickSphere_ ? exactCenter_ : Vector3f{};
 }
 
 void SurfacePointWidget::setCurrentPosition( const PointOnObject& pos )

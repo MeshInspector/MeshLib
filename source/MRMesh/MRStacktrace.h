@@ -10,14 +10,10 @@
 // with libstdc++, std::stacktrace needs an extra library (https://stackoverflow.com/q/78395268/7325599),
 // which cmake/Modules/StdStacktrace.cmake links
 #if __cpp_lib_stacktrace >= 202011
-#ifdef _MSC_VER
 #pragma message("std::stacktrace is available")
-#endif
 #include <stacktrace>
 #else
-#ifdef _MSC_VER
 #pragma message("std::stacktrace is NOT available, using boost::stacktrace instead")
-#endif
 #include <boost/stacktrace.hpp>
 #endif
 

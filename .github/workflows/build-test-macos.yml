@@ -266,7 +266,6 @@ jobs:
         with:
           name: NinjaLog-macos-${{ matrix.arch }}-${{ matrix.config }}-${{ matrix.lib-source }}
           path: build/${{ matrix.config }}/.ninja_log
-          include-hidden-files: true
           retention-days: 7
           if-no-files-found: ignore
 

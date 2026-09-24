@@ -3,8 +3,6 @@
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-us-east-1}"
 
 S3_URL="s3://vcpkg-export/${VCPKG_VERSION}/${VCPKG_TRIPLET}/"
-# reading via HTTP is batched and thus usually faster than via x-aws
-HTTP_URL="https://vcpkg-export.s3.${AWS_DEFAULT_REGION}.amazonaws.com/${VCPKG_VERSION}/${VCPKG_TRIPLET}/{sha}.zip"
 
 # pick up credentials from Docker secrets if available
 if [ -s /run/secrets/AWS_ACCESS_KEY_ID ] && [ -s /run/secrets/AWS_SECRET_ACCESS_KEY ]; then
@@ -16,9 +14,9 @@ if [ -s /run/secrets/AWS_ACCESS_KEY_ID ] && [ -s /run/secrets/AWS_SECRET_ACCESS_
 fi
 
 if [ -n "$AWS_ACCESS_KEY_ID" ] && [ -n "$AWS_SECRET_ACCESS_KEY" ]; then
-    echo "vcpkg S3 binary cache: read ${HTTP_URL}, write ${S3_URL}"
-    export VCPKG_BINARY_SOURCES="clear;http,${HTTP_URL},read;x-aws,${S3_URL},write"
+    echo "vcpkg S3 binary cache: read-write (${S3_URL})"
+    export VCPKG_BINARY_SOURCES="clear;x-aws,${S3_URL},readwrite"
 else
-    echo "vcpkg S3 binary cache: anonymous read-only (${HTTP_URL})"
-    export VCPKG_BINARY_SOURCES="clear;http,${HTTP_URL},read"
+    echo "vcpkg S3 binary cache: anonymous read-only (${S3_URL})"
+    export VCPKG_BINARY_SOURCES="clear;x-aws-config,no-sign-request;x-aws,${S3_URL},read"
 fi

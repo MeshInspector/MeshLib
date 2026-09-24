@@ -281,7 +281,7 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
     const int numGroups = groupsMapAndNum.second;
     const auto groups = MeshComponents::getAllComponentsFaces( groupsMap, numGroups, pendingFaces );
     // faces of each group that appeared when patch subdivision split its boundary edges
-    std::vector<std::vector<FaceId>> splitGroupFaces( numGroups );
+    Vector<std::vector<FaceId>, RegionId> splitGroupFaces( numGroups );
 
     FaceBitSet newFaces;
     auto onFaceSplit = [&] ( FaceId oldFace, FaceId newFace )
@@ -291,7 +291,7 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
             const auto g = groupsMap[oldFace];
             groupsMap.autoResizeSet( newFace, g );
             pendingFaces.autoResizeSet( newFace );
-            splitGroupFaces[int( g )].push_back( newFace );
+            splitGroupFaces[g].push_back( newFace );
         }
         else if ( contains( newFaces, oldFace ) )
             newFaces.autoResizeSet( newFace );
@@ -307,7 +307,7 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
     };
 
     FaceBitSet group( mesh.topology.faceSize() );
-    for ( int r = 0; r < numGroups; ++r )
+    for ( RegionId r( 0 ); r < RegionId( numGroups ); ++r )
     {
         groups.setComponentBits( r, group );
         for ( auto f : splitGroupFaces[r] )

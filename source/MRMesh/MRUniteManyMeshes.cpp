@@ -409,7 +409,7 @@ Expected<Mesh> uniteComponents( const Mesh& mesh,
     auto keepGoing = ParallelFor( components, [&] ( size_t i )
     {
         FaceBitSet compBs( mesh.topology.faceSize() );
-        comps.setComponentBits( int( i ), compBs );
+        comps.setComponentBits( RegionId( i ), compBs );
         components[i].addMeshPart( MeshPart( mesh, &compBs ) );
         normalizeUniteMesh( components[i], params.forceCut || normalizeParams.flipInverted, normalizeParams );
         meshPtrs[i] = &components[i];

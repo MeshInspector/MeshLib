@@ -56,7 +56,7 @@ TEST(MRMesh, getAllComponentsFaces)
     EXPECT_EQ( comps.offsets.back(), 12 );
     ASSERT_EQ( comps.faces.size(), 12 );
     FaceBitSet all;
-    for ( size_t i = 0; i + 1 < comps.offsets.size(); ++i )
+    for ( RegionId i( 0 ); i < comps.offsets.backId(); ++i )
     {
         EXPECT_EQ( comps.offsets[i + 1] - comps.offsets[i], 2 );
         const auto n = mesh.normal( comps.faces[comps.offsets[i]] );
@@ -69,7 +69,7 @@ TEST(MRMesh, getAllComponentsFaces)
     EXPECT_EQ( all.count(), 12 ); // every face exactly once
 
     FaceBitSet comp1( mesh.topology.faceSize() );
-    comps.setComponentBits( 1, comp1 );
+    comps.setComponentBits( RegionId( 1 ), comp1 );
     EXPECT_EQ( comp1.count(), 2 );
     EXPECT_TRUE( comp1.test( comps.faces[2] ) && comp1.test( comps.faces[3] ) );
 

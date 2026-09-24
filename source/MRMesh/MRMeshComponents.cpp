@@ -575,7 +575,7 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsInGroup };
 }
 
-void ComponentsFaces::setComponentBits( int compId, FaceBitSet& bs ) const
+void ComponentsFaces::setComponentBits( RegionId compId, FaceBitSet& bs ) const
 {
     for ( int i = offsets[compId]; i < offsets[compId + 1]; ++i )
         bs.set( faces[i] );
@@ -594,13 +594,13 @@ ComponentsFaces getAllComponentsFaces( const Face2RegionMap& componentsMap, int 
     ComponentsFaces res;
     res.offsets.resize( componentsCount + 1, 0 );
     for ( auto f : region )
-        ++res.offsets[int( componentsMap[f] ) + 1];
-    std::partial_sum( res.offsets.begin(), res.offsets.end(), res.offsets.begin() );
+        ++res.offsets[componentsMap[f] + 1];
+    std::partial_sum( begin( res.offsets ), end( res.offsets ), begin( res.offsets ) );
 
     res.faces.resize( res.offsets.back() );
     auto pos = res.offsets;
     for ( auto f : region )
-        res.faces[pos[int( componentsMap[f] )]++] = f;
+        res.faces[pos[componentsMap[f]]++] = f;
     return res;
 }
 

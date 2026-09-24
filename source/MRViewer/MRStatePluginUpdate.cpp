@@ -31,16 +31,23 @@ bool PluginCloseOnSelectedObjectRemove::shouldClose_() const
     return false;
 }
 
+uint32_t PluginCloseOnChangeMesh::closeOnDirtyMask_() const
+{
+    return DIRTY_POSITION | DIRTY_FACE;
+}
+
 void PluginCloseOnChangeMesh::onPluginEnable_()
 {
     auto meshes = getAllObjectsInTree<ObjectMesh>( &SceneRoot::get(), ObjectSelectivityType::Selected );
     meshChangedConnections_.reserve( meshes.size() );
     meshChanged_ = false;
+    const uint32_t closeMask = closeOnDirtyMask_();
     for ( auto& mesh : meshes )
     {
-        meshChangedConnections_.emplace_back( mesh->meshChangedSignal.connect( [&] ( uint32_t )
+        meshChangedConnections_.emplace_back( mesh->meshChangedSignal.connect( [this, closeMask] ( uint32_t mask )
         {
-            meshChanged_ = true;
+            if ( mask & closeMask )
+                meshChanged_ = true;
         } ) );
         if ( reactOnFaceSelectionChanges_() )
         {

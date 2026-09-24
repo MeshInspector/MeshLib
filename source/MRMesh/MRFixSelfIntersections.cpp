@@ -293,15 +293,12 @@ FaceBitSet cutAndFillGroups( Mesh& mesh, const FaceBitSet& faces, float angleThr
     for ( int r = 0; r < numGroups; ++r )
     {
         for ( int i = groups.offsets[r]; i < groups.offsets[r + 1]; ++i )
-        {
             group.set( groups.faces[i] );
-            protectedFaces.reset( groups.faces[i] );
-        }
+        protectedFaces -= group;
         const auto patch = patchMesh( mesh, group, s );
         newFaces |= patch;
         protectedFaces |= patch;
-        for ( int i = groups.offsets[r]; i < groups.offsets[r + 1]; ++i )
-            group.reset( groups.faces[i] );
+        group.reset();
     }
     return newFaces;
 }

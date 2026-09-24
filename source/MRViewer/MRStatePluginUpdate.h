@@ -43,6 +43,9 @@ protected:
     /// plugin can override it to make this helper class also react on face selections updates
     MRVIEWER_API virtual bool reactOnFaceSelectionChanges_() const { return false; }
 
+    /// plugin can override it to return false and keep open when only vertex coordinates change, closing on topology changes only
+    MRVIEWER_API virtual bool reactOnPositionChanges_() const { return true; }
+
     MRVIEWER_API virtual void onPluginEnable_() override;
     MRVIEWER_API virtual void onPluginDisable_() override;
     MRVIEWER_API virtual bool shouldClose_() const override;

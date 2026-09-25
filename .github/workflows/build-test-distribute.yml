@@ -104,29 +104,13 @@ jobs:
       nuget_build:           ${{ needs.config.outputs.build_enable_linux_vcpkg == 'true' && needs.config.outputs.upload_artifacts == 'true' }}
     secrets: inherit
 
-  ubuntu-arm64-build-test:
-    if: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
+  ubuntu-build-test:
+    if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' || needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-ubuntu.yml
     with:
-      arch:                  arm64
       app_version:           ${{ needs.config.outputs.app_version }}
-      config_matrix:         ${{ needs.config.outputs.ubuntu_arm64_config_matrix }}
-      docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
-      full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
-      internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
-      upload_artifacts:      ${{ needs.config.outputs.upload_artifacts == 'true' }}
-      upload_test_artifacts: ${{ needs.config.outputs.upload_test_artifacts == 'true' }}
-    secrets: inherit
-
-  ubuntu-x64-build-test:
-    if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
-    needs: [ config, prepare-image ]
-    uses: ./.github/workflows/build-test-ubuntu.yml
-    with:
-      arch:                  x64
-      app_version:           ${{ needs.config.outputs.app_version }}
-      config_matrix:         ${{ needs.config.outputs.ubuntu_x64_config_matrix }}
+      config_matrix:         ${{ needs.config.outputs.ubuntu_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
       full_config_build:     ${{ needs.config.outputs.full_config_build == 'true' }}
       internal_build:        ${{ needs.config.outputs.internal_build == 'true' }}
@@ -305,8 +289,7 @@ jobs:
       ${{ !cancelled()
         && needs.config.outputs.upload_artifacts == 'true'
         && needs.windows-build-test.result != 'failure'
-        && needs.ubuntu-x64-build-test.result != 'failure'
-        && needs.ubuntu-arm64-build-test.result != 'failure'
+        && needs.ubuntu-build-test.result != 'failure'
         && needs.linux-vcpkg-build-test.result != 'failure'
         && needs.emscripten-build-test.result != 'failure'
         && needs.emscripten-c-bindings-build-test.result != 'failure'
@@ -319,8 +302,7 @@ jobs:
       - windows-build-test
       - update-win-version
       - create-nuget-package
-      - ubuntu-x64-build-test
-      - ubuntu-arm64-build-test
+      - ubuntu-build-test
       - linux-vcpkg-build-test
       - emscripten-build-test
       - macos-build-test
@@ -437,7 +419,7 @@ jobs:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
     # and if this variant failed this job also will fail
     if: ${{ ( ( needs.config.outputs.upload_artifacts == 'true' && needs.config.outputs.build_enable_ubuntu_arm64 == 'true' ) || needs.config.outputs.update_doc == 'true' ) && !cancelled() }}
-    needs: [ config, ubuntu-arm64-build-test, generate-c-bindings, emscripten-build-test ]
+    needs: [ config, ubuntu-build-test, generate-c-bindings, emscripten-build-test ]
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib/dev

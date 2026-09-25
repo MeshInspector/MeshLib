@@ -3,10 +3,6 @@ name: Build and test Ubuntu
 on:
   workflow_call:
     inputs:
-      arch:
-        description: x64 or arm64
-        required: true
-        type: string
       app_version:
         required: true
         type: string
@@ -42,11 +38,11 @@ jobs:
   ubuntu-build-test:
     # the entries carry every compiler field, so spell out the ones that identify a leg;
     # the name must contain the job id for fetch_job_id.py
-    name: ubuntu-build-test (${{ inputs.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }})
+    name: ubuntu-build-test (${{ matrix.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }})
     timeout-minutes: 60
-    runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
-      image: meshlib/meshlib-${{ matrix.os }}${{ inputs.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.os }}-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
       matrix:
@@ -56,14 +52,12 @@ jobs:
       contents: read  # This is required for actions/checkout
       actions: read   # This is required for wait-for-job
     env:
-      # the suffix of the image, deb, artifact and test path names (not usable in `container`)
-      ARCH_SUFFIX: ${{ inputs.arch == 'arm64' && '-arm64' || '' }}
       # the leg that uploads PythonStubs and CsharpBindings
-      UPLOAD_BINDINGS_SOURCES: ${{ inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
+      UPLOAD_BINDINGS_SOURCES: ${{ matrix.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
 
     steps:
       - name: Display job info
-        run: echo "Building on ${{ matrix.os }} ${{ inputs.arch }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
+        run: echo "Building on ${{ matrix.os }} ${{ matrix.arch }} with ${{ matrix.compiler }} in ${{ matrix.config }} mode"
 
       - name: Checkout
         uses: actions/checkout@v7
@@ -81,7 +75,7 @@ jobs:
         uses: ./.github/actions/collect-runner-stats
         with:
           target_os: ${{ matrix.os }}
-          target_arch: ${{ inputs.arch }}
+          target_arch: ${{ matrix.arch }}
           cxx_compiler: ${{ matrix.cxx-compiler }}
           build_config: ${{ matrix.config }}
           aws_instance_type: ${{ env.AWS_INSTANCE_TYPE }}
@@ -107,7 +101,7 @@ jobs:
         with:
           # The Dockerfile hash in extra-cache-key busts the cache whenever the
           # toolchain inside the image changes (e.g. glibc, clang upgrade).
-          cache-key-prefix: ubuntu-${{ inputs.arch }}-${{ matrix.os }}
+          cache-key-prefix: ubuntu-${{ matrix.arch }}-${{ matrix.os }}
           build-script: scripts/mrbind/install_mrbind_ubuntu.sh
           extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version.txt', format('docker/{0}Dockerfile', matrix.os)) }}
 
@@ -260,7 +254,7 @@ jobs:
           build_config: ${{ matrix.config }}
           pytest_args: ${{ env.RUN_CUDA_ARG }}
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
-          test_artifacts_path: ${{ matrix.os }}${{ env.ARCH_SUFFIX }}/${{ matrix.config }}/${{ matrix.compiler }}
+          test_artifacts_path: ${{ matrix.os }}-${{ matrix.arch }}/${{ matrix.config }}/${{ matrix.compiler }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Generate Test Performance Report
@@ -276,15 +270,15 @@ jobs:
           MESHLIB_BUILD_DEBUG: "OFF"
         run: |
           ./scripts/distribution.sh ${{inputs.app_version}}
-          mv ./distr/meshlib-dev.deb meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb
+          mv ./distr/meshlib-dev.deb meshlib_${{ matrix.os }}-${{ matrix.arch }}-dev.deb
 
       - name: Extract Deb
         if: ${{ matrix.build_distribution == 'ON' }}
-        run: dpkg --extract meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb $(pwd)/meshlib_install/
+        run: dpkg --extract meshlib_${{ matrix.os }}-${{ matrix.arch }}-dev.deb $(pwd)/meshlib_install/
 
       - name: Check Deb Symlinks
         if: ${{ matrix.build_distribution == 'ON' }}
-        run: ./scripts/devops/check_deb_libs.sh meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb /usr/local/lib/MeshLib/lib
+        run: ./scripts/devops/check_deb_libs.sh meshlib_${{ matrix.os }}-${{ matrix.arch }}-dev.deb /usr/local/lib/MeshLib/lib
 
       - name: Build C++ examples and samples
         if: ${{ matrix.build_distribution == 'ON' }}
@@ -322,8 +316,8 @@ jobs:
         if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' }}
         uses: actions/upload-artifact@v7
         with:
-          name: Distributives_${{ matrix.os }}${{ env.ARCH_SUFFIX }}
-          path: meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb
+          name: Distributives_${{ matrix.os }}-${{ matrix.arch }}
+          path: meshlib_${{ matrix.os }}-${{ matrix.arch }}-dev.deb
           retention-days: 1
 
       - name: Collect artifact stats
@@ -337,5 +331,5 @@ jobs:
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb
+          artifact_glob: meshlib_${{ matrix.os }}-${{ matrix.arch }}-dev.deb
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}

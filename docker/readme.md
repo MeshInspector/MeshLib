@@ -11,5 +11,5 @@ $ ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
 
 Build an image locally:
 ```
-$ docker build -f ./docker/ubuntu24Dockerfile -t meshlib/meshlib-ubuntu24 .
+$ docker build -f ./docker/ubuntu24Dockerfile -t meshlib/meshlib-ubuntu24-x64 .
 ```

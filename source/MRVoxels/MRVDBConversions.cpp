@@ -47,9 +47,8 @@ void convertToVDMMesh( const MeshPart& mp, const AffineXf3f& xf, const Vector3f&
     }
 }
 
-template<typename GridType>
 Expected<TriMesh> gridToTriMesh(
-    const GridType& grid,
+    const openvdb::FloatGrid& grid,
     const GridToMeshSettings & settings )
 {
     MR_TIMER;
@@ -57,21 +56,22 @@ Expected<TriMesh> gridToTriMesh(
     if ( !reportProgress( settings.cb, 0.0f ) )
         return unexpectedOperationCanceled();
 
-    openvdb::tools::VolumeToMesh mesher( settings.isoValue, settings.adaptivity, settings.relaxDisorientedTriangles );
-    mesher(grid);
+    std::vector<openvdb::Vec3s> inPts;
+    std::vector<openvdb::Vec3I> tris;
+    std::vector<openvdb::Vec4I> quads;
+    openvdb::tools::volumeToMesh( grid, inPts, tris, quads, settings.isoValue, settings.adaptivity, settings.relaxDisorientedTriangles );
 
     if ( !reportProgress( settings.cb, 0.7f ) )
         return unexpectedOperationCanceled();
 
-    if ( mesher.pointListSize() > settings.maxVertices )
+    if ( inPts.size() > settings.maxVertices )
         return unexpected( "Vertices number limit exceeded." );
 
     // Preallocate the point list
     TriMesh res;
-    res.points.resize( mesher.pointListSize() );
+    res.points.resize( inPts.size() );
 
     // Copy points
-    auto & inPts = mesher.pointList();
     ParallelFor( res.points, [&]( size_t i )
     {
         auto inPt = inPts[i];
@@ -80,22 +80,12 @@ Expected<TriMesh> gridToTriMesh(
             inPt.y() * settings.voxelSize.y,
             inPt.z() * settings.voxelSize.z };
     } );
-    inPts.reset(nullptr);
+    inPts = {};
 
     if ( !reportProgress( settings.cb, 0.8f ) )
         return unexpectedOperationCanceled();
 
-    auto& polygonPoolList = mesher.polygonPoolList();
-
-    // Preallocate primitive lists
-    size_t numQuads = 0, numTriangles = 0;
-    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n) {
-        openvdb::tools::PolygonPool& polygons = polygonPoolList[n];
-        numTriangles += polygons.numTriangles();
-        numQuads += polygons.numQuads();
-    }
-
-    const size_t tNum = numTriangles + 2 * numQuads;
+    const size_t tNum = tris.size() + 2 * quads.size();
 
     if ( tNum > settings.maxFaces )
         return unexpected( "Triangles number limit exceeded." );
@@ -103,43 +93,34 @@ Expected<TriMesh> gridToTriMesh(
     res.tris.reserve( tNum );
 
     // Copy primitives
-    for (size_t n = 0, N = mesher.polygonPoolListSize(); n < N; ++n)
+    for ( const auto & quad : quads )
     {
-        openvdb::tools::PolygonPool& polygons = polygonPoolList[n];
-
-        for ( size_t i = 0, I = polygons.numQuads(); i < I; ++i )
+        ThreeVertIds newTri
         {
-            auto quad = polygons.quad(i);
+            VertId( ( int )quad[2] ),
+            VertId( ( int )quad[1] ),
+            VertId( ( int )quad[0] ),
+        };
+        res.tris.push_back( newTri );
 
-            ThreeVertIds newTri
-            {
-                VertId( ( int )quad[2] ),
-                VertId( ( int )quad[1] ),
-                VertId( ( int )quad[0] ),
-            };
-            res.tris.push_back( newTri );
-
-            newTri =
-            {
-                VertId( ( int )quad[0] ),
-                VertId( ( int )quad[3] ),
-                VertId( ( int )quad[2] ),
-            };
-            res.tris.push_back( newTri );
-        }
-
-        for ( size_t i = 0, I = polygons.numTriangles(); i < I; ++i )
+        newTri =
         {
-            auto tri = polygons.triangle(i);
+            VertId( ( int )quad[0] ),
+            VertId( ( int )quad[3] ),
+            VertId( ( int )quad[2] ),
+        };
+        res.tris.push_back( newTri );
+    }
 
-            ThreeVertIds newTri
-            {
-                VertId( ( int )tri[2] ),
-                VertId( ( int )tri[1] ),
-                VertId( ( int )tri[0] )
-            };
-            res.tris.push_back( newTri );
-        }
+    for ( const auto & tri : tris )
+    {
+        ThreeVertIds newTri
+        {
+            VertId( ( int )tri[2] ),
+            VertId( ( int )tri[1] ),
+            VertId( ( int )tri[0] )
+        };
+        res.tris.push_back( newTri );
     }
 
     if ( !reportProgress( settings.cb, 1.0f ) )
@@ -644,7 +625,7 @@ Expected<Mesh> doubleOffsetVdb( const MeshPart& mp, const DoubleOffsetSettings &
     std::vector<openvdb::Vec4I> quads;
     {
         Timer t( "volumeToMesh" );
-        openvdb::tools::volumeToMesh( *grid, points, tris, quads, offsetInVoxelsA, settings.adaptivity );
+        openvdb::tools::volumeToMesh( ovdb( *grid ), points, tris, quads, offsetInVoxelsA, settings.adaptivity );
     }
 
     if ( !reportProgress( settings.progress, 0.5f ) )

@@ -107,8 +107,9 @@ jobs:
   ubuntu-arm64-build-test:
     if: ${{ needs.config.outputs.build_enable_ubuntu_arm64 == 'true' }}
     needs: [ config, prepare-image ]
-    uses: ./.github/workflows/build-test-ubuntu-arm64.yml
+    uses: ./.github/workflows/build-test-ubuntu.yml
     with:
+      arch:                  arm64
       app_version:           ${{ needs.config.outputs.app_version }}
       config_matrix:         ${{ needs.config.outputs.ubuntu_arm64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}
@@ -121,8 +122,9 @@ jobs:
   ubuntu-x64-build-test:
     if: ${{ needs.config.outputs.build_enable_ubuntu_x64 == 'true' }}
     needs: [ config, prepare-image ]
-    uses: ./.github/workflows/build-test-ubuntu-x64.yml
+    uses: ./.github/workflows/build-test-ubuntu.yml
     with:
+      arch:                  x64
       app_version:           ${{ needs.config.outputs.app_version }}
       config_matrix:         ${{ needs.config.outputs.ubuntu_x64_config_matrix }}
       docker_image_tag:      ${{ needs.config.outputs.docker_image_tag }}

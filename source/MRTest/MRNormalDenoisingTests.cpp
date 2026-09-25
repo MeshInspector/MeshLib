@@ -106,6 +106,30 @@ TEST( MRMesh, MeshDenoiseWithCreasesTopologyAndPoints )
     EXPECT_EQ( maxDiff, 0 );
 }
 
+TEST( MRMesh, MeshDenoiseWithCreasesRegion )
+{
+    const Mesh noisy = noisySphere();
+
+    VertBitSet region( noisy.topology.vertSize() );
+    for ( auto v : noisy.topology.getValidVerts() )
+        if ( noisy.points[v].z > 0 )
+            region.set( v );
+
+    Mesh mesh = noisy;
+    DenoiseWithCreasesSettings settings;
+    settings.region = &region;
+    meshDenoiseWithCreases( mesh, {}, settings );
+
+    float maxShiftIn = 0, maxShiftOut = 0;
+    for ( auto v : noisy.topology.getValidVerts() )
+    {
+        auto & maxShift = region.test( v ) ? maxShiftIn : maxShiftOut;
+        maxShift = std::max( maxShift, ( mesh.points[v] - noisy.points[v] ).length() );
+    }
+    EXPECT_GT( maxShiftIn, 1e-3f );
+    EXPECT_EQ( maxShiftOut, 0 );
+}
+
 TEST( MRMesh, MeshDenoiseWithCreasesProgress )
 {
     const Mesh noisy = noisySphere();

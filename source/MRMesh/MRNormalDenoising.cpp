@@ -304,12 +304,20 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
     NormalsToPoints n2p;
     n2p.prepare( topology, settings.guideWeight );
 
+    VertBitSet fixedVerts;
+    if ( settings.region )
+        fixedVerts = topology.getValidVerts() - *settings.region;
+
     auto sp = subprogress( cb, 0.5f, 1.0f );
     for ( int i = 0; i < settings.pointIters; ++i )
     {
         if ( !reportProgress( sp, float( i ) / settings.pointIters ) )
             return unexpectedOperationCanceled();
         n2p.run( guide, fnormals, points );
+        BitSetParallelFor( fixedVerts, [&]( VertId v )
+        {
+            points[v] = guide[v];
+        } );
     }
 
     reportProgress( cb, 1.0f );

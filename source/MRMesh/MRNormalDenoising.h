@@ -78,6 +78,9 @@ struct DenoiseWithCreasesSettings
 
     /// the number of iterations to update vertex coordinates from found normals; the more the better quality, but longer computation
     int pointIters = 20;
+
+    /// region to denoise, the vertices outside it keep their positions
+    const VertBitSet *region = nullptr;
 };
 
 /// Reduces noise in given mesh, keeping the edges from (creases) sharp,

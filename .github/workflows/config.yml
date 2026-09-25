@@ -128,12 +128,21 @@ jobs:
         id: live-labels
         env:
           GH_TOKEN: ${{ github.token }}
+          DISPATCH_LABELS: ${{ github.event.inputs.labels }}
+          DISPATCH_UBUNTU_ARCH: ${{ github.event.inputs.ubuntu_arch }}
         run: |
           read_labels() {
             if [ "${{ github.event_name }}" = "pull_request" ]; then
               gh pr view ${{ github.event.pull_request.number }} \
                 --repo "${{ github.repository }}" \
                 --json labels --jq '.labels[].name'
+            elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              # a manual run takes its labels from the dispatch inputs
+              tr -s ' ,' '\n' <<< "${DISPATCH_LABELS}" | sed '/^$/d'
+              case "${DISPATCH_UBUNTU_ARCH}" in
+                x64)   echo disable-build-ubuntu-arm64 ;;
+                arm64) echo disable-build-ubuntu-x64 ;;
+              esac
             fi
           }
 

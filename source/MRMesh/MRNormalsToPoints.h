@@ -14,7 +14,8 @@ public:
     /// builds linear system and prepares a solver for it;
     /// please call it only once for mesh, and then run as many times as you like
     /// \param guideWeight how much resulting points must be attracted to initial points, must be > 0
-    MRMESH_API void prepare( const MeshTopology & topology, float guideWeight = 1 );
+    /// \param region if given, then only these vertices are moved by run(), and all other vertices are fixed
+    MRMESH_API void prepare( const MeshTopology & topology, float guideWeight = 1, const VertBitSet * region = nullptr );
 
     /// performs one iteration consisting of projection of all triangles on planes with given normals and finding best points from them
     /// \param guide target vertex positions to avoid under-determined system
@@ -29,7 +30,7 @@ public:
     {
     public:
         virtual ~ISolver() = default;
-        virtual void prepare( const MeshTopology & topology, float guideWeight ) = 0;
+        virtual void prepare( const MeshTopology & topology, float guideWeight, const VertBitSet * region ) = 0;
         virtual void run( const VertCoords & guide, const FaceNormals & normals, VertCoords & points, float maxInitialDistSq ) = 0;
     };
 private:

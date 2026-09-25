@@ -12,9 +12,10 @@ namespace MR
 /// \param normals input noisy normals and output smooth normals
 /// \param v edge indicator function (1 - smooth edge, 0 - crease edge)
 /// \param gamma the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
+/// \param region if given, then only the normals of these faces are changed, and the normals of other faces act as fixed boundary conditions
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework", equation (19)
-MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma );
-MRMESH_API void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma );
+MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region = nullptr );
+MRMESH_API void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region = nullptr );
 
 /// Compute edge indicator function (1 - smooth edge, 0 - crease edge) by solving large system of linear equations
 /// \param mesh contains topology information and coordinates for equation weights
@@ -78,6 +79,9 @@ struct DenoiseWithCreasesSettings
 
     /// the number of iterations to update vertex coordinates from found normals; the more the better quality, but longer computation
     int pointIters = 20;
+
+    /// if given, then only the normals of these faces are denoised, and only the vertices with all incident faces in the region are moved
+    const FaceBitSet *region = nullptr;
 };
 
 /// Reduces noise in given mesh, keeping the edges from (creases) sharp,

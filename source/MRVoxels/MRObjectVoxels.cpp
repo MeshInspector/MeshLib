@@ -1,10 +1,8 @@
 #include "MRObjectVoxels.h"
 #include "MRVDBConversions.h"
-#include "MRVDBFloatGrid.h"
 #include "MRFloatGrid.h"
 #include "MRVoxelsSave.h"
 #include "MRVoxelsLoad.h"
-#include "MROpenVDBHelper.h"
 
 #include "MRMesh/MRObjectFactory.h"
 #include "MRMesh/MRMesh.h"
@@ -15,7 +13,6 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRDirectory.h"
-#include "MRPch/MRTBB.h"
 #include "MRPch/MRJson.h"
 #include "MRPch/MRAsyncLaunchType.h"
 #include "MRPch/MRFmt.h"
@@ -50,7 +47,7 @@ void ObjectVoxels::construct( const SimpleVolume& simpleVolume, const std::optio
     reverseVoxelSize_ = { 1 / vdbVolume_.voxelSize.x,1 / vdbVolume_.voxelSize.y,1 / vdbVolume_.voxelSize.z };
 
     if ( normalPlusGrad )
-        vdbVolume_.data->setGridClass( openvdb::GRID_LEVEL_SET );
+        setGridClass( vdbVolume_.data, FloatGridClass::LevelSet );
 
     volumeRenderActiveVoxels_.clear();
 
@@ -74,7 +71,7 @@ void ObjectVoxels::construct( const FloatGrid& grid, const Vector3f& voxelSize, 
     activeVoxels_.reset();
     activeBounds_.reset();
     vdbVolume_.data = grid;
-    vdbVolume_.dims = fromVdb( vdbVolume_.data->evalActiveVoxelDim() );
+    vdbVolume_.dims = findActiveDims( vdbVolume_.data );
     indexer_ = VolumeIndexer( vdbVolume_.dims );
     vdbVolume_.voxelSize = voxelSize;
     if ( minmax )
@@ -217,7 +214,7 @@ Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( const VdbVo
             vparams.maxVertices = maxSurfaceVertices_;
             vparams.cb = myCb;
             vparams.positioner = positioner_;
-            if ( vdbVolume.data->getGridClass() == openvdb::GridClass::GRID_LEVEL_SET )
+            if ( getGridClass( vdbVolume.data ) == FloatGridClass::LevelSet )
                 vparams.lessInside = true;
             meshRes = marchingCubes( vdbVolume, vparams );
         }
@@ -227,59 +224,13 @@ Expected<std::shared_ptr<Mesh>> ObjectVoxels::recalculateIsoSurface( const VdbVo
             return unexpectedOperationCanceled();
         vdbVolume.data = resampled( vdbVolume.data, 2.0f );
         vdbVolume.voxelSize *= 2.0f;
-        vdbVolume.dims = fromVdb( vdbVolume.data->evalActiveVoxelDim() );
+        vdbVolume.dims = findActiveDims( vdbVolume.data );
     }
 }
 
 
-/// @brief class to parallel reduce histogram calculation
-template<typename TreeT>
-class HistogramCalcProc
-{
-public:
-    using ValueT = typename TreeT::ValueType;
-    using TreeAccessor = openvdb::tree::ValueAccessor<const TreeT>;
-    using LeafIterT = typename TreeT::LeafCIter;
-    using TileIterT = typename TreeT::ValueAllCIter;
-
-    HistogramCalcProc( float min, float max ) :
-        hist( min, max, cVoxelsHistogramBinsNumber )
-    {}
-
-    HistogramCalcProc( const HistogramCalcProc& other ) :
-        hist( Histogram( other.hist.getMin(), other.hist.getMax(), cVoxelsHistogramBinsNumber ) )
-    {}
-
-    void action( const LeafIterT&, const TreeAccessor& treeAcc, const openvdb::math::CoordBBox& bbox )
-    {
-        for ( auto it = bbox.begin(); it != bbox.end(); ++it )
-        {
-            ValueT value = ValueT();
-            if ( treeAcc.probeValue( *it, value ) )
-                hist.addSample( value );
-        }
-    }
-
-    void action( const TileIterT& iter, const TreeAccessor&, const openvdb::math::CoordBBox& bbox )
-    {
-        ValueT value = iter.getValue();
-        const size_t count = size_t( bbox.volume() );
-        hist.addSample( value, count );
-    }
-
-    void join( const HistogramCalcProc& other )
-    {
-        hist.addHistogram( other.hist );
-    }
-
-    Histogram hist;
-};
-
-
 Histogram ObjectVoxels::recalculateHistogram( std::optional<Vector2f> minmax, ProgressCallback cb ) const
 {
-    RangeSize size = calculateRangeSize( *vdbVolume_.data );
-
     float min, max;
     if ( minmax )
     {
@@ -291,30 +242,7 @@ Histogram ObjectVoxels::recalculateHistogram( std::optional<Vector2f> minmax, Pr
         evalGridMinMax( vdbVolume_.data, min, max );
     }
 
-    using HistogramCalcProcFT = HistogramCalcProc<openvdb::FloatTree>;
-    HistogramCalcProcFT histCalcProc( min, max );
-    using HistRangeProcessorOne = RangeProcessorSingle<openvdb::FloatTree, HistogramCalcProcFT>;
-    HistRangeProcessorOne calc( vdbVolume_.data->evalActiveVoxelBoundingBox(), vdbVolume_.data->tree(), histCalcProc );
-
-    if ( size.tile > 0 )
-    {
-        typename HistRangeProcessorOne::TileIterT tileIterMain = vdbVolume_.data->tree().cbeginValueAll();
-        tileIterMain.setMaxDepth( tileIterMain.getLeafDepth() - 1 ); // skip leaf nodes
-        typename HistRangeProcessorOne::TileRange tileRangeMain( tileIterMain );
-        auto sb = size.leaf > 0 ? subprogress( cb, 0.0f, 0.5f ) : cb;
-        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.tile, RangeProgress::Mode::Tiles ) );
-        tbb::parallel_reduce( tileRangeMain, calc );
-    }
-
-    if ( size.leaf > 0 )
-    {
-        typename HistRangeProcessorOne::LeafRange leafRangeMain( vdbVolume_.data->tree().cbeginLeaf() );
-        auto sb = size.tile > 0 ? subprogress( cb, 0.5f, 1.0f ) : cb;
-        calc.setProgressHolder( std::make_shared<RangeProgress>( sb, size.leaf, RangeProgress::Mode::Leaves ) );
-        tbb::parallel_reduce( leafRangeMain, calc );
-    }
-
-    return calc.mProc.hist;
+    return calculateHistogram( vdbVolume_.data, min, max, cVoxelsHistogramBinsNumber, cb );
 }
 
 void ObjectVoxels::setDualMarchingCubes( bool on, bool updateSurface, ProgressCallback cb )
@@ -343,32 +271,7 @@ void ObjectVoxels::setActiveBounds( const Box3i& activeBox, ProgressCallback cb,
         cbModifier = 1.0f / 2.0f;
     float lastProgress = 0.0f;
 
-    openvdb::CoordBBox activeVdbBox;
-    activeVdbBox.min() = openvdb::Coord( activeBox.min.x, activeBox.min.y, activeBox.min.z );
-    activeVdbBox.max() = openvdb::Coord( activeBox.max.x - 1, activeBox.max.y - 1, activeBox.max.z - 1 );
-
-    // create active mask tree
-    openvdb::TopologyTree topologyTree;
-
-    reportProgress( cb, cbModifier * 0.25f );
-
-    // update topology tree with new active box
-    topologyTree.sparseFill( activeVdbBox, true );
-
-    reportProgress( cb, cbModifier * 0.5f );
-
-    // deactivate all of current grid
-    openvdb::tools::foreach( vdbVolume_.data->tree().beginValueOn(), [] ( const openvdb::FloatTree::ValueOnIter& iter )
-    {
-        iter.setActiveState( false );
-    }, false ); // looks like this operation is not safe to do in threaded mode
-
-    reportProgress( cb, cbModifier * 0.75f );
-
-    // copy valid topology to our tree part
-    vdbVolume_.data->tree().topologyUnion( topologyTree );
-
-    reportProgress( cb, cbModifier );
+    MR::setActiveBounds( vdbVolume_.data, activeBox, subprogress( cb, 0.0f, cbModifier ) );
 
     // not safe to call from progress bar thread
     if ( !cb ) // we assume that cb presence indicates thread: if cb is set then it is progress bar thread, otherwise it is UI thread
@@ -407,9 +310,9 @@ const Box3i& ObjectVoxels::getActiveBounds() const
 {
     if ( !activeBounds_ )
     {
-        auto activeBox = vdbVolume_.data->evalActiveVoxelBoundingBox();
-        auto min = fromVdb( activeBox.min() );
-        auto max = fromVdb( activeBox.max() ) + Vector3i::diagonal( 1 );
+        auto activeBox = findActiveBounds( vdbVolume_.data );
+        auto min = activeBox.min;
+        auto max = activeBox.max;
         for ( int i = 0; i < 3; ++i )
         {
             // we should clamp values, because actual active box may lay outside of [0,dims), that we do not count in algorithms
@@ -542,7 +445,7 @@ void ObjectVoxels::setDirtyFlags( uint32_t mask, bool invalidateCaches )
 size_t ObjectVoxels::activeVoxels() const
 {
     if ( !activeVoxels_ )
-        activeVoxels_ = vdbVolume_.data ? vdbVolume_.data->activeVoxelCount() : 0;
+        activeVoxels_ = activeVoxelCount( vdbVolume_.data );
     return *activeVoxels_;
 }
 
@@ -710,17 +613,17 @@ Expected<void> ObjectVoxels::deserializeModel_( const std::filesystem::path& pat
     return {};
 }
 
-[[nodiscard]] static const char * asString( openvdb::GridClass gc )
+[[nodiscard]] static const char * asString( FloatGridClass gc )
 {
     switch ( gc )
     {
-    case openvdb::GRID_UNKNOWN:
+    case FloatGridClass::Unknown:
         return "Unknown";
-    case openvdb::GRID_LEVEL_SET:
+    case FloatGridClass::LevelSet:
         return "Level Set";
-    case openvdb::GRID_FOG_VOLUME:
+    case FloatGridClass::FogVolume:
         return "Fog Volume";
-    case openvdb::GRID_STAGGERED:
+    case FloatGridClass::Staggered:
         return "Staggered";
     default:
         assert( false );
@@ -753,8 +656,8 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
         res.back() += " / " + std::to_string( activeVoxels ) + " active";
     if ( vdbVolume_.data )
     {
-        res.push_back( fmt::format( "background: {:.3}", vdbVolume_.data->background() ) );
-        res.push_back( fmt::format( "grid class: {}", asString( vdbVolume_.data->getGridClass() ) ) );
+        res.push_back( fmt::format( "background: {:.3}", background( vdbVolume_.data ) ) );
+        res.push_back( fmt::format( "grid class: {}", asString( getGridClass( vdbVolume_.data ) ) ) );
     }
 
     return res;

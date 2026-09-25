@@ -19,6 +19,8 @@
 namespace MR
 {
 
+class Histogram;
+
 /**
  * @brief Class to use in tbb::parallel_reduce for openvdb::tree transformation
  * @details similar to openvdb::RangeProcessor
@@ -166,6 +168,13 @@ private:
 };
 
 MRVOXELS_API void translateToZero( openvdb::FloatGrid & grid );
+
+/// computes histogram of grid values with given range and number of bins
+[[nodiscard]] MRVOXELS_API Histogram calculateHistogram( const openvdb::FloatGrid& grid, float min, float max, size_t binsNumber, ProgressCallback cb = {} );
+
+/// activates voxels of the grid within given box and deactivates all other voxels
+/// \note box is in grid space, max: excluding
+MRVOXELS_API void setActiveBounds( openvdb::FloatGrid& grid, const Box3i& box, ProgressCallback cb = {} );
 
 /// This class holds single progress counter for all parallel_reduce threads
 /// but report progress only in main thread

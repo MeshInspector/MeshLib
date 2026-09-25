@@ -2,12 +2,14 @@
 #include "MRVDBFloatGrid.h"
 #include "MRVDBConversions.h"
 #include "MRVDBProgressInterrupter.h"
+#include "MROpenVDBHelper.h"
 
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRHistogram.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -196,6 +198,11 @@ size_t countVoxelsWithValueGreater( const FloatGrid& grid, float value )
     } );
 }
 
+Histogram calculateHistogram( const FloatGrid& grid, float min, float max, size_t binsNumber, ProgressCallback cb )
+{
+    return calculateHistogram( ovdb( *grid ), min, max, binsNumber, cb );
+}
+
 void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb /*= {} */ )
 {
     if ( !grid )
@@ -248,6 +255,23 @@ Box3i findActiveBounds( const FloatGrid& grid )
     return fromVdbBox( grid->evalActiveVoxelBoundingBox() );
 }
 
+Vector3i findActiveDims( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return Vector3i();
+    }
+    return fromVdb( grid->evalActiveVoxelDim() );
+}
+
+void setActiveBounds( FloatGrid& grid, const Box3i& box, ProgressCallback cb )
+{
+    if ( !grid )
+        return;
+    setActiveBounds( ovdb( *grid ), box, cb );
+}
+
 void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
 {
     if ( !grid )
@@ -293,6 +317,43 @@ void setLevelSetType( FloatGrid & grid )
 {
     if ( grid )
         grid->setGridClass( openvdb::GRID_LEVEL_SET );
+}
+
+static_assert( int( FloatGridClass::Unknown ) == int( openvdb::GRID_UNKNOWN ) );
+static_assert( int( FloatGridClass::LevelSet ) == int( openvdb::GRID_LEVEL_SET ) );
+static_assert( int( FloatGridClass::FogVolume ) == int( openvdb::GRID_FOG_VOLUME ) );
+static_assert( int( FloatGridClass::Staggered ) == int( openvdb::GRID_STAGGERED ) );
+static_assert( int( FloatGridClass::Staggered ) + 1 == int( openvdb::NUM_GRID_CLASSES ) );
+
+FloatGridClass getGridClass( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return FloatGridClass::Unknown;
+    }
+    return FloatGridClass( grid->getGridClass() );
+}
+
+void setGridClass( FloatGrid& grid, FloatGridClass gridClass )
+{
+    if ( grid )
+        grid->setGridClass( openvdb::GridClass( gridClass ) );
+}
+
+float background( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return 0;
+    }
+    return grid->background();
+}
+
+size_t activeVoxelCount( const FloatGrid& grid )
+{
+    return grid ? grid->activeVoxelCount() : 0;
 }
 
 FloatGrid operator += ( FloatGrid & a, FloatGrid&& b )

@@ -8,6 +8,7 @@
       "c-compiler": "/usr/bin/clang-14",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -18,6 +19,7 @@
       "c-compiler": "/usr/bin/gcc-12",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -28,6 +30,7 @@
       "c-compiler": "/usr/bin/clang-14",
       "cxx-standard": 20,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -38,6 +41,7 @@
       "c-compiler": "/usr/bin/gcc-12",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "ON",
       "upload_release": "ON"
     },
     {
@@ -48,6 +52,7 @@
       "c-compiler": "clang",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -58,6 +63,7 @@
       "c-compiler": "clang",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -68,6 +74,7 @@
       "c-compiler": "/usr/bin/gcc-13",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "ON",
       "upload_release": "ON"
     },
     {
@@ -78,6 +85,7 @@
       "c-compiler": "/usr/bin/gcc-13",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -88,6 +96,7 @@
       "c-compiler": "clang",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -98,6 +107,7 @@
       "c-compiler": "clang",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -108,6 +118,7 @@
       "c-compiler": "/usr/bin/gcc-15",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "ON",
       "upload_release": "ON"
     },
     {
@@ -118,6 +129,7 @@
       "c-compiler": "/usr/bin/gcc-15",
       "cxx-standard": 23,
       "build_mrcuda": "ON",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     },
     {
@@ -128,6 +140,7 @@
       "c-compiler": "/usr/bin/gcc-16",
       "cxx-standard": 23,
       "build_mrcuda": "OFF",
+      "build_distribution": "ON",
       "upload_release": "OFF"
     },
     {
@@ -138,6 +151,7 @@
       "c-compiler": "/usr/bin/gcc-16",
       "cxx-standard": 23,
       "build_mrcuda": "OFF",
+      "build_distribution": "OFF",
       "upload_release": "OFF"
     }
   ]

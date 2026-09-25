@@ -42,7 +42,7 @@ jobs:
   ubuntu-build-test:
     # the entries carry every compiler field, so spell out the ones that identify a leg;
     # the name must contain the job id for fetch_job_id.py
-    name: ubuntu-build-test (${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }})
+    name: ubuntu-build-test (${{ inputs.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }})
     timeout-minutes: 60
     runs-on: ${{ inputs.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
@@ -56,10 +56,10 @@ jobs:
       contents: read  # This is required for actions/checkout
       actions: read   # This is required for wait-for-job
     env:
-      BUILD_MRCUDA: ${{ matrix.build_mrcuda || 'ON' }}
-      # arm64 has no GCC leg on ubuntu22, so there its Clang leg makes the deb
-      CREATE_DEB: ${{ matrix.config == 'Release' && ( matrix.compiler == 'GCC' || inputs.arch == 'arm64' ) }}
-      DEB_NAME: meshlib_${{ matrix.os }}${{ inputs.arch == 'arm64' && '-arm64' || '' }}-dev.deb
+      # the suffix of the image, deb, artifact and test path names (not usable in `container`)
+      ARCH_SUFFIX: ${{ inputs.arch == 'arm64' && '-arm64' || '' }}
+      # the leg that uploads PythonStubs and CsharpBindings
+      UPLOAD_BINDINGS_SOURCES: ${{ inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
 
     steps:
       - name: Display job info
@@ -133,7 +133,7 @@ jobs:
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
-            -DMESHLIB_BUILD_MRCUDA=${{ env.BUILD_MRCUDA }}
+            -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
@@ -155,6 +155,8 @@ jobs:
       - name: Prepare C bindings folders
         if: ${{ inputs.mrbind_c }}
         shell: bash
+        env:
+          BUILD_MRCUDA: ${{ matrix.build_mrcuda }}
         run: |
           rm -rf source/MeshLibC2
           mv MeshLib/CbindingsTmp/MeshLibC2 source
@@ -177,11 +179,11 @@ jobs:
         run: find ./build/${{ matrix.config }} -name 'cmake_pch.hxx.gch' -exec ls -lh {} +
 
       - name: Generate C# bindings # generate only sources
-        if: ${{ inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
-        if: ${{ inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: CsharpBindings
@@ -195,21 +197,26 @@ jobs:
         if: ${{ inputs.mrbind }}
         env:
           CXX: ${{ matrix.cxx-compiler }}
-          ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [env.BUILD_MRCUDA] }}
+          ENABLE_CUDA: ${{ fromJSON('{"ON":1, "OFF":0}') [matrix.build_mrcuda] }}
           # `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on libstdc++-12 (a `<filesystem>`
           # internal homed into the PCH object but never emitted, surfaces at import time). Disable on ubuntu22.
           PCH_CODEGEN: ${{ matrix.os == 'ubuntu22' && '0' || '1' }}
+        shell: bash
+        run: |
           # The bindings always compile with clang++, which takes the newest GCC in the image - 16 on
           # ubuntu26 - while the deb is built with GCC 15. Pin clang to that same 15.
-          CLANG_GCC_PIN: ${{ matrix.os == 'ubuntu26' && format('--gcc-install-dir=/usr/lib/gcc/{0}-linux-gnu/15', inputs.arch == 'arm64' && 'aarch64' || 'x86_64') || '' }}
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${{env.ENABLE_CUDA}} PCH_CODEGEN=${{env.PCH_CODEGEN}} EXTRA_CFLAGS="${{env.CLANG_GCC_PIN}}" EXTRA_LDFLAGS="${{env.CLANG_GCC_PIN}}"
+          CLANG_GCC_PIN=
+          if [[ "${{ matrix.os }}" == ubuntu26 ]]; then
+            CLANG_GCC_PIN="--gcc-install-dir=/usr/lib/gcc/$(gcc-15 -dumpmachine)/15"
+          fi
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} PCH_CODEGEN=${PCH_CODEGEN} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
 
       - name: Create Python Stubs
-        if: ${{ inputs.mrbind && inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        if: ${{ inputs.mrbind && env.UPLOAD_BINDINGS_SOURCES == 'true' }}
         run: python3 ./scripts/wheel/create_stubs.py
 
       - name: Upload Python Stubs
-        if: ${{ inputs.mrbind && inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'clang' }}
+        if: ${{ inputs.mrbind && env.UPLOAD_BINDINGS_SOURCES == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: PythonStubs
@@ -246,12 +253,14 @@ jobs:
 
       - name: Python Regression Tests
         if: ${{ inputs.internal_build && inputs.mrbind }}
+        env:
+          RUN_CUDA_ARG: "--run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
         uses: ./.github/actions/python-regression-tests
         with:
           build_config: ${{ matrix.config }}
-          pytest_args: "--run-cuda=negative --junit-xml=../unit_tests_report_regression.xml"
+          pytest_args: ${{ env.RUN_CUDA_ARG }}
           smoke: ${{ !inputs.full_config_build && matrix.config == 'Debug' }}
-          test_artifacts_path: ${{ inputs.arch == 'arm64' && 'ubuntu_arm64/' || '' }}${{ matrix.os }}/${{ matrix.config }}/${{ matrix.compiler }}
+          test_artifacts_path: ${{ matrix.os }}${{ env.ARCH_SUFFIX }}/${{ matrix.config }}/${{ matrix.compiler }}
           upload_test_artifacts: ${{ inputs.upload_test_artifacts }}
 
       - name: Generate Test Performance Report
@@ -261,24 +270,24 @@ jobs:
           cat unit_tests_report.csv
 
       - name: Create Deb
-        if: ${{ env.CREATE_DEB == 'true' }}
+        if: ${{ matrix.build_distribution == 'ON' }}
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
         run: |
           ./scripts/distribution.sh ${{inputs.app_version}}
-          mv ./distr/meshlib-dev.deb ${{ env.DEB_NAME }}
+          mv ./distr/meshlib-dev.deb meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb
 
       - name: Extract Deb
-        if: ${{ env.CREATE_DEB == 'true' }}
-        run: dpkg --extract ${{ env.DEB_NAME }} $(pwd)/meshlib_install/
+        if: ${{ matrix.build_distribution == 'ON' }}
+        run: dpkg --extract meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb $(pwd)/meshlib_install/
 
       - name: Check Deb Symlinks
-        if: ${{ env.CREATE_DEB == 'true' }}
-        run: ./scripts/devops/check_deb_libs.sh ${{ env.DEB_NAME }} /usr/local/lib/MeshLib/lib
+        if: ${{ matrix.build_distribution == 'ON' }}
+        run: ./scripts/devops/check_deb_libs.sh meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb /usr/local/lib/MeshLib/lib
 
       - name: Build C++ examples and samples
-        if: ${{ env.CREATE_DEB == 'true' }}
+        if: ${{ matrix.build_distribution == 'ON' }}
         run: |
           cmake \
             -S examples/cpp-examples \
@@ -298,7 +307,7 @@ jobs:
             --parallel $(nproc)
 
       - name: Build C examples
-        if: ${{ env.CREATE_DEB == 'true' }}
+        if: ${{ matrix.build_distribution == 'ON' }}
         run: |
           cmake \
             -S examples/c-examples \
@@ -310,24 +319,23 @@ jobs:
             --parallel $(nproc)
 
       - name: Upload Ubuntu Developer Distribution
-        if: ${{ inputs.upload_artifacts && matrix.upload_release != 'OFF' && env.CREATE_DEB == 'true' }}
+        if: ${{ inputs.upload_artifacts && matrix.upload_release == 'ON' }}
         uses: actions/upload-artifact@v7
         with:
-          name: Distributives_${{ matrix.os }}${{ inputs.arch == 'arm64' && '_arm64' || '-x86' }}
-          path: ${{ env.DEB_NAME }}
+          name: Distributives_${{ matrix.os }}${{ env.ARCH_SUFFIX }}
+          path: meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb
           retention-days: 1
 
       - name: Collect artifact stats
         # Mirror `Upload Ubuntu Developer Distribution`'s gate -- otherwise
-        # matrix entries that don't produce a .deb (Debug, x64 Clang, or
-        # `upload_release == 'OFF'`) invoke this step with no matching file
-        # and the action fails (with `continue-on-error: true` the job still
-        # succeeds, but a confusing `failure`-level annotation is surfaced
-        # on the run summary).
-        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.upload_release != 'OFF' && env.CREATE_DEB == 'true' }}
+        # matrix entries that don't upload a .deb invoke this step with no
+        # matching file and the action fails (with `continue-on-error: true`
+        # the job still succeeds, but a confusing `failure`-level annotation
+        # is surfaced on the run summary).
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.upload_release == 'ON' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
           artifact_path: ${{ github.workspace }}
-          artifact_glob: ${{ env.DEB_NAME }}
+          artifact_glob: meshlib_${{ matrix.os }}${{ env.ARCH_SUFFIX }}-dev.deb
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}

@@ -19,6 +19,7 @@ while read -r f; do
 done < <(find "$LIB_DIR" -type f -name '*.so*')
 
 if [ -n "$BAD" ]; then
-  echo "Bad libraries in the package:$BAD"
+  echo "Bad libraries in the package:"
+  echo "$BAD" | sed '/^$/d' | sort -u
   exit 1
 fi

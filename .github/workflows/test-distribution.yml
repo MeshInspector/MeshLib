@@ -46,10 +46,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
-      # passthrough gh and the host's CA bundle (the bare image has none) to avoid installing them into each container
+      # passthrough gh to avoid installing it into each container
       volumes:
         - /usr/bin/gh:/usr/local/bin/gh:ro
-        - /etc/ssl/certs/ca-certificates.crt:/host-ca-certificates.crt:ro
     strategy:
       fail-fast: false
       matrix:
@@ -80,10 +79,12 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Install CA certificates
+        run: apt-get update && apt-get install -y ca-certificates
+
       - name: Download Ubuntu x86-64 Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
-          SSL_CERT_FILE: /host-ca-certificates.crt
         run: |
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
@@ -137,10 +138,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: ${{ matrix.os }}
-      # passthrough gh and the host's CA bundle (the bare image has none) to avoid installing them into each container
+      # passthrough gh to avoid installing it into each container
       volumes:
         - /usr/bin/gh:/usr/local/bin/gh:ro
-        - /etc/ssl/certs/ca-certificates.crt:/host-ca-certificates.crt:ro
     strategy:
       fail-fast: false
       matrix:
@@ -171,18 +171,21 @@ jobs:
         with:
           ref: ${{needs.setup.outputs.version_tag}}
 
+      - name: Install CA certificates
+        run: |
+          # official Ubuntu ARM repo might be very slow
+          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list.d/ubuntu.sources || true
+          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list || true
+          apt-get update && apt-get install -y ca-certificates
+
       - name: Download Ubuntu arm64 Release
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
-          SSL_CERT_FILE: /host-ca-certificates.crt
         run: |
           gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu arm64 Release
         run: |
-          # official Ubuntu ARM repo might be very slow
-          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list.d/ubuntu.sources || true
-          sed -i 's http://ports.ubuntu.com/ubuntu-ports/ http://mirror.eu.ossplanet.net/ubuntu-ports/ ' /etc/apt/sources.list || true
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
             apt-get -y install libstdc++-${{matrix.stdcxx-version}}-dev && \

@@ -19,8 +19,8 @@ jobs:
       fail-fast: false
     env:
       CONFIG: Release
-      CXX-COMPILER: /usr/bin/clang++-14
-      CXX-STANDARD: 20
+      CXX-COMPILER: /usr/bin/g++-12
+      CXX-STANDARD: 23
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout

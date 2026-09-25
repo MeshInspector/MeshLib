@@ -56,10 +56,10 @@ jobs:
         include:
           - os: "ubuntu:22.04"
             name: "ubuntu22"
-            compiler: clang-14
-            c-compiler: /usr/bin/clang-14
-            cxx-compiler: /usr/bin/clang++-14
-            stdcxx-version: 10
+            compiler: g++-12 gcc-12
+            c-compiler: /usr/bin/gcc-12
+            cxx-compiler: /usr/bin/g++-12
+            stdcxx-version: 12
           - os: "ubuntu:24.04"
             name: "ubuntu24"
             compiler: clang-18
@@ -148,10 +148,10 @@ jobs:
         include:
           - os: "ubuntu:22.04"
             name: "ubuntu22"
-            compiler: clang-14
-            c-compiler: /usr/bin/clang-14
-            cxx-compiler: /usr/bin/clang++-14
-            stdcxx-version: 10
+            compiler: g++-12 gcc-12
+            c-compiler: /usr/bin/gcc-12
+            cxx-compiler: /usr/bin/g++-12
+            stdcxx-version: 12
           - os: "ubuntu:24.04"
             name: "ubuntu24"
             compiler: clang-18

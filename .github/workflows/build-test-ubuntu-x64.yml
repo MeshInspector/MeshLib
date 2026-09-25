@@ -236,6 +236,23 @@ jobs:
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: dpkg --extract meshlib_${{matrix.os}}-dev.deb $(pwd)/meshlib_install/
 
+      - name: Check Deb Symlinks
+        if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
+        shell: bash
+        run: |
+          stat -c '%n: %s bytes' meshlib_${{matrix.os}}-dev.deb
+          LIB_DIR=$(pwd)/meshlib_install/usr/local/lib/MeshLib/lib
+          readelf --version > /dev/null
+          # absolute or dangling links break on the user's machine
+          BAD=$(find "$LIB_DIR" -type l \( -lname '/*' -o -xtype l \))
+          # a regular file under another library's soname makes ldconfig warn "is not a symbolic link"
+          while read -r f; do
+            SONAME=$(readelf -d "$f" 2>/dev/null | sed -n 's/.*Library soname: \[\(.*\)\]/\1/p' || true)
+            S="$(dirname "$f")/$SONAME"
+            if [ -n "$SONAME" ] && [ "$S" != "$f" ] && [ -f "$S" ] && [ ! -L "$S" ]; then BAD="$BAD"$'\n'"$S"; fi
+          done < <(find "$LIB_DIR" -type f -name '*.so*')
+          if [ -n "$BAD" ]; then echo "Bad libraries in the package:$BAD"; exit 1; fi
+
       - name: Build C++ examples and samples
         if: ${{ matrix.compiler == 'GCC' && matrix.config == 'Release' }}
         run: |

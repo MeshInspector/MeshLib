@@ -72,16 +72,10 @@ cp "./scripts/70-space-mouse-meshlib.rules" ./distr/meshlib-dev/usr/local/lib/ud
 
 #copy lib dir
 CURRENT_DIR="`pwd`"
-# keep the soname symlinks: dereferenced copies make ldconfig warn "is not a symbolic link";
-# `./lib/.` because CI's ./lib is itself a symlink to the docker image's thirdparty dir
+# keep the soname symlinks (else ldconfig warns "is not a symbolic link");
+# `./lib/.` because ./lib itself may be a symlink, e.g. in CI
 mkdir -p "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib"
 cp -a ./lib/. "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib/"
-BAD_LINKS=$(find "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib" -type l \( -lname '/*' -o -xtype l \))
-if [ -n "${BAD_LINKS}" ]; then
-  echo "Absolute or dangling symlinks in the packaged lib dir:"
-  echo "${BAD_LINKS}"
-  exit 9
-fi
 cp -rL ./include "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}/"
 echo "Thirdparty libs and include copy done"
 
@@ -90,7 +84,7 @@ cd distr
 dpkg-deb --build -Zxz ./meshlib-dev
 
 if [ -f "./meshlib-dev.deb" ]; then
-  echo "Dev deb package has been built: $(stat -c %s ./meshlib-dev.deb) bytes."
+  echo "Dev deb package has been built."
 else
   echo "Failed to build dev.deb package!"
   exit 8

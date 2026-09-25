@@ -146,11 +146,9 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         // then each of them outside the triangle is strictly above one of the new faces
         if ( !inPlane.empty() )
         {
-            const bool first1 = maxDist1 >= maxDist0;
-            auto & vs = first1 ? vs1 : vs0;
+            assert( maxDist0 > 0 || maxDist1 > 0 ); // planar input is not supported
+            auto & vs = maxDist1 >= maxDist0 ? vs1 : vs0;
             vs.insert( vs.end(), inPlane.begin(), inPlane.end() );
-            auto & maxDist = first1 ? maxDist1 : maxDist0;
-            maxDist = std::max( maxDist, 0.0 );
         }
         queue.setValue( 0_f, maxDist0 );
         queue.setValue( 1_f, maxDist1 );

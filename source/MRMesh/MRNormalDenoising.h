@@ -80,7 +80,7 @@ struct DenoiseWithCreasesSettings
     /// the number of iterations to update vertex coordinates from found normals; the more the better quality, but longer computation
     int pointIters = 20;
 
-    /// if given, then only the normals of these faces are denoised, and only the inner vertices of the region are moved
+    /// if given, then only the normals of these faces are denoised, and only the vertices with all incident faces in the region are moved
     const FaceBitSet *region = nullptr;
 };
 

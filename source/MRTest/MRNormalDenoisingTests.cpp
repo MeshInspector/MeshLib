@@ -115,7 +115,7 @@ TEST( MRMesh, MeshDenoiseWithCreasesRegion )
     for ( auto f : noisy.topology.getValidFaces() )
         if ( noisy.triCenter( f ).z > 0 )
             region.set( f );
-    const auto innerVerts = getInnerVerts( noisy.topology, region );
+    const auto innerVerts = getRegionInnerVerts( noisy.topology, region );
     EXPECT_GT( innerVerts.count(), 0 );
 
     Mesh mesh = noisy;

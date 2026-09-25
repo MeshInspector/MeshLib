@@ -311,7 +311,7 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
 
     VertBitSet innerVerts;
     if ( settings.region )
-        innerVerts = getInnerVerts( topology, *settings.region );
+        innerVerts = getRegionInnerVerts( topology, *settings.region );
 
     const auto guide = points;
     NormalsToPoints n2p;

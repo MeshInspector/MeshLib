@@ -109,6 +109,11 @@ MR_BIND_IGNORE inline std::vector<EdgeLoop> delRegionKeepBd( Mesh & mesh, const 
 /// unlike getBoundaryVerts the vertices of mesh boundary having no incident not-region faces are not returned
 [[nodiscard]] MRMESH_API VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitSet & region );
 
+/// composes the set of all vertices with at least one incident face and all their incident faces in given region,
+/// unlike getInnerVerts the vertices on the boundary of a hole are returned as well;
+/// equivalent to getIncidentVerts( topology, region ) - getRegionBoundaryVerts( topology, region ) but faster
+[[nodiscard]] MRMESH_API VertBitSet getRegionInnerVerts( const MeshTopology & topology, const FaceBitSet & region );
+
 /// composes the set of all faces incident to given vertices
 [[nodiscard]] MRMESH_API FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & verts );
 

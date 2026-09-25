@@ -59,7 +59,7 @@ jobs:
       # the suffix of the image, deb, artifact and test path names (not usable in `container`)
       ARCH_SUFFIX: ${{ inputs.arch == 'arm64' && '-arm64' || '' }}
       # the leg that uploads PythonStubs and CsharpBindings
-      UPLOAD_BINDINGS_SOURCES: ${{ inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' && matrix.compiler == 'Clang' }}
+      UPLOAD_BINDINGS_SOURCES: ${{ inputs.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
 
     steps:
       - name: Display job info

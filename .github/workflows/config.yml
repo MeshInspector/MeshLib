@@ -310,13 +310,12 @@ jobs:
               - ubuntu26
             config:
               - Release
-            compiler:
-              - GCC
             build_mrcuda:
               - "ON"
           rules: |
             - extend:
-                - cxx-standard: 23
+                - compiler: GCC
+                  cxx-standard: 23
                   build_distribution: "ON"
                   upload_release: "ON"
                 - os: ubuntu22
@@ -329,16 +328,6 @@ jobs:
                   cxx-compiler: /usr/bin/g++-15
                   c-compiler: /usr/bin/gcc-15
             - include:
-                # makes PythonStubs and CsharpBindings
-                - os: ubuntu22
-                  config: Release
-                  compiler: Clang
-                  build_mrcuda: "ON"
-                  cxx-compiler: /usr/bin/clang++-14
-                  c-compiler: /usr/bin/clang-14
-                  cxx-standard: 20
-                  build_distribution: "OFF"
-                  upload_release: "OFF"
                 # the newest GCC, which CUDA does not take yet
                 - os: ubuntu26
                   config: Release
@@ -349,11 +338,12 @@ jobs:
                   cxx-standard: 23
                   build_distribution: "ON"
                   upload_release: "OFF"
-            # A docs-only run needs only the ubuntu22 Clang leg - PythonStubs and CsharpBindings
-            # come from it - nothing reads the others unless the debs are published.
+            # A docs-only run still needs ubuntu22 - PythonStubs and CsharpBindings come from
+            # it - but nothing reads the others unless the debs are published.
             - if: ${{ steps.live-labels.outputs.tag-update-doc-only == 'true' && env.upload_artifacts != 'true' }}
               exclude:
-                - compiler: GCC
+                - os: ubuntu24
+                - os: ubuntu26
 
       - name: Set matrix for windows-x64 builds
         id: set-windows-x64-matrix

@@ -3,32 +3,10 @@
     {
       "os": "ubuntu22",
       "config": "Debug",
-      "compiler": "Clang",
-      "cxx-compiler": "/usr/bin/clang++-14",
-      "c-compiler": "/usr/bin/clang-14",
-      "cxx-standard": 20,
-      "build_mrcuda": "ON",
-      "build_distribution": "OFF",
-      "upload_release": "OFF"
-    },
-    {
-      "os": "ubuntu22",
-      "config": "Debug",
       "compiler": "GCC",
       "cxx-compiler": "/usr/bin/g++-12",
       "c-compiler": "/usr/bin/gcc-12",
       "cxx-standard": 23,
-      "build_mrcuda": "ON",
-      "build_distribution": "OFF",
-      "upload_release": "OFF"
-    },
-    {
-      "os": "ubuntu22",
-      "config": "Release",
-      "compiler": "Clang",
-      "cxx-compiler": "/usr/bin/clang++-14",
-      "c-compiler": "/usr/bin/clang-14",
-      "cxx-standard": 20,
       "build_mrcuda": "ON",
       "build_distribution": "OFF",
       "upload_release": "OFF"

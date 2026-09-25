@@ -1010,7 +1010,7 @@ jobs:
     outputs:
       uploaded: ${{ steps.check_upload.outputs.uploaded }}
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
@@ -1053,7 +1053,7 @@ jobs:
         && needs.macos-pip-test.result != 'failure' }}
     needs: [setup, manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8

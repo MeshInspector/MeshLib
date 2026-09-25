@@ -42,7 +42,7 @@ struct VoxelTraits<openvdb::FloatGrid::Accessor>
 
 using VolumeMinMaxAccessor = VoxelsVolumeMinMax<openvdb::FloatGrid::Accessor>;
 
-static const IOFilter filter( "Dicom (.dcm)", "*.dcm" );
+static const IOFilter cDicomFilter( "Dicom (.dcm)", "*.dcm" );
 
 namespace VoxelsLoad
 {
@@ -956,7 +956,7 @@ std::vector<Expected<DicomVolumeAsVdb>> loadDicomsFolderAsVdb( const std::filesy
 MR_ON_INIT
 {
     setVoxelsLoader(
-        filter,
+        cDicomFilter,
         []( const std::filesystem::path& path, const ProgressCallback& cb )
         {
             return loadDicomFileAsVdb( path, cb ).transform(
@@ -969,7 +969,7 @@ MR_ON_INIT
             );
         }
     );
-    ObjectLoad::setObjectLoader( filter, makeObjectFromVoxelsFile );
+    ObjectLoad::setObjectLoader( cDicomFilter, makeObjectFromVoxelsFile );
 };
 
 } // namespace VoxelsLoad
@@ -1052,9 +1052,9 @@ template Expected<void> toDicom<uint16_t>( const SimpleVolumeU16& volume, const 
 
 MR_ON_INIT
 {
-    setVoxelsSaver( filter, toDicom );
+    setVoxelsSaver( cDicomFilter, toDicom );
     /* additionally register the general saver as an object saver for this format */
-    ObjectSave::setObjectSaver( filter, saveObjectVoxelsToFile );
+    ObjectSave::setObjectSaver( cDicomFilter, saveObjectVoxelsToFile );
 };
 
 } // namespace VoxelsSave

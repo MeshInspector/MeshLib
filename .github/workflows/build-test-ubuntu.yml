@@ -36,7 +36,7 @@ on:
 
 jobs:
   ubuntu-build-test:
-    # the entries carry every compiler field, so spell out the ones that identify a leg;
+    # the entries carry every compiler field, so spell out the ones that identify a job;
     # the name must contain the job id for fetch_job_id.py
     name: ubuntu-build-test (${{ matrix.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }})
     timeout-minutes: 60
@@ -52,7 +52,7 @@ jobs:
       contents: read  # This is required for actions/checkout
       actions: read   # This is required for wait-for-job
     env:
-      # the leg that uploads PythonStubs and CsharpBindings
+      # the job that uploads PythonStubs and CsharpBindings
       UPLOAD_BINDINGS_SOURCES: ${{ matrix.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
 
     steps:

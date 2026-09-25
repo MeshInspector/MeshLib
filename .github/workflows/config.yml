@@ -360,7 +360,7 @@ jobs:
                 - build_mrcuda: "OFF"
                   config: Release
                   build_distribution: "ON"
-            # Debug and Clang legs run in full-ci only, and on x64 only
+            # Debug and Clang jobs run in full-ci only, and on x64 only
             - if: ${{ env.full_config_build != 'true' }}
               exclude:
                 - config: Debug

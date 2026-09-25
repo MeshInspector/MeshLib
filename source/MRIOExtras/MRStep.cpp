@@ -1,5 +1,7 @@
 #include "MRStep.h"
 #ifndef MRIOEXTRAS_NO_STEP
+#include "MRExtraFormatSettings.h"
+
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRHexPalette.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
@@ -15,7 +17,6 @@
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRSuppressWarning.h"
 #include <fstream>
-#include <mutex>
 
 MR_SUPPRESS_WARNING_PUSH
 MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
@@ -997,33 +998,13 @@ Expected<Mesh> fromStep( std::istream& in, const MeshLoadSettings& settings, con
     }, settings, stepSettings );
 }
 
-namespace
-{
-
-std::mutex sDefaultStepLoadSettingsMutex;
-StepLoadSettings sDefaultStepLoadSettings;
-
-} // namespace
-
-StepLoadSettings defaultStepLoadSettings()
-{
-    std::unique_lock lock( sDefaultStepLoadSettingsMutex );
-    return sDefaultStepLoadSettings;
-}
-
-void setDefaultStepLoadSettings( const StepLoadSettings& settings )
-{
-    std::unique_lock lock( sDefaultStepLoadSettingsMutex );
-    sDefaultStepLoadSettings = settings;
-}
-
 MR_ON_INIT {
     using namespace MR::MeshLoad;
     setMeshLoader(
         IOFilter( "STEP model (.step,.stp)", "*.step;*.stp" ),
         {
-            [] ( const std::filesystem::path& path, const MeshLoadSettings& settings ) { return fromStep( path, settings, defaultStepLoadSettings() ); },
-            [] ( std::istream& in, const MeshLoadSettings& settings ) { return fromStep( in, settings, defaultStepLoadSettings() ); },
+            [] ( const std::filesystem::path& path, const MeshLoadSettings& settings ) { return fromStep( path, settings, ExtraFormatSettings::getStepLoadSettings() ); },
+            [] ( std::istream& in, const MeshLoadSettings& settings ) { return fromStep( in, settings, ExtraFormatSettings::getStepLoadSettings() ); },
         }
     );
 };
@@ -1088,7 +1069,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFile( std::istream& in, const Mes
 
 Expected<LoadedObject> loadSceneFromStp( const std::filesystem::path& path, const ProgressCallback& progressCb )
 {
-    return fromSceneStepFile( path, { .callback = ProgressCallback{ progressCb } }, defaultStepLoadSettings() ).and_then(
+    return fromSceneStepFile( path, { .callback = ProgressCallback{ progressCb } }, ExtraFormatSettings::getStepLoadSettings() ).and_then(
         []( ObjectPtr && obj ) -> Expected<LoadedObject> { return LoadedObject{ .obj = std::move( obj ) }; } );
 }
 

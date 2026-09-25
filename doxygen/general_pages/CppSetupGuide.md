@@ -16,7 +16,7 @@ If a step fails, see [Troubleshooting](\ref CppSetupTroubleshooting) at the end 
 
 MeshLib uses C++20 standard and is tested to be compiled with:
  - GCC 11 or newer
- - Clang 18 or newer
+ - Clang 16 or newer
  - MSVC 2019 or newer
 
 ### CMake

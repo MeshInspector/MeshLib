@@ -431,7 +431,8 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     output.params = &localParams;
     output.min = &outVolume.min;
     output.max = &outVolume.max;
-    FloatGrid grid;
+    // putSimpleVolumeInDenseGrid deactivates voxels equal to the grid background, so keep it at FLT_MAX until all layers are copied
+    FloatGrid grid = std::make_shared<OpenVdbFloatGrid>( openvdb::FloatGrid( FLT_MAX ) );
     for ( size_t layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
         output.bytes = ( uint8_t* )( outVolume.data.data() );
@@ -443,10 +444,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
         if ( localParams != tp )
             return unexpected( "Inconsistent TIFF files" );
 
-        if ( !grid )
-            grid = simpleVolumeToDenseGrid( outVolume );
-        else
-            putSimpleVolumeInDenseGrid( grid, Vector3i{0, 0, ( int ) layerIndex}, outVolume );
+        putSimpleVolumeInDenseGrid( grid, Vector3i{0, 0, ( int ) layerIndex}, outVolume );
 
         if ( settings.cb && !settings.cb( float( layerIndex ) / files.size() ) )
             return unexpected( "Loading was cancelled" );
@@ -455,8 +453,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     if ( settings.cb && !settings.cb( 1.0f ) )
         return unexpected( "Loading was cancelled" );
 
-    if ( !grid )
-        return unexpected( "No voxel data" );
+    openvdb::tools::changeBackground( grid->tree(), 0.f );
 
     VdbVolume res;
 

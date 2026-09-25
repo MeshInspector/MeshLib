@@ -104,6 +104,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=23
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMRVOXELS_UNITY_BUILD=ON
         run: ./scripts/build_source.sh
 
       - name: Stage MRTest bundle
@@ -202,6 +203,8 @@ jobs:
       - name: Build Wasm module
         env:
           MR_EMSCRIPTEN_SINGLETHREAD: ${{ matrix.singlethread }}
+          MR_CMAKE_OPTIONS: >
+            -DMRVOXELS_UNITY_BUILD=ON
         run: ./scripts/build_wasm_meshlib.sh
 
       - name: Test Wasm module

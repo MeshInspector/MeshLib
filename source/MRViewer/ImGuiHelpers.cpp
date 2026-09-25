@@ -924,7 +924,7 @@ bool BeginCustomStatePlugin( const char* label, bool* open, const CustomStatePlu
         if ( sep != std::string_view::npos )
             strippedLabel = strippedLabel.substr( 0, sep );
 
-        UI::TestEngine::pushTree( strippedLabel );
+        UI::TestEngine::pushTree( params.testEngineName.empty() ? strippedLabel : params.testEngineName );
     }
 
     if ( window )

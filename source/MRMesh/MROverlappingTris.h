@@ -2,6 +2,7 @@
 
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -13,6 +14,11 @@ struct FindOverlappingSettings
     
     /// maximal dot product of one triangle and another overlapping triangle normals
     float maxNormalDot = -0.99f;
+
+    /// if the dot product of the normals is at least this value, then similarly oriented close triangles are also considered overlapping,
+    /// provided that their projections on the average plane overlap with positive area (it finds thin folds of the surface);
+    /// the default value disables this check
+    float minNormalDot = FLT_MAX;
     
     /// consider triangle as overlapping only if the area of the oppositely oriented triangle is at least given fraction of the triangle's area
     float minAreaFraction = 1e-5f;
@@ -27,7 +33,7 @@ struct FindOverlappingSettings
     MR_BIND_PREFER_UNLOCK_GIL_WHEN_USED_AS_PARAM
 };
 
-/// finds all triangles that have oppositely oriented close triangle in the mesh
+/// finds all triangles that have oppositely (or similarly, see minNormalDot) oriented close triangle in the mesh
 [[nodiscard]] MRMESH_API Expected<FaceBitSet> findOverlappingTris( const MeshPart & mp, const FindOverlappingSettings & settings );
 
 } //namespace MR

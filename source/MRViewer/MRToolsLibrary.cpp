@@ -122,6 +122,7 @@ bool GcodeToolsLibrary::drawCreateToolDialog()
     const auto menuWidth = 220.f * UI::scale();
     if ( !ImGui::BeginCustomStatePlugin( _tr( "Create Tool" ), &createToolDialogIsOpen_, {
         .width = menuWidth,
+        .testEngineName = "Create Tool",
     } ) )
         return false;
 

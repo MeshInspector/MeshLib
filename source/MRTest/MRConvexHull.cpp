@@ -2,6 +2,8 @@
 #include "MRMesh/MRVector2.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRMesh.h"
+#include "MRMesh/MRPlane3.h"
+#include "MRMesh/MRBitSet.h"
 #include <gtest/gtest.h>
 
 namespace MR
@@ -95,6 +97,23 @@ TEST( MakeConvexHullTest, Torus )
     EXPECT_EQ( discus.topology.numValidVerts(), 144 );
     EXPECT_EQ( discus.topology.numValidFaces(), 284 );
     EXPECT_EQ( discus.topology.lastNotLoneEdge(), EdgeId( 426 * 2 - 1 ) );
+}
+
+TEST( MakeConvexHullTest, PointsInPlaneOfFirstTriangle )
+{
+    // all points but the last lie in the plane of the initial triangle, and all of them are hull vertices
+    const VertCoords points{ { 44, 100, 0 }, { -100, 87, 0 }, { -40, -75, 0 }, { -71, 100, 0 }, { -63, -21, 0 }, { -11, 16, -14 } };
+    VertBitSet validPoints( points.size() );
+    validPoints.set();
+    Mesh hull = makeConvexHull( points, validPoints );
+    EXPECT_EQ( hull.topology.numValidVerts(), 6 );
+    EXPECT_EQ( hull.topology.numValidFaces(), 8 );
+    for ( auto f : hull.topology.getValidFaces() )
+    {
+        const auto pl = hull.getPlane3d( f );
+        for ( const auto & p : points )
+            EXPECT_LE( pl.distance( Vector3d{ p } ), 1e-6 );
+    }
 }
 
 } // namespace MR

@@ -16,6 +16,9 @@
     <ClCompile Include="MRTestApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MROverlappingTrisTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRTriangleIntersectionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -353,6 +356,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexerTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVoxelsLoadTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMimallocRedirectTests.cpp">

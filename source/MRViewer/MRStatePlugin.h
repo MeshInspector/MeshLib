@@ -118,7 +118,7 @@ public:
 
 protected:
     // begin plugin with given parameters
-    // sets params.collapsed from `dialogIsCollapsed_`
+    // sets params.collapsed from `dialogIsCollapsed_` and params.testEngineName from `name()`
     MRVIEWER_API virtual bool ImGuiBeginWindow_( ImGui::CustomStatePluginWindowParameters params );
 
     MRVIEWER_API virtual bool onEnable_();

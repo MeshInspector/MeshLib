@@ -140,6 +140,9 @@ bool StateBasePlugin::ImGuiBeginWindow_( ImGui::CustomStatePluginWindowParameter
             params.helpBtnFn = [&] () { OpenLink( it->helpLink ); };
     }
 
+    if ( params.testEngineName.empty() )
+        params.testEngineName = name();
+
     return BeginCustomStatePlugin( uiName().c_str(), &dialogIsOpen_, params );
 }
 

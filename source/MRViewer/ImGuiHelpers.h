@@ -205,6 +205,8 @@ struct CustomStatePluginWindowParameters
     std::function<void()> helpBtnFn = nullptr;
     /// if true esc button closes the plugin
     bool closeWithEscape{ true };
+    /// name of the window's group in the UI test engine; if empty, the label without `##...` is used
+    std::string_view testEngineName{};
 };
 
 /// returns the position of the window that will be located at the bottom of the viewport

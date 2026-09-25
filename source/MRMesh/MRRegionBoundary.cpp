@@ -427,6 +427,29 @@ VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitS
     return bdVerts;
 }
 
+VertBitSet getRegionInnerVerts( const MeshTopology & topology, const FaceBitSet & region )
+{
+    MR_TIMER;
+
+    VertBitSet res( topology.vertSize() );
+    BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
+    {
+        bool hasRegionNei = false;
+        for ( auto e : orgRing( topology, v ) )
+        {
+            auto l = topology.left( e );
+            if ( !l )
+                continue;
+            if ( !region.test( l ) )
+                return;
+            hasRegionNei = true;
+        }
+        if ( hasRegionNei )
+            res.set( v );
+    } );
+    return res;
+}
+
 EdgeBitSet getRegionEdges( const MeshTopology& topology, const FaceBitSet& faces )
 {
     MR_TIMER;

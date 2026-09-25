@@ -455,7 +455,7 @@ private:
         for ( auto explorer = TopExp_Explorer( shape, TopAbs_SHELL, TopAbs_SOLID ); explorer.More(); explorer.Next() )
             bodies.emplace_back( explorer.Current(), fmt::format( "Shell{}", ++shellIndex ) );
 
-        if ( bodies.size() <= 1 )
+        if ( bodies.empty() || ( bodies.size() == 1 && !loadSettings_.forceLoadSubShapes ) )
             return false;
 
         const auto& parentLocation = shape.Location();

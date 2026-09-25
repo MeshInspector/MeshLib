@@ -88,7 +88,7 @@ jobs:
         env:
           CXX: ${{ env.CXX-COMPILER }}
         # PCH_CODEGEN=0: `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on this image's
-        # libstdc++-12, same as the ubuntu22 opt-out in build-test-ubuntu-arm64.yml.
+        # libstdc++-12, same as the ubuntu22 opt-out in build-test-ubuntu.yml.
         run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin PCH_CODEGEN=0
 
       - name: Create Python Stubs
@@ -103,7 +103,7 @@ jobs:
 
       # `TARGET=csharp` only reads `source/MeshLibC2/temp/interop_desc.json`, which the C
       # generator writes and the `CBindings` artifact carries, so the C bindings have to be
-      # unpacked here first. Same steps as build-test-ubuntu-arm64.yml and pip-build.yml.
+      # unpacked here first. Same steps as build-test-ubuntu.yml and pip-build.yml.
       - name: Wait for C bindings
         uses: ./.github/actions/wait-for-job
         with:

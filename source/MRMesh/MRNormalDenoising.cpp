@@ -4,6 +4,7 @@
 #include "MRRingIterator.h"
 #include "MRMeshNormals.h"
 #include "MRMeshMath.h"
+#include "MRRegionBoundary.h"
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
@@ -17,23 +18,29 @@
 namespace MR
 {
 
-void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
+void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region )
 {
-    denoiseNormals( mesh.topology, mesh.points, normals, v, gamma );
+    denoiseNormals( mesh.topology, mesh.points, normals, v, gamma, region );
 }
 
-void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
+void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region )
 {
     MR_TIMER;
 
-    const auto sz = normals.size();
-    assert( (int)sz >= topology.lastValidFace() );
+    assert( (int)normals.size() >= topology.lastValidFace() );
     assert( v.size() == topology.undirectedEdgeSize() );
+    const auto & faces = topology.getFaceIds( region );
+
+    // index of every face with unknown normal in the linear system, -1 for fixed faces
+    Vector<int, FaceId> face2idx( topology.faceSize(), -1 );
+    int sz = 0;
+    for ( auto f : faces )
+        face2idx[f] = sz++;
     if ( sz <= 0 )
         return;
 
     // perimeter of every face, also counting boundary edges for better results on mesh boundary
-    Buffer<float, FaceId> perimeter( sz );
+    Buffer<float, FaceId> perimeter( topology.faceSize() );
     BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
         float p = 0;
@@ -46,30 +53,31 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
-    for ( auto f = 0_f; f < sz; ++f )
+    for ( auto f : faces )
     {
+        const int fi = face2idx[f];
         float centralWeight = 1;
-        if ( topology.hasFace( f ) )
+        Vector3d rh( normals[f] );
+        for ( auto e : leftRing( topology, f ) )
         {
-            for ( auto e : leftRing( topology, f ) )
-            {
-                assert( topology.left( e ) == f );
-                const auto r = topology.right( e );
-                if ( !r )
-                    continue;
-                const auto sumPerimeter = perimeter[f] + perimeter[r];
-                if ( sumPerimeter <= 0 )
-                    continue;
-                // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
-                const float weight = gamma * edgeLength( topology, points, e.undirected() ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
-                centralWeight += weight;
-                mTriplets.emplace_back( f, r, -weight );
-            }
+            assert( topology.left( e ) == f );
+            const auto r = topology.right( e );
+            if ( !r )
+                continue;
+            const auto sumPerimeter = perimeter[f] + perimeter[r];
+            if ( sumPerimeter <= 0 )
+                continue;
+            // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
+            const float weight = gamma * edgeLength( topology, points, e.undirected() ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
+            centralWeight += weight;
+            if ( const int ri = face2idx[r]; ri >= 0 )
+                mTriplets.emplace_back( fi, ri, -weight );
+            else
+                rh += double( weight ) * Vector3d( normals[r] ); // fixed normal of a face outside the region
         }
-        mTriplets.emplace_back( f, f, centralWeight );
-        const auto nm = normals[f];
+        mTriplets.emplace_back( fi, fi, centralWeight );
         for ( int i = 0; i < 3; ++i )
-            rhs[i][f] = nm[i];
+            rhs[i][fi] = rh[i];
     }
 
     using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
@@ -87,12 +95,13 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     } );
 
     // copy solution back into normals
-    ParallelFor( normals, [&]( FaceId f )
+    BitSetParallelFor( faces, [&]( FaceId f )
     {
+        const int fi = face2idx[f];
         normals[f] = Vector3f(
-            (float) sol[0][f],
-            (float) sol[1][f],
-            (float) sol[2][f] ).normalized();
+            (float) sol[0][fi],
+            (float) sol[1][fi],
+            (float) sol[2][fi] ).normalized();
     } );
 }
 
@@ -296,17 +305,17 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
     } );
 
     auto fnormals = computePerFaceNormals( topology, points );
-    denoiseNormals( topology, points, fnormals, v, settings.gamma );
+    denoiseNormals( topology, points, fnormals, v, settings.gamma, settings.region );
     if ( !reportProgress( cb, 0.5f ) )
         return unexpectedOperationCanceled();
 
+    VertBitSet innerVerts;
+    if ( settings.region )
+        innerVerts = getInnerVerts( topology, *settings.region );
+
     const auto guide = points;
     NormalsToPoints n2p;
-    n2p.prepare( topology, settings.guideWeight );
-
-    VertBitSet fixedVerts;
-    if ( settings.region )
-        fixedVerts = topology.getValidVerts() - *settings.region;
+    n2p.prepare( topology, settings.guideWeight, settings.region ? &innerVerts : nullptr );
 
     auto sp = subprogress( cb, 0.5f, 1.0f );
     for ( int i = 0; i < settings.pointIters; ++i )
@@ -314,10 +323,6 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
         if ( !reportProgress( sp, float( i ) / settings.pointIters ) )
             return unexpectedOperationCanceled();
         n2p.run( guide, fnormals, points );
-        BitSetParallelFor( fixedVerts, [&]( VertId v )
-        {
-            points[v] = guide[v];
-        } );
     }
 
     reportProgress( cb, 1.0f );

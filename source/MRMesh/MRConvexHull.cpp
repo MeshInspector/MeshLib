@@ -122,23 +122,35 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
     // separate all remaining points as above face #0 or face #1
     {
         const auto pl0 = res.getPlane3d( 0_f );
-        std::vector<VertId> vs0, vs1;
+        std::vector<VertId> vs0, vs1, inPlane;
         double maxDist0 = NoDist, maxDist1 = NoDist;
         for ( VertId v : validPoints )
         {
             if ( v == v0 || v == v1 || v == v2 )
                 continue;
             const auto dist = pl0.distance( Vector3d{ points[v] } );
-            if ( dist >= 0 )
+            if ( dist > 0 )
             {
                 vs0.push_back( v );
                 maxDist0 = std::max( maxDist0, dist );
             }
-            else
+            else if ( dist < 0 )
             {
                 vs1.push_back( v );
                 maxDist1 = std::max( maxDist1, -dist );
             }
+            else
+                inPlane.push_back( v );
+        }
+        // points in the plane of the triangle are above neither face: give them to the face split first (on a tie the heap takes 1_f),
+        // then each of them outside the triangle is strictly above one of the new faces
+        if ( !inPlane.empty() )
+        {
+            const bool first1 = maxDist1 >= maxDist0;
+            auto & vs = first1 ? vs1 : vs0;
+            vs.insert( vs.end(), inPlane.begin(), inPlane.end() );
+            auto & maxDist = first1 ? maxDist1 : maxDist0;
+            maxDist = std::max( maxDist, 0.0 );
         }
         queue.setValue( 0_f, maxDist0 );
         queue.setValue( 1_f, maxDist1 );

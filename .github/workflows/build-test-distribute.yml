@@ -10,16 +10,6 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-    inputs:
-      ubuntu_arch:
-        description: Ubuntu architectures to build
-        type: choice
-        options: [ both, x64, arm64 ]
-        default: both
-      labels:
-        description: PR labels to apply to this run, space-separated (e.g. disable-build-windows)
-        type: string
-        default: ''
   schedule:
     - cron: '0 2 * * *'  # Run every day at 2 AM UTC
 

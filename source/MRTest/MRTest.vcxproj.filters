@@ -16,6 +16,9 @@
     <ClCompile Include="MRTestApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MROverlappingTrisTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRTriangleIntersectionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

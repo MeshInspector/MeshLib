@@ -165,7 +165,8 @@ FloatGrid meshToLevelSet( const MeshPart& mp, const AffineXf3f& xf,
 
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     ProgressInterrupter interrupter( cb );
-    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
+    // the interrupter is passed as util::NullInterrupter (its wasInterrupted() is virtual) so that the instantiations prebuilt in OpenVDB are used
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, openvdb::util::NullInterrupter>
         ( interrupter, *xform, points, tris, surfaceOffset ) );
     if ( interrupter.getWasInterrupted() )
         return {};
@@ -190,7 +191,7 @@ FloatGrid meshToDistanceField( const MeshPart& mp, const AffineXf3f& xf,
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     ProgressInterrupter interrupter( cb );
 
-    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, openvdb::util::NullInterrupter>
         ( interrupter, *xform, points, tris, {}, surfaceOffset ) );
 
     if ( interrupter.getWasInterrupted() )
@@ -578,7 +579,7 @@ static FloatGrid meshToUnsignedDistanceField_(
     MR_TIMER;
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     ProgressInterrupter interrupter( cb );
-    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, ProgressInterrupter>
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToUnsignedDistanceField<openvdb::FloatGrid, openvdb::util::NullInterrupter>
         ( interrupter, *xform, points, tris, quads, surfaceOffset ) );
     if ( interrupter.getWasInterrupted() )
         return {};
@@ -593,7 +594,7 @@ static FloatGrid meshToLevelSet_(
     MR_TIMER;
     openvdb::math::Transform::Ptr xform = openvdb::math::Transform::createLinearTransform();
     ProgressInterrupter interrupter( cb );
-    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, ProgressInterrupter>
+    auto resGrid = MakeFloatGrid( openvdb::tools::meshToLevelSet<openvdb::FloatGrid, openvdb::util::NullInterrupter>
         ( interrupter, *xform, points, tris, quads, surfaceOffset ) );
     if ( interrupter.getWasInterrupted() )
         return {};

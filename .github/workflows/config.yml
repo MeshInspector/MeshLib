@@ -306,10 +306,18 @@ jobs:
               - Clang
             build_mrcuda:
               - "ON"
+              - "OFF"
           rules: |
+            # CUDA is off only for the newest GCC, which CUDA does not take yet
             - exclude:
                 - os: ubuntu22
                   compiler: Clang
+                - os: ubuntu22
+                  build_mrcuda: "OFF"
+                - os: ubuntu24
+                  build_mrcuda: "OFF"
+                - compiler: Clang
+                  build_mrcuda: "OFF"
             - extend:
                 - cxx-standard: 23
                   build_distribution: "OFF"
@@ -333,33 +341,10 @@ jobs:
                   compiler: GCC
                   build_distribution: "ON"
                   upload_release: "ON"
-            # the newest GCC, which CUDA does not take yet
-            - include:
-                - arch: x64
-                  os: ubuntu26
-                  config: Release
-                  compiler: GCC
-                  build_mrcuda: "OFF"
-                - arch: x64
-                  os: ubuntu26
-                  config: Debug
-                  compiler: GCC
-                  build_mrcuda: "OFF"
-                - arch: arm64
-                  os: ubuntu26
-                  config: Release
-                  compiler: GCC
-                  build_mrcuda: "OFF"
-            - extend:
                 - build_mrcuda: "OFF"
                   cxx-compiler: /usr/bin/g++-16
                   c-compiler: /usr/bin/gcc-16
-                  cxx-standard: 23
-                  build_distribution: "OFF"
                   upload_release: "OFF"
-                - build_mrcuda: "OFF"
-                  config: Release
-                  build_distribution: "ON"
             # Debug and Clang jobs run in full-ci only, and on x64 only
             - if: ${{ env.full_config_build != 'true' }}
               exclude:

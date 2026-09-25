@@ -49,6 +49,27 @@ TEST( MRMesh, LoadTiffDir )
     EXPECT_NEAR( ( box.max - Vector3f( 4.5f, 2.5f, 2.5f ) ).length(), 0.f, 1e-6f );
 }
 
+TEST( MRMesh, LoadTiffDirNegativeValues )
+{
+    UniqueTemporaryFolder tmpFolder;
+    for ( int z = 0; z < 2; ++z )
+    {
+        const std::vector<float> slice( 4, -1.f - z );
+        auto saveRes = writeRawTiff( ( const uint8_t* )slice.data(), tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { .baseParams = {
+            .sampleType = BaseTiffParameters::SampleType::Float,
+            .valueType = BaseTiffParameters::ValueType::Scalar,
+            .bytesPerSample = 4,
+            .imageSize = { 2, 2 }
+        } } );
+        ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    }
+
+    auto vol = VoxelsLoad::loadTiffDir( { .dir = tmpFolder } );
+    ASSERT_TRUE( vol.has_value() ) << vol.error();
+    EXPECT_EQ( vol->min, -2.f );
+    EXPECT_EQ( vol->max, -1.f );
+}
+
 } //namespace MR
 
 #endif //!MRVOXELS_NO_TIFF

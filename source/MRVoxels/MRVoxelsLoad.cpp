@@ -420,7 +420,7 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     SimpleVolumeMinMax outVolume;
     outVolume.dims = { tp.imageSize.x, tp.imageSize.y, 1 };
     outVolume.min = FLT_MAX;
-    outVolume.max = FLT_MIN;
+    outVolume.max = -FLT_MAX;
 
     outVolume.voxelSize = settings.voxelSize;
     outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y );

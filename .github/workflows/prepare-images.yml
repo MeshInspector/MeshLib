@@ -115,7 +115,7 @@ jobs:
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
-      image: meshlib/meshlib-${{ matrix.distro }}-${{ matrix.arch }}:${{ inputs.docker_image_tag }}
+      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Work-around possible permission issues
         shell: bash

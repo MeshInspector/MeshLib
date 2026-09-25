@@ -15,7 +15,7 @@ matrix_dir=.github/workflows/matrix
 case "${family}" in
   linux)
     pairs=$(
-      jq -r '.[] | "meshlib/meshlib-\(.distro)-\(.arch) \(.distro)"' "${matrix_dir}/docker-images-linux.json"
+      jq -r '.[] | "meshlib/meshlib-\(.distro)\(if .arch == "arm64" then "-arm64" else "" end) \(.distro)"' "${matrix_dir}/docker-images-linux.json"
       jq -r '.[] | "meshlib/meshlib-emscripten-build-c-bindings-\(.emsdk_image) emscripten-build-c-bindings"' "${matrix_dir}/docker-images-emscripten-c-bindings.json"
     ) ;;
   linux-vcpkg)

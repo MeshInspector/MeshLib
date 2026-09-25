@@ -46,7 +46,7 @@ fi
 if [ "${MESHLIB_USE_VCPKG}" == "ON" ]; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
     -D MESHLIB_USE_VCPKG=ON \
-    -D VCPKG_TARGET_TRIPLET=${VCPKG_TRIPLET:?VCPKG_TRIPLET must be set} \
+    -D VCPKG_TARGET_TRIPLET=${VCPKG_TRIPLET:-$("$SCRIPT_DIR"/detect_vcpkg_triplet.sh)} \
     -D VCPKG_MANIFEST_MODE=${VCPKG_MANIFEST_MODE:=OFF} \
   "
 fi
@@ -83,7 +83,7 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
   "
 fi
 
-if [[ $OSTYPE == 'darwin'* ]]; then
+if [[ $OSTYPE == 'darwin'* && "${MESHLIB_USE_VCPKG}" != "ON" ]]; then
   PYTHON_VERSION="3.10"
   if [ "${MESHLIB_PYTHON_VERSION}" != "" ]; then
     PYTHON_VERSION="${MESHLIB_PYTHON_VERSION}"

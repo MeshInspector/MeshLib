@@ -75,7 +75,7 @@ IF(NOT MRIOEXTRAS_NO_E57)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_JPEG)
-  IF(APPLE)
+  IF(APPLE AND MESHLIB_USE_HOMEBREW)
     target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
     target_link_libraries(${PROJECT_NAME} PRIVATE ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
   ELSE()

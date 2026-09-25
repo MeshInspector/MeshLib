@@ -17,42 +17,6 @@ REM use "aws s3 ls s3://vcpkg-export/" to list all available tags
 if not defined VCPKG_DEFAULT_TRIPLET set VCPKG_DEFAULT_TRIPLET=x64-windows-meshlib
 echo Using vcpkg triplet: %VCPKG_DEFAULT_TRIPLET%
 
-REM Check if AWS CLI is installed
-set "aws_cli_available=false"
-aws.exe --version >nul 2>&1
-if errorlevel 1 (
-    echo AWS CLI v2: not found
-    echo "Without AWS CLI, vcpkg cache from S3 will not be available, and dependencies will be built from source"
-) else (
-    echo AWS CLI v2: found
-    echo "Vcpkg binary cache (if available) will be downloaded from S3"
-    set "aws_cli_available=true"
-)
-
-REM Detect vcpkg path
-for /f "delims=" %%i in ('where vcpkg 2^>nul') do set vcpkg_path=%%~dpi
-if not defined vcpkg_path (
-    echo vcpkg not found. Setting VCPKG_TAG to "no-tag".
-    set VCPKG_TAG=no-tag
-) else (
-    REM S3 folder name = the checked-out vcpkg release tag.
-    REM CI checks vcpkg out at a release tag before running this script, so
-    REM `git describe --exact-match` yields that tag and keeps the binary-cache
-    REM producer (prepare-images) and consumer (build) in sync. safe.directory
-    REM covers checkouts owned by another user (common on self-hosted runners).
-    REM A failed describe is fatal when the S3 cache is in use: silently falling
-    REM back to another folder name would split the cache between producers and
-    REM consumers. Without AWS CLI the cache is disabled and the tag irrelevant.
-    set "VCPKG_TAG="
-    for /f "delims=" %%T in ('git -c safe.directory^=* -C "!vcpkg_path!." describe --tags --exact-match 2^>nul') do set VCPKG_TAG=%%T
-    if not defined VCPKG_TAG (
-        if "!aws_cli_available!"=="true" goto :tag_error
-        set VCPKG_TAG=no-tag
-    )
-)
-
-echo Using vcpkg version: !VCPKG_TAG!
-
 REM Check for CLI options
 set "write_s3_option=false"
 set "use_s3_assets=false"
@@ -74,23 +38,42 @@ if "!expect_extra_req!"=="true" (
     echo Error: --extra-requirements requires a file path argument.
     exit /b 1
 )
-if "!write_s3_option!"=="true" if "!aws_cli_available!"=="false" (
-    echo "Error: --write-s3 requires AWS CLI to be installed."
-    exit /b 1
+if "!write_s3_option!"=="true" (
+    aws.exe --version >nul 2>&1
+    if errorlevel 1 (
+        echo "Error: --write-s3 requires AWS CLI to be installed."
+        exit /b 1
+    )
 )
 
-REM Configure VCPKG_BINARY_SOURCES (only use s3 cache when aws cli is available)
-if "!aws_cli_available!"=="true" (
-    if "!write_s3_option!"=="true" (
-        echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,readwrite;"
-    ) else (
-        echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
-        set "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/,read;"
-    )
+REM Detect vcpkg path
+for /f "delims=" %%i in ('where vcpkg 2^>nul') do set vcpkg_path=%%~dpi
+if not defined vcpkg_path (
+    echo vcpkg not found. Setting VCPKG_TAG to "no-tag".
+    set VCPKG_TAG=no-tag
 ) else (
-    echo "Mode: build from source (no S3 binary cache)."
-    set "VCPKG_BINARY_SOURCES=clear"
+    REM With --write-s3 a missing tag is fatal: pushing under "no-tag" would split the cache.
+    set "VCPKG_TAG="
+    for /f "delims=" %%T in ('git -c safe.directory^=* -C "!vcpkg_path!." describe --tags --exact-match 2^>nul') do set VCPKG_TAG=%%T
+    if not defined VCPKG_TAG (
+        if "!write_s3_option!"=="true" goto :tag_error
+        set VCPKG_TAG=no-tag
+    )
+)
+
+echo Using vcpkg version: !VCPKG_TAG!
+
+REM Configure VCPKG_BINARY_SOURCES
+REM Reading via HTTP is batched and thus usually faster than via x-aws
+set "S3_REGION=us-east-1"
+set "S3_URL=s3://vcpkg-export/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/"
+set "HTTP_URL=https://vcpkg-export.s3.!S3_REGION!.amazonaws.com/!VCPKG_TAG!/!VCPKG_DEFAULT_TRIPLET!/{sha}.zip"
+if "!write_s3_option!"=="true" (
+    echo "Mode: pull-push vcpkg binary cache. AWS credentials are required."
+    set "VCPKG_BINARY_SOURCES=clear;http,!HTTP_URL!,read;x-aws,!S3_URL!,write;"
+) else (
+    echo "Mode: pull vcpkg binary cache. No AWS credentials are required."
+    set "VCPKG_BINARY_SOURCES=clear;http,!HTTP_URL!,read;"
 )
 
 if "!use_s3_assets!"=="true" (

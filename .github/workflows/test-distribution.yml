@@ -40,41 +40,16 @@ on:
         default: false
 
 jobs:
-  # on the host, where gh is preinstalled: installing it in the containers needed apt, whose mirror glitches failed the tests
-  linux-download:
-    if: ${{ inputs.test_ubuntu_x64 || inputs.test_ubuntu_arm64 }}
-    timeout-minutes: 10
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Ubuntu Releases
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
-        run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*-dev.deb" --repo ${{ github.repository }}
-
-      - name: Upload Ubuntu x86-64 Releases
-        if: ${{ inputs.test_ubuntu_x64 }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: ubuntu-x64-debs
-          path: '*_ubuntu[0-9][0-9]-dev.deb'
-          retention-days: 1
-
-      - name: Upload Ubuntu arm64 Releases
-        if: ${{ inputs.test_ubuntu_arm64 }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: ubuntu-arm64-debs
-          path: '*-arm64-dev.deb'
-          retention-days: 1
-
   linux-x64-test:
-    needs: linux-download
     if: ${{ inputs.test_ubuntu_x64 }}
     timeout-minutes: 30
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
+      # the host's static gh and CA bundle: installing gh in the container needed apt
+      volumes:
+        - /usr/bin/gh:/usr/local/bin/gh:ro
+        - /etc/ssl/certs/ca-certificates.crt:/host-ca-certificates.crt:ro
     strategy:
       fail-fast: false
       matrix:
@@ -106,9 +81,11 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Ubuntu x86-64 Release
-        uses: actions/download-artifact@v8
-        with:
-          name: ubuntu-x64-debs
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          SSL_CERT_FILE: /host-ca-certificates.crt
+        run: |
+          gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu x86-64 Release
         run: |
@@ -155,12 +132,15 @@ jobs:
           ./build/MeshModification
 
   linux-arm64-test:
-    needs: linux-download
     if: ${{ inputs.test_ubuntu_arm64 }}
     timeout-minutes: 30
     runs-on: ubuntu-24.04-arm
     container:
       image: ${{ matrix.os }}
+      # the host's static gh and CA bundle: installing gh in the container needed apt
+      volumes:
+        - /usr/bin/gh:/usr/local/bin/gh:ro
+        - /etc/ssl/certs/ca-certificates.crt:/host-ca-certificates.crt:ro
     strategy:
       fail-fast: false
       matrix:
@@ -192,9 +172,11 @@ jobs:
           ref: ${{needs.setup.outputs.version_tag}}
 
       - name: Download Ubuntu arm64 Release
-        uses: actions/download-artifact@v8
-        with:
-          name: ubuntu-arm64-debs
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
+          SSL_CERT_FILE: /host-ca-certificates.crt
+        run: |
+          gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-arm64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu arm64 Release
         run: |

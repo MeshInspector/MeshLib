@@ -304,29 +304,12 @@ jobs:
         uses: ./.github/actions/matrix-builder
         with:
           matrix: |
-            os:
-              - ubuntu22
-              - ubuntu24
-              - ubuntu26
-            config:
-              - Release
+            - { os: ubuntu22, config: Release, compiler: clang, cxx-compiler: /usr/bin/clang++-14, c-compiler: /usr/bin/clang-14, cxx-standard: 20 }
+            - { os: ubuntu24, config: Release, compiler: GCC, cxx-compiler: /usr/bin/g++-13, c-compiler: /usr/bin/gcc-13, cxx-standard: 23 }
+            - { os: ubuntu26, config: Release, compiler: GCC, cxx-compiler: /usr/bin/g++-15, c-compiler: /usr/bin/gcc-15, cxx-standard: 23 }
+            # mirrors the x64 g++-16 leg: no MRCuda, and its deb is not published
+            - { os: ubuntu26, config: Release, compiler: GCC, cxx-compiler: /usr/bin/g++-16, c-compiler: /usr/bin/gcc-16, cxx-standard: 23, build_mrcuda: 'OFF', upload_release: 'OFF' }
           rules: |
-            - extend:
-                - os: ubuntu22
-                  compiler: clang
-                  cxx-compiler: /usr/bin/clang++-14
-                  c-compiler: /usr/bin/clang-14
-                  cxx-standard: 20
-                - os: ubuntu24
-                  compiler: GCC
-                  cxx-compiler: /usr/bin/g++-13
-                  c-compiler: /usr/bin/gcc-13
-                  cxx-standard: 23
-                - os: ubuntu26
-                  compiler: GCC
-                  cxx-compiler: /usr/bin/g++-15
-                  c-compiler: /usr/bin/gcc-15
-                  cxx-standard: 23
             # A docs-only run still needs ubuntu22 - PythonStubs and CsharpBindings come from
             # it - but nothing reads the ubuntu24 leg unless the debs are published.
             - if: ${{ steps.live-labels.outputs.tag-update-doc-only == 'true' && env.upload_artifacts != 'true' }}

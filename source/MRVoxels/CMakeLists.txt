@@ -2,6 +2,7 @@ project(MRVoxels CXX)
 
 option(MRVOXELS_NO_DICOM "Disable DICOM format support" OFF)
 option(MRVOXELS_NO_TIFF "Disable TIFF format support" OFF)
+option(MRVOXELS_UNITY_BUILD "Use unity build for MRVoxels" ON)
 
 IF(MR_EMSCRIPTEN)
   # Sync this with `scripts/mrbind/generate.mk`.
@@ -12,6 +13,11 @@ file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
+
+IF(MRVOXELS_UNITY_BUILD)
+  include(UnityBuildHelpers)
+  mr_enable_unity_build(${PROJECT_NAME} ${SOURCES})
+ENDIF()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 

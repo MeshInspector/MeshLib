@@ -325,6 +325,8 @@ TriangulationPlan{}
 
 const std::array<OutEdge, size_t( NeighborDir::Count )> cPlusOutEdges { OutEdge::PlusX, OutEdge::PlusY, OutEdge::PlusZ };
 
+} // anonymous namespace
+
 class VolumeMesher
 {
 public:
@@ -727,6 +729,9 @@ void VolumeMesher::addBinaryPartBlock_( const SimpleBinaryVolume& part, const Bl
     }
 }
 
+namespace
+{
+
 struct BitSetBounds
 {
     MinMax<size_t> setBounds;
@@ -808,6 +813,8 @@ MinMax<size_t> prepareLayerBounds(
     positionBounds.max += ( indexer.dims().x + 2 );
     return positionBounds;
 }
+
+} // anonymous namespace
 
 Expected<TriMesh> VolumeMesher::finalize()
 {
@@ -1100,8 +1107,6 @@ Expected<TriMesh> VolumeMesher::finalize()
 
     return result;
 }
-
-} // anonymous namespace
 
 Expected<TriMesh> marchingCubesAsTriMesh( const SimpleVolume& volume, const MarchingCubesParams& params /*= {} */ )
 {

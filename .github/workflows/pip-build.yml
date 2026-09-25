@@ -295,6 +295,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMRVOXELS_UNITY_BUILD=ON
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
             -DCMAKE_CXX_FLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
@@ -688,6 +689,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMRVOXELS_UNITY_BUILD=ON
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
 

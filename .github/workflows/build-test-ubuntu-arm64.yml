@@ -128,6 +128,7 @@ jobs:
           MR_CMAKE_OPTIONS: >
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
+            -DMRVOXELS_UNITY_BUILD=ON
             -DMESHLIB_BUILD_MRMESH_PY_LEGACY=${{ fromJSON('["ON", "OFF"]')[inputs.mrbind] }}
             -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF
             -DMRVIEWER_NO_XDG_DESKTOP_PORTAL=ON

@@ -453,6 +453,9 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
     if ( settings.cb && !settings.cb( 1.0f ) )
         return unexpected( "Loading was cancelled" );
 
+    if ( grid->empty() )
+        return unexpected( "No voxel data" );
+
     openvdb::tools::changeBackground( grid->tree(), 0.f );
 
     VdbVolume res;

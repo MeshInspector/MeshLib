@@ -7,4 +7,5 @@
 %/MRRestoringStreamsSink.h
 %/MRTupleBindings.h
 %/MRVDBProgressInterrupter.h
+%/MRVDBInstantiations.h
 %/MRStacktrace.h

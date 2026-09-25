@@ -16,6 +16,7 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 IF(MRVOXELS_UNITY_BUILD)
   include(UnityBuildHelpers)
+  set_source_files_properties(MRVDBInstantiations.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
   mr_enable_unity_build(${PROJECT_NAME} ${SOURCES})
 ENDIF()
 

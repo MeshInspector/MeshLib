@@ -1,13 +1,22 @@
 #!/bin/bash
 
-# Checks the thirdparty libs of a `.deb` built by `distribution.sh` and extracted with `dpkg --extract`
-# usage: ./check_deb_libs.sh <path to .deb> <extraction root>
+# Checks the libraries a `.deb` installs into one directory
+# usage: ./check_deb_libs.sh <path to .deb> <lib dir inside the package>
+# e.g.   ./check_deb_libs.sh meshlib-dev.deb /usr/local/lib/MeshLib/lib
 
 set -eo pipefail
 
 stat -c '%n: %s bytes' "$1"
-LIB_DIR="$2/usr/local/lib/MeshLib/lib"
 readelf --version > /dev/null
+
+ROOT=$(mktemp -d)
+trap 'rm -rf "$ROOT"' EXIT
+dpkg --extract "$1" "$ROOT"
+LIB_DIR="$ROOT$2"
+if [ ! -d "$LIB_DIR" ]; then
+  echo "$2 is not in the package"
+  exit 1
+fi
 
 # absolute or dangling links break on the user's machine
 BAD=$(find "$LIB_DIR" -type l \( -lname '/*' -o -xtype l \))
@@ -20,6 +29,6 @@ done < <(find "$LIB_DIR" -type f -name '*.so*')
 
 if [ -n "$BAD" ]; then
   echo "Bad libraries in the package:"
-  echo "$BAD" | sed '/^$/d' | sort -u
+  echo "$BAD" | sed -e '/^$/d' -e "s|^$ROOT||" | sort -u
   exit 1
 fi

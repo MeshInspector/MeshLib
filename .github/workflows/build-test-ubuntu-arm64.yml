@@ -255,7 +255,7 @@ jobs:
         run: dpkg --extract meshlib_${{matrix.os}}-arm64-dev.deb $(pwd)/meshlib_install/
 
       - name: Check Deb Symlinks
-        run: ./scripts/devops/check_deb_libs.sh meshlib_${{matrix.os}}-arm64-dev.deb $(pwd)/meshlib_install/
+        run: ./scripts/devops/check_deb_libs.sh meshlib_${{matrix.os}}-arm64-dev.deb /usr/local/lib/MeshLib/lib
 
       - name: Build C++ examples and samples
         run: |

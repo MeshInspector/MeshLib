@@ -11,6 +11,6 @@ Example of using Viewer for Volume Rendering
 \include ViewerVolumeRender.dox.py
 \image html Volume_rendering.png
 > [!NOTE]
-> This example does not work on macOS: `mv.launch()` raises `RuntimeError: MeshLib Viewer is not supported on macOS yet`. In releases before 3.1.3.566 it terminated the Python process instead (SIGTRAP, exit code 133, no exception raised).
+> On macOS the Viewer runs on the main thread of the Python process, the only thread a GUI can run on there: `mv.launch()` prepares it, the calls that follow set up the scene, and the window appears in `mv.showViewer()`, which returns once the user closes it. Older releases raised `RuntimeError: MeshLib Viewer is not supported on macOS yet`, and before 3.1.3.566 terminated the Python process (SIGTRAP, exit code 133).
 
 </div>

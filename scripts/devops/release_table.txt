@@ -37,7 +37,7 @@
     <tr>
       <td align="center">Ubuntu 22 LTS x64</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu22-dev.deb">deb</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu22-x64-dev.deb">deb</a>
       </td>
     </tr>
     <tr>
@@ -49,7 +49,7 @@
     <tr>
       <td align="center">Ubuntu 24 LTS x64</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu24-dev.deb">deb</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu24-x64-dev.deb">deb</a>
       </td>
     </tr>
     <tr>
@@ -61,7 +61,7 @@
     <tr>
       <td align="center">Ubuntu 26 LTS x64</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu26-dev.deb">deb</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu26-x64-dev.deb">deb</a>
       </td>
     </tr>
     <tr>

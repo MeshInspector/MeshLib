@@ -2288,9 +2288,6 @@
     <ClCompile Include="MRCylinderApproximator.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
-    <ClCompile Include="MRConeApproximator.cpp">
-      <Filter>Source Files\Math</Filter>
-    </ClCompile>
     <ClCompile Include="MRPly.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>

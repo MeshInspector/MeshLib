@@ -786,7 +786,6 @@
     <ClCompile Include="MRTripleFaceIntersections.cpp" />
     <ClCompile Include="MREndMill.cpp" />
     <ClCompile Include="MRCylinderApproximator.cpp" />
-    <ClCompile Include="MRConeApproximator.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRObjectTagEventDispatcher.cpp" />
     <ClCompile Include="MRPointMeasurementObject.cpp" />

@@ -12,6 +12,7 @@
 #include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 namespace MR
 {
@@ -312,6 +313,60 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
     }
     if ( stats )
         *stats += myStats;
+}
+
+VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
+    const AlphaShapeData & data, std::vector<PreciseVertCoords> & cands )
+{
+    const auto pi = data.coords( cloud, vi );
+    const auto pj = data.coords( cloud, vj );
+    const auto pk = data.coords( cloud, vk );
+
+    // reset( x, pj, pi ) selects the ball with the center on the clockwise side of x's half-plane,
+    // i.e. towards #vk; the existence of a ball does not depend on the side
+    FastInSphereTesterSoS tester;
+    cands.clear();
+    // the centers of the balls via #vi and #vj are on the circle of radius h = sqrt( r^2 - |vi-vj|^2 / 4 )
+    // around their midpoint, so every point of the balls is within r + h from it;
+    // two grid steps are added as in getAlphaShapeData to compensate the rounding of integer coordinates
+    const double rSq = double( data.intRadiusSq );
+    const double hSq = std::max( 0.0, rSq - 0.25 * ( Vector3d( pj.pt ) - Vector3d( pi.pt ) ).lengthSq() );
+    const auto searchRadius = float( ( std::sqrt( rSq ) + std::sqrt( hSq ) + 2 ) / data.toInt.invRange );
+    findPointsInBall( cloud, { 0.5f * ( cloud.points[vi] + cloud.points[vj] ), sqr( searchRadius ) },
+        [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
+        {
+            if ( found.vId == vi || found.vId == vj || found.vId == vk )
+                return Processing::Continue;
+            const auto c = data.coords( cloud, found.vId );
+            if ( tester.reset( c, pj, pi, data.intRadiusSq ) )
+                cands.push_back( c );
+            return Processing::Continue;
+        } );
+
+    std::sort( cands.begin(), cands.end(), [&]( const PreciseVertCoords & a, const PreciseVertCoords & b )
+    {
+        if ( a.id == b.id )
+            return false; // ccwAroundLine requires all distinct points
+        return ccwAroundLine( { pi, pj, pk, a, b } );
+    } );
+
+    for ( const auto & x : cands )
+    {
+        [[maybe_unused]] const bool touchable = tester.reset( x, pj, pi, data.intRadiusSq );
+        assert( touchable );
+        bool empty = true;
+        for ( const auto & y : cands )
+        {
+            if ( y.id != x.id && tester( y ) == InSphereResult::Inside )
+            {
+                empty = false;
+                break;
+            }
+        }
+        if ( empty )
+            return x.id;
+    }
+    return {};
 }
 
 std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback& cb,

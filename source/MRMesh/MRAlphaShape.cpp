@@ -314,6 +314,55 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         *stats += myStats;
 }
 
+VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
+    const AlphaShapeData & data, std::vector<PreciseVertCoords> & cands )
+{
+    const auto pi = data.coords( cloud, vi );
+    const auto pj = data.coords( cloud, vj );
+    const auto pk = data.coords( cloud, vk );
+
+    // reset( x, pj, pi ) selects the ball with the center on the clockwise side of x's half-plane,
+    // i.e. towards #vk; the existence of a ball does not depend on the side
+    FastInSphereTesterSoS tester;
+    cands.clear();
+    // every point of a ball via #vi is within its diameter from #vi
+    findPointsInBall( cloud, { cloud.points[vi], sqr( data.searchRadius ) },
+        [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
+        {
+            if ( found.vId == vi || found.vId == vj || found.vId == vk )
+                return Processing::Continue;
+            const auto c = data.coords( cloud, found.vId );
+            if ( tester.reset( c, pj, pi, data.intRadiusSq ) )
+                cands.push_back( c );
+            return Processing::Continue;
+        } );
+
+    std::sort( cands.begin(), cands.end(), [&]( const PreciseVertCoords & a, const PreciseVertCoords & b )
+    {
+        if ( a.id == b.id )
+            return false; // ccwAroundLine requires all distinct points
+        return ccwAroundLine( { pi, pj, pk, a, b } );
+    } );
+
+    for ( const auto & x : cands )
+    {
+        [[maybe_unused]] const bool touchable = tester.reset( x, pj, pi, data.intRadiusSq );
+        assert( touchable );
+        bool empty = true;
+        for ( const auto & y : cands )
+        {
+            if ( y.id != x.id && tester( y ) == InSphereResult::Inside )
+            {
+                empty = false;
+                break;
+            }
+        }
+        if ( empty )
+            return x.id;
+    }
+    return {};
+}
+
 std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback& cb,
     AlphaShapeStats * stats )
 {

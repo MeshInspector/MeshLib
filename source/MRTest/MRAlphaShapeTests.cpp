@@ -106,6 +106,48 @@ TEST( MRMesh, AlphaShape )
     EXPECT_EQ( allTris.size(), 6 );
 }
 
+TEST( MRMesh, BallPivotVertex )
+{
+    // the pivot edge is on the z-axis directed up, the other points are around it at mid-height
+    PointCloud cloud;
+    cloud.points.push_back( {  0,       0,      0    } ); //0_v, vi
+    cloud.points.push_back( {  0,       0,      1    } ); //1_v, vj
+    cloud.points.push_back( {  1,       0,      0.5f } ); //2_v, vk, rotation 0 degrees
+    cloud.points.push_back( {  0,       1,      0.5f } ); //3_v, rotation 90 degrees
+    cloud.points.push_back( { -1,       0,      0.5f } ); //4_v, rotation 180 degrees
+    cloud.points.push_back( {  0,      -1,      0.5f } ); //5_v, rotation 270 degrees
+    cloud.points.push_back( {  0.2952f, 1.6742f, 0.5f } ); //6_v, rotation 80 degrees, far from the axis
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    auto data = getAlphaShapeData( cloud, 1, false );
+    std::vector<PreciseVertCoords> cands;
+    auto ids = [&cands]
+    {
+        std::vector<VertId> res;
+        for ( const auto & c : cands )
+            res.push_back( c.id );
+        return res;
+    };
+
+    // 6_v is the first counter-clockwise, but its ball contains 3_v, which is hit by the rolling ball first
+    EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 3_v );
+    EXPECT_EQ( ids(), std::vector<VertId>( { 6_v, 3_v, 4_v, 5_v } ) );
+
+    // the reversed edge rotates the other way
+    EXPECT_EQ( findBallPivotVertex( cloud, 1_v, 0_v, 2_v, data, cands ), 5_v );
+    EXPECT_EQ( ids(), std::vector<VertId>( { 5_v, 4_v, 3_v, 6_v } ) );
+
+    cloud.validPoints.reset( 3_v );
+    cloud.invalidateCaches();
+    data = getAlphaShapeData( cloud, 1, false );
+    EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 6_v );
+
+    // the circumradius of the edge with any other point is at least 0.625
+    data = getAlphaShapeData( cloud, 0.6f, false );
+    EXPECT_FALSE( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ) );
+    EXPECT_TRUE( cands.empty() );
+}
+
 // four points of a square are exactly on both balls passing via any three of them,
 // so every ball emptiness test here is a tie resolved by simulation-of-simplicity
 TEST( MRMesh, AlphaShapeSquare )

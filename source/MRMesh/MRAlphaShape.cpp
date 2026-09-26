@@ -315,44 +315,6 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         *stats += myStats;
 }
 
-namespace
-{
-
-// the same answer as tester.reset( a, b, c, rSq ) without its sphere quantities: the squared circumradius
-// uu * vv * ww / ( 4 * W ) is compared with rSq, which is the sign of the tester's E = W * ( 4 * rSq * W - uu * vv * ww );
-// only the ties and the degenerate triangles are left to the tester's simulation-of-simplicity
-bool ballTouches( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c,
-    std::int64_t rSq, FastInSphereTesterSoS & tester )
-{
-    const Vector3i64 u{ b.pt - a.pt }, v{ c.pt - a.pt };
-    const Vector3i64 bc = v - u;
-    const auto rSq4 = 4 * FastInt128( rSq );
-    const auto uu = dot( Vector3i64mul{ u }, Vector3i64mul{ u } );
-    if ( uu > rSq4 )
-        return false;
-    const auto vv = dot( Vector3i64mul{ v }, Vector3i64mul{ v } );
-    if ( vv > rSq4 )
-        return false;
-    const auto ww = dot( Vector3i64mul{ bc }, Vector3i64mul{ bc } );
-    if ( ww > rSq4 )
-        return false;
-    const auto w = cross( u, v );
-    const auto W = FastInt<192>( Int64Mul128( w.x ) * Int64Mul128( w.x ) )
-                 + FastInt<192>( Int64Mul128( w.y ) * Int64Mul128( w.y ) )
-                 + FastInt<192>( Int64Mul128( w.z ) * Int64Mul128( w.z ) ); // <= 2^128
-    if ( W != 0 )
-    {
-        // uu, vv, ww <= rSq4 <= 2^64, so both sides are at most 2^192
-        const auto lhs = FastInt<192>( Int128Mul256( uu ) * Int128Mul256( vv ) ) * ww;
-        const auto rhs = W * rSq4;
-        if ( lhs != rhs )
-            return lhs < rhs;
-    }
-    return tester.reset( a, b, c, rSq );
-}
-
-} // anonymous namespace
-
 VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
     const AlphaShapeData & data, std::vector<PreciseVertCoords> & cands )
 {
@@ -376,7 +338,7 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
             if ( found.vId == vi || found.vId == vj || found.vId == vk )
                 return Processing::Continue;
             const auto c = data.coords( cloud, found.vId );
-            if ( ballTouches( c, pj, pi, data.intRadiusSq, tester ) )
+            if ( tester.sphereExists( c, pj, pi, data.intRadiusSq ) )
                 cands.push_back( c );
             return Processing::Continue;
         } );

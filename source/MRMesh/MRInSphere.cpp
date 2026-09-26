@@ -224,6 +224,33 @@ InSphereResult sosInSphereFull( const Vector3i * pts, const VertId * ids, std::i
     return ( ( sA < 0 ) == ( sG > 0 ) ) ? InSphereResult::Inside : InSphereResult::Outside;
 }
 
+/// closed-form resolutions of the existence of the sphere via a degenerate triangle (cross( u, v ) == 0),
+/// u = b - a and v = c - a, with no side beyond the diameter; validated against the full evaluation
+bool degenerateSphereExists( const Vector3i64 & u, const Vector3i64 & v, const Vector3i * pts, const VertId * ids, std::int64_t rSq )
+{
+    const bool sameAB = u == Vector3i64();
+    const bool sameAC = v == Vector3i64();
+    const bool sameBC = u == v;
+    if ( int( sameAB ) + int( sameAC ) + int( sameBC ) >= 2 )
+        return false; // all three coincide: the perturbed needle-like triangle has diverging circumradius
+    if ( !( sameAB || sameAC || sameBC ) )
+        return false; // distinct collinear points: the perturbed circumradius diverges as well
+    // two coincident points separate along z after the perturbation, so the sphere exists iff
+    // 4 rSq (Vx^2 + Vy^2) > |V|^4 at the leading order, V = the third point minus the pair
+    // (V = -V for b == c, which does not change the rule)
+    const Vector3i64 V = sameAB ? v : u;
+    const auto vxy = Int64Mul128( V.x ) * Int64Mul128( V.x )
+                   + Int64Mul128( V.y ) * Int64Mul128( V.y ); // <= 2^65
+    const auto vv2 = dot( Vector3i64mul{ V }, Vector3i64mul{ V } );         // <= 2^66
+    const auto lhs = FastInt<192>( Int128Mul256( vxy ) * Int128Mul256( 4 * FastInt128( rSq ) ) ); // <= 2^131
+    const auto rhs = FastInt<192>( Int128Mul256( vv2 ) * Int128Mul256( vv2 ) ); // <= 2^132
+    if ( lhs < rhs )
+        return false;
+    if ( lhs == rhs && !sosSphereExists( pts, ids, rSq ) )
+        return false; // an exact tie of the leading rule is resolved by the full evaluation
+    return true;
+}
+
 } // anonymous namespace
 
 bool InSphereTester<int>::reset( const Vector3i & va, const Vector3i & vb, const Vector3i & vc, std::int64_t sqRadius )
@@ -336,38 +363,18 @@ bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCo
         return false;
     if ( cross( u, v ) != Vector3i64() )
         return false; // W > 0, so the base failed on E < 0, which is stable
-
-    // closed-form resolutions of the degenerate triangles, validated against the full evaluation
-    const bool sameAB = u == Vector3i64();
-    const bool sameAC = v == Vector3i64();
-    const bool sameBC = u == v;
-    if ( int( sameAB ) + int( sameAC ) + int( sameBC ) >= 2 )
-        return false; // all three coincide: the perturbed needle-like triangle has diverging circumradius
-    if ( !( sameAB || sameAC || sameBC ) )
-        return false; // distinct collinear points: the perturbed circumradius diverges as well
-    // two coincident points separate along z after the perturbation, so the sphere exists iff
-    // 4 rSq (Vx^2 + Vy^2) > |V|^4 at the leading order, V = the third point minus the pair
-    // (V = -V for b == c, which does not change the rule)
-    const Vector3i64 V = sameAB ? v : u;
-    const auto vxy = Int64Mul128( V.x ) * Int64Mul128( V.x )
-                   + Int64Mul128( V.y ) * Int64Mul128( V.y ); // <= 2^65
-    const auto vv2 = dot( Vector3i64mul{ V }, Vector3i64mul{ V } );         // <= 2^66
-    const auto lhs = FastInt<192>( Int128Mul256( vxy ) * Int128Mul256( 4 * FastInt128( sqRadius ) ) ); // <= 2^131
-    const auto rhs = FastInt<192>( Int128Mul256( vv2 ) * Int128Mul256( vv2 ) ); // <= 2^132
-    if ( lhs < rhs )
+    if ( !degenerateSphereExists( u, v, pts, ids, sqRadius ) )
         return false;
-    if ( lhs == rhs && !sosSphereExists( pts, ids, sqRadius ) )
-        return false; // an exact tie of the leading rule is resolved by the full evaluation
     // the perturbed sphere converges to the sphere via the pair and the third point, tangent to
     // the z-axis at the pair; remember it for the closed-form queries, with the side of its center
     // given by the leading direction of the perturbed normal (validated against the full evaluation)
-    if ( sameAB )
+    if ( u == Vector3i64() )
     {
         pairPt_ = a;
         pairV_ = v;
         pairSigma_ = vb_ < va_ ? 1 : -1;
     }
-    else if ( sameAC )
+    else if ( v == Vector3i64() )
     {
         pairPt_ = a;
         pairV_ = u;
@@ -381,6 +388,38 @@ bool InSphereTesterSoS::reset( const PreciseVertCoords & va, const PreciseVertCo
     }
     degenerateTriangle_ = true;
     return true;
+}
+
+bool InSphereTesterSoS::sphereExists( const PreciseVertCoords & va, const PreciseVertCoords & vb, const PreciseVertCoords & vc, std::int64_t sqRadius ) const
+{
+    // the same side and collinearity tests as in the base reset
+    const Vector3i64 ab{ vb.pt - va.pt }, ac{ vc.pt - va.pt };
+    const Vector3i64 bc = ac - ab;
+    const auto rSq4 = 4 * FastInt128( sqRadius );
+    const auto uu = dot( Vector3i64mul{ ab }, Vector3i64mul{ ab } );
+    if ( uu > rSq4 )
+        return false;
+    const auto vv = dot( Vector3i64mul{ ac }, Vector3i64mul{ ac } );
+    if ( vv > rSq4 )
+        return false;
+    const auto ww = dot( Vector3i64mul{ bc }, Vector3i64mul{ bc } );
+    if ( ww > rSq4 )
+        return false;
+    const Vector3i pts[3] = { va.pt, vb.pt, vc.pt };
+    const VertId ids[3] = { va.id, vb.id, vc.id };
+    const auto n = cross( ab, ac );
+    if ( n == Vector3i64() )
+        return degenerateSphereExists( ab, ac, pts, ids, sqRadius );
+    const auto nn = FastInt<192>( Int64Mul128( n.x ) * Int64Mul128( n.x ) )
+                  + FastInt<192>( Int64Mul128( n.y ) * Int64Mul128( n.y ) )
+                  + FastInt<192>( Int64Mul128( n.z ) * Int64Mul128( n.z ) ); // W of the base, <= 2^128
+    // |M|^2 = W * uu * vv * ww, so E = W * ( 4 * rSq * W - uu * vv * ww ) and the squared circumradius
+    // uu * vv * ww / ( 4 * W ) is compared with rSq; both sides are at most 2^192
+    const auto lhs = FastInt<192>( Int128Mul256( uu ) * Int128Mul256( vv ) ) * ww;
+    const auto rhs = nn * rSq4;
+    if ( lhs != rhs )
+        return lhs < rhs;
+    return sosSphereExists( pts, ids, sqRadius ); // E == 0
 }
 
 InSphereResult InSphereTesterSoS::operator()( const PreciseVertCoords & d ) const

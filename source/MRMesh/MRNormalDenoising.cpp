@@ -211,6 +211,10 @@ void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
 bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb )
 {
     MR_TIMER;
+    assert( settings.normalIters > 0 && settings.pointIters > 0 );
+    if ( settings.normalIters <= 0 || settings.pointIters <= 0 )
+        return true;
+
     if ( !reportProgress( cb, 0.0f ) )
         return false;
 
@@ -221,7 +225,7 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
         return false;
 
     auto sp = subprogress( cb, 0.05f, 0.95f );
-    auto fnormals = fnormals0;
+    FaceNormals fnormals;
     for ( int i = 0; i < settings.normalIters; ++i )
     {
         fnormals = fnormals0;

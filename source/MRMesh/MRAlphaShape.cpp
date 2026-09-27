@@ -316,7 +316,7 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
 }
 
 VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
-    const AlphaShapeData & data, std::vector<PreciseVertCoords> & cands )
+    const AlphaShapeData & data, std::vector<BallPivotCandidate> & cands )
 {
     const auto pi = data.coords( cloud, vi );
     const auto pj = data.coords( cloud, vj );
@@ -340,26 +340,31 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
                 return Processing::Continue;
             const auto c = data.coords( cloud, found.vId );
             if ( tester.sphereExists( c, pj, pi, data.intRadiusSq ) )
-                cands.push_back( c );
+                cands.push_back( { c, orient3d( { pi, pj, pk, c } ) } );
             return Processing::Continue;
         } );
 
-    std::sort( cands.begin(), cands.end(), [&]( const PreciseVertCoords & a, const PreciseVertCoords & b )
+    // ccwAroundLine( { pi, pj, pk, a, b } ) with its first two orient3d calls taken from the candidates
+    std::sort( cands.begin(), cands.end(), [&]( const BallPivotCandidate & a, const BallPivotCandidate & b )
     {
 #ifdef _GLIBCXX_DEBUG
-        if ( a.id == b.id )
-            return false; // ccwAroundLine requires all distinct points
+        if ( a.coords.id == b.coords.id )
+            return false; // orient3d requires all distinct points
 #endif
-        return ccwAroundLine( { pi, pj, pk, a, b } );
+        if ( a.cwFromVk != b.cwFromVk )
+            return b.cwFromVk;
+        return orient3d( { pi, pj, b.coords, a.coords } );
     } );
 
-    for ( const auto & x : cands )
+    for ( const auto & cand : cands )
     {
+        const auto & x = cand.coords;
         [[maybe_unused]] const bool touchable = tester.reset( x, pj, pi, data.intRadiusSq );
         assert( touchable );
         bool empty = true;
-        for ( const auto & y : cands )
+        for ( const auto & other : cands )
         {
+            const auto & y = other.coords;
             if ( y.id != x.id && tester( y ) == InSphereResult::Inside )
             {
                 empty = false;

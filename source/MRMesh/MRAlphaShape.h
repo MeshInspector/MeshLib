@@ -122,6 +122,17 @@ MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
     bool onlyLargerVids,         ///< if true then two other points must have larger ids (to avoid finding same triangles several times)
     AlphaShapeStats * stats = nullptr ); ///< optional statistics of the work done, which is increased here
 
+/// a point touchable by a ball together with the edge (vi, vj) in the search of findBallPivotVertex
+struct BallPivotCandidate
+{
+    /// the point's id together with its integer coordinates
+    PreciseVertCoords coords;
+
+    /// orient3d( vi, vj, vk, this point ): whether the rotation around the line from #vi to #vj
+    /// from the half-plane via #vk to the half-plane via this point is clockwise
+    bool cwFromVk = false;
+};
+
 /// pivots the ball of the given radius from triangle (vi, vj, vk) over its edge (vi, vj):
 /// among the points touchable by a ball together with #vi and #vj (except #vk), ordered by the
 /// rotation of their half-planes counter-clockwise from #vk's one around the line directed from #vi to #vj
@@ -131,7 +142,7 @@ MRMESH_API void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v,
 /// returns invalid id if no such point exists
 [[nodiscard]] MRMESH_API VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
-    std::vector<PreciseVertCoords> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in the order above
+    std::vector<BallPivotCandidate> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in the order above
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius,

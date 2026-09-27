@@ -120,12 +120,12 @@ TEST( MRMesh, BallPivotVertex )
     cloud.validPoints.resize( cloud.points.size(), true );
 
     auto data = getAlphaShapeData( cloud, 1, false );
-    std::vector<PreciseVertCoords> cands;
+    std::vector<BallPivotCandidate> cands;
     auto ids = [&cands]
     {
         std::vector<VertId> res;
         for ( const auto & c : cands )
-            res.push_back( c.id );
+            res.push_back( c.coords.id );
         return res;
     };
 

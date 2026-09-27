@@ -276,18 +276,18 @@ void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points,
     std::ignore = meshDenoiseWithCreases( topology, points, creases, settings, {} );
 }
 
-Expected<void> meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+bool meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
 {
     mesh.invalidateCaches();
     return meshDenoiseWithCreases( mesh.topology, mesh.points, creases, settings, cb );
 }
 
-Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+bool meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
 {
     MR_TIMER;
 
     if ( !reportProgress( cb, 0.0f ) )
-        return unexpectedOperationCanceled();
+        return false;
 
     Vector<float, UndirectedEdgeId> v( topology.undirectedEdgeSize() );
     ParallelFor( v, [&]( UndirectedEdgeId ue )
@@ -298,7 +298,7 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
     auto fnormals = computePerFaceNormals( topology, points );
     denoiseNormals( topology, points, fnormals, v, settings.gamma );
     if ( !reportProgress( cb, 0.5f ) )
-        return unexpectedOperationCanceled();
+        return false;
 
     const auto guide = points;
     NormalsToPoints n2p;
@@ -308,12 +308,12 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
     for ( int i = 0; i < settings.pointIters; ++i )
     {
         if ( !reportProgress( sp, float( i ) / settings.pointIters ) )
-            return unexpectedOperationCanceled();
+            return false;
         n2p.run( guide, fnormals, points );
     }
 
     reportProgress( cb, 1.0f );
-    return {};
+    return true;
 }
 
 } //namespace MR

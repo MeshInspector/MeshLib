@@ -145,10 +145,15 @@ TEST( MRMesh, BallPivotVertex )
     data = getAlphaShapeData( cloud, 1, false );
     EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 5_v );
 
-    // the circumradius of the edge with any other point is at least 0.625
-    data = getAlphaShapeData( cloud, 0.6f, false );
-    EXPECT_FALSE( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ) );
+    // with no other point, the ball rotates to the other side of the same triangle
+    PointCloud tri;
+    for ( VertId v : { 0_v, 1_v, 2_v } )
+        tri.points.push_back( cloud.points[v] );
+    tri.validPoints.resize( tri.points.size(), true );
+    data = getAlphaShapeData( tri, 1, false );
+    EXPECT_EQ( findBallPivotVertex( tri, 0_v, 1_v, 2_v, data, cands ), 2_v );
     EXPECT_TRUE( cands.empty() );
+    EXPECT_EQ( findBallPivotVertex( tri, 1_v, 0_v, 2_v, data, cands ), 2_v );
 }
 
 // the ball pivoted over any edge of an alpha-shape triangle must stop at another alpha-shape triangle;
@@ -182,20 +187,14 @@ TEST( MRMesh, BallPivotAlphaShapeTriangles )
         triSet.insert( cyclic( t[0], t[1], t[2] ) );
 
     std::vector<BallPivotCandidate> cands;
-    int found = 0;
     for ( const auto & t : tris )
         for ( int e = 0; e < 3; ++e )
         {
             const VertId a = t[e], b = t[( e + 1 ) % 3], c = t[( e + 2 ) % 3];
-            if ( const auto x = findBallPivotVertex( cloud, a, b, c, data, cands ) )
-            {
-                EXPECT_TRUE( triSet.contains( cyclic( b, a, x ) ) );
-                ++found;
-            }
-            else
-                EXPECT_TRUE( triSet.contains( cyclic( b, a, c ) ) );
+            const auto x = findBallPivotVertex( cloud, a, b, c, data, cands );
+            EXPECT_TRUE( triSet.contains( cyclic( b, a, x ) ) );
         }
-    EXPECT_GT( found, int( tris.size() ) );
+    EXPECT_GT( tris.size(), size_t( 1000 ) );
 }
 
 // four points of a square are exactly on both balls passing via any three of them,

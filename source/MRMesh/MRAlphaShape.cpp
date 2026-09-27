@@ -325,6 +325,7 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
     // reset( x, pj, pi ) selects the ball with the center on the clockwise side of x's half-plane,
     // i.e. towards #vk; the existence of a ball does not depend on the side
     FastInSphereTesterSoS tester;
+    assert( tester.sphereExists( pi, pj, pk, data.intRadiusSq ) );
     cands.clear();
     // the centers of the balls via #vi and #vj are on the circle of radius h = sqrt( r^2 - |vi-vj|^2 / 4 )
     // around their midpoint, so every point of the balls is within r + h from it;
@@ -376,7 +377,7 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
         if ( empty )
             return x.id;
     }
-    return {};
+    return vk;
 }
 
 std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback& cb,

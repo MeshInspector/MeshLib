@@ -2,7 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
-#include "MRExpected.h"
 
 namespace MR
 {
@@ -59,14 +58,14 @@ struct DenoiseViaNormalsSettings
 
     /// optionally returns creases found during smoothing
     UndirectedEdgeBitSet * outCreases = nullptr;
-
-    /// to get the progress and optionally cancel
-    ProgressCallback cb = {};
 };
 
 /// Reduces noise in given mesh,
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-MRMESH_API Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+MRMESH_API void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+
+/// the same, reporting the progress in (cb); returns false if the operation was canceled from it
+[[nodiscard]] MRMESH_API bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb );
 
 struct DenoiseWithCreasesSettings
 {

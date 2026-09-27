@@ -58,7 +58,7 @@ TEST( MRMesh, MeshDenoiseViaNormalsInvalidatesCaches )
     sphere.getAABBTree();
     EXPECT_TRUE( sphere.getAABBTreeNotCreate() );
 
-    EXPECT_TRUE( meshDenoiseViaNormals( sphere ).has_value() );
+    meshDenoiseViaNormals( sphere );
     EXPECT_FALSE( sphere.getAABBTreeNotCreate() );
 }
 

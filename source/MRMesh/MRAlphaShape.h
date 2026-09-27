@@ -140,8 +140,9 @@ struct BallPivotCandidate
 /// via #vi, #vj and x with the center on #vk's side of the half-plane of x has none of those points nor #vk strictly inside;
 /// the predicates are exact with simulation-of-simplicity resolving the ties;
 /// returns #vk if no such point exists: the ball rotates to the other side of triangle (vi, vj, vk) touching no other point;
-/// a ball via #vi, #vj and #vk must exist; for a triangle (vi, vj, vk) of findAlphaShapeAllTriangles,
-/// (vj, vi, x) is one of them as well, x being the returned point
+/// the ball via #vi, #vj and #vk with the center on the positive side of that triangle must exist and be empty,
+/// otherwise the returned point is not the one touched first by the rotating ball; in particular, for a triangle
+/// (vi, vj, vk) of findAlphaShapeAllTriangles, (vj, vi, x) is one of them as well, x being the returned point
 [[nodiscard]] MRMESH_API VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
     std::vector<BallPivotCandidate> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in unspecified order

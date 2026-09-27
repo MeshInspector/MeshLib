@@ -344,21 +344,24 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
             return Processing::Continue;
         } );
 
-    // ccwAroundLine( { pi, pj, pk, a, b } ) with its first two orient3d calls taken from the candidates
-    std::sort( cands.begin(), cands.end(), [&]( const BallPivotCandidate & a, const BallPivotCandidate & b )
+    // whether a follows b counter-clockwise from #vk, i.e. ccwAroundLine( { pi, pj, pk, b, a } ) with its first two
+    // orient3d calls taken from the candidates; the reversed order puts the first candidate on top of the heap
+    auto later = [&]( const BallPivotCandidate & a, const BallPivotCandidate & b )
     {
 #ifdef _GLIBCXX_DEBUG
         if ( a.coords.id == b.coords.id )
             return false; // orient3d requires all distinct points
 #endif
         if ( a.cwFromVk != b.cwFromVk )
-            return b.cwFromVk;
-        return orient3d( { pi, pj, b.coords, a.coords } );
-    } );
+            return a.cwFromVk;
+        return orient3d( { pi, pj, a.coords, b.coords } );
+    };
+    std::make_heap( cands.begin(), cands.end(), later );
 
-    for ( const auto & cand : cands )
+    for ( auto heapEnd = cands.end(); heapEnd != cands.begin(); --heapEnd )
     {
-        const auto & x = cand.coords;
+        std::pop_heap( cands.begin(), heapEnd, later );
+        const auto & x = ( heapEnd - 1 )->coords;
         [[maybe_unused]] const bool touchable = tester.reset( x, pj, pi, data.intRadiusSq );
         assert( touchable );
         bool empty = true;

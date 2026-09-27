@@ -126,16 +126,18 @@ TEST( MRMesh, BallPivotVertex )
         std::vector<VertId> res;
         for ( const auto & c : cands )
             res.push_back( c.coords.id );
+        std::sort( res.begin(), res.end() ); // the order of the candidates is unspecified
         return res;
     };
+    const std::vector<VertId> allCands{ 3_v, 4_v, 5_v, 6_v };
 
     // 6_v is the first counter-clockwise, but its ball contains 3_v, which is hit by the rolling ball first
     EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 3_v );
-    EXPECT_EQ( ids(), std::vector<VertId>( { 6_v, 3_v, 4_v, 5_v } ) );
+    EXPECT_EQ( ids(), allCands );
 
     // the reversed edge rotates the other way
     EXPECT_EQ( findBallPivotVertex( cloud, 1_v, 0_v, 2_v, data, cands ), 5_v );
-    EXPECT_EQ( ids(), std::vector<VertId>( { 5_v, 4_v, 3_v, 6_v } ) );
+    EXPECT_EQ( ids(), allCands );
 
     cloud.validPoints.reset( 3_v );
     cloud.invalidateCaches();

@@ -142,7 +142,7 @@ struct BallPivotCandidate
 /// returns invalid id if no such point exists
 [[nodiscard]] MRMESH_API VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud and the same radius
-    std::vector<BallPivotCandidate> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in the order above
+    std::vector<BallPivotCandidate> & cands ); ///< temporary storage to avoid memory allocations, it will be filled with the touchable points in unspecified order
 
 /// finds all triangles of alpha-shape with negative alpha = -1/radius
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius,

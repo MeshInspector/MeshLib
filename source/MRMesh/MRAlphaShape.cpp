@@ -345,8 +345,10 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
 
     std::sort( cands.begin(), cands.end(), [&]( const PreciseVertCoords & a, const PreciseVertCoords & b )
     {
+#ifdef _GLIBCXX_DEBUG
         if ( a.id == b.id )
-            return false; // only an element compared with itself (e.g. the irreflexivity check of libstdc++ debug mode), and ccwAroundLine requires distinct ids
+            return false; // ccwAroundLine requires all distinct points
+#endif
         return ccwAroundLine( { pi, pj, pk, a, b } );
     } );
 

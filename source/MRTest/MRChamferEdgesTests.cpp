@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <cmath>
+#include <functional>
 
 namespace MR
 {
@@ -48,6 +49,27 @@ int countFolds( const Mesh & mesh )
     return res;
 }
 
+// cube without the faces with given normal directions
+Mesh makeOpenCube( std::function<bool( const Vector3f & )> removeFaceWithNormal )
+{
+    auto mesh = makeCube();
+    FaceBitSet remove( mesh.topology.faceSize() );
+    for ( auto f : mesh.topology.getValidFaces() )
+        if ( removeFaceWithNormal( mesh.normal( f ) ) )
+            remove.set( f );
+    mesh.deleteFaces( remove );
+    return mesh;
+}
+
+// maximal deviation of the triangle centroids from the surface given as the zero level of the function
+float maxCentroidDeviation( const Mesh & mesh, std::function<float( const Vector3f & )> func )
+{
+    float res = 0;
+    for ( auto f : mesh.topology.getValidFaces() )
+        res = std::max( res, std::abs( func( mesh.triCenter( f ) ) ) );
+    return res;
+}
+
 } // anonymous namespace
 
 TEST( MRMesh, ChamferEdges )
@@ -65,12 +87,7 @@ TEST( MRMesh, ChamferEdges )
         EXPECT_EQ( countFolds( mesh ), 0 );
 
         // not only the vertices, but the whole triangles lie on the chamfered cube, even at the corners
-        for ( auto f : mesh.topology.getValidFaces() )
-        {
-            Vector3f a, b, c;
-            mesh.getTriPoints( f, a, b, c );
-            EXPECT_NEAR( chamferedCubeFunc( ( a + b + c ) / 3.0f, d ), 0, 1e-5f );
-        }
+        EXPECT_LT( maxCentroidDeviation( mesh, [d]( const Vector3f & p ) { return chamferedCubeFunc( p, d ); } ), 1e-5f );
     }
 }
 
@@ -120,6 +137,35 @@ TEST( MRMesh, ChamferEdgesReflexCorner )
     const float mitered = 4 * sqr( d ) / 2 - 4 * d * sqr( d ) / 3;
     EXPECT_GT( 0.75f - mesh.volume(), 0.98f * mitered );
     EXPECT_LT( 0.75f - mesh.volume(), mitered );
+}
+
+TEST( MRMesh, ChamferEdgesOpenChains )
+{
+    const float d = 0.1f;
+    const float s = std::sqrt( 0.5f );
+
+    // square tube along X: two straight chains from one mesh boundary to the other
+    auto tube = makeOpenCube( []( const Vector3f & n ) { return std::abs( n.x ) > 0.9f; } );
+    auto res = chamferEdges( tube, sharpLoop( tube, 0.5f ), d );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( countFolds( tube ), 0 );
+    EXPECT_LT( maxCentroidDeviation( tube, [&]( const Vector3f & p )
+    {
+        return std::max( { std::abs( p.y ) - 0.5f, std::abs( p.z ) - 0.5f, ( std::abs( p.y ) + p.z - ( 1 - d ) ) * s } );
+    } ), 1e-5f );
+
+    // box without the front face: one chain of three top edges with two corners
+    auto box = makeOpenCube( []( const Vector3f & n ) { return n.y < -0.9f; } );
+    const auto chain = sharpLoop( box, 0.5f );
+    EXPECT_EQ( chain.count(), 3 );
+    res = chamferEdges( box, chain, d );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( countFolds( box ), 0 );
+    EXPECT_LT( maxCentroidDeviation( box, [&]( const Vector3f & p )
+    {
+        return std::max( { std::abs( p.x ) - 0.5f, std::abs( p.y ) - 0.5f, std::abs( p.z ) - 0.5f,
+            ( std::abs( p.x ) + p.z - ( 1 - d ) ) * s, ( p.y + p.z - ( 1 - d ) ) * s } );
+    } ), 1e-5f );
 }
 
 TEST( MRMesh, ChamferEdgesBadInput )

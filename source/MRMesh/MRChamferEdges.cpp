@@ -40,8 +40,8 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
         int n = 0;
         for ( auto e : orgRing( tp, v ) )
             n += edges.test( e.undirected() );
-        if ( n != 2 )
-            return unexpected( "Chamfered edges must form disjoint closed loops" );
+        if ( n != 2 && !( n == 1 && tp.isBdVertex( v ) ) )
+            return unexpected( "Chamfered edges must form disjoint closed loops or chains ending on the mesh boundary" );
     }
 
     // original edges are straight segments, the creases between their chamfers are found from them
@@ -203,7 +203,7 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
         const auto l = tp.left( ue );
         const auto r = tp.right( ue );
         const bool inL = contains( strip, l );
-        if ( inL != contains( strip, r ) )
+        if ( l && r && inL != contains( strip, r ) )
             sideBorders[side[inL ? l : r]].set( ue );
     }
 
@@ -221,8 +221,12 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
     // vertex (v) at distance (s) from the edges goes on segment (a,b): (a) is the closest border point to (v) on its side,
     // the ray from (a) through (v) reaches the edges at (onEdge), and (b) is the closest border point to it on the other side
     const auto edgeVerts = getIncidentVerts( tp, selEdges );
+    // the vertices on the mesh boundary are moved as well, only the vertices of the chamfer borders stay
+    auto movedVerts = getIncidentVerts( tp, strip );
+    for ( const auto & b : sideBorders )
+        movedVerts -= getIncidentVerts( tp, b );
     auto newPoints = mesh.points;
-    if ( !BitSetParallelFor( getInnerVerts( tp, strip ), [&]( VertId v )
+    if ( !BitSetParallelFor( movedVerts, [&]( VertId v )
     {
         const auto & pt = mesh.points[v];
         const auto proj = findProjectionOnMeshEdges( pt, mesh, edgesTree, maxDistSq );
@@ -239,7 +243,11 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
                 newPoints[v] = 0.5f * ( a.point + b.point );
             return;
         }
-        const auto ownSide = side[tp.left( tp.edgeWithOrg( v ) )];
+        FaceId ownFace;
+        for ( auto ev : orgRing( tp, v ) )
+            if ( auto f = tp.left( ev ); contains( strip, f ) )
+                ownFace = f;
+        const auto ownSide = side[ownFace];
         if ( ownSide == rightSide )
             std::swap( leftSide, rightSide );
         else if ( ownSide != leftSide )

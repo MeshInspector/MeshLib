@@ -19,17 +19,18 @@
 #include <cmath>
 #include <limits>
 #include <optional>
+#include <tuple>
 
 namespace MR
 {
 
-Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edges, float distance, const ProgressCallback & cb )
+namespace
 {
-    MR_TIMER;
+
+Expected<void> checkChamferInput( const MeshTopology & tp, const UndirectedEdgeBitSet & edges, float distance )
+{
     if ( !( distance > 0 ) )
         return unexpected( "Chamfer distance must be positive" );
-
-    auto & tp = mesh.topology;
     if ( edges.none() )
         return unexpected( "No edges to chamfer" );
     for ( auto ue : edges )
@@ -43,30 +44,47 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
         if ( n != 2 && !( n == 1 && tp.isBdVertex( v ) ) )
             return unexpected( "Chamfered edges must form disjoint closed loops or chains ending on the mesh boundary" );
     }
+    return {};
+}
 
-    // original edges are straight segments, the creases between their chamfers are found from them
-    Vector<LineSegm3f, UndirectedEdgeId> origSegm( tp.undirectedEdgeSize() );
-    Vector<UndirectedEdgeId, UndirectedEdgeId> origEdge( tp.undirectedEdgeSize() );
-    for ( auto ue : edges )
-    {
-        origSegm[ue] = mesh.edgeSegment( ue );
-        origEdge[ue] = ue;
-    }
+/// the chamfered edges after subdivision, each remembers the original edge it is a part of
+struct SubdividedEdges
+{
+    UndirectedEdgeBitSet edges;
+    Vector<UndirectedEdgeId, UndirectedEdgeId> origEdge;
+    /// original edges are straight segments, the creases between their chamfers are found from them
+    Vector<LineSegm3f, UndirectedEdgeId> origSegm;
 
-    auto selEdges = edges;
-    // vertices at surface distance less than 2*distance from the edges
-    auto getNearVerts = [&]
+    SubdividedEdges( const Mesh & mesh, const UndirectedEdgeBitSet & e ) : edges( e ),
+        origEdge( mesh.topology.undirectedEdgeSize() ), origSegm( mesh.topology.undirectedEdgeSize() )
     {
-        const auto nearDist = computeSurfaceDistances( mesh, getIncidentVerts( tp, selEdges ), 2 * distance );
-        VertBitSet nearVerts( nearDist.size() );
-        BitSetParallelFor( tp.getValidVerts(), [&]( VertId v )
+        for ( auto ue : edges )
         {
-            if ( nearDist[v] < 2 * distance )
-                nearVerts.set( v );
-        } );
-        return nearVerts;
-    };
-    auto nearFaces = getIncidentFaces( tp, getNearVerts() );
+            origEdge[ue] = ue;
+            origSegm[ue] = mesh.edgeSegment( ue );
+        }
+    }
+};
+
+/// vertices at surface distance less than (maxDist) from the edges
+VertBitSet getNearVerts( const Mesh & mesh, const UndirectedEdgeBitSet & edges, float maxDist )
+{
+    const auto dist = computeSurfaceDistances( mesh, getIncidentVerts( mesh.topology, edges ), maxDist );
+    VertBitSet res( dist.size() );
+    BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+    {
+        if ( dist[v] < maxDist )
+            res.set( v );
+    } );
+    return res;
+}
+
+/// subdivides the triangles near the edges till their edges are not longer than (distance)
+bool subdivideNearEdges( Mesh & mesh, SubdividedEdges & se, float distance, const ProgressCallback & cb )
+{
+    MR_TIMER;
+    const auto & tp = mesh.topology;
+    auto nearFaces = getIncidentFaces( tp, getNearVerts( mesh, se.edges, 2 * distance ) );
 
     // halve the edge length on each pass and shrink the region again, not to subdivide far parts of big triangles
     float maxLen = 0;
@@ -78,52 +96,59 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
     ss.maxEdgeSplits = INT_MAX;
     ss.maxDeviationAfterFlip = distance * std::numeric_limits<float>::epsilon();
     ss.region = &nearFaces;
-    ss.notFlippable = &selEdges;
+    ss.notFlippable = &se.edges;
     ss.onEdgeSplit = [&]( EdgeId e1, EdgeId e )
     {
-        if ( contains( selEdges, e.undirected() ) )
-            origEdge.autoResizeSet( e1.undirected(), origEdge[e.undirected()] );
+        if ( contains( se.edges, e.undirected() ) )
+            se.origEdge.autoResizeSet( e1.undirected(), se.origEdge[e.undirected()] );
     };
     for ( int i = 0; i < numPasses; ++i )
     {
         if ( i > 0 )
-            nearFaces = getIncidentFaces( tp, getNearVerts() );
+            nearFaces = getIncidentFaces( tp, getNearVerts( mesh, se.edges, 2 * distance ) );
         ss.maxEdgeLen = distance * std::exp2( float( numPasses - 1 - i ) );
-        ss.progressCallback = subprogress( cb, 0.4f * i / numPasses, 0.4f * ( i + 1 ) / numPasses );
+        ss.progressCallback = subprogress( cb, float( i ) / numPasses, float( i + 1 ) / numPasses );
         subdivideMesh( mesh, ss );
-        if ( !reportProgress( cb, 0.4f * ( i + 1 ) / numPasses ) )
-            return unexpectedOperationCanceled();
+        if ( !reportProgress( cb, float( i + 1 ) / numPasses ) )
+            return false;
     }
+    return true;
+}
 
-    const AABBTreePolyline3 edgesTree( mesh, selEdges );
+/// splits mesh edges near the chamfered edges where the nearest original edge changes,
+/// so that the creases between chamfers of neighbor edges become mesh edges
+void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyline3 & edgesTree, float distance )
+{
+    MR_TIMER;
+    const auto & tp = mesh.topology;
     const float maxDistSq = sqr( 2 * distance );
     auto nearestOrigAt = [&]( const Vector3f & p )
     {
         const auto proj = findProjectionOnMeshEdges( p, mesh, edgesTree, maxDistSq );
-        return proj.valid() ? origEdge[proj.line] : UndirectedEdgeId{};
+        return proj.valid() ? se.origEdge[proj.line] : UndirectedEdgeId{};
+    };
+    // positive if (p) is closer to original edge (j) than to (i)
+    auto closerToSecond = [&]( const Vector3f & p, UndirectedEdgeId i, UndirectedEdgeId j )
+    {
+        return ( p - closestPointOnLineSegm( p, se.origSegm[i] ) ).length() - ( p - closestPointOnLineSegm( p, se.origSegm[j] ) ).length();
     };
 
-    // split edges where the nearest original edge changes, so that the creases between chamfers of neighbor edges are mesh edges
-    auto nearVerts = getNearVerts();
+    const auto nearVerts = getNearVerts( mesh, se.edges, 2 * distance );
     Vector<UndirectedEdgeId, VertId> nearestOrig( tp.vertSize() );
     BitSetParallelFor( nearVerts, [&]( VertId v )
     {
         nearestOrig[v] = nearestOrigAt( mesh.points[v] );
     } );
-    // positive if (p) is closer to original edge (j) than to (i)
-    auto closerToSecond = [&]( const Vector3f & p, UndirectedEdgeId i, UndirectedEdgeId j )
-    {
-        return ( p - closestPointOnLineSegm( p, origSegm[i] ) ).length() - ( p - closestPointOnLineSegm( p, origSegm[j] ) ).length();
-    };
-    const float creaseTol = 1e-4f * distance;
     std::vector<EdgeId> crossingEdges;
     for ( auto ue : getIncidentEdges( tp, getIncidentFaces( tp, nearVerts ) ) )
     {
         const auto i = nearestOrig[tp.org( ue )];
         const auto j = nearestOrig[tp.dest( ue )];
-        if ( i && j && i != j && !selEdges.test( ue ) )
+        if ( i && j && i != j && !se.edges.test( ue ) )
             crossingEdges.push_back( ue );
     }
+
+    const float creaseTol = 1e-4f * distance;
     // one edge can cross several creases if the original edges are shorter than mesh edges
     for ( EdgeId e : crossingEdges )
     {
@@ -167,78 +192,94 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
             i = j;
         }
     }
-    if ( !reportProgress( cb, 0.45f ) )
-        return unexpectedOperationCanceled();
+}
 
-    // the borders are at the given straight distance from the edges, which is used again to move the vertices
-    nearVerts = getNearVerts();
+/// cuts the mesh along the lines at the given straight distance from the edges
+/// \return the triangles closer to the edges than the cut lines
+Expected<FaceBitSet> cutAtDistance( Mesh & mesh, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree, float distance )
+{
+    MR_TIMER;
+    const auto & tp = mesh.topology;
+    const float maxDistSq = sqr( 2 * distance );
     VertScalars dist( tp.vertSize(), FLT_MAX );
-    BitSetParallelFor( nearVerts, [&]( VertId v )
+    BitSetParallelFor( getNearVerts( mesh, edges, 2 * distance ), [&]( VertId v )
     {
         dist[v] = std::sqrt( findProjectionOnMeshEdges( mesh.points[v], mesh, edgesTree, maxDistSq ).distSq );
     } );
-    const auto isoLines = extractIsolines( tp, dist, distance );
-    if ( !reportProgress( cb, 0.5f ) )
-        return unexpectedOperationCanceled();
 
-    const auto cutRes = cutMesh( mesh, convertSurfacePathsToMeshContours( mesh, isoLines ) );
+    const auto cutRes = cutMesh( mesh, convertSurfacePathsToMeshContours( mesh, extractIsolines( tp, dist, distance ) ) );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( "Chamfer borders intersect each other" );
-    if ( !reportProgress( cb, 0.7f ) )
-        return unexpectedOperationCanceled();
+    return fillContourLeft( tp, cutRes.resultCut );
+}
 
-    auto strip = fillContourLeft( tp, cutRes.resultCut );
+/// the edges divide the strip on sides, and each side is bounded by its own chamfer border
+struct StripSides
+{
+    Face2RegionMap side;
+    std::vector<AABBTreePolyline3> borderTrees;
+    VertBitSet borderVerts;
+};
 
-    // the edges split the strip on sides, each side is bounded by its own part of the strip boundary
-    const auto sideMap = MeshComponents::getAllComponentsMap( { mesh, &strip }, MeshComponents::FaceIncidence::PerEdge, &selEdges );
-    const auto & side = sideMap.first;
-    const int numSides = sideMap.second;
-    for ( auto ue : selEdges )
-        if ( side[tp.left( ue )] == side[tp.right( ue )] )
+Expected<StripSides> findStripSides( const Mesh & mesh, const FaceBitSet & strip, const UndirectedEdgeBitSet & edges )
+{
+    MR_TIMER;
+    const auto & tp = mesh.topology;
+    StripSides res;
+    int numSides = 0;
+    std::tie( res.side, numSides ) = MeshComponents::getAllComponentsMap( { mesh, &strip }, MeshComponents::FaceIncidence::PerEdge, &edges );
+    for ( auto ue : edges )
+        if ( res.side[tp.left( ue )] == res.side[tp.right( ue )] )
             return unexpected( "Chamfer strip does not have two sides" );
 
-    std::vector<UndirectedEdgeBitSet> sideBorders( numSides, UndirectedEdgeBitSet( tp.undirectedEdgeSize() ) );
+    // the mesh boundary is not a chamfer border
+    std::vector<UndirectedEdgeBitSet> borders( numSides, UndirectedEdgeBitSet( tp.undirectedEdgeSize() ) );
     for ( auto ue : getIncidentEdges( tp, strip ) )
     {
         const auto l = tp.left( ue );
         const auto r = tp.right( ue );
         const bool inL = contains( strip, l );
         if ( l && r && inL != contains( strip, r ) )
-            sideBorders[side[inL ? l : r]].set( ue );
+            borders[res.side[inL ? l : r]].set( ue );
     }
 
-    std::vector<AABBTreePolyline3> sideBorderTrees;
-    sideBorderTrees.reserve( numSides );
-    for ( const auto & b : sideBorders )
+    res.borderTrees.reserve( numSides );
+    res.borderVerts.resize( tp.vertSize() );
+    for ( const auto & b : borders )
     {
         if ( b.none() )
             return unexpected( "Chamfer distance is too large" );
-        sideBorderTrees.emplace_back( mesh, b );
+        res.borderTrees.emplace_back( mesh, b );
+        res.borderVerts |= getIncidentVerts( tp, b );
     }
-    if ( !reportProgress( cb, 0.8f ) )
-        return unexpectedOperationCanceled();
+    return res;
+}
+
+/// moves all strip vertices except for the borders on the chamfer surface
+bool moveStripVerts( Mesh & mesh, const FaceBitSet & strip, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree,
+    const StripSides & sides, float distance, const ProgressCallback & cb )
+{
+    MR_TIMER;
+    const auto & tp = mesh.topology;
+    const float maxDistSq = sqr( 2 * distance );
+    const auto edgeVerts = getIncidentVerts( tp, edges );
+    auto newPoints = mesh.points;
 
     // vertex (v) at distance (s) from the edges goes on segment (a,b): (a) is the closest border point to (v) on its side,
     // the ray from (a) through (v) reaches the edges at (onEdge), and (b) is the closest border point to it on the other side
-    const auto edgeVerts = getIncidentVerts( tp, selEdges );
-    // the vertices on the mesh boundary are moved as well, only the vertices of the chamfer borders stay
-    auto movedVerts = getIncidentVerts( tp, strip );
-    for ( const auto & b : sideBorders )
-        movedVerts -= getIncidentVerts( tp, b );
-    auto newPoints = mesh.points;
-    if ( !BitSetParallelFor( movedVerts, [&]( VertId v )
+    if ( !BitSetParallelFor( getIncidentVerts( tp, strip ) - sides.borderVerts, [&]( VertId v )
     {
         const auto & pt = mesh.points[v];
         const auto proj = findProjectionOnMeshEdges( pt, mesh, edgesTree, maxDistSq );
         if ( !proj.valid() )
             return;
         const EdgeId e = proj.line;
-        auto leftSide = side[tp.left( e )];
-        auto rightSide = side[tp.right( e )];
+        auto leftSide = sides.side[tp.left( e )];
+        auto rightSide = sides.side[tp.right( e )];
         if ( edgeVerts.test( v ) )
         {
-            const auto a = findProjectionOnMeshEdges( pt, mesh, sideBorderTrees[leftSide], maxDistSq );
-            const auto b = findProjectionOnMeshEdges( pt, mesh, sideBorderTrees[rightSide], maxDistSq );
+            const auto a = findProjectionOnMeshEdges( pt, mesh, sides.borderTrees[leftSide], maxDistSq );
+            const auto b = findProjectionOnMeshEdges( pt, mesh, sides.borderTrees[rightSide], maxDistSq );
             if ( a.valid() && b.valid() )
                 newPoints[v] = 0.5f * ( a.point + b.point );
             return;
@@ -247,12 +288,12 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
         for ( auto ev : orgRing( tp, v ) )
             if ( auto f = tp.left( ev ); contains( strip, f ) )
                 ownFace = f;
-        const auto ownSide = side[ownFace];
+        const auto ownSide = sides.side[ownFace];
         if ( ownSide == rightSide )
             std::swap( leftSide, rightSide );
         else if ( ownSide != leftSide )
             return;
-        const auto a = findProjectionOnMeshEdges( pt, mesh, sideBorderTrees[leftSide], maxDistSq );
+        const auto a = findProjectionOnMeshEdges( pt, mesh, sides.borderTrees[leftSide], maxDistSq );
         if ( !a.valid() )
             return;
         const float s = std::sqrt( proj.distSq );
@@ -262,14 +303,48 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
             return;
         }
         const auto onEdge = a.point + ( pt - a.point ) * ( distance / ( distance - s ) );
-        const auto b = findProjectionOnMeshEdges( onEdge, mesh, sideBorderTrees[rightSide], maxDistSq );
+        const auto b = findProjectionOnMeshEdges( onEdge, mesh, sides.borderTrees[rightSide], maxDistSq );
         if ( b.valid() )
             newPoints[v] = a.point + ( b.point - a.point ) * ( ( distance - s ) / ( 2 * distance ) );
-    }, subprogress( cb, 0.8f, 1.0f ) ) )
-        return unexpectedOperationCanceled();
+    }, cb ) )
+        return false;
 
     mesh.points = std::move( newPoints );
     mesh.invalidateCaches();
+    return true;
+}
+
+} // anonymous namespace
+
+Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edges, float distance, const ProgressCallback & cb )
+{
+    MR_TIMER;
+    if ( auto c = checkChamferInput( mesh.topology, edges, distance ); !c )
+        return unexpected( std::move( c.error() ) );
+
+    SubdividedEdges se( mesh, edges );
+    if ( !subdivideNearEdges( mesh, se, distance, subprogress( cb, 0.0f, 0.4f ) ) )
+        return unexpectedOperationCanceled();
+
+    const AABBTreePolyline3 edgesTree( mesh, se.edges );
+    splitCreases( mesh, se, edgesTree, distance );
+    if ( !reportProgress( cb, 0.45f ) )
+        return unexpectedOperationCanceled();
+
+    auto strip = cutAtDistance( mesh, se.edges, edgesTree, distance );
+    if ( !strip )
+        return strip;
+    if ( !reportProgress( cb, 0.7f ) )
+        return unexpectedOperationCanceled();
+
+    const auto sides = findStripSides( mesh, *strip, se.edges );
+    if ( !sides )
+        return unexpected( sides.error() );
+    if ( !reportProgress( cb, 0.8f ) )
+        return unexpectedOperationCanceled();
+
+    if ( !moveStripVerts( mesh, *strip, se.edges, edgesTree, *sides, distance, subprogress( cb, 0.8f, 1.0f ) ) )
+        return unexpectedOperationCanceled();
     return strip;
 }
 

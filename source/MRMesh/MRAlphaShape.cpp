@@ -364,15 +364,14 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
         const auto & x = ( heapEnd - 1 )->coords;
         [[maybe_unused]] const bool touchable = tester.reset( x, pj, pi, data.intRadiusSq );
         assert( touchable );
-        bool empty = true;
-        for ( const auto & other : cands )
+        // #vk is not a candidate, but it is inside the balls between the two touching it,
+        // i.e. behind the starting ball, where a candidate of a thin sheet can be touched
+        bool empty = tester( pk ) != InSphereResult::Inside;
+        for ( size_t k = 0; empty && k < cands.size(); ++k )
         {
-            const auto & y = other.coords;
+            const auto & y = cands[k].coords;
             if ( y.id != x.id && tester( y ) == InSphereResult::Inside )
-            {
                 empty = false;
-                break;
-            }
         }
         if ( empty )
             return x.id;

@@ -328,7 +328,8 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
     cands.clear();
     // the centers of the balls via #vi and #vj are on the circle of radius h = sqrt( r^2 - |vi-vj|^2 / 4 )
     // around their midpoint, so every point of the balls is within r + h from it;
-    // two grid steps are added as in getAlphaShapeData to compensate the rounding of integer coordinates
+    // r and h are in the integer grid, but the search is in float coordinates: the rounding to the grid moves
+    // each point and so the midpoint by at most sqrt(3)/2 steps, hence the distance by less than the 2 steps added
     const double rSq = double( data.intRadiusSq );
     const double hSq = std::max( 0.0, rSq - 0.25 * ( Vector3d( pj.pt ) - Vector3d( pi.pt ) ).lengthSq() );
     const auto searchRadius = float( ( std::sqrt( rSq ) + std::sqrt( hSq ) + 2 ) / data.toInt.invRange );

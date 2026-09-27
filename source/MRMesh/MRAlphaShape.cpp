@@ -325,8 +325,13 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
     // reset( x, pj, pi ) selects the ball with the center on the clockwise side of x's half-plane,
     // i.e. towards #vk; the existence of a ball does not depend on the side
     FastInSphereTesterSoS tester;
-    // the emptiness of the starting ball is required as well, but testing it would cost a scan of all the candidates
-    assert( tester.sphereExists( pi, pj, pk, data.intRadiusSq ) );
+#ifndef NDEBUG
+    // the starting ball must exist and be empty; all its points are within r + h from the midpoint,
+    // so each of them is checked in the search below
+    FastInSphereTesterSoS startBall;
+    [[maybe_unused]] const bool startExists = startBall.reset( pi, pj, pk, data.intRadiusSq );
+    assert( startExists );
+#endif
     cands.clear();
     // the centers of the balls via #vi and #vj are on the circle of radius h = sqrt( r^2 - |vi-vj|^2 / 4 )
     // around their midpoint, so every point of the balls is within r + h from it;
@@ -341,6 +346,7 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
             if ( found.vId == vi || found.vId == vj || found.vId == vk )
                 return Processing::Continue;
             const auto c = data.coords( cloud, found.vId );
+            assert( !startExists || startBall( c ) != InSphereResult::Inside );
             if ( tester.sphereExists( c, pj, pi, data.intRadiusSq ) )
                 cands.push_back( { c, orient3d( { pi, pj, pk, c } ) } );
             return Processing::Continue;

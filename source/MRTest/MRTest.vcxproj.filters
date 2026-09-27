@@ -40,6 +40,9 @@
     <ClCompile Include="MRExampleTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRChamferEdgesTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRExtractIsolinesTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

@@ -444,6 +444,16 @@ Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius
     return res;
 }
 
+Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, const AlphaShapeData & data, AlphaShapeStats * stats )
+{
+    auto maybe = findAlphaShapeAllTriangles( cloud, data, ProgressCallback{}, stats );
+    assert( maybe.has_value() );
+    Triangulation res;
+    if ( maybe.has_value() )
+        res = std::move( *maybe );
+    return res;
+}
+
 std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius,
     const ProgressCallback& cb, std::vector<MeshBuilder::VertDuplication> * dups, AlphaShapeStats * stats )
 {

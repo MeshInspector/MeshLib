@@ -155,6 +155,8 @@ struct BallPivotCandidate
 /// (preferably with allPoints=true, since the triangles around all points will be searched)
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud,
     const AlphaShapeData & data, const ProgressCallback & cb, AlphaShapeStats * stats = nullptr );
+[[nodiscard]] MRMESH_API Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud,
+    const AlphaShapeData & data, AlphaShapeStats * stats = nullptr );
 
 /// builds alpha-shape mesh with negative alpha = -1/radius;
 /// the mesh vertices are the cloud points with the same ids plus the ones appended by the

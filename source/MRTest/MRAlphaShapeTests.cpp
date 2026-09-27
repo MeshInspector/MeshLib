@@ -176,7 +176,7 @@ TEST( MRMesh, BallPivotAlphaShapeTriangles )
         return std::array<VertId, 3>{ a, b, c };
     };
     const auto data = getAlphaShapeData( cloud, 0.2f, true );
-    const auto tris = *findAlphaShapeAllTriangles( cloud, data, {} );
+    const auto tris = findAlphaShapeAllTriangles( cloud, data );
     std::set<std::array<VertId, 3>> triSet;
     for ( const auto & t : tris )
         triSet.insert( cyclic( t[0], t[1], t[2] ) );

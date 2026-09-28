@@ -188,8 +188,8 @@ private:
 };
 
 #ifndef __APPLE__
-// the finish future from the GUI thread, for `showViewer()` to wait on
-std::shared_future<void> gViewerFinished;
+// the GUI thread's exit code, for `showViewer()` to wait on
+std::shared_future<int> gViewerFinished;
 #else
 // the original launch params, for `showViewer()` to wait on
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
@@ -201,7 +201,7 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
 {
 #ifndef __APPLE__
     std::promise<int> launchedPromise;
-    std::promise<void> finishedPromise;
+    std::promise<int> finishedPromise;
     auto launched = launchedPromise.get_future();
     auto finished = finishedPromise.get_future();
 
@@ -212,10 +212,7 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
         const auto exitCode = MR::preLaunchDefaultViewer( params, setup );
         launched.set_value( exitCode );
         if ( exitCode == EXIT_SUCCESS )
-        {
-            MR::launchDefaultViewer( params, setup );
-            finished.set_value();
-        }
+            finished.set_value( MR::launchDefaultViewer( params, setup ) );
     } };
     guiThread.detach();
 
@@ -265,17 +262,24 @@ void pythonShowViewer()
     if ( !viewer.isPreLaunched() )
         throw std::runtime_error( "Viewer is not launched: call launch() first" );
 
+    int exitCode;
 #ifndef __APPLE__
-    pybind11::gil_scoped_release gilRelease;
-    gViewerFinished.get();
+    {
+        pybind11::gil_scoped_release gilRelease;
+        exitCode = gViewerFinished.get();
+    }
 #else
     // more info: https://stackoverflow.com/questions/74893322
     if ( !pthread_main_np() )
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 
-    pybind11::gil_scoped_release gilRelease;
-    MR::launchDefaultViewer( *gLaunchParams, *gLaunchSetup );
+    {
+        pybind11::gil_scoped_release gilRelease;
+        exitCode = MR::launchDefaultViewer( *gLaunchParams, *gLaunchSetup );
+    }
 #endif
+    if ( exitCode != EXIT_SUCCESS )
+        throw std::runtime_error( "Viewer failed with exit code " + std::to_string( exitCode ) );
 }
 
 } // namespace

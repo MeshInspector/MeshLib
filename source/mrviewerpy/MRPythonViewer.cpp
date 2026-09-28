@@ -356,6 +356,29 @@ void pythonShowViewer()
         throw std::runtime_error( "Viewer failed with exit code " + std::to_string( exitCode ) );
 }
 
+// The interpreter is exiting with the viewer still up: close it the way a closed window would, so the
+// settings are saved and the plugins unload, instead of dying mid-loop. Registered with `atexit`.
+void shutViewerAtExit()
+{
+#ifndef __APPLE__
+    if ( !gViewerFinished.valid() || gViewerFinished.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::ready )
+        return;
+    pybind11::gil_scoped_release gilRelease;
+    try
+    {
+        MR::CommandLoop::runCommandFromGUIThread( [] { getViewerInstance().stopEventLoop(); } );
+    }
+    catch ( const std::exception& )
+    {
+        return; // the loop is already on its way out
+    }
+    gViewerFinished.wait_for( std::chrono::seconds( 10 ) ); // a stuck loop must not hold the exit forever
+#else
+    if ( getViewerInstance().isLaunched() )
+        shutViewer();
+#endif
+}
+
 } // namespace
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
@@ -526,4 +549,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         "After it returns the viewer is closed for good, and further viewer calls raise RuntimeError." );
 
     m.def( "runFromGUIThread", &pythonRunLambdaFromGUIThread, pybind11::arg( "lambda" ), "Executes given function from GUI thread, and returns after it is done" );
+
+    pybind11::module_::import( "atexit" ).attr( "register" )( pybind11::cpp_function( &shutViewerAtExit ) );
 } )

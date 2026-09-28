@@ -847,6 +847,14 @@ print(outcome[0] if outcome else "AFTER_HUNG", flush=True)
 sys.exit(0 if outcome and outcome[0].startswith("AFTER_RAISED") else 3)
 """
 
+# Exits with the viewer still up: the `atexit` handler must shut it down first, on every
+# platform - a background viewer thread would otherwise just die with the process.
+_EXIT_WITH_VIEWER_SRC = _VIEWER_PROLOGUE + r"""
+mrviewerpy.Viewer().skipFrames(1)
+print("EXITING", flush=True)
+sys.exit(0)
+"""
+
 # Run with `python -i`: after this the interpreter waits for a line at the prompt, and the
 # input hook must pump the viewer meanwhile, or the helper's command is never served.
 _PROMPT_PUMPS_SRC = _VIEWER_PROLOGUE + r"""
@@ -910,6 +918,30 @@ def test_show_viewer_runs_until_shutdown():
     assert run.returncode == 0 and "AFTER_RAISED" in run.stdout, (
         "a command from another thread after showViewer() returned was served or hung: "
         "the viewer outlived it\n" + run.report()
+    )
+
+
+# logged by `Viewer::launchShut`, so its presence proves the viewer was shut down, not killed
+_LAUNCH_SHUT_MARK = "Wait and DON'T process unfinished web requests"
+
+
+@any_viewer
+def test_exit_with_viewer_up_shuts_it_down():
+    """`sys.exit()` with the viewer running ends in `launchShut`, on both viewer designs."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    what = "sys.exit() with the viewer up"
+    run = _run_in_child(what, _EXIT_WITH_VIEWER_SRC, env_extra=_viewer_child_env())
+    _check_viewer_child(what, run)
+
+    assert "EXITING" in run.stdout, "the child never got to exit\n" + run.report()
+    assert run.returncode == 0, "the exit did not complete cleanly\n" + run.report()
+    assert _LAUNCH_SHUT_MARK in run.stdout, (
+        "the viewer was not shut down on interpreter exit\n" + run.report()
     )
 
 

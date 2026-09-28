@@ -1090,7 +1090,7 @@ void Viewer::runEventLoopIteration( double maxWaitSec )
 
 void Viewer::launchShut()
 {
-    if ( !isLaunched_ )
+    if ( !isPreLaunched_ )
     {
         spdlog::error( "Viewer is not launched!" );
         return;

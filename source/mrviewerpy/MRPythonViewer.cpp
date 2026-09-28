@@ -194,14 +194,14 @@ private:
 std::shared_future<int> gViewerFinished;
 #else
 // AppKit runs a GUI on the process main thread and nowhere else, so here the viewer lives on the
-// calling thread: launch() initializes it and returns, the calls run inline, and the window is pumped
-// by showViewer() or, while the interpreter waits for a line of terminal input, by the input hook below.
+// calling thread: launch() pre-launches it and returns, the calls run inline, and the window appears
+// and is pumped by showViewer() or, while the interpreter waits for a line of terminal input, by the
+// input hook below.
 
 int pumpViewerInputHook();
 
 int ( *gPreviousInputHook )() = nullptr;
-bool gShowWindowLater = false; // the launch asked for a visible window, shown once something pumps it
-// the launch params and setup, for the epilogue once the viewer is over
+// the launch params and setup, for the phases that follow launch()
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
 std::shared_ptr<MinimalViewerSetup> gLaunchSetup;
 
@@ -212,13 +212,13 @@ void requireMainThread()
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 }
 
-void showWindowIfPending()
+// the window appears at the first pump, so a script never shows a window it does not pump
+int showIfPending()
 {
-    if ( !gShowWindowLater )
-        return;
-    gShowWindowLater = false;
-    if ( auto* window = getViewerInstance().window )
-        glfwShowWindow( window );
+    auto& viewer = getViewerInstance();
+    if ( viewer.isLaunched() )
+        return EXIT_SUCCESS;
+    return protectedLaunchPhase( [&] { return viewer.launchShow( *gLaunchParams ); } );
 }
 
 bool stdinHasData()
@@ -235,7 +235,7 @@ bool stdinHasData()
 void shutViewer()
 {
     auto& viewer = getViewerInstance();
-    if ( viewer.isLaunched() )
+    if ( viewer.isPreLaunched() )
         protectedLaunchPhase( [&] { viewer.launchShut(); return EXIT_SUCCESS; } );
     postLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
     if ( PyOS_InputHook == pumpViewerInputHook )
@@ -247,10 +247,10 @@ void shutViewer()
 int pumpViewerInputHook()
 {
     auto& viewer = getViewerInstance();
-    while ( viewer.isLaunched() && !stdinHasData() )
+    while ( viewer.isPreLaunched() && !stdinHasData() )
     {
-        showWindowIfPending();
-        if ( viewer.windowShouldClose()
+        if ( showIfPending() != EXIT_SUCCESS
+            || viewer.windowShouldClose()
             // wakes on any window event, else re-checks stdin 20 times a second
             || protectedLaunchPhase( [&] { viewer.runEventLoopIteration( 0.05 ); return EXIT_SUCCESS; } ) != EXIT_SUCCESS )
         {
@@ -299,24 +299,17 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
 #else
     requireMainThread();
 
-    // The launch up to the event loop, which showViewer() or the input hook runs; the epilogue comes
-    // once the viewer is over. A window shown now would hang unresponsive until something pumps it,
-    // so it waits for the first pump.
     gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
     gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
-    gShowWindowLater = params.windowMode == LaunchParams::HideInit || params.windowMode == LaunchParams::Show;
-    if ( gShowWindowLater )
-        gLaunchParams->windowMode = LaunchParams::Hide;
+    if ( params.windowMode == LaunchParams::Show )
+        gLaunchParams->windowMode = LaunchParams::HideInit;
 
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        auto& viewer = getViewerInstance();
         exitCode = MR::preLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
-        if ( exitCode == EXIT_SUCCESS )
-            exitCode = MR::protectedLaunchPhase( [&] { return viewer.launchShow( *gLaunchParams ); } );
     }
-    if ( exitCode != EXIT_SUCCESS || !getViewerInstance().isLaunched() )
+    if ( exitCode != EXIT_SUCCESS )
     {
         throw std::runtime_error(
             "Viewer could not start: glfwInit failed (no display available?), or the viewer was already "
@@ -343,10 +336,11 @@ void pythonShowViewer()
     }
 #else
     requireMainThread();
-    showWindowIfPending();
     {
         pybind11::gil_scoped_release gilRelease; // commands from other Python threads take the GIL themselves
-        exitCode = MR::protectedLaunchPhase( [&] { viewer.launchEventLoop(); return EXIT_SUCCESS; } );
+        exitCode = showIfPending();
+        if ( exitCode == EXIT_SUCCESS )
+            exitCode = MR::protectedLaunchPhase( [&] { viewer.launchEventLoop(); return EXIT_SUCCESS; } );
         shutViewer();
     }
 #endif
@@ -372,7 +366,7 @@ void shutViewerAtExit()
     }
     gViewerFinished.wait_for( std::chrono::seconds( 10 ) ); // a stuck loop must not hold the exit forever
 #else
-    if ( getViewerInstance().isLaunched() )
+    if ( getViewerInstance().isPreLaunched() )
         shutViewer();
 #endif
 }

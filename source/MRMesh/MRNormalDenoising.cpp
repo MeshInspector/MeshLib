@@ -238,7 +238,7 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
     for ( int i = 0; i < settings.normalIters; ++i )
     {
         fnormals = fnormals0;
-        denoiseNormals( mesh, fnormals, v, settings.gamma );
+        denoiseNormals( mesh, fnormals, v, settings.gamma, settings.region );
         if ( !reportProgress( sp, float( 2 * i ) / ( 2 * settings.normalIters ) ) )
             return false;
 
@@ -256,7 +256,8 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
         settings.outCreases->resize( mesh.topology.undirectedEdgeSize() );
         BitSetParallelForAll( *settings.outCreases, [&]( UndirectedEdgeId ue )
         {
-            if ( v[ue] < 0.5f )
+            if ( v[ue] < 0.5f && ( !settings.region
+                || ( contains( *settings.region, mesh.topology.left( ue ) ) && contains( *settings.region, mesh.topology.right( ue ) ) ) ) )
                 settings.outCreases->set( ue );
         } );
     }
@@ -264,9 +265,13 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
     if ( !reportProgress( cb, 0.95f ) )
         return false;
 
+    VertBitSet innerVerts;
+    if ( settings.region )
+        innerVerts = getRegionInnerVerts( mesh.topology, *settings.region );
+
     const auto guide = mesh.points;
     NormalsToPoints n2p;
-    n2p.prepare( mesh.topology, settings.guideWeight );
+    n2p.prepare( mesh.topology, settings.guideWeight, settings.region ? &innerVerts : nullptr );
     auto maxInitialDistSq = settings.limitNearInitial ? sqr( settings.maxInitialDist )
         : std::numeric_limits<float>::infinity();
     mesh.invalidateCaches();

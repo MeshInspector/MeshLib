@@ -436,17 +436,15 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
     m.def( "launch", &pythonLaunch,
         pybind11::arg_v( "params", MR::Viewer::LaunchParams(), "ViewerLaunchParams()" ),
         pybind11::arg_v( "setup", MinimalViewerSetup(), "ViewerSetup()" ),
-        "Starts default viewer with given params and setup, and returns once it is up and can accept calls.\n"
-        "On Windows and Linux the viewer runs on a background thread, and the window is live from here on.\n"
-        "On macOS a GUI can run on the main thread only, so the viewer runs on the calling thread, which must be the main one: "
-        "the calls prepare the scene, and the window appears and runs in showViewer().\n"
-        "Raises RuntimeError if the viewer could not start - with no display available, for instance - "
-        "or if it was already launched once in this process." );
+        "Starts the viewer with the given params and setup, and returns once it is up and accepts calls.\n"
+        "On Windows and Linux the window opens here, and the script keeps running alongside it.\n"
+        "On macOS the window opens in showViewer() instead; call both from the main thread.\n"
+        "Raises RuntimeError if the viewer could not start (no display, or already launched once in this process)." );
 
     m.def( "showViewer", &pythonShowViewer,
-        "Hands the window to the user: returns once they close it, or once shutdown() is called from another thread. "
-        "The viewer is over for this process then.\n"
-        "On macOS this is where the window appears and runs; call it from the main thread." );
+        "Keeps the window open until the user closes it or shutdown() is called from another thread.\n"
+        "On macOS the window opens here, so this call is required there; make it from the main thread.\n"
+        "After it returns the viewer is closed for good, and further viewer calls raise RuntimeError." );
 
     m.def( "runFromGUIThread", &pythonRunLambdaFromGUIThread, pybind11::arg( "lambda" ), "Executes given function from GUI thread, and returns after it is done" );
 } )

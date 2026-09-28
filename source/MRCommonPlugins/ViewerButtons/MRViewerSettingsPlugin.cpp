@@ -22,9 +22,6 @@
 #include "MRViewer/MRUnitSettings.h"
 #include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRRibbonSceneObjectsListDrawer.h"
-#ifndef MESHLIB_NO_VOXELS
-#include "MRVoxels/MRObjectVoxels.h"
-#endif
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRLog.h"
@@ -33,7 +30,6 @@
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRConfig.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
@@ -1342,7 +1338,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     const std::vector<std::string> voxelsFormatTooltips = { _tr( "Fast and efficient format for sparse data" ),
                                                             _tr( "Simplest but high disk space consumption format" ) };
 
-    std::string format = defaultSerializeMeshFormat();
+    std::string format = SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat );
     if ( format == ".ctm" )
         mruFormatParameters_.meshFormat = MruFormatParameters::MeshFormat::Ctm;
     else if ( format == ".mrmesh" )
@@ -1350,14 +1346,14 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     else // format == ".ply"
         mruFormatParameters_.meshFormat = MruFormatParameters::MeshFormat::Ply;
 
-    format = defaultSerializePointsFormat();
+    format = SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat );
     if ( format == ".ctm" )
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ctm;
     else // format == ".ply"
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ply;
 
     #ifndef MESHLIB_NO_VOXELS
-    format = defaultSerializeVoxelsFormat();
+    format = SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat );
     if ( format == ".raw" )
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Raw;
     else // format == ".vdb"
@@ -1380,7 +1376,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             format = ".ply";
             break;
         }
-        setDefaultSerializeMeshFormat( format );
+        SceneSettings::set( SceneSettings::StringType::MeshSerializeFormat, format );
     }
 
     if ( UI::combo( _tr( "Points Format" ), ( int* )&mruFormatParameters_.pointsFormat, pointsFormatNames, true, pointsFormatTooltips ) )
@@ -1395,7 +1391,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             format = ".ply";
             break;
         }
-        setDefaultSerializePointsFormat( format );
+        SceneSettings::set( SceneSettings::StringType::PointsSerializeFormat, format );
     }
     #ifndef MESHLIB_NO_VOXELS
     if ( UI::combo( _tr( "Voxels Format" ), ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
@@ -1410,7 +1406,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             format = ".vdb";
             break;
         }
-        setDefaultSerializeVoxelsFormat( format );
+        SceneSettings::set( SceneSettings::StringType::VoxelsSerializeFormat, format );
     }
     #endif
     ImGui::PopItemWidth();

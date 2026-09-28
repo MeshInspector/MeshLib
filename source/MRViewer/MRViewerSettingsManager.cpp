@@ -23,10 +23,6 @@
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectPointsHolder.h"
-#ifndef MRVIEWER_NO_VOXELS
-#include "MRVoxels/MRObjectVoxels.h"
-#endif
 
 namespace
 {
@@ -201,12 +197,6 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     // lastExtentions_.clear();
 
     SceneSettings::reset();
-
-    setDefaultSerializeMeshFormat( ".ply" );
-    setDefaultSerializePointsFormat( ".ply" );
-#ifndef MRVIEWER_NO_VOXELS
-    setDefaultSerializeVoxelsFormat( ".vdb" );
-#endif
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
@@ -527,17 +517,9 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
 
     // Save Scene inner formats
-    {
-        std::string format;
-        format = loadString( cMruInnerMeshFormat, ".ply" );
-        setDefaultSerializeMeshFormat( format );
-        format = loadString( cMruInnerPointsFormat, ".ply" );
-        setDefaultSerializePointsFormat( format );
-        #ifndef MRVIEWER_NO_VOXELS
-        format = loadString( cMruInnerVoxelsFormat, ".vdb" );
-        setDefaultSerializeVoxelsFormat( format );
-        #endif
-    }
+    SceneSettings::set( SceneSettings::StringType::MeshSerializeFormat, loadString( cMruInnerMeshFormat, ".ply" ) );
+    SceneSettings::set( SceneSettings::StringType::PointsSerializeFormat, loadString( cMruInnerPointsFormat, ".ply" ) );
+    SceneSettings::set( SceneSettings::StringType::VoxelsSerializeFormat, loadString( cMruInnerVoxelsFormat, ".vdb" ) );
 
     if ( cfg.hasJsonValue( cVisualObjectTags ) )
     {
@@ -692,13 +674,9 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
 
     // Save Scene inner formats
-    {
-        saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
-        saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
-#ifndef MRVIEWER_NO_VOXELS
-        saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
-#endif
-    }
+    saveString( cMruInnerMeshFormat, SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat ) );
+    saveString( cMruInnerPointsFormat, SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat ) );
+    saveString( cMruInnerVoxelsFormat, SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat ) );
 
     {
         Json::Value visualObjectTagsJson;

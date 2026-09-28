@@ -205,13 +205,6 @@ int ( *gPreviousInputHook )() = nullptr;
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
 std::shared_ptr<MinimalViewerSetup> gLaunchSetup;
 
-void requireMainThread()
-{
-    // more info: https://stackoverflow.com/questions/74893322
-    if ( !pthread_main_np() )
-        throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
-}
-
 // the window appears at the first pump, so a script never shows a window it does not pump
 int showIfPending()
 {
@@ -297,7 +290,9 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
 
     gViewerFinished = std::move( finished );
 #else
-    requireMainThread();
+    // more info: https://stackoverflow.com/questions/74893322
+    if ( !pthread_main_np() )
+        throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 
     gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
     gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
@@ -335,7 +330,10 @@ void pythonShowViewer()
         exitCode = gViewerFinished.get();
     }
 #else
-    requireMainThread();
+    // more info: https://stackoverflow.com/questions/74893322
+    if ( !pthread_main_np() )
+        throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
+
     {
         pybind11::gil_scoped_release gilRelease; // commands from other Python threads take the GIL themselves
         exitCode = showIfPending();

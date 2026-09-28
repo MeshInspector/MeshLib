@@ -238,10 +238,8 @@ int pumpViewerInputHook()
             assert( viewer.isPreLaunched() );
 
             if ( !viewer.isLaunched() )
-            {
-                auto rc = viewer.launchShow( *gLaunchParams );
-                assert( rc == EXIT_SUCCESS );
-            }
+                if ( auto rc = viewer.launchShow( *gLaunchParams ); rc != EXIT_SUCCESS )
+                    return rc;
 
             // wakes on any window event, else re-checks stdin 20 times a second
             viewer.runEventLoopIteration( 0.05 );
@@ -350,10 +348,8 @@ void pythonShowViewer()
         {
             auto& viewer = getViewerInstance();
             if ( !viewer.isLaunched() )
-            {
-                auto rc = viewer.launchShow( *gLaunchParams );
-                assert( rc == EXIT_SUCCESS );
-            }
+                if ( auto rc = viewer.launchShow( *gLaunchParams ); rc != EXIT_SUCCESS )
+                    return rc;
             viewer.launchEventLoop();
             viewer.launchShut();
             return EXIT_SUCCESS;

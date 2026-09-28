@@ -300,6 +300,9 @@ MR_BIND_IGNORE inline void getTriPoints( const MeshTopology & topology, const Ve
     return 2 * PI_F - sumAngles( topology, points, v, outBoundaryVert );
 }
 
+/// finds all mesh edges with the cosine of dihedral angle (see dihedralAngleCos) in [minSharpCos, maxSharpCos]
+[[nodiscard]] MRMESH_API UndirectedEdgeBitSet findSharpEdges( const MeshTopology & topology, const VertCoords & points, float minSharpCos, float maxSharpCos );
+
 /// finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet findCreaseEdges( const MeshTopology & topology, const VertCoords & points, float angleFromPlanar );
 

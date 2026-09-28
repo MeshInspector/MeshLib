@@ -559,6 +559,9 @@
     <ClCompile Include="MRMcpSettings.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRGLDriverKnownIssues.cpp">
+      <Filter>Render</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ImGuiHelpers.h">
@@ -1086,6 +1089,9 @@
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="MRVisualObjectTag.h">
+      <Filter>Render</Filter>
+    </ClInclude>
+    <ClInclude Include="MRGLDriverKnownIssues.h">
       <Filter>Render</Filter>
     </ClInclude>
   </ItemGroup>

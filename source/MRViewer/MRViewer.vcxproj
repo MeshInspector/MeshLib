@@ -183,6 +183,7 @@
     <ClCompile Include="MRSystemMcp.cpp" />
     <ClCompile Include="MRMcpCommon.cpp" />
     <ClCompile Include="MRMcpSettings.cpp" />
+    <ClCompile Include="MRGLDriverKnownIssues.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MRFileDialogCocoa.h" />
@@ -365,6 +366,7 @@
     <ClInclude Include="MRUITestEngineControl.h" />
     <ClInclude Include="MRMcpCommon.h" />
     <ClInclude Include="MRMcpSettings.h" />
+    <ClInclude Include="MRGLDriverKnownIssues.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />

@@ -125,35 +125,6 @@ IF(NOT MSVC)
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wstrict-prototypes")
 ENDIF()
 
-# This allows us to share bindings for C++ types across compilers (across GCC and Clang). Otherwise Pybind refuses
-#   to share them because the compiler name and the ABI version number are different, even when there's no actual ABI incompatibility in practice.
-# We allow customizing those so that our clients can prevent their modules from talking to ours, e.g. to provide their own simplified bindings
-#   for our classes, to avoid having our modules as dependencies.
-# Pass empty strings to those to avoid customizing them at all.
-set(MESHLIB_PYBIND11_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
-set(MESHLIB_PYBIND11_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
-IF(NOT "${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}" STREQUAL "")
-  add_compile_definitions(PYBIND11_COMPILER_TYPE=\"${MESHLIB_PYBIND11_COMPILER_TYPE_STRING}\")
-ENDIF()
-IF(NOT "${MESHLIB_PYBIND11_BUILD_ABI_STRING}" STREQUAL "")
-  add_compile_definitions(PYBIND11_BUILD_ABI=\"${MESHLIB_PYBIND11_BUILD_ABI_STRING}\")
-ENDIF()
-
-# Things for our patched pybind: --- [
-
-# It's a good idea to have this match `PYTHON_MIN_VERSION` in `scripts/mrbind/generate.mk`.
-# Here `0x030800f0` corresponds to 3.8 (ignore the `f0` suffix at the end, it just means a release version as opposed to alpha/beta/etc).
-add_compile_definitions(Py_LIMITED_API=0x030800f0)
-
-# It's a good idea to have this match the value specified in `scripts/mrbind/generate.mk`. See that file for the explanation.
-add_compile_definitions(PYBIND11_INTERNALS_VERSION=5)
-
-# This affects the naming of our pybind shims.
-set(MESHLIB_PYBIND11_LIB_SUFFIX "meshlib" CACHE STRING "")
-add_compile_definitions(PYBIND11_NONLIMITEDAPI_LIB_SUFFIX_FOR_MODULE=\"${MESHLIB_PYBIND11_LIB_SUFFIX}\")
-
-# ] --- end things for our patched pybind
-
 # Warn about ABI incompatibilities.
 # GCC 12 fixed a bug, and this fix affects the ABI: https://github.com/gcc-mirror/gcc/commit/a37e8ce3b66325f0c6de55c80d50ac1664c3d0eb
 # Because of this fix GCC 11 and older are incompatible with GCC 12+, and also with Clang that we use the build the Python bindings.
@@ -184,6 +155,29 @@ ENDIF()
 # disable it for now and investigate these cases later
 IF(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -Wno-sfinae-incomplete")
+ENDIF()
+
+# required for older libstdc++'s <stacktrace>
+# fixed for 13.4+, 14.2+, 15+
+# https://gcc.gnu.org/bugzilla/show_bug.cgi?id=114940
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 19)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsized-deallocation")
+ENDIF()
+
+# libstdc++ keeps the implementation of std::stacktrace in the separate library stdc++exp;
+# the check links a shared library against it, as MRMesh is one
+IF(NOT MSVC AND NOT EMSCRIPTEN)
+  include(CheckCXXSourceCompiles)
+  set(CMAKE_REQUIRED_FLAGS -fPIC)
+  set(CMAKE_REQUIRED_LINK_OPTIONS -shared)
+  set(CMAKE_REQUIRED_LIBRARIES stdc++exp)
+  check_cxx_source_compiles("
+    #include <stacktrace>
+    int f() { return int( to_string( std::stacktrace::current() ).size() ); }
+  " HAVE_STD_STACKTRACE)
+  unset(CMAKE_REQUIRED_FLAGS)
+  unset(CMAKE_REQUIRED_LINK_OPTIONS)
+  unset(CMAKE_REQUIRED_LIBRARIES)
 ENDIF()
 
 # Clang 20+ conflicts with fmt prior to 12
@@ -226,6 +220,13 @@ IF(MSVC)
   FOREACH(TARGET_KIND EXE SHARED MODULE)
     set(CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE "${CMAKE_${TARGET_KIND}_LINKER_FLAGS_RELEASE} /DEBUG /OPT:REF /OPT:ICF")
   ENDFOREACH()
+
+  # Ninja: the binaries record bare PDB file names, e.g. MRMesh.pdb.
+  # Visual Studio generator: CMake mangles the option into %%%MRMesh.pdb%%%, a name the PDB cannot be found by, so the option is skipped there and those builds keep full paths.
+  # $<HOST_LINK:...> keeps the option away from CUDA device-link steps.
+  IF(NOT CMAKE_GENERATOR MATCHES "Visual Studio")
+    add_link_options($<HOST_LINK:/PDBALTPATH:%_PDB%>)
+  ENDIF()
 ENDIF()
 
 # macOS: force Clang to use system libc++

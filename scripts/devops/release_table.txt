@@ -37,7 +37,7 @@
     <tr>
       <td align="center">Ubuntu 22 LTS x64</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu22-dev.deb">deb</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu22-x64-dev.deb">deb</a>
       </td>
     </tr>
     <tr>
@@ -49,13 +49,25 @@
     <tr>
       <td align="center">Ubuntu 24 LTS x64</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu24-dev.deb">deb</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu24-x64-dev.deb">deb</a>
       </td>
     </tr>
     <tr>
       <td align="center">Ubuntu 24 LTS arm64</td>
       <td align="center">
         <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu24-arm64-dev.deb">deb</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Ubuntu 26 LTS x64</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu26-x64-dev.deb">deb</a>
+      </td>
+    </tr>
+    <tr>
+      <td align="center">Ubuntu 26 LTS arm64</td>
+      <td align="center">
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_ubuntu26-arm64-dev.deb">deb</a>
       </td>
     </tr>
     <tr>
@@ -79,7 +91,7 @@
     <tr>
       <td align="center">macOS Arm (Apple Silicon)</td>
       <td align="center">
-        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_arm.pkg">arm pkg</a>
+        <a href="RELEASE_PATH/meshlib_SHORT_VERSION_arm64.pkg">arm64 pkg</a>
       </td>
     </tr>
     <tr>

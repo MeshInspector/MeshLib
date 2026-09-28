@@ -22,6 +22,7 @@ MESHLIB_THIRDPARTY_ROOT_DIR="${MESHLIB_THIRDPARTY_ROOT_DIR:-${BASE_DIR}}"
 if [[ $OSTYPE == 'darwin'* ]]; then
   echo "Host system: MacOS"
   INSTALL_REQUIREMENTS="install_brew_requirements.sh"
+  export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.7}"
 elif [[ $OSTYPE == 'linux'* ]]; then
   source /etc/os-release
   echo "Host system: ${NAME} ${DISTRIB_RELEASE}"
@@ -56,6 +57,11 @@ MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} \
   -D CMAKE_INSTALL_PREFIX=${MESHLIB_THIRDPARTY_ROOT_DIR} \
   -D CMAKE_BUILD_TYPE=Release \
 "
+
+# Which Python version the mrbind-pybind11 stubs and shim are built against.
+if [ -n "${MESHLIB_PYTHON_VERSION}" ] ; then
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION=${MESHLIB_PYTHON_VERSION}"
+fi
 
 if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   CMAKE_C_COMPILER="${CMAKE_C_COMPILER:-${CC}}"
@@ -110,9 +116,16 @@ if [ "${MR_EMSCRIPTEN}" == "ON" ]; then
     CXXFLAGS="${CFLAGS} -pthread"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM64} == 1 ]] ; then
-    CFLAGS="${CFLAGS} -s MEMORY64=1"
-    CXXFLAGS="${CFLAGS} -s MEMORY64=1"
-    LDFLAGS="${LDFLAGS} -s MEMORY64=1"
+    EMSCRIPTEN_VERSION=$("${EMSCRIPTEN_ROOT}/emcc" -v 2>&1 | sed -nE 's/^emcc \(.*\) ([0-9.]+).*/\1/p' | head -1)
+    # that's how the version comparison works in Bash
+    if [ "$(printf '%s\n6.0.0\n' "${EMSCRIPTEN_VERSION:-0}" | sort -V | head -1)" = "6.0.0" ] ; then
+      WASM64_FLAG="-m64"
+    else
+      WASM64_FLAG="-s MEMORY64=1"
+    fi
+    CFLAGS="${CFLAGS} ${WASM64_FLAG}"
+    CXXFLAGS="${CFLAGS} ${WASM64_FLAG}"
+    LDFLAGS="${LDFLAGS} ${WASM64_FLAG}"
   fi
   if [[ ${MR_EMSCRIPTEN_WASM2023} == 1 ]] ; then
     CFLAGS="${CFLAGS} -msimd128 -mbulk-memory -mnontrapping-fptoint -msse4.2"

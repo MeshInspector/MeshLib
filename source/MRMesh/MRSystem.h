@@ -82,6 +82,13 @@ using FileNamesStack = std::vector<std::filesystem::path>;
 #ifndef __EMSCRIPTEN__
 /// returns string representation of the current stacktrace
 [[nodiscard]] MRMESH_API std::string getCurrentStacktrace();
+
+/// makes getCurrentStacktrace() delegate to (*provider)(); pass nullptr to restore the default.
+/// Mostly a Windows workaround: std::stacktrace parks a debug engine client in a static of whichever
+/// module resolved symbols, and tearing that down during the DLL's detach deadlocks and kills the
+/// process, skipping the remaining static destructors. Install it from the executable, whose statics
+/// are destroyed earlier, by exit(). See https://github.com/microsoft/STL/issues/4855
+MR_BIND_IGNORE MRMESH_API void setStacktraceProvider( std::string (*provider)() );
 #endif
 
 struct SystemMemory

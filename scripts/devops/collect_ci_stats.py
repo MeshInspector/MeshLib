@@ -76,6 +76,8 @@ def parse_job(job: dict):
             'runner_cpu_model':  runner_stats.get('cpu_model'),
             'runner_ram_mb':     runner_stats['ram_mb'],
             'runner_free_disk_mb': runner_stats.get('free_disk_mb'),
+            'runner_available_mem_mb': runner_stats.get('available_mem_mb'),
+            'runner_wired_mb':   runner_stats.get('wired_mb'),
             'build_system':      runner_stats['build_system'],
             'aws_instance_type': runner_stats['aws_instance_type'],
             'artifact_size':     artifact_size,

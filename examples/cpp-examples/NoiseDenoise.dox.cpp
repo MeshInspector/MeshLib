@@ -35,7 +35,7 @@ int main()
 
     // Denoise the mesh with sharpening for sharp edges
     // see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-    std::ignore = MR::meshDenoiseViaNormals( mesh );
+    MR::meshDenoiseViaNormals( mesh );
 
     // Save the denoised mesh
     if ( auto saveRes = MR::MeshSave::toAnySupportedFormat( mesh, "denoised_mesh.stl" ); !saveRes )

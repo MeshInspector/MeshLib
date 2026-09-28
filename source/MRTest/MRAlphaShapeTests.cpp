@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <random>
+#include <set>
 
 namespace MR
 {
@@ -104,6 +105,96 @@ TEST( MRMesh, AlphaShape )
 
     const auto allTris = findAlphaShapeAllTriangles( cloud, 3 );
     EXPECT_EQ( allTris.size(), 6 );
+}
+
+TEST( MRMesh, BallPivotVertex )
+{
+    // the pivot edge is on the z-axis directed up, the other points are around it at mid-height,
+    // and the balls via the edge and #vk are empty from both sides
+    PointCloud cloud;
+    cloud.points.push_back( {  0,       0,       0    } ); //0_v, vi
+    cloud.points.push_back( {  0,       0,       1    } ); //1_v, vj
+    cloud.points.push_back( {  0.8485f, -0.8485f, 0.5f } ); //2_v, vk, rotation 315 degrees
+    cloud.points.push_back( {  0,       1,       0.5f } ); //3_v, rotation 90 degrees
+    cloud.points.push_back( { -1,       0,       0.5f } ); //4_v, rotation 180 degrees
+    cloud.points.push_back( {  0.2952f, 1.6742f, 0.5f } ); //5_v, rotation 80 degrees, far from the axis
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    auto data = getAlphaShapeData( cloud, 1, false );
+    std::vector<BallPivotCandidate> cands;
+    auto ids = [&cands]
+    {
+        std::vector<VertId> res;
+        for ( const auto & c : cands )
+            res.push_back( c.coords.id );
+        std::sort( res.begin(), res.end() ); // the order of the candidates is unspecified
+        return res;
+    };
+    const std::vector<VertId> allCands{ 3_v, 4_v, 5_v };
+
+    // 5_v is the first counter-clockwise, but its ball contains 3_v, which is hit by the rolling ball first
+    EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 3_v );
+    EXPECT_EQ( ids(), allCands );
+
+    // the reversed edge rotates the other way
+    EXPECT_EQ( findBallPivotVertex( cloud, 1_v, 0_v, 2_v, data, cands ), 4_v );
+    EXPECT_EQ( ids(), allCands );
+
+    cloud.validPoints.reset( 3_v );
+    cloud.invalidateCaches();
+    data = getAlphaShapeData( cloud, 1, false );
+    EXPECT_EQ( findBallPivotVertex( cloud, 0_v, 1_v, 2_v, data, cands ), 5_v );
+
+    // with no other point, the ball rotates to the other side of the same triangle
+    PointCloud tri;
+    for ( VertId v : { 0_v, 1_v, 2_v } )
+        tri.points.push_back( cloud.points[v] );
+    tri.validPoints.resize( tri.points.size(), true );
+    data = getAlphaShapeData( tri, 1, false );
+    EXPECT_EQ( findBallPivotVertex( tri, 0_v, 1_v, 2_v, data, cands ), 2_v );
+    EXPECT_TRUE( cands.empty() );
+    EXPECT_EQ( findBallPivotVertex( tri, 1_v, 0_v, 2_v, data, cands ), 2_v );
+}
+
+// the ball pivoted over any edge of an alpha-shape triangle must stop at another alpha-shape triangle;
+// the thin shell has most triangles in both orientations, where the ball pivoted from one side of a triangle
+// could touch the neighbour behind the starting ball, if #vk were not tested for being inside
+TEST( MRMesh, BallPivotAlphaShapeTriangles )
+{
+    PointCloud cloud;
+    const int n = 2000;
+    for ( int i = 0; i < n; ++i ) // Fibonacci sphere
+    {
+        const float z = 1 - ( 2 * i + 1 ) / float( n );
+        const float rho = std::sqrt( 1 - z * z );
+        const float phi = 2.39996323f * i;
+        cloud.points.push_back( { rho * std::cos( phi ), rho * std::sin( phi ), z } );
+    }
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    auto cyclic = []( VertId a, VertId b, VertId c ) // the rotation starting from the smallest id
+    {
+        if ( b < a && b < c )
+            return std::array<VertId, 3>{ b, c, a };
+        if ( c < a && c < b )
+            return std::array<VertId, 3>{ c, a, b };
+        return std::array<VertId, 3>{ a, b, c };
+    };
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    const auto tris = findAlphaShapeAllTriangles( cloud, data );
+    std::set<std::array<VertId, 3>> triSet;
+    for ( const auto & t : tris )
+        triSet.insert( cyclic( t[0], t[1], t[2] ) );
+
+    std::vector<BallPivotCandidate> cands;
+    for ( const auto & t : tris )
+        for ( int e = 0; e < 3; ++e )
+        {
+            const VertId a = t[e], b = t[( e + 1 ) % 3], c = t[( e + 2 ) % 3];
+            const auto x = findBallPivotVertex( cloud, a, b, c, data, cands );
+            EXPECT_TRUE( triSet.contains( cyclic( b, a, x ) ) );
+        }
+    EXPECT_GT( tris.size(), size_t( 1000 ) );
 }
 
 // four points of a square are exactly on both balls passing via any three of them,

@@ -25,6 +25,60 @@ S decodeUtf8( std::string_view str )
     return res;
 }
 
+MR_FORCE_INLINE void appendUtf8_( std::string& str, char32_t ch )
+{
+    if ( ch < 0x80 )
+    {
+        str.push_back( char( ch ) );
+    }
+    else if ( ch < 0x800 )
+    {
+        str.push_back( char( 0xC0 | ( ch >> 6 ) ) );
+        str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+    }
+    else if ( ch < 0x10000 )
+    {
+        if ( 0xD800 <= ch && ch <= 0xDFFF )
+        {
+            // U+FFFD REPLACEMENT CHARACTER
+            str.push_back( '\xEF' );
+            str.push_back( '\xBF' );
+            str.push_back( '\xBD' );
+        }
+        else
+        {
+            str.push_back( char( 0xE0 | ( ch >> 12 ) ) );
+            str.push_back( char( 0x80 | ( ( ch >> 6 ) & 0x3F ) ) );
+            str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+        }
+    }
+    else if ( ch < 0x110000 )
+    {
+        str.push_back( char( 0xF0 | ( ch >> 18 ) ) );
+        str.push_back( char( 0x80 | ( ( ch >> 12 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( ( ch >> 6 ) & 0x3F ) ) );
+        str.push_back( char( 0x80 | ( ch & 0x3F ) ) );
+    }
+    else
+    {
+        // U+FFFD REPLACEMENT CHARACTER
+        str.push_back( '\xEF' );
+        str.push_back( '\xBF' );
+        str.push_back( '\xBD' );
+    }
+}
+
+/// returns the length of the UTF-8 multi-byte sequence for its first byte
+/// returns 0 if the first byte is invalid
+size_t utf8Length( char8_t ch )
+{
+    constexpr int lengths[] = {
+        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0,
+    };
+    return lengths[ch >> 3];
+}
+
 } // anonymous namespace
 
 std::wstring utf8ToWide( const char* utf8 )
@@ -64,7 +118,7 @@ std::string wideToUtf8( const wchar_t * wide )
 #else
     std::string res;
     for ( ; *wide; ++wide )
-        appendUtf8( res, char32_t( *wide ) );
+        appendUtf8_( res, char32_t( *wide ) );
     return res;
 #endif
 }
@@ -133,13 +187,21 @@ std::string utf8substr( const char * s, size_t pos, size_t count )
         assert( false );
         return {};
     }
+    const auto iterate = [] ( std::string_view str, size_t& offset )
+    {
+        assert( offset < str.size() );
+        const auto len = utf8Length( char8_t( str[offset] ) );
+        offset += size_t( len + !len ); // at least 1 byte
+    };
     const std::string_view str( s );
     size_t begin = 0;
     for ( ; pos > 0 && begin < str.size(); --pos )
-        begin += utf8ToCodepoint( str.data() + begin, str.size() - begin ).second;
+        iterate( str, begin );
+    begin = std::min( begin, str.size() );
     size_t end = begin;
     for ( ; count > 0 && end < str.size(); --count )
-        end += utf8ToCodepoint( str.data() + end, str.size() - end ).second;
+        iterate( str, end );
+    end = std::min( end, str.size() );
     return std::string( str.substr( begin, end - begin ) );
 }
 
@@ -153,11 +215,7 @@ std::pair<char32_t, size_t> utf8ToCodepoint( const char* s, size_t size )
         size > 3 ? (unsigned char)s[3] : (unsigned char)0,
     };
 
-    constexpr int lengths[] = {
-        1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-        0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0
-    };
-    const auto len = lengths[buf[0] >> 3];
+    const auto len = utf8Length( buf[0] );
     const auto read = std::min( size_t( len + !len ), size ); // at least 1 byte
 
     constexpr int masks[]  = {0x00, 0x7f, 0x1f, 0x0f, 0x07};
@@ -193,28 +251,7 @@ std::u32string utf8ToUtf32( std::string_view str )
 
 void appendUtf8( std::string& str, char32_t cp )
 {
-    if ( cp > 0x10FFFF || ( cp >= 0xD800 && cp <= 0xDFFF ) )
-        cp = U'\xFFFD';
-    if ( cp < 0x80 )
-        str.push_back( char( cp ) );
-    else if ( cp < 0x800 )
-    {
-        str.push_back( char( 0xC0 | ( cp >> 6 ) ) );
-        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
-    }
-    else if ( cp < 0x10000 )
-    {
-        str.push_back( char( 0xE0 | ( cp >> 12 ) ) );
-        str.push_back( char( 0x80 | ( ( cp >> 6 ) & 0x3F ) ) );
-        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
-    }
-    else
-    {
-        str.push_back( char( 0xF0 | ( cp >> 18 ) ) );
-        str.push_back( char( 0x80 | ( ( cp >> 12 ) & 0x3F ) ) );
-        str.push_back( char( 0x80 | ( ( cp >> 6 ) & 0x3F ) ) );
-        str.push_back( char( 0x80 | ( cp & 0x3F ) ) );
-    }
+    appendUtf8_( str, cp );
 }
 
 std::string utf32ToUtf8( std::u32string_view str )
@@ -222,7 +259,7 @@ std::string utf32ToUtf8( std::u32string_view str )
     std::string res;
     res.reserve( str.size() );
     for ( auto cp : str )
-        appendUtf8( res, cp );
+        appendUtf8_( res, cp );
     return res;
 }
 

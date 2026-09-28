@@ -25,6 +25,9 @@ struct StepLoadSettings
     /// assign distinct per-component colors so the scene is visually inspectable;
     /// has no effect if the source STEP file contains any color information
     bool autoColorize = true;
+    /// split every simple shape into per-body (Solid/Shell) child objects, even if it has a single body;
+    /// by default single-body shapes are loaded as a single mesh object
+    bool forceLoadSubShapes = false;
 };
 
 /// load mesh data from STEP file using OpenCASCADE

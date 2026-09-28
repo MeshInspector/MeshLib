@@ -110,13 +110,10 @@ IF(EMSCRIPTEN)
   set(GDCM_BUILD_DOCBOOK_MANPAGES OFF)
   meshlib_add_package(GDCM)
 
-  set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   set(JSONCPP_WITH_TESTS OFF)
   set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
   set(BUILD_STATIC_LIBS OFF)
   meshlib_add_package(jsoncpp)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
   meshlib_add_package(fmt)
 
@@ -125,10 +122,16 @@ IF(EMSCRIPTEN)
   meshlib_add_package(spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
+  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
   set(CMAKE_SYSTEM_PROCESSOR "unknown")
   meshlib_add_package(onetbb)
   set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
+
+  # oneTBB forces -fexceptions under Emscripten
+  get_target_property(tbb_compile_options tbb COMPILE_OPTIONS)
+  list(REMOVE_ITEM tbb_compile_options -fexceptions)
+  set_target_properties(tbb PROPERTIES COMPILE_OPTIONS "${tbb_compile_options}")
   install(DIRECTORY ${onetbb_SOURCE_DIR}/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   meshlib_add_package(tinyxml2)

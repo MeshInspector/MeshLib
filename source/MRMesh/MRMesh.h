@@ -306,6 +306,9 @@ struct [[nodiscard]] Mesh
     /// optionally returns whether the vertex is on boundary
     [[nodiscard]] float discreteGaussianCurvature( VertId v, bool * outBoundaryVert = nullptr ) const { return MR::discreteGaussianCurvature( topology, points, v, outBoundaryVert ); }
 
+    /// finds all mesh edges with the cosine of dihedral angle (see dihedralAngleCos) in [minSharpCos, maxSharpCos]
+    [[nodiscard]] UndirectedEdgeBitSet findSharpEdges( float minSharpCos, float maxSharpCos ) const { return MR::findSharpEdges( topology, points, minSharpCos, maxSharpCos ); }
+
     /// finds all mesh edges where dihedral angle is distinct from planar PI angle on at least given value
     [[nodiscard]] UndirectedEdgeBitSet findCreaseEdges( float angleFromPlanar ) const { return MR::findCreaseEdges( topology, points, angleFromPlanar ); }
 

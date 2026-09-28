@@ -89,6 +89,26 @@ package. Installing `meshlib` later adds the viewer on top, and `pip uninstall m
 only the viewer part again. Both packages are versioned in lockstep: `meshlib` of a given version
 requires exactly `meshlib-core` of the same version.
 
+### Upgrading from 3.1.3 or older {#PythonSetupUpgrade}
+Releases up to 3.1.3 shipped a single `meshlib` wheel that owned every file `meshlib-core` provides
+now. Over such an installation `pip install --upgrade meshlib` reports success and leaves a broken
+package: pip installs the new `meshlib-core` first, then removes the old `meshlib` together with
+every file it used to own, including the `mrmeshpy` module that `meshlib-core` has just written,
+and finally installs the new viewer-only `meshlib`. Afterwards `pip show meshlib-core` prints the
+new version, but `from meshlib import mrmeshpy` fails with
+`ModuleNotFoundError: No module named 'meshlib.mrmeshpy'`.
+
+Uninstall the old version before installing the new one:
+```sh
+pip uninstall -y meshlib
+pip install meshlib
+```
+If the upgrade has already happened, a forced reinstall repairs it in place:
+```sh
+pip install --force-reinstall meshlib
+```
+Clean installs into a new environment, and upgrades between 3.1.4 and later versions, are not affected.
+
 ### Verify the installation {#PythonSetupVerify}
 `pip install` reporting success is not the same as a working install: the wheel is tens of megabytes of prebuilt native code, and it can install cleanly and still fail to load. This one command covers the whole chain — import the package, load the native module, run a real geometry call:
 ```sh
@@ -121,13 +141,14 @@ Output:
 
 ### Troubleshooting {#PythonSetupTroubleshooting}
 
-The failures new installations actually hit, with the message each one produces. One of them leaves `pip install` reporting success, which is what [Verify the installation](\ref PythonSetupVerify) is for.
+The failures installations actually hit, with the message each one produces. Two of them leave `pip install` reporting success, which is what [Verify the installation](\ref PythonSetupVerify) is for.
 
 | Path | Symptom | Cause | Fix |
 |------|---------|-------|-----|
 | Linux distribution Python, Homebrew Python on macOS | `pip install meshlib` stops before downloading anything with `error: externally-managed-environment`, then `× This environment is externally managed`. | Not a MeshLib problem: pip 23.0 and newer refuse to install any package into an interpreter the OS package manager owns (PEP 668, marked by a `EXTERNALLY-MANAGED` file next to the standard library). | Install into a virtual environment, as [Installation Process](\ref PythonSetupInstall) above shows. `pip install --break-system-packages meshlib` also installs, but into the system interpreter — prefer the virtual environment. |
 | Any | `ERROR: Could not find a version that satisfies the requirement meshlib (from versions: none)`, then `ERROR: No matching distribution found for meshlib`. | No published wheel matches this interpreter: the Python version is outside the range in [Prerequisites](\ref PythonSetupPrerequisites) above, the interpreter is 32-bit, or the platform has no wheel at all — on ARM64 Windows the wheels start at Python 3.11, so an older interpreter there needs the x64 build. | Check what pip is matching against — `python -c "import sys, sysconfig; print(sys.version, sysconfig.get_platform())"` — and install a Python listed in [Prerequisites](\ref PythonSetupPrerequisites). |
 | Any | Install and import both succeed, but a documented function is missing — ``AttributeError: module 'meshlib.mrmeshpy' has no attribute ...`` — or `pip show meshlib` prints a version well behind the latest. | The package requires Python 3.8 or newer overall, but each release's wheel tags are narrower than that and change over time. When no wheel of the newest release matches your interpreter, pip does not fail: it silently installs the newest *older* release that does. | `pip show meshlib`, and compare with the version on the [PyPI page](https://pypi.org/project/meshlib/). If it is behind, move to a Python version listed in [Prerequisites](\ref PythonSetupPrerequisites) and reinstall with `pip install --upgrade --force-reinstall meshlib`. |
+| Any, after `pip install --upgrade meshlib` over 3.1.3 or older | `pip` reports success and `pip show meshlib-core` prints the new version, but `from meshlib import mrmeshpy` fails with `ModuleNotFoundError: No module named 'meshlib.mrmeshpy'`; `site-packages/meshlib/` holds only `mrviewerpy` and a font. | Removing the old single-wheel `meshlib` deleted the files the new `meshlib-core` had just installed into the same directory, see [Upgrading from 3.1.3 or older](\ref PythonSetupUpgrade). | `pip install --force-reinstall meshlib`. |
 
 Anything not listed here: please open an issue at [MeshLib Issues](https://github.com/MeshInspector/MeshLib/issues), quoting the full `pip` output or traceback.
 
@@ -156,9 +177,27 @@ Additionally, the Python library allows you to explore all the available functio
 
 ### Getting Started: MeshLib Viewer and Mesh I/O Examples
 
-After installing MeshLib, a great way to start exploring its capabilities is through interactive examples.
+After installing MeshLib, a great way to start exploring its capabilities is through interactive examples. On a machine with a graphical session, we recommend beginning with the MeshLib Viewer. It allows you to open and manipulate 3D meshes using Python. You can follow this [**Viewer example**](\ref ExampleViewer) to get started. On a headless machine (container, CI, WSL without an X server, SSH without X forwarding) the Viewer cannot open a window — start with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave) instead.
 
-- **On a machine with a graphical session**, we recommend beginning with the MeshLib Viewer. It allows you to open and manipulate 3D meshes using Python. You can follow this [**Viewer example**](\ref ExampleViewer) to get started. On a headless machine (container, CI, WSL without an X server, SSH without X forwarding) the Viewer cannot open a window — start with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave) instead.
-- **On macOS**, a GUI can run on the main thread of a process only, so the Viewer runs on the thread of your Python script rather than on a background one: `mrviewerpy.launch()` creates the window, the window stays live while Python waits for terminal input — at the interactive prompt or in `input()` — and `mrviewerpy.showViewer()` hands it to the user until they close it. The [**Viewer example**](\ref ExampleViewer) runs unchanged. Call `launch()` and `showViewer()` from the main thread. Older releases raised `RuntimeError: MeshLib Viewer is not supported on macOS yet`, and before 3.1.3.566 terminated the Python process outright, with no exception.
+> [!NOTE]
+> On macOS, AppKit runs a GUI on the main thread of a process only, so the Viewer cannot
+> run on a background thread as it does on Windows and Linux. It runs on the thread of your
+> Python script instead, which must be the main thread.
+>
+> `mrviewerpy.launch()` starts the Viewer and returns, and the calls that follow add objects
+> to the scene. `mrviewerpy.showViewer()` opens the window and runs the Viewer until the user
+> closes it. At the interactive prompt, and while a script waits in `input()`, the window is
+> live as well: the interpreter pumps the Viewer whenever it waits for a line of terminal
+> input, so you can type commands and watch the scene change between them.
+>
+> On Windows and Linux the window is live from `launch()` on and `showViewer()` is optional.
+> On macOS a script that never waits for input needs `showViewer()` to show the window, and it
+> blocks: the scene is shown as it stands at that call, and the code after it runs once the
+> window is closed.
+
+> [!WARNING]
+> On macOS, releases without `mrviewerpy.showViewer()` raise
+> `RuntimeError: MeshLib Viewer is not supported on macOS yet` in `launch()`, and releases
+> before 3.1.3.566 crash in it instead.
 
 These examples are a great entry point for integrating MeshLib into your workflow, regardless of your operating system.

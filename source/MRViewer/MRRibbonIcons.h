@@ -22,10 +22,11 @@ public:
         RibbonItemIcon,   // have four sizes
         ObjectTypeIcon,   // have two sizes
         IndependentIcons, // have two sizes
-        Logos,            // have two sizes
+        Logos,            // have two sizes, loaded lazily on first request
         Count,
     };
-    // this should be called once on start of program (called in RibbonMenu::init)
+    // this should be called once on start of program (called in RibbonMenu::init);
+    // loads all icon types except Logos, which are loaded on first findByName request
     MRVIEWER_API static void load();
     // this should be called once before program stops (called in RibbonMenu::shutdown)
     MRVIEWER_API static void free();
@@ -75,6 +76,7 @@ private:
         std::pair<Sizes, Sizes> minMaxSizes;
         AvailableColor availableColor = AvailableColor::White;
         HashMap<std::string, SizedIcons> map;
+        bool loaded = false;
     };
 
     std::array<IconTypeData, size_t( IconType::Count )> data_;

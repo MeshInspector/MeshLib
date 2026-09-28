@@ -143,6 +143,7 @@ def build_wheel():
                 [
                     sys.executable, "-m", "auditwheel",
                     "repair",
+                    "--only-plat", # disable the platform auto-detection
                     "--plat", f"manylinux_{manylinux_version}_{platform.machine()}",
                     "-w", out_dir,
                     wf

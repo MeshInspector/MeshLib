@@ -130,13 +130,10 @@ IF(EMSCRIPTEN)
   set(LIBZIP_DO_INSTALL ON)
   add_subdirectory(./libzip)
 
-  set(CMAKE_CXX_FLAGS_BACKUP "${CMAKE_CXX_FLAGS}")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s NO_DISABLE_EXCEPTION_CATCHING=1")
   set(JSONCPP_WITH_TESTS OFF)
   set(JSONCPP_WITH_POST_BUILD_UNITTEST OFF)
   set(BUILD_STATIC_LIBS OFF)
   add_subdirectory(./jsoncpp)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS_BACKUP}")
 
   set(FMT_INSTALL ON)
   set(FMT_MODULE OFF)
@@ -149,10 +146,16 @@ IF(EMSCRIPTEN)
   add_subdirectory(./spdlog)
 
   option(TBB_TEST "Enable testing" OFF)
+  option(TBBMALLOC_BUILD "Enable tbbmalloc build" OFF)
   set(CMAKE_SYSTEM_PROCESSOR_BACKUP "${CMAKE_SYSTEM_PROCESSOR}")
   set(CMAKE_SYSTEM_PROCESSOR "unknown")
   add_subdirectory(./onetbb)
   set(CMAKE_SYSTEM_PROCESSOR "${CMAKE_SYSTEM_PROCESSOR_BACKUP}")
+
+  # oneTBB forces -fexceptions under Emscripten
+  get_target_property(tbb_compile_options tbb COMPILE_OPTIONS)
+  list(REMOVE_ITEM tbb_compile_options -fexceptions)
+  set_target_properties(tbb PROPERTIES COMPILE_OPTIONS "${tbb_compile_options}")
   install(DIRECTORY onetbb/include/tbb DESTINATION ${MESHLIB_THIRDPARTY_INCLUDE_DIR})
 
   add_subdirectory(./tinyxml2)
@@ -180,14 +183,22 @@ ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   set(PYBIND11_INSTALL ON)
-  # We want to build the stubs in our main `CMakeLists.txt` instead of here.
-  # It seems to work fine either way, but I'm not comfortable not having the stubs see the customized cmake variables
-  #   that we set in our main `CMakeLists.txt`, such as those influencing the Pybind ABI strings.
-  # Even though the stubs shouldn't call any Pybind functions right now, they still include the Pybind header.
-  # Accidentally calling some inline Pybind function in it could have weird effects, I reckon.
-  # Note that regardless of this setting, the python-version-specific shims always need to be built in our main `CMakeLists.txt`,
-  #   to see our configuration CMake variables.
-  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" OFF)
+  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" ON)
+  option(PYBIND11_NONLIMITEDAPI_INSTALL_EXPORTS "" ON)
+  set(PYBIND11_NONLIMITEDAPI_SUFFIX "meshlib" CACHE STRING "")
+  set(PYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX "0x030800f0" CACHE STRING "") # Python 3.8
+  set(PYBIND11_NONLIMITEDAPI_INTERNALS_VERSION "5" CACHE STRING "")
+  set(PYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
+  set(PYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
+  IF(APPLE)
+    set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.10" CACHE STRING "")
+    execute_process(
+      COMMAND brew --prefix
+      OUTPUT_VARIABLE HOMEBREW_PREFIX
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(Python_ROOT_DIR "${HOMEBREW_PREFIX}/opt/python@${PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION}")
+  ENDIF()
   add_subdirectory(./mrbind-pybind11)
 ENDIF()
 

@@ -28,8 +28,8 @@ jobs:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     outputs:
-      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
-      release_id: ${{ steps.create_release.outputs.id }}
+      release_upload_url: ${{ steps.create_release.outputs.upload_url || steps.published_release.outputs.upload_url }}
+      release_id: ${{ steps.create_release.outputs.id || steps.published_release.outputs.id }}
     steps:
       - name: Convert version
         if: ${{ inputs.upload_artifacts }}
@@ -38,8 +38,23 @@ jobs:
           app_version=${{ inputs.app_version }}
           echo "short_version=${app_version%.*}" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Look for an already published release
         if: ${{ inputs.upload_artifacts }}
+        id: published_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # 404 on a draft: a draft release has no tag yet, so this only ever finds a published one
+          if release=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.release_tag }}" 2>/dev/null); then
+            echo "found=true" >> $GITHUB_OUTPUT
+            echo "id=$(jq -r '.id' <<< "${release}")" >> $GITHUB_OUTPUT
+            echo "upload_url=$(jq -r '.upload_url' <<< "${release}")" >> $GITHUB_OUTPUT
+          else
+            echo "found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Release
+        if: ${{ inputs.upload_artifacts && steps.published_release.outputs.found != 'true' }}
         id: create_release
         uses: mikepenz/action-gh-release@7a1a2d94070db8d22681770f42cdb85a9c38d6ac # v3.1.0
         env:

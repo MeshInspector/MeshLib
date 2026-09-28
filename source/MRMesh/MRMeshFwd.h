@@ -499,6 +499,7 @@ struct PointOnFace;
 struct PointOnObject;
 struct MeshTriPoint;
 struct MeshProjectionResult;
+struct CoordinateConverters;
 struct MeshIntersectionResult;
 struct PointsProjectionResult;
 template <typename T> struct IntersectionPrecomputes;

@@ -22,7 +22,7 @@ void RibbonIcons::load()
     instance.load_( IconType::RibbonItemIcon );
     instance.load_( IconType::ObjectTypeIcon );
     instance.load_( IconType::IndependentIcons );
-    instance.load_( IconType::Logos );
+    // IconType::Logos is loaded lazily on first request
 }
 
 void RibbonIcons::free()
@@ -30,14 +30,18 @@ void RibbonIcons::free()
     for ( auto& curData : instance_().data_ )
     {
         curData.map.clear();
+        curData.loaded = false;
     }
 }
 
 const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width, 
                                            ColorType colorType, IconType iconType )
 {
-    const auto& instance = instance_();
-    const auto& map = instance.data_[size_t(iconType)].map;
+    auto& instance = instance_();
+    auto& data = instance.data_[size_t(iconType)];
+    if ( !data.loaded )
+        instance.load_( iconType );
+    const auto& map = data.map;
     auto iconsIt = map.find( name );
     if ( iconsIt == map.end() )
         return nullptr;
@@ -117,6 +121,7 @@ void RibbonIcons::load_( IconType type )
 {
     size_t num = static_cast< size_t >( type );
     auto& currentData = data_[num];
+    currentData.loaded = true;
 
     bool coloredIcons = bool( currentData.availableColor & IconTypeData::AvailableColor::Colored );
     bool whiteIcons = bool( currentData.availableColor & IconTypeData::AvailableColor::White );

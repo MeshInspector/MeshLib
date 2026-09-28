@@ -41,6 +41,13 @@
 #endif
 
 
+#ifdef _MSC_VER
+#define MR_FORCE_INLINE __forceinline
+#else
+#define MR_FORCE_INLINE inline __attribute__((always_inline))
+#endif
+
+
 // Here we define following macros:
 //   `MR[_THIS]_LIFETIMEBOUND[_NESTED]`
 //   `MR[_THIS]_LIFETIME_CAPTURE_BY[_NESTED](x)`

@@ -314,7 +314,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
 
       - name: Build Python shim libs
         run: |
@@ -616,6 +616,12 @@ jobs:
             # MeshInspector/toolchains releases.
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
     steps:
+      # GitHub-hosted runners enable Spotlight by default
+      # https://github.com/actions/runner-images/discussions/5032
+      - name: Disable Spotlight indexing
+        if: ${{ runner.environment == 'github-hosted' }}
+        run: sudo mdutil -a -i off
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -623,7 +629,7 @@ jobs:
           ref: ${{ needs.setup.outputs.build_ref }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
 
       - name: Install all Python versions
         run: uv python install $(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
@@ -972,7 +978,7 @@ jobs:
           merge-multiple: true
 
       - name: Install uv
-        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
@@ -1004,7 +1010,7 @@ jobs:
     outputs:
       uploaded: ${{ steps.check_upload.outputs.uploaded }}
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8
@@ -1047,7 +1053,7 @@ jobs:
         && needs.macos-pip-test.result != 'failure' }}
     needs: [setup, manylinux-pip-test, windows-pip-test, macos-pip-test]
     timeout-minutes: 30
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Download Wheels Artifacts
         uses: actions/download-artifact@v8

@@ -8,6 +8,7 @@
 #include "MRLineSegm.h"
 #include "MRPlane3.h"
 #include "MRTimer.h"
+#include <cfloat>
 
 namespace MR
 {
@@ -318,15 +319,17 @@ private:
     double volume_{ 0.0 };
 };
 
-class CreaseEdgesCalc
+class SharpEdgesCalc
 {
 public:
-    CreaseEdgesCalc( const MeshTopology & topology, const VertCoords & points, float critCos ) : topology_( topology ), points_( points ), critCos_( critCos )
+    SharpEdgesCalc( const MeshTopology & topology, const VertCoords & points, float minSharpCos, float maxSharpCos )
+        : topology_( topology ), points_( points ), minSharpCos_( minSharpCos ), maxSharpCos_( maxSharpCos )
         { edges_.resize( topology_.undirectedEdgeSize() ); }
-    CreaseEdgesCalc( CreaseEdgesCalc & x, tbb::split ) : topology_( x.topology_ ), points_( x.points_ ), critCos_( x.critCos_ )
+    SharpEdgesCalc( SharpEdgesCalc & x, tbb::split )
+        : topology_( x.topology_ ), points_( x.points_ ), minSharpCos_( x.minSharpCos_ ), maxSharpCos_( x.maxSharpCos_ )
         { edges_.resize( topology_.undirectedEdgeSize() ); }
 
-    void join( const CreaseEdgesCalc & y ) { edges_ |= y.edges_; }
+    void join( const SharpEdgesCalc & y ) { edges_ |= y.edges_; }
 
     UndirectedEdgeBitSet takeEdges() { return std::move( edges_ ); }
 
@@ -337,7 +340,7 @@ public:
             if ( topology_.isLoneEdge( ue ) )
                 continue;
             auto dihedralCos = dihedralAngleCos( topology_, points_, ue );
-            if ( dihedralCos <= critCos_ )
+            if ( dihedralCos >= minSharpCos_ && dihedralCos <= maxSharpCos_ )
                 edges_.set( ue );
         }
     }
@@ -345,7 +348,8 @@ public:
 private:
     const MeshTopology & topology_;
     const VertCoords & points_;
-    float critCos_ = 1;
+    float minSharpCos_ = -1;
+    float maxSharpCos_ = 1;
     UndirectedEdgeBitSet edges_;
 };
 
@@ -648,14 +652,19 @@ float discreteMeanCurvature( const MeshTopology & topology, const VertCoords & p
     return ( sumArea > 0 ) ? 1.5f * sumAngLen / sumArea : 0;
 }
 
-UndirectedEdgeBitSet findCreaseEdges( const MeshTopology & topology, const VertCoords & points, float angleFromPlanar )
+UndirectedEdgeBitSet findSharpEdges( const MeshTopology & topology, const VertCoords & points, float minSharpCos, float maxSharpCos )
 {
     MR_TIMER;
-    assert( angleFromPlanar > 0 && angleFromPlanar < PI );
-    const float critCos = std::cos( angleFromPlanar );
-    CreaseEdgesCalc calc( topology, points, critCos );
+    SharpEdgesCalc calc( topology, points, minSharpCos, maxSharpCos );
     parallel_reduce( tbb::blocked_range<UndirectedEdgeId>( 0_ue, UndirectedEdgeId{ topology.undirectedEdgeSize() } ), calc );
     return calc.takeEdges();
+}
+
+UndirectedEdgeBitSet findCreaseEdges( const MeshTopology & topology, const VertCoords & points, float angleFromPlanar )
+{
+    assert( angleFromPlanar > 0 && angleFromPlanar < PI );
+    // -FLT_MAX and not -1: the cosine of overlapping faces can be slightly less than -1 due to rounding
+    return findSharpEdges( topology, points, -FLT_MAX, std::cos( angleFromPlanar ) );
 }
 
 float leftCotan( const MeshTopology & topology, const VertCoords & points, EdgeId e )

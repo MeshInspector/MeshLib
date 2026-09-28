@@ -37,15 +37,17 @@ void Solver::prepare( const MeshTopology & topology, float guideWeight )
 {
     MR_TIMER;
     topology_ = &topology;
-    guideWeight_ = guideWeight;
+    // the equations per triangle below are ~3 times lighter than centered ones (2*p0-p1-p2, 2*p1-p0-p2),
+    // so the guide weight is reduced by sqrt(3) to keep the same balance
+    guideWeight_ = guideWeight / std::sqrt( 3.0f );
     std::vector< Eigen::Triplet<double> > mTriplets;
     const int nVerts = (int)topology.vertSize();
-    mTriplets.reserve( nVerts + 6 * topology.numValidFaces() );
+    mTriplets.reserve( nVerts + 4 * topology.numValidFaces() );
     // every point shall be close to corresponding guide point (with small weight)
     for ( int v = 0; v < nVerts; ++v )
-        mTriplets.emplace_back( v, v, guideWeight );
+        mTriplets.emplace_back( v, v, guideWeight_ );
 
-    // add 2 equations per triangle for relative position of triangle points
+    // add 2 equations per triangle for relative position of triangle points: p0-p1 and p0-p2
     const int nRows = nVerts + 2 * topology.numValidFaces();
     int row = nVerts;
     face2row_.resize( topology.faceSize() );
@@ -56,18 +58,16 @@ void Solver::prepare( const MeshTopology & topology, float guideWeight )
         VertId vs[3];
         topology.getTriVerts( f, vs );
 
-        mTriplets.emplace_back( row, vs[0],  2 );
+        mTriplets.emplace_back( row, vs[0],  1 );
         mTriplets.emplace_back( row, vs[1], -1 );
-        mTriplets.emplace_back( row, vs[2], -1 );
         ++row;
 
-        mTriplets.emplace_back( row, vs[0], -1 );
-        mTriplets.emplace_back( row, vs[1],  2 );
+        mTriplets.emplace_back( row, vs[0],  1 );
         mTriplets.emplace_back( row, vs[2], -1 );
         ++row;
     }
     assert( row == nRows );
-    assert( mTriplets.size() == nVerts + 6 * topology.numValidFaces() );
+    assert( mTriplets.size() == nVerts + 4 * topology.numValidFaces() );
 
     mat_.resize( nRows, nVerts );
     mat_.setFromTriplets( mTriplets.begin(), mTriplets.end() );
@@ -99,8 +99,8 @@ void Solver::run( const VertCoords & guide, const FaceNormals & normals, VertCoo
         VertId vs[3];
         topology_->getTriVerts( f, vs );
         const auto projectedTri = triangleWithNormal( { points[vs[0]], points[vs[1]], points[vs[2]], }, normals[f] );
-        const auto d0 = 2.0f * projectedTri[0] - projectedTri[1] - projectedTri[2];
-        const auto d1 = 2.0f * projectedTri[1] - projectedTri[0] - projectedTri[2];
+        const auto d0 = projectedTri[0] - projectedTri[1];
+        const auto d1 = projectedTri[0] - projectedTri[2];
         const int row = face2row_[f];
         for ( int i = 0; i < 3; ++i )
         {

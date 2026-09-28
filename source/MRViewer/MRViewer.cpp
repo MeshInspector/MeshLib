@@ -15,6 +15,7 @@
 #include "MRRibbonMenu.h"
 #include "MRSceneObjectsListDrawer.h"
 #include "MRGetSystemInfoJson.h"
+#include "MRGLDriverKnownIssues.h"
 #include "MRSpaceMouseHandler.h"
 #include "MRDragDropHandler.h"
 #include "MRSpaceMouseHandlerHidapi.h"
@@ -53,6 +54,7 @@
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRProtectedRun.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
@@ -77,8 +79,9 @@
 #include "MRMesh/MRCube.h"
 #include "MRViewerConfigConstants.h"
 
+#include <string_view>
+
 #ifndef __EMSCRIPTEN__
-#include <boost/exception/diagnostic_information.hpp>
 #endif
 #include "MRSaveObjects.h"
 #include "MRProgressBar.h"
@@ -139,6 +142,7 @@ EMSCRIPTEN_KEEPALIVE void emsForceSettingsSave()
     auto& settingsManager = viewer.getViewerSettingsManager();
     if ( settingsManager )
         settingsManager->saveSettings( viewer );
+    // the emscripten main loop never returns, so launchShut() is not reached in wasm
     MR::Config::instance().writeToFile();
 }
 
@@ -367,7 +371,25 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     obj.addChild( label );
 }
 
-int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+int protectedLaunch( const std::function<int()>& func )
+{
+#ifdef __EMSCRIPTEN__
+    return func(); // the main loop leaves launch() by a JS throw, which must not be caught
+#else
+    int res = EXIT_FAILURE;
+    auto ok = protectedRun( [&] { res = func(); } );
+    if ( !ok )
+    {
+        spdlog::critical( ok.error() );
+        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
+        printCurrentTimerBranch();
+        return EXIT_FAILURE;
+    }
+    return res;
+#endif
+}
+
+int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
     static bool firstLaunch = true;
     if ( !firstLaunch )
@@ -397,27 +419,35 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
 
-    int res = 0;
-#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
-    res = viewer.launch( params );
-#else
-    try
+    return protectedLaunch( [&] { return viewer.preLaunch( params ); } );
+}
+
+int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+{
+    auto& viewer = MR::Viewer::instanceRef();
+    if ( !viewer.isPreLaunched() )
+        if ( auto rc = preLaunchDefaultViewer( params, setup ); rc != EXIT_SUCCESS )
+            return 1;
+
+    static bool firstLaunch = true;
+    if ( !firstLaunch )
     {
-        res = viewer.launch( params );
+        spdlog::error( "Viewer can be launched only once" );
+        return 1;
     }
-    catch ( ... )
+    else
     {
-        spdlog::critical( boost::current_exception_diagnostic_information() );
-        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
-        printCurrentTimerBranch();
-        res = 1;
+        firstLaunch = false;
     }
-#endif
+
+    auto res = protectedLaunch( [&] { return viewer.launch( params ); } );
+
     setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     if ( setup.shutdownCustomLogSink )
         setup.shutdownCustomLogSink();
+
     return res;
 }
 
@@ -468,7 +498,8 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-openGL3" ||
             flag == "-noRenderInTexture" ||
             flag == "-develop" ||
-            flag == "-unloadPluginsAtEnd"
+            flag == "-unloadPluginsAtEnd" ||
+            flag == "-noMSAA"
             )
             reserved = true;
         else if ( flag == "-width" )
@@ -567,6 +598,8 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             nextFPS = true;
         else if ( flag == "-unloadPluginsAtEnd" )
             params.unloadPluginsAtEnd = true;
+        else if ( flag == "-noMSAA" )
+            params.noMSAA = true;
     }
 }
 
@@ -616,11 +649,11 @@ void Viewer::mainLoopFunc_()
 }
 #endif
 
-int Viewer::launch( const LaunchParams& params )
+int Viewer::preLaunch( const LaunchParams& params )
 {
-    if ( isLaunched_ )
+    if ( isPreLaunched_ )
     {
-        spdlog::error( "Viewer is already launched!" );
+        spdlog::error( "Viewer is already pre-launched!" );
         return 1;
     }
 
@@ -649,8 +682,22 @@ int Viewer::launch( const LaunchParams& params )
     {
         // no command loop will ever run here, so no command may wait for one
         CommandLoop::removeCommands( true );
-        return res;
     }
+    return res;
+}
+
+int Viewer::launch( const LaunchParams& params )
+{
+    if ( isLaunched_ )
+    {
+        spdlog::error( "Viewer is already launched!" );
+        return 1;
+    }
+    if ( !isPreLaunched_ )
+        if ( auto rc = preLaunch( params ); rc != EXIT_SUCCESS )
+            return rc;
+
+    isLaunched_ = true;
 
     CommandLoop::setState( CommandLoop::StartPosition::BeforeWindowAppear );
     CommandLoop::processCommands(); // execute pre init commands before first draw
@@ -682,7 +729,7 @@ int Viewer::launch( const LaunchParams& params )
 #endif
     }
     if ( params.close )
-        launchShut(); // closes the command loop too; with `close` false, the caller's own launchShut does
+        launchShut();
 
     return EXIT_SUCCESS;
 }
@@ -762,6 +809,13 @@ bool Viewer::setupWindow_( const LaunchParams& params )
     {
         spdlog::info( "Supported OpenGL is {}", ( const char* )glGetString( GL_VERSION ) );
         spdlog::info( "Supported GLSL is {}", ( const char* )glGetString( GL_SHADING_LANGUAGE_VERSION ) );
+
+        if ( const auto issues = glDriverKnownIssues(); !issues.empty() )
+        {
+            spdlog::warn( "The current OpenGL driver has known issue(s):" );
+            for ( const auto& issue : issues )
+                spdlog::warn( "- {}", issue.description );
+        }
     }
 
     if ( !windowTitle )
@@ -962,7 +1016,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( menuPlugin_ )
         menuPlugin_->initBackend();
 
-    isLaunched_ = true;
+    isPreLaunched_ = true;
 
     return EXIT_SUCCESS;
 }
@@ -995,8 +1049,7 @@ void Viewer::runEventLoopIteration( double maxWaitSec )
         CommandLoop::processCommands();
     } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
-    // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none):
-    // the caller re-checks windowShouldClose() at once
+    // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
     if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
         return;
 
@@ -1076,6 +1129,7 @@ void Viewer::launchShut()
     glfwTerminate();
     glInitialized_ = false;
     isLaunched_ = false;
+    isPreLaunched_ = false;
     spaceMouseHandler_.reset();
 
     /// removes references on all cached objects before shared libraries with plugins are unloaded
@@ -1090,8 +1144,11 @@ void Viewer::launchShut()
     /// disconnect all slots before shared libraries with plugins are unloaded
     *signals_ = {};
 
-    // no loop will run them any more, and a blocking caller must be told so rather than wait
     CommandLoop::removeCommands( true );
+
+    // the only place where the config is written to file: saveSettings() and the plugin teardown
+    // above only update it in memory
+    Config::instance().writeToFile();
 }
 
 void Viewer::init_()
@@ -1792,7 +1849,6 @@ bool Viewer::draw_( bool force )
 
     if ( !isGLInitialized() )
     {
-        // NoWindow mode: nothing to draw into; only consume the redraw requests, or the event loop spins on them
         resetRedraw_();
         forceRedrawFrames_ = 0;
         forceRedrawFramesWithoutSwap_ = 0;
@@ -2290,7 +2346,6 @@ bool Viewer::windowShouldClose()
     if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
         return false;
 
-    // without a window nothing can ask the user, and nothing draws the answer either
     if ( !window || !interruptWindowClose() )
         return true;
 
@@ -2666,7 +2721,7 @@ void Viewer::captureUIScreenShot( std::function<void( const Image& )> callback,
 
         Image image;
         image.resolution = size;
-        image.pixels.resize( size.x * size.x );
+        image.pixels.resize( size.x * size.y );
 
         if ( glInitialized_ )
         {
@@ -2967,6 +3022,20 @@ void Viewer::updatePixelRatio_()
     pixelRatio = float( framebufferSize.x ) / float( winWidth );
 }
 
+namespace
+{
+
+bool isSoftwareRenderer()
+{
+    const auto* renderer = ( const char* )glGetString( GL_RENDERER );
+    if ( !renderer )
+        return false;
+    const std::string_view name = renderer;
+    return name.starts_with( "llvmpipe" ) || name.starts_with( "softpipe" ) || name.starts_with( "swrast" );
+}
+
+} // namespace
+
 int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
 {
     if ( !sceneTextureOn && forSceneTexture )
@@ -2976,6 +3045,8 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
     }
     if ( sceneTextureOn && !forSceneTexture )
         return 1; // disable msaa for main framebuffer if scene texture is used
+    if ( launchParams_.noMSAA )
+        return 1;
 
     int cDefaultMSAA = 8;
 #if defined(__EMSCRIPTEN__)
@@ -2985,6 +3056,8 @@ int Viewer::getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const
 #elif defined(__APPLE__)
     cDefaultMSAA = 2;
 #endif
+    if ( glInitialized_ && isSoftwareRenderer() )
+        cDefaultMSAA = 2;
     if ( !settingsMng_ )
         return cDefaultMSAA;
     return settingsMng_->loadInt( "multisampleAntiAliasing", cDefaultMSAA );

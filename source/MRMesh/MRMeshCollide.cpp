@@ -9,6 +9,9 @@
 #include "MRTriDist.h"
 #include "MRExpected.h"
 #include "MRProcessSelfTreeSubtasks.h"
+#include "MRMeshProject.h"
+#include "MRPrecisePredicates3.h"
+#include "MRRingIterator.h"
 
 #include <atomic>
 #include <thread>
@@ -388,6 +391,119 @@ bool isNonIntersectingInside( const Mesh& a, FaceId aFace, const MeshPart& b, co
 
     auto signDist = b.mesh.signedDistance( aPoint, FLT_MAX, b.region );
     return signDist && signDist < 0;
+}
+
+namespace
+{
+
+// true if given point is on the side of the plane of given face that its outer normal points away from
+bool isBehindFacePrecise( const Mesh& m, FaceId f, const PreciseVertCoords& p,
+    const CoordinateConverters& conv, int vertShift, const AffineXf3f* xf )
+{
+    std::array<PreciseVertCoords, 4> vs;
+    m.topology.getTriVerts( f, vs[0].id, vs[1].id, vs[2].id );
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto& q = m.points[vs[i].id];
+        vs[i].pt = conv.toInt( xf ? ( *xf )( q ) : q );
+        vs[i].id = VertId( int( vs[i].id ) + vertShift );
+    }
+    vs[3] = p;
+    return orient3d( vs );
+}
+
+// true if the material of the mesh near given edge is not wider than a half-space;
+// both faces of the edge must be present;
+// all four points here are from the same mesh, so no shift of their ids is necessary
+bool isConvexEdgePrecise( const Mesh& m, EdgeId e, const CoordinateConverters& conv, const AffineXf3f* xf )
+{
+    std::array<PreciseVertCoords, 4> vs;
+    vs[0].id = m.topology.org( e );
+    vs[1].id = m.topology.dest( e );
+    vs[2].id = m.topology.dest( m.topology.next( e ) );        // apex of the left face
+    vs[3].id = m.topology.dest( m.topology.next( e.sym() ) );  // apex of the right face
+    for ( auto& v : vs )
+    {
+        const auto& q = m.points[v.id];
+        v.pt = conv.toInt( xf ? ( *xf )( q ) : q );
+    }
+    // the left face is oriented so that its right-hand normal looks outside, and orient3d is true
+    // when the apex of the right face is behind it, which makes the edge convex
+    return orient3d( vs );
+}
+
+} //anonymous namespace
+
+bool isNonIntersectingInsidePrecise( const Mesh& a, FaceId aFace, const MeshPart& b,
+    const CoordinateConverters& conv, int aVertShift, int bVertShift,
+    const AffineXf3f* xfA, const AffineXf3f* xfB )
+{
+    if ( !aFace )
+        return true; //consider empty mesh always inside
+
+    // only mesh vertices have the exact integer coordinates and the ids that the precise predicates need,
+    // so a vertex of aFace is taken as the probe point
+    VertId aVerts[3];
+    a.topology.getTriVerts( aFace, aVerts[0], aVerts[1], aVerts[2] );
+    const VertId aVert = aVerts[0];
+    auto aPoint = a.points[aVert];
+    if ( xfA )
+        aPoint = ( *xfA )( aPoint );
+    const auto proj = findProjection( aPoint, b, FLT_MAX, xfB );
+    if ( !proj )
+        return false; //no projection on b at all
+
+    PreciseVertCoords probe;
+    probe.id = VertId( int( aVert ) + aVertShift );
+    probe.pt = conv.toInt( aPoint );
+    const auto& btopo = b.mesh.topology;
+
+    // the plane of one triangle decides only if the projection is strictly inside that triangle;
+    // otherwise the probe point is in the normal cone of the edge or the vertex it projects on,
+    // where the planes of the incident faces can disagree about the side the probe point is on
+    if ( auto bVert = proj.mtp.inVertex( btopo ) )
+    {
+        std::optional<bool> behind;
+        for ( EdgeId e : orgRing( btopo, bVert ) )
+        {
+            const auto l = btopo.left( e );
+            if ( !l )
+                continue;
+            const bool cur = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB );
+            if ( !behind )
+                behind = cur;
+            else if ( *behind != cur )
+            {
+                // the vertex is supported by a plane, and its normal cone looks outside of b if from
+                // outside and inside if from inside, which the planes of the faces cannot tell apart;
+                // the pseudonormal behind the sign of the distance can, being unreliable at the zero distance only
+                AffineXf3f b2a;
+                if ( xfA )
+                    b2a = xfA->inverse();
+                if ( xfB )
+                    b2a = b2a * ( *xfB );
+                return isNonIntersectingInside( a, aFace, b, ( xfA || xfB ) ? &b2a : nullptr );
+            }
+        }
+        if ( behind )
+            return *behind;
+    }
+    else if ( auto bEdgePoint = proj.mtp.onEdge( btopo ) )
+    {
+        const auto l = btopo.left( bEdgePoint.e );
+        const auto r = btopo.right( bEdgePoint.e );
+        if ( l && r )
+        {
+            const bool lBehind = isBehindFacePrecise( b.mesh, l, probe, conv, bVertShift, xfB );
+            if ( lBehind == isBehindFacePrecise( b.mesh, r, probe, conv, bVertShift, xfB ) )
+                return lBehind;
+            // the faces disagree, so the edge is not flat, and the both wedges of an edge
+            // cannot be non-empty: the probe point is outside of a convex edge and inside of a concave one
+            return !isConvexEdgePrecise( b.mesh, bEdgePoint.e, conv, xfB );
+        }
+    }
+
+    return isBehindFacePrecise( b.mesh, proj.proj.face, probe, conv, bVertShift, xfB );
 }
 
 } //namespace MR

@@ -50,6 +50,7 @@
     <ClCompile Include="MRMarchingCubesTests.cpp" />
     <ClCompile Include="MRMeshBooleanTests.cpp" />
     <ClCompile Include="MRMeshComponentsTests.cpp" />
+    <ClCompile Include="MRMeshPatchTests.cpp" />
     <ClCompile Include="MRMeshDecimateTests.cpp" />
     <ClCompile Include="MRMeshIntersectTests.cpp" />
     <ClCompile Include="MRMeshLoadSaveTest.cpp" />
@@ -76,6 +77,7 @@
     <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
+    <ClCompile Include="MROverlappingTrisTests.cpp" />
     <ClCompile Include="MRTriangleIntersectionTests.cpp" />
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />
     <ClCompile Include="MRTriMathTests.cpp" />
@@ -106,6 +108,7 @@
     <ClCompile Include="MREdgePathsTests.cpp" />
     <ClCompile Include="MRFillContours2DTests.cpp" />
     <ClCompile Include="MRFinallyTests.cpp" />
+    <ClCompile Include="MRStacktraceTests.cpp" />
     <ClCompile Include="MRIdTests.cpp" />
     <ClCompile Include="MRInt64Mul128Tests.cpp" />
     <ClCompile Include="MRIntersectionTests.cpp" />
@@ -127,6 +130,7 @@
     <ClCompile Include="MRPolylineDecimateTests.cpp" />
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />
     <ClCompile Include="MRPolylineTopologyTests.cpp" />
+    <ClCompile Include="MRNormalDenoisingTests.cpp" />
     <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
     <ClCompile Include="MRRayBoxIntersectionTests.cpp" />
@@ -136,12 +140,10 @@
     <ClCompile Include="MRTupleBindingsTests.cpp" />
     <ClCompile Include="MRViewportIdTests.cpp" />
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
+    <ClCompile Include="MRVoxelsLoadTests.cpp" />
     <ClCompile Include="MRMimallocRedirectTests.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\thirdparty\pybind11nonlimitedapi_stubs.vcxproj">
-      <Project>{cb6d82fb-e91d-4d62-b82e-be644244e30a}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\MREmbeddedPython\MREmbeddedPython.vcxproj">
       <Project>{e0202297-edb2-4cdc-9cd0-8921eff08da0}</Project>
     </ProjectReference>

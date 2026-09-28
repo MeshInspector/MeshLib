@@ -61,15 +61,24 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
     vmParams.cb = subprogress( triCb, 0.50f, 1.00f );
     vmParams.lessInside = true;
 
+    // with no implementation given, or with one that cannot process this input, fall back to the default CPU one
+    ComputePointsToDistanceVolume defaultCompute;
+    const IComputePointsToDistanceVolume * computeVolume = &defaultCompute;
+    if ( params.computeVolume && params.computeVolume->canCompute( cloud, p2vParams ) )
+        computeVolume = params.computeVolume.get();
+
+    const auto * byParts = dynamic_cast<const IComputePointsToDistanceVolumeByParts *>( computeVolume );
+    const auto * funcVolume = dynamic_cast<const IComputePointsToDistanceFunctionVolume *>( computeVolume );
+
     Expected<Mesh> res;
-    if ( params.createVolumeCallbackByParts && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
+    if ( byParts )
     {
         p2vParams.cb = {};
         vmParams.cb = subprogress( triCb, 0.00f, 0.90f );
 
         MarchingCubesByParts mesher( p2vParams.dimensions, vmParams );
         res =
-            params.createVolumeCallbackByParts( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume, [[maybe_unused]] int zOffset )
+            byParts->computeByParts( cloud, p2vParams, [&mesher] ( const SimpleVolumeMinMax& volume, [[maybe_unused]] int zOffset )
             {
                 assert( zOffset == mesher.nextZ() );
                 return mesher.addPart( volume );
@@ -82,9 +91,13 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
                 return Mesh::fromTriMesh( std::move( mesh ), {}, subprogress( triCb, 0.90f, 1.00f ) );
             } );
     }
-    else if ( params.createVolumeCallback && ( !params.canCreateVolume || params.canCreateVolume( cloud, p2vParams ) ) )
+    else if ( funcVolume )
     {
-        res = params.createVolumeCallback( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
+        res = marchingCubes( funcVolume->computeFunctionVolume( cloud, p2vParams ), vmParams );
+    }
+    else
+    {
+        res = computeVolume->compute( cloud, p2vParams ).and_then( [&vmParams] ( SimpleVolumeMinMax&& volume )
         {
             vmParams.freeVolume = [&volume]
             {
@@ -93,10 +106,6 @@ Expected<Mesh> pointsToMeshFusion( const PointCloud & cloud, const PointsToMeshP
             };
             return marchingCubes( volume, vmParams );
         } );
-    }
-    else
-    {
-        res = marchingCubes( pointsToDistanceFunctionVolume( cloud, p2vParams ), vmParams );
     }
 
     if ( res && params.ptColors && params.vColors )

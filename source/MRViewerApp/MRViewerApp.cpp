@@ -14,9 +14,14 @@ extern "C" __declspec( dllexport ) DWORD AmdPowerXpressRequestHighPerformance = 
 
 extern "C" int WINAPI WinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, char* /*lpCmdLine*/, int /*nCmdShow*/)
 {
-    // Initialize getting stacktraces before loading DLLs
+    // Own stacktrace symbol resolution here rather than in MRMesh.dll, and warm it up before loading DLLs.
+    // On Windows std::stacktrace parks a debug engine client in a static of whichever module resolved
+    // symbols, and tearing that down during a DLL's detach deadlocks and kills the process, skipping the
+    // remaining static destructors -- Config's among them, which is what writes the settings file.
+    // https://github.com/microsoft/STL/issues/4855
     // https://stackoverflow.com/q/78468776/7325599
-    (void)MR::getCurrentStacktraceInline();
+    MR::setStacktraceProvider( [] { return MR::getCurrentStacktraceInline(); } );
+    (void)MR::getCurrentStacktrace();
 
     auto args = MR::ConvertArgv();
     std::vector<char*> argv;

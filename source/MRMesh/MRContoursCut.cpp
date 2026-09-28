@@ -171,10 +171,10 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
         for ( const auto& in : cont.intersections )
             if ( std::holds_alternative<EdgeId>( in.primitiveId ) )
                 ++intersectedEdges;
-        numEdges += 2 * intersectedEdges;
         if ( cont.closed )
             --numVerts;
     }
+    numEdges += 2 * intersectedEdges;
     const auto totalExpectedVerts = mesh.topology.vertSize() + numVerts;
     const auto totalExpectedEdges = mesh.topology.edgeSize() + numEdges;
 

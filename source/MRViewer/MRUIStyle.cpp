@@ -1877,6 +1877,7 @@ static bool basicTextInputIntoArray( const char* label, char* array, std::size_t
             // How many bytes (excluding `\0`) can we emit?
             std::size_t n = std::min( size - 1, valueOverride->size() );
             std::memcpy( array, valueOverride->c_str(), n );
+            array[n] = '\0';
         }
     }
 

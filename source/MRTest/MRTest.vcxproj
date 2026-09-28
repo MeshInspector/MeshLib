@@ -77,6 +77,7 @@
     <ClCompile Include="MRSurfacePathTests.cpp" />
     <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
+    <ClCompile Include="MROverlappingTrisTests.cpp" />
     <ClCompile Include="MRTriangleIntersectionTests.cpp" />
     <ClCompile Include="MRMeshVoxelsConverter.cpp" />
     <ClCompile Include="MRTriMathTests.cpp" />
@@ -139,6 +140,7 @@
     <ClCompile Include="MRTupleBindingsTests.cpp" />
     <ClCompile Include="MRViewportIdTests.cpp" />
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
+    <ClCompile Include="MRVoxelsLoadTests.cpp" />
     <ClCompile Include="MRMimallocRedirectTests.cpp" />
   </ItemGroup>
   <ItemGroup>

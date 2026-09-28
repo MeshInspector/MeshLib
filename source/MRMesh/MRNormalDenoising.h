@@ -2,7 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
-#include "MRExpected.h"
 
 namespace MR
 {
@@ -60,14 +59,14 @@ struct DenoiseViaNormalsSettings
 
     /// optionally returns creases found during smoothing
     UndirectedEdgeBitSet * outCreases = nullptr;
-
-    /// to get the progress and optionally cancel
-    ProgressCallback cb = {};
 };
 
 /// Reduces noise in given mesh,
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-MRMESH_API Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+MRMESH_API void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+
+/// the same, reporting the progress in (cb); returns false if the operation was canceled from it
+[[nodiscard]] MRMESH_API bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb );
 
 struct DenoiseWithCreasesSettings
 {
@@ -90,8 +89,8 @@ struct DenoiseWithCreasesSettings
 MRMESH_API void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 MRMESH_API void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 
-/// the same, reporting the progress in (cb) and returning error if the operation was canceled from it
-MRMESH_API Expected<void> meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
-MRMESH_API Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
+/// the same, reporting the progress in (cb); returns false if the operation was canceled from it
+[[nodiscard]] MRMESH_API bool meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
+[[nodiscard]] MRMESH_API bool meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
 
 } //namespace MR

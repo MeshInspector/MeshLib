@@ -213,6 +213,11 @@ public:
     /// this hides the id-less reset of the base class, which would leave stale ids
     MRMESH_API bool reset( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq );
 
+    /// returns exactly what reset( a, b, c, rSq ) would, without changing the tester: only the squared
+    /// circumradius of the triangle is compared with rSq, and the sphere itself is not computed,
+    /// which is much cheaper where just the existence of a sphere is needed
+    [[nodiscard]] MRMESH_API bool sphereExists( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, std::int64_t rSq ) const;
+
     /// swaps the points b and c together with their ids, which selects the mirror sphere as in the
     /// base class, and gives exactly the state of reset( a, c, b, rSq );
     /// this hides the id-less flip of the base class, which would leave stale ids

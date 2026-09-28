@@ -59,7 +59,7 @@ TEST( MRMesh, MeshDenoiseViaNormalsInvalidatesCaches )
     sphere.getAABBTree();
     EXPECT_TRUE( sphere.getAABBTreeNotCreate() );
 
-    EXPECT_TRUE( meshDenoiseViaNormals( sphere ).has_value() );
+    meshDenoiseViaNormals( sphere );
     EXPECT_FALSE( sphere.getAABBTreeNotCreate() );
 }
 
@@ -164,7 +164,7 @@ TEST( MRMesh, MeshDenoiseWithCreasesProgress )
         last = p;
         return true;
     } );
-    EXPECT_TRUE( res.has_value() );
+    EXPECT_TRUE( res );
     EXPECT_TRUE( ordered );
     EXPECT_EQ( last, 1.0f ); // the progress must reach the end
 
@@ -176,9 +176,9 @@ TEST( MRMesh, MeshDenoiseWithCreasesProgress )
         maxDiff = std::max( maxDiff, ( quiet.points[v] - mesh.points[v] ).length() );
     EXPECT_EQ( maxDiff, 0 );
 
-    // canceling from the callback must leave an error
+    // canceling from the callback must return false
     Mesh canceled = noisy;
-    EXPECT_FALSE( meshDenoiseWithCreases( canceled, {}, {}, []( float ) { return false; } ).has_value() );
+    EXPECT_FALSE( meshDenoiseWithCreases( canceled, {}, {}, []( float ) { return false; } ) );
 }
 
 } //namespace MR

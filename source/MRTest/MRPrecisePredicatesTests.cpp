@@ -468,6 +468,31 @@ TEST( MRMesh, fastInSphereTesterSoS )
     EXPECT_GT( tested, 10000 );
 }
 
+TEST( MRMesh, inSphereTesterSoSSphereExists )
+{
+    // sphereExists must answer exactly as reset does, including the ties and the degenerate triangles,
+    // which are frequent on the tiny grids with the radii of the same magnitude
+    std::uint64_t seed = 12345;
+    auto rnd = [&seed]( std::int64_t mag )
+    {
+        seed = seed * 6364136223846793005ull + 1442695040888963407ull;
+        return std::int64_t( seed >> 33 ) % ( 2 * mag + 1 ) - mag;
+    };
+    InSphereTesterSoS tester;
+    int exists = 0;
+    for ( int mag : { 1, 2, 3, 1000, 1000000000 } )
+        for ( int t = 0; t < ( mag <= 3 ? 30 : 3000 ); ++t )
+        {
+            auto pt = [&] { return Vector3i{ int( rnd( mag ) ), int( rnd( mag ) ), int( rnd( mag ) ) }; };
+            const PreciseVertCoords vs[3] = { { 0_v, pt() }, { 1_v, pt() }, { 2_v, pt() } };
+            const auto rSq = std::abs( rnd( 3 * sqr( std::int64_t( mag ) ) ) );
+            const bool e = tester.sphereExists( vs[0], vs[1], vs[2], rSq );
+            EXPECT_EQ( e, tester.reset( vs[0], vs[1], vs[2], rSq ) );
+            exists += e;
+        }
+    EXPECT_GT( exists, 4000 );
+}
+
 TEST( MRMesh, inSphereTesterFloat )
 {
     const auto In = InSphereResult::Inside;

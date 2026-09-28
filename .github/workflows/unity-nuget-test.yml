@@ -31,7 +31,7 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        os: [ windows-latest, ubuntu-latest, macos-latest, macos-15-intel ]
+        os: [ windows-latest, ubuntu-24.04, macos-latest, macos-15-intel ]
     runs-on: ${{ matrix.os }}
     env:
       UNITY_PROJECT: test_unity/NugetTestProj

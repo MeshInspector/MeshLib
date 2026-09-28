@@ -86,14 +86,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN || github.token }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-dev.deb" --repo ${{ github.repository }}
+          gh release download ${{ inputs.release_tag }} --pattern "*${{matrix.name}}-x64-dev.deb" --repo ${{ github.repository }}
 
       - name: Install Ubuntu x86-64 Release
         run: |
           export DEBIAN_FRONTEND=noninteractive && apt-get -y update && apt-get -y upgrade && \
             apt-get -y install sudo xvfb curl libssl-dev python3-pip && \
             apt-get -y install libstdc++-${{matrix.stdcxx-version}}-dev && \
-            apt-get -y install ./*${{matrix.name}}-dev.deb
+            apt-get -y install ./*${{matrix.name}}-x64-dev.deb
 
       - name: Create virtualenv
         run: |

@@ -212,39 +212,42 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
     } );
 }
 
-Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
+void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
+{
+    std::ignore = meshDenoiseViaNormals( mesh, settings, {} );
+}
+
+bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb )
 {
     MR_TIMER;
+    assert( settings.normalIters > 0 && settings.pointIters > 0 );
     if ( settings.normalIters <= 0 || settings.pointIters <= 0 )
-    {
-        assert( false );
-        return unexpected( "Bad parameters" );
-    }
+        return true;
 
-    if ( !reportProgress( settings.cb, 0.0f ) )
-        return unexpectedOperationCanceled();
+    if ( !reportProgress( cb, 0.0f ) )
+        return false;
 
     auto fnormals0 = computePerFaceNormals( mesh );
     Vector<float, UndirectedEdgeId> v( mesh.topology.undirectedEdgeSize(), 1 );
 
-    if ( !reportProgress( settings.cb, 0.05f ) )
-        return unexpectedOperationCanceled();
+    if ( !reportProgress( cb, 0.05f ) )
+        return false;
 
-    auto sp = subprogress( settings.cb, 0.05f, 0.95f );
+    auto sp = subprogress( cb, 0.05f, 0.95f );
     FaceNormals fnormals;
     for ( int i = 0; i < settings.normalIters; ++i )
     {
         fnormals = fnormals0;
         denoiseNormals( mesh, fnormals, v, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i ) / ( 2 * settings.normalIters ) ) )
-            return unexpectedOperationCanceled();
+            return false;
 
         if ( settings.fastIndicatorComputation )
             updateIndicatorFast( mesh.topology, v, fnormals, settings.beta, settings.gamma );
         else
             updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
-            return unexpectedOperationCanceled();
+            return false;
     }
 
     if ( settings.outCreases )
@@ -258,8 +261,8 @@ Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettin
         } );
     }
 
-    if ( !reportProgress( settings.cb, 0.95f ) )
-        return unexpectedOperationCanceled();
+    if ( !reportProgress( cb, 0.95f ) )
+        return false;
 
     const auto guide = mesh.points;
     NormalsToPoints n2p;
@@ -270,8 +273,8 @@ Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettin
     for ( int i = 0; i < settings.pointIters; ++i )
         n2p.run( guide, fnormals, mesh.points, maxInitialDistSq );
 
-    reportProgress( settings.cb, 1.0f );
-    return {};
+    reportProgress( cb, 1.0f );
+    return true;
 }
 
 void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings )
@@ -285,18 +288,18 @@ void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points,
     std::ignore = meshDenoiseWithCreases( topology, points, creases, settings, {} );
 }
 
-Expected<void> meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+bool meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
 {
     mesh.invalidateCaches();
     return meshDenoiseWithCreases( mesh.topology, mesh.points, creases, settings, cb );
 }
 
-Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+bool meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
 {
     MR_TIMER;
 
     if ( !reportProgress( cb, 0.0f ) )
-        return unexpectedOperationCanceled();
+        return false;
 
     Vector<float, UndirectedEdgeId> v( topology.undirectedEdgeSize() );
     ParallelFor( v, [&]( UndirectedEdgeId ue )
@@ -307,7 +310,7 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
     auto fnormals = computePerFaceNormals( topology, points );
     denoiseNormals( topology, points, fnormals, v, settings.gamma, settings.region );
     if ( !reportProgress( cb, 0.5f ) )
-        return unexpectedOperationCanceled();
+        return false;
 
     VertBitSet innerVerts;
     if ( settings.region )
@@ -321,12 +324,12 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
     for ( int i = 0; i < settings.pointIters; ++i )
     {
         if ( !reportProgress( sp, float( i ) / settings.pointIters ) )
-            return unexpectedOperationCanceled();
+            return false;
         n2p.run( guide, fnormals, points );
     }
 
     reportProgress( cb, 1.0f );
-    return {};
+    return true;
 }
 
 } //namespace MR

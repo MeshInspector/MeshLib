@@ -48,13 +48,13 @@ def close_small_holes(mesh : mm.Mesh, maxParimeter : float):
     fillSettings.triangulateParams.metric = mm.getMinAreaMetric(mesh)
     fillSettings.triangulateParams.multipleEdgesResolveMode = mm.FillHoleParams.MultipleEdgesResolveMode.Strong
     fillSettings.triangulateParams.smoothBd = True
-    fillSettings.maxEdgeLen = mesh.averageEdgeLength()
+    fillSettings.subdivideSettings.maxEdgeLen = mesh.averageEdgeLength()
     fillSettings.triangulateOnly = False
     fillSettings.smoothCurvature = False
-    fillSettings.naturalSmooth = False
-    fillSettings.maxEdgeSplits = 20000
-    fillSettings.edgeWeights = mm.EdgeWeights.Cotan
-    fillSettings.vmass = mm.VertexMass.NeiArea
+    fillSettings.smoothSettings.naturalSmooth = False
+    fillSettings.subdivideSettings.maxEdgeSplits = 20000
+    fillSettings.smoothSettings.edgeWeights = mm.EdgeWeights.Cotan
+    fillSettings.smoothSettings.vmass = mm.VertexMass.NeiArea
     for smallHoleId in smallHoleIds:
         mm.fillHoleNicely(mesh,smallHoleId,fillSettings)
 

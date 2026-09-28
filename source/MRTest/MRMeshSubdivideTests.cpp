@@ -2,6 +2,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRMakePlane.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -39,6 +40,34 @@ TEST(MRMesh, SubdivideMesh)
     EXPECT_TRUE( splitsDone == 10 );
     EXPECT_TRUE( region.count() * 2 + 3 > mesh.topology.numValidFaces() );
     EXPECT_TRUE( region.count() * 2 - 3 > mesh.topology.numValidFaces() );
+}
+
+TEST(MRMesh, SubdivideMeshOnlyNearNotFlippable)
+{
+    Mesh base = makePlane();
+    subdivideMesh( base, { .maxEdgeLen = 0.2f, .maxEdgeSplits = 10000 } );
+
+    SubdivideSettings settings;
+    settings.maxEdgeLen = 0.02f;
+    settings.maxEdgeSplits = 100000;
+
+    Mesh mesh = base;
+    const int allSplits = subdivideMesh( mesh, settings );
+
+    mesh = base;
+    UndirectedEdgeBitSet notFlippable( mesh.topology.undirectedEdgeSize() );
+    notFlippable.set( mesh.topology.edgeWithOrg( 0_v ).undirected() );
+    settings.notFlippable = &notFlippable;
+    settings.onlyNearNotFlippable = true;
+    const int nearSplits = subdivideMesh( mesh, settings );
+    EXPECT_GT( nearSplits, 0 );
+    EXPECT_LT( 4 * nearSplits, allSplits );
+    EXPECT_GT( notFlippable.count(), 1 );
+
+    // without notFlippable nothing is split
+    mesh = base;
+    settings.notFlippable = nullptr;
+    EXPECT_EQ( subdivideMesh( mesh, settings ), 0 );
 }
 
 } //namespace MR

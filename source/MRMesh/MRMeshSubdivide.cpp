@@ -82,12 +82,31 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         return lenSq;
     };
 
+    // vertices incident to notFlippable edges, updated on their splits (notFlippable edges are never flipped)
+    VertBitSet nearNotFlippableVerts;
+    if ( settings.onlyNearNotFlippable && settings.notFlippable )
+        nearNotFlippableVerts = getIncidentVerts( mesh.topology, *settings.notFlippable );
+
+    auto isNearNotFlippable = [&]( EdgeId e )
+    {
+        const auto & t = mesh.topology;
+        if ( nearNotFlippableVerts.test( t.org( e ) ) || nearNotFlippableVerts.test( t.dest( e ) ) )
+            return true;
+        if ( t.left( e ) && nearNotFlippableVerts.test( t.dest( t.next( e ) ) ) )
+            return true;
+        if ( t.right( e ) && nearNotFlippableVerts.test( t.dest( t.prev( e ) ) ) )
+            return true;
+        return false;
+    };
+
     auto getQueueElem = [&]( UndirectedEdgeId ue )
     {
         EdgeLength x;
         EdgeId e( ue );
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
+            return x;
+        if ( settings.onlyNearNotFlippable && !isNearNotFlippable( e ) )
             return x;
         const float lenSq = calcEdgeLenSq( ue );
         if ( lenSq < maxEdgeLenSq )
@@ -144,6 +163,9 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         if ( el.lenSq != calcEdgeLenSq( el.edge ) )
             continue; // outdated record in the queue
 
+        if ( settings.onlyNearNotFlippable && !isNearNotFlippable( e ) )
+            continue; // flips could move the edge away from notFlippable edges
+
         if ( settings.beforeEdgeSplit && !settings.beforeEdgeSplit( e ) )
             continue;
 
@@ -169,8 +191,14 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             if ( contains( *settings.maintainRegion, mesh.topology.right( e ) ) )
                 settings.maintainRegion->autoResizeSet( mesh.topology.right( e1 ) );
         }
+        bool splitNotFlippable = false;
         if ( settings.notFlippable && settings.notFlippable->test( e.undirected() ) )
+        {
             settings.notFlippable->autoResizeSet( e1.undirected() );
+            splitNotFlippable = true;
+            if ( settings.onlyNearNotFlippable )
+                nearNotFlippableVerts.autoResizeSet( newVertId );
+        }
         ++splitsDone;
         makeDeloneOriginRing( mesh, e, {
             .maxDeviationAfterFlip = settings.maxDeviationAfterFlip,
@@ -204,8 +232,14 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         }
 
         for ( auto ei : orgRing( mesh.topology, e ) )
+        {
             if ( auto x = getQueueElem( ei ) )
                 queue.push( std::move( x ) );
+            // the edges opposite to new vertex have just become near notFlippable
+            if ( settings.onlyNearNotFlippable && splitNotFlippable && mesh.topology.left( ei ) )
+                if ( auto x = getQueueElem( mesh.topology.prev( ei.sym() ) ) )
+                    queue.push( std::move( x ) );
+        }
     }
 
     if ( settings.projectOnOriginalMesh )

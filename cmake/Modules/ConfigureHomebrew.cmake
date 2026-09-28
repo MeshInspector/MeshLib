@@ -31,4 +31,10 @@ IF(APPLE)
     )
     set(ZLIB_ROOT ${HOMEBREW_ZLIB_PREFIX})
   endif()
+
+  # openssl@3 is keg-only (not linked into ${HOMEBREW_PREFIX}/lib/pkgconfig), so without a hint
+  # FindOpenSSL falls through to /usr/local/lib/pkgconfig, which on Apple Silicon can be an x86_64 (Rosetta) Homebrew
+  if(NOT OPENSSL_ROOT_DIR AND EXISTS "${HOMEBREW_PREFIX}/opt/openssl@3")
+    set(OPENSSL_ROOT_DIR "${HOMEBREW_PREFIX}/opt/openssl@3")
+  endif()
 ENDIF() # APPLE

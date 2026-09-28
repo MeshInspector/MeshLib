@@ -4,6 +4,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshNormals.h>
+#include <MRMesh/MRRegionBoundary.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -104,6 +105,50 @@ TEST( MRMesh, MeshDenoiseWithCreasesTopologyAndPoints )
     for ( auto v : noisy.topology.getValidVerts() )
         maxDiff = std::max( maxDiff, ( points[v] - mesh.points[v] ).length() );
     EXPECT_EQ( maxDiff, 0 );
+}
+
+TEST( MRMesh, MeshDenoiseWithCreasesRegion )
+{
+    const Mesh noisy = noisySphere();
+
+    FaceBitSet region( noisy.topology.faceSize() );
+    for ( auto f : noisy.topology.getValidFaces() )
+        if ( noisy.triCenter( f ).z > 0 )
+            region.set( f );
+    const auto innerVerts = getRegionInnerVerts( noisy.topology, region );
+    EXPECT_GT( innerVerts.count(), 0 );
+
+    Mesh mesh = noisy;
+    DenoiseWithCreasesSettings settings;
+    settings.region = &region;
+    meshDenoiseWithCreases( mesh, {}, settings );
+
+    // only the inner vertices of the region move
+    float maxShiftIn = 0, maxShiftOut = 0;
+    for ( auto v : noisy.topology.getValidVerts() )
+    {
+        auto & maxShift = innerVerts.test( v ) ? maxShiftIn : maxShiftOut;
+        maxShift = std::max( maxShift, ( mesh.points[v] - noisy.points[v] ).length() );
+    }
+    EXPECT_GT( maxShiftIn, 1e-3f );
+    EXPECT_EQ( maxShiftOut, 0 );
+
+    // the faces completely inside the region become smoother
+    const auto roughness = [&]( const Mesh & m )
+    {
+        const auto normals = computePerFaceNormals( m );
+        float res = 0;
+        for ( auto ue : undirectedEdges( m.topology ) )
+        {
+            const EdgeId e = ue;
+            const auto l = m.topology.left( e );
+            const auto r = m.topology.right( e );
+            if ( l && r && region.test( l ) && region.test( r ) )
+                res += ( normals[l] - normals[r] ).lengthSq();
+        }
+        return res;
+    };
+    EXPECT_LT( roughness( mesh ), 0.5f * roughness( noisy ) );
 }
 
 TEST( MRMesh, MeshDenoiseWithCreasesProgress )

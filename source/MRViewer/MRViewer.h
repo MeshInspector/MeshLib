@@ -660,9 +660,15 @@ private:
     friend MRVIEWER_API Viewer& getViewerInstance();
 };
 
+// runs one phase of a launch: in Release an exception is logged with a stacktrace and becomes EXIT_FAILURE
+// generally you should just call `launchDefaultViewer` instead
+MRVIEWER_API int protectedLaunchPhase( const std::function<int()>& phase );
 // initializes default viewer with given params and setup
 // generally you should just call `launchDefaultViewer` instead
 MRVIEWER_API int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
+// what `launchDefaultViewer` does once the viewer has shut down: MCP, plugins if requested, the log sink
+// generally you should just call `launchDefaultViewer` instead
+MRVIEWER_API void postLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
 // starts default viewer with given params and setup
 MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
 

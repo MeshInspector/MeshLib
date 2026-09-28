@@ -371,13 +371,13 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     obj.addChild( label );
 }
 
-int protectedLaunch( const std::function<int()>& func )
+int protectedLaunchPhase( const std::function<int()>& phase )
 {
 #ifdef __EMSCRIPTEN__
-    return func(); // the main loop leaves launch() by a JS throw, which must not be caught
+    return phase(); // the main loop leaves launch() by a JS throw, which must not be caught
 #else
     int res = EXIT_FAILURE;
-    auto ok = protectedRun( [&] { res = func(); } );
+    auto ok = protectedRun( [&] { res = phase(); } );
     if ( !ok )
     {
         spdlog::critical( ok.error() );
@@ -419,7 +419,7 @@ int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetu
         setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
 
-    return protectedLaunch( [&] { return viewer.preLaunch( params ); } );
+    return protectedLaunchPhase( [&] { return viewer.preLaunch( params ); } );
 }
 
 int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
@@ -440,15 +440,18 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         firstLaunch = false;
     }
 
-    auto res = protectedLaunch( [&] { return viewer.launch( params ); } );
+    auto res = protectedLaunchPhase( [&] { return viewer.launch( params ); } );
+    postLaunchDefaultViewer( params, setup );
+    return res;
+}
 
+void postLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+{
     setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     if ( setup.shutdownCustomLogSink )
         setup.shutdownCustomLogSink();
-
-    return res;
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )

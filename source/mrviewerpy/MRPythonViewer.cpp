@@ -201,6 +201,9 @@ int pumpViewerInputHook();
 
 int ( *gPreviousInputHook )() = nullptr;
 bool gShowWindowLater = false; // the launch asked for a visible window, shown once something pumps it
+// the launch params and setup, for the epilogue once the viewer is over
+std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
+std::shared_ptr<MinimalViewerSetup> gLaunchSetup;
 
 void requireMainThread()
 {
@@ -228,12 +231,13 @@ bool stdinHasData()
     return select( STDIN_FILENO + 1, &fds, nullptr, nullptr, &noWait ) != 0;
 }
 
-// the window was closed or shutdown() called: the viewer is over, the interpreter goes on without it
+// the window was closed, shutdown() called, or a phase failed: the viewer is over, the interpreter goes on without it
 void shutViewer()
 {
     auto& viewer = getViewerInstance();
     if ( viewer.isLaunched() )
-        viewer.launchShut();
+        protectedLaunchPhase( [&] { viewer.launchShut(); return EXIT_SUCCESS; } );
+    postLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
     if ( PyOS_InputHook == pumpViewerInputHook )
         PyOS_InputHook = gPreviousInputHook;
 }
@@ -246,12 +250,13 @@ int pumpViewerInputHook()
     while ( viewer.isLaunched() && !stdinHasData() )
     {
         showWindowIfPending();
-        if ( viewer.windowShouldClose() )
+        if ( viewer.windowShouldClose()
+            // wakes on any window event, else re-checks stdin 20 times a second
+            || protectedLaunchPhase( [&] { viewer.runEventLoopIteration( 0.05 ); return EXIT_SUCCESS; } ) != EXIT_SUCCESS )
         {
             shutViewer();
             break;
         }
-        viewer.runEventLoopIteration( 0.05 ); // wakes on any window event, else re-checks stdin 20 times a second
     }
     return gPreviousInputHook ? gPreviousInputHook() : 0;
 }
@@ -294,19 +299,24 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
 #else
     requireMainThread();
 
-    // the whole launch but the event loop, which showViewer() or the input hook runs; a window shown
-    // now would hang unresponsive until then, so it waits for the first of them
-    auto launchParams = params;
+    // The whole launch but the event loop, which showViewer() or the input hook runs, and but the
+    // epilogue, which comes once the viewer is over. A window shown now would hang unresponsive until
+    // something pumps it, so it waits for the first pump.
+    gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
+    gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
     gShowWindowLater = params.windowMode == LaunchParams::HideInit || params.windowMode == LaunchParams::Show;
     if ( gShowWindowLater )
-        launchParams.windowMode = LaunchParams::Hide;
-    launchParams.startEventLoop = false;
-    launchParams.close = false;
+        gLaunchParams->windowMode = LaunchParams::Hide;
+    gLaunchParams->startEventLoop = false;
+    gLaunchParams->close = false;
 
     int exitCode;
     {
         pybind11::gil_scoped_release gilRelease;
-        exitCode = MR::launchDefaultViewer( launchParams, setup );
+        auto& viewer = getViewerInstance();
+        exitCode = MR::preLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
+        if ( exitCode == EXIT_SUCCESS )
+            exitCode = MR::protectedLaunchPhase( [&] { return viewer.launch( *gLaunchParams ); } );
     }
     if ( exitCode != EXIT_SUCCESS || !getViewerInstance().isLaunched() )
     {
@@ -338,10 +348,9 @@ void pythonShowViewer()
     showWindowIfPending();
     {
         pybind11::gil_scoped_release gilRelease; // commands from other Python threads take the GIL themselves
-        viewer.launchEventLoop();
+        exitCode = MR::protectedLaunchPhase( [&] { viewer.launchEventLoop(); return EXIT_SUCCESS; } );
+        shutViewer();
     }
-    shutViewer();
-    exitCode = EXIT_SUCCESS;
 #endif
     if ( exitCode != EXIT_SUCCESS )
         throw std::runtime_error( "Viewer failed with exit code " + std::to_string( exitCode ) );

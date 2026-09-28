@@ -84,7 +84,7 @@ private:
     void lift_( size_t pos, I elemId );
 
 private:
-    static constexpr size_t InvalidPos = ~size_t( 0 );
+    static constexpr SizeType InvalidPos = SizeType( -1 );
     std::vector<Element> heap_;
     Vector<SizeType, I> id2PosInHeap_;
     P pred_;
@@ -155,7 +155,7 @@ void Heap<T, I, P>::push( I elemId, const T & val )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::erase( I elemId )
 {
-    const size_t pos = id2PosInHeap_[ elemId ];
+    const size_t pos = size_t( id2PosInHeap_[ elemId ] );
     assert( heap_[pos].id == elemId );
     id2PosInHeap_[ elemId ] = InvalidPos;
     const size_t lastPos = heap_.size() - 1;
@@ -167,7 +167,7 @@ void Heap<T, I, P>::erase( I elemId )
     heap_[pos] = heap_[lastPos];
     heap_.pop_back();
     const I movedId = heap_[pos].id;
-    id2PosInHeap_[movedId] = pos;
+    id2PosInHeap_[movedId] = SizeType( pos );
     if ( pos > 0 && less_( ( pos - 1 ) / 2, pos ) )
         lift_( pos, movedId );
     else

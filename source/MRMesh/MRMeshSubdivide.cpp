@@ -14,11 +14,25 @@
 #include "MRBuffer.h"
 #include "MRObjectMesh.h"
 #include "MRMeshSubdivideCallbacks.h"
-#include "MRHeap.h"
+#include <queue>
 #include "MRMeshNormals.h"
 
 namespace MR
 {
+
+struct EdgeLength
+{
+    UndirectedEdgeId edge;
+    float lenSq; // at the moment the edge was put in the queue
+    EdgeLength( UndirectedEdgeId edge = {}, float lenSq = 0 ) : edge( edge ), lenSq( lenSq ) {}
+    EdgeLength( NoInit ) : edge( noInit ) {}
+    explicit operator bool() const { return edge.valid(); }
+};
+
+inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
+{
+    return std::tie( a.lenSq, a.edge ) < std::tie( b.lenSq, b.edge );
+}
 
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 {
@@ -68,47 +82,39 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         return lenSq;
     };
 
-    // squared length of the edge if it has to be split, or -1 otherwise
-    auto getHeapValue = [&]( UndirectedEdgeId ue )
+    auto getQueueElem = [&]( UndirectedEdgeId ue )
     {
+        EdgeLength x;
         EdgeId e( ue );
         if ( settings.subdivideBorder ? !mesh.topology.isInnerOrBdEdge( e, settings.region )
                                       : !mesh.topology.isInnerEdge( e, settings.region ) )
-            return -1.0f;
+            return x;
         const float lenSq = calcEdgeLenSq( ue );
         if ( lenSq < maxEdgeLenSq )
-            return -1.0f;
+            return x;
         if ( !aboveMaxSplittableTriAspectRatio.empty() )
         {
             if ( auto f = mesh.topology.left( e ); f && aboveMaxSplittableTriAspectRatio.test( f ) )
-                return -1.0f;
+                return x;
             if ( auto f = mesh.topology.right( e ); f && aboveMaxSplittableTriAspectRatio.test( f ) )
-                return -1.0f;
+                return x;
         }
-        return lenSq;
+        x.edge = ue;
+        x.lenSq = lenSq;
+        return x;
     };
 
-    using EdgeHeap = Heap<float, UndirectedEdgeId>;
-    Vector<EdgeHeap::Element, UndirectedEdgeId> elms( mesh.topology.undirectedEdgeSize() );
-    ParallelFor( elms, [&]( UndirectedEdgeId ue )
+    Vector<EdgeLength, UndirectedEdgeId> evec;
+    evec.resizeNoInit( mesh.topology.undirectedEdgeSize() );
+    ParallelFor( evec, [&]( UndirectedEdgeId ue )
     {
-        elms[ue] = { ue, mesh.topology.isLoneEdge( ue ) ? -1.0f : getHeapValue( ue ) };
+        EdgeLength x;
+        if ( !mesh.topology.isLoneEdge( ue ) )
+            x = getQueueElem( ue );
+        evec[ue] = x;
     } );
-    std::erase_if( elms.vec_, []( const EdgeHeap::Element & x ) { return x.val < 0; } );
-    EdgeHeap heap( std::move( elms.vec_ ) );
-    auto updateHeap = [&]( UndirectedEdgeId ue )
-    {
-        const float val = getHeapValue( ue );
-        if ( heap.contains( ue ) )
-        {
-            if ( val >= 0 )
-                heap.setValue( ue, val );
-            else
-                heap.erase( ue );
-        }
-        else if ( val >= 0 )
-            heap.push( ue, val );
-    };
+    std::erase_if( evec.vec_, []( const EdgeLength & x ) { return !x; } );
+    std::priority_queue<EdgeLength> queue( std::less<EdgeLength>(), std::move( evec.vec_ ) );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.25f ) )
         return 0;
@@ -120,7 +126,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     VertBitSet newVerts;
     ProgressCallback notSmoothProgress = subprogress( settings.progressCallback, 0.25f, settings.smoothMode ? 0.75f : 1.0f );
     ProgressCallback whileProgress  =  subprogress( notSmoothProgress, 0.0f, settings.projectOnOriginalMesh ? 0.75f : 1.0f );
-    while ( splitsDone < settings.maxEdgeSplits && heap.size() > 0 )
+    while ( splitsDone < settings.maxEdgeSplits && !queue.empty() )
     {
         if ( settings.maxTriAspectRatio >= 1 && numAboveMax <= 0 )
             break;
@@ -131,8 +137,12 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             lastProgressSplitsDone = splitsDone;
         }
 
-        const EdgeId e = heap.top().id;
-        heap.pop();
+        const auto el = queue.top();
+        const EdgeId e = el.edge;
+        queue.pop();
+
+        if ( el.lenSq != calcEdgeLenSq( el.edge ) )
+            continue; // outdated record in the queue
 
         if ( settings.beforeEdgeSplit && !settings.beforeEdgeSplit( e ) )
             continue;
@@ -187,13 +197,15 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
                 {
                     const bool v = a > settings.maxSplittableTriAspectRatio;
                     if ( v != aboveMaxSplittableTriAspectRatio.autoResizeTestSet( f, v ) && !v )
-                        updateHeap( mesh.topology.prev( ei.sym() ) );
+                        if ( auto x = getQueueElem( mesh.topology.prev( ei.sym() ) ) )
+                            queue.push( std::move( x ) );
                 }
             }
         }
 
         for ( auto ei : orgRing( mesh.topology, e ) )
-            updateHeap( ei );
+            if ( auto x = getQueueElem( ei ) )
+                queue.push( std::move( x ) );
     }
 
     if ( settings.projectOnOriginalMesh )

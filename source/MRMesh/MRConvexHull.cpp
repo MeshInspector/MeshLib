@@ -117,7 +117,19 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
 
     // face of res-mesh to original points above it
     HashMap<FaceId, std::vector<VertId>> face2verts;
-    Heap<double, FaceId> queue{ 2, NoDist };
+    Heap<double, FaceId> queue;
+    auto updateQueue = [&]( FaceId f, double maxDist )
+    {
+        if ( queue.contains( f ) )
+        {
+            if ( maxDist > NoDist )
+                queue.setValue( f, maxDist );
+            else
+                queue.erase( f );
+        }
+        else if ( maxDist > NoDist )
+            queue.push( f, maxDist );
+    };
 
     // separate all remaining points as above face #0 or face #1
     {
@@ -150,8 +162,8 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             auto & vs = maxDist1 >= maxDist0 ? vs1 : vs0;
             vs.insert( vs.end(), inPlane.begin(), inPlane.end() );
         }
-        queue.setValue( 0_f, maxDist0 );
-        queue.setValue( 1_f, maxDist1 );
+        updateQueue( 0_f, maxDist0 );
+        updateQueue( 1_f, maxDist1 );
         if ( !vs0.empty() )
             face2verts[0_f] = std::move( vs0 );
         if ( !vs1.empty() )
@@ -167,23 +179,18 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
     };
     std::vector<FacePoints> newFp;
 
-    while ( queue.top().val > NoDist )
+    while ( queue.size() > 0 )
     {
         const auto myFace = queue.top().id;
+        queue.pop();
         auto it = face2verts.find( myFace );
         if ( it == face2verts.end() )
-        {
-            queue.setSmallerValue( myFace, NoDist );
             continue;
-        }
         auto myverts = std::move( it->second );
         face2verts.erase( it );
 
         if ( myverts.empty() || !res.topology.hasFace( myFace ) )
-        {
-            queue.setSmallerValue( myFace, NoDist );
             continue;
-        }
 
         VertId topmostVert;
         double maxDist = 0;
@@ -198,14 +205,10 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
             }
         }
         if ( !topmostVert )
-        {
-            queue.setSmallerValue( myFace, NoDist );
             continue;
-        }
         auto newv = res.splitFace( myFace, points[topmostVert] );
 
         makeConvexOriginRing( res, res.topology.edgeWithOrg( newv ) );
-        queue.resize( (int)res.topology.faceSize() );
 
         for ( EdgeId e : orgRing( res.topology, newv ) )
         {
@@ -250,7 +253,7 @@ Mesh makeConvexHull( const VertCoords & points, const VertBitSet & validPoints )
         }
         for ( auto & x : newFp )
         {
-            queue.setValue( x.face, x.maxDist );
+            updateQueue( x.face, x.maxDist );
             if ( x.verts.empty() )
             {
                 face2verts.erase( x.face );

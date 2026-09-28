@@ -134,11 +134,13 @@ TEST(MRMesh, SubdivideMeshOnlyNearNotFlippableOpposite)
     for ( auto ue : undirectedEdges( topology ) )
     {
         const EdgeId e( ue );
-        const bool near = ends.test( topology.org( e ) ) || ends.test( topology.dest( e ) )
+        const bool isNear = ends.test( topology.org( e ) ) || ends.test( topology.dest( e ) )
             || ( topology.left( e ) && ends.test( topology.dest( topology.next( e ) ) ) )
             || ( topology.right( e ) && ends.test( topology.dest( topology.prev( e ) ) ) );
-        if ( near )
+        if ( isNear )
+        {
             EXPECT_LT( mesh.edgeLength( e ), settings.maxEdgeLen );
+        }
     }
 }
 

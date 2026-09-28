@@ -158,7 +158,7 @@ VertBitSet getNearVerts( const Mesh & mesh, const UndirectedEdgeBitSet & edges, 
 }
 
 /// subdivides the triangles near the edges till their edges are not longer than (distance)
-bool subdivideNearEdges( Mesh & mesh, SubdividedEdges & se, float distance, const ProgressCallback & cb )
+bool subdivideNearEdges( Mesh & mesh, SubdividedEdges & se, float distance, FaceHashMap & new2Old, const ProgressCallback & cb )
 {
     MR_TIMER;
     const auto & tp = mesh.topology;
@@ -179,6 +179,13 @@ bool subdivideNearEdges( Mesh & mesh, SubdividedEdges & se, float distance, cons
     {
         if ( contains( se.edges, e.undirected() ) )
             se.origEdge.autoResizeSet( e1.undirected(), se.origEdge[e.undirected()] );
+        // the faces around (e1) are new parts of the faces around (e)
+        for ( auto [fNew, fOld] : { std::pair{ tp.left( e1 ), tp.left( e ) }, std::pair{ tp.right( e1 ), tp.right( e ) } } )
+            if ( fNew && fOld )
+            {
+                const auto it = new2Old.find( fOld );
+                new2Old[fNew] = it != new2Old.end() ? it->second : fOld;
+            }
     };
     for ( int i = 0; i < numPasses; ++i )
     {
@@ -198,13 +205,13 @@ bool subdivideNearEdges( Mesh & mesh, SubdividedEdges & se, float distance, cons
         if ( !se.edges.test( ue ) && edgeVerts.test( tp.org( ue ) ) && edgeVerts.test( tp.dest( ue ) ) )
             chords.push_back( ue );
     for ( auto e : chords )
-        mesh.splitEdge( e );
+        mesh.splitEdge( e, nullptr, &new2Old );
     return true;
 }
 
 /// splits mesh edges near the chamfered edges where the nearest original edge changes,
 /// so that the creases between chamfers of neighbor edges become mesh edges
-void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyline3 & edgesTree, float distance )
+void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyline3 & edgesTree, float distance, FaceHashMap & new2Old )
 {
     MR_TIMER;
     const auto & tp = mesh.topology;
@@ -283,7 +290,7 @@ void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyli
             if ( creaseT > 1 - snapT && j == last )
                 break;
             if ( creaseT >= snapT )
-                mesh.splitEdge( e, *crease ); // now (e) starts at the new vertex
+                mesh.splitEdge( e, *crease, nullptr, &new2Old ); // now (e) starts at the new vertex
             i = j;
         }
     }
@@ -354,7 +361,7 @@ float widthAt( const Mesh & mesh, const VertScalars & width, UndirectedEdgeId ue
 /// cuts the mesh along the lines at the chamfer width from the edges
 /// \return the triangles closer to the edges than the cut lines
 Expected<FaceBitSet> cutAtDistance( Mesh & mesh, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree,
-    const VertScalars & width, float distance )
+    const VertScalars & width, float distance, FaceHashMap & new2Old )
 {
     MR_TIMER;
     const auto & tp = mesh.topology;
@@ -367,7 +374,16 @@ Expected<FaceBitSet> cutAtDistance( Mesh & mesh, const UndirectedEdgeBitSet & ed
             relDist[v] = std::sqrt( proj.distSq ) / widthAt( mesh, width, proj.line, proj.point );
     } );
 
-    const auto cutRes = cutMesh( mesh, convertSurfacePathsToMeshContours( mesh, extractIsolines( tp, relDist, 1.0f ) ) );
+    FaceMap cutNew2Old;
+    const auto cutRes = cutMesh( mesh, convertSurfacePathsToMeshContours( mesh, extractIsolines( tp, relDist, 1.0f ) ), { .new2OldMap = &cutNew2Old } );
+    for ( FaceId f( 0 ); f < cutNew2Old.size(); ++f )
+    {
+        if ( const auto fOld = cutNew2Old[f]; fOld && fOld != f )
+        {
+            const auto it = new2Old.find( fOld );
+            new2Old[f] = it != new2Old.end() ? it->second : fOld;
+        }
+    }
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( "Chamfer borders intersect each other" );
     return fillContourLeft( tp, cutRes.resultCut );
@@ -417,8 +433,8 @@ Expected<StripSides> findStripSides( const Mesh & mesh, const FaceBitSet & strip
 
 /// checks that the chamfer stays on the two faces around the edges: in the outer half of the width, at most 2% of the area can be
 /// turned by more than 45 degrees from the average normal of the inner triangles of the same side near the same edge vertex
-Expected<void> checkChamferFits( const Mesh & mesh, const FaceBitSet & strip,
-    const AABBTreePolyline3 & edgesTree, const VertScalars & width, const StripSides & sides, float distance )
+Expected<void> checkChamferFits( const Mesh & mesh, const FaceBitSet & strip, const AABBTreePolyline3 & edgesTree,
+    const VertScalars & width, const StripSides & sides, float distance, const FaceHashMap & new2Old )
 {
     MR_TIMER;
     const auto & tp = mesh.topology;
@@ -478,9 +494,12 @@ Expected<void> checkChamferFits( const Mesh & mesh, const FaceBitSet & strip,
         if ( acc >= 0.5 * badArea )
             break;
     }
-    const auto p = mesh.triCenter( median.second );
+    // the triangle of the input mesh, the turned one is a part of
+    auto origFace = median.second;
+    if ( const auto it = new2Old.find( origFace ); it != new2Old.end() )
+        origFace = it->second;
     return unexpected( fmt::format( "Chamfer does not fit on the faces around the edges: the surface turns away from them at distance about {:.3g}, "
-        "for example near ({:.3g}, {:.3g}, {:.3g}); use a smaller distance", median.first, p.x, p.y, p.z ) );
+        "for example at triangle #{}; use a smaller distance", median.first, (int)origFace ) );
 }
 
 /// moves all strip vertices except for the borders on the chamfer surface
@@ -551,16 +570,17 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
         return unexpected( std::move( c.error() ) );
 
     SubdividedEdges se( mesh, edges );
-    if ( !subdivideNearEdges( mesh, se, distance, subprogress( cb, 0.0f, 0.4f ) ) )
+    FaceHashMap new2Old; // for the triangles appeared in the mesh, the triangles of the input mesh they are parts of
+    if ( !subdivideNearEdges( mesh, se, distance, new2Old, subprogress( cb, 0.0f, 0.4f ) ) )
         return unexpectedOperationCanceled();
 
     const AABBTreePolyline3 edgesTree( mesh, se.edges );
-    splitCreases( mesh, se, edgesTree, distance );
+    splitCreases( mesh, se, edgesTree, distance, new2Old );
     if ( !reportProgress( cb, 0.45f ) )
         return unexpectedOperationCanceled();
 
     const auto width = computeWidths( mesh, se.edges, edgesTree, distance );
-    auto strip = cutAtDistance( mesh, se.edges, edgesTree, width, distance );
+    auto strip = cutAtDistance( mesh, se.edges, edgesTree, width, distance, new2Old );
     if ( !strip )
         return strip;
     if ( !reportProgress( cb, 0.7f ) )
@@ -569,7 +589,7 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
     const auto sides = findStripSides( mesh, *strip, se.edges );
     if ( !sides )
         return unexpected( sides.error() );
-    if ( auto fits = checkChamferFits( mesh, *strip, edgesTree, width, *sides, distance ); !fits )
+    if ( auto fits = checkChamferFits( mesh, *strip, edgesTree, width, *sides, distance, new2Old ); !fits )
         return unexpected( std::move( fits.error() ) );
     if ( !reportProgress( cb, 0.8f ) )
         return unexpectedOperationCanceled();

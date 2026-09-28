@@ -184,6 +184,16 @@ TEST( MRMesh, ChamferEdgesCloseLoops )
     } ), 1e-5f );
 }
 
+TEST( MRMesh, ChamferEdgesDoesNotFit )
+{
+    // the side faces of a thin plate are lower than the distance, so the chamfer of its top loop would reach the bottom face
+    const float h = 0.05f;
+    auto mesh = makeCube( Vector3f( 1, 1, 2 * h ), Vector3f( -0.5f, -0.5f, -h ) );
+    auto res = chamferEdges( mesh, sharpLoop( mesh, h ), 0.2f );
+    ASSERT_FALSE( res.has_value() );
+    EXPECT_NE( res.error().find( "does not fit" ), std::string::npos );
+}
+
 TEST( MRMesh, ChamferEdgesBadInput )
 {
     auto mesh = makeCube();

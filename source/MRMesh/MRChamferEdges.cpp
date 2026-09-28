@@ -14,7 +14,10 @@
 #include "MRRingIterator.h"
 #include "MRLine.h"
 #include "MRLineSegm.h"
+#include "MRConstants.h"
+#include "MRphmap.h"
 #include "MRTimer.h"
+#include "MRPch/MRFmt.h"
 #include <algorithm>
 #include <climits>
 #include <cmath>
@@ -48,22 +51,96 @@ Expected<void> checkChamferInput( const MeshTopology & tp, const UndirectedEdgeB
     return {};
 }
 
-/// the chamfered edges after subdivision, each remembers the original edge it is a part of
+/// the edges of each loop or chain in their order along it; chains start at their ends
+std::vector<std::vector<EdgeId>> orderLoops( const MeshTopology & tp, const UndirectedEdgeBitSet & edges )
+{
+    std::vector<std::vector<EdgeId>> res;
+    UndirectedEdgeBitSet visited( edges.size() );
+    auto walk = [&]( EdgeId e )
+    {
+        auto & loop = res.emplace_back();
+        while ( e && !visited.test( e.undirected() ) )
+        {
+            visited.set( e.undirected() );
+            loop.push_back( e );
+            const auto next = e.sym();
+            e = {};
+            for ( auto en : orgRing( tp, next ) )
+                if ( en != next && edges.test( en.undirected() ) )
+                    e = en;
+        }
+    };
+    for ( auto v : getIncidentVerts( tp, edges ) )
+    {
+        EdgeId single;
+        int n = 0;
+        for ( auto e : orgRing( tp, v ) )
+            if ( edges.test( e.undirected() ) )
+            {
+                single = e;
+                ++n;
+            }
+        if ( n == 1 && !visited.test( single.undirected() ) )
+            walk( single );
+    }
+    for ( auto ue : edges )
+        if ( !visited.test( ue ) )
+            walk( ue );
+    return res;
+}
+
+/// the chamfered edges after subdivision, each remembers the group of original edges it is a part of
 struct SubdividedEdges
 {
     UndirectedEdgeBitSet edges;
+    /// for each edge, the first original edge of its group
     Vector<UndirectedEdgeId, UndirectedEdgeId> origEdge;
-    /// original edges are straight segments, the creases between their chamfers are found from them
-    Vector<LineSegm3f, UndirectedEdgeId> origSegm;
+    /// the segments of each group: consecutive original edges turning by less than 20 degrees in total,
+    /// so that the creases between chamfers appear only at the corners, not at the noise of scanned edges
+    HashMap<UndirectedEdgeId, std::vector<LineSegm3f>> groupSegms;
 
-    SubdividedEdges( const Mesh & mesh, const UndirectedEdgeBitSet & e ) : edges( e ),
-        origEdge( mesh.topology.undirectedEdgeSize() ), origSegm( mesh.topology.undirectedEdgeSize() )
+    SubdividedEdges( const Mesh & mesh, const UndirectedEdgeBitSet & e ) : edges( e ), origEdge( mesh.topology.undirectedEdgeSize() )
     {
-        for ( auto ue : edges )
+        const float cosLimit = std::cos( 20 * PI_F / 180 );
+        for ( auto loop : orderLoops( mesh.topology, edges ) )
         {
-            origEdge[ue] = ue;
-            origSegm[ue] = mesh.edgeSegment( ue );
+            auto dir = [&]( EdgeId x ) { return mesh.edgeVector( x ).normalized(); };
+            const bool closed = mesh.topology.org( loop.front() ) == mesh.topology.dest( loop.back() );
+            if ( closed )
+            {
+                // start a closed loop at its sharpest corner
+                size_t best = 0;
+                float bestCos = 2;
+                for ( size_t i = 0; i < loop.size(); ++i )
+                    if ( float c = dot( dir( loop[i] ), dir( loop[( i + loop.size() - 1 ) % loop.size()] ) ); c < bestCos )
+                    {
+                        bestCos = c;
+                        best = i;
+                    }
+                std::rotate( loop.begin(), loop.begin() + best, loop.end() );
+            }
+            UndirectedEdgeId leader;
+            Vector3f leaderDir;
+            for ( auto x : loop )
+            {
+                if ( !leader || dot( dir( x ), leaderDir ) < cosLimit )
+                {
+                    leader = x.undirected();
+                    leaderDir = dir( x );
+                }
+                origEdge[x.undirected()] = leader;
+                groupSegms[leader].push_back( mesh.edgeSegment( x ) );
+            }
         }
+    }
+
+    /// the distance from (p) to the group of original edges with given leader
+    float distToGroup( const Vector3f & p, UndirectedEdgeId leader ) const
+    {
+        float res = FLT_MAX;
+        for ( const auto & segm : groupSegms.at( leader ) )
+            res = std::min( res, ( p - closestPointOnLineSegm( p, segm ) ).lengthSq() );
+        return std::sqrt( res );
     }
 };
 
@@ -137,10 +214,10 @@ void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyli
         const auto proj = findProjectionOnMeshEdges( p, mesh, edgesTree, maxDistSq );
         return proj.valid() ? se.origEdge[proj.line] : UndirectedEdgeId{};
     };
-    // positive if (p) is closer to original edge (j) than to (i)
+    // positive if (p) is closer to the group of original edges (j) than to (i)
     auto closerToSecond = [&]( const Vector3f & p, UndirectedEdgeId i, UndirectedEdgeId j )
     {
-        return ( p - closestPointOnLineSegm( p, se.origSegm[i] ) ).length() - ( p - closestPointOnLineSegm( p, se.origSegm[j] ) ).length();
+        return se.distToGroup( p, i ) - se.distToGroup( p, j );
     };
 
     const auto nearVerts = getNearVerts( mesh, se.edges, 2 * distance );
@@ -220,48 +297,25 @@ VertScalars computeWidths( const Mesh & mesh, const UndirectedEdgeBitSet & edges
     const auto & tp = mesh.topology;
     const auto edgeVerts = getIncidentVerts( tp, edges );
 
-    // walk each loop or chain to find its id and the arc length of each vertex along it
+    // the id of the loop or chain of each vertex and its arc length along it
     Vector<int, VertId> part( tp.vertSize(), -1 );
     VertScalars arc( tp.vertSize() );
     std::vector<float> partLength;
-    auto nextEdge = [&]( EdgeId e ) // the other edge of the loop at dest( e )
-    {
-        for ( auto en : orgRing( tp, e.sym() ) )
-            if ( en != e.sym() && edges.test( en.undirected() ) )
-                return en;
-        return EdgeId{};
-    };
-    auto walk = [&]( EdgeId e )
+    for ( const auto & loop : orderLoops( tp, edges ) )
     {
         const int id = (int)partLength.size();
         float len = 0;
-        part[tp.org( e )] = id;
-        while ( e && part[tp.dest( e )] < 0 )
+        part[tp.org( loop.front() )] = id;
+        for ( auto e : loop )
         {
             len += mesh.edgeLength( e );
             part[tp.dest( e )] = id;
-            arc[tp.dest( e )] = len;
-            e = nextEdge( e );
+            if ( tp.dest( e ) != tp.org( loop.front() ) )
+                arc[tp.dest( e )] = len;
         }
         // the arc length along a chain is not cyclic
-        partLength.push_back( e ? len + mesh.edgeLength( e ) : FLT_MAX );
-    };
-    for ( auto v : edgeVerts ) // chains start at their ends
-        if ( part[v] < 0 && tp.isBdVertex( v ) )
-            for ( auto e : orgRing( tp, v ) )
-                if ( edges.test( e.undirected() ) )
-                {
-                    walk( e );
-                    break;
-                }
-    for ( auto v : edgeVerts )
-        if ( part[v] < 0 )
-            for ( auto e : orgRing( tp, v ) )
-                if ( edges.test( e.undirected() ) )
-                {
-                    walk( e );
-                    break;
-                }
+        partLength.push_back( tp.org( loop.front() ) == tp.dest( loop.back() ) ? len : FLT_MAX );
+    }
 
     VertScalars res( tp.vertSize(), distance );
     BitSetParallelFor( edgeVerts, [&]( VertId v )
@@ -361,6 +415,74 @@ Expected<StripSides> findStripSides( const Mesh & mesh, const FaceBitSet & strip
     return res;
 }
 
+/// checks that the chamfer stays on the two faces around the edges: in the outer half of the width, at most 2% of the area can be
+/// turned by more than 45 degrees from the average normal of the inner triangles of the same side near the same edge vertex
+Expected<void> checkChamferFits( const Mesh & mesh, const FaceBitSet & strip,
+    const AABBTreePolyline3 & edgesTree, const VertScalars & width, const StripSides & sides, float distance )
+{
+    MR_TIMER;
+    const auto & tp = mesh.topology;
+    const float maxDistSq = sqr( 2 * distance );
+    struct FaceInfo
+    {
+        std::uint64_t key = 0; // edge vertex and side
+        float relDist = -1;
+        float dist = 0;
+    };
+    Vector<FaceInfo, FaceId> info( tp.faceSize() );
+    BitSetParallelFor( strip, [&]( FaceId f )
+    {
+        const auto proj = findProjectionOnMeshEdges( mesh.triCenter( f ), mesh, edgesTree, maxDistSq );
+        if ( !proj.valid() )
+            return;
+        const auto o = tp.org( proj.line );
+        const auto d = tp.dest( proj.line );
+        const auto v = ( proj.point - mesh.points[o] ).lengthSq() < ( proj.point - mesh.points[d] ).lengthSq() ? o : d;
+        const float s = std::sqrt( proj.distSq );
+        info[f] = { std::uint64_t( (int)v ) << 32 | std::uint32_t( (int)sides.side[f] ),
+            s / widthAt( mesh, width, proj.line, proj.point ), s };
+    } );
+
+    HashMap<std::uint64_t, Vector3f> refNormals;
+    for ( auto f : strip )
+        if ( info[f].relDist >= 0.1f && info[f].relDist <= 0.4f )
+            refNormals[info[f].key] += mesh.dirDblArea( f );
+
+    const float cosLimit = std::cos( PI_F / 4 );
+    std::vector<std::pair<float, FaceId>> bad; // distance from the edges and triangle
+    double badArea = 0, outerArea = 0;
+    for ( auto f : strip )
+    {
+        if ( info[f].relDist < 0.5f )
+            continue;
+        outerArea += mesh.area( f );
+        const auto it = refNormals.find( info[f].key );
+        if ( it != refNormals.end() && dot( mesh.normal( f ), it->second.normalized() ) < cosLimit )
+        {
+            badArea += mesh.area( f );
+            bad.emplace_back( info[f].dist, f );
+        }
+    }
+    // single turned triangles near the corners of the edges or scan noise are tolerated, a wide part of the chamfer on another face is not
+    if ( badArea <= 0.02 * outerArea )
+        return {};
+
+    // report the area-weighted median of the turned triangles
+    std::sort( bad.begin(), bad.end() );
+    double acc = 0;
+    auto median = bad.front();
+    for ( const auto & b : bad )
+    {
+        median = b;
+        acc += mesh.area( b.second );
+        if ( acc >= 0.5 * badArea )
+            break;
+    }
+    const auto p = mesh.triCenter( median.second );
+    return unexpected( fmt::format( "Chamfer does not fit on the faces around the edges: the surface turns away from them at distance about {:.3g}, "
+        "for example near ({:.3g}, {:.3g}, {:.3g}); use a smaller distance", median.first, p.x, p.y, p.z ) );
+}
+
 /// moves all strip vertices except for the borders on the chamfer surface
 bool moveStripVerts( Mesh & mesh, const FaceBitSet & strip, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree,
     const VertScalars & width, const StripSides & sides, float distance, const ProgressCallback & cb )
@@ -447,6 +569,8 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
     const auto sides = findStripSides( mesh, *strip, se.edges );
     if ( !sides )
         return unexpected( sides.error() );
+    if ( auto fits = checkChamferFits( mesh, *strip, edgesTree, width, *sides, distance ); !fits )
+        return unexpected( std::move( fits.error() ) );
     if ( !reportProgress( cb, 0.8f ) )
         return unexpectedOperationCanceled();
 

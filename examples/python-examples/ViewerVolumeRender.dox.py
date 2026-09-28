@@ -1,7 +1,5 @@
-import sys
 from meshlib import mrmeshpy as mm
 from meshlib import mrviewerpy as mv
-import os
 
 # load volume file
 volume = mm.loadVoxels("stag_beetle.dcm")[0]
@@ -39,4 +37,5 @@ mv.runFromGUIThread( lambda : ov.setVolumeRenderingParams(vrp) )
 # fit camera
 mv.Viewer().preciseFitDataViewport()
 
-os.system("pause")
+# keep the window until the user closes it
+mv.showViewer()

@@ -31,7 +31,8 @@ offset = mesh.computeBoundingBox().diagonal() * 0.05
 result_mesh = mm.offsetMesh(mesh, offset, params)
 
 
-# Open a window; raises where the Viewer is unavailable, e.g. on macOS
+# Open a window; raises where no window can be opened. On macOS the window appears in
+# mv.showViewer() below, so the calls in between prepare the scene it will show.
 try:
     mv.launch()
 except RuntimeError as e:
@@ -43,8 +44,9 @@ mv.selectByName("Mesh 1")
 
 mv.Viewer().preciseFitDataViewport() # fit viewer to the mesh
 mv.Viewer().showSceneTree(True) # enables Scene Tree in Viewer window
-# user can manipulate with viewer window while this python is on pause
-input("Press Enter to continue...")
+# user can manipulate with viewer window while this python is on pause (not on macOS, no window yet)
+if sys.platform != "darwin":
+    input("Press Enter to continue...")
 
 # remove all objects from scene
 mv.clearScene()
@@ -53,8 +55,9 @@ mv.clearScene()
 mv.addMeshToScene(result_mesh, "Mesh Offset")
 mv.selectByName("Mesh Offset")
 mv.Viewer().showSceneTree(False) # disables Scene Tree in Viewer window
-# user can manipulate with viewer window while this python is on pause
-input("Press Enter to continue...")
+# user can manipulate with viewer window while this python is on pause (not on macOS, no window yet)
+if sys.platform != "darwin":
+    input("Press Enter to continue...")
 
-# close viewer window nicely
-mv.Viewer().shutdown()
+# keep the window until the user closes it
+mv.showViewer()

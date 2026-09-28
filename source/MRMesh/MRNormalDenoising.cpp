@@ -257,7 +257,7 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
         BitSetParallelForAll( *settings.outCreases, [&]( UndirectedEdgeId ue )
         {
             if ( v[ue] < 0.5f && ( !settings.region
-                || contains( *settings.region, mesh.topology.left( ue ) ) || contains( *settings.region, mesh.topology.right( ue ) ) ) )
+                || ( contains( *settings.region, mesh.topology.left( ue ) ) && contains( *settings.region, mesh.topology.right( ue ) ) ) ) )
                 settings.outCreases->set( ue );
         } );
     }

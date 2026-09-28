@@ -27,6 +27,7 @@
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
+#include "MRIOExtras/MRExtraFormatSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
 #include "MRMesh/MRObjectMesh.h"
@@ -273,6 +274,50 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
     drawMouseSceneControlsSettings_( menuWidth );
 }
 
+void ViewerSettingsPlugin::drawStepImportSettings_( [[maybe_unused]] float menuWidth )
+{
+#ifndef MRIOEXTRAS_NO_STEP
+    drawSeparator_( _t( "STEP Import" ) );
+
+    auto settings = ExtraFormatSettings::getStepLoadSettings();
+    bool changed = false;
+
+    ImGui::PushItemWidth( menuWidth * 0.5f );
+
+    auto angularDeflection = float( settings.angularDeflection );
+    if ( UI::drag<AngleUnit>( _tr( "Angular Deflection" ), angularDeflection, 1e-3f, 1e-4f, 1.0f ) )
+    {
+        settings.angularDeflection = angularDeflection;
+        changed = true;
+    }
+    UI::setTooltipIfHovered( _tr( "Maximum angle between the surface normal and the normal of a generated triangle. Smaller values give a more precise but heavier mesh." ) );
+
+    auto linearDeflection = float( settings.linearDeflection );
+    const bool linearChanged = settings.relative ?
+        UI::drag<NoUnit>( _tr( "Linear Deflection" ), linearDeflection, 1e-3f, 1e-4f, 10.0f ) :
+        UI::drag<LengthUnit>( _tr( "Linear Deflection" ), linearDeflection, 1e-2f, 1e-4f, 1e3f );
+    if ( linearChanged )
+    {
+        settings.linearDeflection = linearDeflection;
+        changed = true;
+    }
+    UI::setTooltipIfHovered( _tr( "Maximum distance between the exact surface and a generated triangle. Smaller values give a more precise but heavier mesh." ) );
+
+    ImGui::PopItemWidth();
+
+    if ( UI::checkbox( _tr( "Relative Deflection" ), &settings.relative ) )
+        changed = true;
+    UI::setTooltipIfHovered( _tr( "Treat the linear deflection as a fraction of the edge size instead of an absolute distance." ) );
+
+    if ( UI::checkbox( _tr( "Auto Colorize" ), &settings.autoColorize ) )
+        changed = true;
+    UI::setTooltipIfHovered( _tr( "Assign distinct colors to the imported components. Has no effect if the STEP file already contains colors." ) );
+
+    if ( changed )
+        ExtraFormatSettings::setStepLoadSettings( settings );
+#endif
+}
+
 void ViewerSettingsPlugin::drawGlobalSettings_( float buttonWidth )
 {
     drawSeparator_( _t( "Global" ) );
@@ -419,6 +464,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
     }
 
     drawMruInnerFormats_( menuWidth );
+    drawStepImportSettings_( menuWidth );
 
 #if 0 // Hide unimplemented settings
 #ifndef __EMSCRIPTEN__

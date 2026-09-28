@@ -23,6 +23,7 @@
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
+#include "MRIOExtras/MRExtraFormatSettings.h"
 
 namespace
 {
@@ -55,6 +56,12 @@ const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
+#ifndef MRIOEXTRAS_NO_STEP
+const std::string cStepAngularDeflection = "stepLoad.angularDeflection";
+const std::string cStepLinearDeflection = "stepLoad.linearDeflection";
+const std::string cStepRelativeDeflection = "stepLoad.relativeDeflection";
+const std::string cStepAutoColorize = "stepLoad.autoColorize";
+#endif
 const std::string cUnitsLeadingZero = "units.leadingZero";
 const std::string cUnitsThouSep = "units.thousandsSeparator";
 const std::string cUnitsLenUnit = "units.unitLength";
@@ -197,6 +204,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     // lastExtentions_.clear();
 
     SceneSettings::reset();
+    ExtraFormatSettings::reset();
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
@@ -521,6 +529,17 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     SceneSettings::set( SceneSettings::StringType::PointsSerializeFormat, loadString( cMruInnerPointsFormat, ".ply" ) );
     SceneSettings::set( SceneSettings::StringType::VoxelsSerializeFormat, loadString( cMruInnerVoxelsFormat, ".vdb" ) );
 
+#ifndef MRIOEXTRAS_NO_STEP
+    {
+        MeshLoad::StepLoadSettings step;
+        step.angularDeflection = cfg.getJsonValue( cStepAngularDeflection, step.angularDeflection ).asDouble();
+        step.linearDeflection = cfg.getJsonValue( cStepLinearDeflection, step.linearDeflection ).asDouble();
+        step.relative = cfg.getJsonValue( cStepRelativeDeflection, step.relative ).asBool();
+        step.autoColorize = cfg.getJsonValue( cStepAutoColorize, step.autoColorize ).asBool();
+        ExtraFormatSettings::setStepLoadSettings( step );
+    }
+#endif
+
     if ( cfg.hasJsonValue( cVisualObjectTags ) )
     {
         auto& manager = VisualObjectTagManager::instance();
@@ -677,6 +696,16 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     saveString( cMruInnerMeshFormat, SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat ) );
     saveString( cMruInnerPointsFormat, SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat ) );
     saveString( cMruInnerVoxelsFormat, SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat ) );
+
+#ifndef MRIOEXTRAS_NO_STEP
+    {
+        const auto step = ExtraFormatSettings::getStepLoadSettings();
+        cfg.setJsonValue( cStepAngularDeflection, step.angularDeflection );
+        cfg.setJsonValue( cStepLinearDeflection, step.linearDeflection );
+        cfg.setJsonValue( cStepRelativeDeflection, step.relative );
+        cfg.setJsonValue( cStepAutoColorize, step.autoColorize );
+    }
+#endif
 
     {
         Json::Value visualObjectTagsJson;

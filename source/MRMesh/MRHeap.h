@@ -22,6 +22,9 @@ template <typename T, typename I, typename P = std::less<T>>
 class Heap
 {
 public:
+    /// the type that can hold the number of elements of the maximal heap (e.g. int for FaceId and size_t for VoxelId)
+    using SizeType = typename I::ValueType;
+
     struct Element
     {
         I id;
@@ -83,7 +86,7 @@ private:
 private:
     static constexpr size_t InvalidPos = ~size_t( 0 );
     std::vector<Element> heap_;
-    Vector<size_t, I> id2PosInHeap_;
+    Vector<SizeType, I> id2PosInHeap_;
     P pred_;
 };
 
@@ -121,7 +124,7 @@ Heap<T, I, P>::Heap( std::vector<Element> elms, P pred )
         }
     );
     for ( size_t i = 0; i < heap_.size(); ++i )
-        id2PosInHeap_[heap_[i].id] = i;
+        id2PosInHeap_[heap_[i].id] = SizeType( i );
 }
 
 template <typename T, typename I, typename P>
@@ -177,7 +180,7 @@ void Heap<T, I, P>::erase( I elemId )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::setValue( I elemId, const T & newVal )
 {
-    size_t pos = id2PosInHeap_[ elemId ];
+    size_t pos = size_t( id2PosInHeap_[ elemId ] );
     assert( heap_[pos].id == elemId );
     if ( pred_( newVal, heap_[pos].val ) )
         setSmallerValue( elemId, newVal );
@@ -188,7 +191,7 @@ void Heap<T, I, P>::setValue( I elemId, const T & newVal )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::setLargerValue( I elemId, const T & newVal )
 {
-    size_t pos = id2PosInHeap_[ elemId ];
+    size_t pos = size_t( id2PosInHeap_[ elemId ] );
     assert( heap_[pos].id == elemId );
     assert( !( pred_( newVal, heap_[pos].val ) ) );
     heap_[pos].val = newVal;
@@ -204,18 +207,18 @@ void Heap<T, I, P>::lift_( size_t pos, I elemId )
         if ( !( less_( parentPos, pos ) ) )
             break;
         auto parentId = heap_[parentPos].id;
-        assert( id2PosInHeap_[parentId] == parentPos );
+        assert( size_t( id2PosInHeap_[parentId] ) == parentPos );
         std::swap( heap_[parentPos], heap_[pos] );
         std::swap( parentPos, pos );
-        id2PosInHeap_[parentId] = parentPos;
+        id2PosInHeap_[parentId] = SizeType( parentPos );
     }
-    id2PosInHeap_[elemId] = pos;
+    id2PosInHeap_[elemId] = SizeType( pos );
 }
 
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::setSmallerValue( I elemId, const T & newVal )
 {
-    size_t pos = id2PosInHeap_[ elemId ];
+    size_t pos = size_t( id2PosInHeap_[ elemId ] );
     assert( heap_[pos].id == elemId );
     assert( !( pred_( heap_[pos].val, newVal ) ) );
     heap_[pos].val = newVal;
@@ -228,12 +231,12 @@ void Heap<T, I, P>::setSmallerValue( I elemId, const T & newVal )
         size_t child2Pos = 2 * pos + 2;
         if ( child2Pos >= heap_.size() )
         {
-            assert( id2PosInHeap_[child1Id] == child1Pos );
+            assert( size_t( id2PosInHeap_[child1Id] ) == child1Pos );
             if ( !( less_( child1Pos, pos ) ) )
             {
                 std::swap( heap_[child1Pos], heap_[pos] );
                 std::swap( child1Pos, pos );
-                id2PosInHeap_[child1Id] = child1Pos;
+                id2PosInHeap_[child1Id] = SizeType( child1Pos );
             }
             break;
         }
@@ -242,14 +245,14 @@ void Heap<T, I, P>::setSmallerValue( I elemId, const T & newVal )
         {
             std::swap( heap_[child1Pos], heap_[pos] );
             std::swap( child1Pos, pos );
-            id2PosInHeap_[child1Id] = child1Pos;
+            id2PosInHeap_[child1Id] = SizeType( child1Pos );
         }
         else if ( !( less_( child2Pos, pos ) ) )
         {
             assert( !( less_( child2Pos, child1Pos ) ) );
             std::swap( heap_[child2Pos], heap_[pos] );
             std::swap( child2Pos, pos );
-            id2PosInHeap_[child2Id] = child2Pos;
+            id2PosInHeap_[child2Id] = SizeType( child2Pos );
         }
         else
         {
@@ -258,7 +261,7 @@ void Heap<T, I, P>::setSmallerValue( I elemId, const T & newVal )
             break;
         }
     }
-    id2PosInHeap_[elemId] = pos;
+    id2PosInHeap_[elemId] = SizeType( pos );
 }
 
 template <typename T, typename I, typename P>

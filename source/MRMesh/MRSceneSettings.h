@@ -45,8 +45,7 @@ public:
         Count,
     };
 
-    /// file extensions (starting with '.') used to serialize objects of each kind by default, if not overridden in specific object;
-    /// NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
+    /// file extensions (starting with '.') used to serialize objects of each kind by default, if not overridden in specific object
     enum class StringType
     {
         /// for ObjectMeshHolder

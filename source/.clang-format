@@ -1,5 +1,9 @@
 # Clang-Format counterpart of the Visual C++ formatting settings in .editorconfig.
 Language: Cpp
+ColumnLimit: 0
+IndentWidth: 4
+SortIncludes: Never
+FixNamespaceComments: false
 
 AlignAfterOpenBracket: false
 IndentCaseLabels: false
@@ -8,8 +12,9 @@ LambdaBodyIndentation: OuterScope
 IndentGotoLabels: true
 IndentPPDirectives: None
 # Must stay equal to -IndentWidth so access specifiers sit flush with the class keyword.
-AccessModifierOffset: -2
+AccessModifierOffset: -4
 NamespaceIndentation: None
+IndentExternBlock: NoIndent
 
 BreakBeforeBraces: Custom
 BraceWrapping:
@@ -27,6 +32,8 @@ BraceWrapping:
   BeforeCatch: true
   BeforeElse: true
   BeforeWhile: false
+  AfterExternBlock: true
+  AfterCaseLabel: true
 
 SpaceBeforeParens: ControlStatements
 SpacesInParens: Custom
@@ -47,5 +54,5 @@ PointerAlignment: Left
 ReferenceAlignment: Left
 
 AllowShortBlocksOnASingleLine: Never
-AllowShortFunctionsOnASingleLine: None
-AllowShortLambdasOnASingleLine: None
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortLambdasOnASingleLine: Inline

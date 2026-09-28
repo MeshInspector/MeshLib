@@ -686,7 +686,7 @@ size_t ObjectMeshHolder::heapBytes() const
 
 const char * ObjectMeshHolder::actualSerializeFormat() const
 {
-    return serializeFormat_ ? serializeFormat_ : defaultSerializeMeshFormat().c_str();
+    return serializeFormat_ ? serializeFormat_ : SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat ).c_str();
 }
 
 void ObjectMeshHolder::setSerializeFormat( const char * newFormat )
@@ -893,18 +893,14 @@ void ObjectMeshHolder::setDefaultSceneProperties_()
     setFlatShading( SceneSettings::getDefaultShadingMode() == SceneSettings::ShadingMode::Flat );
 }
 
-// .PLY format is the most compact among other formats with zero compression costs
-static std::string sDefaultSerializeMeshFormat = ".ply";
-
 const std::string & defaultSerializeMeshFormat()
 {
-    return sDefaultSerializeMeshFormat;
+    return SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat );
 }
 
 void setDefaultSerializeMeshFormat( std::string newFormat )
 {
-    assert( !newFormat.empty() && newFormat[0] == '.' );
-    sDefaultSerializeMeshFormat = std::move( newFormat );
+    SceneSettings::set( SceneSettings::StringType::MeshSerializeFormat, std::move( newFormat ) );
 }
 
 } //namespace MR

@@ -93,12 +93,10 @@ Expected<DistanceMap> fromMrDistanceMap( const std::filesystem::path& path, cons
     if ( !inFile )
         return unexpected( readError );
 
+    DistanceMapToWorld localParams;
     auto params = settings.distanceMapToWorld;
     if ( !params )
-    {
-        static DistanceMapToWorld defaultParams;
-        params = &defaultParams;
-    }
+        params = &localParams;
     if ( !inFile.read( ( char* )params, sizeof( DistanceMapToWorld ) ) )
         return unexpected( readError );
 

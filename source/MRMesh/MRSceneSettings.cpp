@@ -18,6 +18,11 @@ float SceneSettings::get( FloatType type )
     return instance_().floatSettings_[int( type )];
 }
 
+const std::string & SceneSettings::get( StringType type )
+{
+    return instance_().stringSettings_[int( type )];
+}
+
 void SceneSettings::set( BoolType type, bool value )
 {
     instance_().boolSettings_[int( type )] = value;
@@ -26,6 +31,11 @@ void SceneSettings::set( BoolType type, bool value )
 void SceneSettings::set( FloatType type, float value )
 {
     instance_().floatSettings_[int( type )] = value;
+}
+
+void SceneSettings::set( StringType type, std::string value )
+{
+    instance_().stringSettings_[int( type )] = std::move( value );
 }
 
 SceneSettings::ShadingMode SceneSettings::getDefaultShadingMode()
@@ -63,6 +73,11 @@ SceneSettings::SceneSettings()
     floatSettings_[int( FloatType::FeatureLineWidth )] = 3;
     floatSettings_[int( FloatType::FeatureSubLineWidth )] = 2;
     floatSettings_[int( FloatType::AmbientCoefSelectedObj )] = 2.5f;
+
+    // .PLY format is the most compact among other formats with zero compression costs
+    stringSettings_[int( StringType::MeshSerializeFormat )] = ".ply";
+    stringSettings_[int( StringType::PointsSerializeFormat )] = ".ply";
+    stringSettings_[int( StringType::VoxelsSerializeFormat )] = ".vdb";
 }
 
 SceneSettings& SceneSettings::instance_()

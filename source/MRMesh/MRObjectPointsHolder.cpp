@@ -5,6 +5,7 @@
 #include "MRPointsSave.h"
 #include "MRPointsLoad.h"
 #include "MRSceneColors.h"
+#include "MRSceneSettings.h"
 #include "MRHeapBytes.h"
 #include "MRSerializer.h"
 #include "MRStringConvert.h"
@@ -302,7 +303,7 @@ Expected<std::future<Expected<void>>> ObjectPointsHolder::serializeModel_( const
     saveSettings.telemetrySignal = false;
     if ( !vertsColorMap_.empty() )
         saveSettings.colors = &vertsColorMap_;
-    auto save = [points = points_, serializeFormat = serializeFormat_ ? serializeFormat_ : defaultSerializePointsFormat(), path, saveSettings]()
+    auto save = [points = points_, serializeFormat = serializeFormat_ ? serializeFormat_ : SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat ), path, saveSettings]()
     {
         auto filename = path;
         const auto extension = std::string( "*" ) + serializeFormat;
@@ -437,18 +438,14 @@ void ObjectPointsHolder::updateRenderDiscretization_()
     renderDiscretizationChangedSignal();
 }
 
-// .PLY format is the most compact among other formats with zero compression costs
-static std::string sDefaultSerializePointsFormat = ".ply";
-
 const std::string & defaultSerializePointsFormat()
 {
-    return sDefaultSerializePointsFormat;
+    return SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat );
 }
 
 void setDefaultSerializePointsFormat( std::string newFormat )
 {
-    assert( !newFormat.empty() && newFormat[0] == '.' );
-    sDefaultSerializePointsFormat = std::move( newFormat );
+    SceneSettings::set( SceneSettings::StringType::PointsSerializeFormat, std::move( newFormat ) );
 }
 
 } //namespace MR

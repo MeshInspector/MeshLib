@@ -95,6 +95,7 @@ private:
     void drawMcpSettings_();
 
     void drawMruInnerFormats_( float menuWidth );
+    void drawStepImportSettings_( float menuWidth );
 
     void drawGlobalSettings_( float buttonWidth );
     void drawCustomSettings_( const std::string& separatorName, bool needSeparator );

@@ -324,13 +324,16 @@ VertScalars computeWidths( const Mesh & mesh, const UndirectedEdgeBitSet & edges
         partLength.push_back( tp.org( loop.front() ) == tp.dest( loop.back() ) ? len : FLT_MAX );
     }
 
+    // the gaps narrowing the chamfer, the strips then stay apart at least by 0.1 of the gap
+    const float gapFactor = 0.45f;
+    const float maxGap = distance / gapFactor;
     VertScalars res( tp.vertSize(), distance );
     BitSetParallelFor( edgeVerts, [&]( VertId v )
     {
         const auto & p = mesh.points[v];
         const int id = part[v];
         float gap = FLT_MAX;
-        findMeshEdgesInBall( mesh, edgesTree, p, 2 * distance, [&]( UndirectedEdgeId ue, const Vector3f & q, float distSq )
+        findMeshEdgesInBall( mesh, edgesTree, p, maxGap, [&]( UndirectedEdgeId ue, const Vector3f & q, float distSq )
         {
             const auto w = tp.org( ue );
             if ( part[w] == id )
@@ -343,7 +346,7 @@ VertScalars computeWidths( const Mesh & mesh, const UndirectedEdgeBitSet & edges
             }
             gap = std::min( gap, ( q - p ).length() );
         } );
-        res[v] = std::min( distance, 0.45f * gap );
+        res[v] = std::min( distance, gapFactor * gap );
     } );
     return res;
 }

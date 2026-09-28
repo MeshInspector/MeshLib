@@ -4,6 +4,7 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MREdgeIterator.h>
+#include <MRMesh/MRMeshComponents.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <cmath>
@@ -177,6 +178,22 @@ TEST( MRMesh, ChamferEdgesCloseLoops )
     auto res = chamferEdges( mesh, sharpLoop( mesh, h ) | sharpLoop( mesh, -h ), d );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( countFolds( mesh ), 0 );
+    EXPECT_LT( maxCentroidDeviation( mesh, [&]( const Vector3f & p )
+    {
+        return std::max( { std::abs( p.x ) - 0.5f, std::abs( p.y ) - 0.5f, std::abs( p.z ) - h,
+            ( std::abs( p.x ) + std::abs( p.z ) - ( 0.5f + h - w ) ) * s, ( std::abs( p.y ) + std::abs( p.z ) - ( 0.5f + h - w ) ) * s } );
+    } ), 1e-5f );
+}
+
+TEST( MRMesh, ChamferEdgesLoopsJustApart )
+{
+    // the top and bottom loops of the plate are a bit farther than 2*d, the chamfers are narrowed anyway not to touch each other
+    const float d = 0.1f, h = 1.02f * d, w = 0.45f * 2 * h;
+    const float s = std::sqrt( 0.5f );
+    auto mesh = makeCube( Vector3f( 1, 1, 2 * h ), Vector3f( -0.5f, -0.5f, -h ) );
+    auto res = chamferEdges( mesh, sharpLoop( mesh, h ) | sharpLoop( mesh, -h ), d );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( MeshComponents::getNumComponents( { mesh, &*res } ), 2 );
     EXPECT_LT( maxCentroidDeviation( mesh, [&]( const Vector3f & p )
     {
         return std::max( { std::abs( p.x ) - 0.5f, std::abs( p.y ) - 0.5f, std::abs( p.z ) - h,

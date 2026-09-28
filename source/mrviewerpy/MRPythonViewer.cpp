@@ -387,11 +387,8 @@ void shutViewerAtExit()
 #else
     auto& viewer = getViewerInstance();
     if ( viewer.isPreLaunched() )
-    {
-        protectedLaunchPhase( [&] { viewer.launchShut(); return EXIT_SUCCESS; } );
         postLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
-        removeInputHook();
-    }
+    removeInputHook();
 #endif
 }
 

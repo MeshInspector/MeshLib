@@ -447,6 +447,12 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
 
 void postLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
+    auto& viewer = MR::Viewer::instanceRef();
+    if ( viewer.isPreLaunched() )
+    {
+        protectedLaunchPhase( [&] { viewer.launchShut(); return EXIT_SUCCESS; } );
+    }
+
     setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();

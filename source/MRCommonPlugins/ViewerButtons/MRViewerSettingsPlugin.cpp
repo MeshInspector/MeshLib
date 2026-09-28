@@ -313,6 +313,10 @@ void ViewerSettingsPlugin::drawStepImportSettings_( [[maybe_unused]] float menuW
         changed = true;
     UI::setTooltipIfHovered( _tr( "Assign distinct colors to the imported components. Has no effect if the STEP file already contains colors." ) );
 
+    if ( UI::checkbox( _tr( "Force Load Sub-Shapes" ), &settings.forceLoadSubShapes ) )
+        changed = true;
+    UI::setTooltipIfHovered( _tr( "Always load the bodies (solids and shells) of a shape as separate child objects, even if the shape has a single body." ) );
+
     if ( changed )
         ExtraFormatSettings::setStepLoadSettings( settings );
 #endif

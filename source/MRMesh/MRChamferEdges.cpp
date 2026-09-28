@@ -15,6 +15,7 @@
 #include "MRLine.h"
 #include "MRLineSegm.h"
 #include "MRTimer.h"
+#include <algorithm>
 #include <climits>
 #include <cmath>
 #include <limits>
@@ -112,6 +113,15 @@ bool subdivideNearEdges( Mesh & mesh, SubdividedEdges & se, float distance, cons
         if ( !reportProgress( cb, float( i + 1 ) / numPasses ) )
             return false;
     }
+
+    // a triangle with all vertices on the edges would collapse on the middle line of the chamfer
+    const auto edgeVerts = getIncidentVerts( tp, se.edges );
+    std::vector<EdgeId> chords;
+    for ( auto ue : getIncidentEdges( tp, getIncidentFaces( tp, edgeVerts ) ) )
+        if ( !se.edges.test( ue ) && edgeVerts.test( tp.org( ue ) ) && edgeVerts.test( tp.dest( ue ) ) )
+            chords.push_back( ue );
+    for ( auto e : chords )
+        mesh.splitEdge( e );
     return true;
 }
 
@@ -160,6 +170,7 @@ void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyli
             auto pEnd = mesh.destPnt( e );
             auto j = last;
             std::optional<Vector3f> crease;
+            float creaseT = 0;
             for ( int attempt = 0; attempt < 16; ++attempt )
             {
                 const float go = closerToSecond( po, i, j );
@@ -173,13 +184,15 @@ void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyli
                     const float t = 0.5f * ( t0 + t1 );
                     ( closerToSecond( po + ( pEnd - po ) * t, i, j ) < 0 ? t0 : t1 ) = t;
                 }
-                const auto x = po + ( pEnd - po ) * ( 0.5f * ( t0 + t1 ) );
+                const float t = 0.5f * ( t0 + t1 );
+                const auto x = po + ( pEnd - po ) * t;
                 const auto k = nearestOrigAt( x );
                 if ( !k )
                     break;
                 if ( k == i || k == j )
                 {
                     crease = x;
+                    creaseT = t;
                     break;
                 }
                 // another original edge is closer at the crossing, so search the crease with it on the first part of the edge
@@ -188,26 +201,119 @@ void splitCreases( Mesh & mesh, const SubdividedEdges & se, const AABBTreePolyli
             }
             if ( !crease )
                 break;
-            mesh.splitEdge( e, *crease ); // now (e) starts at the new vertex
+            // a vertex very close to the crease is used instead of a new one, not to make slivers
+            const float snapT = 0.05f * mesh.edgeLength( e ) / ( pEnd - po ).length();
+            if ( creaseT > 1 - snapT && j == last )
+                break;
+            if ( creaseT >= snapT )
+                mesh.splitEdge( e, *crease ); // now (e) starts at the new vertex
             i = j;
         }
     }
 }
 
-/// cuts the mesh along the lines at the given straight distance from the edges
+/// the width of the chamfer at each vertex of the edges: (distance), but less than half the gap to other loops or chains,
+/// or to the parts of the same loop far along it, so that the chamfer strips do not overlap
+VertScalars computeWidths( const Mesh & mesh, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree, float distance )
+{
+    MR_TIMER;
+    const auto & tp = mesh.topology;
+    const auto edgeVerts = getIncidentVerts( tp, edges );
+
+    // walk each loop or chain to find its id and the arc length of each vertex along it
+    Vector<int, VertId> part( tp.vertSize(), -1 );
+    VertScalars arc( tp.vertSize() );
+    std::vector<float> partLength;
+    auto nextEdge = [&]( EdgeId e ) // the other edge of the loop at dest( e )
+    {
+        for ( auto en : orgRing( tp, e.sym() ) )
+            if ( en != e.sym() && edges.test( en.undirected() ) )
+                return en;
+        return EdgeId{};
+    };
+    auto walk = [&]( EdgeId e )
+    {
+        const int id = (int)partLength.size();
+        float len = 0;
+        part[tp.org( e )] = id;
+        while ( e && part[tp.dest( e )] < 0 )
+        {
+            len += mesh.edgeLength( e );
+            part[tp.dest( e )] = id;
+            arc[tp.dest( e )] = len;
+            e = nextEdge( e );
+        }
+        // the arc length along a chain is not cyclic
+        partLength.push_back( e ? len + mesh.edgeLength( e ) : FLT_MAX );
+    };
+    for ( auto v : edgeVerts ) // chains start at their ends
+        if ( part[v] < 0 && tp.isBdVertex( v ) )
+            for ( auto e : orgRing( tp, v ) )
+                if ( edges.test( e.undirected() ) )
+                {
+                    walk( e );
+                    break;
+                }
+    for ( auto v : edgeVerts )
+        if ( part[v] < 0 )
+            for ( auto e : orgRing( tp, v ) )
+                if ( edges.test( e.undirected() ) )
+                {
+                    walk( e );
+                    break;
+                }
+
+    VertScalars res( tp.vertSize(), distance );
+    BitSetParallelFor( edgeVerts, [&]( VertId v )
+    {
+        const auto & p = mesh.points[v];
+        const int id = part[v];
+        float gap = FLT_MAX;
+        findMeshEdgesInBall( mesh, edgesTree, p, 2 * distance, [&]( UndirectedEdgeId ue, const Vector3f & q, float distSq )
+        {
+            const auto w = tp.org( ue );
+            if ( part[w] == id )
+            {
+                // corners of the same loop are not gaps, only its parts far along it are
+                float along = std::abs( arc[w] - arc[v] );
+                along = std::min( along, partLength[id] - along );
+                if ( along <= 2 * std::sqrt( distSq ) + 2 * distance )
+                    return;
+            }
+            gap = std::min( gap, ( q - p ).length() );
+        } );
+        res[v] = std::min( distance, 0.45f * gap );
+    } );
+    return res;
+}
+
+/// the width of the chamfer at point (p) on edge (ue)
+float widthAt( const Mesh & mesh, const VertScalars & width, UndirectedEdgeId ue, const Vector3f & p )
+{
+    const auto o = mesh.topology.org( ue );
+    const auto d = mesh.topology.dest( ue );
+    const float len = mesh.edgeLength( ue );
+    const float t = len > 0 ? std::clamp( ( p - mesh.points[o] ).length() / len, 0.0f, 1.0f ) : 0.0f;
+    return ( 1 - t ) * width[o] + t * width[d];
+}
+
+/// cuts the mesh along the lines at the chamfer width from the edges
 /// \return the triangles closer to the edges than the cut lines
-Expected<FaceBitSet> cutAtDistance( Mesh & mesh, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree, float distance )
+Expected<FaceBitSet> cutAtDistance( Mesh & mesh, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree,
+    const VertScalars & width, float distance )
 {
     MR_TIMER;
     const auto & tp = mesh.topology;
     const float maxDistSq = sqr( 2 * distance );
-    VertScalars dist( tp.vertSize(), FLT_MAX );
+    VertScalars relDist( tp.vertSize(), FLT_MAX );
     BitSetParallelFor( getNearVerts( mesh, edges, 2 * distance ), [&]( VertId v )
     {
-        dist[v] = std::sqrt( findProjectionOnMeshEdges( mesh.points[v], mesh, edgesTree, maxDistSq ).distSq );
+        const auto proj = findProjectionOnMeshEdges( mesh.points[v], mesh, edgesTree, maxDistSq );
+        if ( proj.valid() )
+            relDist[v] = std::sqrt( proj.distSq ) / widthAt( mesh, width, proj.line, proj.point );
     } );
 
-    const auto cutRes = cutMesh( mesh, convertSurfacePathsToMeshContours( mesh, extractIsolines( tp, dist, distance ) ) );
+    const auto cutRes = cutMesh( mesh, convertSurfacePathsToMeshContours( mesh, extractIsolines( tp, relDist, 1.0f ) ) );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( "Chamfer borders intersect each other" );
     return fillContourLeft( tp, cutRes.resultCut );
@@ -257,7 +363,7 @@ Expected<StripSides> findStripSides( const Mesh & mesh, const FaceBitSet & strip
 
 /// moves all strip vertices except for the borders on the chamfer surface
 bool moveStripVerts( Mesh & mesh, const FaceBitSet & strip, const UndirectedEdgeBitSet & edges, const AABBTreePolyline3 & edgesTree,
-    const StripSides & sides, float distance, const ProgressCallback & cb )
+    const VertScalars & width, const StripSides & sides, float distance, const ProgressCallback & cb )
 {
     MR_TIMER;
     const auto & tp = mesh.topology;
@@ -265,7 +371,7 @@ bool moveStripVerts( Mesh & mesh, const FaceBitSet & strip, const UndirectedEdge
     const auto edgeVerts = getIncidentVerts( tp, edges );
     auto newPoints = mesh.points;
 
-    // vertex (v) at distance (s) from the edges goes on segment (a,b): (a) is the closest border point to (v) on its side,
+    // vertex (v) at relative distance (s) from the edges goes on segment (a,b): (a) is the closest border point to (v) on its side,
     // the ray from (a) through (v) reaches the edges at (onEdge), and (b) is the closest border point to it on the other side
     if ( !BitSetParallelFor( getIncidentVerts( tp, strip ) - sides.borderVerts, [&]( VertId v )
     {
@@ -296,16 +402,16 @@ bool moveStripVerts( Mesh & mesh, const FaceBitSet & strip, const UndirectedEdge
         const auto a = findProjectionOnMeshEdges( pt, mesh, sides.borderTrees[leftSide], maxDistSq );
         if ( !a.valid() )
             return;
-        const float s = std::sqrt( proj.distSq );
-        if ( s >= distance )
+        const float s = std::sqrt( proj.distSq ) / widthAt( mesh, width, proj.line, proj.point );
+        if ( s >= 1 )
         {
             newPoints[v] = a.point;
             return;
         }
-        const auto onEdge = a.point + ( pt - a.point ) * ( distance / ( distance - s ) );
+        const auto onEdge = a.point + ( pt - a.point ) / ( 1 - s );
         const auto b = findProjectionOnMeshEdges( onEdge, mesh, sides.borderTrees[rightSide], maxDistSq );
         if ( b.valid() )
-            newPoints[v] = a.point + ( b.point - a.point ) * ( ( distance - s ) / ( 2 * distance ) );
+            newPoints[v] = a.point + ( b.point - a.point ) * ( 0.5f * ( 1 - s ) );
     }, cb ) )
         return false;
 
@@ -331,7 +437,8 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
     if ( !reportProgress( cb, 0.45f ) )
         return unexpectedOperationCanceled();
 
-    auto strip = cutAtDistance( mesh, se.edges, edgesTree, distance );
+    const auto width = computeWidths( mesh, se.edges, edgesTree, distance );
+    auto strip = cutAtDistance( mesh, se.edges, edgesTree, width, distance );
     if ( !strip )
         return strip;
     if ( !reportProgress( cb, 0.7f ) )
@@ -343,7 +450,7 @@ Expected<FaceBitSet> chamferEdges( Mesh & mesh, const UndirectedEdgeBitSet & edg
     if ( !reportProgress( cb, 0.8f ) )
         return unexpectedOperationCanceled();
 
-    if ( !moveStripVerts( mesh, *strip, se.edges, edgesTree, *sides, distance, subprogress( cb, 0.8f, 1.0f ) ) )
+    if ( !moveStripVerts( mesh, *strip, se.edges, edgesTree, width, *sides, distance, subprogress( cb, 0.8f, 1.0f ) ) )
         return unexpectedOperationCanceled();
     return strip;
 }

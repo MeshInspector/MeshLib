@@ -168,6 +168,22 @@ TEST( MRMesh, ChamferEdgesOpenChains )
     } ), 1e-5f );
 }
 
+TEST( MRMesh, ChamferEdgesCloseLoops )
+{
+    // a thin plate: its top and bottom loops are closer than 2*d, so both chamfers are narrowed to 0.45 of the gap
+    const float h = 0.075f, d = 0.1f, w = 0.45f * 2 * h;
+    const float s = std::sqrt( 0.5f );
+    auto mesh = makeCube( Vector3f( 1, 1, 2 * h ), Vector3f( -0.5f, -0.5f, -h ) );
+    auto res = chamferEdges( mesh, sharpLoop( mesh, h ) | sharpLoop( mesh, -h ), d );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( countFolds( mesh ), 0 );
+    EXPECT_LT( maxCentroidDeviation( mesh, [&]( const Vector3f & p )
+    {
+        return std::max( { std::abs( p.x ) - 0.5f, std::abs( p.y ) - 0.5f, std::abs( p.z ) - h,
+            ( std::abs( p.x ) + std::abs( p.z ) - ( 0.5f + h - w ) ) * s, ( std::abs( p.y ) + std::abs( p.z ) - ( 0.5f + h - w ) ) * s } );
+    } ), 1e-5f );
+}
+
 TEST( MRMesh, ChamferEdgesBadInput )
 {
     auto mesh = makeCube();

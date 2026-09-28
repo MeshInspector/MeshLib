@@ -45,14 +45,14 @@ public:
         Count,
     };
 
-    /// file extensions (starting with '.') used to serialize objects of each kind by default, if not overridden in specific object
     enum class StringType
     {
-        /// for ObjectMeshHolder
+        /// file extension (starting with '.') used to serialize ObjectMeshHolder by default, if not overridden in specific object
         MeshSerializeFormat,
-        /// for ObjectPointsHolder, falls back to PLY if given format is not supported
+        /// file extension (starting with '.') used to serialize ObjectPointsHolder by default, if not overridden in specific object;
+        /// falls back to PLY if given format is not supported
         PointsSerializeFormat,
-        /// for ObjectVoxels
+        /// file extension (starting with '.') used to serialize ObjectVoxels by default, if not overridden in specific object
         VoxelsSerializeFormat,
         /// total count
         Count

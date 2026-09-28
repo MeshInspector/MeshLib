@@ -151,12 +151,12 @@ public:
     /// \sa \ref getRenderDiscretization, \ref MaxRenderingPointsDefault, \ref MaxRenderingPointsUnlimited
     MRMESH_API void setMaxRenderingPoints( int val );
 
-    /// returns overriden file extension used to serialize point cloud inside this object, nullptr means SceneSettings::StringType::PointsSerializeFormat
+    /// returns overriden file extension used to serialize point cloud inside this object, nullptr means SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat )
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
     [[deprecated]] MR_BIND_IGNORE const char * savePointsFormat() const { return serializeFormat(); }
 
     /// overrides file extension used to serialize point cloud inside this object: must start from '.',
-    /// nullptr means serialize in SceneSettings::StringType::PointsSerializeFormat
+    /// nullptr means serialize in SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat )
     MRMESH_API void setSerializeFormat( const char * newFormat );
     [[deprecated]] MR_BIND_IGNORE void setSavePointsFormat( const char * newFormat ) { setSerializeFormat( newFormat ); }
 
@@ -230,7 +230,7 @@ private:
 
     int renderDiscretization_ = 1; // auxiliary parameter to avoid recalculation in every frame
 
-    const char * serializeFormat_ = nullptr; // means use SceneSettings::StringType::PointsSerializeFormat
+    const char * serializeFormat_ = nullptr; // means use SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat )
 };
 
 [[nodiscard]] [[deprecated( "Use SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat )" )]] MRMESH_API MR_BIND_IGNORE const std::string & defaultSerializePointsFormat();

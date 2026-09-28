@@ -1,5 +1,4 @@
 #include "MRSceneSettings.h"
-#include <cassert>
 
 namespace MR
 {
@@ -36,7 +35,6 @@ void SceneSettings::set( FloatType type, float value )
 
 void SceneSettings::set( StringType type, std::string value )
 {
-    assert( !value.empty() && value[0] == '.' );
     instance_().stringSettings_[int( type )] = std::move( value );
 }
 

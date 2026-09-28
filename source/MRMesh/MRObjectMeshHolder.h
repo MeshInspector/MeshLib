@@ -256,14 +256,14 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// returns overriden file extension used to serialize mesh inside this object, nullptr means SceneSettings::StringType::MeshSerializeFormat
+    /// returns overriden file extension used to serialize mesh inside this object, nullptr means SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
 
-    /// returns overriden file extension used to serialize mesh inside this object if set, or SceneSettings::StringType::MeshSerializeFormat otherwise; never returns nullptr
+    /// returns overriden file extension used to serialize mesh inside this object if set, or SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat ) otherwise; never returns nullptr
     [[nodiscard]] MRMESH_API const char * actualSerializeFormat() const;
 
     /// overrides file extension used to serialize mesh inside this object: must start from '.',
-    /// nullptr means serialize in SceneSettings::StringType::MeshSerializeFormat
+    /// nullptr means serialize in SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )
     MRMESH_API void setSerializeFormat( const char * newFormat );
 
     /// reset basic object colors to their default values from the current theme
@@ -360,7 +360,7 @@ private:
     /// set default scene-related properties
     void setDefaultSceneProperties_();
 
-    const char * serializeFormat_ = nullptr; // means use SceneSettings::StringType::MeshSerializeFormat
+    const char * serializeFormat_ = nullptr; // means use SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )
 };
 
 [[nodiscard]] [[deprecated( "Use SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )" )]] MRMESH_API MR_BIND_IGNORE const std::string & defaultSerializeMeshFormat();

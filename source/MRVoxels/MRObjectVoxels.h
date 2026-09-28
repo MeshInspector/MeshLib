@@ -212,11 +212,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRVOXELS_API virtual size_t heapBytes() const override;
 
-    /// returns overriden file extension used to serialize voxels inside this object, nullptr means SceneSettings::StringType::VoxelsSerializeFormat
+    /// returns overriden file extension used to serialize voxels inside this object, nullptr means SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat )
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
 
     /// overrides file extension used to serialize voxels inside this object: must start from '.',
-    /// nullptr means serialize in SceneSettings::StringType::VoxelsSerializeFormat
+    /// nullptr means serialize in SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat )
     MRVOXELS_API void setSerializeFormat( const char * newFormat );
 
     /// reset basic object colors to their default values from the current theme
@@ -243,7 +243,7 @@ private:
     mutable std::optional<Box3i> activeBounds_;
     mutable std::optional<size_t> activeVoxels_;
 
-    const char * serializeFormat_ = nullptr; //means SceneSettings::StringType::VoxelsSerializeFormat
+    const char * serializeFormat_ = nullptr; //means SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat )
 
     /// Service data
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );

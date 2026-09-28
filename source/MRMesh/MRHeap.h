@@ -66,7 +66,8 @@ public:
 
 private:
     /// tests whether heap element at posA is less than posB
-    bool less_( size_t posA, size_t posB ) const;
+    bool less_( size_t posA, size_t posB ) const { return less_( heap_[posA], heap_[posB] ); }
+    bool less_( const Element & a, const Element & b ) const;
 
     /// lifts the element in the queue according to its value
     void lift_( size_t pos, I elemId );
@@ -150,17 +151,19 @@ void Heap<T, I, P>::setLargerValue( I elemId, const T & newVal )
 template <typename T, typename I, typename P>
 void Heap<T, I, P>::lift_( size_t pos, I elemId )
 {
+    assert( heap_[pos].id == elemId );
+    Element elem = std::move( heap_[pos] );
     while ( pos > 0 )
     {
         size_t parentPos = ( pos - 1 ) / 2;
-        if ( !( less_( parentPos, pos ) ) )
+        if ( !( less_( heap_[parentPos], elem ) ) )
             break;
-        auto parentId = heap_[parentPos].id;
-        assert( size_t( id2PosInHeap_[parentId] ) == parentPos );
-        std::swap( heap_[parentPos], heap_[pos] );
-        std::swap( parentPos, pos );
-        id2PosInHeap_[parentId] = SizeType( parentPos );
+        assert( size_t( id2PosInHeap_[heap_[parentPos].id] ) == parentPos );
+        heap_[pos] = std::move( heap_[parentPos] );
+        id2PosInHeap_[heap_[pos].id] = SizeType( pos );
+        pos = parentPos;
     }
+    heap_[pos] = std::move( elem );
     id2PosInHeap_[elemId] = SizeType( pos );
 }
 
@@ -170,54 +173,27 @@ void Heap<T, I, P>::setSmallerValue( I elemId, const T & newVal )
     size_t pos = size_t( id2PosInHeap_[ elemId ] );
     assert( heap_[pos].id == elemId );
     assert( !( pred_( heap_[pos].val, newVal ) ) );
-    heap_[pos].val = newVal;
+    Element elem{ elemId, newVal };
+    // as in std::pop_heap: move the gap down to a leaf filling it with the larger child, then lift the element from there
     for (;;)
     {
-        size_t child1Pos = 2 * pos + 1;
-        if ( child1Pos >= heap_.size() )
+        size_t childPos = 2 * pos + 1;
+        if ( childPos >= heap_.size() )
             break;
-        auto child1Id = heap_[child1Pos].id;
-        size_t child2Pos = 2 * pos + 2;
-        if ( child2Pos >= heap_.size() )
-        {
-            assert( size_t( id2PosInHeap_[child1Id] ) == child1Pos );
-            if ( !( less_( child1Pos, pos ) ) )
-            {
-                std::swap( heap_[child1Pos], heap_[pos] );
-                std::swap( child1Pos, pos );
-                id2PosInHeap_[child1Id] = SizeType( child1Pos );
-            }
-            break;
-        }
-        auto child2Id = heap_[child2Pos].id;
-        if ( !( less_( child1Pos, pos ) ) && !( less_( child1Pos, child2Pos ) ) )
-        {
-            std::swap( heap_[child1Pos], heap_[pos] );
-            std::swap( child1Pos, pos );
-            id2PosInHeap_[child1Id] = SizeType( child1Pos );
-        }
-        else if ( !( less_( child2Pos, pos ) ) )
-        {
-            assert( !( less_( child2Pos, child1Pos ) ) );
-            std::swap( heap_[child2Pos], heap_[pos] );
-            std::swap( child2Pos, pos );
-            id2PosInHeap_[child2Id] = SizeType( child2Pos );
-        }
-        else
-        {
-            assert( !( less_( pos, child1Pos ) ) );
-            assert( !( less_( pos, child2Pos ) ) );
-            break;
-        }
+        if ( childPos + 1 < heap_.size() && less_( childPos, childPos + 1 ) )
+            ++childPos;
+        assert( size_t( id2PosInHeap_[heap_[childPos].id] ) == childPos );
+        heap_[pos] = std::move( heap_[childPos] );
+        id2PosInHeap_[heap_[pos].id] = SizeType( pos );
+        pos = childPos;
     }
-    id2PosInHeap_[elemId] = SizeType( pos );
+    heap_[pos] = std::move( elem );
+    lift_( pos, elemId );
 }
 
 template <typename T, typename I, typename P>
-inline bool Heap<T, I, P>::less_( size_t posA, size_t posB ) const
+inline bool Heap<T, I, P>::less_( const Element & a, const Element & b ) const
 {
-    const auto & a = heap_[posA];
-    const auto & b = heap_[posB];
     if ( pred_( a.val, b.val ) )
         return true;
     if ( pred_( b.val, a.val ) )

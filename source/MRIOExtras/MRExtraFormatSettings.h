@@ -7,7 +7,7 @@
 namespace MR
 {
 
-/// default settings of MRIOExtras formats, used when loading or saving via the format registry; thread-safe
+/// default settings of MRIOExtras formats, used when loading or saving via the format registry
 class ExtraFormatSettings
 {
 public:

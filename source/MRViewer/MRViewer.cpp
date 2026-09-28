@@ -54,6 +54,7 @@
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRProtectedRun.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
@@ -81,7 +82,6 @@
 #include <string_view>
 
 #ifndef __EMSCRIPTEN__
-#include <boost/exception/diagnostic_information.hpp>
 #endif
 #include "MRSaveObjects.h"
 #include "MRProgressBar.h"
@@ -371,23 +371,21 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     obj.addChild( label );
 }
 
-template <typename Func>
-int wrapUnsafeCall( Func&& func )
+int protectedLaunch( const std::function<int()>& func )
 {
-#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
-    return std::forward<Func>( func )();
+#ifdef __EMSCRIPTEN__
+    return func(); // the main loop leaves launch() by a JS throw, which must not be caught
 #else
-    try
+    int res = EXIT_FAILURE;
+    auto ok = protectedRun( [&] { res = func(); } );
+    if ( !ok )
     {
-        return std::forward<Func>( func )();
-    }
-    catch ( ... )
-    {
-        spdlog::critical( boost::current_exception_diagnostic_information() );
+        spdlog::critical( ok.error() );
         spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
         printCurrentTimerBranch();
         return EXIT_FAILURE;
     }
+    return res;
 #endif
 }
 
@@ -421,7 +419,7 @@ int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetu
         setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
 
-    return wrapUnsafeCall( [&] { return viewer.preLaunch( params ); } );
+    return protectedLaunch( [&] { return viewer.preLaunch( params ); } );
 }
 
 int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
@@ -442,7 +440,7 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         firstLaunch = false;
     }
 
-    auto res = wrapUnsafeCall( [&] { return viewer.launch( params ); } );
+    auto res = protectedLaunch( [&] { return viewer.launch( params ); } );
 
     setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )

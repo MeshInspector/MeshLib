@@ -83,18 +83,18 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
     };
 
     // vertices incident to notFlippable edges, updated on their splits (notFlippable edges are never flipped)
-    VertBitSet nearNotFlippableVerts;
+    VertBitSet notFlippableEnds;
     if ( settings.onlyNearNotFlippable && settings.notFlippable )
-        nearNotFlippableVerts = getIncidentVerts( mesh.topology, *settings.notFlippable );
+        notFlippableEnds = getIncidentVerts( mesh.topology, *settings.notFlippable );
 
     auto isNearNotFlippable = [&]( EdgeId e )
     {
         const auto & t = mesh.topology;
-        if ( nearNotFlippableVerts.test( t.org( e ) ) || nearNotFlippableVerts.test( t.dest( e ) ) )
+        if ( notFlippableEnds.test( t.org( e ) ) || notFlippableEnds.test( t.dest( e ) ) )
             return true;
-        if ( t.left( e ) && nearNotFlippableVerts.test( t.dest( t.next( e ) ) ) )
+        if ( t.left( e ) && notFlippableEnds.test( t.dest( t.next( e ) ) ) )
             return true;
-        if ( t.right( e ) && nearNotFlippableVerts.test( t.dest( t.prev( e ) ) ) )
+        if ( t.right( e ) && notFlippableEnds.test( t.dest( t.prev( e ) ) ) )
             return true;
         return false;
     };
@@ -197,7 +197,7 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             settings.notFlippable->autoResizeSet( e1.undirected() );
             splitNotFlippable = true;
             if ( settings.onlyNearNotFlippable )
-                nearNotFlippableVerts.autoResizeSet( newVertId );
+                notFlippableEnds.autoResizeSet( newVertId );
         }
         ++splitsDone;
         makeDeloneOriginRing( mesh, e, {

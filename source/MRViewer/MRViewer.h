@@ -77,6 +77,9 @@ public:
     // Pre-launch viewer with given params
     // Generally you should just call `launch` instead.
     MRVIEWER_API int preLaunch( const LaunchParams& params );
+    // Shows the window of a pre-launched viewer, running the commands queued around its appearance
+    // Generally you should just call `launch` instead.
+    MRVIEWER_API int launchShow( const LaunchParams& params );
     // Launch viewer with given params
     MRVIEWER_API int launch( const LaunchParams& params );
     // Starts event loop

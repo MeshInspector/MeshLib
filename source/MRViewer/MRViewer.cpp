@@ -689,7 +689,7 @@ int Viewer::preLaunch( const LaunchParams& params )
     return res;
 }
 
-int Viewer::launch( const LaunchParams& params )
+int Viewer::launchShow( const LaunchParams& params )
 {
     if ( isLaunched_ )
     {
@@ -697,8 +697,10 @@ int Viewer::launch( const LaunchParams& params )
         return 1;
     }
     if ( !isPreLaunched_ )
-        if ( auto rc = preLaunch( params ); rc != EXIT_SUCCESS )
-            return rc;
+    {
+        spdlog::error( "Viewer is not pre-launched!" );
+        return 1;
+    }
 
     isLaunched_ = true;
 
@@ -722,6 +724,21 @@ int Viewer::launch( const LaunchParams& params )
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
     CommandLoop::processCommands(); // execute remaining commands in the queue, important for params.startEventLoop==false
+    return EXIT_SUCCESS;
+}
+
+int Viewer::launch( const LaunchParams& params )
+{
+    if ( isLaunched_ )
+    {
+        spdlog::error( "Viewer is already launched!" );
+        return 1;
+    }
+    if ( !isPreLaunched_ )
+        if ( auto rc = preLaunch( params ); rc != EXIT_SUCCESS )
+            return rc;
+    if ( auto rc = launchShow( params ); rc != EXIT_SUCCESS )
+        return rc;
 
     if ( params.startEventLoop )
     {

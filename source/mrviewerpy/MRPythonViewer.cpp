@@ -299,16 +299,14 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
 #else
     requireMainThread();
 
-    // The whole launch but the event loop, which showViewer() or the input hook runs, and but the
-    // epilogue, which comes once the viewer is over. A window shown now would hang unresponsive until
-    // something pumps it, so it waits for the first pump.
+    // The launch up to the event loop, which showViewer() or the input hook runs; the epilogue comes
+    // once the viewer is over. A window shown now would hang unresponsive until something pumps it,
+    // so it waits for the first pump.
     gLaunchParams = std::make_shared<Viewer::LaunchParams>( params );
     gLaunchSetup = std::make_shared<MinimalViewerSetup>( setup );
     gShowWindowLater = params.windowMode == LaunchParams::HideInit || params.windowMode == LaunchParams::Show;
     if ( gShowWindowLater )
         gLaunchParams->windowMode = LaunchParams::Hide;
-    gLaunchParams->startEventLoop = false;
-    gLaunchParams->close = false;
 
     int exitCode;
     {
@@ -316,7 +314,7 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
         auto& viewer = getViewerInstance();
         exitCode = MR::preLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
         if ( exitCode == EXIT_SUCCESS )
-            exitCode = MR::protectedLaunchPhase( [&] { return viewer.launch( *gLaunchParams ); } );
+            exitCode = MR::protectedLaunchPhase( [&] { return viewer.launchShow( *gLaunchParams ); } );
     }
     if ( exitCode != EXIT_SUCCESS || !getViewerInstance().isLaunched() )
     {

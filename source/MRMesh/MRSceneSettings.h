@@ -2,6 +2,7 @@
 #include "MRMeshFwd.h"
 #include "MRCNCMachineSettings.h"
 #include <array>
+#include <string>
 
 namespace MR
 {
@@ -44,10 +45,26 @@ public:
         Count,
     };
 
+    /// file extensions (starting with '.') used to serialize objects of each kind by default, if not overridden in specific object;
+    /// NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
+    enum class StringType
+    {
+        /// for ObjectMeshHolder
+        MeshSerializeFormat,
+        /// for ObjectPointsHolder, falls back to PLY if given format is not supported
+        PointsSerializeFormat,
+        /// for ObjectVoxels
+        VoxelsSerializeFormat,
+        /// total count
+        Count
+    };
+
     MRMESH_API static bool get( BoolType type );
     MRMESH_API static float get( FloatType type );
+    MRMESH_API static const std::string & get( StringType type );
     MRMESH_API static void set( BoolType type, bool value );
     MRMESH_API static void set( FloatType type, float value );
+    MRMESH_API static void set( StringType type, std::string value );
 
     /// Mesh faces shading mode
     enum class ShadingMode
@@ -75,6 +92,7 @@ private:
 
     std::array<bool, size_t( BoolType::Count ) > boolSettings_;
     std::array<float, size_t( FloatType::Count ) > floatSettings_;
+    std::array<std::string, size_t( StringType::Count ) > stringSettings_;
 
     ShadingMode defaultShadingMode_ = ShadingMode::AutoDetect;
     CNCMachineSettings cncMachineSettings_;

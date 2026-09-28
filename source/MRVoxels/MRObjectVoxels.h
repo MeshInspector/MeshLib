@@ -212,11 +212,11 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRVOXELS_API virtual size_t heapBytes() const override;
 
-    /// returns overriden file extension used to serialize voxels inside this object, nullptr means defaultSerializeVoxelsFormat()
+    /// returns overriden file extension used to serialize voxels inside this object, nullptr means SceneSettings::StringType::VoxelsSerializeFormat
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
 
     /// overrides file extension used to serialize voxels inside this object: must start from '.',
-    /// nullptr means serialize in defaultSerializeVoxelsFormat()
+    /// nullptr means serialize in SceneSettings::StringType::VoxelsSerializeFormat
     MRVOXELS_API void setSerializeFormat( const char * newFormat );
 
     /// reset basic object colors to their default values from the current theme
@@ -243,7 +243,7 @@ private:
     mutable std::optional<Box3i> activeBounds_;
     mutable std::optional<size_t> activeVoxels_;
 
-    const char * serializeFormat_ = nullptr; //means defaultSerializeVoxelsFormat()
+    const char * serializeFormat_ = nullptr; //means SceneSettings::StringType::VoxelsSerializeFormat
 
     /// Service data
     VolumeIndexer indexer_ = VolumeIndexer( vdbVolume_.dims );
@@ -280,12 +280,8 @@ protected:
     MRVOXELS_API virtual Expected<std::future<Expected<void>>> serializeModel_( const std::filesystem::path& path ) const override;
 };
 
-/// returns file extension used to serialize ObjectVoxels by default (if not overridden in specific object),
-/// the string starts with '.'
-[[nodiscard]] MRVOXELS_API const std::string & defaultSerializeVoxelsFormat();
+[[nodiscard]] [[deprecated( "Use SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat )" )]] MRVOXELS_API MR_BIND_IGNORE const std::string & defaultSerializeVoxelsFormat();
 
-/// sets file extension used to serialize serialize ObjectVoxels by default (if not overridden in specific object),
-/// the string must start from '.'
-MRVOXELS_API void setDefaultSerializeVoxelsFormat( std::string newFormat );
+[[deprecated( "Use SceneSettings::set( SceneSettings::StringType::VoxelsSerializeFormat, newFormat )" )]] MRVOXELS_API MR_BIND_IGNORE void setDefaultSerializeVoxelsFormat( std::string newFormat );
 
 } //namespace MR

@@ -7,10 +7,12 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 # TODO: find Python independently
 
+find_package(pybind11nonlimitedapi REQUIRED HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib/cmake/pybind11nonlimitedapi")
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
   MRMesh
   MRPython
-  pybind11nonlimitedapi_stubs
+  pybind11nonlimitedapi::pybind11nonlimitedapi_stubs
   ${CMAKE_DL_LIBS}
 )
 

@@ -124,11 +124,6 @@ Config& Config::instance()
     return cfg;
 }
 
-Config::~Config()
-{
-    writeToFile();
-}
-
 bool Config::hasBool( const std::string& key ) const
 {
     return ( !config_[key].isNull() && config_[key].isBool() );

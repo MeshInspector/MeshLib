@@ -10,7 +10,9 @@
 #include "MRUnionFindParallel.h"
 #include "MRFaceFace.h"
 #include "MRphmap.h"
+#include "MRConstants.h"
 #include <climits>
+#include <numeric>
 
 namespace MR
 {
@@ -574,6 +576,35 @@ std::pair<std::vector<FaceBitSet>, int> getAllComponents( const MeshPart& meshPa
     return { getAllComponents( uniqueRootsMap, componentsCount, region, maxComponentCount ), componentsInGroup };
 }
 
+void ComponentsFaces::setComponentBits( RegionId compId, FaceBitSet& bs ) const
+{
+    for ( int i = offsets[compId]; i < offsets[compId + 1]; ++i )
+        bs.set( faces[i] );
+}
+
+ComponentsFaces getAllComponentsFaces( const MeshPart& meshPart, FaceIncidence incidence, const UndirectedEdgeBitSet * isCompBd )
+{
+    MR_TIMER;
+    const auto [componentsMap, componentsCount] = getAllComponentsMap( meshPart, incidence, isCompBd );
+    return getAllComponentsFaces( componentsMap, componentsCount, meshPart.mesh.topology.getFaceIds( meshPart.region ) );
+}
+
+ComponentsFaces getAllComponentsFaces( const Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region )
+{
+    MR_TIMER;
+    ComponentsFaces res;
+    res.offsets.resize( componentsCount + 1, 0 );
+    for ( auto f : region )
+        ++res.offsets[componentsMap[f] + 1];
+    std::partial_sum( begin( res.offsets ), end( res.offsets ), begin( res.offsets ) );
+
+    res.faces.resize( res.offsets.back() );
+    auto pos = res.offsets;
+    for ( auto f : region )
+        res.faces[pos[componentsMap[f]]++] = f;
+    return res;
+}
+
 std::vector<MR::FaceBitSet> getAllComponents( Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region,
     int maxComponentCount )
 {
@@ -666,6 +697,14 @@ std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart, Fa
 
     const auto& allRoots = unionFindStruct.roots();
     return getUniqueRootIds( allRoots, region );
+}
+
+std::pair<Face2RegionMap, int> getAllComponentsMapBySharpEdges( const MeshPart& meshPart, float angleThreshold )
+{
+    MR_TIMER;
+    assert( angleThreshold > 0 && angleThreshold < PI2_F );
+    const auto sharpEdges = meshPart.mesh.findSharpEdges( std::cos( PI_F - angleThreshold ), std::cos( angleThreshold ) );
+    return getAllComponentsMap( meshPart, FaceIncidence::PerEdge, &sharpEdges );
 }
 
 std::pair<Face2RegionMap, int> getFacePairRegionMap( const Mesh& mesh, const std::vector<FaceFace>& facePairs,

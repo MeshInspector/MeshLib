@@ -24,10 +24,10 @@ EMSCRIPTEN_BINDINGS( meshlib_normal_denoising )
 
     emscripten::function( "meshDenoiseViaNormals", +[]( std::shared_ptr<Mesh> mesh )
     {
-        Wasm::unwrap( meshDenoiseViaNormals( *mesh ) );
+        meshDenoiseViaNormals( *mesh );
     } );
     emscripten::function( "meshDenoiseViaNormals", +[]( std::shared_ptr<Mesh> mesh, const DenoiseViaNormalsSettings& settings )
     {
-        Wasm::unwrap( meshDenoiseViaNormals( *mesh, settings ) );
+        meshDenoiseViaNormals( *mesh, settings );
     } );
 }

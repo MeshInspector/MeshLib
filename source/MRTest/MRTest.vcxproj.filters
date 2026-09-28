@@ -7,10 +7,16 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MRNormalDenoisingTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRSpdlog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRTestApp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MROverlappingTrisTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRTriangleIntersectionTests.cpp">
@@ -101,6 +107,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMeshComponentsTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRMeshPatchTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRTBBTests.cpp">
@@ -265,6 +274,9 @@
     <ClCompile Include="MRFinallyTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRStacktraceTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRIdTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -344,6 +356,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRVolumeIndexerTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRVoxelsLoadTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRMimallocRedirectTests.cpp">

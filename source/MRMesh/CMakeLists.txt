@@ -79,6 +79,10 @@ IF(APPLE)
   target_link_libraries(${PROJECT_NAME} PRIVATE ${COCOA_LIBRARY})
 ENDIF()
 
+if(HAVE_STD_STACKTRACE AND NOT MSVC)
+  target_link_libraries(${PROJECT_NAME} PUBLIC stdc++exp)
+endif()
+
 IF(EMSCRIPTEN)
   target_compile_definitions(${PROJECT_NAME} PUBLIC
     EIGEN_STACK_ALLOCATION_LIMIT=0

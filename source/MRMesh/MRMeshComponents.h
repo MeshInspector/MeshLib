@@ -157,6 +157,32 @@ struct LargeByAreaComponentsSettings
 [[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMap( const MeshPart& meshPart,
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
+/// gets all components of mesh part separated by sharp edges with dihedral angle in [angleThreshold, PI-angleThreshold]
+/// (see findSharpEdges); nearly planar and nearly folded edges do not separate components, so overlapping coplanar triangles stay together
+/// \param angleThreshold in (0, PI/2)
+/// \return the mapping FaceId -> component id (meaningful only for the faces of mesh part) and the number of components
+[[nodiscard]] MRMESH_API std::pair<Face2RegionMap, int> getAllComponentsMapBySharpEdges( const MeshPart& meshPart, float angleThreshold = 0.5f );
+
+/// faces of all components in one flat array
+struct ComponentsFaces
+{
+    /// faces of component 0, then faces of component 1, ...;
+    /// the faces of component i are faces[offsets[i]], ..., faces[offsets[i+1]-1] in increasing order
+    std::vector<FaceId> faces;
+    Vector<int, RegionId> offsets; ///< the number of components + 1 elements, offsets.back() == faces.size()
+
+    /// sets in given bit set the bits of all faces of component compId; bs must be large enough to contain them
+    MRMESH_API void setComponentBits( RegionId compId, FaceBitSet& bs ) const;
+};
+
+/// gets all connected components of mesh part as a list of faces per component;
+/// unlike getAllComponents, the memory is proportional to the number of faces in the part and not to the number of components
+[[nodiscard]] MRMESH_API ComponentsFaces getAllComponentsFaces( const MeshPart& meshPart,
+    FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
+
+/// gets all connected components from components map ( FaceId => RegionId in [0, componentsCount) ) for the faces of given region
+[[nodiscard]] MRMESH_API ComponentsFaces getAllComponentsFaces( const Face2RegionMap& componentsMap, int componentsCount, const FaceBitSet& region );
+
 /// given some face pairs, collects them in regions, where for each face in a region
 /// its pair face and its incident faces from other pairs are also attributed to that region;
 /// returns 1. the mapping: FaceId -> RegionId, 2. the total number of regions

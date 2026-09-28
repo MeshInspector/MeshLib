@@ -34,7 +34,7 @@ public:
     /// constructs heap for given number of elements, assigning given default value to each element
     explicit Heap( size_t size, T def MR_LIFETIMEBOUND_NESTED = {}, P pred = {} );
 
-    /// constructs heap from given elements (id's shall not repeat and have spaces, but can be arbitrary shuffled)
+    /// constructs heap from given elements (id's shall not repeat, but can have spaces and be arbitrary shuffled)
     explicit Heap( std::vector<Element> elms MR_LIFETIMEBOUND_NESTED, P pred = {} );
 
     /// returns the size of the heap
@@ -42,6 +42,18 @@ public:
 
     /// increases the size of the heap by adding elements at the end
     void resize( size_t size, T def MR_LIFETIME_CAPTURE_BY_NESTED(this) = {} );
+
+    /// returns true if given element is present in the heap
+    bool contains( I elemId ) const { return size_t( elemId ) < id2PosInHeap_.size() && id2PosInHeap_[elemId] != InvalidPos; }
+
+    /// adds given element, which is not present in the heap yet
+    void push( I elemId, const T & val MR_LIFETIME_CAPTURE_BY_NESTED(this) );
+
+    /// removes given element from the heap
+    void erase( I elemId );
+
+    /// removes the element with the largest value from the heap
+    void pop() { erase( top().id ); }
 
     /// returns the value associated with given element
     const T & value( I elemId ) const MR_LIFETIMEBOUND { return heap_[ id2PosInHeap_[ elemId ] ].val; }
@@ -69,6 +81,7 @@ private:
     void lift_( size_t pos, I elemId );
 
 private:
+    static constexpr size_t InvalidPos = ~size_t( 0 );
     std::vector<Element> heap_;
     Vector<size_t, I> id2PosInHeap_;
     P pred_;
@@ -91,10 +104,13 @@ Heap<T, I, P>::Heap( size_t size, T def, P pred )
 template <typename T, typename I, typename P>
 Heap<T, I, P>::Heap( std::vector<Element> elms, P pred )
     : heap_( std::move( elms ) )
-    , id2PosInHeap_( heap_.size() )
     , pred_( pred )
 {
     MR_TIMER;
+    size_t idSize = 0;
+    for ( const auto & e : heap_ )
+        idSize = std::max( idSize, size_t( e.id ) + 1 );
+    id2PosInHeap_.resize( idSize, InvalidPos );
     std::make_heap( heap_.begin(), heap_.end(), [this]( const Element & a, const Element & b )
         {
             if ( pred_( a.val, b.val ) )
@@ -121,6 +137,41 @@ void Heap<T, I, P>::resize( size_t size, T def )
         lift_( i, i );
     }
     assert ( heap_.size() == id2PosInHeap_.size() );
+}
+
+template <typename T, typename I, typename P>
+void Heap<T, I, P>::push( I elemId, const T & val )
+{
+    assert( !contains( elemId ) );
+    if ( size_t( elemId ) >= id2PosInHeap_.size() )
+        id2PosInHeap_.resize( size_t( elemId ) + 1, InvalidPos );
+    heap_.push_back( { elemId, val } );
+    lift_( heap_.size() - 1, elemId );
+}
+
+template <typename T, typename I, typename P>
+void Heap<T, I, P>::erase( I elemId )
+{
+    const size_t pos = id2PosInHeap_[ elemId ];
+    assert( heap_[pos].id == elemId );
+    id2PosInHeap_[ elemId ] = InvalidPos;
+    const size_t lastPos = heap_.size() - 1;
+    if ( pos == lastPos )
+    {
+        heap_.pop_back();
+        return;
+    }
+    heap_[pos] = heap_[lastPos];
+    heap_.pop_back();
+    const I movedId = heap_[pos].id;
+    id2PosInHeap_[movedId] = pos;
+    if ( pos > 0 && less_( ( pos - 1 ) / 2, pos ) )
+        lift_( pos, movedId );
+    else
+    {
+        const T val = heap_[pos].val;
+        setSmallerValue( movedId, val );
+    }
 }
 
 template <typename T, typename I, typename P>

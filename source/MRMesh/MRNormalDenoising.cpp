@@ -31,13 +31,21 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     assert( v.size() == topology.undirectedEdgeSize() );
     const auto & faces = topology.getFaceIds( region );
 
-    // index of every face with unknown normal in the linear system, -1 for fixed faces
-    Vector<int, FaceId> face2idx( topology.faceSize(), -1 );
+    // index of every region face in the linear system, -1 for fixed faces;
+    // without region, face ids are the indices, and invalid faces get trivial equations
+    Vector<int, FaceId> face2idx;
     int sz = 0;
-    for ( auto f : faces )
-        face2idx[f] = sz++;
+    if ( region )
+    {
+        face2idx.resize( topology.faceSize(), -1 );
+        for ( auto f : faces )
+            face2idx[f] = sz++;
+    }
+    else
+        sz = (int)topology.faceSize();
     if ( sz <= 0 )
         return;
+    const auto faceIdx = [&]( FaceId f ) { return region ? face2idx[f] : (int)f; };
 
     // perimeter of every face, also counting boundary edges for better results on mesh boundary
     Buffer<float, FaceId> perimeter( topology.faceSize() );
@@ -53,9 +61,20 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
+    if ( !region )
+    {
+        for ( auto f = 0_f; f < topology.faceSize(); ++f )
+        {
+            if ( topology.hasFace( f ) )
+                continue;
+            mTriplets.emplace_back( f, f, 1.0 );
+            for ( int i = 0; i < 3; ++i )
+                rhs[i][f] = 0;
+        }
+    }
     for ( auto f : faces )
     {
-        const int fi = face2idx[f];
+        const int fi = faceIdx( f );
         float centralWeight = 1;
         Vector3d rh( normals[f] );
         for ( auto e : leftRing( topology, f ) )
@@ -70,7 +89,7 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
             // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
             const float weight = gamma * edgeLength( topology, points, e.undirected() ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
             centralWeight += weight;
-            if ( const int ri = face2idx[r]; ri >= 0 )
+            if ( const int ri = faceIdx( r ); ri >= 0 )
                 mTriplets.emplace_back( fi, ri, -weight );
             else
                 rh += double( weight ) * Vector3d( normals[r] ); // fixed normal of a face outside the region
@@ -97,7 +116,7 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     // copy solution back into normals
     BitSetParallelFor( faces, [&]( FaceId f )
     {
-        const int fi = face2idx[f];
+        const int fi = faceIdx( f );
         normals[f] = Vector3f(
             (float) sol[0][fi],
             (float) sol[1][fi],

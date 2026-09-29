@@ -236,9 +236,14 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
             if ( auto x = getQueueElem( ei ) )
                 queue.push( std::move( x ) );
             // the edges opposite to new vertex have just become near notFlippable
+            // (the edges with an end in notFlippableEnds are already in the queue)
             if ( settings.onlyNearNotFlippable && splitNotFlippable && mesh.topology.left( ei ) )
-                if ( auto x = getQueueElem( mesh.topology.prev( ei.sym() ) ) )
-                    queue.push( std::move( x ) );
+            {
+                const auto opp = mesh.topology.prev( ei.sym() );
+                if ( !notFlippableEnds.test( mesh.topology.org( opp ) ) && !notFlippableEnds.test( mesh.topology.dest( opp ) ) )
+                    if ( auto x = getQueueElem( opp ) )
+                        queue.push( std::move( x ) );
+            }
         }
     }
 

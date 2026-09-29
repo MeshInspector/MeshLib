@@ -209,10 +209,7 @@ bool TouchpadController::touchpadZoomGestureUpdate_( float scale, bool kinetic )
     const auto mult = std::clamp( viewAngle, minAngle, maxAngle ) / currentViewAngle;
     const auto delta2 = std::log( mult ) / std::log( 0.95f );
     const auto sign = delta2 >= 0.f ? +1.f : -1.f;
-    auto delta = sign * std::sqrt( std::abs( delta2 ) );
-    // pinch must follow the fingers, so cancel the wheel inversion applied in MouseController
-    if ( viewer.mouseController().isZoomInverted() )
-        delta = -delta;
+    const auto delta = sign * std::sqrt( std::abs( delta2 ) );
 
     viewer.mouseScroll( delta );
 
@@ -236,6 +233,8 @@ void TouchpadController::setParameters( const TouchpadParameters& parameters )
 
 void TouchpadController::Handler::mouseScroll( float, float dy, bool )
 {
+    if ( getViewerInstance().mouseController().isZoomInverted() )
+        dy = -dy;
     ENQUEUE_VIEWER_METHOD_ARGS( "Mouse scroll", mouseScroll, dy );
 }
 

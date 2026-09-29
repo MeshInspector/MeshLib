@@ -1162,6 +1162,8 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( _tr( "Sensitivity for mouse wheel rotation affecting the speed of zooming." ) );
 
+    ImGui::SameLine( 0.f, 4.f * style.ItemSpacing.x );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * UI::scale() );
     bool zoomInverted = viewer->mouseController().isZoomInverted();
     if ( UI::checkbox( _tr( "Invert Zoom" ), &zoomInverted ) )
         viewer->mouseController().setZoomInverted( zoomInverted );

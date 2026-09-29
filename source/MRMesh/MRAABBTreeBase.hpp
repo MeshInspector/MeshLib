@@ -48,12 +48,7 @@ auto AABBTreeBase<T>::getSubtreeLeaves( NodeId subtreeRoot ) const -> LeafBitSet
     auto addSubTask = [&]( NodeId n )
     {
         if ( nodes_[n].leaf() )
-        {
-            const auto l = nodes_[n].leafId();
-            if ( l >= res.size() )
-                res.resize( l + 1 );
-            res.set( l );
-        }
+            res.autoResizeSet( nodes_[n].leafId() );
         else
             subtasks.push( n );
     };

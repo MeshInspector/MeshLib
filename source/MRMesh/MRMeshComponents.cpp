@@ -1061,11 +1061,7 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPath( const Mesh& mesh, c
         if ( VertId v = ep.inVertex( mesh.topology ) )
         {
             if ( outPathVerts )
-            {
-                if ( v >= outPathVerts->size() )
-                    outPathVerts->resize( v + 1 );
-                outPathVerts->set( v );
-            }
+                outPathVerts->autoResizeSet( v );
             for ( auto e : orgRing( mesh.topology, v ) )
                 ignoreEdges.set( e.undirected() );
             continue;
@@ -1086,11 +1082,7 @@ UnionFind<VertId> getUnionFindStructureVertsSeparatedByPaths( const Mesh& mesh, 
             if ( VertId v = ep.inVertex( mesh.topology ) )
             {
                 if ( outPathVerts )
-                {
-                    if ( v >= outPathVerts->size() )
-                        outPathVerts->resize( v + 1 );
-                    outPathVerts->set( v );
-                }
+                    outPathVerts->autoResizeSet( v );
                 for ( auto e : orgRing( mesh.topology, v ) )
                     ignoreEdges.set( e.undirected() );
                 continue;

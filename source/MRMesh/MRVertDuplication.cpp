@@ -599,9 +599,7 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                         break;
                 }
                 path.push_back( nextVertex );
-                if ( nextVertex >= visitedVertices.size() )
-                    visitedVertices.resize( nextVertex + 1 );
-                visitedVertices.set( nextVertex );
+                visitedVertices.autoResizeSet( nextVertex );
             }
         }
     }

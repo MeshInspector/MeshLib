@@ -27,8 +27,7 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
         return res;
 
     assert( in.firstLastMarked() );
-    res.marks.resize( 1 );
-    res.marks.set( 0 );
+    res.marks.autoResizeSet( res.contour.size() );
     res.contour.push_back( in.contour.front() );
     Contour3f resNormals;
     if ( normals )
@@ -75,8 +74,7 @@ MarkedContour3f resample( const MarkedContour3f & in, float minStep, Contour3f *
             }
         }
         i = i1;
-        res.marks.resize( res.contour.size() + 1 );
-        res.marks.set( res.contour.size() );
+        res.marks.autoResizeSet( res.contour.size() );
         res.contour.push_back( in.contour[i] );
         if ( normals )
             resNormals.push_back( ( *normals )[i] );

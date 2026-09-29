@@ -68,11 +68,7 @@ auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data )
         auto newLeft = mesh.topology.left( e1 );
 
         if ( newLeft && oldLeft && oldLeft < data.size() )
-        {
-            if ( newLeft >= data.size() )
-                data.resize( newLeft + 1 );
-            data[newLeft] = data[oldLeft];
-        }
+            data.autoResizeSet( newLeft, data[oldLeft] );
 
         // getting a right face for an edge that has been split.
         auto oldRight = mesh.topology.right( e );
@@ -80,11 +76,7 @@ auto onEdgeSplitFaceAttribute( const Mesh& mesh, Vector<T, FaceId>& data )
         auto newRight = mesh.topology.right( e1 );
 
         if ( newRight && oldRight && oldRight < data.size() )
-        {
-            if ( newRight >= data.size() )
-                data.resize( newRight + 1 );
-            data[newRight] = data[oldRight];
-        }
+            data.autoResizeSet( newRight, data[oldRight] );
     };
 
     return onEdgeSplit;

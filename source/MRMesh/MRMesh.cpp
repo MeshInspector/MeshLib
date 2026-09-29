@@ -250,9 +250,7 @@ void Mesh::transform( const AffineXf3f& xf, const VertBitSet* region )
 VertId Mesh::addPoint( const Vector3f & pos )
 {
     VertId v = topology.addVertId();
-    if ( v >= points.size() )
-        points.resize( v + 1 );
-    points[v] = pos;
+    points.autoResizeAt( v ) = pos;
     return v;
 }
 
@@ -335,19 +333,14 @@ void Mesh::attachEdgeLoopPart( EdgeId first, EdgeId last, const std::vector<Vect
 EdgeId Mesh::splitEdge( EdgeId e, const Vector3f & newVertPos, FaceBitSet * region, FaceHashMap * new2Old )
 {
     EdgeId newe = topology.splitEdge( e, region, new2Old );
-    const auto newv = topology.org( e );
-    if ( newv >= points.size() )
-        points.resize( newv + 1 );
-    points[newv] = newVertPos;
+    points.autoResizeAt( topology.org( e ) ) = newVertPos;
     return newe;
 }
 
 VertId Mesh::splitFace( FaceId f, const Vector3f & newVertPos, FaceBitSet * region, FaceHashMap * new2Old )
 {
     VertId newv = topology.splitFace( f, region, new2Old );
-    if ( newv >= points.size() )
-        points.resize( newv + 1 );
-    points[newv] = newVertPos;
+    points.autoResizeAt( newv ) = newVertPos;
     return newv;
 }
 

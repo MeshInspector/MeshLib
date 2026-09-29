@@ -215,9 +215,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                 else
                 {
                     newVertId = mesh.topology.addVertId();
-                    if ( newVertId >= mesh.points.size() )
-                        mesh.points.resize( newVertId + 1 );
-                    mesh.points[newVertId] = inter.coordinate;
+                    mesh.points.autoResizeAt( newVertId ) = inter.coordinate;
                 }
             }
             // make edge (we don't need new edge if intersection is last one) and connect with this intersection
@@ -378,11 +376,7 @@ void executeTriangulateContourPlan( Mesh& mesh, EdgeId e, HoleFillPlan& plan, Fa
     {
         assert( oldFace.valid() );
         const auto fsz = mesh.topology.faceSize();
-        auto& faceMap = *new2OldMap;
-        if ( faceMap.size() < fsz )
-            faceMap.resize( fsz, oldFace );
-        for ( auto f = FaceId( fsz0 ); f < fsz; ++f )
-            faceMap[f] = oldFace;
+        new2OldMap->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, oldFace );
     }
     if ( new2OldEdgeMap )
     {
@@ -830,10 +824,7 @@ void cutOneEdge( Mesh& mesh,
         e0 = mesh.topology.makeEdge();
         if ( new2OldEdgeMap )
         {
-            auto& splitEdges = new2OldEdgeMap->splitEdges;
-            if ( e0.undirected() >= splitEdges.size() )
-                splitEdges.resize( e0.undirected() + 1 );
-            splitEdges.set( e0.undirected() );
+            new2OldEdgeMap->splitEdges.autoResizeSet( e0.undirected() );
             new2OldEdgeMap->map[e0.undirected()] = baseEdge;
         }
         if ( ePrev != e )
@@ -866,10 +857,7 @@ void cutOneEdge( Mesh& mesh,
             if ( new2OldEdgeMap )
             {
                 new2OldEdgeMap->map[lastEdge.undirected()] = isBaseSym ? baseEdge.sym() : baseEdge;
-                auto& splitEdges = new2OldEdgeMap->splitEdges;
-                if ( lastEdge.undirected() >= splitEdges.size() )
-                    splitEdges.resize( lastEdge.undirected() + 1 );
-                splitEdges.set( lastEdge.undirected() );
+                new2OldEdgeMap->splitEdges.autoResizeSet( lastEdge.undirected() );
             }
         }
 
@@ -956,12 +944,7 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
             {
                 visited.set( e );
                 if ( e == e0.sym() )
-                {
-                    const auto f = oldFaces[pathId][edgeId].f;
-                    if ( f >= badFacesBS.size() )
-                        badFacesBS.resize( f + 1 );
-                    badFacesBS.set( f );
-                }
+                    badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
             }
         }
     }
@@ -1245,11 +1228,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
         if ( params.new2OldMap )
         {
             assert( of.valid() );
-            auto& faceMap = *params.new2OldMap;
-            if ( nf < faceMap.size() )
-                faceMap[nf] = of;
-            else
-                faceMap.resize( nf + 1, of );
+            params.new2OldMap->autoResizeSet( nf, of );
         }
     };
     for ( size_t i = 0; i < pseudoHoleRepresentativeEdges.size(); ++i )

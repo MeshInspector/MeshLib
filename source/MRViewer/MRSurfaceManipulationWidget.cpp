@@ -434,25 +434,14 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             }
             settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
             {
-                auto selectFace = [&] ( FaceId f )
-                {
-                    if ( f >= newFaceSelection.size() )
-                        newFaceSelection.resize( f + 1 );
-                    newFaceSelection.set( f );
-                };
                 if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
-                    selectFace( newMesh->topology.left( e1 ) );
+                    newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
                 if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
-                    selectFace( newMesh->topology.right( e1 ) );
+                    newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
                 // if we split an edge with both unchangeable end vertices, then mark new vertex as unchangeable as well
                 if ( unchangeableVerts_.test( newMesh->topology.org( e1 ) ) &&
                      unchangeableVerts_.test( newMesh->topology.dest( e ) ) )
-                {
-                    const auto v = newMesh->topology.org( e );
-                    if ( v >= unchangeableVerts_.size() )
-                        unchangeableVerts_.resize( v + 1 );
-                    unchangeableVerts_.set( v );
-                }
+                    unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
             };
 
             const FaceBitSet oldFaces = newMesh->topology.getValidFaces();

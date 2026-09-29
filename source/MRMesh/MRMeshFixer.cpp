@@ -755,9 +755,7 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                     auto f = left ? mesh.topology.left( e ) : mesh.topology.right( e );
                     if ( !f )
                         return;
-                    if ( f >= fixFacesBuffer.size() )
-                        fixFacesBuffer.resize( f + 1 ); // as far as we triangulate holes - new faces might appear, so we need to resize
-                    fixFacesBuffer.set( f );
+                    fixFacesBuffer.autoResizeSet( f ); // as far as we triangulate holes - new faces might appear, so we need to resize
                     e = left ? mesh.topology.next( e ) : mesh.topology.prev( e );
                     if ( e == ce )
                         return; // full cycle

@@ -250,12 +250,7 @@ void sharpenMarchingCubesMesh( const MeshPart& ref, Mesh& vox, Vector<VoxelId, F
         assert( v == dirs.size() + firstNewVert );
         dirs.push_back( dir );
         for ( auto ei : orgRing( vox.topology, v ) )
-        {
-            const auto l = vox.topology.left( ei );
-            if ( l >= face2voxel.size() )
-                face2voxel.resize( l + 1 );
-            face2voxel[l] = voxel;
-        }
+            face2voxel.autoResizeSet( vox.topology.left( ei ), voxel );
 
         // connect new vertex with every vertex from the voxel
         vox.topology.flipEdgesIn( v, [&]( EdgeId e )

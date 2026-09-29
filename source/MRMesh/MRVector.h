@@ -88,7 +88,6 @@ public:
 
     /// sets elements [pos, pos+len) to the given value, adjusting the size of the vector to include new elements;
     /// the elements in between old size and \p pos are also set to \p val (for faster implementation)
-    [[deprecated( "use resize() and operator[] instead" )]]
     void autoResizeSet( I pos, size_t len, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::is_copy_assignable_v<T> )
     {
         assert( pos );
@@ -107,20 +106,13 @@ public:
             vec_[ p + i ] = val;
     }
 
-    /// sets the element #i to the given value, adjusting the size of the vector to include new element;
-    /// the elements in between old size and \p i are also set to \p val
-    [[deprecated( "use resize() and operator[] instead" )]]
+    /// sets the element #i to the given value, adjusting the size of the vector to include new element
     void autoResizeSet( I i, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::is_copy_assignable_v<T> )
     {
-        assert( i );
-        if ( i < size() )
-            vec_[i] = std::move( val );
-        else
-            vec_.resize( i + 1, val );
+        autoResizeSet( i, 1, val );
     }
 
     /// this accessor automatically adjusts the size of the vector
-    [[deprecated( "use resize() and operator[] instead" )]]
     [[nodiscard]] reference autoResizeAt( I i ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
     {
         if ( i + 1 > size() )

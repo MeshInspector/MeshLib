@@ -128,11 +128,7 @@ FaceBitSet subdivideWithPlane( Mesh & mesh, const Plane3f & plane, FaceHashMap *
             const auto l = mesh.topology.left( ei );
             if ( l && !negativeVerts.test( mesh.topology.dest( ei ) )
                    && !negativeVerts.test( mesh.topology.dest( mesh.topology.next( ei ) ) ) )
-            {
-                if ( l >= positiveFaces.size() )
-                    positiveFaces.resize( l + 1 );
-                positiveFaces.set( l );
-            }
+                positiveFaces.autoResizeSet( l );
         }
     }
 

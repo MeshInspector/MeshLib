@@ -303,11 +303,7 @@ FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) co
     {
         auto fn = maps[int( obj )].cut2newFaces[f];
         if ( fn.valid() )
-        {
-            if ( fn >= res.size() )
-                res.resize( fn + 1 );
-            res.set( fn );
-        }
+            res.autoResizeSet( fn );
     }
     return res;
 }
@@ -321,11 +317,7 @@ EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) co
     {
         auto en = mapEdge( maps[int( obj )].old2newEdges, e );
         if ( en.valid() )
-        {
-            if ( en >= res.size() )
-                res.resize( en + 1 );
-            res.set( en );
-        }
+            res.autoResizeSet( en );
     }
     return res;
 }
@@ -339,11 +331,7 @@ UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS
     {
         auto en = mapEdge( maps[int( obj )].old2newEdges, e );
         if ( en.valid() )
-        {
-            if ( en >= res.size() )
-                res.resize( en + 1 );
-            res.set( en );
-        }
+            res.autoResizeSet( en );
     }
     return res;
 }
@@ -357,11 +345,7 @@ VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) co
     {
         auto vn = maps[int( obj )].old2newVerts[v];
         if ( vn.valid() )
-        {
-            if ( vn >= res.size() )
-                res.resize( vn + 1 );
-            res.set( vn );
-        }
+            res.autoResizeSet( vn );
     }
     return res;
 }
@@ -377,11 +361,7 @@ FaceBitSet BooleanResultMapper::newFaces() const
             if ( newF == map.cut2origin[newF] || !map.cut2origin[newF].valid() )
                 continue;
             if ( auto resF = map.cut2newFaces[newF] )
-            {
-                if ( resF >= res.size() )
-                    res.resize( resF + 1 );
-                res.set( resF );
-            }
+                res.autoResizeSet( resF );
         }
     }
     return res;

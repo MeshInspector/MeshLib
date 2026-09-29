@@ -63,8 +63,7 @@ TEST( MRMesh, AlphaShape )
     cloud.points.push_back( { 0,    0,    0 } );    //2_v
     cloud.points.push_back( { 1,    0,    0 } );    //3_v
     cloud.points.push_back( { 0,    1,    0 } );    //4_v
-    cloud.validPoints.resize( cloud.points.size() );
-    cloud.validPoints.set( 2_v, 3, true );
+    cloud.validPoints.autoResizeSet( 2_v, 3, true );
 
     Triangulation tris;
     std::vector<AlphaShapeNei> neis;

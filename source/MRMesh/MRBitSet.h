@@ -184,28 +184,21 @@ public:
     void resizeWithReserve( size_t newSize ) { resize( newSize ); }
 
     /// sets elements [pos, pos+len) to given value, adjusting the size of the set to include new elements
-    [[deprecated( "use resize() and set() instead" )]]
     void autoResizeSet( size_t pos, size_type len, bool val = true )
     {
         if ( pos + len > size() )
             resize( pos + len );
         set( pos, len, val );
     }
-    [[deprecated( "use resize() and set() instead" )]]
-    void autoResizeSet( size_t pos, bool val = true )
-    {
-        if ( pos >= size() )
-            resize( pos + 1 );
-        set( pos, val );
-    }
+    void autoResizeSet( size_t pos, bool val = true ) { autoResizeSet( pos, 1, val ); }
 
-    /// sets the pos-bit to given value, adjusting the size of the set to include it, and returns previous value of pos-bit
-    [[deprecated( "use resize() and test_set() instead" )]]
+    /// same as \ref autoResizeSet and returns previous value of pos-bit
     [[nodiscard]] bool autoResizeTestSet( size_t pos, bool val = true )
     {
-        if ( val && pos >= size() )
-            resize( pos + 1 );
-        return test_set( pos, val );
+        bool const b = test( pos );
+        if ( b != val )
+            autoResizeSet( pos, val );
+        return b;
     }
 
     /// returns the amount of memory this object occupies on heap
@@ -338,27 +331,9 @@ public:
     /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
     [[nodiscard]] bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
 
-    [[deprecated( "use resize() and set() instead" )]]
-    void autoResizeSet( IndexType pos, size_type len, bool val = true )
-    {
-        if ( size_t( pos ) + len > size() )
-            resize( size_t( pos ) + len );
-        set( pos, len, val );
-    }
-    [[deprecated( "use resize() and set() instead" )]]
-    void autoResizeSet( IndexType pos, bool val = true )
-    {
-        if ( pos >= size() )
-            resize( pos + 1 );
-        set( pos, val );
-    }
-    [[deprecated( "use resize() and test_set() instead" )]]
-    [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true )
-    {
-        if ( val && pos >= size() )
-            resize( pos + 1 );
-        return test_set( pos, val );
-    }
+    void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
+    void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
+    [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }
 
     /// constructs another bit set from this where every set bit index is transformed using given map
     template <typename M>
@@ -469,11 +444,7 @@ template <typename M>
     TypedBitSet<I> res;
     for ( auto b : *this )
         if ( auto mapped = map( b ) )
-        {
-            if ( mapped >= res.size() )
-                res.resize( mapped + 1 );
-            res.set( mapped );
-        }
+            res.autoResizeSet( mapped );
     return res;
 }
 

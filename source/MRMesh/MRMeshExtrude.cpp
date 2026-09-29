@@ -39,11 +39,7 @@ void makeDegenerateBandAroundRegion( Mesh& mesh, const FaceBitSet& region, const
                 {
                     const auto ue = topology.findEdge( topology.org( contour[i] ), topology.org( holeContour[i] ) ).undirected();
                     if ( ue.valid() )
-                    {
-                        if ( ue >= params.outExtrudedEdges->size() )
-                            params.outExtrudedEdges->resize( ue + 1 );
-                        params.outExtrudedEdges->set( ue );
-                    }
+                        params.outExtrudedEdges->autoResizeSet( ue, true );
                 }
 
                 if ( params.new2OldMap )

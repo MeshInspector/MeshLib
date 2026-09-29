@@ -11,7 +11,7 @@ struct CutAroundEdgePathsParams
     /// the mesh is cut along the isolines of surface distance equal to this value around each path
     float distance = 0;
 
-    /// the spacing between the regions of any two paths, measured in the adjusted distance fields;
+    /// keeps the regions of any two paths from overlapping, even if the paths are closer than (2*distance + minSpacing):
     /// in the vertices where the sum of two distance fields is less than (2*distance + minSpacing),
     /// both values are scaled proportionally to make the sum exactly (2*distance + minSpacing);
     /// so the actual surface gap between two regions is about minSpacing * pathsDistance / (2*distance + minSpacing)

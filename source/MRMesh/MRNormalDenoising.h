@@ -2,7 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRProgressCallback.h"
-#include "MRExpected.h"
 
 namespace MR
 {
@@ -12,9 +11,10 @@ namespace MR
 /// \param normals input noisy normals and output smooth normals
 /// \param v edge indicator function (1 - smooth edge, 0 - crease edge)
 /// \param gamma the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
+/// \param region if given, then only the normals of these faces are changed, and the normals of other faces act as fixed boundary conditions
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework", equation (19)
-MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma );
-MRMESH_API void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma );
+MRMESH_API void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region = nullptr );
+MRMESH_API void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region = nullptr );
 
 /// Compute edge indicator function (1 - smooth edge, 0 - crease edge) by solving large system of linear equations
 /// \param mesh contains topology information and coordinates for equation weights
@@ -57,16 +57,19 @@ struct DenoiseViaNormalsSettings
     /// maximum distance between a point and its position before relaxation, ignored if limitNearInitial = false
     float maxInitialDist = 0;
 
-    /// optionally returns creases found during smoothing
-    UndirectedEdgeBitSet * outCreases = nullptr;
+    /// if given, then only the normals of these faces are denoised, and only the vertices with all incident faces in the region are moved
+    const FaceBitSet *region = nullptr;
 
-    /// to get the progress and optionally cancel
-    ProgressCallback cb = {};
+    /// optionally returns creases found during smoothing, only among the edges with both incident faces in the region
+    UndirectedEdgeBitSet * outCreases = nullptr;
 };
 
 /// Reduces noise in given mesh,
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-MRMESH_API Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+MRMESH_API void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+
+/// the same, reporting the progress in (cb); returns false if the operation was canceled from it
+[[nodiscard]] MRMESH_API bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb );
 
 struct DenoiseWithCreasesSettings
 {
@@ -78,6 +81,9 @@ struct DenoiseWithCreasesSettings
 
     /// the number of iterations to update vertex coordinates from found normals; the more the better quality, but longer computation
     int pointIters = 20;
+
+    /// if given, then only the normals of these faces are denoised, and only the vertices with all incident faces in the region are moved
+    const FaceBitSet *region = nullptr;
 };
 
 /// Reduces noise in given mesh, keeping the edges from (creases) sharp,
@@ -86,8 +92,8 @@ struct DenoiseWithCreasesSettings
 MRMESH_API void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 MRMESH_API void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings = {} );
 
-/// the same, reporting the progress in (cb) and returning error if the operation was canceled from it
-MRMESH_API Expected<void> meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
-MRMESH_API Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
+/// the same, reporting the progress in (cb); returns false if the operation was canceled from it
+[[nodiscard]] MRMESH_API bool meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
+[[nodiscard]] MRMESH_API bool meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb );
 
 } //namespace MR

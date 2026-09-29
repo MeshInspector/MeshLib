@@ -12,6 +12,7 @@
 #include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 
 namespace MR
 {
@@ -314,6 +315,78 @@ void findAlphaShapeNeiTriangles( const PointCloud & cloud, VertId v, const Alpha
         *stats += myStats;
 }
 
+VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, VertId vk,
+    const AlphaShapeData & data, std::vector<BallPivotCandidate> & cands )
+{
+    const auto pi = data.coords( cloud, vi );
+    const auto pj = data.coords( cloud, vj );
+    const auto pk = data.coords( cloud, vk );
+
+    // reset( x, pj, pi ) selects the ball with the center on the clockwise side of x's half-plane,
+    // i.e. towards #vk; the existence of a ball does not depend on the side
+    FastInSphereTesterSoS tester;
+#ifndef NDEBUG
+    // the starting ball must exist and be empty; all its points are within r + h from the midpoint,
+    // so each of them is checked in the search below
+    FastInSphereTesterSoS startBall;
+    [[maybe_unused]] const bool startExists = startBall.reset( pi, pj, pk, data.intRadiusSq );
+    assert( startExists );
+#endif
+    cands.clear();
+    // the centers of the balls via #vi and #vj are on the circle of radius h = sqrt( r^2 - |vi-vj|^2 / 4 )
+    // around their midpoint, so every point of the balls is within r + h from it;
+    // r and h are in the integer grid, but the search is in float coordinates: the rounding to the grid moves
+    // each point and so the midpoint by at most sqrt(3)/2 steps, hence the distance by less than the 2 steps added
+    const double rSq = double( data.intRadiusSq );
+    const double hSq = std::max( 0.0, rSq - 0.25 * ( Vector3d( pj.pt ) - Vector3d( pi.pt ) ).lengthSq() );
+    const auto searchRadius = float( ( std::sqrt( rSq ) + std::sqrt( hSq ) + 2 ) / data.toInt.invRange );
+    findPointsInBall( cloud, { 0.5f * ( cloud.points[vi] + cloud.points[vj] ), sqr( searchRadius ) },
+        [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
+        {
+            if ( found.vId == vi || found.vId == vj || found.vId == vk )
+                return Processing::Continue;
+            const auto c = data.coords( cloud, found.vId );
+            assert( !startExists || startBall( c ) != InSphereResult::Inside );
+            if ( tester.sphereExists( c, pj, pi, data.intRadiusSq ) )
+                cands.push_back( { c, orient3d( { pi, pj, pk, c } ) } );
+            return Processing::Continue;
+        } );
+
+    // whether a follows b counter-clockwise from #vk, i.e. ccwAroundLine( { pi, pj, pk, b, a } ) with its first two
+    // orient3d calls taken from the candidates; the reversed order puts the first candidate on top of the heap
+    auto later = [&]( const BallPivotCandidate & a, const BallPivotCandidate & b )
+    {
+#ifdef _GLIBCXX_DEBUG
+        if ( a.coords.id == b.coords.id )
+            return false; // orient3d requires all distinct points
+#endif
+        if ( a.cwFromVk != b.cwFromVk )
+            return a.cwFromVk;
+        return orient3d( { pi, pj, a.coords, b.coords } );
+    };
+    std::make_heap( cands.begin(), cands.end(), later );
+
+    for ( auto heapEnd = cands.end(); heapEnd != cands.begin(); --heapEnd )
+    {
+        std::pop_heap( cands.begin(), heapEnd, later );
+        const auto & x = ( heapEnd - 1 )->coords;
+        [[maybe_unused]] const bool touchable = tester.reset( x, pj, pi, data.intRadiusSq );
+        assert( touchable );
+        // #vk is not a candidate, but it is inside the balls between the two touching it,
+        // i.e. behind the starting ball, where a candidate of a thin sheet can be touched
+        bool empty = tester( pk ) != InSphereResult::Inside;
+        for ( size_t k = 0; empty && k < cands.size(); ++k )
+        {
+            const auto & y = cands[k].coords;
+            if ( y.id != x.id && tester( y ) == InSphereResult::Inside )
+                empty = false;
+        }
+        if ( empty )
+            return x.id;
+    }
+    return vk;
+}
+
 std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, const ProgressCallback& cb,
     AlphaShapeStats * stats )
 {
@@ -372,6 +445,16 @@ std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & clou
 Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, float radius, AlphaShapeStats * stats )
 {
     auto maybe = findAlphaShapeAllTriangles( cloud, radius, ProgressCallback{}, stats );
+    assert( maybe.has_value() );
+    Triangulation res;
+    if ( maybe.has_value() )
+        res = std::move( *maybe );
+    return res;
+}
+
+Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, const AlphaShapeData & data, AlphaShapeStats * stats )
+{
+    auto maybe = findAlphaShapeAllTriangles( cloud, data, ProgressCallback{}, stats );
     assert( maybe.has_value() );
     Triangulation res;
     if ( maybe.has_value() )

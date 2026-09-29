@@ -75,8 +75,8 @@ void PolylineTopology::vertResizeWithReserve( size_t newSize )
 {
     if ( edgePerVertex_.size() >= newSize )
         return;
-    edgePerVertex_.resizeWithReserve( newSize );
-    validVerts_.resizeWithReserve( newSize );
+    edgePerVertex_.resize( newSize );
+    validVerts_.resize( newSize );
 }
 
 EdgeId PolylineTopology::makeEdge()

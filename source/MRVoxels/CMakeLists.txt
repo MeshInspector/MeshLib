@@ -2,7 +2,7 @@ project(MRVoxels CXX)
 
 option(MRVOXELS_NO_DICOM "Disable DICOM format support" OFF)
 option(MRVOXELS_NO_TIFF "Disable TIFF format support" OFF)
-option(MRVOXELS_UNITY_BUILD "Use unity build for MRVoxels" ON)
+option(MRVOXELS_UNITY_BUILD "Use unity build for MRVoxels" OFF)
 
 IF(MR_EMSCRIPTEN)
   # Sync this with `scripts/mrbind/generate.mk`.

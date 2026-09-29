@@ -865,6 +865,7 @@ def from_thread():
     print("PUMPED", flush=True)
     mrviewerpy.Viewer().shutdown()
     print("SHUTDOWN_SENT", flush=True)
+    os.close(0)  # EOF for the prompt: the child ends on its own once the viewer is down
 
 
 threading.Thread(target=from_thread, daemon=True).start()
@@ -961,23 +962,26 @@ def test_prompt_pumps_viewer_on_macos():
     env.update(_viewer_child_env())
     what = "prompt pumping the viewer"
     print(f"[mrviewerpy] {what} in a child (timeout {CHILD_TIMEOUT_SEC}s)", file=sys.stderr, flush=True)
+    # stdin stays open and silent for as long as the child lives: the prompt must pump the
+    # viewer on its own, and the child closes its stdin itself once the viewer is down
+    stdin_read, stdin_write = os.pipe()
     child = subprocess.Popen(
         [sys.executable, "-u", "-i", "-c", _PROMPT_PUMPS_SRC],
-        stdin=subprocess.PIPE,
+        stdin=stdin_read,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         env=env,
     )
-    # nothing on stdin for a while: the prompt must pump the viewer on its own meanwhile
-    time.sleep(6)
+    os.close(stdin_read)
     try:
-        stdout, stderr = child.communicate(input="exit()\n", timeout=CHILD_TIMEOUT_SEC)
+        stdout, stderr = child.communicate(timeout=CHILD_TIMEOUT_SEC)
         run = _ChildRun(child.returncode, stdout, stderr, False)
     except subprocess.TimeoutExpired as e:
         child.kill()
         stdout, stderr = child.communicate()
         run = _ChildRun(None, stdout, stderr, True)
+    os.close(stdin_write)
     _check_viewer_child(what, run)
 
     assert "AT_PROMPT" in run.stdout, "the child never reached the prompt\n" + run.report()

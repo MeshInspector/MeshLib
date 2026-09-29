@@ -381,6 +381,8 @@ void shutViewerAtExit()
     }
     gViewerFinished.wait_for( std::chrono::seconds( 10 ) ); // a stuck loop must not hold the exit forever
 #else
+    if ( !gLaunchParams ) // the viewer was not launched by this module, e.g. Python embedded in an application
+        return;
     auto& viewer = getViewerInstance();
     if ( viewer.isPreLaunched() )
         postLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );

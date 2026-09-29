@@ -716,7 +716,7 @@ void SurfaceManipulationWidget::updateUVmap_( bool set, bool wholeMesh )
 {
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
-    uvs.resizeWithReserve( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
+    uvs.resize( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
     BitSetParallelFor( wholeMesh ? obj_->meshPtr()->topology.getValidVerts() : visualizationRegion_, [&] ( VertId v )
     {
@@ -920,7 +920,7 @@ void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
     MR_TIMER;
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
-    uvs.resizeWithReserve( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
+    uvs.resize( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
     BitSetParallelFor( region, [&] ( VertId v )
     {
         uvs[v].x = palette_->getUVcoord( valueChanges_[v], true ).x;

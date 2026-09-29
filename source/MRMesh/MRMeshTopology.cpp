@@ -34,9 +34,9 @@ void MeshTopology::vertResizeWithReserve( size_t newSize )
 {
     if ( edgePerVertex_.size() >= newSize )
         return;
-    edgePerVertex_.resizeWithReserve( newSize );
+    edgePerVertex_.resize( newSize );
     if ( updateValids_ )
-        validVerts_.resizeWithReserve( newSize );
+        validVerts_.resize( newSize );
 }
 
 void MeshTopology::faceResize( size_t newSize )
@@ -52,9 +52,9 @@ void MeshTopology::faceResizeWithReserve( size_t newSize )
 {
     if ( edgePerFace_.size() >= newSize )
         return;
-    edgePerFace_.resizeWithReserve( newSize );
+    edgePerFace_.resize( newSize );
     if ( updateValids_ )
-        validFaces_.resizeWithReserve( newSize );
+        validFaces_.resize( newSize );
 }
 
 EdgeId MeshTopology::makeEdge()

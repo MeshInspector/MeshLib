@@ -115,6 +115,9 @@ IF(EMSCRIPTEN)
   set(BUILD_STATIC_LIBS OFF)
   meshlib_add_package(jsoncpp)
 
+  set(FMT_INSTALL ON)
+  set(FMT_MODULE OFF)
+  set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
   meshlib_add_package(fmt)
 
   set(SPDLOG_INSTALL ON)
@@ -166,15 +169,23 @@ ENDIF()
 
 IF(NOT MR_EMSCRIPTEN)
   set(PYBIND11_INSTALL ON)
-  # We want to build the stubs in our main `CMakeLists.txt` instead of here.
-  # It seems to work fine either way, but I'm not comfortable not having the stubs see the customized cmake variables
-  #   that we set in our main `CMakeLists.txt`, such as those influencing the Pybind ABI strings.
-  # Even though the stubs shouldn't call any Pybind functions right now, they still include the Pybind header.
-  # Accidentally calling some inline Pybind function in it could have weird effects, I reckon.
-  # Note that regardless of this setting, the python-version-specific shims always need to be built in our main `CMakeLists.txt`,
-  #   to see our configuration CMake variables.
-  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" OFF)
-  add_subdirectory(${MESHLIB_THIRDPARTY_DIR}/mrbind-pybind11 ./mrbind-pybind11)
+  option(PYBIND11_NONLIMITEDAPI_BUILD_STUBS "" ON)
+  option(PYBIND11_NONLIMITEDAPI_INSTALL_EXPORTS "" ON)
+  set(PYBIND11_NONLIMITEDAPI_SUFFIX "meshlib" CACHE STRING "")
+  set(PYBIND11_NONLIMITEDAPI_PYTHON_MIN_VERSION_HEX "0x030800f0" CACHE STRING "") # Python 3.8
+  set(PYBIND11_NONLIMITEDAPI_INTERNALS_VERSION "5" CACHE STRING "")
+  set(PYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
+  set(PYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
+  IF(APPLE)
+    set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.10" CACHE STRING "")
+    execute_process(
+      COMMAND brew --prefix
+      OUTPUT_VARIABLE HOMEBREW_PREFIX
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    set(Python_ROOT_DIR "${HOMEBREW_PREFIX}/opt/python@${PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION}")
+  ENDIF()
+  meshlib_add_package(mrbind-pybind11)
 ENDIF()
 
 set(TINYGLTF_INSTALL ON)

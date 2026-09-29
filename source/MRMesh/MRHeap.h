@@ -146,8 +146,7 @@ template <typename T, typename I, typename P>
 void Heap<T, I, P>::push( I elemId, const T & val )
 {
     assert( !contains( elemId ) );
-    if ( size_t( elemId ) >= id2PosInHeap_.size() )
-        id2PosInHeap_.resize( size_t( elemId ) + 1, InvalidPos );
+    id2PosInHeap_.autoResizeSet( elemId, InvalidPos );
     heap_.push_back( { elemId, val } );
     lift_( heap_.size() - 1, elemId );
 }

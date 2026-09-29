@@ -18,7 +18,7 @@ mrviewerpy = None
 
 # The in-process tests below drive a viewer on a background thread, which is Linux-only:
 #  - macOS runs the viewer on the calling thread instead (a GUI can run on the main thread
-#    only), so it is covered by the child-process test at the end of this module.
+#    only), so it gets its own child-process tests at the end of this module.
 #  - Windows CI has no OpenGL driver at all ("WGL: The driver does not appear to support
 #    OpenGL"), so window creation fails for both 4.3 and 3.3 and the viewer gives up.
 # Linux under `xvfb-run -a` gets a real GL 4.5 context from llvmpipe, which is enough for
@@ -34,6 +34,7 @@ any_viewer = pytest.mark.skipif(
     platform.system() not in ("Linux", "Darwin") or (platform.system() == "Linux" and not _has_display),
     reason="a viewer is launched on Linux under a display and on macOS; Windows CI has no OpenGL driver",
 )
+macos_only = pytest.mark.skipif(platform.system() != "Darwin", reason="the main-thread viewer is macOS only")
 
 # Generous: the first round-trip also covers viewer construction and GL init on a cold runner.
 LAUNCH_TIMEOUT_SEC = 180
@@ -757,10 +758,10 @@ def test_call_after_failed_launch_raises():
 # `showViewer()` hands the window to the user and returns once it is closed; on macOS it is
 # also where the window runs, on the calling thread, because a GUI can run on the main thread
 # only. The user is not here, so a helper thread closes the window through the loop. One
-# launch per process, so this is a child interpreter; the resource overrides are the same
-# story as in the shutdown tests above.
+# launch per process, so each case is a child interpreter; the resource overrides are the
+# same story as in the shutdown tests above.
 
-_SHOW_VIEWER_SRC = r"""
+_VIEWER_PROLOGUE = r"""
 import os
 import pathlib
 import sys
@@ -794,7 +795,9 @@ except RuntimeError as e:
     print("LAUNCH_RAISED %s" % e, flush=True)
     sys.exit(2)
 print("LAUNCHED", flush=True)
+"""
 
+_SHOW_VIEWER_SRC = _VIEWER_PROLOGUE + r"""
 viewer = mrviewerpy.Viewer()
 viewer.skipFrames(1)
 cube = mrmesh.makeCube(mrmesh.Vector3f.diagonal(1), mrmesh.Vector3f.diagonal(-0.5))
@@ -844,6 +847,49 @@ print(outcome[0] if outcome else "AFTER_HUNG", flush=True)
 sys.exit(0 if outcome and outcome[0].startswith("AFTER_RAISED") else 3)
 """
 
+# Exits with the viewer still up: the `atexit` handler must shut it down first, on every
+# platform - a background viewer thread would otherwise just die with the process.
+_EXIT_WITH_VIEWER_SRC = _VIEWER_PROLOGUE + r"""
+mrviewerpy.Viewer().skipFrames(1)
+print("EXITING", flush=True)
+sys.exit(0)
+"""
+
+# Run with `python -i`: after this the interpreter waits for a line at the prompt, and the
+# input hook must pump the viewer meanwhile, or the helper's command is never served.
+_PROMPT_PUMPS_SRC = _VIEWER_PROLOGUE + r"""
+
+def from_thread():
+    time.sleep(1.0)
+    mrviewerpy.Viewer().skipFrames(1)
+    print("PUMPED", flush=True)
+    mrviewerpy.Viewer().shutdown()
+    print("SHUTDOWN_SENT", flush=True)
+
+
+threading.Thread(target=from_thread, daemon=True).start()
+print("AT_PROMPT", flush=True)
+"""
+
+
+def _viewer_child_env():
+    return {
+        "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
+        "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
+    }
+
+
+def _check_viewer_child(what, run):
+    assert not run.timed_out, f"{what}: the child never finished\n" + run.report()
+    # a dead interpreter is a bug wherever it happens: this is the SIGTRAP-by-AppKit shape
+    # (exit 133) that the macOS refusal used to stand in for
+    assert run.returncode is not None and run.returncode >= 0, (
+        f"{what}: the interpreter died by signal\n" + run.report()
+    )
+    # no viewer at all is this environment, not the behaviour under test
+    if "LAUNCH_RAISED Viewer could not start" in run.stdout:
+        pytest.skip(f"{what}: the child could not start a viewer\n" + run.report())
+
 
 @any_viewer
 def test_show_viewer_runs_until_shutdown():
@@ -855,23 +901,8 @@ def test_show_viewer_runs_until_shutdown():
     _point_at_bundled_resources()
 
     what = "showViewer() closed by a helper thread"
-    run = _run_in_child(
-        what,
-        _SHOW_VIEWER_SRC,
-        env_extra={
-            "MRVIEWERPY_RESOURCES": str(mrmesh.SystemPath.getResourcesDirectory()),
-            "MRVIEWERPY_FONTS": str(mrmesh.SystemPath.getFontsDirectory()),
-        },
-    )
-    assert not run.timed_out, f"{what}: the child never finished\n" + run.report()
-    # a dead interpreter is a bug wherever it happens: this is the SIGTRAP-by-AppKit shape
-    # (exit 133) that the macOS refusal used to stand in for
-    assert run.returncode is not None and run.returncode >= 0, (
-        f"{what}: the interpreter died by signal\n" + run.report()
-    )
-    # no viewer at all is this environment, not the behaviour under test
-    if "LAUNCH_RAISED Viewer could not start" in run.stdout:
-        pytest.skip(f"{what}: the child could not start a viewer\n" + run.report())
+    run = _run_in_child(what, _SHOW_VIEWER_SRC, env_extra=_viewer_child_env())
+    _check_viewer_child(what, run)
 
     # the GUI thread is the caller's own on macOS, a background one elsewhere
     expected_gui_on_main = platform.system() == "Darwin"
@@ -885,6 +916,75 @@ def test_show_viewer_runs_until_shutdown():
         "showViewer() did not return after shutdown() from another thread\n" + run.report()
     )
     assert run.returncode == 0 and "AFTER_RAISED" in run.stdout, (
-        "a command after showViewer() returned was served or hung: the viewer outlived it\n"
-        + run.report()
+        "a command from another thread after showViewer() returned was served or hung: "
+        "the viewer outlived it\n" + run.report()
+    )
+
+
+# logged by `Viewer::launchShut`, so its presence proves the viewer was shut down, not killed
+_LAUNCH_SHUT_MARK = "Wait and DON'T process unfinished web requests"
+
+
+@any_viewer
+def test_exit_with_viewer_up_shuts_it_down():
+    """`sys.exit()` with the viewer running ends in `launchShut`, on both viewer designs."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    what = "sys.exit() with the viewer up"
+    run = _run_in_child(what, _EXIT_WITH_VIEWER_SRC, env_extra=_viewer_child_env())
+    _check_viewer_child(what, run)
+
+    assert "EXITING" in run.stdout, "the child never got to exit\n" + run.report()
+    assert run.returncode == 0, "the exit did not complete cleanly\n" + run.report()
+    assert _LAUNCH_SHUT_MARK in run.stdout, (
+        "the viewer was not shut down on interpreter exit\n" + run.report()
+    )
+
+
+@macos_only
+def test_prompt_pumps_viewer_on_macos():
+    """At the interactive prompt the input hook keeps the main-thread viewer running."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join(
+        dict.fromkeys(p for p in sys.path + [os.getcwd()] if p)
+    )
+    env.update(_viewer_child_env())
+    what = "prompt pumping the viewer"
+    print(f"[mrviewerpy] {what} in a child (timeout {CHILD_TIMEOUT_SEC}s)", file=sys.stderr, flush=True)
+    child = subprocess.Popen(
+        [sys.executable, "-u", "-i", "-c", _PROMPT_PUMPS_SRC],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=env,
+    )
+    # nothing on stdin for a while: the prompt must pump the viewer on its own meanwhile
+    time.sleep(6)
+    try:
+        stdout, stderr = child.communicate(input="exit()\n", timeout=CHILD_TIMEOUT_SEC)
+        run = _ChildRun(child.returncode, stdout, stderr, False)
+    except subprocess.TimeoutExpired as e:
+        child.kill()
+        stdout, stderr = child.communicate()
+        run = _ChildRun(None, stdout, stderr, True)
+    _check_viewer_child(what, run)
+
+    assert "AT_PROMPT" in run.stdout, "the child never reached the prompt\n" + run.report()
+    assert "PUMPED" in run.stdout, (
+        "a command from another thread was not served while the interpreter waited at the "
+        "prompt: the input hook did not pump the viewer\n" + run.report()
+    )
+    assert run.returncode == 0 and "SHUTDOWN_SENT" in run.stdout, (
+        "the prompt did not come back after the viewer was shut down\n" + run.report()
     )

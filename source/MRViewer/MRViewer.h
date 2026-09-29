@@ -77,10 +77,17 @@ public:
     // Pre-launch viewer with given params
     // Generally you should just call `launch` instead.
     MRVIEWER_API int preLaunch( const LaunchParams& params );
+    // Shows the window of a pre-launched viewer, running the commands queued around its appearance
+    // Generally you should just call `launch` instead.
+    MRVIEWER_API int launchShow( const LaunchParams& params );
     // Launch viewer with given params
     MRVIEWER_API int launch( const LaunchParams& params );
     // Starts event loop
     MRVIEWER_API void launchEventLoop();
+    // One iteration of the event loop: draws while a redraw is needed, handling the events and commands
+    // received meanwhile, then waits for the next event - at most `maxWaitSec` seconds if it is not negative;
+    // an animating viewer waits at most one frame anyway. `launchEventLoop` repeats it until `windowShouldClose`.
+    MRVIEWER_API void runEventLoopIteration( double maxWaitSec = -1 );
     // Terminate window
     MRVIEWER_API void launchShut();
 
@@ -435,7 +442,7 @@ public:
 
     // return true if window should close
     // calls interrupt signal and if no slot interrupts return true, otherwise return false
-    bool windowShouldClose();
+    MRVIEWER_API bool windowShouldClose();
 
     // returns true if viewer has valid GL context
     // note that sometimes it is not enough, for example to free GL memory in destructor,
@@ -656,9 +663,15 @@ private:
     friend MRVIEWER_API Viewer& getViewerInstance();
 };
 
+// runs one phase of a launch: in Release an exception is logged with a stacktrace and becomes EXIT_FAILURE
+// generally you should just call `launchDefaultViewer` instead
+MRVIEWER_API int protectedLaunchPhase( const std::function<int()>& phase );
 // initializes default viewer with given params and setup
 // generally you should just call `launchDefaultViewer` instead
 MRVIEWER_API int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
+// what `launchDefaultViewer` does once the viewer has shut down: MCP, plugins if requested, the log sink
+// generally you should just call `launchDefaultViewer` instead
+MRVIEWER_API void postLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
 // starts default viewer with given params and setup
 MRVIEWER_API int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup );
 

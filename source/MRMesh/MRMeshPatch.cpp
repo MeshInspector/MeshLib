@@ -67,9 +67,8 @@ FaceBitSet patchMeshByGroups( Mesh& mesh, const FaceBitSet& faces, float angleTh
     for ( RegionId r( 0 ); r < RegionId( numGroups ); ++r )
     {
         groups.setComponentBits( r, group );
-        group.resize( mesh.topology.faceSize() );
         for ( auto f : splitGroupFaces[r] )
-            group.set( f );
+            group.autoResizeSet( f );
         pendingFaces -= group;
         newFaces |= patchMesh( mesh, group, s );
         group.reset();

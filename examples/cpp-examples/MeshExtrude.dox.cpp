@@ -21,9 +21,9 @@ int main()
     MR::Mesh& mesh = *loadRes;
 
     // Select faces to extrude
-    MR::FaceBitSet facesToExtrude( mesh.topology.faceSize() );
-    facesToExtrude.set( MR::FaceId( 1 ) );
-    facesToExtrude.set( MR::FaceId( 2 ) );
+    MR::FaceBitSet facesToExtrude;
+    facesToExtrude.autoResizeSet( MR::FaceId( 1 ) );
+    facesToExtrude.autoResizeSet( MR::FaceId( 2 ) );
 
     // Create duplicated verts on region boundary
     MR::makeDegenerateBandAroundRegion( mesh, facesToExtrude );

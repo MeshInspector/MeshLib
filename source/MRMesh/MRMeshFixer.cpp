@@ -598,7 +598,7 @@ int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceB
             region.reset( v );
             for ( auto e : orgRing( topology, e0 ) )
                 if ( auto vn = topology.dest( e ); region.test( vn ) )
-                    candidates.set( vn );
+                    candidates.autoResizeSet( vn );
             [[maybe_unused]] auto ep = eliminateDegree3Dest( topology, e0.sym(), fs );
             assert( ep );
         }

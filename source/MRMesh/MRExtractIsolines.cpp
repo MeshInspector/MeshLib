@@ -702,9 +702,9 @@ FaceBitSet getCrossedFaces( const MeshTopology & topology, const IsoLine & isoli
 {
     assert( isConsistentlyOriented( topology, isoline ) );
 
-    FaceBitSet res( topology.faceSize() );
+    FaceBitSet res;
     for ( int i = 0; i + 1 < isoline.size(); ++i )
-        res.set( topology.left( isoline[i].e ) );
+        res.autoResizeSet( topology.left( isoline[i].e ) );
     return res;
 }
 

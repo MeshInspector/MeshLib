@@ -270,10 +270,8 @@ UndirectedEdgeBitSet findSelfCollidingEdgesBS( const Polyline2& polyline )
     UndirectedEdgeBitSet res;
     for ( const auto& uu : uus )
     {
-        if ( const auto m = std::max( uu.aUndirEdge, uu.bUndirEdge ); m >= res.size() )
-            res.resize( m + 1 );
-        res.set( uu.aUndirEdge );
-        res.set( uu.bUndirEdge );
+        res.autoResizeSet( uu.aUndirEdge );
+        res.autoResizeSet( uu.bUndirEdge );
     }
     return res;
 }

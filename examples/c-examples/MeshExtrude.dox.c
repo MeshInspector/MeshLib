@@ -30,9 +30,8 @@ int main( void )
 
     // Select faces to extrude
     MR_FaceBitSet* facesToExtrude = MR_FaceBitSet_DefaultConstruct();
-    MR_FaceBitSet_resize( facesToExtrude, MR_MeshTopology_faceSize( MR_Mesh_Get_topology( mesh ) ), NULL );
-    MR_FaceBitSet_set_2( facesToExtrude, (MR_FaceId){1}, true );
-    MR_FaceBitSet_set_2( facesToExtrude, (MR_FaceId){2}, true );
+    MR_FaceBitSet_autoResizeSet_2( facesToExtrude, (MR_FaceId){1}, NULL );
+    MR_FaceBitSet_autoResizeSet_2( facesToExtrude, (MR_FaceId){2}, NULL );
 
     // Create duplicated verts on region boundary
     MR_makeDegenerateBandAroundRegion( mesh, facesToExtrude, NULL );

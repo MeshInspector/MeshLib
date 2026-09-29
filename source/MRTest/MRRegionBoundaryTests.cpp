@@ -12,8 +12,8 @@ namespace MR
 TEST(MRMesh, findLeftBoundary)
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
-    FaceBitSet faces( sphere.topology.faceSize() );
-    faces.set( 0_f );
+    FaceBitSet faces;
+    faces.autoResizeSet( 0_f );
     auto paths = findLeftBoundary( sphere.topology, faces );
     EXPECT_EQ( paths.size(), 1 );
     for ( const auto & path : paths )
@@ -29,8 +29,8 @@ TEST(MRMesh, findLeftBoundary)
 TEST( MRMesh, findRightBoundary )
 {
     Mesh sphere = makeUVSphere( 1, 8, 8 );
-    FaceBitSet faces( sphere.topology.faceSize() );
-    faces.set( 0_f );
+    FaceBitSet faces;
+    faces.autoResizeSet( 0_f );
     auto paths = findRightBoundary( sphere.topology, faces );
     EXPECT_EQ( paths.size(), 1 );
     for ( const auto& path : paths )

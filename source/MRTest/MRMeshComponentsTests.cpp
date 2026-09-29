@@ -55,7 +55,7 @@ TEST(MRMesh, getAllComponentsFaces)
     EXPECT_EQ( comps.offsets.front(), 0 );
     EXPECT_EQ( comps.offsets.back(), 12 );
     ASSERT_EQ( comps.faces.size(), 12 );
-    FaceBitSet all( mesh.topology.faceSize() );
+    FaceBitSet all;
     for ( RegionId i( 0 ); i < comps.offsets.backId(); ++i )
     {
         EXPECT_EQ( comps.offsets[i + 1] - comps.offsets[i], 2 );
@@ -63,7 +63,7 @@ TEST(MRMesh, getAllComponentsFaces)
         for ( int j = comps.offsets[i]; j < comps.offsets[i + 1]; ++j )
         {
             EXPECT_GT( dot( mesh.normal( comps.faces[j] ), n ), 0.99f );
-            all.set( comps.faces[j] );
+            all.autoResizeSet( comps.faces[j] );
         }
     }
     EXPECT_EQ( all.count(), 12 ); // every face exactly once

@@ -740,7 +740,7 @@ std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es
 {
     MR_TIMER;
     std::vector<EdgeLoop> res;
-    EdgeBitSet inRes( edgeSize() );
+    EdgeBitSet inRes;
     for ( auto e : es )
     {
         if ( inRes.test( e ) )
@@ -749,7 +749,7 @@ std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es
         for ( auto edge : leftRing( *this, e ) )
         {
             loop.push_back( edge );
-            inRes.set( edge );
+            inRes.autoResizeSet( edge );
         }
         res.push_back( std::move( loop ) );
     }
@@ -862,12 +862,8 @@ VertBitSet MeshTopology::getPathVertices( const EdgePath & path ) const
     VertBitSet res;
     for ( auto e : path )
     {
-        const auto o = org( e );
-        const auto d = dest( e );
-        if ( const auto m = std::max( o, d ); m >= res.size() )
-            res.resize( m + 1 );
-        res.set( o );
-        res.set( d );
+        res.autoResizeSet( org( e ) );
+        res.autoResizeSet( dest( e ) );
     }
     return res;
 }
@@ -1287,11 +1283,8 @@ VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new
 
     if ( region )
     {
-        assert( f1 < f2 );
-        if ( f2 >= region->size() )
-            region->resize( f2 + 1 );
-        region->set( f1 );
-        region->set( f2 );
+        region->autoResizeSet( f1 );
+        region->autoResizeSet( f2 );
     }
 
     setNewToOld( new2Old, { f1, f2 }, f );

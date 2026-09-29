@@ -343,12 +343,8 @@ VertBitSet PolylineTopology::getPathVertices( const EdgePath & path ) const
     VertBitSet res;
     for ( auto e : path )
     {
-        const auto o = org( e );
-        const auto d = dest( e );
-        if ( const auto m = std::max( o, d ); m >= res.size() )
-            res.resize( m + 1 );
-        res.set( o );
-        res.set( d );
+        res.autoResizeSet( org( e ) );
+        res.autoResizeSet( dest( e ) );
     }
     return res;
 }

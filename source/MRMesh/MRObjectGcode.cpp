@@ -227,7 +227,7 @@ void ObjectGcode::updateColors_()
             else
                 color = workColor;
         }
-        colors.resize( colors.size() + part.action.path.size(), color );
+        colors.autoResizeSet( VertId( colors.size() ), part.action.path.size(), color );
     }
     setVertsColorMap( colors );
 }

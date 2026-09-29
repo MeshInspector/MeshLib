@@ -29,8 +29,7 @@ else:
     # result, or drop it completely if that part of sphere1 is not in the result
     face_of_sphere1 = mrmeshpy.FaceId(793)
     one_face = mrmeshpy.FaceBitSet()
-    one_face.resize(sphere1.topology.faceSize())
-    one_face.set(face_of_sphere1)
+    one_face.autoResizeSet(face_of_sphere1)
     produced_faces = mapper.map(one_face, map_object.A)
     print(f"face {face_of_sphere1.get()} of sphere1 produced {produced_faces.count()} faces of the result")
 

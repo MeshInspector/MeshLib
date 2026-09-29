@@ -20,8 +20,8 @@ TEST(MRMesh, AABBTree)
     auto m = std::move( tree );
     assert( tree.nodes().empty() );
 
-    FaceBitSet fs( sphere.topology.faceSize() );
-    fs.set( 1_f );
+    FaceBitSet fs;
+    fs.autoResizeSet( 1_f );
     AABBTree smallerTree( { sphere, &fs } );
     EXPECT_EQ( smallerTree.nodes().size(), 1 );
 }

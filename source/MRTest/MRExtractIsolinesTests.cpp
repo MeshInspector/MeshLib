@@ -74,8 +74,8 @@ TEST( MRMesh, ExtractPlaneSections )
     }
 
     // make a hole in mesh to extract not closed contour
-    FaceBitSet fs( mesh.topology.faceSize() );
-    fs.set( 2_f );
+    FaceBitSet fs;
+    fs.autoResizeSet( 2_f );
     mesh.deleteFaces( fs );
     res = extractPlaneSections( mesh, plane );
     ASSERT_EQ( res.size(), 1 );
@@ -125,8 +125,8 @@ TEST( MRMesh, ExtractXYPlaneSections )
     EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel, nullptr, UseAABBTree::No ).size(), 8 );
     EXPECT_EQ( findTriangleSectionsByXYPlane( mesh, testLevel, nullptr, UseAABBTree::Yes ).size(), 8 );
 
-    FaceBitSet fs( mesh.topology.faceSize() );
-    fs.set( 5_f );
+    FaceBitSet fs;
+    fs.autoResizeSet( 5_f );
     fs.set( 2_f );
     res = testSection( { mesh, &fs }, testLevel );
     EXPECT_EQ( res.size(), 1 );

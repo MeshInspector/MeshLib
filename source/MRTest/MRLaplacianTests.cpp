@@ -10,8 +10,8 @@ TEST( MRMesh, Laplacian )
     Mesh sphere = makeUVSphere( 1, 8, 8 );
 
     {
-        VertBitSet vs( sphere.topology.vertSize() );
-        vs.set( 0_v );
+        VertBitSet vs;
+        vs.autoResizeSet( 0_v );
         Laplacian laplacian( sphere );
         laplacian.init( vs, EdgeWeights::Cotan );
         laplacian.apply();

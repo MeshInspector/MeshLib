@@ -91,11 +91,9 @@ VertBitSet findCloseVertices( const VertMap & smallestMap )
     {
         if ( const auto m = smallestMap[v]; m != v )
         {
-            if ( v >= res.size() )
-                res.resize( v + 1 );
-            res.set( v );
+            res.autoResizeSet( v );
             assert( m < v );
-            res.set( m );
+            res.autoResizeSet( m );
         }
     }
     return res;
@@ -163,10 +161,8 @@ EdgeBitSet findTwinEdges( const std::vector<EdgePair> & pairs )
     EdgeBitSet res;
     for ( const auto & [e1, e2] : pairs )
     {
-        if ( const auto m = std::max( e1, e2 ); m >= res.size() )
-            res.resize( m + 1 );
-        res.set( e1 );
-        res.set( e2 );
+        res.autoResizeSet( e1 );
+        res.autoResizeSet( e2 );
     }
 
     return res;
@@ -183,12 +179,8 @@ UndirectedEdgeBitSet findTwinUndirectedEdges( const std::vector<EdgePair> & pair
     UndirectedEdgeBitSet res;
     for ( const auto & [e1, e2] : pairs )
     {
-        const auto u1 = e1.undirected();
-        const auto u2 = e2.undirected();
-        if ( const auto m = std::max( u1, u2 ); m >= res.size() )
-            res.resize( m + 1 );
-        res.set( u1 );
-        res.set( u2 );
+        res.autoResizeSet( e1.undirected() );
+        res.autoResizeSet( e2.undirected() );
     }
 
     return res;

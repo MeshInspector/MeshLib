@@ -139,15 +139,15 @@ static std::pair<GroupsInfo, MinShiftsMatrix> convergeShiftsMatrix( MinShiftsMat
         if ( !agId )
         {
             agId = GId( resG.groups.size() );
-            resG.groups.emplace_back( sm.numObjects() );
+            resG.groups.emplace_back();
         }
-        resG.groups[agId].set( a );
+        resG.groups[agId].autoResizeSet( a );
         for ( ObjId b( a + 1 ); b < sm.numObjects(); ++b )
         {
             if ( !uf.united( a, b ) )
                 continue;
             resG.o2gId[b] = agId;
-            resG.groups[agId].set( b );
+            resG.groups[agId].autoResizeSet( b );
         }
     }
 

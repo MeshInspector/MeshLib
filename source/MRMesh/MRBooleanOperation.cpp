@@ -293,10 +293,10 @@ FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) co
 {
     if ( maps[int( obj )].cut2newFaces.empty() )
         return {};
-    FaceBitSet afterCutBS( maps[int( obj )].cut2origin.size() );
+    FaceBitSet afterCutBS;
     for ( int i = 0; i < maps[int( obj )].cut2origin.size(); ++i )
         if ( oldBS.test( maps[int( obj )].cut2origin[FaceId( i )] ) )
-            afterCutBS.set( FaceId( i ) );
+            afterCutBS.autoResizeSet( FaceId( i ) );
 
     FaceBitSet res;
     for ( auto f : afterCutBS )

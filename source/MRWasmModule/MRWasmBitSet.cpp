@@ -4,7 +4,6 @@
 
 #include <emscripten/bind.h>
 
-#include <algorithm>
 #include <cstdint>
 #include <vector>
 
@@ -33,10 +32,8 @@ BS bitSetFromIndices( Wasm::IndicesInputVal arr )
         view.call<void>( "set", arr );
     }
     BS bs;
-    if ( !idx.empty() )
-        bs.resize( size_t( *std::max_element( idx.begin(), idx.end() ) ) + 1 );
     for ( uint32_t i : idx )
-        bs.set( typename BS::IndexType( i ) );
+        bs.autoResizeSet( typename BS::IndexType( i ) );
     return bs;
 }
 

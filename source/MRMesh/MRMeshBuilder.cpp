@@ -232,7 +232,7 @@ static size_t addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, c
     // we will try to add these triangles in the current pass
     FaceBitSet active = getLocalRegion( settings.region, t.size() );
     // these are triangles that cannot be added even after other triangles
-    FaceBitSet bad( active.size() );
+    FaceBitSet bad;
     size_t triAddedTotal = 0;
     for (;;)
     {
@@ -244,7 +244,7 @@ static size_t addTrianglesSeqCore( MeshTopology& res, const Triangulation & t, c
                 continue;
             active.reset( f );
             if ( x != AddFaceResult::Success )
-                bad.set( f );
+                bad.autoResizeSet( f );
             else
                 ++triAddedOnThisPass;
         }
@@ -287,7 +287,7 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
     // we will try to add these triangles in the current pass
     FaceBitSet active = getLocalRegion( settings.region, faces.size() );
     // these are faces that cannot be added even after other faces
-    FaceBitSet bad( active.size() );
+    FaceBitSet bad;
     for (;;)
     {
         size_t faceAddedOnThisPass = 0;
@@ -299,7 +299,7 @@ MeshTopology fromFaceSoup( const std::vector<VertId> & verts, const Vector<VertS
                 continue;
             active.reset( f );
             if ( x != AddFaceResult::Success )
-                bad.set( f );
+                bad.autoResizeSet( f );
             else
                 ++faceAddedOnThisPass;
         }
@@ -490,13 +490,14 @@ static MeshTopology fromTrianglesPar( const Triangulation & t, const BuildSettin
                     VertId( vs[1] % vertsInPart ),
                     VertId( vs[2] % vertsInPart )
                 };
+                FaceId fp{ partTriangulation.size() };
                 partTriangulation.push_back( ThreeVertIds{ v[0], v[1], v[2] } );
                 part.fmap.push_back( f );
                 part.vmap[ v[0] ] = vs[0];
                 part.vmap[ v[1] ] = vs[1];
                 part.vmap[ v[2] ] = vs[2];
+                part.rem.autoResizeSet( fp );
             }
-            part.rem.resize( partTriangulation.size(), true );
             part.topology = fromTrianglesSeq( partTriangulation, partSettings );
             parts[myPartId] = std::move( part );
         }

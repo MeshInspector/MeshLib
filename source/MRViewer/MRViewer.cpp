@@ -1257,6 +1257,7 @@ Viewer::Viewer() :
     {
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
+        viewer->mouseController().setZoomInverted( false );
         viewer->experimentalFeatures = false;
         viewer->spaceMouseController().setParameters( SpaceMouse::Parameters{} );
         viewer->touchpadController().setParameters( TouchpadParameters{} );

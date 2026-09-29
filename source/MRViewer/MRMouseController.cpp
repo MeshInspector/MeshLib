@@ -398,6 +398,8 @@ bool MouseController::mouseScroll_( float delta )
     auto ps = viewport.unprojectFromViewportSpace( viewportPoint );
     auto pc = viewport.unprojectFromClipSpace( Vector3f( 0.f, 0.f, viewportPoint.z * 2.f - 1.f ) );
 
+    if ( zoomInverted_ )
+        delta = -delta;
     if ( fabs( delta ) > 4 )  delta = delta / fabs( delta ) * 4;
     float  mult = pow( 0.95f, fabs( delta ) * delta );
     constexpr float min_angle = 0.001f;

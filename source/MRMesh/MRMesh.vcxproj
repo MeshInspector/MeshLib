@@ -123,6 +123,7 @@
     <ClInclude Include="MRConfig.h" />
     <ClInclude Include="MRContour.h" />
     <ClInclude Include="MRContoursCut.h" />
+    <ClInclude Include="MRCutAroundEdgePaths.h" />
     <ClInclude Include="MRContoursSeparation.h" />
     <ClInclude Include="MRContoursStitch.h" />
     <ClInclude Include="MRConvexHull.h" />
@@ -534,6 +535,7 @@
     <ClCompile Include="MRConeObject.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />
+    <ClCompile Include="MRCutAroundEdgePaths.cpp" />
     <ClCompile Include="MRContoursSeparation.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />

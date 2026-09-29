@@ -2,8 +2,6 @@
 Language: Cpp
 ColumnLimit: 0
 IndentWidth: 4
-SortIncludes: Never
-FixNamespaceComments: false
 
 AlignAfterOpenBracket: false
 IndentCaseLabels: false
@@ -41,7 +39,7 @@ SpacesInParensOptions:
   Other: true
   InEmptyParentheses: false
   InConditionalStatements: true
-  InCStyleCasts: true
+  InCStyleCasts: false
 SpaceAfterCStyleCast: false
 SpaceInEmptyBlock: false
 SpaceBeforeCpp11BracedList: false
@@ -54,5 +52,5 @@ PointerAlignment: Left
 ReferenceAlignment: Left
 
 AllowShortBlocksOnASingleLine: Never
-AllowShortFunctionsOnASingleLine: Inline
+AllowShortFunctionsOnASingleLine: All
 AllowShortLambdasOnASingleLine: Inline

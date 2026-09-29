@@ -43,8 +43,8 @@ int main()
     // map one particular face of sphere1 forward: the cut can split it in several faces of the
     // result, or drop it completely if that part of sphere1 is not in the result
     MR::FaceId faceOfSphere1( 793 );
-    MR::FaceBitSet oneFace;
-    oneFace.autoResizeSet( faceOfSphere1 );
+    MR::FaceBitSet oneFace( sphere1.topology.faceSize() );
+    oneFace.set( faceOfSphere1 );
     MR::FaceBitSet producedFaces = mapper.map( oneFace, MapObject::A );
     std::cout << "face " << faceOfSphere1 << " of sphere1 produced " << producedFaces.count() << " faces of the result:";
     for ( MR::FaceId f : producedFaces )

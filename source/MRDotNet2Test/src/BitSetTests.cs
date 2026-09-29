@@ -38,11 +38,13 @@ namespace MRTest
         }
 
         [Test]
-        public void TestAutoResize()
+        public void TestResize()
         {
             var a = new BitSet();
-            a.autoResizeSet(6);
+            a.resize(7);
+            a.set(6);
             Assert.That( a.size() == 7 );
+            Assert.That( a.test( 6 ) );
         }
 
         [Test]

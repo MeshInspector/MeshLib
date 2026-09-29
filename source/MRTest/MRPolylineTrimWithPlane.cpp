@@ -22,8 +22,8 @@ TEST( MRMesh, ExtractSectionsFromPolyline )
         EXPECT_EQ( positiveEdgesIn, positiveEdgesOut );
     };
 
-    UndirectedEdgeBitSet bsOne;
-    bsOne.autoResizeSet( 0_ue );
+    UndirectedEdgeBitSet bsOne( 1 );
+    bsOne.set( 0_ue );
 
     // eps == 0.f
     std::vector<std::vector<std::vector<EdgeSegment>>> expectedEdgeSegments( 3 );
@@ -79,15 +79,15 @@ TEST( MRMesh, SubdividePolylineWithPlane )
     UndirectedEdgeBitSet topUEdges = subdivideWithPlane( polyline, plane, &newPositiveEdges );
 
 
-    EdgeBitSet expectedNewPositiveEdges;
-    expectedNewPositiveEdges.autoResizeSet( 9_e );
+    EdgeBitSet expectedNewPositiveEdges( 10 );
+    expectedNewPositiveEdges.set( 9_e );
     expectedNewPositiveEdges.set( 2_e );
 
     EXPECT_EQ( newPositiveEdges, expectedNewPositiveEdges );
 
 
-    UndirectedEdgeBitSet expectedTopUEdges;
-    expectedTopUEdges.autoResizeSet( 4_ue );
+    UndirectedEdgeBitSet expectedTopUEdges( 5 );
+    expectedTopUEdges.set( 4_ue );
     expectedTopUEdges.set( 3_ue );
     expectedTopUEdges.set( 2_ue );
     expectedTopUEdges.set( 1_ue );

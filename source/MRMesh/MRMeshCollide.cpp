@@ -355,11 +355,11 @@ Expected<FaceBitSet> findSelfCollidingTrianglesBS( const MeshPart& mp, ProgressC
     if ( !ffs.has_value() )
         return unexpected( ffs.error() );
 
-    FaceBitSet res;
+    FaceBitSet res( mp.mesh.topology.faceSize() );
     for ( const auto & ff : ffs.value() )
     {
-        res.autoResizeSet( ff.aFace );
-        res.autoResizeSet( ff.bFace );
+        res.set( ff.aFace );
+        res.set( ff.bFace );
     }
 
     return res;

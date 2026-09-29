@@ -1288,7 +1288,10 @@ void Node::setFilamentFaceColor_( ThreeMFLoader& loader, FaceId f, const std::st
         return;
     if ( loader.filamentColors_.empty() )
         return;
-    fColorMap.autoResizeSet( f, loader.filamentColors_[0] );
+    if ( f < fColorMap.size() )
+        fColorMap[f] = loader.filamentColors_[0];
+    else
+        fColorMap.resize( f + 1, loader.filamentColors_[0] );
 
     // taken from https://github.com/bambulab/BambuStudio/issues/1892#issuecomment-1628513224
     static const HashMap<std::string, int> fId2seq

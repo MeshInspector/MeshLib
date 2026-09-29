@@ -10,7 +10,12 @@ UndirectedEdgeBitSet mapEdges( const WholeEdgeMap & map, const UndirectedEdgeBit
     UndirectedEdgeBitSet res;
     for ( auto b : src )
         if ( auto mapped = map[b] )
-            res.autoResizeSet( mapped.undirected() );
+        {
+            const auto ue = mapped.undirected();
+            if ( ue >= res.size() )
+                res.resize( ue + 1 );
+            res.set( ue );
+        }
     return res;
 }
 
@@ -19,7 +24,12 @@ UndirectedEdgeBitSet mapEdges( const WholeEdgeHashMap & map, const UndirectedEdg
     UndirectedEdgeBitSet res;
     for ( auto b : src )
         if ( auto mapped = getAt( map, b ) )
-            res.autoResizeSet( mapped.undirected() );
+        {
+            const auto ue = mapped.undirected();
+            if ( ue >= res.size() )
+                res.resize( ue + 1 );
+            res.set( ue );
+        }
     return res;
 }
 

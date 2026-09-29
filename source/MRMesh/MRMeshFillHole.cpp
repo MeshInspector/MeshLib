@@ -381,7 +381,11 @@ void stitchHoles( Mesh & mesh, EdgeId a0, EdgeId b0, const StitchHolesParams& pa
     {
         auto res = mesh.topology.addFaceId();
         if ( params.outNewFaces )
-            params.outNewFaces->autoResizeSet( res );
+        {
+            if ( res >= params.outNewFaces->size() )
+                params.outNewFaces->resize( res + 1 );
+            params.outNewFaces->set( res );
+        }
         return res;
     };
     if ( mesh.topology.left( a0 ) || mesh.topology.left( b0 ) )
@@ -571,7 +575,11 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
             {
                 auto newFaceId = mesh.topology.addFaceId();
                 if ( outNewFaces )
-                    outNewFaces->autoResizeSet( newFaceId );
+                {
+                    if ( newFaceId >= outNewFaces->size() )
+                        outNewFaces->resize( newFaceId + 1 );
+                    outNewFaces->set( newFaceId );
+                }
                 mesh.topology.setLeft( a0, newFaceId );
             }
         }
@@ -612,7 +620,11 @@ void executeHoleFillPlan( Mesh & mesh, EdgeId a0, HoleFillPlan & plan, FaceBitSe
                 assert( mesh.topology.isLeftTri( e ) );
                 auto f = mesh.topology.addFaceId();
                 if ( outNewFaces )
-                    outNewFaces->autoResizeSet( f );
+                {
+                    if ( f >= outNewFaces->size() )
+                        outNewFaces->resize( f + 1 );
+                    outNewFaces->set( f );
+                }
                 mesh.topology.setLeft( e, f );
             }
         }
@@ -1013,7 +1025,11 @@ VertId fillHoleTrivially( Mesh& mesh, EdgeId a, FaceBitSet * outNewFaces /*= nul
     {
         auto res = mesh.topology.addFaceId();
         if ( outNewFaces )
-            outNewFaces->autoResizeSet( res );
+        {
+            if ( res >= outNewFaces->size() )
+                outNewFaces->resize( res + 1 );
+            outNewFaces->set( res );
+        }
         return res;
     };
 
@@ -1063,7 +1079,11 @@ EdgeId extendHole( Mesh& mesh, EdgeId a, std::function<Vector3f(const Vector3f &
     {
         auto res = mesh.topology.addFaceId();
         if ( outNewFaces )
-            outNewFaces->autoResizeSet( res );
+        {
+            if ( res >= outNewFaces->size() )
+                outNewFaces->resize( res + 1 );
+            outNewFaces->set( res );
+        }
         return res;
     };
 
@@ -1190,7 +1210,11 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
         topology.setLeft( a, f );
         ++res.newFaces;
         if ( outNewFaces )
-            outNewFaces->autoResizeSet( f );
+        {
+            if ( f >= outNewFaces->size() )
+                outNewFaces->resize( f + 1 );
+            outNewFaces->set( f );
+        }
         assert( !res.na || ( !swapped && topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) ) );
         assert( !res.nb || (  swapped && topology.fromSameOriginRing( a, res.nb ) && !topology.left( res.nb ) ) );
         return res;
@@ -1236,7 +1260,11 @@ MakeBridgeResult makeQuadBridge( MeshTopology & topology, EdgeId a, EdgeId b, Fa
     assert( res.na && topology.fromSameOriginRing( a, res.na ) && !topology.left( res.na ) );
     assert( res.nb && topology.fromSameOriginRing( b, res.nb ) && !topology.left( res.nb ) );
     if ( outNewFaces )
-        outNewFaces->autoResizeSet( fa );
+    {
+        if ( fa >= outNewFaces->size() )
+            outNewFaces->resize( fa + 1 );
+        outNewFaces->set( fa );
+    }
     return res;
 }
 
@@ -1254,7 +1282,11 @@ void splitQuad( MeshTopology & topology, EdgeId a, FaceBitSet * outNewFaces )
     auto f = topology.addFaceId();
     topology.setLeft( d.sym(), f );
     if ( outNewFaces )
-        outNewFaces->autoResizeSet( f );
+    {
+        if ( f >= outNewFaces->size() )
+            outNewFaces->resize( f + 1 );
+        outNewFaces->set( f );
+    }
 }
 
 MakeBridgeResult makeBridge( MeshTopology & topology, EdgeId a, EdgeId b, FaceBitSet * outNewFaces )

@@ -598,7 +598,7 @@ int eliminateDegree3Vertices( MeshTopology& topology, VertBitSet & region, FaceB
             region.reset( v );
             for ( auto e : orgRing( topology, e0 ) )
                 if ( auto vn = topology.dest( e ); region.test( vn ) )
-                    candidates.autoResizeSet( vn );
+                    candidates.set( vn );
             [[maybe_unused]] auto ep = eliminateDegree3Dest( topology, e0.sym(), fs );
             assert( ep );
         }
@@ -755,7 +755,9 @@ void fixMeshCreases( Mesh& mesh, const FixCreasesParams& params )
                     auto f = left ? mesh.topology.left( e ) : mesh.topology.right( e );
                     if ( !f )
                         return;
-                    fixFacesBuffer.autoResizeSet( f ); // as far as we triangulate holes - new faces might appear, so we need to resize
+                    if ( f >= fixFacesBuffer.size() )
+                        fixFacesBuffer.resize( f + 1 ); // as far as we triangulate holes - new faces might appear, so we need to resize
+                    fixFacesBuffer.set( f );
                     e = left ? mesh.topology.next( e ) : mesh.topology.prev( e );
                     if ( e == ce )
                         return; // full cycle

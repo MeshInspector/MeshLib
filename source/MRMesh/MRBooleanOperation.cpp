@@ -293,17 +293,21 @@ FaceBitSet BooleanResultMapper::map( const FaceBitSet& oldBS, MapObject obj ) co
 {
     if ( maps[int( obj )].cut2newFaces.empty() )
         return {};
-    FaceBitSet afterCutBS;
+    FaceBitSet afterCutBS( maps[int( obj )].cut2origin.size() );
     for ( int i = 0; i < maps[int( obj )].cut2origin.size(); ++i )
         if ( oldBS.test( maps[int( obj )].cut2origin[FaceId( i )] ) )
-            afterCutBS.autoResizeSet( FaceId( i ) );
+            afterCutBS.set( FaceId( i ) );
 
     FaceBitSet res;
     for ( auto f : afterCutBS )
     {
         auto fn = maps[int( obj )].cut2newFaces[f];
         if ( fn.valid() )
-            res.autoResizeSet( fn );
+        {
+            if ( fn >= res.size() )
+                res.resize( fn + 1 );
+            res.set( fn );
+        }
     }
     return res;
 }
@@ -317,7 +321,11 @@ EdgeBitSet BooleanResultMapper::map( const EdgeBitSet& oldBS, MapObject obj ) co
     {
         auto en = mapEdge( maps[int( obj )].old2newEdges, e );
         if ( en.valid() )
-            res.autoResizeSet( en );
+        {
+            if ( en >= res.size() )
+                res.resize( en + 1 );
+            res.set( en );
+        }
     }
     return res;
 }
@@ -331,7 +339,11 @@ UndirectedEdgeBitSet BooleanResultMapper::map( const UndirectedEdgeBitSet& oldBS
     {
         auto en = mapEdge( maps[int( obj )].old2newEdges, e );
         if ( en.valid() )
-            res.autoResizeSet( en );
+        {
+            if ( en >= res.size() )
+                res.resize( en + 1 );
+            res.set( en );
+        }
     }
     return res;
 }
@@ -345,7 +357,11 @@ VertBitSet BooleanResultMapper::map( const VertBitSet& oldBS, MapObject obj ) co
     {
         auto vn = maps[int( obj )].old2newVerts[v];
         if ( vn.valid() )
-            res.autoResizeSet( vn );
+        {
+            if ( vn >= res.size() )
+                res.resize( vn + 1 );
+            res.set( vn );
+        }
     }
     return res;
 }
@@ -361,7 +377,11 @@ FaceBitSet BooleanResultMapper::newFaces() const
             if ( newF == map.cut2origin[newF] || !map.cut2origin[newF].valid() )
                 continue;
             if ( auto resF = map.cut2newFaces[newF] )
-                res.autoResizeSet( resF );
+            {
+                if ( resF >= res.size() )
+                    res.resize( resF + 1 );
+                res.set( resF );
+            }
         }
     }
     return res;

@@ -17,7 +17,11 @@ void straightenBoundary( Mesh & mesh, EdgeId bd, float minNeiNormalsDot, float m
     {
         auto nf = mesh.topology.addFaceId();
         if ( newFaces )
-            newFaces->autoResizeSet( nf );
+        {
+            if ( nf >= newFaces->size() )
+                newFaces->resize( nf + 1 );
+            newFaces->set( nf );
+        }
         return nf;
     };
 

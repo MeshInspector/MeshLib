@@ -17,7 +17,11 @@ void mapNewToOldVector(
 {
     for ( Id<IndexT> newId( 0 ); newId < newToOld.size(); ++newId )
         if ( auto oldId = newToOld[newId] )
-            newData.autoResizeSet( newId, oldData[oldId] );
+        {
+            if ( newId >= newData.size() )
+                newData.resize( newId + 1 );
+            newData[newId] = oldData[oldId];
+        }
 }
 
 // oldData - the data that needs to be compared
@@ -31,7 +35,11 @@ void mapOldToNewVector(
 {
     for ( Id<IndexT> oldId( 0 ); oldId < newToOld.size(); ++oldId )
         if ( auto newId = newToOld[oldId] )
-            newData.autoResizeSet( newId, oldData[oldId] );
+        {
+            if ( newId >= newData.size() )
+                newData.resize( newId + 1 );
+            newData[newId] = oldData[oldId];
+        }
 }
 
 }

@@ -75,8 +75,8 @@ void PolylineTopology::vertResizeWithReserve( size_t newSize )
 {
     if ( edgePerVertex_.size() >= newSize )
         return;
-    edgePerVertex_.resizeWithReserve( newSize );
-    validVerts_.resizeWithReserve( newSize );
+    edgePerVertex_.resize( newSize );
+    validVerts_.resize( newSize );
 }
 
 EdgeId PolylineTopology::makeEdge()
@@ -343,8 +343,12 @@ VertBitSet PolylineTopology::getPathVertices( const EdgePath & path ) const
     VertBitSet res;
     for ( auto e : path )
     {
-        res.autoResizeSet( org( e ) );
-        res.autoResizeSet( dest( e ) );
+        const auto o = org( e );
+        const auto d = dest( e );
+        if ( const auto m = std::max( o, d ); m >= res.size() )
+            res.resize( m + 1 );
+        res.set( o );
+        res.set( d );
     }
     return res;
 }

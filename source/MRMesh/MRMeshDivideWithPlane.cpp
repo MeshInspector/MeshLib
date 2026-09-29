@@ -41,27 +41,47 @@ void divideMeshWithPlane( ObjectMeshData& data, const Plane3f& plane, const Divi
             const auto vd = mesh.topology.dest( oldEdge );
             const auto newVertId = mesh.topology.dest( newEdge );
             if ( updateUV )
-                data.uvCoordinates.autoResizeSet( newVertId, lerp( data.uvCoordinates[vo], data.uvCoordinates[vd], ratio ) );
+            {
+                if ( newVertId >= data.uvCoordinates.size() )
+                    data.uvCoordinates.resize( newVertId + 1 );
+                data.uvCoordinates[newVertId] = lerp( data.uvCoordinates[vo], data.uvCoordinates[vd], ratio );
+            }
 
             if ( updateVertColor )
-                data.vertColors.autoResizeSet( newVertId, lerp( data.vertColors[vo], data.vertColors[vd], ratio ) );
+            {
+                if ( newVertId >= data.vertColors.size() )
+                    data.vertColors.resize( newVertId + 1 );
+                data.vertColors[newVertId] = lerp( data.vertColors[vo], data.vertColors[vd], ratio );
+            }
 
             if ( updateEdgeSelection )
             {
                 if ( data.selectedEdges.test( oldEdge.undirected() ) )
                 {
-                    newSelectEdge.autoResizeSet( newEdge.undirected(), true );
+                    if ( newEdge.undirected() >= newSelectEdge.size() )
+                        newSelectEdge.resize( newEdge.undirected() + 1 );
+                    newSelectEdge.set( newEdge.undirected() );
                     if ( params.otherPart )
-                        otherNewSelectEdge.autoResizeSet( oldEdge.undirected(), true );
+                    {
+                        if ( oldEdge.undirected() >= otherNewSelectEdge.size() )
+                            otherNewSelectEdge.resize( oldEdge.undirected() + 1 );
+                        otherNewSelectEdge.set( oldEdge.undirected() );
+                    }
                 }
             }
             if ( updateCreases )
             {
                 if ( data.creases.test( oldEdge.undirected() ) )
                 {
-                    newCreases.autoResizeSet( newEdge.undirected(), true );
+                    if ( newEdge.undirected() >= newCreases.size() )
+                        newCreases.resize( newEdge.undirected() + 1 );
+                    newCreases.set( newEdge.undirected() );
                     if ( params.otherPart )
-                        otherNewCreases.autoResizeSet( oldEdge.undirected(), true );
+                    {
+                        if ( oldEdge.undirected() >= otherNewCreases.size() )
+                            otherNewCreases.resize( oldEdge.undirected() + 1 );
+                        otherNewCreases.set( oldEdge.undirected() );
+                    }
                 }
             }
         };
@@ -128,7 +148,11 @@ void divideMeshWithPlane( ObjectMeshData& data, const Plane3f& plane, const Divi
     auto updateFaces = [] ( auto& faceAttribs, const auto& new2oldMap )
     {
         for ( auto [newId, oldId] : new2oldMap )
-            faceAttribs.autoResizeSet( newId, faceAttribs[oldId] );
+        {
+            if ( newId >= faceAttribs.size() )
+                faceAttribs.resize( newId + 1 );
+            faceAttribs[newId] = faceAttribs[oldId];
+        }
     };
     if ( !data.faceColors.empty() )
     {

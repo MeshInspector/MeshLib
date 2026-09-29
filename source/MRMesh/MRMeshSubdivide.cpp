@@ -150,27 +150,54 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
         const auto e1 = mesh.splitEdge( e, mesh.edgeCenter( e ), settings.region );
         const auto newVertId = mesh.topology.org( e );
         if ( settings.curvaturePriority > 0 )
-            ns.autoResizeSet( newVertId, ( ns[mesh.topology.org( e1 )] + ns[mesh.topology.dest( e )] ).normalized() );
+        {
+            if ( newVertId >= ns.size() )
+                ns.resize( newVertId + 1 );
+            ns[newVertId] = ( ns[mesh.topology.org( e1 )] + ns[mesh.topology.dest( e )] ).normalized();
+        }
 
         // in smooth mode remember all new inner vertices to reposition them at the end
         if ( ( settings.smoothMode || settings.projectOnOriginalMesh ) && mesh.topology.left( e ) && mesh.topology.right( e ) )
-            newVerts.autoResizeSet( newVertId );
+        {
+            if ( newVertId >= newVerts.size() )
+                newVerts.resize( newVertId + 1 );
+            newVerts.set( newVertId );
+        }
 
         if ( settings.newVerts )
-            settings.newVerts->autoResizeSet( newVertId );
+        {
+            if ( newVertId >= settings.newVerts->size() )
+                settings.newVerts->resize( newVertId + 1 );
+            settings.newVerts->set( newVertId );
+        }
         if ( settings.onVertCreated )
             settings.onVertCreated( newVertId );
         if ( settings.onEdgeSplit )
             settings.onEdgeSplit( e1, e );
         if ( settings.maintainRegion )
         {
-            if ( contains( *settings.maintainRegion, mesh.topology.left( e ) ) )
-                settings.maintainRegion->autoResizeSet( mesh.topology.left( e1 ) );
-            if ( contains( *settings.maintainRegion, mesh.topology.right( e ) ) )
-                settings.maintainRegion->autoResizeSet( mesh.topology.right( e1 ) );
+            auto & maintainRegion = *settings.maintainRegion;
+            if ( contains( maintainRegion, mesh.topology.left( e ) ) )
+            {
+                const auto f = mesh.topology.left( e1 );
+                if ( f >= maintainRegion.size() )
+                    maintainRegion.resize( f + 1 );
+                maintainRegion.set( f );
+            }
+            if ( contains( maintainRegion, mesh.topology.right( e ) ) )
+            {
+                const auto f = mesh.topology.right( e1 );
+                if ( f >= maintainRegion.size() )
+                    maintainRegion.resize( f + 1 );
+                maintainRegion.set( f );
+            }
         }
         if ( settings.notFlippable && settings.notFlippable->test( e.undirected() ) )
-            settings.notFlippable->autoResizeSet( e1.undirected() );
+        {
+            if ( e1.undirected() >= settings.notFlippable->size() )
+                settings.notFlippable->resize( e1.undirected() + 1 );
+            settings.notFlippable->set( e1.undirected() );
+        }
         ++splitsDone;
         makeDeloneOriginRing( mesh, e, {
             .maxDeviationAfterFlip = settings.maxDeviationAfterFlip,
@@ -190,13 +217,17 @@ int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
                 if ( !aboveMaxTriAspectRatio.empty() )
                 {
                     const bool v = a > settings.maxTriAspectRatio;
-                    if ( v != aboveMaxTriAspectRatio.autoResizeTestSet( f, v ) )
+                    if ( f >= aboveMaxTriAspectRatio.size() )
+                        aboveMaxTriAspectRatio.resize( f + 1 );
+                    if ( v != aboveMaxTriAspectRatio.test_set( f, v ) )
                         v ? ++numAboveMax : --numAboveMax;
                 }
                 if ( !aboveMaxSplittableTriAspectRatio.empty() )
                 {
                     const bool v = a > settings.maxSplittableTriAspectRatio;
-                    if ( v != aboveMaxSplittableTriAspectRatio.autoResizeTestSet( f, v ) && !v )
+                    if ( f >= aboveMaxSplittableTriAspectRatio.size() )
+                        aboveMaxSplittableTriAspectRatio.resize( f + 1 );
+                    if ( v != aboveMaxSplittableTriAspectRatio.test_set( f, v ) && !v )
                         if ( auto x = getQueueElem( mesh.topology.prev( ei.sym() ) ) )
                             queue.push( std::move( x ) );
                 }
@@ -315,10 +346,18 @@ int subdivideMesh( ObjectMeshData & data, const SubdivideSettings & settings )
         // notFlippable is updated inside subdivideMesh( *data.mesh, subs1 )
 
         if ( data.selectedEdges.test( e.undirected() ) )
-            data.selectedEdges.autoResizeSet( e1.undirected() );
+        {
+            if ( e1.undirected() >= data.selectedEdges.size() )
+                data.selectedEdges.resize( e1.undirected() + 1 );
+            data.selectedEdges.set( e1.undirected() );
+        }
 
         if ( data.creases.test( e.undirected() ) )
-            data.creases.autoResizeSet( e1.undirected() );
+        {
+            if ( e1.undirected() >= data.creases.size() )
+                data.creases.resize( e1.undirected() + 1 );
+            data.creases.set( e1.undirected() );
+        }
 
         updateAttributesCb( e1, e );
         if ( settings.onEdgeSplit )

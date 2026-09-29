@@ -109,10 +109,18 @@ static VertBitSet subdivideFillingNicely( Mesh& mesh, FaceBitSet& newFaces,
             assert( newV == mesh.topology.dest( e1 ) );
 
             if ( uvCoords )
-                uvCoords->autoResizeSet( newV, ( ( *uvCoords )[org] + ( *uvCoords )[dest] ) * 0.5f );
+            {
+                if ( newV >= uvCoords->size() )
+                    uvCoords->resize( newV + 1 );
+                ( *uvCoords )[newV] = ( ( *uvCoords )[org] + ( *uvCoords )[dest] ) * 0.5f;
+            }
 
             if ( colorMap )
-                colorMap->autoResizeSet( newV, ( *colorMap )[org] + ( ( *colorMap )[dest] - ( *colorMap )[org] ) * 0.5f );
+            {
+                if ( newV >= colorMap->size() )
+                    colorMap->resize( newV + 1 );
+                ( *colorMap )[newV] = ( *colorMap )[org] + ( ( *colorMap )[dest] - ( *colorMap )[org] ) * 0.5f;
+            }
 
             if ( faceColors )
             {
@@ -120,13 +128,17 @@ static VertBitSet subdivideFillingNicely( Mesh& mesh, FaceBitSet& newFaces,
                 {
                     auto l1 = mesh.topology.left( e1 );
                     assert( l1 && l < l1 );
-                    faceColors->autoResizeSet( l1, ( *faceColors )[l] );
+                    if ( l1 >= faceColors->size() )
+                        faceColors->resize( l1 + 1 );
+                    ( *faceColors )[l1] = ( *faceColors )[l];
                 }
                 if ( auto r = mesh.topology.right( e ) )
                 {
                     auto r1 = mesh.topology.right( e1 );
                     assert( r1 && r < r1 );
-                    faceColors->autoResizeSet( r1, ( *faceColors )[r] );
+                    if ( r1 >= faceColors->size() )
+                        faceColors->resize( r1 + 1 );
+                    ( *faceColors )[r1] = ( *faceColors )[r];
                 }
             }
         };
@@ -154,9 +166,15 @@ FaceBitSet fillHoleNicely( Mesh & mesh,
     const auto fsz = mesh.topology.faceSize();
     if ( fsz0 == fsz )
         return newFaces;
-    newFaces.autoResizeSet( FaceId{ fsz0 }, fsz - fsz0 );
+    newFaces.resize( fsz );
+    newFaces.set( FaceId{ fsz0 }, fsz - fsz0, true );
     if ( faceColors )
-        faceColors->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, newFaceColor );
+    {
+        if ( faceColors->size() < fsz )
+            faceColors->resize( fsz );
+        for ( FaceId f{ fsz0 }; f < fsz; ++f )
+            ( *faceColors )[f] = newFaceColor;
+    }
 
     if ( !settings.triangulateOnly )
     {
@@ -190,9 +208,15 @@ FaceBitSet stitchHolesNicely( Mesh& mesh, EdgeId hole0Edge, EdgeId hole1Edge, co
     const auto fsz = mesh.topology.faceSize();
     if ( fsz0 == fsz )
         return newFaces;
-    newFaces.autoResizeSet( FaceId{ fsz0 }, fsz - fsz0 );
+    newFaces.resize( fsz );
+    newFaces.set( FaceId{ fsz0 }, fsz - fsz0, true );
     if ( faceColors )
-        faceColors->autoResizeSet( FaceId{ fsz0 }, fsz - fsz0, newFaceColor );
+    {
+        if ( faceColors->size() < fsz )
+            faceColors->resize( fsz );
+        for ( FaceId f{ fsz0 }; f < fsz; ++f )
+            ( *faceColors )[f] = newFaceColor;
+    }
 
     if ( !settings.triangulateOnly )
     {

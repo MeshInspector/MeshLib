@@ -111,12 +111,16 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours, Vector
     // `contours` only needs to outlive construction (every caller passes its own input by reference)
     p.addInputPoint = [&contours, pts, toInt] ( VertId v, int contourId, int pointId )
     {
-        pts->autoResizeSet( v, toInt( contours[contourId][pointId] ) );
+        if ( v >= pts->size() )
+            pts->resize( v + 1 );
+        ( *pts )[v] = toInt( contours[contourId][pointId] );
     };
     p.addIntersectionPoint = [pts] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
-            { PreciseVertCoords2{ a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] }, { d, ( *pts )[d] } } ) );
+        if ( v >= pts->size() )
+            pts->resize( v + 1 );
+        ( *pts )[v] = findSegmentSegmentIntersectionPrecise(
+            { PreciseVertCoords2{ a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] }, { d, ( *pts )[d] } } );
     };
     p.point = [pts, toFloat] ( const MeshTopology&, VertId v )
     {
@@ -173,12 +177,16 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     p.addInputPoint = [&mesh, &loops, pts2, toInt, kx, ky] ( VertId v, int contourId, int pointId )
     {
         const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
-        pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
+        if ( v >= pts2->size() )
+            pts2->resize( v + 1 );
+        ( *pts2 )[v] = Vector2i( q[kx], q[ky] );
     };
     p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
-            { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } ) );
+        if ( v >= pts2->size() )
+            pts2->resize( v + 1 );
+        ( *pts2 )[v] = findSegmentSegmentIntersectionPrecise(
+            { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } );
     };
     // every output vertex lies on a copied input edge (disjoint triangulation adds no intersection
     // vertices), so find one in its org ring, skipping the triangulation's own diagonals
@@ -751,7 +759,13 @@ void SweepLineQueue::triangulate()
         else
             tp_.setLeft( dirE, tp_.addFaceId() ); // mark present
         if ( params_.outFaceWinding ) // all faces of one monotone block are in the region with same winding number
-            params_.outFaceWinding->autoResizeSet( firstBlockFace, tp_.faceSize() - firstBlockFace, windInfo.winding );
+        {
+            auto & outFaceWinding = *params_.outFaceWinding;
+            if ( outFaceWinding.size() < tp_.faceSize() )
+                outFaceWinding.resize( tp_.faceSize(), windInfo.winding );
+            for ( auto f = firstBlockFace; f < tp_.faceSize(); ++f )
+                outFaceWinding[f] = windInfo.winding;
+        }
     }
     pointsCache_.resize( tp_.vertSize() );
     BitSetParallelFor( tp_.getValidVerts(), [&] ( VertId v )
@@ -940,7 +954,11 @@ EdgeId SweepLineQueue::addChord_( EdgeId anchor1, EdgeId anchor2, EdgeId refEdge
     tp_.splice( anchor2, newEdge.sym() );
     if ( params_.outChords )
         params_.outChords->push_back( { anchor1, anchor2, newEdge } );
-    windingInfo_.autoResizeSet( newEdge.undirected(), windingInfo_[refEdge.undirected()] );
+    const auto refInfo = windingInfo_[refEdge.undirected()];
+    if ( newEdge.undirected() < windingInfo_.size() )
+        windingInfo_[newEdge.undirected()] = refInfo;
+    else
+        windingInfo_.resize( newEdge.undirected() + 1, refInfo );
     return newEdge;
 }
 
@@ -1263,7 +1281,9 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
                 // this edge was already traversed: accumulate both traversals in the winding modifier,
                 // seeding from the first one (a single traversal keeps the sentinel = default parity rule)
                 const EdgeId pFirst( pFE ); // created along the first traversal
-                auto& wind = windingInfo_.autoResizeAt( pFirst ).windingModifier;
+                if ( pFirst.undirected() >= windingInfo_.size() )
+                    windingInfo_.resize( pFirst.undirected() + 1 );
+                auto& wind = windingInfo_[pFirst].windingModifier;
                 if ( wind == INT_MAX )
                     wind = predicates_.less( tp_.org( pFirst ), tp_.dest( pFirst ) ) ? 1 : -1;
                 auto existingInE = p2in[pFE];
@@ -1292,7 +1312,9 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
         if ( newPE )
         {
             in2p[inE.undirected()] = newPE.undirected();
-            p2in.autoResizeSet( newPE.undirected(), inE );
+            if ( newPE.undirected() >= p2in.size() )
+                p2in.resize( newPE.undirected() + 1 );
+            p2in[newPE.undirected()] = inE;
             EdgeId inSE;
             UndirectedEdgeId pSE;
             for ( auto de : orgRing0( inTp, inE.sym() ) )
@@ -1437,7 +1459,9 @@ void SweepLineQueue::mergeSinglePare_( VertId unique, VertId same )
         {
             auto meuUndir = minEUnique.undirected();
             auto esUndir = eSame.undirected();
-            auto& uWM = windingInfo_.autoResizeAt( meuUndir ).windingModifier;
+            if ( meuUndir >= windingInfo_.size() )
+                windingInfo_.resize( meuUndir + 1 );
+            auto& uWM = windingInfo_[meuUndir].windingModifier;
             int8_t lessFactor = 0;
             if ( uWM == INT_MAX )
             {

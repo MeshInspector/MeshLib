@@ -137,11 +137,11 @@ VertScalars computeSurfaceDistances( const Mesh& mesh, const std::vector<MeshTri
     for ( const auto& triPoint : starts )
         b.addStart( triPoint );
 
-    VertBitSet stopVerts;
+    VertBitSet stopVerts( mesh.topology.vertSize() );
     for ( const auto & end : ends )
         mesh.topology.forEachVertex( end, [&]( VertId v )
         {
-            stopVerts.autoResizeSet( v );
+            stopVerts.set( v );
         } );
     auto numStopVerts = stopVerts.count();
 

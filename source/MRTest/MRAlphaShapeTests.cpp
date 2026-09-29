@@ -63,7 +63,8 @@ TEST( MRMesh, AlphaShape )
     cloud.points.push_back( { 0,    0,    0 } );    //2_v
     cloud.points.push_back( { 1,    0,    0 } );    //3_v
     cloud.points.push_back( { 0,    1,    0 } );    //4_v
-    cloud.validPoints.autoResizeSet( 2_v, 3, true );
+    cloud.validPoints.resize( cloud.points.size() );
+    cloud.validPoints.set( 2_v, 3, true );
 
     Triangulation tris;
     std::vector<AlphaShapeNei> neis;
@@ -206,7 +207,7 @@ TEST( MRMesh, AlphaShapeSquare )
     cloud.points.push_back( { 1, 0, 0 } ); //1_v
     cloud.points.push_back( { 1, 1, 0 } ); //2_v
     cloud.points.push_back( { 0, 1, 0 } ); //3_v
-    cloud.validPoints.autoResizeSet( 0_v, 4, true );
+    cloud.validPoints.resize( 4, true );
 
     const auto tris = findAlphaShapeAllTriangles( cloud, 0.8f );
     // the square is covered by two triangles from each side, and the sides take different diagonals;
@@ -235,7 +236,7 @@ TEST( MRMesh, AlphaShapeCrossingGrids )
         for ( int k = 0; k <= 10; ++k )
             if ( k != 5 )
                 cloud.points.push_back( { i * 0.05f, 0.25f, k * 0.05f - 0.25f } );
-    cloud.validPoints.autoResizeSet( 0_v, (int)cloud.points.size(), true );
+    cloud.validPoints.resize( cloud.points.size(), true );
 
     AlphaShapeStats stats;
     std::vector<MeshBuilder::VertDuplication> dups;
@@ -284,7 +285,7 @@ PointCloud sphereCloud( int n, float radius )
         const float a = golden * i;
         res.points.push_back( radius * Vector3f{ r * std::cos( a ), r * std::sin( a ), z } );
     }
-    res.validPoints.autoResizeSet( 0_v, n, true );
+    res.validPoints.resize( n, true );
     return res;
 }
 
@@ -296,7 +297,7 @@ PointCloud gridCloud( int n, float step )
     for ( int i = 0; i < n; ++i )
         for ( int j = 0; j < n; ++j )
             res.points.push_back( { i * step, j * step, 0 } );
-    res.validPoints.autoResizeSet( 0_v, n * n, true );
+    res.validPoints.resize( n * n, true );
     return res;
 }
 
@@ -309,7 +310,7 @@ PointCloud randomCloud( int n, float size )
     std::uniform_real_distribution<float> d( 0, size );
     for ( int i = 0; i < n; ++i )
         res.points.push_back( { d( gen ), d( gen ), d( gen ) } );
-    res.validPoints.autoResizeSet( 0_v, n, true );
+    res.validPoints.resize( n, true );
     return res;
 }
 

@@ -130,12 +130,14 @@ void Laplacian::initFromPoints( const VertCoords & points, const VertBitSet & fr
 
 void Laplacian::fixVertex( VertId v, bool smooth )
 {
-    if ( freeVerts_.autoResizeTestSet( v, false ) )
+    if ( freeVerts_.test_set( v, false ) )
     {
         solver_.reset();
         freeVert2id_[v] = -1;
     }
-    if ( fixedSharpVertices_.autoResizeTestSet( v, !smooth ) != !smooth )
+    if ( v >= fixedSharpVertices_.size() )
+        fixedSharpVertices_.resize( v + 1 );
+    if ( fixedSharpVertices_.test_set( v, !smooth ) != !smooth )
         solver_.reset();
 }
 

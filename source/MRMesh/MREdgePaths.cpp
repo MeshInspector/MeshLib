@@ -139,7 +139,11 @@ void addLeftBand( const MeshTopology & topology, const EdgeLoop & loop, FaceBitS
             if ( ei == stop )
                 break;
             if ( auto l = topology.left( ei ) )
-                addHere.autoResizeSet( l );
+            {
+                if ( l >= addHere.size() )
+                    addHere.resize( l + 1 );
+                addHere.set( l );
+            }
         }
         stop = e.sym();
     }
@@ -464,8 +468,11 @@ std::vector<EdgeLoop> extractClosedLoops( const MeshTopology & topology, const s
     EdgeBitSet edges;
     for ( auto e : inEdges )
     {
-        if ( !edges.autoResizeTestSet( e.sym(), false ) )
-            edges.autoResizeSet( e );
+        if ( edges.test_set( e.sym(), false ) )
+            continue;
+        if ( e >= edges.size() )
+            edges.resize( e + 1 );
+        edges.set( e );
     }
     auto res = extractClosedLoops( topology, edges );
     if ( outNotLoopEdges )
@@ -508,7 +515,9 @@ bool dilateRegionByMetric( const MeshTopology & topology, const EdgeMetric & met
         if ( !vinfo.v || vinfo.penalty > dilation )
             break;
 
-        region.autoResizeSet( vinfo.v );
+        if ( vinfo.v >= region.size() )
+            region.resize( vinfo.v + 1 );
+        region.set( vinfo.v );
         builder.addOrgRingSteps( vinfo );
 
         if ( !reportProgress( callback, [&]{ return vinfo.penalty / dilation; }, i, 1024 ) )

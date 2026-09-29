@@ -295,9 +295,7 @@ std::vector<std::vector<T>> PolylineTopology::convertToContours( F&& getPoint, s
 {
     std::vector<std::vector<T>> res;
 
-    UndirectedEdgeBitSet linesUsed;
-    linesUsed.autoResizeSet( UndirectedEdgeId{ undirectedEdgeSize() } );
-    linesUsed.flip();
+    UndirectedEdgeBitSet linesUsed( undirectedEdgeSize(), true );
     for ( EdgeId e0 : linesUsed )
     {
         if ( isLoneEdge( e0 ) )

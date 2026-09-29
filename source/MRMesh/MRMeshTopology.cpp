@@ -34,9 +34,9 @@ void MeshTopology::vertResizeWithReserve( size_t newSize )
 {
     if ( edgePerVertex_.size() >= newSize )
         return;
-    edgePerVertex_.resizeWithReserve( newSize );
+    edgePerVertex_.resize( newSize );
     if ( updateValids_ )
-        validVerts_.resizeWithReserve( newSize );
+        validVerts_.resize( newSize );
 }
 
 void MeshTopology::faceResize( size_t newSize )
@@ -52,9 +52,9 @@ void MeshTopology::faceResizeWithReserve( size_t newSize )
 {
     if ( edgePerFace_.size() >= newSize )
         return;
-    edgePerFace_.resizeWithReserve( newSize );
+    edgePerFace_.resize( newSize );
     if ( updateValids_ )
-        validFaces_.resizeWithReserve( newSize );
+        validFaces_.resize( newSize );
 }
 
 EdgeId MeshTopology::makeEdge()
@@ -740,7 +740,7 @@ std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es
 {
     MR_TIMER;
     std::vector<EdgeLoop> res;
-    EdgeBitSet inRes;
+    EdgeBitSet inRes( edgeSize() );
     for ( auto e : es )
     {
         if ( inRes.test( e ) )
@@ -749,7 +749,7 @@ std::vector<EdgeLoop> MeshTopology::getLeftRings( const std::vector<EdgeId> & es
         for ( auto edge : leftRing( *this, e ) )
         {
             loop.push_back( edge );
-            inRes.autoResizeSet( edge );
+            inRes.set( edge );
         }
         res.push_back( std::move( loop ) );
     }
@@ -862,8 +862,12 @@ VertBitSet MeshTopology::getPathVertices( const EdgePath & path ) const
     VertBitSet res;
     for ( auto e : path )
     {
-        res.autoResizeSet( org( e ) );
-        res.autoResizeSet( dest( e ) );
+        const auto o = org( e );
+        const auto d = dest( e );
+        if ( const auto m = std::max( o, d ); m >= res.size() )
+            res.resize( m + 1 );
+        res.set( o );
+        res.set( d );
     }
     return res;
 }
@@ -874,7 +878,11 @@ FaceBitSet MeshTopology::getPathLeftFaces( const EdgePath & path ) const
     for ( auto e : path )
     {
         if ( auto l = left( e ) )
-            res.autoResizeSet( l );
+        {
+            if ( l >= res.size() )
+                res.resize( l + 1 );
+            res.set( l );
+        }
     }
     return res;
 }
@@ -885,7 +893,11 @@ FaceBitSet MeshTopology::getPathRightFaces( const EdgePath & path ) const
     for ( auto e : path )
     {
         if ( auto r = right( e ) )
-            res.autoResizeSet( r );
+        {
+            if ( r >= res.size() )
+                res.resize( r + 1 );
+            res.set( r );
+        }
     }
     return res;
 }
@@ -1214,7 +1226,11 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
         assert( isLeftTri( e0 ) );
         assert( left( e0 ) == newFace );
         if ( region && region->test( l ) )
-            region->autoResizeSet( newFace );
+        {
+            if ( newFace >= region->size() )
+                region->resize( newFace + 1 );
+            region->set( newFace );
+        }
         setNewToOld( new2Old, {newFace}, l );
     }
     if ( r.valid() && ePrev != e )
@@ -1227,7 +1243,11 @@ EdgeId MeshTopology::splitEdge( EdgeId e, FaceBitSet * region, FaceHashMap * new
         assert( isLeftTri( e0.sym() ) );
         assert( left( e0.sym() ) == newFace );
         if ( region && region->test( r ) )
-            region->autoResizeSet( newFace );
+        {
+            if ( newFace >= region->size() )
+                region->resize( newFace + 1 );
+            region->set( newFace );
+        }
         setNewToOld( new2Old, {newFace}, r );
     }
 
@@ -1283,8 +1303,11 @@ VertId MeshTopology::splitFace( FaceId f, FaceBitSet * region, FaceHashMap * new
 
     if ( region )
     {
-        region->autoResizeSet( f1 );
-        region->autoResizeSet( f2 );
+        assert( f1 < f2 );
+        if ( f2 >= region->size() )
+            region->resize( f2 + 1 );
+        region->set( f1 );
+        region->set( f2 );
     }
 
     setNewToOld( new2Old, { f1, f2 }, f );
@@ -2126,7 +2149,11 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             if ( edgePerVertex_.size() < lastNewVert + 1 )
             {
                 if ( updateValids_ )
-                    validVerts_.autoResizeSet( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
+                {
+                    if ( validVerts_.size() < lastNewVert + 1 )
+                        validVerts_.resize( lastNewVert + 1 );
+                    validVerts_.set( edgePerVertex_.endId(), lastNewVert + 1 - edgePerVertex_.size(), true );
+                }
                 edgePerVertex_.resizeNoInit( lastNewVert + 1 );
             }
         } );
@@ -2177,7 +2204,11 @@ bool MeshTopology::addPartByMask( const MeshTopology & from, const FaceBitSet * 
             if ( edgePerFace_.size() < lastNewFace + 1 )
             {
                 if ( updateValids_ )
-                    validFaces_.autoResizeSet( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
+                {
+                    if ( validFaces_.size() < lastNewFace + 1 )
+                        validFaces_.resize( lastNewFace + 1 );
+                    validFaces_.set( edgePerFace_.endId(), lastNewFace + 1 - edgePerFace_.size(), true );
+                }
                 edgePerFace_.resizeNoInit( lastNewFace + 1 );
             }
         } );

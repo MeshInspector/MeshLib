@@ -16,9 +16,16 @@ UndirectedEdgeBitSet subdivideWithPlane( Polyline3& polyline, const Plane3f& pla
     for ( const auto& sectionPoint : sectionPoints )
     {
         const auto eNew = polyline.splitEdge( sectionPoint.e, polyline.edgePoint( sectionPoint.edgePointA() ) );
-        result.autoResizeSet( sectionPoint.e.undirected() );
+        const auto ue = sectionPoint.e.undirected();
+        if ( ue >= result.size() )
+            result.resize( ue + 1 );
+        result.set( ue );
         if ( newPositiveEdges )
-            newPositiveEdges->autoResizeSet( sectionPoint.e );
+        {
+            if ( sectionPoint.e >= newPositiveEdges->size() )
+                newPositiveEdges->resize( sectionPoint.e + 1 );
+            newPositiveEdges->set( sectionPoint.e );
+        }
         if ( onEdgeSplitCallback )
             onEdgeSplitCallback( sectionPoint.e, eNew, sectionPoint.a );
     }

@@ -395,14 +395,14 @@ Expected<Mesh> makeBaseElement( const Params& params, const AbsentTips& absentTi
             continue;
         auto bar = makeBarForBaseElement( params.type, params.width[ax], l, params.highRes ? 64 : 16 );
 
-        FaceBitSet cylToDel;
+        FaceBitSet cylToDel( bar.topology.faceSize() );
         for ( auto f : bar.topology.getValidFaces() )
         {
             auto n =  bar.normal( f );
             for ( int d : dirs )
             {
                 if ( std::abs( n.z - (float)d ) < normalEps )
-                    cylToDel.autoResizeSet( f, true );
+                    cylToDel.set( f );
             }
         }
         bar.deleteFaces( cylToDel );

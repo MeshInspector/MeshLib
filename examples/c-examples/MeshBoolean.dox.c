@@ -66,7 +66,8 @@ int main( void )
     // result, or drop it completely if that part of sphere1 is not in the result.
     MR_FaceId faceOfSphere1 = { 793 };
     MR_FaceBitSet* oneFace = MR_FaceBitSet_DefaultConstruct();
-    MR_FaceBitSet_autoResizeSet_2( oneFace, faceOfSphere1, NULL );
+    MR_FaceBitSet_resize( oneFace, MR_MeshTopology_faceSize( MR_Mesh_Get_topology( sphere1 ) ), NULL );
+    MR_FaceBitSet_set_2( oneFace, faceOfSphere1, true );
     MR_FaceBitSet* producedFaces = MR_BooleanResultMapper_map_MR_FaceBitSet( mapper, oneFace, MR_BooleanResultMapper_MapObject_A );
     printf( "face %d of sphere1 produced %zu faces of the result\n", faceOfSphere1.id_, MR_FaceBitSet_count( producedFaces ) );
 

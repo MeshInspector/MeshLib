@@ -247,7 +247,9 @@ EdgeId Polyline<V>::addFromEdgePath( const Mesh& mesh, const EdgePath& path )
     }
 
     auto v0 = topology.addVertId();
-    points.autoResizeSet( v0, V{ mesh.orgPnt( path.front() ) } );
+    if ( v0 >= points.size() )
+        points.resize( v0 + 1 );
+    points[v0] = V{ mesh.orgPnt( path.front() ) };
     assert( points.size() == topology.vertSize() );
 
     PolylineMaker maker( topology );
@@ -285,7 +287,9 @@ EdgeId Polyline<V>::addFromGeneralSurfacePath( const Mesh& mesh, const MeshTriPo
     }
 
     auto v0 = topology.addVertId();
-    points.autoResizeSet( v0, V{ start ? mesh.triPoint( start ) : mesh.edgePoint( path.front() ) } );
+    if ( v0 >= points.size() )
+        points.resize( v0 + 1 );
+    points[v0] = V{ start ? mesh.triPoint( start ) : mesh.edgePoint( path.front() ) };
     assert( points.size() == topology.vertSize() );
 
     PolylineMaker maker( topology );
@@ -333,7 +337,10 @@ template<typename V>
 EdgeId Polyline<V>::splitEdge( EdgeId e, const V & newVertPos )
 {
     EdgeId newe = topology.splitEdge( e );
-    points.autoResizeAt( topology.org( e ) ) = newVertPos;
+    const auto newv = topology.org( e );
+    if ( newv >= points.size() )
+        points.resize( newv + 1 );
+    points[newv] = newVertPos;
     return newe;
 }
 

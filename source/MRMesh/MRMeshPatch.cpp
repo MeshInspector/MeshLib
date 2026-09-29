@@ -46,12 +46,20 @@ FaceBitSet patchMeshByGroups( Mesh& mesh, const FaceBitSet& faces, float angleTh
         if ( contains( pendingFaces, oldFace ) )
         {
             const auto g = groupsMap[oldFace];
-            groupsMap.autoResizeSet( newFace, g );
-            pendingFaces.autoResizeSet( newFace );
+            if ( newFace >= groupsMap.size() )
+                groupsMap.resize( newFace + 1 );
+            groupsMap[newFace] = g;
+            if ( newFace >= pendingFaces.size() )
+                pendingFaces.resize( newFace + 1 );
+            pendingFaces.set( newFace );
             splitGroupFaces[g].push_back( newFace );
         }
         else if ( contains( newFaces, oldFace ) )
-            newFaces.autoResizeSet( newFace );
+        {
+            if ( newFace >= newFaces.size() )
+                newFaces.resize( newFace + 1 );
+            newFaces.set( newFace );
+        }
     };
 
     auto s = settings;
@@ -67,8 +75,9 @@ FaceBitSet patchMeshByGroups( Mesh& mesh, const FaceBitSet& faces, float angleTh
     for ( RegionId r( 0 ); r < RegionId( numGroups ); ++r )
     {
         groups.setComponentBits( r, group );
+        group.resize( mesh.topology.faceSize() );
         for ( auto f : splitGroupFaces[r] )
-            group.autoResizeSet( f );
+            group.set( f );
         pendingFaces -= group;
         newFaces |= patchMesh( mesh, group, s );
         group.reset();

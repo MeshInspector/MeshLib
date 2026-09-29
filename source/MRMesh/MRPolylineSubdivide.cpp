@@ -133,10 +133,18 @@ int subdividePolylineT( Polyline<V> & polyline, const PolylineSubdivideSettings 
         const auto e1 = polyline.splitEdge( e, newVertPos );
         const auto newVertId = polyline.topology.org( e );
 
-        if ( settings.region )
-            settings.region->autoResizeSet( newVertId );
-        if ( settings.newVerts )
-            settings.newVerts->autoResizeSet( newVertId );
+        if ( auto region = settings.region )
+        {
+            if ( newVertId >= region->size() )
+                region->resize( newVertId + 1 );
+            region->set( newVertId );
+        }
+        if ( auto newVerts = settings.newVerts )
+        {
+            if ( newVertId >= newVerts->size() )
+                newVerts->resize( newVertId + 1 );
+            newVerts->set( newVertId );
+        }
         if ( settings.onVertCreated )
             settings.onVertCreated( newVertId );
         if ( settings.onEdgeSplit )

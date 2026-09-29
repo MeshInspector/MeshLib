@@ -110,7 +110,9 @@ VertId PointCloud::addPoint(const Vector3f& point)
 {
     VertId id(points.size());
     points.push_back(point);
-    validPoints.autoResizeSet(id);
+    if ( id >= validPoints.size() )
+        validPoints.resize( id + 1 );
+    validPoints.set( id );
 
     if ( !normals.empty() )
     {
@@ -127,7 +129,9 @@ VertId PointCloud::addPoint(const Vector3f& point, const Vector3f& normal)
 
     VertId id(points.size());
     points.push_back(point);
-    validPoints.autoResizeSet(id);
+    if ( id >= validPoints.size() )
+        validPoints.resize( id + 1 );
+    validPoints.set( id );
     normals.push_back(normal);
     return id;
 }

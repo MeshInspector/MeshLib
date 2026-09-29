@@ -434,14 +434,25 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
             }
             settings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
             {
+                auto selectFace = [&] ( FaceId f )
+                {
+                    if ( f >= newFaceSelection.size() )
+                        newFaceSelection.resize( f + 1 );
+                    newFaceSelection.set( f );
+                };
                 if ( newFaceSelection.test( newMesh->topology.left( e ) ) )
-                    newFaceSelection.autoResizeSet( newMesh->topology.left( e1 ) );
+                    selectFace( newMesh->topology.left( e1 ) );
                 if ( newFaceSelection.test( newMesh->topology.right( e ) ) )
-                    newFaceSelection.autoResizeSet( newMesh->topology.right( e1 ) );
+                    selectFace( newMesh->topology.right( e1 ) );
                 // if we split an edge with both unchangeable end vertices, then mark new vertex as unchangeable as well
                 if ( unchangeableVerts_.test( newMesh->topology.org( e1 ) ) &&
                      unchangeableVerts_.test( newMesh->topology.dest( e ) ) )
-                    unchangeableVerts_.autoResizeSet( newMesh->topology.org( e ) );
+                {
+                    const auto v = newMesh->topology.org( e );
+                    if ( v >= unchangeableVerts_.size() )
+                        unchangeableVerts_.resize( v + 1 );
+                    unchangeableVerts_.set( v );
+                }
             };
 
             const FaceBitSet oldFaces = newMesh->topology.getValidFaces();
@@ -716,7 +727,7 @@ void SurfaceManipulationWidget::updateUVmap_( bool set, bool wholeMesh )
 {
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
-    uvs.resizeWithReserve( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
+    uvs.resize( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
     const float normalize = 0.5f / settings_.radius;
     BitSetParallelFor( wholeMesh ? obj_->meshPtr()->topology.getValidVerts() : visualizationRegion_, [&] ( VertId v )
     {
@@ -920,7 +931,7 @@ void SurfaceManipulationWidget::updateRegionUVs_( const VertBitSet& region )
     MR_TIMER;
     VertUVCoords uvs;
     obj_->updateAncillaryUVCoords( uvs );
-    uvs.resizeWithReserve( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
+    uvs.resize( obj_->meshPtr()->points.size(), UVCoord{ 0.5f, 1 } );
     BitSetParallelFor( region, [&] ( VertId v )
     {
         uvs[v].x = palette_->getUVcoord( valueChanges_[v], true ).x;

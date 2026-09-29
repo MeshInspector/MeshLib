@@ -103,7 +103,10 @@ EdgeLoop cutAlongEdgeLoop( Mesh& mesh, const EdgeLoop& c0 )
 
     for ( size_t i = 0; i < c0.size(); ++i )
     {
-        mesh.points.autoResizeSet( mesh.topology.org( res[i] ), mesh.orgPnt( c0[i] ) );
+        const auto v = mesh.topology.org( res[i] );
+        if ( v >= mesh.points.size() )
+            mesh.points.resize( v + 1 );
+        mesh.points[v] = mesh.orgPnt( c0[i] );
     }
     return res;
 }

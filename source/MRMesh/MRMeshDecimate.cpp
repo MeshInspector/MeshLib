@@ -158,10 +158,18 @@ MeshDecimator::MeshDecimator( Mesh & mesh, const DecimateSettings & settings )
             --numOutdated_;
 
         if ( notFlippable && notFlippable->test_set( del.undirected(), false ) && rem )
-            notFlippable->autoResizeSet( rem.undirected() );
+        {
+            if ( rem.undirected() >= notFlippable->size() )
+                notFlippable->resize( rem.undirected() + 1 );
+            notFlippable->set( rem.undirected() );
+        }
 
         if ( edgesToCollapse && edgesToCollapse->test_set( del.undirected(), false ) && rem )
-            edgesToCollapse->autoResizeSet( rem.undirected() );
+        {
+            if ( rem.undirected() >= edgesToCollapse->size() )
+                edgesToCollapse->resize( rem.undirected() + 1 );
+            edgesToCollapse->set( rem.undirected() );
+        }
 
         if ( twinMap )
         {

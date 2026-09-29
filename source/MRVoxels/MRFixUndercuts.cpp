@@ -172,10 +172,16 @@ Expected<void> fix( Mesh& mesh, const FixParams& params )
         {
             ss.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
             {
+                auto add = [&] ( FaceId f )
+                {
+                    if ( f >= regionCpy.size() )
+                        regionCpy.resize( f + 1 );
+                    regionCpy.set( f );
+                };
                 if ( regionCpy.test( mesh.topology.left( e ) ) )
-                    regionCpy.autoResizeSet( mesh.topology.left( e1 ) );
+                    add( mesh.topology.left( e1 ) );
                 if ( regionCpy.test( mesh.topology.right( e ) ) )
-                    regionCpy.autoResizeSet( mesh.topology.right( e1 ) );
+                    add( mesh.topology.right( e1 ) );
             };
         }
         subdivideMesh( mesh, ss );

@@ -72,28 +72,23 @@ public:
         return vec_[i];
     }
 
-    /// doubles reserved memory until resize(newSize) can be done without reallocation
+    /// same as resize(newSize), which already grows the capacity geometrically
+    [[deprecated( "use resize() instead" )]]
     void resizeWithReserve( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
     {
-        // This separate overload is needed as opposed to a `value = T{}` default argument, because if T isn't default-constructible, the parsed chokes on that.
-        resizeWithReserve( newSize, T{} );
+        vec_.resize( newSize );
     }
 
-    /// doubles reserved memory until resize(newSize, value) can be done without reallocation
+    /// same as resize(newSize, value), which already grows the capacity geometrically
+    [[deprecated( "use resize() instead" )]]
     void resizeWithReserve( size_t newSize, const T & value ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> )
     {
-        auto reserved = vec_.capacity();
-        if ( reserved > 0 && newSize > reserved )
-        {
-            while ( newSize > reserved )
-                reserved <<= 1;
-            vec_.reserve( reserved );
-        }
         vec_.resize( newSize, value );
     }
 
     /// sets elements [pos, pos+len) to the given value, adjusting the size of the vector to include new elements;
     /// the elements in between old size and \p pos are also set to \p val (for faster implementation)
+    [[deprecated( "use resize() and operator[] instead" )]]
     void autoResizeSet( I pos, size_t len, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::is_copy_assignable_v<T> )
     {
         assert( pos );
@@ -101,7 +96,7 @@ public:
         if ( const auto sz = size(); p + len > sz )
         {
             // add new elements with the given value
-            resizeWithReserve( p + len, val );
+            vec_.resize( p + len, val );
             if ( p >= sz )
                 return;
             // the number of the elements existing before function call to be changed
@@ -112,17 +107,24 @@ public:
             vec_[ p + i ] = val;
     }
 
-    /// sets the element #i to the given value, adjusting the size of the vector to include new element
+    /// sets the element #i to the given value, adjusting the size of the vector to include new element;
+    /// the elements in between old size and \p i are also set to \p val
+    [[deprecated( "use resize() and operator[] instead" )]]
     void autoResizeSet( I i, T val ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::is_copy_assignable_v<T> )
     {
-        autoResizeSet( i, 1, val );
+        assert( i );
+        if ( i < size() )
+            vec_[i] = std::move( val );
+        else
+            vec_.resize( i + 1, val );
     }
 
     /// this accessor automatically adjusts the size of the vector
+    [[deprecated( "use resize() and operator[] instead" )]]
     [[nodiscard]] reference autoResizeAt( I i ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
     {
         if ( i + 1 > size() )
-            resizeWithReserve( i + 1 );
+            vec_.resize( i + 1 );
         return vec_[i];
     }
 

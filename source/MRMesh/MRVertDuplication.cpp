@@ -537,8 +537,10 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
 
             bool triOrientation = true;
             auto [firstVertex, nextVertex] = pathMaker.getFirstTwoVertices();
-            visitedVertices.autoResizeSet( firstVertex );
-            visitedVertices.autoResizeSet( nextVertex );
+            if ( const auto m = std::max( firstVertex, nextVertex ); m >= visitedVertices.size() )
+                visitedVertices.resize( m + 1 );
+            visitedVertices.set( firstVertex );
+            visitedVertices.set( nextVertex );
             VertId prevVertex = firstVertex;
 
             // preserve allocated memory in path
@@ -597,7 +599,9 @@ size_t duplicateNonManifoldVertices( Triangulation & t, FaceBitSet * region, std
                         break;
                 }
                 path.push_back( nextVertex );
-                visitedVertices.autoResizeSet( nextVertex );
+                if ( nextVertex >= visitedVertices.size() )
+                    visitedVertices.resize( nextVertex + 1 );
+                visitedVertices.set( nextVertex );
             }
         }
     }

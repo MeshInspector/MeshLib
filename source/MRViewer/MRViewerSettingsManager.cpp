@@ -61,6 +61,7 @@ const std::string cStepAngularDeflection = "stepLoad.angularDeflection";
 const std::string cStepLinearDeflection = "stepLoad.linearDeflection";
 const std::string cStepRelativeDeflection = "stepLoad.relativeDeflection";
 const std::string cStepAutoColorize = "stepLoad.autoColorize";
+const std::string cStepForceLoadSubShapes = "stepLoad.forceLoadSubShapes";
 #endif
 const std::string cUnitsLeadingZero = "units.leadingZero";
 const std::string cUnitsThouSep = "units.thousandsSeparator";
@@ -536,6 +537,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         step.linearDeflection = cfg.getJsonValue( cStepLinearDeflection, step.linearDeflection ).asDouble();
         step.relative = cfg.getJsonValue( cStepRelativeDeflection, step.relative ).asBool();
         step.autoColorize = cfg.getJsonValue( cStepAutoColorize, step.autoColorize ).asBool();
+        step.forceLoadSubShapes = cfg.getJsonValue( cStepForceLoadSubShapes, step.forceLoadSubShapes ).asBool();
         ExtraFormatSettings::setStepLoadSettings( step );
     }
 #endif
@@ -704,6 +706,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         cfg.setJsonValue( cStepLinearDeflection, step.linearDeflection );
         cfg.setJsonValue( cStepRelativeDeflection, step.relative );
         cfg.setJsonValue( cStepAutoColorize, step.autoColorize );
+        cfg.setJsonValue( cStepForceLoadSubShapes, step.forceLoadSubShapes );
     }
 #endif
 

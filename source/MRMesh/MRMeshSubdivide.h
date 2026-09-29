@@ -47,6 +47,10 @@ struct SubdivideSettings
     /// Edges specified by this bit-set will never be flipped, but they can be split so it is updated during the operation
     UndirectedEdgeBitSet* notFlippable = nullptr;
 
+    /// If true, then only the edges having a vertex of their left or right triangle incident to a \ref notFlippable edge can be split,
+    /// so subdivision is localized near notFlippable edges; \ref notFlippable must not be null then (nothing is split in release otherwise)
+    bool onlyNearNotFlippable = false;
+
     /// New vertices appeared during subdivision will be added here
     VertBitSet * newVerts = nullptr;
 

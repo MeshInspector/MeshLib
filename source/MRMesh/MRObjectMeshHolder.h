@@ -256,14 +256,14 @@ public:
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API virtual size_t heapBytes() const override;
 
-    /// returns overriden file extension used to serialize mesh inside this object, nullptr means defaultSerializeMeshFormat()
+    /// returns overriden file extension used to serialize mesh inside this object, nullptr means SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )
     [[nodiscard]] const char * serializeFormat() const { return serializeFormat_; }
 
-    /// returns overriden file extension used to serialize mesh inside this object if set, or defaultSerializeMeshFormat().c_str() otherwise; never returns nullptr
+    /// returns overriden file extension used to serialize mesh inside this object if set, or SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat ) otherwise; never returns nullptr
     [[nodiscard]] MRMESH_API const char * actualSerializeFormat() const;
 
     /// overrides file extension used to serialize mesh inside this object: must start from '.',
-    /// nullptr means serialize in defaultSerializeMeshFormat()
+    /// nullptr means serialize in SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )
     MRMESH_API void setSerializeFormat( const char * newFormat );
 
     /// reset basic object colors to their default values from the current theme
@@ -360,17 +360,11 @@ private:
     /// set default scene-related properties
     void setDefaultSceneProperties_();
 
-    const char * serializeFormat_ = nullptr; // means use defaultSerializeMeshFormat()
+    const char * serializeFormat_ = nullptr; // means use SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )
 };
 
-/// returns file extension used to serialize ObjectMeshHolder by default (if not overridden in specific object),
-/// the string starts with '.'
-[[nodiscard]] MRMESH_API const std::string & defaultSerializeMeshFormat();
+[[nodiscard]] [[deprecated( "Use SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat )" )]] MRMESH_API MR_BIND_IGNORE const std::string & defaultSerializeMeshFormat();
 
-/// sets file extension used to serialize serialize ObjectMeshHolder by default (if not overridden in specific object),
-/// the string must start from '.';
-// serialization falls back to the PLY format if given format support is available
-// NOTE: CTM format support is available in the MRIOExtras library; make sure to load it if you prefer CTM
-MRMESH_API void setDefaultSerializeMeshFormat( std::string newFormat );
+[[deprecated( "Use SceneSettings::set( SceneSettings::StringType::MeshSerializeFormat, newFormat )" )]] MRMESH_API MR_BIND_IGNORE void setDefaultSerializeMeshFormat( std::string newFormat );
 
 } // namespace MR

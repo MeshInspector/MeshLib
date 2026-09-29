@@ -14,6 +14,7 @@ if [[ $1 != --skip-prebuilt-thirdparty ]]; then
         thirdparty/clip
         thirdparty/cpp-httplib
         thirdparty/cpr
+        thirdparty/draco
         thirdparty/fastmcpp
         thirdparty/glad
         thirdparty/laz-perf

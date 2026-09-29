@@ -52,6 +52,7 @@ Below is a summary of all modules and their dependencies, so you can see what ea
 |<a rel="nofollow" href="https://github.com/syoyo/tinygltf">tinygltf</a>             |is a header only C++11 glTF 2.0                                              |MIT                                        |
 |<a rel="nofollow" href="https://sourceforge.net/projects/openctm/">OpenCTM</a>      |the Open Compressed Triangle Mesh file format                                |zlib/libpng                                |
 |<a rel="nofollow" href="https://github.com/hobuinc/laz-perf">LAZperf</a>            |alternative LAZ implementation for C++ and JavaScript                        |Apache 2.0                                 |
+|<a rel="nofollow" href="https://github.com/google/draco">Draco</a>                  |library for compressing and decompressing 3D meshes and point clouds         |Apache 2.0                                 |
 |<a rel="nofollow" href="https://github.com/asmaloney/libE57Format">libe57format</a> |library for reading & writing the E57 file format                            |Boost Software License                     |
 |<a rel="nofollow" href="https://leethomason.github.io/tinyxml2/">tinyxml2</a>       |an efficient, C++ XML parser                                                 |zlib                                       |
 |<a rel="nofollow" href="https://github.com/nlohmann/json">nlohmann-json</a>       |JSON for Modern C++ — used by the glTF reader/writer                         |MIT                                        |

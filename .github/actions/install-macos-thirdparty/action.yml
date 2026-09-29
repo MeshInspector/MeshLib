@@ -113,6 +113,7 @@ runs:
             thirdparty/mrbind-pybind11 \
             thirdparty/tinygltf \
             thirdparty/laz-perf \
+            thirdparty/draco \
             thirdparty/clip \
             thirdparty/fastmcpp
           shasum -a 256 \

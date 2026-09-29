@@ -208,3 +208,12 @@ add_subdirectory(./tinygltf)
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
+
+set(DRACO_JS_GLUE OFF CACHE BOOL "")
+set(DRACO_TESTS OFF CACHE BOOL "")
+IF(EMSCRIPTEN)
+  # Draco checks these even with its JS glue disabled
+  set(PYTHONINTERP_FOUND ON)
+  set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
+ENDIF()
+add_subdirectory(./draco)

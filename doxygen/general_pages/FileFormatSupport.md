@@ -21,6 +21,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **STEP** | Yes | No | Yes | No |
 | **STP** | Yes | No | Yes | No |
 | **CTM** | Yes | No | Yes | Yes |
+| **DRC** (Google Draco) | Yes | No | Yes | Yes |
 | **3MF** | Yes | Yes | Yes | Yes |
 | **MODEL** | Yes | No | No | No |
 | **PLY** | Yes | No | Yes | Yes |
@@ -29,12 +30,16 @@ The tables below categorize MeshLib's supported file formats based on their type
 > [!NOTE]
 > STEP (.STP) files are converted into mesh representations within MeshLib.
 
+> [!NOTE]
+> GLTF import also decodes the meshes compressed with the Draco extension (`KHR_draco_mesh_compression`).
+
 ### Point Cloud Formats
 
 | **Format** | **Import** | **Color Support** | **Export** |
 | --- | --- | --- | --- |
 | **ASC** | Yes | Yes | Yes |
 | **CSV** | Yes | No | No |
+| **DRC** (Google Draco) | Yes | Yes | Yes |
 | **E57** | Yes | Yes | No |
 | **LAS** | Yes | Yes | No |
 | **LAZ** | Yes | Yes | No |

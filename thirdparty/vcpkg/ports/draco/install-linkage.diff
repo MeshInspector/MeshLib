@@ -1,0 +1,23 @@
+diff --git a/cmake/draco_install.cmake b/cmake/draco_install.cmake
+index b3c88d4..890d85d 100644
+--- a/cmake/draco_install.cmake
++++ b/cmake/draco_install.cmake
+@@ -68,10 +68,14 @@ macro(draco_setup_install_target)
+         ARCHIVE DESTINATION "${libs_path}"
+         LIBRARY DESTINATION "${libs_path}")
+     else()
+-      install(
+-        TARGETS draco_static
+-        EXPORT dracoExport
+-        DESTINATION "${libs_path}")
++      if(BUILD_SHARED_LIBS)
++        set_target_properties(draco_static PROPERTIES EXCLUDE_FROM_ALL 1)
++      else()
++        install(
++          TARGETS draco_static
++          EXPORT dracoExport
++          DESTINATION "${libs_path}")
++      endif()
+ 
+       if(BUILD_SHARED_LIBS)
+         install(

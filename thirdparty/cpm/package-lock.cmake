@@ -46,6 +46,11 @@ set(MESHLIB_PACKAGE_cpr
   GIT_TAG 1.14.2
 )
 
+set(MESHLIB_PACKAGE_draco
+  GIT_REPOSITORY https://github.com/google/draco
+  GIT_TAG 15bdb3a4f15a7a8d77489ac348a7a50d93de17a3
+)
+
 set(MESHLIB_PACKAGE_eigen
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
   GIT_TAG 5.0.1

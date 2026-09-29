@@ -66,9 +66,10 @@ TEST(MRMesh, SubdivideMeshOnlyNearNotFlippable)
     EXPECT_LT( 4 * nearSplits, allSplits );
     EXPECT_GT( notFlippable.count(), 1 );
 
-    // without notFlippable nothing is split
+    // with empty notFlippable nothing is split
     mesh = base;
-    settings.notFlippable = nullptr;
+    UndirectedEdgeBitSet emptyNotFlippable;
+    settings.notFlippable = &emptyNotFlippable;
     EXPECT_EQ( subdivideMesh( mesh, settings ), 0 );
 }
 

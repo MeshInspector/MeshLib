@@ -37,6 +37,7 @@ inline bool operator < ( const EdgeLength & a, const EdgeLength & b )
 int subdivideMesh( Mesh & mesh, const SubdivideSettings & settings )
 {
     MR_TIMER;
+    assert( !settings.onlyNearNotFlippable || settings.notFlippable );
     const float maxEdgeLenSq = sqr( settings.maxEdgeLen );
     Mesh original;
     if ( settings.projectOnOriginalMesh )

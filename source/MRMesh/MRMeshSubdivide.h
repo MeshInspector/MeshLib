@@ -48,7 +48,7 @@ struct SubdivideSettings
     UndirectedEdgeBitSet* notFlippable = nullptr;
 
     /// If true, then only the edges having a vertex of their left or right triangle incident to a \ref notFlippable edge can be split,
-    /// so subdivision is localized near notFlippable edges; nothing is split if \ref notFlippable is null
+    /// so subdivision is localized near notFlippable edges; \ref notFlippable must not be null then (nothing is split in release otherwise)
     bool onlyNearNotFlippable = false;
 
     /// New vertices appeared during subdivision will be added here

@@ -184,14 +184,16 @@ After installing MeshLib, a great way to start exploring its capabilities is thr
 > run on a background thread as it does on Windows and Linux. It runs on the thread of your
 > Python script instead, which must be the main thread.
 >
-> `mrviewerpy.launch()` starts the Viewer without a window and returns, and the calls that
-> follow add objects to the scene. `mrviewerpy.showViewer()` opens the window and runs the
-> Viewer until the user closes it.
+> `mrviewerpy.launch()` starts the Viewer and returns, and the calls that follow add objects
+> to the scene. `mrviewerpy.showViewer()` opens the window and runs the Viewer until the user
+> closes it. At the interactive prompt, and while a script waits in `input()`, the window is
+> live as well: the interpreter pumps the Viewer whenever it waits for a line of terminal
+> input, so you can type commands and watch the scene change between them.
 >
 > On Windows and Linux the window is live from `launch()` on and `showViewer()` is optional.
-> On macOS `showViewer()` is mandatory, since the window appears nowhere else, and it blocks:
-> the scene is shown as it stands at that call, and the code after it runs once the window
-> is closed.
+> On macOS a script that never waits for input needs `showViewer()` to show the window, and it
+> blocks: the scene is shown as it stands at that call, and the code after it runs once the
+> window is closed.
 
 > [!WARNING]
 > On macOS, releases without `mrviewerpy.showViewer()` raise

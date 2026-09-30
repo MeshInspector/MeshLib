@@ -24,7 +24,7 @@ namespace MR
 static void updateOrInvalidateCaches( Mesh& mesh, const RelaxParams& params )
 {
     if ( params.updateCaches )
-        mesh.updateCaches( mesh.topology.getVertIds( params.region ) );
+        mesh.updateCaches( params.region );
     else
         mesh.invalidateCaches();
 }

@@ -148,6 +148,7 @@ protected:
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 
+    /// when the mouse is not pressed, also sets singleEditingRegion_
     void updateVizualizeSelection_();
 
     void updateRegionUVs_( const VertBitSet& region );
@@ -190,7 +191,7 @@ protected:
     bool mousePressed_ = false;
 
     boost::signals2::scoped_connection meshChangedConnection_;
-    bool ownMeshChangedSignal_ = false;
+    bool ownMeshChangedSignal_ = false; ///< true while the widget changes the mesh itself, to ignore meshChangedSignal
 
     bool connectionsInitialized_ = false;
 

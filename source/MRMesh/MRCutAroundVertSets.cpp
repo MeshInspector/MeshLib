@@ -53,12 +53,12 @@ Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vec
         for ( size_t i = 0; i + 1 < numSets; ++i )
         {
             auto & di = dists[i][v];
-            if ( di == FLT_MAX )
+            if ( !( di < FLT_MAX ) )
                 continue;
             for ( size_t j = i + 1; j < numSets; ++j )
             {
                 auto & dj = dists[j][v];
-                if ( dj == FLT_MAX )
+                if ( !( dj < FLT_MAX ) )
                     continue;
                 const auto sum = di + dj;
                 if ( sum >= minSum )

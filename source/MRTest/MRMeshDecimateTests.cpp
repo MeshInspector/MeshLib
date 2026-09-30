@@ -9,6 +9,7 @@
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRBitSet.h>
 #include <map>
+#include <tuple>
 #include <sstream>
 
 namespace MR

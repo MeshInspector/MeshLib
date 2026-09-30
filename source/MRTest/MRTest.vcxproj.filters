@@ -151,6 +151,9 @@
     <ClCompile Include="MRMeshDecimateTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRMeshFixerTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRCPRTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

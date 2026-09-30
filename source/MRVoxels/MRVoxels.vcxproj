@@ -118,6 +118,7 @@
     <ProjectGuid>{7CC4F0FE-ACE6-4441-9DD7-296066B6D69F}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>MRVoxels</RootNamespace>
+    <EnableUnitySupport Condition="'$(MRVOXELS_UNITY_BUILD)'=='ON'">true</EnableUnitySupport>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">

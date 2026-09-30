@@ -567,7 +567,7 @@ void Mesh::invalidateCaches( bool pointsChanged )
     dipolesOwner_.reset();
 }
 
-void Mesh::updateCaches( const VertBitSet & changedVerts )
+void Mesh::updateCaches( const VertBitSet * changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {

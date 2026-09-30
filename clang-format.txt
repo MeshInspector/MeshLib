@@ -1,4 +1,4 @@
-# Clang-Format counterpart of the Visual C++ formatting settings in .editorconfig.
+# for clang-format 18 and newer
 Language: Cpp
 ColumnLimit: 0
 IndentWidth: 4

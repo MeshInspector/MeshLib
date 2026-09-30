@@ -21,10 +21,20 @@ namespace MR
     relaxT( topology, field );
 }
 
+static void updateOrInvalidateCaches( Mesh& mesh, const RelaxParams& params )
+{
+    if ( params.updateCaches )
+        mesh.updateCaches( mesh.topology.getVertIds( params.region ) );
+    else
+        mesh.invalidateCaches();
+}
+
 bool relax( Mesh& mesh, const MeshRelaxParams& params, const ProgressCallback& cb )
 {
-    mesh.invalidateCaches();
-    return relaxT( mesh.topology, mesh.points, params, cb );
+    const bool res = relaxT( mesh.topology, mesh.points, params, cb );
+    if ( params.iterations > 0 )
+        updateOrInvalidateCaches( mesh, params );
+    return res;
 }
 
 bool relax( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params, const ProgressCallback& cb )
@@ -131,9 +141,10 @@ bool equalizeTriAreas( const MeshTopology& topology, VertCoords& points, const M
 
 bool equalizeTriAreas( Mesh& mesh, const MeshEqualizeTriAreasParams& params, const ProgressCallback& cb )
 {
+    const bool res = equalizeTriAreas( mesh.topology, mesh.points, params, cb );
     if ( params.iterations > 0 )
-        mesh.invalidateCaches();
-    return equalizeTriAreas( mesh.topology, mesh.points, params, cb );
+        updateOrInvalidateCaches( mesh, params );
+    return res;
 }
 
 bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const MeshRelaxParams& params, const ProgressCallback& cb )
@@ -192,9 +203,10 @@ bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const Me
 
 bool relaxKeepVolume( Mesh& mesh, const MeshRelaxParams& params, const ProgressCallback& cb )
 {
+    const bool res = relaxKeepVolume( mesh.topology, mesh.points, params, cb );
     if ( params.iterations > 0 )
-        mesh.invalidateCaches();
-    return relaxKeepVolume( mesh.topology, mesh.points, params, cb );
+        updateOrInvalidateCaches( mesh, params );
+    return res;
 }
 
 bool relaxApprox( const MeshTopology& topology, VertCoords& points, const MeshApproxRelaxParams& params, const ProgressCallback& cb )
@@ -278,9 +290,10 @@ bool relaxApprox( const MeshTopology& topology, VertCoords& points, const MeshAp
 
 bool relaxApprox( Mesh& mesh, const MeshApproxRelaxParams& params, const ProgressCallback& cb )
 {
+    const bool res = relaxApprox( mesh.topology, mesh.points, params, cb );
     if ( params.iterations > 0 )
-        mesh.invalidateCaches();
-    return relaxApprox( mesh.topology, mesh.points, params, cb );
+        updateOrInvalidateCaches( mesh, params );
+    return res;
 }
 
 void removeSpikes( const MeshTopology& topology, VertCoords& points, int maxIterations, float minSumAngle, const VertBitSet * region )

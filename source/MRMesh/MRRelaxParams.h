@@ -19,6 +19,10 @@ struct RelaxParams
     /// speed of relaxing, typical values (0.0, 0.5]
     float force = 0.5f;
 
+    /// in functions taking Mesh: if false then all mesh caches (AABB trees) are invalidated after relaxation,
+    /// if true then they are updated only in the region (faster, but the trees might become less efficient)
+    bool updateCaches = false;
+
     /// if true then maximal displacement of each point during denoising will be limited
     bool limitNearInitial = false;
 

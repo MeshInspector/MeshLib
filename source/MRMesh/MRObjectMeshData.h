@@ -41,8 +41,8 @@ struct ObjectMeshData
 /// return all edges separating faces with different textures
 [[nodiscard]] MRMESH_API UndirectedEdgeBitSet edgesBetweenDifferentTextures( const MeshTopology & topology, const TexturePerFace & textures );
 
-/// resizes each non-empty vertex attribute of data to data.mesh->topology.vertSize() and each non-empty face attribute to faceSize();
-/// if an attribute had no values for some valid elements, then it is padded with default values and a warning is logged
+/// resizes each non-empty vertex attribute of data to data.mesh->topology.vertSize() and each non-empty face attribute to faceSize(),
+/// the added elements get default values, and the added faces in texturePerFace get the first texture
 MRMESH_API void resizeAttributesToMesh( ObjectMeshData & data );
 
 } //namespace MR

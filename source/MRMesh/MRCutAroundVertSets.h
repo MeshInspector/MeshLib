@@ -22,7 +22,7 @@ struct CutAroundVertSetsParams
 
 /// computes surface distance field around each vertex set up to (distance + gap),
 /// scales any two fields to be separated by gap, and cuts the mesh along isolines of each field at given distance;
-/// no two vertex sets may share a vertex;
+/// no two vertex sets may share a vertex; edges with both ends in one set are not cut and keep their ids;
 /// \return the region of each vertex set (triangles with distance <= params.distance) in the modified mesh
 [[nodiscard]] MRMESH_API Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vector<VertBitSet> & vertSets,
     const CutAroundVertSetsParams & params, const ProgressCallback & cb = {} );

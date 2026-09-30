@@ -67,6 +67,11 @@ TEST( MRMesh, CutAroundVertSets )
         EXPECT_FALSE( cutAroundVertSets( meshCopy, vertSets, params, [] ( float ) { return false; } ).has_value() );
     }
 
+    std::vector<std::pair<VertId, VertId>> pathEnds;
+    for ( int i = 0; i < 2; ++i )
+        for ( auto e : paths[i] )
+            pathEnds.emplace_back( mesh.topology.org( e ), mesh.topology.dest( e ) );
+
     float maxProgress = 0;
     auto res = cutAroundVertSets( mesh, vertSets, params, [&] ( float p ) { maxProgress = std::max( maxProgress, p ); return true; } );
     EXPECT_GT( maxProgress, 0.5f );
@@ -81,6 +86,18 @@ TEST( MRMesh, CutAroundVertSets )
     EXPECT_TRUE( r0.any() );
     EXPECT_TRUE( r1.any() );
     EXPECT_FALSE( r0.intersects( r1 ) );
+
+    // no isoline crosses the edges between the vertices of a set, so they keep their ids
+    size_t k = 0;
+    for ( int i = 0; i < 2; ++i )
+    {
+        for ( auto e : paths[i] )
+        {
+            EXPECT_EQ( mesh.topology.org( e ), pathEnds[k].first );
+            EXPECT_EQ( mesh.topology.dest( e ), pathEnds[k].second );
+            ++k;
+        }
+    }
 
     // each path is inside its region
     for ( int i = 0; i < 2; ++i )

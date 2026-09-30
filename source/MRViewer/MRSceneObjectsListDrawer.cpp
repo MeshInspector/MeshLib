@@ -754,7 +754,7 @@ std::vector<Object*> SceneObjectsListDrawer::getPreSelection_( Object* meshclick
         while ( obj && obj != SceneRoot::getSharedPtr().get() )
         {
             const std::string uniqueStr = std::to_string( intptr_t( obj ) );
-            // a group never toggled by the user has no storage entry, and its state is sDefaultGroupState
+            // not ImGui::TreeNodeGetOpen: it assumes closed for a group never toggled by the user, ignoring sDefaultGroupState
             bool isOpen = window->DC.StateStorage->GetInt( window->GetID( objectLineStrId_( *obj, uniqueStr ).c_str() ), sDefaultGroupState ? 1 : 0 ) != 0;
             if ( !isOpen )
                 return false;

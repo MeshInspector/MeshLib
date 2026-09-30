@@ -215,5 +215,7 @@ IF(EMSCRIPTEN)
   # Draco checks these even with its JS glue disabled
   set(PYTHONINTERP_FOUND ON)
   set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
+  # Emscripten builds SHARED libraries as static, so draco_shared would clash with draco_static
+  set(BUILD_SHARED_LIBS OFF)
 ENDIF()
 add_subdirectory(./draco)

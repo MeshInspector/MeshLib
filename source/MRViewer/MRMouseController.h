@@ -50,6 +50,10 @@ public:
     bool isDropOldEventOnNewActive() const { return dropOldEventsOnNew_; }
     void dropOldEventsOnNew( bool on ) { dropOldEventsOnNew_ = on; };
 
+    // if true, mouse wheel zooms in the opposite direction
+    bool isZoomInverted() const { return zoomInverted_; }
+    void setZoomInverted( bool on ) { zoomInverted_ = on; }
+
     // returns nullopt if no control is present for given mode, otherwise returns associated control
     MRVIEWER_API std::optional<MouseControlKey> findControlByMode( MouseMode mode ) const;
     // make string from mouse button and modifier
@@ -82,6 +86,7 @@ private:
     void cursorEntrance_( bool entered );
 
     bool dropOldEventsOnNew_{ false };
+    bool zoomInverted_{ false };
     void resetAllIfNeeded_();
 
     Vector3f downTranslation_;

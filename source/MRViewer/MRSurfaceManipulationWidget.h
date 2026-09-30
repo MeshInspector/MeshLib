@@ -88,10 +88,11 @@ public:
     /// enable visualization of mesh deviations
     MRVIEWER_API void enableDeviationVisualization( bool enable );
 
-    /// set method for calculating mesh changes
+    /// set method for calculating mesh changes;
+    /// while the topology differs from the original mesh, ExactDistance is used instead, and the requested method is restored when it becomes the same again
     MRVIEWER_API void setDeviationCalculationMethod( DeviationCalculationMethod method );
 
-    /// get method for calculating mesh changes
+    /// get method for calculating mesh changes, which is currently in use
     MRVIEWER_API DeviationCalculationMethod deviationCalculationMethod() const { return deviationCalculationMethod_; }
 
     /// returns true if the current object's mesh has the same topology as original input mesh (and vertices with same IDs can be compared)
@@ -148,6 +149,7 @@ protected:
     void laplacianPickVert_( const PointOnFace& pick );
     void laplacianMoveVert_( const Vector2f& mousePos );
 
+    /// when the mouse is not pressed, also sets singleEditingRegion_
     void updateVizualizeSelection_();
 
     void updateRegionUVs_( const VertBitSet& region );
@@ -190,7 +192,7 @@ protected:
     bool mousePressed_ = false;
 
     boost::signals2::scoped_connection meshChangedConnection_;
-    bool ownMeshChangedSignal_ = false;
+    bool ownMeshChangedSignal_ = false; ///< true while the widget changes the mesh itself, to ignore meshChangedSignal
 
     bool connectionsInitialized_ = false;
 
@@ -222,6 +224,7 @@ protected:
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = false;
     DeviationCalculationMethod deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;
+    DeviationCalculationMethod requestedDeviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance; ///< last method passed to setDeviationCalculationMethod
     bool sameOriginalMeshTopology_ = true;
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects

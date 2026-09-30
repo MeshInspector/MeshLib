@@ -73,8 +73,8 @@ public:
     /// updates bounding boxes of the nodes containing changed vertices;
     /// this is a faster alternative to full tree rebuild (but the tree after refit might be less efficient)
     /// \param newCoords coordinates of all vertices including changed ones;
-    /// \param changedVerts vertex ids with modified coordinates (since tree construction or last refit)
-    MRMESH_API void refit( const VertCoords & newCoords, const VertBitSet & changedVerts );
+    /// \param changedVerts vertex ids with modified coordinates (since tree construction or last refit), nullptr means all vertices
+    MRMESH_API void refit( const VertCoords & newCoords, const VertBitSet * changedVerts );
 
 private:
     std::vector<Point> orderedPoints_;

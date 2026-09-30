@@ -59,11 +59,13 @@ AABBTree::AABBTree( const MeshPart & mp )
     nodes_ = makeAABBTreeNodeVec( std::move( boxedFaces ) );
 }
 
-void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
+void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
 {
     MR_TIMER;
 
-    const auto changedFaces = getIncidentFaces( mesh.topology, changedVerts );
+    FaceBitSet changedFaces;
+    if ( changedVerts )
+        changedFaces = getIncidentFaces( mesh.topology, *changedVerts );
 
     // update leaf nodes
     NodeBitSet changedNodes( nodes_.size() );
@@ -73,7 +75,7 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet & changedVerts )
         if ( !node.leaf() )
             return;
         const auto f = node.leafId();
-        if ( !changedFaces.test( f ) )
+        if ( changedVerts && !changedFaces.test( f ) )
             return;
         changedNodes.set( nid );
         node.box = computeFaceBox( mesh, f );

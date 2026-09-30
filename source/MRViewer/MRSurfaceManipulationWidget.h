@@ -57,10 +57,10 @@ public:
         bool mimicPatch = false; ///< if true in Patch mode mixes `CloseSurfaceFillMetric` and disables smoothing
     };
 
-    /// initialize widget according ObjectMesh
+    /// initialize widget according ObjectMesh; if it was initialized with another object, reset() is called first
     MRVIEWER_API void init( const std::shared_ptr<ObjectMesh>& objectMesh );
 
-    /// reset widget state
+    /// reset widget state including the fixed region; does nothing if the widget is not initialized
     MRVIEWER_API void reset();
 
     /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
@@ -77,7 +77,7 @@ public:
     [[deprecated( "always returns 1" )]]
     MRVIEWER_API float getMinRadius() const { return 1.f; }
 
-    /// get palette used for visualization point shifts
+    /// get palette used for visualization point shifts, available before init()
     Palette& palette() { return *palette_; }
 
     /// update texture used for colorize surface (use after change colorMap in palette)

@@ -2,6 +2,7 @@
 Language: Cpp
 ColumnLimit: 0
 IndentWidth: 4
+SortIncludes: Never
 
 AlignAfterOpenBracket: false
 IndentCaseLabels: false

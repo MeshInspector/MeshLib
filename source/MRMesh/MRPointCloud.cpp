@@ -139,7 +139,7 @@ const AABBTreePoints& PointCloud::getAABBTree() const
     return res;
 }
 
-void PointCloud::updateCaches( const VertBitSet & changedVerts )
+void PointCloud::updateCaches( const VertBitSet * changedVerts )
 {
     AABBTreeOwner_.update( [&]( AABBTreePoints & tree )
     {

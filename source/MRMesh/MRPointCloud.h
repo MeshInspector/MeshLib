@@ -100,7 +100,8 @@ struct PointCloud
     /// updates existing caches in case of few points were changed insignificantly,
     /// and validPoints remained unchanged;
     /// it shall be considered as a faster alternative to invalidateCaches() and following rebuild of trees
-    MRMESH_API void updateCaches( const VertBitSet & changedVerts );
+    /// \param changedVerts points with modified coordinates, nullptr means all valid points
+    MRMESH_API void updateCaches( const VertBitSet * changedVerts );
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;

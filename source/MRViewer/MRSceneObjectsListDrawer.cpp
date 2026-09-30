@@ -749,12 +749,13 @@ std::vector<Object*> SceneObjectsListDrawer::getPreSelection_( Object* meshclick
 
     auto checkVisibleInList = [&] ( size_t i )
     {
+        auto* window = ImGui::GetCurrentWindow();
         Object* obj = all_objects[i]->parent();
         while ( obj && obj != SceneRoot::getSharedPtr().get() )
         {
             const std::string uniqueStr = std::to_string( intptr_t( obj ) );
-            spdlog::info( "{}, {}", i, ImGui::GetCurrentWindow()->GetID(objectLineStrId_(*obj, uniqueStr).c_str()));
-            bool isOpen = ImGui::TreeNodeGetOpen( ImGui::GetCurrentWindow()->GetID( objectLineStrId_( *obj, uniqueStr ).c_str() ) );
+            // not ImGui::TreeNodeGetOpen: it assumes closed for a group never toggled by the user, ignoring sDefaultGroupState
+            bool isOpen = window->DC.StateStorage->GetInt( window->GetID( objectLineStrId_( *obj, uniqueStr ).c_str() ), sDefaultGroupState ? 1 : 0 ) != 0;
             if ( !isOpen )
                 return false;
             obj = obj->parent();

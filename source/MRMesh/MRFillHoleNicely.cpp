@@ -9,7 +9,6 @@
 #include "MRExpandShrink.h"
 #include "MRMeshComponents.h"
 #include "MRRingIterator.h"
-#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -38,24 +37,20 @@ static void smoothFillingNicely( Mesh& mesh, const VertBitSet& newVerts, const F
     }
 }
 
-// returns null if the attribute is not given or empty; otherwise returns it,
-// padding it with default values (and logging a warning) if it has no values for some valid elements
+// returns null if the attribute is not given or empty; otherwise returns it padded with default values up to given size
 template <typename T, typename I>
-static Vector<T, I>* attributeToUpdate( Vector<T, I>* attr, I lastValid, size_t size, const char* name )
+static Vector<T, I>* attributeToUpdate( Vector<T, I>* attr, size_t size )
 {
     if ( !attr || attr->empty() )
         return nullptr;
-    if ( lastValid && attr->size() <= lastValid )
-    {
-        spdlog::warn( "Hole filling: {} has {} elements for {} mesh elements, padding it with default values", name, attr->size(), size );
+    if ( attr->size() < size )
         attr->resize( size );
-    }
     return attr;
 }
 
 static std::pair<FaceColors*, Color> prepareFillingFaceColors( const MeshTopology& tp, EdgeId h0, EdgeId h1, FaceColors* inFaceColors )
 {
-    FaceColors* faceColors = attributeToUpdate( inFaceColors, tp.lastValidFace(), tp.faceSize(), "faceColors" );
+    FaceColors* faceColors = attributeToUpdate( inFaceColors, tp.faceSize() );
 
     Color newFaceColor;
     if ( faceColors )
@@ -107,9 +102,8 @@ static VertBitSet subdivideFillingNicely( Mesh& mesh, FaceBitSet& newFaces,
         .onEdgeSplit = settings.onEdgeSplit
     };
 
-    const auto lastVert = mesh.topology.lastValidVert();
-    VertUVCoords* uvCoords = attributeToUpdate( outAttribs.uvCoords, lastVert, mesh.topology.vertSize(), "uvCoords" );
-    VertColors* colorMap = attributeToUpdate( outAttribs.colorMap, lastVert, mesh.topology.vertSize(), "colorMap" );
+    VertUVCoords* uvCoords = attributeToUpdate( outAttribs.uvCoords, mesh.topology.vertSize() );
+    VertColors* colorMap = attributeToUpdate( outAttribs.colorMap, mesh.topology.vertSize() );
     if ( uvCoords || colorMap || outAttribs.faceColors )
     {
         subset.onEdgeSplit = [&mesh, uvCoords, colorMap, faceColors = outAttribs.faceColors, onEdgeSplit = settings.onEdgeSplit] ( EdgeId e1, EdgeId e )

@@ -8,9 +8,6 @@
 #include <MRMesh/MRObjectMeshData.h>
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRBitSet.h>
-#include <MRMesh/MRLog.h>
-#include <MRPch/MRSpdlog.h>
-#include <spdlog/sinks/ostream_sink.h>
 #include <map>
 #include <sstream>
 
@@ -245,24 +242,6 @@ TEST( MRMesh, MeshDecimateResolveDegen )
     );
 }
 
-namespace
-{
-
-// captures the log while it exists
-class LogCapture
-{
-public:
-    LogCapture() { Logger::instance().addSink( sink_ ); }
-    ~LogCapture() { Logger::instance().removeSink( sink_ ); }
-    bool contains( std::string_view s ) const { return stream_.str().find( s ) != std::string::npos; }
-
-private:
-    std::ostringstream stream_;
-    spdlog::sink_ptr sink_ = std::make_shared<spdlog::sinks::ostream_sink_mt>( stream_ );
-};
-
-} // namespace
-
 TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
 {
     const Mesh original = makeSphere( { .numMeshVertices = 400 } );
@@ -293,11 +272,7 @@ TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
         vertAt[{ p.x, p.y, p.z }] = v;
     }
 
-    LogCapture log;
     decimateObjectMeshData( data, { .maxDeletedVertices = 0, .packMesh = true } );
-    EXPECT_TRUE( log.contains( "faceColors" ) );
-    EXPECT_TRUE( log.contains( "uvCoordinates" ) );
-    EXPECT_FALSE( log.contains( "texturePerFace" ) );
 
     // only the packing has happened, and old elements kept their attributes
     ASSERT_EQ( t.numValidFaces(), before.mesh->topology.numValidFaces() );

@@ -231,6 +231,7 @@ void SurfaceManipulationWidget::enableDeviationVisualization( bool enable )
 
 void SurfaceManipulationWidget::setDeviationCalculationMethod( DeviationCalculationMethod method )
 {
+    requestedDeviationCalculationMethod_ = method;
     if ( sameOriginalMeshTopology_ )
         deviationCalculationMethod_ = method;
     else
@@ -277,19 +278,12 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
     if ( !objAndPick.first || objAndPick.first != obj_ )
         return false;
 
+    if ( settings_.workMode == WorkMode::Laplacian && ( !objAndPick.second.face.valid() || badRegion_ ) )
+        return false;
+
     mousePressed_ = true;
     if ( settings_.workMode == WorkMode::Laplacian )
-    {
-        if ( !objAndPick.second.face.valid() )
-            return false;
-
-        if ( badRegion_ )
-        {
-            mousePressed_ = false;
-            return false;
-        }
         laplacianPickVert_( objAndPick.second );
-    }
     else
     {
         if ( settings_.workMode != WorkMode::Patch )
@@ -363,7 +357,7 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
         AppendHistory<PartialChangeMeshDataAction>( _t( "Subdivide Ridges/Grooves" ), obj_, std::move( subdivData ) );
         reallocData_( obj_->meshPtr()->topology.lastValidVert() + 1 );
         sameOriginalMeshTopology_ = false;
-        setDeviationCalculationMethod( deviationCalculationMethod_ );
+        setDeviationCalculationMethod( requestedDeviationCalculationMethod_ );
         obj_->setDirtyFlags( DIRTY_ALL );
     }
 }
@@ -478,7 +472,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
             reallocData_( obj_->meshPtr()->topology.lastValidVert() + 1 );
             sameOriginalMeshTopology_ = false;
-            setDeviationCalculationMethod( deviationCalculationMethod_ );
+            setDeviationCalculationMethod( requestedDeviationCalculationMethod_ );
             obj_->setDirtyFlags( DIRTY_ALL );
 
             // otherwise whole surface becomes red after patch and before mouse move
@@ -591,7 +585,7 @@ void SurfaceManipulationWidget::initConnections_()
         if ( settings_.workMode == WorkMode::Patch )
             updateUVmap_( false, true );
         sameOriginalMeshTopology_ = originalMesh_->topology == obj_->meshPtr()->topology;
-        setDeviationCalculationMethod( deviationCalculationMethod_ );
+        setDeviationCalculationMethod( requestedDeviationCalculationMethod_ );
         updateRegion_( Vector2f( getViewerInstance().mouseController().getMousePos() ) );
     } );
     connect( &getViewerInstance(), 10, boost::signals2::at_front );
@@ -826,6 +820,9 @@ void SurfaceManipulationWidget::abortEdit_()
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();
+    const auto numV = pointsShift_.size();
+    pointsShift_.clear();
+    pointsShift_.resize( numV, 0.f );
 }
 
 void SurfaceManipulationWidget::initLaplacian_( RememberShape rs )

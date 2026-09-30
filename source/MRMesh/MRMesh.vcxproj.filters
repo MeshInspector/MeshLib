@@ -624,6 +624,9 @@
     <ClInclude Include="MRSurroundingContour.h">
       <Filter>Source Files\Segmentation</Filter>
     </ClInclude>
+    <ClInclude Include="MRCutAroundVertSets.h">
+      <Filter>Source Files\Contours</Filter>
+    </ClInclude>
     <ClInclude Include="MRContoursCut.h">
       <Filter>Source Files\Contours</Filter>
     </ClInclude>
@@ -1807,6 +1810,9 @@
     </ClCompile>
     <ClCompile Include="MRSurroundingContour.cpp">
       <Filter>Source Files\Segmentation</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCutAroundVertSets.cpp">
+      <Filter>Source Files\Contours</Filter>
     </ClCompile>
     <ClCompile Include="MRContoursCut.cpp">
       <Filter>Source Files\Contours</Filter>

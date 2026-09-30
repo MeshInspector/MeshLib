@@ -54,7 +54,7 @@ public:
         VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
         bool laplacianBasedAddRemove = false; ///< if true in Add/Remove modes, the modification will be done using Laplacian solver, where the closest vertices will be attracted toward mouse cursor to form ideal ridges or grooves
         bool subdivideGrooves = false; ///< if true in Add/Remove modes, changed parts of mesh will be subdivided on mouse up
-        bool mimicPatch = false; /// if true in Patch mode mixes `CloseSurfaceFillMetric` and disables smoothing
+        bool mimicPatch = false; ///< if true in Patch mode mixes `CloseSurfaceFillMetric` and disables smoothing
     };
 
     /// initialize widget according ObjectMesh
@@ -71,10 +71,11 @@ public:
     MRVIEWER_API void setSettings( const Settings& settings );
 
     /// get widget settings 
-    MRVIEWER_API const Settings& getSettings() { return settings_; }
+    MRVIEWER_API const Settings& getSettings() const { return settings_; }
 
     /// minimum radius of editing area.
-    MRVIEWER_API float getMinRadius() { return minRadius_; }
+    [[deprecated( "always returns 1" )]]
+    MRVIEWER_API float getMinRadius() const { return 1.f; }
 
     /// get palette used for visualization point shifts
     Palette& palette() { return *palette_; }
@@ -99,7 +100,7 @@ public:
     MRVIEWER_API bool sameOriginalMeshTopology() const { return sameOriginalMeshTopology_; }
 
     /// get min / max point shifts for (useful for setup palette)
-    MRVIEWER_API Vector2f getMinMax();
+    MRVIEWER_API Vector2f getMinMax() const;
 
     /// allow the user to edit parts of object that are hidden in the current view by other objects
     MRVIEWER_API void setIgnoreOcclusion( bool ignore ) { ignoreOcclusion_ = ignore; }
@@ -172,7 +173,6 @@ protected:
 
     std::shared_ptr<ObjectMesh> obj_;
     VertBitSet unchangeableVerts_;
-    float minRadius_ = 1.f;
     Vector2f mousePos_; ///< mouse position of last updateRegion_
     std::vector<MeshTriPoint> pointsUnderMouse_; ///< mesh points under mouse in the current frame (could be many in case of fast mouse movement)
     VertBitSet singleEditingRegion_;  ///< current (under the cursor) region of tool application
@@ -182,12 +182,11 @@ protected:
     VertScalars editingDistanceMap_;
     VertScalars visualizationDistanceMap_;
     VertScalars valueChanges_;
-    VertScalars lastStableValueChanges_;
     std::shared_ptr<Mesh> originalMesh_; ///< original input mesh
     VertBitSet unknownSign_; ///< cached data to avoid reallocating memory
     std::shared_ptr<ObjectMesh> lastStableObjMesh_;
-    bool firstInit_ = true; /// need to save settings in re-initial
-    bool badRegion_ = false; /// in selected region less than 3 points
+    bool firstInit_ = true; ///< need to save settings in re-initial
+    bool badRegion_ = false; ///< in selected region less than 3 points
 
     bool mousePressed_ = false;
 
@@ -197,8 +196,8 @@ protected:
     bool connectionsInitialized_ = false;
 
     /// Laplacian
-    VertId touchVertId_; /// we fix this vertex in Laplacian and move it manually
-    Vector3f touchVertIniPos_; /// initial position of fixed vertex
+    VertId touchVertId_; ///< we fix this vertex in Laplacian and move it manually
+    Vector3f touchVertIniPos_; ///< initial position of fixed vertex
     Vector2i storedDown_;
     std::unique_ptr<Laplacian> laplacian_;
 

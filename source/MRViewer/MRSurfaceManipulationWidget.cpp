@@ -204,7 +204,7 @@ void SurfaceManipulationWidget::updateTexture()
         {
             texture.pixels = { brushColor, brushColor, brushColor,
                 Color::blue(), Color::green(), Color::red() };
-            texture.resolution = { 2, 2 };
+            texture.resolution = { 3, 2 };
         }
     }
     else
@@ -239,7 +239,7 @@ void SurfaceManipulationWidget::setDeviationCalculationMethod( DeviationCalculat
     updateValueChanges_( obj_->meshPtr()->topology.getValidVerts() );
 }
 
-Vector2f SurfaceManipulationWidget::getMinMax()
+Vector2f SurfaceManipulationWidget::getMinMax() const
 {
     const float rangeLength = settings_.editForce * ( Palette::DefaultColors.size() - 1 );
     return { rangeLength * -0.5f, rangeLength * 0.5f };
@@ -290,7 +290,6 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
         {
             // in patch mode the mesh does not change till mouse up, and we always need to pick in it (before and right after patch)
             createLastStableObjMesh_();
-            lastStableValueChanges_ = valueChanges_;
 
             appendHistoryAction_ = true;
             std::string name = "Brush: ";
@@ -856,7 +855,6 @@ void SurfaceManipulationWidget::laplacianPickVert_( const PointOnFace& pick )
     initLaplacian_( RememberShape::Yes );
     historyAction_ = std::make_shared<VersatileChangeMeshPointsAction>( _t( "Brush: Deform" ), obj_ );
     createLastStableObjMesh_();
-    lastStableValueChanges_ = valueChanges_;
 }
 
 void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )

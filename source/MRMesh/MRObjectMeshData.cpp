@@ -62,7 +62,9 @@ void resizeAttributesToMesh( ObjectMeshData & data )
     resize( data.uvCoordinates, topology.vertSize() );
     resize( data.vertColors, topology.vertSize() );
     resize( data.faceColors, topology.faceSize() );
-    resize( data.texturePerFace, topology.faceSize() );
+    // not TextureId(), which is invalid: faces without texture id are rendered with the first texture
+    if ( !data.texturePerFace.empty() )
+        data.texturePerFace.resize( topology.faceSize(), TextureId{ 0 } );
 }
 
 } //namespace MR

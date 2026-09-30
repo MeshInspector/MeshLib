@@ -254,16 +254,16 @@ TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
     data.mesh->deleteFaces( del );
     const auto & t = data.mesh->topology;
 
-    // no colors for the last face and no uv for the last vertex
+    // no color and texture for the last face, and no uv for the last vertex
     data.faceColors.resize( size_t( t.lastValidFace() ) );
     for ( FaceId f( 0 ); f < data.faceColors.size(); ++f )
         data.faceColors[f] = Color( int( f ) % 256, int( f ) / 256, 0 );
     data.uvCoordinates.resize( size_t( t.lastValidVert() ) );
     for ( VertId v( 0 ); v < data.uvCoordinates.size(); ++v )
         data.uvCoordinates[v] = { float( v ), 0.0f };
-    data.texturePerFace.resize( t.faceSize() );
+    data.texturePerFace.resize( size_t( t.lastValidFace() ) );
     for ( FaceId f( 0 ); f < data.texturePerFace.size(); ++f )
-        data.texturePerFace[f] = TextureId( int( f ) % 3 );
+        data.texturePerFace[f] = TextureId( int( f ) % 3 + 1 );
     const auto before = data.clone();
     std::map<std::tuple<float, float, float>, VertId> vertAt;
     for ( auto v : t.getValidVerts() )
@@ -282,16 +282,25 @@ TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
     for ( auto f : t.getValidFaces() )
     {
         const auto pf = findProjection( data.mesh->triCenter( f ), *before.mesh ).proj.face;
-        EXPECT_EQ( data.texturePerFace[f], before.texturePerFace[pf] );
         if ( pf < before.faceColors.size() )
+        {
             EXPECT_EQ( data.faceColors[f], before.faceColors[pf] );
+            EXPECT_EQ( data.texturePerFace[f], before.texturePerFace[pf] );
+        }
+        else
+        {
+            // the face without texture gets the first one, not an invalid id
+            EXPECT_EQ( data.texturePerFace[f], TextureId( 0 ) );
+        }
     }
     for ( auto v : t.getValidVerts() )
     {
         const auto p = data.mesh->points[v];
         const auto pv = vertAt.at( { p.x, p.y, p.z } );
         if ( pv < before.uvCoordinates.size() )
+        {
             EXPECT_EQ( data.uvCoordinates[v], before.uvCoordinates[pv] );
+        }
     }
 }
 

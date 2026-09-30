@@ -24,6 +24,7 @@
 #include "MRViewer.h"
 #include "MRSceneCache.h"
 #include "MRUIStyle.h"
+#include "MRUITestEngine.h"
 #include "MRRibbonConstants.h"
 #include "MRImGuiVectorOperators.h"
 #include "MRColorTheme.h"
@@ -258,7 +259,10 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     UI::ButtonCustomizationParams params;
     params.forceImGuiBackground = true;
     params.flags = ImGuiButtonFlags_AllowOverlap;
-    UI::buttonEx( ( "##SelectBtn_" + object.name() + "_" + uniqueStr ).c_str(), Vector2f( -1, cFrameHeight ), params );
+    params.enableTestEngine = false; // registered here to get the keyboard modifiers of a simulated click
+    const auto selectBtnLabel = "##SelectBtn_" + object.name() + "_" + uniqueStr;
+    const auto simulatedClickMods = UI::TestEngine::createButtonWithModifiers( selectBtnLabel );
+    UI::buttonEx( selectBtnLabel.c_str(), Vector2f( -1, cFrameHeight ), params );
     if ( ImGui::IsItemHovered( ImGuiHoveredFlags_AllowWhenBlockedByActiveItem ) && needDragDropTarget_() )
     {
         auto rect = context->LastItemData.Rect;
@@ -278,7 +282,9 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     context->LastItemData.ItemFlags |= ImGuiItemFlags_AllowOverlap; // needed so hover check respect overlap
 
     bool frameHovered = ImGui::IsItemHovered();
-    if ( frameHovered )
+    if ( simulatedClickMods )
+        processSimulatedItemClick_( object, *simulatedClickMods );
+    else if ( frameHovered )
         processItemClick_( object, selected );
 
     auto lineObjectData = context->LastItemData;

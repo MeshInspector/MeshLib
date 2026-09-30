@@ -93,6 +93,9 @@ protected:
     /// function that do click logic on object line (select/deselect/rename/open context)
     MRVIEWER_API void processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected );
 
+    /// selection logic of a click on object line simulated by UI::TestEngine, with its keyboard modifiers (`GLFW_MOD_*` bits)
+    MRVIEWER_API void processSimulatedItemClick_( Object& object, int modifiers );
+
     /// payload object will be moved
     MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
 
@@ -125,9 +128,6 @@ private:
     void updateSelection_( Object* objPtr, bool isShift, bool isCtrl,
                            const std::vector<std::shared_ptr<Object>>& selected,
                            const std::vector<std::shared_ptr<Object>>& all );
-
-    /// registers every row drawn on this frame (not skipped as out of view) as a button in the "SceneTree" group of UI::TestEngine
-    void registerTestEngineRows_( const std::vector<Object*>& rows );
 
     bool clickTrigger_ = false;
     bool allowSceneReorder_ = true;

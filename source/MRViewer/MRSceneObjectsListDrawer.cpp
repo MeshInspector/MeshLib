@@ -14,7 +14,6 @@
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
-#include "MRPch/MRFmt.h"
 #include "MRPch/MRSpdlog.h"
 #include "imgui_internal.h"
 #include "imgui.h"
@@ -341,7 +340,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
     upFirstSelected_ = MoveAndScrollData();
     downLastSelected_ = MoveAndScrollData();
 
-    std::vector<Object*> rows; // drawn ones, not skipped
     for ( int i = 0; i < all.size(); ++i )
     {
         const bool isLast = i == int( all.size() ) - 1;
@@ -399,7 +397,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
             }
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
-            [&] { isOpen = drawObject_( object, uniqueStr, currentDepth ); rows.push_back( &object ); },
+            [&] { isOpen = drawObject_( object, uniqueStr, currentDepth ); },
             [&] { isOpen = drawSkippedObject_( object, uniqueStr, currentDepth ); } );
 
             if ( object.isSelected() )
@@ -438,24 +436,6 @@ void SceneObjectsListDrawer::drawObjectsList_()
     if ( needDragDropTarget_() )
         skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_( SceneRoot::get(), false, true, "" ); } );
     skippableRenderer.endDraw();
-
-    registerTestEngineRows_( rows );
-}
-
-void SceneObjectsListDrawer::registerTestEngineRows_( const std::vector<Object*>& rows )
-{
-    UI::TestEngine::TreeGuard testEngineGuard( "SceneTree" );
-    // a row is named by its object; repeated names get suffixes " (2)", " (3)", ... in the order of drawn rows
-    std::unordered_map<std::string, int> nameCounts;
-    for ( Object* obj : rows )
-    {
-        const int count = ++nameCounts[obj->name()];
-        const auto mods = UI::TestEngine::createButtonWithModifiers( count == 1 ? obj->name() : fmt::format( "{} ({})", obj->name(), count ) );
-        if ( mods )
-            updateSelection_( obj, bool( *mods & GLFW_MOD_SHIFT ), bool( *mods & getGlfwModPrimaryCtrl() ),
-                SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>(),
-                SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>() );
-    }
 }
 
 float SceneObjectsListDrawer::getDrawDropTargetHeight_() const
@@ -576,6 +556,13 @@ void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vecto
 
     if ( pressed || released )
         updateSelection_( &object, ImGui::GetIO().KeyShift, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ), selected, all );
+}
+
+void SceneObjectsListDrawer::processSimulatedItemClick_( Object& object, int modifiers )
+{
+    updateSelection_( &object, bool( modifiers & GLFW_MOD_SHIFT ), bool( modifiers & getGlfwModPrimaryCtrl() ),
+        SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>(),
+        SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>() );
 }
 
 void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload )

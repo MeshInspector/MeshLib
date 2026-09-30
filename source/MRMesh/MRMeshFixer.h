@@ -71,6 +71,9 @@ struct FixMeshDegeneraciesParams
     /// degenerations will be fixed only in given region, it is updated during the operation
     FaceBitSet* region = nullptr;
 
+    /// edges that are never flipped, but can be split or collapsed; it is updated during the operation
+    UndirectedEdgeBitSet* notFlippable = nullptr;
+
     enum class Mode
     {
         Decimate, ///< use decimation only to fix degeneracies
@@ -87,6 +90,12 @@ struct FixMeshDegeneraciesParams
 
 /// Fixes degenerate faces and short edges in mesh (changes topology)
 MRMESH_API Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params );
+
+/// Fixes degenerate faces and short edges in the mesh of data (changes topology), and keeps all per-element attributes of data valid;
+/// the edges between faces with different colors or textures, the edges from data.selectedEdges and data.creases, and params.notFlippable are never flipped,
+/// so a degenerate triangle with the longest edge among them is fixed only if its opposite vertex is within max( params.maxDeviation, params.tinyEdgeLength )
+/// from that edge, or by Mode::RemeshPatch, where new faces and vertices get the attributes of the nearest points of the removed surface
+MRMESH_API Expected<void> fixMeshDataDegeneracies( ObjectMeshData& data, const FixMeshDegeneraciesParams& params );
 
 /// finds all inner vertices in region with the given number of incident edges each
 [[nodiscard]] MRMESH_API VertBitSet findInnerVertsOfDegree( const MeshTopology& topology, int n, const VertBitSet* region = nullptr );

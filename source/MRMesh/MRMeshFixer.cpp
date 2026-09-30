@@ -16,6 +16,11 @@
 #include "MREdgePaths.h"
 #include "MRFillHoleNicely.h"
 #include "MRMeshPatch.h"
+#include "MRObjectMeshData.h"
+#include "MRMeshSubdivideCallbacks.h"
+#include "MRProjectionMeshAttribute.h"
+#include "MRPartMapping.h"
+#include "MRMapOrHashMap.h"
 
 namespace MR
 {
@@ -161,9 +166,54 @@ Expected<std::vector<MultipleEdge>> findMultipleEdges( const MeshTopology& topol
     return res;
 }
 
-Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params )
+// returns the longest edge of given triangle, having the triangle on its left
+static EdgeId longestEdge( const Mesh& mesh, FaceId f )
+{
+    EdgeId res;
+    float maxLengthSq = -1;
+    for ( auto e : leftRing( mesh.topology, f ) )
+    {
+        if ( const auto lengthSq = mesh.edgeLengthSq( e ); lengthSq > maxLengthSq )
+        {
+            maxLengthSq = lengthSq;
+            res = e;
+        }
+    }
+    return res;
+}
+
+// decimation can fix a degenerate triangle with its vertex near the middle of the opposite (longest) edge only by flipping that edge;
+// so if the edge is not flippable, splits it at the projection of the vertex, and the new short edge can be collapsed instead;
+// onEdgeSplit( e1, e, t ) is called after each split of (e) into (e1->e) at org(e1) + t * ( dest(e) - org(e1) )
+static void splitNotFlippableLongEdges( Mesh& mesh, FaceBitSet& region, UndirectedEdgeBitSet& notFlippable,
+    float criticalAspectRatio, float shortEdgeLength, const std::function<void( EdgeId e1, EdgeId e, float t )>& onEdgeSplit )
 {
     MR_TIMER;
+    MR_WRITER( mesh );
+    const auto shortEdgeLengthSq = sqr( double( shortEdgeLength ) );
+    const auto degenerateFaces = findDegenerateFaces( { mesh, &region }, criticalAspectRatio ).value();
+    for ( auto f : degenerateFaces )
+    {
+        const auto e = longestEdge( mesh, f );
+        if ( !notFlippable.test( e.undirected() ) || mesh.edgeLengthSq( e ) <= shortEdgeLengthSq )
+            continue; // the longest edge can be flipped, or all edges are short (or even coincide)
+        const Vector3d a( mesh.orgPnt( e ) ), b( mesh.destPnt( e ) ), p( mesh.destPnt( mesh.topology.next( e ) ) );
+        const auto t = dot( p - a, b - a ) / ( b - a ).lengthSq();
+        const auto q = a + t * ( b - a );
+        if ( ( p - q ).lengthSq() > shortEdgeLengthSq || ( q - a ).lengthSq() <= shortEdgeLengthSq || ( q - b ).lengthSq() <= shortEdgeLengthSq )
+            continue; // the new edge would not be short enough to collapse, or the triangle already has a short edge
+        const auto e1 = mesh.splitEdge( e, Vector3f( q ), &region );
+        notFlippable.autoResizeSet( e1.undirected() );
+        if ( onEdgeSplit )
+            onEdgeSplit( e1, e, float( t ) );
+    }
+}
+
+// if data is given, then its attributes are kept valid, and it must own the mesh
+static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const FixMeshDegeneraciesParams& params )
+{
+    MR_TIMER;
+    assert( !data || data->mesh.get() == &mesh );
     int maxSteps = 1;
     if ( params.mode == FixMeshDegeneraciesParams::Mode::Remesh )
         maxSteps = 2;
@@ -196,6 +246,73 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
     if ( !reportProgress( sbd, 0.25f ) )
         return unexpectedOperationCanceled();
 
+    UndirectedEdgeBitSet* notFlippable = params.notFlippable;
+    UndirectedEdgeBitSet dataNotFlippable;
+    MeshAttributesToUpdate attributes;
+    // the edge sets that the algorithms below do not update themselves
+    std::vector<UndirectedEdgeBitSet*> edgeSets;
+    if ( data )
+    {
+        resizeAttributesToMesh( *data );
+        if ( !data->uvCoordinates.empty() )
+            attributes.uvCoords = &data->uvCoordinates;
+        if ( !data->vertColors.empty() )
+            attributes.colorMap = &data->vertColors;
+        if ( !data->texturePerFace.empty() )
+            attributes.texturePerFace = &data->texturePerFace;
+        if ( !data->faceColors.empty() )
+            attributes.faceColors = &data->faceColors;
+
+        // a flip keeps the ids of both faces, so flipping an edge between different colors or textures
+        // would extend the attribute of one face over a part of the other one
+        dataNotFlippable = data->selectedEdges | data->creases
+            | edgesBetweenDifferentColors( mesh.topology, data->faceColors )
+            | edgesBetweenDifferentTextures( mesh.topology, data->texturePerFace );
+        edgeSets = { &data->selectedEdges, &data->creases };
+        if ( params.notFlippable )
+        {
+            dataNotFlippable |= *params.notFlippable;
+            edgeSets.push_back( params.notFlippable );
+        }
+        notFlippable = dataNotFlippable.any() ? &dataNotFlippable : nullptr;
+    }
+
+    // updates the vertex attributes of data after the split of (e) into (e1->e) at org(e1) + t * ( dest(e) - org(e1) )
+    auto onEdgeSplitVerts = [&] ( EdgeId e1, EdgeId e, float t )
+    {
+        const auto a = mesh.topology.org( e1 );
+        const auto b = mesh.topology.dest( e );
+        if ( auto uv = attributes.uvCoords )
+            uv->push_back( ( *uv )[a] * ( 1 - t ) + ( *uv )[b] * t );
+        if ( auto colors = attributes.colorMap )
+            colors->push_back( ( *colors )[a] * ( 1 - t ) + ( *colors )[b] * t );
+    };
+    // updates the face attributes, face selection and edge sets of data after the split of (e) into (e1->e)
+    auto onEdgeSplitFaces = [&, faceAttributes = meshOnEdgeSplitFaceAttribute( mesh, attributes )] ( EdgeId e1, EdgeId e )
+    {
+        for ( auto s : edgeSets )
+            if ( s->test( e.undirected() ) )
+                s->autoResizeSet( e1.undirected() );
+        if ( faceAttributes )
+            faceAttributes( e1, e );
+        if ( contains( data->selectedFaces, mesh.topology.left( e ) ) )
+            data->selectedFaces.autoResizeSet( mesh.topology.left( e1 ) );
+        if ( contains( data->selectedFaces, mesh.topology.right( e ) ) )
+            data->selectedFaces.autoResizeSet( mesh.topology.right( e1 ) );
+    };
+
+    if ( notFlippable )
+    {
+        splitNotFlippableLongEdges( mesh, *regRes, *notFlippable, params.criticalTriAspectRatio,
+            std::max( params.maxDeviation, params.tinyEdgeLength ), [&] ( EdgeId e1, EdgeId e, float t )
+        {
+            if ( !data )
+                return;
+            onEdgeSplitVerts( e1, e, t );
+            onEdgeSplitFaces( e1, e );
+        } );
+    }
+
     DecimateSettings dsettings
     {
         .strategy = DecimateStrategy::ShortestEdgeFirst,
@@ -205,11 +322,22 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
         .stabilizer = params.stabilizer,
         .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .region = &*regRes,
+        .notFlippable = notFlippable,
+        .collapseNearNotFlippable = true, // otherwise the short edges ending on not flippable edges would remain
         .maxAngleChange = params.maxAngleChange,
         .progressCallback = subprogress( sbd, 0.25f,  1.0f )
     };
+    if ( data )
+    {
+        dsettings.onEdgeDel = [&] ( EdgeId del, EdgeId rem )
+        {
+            for ( auto s : edgeSets )
+                if ( s->test_set( del.undirected(), false ) && rem )
+                    s->autoResizeSet( rem.undirected() );
+        };
+    }
 
-    auto res = decimateMesh( mesh, dsettings );
+    auto res = data ? decimateObjectMeshData( *data, dsettings ) : decimateMesh( mesh, dsettings );
 
     if ( params.region )
     {
@@ -241,9 +369,31 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
         .maxAngleChangeAfterFlip = params.maxAngleChange,
         .criticalAspectRatioFlip = params.criticalTriAspectRatio, // questionable - may lead to exceeding beyond tolerance, but if set FLT_MAX, may lead to more degeneracies
         .region = params.region,
+        .notFlippable = notFlippable,
         .maxTriAspectRatio = params.criticalTriAspectRatio,
         .progressCallback = subprogress( sbs, 0.25f, 1.0f )
     };
+    // subdivision cannot fix degenerate triangles with not flippable longest edges, and they must not keep it splitting other edges
+    FaceBitSet subdivisionRegion;
+    if ( notFlippable )
+    {
+        subdivisionRegion = mesh.topology.getFaceIds( params.region );
+        BitSetParallelFor( findDegenerateFaces( { mesh, params.region }, params.criticalTriAspectRatio ).value(), [&] ( FaceId f )
+        {
+            if ( notFlippable->test( longestEdge( mesh, f ).undirected() ) )
+                subdivisionRegion.reset( f );
+        } );
+        ssettings.region = &subdivisionRegion;
+        ssettings.maintainRegion = params.region;
+    }
+    if ( data )
+    {
+        ssettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+        {
+            onEdgeSplitVerts( e1, e, 0.5f );
+            onEdgeSplitFaces( e1, e );
+        };
+    }
     subdivideMesh( mesh, ssettings );
 
     if ( !reportProgress( sbs, 1.f ) )
@@ -270,14 +420,30 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
         },
         .subdivideSettings =
         {
+            .notFlippable = params.notFlippable,
             .maxEdgeLen = 0.0f, // to use default from `patchMesh`
             .maxEdgeSplits = 20'000,
         }
     };
+
+    // the removed surface, in data mode the new elements get the attributes of its nearest points
+    const bool projectAttributes = data && ( attributes.uvCoords || attributes.colorMap
+        || attributes.texturePerFace || attributes.faceColors || data->selectedFaces.any() );
     Mesh patchRefMesh;
+    FaceMapOrHashMap refFaces;
+    VertMapOrHashMap refVerts;
+    if ( params.mimicPatch || projectAttributes )
+    {
+        PartMapping map;
+        if ( projectAttributes )
+        {
+            map.tgt2srcFaces = &refFaces;
+            map.tgt2srcVerts = &refVerts;
+        }
+        patchRefMesh.addMeshPart( { mesh,&*regRes }, map );
+    }
     if ( params.mimicPatch )
     {
-        patchRefMesh.addMeshPart( { mesh,&*regRes } );
         psettings.triangulateParams.metric = mixMetrics(
                 getCircumscribedMetric( mesh ), getCloseSurfaceFillMetric( mesh, patchRefMesh ),
                 [] ( double a, double b )->double
@@ -293,14 +459,89 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
         psettings.smoothSettings.edgeWeights = EdgeWeights::Unit; // use unit weights to avoid potential laplacian degeneration (which leads to nan coords)
     }
 
+    const bool updateSelection = data && data->selectedFaces.any();
+    const auto removedSelection = updateSelection ? data->selectedFaces & *regRes : FaceBitSet{};
+    const auto vertSize0 = mesh.topology.vertSize();
+    if ( data )
+        psettings.subdivideSettings.onEdgeSplit = onEdgeSplitFaces; // patch subdivision can split the faces around the patch too
+
     auto newFaces = patchMesh( mesh, *regRes, psettings );
 
+    if ( projectAttributes )
+    {
+        const auto vertSize = mesh.topology.vertSize();
+        const auto faceSize = mesh.topology.faceSize();
+        if ( attributes.uvCoords )
+            attributes.uvCoords->resize( vertSize );
+        if ( attributes.colorMap )
+            attributes.colorMap->resize( vertSize );
+        if ( attributes.texturePerFace )
+            attributes.texturePerFace->resize( faceSize );
+        if ( attributes.faceColors )
+            attributes.faceColors->resize( faceSize );
+        if ( updateSelection )
+            data->selectedFaces.resize( faceSize );
+
+        // the attributes of removed elements are still stored in data
+        const auto & refToFace = *refFaces.getMap();
+        projectFaceAttribute( MeshPart( mesh, &newFaces ), patchRefMesh, [&] ( FaceId f, const MeshProjectionResult & res )
+        {
+            const auto src = refToFace[res.proj.face];
+            if ( attributes.texturePerFace )
+                ( *attributes.texturePerFace )[f] = ( *attributes.texturePerFace )[src];
+            if ( attributes.faceColors )
+                ( *attributes.faceColors )[f] = ( *attributes.faceColors )[src];
+            if ( updateSelection )
+                data->selectedFaces.set( f, removedSelection.test( src ) );
+        } );
+
+        if ( ( attributes.uvCoords || attributes.colorMap ) && vertSize > vertSize0 )
+        {
+            VertBitSet newVerts( vertSize );
+            newVerts.set( VertId( vertSize0 ), vertSize - vertSize0, true );
+            newVerts &= mesh.topology.getValidVerts();
+            const auto & refToVert = *refVerts.getMap();
+            projectVertAttribute( MeshVertPart( mesh, &newVerts ), patchRefMesh,
+                [&] ( VertId v, const MeshProjectionResult & res, VertId v0, VertId v1, VertId v2 )
+            {
+                const auto a = refToVert[v0], b = refToVert[v1], c = refToVert[v2];
+                if ( auto uv = attributes.uvCoords )
+                    ( *uv )[v] = res.mtp.bary.interpolate( ( *uv )[a], ( *uv )[b], ( *uv )[c] );
+                if ( auto colors = attributes.colorMap )
+                    ( *colors )[v] = res.mtp.bary.interpolate( ( *colors )[a], ( *colors )[b], ( *colors )[c] );
+            } );
+        }
+    }
+
+    if ( data )
+    {
+        data->selectedFaces &= mesh.topology.getValidFaces();
+        mesh.topology.excludeLoneEdges( data->selectedEdges );
+        mesh.topology.excludeLoneEdges( data->creases );
+    }
+    if ( params.notFlippable )
+        mesh.topology.excludeLoneEdges( *params.notFlippable );
     if ( params.region )
     {
         *params.region |= newFaces;
         *params.region &= mesh.topology.getValidFaces();
     }
     return {};
+}
+
+Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params )
+{
+    return fixDegeneracies( mesh, nullptr, params );
+}
+
+Expected<void> fixMeshDataDegeneracies( ObjectMeshData& data, const FixMeshDegeneraciesParams& params )
+{
+    if ( !data.mesh )
+    {
+        assert( false );
+        return unexpected( "No mesh in ObjectMeshData" );
+    }
+    return fixDegeneracies( *data.mesh, &data, params );
 }
 
 VertBitSet findInnerVertsOfDegree( const MeshTopology& topology, int n, const VertBitSet* region /*= nullptr */ )

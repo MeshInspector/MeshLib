@@ -234,13 +234,17 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
     if ( !reportProgress( sbs, 0.25f ) )
         return unexpectedOperationCanceled();
 
+    // subdivide only near the degenerations, with at most as many splits as there are edges there:
+    // splitting cannot fix some degenerations (e.g. needles, whose short edge the decimation could not collapse),
+    // and then the subdivision does not stop before maxEdgeSplits, splitting the longest edges of its region
     SubdivideSettings ssettings{
         .maxEdgeLen = 1e3f * params.tinyEdgeLength,
-        .maxEdgeSplits = int( mesh.topology.undirectedEdgeSize() ), // 2 * int( region.count() ),
+        .maxEdgeSplits = int( getIncidentEdges( mesh.topology, *regRes ).count() ),
         .maxDeviationAfterFlip = params.maxDeviation, // 0.1 * tolerance
         .maxAngleChangeAfterFlip = params.maxAngleChange,
         .criticalAspectRatioFlip = params.criticalTriAspectRatio, // questionable - may lead to exceeding beyond tolerance, but if set FLT_MAX, may lead to more degeneracies
-        .region = params.region,
+        .region = &*regRes,
+        .maintainRegion = params.region, // the parts of split faces from params.region join it
         .maxTriAspectRatio = params.criticalTriAspectRatio,
         .progressCallback = subprogress( sbs, 0.25f, 1.0f )
     };

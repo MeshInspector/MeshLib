@@ -74,7 +74,7 @@ struct FixMeshDegeneraciesParams
     enum class Mode
     {
         Decimate, ///< use decimation only to fix degeneracies
-        Remesh,   ///< if decimation does not succeed, perform subdivision too
+        Remesh,   ///< if decimation does not succeed, perform subdivision too (only near remaining degenerations)
         RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes
     } mode{ Mode::Remesh };
 

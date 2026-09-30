@@ -535,7 +535,7 @@ jobs:
           msbuild-architecture: ${{ matrix.msbuild-architecture }}
 
       - name: Build
-        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:Platform=${{ matrix.msbuild-platform }} -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON
+        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:Platform=${{ matrix.msbuild-platform }} -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON -p:MRVOXELS_UNITY_BUILD=ON
 
       - name: Install MSYS2 for MRBind
         uses: ./.github/actions/install-msys2-mrbind

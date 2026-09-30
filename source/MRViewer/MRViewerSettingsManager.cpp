@@ -61,6 +61,7 @@ const std::string cStepAngularDeflection = "stepLoad.angularDeflection";
 const std::string cStepLinearDeflection = "stepLoad.linearDeflection";
 const std::string cStepRelativeDeflection = "stepLoad.relativeDeflection";
 const std::string cStepAutoColorize = "stepLoad.autoColorize";
+const std::string cStepForceLoadSubShapes = "stepLoad.forceLoadSubShapes";
 #endif
 const std::string cUnitsLeadingZero = "units.leadingZero";
 const std::string cUnitsThouSep = "units.thousandsSeparator";
@@ -80,6 +81,7 @@ const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
 const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
+const std::string cInvertZoomConfigKey = "invertZoom";
 const std::string cVisualObjectTags = "visualObjectTags";
 [[maybe_unused]] const std::string cLanguage = "language";
 }
@@ -219,6 +221,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     {
         viewer.scrollForce = cfg.getJsonValue( cScrollForceConfigKey ).asFloat();
     }
+    viewer.mouseController().setZoomInverted( cfg.getBool( cInvertZoomConfigKey, false ) );
 
     if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasis )
     {
@@ -536,6 +539,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
         step.linearDeflection = cfg.getJsonValue( cStepLinearDeflection, step.linearDeflection ).asDouble();
         step.relative = cfg.getJsonValue( cStepRelativeDeflection, step.relative ).asBool();
         step.autoColorize = cfg.getJsonValue( cStepAutoColorize, step.autoColorize ).asBool();
+        step.forceLoadSubShapes = cfg.getJsonValue( cStepForceLoadSubShapes, step.forceLoadSubShapes ).asBool();
         ExtraFormatSettings::setStepLoadSettings( step );
     }
 #endif
@@ -563,6 +567,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cOrthographicParamKey, params.orthographic );
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
     cfg.setJsonValue( cScrollForceConfigKey, viewer.scrollForce );
+    cfg.setBool( cInvertZoomConfigKey, viewer.mouseController().isZoomInverted() );
 
     if ( viewer.globalBasis )
     {
@@ -704,6 +709,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
         cfg.setJsonValue( cStepLinearDeflection, step.linearDeflection );
         cfg.setJsonValue( cStepRelativeDeflection, step.relative );
         cfg.setJsonValue( cStepAutoColorize, step.autoColorize );
+        cfg.setJsonValue( cStepForceLoadSubShapes, step.forceLoadSubShapes );
     }
 #endif
 

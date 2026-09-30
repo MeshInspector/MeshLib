@@ -179,24 +179,15 @@ public:
     /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
     [[nodiscard]] MRMESH_API bool intersects( const BitSet & a ) const;
 
-    /// doubles reserved memory until resize(newSize) can be done without reallocation
-    void resizeWithReserve( size_t newSize )
-    {
-        auto reserved = capacity();
-        if ( reserved > 0 && newSize > reserved )
-        {
-            while ( newSize > reserved )
-                reserved <<= 1;
-            reserve( reserved );
-        }
-        resize( newSize );
-    }
+    /// same as resize(newSize), which already grows the capacity geometrically
+    [[deprecated( "use resize() instead" )]]
+    void resizeWithReserve( size_t newSize ) { resize( newSize ); }
 
     /// sets elements [pos, pos+len) to given value, adjusting the size of the set to include new elements
     void autoResizeSet( size_t pos, size_type len, bool val = true )
     {
         if ( pos + len > size() )
-            resizeWithReserve( pos + len );
+            resize( pos + len );
         set( pos, len, val );
     }
     void autoResizeSet( size_t pos, bool val = true ) { autoResizeSet( pos, 1, val ); }

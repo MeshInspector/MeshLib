@@ -313,6 +313,10 @@ void ViewerSettingsPlugin::drawStepImportSettings_( [[maybe_unused]] float menuW
         changed = true;
     UI::setTooltipIfHovered( _tr( "Assign distinct colors to the imported components. Has no effect if the STEP file already contains colors." ) );
 
+    if ( UI::checkbox( _tr( "Force Load Sub-Shapes" ), &settings.forceLoadSubShapes ) )
+        changed = true;
+    UI::setTooltipIfHovered( _tr( "Always load the bodies (solids and shells) of a shape as separate child objects, even if the shape has a single body." ) );
+
     if ( changed )
         ExtraFormatSettings::setStepLoadSettings( settings );
 #endif
@@ -1157,6 +1161,13 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
     UI::drag<NoUnit>( _tr( "Zoom Gain" ), viewer->scrollForce, 0.01f, 0.2f, 3.0f );
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( _tr( "Sensitivity for mouse wheel rotation affecting the speed of zooming." ) );
+
+    ImGui::SameLine( 0.f, 4.f * style.ItemSpacing.x );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * UI::scale() );
+    bool zoomInverted = viewer->mouseController().isZoomInverted();
+    if ( UI::checkbox( _tr( "Invert Zoom" ), &zoomInverted ) )
+        viewer->mouseController().setZoomInverted( zoomInverted );
+    UI::setTooltipIfHovered( _tr( "Reverses the mouse wheel zoom direction." ) );
 
     UI::separator( UI::SeparatorParams{ .extraScale = cSeparatorIndentMultiplier } );
 

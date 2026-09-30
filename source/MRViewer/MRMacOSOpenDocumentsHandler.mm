@@ -22,6 +22,10 @@ extern "C" void handle_load_message(const char* filePath);
         [[NSUserDefaults standardUserDefaults]
             setObject:@"NO"
                forKey:@"NSTreatUnknownArgumentsAsOpen"];
+        // GLFW windows are never restorable, but AppKit's window restoration still runs inside
+        // glfwInit()'s [NSApp run], and after a crash it can block the next launch there forever.
+        // registerDefaults only sets an in-memory fallback, nothing is saved.
+        [[NSUserDefaults standardUserDefaults] registerDefaults:@{ @"ApplePersistence": @NO }];
     });
 }
 

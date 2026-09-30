@@ -27,6 +27,8 @@
 #include <thread>
 #ifdef __APPLE__
 #include <pthread.h>
+#include <sys/select.h>
+#include <unistd.h>
 #endif
 
 #pragma message("mrviewerpy pybind internals magic: " PYBIND11_INTERNALS_ID)
@@ -191,9 +193,74 @@ private:
 // the GUI thread's exit code, for `showViewer()` to wait on
 std::shared_future<int> gViewerFinished;
 #else
-// the original launch params, for `showViewer()` to wait on
+// the launch params and setup, for the phases that follow launch()
 std::shared_ptr<Viewer::LaunchParams> gLaunchParams;
 std::shared_ptr<MinimalViewerSetup> gLaunchSetup;
+
+// AppKit runs a GUI on the process main thread and nowhere else, so here the viewer lives on the
+// calling thread: launch() pre-launches it and returns, the calls run inline, and the window appears
+// and is pumped by showViewer() or, while the interpreter waits for a line of terminal input, by the
+// input hook below.
+int ( *gPreviousInputHook )() = nullptr;
+int pumpViewerInputHook();
+
+void setupInputHook()
+{
+    gPreviousInputHook = PyOS_InputHook;
+    PyOS_InputHook = pumpViewerInputHook;
+}
+
+void removeInputHook()
+{
+    if ( PyOS_InputHook == pumpViewerInputHook )
+        PyOS_InputHook = gPreviousInputHook;
+}
+
+bool stdinHasData()
+{
+    fd_set fds;
+    FD_ZERO( &fds );
+    FD_SET( STDIN_FILENO, &fds );
+    timeval noWait{};
+    // an error counts as data: stop pumping and let the interpreter's own read fail
+    return select( STDIN_FILENO + 1, &fds, nullptr, nullptr, &noWait ) != 0;
+}
+
+// Called by the interpreter, without the GIL, while it waits for a line of terminal input at the
+// prompt or in input(): pumps the viewer until the line arrives, so the window stays live meanwhile.
+int pumpViewerInputHook()
+{
+    while ( !stdinHasData() )
+    {
+        auto rc = protectedLaunchPhase( []
+        {
+            auto& viewer = getViewerInstance();
+            assert( viewer.isPreLaunched() );
+
+            if ( !viewer.isLaunched() )
+                if ( auto rc = viewer.launchShow( *gLaunchParams ); rc != EXIT_SUCCESS )
+                    return rc;
+
+            // wakes on any window event, else re-checks stdin 20 times a second
+            viewer.runEventLoopIteration( 0.05 );
+
+            if ( viewer.windowShouldClose() )
+            {
+                viewer.launchShut();
+                return EXIT_FAILURE;
+            }
+
+            return EXIT_SUCCESS;
+        } );
+        if ( rc != EXIT_SUCCESS )
+        {
+            postLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
+            removeInputHook();
+            break;
+        }
+    }
+    return gPreviousInputHook ? gPreviousInputHook() : 0;
+}
 #endif
 
 // The viewer on a detached thread; the caller continues and drives it with blocking calls.
@@ -252,6 +319,8 @@ void pythonLaunch( const Viewer::LaunchParams& params, const MinimalViewerSetup&
             "launched once in this process; exit code " + std::to_string( exitCode )
         );
     }
+
+    setupInputHook();
 #endif
 }
 
@@ -274,12 +343,51 @@ void pythonShowViewer()
         throw std::runtime_error( "This function must be called from the main thread on macOS, the only thread a GUI can run on" );
 
     {
-        pybind11::gil_scoped_release gilRelease;
-        exitCode = MR::launchDefaultViewer( *gLaunchParams, *gLaunchSetup );
+        pybind11::gil_scoped_release gilRelease; // commands from other Python threads take the GIL themselves
+        exitCode = protectedLaunchPhase( []
+        {
+            auto& viewer = getViewerInstance();
+            if ( !viewer.isLaunched() )
+                if ( auto rc = viewer.launchShow( *gLaunchParams ); rc != EXIT_SUCCESS )
+                    return rc;
+            viewer.launchEventLoop();
+            viewer.launchShut();
+            return EXIT_SUCCESS;
+        } );
+        postLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
     }
+
+    removeInputHook();
 #endif
     if ( exitCode != EXIT_SUCCESS )
         throw std::runtime_error( "Viewer failed with exit code " + std::to_string( exitCode ) );
+}
+
+// The interpreter is exiting with the viewer still up: close it the way a closed window would, so the
+// settings are saved and the plugins unload, instead of dying mid-loop. Registered with `atexit`.
+void shutViewerAtExit()
+{
+#ifndef __APPLE__
+    if ( !gViewerFinished.valid() || gViewerFinished.wait_for( std::chrono::seconds( 0 ) ) == std::future_status::ready )
+        return;
+    pybind11::gil_scoped_release gilRelease;
+    try
+    {
+        MR::CommandLoop::runCommandFromGUIThread( [] { getViewerInstance().stopEventLoop(); } );
+    }
+    catch ( const std::exception& )
+    {
+        return; // the loop is already on its way out
+    }
+    gViewerFinished.wait_for( std::chrono::seconds( 10 ) ); // a stuck loop must not hold the exit forever
+#else
+    if ( !gLaunchParams ) // the viewer was not launched by this module, e.g. Python embedded in an application
+        return;
+    auto& viewer = getViewerInstance();
+    if ( viewer.isPreLaunched() )
+        postLaunchDefaultViewer( *gLaunchParams, *gLaunchSetup );
+    removeInputHook();
+#endif
 }
 
 } // namespace
@@ -442,7 +550,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         pybind11::arg_v( "setup", MinimalViewerSetup(), "ViewerSetup()" ),
         "Starts the viewer with the given params and setup, and returns once it is up and accepts calls.\n"
         "On Windows and Linux the window opens here, and the script keeps running alongside it.\n"
-        "On macOS the window opens in showViewer() instead; call both from the main thread.\n"
+        "On macOS the viewer runs on the calling thread, which must be the main one: the window opens in showViewer(), "
+        "or at the interactive prompt, where it stays live while the interpreter waits for input, in input() too.\n"
         "Raises RuntimeError if the viewer could not start (no display, or already launched once in this process)." );
 
     m.def( "showViewer", &pythonShowViewer,
@@ -451,4 +560,6 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         "After it returns the viewer is closed for good, and further viewer calls raise RuntimeError." );
 
     m.def( "runFromGUIThread", &pythonRunLambdaFromGUIThread, pybind11::arg( "lambda" ), "Executes given function from GUI thread, and returns after it is done" );
+
+    pybind11::module_::import( "atexit" ).attr( "register" )( pybind11::cpp_function( &shutViewerAtExit ) );
 } )

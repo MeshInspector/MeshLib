@@ -126,7 +126,7 @@ private:
                            const std::vector<std::shared_ptr<Object>>& selected,
                            const std::vector<std::shared_ptr<Object>>& all );
 
-    /// registers every row drawn or skipped on this frame as a button in the "SceneTree" group of UI::TestEngine
+    /// registers every row drawn on this frame (not skipped as out of view) as a button in the "SceneTree" group of UI::TestEngine
     void registerTestEngineRows_( const std::vector<Object*>& rows );
 
     bool clickTrigger_ = false;

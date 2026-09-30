@@ -341,7 +341,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
     upFirstSelected_ = MoveAndScrollData();
     downLastSelected_ = MoveAndScrollData();
 
-    std::vector<Object*> rows;
+    std::vector<Object*> rows; // drawn ones, not skipped
     for ( int i = 0; i < all.size(); ++i )
     {
         const bool isLast = i == int( all.size() ) - 1;
@@ -399,9 +399,8 @@ void SceneObjectsListDrawer::drawObjectsList_()
             }
 
             skippableRenderer.draw( frameHeight, itemSpacingY,
-            [&] { isOpen = drawObject_( object, uniqueStr, currentDepth ); },
+            [&] { isOpen = drawObject_( object, uniqueStr, currentDepth ); rows.push_back( &object ); },
             [&] { isOpen = drawSkippedObject_( object, uniqueStr, currentDepth ); } );
-            rows.push_back( &object );
 
             if ( object.isSelected() )
                 previousWasSelected = true;
@@ -446,7 +445,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
 void SceneObjectsListDrawer::registerTestEngineRows_( const std::vector<Object*>& rows )
 {
     UI::TestEngine::TreeGuard testEngineGuard( "SceneTree" );
-    // a row is named by its object; repeated names get suffixes " (2)", " (3)", ... in the tree order
+    // a row is named by its object; repeated names get suffixes " (2)", " (3)", ... in the order of drawn rows
     std::unordered_map<std::string, int> nameCounts;
     for ( Object* obj : rows )
     {

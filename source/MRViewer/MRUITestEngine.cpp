@@ -193,6 +193,11 @@ template std::optional<std::string> detail::createValueLow( std::string_view nam
 
 bool createButton( std::string_view name, const EntryAttributes& attrs )
 {
+    return createButtonWithModifiers( name, attrs ).has_value();
+}
+
+std::optional<int> createButtonWithModifiers( std::string_view name, const EntryAttributes& attrs )
+{
     #if MR_ENABLE_UI_TEST_ENGINE
     checkForNewFrame();
 
@@ -223,13 +228,13 @@ bool createButton( std::string_view name, const EntryAttributes& attrs )
     // if ( button->simulateClick )
     //    spdlog::info( "Button {} click simulation", name );
 
-    const bool clicked = std::exchange( button->simulateClick, false );
-    if ( clicked )
-        state.frameTriggered = true;
-    return clicked;
+    if ( !std::exchange( button->simulateClick, false ) )
+        return {};
+    state.frameTriggered = true;
+    return std::exchange( button->simulatedModifiers, 0 );
     #else
     (void)attrs;
-    return false;
+    return {};
     #endif
 }
 

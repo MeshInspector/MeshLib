@@ -69,21 +69,30 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiListAllEntries,
     "Pass an empty list for the whole tree.\n"
     "Each element is a `(path, UiEntry)` tuple where `path[-1] == entry.name`."
 )
-MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
-    []( const std::vector<std::string>& path )
+namespace
+{
+    void pressButton( const std::vector<std::string>& path, int modifiers )
     {
         MR::CommandLoop::runCommandFromGUIThread( [&]
         {
             spdlog::info( "pressButton {}: frame {}", MR::UI::TestEngine::Control::pathToString( path ), MR::getViewerInstance().getTotalFrames() );
             // Empty status = OK (click simulated); non-empty = disabled (silent no-op — pre-#5961 test contract).
-            auto status = MR::expectedValueOrThrow( MR::UI::TestEngine::Control::pressButton( path ) );
+            auto status = MR::expectedValueOrThrow( MR::UI::TestEngine::Control::pressButton( path, modifiers ) );
             if ( !status.empty() )
                 spdlog::warn( "pressButton {}: {} (silent no-op)", MR::UI::TestEngine::Control::pathToString( path ), status );
         } );
         for ( int i = 0; i < MR::getViewerInstance().forceRedrawMinimumIncrementAfterEvents; ++i )
             MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
-    },
+    }
+}
+
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
+    []( const std::vector<std::string>& path ) { pressButton( path, 0 ); },
     "Simulate a button click. Use `uiListEntries()` to find button names."
+)
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
+    []( const std::vector<std::string>& path, int modifiers ) { pressButton( path, modifiers ); },
+    "Simulate a button click with keyboard modifiers held, e.g. `KeyMod.Shift`. Use `uiListEntries()` to find button names."
 )
 
 namespace

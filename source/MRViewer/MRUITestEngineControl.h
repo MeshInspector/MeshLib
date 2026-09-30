@@ -72,7 +72,8 @@ using PathedEntry = std::pair<std::vector<std::string>, TypedEntry>;
 // Returns empty string on success (click simulated). If the button was drawn disabled, the press is a silent
 // no-op and the return is a non-empty status (`"disabled"` / `"disabled: <reason>"`) matching `composeStatus()`.
 // `unexpected` is returned only for hard errors (path not found, entry is not a button).
-MRVIEWER_API Expected<std::string> pressButton( const std::vector<std::string>& path );
+// `modifiers` are the keyboard modifiers (`GLFW_MOD_*` bits) held during the click, see `createButtonWithModifiers()`.
+MRVIEWER_API Expected<std::string> pressButton( const std::vector<std::string>& path, int modifiers = 0 );
 
 // Read/write values: (drags, sliders, etc)
 

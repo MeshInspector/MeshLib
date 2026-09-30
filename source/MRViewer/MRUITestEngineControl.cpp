@@ -157,7 +157,7 @@ Expected<std::vector<PathedEntry>> listAllEntries( const std::vector<std::string
     return ret;
 }
 
-Expected<std::string> pressButton( const std::vector<std::string>& path )
+Expected<std::string> pressButton( const std::vector<std::string>& path, int modifiers )
 {
     if ( path.empty() )
         return unexpected( "pressButton: Empty path not allowed here." );
@@ -180,6 +180,7 @@ Expected<std::string> pressButton( const std::vector<std::string>& path )
         return composeStatus( disabledReason );
 
     ( *buttonEx )->simulateClick = true;
+    ( *buttonEx )->simulatedModifiers = modifiers;
 
     return {};
 }

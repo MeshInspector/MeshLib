@@ -10,9 +10,11 @@
 #include "ImGuiMenu.h"
 #include "MRRibbonSchema.h"
 #include "MRUITestEngine.h"
+#include "MRGladGlfw.h"
 #include "MRMesh/MRObject.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSceneRoot.h"
+#include "MRPch/MRFmt.h"
 #include "MRPch/MRSpdlog.h"
 #include "imgui_internal.h"
 #include "imgui.h"
@@ -339,6 +341,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
     upFirstSelected_ = MoveAndScrollData();
     downLastSelected_ = MoveAndScrollData();
 
+    std::vector<Object*> rows;
     for ( int i = 0; i < all.size(); ++i )
     {
         const bool isLast = i == int( all.size() ) - 1;
@@ -398,6 +401,7 @@ void SceneObjectsListDrawer::drawObjectsList_()
             skippableRenderer.draw( frameHeight, itemSpacingY,
             [&] { isOpen = drawObject_( object, uniqueStr, currentDepth ); },
             [&] { isOpen = drawSkippedObject_( object, uniqueStr, currentDepth ); } );
+            rows.push_back( &object );
 
             if ( object.isSelected() )
                 previousWasSelected = true;
@@ -435,6 +439,24 @@ void SceneObjectsListDrawer::drawObjectsList_()
     if ( needDragDropTarget_() )
         skippableRenderer.draw( getDrawDropTargetHeight_(), itemSpacingY, [&] { makeDragDropTarget_( SceneRoot::get(), false, true, "" ); } );
     skippableRenderer.endDraw();
+
+    registerTestEngineRows_( rows );
+}
+
+void SceneObjectsListDrawer::registerTestEngineRows_( const std::vector<Object*>& rows )
+{
+    UI::TestEngine::TreeGuard testEngineGuard( "SceneTree" );
+    // a row is named by its object; repeated names get suffixes " (2)", " (3)", ... in the tree order
+    std::unordered_map<std::string, int> nameCounts;
+    for ( Object* obj : rows )
+    {
+        const int count = ++nameCounts[obj->name()];
+        const auto mods = UI::TestEngine::createButtonWithModifiers( count == 1 ? obj->name() : fmt::format( "{} ({})", obj->name(), count ) );
+        if ( mods )
+            updateSelection_( obj, bool( *mods & GLFW_MOD_SHIFT ), bool( *mods & getGlfwModPrimaryCtrl() ),
+                SceneCache::getAllObjects<Object, ObjectSelectivityType::Selected>(),
+                SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>() );
+    }
 }
 
 float SceneObjectsListDrawer::getDrawDropTargetHeight_() const
@@ -554,7 +576,7 @@ void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vecto
         clickTrigger_ = false;
 
     if ( pressed || released )
-        updateSelection_( &object, selected, all );
+        updateSelection_( &object, ImGui::GetIO().KeyShift, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ), selected, all );
 }
 
 void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload )
@@ -771,14 +793,15 @@ std::vector<Object*> SceneObjectsListDrawer::getPreSelection_( Object* meshclick
     return res;
 }
 
-void SceneObjectsListDrawer::updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
+void SceneObjectsListDrawer::updateSelection_( Object* objPtr, bool isShift, bool isCtrl,
+    const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all )
 {
-    auto newSelection = getPreSelection_( objPtr, ImGui::GetIO().KeyShift, ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ), selected, all );
-    if ( ImGui::IsKeyDown( UI::getImGuiModPrimaryCtrl() ) )
+    auto newSelection = getPreSelection_( objPtr, isShift, isCtrl, selected, all );
+    if ( isCtrl )
     {
         for ( auto& sel : newSelection )
         {
-            const bool select = ImGui::GetIO().KeyShift || !sel->isSelected();
+            const bool select = isShift || !sel->isSelected();
             sel->select( select );
             if ( showNewSelectedObjects_ && select )
                 sel->setGlobalVisibility( true );

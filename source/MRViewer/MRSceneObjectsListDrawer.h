@@ -122,7 +122,12 @@ private:
                                            bool isShift, bool isCtrl,
                                            const std::vector<std::shared_ptr<Object>>& selected,
                                            const std::vector<std::shared_ptr<Object>>& all );
-    void updateSelection_( Object* objPtr, const std::vector<std::shared_ptr<Object>>& selected, const std::vector<std::shared_ptr<Object>>& all );
+    void updateSelection_( Object* objPtr, bool isShift, bool isCtrl,
+                           const std::vector<std::shared_ptr<Object>>& selected,
+                           const std::vector<std::shared_ptr<Object>>& all );
+
+    /// registers every row drawn or skipped on this frame as a button in the "SceneTree" group of UI::TestEngine
+    void registerTestEngineRows_( const std::vector<Object*>& rows );
 
     bool clickTrigger_ = false;
     bool allowSceneReorder_ = true;

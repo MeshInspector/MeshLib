@@ -65,6 +65,10 @@ namespace detail
 // If this returns true, simulate a button click.
 [[nodiscard]] MRVIEWER_API bool createButton( std::string_view name, const EntryAttributes& attrs = {} );
 
+// Same as `createButton()`, but for a simulated click returns the keyboard modifiers (`GLFW_MOD_*` bits) held during it,
+// and null if there was no simulated click.
+[[nodiscard]] MRVIEWER_API std::optional<int> createButtonWithModifiers( std::string_view name, const EntryAttributes& attrs = {} );
+
 template <typename T>
 concept AllowedValueType = std::is_arithmetic_v<T> || std::is_same_v<T, std::string>;
 
@@ -127,6 +131,9 @@ struct ButtonEntry
 {
     // Set this to true to simulate a button click.
     mutable bool simulateClick = false;
+
+    // The keyboard modifiers (`GLFW_MOD_*` bits) held during the simulated click.
+    mutable int simulatedModifiers = 0;
 
     // Non-empty if the button was drawn disabled (greyed out / not accepting input) on the last frame,
     // with a human-readable reason. Empty means the button accepts input.

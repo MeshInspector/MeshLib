@@ -336,7 +336,10 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
 {
     MR_TIMER;
     auto subdivData = obj_->data().clone();
-    auto fs = getIncidentFaces( obj_->meshPtr()->topology, generalEditingRegion_ );
+    const auto& topology = subdivData.mesh->topology;
+    auto fs = getIncidentFaces( topology, generalEditingRegion_ );
+    // flips must not change the triangles of the fixed region
+    auto notFlippable = getInnerEdges( topology, unchangeableVerts_ );
     if ( subdivideMesh( subdivData, SubdivideSettings
         {
             .maxEdgeLen = settings_.radius,
@@ -344,11 +347,19 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
             .maxEdgeSplits = 1000,
             .maxDeviationAfterFlip = FLT_MAX,
             .region = &fs,
+            .notFlippable = &notFlippable,
             .smoothMode = true,
-            .minSharpDihedralAngle = FLT_MAX
+            .minSharpDihedralAngle = FLT_MAX,
+            .onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+            {
+                // same as in Patch mode: a vertex splitting an edge with both unchangeable end vertices is unchangeable as well
+                if ( unchangeableVerts_.test( topology.org( e1 ) ) && unchangeableVerts_.test( topology.dest( e ) ) )
+                    unchangeableVerts_.autoResizeSet( topology.org( e ) );
+            }
         } ) )
     {
         ownMeshChangedSignal_ = true;
+        MR_FINALLY{ ownMeshChangedSignal_ = false; };
         AppendHistory<PartialChangeMeshDataAction>( _t( "Subdivide Ridges/Grooves" ), obj_, std::move( subdivData ) );
         reallocData_( obj_->meshPtr()->topology.lastValidVert() + 1 );
         sameOriginalMeshTopology_ = false;
@@ -394,6 +405,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         {
             SCOPED_HISTORY( _t( "Brush: Fix" ) );
             ownMeshChangedSignal_ = true;
+            MR_FINALLY{ ownMeshChangedSignal_ = false; };
             std::shared_ptr<Mesh> newMesh = std::make_shared<Mesh>( oldMesh );
             FaceBitSet newFaceSelection = obj_->getSelectedFaces() - delFaces;
             const auto delEdges = getInnerEdges( oldMesh.topology, delFaces ); // must be done before actual deletion
@@ -477,6 +489,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
         settings_.relaxForceAfterEdit > 0.f && generalEditingRegion_.any() )
     {
         ownMeshChangedSignal_ = true;
+        MR_FINALLY{ ownMeshChangedSignal_ = false; };
 
         MeshRelaxParams params;
         params.region = &generalEditingRegion_;
@@ -572,10 +585,7 @@ void SurfaceManipulationWidget::initConnections_()
     meshChangedConnection_ = obj_->meshChangedSignal.connect( [&] ( uint32_t )
     {
         if ( ownMeshChangedSignal_ )
-        {
-            ownMeshChangedSignal_ = false;
             return;
-        }
         abortEdit_();
         reallocData_( obj_->meshPtr()->topology.lastValidVert() + 1 );
         if ( settings_.workMode == WorkMode::Patch )
@@ -613,6 +623,7 @@ void SurfaceManipulationWidget::changeSurface_()
         return; // everything is done on mouse up
     }
     ownMeshChangedSignal_ = true;
+    MR_FINALLY{ ownMeshChangedSignal_ = false; };
 
     if ( settings_.workMode == WorkMode::Relax )
     {
@@ -784,15 +795,7 @@ void SurfaceManipulationWidget::updateRegion_( const Vector2f& mousePos )
 
     updateVizualizeSelection_();
     if ( !mousePressed_ )
-    {
         editingDistanceMap_ = visualizationDistanceMap_;
-        singleEditingRegion_ = visualizationRegion_;
-        BitSetParallelFor( singleEditingRegion_, [&]( VertId v )
-        {
-            if ( editingDistanceMap_[v] > settings_.radius )
-                singleEditingRegion_.reset( v );
-        } );
-    }
     else
     {
         bool keepOld = settings_.workMode == WorkMode::Patch;
@@ -863,6 +866,7 @@ void SurfaceManipulationWidget::laplacianMoveVert_( const Vector2f& mousePos )
 {
     obj_->varMesh()->invalidateCaches();
     ownMeshChangedSignal_ = true;
+    MR_FINALLY{ ownMeshChangedSignal_ = false; };
     auto& viewerRef = getViewerInstance();
     const float zpos = viewerRef.viewport().projectToViewportSpace( obj_->worldXf()( touchVertIniPos_ ) ).z;
     auto viewportPoint1 = viewerRef.screenToViewport( Vector3f( mousePos.x, mousePos.y, zpos ), viewerRef.viewport().id );
@@ -883,6 +887,8 @@ void SurfaceManipulationWidget::updateVizualizeSelection_()
         visualizationRegion_ -= generalEditingRegion_;
     updateUVmap_( false );
     visualizationRegion_.reset();
+    if ( !mousePressed_ )
+        singleEditingRegion_.reset();
     auto objMeshPtr = lastStableObjMesh_ ? lastStableObjMesh_ : obj_;
     const auto& mesh = *objMeshPtr->meshPtr();
     badRegion_ = false;
@@ -899,18 +905,17 @@ void SurfaceManipulationWidget::updateVizualizeSelection_()
                 }
     }
     updateDistancesAndRegion_( mesh, pointsUnderMouse_, visualizationDistanceMap_, visualizationRegion_, keepOld ? &generalEditingRegion_ : nullptr );
-    expand( mesh.topology, visualizationRegion_ );
     {
+        // count before expand: the added ring can contain vertices within the radius rejected by editOnlyCodirectedSurface_
         int pointsCount = 0;
-        for ( auto vId : visualizationRegion_ )
-        {
-            if ( visualizationDistanceMap_[vId] <= settings_.radius )
-                ++pointsCount;
-            if ( pointsCount == 3 )
+        for ( [[maybe_unused]] auto vId : visualizationRegion_ )
+            if ( ++pointsCount == 3 )
                 break;
-        }
         badRegion_ = pointsCount < 3;
     }
+    if ( !mousePressed_ )
+        singleEditingRegion_ = visualizationRegion_;
+    expand( mesh.topology, visualizationRegion_ );
     if ( !badRegion_ )
         updateUVmap_( true );
 }
@@ -983,27 +988,19 @@ void SurfaceManipulationWidget::updateValueChangesExactDistance_( const VertBitS
     const auto& mesh = *obj_->meshPtr();
     const auto& meshVerts = mesh.points;
 
-    std::vector<MeshProjectionResult> projResults( meshVerts.size() );
-    BitSetParallelFor( region, [&] ( VertId v )
-    {
-        projResults[v] = findProjection( meshVerts[v], *originalMesh_, FLT_MAX, nullptr, 0 );
-    } );
-
     unknownSign_.clear();
     unknownSign_.resize( meshVerts.size(), false );
 
     BitSetParallelFor( region, [&] ( VertId v )
     {
-        const auto& projRes = projResults[v];
-        auto res = projRes.distSq;
+        const auto projRes = findProjection( meshVerts[v], *originalMesh_, FLT_MAX, nullptr, 0 );
         if ( projRes.mtp.e )
-            res = originalMesh_->signedDistance( meshVerts[VertId( v )], projRes );
+            valueChanges_[v] = originalMesh_->signedDistance( meshVerts[v], projRes );
         else
-            res = std::sqrt( res );
-
-        valueChanges_[v] = res;
-        if ( !projRes.mtp )
+        {
+            valueChanges_[v] = std::sqrt( projRes.distSq );
             unknownSign_.set( v, true );
+        }
     } );
 
     BitSetParallelFor( unknownSign_, [&] ( VertId v )

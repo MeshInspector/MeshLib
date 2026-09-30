@@ -235,7 +235,7 @@ size_t AABBTreePoints::heapBytes() const
         MR::heapBytes( orderedPoints_ );
 }
 
-void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & changedVerts )
+void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet * changedVerts )
 {
     MR_TIMER;
 
@@ -244,7 +244,7 @@ void AABBTreePoints::refit( const VertCoords & newCoords, const VertBitSet & cha
     BitSetParallelForAll( changedPoints, [&]( size_t i )
     {
         auto & p = orderedPoints_[i];
-        if ( changedVerts.test( p.id ) )
+        if ( !changedVerts || changedVerts->test( p.id ) )
         {
             changedPoints.set( i );
             p.coord = newCoords[p.id];

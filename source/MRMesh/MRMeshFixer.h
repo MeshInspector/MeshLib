@@ -30,8 +30,9 @@ using MultipleEdge = VertPair;
 [[nodiscard]] MRMESH_API Expected<std::vector<MultipleEdge>> findMultipleEdges( const MeshTopology & topology, ProgressCallback cb = {} );
 [[nodiscard]] inline bool hasMultipleEdges( const MeshTopology & topology ) { return !findMultipleEdges( topology ).value().empty(); }
 
-/// resolves given multiple edges, but splitting all but one edge in each group
-MRMESH_API void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges );
+/// resolves given multiple edges, but splitting all but one edge in each group;
+/// \param new2Old receives the mapping from each new face to the original face it was split from
+MRMESH_API void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges, FaceHashMap * new2Old = nullptr );
 /// finds and resolves multiple edges
 MRMESH_API void fixMultipleEdges( Mesh & mesh );
 

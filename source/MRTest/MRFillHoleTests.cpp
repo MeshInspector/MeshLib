@@ -1,8 +1,12 @@
 #include <MRMesh/MRMeshFillHole.h>
+#include <MRMesh/MRFillHoleNicely.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRCube.h>
+#include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRColor.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -345,6 +349,20 @@ TEST( MRMesh, HoleFillPlanSymAnchorMultipleEdge )
     plan.items.push_back( { (int)he[2], (int)he[0] } );
     plan.items.push_back( { FillHoleItemEdge{ .item = 0, .sym = true }.encode(), (int)he[4] } );
     EXPECT_FALSE( isFillingMultipleEdgeFree( mesh.topology, plan ) );
+}
+
+TEST( MRMesh, FillHoleNicelyShortFaceColors )
+{
+    Mesh mesh = makeCube();
+    FaceBitSet del( mesh.topology.faceSize() );
+    del.set( 0_f );
+    mesh.deleteFaces( del );
+    // no color for the last face: the colors are padded instead of being ignored
+    FaceColors colors( size_t( mesh.topology.lastValidFace() ), Color::red() );
+    const auto newFaces = fillHoleNicely( mesh, mesh.topology.findHoleRepresentiveEdges().front(),
+        { .triangulateOnly = true, .outAttributes = { .faceColors = &colors } } );
+    EXPECT_EQ( newFaces.count(), 1 );
+    EXPECT_EQ( colors.size(), mesh.topology.faceSize() );
 }
 
 } //namespace MR

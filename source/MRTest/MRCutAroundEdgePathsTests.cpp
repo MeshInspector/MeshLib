@@ -35,12 +35,38 @@ TEST( MRMesh, CutAroundEdgePaths )
         buildShortestPath( mesh, closestVert( Vector3f( 1, -0.2f, 0.5f ).normalized() ), closestVert( Vector3f( 1, -0.2f, -0.5f ).normalized() ) ),
         buildShortestPath( mesh, closestVert( Vector3f( 1, 0.2f, 0.5f ).normalized() ), closestVert( Vector3f( 1, 0.2f, -0.5f ).normalized() ) )
     };
+    ASSERT_FALSE( paths[0].empty() );
+    ASSERT_FALSE( paths[1].empty() );
+    std::vector<VertBitSet> vertSets( 2 );
+    for ( int i = 0; i < 2; ++i )
+    {
+        vertSets[i].resize( mesh.topology.vertSize() );
+        for ( auto e : paths[i] )
+        {
+            vertSets[i].set( mesh.topology.org( e ) );
+            vertSets[i].set( mesh.topology.dest( e ) );
+        }
+    }
     const auto numFaces0 = mesh.topology.numValidFaces();
 
     const CutAroundEdgePathsParams params{ .distance = 0.15f, .minSpacing = 0.1f };
-    ASSERT_FALSE( paths[0].empty() );
-    ASSERT_FALSE( paths[1].empty() );
-    auto res = cutAroundEdgePaths( mesh, paths, params );
+
+    // vertex sets sharing a vertex are rejected before the mesh is modified
+    auto shared = vertSets;
+    shared[1].set( vertSets[0].find_first() );
+    EXPECT_FALSE( cutAroundEdgePaths( mesh, shared, params ).has_value() );
+    EXPECT_EQ( mesh.topology.numValidFaces(), numFaces0 );
+
+    // canceled
+    {
+        auto meshCopy = mesh;
+        EXPECT_FALSE( cutAroundEdgePaths( meshCopy, vertSets, params, [] ( float ) { return false; } ).has_value() );
+    }
+
+    float maxProgress = 0;
+    auto res = cutAroundEdgePaths( mesh, vertSets, params, [&] ( float p ) { maxProgress = std::max( maxProgress, p ); return true; } );
+    EXPECT_GT( maxProgress, 0.5f );
+    EXPECT_LE( maxProgress, 1.0f );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->size(), 2 );
     EXPECT_TRUE( mesh.topology.checkValidity() );

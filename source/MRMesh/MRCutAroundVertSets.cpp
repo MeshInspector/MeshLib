@@ -21,8 +21,8 @@ Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vec
     MR_TIMER;
     if ( !( params.distance > 0 ) )
         return unexpected( "distance must be positive" );
-    if ( !( params.minSpacing >= 0 ) )
-        return unexpected( "minSpacing must not be negative" );
+    if ( !( params.gap >= 0 ) )
+        return unexpected( "gap must not be negative" );
 
     const auto numSets = vertSets.size();
     VertBitSet allVerts;
@@ -40,14 +40,14 @@ Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vec
     {
         if ( vertSets[i].any() )
         {
-            // values in (distance, distance + minSpacing] are needed to keep minSpacing from the region of another set
-            dists[i] = computeSurfaceDistances( mesh, vertSets[i], params.distance + params.minSpacing );
+            // values in (distance, distance + gap] are needed to keep the gap from the region of another set
+            dists[i] = computeSurfaceDistances( mesh, vertSets[i], params.distance + params.gap );
         }
         dists[i].resize( mesh.topology.vertSize(), FLT_MAX );
     }, distCb, 1 ) )
         return unexpectedOperationCanceled();
 
-    const float sumSpacing = 2 * params.distance + params.minSpacing;
+    const float minSum = 2 * params.distance + params.gap;
     if ( numSets > 1 && !BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
     {
         for ( size_t i = 0; i + 1 < numSets; ++i )
@@ -61,16 +61,16 @@ Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vec
                 if ( dj == FLT_MAX )
                     continue;
                 const auto sum = di + dj;
-                if ( sum >= sumSpacing )
+                if ( sum >= minSum )
                     continue;
                 if ( sum > 0 )
                 {
-                    const auto k = sumSpacing / sum;
+                    const auto k = minSum / sum;
                     di *= k;
                     dj *= k;
                 }
                 else
-                    di = dj = sumSpacing / 2;
+                    di = dj = minSum / 2;
             }
         }
     }, adjustCb ) )

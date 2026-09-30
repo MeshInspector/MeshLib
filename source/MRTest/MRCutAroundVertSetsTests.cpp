@@ -29,7 +29,7 @@ TEST( MRMesh, CutAroundVertSets )
         return res;
     };
 
-    // two meridian-like paths about 0.36 apart, closer than 2 * distance + minSpacing
+    // two meridian-like paths about 0.36 apart, closer than 2 * distance + gap
     const std::vector<EdgePath> paths =
     {
         buildShortestPath( mesh, closestVert( Vector3f( 1, -0.2f, 0.5f ).normalized() ), closestVert( Vector3f( 1, -0.2f, -0.5f ).normalized() ) ),
@@ -49,7 +49,7 @@ TEST( MRMesh, CutAroundVertSets )
     }
     const auto numFaces0 = mesh.topology.numValidFaces();
 
-    const CutAroundVertSetsParams params{ .distance = 0.15f, .minSpacing = 0.1f };
+    const CutAroundVertSetsParams params{ .distance = 0.15f, .gap = 0.1f };
 
     // vertex sets sharing a vertex are rejected before the mesh is modified
     auto shared = vertSets;
@@ -83,7 +83,7 @@ TEST( MRMesh, CutAroundVertSets )
         for ( auto e : paths[i] )
             EXPECT_TRUE( ( *res )[i].test( mesh.topology.left( e ) ) );
 
-    // the regions are separated: about 0.36 * minSpacing / ( 2 * distance + minSpacing ) = 0.09, and only 0.02 if minSpacing = 0
+    // the regions are separated: about 0.36 * gap / ( 2 * distance + gap ) = 0.09, and only 0.02 if gap = 0
     const auto verts0 = getIncidentVerts( mesh.topology, r0 );
     const auto verts1 = getIncidentVerts( mesh.topology, r1 );
     EXPECT_FALSE( verts0.intersects( verts1 ) );
@@ -91,7 +91,7 @@ TEST( MRMesh, CutAroundVertSets )
     float minDist = FLT_MAX;
     for ( auto v : verts1 )
         minDist = std::min( minDist, distFrom0[v] );
-    EXPECT_GT( minDist, 0.5f * params.minSpacing );
+    EXPECT_GT( minDist, 0.5f * params.gap );
 }
 
 } //namespace MR

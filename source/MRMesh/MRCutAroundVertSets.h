@@ -15,7 +15,8 @@ struct CutAroundVertSetsParams
     /// keeps the regions of any two vertex sets from overlapping, even if the sets are closer than (2*distance + gap):
     /// in the vertices where the sum of two distance fields is less than (2*distance + gap),
     /// both values are scaled proportionally to make the sum exactly (2*distance + gap);
-    /// so the gap is exact in the scaled fields, and the surface gap between two regions is about gap * setsDistance / (2*distance + gap)
+    /// so the gap is exact in the scaled fields, and the surface gap between two regions is about gap * setsDistance / (2*distance + gap);
+    /// must be positive, otherwise the isolines of two close sets coincide
     float gap = 0;
 };
 

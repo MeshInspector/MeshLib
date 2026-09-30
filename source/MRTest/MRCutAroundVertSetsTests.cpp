@@ -57,6 +57,10 @@ TEST( MRMesh, CutAroundVertSets )
     EXPECT_FALSE( cutAroundVertSets( mesh, shared, params ).has_value() );
     EXPECT_EQ( mesh.topology.numValidFaces(), numFaces0 );
 
+    // zero gap is rejected before the mesh is modified
+    EXPECT_FALSE( cutAroundVertSets( mesh, vertSets, { .distance = params.distance, .gap = 0 } ).has_value() );
+    EXPECT_EQ( mesh.topology.numValidFaces(), numFaces0 );
+
     // canceled
     {
         auto meshCopy = mesh;

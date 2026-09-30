@@ -21,8 +21,8 @@ Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vec
     MR_TIMER;
     if ( !( params.distance > 0 ) )
         return unexpected( "distance must be positive" );
-    if ( !( params.gap >= 0 ) )
-        return unexpected( "gap must not be negative" );
+    if ( !( params.gap > 0 ) )
+        return unexpected( "gap must be positive" );
 
     const auto numSets = vertSets.size();
     VertBitSet allVerts;

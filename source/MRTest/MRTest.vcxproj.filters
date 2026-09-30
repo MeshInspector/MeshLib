@@ -100,7 +100,7 @@
     <ClCompile Include="MRMarchingCubesTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRCutAroundEdgePathsTests.cpp">
+    <ClCompile Include="MRCutAroundVertSetsTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRContoursCutTests.cpp">

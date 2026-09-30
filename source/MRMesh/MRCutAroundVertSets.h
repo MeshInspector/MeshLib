@@ -7,7 +7,7 @@
 namespace MR
 {
 
-struct CutAroundEdgePathsParams
+struct CutAroundVertSetsParams
 {
     /// the mesh is cut along the isolines of surface distance equal to this value around each vertex set
     float distance = 0;
@@ -23,7 +23,7 @@ struct CutAroundEdgePathsParams
 /// makes any two fields separated by minSpacing, and cuts the mesh along isolines of each field at given distance;
 /// no two vertex sets may share a vertex;
 /// \return the region of each vertex set (triangles with distance <= params.distance) in the modified mesh
-[[nodiscard]] MRMESH_API Expected<std::vector<FaceBitSet>> cutAroundEdgePaths( Mesh & mesh, const std::vector<VertBitSet> & vertSets,
-    const CutAroundEdgePathsParams & params, const ProgressCallback & cb = {} );
+[[nodiscard]] MRMESH_API Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vector<VertBitSet> & vertSets,
+    const CutAroundVertSetsParams & params, const ProgressCallback & cb = {} );
 
 } //namespace MR

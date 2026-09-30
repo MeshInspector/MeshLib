@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include <MRMesh/MRCutAroundEdgePaths.h>
+#include <MRMesh/MRCutAroundVertSets.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MREdgePaths.h>
 #include <MRMesh/MRMesh.h>
@@ -9,7 +9,7 @@
 namespace MR
 {
 
-TEST( MRMesh, CutAroundEdgePaths )
+TEST( MRMesh, CutAroundVertSets )
 {
     auto mesh = makeSphere( { .radius = 1, .numMeshVertices = 4000 } );
 
@@ -49,22 +49,22 @@ TEST( MRMesh, CutAroundEdgePaths )
     }
     const auto numFaces0 = mesh.topology.numValidFaces();
 
-    const CutAroundEdgePathsParams params{ .distance = 0.15f, .minSpacing = 0.1f };
+    const CutAroundVertSetsParams params{ .distance = 0.15f, .minSpacing = 0.1f };
 
     // vertex sets sharing a vertex are rejected before the mesh is modified
     auto shared = vertSets;
     shared[1].set( vertSets[0].find_first() );
-    EXPECT_FALSE( cutAroundEdgePaths( mesh, shared, params ).has_value() );
+    EXPECT_FALSE( cutAroundVertSets( mesh, shared, params ).has_value() );
     EXPECT_EQ( mesh.topology.numValidFaces(), numFaces0 );
 
     // canceled
     {
         auto meshCopy = mesh;
-        EXPECT_FALSE( cutAroundEdgePaths( meshCopy, vertSets, params, [] ( float ) { return false; } ).has_value() );
+        EXPECT_FALSE( cutAroundVertSets( meshCopy, vertSets, params, [] ( float ) { return false; } ).has_value() );
     }
 
     float maxProgress = 0;
-    auto res = cutAroundEdgePaths( mesh, vertSets, params, [&] ( float p ) { maxProgress = std::max( maxProgress, p ); return true; } );
+    auto res = cutAroundVertSets( mesh, vertSets, params, [&] ( float p ) { maxProgress = std::max( maxProgress, p ); return true; } );
     EXPECT_GT( maxProgress, 0.5f );
     EXPECT_LE( maxProgress, 1.0f );
     ASSERT_TRUE( res.has_value() );

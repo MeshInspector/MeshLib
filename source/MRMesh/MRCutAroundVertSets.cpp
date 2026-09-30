@@ -1,4 +1,4 @@
-#include "MRCutAroundEdgePaths.h"
+#include "MRCutAroundVertSets.h"
 #include "MRSurfaceDistance.h"
 #include "MRExtractIsolines.h"
 #include "MROneMeshContours.h"
@@ -15,8 +15,8 @@
 namespace MR
 {
 
-Expected<std::vector<FaceBitSet>> cutAroundEdgePaths( Mesh & mesh, const std::vector<VertBitSet> & vertSets,
-    const CutAroundEdgePathsParams & params, const ProgressCallback & cb )
+Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vector<VertBitSet> & vertSets,
+    const CutAroundVertSetsParams & params, const ProgressCallback & cb )
 {
     MR_TIMER;
     if ( !( params.distance > 0 ) )

@@ -4,6 +4,7 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRPch/MRSpdlog.h"
 
 namespace MR
 {
@@ -44,6 +45,30 @@ UndirectedEdgeBitSet edgesBetweenDifferentColors( const MeshTopology & topology,
             res.set( ue );
     } );
     return res;
+}
+
+template <typename T, typename I>
+static void resizeAttribute( Vector<T, I> & attr, I lastValid, size_t size, const char * name, const char * elements )
+{
+    if ( attr.empty() )
+        return;
+    if ( lastValid && attr.size() <= lastValid )
+        spdlog::warn( "{} has {} elements for {} mesh {}, padding it with default values", name, attr.size(), size, elements );
+    attr.resize( size );
+}
+
+void resizeAttributesToMesh( ObjectMeshData & data )
+{
+    if ( !data.mesh )
+    {
+        assert( false );
+        return;
+    }
+    const auto & topology = data.mesh->topology;
+    resizeAttribute( data.uvCoordinates, topology.lastValidVert(), topology.vertSize(), "uvCoordinates", "vertices" );
+    resizeAttribute( data.vertColors, topology.lastValidVert(), topology.vertSize(), "vertColors", "vertices" );
+    resizeAttribute( data.faceColors, topology.lastValidFace(), topology.faceSize(), "faceColors", "faces" );
+    resizeAttribute( data.texturePerFace, topology.lastValidFace(), topology.faceSize(), "texturePerFace", "faces" );
 }
 
 } //namespace MR

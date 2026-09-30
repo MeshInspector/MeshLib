@@ -23,10 +23,7 @@
 #include "MRRibbonSceneObjectsListDrawer.h"
 #include "MRVisualObjectTag.h"
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectPointsHolder.h"
-#ifndef MRVIEWER_NO_VOXELS
-#include "MRVoxels/MRObjectVoxels.h"
-#endif
+#include "MRIOExtras/MRExtraFormatSettings.h"
 
 namespace
 {
@@ -59,6 +56,13 @@ const std::string cEnableSavedDialogPositions = "enableSavedDialogPositions";
 const std::string cAutoClosePlugins = "autoClosePlugins";
 const std::string cShowExperimentalFeatures = "showExperimentalFeatures";
 const std::string cAmbientCoefSelectedObj = "ambientCoefSelectedObj";
+#ifndef MRIOEXTRAS_NO_STEP
+const std::string cStepAngularDeflection = "stepLoad.angularDeflection";
+const std::string cStepLinearDeflection = "stepLoad.linearDeflection";
+const std::string cStepRelativeDeflection = "stepLoad.relativeDeflection";
+const std::string cStepAutoColorize = "stepLoad.autoColorize";
+const std::string cStepForceLoadSubShapes = "stepLoad.forceLoadSubShapes";
+#endif
 const std::string cUnitsLeadingZero = "units.leadingZero";
 const std::string cUnitsThouSep = "units.thousandsSeparator";
 const std::string cUnitsLenUnit = "units.unitLength";
@@ -77,6 +81,7 @@ const std::string cMruInnerPointsFormat = "mruInner.pointsFormat";
 const std::string cMruInnerVoxelsFormat = "mruInner.voxelsFormat";
 const std::string cSortDroppedFiles = "sortDroppedFiles";
 const std::string cScrollForceConfigKey = "scrollForce";
+const std::string cInvertZoomConfigKey = "invertZoom";
 const std::string cVisualObjectTags = "visualObjectTags";
 [[maybe_unused]] const std::string cLanguage = "language";
 }
@@ -201,12 +206,7 @@ void ViewerSettingsManager::resetSettings( Viewer& viewer )
     // lastExtentions_.clear();
 
     SceneSettings::reset();
-
-    setDefaultSerializeMeshFormat( ".ply" );
-    setDefaultSerializePointsFormat( ".ply" );
-#ifndef MRVIEWER_NO_VOXELS
-    setDefaultSerializeVoxelsFormat( ".vdb" );
-#endif
+    ExtraFormatSettings::reset();
 }
 
 void ViewerSettingsManager::loadSettings( Viewer& viewer )
@@ -221,6 +221,7 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     {
         viewer.scrollForce = cfg.getJsonValue( cScrollForceConfigKey ).asFloat();
     }
+    viewer.mouseController().setZoomInverted( cfg.getBool( cInvertZoomConfigKey, false ) );
 
     if ( cfg.hasJsonValue( cGlobalBasisKey ) && viewer.globalBasis )
     {
@@ -527,17 +528,21 @@ void ViewerSettingsManager::loadSettings( Viewer& viewer )
     }
 
     // Save Scene inner formats
+    SceneSettings::set( SceneSettings::StringType::MeshSerializeFormat, loadString( cMruInnerMeshFormat, ".ply" ) );
+    SceneSettings::set( SceneSettings::StringType::PointsSerializeFormat, loadString( cMruInnerPointsFormat, ".ply" ) );
+    SceneSettings::set( SceneSettings::StringType::VoxelsSerializeFormat, loadString( cMruInnerVoxelsFormat, ".vdb" ) );
+
+#ifndef MRIOEXTRAS_NO_STEP
     {
-        std::string format;
-        format = loadString( cMruInnerMeshFormat, ".ply" );
-        setDefaultSerializeMeshFormat( format );
-        format = loadString( cMruInnerPointsFormat, ".ply" );
-        setDefaultSerializePointsFormat( format );
-        #ifndef MRVIEWER_NO_VOXELS
-        format = loadString( cMruInnerVoxelsFormat, ".vdb" );
-        setDefaultSerializeVoxelsFormat( format );
-        #endif
+        MeshLoad::StepLoadSettings step;
+        step.angularDeflection = cfg.getJsonValue( cStepAngularDeflection, step.angularDeflection ).asDouble();
+        step.linearDeflection = cfg.getJsonValue( cStepLinearDeflection, step.linearDeflection ).asDouble();
+        step.relative = cfg.getJsonValue( cStepRelativeDeflection, step.relative ).asBool();
+        step.autoColorize = cfg.getJsonValue( cStepAutoColorize, step.autoColorize ).asBool();
+        step.forceLoadSubShapes = cfg.getJsonValue( cStepForceLoadSubShapes, step.forceLoadSubShapes ).asBool();
+        ExtraFormatSettings::setStepLoadSettings( step );
     }
+#endif
 
     if ( cfg.hasJsonValue( cVisualObjectTags ) )
     {
@@ -562,6 +567,7 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     cfg.setBool( cOrthographicParamKey, params.orthographic );
     cfg.setBool( cSortDroppedFiles, viewer.getSortDroppedFiles() );
     cfg.setJsonValue( cScrollForceConfigKey, viewer.scrollForce );
+    cfg.setBool( cInvertZoomConfigKey, viewer.mouseController().isZoomInverted() );
 
     if ( viewer.globalBasis )
     {
@@ -692,13 +698,20 @@ void ViewerSettingsManager::saveSettings( const Viewer& viewer )
     }
 
     // Save Scene inner formats
+    saveString( cMruInnerMeshFormat, SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat ) );
+    saveString( cMruInnerPointsFormat, SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat ) );
+    saveString( cMruInnerVoxelsFormat, SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat ) );
+
+#ifndef MRIOEXTRAS_NO_STEP
     {
-        saveString( cMruInnerMeshFormat, defaultSerializeMeshFormat() );
-        saveString( cMruInnerPointsFormat, defaultSerializePointsFormat() );
-#ifndef MRVIEWER_NO_VOXELS
-        saveString( cMruInnerVoxelsFormat, defaultSerializeVoxelsFormat() );
-#endif
+        const auto step = ExtraFormatSettings::getStepLoadSettings();
+        cfg.setJsonValue( cStepAngularDeflection, step.angularDeflection );
+        cfg.setJsonValue( cStepLinearDeflection, step.linearDeflection );
+        cfg.setJsonValue( cStepRelativeDeflection, step.relative );
+        cfg.setJsonValue( cStepAutoColorize, step.autoColorize );
+        cfg.setJsonValue( cStepForceLoadSubShapes, step.forceLoadSubShapes );
     }
+#endif
 
     {
         Json::Value visualObjectTagsJson;

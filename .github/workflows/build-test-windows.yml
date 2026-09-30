@@ -195,7 +195,7 @@ jobs:
             if not exist source\%MR_ARCH% mkdir source\%MR_ARCH% || exit /b 1
             xcopy source\TempOutput\bin\* source\%MR_ARCH%\${{matrix.config}}\* /s /e /i /Y || exit /b 1
           ) else (
-            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON || exit /b 1
+            msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON;MRVOXELS_UNITY_BUILD=ON || exit /b 1
           )
 
       - name: Log precompiled header sizes

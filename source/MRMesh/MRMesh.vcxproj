@@ -123,6 +123,7 @@
     <ClInclude Include="MRConfig.h" />
     <ClInclude Include="MRContour.h" />
     <ClInclude Include="MRContoursCut.h" />
+    <ClInclude Include="MRCutAroundVertSets.h" />
     <ClInclude Include="MRContoursSeparation.h" />
     <ClInclude Include="MRContoursStitch.h" />
     <ClInclude Include="MRConvexHull.h" />
@@ -534,6 +535,7 @@
     <ClCompile Include="MRConeObject.cpp" />
     <ClCompile Include="MRConfig.cpp" />
     <ClCompile Include="MRContoursCut.cpp" />
+    <ClCompile Include="MRCutAroundVertSets.cpp" />
     <ClCompile Include="MRContoursSeparation.cpp" />
     <ClCompile Include="MRContoursStitch.cpp" />
     <ClCompile Include="MRConvexHull.cpp" />
@@ -786,6 +788,7 @@
     <ClCompile Include="MRTripleFaceIntersections.cpp" />
     <ClCompile Include="MREndMill.cpp" />
     <ClCompile Include="MRCylinderApproximator.cpp" />
+    <ClCompile Include="MRConeApproximator.cpp" />
     <ClCompile Include="MRSolidOfRevolution.cpp" />
     <ClCompile Include="MRObjectTagEventDispatcher.cpp" />
     <ClCompile Include="MRPointMeasurementObject.cpp" />

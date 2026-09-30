@@ -508,14 +508,12 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBit
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
-    for ( auto v : verts )
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
-        for ( auto e : orgRing( topology, v ) )
-        {
-            if ( verts.test( topology.dest( e ) ) )
-                res.set( e.undirected() );
-        }
-    }
+        EdgeId e( ue );
+        if ( contains( verts, topology.org( e ) ) && contains( verts, topology.dest( e ) ) )
+            res.set( ue );
+    } );
     return res;
 }
 
@@ -523,19 +521,12 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBit
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
-
-    for ( auto f0 : region )
+    BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
-        EdgeId e[3];
-        topology.getTriEdges( f0, e );
-        for ( int i = 0; i < 3; ++i )
-        {
-            assert( topology.left( e[i] ) == f0 );
-            FaceId f1 = topology.right( e[i] );
-            if ( f0 < f1 && region.test( f1 ) )
-                res.set( e[i].undirected() );
-        }
-    }
+        EdgeId e( ue );
+        if ( contains( region, topology.left( e ) ) && contains( region, topology.right( e ) ) )
+            res.set( ue );
+    } );
     return res;
 }
 

@@ -4,6 +4,7 @@
 #include "MRRingIterator.h"
 #include "MRMeshNormals.h"
 #include "MRMeshMath.h"
+#include "MRRegionBoundary.h"
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
 #include "MRBuffer.h"
@@ -17,23 +18,29 @@
 namespace MR
 {
 
-void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
+void denoiseNormals( const Mesh & mesh, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region )
 {
-    denoiseNormals( mesh.topology, mesh.points, normals, v, gamma );
+    denoiseNormals( mesh.topology, mesh.points, normals, v, gamma, region );
 }
 
-void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma )
+void denoiseNormals( const MeshTopology & topology, const VertCoords & points, FaceNormals & normals, const Vector<float, UndirectedEdgeId> & v, float gamma, const FaceBitSet * region )
 {
     MR_TIMER;
 
-    const auto sz = normals.size();
-    assert( (int)sz >= topology.lastValidFace() );
+    assert( (int)normals.size() >= topology.lastValidFace() );
     assert( v.size() == topology.undirectedEdgeSize() );
+    const auto & faces = topology.getFaceIds( region );
+
+    // index of every face with unknown normal in the linear system, -1 for fixed faces
+    Vector<int, FaceId> face2idx( topology.faceSize(), -1 );
+    int sz = 0;
+    for ( auto f : faces )
+        face2idx[f] = sz++;
     if ( sz <= 0 )
         return;
 
     // perimeter of every face, also counting boundary edges for better results on mesh boundary
-    Buffer<float, FaceId> perimeter( sz );
+    Buffer<float, FaceId> perimeter( topology.faceSize() );
     BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
         float p = 0;
@@ -46,30 +53,31 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     Eigen::VectorXd rhs[3];
     for ( int i = 0; i < 3; ++i )
         rhs[i].resize( sz );
-    for ( auto f = 0_f; f < sz; ++f )
+    for ( auto f : faces )
     {
+        const int fi = face2idx[f];
         float centralWeight = 1;
-        if ( topology.hasFace( f ) )
+        Vector3d rh( normals[f] );
+        for ( auto e : leftRing( topology, f ) )
         {
-            for ( auto e : leftRing( topology, f ) )
-            {
-                assert( topology.left( e ) == f );
-                const auto r = topology.right( e );
-                if ( !r )
-                    continue;
-                const auto sumPerimeter = perimeter[f] + perimeter[r];
-                if ( sumPerimeter <= 0 )
-                    continue;
-                // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
-                const float weight = gamma * edgeLength( topology, points, e.undirected() ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
-                centralWeight += weight;
-                mTriplets.emplace_back( f, r, -weight );
-            }
+            assert( topology.left( e ) == f );
+            const auto r = topology.right( e );
+            if ( !r )
+                continue;
+            const auto sumPerimeter = perimeter[f] + perimeter[r];
+            if ( sumPerimeter <= 0 )
+                continue;
+            // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
+            const float weight = gamma * edgeLength( topology, points, e.undirected() ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
+            centralWeight += weight;
+            if ( const int ri = face2idx[r]; ri >= 0 )
+                mTriplets.emplace_back( fi, ri, -weight );
+            else
+                rh += double( weight ) * Vector3d( normals[r] ); // fixed normal of a face outside the region
         }
-        mTriplets.emplace_back( f, f, centralWeight );
-        const auto nm = normals[f];
+        mTriplets.emplace_back( fi, fi, centralWeight );
         for ( int i = 0; i < 3; ++i )
-            rhs[i][f] = nm[i];
+            rhs[i][fi] = rh[i];
     }
 
     using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
@@ -87,12 +95,13 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     } );
 
     // copy solution back into normals
-    ParallelFor( normals, [&]( FaceId f )
+    BitSetParallelFor( faces, [&]( FaceId f )
     {
+        const int fi = face2idx[f];
         normals[f] = Vector3f(
-            (float) sol[0][f],
-            (float) sol[1][f],
-            (float) sol[2][f] ).normalized();
+            (float) sol[0][fi],
+            (float) sol[1][fi],
+            (float) sol[2][fi] ).normalized();
     } );
 }
 
@@ -203,39 +212,42 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
     } );
 }
 
-Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
+void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
+{
+    std::ignore = meshDenoiseViaNormals( mesh, settings, {} );
+}
+
+bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb )
 {
     MR_TIMER;
+    assert( settings.normalIters > 0 && settings.pointIters > 0 );
     if ( settings.normalIters <= 0 || settings.pointIters <= 0 )
-    {
-        assert( false );
-        return unexpected( "Bad parameters" );
-    }
+        return true;
 
-    if ( !reportProgress( settings.cb, 0.0f ) )
-        return unexpectedOperationCanceled();
+    if ( !reportProgress( cb, 0.0f ) )
+        return false;
 
     auto fnormals0 = computePerFaceNormals( mesh );
     Vector<float, UndirectedEdgeId> v( mesh.topology.undirectedEdgeSize(), 1 );
 
-    if ( !reportProgress( settings.cb, 0.05f ) )
-        return unexpectedOperationCanceled();
+    if ( !reportProgress( cb, 0.05f ) )
+        return false;
 
-    auto sp = subprogress( settings.cb, 0.05f, 0.95f );
+    auto sp = subprogress( cb, 0.05f, 0.95f );
     FaceNormals fnormals;
     for ( int i = 0; i < settings.normalIters; ++i )
     {
         fnormals = fnormals0;
-        denoiseNormals( mesh, fnormals, v, settings.gamma );
+        denoiseNormals( mesh, fnormals, v, settings.gamma, settings.region );
         if ( !reportProgress( sp, float( 2 * i ) / ( 2 * settings.normalIters ) ) )
-            return unexpectedOperationCanceled();
+            return false;
 
         if ( settings.fastIndicatorComputation )
             updateIndicatorFast( mesh.topology, v, fnormals, settings.beta, settings.gamma );
         else
             updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
-            return unexpectedOperationCanceled();
+            return false;
     }
 
     if ( settings.outCreases )
@@ -244,25 +256,30 @@ Expected<void> meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettin
         settings.outCreases->resize( mesh.topology.undirectedEdgeSize() );
         BitSetParallelForAll( *settings.outCreases, [&]( UndirectedEdgeId ue )
         {
-            if ( v[ue] < 0.5f )
+            if ( v[ue] < 0.5f && ( !settings.region
+                || ( contains( *settings.region, mesh.topology.left( ue ) ) && contains( *settings.region, mesh.topology.right( ue ) ) ) ) )
                 settings.outCreases->set( ue );
         } );
     }
 
-    if ( !reportProgress( settings.cb, 0.95f ) )
-        return unexpectedOperationCanceled();
+    if ( !reportProgress( cb, 0.95f ) )
+        return false;
+
+    VertBitSet innerVerts;
+    if ( settings.region )
+        innerVerts = getRegionInnerVerts( mesh.topology, *settings.region );
 
     const auto guide = mesh.points;
     NormalsToPoints n2p;
-    n2p.prepare( mesh.topology, settings.guideWeight );
+    n2p.prepare( mesh.topology, settings.guideWeight, settings.region ? &innerVerts : nullptr );
     auto maxInitialDistSq = settings.limitNearInitial ? sqr( settings.maxInitialDist )
         : std::numeric_limits<float>::infinity();
     mesh.invalidateCaches();
     for ( int i = 0; i < settings.pointIters; ++i )
         n2p.run( guide, fnormals, mesh.points, maxInitialDistSq );
 
-    reportProgress( settings.cb, 1.0f );
-    return {};
+    reportProgress( cb, 1.0f );
+    return true;
 }
 
 void meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings )
@@ -276,18 +293,18 @@ void meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points,
     std::ignore = meshDenoiseWithCreases( topology, points, creases, settings, {} );
 }
 
-Expected<void> meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+bool meshDenoiseWithCreases( Mesh & mesh, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
 {
     mesh.invalidateCaches();
     return meshDenoiseWithCreases( mesh.topology, mesh.points, creases, settings, cb );
 }
 
-Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
+bool meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points, const UndirectedEdgeBitSet & creases, const DenoiseWithCreasesSettings & settings, const ProgressCallback & cb )
 {
     MR_TIMER;
 
     if ( !reportProgress( cb, 0.0f ) )
-        return unexpectedOperationCanceled();
+        return false;
 
     Vector<float, UndirectedEdgeId> v( topology.undirectedEdgeSize() );
     ParallelFor( v, [&]( UndirectedEdgeId ue )
@@ -296,24 +313,28 @@ Expected<void> meshDenoiseWithCreases( const MeshTopology & topology, VertCoords
     } );
 
     auto fnormals = computePerFaceNormals( topology, points );
-    denoiseNormals( topology, points, fnormals, v, settings.gamma );
+    denoiseNormals( topology, points, fnormals, v, settings.gamma, settings.region );
     if ( !reportProgress( cb, 0.5f ) )
-        return unexpectedOperationCanceled();
+        return false;
+
+    VertBitSet innerVerts;
+    if ( settings.region )
+        innerVerts = getRegionInnerVerts( topology, *settings.region );
 
     const auto guide = points;
     NormalsToPoints n2p;
-    n2p.prepare( topology, settings.guideWeight );
+    n2p.prepare( topology, settings.guideWeight, settings.region ? &innerVerts : nullptr );
 
     auto sp = subprogress( cb, 0.5f, 1.0f );
     for ( int i = 0; i < settings.pointIters; ++i )
     {
         if ( !reportProgress( sp, float( i ) / settings.pointIters ) )
-            return unexpectedOperationCanceled();
+            return false;
         n2p.run( guide, fnormals, points );
     }
 
     reportProgress( cb, 1.0f );
-    return {};
+    return true;
 }
 
 } //namespace MR

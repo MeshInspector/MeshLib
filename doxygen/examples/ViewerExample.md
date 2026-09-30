@@ -14,6 +14,6 @@ Viewer with scene tree
 Viewer without scene tree
 \image html Viewer_without_scene_tree.png
 > [!NOTE]
-> This example does not work on macOS: `mv.launch()` raises `RuntimeError: MeshLib Viewer is not supported on macOS yet`. In releases before 3.1.3.566 it terminated the Python process instead (SIGTRAP, exit code 133, no exception raised).
+> On macOS, MeshLib releases before 3.1.3.566 crash in `mv.launch()`.
 
 </div>

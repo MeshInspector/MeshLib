@@ -12,6 +12,7 @@
 #include "MRMesh/MRMeshNormals.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRSceneColors.h"
+#include "MRMesh/MRSceneSettings.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRDirectory.h"
@@ -645,7 +646,7 @@ Expected<std::future<Expected<void>>> ObjectVoxels::serializeModel_( const std::
         return {};
 
     return std::async( getAsyncLaunchType(),
-        [this, filename = std::filesystem::path( path ) += serializeFormat_ ? serializeFormat_ : defaultSerializeVoxelsFormat()] ()
+        [this, filename = std::filesystem::path( path ) += serializeFormat_ ? serializeFormat_ : SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat )] ()
     {
         return MR::VoxelsSave::gridToAnySupportedFormat( vdbVolume_.data, vdbVolume_.dims, filename );
     } );
@@ -760,17 +761,14 @@ std::vector<std::string> ObjectVoxels::getInfoLines() const
     return res;
 }
 
-static std::string sDefaultSerializeVoxelsFormat = ".vdb";
-
 const std::string & defaultSerializeVoxelsFormat()
 {
-    return sDefaultSerializeVoxelsFormat;
+    return SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat );
 }
 
 void setDefaultSerializeVoxelsFormat( std::string newFormat )
 {
-    assert( !newFormat.empty() && newFormat[0] == '.' );
-    sDefaultSerializeVoxelsFormat = std::move( newFormat );
+    SceneSettings::set( SceneSettings::StringType::VoxelsSerializeFormat, std::move( newFormat ) );
 }
 
 } //namespace MR

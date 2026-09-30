@@ -177,9 +177,27 @@ Additionally, the Python library allows you to explore all the available functio
 
 ### Getting Started: MeshLib Viewer and Mesh I/O Examples
 
-After installing MeshLib, a great way to start exploring its capabilities is through interactive examples.
+After installing MeshLib, a great way to start exploring its capabilities is through interactive examples. On a machine with a graphical session, we recommend beginning with the MeshLib Viewer. It allows you to open and manipulate 3D meshes using Python. You can follow this [**Viewer example**](\ref ExampleViewer) to get started. On a headless machine (container, CI, WSL without an X server, SSH without X forwarding) the Viewer cannot open a window — start with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave) instead.
 
-- **On Windows and Linux with a graphical session**, we recommend beginning with the MeshLib Viewer. It allows you to open and manipulate 3D meshes using Python. You can follow this [**Viewer example**](\ref ExampleViewer) to get started. On a headless machine (container, CI, WSL without an X server, SSH without X forwarding) the Viewer cannot open a window — start with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave) instead.
-- **On macOS**, the interactive Viewer is not supported yet. The `meshlib.mrviewerpy` module installs and imports, but `mrviewerpy.launch()` raises `RuntimeError: MeshLib Viewer is not supported on macOS yet` — and in releases before 3.1.3.566 it terminated the Python process outright, with no exception — so the [**Viewer example**](\ref ExampleViewer) will not run. Start with the [**mesh loading and saving example**](\ref ExampleMeshLoadSave) instead, which demonstrates how to work with mesh files programmatically.
+> [!NOTE]
+> On macOS, AppKit runs a GUI on the main thread of a process only, so the Viewer cannot
+> run on a background thread as it does on Windows and Linux. It runs on the thread of your
+> Python script instead, which must be the main thread.
+>
+> `mrviewerpy.launch()` starts the Viewer and returns, and the calls that follow add objects
+> to the scene. `mrviewerpy.showViewer()` opens the window and runs the Viewer until the user
+> closes it. At the interactive prompt, and while a script waits in `input()`, the window is
+> live as well: the interpreter pumps the Viewer whenever it waits for a line of terminal
+> input, so you can type commands and watch the scene change between them.
+>
+> On Windows and Linux the window is live from `launch()` on and `showViewer()` is optional.
+> On macOS a script that never waits for input needs `showViewer()` to show the window, and it
+> blocks: the scene is shown as it stands at that call, and the code after it runs once the
+> window is closed.
+
+> [!WARNING]
+> On macOS, releases without `mrviewerpy.showViewer()` raise
+> `RuntimeError: MeshLib Viewer is not supported on macOS yet` in `launch()`, and releases
+> before 3.1.3.566 crash in it instead.
 
 These examples are a great entry point for integrating MeshLib into your workflow, regardless of your operating system.

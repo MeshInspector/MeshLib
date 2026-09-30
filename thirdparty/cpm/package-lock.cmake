@@ -63,7 +63,7 @@ set(MESHLIB_PACKAGE_fastmcpp
 
 set(MESHLIB_PACKAGE_fmt
   GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-  GIT_TAG 47a66c5eccc0cce71ad81b4a681a2032d86ca951
+  GIT_TAG 12.2.0
 )
 
 set(MESHLIB_PACKAGE_GDCM
@@ -101,6 +101,7 @@ set(MESHLIB_PACKAGE_libjpeg-turbo
   GIT_TAG 7fa4b5b762c9a99b46b0b7838f5fd55071b92ea5
   PATCHES
     ${CMAKE_CURRENT_LIST_DIR}/patches/libjpeg-turbo-allow-add-subdirectory.patch
+    ${CMAKE_CURRENT_LIST_DIR}/patches/libjpeg-turbo-no-tools.patch
 )
 
 set(MESHLIB_PACKAGE_libzip
@@ -111,6 +112,11 @@ set(MESHLIB_PACKAGE_libzip
 set(MESHLIB_PACKAGE_mbedtls
   GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls
   GIT_TAG v3.5.0
+)
+
+set(MESHLIB_PACKAGE_mrbind-pybind11
+  GIT_REPOSITORY https://github.com/MeshInspector/mrbind-pybind11
+  GIT_TAG f11e5ce8140ea8c7e8cf8156c18394aa73823024
 )
 
 set(MESHLIB_PACKAGE_nlohmann-json

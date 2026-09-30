@@ -233,6 +233,8 @@ void TouchpadController::setParameters( const TouchpadParameters& parameters )
 
 void TouchpadController::Handler::mouseScroll( float, float dy, bool )
 {
+    if ( getViewerInstance().mouseController().isZoomInverted() )
+        dy = -dy;
     ENQUEUE_VIEWER_METHOD_ARGS( "Mouse scroll", mouseScroll, dy );
 }
 

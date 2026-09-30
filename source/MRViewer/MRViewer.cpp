@@ -54,6 +54,7 @@
 #include <MRMesh/MRToFromEigen.h>
 #include <MRMesh/MRTimer.h>
 #include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRProtectedRun.h"
 #include "MRMesh/MRMeshLoad.h"
 #include "MRMesh/MRLinesLoad.h"
 #include "MRMesh/MRPointsLoad.h"
@@ -81,7 +82,6 @@
 #include <string_view>
 
 #ifndef __EMSCRIPTEN__
-#include <boost/exception/diagnostic_information.hpp>
 #endif
 #include "MRSaveObjects.h"
 #include "MRProgressBar.h"
@@ -311,6 +311,8 @@ static void glfw_mouse_scroll( GLFWwindow* /*window*/, double /*x*/, double y )
 {
     static double prevY = 0.0;
     auto viewer = &MR::getViewerInstance();
+    if ( viewer->mouseController().isZoomInverted() )
+        y = -y;
     if ( prevY * y < 0.0 )
         viewer->popEventByName( "Mouse scroll" );
     auto eventCall = [y, viewer, prevPtr = &prevY] ()
@@ -371,7 +373,25 @@ void addLabel( ObjectMesh& obj, const std::string& str, const Vector3f& pos, boo
     obj.addChild( label );
 }
 
-int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+int protectedLaunchPhase( const std::function<int()>& phase )
+{
+#ifdef __EMSCRIPTEN__
+    return phase(); // the main loop leaves launch() by a JS throw, which must not be caught
+#else
+    int res = EXIT_FAILURE;
+    auto ok = protectedRun( [&] { res = phase(); } );
+    if ( !ok )
+    {
+        spdlog::critical( ok.error() );
+        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
+        printCurrentTimerBranch();
+        return EXIT_FAILURE;
+    }
+    return res;
+#endif
+}
+
+int preLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
 {
     static bool firstLaunch = true;
     if ( !firstLaunch )
@@ -401,28 +421,45 @@ int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& 
         setup.setupMcp();
     }, CommandLoop::StartPosition::AfterSplashAppear );
 
-    int res = 0;
-#if defined(__EMSCRIPTEN__) || !defined(NDEBUG)
-    res = viewer.launch( params );
-#else
-    try
+    return protectedLaunchPhase( [&] { return viewer.preLaunch( params ); } );
+}
+
+int launchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+{
+    auto& viewer = MR::Viewer::instanceRef();
+    if ( !viewer.isPreLaunched() )
+        if ( auto rc = preLaunchDefaultViewer( params, setup ); rc != EXIT_SUCCESS )
+            return 1;
+
+    static bool firstLaunch = true;
+    if ( !firstLaunch )
     {
-        res = viewer.launch( params );
+        spdlog::error( "Viewer can be launched only once" );
+        return 1;
     }
-    catch ( ... )
+    else
     {
-        spdlog::critical( boost::current_exception_diagnostic_information() );
-        spdlog::info( "Exception stacktrace:\n{}", getCurrentStacktrace() );
-        printCurrentTimerBranch();
-        res = 1;
+        firstLaunch = false;
     }
-#endif
+
+    auto res = protectedLaunchPhase( [&] { return viewer.launch( params ); } );
+    postLaunchDefaultViewer( params, setup );
+    return res;
+}
+
+void postLaunchDefaultViewer( const Viewer::LaunchParams& params, const ViewerSetup& setup )
+{
+    auto& viewer = MR::Viewer::instanceRef();
+    if ( viewer.isPreLaunched() )
+    {
+        protectedLaunchPhase( [&] { viewer.launchShut(); return EXIT_SUCCESS; } );
+    }
+
     setup.shutdownMcp();
     if ( params.unloadPluginsAtEnd )
         setup.unloadExtendedLibraries();
     if ( setup.shutdownCustomLogSink )
         setup.shutdownCustomLogSink();
-    return res;
 }
 
 void filterReservedCmdArgs( std::vector<std::string>& args )
@@ -623,11 +660,11 @@ void Viewer::mainLoopFunc_()
 }
 #endif
 
-int Viewer::launch( const LaunchParams& params )
+int Viewer::preLaunch( const LaunchParams& params )
 {
-    if ( isLaunched_ )
+    if ( isPreLaunched_ )
     {
-        spdlog::error( "Viewer is already launched!" );
+        spdlog::error( "Viewer is already pre-launched!" );
         return 1;
     }
 
@@ -656,8 +693,24 @@ int Viewer::launch( const LaunchParams& params )
     {
         // no command loop will ever run here, so no command may wait for one
         CommandLoop::removeCommands( true );
-        return res;
     }
+    return res;
+}
+
+int Viewer::launchShow( const LaunchParams& params )
+{
+    if ( isLaunched_ )
+    {
+        spdlog::error( "Viewer is already launched!" );
+        return 1;
+    }
+    if ( !isPreLaunched_ )
+    {
+        spdlog::error( "Viewer is not pre-launched!" );
+        return 1;
+    }
+
+    isLaunched_ = true;
 
     CommandLoop::setState( CommandLoop::StartPosition::BeforeWindowAppear );
     CommandLoop::processCommands(); // execute pre init commands before first draw
@@ -679,6 +732,21 @@ int Viewer::launch( const LaunchParams& params )
 
     CommandLoop::setState( CommandLoop::StartPosition::AfterWindowAppear );
     CommandLoop::processCommands(); // execute remaining commands in the queue, important for params.startEventLoop==false
+    return EXIT_SUCCESS;
+}
+
+int Viewer::launch( const LaunchParams& params )
+{
+    if ( isLaunched_ )
+    {
+        spdlog::error( "Viewer is already launched!" );
+        return 1;
+    }
+    if ( !isPreLaunched_ )
+        if ( auto rc = preLaunch( params ); rc != EXIT_SUCCESS )
+            return rc;
+    if ( auto rc = launchShow( params ); rc != EXIT_SUCCESS )
+        return rc;
 
     if ( params.startEventLoop )
     {
@@ -976,7 +1044,7 @@ int Viewer::launchInit_( const LaunchParams& params )
     if ( menuPlugin_ )
         menuPlugin_->initBackend();
 
-    isLaunched_ = true;
+    isPreLaunched_ = true;
 
     return EXIT_SUCCESS;
 }
@@ -993,43 +1061,44 @@ void Viewer::launchEventLoop()
 
     // Rendering loop
     while ( !windowShouldClose() )
+        runEventLoopIteration();
+}
+
+void Viewer::runEventLoopIteration( double maxWaitSec )
+{
+    do
     {
-        do
-        {
-            draw( true );
-            glfwPollEvents();
-            if ( eventQueue_ )
-                eventQueue_->execute();
-            if ( spaceMouseHandler_ )
-                spaceMouseHandler_->handle();
-            CommandLoop::processCommands();
-        } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
-
-        // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
-        if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
-            continue;
-
-        if ( isAnimating )
-        {
-            const double minDuration = 1.0 / double( animationMaxFps );
-            glfwWaitEventsTimeout( minDuration );
-            if ( eventQueue_ )
-                eventQueue_->execute();
-        }
-        else
-        {
-            glfwWaitEvents();
-            if ( eventQueue_ )
-                eventQueue_->execute();
-        }
+        draw( true );
+        glfwPollEvents();
+        if ( eventQueue_ )
+            eventQueue_->execute();
         if ( spaceMouseHandler_ )
             spaceMouseHandler_->handle();
+        CommandLoop::processCommands();
+    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
+
+    // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
+    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
+        return;
+
+    if ( isAnimating )
+    {
+        const double minDuration = 1.0 / double( animationMaxFps );
+        maxWaitSec = maxWaitSec < 0 ? minDuration : std::min( maxWaitSec, minDuration );
     }
+    if ( maxWaitSec < 0 )
+        glfwWaitEvents();
+    else
+        glfwWaitEventsTimeout( maxWaitSec );
+    if ( eventQueue_ )
+        eventQueue_->execute();
+    if ( spaceMouseHandler_ )
+        spaceMouseHandler_->handle();
 }
 
 void Viewer::launchShut()
 {
-    if ( !isLaunched_ )
+    if ( !isPreLaunched_ )
     {
         spdlog::error( "Viewer is not launched!" );
         return;
@@ -1088,6 +1157,7 @@ void Viewer::launchShut()
     glfwTerminate();
     glInitialized_ = false;
     isLaunched_ = false;
+    isPreLaunched_ = false;
     spaceMouseHandler_.reset();
 
     /// removes references on all cached objects before shared libraries with plugins are unloaded
@@ -1189,6 +1259,7 @@ Viewer::Viewer() :
     {
         viewer->glPickRadius = 0;
         viewer->scrollForce = 1.0f;
+        viewer->mouseController().setZoomInverted( false );
         viewer->experimentalFeatures = false;
         viewer->spaceMouseController().setParameters( SpaceMouse::Parameters{} );
         viewer->touchpadController().setParameters( TouchpadParameters{} );

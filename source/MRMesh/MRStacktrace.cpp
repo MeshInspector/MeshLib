@@ -76,6 +76,8 @@ void printStacktraceOnCrash()
     std::signal( SIGHUP,  crashSignalHandler );
     std::signal( SIGQUIT, crashSignalHandler );
     std::signal( SIGBUS,  crashSignalHandler );
+    // on arm64, __builtin_trap() raises SIGTRAP (on x86-64 it is SIGILL)
+    std::signal( SIGTRAP, crashSignalHandler );
     std::signal( SIGSYS,  crashSignalHandler );
     std::signal( SIGUSR1, crashSignalHandler );
     std::signal( SIGUSR2, crashSignalHandler );

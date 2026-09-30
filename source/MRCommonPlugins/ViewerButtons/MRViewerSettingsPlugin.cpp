@@ -22,18 +22,15 @@
 #include "MRViewer/MRUnitSettings.h"
 #include "MRViewer/MRShowModal.h"
 #include "MRViewer/MRRibbonSceneObjectsListDrawer.h"
-#ifndef MESHLIB_NO_VOXELS
-#include "MRVoxels/MRObjectVoxels.h"
-#endif
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRLog.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRSceneSettings.h"
+#include "MRIOExtras/MRExtraFormatSettings.h"
 #include "MRMesh/MRDirectory.h"
 #include <MRMesh/MRSceneRoot.h>
 #include "MRMesh/MRObjectMesh.h"
-#include "MRMesh/MRObjectPointsHolder.h"
 #include "MRMesh/MRConfig.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRViewer/MRViewportGlobalBasis.h"
@@ -277,6 +274,54 @@ void ViewerSettingsPlugin::drawQuickTab_( float menuWidth )
     drawMouseSceneControlsSettings_( menuWidth );
 }
 
+void ViewerSettingsPlugin::drawStepImportSettings_( [[maybe_unused]] float menuWidth )
+{
+#ifndef MRIOEXTRAS_NO_STEP
+    drawSeparator_( _t( "STEP Import" ) );
+
+    auto settings = ExtraFormatSettings::getStepLoadSettings();
+    bool changed = false;
+
+    ImGui::PushItemWidth( menuWidth * 0.5f );
+
+    auto angularDeflection = float( settings.angularDeflection );
+    if ( UI::drag<AngleUnit>( _tr( "Angular Deflection" ), angularDeflection, 1e-3f, 1e-4f, 1.0f ) )
+    {
+        settings.angularDeflection = angularDeflection;
+        changed = true;
+    }
+    UI::setTooltipIfHovered( _tr( "Maximum angle between the surface normal and the normal of a generated triangle. Smaller values give a more precise but heavier mesh." ) );
+
+    auto linearDeflection = float( settings.linearDeflection );
+    const bool linearChanged = settings.relative ?
+        UI::drag<NoUnit>( _tr( "Linear Deflection" ), linearDeflection, 1e-3f, 1e-4f, 10.0f ) :
+        UI::drag<LengthUnit>( _tr( "Linear Deflection" ), linearDeflection, 1e-2f, 1e-4f, 1e3f );
+    if ( linearChanged )
+    {
+        settings.linearDeflection = linearDeflection;
+        changed = true;
+    }
+    UI::setTooltipIfHovered( _tr( "Maximum distance between the exact surface and a generated triangle. Smaller values give a more precise but heavier mesh." ) );
+
+    ImGui::PopItemWidth();
+
+    if ( UI::checkbox( _tr( "Relative Deflection" ), &settings.relative ) )
+        changed = true;
+    UI::setTooltipIfHovered( _tr( "Treat the linear deflection as a fraction of the edge size instead of an absolute distance." ) );
+
+    if ( UI::checkbox( _tr( "Auto Colorize" ), &settings.autoColorize ) )
+        changed = true;
+    UI::setTooltipIfHovered( _tr( "Assign distinct colors to the imported components. Has no effect if the STEP file already contains colors." ) );
+
+    if ( UI::checkbox( _tr( "Force Load Sub-Shapes" ), &settings.forceLoadSubShapes ) )
+        changed = true;
+    UI::setTooltipIfHovered( _tr( "Always load the bodies (solids and shells) of a shape as separate child objects, even if the shape has a single body." ) );
+
+    if ( changed )
+        ExtraFormatSettings::setStepLoadSettings( settings );
+#endif
+}
+
 void ViewerSettingsPlugin::drawGlobalSettings_( float buttonWidth )
 {
     drawSeparator_( _t( "Global" ) );
@@ -423,6 +468,7 @@ void ViewerSettingsPlugin::drawApplicationTab_( float menuWidth )
     }
 
     drawMruInnerFormats_( menuWidth );
+    drawStepImportSettings_( menuWidth );
 
 #if 0 // Hide unimplemented settings
 #ifndef __EMSCRIPTEN__
@@ -1116,6 +1162,13 @@ void ViewerSettingsPlugin::drawMouseSceneControlsSettings_( float menuWidth )
     ImGui::PopStyleVar();
     UI::setTooltipIfHovered( _tr( "Sensitivity for mouse wheel rotation affecting the speed of zooming." ) );
 
+    ImGui::SameLine( 0.f, 4.f * style.ItemSpacing.x );
+    ImGui::SetCursorPosY( ImGui::GetCursorPosY() + ( cButtonPadding - cCheckboxPadding ) * UI::scale() );
+    bool zoomInverted = viewer->mouseController().isZoomInverted();
+    if ( UI::checkbox( _tr( "Invert Zoom" ), &zoomInverted ) )
+        viewer->mouseController().setZoomInverted( zoomInverted );
+    UI::setTooltipIfHovered( _tr( "Reverses the mouse wheel zoom direction." ) );
+
     UI::separator( UI::SeparatorParams{ .extraScale = cSeparatorIndentMultiplier } );
 
     for ( int i = 0; i < int( MouseMode::Count ); ++i )
@@ -1342,7 +1395,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     const std::vector<std::string> voxelsFormatTooltips = { _tr( "Fast and efficient format for sparse data" ),
                                                             _tr( "Simplest but high disk space consumption format" ) };
 
-    std::string format = defaultSerializeMeshFormat();
+    std::string format = SceneSettings::get( SceneSettings::StringType::MeshSerializeFormat );
     if ( format == ".ctm" )
         mruFormatParameters_.meshFormat = MruFormatParameters::MeshFormat::Ctm;
     else if ( format == ".mrmesh" )
@@ -1350,14 +1403,14 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
     else // format == ".ply"
         mruFormatParameters_.meshFormat = MruFormatParameters::MeshFormat::Ply;
 
-    format = defaultSerializePointsFormat();
+    format = SceneSettings::get( SceneSettings::StringType::PointsSerializeFormat );
     if ( format == ".ctm" )
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ctm;
     else // format == ".ply"
         mruFormatParameters_.pointsFormat = MruFormatParameters::PointsFormat::Ply;
 
     #ifndef MESHLIB_NO_VOXELS
-    format = defaultSerializeVoxelsFormat();
+    format = SceneSettings::get( SceneSettings::StringType::VoxelsSerializeFormat );
     if ( format == ".raw" )
         mruFormatParameters_.voxelsFormat = MruFormatParameters::VoxelsFormat::Raw;
     else // format == ".vdb"
@@ -1380,7 +1433,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             format = ".ply";
             break;
         }
-        setDefaultSerializeMeshFormat( format );
+        SceneSettings::set( SceneSettings::StringType::MeshSerializeFormat, format );
     }
 
     if ( UI::combo( _tr( "Points Format" ), ( int* )&mruFormatParameters_.pointsFormat, pointsFormatNames, true, pointsFormatTooltips ) )
@@ -1395,7 +1448,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             format = ".ply";
             break;
         }
-        setDefaultSerializePointsFormat( format );
+        SceneSettings::set( SceneSettings::StringType::PointsSerializeFormat, format );
     }
     #ifndef MESHLIB_NO_VOXELS
     if ( UI::combo( _tr( "Voxels Format" ), ( int* )&mruFormatParameters_.voxelsFormat, voxelsFormatNames, true, voxelsFormatTooltips ) )
@@ -1410,7 +1463,7 @@ void ViewerSettingsPlugin::drawMruInnerFormats_( float menuWidth )
             format = ".vdb";
             break;
         }
-        setDefaultSerializeVoxelsFormat( format );
+        SceneSettings::set( SceneSettings::StringType::VoxelsSerializeFormat, format );
     }
     #endif
     ImGui::PopItemWidth();

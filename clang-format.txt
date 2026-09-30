@@ -1,0 +1,57 @@
+# for clang-format 18 and newer
+Language: Cpp
+ColumnLimit: 0
+IndentWidth: 4
+SortIncludes: Never
+
+AlignAfterOpenBracket: BlockIndent
+IndentCaseLabels: false
+IndentCaseBlocks: false
+LambdaBodyIndentation: OuterScope
+IndentGotoLabels: true
+IndentPPDirectives: None
+# Must stay equal to -IndentWidth so access specifiers sit flush with the class keyword.
+AccessModifierOffset: -4
+NamespaceIndentation: None
+IndentExternBlock: NoIndent
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  IndentBraces: false
+  AfterNamespace: true
+  AfterClass: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterControlStatement: Always
+  BeforeLambdaBody: true
+  SplitEmptyRecord: true
+  SplitEmptyFunction: true
+  BeforeCatch: true
+  BeforeElse: true
+  BeforeWhile: false
+  AfterExternBlock: true
+  AfterCaseLabel: true
+
+SpaceBeforeParens: ControlStatements
+SpacesInParens: Custom
+SpacesInParensOptions:
+  Other: true
+  InEmptyParentheses: false
+  InConditionalStatements: true
+  InCStyleCasts: false
+SpaceAfterCStyleCast: false
+SpaceInEmptyBlock: false
+SpaceBeforeCpp11BracedList: false
+Cpp11BracedListStyle: false
+SpaceBeforeSquareBrackets: false
+SpacesInSquareBrackets: false
+SpaceBeforeInheritanceColon: true
+SpaceBeforeCtorInitializerColon: true
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+AllowShortBlocksOnASingleLine: Never
+AllowShortFunctionsOnASingleLine: All
+AllowShortLambdasOnASingleLine: Inline

@@ -2,7 +2,7 @@ project(MRVoxels CXX)
 
 option(MRVOXELS_NO_DICOM "Disable DICOM format support" OFF)
 option(MRVOXELS_NO_TIFF "Disable TIFF format support" OFF)
-option(MRVOXELS_UNITY_BUILD "Use unity build for MRVoxels" ON)
+option(MRVOXELS_UNITY_BUILD "Use unity build for MRVoxels" OFF)
 
 IF(MR_EMSCRIPTEN)
   # Sync this with `scripts/mrbind/generate.mk`.
@@ -16,7 +16,10 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
 IF(MRVOXELS_UNITY_BUILD)
   include(UnityBuildHelpers)
-  set_source_files_properties(MRVDBInstantiations.cpp PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+  set_source_files_properties(MRVDBInstantiations.cpp
+    PROPERTIES
+      SKIP_UNITY_BUILD_INCLUSION ON
+  )
   mr_enable_unity_build(${PROJECT_NAME} ${SOURCES})
 ENDIF()
 

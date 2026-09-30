@@ -88,6 +88,11 @@ if [ "${MR_EMSCRIPTEN}" != "ON" ] ; then
   fi
 fi
 
+if [[ $OSTYPE == 'darwin'* ]] && [ "${MR_EMSCRIPTEN}" != "ON" ] && command -v brew >/dev/null 2>&1; then
+  # openssl@3 is keg-only, see ConfigureHomebrew.cmake
+  MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -D OPENSSL_ROOT_DIR=$(brew --prefix openssl@3)"
+fi
+
 if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi

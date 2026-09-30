@@ -75,7 +75,7 @@ struct FixMeshDegeneraciesParams
     {
         Decimate, ///< use decimation only to fix degeneracies
         Remesh,   ///< if decimation does not succeed, perform subdivision too
-        RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes
+        RemeshPatch ///< if both decimation and subdivision does not succeed, removes degenerate areas and fills occurred holes, but does not remove connected components lying entirely in degenerate areas
     } mode{ Mode::Remesh };
 
     /// trying to stay close to initial surface when patching

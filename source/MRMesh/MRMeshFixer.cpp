@@ -16,6 +16,7 @@
 #include "MREdgePaths.h"
 #include "MRFillHoleNicely.h"
 #include "MRMeshPatch.h"
+#include "MRMeshComponents.h"
 
 namespace MR
 {
@@ -259,6 +260,10 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
         return unexpected( regRes.error() );
     if ( regRes->none() )
         return {}; // nothing to fix
+    // patching a whole connected component would just delete it, leaving no hole to fill
+    *regRes &= MeshComponents::getComponents( mesh, mesh.topology.getValidFaces() - *regRes );
+    if ( regRes->none() )
+        return {}; // nothing to patch
     if ( !reportProgress( sbp, 0.25f ) )
         return unexpectedOperationCanceled();
 
@@ -274,6 +279,18 @@ Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams&
             .maxEdgeSplits = 20'000,
         }
     };
+    if ( params.region )
+    {
+        // the patch subdivision can also split the edges on the boundaries of the holes and the faces outside of the patch there;
+        // the parts of split faces from params.region join it
+        psettings.subdivideSettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
+        {
+            if ( contains( *params.region, mesh.topology.left( e ) ) )
+                params.region->autoResizeSet( mesh.topology.left( e1 ) );
+            if ( contains( *params.region, mesh.topology.right( e ) ) )
+                params.region->autoResizeSet( mesh.topology.right( e1 ) );
+        };
+    }
     Mesh patchRefMesh;
     if ( params.mimicPatch )
     {

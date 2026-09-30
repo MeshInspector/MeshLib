@@ -245,7 +245,7 @@ Expected<void> RadiusCompensator::applyCompensation()
             if ( i % 5 == 0 )
                 planeTree_ = std::make_unique<AABBTreePoints>( planeVerts_, vertRegion_ ); // rebuild tree each 5th iteration
             else
-                planeTree_->refit( planeVerts_, updatedVerts ); // update tree
+                planeTree_->refit( planeVerts_, &updatedVerts ); // update tree
         }
         if ( !reportProgress( sb, float( i ) / float( params_.maxIterations ) ) )
             return unexpectedOperationCanceled();

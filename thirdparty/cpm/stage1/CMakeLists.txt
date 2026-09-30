@@ -198,7 +198,8 @@ meshlib_add_package(laz-perf)
 set(DRACO_JS_GLUE OFF CACHE BOOL "")
 set(DRACO_TESTS OFF CACHE BOOL "")
 IF(EMSCRIPTEN)
-  # Draco checks these even with its JS glue disabled
+  # draco_check_emscripten_environment() fails without these even with DRACO_JS_GLUE=OFF, which needs no Python;
+  # PYTHONINTERP_FOUND is never set since Draco moved to find_package(Python) (google/draco@cff9f68)
   set(PYTHONINTERP_FOUND ON)
   set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
   # Emscripten builds SHARED libraries as static, so draco_shared would clash with draco_static

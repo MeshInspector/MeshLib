@@ -569,16 +569,15 @@ void Mesh::invalidateCaches( bool pointsChanged )
 
 void Mesh::updateCaches( const VertBitSet * changedVerts )
 {
-    const auto & verts = changedVerts ? *changedVerts : topology.getValidVerts();
     AABBTreeOwner_.update( [&]( AABBTree & tree )
     {
         assert( tree.numLeaves() == topology.numValidFaces() );
-        tree.refit( *this, verts );
+        tree.refit( *this, changedVerts );
     } );
     AABBTreePointsOwner_.update( [&]( AABBTreePoints & tree )
     {
         assert( tree.orderedPoints().size() == topology.numValidVerts() );
-        tree.refit( points, verts );
+        tree.refit( points, changedVerts );
     } );
     dipolesOwner_.reset();
 }

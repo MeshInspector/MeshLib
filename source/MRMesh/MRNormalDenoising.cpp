@@ -79,6 +79,7 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     for ( auto f : faces )
     {
         const int fi = idxOf( f );
+        const float pf = perimeterOf( f );
         float centralWeight = 1;
         Vector3d rh( normals[f] );
         for ( auto e : leftRing( topology, f ) )
@@ -87,7 +88,7 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
             const auto r = topology.right( e );
             if ( !r )
                 continue;
-            const auto sumPerimeter = perimeterOf( f ) + perimeterOf( r );
+            const auto sumPerimeter = pf + perimeterOf( r );
             if ( sumPerimeter <= 0 )
                 continue;
             // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires

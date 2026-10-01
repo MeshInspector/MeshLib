@@ -166,49 +166,6 @@ Expected<std::vector<MultipleEdge>> findMultipleEdges( const MeshTopology& topol
     return res;
 }
 
-// returns the longest edge of given triangle, having the triangle on its left
-static EdgeId longestEdge( const Mesh& mesh, FaceId f )
-{
-    EdgeId res;
-    float maxLengthSq = -1;
-    for ( auto e : leftRing( mesh.topology, f ) )
-    {
-        if ( const auto lengthSq = mesh.edgeLengthSq( e ); lengthSq > maxLengthSq )
-        {
-            maxLengthSq = lengthSq;
-            res = e;
-        }
-    }
-    return res;
-}
-
-// decimation can fix a degenerate triangle with its vertex near the middle of the opposite (longest) edge only by flipping that edge;
-// so if the edge is not flippable, splits it at the projection of the vertex, and the new short edge can be collapsed instead;
-// onEdgeSplit( e1, e, t ) is called after each split of (e) into (e1->e) at org(e1) + t * ( dest(e) - org(e1) )
-static void splitNotFlippableLongEdges( Mesh& mesh, FaceBitSet& region, UndirectedEdgeBitSet& notFlippable,
-    float criticalAspectRatio, float shortEdgeLength, const std::function<void( EdgeId e1, EdgeId e, float t )>& onEdgeSplit )
-{
-    MR_TIMER;
-    MR_WRITER( mesh );
-    const auto shortEdgeLengthSq = sqr( double( shortEdgeLength ) );
-    const auto degenerateFaces = findDegenerateFaces( { mesh, &region }, criticalAspectRatio ).value();
-    for ( auto f : degenerateFaces )
-    {
-        const auto e = longestEdge( mesh, f );
-        if ( !notFlippable.test( e.undirected() ) || mesh.edgeLengthSq( e ) <= shortEdgeLengthSq )
-            continue; // the longest edge can be flipped, or all edges are short (or even coincide)
-        const Vector3d a( mesh.orgPnt( e ) ), b( mesh.destPnt( e ) ), p( mesh.destPnt( mesh.topology.next( e ) ) );
-        const auto t = dot( p - a, b - a ) / ( b - a ).lengthSq();
-        const auto q = a + t * ( b - a );
-        if ( ( p - q ).lengthSq() > shortEdgeLengthSq || ( q - a ).lengthSq() <= shortEdgeLengthSq || ( q - b ).lengthSq() <= shortEdgeLengthSq )
-            continue; // the new edge would not be short enough to collapse, or the triangle already has a short edge
-        const auto e1 = mesh.splitEdge( e, Vector3f( q ), &region );
-        notFlippable.autoResizeSet( e1.undirected() );
-        if ( onEdgeSplit )
-            onEdgeSplit( e1, e, float( t ) );
-    }
-}
-
 // if data is given, then its attributes are kept valid, and it must own the mesh
 static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const FixMeshDegeneraciesParams& params )
 {
@@ -246,13 +203,9 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
     if ( !reportProgress( sbd, 0.25f ) )
         return unexpectedOperationCanceled();
 
-    UndirectedEdgeBitSet* notFlippable = params.notFlippable;
-    UndirectedEdgeBitSet dataNotFlippable;
     MeshAttributesToUpdate attributes;
-    // the edge sets that the algorithms below do not update themselves
-    std::vector<UndirectedEdgeBitSet*> edgeSets;
-    // updates the attributes of data after the split of (e) into (e1->e) at org(e1) + t * ( dest(e) - org(e1) )
-    std::function<void( EdgeId e1, EdgeId e, float t )> onEdgeSplit;
+    // updates the attributes of data after the split of (e) into (e1->e)
+    OnEdgeSplit onEdgeSplit;
     if ( data )
     {
         resizeAttributesToMesh( *data );
@@ -264,45 +217,18 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
             attributes.texturePerFace = &data->texturePerFace;
         if ( !data->faceColors.empty() )
             attributes.faceColors = &data->faceColors;
-
-        // a flip keeps the ids of both faces, so flipping an edge between different colors or textures
-        // would extend the attribute of one face over a part of the other one
-        dataNotFlippable = data->selectedEdges | data->creases
-            | edgesBetweenDifferentColors( mesh.topology, data->faceColors )
-            | edgesBetweenDifferentTextures( mesh.topology, data->texturePerFace );
-        edgeSets = { &data->selectedEdges, &data->creases };
-        if ( params.notFlippable )
+        onEdgeSplit = [&, updateAttributes = meshOnEdgeSplitAttribute( mesh, attributes )] ( EdgeId e1, EdgeId e )
         {
-            dataNotFlippable |= *params.notFlippable;
-            edgeSets.push_back( params.notFlippable );
-        }
-        notFlippable = dataNotFlippable.any() ? &dataNotFlippable : nullptr;
-
-        onEdgeSplit = [&, faceAttributes = meshOnEdgeSplitFaceAttribute( mesh, attributes )] ( EdgeId e1, EdgeId e, float t )
-        {
-            const auto a = mesh.topology.org( e1 );
-            const auto b = mesh.topology.dest( e );
-            if ( auto uv = attributes.uvCoords )
-                uv->push_back( ( *uv )[a] * ( 1 - t ) + ( *uv )[b] * t );
-            if ( auto colors = attributes.colorMap )
-                colors->push_back( ( *colors )[a] * ( 1 - t ) + ( *colors )[b] * t );
-            if ( faceAttributes )
-                faceAttributes( e1, e );
+            updateAttributes( e1, e );
             if ( contains( data->selectedFaces, mesh.topology.left( e ) ) )
                 data->selectedFaces.autoResizeSet( mesh.topology.left( e1 ) );
             if ( contains( data->selectedFaces, mesh.topology.right( e ) ) )
                 data->selectedFaces.autoResizeSet( mesh.topology.right( e1 ) );
-            for ( auto s : edgeSets )
+            for ( auto s : { &data->selectedEdges, &data->creases } )
                 if ( s->test( e.undirected() ) )
                     s->autoResizeSet( e1.undirected() );
         };
     }
-    // subdivisions split edges in the middle
-    const auto onEdgeSplitInMiddle = onEdgeSplit ? OnEdgeSplit( [&] ( EdgeId e1, EdgeId e ) { onEdgeSplit( e1, e, 0.5f ); } ) : OnEdgeSplit{};
-
-    if ( notFlippable )
-        splitNotFlippableLongEdges( mesh, *regRes, *notFlippable, params.criticalTriAspectRatio,
-            std::max( params.maxDeviation, params.tinyEdgeLength ), onEdgeSplit );
 
     DecimateSettings dsettings
     {
@@ -313,8 +239,6 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
         .stabilizer = params.stabilizer,
         .optimizeVertexPos = false, // this decreases probability of normal inversion near mesh degenerations
         .region = &*regRes,
-        .notFlippable = notFlippable,
-        .collapseNearNotFlippable = true, // otherwise the short edges ending on not flippable edges would remain
         .maxAngleChange = params.maxAngleChange,
         .progressCallback = subprogress( sbd, 0.25f,  1.0f )
     };
@@ -322,7 +246,7 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
     {
         dsettings.onEdgeDel = [&] ( EdgeId del, EdgeId rem )
         {
-            for ( auto s : edgeSets )
+            for ( auto s : { &data->selectedEdges, &data->creases } )
                 if ( s->test_set( del.undirected(), false ) && rem )
                     s->autoResizeSet( rem.undirected() );
         };
@@ -360,24 +284,10 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
         .maxAngleChangeAfterFlip = params.maxAngleChange,
         .criticalAspectRatioFlip = params.criticalTriAspectRatio, // questionable - may lead to exceeding beyond tolerance, but if set FLT_MAX, may lead to more degeneracies
         .region = params.region,
-        .notFlippable = notFlippable,
         .maxTriAspectRatio = params.criticalTriAspectRatio,
-        .onEdgeSplit = onEdgeSplitInMiddle,
+        .onEdgeSplit = onEdgeSplit,
         .progressCallback = subprogress( sbs, 0.25f, 1.0f )
     };
-    // subdivision cannot fix degenerate triangles with not flippable longest edges, and they must not keep it splitting other edges
-    FaceBitSet subdivisionRegion;
-    if ( notFlippable )
-    {
-        subdivisionRegion = mesh.topology.getFaceIds( params.region );
-        BitSetParallelFor( findDegenerateFaces( { mesh, params.region }, params.criticalTriAspectRatio ).value(), [&] ( FaceId f )
-        {
-            if ( notFlippable->test( longestEdge( mesh, f ).undirected() ) )
-                subdivisionRegion.reset( f );
-        } );
-        ssettings.region = &subdivisionRegion;
-        ssettings.maintainRegion = params.region;
-    }
     subdivideMesh( mesh, ssettings );
 
     if ( !reportProgress( sbs, 1.f ) )
@@ -404,10 +314,9 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
         },
         .subdivideSettings =
         {
-            .notFlippable = params.notFlippable,
             .maxEdgeLen = 0.0f, // to use default from `patchMesh`
             .maxEdgeSplits = 20'000,
-            .onEdgeSplit = onEdgeSplitInMiddle, // patch subdivision can split the faces around the patch too
+            .onEdgeSplit = onEdgeSplit, // patch subdivision can split the faces around the patch too
         }
     };
 
@@ -494,8 +403,6 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
         mesh.topology.excludeLoneEdges( data->selectedEdges );
         mesh.topology.excludeLoneEdges( data->creases );
     }
-    if ( params.notFlippable )
-        mesh.topology.excludeLoneEdges( *params.notFlippable );
     if ( params.region )
     {
         *params.region |= newFaces;

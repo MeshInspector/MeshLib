@@ -28,11 +28,11 @@ size_t ObjectMeshData::heapBytes() const
         + texturePerFace.heapBytes();
 }
 
-template <typename T>
-static UndirectedEdgeBitSet edgesBetweenDifferentValues( const MeshTopology & topology, const Vector<T, FaceId> & values )
+UndirectedEdgeBitSet edgesBetweenDifferentColors( const MeshTopology & topology, const FaceColors & colors )
 {
+    MR_TIMER;
     UndirectedEdgeBitSet res;
-    if ( values.empty() )
+    if ( colors.empty() )
         return res;
     res.resize( topology.undirectedEdgeSize() );
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
@@ -40,22 +40,10 @@ static UndirectedEdgeBitSet edgesBetweenDifferentValues( const MeshTopology & to
         EdgeId e( ue );
         auto l = topology.left( e );
         auto r = topology.right( e );
-        if ( l < values.size() && r < values.size() && values[l] != values[r] )
+        if ( l < colors.size() && r < colors.size() && colors[l] != colors[r] )
             res.set( ue );
     } );
     return res;
-}
-
-UndirectedEdgeBitSet edgesBetweenDifferentColors( const MeshTopology & topology, const FaceColors & colors )
-{
-    MR_TIMER;
-    return edgesBetweenDifferentValues( topology, colors );
-}
-
-UndirectedEdgeBitSet edgesBetweenDifferentTextures( const MeshTopology & topology, const TexturePerFace & textures )
-{
-    MR_TIMER;
-    return edgesBetweenDifferentValues( topology, textures );
 }
 
 void resizeAttributesToMesh( ObjectMeshData & data )

@@ -5,6 +5,7 @@
 #include "MRRingIterator.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRMeshFixer.h"
 #include "MRTimer.h"
 
@@ -74,33 +75,64 @@ bool relaxT( const MeshTopology & topology, Vector<T, VertId> & field, const Mes
 
     VertLimiter limiter( field, params );
 
-    Vector<T, VertId> newField;
-    const VertBitSet& zone = topology.getVertIds( params.region );
-    for ( int i = 0; i < params.iterations; ++i )
+    // computes new value of vertex (v) from the values of its neighbors
+    const auto relaxedValue = [&]( VertId v )
     {
-        auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-        newField = field;
-        if ( !BitSetParallelFor( zone, [&]( VertId v )
+        T sum{};
+        float sumWeight = 0.f;
+        for ( auto e : orgRing( topology, v ) )
         {
-            auto e0 = topology.edgeWithOrg( v );
-            if ( !e0.valid() )
-                return;
-            T sum{};
-            float sumWeight = 0.f;
-            for ( auto e : orgRing( topology, e0 ) )
+            const auto dst = topology.dest( e );
+            const auto w = getWeightOrDefault( dst );
+            sum += w * field[dst];
+            sumWeight += w;
+        }
+        auto np = field[v];
+        auto pushForce = params.force * ( sum / sumWeight - np );
+        np += pushForce;
+        return limiter( v, np );
+    };
+
+    const VertBitSet& zone = topology.getVertIds( params.region );
+    if ( 2 * zone.count() > field.size() )
+    {
+        // dense zone: double-buffer the whole field
+        Vector<T, VertId> newField;
+        for ( int i = 0; i < params.iterations; ++i )
+        {
+            auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
+            newField = field;
+            if ( !BitSetParallelFor( zone, [&]( VertId v )
             {
-                const auto dst = topology.dest( e );
-                const auto w = getWeightOrDefault( dst );
-                sum += w * field[dst];
-                sumWeight += w;
-            }
-            auto np = newField[v];
-            auto pushForce = params.force * ( sum / sumWeight - np );
-            np += pushForce;
-            newField[v] = limiter( v, np );
-        }, internalCb ) )
-            return false;
-        field.swap( newField );
+                if ( topology.edgeWithOrg( v ) )
+                    newField[v] = relaxedValue( v );
+            }, internalCb ) )
+                return false;
+            field.swap( newField );
+        }
+    }
+    else
+    {
+        // sparse zone: store new values only for zone vertices
+        std::vector<VertId> zoneVerts;
+        zoneVerts.reserve( zone.count() );
+        for ( auto v : zone )
+            if ( topology.edgeWithOrg( v ) )
+                zoneVerts.push_back( v );
+        std::vector<T> newValues( zoneVerts.size() );
+        for ( int i = 0; i < params.iterations; ++i )
+        {
+            auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
+            if ( !ParallelFor( zoneVerts, [&]( size_t j )
+            {
+                newValues[j] = relaxedValue( zoneVerts[j] );
+            }, internalCb ) )
+                return false;
+            ParallelFor( zoneVerts, [&]( size_t j )
+            {
+                field[zoneVerts[j]] = newValues[j];
+            } );
+        }
     }
     if ( params.hardSmoothTetrahedrons )
         hardSmoothTetrahedronsT( topology, field, params.region );

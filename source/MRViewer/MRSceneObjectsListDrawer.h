@@ -91,7 +91,8 @@ protected:
     MRVIEWER_API bool drawObjectCollapsingHeader_( Object& object, const std::string& uniqueStr, bool hasRealChildren );
 
     /// function that do click logic on object line (select/deselect/rename/open context)
-    MRVIEWER_API void processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected );
+    /// \param simulatedClick a click simulated by UI::TestEngine, which has no mouse state, so only selects
+    MRVIEWER_API void processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, bool simulatedClick = false );
 
     /// payload object will be moved
     MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );

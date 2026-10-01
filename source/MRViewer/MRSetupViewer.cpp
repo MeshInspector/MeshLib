@@ -84,7 +84,6 @@ void resetSettings( Viewer * viewer )
 #endif
 #ifdef __EMSCRIPTEN__
     const size_t memLimit = size_t( 1024 ) * 1024 * 1024;
-    viewer->scrollForce = 0.7f;
     bool hasMouse = bool( EM_ASM_INT( return hasMouse() ) );
     bool isMac = bool( EM_ASM_INT( return is_mac() ) );
     if ( !hasMouse || isMac )

@@ -356,7 +356,7 @@ void ImGuiMenu::startFrame()
 
     restoreKeyModifiers( realKeyModifiers_ ); // in case the previous frame was not finished
     ImGui::NewFrame();
-    if ( auto mods = UI::TestEngine::createValue( "Key modifiers", testKeyModifiers_, 0, 15 ) )
+    if ( auto mods = UI::TestEngine::createValue( "##key_modifiers", testKeyModifiers_, 0, 15 ) )
         testKeyModifiers_ = *mods;
     forceKeyModifiers( testKeyModifiers_, realKeyModifiers_ );
     UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
@@ -748,7 +748,7 @@ void ImGuiMenu::draw_menu()
 
     drawViewerWindow();
 
-    drawAdditionalWindows();   
+    drawAdditionalWindows();
 }
 
 void ImGuiMenu::drawViewerWindow()
@@ -2583,7 +2583,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
 
         const auto& style = ImGui::GetStyle();
 
-        
+
 
         const auto buttonWidth = [&] ( const char* label )
         {

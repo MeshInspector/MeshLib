@@ -74,7 +74,7 @@ protected:
   // last focused plugin window
   ImGuiWindow* prevFrameFocusPlugin_ = nullptr;
 
-  // keyboard modifiers (GLFW_MOD_* bits) held for ImGui in addition to the real keyboard, set by UI tests via test-engine value "Key modifiers"
+  // keyboard modifiers (GLFW_MOD_* bits) held for ImGui in addition to the real keyboard, set by UI tests via test-engine value "##key_modifiers"
   int testKeyModifiers_ = 0;
   // the real down states of the ImGui modifier keys replaced by testKeyModifiers_ in this frame
   std::vector<std::pair<ImGuiKey, bool>> realKeyModifiers_;

@@ -1,5 +1,6 @@
 #include "MRPython/MRPython.h"
 #include "MRViewer/MRPythonAppendCommand.h"
+#include "MRViewer/MRUITestEngine.h"
 #include "MRViewer/MRUITestEngineControl.h"
 #include "MRViewer/MRViewer.h"
 #include "MRPch/MRFmt.h"
@@ -84,6 +85,15 @@ MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiPressButton,
             MR::CommandLoop::runCommandFromGUIThread( [] {} ); // Wait a few frames.
     },
     "Simulate a button click. Use `uiListEntries()` to find button names."
+)
+
+MR_ADD_PYTHON_FUNCTION( mrviewerpy, uiSetKeyModifiers,
+    []( int modifiers )
+    {
+        MR::CommandLoop::runCommandFromGUIThread( [&] { MR::UI::TestEngine::setForcedKeyModifiers( modifiers ); } );
+    },
+    "Make the UI see these keyboard modifiers held (e.g. `KeyMod.Shift`, or several combined with `|`) in every frame, "
+    "in addition to the real keyboard, until the next call. Pass `KeyMod.Empty` to release them."
 )
 
 namespace

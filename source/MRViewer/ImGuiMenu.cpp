@@ -324,6 +324,7 @@ void ImGuiMenu::startFrame()
     }
 
     ImGui::NewFrame();
+    UI::TestEngine::applyForcedKeyModifiers();
     UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
 
     if ( needIncrement && context_->MouseViewport != ImGui::GetMainViewport() ) // needIncrement can be true only if ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_
@@ -351,6 +352,7 @@ void ImGuiMenu::finishFrame()
         }
     }
     ProgressBar::onFrameEnd();
+    UI::TestEngine::restoreKeyModifiers();
     if ( viewer->isGLInitialized() )
     {
         ImGui::Render();

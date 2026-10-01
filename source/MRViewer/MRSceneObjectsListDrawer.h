@@ -93,6 +93,9 @@ protected:
     /// function that do click logic on object line (select/deselect/rename/open context)
     MRVIEWER_API void processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected );
 
+    /// selection logic of a click on object line simulated by UI::TestEngine
+    MRVIEWER_API void processSimulatedItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected );
+
     /// payload object will be moved
     MRVIEWER_API void makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload );
 

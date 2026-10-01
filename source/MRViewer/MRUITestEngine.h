@@ -234,6 +234,16 @@ private:
 // the action.
 MRVIEWER_API void markFrameTriggered();
 
+// Keyboard modifiers (`GLFW_MOD_*` bits) that ImGui sees held in every frame, in addition to the real keyboard,
+// until changed by the next call. Lets a test simulate e.g. a Shift-click.
+MRVIEWER_API void setForcedKeyModifiers( int modifiers );
+[[nodiscard]] MRVIEWER_API int getForcedKeyModifiers();
+
+// Called by the menu right after `ImGui::NewFrame()` and before `ImGui::Render()` respectively:
+// the first marks the forced modifiers as held for this frame, the second returns the keys to their real state.
+MRVIEWER_API void applyForcedKeyModifiers();
+MRVIEWER_API void restoreKeyModifiers();
+
 // Stage the path(s) that the next TE-triggered file dialog should return.
 // Replaces any previously staged value; empty vector is treated as "not staged".
 // Single-shot: consumed by the next file dialog opened during a TE-triggered frame.

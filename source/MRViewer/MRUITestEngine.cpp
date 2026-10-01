@@ -1,4 +1,5 @@
 #include "MRUITestEngine.h"
+#include "MRGladGlfw.h"
 #include "MRImGui.h"
 #include "MRPch/MRFmt.h"
 
@@ -35,6 +36,12 @@ struct State
 
     // Status messages emitted during TE-driven actions; drained by MCP after each dispatch.
     std::vector<std::string> statusMessages;
+
+    // `GLFW_MOD_*` bits held for ImGui in every frame, see `setForcedKeyModifiers()`.
+    int forcedKeyModifiers = 0;
+
+    // The real `Down` states of ImGui modifier keys, replaced by `applyForcedKeyModifiers()`.
+    std::vector<std::pair<ImGuiKey, bool>> realKeyModifiers;
 };
 // Our global state. Stores the current tree of buttons and button groups.
 State state;
@@ -297,6 +304,59 @@ void markFrameTriggered()
     #if MR_ENABLE_UI_TEST_ENGINE
     checkForNewFrame();
     state.frameTriggered = true;
+    #endif
+}
+
+void setForcedKeyModifiers( int modifiers )
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    state.forcedKeyModifiers = modifiers;
+    #else
+    (void)modifiers;
+    #endif
+}
+
+int getForcedKeyModifiers()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    return state.forcedKeyModifiers;
+    #else
+    return 0;
+    #endif
+}
+
+void applyForcedKeyModifiers()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    restoreKeyModifiers(); // in case the previous frame was not finished
+    if ( !state.forcedKeyModifiers )
+        return;
+    auto& io = ImGui::GetIO();
+    auto force = [&] ( int glfwMod, ImGuiKey key, bool& ioKey )
+    {
+        if ( !( state.forcedKeyModifiers & glfwMod ) )
+            return;
+        // ImGui derives io.KeyMods and io.KeyCtrl, ... from these in ImGui::NewFrame(), and IsKeyDown( ImGuiMod_... ) reads them
+        auto& keyData = *ImGui::GetKeyData( key );
+        state.realKeyModifiers.emplace_back( key, keyData.Down );
+        keyData.Down = true;
+        io.KeyMods |= key;
+        ioKey = true;
+    };
+    force( GLFW_MOD_CONTROL, ImGuiMod_Ctrl, io.KeyCtrl );
+    force( GLFW_MOD_SHIFT, ImGuiMod_Shift, io.KeyShift );
+    force( GLFW_MOD_ALT, ImGuiMod_Alt, io.KeyAlt );
+    force( GLFW_MOD_SUPER, ImGuiMod_Super, io.KeySuper );
+    #endif
+}
+
+void restoreKeyModifiers()
+{
+    #if MR_ENABLE_UI_TEST_ENGINE
+    // the real state must be back before the next ImGui::NewFrame(), else ImGui would take a forced key as held by the user
+    for ( const auto& [key, down] : state.realKeyModifiers )
+        ImGui::GetKeyData( key )->Down = down;
+    state.realKeyModifiers.clear();
     #endif
 }
 

@@ -557,6 +557,11 @@ void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vecto
         updateSelection_( &object, selected, all );
 }
 
+void SceneObjectsListDrawer::processSimulatedItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected )
+{
+    updateSelection_( &object, selected, SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>() );
+}
+
 void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload )
 {
     if ( !allowSceneReorder_ || payload.empty() )

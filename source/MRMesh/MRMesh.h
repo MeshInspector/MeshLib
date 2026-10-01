@@ -487,7 +487,8 @@ struct [[nodiscard]] Mesh
     /// updates existing caches in case of few vertices were changed insignificantly,
     /// and topology remained unchanged;
     /// it shall be considered as a faster alternative to invalidateCaches() and following rebuild of trees
-    MRMESH_API void updateCaches( const VertBitSet & changedVerts );
+    /// \param changedVerts vertices with modified coordinates, nullptr means all valid vertices
+    MRMESH_API void updateCaches( const VertBitSet * changedVerts );
 
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;

@@ -57,7 +57,7 @@ void SaveOnClosePlugin::preDraw_()
         }
         else if ( noModalWasPresent )
         {
-            ImGui::OpenPopup( popupId.c_str() );
+            ImGui::EnqueuePopup( popupId.c_str() );
             showCloseModal_ = false;
         }
         else

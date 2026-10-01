@@ -159,6 +159,16 @@ void ProgressBarImpl::tryRun_( const std::function<void ()>& task )
     }
 }
 
+// only one operation can be ordered at a time, but while the progress bar waits for an open modal to close, that modal can order another one
+bool canOrder( const char* name )
+{
+    if ( !ProgressBarImpl::instance().isOrdered_ )
+        return true;
+    spdlog::warn( "Operation \"{}\" is not started: another operation is in progress", name );
+    pushNotification( { .text = _tr( "Another operation in progress." ), .lifeTimeSec = 3.0f } );
+    return false;
+}
+
 } //anonymous namespace
 
 namespace ProgressBar
@@ -171,12 +181,7 @@ void setup()
     if ( instance.deferredOpenPopup_ && instance.setupId_ != ImGuiID( -1 ) )
     {
         instance.deferredOpenPopup_ = false;
-        bool thisOpen = ImGui::IsPopupOpen( instance.setupId_, 0 );
-        bool isAnyOpen = ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
-        if ( isAnyOpen && !thisOpen )
-            ImGui::CloseCurrentPopup();
-        if ( !thisOpen )
-            ImGui::OpenPopup( instance.setupId_ );
+        ImGui::EnqueuePopup( instance.setupId_ );
     }
 
     instance.setupId_ = ImGui::GetID( "###GlobalProgressBarPopup" );
@@ -184,6 +189,7 @@ void setup()
     auto& viewer = getViewerInstance();
     ImGuiMV::SetNextWindowPosMainViewport( 0.5f * ( Vector2f( viewer.framebufferSize ) - windowSize ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    std::function<void()> onFinish;
     if ( ImGui::BeginModalNoAnimation( "###GlobalProgressBarPopup", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         UI::TestEngine::TreeGuard testEngineGuard( "ProgressBar" );
@@ -259,17 +265,15 @@ void setup()
             }
             instance.isOrdered_ = false;
             instance.closeDialogNextFrame_ = true;
-            // important to be after `isOrdered_=false` and `closeDialogNextFrame_=true`
-            // to handle progress bar ordered in `onFinish_`
-            if ( instance.onFinish_ )
-            {
-                instance.onFinish_();
-                instance.onFinish_ = {};
-            }
+            onFinish = std::exchange( instance.onFinish_, {} );
             getViewerInstance().incrementForceRedrawFrames();
         }
         ImGui::EndPopup();
     }
+    // important to be after `isOrdered_=false` and `closeDialogNextFrame_=true` to handle progress bar ordered in `onFinish`,
+    // and out of the popup, so that popups enqueued in `onFinish` open after the progress bar instead of nested in it
+    if ( onFinish )
+        onFinish();
 }
 
 void onFrameEnd()
@@ -286,6 +290,9 @@ void onFrameEnd()
     if ( !ctx )
         return;
     if ( !ctx->MovingWindow )
+        return;
+    // not open yet: waits for another modal to close, which can be moved meanwhile
+    if ( !ImGui::IsPopupOpen( inst.setupId_, ImGuiPopupFlags_AnyPopupLevel ) )
         return;
     if ( std::string( ctx->MovingWindow->Name ).ends_with( "###GlobalProgressBarPopup" ) )
         return;
@@ -306,6 +313,8 @@ void order( const char* name, const std::function<void()>& task, int taskCount )
 
 void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
+    if ( !canOrder( name ) )
+        return;
     auto& instance = ProgressBarImpl::instance();
 
     if ( isFinished() && instance.thread_.joinable() )
@@ -351,6 +360,8 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 
 void orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
+    if ( !canOrder( name ) )
+        return;
     auto& instance = ProgressBarImpl::instance();
 
     if ( isFinished() && instance.thread_.joinable() )

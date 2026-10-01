@@ -1059,7 +1059,7 @@ void ViewerSettingsPlugin::drawResetDialog_( bool activated )
 {
     const auto settingsResetId = s_tr( "Settings reset" ) + "##reset";
     if ( activated )
-        ImGui::OpenPopup( settingsResetId.c_str() );
+        ImGui::EnqueuePopup( settingsResetId.c_str() );
     ModalDialog dialog( settingsResetId, {
         .text = _tr( "Reset all application settings?" ),
     } );

@@ -1027,6 +1027,58 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
     return true;
 }
 
+static std::vector<ImGuiID>& getEnqueuedPopups()
+{
+    static std::vector<ImGuiID> popups;
+    return popups;
+}
+
+// a modal counts while it is drawn (in this or the previous frame), so a modal nobody draws anymore does not block the queue;
+// a popup opened in this or the previous frame and not drawn yet counts too, since it may be a modal
+static bool isModalOpen()
+{
+    const auto& g = *GetCurrentContext();
+    for ( const auto& popup : g.OpenPopupStack )
+    {
+        if ( !popup.Window )
+        {
+            if ( popup.OpenFrameCount >= g.FrameCount - 1 )
+                return true;
+        }
+        else if ( ( popup.Window->Flags & ImGuiWindowFlags_Modal ) && ( popup.Window->Active || popup.Window->WasActive ) )
+            return true;
+    }
+    return false;
+}
+
+void EnqueuePopup( const char* str_id )
+{
+    EnqueuePopup( GetID( str_id ) );
+}
+
+void EnqueuePopup( ImGuiID id )
+{
+    if ( IsPopupOpen( id, ImGuiPopupFlags_None ) )
+        return;
+    auto& popups = getEnqueuedPopups();
+    const bool nested = GetCurrentContext()->BeginPopupStack.Size > 0;
+    if ( nested || ( popups.empty() && !isModalOpen() ) )
+        OpenPopup( id );
+    else if ( std::find( popups.begin(), popups.end(), id ) == popups.end() )
+        popups.push_back( id );
+}
+
+void OpenEnqueuedPopup()
+{
+    auto& popups = getEnqueuedPopups();
+    if ( popups.empty() || isModalOpen() )
+        return;
+    OpenPopup( popups.front() );
+    popups.erase( popups.begin() );
+    // the popup is hidden in its first frame to calculate its size
+    getViewerInstance().incrementForceRedrawFrames( 2, true );
+}
+
 bool InputIntBitSet( const char* label, int* v, const MR::BitSet& bs, int step /*= 1*/, int step_fast /*= 100*/, ImGuiInputTextFlags flags /*= 0 */ )
 {
     int& value = *v;

@@ -254,6 +254,16 @@ MRVIEWER_API void EndCustomStatePlugin();
 /// starts modal window with no animation for background
 MRVIEWER_API bool BeginModalNoAnimation( const char* label, bool* open = nullptr, ImGuiWindowFlags flags = 0 );
 
+/// use instead of ImGui::OpenPopup for modal popups, since opening a popup closes the one open at the same level:
+/// opens the popup now if no modal is open, otherwise after the open modal and all popups enqueued earlier are closed;
+/// inside an open popup (between Begin* and EndPopup) opens a nested popup now, like ImGui::OpenPopup;
+/// does nothing if the popup is already open or enqueued
+MRVIEWER_API void EnqueuePopup( const char* str_id );
+MRVIEWER_API void EnqueuePopup( ImGuiID id );
+
+/// opens the first enqueued popup if no modal is open; called by ImGuiMenu each frame after ImGui::NewFrame
+MRVIEWER_API void OpenEnqueuedPopup();
+
 /// Input int according valid from BitSet
 /// \brief same as ImGui::InputInt
 /// \return true if value was changed and valid

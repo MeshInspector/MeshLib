@@ -183,7 +183,7 @@ void Toolbar::drawCustomize()
     if ( openCustomizeFlag_ )
     {
         openCustomizeFlag_ = false;
-        ImGui::OpenPopup( "Toolbar Customize" );
+        ImGui::EnqueuePopup( "Toolbar Customize" );
     }
     drawCustomizeModal_();
     UI::TestEngine::popTree();

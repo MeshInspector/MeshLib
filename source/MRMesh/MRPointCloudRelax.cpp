@@ -73,10 +73,12 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
             newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );
-        updateOrInvalidateCaches( pointCloud, params );
         if ( !keepGoing )
             break;
+        if ( i + 1 < params.iterations )
+            pointCloud.updateCaches( params.region ); // refit is much faster than rebuilding the tree in the next iteration
     }
+    updateOrInvalidateCaches( pointCloud, params );
     return keepGoing;
 }
 
@@ -160,10 +162,12 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             newPoints[v] = np;
         }, internalCb2 );
         pointCloud.points.swap( newPoints );
-        updateOrInvalidateCaches( pointCloud, params );
         if ( !keepGoing )
             break;
+        if ( i + 1 < params.iterations )
+            pointCloud.updateCaches( params.region ); // refit is much faster than rebuilding the tree in the next iteration
     }
+    updateOrInvalidateCaches( pointCloud, params );
     return keepGoing;
 }
 
@@ -254,10 +258,12 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
             newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );
-        updateOrInvalidateCaches( pointCloud, params );
         if ( !keepGoing )
             break;
+        if ( i + 1 < params.iterations )
+            pointCloud.updateCaches( params.region ); // refit is much faster than rebuilding the tree in the next iteration
     }
+    updateOrInvalidateCaches( pointCloud, params );
     return keepGoing;
 }
 

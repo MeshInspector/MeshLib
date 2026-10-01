@@ -86,7 +86,7 @@ void ResetSceneMenuItem::preDraw_()
 
     if ( openPopup_ )
     {
-        ImGui::OpenPopup( popupId_ );
+        ImGui::EnqueuePopup( popupId_ );
         openPopup_ = false;
     }
 

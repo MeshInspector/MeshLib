@@ -360,6 +360,7 @@ void ImGuiMenu::startFrame()
         testKeyModifiers_ = *mods;
     forceKeyModifiers( testKeyModifiers_, realKeyModifiers_ );
     UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
+    ImGui::OpenEnqueuedPopup();
 
     if ( needIncrement && context_->MouseViewport != ImGui::GetMainViewport() ) // needIncrement can be true only if ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_
     {
@@ -950,7 +951,7 @@ void ImGuiMenu::draw_helpers()
     if ( showRenameModal_ )
     {
         showRenameModal_ = false;
-        ImGui::OpenPopup( "Rename object##rename" );
+        ImGui::EnqueuePopup( "Rename object##rename" );
         popUpRenameBuffer_ = renameBuffer_;
     }
 
@@ -995,7 +996,7 @@ void ImGuiMenu::draw_helpers()
 
     if ( showEditTag_ )
     {
-        ImGui::OpenPopup( "Edit tag##edittag" );
+        ImGui::EnqueuePopup( "Edit tag##edittag" );
         showEditTag_ = false;
     }
 
@@ -1173,10 +1174,9 @@ void ImGuiMenu::drawModalMessage_()
 
     const std::string titleImGui = " " + titleKey + "##modal";
 
-    if ( showInfoModal_ &&
-        !ImGui::IsPopupOpen( " Error##modal" ) && !ImGui::IsPopupOpen( " Warning##modal" ) && !ImGui::IsPopupOpen( " Info##modal" ) )
+    if ( showInfoModal_ )
     {
-        ImGui::OpenPopup( titleImGui.c_str() );
+        ImGui::EnqueuePopup( titleImGui.c_str() );
         showInfoModal_ = false;
     }
 

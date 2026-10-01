@@ -2,6 +2,7 @@
 #include "MRPointCloud.h"
 #include "MRTimer.h"
 #include "MRBitSetParallelFor.h"
+#include "MRNewValuesStorage.hpp"
 #include "MRPointsInBall.h"
 #include "MRBox.h"
 #include "MRBestFit.h"
@@ -30,10 +31,10 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
     if ( params.limitNearInitial )
         initialPos = pointCloud.points;
 
-    VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
     if ( !zone.any() )
         return true;
+    NewValuesStorage storage( pointCloud.points, zone );
     float radius = params.neighborhoodRadius > 0.0f ? params.neighborhoodRadius :
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
@@ -48,8 +49,7 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
                 return cb( ( float( i ) + p ) / float( params.iterations ) );
             };
         }
-        newPoints = pointCloud.points;
-        keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
+        keepGoing = storage.parallelProcess( [&, radiusSq = sqr( radius )] ( VertId v )
         {
             Vector3d sumPos;
             int count = 0;
@@ -63,16 +63,15 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
                 }
                 return Processing::Continue;
             } );
+            auto np = pointCloud.points[v];
             if ( count == 0 )
-                return;
-            auto np = newPoints[v];
+                return np;
             auto pushForce = params.force * ( Vector3f{ sumPos / double( count ) } - np );
             np += pushForce;
             if ( params.limitNearInitial )
                 np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newPoints[v] = np;
+            return np;
         }, internalCb );
-        pointCloud.points.swap( newPoints );
         if ( !keepGoing )
             break;
         if ( i + 1 < params.iterations )
@@ -93,10 +92,10 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
     if ( params.limitNearInitial )
         initialPos = pointCloud.points;
 
-    VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
     if ( !zone.any() )
         return true;
+    NewValuesStorage storage( pointCloud.points, zone );
     float radius = params.neighborhoodRadius > 0.0f ? params.neighborhoodRadius :
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
@@ -117,7 +116,6 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
                 return cb( ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ) );
             };
         }
-        newPoints = pointCloud.points;
         keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
         {
             Vector3d sumPos;
@@ -138,7 +136,7 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
         }, internalCb1 );
         if ( !keepGoing )
             break;
-        keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
+        keepGoing = storage.parallelProcess( [&, radiusSq = sqr( radius )] ( VertId v )
         {
             Vector3d sumForces;
             int count = 0;
@@ -154,14 +152,13 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
                 return Processing::Continue;
             } );
             if ( count <= 0 )
-                return;
+                return pointCloud.points[v];
 
-            auto np = newPoints[v] + vertPushForces[v] - Vector3f{ sumForces / double( count ) };
+            auto np = pointCloud.points[v] + vertPushForces[v] - Vector3f{ sumForces / double( count ) };
             if ( params.limitNearInitial )
                 np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newPoints[v] = np;
+            return np;
         }, internalCb2 );
-        pointCloud.points.swap( newPoints );
         if ( !keepGoing )
             break;
         if ( i + 1 < params.iterations )
@@ -182,10 +179,10 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
     if ( params.limitNearInitial )
         initialPos = pointCloud.points;
 
-    VertCoords newPoints;
     const VertBitSet& zone = params.region ? *params.region : pointCloud.validPoints;
     if ( !zone.any() )
         return true;
+    NewValuesStorage storage( pointCloud.points, zone );
     float radius = params.neighborhoodRadius > 0.0f ? params.neighborhoodRadius :
         pointCloud.getBoundingBox().diagonal() * 0.1f;
 
@@ -201,8 +198,7 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
                 return cb( ( float( i ) + p ) / float( params.iterations ) );
             };
         }
-        newPoints = pointCloud.points;
-        keepGoing = BitSetParallelFor( zone, [&, radiusSq = sqr( radius )] ( VertId v )
+        keepGoing = storage.parallelProcess( [&, radiusSq = sqr( radius )] ( VertId v )
         {
             PointAccumulator accum;
             std::vector<std::pair<VertId, double>> weightedNeighbors;
@@ -221,10 +217,10 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
                 }
                 return Processing::Continue;
             } );
+            auto np = pointCloud.points[v];
             if ( weightedNeighbors.size() < 6 )
-                return;
+                return np;
 
-            auto np = newPoints[v];
             Vector3f target;
             if ( params.type == RelaxApproxType::Planar )
                 target = accum.getBestPlanef().project( np );
@@ -255,9 +251,8 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
             np += ( params.force * ( target - np ) );
             if ( params.limitNearInitial )
                 np = getLimitedPos( np, initialPos[v], maxInitialDistSq );
-            newPoints[v] = np;
+            return np;
         }, internalCb );
-        pointCloud.points.swap( newPoints );
         if ( !keepGoing )
             break;
         if ( i + 1 < params.iterations )

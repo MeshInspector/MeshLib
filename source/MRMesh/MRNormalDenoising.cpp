@@ -107,25 +107,51 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
 
 constexpr float eps = 0.001f;
 
-void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
+void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma, const FaceBitSet * region )
 {
     MR_TIMER;
 
-    const auto sz = v.size();
-    assert( sz == mesh.topology.undirectedEdgeSize() );
+    assert( v.size() == mesh.topology.undirectedEdgeSize() );
     assert( (int)normals.size() >= mesh.topology.lastValidFace() );
+
+    // the edges with unknown indicator in the linear system, the indicator of all other edges is fixed
+    UndirectedEdgeBitSet regionEdges;
+    HashMap<UndirectedEdgeId, int> edge2idx;
+    if ( region )
+    {
+        regionEdges = getIncidentEdges( mesh.topology, *region );
+        edge2idx = makeHashMapWithSeqNums( regionEdges );
+    }
+    const int sz = region ? (int)edge2idx.size() : (int)v.size();
     if ( sz <= 0 )
         return;
+    // index of given edge in the linear system, -1 for fixed edges
+    const auto idxOf = [&]( UndirectedEdgeId ue ) -> int
+    {
+        if ( !region )
+            return int( ue );
+        auto it = edge2idx.find( ue );
+        return it != edge2idx.end() ? it->second : -1;
+    };
 
     std::vector< Eigen::Triplet<double> > mTriplets;
     Eigen::VectorXd rhs;
     rhs.resize( sz );
     const float rh = beta / ( 2 * eps );
     const float k = 2 * beta * eps;
-    for ( auto ue = 0_ue; ue < sz; ++ue )
+    const auto addEquation = [&]( UndirectedEdgeId ue, int row )
     {
         const EdgeId e = ue; // note that it can be lone edge
         float centralWeight = rh;
+        double rhsRow = rh;
+        const auto addNeighbor = [&]( EdgeId n, float x )
+        {
+            centralWeight += x;
+            if ( const int c = idxOf( n.undirected() ); c >= 0 )
+                mTriplets.emplace_back( row, c, -x );
+            else
+                rhsRow += double( x ) * v[n.undirected()]; // fixed indicator of an edge outside the region
+        };
         const auto l = mesh.topology.left( e );
         const auto r = mesh.topology.right( e );
         if ( l && r )
@@ -136,42 +162,29 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
             if ( l )
             {
                 const auto c = mesh.triCenter( l );
-                {
-                    const auto a = mesh.topology.next( e );
-                    const auto lenL = ( c - mesh.orgPnt( e ) ).length();
-                    const auto x = k * lenL / lenE;
-                    centralWeight += x;
-                    mTriplets.emplace_back( ue, a.undirected(), -x );
-                }
-                {
-                    const auto b = mesh.topology.prev( e.sym() );
-                    const auto lenL = ( c - mesh.destPnt( e ) ).length();
-                    const auto x = k * lenL / lenE;
-                    centralWeight += x;
-                    mTriplets.emplace_back( ue, b.undirected(), -x );
-                }
+                addNeighbor( mesh.topology.next( e ), k * ( c - mesh.orgPnt( e ) ).length() / lenE );
+                addNeighbor( mesh.topology.prev( e.sym() ), k * ( c - mesh.destPnt( e ) ).length() / lenE );
             }
             if ( r )
             {
                 const auto c = mesh.triCenter( r );
-                {
-                    const auto a = mesh.topology.prev( e );
-                    const auto lenL = ( c - mesh.orgPnt( e ) ).length();
-                    const auto x = k * lenL / lenE;
-                    centralWeight += x;
-                    mTriplets.emplace_back( ue, a.undirected(), -x );
-                }
-                {
-                    const auto b = mesh.topology.next( e.sym() );
-                    const auto lenL = ( c - mesh.destPnt( e ) ).length();
-                    const auto x = k * lenL / lenE;
-                    centralWeight += x;
-                    mTriplets.emplace_back( ue, b.undirected(), -x );
-                }
+                addNeighbor( mesh.topology.prev( e ), k * ( c - mesh.orgPnt( e ) ).length() / lenE );
+                addNeighbor( mesh.topology.next( e.sym() ), k * ( c - mesh.destPnt( e ) ).length() / lenE );
             }
         }
-        mTriplets.emplace_back( ue, ue, centralWeight );
-        rhs[ue] = rh;
+        mTriplets.emplace_back( row, row, centralWeight );
+        rhs[row] = rhsRow;
+    };
+    if ( region )
+    {
+        int row = 0;
+        for ( auto ue : regionEdges )
+            addEquation( ue, row++ );
+    }
+    else
+    {
+        for ( auto ue = 0_ue; ue < v.size(); ++ue )
+            addEquation( ue, int( ue ) );
     }
 
     using SparseMatrix = Eigen::SparseMatrix<double,Eigen::RowMajor>;
@@ -184,10 +197,20 @@ void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, co
     Eigen::VectorXd sol = solver.solve( rhs );
 
     // copy solution back into v
-    ParallelFor( v, [&]( UndirectedEdgeId ue )
+    if ( region )
     {
-        v[ue] = (float) sol[ue];
-    } );
+        BitSetParallelFor( regionEdges, [&]( UndirectedEdgeId ue )
+        {
+            v[ue] = (float) sol[idxOf( ue )];
+        } );
+    }
+    else
+    {
+        ParallelFor( v, [&]( UndirectedEdgeId ue )
+        {
+            v[ue] = (float) sol[ue];
+        } );
+    }
 }
 
 void updateIndicatorFast( const MeshTopology & topology, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
@@ -245,7 +268,7 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
         if ( settings.fastIndicatorComputation )
             updateIndicatorFast( mesh.topology, v, fnormals, settings.beta, settings.gamma );
         else
-            updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma );
+            updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma, settings.region );
         if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
             return false;
     }

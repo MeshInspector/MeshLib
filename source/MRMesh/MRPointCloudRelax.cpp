@@ -11,6 +11,14 @@
 namespace MR
 {
 
+static void updateOrInvalidateCaches( PointCloud& pointCloud, const RelaxParams& params )
+{
+    if ( params.updateCaches )
+        pointCloud.updateCaches( params.region );
+    else
+        pointCloud.invalidateCaches();
+}
+
 bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} */, ProgressCallback cb )
 {
     if ( params.iterations <= 0 )
@@ -65,7 +73,7 @@ bool relax( PointCloud& pointCloud, const PointCloudRelaxParams& params /*= {} *
             newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );
-        pointCloud.invalidateCaches();
+        updateOrInvalidateCaches( pointCloud, params );
         if ( !keepGoing )
             break;
     }
@@ -152,7 +160,7 @@ bool relaxKeepVolume( PointCloud& pointCloud, const PointCloudRelaxParams& param
             newPoints[v] = np;
         }, internalCb2 );
         pointCloud.points.swap( newPoints );
-        pointCloud.invalidateCaches();
+        updateOrInvalidateCaches( pointCloud, params );
         if ( !keepGoing )
             break;
     }
@@ -246,7 +254,7 @@ bool relaxApprox( PointCloud& pointCloud, const PointCloudApproxRelaxParams& par
             newPoints[v] = np;
         }, internalCb );
         pointCloud.points.swap( newPoints );
-        pointCloud.invalidateCaches();
+        updateOrInvalidateCaches( pointCloud, params );
         if ( !keepGoing )
             break;
     }

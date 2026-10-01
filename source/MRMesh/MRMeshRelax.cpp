@@ -115,24 +115,20 @@ bool equalizeTriAreas( const MeshTopology& topology, VertCoords& points, const M
     MR_TIMER;
     VertLimiter limiter( points, params );
 
-    VertCoords newPoints;
-    const VertBitSet& zone = topology.getVertIds( params.region );
+    NewValuesStorage storage( points, topology.getVertIds( params.region ) );
     for ( int i = 0; i < params.iterations; ++i )
     {
         auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-        newPoints = points;
-        if ( !BitSetParallelFor( zone, [&]( VertId v )
+        if ( !storage.parallelProcess( [&]( VertId v )
         {
-            auto e0 = topology.edgeWithOrg( v );
-            if ( !e0.valid() )
-                return;
-            auto np = newPoints[v];
+            auto np = points[v];
+            if ( !topology.edgeWithOrg( v ) )
+                return np;
             auto pushForce = params.force * ( vertexPosEqualNeiAreas( topology, points, v, params.noShrinkage ) - np );
             np += pushForce;
-            newPoints[v] = limiter( v, np );
+            return limiter( v, np );
         }, internalCb ) )
             return false;
-        points.swap( newPoints );
     }
     if ( params.hardSmoothTetrahedrons )
         hardSmoothTetrahedrons( topology, points, params.region );
@@ -156,15 +152,13 @@ bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const Me
     MR_TIMER;
     VertLimiter limiter( points, params );
 
-    VertCoords newPoints;
-
     const VertBitSet& zone = topology.getVertIds( params.region );
+    NewValuesStorage storage( points, zone );
     std::vector<Vector3f> vertPushForces( zone.size() );
     for ( int i = 0; i < params.iterations; ++i )
     {
         auto internalCb1 = subprogress( cb, [&]( float p ) { return ( float( i ) + p * 0.5f ) / float( params.iterations ); } );
         auto internalCb2 = subprogress( cb, [&]( float p ) { return ( float( i ) + p * 0.5f + 0.5f ) / float( params.iterations ); } );
-        newPoints = points;
         if ( !BitSetParallelFor( zone, [&]( VertId v )
         {
             Vector3d sum;
@@ -178,7 +172,7 @@ bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const Me
         }, internalCb1 ) )
             return false;
 
-        if ( !BitSetParallelFor( zone, [&]( VertId v )
+        if ( !storage.parallelProcess( [&]( VertId v )
         {
             Vector3d sum;
             int count = 0;
@@ -189,12 +183,10 @@ bool relaxKeepVolume( const MeshTopology& topology, VertCoords& points, const Me
                     sum += Vector3d( vertPushForces[d] );
                 ++count;
             }
-            auto np = newPoints[v] + vertPushForces[v] - Vector3f{ sum / double( count ) };
-            newPoints[v] = limiter( v, np );
+            auto np = points[v] + vertPushForces[v] - Vector3f{ sum / double( count ) };
+            return limiter( v, np );
         }, internalCb2 ) )
             return false;
-
-        points.swap( newPoints );
     }
     if ( params.hardSmoothTetrahedrons )
         hardSmoothTetrahedrons( topology, points, params.region );

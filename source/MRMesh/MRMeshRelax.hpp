@@ -5,6 +5,7 @@
 #include "MRRingIterator.h"
 #include "MRBitSet.h"
 #include "MRBitSetParallelFor.h"
+#include "MRNewValuesStorage.hpp"
 #include "MRMeshFixer.h"
 #include "MRTimer.h"
 
@@ -74,33 +75,33 @@ bool relaxT( const MeshTopology & topology, Vector<T, VertId> & field, const Mes
 
     VertLimiter limiter( field, params );
 
-    Vector<T, VertId> newField;
-    const VertBitSet& zone = topology.getVertIds( params.region );
+    // computes new value of vertex (v) from the values of its neighbors
+    const auto relaxedValue = [&]( VertId v )
+    {
+        const auto e0 = topology.edgeWithOrg( v );
+        if ( !e0 )
+            return field[v];
+        T sum{};
+        float sumWeight = 0.f;
+        for ( auto e : orgRing( topology, e0 ) )
+        {
+            const auto dst = topology.dest( e );
+            const auto w = getWeightOrDefault( dst );
+            sum += w * field[dst];
+            sumWeight += w;
+        }
+        auto np = field[v];
+        auto pushForce = params.force * ( sum / sumWeight - np );
+        np += pushForce;
+        return limiter( v, np );
+    };
+
+    NewValuesStorage storage( field, topology.getVertIds( params.region ) );
     for ( int i = 0; i < params.iterations; ++i )
     {
         auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-        newField = field;
-        if ( !BitSetParallelFor( zone, [&]( VertId v )
-        {
-            auto e0 = topology.edgeWithOrg( v );
-            if ( !e0.valid() )
-                return;
-            T sum{};
-            float sumWeight = 0.f;
-            for ( auto e : orgRing( topology, e0 ) )
-            {
-                const auto dst = topology.dest( e );
-                const auto w = getWeightOrDefault( dst );
-                sum += w * field[dst];
-                sumWeight += w;
-            }
-            auto np = newField[v];
-            auto pushForce = params.force * ( sum / sumWeight - np );
-            np += pushForce;
-            newField[v] = limiter( v, np );
-        }, internalCb ) )
+        if ( !storage.parallelProcess( relaxedValue, internalCb ) )
             return false;
-        field.swap( newField );
     }
     if ( params.hardSmoothTetrahedrons )
         hardSmoothTetrahedronsT( topology, field, params.region );

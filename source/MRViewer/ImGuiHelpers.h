@@ -261,8 +261,8 @@ MRVIEWER_API bool BeginModalNoAnimation( const char* label, bool* open = nullptr
 MRVIEWER_API void EnqueuePopup( const char* str_id );
 MRVIEWER_API void EnqueuePopup( ImGuiID id );
 
-/// opens the popup now even if a modal is open: that modal is closed and opens again first once this popup is closed;
-/// for the progress bar, which has to block the UI from the moment an operation is ordered
+/// opens the popup now even if a modal is open: that modal is closed and opens again first once this popup is closed
+/// (popups nested in it are not reopened); for the progress bar, which has to block the UI from the moment an operation is ordered
 MRVIEWER_API void OpenTopPriorityPopup( ImGuiID id );
 
 /// opens the first enqueued popup if no modal is open; called by ImGuiMenu each frame after ImGui::NewFrame

@@ -1075,13 +1075,19 @@ void OpenTopPriorityPopup( ImGuiID id )
     // the modal closed by this popup opens again first
     const auto& stack = GetCurrentContext()->OpenPopupStack;
     if ( !stack.empty() && isModal( stack[0] ) )
+    {
+        std::erase( popups, stack[0].PopupId );
         popups.insert( popups.begin(), stack[0].PopupId );
+    }
     OpenPopup( id );
 }
 
 void OpenEnqueuedPopup()
 {
     auto& popups = getEnqueuedPopups();
+    // an enqueued popup opened meanwhile with plain ImGui::OpenPopup is not waiting anymore
+    if ( const auto& stack = GetCurrentContext()->OpenPopupStack; !stack.empty() )
+        std::erase( popups, stack[0].PopupId );
     if ( popups.empty() || isModalOpen() )
         return;
     OpenPopup( popups.front() );

@@ -251,6 +251,8 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
     MeshAttributesToUpdate attributes;
     // the edge sets that the algorithms below do not update themselves
     std::vector<UndirectedEdgeBitSet*> edgeSets;
+    // updates the attributes of data after the split of (e) into (e1->e) at org(e1) + t * ( dest(e) - org(e1) )
+    std::function<void( EdgeId e1, EdgeId e, float t )> onEdgeSplit;
     if ( data )
     {
         resizeAttributesToMesh( *data );
@@ -275,43 +277,32 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
             edgeSets.push_back( params.notFlippable );
         }
         notFlippable = dataNotFlippable.any() ? &dataNotFlippable : nullptr;
-    }
 
-    // updates the vertex attributes of data after the split of (e) into (e1->e) at org(e1) + t * ( dest(e) - org(e1) )
-    auto onEdgeSplitVerts = [&] ( EdgeId e1, EdgeId e, float t )
-    {
-        const auto a = mesh.topology.org( e1 );
-        const auto b = mesh.topology.dest( e );
-        if ( auto uv = attributes.uvCoords )
-            uv->push_back( ( *uv )[a] * ( 1 - t ) + ( *uv )[b] * t );
-        if ( auto colors = attributes.colorMap )
-            colors->push_back( ( *colors )[a] * ( 1 - t ) + ( *colors )[b] * t );
-    };
-    // updates the face attributes, face selection and edge sets of data after the split of (e) into (e1->e)
-    auto onEdgeSplitFaces = [&, faceAttributes = meshOnEdgeSplitFaceAttribute( mesh, attributes )] ( EdgeId e1, EdgeId e )
-    {
-        for ( auto s : edgeSets )
-            if ( s->test( e.undirected() ) )
-                s->autoResizeSet( e1.undirected() );
-        if ( faceAttributes )
-            faceAttributes( e1, e );
-        if ( contains( data->selectedFaces, mesh.topology.left( e ) ) )
-            data->selectedFaces.autoResizeSet( mesh.topology.left( e1 ) );
-        if ( contains( data->selectedFaces, mesh.topology.right( e ) ) )
-            data->selectedFaces.autoResizeSet( mesh.topology.right( e1 ) );
-    };
+        onEdgeSplit = [&, faceAttributes = meshOnEdgeSplitFaceAttribute( mesh, attributes )] ( EdgeId e1, EdgeId e, float t )
+        {
+            const auto a = mesh.topology.org( e1 );
+            const auto b = mesh.topology.dest( e );
+            if ( auto uv = attributes.uvCoords )
+                uv->push_back( ( *uv )[a] * ( 1 - t ) + ( *uv )[b] * t );
+            if ( auto colors = attributes.colorMap )
+                colors->push_back( ( *colors )[a] * ( 1 - t ) + ( *colors )[b] * t );
+            if ( faceAttributes )
+                faceAttributes( e1, e );
+            if ( contains( data->selectedFaces, mesh.topology.left( e ) ) )
+                data->selectedFaces.autoResizeSet( mesh.topology.left( e1 ) );
+            if ( contains( data->selectedFaces, mesh.topology.right( e ) ) )
+                data->selectedFaces.autoResizeSet( mesh.topology.right( e1 ) );
+            for ( auto s : edgeSets )
+                if ( s->test( e.undirected() ) )
+                    s->autoResizeSet( e1.undirected() );
+        };
+    }
+    // subdivisions split edges in the middle
+    const auto onEdgeSplitInMiddle = onEdgeSplit ? OnEdgeSplit( [&] ( EdgeId e1, EdgeId e ) { onEdgeSplit( e1, e, 0.5f ); } ) : OnEdgeSplit{};
 
     if ( notFlippable )
-    {
         splitNotFlippableLongEdges( mesh, *regRes, *notFlippable, params.criticalTriAspectRatio,
-            std::max( params.maxDeviation, params.tinyEdgeLength ), [&] ( EdgeId e1, EdgeId e, float t )
-        {
-            if ( !data )
-                return;
-            onEdgeSplitVerts( e1, e, t );
-            onEdgeSplitFaces( e1, e );
-        } );
-    }
+            std::max( params.maxDeviation, params.tinyEdgeLength ), onEdgeSplit );
 
     DecimateSettings dsettings
     {
@@ -371,6 +362,7 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
         .region = params.region,
         .notFlippable = notFlippable,
         .maxTriAspectRatio = params.criticalTriAspectRatio,
+        .onEdgeSplit = onEdgeSplitInMiddle,
         .progressCallback = subprogress( sbs, 0.25f, 1.0f )
     };
     // subdivision cannot fix degenerate triangles with not flippable longest edges, and they must not keep it splitting other edges
@@ -385,14 +377,6 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
         } );
         ssettings.region = &subdivisionRegion;
         ssettings.maintainRegion = params.region;
-    }
-    if ( data )
-    {
-        ssettings.onEdgeSplit = [&] ( EdgeId e1, EdgeId e )
-        {
-            onEdgeSplitVerts( e1, e, 0.5f );
-            onEdgeSplitFaces( e1, e );
-        };
     }
     subdivideMesh( mesh, ssettings );
 
@@ -423,6 +407,7 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
             .notFlippable = params.notFlippable,
             .maxEdgeLen = 0.0f, // to use default from `patchMesh`
             .maxEdgeSplits = 20'000,
+            .onEdgeSplit = onEdgeSplitInMiddle, // patch subdivision can split the faces around the patch too
         }
     };
 
@@ -462,25 +447,14 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
     const bool updateSelection = data && data->selectedFaces.any();
     const auto removedSelection = updateSelection ? data->selectedFaces & *regRes : FaceBitSet{};
     const auto vertSize0 = mesh.topology.vertSize();
-    if ( data )
-        psettings.subdivideSettings.onEdgeSplit = onEdgeSplitFaces; // patch subdivision can split the faces around the patch too
 
     auto newFaces = patchMesh( mesh, *regRes, psettings );
 
     if ( projectAttributes )
     {
-        const auto vertSize = mesh.topology.vertSize();
-        const auto faceSize = mesh.topology.faceSize();
-        if ( attributes.uvCoords )
-            attributes.uvCoords->resize( vertSize );
-        if ( attributes.colorMap )
-            attributes.colorMap->resize( vertSize );
-        if ( attributes.texturePerFace )
-            attributes.texturePerFace->resize( faceSize );
-        if ( attributes.faceColors )
-            attributes.faceColors->resize( faceSize );
+        resizeAttributesToMesh( *data );
         if ( updateSelection )
-            data->selectedFaces.resize( faceSize );
+            data->selectedFaces.resize( mesh.topology.faceSize() );
 
         // the attributes of removed elements are still stored in data
         const auto & refToFace = *refFaces.getMap();
@@ -495,6 +469,7 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
                 data->selectedFaces.set( f, removedSelection.test( src ) );
         } );
 
+        const auto vertSize = mesh.topology.vertSize();
         if ( ( attributes.uvCoords || attributes.colorMap ) && vertSize > vertSize0 )
         {
             VertBitSet newVerts( vertSize );

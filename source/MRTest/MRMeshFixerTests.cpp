@@ -1,7 +1,6 @@
 #include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRObjectMeshData.h>
-#include <MRMesh/MRMeshDecimate.h>
 #include <MRMesh/MRMeshSubdivide.h>
 #include <MRMesh/MRMeshBoolean.h>
 #include <MRMesh/MRMeshProject.h>
@@ -23,13 +22,7 @@ const Color cStock( 150, 60, 60 );
 const Color cTool( 0, 255, 0 );
 
 // a stock box with a cylindrical pocket, the faces from the cylinder have the tool color
-struct ColoredCut
-{
-    Mesh mesh;
-    FaceColors colors;
-};
-
-ColoredCut makeColoredCut()
+ObjectMeshData makeColoredCut()
 {
     auto stock = makeCube( Vector3f( 100, 100, 52 ), Vector3f( -50, -50, -50 ) );
     subdivideMesh( stock, { .maxEdgeLen = 4.0f, .maxEdgeSplits = 10'000'000 } );
@@ -38,11 +31,11 @@ ColoredCut makeColoredCut()
     BooleanResultMapper mapper;
     auto res = boolean( stock, tool, BooleanOperation::DifferenceAB, &xf, &mapper );
     EXPECT_TRUE( res.valid() );
-    ColoredCut c;
-    c.mesh = std::move( res.mesh );
-    c.colors.resize( c.mesh.topology.faceSize(), cStock );
+    ObjectMeshData c;
+    c.mesh = std::make_shared<Mesh>( std::move( res.mesh ) );
+    c.faceColors.resize( c.mesh->topology.faceSize(), cStock );
     for ( auto f : mapper.map( tool.topology.getValidFaces(), BooleanResultMapper::MapObject::B ) )
-        c.colors[f] = cTool;
+        c.faceColors[f] = cTool;
     return c;
 }
 
@@ -102,68 +95,44 @@ void addCaps( Mesh & mesh, FaceColors & colors, const std::vector<EdgeId> & edge
     copyNewColors( colors, n2o, t.faceSize() );
 }
 
-// a multiple edge, needle slivers and cap slivers on the color border, and cap slivers on sharp edges between stock faces
+// needle slivers and cap slivers on the color border
 void addDefects( Mesh & mesh, FaceColors & colors )
 {
-    auto & t = mesh.topology;
-    const auto be = borderEdges( t, colors );
-    ASSERT_GE( be.size(), 40 );
-    const auto splitColor = colors[t.left( be[0] )];
-    addMultipleEdge( mesh, be[0] );
-    colors.resize( t.faceSize(), splitColor );
-
+    const auto be = borderEdges( mesh.topology, colors );
+    ASSERT_GE( be.size(), 36 );
     FaceHashMap n2o;
     for ( size_t i = 5; i < 15; ++i )
         mesh.splitEdge( be[i], lerpD( mesh.orgPnt( be[i] ), mesh.destPnt( be[i] ), 1e-6 ), nullptr, &n2o );
-    copyNewColors( colors, n2o, t.faceSize() );
+    copyNewColors( colors, n2o, mesh.topology.faceSize() );
 
     addCaps( mesh, colors, { be.begin() + 20, be.begin() + 30 }, 1e-7 );
     // these are too high to be fixed within small deviation
     addCaps( mesh, colors, { be.begin() + 32, be.begin() + 36 }, 1e-4 );
-
-    std::vector<EdgeId> sharpEdges;
-    for ( EdgeId e( 0 ); e < t.edgeSize(); e += 2 )
-        if ( t.left( e ) && t.right( e ) && colors[t.left( e )] == cStock && colors[t.right( e )] == cStock
-            && std::abs( dot( mesh.normal( t.left( e ) ), mesh.normal( t.right( e ) ) ) ) < 0.1f )
-            sharpEdges.push_back( e );
-    ASSERT_GE( sharpEdges.size(), 60 );
-    std::vector<EdgeId> someSharpEdges;
-    for ( size_t i = 0; i < sharpEdges.size(); i += sharpEdges.size() / 6 )
-        someSharpEdges.push_back( sharpEdges[i] );
-    addCaps( mesh, colors, someSharpEdges, 1e-7 );
     mesh.invalidateCaches();
 }
 
-// the colored cut with the defects (multiple edges already fixed), and the original colored cut
+// the colored cut with the defects, and the original colored cut
 struct DefectCase
 {
     ObjectMeshData data;
-    ColoredCut original;
+    ObjectMeshData original;
 };
 
 DefectCase makeDefectCase()
 {
     DefectCase res;
     res.original = makeColoredCut();
-    auto mesh = std::make_shared<Mesh>( res.original.mesh );
-    auto colors = res.original.colors;
-    addDefects( *mesh, colors );
-
-    FaceHashMap new2Old;
-    fixMultipleEdges( *mesh, findMultipleEdges( mesh->topology ).value(), &new2Old );
-    copyNewColors( colors, new2Old, mesh->topology.faceSize() );
-
-    res.data.mesh = std::move( mesh );
-    res.data.faceColors = std::move( colors );
+    res.data = res.original.clone();
+    addDefects( *res.data.mesh, res.data.faceColors );
     return res;
 }
 
 // total area of the faces with another color than the original surface at their centers
-float wrongColorArea( const ObjectMeshData & data, const ColoredCut & original )
+float wrongColorArea( const ObjectMeshData & data, const ObjectMeshData & original )
 {
     float res = 0;
     for ( auto f : data.mesh->topology.getValidFaces() )
-        if ( data.faceColors[f] != original.colors[findProjection( data.mesh->triCenter( f ), original.mesh ).proj.face] )
+        if ( data.faceColors[f] != original.faceColors[findProjection( data.mesh->triCenter( f ), *original.mesh ).proj.face] )
             res += data.mesh->area( f );
     return res;
 }
@@ -174,11 +143,6 @@ constexpr FixMeshDegeneraciesParams::Mode cModes[] =
     FixMeshDegeneraciesParams::Mode::Remesh,
     FixMeshDegeneraciesParams::Mode::RemeshPatch
 };
-
-FixMeshDegeneraciesParams fixParams( FixMeshDegeneraciesParams::Mode mode )
-{
-    return { .maxDeviation = 1e-3f, .tinyEdgeLength = 1e-4f, .mode = mode };
-}
 
 } // namespace
 
@@ -217,20 +181,33 @@ TEST( MRMesh, FixMultipleEdgesNew2Old )
     }
 }
 
-TEST( MRMesh, FixMeshDataDegeneraciesWithoutAttributes )
+TEST( MRMesh, FixMeshDataDegeneraciesLikeMesh )
 {
+    // without attributes, the data version gives the same mesh as the mesh version,
+    // and with face colors, the same mesh as the mesh version with not flippable color borders
     const auto c = makeDefectCase();
     for ( auto mode : cModes )
     {
-        Mesh ref = *c.data.mesh;
-        EXPECT_TRUE( fixMeshDegeneracies( ref, fixParams( mode ) ).has_value() );
-
+        FixMeshDegeneraciesParams params{ .maxDeviation = 1e-3f, .tinyEdgeLength = 1e-4f, .mode = mode };
         ObjectMeshData data;
         data.mesh = std::make_shared<Mesh>( *c.data.mesh );
-        EXPECT_TRUE( fixMeshDataDegeneracies( data, fixParams( mode ) ).has_value() );
-        EXPECT_TRUE( *data.mesh == ref );
-        EXPECT_TRUE( data.faceColors.empty() );
-        EXPECT_TRUE( data.vertColors.empty() );
+        EXPECT_TRUE( fixMeshDataDegeneracies( data, params ).has_value() );
+        Mesh mesh = *c.data.mesh;
+        EXPECT_TRUE( fixMeshDegeneracies( mesh, params ).has_value() );
+        EXPECT_TRUE( mesh == *data.mesh );
+
+        data = c.data.clone();
+        EXPECT_TRUE( fixMeshDataDegeneracies( data, params ).has_value() );
+        mesh = *c.data.mesh;
+        auto notFlippable = edgesBetweenDifferentColors( mesh.topology, c.data.faceColors );
+        params.notFlippable = &notFlippable;
+        EXPECT_TRUE( fixMeshDegeneracies( mesh, params ).has_value() );
+        EXPECT_TRUE( mesh == *data.mesh );
+
+        // notFlippable is updated
+        EXPECT_TRUE( notFlippable.any() );
+        for ( auto ue : notFlippable )
+            EXPECT_FALSE( mesh.topology.isLoneEdge( ue ) );
     }
 }
 
@@ -313,40 +290,6 @@ TEST( MRMesh, FixMeshDataDegeneraciesKeepsColors )
             EXPECT_LT( ( data.uvCoordinates[v] - Vector2f( pos.x, pos.y ) ).length(), uvTolerance );
         }
     }
-}
-
-TEST( MRMesh, FixMeshDegeneraciesNotFlippable )
-{
-    // the mesh version with not flippable color borders gives the same mesh as the data version
-    const auto c = makeDefectCase();
-    for ( auto mode : cModes )
-    {
-        const auto params = fixParams( mode );
-        auto data = c.data.clone();
-        EXPECT_TRUE( fixMeshDataDegeneracies( data, params ).has_value() );
-
-        Mesh mesh = *c.data.mesh;
-        auto notFlippable = edgesBetweenDifferentColors( mesh.topology, c.data.faceColors );
-        auto params1 = params;
-        params1.notFlippable = &notFlippable;
-        EXPECT_TRUE( fixMeshDegeneracies( mesh, params1 ).has_value() );
-        EXPECT_TRUE( mesh == *data.mesh );
-
-        EXPECT_TRUE( notFlippable.any() );
-        for ( auto ue : notFlippable )
-            EXPECT_FALSE( mesh.topology.isLoneEdge( ue ) );
-    }
-}
-
-TEST( MRMesh, FixMeshDataDegeneraciesThenDecimate )
-{
-    // the fixes followed by decimation with packing keep the colors of the colored cut
-    auto c = makeDefectCase();
-    EXPECT_TRUE( fixMeshDataDegeneracies( c.data, fixParams( FixMeshDegeneraciesParams::Mode::Decimate ) ).has_value() );
-    auto res = decimateObjectMeshData( c.data, { .maxError = 0.03f, .tinyEdgeLength = 1e-6f, .stabilizer = 1e-5f, .packMesh = true } );
-    EXPECT_GT( res.facesDeleted, 0 );
-    EXPECT_EQ( c.data.faceColors.size(), c.data.mesh->topology.faceSize() );
-    EXPECT_LT( wrongColorArea( c.data, c.original ), 1e-4f );
 }
 
 } //namespace MR

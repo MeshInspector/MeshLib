@@ -55,6 +55,51 @@ private:
     float maxInitialDistSq_ = 0;
 };
 
+/// This class stores new values of a vertex field during one iteration of an algorithm:
+/// all values if the zone is large, and only zone values if the zone is small (to avoid copying the whole field)
+template<typename T>
+class NewValuesStorage
+{
+public:
+    NewValuesStorage( Vector<T, VertId> & field, const VertBitSet & zone ) : field_( field ), zone_( zone )
+    {
+        dense_ = 2 * zone.count() > field.size();
+        if ( dense_ )
+            return;
+        zoneVerts_.reserve( zone.count() );
+        for ( auto v : zone )
+            zoneVerts_.push_back( v );
+        newValues_.resize( zoneVerts_.size() );
+    }
+
+    /// computes new values f(v) for all zone vertices in parallel, and only then writes them in the field;
+    /// \return false and leaves the field unchanged if interrupted by progress callback
+    template<typename F>
+    bool parallelProcess( F && f, const ProgressCallback & cb = {} )
+    {
+        if ( dense_ )
+        {
+            newField_ = field_;
+            if ( !BitSetParallelFor( zone_, [&]( VertId v ) { newField_[v] = f( v ); }, cb ) )
+                return false;
+            field_.swap( newField_ );
+            return true;
+        }
+        if ( !ParallelFor( zoneVerts_, [&]( size_t i ) { newValues_[i] = f( zoneVerts_[i] ); }, cb ) )
+            return false;
+        ParallelFor( zoneVerts_, [&]( size_t i ) { field_[zoneVerts_[i]] = newValues_[i]; } );
+        return true;
+    }
+
+private:
+    Vector<T, VertId> & field_;
+    const VertBitSet & zone_;
+    bool dense_ = false;
+    Vector<T, VertId> newField_; // all values for a large zone
+    std::vector<VertId> zoneVerts_; // zone vertices for a small zone
+    std::vector<T> newValues_; // new values of zoneVerts_ for a small zone
+};
+
 /// applies given number of relaxation iterations to given field on mesh vertices;
 /// \return true if was finished successfully, false if was interrupted by progress callback
 template<typename T>
@@ -78,9 +123,12 @@ bool relaxT( const MeshTopology & topology, Vector<T, VertId> & field, const Mes
     // computes new value of vertex (v) from the values of its neighbors
     const auto relaxedValue = [&]( VertId v )
     {
+        const auto e0 = topology.edgeWithOrg( v );
+        if ( !e0 )
+            return field[v];
         T sum{};
         float sumWeight = 0.f;
-        for ( auto e : orgRing( topology, v ) )
+        for ( auto e : orgRing( topology, e0 ) )
         {
             const auto dst = topology.dest( e );
             const auto w = getWeightOrDefault( dst );
@@ -93,46 +141,12 @@ bool relaxT( const MeshTopology & topology, Vector<T, VertId> & field, const Mes
         return limiter( v, np );
     };
 
-    const VertBitSet& zone = topology.getVertIds( params.region );
-    if ( 2 * zone.count() > field.size() )
+    NewValuesStorage storage( field, topology.getVertIds( params.region ) );
+    for ( int i = 0; i < params.iterations; ++i )
     {
-        // dense zone: double-buffer the whole field
-        Vector<T, VertId> newField;
-        for ( int i = 0; i < params.iterations; ++i )
-        {
-            auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-            newField = field;
-            if ( !BitSetParallelFor( zone, [&]( VertId v )
-            {
-                if ( topology.edgeWithOrg( v ) )
-                    newField[v] = relaxedValue( v );
-            }, internalCb ) )
-                return false;
-            field.swap( newField );
-        }
-    }
-    else
-    {
-        // sparse zone: store new values only for zone vertices
-        std::vector<VertId> zoneVerts;
-        zoneVerts.reserve( zone.count() );
-        for ( auto v : zone )
-            if ( topology.edgeWithOrg( v ) )
-                zoneVerts.push_back( v );
-        std::vector<T> newValues( zoneVerts.size() );
-        for ( int i = 0; i < params.iterations; ++i )
-        {
-            auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
-            if ( !ParallelFor( zoneVerts, [&]( size_t j )
-            {
-                newValues[j] = relaxedValue( zoneVerts[j] );
-            }, internalCb ) )
-                return false;
-            ParallelFor( zoneVerts, [&]( size_t j )
-            {
-                field[zoneVerts[j]] = newValues[j];
-            } );
-        }
+        auto internalCb = subprogress( cb, [&]( float p ) { return ( float( i ) + p ) / float( params.iterations ); } );
+        if ( !storage.parallelProcess( relaxedValue, internalCb ) )
+            return false;
     }
     if ( params.hardSmoothTetrahedrons )
         hardSmoothTetrahedronsT( topology, field, params.region );

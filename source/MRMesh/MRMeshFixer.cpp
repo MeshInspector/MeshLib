@@ -169,7 +169,6 @@ Expected<std::vector<MultipleEdge>> findMultipleEdges( const MeshTopology& topol
 // if data is given, then its attributes are kept valid, and it must own the mesh
 static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const FixMeshDegeneraciesParams& params )
 {
-    MR_TIMER;
     assert( !data || data->mesh.get() == &mesh );
     int maxSteps = 1;
     if ( params.mode == FixMeshDegeneraciesParams::Mode::Remesh )
@@ -413,11 +412,13 @@ static Expected<void> fixDegeneracies( Mesh& mesh, ObjectMeshData* data, const F
 
 Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params )
 {
+    MR_TIMER;
     return fixDegeneracies( mesh, nullptr, params );
 }
 
 Expected<void> fixMeshDataDegeneracies( ObjectMeshData& data, const FixMeshDegeneraciesParams& params )
 {
+    MR_TIMER;
     if ( !data.mesh )
     {
         assert( false );

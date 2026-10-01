@@ -261,13 +261,14 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
 }
 
 /// computes the normals of the faces read during denoising of given region: region faces and their neighbors;
-/// the normals of all other faces are left zero
+/// the normals of all other faces are left uninitialized
 static FaceNormals computeNeededNormals( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * region )
 {
     if ( !region )
         return computePerFaceNormals( topology, points );
     MR_TIMER;
-    FaceNormals res( topology.faceSize() );
+    FaceNormals res;
+    res.resizeNoInit( topology.faceSize() );
     BitSetParallelFor( getIncidentFaces( topology, getIncidentEdges( topology, *region ) ), [&]( FaceId f )
     {
         res[f] = normal( topology, points, f );

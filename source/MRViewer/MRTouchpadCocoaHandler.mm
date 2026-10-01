@@ -226,6 +226,12 @@ void TouchpadCocoaHandler::Impl::onScrollEvent( NSView* view, SEL, NSEvent* even
             deltaX *= 0.1;
             deltaY *= 0.1;
         }
+        // undo "Natural scrolling" so that the wheel zooms the same way as on other platforms
+        if ( [event isDirectionInvertedFromDevice] )
+        {
+            deltaX = -deltaX;
+            deltaY = -deltaY;
+        }
         handler->mouseScroll( deltaX, deltaY, [event momentumPhase] != NSEventPhaseNone );
     }
     else

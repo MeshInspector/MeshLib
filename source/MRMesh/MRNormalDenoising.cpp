@@ -8,7 +8,6 @@
 #include "MRRegionBoundary.h"
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
-#include "MRBuffer.h"
 #include "MRTimer.h"
 #include <limits>
 #include <tuple>
@@ -59,18 +58,13 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     };
 
     // perimeter of a face, also counting boundary edges for better results on mesh boundary
-    const auto computePerimeter = [&]( FaceId f )
+    const auto perimeterOf = [&]( FaceId f )
     {
         float p = 0;
         for ( auto e : leftRing( topology, f ) )
             p += edgeLength( topology, points, e.undirected() );
         return p;
     };
-    // precomputed for all faces without a region, and computed only when needed for a region
-    Buffer<float, FaceId> perimeter( region ? 0 : topology.faceSize() );
-    if ( !region )
-        BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f ) { perimeter[f] = computePerimeter( f ); } );
-    const auto perimeterOf = [&]( FaceId f ) { return region ? computePerimeter( f ) : perimeter[f]; };
 
     std::vector< Eigen::Triplet<double> > mTriplets;
     Eigen::VectorXd rhs[3];

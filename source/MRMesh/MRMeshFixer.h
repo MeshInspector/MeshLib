@@ -82,10 +82,11 @@ struct FixMeshDegeneraciesParams
     /// also disables smoothing on patch
     bool mimicPatch = false;
 
-    /// only for fixMeshDataDegeneracies: never flip the edges between faces with different colors or texture ids, the selected edges and the creases,
-    /// so that the fixing does not move them; then a degenerate triangle with the longest edge among them is fixed
+    /// only for fixMeshDataDegeneracies (fixMeshDegeneracies ignores it): never flip the edges between faces with different colors or texture ids,
+    /// the selected edges and the creases, so that the fixing does not move them, but their vertices can still shift by up to max( maxDeviation, tinyEdgeLength )
+    /// in the collapses of nearby edges; a degenerate triangle with the longest edge among them is then fixed
     /// only if its opposite vertex is within max( maxDeviation, tinyEdgeLength ) from that edge, or by Mode::RemeshPatch
-    bool protectAttributeBorders = false;
+    bool protectAttributeBorders = true;
 
     ProgressCallback cb;
 };
@@ -96,8 +97,8 @@ MRMESH_API Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegenera
 /// Fixes degenerate faces and short edges in the mesh of data like fixMeshDegeneracies, and keeps all per-element attributes of data valid:
 /// the elements from edge splits get the attributes of the split elements (interpolated for vertices),
 /// and the new elements of Mode::RemeshPatch get the attributes of the nearest points of the removed surface;
-/// an edge flip keeps the ids of the edge and of its two faces, so it moves a border between different face attributes, a selected edge or a crease
-/// to the other diagonal of the quadrangle: set params.protectAttributeBorders to avoid that, otherwise the mesh is the same as from fixMeshDegeneracies
+/// with params.protectAttributeBorders = false the mesh is the same as from fixMeshDegeneracies, but an edge flip keeps the ids of the edge and of its two faces,
+/// so it can move a border between different face attributes, a selected edge or a crease to the other diagonal of the quadrangle
 MRMESH_API Expected<void> fixMeshDataDegeneracies( ObjectMeshData& data, const FixMeshDegeneraciesParams& params );
 
 /// finds all inner vertices in region with the given number of incident edges each

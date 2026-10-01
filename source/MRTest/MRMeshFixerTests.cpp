@@ -238,7 +238,7 @@ TEST( MRMesh, FixMultipleEdgesNew2Old )
     }
 }
 
-TEST( MRMesh, FixMeshDataDegeneracies )
+TEST( MRMesh, FixMeshDataDegeneraciesWithoutProtection )
 {
     const auto c = makeDefectCase();
     ASSERT_GT( findDegenerateFaces( *c.mesh, 1e4f ).value().count(), 0 );
@@ -246,6 +246,7 @@ TEST( MRMesh, FixMeshDataDegeneracies )
     for ( auto mode : cModes )
     {
         p.mode = mode;
+        p.protectAttributeBorders = false;
         SCOPED_TRACE( traceName( p ) );
         Mesh ref = *c.mesh;
         EXPECT_TRUE( fixMeshDegeneracies( ref, p ).has_value() );
@@ -258,7 +259,7 @@ TEST( MRMesh, FixMeshDataDegeneracies )
     }
 }
 
-TEST( MRMesh, FixMeshDataDegeneraciesProtectAttributeBorders )
+TEST( MRMesh, FixMeshDataDegeneracies )
 {
     const auto original = makeColoredCut();
     std::vector<LineSegm3f> border;
@@ -277,7 +278,6 @@ TEST( MRMesh, FixMeshDataDegeneraciesProtectAttributeBorders )
     for ( auto mode : cModes )
     {
         p.mode = mode;
-        p.protectAttributeBorders = true;
         SCOPED_TRACE( traceName( p ) );
         auto data = c.clone();
         EXPECT_TRUE( fixMeshDataDegeneracies( data, p ).has_value() );

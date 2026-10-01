@@ -282,10 +282,8 @@ void RibbonSceneObjectsListDrawer::drawObjectLine_( Object& object, const std::s
     context->LastItemData.ItemFlags |= ImGuiItemFlags_AllowOverlap; // needed so hover check respect overlap
 
     bool frameHovered = ImGui::IsItemHovered();
-    if ( simulatedClick )
-        processSimulatedItemClick_( object, selected );
-    else if ( frameHovered )
-        processItemClick_( object, selected );
+    if ( simulatedClick || frameHovered )
+        processItemClick_( object, selected, simulatedClick );
 
     auto lineObjectData = context->LastItemData;
 

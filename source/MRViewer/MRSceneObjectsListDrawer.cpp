@@ -534,9 +534,14 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     return isOpen;
 }
 
-void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected )
+void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, bool simulatedClick )
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    if ( simulatedClick )
+    {
+        updateSelection_( &object, selected, all );
+        return;
+    }
     auto isSelected = object.isSelected();
 
     if ( ImGui::IsMouseDoubleClicked( 0 ) )
@@ -555,11 +560,6 @@ void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vecto
 
     if ( pressed || released )
         updateSelection_( &object, selected, all );
-}
-
-void SceneObjectsListDrawer::processSimulatedItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected )
-{
-    updateSelection_( &object, selected, SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>() );
 }
 
 void SceneObjectsListDrawer::makeDragDropSource_( const std::vector<std::shared_ptr<Object>>& payload )

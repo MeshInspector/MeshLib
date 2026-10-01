@@ -90,9 +90,6 @@ public:
 
     bool isOrdered_{ false };
 
-    // needed to be able to call progress bar from any point, not only from ImGui frame scope
-    bool deferredOpenPopup_{ false };
-
     // this is needed to show full progress before closing
     bool closeDialogNextFrame_{ false };
 
@@ -122,8 +119,6 @@ void ProgressBarImpl::initialize_( std::string title, int taskCount, std::functi
 {
     if ( finished_ && thread_.joinable() )
         thread_.join();
-
-    deferredOpenPopup_ = true;
 
     progress_ = 0.0f;
 
@@ -159,16 +154,6 @@ void ProgressBarImpl::tryRun_( const std::function<void ()>& task )
     }
 }
 
-// only one operation can be ordered at a time, but while the progress bar waits for an open modal to close, that modal can order another one
-bool canOrder( const char* name )
-{
-    if ( !ProgressBarImpl::instance().isOrdered_ )
-        return true;
-    spdlog::warn( "Operation \"{}\" is not started: another operation is in progress", name );
-    pushNotification( { .text = _tr( "Another operation in progress." ), .lifeTimeSec = 3.0f } );
-    return false;
-}
-
 } //anonymous namespace
 
 namespace ProgressBar
@@ -178,11 +163,10 @@ void setup()
 {
     auto& instance = ProgressBarImpl::instance();
 
-    if ( instance.deferredOpenPopup_ && instance.setupId_ != ImGuiID( -1 ) )
-    {
-        instance.deferredOpenPopup_ = false;
-        ImGui::EnqueuePopup( instance.setupId_ );
-    }
+    // while an operation is ordered, open over any other modal to block the UI until its post-processing;
+    // every frame, since a popup opened with ImGui::OpenPopup can close it
+    if ( instance.isOrdered_ && instance.setupId_ != ImGuiID( -1 ) )
+        ImGui::OpenTopPriorityPopup( instance.setupId_ );
 
     instance.setupId_ = ImGui::GetID( "###GlobalProgressBarPopup" );
     const Vector2f windowSize( 440.0f * UI::scale(), 144.0f * UI::scale() );
@@ -291,9 +275,6 @@ void onFrameEnd()
         return;
     if ( !ctx->MovingWindow )
         return;
-    // not open yet: waits for another modal to close, which can be moved meanwhile
-    if ( !ImGui::IsPopupOpen( inst.setupId_, ImGuiPopupFlags_AnyPopupLevel ) )
-        return;
     if ( std::string( ctx->MovingWindow->Name ).ends_with( "###GlobalProgressBarPopup" ) )
         return;
     ctx->MovingWindow = nullptr;
@@ -313,8 +294,6 @@ void order( const char* name, const std::function<void()>& task, int taskCount )
 
 void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
-    if ( !canOrder( name ) )
-        return;
     auto& instance = ProgressBarImpl::instance();
 
     if ( isFinished() && instance.thread_.joinable() )
@@ -360,8 +339,6 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 
 void orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
-    if ( !canOrder( name ) )
-        return;
     auto& instance = ProgressBarImpl::instance();
 
     if ( isFinished() && instance.thread_.joinable() )

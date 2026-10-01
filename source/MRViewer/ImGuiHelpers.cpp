@@ -1035,20 +1035,17 @@ static std::vector<ImGuiID>& getEnqueuedPopups()
 
 // a modal counts while it is drawn (in this or the previous frame), so a modal nobody draws anymore does not block the queue;
 // a popup opened in this or the previous frame and not drawn yet counts too, since it may be a modal
+static bool isModal( const ImGuiPopupData& popup )
+{
+    if ( !popup.Window )
+        return popup.OpenFrameCount >= GetFrameCount() - 1;
+    return ( popup.Window->Flags & ImGuiWindowFlags_Modal ) && ( popup.Window->Active || popup.Window->WasActive );
+}
+
 static bool isModalOpen()
 {
-    const auto& g = *GetCurrentContext();
-    for ( const auto& popup : g.OpenPopupStack )
-    {
-        if ( !popup.Window )
-        {
-            if ( popup.OpenFrameCount >= g.FrameCount - 1 )
-                return true;
-        }
-        else if ( ( popup.Window->Flags & ImGuiWindowFlags_Modal ) && ( popup.Window->Active || popup.Window->WasActive ) )
-            return true;
-    }
-    return false;
+    const auto& stack = GetCurrentContext()->OpenPopupStack;
+    return std::any_of( stack.begin(), stack.end(), isModal );
 }
 
 void EnqueuePopup( const char* str_id )
@@ -1066,6 +1063,20 @@ void EnqueuePopup( ImGuiID id )
         OpenPopup( id );
     else if ( std::find( popups.begin(), popups.end(), id ) == popups.end() )
         popups.push_back( id );
+}
+
+void OpenTopPriorityPopup( ImGuiID id )
+{
+    assert( GetCurrentContext()->BeginPopupStack.Size == 0 );
+    if ( IsPopupOpen( id, ImGuiPopupFlags_None ) )
+        return;
+    auto& popups = getEnqueuedPopups();
+    std::erase( popups, id );
+    // the modal closed by this popup opens again first
+    const auto& stack = GetCurrentContext()->OpenPopupStack;
+    if ( !stack.empty() && isModal( stack[0] ) )
+        popups.insert( popups.begin(), stack[0].PopupId );
+    OpenPopup( id );
 }
 
 void OpenEnqueuedPopup()

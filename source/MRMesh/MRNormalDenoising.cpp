@@ -6,6 +6,7 @@
 #include "MRMeshNormals.h"
 #include "MRMeshMath.h"
 #include "MRRegionBoundary.h"
+#include "MRExpandShrink.h"
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
@@ -260,7 +261,7 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
         ParallelFor( v, update );
 }
 
-/// computes the normals of the faces read during denoising of given region: region faces and their neighbors;
+/// computes the normals of the faces read during denoising of given region: region faces and their neighbors across edges;
 /// the normals of all other faces are left uninitialized
 static FaceNormals computeNeededNormals( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * region )
 {
@@ -269,7 +270,7 @@ static FaceNormals computeNeededNormals( const MeshTopology & topology, const Ve
     MR_TIMER;
     FaceNormals res;
     res.resizeNoInit( topology.faceSize() );
-    BitSetParallelFor( getIncidentFaces( topology, getIncidentEdges( topology, *region ) ), [&]( FaceId f )
+    BitSetParallelFor( expandFaces( topology, *region ), [&]( FaceId f )
     {
         res[f] = normal( topology, points, f );
     } );

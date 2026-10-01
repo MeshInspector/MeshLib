@@ -82,15 +82,22 @@ struct FixMeshDegeneraciesParams
     /// also disables smoothing on patch
     bool mimicPatch = false;
 
+    /// only for fixMeshDataDegeneracies: never flip the edges between faces with different colors or texture ids, the selected edges and the creases,
+    /// so that the fixing does not move them; then a degenerate triangle with the longest edge among them is fixed
+    /// only if its opposite vertex is within max( maxDeviation, tinyEdgeLength ) from that edge, or by Mode::RemeshPatch
+    bool protectAttributeBorders = false;
+
     ProgressCallback cb;
 };
 
 /// Fixes degenerate faces and short edges in mesh (changes topology)
 MRMESH_API Expected<void> fixMeshDegeneracies( Mesh& mesh, const FixMeshDegeneraciesParams& params );
 
-/// Fixes degenerate faces and short edges in the mesh of data the same way as fixMeshDegeneracies, and keeps all per-element attributes of data valid:
-/// the elements from edge splits get the attributes of the split elements (interpolated for vertices), an edge flip keeps the attributes of its faces,
-/// and the new elements of Mode::RemeshPatch get the attributes of the nearest points of the removed surface
+/// Fixes degenerate faces and short edges in the mesh of data like fixMeshDegeneracies, and keeps all per-element attributes of data valid:
+/// the elements from edge splits get the attributes of the split elements (interpolated for vertices),
+/// and the new elements of Mode::RemeshPatch get the attributes of the nearest points of the removed surface;
+/// an edge flip keeps the ids of the edge and of its two faces, so it moves a border between different face attributes, a selected edge or a crease
+/// to the other diagonal of the quadrangle: set params.protectAttributeBorders to avoid that, otherwise the mesh is the same as from fixMeshDegeneracies
 MRMESH_API Expected<void> fixMeshDataDegeneracies( ObjectMeshData& data, const FixMeshDegeneraciesParams& params );
 
 /// finds all inner vertices in region with the given number of incident edges each

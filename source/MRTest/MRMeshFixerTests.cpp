@@ -8,6 +8,7 @@
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRLineSegm.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
@@ -111,12 +112,86 @@ void addDefects( Mesh & mesh, FaceColors & colors )
     mesh.invalidateCaches();
 }
 
-// the colored cut with the defects
+// the colored cut with the defects and all attributes: texture ids and face selection following the colors,
+// the color borders as creases, uv and vertex colors from the positions
 ObjectMeshData makeDefectCase()
 {
     auto data = makeColoredCut();
     addDefects( *data.mesh, data.faceColors );
+    const auto & t = data.mesh->topology;
+    data.texturePerFace.resize( t.faceSize() );
+    for ( auto f : t.getValidFaces() )
+    {
+        const bool tool = data.faceColors[f] == cTool;
+        data.texturePerFace[f] = TextureId( tool ? 1 : 0 );
+        if ( tool )
+            data.selectedFaces.autoResizeSet( f );
+    }
+    data.creases = edgesBetweenDifferentColors( t, data.faceColors );
+    data.uvCoordinates.resize( t.vertSize() );
+    data.vertColors.resize( t.vertSize() );
+    for ( auto v : t.getValidVerts() )
+    {
+        const auto pos = data.mesh->points[v];
+        data.uvCoordinates[v] = { pos.x, pos.y };
+        data.vertColors[v] = Color( Vector3f( 0.5f, 0.5f, 0.5f ) + pos / 200.0f );
+    }
     return data;
+}
+
+// checks that the attributes of the defect case are consistent with the mesh and with each other after the fixing
+void checkAttributes( const ObjectMeshData & data, FixMeshDegeneraciesParams::Mode mode )
+{
+    const auto & t = data.mesh->topology;
+    EXPECT_EQ( data.faceColors.size(), t.faceSize() );
+    EXPECT_EQ( data.texturePerFace.size(), t.faceSize() );
+    EXPECT_EQ( data.uvCoordinates.size(), t.vertSize() );
+    EXPECT_EQ( data.vertColors.size(), t.vertSize() );
+    EXPECT_TRUE( data.selectedFaces.is_subset_of( t.getValidFaces() ) );
+    EXPECT_TRUE( data.creases.any() );
+    for ( auto ue : data.creases )
+        EXPECT_FALSE( t.isLoneEdge( ue ) );
+
+    // the face attributes are copied together, and not blended
+    for ( auto f : t.getValidFaces() )
+    {
+        const bool tool = data.faceColors[f] == cTool;
+        EXPECT_TRUE( tool || data.faceColors[f] == cStock );
+        EXPECT_EQ( data.texturePerFace[f], TextureId( tool ? 1 : 0 ) );
+        EXPECT_EQ( data.selectedFaces.test( f ), tool );
+    }
+
+    // the vertices from edge splits get interpolated uv, and the vertices of a patch the uv of the removed surface nearby
+    const float uvTolerance = mode == FixMeshDegeneraciesParams::Mode::RemeshPatch ? 2.0f : 1e-3f;
+    for ( auto v : t.getValidVerts() )
+    {
+        const auto pos = data.mesh->points[v];
+        EXPECT_LT( ( data.uvCoordinates[v] - Vector2f( pos.x, pos.y ) ).length(), uvTolerance );
+    }
+}
+
+// total area of the faces with another color than the original surface at their centers
+float wrongColorArea( const ObjectMeshData & data, const ObjectMeshData & original )
+{
+    float res = 0;
+    for ( auto f : data.mesh->topology.getValidFaces() )
+        if ( data.faceColors[f] != original.faceColors[findProjection( data.mesh->triCenter( f ), *original.mesh ).proj.face] )
+            res += data.mesh->area( f );
+    return res;
+}
+
+const FixMeshDegeneraciesParams cFixParams[] =
+{
+    { .maxDeviation = 1e-3f, .tinyEdgeLength = 1e-4f },
+    // the highest caps remain after the decimation and the subdivision, and Mode::RemeshPatch patches them
+    { .maxDeviation = 1e-6f, .tinyEdgeLength = 1e-6f },
+    // the subdivision splits the thin triangles remaining after the decimation
+    { .maxDeviation = 1e-3f, .tinyEdgeLength = 1e-4f, .criticalTriAspectRatio = 100 }
+};
+
+std::string traceName( const FixMeshDegeneraciesParams & p )
+{
+    return "maxDeviation=" + std::to_string( p.maxDeviation ) + " criticalTriAspectRatio=" + std::to_string( p.criticalTriAspectRatio ) + " mode=" + std::to_string( int( p.mode ) );
 }
 
 constexpr FixMeshDegeneraciesParams::Mode cModes[] =
@@ -167,68 +242,73 @@ TEST( MRMesh, FixMeshDataDegeneracies )
 {
     const auto c = makeDefectCase();
     ASSERT_GT( findDegenerateFaces( *c.mesh, 1e4f ).value().count(), 0 );
-
-    for ( auto p : {
-        FixMeshDegeneraciesParams{ .maxDeviation = 1e-3f, .tinyEdgeLength = 1e-4f },
-        // the highest caps remain after the decimation and the subdivision, and Mode::RemeshPatch patches them
-        FixMeshDegeneraciesParams{ .maxDeviation = 1e-6f, .tinyEdgeLength = 1e-6f },
-        // the subdivision splits the thin triangles remaining after the decimation
-        FixMeshDegeneraciesParams{ .maxDeviation = 1e-3f, .tinyEdgeLength = 1e-4f, .criticalTriAspectRatio = 100 } } )
+    for ( auto p : cFixParams )
     for ( auto mode : cModes )
     {
-        SCOPED_TRACE( "maxDeviation=" + std::to_string( p.maxDeviation ) + " criticalTriAspectRatio=" + std::to_string( p.criticalTriAspectRatio ) + " mode=" + std::to_string( int( mode ) ) );
         p.mode = mode;
+        SCOPED_TRACE( traceName( p ) );
         Mesh ref = *c.mesh;
         EXPECT_TRUE( fixMeshDegeneracies( ref, p ).has_value() );
 
-        auto data = c.clone();
-        const auto & t = data.mesh->topology;
-        data.texturePerFace.resize( t.faceSize() );
-        for ( auto f : t.getValidFaces() )
-        {
-            const bool tool = data.faceColors[f] == cTool;
-            data.texturePerFace[f] = TextureId( tool ? 1 : 0 );
-            if ( tool )
-                data.selectedFaces.autoResizeSet( f );
-        }
-        data.creases = edgesBetweenDifferentColors( t, data.faceColors );
-        data.uvCoordinates.resize( t.vertSize() );
-        data.vertColors.resize( t.vertSize() );
-        for ( auto v : t.getValidVerts() )
-        {
-            const auto pos = data.mesh->points[v];
-            data.uvCoordinates[v] = { pos.x, pos.y };
-            data.vertColors[v] = Color( Vector3f( 0.5f, 0.5f, 0.5f ) + pos / 200.0f );
-        }
-
         // the same mesh as from fixMeshDegeneracies
+        auto data = c.clone();
         EXPECT_TRUE( fixMeshDataDegeneracies( data, p ).has_value() );
         EXPECT_TRUE( *data.mesh == ref );
+        checkAttributes( data, mode );
+    }
+}
 
-        EXPECT_EQ( data.faceColors.size(), t.faceSize() );
-        EXPECT_EQ( data.texturePerFace.size(), t.faceSize() );
-        EXPECT_EQ( data.uvCoordinates.size(), t.vertSize() );
-        EXPECT_EQ( data.vertColors.size(), t.vertSize() );
-        EXPECT_TRUE( data.selectedFaces.is_subset_of( t.getValidFaces() ) );
-        EXPECT_TRUE( data.creases.any() );
-        for ( auto ue : data.creases )
-            EXPECT_FALSE( t.isLoneEdge( ue ) );
+TEST( MRMesh, FixMeshDataDegeneraciesProtectAttributeBorders )
+{
+    const auto original = makeColoredCut();
+    std::vector<LineSegm3f> border;
+    for ( auto ue : edgesBetweenDifferentColors( original.mesh->topology, original.faceColors ) )
+        border.emplace_back( original.mesh->orgPnt( ue ), original.mesh->destPnt( ue ) );
+    auto distToBorder = [&] ( const Vector3f & p )
+    {
+        float res = FLT_MAX;
+        for ( const auto & s : border )
+            res = std::min( res, ( closestPointOnLineSegm( p, s ) - p ).length() );
+        return res;
+    };
 
-        // the face attributes are copied together, and not blended
-        for ( auto f : t.getValidFaces() )
+    const auto c = makeDefectCase();
+    for ( auto p : cFixParams )
+    for ( auto mode : cModes )
+    {
+        p.mode = mode;
+        p.protectAttributeBorders = true;
+        SCOPED_TRACE( traceName( p ) );
+        auto data = c.clone();
+        EXPECT_TRUE( fixMeshDataDegeneracies( data, p ).has_value() );
+        checkAttributes( data, mode );
+        const auto & t = data.mesh->topology;
+        if ( p.criticalTriAspectRatio >= 1e4f )
         {
-            const bool tool = data.faceColors[f] == cTool;
-            EXPECT_TRUE( tool || data.faceColors[f] == cStock );
-            EXPECT_EQ( data.texturePerFace[f], TextureId( tool ? 1 : 0 ) );
-            EXPECT_EQ( data.selectedFaces.test( f ), tool );
+            EXPECT_LT( t.numValidFaces(), 1.1 * c.mesh->topology.numValidFaces() );
         }
 
-        // the vertices from edge splits get interpolated uv, and the vertices of a patch the uv of the removed surface nearby
-        const float uvTolerance = mode == FixMeshDegeneraciesParams::Mode::RemeshPatch ? 2.0f : 1e-3f;
-        for ( auto v : t.getValidVerts() )
+        // only the degenerate triangles with the longest edge on the color border can remain, if they are too high to collapse
+        // (and the thin triangles without short edges in Mode::Decimate, since it only collapses and flips edges)
+        const auto degenerateFaces = findDegenerateFaces( *data.mesh, p.criticalTriAspectRatio ).value();
+        for ( auto f : degenerateFaces )
         {
-            const auto pos = data.mesh->points[v];
-            EXPECT_LT( ( data.uvCoordinates[v] - Vector2f( pos.x, pos.y ) ).length(), uvTolerance );
+            EXPECT_NE( mode, FixMeshDegeneraciesParams::Mode::RemeshPatch );
+            if ( mode == FixMeshDegeneraciesParams::Mode::Decimate && p.criticalTriAspectRatio < 1e4f )
+                continue;
+            EdgeId longest = t.edgeWithLeft( f );
+            for ( auto e : leftRing( t, f ) )
+                if ( data.mesh->edgeLengthSq( e ) > data.mesh->edgeLengthSq( longest ) )
+                    longest = e;
+            EXPECT_NE( data.faceColors[t.left( longest )], data.faceColors[t.right( longest )] );
+        }
+
+        // no face changes its color, and the creases stay on the color border
+        EXPECT_LT( wrongColorArea( data, original ), 1e-4f );
+        for ( auto ue : data.creases )
+        {
+            EXPECT_LT( distToBorder( data.mesh->orgPnt( ue ) ), 1e-2f );
+            EXPECT_LT( distToBorder( data.mesh->destPnt( ue ) ), 1e-2f );
         }
     }
 }

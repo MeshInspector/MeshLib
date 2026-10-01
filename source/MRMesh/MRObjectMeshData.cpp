@@ -46,4 +46,25 @@ UndirectedEdgeBitSet edgesBetweenDifferentColors( const MeshTopology & topology,
     return res;
 }
 
+void resizeAttributesToMesh( ObjectMeshData & data )
+{
+    if ( !data.mesh )
+    {
+        assert( false );
+        return;
+    }
+    auto resize = [] ( auto & attr, size_t size )
+    {
+        if ( !attr.empty() )
+            attr.resize( size );
+    };
+    const auto & topology = data.mesh->topology;
+    resize( data.uvCoordinates, topology.vertSize() );
+    resize( data.vertColors, topology.vertSize() );
+    resize( data.faceColors, topology.faceSize() );
+    // not TextureId(), which is invalid: faces without texture id are rendered with the first texture
+    if ( !data.texturePerFace.empty() )
+        data.texturePerFace.resize( topology.faceSize(), TextureId{ 0 } );
+}
+
 } //namespace MR

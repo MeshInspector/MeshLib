@@ -139,6 +139,15 @@ const AABBTreePoints& PointCloud::getAABBTree() const
     return res;
 }
 
+void PointCloud::updateCaches( const VertBitSet * changedVerts )
+{
+    AABBTreeOwner_.update( [&]( AABBTreePoints & tree )
+    {
+        assert( tree.orderedPoints().size() == validPoints.count() );
+        tree.refit( points, changedVerts );
+    } );
+}
+
 size_t PointCloud::heapBytes() const
 {
     return points.heapBytes()

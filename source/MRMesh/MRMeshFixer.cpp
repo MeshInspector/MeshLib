@@ -386,7 +386,7 @@ Expected<FaceBitSet> findDisorientedFaces( const Mesh& mesh, const FindDisorient
     return disorientedFaces;
 }
 
-void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges )
+void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEdges, FaceHashMap * new2Old )
 {
     if ( multipleEdges.empty() )
         return;
@@ -402,7 +402,7 @@ void fixMultipleEdges( Mesh & mesh, const std::vector<MultipleEdge> & multipleEd
                 continue;
             if ( num++ == 0 )
                 continue; // skip the first edge in the group
-            mesh.splitEdge( e.sym() );
+            mesh.splitEdge( e.sym(), nullptr, new2Old );
         }
         assert( num > 1 ); //it was really multiply connected pair of vertices
     }

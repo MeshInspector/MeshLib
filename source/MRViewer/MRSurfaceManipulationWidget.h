@@ -65,6 +65,7 @@ public:
 
     /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
     /// @note boundary edges can be split to improve quality of the patch
+    /// @note ignored before init(), and reset() clears the region
     MRVIEWER_API void setFixedRegion( const FaceBitSet& region );
 
     /// set widget settings (mesh change settings)
@@ -86,10 +87,10 @@ public:
     /// update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
 
-    /// enable visualization of mesh deviations
+    /// enable visualization of mesh deviations; can be called before init()
     MRVIEWER_API void enableDeviationVisualization( bool enable );
 
-    /// set method for calculating mesh changes;
+    /// set method for calculating mesh changes, can be called before init();
     /// while the topology differs from the original mesh, ExactDistance is used instead, and the requested method is restored when it becomes the same again
     MRVIEWER_API void setDeviationCalculationMethod( DeviationCalculationMethod method );
 

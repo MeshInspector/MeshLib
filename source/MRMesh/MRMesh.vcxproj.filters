@@ -1170,6 +1170,9 @@
     <ClInclude Include="MRPointCloudDistance.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRNewValuesStorage.hpp">
+      <Filter>Source Files\Algorithms</Filter>
+    </ClInclude>
     <ClInclude Include="MRMeshRelax.hpp">
       <Filter>Source Files\Algorithms</Filter>
     </ClInclude>

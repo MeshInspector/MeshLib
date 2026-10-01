@@ -160,6 +160,8 @@ void SurfaceManipulationWidget::reset()
 
 void SurfaceManipulationWidget::setFixedRegion( const FaceBitSet& region )
 {
+    if ( !obj_ )
+        return;
     unchangeableVerts_ = getIncidentVerts( obj_->meshPtr()->topology, region ) ;
 }
 
@@ -182,6 +184,8 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 
 void SurfaceManipulationWidget::updateTexture()
 {
+    if ( !obj_ )
+        return; // init() will call it
     // Determine preview color from theme based on current work mode
     SceneColors::Type colorType = SceneColors::BrushAdd;
     switch ( settings_.workMode )
@@ -217,6 +221,8 @@ void SurfaceManipulationWidget::updateTexture()
 
 void SurfaceManipulationWidget::updateUVs()
 {
+    if ( !obj_ )
+        return;
     updateRegionUVs_( obj_->meshPtr()->topology.getValidVerts() );
 }
 
@@ -236,7 +242,8 @@ void SurfaceManipulationWidget::setDeviationCalculationMethod( DeviationCalculat
         deviationCalculationMethod_ = method;
     else
         deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;
-    updateValueChanges_( obj_->meshPtr()->topology.getValidVerts() );
+    if ( obj_ )
+        updateValueChanges_( obj_->meshPtr()->topology.getValidVerts() );
 }
 
 Vector2f SurfaceManipulationWidget::getMinMax() const

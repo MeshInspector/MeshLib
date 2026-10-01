@@ -1,5 +1,6 @@
 #include "MRNormalDenoising.h"
 #include "MRMesh.h"
+#include "MRMeshPart.h"
 #include "MRParallelFor.h"
 #include "MRRingIterator.h"
 #include "MRMeshNormals.h"
@@ -107,9 +108,11 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
 
 constexpr float eps = 0.001f;
 
-void updateIndicator( const Mesh & mesh, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma, const FaceBitSet * region )
+void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
 {
     MR_TIMER;
+    const auto & mesh = mp.mesh;
+    const auto * region = mp.region;
 
     assert( v.size() == mesh.topology.undirectedEdgeSize() );
     assert( (int)normals.size() >= mesh.topology.lastValidFace() );
@@ -268,7 +271,7 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
         if ( settings.fastIndicatorComputation )
             updateIndicatorFast( mesh.topology, v, fnormals, settings.beta, settings.gamma );
         else
-            updateIndicator( mesh, v, fnormals, settings.beta, settings.gamma, settings.region );
+            updateIndicator( { mesh, settings.region }, v, fnormals, settings.beta, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
             return false;
     }

@@ -135,13 +135,23 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
     assert( v.size() == mesh.topology.undirectedEdgeSize() );
     assert( (int)normals.size() >= mesh.topology.lastValidFace() );
 
-    // the edges with unknown indicator in the linear system, the indicator of all other edges is fixed
-    UndirectedEdgeBitSet regionEdges;
+    // the edges of region faces with unknown indicator in the linear system, the indicator of all other edges is fixed;
+    // collected from region faces (an edge between two region faces from the face with smaller id)
+    std::vector<UndirectedEdgeId> regionEdges;
     HashMap<UndirectedEdgeId, int> edge2idx;
     if ( region )
     {
-        regionEdges = getIncidentEdges( mesh.topology, *region );
-        edge2idx = makeHashMapWithSeqNums( regionEdges );
+        for ( auto f : *region )
+        {
+            if ( !mesh.topology.hasFace( f ) )
+                continue;
+            for ( auto e : leftRing( mesh.topology, f ) )
+                if ( const auto r = mesh.topology.right( e ); !r || r > f || !region->test( r ) )
+                    regionEdges.push_back( e.undirected() );
+        }
+        edge2idx.reserve( regionEdges.size() );
+        for ( int i = 0; i < (int)regionEdges.size(); ++i )
+            edge2idx[regionEdges[i]] = i;
     }
     const int sz = region ? (int)edge2idx.size() : (int)v.size();
     if ( sz <= 0 )
@@ -165,42 +175,44 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
         const EdgeId e = ue; // note that it can be lone edge
         float centralWeight = rh;
         double rhsRow = rh;
-        const auto addNeighbor = [&]( EdgeId n, float x )
+        const auto l = mesh.topology.left( e );
+        const auto r = mesh.topology.right( e );
+        if ( l && r )
+            centralWeight += 2 * gamma * ( normals[l] - normals[r] ).lengthSq();
+        const auto lenE = ( l || r ) ? mesh.edgeLength( e ) : 0.0f;
+        // (d) is the distance from the center of a common triangle to the common vertex of edges (e) and (n);
+        // the weight is symmetric in (e,n), so the matrix is symmetric positive definite as SimplicialLDLT requires
+        const auto addNeighbor = [&]( EdgeId n, float d )
         {
+            const auto sumLen = lenE + mesh.edgeLength( n );
+            if ( sumLen <= 0 )
+                return;
+            const float x = k * d * 2 / sumLen;
             centralWeight += x;
             if ( const int c = idxOf( n.undirected() ); c >= 0 )
                 mTriplets.emplace_back( row, c, -x );
             else
                 rhsRow += double( x ) * v[n.undirected()]; // fixed indicator of an edge outside the region
         };
-        const auto l = mesh.topology.left( e );
-        const auto r = mesh.topology.right( e );
-        if ( l && r )
-            centralWeight += 2 * gamma * ( normals[l] - normals[r] ).lengthSq();
-        const auto lenE = ( l || r ) ? mesh.edgeLength( e ) : 0.0f;
-        if ( lenE > 0 )
+        if ( l )
         {
-            if ( l )
-            {
-                const auto c = mesh.triCenter( l );
-                addNeighbor( mesh.topology.next( e ), k * ( c - mesh.orgPnt( e ) ).length() / lenE );
-                addNeighbor( mesh.topology.prev( e.sym() ), k * ( c - mesh.destPnt( e ) ).length() / lenE );
-            }
-            if ( r )
-            {
-                const auto c = mesh.triCenter( r );
-                addNeighbor( mesh.topology.prev( e ), k * ( c - mesh.orgPnt( e ) ).length() / lenE );
-                addNeighbor( mesh.topology.next( e.sym() ), k * ( c - mesh.destPnt( e ) ).length() / lenE );
-            }
+            const auto c = mesh.triCenter( l );
+            addNeighbor( mesh.topology.next( e ), ( c - mesh.orgPnt( e ) ).length() );
+            addNeighbor( mesh.topology.prev( e.sym() ), ( c - mesh.destPnt( e ) ).length() );
+        }
+        if ( r )
+        {
+            const auto c = mesh.triCenter( r );
+            addNeighbor( mesh.topology.prev( e ), ( c - mesh.orgPnt( e ) ).length() );
+            addNeighbor( mesh.topology.next( e.sym() ), ( c - mesh.destPnt( e ) ).length() );
         }
         mTriplets.emplace_back( row, row, centralWeight );
         rhs[row] = rhsRow;
     };
     if ( region )
     {
-        int row = 0;
-        for ( auto ue : regionEdges )
-            addEquation( ue, row++ );
+        for ( int row = 0; row < sz; ++row )
+            addEquation( regionEdges[row], row );
     }
     else
     {
@@ -220,9 +232,9 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
     // copy solution back into v
     if ( region )
     {
-        BitSetParallelFor( regionEdges, [&]( UndirectedEdgeId ue )
+        ParallelFor( regionEdges, [&]( size_t i )
         {
-            v[ue] = (float) sol[idxOf( ue )];
+            v[regionEdges[i]] = (float) sol[i];
         } );
     }
     else

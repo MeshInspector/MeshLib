@@ -582,6 +582,19 @@ void Mesh::updateCaches( const VertBitSet * changedVerts )
     dipolesOwner_.reset();
 }
 
+void Mesh::updateCachesAfterSplits( const FaceHashMap & new2Old )
+{
+    if ( new2Old.empty() )
+        return; // nothing changed, and the tree shared with other meshes shall not be copied
+    AABBTreeOwner_.update( [&]( AABBTree & tree )
+    {
+        tree.addSplitFaces( *this, new2Old );
+        assert( tree.numLeaves() == topology.numValidFaces() );
+    } );
+    AABBTreePointsOwner_.reset(); // new vertices appeared
+    dipolesOwner_.reset();
+}
+
 size_t Mesh::heapBytes() const
 {
     return topology.heapBytes()

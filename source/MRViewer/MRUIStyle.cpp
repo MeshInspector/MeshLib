@@ -2456,7 +2456,7 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
 
         if ( settings.triggerSave )
         {
-            ImGui::OpenPopup( popupName.c_str() );
+            ImGui::EnqueuePopup( popupName.c_str() );
         }
 
         ModalDialog saveDialog( popupName.c_str(), {
@@ -2486,7 +2486,7 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
             std::error_code ec;
             if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / asU8String( currentConfigName + ".json" ), ec ) )
             {
-                ImGui::OpenPopup( existingPopupName.c_str() );
+                ImGui::EnqueuePopup( existingPopupName.c_str() );
             }
             else
             {
@@ -2525,7 +2525,7 @@ void saveCustomConfigModal( const CustomConfigModalSettings& settings )
             std::error_code ec;
             if ( settings.warnExisting && std::filesystem::is_regular_file( settings.configDirectory / asU8String( currentConfigName + ".json" ), ec ) )
             {
-                ImGui::OpenPopup( existingPopupName.c_str() );
+                ImGui::EnqueuePopup( existingPopupName.c_str() );
             }
             else
             {

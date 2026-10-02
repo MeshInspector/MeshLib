@@ -163,6 +163,7 @@
     <ClInclude Include="MRMeshDoubleLayer.h" />
     <ClInclude Include="MRHexPalette.h" />
     <ClInclude Include="MRMeshPatch.h" />
+    <ClInclude Include="MRNewValuesStorage.hpp" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRSegmentMesh.h" />

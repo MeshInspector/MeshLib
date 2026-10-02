@@ -76,7 +76,9 @@ void findSpaceDistancesAndVerts( const Mesh& mesh, const std::vector<MeshTriPoin
 
 // not in the header to be able to destroy Laplacian
 SurfaceManipulationWidget::SurfaceManipulationWidget()
+    : palette_( std::make_shared<Palette>( Palette::DefaultColors ) )
 {
+    palette_->setFilterType( FilterType::Linear );
 }
 
 // not in the header to be able to destroy Laplacian
@@ -88,6 +90,8 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
 {
     MR_TIMER;
     assert( objectMesh );
+    if ( obj_ && obj_ != objectMesh )
+        reset(); // all the state below belongs to the previous object
     obj_ = objectMesh;
 
     if ( firstInit_ )
@@ -100,15 +104,10 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
         settings_.workMode = WorkMode::Add;
         firstInit_ = false;
     }
-    if ( !palette_ )
-    {
-        palette_ = std::make_shared<Palette>( Palette::DefaultColors );
-        palette_->setFilterType( FilterType::Linear );
-    }
-
     size_t numV = obj_->meshPtr()->topology.lastValidVert() + 1;
 
-    if ( !originalMesh_ )
+    const bool newOriginalMesh = !originalMesh_;
+    if ( newOriginalMesh )
     {
         originalMesh_ = std::make_shared<Mesh>( *obj_->meshPtr() );
 
@@ -128,13 +127,21 @@ void SurfaceManipulationWidget::init( const std::shared_ptr<ObjectMesh>& objectM
     mousePressed_ = false;
     mousePos_ = { -1, -1 };
 
-    sameOriginalMeshTopology_ = true;
+    // if init() is called again for the same object, then meshChangedSignal has already kept these up to date
+    if ( newOriginalMesh )
+    {
+        sameOriginalMeshTopology_ = true;
+        deviationCalculationMethod_ = requestedDeviationCalculationMethod_;
+    }
 }
 
 void SurfaceManipulationWidget::reset()
 {
     MR_TIMER;
+    if ( !obj_ )
+        return; // not initialized or already reset
 
+    abortEdit_();
     laplacian_.reset();
     originalMesh_.reset();
 
@@ -144,13 +151,17 @@ void SurfaceManipulationWidget::reset()
     obj_.reset();
 
     clearData_();
+    unchangeableVerts_.clear();
+    pickedVerts_.clear();
+    pickedVertsToData_.clear();
 
     resetConnections_();
-    mousePressed_ = false;
 }
 
 void SurfaceManipulationWidget::setFixedRegion( const FaceBitSet& region )
 {
+    if ( !obj_ )
+        return;
     unchangeableVerts_ = getIncidentVerts( obj_->meshPtr()->topology, region ) ;
 }
 
@@ -173,6 +184,8 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
 
 void SurfaceManipulationWidget::updateTexture()
 {
+    if ( !obj_ )
+        return; // init() will call it
     // Determine preview color from theme based on current work mode
     SceneColors::Type colorType = SceneColors::BrushAdd;
     switch ( settings_.workMode )
@@ -188,23 +201,14 @@ void SurfaceManipulationWidget::updateTexture()
     MeshTexture texture;
     if ( enableDeviationTexture_ )
     {
-        if ( palette_ )
+        MeshTexture palleteTexture = palette_->getTexture();
+        texture.filter = palleteTexture.filter;
+        texture.resolution = { palleteTexture.resolution.x, 2 };
+        texture.pixels.resize( texture.resolution.x * texture.resolution.y );
+        for ( int x = 0; x < palleteTexture.resolution.x; ++x )
         {
-            MeshTexture palleteTexture = palette_->getTexture();
-            texture.filter = palleteTexture.filter;
-            texture.resolution = { palleteTexture.resolution.x, 2 };
-            texture.pixels.resize( texture.resolution.x * texture.resolution.y );
-            for ( int x = 0; x < palleteTexture.resolution.x; ++x )
-            {
-                texture.pixels[x] = brushColor;
-                texture.pixels[x + palleteTexture.resolution.x] = palleteTexture.pixels[x];
-            }
-        }
-        else
-        {
-            texture.pixels = { brushColor, brushColor, brushColor,
-                Color::blue(), Color::green(), Color::red() };
-            texture.resolution = { 3, 2 };
+            texture.pixels[x] = brushColor;
+            texture.pixels[x + palleteTexture.resolution.x] = palleteTexture.pixels[x];
         }
     }
     else
@@ -217,6 +221,8 @@ void SurfaceManipulationWidget::updateTexture()
 
 void SurfaceManipulationWidget::updateUVs()
 {
+    if ( !obj_ )
+        return;
     updateRegionUVs_( obj_->meshPtr()->topology.getValidVerts() );
 }
 
@@ -236,7 +242,8 @@ void SurfaceManipulationWidget::setDeviationCalculationMethod( DeviationCalculat
         deviationCalculationMethod_ = method;
     else
         deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;
-    updateValueChanges_( obj_->meshPtr()->topology.getValidVerts() );
+    if ( obj_ )
+        updateValueChanges_( obj_->meshPtr()->topology.getValidVerts() );
 }
 
 Vector2f SurfaceManipulationWidget::getMinMax() const

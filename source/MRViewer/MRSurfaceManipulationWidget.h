@@ -57,14 +57,15 @@ public:
         bool mimicPatch = false; ///< if true in Patch mode mixes `CloseSurfaceFillMetric` and disables smoothing
     };
 
-    /// initialize widget according ObjectMesh
+    /// initialize widget according ObjectMesh; if it was initialized with another object, reset() is called first
     MRVIEWER_API void init( const std::shared_ptr<ObjectMesh>& objectMesh );
 
-    /// reset widget state
+    /// reset widget state including the fixed region; does nothing if the widget is not initialized
     MRVIEWER_API void reset();
 
     /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
     /// @note boundary edges can be split to improve quality of the patch
+    /// @note ignored before init(), and reset() clears the region
     MRVIEWER_API void setFixedRegion( const FaceBitSet& region );
 
     /// set widget settings (mesh change settings)
@@ -77,7 +78,7 @@ public:
     [[deprecated( "always returns 1" )]]
     MRVIEWER_API float getMinRadius() const { return 1.f; }
 
-    /// get palette used for visualization point shifts
+    /// get palette used for visualization point shifts, available before init()
     Palette& palette() { return *palette_; }
 
     /// update texture used for colorize surface (use after change colorMap in palette)
@@ -86,10 +87,10 @@ public:
     /// update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
 
-    /// enable visualization of mesh deviations
+    /// enable visualization of mesh deviations; can be called before init()
     MRVIEWER_API void enableDeviationVisualization( bool enable );
 
-    /// set method for calculating mesh changes;
+    /// set method for calculating mesh changes, can be called before init();
     /// while the topology differs from the original mesh, ExactDistance is used instead, and the requested method is restored when it becomes the same again
     MRVIEWER_API void setDeviationCalculationMethod( DeviationCalculationMethod method );
 

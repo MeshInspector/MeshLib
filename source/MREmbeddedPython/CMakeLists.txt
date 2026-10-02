@@ -27,7 +27,9 @@ ENDIF()
 # The flag we're removing here is something we only set on Linux, in `CompilerOptions.cmake`.
 string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
+if(NOT MESHLIB_USE_VCPKG)
+  target_include_directories(${PROJECT_NAME} PUBLIC ${Python_INCLUDE_DIRS})
+endif()
 
 IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)

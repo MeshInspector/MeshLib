@@ -2356,8 +2356,7 @@ void RibbonMenu::drawShortcutsWindow_()
     ImGuiMV::SetNextWindowPosMainViewport( windowPos, ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( ImVec2( windowWidth, windowHeight ), ImGuiCond_Always );
 
-    if ( !ImGui::IsPopupOpen( "HotKeys" ) )
-        ImGui::OpenPopup( "HotKeys" );
+    ImGui::EnqueuePopup( "HotKeys" );
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( StyleConsts::Modal::bigTitlePadding * UI::scale(), 0.0f ) );
     if ( !ImGui::BeginModalNoAnimation( "HotKeys", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )

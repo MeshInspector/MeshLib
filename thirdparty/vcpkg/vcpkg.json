@@ -63,7 +63,7 @@
         },
         {
             "name": "python3",
-            "platform": "windows"
+            "platform": "(osx | windows)"
         }
     ],
     "configuration": {

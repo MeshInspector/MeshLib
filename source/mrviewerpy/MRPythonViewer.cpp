@@ -420,6 +420,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         .def( pybind11::self & pybind11::self )
         .def( ~pybind11::self )
     ;
+    m.def( "getPrimaryCtrlKeyMod", []{ return PythonKeyMod( MR::getGlfwModPrimaryCtrl() ); },
+        "Returns the main control modifier of this platform: `KeyMod.Super` (Cmd) on macOS, `KeyMod.Ctrl` otherwise." );
 
     pybind11::class_<MR::Viewer::LaunchParams>( m, "ViewerLaunchParams", "This struct contains rules for viewer launch" ).
         def( pybind11::init<>() ).

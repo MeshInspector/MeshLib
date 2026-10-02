@@ -10,7 +10,6 @@
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
-#include <algorithm>
 #include <limits>
 #include <tuple>
 
@@ -137,7 +136,7 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
     assert( (int)normals.size() >= mesh.topology.lastValidFace() );
 
     // the edges of region faces with unknown indicator in the linear system, the indicator of all other edges is fixed;
-    // collected from region faces (an edge between two region faces from the face with smaller id) and sorted as in the whole mesh
+    // collected from region faces (an edge between two region faces from the face with smaller id)
     std::vector<UndirectedEdgeId> regionEdges;
     HashMap<UndirectedEdgeId, int> edge2idx;
     if ( region )
@@ -150,7 +149,6 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
                 if ( const auto r = mesh.topology.right( e ); !r || r > f || !region->test( r ) )
                     regionEdges.push_back( e.undirected() );
         }
-        std::sort( regionEdges.begin(), regionEdges.end() );
         edge2idx.reserve( regionEdges.size() );
         for ( int i = 0; i < (int)regionEdges.size(); ++i )
             edge2idx[regionEdges[i]] = i;

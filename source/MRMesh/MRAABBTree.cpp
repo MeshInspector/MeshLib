@@ -6,6 +6,7 @@
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -92,6 +93,117 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         changedNodes.set( nid );
         node.box = nodes_[node.l].box;
         node.box.include( nodes_[node.r].box );
+    }
+}
+
+void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
+{
+    MR_TIMER;
+    if ( new2Old.empty() )
+        return;
+    assert( !nodes_.empty() );
+
+    // (split face, its new part) sorted for the subtrees not to depend on the order of the hash map
+    std::vector<std::pair<FaceId, FaceId>> splits;
+    splits.reserve( new2Old.size() );
+    FaceBitSet splitFaces( mesh.topology.faceSize() );
+    for ( const auto & [newFace, oldFace] : new2Old )
+    {
+        splits.emplace_back( oldFace, newFace );
+        splitFaces.set( oldFace );
+    }
+    std::sort( splits.begin(), splits.end() );
+
+    // find the leaf of every split face
+    std::vector<FaceId> oldFaces;
+    oldFaces.reserve( splitFaces.count() );
+    for ( auto f : splitFaces )
+        oldFaces.push_back( f );
+    std::vector<NodeId> oldLeaves( oldFaces.size() );
+    ParallelFor( nodes_, [&]( NodeId nid )
+    {
+        const auto & node = nodes_[nid];
+        if ( !node.leaf() || !splitFaces.test( node.leafId() ) )
+            return;
+        const auto it = std::lower_bound( oldFaces.begin(), oldFaces.end(), node.leafId() );
+        assert( it != oldFaces.end() && *it == node.leafId() );
+        oldLeaves[it - oldFaces.begin()] = nid;
+    } );
+
+    // the subtree of the parts: its root takes the place of the old leaf, other nodes are appended,
+    // so children have larger ids than their parents as in a constructed tree
+    nodes_.reserve( nodes_.size() + 2 * splits.size() );
+    std::vector<BoxedFace> parts;
+    auto addPart = [&]( FaceId f )
+    {
+        auto & part = parts.emplace_back();
+        part.leafId = f;
+        part.box = computeFaceBox( mesh, f );
+    };
+    auto makeSubtree = [&]( auto && self, NodeId nid, int first, int num ) -> void
+    {
+        if ( num == 1 )
+        {
+            nodes_[nid].setLeafId( parts[first].leafId );
+            nodes_[nid].box = parts[first].box;
+            return;
+        }
+        const auto l = nodes_.endId();
+        const auto r = l + 1;
+        nodes_.resize( nodes_.size() + 2 );
+        const int numL = num / 2;
+        self( self, l, first, numL );
+        self( self, r, first + numL, num - numL );
+        auto & node = nodes_[nid];
+        node.l = l;
+        node.r = r;
+        node.box = nodes_[l].box;
+        node.box.include( nodes_[r].box );
+    };
+
+    std::vector<NodeId> grownRoots; // whose subtree is not inside the box of the old leaf
+    size_t i = 0;
+    for ( size_t j = 0; j < oldFaces.size(); ++j )
+    {
+        const auto oldFace = oldFaces[j];
+        parts.clear();
+        addPart( oldFace );
+        for ( ; i < splits.size() && splits[i].first == oldFace; ++i )
+            addPart( splits[i].second );
+        const auto root = oldLeaves[j];
+        if ( !root )
+        {
+            assert( false ); // the split face is not in this tree
+            continue;
+        }
+        const auto oldBox = nodes_[root].box;
+        makeSubtree( makeSubtree, root, 0, int( parts.size() ) );
+        if ( !oldBox.contains( nodes_[root].box ) )
+            grownRoots.push_back( root );
+    }
+    assert( i == splits.size() );
+
+    // only a new vertex outside the box of its split face makes the boxes of the ancestors to grow
+    if ( grownRoots.empty() )
+        return;
+    Vector<NodeId, NodeId> parents( nodes_.size() );
+    ParallelFor( nodes_, [&]( NodeId nid )
+    {
+        const auto & node = nodes_[nid];
+        if ( node.leaf() )
+            return;
+        parents[node.l] = nid;
+        parents[node.r] = nid;
+    } );
+    for ( auto root : grownRoots )
+    {
+        const auto box = nodes_[root].box;
+        for ( auto p = parents[root]; p; p = parents[p] )
+        {
+            if ( nodes_[p].box.contains( box ) )
+                break; // and all further ancestors contain it too
+            nodes_[p].box.include( box );
+        }
     }
 }
 

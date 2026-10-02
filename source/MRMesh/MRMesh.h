@@ -490,6 +490,11 @@ struct [[nodiscard]] Mesh
     /// \param changedVerts vertices with modified coordinates, nullptr means all valid vertices
     MRMESH_API void updateCaches( const VertBitSet * changedVerts );
 
+    /// updates existing caches after some faces were split into parts (e.g. by splitFace() or splitEdge()) with no other changes in the mesh;
+    /// it shall be considered as a faster alternative to invalidateCaches() and following rebuild of AABB tree
+    /// \param new2Old maps every face appeared after the splits to the face it was split from (as filled by splitFace() and splitEdge())
+    MRMESH_API void updateCachesAfterSplits( const FaceHashMap & new2Old );
+
     // returns the amount of memory this object occupies on heap
     [[nodiscard]] MRMESH_API size_t heapBytes() const;
 

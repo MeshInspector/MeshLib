@@ -9,11 +9,13 @@ COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 RUN <<EOF
     set -e
-    # don't install excess dependencies
-    echo "install_weak_deps=false" >> /etc/dnf/dnf.conf
-    # drop a mirror slower than 1 MB/s for 30 s instead of crawling for 25 min
-    echo "minrate=1M" >> /etc/dnf/dnf.conf
-    echo "fastestmirror=True" >> /etc/dnf/dnf.conf
+    cat >> /etc/dnf/dnf.conf <<'DNF'
+# don't install excess dependencies
+install_weak_deps=false
+# drop slow mirrors
+minrate=1M
+fastestmirror=True
+DNF
     # configure CUDA repo
     case "$(uname -m)" in
         x86_64)  CUDA_REPO_ARCH=x86_64 ;;

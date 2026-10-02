@@ -152,7 +152,7 @@ jobs:
 
       - name: Create virtualenv
         run: |
-          python3.10 -m venv .venv
+          python3.12 -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
 
@@ -225,7 +225,7 @@ jobs:
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             MODE=none \
-            PYTHON_PKGCONF_NAME=python-3.10-embed \
+            PYTHON_PKGCONF_NAME=python-3.12-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Run Start-and-Exit Tests

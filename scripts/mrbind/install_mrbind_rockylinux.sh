@@ -21,11 +21,12 @@ rm -rf build
 export PATH="$LLVM_PREFIX/bin:$PATH"
 export CMAKE_PREFIX_PATH="$LLVM_PREFIX${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}"
 
-# The libstdc++ of GCC 11, the image's only toolset, like the product build.
-[[ ${GCC_INSTALL_DIR:=} ]] || GCC_INSTALL_DIR=/opt/rh/gcc-toolset-11/root/usr/lib/gcc/$(uname -m)-redhat-linux/11
+# Optional GCC_INSTALL_DIR: the GCC whose libstdc++ to build against.
+GCC_INSTALL_DIR_FLAG=
+[ -n "${GCC_INSTALL_DIR:-}" ] && GCC_INSTALL_DIR_FLAG="--gcc-install-dir=$GCC_INSTALL_DIR"
 
 # mrbind links the keg's libLLVM.so/libclang-cpp.so; rpath them for runtime.
 CC=clang CXX=clang++ cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-    -DCMAKE_CXX_FLAGS=--gcc-install-dir="$GCC_INSTALL_DIR" \
-    -DCMAKE_EXE_LINKER_FLAGS="--gcc-install-dir=$GCC_INSTALL_DIR -Wl,-rpath,$LLVM_PREFIX/lib"
+    -DCMAKE_CXX_FLAGS="$GCC_INSTALL_DIR_FLAG" \
+    -DCMAKE_EXE_LINKER_FLAGS="$GCC_INSTALL_DIR_FLAG -Wl,-rpath,$LLVM_PREFIX/lib"
 cmake --build build -j$JOBS

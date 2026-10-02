@@ -135,6 +135,8 @@ jobs:
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
+        env:
+          GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
         with:
           # Prefix is shared with pip-build.yml's rocky section, which uses the same
           # image and script. The Dockerfile hash in extra-cache-key busts the cache

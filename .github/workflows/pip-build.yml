@@ -274,6 +274,8 @@ jobs:
 
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind
+        env:
+          GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
         with:
           # Prefix is shared with build-test-linux-vcpkg.yml, which uses the same
           # image and script. The Dockerfile hash in extra-cache-key busts the cache

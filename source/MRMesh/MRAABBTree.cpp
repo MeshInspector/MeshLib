@@ -121,10 +121,6 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
         assert( it != oldFaces.end() && *it == node.leafId() );
         roots[it - oldFaces.begin()] = nid;
     } );
-    std::vector<Box3f> oldBoxes( roots.size() );
-    for ( size_t i = 0; i < roots.size(); ++i )
-        if ( roots[i] )
-            oldBoxes[i] = nodes_[roots[i]].box;
 
     // every new face turns the current leaf of its split face into a node with the leaves of both faces;
     // the new nodes are appended, so children have larger ids than their parents as in a constructed tree
@@ -163,38 +159,22 @@ void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
     };
     for ( auto nid = nodes_.backId(); nid >= firstNewNode; --nid )
         updateBox( nid );
-    std::vector<NodeId> grownRoots; // whose subtree is not inside the box of the old leaf
-    for ( size_t i = 0; i < roots.size(); ++i )
+    bool grown = false; // whether the subtree of some split face is not inside the box of its old leaf
+    for ( auto root : roots )
     {
-        if ( !roots[i] )
+        if ( !root )
             continue;
-        updateBox( roots[i] );
-        if ( !oldBoxes[i].contains( nodes_[roots[i]].box ) )
-            grownRoots.push_back( roots[i] );
+        const auto oldBox = nodes_[root].box; // still the box of the old leaf
+        updateBox( root );
+        grown = grown || !oldBox.contains( nodes_[root].box );
     }
 
-    // only a new vertex outside the box of its split face makes the boxes of the ancestors to grow
-    if ( grownRoots.empty() )
-        return;
-    Vector<NodeId, NodeId> parents( nodes_.size() );
-    ParallelFor( nodes_, [&]( NodeId nid )
-    {
-        const auto & node = nodes_[nid];
-        if ( node.leaf() )
-            return;
-        parents[node.l] = nid;
-        parents[node.r] = nid;
-    } );
-    for ( auto root : grownRoots )
-    {
-        const auto box = nodes_[root].box;
-        for ( auto p = parents[root]; p; p = parents[p] )
-        {
-            if ( nodes_[p].box.contains( box ) )
-                break; // and all further ancestors contain it too
-            nodes_[p].box.include( box );
-        }
-    }
+    // only a new vertex outside the box of its split face (e.g. due to rounding) makes the boxes of the ancestors to grow,
+    // then update all not-leaf nodes from the last to the root as in refit()
+    if ( grown )
+        for ( auto nid = nodes_.backId(); nid; --nid )
+            if ( !nodes_[nid].leaf() )
+                updateBox( nid );
 }
 
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;

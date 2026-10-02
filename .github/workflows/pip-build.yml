@@ -614,7 +614,7 @@ jobs:
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            instance: macos-14
+            instance: macos-15
             brewpath: /opt/homebrew
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
@@ -953,9 +953,6 @@ jobs:
           - platform: "arm64"
             runner-tier: "self-hosted"
             instance: macos-13
-          - platform: "arm64"
-            runner-tier: "github"
-            instance: macos-14
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-15

@@ -81,7 +81,7 @@ MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart &
  * \param aChangedVerts (bChangedVerts) the vertices of mesh A (B) moved or added after res was found
  */
 MRMESH_API void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
-    const MeshPart & a, const VertBitSet & aChangedVerts, const MeshPart & b, const VertBitSet & bChangedVerts,
+    const Mesh & a, const VertBitSet & aChangedVerts, const Mesh & b, const VertBitSet & bChangedVerts,
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr );
 
 /**

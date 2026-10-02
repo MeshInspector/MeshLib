@@ -527,7 +527,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( settings_.subdivideGrooves && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
         subdivideAfterAddRemove_();
 
-    if ( settings_.workMode == WorkMode::Relax && generalEditingRegion_.any() )
+    if ( settings_.workMode == WorkMode::Relax && settings_.relaxMarkCreases && generalEditingRegion_.any() )
         markSelectedEdgesAsCreases_();
 
     generalEditingRegion_.clear();

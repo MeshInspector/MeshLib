@@ -632,7 +632,15 @@ void SurfaceManipulationWidget::changeSurface_()
         {
             auto& mesh = *obj_->varMesh();
             const auto region = getIncidentFaces( mesh.topology, singleEditingRegion_ );
-            meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), { .region = &region } );
+            // guideWeight is fitted so that on a mesh without creases the noise is reduced as much as by relax with the same force
+            const DenoiseWithCreasesSettings ds
+            {
+                .gamma = 100,
+                .guideWeight = std::sqrt( 20 * ( 1 - settings_.relaxForce ) / settings_.relaxForce ),
+                .pointIters = 3,
+                .region = &region
+            };
+            meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), ds );
         }
         else
         {

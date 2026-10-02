@@ -47,7 +47,7 @@ public:
         WorkMode workMode = WorkMode::Add;
         float radius = 1.f; ///< radius of editing region
         float relaxForce = 0.2f; ///< speed of relaxing, typical values (0 - 0.5]
-        bool relaxKeepCreases = true; ///< if true in Relax mode, the selected edges and creases of the mesh are kept sharp (relaxForce is ignored then)
+        bool relaxKeepCreases = true; ///< if true in Relax mode, the selected edges and creases of the mesh are kept sharp (meshDenoiseWithCreases is used instead of relax)
         float editForce = 1.f; ///< material thickness added or removed to the surface
         float sharpness = 50.f; ///< effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax

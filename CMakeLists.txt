@@ -260,6 +260,20 @@ else()
   endif()
 endif()
 
+if(MESHLIB_USE_VCPKG)
+  set(VCPKG_TRIPLET_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+  install(
+    DIRECTORY
+      "$<$<PLATFORM_ID:Windows>:${VCPKG_TRIPLET_DIR}/bin>"
+      "${VCPKG_TRIPLET_DIR}/include"
+      "${VCPKG_TRIPLET_DIR}/lib"
+      "${VCPKG_TRIPLET_DIR}/share"
+    DESTINATION .
+    PATTERN "pkgconfig" EXCLUDE
+    PATTERN "__pycache__" EXCLUDE
+  )
+endif()
+
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)

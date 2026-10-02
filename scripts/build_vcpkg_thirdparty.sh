@@ -4,6 +4,8 @@ set -e
 # NOTE: realpath is not supported on older macOS versions
 BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )
 
+INSTALL_DIR="${1:-./vcpkg_installed}"
+
 if [ -z "${VCPKG_DEFAULT_HOST_TRIPLET}" ] ; then
   if [ -z "${VCPKG_TRIPLET}" ] ; then
     VCPKG_TRIPLET=$("${BASE_DIR}/scripts/detect_vcpkg_triplet.sh")
@@ -19,6 +21,16 @@ else
   echo "    autoconf autoconf-archive automake libtool"
 fi
 
+if [ -n "${CI}" ] ; then
+  VCPKG_INSTALL_FLAGS=--debug
+fi
+
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \
-    --x-install-root=./vcpkg_installed
+    --x-install-root="${INSTALL_DIR}" \
+    ${VCPKG_INSTALL_FLAGS}
+
+# vcpkg does not strip the libraries it builds
+find "${INSTALL_DIR}" -type f \
+    \( -name '*.dylib' -o -name '*.so' -o -name '*.so.*' \) \
+    -exec strip -x {} +

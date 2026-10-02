@@ -255,10 +255,24 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
         }
         v[ue] = rh / ( rh + 2 * gamma * ( normals[l] - normals[r] ).lengthSq() );
     };
-    if ( region )
-        BitSetParallelFor( getIncidentEdges( topology, *region ), update );
-    else
+    if ( !region )
+    {
         ParallelFor( v, update );
+        return;
+    }
+    // visit only the edges of region faces, each exactly once:
+    // an edge between two region faces is updated from the face with smaller id
+    BitSetParallelFor( *region, [&]( FaceId f )
+    {
+        if ( !topology.hasFace( f ) )
+            return;
+        for ( auto e : leftRing( topology, f ) )
+        {
+            if ( const auto r = topology.right( e ); r && r < f && region->test( r ) )
+                continue;
+            update( e.undirected() );
+        }
+    } );
 }
 
 /// computes the normals of the faces read during denoising of given region: region faces and their neighbors across edges;

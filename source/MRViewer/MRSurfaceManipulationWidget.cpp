@@ -369,6 +369,24 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
     }
 }
 
+void SurfaceManipulationWidget::markSelectedEdgesAsCreases_()
+{
+    MR_TIMER;
+    const auto& topology = obj_->meshPtr()->topology;
+    const auto faces = getIncidentFaces( topology, generalEditingRegion_ );
+    auto creases = obj_->creases();
+    bool changed = false;
+    for ( auto ue : obj_->getSelectedEdges() )
+    {
+        if ( creases.test( ue ) || ( !contains( faces, topology.left( ue ) ) && !contains( faces, topology.right( ue ) ) ) )
+            continue;
+        creases.autoResizeSet( ue );
+        changed = true;
+    }
+    if ( changed )
+        AppendHistory<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, std::move( creases ) );
+}
+
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
 {
     findSpaceDistancesAndVerts( mesh, start, settings_.radius, distances, region, editOnlyCodirectedSurface_, untouchable );
@@ -509,11 +527,8 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( settings_.subdivideGrooves && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
         subdivideAfterAddRemove_();
 
-    if ( newCreases_.any() )
-    {
-        AppendHistory<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, obj_->creases() | newCreases_ );
-        newCreases_.clear();
-    }
+    if ( settings_.workMode == WorkMode::Relax && generalEditingRegion_.any() )
+        markSelectedEdgesAsCreases_();
 
     generalEditingRegion_.clear();
 
@@ -647,9 +662,7 @@ void SurfaceManipulationWidget::changeSurface_()
                 .region = &region
             };
             meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), ds );
-            for ( auto ue : obj_->getSelectedEdges() )
-                if ( !obj_->creases().test( ue ) && ( contains( region, mesh.topology.left( ue ) ) || contains( region, mesh.topology.right( ue ) ) ) )
-                    newCreases_.autoResizeSet( ue );
+            generalEditingRegion_ |= singleEditingRegion_;
         }
         else
         {
@@ -853,7 +866,6 @@ void SurfaceManipulationWidget::abortEdit_()
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();
-    newCreases_.clear();
     const auto numV = pointsShift_.size();
     pointsShift_.clear();
     pointsShift_.resize( numV, 0.f );

@@ -168,6 +168,8 @@ protected:
     void compressChangePointsAction_();
 
     void subdivideAfterAddRemove_();
+    /// selected edges having a face in generalEditingRegion_ become creases (with undo)
+    void markSelectedEdgesAsCreases_();
 
     void updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 
@@ -221,9 +223,6 @@ protected:
 
     /// true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
     bool appendHistoryAction_ = false;
-
-    /// selected edges that were kept sharp by Relax since last mouse down and will become creases on mouse up
-    UndirectedEdgeBitSet newCreases_;
 
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = false;

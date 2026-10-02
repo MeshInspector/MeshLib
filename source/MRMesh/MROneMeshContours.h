@@ -45,6 +45,7 @@ using OneMeshContours = std::vector<OneMeshContour>;
 
 // Divides faces that fully own contours into 3 parts with center in center mass of one of the face contours
 // if there is more than one contour on face it guarantee to subdivide at least one lone contour on this face
+// the AABB tree of the mesh (if any) is updated instead of being invalidated
 MRMESH_API void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap = nullptr );
 
 /// Converts contours given in topological terms as the intersections of one mesh's edge and another mesh's triangle (ContinuousContours),

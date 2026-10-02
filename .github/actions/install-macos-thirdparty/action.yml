@@ -146,6 +146,8 @@ runs:
         HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed keg (no openssl@3 source rebuild)
         HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
       run: |
+        # explicitly overwrite the preinstalled Python package
+        brew install --quiet --overwrite python@3.12
         ./scripts/install_brew_requirements.sh
         ./scripts/strip_brew_dylibs.sh
 

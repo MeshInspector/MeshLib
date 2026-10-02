@@ -29,8 +29,10 @@ MRMESH_API void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEd
 /// \param normals per-face normals
 /// \param beta 0.001 - sharp edges, 0.01 - moderate edges, 0.1 - smooth edges
 /// \param gamma the amount of smoothing: 0 - no smoothing, 1 - average smoothing, ...
+/// \param region if given, then only the indicator of the edges of these faces is updated
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework", equation (20)
-MRMESH_API void updateIndicatorFast( const MeshTopology & topology, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma );
+MRMESH_API void updateIndicatorFast( const MeshTopology & topology, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma,
+    const FaceBitSet * region = nullptr );
 
 struct DenoiseViaNormalsSettings
 {

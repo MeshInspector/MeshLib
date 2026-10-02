@@ -6,9 +6,9 @@
 #include "MRMeshNormals.h"
 #include "MRMeshMath.h"
 #include "MRRegionBoundary.h"
+#include "MRExpandShrink.h"
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
-#include "MRBuffer.h"
 #include "MRTimer.h"
 #include <limits>
 #include <tuple>
@@ -32,23 +32,40 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     assert( v.size() == topology.undirectedEdgeSize() );
     const auto & faces = topology.getFaceIds( region );
 
-    // index of every face with unknown normal in the linear system, -1 for fixed faces
-    Vector<int, FaceId> face2idx( topology.faceSize(), -1 );
+    // index of every face with unknown normal in the linear system, -1 for fixed faces;
+    // a hash map for a region to avoid allocation for all mesh faces
+    Vector<int, FaceId> face2idxVec;
+    HashMap<FaceId, int> face2idxMap;
     int sz = 0;
-    for ( auto f : faces )
-        face2idx[f] = sz++;
+    if ( region )
+    {
+        face2idxMap = makeHashMapWithSeqNums( faces );
+        sz = (int)face2idxMap.size();
+    }
+    else
+    {
+        face2idxVec.resize( topology.faceSize(), -1 );
+        for ( auto f : faces )
+            face2idxVec[f] = sz++;
+    }
     if ( sz <= 0 )
         return;
+    const auto idxOf = [&]( FaceId f ) -> int
+    {
+        if ( !region )
+            return face2idxVec[f];
+        auto it = face2idxMap.find( f );
+        return it != face2idxMap.end() ? it->second : -1;
+    };
 
-    // perimeter of every face, also counting boundary edges for better results on mesh boundary
-    Buffer<float, FaceId> perimeter( topology.faceSize() );
-    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    // perimeter of a face, also counting boundary edges for better results on mesh boundary
+    const auto perimeterOf = [&]( FaceId f )
     {
         float p = 0;
         for ( auto e : leftRing( topology, f ) )
             p += edgeLength( topology, points, e.undirected() );
-        perimeter[f] = p;
-    } );
+        return p;
+    };
 
     std::vector< Eigen::Triplet<double> > mTriplets;
     Eigen::VectorXd rhs[3];
@@ -56,7 +73,8 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
         rhs[i].resize( sz );
     for ( auto f : faces )
     {
-        const int fi = face2idx[f];
+        const int fi = idxOf( f );
+        const float pf = perimeterOf( f );
         float centralWeight = 1;
         Vector3d rh( normals[f] );
         for ( auto e : leftRing( topology, f ) )
@@ -65,13 +83,13 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
             const auto r = topology.right( e );
             if ( !r )
                 continue;
-            const auto sumPerimeter = perimeter[f] + perimeter[r];
+            const auto sumPerimeter = pf + perimeterOf( r );
             if ( sumPerimeter <= 0 )
                 continue;
             // the weight is symmetric in (f,r), so the matrix is symmetric positive definite as SimplicialLDLT requires
             const float weight = gamma * edgeLength( topology, points, e.undirected() ) * sqr( v[e.undirected()] ) * 2 / sumPerimeter;
             centralWeight += weight;
-            if ( const int ri = face2idx[r]; ri >= 0 )
+            if ( const int ri = idxOf( r ); ri >= 0 )
                 mTriplets.emplace_back( fi, ri, -weight );
             else
                 rh += double( weight ) * Vector3d( normals[r] ); // fixed normal of a face outside the region
@@ -98,7 +116,7 @@ void denoiseNormals( const MeshTopology & topology, const VertCoords & points, F
     // copy solution back into normals
     BitSetParallelFor( faces, [&]( FaceId f )
     {
-        const int fi = face2idx[f];
+        const int fi = idxOf( f );
         normals[f] = Vector3f(
             (float) sol[0][fi],
             (float) sol[1][fi],
@@ -216,7 +234,8 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
     }
 }
 
-void updateIndicatorFast( const MeshTopology & topology, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma )
+void updateIndicatorFast( const MeshTopology & topology, Vector<float, UndirectedEdgeId> & v, const FaceNormals & normals, float beta, float gamma,
+    const FaceBitSet * region )
 {
     MR_TIMER;
 
@@ -224,7 +243,7 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
     assert( (int)normals.size() >= topology.lastValidFace() );
 
     const float rh = beta / ( 2 * eps );
-    ParallelFor( v, [&]( UndirectedEdgeId ue )
+    const auto update = [&]( UndirectedEdgeId ue )
     {
         const EdgeId e = ue;
         const auto l = topology.left( e );
@@ -235,7 +254,41 @@ void updateIndicatorFast( const MeshTopology & topology, Vector<float, Undirecte
             return;
         }
         v[ue] = rh / ( rh + 2 * gamma * ( normals[l] - normals[r] ).lengthSq() );
+    };
+    if ( !region )
+    {
+        ParallelFor( v, update );
+        return;
+    }
+    // visit only the edges of region faces, each exactly once:
+    // an edge between two region faces is updated from the face with smaller id
+    BitSetParallelFor( *region, [&]( FaceId f )
+    {
+        if ( !topology.hasFace( f ) )
+            return;
+        for ( auto e : leftRing( topology, f ) )
+        {
+            if ( const auto r = topology.right( e ); r && r < f && region->test( r ) )
+                continue;
+            update( e.undirected() );
+        }
     } );
+}
+
+/// computes the normals of the faces read during denoising of given region: region faces and their neighbors across edges;
+/// the normals of all other faces are left uninitialized
+static FaceNormals computeNeededNormals( const MeshTopology & topology, const VertCoords & points, const FaceBitSet * region )
+{
+    if ( !region )
+        return computePerFaceNormals( topology, points );
+    MR_TIMER;
+    FaceNormals res;
+    res.resizeNoInit( topology.faceSize() );
+    BitSetParallelFor( expandFaces( topology, *region ), [&]( FaceId f )
+    {
+        res[f] = normal( topology, points, f );
+    } );
+    return res;
 }
 
 void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings )
@@ -253,23 +306,39 @@ bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & setti
     if ( !reportProgress( cb, 0.0f ) )
         return false;
 
-    auto fnormals0 = computePerFaceNormals( mesh );
+    auto fnormals = computeNeededNormals( mesh.topology, mesh.points, settings.region );
     Vector<float, UndirectedEdgeId> v( mesh.topology.undirectedEdgeSize(), 1 );
+
+    // denoiseNormals changes only the normals of region faces, so only they are restored before each iteration
+    FaceNormals fnormals0; // initial normals of all faces without a region
+    std::vector<std::pair<FaceId, Vector3f>> regionNormals0; // initial normals of region faces
+    if ( settings.region )
+    {
+        for ( auto f : *settings.region )
+            regionNormals0.emplace_back( f, fnormals[f] );
+    }
+    else
+        fnormals0 = fnormals;
 
     if ( !reportProgress( cb, 0.05f ) )
         return false;
 
     auto sp = subprogress( cb, 0.05f, 0.95f );
-    FaceNormals fnormals;
     for ( int i = 0; i < settings.normalIters; ++i )
     {
-        fnormals = fnormals0;
+        if ( i > 0 )
+        {
+            if ( settings.region )
+                ParallelFor( regionNormals0, [&]( size_t j ) { fnormals[regionNormals0[j].first] = regionNormals0[j].second; } );
+            else
+                fnormals = fnormals0;
+        }
         denoiseNormals( mesh, fnormals, v, settings.gamma, settings.region );
         if ( !reportProgress( sp, float( 2 * i ) / ( 2 * settings.normalIters ) ) )
             return false;
 
         if ( settings.fastIndicatorComputation )
-            updateIndicatorFast( mesh.topology, v, fnormals, settings.beta, settings.gamma );
+            updateIndicatorFast( mesh.topology, v, fnormals, settings.beta, settings.gamma, settings.region );
         else
             updateIndicator( { mesh, settings.region }, v, fnormals, settings.beta, settings.gamma );
         if ( !reportProgress( sp, float( 2 * i + 1 ) / ( 2 * settings.normalIters ) ) )
@@ -338,7 +407,7 @@ bool meshDenoiseWithCreases( const MeshTopology & topology, VertCoords & points,
         v[ue] = creases.test( ue ) ? 0.0f : 1.0f;
     } );
 
-    auto fnormals = computePerFaceNormals( topology, points );
+    auto fnormals = computeNeededNormals( topology, points, settings.region );
     denoiseNormals( topology, points, fnormals, v, settings.gamma, settings.region );
     if ( !reportProgress( cb, 0.5f ) )
         return false;

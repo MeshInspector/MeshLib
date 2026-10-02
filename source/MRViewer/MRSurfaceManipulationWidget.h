@@ -222,6 +222,9 @@ protected:
     /// true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
     bool appendHistoryAction_ = false;
 
+    /// selected edges that were kept sharp by Relax since last mouse down and will become creases on mouse up
+    UndirectedEdgeBitSet newCreases_;
+
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = false;
     DeviationCalculationMethod deviationCalculationMethod_ = DeviationCalculationMethod::ExactDistance;

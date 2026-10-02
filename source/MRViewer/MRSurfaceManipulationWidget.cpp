@@ -509,6 +509,12 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( settings_.subdivideGrooves && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
         subdivideAfterAddRemove_();
 
+    if ( newCreases_.any() )
+    {
+        AppendHistory<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, obj_->creases() | newCreases_ );
+        newCreases_.clear();
+    }
+
     generalEditingRegion_.clear();
 
     return true;
@@ -641,6 +647,9 @@ void SurfaceManipulationWidget::changeSurface_()
                 .region = &region
             };
             meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), ds );
+            for ( auto ue : obj_->getSelectedEdges() )
+                if ( !obj_->creases().test( ue ) && ( contains( region, mesh.topology.left( ue ) ) || contains( region, mesh.topology.right( ue ) ) ) )
+                    newCreases_.autoResizeSet( ue );
         }
         else
         {
@@ -844,6 +853,7 @@ void SurfaceManipulationWidget::abortEdit_()
     appendHistoryAction_ = false;
     historyAction_.reset();
     generalEditingRegion_.clear();
+    newCreases_.clear();
     const auto numV = pointsShift_.size();
     pointsShift_.clear();
     pointsShift_.resize( numV, 0.f );

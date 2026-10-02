@@ -66,7 +66,8 @@ std::string_view imGuiBlockingModalName()
 // - Else if ImGui says the widget is drawn under BeginDisabled, use a generic fallback so the
 //   entry is still marked disabled even though the caller didn't know why.
 // - Else, if a blocking modal popup is open and the widget is drawn outside it, return
-//   "blocked by modal '<name>'" — the widget can't receive input while the modal is on top.
+//   "blocked by modal '<name>'" — the widget can't receive input while the modal is on top
+//   (unless `attrs.ignoreBlockingModal`).
 // - Else empty (entry accepts input).
 std::string effectiveDisabledReason( const EntryAttributes& attrs )
 {
@@ -74,6 +75,8 @@ std::string effectiveDisabledReason( const EntryAttributes& attrs )
         return std::string( attrs.disabledReason );
     if ( imGuiContextSaysDisabled() )
         return "drawn inside ImGui::BeginDisabled";
+    if ( attrs.ignoreBlockingModal )
+        return {};
     if ( const auto modal = imGuiBlockingModalName(); !modal.empty() )
         return fmt::format( "blocked by modal '{}'", modal );
     return {};

@@ -48,15 +48,17 @@ bool imGuiContextSaysDisabled()
 
 // If a blocking modal popup is currently open and the widget being submitted is *outside* that
 // modal's window tree (walking ImGui's ParentWindow chain), returns a view of the modal's window
-// name. Otherwise returns empty (no modal open, or the widget is inside the modal).
+// name. Otherwise returns empty (no modal open, the widget is inside the modal, or the entry is
+// registered outside of any window, like `##key_modifiers`, so it is no widget for the modal to block).
 // The returned view is valid only while ImGui state is untouched (i.e. during the same callback).
 std::string_view imGuiBlockingModalName()
 {
     ImGuiWindow* topModal = ImGui::GetTopMostPopupModal();
-    if ( !topModal )
-        return {};
     // not GetCurrentWindow(): it marks the window as used, so outside of any window ImGui would show its fallback "Debug" window
-    for ( ImGuiWindow* w = ImGui::GetCurrentWindowRead(); w; w = w->ParentWindow )
+    ImGuiWindow* window = ImGui::GetCurrentWindowRead();
+    if ( !topModal || !window || window->IsFallbackWindow )
+        return {};
+    for ( ImGuiWindow* w = window; w; w = w->ParentWindow )
         if ( w == topModal )
             return {};
     return topModal->Name ? std::string_view{ topModal->Name } : std::string_view{ "<unnamed>" };
@@ -66,7 +68,7 @@ std::string_view imGuiBlockingModalName()
 // - If caller passed a reason, use it verbatim (takes precedence).
 // - Else if ImGui says the widget is drawn under BeginDisabled, use a generic fallback so the
 //   entry is still marked disabled even though the caller didn't know why.
-// - Else, if a blocking modal popup is open and the widget is drawn outside it, return
+// - Else, if a blocking modal popup is open and the widget is drawn in a window outside it, return
 //   "blocked by modal '<name>'" — the widget can't receive input while the modal is on top.
 // - Else empty (entry accepts input).
 std::string effectiveDisabledReason( const EntryAttributes& attrs )

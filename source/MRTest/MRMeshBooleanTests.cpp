@@ -275,4 +275,63 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
     }
 }
 
+// after splits of faces and edges and moves of vertices in both meshes,
+// updateCollidingEdgeTrisPrecise finds the same intersections as new search
+TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
+{
+    Mesh meshA = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
+    Mesh meshB = meshA;
+    const auto xf = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), 0.1f ) );
+    const auto conv = getVectorConverters( meshA, meshB, &xf );
+    auto res = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt, &xf );
+    ASSERT_GT( res.size(), 100 );
+    auto less = []( const VarEdgeTri & a, const VarEdgeTri & b )
+    {
+        return std::make_tuple( a.isEdgeATriB(), int( a.edge ), int( a.tri() ) ) < std::make_tuple( b.isEdgeATriB(), int( b.edge ), int( b.tri() ) );
+    };
+    auto orgRes = res;
+    std::sort( orgRes.begin(), orgRes.end(), less );
+
+    // split some intersected triangles of both meshes with new vertices inside the meshes, and an intersecting edge of A
+    const auto aVertsBefore = meshA.topology.vertSize();
+    const auto bVertsBefore = meshB.topology.vertSize();
+    FaceHashMap aNew2Old, bNew2Old;
+    for ( size_t i = 0; i < res.size(); i += 10 )
+    {
+        auto & mesh = res[i].isEdgeATriB() ? meshB : meshA;
+        const auto f = res[i].tri();
+        mesh.splitFace( f, mesh.triCenter( f ) - 0.01f * mesh.normal( f ), nullptr, res[i].isEdgeATriB() ? &bNew2Old : &aNew2Old );
+    }
+    const auto aEdgeIt = std::find_if( res.begin(), res.end(), []( const VarEdgeTri & et ) { return et.isEdgeATriB(); } );
+    ASSERT_NE( aEdgeIt, res.end() );
+    meshA.splitEdge( aEdgeIt->edge, nullptr, &aNew2Old );
+    meshA.updateCachesAfterSplits( aNew2Old );
+    meshB.updateCachesAfterSplits( bNew2Old );
+    VertBitSet aChangedVerts( meshA.topology.vertSize() );
+    aChangedVerts.set( VertId( aVertsBefore ), aChangedVerts.size() - aVertsBefore, true );
+    VertBitSet bChangedVerts( meshB.topology.vertSize() );
+    bChangedVerts.set( VertId( bVertsBefore ), bChangedVerts.size() - bVertsBefore, true );
+
+    // move inside the origins of some intersecting edges of B
+    VertBitSet bMovedVerts( meshB.topology.vertSize() );
+    for ( size_t i = 5; i < res.size(); i += 20 )
+        if ( !res[i].isEdgeATriB() )
+            bMovedVerts.set( meshB.topology.org( res[i].edge ) );
+    for ( auto v : bMovedVerts )
+        meshB.points[v] -= 0.01f * meshB.normal( v );
+    meshB.updateCaches( &bMovedVerts );
+    bChangedVerts |= bMovedVerts;
+
+    updateCollidingEdgeTrisPrecise( res, meshA, aChangedVerts, meshB, bChangedVerts, conv.toInt, &xf );
+    auto newRes = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt, &xf );
+    std::sort( res.begin(), res.end(), less );
+    std::sort( newRes.begin(), newRes.end(), less );
+    EXPECT_EQ( res, newRes );
+    EXPECT_NE( res, orgRes );
+
+    // no changes
+    updateCollidingEdgeTrisPrecise( res, meshA, {}, meshB, {}, conv.toInt, &xf );
+    EXPECT_EQ( res, newRes );
+}
+
 } //namespace MR

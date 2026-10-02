@@ -209,14 +209,18 @@ set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
 
-set(DRACO_JS_GLUE OFF CACHE BOOL "")
-set(DRACO_TESTS OFF CACHE BOOL "")
-IF(EMSCRIPTEN)
-  # draco_check_emscripten_environment() fails without these even with DRACO_JS_GLUE=OFF, which needs no Python;
-  # PYTHONINTERP_FOUND is never set since Draco moved to find_package(Python) (google/draco@cff9f68)
-  set(PYTHONINTERP_FOUND ON)
-  set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
-  # Emscripten builds SHARED libraries as static, so draco_shared would clash with draco_static
-  set(BUILD_SHARED_LIBS OFF)
+# Ubuntu takes Draco from apt (libdraco-dev)
+find_package(draco)
+IF(NOT draco_FOUND)
+  set(DRACO_JS_GLUE OFF CACHE BOOL "")
+  set(DRACO_TESTS OFF CACHE BOOL "")
+  IF(EMSCRIPTEN)
+    # draco_check_emscripten_environment() fails without these even with DRACO_JS_GLUE=OFF, which needs no Python;
+    # PYTHONINTERP_FOUND is never set since Draco moved to find_package(Python) (google/draco@cff9f68)
+    set(PYTHONINTERP_FOUND ON)
+    set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
+    # Emscripten builds SHARED libraries as static, so draco_shared would clash with draco_static
+    set(BUILD_SHARED_LIBS OFF)
+  ENDIF()
+  add_subdirectory(./draco)
 ENDIF()
-add_subdirectory(./draco)

@@ -296,6 +296,7 @@ jobs:
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
+            -DMESHLIB_BUILD_MCP=OFF
             -DCMAKE_CUDA_HOST_COMPILER=/opt/rh/gcc-toolset-11/root/usr/bin/g++
             -DCMAKE_CXX_FLAGS=--gcc-install-dir=${{ matrix.gcc-install-dir }}
 
@@ -535,7 +536,7 @@ jobs:
           msbuild-architecture: ${{ matrix.msbuild-architecture }}
 
       - name: Build
-        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:Platform=${{ matrix.msbuild-platform }} -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON -p:MRVOXELS_UNITY_BUILD=ON
+        run: msbuild -m source\MeshLib.sln -p:Configuration=Release -p:Platform=${{ matrix.msbuild-platform }} -p:VcpkgTriplet=${{ env.VCPKG_DEFAULT_TRIPLET }} -p:PlatformToolset=${{ env.PLATFORM_TOOLSET }} -p:MRCudaPlatformToolset=${{ env.CUDA_PLATFORM_TOOLSET }} -p:MR_PCH_USE_EXTRA_HEADERS=ON -p:MRVOXELS_UNITY_BUILD=ON -p:MESHLIB_BUILD_MCP=OFF
 
       - name: Install MSYS2 for MRBind
         uses: ./.github/actions/install-msys2-mrbind
@@ -690,6 +691,7 @@ jobs:
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
+            -DMESHLIB_BUILD_MCP=OFF
           # not realy needed
           CMAKE_C_COMPILER: /usr/bin/clang
 

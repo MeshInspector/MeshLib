@@ -32,7 +32,9 @@ public:
     /// the leaf of each split face is replaced with a subtree of that face and its new parts;
     /// this is a faster alternative to full tree rebuild (but the tree after the update might be less efficient)
     /// \param mesh same mesh for which this tree was constructed, but after the splits
-    /// \param new2Old maps every new face (not present in the tree) to the face of this tree it was split from
+    /// \param new2Old maps every new face (not present in the tree) to the face of this tree it was split from;
+    /// it must contain only the splits made since the tree was built or last updated: a map accumulated over several calls
+    /// would add the earlier faces to the tree once more
     MRMESH_API void addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old );
 
 private:

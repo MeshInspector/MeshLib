@@ -492,7 +492,9 @@ struct [[nodiscard]] Mesh
 
     /// updates existing caches after some faces were split into parts (e.g. by splitFace() or splitEdge()) with no other changes in the mesh;
     /// it shall be considered as a faster alternative to invalidateCaches() and following rebuild of AABB tree
-    /// \param new2Old maps every face appeared after the splits to the face it was split from (as filled by splitFace() and splitEdge())
+    /// \param new2Old maps every face appeared after the splits to the face it was split from (as filled by splitFace() and splitEdge());
+    /// it must contain only the splits made since the AABB tree was built or last updated: a map accumulated over several calls
+    /// (like new2oldMap of subdivideLoneContours in the iterations of boolean) would add the earlier faces to the tree once more
     MRMESH_API void updateCachesAfterSplits( const FaceHashMap & new2Old );
 
     // returns the amount of memory this object occupies on heap

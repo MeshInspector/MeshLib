@@ -58,7 +58,7 @@ set(MESHLIB_PACKAGE_expected
 
 set(MESHLIB_PACKAGE_fastmcpp
   GIT_REPOSITORY https://github.com/MeshInspector/fastmcpp
-  GIT_TAG 9aa1a179f886f6d098f67693e18ee4778db924b7
+  GIT_TAG 7403ec08a03ea0e9ec4eb320f7258cdcb84a1965
 )
 
 set(MESHLIB_PACKAGE_fmt

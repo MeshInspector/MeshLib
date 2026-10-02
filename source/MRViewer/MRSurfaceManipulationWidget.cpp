@@ -17,6 +17,7 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MREnumNeighbours.h"
 #include "MRMesh/MRMeshRelax.h"
+#include "MRMesh/MRNormalDenoising.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRFillHoleNicely.h"
@@ -627,10 +628,19 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.workMode == WorkMode::Relax )
     {
-        MeshRelaxParams params;
-        params.region = &singleEditingRegion_;
-        params.force = settings_.relaxForce;
-        relax( *obj_->varMesh(), params );
+        if ( settings_.relaxKeepCreases )
+        {
+            auto& mesh = *obj_->varMesh();
+            const auto region = getIncidentFaces( mesh.topology, singleEditingRegion_ );
+            meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), { .region = &region } );
+        }
+        else
+        {
+            MeshRelaxParams params;
+            params.region = &singleEditingRegion_;
+            params.force = settings_.relaxForce;
+            relax( *obj_->varMesh(), params );
+        }
         obj_->setDirtyFlagsFast( DIRTY_POSITION );
         updateValueChanges_( singleEditingRegion_ );
         return;

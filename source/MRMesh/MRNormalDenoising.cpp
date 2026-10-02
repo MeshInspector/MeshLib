@@ -10,6 +10,7 @@
 #include "MRNormalsToPoints.h"
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
+#include <algorithm>
 #include <limits>
 #include <tuple>
 
@@ -135,13 +136,24 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
     assert( v.size() == mesh.topology.undirectedEdgeSize() );
     assert( (int)normals.size() >= mesh.topology.lastValidFace() );
 
-    // the edges with unknown indicator in the linear system, the indicator of all other edges is fixed
-    UndirectedEdgeBitSet regionEdges;
+    // the edges of region faces with unknown indicator in the linear system, the indicator of all other edges is fixed;
+    // collected from region faces (an edge between two region faces from the face with smaller id) and sorted as in the whole mesh
+    std::vector<UndirectedEdgeId> regionEdges;
     HashMap<UndirectedEdgeId, int> edge2idx;
     if ( region )
     {
-        regionEdges = getIncidentEdges( mesh.topology, *region );
-        edge2idx = makeHashMapWithSeqNums( regionEdges );
+        for ( auto f : *region )
+        {
+            if ( !mesh.topology.hasFace( f ) )
+                continue;
+            for ( auto e : leftRing( mesh.topology, f ) )
+                if ( const auto r = mesh.topology.right( e ); !r || r > f || !region->test( r ) )
+                    regionEdges.push_back( e.undirected() );
+        }
+        std::sort( regionEdges.begin(), regionEdges.end() );
+        edge2idx.reserve( regionEdges.size() );
+        for ( int i = 0; i < (int)regionEdges.size(); ++i )
+            edge2idx[regionEdges[i]] = i;
     }
     const int sz = region ? (int)edge2idx.size() : (int)v.size();
     if ( sz <= 0 )
@@ -198,9 +210,8 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
     };
     if ( region )
     {
-        int row = 0;
-        for ( auto ue : regionEdges )
-            addEquation( ue, row++ );
+        for ( int row = 0; row < sz; ++row )
+            addEquation( regionEdges[row], row );
     }
     else
     {
@@ -220,9 +231,9 @@ void updateIndicator( const MeshPart & mp, Vector<float, UndirectedEdgeId> & v, 
     // copy solution back into v
     if ( region )
     {
-        BitSetParallelFor( regionEdges, [&]( UndirectedEdgeId ue )
+        ParallelFor( regionEdges, [&]( size_t i )
         {
-            v[ue] = (float) sol[idxOf( ue )];
+            v[regionEdges[i]] = (float) sol[i];
         } );
     }
     else

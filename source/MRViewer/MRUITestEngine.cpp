@@ -55,7 +55,8 @@ std::string_view imGuiBlockingModalName()
     ImGuiWindow* topModal = ImGui::GetTopMostPopupModal();
     if ( !topModal )
         return {};
-    for ( ImGuiWindow* w = ImGui::GetCurrentWindow(); w; w = w->ParentWindow )
+    // not GetCurrentWindow(): it marks the window as used, so outside of any window ImGui would show its fallback "Debug" window
+    for ( ImGuiWindow* w = ImGui::GetCurrentWindowRead(); w; w = w->ParentWindow )
         if ( w == topModal )
             return {};
     return topModal->Name ? std::string_view{ topModal->Name } : std::string_view{ "<unnamed>" };

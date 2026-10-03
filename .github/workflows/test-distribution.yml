@@ -280,6 +280,10 @@ jobs:
       # GitHub-hosted runners keep the production sudo-into-/Library path so
       # the end-user install scenario is still exercised.
       - name: Install Pkg
+        env:
+          # Keep the formulae already on persistent self-hosted Macs: macOS 12/13 get no
+          # bottles, so an upgrade there compiles from source for hours.
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'
         run: |
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
             sudo installer -pkg meshlib_*.pkg -target /

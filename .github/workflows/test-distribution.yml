@@ -281,9 +281,9 @@ jobs:
       # the end-user install scenario is still exercised.
       - name: Install Pkg
         env:
-          # Keep the formulae already on persistent self-hosted Macs: macOS 12/13 get no
-          # bottles, so an upgrade there compiles from source for hours.
-          HOMEBREW_NO_INSTALL_UPGRADE: '1'
+          HOMEBREW_NO_AUTO_UPDATE: '1'       # don't pull new formulae mid-job
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed keg (no source rebuild on macOS 12/13)
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: |
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
             sudo installer -pkg meshlib_*.pkg -target /

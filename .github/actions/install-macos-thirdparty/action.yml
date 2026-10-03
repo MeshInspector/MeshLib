@@ -10,7 +10,7 @@ inputs:
     required: true
     description: >
       Runner-image identifier baked into the cache key (e.g. `macos-15-intel`,
-      `macos-14`, `self-hosted-arm`). Must match across workflows for the cache
+      `macos-15`, `self-hosted-arm`). Must match across workflows for the cache
       to be shared.
   cache-compiler:
     required: true

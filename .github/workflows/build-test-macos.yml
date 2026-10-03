@@ -64,9 +64,10 @@ jobs:
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases; the app stays on AppleClang.
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
-            # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
-            runner: macos-14
-            instance: macos-14
+            # The .pkg and NuGet bundle brew dylibs that require the macOS they were bottled
+            # for, so distributions are built on the oldest arm64 Mac (macOS 13).
+            runner: ${{ inputs.upload_artifacts && fromJSON('["self-hosted", "macos", "arm64", "macos-13"]') || 'macos-15' }}
+            instance: ${{ inputs.upload_artifacts && 'self-hosted-arm-macos-13' || 'macos-15' }}
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
@@ -345,7 +346,9 @@ jobs:
           source ./wheel_venv/bin/activate
           python3 -m pip install delocate==0.10.7
           python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.dylib
-          ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/libMeshLibC2.dylib
+          for LIB in ./patched_content/lib{MeshLibC2,MeshLibC2Cuda}.dylib ; do
+            ./scripts/nuget_patch/fix_macos_rpath.sh "$LIB"
+          done
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}
@@ -355,3 +358,35 @@ jobs:
           path: ./patched_content/*
           retention-days: 1
           overwrite: true
+
+  macos-nuget-load-test:
+    needs: [ macos-build-test ]
+    if: ${{ inputs.nuget_build_patch }}
+    timeout-minutes: 10
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest macOS per arch: the bundled brew dylibs target the newer build
+        # image, and load here only if they use no system symbol missing on this OS.
+        include:
+          - arch: arm64
+            runner: [ self-hosted, macos, arm64, macos-13 ]
+          - arch: x64
+            runner: [ self-hosted, macos, x64, macos-12-intel ]
+    steps:
+      - name: Download NuGet files
+        uses: actions/download-artifact@v8
+        with:
+          name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
+          path: ${{ runner.temp }}/nuget_runtime
+
+      - name: Load every dylib
+        run: |
+          sw_vers -productVersion
+          FAILED=0
+          for LIB in "$RUNNER_TEMP"/nuget_runtime/*.dylib ; do
+            echo "$LIB"
+            python3 -c 'import ctypes, sys; ctypes.CDLL(sys.argv[1])' "$LIB" || FAILED=1
+          done
+          exit $FAILED

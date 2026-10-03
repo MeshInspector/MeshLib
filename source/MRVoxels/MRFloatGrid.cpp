@@ -2,12 +2,14 @@
 #include "MRVDBFloatGrid.h"
 #include "MRVDBConversions.h"
 #include "MRVDBProgressInterrupter.h"
+#include "MROpenVDBHelper.h"
 
 #include "MRMesh/MRVector3.h"
 #include "MRMesh/MRBitSet.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRTimer.h"
 #include "MRMesh/MRBox.h"
+#include "MRMesh/MRHistogram.h"
 #include "MRPch/MRSpdlog.h"
 
 namespace MR
@@ -104,7 +106,7 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
         try {
             // unlike `openvdb::resampleToMatch`, the size of the voxel for the grid is always 1, the true size of the voxel is stored
             // in volume wrapper
-            dest = openvdb::tools::doLevelSetRebuild( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
+            dest = openvdb::tools::doLevelSetRebuild<openvdb::FloatGrid, openvdb::util::NullInterrupter>( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
             failed = false;
         }
         catch( std::exception& e )
@@ -196,6 +198,11 @@ size_t countVoxelsWithValueGreater( const FloatGrid& grid, float value )
     } );
 }
 
+Histogram calculateHistogram( const FloatGrid& grid, float min, float max, size_t binsNumber, ProgressCallback cb )
+{
+    return calculateHistogram( ovdb( *grid ), min, max, binsNumber, cb );
+}
+
 void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb /*= {} */ )
 {
     if ( !grid )
@@ -212,7 +219,8 @@ void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb 
     };
     ProgressInterrupter interrupter( dummyProgressCb );
 
-    auto filter = openvdb::tools::Filter<openvdb::FloatGrid, openvdb::FloatGrid::ValueConverter<float>::Type, ProgressInterrupter>( ovdb( *grid ), &interrupter );
+    // the interrupter is passed as util::NullInterrupter (its wasInterrupted() is virtual) so that the instantiation prebuilt in OpenVDB is used
+    auto filter = openvdb::tools::Filter<openvdb::FloatGrid, openvdb::FloatGrid::ValueConverter<float>::Type, openvdb::util::NullInterrupter>( ovdb( *grid ), &interrupter );
     filter.gaussian( width, iters );
 }
 
@@ -245,6 +253,23 @@ Box3i findActiveBounds( const FloatGrid& grid )
         return Box3i();
     }
     return fromVdbBox( grid->evalActiveVoxelBoundingBox() );
+}
+
+Vector3i findActiveDims( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return Vector3i();
+    }
+    return fromVdb( grid->evalActiveVoxelDim() );
+}
+
+void setActiveBounds( FloatGrid& grid, const Box3i& box, ProgressCallback cb )
+{
+    if ( !grid )
+        return;
+    setActiveBounds( ovdb( *grid ), box, cb );
 }
 
 void setValue( FloatGrid & grid, const VoxelBitSet& region, float value )
@@ -292,6 +317,43 @@ void setLevelSetType( FloatGrid & grid )
 {
     if ( grid )
         grid->setGridClass( openvdb::GRID_LEVEL_SET );
+}
+
+static_assert( int( FloatGridClass::Unknown ) == int( openvdb::GRID_UNKNOWN ) );
+static_assert( int( FloatGridClass::LevelSet ) == int( openvdb::GRID_LEVEL_SET ) );
+static_assert( int( FloatGridClass::FogVolume ) == int( openvdb::GRID_FOG_VOLUME ) );
+static_assert( int( FloatGridClass::Staggered ) == int( openvdb::GRID_STAGGERED ) );
+static_assert( int( FloatGridClass::Staggered ) + 1 == int( openvdb::NUM_GRID_CLASSES ) );
+
+FloatGridClass getGridClass( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return FloatGridClass::Unknown;
+    }
+    return FloatGridClass( grid->getGridClass() );
+}
+
+void setGridClass( FloatGrid& grid, FloatGridClass gridClass )
+{
+    if ( grid )
+        grid->setGridClass( openvdb::GridClass( gridClass ) );
+}
+
+float background( const FloatGrid& grid )
+{
+    if ( !grid )
+    {
+        assert( false );
+        return 0;
+    }
+    return grid->background();
+}
+
+size_t activeVoxelCount( const FloatGrid& grid )
+{
+    return grid ? grid->activeVoxelCount() : 0;
 }
 
 FloatGrid operator += ( FloatGrid & a, FloatGrid&& b )

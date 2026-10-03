@@ -17,6 +17,7 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MREnumNeighbours.h"
 #include "MRMesh/MRMeshRelax.h"
+#include "MRMesh/MRNormalDenoising.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRFillHoleNicely.h"
@@ -368,6 +369,24 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
     }
 }
 
+void SurfaceManipulationWidget::markSelectedEdgesAsCreases_()
+{
+    MR_TIMER;
+    const auto& topology = obj_->meshPtr()->topology;
+    const auto faces = getIncidentFaces( topology, generalEditingRegion_ );
+    auto creases = obj_->creases();
+    bool changed = false;
+    for ( auto ue : obj_->getSelectedEdges() )
+    {
+        if ( creases.test( ue ) || ( !contains( faces, topology.left( ue ) ) && !contains( faces, topology.right( ue ) ) ) )
+            continue;
+        creases.autoResizeSet( ue );
+        changed = true;
+    }
+    if ( changed )
+        AppendHistory<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, std::move( creases ) );
+}
+
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
 {
     findSpaceDistancesAndVerts( mesh, start, settings_.radius, distances, region, editOnlyCodirectedSurface_, untouchable );
@@ -508,6 +527,9 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( settings_.subdivideGrooves && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
         subdivideAfterAddRemove_();
 
+    if ( settings_.workMode == WorkMode::Relax && settings_.relaxMarkCreases && generalEditingRegion_.any() )
+        markSelectedEdgesAsCreases_();
+
     generalEditingRegion_.clear();
 
     return true;
@@ -627,10 +649,28 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.workMode == WorkMode::Relax )
     {
-        MeshRelaxParams params;
-        params.region = &singleEditingRegion_;
-        params.force = settings_.relaxForce;
-        relax( *obj_->varMesh(), params );
+        if ( settings_.relaxKeepCreases )
+        {
+            auto& mesh = *obj_->varMesh();
+            const auto region = getIncidentFaces( mesh.topology, singleEditingRegion_ );
+            // guideWeight is fitted so that on a mesh without creases the noise is reduced as much as by relax with the same force
+            const DenoiseWithCreasesSettings ds
+            {
+                .gamma = 100,
+                .guideWeight = std::sqrt( 20 * ( 1 - settings_.relaxForce ) / settings_.relaxForce ),
+                .pointIters = 3,
+                .region = &region
+            };
+            meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), ds );
+            generalEditingRegion_ |= singleEditingRegion_;
+        }
+        else
+        {
+            MeshRelaxParams params;
+            params.region = &singleEditingRegion_;
+            params.force = settings_.relaxForce;
+            relax( *obj_->varMesh(), params );
+        }
         obj_->setDirtyFlagsFast( DIRTY_POSITION );
         updateValueChanges_( singleEditingRegion_ );
         return;

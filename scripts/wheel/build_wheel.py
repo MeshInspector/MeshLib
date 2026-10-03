@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import sys
 import re
+import zipfile
 
 from argparse import ArgumentParser
 from string import Template
@@ -197,6 +198,24 @@ def build_wheel():
             next((SOURCE_DIR / "wheelhouse_full").glob("meshlib_core-*.whl")),
             next((SOURCE_DIR / "wheelhouse_core").glob("meshlib_core-*.whl")),
         )
+
+    wheelhouse = (WHEEL_ROOT_DIR if SYSTEM == "Linux" else SOURCE_DIR) / "wheelhouse_core"
+    check_excluded_libraries(sorted(wheelhouse.glob("*.whl")))
+
+
+# Libraries that must not be in the wheels: pip-build.yml builds them with MESHLIB_BUILD_MCP=OFF.
+# Repair tools pack every library a Python module links, so a stray link would bring these back.
+EXCLUDED_LIBRARY_RE = re.compile(r"^(lib)?(MRMcp|fastmcpp)", re.IGNORECASE)
+
+
+def check_excluded_libraries(wheels):
+    assert wheels, "no wheels to check"
+    for wheel in wheels:
+        with zipfile.ZipFile(wheel) as zf:
+            found = [n for n in zf.namelist() if EXCLUDED_LIBRARY_RE.match(n.rsplit("/", 1)[-1])]
+        if found:
+            sys.exit(f"{wheel.name} contains excluded libraries: {found}")
+        print(f"{wheel.name}: no excluded libraries")
 
 
 if __name__ == "__main__":

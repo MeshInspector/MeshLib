@@ -6,6 +6,7 @@
 #include "MRBuffer.h"
 #include "MRParallelFor.h"
 #include "MRRegionBoundary.h"
+#include <algorithm>
 
 namespace MR
 {
@@ -93,6 +94,87 @@ void AABBTree::refit( const Mesh & mesh, const VertBitSet * changedVerts )
         node.box = nodes_[node.l].box;
         node.box.include( nodes_[node.r].box );
     }
+}
+
+void AABBTree::addSplitFaces( const Mesh & mesh, const FaceHashMap & new2Old )
+{
+    MR_TIMER;
+    if ( new2Old.empty() )
+        return;
+    assert( !nodes_.empty() );
+
+    // find the leaf of every split face
+    FaceBitSet splitFaces( mesh.topology.faceSize() );
+    for ( const auto & [newFace, oldFace] : new2Old )
+        splitFaces.set( oldFace );
+    std::vector<FaceId> oldFaces; // in increasing order
+    oldFaces.reserve( splitFaces.count() );
+    for ( auto f : splitFaces )
+        oldFaces.push_back( f );
+    std::vector<NodeId> roots( oldFaces.size() ); // the leaves of split faces become the roots of the subtrees of their parts
+    ParallelFor( nodes_, [&]( NodeId nid )
+    {
+        const auto & node = nodes_[nid];
+        if ( !node.leaf() || !splitFaces.test( node.leafId() ) )
+            return;
+        const auto it = std::lower_bound( oldFaces.begin(), oldFaces.end(), node.leafId() );
+        assert( it != oldFaces.end() && *it == node.leafId() );
+        roots[it - oldFaces.begin()] = nid;
+    } );
+
+    // every new face turns the current leaf of its split face into a node with the leaves of both faces;
+    // the new nodes are appended, so children have larger ids than their parents as in a constructed tree
+    const auto firstNewNode = nodes_.endId();
+    nodes_.reserve( nodes_.size() + 2 * new2Old.size() );
+    auto leaves = roots; // current leaves of split faces
+    for ( const auto & [newFace, oldFace] : new2Old )
+    {
+        auto & leaf = leaves[std::lower_bound( oldFaces.begin(), oldFaces.end(), oldFace ) - oldFaces.begin()];
+        if ( !leaf )
+        {
+            assert( false ); // the split face is not in this tree
+            continue;
+        }
+        const auto l = nodes_.endId();
+        const auto r = l + 1;
+        nodes_.resize( nodes_.size() + 2 );
+        nodes_[l].setLeafId( oldFace );
+        nodes_[r].setLeafId( newFace );
+        nodes_[leaf].l = l;
+        nodes_[leaf].r = r;
+        leaf = l;
+    }
+
+    // the boxes of the new nodes from the leaves, and then of the roots
+    auto updateBox = [&]( NodeId nid )
+    {
+        auto & node = nodes_[nid];
+        if ( node.leaf() )
+            node.box = computeFaceBox( mesh, node.leafId() );
+        else
+        {
+            node.box = nodes_[node.l].box;
+            node.box.include( nodes_[node.r].box );
+        }
+    };
+    for ( auto nid = nodes_.backId(); nid >= firstNewNode; --nid )
+        updateBox( nid );
+    bool grown = false; // whether the subtree of some split face is not inside the box of its old leaf
+    for ( auto root : roots )
+    {
+        if ( !root )
+            continue;
+        const auto oldBox = nodes_[root].box; // still the box of the old leaf
+        updateBox( root );
+        grown = grown || !oldBox.contains( nodes_[root].box );
+    }
+
+    // only a new vertex outside the box of its split face (e.g. due to rounding) makes the boxes of the ancestors to grow,
+    // then update all not-leaf nodes from the last to the root as in refit()
+    if ( grown )
+        for ( auto nid = nodes_.backId(); nid; --nid )
+            if ( !nodes_[nid].leaf() )
+                updateBox( nid );
 }
 
 template auto AABBTreeBase<FaceTreeTraits3>::getSubtrees( int minNum ) const -> std::vector<NodeId>;

@@ -104,7 +104,7 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
         try {
             // unlike `openvdb::resampleToMatch`, the size of the voxel for the grid is always 1, the true size of the voxel is stored
             // in volume wrapper
-            dest = openvdb::tools::doLevelSetRebuild( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
+            dest = openvdb::tools::doLevelSetRebuild<openvdb::FloatGrid, openvdb::util::NullInterrupter>( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
             failed = false;
         }
         catch( std::exception& e )
@@ -212,7 +212,8 @@ void gaussianFilter( FloatGrid& grid, int width, int iters, ProgressCallback cb 
     };
     ProgressInterrupter interrupter( dummyProgressCb );
 
-    auto filter = openvdb::tools::Filter<openvdb::FloatGrid, openvdb::FloatGrid::ValueConverter<float>::Type, ProgressInterrupter>( ovdb( *grid ), &interrupter );
+    // the interrupter is passed as util::NullInterrupter (its wasInterrupted() is virtual) so that the instantiation prebuilt in OpenVDB is used
+    auto filter = openvdb::tools::Filter<openvdb::FloatGrid, openvdb::FloatGrid::ValueConverter<float>::Type, openvdb::util::NullInterrupter>( ovdb( *grid ), &interrupter );
     filter.gaussian( width, iters );
 }
 

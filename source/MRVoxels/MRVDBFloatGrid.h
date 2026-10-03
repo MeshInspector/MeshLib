@@ -6,6 +6,7 @@
 #include "MRMesh/MRBox.h"
 
 #include "MRPch/MROpenVDB.h"
+#include "MRVDBInstantiations.h"
 #include "MRPch/MRBindingMacros.h"
 
 namespace MR

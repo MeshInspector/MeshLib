@@ -52,6 +52,12 @@
     <ClCompile Include="MRTetrisNesting.cpp" />
     <ClCompile Include="MRToolPath.cpp" />
     <ClCompile Include="MRVDBConversions.cpp" />
+    <ClCompile Include="MRVDBInstantiationsGridTools.cpp">
+      <IncludeInUnityFile>false</IncludeInUnityFile>
+    </ClCompile>
+    <ClCompile Include="MRVDBInstantiationsMeshToVolume.cpp">
+      <IncludeInUnityFile>false</IncludeInUnityFile>
+    </ClCompile>
     <ClCompile Include="MRVolumeSegment.cpp" />
     <ClCompile Include="MRVoxelGraphCut.cpp" />
     <ClCompile Include="MRVoxelPath.cpp" />
@@ -96,6 +102,7 @@
     <ClInclude Include="MRToolPath.h" />
     <ClInclude Include="MRVDBConversions.h" />
     <ClInclude Include="MRVDBFloatGrid.h" />
+    <ClInclude Include="MRVDBInstantiations.h" />
     <ClInclude Include="MRVDBProgressInterrupter.h" />
     <ClInclude Include="MRVolumeInterpolation.h" />
     <ClInclude Include="MRVolumeSegment.h" />

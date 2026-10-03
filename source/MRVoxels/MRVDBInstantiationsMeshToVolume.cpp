@@ -1,0 +1,2 @@
+#define MR_VDB_DEFINE_MESH_TO_VOLUME_INSTANTIATIONS
+#include "MRVDBInstantiations.h"

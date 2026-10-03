@@ -113,6 +113,7 @@ runs:
             thirdparty/mrbind-pybind11 \
             thirdparty/tinygltf \
             thirdparty/laz-perf \
+            thirdparty/draco \
             thirdparty/clip \
             thirdparty/fastmcpp
           shasum -a 256 \
@@ -124,7 +125,8 @@ runs:
             requirements/macos.txt
         } | shasum -a 256 | cut -c1-16)" >> "$GITHUB_OUTPUT"
 
-    # Cache only the final outputs (./lib + ./include). Intermediates like
+    # Cache only the final outputs (./lib + ./include + ./share, e.g. Draco's
+    # share/cmake/draco config). Intermediates like
     # ./thirdparty_build (which holds *.o, CMake metadata, etc.) are NOT
     # cached -- they get rebuilt on a miss and discarded on a hit.
     # Bump the `cache-prefix` input to manually invalidate.
@@ -135,6 +137,7 @@ runs:
         path: |
           lib
           include
+          share
         key: ${{ inputs.cache-prefix }}-${{ inputs.cache-instance }}-${{ inputs.cache-compiler }}-${{ steps.cache-keys.outputs.thirdparty-hash }}
 
     # Always run: cached thirdparty .dylibs link against brew libs at runtime,

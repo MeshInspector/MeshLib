@@ -1,6 +1,7 @@
 project(MRIOExtras CXX)
 
 option(MRIOEXTRAS_NO_CTM "Disable OpenCTM support" OFF)
+option(MRIOEXTRAS_NO_DRACO "Disable Google Draco support (.drc and compressed glTF)" OFF)
 option(MRIOEXTRAS_NO_E57 "Disable E57 support" OFF)
 option(MRIOEXTRAS_NO_GLTF "Disable glTF support" OFF)
 option(MRIOEXTRAS_NO_JPEG "Disable JPEG support" OFF)
@@ -41,6 +42,13 @@ IF(NOT MRIOEXTRAS_NO_CTM)
     HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
   )
   target_link_libraries(${PROJECT_NAME} PRIVATE OpenCTM::OpenCTM)
+ENDIF()
+
+IF(NOT MRIOEXTRAS_NO_DRACO)
+  find_package(draco CONFIG REQUIRED
+    HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE draco::draco)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_E57)

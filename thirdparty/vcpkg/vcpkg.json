@@ -18,6 +18,7 @@
         "boost-stacktrace",
         "boost-url",
         "cpr",
+        "draco",
         "eigen3",
         "fastmcpp",
         "freetype",

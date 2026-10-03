@@ -5,6 +5,7 @@ SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
 SUBMODULES=(
     thirdparty/clip
     thirdparty/cpp-httplib
+    thirdparty/draco
     thirdparty/eigen
     thirdparty/expected
     thirdparty/fastmcpp

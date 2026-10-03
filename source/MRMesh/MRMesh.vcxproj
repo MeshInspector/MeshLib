@@ -72,6 +72,7 @@
     <ClInclude Include="MREnumNeighbours.h" />
     <ClInclude Include="MRFewSmallest.h" />
     <ClInclude Include="MRFilterCreaseEdges.h" />
+    <ClInclude Include="MRChamferEdges.h" />
     <ClInclude Include="MRImproveSampling.h" />
     <ClInclude Include="MRIterativeSampling.h" />
     <ClInclude Include="MRLevelOfDetails.h" />
@@ -570,6 +571,7 @@
     <ClCompile Include="MRFillContours2D.cpp" />
     <ClCompile Include="MRFillHoleNicely.cpp" />
     <ClCompile Include="MRFilterCreaseEdges.cpp" />
+    <ClCompile Include="MRChamferEdges.cpp" />
     <ClCompile Include="MRFixSelfIntersections.cpp" />
     <ClCompile Include="MRGcodeProcessor.cpp" />
     <ClCompile Include="MRGcodeLoad.cpp" />

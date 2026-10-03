@@ -25,3 +25,24 @@ def test_numpy_voxels():
     assert npArray.shape[0] == params.vol.dimensions.x
     assert npArray.shape[1] == params.vol.dimensions.y
     assert npArray.shape[2] == params.vol.dimensions.z
+
+
+def test_numpy_voxel_bitset():
+    dims = mrmesh.Vector3i(3, 4, 5)
+    arr = np.zeros((dims.x, dims.y, dims.z), dtype=bool)
+    arr[1, 2, 3] = True
+    arr[2, 0, 4] = True
+    indexer = mrmesh.VolumeIndexer(dims)
+
+    bs = mrmeshnumpy.voxelBitSetFrom3Darray(arr)
+    assert bs.size() == indexer.size()
+    assert bs.count() == 2
+    assert bs.test(indexer.toVoxelId(mrmesh.Vector3i(1, 2, 3)))
+    assert bs.test(indexer.toVoxelId(mrmesh.Vector3i(2, 0, 4)))
+
+    assert np.array_equal(mrmeshnumpy.getNumpy3Darray(bs, dims), arr)
+    # non-contiguous input
+    assert np.array_equal(mrmeshnumpy.getNumpy3Darray(mrmeshnumpy.voxelBitSetFrom3Darray(arr[::-1]), dims), arr[::-1])
+
+    flat = mrmeshnumpy.voxelBitSetFromBools(arr.ravel(order="F"))
+    assert flat == bs

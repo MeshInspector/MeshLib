@@ -1,5 +1,6 @@
 #include "MRMeshToDistanceVolume.h"
 #include "MRVDBConversions.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRTimer.h"
@@ -9,6 +10,8 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
+#include "MRPch/MROpenVDB.h"
+#include "MRPch/MRTBB.h"
 #include <tuple>
 
 namespace MR
@@ -110,6 +113,36 @@ Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const Cl
         if ( anythingWithinCloseDist )
             res.data.set( i );
     }, params.vol.cb ) )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
+Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params )
+{
+    MR_TIMER;
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+        return unexpected( "Only closed mesh can be converted to inside volume" );
+
+    // SimpleVolume and VdbVolume are shifted on half voxel relative one another, see also VoxelsVolumeAccessor::shift()
+    const auto grid = meshToLevelSet( mp, AffineXf3f::translation( -params.origin - 0.5f * params.voxelSize ),
+        params.voxelSize, 0.5f, subprogress( params.cb, 0.0f, 0.8f ) );
+    if ( !grid )
+        return unexpectedOperationCanceled();
+
+    SimpleBinaryVolume res;
+    res.voxelSize = params.voxelSize;
+    res.dims = params.dimensions;
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size(), false );
+
+    tbb::enumerable_thread_specific accessorPerThread( grid->getConstAccessor() );
+    if ( !BitSetParallelForAll( res.data, [&] ( VoxelId i )
+    {
+        const auto pos = indexer.toPos( i );
+        if ( accessorPerThread.local().getValue( openvdb::Coord( pos.x, pos.y, pos.z ) ) < 0 )
+            res.data.set( i );
+    }, subprogress( params.cb, 0.8f, 1.0f ) ) )
         return unexpectedOperationCanceled();
 
     return res;

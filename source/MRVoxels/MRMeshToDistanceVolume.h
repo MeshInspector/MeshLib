@@ -39,6 +39,11 @@ struct CloseToMeshVolumeParams
 /// makes a binary volume with close-to-surface predicate values according to the given parameters
 MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const CloseToMeshVolumeParams& params );
 
+/// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
+/// it is computed by OpenVDB in a narrow band of half a voxel, so it is much faster and smaller than
+/// meshToDistanceVolume followed by thresholding at zero
+MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
+
 /// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part
 MRVOXELS_API Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,

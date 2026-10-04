@@ -12,6 +12,7 @@
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRLine.h"
+#include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <tuple>
 
@@ -137,10 +138,10 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
     // guarantee that every ray crosses the closed surface an even number of times;
     // each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
     mp.mesh.getAABBTree();
+    tbb::enumerable_thread_specific<std::vector<float>> hitsPerThread;
     const size_t numRows = size_t( res.dims.y ) * res.dims.z;
-    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, [&] ( size_t chunk )
+    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<float> & hits )
     {
-        std::vector<float> hits;
         for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
         {
             const auto y = int( row % res.dims.y );

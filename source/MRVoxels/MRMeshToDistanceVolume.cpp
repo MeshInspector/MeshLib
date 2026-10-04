@@ -134,35 +134,39 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
         return res;
 
     // one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
-    // guarantee that every ray crosses the closed surface an even number of times
+    // guarantee that every ray crosses the closed surface an even number of times;
+    // each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
     mp.mesh.getAABBTree();
-    std::vector<std::vector<float>> rowHits( size_t( res.dims.y ) * res.dims.z );
-    if ( !ParallelFor( size_t( 0 ), rowHits.size(), [&] ( size_t row )
+    const size_t numRows = size_t( res.dims.y ) * res.dims.z;
+    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, [&] ( size_t chunk )
     {
-        const auto y = int( row % res.dims.y );
-        const auto z = int( row / res.dims.y );
-        const Vector3d start( params.origin.x,
-            params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
-            params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
-        auto & hits = rowHits[row];
-        rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
+        std::vector<float> hits;
+        for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
         {
-            hits.push_back( isec.distanceAlongLine );
-            return true;
-        }, -DBL_MAX, DBL_MAX );
-        std::sort( hits.begin(), hits.end() );
-    }, subprogress( params.cb, 0.0f, 0.8f ) ) )
-        return unexpectedOperationCanceled();
+            const auto y = int( row % res.dims.y );
+            const auto z = int( row / res.dims.y );
+            const Vector3d start( params.origin.x,
+                params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
+                params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
+            hits.clear();
+            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
+            {
+                hits.push_back( isec.distanceAlongLine );
+                return true;
+            }, -DBL_MAX, DBL_MAX );
+            std::sort( hits.begin(), hits.end() );
 
-    // a voxel is inside if an odd number of intersections precede its center on the row's ray
-    if ( !BitSetParallelForAll( res.data, [&] ( VoxelId i )
-    {
-        const auto x = int( i % res.dims.x );
-        const auto & hits = rowHits[i / res.dims.x];
-        const auto t = float( ( x + 0.5 ) * params.voxelSize.x );
-        if ( ( std::upper_bound( hits.begin(), hits.end(), t ) - hits.begin() ) % 2 == 1 )
-            res.data.set( i );
-    }, subprogress( params.cb, 0.8f, 1.0f ) ) )
+            // voxels with centers between an odd intersection and the next one are inside
+            const auto firstVoxel = [&] ( float t ) { return std::clamp( (int)std::ceil( t / params.voxelSize.x - 0.5 ), 0, res.dims.x ); };
+            for ( size_t i = 0; i + 1 < hits.size(); i += 2 )
+            {
+                const auto xBeg = firstVoxel( hits[i] );
+                const auto xEnd = firstVoxel( hits[i + 1] );
+                if ( xBeg < xEnd )
+                    res.data.set( VoxelId( row * res.dims.x + xBeg ), xEnd - xBeg, true );
+            }
+        }
+    }, params.cb ) )
         return unexpectedOperationCanceled();
 
     return res;

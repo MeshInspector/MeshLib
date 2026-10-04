@@ -40,8 +40,8 @@ struct CloseToMeshVolumeParams
 MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const CloseToMeshVolumeParams& params );
 
 /// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
-/// it is computed by OpenVDB in a narrow band of half a voxel, so it is much faster and smaller than
-/// meshToDistanceVolume followed by thresholding at zero
+/// it casts one ray per row of voxels and counts the intersections with precise predicates,
+/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero
 MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
 
 /// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);

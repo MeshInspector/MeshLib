@@ -330,9 +330,10 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                         MeshIntersectionResult found;
                         found.proj.face = face;
                         found.proj.point = findTriangleSegmentIntersectionPrecise( m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id], dP, eP, { convToInt,convToFloat } );
-                        found.distanceAlongLine = dot( found.proj.point - Vector3f( line.p ), Vector3f( line.d ) );
-                        if ( found.distanceAlongLine < rayEnd && found.distanceAlongLine > rayStart )
+                        const auto t = dot( Vector3d( found.proj.point ) - line.p, line.d ) / line.d.lengthSq();
+                        if ( t < rayEnd && t > rayStart )
                         {
+                            found.distanceAlongLine = float( t );
                             found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
                             if ( !callback( found ) )
                                 return;

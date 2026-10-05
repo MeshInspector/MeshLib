@@ -3,15 +3,15 @@ find_program(MSGFMT_EXECUTABLE
   PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/gettext/bin" ${GETTEXT_ROOT} $ENV{GETTEXT_ROOT}
   PATH_SUFFIXES bin
 )
-option(MR_REQUIRE_TRANSLATIONS "Fail the configuration if msgfmt is not found" OFF)
 
+# REQUIRED: fail the configuration if msgfmt is not found (otherwise translations are skipped with a warning)
 function(mr_add_translations TARGET_NAME)
-  if(MSGFMT_EXECUTABLE)
-    set(options "")
-    set(oneValueArgs "")
-    set(multiValueArgs DOMAINS PATHS)
-    cmake_parse_arguments(LOCALE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+  set(options REQUIRED)
+  set(oneValueArgs "")
+  set(multiValueArgs DOMAINS PATHS)
+  cmake_parse_arguments(LOCALE "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
 
+  if(MSGFMT_EXECUTABLE)
     if(EMSCRIPTEN)
       set(ASSETS_OUTPUT_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
     else()
@@ -70,7 +70,7 @@ function(mr_add_translations TARGET_NAME)
         DESTINATION ${MR_RESOURCES_DIR}/locale
       )
     endif(MO_OUTPUT_FILES)
-  elseif(MR_REQUIRE_TRANSLATIONS)
+  elseif(LOCALE_REQUIRED)
     message(FATAL_ERROR "msgfmt not found, cannot build translations of ${TARGET_NAME}: install gettext or set GETTEXT_ROOT")
   else()
     message(WARNING "msgfmt not found, translations of ${TARGET_NAME} are skipped: install gettext or set GETTEXT_ROOT")

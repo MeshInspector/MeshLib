@@ -19,24 +19,25 @@ struct WeightedVertex
 ///   v0 - the value in org( e ) \n
 ///   v1 - the value in dest( e ) \n
 ///   v2 - the value in dest( next( e ) )
-struct MeshTriPoint
+template <typename T>
+struct MeshTriPointT
 {
     EdgeId e; ///< left face of this edge is considered
     /// barycentric coordinates
     /// \details a in [0,1], a=0 => point is on next( e ) edge, a=1 => point is in dest( e )
     /// b in [0,1], b=0 => point is on e edge, b=1 => point is in dest( next( e ) )
     /// a+b in [0,1], a+b=0 => point is in org( e ), a+b=1 => point is on prev( e.sym() ) edge
-    TriPointf bary;
+    TriPoint<T> bary;
 
-    [[nodiscard]] MeshTriPoint() = default;
-    [[nodiscard]] MeshTriPoint( NoInit ) : e( noInit ), bary( noInit ) { }
-    [[nodiscard]] MeshTriPoint( EdgeId e, TriPointf bary ) : e( e ), bary( bary ) { }
-    [[nodiscard]] MeshTriPoint( const MeshEdgePoint & ep ) : e( ep.e ), bary( ep.a, 0 ) { }
-    [[nodiscard]] MeshTriPoint( const MeshTopology & topology, VertId v ) : MeshTriPoint( MeshEdgePoint( topology, v ) ) { }
+    [[nodiscard]] MeshTriPointT() = default;
+    [[nodiscard]] MeshTriPointT( NoInit ) : e( noInit ), bary( noInit ) { }
+    [[nodiscard]] MeshTriPointT( EdgeId e, TriPoint<T> bary ) : e( e ), bary( bary ) { }
+    [[nodiscard]] MeshTriPointT( const MeshEdgePoint & ep ) : e( ep.e ), bary( T( ep.a ), 0 ) { }
+    [[nodiscard]] MeshTriPointT( const MeshTopology & topology, VertId v ) : MeshTriPointT( MeshEdgePoint( topology, v ) ) { }
 
     /// given a point coordinates computes its barycentric coordinates
-    template< typename T >
-    [[nodiscard]] MeshTriPoint( EdgeId e, const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2 ) : e( e ), bary( p, v0, v1, v2 ) { }
+    template< typename U >
+    [[nodiscard]] MeshTriPointT( EdgeId e, const Vector3<U> & p, const Vector3<U> & v0, const Vector3<U> & v1, const Vector3<U> & v2 ) : e( e ), bary( p, v0, v1, v2 ) { }
 
     /// returns valid vertex id if the point is in vertex, otherwise returns invalid id
     [[nodiscard]] MRMESH_API VertId inVertex( const MeshTopology & topology ) const;
@@ -59,19 +60,19 @@ struct MeshTriPoint
     [[nodiscard]] explicit operator bool() const { return e.valid(); }
 
     /// represents the same point relative to next edge in the same triangle
-    [[nodiscard]] MRMESH_API MeshTriPoint lnext( const MeshTopology & topology ) const;
+    [[nodiscard]] MRMESH_API MeshTriPointT lnext( const MeshTopology & topology ) const;
 
     /// represents the same point relative to the topology.edgeWithLeft( topology.left( e ) )
-    [[nodiscard]] MRMESH_API MeshTriPoint canonical( const MeshTopology & topology ) const;
+    [[nodiscard]] MRMESH_API MeshTriPointT canonical( const MeshTopology & topology ) const;
 
     /// returns three weighted triangle's vertices with the sum of not-negative weights equal to 1, and the largest weight in the closest vertex
     [[nodiscard]] MRMESH_API std::array<WeightedVertex, 3> getWeightedVerts( const MeshTopology & topology ) const;
 
     /// linearly interpolates the values given in vertices to find the field's value at this point
-    [[nodiscard]] MRMESH_API float interpolate( const MeshTopology & topology, const VertScalars & field ) const;
+    [[nodiscard]] MRMESH_API T interpolate( const MeshTopology & topology, const VertScalars & field ) const;
 
     /// returns true if two points are equal including equal not-unique representation
-    [[nodiscard]] bool operator==( const MeshTriPoint& rhs ) const = default;
+    [[nodiscard]] bool operator==( const MeshTriPointT& rhs ) const = default;
 };
 
 /// \related MeshTriPoint

@@ -4,7 +4,8 @@
 namespace MR
 {
 
-VertId MeshTriPoint::inVertex( const MeshTopology & topology ) const
+template <typename T>
+VertId MeshTriPointT<T>::inVertex( const MeshTopology & topology ) const
 {
     switch( bary.inVertex() )
     {
@@ -18,21 +19,23 @@ VertId MeshTriPoint::inVertex( const MeshTopology & topology ) const
     return {};
 }
 
-MeshEdgePoint MeshTriPoint::onEdge( const MeshTopology & topology ) const
+template <typename T>
+MeshEdgePoint MeshTriPointT<T>::onEdge( const MeshTopology & topology ) const
 {
     switch( bary.onEdge() )
     {
     case 0: // if ( a + b + eps >= 1 )
-        return MeshEdgePoint{ topology.prev( e.sym() ), bary.b };
+        return MeshEdgePoint{ topology.prev( e.sym() ), float( bary.b ) };
     case 1: // a <= eps
-        return MeshEdgePoint{ topology.next( e ).sym(), 1 - bary.b };
+        return MeshEdgePoint{ topology.next( e ).sym(), float( 1 - bary.b ) };
     case 2: // b <= eps
-        return MeshEdgePoint{ e, bary.a };
+        return MeshEdgePoint{ e, float( bary.a ) };
     }
     return {};
 }
 
-bool MeshTriPoint::isBd( const MeshTopology & topology, const FaceBitSet * region ) const
+template <typename T>
+bool MeshTriPointT<T>::isBd( const MeshTopology & topology, const FaceBitSet * region ) const
 {
     if ( auto v = inVertex( topology ) )
         return topology.isBdVertex( v, region );
@@ -41,7 +44,8 @@ bool MeshTriPoint::isBd( const MeshTopology & topology, const FaceBitSet * regio
     return false;
 }
 
-bool MeshTriPoint::fromTriangle( const MeshTopology & topology, FaceId f ) const
+template <typename T>
+bool MeshTriPointT<T>::fromTriangle( const MeshTopology & topology, FaceId f ) const
 {
     if ( auto v = inVertex( topology ) )
     {
@@ -54,18 +58,20 @@ bool MeshTriPoint::fromTriangle( const MeshTopology & topology, FaceId f ) const
     return topology.left( e ) == f;
 }
 
-MeshTriPoint MeshTriPoint::lnext( const MeshTopology & topology ) const
+template <typename T>
+MeshTriPointT<T> MeshTriPointT<T>::lnext( const MeshTopology & topology ) const
 {
-    MeshTriPoint res;
+    MeshTriPointT res;
     res.e = topology.prev( e.sym() );
     res.bary = bary.lnext();
     return res;
 }
 
-MeshTriPoint MeshTriPoint::canonical( const MeshTopology & topology ) const
+template <typename T>
+MeshTriPointT<T> MeshTriPointT<T>::canonical( const MeshTopology & topology ) const
 {
     const auto e0 = topology.edgeWithLeft( topology.left( e ) );
-    MeshTriPoint res = *this;
+    MeshTriPointT res = *this;
     for ( int i = 0; i < 2 && res.e != e0; ++i )
     {
         res = res.lnext( topology );
@@ -74,24 +80,29 @@ MeshTriPoint MeshTriPoint::canonical( const MeshTopology & topology ) const
     return res;
 }
 
-std::array<WeightedVertex, 3> MeshTriPoint::getWeightedVerts( const MeshTopology & topology ) const
+template <typename T>
+std::array<WeightedVertex, 3> MeshTriPointT<T>::getWeightedVerts( const MeshTopology & topology ) const
 {
     return
     {
-        WeightedVertex{ topology.org( e ), 1 - bary.a - bary.b },
-        WeightedVertex{ topology.dest( e ), bary.a },
-        WeightedVertex{ topology.dest( topology.next( e ) ), bary.b }
+        WeightedVertex{ topology.org( e ), float( 1 - bary.a - bary.b ) },
+        WeightedVertex{ topology.dest( e ), float( bary.a ) },
+        WeightedVertex{ topology.dest( topology.next( e ) ), float( bary.b ) }
     };
 }
 
-float MeshTriPoint::interpolate( const MeshTopology & topology, const VertScalars & field ) const
+template <typename T>
+T MeshTriPointT<T>::interpolate( const MeshTopology & topology, const VertScalars & field ) const
 {
-    float res = 0;
+    T res = 0;
     for ( const auto & wv : getWeightedVerts( topology ) )
         if ( wv.weight > 0 )
             res += wv.weight * field[wv.v];
     return res;
 }
+
+template struct MeshTriPointT<float>;
+template struct MeshTriPointT<double>;
 
 bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs )
 {

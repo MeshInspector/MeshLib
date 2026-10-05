@@ -497,7 +497,10 @@ struct FaceFace;
 struct UndirectedEdgeUndirectedEdge;
 struct PointOnFace;
 struct PointOnObject;
-struct MeshTriPoint;
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MeshTriPointT,
+    ( MeshTriPoint,  MeshTriPointT<float>  )
+    ( MeshTriPointd, MeshTriPointT<double> )
+)
 struct MeshProjectionResult;
 struct CoordinateConverters;
 struct MeshIntersectionResult;

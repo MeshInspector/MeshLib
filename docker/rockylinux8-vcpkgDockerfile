@@ -9,8 +9,13 @@ COPY scripts/retry.sh /usr/local/bin/retry.sh
 
 RUN <<EOF
     set -e
-    # don't install excess dependencies
-    echo "install_weak_deps=false" >> /etc/dnf/dnf.conf
+    cat >> /etc/dnf/dnf.conf <<'DNF'
+# don't install excess dependencies
+install_weak_deps=false
+# drop slow mirrors
+minrate=1M
+fastestmirror=True
+DNF
     # configure CUDA repo
     case "$(uname -m)" in
         x86_64)  CUDA_REPO_ARCH=x86_64 ;;
@@ -21,11 +26,7 @@ RUN <<EOF
     retry.sh -- dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel8/${CUDA_REPO_ARCH}/cuda-rhel8.repo
     retry.sh -- dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
     retry.sh -- dnf -y install --enablerepo powertools \
-        $(: gcc-toolset-13-gcc-c++ provides the libstdc++ headers that the PGO
-           clang picks by default -- clang 22 scans /opt/rh only up to
-           gcc-toolset-13, see Gnu.cpp GCCInstallationDetector.
-           Product builds keep pinning --gcc-install-dir to toolset-11 ) \
-        git cmake gcc-toolset-11 gcc-toolset-13-gcc-c++ ninja-build \
+        git cmake gcc-toolset-11 ninja-build \
         $(: minimal CUDA toolkit - nvcc, cudart ) \
         cuda-nvcc-12-0 cuda-cudart-devel-12-0 cuda-driver-devel-12-0 cuda-cuxxfilt-12-0 \
         $(: vcpkg requirements ) \

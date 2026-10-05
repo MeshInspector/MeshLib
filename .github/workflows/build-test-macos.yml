@@ -152,7 +152,7 @@ jobs:
 
       - name: Create virtualenv
         run: |
-          python3.10 -m venv .venv
+          python3.12 -m venv .venv
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
 
@@ -225,7 +225,7 @@ jobs:
           make -f scripts/mrbind/generate.mk \
             -B --trace \
             MODE=none \
-            PYTHON_PKGCONF_NAME=python-3.10-embed \
+            PYTHON_PKGCONF_NAME=python-3.12-embed \
             MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
 
       - name: Run Start-and-Exit Tests
@@ -345,7 +345,7 @@ jobs:
           source ./wheel_venv/bin/activate
           python3 -m pip install delocate==0.10.7
           python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.dylib
-          ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/libMeshLibC2.dylib
+          ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/lib{MeshLibC2,MeshLibC2Cuda}.dylib
 
       - name: Upload NuGet files to Artifacts
         if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' }}

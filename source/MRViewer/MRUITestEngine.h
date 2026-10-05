@@ -24,6 +24,9 @@ struct EntryAttributes
 {
     // Non-empty marks the widget as disabled with this reason. Only read during the call.
     std::string_view disabledReason;
+
+    // If true, the entry stays enabled while a modal popup is open, e.g. for a value registered outside of any window
+    bool ignoreBlockingModal = false;
 };
 
 namespace detail

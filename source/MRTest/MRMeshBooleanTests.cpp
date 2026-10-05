@@ -14,6 +14,7 @@
 #include <MRMesh/MRIntersectionContour.h>
 #include <MRMesh/MRAABBTree.h>
 #include <MRMesh/MRConstants.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <tuple>
@@ -273,6 +274,36 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
 
         EXPECT_TRUE( boolean( sphere, sphere, BooleanOperation::DifferenceAB, &xf ).valid() );
     }
+}
+
+// findCollidingEdgeTrisPrecise for given edges and triangles finds the same intersections as the search in whole meshes
+TEST( MRMesh, CollidingEdgeTrisPreciseOfGivenPrimitives )
+{
+    const Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
+    const auto xf = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), 0.1f ) );
+    const auto conv = getVectorConverters( mesh, mesh, &xf );
+    std::vector<EdgeTri> edgesATrisB, edgesBTrisA;
+    for ( const auto & et : findCollidingEdgeTrisPrecise( mesh, mesh, conv.toInt, &xf ) )
+        ( et.isEdgeATriB() ? edgesATrisB : edgesBTrisA ).push_back( et.edgeTri() );
+    ASSERT_GT( edgesATrisB.size(), 100 );
+    ASSERT_GT( edgesBTrisA.size(), 100 );
+
+    std::vector<EdgeId> edges;
+    for ( auto ue : undirectedEdges( mesh.topology ) )
+        edges.emplace_back( ue );
+    std::vector<FaceId> tris;
+    for ( auto t : mesh.topology.getValidFaces() )
+        tris.push_back( t );
+    auto sorted = []( const std::vector<EdgeTri> & ets )
+    {
+        std::vector<std::pair<int, int>> res;
+        for ( const auto & et : ets )
+            res.emplace_back( int( et.edge ), int( et.tri ) );
+        std::sort( res.begin(), res.end() );
+        return res;
+    };
+    EXPECT_EQ( sorted( findCollidingEdgeTrisPrecise( mesh, edges, mesh, tris, conv.toInt, &xf ) ), sorted( edgesATrisB ) );
+    EXPECT_EQ( sorted( findCollidingEdgeTrisPrecise( mesh, tris, mesh, edges, conv.toInt, &xf ) ), sorted( edgesBTrisA ) );
 }
 
 // after splits of faces and edges in both meshes, updateCollidingEdgeTrisPrecise finds the same intersections as new search

@@ -93,13 +93,15 @@ MRMESH_API void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
 MRMESH_API std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp,
     ConvertToIntVector conv, bool anyIntersection = false, const AffineXf3f* rigidB2A = nullptr, int aVertSizes = 0 );
 
-/// finds all intersections between every given edge from A and given triangles from B
+/// finds all intersections between every given edge from A and given triangles from B;
+/// each edge is checked only with the triangles having intersecting int boxes, found by AABB tree of given triangles
 MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
     const Mesh & a, const std::vector<EdgeId> & edgesA,
     const Mesh & b, const std::vector<FaceId> & facesB,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A = nullptr );
 
-/// finds all intersections between every given triangle from A and given edge from B
+/// finds all intersections between every given triangle from A and given edge from B;
+/// each edge is checked only with the triangles having intersecting int boxes, found by AABB tree of given triangles
 MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
     const Mesh & a, const std::vector<FaceId> & facesA,
     const Mesh & b, const std::vector<EdgeId> & edgesB,

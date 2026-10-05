@@ -3,6 +3,8 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshIntersect.h>
 #include <MRMesh/MRLine3.h>
+#include <MRMesh/MRCube.h>
+#include <MRMesh/MREdgeIterator.h>
 
 namespace MR
 {
@@ -35,6 +37,35 @@ TEST(MRMesh, MeshIntersect)
     EXPECT_TRUE( isect2 );
     EXPECT_NEAR( isect2.distanceAlongLine, -0.9f, 0.05f );
     EXPECT_NEAR( isect2.proj.point.x, -1.f, 0.05f );
+}
+
+TEST( MRMesh, MeshIntersectAllPrecise )
+{
+    auto countHits = [] ( const Mesh & mesh, const Line3d & line )
+    {
+        int numHits = 0;
+        rayMeshIntersectAll( mesh, line, [&numHits] ( const MeshIntersectionResult & ) { ++numHits; return true; }, -DBL_MAX, DBL_MAX );
+        return numHits;
+    };
+
+    // the face of the cube at x=0 lies in the plane of the bounding box, and the segment's end clipped by the box must not land on it
+    const auto cube1 = makeCube( Vector3f::diagonal( 1 ), Vector3f::diagonal( -1 ) );
+    EXPECT_EQ( countHits( cube1, Line3d( Vector3d( -2, -0.3, -0.6 ), Vector3d::plusX() ) ), 2 );
+
+    // the ray passes the vertex in the center of the face x=-0.5 closer than the step of integer coordinates,
+    // and the triangle below the vertex must not be culled
+    auto cube2 = makeCube();
+    for ( auto ue : undirectedEdges( cube2.topology ) )
+    {
+        const auto a = cube2.orgPnt( ue );
+        const auto b = cube2.destPnt( ue );
+        if ( a.x == -0.5f && b.x == -0.5f && ( a - b ).length() > 1.1f )
+        {
+            cube2.splitEdge( ue );
+            break;
+        }
+    }
+    EXPECT_EQ( countHits( cube2, Line3d( Vector3d( -1, 0, 1e-12 ), Vector3d::plusX() ) ), 2 );
 }
 
 } //namespace MR

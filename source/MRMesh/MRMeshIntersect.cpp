@@ -276,9 +276,31 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
     if( tree.nodes().empty() )
         return;
 
+    // the double version decides every intersection precisely in integer coordinates of the segment's ends and triangle's vertices;
+    // all boxes are expanded more than the rounding of the points to float and then to integers, otherwise
+    // 1) a segment's end clipped by the root box can get exactly on a face lying in the plane of the box,
+    //    and simulation-of-simplicity can put this end inside the mesh, losing the crossing of that face,
+    // 2) a box can be culled although its triangle is touched by the segment in integer coordinates
+    [[maybe_unused]] T boxExpansion = 0;
+    if constexpr ( std::is_same_v<T, double> )
+    {
+        const auto& rootBox = tree[tree.rootNodeId()].box;
+        const auto size = rootBox.size();
+        const float maxAbsCoord = std::max( { -rootBox.min.x, -rootBox.min.y, -rootBox.min.z, rootBox.max.x, rootBox.max.y, rootBox.max.z } );
+        // the integer grid has about 2^31 steps along the largest dimension of the box
+        boxExpansion = 4.0 * FLT_EPSILON * maxAbsCoord + 1e-8 * std::max( { size.x, size.y, size.z } );
+    }
+    auto nodeBox = [&] ( NodeId n ) -> Box3<T>
+    {
+        if constexpr ( std::is_same_v<T, double> )
+            return Box3d( tree[n].box ).expanded( Vector3d::diagonal( boxExpansion ) );
+        else
+            return tree[n].box;
+    };
+
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( Box3<T>{ tree[tree.rootNodeId()].box }, rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( nodeBox( tree.rootNodeId() ), rayOrigin, s, e, prec ) )
     {
         return;
     }
@@ -294,8 +316,8 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
 
     if constexpr ( std::is_same_v<T, double> )
     {
-        convToInt = getToIntConverter( Box3d( tree[tree.rootNodeId()].box ) );
-        convToFloat = getToFloatConverter( Box3d( tree[tree.rootNodeId()].box ) );
+        convToInt = getToIntConverter( nodeBox( tree.rootNodeId() ) );
+        convToFloat = getToFloatConverter( nodeBox( tree.rootNodeId() ) );
         dP = Vector3f( line( s ) );
         eP = Vector3f( line( e ) );
         pvc[3].pt = convToInt( dP );
@@ -362,12 +384,12 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
         else
         {
             s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( Box3<T>{ tree[node.l].box }, rayOrigin, s, e, prec ) )
+            if( rayBoxIntersect( nodeBox( node.l ), rayOrigin, s, e, prec ) )
             {
                 nodesStack[++currentNode] = node.l;
             }
             s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( Box3<T>{ tree[node.r].box }, rayOrigin, s, e, prec ) )
+            if( rayBoxIntersect( nodeBox( node.r ), rayOrigin, s, e, prec ) )
             {
                 nodesStack[++currentNode] = node.r;
             }

@@ -3,6 +3,7 @@ find_program(MSGFMT_EXECUTABLE
   PATHS "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/gettext/bin" ${GETTEXT_ROOT} $ENV{GETTEXT_ROOT}
   PATH_SUFFIXES bin
 )
+option(MR_REQUIRE_TRANSLATIONS "Fail the configuration if msgfmt is not found" OFF)
 
 function(mr_add_translations TARGET_NAME)
   if(MSGFMT_EXECUTABLE)
@@ -69,5 +70,9 @@ function(mr_add_translations TARGET_NAME)
         DESTINATION ${MR_RESOURCES_DIR}/locale
       )
     endif(MO_OUTPUT_FILES)
+  elseif(MR_REQUIRE_TRANSLATIONS)
+    message(FATAL_ERROR "msgfmt not found, cannot build translations of ${TARGET_NAME}: install gettext or set GETTEXT_ROOT")
+  else()
+    message(WARNING "msgfmt not found, translations of ${TARGET_NAME} are skipped: install gettext or set GETTEXT_ROOT")
   endif(MSGFMT_EXECUTABLE)
 endfunction(mr_add_translations)

@@ -141,6 +141,11 @@ TEST( MRMesh, MeshToDistanceVolumeOddCrossings )
         if ( std::abs( torusDist ) < 0.01f )
             continue;
         EXPECT_EQ( vol->data[i] < 0, torusDist < 0 );
+
+        // the same as from the ray of signedDistanceToMesh for this voxel
+        const auto signedDist = signedDistanceToMesh( torus, center, params.dist );
+        ASSERT_TRUE( signedDist.has_value() );
+        EXPECT_EQ( vol->data[i], *signedDist );
         ++numChecked;
         if ( torusDist < 0 )
             ++numInside;

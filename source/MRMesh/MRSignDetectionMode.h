@@ -19,7 +19,7 @@ enum class SignDetectionMode
 
     /// a point is inside if the surface is crossed an odd number of times on the way from the point to infinity, triangle orientation is ignored
     /// (as InsideMeshRule::OddCrossings in makeInsideMeshVolume); does not support holes in mesh;
-    /// it casts one ray per row of voxels, so it is supported only for whole volumes (e.g. meshToDistanceVolume), not in signedDistanceToMesh;
+    /// signedDistanceToMesh casts a ray from every point, while the volume functions (e.g. meshToDistanceVolume) cast one ray per row of voxels, which is much faster;
     /// this mode does NOT have CUDA acceleration at this moment
     OddCrossings,
     WindingRule [[deprecated( "use OddCrossings instead" )]] = OddCrossings, ///< old name of OddCrossings

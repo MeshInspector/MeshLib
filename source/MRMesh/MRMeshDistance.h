@@ -33,7 +33,7 @@ MRMESH_API void processCloseTriangles( const MeshPart& mp, const Triangle3f & t,
 
 /// computes signed distance from point (p) to mesh part (mp) following options (op);
 /// returns std::nullopt if distance is smaller than op.minDist or larger than op.maxDist (except for op.signMode == HoleWindingRule);
-/// op.signMode == OpenVDB or OddCrossings is not supported here, they find the signs in whole volumes, see meshToDistanceVolume
+/// for op.signMode == OddCrossings it casts a ray from the point; for all points of a grid, meshToDistanceVolume is much faster, since it casts one ray per row of voxels
 [[nodiscard]] MRMESH_API std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op );
 
 /// \}

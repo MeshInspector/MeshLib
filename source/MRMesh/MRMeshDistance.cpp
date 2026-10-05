@@ -3,6 +3,8 @@
 #include "MRInplaceStack.h"
 #include "MRMesh.h"
 #include "MRTriDist.h"
+#include "MRLine3.h"
+#include "MRMeshIntersect.h"
 #include "MRTimer.h"
 
 namespace MR
@@ -10,7 +12,7 @@ namespace MR
 
 std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op )
 {
-    assert( op.signMode != SignDetectionMode::OpenVDB && op.signMode != SignDetectionMode::OddCrossings ); // these modes are only for whole volumes
+    assert( op.signMode != SignDetectionMode::OpenVDB );
 
     auto minDistSq = op.minDistSq;
     auto maxDistSq = op.maxDistSq;
@@ -34,6 +36,16 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
         if ( !mp.mesh.isOutsideByProjNorm( p, proj, mp.region ) )
             dist = -dist;
         break;
+
+    case SignDetectionMode::OddCrossings:
+    {
+        const Line3d ray( Vector3d( p ), Vector3d::plusX() );
+        int count = 0;
+        rayMeshIntersectAll( mp, ray, [&count] ( auto&& ) { ++count; return true; } );
+        if ( count % 2 == 1 ) // inside
+            dist = -dist;
+        break;
+    }
 
     case SignDetectionMode::HoleWindingRule:
         assert( !mp.region );

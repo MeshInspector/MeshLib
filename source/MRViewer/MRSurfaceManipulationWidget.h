@@ -44,21 +44,25 @@ public:
     /// Mesh change settings
     struct Settings
     {
+        // common settings
         WorkMode workMode = WorkMode::Add;
         float radius = 1.f; ///< radius of editing region
 
+        // Relax mode
         float relaxForce = 0.2f; ///< speed of relaxing, typical values (0 - 0.5]
         bool relaxKeepCreases = false; ///< if true in Relax mode, the selected edges and creases of the mesh are kept sharp (meshDenoiseWithCreases is used instead of relax)
         float relaxNormalsSmoothing = 100.f; ///< if relaxKeepCreases, the amount of smoothing of face normals between creases (gamma in meshDenoiseWithCreases)
         int relaxPointIters = 3; ///< if relaxKeepCreases, the number of iterations to update vertex coordinates from smoothed normals
         bool relaxMarkCreases = true; ///< if true and relaxKeepCreases, then on mouse up in Relax mode the selected edges in the smoothed area become creases
 
+        // Add and Remove modes
         float editForce = 1.f; ///< material thickness added or removed to the surface
         float sharpness = 50.f; ///< effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
         bool laplacianBasedAddRemove = false; ///< if true in Add/Remove modes, the modification will be done using Laplacian solver, where the closest vertices will be attracted toward mouse cursor to form ideal ridges or grooves
         bool subdivideGrooves = false; ///< if true in Add/Remove modes, changed parts of mesh will be subdivided on mouse up
 
+        // Laplacian and Patch modes
         EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
         VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
         bool mimicPatch = false; ///< if true in Patch mode mixes `CloseSurfaceFillMetric` and disables smoothing

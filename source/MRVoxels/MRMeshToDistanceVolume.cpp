@@ -159,7 +159,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     {
         insideVoxels = std::make_shared<VoxelBitSet>();
         auto volParams = params.vol;
-        volParams.cb = {};
+        volParams.cb = {}; // the rays take little time compared to the distances, so they report no progress and cannot be canceled
         findVoxelsInside( mp, volParams, InsideMeshRule::OddCrossings, *insideVoxels );
         distOp.signMode = SignDetectionMode::Unsigned;
     }
@@ -173,8 +173,12 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
             auto dist = signedDistanceToMesh( mp, voxelCenter, distOp );
             if ( !dist )
                 return cQuietNan;
-            if ( insideVoxels && insideVoxels->test( indexer.toVoxelId( pos ) ) )
-                return -*dist;
+            if ( insideVoxels )
+            {
+                assert( indexer.isInDims( pos ) ); // the signs are found only for the voxels of the volume
+                if ( insideVoxels->test( indexer.toVoxelId( pos ) ) )
+                    return -*dist;
+            }
             return *dist;
         },
         .dims = params.vol.dimensions,

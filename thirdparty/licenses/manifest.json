@@ -636,7 +636,7 @@
         "type": "submodule",
         "path": "thirdparty/fastmcpp"
       },
-      "version": "796319c06f9bfc296cbcc31540f0b18e3ca344fb"
+      "version": "8672ea18c7db97515447863e18f81e2d74332ff0"
     },
     {
       "id": "cpp-httplib",

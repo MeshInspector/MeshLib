@@ -158,7 +158,6 @@ void updatePointPairs( PointPairs & pairs,
     const auto srcNormals = src.obj.normals();
     const auto tgtNormals = tgt.obj.normals();
 
-    const auto srcWeights = src.obj.weights();
     const auto srcLimProjector = src.obj.limitedProjector();
     const auto tgtLimProjector = tgt.obj.limitedProjector();
 
@@ -198,7 +197,7 @@ void updatePointPairs( PointPairs & pairs,
         // save the result
         PointPair vp = res;
         vp.distSq = prj.distSq;
-        vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
+        vp.weight = 1.0f; // a grid sample represents the same area independently of its vertex triangles
         vp.tgtCloseVert = prj.closestVert;
         vp.srcPoint = src.xf( p0 );
         vp.tgtPoint = tgt.xf( p1 );

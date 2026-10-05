@@ -290,6 +290,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
     ConvertToIntVector convToInt;
     ConvertToFloatVector convToFloat;
     Vector3f dP, eP;
+    [[maybe_unused]] double invDirLenSq = 0;
     std::array<PreciseVertCoords, 5> pvc;
 
     if constexpr ( std::is_same_v<T, double> )
@@ -302,6 +303,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
         pvc[3].id = VertId( m.topology.vertSize() );
         pvc[4].pt = convToInt( eP );
         pvc[4].id = pvc[3].id + 1;
+        invDirLenSq = 1 / line.d.lengthSq();
     }
 
     while( currentNode >= 0 )
@@ -330,9 +332,10 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                         MeshIntersectionResult found;
                         found.proj.face = face;
                         found.proj.point = findTriangleSegmentIntersectionPrecise( m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id], dP, eP, { convToInt,convToFloat } );
-                        found.distanceAlongLine = dot( found.proj.point - Vector3f( line.p ), Vector3f( line.d ) );
-                        if ( found.distanceAlongLine < rayEnd && found.distanceAlongLine > rayStart )
+                        const auto t = dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq;
+                        if ( t < rayEnd && t > rayStart )
                         {
+                            found.distanceAlongLine = float( t );
                             found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
                             if ( !callback( found ) )
                                 return;

@@ -6,19 +6,18 @@
 #include "MRTimer.h"
 #include "MRParallelFor.h"
 #include "MRProcessSelfTreeSubtasks.h"
-#include <array>
 
 namespace MR
 {
 
-PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b, 
+namespace
+{
+
+/// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
+PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTree & aTree, const MeshPart & b, const AABBTree & bTree,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
 {
-    MR_TIMER;
-
     PreciseCollisionResult res;
-    const AABBTree & aTree = a.mesh.getAABBTree();
-    const AABBTree & bTree = b.mesh.getAABBTree();
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
@@ -269,112 +268,31 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     return res;
 }
 
-std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
-    const Mesh & a, const std::vector<EdgeId> & edgesA,
+} //anonymous namespace
+
+PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b,
+    ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
+{
+    MR_TIMER;
+    return findCollidingEdgeTrisPrecise( a, a.mesh.getAABBTree(), b, b.mesh.getAABBTree(), conv, rigidB2A, anyIntersection );
+}
+
+PreciseCollisionResult findCollidingEdgeTrisPrecise(
+    const Mesh & a, const std::vector<FaceId> & facesA,
     const Mesh & b, const std::vector<FaceId> & facesB,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A )
 {
-    using EdgePreciseCoords = std::array<PreciseVertCoords, 2>;
-    std::vector<EdgePreciseCoords> edgeACoords( edgesA.size() );
-    for ( int i = 0; i < edgesA.size(); ++i )
-    {
-        EdgeId eA = edgesA[i];
-        auto & avc = edgeACoords[i];
-        avc[0].id = a.topology.org( eA );
-        avc[0].pt = conv( a.points[avc[0].id] );
-        avc[1].id = a.topology.dest( eA );
-        avc[1].pt = conv( a.points[avc[1].id] );
-    }
-
-    const int aVertsSize = (int)a.topology.vertSize();
-    using TriPreciseCoords = std::array<PreciseVertCoords, 3>;
-    std::vector<TriPreciseCoords> faceBCoords( facesB.size() );
-    for ( int i = 0; i < facesB.size(); ++i )
-    {
-        FaceId fB = facesB[i];
-        auto & bvc = faceBCoords[i];
-        b.topology.getTriVerts( fB, bvc[0].id, bvc[1].id, bvc[2].id );
-
-        for ( int j = 0; j < 3; ++j )
-        {
-            const auto bf = b.points[bvc[j].id];
-            bvc[j].pt = conv( rigidB2A ? (*rigidB2A)( bf ) : bf );
-            bvc[j].id += aVertsSize;
-        }
-    }
-
-    std::vector<EdgeTri> res;
-    for ( int i = 0; i < edgesA.size(); ++i )
-    {
-        EdgeId eA = edgesA[i];
-        const auto & avc = edgeACoords[i];
-        for ( int j = 0; j < facesB.size(); ++j )
-        {
-            FaceId fB = facesB[j];
-            const auto & bvc = faceBCoords[j];
-            auto isect = doTriangleSegmentIntersect( { bvc[0], bvc[1], bvc[2], avc[0], avc[1] } );
-            if ( !isect )
-                continue;
-            res.emplace_back( isect.dIsLeftFromABC ? eA : eA.sym(), fB );
-        }
-    }
-
-    return res;
-}
-
-std::vector<EdgeTri> findCollidingEdgeTrisPrecise(
-    const Mesh & a, const std::vector<FaceId> & facesA,
-    const Mesh & b, const std::vector<EdgeId> & edgesB,
-    ConvertToIntVector conv, const AffineXf3f * rigidB2A )
-{
-    using TriPreciseCoords = std::array<PreciseVertCoords, 3>;
-    std::vector<TriPreciseCoords> faceACoords( facesA.size() );
-    for ( int i = 0; i < facesA.size(); ++i )
-    {
-        FaceId fA = facesA[i];
-        auto & avc = faceACoords[i];
-        a.topology.getTriVerts( fA, avc[0].id, avc[1].id, avc[2].id );
-        for ( int j = 0; j < 3; ++j )
-        {
-            const auto af = a.points[avc[j].id];
-            avc[j].pt = conv( af );
-        }
-    }
-
-    const int aVertsSize = (int)a.topology.vertSize();
-    using EdgePreciseCoords = std::array<PreciseVertCoords, 2>;
-    std::vector<EdgePreciseCoords> edgeBCoords( edgesB.size() );
-    for ( int i = 0; i < edgesB.size(); ++i )
-    {
-        EdgeId eB = edgesB[i];
-        auto & bvc = edgeBCoords[i];
-        bvc[0].id = b.topology.org( eB );
-        bvc[1].id = b.topology.dest( eB );
-        for ( int j = 0; j < 2; ++j )
-        {
-            const auto bf = b.points[bvc[j].id];
-            bvc[j].pt = conv( rigidB2A ? (*rigidB2A)( bf ) : bf );
-            bvc[j].id += aVertsSize;
-        }
-    }
-
-    std::vector<EdgeTri> res;
-    for ( int i = 0; i < facesA.size(); ++i )
-    {
-        FaceId fA = facesA[i];
-        const auto & avc = faceACoords[i];
-        for ( int j = 0; j < edgesB.size(); ++j )
-        {
-            EdgeId eB = edgesB[j];
-            const auto & bvc = edgeBCoords[j];
-            auto isect = doTriangleSegmentIntersect( { avc[0], avc[1], avc[2], bvc[0], bvc[1] } );
-            if ( !isect )
-                continue;
-            res.emplace_back( isect.dIsLeftFromABC ? eB : eB.sym(), fA );
-        }
-    }
-
-    return res;
+    MR_TIMER;
+    FaceBitSet regionA( a.topology.faceSize() );
+    for ( auto f : facesA )
+        regionA.set( f );
+    FaceBitSet regionB( b.topology.faceSize() );
+    for ( auto f : facesB )
+        regionB.set( f );
+    const MeshPart mpA{ a, &regionA };
+    const MeshPart mpB{ b, &regionB };
+    // the trees of given triangles only
+    return findCollidingEdgeTrisPrecise( mpA, AABBTree( mpA ), mpB, AABBTree( mpB ), conv, rigidB2A, false );
 }
 
 

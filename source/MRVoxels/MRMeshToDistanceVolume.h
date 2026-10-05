@@ -46,6 +46,13 @@ MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart&
 /// enclosed cavities stay empty, nested layers alternate inside and outside, and overlapping parts of a self-intersecting surface cancel each other
 MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
 
+/// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
+/// it is computed by OpenVDB in a narrow band of half a voxel, 15-30 times slower than makeInsideMeshVolume
+/// (512^3 voxels and 2.6M triangles on a 12-core Ryzen 9 3900X: 1.3-2.8 s vs 0.08 s);
+/// inside are all voxels separated from infinity by the surface, ignoring triangle orientation: enclosed cavities and the space
+/// between nested layers are filled, and overlapping parts of a self-intersecting surface are united
+MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolumeVdb( const MeshPart& mp, const DistanceVolumeParams& params );
+
 /// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part
 MRVOXELS_API Expected<SimpleVolumeMinMax> meshRegionToIndicatorVolume( const Mesh& mesh, const FaceBitSet& region,

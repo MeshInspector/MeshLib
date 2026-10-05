@@ -42,23 +42,26 @@ TEST( MRMesh, MakeInsideMeshVolume )
     params.origin = Vector3f::diagonal( -1.5f );
     params.voxelSize = Vector3f::diagonal( 0.1f );
     params.dimensions = Vector3i::diagonal( 30 );
-    const auto vol = makeInsideMeshVolume( sphere, params );
-    ASSERT_TRUE( vol.has_value() );
-    EXPECT_EQ( vol->dims, params.dimensions );
-
-    const VolumeIndexer indexer( vol->dims );
-    int numChecked = 0;
-    for ( size_t n = 0; n < indexer.size(); ++n )
+    for ( auto makeInside : { &makeInsideMeshVolume, &makeInsideMeshVolumeVdb } )
     {
-        const VoxelId i( n );
-        const auto center = params.origin + mult( params.voxelSize, Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f ) );
-        const auto r = center.length();
-        if ( std::abs( r - 1.0f ) < 0.02f )
-            continue; // too close to the surface approximated by triangles
-        EXPECT_EQ( vol->data.test( i ), r < 1.0f );
-        ++numChecked;
+        const auto vol = makeInside( sphere, params );
+        ASSERT_TRUE( vol.has_value() );
+        EXPECT_EQ( vol->dims, params.dimensions );
+
+        const VolumeIndexer indexer( vol->dims );
+        int numChecked = 0;
+        for ( size_t n = 0; n < indexer.size(); ++n )
+        {
+            const VoxelId i( n );
+            const auto center = params.origin + mult( params.voxelSize, Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f ) );
+            const auto r = center.length();
+            if ( std::abs( r - 1.0f ) < 0.02f )
+                continue; // too close to the surface approximated by triangles
+            EXPECT_EQ( vol->data.test( i ), r < 1.0f );
+            ++numChecked;
+        }
+        EXPECT_GT( numChecked, 25000 );
     }
-    EXPECT_GT( numChecked, 25000 );
 }
 
 } //namespace MR

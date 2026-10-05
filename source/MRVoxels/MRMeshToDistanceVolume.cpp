@@ -161,9 +161,9 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
                 params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
                 params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
             hits.clear();
-            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
+            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec, bool fromFront )
             {
-                hits.push_back( { isec.distanceAlongLine, isec.fromFront ? 1 : -1 } );
+                hits.push_back( { isec.distanceAlongLine, fromFront ? 1 : -1 } );
                 return true;
             }, -DBL_MAX, DBL_MAX );
             std::sort( hits.begin(), hits.end(), [] ( const Hit & a, const Hit & b ) { return a.t < b.t; } );

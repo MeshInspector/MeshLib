@@ -129,7 +129,6 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     {
         res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
         res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
-        res.fromFront = dot( Vector3<T>( m.dirDblArea( res.proj.face ) ), line.d ) < 0;
     }
     return res;
 }
@@ -264,14 +263,10 @@ MultiMeshIntersectionResult rayMultiMeshAnyIntersect( const std::vector<Line3dMe
     return rayMultiMeshAnyIntersect_( lineMeshes, rayStart, rayEnd );
 }
 
-template<typename T>
-void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshIntersectionCallback callback,
+template<typename T, typename F>
+void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && callback,
     T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */, const IntersectionPrecomputes<T>& prec )
 {
-    assert( callback );
-    if ( !callback )
-        return;
-
     const auto& m = meshPart.mesh;
     const auto& tree = m.getAABBTree();
     if( tree.nodes().empty() )
@@ -330,13 +325,13 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                     {
                         MeshIntersectionResult found;
                         found.proj.face = face;
-                        found.fromFront = !isect.dIsLeftFromABC; // segment start pvc[3] is behind the triangle if dIsLeftFromABC
                         found.proj.point = findTriangleSegmentIntersectionPrecise( m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id], dP, eP, { convToInt,convToFloat } );
                         found.distanceAlongLine = dot( found.proj.point - Vector3f( line.p ), Vector3f( line.d ) );
                         if ( found.distanceAlongLine < rayEnd && found.distanceAlongLine > rayStart )
                         {
                             found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
-                            if ( !callback( found ) )
+                            // segment start pvc[3] is behind the triangle if dIsLeftFromABC
+                            if ( !callback( found, !isect.dIsLeftFromABC ) )
                                 return;
                         }
                     }
@@ -355,8 +350,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                         found.proj.point = Vector3f( line( triIsect->t ) );
                         found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
                         found.distanceAlongLine = float( triIsect->t );
-                        found.fromFront = dot( cross( vB - vA, vC - vA ), line.d ) < 0;
-                        if ( !callback( found ) )
+                        if ( !callback( found, dot( cross( vB - vA, vC - vA ), line.d ) < 0 ) )
                             return;
                     }
                 }
@@ -381,20 +375,37 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
 void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& line, MeshIntersectionCallback callback,
     float rayStart, float rayEnd, const IntersectionPrecomputes<float>* prec )
 {
+    assert( callback );
+    if ( !callback )
+        return;
+    const auto cb = [&callback] ( const MeshIntersectionResult & found, bool ) { return callback( found ); };
     if( prec )
     {
-        return rayMeshIntersectAll_<float>( meshPart, line, callback, rayStart, rayEnd, *prec );
+        return rayMeshIntersectAll_<float>( meshPart, line, cb, rayStart, rayEnd, *prec );
     }
     else
     {
         const IntersectionPrecomputes<float> precNew( line.d );
-        return rayMeshIntersectAll_<float>( meshPart, line, callback, rayStart, rayEnd, precNew );
+        return rayMeshIntersectAll_<float>( meshPart, line, cb, rayStart, rayEnd, precNew );
     }
 }
 
 void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
     double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec )
 {
+    assert( callback );
+    if ( !callback )
+        return;
+    rayMeshIntersectAll( meshPart, line, [&callback] ( const MeshIntersectionResult & found, bool ) { return callback( found ); },
+        rayStart, rayEnd, prec );
+}
+
+void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionWithSideCallback callback,
+    double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec )
+{
+    assert( callback );
+    if ( !callback )
+        return;
     if( prec )
     {
         return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, *prec );

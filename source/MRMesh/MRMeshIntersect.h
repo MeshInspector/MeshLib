@@ -25,10 +25,6 @@ struct MeshIntersectionResult
     /// stores the distance from ray origin to the intersection point in direction units
     float distanceAlongLine = 0;
 
-    /// true if the ray crosses the triangle from its front side (where the triangle's normal points) to its back,
-    /// i.e. enters a closed mesh with outward normals
-    bool fromFront = false;
-
     /// check for validity
     explicit operator bool() const { return proj.face.valid(); }
 };
@@ -113,6 +109,17 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& lin
     float rayStart = 0.0f, float rayEnd = FLT_MAX, const IntersectionPrecomputes<float>* prec = nullptr );
 /// Same as \ref rayMeshIntersectAllF, but use double precision
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
+    double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
+
+/// this callback is envoked for each encountered ray-mesh intersection,
+/// fromFront is true if the ray crosses the triangle from its front side (where the triangle's normal points) to its back,
+/// i.e. enters a closed mesh with outward normals;
+/// if it returns false, then the search immediately terminates
+using MeshIntersectionWithSideCallback = std::function<bool( const MeshIntersectionResult &, bool fromFront )>;
+/// Same as ef rayMeshIntersectAllF in double precision, also reporting the side from which the ray crosses each triangle;
+/// both the intersections and the sides are decided by precise predicates, so for a closed mesh
+/// every infinite ray has the same number of crossings from front and from back
+MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionWithSideCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
 
 /// given mesh part and arbitrary plane, outputs

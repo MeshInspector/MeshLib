@@ -478,6 +478,8 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), EdgeSegmentT,
     ( EdgeSegment,  EdgeSegmentT<float>  )
     ( EdgeSegmentd, EdgeSegmentT<double> )
 )
+using EdgePointf = EdgePointT<float>;
+using EdgeSegmentf = EdgeSegmentT<float>;
 using MeshEdgePoint = EdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;
 using SurfacePaths = std::vector<SurfacePath>;

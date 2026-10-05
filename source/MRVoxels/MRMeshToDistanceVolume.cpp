@@ -19,6 +19,58 @@
 namespace MR
 {
 
+namespace
+{
+
+/// sets the bits of the voxels, which centers have odd number of mesh crossings on the ray from them in +X direction;
+/// one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
+/// guarantee that every ray crosses a closed surface an even number of times;
+/// each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
+bool findVoxelsInside( const MeshPart& mp, const DistanceVolumeParams& params, VoxelBitSet& res )
+{
+    const auto& dims = params.dimensions;
+    res.clear();
+    if ( dims.x <= 0 || dims.y <= 0 || dims.z <= 0 )
+        return true;
+    res.resize( VolumeIndexer( dims ).size(), false );
+
+    mp.mesh.getAABBTree();
+    tbb::enumerable_thread_specific<std::vector<float>> hitsPerThread;
+    const size_t numRows = size_t( dims.y ) * dims.z;
+    return ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<float> & hits )
+    {
+        for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
+        {
+            const auto y = int( row % dims.y );
+            const auto z = int( row / dims.y );
+            const Vector3d start( params.origin.x,
+                params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
+                params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
+            hits.clear();
+            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
+            {
+                hits.push_back( isec.distanceAlongLine );
+                return true;
+            }, -DBL_MAX, DBL_MAX );
+            std::sort( hits.begin(), hits.end() );
+
+            // voxels with centers between hits[j-1] and hits[j] have ( n - j ) intersections to the right,
+            // and they are inside if this number is odd
+            const auto firstVoxel = [&] ( float t ) { return std::clamp( (int)std::ceil( t / params.voxelSize.x - 0.5 ), 0, dims.x ); };
+            const auto n = hits.size();
+            for ( size_t j = 1 - n % 2; j < n; j += 2 )
+            {
+                const auto xBeg = j == 0 ? 0 : firstVoxel( hits[j - 1] );
+                const auto xEnd = firstVoxel( hits[j] );
+                if ( xBeg < xEnd )
+                    res.set( VoxelId( row * dims.x + xBeg ), xEnd - xBeg, true );
+            }
+        }
+    }, params.cb );
+}
+
+} // anonymous namespace
+
 Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER;
@@ -81,14 +133,30 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
         mp.mesh.getDipoles();
 
+    // instead of a ray from every voxel, the signs of all voxels are found by one ray per row of voxels
+    std::shared_ptr<VoxelBitSet> insideVoxels;
+    auto distOp = params.dist;
+    if ( distOp.signMode == SignDetectionMode::WindingRule )
+    {
+        insideVoxels = std::make_shared<VoxelBitSet>();
+        auto volParams = params.vol;
+        volParams.cb = {};
+        findVoxelsInside( mp, volParams, *insideVoxels );
+        distOp.signMode = SignDetectionMode::Unsigned;
+    }
+
     return FunctionVolume
     {
-        .data = [params, mp] ( const Vector3i& pos ) -> float
+        .data = [params, distOp, mp, insideVoxels, indexer = VolumeIndexer( params.vol.dimensions )] ( const Vector3i& pos ) -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto dist = signedDistanceToMesh( mp, voxelCenter, params.dist );
-            return dist ? *dist : cQuietNan;
+            auto dist = signedDistanceToMesh( mp, voxelCenter, distOp );
+            if ( !dist )
+                return cQuietNan;
+            if ( insideVoxels && insideVoxels->test( indexer.toVoxelId( pos ) ) )
+                return -*dist;
+            return *dist;
         },
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize
@@ -129,45 +197,7 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
     SimpleBinaryVolume res;
     res.voxelSize = params.voxelSize;
     res.dims = params.dimensions;
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size(), false );
-    if ( res.dims.x <= 0 || res.dims.y <= 0 || res.dims.z <= 0 )
-        return res;
-
-    // one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
-    // guarantee that every ray crosses the closed surface an even number of times;
-    // each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
-    mp.mesh.getAABBTree();
-    tbb::enumerable_thread_specific<std::vector<float>> hitsPerThread;
-    const size_t numRows = size_t( res.dims.y ) * res.dims.z;
-    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<float> & hits )
-    {
-        for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
-        {
-            const auto y = int( row % res.dims.y );
-            const auto z = int( row / res.dims.y );
-            const Vector3d start( params.origin.x,
-                params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
-                params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
-            hits.clear();
-            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
-            {
-                hits.push_back( isec.distanceAlongLine );
-                return true;
-            }, -DBL_MAX, DBL_MAX );
-            std::sort( hits.begin(), hits.end() );
-
-            // voxels with centers between an odd intersection and the next one are inside
-            const auto firstVoxel = [&] ( float t ) { return std::clamp( (int)std::ceil( t / params.voxelSize.x - 0.5 ), 0, res.dims.x ); };
-            for ( size_t i = 0; i + 1 < hits.size(); i += 2 )
-            {
-                const auto xBeg = firstVoxel( hits[i] );
-                const auto xEnd = firstVoxel( hits[i + 1] );
-                if ( xBeg < xEnd )
-                    res.data.set( VoxelId( row * res.dims.x + xBeg ), xEnd - xBeg, true );
-            }
-        }
-    }, params.cb ) )
+    if ( !findVoxelsInside( mp, params, res.data ) )
         return unexpectedOperationCanceled();
 
     return res;

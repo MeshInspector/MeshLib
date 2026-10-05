@@ -4,6 +4,7 @@
 #include "MRVoxels/MRMeshToDistanceVolume.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRMeshDistance.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRMesh.h"
 #include <gtest/gtest.h>
@@ -59,6 +60,35 @@ TEST( MRMesh, MakeInsideMeshVolume )
         ++numChecked;
     }
     EXPECT_GT( numChecked, 25000 );
+}
+
+TEST( MRMesh, MeshToDistanceVolumeWindingRule )
+{
+    const auto torus = makeTorus( 1.0f, 0.4f, 64, 32 );
+    MeshToDistanceVolumeParams params;
+    params.vol.origin = Vector3f( -1.5f, -1.5f, -0.5f );
+    params.vol.voxelSize = Vector3f::diagonal( 0.05f );
+    params.vol.dimensions = Vector3i( 60, 60, 20 );
+    params.dist.signMode = SignDetectionMode::WindingRule;
+    const auto vol = meshToDistanceVolume( torus, params );
+    ASSERT_TRUE( vol.has_value() );
+
+    // the signs are found by one ray per row of voxels, and must be the same as from a ray per voxel
+    const VolumeIndexer indexer( vol->dims );
+    int numNegative = 0;
+    for ( size_t n = 0; n < indexer.size(); ++n )
+    {
+        const VoxelId i( n );
+        const auto center = params.vol.origin + mult( params.vol.voxelSize, Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f ) );
+        const auto dist = signedDistanceToMesh( torus, center, params.dist );
+        ASSERT_TRUE( dist.has_value() );
+        if ( std::abs( *dist ) < 1e-4f )
+            continue; // the sign of a point on the surface is uncertain
+        EXPECT_EQ( vol->data[i], *dist );
+        if ( *dist < 0 )
+            ++numNegative;
+    }
+    EXPECT_GT( numNegative, 5000 );
 }
 
 } //namespace MR

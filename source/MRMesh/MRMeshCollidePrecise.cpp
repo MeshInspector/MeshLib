@@ -431,7 +431,12 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
                 edges.set( e.undirected() );
         std::erase_if( res, [&]( const VarEdgeTri & et )
         {
-            return et.isEdgeATriB() == inA ? edges.test( et.edge.undirected() ) : tris.test( et.tri() );
+            // both tests without a branch on the kind of the record, which alternates unpredictably:
+            // the test of the ids of the other mesh is masked out
+            const bool byEdge = et.isEdgeATriB() == inA;
+            const bool edgeHit = edges.test( et.edge.undirected() );
+            const bool triHit = tris.test( et.tri() );
+            return ( byEdge & edgeHit ) | ( !byEdge & triHit );
         } );
 
         // and find them again: the intersections of these triangles and their edges with the whole other mesh,

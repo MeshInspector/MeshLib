@@ -43,11 +43,11 @@ jobs:
             frameworks: net10.0
           - rid: osx-x64
             arch: x64
-            runner: macos-15-intel
+            runner: macos-12-intel
             frameworks: net10.0
           - rid: osx-arm64
             arch: ARM64
-            runner: macos-15
+            runner: macos-13
             frameworks: net10.0
     timeout-minutes: 30
     env:

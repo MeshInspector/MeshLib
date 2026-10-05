@@ -40,11 +40,17 @@ struct CloseToMeshVolumeParams
 MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const CloseToMeshVolumeParams& params );
 
 /// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
-/// it is computed by OpenVDB in a narrow band of half a voxel, so it is much faster and smaller than
-/// meshToDistanceVolume followed by thresholding at zero;
+/// it casts one ray per row of voxels and counts the intersections with precise predicates,
+/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero;
+/// a voxel is inside if the surface is crossed an odd number of times on the way from it to infinity, ignoring triangle orientation:
+/// enclosed cavities stay empty, nested layers alternate inside and outside, and overlapping parts of a self-intersecting surface cancel each other
+MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
+
+/// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
+/// it is computed by OpenVDB in a narrow band of half a voxel, slower than makeInsideMeshVolume;
 /// inside are all voxels separated from infinity by the surface, ignoring triangle orientation: enclosed cavities and the space
 /// between nested layers are filled, and overlapping parts of a self-intersecting surface are united
-MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
+MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolumeVdb( const MeshPart& mp, const DistanceVolumeParams& params );
 
 /// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part

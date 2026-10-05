@@ -10,8 +10,12 @@
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRAABBTree.h"
 #include "MRMesh/MRPointsToMeshProjector.h"
+#include "MRMesh/MRMeshIntersect.h"
+#include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRLine.h"
 #include "MRPch/MROpenVDB.h"
 #include "MRPch/MRTBB.h"
+#include <algorithm>
 #include <tuple>
 
 namespace MR
@@ -119,6 +123,59 @@ Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const Cl
 }
 
 Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params )
+{
+    MR_TIMER;
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+        return unexpected( "Only closed mesh can be converted to inside volume" );
+
+    SimpleBinaryVolume res;
+    res.voxelSize = params.voxelSize;
+    res.dims = params.dimensions;
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size(), false );
+    if ( res.dims.x <= 0 || res.dims.y <= 0 || res.dims.z <= 0 )
+        return res;
+
+    // one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
+    // guarantee that every ray crosses the closed surface an even number of times;
+    // each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
+    mp.mesh.getAABBTree();
+    tbb::enumerable_thread_specific<std::vector<float>> hitsPerThread;
+    const size_t numRows = size_t( res.dims.y ) * res.dims.z;
+    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<float> & hits )
+    {
+        for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
+        {
+            const auto y = int( row % res.dims.y );
+            const auto z = int( row / res.dims.y );
+            const Vector3d start( params.origin.x,
+                params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
+                params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
+            hits.clear();
+            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
+            {
+                hits.push_back( isec.distanceAlongLine );
+                return true;
+            }, -DBL_MAX, DBL_MAX );
+            std::sort( hits.begin(), hits.end() );
+
+            // voxels with centers between an odd intersection and the next one are inside
+            const auto firstVoxel = [&] ( float t ) { return std::clamp( (int)std::ceil( t / params.voxelSize.x - 0.5 ), 0, res.dims.x ); };
+            for ( size_t i = 0; i + 1 < hits.size(); i += 2 )
+            {
+                const auto xBeg = firstVoxel( hits[i] );
+                const auto xEnd = firstVoxel( hits[i + 1] );
+                if ( xBeg < xEnd )
+                    res.data.set( VoxelId( row * res.dims.x + xBeg ), xEnd - xBeg, true );
+            }
+        }
+    }, params.cb ) )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
+Expected<SimpleBinaryVolume> makeInsideMeshVolumeVdb( const MeshPart& mp, const DistanceVolumeParams& params )
 {
     MR_TIMER;
     if ( !mp.mesh.topology.isClosed( mp.region ) )

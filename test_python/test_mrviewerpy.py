@@ -860,6 +860,7 @@ sys.exit(0)
 _PROMPT_PUMPS_SRC = _VIEWER_PROLOGUE + r"""
 
 def from_thread():
+    time.sleep(1.0)
     mrviewerpy.Viewer().skipFrames(1)
     print("PUMPED", flush=True)
     mrviewerpy.Viewer().shutdown()
@@ -868,10 +869,6 @@ def from_thread():
 
 
 threading.Thread(target=from_thread, daemon=True).start()
-# the command arrives while this thread still runs Python code, so the caller must wait without the GIL
-deadline = time.monotonic() + 1.0
-while time.monotonic() < deadline:
-    pass
 print("AT_PROMPT", flush=True)
 """
 
@@ -994,4 +991,45 @@ def test_prompt_pumps_viewer_on_macos():
     )
     assert run.returncode == 0 and "SHUTDOWN_SENT" in run.stdout, (
         "the prompt did not come back after the viewer was shut down\n" + run.report()
+    )
+
+
+# A helper thread's command arrives while the main thread still runs Python code: the helper must
+# wait without the GIL, else on macOS the main thread never gets to `showViewer()` to serve it.
+_COMMAND_WHILE_MAIN_BUSY_SRC = _VIEWER_PROLOGUE + r"""
+
+def from_thread():
+    mrviewerpy.Viewer().skipFrames(1)
+    print("PUMPED", flush=True)
+    mrviewerpy.Viewer().shutdown()
+
+
+threading.Thread(target=from_thread, daemon=True).start()
+deadline = time.monotonic() + 1.0
+while time.monotonic() < deadline:  # Python code needs the GIL, unlike time.sleep()
+    pass
+print("BUSY_DONE", flush=True)
+mrviewerpy.showViewer()
+print("SHOW_RETURNED", flush=True)
+"""
+
+
+@any_viewer
+def test_command_while_main_thread_runs_python():
+    """A blocking call from a helper thread does not hold the GIL the main thread needs."""
+    global mrviewerpy
+    mrviewerpy = pytest.importorskip(
+        "meshlib.mrviewerpy", reason="mrviewerpy is not available in this build"
+    )
+    _point_at_bundled_resources()
+
+    what = "a helper thread's command while the main thread runs Python"
+    run = _run_in_child(what, _COMMAND_WHILE_MAIN_BUSY_SRC, env_extra=_viewer_child_env())
+    _check_viewer_child(what, run)
+
+    assert "BUSY_DONE" in run.stdout, (
+        "the main thread could not run Python while a helper thread waited for a command\n" + run.report()
+    )
+    assert run.returncode == 0 and "PUMPED" in run.stdout and "SHOW_RETURNED" in run.stdout, (
+        "the helper's commands were not served or showViewer() did not return\n" + run.report()
     )

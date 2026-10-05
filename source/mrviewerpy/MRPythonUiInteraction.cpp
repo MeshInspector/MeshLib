@@ -1,5 +1,5 @@
 #include "MRPython/MRPython.h"
-#include "MRPythonGUIThread.h"
+#include "MRViewer/MRPythonAppendCommand.h"
 #include "MRViewer/MRUITestEngineControl.h"
 #include "MRViewer/MRViewer.h"
 #include "MRPch/MRFmt.h"

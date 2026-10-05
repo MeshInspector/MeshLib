@@ -19,7 +19,7 @@
 
 // NOTE: see the disclaimer in the header file
 #include "MRPython/MRPython.h"
-#include "MRPythonGUIThread.h"
+#include "MRViewer/MRPythonAppendCommand.h"
 
 namespace MR
 {

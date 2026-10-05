@@ -129,6 +129,7 @@ MeshIntersectionResult meshRayIntersect_( const MeshPart& meshPart, const Line3<
     {
         res.proj.point = Vector3f( line.p + res.distanceAlongLine * line.d );
         res.mtp = MeshTriPoint( m.topology.edgeWithLeft( res.proj.face ), triP );
+        res.fromFront = dot( Vector3<T>( m.dirDblArea( res.proj.face ) ), line.d ) < 0;
     }
     return res;
 }
@@ -325,10 +326,11 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                     // double version (more precise)
                     for ( int i = 0; i < 3; ++i )
                         pvc[i].pt = convToInt( m.points[pvc[i].id] );
-                    if ( doTriangleSegmentIntersect( pvc ) )
+                    if ( const auto isect = doTriangleSegmentIntersect( pvc ) )
                     {
                         MeshIntersectionResult found;
                         found.proj.face = face;
+                        found.fromFront = !isect.dIsLeftFromABC; // segment start pvc[3] is behind the triangle if dIsLeftFromABC
                         found.proj.point = findTriangleSegmentIntersectionPrecise( m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id], dP, eP, { convToInt,convToFloat } );
                         found.distanceAlongLine = dot( found.proj.point - Vector3f( line.p ), Vector3f( line.d ) );
                         if ( found.distanceAlongLine < rayEnd && found.distanceAlongLine > rayStart )
@@ -353,6 +355,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                         found.proj.point = Vector3f( line( triIsect->t ) );
                         found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
                         found.distanceAlongLine = float( triIsect->t );
+                        found.fromFront = dot( cross( vB - vA, vC - vA ), line.d ) < 0;
                         if ( !callback( found ) )
                             return;
                     }

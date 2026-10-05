@@ -25,6 +25,10 @@ struct MeshIntersectionResult
     /// stores the distance from ray origin to the intersection point in direction units
     float distanceAlongLine = 0;
 
+    /// true if the ray crosses the triangle from its front side (where the triangle's normal points) to its back,
+    /// i.e. enters a closed mesh with outward normals
+    bool fromFront = false;
+
     /// check for validity
     explicit operator bool() const { return proj.face.valid(); }
 };

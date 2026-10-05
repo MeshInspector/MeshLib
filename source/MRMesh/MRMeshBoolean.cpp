@@ -417,10 +417,10 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     const int cMaxFixLoneIterations = 100;
     bool aSubdivided = false;
     bool bSubdivided = false;
+    // find intersections
+    intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, params.rigidB2A );
     for ( ;; iters++ )
     {
-        // find intersections
-        intersections = findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, params.rigidB2A );
         // order intersections
         contours = orderIntersectionContours( meshA.topology, meshB.topology, intersections );
         // find lone
@@ -455,6 +455,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             ( loneB.empty() && !needCutMeshA ) )
             break;
         // subdivide owners of lone
+        const VertId aFirstNewVert( meshA.topology.vertSize() );
+        const VertId bFirstNewVert( meshB.topology.vertSize() );
         if ( !loneA.empty() && needCutMeshA )
         {
             aSubdivided = true;
@@ -471,6 +473,8 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             removeLoneDegeneratedContours( meshA.topology, loneIntsB, loneIntsBonA );
             subdivideLoneContours( meshB, loneIntsB, &new2orgSubdivideMapB );
         }
+        // update intersections: only the ones near new vertices could change
+        updateCollidingEdgeTrisPrecise( intersections, meshA, aFirstNewVert, meshB, bFirstNewVert, converters.toInt, params.rigidB2A );
     }
     if ( iters == cMaxFixLoneIterations )
     {

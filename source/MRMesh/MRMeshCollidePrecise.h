@@ -72,6 +72,20 @@ MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart &
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr, bool anyIntersection = false );
 
 /**
+ * \brief updates the result of findCollidingEdgeTrisPrecise( a, b, conv, rigidB2A ) after some faces or edges of the meshes were split
+ * (e.g. in subdivideLoneContours) with no other changes in the meshes: removes all intersections with the triangles around new vertices
+ * (the split triangles and their new parts) and with their edges, and finds them again,
+ * which is much faster than new search if few faces were split, but slower if many were split:
+ * so if more than 1/32 of all vertices are new, the function makes new search instead;
+ * the AABB trees of the meshes must be updated after the splits (e.g. by Mesh::updateCachesAfterSplits) or invalidated
+ * \param res the result of findCollidingEdgeTrisPrecise with the same conv and rigidB2A before the splits
+ * \param aFirstNewVert (bFirstNewVert) all vertices of mesh A (B) with this or larger ids appeared in the splits
+ */
+MRMESH_API void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
+    const Mesh & a, VertId aFirstNewVert, const Mesh & b, VertId bFirstNewVert,
+    ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr );
+
+/**
  * \brief finds all pairs of colliding edges and triangle within one mesh
  * \param anyIntersection if true then the function returns as fast as it finds any intersection
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation, might be useful to obtain same result as in boolean operation would for mesh B

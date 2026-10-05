@@ -275,4 +275,59 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
     }
 }
 
+// after splits of faces and edges in both meshes, updateCollidingEdgeTrisPrecise finds the same intersections as new search
+TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
+{
+    const Mesh sphere = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
+    const auto xf = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), 0.1f ) );
+    const auto conv = getVectorConverters( sphere, sphere, &xf );
+    const auto orgRes = findCollidingEdgeTrisPrecise( sphere, sphere, conv.toInt, &xf );
+    ASSERT_GT( orgRes.size(), 100 );
+    auto less = []( const VarEdgeTri & a, const VarEdgeTri & b )
+    {
+        return std::make_tuple( a.isEdgeATriB(), int( a.edge ), int( a.tri() ) ) < std::make_tuple( b.isEdgeATriB(), int( b.edge ), int( b.tri() ) );
+    };
+    auto sortedOrgRes = orgRes;
+    std::sort( sortedOrgRes.begin(), sortedOrgRes.end(), less );
+
+    // the splits of the triangles of every 200th intersection add less than 1/32 of new vertices, so the update itself is tested;
+    // the ones of every 10th intersection add more, and then the function makes new search
+    for ( size_t step : { 200, 10 } )
+    {
+        Mesh meshA = sphere;
+        Mesh meshB = sphere;
+        auto res = orgRes;
+
+        // split the intersected triangles of both meshes with new vertices inside the meshes, and an intersecting edge of A;
+        // several intersections can have the same triangle, then the part of it keeping its id is split again
+        const VertId aFirstNewVert( meshA.topology.vertSize() );
+        const VertId bFirstNewVert( meshB.topology.vertSize() );
+        FaceHashMap aNew2Old, bNew2Old;
+        for ( size_t i = 0; i < res.size(); i += step )
+        {
+            auto & mesh = res[i].isEdgeATriB() ? meshB : meshA;
+            const auto f = res[i].tri();
+            mesh.splitFace( f, mesh.triCenter( f ) - 0.01f * mesh.normal( f ), nullptr, res[i].isEdgeATriB() ? &bNew2Old : &aNew2Old );
+        }
+        const auto aEdgeIt = std::find_if( res.begin(), res.end(), []( const VarEdgeTri & et ) { return et.isEdgeATriB(); } );
+        ASSERT_NE( aEdgeIt, res.end() );
+        meshA.splitEdge( aEdgeIt->edge, nullptr, &aNew2Old );
+        meshA.updateCachesAfterSplits( aNew2Old );
+        meshB.updateCachesAfterSplits( bNew2Old );
+        const int numVerts = int( meshA.topology.vertSize() + meshB.topology.vertSize() );
+        EXPECT_EQ( 32 * ( numVerts - aFirstNewVert - bFirstNewVert ) > numVerts, step == 10 );
+
+        updateCollidingEdgeTrisPrecise( res, meshA, aFirstNewVert, meshB, bFirstNewVert, conv.toInt, &xf );
+        auto newRes = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt, &xf );
+        std::sort( res.begin(), res.end(), less );
+        std::sort( newRes.begin(), newRes.end(), less );
+        EXPECT_EQ( res, newRes );
+        EXPECT_NE( res, sortedOrgRes );
+
+        // no new vertices
+        updateCollidingEdgeTrisPrecise( res, meshA, VertId( meshA.topology.vertSize() ), meshB, VertId( meshB.topology.vertSize() ), conv.toInt, &xf );
+        EXPECT_EQ( res, newRes );
+    }
+}
+
 } //namespace MR

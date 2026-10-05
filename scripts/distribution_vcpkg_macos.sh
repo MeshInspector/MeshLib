@@ -26,6 +26,10 @@ pushd "${FRAMEWORK_BASE_DIR}/Versions"
   ln -s "${VERSION}" Current
 popd
 
+# drop macOS file metadata
+# otherwise pkgbuild adds a hidden ._<name> companion file for every file in the package
+xattr -cr ./macos_distr
+
 # be careful with pkg names! The pkg can fail to build
 pkgbuild \
   --root macos_distr/Library \

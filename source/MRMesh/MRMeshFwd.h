@@ -470,8 +470,14 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SegmPoint,
     ( SegmPointd, SegmPoint<double> )
 )
 
-struct EdgePoint;
-struct EdgeSegment;
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), EdgePointT,
+    ( EdgePoint,  EdgePointT<float>  )
+    ( EdgePointd, EdgePointT<double> )
+)
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), EdgeSegmentT,
+    ( EdgeSegment,  EdgeSegmentT<float>  )
+    ( EdgeSegmentd, EdgeSegmentT<double> )
+)
 using MeshEdgePoint = EdgePoint;
 using SurfacePath = std::vector<MeshEdgePoint>;
 using SurfacePaths = std::vector<SurfacePath>;

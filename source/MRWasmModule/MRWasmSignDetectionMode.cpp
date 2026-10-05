@@ -12,6 +12,7 @@ EMSCRIPTEN_BINDINGS( meshlib_sign_detection_mode )
         .value( "Unsigned", SignDetectionMode::Unsigned )
         .value( "OpenVDB", SignDetectionMode::OpenVDB )
         .value( "ProjectionNormal", SignDetectionMode::ProjectionNormal )
-        .value( "WindingRule", SignDetectionMode::WindingRule )
+        .value( "WindingRule", SignDetectionMode::WindingRule ) // old name of OddCrossings, which is registered after it to be returned from C++
+        .value( "OddCrossings", SignDetectionMode::OddCrossings )
         .value( "HoleWindingRule", SignDetectionMode::HoleWindingRule );
 }

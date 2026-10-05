@@ -10,7 +10,7 @@ namespace MR
 
 std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op )
 {
-    assert( op.signMode != SignDetectionMode::OpenVDB && op.signMode != SignDetectionMode::WindingRule ); // these modes are only for whole volumes
+    assert( op.signMode != SignDetectionMode::OpenVDB && op.signMode != SignDetectionMode::OddCrossings ); // these modes are only for whole volumes
 
     auto minDistSq = op.minDistSq;
     auto maxDistSq = op.maxDistSq;

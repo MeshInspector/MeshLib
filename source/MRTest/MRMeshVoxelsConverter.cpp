@@ -62,14 +62,14 @@ TEST( MRMesh, MakeInsideMeshVolume )
     EXPECT_GT( numChecked, 25000 );
 }
 
-TEST( MRMesh, MeshToDistanceVolumeWindingRule )
+TEST( MRMesh, MeshToDistanceVolumeOddCrossings )
 {
     const auto torus = makeTorus( 1.0f, 0.4f, 64, 32 );
     MeshToDistanceVolumeParams params;
     params.vol.origin = Vector3f( -1.5f, -1.5f, -0.5f );
     params.vol.voxelSize = Vector3f::diagonal( 0.05f );
     params.vol.dimensions = Vector3i( 60, 60, 20 );
-    params.dist.signMode = SignDetectionMode::WindingRule;
+    params.dist.signMode = SignDetectionMode::OddCrossings;
     const auto vol = meshToDistanceVolume( torus, params );
     ASSERT_TRUE( vol.has_value() );
 

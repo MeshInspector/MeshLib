@@ -116,7 +116,7 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& lin
 /// i.e. enters a closed mesh with outward normals;
 /// if it returns false, then the search immediately terminates
 using MeshIntersectionWithSideCallback = std::function<bool( const MeshIntersectionResult &, bool fromFront )>;
-/// Same as ef rayMeshIntersectAllF in double precision, also reporting the side from which the ray crosses each triangle;
+/// Same as \ref rayMeshIntersectAllF in double precision, also reporting the side from which the ray crosses each triangle;
 /// both the intersections and the sides are decided by precise predicates, so for a closed mesh
 /// every infinite ray has the same number of crossings from front and from back
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionWithSideCallback callback,

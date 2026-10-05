@@ -41,7 +41,9 @@ MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart&
 
 /// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
 /// it casts one ray per row of voxels and counts the intersections with precise predicates,
-/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero
+/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero;
+/// a voxel is inside if the surface is crossed an odd number of times on the way from it to infinity, ignoring triangle orientation:
+/// enclosed cavities stay empty, nested layers alternate inside and outside, and overlapping parts of a self-intersecting surface cancel each other
 MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
 
 /// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);

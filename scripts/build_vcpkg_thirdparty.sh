@@ -34,3 +34,12 @@ vcpkg install \
 find "${INSTALL_DIR}" -type f \
     \( -name '*.dylib' -o -name '*.so' -o -name '*.so.*' \) \
     -exec strip -x {} +
+
+if [ "$(uname -s)" = "Darwin" ] ; then
+  # vcpkg leaves the build-time absolute rpath in the Python extension modules
+  find "${INSTALL_DIR}" -path '*/lib-dynload/*.so' | while IFS= read -r module ; do
+    rpath=$(objdump --macho --rpaths "${module}" | sed 1d)
+    install_name_tool -rpath "${rpath}" @loader_path/../.. "${module}"
+    codesign --force --sign - "${module}"
+  done
+fi

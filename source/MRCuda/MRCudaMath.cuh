@@ -142,6 +142,7 @@ struct MeshIntersectionResult
     PointOnFace proj;
     MeshTriPoint tp;
     float distanceAlongLine = 0;
+    bool fromFront = false;
 };
 
 struct TriIntersectResult
@@ -422,6 +423,9 @@ __device__ inline MeshIntersectionResult rayMeshIntersect( const Node3* nodes, c
 
     res.tp.a = baryA;
     res.tp.b = baryB;
+
+    const auto& vs = faces[res.proj.faceId].verts;
+    res.fromFront = dot( cross( meshPoints[vs[1]] - meshPoints[vs[0]], meshPoints[vs[2]] - meshPoints[vs[0]] ), prec.dir ) < 0;
 
     return res;
 }

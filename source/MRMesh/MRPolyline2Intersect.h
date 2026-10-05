@@ -3,6 +3,7 @@
 #include "MRId.h"
 #include "MREdgePoint.h"
 #include "MREnums.h"
+#include "MRVector2.h"
 #include <cfloat>
 #include <optional>
 
@@ -17,6 +18,13 @@ namespace MR
  * \param point input point
  */
 [[nodiscard]] MRMESH_API bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point );
+
+/// checks every point ( step.x * x + origin.x, step.y * y + origin.y ) of a regular grid with 0 <= x < dims.x, 0 <= y < dims.y;
+/// gives the same results as isPointInsidePolyline, but traces only one ray per row of points
+/// \param step step.x must be positive
+/// \return bit set with dims.x * dims.y bits, where the bit ( x + y * dims.x ) is set if the point is inside
+[[nodiscard]] MRMESH_API BitSet findGridPointsInsidePolyline( const Polyline2& polyline, const Vector2i& dims,
+    const Vector2f& origin = {}, const Vector2f& step = Vector2f::diagonal( 1.f ) );
 
 struct [[nodiscard]] PolylineIntersectionResult2
 {

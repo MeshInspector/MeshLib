@@ -367,6 +367,13 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
 
     const auto maxDistSq = sqr( options.maxDist );
     const auto minDistSq = sqr( options.minDist );
+
+    // the signs by winding rule are found for all pixels at once tracing one ray per row of pixels
+    BitSet insidePixels;
+    if ( params.withSign && options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::WindingRule
+        && ( !options.offsetParameters || options.offsetParameters->type != ContoursDistanceMapOffset::OffsetType::Shell ) )
+        insidePixels = findGridPointsInsidePolyline( polyline, params.resolution, { originPoint.x, originPoint.y }, params.pixelSize );
+
     ParallelFor( (size_t)0, size, [&] ( size_t i )
     {
         if ( options.region && !options.region->test( PixelId( int( i ) ) ) )
@@ -459,7 +466,7 @@ void distanceMapFromContours( DistanceMap & distMap, const Polyline2& polyline, 
             }
             else if ( options.signMethod == ContoursDistanceMapOptions::SignedDetectionMethod::WindingRule )
             {
-                if ( isPointInsidePolyline( polyline, p ) )
+                if ( insidePixels.test( i ) )
                     positive = false;
             }
             if ( !positive )

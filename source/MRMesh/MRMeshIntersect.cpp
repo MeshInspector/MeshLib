@@ -269,7 +269,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */, const IntersectionPrecomputes<T>& prec )
 {
     // the side of a crossing is computed only if the callback takes it
-    const auto report = [&callback] ( const MeshIntersectionResult & found, auto && fromFront ) -> bool
+    const auto report = [&callback] ( const MeshIntersectionResult & found, [[maybe_unused]] auto && fromFront ) -> bool
     {
         if constexpr ( std::is_invocable_v<F, const MeshIntersectionResult &, bool> )
             return callback( found, fromFront() );

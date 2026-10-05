@@ -72,16 +72,16 @@ MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart &
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr, bool anyIntersection = false );
 
 /**
- * \brief updates the result of findCollidingEdgeTrisPrecise( a, b, conv, rigidB2A ) after some vertices of the meshes were moved
- * or appeared by splitting of faces or edges (e.g. in subdivideLoneContours) with no other changes in the meshes:
- * removes the pairs with the edges and the triangles incident to changed vertices and finds all such pairs again,
- * which is much faster than new search if few vertices were changed;
- * the AABB trees of the meshes must be updated after the changes (e.g. by Mesh::updateCachesAfterSplits) or invalidated
- * \param res the result of findCollidingEdgeTrisPrecise with the same conv and rigidB2A before the changes
- * \param aChangedVerts (bChangedVerts) the vertices of mesh A (B) moved or added after res was found
+ * \brief updates the result of findCollidingEdgeTrisPrecise( a, b, conv, rigidB2A ) after some faces or edges of the meshes were split
+ * (e.g. in subdivideLoneContours) with no other changes in the meshes: removes all intersections with the triangles around new vertices
+ * (the split triangles and their new parts) and with their edges, and finds them again,
+ * which is much faster than new search if few faces were split;
+ * the AABB trees of the meshes must be updated after the splits (e.g. by Mesh::updateCachesAfterSplits) or invalidated
+ * \param res the result of findCollidingEdgeTrisPrecise with the same conv and rigidB2A before the splits
+ * \param aFirstNewVert (bFirstNewVert) all vertices of mesh A (B) with this or larger ids appeared in the splits
  */
 MRMESH_API void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
-    const Mesh & a, const VertBitSet & aChangedVerts, const Mesh & b, const VertBitSet & bChangedVerts,
+    const Mesh & a, VertId aFirstNewVert, const Mesh & b, VertId bFirstNewVert,
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr );
 
 /**

@@ -275,8 +275,7 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
     }
 }
 
-// after splits of faces and edges and moves of vertices in both meshes,
-// updateCollidingEdgeTrisPrecise finds the same intersections as new search
+// after splits of faces and edges in both meshes, updateCollidingEdgeTrisPrecise finds the same intersections as new search
 TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
 {
     Mesh meshA = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
@@ -293,8 +292,8 @@ TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
     std::sort( orgRes.begin(), orgRes.end(), less );
 
     // split some intersected triangles of both meshes with new vertices inside the meshes, and an intersecting edge of A
-    const auto aVertsBefore = meshA.topology.vertSize();
-    const auto bVertsBefore = meshB.topology.vertSize();
+    const VertId aFirstNewVert( meshA.topology.vertSize() );
+    const VertId bFirstNewVert( meshB.topology.vertSize() );
     FaceHashMap aNew2Old, bNew2Old;
     for ( size_t i = 0; i < res.size(); i += 10 )
     {
@@ -307,30 +306,16 @@ TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
     meshA.splitEdge( aEdgeIt->edge, nullptr, &aNew2Old );
     meshA.updateCachesAfterSplits( aNew2Old );
     meshB.updateCachesAfterSplits( bNew2Old );
-    VertBitSet aChangedVerts( meshA.topology.vertSize() );
-    aChangedVerts.set( VertId( aVertsBefore ), aChangedVerts.size() - aVertsBefore, true );
-    VertBitSet bChangedVerts( meshB.topology.vertSize() );
-    bChangedVerts.set( VertId( bVertsBefore ), bChangedVerts.size() - bVertsBefore, true );
 
-    // move inside the origins of some intersecting edges of B
-    VertBitSet bMovedVerts( meshB.topology.vertSize() );
-    for ( size_t i = 5; i < res.size(); i += 20 )
-        if ( !res[i].isEdgeATriB() )
-            bMovedVerts.set( meshB.topology.org( res[i].edge ) );
-    for ( auto v : bMovedVerts )
-        meshB.points[v] -= 0.01f * meshB.normal( v );
-    meshB.updateCaches( &bMovedVerts );
-    bChangedVerts |= bMovedVerts;
-
-    updateCollidingEdgeTrisPrecise( res, meshA, aChangedVerts, meshB, bChangedVerts, conv.toInt, &xf );
+    updateCollidingEdgeTrisPrecise( res, meshA, aFirstNewVert, meshB, bFirstNewVert, conv.toInt, &xf );
     auto newRes = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt, &xf );
     std::sort( res.begin(), res.end(), less );
     std::sort( newRes.begin(), newRes.end(), less );
     EXPECT_EQ( res, newRes );
     EXPECT_NE( res, orgRes );
 
-    // no changes
-    updateCollidingEdgeTrisPrecise( res, meshA, {}, meshB, {}, conv.toInt, &xf );
+    // no new vertices
+    updateCollidingEdgeTrisPrecise( res, meshA, VertId( meshA.topology.vertSize() ), meshB, VertId( meshB.topology.vertSize() ), conv.toInt, &xf );
     EXPECT_EQ( res, newRes );
 }
 

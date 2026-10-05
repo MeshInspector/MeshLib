@@ -13,6 +13,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRSpdlog.h"
+#include <type_traits>
 
 namespace MR
 {
@@ -267,6 +268,15 @@ template<typename T, typename F>
 void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && callback,
     T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */, const IntersectionPrecomputes<T>& prec )
 {
+    // the side of a crossing is computed only if the callback takes it
+    const auto report = [&callback] ( const MeshIntersectionResult & found, auto && fromFront ) -> bool
+    {
+        if constexpr ( std::is_invocable_v<F, const MeshIntersectionResult &, bool> )
+            return callback( found, fromFront() );
+        else
+            return callback( found );
+    };
+
     const auto& m = meshPart.mesh;
     const auto& tree = m.getAABBTree();
     if( tree.nodes().empty() )
@@ -331,7 +341,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         {
                             found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
                             // segment start pvc[3] is behind the triangle if dIsLeftFromABC
-                            if ( !callback( found, !isect.dIsLeftFromABC ) )
+                            if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
                                 return;
                         }
                     }
@@ -350,7 +360,7 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         found.proj.point = Vector3f( line( triIsect->t ) );
                         found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), triIsect->bary );
                         found.distanceAlongLine = float( triIsect->t );
-                        if ( !callback( found, dot( cross( vB - vA, vC - vA ), line.d ) < 0 ) )
+                        if ( !report( found, [&] { return dot( cross( vB - vA, vC - vA ), line.d ) < 0; } ) )
                             return;
                     }
                 }
@@ -378,15 +388,14 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& line, MeshInte
     assert( callback );
     if ( !callback )
         return;
-    const auto cb = [&callback] ( const MeshIntersectionResult & found, bool ) { return callback( found ); };
     if( prec )
     {
-        return rayMeshIntersectAll_<float>( meshPart, line, cb, rayStart, rayEnd, *prec );
+        return rayMeshIntersectAll_<float>( meshPart, line, callback, rayStart, rayEnd, *prec );
     }
     else
     {
         const IntersectionPrecomputes<float> precNew( line.d );
-        return rayMeshIntersectAll_<float>( meshPart, line, cb, rayStart, rayEnd, precNew );
+        return rayMeshIntersectAll_<float>( meshPart, line, callback, rayStart, rayEnd, precNew );
     }
 }
 
@@ -396,8 +405,15 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
     assert( callback );
     if ( !callback )
         return;
-    rayMeshIntersectAll( meshPart, line, [&callback] ( const MeshIntersectionResult & found, bool ) { return callback( found ); },
-        rayStart, rayEnd, prec );
+    if( prec )
+    {
+        return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, *prec );
+    }
+    else
+    {
+        const IntersectionPrecomputes<double> precNew( line.d );
+        return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, precNew );
+    }
 }
 
 void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionWithSideCallback callback,

@@ -63,51 +63,49 @@ jobs:
         with:
           dotnet-version: '10.x'
 
+      # bash, not pwsh: the self-hosted macOS runners have no PowerShell
       - name: Download nuget package
-        shell: pwsh
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --clobber
 
       - name: Put package into local NuGet feed
         id: feed
-        shell: pwsh
+        shell: bash
         run: |
-          $pkg = Get-ChildItem -Filter "MeshLib*.nupkg" | Select-Object -First 1
-          if (!$pkg) {
-            Write-Error "No MeshLib*.nupkg file found"
+          pkg=$(ls MeshLib*.nupkg 2>/dev/null | head -n 1)
+          if [ -z "$pkg" ]; then
+            echo "::error::No MeshLib*.nupkg file found"
             exit 1
-          }
-          if ($pkg.Name -notmatch '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+') {
-            Write-Error "Cannot extract version from $($pkg.Name)"
+          fi
+          pkgVersion=$(echo "$pkg" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+          if [ -z "$pkgVersion" ]; then
+            echo "::error::Cannot extract version from $pkg"
             exit 1
-          }
-          $pkgVersion = $Matches[0]
-          $feedDir = Join-Path $env:GITHUB_WORKSPACE "$env:PROJECT_DIR/nuget_repo"
-          New-Item -ItemType Directory -Force -Path $feedDir | Out-Null
-          Move-Item $pkg.FullName (Join-Path $feedDir "MeshLib.$pkgVersion.nupkg")
-          "package_version=$pkgVersion" >> $env:GITHUB_OUTPUT
+          fi
+          mkdir -p "$PROJECT_DIR/nuget_repo"
+          mv "$pkg" "$PROJECT_DIR/nuget_repo/MeshLib.$pkgVersion.nupkg"
+          echo "package_version=$pkgVersion" >> "$GITHUB_OUTPUT"
 
       - name: Build consumers
-        shell: pwsh
+        shell: bash
         run: |
-          foreach ($tfm in -split '${{ matrix.frameworks }}') {
-            dotnet build $env:PROJECT_DIR -c Release -f $tfm -p:MeshLibVersion=${{ steps.feed.outputs.package_version }} -p:PlatformTarget=${{ matrix.arch }}
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+          for tfm in ${{ matrix.frameworks }}; do
+            dotnet build "$PROJECT_DIR" -c Release -f $tfm -p:MeshLibVersion=${{ steps.feed.outputs.package_version }} -p:PlatformTarget=${{ matrix.arch }}
+          done
 
       - name: Run consumers
-        shell: pwsh
+        shell: bash
         run: |
-          $exitCode = 0
-          foreach ($tfm in -split '${{ matrix.frameworks }}') {
-            $out = "$env:PROJECT_DIR/bin/Release/$tfm"
-            if ($tfm -eq 'net47') {
-              & "$out/NugetTestProj.exe"
-            } else {
-              dotnet "$out/NugetTestProj.dll"
-            }
-            if ($LASTEXITCODE -ne 0) { $exitCode = $LASTEXITCODE }
-          }
+          exitCode=0
+          for tfm in ${{ matrix.frameworks }}; do
+            out="$PROJECT_DIR/bin/Release/$tfm"
+            if [ "$tfm" = net47 ]; then
+              "$out/NugetTestProj.exe" || exitCode=$?
+            else
+              dotnet "$out/NugetTestProj.dll" || exitCode=$?
+            fi
+          done
           exit $exitCode

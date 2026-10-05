@@ -49,6 +49,8 @@ set(MESHLIB_PACKAGE_cpr
 set(MESHLIB_PACKAGE_draco
   GIT_REPOSITORY https://github.com/google/draco
   GIT_TAG 15bdb3a4f15a7a8d77489ac348a7a50d93de17a3
+  PATCHES
+    ${CMAKE_CURRENT_LIST_DIR}/patches/draco-emscripten-check-only-for-js-glue.patch
 )
 
 set(MESHLIB_PACKAGE_eigen

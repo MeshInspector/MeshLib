@@ -39,12 +39,30 @@ struct CloseToMeshVolumeParams
 /// makes a binary volume with close-to-surface predicate values according to the given parameters
 MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const CloseToMeshVolumeParams& params );
 
+/// how makeInsideMeshVolume decides whether a voxel is inside
+enum class InsideMeshRule
+{
+    /// the surface is crossed an odd number of times on the way from the voxel to infinity, triangle orientation is ignored:
+    /// enclosed cavities stay empty, nested layers alternate inside and outside, and overlapping parts of a self-intersecting surface cancel each other
+    OddCrossings,
+
+    /// the winding number of the surface around the voxel is positive (for a mesh with outward normals):
+    /// overlapping parts of a self-intersecting surface are united, a cavity stays empty if its triangles look inside it
+    PositiveWinding
+};
+
+/// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh according to given rule, and 0 otherwise;
+/// it casts one ray per row of voxels and finds the intersections with precise predicates,
+/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero
+MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params,
+    InsideMeshRule rule = InsideMeshRule::OddCrossings );
+
 /// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
-/// it casts one ray per row of voxels and counts the intersections with precise predicates,
-/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero;
-/// a voxel is inside if the surface is crossed an odd number of times on the way from it to infinity, ignoring triangle orientation:
-/// enclosed cavities stay empty, nested layers alternate inside and outside, and overlapping parts of a self-intersecting surface cancel each other
-MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
+/// it is computed by OpenVDB in a narrow band of half a voxel, 15-30 times slower than makeInsideMeshVolume
+/// (512^3 voxels and 2.6M triangles on a 12-core Ryzen 9 3900X: 1.3-2.8 s vs 0.08 s);
+/// inside are all voxels separated from infinity by the surface, ignoring triangle orientation: enclosed cavities and the space
+/// between nested layers are filled, and overlapping parts of a self-intersecting surface are united
+MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolumeVdb( const MeshPart& mp, const DistanceVolumeParams& params );
 
 /// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);
 /// v < 0: this point is within offset distance to region-part of mesh and it is closer to region-part than to not-region-part

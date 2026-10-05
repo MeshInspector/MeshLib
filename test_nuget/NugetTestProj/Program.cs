@@ -8,6 +8,9 @@ internal static class Program
         int points = (int)cube.points.size();
         int faces = (int)cube.topology.getValidFaces().count();
         Console.WriteLine("{0} points, {1} faces", points, faces);
+#pragma warning disable CS0618 // getDeviceInfo is absent from the macOS placeholder library
+        Console.WriteLine("CUDA available: {0}", MR.Cuda.isCudaAvailable());
+#pragma warning restore CS0618
         if (points == 8 && faces == 12)
             return 0;
         Console.Error.WriteLine("expected 8 points, 12 faces");

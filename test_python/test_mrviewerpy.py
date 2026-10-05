@@ -860,7 +860,6 @@ sys.exit(0)
 _PROMPT_PUMPS_SRC = _VIEWER_PROLOGUE + r"""
 
 def from_thread():
-    time.sleep(1.0)
     mrviewerpy.Viewer().skipFrames(1)
     print("PUMPED", flush=True)
     mrviewerpy.Viewer().shutdown()
@@ -869,6 +868,10 @@ def from_thread():
 
 
 threading.Thread(target=from_thread, daemon=True).start()
+# the command arrives while this thread still runs Python code, so the caller must wait without the GIL
+deadline = time.monotonic() + 1.0
+while time.monotonic() < deadline:
+    pass
 print("AT_PROMPT", flush=True)
 """
 

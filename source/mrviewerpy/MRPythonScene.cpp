@@ -19,6 +19,7 @@
 
 // NOTE: see the disclaimer in the header file
 #include "MRPython/MRPython.h"
+#include "MRPythonGUIThread.h"
 
 namespace MR
 {
@@ -80,21 +81,21 @@ namespace
 
 void pythonSelectName( const std::string modelName )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [modelName] ()
+    MR::pythonRunCommandFromGUIThread( [modelName] ()
     {
         MR::selectName( modelName );
     } );
 }
 void pythonUnselect()
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&] ()
+    MR::pythonRunCommandFromGUIThread( [&] ()
     {
         MR::unselect();
     } );
 }
 void pythonSelectType( const std::string modelType )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [modelType] ()
+    MR::pythonRunCommandFromGUIThread( [modelType] ()
     {
         if ( modelType == "Meshes" )
         {
@@ -119,7 +120,7 @@ void pythonSelectType( const std::string modelType )
 
 void pythonClearScene()
 {
-    MR::CommandLoop::runCommandFromGUIThread( [] ()
+    MR::pythonRunCommandFromGUIThread( [] ()
     {
         MR::SceneRoot::get().removeAllChildren();
     } );
@@ -128,7 +129,7 @@ void pythonClearScene()
 template <typename ObjectType, typename ModelType, auto SetterFunc, typename ...P>
 void pythonAddModelToScene( const ModelType& model, const std::string& name, P&&... params )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&] ()
+    MR::pythonRunCommandFromGUIThread( [&] ()
     {
         std::shared_ptr<ObjectType> newObject = std::make_shared<ObjectType>();
         std::invoke( SetterFunc, newObject, std::make_shared<ModelType>( model ), std::forward<P>( params )... );
@@ -153,7 +154,7 @@ auto pythonGetSelectedModels()
 
     ReturnedVecType ret;
 
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    MR::pythonRunCommandFromGUIThread( [&]
     {
         auto objects = MR::getAllObjectsInTree<ObjectType>( MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
         ret.reserve( objects.size() );
@@ -172,7 +173,7 @@ auto pythonGetSelectedModels()
 
 void pythonModifySelectedMesh( MR::Mesh mesh )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    MR::pythonRunCommandFromGUIThread( [&]
     {
         auto selected = MR::getAllObjectsInTree<MR::ObjectMesh>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
         if ( selected.size() != 1 )
@@ -189,7 +190,7 @@ auto pythonGetSelectedBitset()
 {
     std::vector<std::remove_cvref_t<decltype( ( std::declval<T>().*M )() )>> ret;
 
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    MR::pythonRunCommandFromGUIThread( [&]
     {
         auto selected = MR::getAllObjectsInTree<T>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
         ret.resize( selected.size() );
@@ -202,7 +203,7 @@ auto pythonGetSelectedBitset()
 template <typename T, typename U, auto M>
 void pythonSetSelectedBitset( const std::vector<U>& bitsets )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&]
+    MR::pythonRunCommandFromGUIThread( [&]
     {
         auto selected = MR::getAllObjectsInTree<T>( &MR::SceneRoot::get(), MR::ObjectSelectivityType::Selected );
         if ( selected.size() != bitsets.size() )
@@ -255,7 +256,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Scene, [] ( pybind11::module_& m )
 
 void pythonAddVoxelsToScene( const MR::VdbVolume& model, const std::string& name )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&] ()
+    MR::pythonRunCommandFromGUIThread( [&] ()
     {
         auto newObject = std::make_shared<MR::ObjectVoxels>();
         newObject->construct( model );

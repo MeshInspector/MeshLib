@@ -8,7 +8,6 @@ internal static class Program
         int points = (int)cube.points.size();
         int faces = (int)cube.topology.getValidFaces().count();
         Console.WriteLine("{0} points, {1} faces", points, faces);
-        // loads MeshLibC2Cuda (and MRCuda where it exists); false without a GPU
 #pragma warning disable CS0618 // getDeviceInfo is absent from the macOS placeholder library
         Console.WriteLine("CUDA available: {0}", MR.Cuda.isCudaAvailable());
 #pragma warning restore CS0618

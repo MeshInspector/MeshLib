@@ -23,7 +23,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # One job per runtimes/<rid>/native folder of the package; net47 runs on Windows only
         include:
           - rid: win-x64
             arch: x64
@@ -63,7 +62,6 @@ jobs:
         with:
           dotnet-version: '10.x'
 
-      # bash, not pwsh: the self-hosted macOS runners have no PowerShell
       - name: Download nuget package
         shell: bash
         env:

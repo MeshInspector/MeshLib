@@ -22,7 +22,7 @@ enum class SignDetectionMode
     /// it casts one ray per row of voxels, so it is supported only for whole volumes (e.g. meshToDistanceVolume), not in signedDistanceToMesh;
     /// this mode does NOT have CUDA acceleration at this moment
     OddCrossings,
-    WindingRule = OddCrossings, ///< old name of OddCrossings
+    WindingRule [[deprecated( "use OddCrossings instead" )]] = OddCrossings, ///< old name of OddCrossings
 
     /// computes robust winding number generalization with support of holes and self-intersections in mesh,
     /// it is the slowest sign detection mode, but it CAN be accelerated with CUDA if this mode activated e.g. in OffsetParameters.fwn

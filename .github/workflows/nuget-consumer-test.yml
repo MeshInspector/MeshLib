@@ -18,16 +18,37 @@ permissions:
 
 jobs:
   nuget-consumer-test:
-    name: NuGet consumer test (${{ matrix.arch }}, net47, net10.0)
+    name: NuGet consumer test (${{ matrix.rid }}, ${{ matrix.frameworks }})
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
+        # One job per runtimes/<rid>/native folder of the package; net47 runs on Windows only
         include:
-          - arch: x64
+          - rid: win-x64
+            arch: x64
             runner: windows-2025
-          - arch: ARM64
+            frameworks: net47 net10.0
+          - rid: win-arm64
+            arch: ARM64
             runner: windows-11-vs2026-arm
+            frameworks: net47 net10.0
+          - rid: linux-x64
+            arch: x64
+            runner: ubuntu-24.04
+            frameworks: net10.0
+          - rid: linux-arm64
+            arch: ARM64
+            runner: ubuntu-24.04-arm
+            frameworks: net10.0
+          - rid: osx-x64
+            arch: x64
+            runner: macos-15-intel
+            frameworks: net10.0
+          - rid: osx-arm64
+            arch: ARM64
+            runner: macos-15
+            frameworks: net10.0
     timeout-minutes: 30
     env:
       PROJECT_DIR: test_nuget/NugetTestProj
@@ -71,14 +92,22 @@ jobs:
       - name: Build consumers
         shell: pwsh
         run: |
-          dotnet build $env:PROJECT_DIR -c Release -p:MeshLibVersion=${{ steps.feed.outputs.package_version }} -p:PlatformTarget=${{ matrix.arch }}
+          foreach ($tfm in -split '${{ matrix.frameworks }}') {
+            dotnet build $env:PROJECT_DIR -c Release -f $tfm -p:MeshLibVersion=${{ steps.feed.outputs.package_version }} -p:PlatformTarget=${{ matrix.arch }}
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       - name: Run consumers
         shell: pwsh
         run: |
           $exitCode = 0
-          foreach ($tfm in 'net47', 'net10.0') {
-            & "$env:PROJECT_DIR/bin/Release/$tfm/NugetTestProj.exe"
+          foreach ($tfm in -split '${{ matrix.frameworks }}') {
+            $out = "$env:PROJECT_DIR/bin/Release/$tfm"
+            if ($tfm -eq 'net47') {
+              & "$out/NugetTestProj.exe"
+            } else {
+              dotnet "$out/NugetTestProj.dll"
+            }
             if ($LASTEXITCODE -ne 0) { $exitCode = $LASTEXITCODE }
           }
           exit $exitCode

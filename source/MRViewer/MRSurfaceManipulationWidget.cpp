@@ -29,6 +29,7 @@
 #include "MRMesh/MRVersatileChangeMeshAction.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRChangeSelectionAction.h"
+#include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRPointsProject.h"
@@ -385,8 +386,8 @@ void SurfaceManipulationWidget::markSelectedEdgesAsCreases_()
         creases.autoResizeSet( ue );
         changed = true;
     }
-    if ( changed )
-        AppendHistory<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, std::move( creases ) );
+    if ( changed && smoothHistoryAction_ )
+        smoothHistoryAction_->getStack().push_back( std::make_shared<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, std::move( creases ) ) );
 }
 
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
@@ -531,6 +532,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
     if ( settings_.workMode == WorkMode::Relax && settings_.relaxMarkCreases && generalEditingRegion_.any() )
         markSelectedEdgesAsCreases_();
+    smoothHistoryAction_.reset();
 
     generalEditingRegion_.clear();
 
@@ -638,7 +640,14 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( appendHistoryAction_ )
     {
         appendHistoryAction_ = false;
-        AppendHistory( historyAction_ );
+        if ( settings_.workMode == WorkMode::Relax && settings_.relaxKeepCreases && settings_.relaxMarkCreases )
+        {
+            // the creases marked on mouse up are added here to be undone together with the smoothing
+            smoothHistoryAction_ = std::make_shared<CombinedHistoryAction>( historyAction_->name(), HistoryActionsVector{ historyAction_ } );
+            AppendHistory( smoothHistoryAction_ );
+        }
+        else
+            AppendHistory( historyAction_ );
     }
 
     if ( settings_.workMode == WorkMode::Patch )
@@ -868,6 +877,7 @@ void SurfaceManipulationWidget::abortEdit_()
     invalidateMetricsCache_();
     appendHistoryAction_ = false;
     historyAction_.reset();
+    smoothHistoryAction_.reset();
     generalEditingRegion_.clear();
     const auto numV = pointsShift_.size();
     pointsShift_.clear();

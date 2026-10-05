@@ -175,6 +175,8 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, 1.e-5f );
     settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );
+    settings_.relaxNormalsSmoothing = std::max( settings_.relaxNormalsSmoothing, 0.f );
+    settings_.relaxPointIters = std::max( settings_.relaxPointIters, 1 );
     settings_.editForce = std::max( settings_.editForce, 1.e-5f );
     settings_.relaxForceAfterEdit = std::clamp( settings_.relaxForceAfterEdit, 0.f, 0.5f );
     settings_.sharpness = std::clamp( settings_.sharpness, 0.f, 100.f );
@@ -653,12 +655,13 @@ void SurfaceManipulationWidget::changeSurface_()
         {
             auto& mesh = *obj_->varMesh();
             const auto region = getIncidentFaces( mesh.topology, singleEditingRegion_ );
-            // guideWeight is fitted so that on a mesh without creases the noise is reduced as much as by relax with the same force
+            // guideWeight is fitted for the default relaxNormalsSmoothing and relaxPointIters,
+            // so that on a mesh without creases the noise is reduced as much as by relax with the same force
             const DenoiseWithCreasesSettings ds
             {
-                .gamma = 100,
+                .gamma = settings_.relaxNormalsSmoothing,
                 .guideWeight = std::sqrt( 20 * ( 1 - settings_.relaxForce ) / settings_.relaxForce ),
-                .pointIters = 3,
+                .pointIters = settings_.relaxPointIters,
                 .region = &region
             };
             meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), ds );

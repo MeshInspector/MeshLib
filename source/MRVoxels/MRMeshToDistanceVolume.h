@@ -39,12 +39,23 @@ struct CloseToMeshVolumeParams
 /// makes a binary volume with close-to-surface predicate values according to the given parameters
 MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const CloseToMeshVolumeParams& params );
 
-/// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
-/// it casts one ray per row of voxels and counts the intersections with precise predicates,
-/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero;
-/// a voxel is inside if the surface is crossed an odd number of times on the way from it to infinity, ignoring triangle orientation:
-/// enclosed cavities stay empty, nested layers alternate inside and outside, and overlapping parts of a self-intersecting surface cancel each other
-MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
+/// how makeInsideMeshVolume decides whether a voxel is inside
+enum class InsideMeshRule
+{
+    /// the surface is crossed an odd number of times on the way from the voxel to infinity, triangle orientation is ignored:
+    /// enclosed cavities stay empty, nested layers alternate inside and outside, and overlapping parts of a self-intersecting surface cancel each other
+    OddCrossings,
+
+    /// the winding number of the surface around the voxel is positive (for a mesh with outward normals):
+    /// overlapping parts of a self-intersecting surface are united, a cavity stays empty if its triangles look inside it
+    PositiveWinding
+};
+
+/// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh according to given rule, and 0 otherwise;
+/// it casts one ray per row of voxels and finds the intersections with precise predicates,
+/// so no distances are computed, unlike in meshToDistanceVolume followed by thresholding at zero
+MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params,
+    InsideMeshRule rule = InsideMeshRule::OddCrossings );
 
 /// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
 /// it is computed by OpenVDB in a narrow band of half a voxel, 15-30 times slower than makeInsideMeshVolume

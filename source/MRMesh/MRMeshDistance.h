@@ -32,7 +32,8 @@ using TriangleCallback = std::function<ProcessOneResult( const Vector3f & p, Fac
 MRMESH_API void processCloseTriangles( const MeshPart& mp, const Triangle3f & t, float rangeSq, const TriangleCallback & call );
 
 /// computes signed distance from point (p) to mesh part (mp) following options (op);
-/// returns std::nullopt if distance is smaller than op.minDist or larger than op.maxDist (except for op.signMode == HoleWindingRule)
+/// returns std::nullopt if distance is smaller than op.minDist or larger than op.maxDist (except for op.signMode == HoleWindingRule);
+/// op.signMode == OpenVDB or WindingRule is not supported here, they find the signs in whole volumes, see meshToDistanceVolume
 [[nodiscard]] MRMESH_API std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p, const SignedDistanceToMeshOptions& op );
 
 /// \}

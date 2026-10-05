@@ -18,7 +18,7 @@ enum class SignDetectionMode
     ProjectionNormal,
 
     /// ray intersection counter, does not support holes in mesh;
-    /// meshToDistanceVolume casts one ray per row of voxels, while signedDistanceToMesh casts a ray from every point;
+    /// it casts one ray per row of voxels, so it is supported only for whole volumes (e.g. meshToDistanceVolume), not in signedDistanceToMesh;
     /// this mode does NOT have CUDA acceleration at this moment
     WindingRule,
 

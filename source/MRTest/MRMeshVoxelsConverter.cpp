@@ -73,22 +73,29 @@ TEST( MRMesh, MeshToDistanceVolumeWindingRule )
     const auto vol = meshToDistanceVolume( torus, params );
     ASSERT_TRUE( vol.has_value() );
 
-    // the signs are found by one ray per row of voxels, and must be the same as from a ray per voxel
+    auto unsignedOp = params.dist;
+    unsignedOp.signMode = SignDetectionMode::Unsigned;
     const VolumeIndexer indexer( vol->dims );
-    int numNegative = 0;
+    int numInside = 0, numChecked = 0;
     for ( size_t n = 0; n < indexer.size(); ++n )
     {
         const VoxelId i( n );
         const auto center = params.vol.origin + mult( params.vol.voxelSize, Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f ) );
-        const auto dist = signedDistanceToMesh( torus, center, params.dist );
+        const auto dist = signedDistanceToMesh( torus, center, unsignedOp );
         ASSERT_TRUE( dist.has_value() );
-        if ( std::abs( *dist ) < 1e-4f )
-            continue; // the sign of a point on the surface is uncertain
-        EXPECT_EQ( vol->data[i], *dist );
-        if ( *dist < 0 )
-            ++numNegative;
+        EXPECT_EQ( std::abs( vol->data[i] ), *dist );
+
+        // signed distance to the exact torus, from which the triangles deviate less than 0.005
+        const auto torusDist = std::hypot( std::hypot( center.x, center.y ) - 1.0f, center.z ) - 0.4f;
+        if ( std::abs( torusDist ) < 0.01f )
+            continue;
+        EXPECT_EQ( vol->data[i] < 0, torusDist < 0 );
+        ++numChecked;
+        if ( torusDist < 0 )
+            ++numInside;
     }
-    EXPECT_GT( numNegative, 5000 );
+    EXPECT_GT( numInside, 5000 );
+    EXPECT_GT( numChecked, 60000 );
 }
 
 } //namespace MR

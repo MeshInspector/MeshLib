@@ -133,7 +133,7 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
         mp.mesh.getDipoles();
 
-    // instead of a ray from every voxel, the signs of all voxels are found by one ray per row of voxels
+    // in WindingRule mode, the signs of all voxels are found first by one ray per row of voxels, and then only unsigned distances are computed
     std::shared_ptr<VoxelBitSet> insideVoxels;
     auto distOp = params.dist;
     if ( distOp.signMode == SignDetectionMode::WindingRule )

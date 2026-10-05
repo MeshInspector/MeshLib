@@ -39,6 +39,26 @@ TEST(MRMesh, MeshIntersect)
     EXPECT_NEAR( isect2.proj.point.x, -1.f, 0.05f );
 }
 
+TEST(MRMesh, MeshIntersectAllDistanceAlongLine)
+{
+    // non-unit direction: faces x=-0.5 and x=+0.5 are at t=0.25 and t=0.75
+    Mesh cube = makeCube();
+    const Vector3d p( -1, 0.1, 0.2 ), d( 2, 0, 0 );
+    for ( bool useDouble : { false, true } )
+    {
+        std::vector<float> ts;
+        auto callback = [&ts] ( const MeshIntersectionResult & found ) { ts.push_back( found.distanceAlongLine ); return true; };
+        if ( useDouble )
+            rayMeshIntersectAll( cube, Line3d( p, d ), callback, 0.0, 1.0 );
+        else
+            rayMeshIntersectAll( cube, Line3f( Vector3f( p ), Vector3f( d ) ), callback, 0.0f, 1.0f );
+        std::sort( ts.begin(), ts.end() );
+        ASSERT_EQ( ts.size(), 2 );
+        EXPECT_NEAR( ts[0], 0.25f, 1e-6f );
+        EXPECT_NEAR( ts[1], 0.75f, 1e-6f );
+    }
+}
+
 TEST( MRMesh, MeshIntersectAllPrecise )
 {
     auto countHits = [] ( const Mesh & mesh, const Line3d & line )

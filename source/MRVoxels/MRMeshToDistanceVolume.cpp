@@ -1,5 +1,6 @@
 #include "MRMeshToDistanceVolume.h"
 #include "MRVDBConversions.h"
+#include "MRVDBFloatGrid.h"
 #include "MRMesh/MRIsNaN.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRTimer.h"
@@ -12,6 +13,7 @@
 #include "MRMesh/MRMeshIntersect.h"
 #include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRLine.h"
+#include "MRPch/MROpenVDB.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
 #include <tuple>
@@ -120,7 +122,7 @@ Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart& mp, const Cl
     return res;
 }
 
-Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params )
+Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params, InsideMeshRule rule )
 {
     MR_TIMER;
     if ( !mp.mesh.topology.isClosed( mp.region ) )
@@ -135,12 +137,21 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
         return res;
 
     // one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
-    // guarantee that every ray crosses the closed surface an even number of times;
+    // guarantee that every ray crosses the closed surface an even number of times with zero total winding;
     // each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
     mp.mesh.getAABBTree();
-    tbb::enumerable_thread_specific<std::vector<float>> hitsPerThread;
+    struct Hit
+    {
+        float t;
+        int winding; // +1 if the ray enters the mesh here, -1 if it leaves
+    };
+    const auto isInside = [rule] ( int numCrossings, int winding )
+    {
+        return rule == InsideMeshRule::OddCrossings ? numCrossings % 2 == 1 : winding > 0;
+    };
+    tbb::enumerable_thread_specific<std::vector<Hit>> hitsPerThread;
     const size_t numRows = size_t( res.dims.y ) * res.dims.z;
-    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<float> & hits )
+    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<Hit> & hits )
     {
         for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
         {
@@ -150,24 +161,63 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
                 params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
                 params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
             hits.clear();
-            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
+            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec, bool fromFront )
             {
-                hits.push_back( isec.distanceAlongLine );
+                hits.push_back( { isec.distanceAlongLine, fromFront ? 1 : -1 } );
                 return true;
             }, -DBL_MAX, DBL_MAX );
-            std::sort( hits.begin(), hits.end() );
+            std::sort( hits.begin(), hits.end(), [] ( const Hit & a, const Hit & b ) { return a.t < b.t; } );
 
-            // voxels with centers between an odd intersection and the next one are inside
+            // walking the ray, set the voxels with centers between the hits where the rule switches to inside and back
             const auto firstVoxel = [&] ( float t ) { return std::clamp( (int)std::ceil( t / params.voxelSize.x - 0.5 ), 0, res.dims.x ); };
-            for ( size_t i = 0; i + 1 < hits.size(); i += 2 )
+            int numCrossings = 0, winding = 0, xBeg = 0;
+            for ( const auto & hit : hits )
             {
-                const auto xBeg = firstVoxel( hits[i] );
-                const auto xEnd = firstVoxel( hits[i + 1] );
-                if ( xBeg < xEnd )
-                    res.data.set( VoxelId( row * res.dims.x + xBeg ), xEnd - xBeg, true );
+                const bool wasInside = isInside( numCrossings, winding );
+                ++numCrossings;
+                winding += hit.winding;
+                const bool nowInside = isInside( numCrossings, winding );
+                if ( !wasInside && nowInside )
+                    xBeg = firstVoxel( hit.t );
+                else if ( wasInside && !nowInside )
+                {
+                    const auto xEnd = firstVoxel( hit.t );
+                    if ( xBeg < xEnd )
+                        res.data.set( VoxelId( row * res.dims.x + xBeg ), xEnd - xBeg, true );
+                }
             }
         }
     }, params.cb ) )
+        return unexpectedOperationCanceled();
+
+    return res;
+}
+
+Expected<SimpleBinaryVolume> makeInsideMeshVolumeVdb( const MeshPart& mp, const DistanceVolumeParams& params )
+{
+    MR_TIMER;
+    if ( !mp.mesh.topology.isClosed( mp.region ) )
+        return unexpected( "Only closed mesh can be converted to inside volume" );
+
+    // SimpleVolume and VdbVolume are shifted on half voxel relative one another, see also VoxelsVolumeAccessor::shift()
+    const auto grid = meshToLevelSet( mp, AffineXf3f::translation( -params.origin - 0.5f * params.voxelSize ),
+        params.voxelSize, 0.5f, subprogress( params.cb, 0.0f, 0.8f ) );
+    if ( !grid )
+        return unexpectedOperationCanceled();
+
+    SimpleBinaryVolume res;
+    res.voxelSize = params.voxelSize;
+    res.dims = params.dimensions;
+    VolumeIndexer indexer( res.dims );
+    res.data.resize( indexer.size(), false );
+
+    tbb::enumerable_thread_specific accessorPerThread( grid->getConstAccessor() );
+    if ( !BitSetParallelForAll( res.data, [&] ( VoxelId i )
+    {
+        const auto pos = indexer.toPos( i );
+        if ( accessorPerThread.local().getValue( openvdb::Coord( pos.x, pos.y, pos.z ) ) < 0 )
+            res.data.set( i );
+    }, subprogress( params.cb, 0.8f, 1.0f ) ) )
         return unexpectedOperationCanceled();
 
     return res;

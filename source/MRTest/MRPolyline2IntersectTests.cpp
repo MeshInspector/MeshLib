@@ -2,6 +2,8 @@
 #include <MRMesh/MRPolyline.h>
 #include <MRMesh/MRLine.h>
 #include <MRMesh/MRVector2.h>
+#include <MRMesh/MRBitSet.h>
+#include <random>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -57,6 +59,36 @@ TEST( MRMesh, IsPointInsidePolyline )
 
     // it is expected to have only one intersection with 
     ASSERT_TRUE( isPointInsidePolyline( polyline, Vector2f( 0, 0 ) ) );
+}
+
+TEST( MRMesh, FindGridPointsInsidePolyline )
+{
+    std::mt19937 rnd( 1 );
+    for ( int n = 0; n < 40; ++n )
+    {
+        // random self-intersecting polygons, half of them with integer vertices to get rows and grid points exactly on vertices and edges
+        const bool intVerts = n % 2 == 0;
+        std::uniform_real_distribution<float> coord( -10, 40 );
+        Contour2f cont( 3 + rnd() % 30 );
+        for ( auto & p : cont )
+        {
+            p = { coord( rnd ), coord( rnd ) };
+            if ( intVerts )
+                p = { std::round( p.x ), std::round( p.y ) };
+        }
+        cont.push_back( cont.front() );
+        const Polyline2 polyline( { cont } );
+
+        const Vector2i dims( 37, 29 );
+        const Vector2f origin = n % 4 < 2 ? Vector2f() : Vector2f( -3.5f, 1.25f );
+        const Vector2f step = n % 8 < 4 ? Vector2f::diagonal( 1 ) : Vector2f( 0.75f, 1.5f );
+        const auto bits = findGridPointsInsidePolyline( polyline, dims, origin, step );
+        ASSERT_EQ( bits.size(), size_t( dims.x ) * dims.y );
+        for ( int y = 0; y < dims.y; ++y )
+            for ( int x = 0; x < dims.x; ++x )
+                ASSERT_EQ( bits.test( x + y * dims.x ), isPointInsidePolyline( polyline, { step.x * float( x ) + origin.x, step.y * float( y ) + origin.y } ) )
+                    << "polygon " << n << ", point " << x << ", " << y;
+    }
 }
 
 } //namespace MR

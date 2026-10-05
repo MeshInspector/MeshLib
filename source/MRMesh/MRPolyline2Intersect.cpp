@@ -6,6 +6,12 @@
 #include "MRInplaceStack.h"
 #include "MRIntersectionPrecomputes2.h"
 #include "MRRayBoxIntersection2.h"
+#include "MRBitSet.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
+#include "MRPch/MRTBB.h"
+#include <algorithm>
+#include <cmath>
 
 namespace MR
 {
@@ -67,6 +73,92 @@ bool isPointInsidePolyline( const Polyline2& polyline, const Vector2f& point )
         }
     }
     return ( intersectionCounter % 2 ) == 1;
+}
+
+BitSet findGridPointsInsidePolyline( const Polyline2& polyline, const Vector2i& dims, const Vector2f& origin, const Vector2f& step )
+{
+    MR_TIMER;
+    assert( step.x > 0 );
+    BitSet res;
+    if ( dims.x <= 0 || dims.y <= 0 )
+        return res;
+    res.resize( size_t( dims.x ) * dims.y );
+
+    const auto& tree = polyline.getAABBTree();
+    if ( tree.nodes().empty() )
+        return res;
+    const auto rootBox = tree[tree.rootNodeId()].box;
+
+    // the largest x in [-1, dims.x) such that the point of the row with that x is to the left of the given coordinate
+    // (or at the same coordinate if !strict)
+    auto lastX = [&] ( float c, bool strict )
+    {
+        auto isLeft = [&] ( int x )
+        {
+            const float px = step.x * float( x ) + origin.x;
+            return strict ? px < c : px <= c;
+        };
+        auto x = (int)std::clamp( std::floor( ( double( c ) - origin.x ) / step.x ), -1.0, double( dims.x - 1 ) );
+        while ( x >= 0 && !isLeft( x ) )
+            --x;
+        while ( x + 1 < dims.x && isLeft( x + 1 ) )
+            ++x;
+        return x;
+    };
+
+    // one ray along X per row of points; each task processes 64 whole rows, which start at a multiple of 64 bits,
+    // so no two tasks write in the same block of the bit set
+    tbb::enumerable_thread_specific<std::vector<int>> lastsPerThread;
+    ParallelFor( 0, ( dims.y + 63 ) / 64, lastsPerThread, [&] ( int chunk, std::vector<int> & lasts )
+    {
+        for ( int y = chunk * 64; y < std::min( dims.y, chunk * 64 + 64 ); ++y )
+        {
+            const float py = step.y * float( y ) + origin.y;
+            if ( !( rootBox.min.y <= py && py < rootBox.max.y ) )
+                continue;
+
+            // all edges crossing the row with the same half-open rule as in isPointInsidePolyline
+            lasts.clear();
+            InplaceStack<NoInitNodeId, 32> nodesStack;
+            nodesStack.push( tree.rootNodeId() );
+            while ( !nodesStack.empty() )
+            {
+                const auto& node = tree[nodesStack.top()];
+                nodesStack.pop();
+                if ( node.leaf() )
+                {
+                    const auto uEId = node.leafId();
+                    const auto& org = polyline.orgPnt( uEId );
+                    const auto& dest = polyline.destPnt( uEId );
+                    const double ratio = ( double( py ) - double( org.y ) ) / ( double( dest.y ) - double( org.y ) );
+                    const float x = float( ratio * double( dest.x ) + ( 1.0 - ratio ) * double( org.x ) );
+                    // isPointInsidePolyline counts this crossing for a point if the point is not to the right of x
+                    // and strictly to the left of the edge's box
+                    lasts.push_back( x < node.box.max.x ? lastX( x, false ) : lastX( node.box.max.x, true ) );
+                }
+                else
+                {
+                    if ( const auto& box = tree[node.l].box; box.min.y <= py && py < box.max.y )
+                        nodesStack.push( node.l );
+                    if ( const auto& box = tree[node.r].box; box.min.y <= py && py < box.max.y )
+                        nodesStack.push( node.r );
+                }
+            }
+            std::sort( lasts.begin(), lasts.end() );
+
+            // a point with lasts[j-1] < x <= lasts[j] has ( n - j ) crossings counted, and it is inside if this number is odd
+            const auto n = lasts.size();
+            const auto rowStart = size_t( y ) * dims.x;
+            for ( size_t j = 1 - n % 2; j < n; j += 2 )
+            {
+                const int xBeg = j == 0 ? 0 : lasts[j - 1] + 1;
+                const int xEnd = lasts[j] + 1;
+                if ( xBeg < xEnd )
+                    res.set( rowStart + xBeg, xEnd - xBeg, true );
+            }
+        }
+    } );
+    return res;
 }
 
 template<typename T>

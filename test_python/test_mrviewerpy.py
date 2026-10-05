@@ -995,16 +995,13 @@ def test_prompt_pumps_viewer_on_macos():
 
 
 # A helper thread's command arrives while the main thread still runs Python code: the helper must
-# wait without the GIL, else on macOS the main thread never gets to `showViewer()` to serve it.
+# wait without the GIL, else the main thread never gets to `showViewer()` to serve it. On macOS
+# nothing is served before `showViewer()`, so the helper's shutdown() always comes after skipFrames.
 _COMMAND_WHILE_MAIN_BUSY_SRC = _VIEWER_PROLOGUE + r"""
 
 def from_thread():
     mrviewerpy.Viewer().skipFrames(1)
     print("PUMPED", flush=True)
-
-
-def close_later():
-    time.sleep(1.0)
     mrviewerpy.Viewer().shutdown()
 
 
@@ -1013,14 +1010,13 @@ deadline = time.monotonic() + 1.0
 while time.monotonic() < deadline:  # Python code needs the GIL, unlike time.sleep()
     pass
 print("BUSY_DONE", flush=True)
-threading.Thread(target=close_later, daemon=True).start()
 mrviewerpy.showViewer()
 print("SHOW_RETURNED", flush=True)
 """
 
 
-@any_viewer
-def test_command_while_main_thread_runs_python():
+@macos_only
+def test_command_while_main_thread_runs_python_on_macos():
     """A blocking call from a helper thread does not hold the GIL the main thread needs."""
     global mrviewerpy
     mrviewerpy = pytest.importorskip(

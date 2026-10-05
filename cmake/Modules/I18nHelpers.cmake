@@ -4,7 +4,6 @@ find_program(MSGFMT_EXECUTABLE
   PATH_SUFFIXES bin
 )
 
-# REQUIRED: fail the configuration if msgfmt is not found (otherwise translations are skipped with a warning)
 function(mr_add_translations TARGET_NAME)
   set(options REQUIRED)
   set(oneValueArgs "")
@@ -71,8 +70,8 @@ function(mr_add_translations TARGET_NAME)
       )
     endif(MO_OUTPUT_FILES)
   elseif(LOCALE_REQUIRED)
-    message(FATAL_ERROR "msgfmt not found, cannot build translations of ${TARGET_NAME}: install gettext or set GETTEXT_ROOT")
+    message(FATAL_ERROR "msgfmt not found, cannot build translations")
   else()
-    message(WARNING "msgfmt not found, translations of ${TARGET_NAME} are skipped: install gettext or set GETTEXT_ROOT")
+    message(WARNING "msgfmt not found")
   endif(MSGFMT_EXECUTABLE)
 endfunction(mr_add_translations)

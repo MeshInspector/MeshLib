@@ -114,7 +114,7 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& lin
 /// so a ray passing exactly through a vertex or an edge crosses a closed surface an even number of times;
 /// slower than the ordinary versions
 MRMESH_API void rayMeshIntersectAllPrecise( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
-    double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
+    double rayStart = 0.0, double rayEnd = DBL_MAX );
 
 /// given mesh part and arbitrary plane, outputs
 /// \param fs  triangles from boxes crossed or touched by the plane

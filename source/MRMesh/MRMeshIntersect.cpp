@@ -403,17 +403,9 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
 }
 
 void rayMeshIntersectAllPrecise( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
-    double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec )
+    double rayStart, double rayEnd )
 {
-    if( prec )
-    {
-        return rayMeshIntersectAll_<double, true>( meshPart, line, callback, rayStart, rayEnd, *prec );
-    }
-    else
-    {
-        const IntersectionPrecomputes<double> precNew( line.d );
-        return rayMeshIntersectAll_<double, true>( meshPart, line, callback, rayStart, rayEnd, precNew );
-    }
+    return rayMeshIntersectAll_<double, true>( meshPart, line, callback, rayStart, rayEnd, IntersectionPrecomputes<double>( line.d ) );
 }
 
 void planeMeshIntersect( const MeshPart& meshPart, const Plane3f & plane,

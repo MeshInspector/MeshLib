@@ -183,7 +183,6 @@ if(NOT draco_FOUND)
       # PYTHONINTERP_FOUND is never set since Draco moved to find_package(Python) (google/draco@cff9f68)
       set(PYTHONINTERP_FOUND ON)
       set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
-      # Emscripten builds SHARED libraries as static, so draco_shared would clash with draco_static
       set(BUILD_SHARED_LIBS OFF)
     ENDIF()
     meshlib_add_package(draco)

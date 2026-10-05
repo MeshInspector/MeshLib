@@ -82,3 +82,37 @@ jobs:
             if ($LASTEXITCODE -ne 0) { $exitCode = $LASTEXITCODE }
           }
           exit $exitCode
+
+  nuget-macos-load-test:
+    name: NuGet macOS dylibs load test (${{ matrix.rid }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The oldest macOS per arch: the bundled brew dylibs target the build
+        # image, and load here only if they use no system symbol missing on this OS.
+        include:
+          - rid: osx-arm64
+            runner: [ self-hosted, macos, arm64, macos-13 ]
+          - rid: osx-x64
+            runner: [ self-hosted, macos, x64, macos-12-intel ]
+    timeout-minutes: 10
+    steps:
+      - name: Download nuget package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download ${{ inputs.release_tag }} --pattern "*.nupkg" --repo ${{ github.repository }} --dir "$RUNNER_TEMP" --clobber
+
+      - name: Load every dylib
+        run: |
+          sw_vers -productVersion
+          rm -rf "$RUNNER_TEMP/nupkg"
+          PKG=$(ls "$RUNNER_TEMP"/MeshLib*.nupkg | head -n 1)
+          unzip -q "$PKG" "runtimes/${{ matrix.rid }}/native/*" -d "$RUNNER_TEMP/nupkg"
+          FAILED=0
+          for LIB in "$RUNNER_TEMP/nupkg/runtimes/${{ matrix.rid }}/native"/*.dylib ; do
+            echo "$LIB"
+            python3 -c 'import ctypes, sys; ctypes.CDLL(sys.argv[1])' "$LIB" || FAILED=1
+          done
+          exit $FAILED

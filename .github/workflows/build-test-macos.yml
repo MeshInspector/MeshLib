@@ -65,9 +65,9 @@ jobs:
             # MeshInspector/toolchains releases; the app stays on AppleClang.
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
             # The .pkg and NuGet bundle brew dylibs that require the macOS they were bottled
-            # for, so distributions are built on the oldest arm64 Mac (macOS 13).
-            runner: ${{ inputs.upload_artifacts && fromJSON('["self-hosted", "macos", "arm64", "macos-13"]') || 'macos-15' }}
-            instance: ${{ inputs.upload_artifacts && 'self-hosted-arm-macos-13' || 'macos-15' }}
+            # for, so this is built on the oldest arm64 Mac (macOS 13).
+            runner: [ self-hosted, macos, arm64, macos-13 ]
+            instance: self-hosted-arm-macos-13
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
@@ -356,35 +356,3 @@ jobs:
           path: ./patched_content/*
           retention-days: 1
           overwrite: true
-
-  macos-nuget-load-test:
-    needs: [ macos-build-test ]
-    if: ${{ inputs.nuget_build_patch }}
-    timeout-minutes: 10
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # The oldest macOS per arch: the bundled brew dylibs target the newer build
-        # image, and load here only if they use no system symbol missing on this OS.
-        include:
-          - arch: arm64
-            runner: [ self-hosted, macos, arm64, macos-13 ]
-          - arch: x64
-            runner: [ self-hosted, macos, x64, macos-12-intel ]
-    steps:
-      - name: Download NuGet files
-        uses: actions/download-artifact@v8
-        with:
-          name: DotNetPatchArchiveMacOs-${{ matrix.arch }}
-          path: ${{ runner.temp }}/nuget_runtime
-
-      - name: Load every dylib
-        run: |
-          sw_vers -productVersion
-          FAILED=0
-          for LIB in "$RUNNER_TEMP"/nuget_runtime/*.dylib ; do
-            echo "$LIB"
-            python3 -c 'import ctypes, sys; ctypes.CDLL(sys.argv[1])' "$LIB" || FAILED=1
-          done
-          exit $FAILED

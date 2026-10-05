@@ -410,7 +410,18 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A )
 {
     MR_TIMER;
-    // first the triangles of A changed by the splits, then the ones of B
+    // if many faces were split, a new search is faster: e.g. on two 3366-vertex spheres the update is faster with 1/26 of the vertices new,
+    // and 1.3 times slower with 1/9 of them new; in Boolean only the faces with lone contours are split, usually much fewer
+    const size_t numVerts = a.topology.vertSize() + b.topology.vertSize();
+    if ( 32 * ( numVerts - size_t( aFirstNewVert ) - size_t( bFirstNewVert ) ) > numVerts )
+    {
+        res = findCollidingEdgeTrisPrecise( a, b, conv, rigidB2A );
+        return;
+    }
+
+    // first the triangles of A changed by the splits, then the ones of B;
+    // if both meshes were split, the pass of B removes and finds again the few intersections of the pass of A
+    // between the changed triangles of A and B and their edges
     for ( bool inA : { true, false } )
     {
         const Mesh & mesh = inA ? a : b;

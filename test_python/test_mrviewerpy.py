@@ -1001,6 +1001,10 @@ _COMMAND_WHILE_MAIN_BUSY_SRC = _VIEWER_PROLOGUE + r"""
 def from_thread():
     mrviewerpy.Viewer().skipFrames(1)
     print("PUMPED", flush=True)
+
+
+def close_later():
+    time.sleep(1.0)
     mrviewerpy.Viewer().shutdown()
 
 
@@ -1009,6 +1013,7 @@ deadline = time.monotonic() + 1.0
 while time.monotonic() < deadline:  # Python code needs the GIL, unlike time.sleep()
     pass
 print("BUSY_DONE", flush=True)
+threading.Thread(target=close_later, daemon=True).start()
 mrviewerpy.showViewer()
 print("SHOW_RETURNED", flush=True)
 """

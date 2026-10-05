@@ -263,7 +263,7 @@ MultiMeshIntersectionResult rayMultiMeshAnyIntersect( const std::vector<Line3dMe
     return rayMultiMeshAnyIntersect_( lineMeshes, rayStart, rayEnd );
 }
 
-template<typename T>
+template<typename T, bool Precise = false>
 void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshIntersectionCallback callback,
     T rayStart /*= 0.0f*/, T rayEnd /*= FLT_MAX */, const IntersectionPrecomputes<T>& prec )
 {
@@ -292,8 +292,9 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
     Vector3f dP, eP;
     std::array<PreciseVertCoords, 5> pvc;
 
-    if constexpr ( std::is_same_v<T, double> )
+    if constexpr ( Precise )
     {
+        static_assert( std::is_same_v<T, double> );
         convToInt = getToIntConverter( Box3d( tree[tree.rootNodeId()].box ) );
         convToFloat = getToFloatConverter( Box3d( tree[tree.rootNodeId()].box ) );
         dP = Vector3f( line( s ) );
@@ -320,9 +321,8 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
             if( !meshPart.region || meshPart.region->test( face ) )
             {
                 m.topology.getTriVerts( face, pvc[0].id, pvc[1].id, pvc[2].id );
-                if constexpr ( std::is_same_v<T, double> )
+                if constexpr ( Precise )
                 {
-                    // double version (more precise)
                     for ( int i = 0; i < 3; ++i )
                         pvc[i].pt = convToInt( m.points[pvc[i].id] );
                     if ( doTriangleSegmentIntersect( pvc ) )
@@ -341,7 +341,6 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, MeshI
                 }
                 else
                 {
-                    // float version (faster)
                     const Vector3<T> vA = Vector3<T>( m.points[pvc[0].id] ) - line.p;
                     const Vector3<T> vB = Vector3<T>( m.points[pvc[1].id] ) - line.p;
                     const Vector3<T> vC = Vector3<T>( m.points[pvc[2].id] ) - line.p;
@@ -400,6 +399,20 @@ void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshInte
     {
         const IntersectionPrecomputes<double> precNew( line.d );
         return rayMeshIntersectAll_<double>( meshPart, line, callback, rayStart, rayEnd, precNew );
+    }
+}
+
+void rayMeshIntersectAllPrecise( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
+    double rayStart, double rayEnd, const IntersectionPrecomputes<double>* prec )
+{
+    if( prec )
+    {
+        return rayMeshIntersectAll_<double, true>( meshPart, line, callback, rayStart, rayEnd, *prec );
+    }
+    else
+    {
+        const IntersectionPrecomputes<double> precNew( line.d );
+        return rayMeshIntersectAll_<double, true>( meshPart, line, callback, rayStart, rayEnd, precNew );
     }
 }
 

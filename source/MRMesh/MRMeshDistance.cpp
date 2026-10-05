@@ -41,7 +41,7 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
     {
         const Line3d ray( Vector3d( p ), Vector3d::plusX() );
         int count = 0;
-        rayMeshIntersectAll( mp, ray, [&count] ( auto&& ) { ++count; return true; } );
+        rayMeshIntersectAllPrecise( mp, ray, [&count] ( auto&& ) { ++count; return true; } );
         if ( count % 2 == 1 ) // inside
             dist = -dist;
         break;

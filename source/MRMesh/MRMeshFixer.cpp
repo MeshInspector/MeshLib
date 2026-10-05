@@ -570,7 +570,7 @@ Expected<FaceBitSet> findDisorientedFaces( const Mesh& mesh, const FindDisorient
                 ++counter;
             return true;
         };
-        rayMeshIntersectAll( *targetMesh, Line3d( triCenter, normal ), interPred );
+        rayMeshIntersectAllPrecise( *targetMesh, Line3d( triCenter, normal ), interPred );
         bool pValid = counter % 2 == 0;
         auto pCounter = counter;
         bool nValid = true;
@@ -579,7 +579,7 @@ Expected<FaceBitSet> findDisorientedFaces( const Mesh& mesh, const FindDisorient
         if ( params.mode != FindDisorientationParams::RayMode::Positive )
         {
             counter = 0;
-            rayMeshIntersectAll( *targetMesh, Line3d( triCenter, -normal ), interPred );
+            rayMeshIntersectAllPrecise( *targetMesh, Line3d( triCenter, -normal ), interPred );
             nValid = counter % 2 == 1;
             nCounter = counter - 1; // ideal face has 0-pCounter and 1-nCounter: so we decrement nCounter for fair compare
 

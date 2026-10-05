@@ -110,6 +110,11 @@ MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3f& lin
 /// Same as \ref rayMeshIntersectAllF, but use double precision
 MRMESH_API void rayMeshIntersectAll( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
     double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
+/// Same as \ref rayMeshIntersectAllF, but uses precise predicates (Simulation of Simplicity) to detect ray-triangle intersections,
+/// so a ray passing exactly through a vertex or an edge crosses a closed surface an even number of times;
+/// slower than the ordinary versions
+MRMESH_API void rayMeshIntersectAllPrecise( const MeshPart& meshPart, const Line3d& line, MeshIntersectionCallback callback,
+    double rayStart = 0.0, double rayEnd = DBL_MAX, const IntersectionPrecomputes<double>* prec = nullptr );
 
 /// given mesh part and arbitrary plane, outputs
 /// \param fs  triangles from boxes crossed or touched by the plane

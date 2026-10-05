@@ -136,7 +136,7 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
     if ( res.dims.x <= 0 || res.dims.y <= 0 || res.dims.z <= 0 )
         return res;
 
-    // one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
+    // one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAllPrecise
     // guarantee that every ray crosses the closed surface an even number of times;
     // each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
     mp.mesh.getAABBTree();
@@ -152,7 +152,7 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
                 params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
                 params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
             hits.clear();
-            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
+            rayMeshIntersectAllPrecise( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec )
             {
                 hits.push_back( isec.distanceAlongLine );
                 return true;

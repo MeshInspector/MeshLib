@@ -41,7 +41,9 @@ MRVOXELS_API Expected<SimpleBinaryVolume> makeCloseToMeshVolume( const MeshPart&
 
 /// makes a binary volume, where a voxel gets 1 if its center is inside closed mesh, and 0 otherwise;
 /// it is computed by OpenVDB in a narrow band of half a voxel, so it is much faster and smaller than
-/// meshToDistanceVolume followed by thresholding at zero
+/// meshToDistanceVolume followed by thresholding at zero;
+/// inside are all voxels separated from infinity by the surface, ignoring triangle orientation: enclosed cavities and the space
+/// between nested layers are filled, and overlapping parts of a self-intersecting surface are united
 MRVOXELS_API Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const DistanceVolumeParams& params );
 
 /// returns a volume filled with the values: (unsigned distance to region-part) - (unsigned distance to not-region-part);

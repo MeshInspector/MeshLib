@@ -101,12 +101,6 @@ if "!use_s3_assets!"=="true" (
     set "X_VCPKG_ASSET_SOURCES="
 )
 
-REM Ensure vcpkg downloads folder exists
-if not exist "!vcpkg_path!downloads\" mkdir "!vcpkg_path!downloads"
-if exist "%~dp0vcpkg\downloads\" (
-    xcopy "%~dp0vcpkg\downloads\*" "!vcpkg_path!downloads" /Y /E 2>nul
-)
-
 REM Read package list from requirements file
 set packages=
 for /f "delims=" %%i in ('type "%~dp0..\requirements\windows.txt"') do (

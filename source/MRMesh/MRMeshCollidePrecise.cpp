@@ -7,19 +7,18 @@
 #include "MRParallelFor.h"
 #include "MRProcessSelfTreeSubtasks.h"
 #include "MRRingIterator.h"
-#include <array>
 
 namespace MR
 {
 
-PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b, 
+namespace
+{
+
+/// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
+PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTree & aTree, const MeshPart & b, const AABBTree & bTree,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
 {
-    MR_TIMER;
-
     PreciseCollisionResult res;
-    const AABBTree & aTree = a.mesh.getAABBTree();
-    const AABBTree & bTree = b.mesh.getAABBTree();
     if ( aTree.nodes().empty() || bTree.nodes().empty() )
         return res;
 
@@ -270,30 +269,50 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     return res;
 }
 
+} //anonymous namespace
+
+PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b,
+    ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
+{
+    MR_TIMER;
+    return findCollidingEdgeTrisPrecise( a, a.mesh.getAABBTree(), b, b.mesh.getAABBTree(), conv, rigidB2A, anyIntersection );
+}
+
+PreciseCollisionResult findCollidingEdgeTrisPrecise(
+    const Mesh & a, const std::vector<FaceId> & facesA,
+    const Mesh & b, const std::vector<FaceId> & facesB,
+    ConvertToIntVector conv, const AffineXf3f * rigidB2A )
+{
+    MR_TIMER;
+    FaceBitSet regionA( a.topology.faceSize() );
+    for ( auto f : facesA )
+        regionA.set( f );
+    FaceBitSet regionB( b.topology.faceSize() );
+    for ( auto f : facesB )
+        regionB.set( f );
+    const MeshPart mpA{ a, &regionA };
+    const MeshPart mpB{ b, &regionB };
+    // the trees of given triangles only
+    return findCollidingEdgeTrisPrecise( mpA, AABBTree( mpA ), mpB, AABBTree( mpB ), conv, rigidB2A, false );
+}
+
 namespace
 {
 
-/// the int box of given box after the transformation xf (if given), as the boxes of the nodes in findCollidingEdgeTrisPrecise
-Box3i toIntBox( const Box3f & box, const ConvertToIntVector & conv, const AffineXf3f * xf )
-{
-    const auto b = transformed( box, xf );
-    return { conv( b.min ), conv( b.max ) };
-}
-
-/// calls f( leafId ) for every leaf of the tree having int box intersecting given box, where nodeBox( nodeId ) returns the int box of a node
-template <typename B, typename F>
-void forEachLeafIntersectingBox( const AABBTree & tree, const Box3i & box, B && nodeBox, F && f )
+/// calls f( leafId ) for every leaf of the tree having int box (as in findCollidingEdgeTrisPrecise) intersecting given box
+template <typename F>
+void forEachLeafIntersectingBox( const AABBTree & tree, const Box3i & box, const ConvertToIntVector & conv, const AffineXf3f * xf, F && f )
 {
     if ( tree.nodes().empty() )
         return;
     std::vector<NodeId> stack{ tree.rootNodeId() };
     while ( !stack.empty() )
     {
-        const auto n = stack.back();
+        const auto & node = tree[stack.back()];
         stack.pop_back();
-        if ( !box.intersects( nodeBox( n ) ) )
+        const auto nodeBox = transformed( node.box, xf );
+        if ( !box.intersects( { conv( nodeBox.min ), conv( nodeBox.max ) } ) )
             continue;
-        const auto & node = tree[n];
         if ( node.leaf() )
             f( node.leafId() );
         else
@@ -304,130 +323,7 @@ void forEachLeafIntersectingBox( const AABBTree & tree, const Box3i & box, B && 
     }
 }
 
-/// AABB tree of given triangles of the mesh
-AABBTree makeTree( const Mesh & mesh, const std::vector<FaceId> & tris )
-{
-    FaceBitSet region( mesh.topology.faceSize() );
-    for ( auto t : tris )
-        region.set( t );
-    return AABBTree( MeshPart{ mesh, &region } );
-}
-
-/// the int boxes of all nodes of the tree
-Vector<Box3i, NodeId> getIntBoxes( const AABBTree & tree, const ConvertToIntVector & conv, const AffineXf3f * xf )
-{
-    Vector<Box3i, NodeId> res;
-    res.reserve( tree.nodes().size() );
-    for ( const auto & node : tree.nodes() )
-        res.push_back( toIntBox( node.box, conv, xf ) );
-    return res;
-}
-
-/// all edges of given triangles
-UndirectedEdgeBitSet getTriEdges( const MeshTopology & topology, const FaceBitSet & tris )
-{
-    UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
-    for ( auto t : tris )
-        for ( auto e : leftRing( topology, t ) )
-            res.set( e.undirected() );
-    return res;
-}
-
-std::vector<FaceId> toVector( const FaceBitSet & tris )
-{
-    std::vector<FaceId> res;
-    res.reserve( tris.count() );
-    for ( auto t : tris )
-        res.push_back( t );
-    return res;
-}
-
-std::vector<EdgeId> toVector( const UndirectedEdgeBitSet & edges )
-{
-    std::vector<EdgeId> res;
-    res.reserve( edges.count() );
-    for ( auto ue : edges )
-        res.emplace_back( ue );
-    return res;
-}
-
 } //anonymous namespace
-
-std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
-    const Mesh & a, const std::vector<EdgeId> & edgesA,
-    const Mesh & b, const std::vector<FaceId> & facesB,
-    ConvertToIntVector conv, const AffineXf3f * rigidB2A )
-{
-    const auto treeB = makeTree( b, facesB );
-    const auto boxesB = getIntBoxes( treeB, conv, rigidB2A );
-    const int aVertsSize = (int)a.topology.vertSize();
-    std::vector<EdgeTri> res;
-    for ( EdgeId eA : edgesA )
-    {
-        PreciseVertCoords avc[2];
-        avc[0].id = a.topology.org( eA );
-        avc[1].id = a.topology.dest( eA );
-        Box3i box;
-        for ( int j = 0; j < 2; ++j )
-        {
-            avc[j].pt = conv( a.points[avc[j].id] );
-            box.include( avc[j].pt );
-        }
-        // only the triangles with intersecting int boxes can intersect the edge
-        forEachLeafIntersectingBox( treeB, box, [&]( NodeId n ) { return boxesB[n]; }, [&]( FaceId fB )
-        {
-            PreciseVertCoords bvc[3];
-            b.topology.getTriVerts( fB, bvc[0].id, bvc[1].id, bvc[2].id );
-            for ( int j = 0; j < 3; ++j )
-            {
-                const auto bf = b.points[bvc[j].id];
-                bvc[j].pt = conv( rigidB2A ? (*rigidB2A)( bf ) : bf );
-                bvc[j].id += aVertsSize;
-            }
-            auto isect = doTriangleSegmentIntersect( { bvc[0], bvc[1], bvc[2], avc[0], avc[1] } );
-            if ( isect )
-                res.emplace_back( isect.dIsLeftFromABC ? eA : eA.sym(), fB );
-        } );
-    }
-    return res;
-}
-
-std::vector<EdgeTri> findCollidingEdgeTrisPrecise(
-    const Mesh & a, const std::vector<FaceId> & facesA,
-    const Mesh & b, const std::vector<EdgeId> & edgesB,
-    ConvertToIntVector conv, const AffineXf3f * rigidB2A )
-{
-    const auto treeA = makeTree( a, facesA );
-    const auto boxesA = getIntBoxes( treeA, conv, nullptr );
-    const int aVertsSize = (int)a.topology.vertSize();
-    std::vector<EdgeTri> res;
-    for ( EdgeId eB : edgesB )
-    {
-        PreciseVertCoords bvc[2];
-        bvc[0].id = b.topology.org( eB );
-        bvc[1].id = b.topology.dest( eB );
-        Box3i box;
-        for ( int j = 0; j < 2; ++j )
-        {
-            const auto bf = b.points[bvc[j].id];
-            bvc[j].pt = conv( rigidB2A ? (*rigidB2A)( bf ) : bf );
-            bvc[j].id += aVertsSize;
-            box.include( bvc[j].pt );
-        }
-        // only the triangles with intersecting int boxes can intersect the edge
-        forEachLeafIntersectingBox( treeA, box, [&]( NodeId n ) { return boxesA[n]; }, [&]( FaceId fA )
-        {
-            PreciseVertCoords avc[3];
-            a.topology.getTriVerts( fA, avc[0].id, avc[1].id, avc[2].id );
-            for ( int j = 0; j < 3; ++j )
-                avc[j].pt = conv( a.points[avc[j].id] );
-            auto isect = doTriangleSegmentIntersect( { avc[0], avc[1], avc[2], bvc[0], bvc[1] } );
-            if ( isect )
-                res.emplace_back( isect.dIsLeftFromABC ? eB : eB.sym(), fA );
-        } );
-    }
-    return res;
-}
 
 void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
     const Mesh & a, VertId aFirstNewVert, const Mesh & b, VertId bFirstNewVert,
@@ -450,43 +346,36 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
                     tris.set( t );
         if ( tris.none() )
             continue;
-        const auto edges = getTriEdges( mesh.topology, tris );
 
         // remove all intersections with these triangles and their edges
+        UndirectedEdgeBitSet edges( mesh.topology.undirectedEdgeSize() );
+        for ( auto t : tris )
+            for ( auto e : leftRing( mesh.topology, t ) )
+                edges.set( e.undirected() );
         std::erase_if( res, [&]( const VarEdgeTri & et )
         {
             return et.isEdgeATriB() == inA ? edges.test( et.edge.undirected() ) : tris.test( et.tri() );
         } );
 
-        // and find them again among the triangles of the other mesh having intersecting int boxes, and their edges
+        // and find them again with the triangles of the other mesh having intersecting int boxes
+        std::vector<FaceId> trisVec, otherTrisVec;
         FaceBitSet otherTris( other.topology.faceSize() );
         const auto & otherTree = other.getAABBTree();
         for ( auto t : tris )
         {
+            trisVec.push_back( t );
             Box3i box;
             for ( auto v : mesh.topology.getTriVerts( t ) )
                 box.include( conv( meshXf ? ( *meshXf )( mesh.points[v] ) : mesh.points[v] ) );
-            forEachLeafIntersectingBox( otherTree, box, [&]( NodeId n ) { return toIntBox( otherTree[n].box, conv, otherXf ); },
-                [&]( FaceId ot ) { otherTris.set( ot ); } );
+            forEachLeafIntersectingBox( otherTree, box, conv, otherXf, [&]( FaceId ot )
+            {
+                if ( !otherTris.test_set( ot ) )
+                    otherTrisVec.push_back( ot );
+            } );
         }
-        const auto trisVec = toVector( tris );
-        const auto edgesVec = toVector( edges );
-        const auto otherTrisVec = toVector( otherTris );
-        const auto otherEdgesVec = toVector( getTriEdges( other.topology, otherTris ) );
-        if ( inA )
-        {
-            for ( const auto & et : findCollidingEdgeTrisPrecise( a, trisVec, b, otherEdgesVec, conv, rigidB2A ) )
-                res.emplace_back( false, et );
-            for ( const auto & et : findCollidingEdgeTrisPrecise( a, edgesVec, b, otherTrisVec, conv, rigidB2A ) )
-                res.emplace_back( true, et );
-        }
-        else
-        {
-            for ( const auto & et : findCollidingEdgeTrisPrecise( a, otherEdgesVec, b, trisVec, conv, rigidB2A ) )
-                res.emplace_back( true, et );
-            for ( const auto & et : findCollidingEdgeTrisPrecise( a, otherTrisVec, b, edgesVec, conv, rigidB2A ) )
-                res.emplace_back( false, et );
-        }
+        const auto found = inA ? findCollidingEdgeTrisPrecise( a, trisVec, b, otherTrisVec, conv, rigidB2A )
+            : findCollidingEdgeTrisPrecise( a, otherTrisVec, b, trisVec, conv, rigidB2A );
+        res.insert( res.end(), found.begin(), found.end() );
     }
 }
 

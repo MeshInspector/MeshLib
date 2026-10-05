@@ -1,6 +1,9 @@
 #ifndef MESHLIB_NO_VOXELS
 
 #include "MRVoxels/MRBoolean.h"
+#include "MRVoxels/MRMeshToDistanceVolume.h"
+#include "MRMesh/MRMakeSphereMesh.h"
+#include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRMesh.h"
 #include <gtest/gtest.h>
@@ -30,6 +33,35 @@ TEST( MRMesh, MeshVoxelsConverterSelfIntersections )
     auto grid = converter( torus );
     torus = converter( grid );
     ASSERT_GT( torus.volume(), 0.f );
+}
+
+TEST( MRMesh, MakeInsideMeshVolume )
+{
+    const auto sphere = makeSphere( { .radius = 1.0f, .numMeshVertices = 10000 } );
+    DistanceVolumeParams params;
+    params.origin = Vector3f::diagonal( -1.5f );
+    params.voxelSize = Vector3f::diagonal( 0.1f );
+    params.dimensions = Vector3i::diagonal( 30 );
+    for ( auto makeInside : { &makeInsideMeshVolume, &makeInsideMeshVolumeVdb } )
+    {
+        const auto vol = makeInside( sphere, params );
+        ASSERT_TRUE( vol.has_value() );
+        EXPECT_EQ( vol->dims, params.dimensions );
+
+        const VolumeIndexer indexer( vol->dims );
+        int numChecked = 0;
+        for ( size_t n = 0; n < indexer.size(); ++n )
+        {
+            const VoxelId i( n );
+            const auto center = params.origin + mult( params.voxelSize, Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f ) );
+            const auto r = center.length();
+            if ( std::abs( r - 1.0f ) < 0.02f )
+                continue; // too close to the surface approximated by triangles
+            EXPECT_EQ( vol->data.test( i ), r < 1.0f );
+            ++numChecked;
+        }
+        EXPECT_GT( numChecked, 25000 );
+    }
 }
 
 } //namespace MR

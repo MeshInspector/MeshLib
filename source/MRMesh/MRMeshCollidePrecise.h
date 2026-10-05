@@ -93,18 +93,17 @@ MRMESH_API void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
 MRMESH_API std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp,
     ConvertToIntVector conv, bool anyIntersection = false, const AffineXf3f* rigidB2A = nullptr, int aVertSizes = 0 );
 
-/// finds all intersections between every given edge from A and given triangles from B;
-/// each edge is checked only with the triangles having intersecting int boxes, found by AABB tree of given triangles
-MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
-    const Mesh & a, const std::vector<EdgeId> & edgesA,
-    const Mesh & b, const std::vector<FaceId> & facesB,
-    ConvertToIntVector conv, const AffineXf3f * rigidB2A = nullptr );
-
-/// finds all intersections between every given triangle from A and given edge from B;
-/// each edge is checked only with the triangles having intersecting int boxes, found by AABB tree of given triangles
-MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
+/**
+ * \brief finds all pairs of colliding edges and triangles of given triangles from one mesh and given triangles from another mesh:
+ * the edges of given triangles from A with given triangles from B, and the edges of given triangles from B with given triangles from A;
+ * the result is the same as of findCollidingEdgeTrisPrecise( MeshPart{ a, &regionA }, MeshPart{ b, &regionB }, conv, rigidB2A ) with the regions of given triangles,
+ * but this function builds the AABB trees of given triangles only instead of using (and building if necessary) the trees of whole meshes,
+ * which is much faster if few triangles are given
+ * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
+ */
+MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise(
     const Mesh & a, const std::vector<FaceId> & facesA,
-    const Mesh & b, const std::vector<EdgeId> & edgesB,
+    const Mesh & b, const std::vector<FaceId> & facesB,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A = nullptr );
 
 /**

@@ -280,6 +280,10 @@ jobs:
       # GitHub-hosted runners keep the production sudo-into-/Library path so
       # the end-user install scenario is still exercised.
       - name: Install Pkg
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'       # don't pull new formulae mid-job
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed keg (no source rebuild on macOS 12/13)
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: |
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
             sudo installer -pkg meshlib_*.pkg -target /

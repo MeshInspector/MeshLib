@@ -275,59 +275,6 @@ TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
     }
 }
 
-// findCollidingEdgeTrisPrecise for given triangles finds the intersections of the search in whole meshes with these triangles and their edges
-TEST( MRMesh, CollidingEdgeTrisPreciseOfGivenTriangles )
-{
-    const Mesh mesh = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
-    const auto xf = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), 0.1f ) );
-    const auto conv = getVectorConverters( mesh, mesh, &xf );
-    auto sorted = []( PreciseCollisionResult res )
-    {
-        std::sort( res.begin(), res.end(), []( const VarEdgeTri & a, const VarEdgeTri & b )
-        {
-            return std::make_tuple( a.isEdgeATriB(), int( a.edge ), int( a.tri() ) ) < std::make_tuple( b.isEdgeATriB(), int( b.edge ), int( b.tri() ) );
-        } );
-        return res;
-    };
-    const auto all = sorted( findCollidingEdgeTrisPrecise( mesh, mesh, conv.toInt, &xf ) );
-    ASSERT_GT( all.size(), 100 );
-
-    std::vector<FaceId> tris;
-    for ( auto t : mesh.topology.getValidFaces() )
-        tris.push_back( t );
-    EXPECT_EQ( sorted( findCollidingEdgeTrisPrecise( mesh, tris, mesh, tris, conv.toInt, &xf ) ), all );
-
-    // every second triangle of A and every third one of B, so many edges have only one of their triangles given
-    std::vector<FaceId> trisA, trisB;
-    FaceBitSet regionA( mesh.topology.faceSize() ), regionB( mesh.topology.faceSize() );
-    for ( auto t : tris )
-    {
-        if ( t % 2 == 0 )
-        {
-            trisA.push_back( t );
-            regionA.set( t );
-        }
-        if ( t % 3 == 0 )
-        {
-            trisB.push_back( t );
-            regionB.set( t );
-        }
-    }
-    auto hasTri = [&]( EdgeId e, const FaceBitSet & region )
-    {
-        const auto l = mesh.topology.left( e );
-        const auto r = mesh.topology.right( e );
-        return ( l && region.test( l ) ) || ( r && region.test( r ) );
-    };
-    PreciseCollisionResult part;
-    for ( const auto & et : all )
-        if ( et.isEdgeATriB() ? hasTri( et.edge, regionA ) && regionB.test( et.tri() ) : hasTri( et.edge, regionB ) && regionA.test( et.tri() ) )
-            part.push_back( et );
-    ASSERT_GT( part.size(), 10 );
-    EXPECT_EQ( sorted( findCollidingEdgeTrisPrecise( mesh, trisA, mesh, trisB, conv.toInt, &xf ) ), part );
-    EXPECT_EQ( sorted( findCollidingEdgeTrisPrecise( MeshPart{ mesh, &regionA }, MeshPart{ mesh, &regionB }, conv.toInt, &xf ) ), part );
-}
-
 // after splits of faces and edges in both meshes, updateCollidingEdgeTrisPrecise finds the same intersections as new search
 TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
 {

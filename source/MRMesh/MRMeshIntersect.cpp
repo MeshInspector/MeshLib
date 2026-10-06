@@ -361,15 +361,13 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                         const auto ip = findTriangleSegmentIntersectionPreciseInt( pvc[0].pt, pvc[1].pt, pvc[2].pt, pvc[3].pt, pvc[4].pt );
                         // no intersection point only if the segment lies in the plane of the triangle without crossing its sides
                         found.proj.point = ip ? convToFloat( *ip ) : Vector3f( ( dP + eP ) * 0.5 );
-                        const auto t = dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq;
-                        if ( t < rayEnd && t > rayStart )
-                        {
-                            found.distanceAlongLine = float( t );
-                            found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
-                            // segment start pvc[3] is behind the triangle if dIsLeftFromABC
-                            if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
-                                return;
-                        }
+                        // the segment is already limited by [rayStart, rayEnd], so the hit is reported without checking its distance,
+                        // which is computed from the rounded point and can be slightly outside of the range
+                        found.distanceAlongLine = float( dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq );
+                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
+                        // segment start pvc[3] is behind the triangle if dIsLeftFromABC
+                        if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
+                            return;
                     }
                 }
                 else

@@ -185,8 +185,12 @@ struct BallPivotCandidate
 /// around them (e.g. far outliers) are skipped in the search of the first triangle;
 /// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave, and the result is sorted
 /// \param allComponents whether to restart the pivoting from the points not in the triangles found so far, until every point
-///                      is either in a triangle or has no alpha-shape triangles: all the pieces of a fragmented scan are found then,
-///                      but also the shapes of the inner points of a closed shell having alpha-shape triangles among themselves
+///                      is either in a triangle or has no alpha-shape triangles: all the pieces of a fragmented scan are found then.
+///                      WARNING: the result is not an outer shape any more, it can contain everything findAlphaShape produces:
+///                      a few points left out of the outer side of a closed shell (e.g. by noise) regrow its whole inner side,
+///                      and the inner points having alpha-shape triangles among themselves get their own shapes;
+///                      and it can take longer than findAlphaShape, since every point left out costs a search of all alpha-shape
+///                      triangles around it, which is as slow as in findAlphaShape but not halved by the symmetry of the pairs
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, so that the twins are known
     bool allComponents = false, const ProgressCallback & cb = {} );

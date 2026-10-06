@@ -17,9 +17,12 @@ enum class SignDetectionMode
     /// the sign is determined based on pseudonormal in closest mesh point (unsafe in case of self-intersections)
     ProjectionNormal,
 
-    /// ray intersection counter, significantly slower than ProjectionNormal and does not support holes in mesh;
-    /// this mode is slow, and it does NOT have CUDA acceleration at this moment
-    WindingRule,
+    /// a point is inside if the surface is crossed an odd number of times on the way from the point to infinity, triangle orientation is ignored
+    /// (as InsideMeshRule::OddCrossings in makeInsideMeshVolume); for meshes with holes, the result depends on the ray direction (+X);
+    /// signedDistanceToMesh casts a ray from every point, while the volume functions (e.g. meshToDistanceVolume) cast one ray per row of voxels, which is much faster;
+    /// this mode does NOT have CUDA acceleration at this moment
+    OddCrossings,
+    WindingRule [[deprecated( "use OddCrossings instead" )]] = OddCrossings, ///< old name of OddCrossings
 
     /// computes robust winding number generalization with support of holes and self-intersections in mesh,
     /// it is the slowest sign detection mode, but it CAN be accelerated with CUDA if this mode activated e.g. in OffsetParameters.fwn

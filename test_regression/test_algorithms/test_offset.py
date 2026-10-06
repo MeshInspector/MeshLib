@@ -26,7 +26,7 @@ from constants import test_files_path
                   "mesh": "self-intersected.ctm",
                   "skip_self-intsc_verif": True,  # Self-intersections presented in input
                   "params": {
-                      "signDetectionMode": "WindingRule",
+                      "signDetectionMode": "OddCrossings",
                       "offset": 5
                   }
                   }, id="thicken_self-intersected"),
@@ -83,7 +83,7 @@ def test_offset_thickening(tmp_path, test_params):
                   "mesh": "self-intersected.ctm",
                   "skip_self-intsc_verif": True,  # Self-intersections presented in input
                   "params": {
-                      "signDetectionMode": "WindingRule",
+                      "signDetectionMode": "OddCrossings",
                       "offset": -5.0,
                       "voxelSize": 0.5
                   }
@@ -202,7 +202,7 @@ def test_offset_shell(tmp_path, test_params):
                   "mesh": "morphed.ctm",
                   "skip_self-intsc_verif": True,  # sharpening produces intersections, that decided not to fix for now
                   "params": {
-                      "signDetectionMode": "WindingRule",
+                      "signDetectionMode": "OddCrossings",
                       "offset": 1,
                       "voxelSize": 0.2,
                       "mode": "Sharpening"
@@ -221,7 +221,7 @@ def test_offset_shell(tmp_path, test_params):
                   "mesh": "self-intersected.ctm",
                   "skip_self-intsc_verif": True,
                   "params": {
-                      "signDetectionMode": "WindingRule",
+                      "signDetectionMode": "OddCrossings",
                       "offset": 5,
                       "voxelSize": 1,
                       "mode": "Standard"

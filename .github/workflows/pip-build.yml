@@ -599,7 +599,7 @@ jobs:
     needs: setup
     if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 120
-    runs-on: ${{ matrix.instance }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -607,15 +607,17 @@ jobs:
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
+            runner: macos-15-intel
             instance: macos-15-intel
-            brewpath: /usr/local
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            instance: macos-14
-            brewpath: /opt/homebrew
+            # The bundled brew dylibs require the macOS they were bottled for; from a
+            # macos-15 image, libcpr needs a libc++ symbol missing on macOS 13.
+            runner: [ self-hosted, macos, arm64, macos-13 ]
+            instance: self-hosted-arm-macos-13
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
@@ -699,7 +701,7 @@ jobs:
 
       - name: Generate and build MRBind bindings
         env:
-          PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
+          PATH: ${{env.BREW_PREFIX}}/opt/make/libexec/gnubin:${{env.BREW_PREFIX}}/opt/grep/libexec/gnubin:${{env.PATH}}
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
@@ -953,9 +955,6 @@ jobs:
           - platform: "arm64"
             runner-tier: "self-hosted"
             instance: macos-13
-          - platform: "arm64"
-            runner-tier: "github"
-            instance: macos-14
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-15

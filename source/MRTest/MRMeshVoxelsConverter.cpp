@@ -4,6 +4,7 @@
 #include "MRVoxels/MRMeshToDistanceVolume.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRMeshDistance.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRMesh.h"
 #include <gtest/gtest.h>
@@ -42,7 +43,11 @@ TEST( MRMesh, MakeInsideMeshVolume )
     params.origin = Vector3f::diagonal( -1.5f );
     params.voxelSize = Vector3f::diagonal( 0.1f );
     params.dimensions = Vector3i::diagonal( 30 );
-    for ( auto makeInside : { &makeInsideMeshVolume, &makeInsideMeshVolumeVdb } )
+    using MakeInside = Expected<SimpleBinaryVolume>( * )( const MeshPart&, const DistanceVolumeParams& );
+    for ( MakeInside makeInside : {
+        MakeInside( [] ( const MeshPart& mp, const DistanceVolumeParams& p ) { return makeInsideMeshVolume( mp, p, InsideMeshRule::OddCrossings ); } ),
+        MakeInside( [] ( const MeshPart& mp, const DistanceVolumeParams& p ) { return makeInsideMeshVolume( mp, p, InsideMeshRule::PositiveWinding ); } ),
+        MakeInside( [] ( const MeshPart& mp, const DistanceVolumeParams& p ) { return makeInsideMeshVolumeVdb( mp, p ); } ) } )
     {
         const auto vol = makeInside( sphere, params );
         ASSERT_TRUE( vol.has_value() );
@@ -62,6 +67,91 @@ TEST( MRMesh, MakeInsideMeshVolume )
         }
         EXPECT_GT( numChecked, 25000 );
     }
+}
+
+TEST( MRMesh, MakeInsideMeshVolumeRules )
+{
+    auto makeSphereAt = [] ( float radius, const Vector3f& center, bool flip )
+    {
+        auto res = makeSphere( { .radius = radius, .numMeshVertices = 3000 } );
+        res.transform( AffineXf3f::translation( center ) );
+        if ( flip )
+            res.topology.flipOrientation();
+        return res;
+    };
+    DistanceVolumeParams params;
+    params.origin = Vector3f::diagonal( -2.5f );
+    params.voxelSize = Vector3f::diagonal( 0.1f );
+    params.dimensions = Vector3i::diagonal( 50 );
+    const VolumeIndexer indexer( params.dimensions );
+
+    // returns { odd crossings, positive winding, OpenVDB } inside-values of the voxel containing point p
+    auto probe = [&] ( const Mesh& mesh, const Vector3f& p )
+    {
+        const auto vox = indexer.toVoxelId( Vector3i( div( p - params.origin, params.voxelSize ) ) );
+        return std::array<bool, 3>{
+            makeInsideMeshVolume( mesh, params, InsideMeshRule::OddCrossings )->data.test( vox ),
+            makeInsideMeshVolume( mesh, params, InsideMeshRule::PositiveWinding )->data.test( vox ),
+            makeInsideMeshVolumeVdb( mesh, params )->data.test( vox ) };
+    };
+    using B = std::array<bool, 3>;
+
+    // two overlapping spheres, not united
+    auto twoSpheres = makeSphereAt( 1, { -0.5f, 0, 0 }, false );
+    twoSpheres.addMesh( makeSphereAt( 1, { 0.5f, 0, 0 }, false ) );
+    EXPECT_EQ( probe( twoSpheres, { 0.05f, 0.05f, 0.05f } ), B( { false, true, true } ) ); // in both spheres
+    EXPECT_EQ( probe( twoSpheres, { 1.15f, 0.05f, 0.05f } ), B( { true, true, true } ) ); // in one sphere
+    EXPECT_EQ( probe( twoSpheres, { 2.05f, 0.05f, 0.05f } ), B( { false, false, false } ) ); // outside
+
+    // hollow shell: the inner sphere looks inside the cavity, or wrongly outside
+    for ( bool flipInner : { true, false } )
+    {
+        auto shell = makeSphereAt( 1.8f, {}, false );
+        shell.addMesh( makeSphereAt( 1, {}, flipInner ) );
+        EXPECT_EQ( probe( shell, { 0.05f, 0.05f, 0.05f } ), B( { false, !flipInner, true } ) ); // in the cavity
+        EXPECT_EQ( probe( shell, { 1.45f, 0.05f, 0.05f } ), B( { true, true, true } ) ); // in the wall
+    }
+}
+
+TEST( MRMesh, MeshToDistanceVolumeOddCrossings )
+{
+    const auto torus = makeTorus( 1.0f, 0.4f, 64, 32 );
+    MeshToDistanceVolumeParams params;
+    params.vol.origin = Vector3f( -1.5f, -1.5f, -0.5f );
+    params.vol.voxelSize = Vector3f::diagonal( 0.05f );
+    params.vol.dimensions = Vector3i( 60, 60, 20 );
+    params.dist.signMode = SignDetectionMode::OddCrossings;
+    const auto vol = meshToDistanceVolume( torus, params );
+    ASSERT_TRUE( vol.has_value() );
+
+    auto unsignedOp = params.dist;
+    unsignedOp.signMode = SignDetectionMode::Unsigned;
+    const VolumeIndexer indexer( vol->dims );
+    int numInside = 0, numChecked = 0;
+    for ( size_t n = 0; n < indexer.size(); ++n )
+    {
+        const VoxelId i( n );
+        const auto center = params.vol.origin + mult( params.vol.voxelSize, Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f ) );
+        const auto dist = signedDistanceToMesh( torus, center, unsignedOp );
+        ASSERT_TRUE( dist.has_value() );
+        EXPECT_EQ( std::abs( vol->data[i] ), *dist );
+
+        // signed distance to the exact torus, from which the triangles deviate less than 0.005
+        const auto torusDist = std::hypot( std::hypot( center.x, center.y ) - 1.0f, center.z ) - 0.4f;
+        if ( std::abs( torusDist ) < 0.01f )
+            continue;
+        EXPECT_EQ( vol->data[i] < 0, torusDist < 0 );
+
+        // the same as from the ray of signedDistanceToMesh for this voxel
+        const auto signedDist = signedDistanceToMesh( torus, center, params.dist );
+        ASSERT_TRUE( signedDist.has_value() );
+        EXPECT_EQ( vol->data[i], *signedDist );
+        ++numChecked;
+        if ( torusDist < 0 )
+            ++numInside;
+    }
+    EXPECT_GT( numInside, 5000 );
+    EXPECT_GT( numChecked, 60000 );
 }
 
 } //namespace MR

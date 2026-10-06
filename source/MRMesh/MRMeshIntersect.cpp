@@ -283,18 +283,20 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         return;
 
     // the double version decides every intersection precisely in integer coordinates of the segment's ends and triangle's vertices;
-    // all boxes are expanded more than the rounding of the points to float and then to integers, otherwise
+    // rounding to integers can bring a vertex and a point of the segment closer by one integer step,
+    // so all boxes are expanded by two steps (the second one is for the errors of computations in double), otherwise
     // 1) a segment's end clipped by the root box can get exactly on a face lying in the plane of the box,
     //    and simulation-of-simplicity can put this end inside the mesh, losing the crossing of that face,
     // 2) a box can be culled although its triangle is touched by the segment in integer coordinates
+    ConvertToIntVector convToInt;
+    ConvertToFloatVector convToFloat;
     [[maybe_unused]] T boxExpansion = 0;
     if constexpr ( std::is_same_v<T, double> )
     {
-        const auto& rootBox = tree[tree.rootNodeId()].box;
-        const auto size = rootBox.size();
-        const float maxAbsCoord = std::max( { -rootBox.min.x, -rootBox.min.y, -rootBox.min.z, rootBox.max.x, rootBox.max.y, rootBox.max.z } );
-        // the integer grid has about 2^31 steps along the largest dimension of the box
-        boxExpansion = 4.0 * FLT_EPSILON * maxAbsCoord + 1e-8 * std::max( { size.x, size.y, size.z } );
+        const Box3d rootBox( tree[tree.rootNodeId()].box );
+        convToInt = getToIntConverter( rootBox );
+        convToFloat = getToFloatConverter( rootBox );
+        boxExpansion = 2 * convToFloat.range;
     }
     auto nodeBox = [&] ( NodeId n ) -> Box3<T>
     {
@@ -315,18 +317,15 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     NodeId nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = tree.rootNodeId();
-    ConvertToIntVector convToInt;
-    ConvertToFloatVector convToFloat;
-    Vector3f dP, eP;
+    Vector3d dP, eP;
     [[maybe_unused]] double invDirLenSq = 0;
     std::array<PreciseVertCoords, 5> pvc;
 
     if constexpr ( std::is_same_v<T, double> )
     {
-        convToInt = getToIntConverter( nodeBox( tree.rootNodeId() ) );
-        convToFloat = getToFloatConverter( nodeBox( tree.rootNodeId() ) );
-        dP = Vector3f( line( s ) );
-        eP = Vector3f( line( e ) );
+        // the ends are rounded to integers directly from double: rounding them to float first could move them by many integer steps
+        dP = line( s );
+        eP = line( e );
         pvc[3].pt = convToInt( dP );
         pvc[3].id = VertId( m.topology.vertSize() );
         pvc[4].pt = convToInt( eP );
@@ -359,7 +358,9 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                     {
                         MeshIntersectionResult found;
                         found.proj.face = face;
-                        found.proj.point = findTriangleSegmentIntersectionPrecise( m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id], dP, eP, { convToInt,convToFloat } );
+                        const auto ip = findTriangleSegmentIntersectionPreciseInt( pvc[0].pt, pvc[1].pt, pvc[2].pt, pvc[3].pt, pvc[4].pt );
+                        // no intersection point only if the segment lies in the plane of the triangle without crossing its sides
+                        found.proj.point = ip ? convToFloat( *ip ) : Vector3f( ( dP + eP ) * 0.5 );
                         const auto t = dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq;
                         if ( t < rayEnd && t > rayStart )
                         {

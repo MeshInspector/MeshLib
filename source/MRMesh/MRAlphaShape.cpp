@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cfloat>
 #include <functional>
+#include <tuple>
 #include <cassert>
 #include <cmath>
 
@@ -347,14 +348,25 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
     findPointsInBall( cloud, { 0.5f * ( cloud.points[vi] + cloud.points[vj] ), sqr( searchRadius ) },
         [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
-            if ( found.vId == vi || found.vId == vj || found.vId == vk )
-                return Processing::Continue;
             const auto c = data.coords( cloud, found.vId );
+            // the triangle's own points and their twins sharing a position in the integer grid
+            if ( c.pt == pi.pt || c.pt == pj.pt || c.pt == pk.pt )
+                return Processing::Continue;
             assert( !startExists || startBall( c ) != InSphereResult::Inside );
             if ( tester.sphereExists( c, pj, pi, data.intRadiusSq ) )
                 cands.push_back( { c, orient3d( { pi, pj, pk, c } ) } );
             return Processing::Continue;
         } );
+
+    // the twins among the candidates are merged as in findAlphaShapeNeiTriangles: only the smallest id of a position remains
+    std::sort( cands.begin(), cands.end(), []( const BallPivotCandidate & a, const BallPivotCandidate & b )
+    {
+        return std::tie( a.coords.pt.x, a.coords.pt.y, a.coords.pt.z, a.coords.id ) < std::tie( b.coords.pt.x, b.coords.pt.y, b.coords.pt.z, b.coords.id );
+    } );
+    cands.erase( std::unique( cands.begin(), cands.end(), []( const BallPivotCandidate & a, const BallPivotCandidate & b )
+    {
+        return a.coords.pt == b.coords.pt;
+    } ), cands.end() );
 
     // whether a follows b counter-clockwise from #vk, i.e. ccwAroundLine( { pi, pj, pk, b, a } ) with its first two
     // orient3d calls taken from the candidates; the reversed order puts the first candidate on top of the heap

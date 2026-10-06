@@ -8,7 +8,6 @@
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
-#include <atomic>
 
 namespace MR
 {
@@ -201,17 +200,15 @@ bool isCoveredByVertices( const MeshPart & mp, float radius )
 {
     MR_TIMER;
     const float maxEdgeLenSq = 3 * radius * radius;
-    std::atomic<bool> covered{ true };
+    tbb::task_group_context ctx;
     BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
     {
-        if ( !covered.load( std::memory_order_relaxed ) )
-            return;
         Vector3f v[3];
         mp.mesh.getTriPoints( f, v );
         if ( ( v[1] - v[0] ).lengthSq() > maxEdgeLenSq || ( v[2] - v[1] ).lengthSq() > maxEdgeLenSq || ( v[0] - v[2] ).lengthSq() > maxEdgeLenSq )
-            covered.store( false, std::memory_order_relaxed );
-    } );
-    return covered;
+            ctx.cancel_group_execution(); // stop at the first long edge
+    }, ctx );
+    return !ctx.is_group_execution_cancelled();
 }
 
 Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, VertNormalsMode normals, const ProgressCallback& cb )

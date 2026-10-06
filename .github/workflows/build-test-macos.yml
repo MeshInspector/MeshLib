@@ -159,7 +159,6 @@ jobs:
           git fetch --depth 1 origin tag "${VCPKG_VERSION}"
           git checkout --force "${VCPKG_VERSION}"
           ./bootstrap-vcpkg.sh -disableMetrics
-          echo "VCPKG_ROOT=${PWD}" >> $GITHUB_ENV
 
       - name: Configure AWS Credentials
         if: ${{ matrix.lib-source == 'vcpkg' && inputs.internal_build }}

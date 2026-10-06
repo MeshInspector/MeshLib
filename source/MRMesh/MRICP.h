@@ -10,6 +10,7 @@
 #include "MRBitSet.h"
 #include "MRMeshTriPoint.h"
 #include <cfloat>
+#include <memory>
 
 namespace MR
 {
@@ -40,7 +41,8 @@ struct ICPPairData
 /// Stores a pair of points: one samples on the source and the closest to it on the target
 struct PointPair : public ICPPairData
 {
-    /// id of the source point
+    /// id of the source point: a vertex of the source object, or a point of the denser cloud
+    /// in case of grid sampling of a mesh with big triangles (see ICP::sampleFltPoints)
     VertId srcVertId;
 
     /// for point clouds it is the closest vertex on target,
@@ -227,7 +229,9 @@ public:
 
     /// select pairs with origin samples on floating object;
     /// setFltSamples weights each pair by the double area of mesh triangles around its sample vertex,
-    /// sampleFltPoints performs grid sampling and gives all pairs equal weights
+    /// sampleFltPoints performs grid sampling and gives all pairs equal weights;
+    /// a mesh with triangles too big for the sampling is sampled from its dense point cloud (see meshToDensePointCloud)
+    /// to get the samples inside the triangles as well
     MRMESH_API void setFltSamples( const VertBitSet& fltSamples );
     MRMESH_API void sampleFltPoints( float samplingVoxelSize );
 
@@ -288,6 +292,10 @@ private:
 
     PointPairs flt2refPairs_;
     PointPairs ref2fltPairs_;
+
+    /// if not null, the source points of the pairs are taken from these clouds instead of the objects
+    std::shared_ptr<PointCloud> fltSamplesCloud_;
+    std::shared_ptr<PointCloud> refSamplesCloud_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };
 

@@ -7,6 +7,10 @@
 #include "MRQuaternion.h"
 #include "MRBestFit.h"
 #include "MRBitSetParallelFor.h"
+#include "MRMeshToPointCloud.h"
+#include "MRMeshProject.h"
+#include "MRPointCloud.h"
+#include <atomic>
 #include <numeric>
 
 namespace MR
@@ -51,6 +55,49 @@ size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
     return cnt0 - pairs.active.count();
 }
 
+
+/// every point of a triangle with no edge longer than sqrt(3)*radius is within the radius from one of its vertices
+static bool coveredByVertices( const MeshPart & mp, float radius )
+{
+    MR_TIMER;
+    const float maxEdgeLenSq = 3 * radius * radius;
+    std::atomic<bool> covered{ true };
+    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
+    {
+        if ( !covered.load( std::memory_order_relaxed ) )
+            return;
+        Vector3f v[3];
+        mp.mesh.getTriPoints( f, v );
+        if ( ( v[1] - v[0] ).lengthSq() > maxEdgeLenSq || ( v[2] - v[1] ).lengthSq() > maxEdgeLenSq || ( v[0] - v[2] ).lengthSq() > maxEdgeLenSq )
+            covered.store( false, std::memory_order_relaxed );
+    } );
+    return covered;
+}
+
+/// returns grid samples of the object; for a mesh with triangles too big for the sampling, the samples are taken
+/// from its dense point cloud returned in (cloud) with the normals of the mesh set in the samples
+static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, std::shared_ptr<PointCloud> & cloud )
+{
+    MR_TIMER;
+    cloud.reset();
+    const auto mp = obj.asMeshPart();
+    if ( !mp || !( samplingVoxelSize > 0 ) || coveredByVertices( *mp, samplingVoxelSize / 2 ) )
+        return *obj.pointsGridSampling( samplingVoxelSize );
+
+    auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, false );
+    if ( !dense || dense->points.size() <= mp->mesh.points.size() )
+        return *obj.pointsGridSampling( samplingVoxelSize ); // the vertices are dense enough
+
+    cloud = std::make_shared<PointCloud>( std::move( *dense ) );
+    auto res = *MeshOrPoints( *cloud ).pointsGridSampling( samplingVoxelSize );
+    cloud->normals.resize( cloud->points.size() );
+    BitSetParallelFor( res, [&]( VertId v )
+    {
+        cloud->normals[v] = v < mp->mesh.points.endId() ? mp->mesh.pseudonormal( v )
+            : mp->mesh.pseudonormal( findProjection( cloud->points[v], *mp ).mtp, mp->region );
+    } );
+    return res;
+}
 
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples, const VertBitSet& refSamples )
     : flt_( flt )
@@ -120,29 +167,33 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::setFltSamples( const VertBitSet& fltSamples )
 {
+    fltSamplesCloud_.reset();
     setupPairs( flt2refPairs_, fltSamples, flt_.obj.weights() );
 }
 
 void ICP::sampleFltPoints( float samplingVoxelSize )
 {
-    setupPairs( flt2refPairs_, *flt_.obj.pointsGridSampling( samplingVoxelSize ), {} );
+    setupPairs( flt2refPairs_, gridSamples( flt_.obj, samplingVoxelSize, fltSamplesCloud_ ), {} );
 }
 
 void ICP::setRefSamples( const VertBitSet& refSamples )
 {
+    refSamplesCloud_.reset();
     setupPairs( ref2fltPairs_, refSamples, ref_.obj.weights() );
 }
 
 void ICP::sampleRefPoints( float samplingVoxelSize )
 {
-    setupPairs( ref2fltPairs_, *ref_.obj.pointsGridSampling( samplingVoxelSize ), {} );
+    setupPairs( ref2fltPairs_, gridSamples( ref_.obj, samplingVoxelSize, refSamplesCloud_ ), {} );
 }
 
 void ICP::updatePointPairs()
 {
     MR_TIMER;
-    MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
-    MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
+    const MeshOrPointsXf fltSrc = fltSamplesCloud_ ? MeshOrPointsXf{ *fltSamplesCloud_, flt_.xf } : flt_;
+    const MeshOrPointsXf refSrc = refSamplesCloud_ ? MeshOrPointsXf{ *refSamplesCloud_, ref_.xf } : ref_;
+    MR::updatePointPairs( flt2refPairs_, fltSrc, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
+    MR::updatePointPairs( ref2fltPairs_, refSrc, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
     deactivatefarDistPairs_();
 }
 

@@ -560,9 +560,9 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     if ( !seed )
         return res;
 
-    // a triangle (a, b, c) also stands for its edge (a, b) with the opposite vertex c; one directed edge can belong
-    // to several triangles if the empty balls rotating around it form several arcs, each with a pair of triangles at its ends,
-    // so the pivoting is tracked per edge of a triangle: it is resolved when the triangle at the other end of its arc is found
+    // one directed edge can belong to several triangles if the empty balls rotating around it form several arcs,
+    // each with a pair of triangles at its ends, so the pivoting is tracked per edge of a triangle:
+    // it is resolved when the triangle at the other end of its arc is found
     struct TriHash
     {
         size_t operator()( const ThreeVertIds & t ) const noexcept
@@ -570,32 +570,46 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
             return size_t( ( ( std::uint64_t( std::uint32_t( t[0] ) ) << 32 ) | std::uint32_t( t[1] ) ) * 0x9E3779B97F4A7C15ull ) ^ std::uint32_t( t[2] );
         }
     };
-    HashSet<ThreeVertIds, TriHash> resolved;
-    HashSet<ThreeVertIds, TriHash> foundTris; // rotated to start from the smallest id
-    std::vector<ThreeVertIds> pivots;
+    // a found triangle rotated to start from its smallest id -> bit i is set if its edge (t[i], t[i+1]) is resolved
+    HashMap<ThreeVertIds, int, TriHash> foundTris;
+    // triangle (a, b, c) rotated to start from the smallest id, and the bit of its edge (a, b)
+    auto rotated = []( VertId a, VertId b, VertId c ) -> std::pair<ThreeVertIds, int>
+    {
+        if ( b < a && b < c )
+            return { { b, c, a }, 4 };
+        if ( c < a && c < b )
+            return { { c, a, b }, 2 };
+        return { { a, b, c }, 1 };
+    };
+    std::vector<ThreeVertIds> pivots; // edge (0, 1) of a found triangle with its third vertex 2
+    // marks edge (a, b) of triangle (a, b, c) resolved, and adds the triangle with its two other edges to pivot over if it is new
     auto addTri = [&]( VertId a, VertId b, VertId c )
     {
-        const auto m = std::min( { a, b, c } );
-        if ( !foundTris.insert( m == a ? ThreeVertIds{ a, b, c } : m == b ? ThreeVertIds{ b, c, a } : ThreeVertIds{ c, a, b } ).second )
+        const auto [t, bit] = rotated( a, b, c );
+        auto [it, inserted] = foundTris.try_emplace( t, 0 );
+        it->second |= bit;
+        if ( !inserted )
             return;
         res.push_back( { a, b, c } );
-        pivots.push_back( { a, b, c } );
         pivots.push_back( { b, c, a } );
         pivots.push_back( { c, a, b } );
     };
     addTri( ( *seed )[0], ( *seed )[1], ( *seed )[2] );
+    foundTris.begin()->second = 0; // the first triangle has no edge resolved yet
+    pivots.push_back( *seed );
 
     std::vector<BallPivotCandidate> cands;
     while ( !pivots.empty() )
     {
         const auto [vi, vj, vk] = pivots.back();
         pivots.pop_back();
-        if ( !resolved.insert( { vi, vj, vk } ).second )
+        const auto [t, bit] = rotated( vi, vj, vk );
+        auto & mask = foundTris[t];
+        if ( mask & bit )
             continue;
-        const auto x = findBallPivotVertex( cloud, vi, vj, vk, data, cands );
+        mask |= bit;
         // the ball pivoted back over the same edge stops at #vk, so that edge of the found triangle is resolved as well
-        resolved.insert( { vj, vi, x } );
-        addTri( vj, vi, x );
+        addTri( vj, vi, findBallPivotVertex( cloud, vi, vj, vk, data, cands ) );
         // a closed surface has about two triangles per point
         if ( res.size() % 1024 == 0 && !reportProgress( cb, std::min( 1.0f, float( res.size() ) / ( 2 * numPoints ) ) ) )
             return std::nullopt;

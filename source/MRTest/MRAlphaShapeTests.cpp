@@ -219,7 +219,7 @@ TEST( MRMesh, BallPivotingSphere )
     cloud.validPoints.resize( cloud.points.size(), true );
 
     std::vector<MeshBuilder::VertDuplication> dups;
-    const auto mesh = findBallPivotingMesh( cloud, 0.2f, &dups );
+    const auto mesh = findBallPivotingMesh( cloud, 0.2f, false, &dups );
     EXPECT_TRUE( dups.empty() );
     EXPECT_TRUE( mesh.topology.isClosed() );
     EXPECT_EQ( mesh.topology.numValidVerts(), n );
@@ -228,6 +228,47 @@ TEST( MRMesh, BallPivotingSphere )
     EXPECT_GT( mesh.volume(), 4.0 ); // outward orientation: the volume of the unit ball is 4.19
 
     EXPECT_GT( findAlphaShapeAllTriangles( cloud, 0.2f ).size(), size_t( 2 * ( 2 * n - 4 ) ) );
+}
+
+// the second sphere far away from the first one is found only with allComponents, together with the shape
+// of the inner points of the first sphere having alpha-shape triangles among themselves
+TEST( MRMesh, BallPivotingAllComponents )
+{
+    PointCloud cloud;
+    const int n = 2000, m = 500;
+    for ( int i = 0; i < n; ++i ) // Fibonacci sphere
+    {
+        const float z = 1 - ( 2 * i + 1 ) / float( n );
+        const float rho = std::sqrt( 1 - z * z );
+        const float phi = 2.39996323f * i;
+        cloud.points.push_back( { rho * std::cos( phi ), rho * std::sin( phi ), z } );
+    }
+    for ( int i = 0; i < m; ++i ) // the sphere of radius 0.5 at x = 4
+    {
+        const float z = 1 - ( 2 * i + 1 ) / float( m );
+        const float rho = std::sqrt( 1 - z * z );
+        const float phi = 2.39996323f * i;
+        cloud.points.push_back( Vector3f{ 4, 0, 0 } + 0.5f * Vector3f{ rho * std::cos( phi ), rho * std::sin( phi ), z } );
+    }
+    std::mt19937 gen( 0 );
+    std::uniform_real_distribution<float> coord( -0.28f, 0.28f );
+    for ( int i = 0; i < 200; ++i )
+        cloud.points.push_back( { coord( gen ), coord( gen ), coord( gen ) } );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto first = findBallPivotingMesh( cloud, 0.2f );
+    EXPECT_EQ( first.topology.numValidVerts(), n );
+    EXPECT_EQ( first.topology.numValidFaces(), 2 * n - 4 );
+
+    const auto all = findBallPivotingMesh( cloud, 0.2f, true );
+    EXPECT_TRUE( all.topology.isClosed() );
+    for ( VertId v( 0 ); v < n + m; ++v )
+    {
+        EXPECT_TRUE( all.topology.hasVert( v ) );
+    }
+    const int comps = MeshComponents::getNumComponents( all );
+    EXPECT_GE( comps, 2 );
+    EXPECT_EQ( all.topology.numValidFaces(), 2 * all.topology.numValidVerts() - 4 * comps ); // closed shells of genus 0
 }
 
 // a tenth of the points of a sphere have twins with smaller ids and another tenth with larger ids:

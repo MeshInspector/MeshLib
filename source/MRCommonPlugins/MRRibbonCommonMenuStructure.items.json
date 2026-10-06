@@ -10,7 +10,7 @@
       "Name": "Redo",
       "Tooltip": "Redo last undone action.",
       "Icon": "\uF01E",
-      "Shortcut": { "Keys": "Primary+Shift+Z", "Category": "Edit", "Tags": [ "history" ] }
+      "Shortcut": { "Keys": [ "Primary+Shift+Z", "Ctrl+Y" ], "Category": "Edit", "Tags": [ "history" ] }
     },
     {
       "Name": "New",

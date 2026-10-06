@@ -13,20 +13,37 @@ namespace MR
 void ShortcutManager::setShortcut( const Shortcut& shortcut, const ShortcutAction& action )
 {
     const ShortcutCommand command{ shortcut.category, action.name, action.func, action.repeatable };
-    auto newMapKey = mapKeyFromKeyAndMod( shortcut.key, false );
-    auto [backMapIt, insertedToBackMap] = backMap_.insert( { command.name,newMapKey } );
-    if ( !insertedToBackMap )
+    if ( auto backMapIt = backMap_.find( command.name ); backMapIt != backMap_.end() )
     {
-        map_.erase( backMapIt->second );
-        backMapIt->second = newMapKey;
+        for ( auto oldMapKey : backMapIt->second )
+            map_.erase( oldMapKey );
+        backMap_.erase( backMapIt );
     }
-    
-    auto [mapIt, insertedToMap] = map_.insert( { newMapKey,command } );
-    if ( !insertedToMap )
+
+    std::vector<int> newMapKeys;
+    auto addKey = [&] ( const ShortcutKey& key )
     {
-        backMap_.erase( mapIt->second.name );
-        mapIt->second = command;
-    }
+        auto newMapKey = mapKeyFromKeyAndMod( key, false );
+        if ( std::find( newMapKeys.begin(), newMapKeys.end(), newMapKey ) != newMapKeys.end() )
+            return;
+        auto [mapIt, insertedToMap] = map_.insert( { newMapKey,command } );
+        if ( !insertedToMap )
+        {
+            // other action loses this key, but keeps the others
+            if ( auto otherIt = backMap_.find( mapIt->second.name ); otherIt != backMap_.end() )
+            {
+                std::erase( otherIt->second, newMapKey );
+                if ( otherIt->second.empty() )
+                    backMap_.erase( otherIt );
+            }
+            mapIt->second = command;
+        }
+        newMapKeys.push_back( newMapKey );
+    };
+    addKey( shortcut.key );
+    for ( const auto& key : shortcut.extraKeys )
+        addKey( key );
+    backMap_[command.name] = std::move( newMapKeys );
     listCache_ = {};
 }
 
@@ -35,22 +52,27 @@ const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList() const
     if ( listCache_ )
         return *listCache_;
 
+    // actions sorted by category, then by main key
+    std::vector<const ShourtcutsBackMap::value_type*> actions;
+    actions.reserve( backMap_.size() );
+    for ( const auto& action : backMap_ )
+        actions.push_back( &action );
+    auto actionOrder = [this] ( const ShourtcutsBackMap::value_type* action )
+    {
+        const auto mainMapKey = action->second.front();
+        return std::pair( map_.at( mainMapKey ).category, kayAndModFromMapKey( mainMapKey ) );
+    };
+    std::sort( actions.begin(), actions.end(), [&] ( const auto* a, const auto* b )
+    {
+        return actionOrder( a ) < actionOrder( b );
+    } );
+
     listCache_ = ShortcutList();
     auto& listRes = *listCache_;
     listRes.reserve( map_.size() );
-    for ( const auto& [key, command] : map_ )
-        listRes.emplace_back( kayAndModFromMapKey( key ), command.category, command.name );
-
-    std::sort( listRes.begin(), listRes.end(), [] ( const auto& a, const auto& b )
-    {
-        if ( std::get<Category>( a ) < std::get<Category>( b ) )
-            return true;
-
-        if ( std::get<Category>( a ) > std::get<Category>( b ) )
-            return false;
-
-        return std::get<ShortcutKey>(a) < std::get<ShortcutKey>(b);
-    } );
+    for ( const auto* action : actions )
+        for ( auto mapKey : action->second )
+            listRes.emplace_back( kayAndModFromMapKey( mapKey ), map_.at( mapKey ).category, action->first );
 
     return *listCache_;
 }
@@ -301,7 +323,7 @@ std::optional<ShortcutManager::ShortcutKey> ShortcutManager::findShortcutByName(
     auto it = backMap_.find( name );
     if ( it == backMap_.end() )
         return {};
-    return kayAndModFromMapKey( it->second );
+    return kayAndModFromMapKey( it->second.front() );
 }
 
 void ShortcutManager::clear()

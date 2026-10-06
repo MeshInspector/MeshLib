@@ -1,5 +1,9 @@
 #include <MRViewer/MRShortcutManager.h>
 #include <MRViewer/MRGladGlfw.h>
+#include <MRViewer/MRLambdaRibbonItem.h>
+#include <MRViewer/MRRibbonSchema.h>
+#include <MRMesh/MRSerializer.h>
+#include <MRPch/MRJson.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -93,5 +97,129 @@ TEST( MRViewer, ShortcutParseCategory )
     EXPECT_FALSE( ShortcutManager::parseCategory( "info" ) );
     EXPECT_FALSE( ShortcutManager::parseCategory( "Count" ) );
 }
+
+TEST( MRViewer, ShortcutSeveralKeys )
+{
+    using SK = ShortcutKey;
+    const SK undoKey{ GLFW_KEY_Z, GLFW_MOD_CONTROL };
+    const SK redoKey{ GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT };
+    const SK redoExtraKey{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
+
+    ShortcutManager sm;
+    int undoCount = 0, redoCount = 0;
+    sm.setShortcut( { undoKey, ShortcutCategory::Edit }, { "Undo", [&] { ++undoCount; } } );
+    // repeating the main key among the extra ones does not bind it twice
+    sm.setShortcut( { redoKey, ShortcutCategory::Edit, { redoExtraKey, redoKey } }, { "Redo", [&] { ++redoCount; } } );
+
+    // every key calls its action
+    EXPECT_TRUE( sm.processShortcut( redoKey ) );
+    EXPECT_TRUE( sm.processShortcut( redoExtraKey ) );
+    EXPECT_TRUE( sm.processShortcut( undoKey ) );
+    EXPECT_FALSE( sm.processShortcut( { GLFW_KEY_Y, 0 } ) );
+    EXPECT_EQ( redoCount, 2 );
+    EXPECT_EQ( undoCount, 1 );
+
+    // the main key is the one to display
+    EXPECT_EQ( sm.findShortcutByName( "Redo" ), redoKey );
+    EXPECT_EQ( sm.findShortcutByName( "Undo" ), undoKey );
+
+    // the extra key follows the main key of its action, although Y is sorted before Z
+    EXPECT_EQ( sm.getShortcutList(), ( ShortcutManager::ShortcutList{
+        { undoKey, ShortcutCategory::Edit, "Undo" },
+        { redoKey, ShortcutCategory::Edit, "Redo" },
+        { redoExtraKey, ShortcutCategory::Edit, "Redo" } } ) );
+}
+
+TEST( MRViewer, ShortcutSeveralKeysRemoval )
+{
+    using SK = ShortcutKey;
+    const SK redoKey{ GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT };
+    const SK redoExtraKey{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
+    const SK otherKey{ GLFW_KEY_R, GLFW_MOD_CONTROL };
+
+    ShortcutManager sm;
+    int redoCount = 0, otherCount = 0;
+    auto setRedo = [&] { sm.setShortcut( { redoKey, ShortcutCategory::Edit, { redoExtraKey } }, { "Redo", [&] { ++redoCount; } } ); };
+
+    // setting the shortcut of an action again replaces all its keys
+    setRedo();
+    sm.setShortcut( { otherKey, ShortcutCategory::Edit }, { "Redo", [&] { ++redoCount; } } );
+    EXPECT_FALSE( sm.processShortcut( redoKey ) );
+    EXPECT_FALSE( sm.processShortcut( redoExtraKey ) );
+    EXPECT_EQ( sm.findShortcutByName( "Redo" ), otherKey );
+    EXPECT_EQ( sm.getShortcutList().size(), 1 );
+
+    // the action losing its main key to another action keeps the extra key, which becomes the main one
+    setRedo();
+    sm.setShortcut( { redoKey, ShortcutCategory::View }, { "Other", [&] { ++otherCount; } } );
+    EXPECT_TRUE( sm.processShortcut( redoKey ) );
+    EXPECT_TRUE( sm.processShortcut( redoExtraKey ) );
+    EXPECT_EQ( otherCount, 1 );
+    EXPECT_EQ( redoCount, 1 );
+    EXPECT_EQ( sm.findShortcutByName( "Redo" ), redoExtraKey );
+    EXPECT_EQ( sm.getShortcutList(), ( ShortcutManager::ShortcutList{
+        { redoExtraKey, ShortcutCategory::Edit, "Redo" },
+        { redoKey, ShortcutCategory::View, "Other" } } ) );
+
+    // the action losing its last key is removed
+    sm.setShortcut( { redoExtraKey, ShortcutCategory::View }, { "Third", [] {} } );
+    EXPECT_FALSE( sm.findShortcutByName( "Redo" ) );
+    EXPECT_EQ( sm.getShortcutList().size(), 2 );
+
+    sm.clear();
+    EXPECT_FALSE( sm.processShortcut( redoKey ) );
+    EXPECT_FALSE( sm.findShortcutByName( "Other" ) );
+    EXPECT_TRUE( sm.getShortcutList().empty() );
+}
+
+#ifndef __EMSCRIPTEN__ // getGlfwModPrimaryCtrl() asks the page for is_mac(), which the test harness does not define
+namespace
+{
+
+// reads the "Shortcut" object of an item in items.json
+std::optional<MenuItemShortcut> readItemShortcut( const std::string& shortcutJson )
+{
+    struct Loader : RibbonSchemaLoader
+    {
+        using RibbonSchemaLoader::readItemsJson_;
+    };
+    const auto item = std::make_shared<LambdaRibbonItem>( "ShortcutTestItem", [] {} );
+    EXPECT_TRUE( RibbonSchemaHolder::addItem( item ) );
+    const auto json = deserializeJsonValue(
+        R"({ "Items": [ { "Name": "ShortcutTestItem", "Icon": "", "Tooltip": "", "Shortcut": )" + shortcutJson + " } ] }" );
+    EXPECT_TRUE( json.has_value() );
+    if ( json )
+        Loader().readItemsJson_( *json );
+    auto res = RibbonSchemaHolder::findItem( item->name() )->shortcut;
+    RibbonSchemaHolder::delItem( item );
+    return res;
+}
+
+} //anonymous namespace
+
+TEST( MRViewer, ShortcutItemKeys )
+{
+    const auto primary = getGlfwModPrimaryCtrl();
+    const ShortcutKey redoKey{ GLFW_KEY_Z, primary | GLFW_MOD_SHIFT };
+
+    // one shortcut
+    auto s = readItemShortcut( R"({ "Keys": "Primary+Shift+Z", "Category": "Edit" })" );
+    ASSERT_TRUE( s );
+    EXPECT_EQ( s->shortcut.key, redoKey );
+    EXPECT_TRUE( s->shortcut.extraKeys.empty() );
+    EXPECT_EQ( s->shortcut.category, ShortcutCategory::Edit );
+
+    // several shortcuts, the first of them is the main one; the other ones with Ctrl are skipped where Cmd is primary (macOS)
+    s = readItemShortcut( R"({ "Keys": [ "Primary+Shift+Z", "Ctrl+Y", "Shift+F4" ], "Category": "Edit" })" );
+    ASSERT_TRUE( s );
+    EXPECT_EQ( s->shortcut.key, redoKey );
+    std::vector<ShortcutKey> extraKeys;
+    if ( primary == GLFW_MOD_CONTROL )
+        extraKeys.push_back( { GLFW_KEY_Y, GLFW_MOD_CONTROL } );
+    extraKeys.push_back( { GLFW_KEY_F4, GLFW_MOD_SHIFT } );
+    EXPECT_EQ( s->shortcut.extraKeys, extraKeys );
+    EXPECT_EQ( s->shortcut.category, ShortcutCategory::Edit );
+}
+#endif
 
 } //namespace MR

@@ -1,6 +1,7 @@
 #include "MRRibbonSchema.h"
 #include "MRI18n.h"
 #include "MRLambdaRibbonItem.h"
+#include "MRGladGlfw.h"
 #include "MRImGui.h"
 #include "MRLocale.h"
 #include "MRRibbonMenu.h"
@@ -629,7 +630,9 @@ namespace
 {
 
 /// reads the "Shortcut" object of an item in items.json:
-/// { "Keys": "Primary+Shift+S", "Category": "Scene", "Tags": [ "base" ] }
+/// { "Keys": "Primary+Shift+S", "Category": "Scene", "Tags": [ "base" ] },
+/// where "Keys" can also be an array of several shortcuts doing the same, the first of them is the main one:
+/// [ "Primary+Shift+Z", "Ctrl+Y" ]
 std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const std::string& itemName )
 {
     auto fail = [&itemName] ( const std::string& what ) -> std::optional<MenuItemShortcut>
@@ -644,12 +647,31 @@ std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const
     MenuItemShortcut res;
 
     const auto& keys = json["Keys"];
-    if ( !keys.isString() )
+    std::vector<std::string> keyStrings;
+    if ( keys.isString() )
+        keyStrings.push_back( keys.asString() );
+    else if ( keys.isArray() )
+    {
+        for ( const auto& k : keys )
+        {
+            if ( !k.isString() )
+                return fail( "non-string element in \"Keys\"" );
+            keyStrings.push_back( k.asString() );
+        }
+    }
+    if ( keyStrings.empty() )
         return fail( "\"Keys\" field is not valid or not present" );
-    const auto shortcutKey = ShortcutManager::parseShortcutKey( keys.asString() );
-    if ( !shortcutKey )
-        return fail( fmt::format( "cannot parse keys \"{}\"", keys.asString() ) );
-    res.shortcut.key = *shortcutKey;
+    for ( size_t i = 0; i < keyStrings.size(); ++i )
+    {
+        const auto shortcutKey = ShortcutManager::parseShortcutKey( keyStrings[i] );
+        if ( !shortcutKey )
+            return fail( fmt::format( "cannot parse keys \"{}\"", keyStrings[i] ) );
+        if ( i == 0 )
+            res.shortcut.key = *shortcutKey;
+        // other keys with Ctrl are Windows and Linux conventions, like Ctrl+Y for Redo, so they are skipped where Cmd is primary (macOS)
+        else if ( !( shortcutKey->mod & GLFW_MOD_CONTROL ) || getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
+            res.shortcut.extraKeys.push_back( *shortcutKey );
+    }
 
     const auto& category = json["Category"];
     if ( !category.isString() )

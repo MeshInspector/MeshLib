@@ -5,28 +5,18 @@
 namespace MR
 {
 
-EdgePoint::EdgePoint( const MeshTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
+template <typename T>
+EdgePointT<T>::EdgePointT( const MeshTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
 {
 }
 
-EdgePoint::EdgePoint( const PolylineTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
+template <typename T>
+EdgePointT<T>::EdgePointT( const PolylineTopology & topology, VertId v ) : e( topology.edgeWithOrg( v ) )
 {
 }
 
-VertId EdgePoint::inVertex( const MeshTopology & topology ) const
-{
-    switch ( a.inVertex() )
-    {
-    case 0:
-        return topology.org( e );
-    case 1:
-        return topology.dest( e );
-    default:
-        return {};
-    }
-}
-
-VertId EdgePoint::inVertex( const PolylineTopology & topology ) const
+template <typename T>
+VertId EdgePointT<T>::inVertex( const MeshTopology & topology ) const
 {
     switch ( a.inVertex() )
     {
@@ -39,7 +29,22 @@ VertId EdgePoint::inVertex( const PolylineTopology & topology ) const
     }
 }
 
-VertId EdgePoint::getClosestVertex( const MeshTopology & topology ) const
+template <typename T>
+VertId EdgePointT<T>::inVertex( const PolylineTopology & topology ) const
+{
+    switch ( a.inVertex() )
+    {
+    case 0:
+        return topology.org( e );
+    case 1:
+        return topology.dest( e );
+    default:
+        return {};
+    }
+}
+
+template <typename T>
+VertId EdgePointT<T>::getClosestVertex( const MeshTopology & topology ) const
 {
     if ( 2 * a <= 1 )
         return topology.org( e );
@@ -47,7 +52,8 @@ VertId EdgePoint::getClosestVertex( const MeshTopology & topology ) const
         return topology.dest( e );
 }
 
-VertId EdgePoint::getClosestVertex( const PolylineTopology & topology ) const
+template <typename T>
+VertId EdgePointT<T>::getClosestVertex( const PolylineTopology & topology ) const
 {
     if ( 2 * a <= 1 )
         return topology.org( e );
@@ -55,7 +61,8 @@ VertId EdgePoint::getClosestVertex( const PolylineTopology & topology ) const
         return topology.dest( e );
 }
 
-void EdgePoint::moveToClosestVertex()
+template <typename T>
+void EdgePointT<T>::moveToClosestVertex()
 {
     if ( 2 * a <= 1 )
         a = 0;
@@ -63,12 +70,16 @@ void EdgePoint::moveToClosestVertex()
         a = 1;
 }
 
-bool EdgePoint::isBd( const MeshTopology & topology, const FaceBitSet * region ) const
+template <typename T>
+bool EdgePointT<T>::isBd( const MeshTopology & topology, const FaceBitSet * region ) const
 {
     if ( auto v = inVertex( topology ) )
         return topology.isBdVertex( v, region );
     return topology.isBdEdge( e, region );
 }
+
+template struct EdgePointT<float>;
+template struct EdgePointT<double>;
 
 bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs )
 {

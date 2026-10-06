@@ -554,8 +554,11 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     std::optional<ThreeVertIds> seed;
     Triangulation seedTris;
     std::vector<AlphaShapeNei> neis;
+    size_t skipped = 0; // the points without triangles passed in the search
     while ( !seed && !heap.empty() )
     {
+        if ( !reportProgress( cb, float( skipped ) / numPoints ) )
+            return std::nullopt;
         std::pop_heap( heap.begin(), heap.end(), std::greater{} );
         const auto v = heap.back().second;
         heap.pop_back();
@@ -574,6 +577,8 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
                 seed = t;
             }
         }
+        if ( !seed )
+            ++skipped;
     }
     heap = {};
     if ( !seed )
@@ -601,21 +606,25 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
         return { { a, b, c }, 1 };
     };
     std::vector<ThreeVertIds> pivots; // edge (0, 1) of a found triangle with its third vertex 2
-    // marks edge (a, b) of triangle (a, b, c) resolved, and adds the triangle with its two other edges to pivot over if it is new
-    auto addTri = [&]( VertId a, VertId b, VertId c )
+    // marks edge (a, b) of triangle (a, b, c) resolved if abResolved, and adds the triangle with its unresolved edges to pivot over if it is new
+    auto addTri = [&]( VertId a, VertId b, VertId c, bool abResolved )
     {
-        const auto [t, bit] = rotated( a, b, c );
-        auto [it, inserted] = foundTris.try_emplace( t, 0 );
-        it->second |= bit;
+        auto [t, bit] = rotated( a, b, c );
+        if ( !abResolved )
+            bit = 0;
+        auto [it, inserted] = foundTris.try_emplace( t, bit );
         if ( !inserted )
+        {
+            it->second |= bit;
             return;
+        }
         res.push_back( { a, b, c } );
+        if ( !abResolved )
+            pivots.push_back( { a, b, c } );
         pivots.push_back( { b, c, a } );
         pivots.push_back( { c, a, b } );
     };
-    addTri( ( *seed )[0], ( *seed )[1], ( *seed )[2] );
-    foundTris.begin()->second = 0; // the first triangle has no edge resolved yet
-    pivots.push_back( *seed );
+    addTri( ( *seed )[0], ( *seed )[1], ( *seed )[2], false );
 
     std::vector<BallPivotCandidate> cands;
     while ( !pivots.empty() )
@@ -623,14 +632,15 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
         const auto [vi, vj, vk] = pivots.back();
         pivots.pop_back();
         const auto [t, bit] = rotated( vi, vj, vk );
-        auto & mask = foundTris[t];
-        if ( mask & bit )
+        auto it = foundTris.find( t );
+        assert( it != foundTris.end() );
+        if ( it->second & bit )
             continue;
-        mask |= bit;
+        it->second |= bit;
         // the ball pivoted back over the same edge stops at #vk, so that edge of the found triangle is resolved as well
-        addTri( vj, vi, findBallPivotVertex( cloud, vi, vj, vk, data, cands ) );
+        addTri( vj, vi, findBallPivotVertex( cloud, vi, vj, vk, data, cands ), true );
         // a closed surface has about two triangles per point
-        if ( res.size() % 1024 == 0 && !reportProgress( cb, std::min( 1.0f, float( res.size() ) / ( 2 * numPoints ) ) ) )
+        if ( res.size() % 1024 == 0 && !reportProgress( cb, std::min( 1.0f, float( skipped + res.size() / 2 ) / numPoints ) ) )
             return std::nullopt;
     }
 

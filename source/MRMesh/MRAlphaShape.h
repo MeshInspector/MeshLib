@@ -180,7 +180,8 @@ struct BallPivotCandidate
 /// findAlphaShapeNeiTriangles around the point with the smallest x-coordinate, taking the one with its ball
 /// farthest in -x direction, where nothing can block the ball; the remaining triangles are found by findBallPivotVertex
 /// rolling the ball over the edges of the triangles already found; all triangles have their empty balls on the positive side;
-/// only the component connected by edges to the first triangle is found, and the points with no alpha-shape triangles
+/// only the triangles reachable by the pivoting from the first one are found: not the inner side of a closed shell,
+/// while both sides of an open sheet are reached via its boundary; the points with no alpha-shape triangles
 /// around them (e.g. far outliers) are skipped in the search of the first triangle
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, so that the twins are known

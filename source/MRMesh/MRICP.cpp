@@ -27,6 +27,19 @@ static void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples, const 
     pairs.active.clear();
 }
 
+static void setupPairs( PointPairs & pairs, const std::vector<WeightedVertexf>& srcSamples )
+{
+    pairs.vec.clear();
+    pairs.vec.reserve( srcSamples.size() );
+    for ( const auto & s : srcSamples )
+    {
+        auto & p = pairs.vec.emplace_back();
+        p.srcVertId = s.v;
+        p.weight = s.weight;
+    }
+    pairs.active.clear();
+}
+
 size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
 {
     size_t cnt0 = pairs.active.count();
@@ -45,6 +58,14 @@ ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet
 {
     setFltSamples( fltSamples );
     setRefSamples( refSamples );
+}
+
+ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples )
+    : flt_( flt )
+    , ref_( ref )
+{
+    setupPairs( flt2refPairs_, fltSamples );
+    setupPairs( ref2fltPairs_, refSamples );
 }
 
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize )

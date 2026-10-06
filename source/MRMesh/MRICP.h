@@ -8,6 +8,7 @@
 #include "MRConstants.h"
 #include "MRAffineXf.h"
 #include "MRBitSet.h"
+#include "MRMeshTriPoint.h"
 #include <cfloat>
 
 namespace MR
@@ -199,6 +200,12 @@ public:
     ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} ) : ICP( { flt, fltXf }, { ref, refXf }, fltSamples, refSamples ) {}
     MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} );
+
+    /// Constructs ICP framework with given sample points on both objects and the weights of their pairs,
+    /// the weights stay fixed during the algorithm
+    ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
+        const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples ) : ICP( { flt, fltXf }, { ref, refXf }, fltSamples, refSamples ) {}
+    MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples );
 
     /// Constructs ICP framework with automatic points sampling on both objects
     /// \param flt floating object

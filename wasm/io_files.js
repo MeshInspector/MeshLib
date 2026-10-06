@@ -306,10 +306,11 @@ var emplace_files_in_local_FS_and_open = function (files, callback = function (o
   var paths = [];
   for (var file of files) {
     var name = file.name.replace(/\//g, "_");
-    // a file named as an earlier one goes to a subdirectory, so as not to overwrite it
+    // a file named as an earlier one goes to a subdirectory, so as not to overwrite it;
+    // ".dup" in the subdirectory's name keeps it from clashing with a file named like "1"
     var dir = directory;
     for (var n = 1; paths.includes(dir + "/" + name); ++n)
-      dir = directory + "/" + n;
+      dir = directory + "/.dup" + n;
     FS.createPath("/", dir);
     paths.push(dir + "/" + name);
     FS.writeFile(paths[paths.length - 1], file.bytes);

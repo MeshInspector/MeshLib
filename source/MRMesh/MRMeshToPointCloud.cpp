@@ -12,14 +12,21 @@
 namespace MR
 {
 
-PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals /*= true */, const VertBitSet* verts )
+PointCloud meshToPointCloud( const Mesh& mesh, VertNormalsMode normals, const VertBitSet* verts )
 {
     PointCloud res;
     res.points = mesh.points;
     res.validPoints = mesh.topology.getVertIds( verts );
-    if(saveNormals)
+    if ( normals == VertNormalsMode::AreaWeighted )
         res.normals = computePerVertNormals( mesh );
+    else if ( normals == VertNormalsMode::AngleWeighted )
+        res.normals = computePerVertPseudoNormals( mesh );
     return res;
+}
+
+PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals, const VertBitSet* verts )
+{
+    return meshToPointCloud( mesh, saveNormals ? VertNormalsMode::AreaWeighted : VertNormalsMode::No, verts );
 }
 
 namespace

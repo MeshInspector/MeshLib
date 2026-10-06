@@ -20,7 +20,8 @@ ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, bool saveNormals/*=true*/
         return;
 
     const auto verts = getInnerVerts( objMesh.meshPtr()->topology, objMesh.getSelectedFaces() );
-    setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( *objMesh.meshPtr(), saveNormals, verts.any() ? &verts : nullptr) ) );
+    setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( *objMesh.meshPtr(),
+        saveNormals ? VertNormalsMode::AreaWeighted : VertNormalsMode::No, verts.any() ? &verts : nullptr ) ) );
     setName( objMesh.name() + " Points" );
     setVertsColorMap( objMesh.getVertsColorMap() );
     setFrontColor( objMesh.getFrontColor( true ), true );

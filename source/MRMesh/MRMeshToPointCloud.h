@@ -7,9 +7,21 @@
 namespace MR
 {
 
-///  Mesh to PointCloud
+/// which normals are given to the points of the cloud made from mesh vertices
+enum class VertNormalsMode
+{
+    No,            ///< the cloud has no normals
+    AreaWeighted,  ///< area-weighted average of the normals of incident triangles, see computePerVertNormals
+    AngleWeighted  ///< angle-weighted average of the normals of incident triangles (pseudonormals), see computePerVertPseudoNormals
+};
+
+/// converts the mesh vertices (or only given ones) in a point cloud with the same vertex ids
 /// \ingroup MeshAlgorithmGroup
-MRMESH_API PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals = true, const VertBitSet* verts = nullptr);
+[[nodiscard]] MRMESH_API PointCloud meshToPointCloud( const Mesh& mesh, VertNormalsMode normals = VertNormalsMode::AreaWeighted,
+    const VertBitSet* verts = nullptr );
+
+[[deprecated( "Use meshToPointCloud( mesh, VertNormalsMode, verts )" )]] MRMESH_API MR_BIND_IGNORE
+PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals, const VertBitSet* verts = nullptr );
 
 /// Converts the mesh or its part in a point cloud dense enough to stop any ball of given radius:
 /// no ball of the radius can pass through the sampled surface without touching at least one point of

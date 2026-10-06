@@ -196,9 +196,10 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 
 } // anonymous namespace
 
-Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb )
+Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, VertNormalsMode normals, const ProgressCallback& cb )
 {
     MR_TIMER;
+    const bool saveNormals = normals != VertNormalsMode::No;
     if ( !( radius > 0 ) )
         return unexpected( "meshToDensePointCloud: radius must be positive" );
     const float radiusSq = radius * radius;
@@ -310,7 +311,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     res.validPoints.resize( numPoints, true );
     if ( saveNormals )
     {
-        res.normals = computePerVertNormals( mesh );
+        res.normals = normals == VertNormalsMode::AngleWeighted ? computePerVertPseudoNormals( mesh ) : computePerVertNormals( mesh );
         res.normals.resizeNoInit( numPoints );
     }
 
@@ -387,6 +388,11 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         return unexpectedOperationCanceled();
 
     return res;
+}
+
+Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb )
+{
+    return meshToDensePointCloud( mp, radius, saveNormals ? VertNormalsMode::AreaWeighted : VertNormalsMode::No, cb );
 }
 
 }

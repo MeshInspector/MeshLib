@@ -1,19 +1,12 @@
 #pragma once
 #include "MRMeshFwd.h"
+#include "MREnums.h"
 #include "MRPointCloud.h"
 #include "MRExpected.h"
 #include "MRProgressCallback.h"
 
 namespace MR
 {
-
-/// which normals are given to the points of the cloud made from mesh vertices
-enum class VertNormalsMode
-{
-    No,            ///< the cloud has no normals
-    AreaWeighted,  ///< area-weighted average of the normals of incident triangles, see computePerVertNormals
-    AngleWeighted  ///< angle-weighted average of the normals of incident triangles (pseudonormals), see computePerVertPseudoNormals
-};
 
 /// converts the mesh vertices (or only given ones) in a point cloud with the same vertex ids
 /// \ingroup MeshAlgorithmGroup
@@ -33,10 +26,13 @@ PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals, const VertBitSe
 /// the radius from one of its vertices, as in a sliver with the third vertex near the longest edge.
 /// Please note that the number of samples grows as 1/radius^2.
 /// \param mp the mesh or the part of it to be covered; nothing outside the part is sampled
-/// \param saveNormals if true then the normals of the cloud are set as well: the normals of the mesh
+/// \param normals unless No, the normals of the cloud are set as well: the normals of the mesh
 ///        vertices, and their interpolation in the samples on the edges and inside the triangles
 /// \ingroup MeshAlgorithmGroup
 [[nodiscard]] MRMESH_API Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius,
-    bool saveNormals = true, const ProgressCallback& cb = {} );
+    VertNormalsMode normals = VertNormalsMode::AreaWeighted, const ProgressCallback& cb = {} );
+
+[[deprecated( "Use meshToDensePointCloud( mp, radius, VertNormalsMode, cb )" )]] [[nodiscard]] MRMESH_API MR_BIND_IGNORE
+Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb = {} );
 
 }

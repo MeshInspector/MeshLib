@@ -690,7 +690,10 @@ endif # TARGETING_EMSCRIPTEN
 
 
 
-LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=lld
+# mold also folds functions that have exception tables, which lld never does. With -flto it needs
+# the compiler's LLVMgold.so, so it is used only where both exist; elsewhere lld.
+LINKER_TYPE := $(if $(and $(IS_LINUX),$(shell command -v ld.mold),$(wildcard $(dir $(shell command -v $(CXX_FOR_BINDINGS)))../lib/LLVMgold.so)),mold,lld)
+LINKER := $(CXX_FOR_BINDINGS) -fuse-ld=$(LINKER_TYPE)
 # Unsure if `-dynamiclib` vs `-shared` makes any difference on MacOS. I'm using the former because that's what CMake does.
 # No $(PYTHON_LDFLAGS) here, that's only for our patched Pybind library.
 LINKER_FLAGS := $(EXTRA_LDFLAGS) $(if $(DEPS_LIB_DIR),-L$(DEPS_LIB_DIR)) $(if $(DEPS_BASE_DIR),-L$(DEPS_BASE_DIR)/lib) -L$(MESHLIB_SHLIB_DIR) $(if $(is_py),-lMRPython) $(if $(IS_MACOS),-dynamiclib,-shared) $(call load_file,$(makefile_dir)linker_flags.txt)
@@ -775,6 +778,10 @@ ifneq ($(IS_LINUX),)
 COMPILER_FLAGS += -I/usr/include/jsoncpp -isystem/usr/include/freetype2 -isystem/usr/include/gdcm-3.0
 # Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
 LINKER_FLAGS += -Wl,-z,separate-loadable-segments
+# lld's LTO codegen splits functions into sections by default; LLVMgold.so has to be asked to, or --icf=all finds little to fold.
+ifeq ($(LINKER_TYPE),mold)
+LINKER_FLAGS += -ffunction-sections
+endif
 endif
 
 # MacOS.

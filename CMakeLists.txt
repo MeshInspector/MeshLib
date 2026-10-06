@@ -28,24 +28,32 @@ set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
 # Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
-# Force lld + give it room to grow PHT so patchelf doesn't trample `.init`.
-# Skip on images without lld (older ubuntu22 Clang 14 etc., which aren't
+# Force mold or lld + give it room to grow PHT so patchelf doesn't trample `.init`.
+# Skip on images without either (older ubuntu22 Clang 14 etc., which aren't
 # AppImage-packaged anyway).
 IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   include(CheckLinkerFlag)
+  check_linker_flag(CXX "-fuse-ld=mold" MESHLIB_HAVE_MOLD)
   check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
-  IF(MESHLIB_HAVE_LLD)
+  IF(MESHLIB_HAVE_MOLD OR MESHLIB_HAVE_LLD)
+    # mold also folds functions that have exception tables, which lld never does.
+    IF(MESHLIB_HAVE_MOLD)
+      set(MESHLIB_LINKER mold)
+    ELSE()
+      set(MESHLIB_LINKER lld)
+    ENDIF()
+    message(STATUS "MeshLib links with ${MESHLIB_LINKER}")
     # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
     # older CMakes (our minimum is 3.18).
     IF(NOT CMAKE_VERSION VERSION_LESS "3.29")
-      set(CMAKE_LINKER_TYPE LLD)
+      string(TOUPPER ${MESHLIB_LINKER} CMAKE_LINKER_TYPE)
     ELSE()
-      add_link_options("-fuse-ld=lld")
+      add_link_options("-fuse-ld=${MESHLIB_LINKER}")
     ENDIF()
     add_link_options("LINKER:-z,separate-loadable-segments")
     # Fold byte-identical functions. `safe` folds only the address-insignificant
     # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
-    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
+    # lld/mold-only: GNU ld has no ICF, and GCC emits no address-significance table.
     add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
     # Widen what ICF can reach: without this only COMDAT functions (templates,
     # inlines) get their own section, so plain out-of-line ones never fold.

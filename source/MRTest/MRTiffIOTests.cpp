@@ -70,6 +70,37 @@ TEST( MRMesh, TiffImageNonAsciiPath )
     auto loaded = ImageLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loaded->resolution, image.resolution );
+    EXPECT_EQ( loaded->pixels, image.pixels );
+}
+
+// libtiff's RGBA reader does not support floating-point samples, such images are converted by MeshLib itself
+TEST( MRMesh, TiffImageFloat )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "float.tif";
+
+    const std::vector<float> values{
+        0.f, 1.f, // top row
+        2.f, 3.f, // bottom row
+    };
+    auto saveRes = writeRawTiff( ( const uint8_t* )values.data(), path, { .baseParams = {
+        .sampleType = BaseTiffParameters::SampleType::Float,
+        .valueType = BaseTiffParameters::ValueType::Scalar,
+        .bytesPerSample = sizeof( float ),
+        .imageSize = { 2, 2 },
+    } } );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+
+    auto loaded = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->resolution, Vector2i( 2, 2 ) );
+    // the values are scaled to [0, 255], and the rows of Image go from bottom to top
+    const std::vector<Color> expected{
+        Color( 170, 170, 170 ), Color( 255, 255, 255 ),
+        Color( 0, 0, 0 ), Color( 85, 85, 85 ),
+    };
+    EXPECT_EQ( loaded->pixels, expected );
 }
 #endif //!MRIOEXTRAS_NO_TIFF
 

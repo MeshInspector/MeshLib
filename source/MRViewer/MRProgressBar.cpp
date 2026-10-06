@@ -91,7 +91,8 @@ public:
 
     bool isOrdered_{ false };
 
-    // operations ordered while another one was, each started after the post-processing of the one before it
+    // operations ordered while another one was, each started after the post-processing of the one before it;
+    // not guarded, so `order*` must be called in the main thread
     std::deque<std::function<void()>> pendingOrders_;
 
     // this is needed to show full progress before closing

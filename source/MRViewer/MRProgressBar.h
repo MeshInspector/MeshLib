@@ -21,17 +21,17 @@ MRVIEWER_API  void setup();
 MRVIEWER_API  void onFrameEnd();
 
 /// this shall be called in order to start concurrent task execution with progress bar display
-/// if another operation is ordered, starts after its post-processing; waiting operations start in the order of calls
+/// if another operation is ordered, starts after its post-processing, also if that one is canceled; waiting operations start in the order of calls
 /// please call setup() first, otherwise this function just execute task directly
 MRVIEWER_API  void order(const char * name, const std::function<void()>& task, int taskCount = 1 );
 
 /// in this version the task returns a function to be executed in main thread
-/// if another operation is ordered, starts after its post-processing; waiting operations start in the order of calls
+/// if another operation is ordered, starts after its post-processing, also if that one is canceled; waiting operations start in the order of calls
 /// please call setup() first, otherwise this function just execute task directly
 MRVIEWER_API  void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount = 1 );
 
 /// the task is spawned by the progress bar but the `finish` method is called from a callback
-/// if another operation is ordered, starts after its post-processing; waiting operations start in the order of calls
+/// if another operation is ordered, starts after its post-processing, also if that one is canceled; waiting operations start in the order of calls
 /// please call setup() first, otherwise this function just execute task directly
 MRVIEWER_API  void orderWithManualFinish( const char * name, std::function<void ()> task, int taskCount = 1 );
 

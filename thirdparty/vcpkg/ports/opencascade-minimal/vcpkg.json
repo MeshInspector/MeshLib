@@ -27,9 +27,6 @@
         "eigen3"
       ]
     },
-    "lto": {
-      "description": "Build with link-time optimization"
-    },
     "tbb": {
       "description": "Enable optional usage of tbb",
       "dependencies": [

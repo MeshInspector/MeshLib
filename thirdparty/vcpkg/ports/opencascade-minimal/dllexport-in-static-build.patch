@@ -1,0 +1,14 @@
+diff --git a/adm/cmake/occt_toolkit.cmake b/adm/cmake/occt_toolkit.cmake
+index 22e94d06..68b13ef6 100644
+--- a/adm/cmake/occt_toolkit.cmake
++++ b/adm/cmake/occt_toolkit.cmake
+@@ -39,9 +39,6 @@ set (PRECOMPILED_DEFS)
+ 
+ if (NOT BUILD_SHARED_LIBS)
+   list (APPEND PRECOMPILED_DEFS "-DOCCT_NO_PLUGINS")
+-  if (WIN32 AND NOT EXECUTABLE_PROJECT)
+-    list (APPEND PRECOMPILED_DEFS "-DOCCT_STATIC_BUILD")
+-  endif()
+ endif()
+ 
+ # Get all used packages from toolkit

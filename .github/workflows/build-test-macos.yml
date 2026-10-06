@@ -157,7 +157,7 @@ jobs:
           VCPKG_VERSION: ${{ inputs.vcpkg_version }}
         run: |
           git fetch --depth 1 origin tag "${VCPKG_VERSION}"
-          git checkout "${VCPKG_VERSION}"
+          git checkout --force "${VCPKG_VERSION}"
           ./bootstrap-vcpkg.sh -disableMetrics
           echo "VCPKG_ROOT=${PWD}" >> $GITHUB_ENV
 

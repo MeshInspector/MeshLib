@@ -344,6 +344,25 @@ const std::string cWebAdvice;
 
 } //anonymous namespace
 
+TEST(MRMesh, LoadObjWithoutMtl)
+{
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj",
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "f 1 3 2\n"
+        "f 1 2 4\n"
+        "f 1 4 3\n"
+        "f 2 3 4\n" );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->objs.size(), 1 );
+    EXPECT_EQ( res->warnings, "" );
+}
+
 TEST(MRMesh, LoadObjMissingMtl)
 {
     UniqueTemporaryFolder dir;

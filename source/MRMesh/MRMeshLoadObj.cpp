@@ -1003,8 +1003,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool colorChecked = false;
     bool hasColors = false;
 
-    Expected<MtlLibrary> mtl = unexpected( "absent" ); // all materials
-    std::string mtlError; // why the referenced material library was not loaded
+    Expected<MtlLibrary> mtl; // all materials, or why the referenced material library was not loaded
 
     std::string parseError;
 
@@ -1043,15 +1042,16 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             // TODO: support multiple files
             std::string filename( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
             boost::trim( filename );
+            if ( filename.empty() )
+                break;
             const auto mtlPath = dir / asU8String( filename );
             mtl = loadMtlLibrary( mtlPath );
-            mtlError.clear();
-            if ( !mtl.has_value() && !filename.empty() )
+            if ( !mtl.has_value() )
             {
                 std::error_code ec;
-                mtlError = std::filesystem::exists( mtlPath, ec ) ?
+                mtl = unexpected( std::filesystem::exists( mtlPath, ec ) ?
                     fmt::format( "Material file {} could not be loaded ({})", filename, mtl.error() ) :
-                    fmt::format( "Material file {} was not found", filename );
+                    fmt::format( "Material file {} was not found", filename ) );
             }
             break;
         }
@@ -1270,7 +1270,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         res.emplace_back( std::move( *meshObj ) );
         if ( oScopes.size() == 1 )
             res.back().name = std::move( oScopes.front().objName );
-        res.back().mtlError = std::move( mtlError );
+        if ( !mtl.has_value() )
+            res.back().mtlError = std::move( mtl.error() );
         return res;
     }
 
@@ -1288,7 +1289,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
         res[i].name = std::move( oScopes[i].objName );
-        res[i].mtlError = mtlError;
+        if ( !mtl.has_value() )
+            res[i].mtlError = mtl.error();
     }
     return res;
 }

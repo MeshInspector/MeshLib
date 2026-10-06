@@ -8,6 +8,7 @@
 #include "MRParallelFor.h"
 #include "MRTriMath.h"
 #include "MRTimer.h"
+#include <atomic>
 
 namespace MR
 {
@@ -195,6 +196,23 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 }
 
 } // anonymous namespace
+
+bool isCoveredByVertices( const MeshPart & mp, float radius )
+{
+    MR_TIMER;
+    const float maxEdgeLenSq = 3 * radius * radius;
+    std::atomic<bool> covered{ true };
+    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
+    {
+        if ( !covered.load( std::memory_order_relaxed ) )
+            return;
+        Vector3f v[3];
+        mp.mesh.getTriPoints( f, v );
+        if ( ( v[1] - v[0] ).lengthSq() > maxEdgeLenSq || ( v[2] - v[1] ).lengthSq() > maxEdgeLenSq || ( v[0] - v[2] ).lengthSq() > maxEdgeLenSq )
+            covered.store( false, std::memory_order_relaxed );
+    } );
+    return covered;
+}
 
 Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, VertNormalsMode normals, const ProgressCallback& cb )
 {

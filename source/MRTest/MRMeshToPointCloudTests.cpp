@@ -5,7 +5,9 @@
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRMeshPart.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <cmath>
 #include <random>
 
@@ -198,6 +200,24 @@ TEST( MRMesh, MeshToDensePointCloudDegenerate )
     // in 5 parts, and the 3 vertices with the 4 samples between them is all the cloud has
     EXPECT_EQ( cloud->points.size(), 7 );
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), 0.1f );
+}
+
+TEST( MRMesh, IsCoveredByVertices )
+{
+    const auto mesh = makeTorus( 1.0f, 0.3f, 12, 10 );
+    float maxEdgeLen = 0;
+    for ( auto ue : undirectedEdges( mesh.topology ) )
+        maxEdgeLen = std::max( maxEdgeLen, mesh.edgeLength( ue ) );
+
+    // covered: then the dense cloud has no samples except the vertices
+    const float bigRadius = maxEdgeLen / std::sqrt( 3.0f ) * 1.01f;
+    EXPECT_TRUE( isCoveredByVertices( mesh, bigRadius ) );
+    EXPECT_EQ( meshToDensePointCloud( mesh, bigRadius )->points.size(), mesh.points.size() );
+
+    // the longest edge is not covered
+    const float smallRadius = maxEdgeLen / 2 * 0.99f;
+    EXPECT_FALSE( isCoveredByVertices( mesh, smallRadius ) );
+    EXPECT_GT( meshToDensePointCloud( mesh, smallRadius )->points.size(), mesh.points.size() );
 }
 
 } //namespace MR

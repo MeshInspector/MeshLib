@@ -9,7 +9,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRMeshToPointCloud.h"
 #include "MRPointCloud.h"
-#include <atomic>
 #include <numeric>
 
 namespace MR
@@ -55,35 +54,17 @@ size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
 }
 
 
-/// every point of a triangle with no edge longer than sqrt(3)*radius is within the radius from one of its vertices
-static bool coveredByVertices( const MeshPart & mp, float radius )
-{
-    MR_TIMER;
-    const float maxEdgeLenSq = 3 * radius * radius;
-    std::atomic<bool> covered{ true };
-    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
-    {
-        if ( !covered.load( std::memory_order_relaxed ) )
-            return;
-        Vector3f v[3];
-        mp.mesh.getTriPoints( f, v );
-        if ( ( v[1] - v[0] ).lengthSq() > maxEdgeLenSq || ( v[2] - v[1] ).lengthSq() > maxEdgeLenSq || ( v[0] - v[2] ).lengthSq() > maxEdgeLenSq )
-            covered.store( false, std::memory_order_relaxed );
-    } );
-    return covered;
-}
-
 /// returns grid samples of the object; for a mesh with triangles too big for the sampling, the samples are taken
-/// from its dense point cloud returned in (cloud), with the normals interpolated from the vertices
+/// from its dense point cloud returned in (cloud), with the normals interpolated from the vertex pseudonormals as MeshOrPoints::normals() returns
 static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, std::shared_ptr<PointCloud> & cloud )
 {
     MR_TIMER;
     cloud.reset();
     const auto mp = obj.asMeshPart();
-    if ( !mp || !( samplingVoxelSize > 0 ) || coveredByVertices( *mp, samplingVoxelSize / 2 ) )
+    if ( !mp || !( samplingVoxelSize > 0 ) || isCoveredByVertices( *mp, samplingVoxelSize / 2 ) )
         return *obj.pointsGridSampling( samplingVoxelSize );
 
-    auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, true );
+    auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, VertNormalsMode::AngleWeighted );
     if ( !dense || dense->points.size() <= mp->mesh.points.size() )
         return *obj.pointsGridSampling( samplingVoxelSize ); // the vertices are dense enough
 

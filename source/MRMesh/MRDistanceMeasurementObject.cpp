@@ -216,6 +216,8 @@ void DistanceMeasurementObject::serializeFields_( Json::Value& root ) const
 
     root["DrawAsNegative"] = isNegative_;
 
+    root["DistanceMode"] = int( perCoordDeltas_ );
+
     if ( tolerance_ )
     {
         root["TolerancePositive"] = tolerance_->positive;

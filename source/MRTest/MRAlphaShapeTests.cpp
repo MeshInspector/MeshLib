@@ -230,6 +230,39 @@ TEST( MRMesh, BallPivotingSphere )
     EXPECT_GT( findAlphaShapeAllTriangles( cloud, 0.2f ).size(), size_t( 2 * ( 2 * n - 4 ) ) );
 }
 
+// three tetrahedra sharing edge (0_v, 1_v), 120 degrees apart around it: the empty balls rotating around the edge
+// form three arcs, so each direction of the edge belongs to three triangles; the pivoting over the edge must not stop
+// after the first arc is crossed, since the third tetrahedron is reachable only via the edge
+TEST( MRMesh, BallPivotingTetrahedraSharingEdge )
+{
+    PointCloud cloud;
+    cloud.points.push_back( { 0, 0, 0 } );
+    cloud.points.push_back( { 0, 0, 1 } );
+    for ( int i = 0; i < 3; ++i )
+        for ( float da : { -0.26f, 0.26f } ) // +-15 degrees
+        {
+            const float a = i * 2.0944f + da;
+            cloud.points.push_back( { 1.5f * std::cos( a ), 1.5f * std::sin( a ), 0.5f } );
+        }
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    const auto tris = *findBallPivotingTriangles( cloud, getAlphaShapeData( cloud, 1, true ) );
+    EXPECT_EQ( tris.size(), 12 );
+    std::map<std::pair<VertId, VertId>, int> edges;
+    for ( const auto & t : tris )
+        for ( int i = 0; i < 3; ++i )
+            ++edges[ { t[i], t[( i + 1 ) % 3] } ];
+    for ( const auto & [e, num] : edges ) // every directed edge is balanced by its opposite
+    {
+        const auto it = edges.find( { e.second, e.first } );
+        EXPECT_EQ( num, it == edges.end() ? 0 : it->second );
+    }
+    EXPECT_EQ( ( edges[ { 0_v, 1_v } ] ), 3 );
+
+    const auto mesh = findBallPivotingMesh( cloud, 1 );
+    EXPECT_EQ( MeshComponents::getNumComponents( mesh ), 3 );
+}
+
 // four points of a square are exactly on both balls passing via any three of them,
 // so every ball emptiness test here is a tie resolved by simulation-of-simplicity
 TEST( MRMesh, AlphaShapeSquare )

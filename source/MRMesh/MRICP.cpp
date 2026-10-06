@@ -12,12 +12,18 @@
 namespace MR
 {
 
-void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
+/// empty weights mean that all pairs have weight 1
+static void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples, const std::function<float(VertId)> & weights )
 {
     pairs.vec.clear();
     pairs.vec.reserve( srcSamples.count() );
     for ( auto id : srcSamples )
-        pairs.vec.emplace_back().srcVertId = id;
+    {
+        auto & p = pairs.vec.emplace_back();
+        p.srcVertId = id;
+        if ( weights )
+            p.weight = weights( id );
+    }
     pairs.active.clear();
 }
 
@@ -37,8 +43,8 @@ ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet
     : flt_( flt )
     , ref_( ref )
 {
-    MR::setupPairs( flt2refPairs_, fltSamples );
-    MR::setupPairs( ref2fltPairs_, refSamples );
+    setFltSamples( fltSamples );
+    setRefSamples( refSamples );
 }
 
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize )
@@ -93,22 +99,22 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::setFltSamples( const VertBitSet& fltSamples )
 {
-    setupPairs( flt2refPairs_, fltSamples );
+    setupPairs( flt2refPairs_, fltSamples, flt_.obj.weights() );
 }
 
 void ICP::sampleFltPoints( float samplingVoxelSize )
 {
-    setFltSamples( *flt_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( flt2refPairs_, *flt_.obj.pointsGridSampling( samplingVoxelSize ), {} );
 }
 
 void ICP::setRefSamples( const VertBitSet& refSamples )
 {
-    setupPairs( ref2fltPairs_, refSamples );
+    setupPairs( ref2fltPairs_, refSamples, ref_.obj.weights() );
 }
 
 void ICP::sampleRefPoints( float samplingVoxelSize )
 {
-    setRefSamples( *ref_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( ref2fltPairs_, *ref_.obj.pointsGridSampling( samplingVoxelSize ), {} );
 }
 
 void ICP::updatePointPairs()
@@ -197,7 +203,6 @@ void updatePointPairs( PointPairs & pairs,
         // save the result
         PointPair vp = res;
         vp.distSq = prj.distSq;
-        vp.weight = 1.0f; // a grid sample represents the same area independently of its vertex triangles
         vp.tgtCloseVert = prj.closestVert;
         vp.srcPoint = src.xf( p0 );
         vp.tgtPoint = tgt.xf( p1 );

@@ -177,7 +177,7 @@ struct ICPProperties
 /// reset active bit if pair distance is further than maxDistSq
 MRMESH_API size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq );
 
-/// in each pair updates the target data and performs basic filtering (activation)
+/// in each pair updates the target data and performs basic filtering (activation); pair weights are not changed
 MRMESH_API void updatePointPairs( PointPairs& pairs,
     const MeshOrPointsXf& src, const MeshOrPointsXf& tgt,
     float cosThreshold, float distThresholdSq, bool mutualClosest, bool ignoreBdTgts );
@@ -195,6 +195,7 @@ public:
     /// \param refXf transformation from reference object space to global space
     /// \param fltSamples samples on floating object to find projections on the reference object during the algorithm
     /// \param refSamples samples on reference object to find projections on the floating object during the algorithm
+    /// the weight of each pair is the double area of mesh triangles around its sample vertex (1 for point clouds)
     ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} ) : ICP( { flt, fltXf }, { ref, refXf }, fltSamples, refSamples ) {}
     MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} );
@@ -205,6 +206,7 @@ public:
     /// \param fltXf transformation from floating object space to global space
     /// \param refXf transformation from reference object space to global space
     /// \param samplingVoxelSize approximate distance between samples on each of two objects
+    /// all pairs get equal weights
     MRMESH_API ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float samplingVoxelSize ) : ICP( { flt, fltXf }, { ref, refXf }, samplingVoxelSize ) {}
     MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize );
@@ -216,11 +218,13 @@ public:
     MRMESH_API void setBadIterCount( const int iter );
     MRMESH_API void setFarDistFactor(const float factor);
 
-    /// select pairs with origin samples on floating object
+    /// select pairs with origin samples on floating object;
+    /// setFltSamples weights each pair by the double area of mesh triangles around its sample vertex,
+    /// sampleFltPoints performs grid sampling and gives all pairs equal weights
     MRMESH_API void setFltSamples( const VertBitSet& fltSamples );
     MRMESH_API void sampleFltPoints( float samplingVoxelSize );
 
-    /// select pairs with origin samples on reference object
+    /// select pairs with origin samples on reference object, weighted the same way as for floating object
     MRMESH_API void setRefSamples( const VertBitSet& refSamples );
     MRMESH_API void sampleRefPoints( float samplingVoxelSize );
 

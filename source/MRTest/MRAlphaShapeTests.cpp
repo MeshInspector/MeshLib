@@ -279,7 +279,13 @@ TEST( MRMesh, BallPivotingTwins )
         }
         return res;
     };
-    const auto tris = *findBallPivotingTriangles( cloud, getAlphaShapeData( cloud, 0.2f, true ) );
+    const auto data = getAlphaShapeData( cloud, 0.2f, true );
+    EXPECT_EQ( data.twins.count(), 2 * ( n / 10 ) );
+    for ( VertId v : data.twins )
+    {
+        EXPECT_NE( v, smallestId[posOf[v]] );
+    }
+    const auto tris = *findBallPivotingTriangles( cloud, data );
     const auto plainTris = *findBallPivotingTriangles( plain, getAlphaShapeData( plain, 0.2f, true ) );
     EXPECT_EQ( tris.size(), 2 * n - 4 );
     for ( const auto & t : tris )

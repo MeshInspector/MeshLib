@@ -52,7 +52,22 @@ AlphaShapeData getAlphaShapeData( const PointCloud & cloud, float radius, bool a
     res.toInt = getToIntConverter( box );
 
     if ( allPoints )
+    {
         res.intPoints = computeIntCoords( res.toInt, cloud.points, &cloud.validPoints );
+
+        // only the smallest id of a position in the integer grid takes part in the searches
+        std::vector<std::pair<Vector3i, VertId>> order;
+        order.reserve( cloud.validPoints.count() );
+        for ( auto v : cloud.validPoints )
+            order.emplace_back( res.intPoints[v], v );
+        tbb::parallel_sort( order.begin(), order.end(), []( const auto & a, const auto & b )
+        {
+            return std::tie( a.first.x, a.first.y, a.first.z, a.second ) < std::tie( b.first.x, b.first.y, b.first.z, b.second );
+        } );
+        for ( size_t i = 1; i < order.size(); ++i )
+            if ( order[i].first == order[i - 1].first )
+                res.twins.autoResizeSet( order[i].second );
+    }
 
     // rounding down to be sure that the integer ball is not larger than the given one
     const auto intRadius = std::int64_t( double( radius ) * res.toInt.invRange );
@@ -348,6 +363,8 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
     findPointsInBall( cloud, { 0.5f * ( cloud.points[vi] + cloud.points[vj] ), sqr( searchRadius ) },
         [&]( const PointsProjectionResult & found, const Vector3f&, Ball3f & )
         {
+            if ( data.twins.test( found.vId ) )
+                return Processing::Continue;
             const auto c = data.coords( cloud, found.vId );
             // the triangle's own points and their twins sharing a position in the integer grid
             if ( c.pt == pi.pt || c.pt == pj.pt || c.pt == pk.pt )
@@ -357,16 +374,6 @@ VertId findBallPivotVertex( const PointCloud & cloud, VertId vi, VertId vj, Vert
                 cands.push_back( { c, orient3d( { pi, pj, pk, c } ) } );
             return Processing::Continue;
         } );
-
-    // the twins among the candidates are merged as in findAlphaShapeNeiTriangles: only the smallest id of a position remains
-    std::sort( cands.begin(), cands.end(), []( const BallPivotCandidate & a, const BallPivotCandidate & b )
-    {
-        return std::tie( a.coords.pt.x, a.coords.pt.y, a.coords.pt.z, a.coords.id ) < std::tie( b.coords.pt.x, b.coords.pt.y, b.coords.pt.z, b.coords.id );
-    } );
-    cands.erase( std::unique( cands.begin(), cands.end(), []( const BallPivotCandidate & a, const BallPivotCandidate & b )
-    {
-        return a.coords.pt == b.coords.pt;
-    } ), cands.end() );
 
     // whether a follows b counter-clockwise from #vk, i.e. ccwAroundLine( { pi, pj, pk, b, a } ) with its first two
     // orient3d calls taken from the candidates; the reversed order puts the first candidate on top of the heap
@@ -533,12 +540,12 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
     Triangulation res;
     const auto numPoints = cloud.validPoints.count();
 
-    // the min-heap of the points by x-coordinate in the integer grid, the smaller id first among equal ones,
-    // so that a point is never preceded by its twin, which would take all its triangles
+    // the min-heap of the points by x-coordinate in the integer grid, without the twins taking part in no search
     std::vector<std::pair<int, VertId>> heap;
     heap.reserve( numPoints );
     for ( auto v : cloud.validPoints )
-        heap.emplace_back( data.coords( cloud, v ).pt.x, v );
+        if ( !data.twins.test( v ) )
+            heap.emplace_back( data.coords( cloud, v ).pt.x, v );
     std::make_heap( heap.begin(), heap.end(), std::greater{} );
 
     // the first triangle: the point with the smallest x is touched by the empty ball from -x direction,

@@ -258,4 +258,28 @@ TEST( MRMesh, PointToPlaneAligningTransform2 )
     }
 }
 
+TEST( MRMesh, PointToPlaneAligningTransformSliding )
+{
+    // the points are only on the four long faces of a box stretched along x-axis,
+    // so the translation along x-axis is not constrained at all
+    const Vector3d shift( 0, 0.01, -0.02 );
+    PointToPlaneAligningTransform p2pl;
+    for ( int i = -5; i <= 5; ++i )
+    {
+        for ( const Vector3d n : { Vector3d( 0, 1, 0 ), Vector3d( 0, -1, 0 ), Vector3d( 0, 0, 1 ), Vector3d( 0, 0, -1 ) } )
+        {
+            for ( double t : { -0.5, 0.5 } )
+            {
+                const Vector3d p = Vector3d( i, 0, 0 ) + n + t * cross( n, Vector3d( 1, 0, 0 ) );
+                p2pl.add( p, p + shift, n );
+            }
+        }
+    }
+    p2pl.prepare();
+    p2pl.setStabilizer( 1e-6 );
+    const auto am = p2pl.calculateAmendment();
+    EXPECT_LT( am.a.length(), 1e-6 );
+    EXPECT_LT( ( am.b - shift ).length(), 1e-6 );
+}
+
 } //namespace MR

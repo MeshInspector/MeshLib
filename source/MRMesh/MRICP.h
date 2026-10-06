@@ -134,6 +134,10 @@ struct ICPProperties
     /// This is to reduce possible instability.
     float p2plScaleLimit = 2;
 
+    /// Relative regularization of the linear system in ICPMethod::PointToPlane, see PointToPlaneAligningTransform::setStabilizer.
+    /// This is to avoid huge motions along the directions poorly constrained by the planes, e.g. sliding along parallel faces of a CAD model.
+    float p2plStabilizer = 1e-6f;
+
     /// If source and target points in a pair both have normals, then dot-product of normals must be not smaller than (cosThreshold),
     /// otherwise such point pair will be deactivated (ignored) during transformation computation.
     /// This is to get rid of erroneous pairs on unrelated parts of objects, which are close only by chance.

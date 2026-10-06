@@ -416,6 +416,7 @@ bool ICP::p2plIter_()
         p2pl.add( vp.tgtPoint - centroidRef, vp.srcPoint - centroidRef, vp.srcNorm, vp.weight );
     }
     p2pl.prepare();
+    p2pl.setStabilizer( prop_.p2plStabilizer );
 
     const AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
     if (std::isnan(res.b.x)) //nan check

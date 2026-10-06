@@ -8,7 +8,6 @@
 #include "MRBestFit.h"
 #include "MRBitSetParallelFor.h"
 #include "MRMeshToPointCloud.h"
-#include "MRMeshProject.h"
 #include "MRPointCloud.h"
 #include <atomic>
 #include <numeric>
@@ -75,7 +74,7 @@ static bool coveredByVertices( const MeshPart & mp, float radius )
 }
 
 /// returns grid samples of the object; for a mesh with triangles too big for the sampling, the samples are taken
-/// from its dense point cloud returned in (cloud) with the normals of the mesh set in the samples
+/// from its dense point cloud returned in (cloud), with the normals interpolated from the vertices
 static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, std::shared_ptr<PointCloud> & cloud )
 {
     MR_TIMER;
@@ -84,19 +83,12 @@ static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize
     if ( !mp || !( samplingVoxelSize > 0 ) || coveredByVertices( *mp, samplingVoxelSize / 2 ) )
         return *obj.pointsGridSampling( samplingVoxelSize );
 
-    auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, false );
+    auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, true );
     if ( !dense || dense->points.size() <= mp->mesh.points.size() )
         return *obj.pointsGridSampling( samplingVoxelSize ); // the vertices are dense enough
 
     cloud = std::make_shared<PointCloud>( std::move( *dense ) );
-    auto res = *MeshOrPoints( *cloud ).pointsGridSampling( samplingVoxelSize );
-    cloud->normals.resize( cloud->points.size() );
-    BitSetParallelFor( res, [&]( VertId v )
-    {
-        cloud->normals[v] = v < mp->mesh.points.endId() ? mp->mesh.pseudonormal( v )
-            : mp->mesh.pseudonormal( findProjection( cloud->points[v], *mp ).mtp, mp->region );
-    } );
-    return res;
+    return *MeshOrPoints( *cloud ).pointsGridSampling( samplingVoxelSize );
 }
 
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples, const VertBitSet& refSamples )

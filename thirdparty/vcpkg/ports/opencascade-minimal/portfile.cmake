@@ -12,6 +12,7 @@ vcpkg_from_github(
         install-include-dir.patch
         remove-vcpkg-enabling.patch
         csf-redifinition.patch
+        trim-xcaf-visualization.patch
 )
 
 if (VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")
@@ -46,7 +47,8 @@ vcpkg_cmake_configure(
         -DBUILD_MODULE_Visualization=OFF
         -DBUILD_DOC_Overview=OFF
         -DBUILD_Inspector=OFF
-        -DBUILD_ADDITIONAL_TOOLKITS="TKDESTEP;TKBinXCAF"
+        -DBUILD_ADDITIONAL_TOOLKITS="TKDESTEP;TKMesh"
+        -DBUILD_USE_PCH=ON
         -DINSTALL_DIR_LAYOUT=Unix
         -DINSTALL_DIR_DOC=share/trash
         -DINSTALL_DIR_SCRIPT=share/trash # not relocatable

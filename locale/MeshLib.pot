@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: MeshLib\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-01 04:17+0000\n"
+"POT-Creation-Date: 2026-10-06 04:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -34,7 +34,7 @@ msgid ""
 msgstr ""
 
 #: source/MRCommonPlugins/Basic/MRCameraOrientationPlugin.cpp:31
-#: source/MRViewer/ImGuiHelpers.cpp:1549
+#: source/MRViewer/ImGuiHelpers.cpp:1618
 msgid "Direction"
 msgstr ""
 
@@ -256,15 +256,15 @@ msgid "Theme with name {} already exists, override it?"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRAddCustomTheme.cpp:121
-#: source/MRViewer/ImGuiMenu.cpp:994
+#: source/MRViewer/ImGuiMenu.cpp:1031
 #: source/MRViewer/MRUISaveChangesPopup.cpp:47
 msgid "Save"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRAddCustomTheme.cpp:130
 #: source/MRCommonPlugins/ViewerButtons/MRViewerSettingsPlugin.cpp:1080
-#: source/MRViewer/ImGuiMenu.cpp:951 source/MRViewer/ImGuiMenu.cpp:1050
-#: source/MRViewer/MRProgressBar.cpp:227
+#: source/MRViewer/ImGuiMenu.cpp:988 source/MRViewer/ImGuiMenu.cpp:1087
+#: source/MRViewer/MRProgressBar.cpp:217
 #: source/MRViewer/MRUISaveChangesPopup.cpp:91
 #: source/MRViewer/MRUISaveChangesPopup.h:24
 msgid "Cancel"
@@ -878,8 +878,8 @@ msgid "Surface opacity"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRViewerSettingsPlugin.cpp:831
-#: source/MRViewer/ImGuiMenu.cpp:2004 source/MRViewer/ImGuiMenu.cpp:2075
-#: source/MRViewer/ImGuiMenu.cpp:2201 source/MRViewer/ImGuiMenu.cpp:2212
+#: source/MRViewer/ImGuiMenu.cpp:2040 source/MRViewer/ImGuiMenu.cpp:2111
+#: source/MRViewer/ImGuiMenu.cpp:2237 source/MRViewer/ImGuiMenu.cpp:2248
 msgid "Point size"
 msgstr ""
 
@@ -888,7 +888,7 @@ msgid "Point size (subfeatures)"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRViewerSettingsPlugin.cpp:839
-#: source/MRViewer/ImGuiMenu.cpp:2078 source/MRViewer/ImGuiMenu.cpp:2194
+#: source/MRViewer/ImGuiMenu.cpp:2114 source/MRViewer/ImGuiMenu.cpp:2230
 msgid "Line width"
 msgstr ""
 
@@ -940,7 +940,7 @@ msgid "Shadow Color"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRViewerSettingsPlugin.cpp:964
-#: source/MRViewer/ImGuiHelpers.cpp:1514
+#: source/MRViewer/ImGuiHelpers.cpp:1583
 msgid "Shift"
 msgstr ""
 
@@ -985,7 +985,7 @@ msgid "Reset all application settings?"
 msgstr ""
 
 #: source/MRCommonPlugins/ViewerButtons/MRViewerSettingsPlugin.cpp:1074
-#: source/MRViewer/ImGuiMenu.cpp:902 source/MRViewer/MRRibbonMenu.cpp:2122
+#: source/MRViewer/ImGuiMenu.cpp:939 source/MRViewer/MRRibbonMenu.cpp:2122
 msgid "Reset"
 msgstr ""
 
@@ -1302,7 +1302,7 @@ msgid "Open Voxels"
 msgstr ""
 
 #: source/MRCommonPlugins/Voxels/MROpenVoxelsFromTiffPlugin.cpp:57
-#: source/MRViewer/ImGuiMenu.cpp:1749
+#: source/MRViewer/ImGuiMenu.cpp:1785
 msgid "Voxel Size"
 msgstr ""
 
@@ -1612,760 +1612,760 @@ msgstr ""
 msgid "Line width cannot be changed with current renderer."
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1195
+#: source/MRViewer/ImGuiHelpers.cpp:1264
 msgid "Load preset"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1195
+#: source/MRViewer/ImGuiHelpers.cpp:1264
 msgid "Select Palette Preset"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1202
+#: source/MRViewer/ImGuiHelpers.cpp:1271
 msgid "Cannot load preset with name"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1211
+#: source/MRViewer/ImGuiHelpers.cpp:1280
 msgid "Load one of custom presets"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1218
+#: source/MRViewer/ImGuiHelpers.cpp:1287
 msgid "Set Zero to Green"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1219
+#: source/MRViewer/ImGuiHelpers.cpp:1288
 msgid "If checked, zero value always will be green"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1225
+#: source/MRViewer/ImGuiHelpers.cpp:1294
 msgid "Discrete Palette"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1231
+#: source/MRViewer/ImGuiHelpers.cpp:1300
 msgid ""
 "If checked, palette will have several discrete levels. Otherwise it will be "
 "smooth."
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1247
+#: source/MRViewer/ImGuiHelpers.cpp:1316
 msgid "Number of discrete levels"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1258
+#: source/MRViewer/ImGuiHelpers.cpp:1327
 msgid "Palette Type"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1258
+#: source/MRViewer/ImGuiHelpers.cpp:1327
 msgid "Even Space"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1258
+#: source/MRViewer/ImGuiHelpers.cpp:1327
 msgid "Central Zone"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1259
+#: source/MRViewer/ImGuiHelpers.cpp:1328
 msgid ""
 "If \"Central zone\" selected you can separately fit values which are higher "
 "or lower then central one. Otherwise only the whole scale can be fit"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1296
+#: source/MRViewer/ImGuiHelpers.cpp:1365
 msgid "Min/Max"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1302
+#: source/MRViewer/ImGuiHelpers.cpp:1371
 msgid "Max (red)"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1304
+#: source/MRViewer/ImGuiHelpers.cpp:1373
 msgid "Min (blue)"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1315
+#: source/MRViewer/ImGuiHelpers.cpp:1384
 msgid "Max positive / Min negative"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1322
+#: source/MRViewer/ImGuiHelpers.cpp:1391
 msgid "Min positive / Max negative"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1328
+#: source/MRViewer/ImGuiHelpers.cpp:1397
 msgid "Max positive (red)"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1329
+#: source/MRViewer/ImGuiHelpers.cpp:1398
 msgid "Min positive (green)"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1330
+#: source/MRViewer/ImGuiHelpers.cpp:1399
 msgid "Max negative (green)"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1332
+#: source/MRViewer/ImGuiHelpers.cpp:1401
 msgid "Min negative (blue)"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1356
+#: source/MRViewer/ImGuiHelpers.cpp:1425
 msgid "Invalid values order"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1390 source/MRViewer/ImGuiHelpers.cpp:1408
+#: source/MRViewer/ImGuiHelpers.cpp:1459 source/MRViewer/ImGuiHelpers.cpp:1477
 msgid "Reset Palette"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1399
+#: source/MRViewer/ImGuiHelpers.cpp:1468
 msgid "Save Palette as"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1401
+#: source/MRViewer/ImGuiHelpers.cpp:1470
 msgid ""
 "Save the current palette settings to file. You can load it later as a preset."
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1424
+#: source/MRViewer/ImGuiHelpers.cpp:1493
 msgid "Returns the palette to its default values"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1449
+#: source/MRViewer/ImGuiHelpers.cpp:1518
 msgid "Plane YZ"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1452
+#: source/MRViewer/ImGuiHelpers.cpp:1521
 msgid "Plane XZ"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1455
+#: source/MRViewer/ImGuiHelpers.cpp:1524
 msgid "Plane XY"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1463
+#: source/MRViewer/ImGuiHelpers.cpp:1532
 msgid "Import Plane"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1475
+#: source/MRViewer/ImGuiHelpers.cpp:1544
 msgid "Click on the plane object in scene to import its parameters"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1490
+#: source/MRViewer/ImGuiHelpers.cpp:1559
 msgid "Normal"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1517
+#: source/MRViewer/ImGuiHelpers.cpp:1586
 msgid "Flip"
 msgstr ""
 
-#: source/MRViewer/ImGuiHelpers.cpp:1529
+#: source/MRViewer/ImGuiHelpers.cpp:1598
 msgid "Show Plane"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:142
+#: source/MRViewer/ImGuiMenu.cpp:143
 msgid "Point Array Size"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:143
+#: source/MRViewer/ImGuiMenu.cpp:144
 msgid "Line Array Size"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:144
+#: source/MRViewer/ImGuiMenu.cpp:145
 msgid "Triangle Array Size"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:145
+#: source/MRViewer/ImGuiMenu.cpp:146
 msgid "Point Elements Number"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:146
+#: source/MRViewer/ImGuiMenu.cpp:147
 msgid "Line Elements Number"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:147
+#: source/MRViewer/ImGuiMenu.cpp:148
 msgid "Triangle Elements Number"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:152
+#: source/MRViewer/ImGuiMenu.cpp:153
 msgid "Mouse Down"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:153
+#: source/MRViewer/ImGuiMenu.cpp:154
 msgid "Mouse Up"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:154
+#: source/MRViewer/ImGuiMenu.cpp:155
 msgid "Mouse Move"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:155
+#: source/MRViewer/ImGuiMenu.cpp:156
 msgid "Mouse Scroll"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:156
+#: source/MRViewer/ImGuiMenu.cpp:157
 msgid "Key Down"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:157
+#: source/MRViewer/ImGuiMenu.cpp:158
 msgid "Key Up"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:158
+#: source/MRViewer/ImGuiMenu.cpp:159
 msgid "Key Repeat"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:159
+#: source/MRViewer/ImGuiMenu.cpp:160
 msgid "Char Pressed"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:892
+#: source/MRViewer/ImGuiMenu.cpp:929
 msgid "GL memory buffer"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:895 source/MRViewer/ImGuiMenu.cpp:897
+#: source/MRViewer/ImGuiMenu.cpp:932 source/MRViewer/ImGuiMenu.cpp:934
 msgid "Previous frame time"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:898
+#: source/MRViewer/ImGuiMenu.cpp:935
 msgid "Total frames"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:899
+#: source/MRViewer/ImGuiMenu.cpp:936
 msgid "Swapped frames"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:900
+#: source/MRViewer/ImGuiMenu.cpp:937
 msgid "FPS"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:906
+#: source/MRViewer/ImGuiMenu.cpp:943
 msgid "Print Time to Log"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:922
+#: source/MRViewer/ImGuiMenu.cpp:959
 msgid "Rename Object"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:937 source/MRViewer/ImGuiMenu.cpp:938
-#: source/MRViewer/ImGuiMenu.cpp:978 source/MRViewer/ImGuiMenu.cpp:979
-#: source/MRViewer/ImGuiMenu.cpp:2232 source/MRViewer/MRToolsLibrary.cpp:133
+#: source/MRViewer/ImGuiMenu.cpp:974 source/MRViewer/ImGuiMenu.cpp:975
+#: source/MRViewer/ImGuiMenu.cpp:1015 source/MRViewer/ImGuiMenu.cpp:1016
+#: source/MRViewer/ImGuiMenu.cpp:2268 source/MRViewer/MRToolsLibrary.cpp:133
 msgid "Name"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:943
+#: source/MRViewer/ImGuiMenu.cpp:980
 msgid "Ok"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:945
+#: source/MRViewer/ImGuiMenu.cpp:982
 msgid "Rename object from modal dialog"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:967
+#: source/MRViewer/ImGuiMenu.cpp:1004
 msgid "Edit Tag"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:983
+#: source/MRViewer/ImGuiMenu.cpp:1020
 msgid "Assign Color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:988
+#: source/MRViewer/ImGuiMenu.cpp:1025
 msgid "Selected Color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:989
+#: source/MRViewer/ImGuiMenu.cpp:1026
 msgid "Unselected Color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1125 source/MRViewer/MRMouseController.cpp:104
+#: source/MRViewer/ImGuiMenu.cpp:1162 source/MRViewer/MRMouseController.cpp:104
 msgid "Error"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1130
+#: source/MRViewer/ImGuiMenu.cpp:1167
 msgid "Warning"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1135
+#: source/MRViewer/ImGuiMenu.cpp:1172
 msgid "Info"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1156
+#: source/MRViewer/ImGuiMenu.cpp:1192
 msgid "Okay"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1233
+#: source/MRViewer/ImGuiMenu.cpp:1269
 msgid "Selection Properties"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1265
+#: source/MRViewer/ImGuiMenu.cpp:1301
 msgid "Draw Options"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1293
+#: source/MRViewer/ImGuiMenu.cpp:1329
 msgid "Information"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1306
+#: source/MRViewer/ImGuiMenu.cpp:1342
 msgid "WORLD"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1307
+#: source/MRViewer/ImGuiMenu.cpp:1343
 msgid "LOCAL"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1528
+#: source/MRViewer/ImGuiMenu.cpp:1564
 msgid "Object Name"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1538
+#: source/MRViewer/ImGuiMenu.cpp:1574
 msgid "Rename object from information"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1556
+#: source/MRViewer/ImGuiMenu.cpp:1592
 msgid "Label"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1561
+#: source/MRViewer/ImGuiMenu.cpp:1597
 msgid "Change label"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1625
+#: source/MRViewer/ImGuiMenu.cpp:1661
 msgid "Selected / Total"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1643
+#: source/MRViewer/ImGuiMenu.cpp:1679
 msgid "Object Type"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1647
+#: source/MRViewer/ImGuiMenu.cpp:1683
 msgid "Objects"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1664
+#: source/MRViewer/ImGuiMenu.cpp:1700
 msgid "Local Box Size"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1666
+#: source/MRViewer/ImGuiMenu.cpp:1702
 msgid ""
 "The edges of the tight axis-aligned bounding box in the local object space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1668
+#: source/MRViewer/ImGuiMenu.cpp:1704
 msgid "Local Box Min"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1669
+#: source/MRViewer/ImGuiMenu.cpp:1705
 msgid ""
 "Lower left corner of the tight axis-aligned bounding box in the local object "
 "space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1671
+#: source/MRViewer/ImGuiMenu.cpp:1707
 msgid "Local Box Max"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1672
+#: source/MRViewer/ImGuiMenu.cpp:1708
 msgid ""
 "Upper right corner of the tight axis-aligned bounding box in the local "
 "object space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1678
+#: source/MRViewer/ImGuiMenu.cpp:1714
 msgid "World Box Size"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1680
+#: source/MRViewer/ImGuiMenu.cpp:1716
 msgid "The edges of the tight axis-aligned bounding box in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1682
+#: source/MRViewer/ImGuiMenu.cpp:1718
 msgid "World Box Min"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1683
+#: source/MRViewer/ImGuiMenu.cpp:1719
 msgid ""
 "Lower left corner of the tight axis-aligned bounding box in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1685
+#: source/MRViewer/ImGuiMenu.cpp:1721
 msgid "World Box Max"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1686
+#: source/MRViewer/ImGuiMenu.cpp:1722
 msgid ""
 "Upper right corner of the tight axis-aligned bounding box in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1697 source/MRViewer/ImGuiMenu.cpp:2174
+#: source/MRViewer/ImGuiMenu.cpp:1733 source/MRViewer/ImGuiMenu.cpp:2210
 msgid "Triangles"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1698
+#: source/MRViewer/ImGuiMenu.cpp:1734
 msgid "Vertices"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1699 source/MRViewer/ImGuiMenu.cpp:2169
+#: source/MRViewer/ImGuiMenu.cpp:1735 source/MRViewer/ImGuiMenu.cpp:2205
 msgid "Edges"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1700 source/MRViewer/ImGuiMenu.cpp:2170
-#: source/MRViewer/ImGuiMenu.cpp:2191
+#: source/MRViewer/ImGuiMenu.cpp:1736 source/MRViewer/ImGuiMenu.cpp:2206
+#: source/MRViewer/ImGuiMenu.cpp:2227
 msgid "Points"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1704
+#: source/MRViewer/ImGuiMenu.cpp:1740
 msgid "Point Normals"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1704
+#: source/MRViewer/ImGuiMenu.cpp:1740
 msgid "Yes"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1704
+#: source/MRViewer/ImGuiMenu.cpp:1740
 msgid "No"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1708
+#: source/MRViewer/ImGuiMenu.cpp:1744
 msgid "Volume"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1709
+#: source/MRViewer/ImGuiMenu.cpp:1745
 msgid "The volume surrounded by the mesh(es) in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1714 source/MRViewer/ImGuiMenu.cpp:1720
+#: source/MRViewer/ImGuiMenu.cpp:1750 source/MRViewer/ImGuiMenu.cpp:1756
 msgid "Area"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1716
+#: source/MRViewer/ImGuiMenu.cpp:1752
 msgid "Selected / Total surface area in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1721
+#: source/MRViewer/ImGuiMenu.cpp:1757
 msgid "Total surface area in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1727 source/MRViewer/MRToolsLibrary.cpp:148
+#: source/MRViewer/ImGuiMenu.cpp:1763 source/MRViewer/MRToolsLibrary.cpp:148
 msgid "Length"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1728
+#: source/MRViewer/ImGuiMenu.cpp:1764
 msgid "The length of the lines in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1733
+#: source/MRViewer/ImGuiMenu.cpp:1769
 msgid "Avg Edge Length"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1734
+#: source/MRViewer/ImGuiMenu.cpp:1770
 msgid "Average edge length of the object(s) in the world space."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1737
+#: source/MRViewer/ImGuiMenu.cpp:1773
 msgid "Holes"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1738
+#: source/MRViewer/ImGuiMenu.cpp:1774
 msgid "Components"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1747
+#: source/MRViewer/ImGuiMenu.cpp:1783
 msgid "Voxels Dims"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1754
+#: source/MRViewer/ImGuiMenu.cpp:1790
 msgid "Active Box Min"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1755
+#: source/MRViewer/ImGuiMenu.cpp:1791
 msgid "Active Box Max"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1760
+#: source/MRViewer/ImGuiMenu.cpp:1796
 msgid "Min,Iso,Max"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1777
+#: source/MRViewer/ImGuiMenu.cpp:1813
 msgid "X/Y/Z Distance"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1780
+#: source/MRViewer/ImGuiMenu.cpp:1816
 msgid "Angle"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1782 source/MRViewer/MRToolsLibrary.cpp:149
+#: source/MRViewer/ImGuiMenu.cpp:1818 source/MRViewer/MRToolsLibrary.cpp:149
 msgid "Diameter"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1782
+#: source/MRViewer/ImGuiMenu.cpp:1818
 msgid "Radius"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1872
+#: source/MRViewer/ImGuiMenu.cpp:1908
 msgid "Change Feature Transform"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1921
+#: source/MRViewer/ImGuiMenu.cpp:1957
 msgid "Tolerance"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1923
+#: source/MRViewer/ImGuiMenu.cpp:1959
 msgid "tolerance"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1948
+#: source/MRViewer/ImGuiMenu.cpp:1984
 msgid "Visibility"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1968
+#: source/MRViewer/ImGuiMenu.cpp:2004
 msgid "Lock Transform"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:1983
+#: source/MRViewer/ImGuiMenu.cpp:2019
 msgid "Advanced"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2003
+#: source/MRViewer/ImGuiMenu.cpp:2039
 msgid "Polygon Offset"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2016
+#: source/MRViewer/ImGuiMenu.cpp:2052
 msgid "Dash"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2025
+#: source/MRViewer/ImGuiMenu.cpp:2061
 msgid "Shininess"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2033
+#: source/MRViewer/ImGuiMenu.cpp:2069
 msgid "Ambient Strength"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2041
+#: source/MRViewer/ImGuiMenu.cpp:2077
 msgid "Specular Strength"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2053
+#: source/MRViewer/ImGuiMenu.cpp:2089
 msgid "Visual Sampling"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2082
+#: source/MRViewer/ImGuiMenu.cpp:2118
 msgid "Point subfeatures size"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2085
+#: source/MRViewer/ImGuiMenu.cpp:2121
 msgid "Line subfeatures width"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2089
+#: source/MRViewer/ImGuiMenu.cpp:2125
 msgid "Main component alpha"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2092
+#: source/MRViewer/ImGuiMenu.cpp:2128
 msgid "Point subfeatures alpha"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2095
+#: source/MRViewer/ImGuiMenu.cpp:2131
 msgid "Line subfeatures alpha"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2098
+#: source/MRViewer/ImGuiMenu.cpp:2134
 msgid "Mesh subfeatures alpha"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2121 source/MRViewer/ImGuiMenu.cpp:2122
+#: source/MRViewer/ImGuiMenu.cpp:2157 source/MRViewer/ImGuiMenu.cpp:2158
 #: source/MRViewer/MRToolsLibrary.cpp:103
 #: source/MRViewer/MRToolsLibrary.cpp:108
 msgid "Remove"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2128
+#: source/MRViewer/ImGuiMenu.cpp:2164
 msgid "Remove Objects (context)"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2167
+#: source/MRViewer/ImGuiMenu.cpp:2203
 msgid "Shading"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2168
+#: source/MRViewer/ImGuiMenu.cpp:2204
 msgid "Flat Shading"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2171
+#: source/MRViewer/ImGuiMenu.cpp:2207
 msgid "Selected Edges"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2172
+#: source/MRViewer/ImGuiMenu.cpp:2208
 msgid "Selected Tri-s"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2173
+#: source/MRViewer/ImGuiMenu.cpp:2209
 msgid "Borders"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2175
+#: source/MRViewer/ImGuiMenu.cpp:2211
 msgid "Transparency"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2187
+#: source/MRViewer/ImGuiMenu.cpp:2223
 msgid "Texture"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2192
+#: source/MRViewer/ImGuiMenu.cpp:2228
 msgid "Smooth corners"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2193
+#: source/MRViewer/ImGuiMenu.cpp:2229
 msgid "Dashed"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2211
+#: source/MRViewer/ImGuiMenu.cpp:2247
 msgid "Selected Points"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2222
+#: source/MRViewer/ImGuiMenu.cpp:2258
 msgid "Always on top"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2223
+#: source/MRViewer/ImGuiMenu.cpp:2259
 msgid "Source point"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2224
+#: source/MRViewer/ImGuiMenu.cpp:2260
 msgid "Background"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2225
+#: source/MRViewer/ImGuiMenu.cpp:2261
 msgid "Contour"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2226
+#: source/MRViewer/ImGuiMenu.cpp:2262
 msgid "Leader line"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2230
+#: source/MRViewer/ImGuiMenu.cpp:2266
 msgid "Subfeatures"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2234
+#: source/MRViewer/ImGuiMenu.cpp:2270
 msgid "Extra information next to name"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2236
+#: source/MRViewer/ImGuiMenu.cpp:2272
 msgid "Clipping"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2293
+#: source/MRViewer/ImGuiMenu.cpp:2329
 msgid "Viewport Id"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2294 source/MRViewer/ImGuiMenu.cpp:2297
+#: source/MRViewer/ImGuiMenu.cpp:2330 source/MRViewer/ImGuiMenu.cpp:2333
 msgid "Default"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2310
+#: source/MRViewer/ImGuiMenu.cpp:2346
 msgid "Selected color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2317
+#: source/MRViewer/ImGuiMenu.cpp:2353
 msgid "Unselected color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2324
+#: source/MRViewer/ImGuiMenu.cpp:2360
 msgid "Back Triangles color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2334
+#: source/MRViewer/ImGuiMenu.cpp:2370
 msgid "Edges color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2341
+#: source/MRViewer/ImGuiMenu.cpp:2377
 msgid "Points color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2348
+#: source/MRViewer/ImGuiMenu.cpp:2384
 msgid "Selected Tri-s color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2355
+#: source/MRViewer/ImGuiMenu.cpp:2391
 msgid "Selected Edges color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2362
+#: source/MRViewer/ImGuiMenu.cpp:2398
 msgid "Borders color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2372
+#: source/MRViewer/ImGuiMenu.cpp:2408
 msgid "Selected Points color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2382
+#: source/MRViewer/ImGuiMenu.cpp:2418
 msgid "Source point color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2389
+#: source/MRViewer/ImGuiMenu.cpp:2425
 msgid "Leader line color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2396
+#: source/MRViewer/ImGuiMenu.cpp:2432
 msgid "Contour color"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2407
+#: source/MRViewer/ImGuiMenu.cpp:2443
 msgid "Decorations color (selected)"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2415
+#: source/MRViewer/ImGuiMenu.cpp:2451
 msgid "Decorations color (unselected)"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2426
+#: source/MRViewer/ImGuiMenu.cpp:2462
 msgid "Opacity"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2493
+#: source/MRViewer/ImGuiMenu.cpp:2529
 #, c++-format
 msgid "{} uncommon tag"
 msgid_plural "{} uncommon tags"
 msgstr[0] ""
 msgstr[1] ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2515
+#: source/MRViewer/ImGuiMenu.cpp:2551
 msgid "Tags"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2683
+#: source/MRViewer/ImGuiMenu.cpp:2719
 msgid "Type to add new tag..."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2840
+#: source/MRViewer/ImGuiMenu.cpp:2876
 msgid "Uni-scale"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2842
+#: source/MRViewer/ImGuiMenu.cpp:2878
 msgid "Selects between uniform scaling or separate scaling along each axis"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2847 source/MRViewer/ImGuiMenu.cpp:2852
+#: source/MRViewer/ImGuiMenu.cpp:2883 source/MRViewer/ImGuiMenu.cpp:2888
 msgid "Rotation XYZ"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2854
+#: source/MRViewer/ImGuiMenu.cpp:2890
 msgid "Rotation round [X, Y, Z] axes respectively."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2860
+#: source/MRViewer/ImGuiMenu.cpp:2896
 msgid "Sequential intrinsic rotations around Oz, Oy and Ox axes."
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2887 source/MRViewer/ImGuiMenu.cpp:2899
+#: source/MRViewer/ImGuiMenu.cpp:2923 source/MRViewer/ImGuiMenu.cpp:2935
 #: source/MRViewer/MRMouse.h:34
 msgid "Translation"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2912
+#: source/MRViewer/ImGuiMenu.cpp:2948
 msgid "Manual Change Transform"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:2934 source/MRViewer/MRRibbonMenu.cpp:1903
+#: source/MRViewer/ImGuiMenu.cpp:2970 source/MRViewer/MRRibbonMenu.cpp:1903
 msgid "Transform"
 msgstr ""
 
-#: source/MRViewer/ImGuiMenu.cpp:3156
+#: source/MRViewer/ImGuiMenu.cpp:3192
 msgid "Hot Key List"
 msgstr ""
 
@@ -2406,11 +2406,11 @@ msgstr ""
 msgid "Move Object"
 msgstr ""
 
-#: source/MRViewer/MRProgressBar.cpp:236
+#: source/MRViewer/MRProgressBar.cpp:226
 msgid "Canceling..."
 msgstr ""
 
-#: source/MRViewer/MRProgressBar.cpp:240 source/MRViewer/MRProgressBar.cpp:242
+#: source/MRViewer/MRProgressBar.cpp:230 source/MRViewer/MRProgressBar.cpp:232
 msgid "Operation is in progress, please wait..."
 msgstr ""
 
@@ -2607,7 +2607,7 @@ msgstr ""
 msgid "Ribbon Scene Show only next"
 msgstr ""
 
-#: source/MRViewer/MRRibbonMenu.cpp:2371
+#: source/MRViewer/MRRibbonMenu.cpp:2370
 msgid "Hotkeys"
 msgstr ""
 
@@ -2643,7 +2643,7 @@ msgstr ""
 msgid "MCP addObject"
 msgstr ""
 
-#: source/MRViewer/MRSceneObjectsListDrawer.cpp:639
+#: source/MRViewer/MRSceneObjectsListDrawer.cpp:644
 msgid "Cannot perform such reorder"
 msgstr ""
 
@@ -2679,27 +2679,31 @@ msgstr ""
 msgid "Select to prefer in selection convex/concave angles or neither"
 msgstr ""
 
-#: source/MRViewer/MRSurfaceManipulationWidget.cpp:297
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:307
 msgid "Brush: Add"
 msgstr ""
 
-#: source/MRViewer/MRSurfaceManipulationWidget.cpp:299
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:309
 msgid "Brush: Remove"
 msgstr ""
 
-#: source/MRViewer/MRSurfaceManipulationWidget.cpp:301
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:311
 msgid "Brush: Smooth"
 msgstr ""
 
-#: source/MRViewer/MRSurfaceManipulationWidget.cpp:356
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:366
 msgid "Subdivide Ridges/Grooves"
 msgstr ""
 
-#: source/MRViewer/MRSurfaceManipulationWidget.cpp:399
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:389
+msgid "Brush: Mark Creases"
+msgstr ""
+
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:427
 msgid "Brush: Fix"
 msgstr ""
 
-#: source/MRViewer/MRSurfaceManipulationWidget.cpp:856
+#: source/MRViewer/MRSurfaceManipulationWidget.cpp:906
 msgid "Brush: Deform"
 msgstr ""
 

@@ -129,11 +129,21 @@ void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters&
     }
 }
 
+// on Windows, narrow TIFFOpen interprets the file name in the ANSI code page, which fails for non-ASCII names
+static TIFF* openTiff( const std::filesystem::path& path, const char* mode )
+{
+#ifdef _WIN32
+    return TIFFOpenW( path.wstring().c_str(), mode );
+#else
+    return TIFFOpen( utf8string( path ).c_str(), mode );
+#endif
+}
+
 Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const WriteRawTiffParams& params )
 {
     const auto& baseParams = params.baseParams;
 
-    TIFF* tif = TIFFOpen( MR::utf8string( path ).c_str(), "w" );
+    TIFF* tif = openTiff( path, "w" );
     if ( !tif )
         return unexpected("Cannot write file: "+ utf8string( path ) );
 
@@ -225,11 +235,7 @@ class TiffHolder
 public:
     TiffHolder( const std::filesystem::path& path, const char* mode )
     {
-#ifdef __WIN32__
-        tiffPtr_ = TIFFOpenW( path.wstring().c_str(), mode );
-#else
-        tiffPtr_ = TIFFOpen( utf8string( path ).c_str(), mode );
-#endif
+        tiffPtr_ = openTiff( path, mode );
     }
     ~TiffHolder()
     {

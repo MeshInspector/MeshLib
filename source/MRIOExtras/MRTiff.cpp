@@ -46,16 +46,22 @@ struct TiffParameters
     bool operator==( const TiffParameters& ) const = default;
 };
 
+// on Windows, narrow TIFFOpen interprets the file name in the ANSI code page, which fails for non-ASCII names
+TIFF* openTiff( const std::filesystem::path& path, const char* mode )
+{
+#ifdef _WIN32
+    return TIFFOpenW( path.wstring().c_str(), mode );
+#else
+    return TIFFOpen( utf8string( path ).c_str(), mode );
+#endif
+}
+
 class TiffHolder
 {
 public:
     TiffHolder( const std::filesystem::path& path, const char* mode )
     {
-#ifdef __WIN32__
-        tiffPtr_ = TIFFOpenW( path.wstring().c_str(), mode );
-#else
-        tiffPtr_ = TIFFOpen( utf8string( path ).c_str(), mode );
-#endif
+        tiffPtr_ = openTiff( path, mode );
     }
     ~TiffHolder()
     {
@@ -326,7 +332,7 @@ namespace ImageSave
 
 Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
 {
-    auto tiff = TIFFOpen( utf8string( path ).c_str(), "w" );
+    auto tiff = openTiff( path, "w" );
     if ( !tiff )
         return unexpected( "Cannot write file: " + utf8string( path ) );
     MR_FINALLY {

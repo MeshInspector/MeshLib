@@ -572,11 +572,18 @@ Vector3f findTriangleSegmentIntersectionPrecise(
     const Vector3f& d, const Vector3f& e, 
     CoordinateConverters converters )
 {
-    auto ai = converters.toInt( a );
-    auto bi = converters.toInt( b );
-    auto ci = converters.toInt( c );
-    auto di = converters.toInt( d );
-    auto ei = converters.toInt( e );
+    if ( auto res = findTriangleSegmentIntersectionPreciseInt( converters.toInt( a ), converters.toInt( b ), converters.toInt( c ),
+        converters.toInt( d ), converters.toInt( e ) ) )
+        return converters.toFloat( *res );
+
+    // rare case when `numSum == 0` - segment is fully inside face
+    return Vector3f( ( Vector3d( d ) + Vector3d( e ) ) * 0.5 );
+}
+
+std::optional<Vector3i> findTriangleSegmentIntersectionPreciseInt(
+    const Vector3i& ai, const Vector3i& bi, const Vector3i& ci,
+    const Vector3i& di, const Vector3i& ei )
+{
     auto abcd = dot( Vector3i64mul{ ai - di }, Vector3i64mul{ cross( Vector3i64{ bi - di }, Vector3i64{ ci - di } ) } );
     if ( abcd < 0 )
         abcd = -abcd;
@@ -585,7 +592,7 @@ Vector3f findTriangleSegmentIntersectionPrecise(
         abce = -abce;
     auto sum = abcd + abce;
     if ( sum != 0 )
-        return converters.toFloat( Vector3i{ divRound( abcd * Vector3i128fast{ ei } + abce * Vector3i128fast{ di }, sum ) } );
+        return Vector3i{ divRound( abcd * Vector3i128fast{ ei } + abce * Vector3i128fast{ di }, sum ) };
     // rare case when `sum == 0` 
     // suggest finding middle point of edge segment laying inside triangle
     Vector3i64 sumVec;
@@ -606,10 +613,10 @@ Vector3f findTriangleSegmentIntersectionPrecise(
         ++numSum;
     }
     if ( numSum > 0 )
-        return converters.toFloat( Vector3i{ Vector3d( sumVec ) / double( numSum ) } );
+        return Vector3i{ Vector3d( sumVec ) / double( numSum ) };
 
     // rare case when `numSum == 0` - segment is fully inside face
-    return Vector3f( ( Vector3d( d ) + Vector3d( e ) ) * 0.5 );
+    return std::nullopt;
 }
 
 } //namespace MR

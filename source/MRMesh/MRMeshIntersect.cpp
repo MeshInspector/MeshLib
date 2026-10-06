@@ -282,9 +282,33 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     if( tree.nodes().empty() )
         return;
 
+    // the double version decides every intersection precisely in integer coordinates of the segment's ends and triangle's vertices;
+    // rounding to integers can bring a vertex and a point of the segment closer by one integer step,
+    // so all boxes are expanded by two steps (the second one is for the errors of computations in double), otherwise
+    // 1) a segment's end clipped by the root box can get exactly on a face lying in the plane of the box,
+    //    and simulation-of-simplicity can put this end inside the mesh, losing the crossing of that face,
+    // 2) a box can be culled although its triangle is touched by the segment in integer coordinates
+    ConvertToIntVector convToInt;
+    ConvertToFloatVector convToFloat;
+    [[maybe_unused]] T boxExpansion = 0;
+    if constexpr ( std::is_same_v<T, double> )
+    {
+        const Box3d rootBox( tree[tree.rootNodeId()].box );
+        convToInt = getToIntConverter( rootBox );
+        convToFloat = getToFloatConverter( rootBox );
+        boxExpansion = 2 * convToFloat.range;
+    }
+    auto nodeBox = [&] ( NodeId n ) -> Box3<T>
+    {
+        if constexpr ( std::is_same_v<T, double> )
+            return Box3d( tree[n].box ).expanded( Vector3d::diagonal( boxExpansion ) );
+        else
+            return tree[n].box;
+    };
+
     RayOrigin<T> rayOrigin{ line.p };
     T s = rayStart, e = rayEnd;
-    if( !rayBoxIntersect( Box3<T>{ tree[tree.rootNodeId()].box }, rayOrigin, s, e, prec ) )
+    if( !rayBoxIntersect( nodeBox( tree.rootNodeId() ), rayOrigin, s, e, prec ) )
     {
         return;
     }
@@ -293,18 +317,15 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
     NodeId nodesStack[maxTreeDepth];
     int currentNode = 0;
     nodesStack[0] = tree.rootNodeId();
-    ConvertToIntVector convToInt;
-    ConvertToFloatVector convToFloat;
-    Vector3f dP, eP;
+    Vector3d dP, eP;
     [[maybe_unused]] double invDirLenSq = 0;
     std::array<PreciseVertCoords, 5> pvc;
 
     if constexpr ( std::is_same_v<T, double> )
     {
-        convToInt = getToIntConverter( Box3d( tree[tree.rootNodeId()].box ) );
-        convToFloat = getToFloatConverter( Box3d( tree[tree.rootNodeId()].box ) );
-        dP = Vector3f( line( s ) );
-        eP = Vector3f( line( e ) );
+        // the ends are rounded to integers directly from double: rounding them to float first could move them by many integer steps
+        dP = line( s );
+        eP = line( e );
         pvc[3].pt = convToInt( dP );
         pvc[3].id = VertId( m.topology.vertSize() );
         pvc[4].pt = convToInt( eP );
@@ -337,16 +358,16 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
                     {
                         MeshIntersectionResult found;
                         found.proj.face = face;
-                        found.proj.point = findTriangleSegmentIntersectionPrecise( m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id], dP, eP, { convToInt,convToFloat } );
-                        const auto t = dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq;
-                        if ( t < rayEnd && t > rayStart )
-                        {
-                            found.distanceAlongLine = float( t );
-                            found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
-                            // segment start pvc[3] is behind the triangle if dIsLeftFromABC
-                            if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
-                                return;
-                        }
+                        const auto ip = findTriangleSegmentIntersectionPreciseInt( pvc[0].pt, pvc[1].pt, pvc[2].pt, pvc[3].pt, pvc[4].pt );
+                        // no intersection point only if the segment lies in the plane of the triangle without crossing its sides
+                        found.proj.point = ip ? convToFloat( *ip ) : Vector3f( ( dP + eP ) * 0.5 );
+                        // the segment is already limited by [rayStart, rayEnd], so the hit is reported without checking its distance,
+                        // which is computed from the rounded point and can be slightly outside of the range
+                        found.distanceAlongLine = float( dot( Vector3d( found.proj.point ) - line.p, line.d ) * invDirLenSq );
+                        found.mtp = MeshTriPoint( m.topology.edgeWithLeft( face ), TriPointf( found.proj.point, m.points[pvc[0].id], m.points[pvc[1].id], m.points[pvc[2].id] ) );
+                        // segment start pvc[3] is behind the triangle if dIsLeftFromABC
+                        if ( !report( found, [&] { return !isect.dIsLeftFromABC; } ) )
+                            return;
                     }
                 }
                 else
@@ -372,12 +393,12 @@ void rayMeshIntersectAll_( const MeshPart& meshPart, const Line3<T>& line, F && 
         else
         {
             s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( Box3<T>{ tree[node.l].box }, rayOrigin, s, e, prec ) )
+            if( rayBoxIntersect( nodeBox( node.l ), rayOrigin, s, e, prec ) )
             {
                 nodesStack[++currentNode] = node.l;
             }
             s = rayStart, e = rayEnd;
-            if( rayBoxIntersect( Box3<T>{ tree[node.r].box }, rayOrigin, s, e, prec ) )
+            if( rayBoxIntersect( nodeBox( node.r ), rayOrigin, s, e, prec ) )
             {
                 nodesStack[++currentNode] = node.r;
             }

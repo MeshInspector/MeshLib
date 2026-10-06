@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshIntersect.h>
 #include <MRMesh/MRLine3.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MREdgeIterator.h>
 
 namespace MR
 {
@@ -55,6 +56,44 @@ TEST(MRMesh, MeshIntersectAllDistanceAlongLine)
         ASSERT_EQ( ts.size(), 2 );
         EXPECT_NEAR( ts[0], 0.25f, 1e-6f );
         EXPECT_NEAR( ts[1], 0.75f, 1e-6f );
+    }
+}
+
+TEST( MRMesh, MeshIntersectAllPrecise )
+{
+    auto countHits = [] ( const Mesh & mesh, const Line3d & line, double rayStart )
+    {
+        int numHits = 0;
+        rayMeshIntersectAll( mesh, line, [&numHits] ( const MeshIntersectionResult & ) { ++numHits; return true; }, rayStart, DBL_MAX );
+        return numHits;
+    };
+
+    // the face of the cube at x=0 lies in the plane of the bounding box, and the segment's end clipped by the box must not land on it
+    const auto cube1 = makeCube( Vector3f::diagonal( 1 ), Vector3f::diagonal( -1 ) );
+    EXPECT_EQ( countHits( cube1, Line3d( Vector3d( -2, -0.3, -0.6 ), Vector3d::plusX() ), -DBL_MAX ), 2 );
+
+    // the ray passes the vertex in the center of the face x=-0.5 closer than the step of integer coordinates,
+    // and the triangle below the vertex must not be culled
+    auto cube2 = makeCube();
+    for ( auto ue : undirectedEdges( cube2.topology ) )
+    {
+        const auto a = cube2.orgPnt( ue );
+        const auto b = cube2.destPnt( ue );
+        if ( a.x == -0.5f && b.x == -0.5f && ( a - b ).length() > 1.1f )
+        {
+            cube2.splitEdge( ue );
+            break;
+        }
+    }
+    EXPECT_EQ( countHits( cube2, Line3d( Vector3d( -1, 0, 1e-12 ), Vector3d::plusX() ), -DBL_MAX ), 2 );
+
+    // the rays start exactly on a face, so only the precise predicates decide whether the start is inside the mesh,
+    // and the rays in opposite directions must agree
+    const auto cube3 = makeCube();
+    for ( double x : { -0.5, 0.5 } )
+    {
+        const Vector3d p( x, 0.1, 0.2 );
+        EXPECT_EQ( countHits( cube3, Line3d( p, Vector3d::plusX() ), 0 ) % 2, countHits( cube3, Line3d( p, Vector3d::minusX() ), 0 ) % 2 );
     }
 }
 

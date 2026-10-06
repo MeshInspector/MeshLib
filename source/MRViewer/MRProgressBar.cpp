@@ -23,6 +23,7 @@
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
 #include <atomic>
+#include <deque>
 #include <thread>
 
 #if defined( __EMSCRIPTEN__ )
@@ -89,6 +90,10 @@ public:
     ImGuiID setupId_ = ImGuiID( -1 );
 
     bool isOrdered_{ false };
+
+    // operations ordered while another one was, each started after the post-processing of the one before it;
+    // not guarded, so `order*` must be called in the main thread
+    std::deque<std::function<void()>> pendingOrders_;
 
     // this is needed to show full progress before closing
     bool closeDialogNextFrame_{ false };
@@ -258,6 +263,13 @@ void setup()
     // and out of the popup, so that popups enqueued in `onFinish` open after the progress bar instead of nested in it
     if ( onFinish )
         onFinish();
+    // then start the next waiting operation, unless `onFinish` ordered one
+    if ( !instance.isOrdered_ && !instance.pendingOrders_.empty() )
+    {
+        auto nextOrder = std::move( instance.pendingOrders_.front() );
+        instance.pendingOrders_.pop_front();
+        nextOrder();
+    }
 }
 
 void onFrameEnd()
@@ -295,6 +307,16 @@ void order( const char* name, const std::function<void()>& task, int taskCount )
 void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
     auto& instance = ProgressBarImpl::instance();
+
+    // another operation is ordered: `setup` starts this one after its post-processing
+    if ( instance.isOrdered_ )
+    {
+        instance.pendingOrders_.push_back( [name = std::string( name ), task = std::move( task ), taskCount]
+        {
+            orderWithMainThreadPostProcessing( name.c_str(), task, taskCount );
+        } );
+        return;
+    }
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();
@@ -340,6 +362,16 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 void orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
     auto& instance = ProgressBarImpl::instance();
+
+    // another operation is ordered: `setup` starts this one after its post-processing
+    if ( instance.isOrdered_ )
+    {
+        instance.pendingOrders_.push_back( [name = std::string( name ), task = std::move( task ), taskCount]
+        {
+            orderWithManualFinish( name.c_str(), task, taskCount );
+        } );
+        return;
+    }
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();

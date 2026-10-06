@@ -78,10 +78,8 @@ bool EdgePointT<T>::isBd( const MeshTopology & topology, const FaceBitSet * regi
     return topology.isBdEdge( e, region );
 }
 
-template struct EdgePointT<float>;
-template struct EdgePointT<double>;
-
-bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs )
+template <typename T>
+bool same( const MeshTopology & topology, const EdgePointT<T>& lhs, const EdgePointT<T>& rhs )
 {
     if ( !lhs )
         return !rhs;
@@ -91,33 +89,35 @@ bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint&
     return lhs == rhs || lhs == rhs.sym();
 }
 
-static bool vertEdge2MeshEdgePoints( const MeshTopology & topology, VertId av, EdgePoint & a, EdgePoint & b )
+template <typename T>
+static bool vertEdge2MeshEdgePoints( const MeshTopology & topology, VertId av, EdgePointT<T> & a, EdgePointT<T> & b )
 {
     if ( topology.org( b.e ) == av )
     {
-        a = EdgePoint( b.e, 0 );
+        a = EdgePointT<T>( b.e, 0 );
         return true;
     }
     if ( topology.dest( b.e ) == av )
     {
-        a = EdgePoint( b.e, 1 );
+        a = EdgePointT<T>( b.e, 1 );
         return true;
     }
     if ( topology.left( b.e ) && topology.dest( topology.next( b.e ) ) == av )
     {
-        a = EdgePoint( topology.next( b.e ).sym(), 0 );
+        a = EdgePointT<T>( topology.next( b.e ).sym(), 0 );
         return true;
     }
     if ( topology.right( b.e ) && topology.dest( topology.prev( b.e ) ) == av )
     {
-        a = EdgePoint( topology.prev( b.e ).sym(), 0 );
+        a = EdgePointT<T>( topology.prev( b.e ).sym(), 0 );
         b = b.sym();
         return true;
     }
     return false;
 }
 
-bool fromSameTriangle( const MeshTopology & topology, EdgePoint & a, EdgePoint & b )
+template <typename T>
+bool fromSameTriangle( const MeshTopology & topology, EdgePointT<T> & a, EdgePointT<T> & b )
 {
     if ( auto av = a.inVertex( topology ) )
     {
@@ -126,13 +126,13 @@ bool fromSameTriangle( const MeshTopology & topology, EdgePoint & a, EdgePoint &
             // a in vertex, b in vertex
             if ( av == bv )
             {
-                a = b = EdgePoint( topology.edgeWithOrg( av ), 0 );
+                a = b = EdgePointT<T>( topology.edgeWithOrg( av ), 0 );
                 return true;
             }
             if ( auto e = topology.findEdge( av, bv ) )
             {
-                a = EdgePoint( e, 0 );
-                b = EdgePoint( e, 1 );
+                a = EdgePointT<T>( e, 0 );
+                b = EdgePointT<T>( e, 1 );
                 return true;
             }
             return false;
@@ -172,5 +172,13 @@ bool fromSameTriangle( const MeshTopology & topology, EdgePoint & a, EdgePoint &
     }
     return false;
 }
+
+template struct EdgePointT<float>;
+template struct EdgePointT<double>;
+
+template MRMESH_API bool same( const MeshTopology & topology, const EdgePointT<float>& lhs, const EdgePointT<float>& rhs );
+template MRMESH_API bool same( const MeshTopology & topology, const EdgePointT<double>& lhs, const EdgePointT<double>& rhs );
+template MRMESH_API bool fromSameTriangle( const MeshTopology & topology, EdgePointT<float> & a, EdgePointT<float> & b );
+template MRMESH_API bool fromSameTriangle( const MeshTopology & topology, EdgePointT<double> & a, EdgePointT<double> & b );
 
 } // namespace MR

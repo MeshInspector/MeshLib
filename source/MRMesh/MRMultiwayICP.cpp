@@ -241,8 +241,6 @@ void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
 
         res.distSq = prj.distSq;
         res.weight = 1.0;
-        if ( auto srcWeights = objs[res.srcId.objId].obj.weights() )
-            res.weight = srcWeights( res.srcId.vId );
 
         res.tgtClosestId.objId = prjObj;
         res.tgtClosestId.vId = prj.closestVert;

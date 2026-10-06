@@ -40,19 +40,10 @@ DNF
         $(: CI environment ) \
         gh time python3.12-pip rpm-build xorg-x11-server-Xvfb mesa-dri-drivers gettext
     dnf clean all
-    TOOLCHAIN=clang-22.1.8_2-pgo-dylib-linux # the _2 build adds LLVMgold.so, which mold needs for -flto
+    TOOLCHAIN=clang-22.1.8_2-pgo-dylib-linux
     retry.sh -- curl -fsSL "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
-    # install mold; 2.42.1, because 3.0.0's aarch64 build needs glibc 2.30 and EL8 has 2.28
-    MOLD=mold-2.42.1-$(uname -m)-linux
-    case $(uname -m) in
-      x86_64)  MOLD_SHA256=6ff270c9bf07d2bec5c98aa324eb7c4daf6a1a4d815c05ff1708049616047855 ;;
-      aarch64) MOLD_SHA256=16b025652d3d7456689e6025a77e1903bb2a15e7630877c26cc133f5df95b9c6 ;;
-    esac
-    retry.sh -- curl -fsSL -o /tmp/mold.tar.gz "https://github.com/rui314/mold/releases/download/v2.42.1/${MOLD}.tar.gz"
-    echo "${MOLD_SHA256}  /tmp/mold.tar.gz" | sha256sum -c -
-    tar -C /usr/local -xzf /tmp/mold.tar.gz --strip-components=1
-    rm /tmp/mold.tar.gz
-    ld.mold --version
+    # install mold
+    retry.sh -- curl -fsSL "https://github.com/rui314/mold/releases/download/v2.42.1/mold-2.42.1-$(uname -m)-linux.tar.gz" | tar -C /usr/local -xz --strip-components=1
     # install aws cli
     curl "https://awscli.amazonaws.com/awscli-exe-linux-$(uname -m).zip" -o "awscliv2.zip"
     unzip awscliv2.zip

@@ -36,13 +36,11 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
   check_linker_flag(CXX "-fuse-ld=mold" MESHLIB_HAVE_MOLD)
   check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
   IF(MESHLIB_HAVE_MOLD OR MESHLIB_HAVE_LLD)
-    # mold also folds functions that have exception tables, which lld never does.
     IF(MESHLIB_HAVE_MOLD)
       set(MESHLIB_LINKER mold)
     ELSE()
       set(MESHLIB_LINKER lld)
     ENDIF()
-    message(STATUS "MeshLib links with ${MESHLIB_LINKER}")
     # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
     # older CMakes (our minimum is 3.18).
     IF(NOT CMAKE_VERSION VERSION_LESS "3.29")

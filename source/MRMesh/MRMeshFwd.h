@@ -509,6 +509,12 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MeshTriPointT,
     ( MeshTriPoint,  MeshTriPointT<float>  )
     ( MeshTriPointd, MeshTriPointT<double> )
 )
+using MeshTriPointf = MeshTriPointT<float>;
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), WeightedVertexT,
+    ( WeightedVertex,  WeightedVertexT<float>  )
+    ( WeightedVertexd, WeightedVertexT<double> )
+)
+using WeightedVertexf = WeightedVertexT<float>;
 struct MeshProjectionResult;
 struct CoordinateConverters;
 struct MeshIntersectionResult;

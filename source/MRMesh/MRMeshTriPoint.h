@@ -7,10 +7,11 @@
 namespace MR
 {
 
-struct WeightedVertex
+template <typename T>
+struct WeightedVertexT
 {
     VertId v;
-    float weight = 0;
+    T weight = 0;
 };
 
 /// encodes a point inside a triangular mesh face using barycentric coordinates
@@ -66,7 +67,7 @@ struct MeshTriPointT
     [[nodiscard]] MRMESH_API MeshTriPointT canonical( const MeshTopology & topology ) const;
 
     /// returns three weighted triangle's vertices with the sum of not-negative weights equal to 1, and the largest weight in the closest vertex
-    [[nodiscard]] MRMESH_API std::array<WeightedVertex, 3> getWeightedVerts( const MeshTopology & topology ) const;
+    [[nodiscard]] MRMESH_API std::array<WeightedVertexT<T>, 3> getWeightedVerts( const MeshTopology & topology ) const;
 
     /// linearly interpolates the values given in vertices to find the field's value at this point
     [[nodiscard]] MRMESH_API T interpolate( const MeshTopology & topology, const VertScalars & field ) const;

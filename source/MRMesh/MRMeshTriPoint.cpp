@@ -81,13 +81,13 @@ MeshTriPointT<T> MeshTriPointT<T>::canonical( const MeshTopology & topology ) co
 }
 
 template <typename T>
-std::array<WeightedVertex, 3> MeshTriPointT<T>::getWeightedVerts( const MeshTopology & topology ) const
+std::array<WeightedVertexT<T>, 3> MeshTriPointT<T>::getWeightedVerts( const MeshTopology & topology ) const
 {
     return
     {
-        WeightedVertex{ topology.org( e ), float( 1 - bary.a - bary.b ) },
-        WeightedVertex{ topology.dest( e ), float( bary.a ) },
-        WeightedVertex{ topology.dest( topology.next( e ) ), float( bary.b ) }
+        WeightedVertexT<T>{ topology.org( e ), 1 - bary.a - bary.b },
+        WeightedVertexT<T>{ topology.dest( e ), bary.a },
+        WeightedVertexT<T>{ topology.dest( topology.next( e ) ), bary.b }
     };
 }
 

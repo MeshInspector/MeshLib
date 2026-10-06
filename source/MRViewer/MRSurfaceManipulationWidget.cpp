@@ -309,7 +309,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Remove )
                 name = _t( "Brush: Remove" );
             else if ( settings_.workMode == WorkMode::Relax )
-                name = _t( "Brush: Smooth" );
+                name = settings_.relaxKeepCreases ? _t( "Brush: Smooth (Keep Sharp Edges)" ) : _t( "Brush: Smooth" );
 
             if ( settings_.laplacianBasedAddRemove
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )

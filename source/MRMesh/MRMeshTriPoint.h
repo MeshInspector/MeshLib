@@ -33,8 +33,8 @@ struct MeshTriPointT
     [[nodiscard]] MeshTriPointT() = default;
     [[nodiscard]] MeshTriPointT( NoInit ) : e( noInit ), bary( noInit ) { }
     [[nodiscard]] MeshTriPointT( EdgeId e, TriPoint<T> bary ) : e( e ), bary( bary ) { }
-    [[nodiscard]] MeshTriPointT( const MeshEdgePoint & ep ) : e( ep.e ), bary( T( ep.a ), 0 ) { }
-    [[nodiscard]] MeshTriPointT( const MeshTopology & topology, VertId v ) : MeshTriPointT( MeshEdgePoint( topology, v ) ) { }
+    [[nodiscard]] MeshTriPointT( const MeshEdgePointT<T> & ep ) : e( ep.e ), bary( ep.a, 0 ) { }
+    [[nodiscard]] MeshTriPointT( const MeshTopology & topology, VertId v ) : MeshTriPointT( MeshEdgePointT<T>( topology, v ) ) { }
 
     /// given a point coordinates computes its barycentric coordinates
     template< typename U >
@@ -47,8 +47,8 @@ struct MeshTriPointT
     [[nodiscard]] bool inVertex() const { return bary.inVertex() >= 0; }
 
     /// returns valid value if the point is on edge and topology.left(result.e) == topology.left(this->e),
-    /// otherwise returns invalid MeshEdgePoint
-    [[nodiscard]] MRMESH_API MeshEdgePoint onEdge( const MeshTopology & topology ) const;
+    /// otherwise returns invalid MeshEdgePointT
+    [[nodiscard]] MRMESH_API MeshEdgePointT<T> onEdge( const MeshTopology & topology ) const;
 
     /// returns true if the point is in vertex or on edge, and that location is on the boundary of the region
     [[nodiscard]] MRMESH_API bool isBd( const MeshTopology & topology, const FaceBitSet * region = nullptr ) const;

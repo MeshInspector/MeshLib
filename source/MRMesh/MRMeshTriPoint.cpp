@@ -20,16 +20,16 @@ VertId MeshTriPointT<T>::inVertex( const MeshTopology & topology ) const
 }
 
 template <typename T>
-MeshEdgePoint MeshTriPointT<T>::onEdge( const MeshTopology & topology ) const
+MeshEdgePointT<T> MeshTriPointT<T>::onEdge( const MeshTopology & topology ) const
 {
     switch( bary.onEdge() )
     {
     case 0: // if ( a + b + eps >= 1 )
-        return MeshEdgePoint{ topology.prev( e.sym() ), float( bary.b ) };
+        return MeshEdgePointT<T>{ topology.prev( e.sym() ), bary.b };
     case 1: // a <= eps
-        return MeshEdgePoint{ topology.next( e ).sym(), float( 1 - bary.b ) };
+        return MeshEdgePointT<T>{ topology.next( e ).sym(), 1 - bary.b };
     case 2: // b <= eps
-        return MeshEdgePoint{ e, float( bary.a ) };
+        return MeshEdgePointT<T>{ e, bary.a };
     }
     return {};
 }

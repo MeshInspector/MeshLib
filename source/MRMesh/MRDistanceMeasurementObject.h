@@ -49,17 +49,16 @@ public:
     [[nodiscard]] MRMESH_API bool isNegative() const;
     MRMESH_API virtual void setIsNegative( bool value );
 
-    // The values are saved in scene files, so don't change the existing ones.
     enum class DistanceMode
     {
-        euclidean = 0, // Euclidean distance.
-        euclideanWithSignedDeltasPerAxis = 1, // Euclidean distance, but also display per-axis deltas with signs.
-        euclideanWithAbsoluteDeltasPerAxis = 2, // Euclidean distance, but also display per-axis deltas without signs.
+        euclidean, // Euclidean distance.
+        euclideanWithSignedDeltasPerAxis, // Euclidean distance, but also display per-axis deltas with signs.
+        euclideanWithAbsoluteDeltasPerAxis, // Euclidean distance, but also display per-axis deltas without signs.
         // Absolute distance in one axis.
         // This can still be made negative by `setIsNegative(true)`. The point is that the real sign is ignored.
-        xAbsolute = 3,
-        yAbsolute = 4,
-        zAbsolute = 5,
+        xAbsolute,
+        yAbsolute,
+        zAbsolute,
     };
     // Whether we should draw the individual X/Y/Z deltas in addition to the distance itself.
     [[nodiscard]] MRMESH_API DistanceMode getDistanceMode() const;

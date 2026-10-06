@@ -64,9 +64,10 @@ jobs:
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases; the app stays on AppleClang.
             llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
-            # Pinned to the same image pip-build.yml uses so the mrbind cache is shared.
-            runner: macos-14
-            instance: macos-14
+            # The .pkg and NuGet bundle brew dylibs that require the macOS they were bottled
+            # for, so this is built on the oldest arm64 Mac (macOS 13).
+            runner: [ self-hosted, macos, arm64, macos-13 ]
+            instance: self-hosted-arm-macos-13
           - arch: arm64
             config: Debug
             compiler: brew-llvm22

@@ -21,6 +21,75 @@
 namespace MR
 {
 
+namespace
+{
+
+/// sets the bits of the voxels, which centers are inside the mesh according to given rule;
+/// one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
+/// guarantee that every ray crosses a closed surface an even number of times with zero total winding;
+/// each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
+bool findVoxelsInside( const MeshPart& mp, const DistanceVolumeParams& params, InsideMeshRule rule, VoxelBitSet& res )
+{
+    const auto& dims = params.dimensions;
+    res.clear();
+    if ( dims.x <= 0 || dims.y <= 0 || dims.z <= 0 )
+        return true;
+    res.resize( VolumeIndexer( dims ).size(), false );
+
+    mp.mesh.getAABBTree();
+    struct Hit
+    {
+        float t;
+        int winding; // +1 if the ray enters the mesh here, -1 if it leaves
+    };
+    const auto isInside = [rule] ( int numCrossings, int winding )
+    {
+        return rule == InsideMeshRule::OddCrossings ? numCrossings % 2 == 1 : winding > 0;
+    };
+    tbb::enumerable_thread_specific<std::vector<Hit>> hitsPerThread;
+    const size_t numRows = size_t( dims.y ) * dims.z;
+    return ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<Hit> & hits )
+    {
+        for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
+        {
+            const auto y = int( row % dims.y );
+            const auto z = int( row / dims.y );
+            const Vector3d start( params.origin.x,
+                params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
+                params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
+            hits.clear();
+            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec, bool fromFront )
+            {
+                hits.push_back( { isec.distanceAlongLine, fromFront ? 1 : -1 } );
+                return true;
+            }, -DBL_MAX, DBL_MAX );
+            std::sort( hits.begin(), hits.end(), [] ( const Hit & a, const Hit & b ) { return a.t < b.t; } );
+
+            // walking the ray, set the voxels with centers between the hits where the rule switches to inside and back;
+            // the crossings are counted from the voxel to +X infinity, which matters only for a mesh with holes (e.g. in SignDetectionMode::OddCrossings)
+            const auto firstVoxel = [&] ( float t ) { return std::clamp( (int)std::ceil( t / params.voxelSize.x - 0.5 ), 0, dims.x ); };
+            int numCrossings = int( hits.size() ), winding = 0, xBeg = 0;
+            for ( const auto & hit : hits )
+            {
+                const bool wasInside = isInside( numCrossings, winding );
+                --numCrossings;
+                winding += hit.winding;
+                const bool nowInside = isInside( numCrossings, winding );
+                if ( !wasInside && nowInside )
+                    xBeg = firstVoxel( hit.t );
+                else if ( wasInside && !nowInside )
+                {
+                    const auto xEnd = firstVoxel( hit.t );
+                    if ( xBeg < xEnd )
+                        res.set( VoxelId( row * dims.x + xBeg ), xEnd - xBeg, true );
+                }
+            }
+        }
+    }, params.cb );
+}
+
+} // anonymous namespace
+
 Expected<SimpleVolumeMinMax> meshToDistanceVolume( const MeshPart& mp, const MeshToDistanceVolumeParams& cParams /*= {} */ )
 {
     MR_TIMER;
@@ -83,14 +152,34 @@ FunctionVolume meshToDistanceFunctionVolume( const MeshPart& mp, const MeshToDis
     if ( params.dist.signMode == SignDetectionMode::HoleWindingRule )
         mp.mesh.getDipoles();
 
+    // in OddCrossings mode, the signs of all voxels are found first by one ray per row of voxels, and then only unsigned distances are computed
+    std::shared_ptr<VoxelBitSet> insideVoxels;
+    auto distOp = params.dist;
+    if ( distOp.signMode == SignDetectionMode::OddCrossings )
+    {
+        insideVoxels = std::make_shared<VoxelBitSet>();
+        auto volParams = params.vol;
+        volParams.cb = {}; // the rays take little time compared to the distances, so they report no progress and cannot be canceled
+        findVoxelsInside( mp, volParams, InsideMeshRule::OddCrossings, *insideVoxels );
+        distOp.signMode = SignDetectionMode::Unsigned;
+    }
+
     return FunctionVolume
     {
-        .data = [params, mp] ( const Vector3i& pos ) -> float
+        .data = [params, distOp, mp, insideVoxels, indexer = VolumeIndexer( params.vol.dimensions )] ( const Vector3i& pos ) -> float
         {
             const auto coord = Vector3f( pos ) + Vector3f::diagonal( 0.5f );
             const auto voxelCenter = params.vol.origin + mult( params.vol.voxelSize, coord );
-            auto dist = signedDistanceToMesh( mp, voxelCenter, params.dist );
-            return dist ? *dist : cQuietNan;
+            auto dist = signedDistanceToMesh( mp, voxelCenter, distOp );
+            if ( !dist )
+                return cQuietNan;
+            if ( insideVoxels )
+            {
+                assert( indexer.isInDims( pos ) ); // the signs are found only for the voxels of the volume
+                if ( insideVoxels->test( indexer.toVoxelId( pos ) ) )
+                    return -*dist;
+            }
+            return *dist;
         },
         .dims = params.vol.dimensions,
         .voxelSize = params.vol.voxelSize
@@ -131,63 +220,7 @@ Expected<SimpleBinaryVolume> makeInsideMeshVolume( const MeshPart& mp, const Dis
     SimpleBinaryVolume res;
     res.voxelSize = params.voxelSize;
     res.dims = params.dimensions;
-    VolumeIndexer indexer( res.dims );
-    res.data.resize( indexer.size(), false );
-    if ( res.dims.x <= 0 || res.dims.y <= 0 || res.dims.z <= 0 )
-        return res;
-
-    // one ray along X through the voxel centers of each row; precise predicates in rayMeshIntersectAll( Line3d )
-    // guarantee that every ray crosses the closed surface an even number of times with zero total winding;
-    // each task processes 64 whole rows, which occupy whole blocks of the bit set, so no two tasks write in the same block
-    mp.mesh.getAABBTree();
-    struct Hit
-    {
-        float t;
-        int winding; // +1 if the ray enters the mesh here, -1 if it leaves
-    };
-    const auto isInside = [rule] ( int numCrossings, int winding )
-    {
-        return rule == InsideMeshRule::OddCrossings ? numCrossings % 2 == 1 : winding > 0;
-    };
-    tbb::enumerable_thread_specific<std::vector<Hit>> hitsPerThread;
-    const size_t numRows = size_t( res.dims.y ) * res.dims.z;
-    if ( !ParallelFor( size_t( 0 ), ( numRows + 63 ) / 64, hitsPerThread, [&] ( size_t chunk, std::vector<Hit> & hits )
-    {
-        for ( size_t row = chunk * 64; row < std::min( numRows, chunk * 64 + 64 ); ++row )
-        {
-            const auto y = int( row % res.dims.y );
-            const auto z = int( row / res.dims.y );
-            const Vector3d start( params.origin.x,
-                params.origin.y + ( y + 0.5 ) * params.voxelSize.y,
-                params.origin.z + ( z + 0.5 ) * params.voxelSize.z );
-            hits.clear();
-            rayMeshIntersectAll( mp, Line3d( start, Vector3d( 1, 0, 0 ) ), [&hits] ( const MeshIntersectionResult & isec, bool fromFront )
-            {
-                hits.push_back( { isec.distanceAlongLine, fromFront ? 1 : -1 } );
-                return true;
-            }, -DBL_MAX, DBL_MAX );
-            std::sort( hits.begin(), hits.end(), [] ( const Hit & a, const Hit & b ) { return a.t < b.t; } );
-
-            // walking the ray, set the voxels with centers between the hits where the rule switches to inside and back
-            const auto firstVoxel = [&] ( float t ) { return std::clamp( (int)std::ceil( t / params.voxelSize.x - 0.5 ), 0, res.dims.x ); };
-            int numCrossings = 0, winding = 0, xBeg = 0;
-            for ( const auto & hit : hits )
-            {
-                const bool wasInside = isInside( numCrossings, winding );
-                ++numCrossings;
-                winding += hit.winding;
-                const bool nowInside = isInside( numCrossings, winding );
-                if ( !wasInside && nowInside )
-                    xBeg = firstVoxel( hit.t );
-                else if ( wasInside && !nowInside )
-                {
-                    const auto xEnd = firstVoxel( hit.t );
-                    if ( xBeg < xEnd )
-                        res.data.set( VoxelId( row * res.dims.x + xBeg ), xEnd - xBeg, true );
-                }
-            }
-        }
-    }, params.cb ) )
+    if ( !findVoxelsInside( mp, params, rule, res.data ) )
         return unexpectedOperationCanceled();
 
     return res;

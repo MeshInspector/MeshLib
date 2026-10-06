@@ -47,7 +47,7 @@ MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
 
 static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&] ()
+    MR::pythonRunCommandFromGUIThread( [&] ()
     {
         auto image = viewer->captureSceneScreenShot();
         (void)MR::ImageSave::toAnySupportedFormat( image, path ); //TODO: process potential error
@@ -57,7 +57,7 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 static void pythonCaptureUIScreenShot( MR::Viewer* viewer, const char* path )
 {
     auto filename = MR::pathFromUtf8( path );
-    MR::CommandLoop::runCommandFromGUIThread( [filename, viewer] ()
+    MR::pythonRunCommandFromGUIThread( [filename, viewer] ()
     {
         viewer->captureUIScreenShot( [filename] ( const MR::Image& image )
         {
@@ -72,7 +72,7 @@ static void pythonSkipFrames( MR::Viewer* viewer, int frames )
     while ( frames > 0 )
     {
         frames--;
-        MR::CommandLoop::runCommandFromGUIThread( []{} );
+        MR::pythonRunCommandFromGUIThread( []{} );
     }
 }
 
@@ -80,7 +80,7 @@ static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
 {
     if ( !viewer )
         return;
-    MR::CommandLoop::runCommandFromGUIThread( [viewer,show]
+    MR::pythonRunCommandFromGUIThread( [viewer,show]
     {
         if ( auto ribbonMenu = viewer->getMenuPluginAs<MR::RibbonMenu>() )
         {

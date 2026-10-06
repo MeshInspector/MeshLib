@@ -2404,9 +2404,9 @@ void RibbonMenu::drawShortcutsWindow_()
         for ( int i = 0; i < shortcutList.size(); ++i )
         {
             const auto& [key, category, name] = shortcutList[i];
-            // the extra keys of an action follow its main key, and they are drawn under it without repeating the caption
-            const bool extraKey = i > 0 && std::get<std::string>( shortcutList[i - 1] ) == name;
-            const auto caption = extraKey ? std::string() : getItemCaption( name );
+            // all keys of an action follow each other, and only the first of them is drawn with the caption
+            const bool sameAction = i > 0 && std::get<std::string>( shortcutList[i - 1] ) == name;
+            const auto caption = sameAction ? std::string() : getItemCaption( name );
 
             if ( !secondColumnStarted && int( category ) >= int( ShortcutManager::Category::Count ) / 2 )
             {

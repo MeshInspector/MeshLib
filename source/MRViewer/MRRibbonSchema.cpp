@@ -631,8 +631,7 @@ namespace
 
 /// reads the "Shortcut" object of an item in items.json:
 /// { "Keys": "Primary+Shift+S", "Category": "Scene", "Tags": [ "base" ] },
-/// where "Keys" can also be an array of several shortcuts doing the same, the first of them is the main one:
-/// [ "Primary+Shift+Z", "Ctrl+Y" ]
+/// where "Keys" can also be an array of several keys doing the same: [ "Primary+Shift+Z", "Ctrl+Y" ]
 std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const std::string& itemName )
 {
     auto fail = [&itemName] ( const std::string& what ) -> std::optional<MenuItemShortcut>
@@ -661,17 +660,18 @@ std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const
     }
     if ( keyStrings.empty() )
         return fail( "\"Keys\" field is not valid or not present" );
-    for ( size_t i = 0; i < keyStrings.size(); ++i )
+    auto& shortcutKeys = res.shortcut.keys;
+    for ( const auto& keyString : keyStrings )
     {
-        const auto shortcutKey = ShortcutManager::parseShortcutKey( keyStrings[i] );
+        const auto shortcutKey = ShortcutManager::parseShortcutKey( keyString );
         if ( !shortcutKey )
-            return fail( fmt::format( "cannot parse keys \"{}\"", keyStrings[i] ) );
-        if ( i == 0 )
-            res.shortcut.key = *shortcutKey;
-        // other keys with Ctrl are Windows and Linux conventions, like Ctrl+Y for Redo, so they are skipped where Cmd is primary (macOS)
-        else if ( !( shortcutKey->mod & GLFW_MOD_CONTROL ) || getGlfwModPrimaryCtrl() == GLFW_MOD_CONTROL )
-            res.shortcut.extraKeys.push_back( *shortcutKey );
+            return fail( fmt::format( "cannot parse keys \"{}\"", keyString ) );
+        shortcutKeys.push_back( *shortcutKey );
     }
+    // keys with Ctrl next to other keys are Windows and Linux conventions, like Ctrl+Y for Redo, so they are skipped where Cmd is primary (macOS)
+    const auto withCtrl = [] ( const ShortcutKey& k ) { return ( k.mod & GLFW_MOD_CONTROL ) != 0; };
+    if ( !std::all_of( shortcutKeys.begin(), shortcutKeys.end(), withCtrl ) && getGlfwModPrimaryCtrl() != GLFW_MOD_CONTROL )
+        std::erase_if( shortcutKeys, withCtrl );
 
     const auto& category = json["Category"];
     if ( !category.isString() )

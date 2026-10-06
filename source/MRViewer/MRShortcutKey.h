@@ -1,6 +1,7 @@
 #pragma once
 #include "MRViewerFwd.h"
 #include <compare>
+#include <utility>
 #include <vector>
 
 namespace MR
@@ -28,10 +29,13 @@ enum class ShortcutCategory : char
 /// a keyboard shortcut: the keys to press and the category it is listed under
 struct Shortcut
 {
-    ShortcutKey key;
+    /// alternative keys doing the same, e.g. Ctrl+Shift+Z and Ctrl+Y for Redo
+    std::vector<ShortcutKey> keys;
     ShortcutCategory category{};
-    /// other keys doing the same, e.g. Ctrl+Y next to Ctrl+Shift+Z for Redo; (key) stays the main one, shown in tooltips
-    std::vector<ShortcutKey> extraKeys;
+
+    Shortcut() = default;
+    Shortcut( ShortcutKey k, ShortcutCategory c ) : keys{ k }, category( c ) {}
+    Shortcut( std::vector<ShortcutKey> ks, ShortcutCategory c ) : keys( std::move( ks ) ), category( c ) {}
 };
 
 } //namespace MR

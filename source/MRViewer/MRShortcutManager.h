@@ -43,8 +43,9 @@ public:
     inline static const std::string categoryNames[6] = { "Info", "Edit", "View", "Scene", "Objects", "Selection " };
 
     // set shortcut
-    // note: one action can have several keys (shortcut.key and shortcut.extraKeys), one key can have only one action
-    // if action already has other keys, they will be removed; if a key already has other action, that action loses only this key
+    // note: one action can have several keys, one key can have only one action
+    // if action already has other keys, they will be removed, so a shortcut without keys removes the action;
+    // if a key already has other action, that action loses only this key
     MRVIEWER_API virtual void setShortcut( const Shortcut& shortcut, const ShortcutAction& action );
 
     /// deprecated: pass the category in (shortcut) and the rest in ShortcutAction
@@ -55,7 +56,7 @@ public:
     using ShortcutList = std::vector<std::tuple<ShortcutKey, Category, std::string>>;
 
     // returns cached list of sorted shortcuts (sorting by category, then by key),
-    // the extra keys of an action follow its main key in the order they were given
+    // all keys of an action follow its first key in their order
     // if this structure was changed since last call of this function - updates cache
     MRVIEWER_API const ShortcutList& getShortcutList() const;
 
@@ -101,8 +102,11 @@ public:
     /// returns nothing if any part is unknown
     MRVIEWER_API static std::optional<ShortcutKey> parseShortcutKey( std::string_view keys );
 
-    // if action with given name is present in shortcut list - returns its main key
+    // if action with given name is present in shortcut list - returns its first key
     MRVIEWER_API std::optional<ShortcutKey> findShortcutByName( const std::string& name ) const;
+
+    /// returns all keys of the action with given name in their order, empty if the action is not present in shortcut list
+    MRVIEWER_API std::vector<ShortcutKey> findShortcutsByName( const std::string& name ) const;
 
     // clear all saved shortcuts
     MRVIEWER_API void clear();
@@ -114,7 +118,7 @@ protected:
     static ShortcutKey kayAndModFromMapKey( int mapKey ) { return { mapKey >> 6, mapKey % ( 1 << 6 ) }; }
 
     using ShourtcutsMap = HashMap<int, ShortcutCommand>;
-    using ShourtcutsBackMap = HashMap<std::string, std::vector<int>>; // the keys of an action, its main key first
+    using ShourtcutsBackMap = HashMap<std::string, std::vector<int>>; // all keys of an action in their order
 
     bool enabled_{ true };
 

@@ -103,66 +103,76 @@ TEST( MRViewer, ShortcutSeveralKeys )
     using SK = ShortcutKey;
     const SK undoKey{ GLFW_KEY_Z, GLFW_MOD_CONTROL };
     const SK redoKey{ GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT };
-    const SK redoExtraKey{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
+    const SK redoKey2{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
 
     ShortcutManager sm;
     int undoCount = 0, redoCount = 0;
     sm.setShortcut( { undoKey, ShortcutCategory::Edit }, { "Undo", [&] { ++undoCount; } } );
-    // repeating the main key among the extra ones does not bind it twice
-    sm.setShortcut( { redoKey, ShortcutCategory::Edit, { redoExtraKey, redoKey } }, { "Redo", [&] { ++redoCount; } } );
+    // a repeated key is bound once
+    sm.setShortcut( { { redoKey, redoKey2, redoKey }, ShortcutCategory::Edit }, { "Redo", [&] { ++redoCount; } } );
 
     // every key calls its action
     EXPECT_TRUE( sm.processShortcut( redoKey ) );
-    EXPECT_TRUE( sm.processShortcut( redoExtraKey ) );
+    EXPECT_TRUE( sm.processShortcut( redoKey2 ) );
     EXPECT_TRUE( sm.processShortcut( undoKey ) );
     EXPECT_FALSE( sm.processShortcut( { GLFW_KEY_Y, 0 } ) );
     EXPECT_EQ( redoCount, 2 );
     EXPECT_EQ( undoCount, 1 );
 
-    // the main key is the one to display
+    // all keys of an action in their order
+    EXPECT_EQ( sm.findShortcutsByName( "Redo" ), ( std::vector<SK>{ redoKey, redoKey2 } ) );
+    EXPECT_EQ( sm.findShortcutsByName( "Undo" ), std::vector<SK>{ undoKey } );
+    EXPECT_TRUE( sm.findShortcutsByName( "Unknown" ).empty() );
     EXPECT_EQ( sm.findShortcutByName( "Redo" ), redoKey );
-    EXPECT_EQ( sm.findShortcutByName( "Undo" ), undoKey );
 
-    // the extra key follows the main key of its action, although Y is sorted before Z
+    // all keys of an action follow its first key, although Y is sorted before Z
     EXPECT_EQ( sm.getShortcutList(), ( ShortcutManager::ShortcutList{
         { undoKey, ShortcutCategory::Edit, "Undo" },
         { redoKey, ShortcutCategory::Edit, "Redo" },
-        { redoExtraKey, ShortcutCategory::Edit, "Redo" } } ) );
+        { redoKey2, ShortcutCategory::Edit, "Redo" } } ) );
 }
 
 TEST( MRViewer, ShortcutSeveralKeysRemoval )
 {
     using SK = ShortcutKey;
     const SK redoKey{ GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT };
-    const SK redoExtraKey{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
+    const SK redoKey2{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
     const SK otherKey{ GLFW_KEY_R, GLFW_MOD_CONTROL };
 
     ShortcutManager sm;
     int redoCount = 0, otherCount = 0;
-    auto setRedo = [&] { sm.setShortcut( { redoKey, ShortcutCategory::Edit, { redoExtraKey } }, { "Redo", [&] { ++redoCount; } } ); };
+    auto setRedo = [&] ( std::vector<SK> keys )
+    {
+        sm.setShortcut( { std::move( keys ), ShortcutCategory::Edit }, { "Redo", [&] { ++redoCount; } } );
+    };
 
     // setting the shortcut of an action again replaces all its keys
-    setRedo();
-    sm.setShortcut( { otherKey, ShortcutCategory::Edit }, { "Redo", [&] { ++redoCount; } } );
+    setRedo( { redoKey, redoKey2 } );
+    setRedo( { otherKey } );
     EXPECT_FALSE( sm.processShortcut( redoKey ) );
-    EXPECT_FALSE( sm.processShortcut( redoExtraKey ) );
-    EXPECT_EQ( sm.findShortcutByName( "Redo" ), otherKey );
-    EXPECT_EQ( sm.getShortcutList().size(), 1 );
+    EXPECT_FALSE( sm.processShortcut( redoKey2 ) );
+    EXPECT_EQ( sm.findShortcutsByName( "Redo" ), std::vector<SK>{ otherKey } );
 
-    // the action losing its main key to another action keeps the extra key, which becomes the main one
-    setRedo();
+    // no keys remove the action
+    setRedo( {} );
+    EXPECT_FALSE( sm.processShortcut( otherKey ) );
+    EXPECT_FALSE( sm.findShortcutByName( "Redo" ) );
+    EXPECT_TRUE( sm.getShortcutList().empty() );
+
+    // the action losing a key to another action keeps its other keys
+    setRedo( { redoKey, redoKey2 } );
     sm.setShortcut( { redoKey, ShortcutCategory::View }, { "Other", [&] { ++otherCount; } } );
     EXPECT_TRUE( sm.processShortcut( redoKey ) );
-    EXPECT_TRUE( sm.processShortcut( redoExtraKey ) );
+    EXPECT_TRUE( sm.processShortcut( redoKey2 ) );
     EXPECT_EQ( otherCount, 1 );
     EXPECT_EQ( redoCount, 1 );
-    EXPECT_EQ( sm.findShortcutByName( "Redo" ), redoExtraKey );
+    EXPECT_EQ( sm.findShortcutsByName( "Redo" ), std::vector<SK>{ redoKey2 } );
     EXPECT_EQ( sm.getShortcutList(), ( ShortcutManager::ShortcutList{
-        { redoExtraKey, ShortcutCategory::Edit, "Redo" },
+        { redoKey2, ShortcutCategory::Edit, "Redo" },
         { redoKey, ShortcutCategory::View, "Other" } } ) );
 
     // the action losing its last key is removed
-    sm.setShortcut( { redoExtraKey, ShortcutCategory::View }, { "Third", [] {} } );
+    sm.setShortcut( { redoKey2, ShortcutCategory::View }, { "Third", [] {} } );
     EXPECT_FALSE( sm.findShortcutByName( "Redo" ) );
     EXPECT_EQ( sm.getShortcutList().size(), 2 );
 
@@ -199,26 +209,30 @@ std::optional<MenuItemShortcut> readItemShortcut( const std::string& shortcutJso
 
 TEST( MRViewer, ShortcutItemKeys )
 {
+    using SK = ShortcutKey;
     const auto primary = getGlfwModPrimaryCtrl();
-    const ShortcutKey redoKey{ GLFW_KEY_Z, primary | GLFW_MOD_SHIFT };
+    const SK redoKey{ GLFW_KEY_Z, primary | GLFW_MOD_SHIFT };
+    const SK ctrlY{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
 
-    // one shortcut
+    // one key
     auto s = readItemShortcut( R"({ "Keys": "Primary+Shift+Z", "Category": "Edit" })" );
     ASSERT_TRUE( s );
-    EXPECT_EQ( s->shortcut.key, redoKey );
-    EXPECT_TRUE( s->shortcut.extraKeys.empty() );
+    EXPECT_EQ( s->shortcut.keys, std::vector<SK>{ redoKey } );
     EXPECT_EQ( s->shortcut.category, ShortcutCategory::Edit );
 
-    // several shortcuts, the first of them is the main one; the other ones with Ctrl are skipped where Cmd is primary (macOS)
+    // several keys in their order, but where Cmd is primary (macOS) the keys with Ctrl next to other keys are skipped
     s = readItemShortcut( R"({ "Keys": [ "Primary+Shift+Z", "Ctrl+Y", "Shift+F4" ], "Category": "Edit" })" );
     ASSERT_TRUE( s );
-    EXPECT_EQ( s->shortcut.key, redoKey );
-    std::vector<ShortcutKey> extraKeys;
+    std::vector<SK> keys{ redoKey };
     if ( primary == GLFW_MOD_CONTROL )
-        extraKeys.push_back( { GLFW_KEY_Y, GLFW_MOD_CONTROL } );
-    extraKeys.push_back( { GLFW_KEY_F4, GLFW_MOD_SHIFT } );
-    EXPECT_EQ( s->shortcut.extraKeys, extraKeys );
-    EXPECT_EQ( s->shortcut.category, ShortcutCategory::Edit );
+        keys.push_back( ctrlY );
+    keys.push_back( { GLFW_KEY_F4, GLFW_MOD_SHIFT } );
+    EXPECT_EQ( s->shortcut.keys, keys );
+
+    // the keys with Ctrl are kept on every platform if all keys have it
+    s = readItemShortcut( R"({ "Keys": [ "Ctrl+Y", "Ctrl+Tab" ], "Category": "Edit" })" );
+    ASSERT_TRUE( s );
+    EXPECT_EQ( s->shortcut.keys, ( std::vector<SK>{ ctrlY, { GLFW_KEY_TAB, GLFW_MOD_CONTROL } } ) );
 }
 #endif
 

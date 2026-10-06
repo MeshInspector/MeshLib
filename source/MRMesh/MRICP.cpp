@@ -12,12 +12,31 @@
 namespace MR
 {
 
-void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
+/// empty weights mean that all pairs have weight 1
+static void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples, const std::function<float(VertId)> & weights )
 {
     pairs.vec.clear();
     pairs.vec.reserve( srcSamples.count() );
     for ( auto id : srcSamples )
-        pairs.vec.emplace_back().srcVertId = id;
+    {
+        auto & p = pairs.vec.emplace_back();
+        p.srcVertId = id;
+        if ( weights )
+            p.weight = weights( id );
+    }
+    pairs.active.clear();
+}
+
+static void setupPairs( PointPairs & pairs, const std::vector<WeightedVertexf>& srcSamples )
+{
+    pairs.vec.clear();
+    pairs.vec.reserve( srcSamples.size() );
+    for ( const auto & s : srcSamples )
+    {
+        auto & p = pairs.vec.emplace_back();
+        p.srcVertId = s.v;
+        p.weight = s.weight;
+    }
     pairs.active.clear();
 }
 
@@ -37,8 +56,16 @@ ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet
     : flt_( flt )
     , ref_( ref )
 {
-    MR::setupPairs( flt2refPairs_, fltSamples );
-    MR::setupPairs( ref2fltPairs_, refSamples );
+    setFltSamples( fltSamples );
+    setRefSamples( refSamples );
+}
+
+ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples )
+    : flt_( flt )
+    , ref_( ref )
+{
+    setupPairs( flt2refPairs_, fltSamples );
+    setupPairs( ref2fltPairs_, refSamples );
 }
 
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize )
@@ -93,22 +120,22 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::setFltSamples( const VertBitSet& fltSamples )
 {
-    setupPairs( flt2refPairs_, fltSamples );
+    setupPairs( flt2refPairs_, fltSamples, flt_.obj.weights() );
 }
 
 void ICP::sampleFltPoints( float samplingVoxelSize )
 {
-    setFltSamples( *flt_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( flt2refPairs_, *flt_.obj.pointsGridSampling( samplingVoxelSize ), {} );
 }
 
 void ICP::setRefSamples( const VertBitSet& refSamples )
 {
-    setupPairs( ref2fltPairs_, refSamples );
+    setupPairs( ref2fltPairs_, refSamples, ref_.obj.weights() );
 }
 
 void ICP::sampleRefPoints( float samplingVoxelSize )
 {
-    setRefSamples( *ref_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( ref2fltPairs_, *ref_.obj.pointsGridSampling( samplingVoxelSize ), {} );
 }
 
 void ICP::updatePointPairs()
@@ -158,7 +185,6 @@ void updatePointPairs( PointPairs & pairs,
     const auto srcNormals = src.obj.normals();
     const auto tgtNormals = tgt.obj.normals();
 
-    const auto srcWeights = src.obj.weights();
     const auto srcLimProjector = src.obj.limitedProjector();
     const auto tgtLimProjector = tgt.obj.limitedProjector();
 
@@ -198,7 +224,6 @@ void updatePointPairs( PointPairs & pairs,
         // save the result
         PointPair vp = res;
         vp.distSq = prj.distSq;
-        vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
         vp.tgtCloseVert = prj.closestVert;
         vp.srcPoint = src.xf( p0 );
         vp.tgtPoint = tgt.xf( p1 );

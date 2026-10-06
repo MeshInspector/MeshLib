@@ -5,6 +5,12 @@
 #include <MRMesh/MRTriMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRColor.h>
+#include <MRMesh/MRImage.h>
+#include <MRMesh/MRImageSave.h>
+#include <MRMesh/MRIOFormatsRegistry.h>
+#include <MRMesh/MRObjectMesh.h>
+#include <MRMesh/MRStringConvert.h>
+#include <MRMesh/MRUniqueTemporaryFolder.h>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
@@ -283,6 +289,153 @@ TEST(MRMesh, LoadObjTabIndented)
     ASSERT_EQ( named.textureFiles.size(), 1 );
     EXPECT_EQ( named.textureFiles.front().filename(), "tex1.jpg" );
     ASSERT_TRUE( named.diffuseColor.has_value() );
+    EXPECT_TRUE( named.mtlError.empty() );
+}
+
+namespace
+{
+
+// two closed tetrahedra (no holes, so no warnings about them) with uv-coordinates and material Mat1 from the given library
+std::string twoTetrahedraObj( const std::string& mtlFile )
+{
+    return
+        "mtllib " + mtlFile + "\n"
+        "usemtl Mat1\n"
+        "o Tetrahedron1\n"
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "vt 0 0\n"
+        "vt 1 0\n"
+        "vt 0 1\n"
+        "vt 1 1\n"
+        "f 1/1 3/3 2/2\n"
+        "f 1/1 2/2 4/4\n"
+        "f 1/1 4/4 3/3\n"
+        "f 2/2 3/3 4/4\n"
+        "o Tetrahedron2\n"
+        "v 2 0 0\n"
+        "v 3 0 0\n"
+        "v 2 1 0\n"
+        "v 2 0 1\n"
+        "vt 0 0\n"
+        "vt 1 0\n"
+        "vt 0 1\n"
+        "vt 1 1\n"
+        "f 5/5 7/7 6/6\n"
+        "f 5/5 6/6 8/8\n"
+        "f 5/5 8/8 7/7\n"
+        "f 6/6 7/7 8/8\n";
+}
+
+void writeTextFile( const std::filesystem::path& path, const std::string& text )
+{
+    std::ofstream out( path, std::ios::binary );
+    out << text;
+}
+
+// added after the warnings about missing files
+#ifdef __EMSCRIPTEN__
+const std::string cWebAdvice = "To load textures in the web app, open a ZIP archive containing the .obj file together with its .mtl and texture files, or use the desktop app.\n";
+#else
+const std::string cWebAdvice;
+#endif
+
+} //anonymous namespace
+
+TEST(MRMesh, LoadObjMissingMtl)
+{
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
+
+    auto meshes = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+    ASSERT_TRUE( meshes.has_value() );
+    ASSERT_EQ( meshes->size(), 2 );
+    for ( const auto& m : *meshes )
+    {
+        EXPECT_EQ( m.mtlError, "Material file model.mtl was not found" );
+    }
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->objs.size(), 2 );
+    // reported once for both objects
+    EXPECT_EQ( res->warnings, "Material file model.mtl was not found, so textures and material colors were not loaded.\n" + cWebAdvice );
+}
+
+TEST(MRMesh, LoadObjWithTexture)
+{
+    if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )
+    {
+        GTEST_SKIP() << "PNG format is not supported in this build";
+    }
+
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
+    writeTextFile( dir / "model.mtl", "newmtl Mat1\nKd 1 0 0\nmap_Kd texture.png\n" );
+    const Image texture{ .pixels = { Color::red(), Color::green(), Color::blue(), Color::white() }, .resolution = { 2, 2 } };
+    ASSERT_TRUE( ImageSave::toAnySupportedFormat( texture, dir / "texture.png" ).has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 2 );
+    for ( const auto& obj : res->objs )
+    {
+        auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj );
+        ASSERT_TRUE( objMesh );
+        EXPECT_EQ( objMesh->getTextures().size(), 1 );
+        EXPECT_EQ( objMesh->getFrontColor( false ), Color::red() );
+    }
+}
+
+TEST(MRMesh, LoadObjMissingTexture)
+{
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
+    writeTextFile( dir / "model.mtl", "newmtl Mat1\nmap_Kd texture.png\n" );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    // reported once although both objects use this texture
+    EXPECT_EQ( res->warnings, "Texture file texture.png was not found, so textures were not loaded.\n" + cWebAdvice );
+    ASSERT_EQ( res->objs.size(), 2 );
+    for ( const auto& obj : res->objs )
+    {
+        auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj );
+        ASSERT_TRUE( objMesh );
+        EXPECT_TRUE( objMesh->getTextures().empty() );
+    }
+}
+
+TEST(MRMesh, LoadObjUnsupportedTexture)
+{
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
+    writeTextFile( dir / "model.mtl", "newmtl Mat1\nmap_Kd texture.txt\n" );
+    writeTextFile( dir / "texture.txt", "not an image" );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    // no web advice: opening the files from a ZIP archive would not help
+    EXPECT_EQ( res->warnings, "Texture file texture.txt could not be loaded (" + stringUnsupportedFileExtension() + "), so textures were not loaded.\n" );
+}
+
+TEST(MRMesh, LoadObjUtf8MtlName)
+{
+    const std::string mtlFile = "\xd0\xbc\xd0\xbe\xd0\xb4\xd0\xb5\xd0\xbb\xd1\x8c.mtl"; // non-ASCII name in UTF-8
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( mtlFile ) );
+    writeTextFile( dir / asU8String( mtlFile ), "newmtl Mat1\nKd 1 0 0\n" );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 2 );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
+    ASSERT_TRUE( objMesh );
+    EXPECT_EQ( objMesh->getFrontColor( false ), Color::red() );
 }
 
 } //namespace MR

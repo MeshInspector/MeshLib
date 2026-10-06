@@ -1004,6 +1004,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool hasColors = false;
 
     Expected<MtlLibrary> mtl = unexpected( "absent" ); // all materials
+    std::string mtlError; // why the referenced material library was not loaded
 
     std::string parseError;
 
@@ -1042,7 +1043,16 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             // TODO: support multiple files
             std::string filename( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
             boost::trim( filename );
-            mtl = loadMtlLibrary( dir / filename );
+            const auto mtlPath = dir / asU8String( filename );
+            mtl = loadMtlLibrary( mtlPath );
+            mtlError.clear();
+            if ( !mtl.has_value() && !filename.empty() )
+            {
+                std::error_code ec;
+                mtlError = std::filesystem::exists( mtlPath, ec ) ?
+                    fmt::format( "Material file {} could not be loaded ({})", filename, mtl.error() ) :
+                    fmt::format( "Material file {} was not found", filename );
+            }
             break;
         }
         default:
@@ -1260,6 +1270,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         res.emplace_back( std::move( *meshObj ) );
         if ( oScopes.size() == 1 )
             res.back().name = std::move( oScopes.front().objName );
+        res.back().mtlError = std::move( mtlError );
         return res;
     }
 
@@ -1277,6 +1288,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
         res[i].name = std::move( oScopes[i].objName );
+        res[i].mtlError = mtlError;
     }
     return res;
 }
@@ -1351,6 +1363,16 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
         int totalDuplicatedVertexCount = 0;
         int holesCount = 0;
         LoadedObjects res;
+
+        // true if the material library was not loaded or a texture file is missing
+        [[maybe_unused]] bool missingFiles = false;
+        if ( !results.empty() && !results.front().mtlError.empty() ) // the same in all results
+        {
+            res.warnings += results.front().mtlError + ", so textures and material colors were not loaded.\n";
+            missingFiles = true;
+        }
+        std::vector<std::filesystem::path> failedTextureFiles; // to report each texture file once, even if several objects use it
+
         res.objs.resize( results.size() );
         for ( int i = 0; i < res.objs.size(); ++i )
         {
@@ -1399,7 +1421,21 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
                     {
                         crashTextureLoad = true;
                         objectMesh->setTextures( {} );
-                        res.warnings += image.error() + '\n';
+                        if ( std::find( failedTextureFiles.begin(), failedTextureFiles.end(), p ) == failedTextureFiles.end() )
+                        {
+                            failedTextureFiles.push_back( p );
+                            std::error_code ec;
+                            if ( std::filesystem::exists( p, ec ) )
+                            {
+                                res.warnings += fmt::format( "Texture file {} could not be loaded ({}), so textures were not loaded.\n",
+                                    utf8string( p.filename() ), image.error() );
+                            }
+                            else
+                            {
+                                res.warnings += fmt::format( "Texture file {} was not found, so textures were not loaded.\n", utf8string( p.filename() ) );
+                                missingFiles = true;
+                            }
+                        }
                         break;
                     }
                 }
@@ -1425,6 +1461,11 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
             totalSkippedFaceCount += result.skippedFaceCount;
             totalDuplicatedVertexCount += result.duplicatedVertexCount;
         }
+#ifdef __EMSCRIPTEN__
+        // the web app has only the files opened by the user, not the other files next to them
+        if ( missingFiles )
+            res.warnings += "To load textures in the web app, open a ZIP archive containing the .obj file together with its .mtl and texture files, or use the desktop app.\n";
+#endif
 
         if ( totalSkippedFaceCount )
             res.warnings += fmt::format( "{} triangles were skipped as having repeated vertex ids or being inconsistent with others.\n", totalSkippedFaceCount );

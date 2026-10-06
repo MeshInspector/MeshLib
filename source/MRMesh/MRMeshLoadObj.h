@@ -46,6 +46,10 @@ struct NamedMesh
     Vector<TextureId, FaceId> texturePerFace;
     std::optional<Color> diffuseColor;
 
+    /// not empty if the file references a material library (.mtl file) that could not be loaded, e.g. "Material file model.mtl was not found";
+    /// then textureFiles and diffuseColor are empty; the same for all meshes loaded from one file
+    std::string mtlError;
+
     /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf
     AffineXf3f xf;
 

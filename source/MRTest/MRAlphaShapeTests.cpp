@@ -197,6 +197,39 @@ TEST( MRMesh, BallPivotAlphaShapeTriangles )
     EXPECT_GT( tris.size(), size_t( 1000 ) );
 }
 
+// the ball pivoting finds only the outer side of a sphere sampled on its surface and inside,
+// while the alpha shape has also the inner side and the triangles around the inner points;
+// the leftmost point is a far outlier with no alpha-shape triangles, skipped in the search of the first triangle
+TEST( MRMesh, BallPivotingSphere )
+{
+    PointCloud cloud;
+    const int n = 2000;
+    for ( int i = 0; i < n; ++i ) // Fibonacci sphere
+    {
+        const float z = 1 - ( 2 * i + 1 ) / float( n );
+        const float rho = std::sqrt( 1 - z * z );
+        const float phi = 2.39996323f * i;
+        cloud.points.push_back( { rho * std::cos( phi ), rho * std::sin( phi ), z } );
+    }
+    std::mt19937 gen( 0 );
+    std::uniform_real_distribution<float> coord( -0.28f, 0.28f );
+    for ( int i = 0; i < 200; ++i )
+        cloud.points.push_back( { coord( gen ), coord( gen ), coord( gen ) } );
+    cloud.points.push_back( { -5, 0, 0 } );
+    cloud.validPoints.resize( cloud.points.size(), true );
+
+    std::vector<MeshBuilder::VertDuplication> dups;
+    const auto mesh = findBallPivotingMesh( cloud, 0.2f, &dups );
+    EXPECT_TRUE( dups.empty() );
+    EXPECT_TRUE( mesh.topology.isClosed() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), n );
+    EXPECT_EQ( mesh.topology.lastValidVert(), VertId( n - 1 ) );
+    EXPECT_EQ( mesh.topology.numValidFaces(), 2 * n - 4 );
+    EXPECT_GT( mesh.volume(), 4.0 ); // outward orientation: the volume of the unit ball is 4.19
+
+    EXPECT_GT( findAlphaShapeAllTriangles( cloud, 0.2f ).size(), size_t( 2 * ( 2 * n - 4 ) ) );
+}
+
 // four points of a square are exactly on both balls passing via any three of them,
 // so every ball emptiness test here is a tie resolved by simulation-of-simplicity
 TEST( MRMesh, AlphaShapeSquare )

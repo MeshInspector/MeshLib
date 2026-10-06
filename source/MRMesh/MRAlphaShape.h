@@ -168,4 +168,22 @@ struct BallPivotCandidate
 [[nodiscard]] MRMESH_API Mesh findAlphaShape( const PointCloud & cloud, float radius,
     std::vector<MeshBuilder::VertDuplication> * dups = nullptr, AlphaShapeStats * stats = nullptr );
 
+/// finds the triangles of the outer shape of the cloud by the ball pivoting: the first triangle is found by
+/// findAlphaShapeNeiTriangles around the point with the smallest x-coordinate, taking the one with its ball
+/// farthest in -x direction, where nothing can block the ball; the remaining triangles are found by findBallPivotVertex
+/// rolling the ball over the edges of the triangles already found; all triangles have their empty balls on the positive side;
+/// only the component connected by edges to the first triangle is found, and the points with no alpha-shape triangles
+/// around them (e.g. far outliers) are skipped in the search of the first triangle
+[[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud, preferably with allPoints=true
+    const ProgressCallback & cb = {} );
+
+/// builds the mesh of the outer shape of the cloud by the ball pivoting with the ball of given radius, see findBallPivotingTriangles;
+/// the mesh vertices are the cloud points with the same ids plus the ones appended by the
+/// duplication of non-manifold vertices, which \param dups (if given) receives
+[[nodiscard]] MRMESH_API std::optional<Mesh> findBallPivotingMesh( const PointCloud & cloud, float radius,
+    const ProgressCallback & cb, std::vector<MeshBuilder::VertDuplication> * dups = nullptr );
+[[nodiscard]] MRMESH_API Mesh findBallPivotingMesh( const PointCloud & cloud, float radius,
+    std::vector<MeshBuilder::VertDuplication> * dups = nullptr );
+
 } //namespace MR

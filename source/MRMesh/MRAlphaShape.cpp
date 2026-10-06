@@ -9,8 +9,12 @@
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRProgressCallback.h"
+#include "MRTriMath.h"
+#include "MRphmap.h"
 #include "MRPch/MRTBB.h"
 #include <algorithm>
+#include <cfloat>
+#include <functional>
 #include <cassert>
 #include <cmath>
 
@@ -462,15 +466,12 @@ Triangulation findAlphaShapeAllTriangles( const PointCloud & cloud, const AlphaS
     return res;
 }
 
-std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius,
-    const ProgressCallback& cb, std::vector<MeshBuilder::VertDuplication> * dups, AlphaShapeStats * stats )
+namespace
 {
-    MR_TIMER;
-    const auto sd = getAlphaShapeData( cloud, radius, true );
-    auto maybeTris = findAlphaShapeAllTriangles( cloud, sd, subprogress( cb, 0.0f, 0.8f ), stats );
-    if ( !maybeTris )
-        return std::nullopt;
 
+Mesh meshFromAlphaShapeTriangles( const PointCloud & cloud, const AlphaShapeData & sd, Triangulation & tris,
+    std::vector<MeshBuilder::VertDuplication> * dups )
+{
     // the best triangle-continuation during vertex duplication is the first one rotating
     // counter-clockwise from the reference triangle around the directed shared edge (e0, e1)
     auto betterCont = [&sd, &cloud]( VertId e0, VertId e1, VertId vRef, VertId vCand, VertId vBest )
@@ -483,16 +484,131 @@ std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius,
     };
 
     int skippedFaceCount = 0;
-    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, *maybeTris, dups,
+    auto res = Mesh::fromTrianglesDuplicatingNonManifoldVertices( cloud.points, tris, dups,
         { .skippedFaceCount = &skippedFaceCount }, betterCont );
     assert( skippedFaceCount == 0 );
     return res;
+}
+
+} // anonymous namespace
+
+std::optional<Mesh> findAlphaShape( const PointCloud & cloud, float radius,
+    const ProgressCallback& cb, std::vector<MeshBuilder::VertDuplication> * dups, AlphaShapeStats * stats )
+{
+    MR_TIMER;
+    const auto sd = getAlphaShapeData( cloud, radius, true );
+    auto maybeTris = findAlphaShapeAllTriangles( cloud, sd, subprogress( cb, 0.0f, 0.8f ), stats );
+    if ( !maybeTris )
+        return std::nullopt;
+    return meshFromAlphaShapeTriangles( cloud, sd, *maybeTris, dups );
 }
 
 Mesh findAlphaShape( const PointCloud & cloud, float radius,
     std::vector<MeshBuilder::VertDuplication> * dups, AlphaShapeStats * stats )
 {
     auto maybe = findAlphaShape( cloud, radius, ProgressCallback{}, dups, stats );
+    assert( maybe.has_value() );
+    Mesh res;
+    if ( maybe.has_value() )
+        res = std::move( *maybe );
+    return res;
+}
+
+std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud, const AlphaShapeData & data,
+    const ProgressCallback & cb )
+{
+    MR_TIMER;
+    Triangulation res;
+    const auto numPoints = cloud.validPoints.count();
+
+    // the min-heap of the points by x-coordinate in the integer grid, the smaller id first among equal ones,
+    // so that a point is never preceded by its twin, which would take all its triangles
+    std::vector<std::pair<int, VertId>> heap;
+    heap.reserve( numPoints );
+    for ( auto v : cloud.validPoints )
+        heap.emplace_back( data.coords( cloud, v ).pt.x, v );
+    std::make_heap( heap.begin(), heap.end(), std::greater{} );
+
+    // the first triangle: the point with the smallest x is touched by the empty ball from -x direction,
+    // which rolls around it without hitting other points to the triangle with the ball center farthest in -x
+    const double r = std::sqrt( double( data.intRadiusSq ) );
+    std::optional<ThreeVertIds> seed;
+    Triangulation seedTris;
+    std::vector<AlphaShapeNei> neis;
+    while ( !seed && !heap.empty() )
+    {
+        std::pop_heap( heap.begin(), heap.end(), std::greater{} );
+        const auto v = heap.back().second;
+        heap.pop_back();
+        seedTris.clear();
+        findAlphaShapeNeiTriangles( cloud, v, data, seedTris, neis, false );
+        double bestX = DBL_MAX;
+        for ( const auto & t : seedTris )
+        {
+            const Vector3d a( data.coords( cloud, t[0] ).pt ), b( data.coords( cloud, t[1] ).pt ), c( data.coords( cloud, t[2] ).pt );
+            Vector3d centerPos, centerNeg;
+            if ( !circumballCenters( a, b, c, r, centerPos, centerNeg ) )
+                centerPos = circumcircleCenter( a, b, c ); // the ball exists exactly, but not in doubles
+            if ( centerPos.x < bestX )
+            {
+                bestX = centerPos.x;
+                seed = t;
+            }
+        }
+    }
+    heap = {};
+    if ( !seed )
+        return res;
+
+    // the found triangles are oriented consistently, so each directed edge belongs to at most one of them,
+    // and the triangle over an edge is already found if its reversed edge is used
+    HashSet<std::uint64_t> usedEdges;
+    auto edgeKey = []( VertId a, VertId b ) { return ( std::uint64_t( std::uint32_t( a ) ) << 32 ) | std::uint32_t( b ); };
+    std::vector<ThreeVertIds> pivots; // directed edge (0, 1) of a found triangle with its third vertex 2
+    auto addTri = [&]( VertId a, VertId b, VertId c )
+    {
+        res.push_back( { a, b, c } );
+        usedEdges.insert( edgeKey( a, b ) );
+        usedEdges.insert( edgeKey( b, c ) );
+        usedEdges.insert( edgeKey( c, a ) );
+        pivots.push_back( { a, b, c } );
+        pivots.push_back( { b, c, a } );
+        pivots.push_back( { c, a, b } );
+    };
+    addTri( ( *seed )[0], ( *seed )[1], ( *seed )[2] );
+
+    std::vector<BallPivotCandidate> cands;
+    while ( !pivots.empty() )
+    {
+        const auto [vi, vj, vk] = pivots.back();
+        pivots.pop_back();
+        if ( usedEdges.contains( edgeKey( vj, vi ) ) )
+            continue;
+        addTri( vj, vi, findBallPivotVertex( cloud, vi, vj, vk, data, cands ) );
+        // a closed surface has about two triangles per point
+        if ( res.size() % 1024 == 0 && !reportProgress( cb, std::min( 1.0f, float( res.size() ) / ( 2 * numPoints ) ) ) )
+            return std::nullopt;
+    }
+
+    if ( !reportProgress( cb, 1.0f ) )
+        return std::nullopt;
+    return res;
+}
+
+std::optional<Mesh> findBallPivotingMesh( const PointCloud & cloud, float radius,
+    const ProgressCallback & cb, std::vector<MeshBuilder::VertDuplication> * dups )
+{
+    MR_TIMER;
+    const auto sd = getAlphaShapeData( cloud, radius, true );
+    auto maybeTris = findBallPivotingTriangles( cloud, sd, subprogress( cb, 0.0f, 0.8f ) );
+    if ( !maybeTris )
+        return std::nullopt;
+    return meshFromAlphaShapeTriangles( cloud, sd, *maybeTris, dups );
+}
+
+Mesh findBallPivotingMesh( const PointCloud & cloud, float radius, std::vector<MeshBuilder::VertDuplication> * dups )
+{
+    auto maybe = findBallPivotingMesh( cloud, radius, ProgressCallback{}, dups );
     assert( maybe.has_value() );
     Mesh res;
     if ( maybe.has_value() )

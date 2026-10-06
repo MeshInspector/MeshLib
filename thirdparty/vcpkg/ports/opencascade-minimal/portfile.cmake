@@ -11,7 +11,7 @@ vcpkg_from_github(
         remove-vcpkg-enabling.patch
         csf-redifinition.patch
         trim-xcaf-visualization.patch
-        dllexport-in-static-build.patch
+        windows-static-toolkits.patch
 )
 
 # toolkits MRIOExtras links; kept whole in the merged library, the others are pulled in by reference only

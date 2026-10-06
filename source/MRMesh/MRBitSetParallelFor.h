@@ -57,6 +57,8 @@ using Range = tbb::blocked_range<size_t>;
 
 MRMESH_API void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range & )> f );
 
+MRMESH_API void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range & )> f, tbb::task_group_context & tgc );
+
 MRMESH_API void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
     FunctionRef<void* ()> ctx );
 
@@ -135,6 +137,18 @@ inline auto BitSetParallelForAll( const BS & bs, F && f, Cb&&... cb )
     return BitSetParallel::ForAllRanged( bs, [&] ( auto bit, auto && ) { std::forward<F>( f )( bit ); }, std::forward<Cb>( cb )... );
 }
 
+/// executes given function f for each index in IdRange or BitSet (bs) in parallel threads;
+/// it is guaranteed that every individual block in BitSet is processed by one thread only;
+/// tbb::task_group_context can be used to interrupt execution prematurely
+template <typename BS, typename F>
+inline void BitSetParallelForAll( const BS & bs, F && f, tbb::task_group_context & tgc )
+{
+    BitSetParallel::forAllRanged( { (size_t)0, bs.size() }, [&] ( size_t i, const BitSetParallel::Range & )
+    {
+        std::forward<F>( f )( typename BS::IndexType{ i } );
+    }, tgc );
+}
+
 /// executes given function f for each index in IdRange or BitSet (bs) in parallel threads
 /// passing e.local() (evaluated once for each sub-range) as the second argument to f;
 /// it is guaranteed that every individual block in BitSet is processed by one thread only;
@@ -154,6 +168,15 @@ template <typename BS, typename F, typename ...Cb>
 inline auto BitSetParallelFor( const BS& bs, F && f, Cb&&... cb )
 {
     return BitSetParallelForAll( bs, [&] ( auto bit ) { if ( bs.test( bit ) ) std::forward<F>( f )( bit ); }, std::forward<Cb>( cb )... );
+}
+
+/// executes given function f for every _set_ bit in IdRange or BitSet (bs) in parallel threads;
+/// it is guaranteed that every individual block in bit-set is processed by one thread only;
+/// tbb::task_group_context can be used to interrupt execution prematurely
+template <typename BS, typename F>
+inline void BitSetParallelFor( const BS& bs, F && f, tbb::task_group_context & tgc )
+{
+    BitSetParallelForAll( bs, [&] ( auto bit ) { if ( bs.test( bit ) ) std::forward<F>( f )( bit ); }, tgc );
 }
 
 /// executes given function f for every _set_ bit in bs IdRange or BitSet (bs) parallel threads,

@@ -37,6 +37,21 @@ void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Rang
     } );
 }
 
+void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range & )> f, tbb::task_group_context & tgc )
+{
+    const auto blockRange = toBlockRange( bitRange );
+    tbb::parallel_for( blockRange, [&] ( const Range & subRange )
+    {
+        const auto bitSubRange = toBitSubRange( bitRange, blockRange, subRange );
+        for ( auto i = bitSubRange.begin(); i < bitSubRange.end(); ++i )
+        {
+            if ( tgc.is_group_execution_cancelled() )
+                break;
+            f( i, bitSubRange );
+        }
+    }, tgc );
+}
+
 void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
     FunctionRef<void* ()> ctx )
 {

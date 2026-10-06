@@ -4,6 +4,7 @@
 #include "MRVoxels/MRMeshToDistanceVolume.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRVolumeIndexer.h"
+#include "MRMesh/MRMeshDistance.h"
 #include "MRMesh/MRTorus.h"
 #include "MRMesh/MRMesh.h"
 #include <gtest/gtest.h>
@@ -110,6 +111,47 @@ TEST( MRMesh, MakeInsideMeshVolumeRules )
         EXPECT_EQ( probe( shell, { 0.05f, 0.05f, 0.05f } ), B( { false, !flipInner, true } ) ); // in the cavity
         EXPECT_EQ( probe( shell, { 1.45f, 0.05f, 0.05f } ), B( { true, true, true } ) ); // in the wall
     }
+}
+
+TEST( MRMesh, MeshToDistanceVolumeOddCrossings )
+{
+    const auto torus = makeTorus( 1.0f, 0.4f, 64, 32 );
+    MeshToDistanceVolumeParams params;
+    params.vol.origin = Vector3f( -1.5f, -1.5f, -0.5f );
+    params.vol.voxelSize = Vector3f::diagonal( 0.05f );
+    params.vol.dimensions = Vector3i( 60, 60, 20 );
+    params.dist.signMode = SignDetectionMode::OddCrossings;
+    const auto vol = meshToDistanceVolume( torus, params );
+    ASSERT_TRUE( vol.has_value() );
+
+    auto unsignedOp = params.dist;
+    unsignedOp.signMode = SignDetectionMode::Unsigned;
+    const VolumeIndexer indexer( vol->dims );
+    int numInside = 0, numChecked = 0;
+    for ( size_t n = 0; n < indexer.size(); ++n )
+    {
+        const VoxelId i( n );
+        const auto center = params.vol.origin + mult( params.vol.voxelSize, Vector3f( indexer.toPos( i ) ) + Vector3f::diagonal( 0.5f ) );
+        const auto dist = signedDistanceToMesh( torus, center, unsignedOp );
+        ASSERT_TRUE( dist.has_value() );
+        EXPECT_EQ( std::abs( vol->data[i] ), *dist );
+
+        // signed distance to the exact torus, from which the triangles deviate less than 0.005
+        const auto torusDist = std::hypot( std::hypot( center.x, center.y ) - 1.0f, center.z ) - 0.4f;
+        if ( std::abs( torusDist ) < 0.01f )
+            continue;
+        EXPECT_EQ( vol->data[i] < 0, torusDist < 0 );
+
+        // the same as from the ray of signedDistanceToMesh for this voxel
+        const auto signedDist = signedDistanceToMesh( torus, center, params.dist );
+        ASSERT_TRUE( signedDist.has_value() );
+        EXPECT_EQ( vol->data[i], *signedDist );
+        ++numChecked;
+        if ( torusDist < 0 )
+            ++numInside;
+    }
+    EXPECT_GT( numInside, 5000 );
+    EXPECT_GT( numChecked, 60000 );
 }
 
 } //namespace MR

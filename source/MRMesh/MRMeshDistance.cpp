@@ -37,7 +37,7 @@ std::optional<float> signedDistanceToMesh( const MeshPart& mp, const Vector3f& p
             dist = -dist;
         break;
 
-    case SignDetectionMode::WindingRule:
+    case SignDetectionMode::OddCrossings:
     {
         const Line3d ray( Vector3d( p ), Vector3d::plusX() );
         int count = 0;

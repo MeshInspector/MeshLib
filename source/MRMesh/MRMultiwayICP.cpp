@@ -946,6 +946,7 @@ bool MultiwayICP::p2plIter_()
             }
         }
         p2pl.prepare();
+        p2pl.setStabilizer( prop_.p2plStabilizer );
 
         AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check

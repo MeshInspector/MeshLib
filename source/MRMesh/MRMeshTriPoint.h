@@ -80,18 +80,29 @@ struct MeshTriPointT
 /// \{
 
 /// returns true if two points are equal considering different representations
-[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs );
+template <typename T>
+[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const MeshTriPointT<T>& lhs, const MeshTriPointT<T> & rhs );
+MR_BIND_TEMPLATE( bool same( const MeshTopology & topology, const MeshTriPointT<float>& lhs, const MeshTriPointT<float> & rhs ) )
+MR_BIND_TEMPLATE( bool same( const MeshTopology & topology, const MeshTriPointT<double>& lhs, const MeshTriPointT<double> & rhs ) )
 
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left
-[[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriPoint & b );
+template <typename T>
+[[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<T> & a, MeshTriPointT<T> & b );
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<float> & a, MeshTriPointT<float> & b ) )
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<double> & a, MeshTriPointT<double> & b ) )
 
 /// returns true if points a and b are located insides or on a boundary of the same triangle;
 /// if true a.e and b.e are updated to have that triangle on the left
-[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint && a, MeshTriPoint && b ) { return fromSameTriangle( topology, a, b ); }
+template <typename T>
+[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<T> && a, MeshTriPointT<T> && b ) { return fromSameTriangle( topology, a, b ); }
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<float> && a, MeshTriPointT<float> && b ) )
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<double> && a, MeshTriPointT<double> && b ) )
 
 /// returns MeshTriPoint representation of given vertex with given edge field; or invalid MeshTriPoint if it is not possible
-[[nodiscard]] MRMESH_API MeshTriPoint getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v );
+template <typename T = float>
+[[nodiscard]] MRMESH_API MeshTriPointT<T> getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v );
+MR_BIND_TEMPLATE( MeshTriPointT<float> getVertexAsMeshTriPoint<float>( const MeshTopology & topology, EdgeId e, VertId v ) )
 
 /// \}
 

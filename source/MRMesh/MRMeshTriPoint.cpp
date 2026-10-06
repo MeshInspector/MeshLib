@@ -101,10 +101,8 @@ T MeshTriPointT<T>::interpolate( const MeshTopology & topology, const VertScalar
     return res;
 }
 
-template struct MeshTriPointT<float>;
-template struct MeshTriPointT<double>;
-
-bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTriPoint & rhs )
+template <typename T>
+bool same( const MeshTopology & topology, const MeshTriPointT<T>& lhs, const MeshTriPointT<T> & rhs )
 {
     if ( !lhs )
         return !rhs;
@@ -126,64 +124,68 @@ bool same( const MeshTopology & topology, const MeshTriPoint& lhs, const MeshTri
     return lhs == r;
 }
 
-MeshTriPoint getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v )
+template <typename T>
+MeshTriPointT<T> getVertexAsMeshTriPoint( const MeshTopology & topology, EdgeId e, VertId v )
 {
     VertId tv[3];
     topology.getLeftTriVerts( e, tv );
     if ( tv[0] == v )
-        return MeshTriPoint( e, { 0, 0 } );
+        return MeshTriPointT<T>( e, { 0, 0 } );
     if ( tv[1] == v )
-        return MeshTriPoint( e, { 1, 0 } );
+        return MeshTriPointT<T>( e, { 1, 0 } );
     if ( tv[2] == v )
-        return MeshTriPoint( e, { 0, 1 } );
+        return MeshTriPointT<T>( e, { 0, 1 } );
     return {};
 }
 
-static bool vertEdge2MeshTriPoints( const MeshTopology & topology, VertId av, const MeshEdgePoint & be, MeshTriPoint & a, MeshTriPoint & b )
+template <typename T>
+static bool vertEdge2MeshTriPoints( const MeshTopology & topology, VertId av, const MeshEdgePointT<T> & be, MeshTriPointT<T> & a, MeshTriPointT<T> & b )
 {
     if ( topology.org( be.e ) == av )
     {
-        a = MeshTriPoint( be.e, { 0, 0 } );
-        b = MeshTriPoint( be );
+        a = MeshTriPointT<T>( be.e, { 0, 0 } );
+        b = MeshTriPointT<T>( be );
         return true;
     }
     if ( topology.dest( be.e ) == av )
     {
-        a = MeshTriPoint( be.e, { 1, 0 } );
-        b = MeshTriPoint( be );
+        a = MeshTriPointT<T>( be.e, { 1, 0 } );
+        b = MeshTriPointT<T>( be );
         return true;
     }
     if ( topology.left( be.e ) && topology.dest( topology.next( be.e ) ) == av )
     {
-        a = MeshTriPoint( be.e, { 0, 1 } );
-        b = MeshTriPoint( be );
+        a = MeshTriPointT<T>( be.e, { 0, 1 } );
+        b = MeshTriPointT<T>( be );
         return true;
     }
     if ( topology.right( be.e ) && topology.dest( topology.prev( be.e ) ) == av )
     {
-        a = MeshTriPoint( be.e.sym(), { 0, 1 } );
-        b = MeshTriPoint( be.sym() );
+        a = MeshTriPointT<T>( be.e.sym(), { 0, 1 } );
+        b = MeshTriPointT<T>( be.sym() );
         return true;
     }
     return false;
 }
 
-static bool edgePoint2MeshTriPoint( const MeshTopology & topology, const MeshEdgePoint & ae, FaceId f, MeshTriPoint & a )
+template <typename T>
+static bool edgePoint2MeshTriPoint( const MeshTopology & topology, const MeshEdgePointT<T> & ae, FaceId f, MeshTriPointT<T> & a )
 {
     if ( topology.left( ae.e ) == f )
     {
-        a = MeshTriPoint( ae );
+        a = MeshTriPointT<T>( ae );
         return true;
     }
     if ( topology.right( ae.e ) == f )
     {
-        a = MeshTriPoint( ae.sym() );
+        a = MeshTriPointT<T>( ae.sym() );
         return true;
     }
     return false;
 }
 
-bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriPoint & b )
+template <typename T>
+bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<T> & a, MeshTriPointT<T> & b )
 {
     if ( auto av = a.inVertex( topology ) )
     {
@@ -192,13 +194,13 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
             // a in vertex, b in vertex
             if ( av == bv )
             {
-                a = b = MeshTriPoint( topology.edgeWithOrg( av ), { 0, 0 } );
+                a = b = MeshTriPointT<T>( topology.edgeWithOrg( av ), { 0, 0 } );
                 return true;
             }
             if ( auto e = topology.findEdge( av, bv ) )
             {
-                a = MeshTriPoint( e, { 0, 0 } );
-                b = MeshTriPoint( e, { 1, 0 } );
+                a = MeshTriPointT<T>( e, { 0, 0 } );
+                b = MeshTriPointT<T>( e, { 1, 0 } );
                 return true;
             }
             return false;
@@ -209,7 +211,7 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
             return vertEdge2MeshTriPoints( topology, av, be, a, b );
         }
         // a in vertex, b in triangle
-        if ( auto mtp = getVertexAsMeshTriPoint( topology, b.e, av ) )
+        if ( auto mtp = getVertexAsMeshTriPoint<T>( topology, b.e, av ) )
         {
             a = mtp;
             return true;
@@ -232,26 +234,26 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
             const auto br = topology.right( be.e );
             if ( al && al == bl )
             {
-                a = MeshTriPoint( ae );
-                b = MeshTriPoint( be );
+                a = MeshTriPointT<T>( ae );
+                b = MeshTriPointT<T>( be );
                 return true;
             }
             if ( al && al == br )
             {
-                a = MeshTriPoint( ae );
-                b = MeshTriPoint( be.sym() );
+                a = MeshTriPointT<T>( ae );
+                b = MeshTriPointT<T>( be.sym() );
                 return true;
             }
             if ( ar && ar == bl )
             {
-                a = MeshTriPoint( ae.sym() );
-                b = MeshTriPoint( be );
+                a = MeshTriPointT<T>( ae.sym() );
+                b = MeshTriPointT<T>( be );
                 return true;
             }
             if ( ar && ar == br )
             {
-                a = MeshTriPoint( ae.sym() );
-                b = MeshTriPoint( be.sym() );
+                a = MeshTriPointT<T>( ae.sym() );
+                b = MeshTriPointT<T>( be.sym() );
                 return true;
             }
             return false;
@@ -262,7 +264,7 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
     if ( auto bv = b.inVertex( topology ) )
     {
         // a in triangle, b in vertex
-        if ( auto mtp = getVertexAsMeshTriPoint( topology, a.e, bv ) )
+        if ( auto mtp = getVertexAsMeshTriPoint<T>( topology, a.e, bv ) )
         {
             b = mtp;
             return true;
@@ -277,5 +279,15 @@ bool fromSameTriangle( const MeshTopology & topology, MeshTriPoint & a, MeshTriP
     // a in triangle, b in triangle
     return topology.left( a.e ) == topology.left( b.e );
 }
+
+template struct MeshTriPointT<float>;
+template struct MeshTriPointT<double>;
+
+template MRMESH_API bool same( const MeshTopology & topology, const MeshTriPointT<float>& lhs, const MeshTriPointT<float> & rhs );
+template MRMESH_API bool same( const MeshTopology & topology, const MeshTriPointT<double>& lhs, const MeshTriPointT<double> & rhs );
+template MRMESH_API bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<float> & a, MeshTriPointT<float> & b );
+template MRMESH_API bool fromSameTriangle( const MeshTopology & topology, MeshTriPointT<double> & a, MeshTriPointT<double> & b );
+template MRMESH_API MeshTriPointT<float> getVertexAsMeshTriPoint<float>( const MeshTopology & topology, EdgeId e, VertId v );
+template MRMESH_API MeshTriPointT<double> getVertexAsMeshTriPoint<double>( const MeshTopology & topology, EdgeId e, VertId v );
 
 } // namespace MR

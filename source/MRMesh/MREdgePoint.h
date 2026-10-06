@@ -44,7 +44,10 @@ struct EdgePointT
 };
 
 /// returns true if two edge-points are equal considering different representations
-[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs );
+template <typename T>
+[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const EdgePointT<T>& lhs, const EdgePointT<T>& rhs );
+MR_BIND_TEMPLATE( bool same( const MeshTopology & topology, const EdgePointT<float>& lhs, const EdgePointT<float>& rhs ) )
+MR_BIND_TEMPLATE( bool same( const MeshTopology & topology, const EdgePointT<double>& lhs, const EdgePointT<double>& rhs ) )
 
 /// two edge-points (e.g. representing collision point of two edges)
 struct EdgePointPair
@@ -84,10 +87,16 @@ struct EdgeSegmentT
 /// returns true if points a and b are located on a boundary of the same triangle;
 /// \details if true a.e and b.e are updated to have that triangle on the left
 /// \related EdgePoint
-[[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, EdgePoint & a, EdgePoint & b );
+template <typename T>
+[[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, EdgePointT<T> & a, EdgePointT<T> & b );
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<float> & a, EdgePointT<float> & b ) )
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<double> & a, EdgePointT<double> & b ) )
 /// returns true if points a and b are located on a boundary of the same triangle;
 /// \details if true a.e and b.e are updated to have that triangle on the left
 /// \related EdgePoint
-[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, EdgePoint && a, EdgePoint && b ) { return fromSameTriangle( topology, a, b ); }
+template <typename T>
+[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, EdgePointT<T> && a, EdgePointT<T> && b ) { return fromSameTriangle( topology, a, b ); }
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<float> && a, EdgePointT<float> && b ) )
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<double> && a, EdgePointT<double> && b ) )
 
 } // namespace MR

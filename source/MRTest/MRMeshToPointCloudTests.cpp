@@ -5,6 +5,7 @@
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRMeshPart.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRCube.h>
 #include <MRMesh/MREdgeIterator.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -218,6 +219,19 @@ TEST( MRMesh, IsCoveredByVertices )
     const float smallRadius = maxEdgeLen / 2 * 0.99f;
     EXPECT_FALSE( isCoveredByVertices( mesh, smallRadius ) );
     EXPECT_GT( meshToDensePointCloud( mesh, smallRadius )->points.size(), mesh.points.size() );
+
+    // the right isosceles triangles of the cube are covered by their vertices from the middle of the hypotenuse on,
+    // which is closer than the longest edge over sqrt(3) of an equilateral triangle
+    const auto cube = makeCube(); // unit edges
+    const float diagonal = std::sqrt( 2.0f );
+    for ( float radius : { diagonal / 2 * 1.01f, diagonal / std::sqrt( 3.0f ) * 0.99f } )
+    {
+        EXPECT_TRUE( isCoveredByVertices( cube, radius ) );
+        EXPECT_EQ( meshToDensePointCloud( cube, radius )->points.size(), cube.points.size() );
+    }
+    const float uncovered = diagonal / 2 * 0.99f;
+    EXPECT_FALSE( isCoveredByVertices( cube, uncovered ) );
+    EXPECT_GT( meshToDensePointCloud( cube, uncovered )->points.size(), cube.points.size() );
 }
 
 } //namespace MR

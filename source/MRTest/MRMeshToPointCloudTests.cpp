@@ -95,7 +95,7 @@ TEST( MRMesh, MeshToDensePointCloud )
         }
 
         // the same cloud without normals
-        const auto noNormals = meshToDensePointCloud( mesh, radius, false );
+        const auto noNormals = meshToDensePointCloud( mesh, radius, VertNormalsMode::No );
         ASSERT_TRUE( noNormals.has_value() );
         EXPECT_TRUE( noNormals->normals.empty() );
         // fuzzy compare to eliminate possible accumulated errors
@@ -104,6 +104,15 @@ TEST( MRMesh, MeshToDensePointCloud )
         for ( auto v : cloud->validPoints )
             maxPointDiffSq = std::max( maxPointDiffSq, ( noNormals->points[v] - cloud->points[v] ).lengthSq() );
         EXPECT_LE( maxPointDiffSq, 1e-12f );
+
+        // the same cloud with the pseudonormals in the mesh vertices
+        const auto angleWeighted = meshToDensePointCloud( mesh, radius, VertNormalsMode::AngleWeighted );
+        ASSERT_TRUE( angleWeighted.has_value() );
+        ASSERT_EQ( angleWeighted->normals.size(), cloud->points.size() );
+        for ( auto v : mesh.topology.getValidVerts() )
+            EXPECT_LE( ( angleWeighted->normals[v] - mesh.pseudonormal( v ) ).length(), 1e-6f );
+        for ( auto v : angleWeighted->validPoints )
+            EXPECT_NEAR( angleWeighted->normals[v].length(), 1.f, 1e-5f );
     }
 
     EXPECT_FALSE( meshToDensePointCloud( mesh, 0 ).has_value() );

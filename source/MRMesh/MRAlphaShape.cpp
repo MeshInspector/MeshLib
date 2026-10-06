@@ -6,6 +6,7 @@
 #include "MRInSphere.h"
 #include "MRBox.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
 #include "MRMesh.h"
 #include "MRTimer.h"
 #include "MRProgressCallback.h"
@@ -605,7 +606,9 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
             return { { c, a, b }, 2 };
         return { { a, b, c }, 1 };
     };
-    std::vector<ThreeVertIds> pivots; // edge (0, 1) of a found triangle with its third vertex 2
+    // the pivoting goes in waves: the ball is pivoted over the unresolved edges of the triangles found by the previous wave
+    // in parallel, then the found triangles are added one by one in a fixed order, so the result does not depend on the threads
+    std::vector<ThreeVertIds> pivots, nextPivots; // edge (0, 1) of a found triangle with its third vertex 2
     // marks edge (a, b) of triangle (a, b, c) resolved if abResolved, and adds the triangle with its unresolved edges to pivot over if it is new
     auto addTri = [&]( VertId a, VertId b, VertId c, bool abResolved )
     {
@@ -620,29 +623,48 @@ std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud
         }
         res.push_back( { a, b, c } );
         if ( !abResolved )
-            pivots.push_back( { a, b, c } );
-        pivots.push_back( { b, c, a } );
-        pivots.push_back( { c, a, b } );
+            nextPivots.push_back( { a, b, c } );
+        nextPivots.push_back( { b, c, a } );
+        nextPivots.push_back( { c, a, b } );
     };
     addTri( ( *seed )[0], ( *seed )[1], ( *seed )[2], false );
 
-    std::vector<BallPivotCandidate> cands;
-    while ( !pivots.empty() )
+    std::vector<VertId> pivotRes; // the point found by each pivot of the wave
+    tbb::enumerable_thread_specific<std::vector<BallPivotCandidate>> threadCands;
+    while ( !nextPivots.empty() )
     {
-        const auto [vi, vj, vk] = pivots.back();
-        pivots.pop_back();
-        const auto [t, bit] = rotated( vi, vj, vk );
-        auto it = foundTris.find( t );
-        assert( it != foundTris.end() );
-        if ( it->second & bit )
-            continue;
-        it->second |= bit;
+        pivots.clear();
+        std::swap( pivots, nextPivots );
+        // the pivots over the edges resolved by the previous wave are dropped, the other edges become resolved
+        size_t n = 0;
+        for ( const auto & p : pivots )
+        {
+            const auto [t, bit] = rotated( p[0], p[1], p[2] );
+            auto it = foundTris.find( t );
+            assert( it != foundTris.end() );
+            if ( it->second & bit )
+                continue;
+            it->second |= bit;
+            pivots[n++] = p;
+        }
+        pivots.resize( n );
+        pivotRes.resize( n );
+        ParallelFor( size_t( 0 ), n, threadCands, [&]( size_t i, std::vector<BallPivotCandidate> & cands )
+        {
+            const auto & p = pivots[i];
+            pivotRes[i] = findBallPivotVertex( cloud, p[0], p[1], p[2], data, cands );
+        } );
         // the ball pivoted back over the same edge stops at #vk, so that edge of the found triangle is resolved as well
-        addTri( vj, vi, findBallPivotVertex( cloud, vi, vj, vk, data, cands ), true );
+        for ( size_t i = 0; i < n; ++i )
+            addTri( pivots[i][1], pivots[i][0], pivotRes[i], true );
         // a closed surface has about two triangles per point
-        if ( res.size() % 1024 == 0 && !reportProgress( cb, std::min( 1.0f, float( skipped + res.size() / 2 ) / numPoints ) ) )
+        if ( !reportProgress( cb, std::min( 1.0f, float( skipped + res.size() / 2 ) / numPoints ) ) )
             return std::nullopt;
     }
+
+    // the same triangles in the same order whatever the traversal, like findAlphaShapeAllTriangles;
+    // the mesh built from them depends on the order where several triangles share a directed edge
+    tbb::parallel_sort( begin( res ), end( res ) );
 
     if ( !reportProgress( cb, 1.0f ) )
         return std::nullopt;

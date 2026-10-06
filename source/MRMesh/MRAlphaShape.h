@@ -182,7 +182,8 @@ struct BallPivotCandidate
 /// rolling the ball over the edges of the triangles already found; all triangles have their empty balls on the positive side;
 /// only the triangles reachable by the pivoting from the first one are found: not the inner side of a closed shell,
 /// while both sides of an open sheet are reached via its boundary; the points with no alpha-shape triangles
-/// around them (e.g. far outliers) are skipped in the search of the first triangle
+/// around them (e.g. far outliers) are skipped in the search of the first triangle;
+/// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave, and the result is sorted
 [[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
     const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, so that the twins are known
     const ProgressCallback & cb = {} );

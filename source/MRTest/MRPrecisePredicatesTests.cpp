@@ -818,6 +818,27 @@ TEST( MRMesh, findTwoSegmentsIntersection )
     EXPECT_EQ( *v, d );
 }
 
+TEST( MRMesh, findTriangleSegmentIntersectionPreciseInt )
+{
+    const Vector3i a( -100, -100, 0 );
+    const Vector3i b(  200, -100, 0 );
+    const Vector3i c( -100,  200, 0 );
+
+    // the segment crosses the plane of the triangle at one third of its length from D
+    auto v = findTriangleSegmentIntersectionPreciseInt( a, b, c, { 30, 60, -10 }, { 0, 0, 20 } );
+    EXPECT_TRUE( v.has_value() );
+    EXPECT_EQ( *v, Vector3i( 20, 40, 0 ) );
+
+    // the segment lies in the plane of the triangle and crosses its side AB
+    v = findTriangleSegmentIntersectionPreciseInt( a, b, c, { 0, -200, 0 }, { 0, 0, 0 } );
+    EXPECT_TRUE( v.has_value() );
+    EXPECT_EQ( *v, Vector3i( 0, -100, 0 ) );
+
+    // the segment lies in the plane of the triangle without crossing its sides
+    v = findTriangleSegmentIntersectionPreciseInt( a, b, c, { 0, 0, 0 }, { 10, 10, 0 } );
+    EXPECT_FALSE( v.has_value() );
+}
+
 TEST( MRMesh, orientParaboloid3d )
 {
     // large numbers requiring more than 64-bit arithmetic, and degeneration (b==c)

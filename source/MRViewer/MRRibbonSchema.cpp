@@ -1,7 +1,6 @@
 #include "MRRibbonSchema.h"
 #include "MRI18n.h"
 #include "MRLambdaRibbonItem.h"
-#include "MRGladGlfw.h"
 #include "MRImGui.h"
 #include "MRLocale.h"
 #include "MRRibbonMenu.h"
@@ -668,10 +667,6 @@ std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const
             return fail( fmt::format( "cannot parse keys \"{}\"", keyString ) );
         shortcutKeys.push_back( *shortcutKey );
     }
-    // keys with Ctrl next to other keys are Windows and Linux conventions, like Ctrl+Y for Redo, so they are skipped where Cmd is primary (macOS)
-    const auto withCtrl = [] ( const ShortcutKey& k ) { return ( k.mod & GLFW_MOD_CONTROL ) != 0; };
-    if ( !std::all_of( shortcutKeys.begin(), shortcutKeys.end(), withCtrl ) && getGlfwModPrimaryCtrl() != GLFW_MOD_CONTROL )
-        std::erase_if( shortcutKeys, withCtrl );
 
     const auto& category = json["Category"];
     if ( !category.isString() )

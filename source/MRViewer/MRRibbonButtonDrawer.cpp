@@ -642,11 +642,10 @@ void RibbonButtonDrawer::drawTooltip_( const MenuItemInfo& item, const std::stri
 
     if ( shortcutManager_ )
     {
-        for ( const auto& key : shortcutManager_->findShortcutsByName( item.item->name() ) )
-            shortcutStr += ( shortcutStr.empty() ? " (" : ", " ) + ShortcutManager::getKeyFullString( key );
-        if ( !shortcutStr.empty() )
+        const auto keys = shortcutManager_->findShortcutsByName( item.item->name() );
+        if ( !keys.empty() )
         {
-            shortcutStr += ")";
+            shortcutStr = " (" + ShortcutManager::getKeysFullString( keys ) + ")";
             fullText += shortcutStr;
         }
     }

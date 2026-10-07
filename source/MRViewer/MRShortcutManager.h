@@ -83,7 +83,9 @@ public:
     //make string from a key without modifiers, for arrow characters it uses icons font
     MRVIEWER_API static std::string getKeyString( int key );
     // make string from all modifiers and with/without key and returns it
-    MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );    
+    MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );
+    /// makes string from several keys separated by commas, e.g. "Ctrl+Shift+Z, Ctrl+Y"
+    MRVIEWER_API static std::string getKeysFullString( const std::vector<ShortcutKey>& keys );
 
     /// parses the name of a key: one printable character ("S", ","), "F1".."F25", "Num0".."Num9",
     /// "Escape", "Enter", "Space", "Tab", "Backspace", "Home", "End", "PageUp", "PageDown", "Up", "Down", "Left", "Right",

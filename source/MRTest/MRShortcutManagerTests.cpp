@@ -98,6 +98,15 @@ TEST( MRViewer, ShortcutParseCategory )
     EXPECT_FALSE( ShortcutManager::parseCategory( "Count" ) );
 }
 
+TEST( MRViewer, ShortcutKeysFullString )
+{
+    using SK = ShortcutKey;
+    EXPECT_EQ( ShortcutManager::getKeysFullString( {} ), "" );
+    EXPECT_EQ( ShortcutManager::getKeysFullString( { SK{ GLFW_KEY_Y, GLFW_MOD_CONTROL } } ), "Ctrl+Y" );
+    EXPECT_EQ( ShortcutManager::getKeysFullString( { SK{ GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, SK{ GLFW_KEY_Y, GLFW_MOD_CONTROL } } ),
+        "Ctrl+Shift+Z, Ctrl+Y" );
+}
+
 TEST( MRViewer, ShortcutSeveralKeys )
 {
     using SK = ShortcutKey;
@@ -214,7 +223,6 @@ TEST( MRViewer, ShortcutItemKeys )
     using SK = ShortcutKey;
     const auto primary = getGlfwModPrimaryCtrl();
     const SK redoKey{ GLFW_KEY_Z, primary | GLFW_MOD_SHIFT };
-    const SK ctrlY{ GLFW_KEY_Y, GLFW_MOD_CONTROL };
 
     // one key
     auto s = readItemShortcut( R"({ "Keys": "Primary+Shift+Z", "Category": "Edit" })" );
@@ -222,19 +230,11 @@ TEST( MRViewer, ShortcutItemKeys )
     EXPECT_EQ( s->shortcut.keys, std::vector<SK>{ redoKey } );
     EXPECT_EQ( s->shortcut.category, ShortcutCategory::Edit );
 
-    // several keys in their order, but where Cmd is primary (macOS) the keys with Ctrl next to other keys are skipped
-    s = readItemShortcut( R"({ "Keys": [ "Primary+Shift+Z", "Ctrl+Y", "Shift+F4" ], "Category": "Edit" })" );
+    // several keys in their order
+    s = readItemShortcut( R"({ "Keys": [ "Primary+Shift+Z", "Primary+Y", "Shift+F4" ], "Category": "Edit" })" );
     ASSERT_TRUE( s );
-    std::vector<SK> keys{ redoKey };
-    if ( primary == GLFW_MOD_CONTROL )
-        keys.push_back( ctrlY );
-    keys.push_back( { GLFW_KEY_F4, GLFW_MOD_SHIFT } );
-    EXPECT_EQ( s->shortcut.keys, keys );
-
-    // the keys with Ctrl are kept on every platform if all keys have it
-    s = readItemShortcut( R"({ "Keys": [ "Ctrl+Y", "Ctrl+Tab" ], "Category": "Edit" })" );
-    ASSERT_TRUE( s );
-    EXPECT_EQ( s->shortcut.keys, ( std::vector<SK>{ ctrlY, { GLFW_KEY_TAB, GLFW_MOD_CONTROL } } ) );
+    EXPECT_EQ( s->shortcut.keys, ( std::vector<SK>{ redoKey, { GLFW_KEY_Y, primary }, { GLFW_KEY_F4, GLFW_MOD_SHIFT } } ) );
+    EXPECT_EQ( s->shortcut.category, ShortcutCategory::Edit );
 }
 #endif
 

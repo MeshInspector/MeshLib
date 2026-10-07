@@ -3196,12 +3196,7 @@ void ImGuiMenu::drawShortcutsWindow_()
     {
         const auto& shortcutsList = shortcutManager_->getShortcutList();
         for ( const auto& [shortcut, name] : shortcutsList )
-        {
-            std::string keys;
-            for ( const auto& key : shortcut.keys )
-                keys += ( keys.empty() ? "" : ", " ) + ShortcutManager::getKeyFullString( key );
-            ImGui::Text( "%s - %s", keys.c_str(), name.c_str() );
-        }
+            ImGui::Text( "%s - %s", ShortcutManager::getKeysFullString( shortcut.keys ).c_str(), name.c_str() );
     }
     ImGui::End();
 }

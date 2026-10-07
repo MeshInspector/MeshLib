@@ -215,6 +215,18 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
     return res;
 }
 
+std::string ShortcutManager::getKeysFullString( const std::vector<ShortcutKey>& keys )
+{
+    std::string res;
+    for ( const auto& key : keys )
+    {
+        if ( !res.empty() )
+            res += ", ";
+        res += getKeyFullString( key );
+    }
+    return res;
+}
+
 std::optional<int> ShortcutManager::parseKey( std::string_view name )
 {
     // GLFW codes of letters, digits and punctuation are their upper-case ASCII codes

@@ -356,8 +356,7 @@ const std::string cWebAdvice;
 
 TEST(MRMesh, LoadObjWithoutMtl)
 {
-    UniqueTemporaryFolder dir;
-    writeTextFile( dir / "model.obj",
+    const std::string tetrahedron =
         "v 0 0 0\n"
         "v 1 0 0\n"
         "v 0 1 0\n"
@@ -365,12 +364,17 @@ TEST(MRMesh, LoadObjWithoutMtl)
         "f 1 3 2\n"
         "f 1 2 4\n"
         "f 1 4 3\n"
-        "f 2 3 4\n" );
-
-    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
-    ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->objs.size(), 1 );
-    EXPECT_EQ( res->warnings, "" );
+        "f 2 3 4\n";
+    UniqueTemporaryFolder dir;
+    // no material library is referenced, so there is nothing to load, even for usemtl
+    for ( const auto& obj : { tetrahedron, "usemtl default\n" + tetrahedron } )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+        ASSERT_TRUE( res.has_value() );
+        EXPECT_EQ( res->objs.size(), 1 );
+        EXPECT_EQ( res->warnings, "" );
+    }
 }
 
 TEST(MRMesh, LoadObjMissingMtl)

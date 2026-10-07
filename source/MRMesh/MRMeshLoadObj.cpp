@@ -597,7 +597,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const std::vector<MaterialScope>& materialScope, // all material scopes from file
     size_t minFace, size_t maxFace,       // this model faces span in `faces`, max face excluding
     const MeshLoad::ObjLoadSettings& settings,
-    const MtlLibrary& mtl ) // materials from all libraries of the file
+    const MtlLibrary* mtl ) // materials from all libraries of the file, nullptr if it references none: then `materialScope` is ignored
 {
     MR_TIMER;
     assert( faces.face2vert.size() == faces.face2texv.size() );
@@ -779,16 +779,18 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     moveMaterialScope( minFace );
 
     // the faces get texture ids only if some material has a texture file
-    const bool anyTextureFiles = std::any_of( mtl.begin(), mtl.end(), [] ( const auto& m ) { return !m.second.diffuseTextureFile.empty(); } );
+    const bool anyTextureFiles = mtl && std::any_of( mtl->begin(), mtl->end(), [] ( const auto& m ) { return !m.second.diffuseTextureFile.empty(); } );
     HashMap<std::string, TextureId> texMap; // texture file name -> its id
     TextureId currTextureId;
     TextureId noTextureId; // for the faces whose material has no texture file or was not found
     bool contradictingDiffuseColors = false;
     auto addCurrentMaterial = [&]()
     {
+        if ( !mtl )
+            return;
         const auto& mtName = materialScope[materialScopeId].mtName;
-        const auto mIt = mtl.find( mtName );
-        const MtlMaterial* material = mIt != mtl.end() ? &mIt->second : nullptr;
+        const auto mIt = mtl->find( mtName );
+        const MtlMaterial* material = mIt != mtl->end() ? &mIt->second : nullptr;
         // "(null)" is written for the faces without a material, e.g. by Blender
         if ( !material && !mtName.empty() && mtName != "(null)" &&
             std::find( res.missingMaterials.begin(), res.missingMaterials.end(), mtName ) == res.missingMaterials.end() )
@@ -1039,6 +1041,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool hasColors = false;
 
     MtlLibrary mtl; // materials from all libraries of the file
+    bool anyMtlLib = false; // the file references some material library
 
     std::string parseError;
 
@@ -1077,8 +1080,10 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li] );
                 std::string names( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
                 boost::trim( names );
-                if ( !names.empty() )
-                    addMtlLibraries( mtl, dir, names );
+                if ( names.empty() )
+                    continue;
+                addMtlLibraries( mtl, dir, names );
+                anyMtlLib = true;
             }
             break;
         default:
@@ -1290,7 +1295,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( mergeAllObjects || oScopes.size() <= 1 )
     {
         newSettings.callback = subprogress( settings.callback, 0.5f, 1.0f );
-        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, mtl );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, anyMtlLib ? &mtl : nullptr );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res.emplace_back( std::move( *meshObj ) );
@@ -1308,7 +1313,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         size_t minFace = oScopes[i].fId;
         size_t maxFace = i + 1 < res.size() ? oScopes[i + 1].fId : faces.size();
 
-        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, mtl );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, anyMtlLib ? &mtl : nullptr );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );

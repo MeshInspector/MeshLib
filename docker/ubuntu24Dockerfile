@@ -77,31 +77,22 @@ RUN mkdir /home/MeshLib
 WORKDIR "/home/MeshLib"
 
 # copy files
-COPY .git .git
 COPY cmake cmake
 COPY thirdparty thirdparty
 COPY scripts scripts
-COPY source source
 COPY requirements requirements
 
 # build and install thirdparty
-RUN ./scripts/build_thirdparty.sh
+RUN ./scripts/build_cpm_thirdparty.sh /usr/local/lib/MeshLib
 
 
 FROM base AS production
 
-WORKDIR "/usr/local/lib/meshlib-thirdparty-lib/"
-
-COPY scripts/install_thirdparty.sh scripts/install_thirdparty.sh
-
-COPY --from=build /home/MeshLib/lib /usr/local/lib/meshlib-thirdparty-lib/lib
-COPY --from=build /home/MeshLib/include /usr/local/lib/meshlib-thirdparty-lib/include
-COPY --from=build /home/MeshLib/share /usr/local/lib/meshlib-thirdparty-lib/share
+COPY --from=build /usr/local/lib/MeshLib /usr/local/lib/MeshLib
 
 RUN <<EOF
     set -e
-    ./scripts/install_thirdparty.sh
-    echo '/usr/local/lib' | tee -a /etc/ld.so.conf
+    printf '%s\n' /usr/local/lib/MeshLib /usr/local/lib/MeshLib/lib > /etc/ld.so.conf.d/meshlib_libs.conf
     ldconfig
 EOF
 

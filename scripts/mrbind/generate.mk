@@ -626,9 +626,12 @@ ifneq ($(DEPS_INCLUDE_DIR),)
 # Required for vcpkg environments
 COMPILER_FLAGS += -I$(DEPS_INCLUDE_DIR)/eigen3
 endif
+ifneq ($(IS_LINUX),)
+COMPILER_FLAGS += -isystem /usr/include/eigen3
+else
 # TODO: use system Eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/eigen
-COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/mrbind-pybind11/include
+endif
 COMPILER_FLAGS_LIBCLANG := $(call load_file,$(makefile_dir)parser_only_flags.txt)
 COMPILER := $(CXX_FOR_BINDINGS) $(subst $(lf), ,$(call load_file,$(makefile_dir)compiler_only_flags.txt)) -I$(makefile_dir)
 # Need whitespace to handle `~` correctly.

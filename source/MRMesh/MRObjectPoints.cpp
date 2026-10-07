@@ -14,19 +14,24 @@ namespace MR
 
 MR_ADD_CLASS_FACTORY( ObjectPoints )
 
-ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, bool saveNormals/*=true*/ )
+ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, VertNormalsMode normals )
 {
     if ( !objMesh.meshPtr() )
         return;
 
     const auto verts = getInnerVerts( objMesh.meshPtr()->topology, objMesh.getSelectedFaces() );
-    setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( *objMesh.meshPtr(), saveNormals, verts.any() ? &verts : nullptr) ) );
+    setPointCloud( std::make_shared<PointCloud>( meshToPointCloud( *objMesh.meshPtr(), normals, verts.any() ? &verts : nullptr ) ) );
     setName( objMesh.name() + " Points" );
     setVertsColorMap( objMesh.getVertsColorMap() );
     setFrontColor( objMesh.getFrontColor( true ), true );
     setFrontColor( objMesh.getFrontColor( false ), false );
     setBackColor( objMesh.getBackColor() );
     setColoringType( objMesh.getColoringType() );
+}
+
+ObjectPoints::ObjectPoints( const ObjectMesh& objMesh, bool saveNormals )
+    : ObjectPoints( objMesh, saveNormals ? VertNormalsMode::AreaWeighted : VertNormalsMode::No )
+{
 }
 
 std::vector<std::string> ObjectPoints::getInfoLines() const

@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO MeshInspector/fastmcpp
-    REF f91755785a99801431c96a04c3d00e820224a9e1
-    SHA512 682a03e5f643fcc6b7ecba95b3b872a894175049e3ce3af4b58b9e33e238578fd88b3a33b03ab15c6963bc1d53534b7a559a0aca8c1fce09fd7c3333f146f6c7
+    REF 0ace80c3e3704ec7f302f516234f02c0e440ef24
+    SHA512 7fd6e083e3f4e7862da150a9f60a95fd46bf5ceaedbb971bbac9cd64b8ce05ae0a96f313ef3f647135f102b9356400e364e0bf6ad052632d210e701b2756f1b6
     HEAD_REF main
 )
 
@@ -15,6 +15,7 @@ vcpkg_cmake_configure(
 )
 
 vcpkg_cmake_install()
+vcpkg_copy_pdbs()
 
 vcpkg_cmake_config_fixup(
     PACKAGE_NAME fastmcpp

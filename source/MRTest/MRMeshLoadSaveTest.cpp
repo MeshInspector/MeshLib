@@ -383,6 +383,64 @@ TEST(MRMesh, LoadObjMissingMtl)
     EXPECT_EQ( res->warnings, "Material file model.mtl was not found, so textures and material colors were not loaded.\n" + cWebAdvice );
 }
 
+TEST(MRMesh, LoadObjEmptyMtl)
+{
+    // some exporters write an empty .mtl file: there are no materials to lose
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
+    writeTextFile( dir / "model.mtl", "" );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+}
+
+TEST(MRMesh, LoadObjSeveralMtl)
+{
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "a.mtl", "newmtl Mat1\nKd 1 0 0\n" );
+    writeTextFile( dir / "b.mtl", "newmtl Other\nKd 0 1 0\n" );
+    const std::string objs[] = {
+        twoTetrahedraObj( "a.mtl b.mtl" ), // several libraries in one line, as the format allows
+        twoTetrahedraObj( "a.mtl\nmtllib b.mtl" ), // in consecutive lines
+        twoTetrahedraObj( "a.mtl" ) + "mtllib b.mtl\n", // or in separate lines
+    };
+    for ( const auto& obj : objs )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+        ASSERT_TRUE( res.has_value() );
+        EXPECT_EQ( res->warnings, "" );
+        auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
+        ASSERT_TRUE( objMesh );
+        // the used material is from the first library
+        EXPECT_EQ( objMesh->getFrontColor( false ), Color::red() );
+    }
+
+    // the missing one is named
+    std::filesystem::remove( dir / "b.mtl" );
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "a.mtl b.mtl" ) );
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "Material file b.mtl was not found, so textures and material colors were not loaded.\n" + cWebAdvice );
+}
+
+TEST(MRMesh, LoadObjMtlNameWithSpaces)
+{
+    // MeshSave::toObj names the library after the saved file, e.g. "my model.mtl" for "my model.obj"
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "my model.obj", twoTetrahedraObj( "my model.mtl" ) );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "my model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "Material file my model.mtl was not found, so textures and material colors were not loaded.\n" + cWebAdvice );
+
+    writeTextFile( dir / "my model.mtl", "newmtl Mat1\nKd 1 0 0\n" );
+    res = MeshLoad::loadObjectFromObj( dir / "my model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+}
+
 TEST(MRMesh, LoadObjWithTexture)
 {
     if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )

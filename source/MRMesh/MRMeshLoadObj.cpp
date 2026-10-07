@@ -22,6 +22,7 @@
 
 #include <map>
 #include <fstream>
+#include <sstream>
 
 namespace MR
 {
@@ -437,14 +438,14 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
         return unexpected( "Unable to open MTL file: " + mtlContent.error() );
     auto data = mtlContent->data();
     auto mtlSize = mtlContent->size();
-    if ( hasBom( data ) )
+    if ( hasBom( { data, mtlSize } ) )
     {
         data += 3;
         mtlSize -= 3;
     }
 
     if ( mtlSize == 0 )
-        return unexpected( "empty MTL file" );
+        return MtlLibrary{}; // some exporters write empty files
 
     const auto newlines = splitByLines( data, mtlSize );
 
@@ -505,6 +506,38 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     if ( !currentMaterialName.empty() )
         result.emplace( std::move( currentMaterialName ), std::move( currentMaterial ) );
     return result;
+}
+
+/// adds to `res` the materials from the libraries of an mtllib line, replacing the materials with the same names;
+/// `names` is the rest of the line: usually one file, maybe with spaces in its name, but the format allows several files separated by spaces
+Expected<MtlLibrary> addMtlLibraries( MtlLibrary res, const std::filesystem::path& dir, const std::string& names )
+{
+    std::error_code ec;
+    const auto fileExists = [&] ( const std::string& file ) { return std::filesystem::exists( dir / asU8String( file ), ec ); };
+
+    std::vector<std::string> files;
+    if ( !fileExists( names ) )
+    {
+        std::istringstream iss( names );
+        for ( std::string file; iss >> file; )
+            files.push_back( std::move( file ) );
+    }
+    if ( std::none_of( files.begin(), files.end(), fileExists ) )
+        files = { names }; // a single file, or none of the files exists
+
+    for ( const auto& file : files )
+    {
+        auto lib = loadMtlLibrary( dir / asU8String( file ) );
+        if ( !lib.has_value() )
+        {
+            return unexpected( fileExists( file ) ?
+                fmt::format( "Material file {} could not be loaded ({})", file, lib.error() ) :
+                fmt::format( "Material file {} was not found", file ) );
+        }
+        for ( auto& [name, material] : *lib )
+            res[name] = std::move( material );
+    }
+    return res;
 }
 
 struct MaterialScope
@@ -1003,7 +1036,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool colorChecked = false;
     bool hasColors = false;
 
-    Expected<MtlLibrary> mtl; // all materials, or why the referenced material library was not loaded
+    Expected<MtlLibrary> mtl; // materials from all referenced libraries, or why one of them was not loaded
 
     std::string parseError;
 
@@ -1037,24 +1070,16 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             numFaces += ( g.end - g.begin );
             break;
         case ObjElement::MaterialLibrary:
-        {
-            std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
-            // TODO: support multiple files
-            std::string filename( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
-            boost::trim( filename );
-            if ( filename.empty() )
-                break;
-            const auto mtlPath = dir / asU8String( filename );
-            mtl = loadMtlLibrary( mtlPath );
-            if ( !mtl.has_value() )
+            // each line of the group; after an error, no materials are used
+            for ( auto li = g.begin; li < g.end && mtl.has_value(); ++li )
             {
-                std::error_code ec;
-                mtl = unexpected( std::filesystem::exists( mtlPath, ec ) ?
-                    fmt::format( "Material file {} could not be loaded ({})", filename, mtl.error() ) :
-                    fmt::format( "Material file {} was not found", filename ) );
+                std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li] );
+                std::string names( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
+                boost::trim( names );
+                if ( !names.empty() )
+                    mtl = addMtlLibraries( std::move( *mtl ), dir, names );
             }
             break;
-        }
         default:
             break;
         }

@@ -1263,7 +1263,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         case ObjElement::MaterialName:
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
-            auto& mtlData = mScopes.emplace_back();
+            // the last scope is replaced if it has no faces yet, e.g. for consecutive usemtl lines
+            auto& mtlData = mScopes.back().fId == faceInfos.size() ? mScopes.back() : mScopes.emplace_back();
             mtlData.mtName = trimLeft( line ).substr( strlen( "usemtl" ), std::string_view::npos );
             mtlData.fId = faceInfos.size();
             boost::trim( mtlData.mtName );
@@ -1305,7 +1306,9 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
 
     timer.finish();
 
-    // put sentinel at the end
+    // put sentinel at the end, replacing the scope of a usemtl line after the last face; so every other scope has faces
+    if ( mScopes.back().fId == faces.size() )
+        mScopes.pop_back();
     mScopes.push_back( { .fId = faces.size() } );
 
     // the library errors matter only if some faces use a material not found;

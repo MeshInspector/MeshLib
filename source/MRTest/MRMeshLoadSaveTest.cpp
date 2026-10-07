@@ -754,6 +754,29 @@ TEST(MRMesh, LoadObjFacesBeforeFirstMaterial)
     EXPECT_EQ( meshTexture.pixels, texture->pixels );
 }
 
+TEST(MRMesh, LoadObjUnusedMaterialName)
+{
+    // b.mtl is missing and a.mtl has no Mat2, but no face uses Mat2: no material is lost, so nothing is reported
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "a.mtl", "newmtl Mat1\nKd 1 0 0\n" );
+    auto replaced = twoTetrahedraObj( "a.mtl b.mtl" );
+    replaced.insert( replaced.find( "usemtl Mat1\n" ), "usemtl Mat2\n" );
+    const std::string objs[] = {
+        replaced, // followed by another usemtl line
+        twoTetrahedraObj( "a.mtl b.mtl" ) + "usemtl Mat2\n", // after the last face
+    };
+    for ( const auto& obj : objs )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+        ASSERT_TRUE( res.has_value() );
+        EXPECT_EQ( res->warnings, "" );
+        ASSERT_EQ( res->objs.size(), 2 );
+        EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
+        EXPECT_EQ( frontColor( res->objs[1] ), Color::red() );
+    }
+}
+
 TEST(MRMesh, LoadObjMaterialPerObject)
 {
     if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )

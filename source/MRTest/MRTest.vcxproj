@@ -145,6 +145,7 @@
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />
     <ClCompile Include="MRMimallocRedirectTests.cpp" />
+    <ClCompile Include="MRTiffIOTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MREmbeddedPython\MREmbeddedPython.vcxproj">

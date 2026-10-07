@@ -1,0 +1,220 @@
+#include "MRMesh/MRTiffIO.h"
+#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+#include "MRMesh/MRImage.h"
+#include "MRMesh/MRStringConvert.h"
+#include "MRMesh/MRUniqueTemporaryFolder.h"
+#include "MRIOExtras/MRTiff.h"
+
+#include <gtest/gtest.h>
+
+#include <bit>
+#include <fstream>
+
+namespace MR
+{
+
+// Cyrillic "test" and a Latin letter with diaeresis: no single ANSI code page has both
+static const std::filesystem::path cNonAsciiName = u8"\u0442\u0435\u0441\u0442_\u00fc";
+
+TEST( MRMesh, TiffNonAsciiPath )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto dir = tmpFolder / cNonAsciiName;
+    std::error_code ec;
+    ASSERT_TRUE( std::filesystem::create_directory( dir, ec ) ) << systemToUtf8( ec.message() );
+    const auto path = dir / "img.tif";
+
+    const BaseTiffParameters baseParams{
+        .sampleType = BaseTiffParameters::SampleType::Float,
+        .valueType = BaseTiffParameters::ValueType::Scalar,
+        .bytesPerSample = sizeof( float ),
+        .imageSize = { 3, 2 },
+    };
+    const std::vector<float> values{ 1.f, 2.f, 3.f, 4.f, 5.f, 6.f };
+    auto saveRes = writeRawTiff( ( const uint8_t* )values.data(), path, { .baseParams = baseParams } );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    EXPECT_TRUE( std::filesystem::is_regular_file( path, ec ) );
+
+    EXPECT_TRUE( isTIFFFile( path ) );
+
+    auto params = readTiffParameters( path );
+    ASSERT_TRUE( params.has_value() ) << params.error();
+    EXPECT_EQ( BaseTiffParameters( *params ), baseParams );
+
+    std::vector<float> loaded( values.size() );
+    RawTiffOutput output{
+        .bytes = ( uint8_t* )loaded.data(),
+        .size = loaded.size() * sizeof( float ),
+    };
+    auto loadRes = readRawTiff( path, output );
+    ASSERT_TRUE( loadRes.has_value() ) << loadRes.error();
+    EXPECT_EQ( loaded, values );
+}
+
+// writes an uncompressed TIFF with 16-bit unsigned samples stored in tiles (more than one);
+// the parts of the tiles outside the image are filled with the padding value
+static void writeTiledTiff( const std::filesystem::path& path, const std::vector<uint16_t>& pixels,
+    const Vector2i& size, const Vector2i& tileSize, uint16_t padding )
+{
+    constexpr uint32_t headerSize = 8;
+    std::vector<uint16_t> tiles;
+    std::vector<uint32_t> tileOffsets;
+    for ( int ty = 0; ty < size.y; ty += tileSize.y )
+    {
+        for ( int tx = 0; tx < size.x; tx += tileSize.x )
+        {
+            tileOffsets.push_back( headerSize + uint32_t( tiles.size() * sizeof( uint16_t ) ) );
+            for ( int y = ty; y < ty + tileSize.y; ++y )
+                for ( int x = tx; x < tx + tileSize.x; ++x )
+                    tiles.push_back( x < size.x && y < size.y ? pixels[x + y * size.x] : padding );
+        }
+    }
+    const auto numTiles = uint32_t( tileOffsets.size() );
+    const auto tileBytes = uint32_t( tileSize.x * tileSize.y * sizeof( uint16_t ) );
+    const auto offsetsPos = headerSize + uint32_t( tiles.size() * sizeof( uint16_t ) );
+    const auto byteCountsPos = offsetsPos + numTiles * uint32_t( sizeof( uint32_t ) );
+    const auto ifdPos = byteCountsPos + numTiles * uint32_t( sizeof( uint32_t ) );
+
+    std::ofstream out( path, std::ios::binary );
+    auto write = [&] ( auto v ) { out.write( ( const char* )&v, sizeof( v ) ); };
+    // all numbers are written in the native byte order
+    out.write( std::endian::native == std::endian::little ? "II" : "MM", 2 );
+    write( uint16_t( 42 ) );
+    write( ifdPos );
+    out.write( ( const char* )tiles.data(), tiles.size() * sizeof( uint16_t ) );
+    for ( auto offset : tileOffsets )
+        write( offset );
+    for ( uint32_t i = 0; i < numTiles; ++i )
+        write( tileBytes );
+
+    // image file directory, the entries are sorted by tag; a single value is stored in the entry itself
+    constexpr uint16_t SHORT = 3, LONG = 4;
+    auto writeEntry = [&] ( uint16_t tag, uint16_t type, uint32_t count, uint32_t value )
+    {
+        write( tag );
+        write( type );
+        write( count );
+        if ( type == SHORT )
+        {
+            write( uint16_t( value ) );
+            write( uint16_t( 0 ) );
+        }
+        else
+        {
+            write( value );
+        }
+    };
+    write( uint16_t( 10 ) );
+    writeEntry( 256, LONG, 1, uint32_t( size.x ) ); // ImageWidth
+    writeEntry( 257, LONG, 1, uint32_t( size.y ) ); // ImageLength
+    writeEntry( 258, SHORT, 1, 16 ); // BitsPerSample
+    writeEntry( 259, SHORT, 1, 1 ); // Compression: none
+    writeEntry( 262, SHORT, 1, 1 ); // PhotometricInterpretation: BlackIsZero
+    writeEntry( 277, SHORT, 1, 1 ); // SamplesPerPixel
+    writeEntry( 322, LONG, 1, uint32_t( tileSize.x ) ); // TileWidth
+    writeEntry( 323, LONG, 1, uint32_t( tileSize.y ) ); // TileLength
+    writeEntry( 324, LONG, numTiles, offsetsPos ); // TileOffsets
+    writeEntry( 325, LONG, numTiles, byteCountsPos ); // TileByteCounts
+    write( uint32_t( 0 ) ); // no next directory
+}
+
+TEST( MRMesh, TiffTiledPartialTiles )
+{
+    // the tiles in the last column and in the last row extend beyond the image
+    const Vector2i size{ 20, 18 };
+    const Vector2i tileSize{ 16, 16 };
+    std::vector<uint16_t> pixels( size_t( size.x ) * size.y );
+    for ( int y = 0; y < size.y; ++y )
+        for ( int x = 0; x < size.x; ++x )
+            pixels[x + y * size.x] = uint16_t( 100 * y + x );
+
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "tiled.tif";
+    writeTiledTiff( path, pixels, size, tileSize, 0xFFFF );
+
+    auto params = readTiffParameters( path );
+    ASSERT_TRUE( params.has_value() ) << params.error();
+    EXPECT_EQ( params->imageSize, size );
+    EXPECT_TRUE( params->tiled );
+    EXPECT_EQ( params->tileSize, tileSize );
+
+    std::vector<uint16_t> raw( pixels.size(), 0xABCD );
+    RawTiffOutput rawOutput{
+        .bytes = ( uint8_t* )raw.data(),
+        .size = raw.size() * sizeof( uint16_t ),
+        .convertToFloat = false,
+    };
+    auto res = readRawTiff( path, rawOutput );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_EQ( raw, pixels );
+
+    std::vector<float> floats( pixels.size() );
+    RawTiffOutput floatOutput{
+        .bytes = ( uint8_t* )floats.data(),
+        .size = floats.size() * sizeof( float ),
+    };
+    res = readRawTiff( path, floatOutput );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_EQ( floats, std::vector<float>( pixels.begin(), pixels.end() ) );
+}
+
+#ifndef MRIOEXTRAS_NO_TIFF
+TEST( MRMesh, TiffImageNonAsciiPath )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto dir = tmpFolder / cNonAsciiName;
+    std::error_code ec;
+    ASSERT_TRUE( std::filesystem::create_directory( dir, ec ) ) << systemToUtf8( ec.message() );
+    const auto path = dir / "img.tif";
+
+    const Image image{
+        .pixels = { Color::red(), Color::green(), Color::blue(), Color::white() },
+        .resolution = { 2, 2 },
+    };
+    auto saveRes = ImageSave::toTiff( image, path );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    EXPECT_TRUE( std::filesystem::is_regular_file( path, ec ) );
+
+    auto loaded = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->resolution, image.resolution );
+    EXPECT_EQ( loaded->pixels, image.pixels );
+}
+
+// libtiff's RGBA reader does not support floating-point samples, such images are converted by MeshLib itself
+TEST( MRMesh, TiffImageFloat )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "float.tif";
+
+    const std::vector<float> values{
+        0.f, 1.f, // top row
+        2.f, 3.f, // bottom row
+    };
+    auto saveRes = writeRawTiff( ( const uint8_t* )values.data(), path, { .baseParams = {
+        .sampleType = BaseTiffParameters::SampleType::Float,
+        .valueType = BaseTiffParameters::ValueType::Scalar,
+        .bytesPerSample = sizeof( float ),
+        .imageSize = { 2, 2 },
+    } } );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+
+    auto loaded = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->resolution, Vector2i( 2, 2 ) );
+    // the values are scaled to [0, 255], and the rows of Image go from bottom to top
+    const std::vector<Color> expected{
+        Color( 170, 170, 170 ), Color( 255, 255, 255 ),
+        Color( 0, 0, 0 ), Color( 85, 85, 85 ),
+    };
+    EXPECT_EQ( loaded->pixels, expected );
+}
+#endif //!MRIOEXTRAS_NO_TIFF
+
+} //namespace MR
+
+#endif //!__EMSCRIPTEN__ && !MRMESH_NO_TIFF

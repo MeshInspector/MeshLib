@@ -5,7 +5,10 @@
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRMeshPart.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRCube.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <cmath>
 #include <random>
 
@@ -95,7 +98,7 @@ TEST( MRMesh, MeshToDensePointCloud )
         }
 
         // the same cloud without normals
-        const auto noNormals = meshToDensePointCloud( mesh, radius, false );
+        const auto noNormals = meshToDensePointCloud( mesh, radius, VertNormalsMode::No );
         ASSERT_TRUE( noNormals.has_value() );
         EXPECT_TRUE( noNormals->normals.empty() );
         // fuzzy compare to eliminate possible accumulated errors
@@ -104,6 +107,15 @@ TEST( MRMesh, MeshToDensePointCloud )
         for ( auto v : cloud->validPoints )
             maxPointDiffSq = std::max( maxPointDiffSq, ( noNormals->points[v] - cloud->points[v] ).lengthSq() );
         EXPECT_LE( maxPointDiffSq, 1e-12f );
+
+        // the same cloud with the pseudonormals in the mesh vertices
+        const auto angleWeighted = meshToDensePointCloud( mesh, radius, VertNormalsMode::AngleWeighted );
+        ASSERT_TRUE( angleWeighted.has_value() );
+        ASSERT_EQ( angleWeighted->normals.size(), cloud->points.size() );
+        for ( auto v : mesh.topology.getValidVerts() )
+            EXPECT_LE( ( angleWeighted->normals[v] - mesh.pseudonormal( v ) ).length(), 1e-6f );
+        for ( auto v : angleWeighted->validPoints )
+            EXPECT_NEAR( angleWeighted->normals[v].length(), 1.f, 1e-5f );
     }
 
     EXPECT_FALSE( meshToDensePointCloud( mesh, 0 ).has_value() );
@@ -189,6 +201,92 @@ TEST( MRMesh, MeshToDensePointCloudDegenerate )
     // in 5 parts, and the 3 vertices with the 4 samples between them is all the cloud has
     EXPECT_EQ( cloud->points.size(), 7 );
     EXPECT_LE( maxSurfaceToCloudDist( mesh, *cloud, 64 ), 0.1f );
+}
+
+TEST( MRMesh, IsCoveredByVertices )
+{
+    const auto mesh = makeTorus( 1.0f, 0.3f, 12, 10 );
+    float maxEdgeLen = 0;
+    for ( auto ue : undirectedEdges( mesh.topology ) )
+        maxEdgeLen = std::max( maxEdgeLen, mesh.edgeLength( ue ) );
+
+    // covered: then the dense cloud has no samples except the vertices
+    const float bigRadius = maxEdgeLen / std::sqrt( 3.0f ) * 1.01f;
+    EXPECT_TRUE( isCoveredByVertices( mesh, bigRadius ) );
+    EXPECT_EQ( meshToDensePointCloud( mesh, bigRadius )->points.size(), mesh.points.size() );
+
+    // the longest edge is not covered
+    const float smallRadius = maxEdgeLen / 2 * 0.99f;
+    EXPECT_FALSE( isCoveredByVertices( mesh, smallRadius ) );
+    EXPECT_GT( meshToDensePointCloud( mesh, smallRadius )->points.size(), mesh.points.size() );
+
+    // the right isosceles triangles of the cube are covered by their vertices from the middle of the hypotenuse on,
+    // which is closer than the longest edge over sqrt(3) of an equilateral triangle
+    const auto cube = makeCube(); // unit edges
+    const float diagonal = std::sqrt( 2.0f );
+    for ( float radius : { diagonal / 2 * 1.01f, diagonal / std::sqrt( 3.0f ) * 0.99f } )
+    {
+        EXPECT_TRUE( isCoveredByVertices( cube, radius ) );
+        EXPECT_EQ( meshToDensePointCloud( cube, radius )->points.size(), cube.points.size() );
+    }
+    const float uncovered = diagonal / 2 * 0.99f;
+    EXPECT_FALSE( isCoveredByVertices( cube, uncovered ) );
+    EXPECT_GT( meshToDensePointCloud( cube, uncovered )->points.size(), cube.points.size() );
+}
+
+TEST( MRMesh, MeshToDensePointCloudPseudonormals )
+{
+    // in a cube, the pseudonormal is the axis of a side inside it (also on the diagonals of its two triangles),
+    // and the bisector of two axes on a cube edge
+    const auto cube = makeCube();
+    const auto cloud = meshToDensePointCloud( cube, 0.1f, VertNormalsMode::AngleWeighted );
+    ASSERT_TRUE( cloud.has_value() );
+    ASSERT_GT( cloud->points.size(), cube.points.size() );
+    for ( auto v = VertId( cube.points.size() ); v < cloud->points.endId(); ++v )
+    {
+        const auto p = cloud->points[v];
+        Vector3f expected;
+        for ( int i = 0; i < 3; ++i )
+            if ( std::abs( std::abs( p[i] ) - 0.5f ) < 1e-5f )
+                expected[i] = p[i] > 0 ? 1.0f : -1.0f;
+        EXPECT_GT( dot( cloud->normals[v], expected.normalized() ), 1 - 1e-5f );
+    }
+    for ( auto v : cube.topology.getValidVerts() )
+        EXPECT_GT( dot( cloud->normals[v], cube.pseudonormal( v ) ), 1 - 1e-5f );
+
+    // AreaWeighted interpolates the vertex normals, which inside a cube side differ from its axis
+    const auto smooth = meshToDensePointCloud( cube, 0.1f, VertNormalsMode::AreaWeighted );
+    ASSERT_TRUE( smooth.has_value() );
+    ASSERT_EQ( smooth->points.size(), cloud->points.size() );
+    int differ = 0;
+    for ( auto v = VertId( cube.points.size() ); v < smooth->points.endId(); ++v )
+        if ( dot( smooth->normals[v], cloud->normals[v] ) < 0.99f )
+            ++differ;
+    EXPECT_GT( differ, 0 );
+
+    // a general mesh: Mesh::pseudonormal of the edge for the samples on an edge, of the triangle for the others
+    const auto torus = makeTorus( 1.0f, 0.3f, 12, 10 );
+    const auto tcloud = meshToDensePointCloud( torus, 0.02f, VertNormalsMode::AngleWeighted );
+    ASSERT_TRUE( tcloud.has_value() );
+    int onEdges = 0, inside = 0;
+    for ( auto v = VertId( torus.points.size() ); v < tcloud->points.endId(); ++v )
+    {
+        const auto p = tcloud->points[v];
+        const auto face = torus.topology.left( findProjection( p, torus ).mtp.e ); // the triangle with the point
+        Vector3f expected = torus.normal( face );
+        EdgeId es[3];
+        torus.topology.getTriEdges( face, es );
+        for ( auto e : es )
+        {
+            const auto a = torus.orgPnt( e ), b = torus.destPnt( e );
+            if ( cross( b - a, p - a ).length() <= 1e-5f * ( b - a ).lengthSq() )
+                expected = torus.pseudonormal( e.undirected() );
+        }
+        ( expected == torus.normal( face ) ? inside : onEdges )++;
+        EXPECT_GT( dot( tcloud->normals[v], expected ), 1 - 1e-5f );
+    }
+    EXPECT_GT( onEdges, 0 );
+    EXPECT_GT( inside, 0 );
 }
 
 } //namespace MR

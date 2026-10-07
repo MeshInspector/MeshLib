@@ -300,19 +300,37 @@ var open_dir = function (e) {
 
 var emplace_file_in_local_FS_and_open_context_id = 0;
 var emplace_file_in_local_FS_and_open_notifier = {};
-var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes, callback = function (objHierarchyJSONString) {}) {
-  var directory = ".use_open_files";
-  FS.createPath("/", directory);
-  var path = "/" + directory + "/" + name_with_ext.replace(/\//g, "_");
-  FS.writeFile(path, bytes);
+// opens files = [{ name: name_with_ext, bytes }] at once, as Open files does; the callback gets the hierarchy of all of them
+var emplace_files_in_local_FS_and_open = function (files, callback = function (objHierarchyJSONString) {}) {
+  var directory = "/.use_open_files";
+  var paths = [];
+  for (var file of files) {
+    var name = file.name.replace(/\//g, "_");
+    // a file named as an earlier one goes to a subdirectory, so as not to overwrite it;
+    // ".dup" in the subdirectory's name keeps it from clashing with a file named like "1"
+    var dir = directory;
+    for (var n = 1; paths.includes(dir + "/" + name); ++n)
+      dir = directory + "/.dup" + n;
+    FS.createPath("/", dir);
+    paths.push(dir + "/" + name);
+    FS.writeFile(paths[paths.length - 1], file.bytes);
+  }
 
+  var pointers = paths.map(function (path) { return stringToNewUTF8(path); });
+  // the array of path pointers, as bytes for ccall to copy onto the stack
+  var pointerArray = getPointerSize() == 8 ? BigUint64Array.from(pointers, BigInt) : Uint32Array.from(pointers);
   emplace_file_in_local_FS_and_open_notifier[emplace_file_in_local_FS_and_open_context_id] = callback;
-  Module.ccall('emsAddFileToScene', 'void', ['string', 'number'], [path, emplace_file_in_local_FS_and_open_context_id]);
+  Module.ccall('emsAddFilesToScene', 'void', ['number', 'array', 'number'], [pointers.length, new Uint8Array(pointerArray.buffer), emplace_file_in_local_FS_and_open_context_id]);
   emplace_file_in_local_FS_and_open_context_id = emplace_file_in_local_FS_and_open_context_id + 1;
+  pointers.forEach(function (pointer) { _free(pointer); });
 
   // enforce several frames to toggle animation when popup closed
   for (var i = 0; i < 500; i += 100)
     setTimeout(function () { Module.ccall('emsPostEmptyEvent', 'void', ['number'], [1]); }, i);
+}
+
+var emplace_file_in_local_FS_and_open = function (name_with_ext, bytes, callback) {
+  emplace_files_in_local_FS_and_open([{ name: name_with_ext, bytes: bytes }], callback);
 }
 
 var get_object_data_from_scene = function (object_name, temp_filename_with_ext) {

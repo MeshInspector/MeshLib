@@ -14,8 +14,8 @@ const char * asString( SignDetectionMode m )
         return "OpenVDB";
     case SignDetectionMode::ProjectionNormal:
         return "ProjectionNormal";
-    case SignDetectionMode::WindingRule:
-        return "WindingRule";
+    case SignDetectionMode::OddCrossings:
+        return "OddCrossings";
     case SignDetectionMode::HoleWindingRule:
         return "HoleWindingRule";
     default:

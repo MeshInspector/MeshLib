@@ -241,8 +241,6 @@ void updateGroupPairs( ICPGroupPairs& pairs, const ICPObjects& objs,
 
         res.distSq = prj.distSq;
         res.weight = 1.0;
-        if ( auto srcWeights = objs[res.srcId.objId].obj.weights() )
-            res.weight = srcWeights( res.srcId.vId );
 
         res.tgtClosestId.objId = prjObj;
         res.tgtClosestId.vId = prj.closestVert;
@@ -948,6 +946,7 @@ bool MultiwayICP::p2plIter_()
             }
         }
         p2pl.prepare();
+        p2pl.setStabilizer( prop_.p2plStabilizer );
 
         AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
         if ( std::isnan( res.b.x ) ) //nan check

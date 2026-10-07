@@ -1,5 +1,6 @@
 #include <MRMesh/MRMultiwayICP.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <gtest/gtest.h>
@@ -10,8 +11,16 @@ namespace MR
 
 TEST( MRMesh, MultiwayICPTorus )
 {
-    // all objects have same shape but different transformations
-    const auto torus = makeTorus( 2.5f, 0.7f, 40, 10 );
+    // all objects have same shape but different transformations;
+    // the bump breaks the rotational symmetry of the torus, otherwise rotations about its axis are unconstrained
+    const auto torus = [] ()
+    {
+        auto res = makeTorus( 2.5f, 0.7f, 40, 10 );
+        auto bump = makeUVSphere( 0.3f, 8, 8 );
+        bump.transform( AffineXf3f::translation( { 3.2f, 0, 0 } ) );
+        res.addMesh( bump );
+        return res;
+    }();
 
     auto axis = Vector3f( 1, 0, 0 );
     auto trans = Vector3f( 0, 0.2f, 0.105f );

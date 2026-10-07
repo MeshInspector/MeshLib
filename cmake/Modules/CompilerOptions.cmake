@@ -18,6 +18,26 @@ ELSE() # if APPLE
   add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,-x>)
 ENDIF()
 
+# Link with lld, which can merge identical functions (GNU ld cannot)
+IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  include(CheckLinkerFlag)
+  check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
+  IF(MESHLIB_HAVE_LLD)
+    # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
+    # older CMakes (our minimum is 3.18).
+    IF(NOT CMAKE_VERSION VERSION_LESS "3.29")
+      set(CMAKE_LINKER_TYPE LLD)
+    ELSE()
+      add_link_options("-fuse-ld=lld")
+    ENDIF()
+    # Merge functions with identical machine code to make the libraries smaller.
+    # `safe` never merges a function whose address is taken, so comparing function pointers still works.
+    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
+    # Put each function in its own section, otherwise only template and inline functions can be merged.
+    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
+  ENDIF()
+ENDIF()
+
 # Warnings and misc compiler settings.
 IF(MSVC)
   # C++-specific flags.

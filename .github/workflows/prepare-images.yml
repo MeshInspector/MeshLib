@@ -117,29 +117,6 @@ jobs:
       dockerfile: ${{ matrix.distro }}Dockerfile
       image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     steps:
-      - name: Work-around possible permission issues
-        shell: bash
-        run: |
-          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
-          # Related issue: https://github.com/actions/runner/issues/2058
-          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
-            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
-            mkdir ${GITHUB_WORKSPACE}
-          fi
-
-      - name: Remove unused Docker data
-        run: docker system prune --force --all --volumes
-
-      - name: Work-around possible permission issues
-        shell: bash
-        run: |
-          # NOTE: {GITHUB_WORKSPACE} != {{ github.workspace }}
-          # Related issue: https://github.com/actions/runner/issues/2058
-          if test -d $GITHUB_WORKSPACE && test -n "$(find ${GITHUB_WORKSPACE} -user root)" ; then
-            mv ${GITHUB_WORKSPACE} ${GITHUB_WORKSPACE}_${RANDOM}
-            mkdir ${GITHUB_WORKSPACE}
-          fi
-
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -169,9 +146,6 @@ jobs:
           fi
           docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
-      - name: Remove unused Docker data
-        run: docker system prune --force --all --volumes
-
   linux-vcpkg-build-upload:
     needs: compute-image-matrices
     if: ${{ inputs.need_linux_vcpkg_rebuild && !inputs.disable_linux_vcpkg }}
@@ -188,9 +162,6 @@ jobs:
       image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
       vcpkg_triplet: ${{ matrix.arch }}-linux-meshlib
     steps:
-      - name: Remove unused Docker data
-        run: docker system prune --force --all --volumes
-
       - name: Checkout
         uses: actions/checkout@v7
 
@@ -233,9 +204,6 @@ jobs:
           fi
           docker buildx imagetools create -t "${image}" "${repo}:${tag}"
 
-      - name: Remove unused Docker data
-        run: docker system prune --force --all --volumes
-
   linux-emscripten-c-bindings-build-upload:
     needs: compute-image-matrices
     if: ${{ inputs.need_linux_image_rebuild && !inputs.disable_emscripten }}
@@ -251,9 +219,6 @@ jobs:
     env:
       image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}
     steps:
-      - name: Remove unused Docker data
-        run: docker system prune --force --all --volumes
-
       - name: Checkout
         uses: actions/checkout@v7
         with:
@@ -297,9 +262,6 @@ jobs:
             docker push "${repo}:${tag}"
           fi
           docker buildx imagetools create -t "${image}" "${repo}:${tag}"
-
-      - name: Remove unused Docker data
-        run: docker system prune --force --all --volumes
 
   windows-vcpkg-build-upload:
     if: ${{ inputs.need_windows_vcpkg_rebuild && !inputs.disable_windows }}

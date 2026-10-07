@@ -101,7 +101,7 @@ runs:
           'py', '-3', '..\..\..\scripts\run_python_test_script.py',
           '-d', '..\test_regression',
           '-s', '${{ inputs.smoke }}',
-          "-a=`"${{ inputs.pytest_args }}`""
+          "-a=${{ inputs.pytest_args }}"
         )
         $run = Start-Process -FilePath $cdb -ArgumentList $cdbArgs -NoNewWindow -PassThru -RedirectStandardInput $onBreak
         if (-not $run.WaitForExit(600000)) {

@@ -6,6 +6,7 @@
 #include <MRMesh/MRIOParsing.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshBuilder.h>
+#include <MRMesh/MRParallelFor.h>
 #include <MRMesh/MRPointCloud.h>
 #include <MRMesh/MRProgressReadWrite.h>
 #include <MRMesh/MRStringConvert.h>
@@ -162,48 +163,67 @@ Expected<Mesh> fromDrc( std::istream& in, const MeshLoadSettings& settings )
     const auto* normalAtt = settings.normals ? pc.GetNamedAttribute( draco::GeometryAttribute::NORMAL ) : nullptr;
     const auto* uvAtt = settings.uvCoords ? pc.GetNamedAttribute( draco::GeometryAttribute::TEX_COORD ) : nullptr;
 
-    // Draco splits the vertices on attribute seams, so merge them back by coordinates in meshes
     const auto numPoints = pc.num_points();
-    std::vector<VertId> pointToVert( numPoints );
-    HashMap<Vector3f, VertId> posToVert;
-    VertCoords points;
-    points.reserve( numPoints );
+    VertCoords points( numPoints );
+    ParallelFor( points, [&] ( VertId v )
+    {
+        points[v] = getVector3( posAtt, draco::PointIndex( v ) );
+    } );
+
+    // Draco splits the vertices on attribute seams, so merge them back by coordinates in meshes
+    std::vector<VertId> pointToVert;
+    std::vector<uint32_t> vertToPoint; // the first point of each vertex
+    if ( geom->mesh )
+    {
+        pointToVert.resize( numPoints );
+        vertToPoint.reserve( numPoints );
+        HashMap<Vector3f, VertId> posToVert;
+        posToVert.reserve( numPoints );
+        for ( uint32_t p = 0; p < numPoints; ++p )
+        {
+            auto [it, inserted] = posToVert.insert( { points[VertId( p )], VertId( vertToPoint.size() ) } );
+            pointToVert[p] = it->second;
+            if ( inserted )
+            {
+                points[it->second] = points[VertId( p )];
+                vertToPoint.push_back( p );
+            }
+        }
+        points.resize( vertToPoint.size() );
+    }
+    const auto vertPoint = [&] ( VertId v ) { return draco::PointIndex( vertToPoint.empty() ? uint32_t( v ) : vertToPoint[v] ); };
+
     VertColors colors;
     VertNormals normals;
     VertUVCoords uvCoords;
-    for ( draco::PointIndex p( 0 ); p < numPoints; ++p )
+    if ( colorAtt )
+        colors.resize( points.size() );
+    if ( normalAtt )
+        normals.resize( points.size() );
+    if ( uvAtt )
+        uvCoords.resize( points.size() );
+    ParallelFor( points, [&] ( VertId v )
     {
-        const auto pos = getVector3( posAtt, p );
-        if ( geom->mesh )
-        {
-            auto [it, inserted] = posToVert.insert( { pos, points.endId() } );
-            pointToVert[p.value()] = it->second;
-            if ( !inserted )
-                continue;
-        }
-        else
-            pointToVert[p.value()] = points.endId();
-
-        points.push_back( pos );
+        const auto p = vertPoint( v );
         if ( colorAtt )
-            colors.push_back( getColor( *colorAtt, p ) );
+            colors[v] = getColor( *colorAtt, p );
         if ( normalAtt )
-            normals.push_back( getVector3( *normalAtt, p ) );
+            normals[v] = getVector3( *normalAtt, p );
         if ( uvAtt )
-            uvCoords.push_back( getUV( *uvAtt, p ) );
-    }
+            uvCoords[v] = getUV( *uvAtt, p );
+    } );
     if ( !reportProgress( settings.callback, 0.75f ) )
         return unexpectedOperationCanceled();
 
     Triangulation t;
     if ( geom->mesh )
     {
-        t.reserve( geom->mesh->num_faces() );
-        for ( draco::FaceIndex f( 0 ); f < geom->mesh->num_faces(); ++f )
+        t.resize( geom->mesh->num_faces() );
+        ParallelFor( t, [&] ( FaceId f )
         {
-            const auto& face = geom->mesh->face( f );
-            t.push_back( { pointToVert[face[0].value()], pointToVert[face[1].value()], pointToVert[face[2].value()] } );
-        }
+            const auto& face = geom->mesh->face( draco::FaceIndex( uint32_t( f ) ) );
+            t[f] = { pointToVert[face[0].value()], pointToVert[face[1].value()], pointToVert[face[2].value()] };
+        } );
     }
 
     std::vector<MeshBuilder::VertDuplication> dups;
@@ -334,15 +354,15 @@ Expected<PointCloud> fromDrc( std::istream& in, const PointsLoadSettings& settin
         cloud.normals.resize( numPoints );
     if ( colorAtt )
         settings.colors->resize( numPoints );
-    for ( draco::PointIndex p( 0 ); p < numPoints; ++p )
+    ParallelFor( cloud.points, [&] ( VertId v )
     {
-        const VertId v( p.value() );
+        const draco::PointIndex p{ uint32_t( v ) };
         cloud.points[v] = getVector3( posAtt, p );
         if ( normalAtt )
             cloud.normals[v] = getVector3( *normalAtt, p );
         if ( colorAtt )
             ( *settings.colors )[v] = getColor( *colorAtt, p );
-    }
+    } );
 
     if ( !reportProgress( settings.callback, 1.0f ) )
         return unexpectedOperationCanceled();

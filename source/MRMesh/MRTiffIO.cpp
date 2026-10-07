@@ -90,10 +90,12 @@ void readRawTiff( TIFF* tiff, uint8_t* bytes, size_t size, const TiffParameters&
                     {
                         size_t dataShift = shift + x;
                         auto modifier = samplePerPixel * tp.bytesPerSample;
-                        if ( ( dataShift + tp.tileSize.x ) * modifier > size )
+                        // the tiles of the last column can extend beyond the image
+                        const auto width = size_t( std::min( tp.tileSize.x, tp.imageSize.x - x ) );
+                        if ( ( dataShift + width ) * modifier > size )
                             continue;
                         auto* first = ( const uint8_t* )( buffer.data() + samplePerPixel * ( tp.tileSize.x * ( y0 - y ) ) );
-                        std::copy( first, first + modifier * tp.tileSize.x, bytes + dataShift * modifier );
+                        std::copy( first, first + modifier * width, bytes + dataShift * modifier );
                     }
                 }
             }

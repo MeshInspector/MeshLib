@@ -9,6 +9,7 @@
 #include "MRLoadedObjects.h"
 #include <filesystem>
 #include <iosfwd>
+#include <map>
 #include <string>
 
 namespace MR
@@ -52,8 +53,9 @@ struct NamedMesh
     /// names of the materials used by the mesh but not found in its material libraries (.mtl files)
     std::vector<std::string> missingMaterials;
 
-    /// material libraries (.mtl files) referenced by the file but not found, the same in all meshes of the file
-    std::vector<std::filesystem::path> missingMtlFiles;
+    /// errors of the material libraries (.mtl files) referenced by the file that could not be loaded, e.g. not found;
+    /// the same in all meshes of the file
+    std::map<std::filesystem::path, std::string> mtlErrors;
 
     /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf
     AffineXf3f xf;

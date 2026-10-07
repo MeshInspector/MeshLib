@@ -10,6 +10,7 @@
 #include "MRBitSet.h"
 #include "MRMeshTriPoint.h"
 #include <cfloat>
+#include <memory>
 
 namespace MR
 {
@@ -40,7 +41,8 @@ struct ICPPairData
 /// Stores a pair of points: one samples on the source and the closest to it on the target
 struct PointPair : public ICPPairData
 {
-    /// id of the source point
+    /// id of the source point: a vertex of the source object, or a point of the denser cloud
+    /// in case of grid sampling of a mesh with big triangles (see ICP::sampleFltPoints)
     VertId srcVertId;
 
     /// for point clouds it is the closest vertex on target,
@@ -217,7 +219,7 @@ public:
     /// \param fltXf transformation from floating object space to global space
     /// \param refXf transformation from reference object space to global space
     /// \param samplingVoxelSize approximate distance between samples on each of two objects
-    /// all pairs get equal weights
+    /// all pairs get equal weights, and a mesh with big triangles gets samples inside them as in samplePoints( samplingVoxelSize, true )
     MRMESH_API ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float samplingVoxelSize ) : ICP( { flt, fltXf }, { ref, refXf }, samplingVoxelSize ) {}
     MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize );
@@ -231,16 +233,19 @@ public:
 
     /// select pairs with origin samples on floating object;
     /// setFltSamples weights each pair by the double area of mesh triangles around its sample vertex,
-    /// sampleFltPoints performs grid sampling and gives all pairs equal weights
+    /// sampleFltPoints performs grid sampling and gives all pairs equal weights;
+    /// \param nonVertexSamples if true, a mesh with triangles too big for the sampling is sampled from its dense point cloud
+    ///        (see meshToDensePointCloud) to get the samples inside the triangles and on the edges as well; otherwise only its vertices are sampled
     MRMESH_API void setFltSamples( const VertBitSet& fltSamples );
-    MRMESH_API void sampleFltPoints( float samplingVoxelSize );
+    MRMESH_API void sampleFltPoints( float samplingVoxelSize, bool nonVertexSamples = true );
 
-    /// select pairs with origin samples on reference object, weighted the same way as for floating object
+    /// select pairs with origin samples on reference object, weighted and sampled the same way as for floating object
     MRMESH_API void setRefSamples( const VertBitSet& refSamples );
-    MRMESH_API void sampleRefPoints( float samplingVoxelSize );
+    MRMESH_API void sampleRefPoints( float samplingVoxelSize, bool nonVertexSamples = true );
 
     /// select pairs with origin samples on both objects
-    void samplePoints( float samplingVoxelSize ) { sampleFltPoints( samplingVoxelSize ); sampleRefPoints( samplingVoxelSize ); }
+    void samplePoints( float samplingVoxelSize, bool nonVertexSamples = true )
+        { sampleFltPoints( samplingVoxelSize, nonVertexSamples ); sampleRefPoints( samplingVoxelSize, nonVertexSamples ); }
 
     [[deprecated]] MR_BIND_IGNORE void recomputeBitSet( float fltSamplingVoxelSize ) { sampleFltPoints( fltSamplingVoxelSize ); }
 
@@ -292,6 +297,10 @@ private:
 
     PointPairs flt2refPairs_;
     PointPairs ref2fltPairs_;
+
+    /// if not null, the source points of the pairs are taken from these clouds instead of the objects
+    std::shared_ptr<PointCloud> fltSamplesCloud_;
+    std::shared_ptr<PointCloud> refSamplesCloud_;
 
     ICPExitType resultType_{ ICPExitType::NotStarted };
 

@@ -19,6 +19,7 @@
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/spirit/home/x3.hpp>
+#include <tbb/parallel_for_each.h>
 
 #include <map>
 #include <fstream>
@@ -1420,7 +1421,35 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
             res.warnings += missingMaterialsWarning( missingMaterials );
             missingFiles = true;
         }
-        std::vector<std::filesystem::path> failedTextureFiles; // to report each texture file once, even if several objects use it
+
+        // the texture files of all objects: each is loaded and reported once even if several objects use it, all files in parallel
+        struct LoadedTexture
+        {
+            int numUses = 0; // by the objects; the last one takes the pixels without copying
+            Expected<Image> image;
+        };
+        std::map<std::filesystem::path, LoadedTexture> loadedTextures;
+        for ( const auto& result : results )
+            for ( const auto& p : result.textureFiles )
+                if ( !p.empty() )
+                    ++loadedTextures[p].numUses;
+        tbb::parallel_for_each( loadedTextures.begin(), loadedTextures.end(), [] ( auto& file )
+        {
+            file.second.image = ImageLoad::fromAnySupportedFormat( file.first );
+        } );
+        for ( const auto& [p, texture] : loadedTextures )
+        {
+            if ( texture.image.has_value() )
+                continue;
+            std::error_code ec;
+            if ( std::filesystem::exists( p, ec ) )
+                res.warnings += fmt::format( "Texture file {} could not be loaded ({}).\n", utf8string( p.filename() ), texture.image.error() );
+            else
+            {
+                res.warnings += fmt::format( "Texture file {} was not found.\n", utf8string( p.filename() ) );
+                missingFiles = true;
+            }
+        }
 
         res.objs.resize( results.size() );
         for ( int i = 0; i < res.objs.size(); ++i )
@@ -1449,26 +1478,16 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
                 const auto& p = result.textureFiles[t];
                 if ( p.empty() )
                     continue;
-                auto image = ImageLoad::fromAnySupportedFormat( p );
-                if ( image.has_value() )
-                {
-                    if ( resolution == Vector2i{} )
-                        resolution = image->resolution;
-                    textures[t].resolution = image->resolution;
-                    textures[t].pixels = std::move( image->pixels );
+                auto& texture = loadedTextures.at( p );
+                if ( !texture.image.has_value() )
                     continue;
-                }
-                if ( std::find( failedTextureFiles.begin(), failedTextureFiles.end(), p ) != failedTextureFiles.end() )
-                    continue;
-                failedTextureFiles.push_back( p );
-                std::error_code ec;
-                if ( std::filesystem::exists( p, ec ) )
-                    res.warnings += fmt::format( "Texture file {} could not be loaded ({}).\n", utf8string( p.filename() ), image.error() );
+                if ( resolution == Vector2i{} )
+                    resolution = texture.image->resolution;
+                textures[t].resolution = texture.image->resolution;
+                if ( --texture.numUses == 0 )
+                    textures[t].pixels = std::move( texture.image->pixels );
                 else
-                {
-                    res.warnings += fmt::format( "Texture file {} was not found.\n", utf8string( p.filename() ) );
-                    missingFiles = true;
-                }
+                    textures[t].pixels = texture.image->pixels;
             }
             if ( resolution != Vector2i{} ) // some texture file is loaded
             {

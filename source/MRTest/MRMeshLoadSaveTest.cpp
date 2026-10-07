@@ -526,6 +526,44 @@ TEST(MRMesh, LoadObjWithTexture)
     }
 }
 
+TEST(MRMesh, LoadObjSharedTextures)
+{
+    if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )
+    {
+        GTEST_SKIP() << "PNG format is not supported in this build";
+    }
+
+    // the first object uses textures a.png and b.png, the second one uses b.png too
+    UniqueTemporaryFolder dir;
+    auto text = twoTetrahedraObj( "model.mtl", "Mat2" );
+    text.insert( text.find( "f 2/2 3/3 4/4\n" ), "usemtl Mat2\n" ); // the last face of the first object
+    writeTextFile( dir / "model.obj", text );
+    writeTextFile( dir / "model.mtl", "newmtl Mat1\nmap_Kd a.png\nnewmtl Mat2\nmap_Kd b.png\n" );
+    const Image imageA{ .pixels = { Color::red(), Color::green(), Color::blue(), Color::white() }, .resolution = { 2, 2 } };
+    const Image imageB{ .pixels = { Color::white(), Color::blue(), Color::green(), Color::red() }, .resolution = { 2, 2 } };
+    ASSERT_TRUE( ImageSave::toAnySupportedFormat( imageA, dir / "a.png" ).has_value() );
+    ASSERT_TRUE( ImageSave::toAnySupportedFormat( imageB, dir / "b.png" ).has_value() );
+    const auto textureA = ImageLoad::fromAnySupportedFormat( dir / "a.png" );
+    const auto textureB = ImageLoad::fromAnySupportedFormat( dir / "b.png" );
+    ASSERT_TRUE( textureA.has_value() && textureB.has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 2 );
+    auto objMesh1 = std::dynamic_pointer_cast<ObjectMesh>( res->objs[0] );
+    auto objMesh2 = std::dynamic_pointer_cast<ObjectMesh>( res->objs[1] );
+    ASSERT_TRUE( objMesh1 && objMesh2 );
+    const auto& textures1 = objMesh1->getTextures();
+    ASSERT_EQ( textures1.size(), 2 );
+    EXPECT_EQ( textures1[TextureId( 0 )].pixels, textureA->pixels );
+    EXPECT_EQ( textures1[TextureId( 1 )].pixels, textureB->pixels );
+    EXPECT_EQ( objMesh1->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 0 ), TextureId( 0 ), TextureId( 1 ) } ) );
+    const auto& textures2 = objMesh2->getTextures();
+    ASSERT_EQ( textures2.size(), 1 );
+    EXPECT_EQ( textures2[TextureId( 0 )].pixels, textureB->pixels );
+}
+
 TEST(MRMesh, LoadObjMissingTexture)
 {
     UniqueTemporaryFolder dir;

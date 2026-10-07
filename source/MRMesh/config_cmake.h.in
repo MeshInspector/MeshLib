@@ -4,4 +4,3 @@
 #cmakedefine MR_PLATFORM "@MR_PLATFORM@"
 
 #cmakedefine MRMESH_NO_TIFF
-#cmakedefine MRMESH_NO_GTEST

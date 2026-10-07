@@ -234,4 +234,59 @@ TEST( MRMesh, IsCoveredByVertices )
     EXPECT_GT( meshToDensePointCloud( cube, uncovered )->points.size(), cube.points.size() );
 }
 
+TEST( MRMesh, MeshToDensePointCloudPseudonormals )
+{
+    // in a cube, the pseudonormal is the axis of a side inside it (also on the diagonals of its two triangles),
+    // and the bisector of two axes on a cube edge
+    const auto cube = makeCube();
+    const auto cloud = meshToDensePointCloud( cube, 0.1f, VertNormalsMode::AngleWeighted );
+    ASSERT_TRUE( cloud.has_value() );
+    ASSERT_GT( cloud->points.size(), cube.points.size() );
+    for ( auto v = VertId( cube.points.size() ); v < cloud->points.endId(); ++v )
+    {
+        const auto p = cloud->points[v];
+        Vector3f expected;
+        for ( int i = 0; i < 3; ++i )
+            if ( std::abs( std::abs( p[i] ) - 0.5f ) < 1e-5f )
+                expected[i] = p[i] > 0 ? 1.0f : -1.0f;
+        EXPECT_GT( dot( cloud->normals[v], expected.normalized() ), 1 - 1e-5f );
+    }
+    for ( auto v : cube.topology.getValidVerts() )
+        EXPECT_GT( dot( cloud->normals[v], cube.pseudonormal( v ) ), 1 - 1e-5f );
+
+    // AreaWeighted interpolates the vertex normals, which inside a cube side differ from its axis
+    const auto smooth = meshToDensePointCloud( cube, 0.1f, VertNormalsMode::AreaWeighted );
+    ASSERT_TRUE( smooth.has_value() );
+    ASSERT_EQ( smooth->points.size(), cloud->points.size() );
+    int differ = 0;
+    for ( auto v = VertId( cube.points.size() ); v < smooth->points.endId(); ++v )
+        if ( dot( smooth->normals[v], cloud->normals[v] ) < 0.99f )
+            ++differ;
+    EXPECT_GT( differ, 0 );
+
+    // a general mesh: Mesh::pseudonormal of the edge for the samples on an edge, of the triangle for the others
+    const auto torus = makeTorus( 1.0f, 0.3f, 12, 10 );
+    const auto tcloud = meshToDensePointCloud( torus, 0.02f, VertNormalsMode::AngleWeighted );
+    ASSERT_TRUE( tcloud.has_value() );
+    int onEdges = 0, inside = 0;
+    for ( auto v = VertId( torus.points.size() ); v < tcloud->points.endId(); ++v )
+    {
+        const auto p = tcloud->points[v];
+        const auto face = torus.topology.left( findProjection( p, torus ).mtp.e ); // the triangle with the point
+        Vector3f expected = torus.normal( face );
+        EdgeId es[3];
+        torus.topology.getTriEdges( face, es );
+        for ( auto e : es )
+        {
+            const auto a = torus.orgPnt( e ), b = torus.destPnt( e );
+            if ( cross( b - a, p - a ).length() <= 1e-5f * ( b - a ).lengthSq() )
+                expected = torus.pseudonormal( e.undirected() );
+        }
+        ( expected == torus.normal( face ) ? inside : onEdges )++;
+        EXPECT_GT( dot( tcloud->normals[v], expected ), 1 - 1e-5f );
+    }
+    EXPECT_GT( onEdges, 0 );
+    EXPECT_GT( inside, 0 );
+}
+
 } //namespace MR

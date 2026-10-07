@@ -1,11 +1,6 @@
 project(MRMesh CXX)
 
 option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
-option(MRMESH_NO_GTEST "Disable building Google tests" OFF)
-
-IF(DEFINED BUILD_TESTING AND NOT BUILD_TESTING)
-  set(MRMESH_NO_GTEST ON)
-ENDIF()
 
 IF(MR_EMSCRIPTEN)
   set(MRMESH_NO_TIFF ON)

@@ -281,7 +281,8 @@ TEST(MRMesh, LoadObjTabIndented)
         "\tusemtl Mat1\n"
         "f 1/1 2/2 3/3\n";
 
-    auto res = MeshLoad::fromSceneObjFile( file.data(), file.size(), false, dir );
+    std::map<std::filesystem::path, std::string> mtlErrors;
+    auto res = MeshLoad::fromSceneObjFile( file.data(), file.size(), false, dir, { .mtlErrors = &mtlErrors } );
     std::filesystem::remove( mtlPath );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->size(), 1 );
@@ -290,7 +291,7 @@ TEST(MRMesh, LoadObjTabIndented)
     ASSERT_EQ( named.textureFiles.size(), 1 );
     EXPECT_EQ( named.textureFiles.front().filename(), "tex1.jpg" );
     ASSERT_TRUE( named.diffuseColor.has_value() );
-    EXPECT_TRUE( named.mtlErrors.empty() );
+    EXPECT_TRUE( mtlErrors.empty() );
 }
 
 namespace
@@ -383,14 +384,12 @@ TEST(MRMesh, LoadObjMissingMtl)
     UniqueTemporaryFolder dir;
     writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
 
-    auto meshes = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+    std::map<std::filesystem::path, std::string> mtlErrors;
+    auto meshes = MeshLoad::fromSceneObjFile( dir / "model.obj", false, { .mtlErrors = &mtlErrors } );
     ASSERT_TRUE( meshes.has_value() );
-    ASSERT_EQ( meshes->size(), 2 );
-    for ( const auto& m : *meshes )
-    {
-        ASSERT_EQ( m.mtlErrors.size(), 1 );
-        EXPECT_EQ( m.mtlErrors.begin()->first, dir / "model.mtl" );
-    }
+    EXPECT_EQ( meshes->size(), 2 );
+    ASSERT_EQ( mtlErrors.size(), 1 );
+    EXPECT_EQ( mtlErrors.begin()->first, dir / "model.mtl" );
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
@@ -654,6 +653,54 @@ TEST(MRMesh, LoadObjPartialTextures)
     auto mesh = MeshLoad::fromObj( dir / "model.obj", { .texture = &meshTexture } );
     ASSERT_TRUE( mesh.has_value() );
     EXPECT_EQ( meshTexture.pixels, texture->pixels );
+}
+
+TEST(MRMesh, LoadObjConsecutiveUsemtl)
+{
+    if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )
+    {
+        GTEST_SKIP() << "PNG format is not supported in this build";
+    }
+
+    // the last of consecutive usemtl lines is used, and the later material changes of the object are kept
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj",
+        "mtllib model.mtl\n"
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "vt 0 0\n"
+        "vt 1 0\n"
+        "vt 0 1\n"
+        "vt 1 1\n"
+        "usemtl Textured\n"
+        "usemtl Plain\n"
+        "f 1/1 3/3 2/2\n"
+        "f 1/1 2/2 4/4\n"
+        "usemtl Textured\n"
+        "f 1/1 4/4 3/3\n"
+        "usemtl Plain\n"
+        "f 2/2 3/3 4/4\n" );
+    // both materials have a color, since a material without one resets the object color as contradicting
+    writeTextFile( dir / "model.mtl", "newmtl Textured\nKd 0 0 1\nmap_Kd texture.png\nnewmtl Plain\nKd 0 0 1\n" );
+    const Image image{ .pixels = { Color::red(), Color::green(), Color::blue(), Color::white() }, .resolution = { 2, 2 } };
+    ASSERT_TRUE( ImageSave::toAnySupportedFormat( image, dir / "texture.png" ).has_value() );
+    const auto texture = ImageLoad::fromAnySupportedFormat( dir / "texture.png" );
+    ASSERT_TRUE( texture.has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 1 );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
+    ASSERT_TRUE( objMesh );
+    const auto& textures = objMesh->getTextures();
+    ASSERT_EQ( textures.size(), 2 );
+    EXPECT_EQ( textures[TextureId( 0 )].pixels, std::vector<Color>( 4, Color( 0, 0, 0, 0 ) ) );
+    EXPECT_EQ( textures[TextureId( 1 )].pixels, texture->pixels );
+    EXPECT_EQ( objMesh->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 0 ), TextureId( 1 ), TextureId( 0 ) } ) );
+    EXPECT_EQ( objMesh->getFrontColor( false ), Color::blue() );
 }
 
 TEST(MRMesh, LoadObjMaterialPerObject)

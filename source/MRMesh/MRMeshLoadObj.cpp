@@ -1312,6 +1312,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( std::none_of( mScopes.begin(), mScopes.end(), [&] ( const MaterialScope& s )
         { return !s.mtName.empty() && s.mtName != "(null)" && mtl.find( s.mtName ) == mtl.end(); } ) )
         mtlErrors.clear();
+    if ( settings.mtlErrors )
+        *settings.mtlErrors = std::move( mtlErrors );
 
     auto newSettings = settings;
     std::vector<MeshLoad::NamedMesh> res;
@@ -1324,7 +1326,6 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         res.emplace_back( std::move( *meshObj ) );
         if ( oScopes.size() == 1 )
             res.back().name = std::move( oScopes.front().objName );
-        res.back().mtlErrors = std::move( mtlErrors );
         return res;
     }
 
@@ -1342,7 +1343,6 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
         res[i].name = std::move( oScopes[i].objName );
-        res[i].mtlErrors = mtlErrors;
     }
     return res;
 }
@@ -1410,7 +1410,8 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
 Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    return fromSceneObjFile( file, false, { .customXf = true, .countSkippedFaces = true, .callback = cb } )
+    std::map<std::filesystem::path, std::string> mtlErrors;
+    return fromSceneObjFile( file, false, { .customXf = true, .countSkippedFaces = true, .callback = cb, .mtlErrors = &mtlErrors } )
     .transform( [&] ( std::vector<NamedMesh>&& results )
     {
         int totalSkippedFaceCount = 0;
@@ -1420,18 +1421,15 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
 
         // true if material libraries or texture files were not found
         [[maybe_unused]] bool missingFiles = false;
-        if ( !results.empty() ) // the material libraries are the same in all objects
+        for ( const auto& [p, error] : mtlErrors )
         {
-            for ( const auto& [p, error] : results.front().mtlErrors )
+            std::error_code ec;
+            if ( std::filesystem::exists( p, ec ) )
+                res.warnings += fmt::format( "Material file {} could not be loaded ({}), so its textures and colors were not loaded.\n", utf8string( p.filename() ), error );
+            else
             {
-                std::error_code ec;
-                if ( std::filesystem::exists( p, ec ) )
-                    res.warnings += fmt::format( "Material file {} could not be loaded ({}), so its textures and colors were not loaded.\n", utf8string( p.filename() ), error );
-                else
-                {
-                    res.warnings += fmt::format( "Material file {} was not found, so its textures and colors were not loaded.\n", utf8string( p.filename() ) );
-                    missingFiles = true;
-                }
+                res.warnings += fmt::format( "Material file {} was not found, so its textures and colors were not loaded.\n", utf8string( p.filename() ) );
+                missingFiles = true;
             }
         }
 

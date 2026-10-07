@@ -35,6 +35,10 @@ struct ObjLoadSettings
 
      /// permit telemetry signal about loading
     bool telemetrySignal = true;
+
+    /// optional output: errors of the material libraries (.mtl files) that could not be loaded, e.g. not found;
+    /// filled only if some faces use a material that was not found
+    std::map<std::filesystem::path, std::string>* mtlErrors = nullptr;
 };
 
 struct NamedMesh
@@ -49,10 +53,6 @@ struct NamedMesh
     Vector<std::filesystem::path, TextureId> textureFiles;
     Vector<TextureId, FaceId> texturePerFace;
     std::optional<Color> diffuseColor;
-
-    /// errors of the material libraries (.mtl files) referenced by the file that could not be loaded, e.g. not found,
-    /// if some faces use a material that was not found; the same in all meshes of the file
-    std::map<std::filesystem::path, std::string> mtlErrors;
 
     /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf
     AffineXf3f xf;

@@ -44,19 +44,21 @@ public:
 
     // set shortcut
     // note: one action can have several keys, one key can have only one action
-    // if action already has other keys, they will be removed, so a shortcut without keys removes the action;
-    // if a key already has other action, that action loses only this key
+    // if action already has other keys, they will be removed; if a key already has other action, that action loses only this key
     MRVIEWER_API virtual void setShortcut( const Shortcut& shortcut, const ShortcutAction& action );
+
+    /// removes the action with given name and all its keys
+    MRVIEWER_API void resetShortcut( const std::string& name );
 
     /// deprecated: pass the category in (shortcut) and the rest in ShortcutAction
     [[deprecated( "use setShortcut( Shortcut, ShortcutAction )" )]]
     void setShortcut( const ShortcutKey& key, const ShortcutCommand& command )
         { setShortcut( { key, command.category }, { command.name, command.action, command.repeatable } ); }
 
-    using ShortcutList = std::vector<std::tuple<ShortcutKey, Category, std::string>>;
+    /// the shortcut of every action with all its keys, and the name of the action
+    using ShortcutList = std::vector<std::pair<Shortcut, std::string>>;
 
-    // returns cached list of sorted shortcuts (sorting by category, then by key),
-    // all keys of an action follow its first key in their order
+    // returns cached list of sorted shortcuts (sorting by category, then by the first key)
     // if this structure was changed since last call of this function - updates cache
     MRVIEWER_API const ShortcutList& getShortcutList() const;
 

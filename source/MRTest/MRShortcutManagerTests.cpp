@@ -125,11 +125,10 @@ TEST( MRViewer, ShortcutSeveralKeys )
     EXPECT_TRUE( sm.findShortcutsByName( "Unknown" ).empty() );
     EXPECT_EQ( sm.findShortcutByName( "Redo" ), redoKey );
 
-    // all keys of an action follow its first key, although Y is sorted before Z
+    // every action is listed once with all its keys, sorted by category and then by the first key
     EXPECT_EQ( sm.getShortcutList(), ( ShortcutManager::ShortcutList{
-        { undoKey, ShortcutCategory::Edit, "Undo" },
-        { redoKey, ShortcutCategory::Edit, "Redo" },
-        { redoKey2, ShortcutCategory::Edit, "Redo" } } ) );
+        { { undoKey, ShortcutCategory::Edit }, "Undo" },
+        { { { redoKey, redoKey2 }, ShortcutCategory::Edit }, "Redo" } } ) );
 }
 
 TEST( MRViewer, ShortcutSeveralKeysRemoval )
@@ -153,9 +152,12 @@ TEST( MRViewer, ShortcutSeveralKeysRemoval )
     EXPECT_FALSE( sm.processShortcut( redoKey2 ) );
     EXPECT_EQ( sm.findShortcutsByName( "Redo" ), std::vector<SK>{ otherKey } );
 
-    // no keys remove the action
-    setRedo( {} );
-    EXPECT_FALSE( sm.processShortcut( otherKey ) );
+    // resetting removes the action with all its keys
+    setRedo( { redoKey, redoKey2 } );
+    sm.resetShortcut( "Redo" );
+    sm.resetShortcut( "Unknown" );
+    EXPECT_FALSE( sm.processShortcut( redoKey ) );
+    EXPECT_FALSE( sm.processShortcut( redoKey2 ) );
     EXPECT_FALSE( sm.findShortcutByName( "Redo" ) );
     EXPECT_TRUE( sm.getShortcutList().empty() );
 
@@ -168,8 +170,8 @@ TEST( MRViewer, ShortcutSeveralKeysRemoval )
     EXPECT_EQ( redoCount, 1 );
     EXPECT_EQ( sm.findShortcutsByName( "Redo" ), std::vector<SK>{ redoKey2 } );
     EXPECT_EQ( sm.getShortcutList(), ( ShortcutManager::ShortcutList{
-        { redoKey2, ShortcutCategory::Edit, "Redo" },
-        { redoKey, ShortcutCategory::View, "Other" } } ) );
+        { { redoKey2, ShortcutCategory::Edit }, "Redo" },
+        { { redoKey, ShortcutCategory::View }, "Other" } } ) );
 
     // the action losing its last key is removed
     sm.setShortcut( { redoKey2, ShortcutCategory::View }, { "Third", [] {} } );

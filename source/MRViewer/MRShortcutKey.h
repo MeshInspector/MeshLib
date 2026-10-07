@@ -36,6 +36,8 @@ struct Shortcut
     Shortcut() = default;
     Shortcut( ShortcutKey k, ShortcutCategory c ) : keys{ k }, category( c ) {}
     Shortcut( std::vector<ShortcutKey> ks, ShortcutCategory c ) : keys( std::move( ks ) ), category( c ) {}
+
+    bool operator==( const Shortcut& ) const = default;
 };
 
 } //namespace MR

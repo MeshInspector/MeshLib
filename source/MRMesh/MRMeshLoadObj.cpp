@@ -509,35 +509,27 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
 }
 
 /// adds to `res` the materials from the libraries of an mtllib line, replacing the materials with the same names;
-/// `names` is the rest of the line: usually one file, maybe with spaces in its name, but the format allows several files separated by spaces
-Expected<MtlLibrary> addMtlLibraries( MtlLibrary res, const std::filesystem::path& dir, const std::string& names )
+/// `names` is the rest of the line: usually one file, maybe with spaces in its name, but the format allows several files separated by spaces;
+/// the libraries that cannot be loaded are skipped, the materials used from them are reported as not found
+void addMtlLibraries( MtlLibrary& res, const std::filesystem::path& dir, const std::string& names )
 {
+    std::vector<std::string> files{ names };
     std::error_code ec;
-    const auto fileExists = [&] ( const std::string& file ) { return std::filesystem::exists( dir / asU8String( file ), ec ); };
-
-    std::vector<std::string> files;
-    if ( !fileExists( names ) )
+    if ( !std::filesystem::exists( dir / asU8String( names ), ec ) )
     {
+        files.clear();
         std::istringstream iss( names );
         for ( std::string file; iss >> file; )
             files.push_back( std::move( file ) );
     }
-    if ( std::none_of( files.begin(), files.end(), fileExists ) )
-        files = { names }; // a single file, or none of the files exists
-
     for ( const auto& file : files )
     {
         auto lib = loadMtlLibrary( dir / asU8String( file ) );
         if ( !lib.has_value() )
-        {
-            return unexpected( fileExists( file ) ?
-                fmt::format( "Material file {} could not be loaded ({})", file, lib.error() ) :
-                fmt::format( "Material file {} was not found", file ) );
-        }
+            continue;
         for ( auto& [name, material] : *lib )
             res[name] = std::move( material );
     }
-    return res;
 }
 
 struct MaterialScope
@@ -605,7 +597,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const std::vector<MaterialScope>& materialScope, // all material scopes from file
     size_t minFace, size_t maxFace,       // this model faces span in `faces`, max face excluding
     const MeshLoad::ObjLoadSettings& settings,
-    const MtlLibrary* mtl ) // optional materials, if nullptr `materialScope` will be ignored
+    const MtlLibrary& mtl ) // materials from all libraries of the file
 {
     MR_TIMER;
     assert( faces.face2vert.size() == faces.face2texv.size() );
@@ -776,56 +768,67 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     assert( !materialScope.empty() );
     assert( materialScope.back().fId >= maxFace );
     size_t materialScopeId = 0;
-    while ( materialScope[materialScopeId].fId < minFace && materialScope[materialScopeId + 1].fId < minFace )
-        ++materialScopeId;
+    // moves to the last material scope beginning not after face `f`, returns true if moved
+    auto moveMaterialScope = [&] ( size_t f )
+    {
+        bool moved = false;
+        for ( ; materialScopeId + 1 < materialScope.size() && materialScope[materialScopeId + 1].fId <= f; ++materialScopeId )
+            moved = true;
+        return moved;
+    };
+    moveMaterialScope( minFace );
 
-    HashMap<std::string, TextureId> texMap;
+    // the faces get texture ids only if some material has a texture file
+    const bool anyTextureFiles = std::any_of( mtl.begin(), mtl.end(), [] ( const auto& m ) { return !m.second.diffuseTextureFile.empty(); } );
+    HashMap<std::string, TextureId> texMap; // texture file name -> its id
     TextureId currTextureId;
-    res.textureFiles.clear();
-    bool missingTextureFiles = false;
+    TextureId noTextureId; // for the faces whose material has no texture file or was not found
     bool contradictingDiffuseColors = false;
     auto addCurrentMaterial = [&]()
     {
-        if ( !mtl )
-            return;
-        auto mIt = mtl->find( materialScope[materialScopeId].mtName );
-        if ( mIt == mtl->end() )
-            return;
-        if ( !contradictingDiffuseColors )
+        const auto& mtName = materialScope[materialScopeId].mtName;
+        const auto mIt = mtl.find( mtName );
+        const MtlMaterial* material = mIt != mtl.end() ? &mIt->second : nullptr;
+        // "(null)" is written for the faces without a material, e.g. by Blender
+        if ( !material && !mtName.empty() && mtName != "(null)" &&
+            std::find( res.missingMaterials.begin(), res.missingMaterials.end(), mtName ) == res.missingMaterials.end() )
+            res.missingMaterials.push_back( mtName );
+        if ( material && !contradictingDiffuseColors )
         {
-            if ( mIt->second.diffuseColor == Vector3f::diagonal( -1.0f ) )
+            if ( material->diffuseColor == Vector3f::diagonal( -1.0f ) )
             {
                 res.diffuseColor.reset();
                 contradictingDiffuseColors = true;
             }
             else if ( !res.diffuseColor )
             {
-                res.diffuseColor = Color( mIt->second.diffuseColor );
+                res.diffuseColor = Color( material->diffuseColor );
             }
-            else if ( *res.diffuseColor != Color( mIt->second.diffuseColor ) )
+            else if ( *res.diffuseColor != Color( material->diffuseColor ) )
             {
                 res.diffuseColor.reset();
                 contradictingDiffuseColors = true;
             }
         }
-        if ( !missingTextureFiles )
+        if ( !anyTextureFiles )
+            return;
+        if ( material && !material->diffuseTextureFile.empty() )
         {
-            if ( mIt->second.diffuseTextureFile.empty() )
-            {
-                texMap.clear();
-                res.textureFiles.clear();
-                currTextureId = {};
-                missingTextureFiles = true;
-            }
-            else
-            {
-                auto [it, inserted] = texMap.insert( { mIt->second.diffuseTextureFile, res.textureFiles.endId() } );
-                currTextureId = it->second;
-                assert( currTextureId );
-                if ( inserted )
-                    res.textureFiles.push_back( dir / asU8String( mIt->second.diffuseTextureFile ) );
-            }
+            auto [it, inserted] = texMap.insert( { material->diffuseTextureFile, res.textureFiles.endId() } );
+            currTextureId = it->second;
+            if ( inserted )
+                res.textureFiles.push_back( dir / asU8String( material->diffuseTextureFile ) );
         }
+        else
+        {
+            if ( !noTextureId )
+            {
+                noTextureId = res.textureFiles.endId();
+                res.textureFiles.push_back( {} );
+            }
+            currTextureId = noTextureId;
+        }
+        assert( currTextureId );
     };
     addCurrentMaterial();
 
@@ -842,11 +845,8 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         res.texturePerFace.reserve( numTris );
     for ( size_t i = minFace; i < maxFace; ++i )
     {
-        if ( materialScope[materialScopeId].fId < i && i == materialScope[materialScopeId + 1].fId )
-        {
-            ++materialScopeId;
+        if ( moveMaterialScope( i ) )
             addCurrentMaterial();
-        }
         const auto nv = faces.numVerts( i );
         assert ( nv >= 3 );
         for ( int j = 1; j + 1 < nv; ++j )
@@ -859,10 +859,12 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         }
     }
     assert( t.size() == numTris );
-    if ( !currTextureId )
+    assert( !currTextureId || res.texturePerFace.size() == numTris );
+    if ( texMap.empty() ) // no texture files are used by this mesh
+    {
+        res.textureFiles = {};
         res.texturePerFace = {};
-    else
-        assert( res.texturePerFace.size() == numTris );
+    }
 
     if ( !reportProgress( settings.callback, 0.6f ) )
         return unexpectedOperationCanceled();
@@ -888,11 +890,11 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         }
     }
 
-    if ( !res.textureFiles.empty() )
+    if ( !texMap.empty() )
     {
         signalString += " TEX";
-        if ( res.textureFiles.size() > 1 )
-            signalString += std::to_string( res.textureFiles.size() );
+        if ( texMap.size() > 1 )
+            signalString += std::to_string( texMap.size() );
     }
     if ( settings.telemetrySignal )
         TelemetrySignal( signalString );
@@ -1036,7 +1038,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool colorChecked = false;
     bool hasColors = false;
 
-    Expected<MtlLibrary> mtl; // materials from all referenced libraries, or why one of them was not loaded
+    MtlLibrary mtl; // materials from all libraries of the file
 
     std::string parseError;
 
@@ -1070,14 +1072,13 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             numFaces += ( g.end - g.begin );
             break;
         case ObjElement::MaterialLibrary:
-            // each line of the group; after an error, no materials are used
-            for ( auto li = g.begin; li < g.end && mtl.has_value(); ++li )
+            for ( auto li = g.begin; li < g.end; ++li ) // each line of the group
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li] );
                 std::string names( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
                 boost::trim( names );
                 if ( !names.empty() )
-                    mtl = addMtlLibraries( std::move( *mtl ), dir, names );
+                    addMtlLibraries( mtl, dir, names );
             }
             break;
         default:
@@ -1289,14 +1290,12 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( mergeAllObjects || oScopes.size() <= 1 )
     {
         newSettings.callback = subprogress( settings.callback, 0.5f, 1.0f );
-        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, mtl.has_value() ? &*mtl : nullptr );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, mtl );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res.emplace_back( std::move( *meshObj ) );
         if ( oScopes.size() == 1 )
             res.back().name = std::move( oScopes.front().objName );
-        if ( !mtl.has_value() )
-            res.back().mtlError = std::move( mtl.error() );
         return res;
     }
 
@@ -1309,15 +1308,28 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         size_t minFace = oScopes[i].fId;
         size_t maxFace = i + 1 < res.size() ? oScopes[i + 1].fId : faces.size();
 
-        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, mtl.has_value() ? &*mtl : nullptr );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, mtl );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
         res[i].name = std::move( oScopes[i].objName );
-        if ( !mtl.has_value() )
-            res[i].mtlError = mtl.error();
     }
     return res;
+}
+
+/// the warning about the materials used but not found in the material libraries
+std::string missingMaterialsWarning( const std::vector<std::string>& names )
+{
+    assert( !names.empty() );
+    constexpr size_t cMaxNames = 5;
+    std::string list = names.front();
+    for ( size_t i = 1; i < std::min( names.size(), cMaxNames ); ++i )
+        list += ", " + names[i];
+    if ( names.size() > cMaxNames )
+        list += fmt::format( " and {} more", names.size() - cMaxNames );
+    if ( names.size() == 1 )
+        return fmt::format( "Material {} was not found, so its texture and color were not loaded.\n", list );
+    return fmt::format( "Materials {} were not found, so their textures and colors were not loaded.\n", list );
 }
 
 } //anonymous namespace
@@ -1391,11 +1403,16 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
         int holesCount = 0;
         LoadedObjects res;
 
-        // true if the material library was not loaded or a texture file is missing
+        // true if materials or texture files were not found
         [[maybe_unused]] bool missingFiles = false;
-        if ( !results.empty() && !results.front().mtlError.empty() ) // the same in all results
+        std::vector<std::string> missingMaterials; // of all objects, each once
+        for ( const auto& result : results )
+            for ( const auto& name : result.missingMaterials )
+                if ( std::find( missingMaterials.begin(), missingMaterials.end(), name ) == missingMaterials.end() )
+                    missingMaterials.push_back( name );
+        if ( !missingMaterials.empty() )
         {
-            res.warnings += results.front().mtlError + ", so textures and material colors were not loaded.\n";
+            res.warnings += missingMaterialsWarning( missingMaterials );
             missingFiles = true;
         }
         std::vector<std::filesystem::path> failedTextureFiles; // to report each texture file once, even if several objects use it
@@ -1418,59 +1435,50 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
 
             objectMesh->setUVCoords( std::move( result.uvCoords ) );
 
-            int numEmptyTexture = 0;
-            for ( const auto& p : result.textureFiles )
+            // the faces without a texture and the faces of the texture files that cannot be loaded get a transparent texture,
+            // which shows the color of the object; it has the size of the first loaded texture, since the renderer needs equal sizes
+            Vector<MeshTexture, TextureId> textures( result.textureFiles.size() );
+            Vector2i resolution;
+            for ( auto t = textures.beginId(); t < textures.endId(); ++t )
             {
+                const auto& p = result.textureFiles[t];
                 if ( p.empty() )
-                    numEmptyTexture++;
-            }
-
-            if ( numEmptyTexture != 0 && numEmptyTexture != result.textureFiles.size() )
-            {
-                res.warnings += "object has material with and without texture\n";
-            }
-            else if ( numEmptyTexture == 0 && result.textureFiles.size() != 0 )
-            {
-                bool crashTextureLoad = false;
-                for ( const auto& p : result.textureFiles )
+                    continue;
+                auto image = ImageLoad::fromAnySupportedFormat( p );
+                if ( image.has_value() )
                 {
-                    auto image = ImageLoad::fromAnySupportedFormat( p );
-                    if ( image.has_value() )
-                    {
-                        MeshTexture meshTexture;
-                        meshTexture.resolution = std::move( image.value().resolution );
-                        meshTexture.pixels = std::move( image.value().pixels );
-                        meshTexture.filter = FilterType::Linear;
-                        meshTexture.wrap = WrapType::Clamp;
-                        objectMesh->addTexture( std::move( meshTexture ) );
-                    }
-                    else
-                    {
-                        crashTextureLoad = true;
-                        objectMesh->setTextures( {} );
-                        if ( std::find( failedTextureFiles.begin(), failedTextureFiles.end(), p ) == failedTextureFiles.end() )
-                        {
-                            failedTextureFiles.push_back( p );
-                            std::error_code ec;
-                            if ( std::filesystem::exists( p, ec ) )
-                            {
-                                res.warnings += fmt::format( "Texture file {} could not be loaded ({}), so textures were not loaded.\n",
-                                    utf8string( p.filename() ), image.error() );
-                            }
-                            else
-                            {
-                                res.warnings += fmt::format( "Texture file {} was not found, so textures were not loaded.\n", utf8string( p.filename() ) );
-                                missingFiles = true;
-                            }
-                        }
-                        break;
-                    }
+                    if ( resolution == Vector2i{} )
+                        resolution = image->resolution;
+                    textures[t].resolution = image->resolution;
+                    textures[t].pixels = std::move( image->pixels );
+                    continue;
                 }
-                if ( !crashTextureLoad )
+                if ( std::find( failedTextureFiles.begin(), failedTextureFiles.end(), p ) != failedTextureFiles.end() )
+                    continue;
+                failedTextureFiles.push_back( p );
+                std::error_code ec;
+                if ( std::filesystem::exists( p, ec ) )
+                    res.warnings += fmt::format( "Texture file {} could not be loaded ({}).\n", utf8string( p.filename() ), image.error() );
+                else
                 {
-                    objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
-                    objectMesh->setTexturePerFace( std::move( result.texturePerFace ) );
+                    res.warnings += fmt::format( "Texture file {} was not found.\n", utf8string( p.filename() ) );
+                    missingFiles = true;
                 }
+            }
+            if ( resolution != Vector2i{} ) // some texture file is loaded
+            {
+                for ( auto& texture : textures )
+                {
+                    if ( texture.pixels.empty() )
+                    {
+                        texture.resolution = resolution;
+                        texture.pixels.assign( size_t( resolution.x ) * resolution.y, Color( 0, 0, 0, 0 ) );
+                    }
+                    texture.filter = FilterType::Linear;
+                }
+                objectMesh->setTextures( std::move( textures ) );
+                objectMesh->setTexturePerFace( std::move( result.texturePerFace ) );
+                objectMesh->setVisualizeProperty( true, MeshVisualizePropertyType::Texture, ViewportMask::all() );
             }
 
             if ( !result.colors.empty() )

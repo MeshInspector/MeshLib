@@ -1470,8 +1470,9 @@ bool Viewer::loadFiles( const std::vector<std::filesystem::path>& filesList, con
             if ( result.warningSummary.find( "were duplicated" ) != std::string::npos ||
                 result.warningSummary.find( "were skipped" ) != std::string::npos )
                 mask |= NotificationTags::ImplicitChanges;
-            // e.g. missing textures: show it even if the summary also has a recommendation, which is hidden by default
-            if ( result.warningSummary.find( "were not loaded" ) != std::string::npos )
+            // e.g. missing materials or textures: show it even if the summary also has a recommendation, which is hidden by default
+            if ( result.warningSummary.find( "not found" ) != std::string::npos ||
+                result.warningSummary.find( "could not be loaded" ) != std::string::npos )
                 mask |= NotificationTags::Important;
             if ( mask == NotificationTags::None )
                 mask = NotificationTags::ImplicitChanges;

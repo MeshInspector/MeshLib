@@ -6,6 +6,7 @@
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRColor.h>
 #include <MRMesh/MRImage.h>
+#include <MRMesh/MRImageLoad.h>
 #include <MRMesh/MRImageSave.h>
 #include <MRMesh/MRIOFormatsRegistry.h>
 #include <MRMesh/MRObjectMesh.h>
@@ -289,14 +290,15 @@ TEST(MRMesh, LoadObjTabIndented)
     ASSERT_EQ( named.textureFiles.size(), 1 );
     EXPECT_EQ( named.textureFiles.front().filename(), "tex1.jpg" );
     ASSERT_TRUE( named.diffuseColor.has_value() );
-    EXPECT_TRUE( named.mtlError.empty() );
+    EXPECT_TRUE( named.missingMaterials.empty() );
 }
 
 namespace
 {
 
-// two closed tetrahedra (no holes, so no warnings about them) with uv-coordinates and material Mat1 from the given library
-std::string twoTetrahedraObj( const std::string& mtlFile )
+// two closed tetrahedra (no holes, so no warnings about them) with uv-coordinates,
+// the first one with material Mat1 and the second one with `material2`, from the given library
+std::string twoTetrahedraObj( const std::string& mtlFile, const std::string& material2 = "Mat1" )
 {
     return
         "mtllib " + mtlFile + "\n"
@@ -323,6 +325,7 @@ std::string twoTetrahedraObj( const std::string& mtlFile )
         "vt 1 0\n"
         "vt 0 1\n"
         "vt 1 1\n"
+        "usemtl " + material2 + "\n"
         "f 5/5 7/7 6/6\n"
         "f 5/5 6/6 8/8\n"
         "f 5/5 8/8 7/7\n"
@@ -333,6 +336,13 @@ void writeTextFile( const std::filesystem::path& path, const std::string& text )
 {
     std::ofstream out( path, std::ios::binary );
     out << text;
+}
+
+// the color of a loaded mesh object, from its materials
+Color frontColor( const std::shared_ptr<Object>& obj )
+{
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( obj );
+    return objMesh ? objMesh->getFrontColor( false ) : Color();
 }
 
 // added after the warnings about missing files
@@ -373,21 +383,65 @@ TEST(MRMesh, LoadObjMissingMtl)
     ASSERT_EQ( meshes->size(), 2 );
     for ( const auto& m : *meshes )
     {
-        EXPECT_EQ( m.mtlError, "Material file model.mtl was not found" );
+        EXPECT_EQ( m.missingMaterials, std::vector<std::string>{ "Mat1" } );
     }
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( res->objs.size(), 2 );
     // reported once for both objects
-    EXPECT_EQ( res->warnings, "Material file model.mtl was not found, so textures and material colors were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Material Mat1 was not found, so its texture and color were not loaded.\n" + cWebAdvice );
+}
+
+TEST(MRMesh, LoadObjMissingMaterialNames)
+{
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj",
+        "mtllib model.mtl\n"
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "v 2 0 0\n"
+        "v 3 0 0\n"
+        "v 2 1 0\n"
+        "v 2 0 1\n"
+        "usemtl M1\n"
+        "f 1 3 2\n"
+        "usemtl M2\n"
+        "f 1 2 4\n"
+        "usemtl (null)\n" // the faces without a material, e.g. from Blender
+        "f 1 4 3\n"
+        "usemtl M3\n"
+        "f 2 3 4\n"
+        "usemtl M4\n"
+        "f 5 7 6\n"
+        "usemtl M5\n"
+        "f 5 6 8\n"
+        "usemtl M6\n"
+        "f 5 8 7\n"
+        "usemtl M2\n"
+        "f 6 7 8\n" );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "Materials M1, M2, M3, M4, M5 and 1 more were not found, so their textures and colors were not loaded.\n" + cWebAdvice );
 }
 
 TEST(MRMesh, LoadObjEmptyMtl)
 {
-    // some exporters write an empty .mtl file: there are no materials to lose
+    // some exporters write an empty .mtl file
     UniqueTemporaryFolder dir;
-    writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
+    writeTextFile( dir / "model.obj",
+        "mtllib model.mtl\n"
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "f 1 3 2\n"
+        "f 1 2 4\n"
+        "f 1 4 3\n"
+        "f 2 3 4\n" );
     writeTextFile( dir / "model.mtl", "" );
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
@@ -399,11 +453,11 @@ TEST(MRMesh, LoadObjSeveralMtl)
 {
     UniqueTemporaryFolder dir;
     writeTextFile( dir / "a.mtl", "newmtl Mat1\nKd 1 0 0\n" );
-    writeTextFile( dir / "b.mtl", "newmtl Other\nKd 0 1 0\n" );
+    writeTextFile( dir / "b.mtl", "newmtl Mat2\nKd 0 1 0\n" );
     const std::string objs[] = {
-        twoTetrahedraObj( "a.mtl b.mtl" ), // several libraries in one line, as the format allows
-        twoTetrahedraObj( "a.mtl\nmtllib b.mtl" ), // in consecutive lines
-        twoTetrahedraObj( "a.mtl" ) + "mtllib b.mtl\n", // or in separate lines
+        twoTetrahedraObj( "a.mtl b.mtl", "Mat2" ), // several libraries in one line, as the format allows
+        twoTetrahedraObj( "a.mtl\nmtllib b.mtl", "Mat2" ), // in consecutive lines
+        twoTetrahedraObj( "a.mtl", "Mat2" ) + "mtllib b.mtl\n", // or in separate lines
     };
     for ( const auto& obj : objs )
     {
@@ -411,18 +465,19 @@ TEST(MRMesh, LoadObjSeveralMtl)
         auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
         ASSERT_TRUE( res.has_value() );
         EXPECT_EQ( res->warnings, "" );
-        auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
-        ASSERT_TRUE( objMesh );
-        // the used material is from the first library
-        EXPECT_EQ( objMesh->getFrontColor( false ), Color::red() );
+        ASSERT_EQ( res->objs.size(), 2 );
+        EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
+        EXPECT_EQ( frontColor( res->objs[1] ), Color::green() );
     }
 
-    // the missing one is named
+    // the materials from the other library are kept
     std::filesystem::remove( dir / "b.mtl" );
-    writeTextFile( dir / "model.obj", twoTetrahedraObj( "a.mtl b.mtl" ) );
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "a.mtl b.mtl", "Mat2" ) );
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings, "Material file b.mtl was not found, so textures and material colors were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Material Mat2 was not found, so its texture and color were not loaded.\n" + cWebAdvice );
+    ASSERT_EQ( res->objs.size(), 2 );
+    EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
 }
 
 TEST(MRMesh, LoadObjMtlNameWithSpaces)
@@ -433,7 +488,7 @@ TEST(MRMesh, LoadObjMtlNameWithSpaces)
 
     auto res = MeshLoad::loadObjectFromObj( dir / "my model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings, "Material file my model.mtl was not found, so textures and material colors were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Material Mat1 was not found, so its texture and color were not loaded.\n" + cWebAdvice );
 
     writeTextFile( dir / "my model.mtl", "newmtl Mat1\nKd 1 0 0\n" );
     res = MeshLoad::loadObjectFromObj( dir / "my model.obj" );
@@ -476,7 +531,7 @@ TEST(MRMesh, LoadObjMissingTexture)
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
     // reported once although both objects use this texture
-    EXPECT_EQ( res->warnings, "Texture file texture.png was not found, so textures were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Texture file texture.png was not found.\n" + cWebAdvice );
     ASSERT_EQ( res->objs.size(), 2 );
     for ( const auto& obj : res->objs )
     {
@@ -496,7 +551,88 @@ TEST(MRMesh, LoadObjUnsupportedTexture)
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
     // no web advice: opening the files from a ZIP archive would not help
-    EXPECT_EQ( res->warnings, "Texture file texture.txt could not be loaded (" + stringUnsupportedFileExtension() + "), so textures were not loaded.\n" );
+    EXPECT_EQ( res->warnings, "Texture file texture.txt could not be loaded (" + stringUnsupportedFileExtension() + ").\n" );
+}
+
+TEST(MRMesh, LoadObjPartialTextures)
+{
+    if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )
+    {
+        GTEST_SKIP() << "PNG format is not supported in this build";
+    }
+
+    // one tetrahedron: a face with a missing material, two faces with a texture and a face with a material without one
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj",
+        "mtllib model.mtl\n"
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "vt 0 0\n"
+        "vt 1 0\n"
+        "vt 0 1\n"
+        "vt 1 1\n"
+        "usemtl Missing\n"
+        "f 1/1 3/3 2/2\n"
+        "usemtl Textured\n"
+        "f 1/1 2/2 4/4\n"
+        "f 1/1 4/4 3/3\n"
+        "usemtl Plain\n"
+        "f 2/2 3/3 4/4\n" );
+    writeTextFile( dir / "model.mtl", "newmtl Textured\nmap_Kd texture.png\nnewmtl Plain\nKd 0 0 1\n" );
+    const Image image{ .pixels = { Color::red(), Color::green(), Color::blue(), Color::white() }, .resolution = { 2, 2 } };
+    ASSERT_TRUE( ImageSave::toAnySupportedFormat( image, dir / "texture.png" ).has_value() );
+    const auto texture = ImageLoad::fromAnySupportedFormat( dir / "texture.png" );
+    ASSERT_TRUE( texture.has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "Material Missing was not found, so its texture and color were not loaded.\n" + cWebAdvice );
+    ASSERT_EQ( res->objs.size(), 1 );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
+    ASSERT_TRUE( objMesh );
+
+    // the faces without a texture get a transparent one of the same size, so that the object color is shown
+    const auto& textures = objMesh->getTextures();
+    ASSERT_EQ( textures.size(), 2 );
+    EXPECT_EQ( textures[TextureId( 0 )].pixels, std::vector<Color>( 4, Color( 0, 0, 0, 0 ) ) );
+    EXPECT_EQ( textures[TextureId( 1 )].pixels, texture->pixels );
+    EXPECT_EQ( objMesh->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 1 ), TextureId( 1 ), TextureId( 0 ) } ) );
+    EXPECT_TRUE( objMesh->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) );
+
+    // MeshLoad::fromObj loads the first texture file
+    MeshTexture meshTexture;
+    auto mesh = MeshLoad::fromObj( dir / "model.obj", { .texture = &meshTexture } );
+    ASSERT_TRUE( mesh.has_value() );
+    EXPECT_EQ( meshTexture.pixels, texture->pixels );
+}
+
+TEST(MRMesh, LoadObjMaterialPerObject)
+{
+    if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )
+    {
+        GTEST_SKIP() << "PNG format is not supported in this build";
+    }
+
+    // usemtl of the second object comes right before its faces, as usual: only its own material is used
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl", "Mat2" ) );
+    writeTextFile( dir / "model.mtl", "newmtl Mat1\nKd 0 0 1\nnewmtl Mat2\nKd 1 0 0\nmap_Kd texture.png\n" );
+    const Image image{ .pixels = { Color::red(), Color::green(), Color::blue(), Color::white() }, .resolution = { 2, 2 } };
+    ASSERT_TRUE( ImageSave::toAnySupportedFormat( image, dir / "texture.png" ).has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 2 );
+    auto objMesh1 = std::dynamic_pointer_cast<ObjectMesh>( res->objs[0] );
+    auto objMesh2 = std::dynamic_pointer_cast<ObjectMesh>( res->objs[1] );
+    ASSERT_TRUE( objMesh1 && objMesh2 );
+    EXPECT_EQ( objMesh1->getFrontColor( false ), Color::blue() );
+    EXPECT_TRUE( objMesh1->getTextures().empty() );
+    EXPECT_EQ( objMesh2->getFrontColor( false ), Color::red() );
+    EXPECT_EQ( objMesh2->getTextures().size(), 1 );
 }
 
 TEST(MRMesh, LoadObjUtf8MtlName)

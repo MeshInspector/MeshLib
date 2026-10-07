@@ -12,14 +12,21 @@
 namespace MR
 {
 
-PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals /*= true */, const VertBitSet* verts )
+PointCloud meshToPointCloud( const Mesh& mesh, VertNormalsMode normals, const VertBitSet* verts )
 {
     PointCloud res;
     res.points = mesh.points;
     res.validPoints = mesh.topology.getVertIds( verts );
-    if(saveNormals)
+    if ( normals == VertNormalsMode::AreaWeighted )
         res.normals = computePerVertNormals( mesh );
+    else if ( normals == VertNormalsMode::AngleWeighted )
+        res.normals = computePerVertPseudoNormals( mesh );
     return res;
+}
+
+PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals, const VertBitSet* verts )
+{
+    return meshToPointCloud( mesh, saveNormals ? VertNormalsMode::AreaWeighted : VertNormalsMode::No, verts );
 }
 
 namespace
@@ -189,9 +196,12 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 
 } // anonymous namespace
 
-Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb )
+Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, VertNormalsMode normals, const ProgressCallback& cb )
 {
     MR_TIMER;
+    const bool saveNormals = normals != VertNormalsMode::No;
+    // the normals of the samples are Mesh::pseudonormal there: of the face inside it, of the edge on it
+    const bool pseudonormals = normals == VertNormalsMode::AngleWeighted;
     if ( !( radius > 0 ) )
         return unexpected( "meshToDensePointCloud: radius must be positive" );
     const float radiusSq = radius * radius;
@@ -303,7 +313,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
     res.validPoints.resize( numPoints, true );
     if ( saveNormals )
     {
-        res.normals = computePerVertNormals( mesh );
+        res.normals = pseudonormals ? computePerVertPseudoNormals( mesh ) : computePerVertNormals( mesh );
         res.normals.resizeNoInit( numPoints );
     }
 
@@ -314,7 +324,9 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             return;
         const EdgeId e = ue;
         Vector3f nOrg, nDest;
-        if ( saveNormals )
+        if ( pseudonormals )
+            nOrg = nDest = mesh.pseudonormal( ue );
+        else if ( saveNormals )
         {
             nOrg = res.normals[ topology.org( e ) ];
             nDest = res.normals[ topology.dest( e ) ];
@@ -325,7 +337,7 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             const float t = float( i ) / divs;
             res.points[v] = mesh.edgePoint( e, t );
             if ( saveNormals )
-                res.normals[v] = ( ( 1 - t ) * nOrg + t * nDest ).normalized();
+                res.normals[v] = pseudonormals ? nOrg : ( ( 1 - t ) * nOrg + t * nDest ).normalized();
         }
     }, edgePointsCb ) )
         return unexpectedOperationCanceled();
@@ -337,8 +349,14 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         const auto & l = layouts[f];
         Vector3f v[3];
         mesh.getTriPoints( f, v );
-        Vector3f n[3];
-        if ( saveNormals )
+        Vector3f n[3], fn; // vertex normals to interpolate, or the face normal
+        EdgeId es[3];
+        if ( pseudonormals )
+        {
+            fn = mesh.normal( f );
+            topology.getTriEdges( f, es );
+        }
+        else if ( saveNormals )
         {
             const auto vs = topology.getTriVerts( f );
             for ( int i = 0; i < 3; ++i )
@@ -353,7 +371,9 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
                 {
                     const float a = float( i ) / divs, b = float( j ) / divs;
                     res.points[p] = v[0] + a * ( v[1] - v[0] ) + b * ( v[2] - v[0] );
-                    if ( saveNormals )
+                    if ( pseudonormals )
+                        res.normals[p] = fn;
+                    else if ( saveNormals )
                         res.normals[p] = ( ( 1 - a - b ) * n[0] + a * n[1] + b * n[2] ).normalized();
                 }
             return;
@@ -371,7 +391,9 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
             {
                 const float g = float( j ) / divs;
                 res.points[p] = rowOrg + g * ( rowDest - rowOrg );
-                if ( saveNormals )
+                if ( pseudonormals ) // the ends of a row are on the edges ( bk, bi ) and ( bj, bk )
+                    res.normals[p] = j == 0 ? mesh.pseudonormal( es[bk].undirected() ) : j == divs ? mesh.pseudonormal( es[bj].undirected() ) : fn;
+                else if ( saveNormals )
                     res.normals[p] = ( ( 1 - hf ) * ( 1 - g ) * n[bi]
                         + ( 1 - hf ) * g * n[bj] + hf * n[bk] ).normalized();
             }
@@ -380,6 +402,11 @@ Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bo
         return unexpectedOperationCanceled();
 
     return res;
+}
+
+Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb )
+{
+    return meshToDensePointCloud( mp, radius, saveNormals ? VertNormalsMode::AreaWeighted : VertNormalsMode::No, cb );
 }
 
 }

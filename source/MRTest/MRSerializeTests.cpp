@@ -4,6 +4,7 @@
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRDistanceMeasurementObject.h"
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
@@ -164,6 +165,52 @@ TEST( MRMesh, SerializeSharedObjectMesh )
     EXPECT_EQ( m1->meshPtr()->topology.numValidFaces(), 12 );
     // meshes are shared among two objects
     EXPECT_EQ( m0->meshPtr(), m1->meshPtr() );
+}
+
+// the distance mode (e.g. the distance along X only) must survive saving and loading a scene
+TEST( MRMesh, SerializeDistanceMeasurementMode )
+{
+    using Mode = DistanceMeasurementObject::DistanceMode;
+    const std::pair<Mode, float> modesAndDistances[] =
+    {
+        { Mode::euclidean, 13.f },
+        { Mode::euclideanWithSignedDeltasPerAxis, 13.f },
+        { Mode::euclideanWithAbsoluteDeltasPerAxis, 13.f },
+        { Mode::xAbsolute, 3.f },
+        { Mode::yAbsolute, 4.f },
+        { Mode::zAbsolute, 12.f },
+    };
+
+    Object o;
+    o.setName( "root" );
+    for ( const auto& [mode, distance] : modesAndDistances )
+    {
+        auto dm = std::make_shared<DistanceMeasurementObject>();
+        dm->setName( "distance" + std::to_string( int( mode ) ) );
+        dm->setLocalPoint( { 1.f, 2.f, 3.f } );
+        dm->setLocalDelta( { 3.f, -4.f, 12.f } );
+        dm->setDistanceMode( mode );
+        EXPECT_FLOAT_EQ( dm->computeDistance(), distance );
+        o.addChild( dm );
+    }
+
+    UniqueTemporaryFolder f;
+    auto mruPath = f / "distances.mru";
+    auto s = serializeObjectTree( o, mruPath );
+    EXPECT_TRUE( s.has_value() ) << ( s.has_value() ? "" : s.error() );
+    auto l = loadSceneFromAnySupportedFormat( mruPath );
+    ASSERT_TRUE( l.has_value() ) << l.error();
+    ASSERT_TRUE( l->obj );
+    EXPECT_TRUE( l->warnings.empty() );
+    ASSERT_EQ( l->obj->children().size(), std::size( modesAndDistances ) );
+    for ( std::size_t i = 0; i < std::size( modesAndDistances ); ++i )
+    {
+        const auto& [mode, distance] = modesAndDistances[i];
+        auto dm = l->obj->children()[i]->asType<DistanceMeasurementObject>();
+        ASSERT_TRUE( dm );
+        EXPECT_EQ( dm->getDistanceMode(), mode );
+        EXPECT_FLOAT_EQ( dm->computeDistance(), distance );
+    }
 }
 
 } //namespace MR

@@ -4,7 +4,7 @@ from helper import *
 
 def test_point_cloud_triangulation():
     torusMesh = mrmesh.makeTorus(2, 1, 32, 32, None)
-    torusPointCloud = mrmesh.meshToPointCloud(torusMesh, True, None)
+    torusPointCloud = mrmesh.meshToPointCloud(torusMesh, mrmesh.VertNormalsMode.AreaWeighted, None)
 
     params = mrmesh.TriangulationParameters()
     restored = mrmesh.triangulatePointCloud(torusPointCloud, params)
@@ -15,7 +15,7 @@ def test_point_cloud_triangulation():
 
 def test_create_normals():
     torusMesh = mrmesh.makeTorus(2, 1, 32, 32, None)
-    torusPointCloud = mrmesh.meshToPointCloud(torusMesh, False, None)
+    torusPointCloud = mrmesh.meshToPointCloud(torusMesh, mrmesh.VertNormalsMode.No, None)
     settings = mrmesh.TriangulationHelpersSettings()
     settings.numNeis = 16
 

@@ -73,7 +73,7 @@ runs:
         -a='${{ inputs.pytest_args }}'
 
     - name: Python Regression Tests (Windows)
-      if: ${{ runner.os == 'Windows' }}
+      if: ${{ runner.os == 'Windows' && inputs.build_config != 'Debug' }}
       shell: powershell
       working-directory: source\${{ inputs.build_arch }}\${{ inputs.build_config }}
       run: >
@@ -81,6 +81,40 @@ runs:
         -d '..\test_regression'
         -s ${{ inputs.smoke }}
         -a='${{ inputs.pytest_args }}'
+
+    # cdb follows the py launcher's child interpreters (-o) and, on any break,
+    # reads "~*kv" then "q" from stdin, so a crash prints every thread's stack.
+    # A run still alive after ten minutes is broken into with DebugBreakProcess,
+    # which yields the same stacks for a hang.
+    - name: Python Regression Tests (Windows, Debug, under cdb)
+      if: ${{ runner.os == 'Windows' && inputs.build_config == 'Debug' }}
+      shell: pwsh
+      working-directory: source\${{ inputs.build_arch }}\${{ inputs.build_config }}
+      run: |
+        $arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
+        $cdb = "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\$arch\cdb.exe"
+        if (-not (Test-Path $cdb)) { throw "cdb.exe not found: $cdb" }
+        $onBreak = Join-Path $env:RUNNER_TEMP 'cdb-on-break.txt'
+        Set-Content -Path $onBreak -Value "~*kv`nq"
+        $cdbArgs = @(
+          '-g', '-G', '-o',
+          'py', '-3', '..\..\..\scripts\run_python_test_script.py',
+          '-d', '..\test_regression',
+          '-s', '${{ inputs.smoke }}',
+          "-a=${{ inputs.pytest_args }}"
+        )
+        $run = Start-Process -FilePath $cdb -ArgumentList $cdbArgs -NoNewWindow -PassThru -RedirectStandardInput $onBreak
+        if (-not $run.WaitForExit(600000)) {
+          Write-Host '::warning::regression run still alive after 10 minutes; breaking into every python process for stacks'
+          Add-Type -Namespace Win32 -Name Kernel32 -MemberDefinition '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool DebugBreakProcess(System.IntPtr hProcess);'
+          foreach ($python in Get-Process -Name python -ErrorAction SilentlyContinue) {
+            $ok = [Win32.Kernel32]::DebugBreakProcess($python.Handle)
+            Write-Host "DebugBreakProcess(pid $($python.Id)): $ok"
+          }
+          if (-not $run.WaitForExit(120000)) { Stop-Process -Id $run.Id -Force }
+          exit 1
+        }
+        exit $run.ExitCode
 
     - name: Configure AWS Credentials
       if: ${{ fromJSON( inputs.upload_test_artifacts ) && !cancelled() }}

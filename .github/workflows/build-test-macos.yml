@@ -55,6 +55,7 @@ jobs:
           - arch: x64
             config: Release
             compiler: AppleClang
+            llvm-keg-version: 22.1.8_2
             # https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
             runner: macos-15-intel # github hosted
             instance: macos-15-intel
@@ -63,6 +64,7 @@ jobs:
           - arch: arm64
             config: Release
             compiler: AppleClang
+            llvm-keg-version: 22.1.8_2
           - arch: arm64
             config: Release
             lib-source: vcpkg
@@ -80,6 +82,7 @@ jobs:
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
+            llvm-keg-version: 22.1.8_2
             cxx-compiler-template: LLVM_PREFIX/bin/clang++
             c-compiler-template: LLVM_PREFIX/bin/clang
             runner: [ self-hosted, macos, arm64, build ] #  any macos version
@@ -107,7 +110,7 @@ jobs:
         id: compilers
         run: |
           BREW_PREFIX=$(brew --prefix)
-          LLVM_PREFIX=${BREW_PREFIX}/Cellar/llvm-pgo/22.1.8_2
+          LLVM_PREFIX=${BREW_PREFIX}/Cellar/llvm-pgo/${{ matrix.llvm-keg-version }}
           echo "LLVM_PREFIX=$LLVM_PREFIX" >> $GITHUB_ENV
           
           CXX=/usr/bin/clang++
@@ -206,7 +209,7 @@ jobs:
           # Shared with pip-build.yml's macOS section where the two also match.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.brew-hash.outputs.brew-hash }}
+          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.brew-hash.outputs.brew-hash }}
 
       - name: Create virtualenv
         run: |

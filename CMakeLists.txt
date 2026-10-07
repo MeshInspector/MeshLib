@@ -27,6 +27,7 @@ project(MeshLib CXX)
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
 
+# Link with lld to fold identical functions (GNU ld has no ICF)
 IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)

@@ -90,6 +90,12 @@ TEST( MRMesh, ICPCubeBigTriangles )
     EXPECT_GT( icp.getFlt2RefPairs().vec.size(), 100 );
     EXPECT_GT( icp.getRef2FltPairs().vec.size(), 100 );
 
+    // only the vertices if non-vertex samples are not allowed
+    ICP icpVerts( cube, cube, xf, AffineXf3f(), VertBitSet{}, VertBitSet{} );
+    icpVerts.samplePoints( 0.1f, false );
+    EXPECT_EQ( icpVerts.getFlt2RefPairs().vec.size(), 8 );
+    EXPECT_EQ( icpVerts.getRef2FltPairs().vec.size(), 8 );
+
     icp.setParams( { .method = ICPMethod::PointToPlane, .iterLimit = 20 } );
     const auto newXf = icp.calculateTransformation();
     EXPECT_LT( ( newXf.A - Matrix3f::identity() ).norm(), 1e-5f );

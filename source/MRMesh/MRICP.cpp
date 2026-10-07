@@ -56,11 +56,11 @@ size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
 
 /// returns grid samples of the object; for a mesh with triangles too big for the sampling, the samples are taken
 /// from its dense point cloud returned in (cloud), with the normals interpolated from the vertex pseudonormals as MeshOrPoints::normals() returns
-static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, std::shared_ptr<PointCloud> & cloud )
+static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, bool nonVertexSamples, std::shared_ptr<PointCloud> & cloud )
 {
     MR_TIMER;
     cloud.reset();
-    const auto mp = obj.asMeshPart();
+    const auto mp = nonVertexSamples ? obj.asMeshPart() : nullptr;
     if ( !mp || !( samplingVoxelSize > 0 ) || isCoveredByVertices( *mp, samplingVoxelSize / 2 ) )
         return *obj.pointsGridSampling( samplingVoxelSize );
 
@@ -144,9 +144,9 @@ void ICP::setFltSamples( const VertBitSet& fltSamples )
     setupPairs( flt2refPairs_, fltSamples, flt_.obj.weights() );
 }
 
-void ICP::sampleFltPoints( float samplingVoxelSize )
+void ICP::sampleFltPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setupPairs( flt2refPairs_, gridSamples( flt_.obj, samplingVoxelSize, fltSamplesCloud_ ), {} );
+    setupPairs( flt2refPairs_, gridSamples( flt_.obj, samplingVoxelSize, nonVertexSamples, fltSamplesCloud_ ), {} );
 }
 
 void ICP::setRefSamples( const VertBitSet& refSamples )
@@ -155,9 +155,9 @@ void ICP::setRefSamples( const VertBitSet& refSamples )
     setupPairs( ref2fltPairs_, refSamples, ref_.obj.weights() );
 }
 
-void ICP::sampleRefPoints( float samplingVoxelSize )
+void ICP::sampleRefPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setupPairs( ref2fltPairs_, gridSamples( ref_.obj, samplingVoxelSize, refSamplesCloud_ ), {} );
+    setupPairs( ref2fltPairs_, gridSamples( ref_.obj, samplingVoxelSize, nonVertexSamples, refSamplesCloud_ ), {} );
 }
 
 void ICP::updatePointPairs()

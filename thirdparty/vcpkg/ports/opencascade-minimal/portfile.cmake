@@ -11,6 +11,7 @@ vcpkg_from_github(
         remove-vcpkg-enabling.patch
         csf-redifinition.patch
         trim-xcaf-visualization.patch
+        pch-build-interface.patch
         windows-static-toolkits.patch
         type-registry-lifetime.patch
 )

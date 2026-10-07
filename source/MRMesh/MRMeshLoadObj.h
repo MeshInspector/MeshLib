@@ -50,11 +50,8 @@ struct NamedMesh
     Vector<TextureId, FaceId> texturePerFace;
     std::optional<Color> diffuseColor;
 
-    /// names of the materials used by the mesh but not found in its material libraries (.mtl files)
-    std::vector<std::string> missingMaterials;
-
-    /// errors of the material libraries (.mtl files) referenced by the file that could not be loaded, e.g. not found;
-    /// the same in all meshes of the file
+    /// errors of the material libraries (.mtl files) referenced by the file that could not be loaded, e.g. not found,
+    /// if some faces use a material that was not found; the same in all meshes of the file
     std::map<std::filesystem::path, std::string> mtlErrors;
 
     /// transform of the loaded mesh, not identity only if ObjLoadSettings.customXf

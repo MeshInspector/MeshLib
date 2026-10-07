@@ -798,10 +798,6 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
         const auto& mtName = materialScope[materialScopeId].mtName;
         const auto mIt = mtl->find( mtName );
         const MtlMaterial* material = mIt != mtl->end() ? &mIt->second : nullptr;
-        // "(null)" is written for the faces without a material, e.g. by Blender
-        if ( !material && !mtName.empty() && mtName != "(null)" &&
-            std::find( res.missingMaterials.begin(), res.missingMaterials.end(), mtName ) == res.missingMaterials.end() )
-            res.missingMaterials.push_back( mtName );
         if ( material && !contradictingDiffuseColors )
         {
             if ( material->diffuseColor == Vector3f::diagonal( -1.0f ) )
@@ -1298,6 +1294,12 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     // put sentinel at the end
     mScopes.push_back( { .fId = faces.size() } );
 
+    // the library errors matter only if some faces use a material not found;
+    // "(null)" is written for the faces without a material, e.g. by Blender
+    if ( std::none_of( mScopes.begin(), mScopes.end(), [&] ( const MaterialScope& s )
+        { return !s.mtName.empty() && s.mtName != "(null)" && mtl.find( s.mtName ) == mtl.end(); } ) )
+        mtlErrors.clear();
+
     auto newSettings = settings;
     std::vector<MeshLoad::NamedMesh> res;
     if ( mergeAllObjects || oScopes.size() <= 1 )
@@ -1330,21 +1332,6 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         res[i].mtlErrors = mtlErrors;
     }
     return res;
-}
-
-/// the warning about the materials used but not found in the material libraries
-std::string missingMaterialsWarning( const std::vector<std::string>& names )
-{
-    assert( !names.empty() );
-    constexpr size_t cMaxNames = 5;
-    std::string list = names.front();
-    for ( size_t i = 1; i < std::min( names.size(), cMaxNames ); ++i )
-        list += ", " + names[i];
-    if ( names.size() > cMaxNames )
-        list += fmt::format( " and {} more", names.size() - cMaxNames );
-    if ( names.size() == 1 )
-        return fmt::format( "Material {} was not found, so its texture and color were not loaded.\n", list );
-    return fmt::format( "Materials {} were not found, so their textures and colors were not loaded.\n", list );
 }
 
 } //anonymous namespace
@@ -1420,30 +1407,19 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
 
         // true if material libraries or texture files were not found
         [[maybe_unused]] bool missingFiles = false;
-        std::vector<std::string> missingMaterials; // of all objects, each once
-        for ( const auto& result : results )
-            for ( const auto& name : result.missingMaterials )
-                if ( std::find( missingMaterials.begin(), missingMaterials.end(), name ) == missingMaterials.end() )
-                    missingMaterials.push_back( name );
-        if ( !missingMaterials.empty() )
+        if ( !results.empty() ) // the material libraries are the same in all objects
         {
-            // the libraries that cannot be loaded are reported instead of the materials; they are the same in all objects
-            if ( const auto& mtlErrors = results.front().mtlErrors; !mtlErrors.empty() )
+            for ( const auto& [p, error] : results.front().mtlErrors )
             {
-                for ( const auto& [p, error] : mtlErrors )
+                std::error_code ec;
+                if ( std::filesystem::exists( p, ec ) )
+                    res.warnings += fmt::format( "Material file {} could not be loaded ({}), so its textures and colors were not loaded.\n", utf8string( p.filename() ), error );
+                else
                 {
-                    std::error_code ec;
-                    if ( std::filesystem::exists( p, ec ) )
-                        res.warnings += fmt::format( "Material file {} could not be loaded ({}), so its textures and colors were not loaded.\n", utf8string( p.filename() ), error );
-                    else
-                    {
-                        res.warnings += fmt::format( "Material file {} was not found, so its textures and colors were not loaded.\n", utf8string( p.filename() ) );
-                        missingFiles = true;
-                    }
+                    res.warnings += fmt::format( "Material file {} was not found, so its textures and colors were not loaded.\n", utf8string( p.filename() ) );
+                    missingFiles = true;
                 }
             }
-            else
-                res.warnings += missingMaterialsWarning( missingMaterials );
         }
 
         // the texture files of all objects: each is loaded and reported once even if several objects use it, all files in parallel

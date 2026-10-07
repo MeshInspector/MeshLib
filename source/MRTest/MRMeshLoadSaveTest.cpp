@@ -290,7 +290,7 @@ TEST(MRMesh, LoadObjTabIndented)
     ASSERT_EQ( named.textureFiles.size(), 1 );
     EXPECT_EQ( named.textureFiles.front().filename(), "tex1.jpg" );
     ASSERT_TRUE( named.diffuseColor.has_value() );
-    EXPECT_TRUE( named.missingMaterials.empty() );
+    EXPECT_TRUE( named.mtlErrors.empty() );
 }
 
 namespace
@@ -354,7 +354,7 @@ const std::string cWebAdvice;
 
 } //anonymous namespace
 
-TEST(MRMesh, LoadObjWithoutMtl)
+TEST(MRMesh, LoadObjWithoutMaterials)
 {
     const std::string tetrahedron =
         "v 0 0 0\n"
@@ -366,10 +366,11 @@ TEST(MRMesh, LoadObjWithoutMtl)
         "f 1 4 3\n"
         "f 2 3 4\n";
     UniqueTemporaryFolder dir;
-    // no material library is referenced, so there is nothing to load, even for usemtl
-    for ( const auto& obj : { tetrahedron, "usemtl default\n" + tetrahedron } )
+    // no material is lost, so nothing is reported: no library is referenced, even for usemtl,
+    // or the missing library is not used, also for "(null)", which Blender writes for the faces without a material
+    for ( const std::string prefix : { "", "usemtl default\n", "mtllib model.mtl\n", "mtllib model.mtl\nusemtl (null)\n" } )
     {
-        writeTextFile( dir / "model.obj", obj );
+        writeTextFile( dir / "model.obj", prefix + tetrahedron );
         auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
         ASSERT_TRUE( res.has_value() );
         EXPECT_EQ( res->objs.size(), 1 );
@@ -387,7 +388,6 @@ TEST(MRMesh, LoadObjMissingMtl)
     ASSERT_EQ( meshes->size(), 2 );
     for ( const auto& m : *meshes )
     {
-        EXPECT_EQ( m.missingMaterials, std::vector<std::string>{ "Mat1" } );
         ASSERT_EQ( m.mtlErrors.size(), 1 );
         EXPECT_EQ( m.mtlErrors.begin()->first, dir / "model.mtl" );
     }
@@ -397,43 +397,6 @@ TEST(MRMesh, LoadObjMissingMtl)
     EXPECT_EQ( res->objs.size(), 2 );
     // reported once for both objects
     EXPECT_EQ( res->warnings, "Material file model.mtl was not found, so its textures and colors were not loaded.\n" + cWebAdvice );
-}
-
-TEST(MRMesh, LoadObjMissingMaterialNames)
-{
-    UniqueTemporaryFolder dir;
-    writeTextFile( dir / "model.obj",
-        "mtllib model.mtl\n"
-        "v 0 0 0\n"
-        "v 1 0 0\n"
-        "v 0 1 0\n"
-        "v 0 0 1\n"
-        "v 2 0 0\n"
-        "v 3 0 0\n"
-        "v 2 1 0\n"
-        "v 2 0 1\n"
-        "usemtl M1\n"
-        "f 1 3 2\n"
-        "usemtl M2\n"
-        "f 1 2 4\n"
-        "usemtl (null)\n" // the faces without a material, e.g. from Blender
-        "f 1 4 3\n"
-        "usemtl M3\n"
-        "f 2 3 4\n"
-        "usemtl M4\n"
-        "f 5 7 6\n"
-        "usemtl M5\n"
-        "f 5 6 8\n"
-        "usemtl M6\n"
-        "f 5 8 7\n"
-        "usemtl M2\n"
-        "f 6 7 8\n" );
-    writeTextFile( dir / "model.mtl", "newmtl Other\nKd 1 0 0\n" );
-
-    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
-    ASSERT_TRUE( res.has_value() );
-    // no web advice: the library is found, so opening the files from a ZIP archive would not help
-    EXPECT_EQ( res->warnings, "Materials M1, M2, M3, M4, M5 and 1 more were not found, so their textures and colors were not loaded.\n" );
 }
 
 TEST(MRMesh, LoadObjEmptyMtl)
@@ -658,7 +621,7 @@ TEST(MRMesh, LoadObjPartialTextures)
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings, "Material Missing was not found, so its texture and color were not loaded.\n" );
+    EXPECT_EQ( res->warnings, "" ); // a material missing from a loaded library is not reported
     ASSERT_EQ( res->objs.size(), 1 );
     auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
     ASSERT_TRUE( objMesh );

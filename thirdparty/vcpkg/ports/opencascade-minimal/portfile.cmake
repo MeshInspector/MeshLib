@@ -12,6 +12,7 @@ vcpkg_from_github(
         csf-redifinition.patch
         trim-xcaf-visualization.patch
         windows-static-toolkits.patch
+        type-registry-lifetime.patch
 )
 
 # toolkits MRIOExtras links; kept whole in the merged library, the others are pulled in by reference only

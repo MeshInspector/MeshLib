@@ -289,7 +289,7 @@
         "type": "vcpkg-overlay",
         "port": "opencascade-minimal"
       },
-      "version": "7.9.1#0"
+      "version": "7.9.1#2"
     },
     {
       "id": "tinygltf",

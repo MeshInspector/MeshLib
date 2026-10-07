@@ -471,6 +471,21 @@ TEST(MRMesh, LoadObjSeveralMtl)
         "Material file b.mtl was not found, so its textures and colors were not loaded.\n" + cWebAdvice );
 }
 
+TEST(MRMesh, LoadObjRepeatedMtl)
+{
+    // a repeated library takes its last place, since a later library replaces the materials with the same names
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "a.mtl", "newmtl Mat1\nKd 1 0 0\n" );
+    writeTextFile( dir / "b.mtl", "newmtl Mat1\nKd 0 1 0\n" );
+    writeTextFile( dir / "model.obj", twoTetrahedraObj( "a.mtl\nmtllib b.mtl\nmtllib a.mtl" ) );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 2 );
+    EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
+}
+
 TEST(MRMesh, LoadObjMtlNameWithSpaces)
 {
     // MeshSave::toObj names the library after the saved file, e.g. "my model.mtl" for "my model.obj"

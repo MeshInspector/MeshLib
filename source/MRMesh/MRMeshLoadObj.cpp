@@ -509,23 +509,34 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     return result;
 }
 
-/// adds to `res` the materials from the libraries of an mtllib line, replacing the materials with the same names,
-/// and to `errors` the errors of the libraries that cannot be loaded;
-/// `names` is the rest of the line: usually one file, maybe with spaces in its name, but the format allows several files separated by spaces
-void addMtlLibraries( MtlLibrary& res, std::map<std::filesystem::path, std::string>& errors, const std::filesystem::path& dir, const std::string& names )
+/// the files of the material libraries in an mtllib line:
+/// usually one file, maybe with spaces in its name, but the format allows several files separated by spaces
+std::vector<std::filesystem::path> parseMtlLibraryLine( const std::filesystem::path& dir, std::string_view line )
 {
-    std::vector<std::filesystem::path> files{ dir / asU8String( names ) };
+    std::string names( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
+    boost::trim( names );
+    if ( names.empty() )
+        return {};
+    auto whole = dir / asU8String( names );
     std::error_code ec;
-    if ( !std::filesystem::exists( files.front(), ec ) )
-    {
-        // several files if all of them are .mtl files, otherwise one file with spaces in its name
-        std::vector<std::filesystem::path> split;
-        std::istringstream iss( names );
-        for ( std::string file; iss >> file; )
-            split.push_back( dir / asU8String( file ) );
-        if ( std::all_of( split.begin(), split.end(), [] ( const auto& p ) { return toLower( utf8string( p.extension() ) ) == ".mtl"; } ) )
-            files = std::move( split );
-    }
+    if ( std::filesystem::exists( whole, ec ) )
+        return { whole };
+
+    // several files if all of them are .mtl files, otherwise one file with spaces in its name
+    std::vector<std::filesystem::path> files;
+    std::istringstream iss( names );
+    for ( std::string file; iss >> file; )
+        files.push_back( dir / asU8String( file ) );
+    if ( std::all_of( files.begin(), files.end(), [] ( const auto& p ) { return toLower( utf8string( p.extension() ) ) == ".mtl"; } ) )
+        return files;
+    return { whole };
+}
+
+/// the materials from the libraries, a later library replaces the materials with the same names;
+/// `errors` gets the errors of the libraries that cannot be loaded
+MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, std::map<std::filesystem::path, std::string>& errors )
+{
+    MtlLibrary res;
     for ( const auto& file : files )
     {
         auto lib = loadMtlLibrary( file );
@@ -537,6 +548,7 @@ void addMtlLibraries( MtlLibrary& res, std::map<std::filesystem::path, std::stri
         for ( auto& [name, material] : *lib )
             res[name] = std::move( material );
     }
+    return res;
 }
 
 struct MaterialScope
@@ -1043,9 +1055,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool colorChecked = false;
     bool hasColors = false;
 
-    MtlLibrary mtl; // materials from all libraries of the file
-    std::map<std::filesystem::path, std::string> mtlErrors; // of the libraries that cannot be loaded
-    bool anyMtlLib = false; // the file references some material library
+    std::vector<std::filesystem::path> mtlFiles; // the material libraries of the file, each once
 
     std::string parseError;
 
@@ -1082,12 +1092,12 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             for ( auto li = g.begin; li < g.end; ++li ) // each line of the group
             {
                 std::string_view line( data + newlines[li], newlines[li + 1] - newlines[li] );
-                std::string names( trimLeft( line ).substr( strlen( "mtllib" ), std::string_view::npos ) );
-                boost::trim( names );
-                if ( names.empty() )
-                    continue;
-                addMtlLibraries( mtl, mtlErrors, dir, names );
-                anyMtlLib = true;
+                for ( auto& file : parseMtlLibraryLine( dir, line ) )
+                {
+                    // a repeated library takes its last place, since a later library replaces the materials with the same names
+                    std::erase( mtlFiles, file );
+                    mtlFiles.push_back( std::move( file ) );
+                }
             }
             break;
         default:
@@ -1096,6 +1106,9 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         if ( !reportProgress( sb, ( ++groupId ) / float( groups.size() ) ) )
             return unexpectedOperationCanceled();
     }
+
+    std::map<std::filesystem::path, std::string> mtlErrors; // of the libraries that cannot be loaded
+    const auto mtl = loadMtlLibraries( mtlFiles, mtlErrors );
 
     timer.restart( "alloc flat arrays" );
 
@@ -1305,7 +1318,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( mergeAllObjects || oScopes.size() <= 1 )
     {
         newSettings.callback = subprogress( settings.callback, 0.5f, 1.0f );
-        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, anyMtlLib ? &mtl : nullptr );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, 0, faces.size(), newSettings, mtlFiles.empty() ? nullptr : &mtl );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res.emplace_back( std::move( *meshObj ) );
@@ -1324,7 +1337,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         size_t minFace = oScopes[i].fId;
         size_t maxFace = i + 1 < res.size() ? oScopes[i + 1].fId : faces.size();
 
-        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, anyMtlLib ? &mtl : nullptr );
+        auto meshObj = loadSingleModelFromObj( dir, points, colors, uvCoords, faces, mScopes, minFace, maxFace, newSettings, mtlFiles.empty() ? nullptr : &mtl );
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );

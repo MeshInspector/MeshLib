@@ -509,23 +509,32 @@ Expected<MtlLibrary> loadMtlLibrary( const std::filesystem::path& path )
     return result;
 }
 
-/// adds to `res` the materials from the libraries of an mtllib line, replacing the materials with the same names;
+/// adds to `res` the materials from the libraries of an mtllib line, replacing the materials with the same names, and to `missingFiles` the libraries not found;
 /// `names` is the rest of the line: usually one file, maybe with spaces in its name, but the format allows several files separated by spaces;
 /// the libraries that cannot be loaded are skipped, the materials used from them are reported as not found
-void addMtlLibraries( MtlLibrary& res, const std::filesystem::path& dir, const std::string& names )
+void addMtlLibraries( MtlLibrary& res, std::vector<std::filesystem::path>& missingFiles, const std::filesystem::path& dir, const std::string& names )
 {
-    std::vector<std::string> files{ names };
+    std::vector<std::filesystem::path> files{ dir / asU8String( names ) };
     std::error_code ec;
-    if ( !std::filesystem::exists( dir / asU8String( names ), ec ) )
+    if ( !std::filesystem::exists( files.front(), ec ) )
     {
-        files.clear();
+        // several files if all of them are .mtl files, otherwise one file with spaces in its name
+        std::vector<std::filesystem::path> split;
         std::istringstream iss( names );
         for ( std::string file; iss >> file; )
-            files.push_back( std::move( file ) );
+            split.push_back( dir / asU8String( file ) );
+        if ( std::all_of( split.begin(), split.end(), [] ( const auto& p ) { return toLower( utf8string( p.extension() ) ) == ".mtl"; } ) )
+            files = std::move( split );
     }
     for ( const auto& file : files )
     {
-        auto lib = loadMtlLibrary( dir / asU8String( file ) );
+        if ( !std::filesystem::exists( file, ec ) )
+        {
+            if ( std::find( missingFiles.begin(), missingFiles.end(), file ) == missingFiles.end() )
+                missingFiles.push_back( file );
+            continue;
+        }
+        auto lib = loadMtlLibrary( file );
         if ( !lib.has_value() )
             continue;
         for ( auto& [name, material] : *lib )
@@ -1042,6 +1051,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     bool hasColors = false;
 
     MtlLibrary mtl; // materials from all libraries of the file
+    std::vector<std::filesystem::path> missingMtlFiles; // the libraries of the file not found
     bool anyMtlLib = false; // the file references some material library
 
     std::string parseError;
@@ -1083,7 +1093,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
                 boost::trim( names );
                 if ( names.empty() )
                     continue;
-                addMtlLibraries( mtl, dir, names );
+                addMtlLibraries( mtl, missingMtlFiles, dir, names );
                 anyMtlLib = true;
             }
             break;
@@ -1302,6 +1312,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         res.emplace_back( std::move( *meshObj ) );
         if ( oScopes.size() == 1 )
             res.back().name = std::move( oScopes.front().objName );
+        res.back().missingMtlFiles = std::move( missingMtlFiles );
         return res;
     }
 
@@ -1319,12 +1330,13 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
         res[i].name = std::move( oScopes[i].objName );
+        res[i].missingMtlFiles = missingMtlFiles;
     }
     return res;
 }
 
-/// the warning about the materials used but not found in the material libraries
-std::string missingMaterialsWarning( const std::vector<std::string>& names )
+/// the names for a warning: all of them if there are few, otherwise the first ones and the number of the others
+std::string warningList( const std::vector<std::string>& names )
 {
     assert( !names.empty() );
     constexpr size_t cMaxNames = 5;
@@ -1333,9 +1345,26 @@ std::string missingMaterialsWarning( const std::vector<std::string>& names )
         list += ", " + names[i];
     if ( names.size() > cMaxNames )
         list += fmt::format( " and {} more", names.size() - cMaxNames );
+    return list;
+}
+
+/// the warning about the material libraries not found
+std::string missingMtlFilesWarning( const std::vector<std::filesystem::path>& files )
+{
+    std::vector<std::string> names;
+    for ( const auto& file : files )
+        names.push_back( utf8string( file.filename() ) );
     if ( names.size() == 1 )
-        return fmt::format( "Material {} was not found, so its texture and color were not loaded.\n", list );
-    return fmt::format( "Materials {} were not found, so their textures and colors were not loaded.\n", list );
+        return fmt::format( "Material file {} was not found, so its textures and colors were not loaded.\n", names.front() );
+    return fmt::format( "Material files {} were not found, so their textures and colors were not loaded.\n", warningList( names ) );
+}
+
+/// the warning about the materials used but not found in the material libraries
+std::string missingMaterialsWarning( const std::vector<std::string>& names )
+{
+    if ( names.size() == 1 )
+        return fmt::format( "Material {} was not found, so its texture and color were not loaded.\n", names.front() );
+    return fmt::format( "Materials {} were not found, so their textures and colors were not loaded.\n", warningList( names ) );
 }
 
 } //anonymous namespace
@@ -1409,7 +1438,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
         int holesCount = 0;
         LoadedObjects res;
 
-        // true if materials or texture files were not found
+        // true if material libraries or texture files were not found
         [[maybe_unused]] bool missingFiles = false;
         std::vector<std::string> missingMaterials; // of all objects, each once
         for ( const auto& result : results )
@@ -1418,8 +1447,14 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
                     missingMaterials.push_back( name );
         if ( !missingMaterials.empty() )
         {
-            res.warnings += missingMaterialsWarning( missingMaterials );
-            missingFiles = true;
+            // the libraries not found are named instead of the materials; they are the same in all objects
+            if ( const auto& missingMtlFiles = results.front().missingMtlFiles; !missingMtlFiles.empty() )
+            {
+                res.warnings += missingMtlFilesWarning( missingMtlFiles );
+                missingFiles = true;
+            }
+            else
+                res.warnings += missingMaterialsWarning( missingMaterials );
         }
 
         // the texture files of all objects: each is loaded and reported once even if several objects use it, all files in parallel

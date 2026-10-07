@@ -388,13 +388,14 @@ TEST(MRMesh, LoadObjMissingMtl)
     for ( const auto& m : *meshes )
     {
         EXPECT_EQ( m.missingMaterials, std::vector<std::string>{ "Mat1" } );
+        EXPECT_EQ( m.missingMtlFiles, std::vector<std::filesystem::path>{ dir / "model.mtl" } );
     }
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( res->objs.size(), 2 );
     // reported once for both objects
-    EXPECT_EQ( res->warnings, "Material Mat1 was not found, so its texture and color were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Material file model.mtl was not found, so its textures and colors were not loaded.\n" + cWebAdvice );
 }
 
 TEST(MRMesh, LoadObjMissingMaterialNames)
@@ -426,10 +427,12 @@ TEST(MRMesh, LoadObjMissingMaterialNames)
         "f 5 8 7\n"
         "usemtl M2\n"
         "f 6 7 8\n" );
+    writeTextFile( dir / "model.mtl", "newmtl Other\nKd 1 0 0\n" );
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings, "Materials M1, M2, M3, M4, M5 and 1 more were not found, so their textures and colors were not loaded.\n" + cWebAdvice );
+    // no web advice: the library is found, so opening the files from a ZIP archive would not help
+    EXPECT_EQ( res->warnings, "Materials M1, M2, M3, M4, M5 and 1 more were not found, so their textures and colors were not loaded.\n" );
 }
 
 TEST(MRMesh, LoadObjEmptyMtl)
@@ -479,9 +482,15 @@ TEST(MRMesh, LoadObjSeveralMtl)
     writeTextFile( dir / "model.obj", twoTetrahedraObj( "a.mtl b.mtl", "Mat2" ) );
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings, "Material Mat2 was not found, so its texture and color were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Material file b.mtl was not found, so its textures and colors were not loaded.\n" + cWebAdvice );
     ASSERT_EQ( res->objs.size(), 2 );
     EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
+
+    // .mtl files are named separately
+    std::filesystem::remove( dir / "a.mtl" );
+    res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "Material files a.mtl, b.mtl were not found, so their textures and colors were not loaded.\n" + cWebAdvice );
 }
 
 TEST(MRMesh, LoadObjMtlNameWithSpaces)
@@ -490,14 +499,18 @@ TEST(MRMesh, LoadObjMtlNameWithSpaces)
     UniqueTemporaryFolder dir;
     writeTextFile( dir / "my model.obj", twoTetrahedraObj( "my model.mtl" ) );
 
+    // named as one file, also if a file named as its last part exists
+    writeTextFile( dir / "model.mtl", "newmtl Mat1\nKd 0 1 0\n" );
     auto res = MeshLoad::loadObjectFromObj( dir / "my model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings, "Material Mat1 was not found, so its texture and color were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Material file my model.mtl was not found, so its textures and colors were not loaded.\n" + cWebAdvice );
 
     writeTextFile( dir / "my model.mtl", "newmtl Mat1\nKd 1 0 0\n" );
     res = MeshLoad::loadObjectFromObj( dir / "my model.obj" );
     ASSERT_TRUE( res.has_value() );
     EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 2 );
+    EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
 }
 
 TEST(MRMesh, LoadObjWithTexture)
@@ -630,7 +643,7 @@ TEST(MRMesh, LoadObjPartialTextures)
 
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings, "Material Missing was not found, so its texture and color were not loaded.\n" + cWebAdvice );
+    EXPECT_EQ( res->warnings, "Material Missing was not found, so its texture and color were not loaded.\n" );
     ASSERT_EQ( res->objs.size(), 1 );
     auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
     ASSERT_TRUE( objMesh );

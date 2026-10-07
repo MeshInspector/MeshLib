@@ -46,16 +46,22 @@ struct TiffParameters
     bool operator==( const TiffParameters& ) const = default;
 };
 
+// on Windows, narrow TIFFOpen interprets the file name in the ANSI code page, which fails for non-ASCII names
+TIFF* openTiff( const std::filesystem::path& path, const char* mode )
+{
+#ifdef _WIN32
+    return TIFFOpenW( path.wstring().c_str(), mode );
+#else
+    return TIFFOpen( utf8string( path ).c_str(), mode );
+#endif
+}
+
 class TiffHolder
 {
 public:
     TiffHolder( const std::filesystem::path& path, const char* mode )
     {
-#ifdef __WIN32__
-        tiffPtr_ = TIFFOpenW( path.wstring().c_str(), mode );
-#else
-        tiffPtr_ = TIFFOpen( utf8string( path ).c_str(), mode );
-#endif
+        tiffPtr_ = openTiff( path, mode );
     }
     ~TiffHolder()
     {
@@ -265,6 +271,17 @@ void readTiff( TIFF* tiff, T* bytes, [[maybe_unused]] size_t size, const TiffPar
     }
 }
 
+void flipVertically( Image& image )
+{
+    const auto width = (size_t)image.resolution.x;
+    const auto height = image.resolution.y;
+    ParallelFor( 0, height / 2, [&] ( int y )
+    {
+        auto* row = image.pixels.data() + y * width;
+        std::swap_ranges( row, row + width, image.pixels.data() + ( height - 1 - y ) * width );
+    } );
+}
+
 } // namespace
 
 namespace MR
@@ -289,9 +306,12 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
     char emsg[21024];
     if ( TIFFRGBAImageOK( tiff, emsg ) )
     {
-        TIFFReadRGBAImageOriented( tiff, result.resolution.x, result.resolution.y, (uint32_t*)result.pixels.data(), ORIENTATION_TOPLEFT, 0 );
+        // ORIENTATION_BOTLEFT puts the bottom row first, as in Image
+        TIFFReadRGBAImageOriented( tiff, result.resolution.x, result.resolution.y, (uint32_t*)result.pixels.data(), ORIENTATION_BOTLEFT, 0 );
+        return result;
     }
-    else if ( params.valueType == ::TiffParameters::ValueType::RGB || params.valueType == ::TiffParameters::ValueType::RGBA )
+
+    if ( params.valueType == ::TiffParameters::ValueType::RGB || params.valueType == ::TiffParameters::ValueType::RGBA )
     {
         readTiff( tiff, result.pixels.data(), result.pixels.size(), params );
     }
@@ -313,6 +333,8 @@ Expected<Image> fromTiff( const std::filesystem::path& path )
             } );
         }, nullptr, params );
     }
+    // readTiff stores the top row first, but Image starts from the bottom one
+    flipVertically( result );
 
     return result;
 }
@@ -326,7 +348,7 @@ namespace ImageSave
 
 Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
 {
-    auto tiff = TIFFOpen( utf8string( path ).c_str(), "w" );
+    auto tiff = openTiff( path, "w" );
     if ( !tiff )
         return unexpected( "Cannot write file: " + utf8string( path ) );
     MR_FINALLY {

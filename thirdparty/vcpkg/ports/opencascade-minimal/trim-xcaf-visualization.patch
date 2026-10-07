@@ -1,0 +1,60 @@
+diff --git a/src/TKXCAF/EXTERNLIB b/src/TKXCAF/EXTERNLIB
+index b23eb5c1..a187d969 100755
+--- a/src/TKXCAF/EXTERNLIB
++++ b/src/TKXCAF/EXTERNLIB
+@@ -4,9 +4,7 @@ TKMath
+ TKService
+ TKG2d
+ TKTopAlgo
+-TKV3d
+ TKCDF
+ TKLCAF
+ TKG3d
+ TKCAF
+-TKVCAF
+diff --git a/src/XCAFApp/XCAFApp_Application.cxx b/src/XCAFApp/XCAFApp_Application.cxx
+index 11fb2952..bcaee6e6 100644
+--- a/src/XCAFApp/XCAFApp_Application.cxx
++++ b/src/XCAFApp/XCAFApp_Application.cxx
+@@ -16,10 +16,8 @@
+ #include <Resource_Manager.hxx>
+ #include <Standard_Dump.hxx>
+ #include <TDF_Label.hxx>
+-#include <TPrsStd_DriverTable.hxx>
+ #include <XCAFApp_Application.hxx>
+ #include <XCAFDoc_DocumentTool.hxx>
+-#include <XCAFPrs_Driver.hxx>
+ 
+ IMPLEMENT_STANDARD_RTTIEXT(XCAFApp_Application, TDocStd_Application)
+ 
+@@ -37,9 +35,6 @@ Handle(XCAFApp_Application) XCAFApp_Application::GetApplication()
+ 
+ XCAFApp_Application::XCAFApp_Application()
+ {
+-  // register driver for presentation
+-  Handle(TPrsStd_DriverTable) table = TPrsStd_DriverTable::Get();
+-  table->AddDriver(XCAFPrs_Driver::GetID(), new XCAFPrs_Driver);
+ }
+ 
+ //=================================================================================================
+diff --git a/src/XCAFPrs/FILES b/src/XCAFPrs/FILES
+index b86972f7..af5e8d9e 100644
+--- a/src/XCAFPrs/FILES
++++ b/src/XCAFPrs/FILES
+@@ -1,7 +1,5 @@
+ XCAFPrs.cxx
+ XCAFPrs.hxx
+-XCAFPrs_AISObject.cxx
+-XCAFPrs_AISObject.hxx
+ XCAFPrs_DataMapIteratorOfIndexedDataMapOfShapeStyle.hxx
+ XCAFPrs_DataMapIteratorOfDataMapOfStyleShape.hxx
+ XCAFPrs_DataMapIteratorOfDataMapOfStyleTransient.hxx
+@@ -12,8 +10,6 @@ XCAFPrs_DocumentExplorer.cxx
+ XCAFPrs_DocumentExplorer.hxx
+ XCAFPrs_DocumentIdIterator.hxx
+ XCAFPrs_DocumentNode.hxx
+-XCAFPrs_Driver.cxx
+-XCAFPrs_Driver.hxx
+ XCAFPrs_Style.cxx
+ XCAFPrs_Style.hxx
+ XCAFPrs_Texture.cxx

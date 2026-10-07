@@ -13,6 +13,7 @@ vcpkg_from_github(
         remove-vcpkg-enabling.patch
         csf-redifinition.patch
         trim-xcaf-visualization.patch
+        pch-build-interface.patch
 )
 
 if (VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")

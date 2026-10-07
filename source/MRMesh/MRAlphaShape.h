@@ -4,6 +4,7 @@
 #include "MRPrecisePredicates3.h"
 #include "MRFastInt128.h"
 #include "MRVector.h"
+#include "MRBitSet.h"
 #include "MRPch/MRBindingMacros.h"
 #include <cstddef>
 #include <optional>
@@ -26,6 +27,11 @@ struct AlphaShapeData
     /// or empty if they have to be computed on the fly by toInt
     Vector<Vector3i, VertId> intPoints;
 
+    /// the valid points sharing their position in the integer grid with a point of a smaller id,
+    /// which take part in no search: only the smallest id of a position does;
+    /// filled together with intPoints, so empty if allPoints was false, and empty if there are no such points
+    VertBitSet twins;
+
     /// squared ball radius in the units of toInt's integer grid, not larger than the squared
     /// original radius (so that no point inside a ball can be farther than searchRadius
     /// from the ball's points), and small enough for the predicates not to overflow
@@ -41,8 +47,8 @@ struct AlphaShapeData
 };
 
 /// prepares the data for the search of alpha-shape triangles with negative alpha = -1/radius in the cloud
-/// \param allPoints whether to convert all valid points of the cloud in integer coordinates in parallel,
-///                  which pays off if the triangles around many points will be searched
+/// \param allPoints whether to convert all valid points of the cloud in integer coordinates in parallel
+///                  and to find the twins among them, which pays off if the triangles around many points will be searched
 [[nodiscard]] MRMESH_API AlphaShapeData getAlphaShapeData( const PointCloud & cloud, float radius, bool allPoints );
 
 /// the amount of work done during the search of alpha-shape triangles;
@@ -138,7 +144,9 @@ struct BallPivotCandidate
 /// rotation of their half-planes counter-clockwise from #vk's one around the line directed from #vi to #vj
 /// (as seen by the viewer the line's direction points at), finds the first point x such that the ball
 /// via #vi, #vj and x with the center on #vk's side of the half-plane of x has none of those points nor #vk strictly inside;
-/// the predicates are exact with simulation-of-simplicity resolving the ties;
+/// the predicates are exact with simulation-of-simplicity resolving the ties; the points sharing a position in the integer grid
+/// are merged as in findAlphaShapeNeiTriangles if \param data was prepared with allPoints=true (otherwise it knows no twins):
+/// only the smallest id of a position is returned, and never a twin of #vi, #vj or #vk;
 /// returns #vk if no such point exists: the ball rotates to the other side of triangle (vi, vj, vk) touching no other point;
 /// the ball via #vi, #vj and #vk with the center on the positive side of that triangle must exist and be empty,
 /// otherwise the returned point is not the one touched first by the rotating ball; in particular, for a triangle
@@ -167,5 +175,32 @@ struct BallPivotCandidate
     const ProgressCallback & cb, std::vector<MeshBuilder::VertDuplication> * dups = nullptr, AlphaShapeStats * stats = nullptr );
 [[nodiscard]] MRMESH_API Mesh findAlphaShape( const PointCloud & cloud, float radius,
     std::vector<MeshBuilder::VertDuplication> * dups = nullptr, AlphaShapeStats * stats = nullptr );
+
+/// finds the triangles of the outer shape of the cloud by the ball pivoting: the first triangle is found by
+/// findAlphaShapeNeiTriangles around the point with the smallest x-coordinate, taking the one with its ball
+/// farthest in -x direction, where nothing can block the ball; the remaining triangles are found by findBallPivotVertex
+/// rolling the ball over the edges of the triangles already found; all triangles have their empty balls on the positive side;
+/// only the triangles reachable by the pivoting from the first one are found: not the inner side of a closed shell,
+/// while both sides of an open sheet are reached via its boundary; the points with no alpha-shape triangles
+/// around them (e.g. far outliers) are skipped in the search of the first triangle;
+/// the pivoting goes in parallel waves over the edges of the triangles found by the previous wave, and the result is sorted
+/// \param allComponents whether to restart the pivoting from the points not in the triangles found so far, until every point
+///                      is either in a triangle or has no alpha-shape triangles: all the pieces of a fragmented scan are found then.
+///                      WARNING: the result is not an outer shape any more, it can contain everything findAlphaShape produces:
+///                      a few points left out of the outer side of a closed shell (e.g. by noise) regrow its whole inner side,
+///                      and the inner points having alpha-shape triangles among themselves get their own shapes;
+///                      and it can take longer than findAlphaShape, since every point left out costs a search of all alpha-shape
+///                      triangles around it, which is as slow as in findAlphaShape but not halved by the symmetry of the pairs
+[[nodiscard]] MRMESH_API std::optional<Triangulation> findBallPivotingTriangles( const PointCloud & cloud,
+    const AlphaShapeData & data, ///< prepared by getAlphaShapeData for the same cloud with allPoints=true, so that the twins are known
+    bool allComponents = false, const ProgressCallback & cb = {} );
+
+/// builds the mesh of the outer shape of the cloud by the ball pivoting with the ball of given radius, see findBallPivotingTriangles;
+/// the mesh vertices are the cloud points with the same ids plus the ones appended by the
+/// duplication of non-manifold vertices, which \param dups (if given) receives
+[[nodiscard]] MRMESH_API std::optional<Mesh> findBallPivotingMesh( const PointCloud & cloud, float radius, bool allComponents,
+    const ProgressCallback & cb, std::vector<MeshBuilder::VertDuplication> * dups = nullptr );
+[[nodiscard]] MRMESH_API Mesh findBallPivotingMesh( const PointCloud & cloud, float radius, bool allComponents = false,
+    std::vector<MeshBuilder::VertDuplication> * dups = nullptr );
 
 } //namespace MR

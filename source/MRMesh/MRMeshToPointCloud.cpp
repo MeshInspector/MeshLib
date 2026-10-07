@@ -125,17 +125,22 @@ int numRowSamples( const RowLayout & l, float baseLen, float radius )
     return res;
 }
 
+/// returns true if every point of the triangle is within the radius from one of its vertices:
+/// no point of a triangle is farther from the nearest vertex than the covering radius, and the
+/// minimal enclosing circle bounds that radius from above and is cheaper to find
+bool isCoveredByVertices( const Vector3f v[3], float radiusSq )
+{
+    return mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq
+        || coveringRadiusSq( v[0], v[1], v[2] ) <= radiusSq;
+}
+
 /// chooses how a face is sampled, and what it needs of its longest edge
 FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 {
     FaceLayout res{ 0, fkVertices, 0 };
-    // no point of a triangle is farther from the nearest vertex than the covering radius, and the
-    // minimal enclosing circle bounds that radius from above and is cheaper to find
-    if ( mincircleDiameterSq( v[0], v[1], v[2] ) <= 4 * radiusSq )
+    if ( isCoveredByVertices( v, radiusSq ) )
         return res;
     const auto coverSq = coveringRadiusSq( v[0], v[1], v[2] );
-    if ( coverSq <= radiusSq )
-        return res;
 
     // the longest edge is the base: the angles at its ends are acute, so every point of the face
     // projects on it inside it, and the sections parallel to it shrink towards the opposite vertex,
@@ -195,6 +200,25 @@ FaceLayout layoutFace( const Vector3f v[3], float radius, float radiusSq )
 }
 
 } // anonymous namespace
+
+bool isCoveredByVertices( const MeshPart & mp, float radius )
+{
+    MR_TIMER;
+    const float radiusSq = radius * radius;
+    const float maxEdgeLenSq = 3 * radiusSq;
+    tbb::task_group_context ctx;
+    BitSetParallelFor( mp.mesh.topology.getFaceIds( mp.region ), [&]( FaceId f )
+    {
+        Vector3f v[3];
+        mp.mesh.getTriPoints( f, v );
+        // the covering radius of a triangle never exceeds its longest edge over sqrt(3), so the cheap test accepts most faces of a dense mesh
+        if ( ( v[1] - v[0] ).lengthSq() <= maxEdgeLenSq && ( v[2] - v[1] ).lengthSq() <= maxEdgeLenSq && ( v[0] - v[2] ).lengthSq() <= maxEdgeLenSq )
+            return;
+        if ( !isCoveredByVertices( v, radiusSq ) )
+            ctx.cancel_group_execution(); // stop at the first uncovered face
+    }, ctx );
+    return !ctx.is_group_execution_cancelled();
+}
 
 Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, VertNormalsMode normals, const ProgressCallback& cb )
 {

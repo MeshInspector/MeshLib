@@ -266,7 +266,7 @@ TEST( MRMesh, BallPivotingAllComponents )
     {
         EXPECT_TRUE( all.topology.hasVert( v ) );
     }
-    const int comps = MeshComponents::getNumComponents( all );
+    const int comps = int( MeshComponents::getNumComponents( all ) );
     EXPECT_GE( comps, 2 );
     EXPECT_EQ( all.topology.numValidFaces(), 2 * all.topology.numValidVerts() - 4 * comps ); // closed shells of genus 0
 }

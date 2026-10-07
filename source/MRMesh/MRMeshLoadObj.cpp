@@ -1125,6 +1125,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     timer.restart( "fill flat arrays" ); // read arrays data and map objects and materials
 
     std::vector<MaterialScope> mScopes;
+    mScopes.push_back( { .fId = 0 } ); // the faces before the first usemtl line have no material
     std::vector<ObjectScope> oScopes;
 
     // simply read all points and colors into vectors

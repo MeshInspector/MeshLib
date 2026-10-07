@@ -703,6 +703,57 @@ TEST(MRMesh, LoadObjConsecutiveUsemtl)
     EXPECT_EQ( objMesh->getFrontColor( false ), Color::blue() );
 }
 
+TEST(MRMesh, LoadObjFacesBeforeFirstMaterial)
+{
+    if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )
+    {
+        GTEST_SKIP() << "PNG format is not supported in this build";
+    }
+
+    // the faces before the first usemtl line have no material, not the first material of the file
+    UniqueTemporaryFolder dir;
+    writeTextFile( dir / "model.obj",
+        "mtllib model.mtl\n"
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 0 0 1\n"
+        "vt 0 0\n"
+        "vt 1 0\n"
+        "vt 0 1\n"
+        "vt 1 1\n"
+        "f 1/1 3/3 2/2\n"
+        "f 1/1 2/2 4/4\n"
+        "usemtl Textured\n"
+        "f 1/1 4/4 3/3\n"
+        "f 2/2 3/3 4/4\n" );
+    writeTextFile( dir / "model.mtl", "newmtl Textured\nKd 0 0 1\nmap_Kd texture.png\n" );
+    const Image image{ .pixels = { Color::red(), Color::green(), Color::blue(), Color::white() }, .resolution = { 2, 2 } };
+    ASSERT_TRUE( ImageSave::toAnySupportedFormat( image, dir / "texture.png" ).has_value() );
+    const auto texture = ImageLoad::fromAnySupportedFormat( dir / "texture.png" );
+    ASSERT_TRUE( texture.has_value() );
+
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    EXPECT_EQ( res->warnings, "" );
+    ASSERT_EQ( res->objs.size(), 1 );
+    auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
+    ASSERT_TRUE( objMesh );
+    // the faces without a material get the transparent texture and don't change the object color
+    const auto& textures = objMesh->getTextures();
+    ASSERT_EQ( textures.size(), 2 );
+    EXPECT_EQ( textures[TextureId( 0 )].pixels, std::vector<Color>( 4, Color( 0, 0, 0, 0 ) ) );
+    EXPECT_EQ( textures[TextureId( 1 )].pixels, texture->pixels );
+    EXPECT_EQ( objMesh->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 0 ), TextureId( 1 ), TextureId( 1 ) } ) );
+    EXPECT_EQ( objMesh->getFrontColor( false ), Color::blue() );
+
+    // MeshLoad::fromObj skips the transparent texture and loads the texture file
+    MeshTexture meshTexture;
+    auto mesh = MeshLoad::fromObj( dir / "model.obj", { .texture = &meshTexture } );
+    ASSERT_TRUE( mesh.has_value() );
+    EXPECT_EQ( meshTexture.pixels, texture->pixels );
+}
+
 TEST(MRMesh, LoadObjMaterialPerObject)
 {
     if ( !ImageSave::getImageSaver( "*.png" ) || !ImageLoad::getImageLoader( "*.png" ) )

@@ -43,8 +43,8 @@ vcpkg_cmake_configure(
         -DBUILD_MODULE_Visualization=OFF
         -DBUILD_DOC_Overview=OFF
         -DBUILD_Inspector=OFF
-        -DBUILD_USE_PCH=ON
         -DBUILD_ADDITIONAL_TOOLKITS="TKDESTEP;TKMesh"
+        -DBUILD_USE_PCH=ON
         -DINSTALL_DIR_LAYOUT=Unix
         -DINSTALL_DIR_DOC=share/trash
         -DINSTALL_DIR_SCRIPT=share/trash # not relocatable

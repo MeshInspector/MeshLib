@@ -1,4 +1,6 @@
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRBitSetParallelFor.h>
+#include <atomic>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -91,6 +93,31 @@ TEST(MRMesh, TaggedBitSet)
     EXPECT_EQ( VertBitSet( VertBitSet( bs0 ) -= bs1 ).count(), 1 );
     EXPECT_EQ( VertBitSet( VertBitSet( bs1 ) -= bs0 ).count(), 1 );
     EXPECT_EQ( VertBitSet( VertBitSet( bs0 ) ^= bs1 ).count(), 2 );
+}
+
+TEST( MRMesh, BitSetParallelForCancel )
+{
+    VertBitSet bs( 1 << 20 );
+    for ( size_t i = 0; i < bs.size(); i += 3 )
+        bs.set( VertId( i ) );
+
+    // without cancellation every set bit is visited
+    std::atomic<size_t> visited{ 0 };
+    tbb::task_group_context ctx;
+    BitSetParallelFor( bs, [&] ( VertId ) { ++visited; }, ctx );
+    EXPECT_FALSE( ctx.is_group_execution_cancelled() );
+    EXPECT_EQ( visited, bs.count() );
+
+    // cancellation in the first visited bit stops processing
+    visited = 0;
+    tbb::task_group_context ctx1;
+    BitSetParallelFor( bs, [&] ( VertId )
+    {
+        ++visited;
+        ctx1.cancel_group_execution();
+    }, ctx1 );
+    EXPECT_TRUE( ctx1.is_group_execution_cancelled() );
+    EXPECT_LT( visited, bs.count() );
 }
 
 } //namespace MR

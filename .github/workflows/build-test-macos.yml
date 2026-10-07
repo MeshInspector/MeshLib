@@ -93,6 +93,8 @@ jobs:
       actions: read   # This is required for wait-for-job
     env:
       DEVELOPER_DIR: ${{ matrix.xcode-version && format('/Applications/Xcode_{0}.app/Contents/Developer', matrix.xcode-version) || '' }}
+      VCPKG_TRIPLET: ${{ matrix.arch }}-osx-meshlib
+      VCPKG_VERSION: ${{ inputs.vcpkg_version }}
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
@@ -156,8 +158,6 @@ jobs:
       - name: Set up vcpkg
         if: ${{ matrix.lib-source == 'vcpkg' }}
         working-directory: /usr/local/share/vcpkg
-        env:
-          VCPKG_VERSION: ${{ inputs.vcpkg_version }}
         run: |
           git fetch --depth 1 origin tag "${VCPKG_VERSION}"
           git checkout --force "${VCPKG_VERSION}"
@@ -172,15 +172,52 @@ jobs:
           role-duration-seconds: 7200
           retry-max-attempts: 5
 
+      - name: Compute vcpkg cache key
+        if: ${{ matrix.lib-source == 'vcpkg' }}
+        run: |
+          CXX_COMPILER='${{ steps.compilers.outputs.cxx-compiler }}'
+          case "${CXX_COMPILER}" in
+            /usr/bin/*)
+              # /usr/bin/clang++ is the xcode-select shim; hash the toolchain binary it dispatches to
+              CXX_COMPILER=$(xcrun --find "${CXX_COMPILER##*/}")
+              TOOLCHAIN=xcode${{ matrix.xcode-version }}
+              ;;
+            *)
+              TOOLCHAIN=llvm${{ matrix.llvm-keg-version }}
+              ;;
+          esac
+          FILES_HASH=$(scripts/devops/cache_key.sh \
+            thirdparty/vcpkg/vcpkg.json \
+            thirdparty/vcpkg/ports \
+            thirdparty/vcpkg/triplets/${VCPKG_TRIPLET}.cmake \
+            scripts/build_vcpkg_thirdparty.sh \
+            "${CXX_COMPILER}")
+          KEY_PREFIX="vcpkg-installed-${VCPKG_VERSION}-${VCPKG_TRIPLET}-${TOOLCHAIN}"
+          echo "VCPKG_CACHE_KEY_PREFIX=${KEY_PREFIX}" >> $GITHUB_ENV
+          echo "VCPKG_CACHE_KEY=${KEY_PREFIX}-${FILES_HASH}" >> $GITHUB_ENV
+
+      - name: Restore vcpkg installed tree
+        if: ${{ matrix.lib-source == 'vcpkg' }}
+        id: vcpkg-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: vcpkg_installed
+          key: ${{ env.VCPKG_CACHE_KEY }}
+          # fall back to the latest tree with the same prefix
+          restore-keys: ${{ env.VCPKG_CACHE_KEY_PREFIX }}-
+
       - name: Build thirdparty libs
         if: ${{ matrix.lib-source == 'vcpkg' }}
-        env:
-          VCPKG_VERSION: ${{ inputs.vcpkg_version }}
         run: |
-          export VCPKG_TRIPLET=$(scripts/detect_vcpkg_triplet.sh)
           source thirdparty/vcpkg/configure_s3_cache.sh
           scripts/build_vcpkg_thirdparty.sh
-          echo "VCPKG_TRIPLET=${VCPKG_TRIPLET}" >> $GITHUB_ENV
+
+      - name: Save vcpkg installed tree
+        if: ${{ matrix.lib-source == 'vcpkg' && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v5
+        with:
+          path: vcpkg_installed
+          key: ${{ env.VCPKG_CACHE_KEY }}
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

@@ -533,8 +533,8 @@ std::vector<std::filesystem::path> parseMtlLibraryLine( const std::filesystem::p
 }
 
 /// the materials from the libraries, a later library replaces the materials with the same names;
-/// `errors` gets the errors of the libraries that cannot be loaded
-MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, std::map<std::filesystem::path, std::string>& errors )
+/// optional `errors` gets the errors of the libraries that cannot be loaded
+MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, std::map<std::filesystem::path, std::string>* errors )
 {
     MtlLibrary res;
     for ( const auto& file : files )
@@ -542,7 +542,8 @@ MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, st
         auto lib = loadMtlLibrary( file );
         if ( !lib.has_value() )
         {
-            errors.emplace( file, std::move( lib.error() ) );
+            if ( errors )
+                errors->emplace( file, std::move( lib.error() ) );
             continue;
         }
         for ( auto& [name, material] : *lib )
@@ -1107,8 +1108,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpectedOperationCanceled();
     }
 
-    std::map<std::filesystem::path, std::string> mtlErrors; // of the libraries that cannot be loaded
-    const auto mtl = loadMtlLibraries( mtlFiles, mtlErrors );
+    const auto mtl = loadMtlLibraries( mtlFiles, settings.mtlErrors );
 
     timer.restart( "alloc flat arrays" );
 
@@ -1309,11 +1309,9 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
 
     // the library errors matter only if some faces use a material not found;
     // "(null)" is written for the faces without a material, e.g. by Blender
-    if ( std::none_of( mScopes.begin(), mScopes.end(), [&] ( const MaterialScope& s )
+    if ( settings.mtlErrors && std::none_of( mScopes.begin(), mScopes.end(), [&] ( const MaterialScope& s )
         { return !s.mtName.empty() && s.mtName != "(null)" && mtl.find( s.mtName ) == mtl.end(); } ) )
-        mtlErrors.clear();
-    if ( settings.mtlErrors )
-        *settings.mtlErrors = std::move( mtlErrors );
+        settings.mtlErrors->clear();
 
     auto newSettings = settings;
     std::vector<MeshLoad::NamedMesh> res;

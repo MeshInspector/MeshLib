@@ -7,7 +7,12 @@
 # exit if any command failed
 set -eo pipefail
 
-MESHLIB_THIRDPARTY_ROOT_DIR="${MESHLIB_THIRDPARTY_ROOT_DIR:-${PWD}/installed}"
+if [ -z "${MESHLIB_THIRDPARTY_ROOT_DIR}" ]; then
+  MESHLIB_THIRDPARTY_ROOT_DIR=.
+  if [ -d "${PWD}/installed" ]; then
+    MESHLIB_THIRDPARTY_ROOT_DIR="${PWD}/installed"
+  fi
+fi
 
 if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
   echo "Project release build was not found. Building..."

@@ -1423,10 +1423,7 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
 
         // true if material libraries or texture files were not found
         [[maybe_unused]] bool missingFiles = false;
-        // in path order: the order of the hash map depends on the hashes of the full paths, which differ between standard libraries
-        std::vector<std::pair<std::filesystem::path, std::string>> sortedMtlErrors( mtlErrors.begin(), mtlErrors.end() );
-        std::sort( sortedMtlErrors.begin(), sortedMtlErrors.end() );
-        for ( const auto& [p, error] : sortedMtlErrors )
+        for ( const auto& [p, error] : mtlErrors )
         {
             std::error_code ec;
             if ( std::filesystem::exists( p, ec ) )

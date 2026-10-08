@@ -478,6 +478,6 @@ Failures most often hit while following the steps above, with the message each o
 ### Where the logs are
 
  - **Runtime.** `MeshViewer` writes a log per run to `<system temp>/MeshLib/Logs/MRLog_<YYYY-MM-DD_HH-MM-SS>_<pid>.txt` — `/tmp/MeshLib/Logs/` on Linux, `%TEMP%\MeshLib\Logs\` on Windows, `$TMPDIR/MeshLib/Logs/` on macOS. The exact path is printed on startup as a `Log file: …` line, which is the reliable way to find it. Logs older than 24 hours are deleted at startup, so collect the file before the next run.
- - **Third-party build.** `scripts/build_cpm_thirdparty.sh` and `scripts/build_thirdparty.sh` write `install_thirdparty_<dd-mm-YYYY_HH:MM:SS>.log` in the current directory and announce it on their second line of output (`You could find output in …`). The console shows only a fraction of the output; the failing compiler invocation is in that file.
+ - **Third-party build.** `scripts/build_thirdparty.sh` writes `install_thirdparty_<dd-mm-YYYY_HH:MM:SS>.log` in the current directory and announces it on its second line of output (`You could find output in …`). The console shows only a fraction of the output; the failing compiler invocation is in that file.
 
 Anything not listed here: please open an issue at [MeshLib Issues](https://github.com/MeshInspector/MeshLib/issues), attaching the relevant log above.

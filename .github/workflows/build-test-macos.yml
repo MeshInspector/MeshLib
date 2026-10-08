@@ -210,6 +210,9 @@ jobs:
         if: ${{ matrix.lib-source == 'vcpkg' }}
         run: |
           source thirdparty/vcpkg/configure_s3_cache.sh
+          # resolve the compiler paths for proper vcpkg cache key computation
+          export CC=$(xcrun --find clang)
+          export CXX=$(xcrun --find clang++)
           scripts/build_vcpkg_thirdparty.sh
 
       - name: Save vcpkg installed tree

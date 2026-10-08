@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <sstream>
 
 namespace MR
@@ -21,6 +22,26 @@ TEST( MRMesh, ScalarTypeSize )
     EXPECT_EQ( getScalarTypeSize( ScalarType::RGB8 ), 3u );
     EXPECT_EQ( getScalarTypeSize( ScalarType::RGBA8 ), sizeof( Color ) );
     EXPECT_EQ( getScalarTypeSize( ScalarType::Unknown ), 0u );
+}
+
+TEST( MRMesh, ScalarTypeMinMax )
+{
+    using Limits = std::pair<std::int64_t, std::uint64_t>;
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::UInt8 ), Limits( 0, 255u ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int16 ), Limits( -32768, 32767u ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::UInt64 ), Limits( 0, std::numeric_limits<std::uint64_t>::max() ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int64 ),
+        Limits( std::numeric_limits<std::int64_t>::lowest(), std::uint64_t( std::numeric_limits<std::int64_t>::max() ) ) );
+    // the range of a color component
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::RGBA8 ), Limits( 0, 255u ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float64 ), Limits( 0, 0u ) );
+
+    // getTypeConverter maps this range to [0, 1]
+    const auto [min, max] = getScalarTypeMinMax( ScalarType::Int16 );
+    const auto converter = getTypeConverter( ScalarType::Int16, max - min, min );
+    const int16_t values[] = { -32768, 32767 };
+    EXPECT_EQ( converter( ( const char* )&values[0] ), 0.f );
+    EXPECT_EQ( converter( ( const char* )&values[1] ), 1.f );
 }
 
 TEST( MRMesh, ScalarTypeColorLuma )

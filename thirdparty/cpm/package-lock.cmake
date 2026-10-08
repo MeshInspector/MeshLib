@@ -54,7 +54,7 @@ set(MESHLIB_PACKAGE_draco
 )
 
 set(MESHLIB_PACKAGE_eigen
-  GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+  GIT_REPOSITORY https://github.com/eigen-mirror/eigen.git
   GIT_TAG 5.0.1
 )
 

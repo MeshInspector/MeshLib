@@ -310,15 +310,11 @@ TEST( MRMesh, TiffImageFloat )
     } } );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
-    // writeRawTiff marks the file with PHOTOMETRIC_MINISWHITE, which is ignored for floating-point samples
-    auto raster = RasterLoad::fromTiff( path );
-    ASSERT_TRUE( raster.has_value() ) << raster.error();
-    EXPECT_FALSE( raster->info.minIsWhite );
-
     auto loaded = ImageLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loaded->resolution, Vector2i( 2, 2 ) );
-    // the values are scaled to [0, 255], and the rows of Image go from bottom to top
+    // the values are scaled to [0, 255], and the rows of Image go from bottom to top;
+    // writeRawTiff marks the file with PHOTOMETRIC_MINISWHITE, which is ignored for floating-point samples
     const std::vector<Color> expected{
         Color( 170, 170, 170 ), Color( 255, 255, 255 ),
         Color( 0, 0, 0 ), Color( 85, 85, 85 ),
@@ -361,77 +357,80 @@ TEST( MRMesh, TiffRasterRoundTrip )
     ASSERT_TRUE( tmpFolder );
 
     for ( auto type : { ScalarType::UInt8, ScalarType::Int8, ScalarType::UInt16, ScalarType::Int16, ScalarType::UInt32, ScalarType::Int32,
-        ScalarType::UInt64, ScalarType::Int64, ScalarType::Float32, ScalarType::Float64 } )
+        ScalarType::UInt64, ScalarType::Int64, ScalarType::Float32, ScalarType::Float64, ScalarType::RGB8, ScalarType::RGBA8 } )
     {
-        for ( int channels = 1; channels <= 5; ++channels )
-        {
-            Raster raster{
-                .info = {
-                    .resolution = { 5, 3 },
-                    .channels = channels,
-                    .sampleType = type,
-                },
-            };
-            raster.data.resize( raster.info.dataSize() );
-            for ( size_t i = 0; i < raster.data.size(); ++i )
-                raster.data[i] = uint8_t( i * 37 + 11 );
+        Raster raster{
+            .info = {
+                .dims = { 5, 3, 1 },
+                .type = type,
+            },
+        };
+        raster.data.resize( raster.info.dataSize() );
+        for ( size_t i = 0; i < raster.data.size(); ++i )
+            raster.data[i] = uint8_t( i * 37 + 11 );
 
-            const auto path = tmpFolder / ( "raster" + std::to_string( int( type ) ) + "_" + std::to_string( channels ) + ".tif" );
-            auto saveRes = RasterSave::toAnySupportedFormat( raster, path );
-            ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+        const auto path = tmpFolder / ( "raster" + std::to_string( int( type ) ) + ".tif" );
+        auto saveRes = RasterSave::toAnySupportedFormat( raster, path );
+        ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
-            auto loaded = RasterLoad::fromAnySupportedFormat( path );
-            ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-            EXPECT_EQ( loaded->info.resolution, raster.info.resolution );
-            EXPECT_EQ( loaded->info.channels, channels );
-            EXPECT_EQ( loaded->info.sampleType, type );
-            EXPECT_TRUE( loaded->info.palette.empty() );
-            EXPECT_FALSE( loaded->info.minIsWhite );
-            EXPECT_FALSE( loaded->info.pixelToWorld.has_value() );
-            EXPECT_FALSE( loaded->info.noData.has_value() );
-            EXPECT_EQ( loaded->data, raster.data );
+        auto loaded = RasterLoad::fromAnySupportedFormat( path );
+        ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+        EXPECT_EQ( loaded->info.dims, raster.info.dims );
+        EXPECT_EQ( loaded->info.type, type );
+        EXPECT_EQ( loaded->data, raster.data );
 
-            auto info = RasterLoad::infoFromAnySupportedFormat( path );
-            ASSERT_TRUE( info.has_value() ) << info.error();
-            EXPECT_EQ( info->resolution, raster.info.resolution );
-            EXPECT_EQ( info->channels, channels );
-            EXPECT_EQ( info->sampleType, type );
-        }
+        auto info = RasterLoad::infoFromAnySupportedFormat( path );
+        ASSERT_TRUE( info.has_value() ) << info.error();
+        EXPECT_EQ( info->dims, raster.info.dims );
+        EXPECT_EQ( info->type, type );
     }
 }
 
-TEST( MRMesh, TiffRasterMetadata )
+TEST( MRMesh, TiffRasterColorConversions )
 {
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
-    const auto path = tmpFolder / "geo.tif";
 
-    const AffineXf3f xf( Matrix3f::scale( 2.f, -3.f, 1.f ), Vector3f( 100.f, 200.f, 5.f ) );
-    Raster raster{
-        .info = {
-            .resolution = { 2, 2 },
-            .sampleType = ScalarType::Float32,
-            .pixelToWorld = xf,
-            .noData = -9999.,
-        },
-        .data = toBytes( std::vector<float>{ 1.f, 2.f, -9999.f, 4.f } ),
-    };
-    auto saveRes = RasterSave::toTiff( raster, path );
-    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
-    auto loaded = RasterLoad::fromTiff( path );
+    // 16-bit color samples are rounded to 8 bits
+    const auto rgb16 = tmpFolder / "rgb16.tif";
+    writeTestTiff( rgb16, { .size = { 1, 1 }, .bitsPerSample = 16, .samplesPerPixel = 3, .photometric = 2 },
+        toBytes( std::vector<uint16_t>{ 0xFFFF, 0x8000, 0x0081 } ) );
+    auto loaded = RasterLoad::fromTiff( rgb16 );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    ASSERT_TRUE( loaded->info.pixelToWorld.has_value() );
-    EXPECT_EQ( *loaded->info.pixelToWorld, xf );
-    EXPECT_EQ( loaded->info.noData, -9999. );
-    EXPECT_EQ( loaded->data, raster.data );
+    EXPECT_EQ( loaded->info.type, ScalarType::RGB8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 255, 128, 1 } ) );
 
-    raster.info.noData = std::nan( "" );
-    saveRes = RasterSave::toTiff( raster, path );
-    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
-    auto info = RasterLoad::infoFromTiff( path );
-    ASSERT_TRUE( info.has_value() ) << info.error();
-    ASSERT_TRUE( info->noData.has_value() );
-    EXPECT_TRUE( std::isnan( *info->noData ) );
+    // floating-point color samples are clamped to [0, 1], the samples after alpha are ignored
+    const auto rgbaFloat = tmpFolder / "rgbaf.tif";
+    writeTestTiff( rgbaFloat, {
+        .size = { 1, 1 },
+        .bitsPerSample = 32,
+        .samplesPerPixel = 5,
+        .sampleFormat = 3, // floating point
+        .photometric = 2,
+        .extraSamples = { 2, 0 },
+    }, toBytes( std::vector<float>{ 2.f, 0.5f, -1.f, 1.f, 7.f } ) );
+    loaded = RasterLoad::fromTiff( rgbaFloat );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 255, 127, 0, 255 } ) );
+
+    // gray with alpha becomes RGBA8, the 16-bit gray value keeps its high byte as in libtiff's RGBA reader
+    const auto grayAlpha = tmpFolder / "ga16.tif";
+    writeTestTiff( grayAlpha, { .size = { 1, 1 }, .bitsPerSample = 16, .samplesPerPixel = 2, .extraSamples = { 2 } },
+        toBytes( std::vector<uint16_t>{ 0x80FF, 0x8000 } ) );
+    loaded = RasterLoad::fromTiff( grayAlpha );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 128, 128, 128, 128 } ) );
+
+    // only the first sample of a gray image with more samples is used, as in libtiff's RGBA reader
+    const auto gray3 = tmpFolder / "gray3.tif";
+    writeTestTiff( gray3, { .size = { 2, 1 }, .samplesPerPixel = 3 }, { 1, 2, 3, 4, 5, 6 } );
+    loaded = RasterLoad::fromTiff( gray3 );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::UInt8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 1, 4 } ) );
 }
 
 TEST( MRMesh, TiffRasterPalette )
@@ -439,43 +438,27 @@ TEST( MRMesh, TiffRasterPalette )
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
 
-    for ( auto type : { ScalarType::UInt8, ScalarType::UInt16 } )
+    for ( int bits : { 8, 16 } )
     {
-        Raster raster{
-            .info = {
-                .resolution = { 3, 1 },
-                .sampleType = type,
-                .palette = { Color::red(), Color::green(), Color::blue() },
-            },
-        };
-        raster.data = type == ScalarType::UInt8 ? std::vector<uint8_t>{ 2, 0, 1 } : toBytes( std::vector<uint16_t>{ 2, 0, 1 } );
-        const auto path = tmpFolder / ( "palette" + std::to_string( int( type ) ) + ".tif" );
-        auto saveRes = RasterSave::toTiff( raster, path );
-        ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+        // red, green and blue colors for the indices 0, 1, 2, the rest is black
+        const size_t size = size_t( 1 ) << bits;
+        std::vector<uint16_t> colorMap( 3 * size, 0 );
+        colorMap[0] = 0xFFFF;
+        colorMap[size + 1] = 0xFFFF;
+        colorMap[2 * size + 2] = 0xFFFF;
+        const auto path = tmpFolder / ( "palette" + std::to_string( bits ) + ".tif" );
+        const auto indices = bits == 8 ? std::vector<uint8_t>{ 2, 0, 1 } : toBytes( std::vector<uint16_t>{ 2, 0, 1 } );
+        writeTestTiff( path, { .size = { 3, 1 }, .bitsPerSample = uint16_t( bits ), .photometric = 3, .colorMap = colorMap }, indices );
 
         auto loaded = RasterLoad::fromTiff( path );
         ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-        EXPECT_EQ( loaded->info.sampleType, type );
-        EXPECT_EQ( loaded->data, raster.data );
-        // the palette has a color for each possible index
-        ASSERT_EQ( loaded->info.palette.size(), type == ScalarType::UInt8 ? 256u : 65536u );
-        EXPECT_EQ( std::vector<Color>( loaded->info.palette.begin(), loaded->info.palette.begin() + 3 ), raster.info.palette );
+        EXPECT_EQ( loaded->info.type, ScalarType::RGB8 );
+        EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 0, 0, 255, 255, 0, 0, 0, 255, 0 } ) );
 
         auto image = ImageLoad::fromTiff( path );
         ASSERT_TRUE( image.has_value() ) << image.error();
         EXPECT_EQ( image->pixels, std::vector<Color>( { Color::blue(), Color::red(), Color::green() } ) );
     }
-
-    // palette indices must be unsigned integers
-    Raster floatRaster{
-        .info = {
-            .resolution = { 1, 1 },
-            .sampleType = ScalarType::Float32,
-            .palette = { Color::red() },
-        },
-        .data = toBytes( std::vector<float>{ 0.f } ),
-    };
-    EXPECT_FALSE( RasterSave::toTiff( floatRaster, tmpFolder / "palette_float.tif" ).has_value() );
 
     // an old-style color map with 8-bit values
     std::vector<uint16_t> colorMap( 3 * 256, 0 );
@@ -483,42 +466,38 @@ TEST( MRMesh, TiffRasterPalette )
     colorMap[256 + 1] = 100; // green of index 1
     colorMap[512 + 1] = 50; // blue of index 1
     const auto path = tmpFolder / "palette8.tif";
-    writeTestTiff( path, {
-        .size = { 2, 1 },
-        .photometric = 3, // palette
-        .colorMap = colorMap,
-    }, { 1, 0 } );
+    writeTestTiff( path, { .size = { 2, 1 }, .photometric = 3, .colorMap = colorMap }, { 1, 0 } );
     auto loaded = RasterLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    ASSERT_EQ( loaded->info.palette.size(), 256u );
-    EXPECT_EQ( loaded->info.palette[1], Color( 200, 100, 50 ) );
-    EXPECT_EQ( loaded->info.palette[0], Color::black() );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 200, 100, 50, 0, 0, 0 } ) );
 }
 
 TEST( MRMesh, TiffRasterMinIsWhite )
 {
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
-    const auto path = tmpFolder / "white.tif";
 
-    const Raster raster{
-        .info = {
-            .resolution = { 2, 1 },
-            .sampleType = ScalarType::UInt8,
-            .minIsWhite = true,
-        },
-        .data = { 0, 200 },
-    };
-    auto saveRes = RasterSave::toTiff( raster, path );
-    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
-    auto loaded = RasterLoad::fromTiff( path );
+    // the raster keeps the stored gray values, the image inverts them as libtiff's RGBA reader does
+    const auto gray = tmpFolder / "white.tif";
+    writeTestTiff( gray, { .size = { 2, 1 }, .photometric = 0 }, { 0, 200 } );
+    auto loaded = RasterLoad::fromTiff( gray );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    EXPECT_TRUE( loaded->info.minIsWhite );
-    EXPECT_EQ( loaded->data, raster.data );
-
-    auto image = ImageLoad::fromTiff( path );
+    EXPECT_EQ( loaded->info.type, ScalarType::UInt8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 0, 200 } ) );
+    auto image = ImageLoad::fromTiff( gray );
     ASSERT_TRUE( image.has_value() ) << image.error();
     EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 255, 255, 255 ), Color( 55, 55, 55 ) } ) );
+
+    // gray with alpha becomes colors, so the gray values are inverted already in the raster
+    const auto grayAlpha = tmpFolder / "white_alpha.tif";
+    writeTestTiff( grayAlpha, { .size = { 2, 1 }, .samplesPerPixel = 2, .photometric = 0, .extraSamples = { 2 } }, { 0, 128, 200, 255 } );
+    loaded = RasterLoad::fromTiff( grayAlpha );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 255, 255, 255, 128, 55, 55, 55, 255 } ) );
+    image = ImageLoad::fromTiff( grayAlpha );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 255, 255, 255, 128 ), Color( 55, 55, 55, 255 ) } ) );
 }
 
 TEST( MRMesh, TiffRasterStoredLayouts )
@@ -526,14 +505,13 @@ TEST( MRMesh, TiffRasterStoredLayouts )
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
 
-    // RGB image with 16-bit samples
+    // RGB image with 8-bit samples
     const Vector2i size{ 5, 3 };
-    std::vector<uint8_t> samples( size_t( size.x ) * size.y * 3 * sizeof( uint16_t ) );
+    std::vector<uint8_t> samples( size_t( size.x ) * size.y * 3 );
     for ( size_t i = 0; i < samples.size(); ++i )
         samples[i] = uint8_t( i * 7 + 3 );
     const TestTiffLayout base{
         .size = size,
-        .bitsPerSample = 16,
         .samplesPerPixel = 3,
         .photometric = 2, // RGB
     };
@@ -564,11 +542,21 @@ TEST( MRMesh, TiffRasterStoredLayouts )
 
         auto loaded = RasterLoad::fromTiff( path );
         ASSERT_TRUE( loaded.has_value() ) << c.name << ": " << loaded.error();
-        EXPECT_EQ( loaded->info.resolution, size ) << c.name;
-        EXPECT_EQ( loaded->info.channels, 3 ) << c.name;
-        EXPECT_EQ( loaded->info.sampleType, ScalarType::UInt16 ) << c.name;
+        EXPECT_EQ( loaded->info.dims, Vector3i( size.x, size.y, 1 ) ) << c.name;
+        EXPECT_EQ( loaded->info.type, ScalarType::RGB8 ) << c.name;
         EXPECT_EQ( loaded->data, samples ) << c.name;
     }
+
+    // 16-bit gray values in tiles are kept as stored
+    std::vector<uint16_t> gray( size_t( size.x ) * size.y );
+    for ( size_t i = 0; i < gray.size(); ++i )
+        gray[i] = uint16_t( 1000 * i + 7 );
+    const auto grayPath = tmpFolder / "grayTiles.tif";
+    writeTestTiff( grayPath, { .size = size, .bitsPerSample = 16, .tileSize = { 4, 2 } }, toBytes( gray ) );
+    auto loaded = RasterLoad::fromTiff( grayPath );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::UInt16 );
+    EXPECT_EQ( loaded->data, toBytes( gray ) );
 }
 
 TEST( MRMesh, TiffRasterOrientation )
@@ -611,8 +599,7 @@ TEST( MRMesh, TiffRasterDecoded )
     } );
     auto loaded = RasterLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    EXPECT_EQ( loaded->info.channels, 4 );
-    EXPECT_EQ( loaded->info.sampleType, ScalarType::UInt8 );
+    EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
     EXPECT_EQ( loaded->data, std::vector<uint8_t>( {
         255, 255, 255, 255,
         0, 0, 0, 255,
@@ -636,15 +623,24 @@ TEST( MRMesh, TiffRasterErrors )
     std::ofstream( notTiff ) << "not a TIFF file";
     EXPECT_FALSE( RasterLoad::fromTiff( notTiff ).has_value() );
 
-    // the data size does not match the resolution
-    const Raster raster{
+    // the data size does not match the dimensions
+    Raster raster{
         .info = {
-            .resolution = { 2, 2 },
-            .sampleType = ScalarType::UInt8,
+            .dims = { 2, 2, 1 },
+            .type = ScalarType::UInt8,
         },
         .data = { 1, 2, 3 },
     };
     EXPECT_FALSE( RasterSave::toTiff( raster, tmpFolder / "wrong.tif" ).has_value() );
+
+    // a TIFF file stores one layer
+    raster.info.dims = { 2, 1, 2 };
+    raster.data = { 1, 2, 3, 4 };
+    EXPECT_FALSE( RasterSave::toTiff( raster, tmpFolder / "layers.tif" ).has_value() );
+
+    raster.info = { .dims = { 1, 1, 1 }, .type = ScalarType::Float32_4 };
+    raster.data.resize( raster.info.dataSize() );
+    EXPECT_FALSE( RasterSave::toTiff( raster, tmpFolder / "float4.tif" ).has_value() );
 }
 
 TEST( MRMesh, TiffDistanceMapSave )
@@ -664,18 +660,14 @@ TEST( MRMesh, TiffDistanceMapSave )
 
     auto raster = RasterLoad::fromTiff( path );
     ASSERT_TRUE( raster.has_value() ) << raster.error();
-    EXPECT_EQ( raster->info.resolution, Vector2i( 3, 2 ) );
-    EXPECT_EQ( raster->info.channels, 1 );
-    EXPECT_EQ( raster->info.sampleType, ScalarType::Float32 );
-    EXPECT_FALSE( raster->info.minIsWhite );
-    EXPECT_EQ( raster->info.pixelToWorld, xf );
-    EXPECT_EQ( raster->info.noData, double( DistanceMap::NOT_VALID_VALUE ) );
+    EXPECT_EQ( raster->info.dims, Vector3i( 3, 2, 1 ) );
+    EXPECT_EQ( raster->info.type, ScalarType::Float32 );
     std::vector<float> values( 6 );
     ASSERT_EQ( raster->data.size(), values.size() * sizeof( float ) );
     std::memcpy( values.data(), raster->data.data(), raster->data.size() );
     EXPECT_EQ( values, std::vector<float>( dmap.data(), dmap.data() + 6 ) );
 
-    // the file is still read by the old reader
+    // the file is still read by the old reader, together with the GeoTIFF transformation
     DistanceMapToWorld toWorld;
     auto loaded = DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();

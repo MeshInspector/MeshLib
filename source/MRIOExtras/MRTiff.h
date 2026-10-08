@@ -17,12 +17,13 @@ namespace MR
 namespace RasterLoad
 {
 
-/// loads from .tiff format; the samples are kept as stored in the file, except for the formats without plain sample values
-/// (YCbCr, CMYK, CIE L*a*b*, less than 8 bits per sample, etc.), which are decoded to 8-bit RGBA;
-/// PHOTOMETRIC_MINISWHITE sets RasterInfo::minIsWhite only for 8-bit and 16-bit samples
+/// loads the first image of a .tiff file as a raster with one layer:
+/// * gray images keep the stored values of the first sample of each pixel, except for 8-bit and 16-bit gray with alpha, which becomes RGBA8;
+/// * RGB and palette images become RGB8 values, RGB images with alpha become RGBA8 values;
+/// * other formats (YCbCr, CMYK, CIE L*a*b*, less than 8 bits per sample, etc.) are decoded by libtiff to RGBA8 values
 MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings = {} );
 
-/// loads everything about the raster except its samples from .tiff format
+/// loads everything about the raster except its values from .tiff format
 MRIOEXTRAS_API Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path );
 
 } // namespace RasterLoad
@@ -30,7 +31,7 @@ MRIOEXTRAS_API Expected<RasterInfo> infoFromTiff( const std::filesystem::path& p
 namespace RasterSave
 {
 
-/// saves in .tiff format
+/// saves a raster with one layer in .tiff format; all value types except Float32_4 are supported
 MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings = {} );
 
 } // namespace RasterSave

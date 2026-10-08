@@ -12,43 +12,40 @@ namespace
 {
 
 template <typename T>
-Raster makeRaster( const Vector2i& resolution, int channels, ScalarType sampleType, const std::vector<T>& samples )
+Raster makeRaster( const Vector2i& size, ScalarType type, const std::vector<T>& values )
 {
     Raster res{
         .info = {
-            .resolution = resolution,
-            .channels = channels,
-            .sampleType = sampleType,
+            .dims = Vector3i( size.x, size.y, 1 ),
+            .type = type,
         },
     };
-    res.data.resize( samples.size() * sizeof( T ) );
-    std::memcpy( res.data.data(), samples.data(), res.data.size() );
+    res.data.resize( values.size() * sizeof( T ) );
+    std::memcpy( res.data.data(), values.data(), res.data.size() );
     return res;
 }
 
 } // namespace
 
-TEST( MRMesh, RasterInfoSizes )
+TEST( MRMesh, RasterInfoDataSize )
 {
     RasterInfo info{
-        .resolution = { 3, 2 },
-        .channels = 4,
-        .sampleType = ScalarType::UInt16,
+        .dims = { 3, 2, 4 },
+        .type = ScalarType::UInt16,
     };
-    EXPECT_EQ( info.sampleSize(), 2u );
     EXPECT_EQ( info.dataSize(), 3u * 2 * 4 * 2 );
-
-    info.sampleType = ScalarType::Float64;
-    EXPECT_EQ( info.sampleSize(), 8u );
-    info.sampleType = ScalarType::Float32_4;
-    EXPECT_EQ( info.sampleSize(), 0u );
+    info.type = ScalarType::RGB8;
+    EXPECT_EQ( info.dataSize(), 3u * 2 * 4 * 3 );
+    info.type = ScalarType::Unknown;
+    EXPECT_EQ( info.dataSize(), 0u );
+    info = { .dims = { 3, 0, 1 }, .type = ScalarType::UInt8 };
     EXPECT_EQ( info.dataSize(), 0u );
 }
 
 TEST( MRMesh, RasterToImageGray )
 {
     // the rows of a raster go from top to bottom, the ones of an image from bottom to top
-    const auto raster8 = makeRaster<uint8_t>( { 2, 2 }, 1, ScalarType::UInt8, { 0, 50, 100, 255 } );
+    const auto raster8 = makeRaster<uint8_t>( { 2, 2 }, ScalarType::UInt8, { 0, 50, 100, 255 } );
     auto image = convertRasterToImage( raster8 );
     ASSERT_TRUE( image.has_value() ) << image.error();
     EXPECT_EQ( image->resolution, Vector2i( 2, 2 ) );
@@ -57,40 +54,24 @@ TEST( MRMesh, RasterToImageGray )
         Color( 0, 0, 0 ), Color( 50, 50, 50 ),
     } ) );
 
-    // 16-bit gray values keep the high byte, as libtiff's RGBA reader does
-    const auto raster16 = makeRaster<uint16_t>( { 3, 1 }, 1, ScalarType::UInt16, { 0x00FF, 0x8000, 0xFFFF } );
+    // 16-bit values keep the high byte, as libtiff's RGBA reader does
+    const auto raster16 = makeRaster<uint16_t>( { 3, 1 }, ScalarType::UInt16, { 0x00FF, 0x8000, 0xFFFF } );
     image = convertRasterToImage( raster16 );
     ASSERT_TRUE( image.has_value() ) << image.error();
     EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 0, 0, 0 ), Color( 128, 128, 128 ), Color( 255, 255, 255 ) } ) );
-
-    auto minIsWhite = raster8;
-    minIsWhite.info.minIsWhite = true;
-    image = convertRasterToImage( minIsWhite );
-    ASSERT_TRUE( image.has_value() ) << image.error();
-    EXPECT_EQ( image->pixels, std::vector<Color>( {
-        Color( 155, 155, 155 ), Color( 0, 0, 0 ),
-        Color( 255, 255, 255 ), Color( 205, 205, 205 ),
-    } ) );
-
-    // gray and alpha
-    const auto grayAlpha = makeRaster<uint8_t>( { 2, 1 }, 2, ScalarType::UInt8, { 10, 20, 30, 40 } );
-    image = convertRasterToImage( grayAlpha );
-    ASSERT_TRUE( image.has_value() ) << image.error();
-    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 10, 10, 10, 20 ), Color( 30, 30, 30, 40 ) } ) );
 }
 
 TEST( MRMesh, RasterToImageScaledGray )
 {
-    // the values of other types are scaled from their valid range, invalid values become black
-    auto raster = makeRaster<float>( { 5, 1 }, 1, ScalarType::Float32, { -1.f, 1.f, 3.f, -1000.f, std::nanf( "" ) } );
-    raster.info.noData = -1000.;
+    // the values of other types are scaled from the range of non-NaN values
+    const auto raster = makeRaster<float>( { 4, 1 }, ScalarType::Float32, { -1.f, 1.f, 3.f, std::nanf( "" ) } );
     auto image = convertRasterToImage( raster );
     ASSERT_TRUE( image.has_value() ) << image.error();
     EXPECT_EQ( image->pixels, std::vector<Color>( {
-        Color( 0, 0, 0 ), Color( 127, 127, 127 ), Color( 255, 255, 255 ), Color::black(), Color::black()
+        Color( 0, 0, 0 ), Color( 127, 127, 127 ), Color( 255, 255, 255 ), Color::black()
     } ) );
 
-    const auto raster16 = makeRaster<int16_t>( { 3, 1 }, 1, ScalarType::Int16, { -300, 0, 300 } );
+    const auto raster16 = makeRaster<int16_t>( { 3, 1 }, ScalarType::Int16, { -300, 0, 300 } );
     image = convertRasterToImage( raster16 );
     ASSERT_TRUE( image.has_value() ) << image.error();
     EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 0, 0, 0 ), Color( 127, 127, 127 ), Color( 255, 255, 255 ) } ) );
@@ -98,32 +79,15 @@ TEST( MRMesh, RasterToImageScaledGray )
 
 TEST( MRMesh, RasterToImageColor )
 {
-    // 16-bit color and alpha samples are rounded, as libtiff's RGBA reader does
-    const auto rgba16 = makeRaster<uint16_t>( { 1, 1 }, 4, ScalarType::UInt16, { 0xFFFF, 0x8000, 0x0081, 0x0000 } );
-    auto image = convertRasterToImage( rgba16 );
+    const auto rgba = makeRaster<uint8_t>( { 2, 1 }, ScalarType::RGBA8, { 1, 2, 3, 4, 5, 6, 7, 8 } );
+    auto image = convertRasterToImage( rgba );
     ASSERT_TRUE( image.has_value() ) << image.error();
-    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 255, 128, 1, 0 ) } ) );
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 1, 2, 3, 4 ), Color( 5, 6, 7, 8 ) } ) );
 
-    // floating-point samples are clamped to [0, 1], the channels after the fourth one are ignored
-    const auto rgbFloat = makeRaster<float>( { 1, 1 }, 5, ScalarType::Float32, { 2.f, 0.5f, -1.f, 1.f, 7.f } );
-    image = convertRasterToImage( rgbFloat );
+    const auto rgb = makeRaster<uint8_t>( { 2, 1 }, ScalarType::RGB8, { 1, 2, 3, 4, 5, 6 } );
+    image = convertRasterToImage( rgb );
     ASSERT_TRUE( image.has_value() ) << image.error();
-    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 255, 127, 0, 255 ) } ) );
-
-    const auto rgb8 = makeRaster<uint8_t>( { 1, 1 }, 3, ScalarType::UInt8, { 1, 2, 3 } );
-    image = convertRasterToImage( rgb8 );
-    ASSERT_TRUE( image.has_value() ) << image.error();
-    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 1, 2, 3 ) } ) );
-}
-
-TEST( MRMesh, RasterToImagePalette )
-{
-    auto raster = makeRaster<uint8_t>( { 3, 1 }, 1, ScalarType::UInt8, { 1, 0, 7 } );
-    raster.info.palette = { Color::red(), Color::green() };
-    auto image = convertRasterToImage( raster );
-    ASSERT_TRUE( image.has_value() ) << image.error();
-    // the indices outside of the palette become black
-    EXPECT_EQ( image->pixels, std::vector<Color>( { Color::green(), Color::red(), Color::black() } ) );
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 1, 2, 3 ), Color( 4, 5, 6 ) } ) );
 }
 
 TEST( MRMesh, RasterImageRoundTrip )
@@ -136,9 +100,8 @@ TEST( MRMesh, RasterImageRoundTrip )
         .resolution = { 3, 2 },
     };
     const auto raster = convertImageToRaster( image );
-    EXPECT_EQ( raster.info.resolution, image.resolution );
-    EXPECT_EQ( raster.info.channels, 4 );
-    EXPECT_EQ( raster.info.sampleType, ScalarType::UInt8 );
+    EXPECT_EQ( raster.info.dims, Vector3i( 3, 2, 1 ) );
+    EXPECT_EQ( raster.info.type, ScalarType::RGBA8 );
     ASSERT_EQ( raster.data.size(), 24u );
     // the first row of the raster is the top one, i.e. the last row of the image
     EXPECT_EQ( raster.data[0], 13 );
@@ -152,13 +115,17 @@ TEST( MRMesh, RasterImageRoundTrip )
 
 TEST( MRMesh, RasterToImageErrors )
 {
-    auto raster = makeRaster<uint8_t>( { 2, 2 }, 1, ScalarType::UInt8, { 0, 1, 2 } );
+    auto raster = makeRaster<uint8_t>( { 2, 2 }, ScalarType::UInt8, { 0, 1, 2 } );
     EXPECT_FALSE( convertRasterToImage( raster ).has_value() );
 
     raster.data.push_back( 3 );
     EXPECT_TRUE( convertRasterToImage( raster ).has_value() );
 
-    raster.info.sampleType = ScalarType::Unknown;
+    auto twoLayers = makeRaster<uint8_t>( { 2, 1 }, ScalarType::UInt8, { 0, 1, 2, 3 } );
+    twoLayers.info.dims.z = 2;
+    EXPECT_FALSE( convertRasterToImage( twoLayers ).has_value() );
+
+    raster.info.type = ScalarType::Unknown;
     EXPECT_FALSE( convertRasterToImage( raster ).has_value() );
 }
 

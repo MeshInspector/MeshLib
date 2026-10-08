@@ -1,14 +1,11 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-#include "MRAffineXf3.h"
-#include "MRColor.h"
 #include "MRExpected.h"
 #include "MRImage.h"
 #include "MRScalarConvert.h"
-#include "MRVector2.h"
+#include "MRVector3.h"
 
-#include <optional>
 #include <vector>
 
 namespace MR
@@ -18,57 +15,35 @@ namespace MR
 /// \ingroup BasicStructuresGroup
 /// \{
 
-/// everything about a raster image except its pixel values
+/// everything about a raster except its values
 struct RasterInfo
 {
-    /// width and height in pixels
-    Vector2i resolution;
+    /// number of values along each axis: x is the width, y is the height, z is the number of layers
+    Vector3i dims;
 
-    /// number of samples per pixel: 1 - gray value or palette index, 2 - gray value and alpha, 3 - RGB, 4 - RGBA;
-    /// the channels after the fourth one have no predefined meaning
-    int channels = 1;
+    /// type of all values
+    ScalarType type = ScalarType::Unknown;
 
-    /// type of all samples
-    ScalarType sampleType = ScalarType::Unknown;
-
-    /// colors of the indices of a single-channel raster with integer samples; empty if the raster has no palette
-    std::vector<Color> palette;
-
-    /// true if the smallest gray value means white and the largest one black (TIFF's PHOTOMETRIC_MINISWHITE)
-    bool minIsWhite = false;
-
-    /// optional transformation of (column, row, sample value) to world coordinates, e.g. from GeoTIFF tags
-    std::optional<AffineXf3f> pixelToWorld;
-
-    /// optional value of the samples without valid data, e.g. from GDAL_NODATA tag
-    std::optional<double> noData;
-
-    /// returns the size of one sample in bytes, or 0 if sampleType cannot be used in rasters
-    [[nodiscard]] MRMESH_API size_t sampleSize() const;
-
-    /// returns the size of all samples in bytes
+    /// returns the size of all values in bytes
     [[nodiscard]] MRMESH_API size_t dataSize() const;
 };
 
-/// raster image with samples of any type and any number of channels
+/// regular grid of values of any type: an image if it has one layer, otherwise a volume
 struct Raster
 {
     RasterInfo info;
 
-    /// samples of type info.sampleType: the rows go from top to bottom (unlike in Image), the pixels of a row from left to right,
-    /// and the samples of a pixel are stored together
+    /// values of type info.type: x changes first, then y (the rows go from top to bottom, unlike in Image), then z
     std::vector<uint8_t> data;
 };
 
-/// converts a raster to an image (the rows are reordered from bottom to top):
-/// * 8-bit samples are taken as is, 16-bit samples are scaled to 8 bits;
-/// * the samples of other types are scaled from the range of valid values (neither noData nor NaN) to [0, 255] if they are gray,
-///   the invalid ones become black; color and alpha samples are clamped to [0, 1] for floating-point types and to [0, 255] for integers;
-/// * gray values are inverted if minIsWhite is set;
-/// * palette indices are replaced with palette colors, the indices outside of the palette become black
+/// converts a raster with one layer to an image (the rows are reordered from bottom to top):
+/// * RGBA8 values are taken as is, RGB8 values become opaque colors;
+/// * UInt8 values become gray colors, and so do the high bytes of UInt16 values;
+/// * the values of other types are scaled from the range of non-NaN values to gray colors, NaN values become black
 MRMESH_API Expected<Image> convertRasterToImage( const Raster& raster );
 
-/// converts an image to a raster with four 8-bit channels
+/// converts an image to a raster with one layer of RGBA8 values
 MRMESH_API Raster convertImageToRaster( const Image& image );
 
 /// settings for loading rasters from external formats

@@ -21,6 +21,7 @@ jobs:
       CONFIG: Release
       CXX-COMPILER: /usr/bin/clang++-14
       CXX-STANDARD: 20
+      MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
     permissions:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
@@ -47,13 +48,8 @@ jobs:
           export HOME=${RUNNER_TEMP}
           git config --global --add safe.directory '*'
           # No retry.sh, linux scripts retry themselves.
-          scripts/clone_submodules_linux.sh --skip-prebuilt-thirdparty
-
-      - name: Install thirdparty libs
-        run: |
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/lib ./lib
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/include ./include
-          ln -s /usr/local/lib/meshlib-thirdparty-lib/share ./share
+          scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/mrbind
+          scripts/checkout_submodules.sh thirdparty/mrbind deps/cppdecl
 
       - name: Install mrbind
         uses: ./.github/actions/build-mrbind

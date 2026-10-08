@@ -198,19 +198,22 @@ git clone https://github.com/MeshInspector/MeshLib.git
 cd MeshLib
 ```
  2. **Clone submodules**:
- <br/> Run `scripts/clone_submodules_linux.sh` to clone submodules. It has the same effect as `git submodules update --recursive --init`, except that it skips submodules that are not needed on Linux.
+ <br/> The build needs only the `thirdparty/imgui` submodule.
+```sh
+git submodule update --init thirdparty/imgui
+```
  3. **Install/Build [Dependencies](\ref ThirdParty) and Compile**:
 ```sh
-./scripts/build_thirdparty.sh  # Do not select emscripten in the corresponding question
-./scripts/build_source.sh      # Do not select emscripten in the corresponding question
+./scripts/build_cpm_thirdparty.sh  # Do not select emscripten in the corresponding question
+./scripts/build_source.sh          # Do not select emscripten in the corresponding question
 ```
 You may also run the scripts in the non-interactive mode (see [Building WebAssembly with MeshLib Using Emscripten](\ref CppSetupWASM) for more info):
 ```sh
-MR_EMSCRIPTEN=OFF ./scripts/build_thirdparty.sh
+MR_EMSCRIPTEN=OFF ./scripts/build_cpm_thirdparty.sh
 MR_EMSCRIPTEN=OFF ./scripts/build_source.sh
 ```
 > [!NOTE]
-> Dependencies are installed automatically on Ubuntu only. Elsewhere `build_thirdparty.sh` prints *"Unsupported system. Installing dependencies is your responsibility."*, so install the equivalents of [`requirements/ubuntu.txt`](https://github.com/MeshInspector/MeshLib/blob/master/requirements/ubuntu.txt) yourself first.
+> Dependencies are installed automatically on Ubuntu only. Elsewhere `build_cpm_thirdparty.sh` prints *"Unsupported system. Installing dependencies is your responsibility."*, so install the equivalents of [`requirements/ubuntu.txt`](https://github.com/MeshInspector/MeshLib/blob/master/requirements/ubuntu.txt) yourself first.
  4. **Create and Install Package**:
  <br/> This step will create distribution package and install it to the system
 ```sh
@@ -358,6 +361,10 @@ emcmake cmake -S . -B build -DCMAKE_FIND_ROOT_PATH=path_to_install
  - Navigate to the MeshLib directory:
 ```sh
 cd ~/MeshLib
+```
+ - Clone the third-party submodules:
+```sh
+git submodule update --init
 ```
  - Run the script to build [Third-Party Dependencies](\ref ThirdParty). When prompted, select **Emscripten** as the build target:
   - `y` - Emscripten, multi-threaded

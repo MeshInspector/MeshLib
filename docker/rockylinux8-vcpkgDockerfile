@@ -68,11 +68,6 @@ ENV VCPKG_TRIPLET=$VCPKG_TRIPLET
 
 WORKDIR /root
 
-COPY thirdparty/vcpkg/vcpkg.json MeshLib/vcpkg.json
-COPY thirdparty/vcpkg/ports MeshLib/ports
-COPY thirdparty/vcpkg/triplets MeshLib/triplets
-COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
-
 # bootstrap vcpkg
 ENV VCPKG_ROOT=/root/vcpkg
 ENV VCPKG_DISABLE_METRICS=1
@@ -87,19 +82,26 @@ RUN <<EOF bash
     # also prepare a clean copy for the production stage
     cp -a vcpkg /opt/
 EOF
+ENV PATH=$VCPKG_ROOT:$PATH
+
+WORKDIR /root/MeshLib
+
+COPY scripts/build_vcpkg_thirdparty.sh scripts/build_vcpkg_thirdparty.sh
+COPY thirdparty/vcpkg thirdparty/vcpkg
 
 # build vcpkg packages
-ENV VCPKG_DEFAULT_HOST_TRIPLET=$VCPKG_TRIPLET
 RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     --mount=type=secret,id=AWS_SECRET_ACCESS_KEY \
     --mount=type=secret,id=AWS_SESSION_TOKEN <<EOF
     set -e
-    source /root/MeshLib/configure_s3_cache.sh
+    source ./thirdparty/vcpkg/configure_s3_cache.sh
     source /opt/rh/gcc-toolset-11/enable
     source /opt/autoconf27/enable
+    # enable debug output
+    export CI=true
     # network may flake
     retry.sh -- \
-        /root/vcpkg/vcpkg install --x-manifest-root=/root/MeshLib --x-install-root=/opt/vcpkg_installed --debug
+        ./scripts/build_vcpkg_thirdparty.sh /opt/vcpkg_installed
 EOF
 
 

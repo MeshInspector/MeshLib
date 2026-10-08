@@ -1,10 +1,10 @@
 #pragma once
 #include "MRVoxelsFwd.h"
-#include "MRScalarConvert.h"
 #include "MRVoxelsVolume.h"
 
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRObject.h"
+#include "MRMesh/MRScalarConvert.h"
 #include <MRMesh/MRLoadedObjects.h>
 
 #include <filesystem>

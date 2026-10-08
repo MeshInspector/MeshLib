@@ -4,7 +4,7 @@ set -euo pipefail
 
 distro=$1
 
-common=(
+emscripten=(
   scripts/build_thirdparty.sh
   scripts/ask_emscripten_mode.src
   scripts/thirdparty
@@ -18,21 +18,26 @@ common=(
   # move the source-checksum-* tag on licenses-only commits and force a needless
   # rebuild of every image (the registry-check finds nothing at the new tag).
   ':(exclude)thirdparty/licenses/**'
+  cmake/Modules/ConfigureVcpkg.cmake
+  cmake/Modules/DefaultEmscriptenOptions.cmake
+  scripts/cmake_install.sh
 )
 
 ubuntu=(
+  scripts/build_cpm_thirdparty.sh
+  scripts/ask_emscripten_mode.src
+  thirdparty/cpm
+  cmake/Modules/ConfigureVcpkg.cmake
   requirements/ubuntu.txt
   requirements/python/requirements.txt
   scripts/install_apt_requirements.sh
-  scripts/install_thirdparty.sh
 )
-emscripten=( scripts/cmake_install.sh )
 
 case "${distro}" in
   ubuntu22|ubuntu24|ubuntu26)
-    files=( "docker/${distro}Dockerfile" "${common[@]}" "${ubuntu[@]}" ) ;;
+    files=( "docker/${distro}Dockerfile" "${ubuntu[@]}" ) ;;
   emscripten|emscripten-build-c-bindings)
-    files=( "docker/${distro}Dockerfile" "${common[@]}" "${emscripten[@]}" ) ;;
+    files=( "docker/${distro}Dockerfile" "${emscripten[@]}" ) ;;
   emscripten-generate-c-bindings)
     files=( "docker/${distro}Dockerfile" ) ;;
   rockylinux8-vcpkg|rockylinux9-vcpkg)

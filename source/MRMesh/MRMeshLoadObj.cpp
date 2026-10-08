@@ -103,12 +103,12 @@ ObjElement parseToken<ObjElement>( std::string_view line )
 }
 
 // some elements should be considered as individual groups even if following same element
-// for example "usemtl" (actually if there are several sequential "usemtl" lines only last one makes sense)
+// for example "usemtl" and "o" (actually if there are several sequential such lines only last one makes sense)
 template <typename T>
 bool isSingleLineElement( T el )
 {
     if constexpr ( std::is_same_v<T, ObjElement> )
-        return el == ObjElement::MaterialName;
+        return el == ObjElement::MaterialName || el == ObjElement::Object;
     else
         return false;
 }
@@ -534,7 +534,7 @@ std::vector<std::filesystem::path> parseMtlLibraryLine( const std::filesystem::p
 
 /// the materials from the libraries, a later library replaces the materials with the same names;
 /// optional `errors` gets the errors of the libraries that cannot be loaded
-MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, std::map<std::filesystem::path, std::string>* errors )
+MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, HashMap<std::filesystem::path, std::string>* errors )
 {
     MtlLibrary res;
     for ( const auto& file : files )
@@ -552,16 +552,29 @@ MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, st
     return res;
 }
 
-struct MaterialScope
+// the faces with the same material or of the same object, from the usemtl or o line before them
+struct FaceScope
 {
-    size_t fId{ 0 }; // material begins with this face
-    std::string mtName;
+    size_t fId{ 0 }; // scope begins with this face
+    std::string name; // of the material or object, empty for none
 };
-struct ObjectScope
+
+// starts a scope at face fId, named by the text of the line after its keyword;
+// the last scope is replaced if it has no faces yet, e.g. for consecutive usemtl or o lines
+void startScope( std::vector<FaceScope>& scopes, size_t fId, std::string_view line, std::string_view keyword )
 {
-    size_t fId{ 0 }; // object begins with this face
-    std::string objName;
-};
+    auto& scope = scopes.back().fId == fId ? scopes.back() : scopes.emplace_back();
+    scope.fId = fId;
+    scope.name = trimLeft( line ).substr( keyword.size() );
+    boost::trim( scope.name );
+}
+
+// removes the last scope if it begins after the last face; with startScope, so every scope has faces
+void removeScopeAfterFaces( std::vector<FaceScope>& scopes, size_t numFaces )
+{
+    if ( scopes.back().fId == numFaces )
+        scopes.pop_back();
+}
 
 
 struct VertexRepr
@@ -614,7 +627,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     const std::vector<Color>& colors,     // all colors from file
     const std::vector<UVCoord>& uvCoords, // all uvs from file
     ObjFaces& faces,                      // all faces from file, this object's vertex ids will be replaced with new unique values
-    const std::vector<MaterialScope>& materialScope, // all material scopes from file
+    const std::vector<FaceScope>& materialScope, // all material scopes from file
     size_t minFace, size_t maxFace,       // this model faces span in `faces`, max face excluding
     const MeshLoad::ObjLoadSettings& settings,
     const MtlLibrary* mtl ) // materials from all libraries of the file, nullptr if it references none: then `materialScope` is ignored
@@ -808,7 +821,7 @@ Expected<MeshLoad::NamedMesh> loadSingleModelFromObj(
     {
         if ( !mtl )
             return;
-        const auto& mtName = materialScope[materialScopeId].mtName;
+        const auto& mtName = materialScope[materialScopeId].name;
         const auto mIt = mtl->find( mtName );
         const MtlMaterial* material = mIt != mtl->end() ? &mIt->second : nullptr;
         if ( material && !contradictingDiffuseColors )
@@ -1124,9 +1137,10 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
 
     timer.restart( "fill flat arrays" ); // read arrays data and map objects and materials
 
-    std::vector<MaterialScope> mScopes;
+    std::vector<FaceScope> mScopes;
     mScopes.push_back( { .fId = 0 } ); // the faces before the first usemtl line have no material
-    std::vector<ObjectScope> oScopes;
+    std::vector<FaceScope> oScopes;
+    oScopes.push_back( { .fId = 0 } ); // the faces before the first o line form an object without a name
 
     // simply read all points and colors into vectors
     auto fillPointsAndColors = [&] ( size_t begin, size_t end )
@@ -1250,11 +1264,9 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             break;
         case ObjElement::Object:
         {
+            // an object without faces, e.g. with only lines, is replaced by the next one
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
-            auto& objData = oScopes.emplace_back();
-            objData.objName = trimLeft( line ).substr( strlen( "o" ), std::string_view::npos );
-            objData.fId = faceInfos.size();
-            boost::trim( objData.objName );
+            startScope( oScopes, faceInfos.size(), line, "o" );
             break;
         }
         case ObjElement::TextureVertex:
@@ -1263,11 +1275,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         case ObjElement::MaterialName:
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
-            // the last scope is replaced if it has no faces yet, e.g. for consecutive usemtl lines
-            auto& mtlData = mScopes.back().fId == faceInfos.size() ? mScopes.back() : mScopes.emplace_back();
-            mtlData.mtName = trimLeft( line ).substr( strlen( "usemtl" ), std::string_view::npos );
-            mtlData.fId = faceInfos.size();
-            boost::trim( mtlData.mtName );
+            startScope( mScopes, faceInfos.size(), line, "usemtl" );
             break;
         }
         default:
@@ -1307,14 +1315,17 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     timer.finish();
 
     // put sentinel at the end, replacing the scope of a usemtl line after the last face; so every other scope has faces
-    if ( mScopes.back().fId == faces.size() )
-        mScopes.pop_back();
+    removeScopeAfterFaces( mScopes, faces.size() );
     mScopes.push_back( { .fId = faces.size() } );
+
+    // skip the object of an o line after the last face; so every object has faces,
+    // and a file without faces has no object left, but then loading the single model below fails anyway
+    removeScopeAfterFaces( oScopes, faces.size() );
 
     // the library errors matter only if some faces use a material not found;
     // "(null)" is written for the faces without a material, e.g. by Blender
-    if ( settings.mtlErrors && std::none_of( mScopes.begin(), mScopes.end(), [&] ( const MaterialScope& s )
-        { return !s.mtName.empty() && s.mtName != "(null)" && mtl.find( s.mtName ) == mtl.end(); } ) )
+    if ( settings.mtlErrors && std::none_of( mScopes.begin(), mScopes.end(), [&] ( const FaceScope& s )
+        { return !s.name.empty() && s.name != "(null)" && mtl.find( s.name ) == mtl.end(); } ) )
         settings.mtlErrors->clear();
 
     auto newSettings = settings;
@@ -1327,7 +1338,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
             return unexpected( std::move( meshObj.error() ) );
         res.emplace_back( std::move( *meshObj ) );
         if ( oScopes.size() == 1 )
-            res.back().name = std::move( oScopes.front().objName );
+            res.back().name = std::move( oScopes.front().name );
         return res;
     }
 
@@ -1344,7 +1355,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         if ( !meshObj.has_value() )
             return unexpected( std::move( meshObj.error() ) );
         res[i] = std::move( *meshObj );
-        res[i].name = std::move( oScopes[i].objName );
+        res[i].name = std::move( oScopes[i].name );
     }
     return res;
 }
@@ -1412,7 +1423,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
 Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     return fromSceneObjFile( file, false, { .customXf = true, .countSkippedFaces = true, .callback = cb, .mtlErrors = &mtlErrors } )
     .transform( [&] ( std::vector<NamedMesh>&& results )
     {

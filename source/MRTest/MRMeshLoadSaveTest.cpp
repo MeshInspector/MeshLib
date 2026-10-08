@@ -12,6 +12,7 @@
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
+#include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
@@ -281,7 +282,7 @@ TEST(MRMesh, LoadObjTabIndented)
         "\tusemtl Mat1\n"
         "f 1/1 2/2 3/3\n";
 
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     auto res = MeshLoad::fromSceneObjFile( file.data(), file.size(), false, dir, { .mtlErrors = &mtlErrors } );
     std::filesystem::remove( mtlPath );
     ASSERT_TRUE( res.has_value() );
@@ -384,7 +385,7 @@ TEST(MRMesh, LoadObjMissingMtl)
     UniqueTemporaryFolder dir;
     writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
 
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     auto meshes = MeshLoad::fromSceneObjFile( dir / "model.obj", false, { .mtlErrors = &mtlErrors } );
     ASSERT_TRUE( meshes.has_value() );
     EXPECT_EQ( meshes->size(), 2 );
@@ -461,13 +462,13 @@ TEST(MRMesh, LoadObjSeveralMtl)
     ASSERT_EQ( res->objs.size(), 2 );
     EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
 
-    // each library is reported
+    // each library is reported, in the order of the hash map (it depends on the full paths)
     std::filesystem::remove( dir / "a.mtl" );
     res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings,
-        "Material file a.mtl was not found, so its textures and colors were not loaded.\n"
-        "Material file b.mtl was not found, so its textures and colors were not loaded.\n" + cWebAdvice );
+    const std::string aMissing = "Material file a.mtl was not found, so its textures and colors were not loaded.\n";
+    const std::string bMissing = "Material file b.mtl was not found, so its textures and colors were not loaded.\n";
+    EXPECT_TRUE( res->warnings == aMissing + bMissing + cWebAdvice || res->warnings == bMissing + aMissing + cWebAdvice ) << res->warnings;
 }
 
 TEST(MRMesh, LoadObjRepeatedMtl)
@@ -818,6 +819,93 @@ TEST(MRMesh, LoadObjUtf8MtlName)
     auto objMesh = std::dynamic_pointer_cast<ObjectMesh>( res->objs.front() );
     ASSERT_TRUE( objMesh );
     EXPECT_EQ( objMesh->getFrontColor( false ), Color::red() );
+}
+
+namespace
+{
+
+// a closed tetrahedron, whose vertices follow the first `numPrevVerts` vertices of the file
+std::string tetrahedronObj( int numPrevVerts )
+{
+    const auto face = [numPrevVerts] ( int a, int b, int c )
+    {
+        return "f " + std::to_string( numPrevVerts + a ) + " " + std::to_string( numPrevVerts + b ) + " " + std::to_string( numPrevVerts + c ) + "\n";
+    };
+    return "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\n" + face( 1, 3, 2 ) + face( 1, 2, 4 ) + face( 1, 4, 3 ) + face( 2, 3, 4 );
+}
+
+using NamedFaceCounts = std::vector<std::pair<std::string, int>>;
+
+// the name and the number of faces of each loaded mesh
+NamedFaceCounts namedFaceCounts( const std::vector<MeshLoad::NamedMesh>& meshes )
+{
+    NamedFaceCounts res;
+    for ( const auto& m : meshes )
+        res.emplace_back( m.name, m.mesh.topology.numValidFaces() );
+    return res;
+}
+
+} //anonymous namespace
+
+TEST(MRMesh, LoadObjFacesBeforeFirstObject)
+{
+    // the faces before the first o line form an object without a name
+    const std::pair<std::string, NamedFaceCounts> cases[] = {
+        { tetrahedronObj( 0 ) + "o A\n" + tetrahedronObj( 4 ) + "o B\n" + tetrahedronObj( 8 ), { { "", 4 }, { "A", 4 }, { "B", 4 } } },
+        { tetrahedronObj( 0 ) + "o A\n" + tetrahedronObj( 4 ), { { "", 4 }, { "A", 4 } } }, // also with a single o line
+    };
+    UniqueTemporaryFolder dir;
+    for ( const auto& [obj, expected] : cases )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_EQ( namedFaceCounts( *res ), expected );
+    }
+
+    // which gets the name of the file
+    writeTextFile( dir / "model.obj", tetrahedronObj( 0 ) + "o A\n" + tetrahedronObj( 4 ) );
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->objs.size(), 2 );
+    EXPECT_EQ( res->objs[0]->name(), "model" );
+    EXPECT_EQ( res->objs[1]->name(), "A" );
+}
+
+TEST(MRMesh, LoadObjObjectWithoutFaces)
+{
+    // an object without faces, e.g. with only lines, is skipped wherever it is
+    const std::pair<std::string, NamedFaceCounts> cases[] = {
+        { "o A\n" + tetrahedronObj( 0 ) + "o Lines\nl 1 2 3 4\no B\n" + tetrahedronObj( 4 ), { { "A", 4 }, { "B", 4 } } },
+        { "o A\n" + tetrahedronObj( 0 ) + "o B\n" + tetrahedronObj( 4 ) + "o Lines\nl 1 2 3 4\n", { { "A", 4 }, { "B", 4 } } },
+        { "o Lines\nl 1 2 3 4\no A\n" + tetrahedronObj( 0 ), { { "A", 4 } } },
+        { "o A\n" + tetrahedronObj( 0 ) + "o Lines\nl 1 2 3 4\n", { { "A", 4 } } },
+    };
+    UniqueTemporaryFolder dir;
+    for ( const auto& [obj, expected] : cases )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_EQ( namedFaceCounts( *res ), expected );
+    }
+}
+
+TEST(MRMesh, LoadObjConsecutiveObjectNames)
+{
+    // of consecutive o lines, the last one names the faces after them
+    const std::pair<std::string, NamedFaceCounts> cases[] = {
+        { "o Empty\no A\n" + tetrahedronObj( 0 ), { { "A", 4 } } },
+        { "o Empty\no A\n" + tetrahedronObj( 0 ) + "o Empty\no B\n" + tetrahedronObj( 4 ), { { "A", 4 }, { "B", 4 } } },
+    };
+    UniqueTemporaryFolder dir;
+    for ( const auto& [obj, expected] : cases )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_EQ( namedFaceCounts( *res ), expected );
+    }
 }
 
 } //namespace MR

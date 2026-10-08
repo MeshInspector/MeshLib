@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include <limits>
 #include <sstream>
 
 namespace MR
@@ -32,23 +33,24 @@ TEST( MRMesh, ScalarTypeMinMax )
     EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int64 ), MinMaxd( -0x1p63, 0x1p63 ) );
     // the range of a color component
     EXPECT_EQ( getScalarTypeMinMax( ScalarType::RGBA8 ), MinMaxd( 0, 255 ) );
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float64 ), MinMaxd( 0, 0 ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float32 ), MinMaxd( std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float32_4 ), getScalarTypeMinMax( ScalarType::Float32 ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float64 ), MinMaxd( std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max() ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Unknown ), MinMaxd( 0, 0 ) );
 
-    // getTypeConverter maps this range to [0, 1]
-    const auto minMax = getScalarTypeMinMax( ScalarType::Int16 );
-    const auto converter = getTypeConverter( ScalarType::Int16, minMax.size(), minMax.min );
+    // getTypeConverter maps the range of an integer type to [0, 1]
+    const auto converter = getTypeConverter( ScalarType::Int16, getScalarTypeMinMax( ScalarType::Int16 ) );
     const int16_t values[] = { -32768, 32767 };
     EXPECT_EQ( converter( ( const char* )&values[0] ), 0.f );
     EXPECT_EQ( converter( ( const char* )&values[1] ), 1.f );
     // 64-bit values do not overflow
-    const auto minMax64 = getScalarTypeMinMax( ScalarType::Int64 );
-    const auto converter64 = getTypeConverter( ScalarType::Int64, minMax64.size(), minMax64.min );
+    const auto converter64 = getTypeConverter( ScalarType::Int64, getScalarTypeMinMax( ScalarType::Int64 ) );
     const std::int64_t values64[] = { 0, std::int64_t( 1 ) << 62 };
     EXPECT_EQ( converter64( ( const char* )&values64[0] ), 0.5f );
     EXPECT_EQ( converter64( ( const char* )&values64[1] ), 0.75f );
     // and keeps floating-point values as they are
     const double value = -2.5;
-    EXPECT_EQ( getTypeConverter( ScalarType::Float64, 0, 0 )( ( const char* )&value ), -2.5f );
+    EXPECT_EQ( getTypeConverter( ScalarType::Float64, getScalarTypeMinMax( ScalarType::Float64 ) )( ( const char* )&value ), -2.5f );
 }
 
 TEST( MRMesh, ScalarTypeColorLuma )
@@ -60,7 +62,7 @@ TEST( MRMesh, ScalarTypeColorLuma )
     EXPECT_FLOAT_EQ( visitScalarType( toFloat, ScalarType::RGB8, c ), luma );
     // alpha does not change the value
     EXPECT_FLOAT_EQ( visitScalarType( toFloat, ScalarType::RGBA8, c ), luma );
-    EXPECT_FLOAT_EQ( getTypeConverter( ScalarType::RGBA8, 255, 0 )( c ), luma / 255 );
+    EXPECT_FLOAT_EQ( getTypeConverter( ScalarType::RGBA8, getScalarTypeMinMax( ScalarType::RGBA8 ) )( c ), luma / 255 );
 }
 
 #ifndef MESHLIB_NO_VOXELS

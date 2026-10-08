@@ -69,8 +69,10 @@ MinMaxd getScalarTypeMinMax( ScalarType scalarType )
     case ScalarType::Int64:
         return minMaxOf<int64_t>();
     case ScalarType::Float32:
-    case ScalarType::Float64:
     case ScalarType::Float32_4:
+        return minMaxOf<float>();
+    case ScalarType::Float64:
+        return minMaxOf<double>();
     case ScalarType::Unknown:
     case ScalarType::Count:
         break;
@@ -78,7 +80,7 @@ MinMaxd getScalarTypeMinMax( ScalarType scalarType )
     return { 0.0, 0.0 };
 }
 
-std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, double range, double min )
+std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, const MinMaxd& range )
 {
     if ( scalarType == ScalarType::Float32 || scalarType == ScalarType::Float64 || scalarType == ScalarType::Float32_4 )
     {
@@ -87,10 +89,10 @@ std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, do
             return visitScalarType( [] ( auto v ) { return float( v ); }, scalarType, c );
         };
     }
-    return [range, min, scalarType] ( const char* c )
+    return [min = range.min, size = range.size(), scalarType] ( const char* c )
     {
         // the subtraction in double does not overflow for 64-bit types
-        return visitScalarType( [range, min] ( auto v ) { return float( double( v ) - min ) / float( range ); }, scalarType, c );
+        return visitScalarType( [min, size] ( auto v ) { return float( double( v ) - min ) / float( size ); }, scalarType, c );
     };
 }
 

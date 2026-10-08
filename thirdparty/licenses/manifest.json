@@ -430,7 +430,7 @@
         "type": "submodule",
         "path": "thirdparty/mrbind-pybind11"
       },
-      "version": "cee72f48dbce4e6bdbe1439d8fd222f2e900e374"
+      "version": "2bead442a0146befdd5383bab79f5aa101afb573"
     },
     {
       "id": "OpenVDB",

@@ -858,11 +858,12 @@ TEST(MRMesh, LoadObjFacesBeforeFirstObject)
     {
         writeTextFile( dir / "model.obj", obj );
         auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
-        ASSERT_TRUE( res.has_value() );
+        ASSERT_TRUE( res.has_value() ) << res.error();
         EXPECT_EQ( namedFaceCounts( *res ), expected );
     }
 
     // which gets the name of the file
+    writeTextFile( dir / "model.obj", tetrahedronObj( 0 ) + "o A\n" + tetrahedronObj( 4 ) );
     auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->objs.size(), 2 );
@@ -901,7 +902,7 @@ TEST(MRMesh, LoadObjConsecutiveObjectNames)
     {
         writeTextFile( dir / "model.obj", obj );
         auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
-        ASSERT_TRUE( res.has_value() );
+        ASSERT_TRUE( res.has_value() ) << res.error();
         EXPECT_EQ( namedFaceCounts( *res ), expected );
     }
 }

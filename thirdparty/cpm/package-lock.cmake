@@ -123,7 +123,7 @@ set(MESHLIB_PACKAGE_mbedtls
 
 set(MESHLIB_PACKAGE_mrbind-pybind11
   GIT_REPOSITORY https://github.com/MeshInspector/mrbind-pybind11
-  GIT_TAG f11e5ce8140ea8c7e8cf8156c18394aa73823024
+  GIT_TAG 2bead442a0146befdd5383bab79f5aa101afb573
 )
 
 set(MESHLIB_PACKAGE_nlohmann-json

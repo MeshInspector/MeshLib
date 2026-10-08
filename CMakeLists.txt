@@ -90,7 +90,7 @@ IF(NOT APPLE)
   list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
 ENDIF()
 IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
-  message("thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
+  message("thirdparty build directory not found! Make sure to point CMAKE_PREFIX_PATH at an existing thirdparty install")
 ENDIF()
 IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
   include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
@@ -223,6 +223,20 @@ else()
     set(MR_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}")
     set(MR_FONTS_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}/fonts")
   endif()
+endif()
+
+if(MESHLIB_USE_VCPKG)
+  set(VCPKG_TRIPLET_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+  install(
+    DIRECTORY
+      "$<$<PLATFORM_ID:Windows>:${VCPKG_TRIPLET_DIR}/bin>"
+      "${VCPKG_TRIPLET_DIR}/include"
+      "${VCPKG_TRIPLET_DIR}/lib"
+      "${VCPKG_TRIPLET_DIR}/share"
+    DESTINATION .
+    PATTERN "pkgconfig" EXCLUDE
+    PATTERN "__pycache__" EXCLUDE
+  )
 endif()
 
 # MRMesh library is always built

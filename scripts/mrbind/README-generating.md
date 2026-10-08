@@ -56,6 +56,8 @@ You need to repeat this step if we update MRBind.
 
 ### Ubuntu
 
+* Run `git submodule update --init --recursive thirdparty/mrbind`
+
 * Run `scripts/mrbind/install_mrbind_ubuntu.sh`
 
 ### MacOS
@@ -232,7 +234,7 @@ Then you must build MeshLib with a special CMake flag, which will build the gene
 
      On Ubuntu, install `sudo apt install libc6-dev-i386`. On other distros, install the package providing `/usr/include/gnu/stubs-32.h` if it doesn't already exist.
 
-     Make sure the third-party libraries for MeshLib are already built, by running `scripts/build_thirdparty.sh` (reply `n` if asked whether to build for Emscripten).
+     Make sure the third-party libraries for MeshLib are already built, by running `scripts/build_cpm_thirdparty.sh` (reply `n` if asked whether to build for Emscripten).
 
   2. **With Emscripten SDK.**
 
@@ -311,6 +313,8 @@ The steps below both generate the C# code (at `MeshLib/source/MRDotNet2`) and co
 ## 4. Other information
 
 ### Less common flags for the generator script
+
+* **Selecting the third-party libraries:** on Linux and MacOS the generator looks for them in `MESHLIB_THIRDPARTY_ROOT_DIR` from the environment, then in `./installed`, then in the project root. `DEPS_BASE_DIR=path/to/libs` overrides all of those.
 
 * **Selecting MRBind installation:** if you installed MRBind to a non-default location (the default is `./thirdparty/mrbind`), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
 

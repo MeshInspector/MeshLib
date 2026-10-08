@@ -257,4 +257,28 @@ TEST( MRMesh, CompressManySmallFilesToZip )
     }
 }
 
+// Zip archives made by macOS Finder contain __MACOSX/._<name> metadata entries, which must not be extracted
+TEST( MRMesh, DecompressZipSkipsMacOSMetadata )
+{
+    UniqueTemporaryFolder srcFolder;
+    ASSERT_TRUE( bool( srcFolder ) );
+    std::error_code ec;
+    std::filesystem::create_directory( srcFolder / "__MACOSX", ec );
+    std::ofstream( srcFolder / "mesh.stl", std::ios::binary ) << "solid";
+    std::ofstream( srcFolder / "__MACOSX" / "._mesh.stl", std::ios::binary ) << "AppleDouble";
+
+    UniqueTemporaryFolder dstFolder;
+    ASSERT_TRUE( bool( dstFolder ) );
+    const auto zipPath = dstFolder / "mac.zip";
+    const auto compressRes = compressZip( zipPath, srcFolder );
+    ASSERT_TRUE( compressRes.has_value() ) << compressRes.error();
+
+    UniqueTemporaryFolder outFolder;
+    ASSERT_TRUE( bool( outFolder ) );
+    const auto decompressRes = decompressZip( zipPath, outFolder );
+    ASSERT_TRUE( decompressRes.has_value() ) << decompressRes.error();
+    EXPECT_TRUE( std::filesystem::exists( outFolder / "mesh.stl", ec ) );
+    EXPECT_FALSE( std::filesystem::exists( outFolder / "__MACOSX", ec ) );
+}
+
 } // namespace MR

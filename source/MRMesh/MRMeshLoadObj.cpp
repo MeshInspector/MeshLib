@@ -534,7 +534,7 @@ std::vector<std::filesystem::path> parseMtlLibraryLine( const std::filesystem::p
 
 /// the materials from the libraries, a later library replaces the materials with the same names;
 /// optional `errors` gets the errors of the libraries that cannot be loaded
-MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, std::map<std::filesystem::path, std::string>* errors )
+MtlLibrary loadMtlLibraries( const std::vector<std::filesystem::path>& files, HashMap<std::filesystem::path, std::string>* errors )
 {
     MtlLibrary res;
     for ( const auto& file : files )
@@ -1412,7 +1412,7 @@ Expected<std::vector<NamedMesh>> fromSceneObjFile( const char* data, size_t size
 
 Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, const ProgressCallback& cb )
 {
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     return fromSceneObjFile( file, false, { .customXf = true, .countSkippedFaces = true, .callback = cb, .mtlErrors = &mtlErrors } )
     .transform( [&] ( std::vector<NamedMesh>&& results )
     {
@@ -1423,7 +1423,10 @@ Expected<LoadedObjects> loadObjectFromObj( const std::filesystem::path& file, co
 
         // true if material libraries or texture files were not found
         [[maybe_unused]] bool missingFiles = false;
-        for ( const auto& [p, error] : mtlErrors )
+        // in path order: the order of the hash map depends on the hashes of the full paths, which differ between standard libraries
+        std::vector<std::pair<std::filesystem::path, std::string>> sortedMtlErrors( mtlErrors.begin(), mtlErrors.end() );
+        std::sort( sortedMtlErrors.begin(), sortedMtlErrors.end() );
+        for ( const auto& [p, error] : sortedMtlErrors )
         {
             std::error_code ec;
             if ( std::filesystem::exists( p, ec ) )

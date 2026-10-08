@@ -9,7 +9,6 @@
 #include "MRLoadedObjects.h"
 #include <filesystem>
 #include <iosfwd>
-#include <map>
 #include <string>
 
 namespace MR
@@ -38,7 +37,7 @@ struct ObjLoadSettings
 
     /// optional output: errors of the material libraries (.mtl files) that could not be loaded, e.g. not found;
     /// filled only if some faces use a material that was not found
-    std::map<std::filesystem::path, std::string>* mtlErrors = nullptr;
+    HashMap<std::filesystem::path, std::string>* mtlErrors = nullptr;
 };
 
 struct NamedMesh

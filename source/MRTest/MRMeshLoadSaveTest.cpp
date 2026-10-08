@@ -12,6 +12,7 @@
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
+#include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
@@ -281,7 +282,7 @@ TEST(MRMesh, LoadObjTabIndented)
         "\tusemtl Mat1\n"
         "f 1/1 2/2 3/3\n";
 
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     auto res = MeshLoad::fromSceneObjFile( file.data(), file.size(), false, dir, { .mtlErrors = &mtlErrors } );
     std::filesystem::remove( mtlPath );
     ASSERT_TRUE( res.has_value() );
@@ -384,7 +385,7 @@ TEST(MRMesh, LoadObjMissingMtl)
     UniqueTemporaryFolder dir;
     writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
 
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     auto meshes = MeshLoad::fromSceneObjFile( dir / "model.obj", false, { .mtlErrors = &mtlErrors } );
     ASSERT_TRUE( meshes.has_value() );
     EXPECT_EQ( meshes->size(), 2 );

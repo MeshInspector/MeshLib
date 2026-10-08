@@ -13,6 +13,7 @@ emscripten=(
   ':(exclude)thirdparty/vcpkg/**'
   ':(exclude)thirdparty/mrbind'
   ':(exclude)thirdparty/mrbind/**'
+  ':(exclude)thirdparty/mrbind-pybind11' # Python bindings only, not built for Emscripten
   ':(exclude)thirdparty/Noto_Sans/**'
   # license texts shipped in packages, not an image input: including them would
   # move the source-checksum-* tag on licenses-only commits and force a needless

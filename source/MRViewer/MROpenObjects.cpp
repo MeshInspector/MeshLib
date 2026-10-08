@@ -52,6 +52,9 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
         for ( auto entry : Directory{ folder, ec } )
         {
             auto path = entry.path();
+            // skip macOS metadata: AppleDouble "._name" files and .DS_Store
+            if ( const auto name = utf8string( path.filename() ); name.starts_with( "._" ) || name == ".DS_Store" )
+                continue;
             if ( entry.is_directory( ec ) )
             {
                 node.subfolders.push_back( getFilePathNode( path ) );

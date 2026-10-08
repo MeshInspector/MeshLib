@@ -521,10 +521,11 @@ MR::TaggedBitSet<T> bitSetFromNP( const pybind11::buffer& bools )
     if ( boolsInfo.format != pybind11::format_descriptor<bool>::format() )
         throw std::runtime_error( "format of python vector 'bools' should be bool" );
 
-    MR::TaggedBitSet<T> resultBitSet( boolsInfo.shape[0] );
+    const auto n = size_t( boolsInfo.shape[0] );
+    MR::TaggedBitSet<T> resultBitSet( n );
 
     bool* data = reinterpret_cast< bool* >( boolsInfo.ptr );
-    for ( int i = 0; i < boolsInfo.shape[0]; ++i )
+    for ( size_t i = 0; i < n; ++i )
         resultBitSet.set( MR::Id<T>( i ), data[i] );
 
     return resultBitSet;
@@ -536,4 +537,5 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyBitSets, [] ( pybind11::module_& m )
     m.def( "vertBitSetFromBools", &bitSetFromNP<MR::VertTag>, pybind11::arg( "boolArray" ), "returns VertBitSet from numpy array with bools" );
     m.def( "edgeBitSetFromBools", &bitSetFromNP<MR::EdgeTag>, pybind11::arg( "boolArray" ), "returns EdgeBitSet from numpy array with bools" );
     m.def( "undirectedEdgeBitSetFromBools", &bitSetFromNP<MR::UndirectedEdgeTag>, pybind11::arg( "boolArray" ), "returns UndirectedEdgeBitSet from numpy array with bools" );
+    m.def( "voxelBitSetFromBools", &bitSetFromNP<MR::VoxelTag>, pybind11::arg( "boolArray" ), "returns VoxelBitSet from numpy array with bools" );
 } )

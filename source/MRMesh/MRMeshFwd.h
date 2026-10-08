@@ -470,9 +470,20 @@ MR_CANONICAL_TYPEDEFS( (template <typename T> struct), SegmPoint,
     ( SegmPointd, SegmPoint<double> )
 )
 
-struct EdgePoint;
-struct EdgeSegment;
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), EdgePointT,
+    ( EdgePoint,  EdgePointT<float>  )
+    ( EdgePointd, EdgePointT<double> )
+)
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), EdgeSegmentT,
+    ( EdgeSegment,  EdgeSegmentT<float>  )
+    ( EdgeSegmentd, EdgeSegmentT<double> )
+)
+using EdgePointf = EdgePointT<float>;
+using EdgeSegmentf = EdgeSegmentT<float>;
 using MeshEdgePoint = EdgePoint;
+template <typename T> using MeshEdgePointT = EdgePointT<T>;
+using MeshEdgePointf = EdgePointf;
+using MeshEdgePointd = EdgePointd;
 using SurfacePath = std::vector<MeshEdgePoint>;
 using SurfacePaths = std::vector<SurfacePath>;
 using IsoLine = SurfacePath;
@@ -497,7 +508,16 @@ struct FaceFace;
 struct UndirectedEdgeUndirectedEdge;
 struct PointOnFace;
 struct PointOnObject;
-struct MeshTriPoint;
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), MeshTriPointT,
+    ( MeshTriPoint,  MeshTriPointT<float>  )
+    ( MeshTriPointd, MeshTriPointT<double> )
+)
+using MeshTriPointf = MeshTriPointT<float>;
+MR_CANONICAL_TYPEDEFS( (template <typename T> struct), WeightedVertexT,
+    ( WeightedVertex,  WeightedVertexT<float>  )
+    ( WeightedVertexd, WeightedVertexT<double> )
+)
+using WeightedVertexf = WeightedVertexT<float>;
 struct MeshProjectionResult;
 struct CoordinateConverters;
 struct MeshIntersectionResult;

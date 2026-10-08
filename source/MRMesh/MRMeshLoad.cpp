@@ -569,10 +569,11 @@ static Expected<Mesh> fromObj( std::istream& in, const MeshLoadSettings& setting
         *settings.duplicatedVertexCount = r.duplicatedVertexCount;
     if ( settings.uvCoords )
         *settings.uvCoords = std::move( r.uvCoords );
-    if ( settings.texture && !r.textureFiles.empty() ) // if there is at least one texture
+    // only load one texture from MeshLoad version of obj opening for now; empty paths stand for the faces without a texture
+    const auto textureFile = std::find_if( begin( r.textureFiles ), end( r.textureFiles ), [] ( const auto& p ) { return !p.empty(); } );
+    if ( settings.texture && textureFile != end( r.textureFiles ) ) // if there is at least one texture
     {
-        // only load one texture from MeshLoad version of obj opening for now
-        auto image = ImageLoad::fromAnySupportedFormat( r.textureFiles.front() );
+        auto image = ImageLoad::fromAnySupportedFormat( *textureFile );
         if ( image.has_value() )
         {
             settings.texture->resolution = std::move( image->resolution );

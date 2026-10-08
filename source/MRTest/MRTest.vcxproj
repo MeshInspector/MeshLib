@@ -63,6 +63,7 @@
     <ClCompile Include="MRMultiwayICPTests.cpp" />
     <ClCompile Include="MRNaNTest.cpp" />
     <ClCompile Include="MRObjectTests.cpp" />
+    <ClCompile Include="MRDracoTests.cpp" />
     <ClCompile Include="MRPdfTests.cpp" />
     <ClCompile Include="MRPointCloudVariadicOffsetTests.cpp" />
     <ClCompile Include="MRPolyline2IntersectTests.cpp" />
@@ -144,6 +145,7 @@
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />
     <ClCompile Include="MRMimallocRedirectTests.cpp" />
+    <ClCompile Include="MRTiffIOTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MREmbeddedPython\MREmbeddedPython.vcxproj">

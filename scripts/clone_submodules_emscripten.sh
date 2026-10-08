@@ -12,6 +12,7 @@ if [[ $1 != --skip-prebuilt-thirdparty ]]; then
     SUBMODULES+=(
         thirdparty/c-blosc
         thirdparty/clip
+        thirdparty/draco
         thirdparty/expected
         thirdparty/fastmcpp
         thirdparty/fmt

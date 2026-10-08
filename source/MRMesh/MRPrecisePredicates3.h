@@ -169,6 +169,12 @@ struct CoordinateConverters
     const Vector3f& d, const Vector3f& e, 
     CoordinateConverters converters );
 
+/// the same as findTriangleSegmentIntersectionPrecise, but takes and returns integer coordinates;
+/// returns std::nullopt in the rare case when segment DE lies in the plane of triangle ABC without crossing its sides
+[[nodiscard]] MRMESH_API std::optional<Vector3i> findTriangleSegmentIntersectionPreciseInt(
+    const Vector3i& ai, const Vector3i& bi, const Vector3i& ci,
+    const Vector3i& di, const Vector3i& ei );
+
 /// \}
 
 }

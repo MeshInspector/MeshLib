@@ -28,6 +28,7 @@ fi
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \
     --x-install-root="${INSTALL_DIR}" \
+    --x-abi-tools-use-exact-versions \
     ${VCPKG_INSTALL_FLAGS}
 
 # vcpkg does not strip the libraries it builds

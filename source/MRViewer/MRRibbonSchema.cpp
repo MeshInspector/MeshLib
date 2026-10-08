@@ -629,7 +629,8 @@ namespace
 {
 
 /// reads the "Shortcut" object of an item in items.json:
-/// { "Keys": "Primary+Shift+S", "Category": "Scene", "Tags": [ "base" ] }
+/// { "Keys": "Primary+Shift+S", "Category": "Scene", "Tags": [ "base" ] },
+/// where "Keys" can also be an array of several keys doing the same: [ "Primary+Shift+Z", "Ctrl+Y" ]
 std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const std::string& itemName )
 {
     auto fail = [&itemName] ( const std::string& what ) -> std::optional<MenuItemShortcut>
@@ -644,12 +645,28 @@ std::optional<MenuItemShortcut> readItemShortcut( const Json::Value& json, const
     MenuItemShortcut res;
 
     const auto& keys = json["Keys"];
-    if ( !keys.isString() )
+    std::vector<std::string> keyStrings;
+    if ( keys.isString() )
+        keyStrings.push_back( keys.asString() );
+    else if ( keys.isArray() )
+    {
+        for ( const auto& k : keys )
+        {
+            if ( !k.isString() )
+                return fail( "non-string element in \"Keys\"" );
+            keyStrings.push_back( k.asString() );
+        }
+    }
+    if ( keyStrings.empty() )
         return fail( "\"Keys\" field is not valid or not present" );
-    const auto shortcutKey = ShortcutManager::parseShortcutKey( keys.asString() );
-    if ( !shortcutKey )
-        return fail( fmt::format( "cannot parse keys \"{}\"", keys.asString() ) );
-    res.shortcut.key = *shortcutKey;
+    auto& shortcutKeys = res.shortcut.keys;
+    for ( const auto& keyString : keyStrings )
+    {
+        const auto shortcutKey = ShortcutManager::parseShortcutKey( keyString );
+        if ( !shortcutKey )
+            return fail( fmt::format( "cannot parse keys \"{}\"", keyString ) );
+        shortcutKeys.push_back( *shortcutKey );
+    }
 
     const auto& category = json["Category"];
     if ( !category.isString() )

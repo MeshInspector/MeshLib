@@ -31,6 +31,12 @@ public:
     /// Clear points and normals data
     void clear() { *this = {}; }
 
+    /// sets relative regularization: this fraction of the mean diagonal element of the rotation block
+    /// and of the translation block of the linear system is added to the diagonal of the same block;
+    /// it suppresses huge motions along the directions poorly constrained by the planes (e.g. sliding along parallel planes)
+    void setStabilizer( double stabilizer ) { stabilizer_ = stabilizer; }
+    [[nodiscard]] double getStabilizer() const { return stabilizer_; }
+
     /// Compute transformation as the solution to a least squares optimization problem:
     /// xf( p1_i ) = p2_i
     /// this version searches for best rigid body transformation
@@ -64,6 +70,10 @@ private:
     Eigen::Matrix<double, 7, 7> sumA_ = Eigen::Matrix<double, 7, 7>::Zero();
     Eigen::Vector<double, 7> sumB_ = Eigen::Vector<double, 7>::Zero();
     bool sumAIsSym_ = true;
+    double stabilizer_ = 0;
+
+    /// returns sumA_ with the stabilizer added to its diagonal
+    [[nodiscard]] Eigen::Matrix<double, 7, 7> stabilizedA_() const;
 };
 
 /// \}

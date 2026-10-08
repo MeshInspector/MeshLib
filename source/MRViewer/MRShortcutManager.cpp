@@ -12,21 +12,43 @@ namespace MR
 
 void ShortcutManager::setShortcut( const Shortcut& shortcut, const ShortcutAction& action )
 {
+    assert( !shortcut.keys.empty() ); // resetShortcut removes an action
+    resetShortcut( action.name );
+
     const ShortcutCommand command{ shortcut.category, action.name, action.func, action.repeatable };
-    auto newMapKey = mapKeyFromKeyAndMod( shortcut.key, false );
-    auto [backMapIt, insertedToBackMap] = backMap_.insert( { command.name,newMapKey } );
-    if ( !insertedToBackMap )
+    std::vector<int> newMapKeys;
+    for ( const auto& key : shortcut.keys )
     {
-        map_.erase( backMapIt->second );
-        backMapIt->second = newMapKey;
+        auto newMapKey = mapKeyFromKeyAndMod( key, false );
+        if ( std::find( newMapKeys.begin(), newMapKeys.end(), newMapKey ) != newMapKeys.end() )
+            continue;
+        auto [mapIt, insertedToMap] = map_.insert( { newMapKey,command } );
+        if ( !insertedToMap )
+        {
+            // other action loses this key, but keeps the others
+            if ( auto otherIt = backMap_.find( mapIt->second.name ); otherIt != backMap_.end() )
+            {
+                std::erase( otherIt->second, newMapKey );
+                if ( otherIt->second.empty() )
+                    backMap_.erase( otherIt );
+            }
+            mapIt->second = command;
+        }
+        newMapKeys.push_back( newMapKey );
     }
-    
-    auto [mapIt, insertedToMap] = map_.insert( { newMapKey,command } );
-    if ( !insertedToMap )
-    {
-        backMap_.erase( mapIt->second.name );
-        mapIt->second = command;
-    }
+    if ( !newMapKeys.empty() )
+        backMap_[command.name] = std::move( newMapKeys );
+    listCache_ = {};
+}
+
+void ShortcutManager::resetShortcut( const std::string& name )
+{
+    auto backMapIt = backMap_.find( name );
+    if ( backMapIt == backMap_.end() )
+        return;
+    for ( auto mapKey : backMapIt->second )
+        map_.erase( mapKey );
+    backMap_.erase( backMapIt );
     listCache_ = {};
 }
 
@@ -37,19 +59,19 @@ const ShortcutManager::ShortcutList& ShortcutManager::getShortcutList() const
 
     listCache_ = ShortcutList();
     auto& listRes = *listCache_;
-    listRes.reserve( map_.size() );
-    for ( const auto& [key, command] : map_ )
-        listRes.emplace_back( kayAndModFromMapKey( key ), command.category, command.name );
+    listRes.reserve( backMap_.size() );
+    for ( const auto& [name, mapKeys] : backMap_ )
+    {
+        Shortcut shortcut;
+        shortcut.category = map_.at( mapKeys.front() ).category;
+        for ( auto mapKey : mapKeys )
+            shortcut.keys.push_back( kayAndModFromMapKey( mapKey ) );
+        listRes.emplace_back( std::move( shortcut ), name );
+    }
 
     std::sort( listRes.begin(), listRes.end(), [] ( const auto& a, const auto& b )
     {
-        if ( std::get<Category>( a ) < std::get<Category>( b ) )
-            return true;
-
-        if ( std::get<Category>( a ) > std::get<Category>( b ) )
-            return false;
-
-        return std::get<ShortcutKey>(a) < std::get<ShortcutKey>(b);
+        return std::tie( a.first.category, a.first.keys.front() ) < std::tie( b.first.category, b.first.keys.front() );
     } );
 
     return *listCache_;
@@ -193,6 +215,18 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
     return res;
 }
 
+std::string ShortcutManager::getKeysFullString( const std::vector<ShortcutKey>& keys )
+{
+    std::string res;
+    for ( const auto& key : keys )
+    {
+        if ( !res.empty() )
+            res += ", ";
+        res += getKeyFullString( key );
+    }
+    return res;
+}
+
 std::optional<int> ShortcutManager::parseKey( std::string_view name )
 {
     // GLFW codes of letters, digits and punctuation are their upper-case ASCII codes
@@ -301,7 +335,16 @@ std::optional<ShortcutManager::ShortcutKey> ShortcutManager::findShortcutByName(
     auto it = backMap_.find( name );
     if ( it == backMap_.end() )
         return {};
-    return kayAndModFromMapKey( it->second );
+    return kayAndModFromMapKey( it->second.front() );
+}
+
+std::vector<ShortcutKey> ShortcutManager::findShortcutsByName( const std::string& name ) const
+{
+    std::vector<ShortcutKey> res;
+    if ( auto it = backMap_.find( name ); it != backMap_.end() )
+        for ( auto mapKey : it->second )
+            res.push_back( kayAndModFromMapKey( mapKey ) );
+    return res;
 }
 
 void ShortcutManager::clear()

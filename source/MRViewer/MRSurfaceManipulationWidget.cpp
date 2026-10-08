@@ -17,6 +17,7 @@
 #include "MRMesh/MRExpandShrink.h"
 #include "MRMesh/MREnumNeighbours.h"
 #include "MRMesh/MRMeshRelax.h"
+#include "MRMesh/MRNormalDenoising.h"
 #include "MRMesh/MRBitSetParallelFor.h"
 #include "MRMesh/MRRegionBoundary.h"
 #include "MRMesh/MRFillHoleNicely.h"
@@ -28,6 +29,7 @@
 #include "MRMesh/MRVersatileChangeMeshAction.h"
 #include "MRMesh/MRFinally.h"
 #include "MRMesh/MRChangeSelectionAction.h"
+#include "MRMesh/MRCombinedHistoryAction.h"
 #include "MRMesh/MRObjectsAccess.h"
 #include "MRMesh/MRAABBTreePoints.h"
 #include "MRMesh/MRPointsProject.h"
@@ -174,6 +176,8 @@ void SurfaceManipulationWidget::setSettings( const Settings& settings )
     settings_ = settings;
     settings_.radius = std::max( settings_.radius, 1.e-5f );
     settings_.relaxForce = std::clamp( settings_.relaxForce, 0.001f, 0.5f );
+    settings_.relaxNormalsSmoothing = std::max( settings_.relaxNormalsSmoothing, 0.f );
+    settings_.relaxPointIters = std::max( settings_.relaxPointIters, 1 );
     settings_.editForce = std::max( settings_.editForce, 1.e-5f );
     settings_.relaxForceAfterEdit = std::clamp( settings_.relaxForceAfterEdit, 0.f, 0.5f );
     settings_.sharpness = std::clamp( settings_.sharpness, 0.f, 100.f );
@@ -305,7 +309,7 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             else if ( settings_.workMode == WorkMode::Remove )
                 name = _t( "Brush: Remove" );
             else if ( settings_.workMode == WorkMode::Relax )
-                name = _t( "Brush: Smooth" );
+                name = settings_.relaxKeepCreases ? _t( "Brush: Smooth (Keep Sharp Edges)" ) : _t( "Brush: Smooth" );
 
             if ( settings_.laplacianBasedAddRemove
                 && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) )
@@ -366,6 +370,24 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
         setDeviationCalculationMethod( requestedDeviationCalculationMethod_ );
         obj_->setDirtyFlags( DIRTY_ALL );
     }
+}
+
+void SurfaceManipulationWidget::markSelectedEdgesAsCreases_()
+{
+    MR_TIMER;
+    const auto& topology = obj_->meshPtr()->topology;
+    const auto faces = getIncidentFaces( topology, generalEditingRegion_ );
+    auto creases = obj_->creases();
+    bool changed = false;
+    for ( auto ue : obj_->getSelectedEdges() )
+    {
+        if ( creases.test( ue ) || ( !contains( faces, topology.left( ue ) ) && !contains( faces, topology.right( ue ) ) ) )
+            continue;
+        creases.autoResizeSet( ue );
+        changed = true;
+    }
+    if ( changed && smoothHistoryAction_ )
+        smoothHistoryAction_->getStack().push_back( std::make_shared<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, std::move( creases ) ) );
 }
 
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
@@ -508,6 +530,10 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
     if ( settings_.subdivideGrooves && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) && generalEditingRegion_.any() )
         subdivideAfterAddRemove_();
 
+    if ( settings_.workMode == WorkMode::Relax && settings_.relaxMarkCreases && generalEditingRegion_.any() )
+        markSelectedEdgesAsCreases_();
+    smoothHistoryAction_.reset();
+
     generalEditingRegion_.clear();
 
     return true;
@@ -614,7 +640,14 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( appendHistoryAction_ )
     {
         appendHistoryAction_ = false;
-        AppendHistory( historyAction_ );
+        if ( settings_.workMode == WorkMode::Relax && settings_.relaxKeepCreases && settings_.relaxMarkCreases )
+        {
+            // the creases marked on mouse up are added here to be undone together with the smoothing
+            smoothHistoryAction_ = std::make_shared<CombinedHistoryAction>( historyAction_->name(), HistoryActionsVector{ historyAction_ } );
+            AppendHistory( smoothHistoryAction_ );
+        }
+        else
+            AppendHistory( historyAction_ );
     }
 
     if ( settings_.workMode == WorkMode::Patch )
@@ -627,10 +660,29 @@ void SurfaceManipulationWidget::changeSurface_()
 
     if ( settings_.workMode == WorkMode::Relax )
     {
-        MeshRelaxParams params;
-        params.region = &singleEditingRegion_;
-        params.force = settings_.relaxForce;
-        relax( *obj_->varMesh(), params );
+        if ( settings_.relaxKeepCreases )
+        {
+            auto& mesh = *obj_->varMesh();
+            const auto region = getIncidentFaces( mesh.topology, singleEditingRegion_ );
+            // guideWeight is fitted for the default relaxNormalsSmoothing and relaxPointIters,
+            // so that on a mesh without creases the noise is reduced as much as by relax with the same force
+            const DenoiseWithCreasesSettings ds
+            {
+                .gamma = settings_.relaxNormalsSmoothing,
+                .guideWeight = std::sqrt( 20 * ( 1 - settings_.relaxForce ) / settings_.relaxForce ),
+                .pointIters = settings_.relaxPointIters,
+                .region = &region
+            };
+            meshDenoiseWithCreases( mesh, obj_->getSelectedEdges() | obj_->creases(), ds );
+            generalEditingRegion_ |= singleEditingRegion_;
+        }
+        else
+        {
+            MeshRelaxParams params;
+            params.region = &singleEditingRegion_;
+            params.force = settings_.relaxForce;
+            relax( *obj_->varMesh(), params );
+        }
         obj_->setDirtyFlagsFast( DIRTY_POSITION );
         updateValueChanges_( singleEditingRegion_ );
         return;
@@ -825,6 +877,7 @@ void SurfaceManipulationWidget::abortEdit_()
     invalidateMetricsCache_();
     appendHistoryAction_ = false;
     historyAction_.reset();
+    smoothHistoryAction_.reset();
     generalEditingRegion_.clear();
     const auto numV = pointsShift_.size();
     pointsShift_.clear();

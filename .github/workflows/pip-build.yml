@@ -294,6 +294,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
           CMAKE_CXX_COMPILER: ${{ matrix.compiler }}
+          CMAKE_LINKER_TYPE: MOLD
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
             -DMR_PCH_USE_EXTRA_HEADERS=ON
@@ -379,7 +380,7 @@ jobs:
         run: |
           python3.12 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
-          python3.12 -m pip install patchelf
+          python3.12 -m pip install 'patchelf>=0.19'
           python3.12 ./scripts/wheel/build_wheel.py --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload Python Stubs
@@ -599,7 +600,7 @@ jobs:
     needs: setup
     if: ${{ inputs.disable_macos != true }}
     timeout-minutes: 120
-    runs-on: ${{ matrix.instance }}
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
@@ -607,18 +608,20 @@ jobs:
         include:
           - platform: "x86"
             plat-name: macosx_12_0_x86_64
+            runner: macos-15-intel
             instance: macos-15-intel
-            brewpath: /usr/local
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
-            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
+            llvm-keg-version: 22.1.8_2
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            instance: macos-14
-            brewpath: /opt/homebrew
+            # The bundled brew dylibs require the macOS they were bottled for; from a
+            # macos-15 image, libcpr needs a libc++ symbol missing on macOS 13.
+            runner: [ self-hosted, macos, arm64, macos-13 ]
+            instance: self-hosted-arm-macos-13
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
-            llvm-prefix-template: BREW_PREFIX/Cellar/llvm-pgo/22.1.8_2
+            llvm-keg-version: 22.1.8_2
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
@@ -661,11 +664,11 @@ jobs:
       # LLVM_PREFIX selects the LLVM keg for the mrbind scripts; same scheme
       # as build-test-macos.yml.
       - name: Resolve LLVM prefix
-        if: ${{ matrix.llvm-prefix-template }}
-        run: echo "LLVM_PREFIX=$(echo '${{ matrix.llvm-prefix-template }}' | sed "s|BREW_PREFIX|$(brew --prefix)|")" >> $GITHUB_ENV
+        if: ${{ matrix.llvm-keg-version }}
+        run: echo "LLVM_PREFIX=$(brew --prefix)/Cellar/llvm-pgo/${{ matrix.llvm-keg-version }}" >> $GITHUB_ENV
 
       - name: Install llvm-pgo keg
-        if: ${{ contains(matrix.llvm-prefix-template, 'llvm-pgo') }}
+        if: ${{ matrix.llvm-keg-version }}
         uses: ./.github/actions/install-llvm-pgo-keg
 
       - name: Install MRBind deps
@@ -681,7 +684,7 @@ jobs:
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: ${{ matrix.llvm-prefix-template }}${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
 
       - name: Build
         run: ./scripts/build_source.sh
@@ -699,7 +702,7 @@ jobs:
 
       - name: Generate and build MRBind bindings
         env:
-          PATH: ${{matrix.brewpath}}/opt/make/libexec/gnubin:${{matrix.brewpath}}/opt/grep/libexec/gnubin:${{env.PATH}}
+          PATH: ${{env.BREW_PREFIX}}/opt/make/libexec/gnubin:${{env.BREW_PREFIX}}/opt/grep/libexec/gnubin:${{env.PATH}}
         # `MACOS_MIN_VER` picked arbitrarily to match what Apple Clang uses when building MeshLib.
         # Not setting this or setting a different value cases a warning when linking the bindings, and you can get the correct (?) value from those warnings.
         run: |
@@ -953,9 +956,6 @@ jobs:
           - platform: "arm64"
             runner-tier: "self-hosted"
             instance: macos-13
-          - platform: "arm64"
-            runner-tier: "github"
-            instance: macos-14
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-15

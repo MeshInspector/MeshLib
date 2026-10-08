@@ -46,6 +46,13 @@ set(MESHLIB_PACKAGE_cpr
   GIT_TAG 1.14.2
 )
 
+set(MESHLIB_PACKAGE_draco
+  GIT_REPOSITORY https://github.com/google/draco
+  GIT_TAG 15bdb3a4f15a7a8d77489ac348a7a50d93de17a3
+  PATCHES
+    ${CMAKE_CURRENT_LIST_DIR}/patches/draco-emscripten-check-only-for-js-glue.patch
+)
+
 set(MESHLIB_PACKAGE_eigen
   GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
   GIT_TAG 5.0.1
@@ -58,7 +65,7 @@ set(MESHLIB_PACKAGE_expected
 
 set(MESHLIB_PACKAGE_fastmcpp
   GIT_REPOSITORY https://github.com/MeshInspector/fastmcpp
-  GIT_TAG 9aa1a179f886f6d098f67693e18ee4778db924b7
+  GIT_TAG 0ace80c3e3704ec7f302f516234f02c0e440ef24
 )
 
 set(MESHLIB_PACKAGE_fmt

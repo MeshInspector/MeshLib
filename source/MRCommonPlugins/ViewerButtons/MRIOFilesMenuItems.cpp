@@ -156,7 +156,7 @@ Json::Value prepareJsonObjsHierarchy( const std::vector<std::shared_ptr<MR::Obje
 #ifdef __EMSCRIPTEN__
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId )
+EMSCRIPTEN_KEEPALIVE void emsAddFilesToScene( int count, const char** filenames, int contextId )
 {
     using namespace MR;
     auto filters = MeshLoad::getFilters() | LinesLoad::getFilters() | PointsLoad::getFilters() | SceneLoad::getFilters() | DistanceMapLoad::getFilters() | GcodeLoad::Filters
@@ -169,7 +169,9 @@ EMSCRIPTEN_KEEPALIVE void emsAddFileToScene( const char* filename, int contextId
 #else
         filters = filters | AsyncObjectLoad::getFilters();
 #endif
-    std::vector<std::filesystem::path> paths = {pathFromUtf8(filename)};
+    std::vector<std::filesystem::path> paths( count );
+    for ( int i = 0; i < count; ++i )
+        paths[i] = pathFromUtf8( filenames[i] );
     if ( !checkPaths( paths, filters ) )
         return;
     FileLoadOptions opts;

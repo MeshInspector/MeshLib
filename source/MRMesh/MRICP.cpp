@@ -7,17 +7,38 @@
 #include "MRQuaternion.h"
 #include "MRBestFit.h"
 #include "MRBitSetParallelFor.h"
+#include "MRMeshToPointCloud.h"
+#include "MRPointCloud.h"
 #include <numeric>
 
 namespace MR
 {
 
-void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples )
+/// empty weights mean that all pairs have weight 1
+static void setupPairs( PointPairs & pairs, const VertBitSet& srcSamples, const std::function<float(VertId)> & weights )
 {
     pairs.vec.clear();
     pairs.vec.reserve( srcSamples.count() );
     for ( auto id : srcSamples )
-        pairs.vec.emplace_back().srcVertId = id;
+    {
+        auto & p = pairs.vec.emplace_back();
+        p.srcVertId = id;
+        if ( weights )
+            p.weight = weights( id );
+    }
+    pairs.active.clear();
+}
+
+static void setupPairs( PointPairs & pairs, const std::vector<WeightedVertexf>& srcSamples )
+{
+    pairs.vec.clear();
+    pairs.vec.reserve( srcSamples.size() );
+    for ( const auto & s : srcSamples )
+    {
+        auto & p = pairs.vec.emplace_back();
+        p.srcVertId = s.v;
+        p.weight = s.weight;
+    }
     pairs.active.clear();
 }
 
@@ -33,12 +54,38 @@ size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
 }
 
 
+/// returns grid samples of the object; for a mesh with triangles too big for the sampling, the samples are taken
+/// from its dense point cloud returned in (cloud), with the normals interpolated from the vertex pseudonormals as MeshOrPoints::normals() returns
+static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, bool nonVertexSamples, std::shared_ptr<PointCloud> & cloud )
+{
+    MR_TIMER;
+    cloud.reset();
+    const auto mp = nonVertexSamples ? obj.asMeshPart() : nullptr;
+    if ( !mp || !( samplingVoxelSize > 0 ) || isCoveredByVertices( *mp, samplingVoxelSize / 2 ) )
+        return *obj.pointsGridSampling( samplingVoxelSize );
+
+    auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, VertNormalsMode::AngleWeighted );
+    if ( !dense || dense->points.size() <= mp->mesh.points.size() )
+        return *obj.pointsGridSampling( samplingVoxelSize ); // the vertices are dense enough
+
+    cloud = std::make_shared<PointCloud>( std::move( *dense ) );
+    return *MeshOrPoints( *cloud ).pointsGridSampling( samplingVoxelSize );
+}
+
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples, const VertBitSet& refSamples )
     : flt_( flt )
     , ref_( ref )
 {
-    MR::setupPairs( flt2refPairs_, fltSamples );
-    MR::setupPairs( ref2fltPairs_, refSamples );
+    setFltSamples( fltSamples );
+    setRefSamples( refSamples );
+}
+
+ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples )
+    : flt_( flt )
+    , ref_( ref )
+{
+    setupPairs( flt2refPairs_, fltSamples );
+    setupPairs( ref2fltPairs_, refSamples );
 }
 
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize )
@@ -93,29 +140,33 @@ AffineXf3f ICP::autoSelectFloatXf()
 
 void ICP::setFltSamples( const VertBitSet& fltSamples )
 {
-    setupPairs( flt2refPairs_, fltSamples );
+    fltSamplesCloud_.reset();
+    setupPairs( flt2refPairs_, fltSamples, flt_.obj.weights() );
 }
 
-void ICP::sampleFltPoints( float samplingVoxelSize )
+void ICP::sampleFltPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setFltSamples( *flt_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( flt2refPairs_, gridSamples( flt_.obj, samplingVoxelSize, nonVertexSamples, fltSamplesCloud_ ), {} );
 }
 
 void ICP::setRefSamples( const VertBitSet& refSamples )
 {
-    setupPairs( ref2fltPairs_, refSamples );
+    refSamplesCloud_.reset();
+    setupPairs( ref2fltPairs_, refSamples, ref_.obj.weights() );
 }
 
-void ICP::sampleRefPoints( float samplingVoxelSize )
+void ICP::sampleRefPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setRefSamples( *ref_.obj.pointsGridSampling( samplingVoxelSize ) );
+    setupPairs( ref2fltPairs_, gridSamples( ref_.obj, samplingVoxelSize, nonVertexSamples, refSamplesCloud_ ), {} );
 }
 
 void ICP::updatePointPairs()
 {
     MR_TIMER;
-    MR::updatePointPairs( flt2refPairs_, flt_, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
-    MR::updatePointPairs( ref2fltPairs_, ref_, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
+    const MeshOrPointsXf fltSrc = fltSamplesCloud_ ? MeshOrPointsXf{ *fltSamplesCloud_, flt_.xf } : flt_;
+    const MeshOrPointsXf refSrc = refSamplesCloud_ ? MeshOrPointsXf{ *refSamplesCloud_, ref_.xf } : ref_;
+    MR::updatePointPairs( flt2refPairs_, fltSrc, ref_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
+    MR::updatePointPairs( ref2fltPairs_, refSrc, flt_, prop_.cosThreshold, prop_.distThresholdSq, prop_.mutualClosest, prop_.ignoreBdTgts );
     deactivatefarDistPairs_();
 }
 
@@ -158,7 +209,6 @@ void updatePointPairs( PointPairs & pairs,
     const auto srcNormals = src.obj.normals();
     const auto tgtNormals = tgt.obj.normals();
 
-    const auto srcWeights = src.obj.weights();
     const auto srcLimProjector = src.obj.limitedProjector();
     const auto tgtLimProjector = tgt.obj.limitedProjector();
 
@@ -198,7 +248,6 @@ void updatePointPairs( PointPairs & pairs,
         // save the result
         PointPair vp = res;
         vp.distSq = prj.distSq;
-        vp.weight = srcWeights ? srcWeights( vp.srcVertId ) : 1.0f;
         vp.tgtCloseVert = prj.closestVert;
         vp.srcPoint = src.xf( p0 );
         vp.tgtPoint = tgt.xf( p1 );
@@ -367,6 +416,7 @@ bool ICP::p2plIter_()
         p2pl.add( vp.tgtPoint - centroidRef, vp.srcPoint - centroidRef, vp.srcNorm, vp.weight );
     }
     p2pl.prepare();
+    p2pl.setStabilizer( prop_.p2plStabilizer );
 
     const AffineXf3d res = getAligningXf( p2pl, prop_.icpMode, prop_.p2plAngleLimit, prop_.p2plScaleLimit, prop_.fixedRotationAxis );
     if (std::isnan(res.b.x)) //nan check

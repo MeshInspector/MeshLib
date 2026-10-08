@@ -135,8 +135,6 @@ public:
     MRVIEWER_API bool keyDown( int key, int modifier );
     MRVIEWER_API bool keyUp( int key, int modifier );
     MRVIEWER_API bool keyRepeat( int key, int modifier );
-    /// returns true if given key (GLFW_KEY_...) is held down after the key events processed so far
-    [[nodiscard]] MRVIEWER_API bool isKeyDown( int key ) const;
     MRVIEWER_API bool mouseDown( MouseButton button, int modifier );
     MRVIEWER_API bool mouseUp( MouseButton button, int modifier );
     MRVIEWER_API bool mouseMove( int mouse_x, int mouse_y );
@@ -588,9 +586,6 @@ private:
 
     std::unique_ptr<RecentFilesStore> recentFilesStore_;
     std::unique_ptr<FrameCounter> frameCounter_;
-
-    // the keys held down now, see isKeyDown
-    std::vector<int> downKeys_;
 
     mutable struct EventsCounter
     {

@@ -228,14 +228,10 @@ TEST( MRViewer, ShortcutChords )
     EXPECT_EQ( hCount, 1 );
     EXPECT_FALSE( sm.processShortcut( { GLFW_KEY_2, 0, GLFW_KEY_SPACE } ) );
 
-    EXPECT_TRUE( sm.isHeldKey( GLFW_KEY_SPACE ) );
-    EXPECT_FALSE( sm.isHeldKey( GLFW_KEY_1 ) );
-    EXPECT_FALSE( sm.isHeldKey( 0 ) );
     EXPECT_EQ( sm.findShortcutsByName( "Front" ), ( std::vector<SK>{ frontKey, frontChord } ) );
 
     // without the chord, its keys do the action of the key alone
     sm.resetShortcut( "Front" );
-    EXPECT_FALSE( sm.isHeldKey( GLFW_KEY_SPACE ) );
     EXPECT_TRUE( sm.processShortcut( frontChord ) );
     EXPECT_EQ( oneCount, 2 );
     EXPECT_EQ( frontCount, 2 );

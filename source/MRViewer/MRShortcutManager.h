@@ -76,13 +76,6 @@ public:
     // a key with heldKey that is not a chord in the map does the action of the key alone
     MRVIEWER_API virtual bool processShortcut( const ShortcutKey& key, Reason = Reason::KeyDown ) const;
 
-    /// returns true if given key is the held key of some chord in the map, like Space in Space+1
-    [[nodiscard]] MRVIEWER_API bool isHeldKey( int key ) const;
-
-    /// returns the held key of a chord in the map made by given key and modifiers with a key held down now (see Viewer::isKeyDown),
-    /// e.g. Space for the key 1 while Space is held, if Space+1 is in the map; returns 0 if there is no such chord
-    [[nodiscard]] MRVIEWER_API int findHeldKey( int key, int mod ) const;
-
     MRVIEWER_API bool onKeyDown_( int key, int modifier ) override;
     MRVIEWER_API bool onKeyRepeat_( int key, int modifier ) override;
 
@@ -127,6 +120,11 @@ protected:
     // returns simple map key from key with modifier (alt, ctrl, shift, etc.)
     // if respectKeyboard is set, key will be mapped using local keyboard settings (only if it is mapped to latin symbol)
     MRVIEWER_API static int mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard );
+    // returns the held key of a chord in the map made by given key and modifiers with a key held down now (according to ImGui),
+    // e.g. Space for the key 1 while Space is held, if Space+1 is in the map; returns 0 if there is no such chord;
+    // a key reserved by a UI hotkey (reserveKeyEvent, e.g. UI::checkKey) does not start chords
+    MRVIEWER_API int findHeldKey_( int key, int mod ) const;
+
     // returns key with modifier (alt, ctrl, shift, etc.) from simple map key
     static ShortcutKey kayAndModFromMapKey( int mapKey )
         { return { ( mapKey >> cModBits ) % ( 1 << cKeyBits ), mapKey % ( 1 << cModBits ), mapKey >> ( cModBits + cKeyBits ) }; }

@@ -228,6 +228,12 @@ void reserveKeyEvent( ImGuiKey key )
     getOrderedKeys()[key] = true;
 }
 
+bool isKeyEventReserved( ImGuiKey key )
+{
+    assert( key < getOrderedKeys().size() );
+    return getOrderedKeys()[key];
+}
+
 // makes ImGui see `mods` (GLFW_MOD_* bits) held in this frame, in addition to the real keyboard; call right after ImGui::NewFrame()
 static void forceKeyModifiers( int mods, std::vector<std::pair<ImGuiKey, bool>>& realKeyModifiers )
 {
@@ -725,43 +731,18 @@ bool ImGuiMenu::onCharPressed_( unsigned  key, int /*modifiers*/ )
 
 bool ImGuiMenu::onKeyDown_( int key, int modifiers )
 {
-    for ( auto& [chordKey, tap] : chordKeys_ )
-        tap = false;
-    // unless ImGui takes the keyboard, the keys of chords like Space+1 do not reach ImGui hotkeys (UI::checkKey) on press:
-    // the key that completes a chord goes to the shortcut, and the held key of chords goes to ImGui on release after a tap
-    if ( !ImGui::GetIO().WantCaptureKeyboard && shortcutManager_ && shortcutManager_->isEnabled() )
-    {
-        if ( shortcutManager_->isHeldKey( key ) )
-        {
-            chordKeys_[key] = true;
-            return false;
-        }
-        if ( shortcutManager_->findHeldKey( key, modifiers ) != 0 )
-        {
-            chordKeys_[key] = false;
-            return false;
-        }
-    }
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
     return ImGui::GetIO().WantCaptureKeyboard || getOrderedKeys()[GlfwToImGuiKey_Duplicate( key )];
 }
 
 bool ImGuiMenu::onKeyUp_( int key, int modifiers )
 {
-    if ( auto it = chordKeys_.find( key ); it != chordKeys_.end() )
-    {
-        if ( it->second )
-            ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_PRESS, modifiers );
-        chordKeys_.erase( it );
-    }
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_RELEASE, modifiers );
     return ImGui::GetIO().WantCaptureKeyboard;
 }
 
 bool ImGuiMenu::onKeyRepeat_( int key, int modifiers )
 {
-    if ( chordKeys_.contains( key ) )
-        return false;
     ImGui_ImplGlfw_KeyCallback( viewer->window, key, 0, GLFW_REPEAT, modifiers );
     return ImGui::GetIO().WantCaptureKeyboard;
 }

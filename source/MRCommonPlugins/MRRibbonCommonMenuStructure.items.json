@@ -205,7 +205,7 @@
       "Tooltip": "Rotates the camera 180 degrees around the current vertical axis.",
       "Icon": "\uF2F1",
       "HelpLink": "https://meshinspector.com/inappvideo/invertview",
-      "Shortcut": { "Keys": [ "Num9", "Space+`" ], "Category": "View" }
+      "Shortcut": { "Keys": [ "Num9", "Space+9" ], "Category": "View" }
     },
     {
       "Name": "Single Viewport",

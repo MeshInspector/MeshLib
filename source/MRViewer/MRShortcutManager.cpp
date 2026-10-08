@@ -2,7 +2,7 @@
 #include "MRRibbonConstants.h"
 #include "MRImGui.h"
 #include "MRGladGlfw.h"
-#include "MRViewer.h"
+#include "ImGuiMenu.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
 #include <algorithm>
@@ -93,24 +93,20 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
-bool ShortcutManager::isHeldKey( int key ) const
+int ShortcutManager::findHeldKey_( int key, int mod ) const
 {
-    if ( key == 0 )
-        return false;
-    for ( const auto& [mapKey, command] : map_ )
-        if ( kayAndModFromMapKey( mapKey ).heldKey == key )
-            return true;
-    return false;
-}
-
-int ShortcutManager::findHeldKey( int key, int mod ) const
-{
+    if ( !ImGui::GetCurrentContext() )
+        return 0;
     // the key as it is in the map: in upper case and according to the keyboard layout
     const auto pressed = kayAndModFromMapKey( mapKeyFromKeyAndMod( { key, mod }, true ) );
     for ( const auto& [mapKey, command] : map_ )
     {
         const auto chord = kayAndModFromMapKey( mapKey );
-        if ( chord.heldKey != 0 && chord.key == pressed.key && chord.mod == pressed.mod && getViewerInstance().isKeyDown( chord.heldKey ) )
+        if ( chord.heldKey == 0 || chord.key != pressed.key || chord.mod != pressed.mod )
+            continue;
+        // key events are processed between ImGui frames, so ImGui knows the keys pressed before the last frame
+        const auto heldKey = ImGuiKey( GlfwToImGuiKey_Duplicate( chord.heldKey ) );
+        if ( heldKey != ImGuiKey_None && ImGui::IsKeyDown( heldKey ) && !isKeyEventReserved( heldKey ) )
             return chord.heldKey;
     }
     return 0;
@@ -118,13 +114,13 @@ int ShortcutManager::findHeldKey( int key, int mod ) const
 
 bool ShortcutManager::onKeyDown_( int key, int modifier )
 {
-    return processShortcut( { key, modifier, findHeldKey( key, modifier ) }, Reason::KeyDown );
+    return processShortcut( { key, modifier, findHeldKey_( key, modifier ) }, Reason::KeyDown );
 }
 
 
 bool ShortcutManager::onKeyRepeat_( int key, int modifier )
 {
-    return processShortcut( { key, modifier, findHeldKey( key, modifier ) }, Reason::KeyRepeat );
+    return processShortcut( { key, modifier, findHeldKey_( key, modifier ) }, Reason::KeyRepeat );
 }
 
 const char* ShortcutManager::getModifierString( int mod )

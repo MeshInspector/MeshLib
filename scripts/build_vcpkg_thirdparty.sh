@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 # NOTE: realpath is not supported on older macOS versions
@@ -36,11 +36,16 @@ find "${INSTALL_DIR}" -type f \
     \( -name '*.dylib' -o -name '*.so' -o -name '*.so.*' \) \
     -exec strip -x {} +
 
-if [ "$(uname -s)" = "Darwin" ] ; then
+if [[ $(uname -s) == Darwin ]] ; then
   # vcpkg leaves the build-time absolute rpath in the Python extension modules
-  find "${INSTALL_DIR}" -path '*/lib-dynload/*.so' | while IFS= read -r module ; do
-    rpath=$(objdump --macho --rpaths "${module}" | sed 1d)
-    install_name_tool -rpath "${rpath}" @loader_path/../.. "${module}"
+  for module in "${INSTALL_DIR}"/*/lib/python3.*/lib-dynload/*.so ; do
+    # the first output line is the file name
+    rpaths=$(objdump --macho --rpaths "${module}" | sed 1d)
+    while IFS= read -r rpath ; do
+      if [[ ${rpath} == /* ]] ; then
+        install_name_tool -rpath "${rpath}" @loader_path/../.. "${module}"
+      fi
+    done <<< "${rpaths}"
     codesign --force --sign - "${module}"
   done
 fi

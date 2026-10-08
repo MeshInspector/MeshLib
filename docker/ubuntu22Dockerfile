@@ -81,7 +81,7 @@ WORKDIR "/home/MeshLib"
 
 # copy files
 COPY cmake cmake
-COPY thirdparty thirdparty
+COPY thirdparty/cpm thirdparty/cpm
 COPY scripts scripts
 COPY requirements requirements
 

@@ -43,8 +43,9 @@ if command -v ninja >/dev/null 2>&1 ; then
   MR_CMAKE_OPTIONS="${MR_CMAKE_OPTIONS} -G Ninja"
 fi
 
-if [ -d "${PWD}/installed" ]; then
-  MR_CMAKE_OPTIONS="-D CMAKE_PREFIX_PATH=${PWD}/installed ${MR_CMAKE_OPTIONS}"
+MESHLIB_THIRDPARTY_ROOT_DIR="${MESHLIB_THIRDPARTY_ROOT_DIR:-${PWD}/installed}"
+if [ -d "${MESHLIB_THIRDPARTY_ROOT_DIR}" ]; then
+  MR_CMAKE_OPTIONS="-D CMAKE_PREFIX_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR} ${MR_CMAKE_OPTIONS}"
 fi
 
 if [ "${MESHLIB_USE_VCPKG}" == "ON" ]; then

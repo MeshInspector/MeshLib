@@ -314,6 +314,8 @@ The steps below both generate the C# code (at `MeshLib/source/MRDotNet2`) and co
 
 ### Less common flags for the generator script
 
+* **Selecting the third-party libraries:** on Linux and MacOS the generator looks for them in `MESHLIB_THIRDPARTY_ROOT_DIR` from the environment, then in `./installed`, then in the project root. `DEPS_BASE_DIR=path/to/libs` overrides all of those.
+
 * **Selecting MRBind installation:** if you installed MRBind to a non-default location (the default is `./thirdparty/mrbind`), you must pass this location to `MRBIND_SOURCE=path/to/mrbind`.
 
     Additionally, if the MRBind binary is not at `$MRBIND_SOURCE/build/mrbind`, you must pass `MRBIND_EXE=...` (path to the executable itself, not its directory).

@@ -270,7 +270,7 @@ MRBIND_GEN_C_EXE = $(MRBIND_EXE)_gen_c
 MRBIND_GEN_CSHARP_EXE = $(MRBIND_EXE)_gen_csharp
 
 
-# Look for MeshLib dependencies relative to this. On Linux and macOS: `./installed` from `build_cpm_thirdparty.sh` if it exists, otherwise the project root with `./include` and `./lib`.
+# Look for MeshLib dependencies relative to this. On Linux and macOS: `MESHLIB_THIRDPARTY_ROOT_DIR` from the environment, else `./installed` from `build_cpm_thirdparty.sh` if it exists, else the project root with `./include` and `./lib`.
 ifneq ($(IS_EMSCRIPTEN),)
 DEPS_BASE_DIR :=
 DEPS_INCLUDE_DIR :=
@@ -280,7 +280,7 @@ DEPS_BASE_DIR := $(VCPKG_DIR)/installed/$(VCPKG_TRIPLET)
 DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 DEPS_LIB_DIR := $(DEPS_BASE_DIR)/$(if $(filter Debug,$(VS_MODE)),debug/)lib
 else
-DEPS_BASE_DIR := $(if $(wildcard installed/.),installed,.)
+DEPS_BASE_DIR := $(or $(MESHLIB_THIRDPARTY_ROOT_DIR),$(if $(wildcard installed/.),installed,.))
 DEPS_INCLUDE_DIR := $(DEPS_BASE_DIR)/include
 DEPS_LIB_DIR := $(DEPS_BASE_DIR)/lib
 endif

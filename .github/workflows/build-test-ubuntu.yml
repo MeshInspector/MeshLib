@@ -122,7 +122,6 @@ jobs:
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DCMAKE_PREFIX_PATH=${{ env.MESHLIB_THIRDPARTY_ROOT_DIR }}
             -DMR_CXX_STANDARD=${{ matrix.cxx-standard }}
             -DMESHLIB_BUILD_MRCUDA=${{ matrix.build_mrcuda }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
@@ -172,7 +171,7 @@ jobs:
 
       - name: Generate C# bindings # generate only sources
         if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate DEPS_BASE_DIR=${{ env.MESHLIB_THIRDPARTY_ROOT_DIR }}
+        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
@@ -201,7 +200,7 @@ jobs:
           if [[ "${{ matrix.os }}" == ubuntu26 ]]; then
             CLANG_GCC_PIN="--gcc-install-dir=/usr/lib/gcc/$(gcc-15 -dumpmachine)/15"
           fi
-          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} PCH_CODEGEN=${PCH_CODEGEN} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}" DEPS_BASE_DIR=${{ env.MESHLIB_THIRDPARTY_ROOT_DIR }}
+          make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin ENABLE_CUDA=${ENABLE_CUDA} PCH_CODEGEN=${PCH_CODEGEN} EXTRA_CFLAGS="${CLANG_GCC_PIN}" EXTRA_LDFLAGS="${CLANG_GCC_PIN}"
 
       - name: Create Python Stubs
         if: ${{ inputs.mrbind && env.UPLOAD_BINDINGS_SOURCES == 'true' }}

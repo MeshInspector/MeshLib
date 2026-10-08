@@ -75,7 +75,6 @@ jobs:
           CMAKE_CXX_COMPILER: ${{ env.CXX-COMPILER }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
-            -DCMAKE_PREFIX_PATH=${{ env.MESHLIB_THIRDPARTY_ROOT_DIR }}
             -DMR_CXX_STANDARD=${{ env.CXX-STANDARD }}
             -DMR_PCH_USE_EXTRA_HEADERS=ON
             -DMRVOXELS_UNITY_BUILD=ON
@@ -86,7 +85,7 @@ jobs:
           CXX: ${{ env.CXX-COMPILER }}
         # PCH_CODEGEN=0: `-fpch-codegen` hits clang defect llvm/llvm-project#203691 on this image's
         # libstdc++-12, same as the ubuntu22 opt-out in build-test-ubuntu.yml.
-        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin PCH_CODEGEN=0 DEPS_BASE_DIR=${{ env.MESHLIB_THIRDPARTY_ROOT_DIR }}
+        run: make -f scripts/mrbind/generate.mk MODE=none -B --trace MESHLIB_SHLIB_DIR=build/${{ env.CONFIG }}/bin PCH_CODEGEN=0
 
       - name: Create Python Stubs
         run: python3 ./scripts/wheel/create_stubs.py
@@ -119,7 +118,7 @@ jobs:
           mv MeshLib/CbindingsTmp/MeshLibC2Cuda source
 
       - name: Generate C# bindings # generate only sources
-        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate DEPS_BASE_DIR=${{ env.MESHLIB_THIRDPARTY_ROOT_DIR }}
+        run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
         uses: actions/upload-artifact@v7

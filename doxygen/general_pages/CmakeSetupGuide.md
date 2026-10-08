@@ -54,7 +54,7 @@ target_link_libraries(your_project_name PUBLIC MeshLib::MeshLibC2)
 
 The package defines the following targets, each guarded by the variable in parentheses. A distribution sets it to `ON` for every module it ships, and only those targets exist.
  - `MeshLib::MRMesh`: core data structures and algorithms, needed by every C++ project.
- - `MeshLib::MRIOExtras` (`MESHLIB_BUILD_EXTRA_IO_FORMATS`): additional file formats such as 3MF, CTM, E57, glTF, LAS, and STEP.
+ - `MeshLib::MRIOExtras` (`MESHLIB_BUILD_EXTRA_IO_FORMATS`): additional file formats such as 3MF, CTM, Draco, E57, glTF, LAS, and STEP.
  - `MeshLib::MRSymbolMesh` (`MESHLIB_BUILD_SYMBOLMESH`): text converted to meshes.
  - `MeshLib::MRVoxels` (`MESHLIB_BUILD_VOXELS`): voxel volumes and the algorithms built on them: offsets, fusion, marching cubes.
  - `MeshLib::MRCuda` (`MESHLIB_BUILD_MRCUDA`): CUDA implementations of several algorithms; unavailable for macOS and Emscripten.

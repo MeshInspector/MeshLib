@@ -90,3 +90,6 @@
 	url = https://github.com/MeshInspector/MeshLibTestData.git
 	update = none
 	shallow = true
+[submodule "thirdparty/draco"]
+	path = thirdparty/draco
+	url = https://github.com/google/draco

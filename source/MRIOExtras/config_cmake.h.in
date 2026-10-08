@@ -1,6 +1,7 @@
 #pragma once
 
 #cmakedefine MRIOEXTRAS_NO_CTM
+#cmakedefine MRIOEXTRAS_NO_DRACO
 #cmakedefine MRIOEXTRAS_NO_E57
 #cmakedefine MRIOEXTRAS_NO_GLTF
 #cmakedefine MRIOEXTRAS_NO_JPEG

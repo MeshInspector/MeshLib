@@ -36,4 +36,9 @@ PointCloud meshToPointCloud( const Mesh& mesh, bool saveNormals, const VertBitSe
 [[deprecated( "Use meshToDensePointCloud( mp, radius, VertNormalsMode, cb )" )]] [[nodiscard]] MRMESH_API MR_BIND_IGNORE
 Expected<PointCloud> meshToDensePointCloud( const MeshPart& mp, float radius, bool saveNormals, const ProgressCallback& cb = {} );
 
+/// returns true if every point of the mesh part is within the radius from one of the vertices of its triangle,
+/// which is exactly when meshToDensePointCloud( mp, radius ) returns the vertices of the mesh and no other samples
+/// \ingroup MeshAlgorithmGroup
+[[nodiscard]] MRMESH_API bool isCoveredByVertices( const MeshPart& mp, float radius );
+
 }

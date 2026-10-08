@@ -12,47 +12,12 @@ IF(APPLE)
     set(CMAKE_USE_WIN32_THREADS_INIT 0)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
-
-    # Pin LC_BUILD_VERSION minos so dylibs stay loadable on older macOS
-    # releases regardless of the build host's SDK. 12.7 matches the
-    # MACOS_MIN_VER passed by scripts/mrbind/generate.mk and the
-    # macosx_12_0_* wheel filenames. Caller's -D or env wins.
-    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET AND NOT DEFINED ENV{MACOSX_DEPLOYMENT_TARGET})
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "12.7" CACHE STRING "Minimum macOS version to target for deployment")
-    endif()
 ENDIF()
 
 project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
-
-# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
-# Force lld + give it room to grow PHT so patchelf doesn't trample `.init`.
-# Skip on images without lld (older ubuntu22 Clang 14 etc., which aren't
-# AppImage-packaged anyway).
-IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  include(CheckLinkerFlag)
-  check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
-  IF(MESHLIB_HAVE_LLD)
-    # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
-    # older CMakes (our minimum is 3.18).
-    IF(NOT CMAKE_VERSION VERSION_LESS "3.29")
-      set(CMAKE_LINKER_TYPE LLD)
-    ELSE()
-      add_link_options("-fuse-ld=lld")
-    ENDIF()
-    add_link_options("LINKER:-z,separate-loadable-segments")
-    # Fold byte-identical functions. `safe` folds only the address-insignificant
-    # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
-    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
-    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
-    # Widen what ICF can reach: without this only COMDAT functions (templates,
-    # inlines) get their own section, so plain out-of-line ones never fold.
-    # `-fdata-sections` would add nothing -- lld folds executable sections only.
-    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
-  ENDIF()
-ENDIF()
 
 include(CompilerOptions)
 include(ConfigurePch)

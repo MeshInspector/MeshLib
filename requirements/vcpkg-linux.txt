@@ -12,6 +12,7 @@ boost-stacktrace
 boost-url
 clip
 cpr
+draco
 dbus[core]
 eigen3
 fastmcpp

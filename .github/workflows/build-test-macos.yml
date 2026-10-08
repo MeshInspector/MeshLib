@@ -213,6 +213,7 @@ jobs:
           # resolve the compiler paths for proper vcpkg cache key computation
           export CC=$(xcrun --find clang)
           export CXX=$(xcrun --find clang++)
+          export SDKROOT=$(xcrun --show-sdk-path)
           scripts/build_vcpkg_thirdparty.sh
 
       - name: Save vcpkg installed tree

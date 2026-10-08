@@ -104,8 +104,7 @@ public:
     MRVIEWER_API static std::optional<Category> parseCategory( std::string_view name );
 
     /// parses a shortcut written as its modifiers and key separated by "+", e.g. "Primary+Shift+S", the inverse of getKeyFullString;
-    /// one part before the key can be the name of a key instead of a modifier, then it is the held key of a chord, e.g. "Space+1";
-    /// returns nothing if any part is unknown or there are several held keys
+    /// a key name among the modifiers is the held key of a chord, e.g. "Space+1"; returns nothing if any part is unknown or there are several held keys
     MRVIEWER_API static std::optional<ShortcutKey> parseShortcutKey( std::string_view keys );
 
     // if action with given name is present in shortcut list - returns its first key
@@ -120,15 +119,13 @@ protected:
     // returns simple map key from key with modifier (alt, ctrl, shift, etc.)
     // if respectKeyboard is set, key will be mapped using local keyboard settings (only if it is mapped to latin symbol)
     MRVIEWER_API static int mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard );
-    // returns the held key of a chord in the map made by given key and modifiers with a key held down now (according to ImGui),
-    // e.g. Space for the key 1 while Space is held, if Space+1 is in the map; returns 0 if there is no such chord;
-    // a key reserved by a UI hotkey (reserveKeyEvent, e.g. UI::checkKey) does not start chords
-    MRVIEWER_API int findHeldKey_( int key, int mod ) const;
+    // the held key, down now and not reserved by a UI hotkey (reserveKeyEvent), of a chord with given key and modifiers; 0 if none
+    int findHeldKey_( int key, int mod ) const;
 
     // returns key with modifier (alt, ctrl, shift, etc.) from simple map key
     static ShortcutKey kayAndModFromMapKey( int mapKey )
         { return { ( mapKey >> cModBits ) % ( 1 << cKeyBits ), mapKey % ( 1 << cModBits ), mapKey >> ( cModBits + cKeyBits ) }; }
-    // a map key consists of the held key, the key and the modifiers, which take these numbers of bits
+    // bits of the modifiers and of the key in a map key, the held key takes the rest
     static constexpr int cModBits = 6;
     static constexpr int cKeyBits = 9;
 

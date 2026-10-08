@@ -5,6 +5,7 @@
 #include "ImGuiMenu.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
+#include <imgui_internal.h>
 #include <algorithm>
 #include <cctype>
 
@@ -93,20 +94,29 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
+// returns true if the latest event of given key that ImGui got is a press: key events are processed between ImGui frames,
+// so the events since the last frame are still in its queue (ImGui itself looks there in AddKeyEvent)
+static bool isKeyDownInImGui( ImGuiKey key )
+{
+    const auto& events = ImGui::GetCurrentContext()->InputEventsQueue;
+    for ( int i = events.Size - 1; i >= 0; --i )
+        if ( events[i].Type == ImGuiInputEventType_Key && events[i].Key.Key == key )
+            return events[i].Key.Down;
+    return ImGui::IsKeyDown( key );
+}
+
 int ShortcutManager::findHeldKey_( int key, int mod ) const
 {
     if ( !ImGui::GetCurrentContext() )
         return 0;
-    // the key as it is in the map: in upper case and according to the keyboard layout
     const auto pressed = kayAndModFromMapKey( mapKeyFromKeyAndMod( { key, mod }, true ) );
     for ( const auto& [mapKey, command] : map_ )
     {
         const auto chord = kayAndModFromMapKey( mapKey );
         if ( chord.heldKey == 0 || chord.key != pressed.key || chord.mod != pressed.mod )
             continue;
-        // key events are processed between ImGui frames, so ImGui knows the keys pressed before the last frame
         const auto heldKey = ImGuiKey( GlfwToImGuiKey_Duplicate( chord.heldKey ) );
-        if ( heldKey != ImGuiKey_None && ImGui::IsKeyDown( heldKey ) && !isKeyEventReserved( heldKey ) )
+        if ( heldKey != ImGuiKey_None && isKeyDownInImGui( heldKey ) && !isKeyEventReserved( heldKey ) )
             return chord.heldKey;
     }
     return 0;

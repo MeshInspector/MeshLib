@@ -11,8 +11,7 @@ struct ShortcutKey
 {
     int key{ 0 };
     int mod{ 0 };
-    /// another key that must be held down when `key` is pressed, e.g. Space in the chord Space+1; 0 if none;
-    /// unlike a letter `key`, it is matched by its GLFW code (the position on the keyboard), not by the keyboard layout
+    /// another key held down when `key` is pressed, e.g. Space in Space+1; 0 if none; matched by its GLFW code, not the keyboard layout
     int heldKey{ 0 };
 
     auto operator<=>( const ShortcutKey& ) const = default;

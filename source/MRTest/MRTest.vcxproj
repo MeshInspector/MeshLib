@@ -141,6 +141,7 @@
     <ClCompile Include="MRRectIndexerTests.cpp" />
     <ClCompile Include="MRRegionBoundaryTests.cpp" />
     <ClCompile Include="MRRegularGridMeshTests.cpp" />
+    <ClCompile Include="MRScalarConvertTests.cpp" />
     <ClCompile Include="MRTupleBindingsTests.cpp" />
     <ClCompile Include="MRViewportIdTests.cpp" />
     <ClCompile Include="MRVolumeIndexerTests.cpp" />

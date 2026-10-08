@@ -5,7 +5,7 @@
 #include "MRColor.h"
 #include "MRExpected.h"
 #include "MRImage.h"
-#include "MRScalarType.h"
+#include "MRScalarConvert.h"
 #include "MRVector2.h"
 
 #include <optional>

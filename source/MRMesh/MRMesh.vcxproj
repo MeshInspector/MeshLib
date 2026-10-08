@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
@@ -151,12 +151,12 @@
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
     <ClInclude Include="MRImage.h" />
+    <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRRaster.h" />
     <ClInclude Include="MRRasterLoad.h" />
     <ClInclude Include="MRRasterSave.h" />
-    <ClInclude Include="MRScalarType.h" />
     <ClInclude Include="MRInnerShell.h" />
     <ClInclude Include="MRInSphere.h" />
     <ClInclude Include="MRIOParsing.h" />
@@ -579,6 +579,7 @@
     <ClCompile Include="MRGcodeLoad.cpp" />
     <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
+    <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRIOFilters.cpp" />
     <ClCompile Include="MRIterativeSampling.cpp" />
     <ClCompile Include="MRLevelOfDetails.cpp" />

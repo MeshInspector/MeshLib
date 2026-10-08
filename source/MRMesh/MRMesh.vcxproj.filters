@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Source Files">
@@ -453,7 +453,7 @@
     <ClInclude Include="MRRaster.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
-    <ClInclude Include="MRScalarType.h">
+    <ClInclude Include="MRScalarConvert.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRPolylineTopology.h">
@@ -2079,6 +2079,9 @@
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRRaster.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRScalarConvert.cpp">
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneLoad.cpp">

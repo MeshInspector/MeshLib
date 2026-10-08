@@ -12,7 +12,7 @@ namespace MR
 
 // this class stores two maps:
 // 1) shortcut to action
-// 2) action name to shortcut
+// 2) action name to its shortcuts
 // it can be used to process, customize and print shortcuts
 // indifferent to literals register
 class MRVIEWER_CLASS ShortcutManager : public MultiListener<KeyDownListener, KeyRepeatListener>
@@ -43,18 +43,22 @@ public:
     inline static const std::string categoryNames[6] = { "Info", "Edit", "View", "Scene", "Objects", "Selection " };
 
     // set shortcut
-    // note: one action can have only one shortcut, one shortcut can have only one action
-    // if action already has other shortcut, other one will be removed
+    // note: one action can have several keys, one key can have only one action
+    // if action already has other keys, they will be removed; if a key already has other action, that action loses only this key
     MRVIEWER_API virtual void setShortcut( const Shortcut& shortcut, const ShortcutAction& action );
+
+    /// removes the action with given name and all its keys
+    MRVIEWER_API void resetShortcut( const std::string& name );
 
     /// deprecated: pass the category in (shortcut) and the rest in ShortcutAction
     [[deprecated( "use setShortcut( Shortcut, ShortcutAction )" )]]
     void setShortcut( const ShortcutKey& key, const ShortcutCommand& command )
         { setShortcut( { key, command.category }, { command.name, command.action, command.repeatable } ); }
 
-    using ShortcutList = std::vector<std::tuple<ShortcutKey, Category, std::string>>;
+    /// the shortcut of every action with all its keys, and the name of the action
+    using ShortcutList = std::vector<std::pair<Shortcut, std::string>>;
 
-    // returns cached list of sorted shortcuts (sorting by key)
+    // returns cached list of sorted shortcuts (sorting by category, then by the first key)
     // if this structure was changed since last call of this function - updates cache
     MRVIEWER_API const ShortcutList& getShortcutList() const;
 
@@ -79,7 +83,9 @@ public:
     //make string from a key without modifiers, for arrow characters it uses icons font
     MRVIEWER_API static std::string getKeyString( int key );
     // make string from all modifiers and with/without key and returns it
-    MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );    
+    MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );
+    /// makes string from several keys separated by commas, e.g. "Ctrl+Shift+Z, Ctrl+Y"
+    MRVIEWER_API static std::string getKeysFullString( const std::vector<ShortcutKey>& keys );
 
     /// parses the name of a key: one printable character ("S", ","), "F1".."F25", "Num0".."Num9",
     /// "Escape", "Enter", "Space", "Tab", "Backspace", "Home", "End", "PageUp", "PageDown", "Up", "Down", "Left", "Right",
@@ -100,8 +106,11 @@ public:
     /// returns nothing if any part is unknown
     MRVIEWER_API static std::optional<ShortcutKey> parseShortcutKey( std::string_view keys );
 
-    // if action with given name is present in shortcut list - returns it
+    // if action with given name is present in shortcut list - returns its first key
     MRVIEWER_API std::optional<ShortcutKey> findShortcutByName( const std::string& name ) const;
+
+    /// returns all keys of the action with given name in their order, empty if the action is not present in shortcut list
+    MRVIEWER_API std::vector<ShortcutKey> findShortcutsByName( const std::string& name ) const;
 
     // clear all saved shortcuts
     MRVIEWER_API void clear();
@@ -113,7 +122,7 @@ protected:
     static ShortcutKey kayAndModFromMapKey( int mapKey ) { return { mapKey >> 6, mapKey % ( 1 << 6 ) }; }
 
     using ShourtcutsMap = HashMap<int, ShortcutCommand>;
-    using ShourtcutsBackMap = HashMap<std::string, int>;
+    using ShourtcutsBackMap = HashMap<std::string, std::vector<int>>; // all keys of an action in their order
 
     bool enabled_{ true };
 

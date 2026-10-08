@@ -119,6 +119,7 @@ jobs:
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          CMAKE_LINKER_TYPE: ${{ startsWith(matrix.cxx-compiler, 'clang') && 'LLD' || '' }}
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >

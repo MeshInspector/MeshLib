@@ -21,4 +21,5 @@ fi
 
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \
-    --x-install-root=./vcpkg_installed
+    --x-install-root=./vcpkg_installed \
+    --x-abi-tools-use-exact-versions

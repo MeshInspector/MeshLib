@@ -331,6 +331,19 @@
       "version": "05ea01542e5c4417c05e7222f920e06276c79324"
     },
     {
+      "id": "Draco",
+      "modules": [
+        "MRIOExtras"
+      ],
+      "license": "Apache-2.0",
+      "upstream": "https://github.com/google/draco",
+      "source": {
+        "type": "submodule",
+        "path": "thirdparty/draco"
+      },
+      "version": "15bdb3a4f15a7a8d77489ac348a7a50d93de17a3"
+    },
+    {
       "id": "libE57Format",
       "modules": [
         "MRIOExtras"

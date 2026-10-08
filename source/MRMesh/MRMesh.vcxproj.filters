@@ -444,6 +444,9 @@
     <ClInclude Include="MRImage.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
+    <ClInclude Include="MRScalarConvert.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
     <ClInclude Include="MRPolylineTopology.h">
       <Filter>Source Files\Polyline</Filter>
     </ClInclude>
@@ -2058,6 +2061,9 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRImage.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRScalarConvert.cpp">
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRSceneLoad.cpp">

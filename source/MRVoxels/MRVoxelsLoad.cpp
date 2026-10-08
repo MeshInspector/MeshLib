@@ -501,43 +501,9 @@ Expected<SimpleVolumeMinMax> simpleFromRaw( std::istream& in, const RawParameter
     if ( params.voxelSize.x <= 0 || params.voxelSize.y <= 0 || params.voxelSize.z <= 0 )
         return unexpected( "Wrong voxel size parameter value" );
 
-    int unitSize = 0;
-    switch ( params.scalarType )
+    const int unitSize = int( getScalarTypeSize( params.scalarType ) );
+    if ( unitSize == 0 )
     {
-    case ScalarType::UInt8:
-        unitSize = 1;
-        break;
-    case ScalarType::Int8:
-        unitSize = 1;
-        break;
-    case ScalarType::UInt16:
-        unitSize = 2;
-        break;
-    case ScalarType::Int16:
-        unitSize = 2;
-        break;
-    case ScalarType::UInt32:
-        unitSize = 4;
-        break;
-    case ScalarType::Int32:
-        unitSize = 4;
-        break;
-    case ScalarType::Float32:
-        unitSize = 4;
-        break;
-    case ScalarType::UInt64:
-        unitSize = 8;
-        break;
-    case ScalarType::Int64:
-        unitSize = 8;
-        break;
-    case ScalarType::Float64:
-        unitSize = 8;
-        break;
-    case ScalarType::Float32_4:
-        unitSize = 16;
-        break;
-    default:
         assert( false );
         return unexpected( "Wrong scalar type parameter value" );
     }
@@ -568,37 +534,7 @@ Expected<SimpleVolumeMinMax> simpleFromRaw( std::istream& in, const RawParameter
 
     if ( params.scalarType != ScalarType::Float32 )
     {
-        int64_t min = 0;
-        uint64_t max = 0;
-        if ( params.scalarType == ScalarType::Int8 )
-        {
-            min = std::numeric_limits<int8_t>::lowest();
-            max = std::numeric_limits<int8_t>::max();
-        }
-        else if ( params.scalarType == ScalarType::Int16 )
-        {
-            min = std::numeric_limits<int16_t>::lowest();
-            max = std::numeric_limits<int16_t>::max();
-        }
-        else if ( params.scalarType == ScalarType::Int32 )
-        {
-            min = std::numeric_limits<int32_t>::lowest();
-            max = std::numeric_limits<int32_t>::max();
-        }
-        else if ( params.scalarType == ScalarType::Int64 )
-        {
-            min = std::numeric_limits<int64_t>::lowest();
-            max = std::numeric_limits<int64_t>::max();
-        }
-        else if ( params.scalarType == ScalarType::UInt8 )
-            max = std::numeric_limits<uint8_t>::max();
-        else if ( params.scalarType == ScalarType::UInt16 )
-            max = std::numeric_limits<uint16_t>::max();
-        else if ( params.scalarType == ScalarType::UInt32 )
-            max = std::numeric_limits<uint32_t>::max();
-        else if ( params.scalarType == ScalarType::UInt64 )
-            max = std::numeric_limits<uint64_t>::max();
-        auto converter = getTypeConverter( params.scalarType, max - min, min );
+        auto converter = getTypeConverter( params.scalarType, getScalarTypeMinMax( params.scalarType ) );
         for ( auto i = 0_vox; i < outVolume.data.endId(); ++i )
         {
             float value = converter( &outPointer[i * unitSize] );

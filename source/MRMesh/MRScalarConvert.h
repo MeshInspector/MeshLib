@@ -1,6 +1,7 @@
 #pragma once
 
-#include "MRVoxelsFwd.h"
+#include "MRMeshFwd.h"
+#include "MRBox.h"
 
 namespace MR
 {
@@ -19,15 +20,24 @@ enum class ScalarType
     Float32,
     Float64,
     Float32_4, ///< the last value from float[4]
+    RGB8, ///< 8-bit red, green and blue components; the scalar value is their luma
+    RGBA8, ///< 8-bit red, green, blue and alpha components as in Color; the scalar value is the luma of the color components
     Unknown,
     Count
 };
 
-/// get a function to convert binary data of specified format type to a scalar value
+/// returns the size in bytes of a value of given type, or 0 for ScalarType::Unknown
+[[nodiscard]] MRMESH_API size_t getScalarTypeSize( ScalarType scalarType );
+
+/// returns the minimal and the maximal values of given type (of a color component for RGB8 and RGBA8),
+/// or zeros for ScalarType::Unknown
+[[nodiscard]] MRMESH_API MinMaxd getScalarTypeMinMax( ScalarType scalarType );
+
+/// get a function to convert binary data of specified format type to a scalar value:
+/// integer and color values are mapped from given range to [0, 1], floating-point values are returned as they are
 /// \param scalarType - binary format type
-/// \param range - (for integer types only) the range of possible values
-/// \param min - (for integer types only) the minimal value
-MRVOXELS_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, std::uint64_t range, std::int64_t min );
+/// \param range - (for integer and color types only) the range of possible values, e.g. getScalarTypeMinMax( scalarType )
+MRMESH_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, const MinMaxd& range );
 
 
 /// More general template to pass a single value of specified format \p scalarType to a generic function \p f
@@ -60,6 +70,13 @@ std::invoke_result_t<F, int> visitScalarType( F&& f, ScalarType scalarType, cons
             M( double )
         case ScalarType::Float32_4:
             return f( *((const float*)c + 3 ) );
+        case ScalarType::RGB8:
+        case ScalarType::RGBA8:
+        {
+            // the same luma as in convertImageToDistanceMap
+            const auto* rgb = ( const uint8_t* )c;
+            return f( 0.299f * float( rgb[0] ) + 0.587f * float( rgb[1] ) + 0.114f * float( rgb[2] ) );
+        }
         case ScalarType::Unknown:
             return {};
         case ScalarType::Count:

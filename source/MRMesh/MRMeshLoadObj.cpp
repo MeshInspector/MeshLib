@@ -103,12 +103,12 @@ ObjElement parseToken<ObjElement>( std::string_view line )
 }
 
 // some elements should be considered as individual groups even if following same element
-// for example "usemtl" (actually if there are several sequential "usemtl" lines only last one makes sense)
+// for example "usemtl" and "o" (actually if there are several sequential such lines only last one makes sense)
 template <typename T>
 bool isSingleLineElement( T el )
 {
     if constexpr ( std::is_same_v<T, ObjElement> )
-        return el == ObjElement::MaterialName;
+        return el == ObjElement::MaterialName || el == ObjElement::Object;
     else
         return false;
 }
@@ -1127,6 +1127,7 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     std::vector<MaterialScope> mScopes;
     mScopes.push_back( { .fId = 0 } ); // the faces before the first usemtl line have no material
     std::vector<ObjectScope> oScopes;
+    oScopes.push_back( { .fId = 0 } ); // the faces before the first o line form an object without a name
 
     // simply read all points and colors into vectors
     auto fillPointsAndColors = [&] ( size_t begin, size_t end )
@@ -1251,7 +1252,8 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
         case ObjElement::Object:
         {
             std::string_view line( data + newlines[g.begin], newlines[g.end] - newlines[g.begin] );
-            auto& objData = oScopes.emplace_back();
+            // the last object is replaced if it has no faces yet, e.g. for consecutive o lines or an object with only lines
+            auto& objData = oScopes.back().fId == faceInfos.size() ? oScopes.back() : oScopes.emplace_back();
             objData.objName = trimLeft( line ).substr( strlen( "o" ), std::string_view::npos );
             objData.fId = faceInfos.size();
             boost::trim( objData.objName );
@@ -1310,6 +1312,10 @@ Expected<std::vector<MeshLoad::NamedMesh>> loadModelsFromObj(
     if ( mScopes.back().fId == faces.size() )
         mScopes.pop_back();
     mScopes.push_back( { .fId = faces.size() } );
+
+    // skip the object of an o line after the last face; so every object has faces
+    if ( oScopes.back().fId == faces.size() )
+        oScopes.pop_back();
 
     // the library errors matter only if some faces use a material not found;
     // "(null)" is written for the faces without a material, e.g. by Blender

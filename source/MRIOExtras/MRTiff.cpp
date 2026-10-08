@@ -383,7 +383,7 @@ void visitSampleType( ScalarType sampleType, F&& f )
     case ScalarType::Float64:
         return f( double{} );
     default:
-        MR_UNREACHABLE
+        MR_UNREACHABLE_NO_RETURN
     }
 }
 
@@ -463,7 +463,7 @@ void convertSamples( const TiffLayout& layout, Conversion conversion, const std:
             }
             break;
         case Conversion::Decoded:
-            MR_UNREACHABLE
+            MR_UNREACHABLE_NO_RETURN
         }
     } );
 }

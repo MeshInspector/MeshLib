@@ -8,6 +8,7 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRIOExtras/MRTiff.h"
+#include "MRPch/MRFmt.h"
 
 #include <gtest/gtest.h>
 
@@ -193,8 +194,10 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         }
         if ( bytes.size() <= 4 )
         {
-            bytes.resize( 4, 0 );
-            append( bytes.data(), bytes.size() );
+            // the value is stored in the entry itself, padded with zeros to 4 bytes
+            uint32_t value = 0;
+            std::memcpy( &value, bytes.data(), bytes.size() );
+            write32( value );
         }
         else
         {
@@ -369,7 +372,7 @@ TEST( MRMesh, TiffRasterRoundTrip )
         for ( size_t i = 0; i < raster.data.size(); ++i )
             raster.data[i] = uint8_t( i * 37 + 11 );
 
-        const auto path = tmpFolder / ( "raster" + std::to_string( int( type ) ) + ".tif" );
+        const auto path = tmpFolder / fmt::format( "raster{}.tif", int( type ) );
         auto saveRes = RasterSave::toAnySupportedFormat( raster, path );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
@@ -446,7 +449,7 @@ TEST( MRMesh, TiffRasterPalette )
         colorMap[0] = 0xFFFF;
         colorMap[size + 1] = 0xFFFF;
         colorMap[2 * size + 2] = 0xFFFF;
-        const auto path = tmpFolder / ( "palette" + std::to_string( bits ) + ".tif" );
+        const auto path = tmpFolder / fmt::format( "palette{}.tif", bits );
         const auto indices = bits == 8 ? std::vector<uint8_t>{ 2, 0, 1 } : toBytes( std::vector<uint16_t>{ 2, 0, 1 } );
         writeTestTiff( path, { .size = { 3, 1 }, .bitsPerSample = uint16_t( bits ), .photometric = 3, .colorMap = colorMap }, indices );
 
@@ -573,7 +576,7 @@ TEST( MRMesh, TiffRasterOrientation )
     const std::vector<uint8_t> expected[8] = { stored, flipX, flipXY, flipY, stored, flipX, flipXY, flipY };
     for ( uint16_t orientation = 1; orientation <= 8; ++orientation )
     {
-        const auto path = tmpFolder / ( "orientation" + std::to_string( orientation ) + ".tif" );
+        const auto path = tmpFolder / fmt::format( "orientation{}.tif", orientation );
         writeTestTiff( path, { .size = { 3, 2 }, .orientation = orientation }, stored );
         auto loaded = RasterLoad::fromTiff( path );
         ASSERT_TRUE( loaded.has_value() ) << loaded.error();

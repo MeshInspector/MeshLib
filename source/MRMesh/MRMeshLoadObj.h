@@ -42,6 +42,7 @@ struct ObjLoadSettings
 
 struct NamedMesh
 {
+    /// the name from the o line of the object; empty for the faces before the first o line, as for an o line without a name
     std::string name;
     Mesh mesh;
     VertUVCoords uvCoords;

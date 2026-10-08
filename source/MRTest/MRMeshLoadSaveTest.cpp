@@ -821,4 +821,91 @@ TEST(MRMesh, LoadObjUtf8MtlName)
     EXPECT_EQ( objMesh->getFrontColor( false ), Color::red() );
 }
 
+namespace
+{
+
+// a closed tetrahedron, whose vertices follow the first `numPrevVerts` vertices of the file
+std::string tetrahedronObj( int numPrevVerts )
+{
+    const auto face = [numPrevVerts] ( int a, int b, int c )
+    {
+        return "f " + std::to_string( numPrevVerts + a ) + " " + std::to_string( numPrevVerts + b ) + " " + std::to_string( numPrevVerts + c ) + "\n";
+    };
+    return "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\n" + face( 1, 3, 2 ) + face( 1, 2, 4 ) + face( 1, 4, 3 ) + face( 2, 3, 4 );
+}
+
+using NamedFaceCounts = std::vector<std::pair<std::string, int>>;
+
+// the name and the number of faces of each loaded mesh
+NamedFaceCounts namedFaceCounts( const std::vector<MeshLoad::NamedMesh>& meshes )
+{
+    NamedFaceCounts res;
+    for ( const auto& m : meshes )
+        res.emplace_back( m.name, m.mesh.topology.numValidFaces() );
+    return res;
+}
+
+} //anonymous namespace
+
+TEST(MRMesh, LoadObjFacesBeforeFirstObject)
+{
+    // the faces before the first o line form an object without a name
+    const std::pair<std::string, NamedFaceCounts> cases[] = {
+        { tetrahedronObj( 0 ) + "o A\n" + tetrahedronObj( 4 ) + "o B\n" + tetrahedronObj( 8 ), { { "", 4 }, { "A", 4 }, { "B", 4 } } },
+        { tetrahedronObj( 0 ) + "o A\n" + tetrahedronObj( 4 ), { { "", 4 }, { "A", 4 } } }, // also with a single o line
+    };
+    UniqueTemporaryFolder dir;
+    for ( const auto& [obj, expected] : cases )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_EQ( namedFaceCounts( *res ), expected );
+    }
+
+    // which gets the name of the file
+    writeTextFile( dir / "model.obj", tetrahedronObj( 0 ) + "o A\n" + tetrahedronObj( 4 ) );
+    auto res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->objs.size(), 2 );
+    EXPECT_EQ( res->objs[0]->name(), "model" );
+    EXPECT_EQ( res->objs[1]->name(), "A" );
+}
+
+TEST(MRMesh, LoadObjObjectWithoutFaces)
+{
+    // an object without faces, e.g. with only lines, is skipped wherever it is
+    const std::pair<std::string, NamedFaceCounts> cases[] = {
+        { "o A\n" + tetrahedronObj( 0 ) + "o Lines\nl 1 2 3 4\no B\n" + tetrahedronObj( 4 ), { { "A", 4 }, { "B", 4 } } },
+        { "o A\n" + tetrahedronObj( 0 ) + "o B\n" + tetrahedronObj( 4 ) + "o Lines\nl 1 2 3 4\n", { { "A", 4 }, { "B", 4 } } },
+        { "o Lines\nl 1 2 3 4\no A\n" + tetrahedronObj( 0 ), { { "A", 4 } } },
+        { "o A\n" + tetrahedronObj( 0 ) + "o Lines\nl 1 2 3 4\n", { { "A", 4 } } },
+    };
+    UniqueTemporaryFolder dir;
+    for ( const auto& [obj, expected] : cases )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_EQ( namedFaceCounts( *res ), expected );
+    }
+}
+
+TEST(MRMesh, LoadObjConsecutiveObjectNames)
+{
+    // of consecutive o lines, the last one names the faces after them
+    const std::pair<std::string, NamedFaceCounts> cases[] = {
+        { "o Empty\no A\n" + tetrahedronObj( 0 ), { { "A", 4 } } },
+        { "o Empty\no A\n" + tetrahedronObj( 0 ) + "o Empty\no B\n" + tetrahedronObj( 4 ), { { "A", 4 }, { "B", 4 } } },
+    };
+    UniqueTemporaryFolder dir;
+    for ( const auto& [obj, expected] : cases )
+    {
+        writeTextFile( dir / "model.obj", obj );
+        auto res = MeshLoad::fromSceneObjFile( dir / "model.obj", false );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_EQ( namedFaceCounts( *res ), expected );
+    }
+}
+
 } //namespace MR

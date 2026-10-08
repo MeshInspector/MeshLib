@@ -325,6 +325,9 @@ Expected<void> decompressZip_( zip_t * zip, const std::filesystem::path& targetF
 
         std::string nameFixed = stats.name;
         std::replace( nameFixed.begin(), nameFixed.end(), '\\', '/' );
+        // macOS Finder adds AppleDouble metadata (resource forks, extended attributes) of each file there
+        if ( nameFixed.starts_with( "__MACOSX/" ) )
+            continue;
         std::filesystem::path relativeName = pathFromUtf8( nameFixed );
         relativeName.make_preferred();
         std::filesystem::path newItemPath = targetFolder / relativeName;

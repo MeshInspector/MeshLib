@@ -136,6 +136,7 @@
     <ClCompile Include="MRNormalDenoisingTests.cpp" />
     <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
+    <ClCompile Include="MRRasterTests.cpp" />
     <ClCompile Include="MRRayBoxIntersectionTests.cpp" />
     <ClCompile Include="MRRectIndexerTests.cpp" />
     <ClCompile Include="MRRegionBoundaryTests.cpp" />

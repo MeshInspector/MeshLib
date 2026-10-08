@@ -9,9 +9,9 @@ namespace
 {
 
 template <typename T>
-std::pair<std::int64_t, std::uint64_t> minMaxOf()
+MinMaxd minMaxOf()
 {
-    return { std::int64_t( std::numeric_limits<T>::lowest() ), std::uint64_t( std::numeric_limits<T>::max() ) };
+    return { double( std::numeric_limits<T>::lowest() ), double( std::numeric_limits<T>::max() ) };
 }
 
 } // anonymous namespace
@@ -46,7 +46,7 @@ size_t getScalarTypeSize( ScalarType scalarType )
     return 0;
 }
 
-std::pair<std::int64_t, std::uint64_t> getScalarTypeMinMax( ScalarType scalarType )
+MinMaxd getScalarTypeMinMax( ScalarType scalarType )
 {
     switch ( scalarType )
     {
@@ -75,10 +75,10 @@ std::pair<std::int64_t, std::uint64_t> getScalarTypeMinMax( ScalarType scalarTyp
     case ScalarType::Count:
         break;
     }
-    return { 0, 0 };
+    return { 0.0, 0.0 };
 }
 
-std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, std::uint64_t range, std::int64_t min )
+std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, double range, double min )
 {
     if ( scalarType == ScalarType::Float32 || scalarType == ScalarType::Float64 || scalarType == ScalarType::Float32_4 )
     {
@@ -89,7 +89,8 @@ std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, st
     }
     return [range, min, scalarType] ( const char* c )
     {
-        return visitScalarType( [range, min] ( auto v ) { return float( v - min ) / float( range ); }, scalarType, c );
+        // the subtraction in double does not overflow for 64-bit types
+        return visitScalarType( [range, min] ( auto v ) { return float( double( v ) - min ) / float( range ); }, scalarType, c );
     };
 }
 

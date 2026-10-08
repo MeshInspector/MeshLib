@@ -534,8 +534,8 @@ Expected<SimpleVolumeMinMax> simpleFromRaw( std::istream& in, const RawParameter
 
     if ( params.scalarType != ScalarType::Float32 )
     {
-        const auto [min, max] = getScalarTypeMinMax( params.scalarType );
-        auto converter = getTypeConverter( params.scalarType, max - min, min );
+        const auto minMax = getScalarTypeMinMax( params.scalarType );
+        auto converter = getTypeConverter( params.scalarType, minMax.size(), minMax.min );
         for ( auto i = 0_vox; i < outVolume.data.endId(); ++i )
         {
             float value = converter( &outPointer[i * unitSize] );

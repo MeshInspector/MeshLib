@@ -228,6 +228,12 @@ void reserveKeyEvent( ImGuiKey key )
     getOrderedKeys()[key] = true;
 }
 
+bool isKeyEventReserved( ImGuiKey key )
+{
+    assert( key < getOrderedKeys().size() );
+    return getOrderedKeys()[key];
+}
+
 // makes ImGui see `mods` (GLFW_MOD_* bits) held in this frame, in addition to the real keyboard; call right after ImGui::NewFrame()
 static void forceKeyModifiers( int mods, std::vector<std::pair<ImGuiKey, bool>>& realKeyModifiers )
 {

@@ -6,7 +6,6 @@
 
 #include <gtest/gtest.h>
 
-#include <limits>
 #include <sstream>
 
 namespace MR
@@ -26,22 +25,27 @@ TEST( MRMesh, ScalarTypeSize )
 
 TEST( MRMesh, ScalarTypeMinMax )
 {
-    using Limits = std::pair<std::int64_t, std::uint64_t>;
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::UInt8 ), Limits( 0, 255u ) );
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int16 ), Limits( -32768, 32767u ) );
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::UInt64 ), Limits( 0, std::numeric_limits<std::uint64_t>::max() ) );
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int64 ),
-        Limits( std::numeric_limits<std::int64_t>::lowest(), std::uint64_t( std::numeric_limits<std::int64_t>::max() ) ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::UInt8 ), MinMaxd( 0, 255 ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int16 ), MinMaxd( -32768, 32767 ) );
+    // the limits of 64-bit types are rounded to doubles: 2^64 and +-2^63
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::UInt64 ), MinMaxd( 0, 0x1p64 ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int64 ), MinMaxd( -0x1p63, 0x1p63 ) );
     // the range of a color component
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::RGBA8 ), Limits( 0, 255u ) );
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float64 ), Limits( 0, 0u ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::RGBA8 ), MinMaxd( 0, 255 ) );
+    EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float64 ), MinMaxd( 0, 0 ) );
 
     // getTypeConverter maps this range to [0, 1]
-    const auto [min, max] = getScalarTypeMinMax( ScalarType::Int16 );
-    const auto converter = getTypeConverter( ScalarType::Int16, max - min, min );
+    const auto minMax = getScalarTypeMinMax( ScalarType::Int16 );
+    const auto converter = getTypeConverter( ScalarType::Int16, minMax.size(), minMax.min );
     const int16_t values[] = { -32768, 32767 };
     EXPECT_EQ( converter( ( const char* )&values[0] ), 0.f );
     EXPECT_EQ( converter( ( const char* )&values[1] ), 1.f );
+    // 64-bit values do not overflow
+    const auto minMax64 = getScalarTypeMinMax( ScalarType::Int64 );
+    const auto converter64 = getTypeConverter( ScalarType::Int64, minMax64.size(), minMax64.min );
+    const std::int64_t values64[] = { 0, std::int64_t( 1 ) << 62 };
+    EXPECT_EQ( converter64( ( const char* )&values64[0] ), 0.5f );
+    EXPECT_EQ( converter64( ( const char* )&values64[1] ), 0.75f );
     // and keeps floating-point values as they are
     const double value = -2.5;
     EXPECT_EQ( getTypeConverter( ScalarType::Float64, 0, 0 )( ( const char* )&value ), -2.5f );

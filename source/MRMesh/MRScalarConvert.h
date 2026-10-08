@@ -1,8 +1,7 @@
 #pragma once
 
 #include "MRMeshFwd.h"
-
-#include <utility>
+#include "MRBox.h"
 
 namespace MR
 {
@@ -32,14 +31,14 @@ enum class ScalarType
 
 /// returns the minimal and the maximal values of given integer type (of a color component for RGB8 and RGBA8),
 /// or zeros for floating-point types and ScalarType::Unknown
-[[nodiscard]] MRMESH_API std::pair<std::int64_t, std::uint64_t> getScalarTypeMinMax( ScalarType scalarType );
+[[nodiscard]] MRMESH_API MinMaxd getScalarTypeMinMax( ScalarType scalarType );
 
 /// get a function to convert binary data of specified format type to a scalar value;
 /// floating-point values are returned as they are
 /// \param scalarType - binary format type
 /// \param range - (for integer and color types only) the range of possible values
 /// \param min - (for integer and color types only) the minimal value
-MRMESH_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, std::uint64_t range, std::int64_t min );
+MRMESH_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, double range, double min );
 
 
 /// More general template to pass a single value of specified format \p scalarType to a generic function \p f

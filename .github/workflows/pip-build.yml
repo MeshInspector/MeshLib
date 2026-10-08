@@ -384,6 +384,7 @@ jobs:
           python3.12 ./scripts/wheel/build_wheel.py --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload Python Stubs
+        timeout-minutes: 10
         if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v7
         with:
@@ -416,6 +417,7 @@ jobs:
         run: make -f scripts/mrbind/generate.mk TARGET=csharp -B --trace generate
 
       - name: Upload C# bindings headers
+        timeout-minutes: 10
         if: ${{ needs.setup.outputs.publish_prod == 'true' && matrix.platform == 'aarch64' }}
         uses: actions/upload-artifact@v7
         with:
@@ -424,6 +426,7 @@ jobs:
           retention-days: 1
 
       - name: Upload to Test Artifacts
+        timeout-minutes: 10
         uses: actions/upload-artifact@v7
         with:
           name: ManyLinux-${{matrix.platform}}
@@ -590,6 +593,7 @@ jobs:
           python .\scripts\wheel\build_wheel.py --plat-name=${{ matrix.plat-name }} --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload to Test Artifacts
+        timeout-minutes: 10
         uses: actions/upload-artifact@v7
         with:
           name: Windows-${{ matrix.platform }}
@@ -747,6 +751,7 @@ jobs:
           python3 ./scripts/wheel/build_wheel.py --plat-name=${{matrix.plat-name}} --version ${{ needs.setup.outputs.wheel_version }}
 
       - name: Upload to Test Artifacts
+        timeout-minutes: 10
         uses: actions/upload-artifact@v7
         with:
           name: Macos-${{matrix.platform}}

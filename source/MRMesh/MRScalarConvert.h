@@ -2,6 +2,8 @@
 
 #include "MRMeshFwd.h"
 
+#include <utility>
+
 namespace MR
 {
 
@@ -27,6 +29,10 @@ enum class ScalarType
 
 /// returns the size in bytes of a value of given type, or 0 for ScalarType::Unknown
 [[nodiscard]] MRMESH_API size_t getScalarTypeSize( ScalarType scalarType );
+
+/// returns the minimal and the maximal values of given integer type (of a color component for RGB8 and RGBA8),
+/// or zeros for floating-point types and ScalarType::Unknown
+[[nodiscard]] MRMESH_API std::pair<std::int64_t, std::uint64_t> getScalarTypeMinMax( ScalarType scalarType );
 
 /// get a function to convert binary data of specified format type to a scalar value
 /// \param scalarType - binary format type

@@ -12,6 +12,7 @@
 #include <MRMesh/MRObjectMesh.h>
 #include <MRMesh/MRStringConvert.h>
 #include <MRMesh/MRUniqueTemporaryFolder.h>
+#include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
 #include <filesystem>
 #include <fstream>
@@ -281,7 +282,7 @@ TEST(MRMesh, LoadObjTabIndented)
         "\tusemtl Mat1\n"
         "f 1/1 2/2 3/3\n";
 
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     auto res = MeshLoad::fromSceneObjFile( file.data(), file.size(), false, dir, { .mtlErrors = &mtlErrors } );
     std::filesystem::remove( mtlPath );
     ASSERT_TRUE( res.has_value() );
@@ -384,7 +385,7 @@ TEST(MRMesh, LoadObjMissingMtl)
     UniqueTemporaryFolder dir;
     writeTextFile( dir / "model.obj", twoTetrahedraObj( "model.mtl" ) );
 
-    std::map<std::filesystem::path, std::string> mtlErrors;
+    HashMap<std::filesystem::path, std::string> mtlErrors;
     auto meshes = MeshLoad::fromSceneObjFile( dir / "model.obj", false, { .mtlErrors = &mtlErrors } );
     ASSERT_TRUE( meshes.has_value() );
     EXPECT_EQ( meshes->size(), 2 );
@@ -461,13 +462,13 @@ TEST(MRMesh, LoadObjSeveralMtl)
     ASSERT_EQ( res->objs.size(), 2 );
     EXPECT_EQ( frontColor( res->objs[0] ), Color::red() );
 
-    // each library is reported
+    // each library is reported, in the order of the hash map (it depends on the full paths)
     std::filesystem::remove( dir / "a.mtl" );
     res = MeshLoad::loadObjectFromObj( dir / "model.obj" );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->warnings,
-        "Material file a.mtl was not found, so its textures and colors were not loaded.\n"
-        "Material file b.mtl was not found, so its textures and colors were not loaded.\n" + cWebAdvice );
+    const std::string aMissing = "Material file a.mtl was not found, so its textures and colors were not loaded.\n";
+    const std::string bMissing = "Material file b.mtl was not found, so its textures and colors were not loaded.\n";
+    EXPECT_TRUE( res->warnings == aMissing + bMissing + cWebAdvice || res->warnings == bMissing + aMissing + cWebAdvice ) << res->warnings;
 }
 
 TEST(MRMesh, LoadObjRepeatedMtl)

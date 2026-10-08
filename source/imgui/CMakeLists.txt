@@ -26,6 +26,7 @@ IF(NOT EXISTS "${IMGUI_ROOT}/imgui.h")
     )
   ELSE()
     # download imgui source code using CPM
+    # NOTE: make sure the lock file's record is synced with the submodule state
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/cpm/cmake/CPM.cmake)
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/cpm/package-lock.cmake)
     cmake_policy(PUSH)

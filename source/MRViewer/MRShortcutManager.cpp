@@ -2,6 +2,7 @@
 #include "MRRibbonConstants.h"
 #include "MRImGui.h"
 #include "MRGladGlfw.h"
+#include "MRViewer.h"
 #include "MRMesh/MRString.h"
 #include "MRMesh/MRStringConvert.h"
 #include <algorithm>
@@ -82,6 +83,8 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     if ( !enabled_ )
         return false;
     auto it = map_.find( mapKeyFromKeyAndMod( key, true ) );
+    if ( it == map_.end() && key.heldKey != 0 )
+        it = map_.find( mapKeyFromKeyAndMod( { key.key, key.mod }, true ) );
     if ( it != map_.end() && ( reason == Reason::KeyDown || it->second.repeatable ) )
     {
         it->second.action();
@@ -90,15 +93,38 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     return false;
 }
 
+bool ShortcutManager::isHeldKey( int key ) const
+{
+    if ( key == 0 )
+        return false;
+    for ( const auto& [mapKey, command] : map_ )
+        if ( kayAndModFromMapKey( mapKey ).heldKey == key )
+            return true;
+    return false;
+}
+
+int ShortcutManager::findHeldKey( int key, int mod ) const
+{
+    // the key as it is in the map: in upper case and according to the keyboard layout
+    const auto pressed = kayAndModFromMapKey( mapKeyFromKeyAndMod( { key, mod }, true ) );
+    for ( const auto& [mapKey, command] : map_ )
+    {
+        const auto chord = kayAndModFromMapKey( mapKey );
+        if ( chord.heldKey != 0 && chord.key == pressed.key && chord.mod == pressed.mod && getViewerInstance().isKeyDown( chord.heldKey ) )
+            return chord.heldKey;
+    }
+    return 0;
+}
+
 bool ShortcutManager::onKeyDown_( int key, int modifier )
 {
-    return processShortcut( {key, modifier }, Reason::KeyDown );
+    return processShortcut( { key, modifier, findHeldKey( key, modifier ) }, Reason::KeyDown );
 }
 
 
 bool ShortcutManager::onKeyRepeat_( int key, int modifier )
 {
-    return processShortcut( { key, modifier }, Reason::KeyRepeat );
+    return processShortcut( { key, modifier, findHeldKey( key, modifier ) }, Reason::KeyRepeat );
 }
 
 const char* ShortcutManager::getModifierString( int mod )
@@ -135,6 +161,10 @@ std::string ShortcutManager::getKeyString( int key )
     else if ( key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_9 )
     {
         return std::string( "Num " ) + std::to_string( key - GLFW_KEY_KP_0 );
+    }
+    else if ( key == GLFW_KEY_SPACE )
+    {
+        return std::string( "Space" );
     }
     else if ( key == GLFW_KEY_TAB )
     {
@@ -210,6 +240,8 @@ std::string ShortcutManager::getKeyFullString( const ShortcutKey& key, bool resp
         res += getModifierString( GLFW_MOD_SHIFT ) + std::string( "+" );
     if ( key.mod & GLFW_MOD_SUPER )
         res += getModifierString( GLFW_MOD_SUPER ) + std::string( "+" );
+    if ( key.heldKey != 0 )
+        res += getKeyString( key.heldKey ) + std::string( "+" );
     if ( respectKey )
         res += getKeyString( key.key );
     return res;
@@ -322,10 +354,12 @@ std::optional<ShortcutKey> ShortcutManager::parseShortcutKey( std::string_view k
     res.key = *key;
     for ( auto part : parts )
     {
-        const auto mod = parseModifier( trim( part ) );
-        if ( !mod )
+        if ( const auto mod = parseModifier( trim( part ) ) )
+            res.mod |= *mod;
+        else if ( const auto heldKey = parseKey( trim( part ) ); heldKey && res.heldKey == 0 && *heldKey != res.key )
+            res.heldKey = *heldKey;
+        else
             return {};
-        res.mod |= *mod;
     }
     return res;
 }
@@ -373,7 +407,9 @@ int ShortcutManager::mapKeyFromKeyAndMod( const ShortcutKey& key, [[maybe_unused
 
     if ( upperKey >= 'a' && upperKey <= 'z' ) // lower
         upperKey = std::toupper( upperKey );
-    return int( upperKey << 6 ) + key.mod;
+    static_assert( GLFW_KEY_LAST < ( 1 << cKeyBits ) );
+    assert( key.mod < ( 1 << cModBits ) );
+    return ( ( ( key.heldKey << cKeyBits ) + upperKey ) << cModBits ) + key.mod;
 }
 
 }

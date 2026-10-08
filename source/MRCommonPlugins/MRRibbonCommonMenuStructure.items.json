@@ -156,55 +156,56 @@
       "Tooltip": "A view of XZ plane with camera looking along Y.",
       "Icon": "\uF102",
       "HelpLink": "https://meshinspector.com/inappvideo/frontview",
-      "Shortcut": { "Keys": "Num1", "Category": "View" }
+      "Shortcut": { "Keys": [ "Num1", "Space+1" ], "Category": "View" }
     },
     {
       "Name": "Top View",
       "Tooltip": "A view of XY plane with Z axis looking in camera.",
       "Icon": "\uF107",
       "HelpLink": "https://meshinspector.com/inappvideo/topview",
-      "Shortcut": { "Keys": "Num7", "Category": "View" }
+      "Shortcut": { "Keys": [ "Num7", "Space+5" ], "Category": "View" }
     },
     {
       "Name": "Bottom View",
       "Tooltip": "A view of XY plane with camera looking along Z.",
       "Icon": "\uF106",
       "HelpLink": "https://meshinspector.com/inappvideo/bottomview",
-      "Shortcut": { "Keys": "Primary+Num7", "Category": "View" }
+      "Shortcut": { "Keys": [ "Primary+Num7", "Space+6" ], "Category": "View" }
     },
     {
       "Name": "Left View",
       "Tooltip": "A view of YZ plane with camera looking along X.",
       "Icon": "\uF105",
       "HelpLink": "https://meshinspector.com/inappvideo/leftview",
-      "Shortcut": { "Keys": "Primary+Num3", "Category": "View" }
+      "Shortcut": { "Keys": [ "Primary+Num3", "Space+4" ], "Category": "View" }
     },
     {
       "Name": "Back View",
       "Tooltip": "A view of XZ plane with Y axis looking in camera.",
       "Icon": "\uF103",
       "HelpLink": "https://meshinspector.com/inappvideo/backview",
-      "Shortcut": { "Keys": "Primary+Num1", "Category": "View" }
+      "Shortcut": { "Keys": [ "Primary+Num1", "Space+2" ], "Category": "View" }
     },
     {
       "Name": "Right View",
       "Tooltip": "A view of YZ plane with X axis looking in camera.",
       "Icon": "\uF104",
       "HelpLink": "https://meshinspector.com/inappvideo/rightview",
-      "Shortcut": { "Keys": "Num3", "Category": "View" }
+      "Shortcut": { "Keys": [ "Num3", "Space+3" ], "Category": "View" }
     },
     {
       "Name": "Isometric View",
       "Tooltip": "Look at the object so the axes X,Y,Z form 120 degree angles on the view.",
       "Icon": "\uF1B2",
-      "HelpLink": "https://meshinspector.com/inappvideo/isometricview"
+      "HelpLink": "https://meshinspector.com/inappvideo/isometricview",
+      "Shortcut": { "Keys": "Space+7", "Category": "View" }
     },
     {
       "Name": "Invert View",
       "Tooltip": "Rotates the camera 180 degrees around the current vertical axis.",
       "Icon": "\uF2F1",
       "HelpLink": "https://meshinspector.com/inappvideo/invertview",
-      "Shortcut": { "Keys": "Num9", "Category": "View" }
+      "Shortcut": { "Keys": [ "Num9", "Space+`" ], "Category": "View" }
     },
     {
       "Name": "Single Viewport",

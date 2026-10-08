@@ -2392,48 +2392,23 @@ void RibbonMenu::drawShortcutsWindow_()
         ImGui::PopStyleVar();
     };
 
-    // draws the modifiers and the key in frames, which stick out above the line of the text before them by the button padding
+    // draws the modifiers, the held key and the key in frames, which stick out above the line of the text before them by the button padding
     auto drawKey = [&] ( const ShortcutKey& key )
     {
-        if ( key.mod & GLFW_MOD_CONTROL )
+        auto drawPart = [&] ( const std::string& part )
         {
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_CONTROL ) );
+            addReadOnlyLine( part );
             ImGui::SameLine( 0, style.ItemInnerSpacing.x );
             ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
             ImGui::Text( "+" );
             ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-        }
-
-        if ( key.mod & GLFW_MOD_ALT )
-        {
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_ALT ) );
-            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            ImGui::Text( "+" );
-            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-        }
-
-        if ( key.mod & GLFW_MOD_SHIFT )
-        {
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SHIFT ) );
-            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            ImGui::Text( "+" );
-            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-        }
-
-        if ( key.mod & GLFW_MOD_SUPER )
-        {
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            addReadOnlyLine( ShortcutManager::getModifierString( GLFW_MOD_SUPER ) );
-            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-            ImGui::SetCursorPosY( ImGui::GetCursorPosY() - cButtonPadding * UI::scale() );
-            ImGui::Text( "+" );
-            ImGui::SameLine( 0, style.ItemInnerSpacing.x );
-        }
+        };
+        for ( int mod : { GLFW_MOD_CONTROL, GLFW_MOD_ALT, GLFW_MOD_SHIFT, GLFW_MOD_SUPER } )
+            if ( key.mod & mod )
+                drawPart( ShortcutManager::getModifierString( mod ) );
+        if ( key.heldKey != 0 )
+            drawPart( ShortcutManager::getKeyString( key.heldKey ) );
 
         std::string keyStr = ShortcutManager::getKeyString( key.key );
         bool isArrow = key.key == GLFW_KEY_UP || key.key == GLFW_KEY_DOWN || key.key == GLFW_KEY_LEFT || key.key == GLFW_KEY_RIGHT;

@@ -93,6 +93,9 @@ protected:
   std::string storedModalMessage_;
   NotificationType modalMessageType_{ NotificationType::Error };
   std::shared_ptr<ShortcutManager> shortcutManager_;
+  // the keys of chords like Space+1 held down now, whose presses ImGui has not got (see onKeyDown_);
+  // true for a held key of chords if no other key was pressed since its press, then ImGui gets its press on release
+  std::unordered_map<int, bool> chordKeys_;
 
   ImVec2 sceneWindowPos_;
   ImVec2 sceneWindowSize_;

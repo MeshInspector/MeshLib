@@ -1561,6 +1561,9 @@ bool Viewer::keyDown( int key, int modifiers )
 {
     incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
 
+    if ( !isKeyDown( key ) )
+        downKeys_.push_back( key );
+
     eventsCounter_.counter[size_t( EventType::KeyDown )]++;
 
     if ( signals_->keyDownSignal( key, modifiers ) )
@@ -1569,9 +1572,16 @@ bool Viewer::keyDown( int key, int modifiers )
     return false;
 }
 
+bool Viewer::isKeyDown( int key ) const
+{
+    return std::find( downKeys_.begin(), downKeys_.end(), key ) != downKeys_.end();
+}
+
 bool Viewer::keyUp( int key, int modifiers )
 {
     incrementForceRedrawFrames( forceRedrawMinimumIncrementAfterEvents, swapOnLastPostEventsRedraw );
+
+    std::erase( downKeys_, key );
 
     eventsCounter_.counter[size_t( EventType::KeyUp )]++;
 

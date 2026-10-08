@@ -73,7 +73,15 @@ public:
     void enable( bool on ) { enabled_ = on; }
 
     // if given key has action in shortcut map - process it and returns true, otherwise returns false;
+    // a key with heldKey that is not a chord in the map does the action of the key alone
     MRVIEWER_API virtual bool processShortcut( const ShortcutKey& key, Reason = Reason::KeyDown ) const;
+
+    /// returns true if given key is the held key of some chord in the map, like Space in Space+1
+    [[nodiscard]] MRVIEWER_API bool isHeldKey( int key ) const;
+
+    /// returns the held key of a chord in the map made by given key and modifiers with a key held down now (see Viewer::isKeyDown),
+    /// e.g. Space for the key 1 while Space is held, if Space+1 is in the map; returns 0 if there is no such chord
+    [[nodiscard]] MRVIEWER_API int findHeldKey( int key, int mod ) const;
 
     MRVIEWER_API bool onKeyDown_( int key, int modifier ) override;
     MRVIEWER_API bool onKeyRepeat_( int key, int modifier ) override;
@@ -82,7 +90,7 @@ public:
     MRVIEWER_API static const char* getModifierString( int mod );
     //make string from a key without modifiers, for arrow characters it uses icons font
     MRVIEWER_API static std::string getKeyString( int key );
-    // make string from all modifiers and with/without key and returns it
+    // make string from all modifiers, the held key and with/without key and returns it, e.g. "Ctrl+Space+1"
     MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );
     /// makes string from several keys separated by commas, e.g. "Ctrl+Shift+Z, Ctrl+Y"
     MRVIEWER_API static std::string getKeysFullString( const std::vector<ShortcutKey>& keys );
@@ -103,7 +111,8 @@ public:
     MRVIEWER_API static std::optional<Category> parseCategory( std::string_view name );
 
     /// parses a shortcut written as its modifiers and key separated by "+", e.g. "Primary+Shift+S", the inverse of getKeyFullString;
-    /// returns nothing if any part is unknown
+    /// one part before the key can be the name of a key instead of a modifier, then it is the held key of a chord, e.g. "Space+1";
+    /// returns nothing if any part is unknown or there are several held keys
     MRVIEWER_API static std::optional<ShortcutKey> parseShortcutKey( std::string_view keys );
 
     // if action with given name is present in shortcut list - returns its first key
@@ -119,7 +128,11 @@ protected:
     // if respectKeyboard is set, key will be mapped using local keyboard settings (only if it is mapped to latin symbol)
     MRVIEWER_API static int mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard );
     // returns key with modifier (alt, ctrl, shift, etc.) from simple map key
-    static ShortcutKey kayAndModFromMapKey( int mapKey ) { return { mapKey >> 6, mapKey % ( 1 << 6 ) }; }
+    static ShortcutKey kayAndModFromMapKey( int mapKey )
+        { return { ( mapKey >> cModBits ) % ( 1 << cKeyBits ), mapKey % ( 1 << cModBits ), mapKey >> ( cModBits + cKeyBits ) }; }
+    // a map key consists of the held key, the key and the modifiers, which take these numbers of bits
+    static constexpr int cModBits = 6;
+    static constexpr int cKeyBits = 9;
 
     using ShourtcutsMap = HashMap<int, ShortcutCommand>;
     using ShourtcutsBackMap = HashMap<std::string, std::vector<int>>; // all keys of an action in their order

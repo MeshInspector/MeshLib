@@ -15,6 +15,27 @@ ELSE()
 ENDIF()
 
 set(IMGUI_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/imgui")
+IF(NOT EXISTS "${IMGUI_ROOT}/imgui.h")
+  IF(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../.git")
+    # initialize imgui submodule
+    find_package(Git REQUIRED)
+    execute_process(
+      COMMAND "${GIT_EXECUTABLE}" submodule update --init --depth 1 -- thirdparty/imgui
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../.."
+      COMMAND_ERROR_IS_FATAL ANY
+    )
+  ELSE()
+    # download imgui source code using CPM
+    # NOTE: make sure the lock file's record is synced with the submodule state
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/cpm/cmake/CPM.cmake)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty/cpm/package-lock.cmake)
+    cmake_policy(PUSH)
+    CPMAddPackage(NAME imgui ${MESHLIB_PACKAGE_imgui} DOWNLOAD_ONLY YES)
+    cmake_policy(POP)
+    set(IMGUI_ROOT "${imgui_SOURCE_DIR}")
+  ENDIF()
+ENDIF()
+set(IMGUI_ROOT "${IMGUI_ROOT}" PARENT_SCOPE)
 
 file(GLOB SOURCES
   "*.cpp"

@@ -88,6 +88,11 @@ set(MESHLIB_PACKAGE_googletest
   GIT_TAG b796f7d44681514f58a683a3a71ff17c94edb0c1
 )
 
+set(MESHLIB_PACKAGE_imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG v1.92.0-docking
+)
+
 set(MESHLIB_PACKAGE_jsoncpp
   GIT_REPOSITORY https://github.com/open-source-parsers/jsoncpp.git
   GIT_TAG 42e892d96e47b1f6e29844cc705e148ec4856448

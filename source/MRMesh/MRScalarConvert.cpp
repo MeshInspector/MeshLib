@@ -80,6 +80,13 @@ std::pair<std::int64_t, std::uint64_t> getScalarTypeMinMax( ScalarType scalarTyp
 
 std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, std::uint64_t range, std::int64_t min )
 {
+    if ( scalarType == ScalarType::Float32 || scalarType == ScalarType::Float64 || scalarType == ScalarType::Float32_4 )
+    {
+        return [scalarType] ( const char* c )
+        {
+            return visitScalarType( [] ( auto v ) { return float( v ); }, scalarType, c );
+        };
+    }
     return [range, min, scalarType] ( const char* c )
     {
         return visitScalarType( [range, min] ( auto v ) { return float( v - min ) / float( range ); }, scalarType, c );

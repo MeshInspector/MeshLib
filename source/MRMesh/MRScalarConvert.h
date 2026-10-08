@@ -34,10 +34,11 @@ enum class ScalarType
 /// or zeros for floating-point types and ScalarType::Unknown
 [[nodiscard]] MRMESH_API std::pair<std::int64_t, std::uint64_t> getScalarTypeMinMax( ScalarType scalarType );
 
-/// get a function to convert binary data of specified format type to a scalar value
+/// get a function to convert binary data of specified format type to a scalar value;
+/// floating-point values are returned as they are
 /// \param scalarType - binary format type
-/// \param range - (for integer types only) the range of possible values
-/// \param min - (for integer types only) the minimal value
+/// \param range - (for integer and color types only) the range of possible values
+/// \param min - (for integer and color types only) the minimal value
 MRMESH_API std::function<float ( const char* )> getTypeConverter( ScalarType scalarType, std::uint64_t range, std::int64_t min );
 
 

@@ -223,16 +223,17 @@ TEST( MRViewer, ShortcutChords )
     EXPECT_EQ( frontCount, 2 );
     EXPECT_EQ( oneCount, 1 );
 
-    // a key pressed while another key is held does its own action if they make no chord
-    EXPECT_TRUE( sm.processShortcut( { GLFW_KEY_H, 0, GLFW_KEY_SPACE } ) );
-    EXPECT_EQ( hCount, 1 );
+    // a held key matches only the chords in the map
+    EXPECT_FALSE( sm.processShortcut( { GLFW_KEY_H, 0, GLFW_KEY_SPACE } ) );
     EXPECT_FALSE( sm.processShortcut( { GLFW_KEY_2, 0, GLFW_KEY_SPACE } ) );
+    EXPECT_EQ( hCount, 0 );
 
     EXPECT_EQ( sm.findShortcutsByName( "Front" ), ( std::vector<SK>{ frontKey, frontChord } ) );
 
-    // without the chord, its keys do the action of the key alone
+    // removing the action removes its chord, the key alone keeps its action
     sm.resetShortcut( "Front" );
-    EXPECT_TRUE( sm.processShortcut( frontChord ) );
+    EXPECT_FALSE( sm.processShortcut( frontChord ) );
+    EXPECT_TRUE( sm.processShortcut( { GLFW_KEY_1, 0 } ) );
     EXPECT_EQ( oneCount, 2 );
     EXPECT_EQ( frontCount, 2 );
 

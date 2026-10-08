@@ -73,7 +73,6 @@ public:
     void enable( bool on ) { enabled_ = on; }
 
     // if given key has action in shortcut map - process it and returns true, otherwise returns false;
-    // a key with heldKey that is not a chord in the map does the action of the key alone
     MRVIEWER_API virtual bool processShortcut( const ShortcutKey& key, Reason = Reason::KeyDown ) const;
 
     MRVIEWER_API bool onKeyDown_( int key, int modifier ) override;
@@ -119,15 +118,15 @@ protected:
     // returns simple map key from key with modifier (alt, ctrl, shift, etc.)
     // if respectKeyboard is set, key will be mapped using local keyboard settings (only if it is mapped to latin symbol)
     MRVIEWER_API static int mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard );
-    // the held key, down now and not reserved by a UI hotkey (reserveKeyEvent), of a chord with given key and modifiers; 0 if none
-    int findHeldKey_( int key, int mod ) const;
-
     // returns key with modifier (alt, ctrl, shift, etc.) from simple map key
     static ShortcutKey kayAndModFromMapKey( int mapKey )
         { return { ( mapKey >> cModBits ) % ( 1 << cKeyBits ), mapKey % ( 1 << cModBits ), mapKey >> ( cModBits + cKeyBits ) }; }
     // bits of the modifiers and of the key in a map key, the held key takes the rest
     static constexpr int cModBits = 6;
     static constexpr int cKeyBits = 9;
+
+    // the held key, down now and not reserved by a UI hotkey (reserveKeyEvent), of a chord with given key and modifiers; 0 if none
+    int findHeldKey_( int key, int mod ) const;
 
     using ShourtcutsMap = HashMap<int, ShortcutCommand>;
     using ShourtcutsBackMap = HashMap<std::string, std::vector<int>>; // all keys of an action in their order

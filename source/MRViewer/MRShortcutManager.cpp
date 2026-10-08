@@ -84,8 +84,6 @@ bool ShortcutManager::processShortcut( const ShortcutKey& key, Reason reason ) c
     if ( !enabled_ )
         return false;
     auto it = map_.find( mapKeyFromKeyAndMod( key, true ) );
-    if ( it == map_.end() && key.heldKey != 0 )
-        it = map_.find( mapKeyFromKeyAndMod( { key.key, key.mod }, true ) );
     if ( it != map_.end() && ( reason == Reason::KeyDown || it->second.repeatable ) )
     {
         it->second.action();

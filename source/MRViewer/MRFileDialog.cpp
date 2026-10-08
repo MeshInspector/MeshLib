@@ -343,8 +343,7 @@ std::vector<std::filesystem::path> gtkDialog( const MR::FileDialog::Parameters& 
                     {
                         if ( filterName == filter.name )
                         {
-                            // the first extension of the filter, e.g. ".tif" for "*.tif;*.tiff"
-                            filepath.replace_extension( filter.extensions.substr( 1, filter.extensions.find( ';' ) - 1 ) );
+                            filepath.replace_extension( filter.extensions.substr( 1 ) );
                             break;
                         }
                     }

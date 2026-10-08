@@ -732,7 +732,8 @@ Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, 
     return writeTiff( path, raster.info, [&] ( size_t row ) { return raster.data.data() + row * rowSize; }, settings.progress );
 }
 
-MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), toTiff )
+MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff )
+MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff )
 
 } // namespace RasterSave
 
@@ -780,7 +781,8 @@ Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
     return writeTiff( path, info, [&] ( size_t row ) { return (const uint8_t*)( image.pixels.data() + ( height - 1 - row ) * width ); }, {} );
 }
 
-MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), toTiff, -1 )
+MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff, -1 )
+MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff, -1 )
 
 } // namespace ImageSave
 

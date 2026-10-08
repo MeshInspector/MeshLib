@@ -152,7 +152,7 @@ ENDIF()
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
-file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
+file(GLOB IMGUI_FONTS "${IMGUI_ROOT}/misc/fonts/*.ttf")
 file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
 # desktop bundles the third-party notices next to the executable for the About dialog;
 # wasm links to them on GitHub instead, so they are not copied into the emscripten assets

@@ -168,8 +168,6 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
     if ( findLocation )
     {
         auto windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
-        Box2f boundsFixed;
-
         Box2f workBox;
 
         if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
@@ -207,25 +205,8 @@ void WindowRectAllocator::setFreeNextWindowPos( const char* expectedWindowName, 
             defaultPos.y = workBox.min.y;
         windowBox = Box2f::fromMinAndSize( defaultPos, window->Size );
 
-
-        if ( ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable )
-        {
-            boundsFixed = workBox;
-        }
-        else
-        {
-            // convert viewport bounds from local to window space
-            Box2f viewportBounds = getViewerInstance().getViewportsBounds();
-            boundsFixed = viewportBounds;
-            boundsFixed.min.y = ImGui::GetIO().DisplaySize.y - boundsFixed.max.y;
-            boundsFixed.max.y = boundsFixed.min.y + viewportBounds.size().y;
-            // convert viewport bounds from window to screen space
-            boundsFixed.min = ImGuiMV::Window2ScreenSpaceVector2f( boundsFixed.min );
-            boundsFixed.max = ImGuiMV::Window2ScreenSpaceVector2f( boundsFixed.max );
-        }
-        // push into application window if it is out
-
-        auto result = findFreeRect( windowBox, boundsFixed, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
+        // the window may be placed anywhere within the application window (or monitor), not only over 3D viewports
+        auto result = findFreeRect( windowBox, workBox, [&]( Box2f rect, std::function<void( const char*, Box2f )> func )
         {
             // Just output all the rects for now.
             // FIXME: An AABB tree would be nice here, for better performance.

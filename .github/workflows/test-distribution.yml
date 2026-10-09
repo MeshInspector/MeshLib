@@ -291,7 +291,10 @@ jobs:
           fi
           # aws/tap ships untrusted in GH images and warns on every brew command
           brew untap aws/tap 2>/dev/null || true
-          xargs brew install --quiet --overwrite < "${MESHLIB_FW}/requirements/macos.txt"
+          # only the Homebrew-based .pkg lists runtime brew deps; the vcpkg one bundles them
+          if [ -f "${MESHLIB_FW}/requirements/macos.txt" ]; then
+            xargs brew install --quiet --overwrite < "${MESHLIB_FW}/requirements/macos.txt"
+          fi
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 

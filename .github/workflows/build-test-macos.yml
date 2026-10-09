@@ -75,8 +75,7 @@ jobs:
           - arch: arm64
             config: Release
             lib-source: Homebrew
-            # The .pkg and NuGet bundle brew dylibs that require the macOS they were bottled
-            # for, so this is built on the oldest arm64 Mac (macOS 13).
+            # Same runner as pip-build.yml's arm64 wheel job, so the mrbind cache is shared.
             runner: [ self-hosted, macos, arm64, macos-13 ]
             instance: self-hosted-arm-macos-13
           - arch: arm64
@@ -432,7 +431,7 @@ jobs:
           ./c-examples-build/MeshModification
 
       - name: Upload Macos Distribution
-        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.lib-source == 'Homebrew' }}
+        if: ${{ inputs.upload_artifacts && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         env:
           ACTIONS_ARTIFACT_UPLOAD_TIMEOUT_MS: 1800000
         uses: actions/upload-artifact@v7
@@ -447,7 +446,7 @@ jobs:
         # invoke this step with no matching .pkg and the action fails (with
         # `continue-on-error: true` the job still succeeds, but a confusing
         # `failure`-level annotation is surfaced on the run summary).
-        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.lib-source == 'Homebrew' }}
+        if: ${{ inputs.internal_build && inputs.upload_artifacts && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         continue-on-error: true
         uses: ./.github/actions/collect-artifact-stats
         with:
@@ -456,7 +455,7 @@ jobs:
           stats_file_suffix: -${{ steps.collect-runner-stats.outputs.job_id }}
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'Homebrew' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         shell: bash
         run: |
           python3 -m venv ./wheel_venv
@@ -466,7 +465,7 @@ jobs:
           ./scripts/nuget_patch/fix_macos_rpath.sh ./patched_content/lib{MeshLibC2,MeshLibC2Cuda}.dylib
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'Homebrew' }}
+        if: ${{ inputs.nuget_build_patch && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveMacOs-${{ matrix.arch }}

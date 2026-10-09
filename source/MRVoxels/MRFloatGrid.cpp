@@ -106,7 +106,7 @@ FloatGrid resampled( const FloatGrid& grid, const Vector3f& voxelScale, Progress
         try {
             // unlike `openvdb::resampleToMatch`, the size of the voxel for the grid is always 1, the true size of the voxel is stored
             // in volume wrapper
-            dest = openvdb::tools::doLevelSetRebuild<openvdb::FloatGrid, openvdb::util::NullInterrupter>( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
+            dest = openvdb::tools::levelSetRebuild<openvdb::FloatGrid, openvdb::util::NullInterrupter>( grid_, 0.f, 1, 1, &dest->constTransform(), &interrupter );
             failed = false;
         }
         catch( std::exception& e )

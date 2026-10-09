@@ -52,7 +52,7 @@ target_link_libraries(${PROJECT_NAME}
 IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
   # remove explicit macOS SDK include dir to fix Clang and system libc++ mismatch
-  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT MESHLIB_USE_VCPKG)
     set_target_properties(CURL::libcurl PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
   endif()
 

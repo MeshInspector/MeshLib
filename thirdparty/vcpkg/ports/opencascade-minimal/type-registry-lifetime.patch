@@ -1,0 +1,15 @@
+diff --git a/src/Standard/Standard_Type.cxx b/src/Standard/Standard_Type.cxx
+--- a/src/Standard/Standard_Type.cxx
++++ b/src/Standard/Standard_Type.cxx
+@@ -99,8 +99,9 @@ using registry_type = NCollection_DataMap<Standard_CString, Standard_Type*, typeNameHasher>;
+ // initialized by the time of first access
+ registry_type& GetRegistry()
+ {
+-  static registry_type theRegistry(2048, NCollection_BaseAllocator::CommonBaseAllocator());
+-  return theRegistry;
++  static registry_type* theRegistry =
++    new registry_type(2048, NCollection_BaseAllocator::CommonBaseAllocator());
++  return *theRegistry;
+ }
+ 
+ // To initialize theRegistry map as soon as possible to be destroyed the latest

@@ -11,6 +11,9 @@ struct ShortcutKey
 {
     int key{ 0 };
     int mod{ 0 };
+    /// another key held down when `key` is pressed, e.g. Space in Space+1; 0 if none; matched by its GLFW code, not the keyboard layout;
+    /// a shortcut on the held key alone also fires when a chord starts
+    int heldKey{ 0 };
 
     auto operator<=>( const ShortcutKey& ) const = default;
 };

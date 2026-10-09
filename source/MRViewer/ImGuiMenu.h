@@ -470,5 +470,8 @@ protected:
 // call if you want ImGui to take event if this key is pressed (to prevent scene reaction on key press)
 MRVIEWER_API void reserveKeyEvent( ImGuiKey key );
 
+// returns true if reserveKeyEvent was called for this key in the last frame
+MRVIEWER_API bool isKeyEventReserved( ImGuiKey key );
+
 
 } // end namespace

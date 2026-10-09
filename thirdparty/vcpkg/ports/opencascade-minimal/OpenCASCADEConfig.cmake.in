@@ -1,0 +1,14 @@
+include("${CMAKE_CURRENT_LIST_DIR}/opencascade-minimal-targets.cmake")
+
+get_filename_component(OpenCASCADE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+set(OpenCASCADE_INCLUDE_DIR "${OpenCASCADE_INSTALL_PREFIX}/include/opencascade")
+set(OpenCASCADE_LIBRARY_DIR "${OpenCASCADE_INSTALL_PREFIX}/lib")
+set(OpenCASCADE_MODULES FoundationClasses ModelingData ModelingAlgorithms Visualization ApplicationFramework DataExchange)
+set(OpenCASCADE_LIBRARIES @DIRECT_TOOLKITS@)
+
+foreach(toolkit IN LISTS OpenCASCADE_LIBRARIES)
+  if(NOT TARGET ${toolkit})
+    add_library(${toolkit} INTERFACE IMPORTED)
+    set_target_properties(${toolkit} PROPERTIES INTERFACE_LINK_LIBRARIES OpenCASCADE::OpenCASCADE)
+  endif()
+endforeach()

@@ -1,7 +1,6 @@
 #include "MRVoxelsConversionsByParts.h"
 #include "MRVoxelsVolume.h"
 #include "MRVDBConversions.h"
-#include "MRVDBFloatGrid.h"
 #include "MRMarchingCubes.h"
 
 #include "MRMesh/MREdgePaths.h"

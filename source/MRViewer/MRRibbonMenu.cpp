@@ -1766,7 +1766,7 @@ void RibbonMenu::drawRibbonSceneList_()
     const float cMaxSceneWidth = std::max( cMinSceneWidth, std::round( viewerRef.framebufferSize.x * 0.5f ) );
     sceneSize_.x = std::max( sceneSize_.x, cMinSceneWidth );
     sceneSize_.y = std::round( viewerRef.framebufferSize.y - ( topShift - 2.0f ) * UI::scale() );
-    ImGui::SetWindowSize( "RibbonScene", sceneSize_, ImGuiCond_Always );
+    ImGui::SetWindowSize( "RibbonScene##[rect_allocator_ignore]", sceneSize_, ImGuiCond_Always );
     ImGui::SetNextWindowSizeConstraints( ImVec2( cMinSceneWidth, -1.f ), ImVec2( cMaxSceneWidth, -1.f ) ); // TODO take out limits to special place
     ImGui::PushStyleVar( ImGuiStyleVar_Alpha, 1.f );
     auto colorBg = ImGui::GetStyle().Colors[ImGuiCol_WindowBg];
@@ -1774,7 +1774,7 @@ void RibbonMenu::drawRibbonSceneList_()
     ImGui::PushStyleColor( ImGuiCol_WindowBg, colorBg );
 
     ImGui::Begin(
-        "RibbonScene", nullptr,
+        "RibbonScene##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoResize
     );
@@ -1796,7 +1796,7 @@ void RibbonMenu::drawRibbonSceneList_()
     ImGui::End();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar();
-    auto window = ImGui::FindWindowByName( "RibbonScene" );
+    auto window = ImGui::FindWindowByName( "RibbonScene##[rect_allocator_ignore]" );
     if ( !window || manualSizeSet )
         return;
     // this check is needed when resize of app window changes size of scene window
@@ -2508,7 +2508,7 @@ void RibbonMenu::beginTopPanel_()
 
     ImGui::PushStyleVar( ImGuiStyleVar_WindowPadding, ImVec2( 0, 0 ) );
     ImGui::Begin(
-        "TopPanel", nullptr,
+        "TopPanel##[rect_allocator_ignore]", nullptr,
         ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoDocking
     );

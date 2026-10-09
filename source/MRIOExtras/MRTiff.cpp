@@ -289,9 +289,9 @@ struct GeoTags
     std::optional<double> noData;
 };
 
-// writes a raster with one layer, the rows go from top to bottom
-Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& info, const uint8_t* data, const ProgressCallback& progress,
-    const GeoTags& geoTags = {} )
+// writes a raster with one layer, the rows of data go from top to bottom, or from bottom to top as in Image if bottomUp is set
+Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& info, const uint8_t* data, bool bottomUp,
+    const ProgressCallback& progress, const GeoTags& geoTags = {} )
 {
     // the color components are stored as 8-bit samples, other values as single samples
     const bool isColor = info.type == ScalarType::RGB8 || info.type == ScalarType::RGBA8;
@@ -341,7 +341,8 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     const auto rowSize = size_t( info.dims.x ) * getScalarTypeSize( info.type );
     for ( size_t row = 0; row < height; ++row )
     {
-        if ( TIFFWriteScanline( tiff, (void*)( data + row * rowSize ), uint32_t( row ), 0 ) < 0 )
+        const auto* rowData = data + ( bottomUp ? height - 1 - row : row ) * rowSize;
+        if ( TIFFWriteScanline( tiff, (void*)rowData, uint32_t( row ), 0 ) < 0 )
             return unexpected( "Error writing file: " + utf8string( path ) );
         if ( !reportProgress( progress, float( row + 1 ) / float( height ) ) )
             return unexpectedOperationCanceled();
@@ -383,7 +384,7 @@ Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, 
     MR_TIMER;
     if ( raster.data.size() != raster.info.dataSize() )
         return unexpected( "Raster data size does not match its dimensions" );
-    return writeTiff( path, raster.info, raster.data.data(), settings.progress );
+    return writeTiff( path, raster.info, raster.data.data(), false, settings.progress );
 }
 
 MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff )
@@ -409,7 +410,14 @@ namespace ImageSave
 
 Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
 {
-    return convertImageToRaster( image ).and_then( [&] ( const Raster& raster ) { return RasterSave::toTiff( raster, path ); } );
+    MR_TIMER;
+    if ( image.pixels.size() != size_t( image.resolution.x ) * size_t( image.resolution.y ) )
+        return unexpected( "Image size does not match its resolution" );
+    const RasterInfo info{
+        .dims = Vector3i( image.resolution.x, image.resolution.y, 1 ),
+        .type = ScalarType::RGBA8,
+    };
+    return writeTiff( path, info, (const uint8_t*)image.pixels.data(), true, {} );
 }
 
 MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff, -1 )
@@ -426,7 +434,7 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
         .dims = Vector3i( dmap.dims().x, dmap.dims().y, 1 ),
         .type = ScalarType::Float32,
     };
-    return writeTiff( path, info, (const uint8_t*)dmap.data(), settings.progress, {
+    return writeTiff( path, info, (const uint8_t*)dmap.data(), false, settings.progress, {
         .pixelToWorld = settings.xf,
         .noData = DistanceMap::NOT_VALID_VALUE,
     } );

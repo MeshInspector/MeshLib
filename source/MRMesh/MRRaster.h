@@ -45,9 +45,6 @@ struct Raster
 /// * the values of other types are scaled from the range of finite values to gray colors, NaN and infinite values become black
 MRMESH_API Expected<Image> convertRasterToImage( const Raster& raster );
 
-/// converts an image to a raster with one layer of RGBA8 values
-MRMESH_API Expected<Raster> convertImageToRaster( const Image& image );
-
 /// settings for loading rasters from external formats
 struct RasterLoadSettings
 {

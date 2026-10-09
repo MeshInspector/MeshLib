@@ -133,30 +133,4 @@ Expected<Image> convertRasterToImage( const Raster& raster )
     return res;
 }
 
-Expected<Raster> convertImageToRaster( const Image& image )
-{
-    MR_TIMER;
-    if ( image.resolution.x < 0 || image.resolution.y < 0
-        || image.pixels.size() != size_t( image.resolution.x ) * size_t( image.resolution.y ) )
-        return unexpected( "Image size does not match its resolution" );
-
-    Raster res{
-        .info = {
-            .dims = Vector3i( image.resolution.x, image.resolution.y, 1 ),
-            .type = ScalarType::RGBA8,
-        },
-    };
-    res.data.resize( image.pixels.size() * sizeof( Color ) );
-
-    const auto width = size_t( image.resolution.x );
-    const auto height = size_t( image.resolution.y );
-    ParallelFor( size_t( 0 ), height, [&] ( size_t y )
-    {
-        // Image starts from the bottom row
-        std::memcpy( res.data.data() + y * width * sizeof( Color ), (const void*)( image.pixels.data() + ( height - 1 - y ) * width ),
-            width * sizeof( Color ) );
-    } );
-    return res;
-}
-
 } // namespace MR

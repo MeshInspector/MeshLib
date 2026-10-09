@@ -356,6 +356,18 @@ TEST( MRMesh, TiffImageAlpha )
     auto loaded = ImageLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loaded->pixels, image.pixels );
+
+    // the file starts from the top row, which is the last row of the image
+    auto raster = RasterLoad::fromTiff( path );
+    ASSERT_TRUE( raster.has_value() ) << raster.error();
+    EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { 2, 2, 1 }, .type = ScalarType::RGBA8 } ) );
+    std::vector<Color> colors( 4 );
+    ASSERT_EQ( raster->data.size(), colors.size() * sizeof( Color ) );
+    std::memcpy( (void*)colors.data(), raster->data.data(), raster->data.size() );
+    EXPECT_EQ( colors, std::vector<Color>( { image.pixels[2], image.pixels[3], image.pixels[0], image.pixels[1] } ) );
+
+    const Image wrongSize{ .pixels = { Color::red() }, .resolution = { 2, 2 } };
+    EXPECT_FALSE( ImageSave::toTiff( wrongSize, path ).has_value() );
 }
 
 TEST( MRMesh, TiffRasterRoundTrip )

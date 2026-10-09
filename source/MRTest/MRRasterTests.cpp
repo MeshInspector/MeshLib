@@ -107,29 +107,6 @@ TEST( MRMesh, RasterToImageColor )
     EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 1, 2, 3 ), Color( 4, 5, 6 ) } ) );
 }
 
-TEST( MRMesh, RasterImageRoundTrip )
-{
-    const Image image{
-        .pixels = {
-            Color( 1, 2, 3, 4 ), Color( 5, 6, 7, 8 ), Color( 9, 10, 11, 12 ),
-            Color( 13, 14, 15, 16 ), Color( 17, 18, 19, 20 ), Color( 21, 22, 23, 24 ),
-        },
-        .resolution = { 3, 2 },
-    };
-    const auto raster = convertImageToRaster( image );
-    ASSERT_TRUE( raster.has_value() ) << raster.error();
-    EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { 3, 2, 1 }, .type = ScalarType::RGBA8 } ) );
-    ASSERT_EQ( raster->data.size(), 24u );
-    // the first row of the raster is the top one, i.e. the last row of the image
-    EXPECT_EQ( raster->data[0], 13 );
-    EXPECT_EQ( raster->data[12], 1 );
-
-    auto back = convertRasterToImage( *raster );
-    ASSERT_TRUE( back.has_value() ) << back.error();
-    EXPECT_EQ( back->resolution, image.resolution );
-    EXPECT_EQ( back->pixels, image.pixels );
-}
-
 TEST( MRMesh, RasterToImageErrors )
 {
     auto raster = makeRaster<uint8_t>( { 2, 2 }, ScalarType::UInt8, { 0, 1, 2 } );
@@ -144,19 +121,6 @@ TEST( MRMesh, RasterToImageErrors )
 
     raster.info.type = ScalarType::Unknown;
     EXPECT_FALSE( convertRasterToImage( raster ).has_value() );
-}
-
-TEST( MRMesh, ImageToRasterErrors )
-{
-    Image image{
-        .pixels = { Color::red(), Color::green(), Color::blue() },
-        .resolution = { 2, 2 },
-    };
-    EXPECT_FALSE( convertImageToRaster( image ).has_value() );
-    image.resolution = { 4, -1 };
-    EXPECT_FALSE( convertImageToRaster( image ).has_value() );
-    image.resolution = { 3, 1 };
-    EXPECT_TRUE( convertImageToRaster( image ).has_value() );
 }
 
 } //namespace MR

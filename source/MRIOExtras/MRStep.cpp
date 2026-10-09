@@ -949,7 +949,7 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
         ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
         if ( !reader.Transfer( document, progress.Start() ) )
 #else
-        if ( reader.Transfer( document ) != Standard_True )
+        if ( !reader.Transfer( document ) )
 #endif
             return unexpected( "Failed to read STEP model" );
     }

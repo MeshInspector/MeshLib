@@ -1,11 +1,13 @@
 #pragma once
 
 #include "MRVoxelsFwd.h"
-#include "MRPch/MROpenVDB.h"
+#include <openvdb/version.h>
 
 // The OpenVDB templates used by MeshLib are instantiated once in MRVDBInstantiations*.cpp and only referenced from other
 // translation units; OpenVDB built with USE_EXPLICIT_INSTANTIATION ships these instantiations itself.
 #ifndef OPENVDB_USE_EXPLICIT_INSTANTIATION
+
+#include "MRPch/MROpenVDB.h"
 
 #ifdef _WIN32
 #   ifdef MRVoxels_EXPORTS

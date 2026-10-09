@@ -32,6 +32,7 @@
   <ItemGroup>
     <ClCompile Include="MR3mf.cpp" />
     <ClCompile Include="MRCtm.cpp" />
+    <ClCompile Include="MRDraco.cpp" />
     <ClCompile Include="MRE57.cpp" />
     <ClCompile Include="MRExtraFormatSettings.cpp" />
     <ClCompile Include="MRGltf.cpp" />
@@ -50,6 +51,7 @@
     <ClInclude Include="exports.h" />
     <ClInclude Include="MR3mf.h" />
     <ClInclude Include="MRCtm.h" />
+    <ClInclude Include="MRDraco.h" />
     <ClInclude Include="MRE57.h" />
     <ClInclude Include="MRExtraFormatSettings.h" />
     <ClInclude Include="MRGltf.h" />

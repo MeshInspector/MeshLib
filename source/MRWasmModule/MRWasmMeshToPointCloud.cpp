@@ -14,6 +14,6 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_to_point_cloud )
 {
     emscripten::function( "meshToPointCloud", +[]( std::shared_ptr<Mesh> mesh, bool saveNormals )
     {
-        return meshToPointCloud( *mesh, saveNormals );
+        return meshToPointCloud( *mesh, saveNormals ? VertNormalsMode::AreaWeighted : VertNormalsMode::No );
     } );
 }

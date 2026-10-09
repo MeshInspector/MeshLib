@@ -36,10 +36,11 @@ if(NOT OpenVDB_FOUND)
 endif()
 
 # requires MbedTLS (stage1)
-# libzip prior to version 1.11.4 has incorrect CMake config that requires libzip tools to be installed
-if(APPLE OR EMSCRIPTEN)
-  find_package(libzip)
-else()
+# libzip prior to version 1.11.4 has incorrect CMake config that requires
+# libzip tools to be installed; trying to use it causes a configuration error.
+find_package(libzip 1.11.4 CONFIG QUIET)
+if(NOT libzip_FOUND)
+  # fallback to pkg-config for older versions
   find_package(PkgConfig)
   if(PkgConfig_FOUND)
     pkg_check_modules(libzip QUIET libzip)

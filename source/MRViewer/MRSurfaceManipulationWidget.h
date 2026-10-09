@@ -44,27 +44,39 @@ public:
     /// Mesh change settings
     struct Settings
     {
+        // common settings
         WorkMode workMode = WorkMode::Add;
         float radius = 1.f; ///< radius of editing region
+
+        // Relax mode
         float relaxForce = 0.2f; ///< speed of relaxing, typical values (0 - 0.5]
+        bool relaxKeepCreases = false; ///< if true in Relax mode, the selected edges and creases of the mesh are kept sharp (meshDenoiseWithCreases is used instead of relax)
+        float relaxNormalsSmoothing = 100.f; ///< if relaxKeepCreases, the amount of smoothing of face normals between creases (gamma in meshDenoiseWithCreases)
+        int relaxPointIters = 3; ///< if relaxKeepCreases, the number of iterations to update vertex coordinates from smoothed normals
+        bool relaxMarkCreases = true; ///< if true and relaxKeepCreases, then on mouse up in Relax mode the selected edges in the smoothed area become creases
+
+        // Add and Remove modes
         float editForce = 1.f; ///< material thickness added or removed to the surface
         float sharpness = 50.f; ///< effect of force on points far from center editing area. [0 - 100]
         float relaxForceAfterEdit = 0.25f; ///< force of relaxing modified area after editing (add / remove) is complete. [0 - 0.5], 0 - not relax
-        EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
-        VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
         bool laplacianBasedAddRemove = false; ///< if true in Add/Remove modes, the modification will be done using Laplacian solver, where the closest vertices will be attracted toward mouse cursor to form ideal ridges or grooves
         bool subdivideGrooves = false; ///< if true in Add/Remove modes, changed parts of mesh will be subdivided on mouse up
+
+        // Laplacian and Patch modes
+        EdgeWeights edgeWeights = EdgeWeights::Cotan; ///< edge weights for Laplacian and Patch
+        VertexMass vmass = VertexMass::NeiArea; ///< vertex weights for Laplacian and Patch
         bool mimicPatch = false; ///< if true in Patch mode mixes `CloseSurfaceFillMetric` and disables smoothing
     };
 
-    /// initialize widget according ObjectMesh
+    /// initialize widget according ObjectMesh; if it was initialized with another object, reset() is called first
     MRVIEWER_API void init( const std::shared_ptr<ObjectMesh>& objectMesh );
 
-    /// reset widget state
+    /// reset widget state including the fixed region; does nothing if the widget is not initialized
     MRVIEWER_API void reset();
 
     /// lock the mesh region (vertices in this region cannot be moved, added or deleted)
     /// @note boundary edges can be split to improve quality of the patch
+    /// @note ignored before init(), and reset() clears the region
     MRVIEWER_API void setFixedRegion( const FaceBitSet& region );
 
     /// set widget settings (mesh change settings)
@@ -77,7 +89,7 @@ public:
     [[deprecated( "always returns 1" )]]
     MRVIEWER_API float getMinRadius() const { return 1.f; }
 
-    /// get palette used for visualization point shifts
+    /// get palette used for visualization point shifts, available before init()
     Palette& palette() { return *palette_; }
 
     /// update texture used for colorize surface (use after change colorMap in palette)
@@ -86,10 +98,10 @@ public:
     /// update texture uv coords used for colorize surface (use after change ranges in palette)
     MRVIEWER_API void updateUVs();
 
-    /// enable visualization of mesh deviations
+    /// enable visualization of mesh deviations; can be called before init()
     MRVIEWER_API void enableDeviationVisualization( bool enable );
 
-    /// set method for calculating mesh changes;
+    /// set method for calculating mesh changes, can be called before init();
     /// while the topology differs from the original mesh, ExactDistance is used instead, and the requested method is restored when it becomes the same again
     MRVIEWER_API void setDeviationCalculationMethod( DeviationCalculationMethod method );
 
@@ -166,6 +178,8 @@ protected:
     void compressChangePointsAction_();
 
     void subdivideAfterAddRemove_();
+    /// selected edges having a face in generalEditingRegion_ become creases, undone together with the smoothing
+    void markSelectedEdgesAsCreases_();
 
     void updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable );
 
@@ -219,6 +233,9 @@ protected:
 
     /// true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
     bool appendHistoryAction_ = false;
+
+    /// in Relax mode with relaxMarkCreases, wraps historyAction_ in HistoryStore, and receives the creases change on mouse up
+    std::shared_ptr<CombinedHistoryAction> smoothHistoryAction_;
 
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = false;

@@ -88,7 +88,7 @@ void AddCustomThemePlugin::drawDialog( ImGuiContext* )
         auto saveDir = ColorTheme::getUserThemesDirectory() / ( asU8String( themeName_ ) + u8".json" );
         if ( std::filesystem::is_regular_file( saveDir, ec ) )
         {
-            ImGui::OpenPopup( "File already exists" );
+            ImGui::EnqueuePopup( "File already exists" );
             incrementForceRedrawFrames();
         }
         else

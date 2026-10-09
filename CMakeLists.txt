@@ -12,47 +12,12 @@ IF(APPLE)
     set(CMAKE_USE_WIN32_THREADS_INIT 0)
     set(CMAKE_USE_PTHREADS_INIT 1)
     set(THREADS_PREFER_PTHREAD_FLAG ON)
-
-    # Pin LC_BUILD_VERSION minos so dylibs stay loadable on older macOS
-    # releases regardless of the build host's SDK. 12.7 matches the
-    # MACOS_MIN_VER passed by scripts/mrbind/generate.mk and the
-    # macosx_12_0_* wheel filenames. Caller's -D or env wins.
-    if(NOT CMAKE_OSX_DEPLOYMENT_TARGET AND NOT DEFINED ENV{MACOSX_DEPLOYMENT_TARGET})
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "12.7" CACHE STRING "Minimum macOS version to target for deployment")
-    endif()
 ENDIF()
 
 project(MeshLib CXX)
 
 set(MESHLIB_PROJECT_NAME "MeshLib" CACHE STRING "Project name")
 add_compile_definitions(MR_PROJECT_NAME=\"${MESHLIB_PROJECT_NAME}\")
-
-# Work around patchelf bug: https://github.com/NixOS/patchelf/issues/639
-# Force lld + give it room to grow PHT so patchelf doesn't trample `.init`.
-# Skip on images without lld (older ubuntu22 Clang 14 etc., which aren't
-# AppImage-packaged anyway).
-IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  include(CheckLinkerFlag)
-  check_linker_flag(CXX "-fuse-ld=lld" MESHLIB_HAVE_LLD)
-  IF(MESHLIB_HAVE_LLD)
-    # Prefer CMAKE_LINKER_TYPE (CMake >= 3.29); fall back to -fuse-ld= on
-    # older CMakes (our minimum is 3.18).
-    IF(NOT CMAKE_VERSION VERSION_LESS "3.29")
-      set(CMAKE_LINKER_TYPE LLD)
-    ELSE()
-      add_link_options("-fuse-ld=lld")
-    ENDIF()
-    add_link_options("LINKER:-z,separate-loadable-segments")
-    # Fold byte-identical functions. `safe` folds only the address-insignificant
-    # ones (per Clang's `.llvm_addrsig`), so function pointers stay comparable.
-    # lld-only: GNU ld has no ICF, and GCC emits no address-significance table.
-    add_link_options($<$<NOT:$<CONFIG:Debug>>:-Wl,--icf=safe>)
-    # Widen what ICF can reach: without this only COMDAT functions (templates,
-    # inlines) get their own section, so plain out-of-line ones never fold.
-    # `-fdata-sections` would add nothing -- lld folds executable sections only.
-    add_compile_options($<$<AND:$<COMPILE_LANGUAGE:C,CXX>,$<NOT:$<CONFIG:Debug>>>:-ffunction-sections>)
-  ENDIF()
-ENDIF()
 
 include(CompilerOptions)
 include(ConfigurePch)
@@ -125,7 +90,7 @@ IF(NOT APPLE)
   list(APPEND CMAKE_FIND_ROOT_PATH ${MESHLIB_THIRDPARTY_ROOT_DIR})
 ENDIF()
 IF(NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" OR NOT EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib")
-  message("thirdparty build directory not found! You can build thirdparty with ./scripts/build_thirdparty.sh")
+  message("thirdparty build directory not found! Make sure to point CMAKE_PREFIX_PATH at an existing thirdparty install")
 ENDIF()
 IF(EXISTS "${MESHLIB_THIRDPARTY_ROOT_DIR}/include")
   include_directories(${MESHLIB_THIRDPARTY_ROOT_DIR}/include)
@@ -142,7 +107,7 @@ IF(NOT MESHLIB_KEEP_CTEST_TARGETS)
 ENDIF()
 include(CTest)
 
-IF(APPLE)
+IF(APPLE AND NOT MESHLIB_USE_VCPKG)
   include(ConfigureHomebrew)
 
   # need to hardcode some path to fix wheel (no option to pass path)
@@ -155,8 +120,8 @@ include(DetectPlatform)
 IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
   IF(NOT DEFINED MESHLIB_PYTHON_VERSION)
     # TODO: drop Python version hard-coding; set -DMESHLIB_PYTHON_VERSION explicitly in the CI config if needed
-    IF(APPLE)
-      set(MESHLIB_PYTHON_VERSION "3.10")
+    IF(APPLE AND NOT MESHLIB_USE_VCPKG)
+      set(MESHLIB_PYTHON_VERSION "3.12")
     ELSEIF(DEFINED MR_LINUX_DISTRO)
       IF(${MR_LINUX_DISTRO} STREQUAL "Ubuntu")
         set(MESHLIB_PYTHON_VERSION "3.8")
@@ -175,7 +140,7 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
     ENDIF()
   ENDIF()
 
-  IF(APPLE)
+  IF(APPLE AND MESHLIB_USE_HOMEBREW)
     set(Python_ROOT_DIR "${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}")
   ENDIF()
 
@@ -185,7 +150,7 @@ IF(MESHLIB_PYTHON_SUPPORT AND NOT MR_EMSCRIPTEN)
     find_package(Python REQUIRED COMPONENTS Interpreter Development)
   ENDIF()
 
-  IF(APPLE)
+  IF(APPLE AND MESHLIB_USE_HOMEBREW)
     # TODO: revise
     link_directories(${HOMEBREW_PREFIX}/opt/python@${MESHLIB_PYTHON_VERSION}/Frameworks/Python.framework/Versions/${MESHLIB_PYTHON_VERSION}/lib/)
   ENDIF()
@@ -202,50 +167,77 @@ ENDIF()
 message("version: ${MESHLIB_VERSION}")
 
 set(MESHLIB_LIB_SUBDIR "${MESHLIB_PROJECT_NAME}" CACHE STRING "Subdirectory in the library directory to place the MeshLib libraries at")
-IF(MESHLIB_USE_VCPKG)
-  # use OS-agnostic directory structure for vcpkg
-  set(MR_BIN_DIR bin)
-  set(MR_INCLUDE_DIR include/MeshLib)
-  set(MR_MAIN_LIB_DIR lib/${MESHLIB_LIB_SUBDIR})
-  set(MR_PY_LIB_DIR lib/${MESHLIB_LIB_SUBDIR}/meshlib)
-  set(MR_CONFIG_DIR lib/cmake/MeshLib)
-  set(MR_RESOURCES_DIR share/${MESHLIB_PROJECT_NAME})
-  set(MR_FONTS_DIR share/${MESHLIB_PROJECT_NAME}/fonts)
-  # set rpath manually for both executables and shared libraries
-  # related issue: https://gitlab.kitware.com/cmake/cmake/-/issues/23727
-  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_LIB_SUBDIR}")
-ELSEIF(NOT APPLE)
-  include(GNUInstallDirs)
-  set(MR_BIN_DIR "${CMAKE_INSTALL_BINDIR}")
-  set(MR_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/MeshLib")
-  set(MR_MAIN_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}")
-  set(MR_PY_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}/meshlib")
-  set(MR_CONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/MeshLib")
-  set(MR_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}")
-  set(MR_FONTS_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}/fonts")
-ELSE()
-  # TODO: correct directory structure for macOS
-  # TODO: https://cmake.org/cmake/help/latest/prop_tgt/RESOURCE.html
-  IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if(APPLE)
+  if(MESHLIB_USE_VCPKG)
     set(MR_BIN_DIR       "bin")
-    set(MR_INCLUDE_DIR   "include")
+    set(MR_INCLUDE_DIR   "include/MeshLib")
     set(MR_MAIN_LIB_DIR  "lib")
     set(MR_PY_LIB_DIR    "lib/meshlib")
     set(MR_RESOURCES_DIR "Resources")
     set(MR_CONFIG_DIR    "Resources/cmake")
     set(MR_FONTS_DIR     "Resources/fonts")
-  ELSE()
-    set(MESHLIB_MACOS_INSTALL_PATH "./usr/local" CACHE PATH "")
-    set(MR_ROOT ${MESHLIB_MACOS_INSTALL_PATH})
-    set(MR_BIN_DIR "${MR_ROOT}/bin")
-    set(MR_INCLUDE_DIR "${MR_ROOT}/include/MeshLib")
-    set(MR_MAIN_LIB_DIR "${MR_ROOT}/lib/MeshLib")
-    set(MR_PY_LIB_DIR "${MR_ROOT}/lib/MeshLib/meshlib")
-    set(MR_RESOURCES_DIR "${MR_ROOT}/etc/MeshLib")
-    set(MR_FONTS_DIR "${MR_ROOT}/share/fonts")
-    set(MR_CONFIG_DIR "${MR_ROOT}/lib/MeshLib")
-  ENDIF()
-ENDIF()
+    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/..;@loader_path/../lib;@loader_path/../Frameworks")
+  else()
+    # TODO: correct directory structure for macOS
+    # TODO: https://cmake.org/cmake/help/latest/prop_tgt/RESOURCE.html
+    if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+      set(MR_BIN_DIR       "bin")
+      set(MR_INCLUDE_DIR   "include")
+      set(MR_MAIN_LIB_DIR  "lib")
+      set(MR_PY_LIB_DIR    "lib/meshlib")
+      set(MR_RESOURCES_DIR "Resources")
+      set(MR_CONFIG_DIR    "Resources/cmake")
+      set(MR_FONTS_DIR     "Resources/fonts")
+    else()
+      set(MESHLIB_MACOS_INSTALL_PATH "./usr/local" CACHE PATH "")
+      set(MR_ROOT ${MESHLIB_MACOS_INSTALL_PATH})
+      set(MR_BIN_DIR "${MR_ROOT}/bin")
+      set(MR_INCLUDE_DIR "${MR_ROOT}/include/MeshLib")
+      set(MR_MAIN_LIB_DIR "${MR_ROOT}/lib/MeshLib")
+      set(MR_PY_LIB_DIR "${MR_ROOT}/lib/MeshLib/meshlib")
+      set(MR_RESOURCES_DIR "${MR_ROOT}/etc/MeshLib")
+      set(MR_FONTS_DIR "${MR_ROOT}/share/fonts")
+      set(MR_CONFIG_DIR "${MR_ROOT}/lib/MeshLib")
+    endif()
+  endif()
+else()
+  if(MESHLIB_USE_VCPKG)
+    # use OS-agnostic directory structure for vcpkg
+    set(MR_BIN_DIR bin)
+    set(MR_INCLUDE_DIR include/MeshLib)
+    set(MR_MAIN_LIB_DIR lib/${MESHLIB_LIB_SUBDIR})
+    set(MR_PY_LIB_DIR lib/${MESHLIB_LIB_SUBDIR}/meshlib)
+    set(MR_CONFIG_DIR lib/cmake/MeshLib)
+    set(MR_RESOURCES_DIR share/${MESHLIB_PROJECT_NAME})
+    set(MR_FONTS_DIR share/${MESHLIB_PROJECT_NAME}/fonts)
+    # set rpath manually for both executables and shared libraries
+    # related issue: https://gitlab.kitware.com/cmake/cmake/-/issues/23727
+    list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN" "$ORIGIN/.." "$ORIGIN/../lib" "$ORIGIN/../lib/${MESHLIB_LIB_SUBDIR}")
+  else()
+    include(GNUInstallDirs)
+    set(MR_BIN_DIR "${CMAKE_INSTALL_BINDIR}")
+    set(MR_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/MeshLib")
+    set(MR_MAIN_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}")
+    set(MR_PY_LIB_DIR "${CMAKE_INSTALL_LIBDIR}/${MESHLIB_LIB_SUBDIR}/meshlib")
+    set(MR_CONFIG_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/MeshLib")
+    set(MR_RESOURCES_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}")
+    set(MR_FONTS_DIR "${CMAKE_INSTALL_DATADIR}/${MESHLIB_PROJECT_NAME}/fonts")
+  endif()
+endif()
+
+if(MESHLIB_USE_VCPKG)
+  set(VCPKG_TRIPLET_DIR "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+  install(
+    DIRECTORY
+      "$<$<PLATFORM_ID:Windows>:${VCPKG_TRIPLET_DIR}/bin>"
+      "${VCPKG_TRIPLET_DIR}/include"
+      "${VCPKG_TRIPLET_DIR}/lib"
+      "${VCPKG_TRIPLET_DIR}/share"
+    DESTINATION .
+    PATTERN "pkgconfig" EXCLUDE
+    PATTERN "__pycache__" EXCLUDE
+  )
+endif()
 
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)

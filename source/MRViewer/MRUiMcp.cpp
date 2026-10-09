@@ -192,7 +192,8 @@ static std::string withPreamble( std::string_view specific )
 static nlohmann::json mcpToolProgressStatus( const nlohmann::json& )
 {
     nlohmann::json out = nlohmann::json::object();
-    if ( !MR::ProgressBar::isOrdered() || MR::ProgressBar::isFinished() )
+    // not `isFinished()`: the progress popup blocks `ui_*` until the post-processing, and operations ordered meanwhile follow it
+    if ( !MR::ProgressBar::isOrdered() )
     {
         out["active"] = false;
         return out;

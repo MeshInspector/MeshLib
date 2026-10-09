@@ -44,6 +44,9 @@ MR_SUPPRESS_WARNING_PUSH
 #endif
 #endif
 
+#ifndef MRIOEXTRAS_NO_DRACO
+#define TINYGLTF_ENABLE_DRACO // decode meshes with KHR_draco_mesh_compression extension
+#endif
 #define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION

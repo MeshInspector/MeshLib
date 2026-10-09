@@ -21,6 +21,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | **STEP** | Yes | No | Yes | No |
 | **STP** | Yes | No | Yes | No |
 | **CTM** | Yes | No | Yes | Yes |
+| **DRC** | Yes | No | Yes | Yes |
 | **3MF** | Yes | Yes | Yes | Yes |
 | **MODEL** | Yes | No | No | No |
 | **PLY** | Yes | No | Yes | Yes |
@@ -35,6 +36,7 @@ The tables below categorize MeshLib's supported file formats based on their type
 | --- | --- | --- | --- |
 | **ASC** | Yes | Yes | Yes |
 | **CSV** | Yes | No | No |
+| **DRC** | Yes | Yes | Yes |
 | **E57** | Yes | Yes | No |
 | **LAS** | Yes | Yes | No |
 | **LAZ** | Yes | Yes | No |

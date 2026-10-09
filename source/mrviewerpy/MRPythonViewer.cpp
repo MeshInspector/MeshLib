@@ -47,7 +47,7 @@ MR_INIT_PYTHON_MODULE_PRECALL( mrviewerpy, [] ()
 
 static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 {
-    MR::CommandLoop::runCommandFromGUIThread( [&] ()
+    MR::pythonRunCommandFromGUIThread( [&] ()
     {
         auto image = viewer->captureSceneScreenShot();
         (void)MR::ImageSave::toAnySupportedFormat( image, path ); //TODO: process potential error
@@ -57,7 +57,7 @@ static void pythonCaptureScreenShot( MR::Viewer* viewer, const char* path )
 static void pythonCaptureUIScreenShot( MR::Viewer* viewer, const char* path )
 {
     auto filename = MR::pathFromUtf8( path );
-    MR::CommandLoop::runCommandFromGUIThread( [filename, viewer] ()
+    MR::pythonRunCommandFromGUIThread( [filename, viewer] ()
     {
         viewer->captureUIScreenShot( [filename] ( const MR::Image& image )
         {
@@ -72,7 +72,7 @@ static void pythonSkipFrames( MR::Viewer* viewer, int frames )
     while ( frames > 0 )
     {
         frames--;
-        MR::CommandLoop::runCommandFromGUIThread( []{} );
+        MR::pythonRunCommandFromGUIThread( []{} );
     }
 }
 
@@ -80,7 +80,7 @@ static void pythonShowSceneTree( MR::Viewer* viewer, bool show )
 {
     if ( !viewer )
         return;
-    MR::CommandLoop::runCommandFromGUIThread( [viewer,show]
+    MR::pythonRunCommandFromGUIThread( [viewer,show]
     {
         if ( auto ribbonMenu = viewer->getMenuPluginAs<MR::RibbonMenu>() )
         {
@@ -420,6 +420,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
         .def( pybind11::self & pybind11::self )
         .def( ~pybind11::self )
     ;
+    m.def( "getPrimaryCtrlKeyMod", []{ return PythonKeyMod( MR::getGlfwModPrimaryCtrl() ); },
+        "Returns the main control modifier of this platform: `KeyMod.Super` (Cmd) on macOS, `KeyMod.Ctrl` otherwise." );
 
     pybind11::class_<MR::Viewer::LaunchParams>( m, "ViewerLaunchParams", "This struct contains rules for viewer launch" ).
         def( pybind11::init<>() ).

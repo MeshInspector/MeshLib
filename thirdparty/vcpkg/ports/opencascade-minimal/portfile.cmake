@@ -1,3 +1,5 @@
+vcpkg_check_linkage(ONLY_DYNAMIC_LIBRARY)
+
 string(REPLACE "." "_" VERSION_STR "V${VERSION}")
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
@@ -6,19 +8,18 @@ vcpkg_from_github(
     SHA512 4ec271ec8db5f0d6f77ea5c0633b40334c796421806a344c568fb8d9ed942fec63f8dfcc65ab9f65e0446d5cd7a49beede5ac693421971b350e828ab1a19d773
     HEAD_REF master
     PATCHES
-        fix-install-prefix-path.patch
         drop-bin-letter-d.patch
         dependencies.patch
-        install-include-dir.patch
         remove-vcpkg-enabling.patch
         csf-redifinition.patch
+        trim-xcaf-visualization.patch
+        pch-build-interface.patch
+        windows-static-toolkits.patch
+        type-registry-lifetime.patch
 )
 
-if (VCPKG_LIBRARY_LINKAGE STREQUAL "dynamic")
-    set(BUILD_TYPE "Shared")
-else()
-    set(BUILD_TYPE "Static")
-endif()
+# toolkits MRIOExtras links; kept whole in the merged library, the others are pulled in by reference only
+set(DIRECT_TOOLKITS "TKernel TKMath TKBRep TKTopAlgo TKXSBase TKLCAF TKXCAF TKDESTEP TKMesh")
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     FEATURES
@@ -26,15 +27,13 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
         tbb     USE_TBB
 )
 
-if ("lto" IN_LIST FEATURES)
-    list(APPEND FEATURE_OPTIONS "-DBUILD_OPT_PROFILE=Production")
-endif()
-
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         ${FEATURE_OPTIONS}
-        -DBUILD_LIBRARY_TYPE=${BUILD_TYPE}
+        -DBUILD_LIBRARY_TYPE=Static
+        "-DCMAKE_PROJECT_INCLUDE=${CMAKE_CURRENT_LIST_DIR}/merged-library.cmake"
+        "-DOPENCASCADE_MINIMAL_DIRECT_TOOLKITS=${DIRECT_TOOLKITS}"
         -DBUILD_CPP_STANDARD=C++20
         -DBUILD_RELEASE_DISABLE_EXCEPTIONS=ON
         -DBUILD_MODULE_ApplicationFramework=OFF
@@ -46,7 +45,8 @@ vcpkg_cmake_configure(
         -DBUILD_MODULE_Visualization=OFF
         -DBUILD_DOC_Overview=OFF
         -DBUILD_Inspector=OFF
-        -DBUILD_ADDITIONAL_TOOLKITS="TKDESTEP;TKBinXCAF"
+        -DBUILD_ADDITIONAL_TOOLKITS="TKDESTEP;TKMesh"
+        -DBUILD_USE_PCH=ON
         -DINSTALL_DIR_LAYOUT=Unix
         -DINSTALL_DIR_DOC=share/trash
         -DINSTALL_DIR_SCRIPT=share/trash # not relocatable
@@ -65,8 +65,26 @@ vcpkg_cmake_configure(
 )
 
 vcpkg_cmake_install()
+vcpkg_copy_pdbs()
 
 vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/opencascade)
+
+# the toolkits are linked into the single OpenCASCADE library; their archives and OCCT's own CMake files are not shipped
+file(GLOB toolkit_files
+    "${CURRENT_PACKAGES_DIR}/lib/libTK*.a"
+    "${CURRENT_PACKAGES_DIR}/lib/TK*.lib"
+    "${CURRENT_PACKAGES_DIR}/debug/lib/libTK*.a"
+    "${CURRENT_PACKAGES_DIR}/debug/lib/TK*.lib"
+    "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADEFoundationClassesTargets*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADEModelingDataTargets*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADEModelingAlgorithmsTargets*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADEVisualizationTargets*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADEApplicationFrameworkTargets*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADEDataExchangeTargets*.cmake"
+    "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADECompileDefinitionsAndFlags-*.cmake"
+)
+file(REMOVE ${toolkit_files})
+configure_file("${CMAKE_CURRENT_LIST_DIR}/OpenCASCADEConfig.cmake.in" "${CURRENT_PACKAGES_DIR}/share/${PORT}/OpenCASCADEConfig.cmake" @ONLY)
 
 #make occt includes relative to source_file
 file(GLOB extra_headers

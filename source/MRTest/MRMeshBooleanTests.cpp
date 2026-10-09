@@ -9,7 +9,14 @@
 #include <MRMesh/MRMatrix3.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRMeshCollidePrecise.h>
+#include <MRMesh/MRIntersectionContour.h>
+#include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRConstants.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <tuple>
 
 namespace MR
 {
@@ -217,6 +224,110 @@ TEST( MRMesh, BooleanResultMapper )
     EXPECT_EQ( mapsB.old2newVerts.size(), 160 );
     EXPECT_EQ( mapsB.cut2newFaces.size(), 320 );
     EXPECT_EQ( mapsB.cut2origin.size(), 320 );
+}
+
+// the spheres of the Boolean benchmark (B rotated around Z by n times 0.1 degree) have lone contours (each inside one triangle) for some n;
+// subdivideLoneContours splits those triangles and updates the AABB tree instead of its rebuild
+TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
+{
+    const Mesh sphere = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
+    auto less = []( const VarEdgeTri & a, const VarEdgeTri & b )
+    {
+        return std::make_tuple( a.isEdgeATriB(), int( a.edge ), int( a.tri() ) ) < std::make_tuple( b.isEdgeATriB(), int( b.edge ), int( b.tri() ) );
+    };
+    for ( int n : { 50, 74 } )
+    {
+        const auto xf = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), float( double( n ) * 0.1f * PI / 180.0 ) ) );
+        Mesh meshA = sphere;
+        const Mesh & meshB = sphere;
+        const auto conv = getVectorConverters( meshA, meshB, &xf );
+        const auto contours = orderIntersectionContours( meshA.topology, meshB.topology,
+            findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt, &xf ) );
+        ContinuousContours loneA;
+        for ( int i : detectLoneContours( contours ) )
+            if ( !contours[i][0].isEdgeATriB() )
+                loneA.push_back( contours[i] );
+        OneMeshContours loneIntsA, loneIntsAonB;
+        getOneMeshIntersectionContours( meshA, meshB, loneA, &loneIntsA, &loneIntsAonB, conv, &xf );
+        removeLoneDegeneratedContours( meshB.topology, loneIntsA, loneIntsAonB );
+        ASSERT_FALSE( loneIntsA.empty() );
+
+        FaceBitSet loneFaces;
+        for ( const auto & c : loneIntsA )
+            loneFaces.autoResizeSet( std::get<FaceId>( c.intersections.front().primitiveId ) );
+        const auto numFaces = meshA.topology.numValidFaces();
+        subdivideLoneContours( meshA, loneIntsA );
+        EXPECT_EQ( meshA.topology.numValidFaces(), numFaces + 2 * int( loneFaces.count() ) );
+        const auto * tree = meshA.getAABBTreeNotCreate();
+        ASSERT_TRUE( tree );
+        EXPECT_EQ( tree->numLeaves(), size_t( meshA.topology.numValidFaces() ) );
+
+        // same intersections as with a new tree
+        Mesh rebuiltA = meshA;
+        rebuiltA.invalidateCaches();
+        auto updatedRes = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt, &xf );
+        auto rebuiltRes = findCollidingEdgeTrisPrecise( rebuiltA, meshB, conv.toInt, &xf );
+        std::sort( updatedRes.begin(), updatedRes.end(), less );
+        std::sort( rebuiltRes.begin(), rebuiltRes.end(), less );
+        EXPECT_EQ( updatedRes, rebuiltRes );
+
+        EXPECT_TRUE( boolean( sphere, sphere, BooleanOperation::DifferenceAB, &xf ).valid() );
+    }
+}
+
+// after splits of faces and edges in both meshes, updateCollidingEdgeTrisPrecise finds the same intersections as new search
+TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
+{
+    const Mesh sphere = makeSphere( { .radius = 1.0f, .numMeshVertices = 3366 } );
+    const auto xf = AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), 0.1f ) );
+    const auto conv = getVectorConverters( sphere, sphere, &xf );
+    const auto orgRes = findCollidingEdgeTrisPrecise( sphere, sphere, conv.toInt, &xf );
+    ASSERT_GT( orgRes.size(), 100 );
+    auto less = []( const VarEdgeTri & a, const VarEdgeTri & b )
+    {
+        return std::make_tuple( a.isEdgeATriB(), int( a.edge ), int( a.tri() ) ) < std::make_tuple( b.isEdgeATriB(), int( b.edge ), int( b.tri() ) );
+    };
+    auto sortedOrgRes = orgRes;
+    std::sort( sortedOrgRes.begin(), sortedOrgRes.end(), less );
+
+    // the splits of the triangles of every 200th intersection add less than 1/32 of new vertices, so the update itself is tested;
+    // the ones of every 10th intersection add more, and then the function makes new search
+    for ( size_t step : { 200, 10 } )
+    {
+        Mesh meshA = sphere;
+        Mesh meshB = sphere;
+        auto res = orgRes;
+
+        // split the intersected triangles of both meshes with new vertices inside the meshes, and an intersecting edge of A;
+        // several intersections can have the same triangle, then the part of it keeping its id is split again
+        const VertId aFirstNewVert( meshA.topology.vertSize() );
+        const VertId bFirstNewVert( meshB.topology.vertSize() );
+        FaceHashMap aNew2Old, bNew2Old;
+        for ( size_t i = 0; i < res.size(); i += step )
+        {
+            auto & mesh = res[i].isEdgeATriB() ? meshB : meshA;
+            const auto f = res[i].tri();
+            mesh.splitFace( f, mesh.triCenter( f ) - 0.01f * mesh.normal( f ), nullptr, res[i].isEdgeATriB() ? &bNew2Old : &aNew2Old );
+        }
+        const auto aEdgeIt = std::find_if( res.begin(), res.end(), []( const VarEdgeTri & et ) { return et.isEdgeATriB(); } );
+        ASSERT_NE( aEdgeIt, res.end() );
+        meshA.splitEdge( aEdgeIt->edge, nullptr, &aNew2Old );
+        meshA.updateCachesAfterSplits( aNew2Old );
+        meshB.updateCachesAfterSplits( bNew2Old );
+        const int numVerts = int( meshA.topology.vertSize() + meshB.topology.vertSize() );
+        EXPECT_EQ( 32 * ( numVerts - aFirstNewVert - bFirstNewVert ) > numVerts, step == 10 );
+
+        updateCollidingEdgeTrisPrecise( res, meshA, aFirstNewVert, meshB, bFirstNewVert, conv.toInt, &xf );
+        auto newRes = findCollidingEdgeTrisPrecise( meshA, meshB, conv.toInt, &xf );
+        std::sort( res.begin(), res.end(), less );
+        std::sort( newRes.begin(), newRes.end(), less );
+        EXPECT_EQ( res, newRes );
+        EXPECT_NE( res, sortedOrgRes );
+
+        // no new vertices
+        updateCollidingEdgeTrisPrecise( res, meshA, VertId( meshA.topology.vertSize() ), meshB, VertId( meshB.topology.vertSize() ), conv.toInt, &xf );
+        EXPECT_EQ( res, newRes );
+    }
 }
 
 } //namespace MR

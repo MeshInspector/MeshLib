@@ -1,6 +1,7 @@
 {
   "name": "opencascade-minimal",
   "version": "7.9.1",
+  "port-version": 4,
   "description": "Open CASCADE Technology (OCCT) is an open-source software development platform for 3D CAD, CAM, CAE. Minimal build for STEP import support.",
   "homepage": "https://github.com/Open-Cascade-SAS/OCCT",
   "license": "LGPL-2.1-only",
@@ -25,9 +26,6 @@
       "dependencies": [
         "eigen3"
       ]
-    },
-    "lto": {
-      "description": "Build with link-time optimization"
     },
     "tbb": {
       "description": "Enable optional usage of tbb",

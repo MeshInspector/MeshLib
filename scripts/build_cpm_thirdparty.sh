@@ -6,10 +6,7 @@
 # exit if any command failed
 set -eo pipefail
 
-dt=$(date '+%d-%m-%Y_%H:%M:%S');
-logfile="`pwd`/install_thirdparty_${dt}.log"
 echo "Thirdparty build script started."
-echo "You could find output in ${logfile}"
 
 # NOTE: realpath is not supported on older macOS versions
 BASE_DIR=$( cd "$( dirname "$0" )"/.. ; pwd -P )

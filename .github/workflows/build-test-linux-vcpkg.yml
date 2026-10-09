@@ -74,7 +74,7 @@ jobs:
             c-compiler: /opt/rh/gcc-toolset-11/root/usr/bin/gcc
             cxx-standard: 20
           # GCC 11's libstdc++ dir, per-arch. `--gcc-install-dir` (Clang 16+) makes the Build (Clang rows)
-          # and bindings steps use libstdc++11 instead of Clang's default libstdc++13 - matching g++ and
+          # and bindings steps use libstdc++11 explicitly, whatever toolsets the image has - matching g++ and
           # the vcpkg deps, and compiling the bindings ~11% faster.
           - arch: x64
             os: ubuntu-latest
@@ -135,6 +135,8 @@ jobs:
       - name: Install MRBind
         if: ${{ inputs.mrbind || inputs.mrbind_c }}
         uses: ./.github/actions/build-mrbind
+        env:
+          GCC_INSTALL_DIR: ${{ matrix.gcc-install-dir }}
         with:
           # Prefix is shared with pip-build.yml's rocky section, which uses the same
           # image and script. The Dockerfile hash in extra-cache-key busts the cache
@@ -160,6 +162,7 @@ jobs:
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_CXX_COMPILER: ${{ matrix.cxx-compiler }}
+          CMAKE_LINKER_TYPE: ${{ matrix.compiler == 'Clang' && 'MOLD' || '' }}
           MR_VERSION: ${{ inputs.app_version }}
           # options to be passed to cmake
           MR_CMAKE_OPTIONS: >
@@ -318,7 +321,8 @@ jobs:
         run: |
           python3 -m venv ./wheel_venv
           source ./wheel_venv/bin/activate
-          python3 -m pip install auditwheel patchelf
+          python3 -m pip install auditwheel 'patchelf>=0.19'
+          strip --strip-unneeded ./build/Release/bin/lib*.so
           python3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./build/Release/bin/lib{MeshLibC2,MeshLibC2Cuda}.so
 
       - name: Upload NuGet files to Artifacts

@@ -1,6 +1,7 @@
 project(MRIOExtras CXX)
 
 option(MRIOEXTRAS_NO_CTM "Disable OpenCTM support" OFF)
+option(MRIOEXTRAS_NO_DRACO "Disable Google Draco support (.drc and compressed glTF)" OFF)
 option(MRIOEXTRAS_NO_E57 "Disable E57 support" OFF)
 option(MRIOEXTRAS_NO_GLTF "Disable glTF support" OFF)
 option(MRIOEXTRAS_NO_JPEG "Disable JPEG support" OFF)
@@ -43,6 +44,13 @@ IF(NOT MRIOEXTRAS_NO_CTM)
   target_link_libraries(${PROJECT_NAME} PRIVATE OpenCTM::OpenCTM)
 ENDIF()
 
+IF(NOT MRIOEXTRAS_NO_DRACO)
+  find_package(draco CONFIG REQUIRED
+    HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
+  )
+  target_link_libraries(${PROJECT_NAME} PRIVATE draco::draco)
+ENDIF()
+
 IF(NOT MRIOEXTRAS_NO_E57)
   find_package(E57Format CONFIG REQUIRED
     HINTS "${MESHLIB_THIRDPARTY_ROOT_DIR}"
@@ -75,7 +83,7 @@ IF(NOT MRIOEXTRAS_NO_E57)
 ENDIF()
 
 IF(NOT MRIOEXTRAS_NO_JPEG)
-  IF(APPLE)
+  IF(APPLE AND MESHLIB_USE_HOMEBREW)
     target_include_directories(${PROJECT_NAME} PRIVATE $<BUILD_INTERFACE:${HOMEBREW_PREFIX}/opt/jpeg-turbo/include>) # @todo
     target_link_libraries(${PROJECT_NAME} PRIVATE ${HOMEBREW_PREFIX}/opt/jpeg-turbo/lib/libturbojpeg.dylib)
   ELSE()

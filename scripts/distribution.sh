@@ -7,9 +7,11 @@
 # exit if any command failed
 set -eo pipefail
 
-if [ ! -f "./lib/libcpr.so" ]; then
-  echo "Thirdparty build was not found. Building..."
-  ./scripts/build_thirdparty.sh
+if [ -z "${MESHLIB_THIRDPARTY_ROOT_DIR}" ]; then
+  MESHLIB_THIRDPARTY_ROOT_DIR=.
+  if [ -d "${PWD}/installed" ]; then
+    MESHLIB_THIRDPARTY_ROOT_DIR="${PWD}/installed"
+  fi
 fi
 
 if [ ! -f "./build/Release/bin/libMRMesh.so" ]; then
@@ -70,13 +72,8 @@ chmod +x ./distr/meshlib-dev/DEBIAN/postinst
 mkdir -p ./distr/meshlib-dev/usr/local/lib/udev/rules.d/
 cp "./scripts/70-space-mouse-meshlib.rules" ./distr/meshlib-dev/usr/local/lib/udev/rules.d/
 
-#copy lib dir
-CURRENT_DIR="`pwd`"
-# keep the soname symlinks (else ldconfig warns "is not a symbolic link");
-# `./lib/.` because ./lib itself may be a symlink, e.g. in CI
-mkdir -p "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib"
-cp -a ./lib/. "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_LIB_DIR}/lib/"
-cp -rL ./include "${CURRENT_DIR}/distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}/"
+cp -a "${MESHLIB_THIRDPARTY_ROOT_DIR}/lib" "./distr/meshlib-dev${MR_INSTALL_LIB_DIR}/"
+cp -a "${MESHLIB_THIRDPARTY_ROOT_DIR}/include" "./distr/meshlib-dev${MR_INSTALL_INCLUDE_DIR}/"
 echo "Thirdparty libs and include copy done"
 
 #call dpkg

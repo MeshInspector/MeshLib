@@ -463,13 +463,13 @@ SurfacePath formatSurfacePath( const MeshTopology& topology, const  SurfacePath&
 void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHashMap* new2oldMap /*= nullptr */ )
 {
     MR_TIMER;
-    MR_WRITER( mesh );
     HashMap<FaceId, std::vector<int>> face2contoursMap;
     for ( int i = 0; i < contours.size(); ++i )
     {
         FaceId f = std::get<FaceId>( contours[i].intersections.front().primitiveId );
         face2contoursMap[f].push_back( i );
     }
+    FaceHashMap splitNew2Old; // new face -> face it was split from here, to update AABB tree instead of rebuilding it
     for ( auto& [faceId, conts] : face2contoursMap )
     {
         assert( !conts.empty() );
@@ -484,8 +484,12 @@ void subdivideLoneContours( Mesh& mesh, const OneMeshContours& contours, FaceHas
             massCenter += p.coordinate;
         }
         massCenter /= float( counter );
+        const FaceId firstNewFace( mesh.topology.faceSize() );
         mesh.splitFace( faceId, massCenter, nullptr, new2oldMap );
+        for ( FaceId f = firstNewFace; f < mesh.topology.faceSize(); ++f )
+            splitNew2Old[f] = faceId;
     }
+    mesh.updateCachesAfterSplits( splitNew2Old );
 }
 
 void getOneMeshIntersectionContours( const Mesh& meshA, const Mesh& meshB, const ContinuousContours& contours,

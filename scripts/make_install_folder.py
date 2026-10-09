@@ -92,6 +92,10 @@ def copy_lib():
 	shutil.copytree(os.path.join(it.path_to_sources,target_arch()),it.path_to_libs,dirs_exist_ok=True)
 	shutil.copytree(os.path.join(os.path.join(vcpkg_directory,'debug'),'lib'),os.path.join(it.path_to_libs,"Debug"),dirs_exist_ok=True)
 	shutil.copytree(os.path.join(vcpkg_directory,'lib'),os.path.join(it.path_to_libs,"Release"),dirs_exist_ok=True)
+	# vcpkg puts the .pdb of each DLL next to it in bin/; ship them in the symbols archive too
+	for src_bin, config in ((os.path.join(vcpkg_directory,'bin'),"Release"),(os.path.join(vcpkg_directory,'debug','bin'),"Debug")):
+		for pdb in glob.glob(os.path.join(src_bin,'*.pdb')):
+			shutil.copy2(pdb,os.path.join(it.path_to_libs,config))
 
 	# Drop the debug-symbol cache that the .NET (C#) test run leaves under
 	# <arch>/<config>/sym (coreclr/ntdll/kernelbase PDBs, indexed by GUID). Its

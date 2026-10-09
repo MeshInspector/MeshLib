@@ -4,12 +4,15 @@
 #include "MRMesh/MRObjectLoad.h"
 #include "MRMesh/MRObjectMesh.h"
 #include "MRMesh/MRObjectPoints.h"
+#include "MRMesh/MRDistanceMeasurementObject.h"
+#include "MRMesh/MRPointMeasurementObject.h"
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRMesh.h"
 #include "MRMesh/MRMeshSave.h"
 #include "MRMesh/MRMeshToPointCloud.h"
 #include "MRMesh/MRPointsSave.h"
 #include "MRMesh/MRTelemetry.h"
+#include "MRPch/MRJson.h"
 #include <gtest/gtest.h>
 
 namespace MR
@@ -164,6 +167,109 @@ TEST( MRMesh, SerializeSharedObjectMesh )
     EXPECT_EQ( m1->meshPtr()->topology.numValidFaces(), 12 );
     // meshes are shared among two objects
     EXPECT_EQ( m0->meshPtr(), m1->meshPtr() );
+}
+
+// the distance mode (e.g. the distance along X only) must survive saving and loading a scene
+TEST( MRMesh, SerializeDistanceMeasurementMode )
+{
+    using Mode = DistanceMeasurementObject::DistanceMode;
+    const std::pair<Mode, float> modesAndDistances[] =
+    {
+        { Mode::euclidean, 13.f },
+        { Mode::euclideanWithSignedDeltasPerAxis, 13.f },
+        { Mode::euclideanWithAbsoluteDeltasPerAxis, 13.f },
+        { Mode::xAbsolute, 3.f },
+        { Mode::yAbsolute, 4.f },
+        { Mode::zAbsolute, 12.f },
+    };
+
+    Object o;
+    o.setName( "root" );
+    for ( const auto& [mode, distance] : modesAndDistances )
+    {
+        auto dm = std::make_shared<DistanceMeasurementObject>();
+        dm->setName( "distance" + std::to_string( int( mode ) ) );
+        dm->setLocalPoint( { 1.f, 2.f, 3.f } );
+        dm->setLocalDelta( { 3.f, -4.f, 12.f } );
+        dm->setDistanceMode( mode );
+        EXPECT_FLOAT_EQ( dm->computeDistance(), distance );
+        o.addChild( dm );
+    }
+
+    UniqueTemporaryFolder f;
+    auto mruPath = f / "distances.mru";
+    auto s = serializeObjectTree( o, mruPath );
+    EXPECT_TRUE( s.has_value() ) << ( s.has_value() ? "" : s.error() );
+    auto l = loadSceneFromAnySupportedFormat( mruPath );
+    ASSERT_TRUE( l.has_value() ) << l.error();
+    ASSERT_TRUE( l->obj );
+    EXPECT_TRUE( l->warnings.empty() );
+    ASSERT_EQ( l->obj->children().size(), std::size( modesAndDistances ) );
+    for ( std::size_t i = 0; i < std::size( modesAndDistances ); ++i )
+    {
+        const auto& [mode, distance] = modesAndDistances[i];
+        auto dm = l->obj->children()[i]->asType<DistanceMeasurementObject>();
+        ASSERT_TRUE( dm );
+        EXPECT_EQ( dm->getDistanceMode(), mode );
+        EXPECT_FLOAT_EQ( dm->computeDistance(), distance );
+    }
+}
+
+// the cap visibility of a point measurement must survive saving and loading a scene
+TEST( MRMesh, SerializePointMeasurementCapVisibility )
+{
+    constexpr auto CapVisibility = PointMeasurementVisualizePropertyType::CapVisibility;
+    auto capMask = ViewportMask::all();
+    capMask.set( ViewportId( 2 ), false );
+
+    Object o;
+    o.setName( "root" );
+    auto pm = std::make_shared<PointMeasurementObject>();
+    pm->setName( "point" );
+    pm->setVisualizePropertyMask( CapVisibility, capMask );
+    o.addChild( pm );
+
+    UniqueTemporaryFolder f;
+    auto mruPath = f / "point.mru";
+    auto s = serializeObjectTree( o, mruPath );
+    EXPECT_TRUE( s.has_value() ) << ( s.has_value() ? "" : s.error() );
+    auto l = loadSceneFromAnySupportedFormat( mruPath );
+    ASSERT_TRUE( l.has_value() ) << l.error();
+    ASSERT_TRUE( l->obj );
+    EXPECT_TRUE( l->warnings.empty() );
+    ASSERT_EQ( l->obj->children().size(), 1 );
+    auto loaded = l->obj->children()[0]->asType<PointMeasurementObject>();
+    ASSERT_TRUE( loaded );
+    EXPECT_EQ( loaded->getVisualizePropertyMask( CapVisibility ), capMask );
+
+    // scenes saved without the key keep the default
+    Json::Value root;
+    auto futures = pm->serializeRecursive( f, root, 0 );
+    ASSERT_TRUE( futures.has_value() ) << futures.error();
+    EXPECT_TRUE( futures->empty() );
+    ASSERT_TRUE( root.isMember( "CapVisibility" ) );
+    root.removeMember( "CapVisibility" );
+    PointMeasurementObject old;
+    auto d = old.deserializeRecursive( f, root );
+    ASSERT_TRUE( d.has_value() ) << d.error();
+    EXPECT_EQ( old.getVisualizePropertyMask( CapVisibility ), ViewportMask::all() );
+}
+
+// copying all visualize masks (e.g. to a newly added viewport) must include the cap visibility
+TEST( MRMesh, PointMeasurementSetAllVisualizeProperties )
+{
+    constexpr auto CapVisibility = PointMeasurementVisualizePropertyType::CapVisibility;
+    auto capMask = ViewportMask::all();
+    capMask.set( ViewportId( 2 ), false );
+
+    PointMeasurementObject src;
+    src.setVisualizePropertyMask( CapVisibility, capMask );
+    const auto props = src.getAllVisualizeProperties();
+
+    PointMeasurementObject dst;
+    dst.setAllVisualizeProperties( props );
+    EXPECT_EQ( dst.getVisualizePropertyMask( CapVisibility ), capMask );
+    EXPECT_EQ( dst.getAllVisualizeProperties(), props );
 }
 
 } //namespace MR

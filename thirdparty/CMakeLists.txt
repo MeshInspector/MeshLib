@@ -191,7 +191,7 @@ IF(NOT MR_EMSCRIPTEN)
   set(PYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
   set(PYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
   IF(APPLE)
-    set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.10" CACHE STRING "")
+    set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.12" CACHE STRING "")
     execute_process(
       COMMAND brew --prefix
       OUTPUT_VARIABLE HOMEBREW_PREFIX
@@ -208,3 +208,17 @@ add_subdirectory(./tinygltf)
 set(WITH_TESTS OFF CACHE BOOL "")
 set(WITH_EMBIND OFF CACHE BOOL "")
 add_subdirectory(./laz-perf)
+
+find_package(draco)
+IF(NOT draco_FOUND)
+  set(DRACO_JS_GLUE OFF CACHE BOOL "")
+  set(DRACO_TESTS OFF CACHE BOOL "")
+  IF(EMSCRIPTEN)
+    # draco_check_emscripten_environment() fails without these even with DRACO_JS_GLUE=OFF, which needs no Python;
+    # PYTHONINTERP_FOUND is never set since Draco moved to find_package(Python) (google/draco@cff9f68)
+    set(PYTHONINTERP_FOUND ON)
+    set(ENV{EMSCRIPTEN} "${EMSCRIPTEN_ROOT_PATH}")
+    set(BUILD_SHARED_LIBS OFF)
+  ENDIF()
+  add_subdirectory(./draco)
+ENDIF()

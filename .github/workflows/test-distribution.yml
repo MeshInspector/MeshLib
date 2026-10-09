@@ -239,9 +239,6 @@ jobs:
             runner: macos-13
             pkg_pattern: '*arm64.pkg'
           - arch: arm64
-            runner: macos-14
-            pkg_pattern: '*arm64.pkg'
-          - arch: arm64
             runner: macos-15
             pkg_pattern: '*arm64.pkg'
           - arch: arm64
@@ -280,6 +277,10 @@ jobs:
       # GitHub-hosted runners keep the production sudo-into-/Library path so
       # the end-user install scenario is still exercised.
       - name: Install Pkg
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'       # don't pull new formulae mid-job
+          HOMEBREW_NO_INSTALL_UPGRADE: '1'   # don't upgrade an already-installed keg (no source rebuild on macOS 12/13)
+          HOMEBREW_NO_INSTALL_CLEANUP: '1'   # don't prune the known-good keg
         run: |
           if [ "${{ runner.environment }}" = "github-hosted" ]; then
             sudo installer -pkg meshlib_*.pkg -target /
@@ -290,7 +291,7 @@ jobs:
           fi
           # aws/tap ships untrusted in GH images and warns on every brew command
           brew untap aws/tap 2>/dev/null || true
-          xargs brew install --quiet < "${MESHLIB_FW}/requirements/macos.txt"
+          xargs brew install --quiet --overwrite < "${MESHLIB_FW}/requirements/macos.txt"
           echo "MESHLIB_FW=${MESHLIB_FW}" >> "${GITHUB_ENV}"
           echo "${MESHLIB_FW}/bin" >> "${GITHUB_PATH}"
 

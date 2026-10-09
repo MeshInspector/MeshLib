@@ -62,6 +62,14 @@ enum class Processing : bool
     Stop
 };
 
+/// which normals are given to the points of the cloud made from mesh vertices
+enum class VertNormalsMode
+{
+    No,            ///< the cloud has no normals
+    AreaWeighted,  ///< area-weighted average of the normals of incident triangles, see computePerVertNormals
+    AngleWeighted  ///< angle-weighted average of the normals of incident triangles (pseudonormals), see computePerVertPseudoNormals
+};
+
 /// the method how to choose between two opposite normal orientations
 enum class OrientNormals
 {

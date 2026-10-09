@@ -23,6 +23,7 @@
 #include "MRPch/MRWasm.h"
 #include <GLFW/glfw3.h>
 #include <atomic>
+#include <deque>
 #include <thread>
 
 #if defined( __EMSCRIPTEN__ )
@@ -90,8 +91,9 @@ public:
 
     bool isOrdered_{ false };
 
-    // needed to be able to call progress bar from any point, not only from ImGui frame scope
-    bool deferredOpenPopup_{ false };
+    // operations ordered while another one was, each started after the post-processing of the one before it;
+    // not guarded, so `order*` must be called in the main thread
+    std::deque<std::function<void()>> pendingOrders_;
 
     // this is needed to show full progress before closing
     bool closeDialogNextFrame_{ false };
@@ -122,8 +124,6 @@ void ProgressBarImpl::initialize_( std::string title, int taskCount, std::functi
 {
     if ( finished_ && thread_.joinable() )
         thread_.join();
-
-    deferredOpenPopup_ = true;
 
     progress_ = 0.0f;
 
@@ -168,22 +168,17 @@ void setup()
 {
     auto& instance = ProgressBarImpl::instance();
 
-    if ( instance.deferredOpenPopup_ && instance.setupId_ != ImGuiID( -1 ) )
-    {
-        instance.deferredOpenPopup_ = false;
-        bool thisOpen = ImGui::IsPopupOpen( instance.setupId_, 0 );
-        bool isAnyOpen = ImGui::IsPopupOpen( "", ImGuiPopupFlags_AnyPopup );
-        if ( isAnyOpen && !thisOpen )
-            ImGui::CloseCurrentPopup();
-        if ( !thisOpen )
-            ImGui::OpenPopup( instance.setupId_ );
-    }
+    // while an operation is ordered, open over any other modal to block the UI until its post-processing;
+    // every frame, since a popup opened with ImGui::OpenPopup can close it
+    if ( instance.isOrdered_ && instance.setupId_ != ImGuiID( -1 ) )
+        ImGui::OpenTopPriorityPopup( instance.setupId_ );
 
     instance.setupId_ = ImGui::GetID( "###GlobalProgressBarPopup" );
     const Vector2f windowSize( 440.0f * UI::scale(), 144.0f * UI::scale() );
     auto& viewer = getViewerInstance();
     ImGuiMV::SetNextWindowPosMainViewport( 0.5f * ( Vector2f( viewer.framebufferSize ) - windowSize ), ImGuiCond_Appearing );
     ImGui::SetNextWindowSize( windowSize, ImGuiCond_Always );
+    std::function<void()> onFinish;
     if ( ImGui::BeginModalNoAnimation( "###GlobalProgressBarPopup", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar ) )
     {
         UI::TestEngine::TreeGuard testEngineGuard( "ProgressBar" );
@@ -259,16 +254,21 @@ void setup()
             }
             instance.isOrdered_ = false;
             instance.closeDialogNextFrame_ = true;
-            // important to be after `isOrdered_=false` and `closeDialogNextFrame_=true`
-            // to handle progress bar ordered in `onFinish_`
-            if ( instance.onFinish_ )
-            {
-                instance.onFinish_();
-                instance.onFinish_ = {};
-            }
+            onFinish = std::exchange( instance.onFinish_, {} );
             getViewerInstance().incrementForceRedrawFrames();
         }
         ImGui::EndPopup();
+    }
+    // important to be after `isOrdered_=false` and `closeDialogNextFrame_=true` to handle progress bar ordered in `onFinish`,
+    // and out of the popup, so that popups enqueued in `onFinish` open after the progress bar instead of nested in it
+    if ( onFinish )
+        onFinish();
+    // then start the next waiting operation, unless `onFinish` ordered one
+    if ( !instance.isOrdered_ && !instance.pendingOrders_.empty() )
+    {
+        auto nextOrder = std::move( instance.pendingOrders_.front() );
+        instance.pendingOrders_.pop_front();
+        nextOrder();
     }
 }
 
@@ -307,6 +307,16 @@ void order( const char* name, const std::function<void()>& task, int taskCount )
 void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPostProcessing task, int taskCount )
 {
     auto& instance = ProgressBarImpl::instance();
+
+    // another operation is ordered: `setup` starts this one after its post-processing
+    if ( instance.isOrdered_ )
+    {
+        instance.pendingOrders_.push_back( [name = std::string( name ), task = std::move( task ), taskCount]
+        {
+            orderWithMainThreadPostProcessing( name.c_str(), task, taskCount );
+        } );
+        return;
+    }
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();
@@ -352,6 +362,16 @@ void orderWithMainThreadPostProcessing( const char* name, TaskWithMainThreadPost
 void orderWithManualFinish( const char* name, std::function<void ()> task, int taskCount )
 {
     auto& instance = ProgressBarImpl::instance();
+
+    // another operation is ordered: `setup` starts this one after its post-processing
+    if ( instance.isOrdered_ )
+    {
+        instance.pendingOrders_.push_back( [name = std::string( name ), task = std::move( task ), taskCount]
+        {
+            orderWithManualFinish( name.c_str(), task, taskCount );
+        } );
+        return;
+    }
 
     if ( isFinished() && instance.thread_.joinable() )
         instance.thread_.join();

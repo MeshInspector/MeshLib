@@ -534,9 +534,14 @@ bool SceneObjectsListDrawer::drawObjectCollapsingHeader_( Object& object, const 
     return isOpen;
 }
 
-void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected )
+void SceneObjectsListDrawer::processItemClick_( Object& object, const std::vector<std::shared_ptr<Object>>& selected, bool simulatedClick )
 {
     const auto& all = SceneCache::getAllObjects<Object, ObjectSelectivityType::Selectable>();
+    if ( simulatedClick )
+    {
+        updateSelection_( &object, selected, all );
+        return;
+    }
     auto isSelected = object.isSelected();
 
     if ( ImGui::IsMouseDoubleClicked( 0 ) )

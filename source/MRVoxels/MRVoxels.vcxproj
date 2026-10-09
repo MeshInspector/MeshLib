@@ -44,7 +44,6 @@
     <ClCompile Include="MRPointsToMeshFusion.cpp" />
     <ClCompile Include="MRPolylineToVoxels.cpp" />
     <ClCompile Include="MRRebuildMesh.cpp" />
-    <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRScanHelpers.cpp" />
     <ClCompile Include="MRSequentialNester.cpp" />
     <ClCompile Include="MRSweptVolume.cpp" />
@@ -93,7 +92,6 @@
     <ClInclude Include="MRPointsToMeshFusion.h" />
     <ClInclude Include="MRPolylineToVoxels.h" />
     <ClInclude Include="MRRebuildMesh.h" />
-    <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRScanHelpers.h" />
     <ClInclude Include="MRSequentialNester.h" />
     <ClInclude Include="MRSweptVolume.h" />

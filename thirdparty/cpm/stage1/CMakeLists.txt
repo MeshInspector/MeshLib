@@ -173,6 +173,19 @@ if(NOT LAZPERF_FOUND)
   meshlib_add_package(laz-perf)
 endif()
 
+find_package(draco)
+if(NOT draco_FOUND)
+  function(add_draco)
+    set(DRACO_JS_GLUE OFF CACHE BOOL "")
+    set(DRACO_TESTS OFF CACHE BOOL "")
+    IF(EMSCRIPTEN)
+      set(BUILD_SHARED_LIBS OFF)
+    ENDIF()
+    meshlib_add_package(draco)
+  endfunction()
+  add_draco()
+endif()
+
 if(EMSCRIPTEN)
   find_package(libjpeg-turbo)
   if(NOT libjpeg-turbo_FOUND)
@@ -243,7 +256,7 @@ else()
     set(PYBIND11_NONLIMITEDAPI_COMPILER_TYPE_STRING "_meshlib" CACHE STRING "")
     set(PYBIND11_NONLIMITEDAPI_BUILD_ABI_STRING "_meshlib" CACHE STRING "")
     IF(APPLE)
-      set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.10" CACHE STRING "")
+      set(PYBIND11_NONLIMITEDAPI_PYTHON_HEADERS_VERSION "3.12" CACHE STRING "")
       execute_process(
         COMMAND brew --prefix
         OUTPUT_VARIABLE HOMEBREW_PREFIX

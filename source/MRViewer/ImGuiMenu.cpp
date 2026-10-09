@@ -34,6 +34,7 @@
 #include "MRMeshModifier.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRProgressBar.h"
+#include "MRUITestEngine.h"
 #include "MRFileDialog.h"
 #include "MRModalDialog.h"
 
@@ -227,6 +228,42 @@ void reserveKeyEvent( ImGuiKey key )
     getOrderedKeys()[key] = true;
 }
 
+bool isKeyEventReserved( ImGuiKey key )
+{
+    assert( key < getOrderedKeys().size() );
+    return getOrderedKeys()[key];
+}
+
+// makes ImGui see `mods` (GLFW_MOD_* bits) held in this frame, in addition to the real keyboard; call right after ImGui::NewFrame()
+static void forceKeyModifiers( int mods, std::vector<std::pair<ImGuiKey, bool>>& realKeyModifiers )
+{
+    auto& io = ImGui::GetIO();
+    auto force = [&] ( int glfwMod, ImGuiKey key, bool& ioKey )
+    {
+        if ( !( mods & glfwMod ) )
+            return;
+        // ImGui derives io.KeyMods and io.KeyCtrl, ... from these in ImGui::NewFrame(), and IsKeyDown( ImGuiMod_... ) reads them
+        auto& keyData = *ImGui::GetKeyData( key );
+        realKeyModifiers.emplace_back( key, keyData.Down );
+        keyData.Down = true;
+        io.KeyMods |= key;
+        ioKey = true;
+    };
+    force( GLFW_MOD_CONTROL, ImGuiMod_Ctrl, io.KeyCtrl );
+    force( GLFW_MOD_SHIFT, ImGuiMod_Shift, io.KeyShift );
+    force( GLFW_MOD_ALT, ImGuiMod_Alt, io.KeyAlt );
+    force( GLFW_MOD_SUPER, ImGuiMod_Super, io.KeySuper );
+}
+
+// returns the keys forced by forceKeyModifiers() to their real state, which must be done before the next ImGui::NewFrame(),
+// else ImGui would take a forced key as held by the user
+static void restoreKeyModifiers( std::vector<std::pair<ImGuiKey, bool>>& realKeyModifiers )
+{
+    for ( const auto& [key, down] : realKeyModifiers )
+        ImGui::GetKeyData( key )->Down = down;
+    realKeyModifiers.clear();
+}
+
 void ImGuiMenu::startFrame()
 {
     MR_TIMER;
@@ -323,8 +360,13 @@ void ImGuiMenu::startFrame()
         }
     }
 
+    restoreKeyModifiers( realKeyModifiers_ ); // in case the previous frame was not finished
     ImGui::NewFrame();
+    if ( auto mods = UI::TestEngine::createValue( "##key_modifiers", testKeyModifiers_, 0, 15, true, { .ignoreBlockingModal = true } ) )
+        testKeyModifiers_ = *mods;
+    forceKeyModifiers( testKeyModifiers_, realKeyModifiers_ );
     UI::getDefaultWindowRectAllocator().invalidateClosedWindows();
+    ImGui::OpenEnqueuedPopup();
 
     if ( needIncrement && context_->MouseViewport != ImGui::GetMainViewport() ) // needIncrement can be true only if ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable && context_
     {
@@ -351,6 +393,7 @@ void ImGuiMenu::finishFrame()
         }
     }
     ProgressBar::onFrameEnd();
+    restoreKeyModifiers( realKeyModifiers_ );
     if ( viewer->isGLInitialized() )
     {
         ImGui::Render();
@@ -712,7 +755,7 @@ void ImGuiMenu::draw_menu()
 
     drawViewerWindow();
 
-    drawAdditionalWindows();   
+    drawAdditionalWindows();
 }
 
 void ImGuiMenu::drawViewerWindow()
@@ -914,7 +957,7 @@ void ImGuiMenu::draw_helpers()
     if ( showRenameModal_ )
     {
         showRenameModal_ = false;
-        ImGui::OpenPopup( "Rename object##rename" );
+        ImGui::EnqueuePopup( "Rename object##rename" );
         popUpRenameBuffer_ = renameBuffer_;
     }
 
@@ -959,7 +1002,7 @@ void ImGuiMenu::draw_helpers()
 
     if ( showEditTag_ )
     {
-        ImGui::OpenPopup( "Edit tag##edittag" );
+        ImGui::EnqueuePopup( "Edit tag##edittag" );
         showEditTag_ = false;
     }
 
@@ -1137,10 +1180,9 @@ void ImGuiMenu::drawModalMessage_()
 
     const std::string titleImGui = " " + titleKey + "##modal";
 
-    if ( showInfoModal_ &&
-        !ImGui::IsPopupOpen( " Error##modal" ) && !ImGui::IsPopupOpen( " Warning##modal" ) && !ImGui::IsPopupOpen( " Info##modal" ) )
+    if ( showInfoModal_ )
     {
-        ImGui::OpenPopup( titleImGui.c_str() );
+        ImGui::EnqueuePopup( titleImGui.c_str() );
         showInfoModal_ = false;
     }
 
@@ -2547,7 +2589,7 @@ void ImGuiMenu::drawTagInformation_( const std::vector<std::shared_ptr<Object>>&
 
         const auto& style = ImGui::GetStyle();
 
-        
+
 
         const auto buttonWidth = [&] ( const char* label )
         {
@@ -3159,8 +3201,8 @@ void ImGuiMenu::drawShortcutsWindow_()
     if ( shortcutManager_ )
     {
         const auto& shortcutsList = shortcutManager_->getShortcutList();
-        for ( const auto& [key, category, name] : shortcutsList )
-            ImGui::Text( "%s - %s", ShortcutManager::getKeyFullString( key ).c_str(), name.c_str() );
+        for ( const auto& [shortcut, name] : shortcutsList )
+            ImGui::Text( "%s - %s", ShortcutManager::getKeysFullString( shortcut.keys ).c_str(), name.c_str() );
     }
     ImGui::End();
 }

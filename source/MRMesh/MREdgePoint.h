@@ -7,15 +7,16 @@ namespace MR
 {
 
 /// encodes a point on an edge of mesh or of polyline
-struct EdgePoint
+template <typename T>
+struct EdgePointT
 {
     EdgeId e;
-    SegmPointf a; ///< a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )
+    SegmPoint<T> a; ///< a in [0,1], a=0 => point is in org( e ), a=1 => point is in dest( e )
 
-    [[nodiscard]] EdgePoint() = default;
-    [[nodiscard]] EdgePoint( EdgeId e, float a ) : e( e ), a( a ) { }
-    [[nodiscard]] MRMESH_API EdgePoint( const MeshTopology & topology, VertId v );
-    [[nodiscard]] MRMESH_API EdgePoint( const PolylineTopology & topology, VertId v );
+    [[nodiscard]] EdgePointT() = default;
+    [[nodiscard]] EdgePointT( EdgeId e, T a ) : e( e ), a( a ) { }
+    [[nodiscard]] MRMESH_API EdgePointT( const MeshTopology & topology, VertId v );
+    [[nodiscard]] MRMESH_API EdgePointT( const PolylineTopology & topology, VertId v );
 
     /// returns valid vertex id if the point is in vertex, otherwise returns invalid id
     [[nodiscard]] MRMESH_API VertId inVertex( const MeshTopology & topology ) const;
@@ -37,13 +38,16 @@ struct EdgePoint
     [[nodiscard]] explicit operator bool() const { return e.valid(); }
 
     /// represents the same point relative to sym edge in
-    [[nodiscard]] EdgePoint sym() const { return EdgePoint{ e.sym(), 1 - a }; }
+    [[nodiscard]] EdgePointT sym() const { return EdgePointT{ e.sym(), 1 - a }; }
     /// returns true if two edge-points are equal including equal not-unique representation
-    [[nodiscard]] bool operator==( const EdgePoint& rhs ) const = default;
+    [[nodiscard]] bool operator==( const EdgePointT& rhs ) const = default;
 };
 
 /// returns true if two edge-points are equal considering different representations
-[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const EdgePoint& lhs, const EdgePoint& rhs );
+template <typename T>
+[[nodiscard]] MRMESH_API bool same( const MeshTopology & topology, const EdgePointT<T>& lhs, const EdgePointT<T>& rhs );
+MR_BIND_TEMPLATE( bool same( const MeshTopology & topology, const EdgePointT<float>& lhs, const EdgePointT<float>& rhs ) )
+MR_BIND_TEMPLATE( bool same( const MeshTopology & topology, const EdgePointT<double>& lhs, const EdgePointT<double>& rhs ) )
 
 /// two edge-points (e.g. representing collision point of two edges)
 struct EdgePointPair
@@ -57,35 +61,42 @@ struct EdgePointPair
 };
 
 /// Represents a segment on one edge
-struct EdgeSegment
+template <typename T>
+struct EdgeSegmentT
 {
     /// id of the edge
     EdgeId e;
     /// start of the segment
-    SegmPointf a{ 0.0f };
+    SegmPoint<T> a{ 0 };
     /// end of the segment
-    SegmPointf b{ 1.0f };
-    [[nodiscard]] EdgeSegment() = default;
-    [[nodiscard]] EdgeSegment( EdgeId e, float a = 0.0f, float b = 1.0f ) : e( e ), a( a ), b( b ) { assert( valid() ); };
+    SegmPoint<T> b{ 1 };
+    [[nodiscard]] EdgeSegmentT() = default;
+    [[nodiscard]] EdgeSegmentT( EdgeId e, T a = 0, T b = 1 ) : e( e ), a( a ), b( b ) { assert( valid() ); };
     /// returns starting EdgePoint
-    [[nodiscard]] EdgePoint edgePointA() const { return { e, a }; }
+    [[nodiscard]] EdgePointT<T> edgePointA() const { return { e, a }; }
     /// returns ending EdgePoint
-    [[nodiscard]] EdgePoint edgePointB() const { return { e, b }; }
+    [[nodiscard]] EdgePointT<T> edgePointB() const { return { e, b }; }
     /// returns true if the edge is valid and start point is less than end point
     [[nodiscard]] bool valid() const { return e.valid() && a <= b; }
 
-    bool operator==( const EdgeSegment& rhs ) const = default;
+    bool operator==( const EdgeSegmentT& rhs ) const = default;
     /// represents the same segment relative to sym edge in
-    [[nodiscard]] EdgeSegment sym() const { return EdgeSegment{ e.sym(), b.sym(), a.sym() }; }
+    [[nodiscard]] EdgeSegmentT sym() const { return EdgeSegmentT{ e.sym(), b.sym(), a.sym() }; }
 };
 
 /// returns true if points a and b are located on a boundary of the same triangle;
 /// \details if true a.e and b.e are updated to have that triangle on the left
 /// \related EdgePoint
-[[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, EdgePoint & a, EdgePoint & b );
+template <typename T>
+[[nodiscard]] MRMESH_API bool fromSameTriangle( const MeshTopology & topology, EdgePointT<T> & a, EdgePointT<T> & b );
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<float> & a, EdgePointT<float> & b ) )
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<double> & a, EdgePointT<double> & b ) )
 /// returns true if points a and b are located on a boundary of the same triangle;
 /// \details if true a.e and b.e are updated to have that triangle on the left
 /// \related EdgePoint
-[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, EdgePoint && a, EdgePoint && b ) { return fromSameTriangle( topology, a, b ); }
+template <typename T>
+[[nodiscard]] inline bool fromSameTriangle( const MeshTopology & topology, EdgePointT<T> && a, EdgePointT<T> && b ) { return fromSameTriangle( topology, a, b ); }
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<float> && a, EdgePointT<float> && b ) )
+MR_BIND_TEMPLATE( bool fromSameTriangle( const MeshTopology & topology, EdgePointT<double> && a, EdgePointT<double> && b ) )
 
 } // namespace MR

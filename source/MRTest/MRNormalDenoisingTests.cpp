@@ -1,4 +1,5 @@
 #include <MRMesh/MRNormalDenoising.h>
+#include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRMakeSphereMesh.h>
@@ -51,6 +52,23 @@ TEST( MRMesh, DenoiseNormalsStrong )
     denoiseNormals( sphere, normals, v, 100 );
     for ( auto f : sphere.topology.getValidFaces() )
         EXPECT_GT( dot( normals[f], normals0[f] ), 0.9f );
+}
+
+TEST( MRMesh, UpdateIndicatorIndependentOfEdgeOrder )
+{
+    // a symmetric system has the same solution after renumbering of its unknowns,
+    // but SimplicialLDLT of a non-symmetric one depends on the order since it reads only one triangle of the matrix
+    Mesh mesh = noisySphere();
+    Vector<float, UndirectedEdgeId> v( mesh.topology.undirectedEdgeSize(), 1 );
+    updateIndicator( mesh, v, computePerFaceNormals( mesh ), 0.01f, 5 );
+
+    Mesh packed = mesh;
+    const auto map = packed.packOptimally( false );
+    Vector<float, UndirectedEdgeId> vPacked( packed.topology.undirectedEdgeSize(), 1 );
+    updateIndicator( packed, vPacked, computePerFaceNormals( packed ), 0.01f, 5 );
+
+    for ( auto ue : undirectedEdges( mesh.topology ) )
+        EXPECT_NEAR( v[ue], vPacked[map.e.b[ue]], 2e-7f );
 }
 
 TEST( MRMesh, MeshDenoiseViaNormalsInvalidatesCaches )

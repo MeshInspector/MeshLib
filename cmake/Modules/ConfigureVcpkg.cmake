@@ -67,7 +67,7 @@ IF(MESHLIB_USE_VCPKG)
                 # intended for CI only; set the CMake variable explicitly in your environment
                 set(VCPKG_INSTALLED_DIR $ENV{VCPKG_INSTALLED_DIR})
             else()
-                set(VCPKG_INSTALLED_DIR "${PROJECT_ROOT_DIR}/vcpkg_installed")
+                set(VCPKG_INSTALLED_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg_installed")
             endif()
         endif()
         message(STATUS "Manifest mode enabled, binaries' location: ${VCPKG_INSTALLED_DIR}")

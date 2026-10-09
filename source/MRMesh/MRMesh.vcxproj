@@ -151,6 +151,7 @@
     <ClInclude Include="MRHistoryAction.h" />
     <ClInclude Include="MRIdentifyVertices.h" />
     <ClInclude Include="MRImage.h" />
+    <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
     <ClInclude Include="MRInnerShell.h" />
@@ -163,6 +164,7 @@
     <ClInclude Include="MRMeshDoubleLayer.h" />
     <ClInclude Include="MRHexPalette.h" />
     <ClInclude Include="MRMeshPatch.h" />
+    <ClInclude Include="MRNewValuesStorage.hpp" />
     <ClInclude Include="MRMeshRelax.hpp" />
     <ClInclude Include="MRMeshReplicate.h" />
     <ClInclude Include="MRSegmentMesh.h" />
@@ -574,6 +576,7 @@
     <ClCompile Include="MRGcodeLoad.cpp" />
     <ClCompile Include="MRHistoryAction.cpp" />
     <ClCompile Include="MRImage.cpp" />
+    <ClCompile Include="MRScalarConvert.cpp" />
     <ClCompile Include="MRIOFilters.cpp" />
     <ClCompile Include="MRIterativeSampling.cpp" />
     <ClCompile Include="MRLevelOfDetails.cpp" />

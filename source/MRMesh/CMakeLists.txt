@@ -1,11 +1,6 @@
 project(MRMesh CXX)
 
 option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
-option(MRMESH_NO_GTEST "Disable building Google tests" OFF)
-
-IF(DEFINED BUILD_TESTING AND NOT BUILD_TESTING)
-  set(MRMESH_NO_GTEST ON)
-ENDIF()
 
 IF(MR_EMSCRIPTEN)
   set(MRMESH_NO_TIFF ON)
@@ -59,16 +54,15 @@ IF(EMSCRIPTEN)
 ENDIF()
 find_package(ZLIB REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
-# libzip prior to version 1.11.4 has incorrect CMake config that requires libzip tools to be installed
-IF(MESHLIB_USE_VCPKG OR APPLE OR EMSCRIPTEN)
-  # vcpkg, homebrew, and submodule versions are already updated
-  find_package(libzip REQUIRED)
-ELSE()
-  # on Ubuntu LTS (22.04, 24.04) we have to use pkg-config instead
+# libzip prior to version 1.11.4 has incorrect CMake config that requires
+# libzip tools to be installed; trying to use it causes a configuration error.
+find_package(libzip 1.11.4 CONFIG QUIET)
+if(NOT libzip_FOUND)
+  # fallback to pkg-config for older versions
   find_package(PkgConfig REQUIRED)
   pkg_check_modules(libzip REQUIRED IMPORTED_TARGET libzip)
   add_library(libzip::zip ALIAS PkgConfig::libzip)
-ENDIF()
+endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
 IF(APPLE)

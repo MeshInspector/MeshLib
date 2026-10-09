@@ -41,30 +41,9 @@ BitSet calculateSelectedPixelsInsidePolygon( const Contour2f & screenPoints )
     Polyline2 polygon( { std::move( contour ) } );
     auto width = int( MR::width( vpRect ) );
     auto height = int( MR::height( vpRect ) );
-    BitSet resBS( width * height );
-
-    auto box = Box2i( polygon.getBoundingBox() );
-    box.min -= Vector2i::diagonal( 1 );
-    box.max += Vector2i::diagonal( 1 );
-    if ( box.min.x < 0 )
-        box.min.x = 0;
-    if ( box.min.y < 0 )
-        box.min.y = 0;
-    if ( box.max.x >= width )
-        box.max.x = width - 1;
-    if ( box.max.y >= height )
-        box.max.y = height - 1;
 
     // mark all pixels in the polygon
-    BitSetParallelForAll( resBS, [&] ( size_t i )
-    {
-        Vector2i coord( int( i ) % width, int( i ) / width );
-        if ( !box.contains( coord ) )
-            return;
-        resBS.set( i, isPointInsidePolyline( polygon, Vector2f( coord ) ) );
-    } );
-
-    return resBS;
+    return findGridPointsInsidePolyline( polygon, { width, height } );
 }
 
 BitSet calculateSelectedPixelsNearPolygon( const Contour2f & screenPoints, float radiusPix )

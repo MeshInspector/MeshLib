@@ -65,19 +65,10 @@ jobs:
             config: Release
             compiler: AppleClang
             llvm-keg-version: 22.1.8_2
-          - arch: arm64
-            config: Release
-            lib-source: vcpkg
             runner: macos-15
             instance: macos-15
             # set Xcode version explicitly to mitigate possible vcpkg cache invalidation
             xcode-version: '16.4'
-          - arch: arm64
-            config: Release
-            lib-source: Homebrew
-            # Same runner as pip-build.yml's arm64 wheel job, so the mrbind cache is shared.
-            runner: [ self-hosted, macos, arm64, macos-13 ]
-            instance: self-hosted-arm-macos-13
           - arch: arm64
             config: Debug
             compiler: brew-llvm22
@@ -93,7 +84,6 @@ jobs:
     env:
       DEVELOPER_DIR: ${{ matrix.xcode-version && format('/Applications/Xcode_{0}.app/Contents/Developer', matrix.xcode-version) || '' }}
       VCPKG_TRIPLET: ${{ matrix.arch }}-osx-meshlib
-      VCPKG_VERSION: ${{ inputs.vcpkg_version }}
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
@@ -156,71 +146,12 @@ jobs:
 
       - name: Set up vcpkg
         if: ${{ matrix.lib-source == 'vcpkg' }}
-        working-directory: /usr/local/share/vcpkg
-        run: |
-          git fetch --depth 1 origin tag "${VCPKG_VERSION}"
-          git checkout --force "${VCPKG_VERSION}"
-          ./bootstrap-vcpkg.sh -disableMetrics
-
-      - name: Configure AWS Credentials
-        if: ${{ matrix.lib-source == 'vcpkg' && inputs.internal_build }}
-        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c # v6.2.4
+        uses: ./.github/actions/setup-vcpkg-macos
         with:
-          role-to-assume: arn:aws:iam::259351611210:role/GitHubMeshLibAwsCredsRole
-          aws-region: us-east-1
-          role-duration-seconds: 7200
-          retry-max-attempts: 5
-
-      - name: Compute vcpkg cache key
-        if: ${{ matrix.lib-source == 'vcpkg' }}
-        run: |
-          CXX_COMPILER='${{ steps.compilers.outputs.cxx-compiler }}'
-          case "${CXX_COMPILER}" in
-            /usr/bin/*)
-              # /usr/bin/clang++ is the xcode-select shim; hash the toolchain binary it dispatches to
-              CXX_COMPILER=$(xcrun --find "${CXX_COMPILER##*/}")
-              TOOLCHAIN=xcode${{ matrix.xcode-version }}
-              ;;
-            *)
-              TOOLCHAIN=llvm${{ matrix.llvm-keg-version }}
-              ;;
-          esac
-          FILES_HASH=$(scripts/devops/cache_key.sh \
-            thirdparty/vcpkg/vcpkg.json \
-            thirdparty/vcpkg/ports \
-            thirdparty/vcpkg/triplets/${VCPKG_TRIPLET}.cmake \
-            scripts/build_vcpkg_thirdparty.sh \
-            "${CXX_COMPILER}")
-          KEY_PREFIX="vcpkg-installed-${VCPKG_VERSION}-${VCPKG_TRIPLET}-${TOOLCHAIN}"
-          echo "VCPKG_CACHE_KEY_PREFIX=${KEY_PREFIX}" >> $GITHUB_ENV
-          echo "VCPKG_CACHE_KEY=${KEY_PREFIX}-${FILES_HASH}" >> $GITHUB_ENV
-
-      - name: Restore vcpkg installed tree
-        if: ${{ matrix.lib-source == 'vcpkg' }}
-        id: vcpkg-cache
-        uses: actions/cache/restore@v5
-        with:
-          path: vcpkg_installed
-          key: ${{ env.VCPKG_CACHE_KEY }}
-          # fall back to the latest tree with the same prefix
-          restore-keys: ${{ env.VCPKG_CACHE_KEY_PREFIX }}-
-
-      - name: Build thirdparty libs
-        if: ${{ matrix.lib-source == 'vcpkg' }}
-        run: |
-          source thirdparty/vcpkg/configure_s3_cache.sh
-          # resolve the compiler paths for proper vcpkg cache key computation
-          export CC=$(xcrun --find clang)
-          export CXX=$(xcrun --find clang++)
-          export SDKROOT=$(xcrun --show-sdk-path)
-          scripts/build_vcpkg_thirdparty.sh
-
-      - name: Save vcpkg installed tree
-        if: ${{ matrix.lib-source == 'vcpkg' && steps.vcpkg-cache.outputs.cache-hit != 'true' }}
-        uses: actions/cache/save@v5
-        with:
-          path: vcpkg_installed
-          key: ${{ env.VCPKG_CACHE_KEY }}
+          vcpkg-version: ${{ inputs.vcpkg_version }}
+          vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
+          xcode-version: ${{ matrix.xcode-version }}
+          internal-build: ${{ inputs.internal_build }}
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

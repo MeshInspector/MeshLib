@@ -614,18 +614,25 @@ jobs:
             plat-name: macosx_12_0_x86_64
             runner: macos-15-intel
             instance: macos-15-intel
+            vcpkg-triplet: x64-osx-meshlib
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-keg-version: 22.1.8_2
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            # The bundled brew dylibs require the macOS they were bottled for; from a
-            # macos-15 image, libcpr needs a libc++ symbol missing on macOS 13.
-            runner: [ self-hosted, macos, arm64, macos-13 ]
-            instance: self-hosted-arm-macos-13
+            runner: macos-15
+            instance: macos-15
+            vcpkg-triplet: arm64-osx-meshlib
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-keg-version: 22.1.8_2
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
+    env:
+      # same Xcode as build-test-macos.yml, so the vcpkg installed tree cache is shared
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      VCPKG_TRIPLET: ${{ matrix.vcpkg-triplet }}
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
@@ -638,6 +645,14 @@ jobs:
         with:
           submodules: recursive
           ref: ${{ needs.setup.outputs.build_ref }}
+
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-macos
+        with:
+          vcpkg-version: '2026.07.29'
+          vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
+          xcode-version: '16.4'
+          internal-build: 'true'
 
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
@@ -654,16 +669,12 @@ jobs:
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
 
-      - name: Install thirdparty libs
-        id: thirdparty
-        uses: ./.github/actions/install-macos-thirdparty
-        with:
-          # `cache-instance` and `cache-compiler` must match the values used by
-          # build-test-macos.yml on the same runner image (`AppleClang` here matches
-          # build-test-macos.yml's x64-Release and arm64-Debug matrix entries), so
-          # the thirdparty ./lib + ./include cache is shared across the two workflows.
-          cache-instance: ${{ matrix.instance }}
-          cache-compiler: AppleClang
+      - name: Compute Homebrew path hash
+        id: brew-hash
+        run: |
+          BREW_PREFIX=$(brew --prefix)
+          echo "BREW_PREFIX=${BREW_PREFIX}" >> $GITHUB_ENV
+          echo "brew-hash=$(printf %s "${BREW_PREFIX}" | shasum -a 256 | cut -c1-16)" >> $GITHUB_OUTPUT
 
       # LLVM_PREFIX selects the LLVM keg for the mrbind scripts; same scheme
       # as build-test-macos.yml.
@@ -688,13 +699,15 @@ jobs:
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.brew-hash.outputs.brew-hash }}
 
       - name: Build
         run: ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
+          MESHLIB_USE_VCPKG: "ON"
+          VCPKG_MANIFEST_MODE: "ON"
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
@@ -720,7 +733,7 @@ jobs:
           export PKG_CONFIG_PATH=${PKG_CONFIG_PATH#:}
 
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace MODE=release FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}"
+          make -f scripts/mrbind/generate.mk -B --trace MODE=release FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}" DEPS_BASE_DIR=vcpkg_installed/${VCPKG_TRIPLET}
 
       - name: Verify meshlib.mrmeshpy import
         timeout-minutes: 3

@@ -105,9 +105,15 @@ jobs:
       build_ref:     ${{ inputs.ref || steps.get-latest-tag.outputs.tag }}
       release_tag:   ${{ inputs.release_tag || steps.release-for-ref.outputs.tag }}
       wheel_version: ${{ inputs.version || steps.release-for-ref.outputs.tag || steps.get-latest-tag.outputs.tag || '0' }}
+      vcpkg_version: ${{ steps.vcpkg-version.outputs.vcpkg_version }}
+      internal_build: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Read vcpkg version
+        id: vcpkg-version
+        run: echo "vcpkg_version=$(yq eval -r '.on.workflow_call.outputs.vcpkg_version.value' .github/workflows/config.yml)" >> "$GITHUB_OUTPUT"
 
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
@@ -614,7 +620,7 @@ jobs:
             plat-name: macosx_12_0_x86_64
             runner: macos-15-intel
             instance: macos-15-intel
-            vcpkg-triplet: x64-osx-meshlib
+            xcode-version: '16.4'
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-keg-version: 22.1.8_2
@@ -622,7 +628,7 @@ jobs:
             plat-name: macosx_12_0_arm64
             runner: macos-15
             instance: macos-15
-            vcpkg-triplet: arm64-osx-meshlib
+            xcode-version: '16.4'
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-keg-version: 22.1.8_2
@@ -630,9 +636,8 @@ jobs:
       id-token: write # This is required for requesting the JWT
       contents: read  # This is required for actions/checkout
     env:
-      # same Xcode as build-test-macos.yml, so the vcpkg installed tree cache is shared
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
-      VCPKG_TRIPLET: ${{ matrix.vcpkg-triplet }}
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer
+      VCPKG_TRIPLET: ${{ matrix.platform == 'x86' && 'x64' || matrix.platform }}-osx-meshlib
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
@@ -649,10 +654,12 @@ jobs:
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-macos
         with:
-          vcpkg-version: '2026.07.29'
+          vcpkg-version: ${{ needs.setup.outputs.vcpkg_version }}
           vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
-          xcode-version: '16.4'
-          internal-build: 'true'
+          c-compiler: /usr/bin/clang
+          cxx-compiler: /usr/bin/clang++
+          toolchain: xcode${{ matrix.xcode-version }}
+          internal-build: ${{ needs.setup.outputs.internal_build }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7

@@ -1,18 +1,24 @@
 name: 'Set up vcpkg for MeshLib (macOS)'
-description: 'Checks out vcpkg under /usr/local/share/vcpkg and builds ./vcpkg_installed with Xcode clang, restoring and saving it in the GitHub cache. The caller sets DEVELOPER_DIR to pick the Xcode version.'
+description: 'Builds the vcpkg dependencies into ./vcpkg_installed, using the GitHub cache.'
 
 inputs:
   vcpkg-version:
-    description: 'Vcpkg git tag to check out under /usr/local/share/vcpkg.'
+    description: 'Vcpkg tag.'
     required: true
   vcpkg-triplet:
-    description: 'Vcpkg triplet name, e.g. arm64-osx-meshlib.'
+    description: 'Vcpkg triplet.'
     required: true
-  xcode-version:
-    description: 'Xcode version selected by the caller via DEVELOPER_DIR. Used in the cache key.'
+  c-compiler:
+    description: 'C compiler.'
+    required: true
+  cxx-compiler:
+    description: 'C++ compiler.'
+    required: true
+  toolchain:
+    description: 'Toolchain name for the cache key.'
     required: true
   internal-build:
-    description: 'String boolean ("true" or "false"). When "true", configure AWS credentials via OIDC so vcpkg can write the S3 binary cache. The caller must grant `permissions.id-token: write` on the job.'
+    description: 'Write to the S3 binary cache ("true" or "false"); needs `id-token: write`.'
     required: false
     default: 'false'
 
@@ -36,19 +42,31 @@ runs:
         role-duration-seconds: 7200
         retry-max-attempts: 5
 
+    - name: Resolve compilers
+      shell: bash
+      run: |
+        # /usr/bin/clang is the xcode-select shim; resolve the toolchain binary it dispatches to
+        resolve() {
+          case "$1" in
+            /usr/bin/*) xcrun --find "${1##*/}" ;;
+            *) echo "$1" ;;
+          esac
+        }
+        echo "VCPKG_CC=$(resolve '${{ inputs.c-compiler }}')" >> $GITHUB_ENV
+        echo "VCPKG_CXX=$(resolve '${{ inputs.cxx-compiler }}')" >> $GITHUB_ENV
+
     - name: Compute vcpkg cache key
       shell: bash
       env:
         VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
       run: |
-        # /usr/bin/clang++ is the xcode-select shim; hash the toolchain binary it dispatches to
         FILES_HASH=$(scripts/devops/cache_key.sh \
           thirdparty/vcpkg/vcpkg.json \
           thirdparty/vcpkg/ports \
           thirdparty/vcpkg/triplets/${VCPKG_TRIPLET}.cmake \
           scripts/build_vcpkg_thirdparty.sh \
-          "$(xcrun --find clang++)")
-        KEY_PREFIX="vcpkg-installed-${{ inputs.vcpkg-version }}-${VCPKG_TRIPLET}-xcode${{ inputs.xcode-version }}"
+          "${VCPKG_CXX}")
+        KEY_PREFIX="vcpkg-installed-${{ inputs.vcpkg-version }}-${VCPKG_TRIPLET}-${{ inputs.toolchain }}"
         echo "VCPKG_CACHE_KEY_PREFIX=${KEY_PREFIX}" >> $GITHUB_ENV
         echo "VCPKG_CACHE_KEY=${KEY_PREFIX}-${FILES_HASH}" >> $GITHUB_ENV
 
@@ -68,9 +86,8 @@ runs:
         VCPKG_VERSION: ${{ inputs.vcpkg-version }}
       run: |
         source thirdparty/vcpkg/configure_s3_cache.sh
-        # resolve the compiler paths for proper vcpkg cache key computation
-        export CC=$(xcrun --find clang)
-        export CXX=$(xcrun --find clang++)
+        export CC="${VCPKG_CC}"
+        export CXX="${VCPKG_CXX}"
         export SDKROOT=$(xcrun --show-sdk-path)
         scripts/build_vcpkg_thirdparty.sh
 

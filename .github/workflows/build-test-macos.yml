@@ -150,7 +150,9 @@ jobs:
         with:
           vcpkg-version: ${{ inputs.vcpkg_version }}
           vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
-          xcode-version: ${{ matrix.xcode-version }}
+          c-compiler: ${{ steps.compilers.outputs.c-compiler }}
+          cxx-compiler: ${{ steps.compilers.outputs.cxx-compiler }}
+          toolchain: ${{ matrix.xcode-version && format('xcode{0}', matrix.xcode-version) || format('llvm{0}', matrix.llvm-keg-version) }}
           internal-build: ${{ inputs.internal_build }}
 
       - name: Collect runner's system stats

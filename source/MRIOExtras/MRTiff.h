@@ -18,10 +18,10 @@ namespace RasterLoad
 {
 
 /// loads the first image of a .tiff file as a raster with one layer:
-/// * gray images with one sample per pixel keep the stored values, even if the smallest value means white;
-/// * RGB images become RGB8 colors, or RGBA8 colors with the fourth sample as alpha if they have more samples;
-/// * other formats (palette, gray with more samples, YCbCr, CMYK, less than 8 bits per sample, etc.) are decoded by libtiff to RGBA8 colors;
-/// * the formats that libtiff cannot decode keep the stored values of the first sample of each pixel
+/// * gray images with one sample per pixel keep the stored values, RGB images with interleaved samples become RGB8 or RGBA8 colors;
+///   unlike the decoded colors, the stored values are not reordered according to the Orientation tag;
+/// * libtiff decodes the other formats (palette, gray with alpha, YCbCr, CMYK, less than 8 bits per sample, etc.) to RGBA8 colors;
+/// * the formats that libtiff cannot decode are read as stored too, as gray values or as colors depending on the number of samples
 MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings = {} );
 
 /// loads everything about the raster except its values from .tiff format
@@ -40,8 +40,8 @@ MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesyste
 namespace ImageLoad
 {
 
-/// loads the first image of a .tiff file: converts the raster loaded by RasterLoad::fromTiff to an image as convertRasterToImage does,
-/// but 8-bit and 16-bit gray is inverted if the smallest value means white
+/// loads the first image of a .tiff file: libtiff decodes the formats it supports,
+/// the others are loaded by RasterLoad::fromTiff and converted by convertRasterToImage
 MRIOEXTRAS_API Expected<Image> fromTiff( const std::filesystem::path& path );
 
 } // namespace ImageLoad

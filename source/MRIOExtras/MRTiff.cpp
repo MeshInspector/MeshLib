@@ -28,6 +28,10 @@ constexpr uint32_t cModelTransformationTag = 34264;
 // no-data value: https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value
 constexpr uint32_t cGdalNoDataTag = 42113;
 
+// libtiff's RGBA reader stores the pixels as uint32 values with the red component in the lowest byte,
+// which is the order of the components in Color and in RGBA8 values in a little-endian machine
+static_assert( std::endian::native == std::endian::little );
+
 struct TiffCloser
 {
     void operator()( TIFF* tiff ) const { TIFFClose( tiff ); }
@@ -42,19 +46,6 @@ TiffPtr openTiff( const std::filesystem::path& path, const char* mode )
 #else
     return TiffPtr( TIFFOpen( utf8string( path ).c_str(), mode ) );
 #endif
-}
-
-// calls f( i ) for each i in [0, count) in parallel by blocks
-template <typename F>
-void parallelForEach( size_t count, F&& f )
-{
-    constexpr size_t cBlockSize = 4096;
-    ParallelFor( size_t( 0 ), chunkCount( count, cBlockSize ), [&] ( size_t block )
-    {
-        const auto end = std::min( count, ( block + 1 ) * cBlockSize );
-        for ( auto i = block * cBlockSize; i < end; ++i )
-            f( i );
-    } );
 }
 
 // the value types that are stored as single samples
@@ -94,15 +85,11 @@ struct TiffLayout
 {
     Vector2i size;
     uint16_t samplesPerPixel = 1;
-    uint16_t bitsPerSample = 1;
-    uint16_t photometric = PHOTOMETRIC_MINISBLACK;
-    uint16_t planarConfig = PLANARCONFIG_CONTIG;
-    uint16_t orientation = ORIENTATION_TOPLEFT;
     std::optional<Vector2i> tileSize;
     // type of the samples if they are read as stored; ScalarType::Unknown if libtiff decodes the pixels to RGBA8 values
     ScalarType sampleType = ScalarType::Unknown;
-    // type of the raster values: sampleType if the first sample of each pixel is taken as is,
-    // otherwise RGB8 or RGBA8 made of the first three or four samples, or decoded by libtiff
+    // type of the raster values: sampleType for one sample per pixel, otherwise RGB8 or RGBA8 made of the first three or four samples,
+    // or decoded by libtiff
     ScalarType valueType = ScalarType::RGBA8;
 
     RasterInfo rasterInfo() const
@@ -123,23 +110,13 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
         return unexpected( "Unsupported image size" );
     res.size = Vector2i( int( width ), int( height ) );
 
-    uint16_t sampleFormat = SAMPLEFORMAT_UINT;
-    uint16_t compression = COMPRESSION_NONE;
+    uint16_t bitsPerSample = 1, sampleFormat = SAMPLEFORMAT_UINT, planarConfig = PLANARCONFIG_CONTIG, photometric = PHOTOMETRIC_MINISBLACK;
     TIFFGetFieldDefaulted( tiff, TIFFTAG_SAMPLESPERPIXEL, &res.samplesPerPixel );
-    TIFFGetFieldDefaulted( tiff, TIFFTAG_BITSPERSAMPLE, &res.bitsPerSample );
+    TIFFGetFieldDefaulted( tiff, TIFFTAG_BITSPERSAMPLE, &bitsPerSample );
     TIFFGetFieldDefaulted( tiff, TIFFTAG_SAMPLEFORMAT, &sampleFormat );
-    TIFFGetFieldDefaulted( tiff, TIFFTAG_PLANARCONFIG, &res.planarConfig );
-    TIFFGetFieldDefaulted( tiff, TIFFTAG_ORIENTATION, &res.orientation );
-    TIFFGetFieldDefaulted( tiff, TIFFTAG_COMPRESSION, &compression );
-    if ( !TIFFGetField( tiff, TIFFTAG_PHOTOMETRIC, &res.photometric ) )
-        res.photometric = res.samplesPerPixel >= 3 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
-
-    // only libtiff's RGBA reader checks the codec, other reads just fail without it
-    if ( !TIFFIsCODECConfigured( compression ) )
-    {
-        const auto* codec = TIFFFindCODEC( compression );
-        return unexpected( codec ? fmt::format( "Unsupported compression: {}", codec->name ) : fmt::format( "Unsupported compression: {}", compression ) );
-    }
+    TIFFGetFieldDefaulted( tiff, TIFFTAG_PLANARCONFIG, &planarConfig );
+    if ( !TIFFGetField( tiff, TIFFTAG_PHOTOMETRIC, &photometric ) )
+        photometric = res.samplesPerPixel >= 3 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
 
     if ( TIFFIsTiled( tiff ) )
     {
@@ -153,159 +130,92 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
     }
 
     // the stored samples, the values and a tile must fit in memory; the largest value takes 8 bytes
-    const auto maxPixelSize = std::max( uint64_t( res.samplesPerPixel ) * ( ( res.bitsPerSample + 7u ) / 8u ), uint64_t( 8 ) );
+    const auto maxPixelSize = std::max( uint64_t( res.samplesPerPixel ) * ( ( bitsPerSample + 7u ) / 8u ), uint64_t( 8 ) );
     const auto maxPixels = uint64_t( std::numeric_limits<std::ptrdiff_t>::max() ) / maxPixelSize;
-    if ( uint64_t( width ) * height > maxPixels )
+    if ( uint64_t( width ) * height > maxPixels || ( res.tileSize && uint64_t( res.tileSize->x ) * uint64_t( res.tileSize->y ) > maxPixels ) )
         return unexpected( "Image is too large" );
-    if ( res.tileSize && uint64_t( res.tileSize->x ) * uint64_t( res.tileSize->y ) > maxPixels )
-        return unexpected( "Unsupported tiles format" );
 
-    // the samples are read as stored if they have plain meaning: gray values with one sample per pixel, or RGB colors;
-    // the other pixels are decoded by libtiff's RGBA reader, as the old image loader did
-    const auto sampleType = getSampleType( sampleFormat, res.bitsPerSample );
-    const bool isGray = res.photometric == PHOTOMETRIC_MINISWHITE || res.photometric == PHOTOMETRIC_MINISBLACK;
+    // gray values and RGB colors are read as stored, as the old raster reader did; libtiff decodes the other formats, as the old
+    // image loader did; if it cannot, they are read as stored too: as gray values or as colors depending on the number of samples
+    const auto sampleType = getSampleType( sampleFormat, bitsPerSample );
+    const bool storable = sampleType != ScalarType::Unknown && photometric != PHOTOMETRIC_YCBCR
+        && ( res.samplesPerPixel == 1 || ( res.samplesPerPixel >= 3 && planarConfig == PLANARCONFIG_CONTIG ) );
+    const bool plain = photometric == PHOTOMETRIC_RGB
+        || ( res.samplesPerPixel == 1 && ( photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE ) );
     char emsg[1024] = {};
-    if ( sampleType != ScalarType::Unknown && isGray && res.samplesPerPixel == 1 )
-    {
-        res.sampleType = res.valueType = sampleType;
-    }
-    else if ( sampleType != ScalarType::Unknown && res.photometric == PHOTOMETRIC_RGB && res.samplesPerPixel >= 3 )
-    {
-        // as in libtiff's RGBA reader, the fourth sample is alpha whatever ExtraSamples says
-        res.sampleType = sampleType;
-        res.valueType = res.samplesPerPixel == 3 ? ScalarType::RGB8 : ScalarType::RGBA8;
-    }
-    else if ( !TIFFRGBAImageOK( tiff, emsg ) )
-    {
-        // the formats that libtiff cannot decode keep the stored values of the first sample, as the old image loader read them;
-        // except for YCbCr, whose subsampled chroma is not stored by pixels
-        if ( sampleType == ScalarType::Unknown || res.photometric == PHOTOMETRIC_YCBCR )
-            return unexpected( fmt::format( "Unsupported pixel format: {}", emsg ) );
-        res.sampleType = res.valueType = sampleType;
-    }
+    if ( !( storable && plain ) && TIFFRGBAImageOK( tiff, emsg ) )
+        return res;
+    if ( !storable )
+        return unexpected( fmt::format( "Unsupported pixel format: {}", emsg ) );
+
+    res.sampleType = sampleType;
+    if ( res.samplesPerPixel == 1 )
+        res.valueType = sampleType;
+    else if ( res.samplesPerPixel == 3 )
+        res.valueType = ScalarType::RGB8;
+    // otherwise RGBA8: as in libtiff's RGBA reader, the fourth sample is alpha whatever ExtraSamples says
     return res;
 }
 
-// reads the samples as stored in the file to dst, in which the pixels of a row and the samples of a pixel go together
+// reads the samples as stored in the file to dst, row by row
 Expected<void> readSamples( TIFF* tiff, const TiffLayout& layout, uint8_t* dst, const ProgressCallback& progress )
 {
-    const auto sampleSize = getScalarTypeSize( layout.sampleType );
-    const auto samplesPerPixel = size_t( layout.samplesPerPixel );
-    const auto pixelSize = sampleSize * samplesPerPixel;
     const auto width = size_t( layout.size.x );
     const auto height = size_t( layout.size.y );
+    const auto pixelSize = size_t( layout.samplesPerPixel ) * getScalarTypeSize( layout.sampleType );
     const auto rowSize = width * pixelSize;
-    // each sample of a pixel is stored in its own plane
-    const bool separatePlanes = layout.planarConfig == PLANARCONFIG_SEPARATE && samplesPerPixel > 1;
-    const size_t planeCount = separatePlanes ? samplesPerPixel : 1;
-    const size_t planePixelSize = separatePlanes ? sampleSize : pixelSize;
-
-    // the file stores the pixels by chunks: tiles, or strips of whole rows
-    const bool tiled = layout.tileSize.has_value();
-    size_t chunkWidth = width;
-    size_t chunkHeight = 0;
-    if ( tiled )
+    if ( !layout.tileSize )
     {
-        chunkWidth = size_t( layout.tileSize->x );
-        chunkHeight = size_t( layout.tileSize->y );
-    }
-    else
-    {
-        uint32_t rowsPerStrip = 0;
-        TIFFGetFieldDefaulted( tiff, TIFFTAG_ROWSPERSTRIP, &rowsPerStrip );
-        chunkHeight = std::clamp( size_t( rowsPerStrip ), size_t( 1 ), height );
-    }
-    const auto chunkRowSize = chunkWidth * planePixelSize;
-    // strips of contiguous samples are read directly to dst, other chunks through this buffer
-    const bool direct = !tiled && !separatePlanes;
-    Buffer<uint8_t> buffer( direct ? 0 : chunkRowSize * chunkHeight );
-
-    const auto chunkTotal = planeCount * chunkCount( height, chunkHeight ) * chunkCount( width, chunkWidth );
-    size_t chunksRead = 0;
-    for ( size_t plane = 0; plane < planeCount; ++plane )
-    {
-        for ( const auto chunkY : splitByChunks( height, chunkHeight ) )
+        for ( size_t y = 0; y < height; ++y )
         {
-            for ( const auto chunkX : splitByChunks( width, chunkWidth ) )
-            {
-                auto* chunkData = direct ? dst + chunkY.offset * rowSize : buffer.data();
-                if ( tiled )
-                {
-                    const auto tile = TIFFComputeTile( tiff, uint32_t( chunkX.offset ), uint32_t( chunkY.offset ), 0, uint16_t( plane ) );
-                    if ( TIFFReadEncodedTile( tiff, tile, chunkData, tmsize_t( buffer.size() ) ) < 0 )
-                        return unexpected( "Error reading tile" );
-                }
-                else
-                {
-                    const auto strip = TIFFComputeStrip( tiff, uint32_t( chunkY.offset ), uint16_t( plane ) );
-                    if ( TIFFReadEncodedStrip( tiff, strip, chunkData, tmsize_t( chunkY.size * chunkRowSize ) ) < 0 )
-                        return unexpected( "Error reading strip" );
-                }
-                if ( !direct )
-                {
-                    // the tiles of the last column and of the last row can extend beyond the image
-                    for ( size_t row = 0; row < chunkY.size; ++row )
-                    {
-                        const auto* src = chunkData + row * chunkRowSize;
-                        auto* d = dst + ( chunkY.offset + row ) * rowSize + chunkX.offset * pixelSize;
-                        if ( separatePlanes )
-                        {
-                            for ( size_t x = 0; x < chunkX.size; ++x )
-                                std::memcpy( d + x * pixelSize + plane * sampleSize, src + x * sampleSize, sampleSize );
-                        }
-                        else
-                        {
-                            std::memcpy( d, src, chunkX.size * pixelSize );
-                        }
-                    }
-                }
-                if ( !reportProgress( progress, float( ++chunksRead ) / float( chunkTotal ) ) )
-                    return unexpectedOperationCanceled();
-            }
+            if ( TIFFReadScanline( tiff, dst + y * rowSize, uint32_t( y ), 0 ) < 0 )
+                return unexpected( "Error reading row" );
+            if ( !reportProgress( progress, float( y + 1 ) / float( height ) ) )
+                return unexpectedOperationCanceled();
+        }
+        return {};
+    }
+
+    // the tiles of the last column and of the last row can extend beyond the image
+    const auto tileWidth = size_t( layout.tileSize->x );
+    const auto tileHeight = size_t( layout.tileSize->y );
+    const auto tileRowSize = tileWidth * pixelSize;
+    Buffer<uint8_t> buffer( tileRowSize * tileHeight );
+    const auto tileCount = chunkCount( width, tileWidth ) * chunkCount( height, tileHeight );
+    size_t tilesRead = 0;
+    for ( const auto tileY : splitByChunks( height, tileHeight ) )
+    {
+        for ( const auto tileX : splitByChunks( width, tileWidth ) )
+        {
+            if ( TIFFReadTile( tiff, buffer.data(), uint32_t( tileX.offset ), uint32_t( tileY.offset ), 0, 0 ) < 0 )
+                return unexpected( "Error reading tile" );
+            for ( size_t row = 0; row < tileY.size; ++row )
+                std::memcpy( dst + ( tileY.offset + row ) * rowSize + tileX.offset * pixelSize, buffer.data() + row * tileRowSize, tileX.size * pixelSize );
+            if ( !reportProgress( progress, float( ++tilesRead ) / float( tileCount ) ) )
+                return unexpectedOperationCanceled();
         }
     }
     return {};
 }
 
-// converts a color or alpha sample to 8 bits: as in libtiff's RGBA reader, integer samples are taken as unsigned ones,
-// and 16-bit samples are rounded; wider integer samples keep their high byte; floating-point samples are clamped to [0, 1], NaN becomes 0
+// converts a color sample to 8 bits: integer samples keep their high byte and are taken as unsigned ones, as in libtiff's RGBA reader;
+// floating-point samples are clamped to [0, 1], NaN becomes 0
 template <typename T>
 uint8_t colorTo8Bit( T v )
 {
     if constexpr ( std::is_floating_point_v<T> )
-    {
         return std::isnan( v ) ? uint8_t( 0 ) : Color::valToUint8( v );
-    }
     else
-    {
-        const auto u = std::make_unsigned_t<T>( v );
-        if constexpr ( sizeof( T ) == 1 )
-            return u;
-        else if constexpr ( sizeof( T ) == 2 )
-            return uint8_t( ( u + 128u ) / 257u );
-        else
-            return uint8_t( u >> ( 8 * sizeof( T ) - 8 ) );
-    }
+        return uint8_t( std::make_unsigned_t<T>( v ) >> ( 8 * sizeof( T ) - 8 ) );
 }
 
-// converts the samples as stored in the file to the values of the raster: takes the first sample of each pixel,
-// or converts the first three or four samples to 8-bit color components
-void convertSamples( const TiffLayout& layout, const uint8_t* src, uint8_t* dst )
+// converts the first three or four samples of each pixel as stored in the file to 8-bit color components
+void convertColors( const TiffLayout& layout, const uint8_t* src, uint8_t* dst )
 {
-    const auto pixelCount = size_t( layout.size.x ) * size_t( layout.size.y );
     const auto sampleSize = getScalarTypeSize( layout.sampleType );
     const auto storedPixelSize = size_t( layout.samplesPerPixel ) * sampleSize;
-    if ( layout.valueType == layout.sampleType )
-    {
-        parallelForEach( pixelCount, [&] ( size_t i )
-        {
-            std::memcpy( dst + i * sampleSize, src + i * storedPixelSize, sampleSize );
-        } );
-        return;
-    }
-
     const auto channels = getScalarTypeSize( layout.valueType );
-    parallelForEach( pixelCount, [&] ( size_t i )
+    ParallelFor( size_t( 0 ), size_t( layout.size.x ) * size_t( layout.size.y ), [&] ( size_t i )
     {
         for ( size_t c = 0; c < channels; ++c )
         {
@@ -315,53 +225,6 @@ void convertSamples( const TiffLayout& layout, const uint8_t* src, uint8_t* dst 
     } );
 }
 
-// reorders the pixels from the stored order to the one with the top-left pixel first,
-// the orientations with swapped rows and columns are treated as the ones without the swap, as libtiff's RGBA reader does
-void applyOrientation( uint8_t* data, const Vector2i& size, size_t pixelSize, uint16_t orientation )
-{
-    bool flipX = false;
-    bool flipY = false;
-    switch ( orientation )
-    {
-    case ORIENTATION_TOPRIGHT:
-    case ORIENTATION_RIGHTTOP:
-        flipX = true;
-        break;
-    case ORIENTATION_BOTRIGHT:
-    case ORIENTATION_RIGHTBOT:
-        flipX = true;
-        flipY = true;
-        break;
-    case ORIENTATION_BOTLEFT:
-    case ORIENTATION_LEFTBOT:
-        flipY = true;
-        break;
-    default:
-        break;
-    }
-
-    const auto width = size_t( size.x );
-    const auto height = size_t( size.y );
-    const auto rowSize = width * pixelSize;
-    if ( flipY )
-    {
-        ParallelFor( size_t( 0 ), height / 2, [&] ( size_t y )
-        {
-            auto* row = data + y * rowSize;
-            std::swap_ranges( row, row + rowSize, data + ( height - 1 - y ) * rowSize );
-        } );
-    }
-    if ( flipX )
-    {
-        ParallelFor( size_t( 0 ), height, [&] ( size_t y )
-        {
-            auto* row = data + y * rowSize;
-            for ( size_t x = 0; x < width / 2; ++x )
-                std::swap_ranges( row + x * pixelSize, row + ( x + 1 ) * pixelSize, row + ( width - 1 - x ) * pixelSize );
-        } );
-    }
-}
-
 Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const ProgressCallback& progress )
 {
     Raster res{ .info = layout.rasterInfo() };
@@ -369,9 +232,6 @@ Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const Progres
 
     if ( layout.sampleType == ScalarType::Unknown )
     {
-        // TIFFReadRGBAImageOriented stores the pixels as uint32 values with the red component in the lowest byte,
-        // which is the order of the components in a little-endian machine
-        static_assert( std::endian::native == std::endian::little );
         if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( layout.size.x ), uint32_t( layout.size.y ), (uint32_t*)res.data.data(), ORIENTATION_TOPLEFT, 1 ) )
             return unexpected( "Error reading pixels" );
         if ( !reportProgress( progress, 1.f ) )
@@ -379,36 +239,30 @@ Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const Progres
         return res;
     }
 
-    // the samples are read directly to the raster if they need no conversion: one sample per pixel, or 8-bit color samples
-    const auto valueSize = getScalarTypeSize( layout.valueType );
+    // the samples are read directly to the raster if they need no conversion: one sample per pixel, or three or four 8-bit color samples
     const auto storedPixelSize = size_t( layout.samplesPerPixel ) * getScalarTypeSize( layout.sampleType );
-    const bool asStored = storedPixelSize == valueSize;
+    const bool asStored = storedPixelSize == getScalarTypeSize( layout.valueType );
     Buffer<uint8_t> stored( asStored ? 0 : size_t( layout.size.x ) * size_t( layout.size.y ) * storedPixelSize );
     auto* samples = asStored ? res.data.data() : stored.data();
     if ( auto readRes = readSamples( tiff, layout, samples, progress ); !readRes )
         return unexpected( std::move( readRes.error() ) );
     if ( !asStored )
-        convertSamples( layout, samples, res.data.data() );
-
-    applyOrientation( res.data.data(), layout.size, valueSize, layout.orientation );
+        convertColors( layout, samples, res.data.data() );
     return res;
 }
 
+// as the old image loader did, libtiff decodes the images it can, the others are converted from the raster
 Expected<Image> readImage( TIFF* tiff, const TiffLayout& layout )
 {
-    auto res = readRaster( tiff, layout, {} ).and_then( convertRasterToImage );
-    // as in libtiff's RGBA reader, 8-bit and 16-bit gray values are shown inverted if the smallest value means white;
-    // other gray values are not, since writeRawTiff marked all files including floating-point distance maps this way;
-    // the raster keeps the stored gray values, unlike the colors decoded by libtiff
-    if ( res && layout.photometric == PHOTOMETRIC_MINISWHITE && layout.bitsPerSample <= 16 && layout.valueType == layout.sampleType )
-    {
-        auto& pixels = res->pixels;
-        parallelForEach( pixels.size(), [&] ( size_t i )
-        {
-            auto& c = pixels[i];
-            c = Color( 255 - c.r, 255 - c.g, 255 - c.b, c.a );
-        } );
-    }
+    char emsg[1024] = {};
+    if ( !TIFFRGBAImageOK( tiff, emsg ) )
+        return readRaster( tiff, layout, {} ).and_then( convertRasterToImage );
+
+    Image res{ .resolution = layout.size };
+    res.pixels.resize( size_t( layout.size.x ) * size_t( layout.size.y ) );
+    // ORIENTATION_BOTLEFT puts the bottom row first, as in Image
+    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( layout.size.x ), uint32_t( layout.size.y ), (uint32_t*)res.pixels.data(), ORIENTATION_BOTLEFT, 1 ) )
+        return unexpected( "Error reading pixels" );
     return res;
 }
 
@@ -435,9 +289,9 @@ struct GeoTags
     std::optional<double> noData;
 };
 
-// writes a raster with one layer, getRow returns the values of given row, the rows go from top to bottom
-Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& info, const std::function<const uint8_t* ( size_t )>& getRow,
-    const ProgressCallback& progress, const GeoTags& geoTags = {} )
+// writes a raster with one layer, the rows go from top to bottom
+Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& info, const uint8_t* data, const ProgressCallback& progress,
+    const GeoTags& geoTags = {} )
 {
     // the color components are stored as 8-bit samples, other values as single samples
     const bool isColor = info.type == ScalarType::RGB8 || info.type == ScalarType::RGBA8;
@@ -458,16 +312,13 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     TIFFSetField( tiff, TIFFTAG_IMAGEWIDTH, uint32_t( info.dims.x ) );
     TIFFSetField( tiff, TIFFTAG_IMAGELENGTH, uint32_t( info.dims.y ) );
     TIFFSetField( tiff, TIFFTAG_BITSPERSAMPLE, sample->bits );
+    // ExtraSamples is not written, as before, so libtiff's RGBA reader takes the fourth sample as associated alpha
+    // and does not premultiply the colors by it
     TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, isColor ? int( getScalarTypeSize( info.type ) ) : 1 );
     TIFFSetField( tiff, TIFFTAG_SAMPLEFORMAT, sample->format );
     TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, isColor ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
     TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
-    if ( info.type == ScalarType::RGBA8 )
-    {
-        const uint16_t extraSample = EXTRASAMPLE_UNASSALPHA;
-        TIFFSetField( tiff, TIFFTAG_EXTRASAMPLES, 1, &extraSample );
-    }
 
     // declare non-standard tags
     std::vector<TIFFFieldInfo> fieldInfo;
@@ -487,9 +338,10 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
         TIFFSetField( tiff, cGdalNoDataTag, fmt::format( "{}", *geoTags.noData ).c_str() );
 
     const auto height = size_t( info.dims.y );
+    const auto rowSize = size_t( info.dims.x ) * getScalarTypeSize( info.type );
     for ( size_t row = 0; row < height; ++row )
     {
-        if ( TIFFWriteScanline( tiff, (void*)getRow( row ), uint32_t( row ), 0 ) < 0 )
+        if ( TIFFWriteScanline( tiff, (void*)( data + row * rowSize ), uint32_t( row ), 0 ) < 0 )
             return unexpected( "Error writing file: " + utf8string( path ) );
         if ( !reportProgress( progress, float( row + 1 ) / float( height ) ) )
             return unexpectedOperationCanceled();
@@ -531,9 +383,7 @@ Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, 
     MR_TIMER;
     if ( raster.data.size() != raster.info.dataSize() )
         return unexpected( "Raster data size does not match its dimensions" );
-
-    const auto rowSize = size_t( raster.info.dims.x ) * getScalarTypeSize( raster.info.type );
-    return writeTiff( path, raster.info, [&] ( size_t row ) { return raster.data.data() + row * rowSize; }, settings.progress );
+    return writeTiff( path, raster.info, raster.data.data(), settings.progress );
 }
 
 MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff )
@@ -559,17 +409,7 @@ namespace ImageSave
 
 Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
 {
-    if ( image.pixels.size() != size_t( std::max( image.resolution.x, 0 ) ) * size_t( std::max( image.resolution.y, 0 ) ) )
-        return unexpected( "Image size does not match its resolution" );
-
-    const RasterInfo info{
-        .dims = Vector3i( image.resolution.x, image.resolution.y, 1 ),
-        .type = ScalarType::RGBA8,
-    };
-    const auto width = size_t( image.resolution.x );
-    const auto height = size_t( image.resolution.y );
-    // Image starts from the bottom row
-    return writeTiff( path, info, [&] ( size_t row ) { return (const uint8_t*)( image.pixels.data() + ( height - 1 - row ) * width ); }, {} );
+    return convertImageToRaster( image ).and_then( [&] ( const Raster& raster ) { return RasterSave::toTiff( raster, path ); } );
 }
 
 MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff, -1 )
@@ -586,8 +426,7 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
         .dims = Vector3i( dmap.dims().x, dmap.dims().y, 1 ),
         .type = ScalarType::Float32,
     };
-    const auto width = dmap.resX();
-    return writeTiff( path, info, [&] ( size_t row ) { return (const uint8_t*)( dmap.data() + row * width ); }, settings.progress, {
+    return writeTiff( path, info, (const uint8_t*)dmap.data(), settings.progress, {
         .pixelToWorld = settings.xf,
         .noData = DistanceMap::NOT_VALID_VALUE,
     } );

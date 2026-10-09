@@ -1,0 +1,17 @@
+name: 'Get latest tag'
+description: 'Outputs the latest git tag of the checked-out repository, like actions-ecosystem/action-get-latest-tag without its Docker image.'
+
+outputs:
+  tag:
+    description: 'The latest tag, or v0.0.0 if there is none.'
+    value: ${{ steps.tag.outputs.tag }}
+
+runs:
+  using: 'composite'
+  steps:
+    - id: tag
+      shell: bash
+      run: |
+        git fetch --tags
+        git fetch --prune --unshallow || true
+        echo "tag=$(git describe --abbrev=0 --tags || echo v0.0.0)" >> "$GITHUB_OUTPUT"

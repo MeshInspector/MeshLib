@@ -1,5 +1,6 @@
 #include "MRMesh/MRTiffIO.h"
 #if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
@@ -158,6 +159,40 @@ TEST( MRMesh, TiffTiledPartialTiles )
     res = readRawTiff( path, floatOutput );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_EQ( floats, std::vector<float>( pixels.begin(), pixels.end() ) );
+}
+
+// libtiff passes the number of values of the GeoTIFF tags as a 16-bit or a 32-bit value, depending on how the tags are registered:
+// e.g. libgeotiff's tag extender registers them with a 16-bit count
+TEST( MRMesh, TiffGeoTransform )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "dmap.tif";
+
+    const std::vector<float> values{ 0.f, 1.f, 2.f, 3.f, 4.f, 5.f };
+    const AffineXf3f xf( Matrix3f::scale( 0.5f, -0.5f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) );
+    auto saveRes = writeRawTiff( ( const uint8_t* )values.data(), path, {
+        .baseParams = {
+            .sampleType = BaseTiffParameters::SampleType::Float,
+            .valueType = BaseTiffParameters::ValueType::Scalar,
+            .bytesPerSample = sizeof( float ),
+            .imageSize = { 3, 2 },
+        },
+        .xf = &xf,
+    } );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+
+    std::vector<float> loaded( values.size() );
+    AffineXf3f loadedXf;
+    RawTiffOutput output{
+        .bytes = ( uint8_t* )loaded.data(),
+        .size = loaded.size() * sizeof( float ),
+        .p2wXf = &loadedXf,
+    };
+    auto res = readRawTiff( path, output );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_EQ( loaded, values );
+    EXPECT_EQ( loadedXf, xf );
 }
 
 #ifndef MRIOEXTRAS_NO_TIFF

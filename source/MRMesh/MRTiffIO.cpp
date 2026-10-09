@@ -323,6 +323,25 @@ Expected<TiffParameters> readTiffParameters( const std::filesystem::path& path )
     return addFileNameInError( readTifParameters( tif ), path );
 }
 
+// returns the values of a tag of doubles and sets their count, or returns nullptr; libtiff passes the count as a 32-bit value
+// for the tags it does not know, and as a 16-bit value for the tags registered with TIFF_VARIABLE, as libgeotiff's tag extender does
+static const double* getDoublesTag( TIFF* tiff, uint32_t tag, uint32_t& count )
+{
+    count = 0;
+    double* data = nullptr;
+    // the tags of other types or with a fixed number of values are returned differently
+    const auto* field = TIFFFindField( tiff, tag, TIFF_ANY );
+    if ( !field || TIFFFieldDataType( field ) != TIFF_DOUBLE || !TIFFFieldPassCount( field ) )
+        return nullptr;
+    if ( TIFFFieldReadCount( field ) == TIFF_VARIABLE2 )
+        return TIFFGetField( tiff, tag, &count, &data ) ? data : nullptr;
+    uint16_t count16 = 0;
+    if ( !TIFFGetField( tiff, tag, &count16, &data ) )
+        return nullptr;
+    count = count16;
+    return data;
+}
+
 Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& output )
 {
     assert( output.size != 0 );
@@ -343,26 +362,25 @@ Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& ou
         constexpr uint32_t TIFFTAG_ModelTiePointTag = 33922;	/* GeoTIFF */
         constexpr uint32_t TIFFTAG_ModelPixelScaleTag = 33550;	/* GeoTIFF */
         constexpr uint32_t TIFFTAG_ModelTransformationTag = 34264;	/* GeoTIFF */
-        double* dataMatrix;
-        uint32_t count;
-        if ( TIFFGetField( tiff, TIFFTAG_ModelTransformationTag, &count, &dataMatrix ) && count == 16 )
+        uint32_t count = 0;
+        // the values will be freed with tiff
+        const auto* dataMatrix = getDoublesTag( tiff, TIFFTAG_ModelTransformationTag, count );
+        if ( dataMatrix && count == 16 )
         {
-            auto* matrix = (Matrix4d*)dataMatrix;
+            auto* matrix = (const Matrix4d*)dataMatrix;
             *output.p2wXf = AffineXf3f( Matrix4f( *matrix ) );
         }
         else
         {
-            double* dataTie;// will be freed with tiff
-            auto statusT = TIFFGetField( tiff, TIFFTAG_ModelTiePointTag, &count, &dataTie );
-            if ( statusT && count == 6 )
+            const auto* dataTie = getDoublesTag( tiff, TIFFTAG_ModelTiePointTag, count );
+            if ( dataTie && count == 6 )
             {
                 Vector3d tiePoints[2];
                 tiePoints[0] = { dataTie[0], dataTie[1], dataTie[2] };
                 tiePoints[1] = { dataTie[3], dataTie[4], dataTie[5] };
 
-                double* dataScale;// will be freed with tiff
-                auto statusS = TIFFGetField( tiff, TIFFTAG_ModelPixelScaleTag, &count, &dataScale );
-                if ( statusS && count == 3 )
+                const auto* dataScale = getDoublesTag( tiff, TIFFTAG_ModelPixelScaleTag, count );
+                if ( dataScale && count == 3 )
                 {
                     Vector3d scale { dataScale[0], dataScale[1], dataScale[2] };
 

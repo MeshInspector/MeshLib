@@ -21,17 +21,38 @@ inputs:
     description: 'Write to the S3 binary cache ("true" or "false"); needs `id-token: write`.'
     required: false
     default: 'false'
+  vcpkg-root:
+    description: 'Vcpkg checkout; cloned if missing.'
+    required: false
+    default: '/usr/local/share/vcpkg'
+  repo-dir:
+    description: 'Path to this repository from the workspace root.'
+    required: false
+    default: '.'
 
 runs:
   using: 'composite'
   steps:
     - name: Set up vcpkg
       shell: bash
-      working-directory: /usr/local/share/vcpkg
+      env:
+        VCPKG_ROOT: ${{ inputs.vcpkg-root }}
       run: |
-        git fetch --depth 1 origin tag "${{ inputs.vcpkg-version }}"
-        git checkout --force "${{ inputs.vcpkg-version }}"
-        ./bootstrap-vcpkg.sh -disableMetrics
+        if [ ! -d "${VCPKG_ROOT}/.git" ] ; then
+          git clone --filter=blob:none https://github.com/microsoft/vcpkg.git "${VCPKG_ROOT}"
+        fi
+        git -C "${VCPKG_ROOT}" fetch --depth 1 origin tag "${{ inputs.vcpkg-version }}"
+        git -C "${VCPKG_ROOT}" checkout --force "${{ inputs.vcpkg-version }}"
+        "${VCPKG_ROOT}/bootstrap-vcpkg.sh" -disableMetrics
+        echo "VCPKG_ROOT=${VCPKG_ROOT}" >> $GITHUB_ENV
+        echo "${VCPKG_ROOT}" >> $GITHUB_PATH
+
+        d='${{ inputs.repo-dir }}'
+        if [ -z "$d" ] || [ "$d" = "." ]; then
+          echo "REPO_PREFIX=" >> $GITHUB_ENV
+        else
+          echo "REPO_PREFIX=${d%/}/" >> $GITHUB_ENV
+        fi
 
     - name: Configure AWS Credentials
       if: ${{ inputs.internal-build == 'true' }}
@@ -60,11 +81,11 @@ runs:
       env:
         VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
       run: |
-        FILES_HASH=$(scripts/devops/cache_key.sh \
-          thirdparty/vcpkg/vcpkg.json \
-          thirdparty/vcpkg/ports \
-          thirdparty/vcpkg/triplets/${VCPKG_TRIPLET}.cmake \
-          scripts/build_vcpkg_thirdparty.sh \
+        FILES_HASH=$(${REPO_PREFIX}scripts/devops/cache_key.sh \
+          ${REPO_PREFIX}thirdparty/vcpkg/vcpkg.json \
+          ${REPO_PREFIX}thirdparty/vcpkg/ports \
+          ${REPO_PREFIX}thirdparty/vcpkg/triplets/${VCPKG_TRIPLET}.cmake \
+          ${REPO_PREFIX}scripts/build_vcpkg_thirdparty.sh \
           "${VCPKG_CXX}")
         KEY_PREFIX="vcpkg-installed-${{ inputs.vcpkg-version }}-${VCPKG_TRIPLET}-${{ inputs.toolchain }}"
         echo "VCPKG_CACHE_KEY_PREFIX=${KEY_PREFIX}" >> $GITHUB_ENV
@@ -85,11 +106,11 @@ runs:
         VCPKG_TRIPLET: ${{ inputs.vcpkg-triplet }}
         VCPKG_VERSION: ${{ inputs.vcpkg-version }}
       run: |
-        source thirdparty/vcpkg/configure_s3_cache.sh
+        source ${REPO_PREFIX}thirdparty/vcpkg/configure_s3_cache.sh
         export CC="${VCPKG_CC}"
         export CXX="${VCPKG_CXX}"
         export SDKROOT=$(xcrun --show-sdk-path)
-        scripts/build_vcpkg_thirdparty.sh
+        ${REPO_PREFIX}scripts/build_vcpkg_thirdparty.sh
 
     - name: Save vcpkg installed tree
       if: ${{ steps.vcpkg-cache.outputs.cache-hit != 'true' }}

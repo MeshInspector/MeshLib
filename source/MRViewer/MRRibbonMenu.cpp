@@ -238,7 +238,7 @@ void RibbonMenu::updateItemStatus( const std::string& itemName )
             // disable old blocking first
             if ( activeBlockingItem_.item && activeBlockingItem_.item != item )
                 itemPressed_( activeBlockingItem_.item );
-            activeBlockingItem_ = { item,false };
+            activeBlockingItem_ = { item };
         }
         else
         {
@@ -249,7 +249,7 @@ void RibbonMenu::updateItemStatus( const std::string& itemName )
             } );
             // add if it is not already in the list
             if ( nonBlockingIt == activeNonBlockingItems_.end() )
-                activeNonBlockingItems_.push_back( { item,false } );
+                activeNonBlockingItems_.push_back( { item } );
         }
     }
     else
@@ -1730,18 +1730,6 @@ void RibbonMenu::drawItemDialog_( DialogItemPtr& itemPtr )
 
     if ( !itemPtr.item ) // if it was closed in drawDialog
         return;
-
-    if ( !itemPtr.dialogPositionFixed )
-    {
-        itemPtr.dialogPositionFixed = true;
-        auto* window = ImGui::FindWindowByName( itemPtr.item->name().c_str() ); // this function is hidden in imgui_internal.h
-        // viewer->framebufferSize.x here because ImGui use screen space
-        if ( window )
-        {
-            ImVec2 pos = ImVec2( viewer->framebufferSize.x - window->Size.x, float( topPanelOpenedHeight_ - 1.0f ) * UI::scale() );
-            ImGui::SetWindowPos( window, pos, ImGuiCond_Always );
-        }
-    }
 
     if ( !statePlugin->dialogIsOpen() ) // still need to check here we ordered to close dialog in `drawDialog`
         itemPressed_( itemPtr.item );

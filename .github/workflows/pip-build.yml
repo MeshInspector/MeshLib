@@ -507,8 +507,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          submodules: recursive
           ref: ${{ needs.setup.outputs.build_ref }}
+
+      - name: Checkout third-party submodules
+        shell: bash
+        run: |
+          bash scripts/retry.sh --timeout 300 -- powershell scripts/clone_submodules_windows.ps1 --skip-prebuilt-thirdparty
 
       - name: Locate Visual Studio
         uses: ./.github/actions/locate-visual-studio
@@ -648,8 +652,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
         with:
-          submodules: recursive
           ref: ${{ needs.setup.outputs.build_ref }}
+
+      - name: Checkout third-party submodules
+        # Retried via retry.sh: submodule endpoints occasionally 500.
+        run: bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
 
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-macos

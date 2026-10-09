@@ -410,10 +410,12 @@ void ImGuiMenu::finishFrame()
                 {
                     const auto* vp = context_->Viewports[i];
                     // if non-main viewport will be deleted in following frames we force redraw of main frame
-                    // to ensure that there is at least one frame when both removed viewport and main viewport renders the window
+                    // to ensure that there is at least one frame when both removed viewport and main viewport renders the window,
+                    // and request one more frame, otherwise the platform window is destroyed (and stays on screen) only after next user input
                     if ( vp->LastFrameActive < context_->FrameCount )
                     {
                         viewer->forceSwapOnFrame();
+                        viewer->incrementForceRedrawFrames();
                         break;
                     }
                 }

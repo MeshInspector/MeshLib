@@ -5,7 +5,7 @@ set -euo pipefail
 # interpreter and run the wheel's pytest suite. Run from the repo root;
 # the wheel artifact must already be unpacked in the working directory.
 
-USAGE="usage: test_wheel_macos.sh <py-version> <platform: arm64|x86>"
+USAGE="usage: test_wheel_macos.sh <py-version> <platform: arm64|x64>"
 PY_VER="${1:?${USAGE}}"
 PLATFORM="${2:?${USAGE}}"
 
@@ -15,7 +15,8 @@ PLATFORM="${2:?${USAGE}}"
 # picked up from Anaconda).
 export PATH="$(echo "$PATH" | perl -pe 's/[^:]*anaconda[^:]*//g;s/::|^:|:$//g')"
 
-WHEELS=$(ls ./meshlib*"${PLATFORM}"*.whl)
+# the wheel tag names x64 as x86_64
+WHEELS=$(ls ./meshlib*"${PLATFORM/x64/x86_64}".whl)
 
 VENV=".venv-${PY_VER}"
 rm -rf "${VENV}"

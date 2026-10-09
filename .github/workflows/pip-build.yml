@@ -105,9 +105,15 @@ jobs:
       build_ref:     ${{ inputs.ref || steps.get-latest-tag.outputs.tag }}
       release_tag:   ${{ inputs.release_tag || steps.release-for-ref.outputs.tag }}
       wheel_version: ${{ inputs.version || steps.release-for-ref.outputs.tag || steps.get-latest-tag.outputs.tag || '0' }}
+      vcpkg_version: ${{ steps.vcpkg-version.outputs.vcpkg_version }}
+      internal_build: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+
+      - name: Read vcpkg version
+        id: vcpkg-version
+        run: echo "vcpkg_version=$(yq eval -r '.on.workflow_call.outputs.vcpkg_version.value' .github/workflows/config.yml)" >> "$GITHUB_OUTPUT"
 
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
@@ -612,24 +618,30 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["x86", "arm64"]
+        platform: ["x64", "arm64"]
         include:
-          - platform: "x86"
+          - platform: "x64"
             plat-name: macosx_12_0_x86_64
             runner: macos-15-intel
             instance: macos-15-intel
+            xcode-version: '16.4'
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-keg-version: 22.1.8_2
           - platform: "arm64"
             plat-name: macosx_12_0_arm64
-            # The bundled brew dylibs require the macOS they were bottled for; from a
-            # macos-15 image, libcpr needs a libc++ symbol missing on macOS 13.
-            runner: [ self-hosted, macos, arm64, macos-13 ]
-            instance: self-hosted-arm-macos-13
+            runner: macos-15
+            instance: macos-15
+            xcode-version: '16.4'
             # mrbind and the bindings use the PGO keg fetched from
             # MeshInspector/toolchains releases.
             llvm-keg-version: 22.1.8_2
+    permissions:
+      id-token: write # This is required for requesting the JWT
+      contents: read  # This is required for actions/checkout
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer
+      VCPKG_TRIPLET: ${{ matrix.platform }}-osx-meshlib
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
@@ -646,6 +658,16 @@ jobs:
         # Retried via retry.sh: submodule endpoints occasionally 500.
         run: bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
 
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-macos
+        with:
+          vcpkg-version: ${{ needs.setup.outputs.vcpkg_version }}
+          vcpkg-triplet: ${{ env.VCPKG_TRIPLET }}
+          c-compiler: /usr/bin/clang
+          cxx-compiler: /usr/bin/clang++
+          toolchain: xcode${{ matrix.xcode-version }}
+          internal-build: ${{ needs.setup.outputs.internal_build }}
+
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
 
@@ -661,16 +683,12 @@ jobs:
           . .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
 
-      - name: Install thirdparty libs
-        id: thirdparty
-        uses: ./.github/actions/install-macos-thirdparty
-        with:
-          # `cache-instance` and `cache-compiler` must match the values used by
-          # build-test-macos.yml on the same runner image (`AppleClang` here matches
-          # build-test-macos.yml's x64-Release and arm64-Debug matrix entries), so
-          # the thirdparty ./lib + ./include cache is shared across the two workflows.
-          cache-instance: ${{ matrix.instance }}
-          cache-compiler: AppleClang
+      - name: Compute Homebrew path hash
+        id: brew-hash
+        run: |
+          BREW_PREFIX=$(brew --prefix)
+          echo "BREW_PREFIX=${BREW_PREFIX}" >> $GITHUB_ENV
+          echo "brew-hash=$(printf %s "${BREW_PREFIX}" | shasum -a 256 | cut -c1-16)" >> $GITHUB_OUTPUT
 
       # LLVM_PREFIX selects the LLVM keg for the mrbind scripts; same scheme
       # as build-test-macos.yml.
@@ -695,13 +713,15 @@ jobs:
           # build-test-macos.yml when its matrix.instance matches.
           cache-key-prefix: ${{ matrix.instance }}-clang
           build-script: scripts/mrbind/install_mrbind_macos.sh
-          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.thirdparty.outputs.brew-hash }}
+          extra-cache-key: llvm_pgo_${{ matrix.llvm-keg-version }}-${{ hashFiles('scripts/mrbind/clang_version_macos.txt') }}-${{ steps.brew-hash.outputs.brew-hash }}
 
       - name: Build
         run: ./scripts/build_source.sh
         env:
           MESHLIB_BUILD_RELEASE: "ON"
           MESHLIB_BUILD_DEBUG: "OFF"
+          MESHLIB_USE_VCPKG: "ON"
+          VCPKG_MANIFEST_MODE: "ON"
           CMAKE_CXX_COMPILER: /usr/bin/clang++
           MR_CMAKE_OPTIONS: >
             -DMRVIEWER_NO_GTK=ON
@@ -727,7 +747,7 @@ jobs:
           export PKG_CONFIG_PATH=${PKG_CONFIG_PATH#:}
 
           make --version
-          make -f scripts/mrbind/generate.mk -B --trace MODE=release FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}"
+          make -f scripts/mrbind/generate.mk -B --trace MODE=release FOR_WHEEL=1 MACOS_MIN_VER=12.7 PYTHON_VERSIONS="${PYTHON_VERSIONS}" DEPS_BASE_DIR=vcpkg_installed/${VCPKG_TRIPLET}
 
       - name: Verify meshlib.mrmeshpy import
         timeout-minutes: 3
@@ -974,13 +994,13 @@ jobs:
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-26
-          - platform: "x86"
+          - platform: "x64"
             runner-tier: "self-hosted"
             instance: macos-12-intel
-          - platform: "x86"
+          - platform: "x64"
             runner-tier: "github"
             instance: macos-15-intel
-          - platform: "x86"
+          - platform: "x64"
             runner-tier: "github"
             instance: macos-26-intel
     steps:

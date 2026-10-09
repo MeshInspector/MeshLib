@@ -297,15 +297,16 @@ public:
         rootObj_->select( true );
         objStack_.push( rootObj_ );
 
-        NCollection_Sequence<TDF_Label> shapes;
+        using LabelSequence = NCollection_Sequence<TDF_Label>;
+        LabelSequence shapes;
         shapeTool_->GetFreeShapes( shapes );
 
 #if STEP_LOAD_COLORS
-        NCollection_Sequence<TDF_Label> colors;
+        LabelSequence colors;
         colorTool_->GetColors( colors );
 #endif
 
-        for ( NCollection_Sequence<TDF_Label>::Iterator it( shapes ); it.More(); it.Next() )
+        for ( LabelSequence::Iterator it( shapes ); it.More(); it.Next() )
             readLabel_( it.Value() );
 
 #if STEP_LOAD_COLORS

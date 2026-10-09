@@ -54,6 +54,7 @@ jobs:
   generate-c-bindings:
     needs: config
     uses: ./.github/workflows/generate-c-bindings.yml
+    secrets: inherit
     with:
       docker_image_tag: 'latest' # hardcode latest for now TODO: provide correct tag later
       version_tag: ${{ needs.config.outputs.release_tag }}

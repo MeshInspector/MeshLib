@@ -210,6 +210,7 @@ jobs:
   generate-c-bindings:
     needs: setup
     uses: ./.github/workflows/generate-c-bindings.yml
+    secrets: inherit
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       version_tag: ${{needs.setup.outputs.version_tag}}
@@ -218,6 +219,7 @@ jobs:
     needs: setup
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
     uses: ./.github/workflows/build-test-emscripten.yml
+    secrets: inherit
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       upload_artifacts: false
@@ -233,6 +235,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       # `include` enumerates the per-platform combos, surviving platforms

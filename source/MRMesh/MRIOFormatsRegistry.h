@@ -8,6 +8,7 @@
 #include "MRLinesLoadSettings.h"
 #include "MROnInit.h"
 #include "MRPointsLoadSettings.h"
+#include "MRRaster.h"
 #include "MRSaveSettings.h"
 #include "MRObjectSaveSettings.h"
 #include "MRLoadedObjects.h"
@@ -401,6 +402,39 @@ MR_ON_INIT { using namespace MR::DistanceMapSave; setDistanceMapSaver( filter, s
 MR_ON_INIT { using namespace MR::DistanceMapSave; setDistanceMapSaver( filter, saver, priority ); };
 
 } // namespace DistanceMapSave
+
+namespace RasterLoad
+{
+
+using RasterFileLoader = Expected<Raster>( * )( const std::filesystem::path&, const RasterLoadSettings& );
+using RasterInfoLoader = Expected<RasterInfo>( * )( const std::filesystem::path& );
+
+struct RasterLoader
+{
+    /// loads the whole raster
+    RasterFileLoader fileLoad{ nullptr };
+    /// loads everything about the raster except its samples
+    RasterInfoLoader infoLoad{ nullptr };
+};
+
+MR_FORMAT_REGISTRY_DECL( RasterLoader )
+
+#define MR_ADD_RASTER_LOADER( filter, loader, infoLoader ) \
+MR_ON_INIT { using namespace MR::RasterLoad; setRasterLoader( filter, { static_cast<RasterFileLoader>( loader ), static_cast<RasterInfoLoader>( infoLoader ) } ); };
+
+} // namespace RasterLoad
+
+namespace RasterSave
+{
+
+using RasterSaver = Expected<void>( * )( const Raster&, const std::filesystem::path&, const RasterSaveSettings& );
+
+MR_FORMAT_REGISTRY_DECL( RasterSaver )
+
+#define MR_ADD_RASTER_SAVER( filter, saver ) \
+MR_ON_INIT { using namespace MR::RasterSave; setRasterSaver( filter, saver ); };
+
+} // namespace RasterSave
 
 } // namespace MR
 #endif

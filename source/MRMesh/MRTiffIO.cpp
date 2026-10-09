@@ -323,34 +323,22 @@ Expected<TiffParameters> readTiffParameters( const std::filesystem::path& path )
     return addFileNameInError( readTifParameters( tif ), path );
 }
 
-// returns the values of a tag with a variable number of doubles and sets their count; depending on how the tag is registered,
-// libtiff passes the count as a 16-bit or a 32-bit value: e.g. libgeotiff's tag extender registers GeoTIFF tags with a 16-bit count
+// returns the values of a tag of doubles and sets their count, or returns nullptr; libtiff passes the count as a 32-bit value
+// for the tags it does not know, and as a 16-bit value for the tags registered with TIFF_VARIABLE, as libgeotiff's tag extender does
 static const double* getDoublesTag( TIFF* tiff, uint32_t tag, uint32_t& count )
 {
     count = 0;
-    const auto* field = TIFFFindField( tiff, tag, TIFF_ANY );
-    if ( !field )
-        return nullptr;
-
     double* data = nullptr;
-    if ( !TIFFFieldPassCount( field ) )
-    {
-        if ( TIFFFieldReadCount( field ) <= 0 || !TIFFGetField( tiff, tag, &data ) )
-            return nullptr;
-        count = uint32_t( TIFFFieldReadCount( field ) );
-    }
-    else if ( TIFFFieldReadCount( field ) == TIFF_VARIABLE2 )
-    {
-        if ( !TIFFGetField( tiff, tag, &count, &data ) )
-            return nullptr;
-    }
-    else
-    {
-        uint16_t count16 = 0;
-        if ( !TIFFGetField( tiff, tag, &count16, &data ) )
-            return nullptr;
-        count = count16;
-    }
+    // the tags of other types or with a fixed number of values are returned differently
+    const auto* field = TIFFFindField( tiff, tag, TIFF_ANY );
+    if ( !field || TIFFFieldDataType( field ) != TIFF_DOUBLE || !TIFFFieldPassCount( field ) )
+        return nullptr;
+    if ( TIFFFieldReadCount( field ) == TIFF_VARIABLE2 )
+        return TIFFGetField( tiff, tag, &count, &data ) ? data : nullptr;
+    uint16_t count16 = 0;
+    if ( !TIFFGetField( tiff, tag, &count16, &data ) )
+        return nullptr;
+    count = count16;
     return data;
 }
 

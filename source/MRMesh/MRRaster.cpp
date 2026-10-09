@@ -4,8 +4,10 @@
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
+#include <limits>
 
 namespace MR
 {
@@ -14,7 +16,15 @@ size_t RasterInfo::dataSize() const
 {
     if ( dims.x <= 0 || dims.y <= 0 || dims.z <= 0 )
         return 0;
-    return size_t( dims.x ) * size_t( dims.y ) * size_t( dims.z ) * getScalarTypeSize( type );
+    // the product of three 31-bit dimensions and the value size can exceed 64 bits
+    size_t res = getScalarTypeSize( type );
+    for ( int d : { dims.x, dims.y, dims.z } )
+    {
+        if ( res > std::numeric_limits<size_t>::max() / size_t( d ) )
+            return std::numeric_limits<size_t>::max();
+        res *= size_t( d );
+    }
+    return res;
 }
 
 Expected<Image> convertRasterToImage( const Raster& raster )
@@ -94,7 +104,7 @@ Expected<Image> convertRasterToImage( const Raster& raster )
                 for ( auto i = range.begin(); i < range.end(); ++i )
                 {
                     const auto v = getValue( i );
-                    if ( !std::isnan( v ) )
+                    if ( std::isfinite( v ) )
                         box.include( v );
                 }
                 return box;
@@ -104,13 +114,16 @@ Expected<Image> convertRasterToImage( const Raster& raster )
                 a.include( b );
                 return a;
             } );
-        const auto rangeSize = valueRange.valid() ? valueRange.max - valueRange.min : 0.;
+        // the halves do not overflow even for the range of all double values
+        const auto halfMin = valueRange.min / 2;
+        const auto halfRangeSize = valueRange.valid() ? valueRange.max / 2 - halfMin : 0.;
         fill( [&] ( size_t i )
         {
             const auto v = getValue( i );
-            if ( std::isnan( v ) )
+            if ( !std::isfinite( v ) )
                 return Color::black();
-            const auto g = rangeSize > 0 ? uint8_t( 255. * ( v - valueRange.min ) / rangeSize ) : uint8_t( 0 );
+            const auto t = halfRangeSize > 0 ? std::clamp( ( v / 2 - halfMin ) / halfRangeSize, 0., 1. ) : 0.;
+            const auto g = uint8_t( 255. * t );
             return Color( g, g, g );
         } );
         break;
@@ -120,17 +133,20 @@ Expected<Image> convertRasterToImage( const Raster& raster )
     return res;
 }
 
-Raster convertImageToRaster( const Image& image )
+Expected<Raster> convertImageToRaster( const Image& image )
 {
     MR_TIMER;
+    if ( image.resolution.x < 0 || image.resolution.y < 0
+        || image.pixels.size() != size_t( image.resolution.x ) * size_t( image.resolution.y ) )
+        return unexpected( "Image size does not match its resolution" );
+
     Raster res{
         .info = {
             .dims = Vector3i( image.resolution.x, image.resolution.y, 1 ),
             .type = ScalarType::RGBA8,
         },
     };
-    res.data.resize( res.info.dataSize() );
-    assert( res.data.size() == image.pixels.size() * sizeof( Color ) );
+    res.data.resize( image.pixels.size() * sizeof( Color ) );
 
     const auto width = size_t( image.resolution.x );
     const auto height = size_t( image.resolution.y );

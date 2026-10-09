@@ -68,6 +68,7 @@ struct TestTiffLayout
     uint16_t sampleFormat = 1; // unsigned integer
     uint16_t photometric = 1; // BlackIsZero
     uint16_t orientation = 1; // top-left
+    uint16_t compression = 1; // none, the samples are written uncompressed anyway
     bool separatePlanes = false;
     // the image is stored in tiles of this size if it is not zero, otherwise in strips
     Vector2i tileSize;
@@ -76,12 +77,14 @@ struct TestTiffLayout
     std::vector<uint16_t> extraSamples;
     // 3 * 2^bitsPerSample values for a palette image
     std::vector<uint16_t> colorMap;
+    // the image file directory goes before the pixels, so that the file can be opened after its end is cut off
+    bool directoryFirst = false;
 };
 
 // writes an uncompressed TIFF file in the native byte order; `samples` holds the pixels in the stored order:
 // rows one after another, the samples of a pixel together, each sample takes bitsPerSample / 8 bytes;
-// the parts of the tiles outside the image are filled with the padding byte
-static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayout& layout, const std::vector<uint8_t>& samples, uint8_t padding = 0xFF )
+// the parts of the tiles outside the image are filled with 0xFF bytes
+static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayout& layout, const std::vector<uint8_t>& samples )
 {
     const size_t sampleSize = layout.bitsPerSample / 8;
     const size_t samplesPerPixel = layout.samplesPerPixel;
@@ -94,12 +97,8 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
     const size_t planeCount = layout.separatePlanes ? samplesPerPixel : 1;
     const size_t planeSamples = layout.separatePlanes ? 1 : samplesPerPixel;
 
-    std::vector<uint8_t> file( 8 ); // the header is written in the end
-    auto append = [&] ( const void* data, size_t size )
-    {
-        file.insert( file.end(), ( const uint8_t* )data, ( const uint8_t* )data + size );
-    };
-
+    // the pixels by chunks, their offsets are relative to the start of the pixels until the position of the pixels is known
+    std::vector<uint8_t> pixels;
     std::vector<uint32_t> chunkOffsets, chunkSizes;
     for ( size_t plane = 0; plane < planeCount; ++plane )
     {
@@ -107,7 +106,7 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         {
             for ( size_t x0 = 0; x0 < width; x0 += chunkWidth )
             {
-                chunkOffsets.push_back( uint32_t( file.size() ) );
+                chunkOffsets.push_back( uint32_t( pixels.size() ) );
                 // the last strip ends with the last row, tiles are always complete
                 const auto yEnd = tiled ? y0 + chunkHeight : std::min( y0 + chunkHeight, height );
                 for ( size_t y = y0; y < yEnd; ++y )
@@ -117,13 +116,18 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
                         for ( size_t s = 0; s < planeSamples; ++s )
                         {
                             if ( x < width && y < height )
-                                append( samples.data() + ( ( y * width + x ) * samplesPerPixel + plane + s ) * sampleSize, sampleSize );
+                            {
+                                const auto* sample = samples.data() + ( ( y * width + x ) * samplesPerPixel + plane + s ) * sampleSize;
+                                pixels.insert( pixels.end(), sample, sample + sampleSize );
+                            }
                             else
-                                file.insert( file.end(), sampleSize, padding );
+                            {
+                                pixels.insert( pixels.end(), sampleSize, uint8_t( 0xFF ) );
+                            }
                         }
                     }
                 }
-                chunkSizes.push_back( uint32_t( file.size() - chunkOffsets.back() ) );
+                chunkSizes.push_back( uint32_t( pixels.size() - chunkOffsets.back() ) );
             }
         }
     }
@@ -139,7 +143,7 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         { 256, LONG, { uint32_t( width ) } }, // ImageWidth
         { 257, LONG, { uint32_t( height ) } }, // ImageLength
         { 258, SHORT, std::vector<uint32_t>( samplesPerPixel, layout.bitsPerSample ) }, // BitsPerSample
-        { 259, SHORT, { 1 } }, // Compression: none
+        { 259, SHORT, { layout.compression } }, // Compression
         { 262, SHORT, { layout.photometric } }, // PhotometricInterpretation
         { 274, SHORT, { layout.orientation } }, // Orientation
         { 277, SHORT, { layout.samplesPerPixel } }, // SamplesPerPixel
@@ -165,20 +169,8 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         entries.push_back( { 338, SHORT, { layout.extraSamples.begin(), layout.extraSamples.end() } } ); // ExtraSamples
     std::sort( entries.begin(), entries.end(), [] ( const Entry& a, const Entry& b ) { return a.tag < b.tag; } );
 
-    // the image file directory starts on a word boundary, the values longer than 4 bytes are stored after it
-    if ( file.size() % 2 != 0 )
-        file.push_back( 0 );
-    const auto directoryPos = uint32_t( file.size() );
-    const auto externalPos = directoryPos + uint32_t( 2 + 12 * entries.size() + 4 );
-    std::vector<uint8_t> external;
-    auto write16 = [&] ( uint16_t v ) { append( &v, sizeof( v ) ); };
-    auto write32 = [&] ( uint32_t v ) { append( &v, sizeof( v ) ); };
-    write16( uint16_t( entries.size() ) );
-    for ( const auto& entry : entries )
+    auto valueBytes = [&] ( const Entry& entry )
     {
-        write16( entry.tag );
-        write16( entry.type );
-        write32( uint32_t( entry.values.size() ) );
         std::vector<uint8_t> bytes;
         for ( auto v : entry.values )
         {
@@ -192,6 +184,39 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
                 bytes.insert( bytes.end(), ( const uint8_t* )&v, ( const uint8_t* )&v + sizeof( v ) );
             }
         }
+        return bytes;
+    };
+
+    // the image file directory and the pixels start on word boundaries; the values longer than 4 bytes are stored after the directory
+    auto even = [] ( size_t v ) { return v + v % 2; };
+    size_t externalSize = 0;
+    for ( const auto& entry : entries )
+        if ( const auto size = valueBytes( entry ).size(); size > 4 )
+            externalSize += even( size );
+    const auto directorySize = 2 + 12 * entries.size() + 4 + externalSize;
+    const auto directoryPos = layout.directoryFirst ? size_t( 8 ) : 8 + even( pixels.size() );
+    const auto pixelsPos = layout.directoryFirst ? 8 + even( directorySize ) : size_t( 8 );
+    for ( auto& entry : entries )
+        if ( entry.tag == 273 || entry.tag == 324 ) // StripOffsets, TileOffsets
+            for ( auto& offset : entry.values )
+                offset += uint32_t( pixelsPos );
+
+    std::vector<uint8_t> directory;
+    auto append = [&] ( const void* data, size_t size )
+    {
+        directory.insert( directory.end(), ( const uint8_t* )data, ( const uint8_t* )data + size );
+    };
+    auto write16 = [&] ( uint16_t v ) { append( &v, sizeof( v ) ); };
+    auto write32 = [&] ( uint32_t v ) { append( &v, sizeof( v ) ); };
+    const auto externalPos = uint32_t( directoryPos + 2 + 12 * entries.size() + 4 );
+    std::vector<uint8_t> external;
+    write16( uint16_t( entries.size() ) );
+    for ( const auto& entry : entries )
+    {
+        write16( entry.tag );
+        write16( entry.type );
+        write32( uint32_t( entry.values.size() ) );
+        const auto bytes = valueBytes( entry );
         if ( bytes.size() <= 4 )
         {
             // the value is stored in the entry itself, padded with zeros to 4 bytes
@@ -208,13 +233,20 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         }
     }
     write32( 0 ); // no next directory
-    file.insert( file.end(), external.begin(), external.end() );
+    directory.insert( directory.end(), external.begin(), external.end() );
 
     // all numbers are written in the native byte order
+    std::vector<uint8_t> file( 8 );
     std::memcpy( file.data(), std::endian::native == std::endian::little ? "II" : "MM", 2 );
     const uint16_t magic = 42;
     std::memcpy( file.data() + 2, &magic, sizeof( magic ) );
-    std::memcpy( file.data() + 4, &directoryPos, sizeof( directoryPos ) );
+    const auto directoryOffset = uint32_t( directoryPos );
+    std::memcpy( file.data() + 4, &directoryOffset, sizeof( directoryOffset ) );
+    const auto& first = layout.directoryFirst ? directory : pixels;
+    const auto& second = layout.directoryFirst ? pixels : directory;
+    file.insert( file.end(), first.begin(), first.end() );
+    file.resize( layout.directoryFirst ? pixelsPos : directoryPos );
+    file.insert( file.end(), second.begin(), second.end() );
 
     std::ofstream out( path, std::ios::binary );
     out.write( ( const char* )file.data(), std::streamsize( file.size() ) );
@@ -226,6 +258,59 @@ static std::vector<uint8_t> toBytes( const std::vector<T>& values )
     std::vector<uint8_t> res( values.size() * sizeof( T ) );
     std::memcpy( res.data(), values.data(), res.size() );
     return res;
+}
+
+static std::vector<uint8_t> readTestFile( const std::filesystem::path& path )
+{
+    std::ifstream in( path, std::ios::binary );
+    return { std::istreambuf_iterator<char>( in ), std::istreambuf_iterator<char>() };
+}
+
+// returns the position of the value of the first directory entry with given tag in a TIFF file in the native byte order, or 0
+static size_t findTiffValue( const std::vector<uint8_t>& file, uint16_t tag )
+{
+    if ( file.size() < 8 || std::memcmp( file.data(), std::endian::native == std::endian::little ? "II" : "MM", 2 ) != 0 )
+        return 0;
+    uint32_t directoryPos = 0;
+    std::memcpy( &directoryPos, file.data() + 4, sizeof( directoryPos ) );
+    uint16_t entryCount = 0;
+    if ( size_t( directoryPos ) + 2 > file.size() )
+        return 0;
+    std::memcpy( &entryCount, file.data() + directoryPos, sizeof( entryCount ) );
+    for ( size_t i = 0; i < entryCount; ++i )
+    {
+        const auto entryPos = size_t( directoryPos ) + 2 + 12 * i;
+        if ( entryPos + 12 > file.size() )
+            return 0;
+        uint16_t entryTag = 0;
+        std::memcpy( &entryTag, file.data() + entryPos, sizeof( entryTag ) );
+        if ( entryTag == tag )
+            return entryPos + 8;
+    }
+    return 0;
+}
+
+// returns the first value of a SHORT entry stored in the entry itself
+static std::optional<uint16_t> readTiffShort( const std::filesystem::path& path, uint16_t tag )
+{
+    const auto file = readTestFile( path );
+    const auto pos = findTiffValue( file, tag );
+    if ( !pos )
+        return {};
+    uint16_t res = 0;
+    std::memcpy( &res, file.data() + pos, sizeof( res ) );
+    return res;
+}
+
+// replaces the value of a LONG entry stored in the entry itself
+static void setTiffLong( const std::filesystem::path& path, uint16_t tag, uint32_t value )
+{
+    auto file = readTestFile( path );
+    const auto pos = findTiffValue( file, tag );
+    ASSERT_NE( pos, 0u );
+    std::memcpy( file.data() + pos, &value, sizeof( value ) );
+    std::ofstream out( path, std::ios::binary );
+    out.write( ( const char* )file.data(), std::streamsize( file.size() ) );
 }
 
 TEST( MRMesh, TiffTiledPartialTiles )
@@ -241,8 +326,8 @@ TEST( MRMesh, TiffTiledPartialTiles )
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
     const auto path = tmpFolder / "tiled.tif";
-    // the padding is 0xFFFF
-    writeTestTiff( path, { .size = size, .bitsPerSample = 16, .tileSize = tileSize }, toBytes( pixels ), 0xFF );
+    // the tiles are padded with 0xFFFF
+    writeTestTiff( path, { .size = size, .bitsPerSample = 16, .tileSize = tileSize }, toBytes( pixels ) );
 
     auto params = readTiffParameters( path );
     ASSERT_TRUE( params.has_value() ) << params.error();
@@ -349,6 +434,9 @@ TEST( MRMesh, TiffImageStraightAlpha )
     const auto savedPath = tmpFolder / "saved.tif";
     auto saveRes = ImageSave::toTiff( image, savedPath );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    // the reader ignores the tags, so they are checked in the file
+    EXPECT_EQ( readTiffShort( savedPath, 262 ), uint16_t( 2 ) ); // PhotometricInterpretation: RGB
+    EXPECT_EQ( readTiffShort( savedPath, 338 ), uint16_t( 2 ) ); // ExtraSamples: unassociated alpha
     loaded = ImageLoad::fromTiff( savedPath );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loaded->pixels, image.pixels );
@@ -378,14 +466,12 @@ TEST( MRMesh, TiffRasterRoundTrip )
 
         auto loaded = RasterLoad::fromAnySupportedFormat( path );
         ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-        EXPECT_EQ( loaded->info.dims, raster.info.dims );
-        EXPECT_EQ( loaded->info.type, type );
+        EXPECT_EQ( loaded->info, raster.info );
         EXPECT_EQ( loaded->data, raster.data );
 
         auto info = RasterLoad::infoFromAnySupportedFormat( path );
         ASSERT_TRUE( info.has_value() ) << info.error();
-        EXPECT_EQ( info->dims, raster.info.dims );
-        EXPECT_EQ( info->type, type );
+        EXPECT_EQ( *info, raster.info );
     }
 }
 
@@ -417,62 +503,126 @@ TEST( MRMesh, TiffRasterColorConversions )
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
     EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 255, 127, 0, 255 } ) );
-
-    // gray with alpha becomes RGBA8, the 16-bit gray value keeps its high byte as in libtiff's RGBA reader
-    const auto grayAlpha = tmpFolder / "ga16.tif";
-    writeTestTiff( grayAlpha, { .size = { 1, 1 }, .bitsPerSample = 16, .samplesPerPixel = 2, .extraSamples = { 2 } },
-        toBytes( std::vector<uint16_t>{ 0x80FF, 0x8000 } ) );
-    loaded = RasterLoad::fromTiff( grayAlpha );
-    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
-    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 128, 128, 128, 128 } ) );
-
-    // only the first sample of a gray image with more samples is used, as in libtiff's RGBA reader
-    const auto gray3 = tmpFolder / "gray3.tif";
-    writeTestTiff( gray3, { .size = { 2, 1 }, .samplesPerPixel = 3 }, { 1, 2, 3, 4, 5, 6 } );
-    loaded = RasterLoad::fromTiff( gray3 );
-    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    EXPECT_EQ( loaded->info.type, ScalarType::UInt8 );
-    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 1, 4 } ) );
 }
 
+// gray images with more samples per pixel are decoded by libtiff, which shows the second sample as alpha if ExtraSamples says so
+TEST( MRMesh, TiffRasterGrayExtraSamples )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+
+    // libtiff declares a missing extra sample as unspecified
+    const std::vector<uint16_t> extraSamples[] = { {}, { 0 }, { 2 } };
+    const std::vector<uint8_t> expected[] = {
+        { 10, 10, 10, 255, 20, 20, 20, 255 },
+        { 10, 10, 10, 255, 20, 20, 20, 255 },
+        { 10, 10, 10, 0, 20, 20, 20, 255 },
+    };
+    for ( size_t i = 0; i < std::size( extraSamples ); ++i )
+    {
+        const auto path = tmpFolder / fmt::format( "gray{}.tif", i );
+        writeTestTiff( path, { .size = { 2, 1 }, .samplesPerPixel = 2, .extraSamples = extraSamples[i] }, { 10, 0, 20, 255 } );
+        auto loaded = RasterLoad::fromTiff( path );
+        ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+        EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
+        EXPECT_EQ( loaded->data, expected[i] ) << i;
+    }
+
+    // libtiff cannot decode floating-point samples, so the first sample is kept
+    const auto floatPath = tmpFolder / "gray_float.tif";
+    writeTestTiff( floatPath, { .size = { 2, 1 }, .bitsPerSample = 32, .samplesPerPixel = 2, .sampleFormat = 3 },
+        toBytes( std::vector<float>{ 1.5f, 0.f, -2.f, 0.f } ) );
+    auto loaded = RasterLoad::fromTiff( floatPath );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::Float32 );
+    EXPECT_EQ( loaded->data, toBytes( std::vector<float>{ 1.5f, -2.f } ) );
+}
+
+TEST( MRMesh, TiffRasterIntegerAndNaNColors )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+
+    // as in libtiff's RGBA reader, signed samples are taken as unsigned ones
+    const auto rgb8 = tmpFolder / "rgb8s.tif";
+    writeTestTiff( rgb8, { .size = { 1, 1 }, .samplesPerPixel = 3, .sampleFormat = 2, .photometric = 2 }, { 0xFF, 0x80, 0x01 } );
+    auto loaded = RasterLoad::fromTiff( rgb8 );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::RGB8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 255, 128, 1 } ) );
+
+    const auto rgb16 = tmpFolder / "rgb16s.tif";
+    writeTestTiff( rgb16, { .size = { 1, 1 }, .bitsPerSample = 16, .samplesPerPixel = 3, .sampleFormat = 2, .photometric = 2 },
+        toBytes( std::vector<int16_t>{ 20000, -1, 0 } ) );
+    loaded = RasterLoad::fromTiff( rgb16 );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 78, 255, 0 } ) );
+
+    // wider samples keep their high byte
+    const auto rgb32 = tmpFolder / "rgb32.tif";
+    writeTestTiff( rgb32, { .size = { 1, 1 }, .bitsPerSample = 32, .samplesPerPixel = 3, .photometric = 2 },
+        toBytes( std::vector<uint32_t>{ 0xFF000000, 0x80FFFFFF, 0x00FFFFFF } ) );
+    loaded = RasterLoad::fromTiff( rgb32 );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 255, 128, 0 } ) );
+
+    // NaN becomes 0
+    const auto rgbFloat = tmpFolder / "rgbf.tif";
+    writeTestTiff( rgbFloat, { .size = { 1, 1 }, .bitsPerSample = 32, .samplesPerPixel = 3, .sampleFormat = 3, .photometric = 2 },
+        toBytes( std::vector<float>{ std::nanf( "" ), 0.5f, 1.f } ) );
+    loaded = RasterLoad::fromTiff( rgbFloat );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 0, 127, 255 } ) );
+}
+
+// the formats that libtiff cannot decode keep the stored values of the first sample, as the old image loader read them
+TEST( MRMesh, TiffRasterUndecodedFormat )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "linearraw.tif";
+
+    writeTestTiff( path, { .size = { 2, 1 }, .bitsPerSample = 16, .photometric = 34892 }, toBytes( std::vector<uint16_t>{ 0x0100, 0xFF00 } ) ); // LinearRaw
+    auto loaded = RasterLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::UInt16 );
+    EXPECT_EQ( loaded->data, toBytes( std::vector<uint16_t>{ 0x0100, 0xFF00 } ) );
+    auto image = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 1, 1, 1 ), Color( 255, 255, 255 ) } ) );
+}
+
+// palette images are decoded by libtiff
 TEST( MRMesh, TiffRasterPalette )
 {
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
 
-    for ( int bits : { 8, 16 } )
-    {
-        // red, green and blue colors for the indices 0, 1, 2, the rest is black
-        const size_t size = size_t( 1 ) << bits;
-        std::vector<uint16_t> colorMap( 3 * size, 0 );
-        colorMap[0] = 0xFFFF;
-        colorMap[size + 1] = 0xFFFF;
-        colorMap[2 * size + 2] = 0xFFFF;
-        const auto path = tmpFolder / fmt::format( "palette{}.tif", bits );
-        const auto indices = bits == 8 ? std::vector<uint8_t>{ 2, 0, 1 } : toBytes( std::vector<uint16_t>{ 2, 0, 1 } );
-        writeTestTiff( path, { .size = { 3, 1 }, .bitsPerSample = uint16_t( bits ), .photometric = 3, .colorMap = colorMap }, indices );
-
-        auto loaded = RasterLoad::fromTiff( path );
-        ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-        EXPECT_EQ( loaded->info.type, ScalarType::RGB8 );
-        EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 0, 0, 255, 255, 0, 0, 0, 255, 0 } ) );
-
-        auto image = ImageLoad::fromTiff( path );
-        ASSERT_TRUE( image.has_value() ) << image.error();
-        EXPECT_EQ( image->pixels, std::vector<Color>( { Color::blue(), Color::red(), Color::green() } ) );
-    }
+    // red, green and blue colors for the indices 0, 1, 2, the rest is black
+    std::vector<uint16_t> colorMap( 3 * 256, 0 );
+    colorMap[0] = 0xFFFF;
+    colorMap[256 + 1] = 0xFFFF;
+    colorMap[512 + 2] = 0xFFFF;
+    const auto path = tmpFolder / "palette.tif";
+    writeTestTiff( path, { .size = { 3, 1 }, .photometric = 3, .colorMap = colorMap }, { 2, 0, 1 } );
+    auto loaded = RasterLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info.type, ScalarType::RGBA8 );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 0, 0, 255, 255, 255, 0, 0, 255, 0, 255, 0, 255 } ) );
+    auto image = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color::blue(), Color::red(), Color::green() } ) );
 
     // an old-style color map with 8-bit values
-    std::vector<uint16_t> colorMap( 3 * 256, 0 );
+    std::fill( colorMap.begin(), colorMap.end(), uint16_t( 0 ) );
     colorMap[1] = 200; // red of index 1
     colorMap[256 + 1] = 100; // green of index 1
     colorMap[512 + 1] = 50; // blue of index 1
-    const auto path = tmpFolder / "palette8.tif";
-    writeTestTiff( path, { .size = { 2, 1 }, .photometric = 3, .colorMap = colorMap }, { 1, 0 } );
-    auto loaded = RasterLoad::fromTiff( path );
+    const auto oldPath = tmpFolder / "palette_old.tif";
+    writeTestTiff( oldPath, { .size = { 2, 1 }, .photometric = 3, .colorMap = colorMap }, { 1, 0 } );
+    loaded = RasterLoad::fromTiff( oldPath );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 200, 100, 50, 0, 0, 0 } ) );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 200, 100, 50, 255, 0, 0, 0, 255 } ) );
 }
 
 TEST( MRMesh, TiffRasterMinIsWhite )
@@ -491,7 +641,7 @@ TEST( MRMesh, TiffRasterMinIsWhite )
     ASSERT_TRUE( image.has_value() ) << image.error();
     EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 255, 255, 255 ), Color( 55, 55, 55 ) } ) );
 
-    // gray with alpha becomes colors, so the gray values are inverted already in the raster
+    // gray with alpha is decoded by libtiff, which inverts the gray values
     const auto grayAlpha = tmpFolder / "white_alpha.tif";
     writeTestTiff( grayAlpha, { .size = { 2, 1 }, .samplesPerPixel = 2, .photometric = 0, .extraSamples = { 2 } }, { 0, 128, 200, 255 } );
     loaded = RasterLoad::fromTiff( grayAlpha );
@@ -545,8 +695,7 @@ TEST( MRMesh, TiffRasterStoredLayouts )
 
         auto loaded = RasterLoad::fromTiff( path );
         ASSERT_TRUE( loaded.has_value() ) << c.name << ": " << loaded.error();
-        EXPECT_EQ( loaded->info.dims, Vector3i( size.x, size.y, 1 ) ) << c.name;
-        EXPECT_EQ( loaded->info.type, ScalarType::RGB8 ) << c.name;
+        EXPECT_EQ( loaded->info, ( RasterInfo{ .dims = Vector3i( size.x, size.y, 1 ), .type = ScalarType::RGB8 } ) ) << c.name;
         EXPECT_EQ( loaded->data, samples ) << c.name;
     }
 
@@ -608,6 +757,24 @@ TEST( MRMesh, TiffRasterDecoded )
         0, 0, 0, 255,
         0, 255, 255, 255,
     } ) );
+
+    // libtiff applies the orientation itself: the bottom row goes first in the file
+    const auto bottomLeft = tmpFolder / "cmyk_bottom_left.tif";
+    writeTestTiff( bottomLeft, {
+        .size = { 2, 2 },
+        .samplesPerPixel = 4,
+        .photometric = 5,
+        .orientation = 4, // bottom-left
+    }, {
+        0, 0, 0, 0, 0, 0, 0, 255, // bottom row: white, black
+        255, 0, 0, 0, 0, 0, 0, 0, // top row: cyan, white
+    } );
+    loaded = RasterLoad::fromTiff( bottomLeft );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( {
+        0, 255, 255, 255, 255, 255, 255, 255,
+        255, 255, 255, 255, 0, 0, 0, 255,
+    } ) );
 }
 
 TEST( MRMesh, TiffRasterErrors )
@@ -615,16 +782,82 @@ TEST( MRMesh, TiffRasterErrors )
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
 
+    // checks that loading fails with an error containing given text
+    auto expectError = [] ( const auto& res, const std::string& text )
+    {
+        ASSERT_FALSE( res.has_value() ) << text;
+        EXPECT_NE( res.error().find( text ), std::string::npos ) << res.error();
+    };
+
     // libtiff's RGBA reader does not support 12-bit samples either
     const auto path12 = tmpFolder / "gray12.tif";
     writeTestTiff( path12, { .size = { 2, 1 }, .bitsPerSample = 12 }, { 1, 2 } );
-    EXPECT_FALSE( RasterLoad::fromTiff( path12 ).has_value() );
-    EXPECT_FALSE( RasterLoad::infoFromTiff( path12 ).has_value() );
-    EXPECT_FALSE( ImageLoad::fromTiff( path12 ).has_value() );
+    expectError( RasterLoad::fromTiff( path12 ), "12-bit" );
+    expectError( RasterLoad::infoFromTiff( path12 ), "12-bit" );
+    expectError( ImageLoad::fromTiff( path12 ), "12-bit" );
 
     const auto notTiff = tmpFolder / "text.tif";
     std::ofstream( notTiff ) << "not a TIFF file";
-    EXPECT_FALSE( RasterLoad::fromTiff( notTiff ).has_value() );
+    expectError( RasterLoad::fromTiff( notTiff ), "Cannot read file" );
+
+    // libtiff reads a palette image without a color map, or with a color map of a wrong size, as a gray one
+    const auto noColorMap = tmpFolder / "no_color_map.tif";
+    writeTestTiff( noColorMap, { .size = { 2, 1 }, .photometric = 3 }, { 0, 200 } );
+    auto gray = RasterLoad::fromTiff( noColorMap );
+    ASSERT_TRUE( gray.has_value() ) << gray.error();
+    EXPECT_EQ( gray->info.type, ScalarType::UInt8 );
+    EXPECT_EQ( gray->data, std::vector<uint8_t>( { 0, 200 } ) );
+    const auto shortColorMap = tmpFolder / "short_color_map.tif";
+    writeTestTiff( shortColorMap, { .size = { 2, 1 }, .photometric = 3, .colorMap = std::vector<uint16_t>( 256, 0xFFFF ) }, { 0, 200 } );
+    auto image = ImageLoad::fromTiff( shortColorMap );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 0, 0, 0 ), Color( 200, 200, 200 ) } ) );
+
+    // the samples cannot be decoded without the codec
+    const auto unknownCodec = tmpFolder / "unknown_codec.tif";
+    writeTestTiff( unknownCodec, { .size = { 2, 1 }, .compression = 60000 }, { 0, 1 } );
+    expectError( RasterLoad::infoFromTiff( unknownCodec ), "compression" );
+    expectError( RasterLoad::fromTiff( unknownCodec ), "compression" );
+
+    // the declared size does not fit in memory, although each side fits in int
+    const auto tooLarge = tmpFolder / "too_large.tif";
+    writeTestTiff( tooLarge, { .size = { 1, 1 } }, { 0 } );
+    setTiffLong( tooLarge, 256, 0x7FFFFFFF ); // ImageWidth
+    setTiffLong( tooLarge, 257, 0x7FFFFFFF ); // ImageLength
+    setTiffLong( tooLarge, 278, 0xFFFFFFFF ); // RowsPerStrip: a single strip
+    expectError( RasterLoad::fromTiff( tooLarge ), "too large" );
+    expectError( ImageLoad::fromTiff( tooLarge ), "too large" );
+
+    // the tile width does not fit in int
+    const auto wideTiles = tmpFolder / "wide_tiles.tif";
+    writeTestTiff( wideTiles, { .size = { 16, 16 }, .tileSize = { 16, 16 } }, std::vector<uint8_t>( 256 ) );
+    setTiffLong( wideTiles, 322, 0x80000000 ); // TileWidth
+    expectError( RasterLoad::fromTiff( wideTiles ), "tiles" );
+
+    // the file is cut off in the last strip or tile, the directory goes first, so the file still opens
+    const auto cutOff = [] ( const std::filesystem::path& path )
+    {
+        std::error_code ec;
+        const auto size = std::filesystem::file_size( path, ec );
+        std::filesystem::resize_file( path, size - 2, ec );
+    };
+    const auto strips = tmpFolder / "cut_strips.tif";
+    writeTestTiff( strips, { .size = { 4, 4 }, .rowsPerStrip = 1, .directoryFirst = true }, std::vector<uint8_t>( 16, 7 ) );
+    cutOff( strips );
+    EXPECT_TRUE( RasterLoad::infoFromTiff( strips ).has_value() );
+    expectError( RasterLoad::fromTiff( strips ), "Error reading strip" );
+    expectError( ImageLoad::fromTiff( strips ), "Error reading strip" );
+
+    const auto tiles = tmpFolder / "cut_tiles.tif";
+    writeTestTiff( tiles, { .size = { 20, 18 }, .tileSize = { 16, 16 }, .directoryFirst = true }, std::vector<uint8_t>( 20 * 18, 7 ) );
+    cutOff( tiles );
+    expectError( RasterLoad::fromTiff( tiles ), "Error reading tile" );
+
+    const auto decoded = tmpFolder / "cut_cmyk.tif";
+    writeTestTiff( decoded, { .size = { 2, 2 }, .samplesPerPixel = 4, .photometric = 5, .rowsPerStrip = 1, .directoryFirst = true },
+        std::vector<uint8_t>( 16, 7 ) );
+    cutOff( decoded );
+    expectError( RasterLoad::fromTiff( decoded ), "Error reading pixels" );
 
     // the data size does not match the dimensions
     Raster raster{
@@ -661,10 +894,11 @@ TEST( MRMesh, TiffDistanceMapSave )
     auto saveRes = DistanceMapSave::toTiff( dmap, path, { .xf = &xf } );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
+    EXPECT_EQ( readTiffShort( path, 262 ), uint16_t( 1 ) ); // PhotometricInterpretation: BlackIsZero
+
     auto raster = RasterLoad::fromTiff( path );
     ASSERT_TRUE( raster.has_value() ) << raster.error();
-    EXPECT_EQ( raster->info.dims, Vector3i( 3, 2, 1 ) );
-    EXPECT_EQ( raster->info.type, ScalarType::Float32 );
+    EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { 3, 2, 1 }, .type = ScalarType::Float32 } ) );
     std::vector<float> values( 6 );
     ASSERT_EQ( raster->data.size(), values.size() * sizeof( float ) );
     std::memcpy( values.data(), raster->data.data(), raster->data.size() );
@@ -676,6 +910,34 @@ TEST( MRMesh, TiffDistanceMapSave )
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( std::vector<float>( loaded->data(), loaded->data() + 6 ), values );
     EXPECT_EQ( AffineXf3f( toWorld ), xf );
+}
+
+TEST( MRMesh, TiffCancel )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "strips.tif";
+    writeTestTiff( path, { .size = { 4, 4 }, .rowsPerStrip = 1 }, std::vector<uint8_t>( 16, 7 ) );
+
+    // the callback stops at the second report
+    int calls = 0;
+    const ProgressCallback cancelSecond = [&] ( float ) { return ++calls < 2; };
+    auto loaded = RasterLoad::fromTiff( path, { .progress = cancelSecond } );
+    ASSERT_FALSE( loaded.has_value() );
+    // the file name is not appended, so that callers can recognize the cancellation
+    EXPECT_EQ( loaded.error(), stringOperationCanceled() );
+
+    calls = 0;
+    Raster raster{ .info = { .dims = { 2, 4, 1 }, .type = ScalarType::UInt8 } };
+    raster.data.resize( raster.info.dataSize() );
+    auto saveRes = RasterSave::toTiff( raster, tmpFolder / "raster.tif", { .progress = cancelSecond } );
+    ASSERT_FALSE( saveRes.has_value() );
+    EXPECT_EQ( saveRes.error(), stringOperationCanceled() );
+
+    calls = 0;
+    saveRes = DistanceMapSave::toTiff( DistanceMap( 2, 4 ), tmpFolder / "dmap.tiff", { .progress = cancelSecond } );
+    ASSERT_FALSE( saveRes.has_value() );
+    EXPECT_EQ( saveRes.error(), stringOperationCanceled() );
 }
 #endif //!MRIOEXTRAS_NO_TIFF
 

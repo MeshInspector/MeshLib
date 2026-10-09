@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstring>
+#include <limits>
 
 namespace MR
 {
@@ -40,6 +41,10 @@ TEST( MRMesh, RasterInfoDataSize )
     EXPECT_EQ( info.dataSize(), 0u );
     info = { .dims = { 3, 0, 1 }, .type = ScalarType::UInt8 };
     EXPECT_EQ( info.dataSize(), 0u );
+
+    // the size that does not fit in size_t cannot match any data
+    info = { .dims = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF }, .type = ScalarType::Float64 };
+    EXPECT_EQ( info.dataSize(), std::numeric_limits<size_t>::max() );
 }
 
 TEST( MRMesh, RasterToImageGray )
@@ -71,6 +76,18 @@ TEST( MRMesh, RasterToImageScaledGray )
         Color( 0, 0, 0 ), Color( 127, 127, 127 ), Color( 255, 255, 255 ), Color::black()
     } ) );
 
+    // infinite values are excluded from the range too, even the largest finite values do not overflow it
+    const auto infinite = makeRaster<float>( { 4, 1 }, ScalarType::Float32,
+        { -std::numeric_limits<float>::infinity(), 1.f, 3.f, std::numeric_limits<float>::infinity() } );
+    image = convertRasterToImage( infinite );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color::black(), Color( 0, 0, 0 ), Color( 255, 255, 255 ), Color::black() } ) );
+    const auto extreme = makeRaster<double>( { 3, 1 }, ScalarType::Float64,
+        { std::numeric_limits<double>::lowest(), 0., std::numeric_limits<double>::max() } );
+    image = convertRasterToImage( extreme );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 0, 0, 0 ), Color( 127, 127, 127 ), Color( 255, 255, 255 ) } ) );
+
     const auto raster16 = makeRaster<int16_t>( { 3, 1 }, ScalarType::Int16, { -300, 0, 300 } );
     image = convertRasterToImage( raster16 );
     ASSERT_TRUE( image.has_value() ) << image.error();
@@ -100,14 +117,14 @@ TEST( MRMesh, RasterImageRoundTrip )
         .resolution = { 3, 2 },
     };
     const auto raster = convertImageToRaster( image );
-    EXPECT_EQ( raster.info.dims, Vector3i( 3, 2, 1 ) );
-    EXPECT_EQ( raster.info.type, ScalarType::RGBA8 );
-    ASSERT_EQ( raster.data.size(), 24u );
+    ASSERT_TRUE( raster.has_value() ) << raster.error();
+    EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { 3, 2, 1 }, .type = ScalarType::RGBA8 } ) );
+    ASSERT_EQ( raster->data.size(), 24u );
     // the first row of the raster is the top one, i.e. the last row of the image
-    EXPECT_EQ( raster.data[0], 13 );
-    EXPECT_EQ( raster.data[12], 1 );
+    EXPECT_EQ( raster->data[0], 13 );
+    EXPECT_EQ( raster->data[12], 1 );
 
-    auto back = convertRasterToImage( raster );
+    auto back = convertRasterToImage( *raster );
     ASSERT_TRUE( back.has_value() ) << back.error();
     EXPECT_EQ( back->resolution, image.resolution );
     EXPECT_EQ( back->pixels, image.pixels );
@@ -127,6 +144,19 @@ TEST( MRMesh, RasterToImageErrors )
 
     raster.info.type = ScalarType::Unknown;
     EXPECT_FALSE( convertRasterToImage( raster ).has_value() );
+}
+
+TEST( MRMesh, ImageToRasterErrors )
+{
+    Image image{
+        .pixels = { Color::red(), Color::green(), Color::blue() },
+        .resolution = { 2, 2 },
+    };
+    EXPECT_FALSE( convertImageToRaster( image ).has_value() );
+    image.resolution = { 4, -1 };
+    EXPECT_FALSE( convertImageToRaster( image ).has_value() );
+    image.resolution = { 3, 1 };
+    EXPECT_TRUE( convertImageToRaster( image ).has_value() );
 }
 
 } //namespace MR

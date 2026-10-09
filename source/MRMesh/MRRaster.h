@@ -24,8 +24,10 @@ struct RasterInfo
     /// type of all values
     ScalarType type = ScalarType::Unknown;
 
-    /// returns the size of all values in bytes
+    /// returns the size of all values in bytes, or the largest size_t value if the size does not fit in size_t, which no data can have
     [[nodiscard]] MRMESH_API size_t dataSize() const;
+
+    bool operator==( const RasterInfo& ) const = default;
 };
 
 /// regular grid of values of any type: an image if it has one layer, otherwise a volume
@@ -40,11 +42,11 @@ struct Raster
 /// converts a raster with one layer to an image (the rows are reordered from bottom to top):
 /// * RGBA8 values are taken as is, RGB8 values become opaque colors;
 /// * UInt8 values become gray colors, and so do the high bytes of UInt16 values;
-/// * the values of other types are scaled from the range of non-NaN values to gray colors, NaN values become black
+/// * the values of other types are scaled from the range of finite values to gray colors, NaN and infinite values become black
 MRMESH_API Expected<Image> convertRasterToImage( const Raster& raster );
 
 /// converts an image to a raster with one layer of RGBA8 values
-MRMESH_API Raster convertImageToRaster( const Image& image );
+MRMESH_API Expected<Raster> convertImageToRaster( const Image& image );
 
 /// settings for loading rasters from external formats
 struct RasterLoadSettings

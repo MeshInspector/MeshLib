@@ -117,9 +117,14 @@ jobs:
 
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
-      - uses: actions-ecosystem/action-get-latest-tag@v1
+      - name: Get latest tag
         if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
         id: get-latest-tag
+        # same as actions-ecosystem/action-get-latest-tag, whose Docker image pull hits Docker Hub's rate limit
+        run: |
+          git fetch --tags
+          git fetch --prune --unshallow || true
+          echo "tag=$(git describe --abbrev=0 --tags || echo v0.0.0)" >> "$GITHUB_OUTPUT"
 
       # Attach to a release that already exists for this ref; never create one. No match leaves the
       # tag empty, which is what skips the upload job.

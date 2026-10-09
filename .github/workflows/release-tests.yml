@@ -28,8 +28,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - uses: actions-ecosystem/action-get-latest-tag@v1
+      - name: Get latest tag
         id: get-latest-tag
+        # same as actions-ecosystem/action-get-latest-tag, whose Docker image pull hits Docker Hub's rate limit
+        run: |
+          git fetch --tags
+          git fetch --prune --unshallow || true
+          echo "tag=$(git describe --abbrev=0 --tags || echo v0.0.0)" >> "$GITHUB_OUTPUT"
 
   pip-test-linux:
     needs: setup

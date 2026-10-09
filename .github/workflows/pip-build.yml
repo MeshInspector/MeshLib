@@ -614,9 +614,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ["x86", "arm64"]
+        platform: ["x64", "arm64"]
         include:
-          - platform: "x86"
+          - platform: "x64"
             plat-name: macosx_12_0_x86_64
             runner: macos-15-intel
             instance: macos-15-intel
@@ -637,7 +637,7 @@ jobs:
       contents: read  # This is required for actions/checkout
     env:
       DEVELOPER_DIR: /Applications/Xcode_${{ matrix.xcode-version }}.app/Contents/Developer
-      VCPKG_TRIPLET: ${{ matrix.platform == 'x86' && 'x64' || matrix.platform }}-osx-meshlib
+      VCPKG_TRIPLET: ${{ matrix.platform }}-osx-meshlib
     steps:
       # GitHub-hosted runners enable Spotlight by default
       # https://github.com/actions/runner-images/discussions/5032
@@ -987,13 +987,13 @@ jobs:
           - platform: "arm64"
             runner-tier: "github"
             instance: macos-26
-          - platform: "x86"
+          - platform: "x64"
             runner-tier: "self-hosted"
             instance: macos-12-intel
-          - platform: "x86"
+          - platform: "x64"
             runner-tier: "github"
             instance: macos-15-intel
-          - platform: "x86"
+          - platform: "x64"
             runner-tier: "github"
             instance: macos-26-intel
     steps:

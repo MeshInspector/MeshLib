@@ -286,7 +286,11 @@ zip_int64_t istreamZipSourceCallback( void *istream, void *data, zip_uint64_t le
             zip_stat_t* zipStat = (zip_stat_t*)data;
             zip_stat_init(zipStat);
 
-            zipStat->size = getStreamSize( is );
+            // the size of whole stream is requested, independently of current position
+            const auto pos = is.tellg();
+            is.seekg( 0, std::ios::end );
+            zipStat->size = zip_uint64_t( std::streamoff( is.tellg() ) );
+            is.seekg( pos );
             zipStat->valid |= ZIP_STAT_SIZE;
             assert( !is.fail() );
 
@@ -335,7 +339,7 @@ Expected<void> forEachZipEntry_( zip_t * zip, const char * password,
 
         zip_file_t * zfile = zip_fopen_index( zip, i, 0 );
         if ( !zfile )
-            return unexpected( "Cannot open zip file " + nameFixed );
+            return unexpected( "Cannot open zip file " + nameFixed + ": " + zip_strerror( zip ) );
         std::vector<char> data( stats.size );
         const auto bytesRead = zip_fread( zfile, data.data(), data.size() );
         zip_fclose( zfile );

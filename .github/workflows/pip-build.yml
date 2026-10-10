@@ -835,6 +835,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.container-prefix }}${{ matrix.os }}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       # `include` is the cartesian product (surviving platforms x
@@ -1126,6 +1129,7 @@ jobs:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
     needs: [setup, upload-to-release]
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
+    secrets: inherit
 
   delete-artifacts:
     timeout-minutes: 5

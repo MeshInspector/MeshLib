@@ -418,6 +418,7 @@ jobs:
       test_windows:      ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   update-dev-documentation:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),

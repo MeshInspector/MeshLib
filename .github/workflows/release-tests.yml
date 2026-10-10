@@ -37,6 +37,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{matrix.container-prefix}}${{matrix.os}}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:

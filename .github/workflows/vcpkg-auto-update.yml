@@ -55,6 +55,11 @@ jobs:
             echo "need_vcpkg_update=false" >> $GITHUB_OUTPUT
           fi
           
+      # update_python_zip.py runs itself under the vcpkg port's Python version via uv
+      - name: Install uv
+        if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+
       - name: Bump vcpkg
         if: ${{ steps.compare.outputs.need_vcpkg_update == 'true' }}
         id: bump-vcpkg
@@ -78,6 +83,10 @@ jobs:
           sed -i "s/${{ steps.extract-tag.outputs.current_vcpkg_tag }}/${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}/g" ./thirdparty/vcpkg/vcpkg.json
           current_vcpkg_baseline=$(jq -r '.configuration["default-registry"].baseline' ./thirdparty/vcpkg/vcpkg.json)
           sed -i "s/${current_vcpkg_baseline}/${{ steps.get-latest-tag.outputs.latest_vcpkg_baseline }}/g" ./thirdparty/vcpkg/vcpkg.json
+
+          # Regenerate the Windows Python standard library zip from the new python3 port
+          python3 scripts/update_python_zip.py ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}
+          git add thirdparty/python
 
           # Commit the changes
           git commit -am "Update vcpkg tag to ${{ steps.get-latest-tag.outputs.latest_vcpkg_tag }}"

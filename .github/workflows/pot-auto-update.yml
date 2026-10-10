@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: fedora:44  # gettext 0.26
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     env:
       GIT_BRANCH_NAME: auto-ci/update_pot_files

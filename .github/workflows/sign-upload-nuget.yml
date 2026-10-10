@@ -26,7 +26,7 @@ jobs:
         if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: actions/checkout@v7
 
-      - uses: actions-ecosystem/action-get-latest-tag@v1
+      - uses: ./.github/actions/get-latest-tag
         if: ${{ github.event_name != 'workflow_dispatch' }}
         id: get-latest-tag
 

@@ -440,6 +440,11 @@ public:
     // get stop event loop flag (this flag is glfwShouldWindowClose equivalent)
     bool getStopEventLoopFlag() const { return stopEventLoop_; }
 
+    // sets the value that `launch` returns after a normal shutdown, e.g. to report a failure;
+    // use it with `stopEventLoop` instead of calling std::exit while the viewer is running
+    void setExitCode( int exitCode ) { exitCode_ = exitCode; }
+    int getExitCode() const { return exitCode_; }
+
     // return true if window should close
     // calls interrupt signal and if no slot interrupts return true, otherwise return false
     MRVIEWER_API bool windowShouldClose();
@@ -624,6 +629,7 @@ private:
     int getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const;
 
     bool stopEventLoop_{ false };
+    int exitCode_{ 0 };
 
     bool isPreLaunched_{ false };
     bool isLaunched_{ false };

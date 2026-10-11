@@ -759,7 +759,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( params.close )
         launchShut();
 
-    return EXIT_SUCCESS;
+    return exitCode_;
 }
 
 bool Viewer::checkOpenGL_( const LaunchParams& params )

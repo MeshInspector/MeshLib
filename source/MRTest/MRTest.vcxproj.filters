@@ -376,6 +376,9 @@
     <ClCompile Include="MRTiffIOTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRRasterTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRScalarConvertTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

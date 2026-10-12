@@ -154,6 +154,9 @@
     <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRRaster.h" />
+    <ClInclude Include="MRRasterLoad.h" />
+    <ClInclude Include="MRRasterSave.h" />
     <ClInclude Include="MRInnerShell.h" />
     <ClInclude Include="MRInSphere.h" />
     <ClInclude Include="MRIOParsing.h" />
@@ -588,6 +591,9 @@
     <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
+    <ClCompile Include="MRRaster.cpp" />
+    <ClCompile Include="MRRasterLoad.cpp" />
+    <ClCompile Include="MRRasterSave.cpp" />
     <ClCompile Include="MRImproveSampling.cpp" />
     <ClCompile Include="MRInnerShell.cpp" />
     <ClCompile Include="MRInSphere.cpp" />

@@ -321,6 +321,12 @@
     <ClInclude Include="MRImageSave.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
+    <ClInclude Include="MRRasterLoad.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRasterSave.h">
+      <Filter>Source Files\IO</Filter>
+    </ClInclude>
     <ClInclude Include="MRMatrix.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
@@ -442,6 +448,9 @@
       <Filter>Source Files\IO</Filter>
     </ClInclude>
     <ClInclude Include="MRImage.h">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClInclude>
+    <ClInclude Include="MRRaster.h">
       <Filter>Source Files\BaseStructures</Filter>
     </ClInclude>
     <ClInclude Include="MRScalarConvert.h">
@@ -1607,6 +1616,12 @@
     <ClCompile Include="MRImageSave.cpp">
       <Filter>Source Files\IO</Filter>
     </ClCompile>
+    <ClCompile Include="MRRasterLoad.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRasterSave.cpp">
+      <Filter>Source Files\IO</Filter>
+    </ClCompile>
     <ClCompile Include="MRMeshIntersect.cpp">
       <Filter>Source Files\AABBTree</Filter>
     </ClCompile>
@@ -2061,6 +2076,9 @@
       <Filter>Source Files\IO</Filter>
     </ClCompile>
     <ClCompile Include="MRImage.cpp">
+      <Filter>Source Files\BaseStructures</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRaster.cpp">
       <Filter>Source Files\BaseStructures</Filter>
     </ClCompile>
     <ClCompile Include="MRScalarConvert.cpp">

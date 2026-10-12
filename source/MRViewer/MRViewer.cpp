@@ -3037,9 +3037,10 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
     menuPlugin_ = menu;
 }
 
-void Viewer::stopEventLoop()
+void Viewer::stopEventLoop( int exitCode )
 {
     stopEventLoop_ = true;
+    exitCode_ = exitCode;
     postClose();
 }
 

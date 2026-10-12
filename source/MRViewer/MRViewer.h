@@ -435,15 +435,11 @@ public:
     template <typename T>
     std::shared_ptr<T> getMenuPluginAs() const { return std::dynamic_pointer_cast<T>( getMenuPlugin() ); }
 
-    // sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)
-    MRVIEWER_API void stopEventLoop();
+    // sets stop event loop flag (this flag is glfwShouldWindowClose equivalent);
+    // `launch` returns exitCode after the normal shutdown, so use it instead of std::exit to report a failure
+    MRVIEWER_API void stopEventLoop( int exitCode = 0 );
     // get stop event loop flag (this flag is glfwShouldWindowClose equivalent)
     bool getStopEventLoopFlag() const { return stopEventLoop_; }
-
-    // sets the value that `launch` returns after a normal shutdown, e.g. to report a failure;
-    // use it with `stopEventLoop` instead of calling std::exit while the viewer is running
-    void setExitCode( int exitCode ) { exitCode_ = exitCode; }
-    int getExitCode() const { return exitCode_; }
 
     // return true if window should close
     // calls interrupt signal and if no slot interrupts return true, otherwise return false

@@ -415,7 +415,7 @@ jobs:
         uses: ./.github/actions/setup-rust
 
         # This consumes the JSON created by generating the C bindings, like the C# step.
-      - name: Generate and build Rust bindings and examples
+      - name: Generate and build Rust bindings, examples and tests
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
         shell: cmd
         env:
@@ -426,6 +426,7 @@ jobs:
           cargo build --manifest-path examples/rust-examples/Cargo.toml || exit /b 1
           set PATH=%CD%\source\%MR_ARCH%\${{matrix.config}};%PATH%
           examples\rust-examples\target\debug\MeshBoolean.exe || exit /b 1
+          cargo test --manifest-path source/MRTestRust/Cargo.toml || exit /b 1
 
       - name: Build C examples
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}

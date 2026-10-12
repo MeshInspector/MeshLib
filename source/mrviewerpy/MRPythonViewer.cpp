@@ -489,7 +489,8 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrviewerpy, Viewer, [] ( pybind11::module_& m )
             "Captures part of window (redraw 3d scene over UI (without redrawing UI))" ).
         def( "captureUIScreenShot", &pythonCaptureUIScreenShot, pybind11::arg( "path" ),
             "Captures full window screenshot with UI" ).
-        def( "shutdown", MR::pythonRunFromGUIThread( &MR::Viewer::stopEventLoop ), "sets stop event loop flag (this flag is glfwShouldWindowClose equivalent)" ).
+        def( "shutdown", MR::pythonRunFromGUIThread( &MR::Viewer::stopEventLoop ), pybind11::arg( "exitCode" ) = 0,
+            "sets stop event loop flag (this flag is glfwShouldWindowClose equivalent); the viewer's launch then returns exitCode" ).
         // Input events:
         def( "mouseDown",
             []( MR::Viewer& v, MR::MouseButton b, PythonKeyMod m )

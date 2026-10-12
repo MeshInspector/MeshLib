@@ -759,7 +759,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( params.close )
         launchShut();
 
-    return exitCode_;
+    return stopEventLoopExitCode_.value_or( 0 );
 }
 
 bool Viewer::checkOpenGL_( const LaunchParams& params )
@@ -1075,10 +1075,10 @@ void Viewer::runEventLoopIteration( double maxWaitSec )
         if ( spaceMouseHandler_ )
             spaceMouseHandler_->handle();
         CommandLoop::processCommands();
-    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
+    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopExitCode_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
     // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
-    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
+    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoopExitCode_ )
         return;
 
     if ( isAnimating )
@@ -2376,7 +2376,7 @@ void Viewer::initSpaceMouseHandler_()
 
 bool Viewer::windowShouldClose()
 {
-    if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
+    if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopExitCode_ )
         return false;
 
     if ( !window || !interruptWindowClose() )
@@ -2384,7 +2384,7 @@ bool Viewer::windowShouldClose()
 
     if ( window )
         glfwSetWindowShouldClose( window, false );
-    stopEventLoop_ = false;
+    stopEventLoopExitCode_.reset();
     return false;
 }
 
@@ -3039,8 +3039,7 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
 
 void Viewer::stopEventLoop( int exitCode )
 {
-    stopEventLoop_ = true;
-    exitCode_ = exitCode;
+    stopEventLoopExitCode_ = exitCode;
     postClose();
 }
 

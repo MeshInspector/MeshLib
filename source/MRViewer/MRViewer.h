@@ -7,6 +7,7 @@
 #include "MRMesh/MRRenderModelParameters.h"
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 
 struct GLFWwindow;
 
@@ -439,7 +440,7 @@ public:
     // `launch` returns exitCode after the normal shutdown, so use it instead of std::exit to report a failure
     MRVIEWER_API void stopEventLoop( int exitCode = 0 );
     // get stop event loop flag (this flag is glfwShouldWindowClose equivalent)
-    bool getStopEventLoopFlag() const { return stopEventLoop_; }
+    bool getStopEventLoopFlag() const { return stopEventLoopExitCode_.has_value(); }
 
     // return true if window should close
     // calls interrupt signal and if no slot interrupts return true, otherwise return false
@@ -624,8 +625,8 @@ private:
     // forSceneTexture - true request MSAA required for scene texture (calling with !sceneTextureOn is invalid), false - request MSAA for main framebuffer
     int getRequiredMSAA_( bool sceneTextureOn, bool forSceneTexture ) const;
 
-    bool stopEventLoop_{ false };
-    int exitCode_{ 0 };
+    // set by stopEventLoop: the loop is to stop, and `launch` returns this code; reset if the close is interrupted
+    std::optional<int> stopEventLoopExitCode_;
 
     bool isPreLaunched_{ false };
     bool isLaunched_{ false };

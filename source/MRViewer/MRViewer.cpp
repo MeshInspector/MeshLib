@@ -759,7 +759,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( params.close )
         launchShut();
 
-    return stopEventLoopExitCode_.value_or( 0 );
+    return stopEventLoopRequest_ ? stopEventLoopRequest_->exitCode : 0;
 }
 
 bool Viewer::checkOpenGL_( const LaunchParams& params )
@@ -1075,10 +1075,10 @@ void Viewer::runEventLoopIteration( double maxWaitSec )
         if ( spaceMouseHandler_ )
             spaceMouseHandler_->handle();
         CommandLoop::processCommands();
-    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopExitCode_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
+    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopRequest_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
     // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
-    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoopExitCode_ )
+    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoopRequest_ )
         return;
 
     if ( isAnimating )
@@ -2376,15 +2376,15 @@ void Viewer::initSpaceMouseHandler_()
 
 bool Viewer::windowShouldClose()
 {
-    if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopExitCode_ )
+    if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopRequest_ )
         return false;
 
-    if ( !window || !interruptWindowClose() )
+    if ( !window || ( stopEventLoopRequest_ && !stopEventLoopRequest_->interruptible ) || !interruptWindowClose() )
         return true;
 
     if ( window )
         glfwSetWindowShouldClose( window, false );
-    stopEventLoopExitCode_.reset();
+    stopEventLoopRequest_.reset();
     return false;
 }
 
@@ -3037,9 +3037,9 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
     menuPlugin_ = menu;
 }
 
-void Viewer::stopEventLoop( int exitCode )
+void Viewer::stopEventLoop( int exitCode, bool interruptible )
 {
-    stopEventLoopExitCode_ = exitCode;
+    stopEventLoopRequest_ = StopEventLoopRequest{ exitCode, interruptible };
     postClose();
 }
 

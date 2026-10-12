@@ -235,9 +235,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # anonymous pull when the secret is unavailable (Dependabot, forks)
+      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
     strategy:
       fail-fast: false
       # `include` enumerates the per-platform combos, surviving platforms
@@ -835,9 +834,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.container-prefix }}${{ matrix.os }}
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # anonymous pull when the secret is unavailable (Dependabot, forks)
+      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
     strategy:
       fail-fast: false
       # `include` is the cartesian product (surviving platforms x

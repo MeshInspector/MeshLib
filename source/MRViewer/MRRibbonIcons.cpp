@@ -7,13 +7,34 @@
 #include "MRMesh/MRSystem.h"
 #include "MRMesh/MRSystemPath.h"
 #include "MRMesh/MRDirectory.h"
+#include "MRMesh/MRString.h"
 #include "MRMesh/MRTimer.h"
+#include "MRMesh/MRZip.h"
 #include "MRPch/MRSpdlog.h"
 
 #include "MRIOExtras/MRPng.h"
 
 namespace MR
 {
+
+namespace
+{
+
+// std::istream over a buffer in memory
+struct MemoryStreamBuf : std::streambuf
+{
+    MemoryStreamBuf( std::vector<char>& data ) { setg( data.data(), data.data(), data.data() + data.size() ); }
+};
+
+bool isPng( const std::filesystem::path& file )
+{
+    auto ext = file.extension().u8string();
+    for ( auto& c : ext )
+        c = ( char )tolower( c );
+    return ext == u8".png";
+}
+
+} // anonymous namespace
 
 void RibbonIcons::load()
 {
@@ -22,16 +43,18 @@ void RibbonIcons::load()
     instance.load_( IconType::RibbonItemIcon );
     instance.load_( IconType::ObjectTypeIcon );
     instance.load_( IconType::IndependentIcons );
-    // IconType::Logos is loaded lazily on first request
+    // without icons.zip, IconType::Logos is loaded lazily on first request
 }
 
 void RibbonIcons::free()
 {
-    for ( auto& curData : instance_().data_ )
+    auto& instance = instance_();
+    for ( auto& curData : instance.data_ )
     {
         curData.map.clear();
         curData.loaded = false;
     }
+    instance.zipTried_ = false;
 }
 
 const ImGuiImage* RibbonIcons::findByName( const std::string& name, float width, 
@@ -117,14 +140,90 @@ const ImGuiImage* RibbonIcons::findRequiredSize_( const SizedIcons& icons, float
     return maxIcon;
 }
 
+void RibbonIcons::addIcon_( IconTypeData& data, int sz, const std::string& name, Image&& image )
+{
+    MeshTexture texture{ std::move( image ) };
+    if ( sz != int( Sizes::X0_5 ) )
+        texture.filter = FilterType::Linear;
+
+    Icons icons;
+    if ( bool( data.availableColor & IconTypeData::AvailableColor::Colored ) )
+    {
+        icons.colored = std::make_unique<ImGuiImage>();
+        icons.colored->update( texture );
+    }
+    if ( bool( data.availableColor & IconTypeData::AvailableColor::White ) )
+    {
+        icons.white = std::make_unique<ImGuiImage>();
+        ParallelFor( texture.pixels, [&] ( size_t i )
+        {
+            auto alpha = texture.pixels[i].a;
+            texture.pixels[i] = Color::white();
+            texture.pixels[i].a = alpha;
+        } );
+        icons.white->update( std::move( texture ) );
+    }
+    data.map[name][sz] = std::move( icons );
+}
+
+bool RibbonIcons::loadZip_()
+{
+    const auto zipPath = SystemPath::getResourcesDirectory() / "resource" / "icons.zip";
+    std::error_code ec;
+    if ( !std::filesystem::is_regular_file( zipPath, ec ) )
+        return false;
+    MR_TIMER;
+
+    int num = 0;
+    auto res = decompressZip( zipPath, [&] ( const std::string& path, std::vector<char>&& content ) -> Expected<void>
+    {
+        // path is "<icon type folder>/<size folder>/<name>.png"
+        const auto parts = split( path, "/" );
+        if ( parts.size() != 3 || !isPng( parts[2] ) )
+            return {};
+        for ( auto& data : data_ )
+        {
+            if ( utf8string( data.pathDirectory.filename() ) != parts[0] )
+                continue;
+            for ( int sz = int( data.minMaxSizes.first ); sz <= int( data.minMaxSizes.second ); ++sz )
+            {
+                if ( parts[1] != sizeSubFolder_( Sizes( sz ) ) )
+                    continue;
+                MemoryStreamBuf buf( content );
+                std::istream in( &buf );
+                if ( auto image = ImageLoad::fromPng( in ) )
+                {
+                    addIcon_( data, sz, utf8string( std::filesystem::path( parts[2] ).stem() ), std::move( *image ) );
+                    ++num;
+                }
+            }
+        }
+        return {};
+    } );
+    if ( !res )
+    {
+        spdlog::error( "Cannot load icons from {}: {}", utf8string( zipPath ), res.error() );
+        return false;
+    }
+    spdlog::info( "Loaded {} icons from {}", num, utf8string( zipPath ) );
+    for ( auto& data : data_ )
+        data.loaded = true;
+    return true;
+}
+
 void RibbonIcons::load_( IconType type )
 {
     size_t num = static_cast< size_t >( type );
     auto& currentData = data_[num];
+    if ( currentData.loaded )
+        return;
+    if ( !zipTried_ )
+    {
+        zipTried_ = true;
+        if ( loadZip_() )
+            return;
+    }
     currentData.loaded = true;
-
-    bool coloredIcons = bool( currentData.availableColor & IconTypeData::AvailableColor::Colored );
-    bool whiteIcons = bool( currentData.availableColor & IconTypeData::AvailableColor::White );
 
     std::filesystem::path path = currentData.pathDirectory;
     int minSize = static_cast< int >( currentData.minMaxSizes.first );
@@ -143,39 +242,10 @@ void RibbonIcons::load_( IconType type )
 
         for ( auto entry : Directory{ dirPath, ec } )
         {
-            if ( !entry.is_regular_file( ec ) )
+            if ( !entry.is_regular_file( ec ) || !isPng( entry.path() ) )
                 continue;
-            auto ext = entry.path().extension().u8string();
-            for ( auto& c : ext )
-                c = ( char )tolower( c );
-            if ( ext != u8".png" )
-                continue;
-            auto image = ImageLoad::fromPng( entry.path() );
-            if ( !image.has_value() )
-                continue;
-
-            MeshTexture texture{ std::move( *image ) };
-            if ( sz != int( Sizes::X0_5 ) )
-                texture.filter = FilterType::Linear;
-
-            Icons icons;
-            if ( coloredIcons )
-            {
-                icons.colored = std::make_unique<ImGuiImage>();
-                icons.colored->update( texture );
-            }
-            if ( whiteIcons )
-            {
-                icons.white = std::make_unique<ImGuiImage>();
-                ParallelFor( texture.pixels, [&] ( size_t i )
-                {
-                    auto alpha = texture.pixels[i].a;
-                    texture.pixels[i] = Color::white();
-                    texture.pixels[i].a = alpha;
-                } );
-                icons.white->update( std::move( texture ) );
-            }
-            currentData.map[utf8string( entry.path().stem() )][sz] = std::move( icons );
+            if ( auto image = ImageLoad::fromPng( entry.path() ) )
+                addIcon_( currentData, sz, utf8string( entry.path().stem() ), std::move( *image ) );
         }
     }
 }

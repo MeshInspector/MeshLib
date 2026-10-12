@@ -1237,10 +1237,17 @@ endif
 generate:
 	$(strip $(MRBIND_GEN_RUST_EXE) 		--input-json $(call quote,$(RUST_INPUT_JSON)) 		--output-dir $(call quote,$(RUST_CODE_OUTPUT_DIR)) 		--clean-output-dir 		--imported-lib-name MeshLibC2 		--crate-name $(RUST_CRATE_NAME) 		$(call, ### Handle sub-libraries) 		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) 	)
 
+# In the MSYS2 shell `link.exe` resolves to the coreutils `link`, so point cargo at the MSVC linker explicitly.
+ifneq ($(IS_WINDOWS),)
+override RUST_LINKER_ENV := CARGO_TARGET_$(if $(filter arm64,$(MSVC_ARCH)),AARCH64,X86_64)_PC_WINDOWS_MSVC_LINKER=$(call quote,$(subst \,/,$(VCToolsInstallDir))bin/Host$(MSVC_ARCH)/$(MSVC_ARCH)/link.exe)
+else
+override RUST_LINKER_ENV :=
+endif
+
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
 # The library crate itself links against nothing, but its consumers need the C libraries. The generated `build.rs` reads this variable.
-	$(if $(wildcard $(MESHLIB_SHLIB_DIR)),MESHLIB_LIB_DIR=$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))) cargo build --manifest-path $(call quote,$(RUST_CODE_OUTPUT_DIR)/Cargo.toml)
+	$(if $(wildcard $(MESHLIB_SHLIB_DIR)),MESHLIB_LIB_DIR=$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))) $(RUST_LINKER_ENV) cargo build --manifest-path $(call quote,$(RUST_CODE_OUTPUT_DIR)/Cargo.toml)
 
 endif

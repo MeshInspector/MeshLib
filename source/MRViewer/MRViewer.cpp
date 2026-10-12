@@ -1880,14 +1880,6 @@ bool Viewer::draw_( bool force )
     if ( !force && !needSceneRedraw )
         return false;
 
-    if ( !isGLInitialized() )
-    {
-        resetRedraw_();
-        forceRedrawFrames_ = 0;
-        forceRedrawFramesWithoutSwap_ = 0;
-        return false;
-    }
-
     if ( !isInDraw_ )
         isInDraw_ = true;
     else
@@ -1899,6 +1891,23 @@ bool Viewer::draw_( bool force )
     }
 
     frameCounter_->startDraw();
+
+    if ( !isGLInitialized() )
+    {
+        // nothing is rendered, but the frame's UI logic and draw signals still run, e.g. in NoWindow mode
+        if ( menuPlugin_ )
+            menuPlugin_->startFrame();
+        signals_->preDrawSignal();
+        signals_->postDrawSignal();
+        if ( menuPlugin_ )
+            menuPlugin_->finishFrame();
+        resetRedraw_();
+        forceRedrawFrames_ = 0;
+        forceRedrawFramesWithoutSwap_ = 0;
+        frameCounter_->endDraw( false );
+        isInDraw_ = false;
+        return false;
+    }
 
     glPrimitivesCounter_.reset();
 

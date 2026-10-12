@@ -117,7 +117,7 @@ jobs:
 
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
-      - uses: actions-ecosystem/action-get-latest-tag@v1
+      - uses: ./.github/actions/get-latest-tag
         if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
         id: get-latest-tag
 
@@ -210,6 +210,7 @@ jobs:
   generate-c-bindings:
     needs: setup
     uses: ./.github/workflows/generate-c-bindings.yml
+    secrets: inherit
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       version_tag: ${{needs.setup.outputs.version_tag}}
@@ -218,6 +219,7 @@ jobs:
     needs: setup
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
     uses: ./.github/workflows/build-test-emscripten.yml
+    secrets: inherit
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       upload_artifacts: false
@@ -233,6 +235,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       # `include` enumerates the per-platform combos, surviving platforms
@@ -830,6 +835,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.container-prefix }}${{ matrix.os }}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       # `include` is the cartesian product (surviving platforms x
@@ -1121,6 +1129,7 @@ jobs:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
     needs: [setup, upload-to-release]
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
+    secrets: inherit
 
   delete-artifacts:
     timeout-minutes: 5

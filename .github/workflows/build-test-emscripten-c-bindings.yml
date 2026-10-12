@@ -38,6 +38,9 @@ jobs:
     runs-on: ${{matrix.emsdk_runs_on}}
     container:
       image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_ver_docker}}:${{inputs.docker_image_tag}}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     steps:
       - name: Work-around possible permission issues

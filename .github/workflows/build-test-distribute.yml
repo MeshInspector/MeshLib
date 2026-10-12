@@ -87,6 +87,7 @@ jobs:
   generate-c-bindings:
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/generate-c-bindings.yml
+    secrets: inherit
     with:
       docker_image_tag: ${{ needs.config.outputs.docker_image_tag }}
       upload_artifacts: ${{ needs.config.outputs.upload_artifacts == 'true' }}
@@ -136,6 +137,7 @@ jobs:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' || needs.config.outputs.update_doc == 'true' }}
     needs: [ config, prepare-image ]
     uses: ./.github/workflows/build-test-emscripten.yml
+    secrets: inherit
     with:
       app_version:       ${{ needs.config.outputs.app_version }}
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
@@ -147,6 +149,7 @@ jobs:
     if: ${{ needs.config.outputs.build_enable_emscripten == 'true' }}
     needs: [ config, generate-c-bindings ]
     uses: ./.github/workflows/build-test-emscripten-c-bindings.yml
+    secrets: inherit
     with:
       docker_image_tag:  ${{ needs.config.outputs.docker_image_tag }}
       internal_build:    ${{ needs.config.outputs.internal_build == 'true' }}
@@ -415,6 +418,7 @@ jobs:
       test_windows:      ${{ needs.config.outputs.build_enable_windows == 'true' && needs.config.outputs.build-release-win == 'true' }}
     secrets:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
   update-dev-documentation:
     # !cancelled() need to ignore general fail previous job, because this job depends on one matrix variant (ubuntu 22),
@@ -430,6 +434,7 @@ jobs:
     needs: [ config, prepare-image ]
     if: ${{ needs.config.outputs.test_pip_build == 'true' }}
     uses: ./.github/workflows/pip-build.yml
+    secrets: inherit
     with:
       vcpkg_docker_image_tag: ${{ needs.config.outputs.vcpkg_docker_image_tag }}
       disable_manylinux:    ${{ needs.config.outputs.build_enable_linux_vcpkg != 'true' }}

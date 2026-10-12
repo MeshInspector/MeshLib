@@ -28,7 +28,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - uses: actions-ecosystem/action-get-latest-tag@v1
+      - uses: ./.github/actions/get-latest-tag
         id: get-latest-tag
 
   pip-test-linux:
@@ -37,6 +37,9 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{matrix.container-prefix}}${{matrix.os}}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:

@@ -21,6 +21,8 @@ on:
     secrets:
       GH_TOKEN:
         required: true
+      DOCKERHUB_TOKEN:
+        required: false
   workflow_dispatch:
     inputs:
       release_tag:
@@ -46,6 +48,9 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
       # passthrough gh to avoid installing it into each container
       volumes:
         - /usr/bin/gh:/usr/local/bin/gh:ro
@@ -138,6 +143,9 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: ${{ matrix.os }}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
       # passthrough gh to avoid installing it into each container
       volumes:
         - /usr/bin/gh:/usr/local/bin/gh:ro

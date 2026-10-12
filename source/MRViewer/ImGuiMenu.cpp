@@ -1157,7 +1157,8 @@ bool ImGuiMenu::anyImGuiWindowIsHovered() const
 
 bool ImGuiMenu::anyUiObjectIsHovered() const
 {
-    return bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
+    // the manager is created on the first rendered frame, so it is null without OpenGL
+    return uiRenderManager_ && bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
 }
 
 void ImGuiMenu::drawModalMessage_()

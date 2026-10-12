@@ -47,6 +47,7 @@ compile_commands.json
 /source/MRDotNet2/bin
 /source/MRDotNet2/obj
 /source/MRDotNet2/src
+/source/MeshLibRust/
 /source/MRDotNet2Static/bin
 /source/MRDotNet2Static/obj
 /source/MRDotNet2Static/src

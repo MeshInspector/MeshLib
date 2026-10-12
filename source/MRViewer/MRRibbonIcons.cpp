@@ -174,7 +174,15 @@ bool RibbonIcons::loadZip_()
         return false;
     MR_TIMER;
 
-    int num = 0;
+    struct ZipIcon
+    {
+        IconTypeData* data = nullptr;
+        int sz = 0;
+        std::string name;
+        std::vector<char> png;
+        Expected<Image> image;
+    };
+    std::vector<ZipIcon> icons;
     auto res = decompressZip( zipPath, [&] ( const std::string& path, std::vector<char>&& content ) -> Expected<void>
     {
         // path is "<icon type folder>/<size folder>/<name>.png"
@@ -186,17 +194,9 @@ bool RibbonIcons::loadZip_()
             if ( utf8string( data.pathDirectory.filename() ) != parts[0] )
                 continue;
             for ( int sz = int( data.minMaxSizes.first ); sz <= int( data.minMaxSizes.second ); ++sz )
-            {
-                if ( parts[1] != sizeSubFolder_( Sizes( sz ) ) )
-                    continue;
-                MemoryStreamBuf buf( content );
-                std::istream in( &buf );
-                if ( auto image = ImageLoad::fromPng( in ) )
-                {
-                    addIcon_( data, sz, utf8string( std::filesystem::path( parts[2] ).stem() ), std::move( *image ) );
-                    ++num;
-                }
-            }
+                if ( parts[1] == sizeSubFolder_( Sizes( sz ) ) )
+                    icons.push_back( { &data, sz, utf8string( std::filesystem::path( parts[2] ).stem() ), std::move( content ) } );
+            break;
         }
         return {};
     } );
@@ -204,6 +204,22 @@ bool RibbonIcons::loadZip_()
     {
         spdlog::error( "Cannot load icons from {}: {}", utf8string( zipPath ), res.error() );
         return false;
+    }
+
+    // PNG decoding takes most of the time, so it is parallel; the textures are created on this thread only
+    ParallelFor( icons, [&] ( size_t i )
+    {
+        MemoryStreamBuf buf( icons[i].png );
+        std::istream in( &buf );
+        icons[i].image = ImageLoad::fromPng( in );
+    } );
+    int num = 0;
+    for ( auto& icon : icons )
+    {
+        if ( !icon.image )
+            continue;
+        addIcon_( *icon.data, icon.sz, icon.name, std::move( *icon.image ) );
+        ++num;
     }
     spdlog::info( "Loaded {} icons from {}", num, utf8string( zipPath ) );
     for ( auto& data : data_ )

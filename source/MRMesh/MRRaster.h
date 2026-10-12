@@ -5,6 +5,7 @@
 #include "MRScalarConvert.h"
 #include "MRVector3.h"
 
+#include <optional>
 #include <vector>
 
 namespace MR
@@ -71,6 +72,8 @@ struct RasterSaveSettings
 {
     /// optional transformation of (column, row, value) to world coordinates, saved if the format supports it (e.g. GeoTIFF)
     const AffineXf3f* xf = nullptr;
+    /// optional value meaning no data, saved if the format supports it (e.g. GDAL_NODATA in TIFF)
+    std::optional<double> noData;
     /// to report save progress and cancel saving if user desires
     ProgressCallback progress;
 };

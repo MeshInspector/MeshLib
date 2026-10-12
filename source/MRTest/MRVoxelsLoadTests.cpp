@@ -8,10 +8,21 @@
 
 #include <gtest/gtest.h>
 
+#include <cstring>
 #include <fstream>
 
 namespace MR
 {
+
+// saves a slice of values of given type
+template <typename T>
+static Expected<void> saveSlice( const std::filesystem::path& path, const Vector2i& size, ScalarType type, const std::vector<T>& values )
+{
+    Raster raster{ .info = { .dims = { size.x, size.y, 1 }, .type = type } };
+    raster.data.resize( raster.info.dataSize() );
+    std::memcpy( raster.data.data(), values.data(), raster.data.size() );
+    return RasterSave::toTiff( raster, path );
+}
 
 TEST( MRMesh, LoadRasterFolder )
 {
@@ -26,12 +37,7 @@ TEST( MRMesh, LoadRasterFolder )
             for ( int y = 1; y <= 2; ++y )
                 for ( int x = 2; x <= 4; ++x )
                     slice[y * dims.x + x] = 255;
-        auto saveRes = writeRawTiff( slice.data(), tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { .baseParams = {
-            .sampleType = BaseTiffParameters::SampleType::Uint,
-            .valueType = BaseTiffParameters::ValueType::Scalar,
-            .bytesPerSample = 1,
-            .imageSize = { dims.x, dims.y }
-        } } );
+        auto saveRes = saveSlice( tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { dims.x, dims.y }, ScalarType::UInt8, slice );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     }
 
@@ -57,12 +63,7 @@ TEST( MRMesh, LoadRasterFolderNegativeValues )
     for ( int z = 0; z < 2; ++z )
     {
         const std::vector<float> slice( 4, -1.f - z );
-        auto saveRes = writeRawTiff( ( const uint8_t* )slice.data(), tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { .baseParams = {
-            .sampleType = BaseTiffParameters::SampleType::Float,
-            .valueType = BaseTiffParameters::ValueType::Scalar,
-            .bytesPerSample = 4,
-            .imageSize = { 2, 2 }
-        } } );
+        auto saveRes = saveSlice( tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { 2, 2 }, ScalarType::Float32, slice );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     }
 
@@ -78,13 +79,7 @@ TEST( MRMesh, LoadRasterFolderFiles )
     UniqueTemporaryFolder tmpFolder;
     auto writeSlice = [&] ( const std::string& name, const Vector2i& size )
     {
-        const std::vector<uint8_t> slice( size_t( size.x ) * size.y, 7 );
-        auto saveRes = writeRawTiff( slice.data(), tmpFolder / name, { .baseParams = {
-            .sampleType = BaseTiffParameters::SampleType::Uint,
-            .valueType = BaseTiffParameters::ValueType::Scalar,
-            .bytesPerSample = 1,
-            .imageSize = size
-        } } );
+        auto saveRes = saveSlice( tmpFolder / name, size, ScalarType::UInt8, std::vector<uint8_t>( size_t( size.x ) * size.y, 7 ) );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     };
     for ( int z = 0; z < 3; ++z )

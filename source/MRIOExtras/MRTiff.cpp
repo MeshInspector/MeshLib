@@ -1,12 +1,14 @@
 #include "MRTiff.h"
 #ifndef MRIOEXTRAS_NO_TIFF
 
+#include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRBuffer.h"
 #include "MRMesh/MRChunkIterator.h"
 #include "MRMesh/MRDistanceMap.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRMatrix4.h"
+#include "MRMesh/MRParallelMinMax.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRFmt.h"
@@ -21,7 +23,9 @@ namespace
 {
 using namespace MR;
 
-// GeoTIFF tag: http://geotiff.maptools.org/spec/geotiff2.6.html
+// GeoTIFF tags: http://geotiff.maptools.org/spec/geotiff2.6.html
+constexpr uint32_t cModelPixelScaleTag = 33550;
+constexpr uint32_t cModelTiePointTag = 33922;
 constexpr uint32_t cModelTransformationTag = 34264;
 // no-data value: https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value
 constexpr uint32_t cGdalNoDataTag = 42113;
@@ -76,6 +80,13 @@ ScalarType getSampleType( uint16_t sampleFormat, uint16_t bitsPerSample )
         if ( s.format == sampleFormat && s.bits == bitsPerSample )
             return s.type;
     return ScalarType::Unknown;
+}
+
+// returns how the values of given type are stored, or nullptr if they cannot be
+const SampleType* findSampleType( ScalarType type )
+{
+    const auto* res = std::find_if( std::begin( cSampleTypes ), std::end( cSampleTypes ), [type] ( const SampleType& s ) { return s.type == type; } );
+    return res != std::end( cSampleTypes ) ? res : nullptr;
 }
 
 // how the pixels are stored in the file and how they become the values of the raster
@@ -202,25 +213,111 @@ Expected<void> readSamples( TIFF* tiff, const TiffLayout& layout, uint8_t* dst, 
     return {};
 }
 
-Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const ProgressCallback& progress )
+// reads the values of the raster to dst: the stored samples, or the colors decoded by libtiff
+Expected<void> readPixels( TIFF* tiff, const TiffLayout& layout, uint8_t* dst, const ProgressCallback& progress )
 {
-    Raster res{ .info = layout.info };
-    res.data.resize( res.info.dataSize() );
     if ( !layout.decoded )
-    {
-        if ( auto readRes = readSamples( tiff, layout, res.data.data(), progress ); !readRes )
-            return unexpected( std::move( readRes.error() ) );
-        return res;
-    }
+        return readSamples( tiff, layout, dst, progress );
 
     // asked for the orientation of the file, libtiff keeps the stored order of the rows, as in the stored samples
     uint16_t orientation = ORIENTATION_TOPLEFT;
     TIFFGetFieldDefaulted( tiff, TIFFTAG_ORIENTATION, &orientation );
-    const auto& dims = res.info.dims;
-    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( dims.x ), uint32_t( dims.y ), (uint32_t*)res.data.data(), orientation, 1 ) )
+    const auto& dims = layout.info.dims;
+    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( dims.x ), uint32_t( dims.y ), (uint32_t*)dst, orientation, 1 ) )
         return unexpected( "Error reading pixels" );
     if ( !reportProgress( progress, 1.f ) )
         return unexpectedOperationCanceled();
+    return {};
+}
+
+Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const ProgressCallback& progress )
+{
+    Raster res{ .info = layout.info };
+    res.data.resize( res.info.dataSize() );
+    if ( auto readRes = readPixels( tiff, layout, res.data.data(), progress ); !readRes )
+        return unexpected( std::move( readRes.error() ) );
+    return res;
+}
+
+// one channel of Float32 values is read straight to the floats
+bool storesFloats( const TiffLayout& layout )
+{
+    return layout.info.type == ScalarType::Float32 && layout.info.channels == 1;
+}
+
+// reads the values of other formats and converts them to floats by convertRasterToFloats
+Expected<std::vector<float>> readConvertedFloats( TIFF* tiff, const TiffLayout& layout, const ProgressCallback& progress )
+{
+    std::vector<float> res;
+    return readRaster( tiff, layout, progress )
+        .and_then( [&] ( const Raster& raster ) { return convertRasterToFloats( raster, res ); } )
+        .transform( [&] { return std::move( res ); } );
+}
+
+// returns the values of a tag of doubles and sets their count, or returns nullptr; libtiff passes the count as a 32-bit value
+// for the tags it does not know, and as a 16-bit value for the tags registered with TIFF_VARIABLE, as libgeotiff's tag extender does
+const double* getDoublesTag( TIFF* tiff, uint32_t tag, uint32_t& count )
+{
+    count = 0;
+    double* data = nullptr;
+    // the tags of other types or with a fixed number of values are returned differently
+    const auto* field = TIFFFindField( tiff, tag, TIFF_ANY );
+    if ( !field || TIFFFieldDataType( field ) != TIFF_DOUBLE || !TIFFFieldPassCount( field ) )
+        return nullptr;
+    if ( TIFFFieldReadCount( field ) == TIFF_VARIABLE2 )
+        return TIFFGetField( tiff, tag, &count, &data ) ? data : nullptr;
+    uint16_t count16 = 0;
+    if ( !TIFFGetField( tiff, tag, &count16, &data ) )
+        return nullptr;
+    count = count16;
+    return data;
+}
+
+// reads the GeoTIFF transformation of (column, row, value) to world coordinates
+std::optional<AffineXf3f> readGeoTransform( TIFF* tiff )
+{
+    uint32_t count = 0;
+    // the values are freed with the file
+    if ( const auto* matrix = getDoublesTag( tiff, cModelTransformationTag, count ); matrix && count == 16 )
+        return AffineXf3f( Matrix4f( *(const Matrix4d*)matrix ) );
+
+    const auto* tie = getDoublesTag( tiff, cModelTiePointTag, count );
+    if ( !tie || count != 6 )
+        return {};
+    const auto* scaleTag = getDoublesTag( tiff, cModelPixelScaleTag, count );
+    if ( !scaleTag || count != 3 )
+        return {};
+    Vector3d tiePoints[2] = { { tie[0], tie[1], tie[2] }, { tie[3], tie[4], tie[5] } };
+    Vector3d scale{ scaleTag[0], -scaleTag[1], scaleTag[2] };
+    if ( scale.z == 0. )
+    {
+        tiePoints[1].z = 0.;
+        scale.z = 1.;
+    }
+    return AffineXf3f( Matrix3f::scale( Vector3f( scale ) ), Vector3f( tiePoints[0] + tiePoints[1] ) );
+}
+
+// describes the pixels as the old raster reader did; the colors decoded by libtiff are 8-bit RGBA ones
+Expected<TiffParameters> getTiffParameters( const TiffLayout& layout )
+{
+    const auto& info = layout.info;
+    TiffParameters res;
+    switch ( info.channels )
+    {
+    case 1: res.valueType = TiffParameters::ValueType::Scalar; break;
+    case 3: res.valueType = TiffParameters::ValueType::RGB; break;
+    case 4: res.valueType = TiffParameters::ValueType::RGBA; break;
+    default: return unexpected( "Unsupported pixel format" );
+    }
+    // the layout has only the types of stored samples
+    const auto* sample = findSampleType( info.type );
+    assert( sample );
+    res.sampleType = sample->format == SAMPLEFORMAT_IEEEFP ? TiffParameters::SampleType::Float
+        : sample->format == SAMPLEFORMAT_INT ? TiffParameters::SampleType::Int : TiffParameters::SampleType::Uint;
+    res.bytesPerSample = sample->bits / 8;
+    res.imageSize = Vector2i( info.dims.x, info.dims.y );
+    res.tiled = layout.tileSize.has_value();
+    res.tileSize = layout.tileSize.value_or( Vector2i() );
     return res;
 }
 
@@ -258,16 +355,16 @@ struct GeoTags
 {
     // optional transformation of (column, row, value) to world coordinates
     const AffineXf3f* pixelToWorld = nullptr;
-    // optional value meaning no data
-    std::optional<double> noData;
+    // optional value meaning no data, not written if empty
+    std::string noData;
 };
 
 // writes a raster with one layer, the rows of data go from top to bottom, or from bottom to top as in Image if bottomUp is set
 Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& info, const uint8_t* data, bool bottomUp,
     const ProgressCallback& progress, const GeoTags& geoTags = {} )
 {
-    const auto* sample = std::find_if( std::begin( cSampleTypes ), std::end( cSampleTypes ), [&info] ( const SampleType& s ) { return s.type == info.type; } );
-    if ( sample == std::end( cSampleTypes ) )
+    const auto* sample = findSampleType( info.type );
+    if ( !sample )
         return unexpected( "Unsupported value type" );
     if ( info.channels != 1 && info.channels != 3 && info.channels != 4 )
         return unexpected( "Unsupported number of channels" );
@@ -296,7 +393,7 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     std::vector<TIFFFieldInfo> fieldInfo;
     if ( geoTags.pixelToWorld )
         fieldInfo.push_back( { cModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" } );
-    if ( geoTags.noData )
+    if ( !geoTags.noData.empty() )
         fieldInfo.push_back( { cGdalNoDataTag, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" } );
     if ( !fieldInfo.empty() )
         TIFFMergeFieldInfo( tiff, fieldInfo.data(), uint32_t( fieldInfo.size() ) );
@@ -306,8 +403,8 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
         const Matrix4d matrix = AffineXf3d( *geoTags.pixelToWorld );
         TIFFSetField( tiff, cModelTransformationTag, 16, &matrix );
     }
-    if ( geoTags.noData )
-        TIFFSetField( tiff, cGdalNoDataTag, fmt::format( "{}", *geoTags.noData ).c_str() );
+    if ( !geoTags.noData.empty() )
+        TIFFSetField( tiff, cGdalNoDataTag, geoTags.noData.c_str() );
 
     const auto height = size_t( info.dims.y );
     const auto rowSize = size_t( info.dims.x ) * size_t( info.channels ) * getScalarTypeSize( info.type );
@@ -398,6 +495,29 @@ MR_ADD_IMAGE_SAVER_WITH_PRIORITY( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff, 
 
 } // namespace ImageSave
 
+namespace DistanceMapLoad
+{
+
+Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const DistanceMapLoadSettings& settings )
+{
+    MR_TIMER;
+    return readTiffFile( path, [&] ( TIFF* tiff, const TiffLayout& layout ) -> Expected<DistanceMap>
+    {
+        DistanceMap res( layout.info.dims.x, layout.info.dims.y );
+        auto readRes = storesFloats( layout ) ? readPixels( tiff, layout, (uint8_t*)res.data(), settings.progress )
+            : readConvertedFloats( tiff, layout, settings.progress ).transform( [&] ( std::vector<float>&& values ) { res.set( std::move( values ) ); } );
+        if ( !readRes )
+            return unexpected( std::move( readRes.error() ) );
+        if ( settings.distanceMapToWorld )
+            *settings.distanceMapToWorld = readGeoTransform( tiff ).value_or( AffineXf3f() );
+        return res;
+    } );
+}
+
+MR_ADD_DISTANCE_MAP_LOADER( IOFilter( "GeoTIFF (.tif,.tiff)", "*.tif;*.tiff" ), fromTiff )
+
+} // namespace DistanceMapLoad
+
 namespace DistanceMapSave
 {
 
@@ -410,13 +530,76 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
     };
     return writeTiff( path, info, (const uint8_t*)dmap.data(), false, settings.progress, {
         .pixelToWorld = settings.xf,
-        .noData = DistanceMap::NOT_VALID_VALUE,
+        .noData = fmt::format( "{}", double( DistanceMap::NOT_VALID_VALUE ) ),
     } );
 }
 
 MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff )
 
 } // namespace DistanceMapSave
+
+bool isTIFFFile( const std::filesystem::path& path )
+{
+    // only the header is read
+    return bool( openTiff( path, "rh" ) );
+}
+
+Expected<TiffParameters> readTiffParameters( const std::filesystem::path& path )
+{
+    return readTiffFile( path, [] ( TIFF*, const TiffLayout& layout ) { return getTiffParameters( layout ); } );
+}
+
+Expected<void> readRawTiff( const std::filesystem::path& path, RawTiffOutput& output )
+{
+    MR_TIMER;
+    return readTiffFile( path, [&] ( TIFF* tiff, const TiffLayout& layout ) -> Expected<void>
+    {
+        const auto params = getTiffParameters( layout );
+        if ( !params )
+            return unexpected( params.error() );
+        if ( output.params )
+            *output.params = *params;
+        if ( output.p2wXf )
+            if ( const auto xf = readGeoTransform( tiff ) )
+                *output.p2wXf = *xf;
+
+        const auto pixels = size_t( layout.info.dims.x ) * size_t( layout.info.dims.y );
+        if ( !output.bytes || output.size < ( output.convertToFloat ? pixels * sizeof( float ) : layout.info.dataSize() ) )
+            return unexpected( "Output buffer is too small" );
+        if ( !output.convertToFloat )
+            return readPixels( tiff, layout, output.bytes, {} );
+
+        auto* floats = (float*)output.bytes;
+        // the values of other formats are converted and copied to the output
+        auto readRes = storesFloats( layout ) ? readPixels( tiff, layout, output.bytes, {} )
+            : readConvertedFloats( tiff, layout, {} ).transform( [&] ( const std::vector<float>& values ) { std::copy( values.begin(), values.end(), floats ); } );
+        if ( readRes && ( output.min || output.max ) )
+        {
+            // the given range is extended to include the values
+            const auto [min, max] = parallelMinMax( floats, pixels );
+            if ( output.min )
+                *output.min = std::min( *output.min, min );
+            if ( output.max )
+                *output.max = std::max( *output.max, max );
+        }
+        return readRes;
+    } );
+}
+
+Expected<void> writeRawTiff( const uint8_t* bytes, const std::filesystem::path& path, const WriteRawTiffParams& params )
+{
+    MR_TIMER;
+    using P = BaseTiffParameters;
+    const auto& base = params.baseParams;
+    const uint16_t sampleFormat = base.sampleType == P::SampleType::Float ? SAMPLEFORMAT_IEEEFP
+        : base.sampleType == P::SampleType::Int ? SAMPLEFORMAT_INT : base.sampleType == P::SampleType::Uint ? SAMPLEFORMAT_UINT : 0;
+    const RasterInfo info{
+        .dims = Vector3i( base.imageSize.x, base.imageSize.y, 1 ),
+        .type = getSampleType( sampleFormat, uint16_t( 8 * base.bytesPerSample ) ),
+        .channels = base.valueType == P::ValueType::RGB ? 3 : base.valueType == P::ValueType::RGBA ? 4 : 1,
+    };
+    return writeTiff( path, info, bytes, false, {}, { .pixelToWorld = params.xf, .noData = params.noData } );
+}
 
 } // namespace MR
 #endif

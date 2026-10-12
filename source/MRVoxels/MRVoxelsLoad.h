@@ -89,17 +89,23 @@ enum class GridType
     LevelSet = 1
 };
 
-#ifndef MRVOXELS_NO_TIFF
-struct LoadingTiffSettings
+struct LoadingRasterDirSettings
 {
     std::filesystem::path dir;
     Vector3f voxelSize = { 1.0f, 1.0f, 1.0f };
     GridType gridType = GridType::DenseGrid;
     ProgressCallback cb = {};
 };
-/// Load voxels from a set of TIFF files
-MRVOXELS_API Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings );
-#endif // MRVOXELS_NO_TIFF
+/// Load voxels from the raster files of a directory, a layer from each file: the files are those of the extension with a raster loader
+/// that most files have, sorted by name; they must have the same RasterInfo, their values are converted by convertRasterToFloats
+MRVOXELS_API Expected<VdbVolume> loadRasterDir( const LoadingRasterDirSettings& settings );
+
+using LoadingTiffSettings [[deprecated( "Use LoadingRasterDirSettings" )]] MR_BIND_IGNORE = LoadingRasterDirSettings;
+[[deprecated( "Use loadRasterDir" )]]
+MR_BIND_IGNORE inline Expected<VdbVolume> loadTiffDir( const LoadingRasterDirSettings& settings )
+{
+    return loadRasterDir( settings );
+}
 
 #ifndef MR_PARSING_FOR_ANY_BINDINGS
 using VoxelsLoader = Expected<std::vector<VdbVolume>>( * )( const std::filesystem::path&, const ProgressCallback& );

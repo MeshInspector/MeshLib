@@ -285,7 +285,6 @@
     <ClInclude Include="MRTbbTaskArenaAndGroup.h" />
     <ClInclude Include="MRTelemetry.h" />
     <ClInclude Include="MRTextureColors.h" />
-    <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
@@ -703,7 +702,6 @@
     <ClCompile Include="MRTelemetry.cpp" />
     <ClCompile Include="MRTelemetryStlHead.cpp" />
     <ClCompile Include="MRTextureColors.cpp" />
-    <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />

@@ -316,6 +316,8 @@ void ImGuiMenu::startFrame()
         // needed for dear ImGui
         // should be window size
         ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
+        // no renderer backend to set it: without it NewFrame requires a prebuilt font atlas (as in ImGui's example_null)
+        ImGui::GetIO().BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
     }
     auto& style = ImGui::GetStyle();
     if ( !needModalBgChange_ )

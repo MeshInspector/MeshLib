@@ -13,7 +13,7 @@
 namespace MR
 {
 
-TEST( MRMesh, LoadRasterDir )
+TEST( MRMesh, LoadRasterFolder )
 {
     const Vector3i dims{ 10, 8, 4 };
     UniqueTemporaryFolder tmpFolder;
@@ -35,7 +35,7 @@ TEST( MRMesh, LoadRasterDir )
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     }
 
-    auto vol = VoxelsLoad::loadRasterDir( { .dir = tmpFolder } );
+    auto vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
     ASSERT_TRUE( vol.has_value() ) << vol.error();
     EXPECT_EQ( vol->dims, dims );
     // zero voxels of every slice must be active, otherwise marchingCubes considers them invalid
@@ -51,7 +51,7 @@ TEST( MRMesh, LoadRasterDir )
     EXPECT_NEAR( ( box.max - Vector3f( 4.5f, 2.5f, 2.5f ) ).length(), 0.f, 1e-6f );
 }
 
-TEST( MRMesh, LoadRasterDirNegativeValues )
+TEST( MRMesh, LoadRasterFolderNegativeValues )
 {
     UniqueTemporaryFolder tmpFolder;
     for ( int z = 0; z < 2; ++z )
@@ -66,14 +66,14 @@ TEST( MRMesh, LoadRasterDirNegativeValues )
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     }
 
-    auto vol = VoxelsLoad::loadRasterDir( { .dir = tmpFolder } );
+    auto vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
     ASSERT_TRUE( vol.has_value() ) << vol.error();
     EXPECT_EQ( vol->min, -2.f );
     EXPECT_EQ( vol->max, -1.f );
 }
 
 // the slices are the files of the extension with a raster loader that most files have, and they must have the same size and format
-TEST( MRMesh, LoadRasterDirFiles )
+TEST( MRMesh, LoadRasterFolderFiles )
 {
     UniqueTemporaryFolder tmpFolder;
     auto writeSlice = [&] ( const std::string& name, const Vector2i& size )
@@ -95,12 +95,12 @@ TEST( MRMesh, LoadRasterDirFiles )
     for ( int i = 0; i < 4; ++i )
         std::ofstream( tmpFolder / ( "note" + std::to_string( i ) + ".txt" ) ) << "not a raster";
 
-    auto vol = VoxelsLoad::loadRasterDir( { .dir = tmpFolder } );
+    auto vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
     ASSERT_TRUE( vol.has_value() ) << vol.error();
     EXPECT_EQ( vol->dims, Vector3i( 2, 3, 3 ) );
 
     writeSlice( "slice3.tif", { 3, 2 } );
-    vol = VoxelsLoad::loadRasterDir( { .dir = tmpFolder } );
+    vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
     ASSERT_FALSE( vol.has_value() );
     EXPECT_NE( vol.error().find( "slice3.tif" ), std::string::npos ) << vol.error();
 }

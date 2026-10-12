@@ -85,6 +85,9 @@ MRIOEXTRAS_API Expected<void> toTiff( const DistanceMap& dmap, const std::filesy
 
 } // namespace DistanceMapSave
 
+// raw TIFF API: reads and writes the samples of any type together with the GeoTIFF transformation (and a GDAL no-data value
+// when writing), which the Raster API does not support
+
 struct BaseTiffParameters
 {
     enum class SampleType

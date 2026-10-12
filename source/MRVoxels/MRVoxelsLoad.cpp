@@ -361,7 +361,7 @@ MR_ADD_VOXELS_LOADER( IOFilter( "Raw (.raw)", "*.raw" ), vecFromRaw )
 MR_ADD_VOXELS_LOADER( IOFilter( "Micro CT (.gav)", "*.gav" ), vecFromGav )
 MR_ADD_VOXELS_LOADER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), fromVdb )
 
-Expected<VdbVolume> loadRasterDir( const LoadingRasterDirSettings& settings )
+Expected<VdbVolume> loadRasterFolder( const RasterFolderLoadSettings& settings )
 {
     MR_TIMER;
     std::error_code ec;

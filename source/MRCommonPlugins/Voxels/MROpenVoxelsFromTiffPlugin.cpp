@@ -73,7 +73,7 @@ void OpenVoxelsFromTiffPlugin::drawDialog( ImGuiContext* )
         {
             ProgressBar::nextTask( "Load TIFF Folder" );
             spdlog::info( "Loading TIFF Folder: {}", utf8string( directory ) );
-            auto loadRes = VoxelsLoad::loadRasterDir
+            auto loadRes = VoxelsLoad::loadRasterFolder
             ( {
                 directory,
                 voxelSize_,

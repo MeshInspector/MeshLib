@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""Regenerates thirdparty/python/python3XY.zip, the zipped standard library shipped next to
-python3XY.dll on Windows, from the CPython sources of vcpkg's python3 port.
+"""Builds python3XY.zip, the pure-Python standard library of an embedded interpreter, from the CPython
+sources of vcpkg's python3 port, in the format of python.org's Windows embeddable package.
 
-Usage: update_python_zip.py [vcpkg-tag]   (default: the vcpkg version in .github/workflows/config.yml)
+Usage: update_python_zip.py [--vcpkg-tag TAG] [--output PATH]
+  --vcpkg-tag  vcpkg release tag (default: the vcpkg version in .github/workflows/config.yml)
+  --output     zip file or directory to write to (default: the current directory); a directory
+               gets the file name python3XY.zip
 
 The port's version, source checksum and patches are read at that vcpkg tag, so the zip matches the
 Python that vcpkg builds. Run it with that Python minor version (e.g. `uv run --python 3.12`), or
 have `uv` on PATH and the script re-runs itself under the right version.
 """
+import argparse
 import hashlib
 import io
 import os
@@ -37,14 +41,19 @@ def vcpkg_tag_from_config():
 
 
 def main():
-    tag = sys.argv[1] if len(sys.argv) > 1 else vcpkg_tag_from_config()
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    parser.add_argument('--vcpkg-tag')
+    parser.add_argument('--output', default='.')
+    args = parser.parse_args()
+    tag = args.vcpkg_tag or vcpkg_tag_from_config()
     port = f'https://raw.githubusercontent.com/microsoft/vcpkg/{tag}/ports/python3'
     version = re.search(r'"version":\s*"([^"]+)"', fetch(f'{port}/vcpkg.json').decode()).group(1)
     major, minor = (int(x) for x in version.split('.')[:2])
     if sys.version_info[:2] != (major, minor):
         if shutil.which('uv'):
             sys.exit(subprocess.call(['uv', 'run', '--no-project', '--python', f'{major}.{minor}',
-                                      'python', os.path.abspath(__file__), tag]))
+                                      'python', os.path.abspath(__file__), '--vcpkg-tag', tag,
+                                      '--output', os.path.abspath(args.output)]))
         sys.exit(f'vcpkg {tag} has Python {version}; run this script with Python {major}.{minor}')
 
     portfile = fetch(f'{port}/portfile.cmake').decode()
@@ -81,7 +90,9 @@ def main():
         subprocess.check_call([sys.executable, '-I', '-m', 'compileall', '-q', '-b', '-o', '2',
                                '--invalidation-mode', 'unchecked-hash', '-s', lib, lib])
 
-        zip_path = os.path.join(ROOT, 'thirdparty', 'python', f'python{major}{minor}.zip')
+        zip_path = args.output
+        if os.path.isdir(zip_path):
+            zip_path = os.path.join(zip_path, f'python{major}{minor}.zip')
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
             for address, dirs, files in sorted(os.walk(lib)):
                 dirs.sort()

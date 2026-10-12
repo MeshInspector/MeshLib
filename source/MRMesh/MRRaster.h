@@ -24,7 +24,8 @@ struct RasterInfo
     /// type of all values
     ScalarType type = ScalarType::Unknown;
 
-    /// number of values in each pixel: 1 for gray values, 3 for RGB colors, 4 for RGBA colors
+    /// number of values in each pixel, e.g. 1 for gray values, 3 for RGB colors, 4 for RGBA colors, or any number of bands;
+    /// convertRasterToImage takes three or more channels as RGB(A) colors, so three or four gray bands look like colors there
     int channels = 1;
 
     /// returns the size of all values in bytes, or the largest size_t value if the size does not fit in size_t, which no data can have

@@ -100,6 +100,15 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
         return unexpected( "Unsupported image size" );
     res.info.dims = Vector3i( int( width ), int( height ), 1 );
 
+    // libtiff opens the files compressed by the methods it does not support and fails only when reading the pixels
+    uint16_t compression = COMPRESSION_NONE;
+    TIFFGetFieldDefaulted( tiff, TIFFTAG_COMPRESSION, &compression );
+    if ( !TIFFIsCODECConfigured( compression ) )
+    {
+        const auto* codec = TIFFFindCODEC( compression );
+        return unexpected( "Unsupported compression method: " + ( codec ? std::string( codec->name ) : std::to_string( compression ) ) );
+    }
+
     uint16_t samplesPerPixel = 1, bitsPerSample = 1, sampleFormat = SAMPLEFORMAT_UINT, planarConfig = PLANARCONFIG_CONTIG,
         photometric = PHOTOMETRIC_MINISBLACK;
     TIFFGetFieldDefaulted( tiff, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel );
@@ -389,6 +398,7 @@ namespace DistanceMapSave
 
 Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings )
 {
+    MR_TIMER;
     const RasterInfo info{
         .dims = Vector3i( dmap.dims().x, dmap.dims().y, 1 ),
         .type = ScalarType::Float32,

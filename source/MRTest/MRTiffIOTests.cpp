@@ -68,6 +68,8 @@ struct TestTiffLayout
     uint16_t samplesPerPixel = 1;
     uint16_t sampleFormat = 1; // unsigned integer
     uint16_t photometric = 1; // BlackIsZero
+    // the samples are written uncompressed whatever the tag says
+    uint16_t compression = 1; // none
     // the image is stored in tiles of this size if it is not zero, otherwise in strips
     Vector2i tileSize;
     // the number of rows in a strip, zero means a single strip
@@ -129,7 +131,7 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         { 256, LONG, { uint32_t( width ) } }, // ImageWidth
         { 257, LONG, { uint32_t( height ) } }, // ImageLength
         { 258, SHORT, std::vector<uint32_t>( samplesPerPixel, layout.bitsPerSample ) }, // BitsPerSample
-        { 259, SHORT, { 1 } }, // Compression: none
+        { 259, SHORT, { layout.compression } }, // Compression
         { 262, SHORT, { layout.photometric } }, // PhotometricInterpretation
         { 277, SHORT, { layout.samplesPerPixel } }, // SamplesPerPixel
         { 339, SHORT, std::vector<uint32_t>( samplesPerPixel, layout.sampleFormat ) }, // SampleFormat
@@ -591,6 +593,13 @@ TEST( MRMesh, TiffRasterErrors )
     expectError( RasterLoad::fromTiff( path12 ), "12-bit" );
     expectError( RasterLoad::infoFromTiff( path12 ), "12-bit" );
     expectError( ImageLoad::fromTiff( path12 ), "12-bit" );
+
+    // libtiff opens a file compressed by an unknown method, but cannot decode it
+    const auto unknownCompression = tmpFolder / "compression.tif";
+    writeTestTiff( unknownCompression, { .size = { 2, 1 }, .compression = 60000 }, { 1, 2 } );
+    expectError( RasterLoad::fromTiff( unknownCompression ), "Unsupported compression method: 60000" );
+    expectError( RasterLoad::infoFromTiff( unknownCompression ), "Unsupported compression method" );
+    expectError( ImageLoad::fromTiff( unknownCompression ), "Unsupported compression method" );
 
     const auto notTiff = tmpFolder / "text.tif";
     std::ofstream( notTiff ) << "not a TIFF file";

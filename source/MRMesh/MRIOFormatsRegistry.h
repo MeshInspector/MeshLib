@@ -8,7 +8,6 @@
 #include "MRLinesLoadSettings.h"
 #include "MROnInit.h"
 #include "MRPointsLoadSettings.h"
-#include "MRRaster.h"
 #include "MRSaveSettings.h"
 #include "MRObjectSaveSettings.h"
 #include "MRLoadedObjects.h"

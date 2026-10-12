@@ -22,7 +22,9 @@ namespace RasterLoad
 ///   unlike the decoded colors, the stored samples are not reordered according to the Orientation tag;
 /// * libtiff decodes the other formats (gray with alpha, YCbCr, CMYK, less than 8 bits per sample, etc.) to four UInt8 channels
 ///   of RGBA colors;
-/// * the formats that libtiff cannot decode are read as stored too
+/// * the formats that libtiff cannot decode are read as stored too if each pixel has one sample or three or more interleaved samples
+///   of 8 to 64 bits, otherwise loading fails;
+/// * the files compressed by the methods that libtiff does not support fail to load
 MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings = {} );
 
 /// loads everything about the raster except its values from .tiff format
@@ -62,7 +64,7 @@ namespace DistanceMapSave
 /// saves in .tiff format
 MRIOEXTRAS_API Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& path, const DistanceMapSaveSettings& settings = {} );
 
-} // namespace ImageSave
+} // namespace DistanceMapSave
 
 } // namespace MR
 #endif

@@ -191,7 +191,8 @@ jobs:
             export PATH="$HOME/.cargo/bin:$PATH"
           fi
           make -f scripts/mrbind/generate.mk TARGET=rust -B --trace
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          # This job keeps PATH in GITHUB_ENV (see "Create virtualenv"), so extend it the same way. GITHUB_PATH would drop the venv from it.
+          echo "PATH=$PATH" >> "$GITHUB_ENV"
 
       - name: Build and run Rust examples
         if: ${{ inputs.mrbind_c && env.UPLOAD_BINDINGS_SOURCES == 'true' }}

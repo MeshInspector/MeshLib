@@ -192,7 +192,7 @@ jobs:
         if: ${{ env.RUN_RUST == 'true' }}
         run: make -f scripts/mrbind/generate.mk TARGET=rust -B --trace
 
-      - name: Build and run Rust examples
+      - name: Build and run Rust examples and tests
         if: ${{ env.RUN_RUST == 'true' }}
         env:
           MESHLIB_LIB_DIR: ${{ github.workspace }}/build/${{ matrix.config }}/bin
@@ -200,6 +200,7 @@ jobs:
         run: |
           cargo build --manifest-path examples/rust-examples/Cargo.toml
           ./examples/rust-examples/target/debug/MeshBoolean
+          cargo test --manifest-path source/MRTestRust/Cargo.toml
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt

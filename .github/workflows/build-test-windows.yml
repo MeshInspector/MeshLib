@@ -425,7 +425,7 @@ jobs:
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=rust || exit /b 1
           cargo build --manifest-path examples/rust-examples/Cargo.toml || exit /b 1
           set PATH=%CD%\source\%MR_ARCH%\${{matrix.config}};%PATH%
-          examplesust-examples	arget\debug\MeshBoolean.exe || exit /b 1
+          examples\rust-examples\target\debug\MeshBoolean.exe || exit /b 1
 
       - name: Build C examples
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}

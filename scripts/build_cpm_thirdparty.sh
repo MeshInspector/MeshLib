@@ -22,6 +22,7 @@ MESHLIB_THIRDPARTY_ROOT_DIR=$( cd "${MESHLIB_THIRDPARTY_ROOT_DIR}" ; pwd -P )
 if [[ $OSTYPE == 'darwin'* ]]; then
   echo "Host system: MacOS"
   INSTALL_REQUIREMENTS="install_brew_requirements.sh"
+  export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 elif [[ $OSTYPE == 'linux'* ]]; then
   source /etc/os-release
   echo "Host system: ${NAME} ${DISTRIB_RELEASE}"

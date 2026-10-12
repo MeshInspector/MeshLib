@@ -966,6 +966,14 @@ bool BeginModalNoAnimation( const char* label, bool* open /*= nullptr*/, ImGuiWi
         hasPrevData = true;
         prevCursorMaxPos = window->DC.CursorMaxPos.y;
     }
+    // a modal inside the main viewport is drawn below other dialogs having their own OS windows, so give it its own window too
+    if ( ( GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable ) && GetPlatformIO().Viewports.Size > 1 )
+    {
+        context->NextWindowData.HasFlags &= ~ImGuiNextWindowDataFlags_HasViewport;
+        ImGuiWindowClass windowClass;
+        windowClass.ViewportFlagsOverrideSet = ImGuiViewportFlags_NoAutoMerge;
+        SetNextWindowClass( &windowClass );
+    }
     if ( !BeginPopupModal( label, open, flags | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse ) )
     {
         ImGui::PopStyleVar();

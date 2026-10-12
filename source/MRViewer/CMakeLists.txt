@@ -52,7 +52,7 @@ target_link_libraries(${PROJECT_NAME}
 IF(NOT EMSCRIPTEN)
   find_package(cpr REQUIRED)
   # remove explicit macOS SDK include dir to fix Clang and system libc++ mismatch
-  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT MESHLIB_USE_VCPKG)
     set_target_properties(CURL::libcurl PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "")
   endif()
 
@@ -152,7 +152,7 @@ ENDIF()
 
 file(GLOB JSONS "*.json")
 file(GLOB AWESOME_FONTS "${MESHLIB_THIRDPARTY_DIR}/fontawesome-free/*.ttf")
-file(GLOB IMGUI_FONTS "${MESHLIB_THIRDPARTY_DIR}/imgui/misc/fonts/*.ttf")
+file(GLOB IMGUI_FONTS "${IMGUI_ROOT}/misc/fonts/*.ttf")
 file(GLOB MAIN_FONTS "${MESHLIB_THIRDPARTY_DIR}/Noto_Sans/*.*")
 # desktop bundles the third-party notices next to the executable for the About dialog;
 # wasm links to them on GitHub instead, so they are not copied into the emscripten assets

@@ -2,7 +2,11 @@
 
 # This is to be used on platforms that generate C/C# bindings through Emscripten: on Windows, and optionally on Linux. Not needed on Mac.
 
-git -C "$(dirname "$BASH_SOURCE")"/.. submodule update --init --depth 1 \
+set -e
+
+SCRIPT_DIR="$(dirname "$BASH_SOURCE")"
+
+"$SCRIPT_DIR"/checkout_submodules.sh "$SCRIPT_DIR"/.. \
     thirdparty/eigen \
     thirdparty/expected \
     thirdparty/imgui \
@@ -14,4 +18,4 @@ git -C "$(dirname "$BASH_SOURCE")"/.. submodule update --init --depth 1 \
     thirdparty/parallel-hashmap \
     thirdparty/spdlog \
 
-git -C "$(dirname "$BASH_SOURCE")"/../thirdparty/mrbind submodule update --init --depth 1 deps/cppdecl
+"$SCRIPT_DIR"/checkout_submodules.sh "$SCRIPT_DIR"/../thirdparty/mrbind deps/cppdecl

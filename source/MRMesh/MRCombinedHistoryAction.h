@@ -24,6 +24,8 @@ public:
         return name_;
     }
 
+    void setName( std::string name ) { name_ = std::move( name ); }
+
     MRMESH_API virtual void action( HistoryAction::Type type ) override;
 
           HistoryActionsVector& getStack()       { return actions_; }

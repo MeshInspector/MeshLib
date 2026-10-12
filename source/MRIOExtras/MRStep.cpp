@@ -166,9 +166,9 @@ public:
         : callback_( std::move( callback ) )
     {}
 
-    Standard_Boolean UserBreak() override { return interrupted_; }
+    bool UserBreak() override { return interrupted_; }
 
-    void Show( const Message_ProgressScope&, const Standard_Boolean ) override
+    void Show( const Message_ProgressScope&, const bool ) override
     {
         interrupted_ = !reportProgress( callback_, (float)GetPosition() );
     }
@@ -297,15 +297,16 @@ public:
         rootObj_->select( true );
         objStack_.push( rootObj_ );
 
-        TDF_LabelSequence shapes;
+        using LabelSequence = NCollection_Sequence<TDF_Label>;
+        LabelSequence shapes;
         shapeTool_->GetFreeShapes( shapes );
 
 #if STEP_LOAD_COLORS
-        TDF_LabelSequence colors;
+        LabelSequence colors;
         colorTool_->GetColors( colors );
 #endif
 
-        for ( TDF_LabelSequence::Iterator it( shapes ); it.More(); it.Next() )
+        for ( LabelSequence::Iterator it( shapes ); it.More(); it.Next() )
             readLabel_( it.Value() );
 
 #if STEP_LOAD_COLORS
@@ -615,7 +616,7 @@ private:
         assert( !label.IsNull() );
 
         Handle( TDataStd_Name ) name;
-        if ( label.FindAttribute( TDataStd_Name::GetID(), name ) != Standard_True )
+        if ( !label.FindAttribute( TDataStd_Name::GetID(), name ) )
             return {};
 
         const auto& str = name->Get();
@@ -947,9 +948,9 @@ Expected<std::shared_ptr<Object>> fromSceneStepFileImpl( const std::function<Exp
 #endif
 #if MODERN_PROGRESS_INDICATION_SUPPORTED
         ProgressIndicator progress( subprogress( settings.callback, 0.25f, 0.85f ) );
-        if ( reader.Transfer( document, progress.Start() ) != Standard_True )
+        if ( !reader.Transfer( document, progress.Start() ) )
 #else
-        if ( reader.Transfer( document ) != Standard_True )
+        if ( !reader.Transfer( document ) )
 #endif
             return unexpected( "Failed to read STEP model" );
     }

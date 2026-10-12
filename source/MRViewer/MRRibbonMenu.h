@@ -189,8 +189,6 @@ protected:
     struct DialogItemPtr
     {
         std::shared_ptr<RibbonMenuItem> item;
-        // this flag is needed to correctly fix position of UI dialog (temporary, while plugin dialogs are floating in viewport)
-        bool dialogPositionFixed{ false };
     };
     DialogItemPtr activeBlockingItem_;
     std::vector<DialogItemPtr> activeNonBlockingItems_;

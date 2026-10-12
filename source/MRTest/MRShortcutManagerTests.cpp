@@ -41,7 +41,7 @@ TEST( MRViewer, ShortcutKeyNameRoundTrip )
     for ( int key : { GLFW_KEY_A, GLFW_KEY_Z, GLFW_KEY_0, GLFW_KEY_9, GLFW_KEY_COMMA, GLFW_KEY_MINUS, GLFW_KEY_EQUAL,
                       GLFW_KEY_F1, GLFW_KEY_F12, GLFW_KEY_F25, GLFW_KEY_KP_0, GLFW_KEY_KP_9,
                       GLFW_KEY_TAB, GLFW_KEY_HOME, GLFW_KEY_END, GLFW_KEY_PAGE_UP, GLFW_KEY_PAGE_DOWN,
-                      GLFW_KEY_PAUSE, GLFW_KEY_CAPS_LOCK, GLFW_KEY_BACKSPACE, GLFW_KEY_ENTER } )
+                      GLFW_KEY_PAUSE, GLFW_KEY_CAPS_LOCK, GLFW_KEY_BACKSPACE, GLFW_KEY_ENTER, GLFW_KEY_SPACE, GLFW_KEY_GRAVE_ACCENT } )
     {
         EXPECT_EQ( ShortcutManager::parseKey( ShortcutManager::getKeyString( key ) ), key ) << "key " << key;
     }
@@ -74,13 +74,22 @@ TEST( MRViewer, ShortcutParseShortcutKey )
     EXPECT_EQ( ShortcutManager::parseShortcutKey( "Ctrl++" ), ( SK{ '+', GLFW_MOD_CONTROL } ) );
     EXPECT_EQ( ShortcutManager::parseShortcutKey( "+" ), ( SK{ '+', 0 } ) );
 
+    // chords: a key name instead of a modifier is the held key
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "Space+1" ), ( SK{ GLFW_KEY_1, 0, GLFW_KEY_SPACE } ) );
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "Space+`" ), ( SK{ GLFW_KEY_GRAVE_ACCENT, 0, GLFW_KEY_SPACE } ) );
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "Ctrl+Space+1" ), ( SK{ GLFW_KEY_1, GLFW_MOD_CONTROL, GLFW_KEY_SPACE } ) );
+    EXPECT_EQ( ShortcutManager::parseShortcutKey( "Space" ), ( SK{ GLFW_KEY_SPACE, 0 } ) );
+
     EXPECT_FALSE( ShortcutManager::parseShortcutKey( "" ) );
-    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Ctrl+Shift" ) ); // no key
-    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Foo+S" ) );      // unknown modifier
-    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Ctrl+Foo" ) );   // unknown key
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Ctrl+Shift" ) );  // no key
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Foo+S" ) );       // unknown modifier or held key
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Ctrl+Foo" ) );    // unknown key
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "G+Space+1" ) );   // several held keys
+    EXPECT_FALSE( ShortcutManager::parseShortcutKey( "Space+Space" ) ); // held key is the key
 
     // round trip through getKeyFullString for the modifiers with platform-independent display names
-    for ( SK sk : { SK{ GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, SK{ GLFW_KEY_F2, 0 }, SK{ GLFW_KEY_KP_7, GLFW_MOD_SHIFT }, SK{ GLFW_KEY_COMMA, GLFW_MOD_CONTROL } } )
+    for ( SK sk : { SK{ GLFW_KEY_S, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, SK{ GLFW_KEY_F2, 0 }, SK{ GLFW_KEY_KP_7, GLFW_MOD_SHIFT }, SK{ GLFW_KEY_COMMA, GLFW_MOD_CONTROL },
+                    SK{ GLFW_KEY_1, 0, GLFW_KEY_SPACE }, SK{ GLFW_KEY_1, GLFW_MOD_CONTROL, GLFW_KEY_SPACE } } )
         EXPECT_EQ( ShortcutManager::parseShortcutKey( ShortcutManager::getKeyFullString( sk ) ), sk );
 }
 
@@ -105,6 +114,8 @@ TEST( MRViewer, ShortcutKeysFullString )
     EXPECT_EQ( ShortcutManager::getKeysFullString( { SK{ GLFW_KEY_Y, GLFW_MOD_CONTROL } } ), "Ctrl+Y" );
     EXPECT_EQ( ShortcutManager::getKeysFullString( { SK{ GLFW_KEY_Z, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT }, SK{ GLFW_KEY_Y, GLFW_MOD_CONTROL } } ),
         "Ctrl+Shift+Z, Ctrl+Y" );
+    EXPECT_EQ( ShortcutManager::getKeysFullString( { SK{ GLFW_KEY_KP_1, 0 }, SK{ GLFW_KEY_1, 0, GLFW_KEY_SPACE } } ), "Num 1, Space+1" );
+    EXPECT_EQ( ShortcutManager::getKeyFullString( SK{ GLFW_KEY_1, GLFW_MOD_CONTROL, GLFW_KEY_SPACE } ), "Ctrl+Space+1" );
 }
 
 TEST( MRViewer, ShortcutSeveralKeys )
@@ -193,6 +204,46 @@ TEST( MRViewer, ShortcutSeveralKeysRemoval )
     EXPECT_TRUE( sm.getShortcutList().empty() );
 }
 
+TEST( MRViewer, ShortcutChords )
+{
+    using SK = ShortcutKey;
+    const SK frontKey{ GLFW_KEY_KP_1, 0 };
+    const SK frontChord{ GLFW_KEY_1, 0, GLFW_KEY_SPACE };
+
+    ShortcutManager sm;
+    int frontCount = 0, oneCount = 0, hCount = 0;
+    sm.setShortcut( { { frontKey, frontChord }, ShortcutCategory::View }, { "Front", [&] { ++frontCount; } } );
+    sm.setShortcut( { { GLFW_KEY_1, 0 }, ShortcutCategory::View }, { "One", [&] { ++oneCount; } } );
+    sm.setShortcut( { { GLFW_KEY_H, 0 }, ShortcutCategory::View }, { "H", [&] { ++hCount; } } );
+
+    // the chord and its key alone are different shortcuts
+    EXPECT_TRUE( sm.processShortcut( frontChord ) );
+    EXPECT_TRUE( sm.processShortcut( frontKey ) );
+    EXPECT_TRUE( sm.processShortcut( { GLFW_KEY_1, 0 } ) );
+    EXPECT_EQ( frontCount, 2 );
+    EXPECT_EQ( oneCount, 1 );
+
+    // a held key matches only the chords in the map
+    EXPECT_FALSE( sm.processShortcut( { GLFW_KEY_H, 0, GLFW_KEY_SPACE } ) );
+    EXPECT_FALSE( sm.processShortcut( { GLFW_KEY_2, 0, GLFW_KEY_SPACE } ) );
+    EXPECT_EQ( hCount, 0 );
+
+    EXPECT_EQ( sm.findShortcutsByName( "Front" ), ( std::vector<SK>{ frontKey, frontChord } ) );
+
+    // removing the action removes its chord, the key alone keeps its action
+    sm.resetShortcut( "Front" );
+    EXPECT_FALSE( sm.processShortcut( frontChord ) );
+    EXPECT_TRUE( sm.processShortcut( { GLFW_KEY_1, 0 } ) );
+    EXPECT_EQ( oneCount, 2 );
+    EXPECT_EQ( frontCount, 2 );
+
+    // the largest key codes and all modifiers fit in the map
+    const SK bigChord{ GLFW_KEY_LAST, GLFW_MOD_CONTROL | GLFW_MOD_SHIFT | GLFW_MOD_ALT | GLFW_MOD_SUPER, GLFW_KEY_LAST - 1 };
+    sm.setShortcut( { bigChord, ShortcutCategory::View }, { "Big", [] {} } );
+    EXPECT_EQ( sm.findShortcutsByName( "Big" ), std::vector<SK>{ bigChord } );
+    EXPECT_TRUE( sm.processShortcut( bigChord ) );
+}
+
 #ifndef __EMSCRIPTEN__ // getGlfwModPrimaryCtrl() asks the page for is_mac(), which the test harness does not define
 namespace
 {
@@ -235,6 +286,11 @@ TEST( MRViewer, ShortcutItemKeys )
     ASSERT_TRUE( s );
     EXPECT_EQ( s->shortcut.keys, ( std::vector<SK>{ redoKey, { GLFW_KEY_Y, primary }, { GLFW_KEY_F4, GLFW_MOD_SHIFT } } ) );
     EXPECT_EQ( s->shortcut.category, ShortcutCategory::Edit );
+
+    // a chord
+    s = readItemShortcut( R"({ "Keys": [ "Num1", "Space+1" ], "Category": "View" })" );
+    ASSERT_TRUE( s );
+    EXPECT_EQ( s->shortcut.keys, ( std::vector<SK>{ { GLFW_KEY_KP_1, 0 }, { GLFW_KEY_1, 0, GLFW_KEY_SPACE } } ) );
 }
 #endif
 

@@ -234,8 +234,9 @@ protected:
     /// true if historyAction_ is prepared but not yet appended to HistoryStore, which is done on first mouse move
     bool appendHistoryAction_ = false;
 
-    /// in Relax mode with relaxMarkCreases, wraps historyAction_ in HistoryStore, and receives the creases change on mouse up
-    std::shared_ptr<CombinedHistoryAction> smoothHistoryAction_;
+    /// wraps historyAction_ in HistoryStore to receive the changes made on mouse up:
+    /// the creases in Relax mode with relaxMarkCreases, the subdivision in Add/Remove modes with subdivideGrooves
+    std::shared_ptr<CombinedHistoryAction> combinedHistoryAction_;
 
     std::shared_ptr<Palette> palette_;
     bool enableDeviationTexture_ = false;

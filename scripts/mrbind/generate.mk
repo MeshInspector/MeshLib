@@ -628,6 +628,8 @@ COMPILER_FLAGS += -I$(DEPS_INCLUDE_DIR)/eigen3
 endif
 ifneq ($(IS_LINUX),)
 COMPILER_FLAGS += -isystem /usr/include/eigen3
+else ifneq ($(IS_MACOS),)
+COMPILER_FLAGS += -isystem $(HOMEBREW_DIR)/include/eigen3
 else
 # TODO: use system Eigen
 COMPILER_FLAGS += -isystem $(makefile_dir)../../thirdparty/eigen

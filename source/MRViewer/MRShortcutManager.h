@@ -82,7 +82,7 @@ public:
     MRVIEWER_API static const char* getModifierString( int mod );
     //make string from a key without modifiers, for arrow characters it uses icons font
     MRVIEWER_API static std::string getKeyString( int key );
-    // make string from all modifiers and with/without key and returns it
+    // make string from all modifiers, the held key and with/without key and returns it, e.g. "Ctrl+Space+1"
     MRVIEWER_API static std::string getKeyFullString( const ShortcutKey& key, bool respectKey = true );
     /// makes string from several keys separated by commas, e.g. "Ctrl+Shift+Z, Ctrl+Y"
     MRVIEWER_API static std::string getKeysFullString( const std::vector<ShortcutKey>& keys );
@@ -103,7 +103,7 @@ public:
     MRVIEWER_API static std::optional<Category> parseCategory( std::string_view name );
 
     /// parses a shortcut written as its modifiers and key separated by "+", e.g. "Primary+Shift+S", the inverse of getKeyFullString;
-    /// returns nothing if any part is unknown
+    /// a key name among the modifiers is the held key of a chord, e.g. "Space+1"; returns nothing if any part is unknown or there are several held keys
     MRVIEWER_API static std::optional<ShortcutKey> parseShortcutKey( std::string_view keys );
 
     // if action with given name is present in shortcut list - returns its first key
@@ -119,7 +119,14 @@ protected:
     // if respectKeyboard is set, key will be mapped using local keyboard settings (only if it is mapped to latin symbol)
     MRVIEWER_API static int mapKeyFromKeyAndMod( const ShortcutKey& key, bool respectKeyboard );
     // returns key with modifier (alt, ctrl, shift, etc.) from simple map key
-    static ShortcutKey kayAndModFromMapKey( int mapKey ) { return { mapKey >> 6, mapKey % ( 1 << 6 ) }; }
+    static ShortcutKey kayAndModFromMapKey( int mapKey )
+        { return { ( mapKey >> cModBits ) % ( 1 << cKeyBits ), mapKey % ( 1 << cModBits ), mapKey >> ( cModBits + cKeyBits ) }; }
+    // bits of the modifiers and of the key in a map key, the held key takes the rest
+    static constexpr int cModBits = 6;
+    static constexpr int cKeyBits = 9;
+
+    // the held key, down now and not reserved by a UI hotkey (reserveKeyEvent), of a chord with given key and modifiers; 0 if none
+    int findHeldKey_( int key, int mod ) const;
 
     using ShourtcutsMap = HashMap<int, ShortcutCommand>;
     using ShourtcutsBackMap = HashMap<std::string, std::vector<int>>; // all keys of an action in their order

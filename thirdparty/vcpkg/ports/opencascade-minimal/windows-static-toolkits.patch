@@ -1,0 +1,23 @@
+diff --git a/adm/cmake/occt_toolkit.cmake b/adm/cmake/occt_toolkit.cmake
+index 22e94d06..04b15620 100644
+--- a/adm/cmake/occt_toolkit.cmake
++++ b/adm/cmake/occt_toolkit.cmake
+@@ -39,9 +39,6 @@ set (PRECOMPILED_DEFS)
+ 
+ if (NOT BUILD_SHARED_LIBS)
+   list (APPEND PRECOMPILED_DEFS "-DOCCT_NO_PLUGINS")
+-  if (WIN32 AND NOT EXECUTABLE_PROJECT)
+-    list (APPEND PRECOMPILED_DEFS "-DOCCT_STATIC_BUILD")
+-  endif()
+ endif()
+ 
+ # Get all used packages from toolkit
+@@ -94,7 +91,7 @@ endforeach()
+ string (REGEX REPLACE ";" " " PRECOMPILED_DEFS "${PRECOMPILED_DEFS}")
+ 
+ set (USED_RCFILE "")
+-if (MSVC)
++if (MSVC AND BUILD_SHARED_LIBS)
+   set (USED_RCFILE "${CMAKE_BINARY_DIR}/resources/${PROJECT_NAME}.rc")
+   configure_file("${CMAKE_SOURCE_DIR}/adm/templates/occt_toolkit.rc.in" "${USED_RCFILE}" @ONLY)
+ endif()

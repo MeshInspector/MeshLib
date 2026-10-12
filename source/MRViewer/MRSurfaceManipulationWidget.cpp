@@ -305,9 +305,9 @@ bool SurfaceManipulationWidget::onMouseDown_( MouseButton button, int modifiers 
             appendHistoryAction_ = true;
             std::string name = "Brush: ";
             if ( settings_.workMode == WorkMode::Add )
-                name = _t( "Brush: Add" );
+                name = settings_.laplacianBasedAddRemove ? _t( "Brush: Add Ridge" ) : _t( "Brush: Add" );
             else if ( settings_.workMode == WorkMode::Remove )
-                name = _t( "Brush: Remove" );
+                name = settings_.laplacianBasedAddRemove ? _t( "Brush: Remove Groove" ) : _t( "Brush: Remove" );
             else if ( settings_.workMode == WorkMode::Relax )
                 name = settings_.relaxKeepCreases ? _t( "Brush: Smooth (Keep Sharp Edges)" ) : _t( "Brush: Smooth" );
 
@@ -364,7 +364,14 @@ void SurfaceManipulationWidget::subdivideAfterAddRemove_()
     {
         ownMeshChangedSignal_ = true;
         MR_FINALLY{ ownMeshChangedSignal_ = false; };
-        AppendHistory<PartialChangeMeshDataAction>( _t( "Subdivide Ridges/Grooves" ), obj_, std::move( subdivData ) );
+        auto subdivAction = std::make_shared<PartialChangeMeshDataAction>( _t( "Subdivide Ridges/Grooves" ), obj_, std::move( subdivData ) );
+        if ( combinedHistoryAction_ )
+        {
+            combinedHistoryAction_->getStack().push_back( std::move( subdivAction ) );
+            combinedHistoryAction_->setName( combinedHistoryAction_->name() + _t( " + Subdivision" ) );
+        }
+        else
+            AppendHistory( std::move( subdivAction ) );
         reallocData_( obj_->meshPtr()->topology.lastValidVert() + 1 );
         sameOriginalMeshTopology_ = false;
         setDeviationCalculationMethod( requestedDeviationCalculationMethod_ );
@@ -386,8 +393,8 @@ void SurfaceManipulationWidget::markSelectedEdgesAsCreases_()
         creases.autoResizeSet( ue );
         changed = true;
     }
-    if ( changed && smoothHistoryAction_ )
-        smoothHistoryAction_->getStack().push_back( std::make_shared<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, std::move( creases ) ) );
+    if ( changed && combinedHistoryAction_ )
+        combinedHistoryAction_->getStack().push_back( std::make_shared<ChangeMeshCreasesAction>( _t( "Brush: Mark Creases" ), obj_, std::move( creases ) ) );
 }
 
 void SurfaceManipulationWidget::updateDistancesAndRegion_( const Mesh& mesh, const std::vector<MeshTriPoint>& start, VertScalars& distances, VertBitSet& region, const VertBitSet* untouchable )
@@ -532,7 +539,7 @@ bool SurfaceManipulationWidget::onMouseUp_( Viewer::MouseButton button, int /*mo
 
     if ( settings_.workMode == WorkMode::Relax && settings_.relaxMarkCreases && generalEditingRegion_.any() )
         markSelectedEdgesAsCreases_();
-    smoothHistoryAction_.reset();
+    combinedHistoryAction_.reset();
 
     generalEditingRegion_.clear();
 
@@ -640,11 +647,12 @@ void SurfaceManipulationWidget::changeSurface_()
     if ( appendHistoryAction_ )
     {
         appendHistoryAction_ = false;
-        if ( settings_.workMode == WorkMode::Relax && settings_.relaxKeepCreases && settings_.relaxMarkCreases )
+        if ( ( settings_.workMode == WorkMode::Relax && settings_.relaxKeepCreases && settings_.relaxMarkCreases )
+            || ( settings_.subdivideGrooves && ( settings_.workMode == WorkMode::Add || settings_.workMode == WorkMode::Remove ) ) )
         {
-            // the creases marked on mouse up are added here to be undone together with the smoothing
-            smoothHistoryAction_ = std::make_shared<CombinedHistoryAction>( historyAction_->name(), HistoryActionsVector{ historyAction_ } );
-            AppendHistory( smoothHistoryAction_ );
+            // the creases marked or the subdivision made on mouse up are added here to be undone together with the brush stroke
+            combinedHistoryAction_ = std::make_shared<CombinedHistoryAction>( historyAction_->name(), HistoryActionsVector{ historyAction_ } );
+            AppendHistory( combinedHistoryAction_ );
         }
         else
             AppendHistory( historyAction_ );
@@ -877,7 +885,7 @@ void SurfaceManipulationWidget::abortEdit_()
     invalidateMetricsCache_();
     appendHistoryAction_ = false;
     historyAction_.reset();
-    smoothHistoryAction_.reset();
+    combinedHistoryAction_.reset();
     generalEditingRegion_.clear();
     const auto numV = pointsShift_.size();
     pointsShift_.clear();

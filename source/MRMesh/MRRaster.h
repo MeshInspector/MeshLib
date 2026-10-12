@@ -59,6 +59,9 @@ MRMESH_API Expected<void> convertRasterToFloats( const Raster& raster, std::vect
 /// settings for loading rasters from external formats
 struct RasterLoadSettings
 {
+    /// optional output: transformation of (column, row, value) to world coordinates if the format stores it (e.g. GeoTIFF),
+    /// otherwise the identity
+    AffineXf3f* xf = nullptr;
     /// to report load progress and cancel loading if user desires
     ProgressCallback progress;
 };
@@ -66,6 +69,8 @@ struct RasterLoadSettings
 /// settings for saving rasters in external formats
 struct RasterSaveSettings
 {
+    /// optional transformation of (column, row, value) to world coordinates, saved if the format supports it (e.g. GeoTIFF)
+    const AffineXf3f* xf = nullptr;
     /// to report save progress and cancel saving if user desires
     ProgressCallback progress;
 };

@@ -776,6 +776,34 @@ TEST( MRMesh, TiffDistanceMapSave )
     EXPECT_EQ( AffineXf3f( toWorld ), xf );
 }
 
+// the GeoTIFF transformation of a raster of any type, which distance maps read too; a file without it gives the identity
+TEST( MRMesh, TiffRasterXf )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "xf.tif";
+
+    Raster raster{ .info = { .dims = { 3, 2, 1 }, .type = ScalarType::UInt16 } };
+    raster.data.resize( raster.info.dataSize() );
+    const AffineXf3f xf( Matrix3f::scale( 0.5f, -0.5f, 2.f ), Vector3f( 10.f, 20.f, 3.f ) );
+    auto saveRes = RasterSave::toAnySupportedFormat( raster, path, { .xf = &xf } );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+
+    AffineXf3f loadedXf;
+    auto loaded = RasterLoad::fromAnySupportedFormat( path, { .xf = &loadedXf } );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loadedXf, xf );
+    DistanceMapToWorld toWorld;
+    ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );
+    EXPECT_EQ( AffineXf3f( toWorld ), xf );
+
+    saveRes = RasterSave::toAnySupportedFormat( raster, path );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    loaded = RasterLoad::fromAnySupportedFormat( path, { .xf = &loadedXf } );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loadedXf, AffineXf3f() );
+}
+
 TEST( MRMesh, TiffCancel )
 {
     UniqueTemporaryFolder tmpFolder;

@@ -433,7 +433,12 @@ namespace RasterLoad
 Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings )
 {
     MR_TIMER;
-    return readTiffFile( path, [&] ( TIFF* tiff, const TiffLayout& layout ) { return readRaster( tiff, layout, settings.progress ); } );
+    return readTiffFile( path, [&] ( TIFF* tiff, const TiffLayout& layout )
+    {
+        if ( settings.xf )
+            *settings.xf = readGeoTransform( tiff ).value_or( AffineXf3f() );
+        return readRaster( tiff, layout, settings.progress );
+    } );
 }
 
 Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path )
@@ -453,7 +458,7 @@ Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, 
     MR_TIMER;
     if ( raster.data.size() != raster.info.dataSize() )
         return unexpected( "Raster data size does not match its dimensions" );
-    return writeTiff( path, raster.info, raster.data.data(), false, settings.progress );
+    return writeTiff( path, raster.info, raster.data.data(), false, settings.progress, { .pixelToWorld = settings.xf } );
 }
 
 MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff )

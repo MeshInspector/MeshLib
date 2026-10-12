@@ -1,4 +1,3 @@
-#include "MRMesh/MRColor.h"
 #include "MRMesh/MRScalarConvert.h"
 #ifndef MESHLIB_NO_VOXELS
 #include "MRVoxels/MRVoxelsLoad.h"
@@ -19,8 +18,6 @@ TEST( MRMesh, ScalarTypeSize )
     EXPECT_EQ( getScalarTypeSize( ScalarType::UInt32 ), 4u );
     EXPECT_EQ( getScalarTypeSize( ScalarType::Float64 ), 8u );
     EXPECT_EQ( getScalarTypeSize( ScalarType::Float32_4 ), 16u );
-    EXPECT_EQ( getScalarTypeSize( ScalarType::RGB8 ), 3u );
-    EXPECT_EQ( getScalarTypeSize( ScalarType::RGBA8 ), sizeof( Color ) );
     EXPECT_EQ( getScalarTypeSize( ScalarType::Unknown ), 0u );
 }
 
@@ -31,8 +28,6 @@ TEST( MRMesh, ScalarTypeMinMax )
     // the limits of 64-bit types are rounded to doubles: 2^64 and +-2^63
     EXPECT_EQ( getScalarTypeMinMax( ScalarType::UInt64 ), MinMaxd( 0, 0x1p64 ) );
     EXPECT_EQ( getScalarTypeMinMax( ScalarType::Int64 ), MinMaxd( -0x1p63, 0x1p63 ) );
-    // the range of a color component
-    EXPECT_EQ( getScalarTypeMinMax( ScalarType::RGBA8 ), MinMaxd( 0, 255 ) );
     EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float32 ), MinMaxd( std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() ) );
     EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float32_4 ), getScalarTypeMinMax( ScalarType::Float32 ) );
     EXPECT_EQ( getScalarTypeMinMax( ScalarType::Float64 ), MinMaxd( std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max() ) );
@@ -53,35 +48,7 @@ TEST( MRMesh, ScalarTypeMinMax )
     EXPECT_EQ( getTypeConverter( ScalarType::Float64, getScalarTypeMinMax( ScalarType::Float64 ) )( ( const char* )&value ), -2.5f );
 }
 
-TEST( MRMesh, ScalarTypeColorLuma )
-{
-    const uint8_t color[] = { 255, 128, 0, 7 };
-    const auto* c = ( const char* )color;
-    const float luma = 0.299f * 255 + 0.587f * 128;
-    auto toFloat = [] ( auto v ) { return float( v ); };
-    EXPECT_FLOAT_EQ( visitScalarType( toFloat, ScalarType::RGB8, c ), luma );
-    // alpha does not change the value
-    EXPECT_FLOAT_EQ( visitScalarType( toFloat, ScalarType::RGBA8, c ), luma );
-    EXPECT_FLOAT_EQ( getTypeConverter( ScalarType::RGBA8, getScalarTypeMinMax( ScalarType::RGBA8 ) )( c ), luma / 255 );
-}
-
 #ifndef MESHLIB_NO_VOXELS
-TEST( MRMesh, RawVoxelsColor )
-{
-    // red and blue voxels
-    const uint8_t data[] = { 255, 0, 0, 0, 0, 255 };
-    std::istringstream in( std::string( ( const char* )data, sizeof( data ) ) );
-    auto vol = VoxelsLoad::fromRaw( in, {
-        .dimensions = { 2, 1, 1 },
-        .voxelSize = { 1, 1, 1 },
-        .scalarType = ScalarType::RGB8,
-    } );
-    ASSERT_TRUE( vol.has_value() ) << vol.error();
-    // the luma values are scaled to [0, 1] as for UInt8
-    EXPECT_NEAR( vol->max, 0.299f, 1e-6f );
-    EXPECT_NEAR( vol->min, 0.114f, 1e-6f );
-}
-
 TEST( MRMesh, RawVoxelsFloat )
 {
     // Float64 and Float32_4 values are kept as they are, like Float32 ones

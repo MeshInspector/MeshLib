@@ -26,12 +26,9 @@ size_t getScalarTypeSize( ScalarType scalarType )
     case ScalarType::UInt16:
     case ScalarType::Int16:
         return 2;
-    case ScalarType::RGB8:
-        return 3;
     case ScalarType::UInt32:
     case ScalarType::Int32:
     case ScalarType::Float32:
-    case ScalarType::RGBA8:
         return 4;
     case ScalarType::UInt64:
     case ScalarType::Int64:
@@ -51,8 +48,6 @@ MinMaxd getScalarTypeMinMax( ScalarType scalarType )
     switch ( scalarType )
     {
     case ScalarType::UInt8:
-    case ScalarType::RGB8:
-    case ScalarType::RGBA8:
         return minMaxOf<uint8_t>();
     case ScalarType::Int8:
         return minMaxOf<int8_t>();

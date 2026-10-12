@@ -182,6 +182,26 @@ jobs:
           path: ./source/MRDotNet2/src
           retention-days: 1
 
+      - name: Generate and build Rust bindings
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
+        run: |
+          # The images don't have Rust yet.
+          if ! command -v cargo >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          make -f scripts/mrbind/generate.mk TARGET=rust -B --trace
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      - name: Build and run Rust examples
+        if: ${{ inputs.mrbind_c && env.UPLOAD_BINDINGS_SOURCES == 'true' }}
+        env:
+          MESHLIB_LIB_DIR: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+        run: |
+          cargo build --manifest-path examples/rust-examples/Cargo.toml
+          ./examples/rust-examples/target/debug/MeshBoolean
+
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt
 

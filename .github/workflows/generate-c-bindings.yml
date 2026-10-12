@@ -23,6 +23,9 @@ jobs:
       contents: read  # This is required for actions/checkout
     container:
       image: meshlib/meshlib-emscripten-generate-c-bindings-arm64:${{inputs.docker_image_tag}}
+      credentials:
+        username: meshlib
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     steps:
       - name: Checkout

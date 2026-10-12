@@ -7,7 +7,6 @@
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRIOFormatsRegistry.h"
 #include "MRMesh/MRMatrix4.h"
-#include "MRMesh/MRParallelFor.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRFmt.h"
@@ -15,7 +14,6 @@
 #include <tiffio.h>
 
 #include <bit>
-#include <cmath>
 #include <cstring>
 #include <memory>
 
@@ -29,7 +27,7 @@ constexpr uint32_t cModelTransformationTag = 34264;
 constexpr uint32_t cGdalNoDataTag = 42113;
 
 // libtiff's RGBA reader stores the pixels as uint32 values with the red component in the lowest byte,
-// which is the order of the components in Color and in RGBA8 values in a little-endian machine
+// which is the order of the components in Color and in the channels of a raster in a little-endian machine
 static_assert( std::endian::native == std::endian::little );
 
 struct TiffCloser
@@ -83,19 +81,11 @@ ScalarType getSampleType( uint16_t sampleFormat, uint16_t bitsPerSample )
 // how the pixels are stored in the file and how they become the values of the raster
 struct TiffLayout
 {
-    Vector2i size;
-    uint16_t samplesPerPixel = 1;
+    // the stored samples, or four UInt8 channels of the RGBA colors decoded by libtiff
+    RasterInfo info;
+    // libtiff decodes the pixels to RGBA colors
+    bool decoded = false;
     std::optional<Vector2i> tileSize;
-    // type of the samples if they are read as stored; ScalarType::Unknown if libtiff decodes the pixels to RGBA8 values
-    ScalarType sampleType = ScalarType::Unknown;
-    // type of the raster values: sampleType for one sample per pixel, otherwise RGB8 or RGBA8 made of the first three or four samples,
-    // or decoded by libtiff
-    ScalarType valueType = ScalarType::RGBA8;
-
-    RasterInfo rasterInfo() const
-    {
-        return { .dims = Vector3i( size.x, size.y, 1 ), .type = valueType };
-    }
 };
 
 Expected<TiffLayout> readLayout( TIFF* tiff )
@@ -108,15 +98,16 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
     constexpr auto maxSize = uint32_t( std::numeric_limits<int>::max() );
     if ( width == 0 || height == 0 || width > maxSize || height > maxSize )
         return unexpected( "Unsupported image size" );
-    res.size = Vector2i( int( width ), int( height ) );
+    res.info.dims = Vector3i( int( width ), int( height ), 1 );
 
-    uint16_t bitsPerSample = 1, sampleFormat = SAMPLEFORMAT_UINT, planarConfig = PLANARCONFIG_CONTIG, photometric = PHOTOMETRIC_MINISBLACK;
-    TIFFGetFieldDefaulted( tiff, TIFFTAG_SAMPLESPERPIXEL, &res.samplesPerPixel );
+    uint16_t samplesPerPixel = 1, bitsPerSample = 1, sampleFormat = SAMPLEFORMAT_UINT, planarConfig = PLANARCONFIG_CONTIG,
+        photometric = PHOTOMETRIC_MINISBLACK;
+    TIFFGetFieldDefaulted( tiff, TIFFTAG_SAMPLESPERPIXEL, &samplesPerPixel );
     TIFFGetFieldDefaulted( tiff, TIFFTAG_BITSPERSAMPLE, &bitsPerSample );
     TIFFGetFieldDefaulted( tiff, TIFFTAG_SAMPLEFORMAT, &sampleFormat );
     TIFFGetFieldDefaulted( tiff, TIFFTAG_PLANARCONFIG, &planarConfig );
     if ( !TIFFGetField( tiff, TIFFTAG_PHOTOMETRIC, &photometric ) )
-        photometric = res.samplesPerPixel >= 3 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
+        photometric = samplesPerPixel >= 3 ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK;
 
     if ( TIFFIsTiled( tiff ) )
     {
@@ -129,40 +120,41 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
         res.tileSize = Vector2i( int( tileWidth ), int( tileHeight ) );
     }
 
-    // the stored samples, the values and a tile must fit in memory; the largest value takes 8 bytes
-    const auto maxPixelSize = std::max( uint64_t( res.samplesPerPixel ) * ( ( bitsPerSample + 7u ) / 8u ), uint64_t( 8 ) );
+    // the stored samples or the decoded colors must fit in memory, and so must a tile
+    const auto maxPixelSize = std::max( uint64_t( samplesPerPixel ) * ( ( bitsPerSample + 7u ) / 8u ), uint64_t( 4 ) );
     const auto maxPixels = uint64_t( std::numeric_limits<std::ptrdiff_t>::max() ) / maxPixelSize;
     if ( uint64_t( width ) * height > maxPixels || ( res.tileSize && uint64_t( res.tileSize->x ) * uint64_t( res.tileSize->y ) > maxPixels ) )
         return unexpected( "Image is too large" );
 
-    // gray values and RGB colors are read as stored, as the old raster reader did; libtiff decodes the other formats, as the old
-    // image loader did; if it cannot, they are read as stored too: as gray values or as colors depending on the number of samples
+    // the samples of gray, palette and RGB images are read as stored, as the old raster reader did; libtiff decodes the other formats,
+    // as the old image loader did; if it cannot, they are read as stored too
     const auto sampleType = getSampleType( sampleFormat, bitsPerSample );
     const bool storable = sampleType != ScalarType::Unknown && photometric != PHOTOMETRIC_YCBCR
-        && ( res.samplesPerPixel == 1 || ( res.samplesPerPixel >= 3 && planarConfig == PLANARCONFIG_CONTIG ) );
-    const bool plain = photometric == PHOTOMETRIC_RGB
-        || ( res.samplesPerPixel == 1 && ( photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE ) );
+        && ( samplesPerPixel == 1 || ( samplesPerPixel >= 3 && planarConfig == PLANARCONFIG_CONTIG ) );
+    const bool plain = photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE
+        || photometric == PHOTOMETRIC_RGB || photometric == PHOTOMETRIC_PALETTE;
     char emsg[1024] = {};
     if ( !( storable && plain ) && TIFFRGBAImageOK( tiff, emsg ) )
+    {
+        res.info.type = ScalarType::UInt8;
+        res.info.channels = 4;
+        res.decoded = true;
         return res;
+    }
     if ( !storable )
         return unexpected( fmt::format( "Unsupported pixel format: {}", emsg ) );
 
-    res.sampleType = sampleType;
-    if ( res.samplesPerPixel == 1 )
-        res.valueType = sampleType;
-    else if ( res.samplesPerPixel == 3 )
-        res.valueType = ScalarType::RGB8;
-    // otherwise RGBA8: as in libtiff's RGBA reader, the fourth sample is alpha whatever ExtraSamples says
+    res.info.type = sampleType;
+    res.info.channels = samplesPerPixel;
     return res;
 }
 
 // reads the samples as stored in the file to dst, row by row
 Expected<void> readSamples( TIFF* tiff, const TiffLayout& layout, uint8_t* dst, const ProgressCallback& progress )
 {
-    const auto width = size_t( layout.size.x );
-    const auto height = size_t( layout.size.y );
-    const auto pixelSize = size_t( layout.samplesPerPixel ) * getScalarTypeSize( layout.sampleType );
+    const auto width = size_t( layout.info.dims.x );
+    const auto height = size_t( layout.info.dims.y );
+    const auto pixelSize = size_t( layout.info.channels ) * getScalarTypeSize( layout.info.type );
     const auto rowSize = width * pixelSize;
     if ( !layout.tileSize )
     {
@@ -198,56 +190,22 @@ Expected<void> readSamples( TIFF* tiff, const TiffLayout& layout, uint8_t* dst, 
     return {};
 }
 
-// converts a color sample to 8 bits: integer samples keep their high byte and are taken as unsigned ones, as in libtiff's RGBA reader;
-// floating-point samples are clamped to [0, 1], NaN becomes 0
-template <typename T>
-uint8_t colorTo8Bit( T v )
-{
-    if constexpr ( std::is_floating_point_v<T> )
-        return std::isnan( v ) ? uint8_t( 0 ) : Color::valToUint8( v );
-    else
-        return uint8_t( std::make_unsigned_t<T>( v ) >> ( 8 * sizeof( T ) - 8 ) );
-}
-
-// converts the first three or four samples of each pixel as stored in the file to 8-bit color components
-void convertColors( const TiffLayout& layout, const uint8_t* src, uint8_t* dst )
-{
-    const auto sampleSize = getScalarTypeSize( layout.sampleType );
-    const auto storedPixelSize = size_t( layout.samplesPerPixel ) * sampleSize;
-    const auto channels = getScalarTypeSize( layout.valueType );
-    ParallelFor( size_t( 0 ), size_t( layout.size.x ) * size_t( layout.size.y ), [&] ( size_t i )
-    {
-        for ( size_t c = 0; c < channels; ++c )
-        {
-            const auto* sample = (const char*)src + i * storedPixelSize + c * sampleSize;
-            dst[i * channels + c] = visitScalarType( [] ( auto v ) { return colorTo8Bit( v ); }, layout.sampleType, sample );
-        }
-    } );
-}
-
 Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const ProgressCallback& progress )
 {
-    Raster res{ .info = layout.rasterInfo() };
+    Raster res{ .info = layout.info };
     res.data.resize( res.info.dataSize() );
-
-    if ( layout.sampleType == ScalarType::Unknown )
+    if ( !layout.decoded )
     {
-        if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( layout.size.x ), uint32_t( layout.size.y ), (uint32_t*)res.data.data(), ORIENTATION_TOPLEFT, 1 ) )
-            return unexpected( "Error reading pixels" );
-        if ( !reportProgress( progress, 1.f ) )
-            return unexpectedOperationCanceled();
+        if ( auto readRes = readSamples( tiff, layout, res.data.data(), progress ); !readRes )
+            return unexpected( std::move( readRes.error() ) );
         return res;
     }
 
-    // the samples are read directly to the raster if they need no conversion: one sample per pixel, or three or four 8-bit color samples
-    const auto storedPixelSize = size_t( layout.samplesPerPixel ) * getScalarTypeSize( layout.sampleType );
-    const bool asStored = storedPixelSize == getScalarTypeSize( layout.valueType );
-    Buffer<uint8_t> stored( asStored ? 0 : size_t( layout.size.x ) * size_t( layout.size.y ) * storedPixelSize );
-    auto* samples = asStored ? res.data.data() : stored.data();
-    if ( auto readRes = readSamples( tiff, layout, samples, progress ); !readRes )
-        return unexpected( std::move( readRes.error() ) );
-    if ( !asStored )
-        convertColors( layout, samples, res.data.data() );
+    const auto& dims = res.info.dims;
+    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( dims.x ), uint32_t( dims.y ), (uint32_t*)res.data.data(), ORIENTATION_TOPLEFT, 1 ) )
+        return unexpected( "Error reading pixels" );
+    if ( !reportProgress( progress, 1.f ) )
+        return unexpectedOperationCanceled();
     return res;
 }
 
@@ -258,10 +216,11 @@ Expected<Image> readImage( TIFF* tiff, const TiffLayout& layout )
     if ( !TIFFRGBAImageOK( tiff, emsg ) )
         return readRaster( tiff, layout, {} ).and_then( convertRasterToImage );
 
-    Image res{ .resolution = layout.size };
-    res.pixels.resize( size_t( layout.size.x ) * size_t( layout.size.y ) );
+    const auto& dims = layout.info.dims;
+    Image res{ .resolution = Vector2i( dims.x, dims.y ) };
+    res.pixels.resize( size_t( dims.x ) * size_t( dims.y ) );
     // ORIENTATION_BOTLEFT puts the bottom row first, as in Image
-    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( layout.size.x ), uint32_t( layout.size.y ), (uint32_t*)res.pixels.data(), ORIENTATION_BOTLEFT, 1 ) )
+    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( dims.x ), uint32_t( dims.y ), (uint32_t*)res.pixels.data(), ORIENTATION_BOTLEFT, 1 ) )
         return unexpected( "Error reading pixels" );
     return res;
 }
@@ -293,12 +252,11 @@ struct GeoTags
 Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& info, const uint8_t* data, bool bottomUp,
     const ProgressCallback& progress, const GeoTags& geoTags = {} )
 {
-    // the color components are stored as 8-bit samples, other values as single samples
-    const bool isColor = info.type == ScalarType::RGB8 || info.type == ScalarType::RGBA8;
-    const auto sampleType = isColor ? ScalarType::UInt8 : info.type;
-    const auto* sample = std::find_if( std::begin( cSampleTypes ), std::end( cSampleTypes ), [sampleType] ( const SampleType& s ) { return s.type == sampleType; } );
+    const auto* sample = std::find_if( std::begin( cSampleTypes ), std::end( cSampleTypes ), [&info] ( const SampleType& s ) { return s.type == info.type; } );
     if ( sample == std::end( cSampleTypes ) )
         return unexpected( "Unsupported value type" );
+    if ( info.channels != 1 && info.channels != 3 && info.channels != 4 )
+        return unexpected( "Unsupported number of channels" );
     if ( info.dims.x <= 0 || info.dims.y <= 0 || info.dims.z <= 0 )
         return unexpected( "Cannot save empty raster" );
     if ( info.dims.z != 1 )
@@ -314,9 +272,9 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     TIFFSetField( tiff, TIFFTAG_BITSPERSAMPLE, sample->bits );
     // ExtraSamples is not written, as before, so libtiff's RGBA reader takes the fourth sample as associated alpha
     // and does not premultiply the colors by it
-    TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, isColor ? int( getScalarTypeSize( info.type ) ) : 1 );
+    TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, info.channels );
     TIFFSetField( tiff, TIFFTAG_SAMPLEFORMAT, sample->format );
-    TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, isColor ? PHOTOMETRIC_RGB : PHOTOMETRIC_MINISBLACK );
+    TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, info.channels == 1 ? PHOTOMETRIC_MINISBLACK : PHOTOMETRIC_RGB );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
     TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
 
@@ -338,7 +296,7 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
         TIFFSetField( tiff, cGdalNoDataTag, fmt::format( "{}", *geoTags.noData ).c_str() );
 
     const auto height = size_t( info.dims.y );
-    const auto rowSize = size_t( info.dims.x ) * getScalarTypeSize( info.type );
+    const auto rowSize = size_t( info.dims.x ) * size_t( info.channels ) * getScalarTypeSize( info.type );
     for ( size_t row = 0; row < height; ++row )
     {
         const auto* rowData = data + ( bottomUp ? height - 1 - row : row ) * rowSize;
@@ -369,7 +327,7 @@ Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSe
 
 Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path )
 {
-    return readTiffFile( path, [] ( TIFF*, const TiffLayout& layout ) -> Expected<RasterInfo> { return layout.rasterInfo(); } );
+    return readTiffFile( path, [] ( TIFF*, const TiffLayout& layout ) -> Expected<RasterInfo> { return layout.info; } );
 }
 
 MR_ADD_RASTER_LOADER( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), fromTiff, infoFromTiff )
@@ -415,7 +373,8 @@ Expected<void> toTiff( const Image& image, const std::filesystem::path& path )
         return unexpected( "Image size does not match its resolution" );
     const RasterInfo info{
         .dims = Vector3i( image.resolution.x, image.resolution.y, 1 ),
-        .type = ScalarType::RGBA8,
+        .type = ScalarType::UInt8,
+        .channels = 4,
     };
     return writeTiff( path, info, (const uint8_t*)image.pixels.data(), true, {} );
 }

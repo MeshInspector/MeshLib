@@ -395,7 +395,7 @@ TEST( MRMesh, TiffImageAlpha )
     // the file starts from the top row, which is the last row of the image
     auto raster = RasterLoad::fromTiff( path );
     ASSERT_TRUE( raster.has_value() ) << raster.error();
-    EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { 2, 2, 1 }, .type = ScalarType::RGBA8 } ) );
+    EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { 2, 2, 1 }, .type = ScalarType::UInt8, .channels = 4 } ) );
     std::vector<Color> colors( 4 );
     ASSERT_EQ( raster->data.size(), colors.size() * sizeof( Color ) );
     std::memcpy( (void*)colors.data(), raster->data.data(), raster->data.size() );
@@ -411,19 +411,21 @@ TEST( MRMesh, TiffRasterRoundTrip )
     ASSERT_TRUE( tmpFolder );
 
     for ( auto type : { ScalarType::UInt8, ScalarType::Int8, ScalarType::UInt16, ScalarType::Int16, ScalarType::UInt32, ScalarType::Int32,
-        ScalarType::UInt64, ScalarType::Int64, ScalarType::Float32, ScalarType::Float64, ScalarType::RGB8, ScalarType::RGBA8 } )
+        ScalarType::UInt64, ScalarType::Int64, ScalarType::Float32, ScalarType::Float64 } )
+    for ( int channels : { 1, 3, 4 } )
     {
         Raster raster{
             .info = {
                 .dims = { 5, 3, 1 },
                 .type = type,
+                .channels = channels,
             },
         };
         raster.data.resize( raster.info.dataSize() );
         for ( size_t i = 0; i < raster.data.size(); ++i )
             raster.data[i] = uint8_t( i * 37 + 11 );
 
-        const auto path = tmpFolder / fmt::format( "raster{}.tif", int( type ) );
+        const auto path = tmpFolder / fmt::format( "raster{}_{}.tif", int( type ), channels );
         auto saveRes = RasterSave::toAnySupportedFormat( raster, path );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
@@ -445,6 +447,7 @@ struct TestTiffCase
     TestTiffLayout layout;
     std::vector<uint8_t> samples;
     ScalarType type;
+    int channels;
     std::vector<uint8_t> expected;
 };
 
@@ -458,42 +461,61 @@ static void checkTestTiffCases( const std::vector<TestTiffCase>& cases )
         writeTestTiff( path, c.layout, c.samples );
         auto loaded = RasterLoad::fromTiff( path );
         ASSERT_TRUE( loaded.has_value() ) << c.name << ": " << loaded.error();
-        EXPECT_EQ( loaded->info, ( RasterInfo{ .dims = Vector3i( c.layout.size.x, c.layout.size.y, 1 ), .type = c.type } ) ) << c.name;
+        EXPECT_EQ( loaded->info, ( RasterInfo{ .dims = Vector3i( c.layout.size.x, c.layout.size.y, 1 ), .type = c.type, .channels = c.channels } ) ) << c.name;
         EXPECT_EQ( loaded->data, c.expected ) << c.name;
     }
 }
 
-// RGB samples wider than 8 bits keep their high byte, taken as unsigned; floating-point samples are clamped to [0, 1], NaN becomes 0
-TEST( MRMesh, TiffRasterColorConversions )
+// the color samples of any type are kept as stored, ImageLoad converts the ones that libtiff cannot decode
+TEST( MRMesh, TiffRasterStoredColors )
 {
+    const auto rgb16 = toBytes( std::vector<uint16_t>{ 0xFFFF, 0x80FF, 0x00FF } );
+    const auto rgbaf = toBytes( std::vector<float>{ 2.f, 0.5f, std::nanf( "" ), 1.f, 7.f } );
+    const TestTiffLayout rgbafLayout{ .size = { 1, 1 }, .bitsPerSample = 32, .samplesPerPixel = 5, .sampleFormat = 3, .photometric = 2, .extraSamples = { 2, 0 } };
     checkTestTiffCases( {
-        { "rgb16", { .size = { 1, 1 }, .bitsPerSample = 16, .samplesPerPixel = 3, .photometric = 2 },
-            toBytes( std::vector<uint16_t>{ 0xFFFF, 0x80FF, 0x00FF } ), ScalarType::RGB8, { 255, 128, 0 } },
-        { "rgb16s", { .size = { 1, 1 }, .bitsPerSample = 16, .samplesPerPixel = 3, .sampleFormat = 2, .photometric = 2 },
-            toBytes( std::vector<int16_t>{ 20000, -1, 0 } ), ScalarType::RGB8, { 78, 255, 0 } },
-        { "rgb32", { .size = { 1, 1 }, .bitsPerSample = 32, .samplesPerPixel = 3, .photometric = 2 },
-            toBytes( std::vector<uint32_t>{ 0xFF000000, 0x80FFFFFF, 0x00FFFFFF } ), ScalarType::RGB8, { 255, 128, 0 } },
-        // the fourth sample is alpha, the samples after it are ignored
-        { "rgbaf", { .size = { 1, 1 }, .bitsPerSample = 32, .samplesPerPixel = 5, .sampleFormat = 3, .photometric = 2, .extraSamples = { 2, 0 } },
-            toBytes( std::vector<float>{ 2.f, 0.5f, std::nanf( "" ), 1.f, 7.f } ), ScalarType::RGBA8, { 255, 127, 0, 255 } },
+        { "rgb16", { .size = { 1, 1 }, .bitsPerSample = 16, .samplesPerPixel = 3, .photometric = 2 }, rgb16, ScalarType::UInt16, 3, rgb16 },
+        { "rgbaf", rgbafLayout, rgbaf, ScalarType::Float32, 5, rgbaf },
     } );
+
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "rgbaf.tif";
+    writeTestTiff( path, rgbafLayout, rgbaf );
+    auto image = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 255, 127, 0, 255 ) } ) );
 }
 
-// the formats without plain sample values are decoded by libtiff to RGBA8 values
+// the formats without plain samples are decoded by libtiff to RGBA colors
 TEST( MRMesh, TiffRasterDecoded )
 {
-    // red, green and blue colors for the indices 0, 1, 2, the rest is black
-    std::vector<uint16_t> colorMap( 3 * 256, 0 );
-    colorMap[0] = colorMap[256 + 1] = colorMap[512 + 2] = 0xFFFF;
     checkTestTiffCases( {
         // white, black and cyan
         { "cmyk", { .size = { 3, 1 }, .samplesPerPixel = 4, .photometric = 5 }, { 0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0 },
-            ScalarType::RGBA8, { 255, 255, 255, 255, 0, 0, 0, 255, 0, 255, 255, 255 } },
-        { "palette", { .size = { 3, 1 }, .photometric = 3, .colorMap = colorMap }, { 2, 0, 1 },
-            ScalarType::RGBA8, { 0, 0, 255, 255, 255, 0, 0, 255, 0, 255, 0, 255 } },
+            ScalarType::UInt8, 4, { 255, 255, 255, 255, 0, 0, 0, 255, 0, 255, 255, 255 } },
         { "grayAlpha", { .size = { 2, 1 }, .samplesPerPixel = 2, .extraSamples = { 2 } }, { 10, 0, 20, 255 },
-            ScalarType::RGBA8, { 10, 10, 10, 0, 20, 20, 20, 255 } },
+            ScalarType::UInt8, 4, { 10, 10, 10, 0, 20, 20, 20, 255 } },
     } );
+}
+
+// the raster keeps the color indices, libtiff decodes the colors in the image
+TEST( MRMesh, TiffRasterPalette )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "palette.tif";
+
+    // red, green and blue colors for the indices 0, 1, 2, the rest is black
+    std::vector<uint16_t> colorMap( 3 * 256, 0 );
+    colorMap[0] = colorMap[256 + 1] = colorMap[512 + 2] = 0xFFFF;
+    writeTestTiff( path, { .size = { 3, 1 }, .photometric = 3, .colorMap = colorMap }, { 2, 0, 1 } );
+    auto loaded = RasterLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->info, ( RasterInfo{ .dims = { 3, 1, 1 }, .type = ScalarType::UInt8 } ) );
+    EXPECT_EQ( loaded->data, std::vector<uint8_t>( { 2, 0, 1 } ) );
+    auto image = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color::blue(), Color::red(), Color::green() } ) );
 }
 
 // the samples are read from strips and tiles, the tiles of the last column and of the last row extend beyond the image
@@ -506,15 +528,18 @@ TEST( MRMesh, TiffRasterStoredLayouts )
     std::vector<uint16_t> gray( size_t( size.x ) * size.y );
     for ( size_t i = 0; i < gray.size(); ++i )
         gray[i] = uint16_t( 1000 * i + 7 );
+    // the gray images with several samples per pixel keep them all
+    const auto bands = toBytes( std::vector<float>{ 1.5f, -2.f, 1e6f } );
     checkTestTiffCases( {
-        { "strip", { .size = size, .samplesPerPixel = 3, .photometric = 2 }, rgb, ScalarType::RGB8, rgb },
-        { "strips", { .size = size, .samplesPerPixel = 3, .photometric = 2, .rowsPerStrip = 2 }, rgb, ScalarType::RGB8, rgb },
-        { "tiles", { .size = size, .samplesPerPixel = 3, .photometric = 2, .tileSize = { 4, 2 } }, rgb, ScalarType::RGB8, rgb },
-        { "grayTiles", { .size = size, .bitsPerSample = 16, .tileSize = { 4, 2 } }, toBytes( gray ), ScalarType::UInt16, toBytes( gray ) },
+        { "strip", { .size = size, .samplesPerPixel = 3, .photometric = 2 }, rgb, ScalarType::UInt8, 3, rgb },
+        { "strips", { .size = size, .samplesPerPixel = 3, .photometric = 2, .rowsPerStrip = 2 }, rgb, ScalarType::UInt8, 3, rgb },
+        { "tiles", { .size = size, .samplesPerPixel = 3, .photometric = 2, .tileSize = { 4, 2 } }, rgb, ScalarType::UInt8, 3, rgb },
+        { "grayTiles", { .size = size, .bitsPerSample = 16, .tileSize = { 4, 2 } }, toBytes( gray ), ScalarType::UInt16, 1, toBytes( gray ) },
+        { "bands", { .size = { 1, 1 }, .bitsPerSample = 32, .samplesPerPixel = 3, .sampleFormat = 3 }, bands, ScalarType::Float32, 3, bands },
     } );
 }
 
-// the formats that libtiff cannot decode are read as stored, as the old image loader read them
+// the formats that libtiff cannot decode are read as stored, and their gray values are scaled in the image, as the old image loader did
 TEST( MRMesh, TiffRasterUndecodedFormat )
 {
     UniqueTemporaryFolder tmpFolder;
@@ -524,11 +549,11 @@ TEST( MRMesh, TiffRasterUndecodedFormat )
     writeTestTiff( path, { .size = { 2, 1 }, .bitsPerSample = 16, .photometric = 34892 }, toBytes( std::vector<uint16_t>{ 0x0100, 0xFF00 } ) ); // LinearRaw
     auto loaded = RasterLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    EXPECT_EQ( loaded->info.type, ScalarType::UInt16 );
+    EXPECT_EQ( loaded->info, ( RasterInfo{ .dims = { 2, 1, 1 }, .type = ScalarType::UInt16 } ) );
     EXPECT_EQ( loaded->data, toBytes( std::vector<uint16_t>{ 0x0100, 0xFF00 } ) );
     auto image = ImageLoad::fromTiff( path );
     ASSERT_TRUE( image.has_value() ) << image.error();
-    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 1, 1, 1 ), Color( 255, 255, 255 ) } ) );
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 0, 0, 0 ), Color( 255, 255, 255 ) } ) );
 }
 
 // the raster keeps the stored gray values, libtiff inverts them in the image
@@ -608,6 +633,11 @@ TEST( MRMesh, TiffRasterErrors )
     raster.info = { .dims = { 1, 1, 1 }, .type = ScalarType::Float32_4 };
     raster.data.resize( raster.info.dataSize() );
     EXPECT_FALSE( RasterSave::toTiff( raster, tmpFolder / "float4.tif" ).has_value() );
+
+    // gray with alpha is not saved
+    raster.info = { .dims = { 1, 1, 1 }, .type = ScalarType::UInt8, .channels = 2 };
+    raster.data.resize( raster.info.dataSize() );
+    EXPECT_FALSE( RasterSave::toTiff( raster, tmpFolder / "grayAlpha.tif" ).has_value() );
 }
 
 TEST( MRMesh, TiffDistanceMapSave )

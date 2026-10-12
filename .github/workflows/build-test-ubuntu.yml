@@ -55,6 +55,8 @@ jobs:
       MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
       # the job that uploads PythonStubs and CsharpBindings
       UPLOAD_BINDINGS_SOURCES: ${{ matrix.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
+      # one Release job per OS and architecture builds the Rust bindings and runs their examples
+      RUN_RUST: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
 
     steps:
       - name: Display job info
@@ -182,20 +184,16 @@ jobs:
           path: ./source/MRDotNet2/src
           retention-days: 1
 
+      - name: Install Rust
+        if: ${{ env.RUN_RUST == 'true' }}
+        uses: ./.github/actions/setup-rust
+
       - name: Generate and build Rust bindings
-        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' }}
-        run: |
-          # The images don't have Rust yet.
-          if ! command -v cargo >/dev/null; then
-            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
-            export PATH="$HOME/.cargo/bin:$PATH"
-          fi
-          make -f scripts/mrbind/generate.mk TARGET=rust -B --trace
-          # This job keeps PATH in GITHUB_ENV (see "Create virtualenv"), so extend it the same way. GITHUB_PATH would drop the venv from it.
-          echo "PATH=$PATH" >> "$GITHUB_ENV"
+        if: ${{ env.RUN_RUST == 'true' }}
+        run: make -f scripts/mrbind/generate.mk TARGET=rust -B --trace
 
       - name: Build and run Rust examples
-        if: ${{ inputs.mrbind_c && env.UPLOAD_BINDINGS_SOURCES == 'true' }}
+        if: ${{ env.RUN_RUST == 'true' }}
         env:
           MESHLIB_LIB_DIR: ${{ github.workspace }}/build/${{ matrix.config }}/bin
           LD_LIBRARY_PATH: ${{ github.workspace }}/build/${{ matrix.config }}/bin

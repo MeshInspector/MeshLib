@@ -410,6 +410,23 @@ jobs:
             -DMESHLIB_LIB_DIRS="%CD%/source/%MR_ARCH%/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
           cmake --build cpp-examples-build -j || exit /b 1
 
+      - name: Install Rust
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
+        uses: ./.github/actions/setup-rust
+
+        # This consumes the JSON created by generating the C bindings, like the C# step.
+      - name: Generate and build Rust bindings and examples
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
+        shell: cmd
+        env:
+          MSYS2_DIR: C:\msys64
+        run: |
+          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
+          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=rust || exit /b 1
+          cargo build --manifest-path examples/rust-examples/Cargo.toml || exit /b 1
+          set PATH=%CD%\source\%MR_ARCH%\${{matrix.config}};%PATH%
+          examplesust-examples	arget\debug\MeshBoolean.exe || exit /b 1
+
       - name: Build C examples
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd

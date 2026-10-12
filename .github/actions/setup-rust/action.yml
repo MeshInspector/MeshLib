@@ -1,0 +1,37 @@
+name: Setup Rust
+description: >
+  Makes `cargo` available for the following steps. If the runner already has
+  it, nothing is installed. Otherwise a minimal stable toolchain is installed
+  with rustup into the runner's temp directory, so self-hosted runners don't
+  accumulate state.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Rust
+      shell: bash
+      run: |
+        set -eu
+        if command -v cargo >/dev/null; then
+          echo "Using the existing $(command -v cargo)"
+          exit 0
+        fi
+        export CARGO_HOME="$RUNNER_TEMP/cargo"
+        export RUSTUP_HOME="$RUNNER_TEMP/rustup"
+        if [ "$RUNNER_OS" = Windows ]; then
+          case "$RUNNER_ARCH" in
+            ARM64) host=aarch64 ;;
+            *) host=x86_64 ;;
+          esac
+          curl -sSfL -o "$RUNNER_TEMP/rustup-init.exe" "https://win.rustup.rs/$host"
+          "$RUNNER_TEMP/rustup-init.exe" -y --profile minimal --no-modify-path
+          # `GITHUB_PATH` is fine here: the Windows jobs don't keep PATH in `GITHUB_ENV`.
+          echo "$CARGO_HOME\bin" >> "$GITHUB_PATH"
+        else
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --no-modify-path
+          # The Ubuntu and macOS jobs keep PATH in `GITHUB_ENV` (see their "Create virtualenv" steps),
+          # and a `GITHUB_PATH` entry would make the runner rebuild PATH without the virtualenv.
+          echo "PATH=$CARGO_HOME/bin:$PATH" >> "$GITHUB_ENV"
+        fi
+        echo "CARGO_HOME=$CARGO_HOME" >> "$GITHUB_ENV"
+        echo "RUSTUP_HOME=$RUSTUP_HOME" >> "$GITHUB_ENV"

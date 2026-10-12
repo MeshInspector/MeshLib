@@ -1241,6 +1241,6 @@ generate:
 .PHONY: build
 build: generate
 # The library crate itself links against nothing, but its consumers need the C libraries. The generated `build.rs` reads this variable.
-	$(if $(wildcard $(MESHLIB_SHLIB_DIR)),MESHLIB_LIB_DIR=$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))) cargo build --manifest-path $(call quote,$(RUST_CODE_OUTPUT_DIR)/Cargo.toml) $(if $(filter release,$(MODE)),--release)
+	$(if $(wildcard $(MESHLIB_SHLIB_DIR)),MESHLIB_LIB_DIR=$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))) cargo build --manifest-path $(call quote,$(RUST_CODE_OUTPUT_DIR)/Cargo.toml)
 
 endif

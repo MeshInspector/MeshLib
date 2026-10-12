@@ -1,7 +1,7 @@
 use meshlib::mr;
 use meshlib::mr::{Box3i, Vector3f, Vector3i, VoxelId};
 
-fn create_volume() -> meshlib::Owned<meshlib::expected_MR_VdbVolume_std_string>
+fn create_volume() -> meshlib::Owned<mr::expected_MR_VdbVolume_std_string>
 {
     let mut sphere_params = mr::SphereParams::new();
     sphere_params.set_radius(1.0);

@@ -1219,12 +1219,10 @@ else # If Rust:
 
 # Rust needs almost none of the logic in this file, just one simple rule.
 
-# Where to output the crate. The whole directory is generated, including `Cargo.toml` and `build.rs`.
+# The crate directory. `Cargo.toml` and `build.rs` are committed, `src` is generated.
 RUST_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibRust
 
 RUST_INPUT_JSON := $(TEMP_OUTPUT_DIR)/interop_desc.json
-
-RUST_CRATE_NAME := meshlib
 
 # Where to find the compiled C bindings. This is only passed to the consumers of the crate, see `build.rs`.
 ifneq ($(IS_WINDOWS),)
@@ -1235,7 +1233,15 @@ endif
 
 .PHONY: generate
 generate:
-	$(strip $(MRBIND_GEN_RUST_EXE) 		--input-json $(call quote,$(RUST_INPUT_JSON)) 		--output-dir $(call quote,$(RUST_CODE_OUTPUT_DIR)) 		--clean-output-dir 		--imported-lib-name MeshLibC2 		--crate-name $(RUST_CRATE_NAME) 		$(call, ### Handle sub-libraries) 		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) 	)
+	$(strip $(MRBIND_GEN_RUST_EXE) \
+		--input-json $(call quote,$(RUST_INPUT_JSON)) \
+		--output-dir $(call quote,$(RUST_CODE_OUTPUT_DIR)/src) \
+		--clean-output-dir \
+		--imported-lib-name MeshLibC2 \
+		--force-namespace MR \
+		$(call, ### Handle sub-libraries) \
+		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
+	)
 
 # In the MSYS2 shell `link.exe` resolves to the coreutils `link`, so point cargo at the MSVC linker explicitly.
 ifneq ($(IS_WINDOWS),)
@@ -1247,7 +1253,7 @@ endif
 .DEFAULT_GOAL := build
 .PHONY: build
 build: generate
-# The library crate itself links against nothing, but its consumers need the C libraries. The generated `build.rs` reads this variable.
+# The library crate itself links against nothing, but its consumers need the C libraries. The committed `build.rs` reads this variable.
 	$(if $(wildcard $(MESHLIB_SHLIB_DIR)),MESHLIB_LIB_DIR=$(call quote,$(abspath $(MESHLIB_SHLIB_DIR)))) $(RUST_LINKER_ENV) cargo build --manifest-path $(call quote,$(RUST_CODE_OUTPUT_DIR)/Cargo.toml)
 
 endif

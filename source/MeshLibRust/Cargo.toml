@@ -1,0 +1,9 @@
+[package]
+name = "meshlib"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+build = "build.rs"
+
+[lib]
+path = "src/lib.rs"

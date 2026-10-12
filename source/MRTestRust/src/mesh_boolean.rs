@@ -70,7 +70,7 @@ fn boolean_multiple_edge_propogation_sort()
     *points.index_mut(VertId {id_: 4}) = Vector3f {x: -1.0, y: 1.5, z: 0.0};
     *points.index_mut(VertId {id_: 5}) = Vector3f {x: 1.0, y: 1.5, z: 0.0};
     let mut triangulation = mr::Triangulation::construct_1_size_t(5);
-    let tri = |a, b, c| meshlib::std_array_MR_VertId_3 {elems: [VertId {id_: a}, VertId {id_: b}, VertId {id_: c}]};
+    let tri = |a, b, c| mr::std_array_MR_VertId_3 {elems: [VertId {id_: a}, VertId {id_: b}, VertId {id_: c}]};
     *triangulation.index_mut(FaceId {id_: 0}) = tri(0, 2, 1);
     *triangulation.index_mut(FaceId {id_: 1}) = tri(1, 2, 3);
     *triangulation.index_mut(FaceId {id_: 2}) = tri(3, 4, 1);
@@ -82,7 +82,7 @@ fn boolean_multiple_edge_propogation_sort()
         *mesh_a_sup.points_mut().index_mut(VertId {id_: 3}) = Vector3f {x: 0.0, y: 1.5, z: -0.5};
         let holes = mesh_a.topology().find_hole_representive_edges(None);
         let border = mr::track_right_boundary_loop(mesh_a.topology(), *holes.at(0), None, Some(Turn::Rightmost));
-        let mut border_vec = meshlib::std_vector_std_vector_MR_EdgeId::new();
+        let mut border_vec = mr::std_vector_std_vector_MR_EdgeId::new();
         border_vec.push_back(&border);
         let mp = mr::MeshPart::construct(&mesh_a_sup, Some(mesh_a_sup.topology().get_valid_faces()));
         mesh_a.add_mesh_part_6(&mp, Some(true), Some(&border_vec), Some(&border_vec), None, None);

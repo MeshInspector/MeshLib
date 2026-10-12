@@ -11,7 +11,7 @@ fn create_mesh_with_holes() -> meshlib::Owned<mr::Mesh>
     *points.index_mut(VertId {id_: 4}) = Vector3f {x: 1.0, y: 0.0, z: 1.0};
     *points.index_mut(VertId {id_: 5}) = Vector3f {x: 0.0, y: 1.0, z: 1.0};
     let mut triangulation = mr::Triangulation::construct_1_size_t(5);
-    let tri = |a, b, c| meshlib::std_array_MR_VertId_3 {elems: [VertId {id_: a}, VertId {id_: b}, VertId {id_: c}]};
+    let tri = |a, b, c| mr::std_array_MR_VertId_3 {elems: [VertId {id_: a}, VertId {id_: b}, VertId {id_: c}]};
     *triangulation.index_mut(FaceId {id_: 0}) = tri(0, 2, 1);
     *triangulation.index_mut(FaceId {id_: 1}) = tri(3, 4, 5);
     *triangulation.index_mut(FaceId {id_: 2}) = tri(0, 1, 3);

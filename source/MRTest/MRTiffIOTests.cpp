@@ -70,6 +70,7 @@ struct TestTiffLayout
     uint16_t photometric = 1; // BlackIsZero
     // the samples are written uncompressed whatever the tag says
     uint16_t compression = 1; // none
+    uint16_t orientation = 1; // TopLeft
     // the image is stored in tiles of this size if it is not zero, otherwise in strips
     Vector2i tileSize;
     // the number of rows in a strip, zero means a single strip
@@ -133,6 +134,7 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         { 258, SHORT, std::vector<uint32_t>( samplesPerPixel, layout.bitsPerSample ) }, // BitsPerSample
         { 259, SHORT, { layout.compression } }, // Compression
         { 262, SHORT, { layout.photometric } }, // PhotometricInterpretation
+        { 274, SHORT, { layout.orientation } }, // Orientation
         { 277, SHORT, { layout.samplesPerPixel } }, // SamplesPerPixel
         { 339, SHORT, std::vector<uint32_t>( samplesPerPixel, layout.sampleFormat ) }, // SampleFormat
     };
@@ -498,6 +500,27 @@ TEST( MRMesh, TiffRasterDecoded )
         { "grayAlpha", { .size = { 2, 1 }, .samplesPerPixel = 2, .extraSamples = { 2 } }, { 10, 0, 20, 255 },
             ScalarType::UInt8, 4, { 10, 10, 10, 0, 20, 20, 20, 255 } },
     } );
+}
+
+// the rows of the raster keep the stored order whatever the Orientation tag says, also in the formats decoded by libtiff;
+// ImageLoad follows the tag
+TEST( MRMesh, TiffRasterOrientation )
+{
+    // the first stored row is the bottom one
+    checkTestTiffCases( {
+        { "gray", { .size = { 1, 2 }, .orientation = 4 }, { 10, 20 }, ScalarType::UInt8, 1, { 10, 20 } },
+        { "grayAlpha", { .size = { 1, 2 }, .samplesPerPixel = 2, .orientation = 4, .extraSamples = { 2 } }, { 10, 255, 20, 255 },
+            ScalarType::UInt8, 4, { 10, 10, 10, 255, 20, 20, 20, 255 } },
+    } );
+
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "bottomUp.tif";
+    writeTestTiff( path, { .size = { 1, 2 }, .orientation = 4 }, { 10, 20 } );
+    auto image = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( image.has_value() ) << image.error();
+    // the rows of Image go from bottom to top too
+    EXPECT_EQ( image->pixels, std::vector<Color>( { Color( 10, 10, 10 ), Color( 20, 20, 20 ) } ) );
 }
 
 // the raster keeps the color indices, libtiff decodes the colors in the image

@@ -83,7 +83,9 @@ struct TiffLayout
 {
     // the stored samples, or four UInt8 channels of the RGBA colors decoded by libtiff
     RasterInfo info;
-    // libtiff decodes the pixels to RGBA colors
+    // libtiff can decode the pixels to RGBA colors
+    bool decodable = false;
+    // the raster holds the colors decoded by libtiff
     bool decoded = false;
     std::optional<Vector2i> tileSize;
 };
@@ -143,7 +145,8 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
     const bool plain = photometric == PHOTOMETRIC_MINISBLACK || photometric == PHOTOMETRIC_MINISWHITE
         || photometric == PHOTOMETRIC_RGB || photometric == PHOTOMETRIC_PALETTE;
     char emsg[1024] = {};
-    if ( !( storable && plain ) && TIFFRGBAImageOK( tiff, emsg ) )
+    res.decodable = TIFFRGBAImageOK( tiff, emsg ) != 0;
+    if ( res.decodable && !( storable && plain ) )
     {
         res.info.type = ScalarType::UInt8;
         res.info.channels = 4;
@@ -210,8 +213,11 @@ Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const Progres
         return res;
     }
 
+    // asked for the orientation of the file, libtiff keeps the stored order of the rows, as in the stored samples
+    uint16_t orientation = ORIENTATION_TOPLEFT;
+    TIFFGetFieldDefaulted( tiff, TIFFTAG_ORIENTATION, &orientation );
     const auto& dims = res.info.dims;
-    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( dims.x ), uint32_t( dims.y ), (uint32_t*)res.data.data(), ORIENTATION_TOPLEFT, 1 ) )
+    if ( !TIFFReadRGBAImageOriented( tiff, uint32_t( dims.x ), uint32_t( dims.y ), (uint32_t*)res.data.data(), orientation, 1 ) )
         return unexpected( "Error reading pixels" );
     if ( !reportProgress( progress, 1.f ) )
         return unexpectedOperationCanceled();
@@ -221,8 +227,7 @@ Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const Progres
 // as the old image loader did, libtiff decodes the images it can, the others are converted from the raster
 Expected<Image> readImage( TIFF* tiff, const TiffLayout& layout )
 {
-    char emsg[1024] = {};
-    if ( !TIFFRGBAImageOK( tiff, emsg ) )
+    if ( !layout.decodable )
         return readRaster( tiff, layout, {} ).and_then( convertRasterToImage );
 
     const auto& dims = layout.info.dims;

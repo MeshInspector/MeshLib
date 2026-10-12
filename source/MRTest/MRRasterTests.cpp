@@ -1,3 +1,4 @@
+#include "MRMesh/MRImage.h"
 #include "MRMesh/MRRaster.h"
 
 #include <gtest/gtest.h>

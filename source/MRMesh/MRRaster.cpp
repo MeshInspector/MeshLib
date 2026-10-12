@@ -1,5 +1,6 @@
 #include "MRRaster.h"
 #include "MRBox.h"
+#include "MRImage.h"
 #include "MRParallelFor.h"
 #include "MRTimer.h"
 #include "MRPch/MRTBB.h"

@@ -2,7 +2,6 @@
 
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
-#include "MRImage.h"
 #include "MRScalarConvert.h"
 #include "MRVector3.h"
 

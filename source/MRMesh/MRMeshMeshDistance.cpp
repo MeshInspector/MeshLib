@@ -112,12 +112,14 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                     aBary = TriPointf( aPt, av[0], av[1], av[2] );
                     bBary = TriPointf( bPt, bv[0], bv[1], bv[2] );
                 }
-                res.a.point = aPt;
-                res.a.face = aNode.leafId();
-                res.aMtp = MeshTriPoint( a.mesh.topology.edgeWithLeft( aFace ), aBary );
-                res.b.point = bPt;
-                res.b.face = bNode.leafId();
-                res.bMtp = MeshTriPoint( b.mesh.topology.edgeWithLeft( bFace ), bBary );
+                res.a.proj.point = aPt;
+                res.a.proj.face = aNode.leafId();
+                res.a.mtp = MeshTriPoint( a.mesh.topology.edgeWithLeft( aFace ), aBary );
+                res.a.distSq = td.distSq;
+                res.b.proj.point = bPt;
+                res.b.proj.face = bNode.leafId();
+                res.b.mtp = MeshTriPoint( b.mesh.topology.edgeWithLeft( bFace ), bBary );
+                res.b.distSq = td.distSq;
             }
             continue;
         }
@@ -150,7 +152,7 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
     }
 
     if ( rigidB2A && res.distSq < upDistLimitSq )
-        res.b.point = rigidB2A->inverse()( res.b.point );
+        res.b.proj.point = rigidB2A->inverse()( res.b.proj.point );
 
     return res;
 }
@@ -225,17 +227,17 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
     if ( !res.a || !res.b )
     {   // findDistance returns the limit sentinel when nothing closer was found
         assert( res.distSq == upDistLimitSq );
-        return { res.a, res.b, MeshMeshCollisionStatus::NotColliding, std::sqrt( res.distSq ) };
+        return { res.a.proj, res.b.proj, MeshMeshCollisionStatus::NotColliding, std::sqrt( res.distSq ) };
     }
     assert( res.distSq == 0.0f || res.distSq < upDistLimitSq );
     std::vector<FaceFace> collisions;
     auto status = findCollisionStatus( a, b, res, rigidB2A, &collisions );
     if ( status == MeshMeshCollisionStatus::Touching )
-        return { res.a, res.b,status, 0 }; // two meshes touch one another but do not intersect
+        return { res.a.proj, res.b.proj, status, 0 }; // two meshes touch one another but do not intersect
     if ( status != MeshMeshCollisionStatus::Colliding )
     {
         auto dist = status == MeshMeshCollisionStatus::BothOutside ? std::sqrt( res.distSq ) : -std::sqrt( res.distSq );
-        return { res.a, res.b,status, dist };
+        return { res.a.proj, res.b.proj, status, dist };
     }
 
     // colliding
@@ -276,7 +278,7 @@ MeshMeshSignedDistanceResult findSignedDistance( const MeshPart & a, const MeshP
             signedRes.signedDist = dist;
         }
     }
-    return ( signedRes.signedDist > 0.0f ) ? MeshMeshSignedDistanceResult{ res.a, res.b, status,0.0f } : signedRes;
+    return ( signedRes.signedDist > 0.0f ) ? MeshMeshSignedDistanceResult{ res.a.proj, res.b.proj, status, 0.0f } : signedRes;
 }
 
 MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& b, const MeshMeshDistanceResult& distRes, 
@@ -292,16 +294,8 @@ MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& 
             *collisions = std::move( thisCollisions );
         return status;
     }
-    MeshProjectionResult aRes, bRes;
-    aRes.proj = distRes.a;
-    bRes.proj = distRes.b;
-    // a point found on an edge, if converted from its position, can get slightly inside a face,
-    // whose normal can be orthogonal to the direction to the other mesh making the sign arbitrary
-    aRes.mtp = distRes.aMtp ? distRes.aMtp : a.mesh.toTriPoint( distRes.a );
-    bRes.mtp = distRes.bMtp ? distRes.bMtp : b.mesh.toTriPoint( distRes.b );
-    bRes.distSq = aRes.distSq = distRes.distSq;
-    bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.point ) : distRes.b.point, aRes, a.region );
-    bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.point ) : distRes.a.point, bRes, b.region );
+    bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.proj.point ) : distRes.b.proj.point, distRes.a, a.region );
+    bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.proj.point ) : distRes.a.proj.point, distRes.b, b.region );
     if ( isBOutside && isAOutside )
         status = MeshMeshCollisionStatus::BothOutside;
     else if ( !isBOutside && !isAOutside )

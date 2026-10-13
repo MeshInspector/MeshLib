@@ -44,7 +44,7 @@ struct TriTriDistanceParams
 {
     /// upper limit on the distance in question, if the real distance is larger (or equal depending on upLimitCheck)
     /// then findTriTriDistance exits earlier returning lower bound on distSq >= upDistLimitSq
-    /// and the points a and b can be arbitrary
+    /// and the points a and b with their barycentric coordinates can be arbitrary
     T upDistLimitSq = std::numeric_limits<T>::max();
 
     UpLimitCheck upLimitCheck = UpLimitCheck::Greater;

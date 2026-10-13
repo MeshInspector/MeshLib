@@ -96,14 +96,11 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
 
             // Test whether the point found, when projected onto the
             // other triangle, lies within the face;
-            // m[i] is twice the area of the triangle of the projection and edge av[i]
-            const T m[3] =
-            {
-                mixed( b[point] - a[0], an, av[0] ),
-                mixed( b[point] - a[1], an, av[1] ),
-                mixed( b[point] - a[2], an, av[2] )
-            };
-            if ( m[0] > 0 && m[1] > 0 && m[2] > 0 )
+            // mi is twice the area of the triangle of the projection and edge av[i]
+            const T m0 = mixed( b[point] - a[0], an, av[0] );
+            const T m1 = m0 > 0 ? mixed( b[point] - a[1], an, av[1] ) : 0;
+            const T m2 = m1 > 0 ? mixed( b[point] - a[2], an, av[2] ) : 0;
+            if ( m2 > 0 )
             {
                 // b[point] passed the test - it's the closest point for
                 // the b triangle; the other point is on the face of a
@@ -112,8 +109,8 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
                 res.b = b[point];
                 res.distSq = distanceSq( res.a, res.b );
                 res.overlap = false;
-                const T sum = m[0] + m[1] + m[2];
-                res.aBary = { m[2] / sum, m[0] / sum };
+                const T sum = m0 + m1 + m2;
+                res.aBary = { m2 / sum, m0 / sum };
                 res.bBary = vertBary<T>( point );
                 return res;
             }
@@ -207,7 +204,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                         if ( params.canExitEarlier( planeDistSq ) )
                         {
                             res.distSq = planeDistSq;
-                            return withEdgeBary();
+                            return res;
                         }
                     }
                 }

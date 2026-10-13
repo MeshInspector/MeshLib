@@ -42,11 +42,11 @@ EMSCRIPTEN_BINDINGS( meshlib_mesh_mesh_distance )
         const MeshMeshDistanceResult r = findDistance( *a, *b );
 
         emscripten::val va = emscripten::val::object();
-        va.set( "face", (int)r.a.face );
-        va.set( "point", r.a.point );
+        va.set( "face", (int)r.a.proj.face );
+        va.set( "point", r.a.proj.point );
         emscripten::val vb = emscripten::val::object();
-        vb.set( "face", (int)r.b.face );
-        vb.set( "point", r.b.point );
+        vb.set( "face", (int)r.b.proj.face );
+        vb.set( "point", r.b.proj.point );
 
         emscripten::val out = emscripten::val::object();
         out.set( "a", va );

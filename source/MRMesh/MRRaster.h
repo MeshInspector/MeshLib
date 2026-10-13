@@ -50,12 +50,11 @@ struct Raster
 ///   and are taken as unsigned ones, floating-point values are clamped to [0, 1], NaN becomes 0
 MRMESH_API Expected<Image> convertRasterToImage( const Raster& raster );
 
-/// converts the values of a raster to floats: dst is resized to dims.x * dims.y * dims.z values (memory is reallocated only if its
-/// capacity is too small), in the order of the raster:
+/// converts the values of a raster to floats in dst, which has room for size = dims.x * dims.y * dims.z values, in the order of the raster:
 /// * one channel is taken as is;
 /// * three or more channels give the luma 0.299 R + 0.587 G + 0.114 B of the first three;
-/// fails for two channels, an unknown type, or data whose size does not match the dimensions
-MRMESH_API Expected<void> convertRasterToFloats( const Raster& raster, std::vector<float>& dst );
+/// fails for two channels, an unknown type, data whose size does not match the dimensions, or another size
+MRMESH_API Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t size );
 
 /// settings for loading rasters from external formats
 struct RasterLoadSettings

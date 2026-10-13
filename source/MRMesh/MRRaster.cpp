@@ -126,7 +126,7 @@ Expected<Image> convertRasterToImage( const Raster& raster )
     return res;
 }
 
-Expected<void> convertRasterToFloats( const Raster& raster, std::vector<float>& dst )
+Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t size )
 {
     MR_TIMER;
     const auto& info = raster.info;
@@ -137,15 +137,16 @@ Expected<void> convertRasterToFloats( const Raster& raster, std::vector<float>& 
         return unexpected( "Unsupported number of channels" );
     if ( raster.data.size() != info.dataSize() )
         return unexpected( "Raster data size does not match its dimensions" );
-
     const auto channels = size_t( info.channels );
-    dst.resize( raster.data.size() / ( valueSize * channels ) );
+    if ( size != raster.data.size() / ( valueSize * channels ) )
+        return unexpected( "Output size does not match the raster dimensions" );
+
     const auto* data = ( const char* )raster.data.data();
     auto getValue = [&] ( size_t i )
     {
         return visitScalarType( [] ( auto v ) { return float( v ); }, info.type, data + i * valueSize );
     };
-    ParallelFor( size_t( 0 ), dst.size(), [&] ( size_t i )
+    ParallelFor( size_t( 0 ), size, [&] ( size_t i )
     {
         const auto j = i * channels;
         dst[i] = channels == 1 ? getValue( j ) : 0.299f * getValue( j ) + 0.587f * getValue( j + 1 ) + 0.114f * getValue( j + 2 );

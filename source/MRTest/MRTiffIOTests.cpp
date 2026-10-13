@@ -263,10 +263,13 @@ TEST( MRMesh, TiffTiledPartialTiles )
     EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { size.x, size.y, 1 }, .type = ScalarType::UInt16 } ) );
     EXPECT_EQ( raster->data, toBytes( pixels ) );
 
-    std::vector<float> floats;
-    auto res = convertRasterToFloats( *raster, floats );
+    std::vector<float> floats( pixels.size() );
+    auto res = convertRasterToFloats( *raster, floats.data(), floats.size() );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_EQ( floats, std::vector<float>( pixels.begin(), pixels.end() ) );
+    // the output must have room for all values, and no more
+    res = convertRasterToFloats( *raster, floats.data(), floats.size() - 1 );
+    EXPECT_FALSE( res.has_value() );
 }
 
 // libtiff passes the number of values of the GeoTIFF tags as a 16-bit or a 32-bit value, depending on how the tags are registered:
@@ -348,10 +351,9 @@ TEST( MRMesh, TiffRasterDecodedLuma )
 
     auto raster = RasterLoad::fromTiff( path );
     ASSERT_TRUE( raster.has_value() ) << raster.error();
-    std::vector<float> floats;
-    auto res = convertRasterToFloats( *raster, floats );
+    std::vector<float> floats( 3 );
+    auto res = convertRasterToFloats( *raster, floats.data(), floats.size() );
     ASSERT_TRUE( res.has_value() ) << res.error();
-    ASSERT_EQ( floats.size(), 3u );
     EXPECT_NEAR( floats[0], 255.f, 1e-3f );
     EXPECT_EQ( floats[1], 0.f );
     EXPECT_NEAR( floats[2], ( 0.587f + 0.114f ) * 255.f, 1e-3f );

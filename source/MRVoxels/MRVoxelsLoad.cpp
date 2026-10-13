@@ -383,7 +383,7 @@ Expected<VdbVolume> loadRasterFolder( const RasterFolderLoadSettings& settings )
     }
 
     if ( files.size() < 2 )
-        return unexpected( "Too few raster files in the directory" );
+        return unexpected( "Too few files of a supported raster format in the directory" );
 
     sortScanFilesByName( files );
 
@@ -408,14 +408,15 @@ Expected<VdbVolume> loadRasterFolder( const RasterFolderLoadSettings& settings )
             if ( info.dims.z != 1 )
                 return unexpected( "Raster has several layers: " + utf8string( file ) );
             outVolume.dims = info.dims;
+            // the buffer of the layer is reused
+            outVolume.data.resize( size_t( info.dims.x ) * size_t( info.dims.y ) );
         }
         else if ( raster->info != info )
         {
             return unexpected( "Size or format differs from the first file: " + utf8string( file ) );
         }
 
-        // the buffer of the layer is reused
-        if ( auto convertRes = convertRasterToFloats( *raster, outVolume.data.vec_ ); !convertRes.has_value() )
+        if ( auto convertRes = convertRasterToFloats( *raster, outVolume.data.data(), outVolume.data.size() ); !convertRes.has_value() )
             return unexpected( convertRes.error() + ": " + utf8string( file ) );
         const auto [min, max] = parallelMinMax( outVolume.data );
         outVolume.min = std::min( outVolume.min, min );

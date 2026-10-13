@@ -53,6 +53,8 @@ compile_commands.json
 /source/MeshLibJava/meshlib.jar
 /source/MRTestJava/classes/
 /examples/java-examples/classes/
+/java_native/
+/java_venv/
 /source/MRDotNet2Static/bin
 /source/MRDotNet2Static/obj
 /source/MRDotNet2Static/src

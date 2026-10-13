@@ -40,8 +40,8 @@ TEST( MRMesh, MeshMeshClosestPoint )
 
     auto usd = findDistance( cube1, cube2, &b2a );
     EXPECT_EQ( usd.distSq, 0.0f );
-    EXPECT_TRUE( findProjection( usd.a.point, cube1 ).distSq < 1e-6f );
-    EXPECT_TRUE( findProjection( usd.b.point, cube2 ).distSq < 1e-6f );
+    EXPECT_TRUE( findProjection( usd.a.proj.point, cube1 ).distSq < 1e-6f );
+    EXPECT_TRUE( findProjection( usd.b.proj.point, cube2 ).distSq < 1e-6f );
 }
 
 } //namespace MR

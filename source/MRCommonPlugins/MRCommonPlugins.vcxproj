@@ -26,9 +26,6 @@
     <CopyFileToFolders Include="MRRibbonCommonMenuStructure.ui.json">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <Content Include="resource\**" Exclude="resource\icons\**;resource\object_icons\**;resource\independent_icons\**;resource\logos\**">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Basic\MRCameraOrientationPlugin.cpp" />

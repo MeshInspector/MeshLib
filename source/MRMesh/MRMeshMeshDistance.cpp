@@ -61,7 +61,9 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
     };
 
     addSubTask( getSubTask( aTree.rootNodeId(), bTree.rootNodeId() ) );
-    TriPointf aBary, bBary; // of res.a and res.b in their faces
+    // the closest triangles found so far, their points are computed at the end
+    TriTriDistanceResultf bestTd;
+    Triangle3f bestAv, bestBv;
 
     while ( !subtasks.empty() )
     {
@@ -95,31 +97,12 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             const auto td = findTriTriDistance( av, bv, { .upDistLimitSq = res.distSq, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
             if ( td.distSq < res.distSq )
             {
-                Vector3f aPt = td.a;
-                Vector3f bPt = td.b;
                 res.distSq = td.distSq;
-                if ( td.distSq == 0 )
-                {
-                    auto pt = findTriangleTriangleIntersection( av[0], av[1], av[2], bv[0], bv[1], bv[2] );
-                    if ( pt )
-                        aPt = bPt = *pt;
-                    else
-                    {
-                        // might fall back here in degenerated scenarios
-                        aPt = bPt = 0.5f * ( aPt + bPt );
-                    }
-                    aBary = TriPointf( aPt, av[0], av[1], av[2] );
-                    bBary = TriPointf( bPt, bv[0], bv[1], bv[2] );
-                }
-                else
-                {
-                    aBary = td.aBary( av );
-                    bBary = td.bBary( bv );
-                }
-                res.a.proj.point = aPt;
-                res.a.proj.face = aNode.leafId();
-                res.b.proj.point = bPt;
-                res.b.proj.face = bNode.leafId();
+                res.a.proj.face = aFace;
+                res.b.proj.face = bFace;
+                bestTd = td;
+                bestAv = av;
+                bestBv = bv;
             }
             continue;
         }
@@ -153,11 +136,33 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
 
     if ( res.a ) // found closer than upDistLimitSq
     {
+        Vector3f aPt = bestTd.a;
+        Vector3f bPt = bestTd.b;
+        TriPointf aBary, bBary;
+        if ( res.distSq == 0 )
+        {
+            auto pt = findTriangleTriangleIntersection( bestAv[0], bestAv[1], bestAv[2], bestBv[0], bestBv[1], bestBv[2] );
+            if ( pt )
+                aPt = bPt = *pt;
+            else
+            {
+                // might fall back here in degenerated scenarios
+                aPt = bPt = 0.5f * ( aPt + bPt );
+            }
+            aBary = TriPointf::fromPoint( aPt, bestAv[0], bestAv[1], bestAv[2] );
+            bBary = TriPointf::fromPoint( bPt, bestBv[0], bestBv[1], bestBv[2] );
+        }
+        else
+        {
+            aBary = bestTd.aBary( bestAv );
+            bBary = bestTd.bBary( bestBv );
+        }
+        res.a.proj.point = aPt;
         res.a.mtp = MeshTriPoint( a.mesh.topology.edgeWithLeft( res.a.proj.face ), aBary );
+        res.a.distSq = res.distSq;
+        res.b.proj.point = rigidB2A ? rigidB2A->inverse()( bPt ) : bPt;
         res.b.mtp = MeshTriPoint( b.mesh.topology.edgeWithLeft( res.b.proj.face ), bBary );
-        res.a.distSq = res.b.distSq = res.distSq;
-        if ( rigidB2A )
-            res.b.proj.point = rigidB2A->inverse()( res.b.proj.point );
+        res.b.distSq = res.distSq;
     }
 
     return res;

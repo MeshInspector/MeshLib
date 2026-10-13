@@ -32,6 +32,11 @@ struct TriPoint
     /// given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point
     TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector3<T> & v2 );
 
+    /// given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point by the areas of the triangles
+    /// it makes with the edges, which unlike the constructor keeps the precision in thin triangles;
+    /// if the point is known to be on an edge, numbered as in onEdge(), then pass it to get the point exactly there
+    [[nodiscard]] static TriPoint fromPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2, int edge = -1 );
+
     /// given three values in three vertices, computes interpolated value at this barycentric coordinates
     template <typename U>
     U interpolate( const U & v0, const U & v1, const U & v2 ) const
@@ -85,6 +90,38 @@ TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector
     const T pv2 = dot( p, v2 );
     a = std::clamp( ( 1 / det ) * ( v22 * pv1 - v12 * pv2 ), T(0), T(1) );
     b = std::clamp( ( 1 / det ) * (-v12 * pv1 + v11 * pv2 ), T(0), T(1) - a );
+}
+
+template <typename T>
+TriPoint<T> TriPoint<T>::fromPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2, int edge )
+{
+    if ( edge >= 0 )
+    {
+        // the edge opposite to vertex #edge
+        const Vector3<T> * v[3] = { &v0, &v1, &v2 };
+        const auto & org = *v[( edge + 1 ) % 3];
+        const auto d = *v[( edge + 2 ) % 3] - org;
+        const T dSq = d.lengthSq();
+        const T s = dSq > 0 ? std::clamp( dot( p - org, d ) / dSq, T(0), T(1) ) : T(0);
+        switch ( edge )
+        {
+        case 0:
+            return { 1 - s, s };
+        case 1:
+            return { 0, 1 - s };
+        default:
+            return { s, 0 };
+        }
+    }
+    const auto e1 = v1 - v0;
+    const auto e2 = v2 - v0;
+    const auto q = p - v0;
+    const auto n = cross( e1, e2 );
+    const T nSq = n.lengthSq();
+    if ( nSq <= 0 )
+        return { 1 / T(3), 1 / T(3) }; // degenerate triangle
+    const T a = std::clamp( dot( n, cross( q, e2 ) ) / nSq, T(0), T(1) );
+    return { a, std::clamp( dot( n, cross( e1, q ) ) / nSq, T(0), 1 - a ) };
 }
 
 template <typename T>

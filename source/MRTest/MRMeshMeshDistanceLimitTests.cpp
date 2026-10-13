@@ -450,6 +450,20 @@ TEST( MRMesh, findTriTriDistance )
     EXPECT_LT( distance( td0.bBary( b ).interpolate( b[0], b[1], b[2] ), td0.b ), 1e-3f );
 }
 
+TEST( MRMesh, TriPointFromPoint )
+{
+    // a thin triangle, where the constructor from a point loses precision
+    const Vector3f v0{ 10, -90, 85 }, v1{ 10.0000219f, -48.2452545f, 112.298973f }, v2{ 10.000021f, -49.7307281f, 112.298973f };
+    const auto p = TriPointf( 0.19f, 0.096f ).interpolate( v0, v1, v2 );
+    EXPECT_LT( distance( TriPointf::fromPoint( p, v0, v1, v2 ).interpolate( v0, v1, v2 ), p ), 1e-4f );
+
+    // a point on edge [v1,v2] is placed exactly there
+    const auto q = 0.3f * v1 + 0.7f * v2;
+    const auto tq = TriPointf::fromPoint( q, v0, v1, v2, 0 );
+    EXPECT_EQ( tq.onEdge(), 0 );
+    EXPECT_LT( distance( tq.interpolate( v0, v1, v2 ), q ), 1e-4f );
+}
+
 // the closest points are on the edges between the bottom and the almost vertical walls of the tool,
 // so a closest point converted from its position to barycentric coordinates can get slightly inside a wall,
 // where the sign of the distance by the normal of the wall is arbitrary

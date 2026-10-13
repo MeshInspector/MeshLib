@@ -27,46 +27,16 @@ struct TriTriDistanceResult
     /// if distSq == 0 and overlap == false, then the triangles just touch one another
     bool overlap = true;
 
-    /// the edges of the triangles with points a and b: i is the edge from vertex i to vertex (i+1)%3,
-    /// which also has a point found in vertex i, and -1 means inside the triangle
+    /// the edges of the triangles with points a and b, numbered as in TriPoint::onEdge() (which also contain a point found in a vertex),
+    /// or -1 if the point is inside its triangle
     std::int8_t aEdge = -1, bEdge = -1;
 
     /// barycentric coordinates of point a in triangle ta, given to findTriTriDistance as the first one;
     /// unlike the ones computed from the position of the point, they place a point found on an edge or in a vertex there
-    [[nodiscard]] TriPoint<T> aBary( const Triangle3<T>& ta ) const { return bary_( ta, a, aEdge ); }
+    [[nodiscard]] TriPoint<T> aBary( const Triangle3<T>& ta ) const { return TriPoint<T>::fromPoint( a, ta[0], ta[1], ta[2], aEdge ); }
 
     /// barycentric coordinates of point b in triangle tb, given to findTriTriDistance as the second one
-    [[nodiscard]] TriPoint<T> bBary( const Triangle3<T>& tb ) const { return bary_( tb, b, bEdge ); }
-
-private:
-    [[nodiscard]] static TriPoint<T> bary_( const Triangle3<T>& t, const Vector3<T>& p, int edge )
-    {
-        if ( edge < 0 )
-        {
-            // by the areas, unlike TriPoint( p, t[0], t[1], t[2] ) keeping the precision in thin triangles
-            const auto e1 = t[1] - t[0];
-            const auto e2 = t[2] - t[0];
-            const auto q = p - t[0];
-            const auto n = cross( e1, e2 );
-            const auto nSq = n.lengthSq();
-            if ( nSq <= 0 )
-                return { 1 / T( 3 ), 1 / T( 3 ) }; // degenerate triangle
-            const T a = std::clamp( dot( n, cross( q, e2 ) ) / nSq, T( 0 ), T( 1 ) );
-            return { a, std::clamp( dot( n, cross( e1, q ) ) / nSq, T( 0 ), 1 - a ) };
-        }
-        const auto d = t[( edge + 1 ) % 3] - t[edge];
-        const auto dSq = d.lengthSq();
-        const T s = dSq > 0 ? std::clamp( dot( p - t[edge], d ) / dSq, T( 0 ), T( 1 ) ) : T( 0 );
-        switch ( edge )
-        {
-        case 0:
-            return { s, 0 };
-        case 1:
-            return { 1 - s, s };
-        default:
-            return { 0, 1 - s };
-        }
-    }
+    [[nodiscard]] TriPoint<T> bBary( const Triangle3<T>& tb ) const { return TriPoint<T>::fromPoint( b, tb[0], tb[1], tb[2], bEdge ); }
 };
 using TriTriDistanceResultf = TriTriDistanceResult<float>;
 using TriTriDistanceResultd = TriTriDistanceResult<double>;

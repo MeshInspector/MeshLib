@@ -224,17 +224,17 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
     directory.insert( directory.end(), external.begin(), external.end() );
 
     // all numbers are written in the native byte order
-    std::vector<uint8_t> file( 8 );
+    const auto& first = layout.directoryFirst ? directory : pixels;
+    const auto& second = layout.directoryFirst ? pixels : directory;
+    const auto secondPos = layout.directoryFirst ? pixelsPos : directoryPos;
+    std::vector<uint8_t> file( secondPos + second.size() );
     std::memcpy( file.data(), std::endian::native == std::endian::little ? "II" : "MM", 2 );
     const uint16_t magic = 42;
     std::memcpy( file.data() + 2, &magic, sizeof( magic ) );
     const auto directoryOffset = uint32_t( directoryPos );
     std::memcpy( file.data() + 4, &directoryOffset, sizeof( directoryOffset ) );
-    const auto& first = layout.directoryFirst ? directory : pixels;
-    const auto& second = layout.directoryFirst ? pixels : directory;
-    file.insert( file.end(), first.begin(), first.end() );
-    file.resize( layout.directoryFirst ? pixelsPos : directoryPos );
-    file.insert( file.end(), second.begin(), second.end() );
+    std::copy( first.begin(), first.end(), file.begin() + 8 );
+    std::copy( second.begin(), second.end(), file.begin() + secondPos );
 
     std::ofstream out( path, std::ios::binary );
     out.write( ( const char* )file.data(), std::streamsize( file.size() ) );

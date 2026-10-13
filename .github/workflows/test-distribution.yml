@@ -21,8 +21,6 @@ on:
     secrets:
       GH_TOKEN:
         required: true
-      DOCKERHUB_TOKEN:
-        required: false
   workflow_dispatch:
     inputs:
       release_tag:
@@ -48,8 +46,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: ${{ matrix.os }}
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
       # passthrough gh to avoid installing it into each container
       volumes:
         - /usr/bin/gh:/usr/local/bin/gh:ro
@@ -142,8 +138,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: ${{ matrix.os }}
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
       # passthrough gh to avoid installing it into each container
       volumes:
         - /usr/bin/gh:/usr/local/bin/gh:ro

@@ -10,6 +10,9 @@ Usage: update_python_zip.py [--vcpkg-tag TAG] [--output PATH]
 The port's version, source checksum and patches are read at that vcpkg tag, so the zip matches the
 Python that vcpkg builds. Run it with that Python minor version (e.g. `uv run --python 3.12`), or
 have `uv` on PATH and the script re-runs itself under the right version.
+
+A Windows build needs the zip next to python3XY.dll for its embedded Python, e.g.
+`update_python_zip.py --output source/x64/Release`; the repository no longer stores it.
 """
 import argparse
 import hashlib

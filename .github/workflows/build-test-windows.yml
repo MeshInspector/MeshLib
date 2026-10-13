@@ -198,6 +198,18 @@ jobs:
             msbuild -m source\MeshLib.sln -p:Configuration=${{ matrix.config }} -p:Platform=%MSBUILD_PLATFORM% -p:VcpkgTriplet=%VCPKG_TARGET_TRIPLET%;PlatformToolset=${{ env.PLATFORM_TOOLSET }};MRCudaPlatformToolset=${{ env.MRCUDA_PLATFORM_TOOLSET }};MR_PCH_USE_EXTRA_HEADERS=ON;MRVOXELS_UNITY_BUILD=ON || exit /b 1
           )
 
+      # The embedded Python's pure-Python standard library, next to python3XY.dll; run by the
+      # py-launcher Python of the same minor version (installed by "Setup python")
+      - name: Build Python standard library zip
+        shell: pwsh
+        run: |
+          $out = "source\$env:MR_ARCH\${{ matrix.config }}"
+          $dll = Get-ChildItem $out -Filter 'python3*.dll' | Where-Object Name -match '^python3(\d+)\.dll$' | Select-Object -First 1
+          if (-not $dll) { throw "no python3XY.dll in $out" }
+          $minor = [regex]::Match($dll.Name, '^python3(\d+)\.dll$').Groups[1].Value
+          py "-3.$minor" scripts\update_python_zip.py --vcpkg-tag ${{ matrix.vcpkg-version }} --output $out
+          exit $LASTEXITCODE
+
       - name: Log precompiled header sizes
         shell: pwsh
         continue-on-error: true

@@ -35,14 +35,6 @@ IF(MR_PCH)
   target_precompile_headers(${PROJECT_NAME} REUSE_FROM MRPch)
 ENDIF()
 
-# On Windows, copy the zipped Python environment to the output directory.
-IF(WIN32)
-  file(
-    COPY ${MESHLIB_THIRDPARTY_DIR}/python/python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.zip
-    DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
-  )
-ENDIF()
-
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT ${PROJECT_NAME}

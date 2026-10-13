@@ -22,6 +22,11 @@
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
       <FileType>Document</FileType>
     </CopyFileToFolders>
+    <!-- The standard library's extension modules (_socket, _ssl, _sqlite3, ...) with the DLLs they need; Python puts DLLs\ next to python3XY.dll on sys.path -->
+    <CopyFileToFolders Include="$(VcpkgCurrentInstalledDir)\tools\python3\DLLs\*">
+      <FileType>Document</FileType>
+      <DestinationFolders>$(OutDir)DLLs</DestinationFolders>
+    </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">

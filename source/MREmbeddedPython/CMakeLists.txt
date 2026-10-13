@@ -41,6 +41,14 @@ IF(WIN32)
     COPY ${MESHLIB_THIRDPARTY_DIR}/python/python${Python_VERSION_MAJOR}${Python_VERSION_MINOR}.zip
     DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   )
+  # The standard library's extension modules (_socket, _ssl, _sqlite3, ...) with the DLLs they need;
+  # Python puts DLLs/ next to python3XY.dll on sys.path
+  IF(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    file(
+      COPY ${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/tools/python3/DLLs
+      DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
+    )
+  ENDIF()
 ENDIF()
 
 install(

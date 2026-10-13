@@ -3,6 +3,7 @@
 // distance queries involving two meshes, please see MRMeshDistance.h for queries to one mesh only
 
 #include "MRPointOnFace.h"
+#include "MRMeshTriPoint.h"
 #include "MRFaceFace.h"
 #include "MRMeshPart.h"
 #include <cfloat>
@@ -19,6 +20,9 @@ struct MeshMeshDistanceResult
     PointOnFace a, b;
     /// squared distance between a and b
     float distSq = 0;
+    /// the same points a and b in barycentric coordinates of their faces;
+    /// unlike the conversion of their positions, it places a point found on an edge or in a vertex there
+    MeshTriPoint aMtp, bMtp;
 };
 
 enum class MeshMeshCollisionStatus

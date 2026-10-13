@@ -96,6 +96,8 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
             {
                 Vector3f aPt = td.a;
                 Vector3f bPt = td.b;
+                TriPointf aBary = td.aBary;
+                TriPointf bBary = td.bBary;
                 res.distSq = td.distSq;
                 if ( td.distSq == 0 )
                 {
@@ -107,11 +109,15 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                         // might fall back here in degenerated scenarios
                         aPt = bPt = 0.5f * ( aPt + bPt );
                     }
+                    aBary = TriPointf( aPt, av[0], av[1], av[2] );
+                    bBary = TriPointf( bPt, bv[0], bv[1], bv[2] );
                 }
                 res.a.point = aPt;
                 res.a.face = aNode.leafId();
+                res.aMtp = MeshTriPoint( a.mesh.topology.edgeWithLeft( aFace ), aBary );
                 res.b.point = bPt;
                 res.b.face = bNode.leafId();
+                res.bMtp = MeshTriPoint( b.mesh.topology.edgeWithLeft( bFace ), bBary );
             }
             continue;
         }
@@ -289,8 +295,10 @@ MeshMeshCollisionStatus findCollisionStatus( const MeshPart& a, const MeshPart& 
     MeshProjectionResult aRes, bRes;
     aRes.proj = distRes.a;
     bRes.proj = distRes.b;
-    aRes.mtp = a.mesh.toTriPoint( distRes.a );
-    bRes.mtp = b.mesh.toTriPoint( distRes.b );
+    // a point found on an edge, if converted from its position, can get slightly inside a face,
+    // whose normal can be orthogonal to the direction to the other mesh making the sign arbitrary
+    aRes.mtp = distRes.aMtp ? distRes.aMtp : a.mesh.toTriPoint( distRes.a );
+    bRes.mtp = distRes.bMtp ? distRes.bMtp : b.mesh.toTriPoint( distRes.b );
     bRes.distSq = aRes.distSq = distRes.distSq;
     bool isBOutside = a.mesh.isOutsideByProjNorm( rigidB2A ? ( *rigidB2A )( distRes.b.point ) : distRes.b.point, aRes, a.region );
     bool isAOutside = b.mesh.isOutsideByProjNorm( rigidB2A ? rigidB2A->inverse()( distRes.a.point ) : distRes.a.point, bRes, b.region );

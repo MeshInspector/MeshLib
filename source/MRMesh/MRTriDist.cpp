@@ -10,6 +10,31 @@ namespace
 
 // based on the code by E. Larsen from University of N. Carolina
 
+// barycentric coordinates of vertex i of a triangle
+template<class T>
+TriPoint<T> vertBary( int i )
+{
+    return { T( i == 1 ), T( i == 2 ) };
+}
+
+// barycentric coordinates of point p on the edge of triangle t from vertex i to vertex (i+1)%3
+template<class T>
+TriPoint<T> edgeBary( const Triangle3<T>& t, int i, const Vector3<T>& p )
+{
+    const auto d = t[( i + 1 ) % 3] - t[i];
+    const auto dSq = d.lengthSq();
+    const T s = dSq > 0 ? std::clamp( dot( p - t[i], d ) / dSq, T( 0 ), T( 1 ) ) : T( 0 );
+    switch ( i )
+    {
+    case 0:
+        return { s, 0 };
+    case 1:
+        return { 1 - s, s };
+    default:
+        return { 0, 1 - s };
+    }
+}
+
 // a. tests whether normal of a-triangle is a separating direction, then sets overlap flag to false;
 // b. if separating direction confirmed, then additionally tests whether the closest of b-vertices to a-triangle
 //       projects in the interior of a-triangle, then returns them as the closest pair of points.
@@ -64,16 +89,21 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
                         .a = a[0],
                         .b = b[point],
                         .distSq = planeDistSq,
-                        .overlap = false
+                        .overlap = false,
+                        .bBary = vertBary<T>( point )
                     };
             }
 
             // Test whether the point found, when projected onto the
-            // other triangle, lies within the face.
-
-            if ( mixed( b[point] - a[0], an, av[0] ) > 0
-              && mixed( b[point] - a[1], an, av[1] ) > 0
-              && mixed( b[point] - a[2], an, av[2] ) > 0 )
+            // other triangle, lies within the face;
+            // m[i] is twice the area of the triangle of the projection and edge av[i]
+            const T m[3] =
+            {
+                mixed( b[point] - a[0], an, av[0] ),
+                mixed( b[point] - a[1], an, av[1] ),
+                mixed( b[point] - a[2], an, av[2] )
+            };
+            if ( m[0] > 0 && m[1] > 0 && m[2] > 0 )
             {
                 // b[point] passed the test - it's the closest point for
                 // the b triangle; the other point is on the face of a
@@ -82,6 +112,9 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
                 res.b = b[point];
                 res.distSq = distanceSq( res.a, res.b );
                 res.overlap = false;
+                const T sum = m[0] + m[1] + m[2];
+                res.aBary = { m[2] / sum, m[0] / sum };
+                res.bBary = vertBary<T>( point );
                 return res;
             }
         }
@@ -108,6 +141,19 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
         .distSq = distanceSq( a[0], b[0] )
     };
 
+    // the edges with the points of res, -1 while they are a[0] and b[0]
+    int aEdge = -1, bEdge = -1;
+    // returns res with the barycentric coordinates of its points on these edges
+    auto withEdgeBary = [&]
+    {
+        if ( aEdge >= 0 )
+        {
+            res.aBary = edgeBary( a, aEdge, res.a );
+            res.bBary = edgeBary( b, bEdge, res.b );
+        }
+        return res;
+    };
+
     for ( int i = 0; i < 3; i++ )
     {
         for ( int j = 0; j < 3; j++ )
@@ -128,6 +174,8 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 res.a = sd.a;
                 res.b = sd.b;
                 res.distSq = dd;
+                aEdge = i;
+                bEdge = j;
 
                 // a[prev[i]] and b[prev[j]] are remaining vertices of the triangles
                 // on top of the vertices from the considered edges
@@ -138,7 +186,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 if ( ( s <= 0 ) && ( t >= 0 ) )
                 {
                     res.overlap = false;
-                    return res;
+                    return withEdgeBary();
                 }
 
                 // the distance along sd.dir between the considered edges
@@ -159,7 +207,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                         if ( params.canExitEarlier( planeDistSq ) )
                         {
                             res.distSq = planeDistSq;
-                            return res;
+                            return withEdgeBary();
                         }
                     }
                 }
@@ -188,6 +236,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     if ( auto maybeRes = projectBonA( b, a, res.overlap, params ) )
     {
         std::swap( maybeRes->a, maybeRes->b );
+        std::swap( maybeRes->aBary, maybeRes->bBary );
         return *maybeRes;
     }
 
@@ -199,7 +248,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     if ( res.overlap )
         res.distSq = 0; // triangles are colliding (overlapping)
 
-    return res;
+    return withEdgeBary();
 }
 
 } // anonymous namespace

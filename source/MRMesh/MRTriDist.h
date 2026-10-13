@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MRVector3.h"
+#include "MRTriPoint.h"
 #include <limits>
 
 namespace MR
@@ -24,6 +25,10 @@ struct TriTriDistanceResult
     /// overlap==true means that the triangles are intersecting and not just touch one another => distSq == 0
     /// if distSq == 0 and overlap == false, then the triangles just touch one another
     bool overlap = true;
+
+    /// barycentric coordinates of a and b in their triangles; unlike the coordinates computed from the positions of the points,
+    /// they place a point found on an edge or in a vertex of its triangle there (see TriPoint::onEdge and TriPoint::inVertex)
+    TriPoint<T> aBary, bBary;
 };
 using TriTriDistanceResultf = TriTriDistanceResult<float>;
 using TriTriDistanceResultd = TriTriDistanceResult<double>;

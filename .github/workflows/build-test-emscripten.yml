@@ -31,9 +31,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -162,9 +159,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
     strategy:
       fail-fast: false
       matrix:
@@ -263,9 +257,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-emscripten-arm64:${{ inputs.docker_image_tag }}
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Work-around possible permission issues
         shell: bash

@@ -38,9 +38,8 @@ jobs:
     runs-on: ${{matrix.emsdk_runs_on}}
     container:
       image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_ver_docker}}:${{inputs.docker_image_tag}}
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # anonymous pull when the secret is unavailable (Dependabot, forks)
+      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
 
     steps:
       - name: Work-around possible permission issues

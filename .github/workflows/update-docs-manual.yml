@@ -15,8 +15,6 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-ubuntu22-arm64:latest
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
     strategy:
       fail-fast: false
     env:
@@ -142,7 +140,6 @@ jobs:
   # it needs an Emscripten SDK that the ubuntu22 image doesn't carry.
   generate-c-bindings:
     uses: ./.github/workflows/generate-c-bindings.yml
-    secrets: inherit
     with:
       docker_image_tag: latest
 

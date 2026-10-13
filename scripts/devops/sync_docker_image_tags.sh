@@ -28,12 +28,9 @@ esac
 while read -r repo distro; do
   hash_tag=$("$(dirname "$0")"/docker_image_source_checksum.sh "${distro}")
   # one-time migration: copy an image built before the move from Docker Hub
-  dockerhub_repo="docker.io/meshlib/${repo##*/}"
-  if ! "$(dirname "$0")"/../docker_image_exists.sh "${repo}:${hash_tag}" &&
-     "$(dirname "$0")"/../docker_image_exists.sh "${dockerhub_repo}:${hash_tag}"; then
-    docker buildx imagetools create -t "${repo}:${hash_tag}" "${dockerhub_repo}:${hash_tag}" >&2 || true
-  fi
-  if docker buildx imagetools create -t "${repo}:${tag}" "${repo}:${hash_tag}" >&2; then
+  if docker buildx imagetools create -t "${repo}:${tag}" "${repo}:${hash_tag}" >&2 ||
+     { docker buildx imagetools create -t "${repo}:${hash_tag}" "docker.io/meshlib/${repo##*/}:${hash_tag}" >&2 &&
+       docker buildx imagetools create -t "${repo}:${tag}" "${repo}:${hash_tag}" >&2; }; then
     echo "${repo}:${tag} -> ${hash_tag}" >&2
   else
     echo "${repo}:${hash_tag} absent, needs building" >&2

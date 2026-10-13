@@ -2,8 +2,9 @@ name: Setup Java
 description: >
   Makes a JDK 22 or newer (needed for the foreign function API the Java
   bindings use) available for the following steps. If the runner already has
-  one, nothing is installed. Otherwise a Temurin JDK is downloaded into the
-  runner's temp directory, so self-hosted runners don't accumulate state.
+  one, nothing is installed. Otherwise a Temurin JDK (Microsoft's build on
+  Windows ARM64) is downloaded into the runner's temp directory, so self-hosted
+  runners don't accumulate state.
 
 inputs:
   version:
@@ -38,6 +39,10 @@ runs:
         rm -rf "$dir"
         mkdir -p "$dir"
         url="https://api.adoptium.net/v3/binary/latest/${{ inputs.version }}/ga/$os/$arch/jdk/hotspot/normal/eclipse"
+        if [ "$os-$arch" = windows-aarch64 ]; then
+          # Temurin has no Windows ARM64 builds past 21, the Microsoft build of OpenJDK has.
+          url="https://aka.ms/download-jdk/microsoft-jdk-${{ inputs.version }}-windows-aarch64.zip"
+        fi
         if [ "$RUNNER_OS" = Windows ]; then
           curl -sSfL -o "$RUNNER_TEMP/jdk.zip" "$url"
           unzip -q "$RUNNER_TEMP/jdk.zip" -d "$dir"

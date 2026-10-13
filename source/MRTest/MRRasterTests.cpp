@@ -140,4 +140,16 @@ TEST( MRMesh, RasterToImageErrors )
     EXPECT_FALSE( convertRasterToImage( raster ).has_value() );
 }
 
+// both conversions check the raster in the same way: e.g. negative dimensions match no data, not even empty data
+TEST( MRMesh, RasterNegativeDims )
+{
+    std::vector<float> floats;
+    for ( const auto& dims : { Vector3i( -1, 2, 1 ), Vector3i( 2, -1, 1 ), Vector3i( 2, 1, -1 ) } )
+    {
+        const Raster raster{ .info = { .dims = dims, .type = ScalarType::UInt8 } };
+        EXPECT_FALSE( convertRasterToFloats( raster, floats ).has_value() );
+        EXPECT_FALSE( convertRasterToImage( raster ).has_value() );
+    }
+}
+
 } //namespace MR

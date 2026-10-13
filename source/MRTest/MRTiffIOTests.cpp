@@ -1,14 +1,12 @@
-#include "MRMesh/MRTiffIO.h"
-#if !defined( __EMSCRIPTEN__ ) && !defined( MRMESH_NO_TIFF )
+#include "MRIOExtras/MRTiff.h"
+#ifndef MRIOEXTRAS_NO_TIFF
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRDistanceMap.h"
-#include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRRasterLoad.h"
 #include "MRMesh/MRRasterSave.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
-#include "MRIOExtras/MRTiff.h"
 #include "MRPch/MRFmt.h"
 
 #include <gtest/gtest.h>
@@ -17,12 +15,21 @@
 #include <cmath>
 #include <cstring>
 #include <fstream>
+#include <iterator>
 
 namespace MR
 {
 
 // Cyrillic "test" and a Latin letter with diaeresis: no single ANSI code page has both
 static const std::filesystem::path cNonAsciiName = u8"\u0442\u0435\u0441\u0442_\u00fc";
+
+template <typename T>
+static std::vector<uint8_t> toBytes( const std::vector<T>& values )
+{
+    std::vector<uint8_t> res( values.size() * sizeof( T ) );
+    std::memcpy( res.data(), values.data(), res.size() );
+    return res;
+}
 
 TEST( MRMesh, TiffNonAsciiPath )
 {
@@ -33,31 +40,21 @@ TEST( MRMesh, TiffNonAsciiPath )
     ASSERT_TRUE( std::filesystem::create_directory( dir, ec ) ) << systemToUtf8( ec.message() );
     const auto path = dir / "img.tif";
 
-    const BaseTiffParameters baseParams{
-        .sampleType = BaseTiffParameters::SampleType::Float,
-        .valueType = BaseTiffParameters::ValueType::Scalar,
-        .bytesPerSample = sizeof( float ),
-        .imageSize = { 3, 2 },
+    const Raster raster{
+        .info = { .dims = { 3, 2, 1 }, .type = ScalarType::Float32 },
+        .data = toBytes( std::vector<float>{ 1.f, 2.f, 3.f, 4.f, 5.f, 6.f } ),
     };
-    const std::vector<float> values{ 1.f, 2.f, 3.f, 4.f, 5.f, 6.f };
-    auto saveRes = writeRawTiff( ( const uint8_t* )values.data(), path, { .baseParams = baseParams } );
+    auto saveRes = RasterSave::toTiff( raster, path );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     EXPECT_TRUE( std::filesystem::is_regular_file( path, ec ) );
 
-    EXPECT_TRUE( isTIFFFile( path ) );
+    auto info = RasterLoad::infoFromTiff( path );
+    ASSERT_TRUE( info.has_value() ) << info.error();
+    EXPECT_EQ( *info, raster.info );
 
-    auto params = readTiffParameters( path );
-    ASSERT_TRUE( params.has_value() ) << params.error();
-    EXPECT_EQ( BaseTiffParameters( *params ), baseParams );
-
-    std::vector<float> loaded( values.size() );
-    RawTiffOutput output{
-        .bytes = ( uint8_t* )loaded.data(),
-        .size = loaded.size() * sizeof( float ),
-    };
-    auto loadRes = readRawTiff( path, output );
-    ASSERT_TRUE( loadRes.has_value() ) << loadRes.error();
-    EXPECT_EQ( loaded, values );
+    auto loaded = RasterLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->data, raster.data );
 }
 
 // layout of a hand-written TIFF file
@@ -78,6 +75,8 @@ struct TestTiffLayout
     std::vector<uint16_t> extraSamples;
     // 3 * 2^bitsPerSample values for a palette image
     std::vector<uint16_t> colorMap;
+    // tags with DOUBLE values
+    std::vector<std::pair<int, std::vector<double>>> doubleTags;
     // the image file directory goes before the pixels, so that the file can be opened after its end is cut off
     bool directoryFirst = false;
 };
@@ -121,12 +120,14 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         }
     }
 
-    constexpr uint16_t SHORT = 3, LONG = 4;
+    constexpr uint16_t SHORT = 3, LONG = 4, DOUBLE = 12;
     struct Entry
     {
         uint16_t tag;
         uint16_t type;
         std::vector<uint32_t> values;
+        // the values of a DOUBLE entry
+        std::vector<double> doubles;
     };
     std::vector<Entry> entries{
         { 256, LONG, { uint32_t( width ) } }, // ImageWidth
@@ -155,23 +156,29 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         entries.push_back( { 320, SHORT, { layout.colorMap.begin(), layout.colorMap.end() } } ); // ColorMap
     if ( !layout.extraSamples.empty() )
         entries.push_back( { 338, SHORT, { layout.extraSamples.begin(), layout.extraSamples.end() } } ); // ExtraSamples
+    for ( const auto& [tag, doubles] : layout.doubleTags )
+        entries.push_back( { uint16_t( tag ), DOUBLE, {}, doubles } );
     std::sort( entries.begin(), entries.end(), [] ( const Entry& a, const Entry& b ) { return a.tag < b.tag; } );
 
     auto valueBytes = [&] ( const Entry& entry )
     {
-        std::vector<uint8_t> bytes;
+        // filled in place, as the file below: inserts into a vector give a false -Wstringop-overread in GCC 11 Release builds
+        std::vector<uint8_t> bytes( entry.values.size() * ( entry.type == SHORT ? sizeof( uint16_t ) : sizeof( uint32_t ) )
+            + entry.doubles.size() * sizeof( double ) );
+        auto out = bytes.begin();
         for ( auto v : entry.values )
         {
             if ( entry.type == SHORT )
             {
                 const auto s = uint16_t( v );
-                bytes.insert( bytes.end(), ( const uint8_t* )&s, ( const uint8_t* )&s + sizeof( s ) );
+                out = std::copy( ( const uint8_t* )&s, ( const uint8_t* )&s + sizeof( s ), out );
             }
             else
             {
-                bytes.insert( bytes.end(), ( const uint8_t* )&v, ( const uint8_t* )&v + sizeof( v ) );
+                out = std::copy( ( const uint8_t* )&v, ( const uint8_t* )&v + sizeof( v ), out );
             }
         }
+        std::copy( ( const uint8_t* )entry.doubles.data(), ( const uint8_t* )( entry.doubles.data() + entry.doubles.size() ), out );
         return bytes;
     };
 
@@ -203,7 +210,7 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
     {
         write16( entry.tag );
         write16( entry.type );
-        write32( uint32_t( entry.values.size() ) );
+        write32( uint32_t( entry.values.size() + entry.doubles.size() ) );
         const auto bytes = valueBytes( entry );
         if ( bytes.size() <= 4 )
         {
@@ -240,19 +247,10 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
     out.write( ( const char* )file.data(), std::streamsize( file.size() ) );
 }
 
-template <typename T>
-static std::vector<uint8_t> toBytes( const std::vector<T>& values )
-{
-    std::vector<uint8_t> res( values.size() * sizeof( T ) );
-    std::memcpy( res.data(), values.data(), res.size() );
-    return res;
-}
-
 TEST( MRMesh, TiffTiledPartialTiles )
 {
     // the tiles in the last column and in the last row extend beyond the image
     const Vector2i size{ 20, 18 };
-    const Vector2i tileSize{ 16, 16 };
     std::vector<uint16_t> pixels( size_t( size.x ) * size.y );
     for ( int y = 0; y < size.y; ++y )
         for ( int x = 0; x < size.x; ++x )
@@ -262,32 +260,20 @@ TEST( MRMesh, TiffTiledPartialTiles )
     ASSERT_TRUE( tmpFolder );
     const auto path = tmpFolder / "tiled.tif";
     // the tiles are padded with 0xFFFF
-    writeTestTiff( path, { .size = size, .bitsPerSample = 16, .tileSize = tileSize }, toBytes( pixels ) );
+    writeTestTiff( path, { .size = size, .bitsPerSample = 16, .tileSize = { 16, 16 } }, toBytes( pixels ) );
 
-    auto params = readTiffParameters( path );
-    ASSERT_TRUE( params.has_value() ) << params.error();
-    EXPECT_EQ( params->imageSize, size );
-    EXPECT_TRUE( params->tiled );
-    EXPECT_EQ( params->tileSize, tileSize );
+    auto raster = RasterLoad::fromTiff( path );
+    ASSERT_TRUE( raster.has_value() ) << raster.error();
+    EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { size.x, size.y, 1 }, .type = ScalarType::UInt16 } ) );
+    EXPECT_EQ( raster->data, toBytes( pixels ) );
 
-    std::vector<uint16_t> raw( pixels.size(), 0xABCD );
-    RawTiffOutput rawOutput{
-        .bytes = ( uint8_t* )raw.data(),
-        .size = raw.size() * sizeof( uint16_t ),
-        .convertToFloat = false,
-    };
-    auto res = readRawTiff( path, rawOutput );
-    ASSERT_TRUE( res.has_value() ) << res.error();
-    EXPECT_EQ( raw, pixels );
-
-    std::vector<float> floats( pixels.size() );
-    RawTiffOutput floatOutput{
-        .bytes = ( uint8_t* )floats.data(),
-        .size = floats.size() * sizeof( float ),
-    };
-    res = readRawTiff( path, floatOutput );
+    std::vector<float> floats;
+    auto res = convertRasterToFloats( *raster, floats );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_EQ( floats, std::vector<float>( pixels.begin(), pixels.end() ) );
+    // the caller's memory must have room for all values, and no more
+    res = convertRasterToFloats( *raster, floats.data(), floats.size() - 1 );
+    EXPECT_FALSE( res.has_value() );
 }
 
 // libtiff passes the number of values of the GeoTIFF tags as a 16-bit or a 32-bit value, depending on how the tags are registered:
@@ -296,35 +282,132 @@ TEST( MRMesh, TiffGeoTransform )
 {
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
-    const auto path = tmpFolder / "dmap.tif";
+    const auto path = tmpFolder / "geo.tif";
 
-    const std::vector<float> values{ 0.f, 1.f, 2.f, 3.f, 4.f, 5.f };
-    const AffineXf3f xf( Matrix3f::scale( 0.5f, -0.5f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) );
-    auto saveRes = writeRawTiff( ( const uint8_t* )values.data(), path, {
-        .baseParams = {
-            .sampleType = BaseTiffParameters::SampleType::Float,
-            .valueType = BaseTiffParameters::ValueType::Scalar,
-            .bytesPerSample = sizeof( float ),
-            .imageSize = { 3, 2 },
-        },
-        .xf = &xf,
-    } );
+    // a raster of any type keeps the transformation, which distance maps read too
+    const Raster raster{
+        .info = { .dims = { 3, 2, 1 }, .type = ScalarType::UInt16 },
+        .data = toBytes( std::vector<uint16_t>{ 0, 1, 2, 3, 4, 5 } ),
+    };
+    const AffineXf3f xf( Matrix3f::scale( 0.5f, -0.5f, 2.f ), Vector3f( 10.f, 20.f, 3.f ) );
+    TiffSaveSettings settings;
+    settings.xf = &xf;
+    settings.noData = -9999.;
+    auto saveRes = RasterSave::toTiff( raster, path, settings );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
-    std::vector<float> loaded( values.size() );
     AffineXf3f loadedXf;
-    RawTiffOutput output{
-        .bytes = ( uint8_t* )loaded.data(),
-        .size = loaded.size() * sizeof( float ),
-        .p2wXf = &loadedXf,
-    };
-    auto res = readRawTiff( path, output );
-    ASSERT_TRUE( res.has_value() ) << res.error();
-    EXPECT_EQ( loaded, values );
+    auto loaded = RasterLoad::fromAnySupportedFormat( path, { .xf = &loadedXf } );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->data, raster.data );
     EXPECT_EQ( loadedXf, xf );
+    DistanceMapToWorld toWorld;
+    ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );
+    EXPECT_EQ( AffineXf3f( toWorld ), xf );
+
+    // GDAL_NODATA is a text tag
+    auto fileContents = [&path]
+    {
+        std::ifstream in( path, std::ios::binary );
+        return std::string( std::istreambuf_iterator<char>( in ), {} );
+    };
+    EXPECT_NE( fileContents().find( std::string( "-9999" ) + '\0' ), std::string::npos );
+
+    // a file without the transformation gives the identity
+    saveRes = RasterSave::toAnySupportedFormat( raster, path );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    loaded = RasterLoad::fromAnySupportedFormat( path, { .xf = &loadedXf } );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loadedXf, AffineXf3f() );
+    EXPECT_EQ( fileContents().find( "-9999" ), std::string::npos );
 }
 
-#ifndef MRIOEXTRAS_NO_TIFF
+// without the transformation matrix, the GeoTIFF transformation is made of a tie point and the pixel scale
+TEST( MRMesh, TiffGeoTiePoint )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "tiePoint.tif";
+
+    const std::vector<float> values{ 0.f, 1.f, 2.f, 3.f, 4.f, 5.f };
+    writeTestTiff( path, { .size = { 3, 2 }, .bitsPerSample = 32, .sampleFormat = 3, .doubleTags = {
+        { 33550, { 0.5, 0.25, 0. } }, // ModelPixelScaleTag: the zero scale of values keeps them as they are
+        { 33922, { 0., 0., 0., 10., 20., 0. } }, // ModelTiePointTag: the raster point (0, 0, 0) is at (10, 20, 0)
+    } }, toBytes( values ) );
+
+    DistanceMapToWorld toWorld;
+    auto loaded = DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( std::vector<float>( loaded->data(), loaded->data() + 6 ), values );
+    // the rows go down while y goes up
+    const AffineXf3f expected( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) );
+    EXPECT_EQ( AffineXf3f( toWorld ), expected );
+    AffineXf3f rasterXf;
+    ASSERT_TRUE( RasterLoad::fromTiff( path, { .xf = &rasterXf } ).has_value() );
+    EXPECT_EQ( rasterXf, expected );
+}
+
+// the tie point can be any raster point (I, J, K), the translation is the model point of the raster origin
+TEST( MRMesh, TiffGeoTiePointNotAtOrigin )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "tiePoint.tif";
+
+    struct GeoTags
+    {
+        std::vector<double> scale;
+        std::vector<double> tiePoint;
+        AffineXf3f expected;
+    };
+    const GeoTags cases[] = {
+        // the raster point (1, 2, 0) is at (10, 20, 0): the origin is one column to the left and two rows up
+        { { 0.5, 0.25, 0. }, { 1., 2., 0., 10., 20., 0. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.5f, 20.5f, 0.f ) ) },
+        // the raster point (1, 2, 4) is at (10, 20, 30), and the values are scaled too
+        { { 0.5, 0.25, 2. }, { 1., 2., 4., 10., 20., 30. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 2.f ), Vector3f( 9.5f, 20.5f, 22.f ) ) },
+        // the zero scale of values keeps them as they are, whatever the tie point's K and Z
+        { { 0.5, 0.25, 0. }, { 1., 2., 4., 10., 20., 30. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.5f, 20.5f, 0.f ) ) },
+    };
+    for ( const auto& c : cases )
+    {
+        writeTestTiff( path, { .size = { 3, 2 }, .bitsPerSample = 32, .sampleFormat = 3, .doubleTags = {
+            { 33550, c.scale }, // ModelPixelScaleTag
+            { 33922, c.tiePoint }, // ModelTiePointTag
+        } }, toBytes( std::vector<float>( 6 ) ) );
+
+        DistanceMapToWorld toWorld;
+        ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );
+        EXPECT_EQ( AffineXf3f( toWorld ), c.expected );
+        AffineXf3f rasterXf;
+        ASSERT_TRUE( RasterLoad::fromTiff( path, { .xf = &rasterXf } ).has_value() );
+        EXPECT_EQ( rasterXf, c.expected );
+    }
+}
+
+// the colors that libtiff decodes give their luma as floats
+TEST( MRMesh, TiffRasterDecodedLuma )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "cmyk.tif";
+    // white, black and cyan
+    writeTestTiff( path, { .size = { 3, 1 }, .samplesPerPixel = 4, .photometric = 5 }, { 0, 0, 0, 0, 0, 0, 0, 255, 255, 0, 0, 0 } );
+
+    auto raster = RasterLoad::fromTiff( path );
+    ASSERT_TRUE( raster.has_value() ) << raster.error();
+    std::vector<float> floats;
+    auto res = convertRasterToFloats( *raster, floats );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    ASSERT_EQ( floats.size(), 3u );
+    EXPECT_NEAR( floats[0], 255.f, 1e-3f );
+    EXPECT_EQ( floats[1], 0.f );
+    EXPECT_NEAR( floats[2], ( 0.587f + 0.114f ) * 255.f, 1e-3f );
+
+    auto dmap = DistanceMapLoad::fromTiff( path );
+    ASSERT_TRUE( dmap.has_value() ) << dmap.error();
+    EXPECT_EQ( std::vector<float>( dmap->data(), dmap->data() + 3 ), floats );
+}
+
 TEST( MRMesh, TiffImageNonAsciiPath )
 {
     UniqueTemporaryFolder tmpFolder;
@@ -355,23 +438,20 @@ TEST( MRMesh, TiffImageFloat )
     ASSERT_TRUE( tmpFolder );
     const auto path = tmpFolder / "float.tif";
 
-    const std::vector<float> values{
-        0.f, 1.f, // top row
-        2.f, 3.f, // bottom row
+    const Raster raster{
+        .info = { .dims = { 2, 2, 1 }, .type = ScalarType::Float32 },
+        .data = toBytes( std::vector<float>{
+            0.f, 1.f, // top row
+            2.f, 3.f, // bottom row
+        } ),
     };
-    auto saveRes = writeRawTiff( ( const uint8_t* )values.data(), path, { .baseParams = {
-        .sampleType = BaseTiffParameters::SampleType::Float,
-        .valueType = BaseTiffParameters::ValueType::Scalar,
-        .bytesPerSample = sizeof( float ),
-        .imageSize = { 2, 2 },
-    } } );
+    auto saveRes = RasterSave::toTiff( raster, path );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
     auto loaded = ImageLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loaded->resolution, Vector2i( 2, 2 ) );
-    // the values are scaled to [0, 255], and the rows of Image go from bottom to top;
-    // writeRawTiff marks the file with PHOTOMETRIC_MINISWHITE, which is ignored for floating-point samples
+    // the values are scaled to [0, 255], and the rows of Image go from bottom to top
     const std::vector<Color> expected{
         Color( 170, 170, 170 ), Color( 255, 255, 255 ),
         Color( 0, 0, 0 ), Color( 85, 85, 85 ),
@@ -695,7 +775,7 @@ TEST( MRMesh, TiffDistanceMapSave )
     std::memcpy( values.data(), raster->data.data(), raster->data.size() );
     EXPECT_EQ( values, std::vector<float>( dmap.data(), dmap.data() + 6 ) );
 
-    // the file is still read by the old reader, together with the GeoTIFF transformation
+    // the distance map is read back together with the GeoTIFF transformation
     DistanceMapToWorld toWorld;
     auto loaded = DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
@@ -725,8 +805,7 @@ TEST( MRMesh, TiffCancel )
     ASSERT_FALSE( saveRes.has_value() );
     EXPECT_EQ( saveRes.error(), stringOperationCanceled() );
 }
-#endif //!MRIOEXTRAS_NO_TIFF
 
 } //namespace MR
 
-#endif //!__EMSCRIPTEN__ && !MRMESH_NO_TIFF
+#endif //!MRIOEXTRAS_NO_TIFF

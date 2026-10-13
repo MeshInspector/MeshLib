@@ -42,9 +42,7 @@ jobs:
     timeout-minutes: 60
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
-      image: meshlib/meshlib-${{ matrix.os }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
+      image: ghcr.io/meshinspector/meshlib-${{ matrix.os }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     strategy:
       fail-fast: false
       matrix:

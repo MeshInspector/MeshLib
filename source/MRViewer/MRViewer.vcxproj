@@ -370,7 +370,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="$(ProjectDir)..\.editorconfig" />
-    <Content Include="resource\**">
+    <Content Include="resource\**" Exclude="resource\icons\**;resource\object_icons\**;resource\independent_icons\**;resource\logos\**">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <CopyFileToFolders Include="MRDarkTheme.json">
@@ -602,4 +602,5 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
+  <Import Project="$(MeshLibDir)\source\PackIcons.targets" />
 </Project>

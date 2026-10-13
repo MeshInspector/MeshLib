@@ -117,7 +117,7 @@ jobs:
 
         # Disabling this with an `if:` results in `steps.get-latest-tag.outputs.tag` being empty.
         # Passing that to `ref:` makes it default to the current commit, which is exactly what we need.
-      - uses: ./.github/actions/get-latest-tag
+      - uses: actions-ecosystem/action-get-latest-tag@v1
         if: ${{ github.event_name == 'release' || inputs.publish == 'publish-prod' }}
         id: get-latest-tag
 
@@ -210,7 +210,6 @@ jobs:
   generate-c-bindings:
     needs: setup
     uses: ./.github/workflows/generate-c-bindings.yml
-    secrets: inherit
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       version_tag: ${{needs.setup.outputs.version_tag}}
@@ -219,7 +218,6 @@ jobs:
     needs: setup
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
     uses: ./.github/workflows/build-test-emscripten.yml
-    secrets: inherit
     with:
       docker_image_tag: ${{ inputs.vcpkg_docker_image_tag || 'latest' }}
       upload_artifacts: false
@@ -234,9 +232,7 @@ jobs:
     timeout-minutes: 80
     runs-on: ${{ matrix.runner }}
     container:
-      image: meshlib/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
+      image: ghcr.io/meshinspector/meshlib-${{ matrix.os }}:${{ inputs.vcpkg_docker_image_tag || 'latest' }}
     strategy:
       fail-fast: false
       # `include` enumerates the per-platform combos, surviving platforms
@@ -329,7 +325,7 @@ jobs:
 
       # install helper utility for Python version management
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
 
       - name: Build Python shim libs
         run: |
@@ -673,7 +669,7 @@ jobs:
           internal-build: ${{ needs.setup.outputs.internal_build }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
 
       - name: Install all Python versions
         run: uv python install $(cat scripts/mrbind-pybind11/python_versions.txt | xargs)
@@ -834,8 +830,6 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{ matrix.container-prefix }}${{ matrix.os }}
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
     strategy:
       fail-fast: false
       # `include` is the cartesian product (surviving platforms x
@@ -1022,7 +1016,7 @@ jobs:
           merge-multiple: true
 
       - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884
 
       # One step per Python ABI so the GitHub Actions UI shows per-version
       # status / timing / logs. Each step is a thin wrapper around the
@@ -1127,7 +1121,6 @@ jobs:
     if: ${{ needs.setup.outputs.publish_prod == 'true' }}
     needs: [setup, upload-to-release]
     uses: MeshInspector/MeshLib/.github/workflows/release-tests.yml@master
-    secrets: inherit
 
   delete-artifacts:
     timeout-minutes: 5

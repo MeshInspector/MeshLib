@@ -55,7 +55,7 @@ jobs:
       MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
       # the job that uploads PythonStubs and CsharpBindings
       UPLOAD_BINDINGS_SOURCES: ${{ matrix.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
-      # one Release job per OS and architecture builds the Rust bindings and runs their examples
+      # one Release job per OS and architecture builds the Rust and Java bindings and runs their examples
       RUN_RUST: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
 
     steps:
@@ -201,6 +201,24 @@ jobs:
           cargo build --manifest-path examples/rust-examples/Cargo.toml
           ./examples/rust-examples/target/debug/MeshBoolean
           cargo test --manifest-path source/MRTestRust/Cargo.toml
+
+      - name: Install Java
+        if: ${{ env.RUN_RUST == 'true' }}
+        uses: ./.github/actions/setup-java
+
+      - name: Generate and build Java bindings
+        if: ${{ env.RUN_RUST == 'true' }}
+        run: make -f scripts/mrbind/generate.mk TARGET=java -B --trace
+
+      - name: Build and run Java examples and tests
+        if: ${{ env.RUN_RUST == 'true' }}
+        env:
+          LD_LIBRARY_PATH: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+        run: |
+          javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d examples/java-examples/classes examples/java-examples/*.java
+          java --enable-native-access=ALL-UNNAMED -Djava.library.path=build/${{ matrix.config }}/bin -cp source/MeshLibJava/meshlib.jar:examples/java-examples/classes MeshBoolean
+          javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java
+          java --enable-native-access=ALL-UNNAMED -Djava.library.path=build/${{ matrix.config }}/bin -cp source/MeshLibJava/meshlib.jar:source/MRTestJava/classes mrtest.Main
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt

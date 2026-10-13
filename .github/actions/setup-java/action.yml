@@ -1,0 +1,61 @@
+name: Setup Java
+description: >
+  Makes a JDK 22 or newer (needed for the foreign function API the Java
+  bindings use) available for the following steps. If the runner already has
+  one, nothing is installed. Otherwise a Temurin JDK is downloaded into the
+  runner's temp directory, so self-hosted runners don't accumulate state.
+
+inputs:
+  version:
+    description: The JDK feature version to download when the runner has none.
+    default: '25'
+
+runs:
+  using: composite
+  steps:
+    - name: Install Java
+      shell: bash
+      run: |
+        set -eu
+        if command -v javac >/dev/null; then
+          version=$(javac -version 2>&1 | sed -E 's/^javac ([0-9]+).*/\1/')
+          if [ "$version" -ge 22 ]; then
+            echo "Using the existing $(command -v javac), version $version"
+            exit 0
+          fi
+        fi
+        case "$RUNNER_OS" in
+          Linux) os=linux ;;
+          macOS) os=mac ;;
+          Windows) os=windows ;;
+          *) echo "Unknown OS $RUNNER_OS"; exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          ARM64) arch=aarch64 ;;
+          *) arch=x64 ;;
+        esac
+        dir="$RUNNER_TEMP/jdk"
+        rm -rf "$dir"
+        mkdir -p "$dir"
+        url="https://api.adoptium.net/v3/binary/latest/${{ inputs.version }}/ga/$os/$arch/jdk/hotspot/normal/eclipse"
+        if [ "$RUNNER_OS" = Windows ]; then
+          curl -sSfL -o "$RUNNER_TEMP/jdk.zip" "$url"
+          unzip -q "$RUNNER_TEMP/jdk.zip" -d "$dir"
+        else
+          curl -sSfL "$url" | tar -xzf - -C "$dir"
+        fi
+        home=$(echo "$dir"/jdk-*)
+        if [ "$RUNNER_OS" = macOS ]; then
+          home="$home/Contents/Home"
+        fi
+        if [ "$RUNNER_OS" = Windows ]; then
+          home=$(cygpath -w "$home")
+          # `GITHUB_PATH` is fine here: the Windows jobs don't keep PATH in `GITHUB_ENV`.
+          echo "$home\bin" >> "$GITHUB_PATH"
+        else
+          # The Ubuntu and macOS jobs keep PATH in `GITHUB_ENV` (see their "Create virtualenv" steps),
+          # and a `GITHUB_PATH` entry would make the runner rebuild PATH without the virtualenv.
+          echo "PATH=$home/bin:$PATH" >> "$GITHUB_ENV"
+        fi
+        echo "JAVA_HOME=$home" >> "$GITHUB_ENV"
+        "$home/bin/java" -version

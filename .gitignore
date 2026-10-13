@@ -54,6 +54,12 @@ compile_commands.json
 /examples/rust-examples/Cargo.lock
 /source/MRTestRust/target/
 /source/MRTestRust/Cargo.lock
+/source/MeshLibJava/src/
+/source/MeshLibJava/classes/
+/source/MeshLibJava/sources.txt
+/source/MeshLibJava/meshlib.jar
+/source/MRTestJava/classes/
+/examples/java-examples/classes/
 /source/MRDotNet2Static/bin
 /source/MRDotNet2Static/obj
 /source/MRDotNet2Static/src

@@ -201,6 +201,7 @@ jobs:
       # The embedded Python's pure-Python standard library, next to python3XY.dll; run by the
       # py-launcher Python of the same minor version (installed by "Setup python")
       - name: Build Python standard library zip
+        if: ${{ matrix.vcpkg_triplet != 'x64-windows-meshlib-iterator-debug' }}
         shell: pwsh
         run: |
           $out = "source\$env:MR_ARCH\${{ matrix.config }}"

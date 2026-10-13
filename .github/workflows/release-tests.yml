@@ -37,9 +37,8 @@ jobs:
     runs-on: ${{ matrix.runner }}
     container:
       image: ${{matrix.container-prefix}}${{matrix.os}}
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # anonymous pull when the secret is unavailable (Dependabot, forks)
+      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
     strategy:
       fail-fast: false
       matrix:

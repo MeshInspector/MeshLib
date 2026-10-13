@@ -15,9 +15,8 @@ jobs:
     runs-on: ubuntu-24.04-arm
     container:
       image: meshlib/meshlib-ubuntu22-arm64:latest
-      credentials:
-        username: meshlib
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # anonymous pull when the secret is unavailable (Dependabot, forks)
+      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
     strategy:
       fail-fast: false
     env:

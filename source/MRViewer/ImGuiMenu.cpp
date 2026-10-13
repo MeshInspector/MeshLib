@@ -316,6 +316,8 @@ void ImGuiMenu::startFrame()
         // needed for dear ImGui
         // should be window size
         ImGui::GetIO().DisplaySize = ImVec2( float( viewer->framebufferSize.x ), float( viewer->framebufferSize.y ) );
+        // no renderer backend to set it: without it NewFrame requires a prebuilt font atlas (as in ImGui's example_null)
+        ImGui::GetIO().BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
     }
     auto& style = ImGui::GetStyle();
     if ( !needModalBgChange_ )
@@ -1155,7 +1157,8 @@ bool ImGuiMenu::anyImGuiWindowIsHovered() const
 
 bool ImGuiMenu::anyUiObjectIsHovered() const
 {
-    return bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
+    // the manager is created on the first rendered frame, so it is null without OpenGL
+    return uiRenderManager_ && bool( uiRenderManager_->consumedInteractions & BasicUiRenderTask::InteractionMask::mouseHover );
 }
 
 void ImGuiMenu::drawModalMessage_()

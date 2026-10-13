@@ -50,7 +50,7 @@ Expected<Image> convertRasterToImage( const Raster& raster )
     const auto valueSize = getScalarTypeSize( info.type );
     if ( valueSize == 0 )
         return unexpected( "Unsupported value type" );
-    if ( info.channels != 1 && info.channels < 3 )
+    if ( info.channels == 2 || info.channels <= 0 )
         return unexpected( "Unsupported number of channels" );
     if ( info.dims.z != 1 )
         return unexpected( "Only a raster with one layer can be converted to an image" );
@@ -124,6 +124,42 @@ Expected<Image> convertRasterToImage( const Raster& raster )
         return Color( g, g, g );
     } );
     return res;
+}
+
+Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t size )
+{
+    MR_TIMER;
+    const auto& info = raster.info;
+    const auto valueSize = getScalarTypeSize( info.type );
+    if ( valueSize == 0 )
+        return unexpected( "Unsupported value type" );
+    if ( info.channels == 2 || info.channels <= 0 )
+        return unexpected( "Unsupported number of channels" );
+    if ( raster.data.size() != info.dataSize() )
+        return unexpected( "Raster data size does not match its dimensions" );
+    const auto channels = size_t( info.channels );
+    if ( size != raster.data.size() / ( valueSize * channels ) )
+        return unexpected( "Output size does not match the raster dimensions" );
+
+    const auto* data = ( const char* )raster.data.data();
+    auto getValue = [&] ( size_t i )
+    {
+        return visitScalarType( [] ( auto v ) { return float( v ); }, info.type, data + i * valueSize );
+    };
+    ParallelFor( size_t( 0 ), size, [&] ( size_t i )
+    {
+        const auto j = i * channels;
+        dst[i] = channels == 1 ? getValue( j ) : 0.299f * getValue( j ) + 0.587f * getValue( j + 1 ) + 0.114f * getValue( j + 2 );
+    } );
+    return {};
+}
+
+Expected<void> convertRasterToFloats( const Raster& raster, std::vector<float>& dst )
+{
+    // one value per pixel; the conversion checks the raster, and the vector never gets more values than the data has bytes
+    const auto pixelSize = getScalarTypeSize( raster.info.type ) * size_t( std::max( raster.info.channels, 0 ) );
+    dst.resize( pixelSize > 0 ? raster.data.size() / pixelSize : 0 );
+    return convertRasterToFloats( raster, dst.data(), dst.size() );
 }
 
 } // namespace MR

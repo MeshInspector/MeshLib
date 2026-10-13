@@ -1,11 +1,5 @@
 project(MRMesh CXX)
 
-option(MRMESH_NO_TIFF "Disable TIFF support" OFF)
-
-IF(MR_EMSCRIPTEN)
-  set(MRMESH_NO_TIFF ON)
-ENDIF()
-
 file(GLOB SOURCES "*.cpp")
 file(GLOB HEADERS "*.h" "*.hpp")
 # MRPchCreate.cpp only drives the MSVC/MSBuild precompiled header; CMake generates its own.
@@ -82,11 +76,6 @@ IF(EMSCRIPTEN)
     EIGEN_STACK_ALLOCATION_LIMIT=0
   )
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_BOOST_HEADERS=1")
-ENDIF()
-
-IF(NOT MRMESH_NO_TIFF)
-  find_package(TIFF REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE TIFF::TIFF)
 ENDIF()
 
 IF(MR_PCH)

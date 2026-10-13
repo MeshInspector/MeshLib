@@ -12,13 +12,11 @@
 #include "MRMesh/MRDirectory.h"
 #include "MROpenVDBHelper.h"
 #include "MRMesh/MRParallelFor.h"
+#include "MRMesh/MRParallelMinMax.h"
+#include "MRMesh/MRRasterLoad.h"
 #include "MRPch/MROpenVDB.h"
 #include "MRPch/MRSpdlog.h"
 #include "MRPch/MRTBB.h"
-
-#ifndef MRVOXELS_NO_TIFF
-#include "MRMesh/MRTiffIO.h"
-#endif // MRVOXELS_NO_TIFF
 
 #include <openvdb/io/Stream.h>
 #include <openvdb/tools/GridTransformer.h>
@@ -26,6 +24,7 @@
 
 #include <cfloat>
 #include <fstream>
+#include <map>
 
 namespace MR
 {
@@ -362,87 +361,77 @@ MR_ADD_VOXELS_LOADER( IOFilter( "Raw (.raw)", "*.raw" ), vecFromRaw )
 MR_ADD_VOXELS_LOADER( IOFilter( "Micro CT (.gav)", "*.gav" ), vecFromGav )
 MR_ADD_VOXELS_LOADER( IOFilter( "OpenVDB (.vdb)", "*.vdb" ), fromVdb )
 
-#ifndef MRVOXELS_NO_TIFF
-struct TiffParams
-{
-    int bitsPerSample = 0;
-    int samplesPerPixel = 0;
-    int width = 0;
-    int height = 0;
-
-    bool operator==( const TiffParams& other ) const
-    {
-        return bitsPerSample == other.bitsPerSample &&
-            samplesPerPixel == other.samplesPerPixel &&
-            width == other.width &&
-            height == other.height;
-    }
-
-    bool operator !=( const TiffParams& other ) const
-    {
-        return !( *this == other );
-    }
-};
-
-Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
+Expected<VdbVolume> loadRasterFolder( const RasterFolderLoadSettings& settings )
 {
     MR_TIMER;
     std::error_code ec;
     if ( !std::filesystem::is_directory( settings.dir, ec ) )
         return unexpected( "Given path is not directory" );
 
-    int filesNum = 0;
-    std::vector<std::filesystem::path> files;
+    std::map<std::string, std::vector<std::filesystem::path>> filesByExtension;
     for ( auto entry : Directory{ settings.dir, ec } )
     {
         if ( entry.is_regular_file( ec ) )
-            ++filesNum;
+            filesByExtension[toLower( utf8string( entry.path().extension() ) )].push_back( entry.path() );
     }
-    files.reserve( filesNum );
-    for ( auto entry : Directory{ settings.dir, ec } )
+    // of the extensions with a raster loader, the one that most files have; the alphabetically first one if several have as many files
+    std::string extension;
+    std::vector<std::filesystem::path> files;
+    size_t rasterFileCount = 0;
+    for ( auto& [ext, extFiles] : filesByExtension )
     {
-        auto filePath = entry.path();
-        if ( entry.is_regular_file( ec ) && isTIFFFile( filePath ) )
-            files.push_back( filePath );
+        if ( !RasterLoad::getRasterLoader( "*" + ext ).fileLoad )
+            continue;
+        rasterFileCount += extFiles.size();
+        if ( extFiles.size() > files.size() )
+        {
+            extension = ext;
+            files = std::move( extFiles );
+        }
     }
 
     if ( files.size() < 2 )
-        return unexpected( "Too few TIFF files in the directory" );
+    {
+        // with two raster files or more, each extension has one file, e.g. one .tif and one .tiff file
+        return unexpected( rasterFileCount < 2 ? std::string( "Too few files of a supported raster format in the directory" )
+            : fmt::format( "Only 1 {} file of {} raster files in the directory", extension, rasterFileCount ) );
+    }
 
     sortScanFilesByName( files );
 
-    auto tpExp = readTiffParameters( files.front() );
-    if ( !tpExp.has_value() )
-        return unexpected( tpExp.error() );
-
-    auto& tp = *tpExp;
-
     SimpleVolumeMinMax outVolume;
-    outVolume.dims = { tp.imageSize.x, tp.imageSize.y, 1 };
     outVolume.min = FLT_MAX;
     outVolume.max = -FLT_MAX;
-
     outVolume.voxelSize = settings.voxelSize;
-    outVolume.data.resize( size_t( outVolume.dims.x ) * outVolume.dims.y );
 
-    TiffParameters localParams;
-    RawTiffOutput output;
-    output.size = ( tp.imageSize.x * tp.imageSize.y ) * sizeof( float );
-    output.params = &localParams;
-    output.min = &outVolume.min;
-    output.max = &outVolume.max;
+    RasterInfo info;
     // putSimpleVolumeInDenseGrid deactivates voxels equal to the grid background, so keep it at FLT_MAX until all layers are copied
     FloatGrid grid = std::make_shared<OpenVdbFloatGrid>( openvdb::FloatGrid( FLT_MAX ) );
     for ( size_t layerIndex = 0; layerIndex < files.size(); ++layerIndex )
     {
-        output.bytes = ( uint8_t* )( outVolume.data.data() );
-        auto readRes = readRawTiff( files[layerIndex], output );
+        const auto& file = files[layerIndex];
+        auto raster = RasterLoad::fromAnySupportedFormat( file );
+        if ( !raster.has_value() )
+            return unexpected( std::move( raster.error() ) );
 
-        if ( !readRes.has_value() )
-            return unexpected( readRes.error() );
+        if ( layerIndex == 0 )
+        {
+            info = raster->info;
+            if ( info.dims.z != 1 )
+                return unexpected( "Raster has several layers: " + utf8string( file ) );
+            outVolume.dims = info.dims;
+        }
+        else if ( raster->info != info )
+        {
+            return unexpected( "Size or format differs from the first file: " + utf8string( file ) );
+        }
 
-        if ( localParams != tp )
-            return unexpected( "Inconsistent TIFF files" );
+        // the buffer of the layer is reused
+        if ( auto convertRes = convertRasterToFloats( *raster, outVolume.data.vec_ ); !convertRes.has_value() )
+            return unexpected( convertRes.error() + ": " + utf8string( file ) );
+        const auto [min, max] = parallelMinMax( outVolume.data );
+        outVolume.min = std::min( outVolume.min, min );
+        outVolume.max = std::max( outVolume.max, max );
 
         putSimpleVolumeInDenseGrid( grid, Vector3i{0, 0, ( int ) layerIndex}, outVolume );
 
@@ -481,7 +470,6 @@ Expected<VdbVolume> loadTiffDir( const LoadingTiffSettings& settings )
 
     return res;
 }
-#endif // MRVOXELS_NO_TIFF
 
 Expected<MR::FloatGrid> gridFromRaw( const std::filesystem::path& file, const RawParameters& params, const ProgressCallback& cb /*= {} */ )
 {

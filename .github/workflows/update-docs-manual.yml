@@ -14,7 +14,7 @@ jobs:
     timeout-minutes: 40
     runs-on: ubuntu-24.04-arm
     container:
-      image: meshlib/meshlib-ubuntu22-arm64:latest
+      image: ghcr.io/meshinspector/meshlib-ubuntu22-arm64:latest
     strategy:
       fail-fast: false
     env:

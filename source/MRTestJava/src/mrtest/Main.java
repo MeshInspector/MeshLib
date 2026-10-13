@@ -17,6 +17,7 @@ public final class Main
         TestAffineXf.class,
         TestBitSet.class,
         TestBox.class,
+        TestCallbacks.class,
         TestColor.class,
         TestExpandShrink.class,
         TestFixSelfIntersections.class,

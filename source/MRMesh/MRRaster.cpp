@@ -26,6 +26,19 @@ uint8_t colorTo8Bit( T v )
         return uint8_t( std::make_unsigned_t<T>( v ) >> ( 8 * sizeof( T ) - 8 ) );
 }
 
+// checks that the values of the raster can be converted, and that its dimensions are not negative and match its data size
+Expected<void> checkRaster( const Raster& raster )
+{
+    const auto& info = raster.info;
+    if ( getScalarTypeSize( info.type ) == 0 )
+        return unexpected( "Unsupported value type" );
+    if ( info.channels == 2 || info.channels <= 0 )
+        return unexpected( "Unsupported number of channels" );
+    if ( info.dims.x < 0 || info.dims.y < 0 || info.dims.z < 0 || raster.data.size() != info.dataSize() )
+        return unexpected( "Raster data size does not match its dimensions" );
+    return {};
+}
+
 } // namespace
 
 size_t RasterInfo::dataSize() const
@@ -46,17 +59,12 @@ size_t RasterInfo::dataSize() const
 Expected<Image> convertRasterToImage( const Raster& raster )
 {
     MR_TIMER;
+    MR_RETURN_IF_UNEXPECTED( checkRaster( raster ) )
     const auto& info = raster.info;
-    const auto valueSize = getScalarTypeSize( info.type );
-    if ( valueSize == 0 )
-        return unexpected( "Unsupported value type" );
-    if ( info.channels == 2 || info.channels <= 0 )
-        return unexpected( "Unsupported number of channels" );
     if ( info.dims.z != 1 )
         return unexpected( "Only a raster with one layer can be converted to an image" );
-    if ( info.dims.x < 0 || info.dims.y < 0 || raster.data.size() != info.dataSize() )
-        return unexpected( "Raster data size does not match its dimensions" );
 
+    const auto valueSize = getScalarTypeSize( info.type );
     const auto width = size_t( info.dims.x );
     const auto height = size_t( info.dims.y );
     Image res{
@@ -129,14 +137,9 @@ Expected<Image> convertRasterToImage( const Raster& raster )
 Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t size )
 {
     MR_TIMER;
+    MR_RETURN_IF_UNEXPECTED( checkRaster( raster ) )
     const auto& info = raster.info;
     const auto valueSize = getScalarTypeSize( info.type );
-    if ( valueSize == 0 )
-        return unexpected( "Unsupported value type" );
-    if ( info.channels == 2 || info.channels <= 0 )
-        return unexpected( "Unsupported number of channels" );
-    if ( raster.data.size() != info.dataSize() )
-        return unexpected( "Raster data size does not match its dimensions" );
     const auto channels = size_t( info.channels );
     if ( size != raster.data.size() / ( valueSize * channels ) )
         return unexpected( "Output size does not match the raster dimensions" );

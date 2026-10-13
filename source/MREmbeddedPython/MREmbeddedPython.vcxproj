@@ -22,10 +22,14 @@
     <CopyFileToFolders Include="$(ProjectDir)..\..\thirdparty\python\python$(PythonVersion).zip">
       <FileType>Document</FileType>
     </CopyFileToFolders>
-    <!-- The standard library's extension modules (_socket, _ssl, _sqlite3, ...) with the DLLs they need; Python puts DLLs\ next to python3XY.dll on sys.path -->
-    <CopyFileToFolders Include="$(VcpkgCurrentInstalledDir)\tools\python3\DLLs\*">
+    <!-- The standard library's extension modules (_socket, _ssl, _sqlite3, ...) go to DLLs\, which Python puts on sys.path; -->
+    <!-- the DLLs they need go next to the executable, where most of them already are and the loader finds them -->
+    <CopyFileToFolders Include="$(VcpkgCurrentInstalledDir)\tools\python3\DLLs\*.pyd">
       <FileType>Document</FileType>
       <DestinationFolders>$(OutDir)DLLs</DestinationFolders>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(VcpkgCurrentInstalledDir)\tools\python3\DLLs\*.dll">
+      <FileType>Document</FileType>
     </CopyFileToFolders>
   </ItemGroup>
   <ItemGroup>

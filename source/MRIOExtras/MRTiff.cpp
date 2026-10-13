@@ -269,6 +269,7 @@ AffineXf3f readGeoTransform( TIFF* tiff )
     Vector3d scale{ scaleTag[0], -scaleTag[1], scaleTag[2] };
     if ( scale.z == 0. )
     {
+        tiePoints[0].z = 0.;
         tiePoints[1].z = 0.;
         scale.z = 1.;
     }

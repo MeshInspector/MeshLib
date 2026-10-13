@@ -365,6 +365,8 @@ TEST( MRMesh, TiffGeoTiePointNotAtOrigin )
         { { 0.5, 0.25, 0. }, { 1., 2., 0., 10., 20., 0. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.5f, 20.5f, 0.f ) ) },
         // the raster point (1, 2, 4) is at (10, 20, 30), and the values are scaled too
         { { 0.5, 0.25, 2. }, { 1., 2., 4., 10., 20., 30. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 2.f ), Vector3f( 9.5f, 20.5f, 22.f ) ) },
+        // the zero scale of values keeps them as they are, whatever the tie point's K and Z
+        { { 0.5, 0.25, 0. }, { 1., 2., 4., 10., 20., 30. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.5f, 20.5f, 0.f ) ) },
     };
     for ( const auto& c : cases )
     {

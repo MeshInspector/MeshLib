@@ -264,6 +264,7 @@ AffineXf3f readGeoTransform( TIFF* tiff )
     const auto* scaleTag = getDoublesTag( tiff, cModelPixelScaleTag, count );
     if ( !scaleTag || count != 3 )
         return {};
+    // the tie point maps the raster point tiePoints[0] to the model point tiePoints[1]
     Vector3d tiePoints[2] = { { tie[0], tie[1], tie[2] }, { tie[3], tie[4], tie[5] } };
     Vector3d scale{ scaleTag[0], -scaleTag[1], scaleTag[2] };
     if ( scale.z == 0. )
@@ -271,7 +272,7 @@ AffineXf3f readGeoTransform( TIFF* tiff )
         tiePoints[1].z = 0.;
         scale.z = 1.;
     }
-    return AffineXf3f( Matrix3f::scale( Vector3f( scale ) ), Vector3f( tiePoints[0] + tiePoints[1] ) );
+    return AffineXf3f( Matrix3f::scale( Vector3f( scale ) ), Vector3f( tiePoints[1] - mult( scale, tiePoints[0] ) ) );
 }
 
 // as the old image loader did, libtiff decodes the images it can, the others are converted from the raster

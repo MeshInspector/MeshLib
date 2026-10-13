@@ -1,6 +1,7 @@
 #pragma once
 #include "MRMesh/MRFlagOperators.h"
 #include "MRMesh/MRphmap.h"
+#include "MRMesh/MRMeshTexture.h"
 #include "MRViewerFwd.h"
 #include <array>
 #include <filesystem>
@@ -66,7 +67,13 @@ private:
     bool loadZip_();
 
     struct IconTypeData;
-    static void addIcon_( IconTypeData& data, int sz, const std::string& name, Image&& image );
+    // colored and white textures of one icon, each empty if the icon type does not have it
+    struct Textures
+    {
+        MeshTexture colored, white;
+    };
+    static Textures makeTextures_( const IconTypeData& data, int sz, Image&& image );
+    static void addIcon_( IconTypeData& data, int sz, const std::string& name, Textures&& textures );
 
     struct IconTypeData
     {

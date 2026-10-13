@@ -140,28 +140,40 @@ const ImGuiImage* RibbonIcons::findRequiredSize_( const SizedIcons& icons, float
     return maxIcon;
 }
 
-void RibbonIcons::addIcon_( IconTypeData& data, int sz, const std::string& name, Image&& image )
+RibbonIcons::Textures RibbonIcons::makeTextures_( const IconTypeData& data, int sz, Image&& image )
 {
     MeshTexture texture{ std::move( image ) };
     if ( sz != int( Sizes::X0_5 ) )
         texture.filter = FilterType::Linear;
 
-    Icons icons;
+    Textures res;
     if ( bool( data.availableColor & IconTypeData::AvailableColor::Colored ) )
-    {
-        icons.colored = std::make_unique<ImGuiImage>();
-        icons.colored->update( texture );
-    }
+        res.colored = texture;
     if ( bool( data.availableColor & IconTypeData::AvailableColor::White ) )
     {
-        icons.white = std::make_unique<ImGuiImage>();
-        ParallelFor( texture.pixels, [&] ( size_t i )
+        for ( auto& pixel : texture.pixels )
         {
-            auto alpha = texture.pixels[i].a;
-            texture.pixels[i] = Color::white();
-            texture.pixels[i].a = alpha;
-        } );
-        icons.white->update( std::move( texture ) );
+            auto alpha = pixel.a;
+            pixel = Color::white();
+            pixel.a = alpha;
+        }
+        res.white = std::move( texture );
+    }
+    return res;
+}
+
+void RibbonIcons::addIcon_( IconTypeData& data, int sz, const std::string& name, Textures&& textures )
+{
+    Icons icons;
+    if ( !textures.colored.pixels.empty() )
+    {
+        icons.colored = std::make_unique<ImGuiImage>();
+        icons.colored->update( textures.colored );
+    }
+    if ( !textures.white.pixels.empty() )
+    {
+        icons.white = std::make_unique<ImGuiImage>();
+        icons.white->update( textures.white );
     }
     data.map[name][sz] = std::move( icons );
 }
@@ -180,7 +192,7 @@ bool RibbonIcons::loadZip_()
         int sz = 0;
         std::string name;
         std::vector<char> png;
-        Expected<Image> image;
+        Textures textures;
     };
     std::vector<ZipIcon> icons;
     auto res = decompressZip( zipPath, [&] ( const std::string& path, std::vector<char>&& content ) -> Expected<void>
@@ -206,19 +218,21 @@ bool RibbonIcons::loadZip_()
         return false;
     }
 
-    // PNG decoding takes most of the time, so it is parallel; the textures are created on this thread only
+    // PNG decoding takes most of the time, so it is parallel; only the GPU textures are created on this thread
     ParallelFor( icons, [&] ( size_t i )
     {
-        MemoryStreamBuf buf( icons[i].png );
+        auto& icon = icons[i];
+        MemoryStreamBuf buf( icon.png );
         std::istream in( &buf );
-        icons[i].image = ImageLoad::fromPng( in );
+        if ( auto image = ImageLoad::fromPng( in ) )
+            icon.textures = makeTextures_( *icon.data, icon.sz, std::move( *image ) );
     } );
     int num = 0;
     for ( auto& icon : icons )
     {
-        if ( !icon.image )
+        if ( icon.textures.colored.pixels.empty() && icon.textures.white.pixels.empty() )
             continue;
-        addIcon_( *icon.data, icon.sz, icon.name, std::move( *icon.image ) );
+        addIcon_( *icon.data, icon.sz, icon.name, std::move( icon.textures ) );
         ++num;
     }
     spdlog::info( "Loaded {} icons from {}", num, utf8string( zipPath ) );
@@ -261,7 +275,7 @@ void RibbonIcons::load_( IconType type )
             if ( !entry.is_regular_file( ec ) || !isPng( entry.path() ) )
                 continue;
             if ( auto image = ImageLoad::fromPng( entry.path() ) )
-                addIcon_( currentData, sz, utf8string( entry.path().stem() ), std::move( *image ) );
+                addIcon_( currentData, sz, utf8string( entry.path().stem() ), makeTextures_( currentData, sz, std::move( *image ) ) );
         }
     }
 }

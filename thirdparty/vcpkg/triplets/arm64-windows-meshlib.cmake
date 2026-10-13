@@ -10,4 +10,5 @@ set(VCPKG_C_FLAGS_DEBUG "${VCPKG_C_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 # overrides /Gs0 and avoids it.
 if(PORT STREQUAL "openssl")
     set(VCPKG_C_FLAGS_RELEASE "${VCPKG_C_FLAGS_RELEASE} /Gs")
+    set(VCPKG_CXX_FLAGS_RELEASE "${VCPKG_CXX_FLAGS_RELEASE} /Gs") # vcpkg requires both or neither
 endif()

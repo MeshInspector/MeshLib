@@ -423,6 +423,8 @@ jobs:
         run: |
           call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           call ./scripts/mrbind/generate_win.bat -B --trace TARGET=java || exit /b 1
+          rem The DLLs that MeshLibC2.dll depends on are found through PATH, not java.library.path.
+          set PATH=%CD%\source\%MR_ARCH%\${{matrix.config}};%PATH%
           javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d examples/java-examples/classes examples/java-examples/*.java || exit /b 1
           java --enable-native-access=ALL-UNNAMED -Djava.library.path=source/%MR_ARCH%/${{matrix.config}} -cp source/MeshLibJava/meshlib.jar;examples/java-examples/classes MeshBoolean || exit /b 1
           javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java || exit /b 1

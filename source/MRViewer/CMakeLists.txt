@@ -164,9 +164,9 @@ IF(EMSCRIPTEN)
       ${MAIN_FONTS}
       ${AWESOME_FONTS}
       ${IMGUI_FONTS}
-      "resource"
     DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
   )
+  mr_copy_resources("resource" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
   file(
     COPY "wasm_async_func_list.txt"
     DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
@@ -179,9 +179,9 @@ ELSE()
       ${AWESOME_FONTS}
       ${IMGUI_FONTS}
       ${THIRD_PARTY_NOTICES}
-      "resource"
     DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   )
+  mr_copy_resources("resource" ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 ENDIF()
 
 install(
@@ -217,10 +217,7 @@ install(
   FILES ${JSONS}
   DESTINATION ${MR_RESOURCES_DIR}
 )
-install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
-  DESTINATION ${MR_RESOURCES_DIR}
-)
+mr_install_resources(${CMAKE_CURRENT_SOURCE_DIR}/resource ${MR_RESOURCES_DIR})
 IF(EMSCRIPTEN)
   install(
     FILES "wasm_async_func_list.txt"

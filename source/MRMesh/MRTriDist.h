@@ -33,10 +33,10 @@ struct TriTriDistanceResult
 
     /// barycentric coordinates of point a in triangle ta, given to findTriTriDistance as the first one;
     /// unlike the ones computed from the position of the point, they place a point found on an edge or in a vertex there
-    [[nodiscard]] TriPoint<T> aBary( const Triangle3<T>& ta ) const { return TriPoint<T>::fromPoint( a, ta[0], ta[1], ta[2], aEdge ); }
+    [[nodiscard]] TriPoint<T> aBary( const Triangle3<T>& ta ) const { return TriPoint<T>( a, ta[0], ta[1], ta[2], aEdge ); }
 
     /// barycentric coordinates of point b in triangle tb, given to findTriTriDistance as the second one
-    [[nodiscard]] TriPoint<T> bBary( const Triangle3<T>& tb ) const { return TriPoint<T>::fromPoint( b, tb[0], tb[1], tb[2], bEdge ); }
+    [[nodiscard]] TriPoint<T> bBary( const Triangle3<T>& tb ) const { return TriPoint<T>( b, tb[0], tb[1], tb[2], bEdge ); }
 };
 using TriTriDistanceResultf = TriTriDistanceResult<float>;
 using TriTriDistanceResultd = TriTriDistanceResult<double>;

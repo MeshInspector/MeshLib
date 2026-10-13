@@ -27,13 +27,12 @@ struct TriPoint
     template <typename U> MR_REQUIRES_IF_SUPPORTED(!std::is_same_v<T, U>) // The condition is needed for the bindings to not duplicate this ctor against the copy ctor.
     constexpr TriPoint( const TriPoint<U> & s ) : a( T( s.a ) ), b( T( s.b ) ) { }
 
-    /// given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point
-    TriPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2 ) : TriPoint( p - v0, v1 - v0, v2 - v0 ) { }
-    /// given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point
-    TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector3<T> & v2 );
-
-    /// the same as the constructor, but if the point is known to be on an edge, numbered as in onEdge(), then pass it to get the point exactly there
-    [[nodiscard]] static TriPoint fromPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2, int edge );
+    /// given a point coordinates and triangle (v0,v1,v2) computes barycentric coordinates of the point;
+    /// if the point is known to be on an edge, numbered as in onEdge(), then pass it to place the point exactly there
+    TriPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2, int edge = -1 ) : TriPoint( p - v0, v1 - v0, v2 - v0, edge ) { }
+    /// given a point coordinates and triangle (0,v1,v2) computes barycentric coordinates of the point;
+    /// if the point is known to be on an edge, numbered as in onEdge(), then pass it to place the point exactly there
+    TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector3<T> & v2, int edge = -1 );
 
     /// given three values in three vertices, computes interpolated value at this barycentric coordinates
     template <typename U>
@@ -72,8 +71,33 @@ struct TriPoint
 /// \{
 
 template <typename T>
-TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector3<T> & v2 )
+TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector3<T> & v2, int edge )
 {
+    if ( edge >= 0 )
+    {
+        // the edge opposite to vertex #edge
+        const Vector3<T> v0;
+        const Vector3<T> * v[3] = { &v0, &v1, &v2 };
+        const auto & org = *v[( edge + 1 ) % 3];
+        const auto d = *v[( edge + 2 ) % 3] - org;
+        const T dSq = d.lengthSq();
+        const T s = dSq > 0 ? std::clamp( dot( p - org, d ) / dSq, T(0), T(1) ) : T(0);
+        switch ( edge )
+        {
+        case 0:
+            a = 1 - s;
+            b = s;
+            break;
+        case 1:
+            a = 0;
+            b = 1 - s;
+            break;
+        default:
+            a = s;
+            b = 0;
+        }
+        return;
+    }
     // by the areas of the triangles the point makes with the edges, which keeps the precision in thin triangles
     const auto n = cross( v1, v2 );
     const T nSq = n.lengthSq();
@@ -86,28 +110,6 @@ TriPoint<T>::TriPoint( const Vector3<T> & p, const Vector3<T> & v1, const Vector
     const T inv = 1 / nSq;
     a = std::clamp( inv * dot( n, cross( p, v2 ) ), T(0), T(1) );
     b = std::clamp( inv * dot( n, cross( v1, p ) ), T(0), T(1) - a );
-}
-
-template <typename T>
-TriPoint<T> TriPoint<T>::fromPoint( const Vector3<T> & p, const Vector3<T> & v0, const Vector3<T> & v1, const Vector3<T> & v2, int edge )
-{
-    if ( edge < 0 )
-        return TriPoint( p, v0, v1, v2 );
-    // the edge opposite to vertex #edge
-    const Vector3<T> * v[3] = { &v0, &v1, &v2 };
-    const auto & org = *v[( edge + 1 ) % 3];
-    const auto d = *v[( edge + 2 ) % 3] - org;
-    const T dSq = d.lengthSq();
-    const T s = dSq > 0 ? std::clamp( dot( p - org, d ) / dSq, T(0), T(1) ) : T(0);
-    switch ( edge )
-    {
-    case 0:
-        return { 1 - s, s };
-    case 1:
-        return { 0, 1 - s };
-    default:
-        return { s, 0 };
-    }
 }
 
 template <typename T>

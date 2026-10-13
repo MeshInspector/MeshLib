@@ -459,7 +459,7 @@ TEST( MRMesh, TriPointFromPoint )
 
     // a point on edge [v1,v2] is placed exactly there
     const auto q = 0.3f * v1 + 0.7f * v2;
-    const auto tq = TriPointf::fromPoint( q, v0, v1, v2, 0 );
+    const auto tq = TriPointf( q, v0, v1, v2, 0 );
     EXPECT_EQ( tq.onEdge(), 0 );
     EXPECT_LT( distance( tq.interpolate( v0, v1, v2 ), q ), 1e-4f );
 }

@@ -11,15 +11,15 @@ tag=$2
 
 matrix_dir=.github/workflows/matrix
 
-# "<Docker Hub repository> <checksum-script distro>" lines
+# "<image repository> <checksum-script distro>" lines
 case "${family}" in
   linux)
     pairs=$(
-      jq -r '.[] | "meshlib/meshlib-\(.distro)\(if .arch == "arm64" then "-arm64" else "" end) \(.distro)"' "${matrix_dir}/docker-images-linux.json"
-      jq -r '.[] | "meshlib/meshlib-emscripten-build-c-bindings-\(.emsdk_image) emscripten-build-c-bindings"' "${matrix_dir}/docker-images-emscripten-c-bindings.json"
+      jq -r '.[] | "ghcr.io/meshinspector/meshlib-\(.distro)\(if .arch == "arm64" then "-arm64" else "" end) \(.distro)"' "${matrix_dir}/docker-images-linux.json"
+      jq -r '.[] | "ghcr.io/meshinspector/meshlib-emscripten-build-c-bindings-\(.emsdk_image) emscripten-build-c-bindings"' "${matrix_dir}/docker-images-emscripten-c-bindings.json"
     ) ;;
   linux-vcpkg)
-    pairs=$(jq -r '.[] | "meshlib/meshlib-\(.os)-vcpkg-\(.arch) \(.os)-vcpkg"' "${matrix_dir}/docker-images-linux-vcpkg.json") ;;
+    pairs=$(jq -r '.[] | "ghcr.io/meshinspector/meshlib-\(.os)-vcpkg-\(.arch) \(.os)-vcpkg"' "${matrix_dir}/docker-images-linux-vcpkg.json") ;;
   *)
     echo "unknown image family ${family}: nothing to sync" >&2
     exit 0 ;;
@@ -27,6 +27,12 @@ esac
 
 while read -r repo distro; do
   hash_tag=$("$(dirname "$0")"/docker_image_source_checksum.sh "${distro}")
+  # one-time migration: copy an image built before the move from Docker Hub
+  dockerhub_repo="docker.io/meshlib/${repo##*/}"
+  if ! "$(dirname "$0")"/../docker_image_exists.sh "${repo}:${hash_tag}" &&
+     "$(dirname "$0")"/../docker_image_exists.sh "${dockerhub_repo}:${hash_tag}"; then
+    docker buildx imagetools create -t "${repo}:${hash_tag}" "${dockerhub_repo}:${hash_tag}" >&2 || true
+  fi
   if docker buildx imagetools create -t "${repo}:${tag}" "${repo}:${hash_tag}" >&2; then
     echo "${repo}:${tag} -> ${hash_tag}" >&2
   else

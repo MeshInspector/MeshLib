@@ -154,4 +154,12 @@ Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t s
     return {};
 }
 
+Expected<void> convertRasterToFloats( const Raster& raster, std::vector<float>& dst )
+{
+    // one value per pixel; the conversion checks the raster, and the vector never gets more values than the data has bytes
+    const auto pixelSize = getScalarTypeSize( raster.info.type ) * size_t( std::max( raster.info.channels, 0 ) );
+    dst.resize( pixelSize > 0 ? raster.data.size() / pixelSize : 0 );
+    return convertRasterToFloats( raster, dst.data(), dst.size() );
+}
+
 } // namespace MR

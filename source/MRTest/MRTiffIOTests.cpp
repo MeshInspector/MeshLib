@@ -263,11 +263,11 @@ TEST( MRMesh, TiffTiledPartialTiles )
     EXPECT_EQ( raster->info, ( RasterInfo{ .dims = { size.x, size.y, 1 }, .type = ScalarType::UInt16 } ) );
     EXPECT_EQ( raster->data, toBytes( pixels ) );
 
-    std::vector<float> floats( pixels.size() );
-    auto res = convertRasterToFloats( *raster, floats.data(), floats.size() );
+    std::vector<float> floats;
+    auto res = convertRasterToFloats( *raster, floats );
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_EQ( floats, std::vector<float>( pixels.begin(), pixels.end() ) );
-    // the output must have room for all values, and no more
+    // the caller's memory must have room for all values, and no more
     res = convertRasterToFloats( *raster, floats.data(), floats.size() - 1 );
     EXPECT_FALSE( res.has_value() );
 }
@@ -286,7 +286,7 @@ TEST( MRMesh, TiffGeoTransform )
         .data = toBytes( std::vector<uint16_t>{ 0, 1, 2, 3, 4, 5 } ),
     };
     const AffineXf3f xf( Matrix3f::scale( 0.5f, -0.5f, 2.f ), Vector3f( 10.f, 20.f, 3.f ) );
-    auto saveRes = RasterSave::toAnySupportedFormat( raster, path, { .xf = &xf, .noData = -9999. } );
+    auto saveRes = RasterSave::toTiff( raster, path, { .xf = &xf }, -9999. );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
     AffineXf3f loadedXf;
@@ -351,9 +351,10 @@ TEST( MRMesh, TiffRasterDecodedLuma )
 
     auto raster = RasterLoad::fromTiff( path );
     ASSERT_TRUE( raster.has_value() ) << raster.error();
-    std::vector<float> floats( 3 );
-    auto res = convertRasterToFloats( *raster, floats.data(), floats.size() );
+    std::vector<float> floats;
+    auto res = convertRasterToFloats( *raster, floats );
     ASSERT_TRUE( res.has_value() ) << res.error();
+    ASSERT_EQ( floats.size(), 3u );
     EXPECT_NEAR( floats[0], 255.f, 1e-3f );
     EXPECT_EQ( floats[1], 0.f );
     EXPECT_NEAR( floats[2], ( 0.587f + 0.114f ) * 255.f, 1e-3f );

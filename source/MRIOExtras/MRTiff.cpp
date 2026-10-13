@@ -305,7 +305,7 @@ auto readTiffFile( const std::filesystem::path& path, F&& f ) -> decltype( f( (T
 
 // writes a raster with one layer, the rows of data go from top to bottom, or from bottom to top as in Image if bottomUp is set
 Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& info, const uint8_t* data, bool bottomUp,
-    const RasterSaveSettings& settings )
+    const RasterSaveSettings& settings, std::optional<double> noData = {} )
 {
     const auto* sample = std::find_if( std::begin( cSampleTypes ), std::end( cSampleTypes ), [&info] ( const SampleType& s ) { return s.type == info.type; } );
     if ( sample == std::end( cSampleTypes ) )
@@ -337,7 +337,7 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     std::vector<TIFFFieldInfo> fieldInfo;
     if ( settings.xf )
         fieldInfo.push_back( { cModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" } );
-    if ( settings.noData )
+    if ( noData )
         fieldInfo.push_back( { cGdalNoDataTag, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" } );
     if ( !fieldInfo.empty() )
         TIFFMergeFieldInfo( tiff, fieldInfo.data(), uint32_t( fieldInfo.size() ) );
@@ -347,8 +347,8 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
         const Matrix4d matrix = AffineXf3d( *settings.xf );
         TIFFSetField( tiff, cModelTransformationTag, 16, &matrix );
     }
-    if ( settings.noData )
-        TIFFSetField( tiff, cGdalNoDataTag, fmt::format( "{}", *settings.noData ).c_str() );
+    if ( noData )
+        TIFFSetField( tiff, cGdalNoDataTag, fmt::format( "{}", *noData ).c_str() );
 
     const auto height = size_t( info.dims.y );
     const auto rowSize = size_t( info.dims.x ) * size_t( info.channels ) * getScalarTypeSize( info.type );
@@ -400,10 +400,15 @@ namespace RasterSave
 
 Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings )
 {
+    return toTiff( raster, path, settings, std::nullopt );
+}
+
+Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings, std::optional<double> noData )
+{
     MR_TIMER;
     if ( raster.data.size() != raster.info.dataSize() )
         return unexpected( "Raster data size does not match its dimensions" );
-    return writeTiff( path, raster.info, raster.data.data(), false, settings );
+    return writeTiff( path, raster.info, raster.data.data(), false, settings, noData );
 }
 
 MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff )
@@ -481,11 +486,8 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
         .dims = Vector3i( dmap.dims().x, dmap.dims().y, 1 ),
         .type = ScalarType::Float32,
     };
-    return writeTiff( path, info, (const uint8_t*)dmap.data(), false, {
-        .xf = settings.xf,
-        .noData = DistanceMap::NOT_VALID_VALUE,
-        .progress = settings.progress,
-    } );
+    return writeTiff( path, info, (const uint8_t*)dmap.data(), false, { .xf = settings.xf, .progress = settings.progress },
+        DistanceMap::NOT_VALID_VALUE );
 }
 
 MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff )

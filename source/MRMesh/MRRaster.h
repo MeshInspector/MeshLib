@@ -5,7 +5,6 @@
 #include "MRScalarConvert.h"
 #include "MRVector3.h"
 
-#include <optional>
 #include <vector>
 
 namespace MR
@@ -54,7 +53,11 @@ MRMESH_API Expected<Image> convertRasterToImage( const Raster& raster );
 /// * one channel is taken as is;
 /// * three or more channels give the luma 0.299 R + 0.587 G + 0.114 B of the first three;
 /// fails for two channels, an unknown type, data whose size does not match the dimensions, or another size
-MRMESH_API Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t size );
+MR_BIND_IGNORE MRMESH_API Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t size );
+
+/// converts the values of a raster to floats as above, dst is resized to dims.x * dims.y * dims.z values
+/// (memory is reallocated only if its capacity is too small)
+MRMESH_API Expected<void> convertRasterToFloats( const Raster& raster, std::vector<float>& dst );
 
 /// settings for loading rasters from external formats
 struct RasterLoadSettings
@@ -71,8 +74,6 @@ struct RasterSaveSettings
 {
     /// optional transformation of (column, row, value) to world coordinates, saved if the format supports it (e.g. GeoTIFF)
     const AffineXf3f* xf = nullptr;
-    /// optional value meaning no data, saved if the format supports it (e.g. GDAL_NODATA in TIFF)
-    std::optional<double> noData;
     /// to report save progress and cancel saving if user desires
     ProgressCallback progress;
 };

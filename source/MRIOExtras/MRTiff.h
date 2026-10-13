@@ -10,6 +10,7 @@
 #include <MRMesh/MRRaster.h>
 
 #include <filesystem>
+#include <optional>
 
 namespace MR
 {
@@ -38,6 +39,9 @@ namespace RasterSave
 /// saves a raster with one layer in .tiff format: one channel of gray values, or three or four channels of RGB or RGBA colors,
 /// of any type from UInt8 to Float64
 MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings = {} );
+/// \param noData the value meaning no data, written as GDAL_NODATA if given
+MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings,
+    std::optional<double> noData );
 
 } // namespace RasterSave
 

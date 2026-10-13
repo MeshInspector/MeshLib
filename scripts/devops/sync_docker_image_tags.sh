@@ -25,8 +25,24 @@ case "${family}" in
     exit 0 ;;
 esac
 
+# manifest digests of <repo>:<tag>... (public ghcr.io images, anonymous token)
+digests() {
+  local path=${1#ghcr.io/} t urls=()
+  shift
+  local token=$(curl -fsS "https://ghcr.io/token?scope=repository:${path}:pull" | jq -r .token)
+  for t in "$@"; do urls+=("https://ghcr.io/v2/${path}/manifests/${t}"); done
+  curl -sSI -H "Authorization: Bearer ${token}" \
+    -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json" \
+    "${urls[@]}" | tr -d '\r' | awk 'tolower($1) == "docker-content-digest:" { print $2 }'
+}
+
 while read -r repo distro; do
   hash_tag=$("$(dirname "$0")"/docker_image_source_checksum.sh "${distro}")
+  d=( $(digests "${repo}" "${tag}" "${hash_tag}" || true) )
+  if [ ${#d[@]} -eq 2 ] && [ "${d[0]}" = "${d[1]}" ]; then
+    echo "${repo}:${tag} -> ${hash_tag} (already)" >&2
+    continue
+  fi
   # one-time migration: copy an image built before the move from Docker Hub
   if docker buildx imagetools create -t "${repo}:${tag}" "${repo}:${hash_tag}" >&2 ||
      { docker buildx imagetools create -t "${repo}:${hash_tag}" "docker.io/meshlib/${repo##*/}:${hash_tag}" >&2 &&

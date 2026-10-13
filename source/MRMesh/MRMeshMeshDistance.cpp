@@ -149,8 +149,8 @@ MeshMeshDistanceResult findDistance( const MeshPart& a, const MeshPart& b, const
                 // might fall back here in degenerated scenarios
                 aPt = bPt = 0.5f * ( aPt + bPt );
             }
-            aBary = TriPointf::fromPoint( aPt, bestAv[0], bestAv[1], bestAv[2] );
-            bBary = TriPointf::fromPoint( bPt, bestBv[0], bestBv[1], bestBv[2] );
+            aBary = TriPointf( aPt, bestAv[0], bestAv[1], bestAv[2] );
+            bBary = TriPointf( bPt, bestBv[0], bestBv[1], bestBv[2] );
         }
         else
         {

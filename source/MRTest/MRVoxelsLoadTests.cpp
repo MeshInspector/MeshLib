@@ -98,6 +98,15 @@ TEST( MRMesh, LoadRasterFolderFiles )
     vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
     ASSERT_FALSE( vol.has_value() );
     EXPECT_NE( vol.error().find( "slice3.tif" ), std::string::npos ) << vol.error();
+
+    // one file of each raster extension is too few
+    std::error_code ec;
+    ASSERT_TRUE( std::filesystem::create_directory( tmpFolder / "split", ec ) );
+    writeSlice( "split/slice0.tif", { 2, 3 } );
+    writeSlice( "split/slice1.tiff", { 2, 3 } );
+    vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder / "split" } );
+    ASSERT_FALSE( vol.has_value() );
+    EXPECT_EQ( vol.error(), "Only 1 .tif file of 2 raster files in the directory" );
 }
 
 } //namespace MR

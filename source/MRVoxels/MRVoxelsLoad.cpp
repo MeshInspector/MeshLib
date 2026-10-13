@@ -375,15 +375,27 @@ Expected<VdbVolume> loadRasterFolder( const RasterFolderLoadSettings& settings )
             filesByExtension[toLower( utf8string( entry.path().extension() ) )].push_back( entry.path() );
     }
     // of the extensions with a raster loader, the one that most files have; the alphabetically first one if several have as many files
+    std::string extension;
     std::vector<std::filesystem::path> files;
+    size_t rasterFileCount = 0;
     for ( auto& [ext, extFiles] : filesByExtension )
     {
-        if ( extFiles.size() > files.size() && RasterLoad::getRasterLoader( "*" + ext ).fileLoad )
+        if ( !RasterLoad::getRasterLoader( "*" + ext ).fileLoad )
+            continue;
+        rasterFileCount += extFiles.size();
+        if ( extFiles.size() > files.size() )
+        {
+            extension = ext;
             files = std::move( extFiles );
+        }
     }
 
     if ( files.size() < 2 )
-        return unexpected( "Too few files of a supported raster format in the directory" );
+    {
+        // with two raster files or more, each extension has one file, e.g. one .tif and one .tiff file
+        return unexpected( rasterFileCount < 2 ? std::string( "Too few files of a supported raster format in the directory" )
+            : fmt::format( "Only 1 {} file of {} raster files in the directory", extension, rasterFileCount ) );
+    }
 
     sortScanFilesByName( files );
 

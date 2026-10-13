@@ -162,19 +162,23 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
 
     auto valueBytes = [&] ( const Entry& entry )
     {
-        std::vector<uint8_t> bytes( ( const uint8_t* )entry.doubles.data(), ( const uint8_t* )( entry.doubles.data() + entry.doubles.size() ) );
+        // filled in place, as the file below: inserts into a vector give a false -Wstringop-overread in GCC 11 Release builds
+        std::vector<uint8_t> bytes( entry.values.size() * ( entry.type == SHORT ? sizeof( uint16_t ) : sizeof( uint32_t ) )
+            + entry.doubles.size() * sizeof( double ) );
+        auto out = bytes.begin();
         for ( auto v : entry.values )
         {
             if ( entry.type == SHORT )
             {
                 const auto s = uint16_t( v );
-                bytes.insert( bytes.end(), ( const uint8_t* )&s, ( const uint8_t* )&s + sizeof( s ) );
+                out = std::copy( ( const uint8_t* )&s, ( const uint8_t* )&s + sizeof( s ), out );
             }
             else
             {
-                bytes.insert( bytes.end(), ( const uint8_t* )&v, ( const uint8_t* )&v + sizeof( v ) );
+                out = std::copy( ( const uint8_t* )&v, ( const uint8_t* )&v + sizeof( v ), out );
             }
         }
+        std::copy( ( const uint8_t* )entry.doubles.data(), ( const uint8_t* )( entry.doubles.data() + entry.doubles.size() ), out );
         return bytes;
     };
 

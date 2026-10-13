@@ -50,7 +50,7 @@ Expected<Image> convertRasterToImage( const Raster& raster )
     const auto valueSize = getScalarTypeSize( info.type );
     if ( valueSize == 0 )
         return unexpected( "Unsupported value type" );
-    if ( info.channels != 1 && info.channels < 3 )
+    if ( info.channels == 2 || info.channels <= 0 )
         return unexpected( "Unsupported number of channels" );
     if ( info.dims.z != 1 )
         return unexpected( "Only a raster with one layer can be converted to an image" );
@@ -133,7 +133,7 @@ Expected<void> convertRasterToFloats( const Raster& raster, float* dst, size_t s
     const auto valueSize = getScalarTypeSize( info.type );
     if ( valueSize == 0 )
         return unexpected( "Unsupported value type" );
-    if ( info.channels != 1 && info.channels < 3 )
+    if ( info.channels == 2 || info.channels <= 0 )
         return unexpected( "Unsupported number of channels" );
     if ( raster.data.size() != info.dataSize() )
         return unexpected( "Raster data size does not match its dimensions" );

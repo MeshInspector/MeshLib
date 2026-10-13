@@ -347,6 +347,43 @@ TEST( MRMesh, TiffGeoTiePoint )
     EXPECT_EQ( rasterXf, expected );
 }
 
+// the tie point can be any raster point (I, J, K), the translation is the model point of the raster origin
+TEST( MRMesh, TiffGeoTiePointNotAtOrigin )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "tiePoint.tif";
+
+    struct GeoTags
+    {
+        std::vector<double> scale;
+        std::vector<double> tiePoint;
+        AffineXf3f expected;
+    };
+    const GeoTags cases[] = {
+        // the raster point (1, 2, 0) is at (10, 20, 0): the origin is one column to the left and two rows up
+        { { 0.5, 0.25, 0. }, { 1., 2., 0., 10., 20., 0. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.5f, 20.5f, 0.f ) ) },
+        // the raster point (1, 2, 4) is at (10, 20, 30), and the values are scaled too
+        { { 0.5, 0.25, 2. }, { 1., 2., 4., 10., 20., 30. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 2.f ), Vector3f( 9.5f, 20.5f, 22.f ) ) },
+        // the zero scale of values keeps them as they are, whatever the tie point's K and Z
+        { { 0.5, 0.25, 0. }, { 1., 2., 4., 10., 20., 30. }, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.5f, 20.5f, 0.f ) ) },
+    };
+    for ( const auto& c : cases )
+    {
+        writeTestTiff( path, { .size = { 3, 2 }, .bitsPerSample = 32, .sampleFormat = 3, .doubleTags = {
+            { 33550, c.scale }, // ModelPixelScaleTag
+            { 33922, c.tiePoint }, // ModelTiePointTag
+        } }, toBytes( std::vector<float>( 6 ) ) );
+
+        DistanceMapToWorld toWorld;
+        ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );
+        EXPECT_EQ( AffineXf3f( toWorld ), c.expected );
+        AffineXf3f rasterXf;
+        ASSERT_TRUE( RasterLoad::fromTiff( path, { .xf = &rasterXf } ).has_value() );
+        EXPECT_EQ( rasterXf, c.expected );
+    }
+}
+
 // the colors that libtiff decodes give their luma as floats
 TEST( MRMesh, TiffRasterDecodedLuma )
 {

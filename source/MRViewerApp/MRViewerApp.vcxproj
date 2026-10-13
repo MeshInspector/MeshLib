@@ -132,9 +132,4 @@
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <Import Project="$(MeshLibDir)\source\CompileTranslations.targets" />
-  <ItemGroup>
-    <IconResourceDir Include="$(MeshLibSourceDir)\MRViewer\resource" />
-    <IconResourceDir Include="$(MeshLibSourceDir)\MRCommonPlugins\resource" />
-  </ItemGroup>
-  <Import Project="$(MeshLibDir)\source\PackIcons.targets" />
 </Project>

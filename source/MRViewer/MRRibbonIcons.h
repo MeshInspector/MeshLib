@@ -27,7 +27,7 @@ public:
         Count,
     };
     // this should be called once on start of program (called in RibbonMenu::init);
-    // if resource/icons.zip exists, loads all icons from it (entries like "icons/X1/name.png"),
+    // if resource/icons*.zip exist (one archive per library, made by the build, entries like "icons/X1/name.png"), loads all icons from them,
     // otherwise loads all icon types from resource/<type> folders except Logos, which are loaded on first findByName request
     MRVIEWER_API static void load();
     // this should be called once before program stops (called in RibbonMenu::shutdown)
@@ -63,8 +63,8 @@ private:
     const ImGuiImage* findRequiredSize_( const SizedIcons& icons, float width, ColorType colorType, IconType iconType ) const;
 
     void load_( IconType type );
-    // loads all icon types from resource/icons.zip; returns false if there is no such file or it cannot be read
-    bool loadZip_();
+    // loads all icon types from resource/icons*.zip (one archive per library, made by the build); returns false if there are no such files
+    bool loadZips_();
 
     struct IconTypeData;
     // colored and white textures of one icon, each empty if the icon type does not have it

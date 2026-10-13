@@ -9,24 +9,29 @@
 namespace MR
 {
 
-// resource/icons.zip replaces the per-type icon folders
+// resource/icons*.zip (one per library) replace the per-type icon folders
 TEST( MRViewer, RibbonIconsFromZip )
 {
     UniqueTemporaryFolder tmp;
     ASSERT_TRUE( bool( tmp ) );
 
-    const auto iconsDir = tmp / "icons_src";
     const Image image{ .pixels = std::vector<Color>( 4, Color::red() ), .resolution = { 2, 2 } };
-    for ( const char* file : { "icons/X1/Tool.png", "icons/X3/Tool.png", "object_icons/X1/mesh.png" } )
-    {
-        std::error_code ec;
-        std::filesystem::create_directories( ( iconsDir / file ).parent_path(), ec );
-        ASSERT_TRUE( ImageSave::toPng( image, iconsDir / file ).has_value() );
-    }
     const auto resourcesDir = tmp / "resources";
     std::error_code ec;
     std::filesystem::create_directories( resourcesDir / "resource", ec );
-    ASSERT_TRUE( compressZip( resourcesDir / "resource" / "icons.zip", iconsDir ).has_value() );
+    int numZips = 0;
+    for ( const auto& [zipName, files] : std::initializer_list<std::pair<const char*, std::vector<const char*>>>{
+        { "icons-a.zip", { "icons/X1/Tool.png", "icons/X3/Tool.png" } },
+        { "icons-b.zip", { "object_icons/X1/mesh.png" } } } )
+    {
+        const auto iconsDir = tmp / ( "src" + std::to_string( ++numZips ) );
+        for ( const char* file : files )
+        {
+            std::filesystem::create_directories( ( iconsDir / file ).parent_path(), ec );
+            ASSERT_TRUE( ImageSave::toPng( image, iconsDir / file ).has_value() );
+        }
+        ASSERT_TRUE( compressZip( resourcesDir / "resource" / zipName, iconsDir ).has_value() );
+    }
 
     const auto oldResourcesDir = SystemPath::getResourcesDirectory();
     SystemPath::overrideDirectory( SystemPath::Directory::Resources, resourcesDir );

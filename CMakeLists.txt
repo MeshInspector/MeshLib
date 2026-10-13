@@ -273,19 +273,13 @@ IF(MESHLIB_BUILD_MRVIEWER)
     ENDIF()
   ENDIF()
 
-  include(IconsHelpers)
+  include(ResourceHelpers)
   add_subdirectory(${PROJECT_SOURCE_DIR}/imgui ./imgui)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)
 
-  set(MR_ICONS_ZIP_APPS "")
   IF(MESHLIB_BUILD_MESHVIEWER)
     add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewerApp ./MRViewerApp)
-    list(APPEND MR_ICONS_ZIP_APPS MeshViewer)
-  ENDIF()
-  # a parent project (MeshInspector) adds its own icons and packs the zip itself
-  IF(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    mr_add_icons_zip(${MR_ICONS_ZIP_APPS})
   ENDIF()
 ENDIF()
 

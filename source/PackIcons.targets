@@ -1,34 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <!--
-    Packs icons into $(OutDir)resource\icons.zip with scripts/pack_icons.py, which MR::RibbonIcons
-    reads on start instead of a thousand small files.
-
-    Importing projects (applications) must define IconResourceDir items pointing to the resource
-    directories whose icons/, object_icons/, independent_icons/ and logos/ folders go into the zip, e.g.:
-      <IconResourceDir Include="$(MeshLibSourceDir)\MRViewer\resource" />
+    Packs the icon folders of the project's resource directory (icons, object_icons, independent_icons, logos)
+    into $(OutDir)resource\icons-$(ProjectName).zip with scripts/pack_icons.py, which MR::RibbonIcons reads
+    on start instead of a thousand small files. The project's Content items must exclude those folders.
   -->
 
   <PropertyGroup>
     <_PackIconsPython Condition="Exists('$(VcpkgCurrentInstalledDir)\tools\python3\python.exe')">$(VcpkgCurrentInstalledDir)\tools\python3\python.exe</_PackIconsPython>
     <_PackIconsPython Condition="'$(_PackIconsPython)' == ''">python</_PackIconsPython>
     <_PackIconsScript>$(MeshLibDir)scripts\pack_icons.py</_PackIconsScript>
-    <_PackIconsZip>$(OutDir)resource\icons.zip</_PackIconsZip>
+    <_PackIconsZip>$(OutDir)resource\icons-$(ProjectName).zip</_PackIconsZip>
   </PropertyGroup>
 
-  <Target Name="_CollectIconFiles">
-    <ItemGroup>
-      <_IconFile Include="%(IconResourceDir.Identity)\icons\**\*.png;%(IconResourceDir.Identity)\object_icons\**\*.png;%(IconResourceDir.Identity)\independent_icons\**\*.png;%(IconResourceDir.Identity)\logos\**\*.png" />
-    </ItemGroup>
-  </Target>
+  <ItemGroup>
+    <_IconFile Include="$(ProjectDir)resource\icons\**\*.png;$(ProjectDir)resource\object_icons\**\*.png;$(ProjectDir)resource\independent_icons\**\*.png;$(ProjectDir)resource\logos\**\*.png" />
+  </ItemGroup>
 
   <Target
     Name="PackIcons"
     BeforeTargets="Build"
-    DependsOnTargets="_CollectIconFiles"
-    Condition="'@(IconResourceDir)' != ''"
+    Condition="'@(_IconFile)' != ''"
     Inputs="@(_IconFile);$(_PackIconsScript)"
     Outputs="$(_PackIconsZip)">
-    <Exec Command="&quot;$(_PackIconsPython)&quot; &quot;$(_PackIconsScript)&quot; &quot;$(_PackIconsZip)&quot; @(IconResourceDir->'&quot;%(Identity)&quot;', ' ')" />
+    <Exec Command="&quot;$(_PackIconsPython)&quot; &quot;$(_PackIconsScript)&quot; &quot;$(_PackIconsZip)&quot; &quot;$(ProjectDir)resource&quot;" />
   </Target>
 </Project>

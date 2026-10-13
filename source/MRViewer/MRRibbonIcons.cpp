@@ -178,11 +178,18 @@ void RibbonIcons::addIcon_( IconTypeData& data, int sz, const std::string& name,
     data.map[name][sz] = std::move( icons );
 }
 
-bool RibbonIcons::loadZip_()
+bool RibbonIcons::loadZips_()
 {
-    const auto zipPath = SystemPath::getResourcesDirectory() / "resource" / "icons.zip";
+    const auto resourceDir = SystemPath::getResourcesDirectory() / "resource";
     std::error_code ec;
-    if ( !std::filesystem::is_regular_file( zipPath, ec ) )
+    std::vector<std::filesystem::path> zipPaths;
+    for ( auto entry : Directory{ resourceDir, ec } )
+    {
+        const auto name = utf8string( entry.path().filename() );
+        if ( entry.is_regular_file( ec ) && name.starts_with( "icons" ) && name.ends_with( ".zip" ) )
+            zipPaths.push_back( entry.path() );
+    }
+    if ( zipPaths.empty() )
         return false;
     MR_TIMER;
 
@@ -195,27 +202,27 @@ bool RibbonIcons::loadZip_()
         Textures textures;
     };
     std::vector<ZipIcon> icons;
-    auto res = decompressZip( zipPath, [&] ( const std::string& path, std::vector<char>&& content ) -> Expected<void>
+    for ( const auto& zipPath : zipPaths )
     {
-        // path is "<icon type folder>/<size folder>/<name>.png"
-        const auto parts = split( path, "/" );
-        if ( parts.size() != 3 || !isPng( parts[2] ) )
-            return {};
-        for ( auto& data : data_ )
+        auto res = decompressZip( zipPath, [&] ( const std::string& path, std::vector<char>&& content ) -> Expected<void>
         {
-            if ( utf8string( data.pathDirectory.filename() ) != parts[0] )
-                continue;
-            for ( int sz = int( data.minMaxSizes.first ); sz <= int( data.minMaxSizes.second ); ++sz )
-                if ( parts[1] == sizeSubFolder_( Sizes( sz ) ) )
-                    icons.push_back( { &data, sz, utf8string( std::filesystem::path( parts[2] ).stem() ), std::move( content ) } );
-            break;
-        }
-        return {};
-    } );
-    if ( !res )
-    {
-        spdlog::error( "Cannot load icons from {}: {}", utf8string( zipPath ), res.error() );
-        return false;
+            // path is "<icon type folder>/<size folder>/<name>.png"
+            const auto parts = split( path, "/" );
+            if ( parts.size() != 3 || !isPng( parts[2] ) )
+                return {};
+            for ( auto& data : data_ )
+            {
+                if ( utf8string( data.pathDirectory.filename() ) != parts[0] )
+                    continue;
+                for ( int sz = int( data.minMaxSizes.first ); sz <= int( data.minMaxSizes.second ); ++sz )
+                    if ( parts[1] == sizeSubFolder_( Sizes( sz ) ) )
+                        icons.push_back( { &data, sz, utf8string( std::filesystem::path( parts[2] ).stem() ), std::move( content ) } );
+                break;
+            }
+            return {};
+        } );
+        if ( !res )
+            spdlog::error( "Cannot load icons from {}: {}", utf8string( zipPath ), res.error() );
     }
 
     // PNG decoding takes most of the time, so it is parallel; only the GPU textures are created on this thread
@@ -235,7 +242,7 @@ bool RibbonIcons::loadZip_()
         addIcon_( *icon.data, icon.sz, icon.name, std::move( icon.textures ) );
         ++num;
     }
-    spdlog::info( "Loaded {} icons from {}", num, utf8string( zipPath ) );
+    spdlog::info( "Loaded {} icons from {} icons*.zip in {}", num, zipPaths.size(), utf8string( resourceDir ) );
     for ( auto& data : data_ )
         data.loaded = true;
     return true;
@@ -250,7 +257,7 @@ void RibbonIcons::load_( IconType type )
     if ( !zipTried_ )
     {
         zipTried_ = true;
-        if ( loadZip_() )
+        if ( loadZips_() )
             return;
     }
     currentData.loaded = true;

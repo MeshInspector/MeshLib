@@ -25,6 +25,7 @@ IF(APPLE)
 ENDIF()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
+mr_add_resources(${PROJECT_NAME})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
@@ -166,7 +167,6 @@ IF(EMSCRIPTEN)
       ${IMGUI_FONTS}
     DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
   )
-  mr_copy_resources("resource" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
   file(
     COPY "wasm_async_func_list.txt"
     DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}"
@@ -181,7 +181,6 @@ ELSE()
       ${THIRD_PARTY_NOTICES}
     DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   )
-  mr_copy_resources("resource" ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
 ENDIF()
 
 install(
@@ -217,7 +216,6 @@ install(
   FILES ${JSONS}
   DESTINATION ${MR_RESOURCES_DIR}
 )
-mr_install_resources(${CMAKE_CURRENT_SOURCE_DIR}/resource ${MR_RESOURCES_DIR})
 IF(EMSCRIPTEN)
   install(
     FILES "wasm_async_func_list.txt"

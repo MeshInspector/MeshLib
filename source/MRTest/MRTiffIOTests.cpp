@@ -2,6 +2,8 @@
 #ifndef MRIOEXTRAS_NO_TIFF
 #include "MRMesh/MRAffineXf3.h"
 #include "MRMesh/MRDistanceMap.h"
+#include "MRMesh/MRDistanceMapLoad.h"
+#include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRImage.h"
 #include "MRMesh/MRRasterLoad.h"
 #include "MRMesh/MRRasterSave.h"
@@ -781,6 +783,16 @@ TEST( MRMesh, TiffDistanceMapSave )
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( std::vector<float>( loaded->data(), loaded->data() + 6 ), values );
     EXPECT_EQ( AffineXf3f( toWorld ), xf );
+
+    // the saver is registered for .tif as well as .tiff, as the loader is
+    const auto tifPath = tmpFolder / "dmap.tif";
+    saveRes = DistanceMapSave::toAnySupportedFormat( dmap, tifPath, { .xf = &xf } );
+    ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    DistanceMapToWorld tifToWorld;
+    loaded = DistanceMapLoad::fromAnySupportedFormat( tifPath, { .distanceMapToWorld = &tifToWorld } );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( std::vector<float>( loaded->data(), loaded->data() + 6 ), values );
+    EXPECT_EQ( AffineXf3f( tifToWorld ), xf );
 }
 
 TEST( MRMesh, TiffCancel )

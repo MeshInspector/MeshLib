@@ -446,8 +446,8 @@ TEST( MRMesh, findTriTriDistance )
     const auto td1 = findTriTriDistance( a, b, { .upDistLimitSq = td0.distSq + 0.1f, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
     EXPECT_EQ( td0.distSq, td1.distSq );
 
-    EXPECT_LT( distance( td0.aBary.interpolate( a[0], a[1], a[2] ), td0.a ), 1e-3f );
-    EXPECT_LT( distance( td0.bBary.interpolate( b[0], b[1], b[2] ), td0.b ), 1e-3f );
+    EXPECT_LT( distance( td0.aBary( a ).interpolate( a[0], a[1], a[2] ), td0.a ), 1e-3f );
+    EXPECT_LT( distance( td0.bBary( b ).interpolate( b[0], b[1], b[2] ), td0.b ), 1e-3f );
 }
 
 // the closest points are on the edges between the bottom and the almost vertical walls of the tool,

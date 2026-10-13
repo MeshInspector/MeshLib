@@ -2,7 +2,6 @@
 
 // distance queries involving two meshes, please see MRMeshDistance.h for queries to one mesh only
 
-#include "MRPointOnFace.h"
 #include "MRMeshProject.h"
 #include "MRFaceFace.h"
 #include "MRMeshPart.h"
@@ -36,8 +35,8 @@ enum class MeshMeshCollisionStatus
 
 struct MeshMeshSignedDistanceResult
 {
-    /// two closest points: from meshes A and B respectively
-    PointOnFace a, b;
+    /// two closest points: from meshes A and B respectively, each one as the projection of the other point
+    MeshProjectionResult a, b;
 
     /// mutual status of two meshes
     MeshMeshCollisionStatus status{ MeshMeshCollisionStatus::BothOutside };

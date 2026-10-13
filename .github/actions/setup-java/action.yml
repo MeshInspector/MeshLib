@@ -54,6 +54,10 @@ runs:
           home="$home/Contents/Home"
         fi
         if [ "$RUNNER_OS" = Windows ]; then
+          # The JDK bundles a C++ runtime (msvcp140.dll and friends) that java.exe loads before anything else, and it can be older than
+          # the one MeshLib was built with, which makes loading MeshLibC2.dll fail with "The specified procedure could not be found".
+          # Without them java.exe uses the Visual C++ redistributable installed on the machine, which MeshLib needs anyway.
+          rm -f "$home"/bin/msvcp140*.dll "$home"/bin/vcruntime140*.dll
           home=$(cygpath -w "$home")
           # `GITHUB_PATH` is fine here: the Windows jobs don't keep PATH in `GITHUB_ENV`.
           echo "$home\bin" >> "$GITHUB_PATH"

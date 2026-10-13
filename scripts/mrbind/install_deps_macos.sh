@@ -4,8 +4,8 @@
 # We assume `brew` is already installed. Automatic its installation is too much,
 #   especially because of the conflicts that happen if several users install it.
 
-brew update
-brew install --quiet make grep
+# No `brew update`: it migrates preinstalled azure-cli to a cask, building openssl@4 from source on Intel (~10 min)
+HOMEBREW_NO_AUTO_UPDATE=1 brew install --quiet make grep
 
 # Nothing LLVM is installed from brew: the compiler and the linker both come from the
 # llvm-pgo keg of https://github.com/MeshInspector/toolchains. Homebrew has no `lld`

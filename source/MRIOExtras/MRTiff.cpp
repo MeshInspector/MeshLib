@@ -398,17 +398,17 @@ MR_ADD_RASTER_LOADER( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), fromTiff,
 namespace RasterSave
 {
 
-Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings )
-{
-    return toTiff( raster, path, settings, std::nullopt );
-}
-
-Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings, std::optional<double> noData )
+Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const TiffSaveSettings& settings )
 {
     MR_TIMER;
     if ( raster.data.size() != raster.info.dataSize() )
         return unexpected( "Raster data size does not match its dimensions" );
-    return writeTiff( path, raster.info, raster.data.data(), false, settings, noData );
+    return writeTiff( path, raster.info, raster.data.data(), false, settings, settings.noData );
+}
+
+Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings )
+{
+    return toTiff( raster, path, TiffSaveSettings{ settings } );
 }
 
 MR_ADD_RASTER_SAVER( IOFilter( "TIFF (.tif)", "*.tif" ), toTiff )

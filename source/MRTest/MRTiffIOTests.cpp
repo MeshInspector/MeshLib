@@ -286,7 +286,10 @@ TEST( MRMesh, TiffGeoTransform )
         .data = toBytes( std::vector<uint16_t>{ 0, 1, 2, 3, 4, 5 } ),
     };
     const AffineXf3f xf( Matrix3f::scale( 0.5f, -0.5f, 2.f ), Vector3f( 10.f, 20.f, 3.f ) );
-    auto saveRes = RasterSave::toTiff( raster, path, { .xf = &xf }, -9999. );
+    TiffSaveSettings settings;
+    settings.xf = &xf;
+    settings.noData = -9999.;
+    auto saveRes = RasterSave::toTiff( raster, path, settings );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
 
     AffineXf3f loadedXf;

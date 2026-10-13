@@ -33,15 +33,20 @@ MRIOEXTRAS_API Expected<RasterInfo> infoFromTiff( const std::filesystem::path& p
 
 } // namespace RasterLoad
 
+/// settings for saving rasters in .tiff format
+struct TiffSaveSettings : RasterSaveSettings
+{
+    /// optional value meaning no data, written as GDAL_NODATA
+    std::optional<double> noData;
+};
+
 namespace RasterSave
 {
 
 /// saves a raster with one layer in .tiff format: one channel of gray values, or three or four channels of RGB or RGBA colors,
 /// of any type from UInt8 to Float64
+MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const TiffSaveSettings& settings );
 MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings = {} );
-/// \param noData the value meaning no data, written as GDAL_NODATA if given
-MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings,
-    std::optional<double> noData );
 
 } // namespace RasterSave
 

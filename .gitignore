@@ -47,6 +47,12 @@ compile_commands.json
 /source/MRDotNet2/bin
 /source/MRDotNet2/obj
 /source/MRDotNet2/src
+/source/MeshLibJava/src/
+/source/MeshLibJava/classes/
+/source/MeshLibJava/sources.txt
+/source/MeshLibJava/meshlib.jar
+/source/MRTestJava/classes/
+/examples/java-examples/classes/
 /source/MRDotNet2Static/bin
 /source/MRDotNet2Static/obj
 /source/MRDotNet2Static/src

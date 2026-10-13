@@ -159,12 +159,13 @@ endif
 # What target language?
 TARGET=python
 #TARGET=c
-override known_target_languages := python c csharp
+override known_target_languages := python c csharp java
 override TARGET := $(strip $(TARGET))
 $(if $(filter-out 1,$(words $(TARGET)))$(filter-out $(known_target_languages),$(TARGET)),$(error Wrong value of `TARGET`, must be one of: $(known_target_languages)))
 override is_py := $(filter python,$(TARGET))
 override is_c := $(filter c,$(TARGET))
 override is_csharp := $(filter csharp,$(TARGET))
+override is_java := $(filter java,$(TARGET))
 
 
 ifeq ($(TARGET),python)
@@ -268,6 +269,7 @@ MRBIND_SOURCE := $(makefile_dir)../../thirdparty/mrbind
 MRBIND_EXE := $(MRBIND_SOURCE)/build/mrbind
 MRBIND_GEN_C_EXE = $(MRBIND_EXE)_gen_c
 MRBIND_GEN_CSHARP_EXE = $(MRBIND_EXE)_gen_csharp
+MRBIND_GEN_JAVA_EXE = $(MRBIND_EXE)_gen_java
 
 
 # Look for MeshLib dependencies relative to this. On Linux and macOS: `MESHLIB_THIRDPARTY_ROOT_DIR` from the environment, else `./installed` from `build_cpm_thirdparty.sh` if it exists, else the project root with `./include` and `./lib`.
@@ -588,7 +590,7 @@ endif
 
 INPUT_FILES_BLACKLIST := $(call load_file,$(makefile_dir)input_file_blacklist.txt)
 INPUT_FILES_WHITELIST := %
-ifneq ($(filter c csharp,$(TARGET)),)
+ifneq ($(filter c csharp java,$(TARGET)),)
 TEMP_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibC2/temp
 else ifneq ($(IS_WINDOWS),)
 TEMP_OUTPUT_DIR := source/TempOutput/Bindings_$(TARGET)/$(MSVC_ARCH)/$(VS_MODE)
@@ -596,7 +598,7 @@ else
 TEMP_OUTPUT_DIR := build/binds_$(TARGET)
 endif
 
-ifneq ($(TARGET),csharp) # Stuff below is for all languages except C#. C# logic is at the bottom of this makefile.
+ifeq ($(filter csharp java,$(TARGET)),) # Stuff below is for all languages except C# and Java. Their logic is at the bottom of this makefile.
 
 INPUT_GLOBS := *.h
 
@@ -728,9 +730,9 @@ MRBIND_FLAGS += --copy-inherited-members
 endif
 
 ifeq ($(TARGET),c)
-# Output interop description JSON for C#.
+# Output interop description JSON for C# and Java.
 MRBIND_GEN_C_FLAGS += --output-desc-json $(call quote,$(TEMP_OUTPUT_DIR)/interop_desc.json)
-# Those are required when generating C, if we then want to produce C# from it.
+# Those are required when generating C, if we then want to produce C# or Java from it.
 # But even ignoring C#, they make C code look better.
 MRBIND_GEN_C_FLAGS += --bind-shared-ptr-virally --force-emit-common-helpers
 endif
@@ -1149,7 +1151,7 @@ endif # $(TARGET) == python
 .PHONY: all
 all: $(all_outputs)
 
-else # If C#:
+else ifeq ($(TARGET),csharp) # If C#:
 
 # C# needs almost none of the logic in this file, just one simple rule.
 
@@ -1212,5 +1214,41 @@ build: generate
 # 		&& dotnet build $(call quote,$(CSHARP_CODE_OUTPUT_DIR)/../$($m_CSharpSubLibraryOutputProject)) $(if $(CSHARP_MODE),-c $(CSHARP_MODE))\
 # 	)\
 # )\
+
+else # If Java:
+
+# Java needs almost none of the logic in this file, just one simple rule.
+
+# The sources are generated into `src`, compiled into `classes`, and packed into `meshlib.jar`. All of those are ignored by git.
+JAVA_CODE_OUTPUT_DIR := $(makefile_dir)../../source/MeshLibJava
+
+JAVA_INPUT_JSON := $(TEMP_OUTPUT_DIR)/interop_desc.json
+
+# The JDK tools, from `JAVA_HOME` if it's set.
+JAVA_BIN_DIR := $(if $(JAVA_HOME),$(subst \,/,$(JAVA_HOME))/bin/)
+JAVAC := $(JAVA_BIN_DIR)javac
+JAR := $(JAVA_BIN_DIR)jar
+
+.PHONY: generate
+generate:
+	$(strip $(MRBIND_GEN_JAVA_EXE) \
+		--input-json $(call quote,$(JAVA_INPUT_JSON)) \
+		--output-dir $(call quote,$(JAVA_CODE_OUTPUT_DIR)/src) \
+		--clean-output-dir \
+		--package meshlib \
+		--imported-lib-name MeshLibC2 \
+		--force-namespace MR \
+		$(call, ### Handle sub-libraries) \
+		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
+	)
+
+.DEFAULT_GOAL := build
+.PHONY: build
+build: generate
+# The list of sources goes through a file, there are too many of them for the command line.
+	find $(call quote,$(JAVA_CODE_OUTPUT_DIR)/src) -name '*.java' >$(call quote,$(JAVA_CODE_OUTPUT_DIR)/sources.txt)
+	rm -rf $(call quote,$(JAVA_CODE_OUTPUT_DIR)/classes)
+	$(call quote,$(JAVAC)) -J-Xmx2g --release 22 -Xlint:all -Werror -d $(call quote,$(JAVA_CODE_OUTPUT_DIR)/classes) @$(call quote,$(JAVA_CODE_OUTPUT_DIR)/sources.txt)
+	$(call quote,$(JAR)) --create --file $(call quote,$(JAVA_CODE_OUTPUT_DIR)/meshlib.jar) -C $(call quote,$(JAVA_CODE_OUTPUT_DIR)/classes) .
 
 endif

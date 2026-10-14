@@ -317,6 +317,17 @@ jobs:
           pattern: Distributives*
           merge-multiple: true
 
+      # The Rust crate is sources only (the C libraries come from the platform packages), one archive for all platforms.
+      - name: Download Rust bindings
+        continue-on-error: true # The job producing it may be disabled for this run.
+        uses: actions/download-artifact@v8
+        with:
+          name: RustBindings
+          path: MeshLibRust
+
+      - name: Pack Rust bindings
+        run: if [ -d MeshLibRust ]; then zip -qr meshlib_rust_bindings.zip MeshLibRust; fi
+
       - name: Rename Distributives
         run: |
           shopt -s nullglob

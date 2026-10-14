@@ -184,23 +184,23 @@ jobs:
           path: ./source/MRDotNet2/src
           retention-days: 1
 
-      - name: Install Rust
+      - name: Build and test Rust bindings
         if: ${{ env.RUN_RUST == 'true' }}
-        uses: ./.github/actions/setup-rust
+        uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
 
-      - name: Generate and build Rust bindings
-        if: ${{ env.RUN_RUST == 'true' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=rust -B --trace
-
-      - name: Build and run Rust examples and tests
-        if: ${{ env.RUN_RUST == 'true' }}
-        env:
-          MESHLIB_LIB_DIR: ${{ github.workspace }}/build/${{ matrix.config }}/bin
-          LD_LIBRARY_PATH: ${{ github.workspace }}/build/${{ matrix.config }}/bin
-        run: |
-          cargo build --manifest-path examples/rust-examples/Cargo.toml
-          ./examples/rust-examples/target/debug/MeshBoolean
-          cargo test --manifest-path source/MRTestRust/Cargo.toml
+      # The crate goes to the draft release, see `upload-distributions`.
+      - name: Upload Rust bindings
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' && env.RUN_RUST == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: RustBindings
+          path: |
+            ./source/MeshLibRust/Cargo.toml
+            ./source/MeshLibRust/build.rs
+            ./source/MeshLibRust/src
+          retention-days: 1
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt

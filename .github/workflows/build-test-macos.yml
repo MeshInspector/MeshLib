@@ -349,25 +349,11 @@ jobs:
             --build cpp-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
 
-      - name: Install Rust
+      - name: Build and test Rust bindings
         if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
-        uses: ./.github/actions/setup-rust
-
-      - name: Generate and build Rust bindings
-        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
-        run: |
-          export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
-          make -f scripts/mrbind/generate.mk -B --trace TARGET=rust MESHLIB_SHLIB_DIR=build/${{matrix.config}}/bin
-
-      - name: Build and run Rust examples and tests
-        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
-        env:
-          MESHLIB_LIB_DIR: ${{ github.workspace }}/build/${{ matrix.config }}/bin
-          DYLD_LIBRARY_PATH: ${{ github.workspace }}/build/${{ matrix.config }}/bin
-        run: |
-          cargo build --manifest-path examples/rust-examples/Cargo.toml
-          ./examples/rust-examples/target/debug/MeshBoolean
-          cargo test --manifest-path source/MRTestRust/Cargo.toml
+        uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
 
       - name: Build C examples
         if: ${{ matrix.config == 'Release' }}

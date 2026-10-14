@@ -160,11 +160,46 @@ std::vector<EdgePath> extractAllPaths( const MeshTopology& topology, EdgeBitSet 
     return res;
 }
 
+// a small set is faster to walk element by element than to test every element of the mesh in parallel;
+// walks that visit more per element (rings around vertices, a second test of each candidate) need a smaller set
+static bool isSmall( size_t setCount, size_t meshSize, size_t maxFraction = 8 )
+{
+    return setCount * maxFraction < meshSize;
+}
+
+// vertices of given faces; a deleted or out-of-range face has no edges and adds nothing
+static void addVertsOfFaces( const MeshTopology & topology, const FaceBitSet & faces, VertBitSet & res )
+{
+    for ( auto f : faces )
+        for ( auto e : leftRing( topology, f ) )
+            res.set( topology.org( e ) );
+}
+
+// vertices that can be touched by the region: its own when the region is small, otherwise all valid vertices
+static const VertBitSet & candidateVerts( const MeshTopology & topology, const FaceBitSet & region, VertBitSet & store, size_t maxFraction )
+{
+    if ( !isSmall( region.count(), topology.faceSize(), maxFraction ) )
+        return topology.getValidVerts();
+    store.clear();
+    store.resize( topology.vertSize() );
+    addVertsOfFaces( topology, region, store );
+    return store;
+}
+
 EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* region, bool innerMeshEdgesOnly )
 {
     MR_TIMER;
     assert( !innerMeshEdgesOnly || ( innerMeshEdgesOnly && region ) );
     EdgeBitSet bdEdges( topology.edgeSize() );
+    if ( region && isSmall( region->count(), topology.faceSize(), 16 ) )
+    {
+        // a left boundary edge has its left face in the region
+        for ( auto f : *region )
+            for ( auto e : leftRing( topology, f ) )
+                if ( ( !innerMeshEdgesOnly || topology.right( e ) ) && topology.isLeftBdEdge( e, region ) )
+                    bdEdges.set( e );
+        return bdEdges;
+    }
     BitSetParallelForAll( bdEdges, [&]( EdgeId e )
     {
         if ( topology.isLoneEdge( e ) )
@@ -298,6 +333,14 @@ UndirectedEdgeBitSet findRegionBoundaryUndirectedEdgesInsideMesh( const MeshTopo
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    if ( isSmall( region.count(), topology.faceSize() ) )
+    {
+        for ( auto f : region )
+            for ( auto e : leftRing( topology, f ) )
+                if ( auto r = topology.right( e ); r && !region.test( r ) )
+                    res.set( e.undirected() );
+        return res;
+    }
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
         const auto l = topology.left( ue );
@@ -332,6 +375,12 @@ FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet&
 VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & faces )
 {
     MR_TIMER;
+    if ( isSmall( faces.count(), topology.faceSize() ) )
+    {
+        VertBitSet res( topology.getValidVerts().size() );
+        addVertsOfFaces( topology, faces, res );
+        return res;
+    }
     VertBitSet res = topology.getValidVerts();
     BitSetParallelFor( res, [&]( VertId v )
     {
@@ -354,7 +403,14 @@ VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & f
 VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet * region )
 {
     MR_TIMER;
-    VertBitSet res = topology.getValidVerts();
+    VertBitSet res;
+    if ( region && isSmall( region->count(), topology.faceSize(), 32 ) )
+    {
+        res.resize( topology.getValidVerts().size() );
+        addVertsOfFaces( topology, *region, res );
+    }
+    else
+        res = topology.getValidVerts();
     BitSetParallelFor( res, [&]( VertId v )
     {
         for ( auto e : orgRing( topology, v ) )
@@ -404,7 +460,8 @@ VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitS
     MR_TIMER;
 
     VertBitSet bdVerts( topology.vertSize() );
-    BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
+    VertBitSet store;
+    BitSetParallelFor( candidateVerts( topology, region, store, 8 ), [&]( VertId v )
     {
         bool hasRegionNei = false;
         bool hasNotRegionNei = false;
@@ -432,7 +489,8 @@ VertBitSet getRegionInnerVerts( const MeshTopology & topology, const FaceBitSet 
     MR_TIMER;
 
     VertBitSet res( topology.vertSize() );
-    BitSetParallelFor( topology.getValidVerts(), [&]( VertId v )
+    VertBitSet store;
+    BitSetParallelFor( candidateVerts( topology, region, store, 32 ), [&]( VertId v )
     {
         bool hasRegionNei = false;
         for ( auto e : orgRing( topology, v ) )
@@ -469,8 +527,7 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceB
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
-    // a small region is faster to walk face by face than to test every edge of the mesh in parallel
-    if ( faces.count() * 8 < topology.faceSize() )
+    if ( isSmall( faces.count(), topology.faceSize() ) )
     {
         for ( auto f : faces )
             for ( auto e : leftRing( topology, f ) ) // empty for a deleted or out-of-range face
@@ -491,6 +548,19 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const Undir
     MR_TIMER;
     UndirectedEdgeBitSet res = edges;
     res.resize( topology.undirectedEdgeSize() );
+    if ( isSmall( edges.count(), topology.undirectedEdgeSize(), 32 ) )
+    {
+        // all edges around both ends of every given edge
+        for ( auto ue : edges )
+        {
+            if ( ue >= topology.undirectedEdgeSize() )
+                break;
+            for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+                for ( EdgeId ei : orgRing( topology, e ) )
+                    res.set( ei.undirected() );
+        }
+        return res;
+    }
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
         if ( res.test( ue ) )
@@ -516,6 +586,14 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBit
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    if ( isSmall( verts.count(), topology.vertSize(), 16 ) )
+    {
+        for ( auto v : verts )
+            for ( auto e : orgRing( topology, v ) ) // empty for a deleted or out-of-range vertex
+                if ( verts.test( topology.dest( e ) ) )
+                    res.set( e.undirected() );
+        return res;
+    }
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
         EdgeId e( ue );
@@ -529,6 +607,14 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBit
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    if ( isSmall( region.count(), topology.faceSize(), 16 ) )
+    {
+        for ( auto f : region )
+            for ( auto e : leftRing( topology, f ) )
+                if ( contains( region, topology.right( e ) ) )
+                    res.set( e.undirected() );
+        return res;
+    }
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
         EdgeId e( ue );
@@ -542,6 +628,14 @@ FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & v
 {
     MR_TIMER;
     FaceBitSet res( topology.faceSize() );
+    if ( isSmall( verts.count(), topology.vertSize(), 16 ) )
+    {
+        for ( auto v : verts )
+            for ( auto e : orgRing( topology, v ) ) // empty for a deleted or out-of-range vertex
+                if ( auto l = topology.left( e ) )
+                    res.set( l );
+        return res;
+    }
     BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
         for ( auto e : leftRing( topology, f ) )
@@ -574,7 +668,10 @@ FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & vert
 {
     MR_TIMER;
     FaceBitSet res( topology.faceSize() );
-    BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
+    // an inner face is incident to the vertices, so a small set needs to check only its incident faces
+    const bool small = isSmall( verts.count(), topology.vertSize(), 32 );
+    const FaceBitSet candidates = small ? getIncidentFaces( topology, verts ) : FaceBitSet{};
+    BitSetParallelFor( small ? candidates : topology.getValidFaces(), [&]( FaceId f )
     {
         bool inner = true;
         for ( auto e : leftRing( topology, f ) )

@@ -4,6 +4,7 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRId.h>
+#include <MRMesh/MRRingIterator.h>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -69,37 +70,117 @@ TEST( MRMesh, getRegionInnerVerts )
     EXPECT_GT( verts.count(), innerVerts.count() );
 }
 
-TEST( MRMesh, getIncidentEdges )
+// every function with a separate path for small sets must give what a test of every mesh element gives
+TEST( MRMesh, RegionBoundarySmallAndLargeSets )
 {
-    Mesh sphere = makeUVSphere( 1, 16, 16 );
-    FaceBitSet deleted( sphere.topology.faceSize() );
-    deleted.set( 3_f );
+    Mesh sphere = makeUVSphere( 1, 32, 32 );
+    const auto & t = sphere.topology;
+    // a hole around the upper pole and a single deleted face
+    FaceBitSet deleted( t.faceSize() );
+    for ( auto f : t.getValidFaces() )
+        if ( sphere.triCenter( f ).z > 0.9f )
+            deleted.set( f );
+    deleted.set( 700_f );
     sphere.topology.deleteFaces( deleted );
 
-    auto bruteForce = [&]( const FaceBitSet & faces )
+    auto check = [&]( const FaceBitSet & faces, const char * name )
     {
-        UndirectedEdgeBitSet res( sphere.topology.undirectedEdgeSize() );
-        for ( UndirectedEdgeId ue{ 0 }; ue < res.size(); ++ue )
+        SCOPED_TRACE( name );
+        auto inFaces = [&]( FaceId f ) { return f && faces.test( f ); };
+
+        VertBitSet incVerts( t.getValidVerts().size() ), innerVerts( t.getValidVerts().size() ),
+            bdVerts( t.vertSize() ), regionInnerVerts( t.vertSize() );
+        for ( auto v : t.getValidVerts() )
         {
-            const auto l = sphere.topology.left( ue ), r = sphere.topology.right( ue );
-            if ( ( l && faces.test( l ) ) || ( r && faces.test( r ) ) )
-                res.set( ue );
+            int in = 0, out = 0, missing = 0;
+            for ( auto e : orgRing( t, v ) )
+            {
+                const auto l = t.left( e );
+                if ( !l )
+                    ++missing;
+                else if ( inFaces( l ) )
+                    ++in;
+                else
+                    ++out;
+            }
+            incVerts.set( v, in > 0 );
+            innerVerts.set( v, out == 0 && missing == 0 );
+            bdVerts.set( v, in > 0 && out > 0 );
+            regionInnerVerts.set( v, in > 0 && out == 0 );
         }
-        return res;
+        EXPECT_EQ( getIncidentVerts( t, faces ), incVerts );
+        EXPECT_EQ( getInnerVerts( t, faces ), innerVerts );
+        EXPECT_EQ( getRegionBoundaryVerts( t, faces ), bdVerts );
+        EXPECT_EQ( getRegionInnerVerts( t, faces ), regionInnerVerts );
+
+        UndirectedEdgeBitSet incEdges( t.undirectedEdgeSize() ), innerEdges( t.undirectedEdgeSize() ), bdInside( t.undirectedEdgeSize() );
+        EdgeBitSet leftBd( t.edgeSize() ), leftBdInside( t.edgeSize() );
+        for ( UndirectedEdgeId ue{ 0 }; ue < t.undirectedEdgeSize(); ++ue )
+        {
+            const auto l = t.left( ue ), r = t.right( ue );
+            incEdges.set( ue, inFaces( l ) || inFaces( r ) );
+            innerEdges.set( ue, inFaces( l ) && inFaces( r ) );
+            bdInside.set( ue, l && r && inFaces( l ) != inFaces( r ) );
+            for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+            {
+                const bool bd = inFaces( t.left( e ) ) && !inFaces( t.right( e ) );
+                leftBd.set( e, bd );
+                leftBdInside.set( e, bd && t.right( e ) );
+            }
+        }
+        EXPECT_EQ( getIncidentEdges( t, faces ), incEdges );
+        EXPECT_EQ( getInnerEdges( t, faces ), innerEdges );
+        EXPECT_EQ( findRegionBoundaryUndirectedEdgesInsideMesh( t, faces ), bdInside );
+        EXPECT_EQ( findAllLeftBdEdges( t, &faces ), leftBd );
+        EXPECT_EQ( findAllLeftBdEdges( t, &faces, true ), leftBdInside );
+
+        // vertex and edge inputs: the vertices and edges of the region
+        const auto verts = getIncidentVerts( t, faces );
+        UndirectedEdgeBitSet innerEdgesOfVerts( t.undirectedEdgeSize() ), edgesNearEdges( t.undirectedEdgeSize() );
+        for ( UndirectedEdgeId ue{ 0 }; ue < t.undirectedEdgeSize(); ++ue )
+        {
+            const auto o = t.org( ue ), d = t.dest( ue );
+            innerEdgesOfVerts.set( ue, o && d && verts.test( o ) && verts.test( d ) );
+            bool near = incEdges.test( ue );
+            for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+                for ( auto ei : orgRing( t, e ) )
+                    near = near || incEdges.test( ei.undirected() );
+            edgesNearEdges.set( ue, near );
+        }
+        EXPECT_EQ( getInnerEdges( t, verts ), innerEdgesOfVerts );
+        EXPECT_EQ( getIncidentEdges( t, incEdges ), edgesNearEdges );
+
+        FaceBitSet incFaces( t.faceSize() ), innerFaces( t.faceSize() );
+        for ( auto f : t.getValidFaces() )
+        {
+            int in = 0, all = 0;
+            for ( auto e : leftRing( t, f ) )
+            {
+                ++all;
+                in += verts.test( t.org( e ) );
+            }
+            incFaces.set( f, in > 0 );
+            innerFaces.set( f, in == all );
+        }
+        EXPECT_EQ( getIncidentFaces( t, verts ), incFaces );
+        EXPECT_EQ( getInnerFaces( t, verts ), innerFaces );
     };
 
-    // small regions take the face-by-face path, including a deleted face and an id past the last face
-    FaceBitSet small( sphere.topology.faceSize() + 10 );
-    small.set( 0_f );
-    small.set( 3_f );
-    small.set( FaceId( sphere.topology.faceSize() + 5 ) );
-    EXPECT_EQ( getIncidentEdges( sphere.topology, small ), bruteForce( small ) );
-    EXPECT_EQ( getIncidentEdges( sphere.topology, small ).count(), 3 );
+    // small sets: a few faces next to the hole, the deleted face and an id past the last face
+    FaceBitSet small( t.faceSize() + 10 );
+    for ( auto f : t.getValidFaces() )
+        if ( sphere.triCenter( f ).z > 0.8f && small.count() < 20 )
+            small.set( f );
+    small.set( 700_f );
+    small.set( FaceId( t.faceSize() + 5 ) );
+    check( small, "small" );
 
-    // a large region takes the parallel scan of all edges
-    FaceBitSet large = sphere.topology.getValidFaces();
-    large.reset( 0_f );
-    EXPECT_EQ( getIncidentEdges( sphere.topology, large ), bruteForce( large ) );
+    // a large region takes the scans of the whole mesh
+    FaceBitSet large( t.faceSize() );
+    for ( auto f : t.getValidFaces() )
+        if ( sphere.triCenter( f ).z > -0.2f )
+            large.set( f );
+    check( large, "large" );
 }
 
 } //namespace MR

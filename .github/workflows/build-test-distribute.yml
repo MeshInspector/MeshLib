@@ -340,6 +340,21 @@ jobs:
             zip -qr meshlib_rust_bindings.zip MeshLibRust
           fi
 
+      # The Java bindings are a jar with no native code (the C libraries come from the platform packages), one archive for all platforms:
+      # the jar and the generated sources from the Ubuntu job.
+      - name: Download Java bindings
+        continue-on-error: true # The job producing it may be disabled for this run.
+        uses: actions/download-artifact@v8
+        with:
+          name: JavaBindings
+          path: MeshLibJava
+
+      - name: Pack Java bindings
+        run: |
+          if [ -f MeshLibJava/meshlib.jar ]; then
+            zip -qr meshlib_java_bindings.zip MeshLibJava
+          fi
+
       - name: Rename Distributives
         run: |
           shopt -s nullglob

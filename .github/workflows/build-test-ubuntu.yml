@@ -221,6 +221,16 @@ jobs:
           javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java
           java --enable-native-access=ALL-UNNAMED -Djava.library.path=build/${{ matrix.config }}/bin -cp source/MeshLibJava/meshlib.jar:source/MRTestJava/classes mrtest.Main
 
+      - name: Upload Java bindings
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' && env.RUN_JAVA == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: JavaBindings
+          path: |
+            ./source/MeshLibJava/meshlib.jar
+            ./source/MeshLibJava/src
+          retention-days: 1
+
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt
 

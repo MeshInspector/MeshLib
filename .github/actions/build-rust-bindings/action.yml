@@ -11,6 +11,13 @@ inputs:
     description: >
       Absolute path of the directory with the MeshLib and MeshLibC2 shared
       libraries, for linking and for the dynamic loader when running.
+  artifact-name:
+    required: false
+    default: ''
+    description: >
+      The name of the artifact with the generated crate. The default is
+      `RustBindings-<os>-<arch>`, pass something else when several jobs of
+      the workflow share those.
   windows-vsdevcmd:
     required: false
     default: ''
@@ -55,6 +62,17 @@ runs:
         cargo build --manifest-path examples/rust-examples/Cargo.toml
         ./examples/rust-examples/target/debug/MeshBoolean
         cargo test --manifest-path source/MRTestRust/Cargo.toml
+
+    # The crate must come out the same on every platform. `upload-distributions` compares them and publishes one.
+    - name: Upload the generated crate
+      uses: actions/upload-artifact@v7
+      with:
+        name: ${{ inputs.artifact-name || format('RustBindings-{0}-{1}', runner.os, runner.arch) }}
+        path: |
+          source/MeshLibRust/Cargo.toml
+          source/MeshLibRust/build.rs
+          source/MeshLibRust/src
+        retention-days: 1
 
     - name: Build and run Rust examples and tests (Windows)
       if: runner.os == 'Windows'

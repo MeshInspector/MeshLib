@@ -189,18 +189,7 @@ jobs:
         uses: ./.github/actions/build-rust-bindings
         with:
           lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
-
-      # The crate goes to the draft release, see `upload-distributions`.
-      - name: Upload Rust bindings
-        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' && env.RUN_RUST == 'true' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: RustBindings
-          path: |
-            ./source/MeshLibRust/Cargo.toml
-            ./source/MeshLibRust/build.rs
-            ./source/MeshLibRust/src
-          retention-days: 1
+          artifact-name: RustBindings-${{ matrix.os }}-${{ matrix.arch }}
 
       - name: MRMesh Exported Symbols
         run: objdump -T ./build/${{ matrix.config }}/bin/libMRMesh.so | c++filt

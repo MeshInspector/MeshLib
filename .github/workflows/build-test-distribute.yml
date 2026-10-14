@@ -317,16 +317,31 @@ jobs:
           pattern: Distributives*
           merge-multiple: true
 
-      # The Rust crate is sources only (the C libraries come from the platform packages), one archive for all platforms.
+      # The Rust crate is sources only (the C libraries come from the platform packages), so one archive serves
+      # all platforms. Every Rust job uploads its crate; they are compared here and the first one is published.
       - name: Download Rust bindings
-        continue-on-error: true # The job producing it may be disabled for this run.
         uses: actions/download-artifact@v8
         with:
-          name: RustBindings
-          path: MeshLibRust
+          pattern: RustBindings-*
+          path: rust_bindings
 
-      - name: Pack Rust bindings
-        run: if [ -d MeshLibRust ]; then zip -qr meshlib_rust_bindings.zip MeshLibRust; fi
+      - name: Compare and pack Rust bindings
+        run: |
+          shopt -s nullglob
+          CRATES=(rust_bindings/RustBindings-*)
+          if [ ${#CRATES[@]} -eq 0 ]; then
+            echo "No Rust bindings in this run."
+            exit 0
+          fi
+          REF="${CRATES[0]}"
+          for CRATE in "${CRATES[@]:1}"; do
+            if ! diff -rq "$REF" "$CRATE" >/dev/null; then
+              echo "::warning title=Rust bindings differ between platforms::$(basename "$CRATE") differs from $(basename "$REF"), publishing the latter."
+              diff -rq "$REF" "$CRATE" | head -20 || true
+            fi
+          done
+          cp -r "$REF" MeshLibRust
+          zip -qr meshlib_rust_bindings.zip MeshLibRust
 
       - name: Rename Distributives
         run: |

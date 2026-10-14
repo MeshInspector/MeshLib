@@ -83,6 +83,8 @@ struct TestTiffLayout
     std::vector<uint16_t> colorMap;
     // tags with DOUBLE values
     std::vector<std::pair<int, std::vector<double>>> doubleTags;
+    // tags with SHORT values
+    std::vector<std::pair<int, std::vector<uint16_t>>> shortTags;
     // the image file directory goes before the pixels, so that the file can be opened after its end is cut off
     bool directoryFirst = false;
 };
@@ -164,6 +166,8 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         entries.push_back( { 338, SHORT, { layout.extraSamples.begin(), layout.extraSamples.end() } } ); // ExtraSamples
     for ( const auto& [tag, doubles] : layout.doubleTags )
         entries.push_back( { uint16_t( tag ), DOUBLE, {}, doubles } );
+    for ( const auto& [tag, shorts] : layout.shortTags )
+        entries.push_back( { uint16_t( tag ), SHORT, { shorts.begin(), shorts.end() } } );
     std::sort( entries.begin(), entries.end(), [] ( const Entry& a, const Entry& b ) { return a.tag < b.tag; } );
 
     auto valueBytes = [&] ( const Entry& entry )
@@ -390,6 +394,49 @@ TEST( MRMesh, TiffGeoTiePointNotAtOrigin )
             { 33550, c.scale }, // ModelPixelScaleTag
             { 33922, c.tiePoint }, // ModelTiePointTag
         } }, toBytes( std::vector<float>( 6 ) ) );
+
+        DistanceMapToWorld toWorld;
+        ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );
+        EXPECT_EQ( AffineXf3f( toWorld ), c.expected );
+        AffineXf3f rasterXf;
+        ASSERT_TRUE( RasterLoad::fromTiff( path, { .xf = &rasterXf } ).has_value() );
+        EXPECT_EQ( rasterXf, c.expected );
+    }
+}
+
+// the GeoTIFF transformation of a PixelIsPoint raster refers to the pixel centers, the loaded one to the pixel corners as in PixelIsArea
+TEST( MRMesh, TiffGeoPixelIsPoint )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "pixelIsPoint.tif";
+
+    const std::pair<int, std::vector<double>> scale{ 33550, { 0.5, 0.25, 0. } }; // ModelPixelScaleTag
+    const std::pair<int, std::vector<double>> tiePoint{ 33922, { 0., 0., 0., 10., 20., 0. } }; // ModelTiePointTag
+    // ModelTransformationTag: the rows of a matrix with skewed axes
+    const std::pair<int, std::vector<double>> matrix{ 34264, { 0.5, 0.125, 0., 10., 0.25, -0.5, 0., 20., 0., 0., 2., 3., 0., 0., 0., 1. } };
+    struct GeoTags
+    {
+        std::vector<std::pair<int, std::vector<double>>> doubleTags;
+        uint16_t rasterType; // GTRasterTypeGeoKey: 1 = RasterPixelIsArea, 2 = RasterPixelIsPoint
+        AffineXf3f expected;
+        uint16_t version = 1; // of the key directory, the only one defined
+    };
+    const GeoTags cases[] = {
+        { { scale, tiePoint }, 1, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) ) },
+        // the center of the first pixel is at (10, 20), its corner is half a pixel to the left and up
+        { { scale, tiePoint }, 2, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.75f, 20.125f, 0.f ) ) },
+        // with any matrix A, the corner is at (10, 20, 3) - A * (0.5, 0.5, 0)
+        { { matrix }, 2, AffineXf3f( Matrix3f( { 0.5f, 0.125f, 0.f }, { 0.25f, -0.5f, 0.f }, { 0.f, 0.f, 2.f } ), Vector3f( 9.6875f, 20.125f, 3.f ) ) },
+        // the keys of an unknown version are ignored
+        { { scale, tiePoint }, 2, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) ), 2 },
+    };
+    for ( const auto& c : cases )
+    {
+        // GeoKeyDirectoryTag: the header { version, revision 1.0, 2 keys }, then the keys { id, 0 = the value follows, count 1, value }:
+        // GTModelTypeGeoKey = ModelTypeProjected and GTRasterTypeGeoKey
+        writeTestTiff( path, { .size = { 3, 2 }, .bitsPerSample = 32, .sampleFormat = 3, .doubleTags = c.doubleTags,
+            .shortTags = { { 34735, { c.version, 1, 0, 2, 1024, 0, 1, 1, 1025, 0, 1, c.rasterType } } } }, toBytes( std::vector<float>( 6 ) ) );
 
         DistanceMapToWorld toWorld;
         ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );

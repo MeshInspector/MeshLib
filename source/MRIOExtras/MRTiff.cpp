@@ -15,6 +15,7 @@
 
 #include <tiffio.h>
 
+#include <algorithm>
 #include <bit>
 #include <cstdarg>
 #include <cstdio>
@@ -29,6 +30,10 @@ using namespace MR;
 constexpr uint32_t cModelPixelScaleTag = 33550;
 constexpr uint32_t cModelTiePointTag = 33922;
 constexpr uint32_t cModelTransformationTag = 34264;
+constexpr uint32_t cGeoKeyDirectoryTag = 34735;
+// the raster type key and its value for the rasters whose pixels are points: https://docs.ogc.org/is/19-008r4/19-008r4.html#_raster_space
+constexpr uint16_t cGTRasterTypeGeoKey = 1025;
+constexpr uint16_t cRasterPixelIsPoint = 2;
 // no-data value: https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value
 constexpr uint32_t cGdalNoDataTag = 42113;
 
@@ -261,15 +266,17 @@ Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const Progres
     return res;
 }
 
-// returns the values of a tag of doubles and sets their count, or returns nullptr; libtiff passes the count as a 32-bit value
+// returns the values of a tag of doubles or shorts and sets their count, or returns nullptr; libtiff passes the count as a 32-bit value
 // for the tags it does not know, and as a 16-bit value for the tags registered with TIFF_VARIABLE, as libgeotiff's tag extender does
-const double* getDoublesTag( TIFF* tiff, uint32_t tag, uint32_t& count )
+template <typename T>
+const T* getTagValues( TIFF* tiff, uint32_t tag, uint32_t& count )
 {
+    static_assert( std::is_same_v<T, double> || std::is_same_v<T, uint16_t> );
     count = 0;
-    double* data = nullptr;
+    T* data = nullptr;
     // the tags of other types or with a fixed number of values are returned differently
     const auto* field = TIFFFindField( tiff, tag, TIFF_ANY );
-    if ( !field || TIFFFieldDataType( field ) != TIFF_DOUBLE || !TIFFFieldPassCount( field ) )
+    if ( !field || TIFFFieldDataType( field ) != ( std::is_same_v<T, double> ? TIFF_DOUBLE : TIFF_SHORT ) || !TIFFFieldPassCount( field ) )
         return nullptr;
     if ( TIFFFieldReadCount( field ) == TIFF_VARIABLE2 )
         return TIFFGetField( tiff, tag, &count, &data ) ? data : nullptr;
@@ -280,30 +287,56 @@ const double* getDoublesTag( TIFF* tiff, uint32_t tag, uint32_t& count )
     return data;
 }
 
+// returns whether the GeoTIFF raster type is PixelIsPoint
+bool isPixelIsPoint( TIFF* tiff )
+{
+    uint32_t count = 0;
+    // the header { version 1, revision, minor revision, number of keys } is followed by the keys { id, location, count, value },
+    // the location 0 means that the value is in the key
+    const auto* keys = getTagValues<uint16_t>( tiff, cGeoKeyDirectoryTag, count );
+    if ( !keys || count < 4 || keys[0] != 1 )
+        return false;
+    const auto end = std::min( count, 4 + 4 * uint32_t( keys[3] ) );
+    for ( uint32_t i = 4; i + 4 <= end; i += 4 )
+        if ( keys[i] == cGTRasterTypeGeoKey )
+            return keys[i + 1] == 0 && keys[i + 3] == cRasterPixelIsPoint;
+    return false;
+}
+
 // reads the GeoTIFF transformation of (column, row, value) to world coordinates, or returns the identity if the file has none
 AffineXf3f readGeoTransform( TIFF* tiff )
 {
+    AffineXf3d xf;
     uint32_t count = 0;
     // the values are freed with the file
-    if ( const auto* matrix = getDoublesTag( tiff, cModelTransformationTag, count ); matrix && count == 16 )
-        return AffineXf3f( Matrix4f( *(const Matrix4d*)matrix ) );
-
-    const auto* tie = getDoublesTag( tiff, cModelTiePointTag, count );
-    if ( !tie || count != 6 )
-        return {};
-    const auto* scaleTag = getDoublesTag( tiff, cModelPixelScaleTag, count );
-    if ( !scaleTag || count != 3 )
-        return {};
-    // the tie point maps the raster point tiePoints[0] to the model point tiePoints[1]
-    Vector3d tiePoints[2] = { { tie[0], tie[1], tie[2] }, { tie[3], tie[4], tie[5] } };
-    Vector3d scale{ scaleTag[0], -scaleTag[1], scaleTag[2] };
-    if ( scale.z == 0. )
+    if ( const auto* matrix = getTagValues<double>( tiff, cModelTransformationTag, count ); matrix && count == 16 )
     {
-        tiePoints[0].z = 0.;
-        tiePoints[1].z = 0.;
-        scale.z = 1.;
+        xf = AffineXf3d( *(const Matrix4d*)matrix );
     }
-    return AffineXf3f( Matrix3f::scale( Vector3f( scale ) ), Vector3f( tiePoints[1] - mult( scale, tiePoints[0] ) ) );
+    else
+    {
+        const auto* tie = getTagValues<double>( tiff, cModelTiePointTag, count );
+        if ( !tie || count != 6 )
+            return {};
+        const auto* scaleTag = getTagValues<double>( tiff, cModelPixelScaleTag, count );
+        if ( !scaleTag || count != 3 )
+            return {};
+        // the tie point maps the raster point tiePoints[0] to the model point tiePoints[1]
+        Vector3d tiePoints[2] = { { tie[0], tie[1], tie[2] }, { tie[3], tie[4], tie[5] } };
+        Vector3d scale{ scaleTag[0], -scaleTag[1], scaleTag[2] };
+        if ( scale.z == 0. )
+        {
+            tiePoints[0].z = 0.;
+            tiePoints[1].z = 0.;
+            scale.z = 1.;
+        }
+        xf = AffineXf3d( Matrix3d::scale( scale ), tiePoints[1] - mult( scale, tiePoints[0] ) );
+    }
+    // the raster point (0, 0) is the center of the first pixel in PixelIsPoint rasters and its corner in PixelIsArea rasters;
+    // the returned transformation refers to the corners, as GDAL's does
+    if ( isPixelIsPoint( tiff ) )
+        xf.b -= xf.A * Vector3d( 0.5, 0.5, 0. );
+    return AffineXf3f( xf );
 }
 
 // as the old image loader did, libtiff decodes the images it can, the others are converted from the raster

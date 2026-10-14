@@ -15,6 +15,7 @@
 
 #include <tiffio.h>
 
+#include <algorithm>
 #include <bit>
 #include <cstdarg>
 #include <cstdio>
@@ -290,10 +291,10 @@ const T* getTagValues( TIFF* tiff, uint32_t tag, uint32_t& count )
 bool isPixelIsPoint( TIFF* tiff )
 {
     uint32_t count = 0;
-    // the header { version, revision, minor revision, number of keys } is followed by the keys { id, location, count, value },
+    // the header { version 1, revision, minor revision, number of keys } is followed by the keys { id, location, count, value },
     // the location 0 means that the value is in the key
     const auto* keys = getTagValues<uint16_t>( tiff, cGeoKeyDirectoryTag, count );
-    if ( !keys || count < 4 )
+    if ( !keys || count < 4 || keys[0] != 1 )
         return false;
     const auto end = std::min( count, 4 + 4 * uint32_t( keys[3] ) );
     for ( uint32_t i = 4; i + 4 <= end; i += 4 )

@@ -420,6 +420,7 @@ TEST( MRMesh, TiffGeoPixelIsPoint )
         std::vector<std::pair<int, std::vector<double>>> doubleTags;
         uint16_t rasterType; // GTRasterTypeGeoKey: 1 = RasterPixelIsArea, 2 = RasterPixelIsPoint
         AffineXf3f expected;
+        uint16_t version = 1; // of the key directory, the only one defined
     };
     const GeoTags cases[] = {
         { { scale, tiePoint }, 1, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) ) },
@@ -427,13 +428,15 @@ TEST( MRMesh, TiffGeoPixelIsPoint )
         { { scale, tiePoint }, 2, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 9.75f, 20.125f, 0.f ) ) },
         // with any matrix A, the corner is at (10, 20, 3) - A * (0.5, 0.5, 0)
         { { matrix }, 2, AffineXf3f( Matrix3f( { 0.5f, 0.125f, 0.f }, { 0.25f, -0.5f, 0.f }, { 0.f, 0.f, 2.f } ), Vector3f( 9.6875f, 20.125f, 3.f ) ) },
+        // the keys of an unknown version are ignored
+        { { scale, tiePoint }, 2, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) ), 2 },
     };
     for ( const auto& c : cases )
     {
-        // GeoKeyDirectoryTag: the header { version 1, revision 1.0, 2 keys }, then the keys { id, 0 = the value follows, count 1, value }:
+        // GeoKeyDirectoryTag: the header { version, revision 1.0, 2 keys }, then the keys { id, 0 = the value follows, count 1, value }:
         // GTModelTypeGeoKey = ModelTypeProjected and GTRasterTypeGeoKey
         writeTestTiff( path, { .size = { 3, 2 }, .bitsPerSample = 32, .sampleFormat = 3, .doubleTags = c.doubleTags,
-            .shortTags = { { 34735, { 1, 1, 0, 2, 1024, 0, 1, 1, 1025, 0, 1, c.rasterType } } } }, toBytes( std::vector<float>( 6 ) ) );
+            .shortTags = { { 34735, { c.version, 1, 0, 2, 1024, 0, 1, 1, 1025, 0, 1, c.rasterType } } } }, toBytes( std::vector<float>( 6 ) ) );
 
         DistanceMapToWorld toWorld;
         ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );

@@ -19,6 +19,17 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <!-- The standard library's extension modules (_socket, _ssl, _sqlite3, ...) go to DLLs\, which Python puts on sys.path; -->
+    <!-- the DLLs they need go next to the executable, where most of them already are and the loader finds them -->
+    <CopyFileToFolders Include="$(VcpkgCurrentInstalledDir)\tools\python3\DLLs\*.pyd">
+      <FileType>Document</FileType>
+      <DestinationFolders>$(OutDir)DLLs</DestinationFolders>
+    </CopyFileToFolders>
+    <CopyFileToFolders Include="$(VcpkgCurrentInstalledDir)\tools\python3\DLLs\*.dll">
+      <FileType>Document</FileType>
+    </CopyFileToFolders>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\MRMesh\MRMesh.vcxproj">
       <Project>{c7780500-ca0e-4f5f-8423-d7ab06078b14}</Project>
     </ProjectReference>
@@ -126,6 +137,14 @@
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- The pure-Python standard library, python3XY.zip, built from the CPython sources of vcpkg's python3 port
+       by that port's own python.exe; rebuilt only when the script or that Python changes -->
+  <Target Name="BuildPythonZip" AfterTargets="Build"
+          Condition="Exists('$(VcpkgCurrentInstalledDir)\tools\python3\python.exe')"
+          Inputs="$(ProjectDir)..\..\scripts\update_python_zip.py;$(VcpkgCurrentInstalledDir)\tools\python3\python.exe"
+          Outputs="$(OutDir)python$(PythonVersion).zip">
+    <Exec Command="&quot;$(VcpkgCurrentInstalledDir)\tools\python3\python.exe&quot; &quot;$(ProjectDir)..\..\scripts\update_python_zip.py&quot; --output &quot;$(OutDir)python$(PythonVersion).zip&quot;" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

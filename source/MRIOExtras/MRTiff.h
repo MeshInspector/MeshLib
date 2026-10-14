@@ -4,12 +4,13 @@
 #ifndef MRIOEXTRAS_NO_TIFF
 #include "exports.h"
 
-#include <MRMesh/MRDistanceMapParams.h>
+#include <MRMesh/MRDistanceMap.h>
 #include <MRMesh/MRExpected.h>
 #include <MRMesh/MRMeshFwd.h>
 #include <MRMesh/MRRaster.h>
 
 #include <filesystem>
+#include <optional>
 
 namespace MR
 {
@@ -32,11 +33,19 @@ MRIOEXTRAS_API Expected<RasterInfo> infoFromTiff( const std::filesystem::path& p
 
 } // namespace RasterLoad
 
+/// settings for saving rasters in .tiff format
+struct TiffSaveSettings : RasterSaveSettings
+{
+    /// optional value meaning no data, written as GDAL_NODATA
+    std::optional<double> noData;
+};
+
 namespace RasterSave
 {
 
 /// saves a raster with one layer in .tiff format: one channel of gray values, or three or four channels of RGB or RGBA colors,
 /// of any type from UInt8 to Float64
+MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const TiffSaveSettings& settings );
 MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings = {} );
 
 } // namespace RasterSave
@@ -57,6 +66,23 @@ namespace ImageSave
 MRIOEXTRAS_API Expected<void> toTiff( const Image& image, const std::filesystem::path& path );
 
 } // namespace ImageSave
+
+namespace DistanceMapLoad
+{
+
+/// loads the first image of a .tiff file: one channel is taken as is, three or more channels give the luma of the first three,
+/// see convertRasterToFloats; settings.distanceMapToWorld gets the GeoTIFF transformation, or the identity if the file has none
+MRIOEXTRAS_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
+[[deprecated( "Use fromTiff( path, settings )")]]
+MR_BIND_IGNORE inline Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )
+{
+    return fromTiff( path, {
+        .distanceMapToWorld = &params,
+        .progress = progressCb,
+    } );
+}
+
+} // namespace DistanceMapLoad
 
 namespace DistanceMapSave
 {

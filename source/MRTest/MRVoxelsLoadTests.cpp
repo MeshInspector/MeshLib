@@ -1,17 +1,30 @@
-#include "MRVoxels/MRVoxelsLoad.h"
-#ifndef MRVOXELS_NO_TIFF
+#include "MRIOExtras/MRTiff.h"
+#ifndef MRIOEXTRAS_NO_TIFF
 #include "MRVoxels/MRMarchingCubes.h"
 #include "MRVoxels/MRVDBFloatGrid.h"
+#include "MRVoxels/MRVoxelsLoad.h"
 #include "MRMesh/MRMesh.h"
-#include "MRMesh/MRTiffIO.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 
 #include <gtest/gtest.h>
 
+#include <cstring>
+#include <fstream>
+
 namespace MR
 {
 
-TEST( MRMesh, LoadTiffDir )
+// saves a slice of values of given type
+template <typename T>
+static Expected<void> saveSlice( const std::filesystem::path& path, const Vector2i& size, ScalarType type, const std::vector<T>& values )
+{
+    Raster raster{ .info = { .dims = { size.x, size.y, 1 }, .type = type } };
+    raster.data.resize( raster.info.dataSize() );
+    std::memcpy( raster.data.data(), values.data(), raster.data.size() );
+    return RasterSave::toTiff( raster, path );
+}
+
+TEST( MRMesh, LoadRasterFolder )
 {
     const Vector3i dims{ 10, 8, 4 };
     UniqueTemporaryFolder tmpFolder;
@@ -24,16 +37,11 @@ TEST( MRMesh, LoadTiffDir )
             for ( int y = 1; y <= 2; ++y )
                 for ( int x = 2; x <= 4; ++x )
                     slice[y * dims.x + x] = 255;
-        auto saveRes = writeRawTiff( slice.data(), tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { .baseParams = {
-            .sampleType = BaseTiffParameters::SampleType::Uint,
-            .valueType = BaseTiffParameters::ValueType::Scalar,
-            .bytesPerSample = 1,
-            .imageSize = { dims.x, dims.y }
-        } } );
+        auto saveRes = saveSlice( tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { dims.x, dims.y }, ScalarType::UInt8, slice );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     }
 
-    auto vol = VoxelsLoad::loadTiffDir( { .dir = tmpFolder } );
+    auto vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
     ASSERT_TRUE( vol.has_value() ) << vol.error();
     EXPECT_EQ( vol->dims, dims );
     // zero voxels of every slice must be active, otherwise marchingCubes considers them invalid
@@ -49,27 +57,58 @@ TEST( MRMesh, LoadTiffDir )
     EXPECT_NEAR( ( box.max - Vector3f( 4.5f, 2.5f, 2.5f ) ).length(), 0.f, 1e-6f );
 }
 
-TEST( MRMesh, LoadTiffDirNegativeValues )
+TEST( MRMesh, LoadRasterFolderNegativeValues )
 {
     UniqueTemporaryFolder tmpFolder;
     for ( int z = 0; z < 2; ++z )
     {
         const std::vector<float> slice( 4, -1.f - z );
-        auto saveRes = writeRawTiff( ( const uint8_t* )slice.data(), tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { .baseParams = {
-            .sampleType = BaseTiffParameters::SampleType::Float,
-            .valueType = BaseTiffParameters::ValueType::Scalar,
-            .bytesPerSample = 4,
-            .imageSize = { 2, 2 }
-        } } );
+        auto saveRes = saveSlice( tmpFolder / ( "slice" + std::to_string( z ) + ".tif" ), { 2, 2 }, ScalarType::Float32, slice );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     }
 
-    auto vol = VoxelsLoad::loadTiffDir( { .dir = tmpFolder } );
+    auto vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
     ASSERT_TRUE( vol.has_value() ) << vol.error();
     EXPECT_EQ( vol->min, -2.f );
     EXPECT_EQ( vol->max, -1.f );
 }
 
+// the slices are the files of the extension with a raster loader that most files have, and they must have the same size and format
+TEST( MRMesh, LoadRasterFolderFiles )
+{
+    UniqueTemporaryFolder tmpFolder;
+    auto writeSlice = [&] ( const std::string& name, const Vector2i& size )
+    {
+        auto saveRes = saveSlice( tmpFolder / name, size, ScalarType::UInt8, std::vector<uint8_t>( size_t( size.x ) * size.y, 7 ) );
+        ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    };
+    for ( int z = 0; z < 3; ++z )
+        writeSlice( "slice" + std::to_string( z ) + ".tif", { 2, 3 } );
+    // fewer files of another raster extension, and more files without a raster loader
+    writeSlice( "other0.tiff", { 4, 4 } );
+    writeSlice( "other1.tiff", { 4, 4 } );
+    for ( int i = 0; i < 4; ++i )
+        std::ofstream( tmpFolder / ( "note" + std::to_string( i ) + ".txt" ) ) << "not a raster";
+
+    auto vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
+    ASSERT_TRUE( vol.has_value() ) << vol.error();
+    EXPECT_EQ( vol->dims, Vector3i( 2, 3, 3 ) );
+
+    writeSlice( "slice3.tif", { 3, 2 } );
+    vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder } );
+    ASSERT_FALSE( vol.has_value() );
+    EXPECT_NE( vol.error().find( "slice3.tif" ), std::string::npos ) << vol.error();
+
+    // one file of each raster extension is too few
+    std::error_code ec;
+    ASSERT_TRUE( std::filesystem::create_directory( tmpFolder / "split", ec ) );
+    writeSlice( "split/slice0.tif", { 2, 3 } );
+    writeSlice( "split/slice1.tiff", { 2, 3 } );
+    vol = VoxelsLoad::loadRasterFolder( { .dir = tmpFolder / "split" } );
+    ASSERT_FALSE( vol.has_value() );
+    EXPECT_EQ( vol.error(), "Only 1 .tif file of 2 raster files in the directory" );
+}
+
 } //namespace MR
 
-#endif //!MRVOXELS_NO_TIFF
+#endif //!MRIOEXTRAS_NO_TIFF

@@ -73,7 +73,7 @@ runs:
       continue-on-error: true
       with:
         path: ${{ inputs.mrbind-dir }}/build
-        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script) }}-${{ inputs.extra-cache-key }}
+        key: mrbind-build-${{ inputs.cache-key-prefix }}-${{ steps.mrbind-sha.outputs.sha }}-${{ hashFiles(inputs.build-script, '.github/actions/build-mrbind/action.yml') }}-${{ inputs.extra-cache-key }}
 
     - name: Build MRBind
       # `install_mrbind_windows_msys2.bat` defaults MSYS2_DIR to

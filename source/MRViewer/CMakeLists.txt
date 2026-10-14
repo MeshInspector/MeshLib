@@ -25,6 +25,7 @@ IF(APPLE)
 ENDIF()
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${OBJCPP_SOURCES} ${HEADERS})
+mr_add_resources(${PROJECT_NAME})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
@@ -164,7 +165,6 @@ IF(EMSCRIPTEN)
       ${MAIN_FONTS}
       ${AWESOME_FONTS}
       ${IMGUI_FONTS}
-      "resource"
     DESTINATION "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets"
   )
   file(
@@ -179,7 +179,6 @@ ELSE()
       ${AWESOME_FONTS}
       ${IMGUI_FONTS}
       ${THIRD_PARTY_NOTICES}
-      "resource"
     DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
   )
 ENDIF()
@@ -215,10 +214,6 @@ install(
 )
 install(
   FILES ${JSONS}
-  DESTINATION ${MR_RESOURCES_DIR}
-)
-install(
-  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/resource
   DESTINATION ${MR_RESOURCES_DIR}
 )
 IF(EMSCRIPTEN)

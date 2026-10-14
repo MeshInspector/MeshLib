@@ -10,8 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     container:
       image: fedora:44  # gettext 0.26
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
 
     env:
       GIT_BRANCH_NAME: auto-ci/update_pot_files

@@ -22,9 +22,7 @@ jobs:
     permissions:
       contents: read  # This is required for actions/checkout
     container:
-      image: meshlib/meshlib-emscripten-generate-c-bindings-arm64:${{inputs.docker_image_tag}}
-      # anonymous pull when the secret is unavailable (Dependabot, forks)
-      credentials: ${{ secrets.DOCKERHUB_TOKEN && fromJSON(format('{{"username":"meshlib","password":"{0}"}}', secrets.DOCKERHUB_TOKEN)) || fromJSON('{}') }}
+      image: ghcr.io/meshinspector/meshlib-emscripten-generate-c-bindings-arm64:${{inputs.docker_image_tag}}
 
     steps:
       - name: Checkout

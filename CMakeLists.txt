@@ -273,6 +273,7 @@ IF(MESHLIB_BUILD_MRVIEWER)
     ENDIF()
   ENDIF()
 
+  include(ResourceHelpers)
   add_subdirectory(${PROJECT_SOURCE_DIR}/imgui ./imgui)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRViewer ./MRViewer)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRCommonPlugins ./MRCommonPlugins)

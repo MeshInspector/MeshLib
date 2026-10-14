@@ -113,9 +113,12 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.compute-image-matrices.outputs.linux_matrix) }}
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      packages: write
     env:
       dockerfile: ${{ matrix.distro }}Dockerfile
-      image: meshlib/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
+      image: ghcr.io/meshinspector/meshlib-${{ matrix.distro }}${{ matrix.arch == 'arm64' && '-arm64' || '' }}:${{ inputs.docker_image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -129,6 +132,13 @@ jobs:
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       # Build the image only if its content-addressed tag isn't already in the
       # registry (reused as-is across PR commits and after merge), then point
@@ -152,6 +162,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      packages: write
     timeout-minutes: 75
     strategy:
       fail-fast: false
@@ -159,7 +170,7 @@ jobs:
         include: ${{ fromJSON(needs.compute-image-matrices.outputs.vcpkg_matrix) }}
     runs-on: ${{ matrix.runner }}
     env:
-      image: meshlib/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
+      image: ghcr.io/meshinspector/meshlib-${{ matrix.os }}-vcpkg-${{ matrix.arch }}:${{ inputs.vcpkg_docker_image_tag }}
       vcpkg_triplet: ${{ matrix.arch }}-linux-meshlib
     steps:
       - name: Checkout
@@ -170,6 +181,13 @@ jobs:
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
@@ -210,6 +228,7 @@ jobs:
     permissions:
       id-token: write
       contents: read
+      packages: write
     timeout-minutes: 120
     strategy:
       fail-fast: false
@@ -217,7 +236,7 @@ jobs:
         include: ${{ fromJSON(needs.compute-image-matrices.outputs.cbindings_matrix) }}
     runs-on: ${{matrix.runner_image}}
     env:
-      image: meshlib/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}
+      image: ghcr.io/meshinspector/meshlib-emscripten-build-c-bindings-${{matrix.emsdk_image}}:${{inputs.docker_image_tag}}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -229,6 +248,13 @@ jobs:
         with:
           username: meshlib
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0

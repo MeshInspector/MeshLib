@@ -1064,22 +1064,22 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     if ( settings.progressCallback && !settings.progressCallback( 0.03f ) )
         return res;
 
+    // the part of each face (parts do not overlap), -1 for faces outside all parts
+    Vector<int, FaceId> facePart( mesh.topology.faceSize(), -1 );
+    ParallelFor( parts, [&]( size_t i )
+    {
+        for ( auto f : parts[i].region )
+            facePart[f] = int( i );
+    } );
+
     // determine edges in between the parts
     UndirectedEdgeBitSet stableEdges( mesh.topology.undirectedEdgeSize() );
     BitSetParallelForAll( stableEdges, [&]( UndirectedEdgeId ue )
     {
         FaceId l = mesh.topology.left( ue );
         FaceId r = mesh.topology.right( ue );
-        if ( !l || !r )
-            return;
-        for ( size_t i = 0; i < sz; ++i )
-        {
-            if ( parts[i].region.test( l ) != parts[i].region.test( r ) )
-            {
-                stableEdges.set( ue );
-                break;
-            }
-        }
+        if ( l && r && facePart[l] != facePart[r] )
+            stableEdges.set( ue );
     } );
     if ( settings.progressCallback && !settings.progressCallback( 0.07f ) )
         return res;
@@ -1088,45 +1088,106 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         settings.maxDeletedVertices < mesh.topology.numValidVerts() ||
         settings.maxDeletedFaces < mesh.topology.numValidFaces();
 
-    // limit each part to region, find boundary vertices
-    ParallelFor( parts, [&]( size_t i )
+    if ( settings.touchNearBdEdges )
     {
-        auto & faces = parts[i].region;
-        if ( settings.touchNearBdEdges )
+        const auto vertSize = mesh.topology.vertSize();
+        ParallelFor( parts, [&]( size_t i )
         {
-            /// vertices on the boundary of subdivision,
-            /// if a vertex is only on hole's boundary or region's boundary but not on subdivision boundary, it is not here
-            parts[i].bdVerts = getRegionBoundaryVerts( mesh.topology, faces );
-            if ( settings.region )
-                faces &= *settings.region;
+            parts[i].bdVerts.resize( vertSize );
+            if ( limitedDeletion )
+                parts[i].removableVerts.resize( vertSize );
+        } );
+
+        // bdVerts: vertices with incident faces from several parts (hole and region boundaries alone do not count);
+        // innerVertPart: the part of all faces around a vertex, not on subdivision boundary, having a face in region;
+        // one pass for all parts instead of a whole-mesh pass per part; writing different VertBitSets by v is race-free
+        Vector<int, VertId> innerVertPart;
+        if ( limitedDeletion )
+            innerVertPart.resize( vertSize, -1 );
+        BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+        {
+            int p0 = -2; // not yet seen any face
+            bool severalParts = false, inRegion = false;
+            for ( auto e : orgRing( mesh.topology, v ) )
+            {
+                const auto f = mesh.topology.left( e );
+                if ( !f )
+                    continue;
+                if ( !settings.region || settings.region->test( f ) )
+                    inRegion = true;
+                const int p = facePart[f];
+                if ( p0 == -2 )
+                    p0 = p;
+                else if ( p != p0 )
+                    severalParts = true;
+            }
+            if ( severalParts )
+            {
+                for ( auto e : orgRing( mesh.topology, v ) )
+                    if ( const auto f = mesh.topology.left( e ); f && facePart[f] >= 0 )
+                        parts[facePart[f]].bdVerts.set( v );
+            }
+            else if ( limitedDeletion && p0 >= 0 && inRegion )
+                innerVertPart[v] = p0;
+        } );
+
+        if ( limitedDeletion )
+        {
+            // exclude the first level of inner vertices, because they cannot be all deleted without violating aspect ratio criterion
+            Vector<int, FaceId> innerFacePart( mesh.topology.faceSize(), -1 );
+            BitSetParallelFor( mesh.topology.getValidFaces(), [&]( FaceId f )
+            {
+                int p = -2;
+                for ( auto e : leftRing( mesh.topology, f ) )
+                {
+                    const int q = innerVertPart[mesh.topology.org( e )];
+                    if ( q < 0 || ( p != -2 && q != p ) )
+                        return;
+                    p = q;
+                }
+                innerFacePart[f] = p;
+            } );
+            BitSetParallelFor( mesh.topology.getValidVerts(), [&]( VertId v )
+            {
+                int p = -2;
+                for ( auto e : orgRing( mesh.topology, v ) )
+                {
+                    const auto f = mesh.topology.left( e );
+                    const int q = f ? innerFacePart[f] : -1;
+                    if ( q < 0 || ( p != -2 && q != p ) )
+                        return;
+                    p = q;
+                }
+                if ( p >= 0 )
+                    parts[p].removableVerts.set( v );
+            } );
         }
-        else
+
+        if ( settings.region )
+            ParallelFor( parts, [&]( size_t i ) { parts[i].region &= *settings.region; } );
+    }
+    else
+    {
+        // limit each part to region, find boundary vertices
+        ParallelFor( parts, [&]( size_t i )
         {
+            auto & faces = parts[i].region;
             if ( settings.region )
                 faces &= *settings.region;
             /// all boundary vertices of subdivision faces, including hole boundaries
             parts[i].bdVerts = getBoundaryVerts( mesh.topology, &faces );
-        }
-        if ( limitedDeletion )
-        {
-            // all inner vertices of the part
-            auto innerVerts0 = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
-            // exclude the first level of inner vertices, because they cannot be all deleted without violating aspect ratio criterion
-            auto innerFaces = getInnerFaces( mesh.topology, innerVerts0 );
-            parts[i].removableVerts = getInnerVerts( mesh.topology, innerFaces );
-        }
-    } );
+            if ( limitedDeletion )
+            {
+                // all inner vertices of the part
+                auto innerVerts0 = getIncidentVerts( mesh.topology, faces ) - parts[i].bdVerts;
+                // exclude the first level of inner vertices, because they cannot be all deleted without violating aspect ratio criterion
+                auto innerFaces = getInnerFaces( mesh.topology, innerVerts0 );
+                parts[i].removableVerts = getInnerVerts( mesh.topology, innerFaces );
+            }
+        } );
+    }
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
         return res;
-
-    /// these vertices can be deleted only after parallel parts processing
-    VertBitSet seqVerts;
-    if ( limitedDeletion )
-    {
-        seqVerts = mesh.topology.getValidVerts();
-        for ( int i = 0; i < parts.size(); ++i )
-            seqVerts -= parts[i].removableVerts;
-    }
 
     mesh.topology.preferEdges( stableEdges );
     if ( settings.progressCallback && !settings.progressCallback( 0.16f ) )

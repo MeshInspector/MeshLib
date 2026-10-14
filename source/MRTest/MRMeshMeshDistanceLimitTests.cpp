@@ -19,6 +19,7 @@
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRTriDist.h>
 #include <gtest/gtest.h>
@@ -444,6 +445,45 @@ TEST( MRMesh, findTriTriDistance )
 
     const auto td1 = findTriTriDistance( a, b, { .upDistLimitSq = td0.distSq + 0.1f, .upLimitCheck = UpLimitCheck::GreaterOrEqual } );
     EXPECT_EQ( td0.distSq, td1.distSq );
+
+    EXPECT_LT( distance( td0.aBary( a ).interpolate( a[0], a[1], a[2] ), td0.a ), 1e-3f );
+    EXPECT_LT( distance( td0.bBary( b ).interpolate( b[0], b[1], b[2] ), td0.b ), 1e-3f );
+}
+
+TEST( MRMesh, TriPointFromPoint )
+{
+    // a thin triangle, where the coordinates by Gram determinant lost the precision
+    const Vector3f v0{ 10, -90, 85 }, v1{ 10.0000219f, -48.2452545f, 112.298973f }, v2{ 10.000021f, -49.7307281f, 112.298973f };
+    const auto p = TriPointf( 0.19f, 0.096f ).interpolate( v0, v1, v2 );
+    EXPECT_LT( distance( TriPointf( p, v0, v1, v2 ).interpolate( v0, v1, v2 ), p ), 1e-4f );
+
+    // a point on edge [v1,v2] is placed exactly there
+    const auto q = 0.3f * v1 + 0.7f * v2;
+    const auto tq = TriPointf( q, v0, v1, v2, 0 );
+    EXPECT_EQ( tq.onEdge(), 0 );
+    EXPECT_LT( distance( tq.interpolate( v0, v1, v2 ), q ), 1e-4f );
+}
+
+// the closest points are on the edges between the bottom and the almost vertical walls of the tool,
+// so a closest point converted from its position to barycentric coordinates can get slightly inside a wall,
+// where the sign of the distance by the normal of the wall is arbitrary
+TEST( MRMesh, findCollisionStatus_EdgeOfWall )
+{
+    // the stock is a box slightly wider at the top, and the tool is a cylinder slightly wider at the bottom
+    auto stock = makeCube( { 100, 100, 50 }, { -90, -90, 85 } );
+    for ( auto & p : stock.points )
+        if ( p.z > 100 )
+            p += Vector3f( p.x > -40 ? 0.005f : -0.005f, p.y > -40 ? 0.005f : -0.005f, 0 );
+    const auto tool = makeCylinderAdvanced( 30.003f, 30, 0, 2 * PI_F, 30, 64 );
+    for ( float x : { -70.f, -40.f, -10.f } )
+        for ( int i = 0; i < 90; ++i )
+        {
+            // the tool 150 above the stock, hanging over its edge
+            const auto xf = AffineXf3f::translation( { x, -100, 285 } ) * AffineXf3f::linear( Matrix3f::rotation( Vector3f::plusZ(), i * PI_F / 45 ) );
+            const auto res = findDistance( stock, tool, &xf );
+            EXPECT_NEAR( res.distSq, sqr( 150.f ), 1.f );
+            EXPECT_EQ( findCollisionStatus( stock, tool, res, &xf ), MeshMeshCollisionStatus::BothOutside );
+        }
 }
 
 } // namespace MR

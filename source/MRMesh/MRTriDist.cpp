@@ -82,6 +82,7 @@ std::optional<TriTriDistanceResult<T>> projectBonA( const Triangle3<T>& a, const
                 res.b = b[point];
                 res.distSq = distanceSq( res.a, res.b );
                 res.overlap = false;
+                res.bEdge = std::int8_t( ( point + 2 ) % 3 ); // an edge with the vertex
                 return res;
             }
         }
@@ -105,7 +106,9 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     {
         .a = a[0],
         .b = b[0],
-        .distSq = distanceSq( a[0], b[0] )
+        .distSq = distanceSq( a[0], b[0] ),
+        .aEdge = 2, // edge [v0,v1] in TriPoint
+        .bEdge = 2
     };
 
     for ( int i = 0; i < 3; i++ )
@@ -128,6 +131,8 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
                 res.a = sd.a;
                 res.b = sd.b;
                 res.distSq = dd;
+                res.aEdge = std::int8_t( prev[i] ); // the edge opposite to the remaining vertex
+                res.bEdge = std::int8_t( prev[j] );
 
                 // a[prev[i]] and b[prev[j]] are remaining vertices of the triangles
                 // on top of the vertices from the considered edges
@@ -188,6 +193,7 @@ TriTriDistanceResult<T> findTriTriDistanceT( const Triangle3<T>& a, const Triang
     if ( auto maybeRes = projectBonA( b, a, res.overlap, params ) )
     {
         std::swap( maybeRes->a, maybeRes->b );
+        std::swap( maybeRes->aEdge, maybeRes->bEdge );
         return *maybeRes;
     }
 

@@ -169,6 +169,16 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
         || photometric == PHOTOMETRIC_RGB || photometric == PHOTOMETRIC_PALETTE;
     char emsg[1024] = {};
     res.decodable = TIFFRGBAImageOK( tiff, emsg ) != 0;
+    // libtiff multiplies the decoded colors by unassociated alpha, but not by associated alpha; declared associated in memory,
+    // the alpha keeps the colors as stored, as in Image; the values are copied, since libtiff frees the old ones first
+    uint16_t extraCount = 0;
+    const uint16_t* extra = nullptr;
+    if ( TIFFGetField( tiff, TIFFTAG_EXTRASAMPLES, &extraCount, &extra ) && extraCount > 0 && extra[0] == EXTRASAMPLE_UNASSALPHA )
+    {
+        std::vector<uint16_t> associated( extra, extra + extraCount );
+        associated[0] = EXTRASAMPLE_ASSOCALPHA;
+        TIFFSetField( tiff, TIFFTAG_EXTRASAMPLES, extraCount, associated.data() );
+    }
     if ( res.decodable && !( storable && plain ) )
     {
         res.info.type = ScalarType::UInt8;
@@ -347,9 +357,11 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     TIFFSetField( tiff, TIFFTAG_IMAGEWIDTH, uint32_t( info.dims.x ) );
     TIFFSetField( tiff, TIFFTAG_IMAGELENGTH, uint32_t( info.dims.y ) );
     TIFFSetField( tiff, TIFFTAG_BITSPERSAMPLE, sample->bits );
-    // ExtraSamples is not written, as before, so libtiff's RGBA reader takes the fourth sample as associated alpha
-    // and does not premultiply the colors by it
     TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, info.channels );
+    // the fourth channel is unassociated alpha, as in Image: the colors are not multiplied by it
+    const uint16_t unassociatedAlpha = EXTRASAMPLE_UNASSALPHA;
+    if ( info.channels == 4 )
+        TIFFSetField( tiff, TIFFTAG_EXTRASAMPLES, uint16_t( 1 ), &unassociatedAlpha );
     TIFFSetField( tiff, TIFFTAG_SAMPLEFORMAT, sample->format );
     TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, info.channels == 1 ? PHOTOMETRIC_MINISBLACK : PHOTOMETRIC_RGB );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );

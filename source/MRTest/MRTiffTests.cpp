@@ -5,19 +5,23 @@
 #include "MRMesh/MRDistanceMapLoad.h"
 #include "MRMesh/MRDistanceMapSave.h"
 #include "MRMesh/MRImage.h"
+#include "MRMesh/MRLog.h"
 #include "MRMesh/MRRasterLoad.h"
 #include "MRMesh/MRRasterSave.h"
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRUniqueTemporaryFolder.h"
 #include "MRPch/MRFmt.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <gtest/gtest.h>
+#include <spdlog/sinks/ostream_sink.h>
 
 #include <bit>
 #include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 
 namespace MR
 {
@@ -752,6 +756,29 @@ TEST( MRMesh, TiffRasterErrors )
     raster.info = { .dims = { 1, 1, 1 }, .type = ScalarType::UInt8, .channels = 2 };
     raster.data.resize( raster.info.dataSize() );
     EXPECT_FALSE( RasterSave::toTiff( raster, tmpFolder / "grayAlpha.tif" ).has_value() );
+}
+
+// libtiff's warnings and errors go to the log instead of stderr
+TEST( MRMesh, TiffMessagesToLog )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    // libtiff warns about the fourth sample of an RGB image without ExtraSamples when it reads the file
+    const auto rgba = tmpFolder / "rgba.tif";
+    writeTestTiff( rgba, { .size = { 1, 1 }, .samplesPerPixel = 4, .photometric = 2 }, { 255, 0, 0, 255 } );
+    const auto notTiff = tmpFolder / "text.tif";
+    std::ofstream( notTiff ) << "not a TIFF file";
+
+    std::ostringstream log;
+    const auto sink = std::make_shared<spdlog::sinks::ostream_sink_mt>( log );
+    sink->set_pattern( "%l %v" );
+    Logger::instance().addSink( sink );
+    EXPECT_TRUE( ImageLoad::fromTiff( rgba ).has_value() );
+    EXPECT_FALSE( ImageLoad::fromTiff( notTiff ).has_value() );
+    Logger::instance().removeSink( sink );
+
+    EXPECT_NE( log.str().find( "warning libtiff: TIFFReadDirectory: Sum of Photometric" ), std::string::npos ) << log.str();
+    EXPECT_NE( log.str().find( "error libtiff: " ), std::string::npos ) << log.str();
 }
 
 TEST( MRMesh, TiffDistanceMapSave )

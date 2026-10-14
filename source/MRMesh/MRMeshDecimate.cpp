@@ -249,7 +249,7 @@ bool MeshDecimator::initialize_()
     {
         // all region edges; a small region (e.g. a part of parallel decimation) collects them from its faces
         // instead of scanning every edge of the mesh, a large one is faster with the parallel scan
-        if ( settings_.region->count() * 8 < mesh_.topology.numValidFaces() )
+        if ( settings_.region->count() * 8 < mesh_.topology.faceSize() )
         {
             regionEdges_.clear();
             regionEdges_.resize( mesh_.topology.undirectedEdgeSize() );

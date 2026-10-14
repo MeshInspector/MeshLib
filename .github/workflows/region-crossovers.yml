@@ -81,6 +81,11 @@ jobs:
           d=$(cygpath -m "$PWD/install")
           echo "CMAKE_ARGS=-A x64 -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV
           echo "$(cygpath -w "$PWD/install/app/Release")" >> $GITHUB_PATH
+          # self-hosted Windows has no cmake on PATH, only the one bundled with Visual Studio
+          if ! command -v cmake >/dev/null; then
+            vs=$("/c/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe" -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)
+            echo "$vs\\Common7\\IDE\\CommonExtensions\\Microsoft\\CMake\\CMake\\bin" >> $GITHUB_PATH
+          fi
 
       # MRMesh's CMake config needs these; our self-hosted Mac builds MeshLib and has them already
       - name: macOS - dependencies

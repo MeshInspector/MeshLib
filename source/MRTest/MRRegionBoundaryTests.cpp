@@ -73,7 +73,8 @@ TEST( MRMesh, getRegionInnerVerts )
 // every function with a separate path for small sets must give what a test of every mesh element gives
 TEST( MRMesh, RegionBoundarySmallAndLargeSets )
 {
-    Mesh sphere = makeUVSphere( 1, 32, 32 );
+    // fine enough that the small set below is under the strictest walking limits (1/128 of the elements, 1/2048 in blocks)
+    Mesh sphere = makeUVSphere( 1, 128, 128 );
     const auto & t = sphere.topology;
     // a hole around the upper pole and a single deleted face
     FaceBitSet deleted( t.faceSize() );

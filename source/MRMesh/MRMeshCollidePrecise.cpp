@@ -531,6 +531,16 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         mp.mesh.topology.getTriVerts( lTri, lvc[0].id, lvc[1].id, lvc[2].id );
         mp.mesh.topology.getTriVerts( rTri, rvc[0].id, rvc[1].id, rvc[2].id );
 
+        // the triangles with two shared vertices (connected by multiple edges) can meet only along the segment between them,
+        // so they are skipped as the triangles with a shared edge
+        int numSharedVerts = 0;
+        for ( int i = 0; i < 3; ++i )
+            for ( int j = 0; j < 3; ++j )
+                if ( lvc[i].id == rvc[j].id )
+                    ++numSharedVerts;
+        if ( numSharedVerts >= 2 )
+            return;
+
         for ( int j = 0; j < 3; ++j )
         {
             const auto& lf = mp.mesh.points[lvc[j].id];

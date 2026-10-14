@@ -763,9 +763,9 @@ TEST( MRMesh, TiffMessagesToLog )
 {
     UniqueTemporaryFolder tmpFolder;
     ASSERT_TRUE( tmpFolder );
-    // libtiff warns about the fourth channel of a color image without ExtraSamples when it reads the file
+    // libtiff warns about the fourth sample of an RGB image without ExtraSamples when it reads the file
     const auto rgba = tmpFolder / "rgba.tif";
-    ASSERT_TRUE( ImageSave::toTiff( Image{ .pixels = { Color::red() }, .resolution = { 1, 1 } }, rgba ).has_value() );
+    writeTestTiff( rgba, { .size = { 1, 1 }, .samplesPerPixel = 4, .photometric = 2 }, { 255, 0, 0, 255 } );
     const auto notTiff = tmpFolder / "text.tif";
     std::ofstream( notTiff ) << "not a TIFF file";
 

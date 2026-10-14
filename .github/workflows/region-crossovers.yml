@@ -61,6 +61,11 @@ jobs:
           echo "CMAKE_ARGS=-G \"Visual Studio 17 2022\" -A x64 -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV
           echo "$(cygpath -w "$PWD/install/app/Release")" >> $GITHUB_PATH
 
+      # MRMesh's CMake config needs these; our self-hosted Mac builds MeshLib and has them already
+      - name: macOS - dependencies
+        if: matrix.name == 'macos-hosted'
+        run: brew install --quiet boost eigen fmt jsoncpp parallel-hashmap spdlog tbb tl-expected
+
       - name: macOS - MeshLib
         if: matrix.family == 'macos'
         working-directory: rc

@@ -321,9 +321,7 @@ TEST( MRMesh, TiffGeoTransform )
     ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );
     EXPECT_EQ( AffineXf3f( toWorld ), xf );
     std::optional<double> noData;
-    TiffLoadSettings tiffSettings;
-    tiffSettings.noData = &noData;
-    ASSERT_TRUE( RasterLoad::fromTiff( path, tiffSettings ).has_value() );
+    ASSERT_TRUE( RasterLoad::fromTiff( path, {}, { .noData = &noData } ).has_value() );
     EXPECT_EQ( noData, -9999. );
 
     // a file without the transformation gives the identity, and no value meaning no data
@@ -332,7 +330,7 @@ TEST( MRMesh, TiffGeoTransform )
     loaded = RasterLoad::fromAnySupportedFormat( path, { .xf = &loadedXf } );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loadedXf, AffineXf3f() );
-    ASSERT_TRUE( RasterLoad::fromTiff( path, tiffSettings ).has_value() );
+    ASSERT_TRUE( RasterLoad::fromTiff( path, {}, { .noData = &noData } ).has_value() );
     EXPECT_EQ( noData, std::nullopt );
 }
 

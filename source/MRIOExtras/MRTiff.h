@@ -15,15 +15,15 @@
 namespace MR
 {
 
-/// settings for loading rasters from .tiff format
-struct TiffLoadSettings : RasterLoadSettings
+namespace RasterLoad
+{
+
+/// TIFF-specific raster load parameters
+struct TiffLoadSettings
 {
     /// optional output: the value meaning no data (GDAL_NODATA) if the file has one, otherwise nullopt
     std::optional<double>* noData = nullptr;
 };
-
-namespace RasterLoad
-{
 
 /// loads the first image of a .tiff file as a raster with one layer:
 /// * gray, palette and RGB images keep the stored samples of any type (gray values, color indices or color components) as channels;
@@ -33,8 +33,8 @@ namespace RasterLoad
 ///   of 8 to 64 bits, otherwise loading fails;
 /// * the files compressed by the methods that libtiff does not support fail to load;
 /// * the rows keep the stored order whatever the Orientation tag says, also in the decoded formats
-MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const TiffLoadSettings& settings );
-MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings = {} );
+MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings = {},
+    const TiffLoadSettings& tiffSettings = {} );
 
 /// loads everything about the raster except its values from .tiff format
 MRIOEXTRAS_API Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path );

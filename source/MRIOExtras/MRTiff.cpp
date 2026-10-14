@@ -431,7 +431,7 @@ namespace MR
 namespace RasterLoad
 {
 
-Expected<Raster> fromTiff( const std::filesystem::path& path, const TiffLoadSettings& settings )
+Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings, const TiffLoadSettings& tiffSettings )
 {
     MR_TIMER;
     return readTiffFile( path, [&] ( TIFF* tiff, const TiffLayout& layout )
@@ -439,15 +439,10 @@ Expected<Raster> fromTiff( const std::filesystem::path& path, const TiffLoadSett
         auto res = readRaster( tiff, layout, settings.progress );
         if ( res && settings.xf )
             *settings.xf = readGeoTransform( tiff );
-        if ( res && settings.noData )
-            *settings.noData = readNoData( tiff );
+        if ( res && tiffSettings.noData )
+            *tiffSettings.noData = readNoData( tiff );
         return res;
     } );
-}
-
-Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings )
-{
-    return fromTiff( path, TiffLoadSettings{ settings } );
 }
 
 Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path )
@@ -455,7 +450,8 @@ Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path )
     return readTiffFile( path, [] ( TIFF*, const TiffLayout& layout ) -> Expected<RasterInfo> { return layout.info; } );
 }
 
-MR_ADD_RASTER_LOADER( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), fromTiff, infoFromTiff )
+MR_ADD_RASTER_LOADER( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ),
+    [] ( const std::filesystem::path& path, const RasterLoadSettings& settings ) { return fromTiff( path, settings ); }, infoFromTiff )
 
 } // namespace RasterLoad
 

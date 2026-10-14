@@ -332,22 +332,18 @@ TEST( MRMesh, TiffGeoTransform )
     DistanceMapToWorld toWorld;
     ASSERT_TRUE( DistanceMapLoad::fromTiff( path, { .distanceMapToWorld = &toWorld } ).has_value() );
     EXPECT_EQ( AffineXf3f( toWorld ), xf );
+    std::optional<double> noData;
+    ASSERT_TRUE( RasterLoad::fromTiff( path, {}, { .noData = &noData } ).has_value() );
+    EXPECT_EQ( noData, -9999. );
 
-    // GDAL_NODATA is a text tag
-    auto fileContents = [&path]
-    {
-        std::ifstream in( path, std::ios::binary );
-        return std::string( std::istreambuf_iterator<char>( in ), {} );
-    };
-    EXPECT_NE( fileContents().find( std::string( "-9999" ) + '\0' ), std::string::npos );
-
-    // a file without the transformation gives the identity
+    // a file without the transformation gives the identity, and no value meaning no data
     saveRes = RasterSave::toAnySupportedFormat( raster, path );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
     loaded = RasterLoad::fromAnySupportedFormat( path, { .xf = &loadedXf } );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loadedXf, AffineXf3f() );
-    EXPECT_EQ( fileContents().find( "-9999" ), std::string::npos );
+    ASSERT_TRUE( RasterLoad::fromTiff( path, {}, { .noData = &noData } ).has_value() );
+    EXPECT_EQ( noData, std::nullopt );
 }
 
 // without the transformation matrix, the GeoTIFF transformation is made of a tie point and the pixel scale
@@ -934,6 +930,42 @@ TEST( MRMesh, TiffDistanceMapSave )
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( std::vector<float>( loaded->data(), loaded->data() + 6 ), values );
     EXPECT_EQ( AffineXf3f( tifToWorld ), xf );
+}
+
+// the values of one channel equal to the value meaning no data become invalid in distance maps, NaN too
+TEST( MRMesh, TiffDistanceMapNoData )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "dem.tif";
+
+    const float nan = std::numeric_limits<float>::quiet_NaN();
+    const auto floats = toBytes( std::vector<float>{ 1.f, -9999.f, nan, 4.f } );
+    struct NoDataCase
+    {
+        Raster raster;
+        double noData;
+        std::vector<bool> valid;
+    };
+    const NoDataCase cases[] = {
+        { { .info = { .dims = { 4, 1, 1 }, .type = ScalarType::Float32 }, .data = floats }, -9999., { true, false, true, true } },
+        { { .info = { .dims = { 4, 1, 1 }, .type = ScalarType::Float32 }, .data = floats }, nan, { true, true, false, true } },
+        // integer samples are converted to floats first
+        { { .info = { .dims = { 2, 1, 1 }, .type = ScalarType::Int16 }, .data = toBytes( std::vector<int16_t>{ 1, -32768 } ) }, -32768., { true, false } },
+        // the value refers to the samples, not to the luma of colors
+        { { .info = { .dims = { 2, 1, 1 }, .type = ScalarType::UInt8, .channels = 3 }, .data = { 0, 0, 0, 10, 20, 30 } }, 0., { true, true } },
+    };
+    for ( const auto& c : cases )
+    {
+        TiffSaveSettings settings;
+        settings.noData = c.noData;
+        auto saveRes = RasterSave::toTiff( c.raster, path, settings );
+        ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+        auto dmap = DistanceMapLoad::fromTiff( path );
+        ASSERT_TRUE( dmap.has_value() ) << dmap.error();
+        for ( size_t i = 0; i < c.valid.size(); ++i )
+            EXPECT_EQ( dmap->isValid( i ), c.valid[i] ) << i;
+    }
 }
 
 TEST( MRMesh, TiffCancel )

@@ -18,6 +18,13 @@ namespace MR
 namespace RasterLoad
 {
 
+/// TIFF-specific raster load parameters
+struct TiffLoadSettings
+{
+    /// optional output: the value meaning no data (GDAL_NODATA) if the file has one, otherwise nullopt
+    std::optional<double>* noData = nullptr;
+};
+
 /// loads the first image of a .tiff file as a raster with one layer:
 /// * gray, palette and RGB images keep the stored samples of any type (gray values, color indices or color components) as channels;
 /// * libtiff decodes the other formats (gray with alpha, YCbCr, CMYK, less than 8 bits per sample, etc.) to four UInt8 channels
@@ -26,7 +33,8 @@ namespace RasterLoad
 ///   of 8 to 64 bits, otherwise loading fails;
 /// * the files compressed by the methods that libtiff does not support fail to load;
 /// * the rows keep the stored order whatever the Orientation tag says, also in the decoded formats
-MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings = {} );
+MRIOEXTRAS_API Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings = {},
+    const TiffLoadSettings& tiffSettings = {} );
 
 /// loads everything about the raster except its values from .tiff format
 MRIOEXTRAS_API Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path );
@@ -72,7 +80,8 @@ namespace DistanceMapLoad
 {
 
 /// loads the first image of a .tiff file: one channel is taken as is, three or more channels give the luma of the first three,
-/// see convertRasterToFloats; settings.distanceMapToWorld gets the GeoTIFF transformation, or the identity if the file has none
+/// see convertRasterToFloats; the values of one channel equal to the value meaning no data (GDAL_NODATA) are invalid;
+/// settings.distanceMapToWorld gets the GeoTIFF transformation, or the identity if the file has none
 MRIOEXTRAS_API Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const DistanceMapLoadSettings& settings = {} );
 [[deprecated( "Use fromTiff( path, settings )")]]
 MR_BIND_IGNORE inline Expected<DistanceMap> fromTiff( const std::filesystem::path& path, DistanceMapToWorld& params, ProgressCallback progressCb = {} )

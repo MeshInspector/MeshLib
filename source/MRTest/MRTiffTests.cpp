@@ -249,6 +249,16 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
     out.write( ( const char* )file.data(), std::streamsize( file.size() ) );
 }
 
+// returns whether a TIFF file in the native byte order has the directory entry of a SHORT tag with one value
+static bool hasTiffTag( const std::filesystem::path& path, uint16_t tag, uint16_t value )
+{
+    // the tag, its type SHORT, the count of values and the value padded to 4 bytes
+    const struct { uint16_t tag, type; uint32_t count; uint16_t value, padding; } entry{ tag, 3, 1, value, 0 };
+    std::ifstream in( path, std::ios::binary );
+    const std::string file( ( std::istreambuf_iterator<char>( in ) ), std::istreambuf_iterator<char>() );
+    return file.find( std::string( ( const char* )&entry, sizeof( entry ) ) ) != std::string::npos;
+}
+
 TEST( MRMesh, TiffTiledPartialTiles )
 {
     // the tiles in the last column and in the last row extend beyond the image
@@ -461,7 +471,7 @@ TEST( MRMesh, TiffImageFloat )
     EXPECT_EQ( loaded->pixels, expected );
 }
 
-// colors with alpha are loaded as saved
+// colors with alpha are loaded as saved: the alpha is unassociated, the colors are not multiplied by it
 TEST( MRMesh, TiffImageAlpha )
 {
     UniqueTemporaryFolder tmpFolder;
@@ -474,6 +484,7 @@ TEST( MRMesh, TiffImageAlpha )
     };
     auto saveRes = ImageSave::toTiff( image, path );
     ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+    EXPECT_TRUE( hasTiffTag( path, 338, 2 ) ); // ExtraSamples: unassociated alpha
     auto loaded = ImageLoad::fromTiff( path );
     ASSERT_TRUE( loaded.has_value() ) << loaded.error();
     EXPECT_EQ( loaded->pixels, image.pixels );
@@ -486,6 +497,12 @@ TEST( MRMesh, TiffImageAlpha )
     ASSERT_EQ( raster->data.size(), colors.size() * sizeof( Color ) );
     std::memcpy( (void*)colors.data(), raster->data.data(), raster->data.size() );
     EXPECT_EQ( colors, std::vector<Color>( { image.pixels[2], image.pixels[3], image.pixels[0], image.pixels[1] } ) );
+
+    // other files with unassociated alpha keep their colors too, which libtiff's decoder would multiply by the alpha
+    writeTestTiff( path, { .size = { 2, 1 }, .samplesPerPixel = 4, .photometric = 2, .extraSamples = { 2 } }, { 200, 100, 50, 128, 1, 2, 3, 0 } );
+    loaded = ImageLoad::fromTiff( path );
+    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+    EXPECT_EQ( loaded->pixels, std::vector<Color>( { Color( 200, 100, 50, 128 ), Color( 1, 2, 3, 0 ) } ) );
 
     const Image wrongSize{ .pixels = { Color::red() }, .resolution = { 2, 2 } };
     EXPECT_FALSE( ImageSave::toTiff( wrongSize, path ).has_value() );
@@ -514,6 +531,7 @@ TEST( MRMesh, TiffRasterRoundTrip )
         const auto path = tmpFolder / fmt::format( "raster{}_{}.tif", int( type ), channels );
         auto saveRes = RasterSave::toAnySupportedFormat( raster, path );
         ASSERT_TRUE( saveRes.has_value() ) << saveRes.error();
+        EXPECT_EQ( hasTiffTag( path, 338, 2 ), channels == 4 ); // ExtraSamples: unassociated alpha
 
         auto loaded = RasterLoad::fromAnySupportedFormat( path );
         ASSERT_TRUE( loaded.has_value() ) << loaded.error();

@@ -21,7 +21,7 @@ namespace RasterLoad
 /// loads the first image of a .tiff file as a raster with one layer:
 /// * gray, palette and RGB images keep the stored samples of any type (gray values, color indices or color components) as channels;
 /// * libtiff decodes the other formats (gray with alpha, YCbCr, CMYK, less than 8 bits per sample, etc.) to four UInt8 channels
-///   of RGBA colors;
+///   of RGBA colors, which are not multiplied by alpha unless the file stores them so (associated alpha);
 /// * the formats that libtiff cannot decode are read as stored too if each pixel has one sample or three or more interleaved samples
 ///   of 8 to 64 bits, otherwise loading fails;
 /// * the files compressed by the methods that libtiff does not support fail to load;
@@ -43,8 +43,8 @@ struct TiffSaveSettings : RasterSaveSettings
 namespace RasterSave
 {
 
-/// saves a raster with one layer in .tiff format: one channel of gray values, or three or four channels of RGB or RGBA colors,
-/// of any type from UInt8 to Float64
+/// saves a raster with one layer in .tiff format: one channel of gray values, or three or four channels of RGB or RGBA colors
+/// (unassociated alpha: the colors are not multiplied by it), of any type from UInt8 to Float64
 MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const TiffSaveSettings& settings );
 MRIOEXTRAS_API Expected<void> toTiff( const Raster& raster, const std::filesystem::path& path, const RasterSaveSettings& settings = {} );
 
@@ -54,7 +54,8 @@ namespace ImageLoad
 {
 
 /// loads the first image of a .tiff file: libtiff decodes the formats it supports,
-/// the others are loaded by RasterLoad::fromTiff and converted by convertRasterToImage
+/// the others are loaded by RasterLoad::fromTiff and converted by convertRasterToImage;
+/// the colors are not multiplied by alpha unless the file stores them so (associated alpha)
 MRIOEXTRAS_API Expected<Image> fromTiff( const std::filesystem::path& path );
 
 } // namespace ImageLoad
@@ -62,7 +63,7 @@ MRIOEXTRAS_API Expected<Image> fromTiff( const std::filesystem::path& path );
 namespace ImageSave
 {
 
-/// saves in .tiff format
+/// saves in .tiff format with unassociated alpha, as in Image: the colors are not multiplied by it
 MRIOEXTRAS_API Expected<void> toTiff( const Image& image, const std::filesystem::path& path );
 
 } // namespace ImageSave

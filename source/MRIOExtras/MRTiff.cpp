@@ -15,7 +15,9 @@
 
 #include <tiffio.h>
 
+#include <algorithm>
 #include <bit>
+#include <cmath>
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
@@ -306,6 +308,27 @@ AffineXf3f readGeoTransform( TIFF* tiff )
     return AffineXf3f( Matrix3f::scale( Vector3f( scale ) ), Vector3f( tiePoints[1] - mult( scale, tiePoints[0] ) ) );
 }
 
+// reads the value meaning no data, which GDAL writes as text, e.g. "-9999" or "nan"; libtiff passes the length of the text too
+// if the tag is not registered
+std::optional<double> readNoData( TIFF* tiff )
+{
+    const auto* field = TIFFFindField( tiff, cGdalNoDataTag, TIFF_ANY );
+    if ( !field || TIFFFieldDataType( field ) != TIFF_ASCII )
+        return {};
+    const char* text = nullptr;
+    uint32_t length = 0;
+    const bool read = TIFFFieldPassCount( field )
+        ? TIFFFieldReadCount( field ) == TIFF_VARIABLE2 && TIFFGetField( tiff, cGdalNoDataTag, &length, &text )
+        : TIFFGetField( tiff, cGdalNoDataTag, &text ) != 0;
+    if ( !read || !text )
+        return {};
+    char* end = nullptr;
+    const double value = std::strtod( text, &end );
+    if ( end == text )
+        return {};
+    return value;
+}
+
 // as the old image loader did, libtiff decodes the images it can, the others are converted from the raster
 Expected<Image> readImage( TIFF* tiff, const TiffLayout& layout )
 {
@@ -408,7 +431,7 @@ namespace MR
 namespace RasterLoad
 {
 
-Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings )
+Expected<Raster> fromTiff( const std::filesystem::path& path, const TiffLoadSettings& settings )
 {
     MR_TIMER;
     return readTiffFile( path, [&] ( TIFF* tiff, const TiffLayout& layout )
@@ -416,8 +439,15 @@ Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSe
         auto res = readRaster( tiff, layout, settings.progress );
         if ( res && settings.xf )
             *settings.xf = readGeoTransform( tiff );
+        if ( res && settings.noData )
+            *settings.noData = readNoData( tiff );
         return res;
     } );
+}
+
+Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings )
+{
+    return fromTiff( path, TiffLoadSettings{ settings } );
 }
 
 Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path )
@@ -500,6 +530,15 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const Distanc
                 .and_then( [&] ( const Raster& raster ) { return convertRasterToFloats( raster, res.data(), res.size() ); } );
         if ( !readRes )
             return unexpected( std::move( readRes.error() ) );
+        // the value meaning no data refers to the stored samples, so the luma of colors is not compared with it
+        if ( const auto noData = readNoData( tiff ); noData && layout.info.channels == 1 )
+        {
+            const auto invalid = float( *noData );
+            if ( std::isnan( invalid ) )
+                std::replace_if( res.data(), res.data() + res.size(), [] ( float v ) { return std::isnan( v ); }, DistanceMap::NOT_VALID_VALUE );
+            else if ( invalid != DistanceMap::NOT_VALID_VALUE )
+                std::replace( res.data(), res.data() + res.size(), invalid, DistanceMap::NOT_VALID_VALUE );
+        }
         if ( settings.distanceMapToWorld )
             *settings.distanceMapToWorld = readGeoTransform( tiff );
         return res;

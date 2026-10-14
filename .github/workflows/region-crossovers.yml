@@ -55,7 +55,7 @@ jobs:
         working-directory: rc
         run: |
           curl -sSfL -o meshlib.zip "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/MeshLibDistVS22_${MESHLIB_VER}.zip"
-          tar -xf meshlib.zip install/include install/lib/Release install/app/Release
+          "$SYSTEMROOT/System32/tar.exe" -xf meshlib.zip install/include install/lib/Release install/app/Release
           rm meshlib.zip
           d=$(cygpath -m "$PWD/install")
           echo "CMAKE_ARGS=-G \"Visual Studio 17 2022\" -A x64 -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV

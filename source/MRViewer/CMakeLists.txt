@@ -89,7 +89,8 @@ IF(APPLE)
   )
 
   find_library(APPKIT_LIBRARY AppKit REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY})
+  find_library(QUARTZCORE_LIBRARY QuartzCore REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PRIVATE ${APPKIT_LIBRARY} ${QUARTZCORE_LIBRARY})
 ENDIF()
 
 IF(CMAKE_SYSTEM_NAME STREQUAL "Linux")

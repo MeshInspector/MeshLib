@@ -349,6 +349,12 @@ jobs:
             --build cpp-examples-build \
             --parallel $(sysctl -n hw.physicalcpu)
 
+      - name: Build and test Rust bindings
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
       - name: Install Java
         if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         uses: ./.github/actions/setup-java

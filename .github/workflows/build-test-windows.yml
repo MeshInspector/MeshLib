@@ -110,6 +110,13 @@ jobs:
           install-flags: '--write-s3'
           internal-build: ${{ inputs.internal_build }}
 
+      # A TLS handshake through vcpkg's OpenSSL, which crashed on arm64 before the triplet's /Gs (see it)
+      - name: Check TLS handshake with vcpkg's Python
+        if: ${{ matrix.arch == 'arm64' }}
+        run: |
+          & "C:\vcpkg\installed\${{ matrix.vcpkg_triplet }}\tools\python3\python.exe" -c "import ssl, urllib.request; urllib.request.urlopen('https://github.com').read(1); print(ssl.OPENSSL_VERSION, 'handshake ok')"
+          exit $LASTEXITCODE
+
       - name: Resolve CUDA major/minor
         if: ${{ env.CUDA_VERSION != '' }}
         shell: bash
@@ -410,11 +417,18 @@ jobs:
             -DMESHLIB_LIB_DIRS="%CD%/source/%MR_ARCH%/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
           cmake --build cpp-examples-build -j || exit /b 1
 
+        # This consumes the JSON created by generating the C bindings, like the C# step.
+      - name: Build and test Rust bindings
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
+        uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}\source\${{ env.MR_ARCH }}\${{ matrix.config }}
+          windows-vsdevcmd: call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ env.VS_DEV_ARGS }} -vcvars_ver=${{ env.VCVARS_VER }}
+
       - name: Install Java
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
         uses: ./.github/actions/setup-java
 
-        # This consumes the JSON created by generating the C bindings, like the C# step.
       - name: Generate and build Java bindings, examples and tests
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
         shell: cmd

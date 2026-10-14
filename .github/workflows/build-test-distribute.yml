@@ -318,6 +318,28 @@ jobs:
           pattern: Distributives*
           merge-multiple: true
 
+      # The Rust crate is sources only (the C libraries come from the platform packages), one archive for all platforms:
+      # the generated `src` from the Ubuntu job, the committed `Cargo.toml` and `build.rs` from the checkout.
+      - name: Download Rust bindings
+        continue-on-error: true # The job producing it may be disabled for this run.
+        uses: actions/download-artifact@v8
+        with:
+          name: RustBindings
+          path: MeshLibRust/src
+
+      - name: Pack Rust bindings
+        run: |
+          if [ -d MeshLibRust/src ]; then
+            cp source/MeshLibRust/Cargo.toml source/MeshLibRust/build.rs MeshLibRust/
+            # The crate version is the MeshLib version. Cargo wants semver, so the fourth number becomes build metadata: v3.1.4.528 -> 3.1.4+528.
+            VERSION="${{ needs.config.outputs.app_version }}"
+            VERSION="${VERSION#v}"
+            CRATE_VERSION="$(echo "$VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$/\1+\2/')"
+            sed -i "s/^version = .*/version = \"$CRATE_VERSION\"/" MeshLibRust/Cargo.toml
+            grep '^version' MeshLibRust/Cargo.toml
+            zip -qr meshlib_rust_bindings.zip MeshLibRust
+          fi
+
       - name: Rename Distributives
         run: |
           shopt -s nullglob

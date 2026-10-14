@@ -19,6 +19,10 @@ class MeshDecimate
         }
         Mesh mesh = loaded.value_mut();
 
+        // Repack mesh optimally.
+        // It's not necessary but highly recommended to achieve the best performance in parallel processing.
+        mesh.packOptimally(null);
+
         // Setup decimate parameters.
         DecimateSettings settings = new DecimateSettings();
 
@@ -26,9 +30,9 @@ class MeshDecimate
         settings.setMaxDeletedFaces(1000); // Number of faces to be deleted.
         settings.setMaxError(0.05f); // Maximum error when decimation stops.
 
-        // Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss.
-        // Recommended to set to the number of available CPU cores or more for the best performance.
-        settings.setSubdivideParts(64);
+        // Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
+        // A value close to the number of CPU cores is usually the fastest; much larger values add per-part overhead.
+        settings.setSubdivideParts(16);
 
         // Decimate mesh.
         DecimateResult result = Functions.decimateMesh(mesh, settings);

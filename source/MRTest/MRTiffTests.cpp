@@ -498,11 +498,15 @@ TEST( MRMesh, TiffImageAlpha )
     std::memcpy( (void*)colors.data(), raster->data.data(), raster->data.size() );
     EXPECT_EQ( colors, std::vector<Color>( { image.pixels[2], image.pixels[3], image.pixels[0], image.pixels[1] } ) );
 
-    // other files with unassociated alpha keep their colors too, which libtiff's decoder would multiply by the alpha
-    writeTestTiff( path, { .size = { 2, 1 }, .samplesPerPixel = 4, .photometric = 2, .extraSamples = { 2 } }, { 200, 100, 50, 128, 1, 2, 3, 0 } );
-    loaded = ImageLoad::fromTiff( path );
-    ASSERT_TRUE( loaded.has_value() ) << loaded.error();
-    EXPECT_EQ( loaded->pixels, std::vector<Color>( { Color( 200, 100, 50, 128 ), Color( 1, 2, 3, 0 ) } ) );
+    // other files with unassociated alpha keep their colors too, which libtiff's decoder would multiply by the alpha,
+    // and so do the files without ExtraSamples, as earlier versions saved them
+    for ( const auto& extraSamples : { std::vector<uint16_t>{ 2 }, std::vector<uint16_t>{} } )
+    {
+        writeTestTiff( path, { .size = { 2, 1 }, .samplesPerPixel = 4, .photometric = 2, .extraSamples = extraSamples }, { 200, 100, 50, 128, 1, 2, 3, 0 } );
+        loaded = ImageLoad::fromTiff( path );
+        ASSERT_TRUE( loaded.has_value() ) << loaded.error();
+        EXPECT_EQ( loaded->pixels, std::vector<Color>( { Color( 200, 100, 50, 128 ), Color( 1, 2, 3, 0 ) } ) ) << extraSamples.size() << " extra samples";
+    }
 
     const Image wrongSize{ .pixels = { Color::red() }, .resolution = { 2, 2 } };
     EXPECT_FALSE( ImageSave::toTiff( wrongSize, path ).has_value() );

@@ -361,7 +361,7 @@ jobs:
           merge-multiple: true
 
       # The Rust crate is sources only (the C libraries come from the platform packages), and `compare-rust-bindings`
-      # checked that all platforms generated the same one, so any of them can be published.
+      # checked that all platforms generated the same `src`, so any of them goes with the committed manifest.
       - name: Download Rust bindings
         uses: actions/download-artifact@v8
         with:
@@ -373,7 +373,9 @@ jobs:
           shopt -s nullglob
           CRATES=(rust_bindings/RustBindings-*)
           if [ ${#CRATES[@]} -gt 0 ]; then
-            cp -r "${CRATES[0]}" MeshLibRust
+            mkdir MeshLibRust
+            cp source/MeshLibRust/Cargo.toml source/MeshLibRust/build.rs MeshLibRust/
+            cp -r "${CRATES[0]}" MeshLibRust/src
             zip -qr meshlib_rust_bindings.zip MeshLibRust
           fi
 

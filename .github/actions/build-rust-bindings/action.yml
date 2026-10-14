@@ -63,15 +63,13 @@ runs:
         ./examples/rust-examples/target/debug/MeshBoolean
         cargo test --manifest-path source/MRTestRust/Cargo.toml
 
-    # The crate must come out the same on every platform. `upload-distributions` compares them and publishes one.
+    # The generated sources must come out the same on every platform, `compare-rust-bindings` checks that.
+    # Only `src`: the committed `Cargo.toml` and `build.rs` get CRLF on a Windows checkout.
     - name: Upload the generated crate
       uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.artifact-name || format('RustBindings-{0}-{1}', runner.os, runner.arch) }}
-        path: |
-          source/MeshLibRust/Cargo.toml
-          source/MeshLibRust/build.rs
-          source/MeshLibRust/src
+        path: source/MeshLibRust/src
         retention-days: 1
 
     - name: Build and run Rust examples and tests (Windows)

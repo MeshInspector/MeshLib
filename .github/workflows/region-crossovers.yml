@@ -30,7 +30,7 @@ jobs:
           import json, os, re
           all = [
               {"name": "linux-hosted",   "family": "linux",   "runner": "ubuntu-24.04"},
-              {"name": "linux-self",     "family": "linux",   "runner": ["self-hosted", "gha-runner-linux1"]},
+              {"name": "linux-self",     "family": "linux",   "runner": ["self-hosted", "Linux", "georgia"]},
               {"name": "windows-hosted", "family": "windows", "runner": "windows-2025"},
               {"name": "windows-self",   "family": "windows", "runner": ["self-hosted", "georgiawin-mi"]},
               {"name": "macos-hosted",   "family": "macos",   "runner": "macos-15"},

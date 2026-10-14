@@ -141,11 +141,11 @@ TEST( MRMesh, RegionBoundarySmallAndLargeSets )
         {
             const auto o = t.org( ue ), d = t.dest( ue );
             innerEdgesOfVerts.set( ue, o && d && verts.test( o ) && verts.test( d ) );
-            bool near = incEdges.test( ue );
+            bool touches = incEdges.test( ue );
             for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
                 for ( auto ei : orgRing( t, e ) )
-                    near = near || incEdges.test( ei.undirected() );
-            edgesNearEdges.set( ue, near );
+                    touches = touches || incEdges.test( ei.undirected() );
+            edgesNearEdges.set( ue, touches );
         }
         EXPECT_EQ( getInnerEdges( t, verts ), innerEdgesOfVerts );
         EXPECT_EQ( getIncidentEdges( t, incEdges ), edgesNearEdges );
@@ -167,13 +167,13 @@ TEST( MRMesh, RegionBoundarySmallAndLargeSets )
     };
 
     // small sets: a few faces next to the hole, the deleted face and an id past the last face
-    FaceBitSet small( t.faceSize() + 10 );
+    FaceBitSet smallSet( t.faceSize() + 10 );
     for ( auto f : t.getValidFaces() )
-        if ( sphere.triCenter( f ).z > 0.8f && small.count() < 20 )
-            small.set( f );
-    small.set( 700_f );
-    small.set( FaceId( t.faceSize() + 5 ) );
-    check( small, "small" );
+        if ( sphere.triCenter( f ).z > 0.8f && smallSet.count() < 20 )
+            smallSet.set( f );
+    smallSet.set( 700_f );
+    smallSet.set( FaceId( t.faceSize() + 5 ) );
+    check( smallSet, "small" );
 
     // a large region takes the scans of the whole mesh
     FaceBitSet large( t.faceSize() );

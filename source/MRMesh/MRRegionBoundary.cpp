@@ -669,9 +669,9 @@ FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & vert
     MR_TIMER;
     FaceBitSet res( topology.faceSize() );
     // an inner face is incident to the vertices, so a small set needs to check only its incident faces
-    const bool small = isSmall( verts.count(), topology.vertSize(), 32 );
-    const FaceBitSet candidates = small ? getIncidentFaces( topology, verts ) : FaceBitSet{};
-    BitSetParallelFor( small ? candidates : topology.getValidFaces(), [&]( FaceId f )
+    const bool smallSet = isSmall( verts.count(), topology.vertSize(), 32 );
+    const FaceBitSet candidates = smallSet ? getIncidentFaces( topology, verts ) : FaceBitSet{};
+    BitSetParallelFor( smallSet ? candidates : topology.getValidFaces(), [&]( FaceId f )
     {
         bool inner = true;
         for ( auto e : leftRing( topology, f ) )

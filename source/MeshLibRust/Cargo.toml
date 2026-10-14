@@ -1,0 +1,10 @@
+[package]
+name = "meshlib"
+# The release archive gets the MeshLib version here (`3.1.4+528` for v3.1.4.528), see `upload-distributions`. A local build has none.
+version = "0.0.0"
+edition = "2021"
+rust-version = "1.82"
+build = "build.rs"
+
+[lib]
+path = "src/lib.rs"

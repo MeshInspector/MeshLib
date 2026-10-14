@@ -1,0 +1,22 @@
+# Examples of using the generated Rust bindings. Generate them first with `make -f scripts/mrbind/generate.mk TARGET=rust`,
+# then build with `MESHLIB_LIB_DIR=<directory with the MeshLib shared libraries> cargo build`.
+[package]
+name = "rust-examples"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+meshlib = { path = "../../source/MeshLibRust" }
+
+[[bin]]
+name = "MeshBoolean"
+path = "MeshBoolean.dox.rs"
+
+[[bin]]
+name = "MeshDecimate"
+path = "MeshDecimate.dox.rs"
+
+[[bin]]
+name = "MeshLoadSave"
+path = "MeshLoadSave.dox.rs"

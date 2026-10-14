@@ -417,6 +417,14 @@ jobs:
             -DMESHLIB_LIB_DIRS="%CD%/source/%MR_ARCH%/${{matrix.config}};%VCPKG_ROOT%/installed/%VCPKG_TARGET_TRIPLET%/lib" || exit /b 1
           cmake --build cpp-examples-build -j || exit /b 1
 
+        # This consumes the JSON created by generating the C bindings, like the C# step.
+      - name: Build and test Rust bindings
+        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
+        uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}\source\${{ env.MR_ARCH }}\${{ matrix.config }}
+          windows-vsdevcmd: call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ env.VS_DEV_ARGS }} -vcvars_ver=${{ env.VCVARS_VER }}
+
       - name: Build C examples
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}
         shell: cmd

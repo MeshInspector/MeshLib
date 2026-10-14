@@ -15,6 +15,7 @@ if(DEFINED MESHLIB_INCLUDE_DIRS AND DEFINED MESHLIB_LIB_DIRS)
   target_link_libraries(region_crossovers PRIVATE MRMesh)
 elseif(DEFINED MRMESH_CONFIG_DIR)
   # only MRMesh's config, so other MeshLib components' dependencies (OpenVDB, ...) are not needed
+  list(APPEND CMAKE_MODULE_PATH "${MRMESH_CONFIG_DIR}/Modules") # MeshLib's Find modules (phmap, ...), as meshlib-config does
   find_package(MRMesh CONFIG REQUIRED PATHS ${MRMESH_CONFIG_DIR} NO_DEFAULT_PATH)
   target_link_libraries(region_crossovers PRIVATE MeshLib::MRMesh)
 else()

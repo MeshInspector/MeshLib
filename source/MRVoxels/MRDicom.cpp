@@ -167,12 +167,11 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
     }
     if ( data.voxelSize[0] == 0.0f )
     {
-        // use "spacingVec.empty()" instead of "spacing == (1,1,1)" to handle case when spacing is actually (1,1,1)
-        auto spacingVec = gdcm::ImageHelper::GetSpacingValue( ir.GetFile() );
         const double* spacing = gimage.GetSpacing();
-        if ( spacingVec.empty() && ds.FindDataElement( gdcm::Keywords::PixelSpacing::GetTag() ) )
+        // gdcm returns spacing 1 when it cannot find the spacing, e.g. it reads Enhanced SOP classes only from the functional groups,
+        // while single-frame Enhanced CT slices without them (OnDemand3D) have it in the top-level element as classic CT
+        if ( spacing[0] == 1 && spacing[1] == 1 && ds.FindDataElement( gdcm::Keywords::PixelSpacing::GetTag() ) )
         {
-            // gdcm was unable to find the spacing, so find it by ourselves
             const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::PixelSpacing::GetTag() );
             gdcm::Keywords::PixelSpacing desc;
             desc.SetFromDataElement( de );
@@ -234,9 +233,22 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
         if ( rescaleType != "HU" && rescaleType != "HU_MOD" )
             spdlog::warn( "DICOM is in unknown units: {}", rescaleType );
     }
+    double slope = gimage.GetSlope();
+    double intercept = gimage.GetIntercept();
+    if ( slope == 1 && intercept == 0 )
+    {
+        // gdcm returns identity when it cannot find the rescale (see the spacing above)
+        gdcm::Keywords::RescaleSlope slopeAt = { 1 };
+        slopeAt.SetFromDataSet( ds );
+        gdcm::Keywords::RescaleIntercept interceptAt = { 0 };
+        interceptAt.SetFromDataSet( ds );
+        if ( slopeAt.GetValue() != 0 ) // as gdcm, ignore zero slope
+            slope = slopeAt.GetValue();
+        intercept = interceptAt.GetValue();
+    }
     auto scalarType = convertToScalarType( gimage.GetPixelFormat() );
-    auto caster = [k = static_cast<float>( gimage.GetSlope() ),
-                   b = static_cast<float>( gimage.GetIntercept() ),
+    auto caster = [k = static_cast<float>( slope ),
+                   b = static_cast<float>( intercept ),
                    scalarType] ( const char* c ) {
         return visitScalarType( [k, b] ( auto val ) -> float { return k * static_cast<float>( val ) + b; }, scalarType, c );
     };
@@ -482,19 +494,19 @@ SeriesInfo sortDICOMFiles( std::vector<std::filesystem::path>& files, unsigned m
             std::ifstream ifs( files[i], std::ios_base::binary );
             ir.SetStream( ifs );
             ir.ReadSelectedTags( {
-                gdcm::Tag( 0x0002, 0x0002 ),
-                gdcm::Tag( 0x0008, 0x0016 ),
                 gdcm::Keywords::InstanceNumber::GetTag(),
                 gdcm::Keywords::ImagePositionPatient::GetTag() } );
+            const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
 
             SliceInfo sl;
             sl.fileNum = (int)i;
-            const auto origin = gdcm::ImageHelper::GetOriginValue( ir.GetFile() );
-            sl.z = origin[2];
-            sl.imagePos = { origin[0], origin[1], origin[2] };
+            // not gdcm::ImageHelper::GetOriginValue, which reads Enhanced SOP classes only from the functional groups
+            gdcm::Keywords::ImagePositionPatient origin = { { 0, 0, 0 } };
+            origin.SetFromDataSet( ds );
+            sl.z = origin.GetValue( 2 );
+            sl.imagePos = { origin.GetValue( 0 ), origin.GetValue( 1 ), origin.GetValue( 2 ) };
 
             // if Instance Number is available then sort by it
-            const gdcm::DataSet& ds = ir.GetFile().GetDataSet();
             if( ds.FindDataElement( gdcm::Keywords::InstanceNumber::GetTag() ) )
             {
                 const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::InstanceNumber::GetTag() );

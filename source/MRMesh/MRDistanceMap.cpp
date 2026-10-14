@@ -27,7 +27,6 @@ DistanceMap::DistanceMap( size_t resX, size_t resY )
     : RectIndexer( { (int)resX, (int)resY } )
     , data_( size(), NOT_VALID_VALUE )
 {
-    invalidateAll();
 }
 
 bool DistanceMap::isValid( size_t x, size_t y ) const

@@ -24,6 +24,7 @@
     <ClCompile Include="MRAlphaShapeTests.cpp" />
     <ClCompile Include="MRBase64Tests.cpp" />
     <ClCompile Include="MRShortcutManagerTests.cpp" />
+    <ClCompile Include="MRRibbonIconsTests.cpp" />
     <ClCompile Include="MRBestFitTests.cpp" />
     <ClCompile Include="MRBezierTests.cpp" />
     <ClCompile Include="MRBitSetTests.cpp" />
@@ -136,6 +137,7 @@
     <ClCompile Include="MRNormalDenoisingTests.cpp" />
     <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
+    <ClCompile Include="MRRasterTests.cpp" />
     <ClCompile Include="MRRayBoxIntersectionTests.cpp" />
     <ClCompile Include="MRRectIndexerTests.cpp" />
     <ClCompile Include="MRRegionBoundaryTests.cpp" />
@@ -146,7 +148,7 @@
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />
     <ClCompile Include="MRMimallocRedirectTests.cpp" />
-    <ClCompile Include="MRTiffIOTests.cpp" />
+    <ClCompile Include="MRTiffTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\MREmbeddedPython\MREmbeddedPython.vcxproj">

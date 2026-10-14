@@ -154,6 +154,9 @@
     <ClInclude Include="MRScalarConvert.h" />
     <ClInclude Include="MRImageLoad.h" />
     <ClInclude Include="MRImageSave.h" />
+    <ClInclude Include="MRRaster.h" />
+    <ClInclude Include="MRRasterLoad.h" />
+    <ClInclude Include="MRRasterSave.h" />
     <ClInclude Include="MRInnerShell.h" />
     <ClInclude Include="MRInSphere.h" />
     <ClInclude Include="MRIOParsing.h" />
@@ -282,7 +285,6 @@
     <ClInclude Include="MRTbbTaskArenaAndGroup.h" />
     <ClInclude Include="MRTelemetry.h" />
     <ClInclude Include="MRTextureColors.h" />
-    <ClInclude Include="MRTiffIO.h" />
     <ClInclude Include="MRRectIndexer.h" />
     <ClInclude Include="MRRestoringStreamsSink.h" />
     <ClInclude Include="MRSceneSettings.h" />
@@ -588,6 +590,9 @@
     <ClCompile Include="MRIdentifyVertices.cpp" />
     <ClCompile Include="MRImageLoad.cpp" />
     <ClCompile Include="MRImageSave.cpp" />
+    <ClCompile Include="MRRaster.cpp" />
+    <ClCompile Include="MRRasterLoad.cpp" />
+    <ClCompile Include="MRRasterSave.cpp" />
     <ClCompile Include="MRImproveSampling.cpp" />
     <ClCompile Include="MRInnerShell.cpp" />
     <ClCompile Include="MRInSphere.cpp" />
@@ -697,7 +702,6 @@
     <ClCompile Include="MRTelemetry.cpp" />
     <ClCompile Include="MRTelemetryStlHead.cpp" />
     <ClCompile Include="MRTextureColors.cpp" />
-    <ClCompile Include="MRTiffIO.cpp" />
     <ClCompile Include="MRRectIndexer.cpp" />
     <ClCompile Include="MRSceneColors.cpp" />
     <ClCompile Include="MRMeshComponents.cpp" />

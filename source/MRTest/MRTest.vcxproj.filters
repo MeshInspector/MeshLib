@@ -196,6 +196,9 @@
     <ClCompile Include="MRShortcutManagerTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRRibbonIconsTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRContourTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -373,7 +376,10 @@
     <ClCompile Include="MRFastIntTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRTiffIOTests.cpp">
+    <ClCompile Include="MRTiffTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MRRasterTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRScalarConvertTests.cpp">

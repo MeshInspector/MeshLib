@@ -732,6 +732,10 @@ class ConeObject;
 struct LoadedObjects;
 
 struct Image;
+struct RasterInfo;
+struct Raster;
+struct RasterLoadSettings;
+struct RasterSaveSettings;
 class AnyVisualizeMaskEnum;
 
 class HistoryAction;

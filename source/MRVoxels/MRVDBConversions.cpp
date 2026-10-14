@@ -264,7 +264,7 @@ VdbVolume floatGridToVdbVolume( FloatGrid grid )
 }
 
 template <>
-void putSimpleVolumeInDenseGrid(
+MRVOXELS_API void putSimpleVolumeInDenseGrid(
         openvdb::FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
@@ -283,7 +283,7 @@ void putSimpleVolumeInDenseGrid(
 }
 
 template <>
-void putSimpleVolumeInDenseGrid(
+MRVOXELS_API void putSimpleVolumeInDenseGrid(
         FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )
@@ -320,7 +320,7 @@ void putVolumeInDenseGrid(
 }
 
 template <>
-void putSimpleVolumeInDenseGrid(
+MRVOXELS_API void putSimpleVolumeInDenseGrid(
         openvdb::FloatGrid::Accessor& gridAccessor,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb
     )

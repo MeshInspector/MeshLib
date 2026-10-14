@@ -2,5 +2,3 @@
 
 #cmakedefine MESHLIB_VERSION "@MESHLIB_VERSION@"
 #cmakedefine MR_PLATFORM "@MR_PLATFORM@"
-
-#cmakedefine MRMESH_NO_TIFF

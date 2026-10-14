@@ -4,3 +4,9 @@ set(VCPKG_LIBRARY_LINKAGE dynamic)
 set(VCPKG_DISABLE_COMPILER_TRACKING ON)
 set(VCPKG_CXX_FLAGS_DEBUG "${VCPKG_CXX_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
 set(VCPKG_C_FLAGS_DEBUG "${VCPKG_C_FLAGS_DEBUG} /D_ITERATOR_DEBUG_LEVEL=0")
+
+# https://developercommunity.visualstudio.com/t/ARM64-O2-Gs0:-prologue-calls-__chks/11146442
+if(PORT STREQUAL "openssl")
+    set(VCPKG_C_FLAGS_RELEASE "${VCPKG_C_FLAGS_RELEASE} /Gs")
+    set(VCPKG_CXX_FLAGS_RELEASE "${VCPKG_CXX_FLAGS_RELEASE} /Gs") # vcpkg requires both or neither
+endif()

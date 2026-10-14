@@ -110,6 +110,13 @@ jobs:
           install-flags: '--write-s3'
           internal-build: ${{ inputs.internal_build }}
 
+      # A TLS handshake through vcpkg's OpenSSL, which crashed on arm64 before the triplet's /Gs (see it)
+      - name: Check TLS handshake with vcpkg's Python
+        if: ${{ matrix.arch == 'arm64' }}
+        run: |
+          & "C:\vcpkg\installed\${{ matrix.vcpkg_triplet }}\tools\python3\python.exe" -c "import ssl, urllib.request; urllib.request.urlopen('https://github.com').read(1); print(ssl.OPENSSL_VERSION, 'handshake ok')"
+          exit $LASTEXITCODE
+
       - name: Resolve CUDA major/minor
         if: ${{ env.CUDA_VERSION != '' }}
         shell: bash

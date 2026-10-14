@@ -501,7 +501,7 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-transparentBgOff" ||
             flag == "-resetConfig" ||
             flag == "-noSplash" ||
-    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    #ifndef __EMSCRIPTEN__
             flag == "-showSplash" ||
     #endif
             flag == "-console" ||
@@ -587,9 +587,13 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.resetConfig = true;
         else if ( flag == "-noSplash" )
             params.splashWindow.reset();
-    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    #ifndef __EMSCRIPTEN__
         else if ( flag == "-showSplash" )
+        #ifdef __APPLE__
+            params.splashWindow = std::make_shared<MR::StaticImageSplashWindow>();
+        #else
             params.splashWindow = std::make_shared<MR::DefaultSplashWindow>();
+        #endif
     #endif
         else if ( flag == "-console" )
             params.console = true;
@@ -759,7 +763,7 @@ int Viewer::launch( const LaunchParams& params )
     if ( params.close )
         launchShut();
 
-    return EXIT_SUCCESS;
+    return stopEventLoopRequest_ ? stopEventLoopRequest_->exitCode : 0;
 }
 
 bool Viewer::checkOpenGL_( const LaunchParams& params )
@@ -1075,10 +1079,10 @@ void Viewer::runEventLoopIteration( double maxWaitSec )
         if ( spaceMouseHandler_ )
             spaceMouseHandler_->handle();
         CommandLoop::processCommands();
-    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
+    } while ( ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopRequest_ ) && ( forceRedrawFrames_ > 0 || needRedraw_() ) );
 
     // a pending close must not wait for an event that may never come (glfwSetWindowShouldClose posts none)
-    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoop_ )
+    if ( ( window && glfwWindowShouldClose( window ) ) || stopEventLoopRequest_ )
         return;
 
     if ( isAnimating )
@@ -1880,14 +1884,6 @@ bool Viewer::draw_( bool force )
     if ( !force && !needSceneRedraw )
         return false;
 
-    if ( !isGLInitialized() )
-    {
-        resetRedraw_();
-        forceRedrawFrames_ = 0;
-        forceRedrawFramesWithoutSwap_ = 0;
-        return false;
-    }
-
     if ( !isInDraw_ )
         isInDraw_ = true;
     else
@@ -1899,6 +1895,23 @@ bool Viewer::draw_( bool force )
     }
 
     frameCounter_->startDraw();
+
+    if ( !isGLInitialized() )
+    {
+        // nothing is rendered, but the frame's UI logic and draw signals still run, e.g. in NoWindow mode
+        if ( menuPlugin_ )
+            menuPlugin_->startFrame();
+        signals_->preDrawSignal();
+        signals_->postDrawSignal();
+        if ( menuPlugin_ )
+            menuPlugin_->finishFrame();
+        resetRedraw_();
+        forceRedrawFrames_ = 0;
+        forceRedrawFramesWithoutSwap_ = 0;
+        frameCounter_->endDraw( false );
+        isInDraw_ = false;
+        return false;
+    }
 
     glPrimitivesCounter_.reset();
 
@@ -2376,15 +2389,15 @@ void Viewer::initSpaceMouseHandler_()
 
 bool Viewer::windowShouldClose()
 {
-    if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoop_ )
+    if ( !( window && glfwWindowShouldClose( window ) ) && !stopEventLoopRequest_ )
         return false;
 
-    if ( !window || !interruptWindowClose() )
+    if ( !window || ( stopEventLoopRequest_ && !stopEventLoopRequest_->interruptible ) || !interruptWindowClose() )
         return true;
 
     if ( window )
         glfwSetWindowShouldClose( window, false );
-    stopEventLoop_ = false;
+    stopEventLoopRequest_.reset();
     return false;
 }
 
@@ -3037,9 +3050,9 @@ void Viewer::setMenuPlugin( std::shared_ptr<ImGuiMenu> menu )
     menuPlugin_ = menu;
 }
 
-void Viewer::stopEventLoop()
+void Viewer::stopEventLoop( int exitCode, bool interruptible )
 {
-    stopEventLoop_ = true;
+    stopEventLoopRequest_ = StopEventLoopRequest{ exitCode, interruptible };
     postClose();
 }
 

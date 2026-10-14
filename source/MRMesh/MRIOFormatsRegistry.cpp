@@ -114,4 +114,18 @@ MR_FORMAT_REGISTRY_IMPL( DistanceMapSaver )
 
 } // namespace DistanceMapSave
 
+namespace RasterLoad
+{
+
+MR_FORMAT_REGISTRY_IMPL( RasterLoader )
+
+} // namespace RasterLoad
+
+namespace RasterSave
+{
+
+MR_FORMAT_REGISTRY_IMPL( RasterSaver )
+
+} // namespace RasterSave
+
 } // namespace MR

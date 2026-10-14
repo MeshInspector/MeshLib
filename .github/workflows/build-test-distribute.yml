@@ -24,6 +24,7 @@ permissions:
   id-token: write
   contents: write
   actions: read  # This is required for wait-for-job
+  packages: write # push the CI images to ghcr.io
 
 jobs:
   # NOTE: all output values are strings

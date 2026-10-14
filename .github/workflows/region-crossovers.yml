@@ -16,19 +16,40 @@ env:
   REPS: 7
 
 jobs:
+  # a line "only: <name> <name>" in the commit message limits the run to those machines
+  machines:
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.pick.outputs.matrix }}
+    steps:
+      - id: pick
+        env:
+          MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os, re
+          all = [
+              {"name": "linux-hosted",   "family": "linux",   "runner": "ubuntu-24.04"},
+              {"name": "linux-self",     "family": "linux",   "runner": ["self-hosted", "gha-runner-linux1"]},
+              {"name": "windows-hosted", "family": "windows", "runner": "windows-2025"},
+              {"name": "windows-self",   "family": "windows", "runner": ["self-hosted", "georgiawin-mi"]},
+              {"name": "macos-hosted",   "family": "macos",   "runner": "macos-15"},
+              {"name": "macos-self",     "family": "macos",   "runner": ["self-hosted", "our-macos-15"]},
+          ]
+          m = re.search(r"^only:(.*)$", os.environ.get("MESSAGE", ""), re.M)
+          pick = [x for x in all if not m or x["name"] in m.group(1).split()]
+          for x in pick:
+              x["runner"] = json.dumps(x["runner"])
+          print("matrix=" + json.dumps({"include": pick}))
+          PY
+
   bench:
+    needs: machines
     name: ${{ matrix.name }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - { name: linux-hosted,   family: linux,   runner: '"ubuntu-24.04"' }
-          - { name: linux-self,     family: linux,   runner: '["self-hosted","gha-runner-linux1"]' }
-          - { name: windows-hosted, family: windows, runner: '"windows-2025"' }
-          - { name: windows-self,   family: windows, runner: '["self-hosted","georgiawin-mi"]' }
-          - { name: macos-hosted,   family: macos,   runner: '"macos-15"' }
-          - { name: macos-self,     family: macos,   runner: '["self-hosted","our-macos-15"]' }
+      matrix: ${{ fromJSON(needs.machines.outputs.matrix) }}
     runs-on: ${{ fromJSON(matrix.runner) }}
     container: ${{ matrix.family == 'linux' && 'ubuntu:24.04' || '' }}
     defaults:
@@ -58,7 +79,7 @@ jobs:
           "$SYSTEMROOT/System32/tar.exe" -xf meshlib.zip install/include install/lib/Release install/app/Release
           rm meshlib.zip
           d=$(cygpath -m "$PWD/install")
-          echo "CMAKE_ARGS=-G \"Visual Studio 17 2022\" -A x64 -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV
+          echo "CMAKE_ARGS=-A x64 -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV
           echo "$(cygpath -w "$PWD/install/app/Release")" >> $GITHUB_PATH
 
       # MRMesh's CMake config needs these; our self-hosted Mac builds MeshLib and has them already
@@ -73,7 +94,9 @@ jobs:
           curl -sSfL -o meshlib.pkg "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/meshlib_${MESHLIB_VER}_arm64.pkg"
           pkgutil --expand meshlib.pkg ./meshlib_install
           ( cd meshlib_install/MeshLib.pkg && cat Payload | gunzip | cpio -i --quiet )
-          echo "CMAKE_ARGS=-DCMAKE_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks/" >> $GITHUB_ENV
+          cfg=$(dirname "$(find "$PWD/meshlib_install" -name MRMeshConfig.cmake | head -1)")
+          echo "MRMesh config: $cfg"
+          echo "CMAKE_ARGS=-DCMAKE_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks/ -DMRMESH_CONFIG_DIR=$cfg" >> $GITHUB_ENV
           echo "DYLD_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks" >> $GITHUB_ENV
 
       - name: Sources and meshes

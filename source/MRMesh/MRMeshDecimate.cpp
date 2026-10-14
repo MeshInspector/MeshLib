@@ -247,8 +247,18 @@ bool MeshDecimator::initialize_()
     // initialize regionEdges_ if some edges (out-of-region or touching boundary) cannot be collapsed
     if ( settings_.region )
     {
-        // all region edges
-        regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
+        // all region edges; a small region (e.g. a part of parallel decimation) collects them from its faces
+        // instead of scanning every edge of the mesh, a large one is faster with the parallel scan
+        if ( settings_.region->count() * 8 < mesh_.topology.numValidFaces() )
+        {
+            regionEdges_.clear();
+            regionEdges_.resize( mesh_.topology.undirectedEdgeSize() );
+            for ( auto f : *settings_.region )
+                for ( auto e : leftRing( mesh_.topology, f ) )
+                    regionEdges_.set( e.undirected() );
+        }
+        else
+            regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
         if ( settings_.edgesToCollapse )
             regionEdges_ &= *settings_.edgesToCollapse;
         if ( !settings_.touchNearBdEdges )
@@ -301,24 +311,23 @@ auto MeshDecimator::makeQueueElements_() -> std::vector<QueueElement>
     validInQueue_.resize( sz, false );
 
     tbb::enumerable_thread_specific<std::vector<QueueElement>> threadData;
-    BitSetParallelForAll( validInQueue_, [&]( UndirectedEdgeId ue )
+    auto addEdge = [&]( UndirectedEdgeId ue )
     {
-        if ( regionEdges_.empty() )
-        {
-            if ( mesh_.topology.isLoneEdge( ue ) )
-                return;
-        }
-        else
-        {
-            if ( !regionEdges_.test( ue ) )
-                return;
-        }
         if ( auto qe = computeQueueElement_( ue, settings_.optimizeVertexPos ) )
         {
             threadData.local().push_back( *qe );
             validInQueue_.set( ue );
         }
-    } );
+    };
+    // validInQueue_ and regionEdges_ have the same indexing, so threads write disjoint blocks of validInQueue_
+    if ( regionEdges_.empty() )
+        BitSetParallelForAll( validInQueue_, [&]( UndirectedEdgeId ue )
+        {
+            if ( !mesh_.topology.isLoneEdge( ue ) )
+                addEdge( ue );
+        } );
+    else
+        BitSetParallelFor( regionEdges_, addEdge );
 
     size_t queueSize = 0;
     for ( const auto & v : threadData )

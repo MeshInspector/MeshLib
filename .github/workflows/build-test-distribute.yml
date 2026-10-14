@@ -330,6 +330,12 @@ jobs:
         run: |
           if [ -d MeshLibRust/src ]; then
             cp source/MeshLibRust/Cargo.toml source/MeshLibRust/build.rs MeshLibRust/
+            # The crate version is the MeshLib version. Cargo wants semver, so the fourth number becomes build metadata: v3.1.4.528 -> 3.1.4+528.
+            VERSION="${{ needs.config.outputs.app_version }}"
+            VERSION="${VERSION#v}"
+            CRATE_VERSION="$(echo "$VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$/\1+\2/')"
+            sed -i "s/^version = .*/version = \"$CRATE_VERSION\"/" MeshLibRust/Cargo.toml
+            grep '^version' MeshLibRust/Cargo.toml
             zip -qr meshlib_rust_bindings.zip MeshLibRust
           fi
 

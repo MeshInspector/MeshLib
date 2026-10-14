@@ -17,7 +17,7 @@ The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C
 ## Installation
 
  1. **Download the crate**
- <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download `meshlib_<version>_rust_bindings.zip` of the same version as your MeshLib binaries. Extract it next to your project, e.g. into `../MeshLibRust`. The archive holds `Cargo.toml`, `build.rs` and the generated `src`.
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download `meshlib_<version>_rust_bindings.zip` of the same version as your MeshLib binaries. Extract it next to your project, e.g. into `../MeshLibRust`. The archive holds `Cargo.toml`, `build.rs` and the generated `src`. The crate version is the MeshLib version with the fourth number as build metadata (`3.1.4+528` for v3.1.4.528).
 
  2. **Add the dependency**
  <br/> In your `Cargo.toml`:

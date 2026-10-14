@@ -492,7 +492,8 @@ Expected<void> toTiff( const DistanceMap& dmap, const std::filesystem::path& pat
         DistanceMap::NOT_VALID_VALUE );
 }
 
-MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "TIFF (.tiff)", "*.tiff" ), toTiff )
+MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "GeoTIFF (.tif)", "*.tif" ), toTiff )
+MR_ADD_DISTANCE_MAP_SAVER( IOFilter( "GeoTIFF (.tiff)", "*.tiff" ), toTiff )
 
 } // namespace DistanceMapSave
 

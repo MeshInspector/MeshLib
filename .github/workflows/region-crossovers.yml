@@ -1,0 +1,131 @@
+# Temporary: walk vs scan crossovers of MRRegionBoundary functions (MeshInspector/MeshLib#7134) on GitHub-hosted
+# (few vCPUs) and self-hosted (many vCPUs) machines. Lives only on the bench/region-crossovers branch.
+name: Region crossovers
+
+on:
+  push:
+    branches: [ bench/region-crossovers ]
+  workflow_dispatch:
+
+env:
+  MESHLIB_TAG: v3.1.4.297
+  MESHLIB_VER: v3.1.4.297
+  # trueform commit whose benchmarks/data holds the dragon meshes
+  DATA_URL: https://raw.githubusercontent.com/polydera/trueform/e512f62ba37566f57bdf3125f69ab46853445538/benchmarks/data
+  SRC_URL: https://raw.githubusercontent.com/MeshInspector/MeshLib/${{ github.sha }}/scripts/region_crossovers
+  REPS: 7
+
+jobs:
+  bench:
+    name: ${{ matrix.name }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-hosted,   family: linux,   runner: '"ubuntu-24.04"' }
+          - { name: linux-self,     family: linux,   runner: '["self-hosted","gha-runner-linux1"]' }
+          - { name: windows-hosted, family: windows, runner: '"windows-2025"' }
+          - { name: windows-self,   family: windows, runner: '["self-hosted","georgiawin-mi"]' }
+          - { name: macos-hosted,   family: macos,   runner: '"macos-15"' }
+          - { name: macos-self,     family: macos,   runner: '["self-hosted","our-macos-15"]' }
+    runs-on: ${{ fromJSON(matrix.runner) }}
+    container: ${{ matrix.family == 'linux' && 'ubuntu:24.04' || '' }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Work directory
+        run: |
+          rm -rf rc && mkdir rc
+
+      - name: Linux - tools and MeshLib
+        if: matrix.family == 'linux'
+        working-directory: rc
+        run: |
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update -qq
+          apt-get install -y -qq curl ca-certificates cmake g++ make python3 >/dev/null
+          curl -sSfL -o meshlib.deb "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/meshlib_${MESHLIB_VER}_ubuntu24-dev.deb"
+          apt-get install -y -qq ./meshlib.deb >/dev/null
+          echo "CMAKE_ARGS=" >> $GITHUB_ENV
+
+      - name: Windows - MeshLib
+        if: matrix.family == 'windows'
+        working-directory: rc
+        run: |
+          curl -sSfL -o meshlib.zip "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/MeshLibDistVS22_${MESHLIB_VER}.zip"
+          tar -xf meshlib.zip install/include install/lib/Release install/app/Release
+          rm meshlib.zip
+          d=$(cygpath -m "$PWD/install")
+          echo "CMAKE_ARGS=-G \"Visual Studio 17 2022\" -A x64 -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV
+          echo "$(cygpath -w "$PWD/install/app/Release")" >> $GITHUB_PATH
+
+      - name: macOS - MeshLib
+        if: matrix.family == 'macos'
+        working-directory: rc
+        run: |
+          curl -sSfL -o meshlib.pkg "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/meshlib_${MESHLIB_VER}_arm64.pkg"
+          pkgutil --expand meshlib.pkg ./meshlib_install
+          ( cd meshlib_install/MeshLib.pkg && cat Payload | gunzip | cpio -i --quiet )
+          echo "CMAKE_ARGS=-DCMAKE_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks/" >> $GITHUB_ENV
+          echo "DYLD_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks" >> $GITHUB_ENV
+
+      - name: Sources and meshes
+        working-directory: rc
+        run: |
+          mkdir src data
+          for f in CMakeLists.txt region_crossovers.cpp analyze.py; do curl -sSfL -o src/$f "$SRC_URL/$f"; done
+          for m in 1M 250k; do curl -sSfL -o data/dragon-$m.stl "$DATA_URL/dragon-$m.stl"; done
+
+      - name: Build
+        working-directory: rc
+        run: |
+          eval cmake -S src -B build -DCMAKE_BUILD_TYPE=Release $CMAKE_ARGS
+          cmake --build build --config Release --parallel
+
+      - name: Machine
+        working-directory: rc
+        run: |
+          mkdir -p out/${{ matrix.name }}
+          case "${{ matrix.family }}" in
+            linux)   cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2); threads=$(nproc) ;;
+            macos)   cpu=$(sysctl -n machdep.cpu.brand_string); threads=$(sysctl -n hw.logicalcpu) ;;
+            windows) cpu=$(powershell -NoProfile -Command "(Get-CimInstance Win32_Processor | Select-Object -First 1).Name"); threads=$NUMBER_OF_PROCESSORS ;;
+          esac
+          echo "$(echo $cpu | xargs), $threads threads, ${{ runner.os }}, runner ${{ runner.name }}" | tee out/${{ matrix.name }}/info.txt
+
+      - name: Run
+        working-directory: rc
+        run: |
+          exe=build/region_crossovers; [ -f build/Release/region_crossovers.exe ] && exe=build/Release/region_crossovers.exe
+          $exe $REPS data/dragon-1M.stl data/dragon-250k.stl > out/${{ matrix.name }}/results.csv
+          wc -l out/${{ matrix.name }}/results.csv
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crossovers-${{ matrix.name }}
+          path: rc/out/${{ matrix.name }}
+
+      - name: Clean up
+        if: always()
+        run: rm -rf rc
+
+  summary:
+    needs: bench
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: crossovers-*
+          path: results
+      - name: Crossovers
+        run: |
+          for d in results/crossovers-*; do mv "$d" "results/${d#results/crossovers-}"; done
+          curl -sSfL -o analyze.py "$SRC_URL/analyze.py"
+          python3 analyze.py results | tee summary.md >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crossovers-summary
+          path: summary.md

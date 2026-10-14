@@ -22,7 +22,7 @@ public class MeshDecimateExample
 
             // Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
             // A value close to the number of CPU cores is usually the fastest; much larger values add per-part overhead
-            ds.subdivideParts = 64;
+            ds.subdivideParts = 16;
 
             // Decimate mesh
             MR.decimateMesh(mesh, ds);

@@ -18,7 +18,7 @@ settings.maxError = 0.05; // Maximum error when decimation stops
 
 // Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
 // A value close to the number of CPU cores is usually the fastest; much larger values add per-part overhead
-settings.subdivideParts = 64;
+settings.subdivideParts = 16;
 
 // Decimate mesh
 ml.decimateMesh(mesh, settings);

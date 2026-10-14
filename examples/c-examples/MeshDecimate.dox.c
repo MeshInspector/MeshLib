@@ -34,7 +34,7 @@ int main( void )
 
     // Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
     // A value close to the number of CPU cores is usually the fastest; much larger values add per-part overhead
-    MR_DecimateSettings_Set_subdivideParts( params, 64 );
+    MR_DecimateSettings_Set_subdivideParts( params, 16 );
 
     // Decimate mesh
     MR_DecimateResult* result = MR_decimateMesh( mesh, params );

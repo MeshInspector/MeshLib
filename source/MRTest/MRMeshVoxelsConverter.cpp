@@ -157,7 +157,7 @@ TEST( MRMesh, MeshToDistanceVolumeOddCrossings )
     EXPECT_GT( numChecked, 60000 );
 }
 
-// the specializations are exported from MRVoxels, so other libraries can call them
+// links only if MRVoxels exports all three specializations
 TEST( MRMesh, PutSimpleVolumeInDenseGrid )
 {
     const SimpleVolume volume{ .data = { 1.f, 2.f }, .dims = { 2, 1, 1 } };

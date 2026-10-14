@@ -68,10 +68,33 @@ void logTiffMessage( spdlog::level::level_enum level, const char* module, const 
         spdlog::log( level, "libtiff: {}", message );
 }
 
+// libtiff before 4.7 warns about every tag it does not know, so the tags of GDAL's GeoTIFF files are registered for each file
+// before libtiff reads its directory, as libgeotiff and GDAL define them
+const TIFFFieldInfo cGeoTiffFields[] = {
+    { cModelPixelScaleTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelPixelScaleTag" },
+    { cModelTiePointTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTiePointTag" },
+    { cModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" },
+    { 34735, -1, -1, TIFF_SHORT, FIELD_CUSTOM, 1, 1, (char*)"GeoKeyDirectoryTag" },
+    { 34736, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"GeoDoubleParamsTag" },
+    { 34737, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GeoAsciiParamsTag" },
+    { 42112, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALMetadata" },
+    { cGdalNoDataTag, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" },
+};
+
+// the tag extender is process-wide, so it calls the one set before it, as libgeotiff's does
+TIFFExtendProc sParentTagExtender = nullptr;
+void extendTags( TIFF* tiff )
+{
+    TIFFMergeFieldInfo( tiff, cGeoTiffFields, uint32_t( std::size( cGeoTiffFields ) ) );
+    if ( sParentTagExtender )
+        sParentTagExtender( tiff );
+}
+
 MR_ON_INIT
 {
     TIFFSetWarningHandler( [] ( const char* module, const char* fmt, va_list ap ) { logTiffMessage( spdlog::level::warn, module, fmt, ap ); } );
     TIFFSetErrorHandler( [] ( const char* module, const char* fmt, va_list ap ) { logTiffMessage( spdlog::level::err, module, fmt, ap ); } );
+    sParentTagExtender = TIFFSetTagExtender( extendTags );
 };
 
 // the value types that are stored as single samples
@@ -400,15 +423,7 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
     TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
 
-    // declare non-standard tags
-    std::vector<TIFFFieldInfo> fieldInfo;
-    if ( settings.xf )
-        fieldInfo.push_back( { cModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" } );
-    if ( noData )
-        fieldInfo.push_back( { cGdalNoDataTag, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" } );
-    if ( !fieldInfo.empty() )
-        TIFFMergeFieldInfo( tiff, fieldInfo.data(), uint32_t( fieldInfo.size() ) );
-
+    // the GeoTIFF and GDAL tags are registered by extendTags
     if ( settings.xf )
     {
         const Matrix4d matrix = AffineXf3d( *settings.xf );

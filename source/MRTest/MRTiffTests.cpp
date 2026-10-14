@@ -81,6 +81,8 @@ struct TestTiffLayout
     std::vector<uint16_t> extraSamples;
     // 3 * 2^bitsPerSample values for a palette image
     std::vector<uint16_t> colorMap;
+    // tags with ASCII values
+    std::vector<std::pair<int, std::string>> asciiTags;
     // tags with DOUBLE values
     std::vector<std::pair<int, std::vector<double>>> doubleTags;
     // tags with SHORT values
@@ -128,7 +130,7 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         }
     }
 
-    constexpr uint16_t SHORT = 3, LONG = 4, DOUBLE = 12;
+    constexpr uint16_t ASCII = 2, SHORT = 3, LONG = 4, DOUBLE = 12;
     struct Entry
     {
         uint16_t tag;
@@ -164,6 +166,8 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
         entries.push_back( { 320, SHORT, { layout.colorMap.begin(), layout.colorMap.end() } } ); // ColorMap
     if ( !layout.extraSamples.empty() )
         entries.push_back( { 338, SHORT, { layout.extraSamples.begin(), layout.extraSamples.end() } } ); // ExtraSamples
+    for ( const auto& [tag, text] : layout.asciiTags )
+        entries.push_back( { uint16_t( tag ), ASCII, { text.c_str(), text.c_str() + text.size() + 1 } } ); // with the terminating zero
     for ( const auto& [tag, doubles] : layout.doubleTags )
         entries.push_back( { uint16_t( tag ), DOUBLE, {}, doubles } );
     for ( const auto& [tag, shorts] : layout.shortTags )
@@ -173,12 +177,16 @@ static void writeTestTiff( const std::filesystem::path& path, const TestTiffLayo
     auto valueBytes = [&] ( const Entry& entry )
     {
         // filled in place, as the file below: inserts into a vector give a false -Wstringop-overread in GCC 11 Release builds
-        std::vector<uint8_t> bytes( entry.values.size() * ( entry.type == SHORT ? sizeof( uint16_t ) : sizeof( uint32_t ) )
+        std::vector<uint8_t> bytes( entry.values.size() * ( entry.type == ASCII ? 1 : entry.type == SHORT ? sizeof( uint16_t ) : sizeof( uint32_t ) )
             + entry.doubles.size() * sizeof( double ) );
         auto out = bytes.begin();
         for ( auto v : entry.values )
         {
-            if ( entry.type == SHORT )
+            if ( entry.type == ASCII )
+            {
+                *out++ = uint8_t( v );
+            }
+            else if ( entry.type == SHORT )
             {
                 const auto s = uint16_t( v );
                 out = std::copy( ( const uint8_t* )&s, ( const uint8_t* )&s + sizeof( s ), out );
@@ -848,6 +856,43 @@ TEST( MRMesh, TiffMessagesToLog )
 
     EXPECT_NE( log.str().find( "warning libtiff: TIFFReadDirectory: Sum of Photometric" ), std::string::npos ) << log.str();
     EXPECT_NE( log.str().find( "error libtiff: " ), std::string::npos ) << log.str();
+}
+
+// libtiff before 4.7 warns about every tag it does not know; the tags of GDAL's GeoTIFF files are registered, so they are read silently
+TEST( MRMesh, TiffGeoTagsRegistered )
+{
+    UniqueTemporaryFolder tmpFolder;
+    ASSERT_TRUE( tmpFolder );
+    const auto path = tmpFolder / "gdal.tif";
+    // a file has either the transformation matrix or the tie point with the pixel scale, this one has both
+    writeTestTiff( path, { .size = { 2, 1 },
+        .asciiTags = {
+            { 34737, "WGS 84|" }, // GeoAsciiParamsTag
+            { 42112, "<GDALMetadata></GDALMetadata>" }, // GDAL_METADATA
+            { 42113, "-9999" }, // GDAL_NODATA
+        },
+        .doubleTags = {
+            { 33550, { 0.5, 0.25, 0. } }, // ModelPixelScaleTag
+            { 33922, { 0., 0., 0., 10., 20., 0. } }, // ModelTiePointTag
+            { 34264, { 0.5, 0., 0., 10., 0., -0.25, 0., 20., 0., 0., 1., 0., 0., 0., 0., 1. } }, // ModelTransformationTag
+            { 34736, { 6378137. } }, // GeoDoubleParamsTag
+        },
+        .shortTags = {
+            { 34735, { 1, 1, 0, 1, 1024, 0, 1, 2 } }, // GeoKeyDirectoryTag with GTModelTypeGeoKey = ModelTypeGeographic
+        } }, { 1, 2 } );
+
+    std::ostringstream log;
+    const auto sink = std::make_shared<spdlog::sinks::ostream_sink_mt>( log );
+    sink->set_pattern( "%l %v" );
+    Logger::instance().addSink( sink );
+    AffineXf3f xf;
+    const auto raster = RasterLoad::fromTiff( path, { .xf = &xf } );
+    Logger::instance().removeSink( sink );
+
+    ASSERT_TRUE( raster.has_value() ) << raster.error();
+    EXPECT_EQ( log.str().find( "libtiff" ), std::string::npos ) << log.str();
+    // libtiff passes the number of values of the registered tags as a 16-bit value
+    EXPECT_EQ( xf, AffineXf3f( Matrix3f::scale( 0.5f, -0.25f, 1.f ), Vector3f( 10.f, 20.f, 0.f ) ) );
 }
 
 TEST( MRMesh, TiffDistanceMapSave )

@@ -75,7 +75,7 @@ const TIFFFieldInfo cGeoTiffFields[] = {
     { cModelPixelScaleTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelPixelScaleTag" },
     { cModelTiePointTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTiePointTag" },
     { cModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" },
-    { 34735, -1, -1, TIFF_SHORT, FIELD_CUSTOM, 1, 1, (char*)"GeoKeyDirectoryTag" },
+    { cGeoKeyDirectoryTag, -1, -1, TIFF_SHORT, FIELD_CUSTOM, 1, 1, (char*)"GeoKeyDirectoryTag" },
     { 34736, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"GeoDoubleParamsTag" },
     { 34737, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GeoAsciiParamsTag" },
     { 42112, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALMetadata" },

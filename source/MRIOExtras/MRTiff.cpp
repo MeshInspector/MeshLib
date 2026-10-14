@@ -11,10 +11,13 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRFmt.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <tiffio.h>
 
 #include <bit>
+#include <cstdarg>
+#include <cstdio>
 #include <cstring>
 #include <memory>
 
@@ -48,6 +51,23 @@ TiffPtr openTiff( const std::filesystem::path& path, const char* mode )
     return TiffPtr( TIFFOpen( utf8string( path ).c_str(), mode ) );
 #endif
 }
+
+// libtiff prints its warnings and errors to stderr; they go to the log instead, as OpenCASCADE's messages do
+void logTiffMessage( spdlog::level::level_enum level, const char* module, const char* fmt, va_list ap )
+{
+    char message[1024];
+    std::vsnprintf( message, sizeof( message ), fmt, ap );
+    if ( module )
+        spdlog::log( level, "libtiff: {}: {}", module, message );
+    else
+        spdlog::log( level, "libtiff: {}", message );
+}
+
+MR_ON_INIT
+{
+    TIFFSetWarningHandler( [] ( const char* module, const char* fmt, va_list ap ) { logTiffMessage( spdlog::level::warn, module, fmt, ap ); } );
+    TIFFSetErrorHandler( [] ( const char* module, const char* fmt, va_list ap ) { logTiffMessage( spdlog::level::err, module, fmt, ap ); } );
+};
 
 // the value types that are stored as single samples
 struct SampleType

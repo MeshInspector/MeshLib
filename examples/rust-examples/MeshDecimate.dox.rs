@@ -16,9 +16,9 @@ fn main() -> Result<(), String>
     settings.set_max_deleted_faces(1000); // Number of faces to be deleted.
     settings.set_max_error(0.05); // Maximum error when decimation stops.
 
-    // Number of parts to simultaneous processing, greatly improves performance by cost of minor quality loss.
-    // Recommended to set to the number of available CPU cores or more for the best performance.
-    settings.set_subdivide_parts(64);
+    // Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
+    // A value close to the number of CPU cores is usually the fastest; much larger values add per-part overhead.
+    settings.set_subdivide_parts(16);
 
     // Decimate mesh.
     let result = mr::decimate_mesh(mesh, Some(&settings));

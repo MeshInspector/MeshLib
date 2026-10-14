@@ -25,10 +25,10 @@ public:
 
     // Starts splash window in new thread, non blocking
     // window will be closed in destructor of this class, or if `frame_` func returns false. or manually with `stop` function
-    MRVIEWER_API void start();
+    MRVIEWER_API virtual void start();
 
     // Closes splash window if it is still opened
-    MRVIEWER_API void stop();
+    MRVIEWER_API virtual void stop();
 
     // Returns minimum time in seconds, splash screen to be present
     virtual float minimumTimeSec() const { return 2.f; }
@@ -69,6 +69,11 @@ class MRVIEWER_CLASS DefaultSplashWindow final : public SplashWindow
 {
 public:
     MRVIEWER_API DefaultSplashWindow();
+#ifdef __APPLE__
+    // GLFW windows cannot be created outside the main thread on macOS, so a native window is shown there instead
+    MRVIEWER_API void start() override;
+    MRVIEWER_API void stop() override;
+#endif
 private:
     virtual void setup_() const override;
     virtual void postInit_() override;
@@ -79,6 +84,9 @@ private:
 
     std::shared_ptr<ImGuiImage> splashImage_;
     std::string versionStr_;
+#ifdef __APPLE__
+    void* nsWindow_ = nullptr;
+#endif
 };
 #endif
 }

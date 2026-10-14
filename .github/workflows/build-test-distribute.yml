@@ -283,6 +283,47 @@ jobs:
            DotNetDllXml
          failOnError: false
 
+  compare-rust-bindings:
+    # The Rust crate is sources only, so one archive serves all platforms. That requires every platform to generate
+    # the same crate, which this checks on every run; `upload-distributions` then publishes one of them.
+    if: >-
+      ${{ !cancelled()
+        && needs.windows-build-test.result != 'failure'
+        && needs.ubuntu-build-test.result != 'failure'
+        && needs.macos-build-test.result != 'failure' }}
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs:
+      - windows-build-test
+      - ubuntu-build-test
+      - macos-build-test
+    steps:
+      - name: Download the crates
+        uses: actions/download-artifact@v8
+        with:
+          pattern: RustBindings-*
+          path: rust_bindings
+
+      - name: Compare
+        run: |
+          shopt -s nullglob
+          CRATES=(rust_bindings/RustBindings-*)
+          echo "${#CRATES[@]} crates: ${CRATES[*]#rust_bindings/}"
+          if [ ${#CRATES[@]} -eq 0 ]; then
+            echo "No Rust bindings in this run."
+            exit 0
+          fi
+          REF="${CRATES[0]}"
+          FAILED=0
+          for CRATE in "${CRATES[@]:1}"; do
+            if ! diff -rq "$REF" "$CRATE" >/dev/null; then
+              echo "::error title=Rust bindings differ between platforms::$(basename "$CRATE") differs from $(basename "$REF")"
+              diff -rq "$REF" "$CRATE" | head -20 || true
+              FAILED=1
+            fi
+          done
+          exit $FAILED
+
   upload-distributions:
     # Don't publish if any build failed (its distributive is missing); skipped builds are fine.
     # Don't need `emscripten-c-bindings-build-test` here, it doesn't upload any distributions of its own.
@@ -294,7 +335,8 @@ jobs:
         && needs.linux-vcpkg-build-test.result != 'failure'
         && needs.emscripten-build-test.result != 'failure'
         && needs.emscripten-c-bindings-build-test.result != 'failure'
-        && needs.macos-build-test.result != 'failure' }}
+        && needs.macos-build-test.result != 'failure'
+        && needs.compare-rust-bindings.result != 'failure' }}
     timeout-minutes: 10
     runs-on: ubuntu-latest
     needs:
@@ -307,6 +349,7 @@ jobs:
       - linux-vcpkg-build-test
       - emscripten-build-test
       - macos-build-test
+      - compare-rust-bindings
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -317,31 +360,22 @@ jobs:
           pattern: Distributives*
           merge-multiple: true
 
-      # The Rust crate is sources only (the C libraries come from the platform packages), so one archive serves
-      # all platforms. Every Rust job uploads its crate; they are compared here and the first one is published.
+      # The Rust crate is sources only (the C libraries come from the platform packages), and `compare-rust-bindings`
+      # checked that all platforms generated the same one, so any of them can be published.
       - name: Download Rust bindings
         uses: actions/download-artifact@v8
         with:
           pattern: RustBindings-*
           path: rust_bindings
 
-      - name: Compare and pack Rust bindings
+      - name: Pack Rust bindings
         run: |
           shopt -s nullglob
           CRATES=(rust_bindings/RustBindings-*)
-          if [ ${#CRATES[@]} -eq 0 ]; then
-            echo "No Rust bindings in this run."
-            exit 0
+          if [ ${#CRATES[@]} -gt 0 ]; then
+            cp -r "${CRATES[0]}" MeshLibRust
+            zip -qr meshlib_rust_bindings.zip MeshLibRust
           fi
-          REF="${CRATES[0]}"
-          for CRATE in "${CRATES[@]:1}"; do
-            if ! diff -rq "$REF" "$CRATE" >/dev/null; then
-              echo "::warning title=Rust bindings differ between platforms::$(basename "$CRATE") differs from $(basename "$REF"), publishing the latter."
-              diff -rq "$REF" "$CRATE" | head -20 || true
-            fi
-          done
-          cp -r "$REF" MeshLibRust
-          zip -qr meshlib_rust_bindings.zip MeshLibRust
 
       - name: Rename Distributives
         run: |

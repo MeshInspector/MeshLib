@@ -44,7 +44,7 @@ for m in machines:
     print(f"- **{m.name}**: {info}")
 
 meshes = sorted({k[1] for k in rows})
-layouts = ["packed-contiguous", "packed-scattered", "unpacked-contiguous"]
+layouts = ["packed-contiguous", "packed-scattered", "unpacked-contiguous", "packed-ball", "packed-ball-half", "unpacked-ball"]
 for mesh in meshes:
     print(f"\n## {mesh}\n")
     header = "| Function | " + " | ".join(f"{m.name}<br>{l.replace('-', ' ')}" for m in machines for l in layouts) + " | worst |"

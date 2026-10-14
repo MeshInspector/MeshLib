@@ -1,11 +1,16 @@
 // Crossover benchmark for MRRegionBoundary functions (MeshInspector/MeshLib#7134):
 // for each function, times the parallel scan of the whole mesh (master) against the walk of the input set (the PR)
-// on regions from 1/1024 to 1/4 of the mesh, in three layouts:
+// on regions from 1/1024 to 1/4 of the mesh, in these layouts:
 //   packed-contiguous   - mesh after packOptimally(), the first N faces
 //   packed-scattered    - mesh after packOptimally(), N random faces
 //   unpacked-contiguous - mesh in file order, the first N faces
+//   packed-ball         - mesh after packOptimally(), the N faces nearest to a point (like a brush selection)
+//   packed-ball-half    - mesh after packOptimally(), every other of the 2N faces nearest to a point
+//   unpacked-ball       - mesh in file order, the N faces nearest to a point
 // Both implementations are copies of the library code, so the program needs only a released MeshLib.
-// Output: CSV lines  mesh,layout,function,fraction,setSize,scanMs,walkMs  ; a mismatch of the two results aborts.
+// Output: CSV lines  mesh,layout,function,fraction,setSize,setSpan,setFill,scanMs,walkMs  ; setSpan = last - first id + 1 of the input set,
+// setFill = average set bits per non-empty 64-bit block of the input set (1 for a scattered set, 64 for a dense one);
+// a mismatch of the two results aborts.
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshTopology.h>
@@ -14,6 +19,7 @@
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRBuffer.h>
 #include <algorithm>
+#include <bit>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -308,6 +314,26 @@ UndirectedEdgeBitSet incEdgesE( const MeshTopology & t, const UndirectedEdgeBitS
 }
 } // namespace walk
 
+template <typename BS>
+static size_t spanOf( const BS & b )
+{
+    const auto first = b.find_first();
+    return first.valid() ? size_t( b.find_last() - first ) + 1 : 0;
+}
+
+template <typename BS>
+static double fillOf( const BS & b )
+{
+    size_t bits = 0, blocks = 0;
+    for ( auto blk : b.bits() )
+        if ( blk )
+        {
+            ++blocks;
+            bits += std::popcount( blk );
+        }
+    return blocks ? double( bits ) / blocks : 0;
+}
+
 static double msSince( std::chrono::steady_clock::time_point t0 )
 {
     return std::chrono::duration<double, std::milli>( std::chrono::steady_clock::now() - t0 ).count();
@@ -322,7 +348,7 @@ int main( int argc, char ** argv )
     }
     const int reps = std::atoi( argv[1] );
     std::fprintf( stderr, "hardware threads: %u\n", std::thread::hardware_concurrency() );
-    std::printf( "mesh,layout,function,fraction,setSize,scanMs,walkMs\n" );
+    std::printf( "mesh,layout,function,fraction,setSize,setSpan,setFill,scanMs,walkMs\n" );
     const int fractions[] = { 1024, 512, 256, 128, 96, 64, 48, 32, 24, 16, 12, 8, 6, 4 };
 
     for ( int mi = 2; mi < argc; ++mi )
@@ -334,7 +360,7 @@ int main( int argc, char ** argv )
             std::fprintf( stderr, "%s: %s\n", argv[mi], loaded.error().c_str() );
             return 1;
         }
-        for ( const char * layout : { "packed-contiguous", "packed-scattered", "unpacked-contiguous" } )
+        for ( const char * layout : { "packed-contiguous", "packed-scattered", "unpacked-contiguous", "packed-ball", "packed-ball-half", "unpacked-ball" } )
         {
             Mesh mesh = *loaded;
             if ( std::string( layout ).starts_with( "packed" ) )
@@ -343,18 +369,31 @@ int main( int argc, char ** argv )
             std::vector<FaceId> order;
             for ( auto f : t.getValidFaces() )
                 order.push_back( f );
-            if ( std::string( layout ).ends_with( "scattered" ) )
+            const std::string lay = layout;
+            if ( lay.ends_with( "scattered" ) )
                 std::shuffle( order.begin(), order.end(), std::mt19937( 42 ) );
+            const bool ball = lay.find( "ball" ) != std::string::npos, half = lay.ends_with( "half" );
+            if ( ball )
+            {
+                // faces by distance of their centers from the center of a fixed random face
+                const auto seed = mesh.triCenter( order[std::mt19937( 7 )() % order.size()] );
+                std::vector<std::pair<float, FaceId>> byDist;
+                for ( auto f : order )
+                    byDist.emplace_back( ( mesh.triCenter( f ) - seed ).lengthSq(), f );
+                std::sort( byDist.begin(), byDist.end() );
+                for ( size_t i = 0; i < order.size(); ++i )
+                    order[i] = byDist[i].second;
+            }
 
             for ( int fr : fractions )
             {
                 FaceBitSet region( t.faceSize() );
                 for ( size_t i = 0; i < order.size() / fr; ++i )
-                    region.set( order[i] );
+                    region.set( order[half ? 2 * i : i] );
                 const auto verts = scan::incVertsF( t, region );
                 const auto edges = scan::incEdgesF( t, region );
 
-                auto run = [&]( const char * name, size_t setSize, auto && fScan, auto && fWalk )
+                auto run = [&]( const char * name, size_t setSize, size_t setSpan, double setFill, auto && fScan, auto && fWalk )
                 {
                     if ( !( fScan() == fWalk() ) )
                     {
@@ -371,22 +410,24 @@ int main( int argc, char ** argv )
                         { [[maybe_unused]] auto x = fWalk(); }
                         bw = std::min( bw, msSince( t0 ) );
                     }
-                    std::printf( "%s,%s,%s,%d,%zu,%.4f,%.4f\n", meshName.c_str(), layout, name, fr, setSize, bs, bw );
+                    std::printf( "%s,%s,%s,%d,%zu,%zu,%.2f,%.4f,%.4f\n", meshName.c_str(), layout, name, fr, setSize, setSpan, setFill, bs, bw );
                     std::fflush( stdout );
                 };
                 const size_t nf = region.count(), nv = verts.count(), ne = edges.count();
-                run( "getIncidentEdges(faces)", nf, [&] { return scan::incEdgesF( t, region ); }, [&] { return walk::incEdgesF( t, region ); } );
-                run( "getIncidentVerts(faces)", nf, [&] { return scan::incVertsF( t, region ); }, [&] { return walk::incVertsF( t, region ); } );
-                run( "getInnerVerts(faces)", nf, [&] { return scan::innerVertsF( t, region ); }, [&] { return walk::innerVertsF( t, region ); } );
-                run( "getRegionBoundaryVerts", nf, [&] { return scan::regionBdVerts( t, region ); }, [&] { return walk::regionBdVerts( t, region ); } );
-                run( "getRegionInnerVerts", nf, [&] { return scan::regionInnerVerts( t, region ); }, [&] { return walk::regionInnerVerts( t, region ); } );
-                run( "getInnerEdges(faces)", nf, [&] { return scan::innerEdgesF( t, region ); }, [&] { return walk::innerEdgesF( t, region ); } );
-                run( "findRegionBoundaryUndirectedEdgesInsideMesh", nf, [&] { return scan::bdEdgesInside( t, region ); }, [&] { return walk::bdEdgesInside( t, region ); } );
-                run( "findAllLeftBdEdges", nf, [&] { return scan::leftBdEdges( t, region ); }, [&] { return walk::leftBdEdges( t, region ); } );
-                run( "getIncidentFaces(verts)", nv, [&] { return scan::incFacesV( t, verts ); }, [&] { return walk::incFacesV( t, verts ); } );
-                run( "getInnerFaces(verts)", nv, [&] { return scan::innerFacesV( t, verts ); }, [&] { return walk::innerFacesV( t, verts ); } );
-                run( "getInnerEdges(verts)", nv, [&] { return scan::innerEdgesV( t, verts ); }, [&] { return walk::innerEdgesV( t, verts ); } );
-                run( "getIncidentEdges(edges)", ne, [&] { return scan::incEdgesE( t, edges ); }, [&] { return walk::incEdgesE( t, edges ); } );
+                const size_t sf = spanOf( region ), sv = spanOf( verts ), se = spanOf( edges );
+                const double ff = fillOf( region ), fv = fillOf( verts ), fe = fillOf( edges );
+                run( "getIncidentEdges(faces)", nf, sf, ff, [&] { return scan::incEdgesF( t, region ); }, [&] { return walk::incEdgesF( t, region ); } );
+                run( "getIncidentVerts(faces)", nf, sf, ff, [&] { return scan::incVertsF( t, region ); }, [&] { return walk::incVertsF( t, region ); } );
+                run( "getInnerVerts(faces)", nf, sf, ff, [&] { return scan::innerVertsF( t, region ); }, [&] { return walk::innerVertsF( t, region ); } );
+                run( "getRegionBoundaryVerts", nf, sf, ff, [&] { return scan::regionBdVerts( t, region ); }, [&] { return walk::regionBdVerts( t, region ); } );
+                run( "getRegionInnerVerts", nf, sf, ff, [&] { return scan::regionInnerVerts( t, region ); }, [&] { return walk::regionInnerVerts( t, region ); } );
+                run( "getInnerEdges(faces)", nf, sf, ff, [&] { return scan::innerEdgesF( t, region ); }, [&] { return walk::innerEdgesF( t, region ); } );
+                run( "findRegionBoundaryUndirectedEdgesInsideMesh", nf, sf, ff, [&] { return scan::bdEdgesInside( t, region ); }, [&] { return walk::bdEdgesInside( t, region ); } );
+                run( "findAllLeftBdEdges", nf, sf, ff, [&] { return scan::leftBdEdges( t, region ); }, [&] { return walk::leftBdEdges( t, region ); } );
+                run( "getIncidentFaces(verts)", nv, sv, fv, [&] { return scan::incFacesV( t, verts ); }, [&] { return walk::incFacesV( t, verts ); } );
+                run( "getInnerFaces(verts)", nv, sv, fv, [&] { return scan::innerFacesV( t, verts ); }, [&] { return walk::innerFacesV( t, verts ); } );
+                run( "getInnerEdges(verts)", nv, sv, fv, [&] { return scan::innerEdgesV( t, verts ); }, [&] { return walk::innerEdgesV( t, verts ); } );
+                run( "getIncidentEdges(edges)", ne, se, fe, [&] { return scan::incEdgesE( t, edges ); }, [&] { return walk::incEdgesE( t, edges ); } );
             }
         }
     }

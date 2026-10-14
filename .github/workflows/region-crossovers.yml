@@ -96,7 +96,9 @@ jobs:
           ( cd meshlib_install/MeshLib.pkg && cat Payload | gunzip | cpio -i --quiet )
           cfg=$(dirname "$(find "$PWD/meshlib_install" -name MRMeshConfig.cmake | head -1)")
           echo "MRMesh config: $cfg"
-          echo "CMAKE_ARGS=-DCMAKE_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks/ -DMRMESH_CONFIG_DIR=$cfg" >> $GITHUB_ENV
+          inc=$(dirname "$(dirname "$(find "$PWD/meshlib_install" -path '*/MRMesh/MRMesh.h' | head -1)")")
+          echo "MeshLib headers: $inc"
+          echo "CMAKE_ARGS=-DCMAKE_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks/ -DMRMESH_CONFIG_DIR=$cfg -DMESHLIB_INCLUDE_DIR=$inc" >> $GITHUB_ENV
           echo "DYLD_FRAMEWORK_PATH=$PWD/meshlib_install/MeshLib.pkg/Frameworks" >> $GITHUB_ENV
 
       - name: Sources and meshes

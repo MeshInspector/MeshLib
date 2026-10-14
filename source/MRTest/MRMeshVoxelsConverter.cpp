@@ -2,6 +2,9 @@
 
 #include "MRVoxels/MRBoolean.h"
 #include "MRVoxels/MRMeshToDistanceVolume.h"
+#include "MRVoxels/MRVDBConversions.h"
+#include "MRVoxels/MRVDBFloatGrid.h"
+#include "MRVoxels/MRVoxelsVolume.h"
 #include "MRMesh/MRMakeSphereMesh.h"
 #include "MRMesh/MRVolumeIndexer.h"
 #include "MRMesh/MRMeshDistance.h"
@@ -152,6 +155,25 @@ TEST( MRMesh, MeshToDistanceVolumeOddCrossings )
     }
     EXPECT_GT( numInside, 5000 );
     EXPECT_GT( numChecked, 60000 );
+}
+
+// the specializations are exported from MRVoxels, so other libraries can call them
+TEST( MRMesh, PutSimpleVolumeInDenseGrid )
+{
+    const SimpleVolume volume{ .data = { 1.f, 2.f }, .dims = { 2, 1, 1 } };
+    FloatGrid grid = MakeFloatGrid( openvdb::FloatGrid::create( 0.f ) );
+    // each specialization fills its own row of the grid
+    putSimpleVolumeInDenseGrid( grid, { 0, 0, 0 }, volume );
+    openvdb::FloatGrid& vdbGrid = *grid;
+    putSimpleVolumeInDenseGrid( vdbGrid, { 0, 1, 0 }, volume );
+    auto accessor = vdbGrid.getAccessor();
+    putSimpleVolumeInDenseGrid( accessor, { 0, 2, 0 }, volume );
+
+    for ( int y = 0; y < 3; ++y )
+    {
+        EXPECT_EQ( vdbGrid.tree().getValue( openvdb::Coord( 0, y, 0 ) ), 1.f );
+        EXPECT_EQ( vdbGrid.tree().getValue( openvdb::Coord( 1, y, 0 ) ), 2.f );
+    }
 }
 
 } //namespace MR

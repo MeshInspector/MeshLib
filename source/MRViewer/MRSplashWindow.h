@@ -69,11 +69,6 @@ class MRVIEWER_CLASS DefaultSplashWindow final : public SplashWindow
 {
 public:
     MRVIEWER_API DefaultSplashWindow();
-#ifdef __APPLE__
-    // GLFW windows cannot be created outside the main thread on macOS, so a native window is shown there instead
-    MRVIEWER_API void start() override;
-    MRVIEWER_API void stop() override;
-#endif
 private:
     virtual void setup_() const override;
     virtual void postInit_() override;
@@ -84,9 +79,25 @@ private:
 
     std::shared_ptr<ImGuiImage> splashImage_;
     std::string versionStr_;
-#ifdef __APPLE__
-    void* nsWindow_ = nullptr;
+};
 #endif
+
+#ifdef __APPLE__
+// Shows MRSplash.png in a native window created in the main thread (GLFW windows cannot be created in other threads on macOS);
+// the window does not process events and has no ImGui context
+class MRVIEWER_CLASS StaticImageSplashWindow final : public SplashWindow
+{
+public:
+    MRVIEWER_API StaticImageSplashWindow();
+    MRVIEWER_API void start() override;
+    MRVIEWER_API void stop() override;
+private:
+    virtual void setup_() const override {}
+    virtual void positioning_( float ) override {}
+    virtual void reloadFont_( float, float ) override {}
+    virtual bool frame_( float ) override { return false; }
+
+    void* nsWindow_ = nullptr;
 };
 #endif
 }

@@ -11,7 +11,12 @@
 namespace MR
 {
 
-void DefaultSplashWindow::start()
+StaticImageSplashWindow::StaticImageSplashWindow() :
+    SplashWindow( "MeshInspector Splash" )
+{
+}
+
+void StaticImageSplashWindow::start()
 {
     @autoreleasepool
     {
@@ -60,7 +65,7 @@ void DefaultSplashWindow::start()
     }
 }
 
-void DefaultSplashWindow::stop()
+void StaticImageSplashWindow::stop()
 {
     if ( !nsWindow_ )
         return;

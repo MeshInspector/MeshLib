@@ -56,7 +56,9 @@ int main( int argc, char** argv )
     MR::Viewer::LaunchParams launchParams;
     launchParams.enableTransparentBackground = true;// default false, set true for MR and MRE
     launchParams.name = std::string( MR_PROJECT_NAME );
-    #ifndef __EMSCRIPTEN__
+    #ifdef __APPLE__
+    launchParams.splashWindow = std::make_shared<MR::StaticImageSplashWindow>();
+    #elif !defined(__EMSCRIPTEN__)
     launchParams.splashWindow = std::make_shared<MR::DefaultSplashWindow>();
     #endif
     launchParams.argc = argc;

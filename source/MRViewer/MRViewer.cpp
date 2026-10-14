@@ -589,7 +589,11 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.splashWindow.reset();
     #ifndef __EMSCRIPTEN__
         else if ( flag == "-showSplash" )
+        #ifdef __APPLE__
+            params.splashWindow = std::make_shared<MR::StaticImageSplashWindow>();
+        #else
             params.splashWindow = std::make_shared<MR::DefaultSplashWindow>();
+        #endif
     #endif
         else if ( flag == "-console" )
             params.console = true;

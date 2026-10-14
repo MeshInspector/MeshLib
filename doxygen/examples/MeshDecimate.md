@@ -41,5 +41,12 @@ Source mesh
 \image html decimate_before.png
 After decimate
 \image html decimate_after.png
+ 
+- <b class="tab-title">Rust</b>
+\include MeshDecimate.dox.rs
+Source mesh
+\image html decimate_before.png
+After decimate
+\image html decimate_after.png
 
 </div>

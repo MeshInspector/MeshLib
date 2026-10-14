@@ -23,4 +23,7 @@ Further examples won't check return values for sake of clarity
 \include MeshLoadSave.dox.js
 \include{doc} JsUsingNote.md
 
+- <b class="tab-title">Rust</b>
+\include MeshLoadSave.dox.rs
+
 </div>

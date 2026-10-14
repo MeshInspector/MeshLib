@@ -69,4 +69,37 @@ TEST( MRMesh, getRegionInnerVerts )
     EXPECT_GT( verts.count(), innerVerts.count() );
 }
 
+TEST( MRMesh, getIncidentEdges )
+{
+    Mesh sphere = makeUVSphere( 1, 16, 16 );
+    FaceBitSet deleted( sphere.topology.faceSize() );
+    deleted.set( 3_f );
+    sphere.topology.deleteFaces( deleted );
+
+    auto bruteForce = [&]( const FaceBitSet & faces )
+    {
+        UndirectedEdgeBitSet res( sphere.topology.undirectedEdgeSize() );
+        for ( UndirectedEdgeId ue{ 0 }; ue < res.size(); ++ue )
+        {
+            const auto l = sphere.topology.left( ue ), r = sphere.topology.right( ue );
+            if ( ( l && faces.test( l ) ) || ( r && faces.test( r ) ) )
+                res.set( ue );
+        }
+        return res;
+    };
+
+    // small regions take the face-by-face path, including a deleted face and an id past the last face
+    FaceBitSet small( sphere.topology.faceSize() + 10 );
+    small.set( 0_f );
+    small.set( 3_f );
+    small.set( FaceId( sphere.topology.faceSize() + 5 ) );
+    EXPECT_EQ( getIncidentEdges( sphere.topology, small ), bruteForce( small ) );
+    EXPECT_EQ( getIncidentEdges( sphere.topology, small ).count(), 3 );
+
+    // a large region takes the parallel scan of all edges
+    FaceBitSet large = sphere.topology.getValidFaces();
+    large.reset( 0_f );
+    EXPECT_EQ( getIncidentEdges( sphere.topology, large ), bruteForce( large ) );
+}
+
 } //namespace MR

@@ -469,6 +469,14 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceB
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
+    // a small region is faster to walk face by face than to test every edge of the mesh in parallel
+    if ( faces.count() * 8 < topology.faceSize() )
+    {
+        for ( auto f : faces )
+            for ( auto e : leftRing( topology, f ) ) // empty for a deleted or out-of-range face
+                res.set( e.undirected() );
+        return res;
+    }
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
         EdgeId e( ue );

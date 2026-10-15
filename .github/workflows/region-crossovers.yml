@@ -13,7 +13,7 @@ env:
   # trueform commit whose benchmarks/data holds the dragon meshes
   DATA_URL: https://raw.githubusercontent.com/polydera/trueform/e512f62ba37566f57bdf3125f69ab46853445538/benchmarks/data
   SRC_URL: https://raw.githubusercontent.com/MeshInspector/MeshLib/${{ github.sha }}/scripts/region_crossovers
-  REPS: 7
+  REPS: 5
 
 jobs:
   # a line "only: <name> <name>" in the commit message limits the run to those machines

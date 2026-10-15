@@ -1,16 +1,19 @@
 // Crossover benchmark for MRRegionBoundary functions (MeshInspector/MeshLib#7134):
-// for each function, times the parallel scan of the whole mesh (master) against the walk of the input set (the PR)
-// on regions from 1/1024 to 1/4 of the mesh, in these layouts:
+// for each function, times the parallel scan of the whole mesh (master) against the serial walk of the input set (the PR)
+// and, for the 8 functions that set neighbours, the parallel walk with atomic bit setting (the PR's middle tier),
+// on regions from 1/8192 to 1/2 of the mesh, in these layouts:
 //   packed-contiguous   - mesh after packOptimally(), the first N faces
 //   packed-scattered    - mesh after packOptimally(), N random faces
 //   unpacked-contiguous - mesh in file order, the first N faces
 //   packed-ball         - mesh after packOptimally(), the N faces nearest to a point (like a brush selection)
 //   packed-ball-half    - mesh after packOptimally(), every other of the 2N faces nearest to a point
 //   unpacked-ball       - mesh in file order, the N faces nearest to a point
-// Both implementations are copies of the library code, so the program needs only a released MeshLib.
-// Output: CSV lines  mesh,layout,function,fraction,setSize,setSpan,setFill,scanMs,walkMs  ; setSpan = last - first id + 1 of the input set,
-// setFill = average set bits per non-empty 64-bit block of the input set (1 for a scattered set, 64 for a dense one);
-// a mismatch of the two results aborts.
+// All implementations are copies of the library code, so the program needs only a released MeshLib.
+// Output: CSV lines  mesh,layout,function,fraction,setSize,setSpan,setFill,scanMs,walkMs,parMs  ; setSpan = last - first id + 1 of the input set,
+// setFill = average set bits per non-empty 64-bit block of the input set (1 for a scattered set, 64 for a dense one),
+// parMs is empty for functions without a parallel walk; a mismatch of the results aborts.
+// Timing: the first calls after switching between implementations are up to 3.5x slower, so each implementation runs
+// in bursts (3 untimed calls, then <reps> timed), bursts interleaved over 3 rounds; the minimum over all timed calls.
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRMeshLoad.h>
 #include <MRMesh/MRMeshTopology.h>
@@ -19,6 +22,7 @@
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRBuffer.h>
 #include <algorithm>
+#include <atomic>
 #include <bit>
 #include <chrono>
 #include <cstdio>
@@ -314,6 +318,108 @@ UndirectedEdgeBitSet incEdgesE( const MeshTopology & t, const UndirectedEdgeBitS
 }
 } // namespace walk
 
+namespace par // the PR's middle tier: walkSet( ..., Walk::Parallel, ... ) with BitSet::atomicTestSet
+{
+// BitSet::atomicTestSet (MeshLib#7144) is newer than the released MeshLib
+template <typename BS>
+void atomicSet( BS & bs, typename BS::IndexType i )
+{
+    auto & block = const_cast<BitSet::block_type &>( bs.bits()[size_t( i ) / BitSet::bits_per_block] );
+    const auto mask = BitSet::block_type( 1 ) << ( size_t( i ) % BitSet::bits_per_block );
+#ifdef __cpp_lib_atomic_ref
+    std::atomic_ref<BitSet::block_type>( block ).fetch_or( mask, std::memory_order_relaxed );
+#else
+    __atomic_fetch_or( &block, mask, __ATOMIC_RELAXED );
+#endif
+}
+template <typename In, typename Res, typename Visit>
+void walkSet( const In & input, Res & res, Visit && visit )
+{
+    BitSetParallelFor( input, [&]( typename In::IndexType x ) { visit( x, [&]( typename Res::IndexType i ) { atomicSet( res, i ); } ); } );
+}
+UndirectedEdgeBitSet incEdgesF( const MeshTopology & t, const FaceBitSet & faces )
+{
+    UndirectedEdgeBitSet res( t.undirectedEdgeSize() );
+    walkSet( faces, res, [&]( FaceId f, auto && add ) { for ( auto e : leftRing( t, f ) ) add( e.undirected() ); } );
+    return res;
+}
+VertBitSet incVertsF( const MeshTopology & t, const FaceBitSet & faces )
+{
+    VertBitSet res( t.getValidVerts().size() );
+    walkSet( faces, res, [&]( FaceId f, auto && add ) { for ( auto e : leftRing( t, f ) ) add( t.org( e ) ); } );
+    return res;
+}
+UndirectedEdgeBitSet innerEdgesF( const MeshTopology & t, const FaceBitSet & region )
+{
+    UndirectedEdgeBitSet res( t.undirectedEdgeSize() );
+    walkSet( region, res, [&]( FaceId f, auto && add )
+    {
+        for ( auto e : leftRing( t, f ) )
+            if ( contains( region, t.right( e ) ) )
+                add( e.undirected() );
+    } );
+    return res;
+}
+UndirectedEdgeBitSet bdEdgesInside( const MeshTopology & t, const FaceBitSet & region )
+{
+    UndirectedEdgeBitSet res( t.undirectedEdgeSize() );
+    walkSet( region, res, [&]( FaceId f, auto && add )
+    {
+        for ( auto e : leftRing( t, f ) )
+            if ( auto r = t.right( e ); r && !region.test( r ) )
+                add( e.undirected() );
+    } );
+    return res;
+}
+EdgeBitSet leftBdEdges( const MeshTopology & t, const FaceBitSet & region )
+{
+    EdgeBitSet res( t.edgeSize() );
+    walkSet( region, res, [&]( FaceId f, auto && add )
+    {
+        for ( auto e : leftRing( t, f ) )
+            if ( t.isLeftBdEdge( e, &region ) )
+                add( e );
+    } );
+    return res;
+}
+FaceBitSet incFacesV( const MeshTopology & t, const VertBitSet & verts )
+{
+    FaceBitSet res( t.faceSize() );
+    walkSet( verts, res, [&]( VertId v, auto && add )
+    {
+        for ( auto e : orgRing( t, v ) )
+            if ( auto l = t.left( e ) )
+                add( l );
+    } );
+    return res;
+}
+UndirectedEdgeBitSet innerEdgesV( const MeshTopology & t, const VertBitSet & verts )
+{
+    UndirectedEdgeBitSet res( t.undirectedEdgeSize() );
+    walkSet( verts, res, [&]( VertId v, auto && add )
+    {
+        for ( auto e : orgRing( t, v ) )
+            if ( verts.test( t.dest( e ) ) )
+                add( e.undirected() );
+    } );
+    return res;
+}
+UndirectedEdgeBitSet incEdgesE( const MeshTopology & t, const UndirectedEdgeBitSet & edges )
+{
+    UndirectedEdgeBitSet res = edges;
+    res.resize( t.undirectedEdgeSize() );
+    walkSet( edges, res, [&]( UndirectedEdgeId ue, auto && add )
+    {
+        if ( ue >= t.undirectedEdgeSize() )
+            return;
+        for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+            for ( EdgeId ei : orgRing( t, e ) )
+                add( ei.undirected() );
+    } );
+    return res;
+}
+} // namespace par
+
 template <typename BS>
 static size_t spanOf( const BS & b )
 {
@@ -348,8 +454,8 @@ int main( int argc, char ** argv )
     }
     const int reps = std::atoi( argv[1] );
     std::fprintf( stderr, "hardware threads: %u\n", std::thread::hardware_concurrency() );
-    std::printf( "mesh,layout,function,fraction,setSize,setSpan,setFill,scanMs,walkMs\n" );
-    const int fractions[] = { 1024, 512, 256, 128, 96, 64, 48, 32, 24, 16, 12, 8, 6, 4 };
+    std::printf( "mesh,layout,function,fraction,setSize,setSpan,setFill,scanMs,walkMs,parMs\n" );
+    const int fractions[] = { 8192, 4096, 2048, 1024, 512, 256, 128, 96, 64, 48, 32, 24, 16, 12, 8, 6, 4, 3, 2 };
 
     for ( int mi = 2; mi < argc; ++mi )
     {
@@ -393,41 +499,70 @@ int main( int argc, char ** argv )
                 const auto verts = scan::incVertsF( t, region );
                 const auto edges = scan::incEdgesF( t, region );
 
-                auto run = [&]( const char * name, size_t setSize, size_t setSpan, double setFill, auto && fScan, auto && fWalk )
+                // minimum over 3 rounds of bursts: 3 untimed calls, then reps timed calls of each implementation
+                auto bench = [&]( auto && ... fs )
                 {
-                    if ( !( fScan() == fWalk() ) )
+                    std::vector<double> best( sizeof...( fs ), 1e30 );
+                    for ( int round = 0; round < 3; ++round )
+                    {
+                        size_t i = 0;
+                        ( [&]( auto && f )
+                        {
+                            for ( int w = 0; w < 3; ++w )
+                                { [[maybe_unused]] auto x = f(); }
+                            for ( int r = 0; r < reps; ++r )
+                            {
+                                auto t0 = std::chrono::steady_clock::now();
+                                { [[maybe_unused]] auto x = f(); }
+                                best[i] = std::min( best[i], msSince( t0 ) );
+                            }
+                            ++i;
+                        }( fs ), ... );
+                    }
+                    return best;
+                };
+                auto check = [&]( const char * name, bool same )
+                {
+                    if ( !same )
                     {
                         std::fprintf( stderr, "MISMATCH %s %s %s 1/%d\n", meshName.c_str(), layout, name, fr );
                         std::exit( 2 );
                     }
-                    double bs = 1e30, bw = 1e30;
-                    for ( int r = 0; r < reps; ++r )
-                    {
-                        auto t0 = std::chrono::steady_clock::now();
-                        { [[maybe_unused]] auto x = fScan(); }
-                        bs = std::min( bs, msSince( t0 ) );
-                        t0 = std::chrono::steady_clock::now();
-                        { [[maybe_unused]] auto x = fWalk(); }
-                        bw = std::min( bw, msSince( t0 ) );
-                    }
-                    std::printf( "%s,%s,%s,%d,%zu,%zu,%.2f,%.4f,%.4f\n", meshName.c_str(), layout, name, fr, setSize, setSpan, setFill, bs, bw );
+                };
+                auto print = [&]( const char * name, size_t setSize, size_t setSpan, double setFill, const std::vector<double> & ms )
+                {
+                    std::printf( "%s,%s,%s,%d,%zu,%zu,%.2f,%.4f,%.4f,", meshName.c_str(), layout, name, fr, setSize, setSpan, setFill, ms[0], ms[1] );
+                    if ( ms.size() > 2 )
+                        std::printf( "%.4f", ms[2] );
+                    std::printf( "\n" );
                     std::fflush( stdout );
+                };
+                auto run = [&]( const char * name, size_t setSize, size_t setSpan, double setFill, auto && fScan, auto && fWalk )
+                {
+                    check( name, fScan() == fWalk() );
+                    print( name, setSize, setSpan, setFill, bench( fScan, fWalk ) );
+                };
+                auto run3 = [&]( const char * name, size_t setSize, size_t setSpan, double setFill, auto && fScan, auto && fWalk, auto && fPar )
+                {
+                    const auto r = fScan();
+                    check( name, r == fWalk() && r == fPar() );
+                    print( name, setSize, setSpan, setFill, bench( fScan, fWalk, fPar ) );
                 };
                 const size_t nf = region.count(), nv = verts.count(), ne = edges.count();
                 const size_t sf = spanOf( region ), sv = spanOf( verts ), se = spanOf( edges );
                 const double ff = fillOf( region ), fv = fillOf( verts ), fe = fillOf( edges );
-                run( "getIncidentEdges(faces)", nf, sf, ff, [&] { return scan::incEdgesF( t, region ); }, [&] { return walk::incEdgesF( t, region ); } );
-                run( "getIncidentVerts(faces)", nf, sf, ff, [&] { return scan::incVertsF( t, region ); }, [&] { return walk::incVertsF( t, region ); } );
+                run3( "getIncidentEdges(faces)", nf, sf, ff, [&] { return scan::incEdgesF( t, region ); }, [&] { return walk::incEdgesF( t, region ); }, [&] { return par::incEdgesF( t, region ); } );
+                run3( "getIncidentVerts(faces)", nf, sf, ff, [&] { return scan::incVertsF( t, region ); }, [&] { return walk::incVertsF( t, region ); }, [&] { return par::incVertsF( t, region ); } );
                 run( "getInnerVerts(faces)", nf, sf, ff, [&] { return scan::innerVertsF( t, region ); }, [&] { return walk::innerVertsF( t, region ); } );
                 run( "getRegionBoundaryVerts", nf, sf, ff, [&] { return scan::regionBdVerts( t, region ); }, [&] { return walk::regionBdVerts( t, region ); } );
                 run( "getRegionInnerVerts", nf, sf, ff, [&] { return scan::regionInnerVerts( t, region ); }, [&] { return walk::regionInnerVerts( t, region ); } );
-                run( "getInnerEdges(faces)", nf, sf, ff, [&] { return scan::innerEdgesF( t, region ); }, [&] { return walk::innerEdgesF( t, region ); } );
-                run( "findRegionBoundaryUndirectedEdgesInsideMesh", nf, sf, ff, [&] { return scan::bdEdgesInside( t, region ); }, [&] { return walk::bdEdgesInside( t, region ); } );
-                run( "findAllLeftBdEdges", nf, sf, ff, [&] { return scan::leftBdEdges( t, region ); }, [&] { return walk::leftBdEdges( t, region ); } );
-                run( "getIncidentFaces(verts)", nv, sv, fv, [&] { return scan::incFacesV( t, verts ); }, [&] { return walk::incFacesV( t, verts ); } );
+                run3( "getInnerEdges(faces)", nf, sf, ff, [&] { return scan::innerEdgesF( t, region ); }, [&] { return walk::innerEdgesF( t, region ); }, [&] { return par::innerEdgesF( t, region ); } );
+                run3( "findRegionBoundaryUndirectedEdgesInsideMesh", nf, sf, ff, [&] { return scan::bdEdgesInside( t, region ); }, [&] { return walk::bdEdgesInside( t, region ); }, [&] { return par::bdEdgesInside( t, region ); } );
+                run3( "findAllLeftBdEdges", nf, sf, ff, [&] { return scan::leftBdEdges( t, region ); }, [&] { return walk::leftBdEdges( t, region ); }, [&] { return par::leftBdEdges( t, region ); } );
+                run3( "getIncidentFaces(verts)", nv, sv, fv, [&] { return scan::incFacesV( t, verts ); }, [&] { return walk::incFacesV( t, verts ); }, [&] { return par::incFacesV( t, verts ); } );
                 run( "getInnerFaces(verts)", nv, sv, fv, [&] { return scan::innerFacesV( t, verts ); }, [&] { return walk::innerFacesV( t, verts ); } );
-                run( "getInnerEdges(verts)", nv, sv, fv, [&] { return scan::innerEdgesV( t, verts ); }, [&] { return walk::innerEdgesV( t, verts ); } );
-                run( "getIncidentEdges(edges)", ne, se, fe, [&] { return scan::incEdgesE( t, edges ); }, [&] { return walk::incEdgesE( t, edges ); } );
+                run3( "getInnerEdges(verts)", nv, sv, fv, [&] { return scan::innerEdgesV( t, verts ); }, [&] { return walk::innerEdgesV( t, verts ); }, [&] { return par::innerEdgesV( t, verts ); } );
+                run3( "getIncidentEdges(edges)", ne, se, fe, [&] { return scan::incEdgesE( t, edges ); }, [&] { return walk::incEdgesE( t, edges ); }, [&] { return par::incEdgesE( t, edges ); } );
             }
         }
     }

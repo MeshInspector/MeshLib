@@ -136,7 +136,7 @@ Expected<std::filesystem::path> getExecutablePath_()
     std::error_code ec;
     if ( auto res = std::filesystem::absolute( path, ec ); !ec )
         return res;
-    return unexpected( "Failed to get executable path" );
+    return std::filesystem::path { path };
 #else
     char path[PATH_MAX];
     if ( auto size = readlink( "/proc/self/exe", path, PATH_MAX ); size < 0 )

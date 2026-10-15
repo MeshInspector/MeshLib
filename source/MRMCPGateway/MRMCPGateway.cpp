@@ -54,7 +54,7 @@ std::filesystem::path gatewayExePath()
     std::error_code ec;
     if ( auto res = std::filesystem::absolute( path, ec ); !ec )
         return res;
-    return {};
+    return std::filesystem::path{ path };
 #else
     char path[PATH_MAX];
     auto size = readlink( "/proc/self/exe", path, PATH_MAX );

@@ -546,6 +546,15 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceB
                 res.set( e.undirected() );
         return res;
     }
+    if ( faces.count() * 8 <= topology.faceSize() )
+    {
+        BitSetParallelFor( faces, [&]( FaceId f )
+        {
+            for ( auto e : leftRing( topology, f ) )
+                res.atomicTestSet( e.undirected() );
+        } );
+        return res;
+    }
     BitSetParallelForAll( res, [&]( UndirectedEdgeId ue )
     {
         EdgeId e( ue );

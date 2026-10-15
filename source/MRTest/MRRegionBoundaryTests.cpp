@@ -176,6 +176,15 @@ TEST( MRMesh, RegionBoundarySmallAndLargeSets )
     smallSet.set( FaceId( t.faceSize() + 5 ) );
     check( smallSet, "small" );
 
+    // a medium set (a band of about 1/10 of the faces) takes the parallel walk in getIncidentEdges
+    FaceBitSet medium( t.faceSize() + 10 );
+    for ( auto f : t.getValidFaces() )
+        if ( auto z = sphere.triCenter( f ).z; z > 0.7f && z <= 0.9f )
+            medium.set( f );
+    medium.set( 700_f );
+    medium.set( FaceId( t.faceSize() + 5 ) );
+    check( medium, "medium" );
+
     // a large region takes the scans of the whole mesh
     FaceBitSet large( t.faceSize() );
     for ( auto f : t.getValidFaces() )

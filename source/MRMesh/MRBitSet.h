@@ -166,6 +166,13 @@ public:
     /// computes the number of set bits in the whole set
     [[nodiscard]] MRMESH_API size_type count() const noexcept;
 
+    /// the numbers of set bits and of non-empty blocks
+    struct Counts { size_type bits = 0; size_type blocks = 0; };
+
+    /// computes the numbers of set bits and of non-empty blocks, stopping as soon as the set bits exceed maxBits;
+    /// both numbers are then partial, which makes a size test of a large set cheap
+    [[nodiscard]] MRMESH_API Counts countBitsAndBlocks( size_type maxBits = ~size_type{} ) const noexcept;
+
     /// return the smallest index i such that bit i is set, or npos if *this has no on bits.
     [[nodiscard]] IndexType find_first() const { return findSetBitAfter_( 0 ); }
 

@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <cfloat>
+#include <tuple>
 
 namespace MR
 {
@@ -188,6 +189,7 @@ HashMap<UndirectedEdgeId, EdgePath> splitCrossedEdges( Mesh& mesh, const std::ve
         EdgePoint p;
         int crossing = 0;
         int toDest = 0, toOrg = 0;
+        int along = 0; // orders the cuts at the same point of the edge toward its destination, by their order in crossings
     };
     std::vector<Cut> cuts;
     cuts.reserve( 2 * crossings.size() );
@@ -195,11 +197,16 @@ HashMap<UndirectedEdgeId, EdgePath> splitCrossedEdges( Mesh& mesh, const std::ve
     {
         // the ring slots go counterclockwise: a.e to its destination, b.e to its destination, a.e to its origin, b.e to its origin
         const auto& [a, b] = crossings[k];
-        cuts.push_back( a.e.even() ? Cut{ a, k, 0, 2 } : Cut{ a.sym(), k, 2, 0 } );
-        cuts.push_back( b.e.even() ? Cut{ b, k, 1, 3 } : Cut{ b.sym(), k, 3, 1 } );
+        cuts.push_back( a.e.even() ? Cut{ a, k, 0, 2, k } : Cut{ a.sym(), k, 2, 0, -k } );
+        cuts.push_back( b.e.even() ? Cut{ b, k, 1, 3, k } : Cut{ b.sym(), k, 3, 1, -k } );
     }
     // the cuts of every edge from its destination to its origin, so that each one splits the piece at the origin
-    std::sort( cuts.begin(), cuts.end(), [] ( const Cut& x, const Cut& y ) { return x.p.e != y.p.e ? x.p.e < y.p.e : x.p.a > y.p.a; } );
+    std::sort( cuts.begin(), cuts.end(), [] ( const Cut& x, const Cut& y )
+    {
+        if ( x.p.e != y.p.e )
+            return x.p.e < y.p.e;
+        return std::tie( y.p.a.a, y.along ) < std::tie( x.p.a.a, x.along );
+    } );
 
     const VertId firstNewVert( tp.vertSize() );
     for ( const auto& [a, b] : crossings )

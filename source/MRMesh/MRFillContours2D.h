@@ -22,6 +22,7 @@ MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>&
  * e.g. the crossings of contours in a cut face found by \ref PlanarTriangulation::findInnerCrossings;
  * the holes around the pieces can then be filled as usual
  * @param crossings the points of each crossing on its two edges, where b.e goes from the right of a.e to its left;
+ * crossings at the same point of an edge must come in their order along the edge as given there;
  * the edges must have no faces on either side, so that no face changes;
  * the new vertex of crossings[k] is the k-th vertex added: VertId( vertSize() before the call + k )
  * @return for every split edge, the pieces of EdgeId( ue ) from its origin to its destination;

@@ -157,8 +157,9 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
  * @param loops all hole loops of the region together (e.g. all hole loops inside one cut face), each of at least 3 edges
  * @param normal the orientation of the region, see \ref triangulateDisjointContours
  * @return the points of every crossing on its two edges, where b.e goes from the right of a.e to its left,
- *         seen from the tip of the normal; an error if a crossing involves an edge the loops run only once
- *         (the boundary of the region), or if a crossing lands on a vertex or on another crossing; see \ref splitCrossedEdges
+ *         seen from the tip of the normal; the crossings on every edge come in their order along it, which tells
+ *         the crossings at the same point apart (e.g. three edges through one point); an error if a crossing involves
+ *         an edge the loops run only once (the boundary of the region); see \ref splitCrossedEdges
  */
 MRMESH_API Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 

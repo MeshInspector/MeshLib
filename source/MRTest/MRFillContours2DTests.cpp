@@ -376,7 +376,6 @@ static Expected<std::vector<EdgePointPair>> findChordCrossings( const PolygonWit
 }
 
 static const std::string cOuterCrossing = "an edge of the region boundary crosses another edge";
-static const std::string cTouch = "a crossing lands on a vertex or on another crossing";
 
 static std::string errorOf( const Expected<std::vector<EdgePointPair>>& crossings )
 {
@@ -464,7 +463,8 @@ static void splitAndCheck( PolygonWithChords& pc, const std::vector<EdgePointPai
 }
 
 // fills the holes inside the polygon with the usual planners, as cutMesh does, and checks that the filling covers the polygon once
-static void fillAndCheck( PolygonWithChords& pc )
+// with triangles of double area above minDblArea
+static void fillAndCheck( PolygonWithChords& pc, float minDblArea = 1e-4f )
 {
     Mesh& mesh = pc.mesh;
     std::vector<EdgeId> holes;
@@ -488,7 +488,7 @@ static void fillAndCheck( PolygonWithChords& pc )
     EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) ); // only the outside of the polygon is left
     EXPECT_LT( ( mesh.dirArea( newFaces ) - dirArea ).length(), 1e-5 );
     for ( FaceId f : newFaces )
-        EXPECT_GT( mesh.dirDblArea( f ).z, 1e-4f ); // no triangle is upside down or of zero area
+        EXPECT_GT( mesh.dirDblArea( f ).z, minDblArea ); // no triangle is upside down or of zero area
 }
 
 static void splitFillAndCheck( PolygonWithChords& pc, const std::vector<EdgePointPair>& crossings )
@@ -651,31 +651,38 @@ TEST( MRMesh, findInnerCrossingsIslandOverRing )
     EXPECT_EQ( errorOf( PlanarTriangulation::findInnerCrossings( mesh, loops, Vector3f::plusZ() ) ), cOuterCrossing );
 }
 
-// A crossing exactly at a vertex, or three chords crossing at one point, is an error
+// Chords touching exactly or nearly: simulation of simplicity turns exact touches in proper crossings,
+// whose vertices can then coincide with other ones, giving zero-area triangles
 TEST( MRMesh, findInnerCrossingsTouch )
 {
     const std::vector<Vector3f> octagon{ { 2, 0, 0 }, { 1.5f, 1.5f, 0 }, { 0, 2, 0 }, { -1.5f, 1.5f, 0 }, { -2, 0, 0 }, { -1.5f, -1.5f, 0 }, { 0, -2, 0 }, { 1.5f, -1.5f, 0 } };
+    struct Case
     {
-        // the crossing chord bends exactly on the other one
-        auto pc = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6, { { 0.5f, 0, 0 } } } } );
-        EXPECT_EQ( errorOf( findChordCrossings( pc ) ), cTouch );
-    }
+        std::vector<ChordSpec> chords;
+        size_t numCrossings = 0;
+        bool exact = false;
+    };
+    const Case cases[] =
     {
-        auto pc = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6 }, { 1, 5 } } );
-        EXPECT_EQ( errorOf( findChordCrossings( pc ) ), cTouch );
-        // three crossings near one point are fine
-        auto pcNear = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6 }, { 1, 5, { { 0.1f, -0.05f, 0 } } } } );
-        const auto crossings = findChordCrossings( pcNear );
-        ASSERT_TRUE( crossings.has_value() ) << crossings.error();
-        EXPECT_EQ( crossings->size(), size_t( 3 ) );
-        splitFillAndCheck( pcNear, *crossings );
-    }
+        { { { 0, 4 }, { 2, 6, { { 0.5f, 0, 0 } } } }, 1, true }, // a chord bending exactly on the other one
+        { { { 0, 4 }, { 2, 6 }, { 1, 5 } }, 3, true }, // three chords through one point
+        { { { 0, 4 }, { 2, 6, { { 0.5f, -0.25f, 0 } } } }, 1, false }, // a bend near the other chord
+        { { { 0, 4 }, { 2, 6 }, { 1, 5, { { 0.1f, -0.05f, 0 } } } }, 3, false } // three crossings near one point
+    };
+    for ( const auto& c : cases )
     {
-        // a bend near the other chord is fine
-        auto pc = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6, { { 0.5f, -0.25f, 0 } } } } );
+        auto pc = makePolygonWithChords( octagon, c.chords );
         const auto crossings = findChordCrossings( pc );
         ASSERT_TRUE( crossings.has_value() ) << crossings.error();
-        splitFillAndCheck( pc, *crossings );
+        EXPECT_EQ( crossings->size(), c.numCrossings );
+        if ( c.exact )
+        {
+            splitCrossedEdges( pc.mesh, *crossings );
+            EXPECT_TRUE( pc.mesh.topology.checkValidity() );
+            fillAndCheck( pc, -1e-6f );
+        }
+        else
+            splitFillAndCheck( pc, *crossings );
     }
 }
 

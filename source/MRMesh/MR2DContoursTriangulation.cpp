@@ -1880,23 +1880,12 @@ Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh, const
     WholeEdgeMap patchToInEdges;
     SweepLineQueue sweep( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer ), loops,
         { .abortWhenIntersect = true, .allowInnerIntersections = true, .outPatchMap = &patchToInEdges } );
-    const VertId firstCrossingVert( sweep.vertSize() ); // the sweep adds a vertex per crossing after those of the loops
     // only the crossings are needed: finding them leaves the topology as it is, so patch edges still map to mesh edges
     if ( !sweep.findIntersections() )
         return unexpected( "an edge of the region boundary crosses another edge" );
-    if ( cache.intersections.empty() )
-        return res;
 
     const auto& tp = cache.tp;
     const auto& pts = cache.pts2Buffer;
-    std::vector<VertId> sorted( tp.vertSize() );
-    for ( int i = 0; i < int( sorted.size() ); ++i )
-        sorted[i] = VertId( i );
-    tbb::parallel_sort( sorted.begin(), sorted.end(), [&] ( VertId a, VertId b ) { return std::tie( pts[a].x, pts[a].y ) < std::tie( pts[b].x, pts[b].y ); } );
-    for ( size_t i = 1; i < sorted.size(); ++i )
-        if ( pts[sorted[i]] == pts[sorted[i - 1]] && std::max( sorted[i], sorted[i - 1] ) >= firstCrossingVert )
-            return unexpected( "a crossing lands on a vertex or on another crossing" );
-
     // the point of crossing vertex crossingV on the mesh edge of patch edge patchE
     auto onEdge = [&] ( EdgeId patchE, VertId crossingV )
     {
@@ -1904,6 +1893,7 @@ Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh, const
         return EdgePoint( mapEdge( patchToInEdges, patchE ),
             float( std::clamp( dot( Vector2d( pts[crossingV] ) - a, b - a ) / ( b - a ).lengthSq(), 0.0, 1.0 ) ) );
     };
+    // the sweep meets the crossings of every edge in their order along it, even those at the same point
     res.resize( cache.intersections.size() );
     ParallelFor( res, [&] ( size_t i )
     {

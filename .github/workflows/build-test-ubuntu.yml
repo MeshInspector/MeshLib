@@ -203,23 +203,11 @@ jobs:
           path: ./source/MeshLibRust/src
           retention-days: 1
 
-      - name: Install Java
+      - name: Build and test Java bindings
         if: ${{ env.RUN_JAVA == 'true' }}
-        uses: ./.github/actions/setup-java
-
-      - name: Generate and build Java bindings
-        if: ${{ env.RUN_JAVA == 'true' }}
-        run: make -f scripts/mrbind/generate.mk TARGET=java -B --trace
-
-      - name: Build and run Java examples and tests
-        if: ${{ env.RUN_JAVA == 'true' }}
-        env:
-          LD_LIBRARY_PATH: ${{ github.workspace }}/build/${{ matrix.config }}/bin
-        run: |
-          javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d examples/java-examples/classes examples/java-examples/*.java
-          java --enable-native-access=ALL-UNNAMED -Djava.library.path=build/${{ matrix.config }}/bin -cp source/MeshLibJava/meshlib.jar:examples/java-examples/classes MeshBoolean
-          javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java
-          java --enable-native-access=ALL-UNNAMED -Djava.library.path=build/${{ matrix.config }}/bin -cp source/MeshLibJava/meshlib.jar:source/MRTestJava/classes mrtest.Main
+        uses: ./.github/actions/build-java-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
 
       - name: Upload Java bindings
         if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' && env.RUN_JAVA == 'true' }}

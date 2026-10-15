@@ -425,28 +425,12 @@ jobs:
           lib-dir: ${{ github.workspace }}\source\${{ env.MR_ARCH }}\${{ matrix.config }}
           windows-vsdevcmd: call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ env.VS_DEV_ARGS }} -vcvars_ver=${{ env.VCVARS_VER }}
 
-      - name: Install Java
+      - name: Build and test Java bindings
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
-        uses: ./.github/actions/setup-java
-
-      - name: Generate and build Java bindings, examples and tests
-        if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' && matrix.config == 'Release' }}
-        shell: cmd
-        env:
-          MSYS2_DIR: C:\msys64
-        run: |
-          call "${{env.VC_PATH}}\Common7\Tools\VsDevCmd.bat" %VS_DEV_ARGS% -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
-          call ./scripts/mrbind/generate_win.bat -B --trace TARGET=java || exit /b 1
-          rem java.exe has already loaded its own zip.dll (and freetype.dll, msvcp140.dll), which shadow MeshLib's dependencies of the same names.
-          rem So the tests run against a copy with mangled dependency names, made the same way as the NuGet package.
-          py -3 -m venv java_venv || exit /b 1
-          java_venv\Scripts\Activate || exit /b 1
-          py -3 -m pip install delvewheel || exit /b 1
-          py -3 ./scripts/nuget_patch/patch_library_deps.py ./java_native/ ./source/%MR_ARCH%/${{matrix.config}}/MeshLibC2.dll || exit /b 1
-          javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d examples/java-examples/classes examples/java-examples/*.java || exit /b 1
-          java --enable-native-access=ALL-UNNAMED -Djava.library.path=java_native -cp source/MeshLibJava/meshlib.jar;examples/java-examples/classes MeshBoolean || exit /b 1
-          javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java || exit /b 1
-          java --enable-native-access=ALL-UNNAMED -Djava.library.path=java_native -cp source/MeshLibJava/meshlib.jar;source/MRTestJava/classes mrtest.Main || exit /b 1
+        uses: ./.github/actions/build-java-bindings
+        with:
+          lib-dir: ${{ github.workspace }}\source\${{ env.MR_ARCH }}\${{ matrix.config }}
+          windows-vsdevcmd: call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ env.VS_DEV_ARGS }} -vcvars_ver=${{ env.VCVARS_VER }}
 
       - name: Build C examples
         if: ${{ inputs.mrbind_c && matrix.build_system == 'CMake' }}

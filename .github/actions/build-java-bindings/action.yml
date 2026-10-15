@@ -1,0 +1,72 @@
+name: Build Java bindings
+description: >
+  Installs a JDK if needed, generates the Java bindings from the C bindings
+  (`make -f scripts/mrbind/generate.mk TARGET=java`, which also compiles
+  `meshlib.jar`), then builds and runs the Java examples and tests against the
+  freshly built C libraries. The C bindings must have been built already.
+
+inputs:
+  lib-dir:
+    required: true
+    description: >
+      Absolute path of the directory with the MeshLib and MeshLibC2 shared
+      libraries, for `java.library.path` when running.
+  windows-vsdevcmd:
+    required: false
+    default: ''
+    description: >
+      Windows only: the `call ...\VsDevCmd.bat ...` command that sets up the
+      MSVC environment for `generate_win.bat`.
+
+runs:
+  using: composite
+  steps:
+    - name: Install Java
+      uses: ./.github/actions/setup-java
+
+    - name: Generate and build Java bindings
+      if: runner.os != 'Windows'
+      shell: bash
+      run: |
+        set -eu
+        if [ "$RUNNER_OS" = macOS ]; then
+          export PATH="$(brew --prefix)/opt/make/libexec/gnubin:$(brew --prefix)/opt/grep/libexec/gnubin:$PATH"
+        fi
+        make -f scripts/mrbind/generate.mk -B --trace TARGET=java
+
+    - name: Generate and build Java bindings (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      env:
+        MSYS2_DIR: C:\msys64
+      run: |
+        ${{ inputs.windows-vsdevcmd }} || exit /b 1
+        call ./scripts/mrbind/generate_win.bat -B --trace TARGET=java || exit /b 1
+
+    - name: Build and run Java examples and tests
+      if: runner.os != 'Windows'
+      shell: bash
+      env:
+        LD_LIBRARY_PATH: ${{ inputs.lib-dir }}
+        DYLD_LIBRARY_PATH: ${{ inputs.lib-dir }}
+      run: |
+        set -eu
+        javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d examples/java-examples/classes examples/java-examples/*.java
+        java --enable-native-access=ALL-UNNAMED -Djava.library.path="${{ inputs.lib-dir }}" -cp source/MeshLibJava/meshlib.jar:examples/java-examples/classes MeshBoolean
+        javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java
+        java --enable-native-access=ALL-UNNAMED -Djava.library.path="${{ inputs.lib-dir }}" -cp source/MeshLibJava/meshlib.jar:source/MRTestJava/classes mrtest.Main
+
+    # java.exe has already loaded its own zip.dll (and freetype.dll, msvcp140.dll), which shadow MeshLib's dependencies of the same names.
+    # So the tests run against a copy with mangled dependency names, made the same way as the NuGet package.
+    - name: Build and run Java examples and tests (Windows)
+      if: runner.os == 'Windows'
+      shell: cmd
+      run: |
+        py -3 -m venv java_venv || exit /b 1
+        call java_venv\Scripts\activate.bat || exit /b 1
+        py -3 -m pip install delvewheel || exit /b 1
+        py -3 ./scripts/nuget_patch/patch_library_deps.py ./java_native/ "${{ inputs.lib-dir }}\MeshLibC2.dll" || exit /b 1
+        javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d examples/java-examples/classes examples/java-examples/*.java || exit /b 1
+        java --enable-native-access=ALL-UNNAMED -Djava.library.path=java_native -cp source/MeshLibJava/meshlib.jar;examples/java-examples/classes MeshBoolean || exit /b 1
+        javac --release 22 -Xlint:all -Werror -cp source/MeshLibJava/meshlib.jar -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java || exit /b 1
+        java --enable-native-access=ALL-UNNAMED -Djava.library.path=java_native -cp source/MeshLibJava/meshlib.jar;source/MRTestJava/classes mrtest.Main || exit /b 1

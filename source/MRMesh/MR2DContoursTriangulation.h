@@ -2,7 +2,6 @@
 #include "MRMeshFwd.h"
 #include "MRId.h"
 #include "MRHoleFillPlan.h"
-#include "MREdgePoint.h"
 #include "MRExpected.h"
 #include <memory>
 #include <optional>
@@ -152,16 +151,17 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
 /**
- * @brief finds all crossings of the edges inside the planar region bounded by \p loops, in its projection along \p normal;
- * an edge is inside if the loops run along it both ways, as along the contours in a face cut by crossing contours
+ * @brief splits every two edges crossing inside the planar region bounded by \p loops, in its projection along \p normal,
+ * at one new vertex shared by them, in the middle of the points of the crossing on both edges;
+ * an edge is inside if the loops run along it both ways, as along the contours in a face cut by crossing contours,
+ * so no face changes, and the holes around the pieces can be filled as usual afterwards
  * @param loops all hole loops of the region together (e.g. all hole loops inside one cut face), each of at least 3 edges
  * @param normal the orientation of the region, see \ref triangulateDisjointContours
- * @return the points of every crossing on its two edges, where b.e goes from the right of a.e to its left,
- *         seen from the tip of the normal; the crossings on every edge come in their order along it, which tells
- *         the crossings at the same point apart (e.g. three edges through one point); an error if a crossing involves
- *         an edge the loops run only once (the boundary of the region); see \ref splitCrossedEdges
+ * @return for every split edge, the pieces of EdgeId( ue ) from its origin to its destination, where the last piece
+ *         keeps the id EdgeId( ue ) as in MeshTopology::splitEdge; an error without changing the mesh
+ *         if a crossing involves an edge the loops run only once (the boundary of the region)
  */
-MRMESH_API Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
+MRMESH_API Expected<HashMap<UndirectedEdgeId, EdgePath>> splitInnerCrossings( Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
 }
 }

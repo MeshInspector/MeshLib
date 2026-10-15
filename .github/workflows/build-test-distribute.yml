@@ -329,12 +329,16 @@ jobs:
 
       - name: Pack Rust bindings
         run: |
-          if [ -d rust_bindings_src ]; then
+          # Both crates need the libraries of the NuGet package. Without it (a run without NuGet, or a re-run after its artifact
+          # was deleted) nothing is packed, so a re-run can't replace good crates of the release with broken ones.
+          if [ -d rust_bindings_src ] && [ -f MeshLib.nupkg ]; then
             scripts/rust/pack_crate.sh ${{ needs.config.outputs.app_version }} \
               "https://github.com/${{ github.repository }}/releases/download/${{ needs.config.outputs.release_tag }}" \
-              rust_bindings_src $([ -f MeshLib.nupkg ] && echo MeshLib.nupkg)
-            rm -rf rust_bindings_src
+              rust_bindings_src MeshLib.nupkg
+          elif [ -d rust_bindings_src ]; then
+            echo "::notice::No MeshLib.nupkg, the Rust crates are not packed."
           fi
+          rm -rf rust_bindings_src
 
       # The Java bindings are a jar with no native code (the C libraries come from the platform packages), one archive for all platforms:
       # the jar and the generated sources from the Ubuntu job.

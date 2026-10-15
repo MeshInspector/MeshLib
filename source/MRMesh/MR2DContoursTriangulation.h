@@ -2,6 +2,8 @@
 #include "MRMeshFwd.h"
 #include "MRId.h"
 #include "MRHoleFillPlan.h"
+#include "MREdgePoint.h"
+#include "MRExpected.h"
 #include <memory>
 #include <optional>
 
@@ -148,6 +150,17 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
  *         Validate it with \ref isFillingMultipleEdgeFree: a chord may duplicate an off-loop mesh edge
  */
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
+
+/**
+ * @brief finds all crossings of the edges inside the planar region bounded by \p loops, in its projection along \p normal;
+ * an edge is inside if the loops run along it both ways, as along the contours in a face cut by crossing contours
+ * @param loops all hole loops of the region together (e.g. all hole loops inside one cut face), each of at least 3 edges
+ * @param normal the orientation of the region, see \ref triangulateDisjointContours
+ * @return the points of every crossing on its two edges, where b.e goes from the right of a.e to its left,
+ *         seen from the tip of the normal; an error if a crossing involves an edge the loops run only once
+ *         (the boundary of the region), or if a crossing lands on a vertex or on another crossing; see \ref splitCrossedEdges
+ */
+MRMESH_API Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
 }
 }

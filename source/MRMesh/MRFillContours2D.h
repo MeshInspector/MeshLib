@@ -17,6 +17,18 @@ namespace MR
  */
 MRMESH_API Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepresentativeEdges );
 
+/**
+ * @brief splits both edges of every crossing at one new vertex in the middle of its two points,
+ * e.g. the crossings of contours in a cut face found by \ref PlanarTriangulation::findInnerCrossings;
+ * the holes around the pieces can then be filled as usual
+ * @param crossings the points of each crossing on its two edges, where b.e goes from the right of a.e to its left;
+ * the edges must have no faces on either side, so that no face changes;
+ * the new vertex of crossings[k] is the k-th vertex added: VertId( vertSize() before the call + k )
+ * @return for every split edge, the pieces of EdgeId( ue ) from its origin to its destination;
+ * the last piece keeps the id EdgeId( ue ), as in MeshTopology::splitEdge
+ */
+MRMESH_API HashMap<UndirectedEdgeId, EdgePath> splitCrossedEdges( Mesh& mesh, const std::vector<EdgePointPair>& crossings );
+
 /// keeps the buffers of \ref fillContours2DPlan alive between calls (the sweep-line triangulation's
 /// own cache among them), so a caller preparing plans for many holes one by one avoids re-allocating
 /// them on every call; one cache must not be used by several threads at once

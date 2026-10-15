@@ -13,9 +13,12 @@
 #include "MRMeshFillHole.h"
 #include "MRBox.h"
 #include "MRMapEdge.h"
+#include "MREdgePoint.h"
 #include "MRBitSet.h"
 #include "MRphmap.h"
+#include <array>
 #include <cfloat>
+#include <tuple>
 
 namespace MR
 {
@@ -172,6 +175,80 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
     if ( !mesh.addMeshPart( *patch, false, paths, patchPaths ) )
         return unexpected( "Patch surface borders are incompatible with mesh borders" );
     return {};
+}
+
+HashMap<UndirectedEdgeId, EdgePath> splitCrossedEdges( Mesh& mesh, const std::vector<EdgePointPair>& crossings )
+{
+    MR_TIMER;
+    auto& tp = mesh.topology;
+    // a crossing on an edge, along its even direction, and the slots in the ring of the crossing's vertex
+    // of the pieces going from there toward the edge's destination and toward its origin
+    struct Cut
+    {
+        UndirectedEdgeId ue;
+        float t = 0;
+        int crossing = 0;
+        int toDest = 0, toOrg = 0;
+    };
+    std::vector<Cut> cuts;
+    cuts.reserve( 2 * crossings.size() );
+    for ( int k = 0; k < int( crossings.size() ); ++k )
+    {
+        const auto& c = crossings[k];
+        assert( c.a.e.undirected() != c.b.e.undirected() );
+        // the ring slots go counterclockwise: a.e to its destination, b.e to its destination, a.e to its origin, b.e to its origin
+        for ( auto [p, toDest, toOrg] : { std::tuple{ c.a, 0, 2 }, std::tuple{ c.b, 1, 3 } } )
+        {
+            assert( !tp.left( p.e ) && !tp.right( p.e ) );
+            if ( p.e.odd() )
+                cuts.push_back( { p.e.undirected(), 1 - p.a, k, toOrg, toDest } );
+            else
+                cuts.push_back( { p.e.undirected(), p.a, k, toDest, toOrg } );
+        }
+    }
+    std::sort( cuts.begin(), cuts.end(), [] ( const Cut& a, const Cut& b ) { return std::tie( a.ue, a.t ) < std::tie( b.ue, b.t ); } );
+
+    const VertId firstNewVert( tp.vertSize() );
+    for ( const auto& c : crossings )
+        mesh.addPoint( 0.5f * ( mesh.edgePoint( c.a ) + mesh.edgePoint( c.b ) ) );
+
+    HashMap<UndirectedEdgeId, EdgePath> res;
+    std::vector<std::array<EdgeId, 4>> rings( crossings.size() );
+    for ( size_t i = 0; i < cuts.size(); )
+    {
+        const EdgeId e( cuts[i].ue );
+        auto& pieces = res[cuts[i].ue];
+        // the first piece takes the place of e in the ring of its origin, and e becomes the last piece, as in MeshTopology::splitEdge
+        EdgeId piece = tp.makeEdge();
+        if ( const EdgeId ePrev = tp.prev( e ); ePrev != e )
+        {
+            tp.splice( ePrev, e );
+            tp.splice( ePrev, piece );
+        }
+        else
+        {
+            const VertId v0 = tp.org( e );
+            tp.setOrg( e, {} );
+            tp.setOrg( piece, v0 );
+        }
+        for ( ; i < cuts.size() && cuts[i].ue == e.undirected(); ++i )
+        {
+            pieces.push_back( piece );
+            rings[cuts[i].crossing][cuts[i].toOrg] = piece.sym();
+            piece = i + 1 < cuts.size() && cuts[i + 1].ue == e.undirected() ? tp.makeEdge() : e;
+            rings[cuts[i].crossing][cuts[i].toDest] = piece;
+        }
+        pieces.push_back( e );
+    }
+    for ( int k = 0; k < int( rings.size() ); ++k )
+    {
+        const auto& r = rings[k];
+        tp.splice( r[0], r[1] );
+        tp.splice( r[1], r[2] );
+        tp.splice( r[2], r[3] );
+        tp.setOrg( r[0], firstNewVert + k );
+    }
+    return res;
 }
 
 IFillContours2DPlanCache::~IFillContours2DPlanCache() = default;

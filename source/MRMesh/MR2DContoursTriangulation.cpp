@@ -1849,6 +1849,56 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     return res;
 }
 
+Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+{
+    std::vector<EdgePointPair> res;
+    if ( loops.empty() )
+        return res;
+    for ( const auto& loop : loops )
+        if ( loop.size() < 3 )
+            return unexpected( "a loop of less than 3 edges" ); // the sweep skips such loops, so their crossings would stay unseen
+
+    SweepLineQueue::Cache cache;
+    WholeEdgeMap patchToInEdges;
+    SweepLineQueue sweep( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer ), loops,
+        { .outPatchMap = &patchToInEdges } );
+    const VertId firstCrossingVert( sweep.vertSize() ); // the sweep adds a vertex per crossing after those of the loops
+    // only the crossings are needed: finding them leaves the topology as it is, so patch edges still map to mesh edges
+    sweep.findIntersections();
+    if ( cache.intersections.empty() )
+        return res;
+
+    const auto& tp = cache.tp;
+    const auto& pts = cache.pts2Buffer;
+    std::vector<VertId> sorted( tp.vertSize() );
+    for ( int i = 0; i < int( sorted.size() ); ++i )
+        sorted[i] = VertId( i );
+    std::sort( sorted.begin(), sorted.end(), [&] ( VertId a, VertId b ) { return std::tie( pts[a].x, pts[a].y ) < std::tie( pts[b].x, pts[b].y ); } );
+    for ( size_t i = 1; i < sorted.size(); ++i )
+        if ( pts[sorted[i]] == pts[sorted[i - 1]] && std::max( sorted[i], sorted[i - 1] ) >= firstCrossingVert )
+            return unexpected( "a crossing lands on a vertex or on another crossing" );
+
+    // the point of crossing vertex crossingV on the mesh edge of patch edge patchE
+    auto onEdge = [&] ( EdgeId patchE, VertId crossingV )
+    {
+        const Vector2d a( pts[tp.org( patchE )] ), b( pts[tp.dest( patchE )] );
+        return EdgePoint( mapEdge( patchToInEdges, patchE ),
+            float( std::clamp( dot( Vector2d( pts[crossingV] ) - a, b - a ) / ( b - a ).lengthSq(), 0.0, 1.0 ) ) );
+    };
+    res.reserve( cache.intersections.size() );
+    for ( const auto& inter : cache.intersections )
+    {
+        // initMeshByLoops_ gives a patch edge taken both ways winding modifier 0, and leaves one taken once without any
+        if ( cache.windingInfo[inter.lower.undirected()].windingModifier != 0 || cache.windingInfo[inter.upper.undirected()].windingModifier != 0 )
+            return unexpected( "an edge of the region boundary crosses another edge" );
+        // both edges point along the sweep, and the lower one passes from below the upper one to above it
+        assert( !MR::ccw( { PreciseVertCoords2{ tp.org( inter.upper ), pts[tp.org( inter.upper )] },
+            { tp.dest( inter.upper ), pts[tp.dest( inter.upper )] }, { tp.org( inter.lower ), pts[tp.org( inter.lower )] } } ) );
+        res.emplace_back( onEdge( inter.upper, inter.vId ), onEdge( inter.lower, inter.vId ) );
+    }
+    return res;
+}
+
 }
 
 }

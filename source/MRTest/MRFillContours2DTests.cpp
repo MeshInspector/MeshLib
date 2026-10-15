@@ -1,5 +1,6 @@
 #include <MRMesh/MRFillContours2D.h>
 #include <MRMesh/MRMesh.h>
+#include <MRMesh/MRVector2.h>
 #include <MRMesh/MRVector3.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMeshTrimWithPlane.h>
@@ -8,7 +9,14 @@
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MR2DContoursTriangulation.h>
+#include <MRMesh/MREdgePoint.h>
+#include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRConstants.h>
+#include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRphmap.h>
 #include <gtest/gtest.h>
+#include <algorithm>
+#include <cfloat>
 #include <limits>
 
 namespace MR
@@ -269,6 +277,406 @@ TEST( MRMesh, triangulateDisjointContoursPinchedLoop )
     EXPECT_FALSE( folded );
     EXPECT_NEAR( patchArea, mesh.area(), 1e-5 );
     EXPECT_EQ( patch->topology.numValidFaces(), 2 );
+}
+
+// A polygon in the plane z = 0, with chords: polylines of edges with no faces between two of its vertices, so the hole inside
+// the polygon runs along every chord in both directions, as in a face cut by crossing contours
+struct PolygonWithChords
+{
+    Mesh mesh;
+    EdgeId e0; // the first polygon edge, with the inside of the polygon on its left
+    std::vector<EdgePath> chords; // the edges of every chord, from its first polygon vertex to its last one
+};
+
+struct ChordSpec
+{
+    int from = 0, to = 0; // the polygon vertices at the ends of the chord, each with at most one chord
+    std::vector<Vector3f> via; // the vertices of the chord inside the polygon
+};
+
+// the polygon is counterclockwise around +Z
+static PolygonWithChords makePolygonWithChords( const std::vector<Vector3f>& polygon, const std::vector<ChordSpec>& chords )
+{
+    PolygonWithChords res;
+    res.e0 = res.mesh.addSeparateEdgeLoop( polygon );
+    auto& tp = res.mesh.topology;
+    const EdgeLoop sides = trackRightBoundaryLoop( tp, res.e0 );
+    for ( int i = 0; i < int( polygon.size() ); ++i )
+        EXPECT_EQ( res.mesh.orgPnt( sides[i] ), polygon[i] );
+    for ( const auto& spec : chords )
+    {
+        // a chord goes into the polygon right after the polygon edge from its vertex
+        EdgePath& path = res.chords.emplace_back();
+        EdgeId prev = sides[spec.from];
+        for ( size_t i = 0; i <= spec.via.size(); ++i )
+        {
+            const EdgeId e = tp.makeEdge();
+            tp.splice( prev, e );
+            if ( i < spec.via.size() )
+            {
+                tp.setOrg( e.sym(), res.mesh.addPoint( spec.via[i] ) );
+                prev = e.sym();
+            }
+            else
+                tp.splice( sides[spec.to], e.sym() );
+            path.push_back( e );
+        }
+    }
+    return res;
+}
+
+static std::vector<Vector3f> regularPolygon( int n, float r, float angle0 = 0.1f )
+{
+    std::vector<Vector3f> res;
+    for ( int i = 0; i < n; ++i )
+    {
+        const float a = angle0 + 2 * PI_F * i / n;
+        res.emplace_back( r * std::cos( a ), r * std::sin( a ), 0.f );
+    }
+    return res;
+}
+
+// the points where the chords properly cross each other in the projection on z = 0
+static std::vector<Vector3f> chordCrossings( const Mesh& mesh, const std::vector<EdgePath>& chords )
+{
+    std::vector<Vector3f> res;
+    for ( size_t i = 0; i < chords.size(); ++i )
+        for ( size_t j = i + 1; j < chords.size(); ++j )
+            for ( EdgeId a : chords[i] )
+                for ( EdgeId b : chords[j] )
+                {
+                    const Vector3d a0( mesh.orgPnt( a ) ), a1( mesh.destPnt( a ) ), b0( mesh.orgPnt( b ) ), b1( mesh.destPnt( b ) );
+                    const Vector2d r( a1.x - a0.x, a1.y - a0.y ), s( b1.x - b0.x, b1.y - b0.y ), ab( b0.x - a0.x, b0.y - a0.y );
+                    const double d = cross( r, s );
+                    if ( d == 0 )
+                        continue;
+                    const double t = cross( ab, s ) / d, u = cross( ab, r ) / d;
+                    if ( t > 0 && t < 1 && u > 0 && u < 1 )
+                        res.push_back( Vector3f( a0 + t * ( a1 - a0 ) ) );
+                }
+    return res;
+}
+
+// the hole loops inside the polygon: several ones if its chords split it topologically, whatever their crossings
+static EdgeLoops innerLoops( const PolygonWithChords& pc )
+{
+    EdgeLoops res;
+    for ( EdgeId e : pc.mesh.topology.findHoleRepresentiveEdges() )
+    {
+        auto loop = trackRightBoundaryLoop( pc.mesh.topology, e );
+        if ( std::find( loop.begin(), loop.end(), pc.e0.sym() ) == loop.end() ) // not the outside of the polygon
+            res.push_back( std::move( loop ) );
+    }
+    return res;
+}
+
+static Expected<std::vector<EdgePointPair>> findChordCrossings( const PolygonWithChords& pc )
+{
+    return PlanarTriangulation::findInnerCrossings( pc.mesh, innerLoops( pc ), Vector3f::plusZ() );
+}
+
+static const std::string cOuterCrossing = "an edge of the region boundary crosses another edge";
+static const std::string cTouch = "a crossing lands on a vertex or on another crossing";
+
+static std::string errorOf( const Expected<std::vector<EdgePointPair>>& crossings )
+{
+    return crossings ? "no error" : crossings.error();
+}
+
+static float pathLength( const Mesh& mesh, const EdgePath& path )
+{
+    float res = 0;
+    for ( EdgeId e : path )
+        res += mesh.edgeLength( e.undirected() );
+    return res;
+}
+
+// splits the chords at the crossings, which must be all the crossings of the chords, and puts the pieces in the chords,
+// as cutMesh is to do in its paths
+static void splitAndCheck( PolygonWithChords& pc, const std::vector<EdgePointPair>& crossings )
+{
+    Mesh& mesh = pc.mesh;
+    const auto expected = chordCrossings( mesh, pc.chords );
+    ASSERT_EQ( crossings.size(), expected.size() );
+    for ( const auto& p : expected )
+    {
+        float minDist = FLT_MAX;
+        for ( const auto& c : crossings )
+            minDist = std::min( minDist, ( p - mesh.edgePoint( c.a ) ).length() );
+        EXPECT_LT( minDist, 1e-5f );
+    }
+    std::vector<Vector3f> crossingPoints;
+    for ( const auto& c : crossings )
+    {
+        EXPECT_LT( ( mesh.edgePoint( c.a ) - mesh.edgePoint( c.b ) ).length(), 1e-5f );
+        EXPECT_GT( cross( mesh.edgeVector( c.a.e ), mesh.edgeVector( c.b.e ) ).z, 0.f ); // b.e goes from the right of a.e to its left
+        crossingPoints.push_back( 0.5f * ( mesh.edgePoint( c.a ) + mesh.edgePoint( c.b ) ) );
+    }
+
+    const auto numVerts = mesh.topology.numValidVerts();
+    const VertId firstNewVert( mesh.topology.vertSize() );
+    std::vector<float> chordLengths;
+    for ( const auto& path : pc.chords )
+        chordLengths.push_back( pathLength( mesh, path ) );
+    const auto pieces = splitCrossedEdges( mesh, crossings );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.numValidVerts(), numVerts + int( crossings.size() ) );
+    for ( int k = 0; k < int( crossings.size() ); ++k )
+    {
+        // four pieces around the vertex of each crossing, counterclockwise
+        const VertId v = firstNewVert + k;
+        EXPECT_EQ( mesh.points[v], crossingPoints[k] );
+        int degree = 0;
+        for ( EdgeId e : orgRing( mesh.topology, v ) )
+        {
+            ++degree;
+            EXPECT_GT( cross( mesh.edgeVector( e ), mesh.edgeVector( mesh.topology.next( e ) ) ).z, 0.f );
+        }
+        EXPECT_EQ( degree, 4 );
+    }
+
+    size_t numPieces = 0;
+    for ( const auto& [ue, path] : pieces )
+    {
+        numPieces += path.size();
+        EXPECT_EQ( path.back(), EdgeId( ue ) );
+    }
+    EXPECT_EQ( numPieces, pieces.size() + 2 * crossings.size() );
+    for ( size_t i = 0; i < pc.chords.size(); ++i )
+    {
+        EdgePath path;
+        for ( EdgeId e : pc.chords[i] )
+        {
+            const auto it = pieces.find( e.undirected() );
+            if ( it == pieces.end() )
+                path.push_back( e );
+            else if ( e.even() )
+                path.insert( path.end(), it->second.begin(), it->second.end() );
+            else
+                for ( auto rit = it->second.rbegin(); rit != it->second.rend(); ++rit )
+                    path.push_back( rit->sym() );
+        }
+        for ( size_t j = 0; j + 1 < path.size(); ++j )
+            EXPECT_EQ( mesh.topology.dest( path[j] ), mesh.topology.org( path[j + 1] ) );
+        EXPECT_NEAR( pathLength( mesh, path ), chordLengths[i], 1e-5f );
+        pc.chords[i] = std::move( path );
+    }
+}
+
+// fills the holes inside the polygon with the usual planners, as cutMesh does, and checks that the filling covers the polygon once
+static void fillAndCheck( PolygonWithChords& pc )
+{
+    Mesh& mesh = pc.mesh;
+    std::vector<EdgeId> holes;
+    Vector3d dirArea; // of any surface spanning the loops inside the polygon
+    for ( const auto& loop : innerLoops( pc ) )
+    {
+        holes.push_back( loop.front() );
+        for ( EdgeId e : loop )
+            dirArea += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
+    }
+    dirArea *= 0.5;
+    auto plans = getPlanarHoleFillPlans( mesh, holes );
+    FaceBitSet newFaces;
+    for ( size_t i = 0; i < holes.size(); ++i )
+    {
+        if ( !isFillingMultipleEdgeFree( mesh.topology, plans[i] ) )
+            plans[i] = getPlanarHoleFillPlan( mesh, holes[i], false );
+        executeHoleFillPlan( mesh, holes[i], plans[i], &newFaces );
+    }
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findHoleRepresentiveEdges().size(), size_t( 1 ) ); // only the outside of the polygon is left
+    EXPECT_LT( ( mesh.dirArea( newFaces ) - dirArea ).length(), 1e-5 );
+    for ( FaceId f : newFaces )
+        EXPECT_GT( mesh.dirDblArea( f ).z, 1e-4f ); // no triangle is upside down or of zero area
+}
+
+static void splitFillAndCheck( PolygonWithChords& pc, const std::vector<EdgePointPair>& crossings )
+{
+    splitAndCheck( pc, crossings );
+    fillAndCheck( pc );
+}
+
+// Two chords crossing in the middle of a polygon, in one hole that the planners cannot fill as it is
+TEST( MRMesh, findInnerCrossingsTwoChords )
+{
+    auto pc = makePolygonWithChords( regularPolygon( 12, 2 ), { { 0, 6 }, { 3, 9 } } );
+    EXPECT_FALSE( fillContours2DPlan( pc.mesh, pc.e0 ).has_value() );
+    const auto crossings = findChordCrossings( pc );
+    ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+    EXPECT_EQ( crossings->size(), size_t( 1 ) );
+    splitFillAndCheck( pc, *crossings );
+}
+
+// Three chords crossing pairwise: going along each of them, the other two come in cyclic order.
+// They split the hole in two loops, each running every chord once, so only both loops together have the chords inside
+TEST( MRMesh, findInnerCrossingsThreeChords )
+{
+    auto pc = makePolygonWithChords( regularPolygon( 12, 2 ), { { 0, 5 }, { 4, 9 }, { 8, 1 } } );
+    const auto loops = innerLoops( pc );
+    ASSERT_EQ( loops.size(), size_t( 2 ) );
+    for ( const auto& loop : loops )
+        EXPECT_EQ( errorOf( PlanarTriangulation::findInnerCrossings( pc.mesh, EdgeLoops{ loop }, Vector3f::plusZ() ) ), cOuterCrossing );
+    const auto crossings = PlanarTriangulation::findInnerCrossings( pc.mesh, loops, Vector3f::plusZ() );
+    ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+    EXPECT_EQ( crossings->size(), size_t( 3 ) );
+    splitFillAndCheck( pc, *crossings );
+}
+
+// A chord cutting off a corner beside two crossing ones: the corner is a hole of three edges
+TEST( MRMesh, findInnerCrossingsCornerCutOff )
+{
+    auto pc = makePolygonWithChords( regularPolygon( 12, 2 ), { { 0, 6 }, { 3, 8 }, { 9, 11 } } );
+    ASSERT_EQ( innerLoops( pc ).size(), size_t( 2 ) );
+    const auto crossings = findChordCrossings( pc );
+    ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+    EXPECT_EQ( crossings->size(), size_t( 1 ) );
+    splitFillAndCheck( pc, *crossings );
+}
+
+// Chords crossed several times
+TEST( MRMesh, findInnerCrossingsManyOnOneChord )
+{
+    // two chords, one going back and forth over the other one
+    {
+        auto pc = makePolygonWithChords( regularPolygon( 16, 2 ),
+            { { 0, 8 }, { 4, 12, { { -0.6f, -0.5f, 0.f }, { 0.1f, 0.6f, 0.f }, { 0.5f, -0.6f, 0.f } } } } );
+        const auto crossings = findChordCrossings( pc );
+        ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+        EXPECT_EQ( crossings->size(), size_t( 3 ) );
+        splitFillAndCheck( pc, *crossings );
+    }
+    // one chord crossed by three others, once by two of them and three times by one more, in three loops
+    {
+        auto pc = makePolygonWithChords( regularPolygon( 16, 2 ),
+            { { 0, 8 }, { 2, 14 }, { 4, 12, { { -0.5f, -0.3f, 0.f }, { 0.2f, 0.4f, 0.f } } }, { 6, 10 } } );
+        EXPECT_EQ( innerLoops( pc ).size(), size_t( 3 ) );
+        const auto crossings = findChordCrossings( pc );
+        ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+        EXPECT_EQ( crossings->size(), size_t( 5 ) );
+        splitFillAndCheck( pc, *crossings );
+    }
+}
+
+// Holes large enough for the swept line triangulation after the split
+TEST( MRMesh, findInnerCrossingsLargeHoles )
+{
+    auto pc = makePolygonWithChords( regularPolygon( 64, 2 ), { { 0, 32 }, { 16, 48 } } );
+    const auto crossings = findChordCrossings( pc );
+    ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+    splitAndCheck( pc, *crossings );
+    const auto loops = innerLoops( pc );
+    EXPECT_EQ( loops.size(), size_t( 4 ) );
+    for ( const auto& loop : loops )
+    {
+        EXPECT_EQ( loop.size(), size_t( 18 ) );
+        const auto plan = fillContours2DPlan( pc.mesh, loop.front() );
+        EXPECT_TRUE( plan.has_value() ) << plan.error();
+    }
+    fillAndCheck( pc );
+}
+
+// A crossing involving the boundary of the region is an error
+TEST( MRMesh, findInnerCrossingsOuter )
+{
+    const std::vector<Vector3f> notched{ { 0, 0, 0 }, { 4, 0, 0 }, { 4, 4, 0 }, { 2.5f, 4, 0 }, { 2, 1, 0 }, { 1.5f, 4, 0 }, { 0, 4, 0 } };
+    // a chord leaving the region through the notch, crossing two of its edges: it splits the hole in two
+    {
+        auto pc = makePolygonWithChords( notched, { { 6, 1 } } );
+        EXPECT_EQ( innerLoops( pc ).size(), size_t( 2 ) );
+        EXPECT_EQ( errorOf( findChordCrossings( pc ) ), cOuterCrossing );
+    }
+    // the same chord crossing another one inside the region too, which makes one hole
+    {
+        auto pc = makePolygonWithChords( notched, { { 6, 1 }, { 0, 5 } } );
+        EXPECT_EQ( innerLoops( pc ).size(), size_t( 1 ) );
+        EXPECT_EQ( errorOf( findChordCrossings( pc ) ), cOuterCrossing );
+    }
+    // a pentagon whose vertex D, lifted, pokes through the opposite edge AB in the projection: the boundary crosses itself
+    {
+        Mesh mesh;
+        const EdgeId e0 = mesh.addSeparateEdgeLoop( { { 0, 0, 0 }, { 4, 0, 0 }, { 4, 2, 0 }, { 2, -0.1f, 0.2f }, { 0, 2, 0 } } );
+        EXPECT_EQ( errorOf( PlanarTriangulation::findInnerCrossings( mesh, { trackRightBoundaryLoop( mesh.topology, e0 ) }, Vector3f::plusZ() ) ), cOuterCrossing );
+        EXPECT_EQ( errorOf( PlanarTriangulation::findInnerCrossings( mesh, { trackRightBoundaryLoop( mesh.topology, e0.sym() ) }, Vector3f::minusZ() ) ), cOuterCrossing );
+    }
+    // a loop spiraling twice around the middle
+    {
+        constexpr int n = 15;
+        std::vector<Vector3f> pts;
+        for ( int i = 0; i < n; ++i )
+        {
+            const float a = 4 * PI_F * i / n, r = 1 - 0.3f * i / n;
+            pts.emplace_back( r * std::cos( a ), r * std::sin( a ), 0.01f * i );
+        }
+        Mesh mesh;
+        const EdgeId e = mesh.addSeparateEdgeLoop( pts );
+        EXPECT_EQ( errorOf( PlanarTriangulation::findInnerCrossings( mesh, { trackRightBoundaryLoop( mesh.topology, e ) }, Vector3f::plusZ() ) ), cOuterCrossing );
+    }
+}
+
+// A flat ring around a gap, and an island disk raised above it, sticking out of the gap over the ring:
+// the island's loop crosses the ring's inner loop twice, which are both boundaries of the region
+TEST( MRMesh, findInnerCrossingsIslandOverRing )
+{
+    constexpr int n = 16, m = 12;
+    VertCoords pts;
+    for ( int ring = 0; ring < 2; ++ring ) // circles of radius 2 and 3
+        for ( int i = 0; i < n; ++i )
+        {
+            const float a = 2 * PI_F * i / n + 0.1f; // off the axes, so no two vertices share an x
+            pts.push_back( Vector3f( ( ring + 2 ) * std::cos( a ), ( ring + 2 ) * std::sin( a ), 0.f ) );
+        }
+    pts.push_back( Vector3f( 1.5f, 0.f, 0.1f ) ); // the island center
+    for ( int i = 0; i < m; ++i )
+    {
+        const float a = 2 * PI_F * i / m + 0.2f;
+        pts.push_back( Vector3f( 1.5f + std::cos( a ), std::sin( a ), 0.1f ) );
+    }
+    auto rv = [] ( int ring, int i ) { return VertId( ring * n + i % n ); };
+    auto iv = [] ( int i ) { return VertId( 2 * n + 1 + i % m ); };
+    Triangulation t;
+    for ( int i = 0; i < n; ++i )
+    {
+        t.push_back( { rv( 0, i ), rv( 1, i ), rv( 1, i + 1 ) } );
+        t.push_back( { rv( 0, i ), rv( 1, i + 1 ), rv( 0, i + 1 ) } );
+    }
+    for ( int i = 0; i < m; ++i )
+        t.push_back( { VertId( 2 * n ), iv( i ), iv( i + 1 ) } );
+    Mesh mesh = Mesh::fromTriangles( std::move( pts ), t );
+
+    // the loops of the gap: the ring's inner boundary and the island's boundary, not the ring's outer one
+    EdgeLoops loops = findRightBoundary( mesh.topology );
+    std::erase_if( loops, [&] ( const EdgeLoop& l ) { return mesh.orgPnt( l.front() ).lengthSq() > 8.f; } );
+    ASSERT_EQ( loops.size(), size_t( 2 ) );
+    EXPECT_EQ( errorOf( PlanarTriangulation::findInnerCrossings( mesh, loops, Vector3f::plusZ() ) ), cOuterCrossing );
+}
+
+// A crossing exactly at a vertex, or three chords crossing at one point, is an error
+TEST( MRMesh, findInnerCrossingsTouch )
+{
+    const std::vector<Vector3f> octagon{ { 2, 0, 0 }, { 1.5f, 1.5f, 0 }, { 0, 2, 0 }, { -1.5f, 1.5f, 0 }, { -2, 0, 0 }, { -1.5f, -1.5f, 0 }, { 0, -2, 0 }, { 1.5f, -1.5f, 0 } };
+    {
+        // the crossing chord bends exactly on the other one
+        auto pc = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6, { { 0.5f, 0, 0 } } } } );
+        EXPECT_EQ( errorOf( findChordCrossings( pc ) ), cTouch );
+    }
+    {
+        auto pc = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6 }, { 1, 5 } } );
+        EXPECT_EQ( errorOf( findChordCrossings( pc ) ), cTouch );
+        // three crossings near one point are fine
+        auto pcNear = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6 }, { 1, 5, { { 0.1f, -0.05f, 0 } } } } );
+        const auto crossings = findChordCrossings( pcNear );
+        ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+        EXPECT_EQ( crossings->size(), size_t( 3 ) );
+        splitFillAndCheck( pcNear, *crossings );
+    }
+    {
+        // a bend near the other chord is fine
+        auto pc = makePolygonWithChords( octagon, { { 0, 4 }, { 2, 6, { { 0.5f, -0.25f, 0 } } } } );
+        const auto crossings = findChordCrossings( pc );
+        ASSERT_TRUE( crossings.has_value() ) << crossings.error();
+        splitFillAndCheck( pc, *crossings );
+    }
 }
 
 }

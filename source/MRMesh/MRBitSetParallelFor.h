@@ -190,6 +190,20 @@ inline auto BitSetParallelFor( const BS& bs, tbb::enumerable_thread_specific<L> 
     return BitSetParallelForAll( bs, e, [&] ( auto bit, auto & tls ) { if ( bs.test( bit ) ) std::forward<F>( f )( bit, tls ); }, std::forward<Cb>( cb )... );
 }
 
+/// calls visit( x, add ) for every set bit x of (input), where add( i ) sets bit i in (res):
+/// serially in the order of bits, or in parallel threads, where add sets the bit atomically,
+/// since several threads may write in the same block of (res)
+template <typename In, typename Res, typename Visit>
+void BitSetWalk( const In & input, Res & res, bool parallel, Visit && visit )
+{
+    using I = typename Res::IndexType;
+    if ( parallel )
+        BitSetParallelFor( input, [&]( typename In::IndexType x ) { visit( x, [&]( I i ) { res.atomicTestSet( i ); } ); } );
+    else
+        for ( auto x : input )
+            visit( x, [&]( I i ) { res.set( i ); } );
+}
+
 /// \}
 
 } // namespace MR

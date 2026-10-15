@@ -7,7 +7,6 @@
 #include "MRBitSetParallelFor.h"
 #include "MRTimer.h"
 #include <algorithm>
-#include <bit>
 #include <tbb/global_control.h>
 #include <tbb/task.h>
 #include "MRMesh.h"
@@ -165,34 +164,12 @@ std::vector<EdgePath> extractAllPaths( const MeshTopology& topology, EdgeBitSet 
 
 enum class Walk { Serial, Parallel, None };
 
-struct SetSize
-{
-    size_t count = 0; // set bits
-    size_t blocks = 0; // non-empty 64-bit blocks
-};
-
-// sizes of the set, counted only until count * stopFraction exceeds meshSize
-static SetSize countSet( const BitSet & set, size_t meshSize, size_t stopFraction )
-{
-    SetSize res;
-    for ( auto block : set.bits() )
-    {
-        if ( !block )
-            continue;
-        ++res.blocks;
-        res.count += std::popcount( block );
-        if ( res.count * stopFraction > meshSize )
-            break; // no need to count the rest of a large set
-    }
-    return res;
-}
-
 // whether the set is small enough for the serial walk: under 1/denseFraction of the mesh, and its non-empty 64-bit blocks
 // under 1/scatteredFraction of it, because a scattered set misses the cache on every element
 static bool isSmall( const BitSet & set, size_t meshSize, size_t denseFraction, size_t scatteredFraction )
 {
-    const auto s = countSet( set, meshSize, denseFraction );
-    return s.count * denseFraction < meshSize && s.blocks * scatteredFraction < meshSize;
+    const auto c = set.countBitsAndBlocks( meshSize / denseFraction ); // no need to count the rest of a large set
+    return c.bits * denseFraction < meshSize && c.blocks * scatteredFraction < meshSize;
 }
 
 // how to process the set, measured per function on machines with 3 to 24 threads:
@@ -209,23 +186,10 @@ static Walk chooseWalk( const BitSet & set, size_t meshSize, size_t denseFractio
     denseFraction *= threads;
     scatteredFraction *= threads;
     // a set over 1/stopFraction of the mesh is neither walked serially nor in parallel
-    const auto s = countSet( set, meshSize, std::min( denseFraction, parallelFraction ) );
-    if ( s.count * denseFraction < meshSize && s.blocks * scatteredFraction < meshSize )
+    const auto c = set.countBitsAndBlocks( meshSize / std::min( denseFraction, parallelFraction ) );
+    if ( c.bits * denseFraction < meshSize && c.blocks * scatteredFraction < meshSize )
         return Walk::Serial;
-    return !nested && s.count * parallelFraction <= meshSize ? Walk::Parallel : Walk::None;
-}
-
-// calls visit( x, add ) for every element x of the input set, where add( i ) puts i in res;
-// in parallel, add sets the bit atomically, since several threads may write in the same 64-bit block of res
-template <typename In, typename Res, typename Visit>
-static void walkSet( const In & input, Res & res, Walk walk, Visit && visit )
-{
-    using I = typename Res::IndexType;
-    if ( walk == Walk::Parallel )
-        BitSetParallelFor( input, [&]( typename In::IndexType x ) { visit( x, [&]( I i ) { res.atomicTestSet( i ); } ); } );
-    else
-        for ( auto x : input )
-            visit( x, [&]( I i ) { res.set( i ); } );
+    return !nested && c.bits * parallelFraction <= meshSize ? Walk::Parallel : Walk::None;
 }
 
 // vertices of given faces; a deleted or out-of-range face has no edges and adds nothing
@@ -256,7 +220,7 @@ EdgeBitSet findAllLeftBdEdges( const MeshTopology& topology, const FaceBitSet* r
     if ( const auto walk = region ? chooseWalk( *region, topology.faceSize(), 4, 12, 2 ) : Walk::None; walk != Walk::None )
     {
         // a left boundary edge has its left face in the region
-        walkSet( *region, bdEdges, walk, [&]( FaceId f, auto && add )
+        BitSetWalk( *region, bdEdges, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
             for ( auto e : leftRing( topology, f ) )
                 if ( ( !innerMeshEdgesOnly || topology.right( e ) ) && topology.isLeftBdEdge( e, region ) )
@@ -399,7 +363,7 @@ UndirectedEdgeBitSet findRegionBoundaryUndirectedEdgesInsideMesh( const MeshTopo
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
     if ( const auto walk = chooseWalk( region, topology.faceSize(), 3, 12, 3 ); walk != Walk::None )
     {
-        walkSet( region, res, walk, [&]( FaceId f, auto && add )
+        BitSetWalk( region, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
             for ( auto e : leftRing( topology, f ) )
                 if ( auto r = topology.right( e ); r && !region.test( r ) )
@@ -444,7 +408,7 @@ VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & f
     if ( const auto walk = chooseWalk( faces, topology.faceSize(), 2, 8, 3 ); walk != Walk::None )
     {
         VertBitSet res( topology.getValidVerts().size() );
-        walkSet( faces, res, walk, [&]( FaceId f, auto && add )
+        BitSetWalk( faces, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
             for ( auto e : leftRing( topology, f ) ) // empty for a deleted or out-of-range face
                 add( topology.org( e ) );
@@ -599,7 +563,7 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceB
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
     if ( const auto walk = chooseWalk( faces, topology.faceSize(), 2, 8, 3 ); walk != Walk::None )
     {
-        walkSet( faces, res, walk, [&]( FaceId f, auto && add )
+        BitSetWalk( faces, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
             for ( auto e : leftRing( topology, f ) ) // empty for a deleted or out-of-range face
                 add( e.undirected() );
@@ -623,7 +587,7 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const Undir
     if ( const auto walk = chooseWalk( edges, topology.undirectedEdgeSize(), 8, 32, 2 ); walk != Walk::None )
     {
         // all edges around both ends of every given edge
-        walkSet( edges, res, walk, [&]( UndirectedEdgeId ue, auto && add )
+        BitSetWalk( edges, res, walk == Walk::Parallel, [&]( UndirectedEdgeId ue, auto && add )
         {
             if ( ue >= topology.undirectedEdgeSize() )
                 return;
@@ -660,7 +624,7 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const VertBit
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
     if ( const auto walk = chooseWalk( verts, topology.vertSize(), 6, 24, 4 ); walk != Walk::None )
     {
-        walkSet( verts, res, walk, [&]( VertId v, auto && add )
+        BitSetWalk( verts, res, walk == Walk::Parallel, [&]( VertId v, auto && add )
         {
             for ( auto e : orgRing( topology, v ) ) // empty for a deleted or out-of-range vertex
                 if ( verts.test( topology.dest( e ) ) )
@@ -683,7 +647,7 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBit
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
     if ( const auto walk = chooseWalk( region, topology.faceSize(), 3, 8, 6 ); walk != Walk::None )
     {
-        walkSet( region, res, walk, [&]( FaceId f, auto && add )
+        BitSetWalk( region, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
             for ( auto e : leftRing( topology, f ) )
                 if ( contains( region, topology.right( e ) ) )
@@ -706,7 +670,7 @@ FaceBitSet getIncidentFaces( const MeshTopology & topology, const VertBitSet & v
     FaceBitSet res( topology.faceSize() );
     if ( const auto walk = chooseWalk( verts, topology.vertSize(), 4, 32, 2 ); walk != Walk::None )
     {
-        walkSet( verts, res, walk, [&]( VertId v, auto && add )
+        BitSetWalk( verts, res, walk == Walk::Parallel, [&]( VertId v, auto && add )
         {
             for ( auto e : orgRing( topology, v ) ) // empty for a deleted or out-of-range vertex
                 if ( auto l = topology.left( e ) )

@@ -66,7 +66,7 @@ void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Rang
 }
 
 bool forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
-    FunctionRef<void* ()> ctx, ProgressCallback progressCb, size_t reportProgressEveryBit )
+    FunctionRef<void* ()> ctx, const ProgressCallback& progressCb, size_t reportProgressEveryBit )
 {
     if ( !progressCb )
     {

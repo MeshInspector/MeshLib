@@ -21,7 +21,7 @@ MRMESH_API void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t
 MRMESH_API void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t, void* )> f, FunctionRef<void* ()> ctx );
 
 MRMESH_API bool parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t, void* )> f, FunctionRef<void* ()> ctx,
-    ProgressCallback cb, size_t reportProgressEvery = 1024 );
+    const ProgressCallback& cb, size_t reportProgressEvery = 1024 );
 
 /// executes given function f for each span element [begin, end);
 /// optional parameters after f: ProgressCallback cb, size_t reportProgressEvery = 1024 for periodic progress report

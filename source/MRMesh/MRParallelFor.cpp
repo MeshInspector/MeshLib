@@ -36,7 +36,7 @@ void parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t, void* )> 
 }
 
 bool parallelFor( size_t begin, size_t end, FunctionRef<void ( size_t, void* )> f, FunctionRef<void* ()> ctx,
-    ProgressCallback cb, size_t reportProgressEvery )
+    const ProgressCallback& cb, size_t reportProgressEvery )
 {
     if ( !cb )
     {

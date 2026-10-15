@@ -16,9 +16,9 @@
 #include "MREdgePoint.h"
 #include "MRBitSet.h"
 #include "MRphmap.h"
+#include <algorithm>
 #include <array>
 #include <cfloat>
-#include <tuple>
 
 namespace MR
 {
@@ -182,11 +182,10 @@ HashMap<UndirectedEdgeId, EdgePath> splitCrossedEdges( Mesh& mesh, const std::ve
     MR_TIMER;
     auto& tp = mesh.topology;
     // a crossing on an edge, along its even direction, and the slots in the ring of the crossing's vertex
-    // of the pieces going from there toward the edge's destination and toward its origin
+    // of the pieces from there toward the edge's destination and toward its origin
     struct Cut
     {
-        UndirectedEdgeId ue;
-        float t = 0;
+        EdgePoint p;
         int crossing = 0;
         int toDest = 0, toOrg = 0;
     };
@@ -194,52 +193,50 @@ HashMap<UndirectedEdgeId, EdgePath> splitCrossedEdges( Mesh& mesh, const std::ve
     cuts.reserve( 2 * crossings.size() );
     for ( int k = 0; k < int( crossings.size() ); ++k )
     {
-        const auto& c = crossings[k];
-        assert( c.a.e.undirected() != c.b.e.undirected() );
         // the ring slots go counterclockwise: a.e to its destination, b.e to its destination, a.e to its origin, b.e to its origin
-        for ( auto [p, toDest, toOrg] : { std::tuple{ c.a, 0, 2 }, std::tuple{ c.b, 1, 3 } } )
-        {
-            assert( !tp.left( p.e ) && !tp.right( p.e ) );
-            if ( p.e.odd() )
-                cuts.push_back( { p.e.undirected(), 1 - p.a, k, toOrg, toDest } );
-            else
-                cuts.push_back( { p.e.undirected(), p.a, k, toDest, toOrg } );
-        }
+        const auto& [a, b] = crossings[k];
+        cuts.push_back( a.e.even() ? Cut{ a, k, 0, 2 } : Cut{ a.sym(), k, 2, 0 } );
+        cuts.push_back( b.e.even() ? Cut{ b, k, 1, 3 } : Cut{ b.sym(), k, 3, 1 } );
     }
-    std::sort( cuts.begin(), cuts.end(), [] ( const Cut& a, const Cut& b ) { return std::tie( a.ue, a.t ) < std::tie( b.ue, b.t ); } );
+    // the cuts of every edge from its destination to its origin, so that each one splits the piece at the origin
+    std::sort( cuts.begin(), cuts.end(), [] ( const Cut& x, const Cut& y ) { return x.p.e != y.p.e ? x.p.e < y.p.e : x.p.a > y.p.a; } );
 
     const VertId firstNewVert( tp.vertSize() );
-    for ( const auto& c : crossings )
-        mesh.addPoint( 0.5f * ( mesh.edgePoint( c.a ) + mesh.edgePoint( c.b ) ) );
+    for ( const auto& [a, b] : crossings )
+        mesh.addPoint( 0.5f * ( mesh.edgePoint( a ) + mesh.edgePoint( b ) ) );
 
     HashMap<UndirectedEdgeId, EdgePath> res;
     std::vector<std::array<EdgeId, 4>> rings( crossings.size() );
-    for ( size_t i = 0; i < cuts.size(); )
+    EdgeId x; // the piece at the origin of the edge being cut
+    for ( const auto& cut : cuts )
     {
-        const EdgeId e( cuts[i].ue );
-        auto& pieces = res[cuts[i].ue];
-        // the first piece takes the place of e in the ring of its origin, and e becomes the last piece, as in MeshTopology::splitEdge
-        EdgeId piece = tp.makeEdge();
-        if ( const EdgeId ePrev = tp.prev( e ); ePrev != e )
+        assert( !tp.left( cut.p.e ) && !tp.right( cut.p.e ) );
+        auto& pieces = res[cut.p.e.undirected()];
+        if ( pieces.empty() ) // the first cut of this edge
         {
-            tp.splice( ePrev, e );
-            tp.splice( ePrev, piece );
+            x = cut.p.e;
+            pieces.push_back( x );
+        }
+        // as in MeshTopology::splitEdge: the new piece y takes the place of x at its origin, and x starts at the cut
+        const EdgeId y = tp.makeEdge();
+        if ( const EdgeId xPrev = tp.prev( x ); xPrev != x )
+        {
+            tp.splice( xPrev, x );
+            tp.splice( xPrev, y );
         }
         else
         {
-            const VertId v0 = tp.org( e );
-            tp.setOrg( e, {} );
-            tp.setOrg( piece, v0 );
+            const VertId v = tp.org( x );
+            tp.setOrg( x, {} );
+            tp.setOrg( y, v );
         }
-        for ( ; i < cuts.size() && cuts[i].ue == e.undirected(); ++i )
-        {
-            pieces.push_back( piece );
-            rings[cuts[i].crossing][cuts[i].toOrg] = piece.sym();
-            piece = i + 1 < cuts.size() && cuts[i + 1].ue == e.undirected() ? tp.makeEdge() : e;
-            rings[cuts[i].crossing][cuts[i].toDest] = piece;
-        }
-        pieces.push_back( e );
+        rings[cut.crossing][cut.toDest] = x;
+        rings[cut.crossing][cut.toOrg] = y.sym();
+        pieces.push_back( y );
+        x = y;
     }
+    for ( auto& [ue, pieces] : res )
+        std::reverse( pieces.begin(), pieces.end() );
     for ( int k = 0; k < int( rings.size() ); ++k )
     {
         const auto& r = rings[k];

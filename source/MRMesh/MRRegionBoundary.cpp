@@ -443,7 +443,7 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet * regi
 {
     MR_TIMER;
     VertBitSet res;
-    if ( region && isSmall( *region, topology.faceSize(), 4, 64 ) )
+    if ( region && isSmall( *region, topology.faceSize(), 8, 48 ) )
     {
         res.resize( topology.getValidVerts().size() );
         addVertsOfFaces( topology, *region, res );
@@ -500,7 +500,7 @@ VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitS
 
     VertBitSet bdVerts( topology.vertSize() );
     VertBitSet store;
-    BitSetParallelFor( candidateVerts( topology, region, store, 1, 24 ), [&]( VertId v )
+    BitSetParallelFor( candidateVerts( topology, region, store, 2, 24 ), [&]( VertId v )
     {
         bool hasRegionNei = false;
         bool hasNotRegionNei = false;
@@ -529,7 +529,7 @@ VertBitSet getRegionInnerVerts( const MeshTopology & topology, const FaceBitSet 
 
     VertBitSet res( topology.vertSize() );
     VertBitSet store;
-    BitSetParallelFor( candidateVerts( topology, region, store, 4, 64 ), [&]( VertId v )
+    BitSetParallelFor( candidateVerts( topology, region, store, 8, 48 ), [&]( VertId v )
     {
         bool hasRegionNei = false;
         for ( auto e : orgRing( topology, v ) )

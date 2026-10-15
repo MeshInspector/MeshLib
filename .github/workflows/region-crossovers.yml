@@ -128,7 +128,7 @@ jobs:
         run: |
           mkdir -p out/${{ matrix.name }}
           case "${{ matrix.family }}" in
-            linux)   cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2); [ -n "$cpu" ] || cpu=$(lscpu | sed -n 's/^Model name: *//p' | head -1); threads=$(nproc) ;;
+            linux)   cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2 || true); [ -n "$cpu" ] || cpu=$(lscpu | sed -n 's/^Model name: *//p' | head -1); threads=$(nproc) ;;
             macos)   cpu=$(sysctl -n machdep.cpu.brand_string); threads=$(sysctl -n hw.logicalcpu) ;;
             windows) cpu=$(powershell -NoProfile -Command "(Get-CimInstance Win32_Processor | Select-Object -First 1).Name"); threads=$NUMBER_OF_PROCESSORS ;;
           esac

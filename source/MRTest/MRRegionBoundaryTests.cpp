@@ -5,6 +5,7 @@
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRId.h>
 #include <MRMesh/MRRingIterator.h>
+#include <string>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -176,14 +177,17 @@ TEST( MRMesh, RegionBoundarySmallAndLargeSets )
     smallSet.set( FaceId( t.faceSize() + 5 ) );
     check( smallSet, "small" );
 
-    // a medium set (a band of about 1/10 of the faces) takes the parallel walk in getIncidentEdges
-    FaceBitSet medium( t.faceSize() + 10 );
-    for ( auto f : t.getValidFaces() )
-        if ( auto z = sphere.triCenter( f ).z; z > 0.7f && z <= 0.9f )
-            medium.set( f );
-    medium.set( 700_f );
-    medium.set( FaceId( t.faceSize() + 5 ) );
-    check( medium, "medium" );
+    // medium sets (bands of about 1/100 to 1/10 of the faces) take the parallel walks
+    for ( float width : { 0.02f, 0.05f, 0.1f, 0.2f } )
+    {
+        FaceBitSet medium( t.faceSize() + 10 );
+        for ( auto f : t.getValidFaces() )
+            if ( auto z = sphere.triCenter( f ).z; z > 0.7f && z <= 0.7f + width )
+                medium.set( f );
+        medium.set( 700_f );
+        medium.set( FaceId( t.faceSize() + 5 ) );
+        check( medium, ( "medium " + std::to_string( width ) ).c_str() );
+    }
 
     // a large region takes the scans of the whole mesh
     FaceBitSet large( t.faceSize() );

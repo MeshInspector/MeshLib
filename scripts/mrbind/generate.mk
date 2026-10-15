@@ -1239,8 +1239,7 @@ generate:
 		--output-dir $(call quote,$(RUST_CODE_OUTPUT_DIR)/src) \
 		--clean-output-dir \
 		--imported-lib-name MeshLibC2 \
-		--force-namespace MR \
-		--root-namespace MR \
+		--replace-namespace MR :: \
 		$(call, ### Handle sub-libraries) \
 		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
 	)

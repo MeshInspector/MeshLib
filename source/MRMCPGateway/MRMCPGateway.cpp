@@ -50,6 +50,10 @@ std::filesystem::path gatewayExePath()
     uint32_t size = PATH_MAX;
     if ( _NSGetExecutablePath( path, &size ) != 0 )
         return {};
+    // unlike /proc/self/exe, the returned path may contain symlinks and . or .. components
+    std::error_code ec;
+    if ( auto res = std::filesystem::canonical( path, ec ); !ec )
+        return res;
     return std::filesystem::path{ path };
 #else
     char path[PATH_MAX];

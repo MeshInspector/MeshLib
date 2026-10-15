@@ -1,6 +1,8 @@
 #include "MRVoxels/MRDicom.h"
 #ifndef MRVOXELS_NO_DICOM
 #include "MRMesh/MRUniqueTemporaryFolder.h"
+#include "MRVoxels/MRObjectVoxels.h"
+#include "MRViewer/MROpenObjects.h"
 
 #include <gtest/gtest.h>
 
@@ -69,7 +71,7 @@ std::string dicomBinary( const T& v )
 
 // single-frame 16-bit slice of the given SOP class with spacing, position and rescale in the top-level elements
 void writeDicomSlice( const std::filesystem::path& path, const std::string& sopClass, int instance, double z,
-    int cols, int rows, const std::vector<uint16_t>& pixels )
+    int cols, int rows, const std::vector<uint16_t>& pixels, const std::string& photometric = "MONOCHROME2" )
 {
     const auto sopInstance = "1.2.3.4.5." + std::to_string( instance );
     const auto meta =
@@ -86,7 +88,7 @@ void writeDicomSlice( const std::filesystem::path& path, const std::string& sopC
         dicomElement( 0x0020, 0x0032, "DS", "-10\\-20\\" + std::to_string( z ) ) + // ImagePositionPatient
         dicomElement( 0x0020, 0x0037, "DS", "1\\0\\0\\0\\1\\0" ) + // ImageOrientationPatient
         dicomElement( 0x0028, 0x0002, "US", dicomBinary( uint16_t( 1 ) ) ) + // SamplesPerPixel
-        dicomElement( 0x0028, 0x0004, "CS", "MONOCHROME2" ) +
+        dicomElement( 0x0028, 0x0004, "CS", photometric ) +
         dicomElement( 0x0028, 0x0010, "US", dicomBinary( uint16_t( rows ) ) ) +
         dicomElement( 0x0028, 0x0011, "US", dicomBinary( uint16_t( cols ) ) ) +
         dicomElement( 0x0028, 0x0030, "DS", "0.5\\0.5" ) + // PixelSpacing
@@ -145,6 +147,23 @@ TEST( MRMesh, DicomLoadSlicesWithoutFunctionalGroups )
                 EXPECT_EQ( vol.data[VoxelId( size_t( z * cols * rows + p ) )], 2.f * float( 500 + 100 * i + p ) - 1000.f ) << "z=" << z << " p=" << p;
         }
     }
+}
+
+// an unsupported file (e.g. a color thumbnail) listed first must not block opening the folder
+TEST( MRMesh, DicomFolderWithUnsupportedFile )
+{
+    UniqueTemporaryFolder tmpFolder;
+    const std::string ct = "1.2.840.10008.5.1.4.1.1.2";
+    const std::vector<uint16_t> pixels = { 500, 1500, 2500, 3500 };
+    writeDicomSlice( tmpFolder / "a.dcm", ct, 1, 0, 2, 2, pixels, "YBR_FULL" );
+    for ( int i = 0; i < 3; ++i )
+        writeDicomSlice( tmpFolder / ( "slice" + std::to_string( i ) + ".dcm" ), ct, i + 1, i, 2, 2, pixels );
+
+    auto res = makeObjectTreeFromFolder( tmpFolder, true, [] ( float ) { return true; } );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    auto voxels = std::dynamic_pointer_cast<ObjectVoxels>( res->obj );
+    ASSERT_TRUE( voxels );
+    EXPECT_EQ( voxels->vdbVolume().dims, Vector3i( 2, 2, 3 ) );
 }
 
 } //namespace MR

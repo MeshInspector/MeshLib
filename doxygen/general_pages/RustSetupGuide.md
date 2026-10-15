@@ -5,9 +5,9 @@
 [TOC]
 
 > [!NOTE]
-> The Rust bindings are new. The crate is generated from the C API and is published as archives on the releases page, not on crates.io yet.
+> The Rust bindings are new. The crate is generated from the C API and is published on [crates.io](https://crates.io/crates/meshlib) and as archives on the releases page.
 
-The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C Setup Guide](\ref MeshLibCSetupGuide)) in safe Rust: C++ classes become types held in `Owned<T>`, which destroys the object when dropped, references and pointers become `&T` / `&mut T` / `Option<&T>`, `std::string` parameters take `&str`, and C++ exceptions become panics. The C++ namespaces become modules, so everything from `MR::` is under `meshlib::mr`.
+The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C Setup Guide](\ref MeshLibCSetupGuide)) in safe Rust: C++ classes become types held in `Owned<T>`, which destroys the object when dropped, references and pointers become `&T` / `&mut T` / `Option<&T>`, `std::string` parameters take `&str`, and C++ exceptions become panics. The `MR` namespace is the crate root, so `MR::Mesh` is `meshlib::Mesh`, and the nested namespaces become modules: `MR::MeshSave` is `meshlib::mesh_save`.
 
 ## Prerequisites {#RustSetupPrerequisites}
 
@@ -16,12 +16,12 @@ The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C
 
 ## Installation
 
- 1. **Download the crate**
- <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download one of:
+ 1. **Get the crate**
+ <br/> The simplest way is crates.io: `cargo add meshlib@3.1.4-540` (use the latest version from the [crate page](https://crates.io/crates/meshlib)). It adds the crate without libraries described below to your `Cargo.toml`, so step 2 is done too. Or open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download one of:
   - `meshlib_<version>_rust_bindings.zip` (4 MB): `Cargo.toml`, `build.rs` and the generated `src`. On the first build, `build.rs` downloads the MeshLib shared libraries of the target platform (20-35 MB) from the same release, checks their SHA256 and keeps them in the user's cache directory (`%LOCALAPPDATA%\meshlib`, `~/Library/Caches/meshlib`, `~/.cache/meshlib`; set `MESHLIB_CACHE_DIR` to change it). Offline, set `MESHLIB_NATIVE_URL` to a directory with the downloaded `meshlib_<version>_rust_native_<os>-<arch>.zip`.
   - `meshlib_<version>_rust.zip` (160 MB): the same plus, in `native`, the libraries of all supported platforms, so nothing is downloaded.
 
- Extract it next to your project, e.g. into `../MeshLibRust`. The libraries are the same ones as in the NuGet package. The crate version is the MeshLib version with the build number folded into the third number, `patch * 10000 + build`: `3.1.40528` for v3.1.4.528, so `meshlib = "3.1"` in a dependency picks up every 3.1.x release.
+ Extract it next to your project, e.g. into `../MeshLibRust`. The libraries are the same ones as in the NuGet package. The crate version is the MeshLib version with the build number as a pre-release identifier, as in the npm package: `3.1.4-528` for v3.1.4.528. Cargo picks pre-release versions only when they are asked for explicitly, so name the build in the dependency: `meshlib = "3.1.4-528"` also accepts the later builds of 3.1.4, but `meshlib = "3.1"` matches none of them.
 
  2. **Add the dependency**
  <br/> In your `Cargo.toml`:
@@ -50,13 +50,12 @@ The same directory must be visible to the dynamic loader when your program runs:
 ## Using the API
 
 ```rust
-use meshlib::mr;
 
 fn main()
 {
-    let mesh = mr::make_uv_sphere(Some(1.0), Some(64), Some(64)); // Owned<Mesh>, freed on drop.
+    let mesh = meshlib::make_uv_sphere(Some(1.0), Some(64), Some(64)); // Owned<Mesh>, freed on drop.
     println!("{} faces", mesh.topology().get_valid_faces().count());
-    let saved = mr::mesh_save::to_any_supported_format_3(&mesh, "sphere.stl", None); // Returns the C++ `expected<void, std::string>`.
+    let saved = meshlib::mesh_save::to_any_supported_format_3(&mesh, "sphere.stl", None); // Returns the C++ `expected<void, std::string>`.
     if let Some(error) = saved.error()
     {
         panic!("Failed to save: {error}");
@@ -68,8 +67,8 @@ A few rules of thumb:
 
  - Parameters with default arguments take `Option`, pass `None` for the default.
  - Overloaded C++ functions keep the disambiguated names of the C API, e.g. `boolean_6`; hover the function in your editor, its doc comment names the C function and the C++ original.
- - Callbacks (`std::function` parameters) are built from closures: `mr::std_function_bool_from_float::from_fn(|progress| true)`.
- - Downcasts and upcasts between a class and its bases are explicit: `object_mesh.upcast_to_object()`, `mr::ObjectMesh::dynamic_downcast_from_object(&object)`.
+ - Callbacks (`std::function` parameters) are built from closures: `meshlib::std_function_bool_from_float::from_fn(|progress| true)`.
+ - Downcasts and upcasts between a class and its bases are explicit: `object_mesh.upcast_to_object()`, `meshlib::ObjectMesh::dynamic_downcast_from_object(&object)`.
 
 ## Try MeshLib with Rust Examples
 

@@ -1,6 +1,5 @@
 use crate::assert_approx;
-use meshlib::mr;
-use meshlib::mr::{Matrix3f, Vector3f};
+use meshlib::{Matrix3f, Vector3f};
 
 fn matrix(rows: [[f32; 3]; 3]) -> Matrix3f
 {
@@ -49,7 +48,7 @@ fn add()
 {
     let a = matrix([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]);
     let b = matrix([[9.0, 8.0, 7.0], [6.0, 5.0, 4.0], [3.0, 2.0, 1.0]]);
-    assert_matrix(&mr::op_add_mr_matrix3f(&a, &b), [[10.0; 3]; 3]);
+    assert_matrix(&meshlib::op_add_mr_matrix3f(&a, &b), [[10.0; 3]; 3]);
 }
 
 #[test]
@@ -57,7 +56,7 @@ fn sub()
 {
     let a = matrix([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]);
     let b = matrix([[9.0, 8.0, 7.0], [6.0, 5.0, 4.0], [3.0, 2.0, 1.0]]);
-    assert_matrix(&mr::op_sub_mr_matrix3f(&a, &b), [[-8.0, -6.0, -4.0], [-2.0, 0.0, 2.0], [4.0, 6.0, 8.0]]);
+    assert_matrix(&meshlib::op_sub_mr_matrix3f(&a, &b), [[-8.0, -6.0, -4.0], [-2.0, 0.0, 2.0], [4.0, 6.0, 8.0]]);
 }
 
 #[test]
@@ -65,14 +64,14 @@ fn mul()
 {
     let a = Matrix3f::identity();
     let b = matrix([[2.0, 1.0, 0.0], [1.0, 2.0, 0.0], [0.0, 0.0, 3.0]]);
-    assert_matrix(&mr::op_mul_mr_matrix3f(&a, &b), [[2.0, 1.0, 0.0], [1.0, 2.0, 0.0], [0.0, 0.0, 3.0]]);
+    assert_matrix(&meshlib::op_mul_mr_matrix3f(&a, &b), [[2.0, 1.0, 0.0], [1.0, 2.0, 0.0], [0.0, 0.0, 3.0]]);
 }
 
 #[test]
 fn mul_vector()
 {
     let m = matrix([[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]);
-    let r = mr::op_mul_mr_matrix3f_mr_vector3f(&m, &Vector3f {x: 1.0, y: 2.0, z: 3.0});
+    let r = meshlib::op_mul_mr_matrix3f_mr_vector3f(&m, &Vector3f {x: 1.0, y: 2.0, z: 3.0});
     assert_approx!(r.x, 2.0, 0.001);
     assert_approx!(r.y, 4.0, 0.001);
     assert_approx!(r.z, 6.0, 0.001);
@@ -84,6 +83,6 @@ fn equal()
     let a = Matrix3f::identity();
     let b = Matrix3f::identity();
     let c = matrix([[2.0, 0.0, 0.0], [0.0, 2.0, 0.0], [0.0, 0.0, 2.0]]);
-    assert!(mr::op_equal_mr_matrix3f(&a, &b));
-    assert!(!mr::op_equal_mr_matrix3f(&a, &c));
+    assert!(meshlib::op_equal_mr_matrix3f(&a, &b));
+    assert!(!meshlib::op_equal_mr_matrix3f(&a, &c));
 }

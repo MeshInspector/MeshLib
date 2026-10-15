@@ -1,6 +1,5 @@
 use crate::common::{create_cube, make_torus};
-use meshlib::mr;
-use meshlib::mr::{FaceId, UndirectedEdgeId, VertId};
+use meshlib::{FaceId, UndirectedEdgeId, VertId};
 
 #[test]
 fn area()
@@ -9,7 +8,7 @@ fn area()
     let area = mesh.area_const_mr_face_bit_set_ptr(None);
     assert!(area > 5.999 && area < 6.001);
 
-    let mut faces = mr::FaceBitSet::new();
+    let mut faces = meshlib::FaceBitSet::new();
     faces.resize(12, Some(true));
     for i in 6..12
     {
@@ -27,8 +26,8 @@ fn area()
 fn short_edges()
 {
     let mesh = make_torus(1.0, 0.05, 16, 16);
-    let mp = mr::MeshPart::construct(&mesh, None);
-    let mut short_edges = mr::find_short_edges(&mp, 0.1, None);
+    let mp = meshlib::MeshPart::construct(&mesh, None);
+    let mut short_edges = meshlib::find_short_edges(&mp, 0.1, None);
     let short_edges = short_edges.value_mut().expect("findShortEdges failed");
     assert_eq!(short_edges.count(), 256);
 }
@@ -37,10 +36,10 @@ fn short_edges()
 fn incident_faces_from_verts()
 {
     let mesh = create_cube();
-    let mut verts = mr::VertBitSet::new();
+    let mut verts = meshlib::VertBitSet::new();
     verts.resize(8, Some(false));
     verts.set_2(VertId {id_: 0}, true);
-    let faces = mr::get_incident_faces_mr_vert_bit_set(mesh.topology(), &verts);
+    let faces = meshlib::get_incident_faces_mr_vert_bit_set(mesh.topology(), &verts);
     assert_eq!(faces.count(), 6);
 }
 
@@ -48,9 +47,9 @@ fn incident_faces_from_verts()
 fn incident_faces_from_edges()
 {
     let mesh = create_cube();
-    let mut edges = mr::UndirectedEdgeBitSet::new();
+    let mut edges = meshlib::UndirectedEdgeBitSet::new();
     edges.resize(12, Some(false));
     edges.set_2(UndirectedEdgeId {id_: 0}, true);
-    let faces = mr::get_incident_faces_mr_undirected_edge_bit_set(mesh.topology(), &edges);
+    let faces = meshlib::get_incident_faces_mr_undirected_edge_bit_set(mesh.topology(), &edges);
     assert_eq!(faces.count(), 8);
 }

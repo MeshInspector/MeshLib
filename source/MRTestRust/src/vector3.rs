@@ -1,6 +1,5 @@
 use crate::assert_approx;
-use meshlib::mr;
-use meshlib::mr::{Vector3f, Vector3i};
+use meshlib::{Vector3f, Vector3i};
 
 fn assert_vec(v: &Vector3f, x: f32, y: f32, z: f32)
 {
@@ -36,21 +35,21 @@ fn plus_z()
 #[test]
 fn add()
 {
-    let r = mr::op_add_mr_vector3f(&Vector3f {x: 1.0, y: 2.0, z: 3.0}, &Vector3f {x: 4.0, y: 5.0, z: 6.0});
+    let r = meshlib::op_add_mr_vector3f(&Vector3f {x: 1.0, y: 2.0, z: 3.0}, &Vector3f {x: 4.0, y: 5.0, z: 6.0});
     assert_vec(&r, 5.0, 7.0, 9.0);
 }
 
 #[test]
 fn sub()
 {
-    let r = mr::op_sub_mr_vector3f(&Vector3f {x: 5.0, y: 7.0, z: 9.0}, &Vector3f {x: 4.0, y: 5.0, z: 6.0});
+    let r = meshlib::op_sub_mr_vector3f(&Vector3f {x: 5.0, y: 7.0, z: 9.0}, &Vector3f {x: 4.0, y: 5.0, z: 6.0});
     assert_vec(&r, 1.0, 2.0, 3.0);
 }
 
 #[test]
 fn mul_scalar()
 {
-    let r = mr::op_mul_mr_vector3f_float(&Vector3f {x: 1.0, y: 2.0, z: 3.0}, 2.0);
+    let r = meshlib::op_mul_mr_vector3f_float(&Vector3f {x: 1.0, y: 2.0, z: 3.0}, 2.0);
     assert_vec(&r, 2.0, 4.0, 6.0);
 }
 

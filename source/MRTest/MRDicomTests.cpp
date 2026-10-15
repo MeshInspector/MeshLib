@@ -91,7 +91,7 @@ void writeDicomSlice( const std::filesystem::path& path, const std::string& sopC
         dicomElement( 0x0028, 0x0004, "CS", photometric ) +
         dicomElement( 0x0028, 0x0010, "US", dicomBinary( uint16_t( rows ) ) ) +
         dicomElement( 0x0028, 0x0011, "US", dicomBinary( uint16_t( cols ) ) ) +
-        dicomElement( 0x0028, 0x0030, "DS", "0.5\\0.5" ) + // PixelSpacing
+        dicomElement( 0x0028, 0x0030, "DS", "0.5\\0.25" ) + // PixelSpacing: between rows (y), between columns (x)
         dicomElement( 0x0028, 0x0100, "US", dicomBinary( uint16_t( 16 ) ) ) + // BitsAllocated
         dicomElement( 0x0028, 0x0101, "US", dicomBinary( uint16_t( 16 ) ) ) + // BitsStored
         dicomElement( 0x0028, 0x0102, "US", dicomBinary( uint16_t( 15 ) ) ) + // HighBit
@@ -134,7 +134,7 @@ TEST( MRMesh, DicomLoadSlicesWithoutFunctionalGroups )
         const auto& dcm = *loadRes[0];
         const SimpleVolumeMinMax& vol = dcm.vol;
         EXPECT_EQ( vol.dims, Vector3i( cols, rows, numSlices ) );
-        EXPECT_NEAR( vol.voxelSize.x, 0.5e-3f, 1e-9f );
+        EXPECT_NEAR( vol.voxelSize.x, 0.25e-3f, 1e-9f );
         EXPECT_NEAR( vol.voxelSize.y, 0.5e-3f, 1e-9f );
         EXPECT_NEAR( vol.voxelSize.z, 0.75e-3f, 1e-9f );
         // the volume starts at the lowest slice

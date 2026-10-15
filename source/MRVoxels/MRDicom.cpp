@@ -90,6 +90,18 @@ std::pair<gdcm::PixelFormat::ScalarType, gdcm::Tag> getGDCMTypeAndTag()
         static_assert( dependent_false<T>, "Unsupported type T" );
 }
 
+// gdcm reads spacing and rescale of these SOP classes only from the functional groups and returns the defaults without them,
+// while single-frame Enhanced CT slices exported by OnDemand3D have them in the top-level elements as classic CT
+bool isEnhanced( const gdcm::File& file )
+{
+    gdcm::MediaStorage ms;
+    ms.SetFromFile( file );
+    using MS = gdcm::MediaStorage;
+    return ms == MS::EnhancedCTImageStorage || ms == MS::EnhancedMRImageStorage || ms == MS::EnhancedPETImageStorage
+        || ms == MS::LegacyConvertedEnhancedCTImageStorage || ms == MS::LegacyConvertedEnhancedMRImageStorage
+        || ms == MS::LegacyConvertedEnhancedPETImageStorage;
+}
+
 struct DCMFileLoadResult
 {
     bool success = false;
@@ -152,6 +164,7 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
     res.xf.A = res.xf.A.transposed();
 
     const auto& gimage = ir.GetImage();
+    const bool enhanced = isEnhanced( ir.GetFile() );
     auto dimsNum = gimage.GetNumberOfDimensions();
     const unsigned* dims = gimage.GetDimensions();
     bool needInvertZ = false;
@@ -168,15 +181,14 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
     if ( data.voxelSize[0] == 0.0f )
     {
         const double* spacing = gimage.GetSpacing();
-        // gdcm returns spacing 1 when it cannot find the spacing, e.g. it reads Enhanced SOP classes only from the functional groups,
-        // while single-frame Enhanced CT slices without them (OnDemand3D) have it in the top-level element as classic CT
-        if ( spacing[0] == 1 && spacing[1] == 1 && ds.FindDataElement( gdcm::Keywords::PixelSpacing::GetTag() ) )
+        if ( enhanced && spacing[0] == 1 && spacing[1] == 1 && ds.FindDataElement( gdcm::Keywords::PixelSpacing::GetTag() ) )
         {
             const gdcm::DataElement& de = ds.GetDataElement( gdcm::Keywords::PixelSpacing::GetTag() );
             gdcm::Keywords::PixelSpacing desc;
             desc.SetFromDataElement( de );
-            data.voxelSize.x = float( desc.GetValue( 0 ) / 1000 );
-            data.voxelSize.y = float( desc.GetValue( 1 ) / 1000 );
+            // the spacing between rows (y) goes first
+            data.voxelSize.x = float( desc.GetValue( 1 ) / 1000 );
+            data.voxelSize.y = float( desc.GetValue( 0 ) / 1000 );
         }
         else
         {
@@ -235,9 +247,8 @@ DCMFileLoadResult loadSingleFile( const std::filesystem::path& path, T& data, si
     }
     double slope = gimage.GetSlope();
     double intercept = gimage.GetIntercept();
-    if ( slope == 1 && intercept == 0 )
+    if ( enhanced && slope == 1 && intercept == 0 )
     {
-        // gdcm returns identity when it cannot find the rescale (see the spacing above)
         gdcm::Keywords::RescaleSlope slopeAt = { 1 };
         slopeAt.SetFromDataSet( ds );
         gdcm::Keywords::RescaleIntercept interceptAt = { 0 };

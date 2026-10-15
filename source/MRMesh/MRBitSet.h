@@ -5,6 +5,7 @@
 #include "MRphmap.h"
 #include "MRVector.h"
 #include "MRPch/MRBindingMacros.h"
+#include <atomic>
 #include <functional>
 #include <iosfwd>
 #include <iterator>
@@ -111,6 +112,19 @@ public:
     BitSet & set( IndexType n, bool val ) { return val ? set( n ) : reset( n ); } // Not using a default argument for `val` to get better C bindings.
     BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] |= bitMask_( n ); return * this; }
     MRMESH_API BitSet & set();
+
+    /// sets n-th bit, and it is safe to call simultaneously from several threads for any bits of the same bitset,
+    /// provided no other modification of the bitset (including resizing) is performed in parallel
+    BitSet & atomicSet( IndexType n )
+    {
+        assert( n < size() );
+#ifdef __cpp_lib_atomic_ref
+        std::atomic_ref<block_type>( blocks_[blockIndex_( n )] ).fetch_or( bitMask_( n ), std::memory_order_relaxed );
+#else
+        __atomic_fetch_or( &blocks_[blockIndex_( n )], bitMask_( n ), __ATOMIC_RELAXED );
+#endif
+        return * this;
+    }
 
     MRMESH_API BitSet & reset( IndexType n, size_type len );
     BitSet & reset( IndexType n ) { if ( n < size() ) blocks_[blockIndex_( n )] &= ~bitMask_( n ); return * this; }
@@ -281,6 +295,7 @@ public:
     TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
     TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
     TypedBitSet & set() { base::set(); return * this; }
+    TypedBitSet & atomicSet( IndexType n ) { base::atomicSet( n ); return * this; }
     TypedBitSet & reset( IndexType n, size_type len ) { base::reset( n, len ); return * this; }
     TypedBitSet & reset( IndexType n ) { base::reset( n ); return * this; }
     TypedBitSet & reset() { base::reset(); return * this; }

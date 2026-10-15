@@ -5,19 +5,23 @@
 [TOC]
 
 > [!NOTE]
-> The Rust bindings are new. The crate is generated from the C API and is published as archives on the releases page, not on crates.io: with the MeshLib libraries for all platforms it is far over the crates.io size limit.
+> The Rust bindings are new. The crate is generated from the C API and is published as archives on the releases page, not on crates.io yet.
 
 The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C Setup Guide](\ref MeshLibCSetupGuide)) in safe Rust: C++ classes become types held in `Owned<T>`, which destroys the object when dropped, references and pointers become `&T` / `&mut T` / `Option<&T>`, `std::string` parameters take `&str`, and C++ exceptions become panics. The C++ namespaces become modules, so everything from `MR::` is under `meshlib::mr`.
 
 ## Prerequisites {#RustSetupPrerequisites}
 
- - [Rust](https://rustup.rs/) 1.82 or newer, with `cargo`.
+ - [Rust](https://rustup.rs/) 1.88 or newer, with `cargo`.
  - Windows, Linux (glibc 2.28 or newer) or macOS, on x86_64 or aarch64.
 
 ## Installation
 
  1. **Download the crate**
- <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download `meshlib_<version>_rust.zip`. Extract it next to your project, e.g. into `../MeshLibRust`. The archive holds `Cargo.toml`, `build.rs`, the generated `src` and, in `native`, the MeshLib shared libraries for all supported platforms (the same ones as in the NuGet package). The crate version is the MeshLib version with the fourth number as build metadata (`3.1.4+528` for v3.1.4.528).
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download one of:
+  - `meshlib_<version>_rust_bindings.zip` (4 MB): `Cargo.toml`, `build.rs` and the generated `src`. On the first build, `build.rs` downloads the MeshLib shared libraries of the target platform (25-35 MB) from the same release, checks their SHA256 and keeps them in the user's cache directory (`%LOCALAPPDATA%\meshlib`, `~/Library/Caches/meshlib`, `~/.cache/meshlib`; set `MESHLIB_CACHE_DIR` to change it). Offline, set `MESHLIB_NATIVE_URL` to a directory with the downloaded `meshlib_<version>_rust_native_<os>-<arch>.zip`.
+  - `meshlib_<version>_rust.zip` (160 MB): the same plus, in `native`, the libraries of all supported platforms, so nothing is downloaded.
+
+ Extract it next to your project, e.g. into `../MeshLibRust`. The libraries are the same ones as in the NuGet package. The crate version is the MeshLib version with the fourth number as build metadata (`3.1.4+528` for v3.1.4.528).
 
  2. **Add the dependency**
  <br/> In your `Cargo.toml`:
@@ -34,7 +38,7 @@ On macOS, set `DYLD_FALLBACK_LIBRARY_PATH` to that directory. When you ship your
 
 ### Using your own MeshLib installation {#RustSetupOwnLibraries}
 
-`meshlib_<version>_rust_bindings.zip` is the same crate without the libraries, for the MeshLib binaries you already have, installed as described in the [C Setup Guide](\ref MeshLibCSetupGuide): the Windows archive, the Linux `.deb` or vcpkg archive, or the macOS `.pkg` of the same version. Point the linker to them with the `MESHLIB_LIB_DIR` environment variable (it also takes precedence over the libraries bundled in the other archive):
+Instead of the bundled or downloaded libraries, the crate can use the MeshLib binaries you already have, installed as described in the [C Setup Guide](\ref MeshLibCSetupGuide): the Windows archive, the Linux `.deb` or vcpkg archive, or the macOS `.pkg` of the same version. Point the linker to them with the `MESHLIB_LIB_DIR` environment variable, then nothing is downloaded:
   - Windows: `C:\meshlib-built\install\app\Release` (the `.dll` files; no import library is needed, the crate links with `raw-dylib`)
   - Linux: `/usr/local/lib/MeshLib/lib` for the `.deb`, or `path_to_install/lib` for the vcpkg archive
   - macOS: `/Library/Frameworks/MeshLib.framework/Versions/Current/lib`

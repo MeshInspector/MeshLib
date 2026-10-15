@@ -318,8 +318,8 @@ jobs:
           pattern: Distributives*
           merge-multiple: true
 
-      # The sources-only crate needs the C libraries of a MeshLib installation, the other one bundles them for all platforms from the NuGet package.
-      # Both get the generated `src` from the Ubuntu job, the committed `Cargo.toml` and `build.rs` from the checkout.
+      # The crate without libraries downloads them from this release (or uses a MeshLib installation), the other one bundles them for all platforms.
+      # The libraries come from the NuGet package, the generated `src` from the Ubuntu job, `Cargo.toml` and `build.rs` from the checkout.
       - name: Download Rust bindings
         continue-on-error: true # The job producing it may be disabled for this run.
         uses: actions/download-artifact@v8
@@ -330,10 +330,7 @@ jobs:
       - name: Pack Rust bindings
         run: |
           if [ -d rust_bindings_src ]; then
-            scripts/pack_rust_crate.sh ${{ needs.config.outputs.app_version }} rust_bindings_src meshlib_rust_bindings.zip
-            if [ -f MeshLib.nupkg ]; then
-              scripts/pack_rust_crate.sh ${{ needs.config.outputs.app_version }} rust_bindings_src meshlib_rust.zip MeshLib.nupkg
-            fi
+            scripts/pack_rust_crate.sh ${{ needs.config.outputs.app_version }}               "https://github.com/${{ github.repository }}/releases/download/${{ needs.config.outputs.release_tag }}"               rust_bindings_src $([ -f MeshLib.nupkg ] && echo MeshLib.nupkg)
             rm -rf rust_bindings_src
           fi
 

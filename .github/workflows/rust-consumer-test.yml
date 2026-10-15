@@ -1,4 +1,4 @@
-name: Test Rust crate with bundled libraries
+name: Test Rust crates
 
 on:
   workflow_dispatch:
@@ -69,3 +69,21 @@ jobs:
         if: ${{ runner.os == 'Windows' }} # Elsewhere the executable needs an rpath or LD_LIBRARY_PATH / DYLD_LIBRARY_PATH, see RustSetupGuide.md.
         working-directory: examples/rust-examples
         run: target/release/MeshBoolean.exe
+
+      # The crate without libraries. A draft release can't be downloaded without a token, so `build.rs` takes this platform's archive from a directory.
+      - name: Switch to the crate without libraries
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "meshlib_*_rust_bindings.zip" --pattern "meshlib_*_rust_native_${{ matrix.target }}.zip" --dir downloaded --repo ${{ github.repository }} --clobber
+          rm -rf source/MeshLibRust/native
+          unzip -qo downloaded/meshlib_*_rust_bindings.zip -d source
+          cat source/MeshLibRust/native.txt
+
+      - name: Run the tests with the downloaded libraries
+        env:
+          MESHLIB_NATIVE_URL: ${{ github.workspace }}/downloaded
+          MESHLIB_CACHE_DIR: ${{ runner.temp }}/meshlib-cache
+        run: |
+          cargo test --release --manifest-path source/MRTestRust/Cargo.toml
+          ls "$MESHLIB_CACHE_DIR/meshlib"

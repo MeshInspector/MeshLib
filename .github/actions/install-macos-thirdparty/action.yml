@@ -84,9 +84,7 @@ runs:
         echo "thirdparty-hash=$( {
           printf '%s\n' "$BREW_PREFIX"
           git ls-tree HEAD \
-            thirdparty/googletest \
             thirdparty/OpenCTM-git \
-            thirdparty/parallel-hashmap \
             thirdparty/libE57Format \
             thirdparty/glad \
             thirdparty/mrbind-pybind11 \

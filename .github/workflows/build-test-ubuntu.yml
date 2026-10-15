@@ -57,6 +57,9 @@ jobs:
       UPLOAD_BINDINGS_SOURCES: ${{ matrix.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
       # one Release job per OS and architecture builds the Rust bindings and runs their examples
       RUN_RUST: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
+      # one Release job per OS and architecture builds the Java bindings and runs their examples and tests
+      RUN_JAVA: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.compiler == 'GCC' && matrix.build_mrcuda == 'ON' }}
+
 
     steps:
       - name: Display job info
@@ -198,6 +201,22 @@ jobs:
         with:
           name: RustBindings
           path: ./source/MeshLibRust/src
+          retention-days: 1
+
+      - name: Build and test Java bindings
+        if: ${{ env.RUN_JAVA == 'true' }}
+        uses: ./.github/actions/build-java-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
+      - name: Upload Java bindings
+        if: ${{ env.UPLOAD_BINDINGS_SOURCES == 'true' && env.RUN_JAVA == 'true' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: JavaBindings
+          path: |
+            ./source/MeshLibJava/meshlib.jar
+            ./source/MeshLibJava/src
           retention-days: 1
 
       - name: MRMesh Exported Symbols

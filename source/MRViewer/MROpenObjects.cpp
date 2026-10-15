@@ -66,11 +66,12 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     c = ( char )tolower( c );
 
                 #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
-                if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
+                if ( auto dicomStatus = VoxelsLoad::isDicomFile( path ); dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid )
                 {
-                    node.dicomStatus = dicomStatus;
-                    node.dicomFolder = true;
-                    node.files.clear();
+                    // the first supported file decides, the loader skips unsupported ones (e.g. a color thumbnail)
+                    if ( dicomStatus || node.dicomStatus == VoxelsLoad::DicomStatusEnum::Invalid )
+                        node.dicomStatus = std::move( dicomStatus );
+                    node.dicomFolder = bool( node.dicomStatus );
                 }
                 else
                 #endif
@@ -78,6 +79,13 @@ Expected<LoadedObject> makeObjectTreeFromFolder( const std::filesystem::path & f
                     node.files.push_back( { .path = path } );
             }
         }
+        #if !defined( MESHLIB_NO_VOXELS ) && !defined( MRVOXELS_NO_DICOM )
+        if ( node.dicomStatus != VoxelsLoad::DicomStatusEnum::Invalid ) // unsupported will be reported later
+        {
+            node.dicomFolder = true;
+            node.files.clear();
+        }
+        #endif
         return node;
     };
     FilePathNode filesTree = getFilePathNode( folder );

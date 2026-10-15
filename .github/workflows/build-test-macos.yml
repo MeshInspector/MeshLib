@@ -130,7 +130,7 @@ jobs:
           # Selective init -- parent Checkout drops submodules:true.
           # https://github.com/actions/checkout/issues/1779
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh ${{ matrix.lib-source == 'vcpkg' && '--vcpkg' || '' }}
 
       - name: Install llvm-pgo keg
         uses: ./.github/actions/install-llvm-pgo-keg
@@ -352,6 +352,12 @@ jobs:
       - name: Build and test Rust bindings
         if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
+      - name: Build and test Java bindings
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        uses: ./.github/actions/build-java-bindings
         with:
           lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
 

@@ -4,7 +4,7 @@
 
 ### Welcome to MeshLib’s documentation!
 The MeshLib SDK is an open-source 3D geometry processing library designed to provide developers with a comprehensive toolkit for building robust 3D applications.
-Whether you are working in C++, Python, C#, C, JavaScript, or Rust, MeshLib offers a versatile, cross-platform solution available on Windows, macOS, and Linux, enabling the development of cutting-edge solutions with ease and precision.
+Whether you are working in C++, Python, C#, C, JavaScript, Rust, or Java, MeshLib offers a versatile, cross-platform solution available on Windows, macOS, and Linux, enabling the development of cutting-edge solutions with ease and precision.
 
 ### Key Features
 
@@ -45,7 +45,7 @@ pip install meshlib
 For headless environments — servers, docker, CI — `pip install meshlib-core` provides everything
 except the interactive viewer at a about 30% smaller download.
 
-For C++, C#, C, and Rust developers, head to our [Installation Guide](\ref InstallationGuide) for more details on integrating MeshLib into your environment.
+For C++, C#, C, Rust, and Java developers, head to our [Installation Guide](\ref InstallationGuide) for more details on integrating MeshLib into your environment.
 
 ### Tutorials
 Explore [MeshLib's tutorials](\ref Tutorials) and [code samples](\ref Examples) to get started quickly and master advanced features.

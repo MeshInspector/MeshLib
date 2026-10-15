@@ -63,7 +63,7 @@ MRMESH_API void forAllRanged( const Range & bitRange, FunctionRef<void ( size_t,
     FunctionRef<void* ()> ctx );
 
 MRMESH_API bool forAllRanged( const Range & bitRange, FunctionRef<void ( size_t, const Range &, void* )> f,
-    FunctionRef<void* ()> ctx, ProgressCallback progressCb, size_t reportProgressEveryBit = 1024 );
+    FunctionRef<void* ()> ctx, const ProgressCallback& progressCb, size_t reportProgressEveryBit = 1024 );
 
 template <typename BS, typename F, typename ...Cb>
 auto ForAllRanged( const BS & bs, F && f, Cb && ... cb )

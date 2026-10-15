@@ -74,7 +74,8 @@ TEST( MRMesh, getRegionInnerVerts )
 // every function with a separate path for small sets must give what a test of every mesh element gives
 TEST( MRMesh, RegionBoundarySmallAndLargeSets )
 {
-    // fine enough that the small set below is under the strictest walking limits (1/128 of the elements, 1/2048 in blocks)
+    // fine enough that the small set below is under the strictest serial-walk limits (1/128 of the elements, 1/2048 in blocks,
+    // and 1/(8T), 1/(32T) with T threads, up to about 64 threads)
     Mesh sphere = makeUVSphere( 1, 128, 128 );
     const auto & t = sphere.topology;
     // a hole around the upper pole and a single deleted face

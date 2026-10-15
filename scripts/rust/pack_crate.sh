@@ -5,14 +5,14 @@
 #   meshlib_rust_native_<os>-<arch>.zip - the libraries of one platform from the NuGet package, what `build.rs` downloads;
 #   meshlib_rust.zip - the crate with the libraries of all platforms in `native/<os>-<arch>`.
 # The release renames `meshlib_` to `meshlib_<MeshLib version>_` in all of them.
-# Usage: pack_rust_crate.sh <MeshLib version, e.g. v3.1.4.528> <release download URL> <generated src directory> [<MeshLib .nupkg>]
+# Usage: pack_crate.sh <MeshLib version, e.g. v3.1.4.528> <release download URL> <generated src directory> [<MeshLib .nupkg>]
 set -euo pipefail
 
 APP_VERSION="$1"
 URL="$2"
 SRC_DIR="$3"
 NUPKG="${4:-}"
-ROOT="$(dirname "$(realpath "$0")")/.."
+ROOT="$(dirname "$(realpath "$0")")/../.."
 OUT="$PWD"
 
 WORK="$(mktemp -d)"

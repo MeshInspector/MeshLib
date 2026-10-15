@@ -10,6 +10,9 @@ Usage: update_python_zip.py [--vcpkg-tag TAG] [--output PATH]
 The port's version, source checksum and patches are read at that vcpkg tag, so the zip matches the
 Python that vcpkg builds. Run it with that Python minor version (e.g. `uv run --python 3.12`), or
 have `uv` on PATH and the script re-runs itself under the right version.
+
+The Windows builds of MREmbeddedPython run it with vcpkg's python.exe to put the zip next to
+python3XY.dll; the repository no longer stores it.
 """
 import argparse
 import hashlib

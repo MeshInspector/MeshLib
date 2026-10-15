@@ -411,13 +411,14 @@
       "upstream": "https://www.python.org",
       "license_source": "https://raw.githubusercontent.com/python/cpython/3.12/LICENSE",
       "source": {
-        "type": "hash",
-        "track": [
-          "thirdparty/python/python311.zip",
-          "thirdparty/python/python312.zip"
+        "type": "vcpkg-registry",
+        "ports": [
+          "python3"
         ]
       },
-      "version": "35ba61c359222abe"
+      "version": {
+        "python3": "3.12.13#1"
+      }
     },
     {
       "id": "pybind11",

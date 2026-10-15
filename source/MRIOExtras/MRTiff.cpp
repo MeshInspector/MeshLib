@@ -11,10 +11,15 @@
 #include "MRMesh/MRStringConvert.h"
 #include "MRMesh/MRTimer.h"
 #include "MRPch/MRFmt.h"
+#include "MRPch/MRSpdlog.h"
 
 #include <tiffio.h>
 
+#include <algorithm>
 #include <bit>
+#include <cmath>
+#include <cstdarg>
+#include <cstdio>
 #include <cstring>
 #include <memory>
 
@@ -26,6 +31,10 @@ using namespace MR;
 constexpr uint32_t cModelPixelScaleTag = 33550;
 constexpr uint32_t cModelTiePointTag = 33922;
 constexpr uint32_t cModelTransformationTag = 34264;
+constexpr uint32_t cGeoKeyDirectoryTag = 34735;
+// the raster type key and its value for the rasters whose pixels are points: https://docs.ogc.org/is/19-008r4/19-008r4.html#_raster_space
+constexpr uint16_t cGTRasterTypeGeoKey = 1025;
+constexpr uint16_t cRasterPixelIsPoint = 2;
 // no-data value: https://gdal.org/en/stable/drivers/raster/gtiff.html#nodata-value
 constexpr uint32_t cGdalNoDataTag = 42113;
 
@@ -48,6 +57,46 @@ TiffPtr openTiff( const std::filesystem::path& path, const char* mode )
     return TiffPtr( TIFFOpen( utf8string( path ).c_str(), mode ) );
 #endif
 }
+
+// libtiff prints its warnings and errors to stderr; they go to the log instead, as OpenCASCADE's messages do
+void logTiffMessage( spdlog::level::level_enum level, const char* module, const char* fmt, va_list ap )
+{
+    char message[1024];
+    std::vsnprintf( message, sizeof( message ), fmt, ap );
+    if ( module )
+        spdlog::log( level, "libtiff: {}: {}", module, message );
+    else
+        spdlog::log( level, "libtiff: {}", message );
+}
+
+// libtiff before 4.7 warns about every tag it does not know, so the tags of GDAL's GeoTIFF files are registered for each file
+// before libtiff reads its directory, as libgeotiff and GDAL define them
+const TIFFFieldInfo cGeoTiffFields[] = {
+    { cModelPixelScaleTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelPixelScaleTag" },
+    { cModelTiePointTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTiePointTag" },
+    { cModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" },
+    { cGeoKeyDirectoryTag, -1, -1, TIFF_SHORT, FIELD_CUSTOM, 1, 1, (char*)"GeoKeyDirectoryTag" },
+    { 34736, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"GeoDoubleParamsTag" },
+    { 34737, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GeoAsciiParamsTag" },
+    { 42112, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALMetadata" },
+    { cGdalNoDataTag, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" },
+};
+
+// the tag extender is process-wide, so it calls the one set before it, as libgeotiff's does
+TIFFExtendProc sParentTagExtender = nullptr;
+void extendTags( TIFF* tiff )
+{
+    TIFFMergeFieldInfo( tiff, cGeoTiffFields, uint32_t( std::size( cGeoTiffFields ) ) );
+    if ( sParentTagExtender )
+        sParentTagExtender( tiff );
+}
+
+MR_ON_INIT
+{
+    TIFFSetWarningHandler( [] ( const char* module, const char* fmt, va_list ap ) { logTiffMessage( spdlog::level::warn, module, fmt, ap ); } );
+    TIFFSetErrorHandler( [] ( const char* module, const char* fmt, va_list ap ) { logTiffMessage( spdlog::level::err, module, fmt, ap ); } );
+    sParentTagExtender = TIFFSetTagExtender( extendTags );
+};
 
 // the value types that are stored as single samples
 struct SampleType
@@ -149,6 +198,16 @@ Expected<TiffLayout> readLayout( TIFF* tiff )
         || photometric == PHOTOMETRIC_RGB || photometric == PHOTOMETRIC_PALETTE;
     char emsg[1024] = {};
     res.decodable = TIFFRGBAImageOK( tiff, emsg ) != 0;
+    // libtiff multiplies the decoded colors by unassociated alpha, but not by associated alpha; declared associated in memory,
+    // the alpha keeps the colors as stored, as in Image; the values are copied, since libtiff frees the old ones first
+    uint16_t extraCount = 0;
+    const uint16_t* extra = nullptr;
+    if ( TIFFGetField( tiff, TIFFTAG_EXTRASAMPLES, &extraCount, &extra ) && extraCount > 0 && extra[0] == EXTRASAMPLE_UNASSALPHA )
+    {
+        std::vector<uint16_t> associated( extra, extra + extraCount );
+        associated[0] = EXTRASAMPLE_ASSOCALPHA;
+        TIFFSetField( tiff, TIFFTAG_EXTRASAMPLES, extraCount, associated.data() );
+    }
     if ( res.decodable && !( storable && plain ) )
     {
         res.info.type = ScalarType::UInt8;
@@ -231,15 +290,17 @@ Expected<Raster> readRaster( TIFF* tiff, const TiffLayout& layout, const Progres
     return res;
 }
 
-// returns the values of a tag of doubles and sets their count, or returns nullptr; libtiff passes the count as a 32-bit value
+// returns the values of a tag of doubles or shorts and sets their count, or returns nullptr; libtiff passes the count as a 32-bit value
 // for the tags it does not know, and as a 16-bit value for the tags registered with TIFF_VARIABLE, as libgeotiff's tag extender does
-const double* getDoublesTag( TIFF* tiff, uint32_t tag, uint32_t& count )
+template <typename T>
+const T* getTagValues( TIFF* tiff, uint32_t tag, uint32_t& count )
 {
+    static_assert( std::is_same_v<T, double> || std::is_same_v<T, uint16_t> );
     count = 0;
-    double* data = nullptr;
+    T* data = nullptr;
     // the tags of other types or with a fixed number of values are returned differently
     const auto* field = TIFFFindField( tiff, tag, TIFF_ANY );
-    if ( !field || TIFFFieldDataType( field ) != TIFF_DOUBLE || !TIFFFieldPassCount( field ) )
+    if ( !field || TIFFFieldDataType( field ) != ( std::is_same_v<T, double> ? TIFF_DOUBLE : TIFF_SHORT ) || !TIFFFieldPassCount( field ) )
         return nullptr;
     if ( TIFFFieldReadCount( field ) == TIFF_VARIABLE2 )
         return TIFFGetField( tiff, tag, &count, &data ) ? data : nullptr;
@@ -250,30 +311,77 @@ const double* getDoublesTag( TIFF* tiff, uint32_t tag, uint32_t& count )
     return data;
 }
 
+// returns whether the GeoTIFF raster type is PixelIsPoint
+bool isPixelIsPoint( TIFF* tiff )
+{
+    uint32_t count = 0;
+    // the header { version 1, revision, minor revision, number of keys } is followed by the keys { id, location, count, value },
+    // the location 0 means that the value is in the key
+    const auto* keys = getTagValues<uint16_t>( tiff, cGeoKeyDirectoryTag, count );
+    if ( !keys || count < 4 || keys[0] != 1 )
+        return false;
+    const auto end = std::min( count, 4 + 4 * uint32_t( keys[3] ) );
+    for ( uint32_t i = 4; i + 4 <= end; i += 4 )
+        if ( keys[i] == cGTRasterTypeGeoKey )
+            return keys[i + 1] == 0 && keys[i + 3] == cRasterPixelIsPoint;
+    return false;
+}
+
 // reads the GeoTIFF transformation of (column, row, value) to world coordinates, or returns the identity if the file has none
 AffineXf3f readGeoTransform( TIFF* tiff )
 {
+    AffineXf3d xf;
     uint32_t count = 0;
     // the values are freed with the file
-    if ( const auto* matrix = getDoublesTag( tiff, cModelTransformationTag, count ); matrix && count == 16 )
-        return AffineXf3f( Matrix4f( *(const Matrix4d*)matrix ) );
-
-    const auto* tie = getDoublesTag( tiff, cModelTiePointTag, count );
-    if ( !tie || count != 6 )
-        return {};
-    const auto* scaleTag = getDoublesTag( tiff, cModelPixelScaleTag, count );
-    if ( !scaleTag || count != 3 )
-        return {};
-    // the tie point maps the raster point tiePoints[0] to the model point tiePoints[1]
-    Vector3d tiePoints[2] = { { tie[0], tie[1], tie[2] }, { tie[3], tie[4], tie[5] } };
-    Vector3d scale{ scaleTag[0], -scaleTag[1], scaleTag[2] };
-    if ( scale.z == 0. )
+    if ( const auto* matrix = getTagValues<double>( tiff, cModelTransformationTag, count ); matrix && count == 16 )
     {
-        tiePoints[0].z = 0.;
-        tiePoints[1].z = 0.;
-        scale.z = 1.;
+        xf = AffineXf3d( *(const Matrix4d*)matrix );
     }
-    return AffineXf3f( Matrix3f::scale( Vector3f( scale ) ), Vector3f( tiePoints[1] - mult( scale, tiePoints[0] ) ) );
+    else
+    {
+        const auto* tie = getTagValues<double>( tiff, cModelTiePointTag, count );
+        if ( !tie || count != 6 )
+            return {};
+        const auto* scaleTag = getTagValues<double>( tiff, cModelPixelScaleTag, count );
+        if ( !scaleTag || count != 3 )
+            return {};
+        // the tie point maps the raster point tiePoints[0] to the model point tiePoints[1]
+        Vector3d tiePoints[2] = { { tie[0], tie[1], tie[2] }, { tie[3], tie[4], tie[5] } };
+        Vector3d scale{ scaleTag[0], -scaleTag[1], scaleTag[2] };
+        if ( scale.z == 0. )
+        {
+            tiePoints[0].z = 0.;
+            tiePoints[1].z = 0.;
+            scale.z = 1.;
+        }
+        xf = AffineXf3d( Matrix3d::scale( scale ), tiePoints[1] - mult( scale, tiePoints[0] ) );
+    }
+    // the raster point (0, 0) is the center of the first pixel in PixelIsPoint rasters and its corner in PixelIsArea rasters;
+    // the returned transformation refers to the corners, as GDAL's does
+    if ( isPixelIsPoint( tiff ) )
+        xf.b -= xf.A * Vector3d( 0.5, 0.5, 0. );
+    return AffineXf3f( xf );
+}
+
+// reads the value meaning no data, which GDAL writes as text, e.g. "-9999" or "nan"; libtiff passes the length of the text too
+// if the tag is not registered
+std::optional<double> readNoData( TIFF* tiff )
+{
+    const auto* field = TIFFFindField( tiff, cGdalNoDataTag, TIFF_ANY );
+    if ( !field || TIFFFieldDataType( field ) != TIFF_ASCII )
+        return {};
+    const char* text = nullptr;
+    uint32_t length = 0;
+    const bool read = TIFFFieldPassCount( field )
+        ? TIFFFieldReadCount( field ) == TIFF_VARIABLE2 && TIFFGetField( tiff, cGdalNoDataTag, &length, &text )
+        : TIFFGetField( tiff, cGdalNoDataTag, &text ) != 0;
+    if ( !read || !text )
+        return {};
+    char* end = nullptr;
+    const double value = std::strtod( text, &end );
+    if ( end == text )
+        return {};
+    return value;
 }
 
 // as the old image loader did, libtiff decodes the images it can, the others are converted from the raster
@@ -327,23 +435,17 @@ Expected<void> writeTiff( const std::filesystem::path& path, const RasterInfo& i
     TIFFSetField( tiff, TIFFTAG_IMAGEWIDTH, uint32_t( info.dims.x ) );
     TIFFSetField( tiff, TIFFTAG_IMAGELENGTH, uint32_t( info.dims.y ) );
     TIFFSetField( tiff, TIFFTAG_BITSPERSAMPLE, sample->bits );
-    // ExtraSamples is not written, as before, so libtiff's RGBA reader takes the fourth sample as associated alpha
-    // and does not premultiply the colors by it
     TIFFSetField( tiff, TIFFTAG_SAMPLESPERPIXEL, info.channels );
+    // the fourth channel is unassociated alpha, as in Image: the colors are not multiplied by it
+    const uint16_t unassociatedAlpha = EXTRASAMPLE_UNASSALPHA;
+    if ( info.channels == 4 )
+        TIFFSetField( tiff, TIFFTAG_EXTRASAMPLES, uint16_t( 1 ), &unassociatedAlpha );
     TIFFSetField( tiff, TIFFTAG_SAMPLEFORMAT, sample->format );
     TIFFSetField( tiff, TIFFTAG_PHOTOMETRIC, info.channels == 1 ? PHOTOMETRIC_MINISBLACK : PHOTOMETRIC_RGB );
     TIFFSetField( tiff, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG );
     TIFFSetField( tiff, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT );
 
-    // declare non-standard tags
-    std::vector<TIFFFieldInfo> fieldInfo;
-    if ( settings.xf )
-        fieldInfo.push_back( { cModelTransformationTag, -1, -1, TIFF_DOUBLE, FIELD_CUSTOM, 1, 1, (char*)"ModelTransformationTag" } );
-    if ( noData )
-        fieldInfo.push_back( { cGdalNoDataTag, -1, -1, TIFF_ASCII, FIELD_CUSTOM, 1, 0, (char*)"GDALNoDataValue" } );
-    if ( !fieldInfo.empty() )
-        TIFFMergeFieldInfo( tiff, fieldInfo.data(), uint32_t( fieldInfo.size() ) );
-
+    // the GeoTIFF and GDAL tags are registered by extendTags
     if ( settings.xf )
     {
         const Matrix4d matrix = AffineXf3d( *settings.xf );
@@ -376,7 +478,7 @@ namespace MR
 namespace RasterLoad
 {
 
-Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings )
+Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSettings& settings, const TiffLoadSettings& tiffSettings )
 {
     MR_TIMER;
     return readTiffFile( path, [&] ( TIFF* tiff, const TiffLayout& layout )
@@ -384,6 +486,8 @@ Expected<Raster> fromTiff( const std::filesystem::path& path, const RasterLoadSe
         auto res = readRaster( tiff, layout, settings.progress );
         if ( res && settings.xf )
             *settings.xf = readGeoTransform( tiff );
+        if ( res && tiffSettings.noData )
+            *tiffSettings.noData = readNoData( tiff );
         return res;
     } );
 }
@@ -393,7 +497,8 @@ Expected<RasterInfo> infoFromTiff( const std::filesystem::path& path )
     return readTiffFile( path, [] ( TIFF*, const TiffLayout& layout ) -> Expected<RasterInfo> { return layout.info; } );
 }
 
-MR_ADD_RASTER_LOADER( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ), fromTiff, infoFromTiff )
+MR_ADD_RASTER_LOADER( IOFilter( "TIFF (.tif,.tiff)", "*.tif;*.tiff" ),
+    [] ( const std::filesystem::path& path, const RasterLoadSettings& settings ) { return fromTiff( path, settings ); }, infoFromTiff )
 
 } // namespace RasterLoad
 
@@ -468,6 +573,15 @@ Expected<DistanceMap> fromTiff( const std::filesystem::path& path, const Distanc
                 .and_then( [&] ( const Raster& raster ) { return convertRasterToFloats( raster, res.data(), res.size() ); } );
         if ( !readRes )
             return unexpected( std::move( readRes.error() ) );
+        // the value meaning no data refers to the stored samples, so the luma of colors is not compared with it
+        if ( const auto noData = readNoData( tiff ); noData && layout.info.channels == 1 )
+        {
+            const auto invalid = float( *noData );
+            if ( std::isnan( invalid ) )
+                std::replace_if( res.data(), res.data() + res.size(), [] ( float v ) { return std::isnan( v ); }, DistanceMap::NOT_VALID_VALUE );
+            else if ( invalid != DistanceMap::NOT_VALID_VALUE )
+                std::replace( res.data(), res.data() + res.size(), invalid, DistanceMap::NOT_VALID_VALUE );
+        }
         if ( settings.distanceMapToWorld )
             *settings.distanceMapToWorld = readGeoTransform( tiff );
         return res;

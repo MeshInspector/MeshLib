@@ -46,4 +46,11 @@ Source meshes
 Boolean intersection
 \image html boolean_after.png
 
+- <b class="tab-title">Rust</b>
+\include MeshBoolean.dox.rs
+Source meshes
+\image html boolean_before.png
+Boolean intersection
+\image html boolean_after.png
+
 </div>

@@ -465,19 +465,6 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
 }
 
 
-inline std::pair<int, int> sharedPreciseVertCoord( const PreciseVertCoords av[3], const PreciseVertCoords bv[3] )
-{
-    for ( int i = 0; i < 3; ++i )
-    {
-        for ( int j = 0; j < 3; ++j )
-        {
-            if ( av[i].id == bv[j].id )
-                return { i, j };
-        }
-    }
-    return { -1, -1 };
-}
-
 std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, ConvertToIntVector conv, bool anyIntersection /*= false */, 
     const AffineXf3f* rigidB2A, int aVertsSize )
 {
@@ -531,6 +518,24 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
         mp.mesh.topology.getTriVerts( lTri, lvc[0].id, lvc[1].id, lvc[2].id );
         mp.mesh.topology.getTriVerts( rTri, rvc[0].id, rvc[1].id, rvc[2].id );
 
+        // the triangles with two shared vertices (connected by a shared edge or by multiple edges) can meet only along the segment between them,
+        // so they are skipped; otherwise find the indices of the shared vertex in both triangles
+        std::pair<int, int> sharedVerts{ -1, -1 };
+        int numSharedVerts = 0;
+        for ( int i = 0; i < 3; ++i )
+        {
+            for ( int j = 0; j < 3; ++j )
+            {
+                if ( lvc[i].id == rvc[j].id )
+                {
+                    sharedVerts = { i, j };
+                    ++numSharedVerts;
+                }
+            }
+        }
+        if ( numSharedVerts >= 2 )
+            return;
+
         for ( int j = 0; j < 3; ++j )
         {
             const auto& lf = mp.mesh.points[lvc[j].id];
@@ -542,10 +547,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
             rvc[j].id += aVertsSize;
         }
 
-        auto sharedVerts = sharedPreciseVertCoord( lvc, rvc );
-
         // check edges from A
-        int numL = 0;
         EdgeId lEdge = mp.mesh.topology.edgeWithLeft( lTri );
         auto lEdgeCheck = [&] ( int v0, int v1 )
         {
@@ -569,14 +571,12 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
             res.emplace_back( e, rTri );
         }
         lEdge = mp.mesh.topology.prev( lEdge.sym() );
-        if ( numL < 2 )
+        if ( auto e = lEdgeCheck( 2, 0 ) )
         {
-            if ( auto e = lEdgeCheck( 2, 0 ) )
-                res.emplace_back( e, rTri );
+            res.emplace_back( e, rTri );
         }
 
         // check edges from B
-        int numR = 0;
         EdgeId rEdge = mp.mesh.topology.edgeWithLeft( rTri );
         auto rEdgeCheck = [&] ( int v0, int v1 )
         {
@@ -600,10 +600,9 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
             res.emplace_back( e, lTri );
         }
         rEdge = mp.mesh.topology.prev( rEdge.sym() );
-        if ( numR < 2 )
+        if ( auto e = rEdgeCheck( 2, 0 ) )
         {
-            if ( auto e = rEdgeCheck( 2, 0 ) )
-                res.emplace_back( e, lTri );
+            res.emplace_back( e, lTri );
         }
     };
 
@@ -627,8 +626,6 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
                     return Processing::Continue;
                 const auto rFace = rNode.leafId();
                 if ( mp.region && !mp.region->test( rFace ) )
-                    return Processing::Continue;
-                if ( mp.mesh.topology.sharedEdge( lFace, rFace ) )
                     return Processing::Continue;
                 checkTwoTris( lFace, rFace, myRes );
                 if ( anyIntersection && !myRes.empty() )

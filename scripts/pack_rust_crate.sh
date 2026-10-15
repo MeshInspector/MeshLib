@@ -18,7 +18,7 @@ OUT="$PWD"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir "$WORK/MeshLibRust"
-cp "$ROOT/source/MeshLibRust/Cargo.toml" "$ROOT/source/MeshLibRust/build.rs" "$ROOT/LICENSE" "$ROOT/thirdparty/licenses/THIRD-PARTY-NOTICES.txt" "$WORK/MeshLibRust/"
+cp "$ROOT/source/MeshLibRust/Cargo.toml" "$ROOT/source/MeshLibRust/build.rs" "$ROOT/LICENSE" "$ROOT/readme.md" "$ROOT/thirdparty/licenses/THIRD-PARTY-NOTICES.txt" "$WORK/MeshLibRust/"
 cp -r "$SRC_DIR" "$WORK/MeshLibRust/src"
 
 # Cargo wants three numbers in the version and crates.io ignores build metadata (`+528`) when telling versions apart,

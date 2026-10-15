@@ -5,6 +5,15 @@ version = "0.0.0"
 edition = "2021"
 rust-version = "1.88"
 build = "build.rs"
+description = "Rust bindings for MeshLib, the 3D mesh processing library: booleans, offsets, decimation, registration, voxels"
+authors = ["AMV Consulting"]
+# Non-commercial and educational use, see the file. `LICENSE` and `readme.md` are copied from the repository root by `scripts/pack_rust_crate.sh`.
+license-file = "LICENSE"
+readme = "readme.md"
+homepage = "https://meshlib.io"
+repository = "https://github.com/MeshInspector/MeshLib"
+keywords = ["mesh", "3d", "geometry", "boolean", "stl"]
+categories = ["graphics", "mathematics", "api-bindings"]
 
 [lib]
 path = "src/lib.rs"

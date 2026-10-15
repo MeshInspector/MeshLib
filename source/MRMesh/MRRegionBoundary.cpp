@@ -8,7 +8,6 @@
 #include "MRTimer.h"
 #include <algorithm>
 #include <tbb/global_control.h>
-#include <tbb/task.h>
 #include "MRMesh.h"
 
 namespace MR
@@ -176,20 +175,17 @@ static bool isSmall( const BitSet & set, size_t meshSize, size_t denseFraction, 
 // * a serial walk, if isSmall with both fractions multiplied by the number of threads,
 //   since the parallel walk overtakes the serial one at a set size about inversely proportional to it;
 // * a parallel walk, if the set has at most 1/parallelFraction of the mesh elements;
-// * otherwise none: every element of the mesh is tested in parallel.
-// A call from inside a parallel region (e.g. per part of a parallel decimation) finds every thread busy,
-// so it is treated as a call on a single-threaded machine: the serial walk or the scan, never the parallel walk
+// * otherwise none: every element of the mesh is tested in parallel
 static Walk chooseWalk( const BitSet & set, size_t meshSize, size_t denseFraction, size_t scatteredFraction, size_t parallelFraction )
 {
-    const bool nested = tbb::task::current_context() != nullptr;
-    const auto threads = nested ? 1 : tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+    const auto threads = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
     denseFraction *= threads;
     scatteredFraction *= threads;
     // a set over 1/stopFraction of the mesh is neither walked serially nor in parallel
     const auto c = set.countBitsAndBlocks( meshSize / std::min( denseFraction, parallelFraction ) );
     if ( c.bits * denseFraction < meshSize && c.blocks * scatteredFraction < meshSize )
         return Walk::Serial;
-    return !nested && c.bits * parallelFraction <= meshSize ? Walk::Parallel : Walk::None;
+    return c.bits * parallelFraction <= meshSize ? Walk::Parallel : Walk::None;
 }
 
 // vertices of given faces; a deleted or out-of-range face has no edges and adds nothing

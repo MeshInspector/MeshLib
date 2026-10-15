@@ -217,7 +217,7 @@ TEST( MRMesh, RegionBoundarySmallAndLargeSets )
     for ( const auto & [name, faces] : sets )
         check( faces, name.c_str() );
 
-    // a call from inside a parallel region takes the serial walk or the scan, never the parallel walk; the results must not change
+    // the same from inside a parallel region, where the parallel walks and scans are nested
     std::vector<decltype( allResults( sets[0].second ) )> nested( sets.size() );
     ParallelFor( sets, [&]( size_t i ) { nested[i] = allResults( sets[i].second ); } );
     for ( size_t i = 0; i < sets.size(); ++i )

@@ -5,19 +5,19 @@
 [TOC]
 
 > [!NOTE]
-> The Rust bindings are new. The crate is generated from the C API and is published as a source archive on the releases page, not on crates.io yet.
+> The Rust bindings are new. The crate is generated from the C API and is published as archives on the releases page, not on crates.io: with the MeshLib libraries for all platforms it is far over the crates.io size limit.
 
 The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C Setup Guide](\ref MeshLibCSetupGuide)) in safe Rust: C++ classes become types held in `Owned<T>`, which destroys the object when dropped, references and pointers become `&T` / `&mut T` / `Option<&T>`, `std::string` parameters take `&str`, and C++ exceptions become panics. The C++ namespaces become modules, so everything from `MR::` is under `meshlib::mr`.
 
 ## Prerequisites {#RustSetupPrerequisites}
 
  - [Rust](https://rustup.rs/) 1.82 or newer, with `cargo`.
- - The MeshLib binaries for your platform, installed as described in the [C Setup Guide](\ref MeshLibCSetupGuide): the Windows archive, the Linux `.deb` or vcpkg archive, or the macOS `.pkg`. The crate links against `MeshLibC2` (and `MeshLibC2Cuda`) from that installation.
+ - Windows, Linux (glibc 2.28 or newer) or macOS, on x86_64 or aarch64.
 
 ## Installation
 
  1. **Download the crate**
- <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download `meshlib_<version>_rust_bindings.zip` of the same version as your MeshLib binaries. Extract it next to your project, e.g. into `../MeshLibRust`. The archive holds `Cargo.toml`, `build.rs` and the generated `src`. The crate version is the MeshLib version with the fourth number as build metadata (`3.1.4+528` for v3.1.4.528).
+ <br/> Open the [MeshLib GitHub Releases](https://github.com/MeshInspector/MeshLib/releases) page and download `meshlib_<version>_rust.zip`. Extract it next to your project, e.g. into `../MeshLibRust`. The archive holds `Cargo.toml`, `build.rs`, the generated `src` and, in `native`, the MeshLib shared libraries for all supported platforms (the same ones as in the NuGet package). The crate version is the MeshLib version with the fourth number as build metadata (`3.1.4+528` for v3.1.4.528).
 
  2. **Add the dependency**
  <br/> In your `Cargo.toml`:
@@ -26,17 +26,22 @@ The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C
 meshlib = { path = "../MeshLibRust" }
 ```
 
- 3. **Point the linker to the MeshLib libraries**
- <br/> The crate's `build.rs` reads the `MESHLIB_LIB_DIR` environment variable and adds that directory to the linker search path. Set it to the directory with the MeshLib shared libraries when building:
+That is all: `cargo build`, `cargo run` and `cargo test` find the libraries of the target platform by themselves. The crate's `build.rs` also puts them next to your executables in `target/<profile>`, which is enough to run them without `cargo` on Windows. On Linux, let the executable find them there by adding to your own `build.rs`:
+```rust
+println!("cargo:rustc-link-arg-bins=-Wl,-rpath,$ORIGIN");
+```
+On macOS, set `DYLD_FALLBACK_LIBRARY_PATH` to that directory. When you ship your program, ship the libraries with it.
+
+### Using your own MeshLib installation {#RustSetupOwnLibraries}
+
+`meshlib_<version>_rust_bindings.zip` is the same crate without the libraries, for the MeshLib binaries you already have, installed as described in the [C Setup Guide](\ref MeshLibCSetupGuide): the Windows archive, the Linux `.deb` or vcpkg archive, or the macOS `.pkg` of the same version. Point the linker to them with the `MESHLIB_LIB_DIR` environment variable (it also takes precedence over the libraries bundled in the other archive):
   - Windows: `C:\meshlib-built\install\app\Release` (the `.dll` files; no import library is needed, the crate links with `raw-dylib`)
   - Linux: `/usr/local/lib/MeshLib/lib` for the `.deb`, or `path_to_install/lib` for the vcpkg archive
   - macOS: `/Library/Frameworks/MeshLib.framework/Versions/Current/lib`
 ```sh
 MESHLIB_LIB_DIR=/usr/local/lib/MeshLib/lib cargo build
 ```
-
- 4. **Make the libraries loadable at runtime**
- <br/> The same directory must be visible to the dynamic loader when your program runs: add it to `PATH` on Windows, `LD_LIBRARY_PATH` on Linux, `DYLD_LIBRARY_PATH` on macOS.
+The same directory must be visible to the dynamic loader when your program runs: add it to `PATH` on Windows, `LD_LIBRARY_PATH` on Linux, `DYLD_LIBRARY_PATH` on macOS.
 
 ## Using the API
 

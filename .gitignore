@@ -48,6 +48,7 @@ compile_commands.json
 /source/MRDotNet2/obj
 /source/MRDotNet2/src
 /source/MeshLibRust/src/
+/source/MeshLibRust/native/
 /source/MeshLibRust/target/
 /source/MeshLibRust/Cargo.lock
 /examples/rust-examples/target/

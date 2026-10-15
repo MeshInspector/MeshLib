@@ -1,0 +1,71 @@
+name: Test Rust crate with bundled libraries
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to test'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+
+permissions:
+  contents: write # `gh release download` of a draft release.
+
+jobs:
+  rust-consumer-test:
+    name: Rust consumer test (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x86_64
+            runner: windows-2025
+          - target: windows-aarch64
+            runner: windows-11-vs2026-arm
+          - target: linux-x86_64
+            runner: ubuntu-24.04
+          - target: linux-aarch64
+            runner: ubuntu-24.04-arm
+          - target: macos-x86_64
+            runner: macos-12-intel
+          - target: macos-aarch64
+            runner: macos-13
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-rust
+
+      # Replaces the committed `Cargo.toml` and `build.rs` with the released ones, and adds `src` and `native`.
+      - name: Download the crate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "meshlib_*_rust.zip" --repo ${{ github.repository }} --clobber
+          unzip -qo meshlib_*_rust.zip -d source
+          ls source/MeshLibRust/native
+
+      # No `MESHLIB_LIB_DIR`: everything must come from the crate.
+      - name: Run the tests
+        run: cargo test --release --manifest-path source/MRTestRust/Cargo.toml
+
+      - name: Run an example with cargo
+        run: cargo run --release --manifest-path examples/rust-examples/Cargo.toml --bin MeshBoolean
+
+      - name: Run an example without cargo
+        if: ${{ runner.os == 'Windows' }} # Elsewhere the executable needs an rpath or LD_LIBRARY_PATH / DYLD_LIBRARY_PATH, see RustSetupGuide.md.
+        working-directory: examples/rust-examples
+        run: target/release/MeshBoolean.exe

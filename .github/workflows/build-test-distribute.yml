@@ -318,26 +318,23 @@ jobs:
           pattern: Distributives*
           merge-multiple: true
 
-      # The Rust crate is sources only (the C libraries come from the platform packages), one archive for all platforms:
-      # the generated `src` from the Ubuntu job, the committed `Cargo.toml` and `build.rs` from the checkout.
+      # The sources-only crate needs the C libraries of a MeshLib installation, the other one bundles them for all platforms from the NuGet package.
+      # Both get the generated `src` from the Ubuntu job, the committed `Cargo.toml` and `build.rs` from the checkout.
       - name: Download Rust bindings
         continue-on-error: true # The job producing it may be disabled for this run.
         uses: actions/download-artifact@v8
         with:
           name: RustBindings
-          path: MeshLibRust/src
+          path: rust_bindings_src
 
       - name: Pack Rust bindings
         run: |
-          if [ -d MeshLibRust/src ]; then
-            cp source/MeshLibRust/Cargo.toml source/MeshLibRust/build.rs MeshLibRust/
-            # The crate version is the MeshLib version. Cargo wants semver, so the fourth number becomes build metadata: v3.1.4.528 -> 3.1.4+528.
-            VERSION="${{ needs.config.outputs.app_version }}"
-            VERSION="${VERSION#v}"
-            CRATE_VERSION="$(echo "$VERSION" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$/\1+\2/')"
-            sed -i "s/^version = .*/version = \"$CRATE_VERSION\"/" MeshLibRust/Cargo.toml
-            grep '^version' MeshLibRust/Cargo.toml
-            zip -qr meshlib_rust_bindings.zip MeshLibRust
+          if [ -d rust_bindings_src ]; then
+            scripts/pack_rust_crate.sh ${{ needs.config.outputs.app_version }} rust_bindings_src meshlib_rust_bindings.zip
+            if [ -f MeshLib.nupkg ]; then
+              scripts/pack_rust_crate.sh ${{ needs.config.outputs.app_version }} rust_bindings_src meshlib_rust.zip MeshLib.nupkg
+            fi
+            rm -rf rust_bindings_src
           fi
 
       - name: Rename Distributives
@@ -422,6 +419,24 @@ jobs:
       - create-nuget-package
       - upload-distributions
     uses: ./.github/workflows/nuget-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+
+  rust-consumer-test:
+    # The crate is packed in `upload-distributions` from the NuGet package and the Rust bindings of the arm64 Ubuntu 22 job.
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_ubuntu_arm64 == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.ubuntu-build-test.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - ubuntu-build-test
+      - upload-distributions
+    uses: ./.github/workflows/rust-consumer-test.yml
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
 

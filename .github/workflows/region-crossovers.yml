@@ -35,6 +35,8 @@ jobs:
               {"name": "windows-self",   "family": "windows", "runner": ["self-hosted", "georgiawin-mi"]},
               {"name": "macos-hosted",   "family": "macos",   "runner": "macos-15"},
               {"name": "macos-self",     "family": "macos",   "runner": ["self-hosted", "our-macos-15"]},
+              {"name": "linux-arm-hosted",   "family": "linux",   "arch": "arm64", "runner": "ubuntu-24.04-arm"},
+              {"name": "windows-arm-hosted", "family": "windows", "arch": "arm64", "runner": "windows-11-arm"},
           ]
           m = re.search(r"^only:(.*)$", os.environ.get("MESSAGE", ""), re.M)
           pick = [x for x in all if not m or x["name"] in m.group(1).split()]
@@ -67,7 +69,7 @@ jobs:
           export DEBIAN_FRONTEND=noninteractive
           apt-get update -qq
           apt-get install -y -qq curl ca-certificates cmake g++ make python3 >/dev/null
-          curl -sSfL -o meshlib.deb "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/meshlib_${MESHLIB_VER}_ubuntu24-dev.deb"
+          curl -sSfL -o meshlib.deb "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/meshlib_${MESHLIB_VER}_ubuntu24${{ matrix.arch == 'arm64' && '-arm64' || '' }}-dev.deb"
           apt-get install -y -qq ./meshlib.deb >/dev/null
           echo "CMAKE_ARGS=" >> $GITHUB_ENV
 
@@ -75,11 +77,13 @@ jobs:
         if: matrix.family == 'windows'
         working-directory: rc
         run: |
-          curl -sSfL -o meshlib.zip "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/MeshLibDistVS22_${MESHLIB_VER}.zip"
+          zip=MeshLibDistVS22_${MESHLIB_VER}.zip; arch=x64
+          [ "${{ matrix.arch }}" = arm64 ] && zip=MeshLibDistVS26_${MESHLIB_VER}-arm64.zip && arch=ARM64
+          curl -sSfL -o meshlib.zip "https://github.com/MeshInspector/MeshLib/releases/download/$MESHLIB_TAG/$zip"
           "$SYSTEMROOT/System32/tar.exe" -xf meshlib.zip install/include install/lib/Release install/app/Release
           rm meshlib.zip
           d=$(cygpath -m "$PWD/install")
-          echo "CMAKE_ARGS=-A x64 -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV
+          echo "CMAKE_ARGS=-A $arch -DMESHLIB_INCLUDE_DIRS=$d/include -DMESHLIB_LIB_DIRS=$d/lib/Release" >> $GITHUB_ENV
           echo "$(cygpath -w "$PWD/install/app/Release")" >> $GITHUB_PATH
           # self-hosted Windows has no cmake on PATH, only the one bundled with Visual Studio
           if ! command -v cmake >/dev/null; then
@@ -124,7 +128,7 @@ jobs:
         run: |
           mkdir -p out/${{ matrix.name }}
           case "${{ matrix.family }}" in
-            linux)   cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2); threads=$(nproc) ;;
+            linux)   cpu=$(grep -m1 'model name' /proc/cpuinfo | cut -d: -f2); [ -n "$cpu" ] || cpu=$(lscpu | sed -n 's/^Model name: *//p' | head -1); threads=$(nproc) ;;
             macos)   cpu=$(sysctl -n machdep.cpu.brand_string); threads=$(sysctl -n hw.logicalcpu) ;;
             windows) cpu=$(powershell -NoProfile -Command "(Get-CimInstance Win32_Processor | Select-Object -First 1).Name"); threads=$NUMBER_OF_PROCESSORS ;;
           esac

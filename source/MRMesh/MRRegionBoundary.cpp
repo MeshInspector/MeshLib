@@ -163,22 +163,31 @@ std::vector<EdgePath> extractAllPaths( const MeshTopology& topology, EdgeBitSet 
 
 enum class Walk { Serial, Parallel, None };
 
-// whether the set is small enough for the serial walk: under 1/denseFraction of the mesh, and its non-empty 64-bit blocks
-// under 1/scatteredFraction of it, because a scattered set misses the cache on every element
+// parallel code overtakes a serial walk at a set size about inversely proportional to the number of threads,
+// so the serial walk limits below are multiplied by it (measured per function on machines with 3 to 28 threads)
+static size_t numThreads()
+{
+    return tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+}
+
+// whether the set is small enough for the serial walk: under 1/(denseFraction*T) of the mesh, and its non-empty 64-bit blocks
+// under 1/(scatteredFraction*T) of it, where T = numThreads(), because a scattered set misses the cache on every element
 static bool isSmall( const BitSet & set, size_t meshSize, size_t denseFraction, size_t scatteredFraction )
 {
+    const auto threads = numThreads();
+    denseFraction *= threads;
+    scatteredFraction *= threads;
     const auto c = set.countBitsAndBlocks( meshSize / denseFraction ); // no need to count the rest of a large set
     return c.bits * denseFraction < meshSize && c.blocks * scatteredFraction < meshSize;
 }
 
-// how to process the set, measured per function on machines with 3 to 24 threads:
-// * a serial walk, if isSmall with both fractions multiplied by the number of threads,
-//   since the parallel walk overtakes the serial one at a set size about inversely proportional to it;
+// how to process the set:
+// * a serial walk, if isSmall;
 // * a parallel walk, if the set has at most 1/parallelFraction of the mesh elements;
 // * otherwise none: every element of the mesh is tested in parallel
 static Walk chooseWalk( const BitSet & set, size_t meshSize, size_t denseFraction, size_t scatteredFraction, size_t parallelFraction )
 {
-    const auto threads = tbb::global_control::active_value( tbb::global_control::max_allowed_parallelism );
+    const auto threads = numThreads();
     denseFraction *= threads;
     scatteredFraction *= threads;
     // a set over 1/stopFraction of the mesh is neither walked serially nor in parallel
@@ -434,7 +443,7 @@ VertBitSet getInnerVerts( const MeshTopology & topology, const FaceBitSet * regi
 {
     MR_TIMER;
     VertBitSet res;
-    if ( region && isSmall( *region, topology.faceSize(), 128, 256 ) )
+    if ( region && isSmall( *region, topology.faceSize(), 4, 64 ) )
     {
         res.resize( topology.getValidVerts().size() );
         addVertsOfFaces( topology, *region, res );
@@ -491,7 +500,7 @@ VertBitSet getRegionBoundaryVerts( const MeshTopology & topology, const FaceBitS
 
     VertBitSet bdVerts( topology.vertSize() );
     VertBitSet store;
-    BitSetParallelFor( candidateVerts( topology, region, store, 16, 256 ), [&]( VertId v )
+    BitSetParallelFor( candidateVerts( topology, region, store, 1, 24 ), [&]( VertId v )
     {
         bool hasRegionNei = false;
         bool hasNotRegionNei = false;
@@ -520,7 +529,7 @@ VertBitSet getRegionInnerVerts( const MeshTopology & topology, const FaceBitSet 
 
     VertBitSet res( topology.vertSize() );
     VertBitSet store;
-    BitSetParallelFor( candidateVerts( topology, region, store, 128, 512 ), [&]( VertId v )
+    BitSetParallelFor( candidateVerts( topology, region, store, 4, 64 ), [&]( VertId v )
     {
         bool hasRegionNei = false;
         for ( auto e : orgRing( topology, v ) )
@@ -707,7 +716,7 @@ FaceBitSet getInnerFaces( const MeshTopology & topology, const VertBitSet & vert
     MR_TIMER;
     FaceBitSet res( topology.faceSize() );
     // an inner face is incident to the vertices, so a small set needs to check only its incident faces
-    const bool smallSet = isSmall( verts, topology.vertSize(), 128, 2048 );
+    const bool smallSet = isSmall( verts, topology.vertSize(), 6, 32 );
     const FaceBitSet candidates = smallSet ? getIncidentFaces( topology, verts ) : FaceBitSet{};
     BitSetParallelFor( smallSet ? candidates : topology.getValidFaces(), [&]( FaceId f )
     {

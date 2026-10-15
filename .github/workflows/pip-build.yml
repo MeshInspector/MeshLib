@@ -656,7 +656,7 @@ jobs:
 
       - name: Checkout third-party submodules
         # Retried via retry.sh: submodule endpoints occasionally 500.
-        run: bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+        run: bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh --vcpkg
 
       - name: Set up vcpkg
         uses: ./.github/actions/setup-vcpkg-macos

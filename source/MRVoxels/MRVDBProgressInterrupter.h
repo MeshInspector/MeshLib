@@ -13,7 +13,7 @@ namespace MR
 // This class implements OpenVdb interrupter interface and provides ability to use MR::ProgressCallback in some OpenVdb operations
 struct ProgressInterrupter : openvdb::util::NullInterrupter
 {
-    ProgressInterrupter( ProgressCallback cb )  : cb_{ cb }
+    ProgressInterrupter( ProgressCallback cb )  : cb_{ std::move( cb ) }
         , progressThreadId_{ std::this_thread::get_id() } {}
     virtual bool wasInterrupted( int percent = -1 ) override
     {

@@ -180,7 +180,7 @@ public:
     };
     RangeProgress( ProgressCallback cb, size_t size, Mode mode ) :
         size_{ size },
-        cb_{ cb },
+        cb_{ std::move( cb ) },
         mode_{ mode }
     {
         progressThreadId_ = std::this_thread::get_id();

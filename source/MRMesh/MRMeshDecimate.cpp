@@ -248,7 +248,7 @@ bool MeshDecimator::initialize_()
     if ( settings_.region )
     {
         // all region edges
-        regionEdges_ = getIncidentEdges( mesh_.topology, *settings_.region );
+        regionEdges_ = settings_.regionEdges ? *settings_.regionEdges : getIncidentEdges( mesh_.topology, *settings_.region );
         if ( settings_.edgesToCollapse )
             regionEdges_ &= *settings_.edgesToCollapse;
         if ( !settings_.touchNearBdEdges )
@@ -1049,6 +1049,9 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         /// filled only if limitedDeletion
         VertBitSet removableVerts;
 
+        /// edges incident to region faces
+        UndirectedEdgeBitSet regionEdges;
+
         DecimateResult decimRes;
     };
     std::vector<Parts> parts( sz );
@@ -1186,6 +1189,17 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             }
         } );
     }
+
+    // edges of each part's region (facePart limited to settings.region) in one pass over all edges instead of a
+    // getIncidentEdges pass per part; all edge bit sets have the same indexing, so threads write disjoint blocks
+    ParallelFor( parts, [&]( size_t i ) { parts[i].regionEdges.resize( mesh.topology.undirectedEdgeSize() ); } );
+    BitSetParallelForAll( parts[0].regionEdges, [&]( UndirectedEdgeId ue )
+    {
+        for ( auto f : { mesh.topology.left( ue ), mesh.topology.right( ue ) } )
+            if ( f && facePart[f] >= 0 && ( !settings.region || settings.region->test( f ) ) )
+                parts[size_t( facePart[f] )].regionEdges.set( ue );
+    } );
+
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )
         return res;
 
@@ -1248,6 +1262,7 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
             subSeqSettings.touchNearBdEdges = false;
             // after mesh.topology.stopUpdatingValids(), seq-subdivider cannot find bdVerts by itself
             subSeqSettings.bdVerts = &parts[i].bdVerts;
+            subSeqSettings.regionEdges = &parts[i].regionEdges;
             subSeqSettings.region = &parts[i].region;
             if ( reportProgressFromThisThread )
                 subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };

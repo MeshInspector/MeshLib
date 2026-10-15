@@ -106,6 +106,10 @@ struct DecimateSettings
     /// the algorithm updates this set if it packs the mesh
     VertBitSet * bdVerts = nullptr;
 
+    /// if region is not null and this pointer is not null, then it shall contain all edges incident to region faces
+    /// (as returned by getIncidentEdges( topology, *region )), and the algorithm does not compute them itself
+    const UndirectedEdgeBitSet * regionEdges = nullptr;
+
     /// Permit edge flips (in addition to collapsing) to improve Delone quality of the mesh
     /// if it does not change dihedral angle more than on this value (negative value prohibits any edge flips)
     float maxAngleChange = -1;

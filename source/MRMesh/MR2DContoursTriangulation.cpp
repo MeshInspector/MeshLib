@@ -17,7 +17,6 @@
 #include "MR2to3.h"
 #include "MRBitSetParallelFor.h"
 #include "MRParallelFor.h"
-#include "MREdgePoint.h"
 #include "MRTimer.h"
 #include "MRphmap.h"
 #include "MRPrecisePredicates2.h"
@@ -1873,12 +1872,10 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     return res;
 }
 
-// all crossings of the edges that the loops take both ways, as the points of each crossing on its two edges,
-// where b.e goes from the right of a.e to its left around the normal; the crossings on every edge come in their order
-// along it as given there, which tells apart even the crossings at the same point (e.g. of three edges through one point)
-static Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+Expected<HashMap<UndirectedEdgeId, EdgePath>> splitInnerCrossings( Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
 {
-    std::vector<EdgePointPair> res;
+    MR_TIMER;
+    HashMap<UndirectedEdgeId, EdgePath> res;
     if ( loops.empty() )
         return res;
     for ( const auto& loop : loops )
@@ -1889,116 +1886,72 @@ static Expected<std::vector<EdgePointPair>> findInnerCrossings( const Mesh& mesh
     WholeEdgeMap patchToInEdges;
     SweepLineQueue sweep( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer ), loops,
         { .abortWhenIntersect = true, .allowInnerIntersections = true, .outPatchMap = &patchToInEdges } );
-    // only the crossings are needed: finding them leaves the topology as it is, so patch edges still map to mesh edges
+    // only the crossings are needed: finding them leaves the patch topology as it is, so patch edges still map to mesh edges
     if ( !sweep.findIntersections() )
         return unexpected( "an edge of the region boundary crosses another edge" );
+    // in the order the sweep met them, which is their order along every edge, even at the same point;
+    // both edges of a crossing point along the sweep, and the lower one passes from the right of the upper one to its left
+    const auto& crossings = cache.intersections;
 
-    const auto& tp = cache.tp;
-    const auto& pts = cache.pts2Buffer;
-    // the point of crossing vertex crossingV on the mesh edge of patch edge patchE
-    auto onEdge = [&] ( EdgeId patchE, VertId crossingV )
-    {
-        const Vector2d a( pts[tp.org( patchE )] ), b( pts[tp.dest( patchE )] );
-        return EdgePoint( mapEdge( patchToInEdges, patchE ),
-            float( std::clamp( dot( Vector2d( pts[crossingV] ) - a, b - a ) / ( b - a ).lengthSq(), 0.0, 1.0 ) ) );
-    };
-    // the sweep meets the crossings of every edge in their order along it, even those at the same point
-    res.resize( cache.intersections.size() );
-    ParallelFor( res, [&] ( size_t i )
-    {
-        const auto& inter = cache.intersections[i];
-        // both edges point along the sweep, and the lower one passes from below the upper one to above it
-        assert( !MR::ccw( { PreciseVertCoords2{ tp.org( inter.upper ), pts[tp.org( inter.upper )] },
-            { tp.dest( inter.upper ), pts[tp.dest( inter.upper )] }, { tp.org( inter.lower ), pts[tp.org( inter.lower )] } } ) );
-        res[i] = EdgePointPair( onEdge( inter.upper, inter.vId ), onEdge( inter.lower, inter.vId ) );
-    } );
-    return res;
-}
-
-// splits both edges of every crossing found by findInnerCrossings at one new vertex in the middle of its two points
-static HashMap<UndirectedEdgeId, EdgePath> splitCrossedEdges( Mesh& mesh, const std::vector<EdgePointPair>& crossings )
-{
+    // a new vertex for every crossing, in the middle of its points on both edges, before the edges change
     auto& tp = mesh.topology;
-    // a crossing on an edge, along its even direction, and the slots in the ring of the crossing's vertex
-    // of the pieces from there toward the edge's destination and toward its origin
-    struct Cut
+    const VertId firstNewVert( tp.vertSize() );
+    tp.vertResize( tp.vertSize() + crossings.size() );
+    if ( mesh.points.size() < tp.vertSize() )
+        mesh.points.resize( tp.vertSize() );
+    const auto& patch = cache.tp;
+    const auto& pts = cache.pts2Buffer;
+    ParallelFor( size_t( 0 ), crossings.size(), [&] ( size_t i )
     {
-        EdgePoint p;
-        int crossing = 0;
-        int toDest = 0, toOrg = 0;
-        int along = 0; // orders the cuts at the same point of the edge toward its destination, by their order in crossings
-    };
-    std::vector<Cut> cuts;
-    cuts.reserve( 2 * crossings.size() );
-    for ( int k = 0; k < int( crossings.size() ); ++k )
-    {
-        // the ring slots go counterclockwise: a.e to its destination, b.e to its destination, a.e to its origin, b.e to its origin
-        const auto& [a, b] = crossings[k];
-        cuts.push_back( a.e.even() ? Cut{ a, k, 0, 2, k } : Cut{ a.sym(), k, 2, 0, -k } );
-        cuts.push_back( b.e.even() ? Cut{ b, k, 1, 3, k } : Cut{ b.sym(), k, 3, 1, -k } );
-    }
-    // the cuts of every edge from its destination to its origin, so that each one splits the piece at the origin
-    std::sort( cuts.begin(), cuts.end(), [] ( const Cut& x, const Cut& y )
-    {
-        if ( x.p.e != y.p.e )
-            return x.p.e < y.p.e;
-        return std::tie( y.p.a.a, y.along ) < std::tie( x.p.a.a, x.along );
+        const auto& c = crossings[i];
+        assert( !MR::ccw( { PreciseVertCoords2{ patch.org( c.upper ), pts[patch.org( c.upper )] },
+            { patch.dest( c.upper ), pts[patch.dest( c.upper )] }, { patch.org( c.lower ), pts[patch.org( c.lower )] } } ) );
+        auto onEdge = [&] ( EdgeId patchE )
+        {
+            const Vector2d a( pts[patch.org( patchE )] ), b( pts[patch.dest( patchE )] );
+            const float t = float( std::clamp( dot( Vector2d( pts[c.vId] ) - a, b - a ) / ( b - a ).lengthSq(), 0.0, 1.0 ) );
+            const EdgeId e = mapEdge( patchToInEdges, patchE );
+            return ( 1 - t ) * mesh.orgPnt( e ) + t * mesh.destPnt( e );
+        };
+        mesh.points[firstNewVert + i] = 0.5f * ( onEdge( c.upper ) + onEdge( c.lower ) );
     } );
 
-    const VertId firstNewVert( tp.vertSize() );
-    for ( const auto& [a, b] : crossings )
-        mesh.addPoint( 0.5f * ( mesh.edgePoint( a ) + mesh.edgePoint( b ) ) );
-
-    HashMap<UndirectedEdgeId, EdgePath> res;
-    std::vector<std::array<EdgeId, 4>> rings( crossings.size() );
-    EdgeId x; // the piece at the origin of the edge being cut
-    for ( const auto& cut : cuts )
+    // split both edges of every crossing as in MeshTopology::splitEdge: a new piece takes the place of the edge
+    // at its origin, and the edge goes on from the crossing, keeping the next crossing on it
+    for ( size_t i = 0; i < crossings.size(); ++i )
     {
-        assert( !tp.left( cut.p.e ) && !tp.right( cut.p.e ) );
-        auto& pieces = res[cut.p.e.undirected()];
-        if ( pieces.empty() ) // the first cut of this edge
+        // around the new vertex counterclockwise: the upper edge to its destination, the lower edge to its destination,
+        // the upper edge to its origin, the lower edge to its origin
+        std::array<EdgeId, 4> ring;
+        for ( int j = 0; j < 2; ++j )
         {
-            x = cut.p.e;
-            pieces.push_back( x );
+            const EdgeId e = mapEdge( patchToInEdges, j == 0 ? crossings[i].upper : crossings[i].lower );
+            assert( !tp.left( e ) && !tp.right( e ) );
+            const EdgeId piece = tp.makeEdge();
+            if ( const EdgeId ePrev = tp.prev( e ); ePrev != e )
+            {
+                tp.splice( ePrev, e );
+                tp.splice( ePrev, piece );
+            }
+            else
+            {
+                const VertId v = tp.org( e );
+                tp.setOrg( e, {} );
+                tp.setOrg( piece, v );
+            }
+            ring[j] = e;
+            ring[j + 2] = piece.sym();
+            auto& pieces = res[e.undirected()];
+            if ( pieces.empty() )
+                pieces.push_back( e ); // the last piece
+            pieces.insert( pieces.end() - 1, piece );
         }
-        // as in MeshTopology::splitEdge: the new piece y takes the place of x at its origin, and x starts at the cut
-        const EdgeId y = tp.makeEdge();
-        if ( const EdgeId xPrev = tp.prev( x ); xPrev != x )
-        {
-            tp.splice( xPrev, x );
-            tp.splice( xPrev, y );
-        }
-        else
-        {
-            const VertId v = tp.org( x );
-            tp.setOrg( x, {} );
-            tp.setOrg( y, v );
-        }
-        rings[cut.crossing][cut.toDest] = x;
-        rings[cut.crossing][cut.toOrg] = y.sym();
-        pieces.push_back( y );
-        x = y;
-    }
-    for ( auto& [ue, pieces] : res )
-        std::reverse( pieces.begin(), pieces.end() );
-    for ( int k = 0; k < int( rings.size() ); ++k )
-    {
-        const auto& r = rings[k];
-        tp.splice( r[0], r[1] );
-        tp.splice( r[1], r[2] );
-        tp.splice( r[2], r[3] );
-        tp.setOrg( r[0], firstNewVert + k );
+        tp.splice( ring[0], ring[1] );
+        tp.splice( ring[1], ring[2] );
+        tp.splice( ring[2], ring[3] );
+        tp.setOrg( ring[0], firstNewVert + i );
     }
     return res;
-}
-
-Expected<HashMap<UndirectedEdgeId, EdgePath>> splitInnerCrossings( Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
-{
-    MR_TIMER;
-    auto crossings = findInnerCrossings( mesh, loops, normal );
-    if ( !crossings )
-        return unexpected( std::move( crossings.error() ) );
-    return splitCrossedEdges( mesh, *crossings );
 }
 
 }

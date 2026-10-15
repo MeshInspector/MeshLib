@@ -441,7 +441,7 @@ static int splitAndCheck( PolygonWithChords& pc, bool exactTouches = false )
     for ( const auto& [ue, path] : *pieces )
     {
         numPieces += path.size();
-        EXPECT_EQ( path.back(), EdgeId( ue ) );
+        EXPECT_EQ( path.back().undirected(), ue ); // the last piece keeps the id of the edge
     }
     EXPECT_EQ( numPieces, pieces->size() + 2 * numNewVerts );
     for ( size_t i = 0; i < pc.chords.size(); ++i )
@@ -452,7 +452,7 @@ static int splitAndCheck( PolygonWithChords& pc, bool exactTouches = false )
             const auto it = pieces->find( e.undirected() );
             if ( it == pieces->end() )
                 path.push_back( e );
-            else if ( e.even() )
+            else if ( it->second.back() == e ) // the pieces go along e
                 path.insert( path.end(), it->second.begin(), it->second.end() );
             else
                 for ( auto rit = it->second.rbegin(); rit != it->second.rend(); ++rit )

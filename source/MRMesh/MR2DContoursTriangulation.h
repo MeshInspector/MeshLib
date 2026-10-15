@@ -157,9 +157,9 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
  * so no face changes, and the holes around the pieces can be filled as usual afterwards
  * @param loops all hole loops of the region together (e.g. all hole loops inside one cut face), each of at least 3 edges
  * @param normal the orientation of the region, see \ref triangulateDisjointContours
- * @return for every split edge, the pieces of EdgeId( ue ) from its origin to its destination, where the last piece
- *         keeps the id EdgeId( ue ) as in MeshTopology::splitEdge; an error without changing the mesh
- *         if a crossing involves an edge the loops run only once (the boundary of the region)
+ * @return for every split edge, its pieces in order, where the last piece keeps the id of the edge as in MeshTopology::splitEdge,
+ *         and the pieces go along that last one, from the origin of the first to its destination;
+ *         an error without changing the mesh if a crossing involves an edge the loops run only once (the boundary of the region)
  */
 MRMESH_API Expected<HashMap<UndirectedEdgeId, EdgePath>> splitInnerCrossings( Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 

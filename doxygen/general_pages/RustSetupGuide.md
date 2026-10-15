@@ -21,7 +21,7 @@ The crate is named `meshlib`. It wraps the C API library `MeshLibC2` (see the [C
   - `meshlib_<version>_rust_bindings.zip` (4 MB): `Cargo.toml`, `build.rs` and the generated `src`. On the first build, `build.rs` downloads the MeshLib shared libraries of the target platform (25-35 MB) from the same release, checks their SHA256 and keeps them in the user's cache directory (`%LOCALAPPDATA%\meshlib`, `~/Library/Caches/meshlib`, `~/.cache/meshlib`; set `MESHLIB_CACHE_DIR` to change it). Offline, set `MESHLIB_NATIVE_URL` to a directory with the downloaded `meshlib_<version>_rust_native_<os>-<arch>.zip`.
   - `meshlib_<version>_rust.zip` (160 MB): the same plus, in `native`, the libraries of all supported platforms, so nothing is downloaded.
 
- Extract it next to your project, e.g. into `../MeshLibRust`. The libraries are the same ones as in the NuGet package. The crate version is the MeshLib version with the fourth number as build metadata (`3.1.4+528` for v3.1.4.528).
+ Extract it next to your project, e.g. into `../MeshLibRust`. The libraries are the same ones as in the NuGet package. The crate version is the MeshLib version with the build number folded into the third number, `patch * 10000 + build`: `3.1.40528` for v3.1.4.528, so `meshlib = "3.1"` in a dependency picks up every 3.1.x release.
 
  2. **Add the dependency**
  <br/> In your `Cargo.toml`:

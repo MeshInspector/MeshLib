@@ -21,8 +21,13 @@ mkdir "$WORK/MeshLibRust"
 cp "$ROOT/source/MeshLibRust/Cargo.toml" "$ROOT/source/MeshLibRust/build.rs" "$ROOT/LICENSE" "$ROOT/thirdparty/licenses/THIRD-PARTY-NOTICES.txt" "$WORK/MeshLibRust/"
 cp -r "$SRC_DIR" "$WORK/MeshLibRust/src"
 
-# The crate version is the MeshLib version. Cargo wants semver, so the fourth number becomes build metadata: v3.1.4.528 -> 3.1.4+528.
-CRATE_VERSION="$(echo "${APP_VERSION#v}" | sed -E 's/^([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]+)$/\1+\2/')"
+# Cargo wants three numbers in the version and crates.io ignores build metadata (`+528`) when telling versions apart,
+# so the MeshLib build number goes into the patch number: patch * 10000 + build, v3.1.4.528 -> 3.1.40528.
+if ! [[ "${APP_VERSION#v}" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$ ]] || [ "${BASH_REMATCH[4]}" -ge 10000 ]; then
+  echo "Can't make a crate version from $APP_VERSION" >&2
+  exit 1
+fi
+CRATE_VERSION="${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((10#${BASH_REMATCH[3]} * 10000 + 10#${BASH_REMATCH[4]}))"
 sed -i "s/^version = .*/version = \"$CRATE_VERSION\"/" "$WORK/MeshLibRust/Cargo.toml"
 grep '^version' "$WORK/MeshLibRust/Cargo.toml"
 

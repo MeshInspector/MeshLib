@@ -132,10 +132,8 @@ Expected<std::filesystem::path> getExecutablePath_()
     uint32_t size = PATH_MAX;
     if ( _NSGetExecutablePath( path, &size ) != 0 )
         return unexpected( "Executable path is too long" );
-    // unlike /proc/self/exe, the returned path may contain symlinks and . or .. components
+    // older dyld versions may return a relative path
     std::error_code ec;
-    if ( auto res = std::filesystem::canonical( path, ec ); !ec )
-        return res;
     if ( auto res = std::filesystem::absolute( path, ec ); !ec )
         return res;
     return unexpected( "Failed to get executable path" );

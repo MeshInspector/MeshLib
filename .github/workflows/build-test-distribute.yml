@@ -330,7 +330,9 @@ jobs:
       - name: Pack Rust bindings
         run: |
           if [ -d rust_bindings_src ]; then
-            scripts/pack_rust_crate.sh ${{ needs.config.outputs.app_version }}               "https://github.com/${{ github.repository }}/releases/download/${{ needs.config.outputs.release_tag }}"               rust_bindings_src $([ -f MeshLib.nupkg ] && echo MeshLib.nupkg)
+            scripts/pack_rust_crate.sh ${{ needs.config.outputs.app_version }} \
+              "https://github.com/${{ github.repository }}/releases/download/${{ needs.config.outputs.release_tag }}" \
+              rust_bindings_src $([ -f MeshLib.nupkg ] && echo MeshLib.nupkg)
             rm -rf rust_bindings_src
           fi
 

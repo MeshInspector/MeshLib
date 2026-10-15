@@ -36,7 +36,7 @@ namespace
 
 // PASTED from `getExecutablePath_()` in MeshLib/source/MRMesh/MRSystemPath.cpp.
 // Adapted: returns an empty path on failure instead of `Expected<>` so the
-// gateway keeps its zero-MRMesh dependency footprint.
+// gateway keeps its zero-MRMesh dependency footprint. The returned path is absolute.
 std::filesystem::path gatewayExePath()
 {
 #if defined( _WIN32 )
@@ -50,6 +50,10 @@ std::filesystem::path gatewayExePath()
     uint32_t size = PATH_MAX;
     if ( _NSGetExecutablePath( path, &size ) != 0 )
         return {};
+    // older dyld versions may return a relative path
+    std::error_code ec;
+    if ( auto res = std::filesystem::absolute( path, ec ); !ec )
+        return res;
     return std::filesystem::path{ path };
 #else
     char path[PATH_MAX];

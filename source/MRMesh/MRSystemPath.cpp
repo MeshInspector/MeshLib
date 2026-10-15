@@ -132,6 +132,10 @@ Expected<std::filesystem::path> getExecutablePath_()
     uint32_t size = PATH_MAX;
     if ( _NSGetExecutablePath( path, &size ) != 0 )
         return unexpected( "Executable path is too long" );
+    // older dyld versions may return a relative path
+    std::error_code ec;
+    if ( auto res = std::filesystem::absolute( path, ec ); !ec )
+        return res;
     return std::filesystem::path { path };
 #else
     char path[PATH_MAX];

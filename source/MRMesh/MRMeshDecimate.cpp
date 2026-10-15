@@ -1190,21 +1190,14 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
         } );
     }
 
-    // edges of each part's region (final here, after intersection with settings.region), found in one pass over all edges
-    // instead of a getIncidentEdges pass per part; all edge bit sets have the same indexing,
-    // so BitSetParallelForAll gives each thread exclusive blocks in all of them
-    Vector<int, FaceId> regionPart( mesh.topology.faceSize(), -1 );
-    ParallelFor( parts, [&]( size_t i )
-    {
-        parts[i].regionEdges.resize( mesh.topology.undirectedEdgeSize() );
-        for ( auto f : parts[i].region )
-            regionPart[f] = int( i );
-    } );
+    // edges of each part's region (facePart limited to settings.region) in one pass over all edges instead of a
+    // getIncidentEdges pass per part; all edge bit sets have the same indexing, so threads write disjoint blocks
+    ParallelFor( parts, [&]( size_t i ) { parts[i].regionEdges.resize( mesh.topology.undirectedEdgeSize() ); } );
     BitSetParallelForAll( parts[0].regionEdges, [&]( UndirectedEdgeId ue )
     {
         for ( auto f : { mesh.topology.left( ue ), mesh.topology.right( ue ) } )
-            if ( f && regionPart[f] >= 0 )
-                parts[size_t( regionPart[f] )].regionEdges.set( ue );
+            if ( f && facePart[f] >= 0 && ( !settings.region || settings.region->test( f ) ) )
+                parts[size_t( facePart[f] )].regionEdges.set( ue );
     } );
 
     if ( settings.progressCallback && !settings.progressCallback( 0.14f ) )

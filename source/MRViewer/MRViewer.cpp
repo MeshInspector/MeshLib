@@ -501,7 +501,7 @@ void filterReservedCmdArgs( std::vector<std::string>& args )
             flag == "-transparentBgOff" ||
             flag == "-resetConfig" ||
             flag == "-noSplash" ||
-    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    #ifndef __EMSCRIPTEN__
             flag == "-showSplash" ||
     #endif
             flag == "-console" ||
@@ -587,9 +587,13 @@ void Viewer::parseLaunchParams( LaunchParams& params )
             params.resetConfig = true;
         else if ( flag == "-noSplash" )
             params.splashWindow.reset();
-    #if !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
+    #ifndef __EMSCRIPTEN__
         else if ( flag == "-showSplash" )
+        #ifdef __APPLE__
+            params.splashWindow = std::make_shared<MR::StaticImageSplashWindow>();
+        #else
             params.splashWindow = std::make_shared<MR::DefaultSplashWindow>();
+        #endif
     #endif
         else if ( flag == "-console" )
             params.console = true;

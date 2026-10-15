@@ -11,6 +11,8 @@
 #include <MRMesh/MRRegionBoundary.h>
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRMeshCollidePrecise.h>
+#include <MRMesh/MRMeshFixer.h>
+#include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRIntersectionContour.h>
 #include <MRMesh/MRAABBTree.h>
 #include <MRMesh/MRConstants.h>
@@ -140,10 +142,12 @@ TEST( MRMesh, BooleanDisjointMeshes )
         makeBox( { 5.f, 5.f, 5.f }, { 6.f, 6.f, 6.f } ) );
 }
 
-TEST( MRMesh, BooleanMultipleEdgePropogationSort )
+// closed mesh of two parts (apexes 3_v and 6_v) stitched along their common boundary, which passes through all vertices of triangle 0_v, 2_v, 1_v
+// of each part, so these two triangles share edges 0_v-2_v and 0_v-1_v, while their edges 1_v-2_v make a multiple edge
+static Mesh makeMeshWithMultipleEdge()
 {
-    Mesh meshA;
-    meshA.points = std::vector<Vector3f>
+    Mesh res;
+    res.points = std::vector<Vector3f>
     {
         {0.0f,0.0f,0.0f},
         {-0.5f,1.0f,0.0f},
@@ -152,7 +156,7 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
         {-1.0f,1.5f,0.0f},
         {1.0f,1.5f,0.0f}
     };
-    Triangulation tA =
+    Triangulation t =
     {
         { 0_v, 2_v, 1_v },
         { 1_v, 2_v, 3_v },
@@ -160,16 +164,18 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
         { 2_v, 5_v, 3_v },
         { 3_v, 5_v, 4_v }
     };
-    meshA.topology = MeshBuilder::fromTriangles( tA );
-    {
-        Mesh meshASup = meshA;
-        meshASup.points[3_v] = { 0.0f,1.5f,-0.5f };
+    res.topology = MeshBuilder::fromTriangles( t );
 
+    Mesh second = res;
+    second.points[3_v] = { 0.0f,1.5f,-0.5f };
+    auto border = trackRightBoundaryLoop( res.topology, res.topology.findHoleRepresentiveEdges()[0] );
+    res.addMeshPart( second, true, { border }, { border } );
+    return res;
+}
 
-        auto border = trackRightBoundaryLoop( meshA.topology, meshA.topology.findHoleRepresentiveEdges()[0] );
-
-        meshA.addMeshPart( meshASup, true, { border }, { border } );
-    }
+TEST( MRMesh, BooleanMultipleEdgePropogationSort )
+{
+    const Mesh meshA = makeMeshWithMultipleEdge();
 
     auto meshB = makeCube( Vector3f::diagonal( 2.0f ) );
     meshB.transform( AffineXf3f::translation( Vector3f( -1.5f, -0.2f, -0.5f ) ) );
@@ -179,6 +185,58 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
     {
         EXPECT_TRUE( boolean( meshA, meshB, BooleanOperation( i ) ).valid() );
         EXPECT_TRUE( boolean( meshB, meshA, BooleanOperation( i ) ).valid() );
+    }
+}
+
+// two triangles sharing two vertices but not the edge between them (multiple edges connect the vertices) can meet only along
+// the segment between these vertices, so findSelfCollidingEdgeTrisPrecise skips them as the triangles with a shared edge,
+// but still finds all crossings of other edges and triangles
+TEST( MRMesh, SelfCollidingEdgeTrisPreciseMultipleEdges )
+{
+    Mesh mesh = makeMeshWithMultipleEdge();
+    ASSERT_EQ( findMultipleEdges( mesh.topology ).value().size(), 1 );
+
+    // all crossings of an edge and a triangle without common vertices, with the edge directed as in findSelfCollidingEdgeTrisPrecise
+    auto findAllCrossings = [&mesh]( const ConvertToIntVector & toInt )
+    {
+        std::vector<std::pair<EdgeId, FaceId>> res;
+        auto pvc = [&]( VertId v ) { return PreciseVertCoords{ v, toInt( mesh.points[v] ) }; };
+        for ( auto ue : undirectedEdges( mesh.topology ) )
+        {
+            const EdgeId e = ue;
+            const auto o = mesh.topology.org( e ), d = mesh.topology.dest( e );
+            for ( auto f : mesh.topology.getValidFaces() )
+            {
+                if ( mesh.topology.isTriVert( f, o ) || mesh.topology.isTriVert( f, d ) )
+                    continue;
+                const auto t = mesh.topology.getTriVerts( f );
+                if ( auto isect = doTriangleSegmentIntersect( { pvc( t[0] ), pvc( t[1] ), pvc( t[2] ), pvc( o ), pvc( d ) } ) )
+                    res.emplace_back( isect.dIsLeftFromABC ? e : e.sym(), f );
+            }
+        }
+        std::sort( res.begin(), res.end() );
+        return res;
+    };
+
+    // first the closed mesh without self-intersections; then apex 6_v of the second part is moved through the first part,
+    // and triangle 1_v, 2_v, 3_v with the multiple edge gets two crossings: its edge 2_v-3_v crosses triangle 5_v, 6_v, 4_v,
+    // and edge 4_v-6_v of triangle 4_v, 6_v, 1_v (sharing vertex 1_v with it) crosses it
+    for ( bool crossing : { false, true } )
+    {
+        if ( crossing )
+        {
+            mesh.points[6_v] = { 1.0f, 1.0f, 0.5f };
+            mesh.invalidateCaches();
+        }
+        const auto toInt = getVectorConverters( mesh ).toInt;
+        const auto expected = findAllCrossings( toInt );
+        EXPECT_EQ( expected.size(), crossing ? 2 : 0 );
+
+        std::vector<std::pair<EdgeId, FaceId>> found;
+        for ( const auto & et : findSelfCollidingEdgeTrisPrecise( mesh, toInt ) )
+            found.emplace_back( et.edge, et.tri );
+        std::sort( found.begin(), found.end() );
+        EXPECT_EQ( found, expected );
     }
 }
 

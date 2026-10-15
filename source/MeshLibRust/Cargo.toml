@@ -1,10 +1,25 @@
 [package]
 name = "meshlib"
-# The release archive gets the MeshLib version here (`3.1.4+528` for v3.1.4.528), see `upload-distributions`. A local build has none.
+# The release archives get the MeshLib version here (`3.1.4-528` for v3.1.4.528), see `scripts/rust/pack_crate.sh`. A local build has none.
 version = "0.0.0"
 edition = "2021"
-rust-version = "1.82"
+rust-version = "1.88"
 build = "build.rs"
+description = "Rust bindings for MeshLib, the 3D mesh processing library: booleans, offsets, decimation, registration, voxels"
+authors = ["AMV Consulting"]
+# Non-commercial and educational use, see the file. `LICENSE` and `readme.md` are copied from the repository root by `scripts/rust/pack_crate.sh`.
+license-file = "LICENSE"
+readme = "readme.md"
+homepage = "https://meshlib.io"
+repository = "https://github.com/MeshInspector/MeshLib"
+keywords = ["mesh", "3d", "geometry", "boolean", "stl"]
+categories = ["graphics", "mathematics", "api-bindings"]
 
 [lib]
 path = "src/lib.rs"
+
+# For downloading the MeshLib libraries, see `build.rs`.
+[build-dependencies]
+sha2 = "0.11"
+ureq = "3"
+zip = {version = "9", default-features = false, features = ["deflate"]}

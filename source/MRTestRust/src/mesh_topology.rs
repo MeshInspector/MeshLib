@@ -1,5 +1,5 @@
 use crate::common::create_cube;
-use meshlib::mr::{EdgeId, VertId};
+use meshlib::{EdgeId, VertId};
 
 #[test]
 fn pack()

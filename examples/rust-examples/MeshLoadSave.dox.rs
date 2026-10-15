@@ -1,4 +1,3 @@
-use meshlib::mr;
 
 fn main() -> Result<(), String>
 {
@@ -7,7 +6,7 @@ fn main() -> Result<(), String>
     let output_path = args.get(2).map_or("mesh.ply", String::as_str);
 
     // Load mesh.
-    let loaded = mr::mesh_load::from_any_supported_format_2(input_path, None);
+    let loaded = meshlib::mesh_load::from_any_supported_format_2(input_path, None);
     let Some(mesh) = loaded.value() else
     {
         if args.len() <= 1
@@ -18,7 +17,7 @@ fn main() -> Result<(), String>
     };
 
     // Save mesh.
-    let saved = mr::mesh_save::to_any_supported_format_3(mesh, output_path, None);
+    let saved = meshlib::mesh_save::to_any_supported_format_3(mesh, output_path, None);
     if let Some(error) = saved.error()
     {
         return Err(format!("Failed to save mesh: {error}"));

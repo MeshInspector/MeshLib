@@ -1,15 +1,14 @@
-use meshlib::mr;
 
 /// Creates a cube mesh with diagonal = 1.
-pub fn create_cube() -> meshlib::Owned<mr::Mesh>
+pub fn create_cube() -> meshlib::Owned<meshlib::Mesh>
 {
-    mr::make_cube(Some(&mr::Vector3f::diagonal(1.0)), Some(&mr::Vector3f::diagonal(-0.5)))
+    meshlib::make_cube(Some(&meshlib::Vector3f::diagonal(1.0)), Some(&meshlib::Vector3f::diagonal(-0.5)))
 }
 
 /// Creates a torus with the given radii and resolutions.
-pub fn make_torus(primary_radius: f32, secondary_radius: f32, primary_resolution: i32, secondary_resolution: i32) -> meshlib::Owned<mr::Mesh>
+pub fn make_torus(primary_radius: f32, secondary_radius: f32, primary_resolution: i32, secondary_resolution: i32) -> meshlib::Owned<meshlib::Mesh>
 {
-    mr::make_torus(Some(primary_radius), Some(secondary_radius), Some(primary_resolution), Some(secondary_resolution), None)
+    meshlib::make_torus(Some(primary_radius), Some(secondary_radius), Some(primary_resolution), Some(secondary_resolution), None)
 }
 
 #[macro_export]

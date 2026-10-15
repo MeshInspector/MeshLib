@@ -584,7 +584,7 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const Undir
     MR_TIMER;
     UndirectedEdgeBitSet res = edges;
     res.resize( topology.undirectedEdgeSize() );
-    if ( const auto walk = chooseWalk( edges, topology.undirectedEdgeSize(), 8, 32, 2 ); walk != Walk::None )
+    if ( const auto walk = chooseWalk( edges, topology.undirectedEdgeSize(), 8, 32, 3 ); walk != Walk::None )
     {
         // all edges around both ends of every given edge
         BitSetWalk( edges, res, walk == Walk::Parallel, [&]( UndirectedEdgeId ue, auto && add )

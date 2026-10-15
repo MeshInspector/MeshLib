@@ -410,7 +410,7 @@ FaceBitSet findRegionOuterFaces( const MeshTopology& topology, const FaceBitSet&
 VertBitSet getIncidentVerts( const MeshTopology & topology, const FaceBitSet & faces )
 {
     MR_TIMER;
-    if ( const auto walk = chooseWalk( faces, topology.faceSize(), 2, 8, 3 ); walk != Walk::None )
+    if ( const auto walk = chooseWalk( faces, topology.faceSize(), 2, 12, 3 ); walk != Walk::None )
     {
         VertBitSet res( topology.getValidVerts().size() );
         BitSetWalk( faces, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
@@ -566,7 +566,7 @@ UndirectedEdgeBitSet getIncidentEdges( const MeshTopology& topology, const FaceB
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
-    if ( const auto walk = chooseWalk( faces, topology.faceSize(), 2, 8, 3 ); walk != Walk::None )
+    if ( const auto walk = chooseWalk( faces, topology.faceSize(), 2, 12, 3 ); walk != Walk::None )
     {
         BitSetWalk( faces, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {
@@ -650,7 +650,7 @@ UndirectedEdgeBitSet getInnerEdges( const MeshTopology & topology, const FaceBit
 {
     MR_TIMER;
     UndirectedEdgeBitSet res( topology.undirectedEdgeSize() );
-    if ( const auto walk = chooseWalk( region, topology.faceSize(), 3, 8, 6 ); walk != Walk::None )
+    if ( const auto walk = chooseWalk( region, topology.faceSize(), 4, 8, 6 ); walk != Walk::None )
     {
         BitSetWalk( region, res, walk == Walk::Parallel, [&]( FaceId f, auto && add )
         {

@@ -113,17 +113,17 @@ public:
     BitSet & set( IndexType n ) { assert( n < size() ); blocks_[blockIndex_( n )] |= bitMask_( n ); return * this; }
     MRMESH_API BitSet & set();
 
-    /// sets n-th bit, and it is safe to call simultaneously from several threads for any bits of the same bitset,
+    /// sets n-th bit and returns its previous value; it is safe to call simultaneously from several threads for any bits of the same bitset,
     /// provided no other modification of the bitset (including resizing) is performed in parallel
-    BitSet & atomicSet( IndexType n )
+    bool atomicTestSet( IndexType n )
     {
         assert( n < size() );
+        const auto mask = bitMask_( n );
 #ifdef __cpp_lib_atomic_ref
-        std::atomic_ref<block_type>( blocks_[blockIndex_( n )] ).fetch_or( bitMask_( n ), std::memory_order_relaxed );
+        return std::atomic_ref<block_type>( blocks_[blockIndex_( n )] ).fetch_or( mask, std::memory_order_relaxed ) & mask;
 #else
-        __atomic_fetch_or( &blocks_[blockIndex_( n )], bitMask_( n ), __ATOMIC_RELAXED );
+        return __atomic_fetch_or( &blocks_[blockIndex_( n )], mask, __ATOMIC_RELAXED ) & mask;
 #endif
-        return * this;
     }
 
     MRMESH_API BitSet & reset( IndexType n, size_type len );
@@ -295,7 +295,7 @@ public:
     TypedBitSet & set( IndexType n, bool val ) { base::set( n, val ); return * this; } // Not using a default argument for `val` to get better C bindings.
     TypedBitSet & set( IndexType n ) { base::set( n ); return * this; }
     TypedBitSet & set() { base::set(); return * this; }
-    TypedBitSet & atomicSet( IndexType n ) { base::atomicSet( n ); return * this; }
+    bool atomicTestSet( IndexType n ) { return base::atomicTestSet( n ); }
     TypedBitSet & reset( IndexType n, size_type len ) { base::reset( n, len ); return * this; }
     TypedBitSet & reset( IndexType n ) { base::reset( n ); return * this; }
     TypedBitSet & reset() { base::reset(); return * this; }

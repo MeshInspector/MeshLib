@@ -121,7 +121,7 @@ TEST( MRMesh, BitSetParallelForCancel )
     EXPECT_LT( visited, bs.count() );
 }
 
-TEST( MRMesh, BitSetAtomicSet )
+TEST( MRMesh, BitSetAtomicTestSet )
 {
     // odd multiplier scatters consecutive indices, so different threads hit bits of the same blocks
     constexpr size_t n = 1 << 20;
@@ -131,13 +131,16 @@ TEST( MRMesh, BitSetAtomicSet )
     for ( size_t i = 0; i < n; i += 3 )
         expected.set( bitOf( i ) );
 
+    // every bit is set twice (by i and i + n), and exactly one of the two calls must find it unset
     VertBitSet bs( n );
-    ParallelFor( size_t( 0 ), n, [&] ( size_t i )
+    std::atomic<size_t> firstSets{ 0 };
+    ParallelFor( size_t( 0 ), 2 * n, [&] ( size_t i )
     {
-        if ( i % 3 == 0 )
-            bs.atomicSet( bitOf( i ) );
+        if ( i % n % 3 == 0 && !bs.atomicTestSet( bitOf( i % n ) ) )
+            ++firstSets;
     } );
     EXPECT_EQ( bs, expected );
+    EXPECT_EQ( firstSets, expected.count() );
 }
 
 } //namespace MR

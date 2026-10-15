@@ -53,4 +53,11 @@ Source meshes
 Boolean intersection
 \image html boolean_after.png
 
+- <b class="tab-title">Java</b>
+\include MeshBoolean.dox.java
+Source meshes
+\image html boolean_before.png
+Boolean intersection
+\image html boolean_after.png
+
 </div>

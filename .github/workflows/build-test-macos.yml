@@ -355,6 +355,12 @@ jobs:
         with:
           lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
 
+      - name: Build and test Java bindings
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        uses: ./.github/actions/build-java-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
       - name: Build C examples
         if: ${{ matrix.config == 'Release' }}
         env:

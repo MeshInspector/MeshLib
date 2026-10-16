@@ -17,9 +17,9 @@ The bindings are the artifact `com.meshinspector:meshlib`, and the MeshLib libra
 **Gradle** (`build.gradle.kts`), with the natives of the platforms you need:
 ```kotlin
 dependencies {
-    implementation("com.meshinspector:meshlib:3.1.4.544")
-    runtimeOnly("com.meshinspector:meshlib:3.1.4.544:natives-windows-x86_64")
-    runtimeOnly("com.meshinspector:meshlib:3.1.4.544:natives-linux-x86_64")
+    implementation("com.meshinspector:meshlib:1.2.3.4")
+    runtimeOnly("com.meshinspector:meshlib:1.2.3.4:natives-windows-x86_64")
+    runtimeOnly("com.meshinspector:meshlib:1.2.3.4:natives-linux-x86_64")
 }
 ```
 
@@ -28,12 +28,12 @@ dependencies {
 <dependency>
   <groupId>com.meshinspector</groupId>
   <artifactId>meshlib</artifactId>
-  <version>3.1.4.544</version>
+  <version>1.2.3.4</version>
 </dependency>
 <dependency>
   <groupId>com.meshinspector</groupId>
   <artifactId>meshlib</artifactId>
-  <version>3.1.4.544</version>
+  <version>1.2.3.4</version>
   <classifier>natives-${meshlib.platform}</classifier>
   <scope>runtime</scope>
 </dependency>
@@ -90,4 +90,4 @@ A few rules of thumb:
 
 ## Try MeshLib with Java Examples
 
-The [code samples](\ref Examples) have Java tabs for the [boolean](\ref ExampleMeshBoolean), [decimation](\ref ExampleMeshDecimate) and [load and save](\ref ExampleMeshLoadSave) examples, with the sources in `examples/java-examples` of the repository. Run them with Maven from that directory: `mvn compile exec:exec -Dexample=MeshBoolean`. Or compile them with `javac --release 22 -cp meshlib.jar -d classes examples/java-examples/*.java` and run them with `java --enable-native-access=ALL-UNNAMED -Djava.library.path=<libraries> -cp meshlib.jar:classes MeshBoolean`.
+The [code samples](\ref Examples) have Java tabs for the [boolean](\ref ExampleMeshBoolean), [decimation](\ref ExampleMeshDecimate) and [load and save](\ref ExampleMeshLoadSave) examples, with the sources in `examples/java-examples` of the repository. Run them with Maven from that directory: `mvn compile exec:exec -Dmeshlib.version=1.2.3.4 -Dexample=MeshBoolean`. Or compile them with `javac --release 22 -cp meshlib.jar -d classes examples/java-examples/*.java` and run them with `java --enable-native-access=ALL-UNNAMED -Djava.library.path=<libraries> -cp meshlib.jar:classes MeshBoolean`.

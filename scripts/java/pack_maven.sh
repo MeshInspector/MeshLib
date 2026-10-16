@@ -6,7 +6,7 @@
 #   meshlib-<version>-sources.jar, meshlib-<version>-javadoc.jar (a placeholder: Maven Central requires one), meshlib-<version>.pom.
 # The natives are packed for every `*native_<os>-<arch>.zip` in the given directory (the release has them for the Rust crate).
 # Nothing is signed: the publishing workflow adds the signatures and checksums. Needs `jar` (a JDK) and `unzip`.
-# Usage: pack_maven.sh <MeshLib version, e.g. v3.1.4.544> <MeshLibJava directory of the Java bindings archive> <directory with the native archives> <output dir>
+# Usage: pack_maven.sh <MeshLib version, e.g. v1.2.3.4> <MeshLibJava directory of the Java bindings archive> <directory with the native archives> <output dir>
 set -euo pipefail
 
 if [ $# -ne 4 ]; then
@@ -21,7 +21,7 @@ OUT_ROOT="$(realpath "$4")"
 ROOT="$(dirname "$(realpath "$0")")/../.."
 JAR="${JAVA_HOME:+$JAVA_HOME/bin/}jar"
 
-# Maven compares versions part by part, so the MeshLib version is used as is: v3.1.4.544 -> 3.1.4.544.
+# Maven compares versions part by part, so the MeshLib version is used as is: v1.2.3.4 -> 1.2.3.4.
 if ! [[ "${APP_VERSION#v}" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   echo "Can't make a Maven version from $APP_VERSION" >&2
   exit 1

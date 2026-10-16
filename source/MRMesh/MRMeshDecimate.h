@@ -153,8 +153,9 @@ struct DecimateSettings
     /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
     int subdivideParts = 1;
 
-    /// After parallel decimation of all mesh parts is done, whether to perform final decimation of whole mesh region
-    /// to eliminate small edges near the border of individual parts
+    /// Whether to decimate near the borders of individual parts to eliminate small edges there:
+    /// as soon as two sibling nodes in the binary tree of parts are decimated, their union is decimated in parallel with other nodes,
+    /// and only the border between two halves of the mesh remains for the final decimation of whole mesh region
     bool decimateBetweenParts = true;
 
     /// if not null, then it contains the faces of each subdivision part on input, which must not overlap,

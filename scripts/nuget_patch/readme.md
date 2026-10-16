@@ -1,0 +1,191 @@
+![MeshLib logo](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/scripts/nuget_patch/readme_images/logo.png)
+
+# MeshLib — an SDK that supercharges your 3D data processing efficiency
+
+**Geometry algorithms engineered to revolutionize.** We help software engineers process, repair, measure and optimize 3D data with next-generation algorithms, reducing development time and costs — mesh boolean, mesh repair, decimation, offset, point cloud triangulation, ICP registration and voxel processing, in **C++, C, C#, Python and JavaScript**. This is the .NET package.
+
+[**▶ Try it live**](https://demo.meshlib.io) · [Website](https://meshlib.io/) · [Documentation](https://meshlib.io/documentation/index.html) · [C# setup guide](https://meshlib.io/documentation/MeshLibCSharpSetupGuide.html) · [Examples](https://meshlib.io/documentation/Examples.html) · [Benchmarks](https://meshlib.io/blog/comparing-3d-boolean-libraries/) · [Discussions](https://github.com/MeshInspector/MeshLib/discussions)
+
+[![build-test-distribute](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml/badge.svg?branch=master)](https://github.com/MeshInspector/MeshLib/actions/workflows/build-test-distribute.yml?branch=master)
+[![NuGet](https://img.shields.io/nuget/v/MeshLib?label=nuget&color=green)](https://www.nuget.org/packages/MeshLib)
+[![NuGet downloads](https://img.shields.io/nuget/dt/MeshLib?label=downloads)](https://www.nuget.org/packages/MeshLib)
+[![Stars](https://img.shields.io/github/stars/MeshInspector/MeshLib?style=flat&color=yellow)](https://github.com/MeshInspector/MeshLib)
+
+![MeshLib SDK — 3D mesh processing library](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/scripts/nuget_patch/readme_images/banner.png)
+
+## Install
+
+```bash
+dotnet add package MeshLib
+```
+
+.NET Standard 2.0, with native libraries for Windows, Linux and macOS on x64 and arm64.
+For the other languages, see the [Installation Guide](https://meshlib.io/documentation/InstallationGuide.html).
+
+## 60 seconds to your first result
+
+Turn a scan into a triangle mesh:
+
+```csharp
+var pc   = MR.PointsLoad.fromAnySupportedFormat("scan.ply");   // point cloud from any scanner
+var mesh = MR.triangulatePointCloud(pc).value()!;              // point cloud -> triangle mesh
+MR.MeshSave.toAnySupportedFormat(mesh, "model.stl");
+```
+
+Boolean operations that just work, with no non-manifold surprises:
+
+```csharp
+var a = MR.makeUVSphere(1.0f, 64, 64);
+var b = new MR.Mesh(a);
+b.transform(MR.AffineXf3f.translation(new MR.Vector3f(0.7f, 0.0f, 0.0f)));
+
+var res = MR.boolean(a, b, MR.BooleanOperation.Union);
+if (!res.valid())
+    throw new Exception(res.errorString);
+MR.MeshSave.toAnySupportedFormat(res.mesh, "out_boolean.stl");
+```
+
+Heal a broken scan into a watertight, printable model. Voxel-based repair rebuilds
+the surface through a signed distance field, so holes, self-intersections and
+non-manifold edges disappear in a single pass:
+
+```csharp
+var mesh = MR.MeshLoad.fromAnySupportedFormat("broken.stl");
+
+var parameters = new MR.GeneralOffsetParameters();
+parameters.voxelSize = mesh.computeBoundingBox().diagonal() / 200;
+parameters.signDetectionMode = MR.SignDetectionMode.HoleWindingRule;
+parameters.closeHolesInHoleWindingNumber = true;
+
+var fixedMesh = MR.generalOffsetMesh(new MR.MeshPart(mesh), 0.0f, parameters);   // watertight
+MR.MeshSave.toAnySupportedFormat(fixedMesh, "fixed.stl");
+```
+
+Voxel repair resamples the surface, so the result is denser than the input —
+add [`decimateMesh`](https://meshlib.io/documentation/Examples.html) to bring the
+triangle count back down within a tolerance you set. Lighter, topological repair
+(`fixMeshDegeneracies`, `fillHole`, `SelfIntersections.fix`) is available when you
+need to preserve the original vertices.
+
+More in [Tutorials](https://meshlib.io/documentation/Tutorials.html) and the
+[`examples/`](https://github.com/MeshInspector/MeshLib/tree/master/examples) folder —
+including complete, runnable programs for repair, boolean, offset, ICP and triangulation;
+the C# ones are in [`examples/c-sharp-examples`](https://github.com/MeshInspector/MeshLib/tree/master/examples/c-sharp-examples).
+Each snippet above is a complete console program with top-level statements; loading, saving
+and the other operations that can fail throw an exception with the error message.
+
+## What MeshLib does
+
+| | |
+|---|---|
+| **3D Boolean** | Fast, exact mesh booleans (union, intersection, difference) plus a voxel-based mode for messy input. |
+| **Mesh repair** | Fix self-intersections, degeneracies, tunnels, multiple edges and undercuts; fill and stitch holes on flat and curved surfaces. |
+| **Point cloud to mesh** | Triangulation with accurate normal estimation, uniform and grid sampling, outlier removal. |
+| **Simplification** | Decimation within a set tolerance, remeshing and subdivision that keep the details you care about. |
+| **Offset** | Shell, partial and weighted offsets for 3D printing, machining and hollowing. |
+| **Registration** | Point-to-point and point-to-plane ICP, plus global registration of multiple scans. |
+| **Distance & SDF** | Mesh to signed distance field and back by marching cubes, distance maps, iso-lines, projection and ray intersection. |
+| **Voxels & CT** | DICOM import/export, voxel-grid processing and 3D volume rendering. |
+| **Deformation** | Laplacian, freeform and relaxation smoothing, noise reduction. |
+| **Segmentation** | Semi-automatic mesh segmentation guided by a curvature metric; graph-cut segmentation of voxel volumes. |
+| **Collision detection** | Exact and precise self- and pairwise intersection tests. |
+| **Viewer** | An embeddable OpenGL/ImGui viewer with UI components, or run the algorithms fully headless. |
+| **File formats** | Meshes, point clouds, CT scans, polylines, distance maps and G-code — [full list](https://meshlib.io/feature/file-formats-supported-by-meshlib/). |
+
+Full feature reference: [meshlib.io/features](https://meshlib.io/features/).
+
+## Why teams pick MeshLib
+
+**Measured, not claimed.** Our boolean benchmark compares MeshLib across nine
+libraries on 2M-triangle models — [method, data and input meshes](https://meshlib.io/blog/comparing-3d-boolean-libraries/).
+The [simplification benchmark](https://meshlib.io/blog/comparing-3d-simplification-libraries/)
+does the same for decimation across 11 libraries. Both are public and reproducible.
+
+**Manifold by construction.** Meshes use a half-edge data structure, in which most
+non-manifold situations are simply not representable — a non-manifold edge, or a
+vertex with two closed rings of triangles around it. Broken topology is caught where
+it happens, not three pipeline stages later.
+
+**One engine, five languages.** A native C++ core with official APIs for C, C#,
+Python and JavaScript/WebAssembly. The same algorithms, the same results — on the
+desktop, on a server, or in a browser tab.
+
+**Built for real workloads.** Core algorithms are multithreaded; a CUDA module
+accelerates distance maps, signed distance fields, offsets and swept volumes on
+NVIDIA GPUs.
+
+**We use it ourselves.** [MeshInspector](https://meshinspector.com/), our desktop and
+web application, and [SmileInspector](https://smileinspector.io/), our
+[FDA-cleared](https://smileinspector.io/news/smileinspector-launches-after-fda-clearance/)
+clear-aligner platform, are both built entirely on this SDK, so it is exercised every
+day on real production data.
+
+**Supported, not abandoned.** Backed by a full-time team with commercial support,
+regular releases and a responsive issue tracker.
+
+## Platforms
+
+Windows · macOS · Linux (Ubuntu/Debian, Fedora/RHEL) · WebAssembly
+
+## Built with MeshLib
+
+| Project | Field | What it does |
+|---|---|---|
+| [Polyga](https://polyga.com/) | 3D scanning | PointKit scanning platform, built on MeshLib |
+| [Verisurf](https://verisurf.com/) | Metrology | 3D measurement, inspection and reverse engineering |
+| [Brius Technologies](https://bravabraces.com/) | Orthodontics | Customized lingual orthodontic appliances |
+| [Axial3D](https://axial3d.com/) | Medical imaging | Scan-to-3D-model services for surgical planning |
+| [customed.ai](https://customed.ai/) | Medical devices | AI-driven patient-specific surgical instruments |
+| [Relu](https://relu.eu/) | Digital dentistry | AI segmentation for dental CAD workflows |
+| [spherene](https://spherene.ch/) | Generative design | Adaptive density minimal surfaces for AM |
+| [ToffeeX](https://toffeex.com/) | Generative design | Physics-driven design optimization |
+| [Enhatch](https://www.enhatch.com/) | Medical devices | Intelligent surgery platform |
+| [CIMsystem](https://cimsystem.com/) | CAM / machining | CAD/CAM software for dental and industrial milling |
+| 3DONS | Digital dentistry | Dental treatment planning software |
+| Henning Larsen | Architecture / AEC | Computational design and terrain modelling |
+| [MeshInspector](https://meshinspector.com/) | 3D printing / QA | STL editor, viewer and mesh repair application |
+| [SmileInspector](https://smileinspector.io/) | Clear aligners | FDA-cleared aligner treatment planning platform |
+
+Shipping something built on MeshLib? Open a PR and add it here — we like showing what people build.
+
+## Getting started
+
+1. **[Try the live demo](https://demo.meshlib.io)** — booleans, repair, decimation and ICP in the browser. No install, no sign-up.
+2. **Evaluate locally.** `dotnet add package MeshLib`, then work through the [tutorials](https://meshlib.io/documentation/Tutorials.html). Free for non-commercial and educational use under our [licence](https://github.com/MeshInspector/MeshLib?tab=License-1-ov-file#readme).
+3. **See it in an application.** [MeshInspector](https://meshinspector.com/) is the GUI built on MeshLib — desktop and web, 30-day trial.
+4. **[Book a call](https://meshlib.io/book-a-call/).** Integration guidance, architecture questions and commercial licensing tailored to your project.
+
+## Licence
+
+MeshLib is **source-available**: read the code, fork it, and use it free for
+non-commercial and educational work. Commercial use requires a licence — see the
+[full terms](https://github.com/MeshInspector/MeshLib?tab=License-1-ov-file#readme)
+and the [licence page](https://meshlib.io/license/).
+
+## Citing MeshLib
+
+If MeshLib supports your research, please cite the exact version you used — find it with `dotnet list package`.
+
+```bibtex
+@software{meshlib,
+  author       = {{MeshLib Development Team}},
+  title        = {{MeshLib}: 3D Mesh Processing Library},
+  organization = {AMV Consulting LLC},
+  year         = {2026},
+  version      = {3.1.3.429},
+  url          = {https://meshlib.io},
+  note         = {Please cite the exact version used in your work}
+}
+```
+
+Other styles (APA, IEEE, Chicago) and guidance on citing a specific algorithm:
+[meshlib.io/citation-guide](https://meshlib.io/citation-guide/). Published something
+that uses MeshLib? Tell us in [Discussions](https://github.com/MeshInspector/MeshLib/discussions) — we keep a list.
+
+## Community and support
+
+- **Bugs and feature requests** → [GitHub Issues](https://github.com/MeshInspector/MeshLib/issues/)
+- **Questions, ideas, show-and-tell** → [GitHub Discussions](https://github.com/MeshInspector/MeshLib/discussions)
+- **Commercial support** → [meshlib.io/book-a-call](https://meshlib.io/book-a-call/)
+
+If MeshLib saves you time, a ⭐ helps other engineers find it.

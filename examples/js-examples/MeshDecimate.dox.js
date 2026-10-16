@@ -5,9 +5,9 @@ const ml = await createMeshLib();
 // Load mesh
 using mesh = ml.MeshLoad.fromAnySupportedFormat('mesh.stl');
 
-// Repack the mesh.
+// Repack the mesh without building an AABB tree, which decimation invalidates anyway.
 // Not necessary, but highly recommended to achieve the best performance in parallel processing.
-mesh.packOptimally();
+mesh.packOptimally(false);
 
 // Setup decimate parameters
 using settings = new ml.DecimateSettings();

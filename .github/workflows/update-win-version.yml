@@ -80,8 +80,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          submodules: true
+
+      # headers that make_install_folder.py puts into the distribution
+      - name: Checkout third-party submodules
+        shell: bash
+        run: scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}

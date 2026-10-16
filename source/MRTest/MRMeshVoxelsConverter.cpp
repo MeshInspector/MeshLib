@@ -157,12 +157,12 @@ TEST( MRMesh, MeshToDistanceVolumeOddCrossings )
     EXPECT_GT( numChecked, 60000 );
 }
 
-// links only if MRVoxels exports all three specializations
+// links only if MRVoxels exports all three overloads
 TEST( MRMesh, PutSimpleVolumeInDenseGrid )
 {
     const SimpleVolume volume{ .data = { 1.f, 2.f }, .dims = { 2, 1, 1 } };
     FloatGrid grid = MakeFloatGrid( openvdb::FloatGrid::create( 0.f ) );
-    // each specialization fills its own row of the grid
+    // each overload fills its own row of the grid
     putSimpleVolumeInDenseGrid( grid, { 0, 0, 0 }, volume );
     openvdb::FloatGrid& vdbGrid = *grid;
     putSimpleVolumeInDenseGrid( vdbGrid, { 0, 1, 0 }, volume );

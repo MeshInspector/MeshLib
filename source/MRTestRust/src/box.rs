@@ -1,4 +1,4 @@
-use meshlib::mr::{Box3f, Box3i, Vector3f, Vector3i};
+use meshlib::{Box3f, Box3i, Vector3f, Vector3i};
 
 #[test]
 fn boxf()

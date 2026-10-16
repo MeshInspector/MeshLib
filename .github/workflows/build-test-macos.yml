@@ -89,6 +89,8 @@ jobs:
       # https://github.com/actions/runner-images/discussions/5032
       - name: Disable Spotlight indexing
         if: ${{ runner.environment == 'github-hosted' }}
+        # best effort: mdutil fails with -402 on a volume whose index is still transitioning
+        continue-on-error: true
         run: sudo mdutil -a -i off
 
       - name: Checkout
@@ -352,6 +354,12 @@ jobs:
       - name: Build and test Rust bindings
         if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
         uses: ./.github/actions/build-rust-bindings
+        with:
+          lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
+
+      - name: Build and test Java bindings
+        if: ${{ inputs.mrbind_c && matrix.config == 'Release' && matrix.lib-source == 'vcpkg' }}
+        uses: ./.github/actions/build-java-bindings
         with:
           lib-dir: ${{ github.workspace }}/build/${{ matrix.config }}/bin
 

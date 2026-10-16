@@ -4,6 +4,12 @@
 #include <MRMesh/MRMakeSphereMesh.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRId.h>
+#include <MRMesh/MRRingIterator.h>
+#include <MRMesh/MRParallelFor.h>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
 #include <gtest/gtest.h>
 
 namespace MR
@@ -67,6 +73,158 @@ TEST( MRMesh, getRegionInnerVerts )
     const auto innerVerts = getInnerVerts( sphere.topology, region );
     EXPECT_TRUE( innerVerts.is_subset_of( verts ) );
     EXPECT_GT( verts.count(), innerVerts.count() );
+}
+
+// every function with a separate path for small sets must give what a test of every mesh element gives
+TEST( MRMesh, RegionBoundarySmallAndLargeSets )
+{
+    // fine enough that the small set below is under the strictest serial-walk limits
+    // (1/(8T) of the elements and 1/(48T) in blocks with T threads), up to about 64 threads
+    Mesh sphere = makeUVSphere( 1, 128, 128 );
+    const auto & t = sphere.topology;
+    // a hole around the upper pole and a single deleted face
+    FaceBitSet deleted( t.faceSize() );
+    for ( auto f : t.getValidFaces() )
+        if ( sphere.triCenter( f ).z > 0.9f )
+            deleted.set( f );
+    deleted.set( 700_f );
+    sphere.topology.deleteFaces( deleted );
+
+    auto check = [&]( const FaceBitSet & faces, const char * name )
+    {
+        SCOPED_TRACE( name );
+        auto inFaces = [&]( FaceId f ) { return f && faces.test( f ); };
+
+        VertBitSet incVerts( t.getValidVerts().size() ), innerVerts( t.getValidVerts().size() ),
+            bdVerts( t.vertSize() ), regionInnerVerts( t.vertSize() );
+        for ( auto v : t.getValidVerts() )
+        {
+            int in = 0, out = 0, missing = 0;
+            for ( auto e : orgRing( t, v ) )
+            {
+                const auto l = t.left( e );
+                if ( !l )
+                    ++missing;
+                else if ( inFaces( l ) )
+                    ++in;
+                else
+                    ++out;
+            }
+            incVerts.set( v, in > 0 );
+            innerVerts.set( v, out == 0 && missing == 0 );
+            bdVerts.set( v, in > 0 && out > 0 );
+            regionInnerVerts.set( v, in > 0 && out == 0 );
+        }
+        EXPECT_EQ( getIncidentVerts( t, faces ), incVerts );
+        EXPECT_EQ( getInnerVerts( t, faces ), innerVerts );
+        EXPECT_EQ( getRegionBoundaryVerts( t, faces ), bdVerts );
+        EXPECT_EQ( getRegionInnerVerts( t, faces ), regionInnerVerts );
+
+        UndirectedEdgeBitSet incEdges( t.undirectedEdgeSize() ), innerEdges( t.undirectedEdgeSize() ), bdInside( t.undirectedEdgeSize() );
+        EdgeBitSet leftBd( t.edgeSize() ), leftBdInside( t.edgeSize() );
+        for ( UndirectedEdgeId ue{ 0 }; ue < t.undirectedEdgeSize(); ++ue )
+        {
+            const auto l = t.left( ue ), r = t.right( ue );
+            incEdges.set( ue, inFaces( l ) || inFaces( r ) );
+            innerEdges.set( ue, inFaces( l ) && inFaces( r ) );
+            bdInside.set( ue, l && r && inFaces( l ) != inFaces( r ) );
+            for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+            {
+                const bool bd = inFaces( t.left( e ) ) && !inFaces( t.right( e ) );
+                leftBd.set( e, bd );
+                leftBdInside.set( e, bd && t.right( e ) );
+            }
+        }
+        EXPECT_EQ( getIncidentEdges( t, faces ), incEdges );
+        EXPECT_EQ( getInnerEdges( t, faces ), innerEdges );
+        EXPECT_EQ( findRegionBoundaryUndirectedEdgesInsideMesh( t, faces ), bdInside );
+        EXPECT_EQ( findAllLeftBdEdges( t, &faces ), leftBd );
+        EXPECT_EQ( findAllLeftBdEdges( t, &faces, true ), leftBdInside );
+
+        // vertex and edge inputs: the vertices and edges of the region
+        const auto verts = getIncidentVerts( t, faces );
+        UndirectedEdgeBitSet innerEdgesOfVerts( t.undirectedEdgeSize() ), edgesNearEdges( t.undirectedEdgeSize() );
+        for ( UndirectedEdgeId ue{ 0 }; ue < t.undirectedEdgeSize(); ++ue )
+        {
+            const auto o = t.org( ue ), d = t.dest( ue );
+            innerEdgesOfVerts.set( ue, o && d && verts.test( o ) && verts.test( d ) );
+            bool touches = incEdges.test( ue );
+            for ( EdgeId e : { EdgeId( ue ), EdgeId( ue ).sym() } )
+                for ( auto ei : orgRing( t, e ) )
+                    touches = touches || incEdges.test( ei.undirected() );
+            edgesNearEdges.set( ue, touches );
+        }
+        EXPECT_EQ( getInnerEdges( t, verts ), innerEdgesOfVerts );
+        EXPECT_EQ( getIncidentEdges( t, incEdges ), edgesNearEdges );
+
+        FaceBitSet incFaces( t.faceSize() ), innerFaces( t.faceSize() );
+        for ( auto f : t.getValidFaces() )
+        {
+            int in = 0, all = 0;
+            for ( auto e : leftRing( t, f ) )
+            {
+                ++all;
+                in += verts.test( t.org( e ) );
+            }
+            incFaces.set( f, in > 0 );
+            innerFaces.set( f, in == all );
+        }
+        EXPECT_EQ( getIncidentFaces( t, verts ), incFaces );
+        EXPECT_EQ( getInnerFaces( t, verts ), innerFaces );
+    };
+
+    // every function above, called with the given faces, their vertices and their edges
+    auto allResults = [&]( const FaceBitSet & faces )
+    {
+        const auto verts = getIncidentVerts( t, faces );
+        const auto edges = getIncidentEdges( t, faces );
+        return std::tuple{ verts, getInnerVerts( t, faces ), getRegionBoundaryVerts( t, faces ), getRegionInnerVerts( t, faces ),
+            edges, getInnerEdges( t, faces ), findRegionBoundaryUndirectedEdgesInsideMesh( t, faces ),
+            findAllLeftBdEdges( t, &faces ), findAllLeftBdEdges( t, &faces, true ),
+            getInnerEdges( t, verts ), getIncidentEdges( t, edges ), getIncidentFaces( t, verts ), getInnerFaces( t, verts ) };
+    };
+
+    std::vector<std::pair<std::string, FaceBitSet>> sets;
+
+    // small set: a few faces next to the hole, the deleted face and an id past the last face
+    FaceBitSet smallSet( t.faceSize() + 10 );
+    for ( auto f : t.getValidFaces() )
+        if ( sphere.triCenter( f ).z > 0.8f && smallSet.count() < 20 )
+            smallSet.set( f );
+    smallSet.set( 700_f );
+    smallSet.set( FaceId( t.faceSize() + 5 ) );
+    sets.emplace_back( "small", std::move( smallSet ) );
+
+    // medium sets (bands of about 1/100 to 1/10 of the faces) take the parallel walks
+    for ( float width : { 0.02f, 0.05f, 0.1f, 0.2f } )
+    {
+        FaceBitSet medium( t.faceSize() + 10 );
+        for ( auto f : t.getValidFaces() )
+            if ( auto z = sphere.triCenter( f ).z; z > 0.7f && z <= 0.7f + width )
+                medium.set( f );
+        medium.set( 700_f );
+        medium.set( FaceId( t.faceSize() + 5 ) );
+        sets.emplace_back( "medium " + std::to_string( width ), std::move( medium ) );
+    }
+
+    // a large region takes the scans of the whole mesh
+    FaceBitSet large( t.faceSize() );
+    for ( auto f : t.getValidFaces() )
+        if ( sphere.triCenter( f ).z > -0.2f )
+            large.set( f );
+    sets.emplace_back( "large", std::move( large ) );
+
+    for ( const auto & [name, faces] : sets )
+        check( faces, name.c_str() );
+
+    // the same from inside a parallel region, where the parallel walks and scans are nested
+    std::vector<decltype( allResults( sets[0].second ) )> nested( sets.size() );
+    ParallelFor( sets, [&]( size_t i ) { nested[i] = allResults( sets[i].second ); } );
+    for ( size_t i = 0; i < sets.size(); ++i )
+    {
+        SCOPED_TRACE( sets[i].first );
+        EXPECT_TRUE( nested[i] == allResults( sets[i].second ) );
+    }
 }
 
 } //namespace MR

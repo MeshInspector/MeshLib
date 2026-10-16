@@ -1,21 +1,20 @@
-use meshlib::mr;
-use meshlib::mr::{BooleanOperation, BooleanResultMapper, BooleanResultMapper_MapObject as MapObject, FaceBitSet, FaceId, Vector3f};
+use meshlib::{BooleanOperation, BooleanResultMapper, BooleanResultMapper_MapObject as MapObject, FaceBitSet, FaceId, Vector3f};
 
 fn main() -> Result<(), String>
 {
     // First, create a unit sphere.
-    let sphere1 = mr::make_uv_sphere(Some(1.0), Some(64), Some(64));
+    let sphere1 = meshlib::make_uv_sphere(Some(1.0), Some(64), Some(64));
 
     // Create a copy of this sphere and offset it.
     let mut sphere2 = sphere1.clone();
-    let xf = mr::AffineXf3f::translation(&Vector3f {x: 0.7, y: 0.0, z: 0.0});
+    let xf = meshlib::AffineXf3f::translation(&Vector3f {x: 0.7, y: 0.0, z: 0.0});
     sphere2.transform(&xf, None);
 
     // Ask for an optional mapper relating the primitives of the input meshes to the primitives of the result.
     let mut mapper = BooleanResultMapper::new();
 
     // Perform the boolean operation.
-    let result = mr::boolean_6(&sphere1, &sphere2, BooleanOperation::Intersection, None, Some(&mut mapper), None);
+    let result = meshlib::boolean_6(&sphere1, &sphere2, BooleanOperation::Intersection, None, Some(&mut mapper), None);
     if !result.valid()
     {
         return Err(format!("Failed to perform boolean: {}", result.error_string()));
@@ -45,11 +44,7 @@ fn main() -> Result<(), String>
     println!("face {} of the result came from face {} of sphere1", result_face.id_, new2old_faces.index(result_face).id_);
 
     // Save result to an STL file.
-    let saved = mr::mesh_save::to_any_supported_format_3(result.mesh(), "out_boolean.stl", None);
-    if let Some(error) = saved.error()
-    {
-        return Err(format!("Failed to save mesh: {error}"));
-    }
+    meshlib::mesh_save::to_any_supported_format_3(result.mesh(), "out_boolean.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
 
     Ok(())
 }

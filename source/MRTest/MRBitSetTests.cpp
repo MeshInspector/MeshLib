@@ -121,6 +121,28 @@ TEST( MRMesh, BitSetParallelForCancel )
     EXPECT_LT( visited, bs.count() );
 }
 
+TEST( MRMesh, BitSetCountBitsAndBlocks )
+{
+    BitSet bs( 1000 );
+    EXPECT_EQ( bs.countBitsAndBlocks().bits, 0 );
+    EXPECT_EQ( bs.countBitsAndBlocks().blocks, 0 );
+    for ( size_t i : { 1, 63, 64, 700, 701 } )
+        bs.set( i );
+    auto c = bs.countBitsAndBlocks();
+    EXPECT_EQ( c.bits, 5 );
+    EXPECT_EQ( c.blocks, 3 );
+    // counting stops after the block where the limit is exceeded
+    c = bs.countBitsAndBlocks( 1 );
+    EXPECT_EQ( c.bits, 2 );
+    EXPECT_EQ( c.blocks, 1 );
+    c = bs.countBitsAndBlocks( 2 );
+    EXPECT_EQ( c.bits, 3 );
+    EXPECT_EQ( c.blocks, 2 );
+    c = bs.countBitsAndBlocks( 4 );
+    EXPECT_EQ( c.bits, 5 );
+    EXPECT_EQ( c.blocks, 3 );
+}
+
 TEST( MRMesh, BitSetAtomicTestSet )
 {
     // odd multiplier scatters consecutive indices, so different threads hit bits of the same blocks

@@ -49,4 +49,11 @@ Source mesh
 After decimate
 \image html decimate_after.png
 
+- <b class="tab-title">Java</b>
+\include MeshDecimate.dox.java
+Source mesh
+\image html decimate_before.png
+After decimate
+\image html decimate_after.png
+
 </div>

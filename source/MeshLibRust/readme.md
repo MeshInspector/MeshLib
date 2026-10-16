@@ -27,7 +27,7 @@ cargo add meshlib@1.2.3-4
 
 The crate version is the MeshLib version with the build number as a pre-release identifier
 (`3.1.4-528` for v3.1.4.528), and Cargo picks pre-release versions only when they are named:
-`meshlib = "1.2.3-4"` also accepts the later builds of the same release, but `meshlib = "1.2"` matches none.
+`meshlib = "1.2.3-4"` also accepts the later builds of the same release, but `meshlib = "3.1"` matches none.
 
 Rust 1.88 or newer; Windows, Linux (glibc 2.28 or newer) and macOS, on x86_64 and aarch64.
 On the first build, the crate downloads the MeshLib shared libraries of the target platform

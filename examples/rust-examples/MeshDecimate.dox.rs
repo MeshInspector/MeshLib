@@ -2,11 +2,7 @@
 fn main() -> Result<(), String>
 {
     // Load mesh.
-    let mut loaded = meshlib::mesh_load::from_any_supported_format_2("mesh.stl", None);
-    let Some(mesh) = loaded.value_mut() else
-    {
-        return Err(format!("Failed to load mesh: {}", loaded.error().unwrap()));
-    };
+    let mut mesh = meshlib::mesh_load::from_any_supported_format_2("mesh.stl", None).into_result().map_err(|error| format!("Failed to load mesh: {error}"))?;
 
     // Setup decimate parameters.
     let mut settings = meshlib::DecimateSettings::new();
@@ -20,15 +16,11 @@ fn main() -> Result<(), String>
     settings.set_subdivide_parts(16);
 
     // Decimate mesh.
-    let result = meshlib::decimate_mesh(mesh, Some(&settings));
+    let result = meshlib::decimate_mesh(&mut mesh, Some(&settings));
     println!("Removed {} vertices, {} faces", result.verts_deleted(), result.faces_deleted());
 
     // Save result.
-    let saved = meshlib::mesh_save::to_any_supported_format_3(mesh, "decimated_mesh.stl", None);
-    if let Some(error) = saved.error()
-    {
-        return Err(format!("Failed to save mesh: {error}"));
-    }
+    meshlib::mesh_save::to_any_supported_format_3(&mesh, "decimated_mesh.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
 
     Ok(())
 }

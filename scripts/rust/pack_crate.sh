@@ -34,9 +34,10 @@ fi
 CRATE_VERSION="$((10#${BASH_REMATCH[1]})).$((10#${BASH_REMATCH[2]})).$((10#${BASH_REMATCH[3]}))-$((10#${BASH_REMATCH[4]}))"
 sed -i "s/^version = .*/version = \"$CRATE_VERSION\"/" "$WORK/MeshLibRust/Cargo.toml"
 grep '^version' "$WORK/MeshLibRust/Cargo.toml"
-# The install lines of the readme name the exact version, as pre-release versions must be.
-sed -i -E "s/meshlib(@| = \")[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/meshlib\1$CRATE_VERSION/g" "$WORK/MeshLibRust/readme.md"
-grep -n "$CRATE_VERSION" "$WORK/MeshLibRust/readme.md"
+# The readme has the placeholders `1.2.3-4` for the crate version (the install lines name it exactly, as pre-release versions must be)
+# and `1.2.3.4` for the MeshLib version (the citation).
+sed -i -e "s/1\.2\.3-4/$CRATE_VERSION/g" -e "s/1\.2\.3\.4/${APP_VERSION#v}/g" "$WORK/MeshLibRust/readme.md"
+grep -n -e "$CRATE_VERSION" -e "${APP_VERSION#v}" "$WORK/MeshLibRust/readme.md"
 
 unzip -q "$NUPKG" -d "$WORK/nupkg"
 echo "url $URL" > "$WORK/native.txt"

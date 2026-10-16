@@ -22,12 +22,12 @@
 ## Install
 
 ```bash
-cargo add meshlib@3.1.4-542
+cargo add meshlib@1.2.3-4
 ```
 
 The crate version is the MeshLib version with the build number as a pre-release identifier
 (`3.1.4-528` for v3.1.4.528), and Cargo picks pre-release versions only when they are named:
-`meshlib = "3.1.4-542"` also accepts the later builds of 3.1.4, but `meshlib = "3.1"` matches none.
+`meshlib = "1.2.3-4"` also accepts the later builds of the same release, but `meshlib = "1.2"` matches none.
 
 Rust 1.88 or newer; Windows, Linux (glibc 2.28 or newer) and macOS, on x86_64 and aarch64.
 On the first build, the crate downloads the MeshLib shared libraries of the target platform
@@ -198,7 +198,7 @@ Shipping something built on MeshLib? Open a PR and add it here — we like showi
 ## Getting started
 
 1. **[Try the live demo](https://demo.meshlib.io)** — booleans, repair, decimation and ICP in the browser. No install, no sign-up.
-2. **Evaluate locally.** `cargo add meshlib@3.1.4-542`, then work through the [tutorials](https://meshlib.io/documentation/Tutorials.html). Free for non-commercial and educational use under our [licence](https://github.com/MeshInspector/MeshLib?tab=License-1-ov-file#readme).
+2. **Evaluate locally.** `cargo add meshlib@1.2.3-4`, then work through the [tutorials](https://meshlib.io/documentation/Tutorials.html). Free for non-commercial and educational use under our [licence](https://github.com/MeshInspector/MeshLib?tab=License-1-ov-file#readme).
 3. **See it in an application.** [MeshInspector](https://meshinspector.com/) is the GUI built on MeshLib — desktop and web, 30-day trial.
 4. **[Book a call](https://meshlib.io/book-a-call/).** Integration guidance, architecture questions and commercial licensing tailored to your project.
 
@@ -219,7 +219,7 @@ If MeshLib supports your research, please cite the exact version you used — fi
   title        = {{MeshLib}: 3D Mesh Processing Library},
   organization = {AMV Consulting LLC},
   year         = {2026},
-  version      = {3.1.3.429},
+  version      = {1.2.3.4},
   url          = {https://meshlib.io},
   note         = {Please cite the exact version used in your work}
 }

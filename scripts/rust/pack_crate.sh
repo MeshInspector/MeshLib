@@ -22,7 +22,7 @@ OUT="$PWD"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir "$WORK/MeshLibRust"
-cp "$ROOT/source/MeshLibRust/Cargo.toml" "$ROOT/source/MeshLibRust/build.rs" "$ROOT/LICENSE" "$ROOT/readme.md" "$ROOT/thirdparty/licenses/THIRD-PARTY-NOTICES.txt" "$WORK/MeshLibRust/"
+cp "$ROOT/source/MeshLibRust/Cargo.toml" "$ROOT/source/MeshLibRust/build.rs" "$ROOT/source/MeshLibRust/readme.md" "$ROOT/LICENSE" "$ROOT/thirdparty/licenses/THIRD-PARTY-NOTICES.txt" "$WORK/MeshLibRust/"
 cp -r "$SRC_DIR" "$WORK/MeshLibRust/src"
 
 # Cargo wants three numbers in the version, and crates.io ignores build metadata (`+528`) when telling versions apart,
@@ -34,6 +34,9 @@ fi
 CRATE_VERSION="$((10#${BASH_REMATCH[1]})).$((10#${BASH_REMATCH[2]})).$((10#${BASH_REMATCH[3]}))-$((10#${BASH_REMATCH[4]}))"
 sed -i "s/^version = .*/version = \"$CRATE_VERSION\"/" "$WORK/MeshLibRust/Cargo.toml"
 grep '^version' "$WORK/MeshLibRust/Cargo.toml"
+# The install lines of the readme name the exact version, as pre-release versions must be.
+sed -i -E "s/meshlib(@| = \")[0-9]+\.[0-9]+\.[0-9]+-[0-9]+/meshlib\1$CRATE_VERSION/g" "$WORK/MeshLibRust/readme.md"
+grep -n "$CRATE_VERSION" "$WORK/MeshLibRust/readme.md"
 
 unzip -q "$NUPKG" -d "$WORK/nupkg"
 echo "url $URL" > "$WORK/native.txt"

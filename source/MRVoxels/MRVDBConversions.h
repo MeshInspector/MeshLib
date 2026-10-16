@@ -75,13 +75,10 @@ MRVOXELS_API VdbVolume simpleVolumeToVdbVolume( const SimpleVolumeMinMax& simple
 MRVOXELS_API VdbVolume functionVolumeToVdbVolume( const FunctionVolume& functoinVolume, ProgressCallback cb = {} );
 
 /// @brief Copy given \p simpleVolume into the \p grid, starting at \p minCoord
-/// Instantiated for AccessorOrGrid in { openvdb::FloatGrid::Accessor, FloatGrid, openvdb::FloatGrid }.
-/// The template is used to not include openvdb's mess into this header (forward declaring classes in openvdb is also non-trivial).
-/// When used with a Grid, multithreaded implementation of copying is used (so the function is not thread safe).
-/// When used with an Accessor, this function could be called from different threads on the same volume (provided that accessors are different, of course).
-template <typename AccessorOrGrid>
+/// Uses multithreaded copying, so the function is not thread safe.
+/// The overloads taking openvdb::FloatGrid and its Accessor are declared in MRVDBFloatGrid.h
 MRVOXELS_API void putSimpleVolumeInDenseGrid(
-        AccessorOrGrid& gridAccessor,
+        FloatGrid& grid,
         const Vector3i& minCoord, const SimpleVolume& simpleVolume, ProgressCallback cb = {}
     );
 

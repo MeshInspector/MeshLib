@@ -168,7 +168,9 @@ jobs:
 
   cleanup-win-archives:
     needs: update-win-version
-    if: always()
+    # Keep the archives (1-day retention) when any packaging job failed, so a re-run
+    # of just that job still finds its WindowsArchive* input.
+    if: needs.update-win-version.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Delete Windows Binaries Archive

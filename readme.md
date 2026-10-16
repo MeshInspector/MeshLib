@@ -8,7 +8,7 @@
 
 # MeshLib — an SDK that supercharges your 3D data processing efficiency
 
-**Geometry algorithms engineered to revolutionize.** We help software engineers process, repair, measure and optimize 3D data with next-generation algorithms, reducing development time and costs — mesh boolean, mesh repair, decimation, offset, point cloud triangulation, ICP registration and voxel processing, in **C++, C, C#, Python and JavaScript**.
+**Geometry algorithms engineered to revolutionize.** We help software engineers process, repair, measure and optimize 3D data with next-generation algorithms, reducing development time and costs — mesh boolean, mesh repair, decimation, offset, point cloud triangulation, ICP registration and voxel processing, in **C++, C, C#, Python, JavaScript and Rust**.
 
 [**▶ Try it live**](https://demo.meshlib.io) · [Website](https://meshlib.io/) · [Documentation](https://meshlib.io/documentation/index.html) · [Quick start](https://meshlib.io/documentation/InstallationGuide.html) · [Examples](https://meshlib.io/documentation/Examples.html) · [Benchmarks](https://meshlib.io/blog/comparing-3d-boolean-libraries/) · [Discussions](https://github.com/MeshInspector/MeshLib/discussions)
 
@@ -30,9 +30,11 @@
 pip install meshlib                  # Python
 dotnet add package MeshLib           # C#
 npm install @meshinspector/meshlib   # JavaScript / WebAssembly
+cargo add meshlib@<version>          # Rust, the exact version from crates.io
 ```
 
-For C++ and C, see the [Installation Guide](https://meshlib.io/documentation/InstallationGuide.html).
+For C++ and C, see the [Installation Guide](https://meshlib.io/documentation/InstallationGuide.html);
+for Rust, the [Rust setup guide](https://github.com/MeshInspector/MeshLib/blob/master/doxygen/general_pages/RustSetupGuide.md).
 
 ## 60 seconds to your first result
 
@@ -88,7 +90,7 @@ need to preserve the original vertices.
 More in [Tutorials](https://meshlib.io/documentation/Tutorials.html) and the
 [`examples/`](https://github.com/MeshInspector/MeshLib/tree/master/examples) folder —
 including complete, runnable programs for repair, boolean, offset, ICP and triangulation
-in all five languages.
+in C++, C, C#, Python and JavaScript, and for boolean, decimation and loading/saving in Rust.
 
 ## What MeshLib does
 
@@ -122,8 +124,8 @@ non-manifold situations are simply not representable — a non-manifold edge, or
 vertex with two closed rings of triangles around it. Broken topology is caught where
 it happens, not three pipeline stages later.
 
-**One engine, five languages.** A native C++ core with official APIs for C, C#,
-Python and JavaScript/WebAssembly. The same algorithms, the same results — on the
+**One engine, six languages.** A native C++ core with official APIs for C, C#,
+Python, JavaScript/WebAssembly and Rust. The same algorithms, the same results — on the
 desktop, on a server, or in a browser tab.
 
 **Built for real workloads.** Core algorithms are multithreaded; a CUDA module

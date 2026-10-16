@@ -111,7 +111,7 @@ Poly<M> orient3dPoly( const PointDegree & a, const PointDegree & b, const PointD
     return Poly<M>::fromUnsortedTerms( std::move( terms ) );
 }
 
-FastInt128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+MR_FORCE_INLINE FastInt128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
 {
     const Vector3i64 x( a - d );
     const Vector3i64 y( b - d );
@@ -280,11 +280,12 @@ bool orient3dDegenerate( const Vector3i & a, const Vector3i& b, const Vector3i& 
     return true;
 }
 
-/// orient3d( vs ) for four points known to be exactly coplanar, resolved by simulation-of-simplicity
-bool orient3dDegenerate( const std::array<PreciseVertCoords, 4> & vs )
+/// orient3d( { a, b, c, d } ) for four points known to be exactly coplanar, resolved by simulation-of-simplicity
+bool orient3dDegenerate( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, const PreciseVertCoords & d )
 {
-    assert( volume( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt ) == 0 );
+    assert( volume( a.pt, b.pt, c.pt, d.pt ) == 0 );
 
+    const PreciseVertCoords * vs[4] = { &a, &b, &c, &d };
     bool odd = false;
     std::array<int, 4> order = { 0, 1, 2, 3 };
 
@@ -292,8 +293,8 @@ bool orient3dDegenerate( const std::array<PreciseVertCoords, 4> & vs )
     {
         for ( int j = i + 1; j < 4; ++j )
         {
-            assert( vs[order[i]].id != vs[order[j]].id );
-            if ( vs[order[i]].id > vs[order[j]].id )
+            assert( vs[order[i]]->id != vs[order[j]]->id );
+            if ( vs[order[i]]->id > vs[order[j]]->id )
             {
                 odd = !odd;
                 std::swap( order[i], order[j] );
@@ -301,8 +302,17 @@ bool orient3dDegenerate( const std::array<PreciseVertCoords, 4> & vs )
         }
     }
 
-    const auto & d = vs[order[3]].pt;
-    return odd != orient3dDegenerate( vs[order[0]].pt - d, vs[order[1]].pt - d, vs[order[2]].pt - d );
+    const auto & o = vs[order[3]]->pt;
+    return odd != orient3dDegenerate( vs[order[0]]->pt - o, vs[order[1]]->pt - o, vs[order[2]]->pt - o );
+}
+
+/// orient3d( { a, b, c, d } ), inlined in the callers below; the degenerate case and its temporary arrays stay out of line
+MR_FORCE_INLINE bool orient3dInl( const PreciseVertCoords & a, const PreciseVertCoords & b, const PreciseVertCoords & c, const PreciseVertCoords & d )
+{
+    // the exact answer first, the perturbation of the points is necessary only if all four points are exactly coplanar
+    if ( const auto v = volume( a.pt, b.pt, c.pt, d.pt ); v != 0 )
+        return v > 0;
+    return orient3dDegenerate( a, b, c, d );
 }
 
 } // anonymous namespace
@@ -316,10 +326,7 @@ bool orient3d( const Vector3i & a, const Vector3i& b, const Vector3i& c )
 
 bool orient3d( const PreciseVertCoords* vs )
 {
-    // the exact answer first, the perturbation of the points is necessary only if all four points are exactly coplanar
-    if ( const auto v = volume( vs[0].pt, vs[1].pt, vs[2].pt, vs[3].pt ); v != 0 )
-        return v > 0;
-    return orient3dDegenerate( { vs[0], vs[1], vs[2], vs[3] } );
+    return orient3dInl( vs[0], vs[1], vs[2], vs[3] );
 }
 
 bool ccwAroundLine( const PreciseVertCoords* vs )
@@ -344,23 +351,19 @@ TriangleSegmentIntersectResult doTriangleSegmentIntersect( const std::array<Prec
     constexpr int d = 3;
     constexpr int e = 4;
 
-    auto orient3d = [&]( int p, int q, int r, int s )
-    {
-        return MR::orient3d( { vs[p], vs[q], vs[r], vs[s] } );
-    };
-
-    const auto abcd = orient3d( a, b, c, d );
+    // orient3dInl directly and not via a lambda: MSVC does not inline the lambda then
+    const auto abcd = orient3dInl( vs[a], vs[b], vs[c], vs[d] );
     res.dIsLeftFromABC = abcd;
-    const auto abce = orient3d( a, b, c, e );
+    const auto abce = orient3dInl( vs[a], vs[b], vs[c], vs[e] );
     if ( abcd == abce )
         return res; // segment DE is located at one side of the plane ABC
 
-    const auto dabe = orient3d( a, b, d, e );
-    const auto dbce = orient3d( b, c, d, e );
+    const auto dabe = orient3dInl( vs[a], vs[b], vs[d], vs[e] );
+    const auto dbce = orient3dInl( vs[b], vs[c], vs[d], vs[e] );
     if ( dabe != dbce )
         return res; // segment AC is located at one side of the plane DEB
 
-    const auto dcae = !orient3d( a, c, d, e ); // '!' is due to inverted order of a and c
+    const auto dcae = !orient3dInl( vs[a], vs[c], vs[d], vs[e] ); // '!' is due to inverted order of a and c
     if ( dbce != dcae )
         return res; // segment AB is located at one side of the plane DEC
 
@@ -390,9 +393,9 @@ bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs )
     // shared vertices are on both planes, so only not-shared vertices define the side of a triangle
     const auto sp = findSharedPoints( vs );
     if ( auto sideA = oneSideOfPlane( vs, 5, 6, 7, sp.otherA, 3 - sp.numShared ) )
-        return *sideA == ( v.tbOrg != 0 ? v.tbOrg > 0 : orient3dDegenerate( { vs[5], vs[6], vs[7], vs[0] } ) ); // ta is on one side of tb's plane
+        return *sideA == ( v.tbOrg != 0 ? v.tbOrg > 0 : orient3dDegenerate( vs[5], vs[6], vs[7], vs[0] ) ); // ta is on one side of tb's plane
     if ( auto sideB = oneSideOfPlane( vs, 2, 3, 4, sp.otherB, 3 - sp.numShared ) )
-        return *sideB == ( v.taDest != 0 ? v.taDest > 0 : orient3dDegenerate( { vs[2], vs[3], vs[4], vs[1] } ) ); // tb is on one side of ta's plane
+        return *sideB == ( v.taDest != 0 ? v.taDest > 0 : orient3dDegenerate( vs[2], vs[3], vs[4], vs[1] ) ); // tb is on one side of ta's plane
 
     // triangles ta and tb intersect one another
     return segmentIntersectionOrderDegenerate<cMaxPolyDTriTri>( vs );
@@ -405,8 +408,8 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
 
     const auto volumeOrg  = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[0].pt );
     const auto volumeDest = volume( vs[5].pt, vs[6].pt, vs[7].pt, vs[1].pt );
-    const bool o0 = volumeOrg  != 0 ? volumeOrg  > 0 : orient3dDegenerate( { vs[5], vs[6], vs[7], vs[0] } );
-    const bool o1 = volumeDest != 0 ? volumeDest > 0 : orient3dDegenerate( { vs[5], vs[6], vs[7], vs[1] } );
+    const bool o0 = volumeOrg  != 0 ? volumeOrg  > 0 : orient3dDegenerate( vs[5], vs[6], vs[7], vs[0] );
+    const bool o1 = volumeDest != 0 ? volumeDest > 0 : orient3dDegenerate( vs[5], vs[6], vs[7], vs[1] );
     if ( o0 == o1 )
     {
         // entire segment s is on one side of plane pb, so the line of s crosses pb either before s[0] or after s[1];

@@ -1,8 +1,8 @@
 <p align="left">
 <picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="https://github.com/user-attachments/assets/37d3a562-581d-421b-8209-ef6b224e96a8">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/caf6bdd1-b2f1-4d6d-9e22-c213db6fc9cf">
-  <img alt="MeshLib logo" src="https://github.com/user-attachments/assets/caf6bdd1-b2f1-4d6d-9e22-c213db6fc9cf" width="60%">
+  <source media="(prefers-color-scheme: dark)"  srcset="https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/logo_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/logo.png">
+  <img alt="MeshLib logo" src="https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/logo.png" width="60%">
 </picture>
 </p>
 
@@ -20,7 +20,7 @@
 [![npm](https://img.shields.io/npm/v/%40meshinspector%2Fmeshlib?label=npm%20%28wasm%29&color=red)](https://www.npmjs.com/package/@meshinspector/meshlib)
 [![Stars](https://img.shields.io/github/stars/MeshInspector/MeshLib?style=flat&color=yellow)](https://github.com/MeshInspector/MeshLib)
 
-![MeshLib SDK — 3D mesh processing library](https://github.com/user-attachments/assets/a65dc95f-675d-4fb8-ac17-6857c9a91554)
+![MeshLib SDK — 3D mesh processing library](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/banner.png)
 
 ## Install
 

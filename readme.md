@@ -18,6 +18,8 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/meshlib?label=python)](https://pypi.org/project/meshlib/)
 [![NuGet](https://img.shields.io/nuget/v/MeshLib?label=nuget&color=green)](https://www.nuget.org/packages/MeshLib)
 [![npm](https://img.shields.io/npm/v/%40meshinspector%2Fmeshlib?label=npm%20%28wasm%29&color=red)](https://www.npmjs.com/package/@meshinspector/meshlib)
+[![crates.io](https://img.shields.io/crates/v/meshlib?include_prereleases&label=crates.io&color=orange)](https://crates.io/crates/meshlib)
+[![crates.io downloads](https://img.shields.io/crates/d/meshlib?label=crates.io%20downloads&color=orange)](https://crates.io/crates/meshlib)
 [![Stars](https://img.shields.io/github/stars/MeshInspector/MeshLib?style=flat&color=yellow)](https://github.com/MeshInspector/MeshLib)
 
 ![MeshLib SDK — 3D mesh processing library](https://github.com/user-attachments/assets/a65dc95f-675d-4fb8-ac17-6857c9a91554)

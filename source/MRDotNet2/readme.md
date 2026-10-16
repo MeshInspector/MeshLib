@@ -1,4 +1,4 @@
-![MeshLib logo](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/scripts/nuget_patch/readme_images/logo.png)
+![MeshLib logo](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/logo.png)
 
 # MeshLib — an SDK that supercharges your 3D data processing efficiency
 
@@ -11,7 +11,7 @@
 [![NuGet downloads](https://img.shields.io/nuget/dt/MeshLib?label=downloads)](https://www.nuget.org/packages/MeshLib)
 [![Stars](https://img.shields.io/github/stars/MeshInspector/MeshLib?style=flat&color=yellow)](https://github.com/MeshInspector/MeshLib)
 
-![MeshLib SDK — 3D mesh processing library](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/scripts/nuget_patch/readme_images/banner.png)
+![MeshLib SDK — 3D mesh processing library](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/banner.png)
 
 ## Install
 

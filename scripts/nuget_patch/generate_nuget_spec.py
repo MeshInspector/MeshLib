@@ -47,7 +47,7 @@ add_files( MACOS_ARM_RUNTIME_DIR, "runtimes/osx-arm64/native/" )
 shutil.copy(WORK_DIR / "thirdparty" / "licenses" / "THIRD-PARTY-NOTICES.txt", "THIRD-PARTY-NOTICES.txt")
 
 # the citation in the readme names the version of the package
-with open(Path(__file__).parent / "readme.md", 'r', encoding='utf-8') as readme_file:
+with open(WORK_DIR / "source" / "MRDotNet2" / "readme.md", 'r', encoding='utf-8') as readme_file:
 	readme = readme_file.read()
 assert readme.count("{1.2.3.4}") == 1
 readme = readme.replace("{1.2.3.4}", "{" + VERSION + "}")

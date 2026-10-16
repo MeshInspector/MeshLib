@@ -75,7 +75,8 @@ private:
     {
         PreciseCutPoint def;
         FastInt128 oa, ob; // for an edge-triangle point: the volumes of its triangle with the ends of its segment
-        int sides = 0; // bit i is set if the point is on side i of the triangle, from vertex i to vertex i+1
+        int sides; // bit i is set if the point is on side i of the triangle, from vertex i to vertex i+1
+        // no default member initializers: with them, clang takes Point as not default-constructible in Vector::resize
     };
 
     /// a projected coordinate as a fraction with a positive denominator

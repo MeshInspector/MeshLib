@@ -22,7 +22,7 @@ OUT="$PWD"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir "$WORK/MeshLibRust"
-cp "$ROOT/source/MeshLibRust/Cargo.toml" "$ROOT/source/MeshLibRust/build.rs" "$ROOT/LICENSE" "$ROOT/readme.md" "$ROOT/thirdparty/licenses/THIRD-PARTY-NOTICES.txt" "$WORK/MeshLibRust/"
+cp "$ROOT/source/MeshLibRust/Cargo.toml" "$ROOT/source/MeshLibRust/build.rs" "$ROOT/source/MeshLibRust/readme.md" "$ROOT/LICENSE" "$ROOT/thirdparty/licenses/THIRD-PARTY-NOTICES.txt" "$WORK/MeshLibRust/"
 cp -r "$SRC_DIR" "$WORK/MeshLibRust/src"
 
 # Cargo wants three numbers in the version, and crates.io ignores build metadata (`+528`) when telling versions apart,
@@ -34,6 +34,10 @@ fi
 CRATE_VERSION="$((10#${BASH_REMATCH[1]})).$((10#${BASH_REMATCH[2]})).$((10#${BASH_REMATCH[3]}))-$((10#${BASH_REMATCH[4]}))"
 sed -i "s/^version = .*/version = \"$CRATE_VERSION\"/" "$WORK/MeshLibRust/Cargo.toml"
 grep '^version' "$WORK/MeshLibRust/Cargo.toml"
+# The readme has the placeholders `1.2.3-4` for the crate version (the install lines name it exactly, as pre-release versions must be)
+# and `1.2.3.4` for the MeshLib version (the citation).
+sed -i -e "s/1\.2\.3-4/$CRATE_VERSION/g" -e "s/1\.2\.3\.4/${APP_VERSION#v}/g" "$WORK/MeshLibRust/readme.md"
+grep -n -e "$CRATE_VERSION" -e "${APP_VERSION#v}" "$WORK/MeshLibRust/readme.md"
 
 unzip -q "$NUPKG" -d "$WORK/nupkg"
 echo "url $URL" > "$WORK/native.txt"

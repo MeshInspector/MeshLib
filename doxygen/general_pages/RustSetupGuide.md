@@ -51,15 +51,13 @@ The same directory must be visible to the dynamic loader when your program runs:
 
 ```rust
 
-fn main()
+fn main() -> Result<(), String>
 {
     let mesh = meshlib::make_uv_sphere(Some(1.0), Some(64), Some(64)); // Owned<Mesh>, freed on drop.
     println!("{} faces", mesh.topology().get_valid_faces().count());
-    let saved = meshlib::mesh_save::to_any_supported_format_3(&mesh, "sphere.stl", None); // Returns the C++ `expected<void, std::string>`.
-    if let Some(error) = saved.error()
-    {
-        panic!("Failed to save: {error}");
-    }
+    // Returns the C++ `expected<void, std::string>`, `into_result()` makes it `Result<(), String>`.
+    meshlib::mesh_save::to_any_supported_format_3(&mesh, "sphere.stl", None).into_result()?;
+    Ok(())
 }
 ```
 
@@ -67,6 +65,7 @@ A few rules of thumb:
 
  - Parameters with default arguments take `Option`, pass `None` for the default.
  - Overloaded C++ functions keep the disambiguated names of the C API, e.g. `boolean_6`; hover the function in your editor, its doc comment names the C function and the C++ original.
+ - Functions returning C++ `expected<T, std::string>` give an opaque `expected_...` object: `into_result()` converts it to `Result<Owned<T>, String>` (so `?` works), `as_result()` to `Result<&T, &std_string>` without moving. Likewise `into_option()` converts a returned `std::optional<T>` to `Option<Owned<T>>`.
  - Callbacks (`std::function` parameters) are built from closures: `meshlib::std_function_bool_from_float::from_fn(|progress| true)`.
  - Downcasts and upcasts between a class and its bases are explicit: `object_mesh.upcast_to_object()`, `meshlib::ObjectMesh::dynamic_downcast_from_object(&object)`.
 

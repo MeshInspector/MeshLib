@@ -7,7 +7,7 @@ rust-version = "1.88"
 build = "build.rs"
 description = "Rust bindings for MeshLib, the 3D mesh processing library: booleans, offsets, decimation, registration, voxels"
 authors = ["AMV Consulting"]
-# Non-commercial and educational use, see the file. `LICENSE` and `readme.md` are copied from the repository root by `scripts/rust/pack_crate.sh`.
+# Non-commercial and educational use, see the file. `LICENSE` is copied from the repository root by `scripts/rust/pack_crate.sh`, which also puts the current version in `readme.md`.
 license-file = "LICENSE"
 readme = "readme.md"
 homepage = "https://meshlib.io"

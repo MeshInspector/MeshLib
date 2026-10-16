@@ -80,8 +80,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
-        with:
-          submodules: true
+
+      # headers that make_install_folder.py puts into the distribution
+      - name: Checkout third-party submodules
+        shell: bash
+        run: scripts/checkout_submodules.sh . thirdparty/imgui thirdparty/parallel-hashmap thirdparty/mrbind-pybind11
 
       - name: Collect runner's system stats
         if: ${{ inputs.internal_build }}
@@ -165,7 +168,9 @@ jobs:
 
   cleanup-win-archives:
     needs: update-win-version
-    if: always()
+    # Keep the archives (1-day retention) when any packaging job failed, so a re-run
+    # of just that job still finds its WindowsArchive* input.
+    if: needs.update-win-version.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Delete Windows Binaries Archive

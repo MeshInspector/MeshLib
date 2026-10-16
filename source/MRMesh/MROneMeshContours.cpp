@@ -162,8 +162,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
     }
 }
 
-// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e)
-FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
+FaceId findSharedFaceImpl( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
 {
     auto mtpEdgeRep = mtp.onEdge( topology );
     if ( !mtpEdgeRep )
@@ -195,6 +194,15 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
             return topology.right( eid );
     }
     return topology.left( mtp.e );
+}
+
+// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e);
+// if the found face does not exist (mtp on the mesh boundary), returns any existing face of eid
+FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
+{
+    if ( auto f = findSharedFaceImpl( topology, vid, eid, mtp ) )
+        return f;
+    return topology.left( eid ) ? topology.left( eid ) : topology.right( eid );
 }
 
 // function to get information about mesh tri point intersection between two surfaces paths
@@ -281,9 +289,9 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
                 if ( coordDif < closeEdgeEps )
                 {
                     type = CenterInterType::SameEdgesClosePos;
-                    if ( currF == topology.left( nEId ) )
+                    if ( currF == topology.left( nEId ) && topology.right( nEId ) )
                         currF = topology.right( nEId );
-                    else if ( currF == topology.right( nEId ) )
+                    else if ( currF == topology.right( nEId ) && topology.left( nEId ) )
                         currF = topology.left( nEId );
                 }
                 return OneMeshIntersection{currF,mesh.triPoint( curr )};
@@ -817,6 +825,7 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
     sameMtpsNavigator = 0;
     pivotNavigator = 0;
     const float closeEdgeEps = std::numeric_limits<float>::epsilon() * box.diagonal();
+    std::optional<OneMeshIntersection> deferredFront;
     // add interjacent
     for ( int i = 0; i < meshTriPoints.size(); ++i )
     {
@@ -876,8 +885,10 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
             {
                 if ( res.intersections.empty() )
                 {
-                    if ( prevInter )
+                    if ( prevInter && !prevInter->empty() )
                         prevInter->back() = *centerInterOp;
+                    else if ( prevInter )
+                        deferredFront = *centerInterOp; // previous path is empty: replace its stand-in after the loop
                 }
                 else
                 {
@@ -901,6 +912,8 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
                 res.intersections.insert( res.intersections.end(), nextInter->begin() + 1, nextInter->end() );
         }
     }
+    if ( deferredFront && !res.intersections.empty() )
+        res.intersections.back() = *deferredFront;
     if ( closed && !res.intersections.empty() )
     {
         res.intersections.push_back( res.intersections.front() );

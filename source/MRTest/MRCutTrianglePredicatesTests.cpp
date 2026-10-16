@@ -2,11 +2,11 @@
 #include <MRMesh/MRPrecisePredicates3.h>
 #include <gtest/gtest.h>
 #include <algorithm>
-#include <cfloat>
+#include <bit>
+#include <functional>
 #include <numeric>
 #include <optional>
 #include <random>
-#include <sstream>
 
 namespace MR
 {
@@ -40,15 +40,6 @@ public:
     {
         return { vert(), vert(), vert() };
     }
-    // a triangle around point c
-    Tri triAround( const Vector3i& c )
-    {
-        Tri res = tri();
-        for ( auto& v : res )
-            v.pt += c;
-        return res;
-    }
-    std::mt19937& gen() { return gen_; }
 
 private:
     std::mt19937 gen_;
@@ -62,11 +53,6 @@ PreciseCutPoint vertexPoint( const PreciseVertCoords& v )
     PreciseCutPoint res;
     res.seg[0] = v;
     return res;
-}
-
-PreciseCutLine cutLine( const Tri& plane, bool alongCross = false )
-{
-    return { .plane = plane, .alongCross = alongCross };
 }
 
 // the axes that the predicates project on: the two least aligned with the normal, ordered counterclockwise around it
@@ -105,54 +91,46 @@ Vector3d positionOf( const PreciseCutPoint& p )
     return a + s * ( b - a );
 }
 
-// the common point of the planes of three triangles in doubles
-Vector3d triplePoint( const Tri& f, const Tri& g, const Tri& h )
+// the points of triangle f cut by other triangles: its vertices, the crossings of its sides with the others, and the crossings
+// of their edges with it, if defined; bit s of lines[i] is set if point i is on side s of f, from vertex s to vertex s+1,
+// and bit 3+j if it is on the cut by others[j]
+struct CutPoints
 {
-    const Vector3d nf = normalOf( f ), ng = normalOf( g ), nh = normalOf( h );
-    const double df = dot( nf, toDouble( f[0] ) ), dg = dot( ng, toDouble( g[0] ) ), dh = dot( nh, toDouble( h[0] ) );
-    return ( df * cross( ng, nh ) + dg * cross( nh, nf ) + dh * cross( nf, ng ) ) / dot( nf, cross( ng, nh ) );
-}
+    std::vector<PreciseCutPoint> defs;
+    std::vector<int> lines;
 
-// how far inside triangle t point p is, relative to the size of the triangle; negative outside
-double insideness( const Tri& t, const Vector3d& p )
-{
-    const Vector3d n = normalOf( t );
-    double res = DBL_MAX;
-    for ( int i = 0; i < 3; ++i )
+    // whether two of points p, q, r are on one line
+    bool twoOnLine( int p, int q, int r ) const
     {
-        const Vector3d a = toDouble( t[i] ), b = toDouble( t[( i + 1 ) % 3] );
-        res = std::min( res, dot( cross( b - a, p - a ), n ) / ( n.lengthSq() ) );
+        return ( lines[p] & lines[q] ) || ( lines[q] & lines[r] ) || ( lines[r] & lines[p] );
+    }
+};
+
+CutPoints cutPoints( const Tri& f, const std::vector<Tri>& others, const std::function<bool( const PreciseCutPoint& )>& defined )
+{
+    CutPoints res;
+    auto add = [&] ( const PreciseCutPoint& p, int lines )
+    {
+        if ( !defined( p ) )
+            return;
+        res.defs.push_back( p );
+        res.lines.push_back( lines );
+    };
+    for ( int s = 0; s < 3; ++s )
+        add( vertexPoint( f[s] ), ( 1 << s ) | ( 1 << ( ( s + 2 ) % 3 ) ) );
+    for ( int j = 0; j < int( others.size() ); ++j )
+    {
+        const Tri& t = others[j];
+        for ( int s = 0; s < 3; ++s )
+        {
+            if ( doTriangleSegmentIntersect( { t[0], t[1], t[2], f[s], f[( s + 1 ) % 3] } ) )
+                add( { { f[s], f[( s + 1 ) % 3] }, t }, ( 1 << s ) | ( 8 << j ) );
+            if ( doTriangleSegmentIntersect( { f[0], f[1], f[2], t[s], t[( s + 1 ) % 3] } ) )
+                add( { { t[s], t[( s + 1 ) % 3] }, f }, 8 << j );
+        }
     }
     return res;
 }
-
-// the edge-triangle points at the ends of the segment where triangles s and t cross, or nothing if they do not cross
-std::optional<std::array<PreciseCutPoint, 2>> crossingSegment( const Tri& s, const Tri& t )
-{
-    std::vector<PreciseCutPoint> pts;
-    for ( int i = 0; i < 3; ++i )
-    {
-        if ( doTriangleSegmentIntersect( { t[0], t[1], t[2], s[i], s[( i + 1 ) % 3] } ) )
-            pts.push_back( { { s[i], s[( i + 1 ) % 3] }, t } );
-        if ( doTriangleSegmentIntersect( { s[0], s[1], s[2], t[i], t[( i + 1 ) % 3] } ) )
-            pts.push_back( { { t[i], t[( i + 1 ) % 3] }, s } );
-    }
-    if ( pts.size() != 2 )
-    {
-        auto str = [] ( const Tri& t )
-        {
-            std::ostringstream ss;
-            for ( const auto& v : t )
-                ss << " " << int( v.id ) << ":(" << v.pt.x << "," << v.pt.y << "," << v.pt.z << ")";
-            return ss.str();
-        };
-        EXPECT_TRUE( pts.empty() ) << pts.size() << " s" << str( s ) << " t" << str( t ); // the perturbed triangles cross along a segment with two ends, or not at all
-        return {};
-    }
-    return std::array<PreciseCutPoint, 2>{ pts[0], pts[1] };
-}
-
-const ConvertToFloatVector cIdentity{ .range = 1, .center = {} };
 
 // exact rational coordinates of a point with small integer coordinates: n / d, d > 0
 struct SmallFraction
@@ -184,28 +162,6 @@ std::optional<SmallFraction> smallFraction( const PreciseCutPoint& p )
     return res;
 }
 
-std::optional<SmallFraction> smallTriplePoint( const Tri& f, const Tri& g, const Tri& h )
-{
-    auto plane = [] ( const Tri& t )
-    {
-        const Vector3i64 a( t[0].pt );
-        const auto n = cross( Vector3i64( t[1].pt ) - a, Vector3i64( t[2].pt ) - a );
-        return std::pair{ n, dot( n, a ) };
-    };
-    const auto [nf, df] = plane( f );
-    const auto [ng, dg] = plane( g );
-    const auto [nh, dh] = plane( h );
-    SmallFraction res{ df * cross( ng, nh ) + dg * cross( nh, nf ) + dh * cross( nf, ng ), dot( nf, cross( ng, nh ) ) };
-    if ( res.d == 0 )
-        return {};
-    if ( res.d < 0 )
-    {
-        res.n = -res.n;
-        res.d = -res.d;
-    }
-    return res;
-}
-
 // -1, 0, 1 as coordinate k of a is less, equal, greater than that of b
 int compareSmall( const SmallFraction& a, const SmallFraction& b, int k )
 {
@@ -213,30 +169,25 @@ int compareSmall( const SmallFraction& a, const SmallFraction& b, int k )
     return l < r ? -1 : ( l > r ? 1 : 0 );
 }
 
-bool sameSet( const Tri& a, const Tri& b )
+// the sign of the area of triangle abc projected on axes kx, ky
+int orientSmall( const SmallFraction& a, const SmallFraction& b, const SmallFraction& c, int kx, int ky )
 {
-    for ( const auto& v : a )
-        if ( v.id != b[0].id && v.id != b[1].id && v.id != b[2].id )
-            return false;
-    return true;
-}
-
-bool sameDefinition( const PreciseCutPoint& a, const PreciseCutPoint& b )
-{
-    if ( a.isVertex() || b.isVertex() )
-        return a.isVertex() && b.isVertex() && a.seg[0].id == b.seg[0].id;
-    const bool sameSeg = ( a.seg[0].id == b.seg[0].id && a.seg[1].id == b.seg[1].id ) || ( a.seg[0].id == b.seg[1].id && a.seg[1].id == b.seg[0].id );
-    return sameSeg && sameSet( a.tri, b.tri );
+    // the determinant of the rows ( n[kx], n[ky], d ), which has the sign of the area, since every d is positive
+    const std::int64_t det =
+          a.n[kx] * ( b.n[ky] * c.d - b.d * c.n[ky] )
+        - a.n[ky] * ( b.n[kx] * c.d - b.d * c.n[kx] )
+        + a.d * ( b.n[kx] * c.n[ky] - b.n[ky] * c.n[kx] );
+    return det > 0 ? 1 : ( det < 0 ? -1 : 0 );
 }
 
 } // anonymous namespace
 
-// Points of random triangles in general position: the order and the sides must agree with the positions in doubles
+// Points of random triangles in general position: the predicates must agree with the positions in doubles
 TEST( MRMesh, CutTrianglePredicatesRandom )
 {
     RandomVerts rv( 0, 1 << 20 );
     CutTrianglePredicates preds;
-    int numOrders = 0, numSides = 0;
+    int numOrders = 0, numBehind = 0, numTriangles = 0, numSideTriangles = 0, numUndecided = 0;
     for ( int trial = 0; trial < 100; ++trial )
     {
         rv.newTrial();
@@ -248,101 +199,91 @@ TEST( MRMesh, CutTrianglePredicatesRandom )
             const Vector3d a = toDouble( f[0] ), b = toDouble( f[1] ), c = toDouble( f[2] );
             EXPECT_GT( ( b[kx] - a[kx] ) * ( c[ky] - a[ky] ) - ( b[ky] - a[ky] ) * ( c[kx] - a[kx] ), 0 );
         }
-
-        std::vector<PreciseCutPoint> defs;
-        for ( const auto& v : f )
-            defs.push_back( vertexPoint( v ) );
-        std::vector<Tri> planes;
+        std::vector<Tri> others;
         for ( int i = 0; i < 6; ++i )
-        {
-            const Tri t = rv.tri();
-            planes.push_back( t );
-            for ( int s = 0; s < 3; ++s )
-            {
-                if ( doTriangleSegmentIntersect( { t[0], t[1], t[2], f[s], f[( s + 1 ) % 3] } ) )
-                    defs.push_back( { { f[s], f[( s + 1 ) % 3] }, t } ); // a side crossing another triangle
-                if ( doTriangleSegmentIntersect( { f[0], f[1], f[2], t[s], t[( s + 1 ) % 3] } ) )
-                    defs.push_back( { { t[s], t[( s + 1 ) % 3] }, f } ); // an edge of another triangle crossing this one
-            }
-        }
+            others.push_back( rv.tri() );
+        const auto pts = cutPoints( f, others, [] ( const PreciseCutPoint& ) { return true; } );
+        const int n = int( pts.defs.size() );
         std::vector<Vector3d> pos;
-        for ( const auto& d : defs )
+        for ( int i = 0; i < n; ++i )
         {
-            EXPECT_TRUE( preds.addPoint( VertId( pos.size() ), d ) );
-            pos.push_back( positionOf( d ) );
+            EXPECT_TRUE( preds.addPoint( VertId( i ), pts.defs[i] ) );
+            pos.push_back( positionOf( pts.defs[i] ) );
         }
-        const size_t numNotCrossings = pos.size();
-        for ( size_t i = 0; i < planes.size(); ++i )
-            for ( size_t j = i + 1; j < planes.size(); ++j )
+
+        for ( int p = 0; p < n; ++p )
+            for ( int q = 0; q < n; ++q )
             {
-                const auto x = triplePoint( f, planes[i], planes[j] );
-                if ( insideness( f, x ) < 1e-3 )
-                    continue;
-                const VertId v( pos.size() );
-                EXPECT_TRUE( preds.addCrossing( v, cutLine( planes[i] ), cutLine( planes[j] ), cIdentity ) );
-                EXPECT_LT( ( Vector3d( preds.crossingPos( v ) ) - x ).length(), 1.0 );
-                pos.push_back( x );
+                if ( std::abs( pos[p][kx] - pos[q][kx] ) > 1e-3 )
+                {
+                    EXPECT_EQ( preds.less( VertId( p ), VertId( q ) ), pos[p][kx] < pos[q][kx] );
+                    ++numOrders;
+                }
+                if ( std::abs( pos[p][ky] - pos[q][ky] ) > 1e-3 )
+                {
+                    // seen from far behind p against the sweep, q makes a counterclockwise turn iff it is below p
+                    EXPECT_EQ( preds.ccwFromBehind( VertId( q ), VertId( p ) ), pos[q][ky] < pos[p][ky] );
+                    ++numBehind;
+                }
             }
 
-        for ( size_t p = 0; p < pos.size(); ++p )
-            for ( size_t q = 0; q < pos.size(); ++q )
-            {
-                if ( std::abs( pos[p][kx] - pos[q][kx] ) < 1e-3 )
-                    continue;
-                EXPECT_EQ( preds.less( VertId( p ), VertId( q ) ), pos[p][kx] < pos[q][kx] );
-                ++numOrders;
-            }
-
-        for ( const auto& plane : planes )
-        {
-            const Vector3d n = normalOf( plane );
-            for ( size_t p = 0; p < numNotCrossings; ++p )
-            {
-                const double dist = dot( n, pos[p] - toDouble( plane[0] ) ) / n.length();
-                if ( std::abs( dist ) < 1e-3 )
-                    continue;
-                for ( int along = 0; along < 2; ++along )
-                    for ( int reversed = 0; reversed < 2; ++reversed )
+        for ( int p = 0; p < n; ++p )
+            for ( int q = 0; q < n; ++q )
+                for ( int r = 0; r < n; ++r )
+                {
+                    if ( p == q || q == r || r == p || !pts.twoOnLine( p, q, r ) )
+                        continue;
+                    bool expected = false;
+                    if ( const int side = pts.lines[p] & pts.lines[q] & pts.lines[r] & 7 )
                     {
-                        EXPECT_EQ( preds.leftOf( cutLine( plane, along != 0 ), reversed != 0, VertId( p ) ), ( dist < 0 ) == ( along != reversed ) );
+                        // three points on one side, which bulges outward a little: counterclockwise iff they go along it in this order,
+                        // up to a cyclic shift
+                        const int s = std::countr_zero( unsigned( side ) );
+                        const Vector3d a = toDouble( f[s] ), u = toDouble( f[( s + 1 ) % 3] ) - a;
+                        auto along = [&] ( int i, int j ) { return dot( pos[i] - a, u ) < dot( pos[j] - a, u ); };
+                        expected = int( along( p, q ) ) + int( along( q, r ) ) + int( along( r, p ) ) == 2;
+                        ++numSideTriangles;
                     }
-                ++numSides;
-            }
-            // the direction of the cut, cross( normal of the triangle, normal of the plane ), seen from far behind against the sweep
-            const Vector3d u = cross( normalOf( f ), n );
-            if ( std::abs( u[ky] ) > 1e-6 * u.length() )
-            {
-                EXPECT_EQ( preds.ccwFromBehind( cutLine( plane, true ), false ), u[ky] < 0 );
-                EXPECT_EQ( preds.ccwFromBehind( cutLine( plane, true ), true ), u[ky] > 0 );
-                EXPECT_EQ( preds.ccwFromBehind( cutLine( plane, false ), false ), u[ky] > 0 );
-            }
-        }
-        for ( int s = 0; s < 3; ++s )
-        {
-            const PreciseCutLine side{ .side = s };
-            for ( size_t p = 0; p < numNotCrossings; ++p )
-            {
-                EXPECT_TRUE( preds.leftOf( side, false, VertId( p ) ) );
-                EXPECT_FALSE( preds.leftOf( side, true, VertId( p ) ) );
-            }
-            const Vector3i u = f[( s + 1 ) % 3].pt - f[s].pt;
-            EXPECT_EQ( preds.ccwFromBehind( side, false ), u[ky] != 0 ? u[ky] < 0 : u[kx] > 0 );
-            EXPECT_EQ( preds.ccwFromBehind( side, true ), u[ky] != 0 ? u[ky] > 0 : u[kx] < 0 );
-        }
+                    else
+                    {
+                        const Vector2d a( pos[p][kx], pos[p][ky] ), b( pos[q][kx], pos[q][ky] ), c( pos[r][kx], pos[r][ky] );
+                        const double area = cross( b - a, c - a );
+                        if ( std::abs( area ) < 1e-9 * ( b - a ).length() * ( c - a ).length() )
+                            continue;
+                        expected = area > 0;
+                    }
+                    EXPECT_EQ( preds.ccw( VertId( p ), VertId( q ), VertId( r ) ), expected );
+                    ++numTriangles;
+                }
         EXPECT_FALSE( preds.failed() );
+
+        // no two points on one line: ccw cannot decide
+        for ( int p = 0; p < n && !preds.failed(); ++p )
+            for ( int q = p + 1; q < n && !preds.failed(); ++q )
+                for ( int r = q + 1; r < n && !preds.failed(); ++r )
+                    if ( !pts.twoOnLine( p, q, r ) )
+                    {
+                        (void)preds.ccw( VertId( p ), VertId( q ), VertId( r ) );
+                        EXPECT_TRUE( preds.failed() );
+                        ++numUndecided;
+                    }
     }
-    EXPECT_GT( numOrders, 5000 );
-    EXPECT_GT( numSides, 1000 );
+    EXPECT_GT( numOrders, 3000 );
+    EXPECT_GT( numBehind, 3000 );
+    EXPECT_GT( numTriangles, 10000 );
+    EXPECT_GT( numSideTriangles, 100 );
+    EXPECT_GT( numUndecided, 50 );
 }
 
-// Points on a small grid, where many of them coincide before the perturbation: the order must be a strict total order, exact
-// where the points differ, and on coincident points the expansion of the perturbation must agree with the faster rules,
-// which follow the boolean's own predicates
+// Points on a small grid, where many of them coincide and many triangles are degenerate before the perturbation:
+// the predicates must be exact where the points are in general position, and consistent elsewhere;
+// the order must be a strict total order, on coincident points the expansion of the perturbation must agree with the faster rules,
+// and along a side the order must be the one of the boolean's cut
 TEST( MRMesh, CutTrianglePredicatesGrid )
 {
     RandomVerts rv( 1, 2 );
     CutTrianglePredicates preds;
-    int numCoincident = 0, numTriangles = 0;
+    int numTriangles = 0, numCoincident = 0, numSidePairs = 0, numDegenerate = 0, numCoincidentBehind = 0;
     for ( int trial = 0; trial < 400; ++trial )
     {
         rv.newTrial();
@@ -351,49 +292,19 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
             continue; // a degenerate triangle
         ++numTriangles;
         const auto [kx, ky] = projectionAxes( f );
-
-        std::vector<PreciseCutPoint> defs;
-        for ( const auto& v : f )
-            defs.push_back( vertexPoint( v ) );
-        auto addDef = [&] ( const PreciseCutPoint& d )
-        {
-            if ( !smallFraction( d ) )
-                return; // a segment parallel to the plane: not defined
-            for ( const auto& e : defs )
-                if ( sameDefinition( d, e ) )
-                    return;
-            defs.push_back( d );
-        };
-        std::vector<Tri> planes;
+        std::vector<Tri> others;
         for ( int i = 0; i < 4; ++i )
-        {
-            const Tri t = rv.tri();
-            planes.push_back( t );
-            for ( int s = 0; s < 3; ++s )
-            {
-                if ( doTriangleSegmentIntersect( { t[0], t[1], t[2], f[s], f[( s + 1 ) % 3] } ) )
-                    addDef( { { f[s], f[( s + 1 ) % 3] }, t } );
-                if ( doTriangleSegmentIntersect( { f[0], f[1], f[2], t[s], t[( s + 1 ) % 3] } ) )
-                    addDef( { { t[s], t[( s + 1 ) % 3] }, f } );
-            }
-        }
+            others.push_back( rv.tri() );
+        // a segment parallel to the plane of its triangle defines no point
+        const auto pts = cutPoints( f, others, [] ( const PreciseCutPoint& p ) { return smallFraction( p ).has_value(); } );
+        const int n = int( pts.defs.size() );
         std::vector<SmallFraction> pos;
-        for ( const auto& d : defs )
+        for ( int i = 0; i < n; ++i )
         {
-            ASSERT_TRUE( preds.addPoint( VertId( pos.size() ), d ) );
-            pos.push_back( *smallFraction( d ) );
+            ASSERT_TRUE( preds.addPoint( VertId( i ), pts.defs[i] ) );
+            pos.push_back( *smallFraction( pts.defs[i] ) );
         }
-        for ( size_t i = 0; i < planes.size(); ++i )
-            for ( size_t j = i + 1; j < planes.size(); ++j )
-            {
-                const auto x = smallTriplePoint( f, planes[i], planes[j] );
-                if ( !x )
-                    continue;
-                ASSERT_TRUE( preds.addCrossing( VertId( pos.size() ), cutLine( planes[i] ), cutLine( planes[j] ), cIdentity ) );
-                pos.push_back( *x );
-            }
 
-        const int n = int( pos.size() );
         std::vector<char> less( n * n );
         for ( int p = 0; p < n; ++p )
             for ( int q = 0; q < n; ++q )
@@ -426,178 +337,73 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
                     {
                         EXPECT_TRUE( less[p * n + r] );
                     }
+
+        // two crossings of a side with other triangles come along it in the order of segmentIntersectionOrder
+        for ( int p = 0; p < n; ++p )
+            for ( int q = 0; q < n; ++q )
+            {
+                const auto& a = pts.defs[p];
+                const auto& b = pts.defs[q];
+                const int side = pts.lines[p] & pts.lines[q] & 7;
+                if ( p == q || !side || a.isVertex() || b.isVertex() )
+                    continue;
+                const int s = std::countr_zero( unsigned( side ) );
+                const Vector3i u = f[( s + 1 ) % 3].pt - f[s].pt; // the segment of both points
+                const bool alongSweep = u[kx] != 0 ? u[kx] > 0 : u[ky] > 0;
+                const bool aFirst = segmentIntersectionOrder( { a.seg[0], a.seg[1], a.tri[0], a.tri[1], a.tri[2], b.tri[0], b.tri[1], b.tri[2] } );
+                EXPECT_EQ( bool( less[p * n + q] ) == alongSweep, aFirst );
+                ++numSidePairs;
+            }
+
+        // a triangle with two vertices on one line: exact unless degenerate before the perturbation,
+        // the same in any rotation of its vertices, and the opposite when flipped
+        for ( int p = 0; p < n; ++p )
+            for ( int q = 0; q < n; ++q )
+            {
+                if ( p == q || !( pts.lines[p] & pts.lines[q] ) )
+                    continue;
+                for ( int r = 0; r < n; ++r )
+                {
+                    if ( r == p || r == q )
+                        continue;
+                    const bool c = preds.ccw( VertId( p ), VertId( q ), VertId( r ) );
+                    EXPECT_EQ( preds.ccw( VertId( q ), VertId( r ), VertId( p ) ), c );
+                    EXPECT_EQ( preds.ccw( VertId( r ), VertId( p ), VertId( q ) ), c );
+                    EXPECT_NE( preds.ccw( VertId( q ), VertId( p ), VertId( r ) ), c );
+                    if ( const int o = orientSmall( pos[p], pos[q], pos[r], kx, ky ) )
+                    {
+                        EXPECT_EQ( c, o > 0 );
+                    }
+                    else
+                        ++numDegenerate;
+                }
+            }
+
+        // seen from behind: exact where the points differ before the perturbation, opposite for the edge taken backward
+        for ( int p = 0; p < n; ++p )
+            for ( int q = 0; q < n; ++q )
+            {
+                if ( p == q )
+                    continue;
+                const int cy = compareSmall( pos[q], pos[p], ky ), cx = compareSmall( pos[q], pos[p], kx );
+                if ( cy != 0 || cx != 0 )
+                {
+                    EXPECT_EQ( preds.ccwFromBehind( VertId( q ), VertId( p ) ), cy != 0 ? cy < 0 : cx > 0 );
+                }
+                else if ( pts.lines[p] & pts.lines[q] )
+                {
+                    EXPECT_NE( preds.ccwFromBehind( VertId( q ), VertId( p ) ), preds.ccwFromBehind( VertId( p ), VertId( q ) ) );
+                    ++numCoincidentBehind;
+                }
+            }
         EXPECT_FALSE( preds.failed() );
     }
     EXPECT_GT( numTriangles, 200 );
-    EXPECT_GT( numCoincident, 300 );
-}
-
-// A crossing of two cuts inside a triangle is where the planes of three triangles meet: each of them must find it,
-// at the same position
-TEST( MRMesh, CutTrianglePredicatesTriplePoints )
-{
-    for ( int halfSize : { 1 << 20, 2 } )
-    {
-        RandomVerts rv( 2, halfSize );
-        CutTrianglePredicates preds;
-        int numCrossings = 0, numChecked = 0;
-        for ( int trial = 0; trial < 3000; ++trial )
-        {
-            rv.newTrial();
-            const std::array<Tri, 3> t{ rv.tri(), rv.tri(), rv.tri() };
-            std::array<std::array<PreciseCutPoint, 2>, 3> segs; // segs[i] is where the two triangles other than t[i] cross
-            bool allCross = true;
-            for ( int i = 0; i < 3 && allCross; ++i )
-            {
-                const auto s = crossingSegment( t[( i + 1 ) % 3], t[( i + 2 ) % 3] );
-                if ( s )
-                    segs[i] = *s;
-                else
-                    allCross = false;
-            }
-            if ( !allCross )
-                continue;
-            std::optional<bool> found;
-            std::optional<Vector3f> foundPos;
-            int numFaces = 0;
-            for ( int i = 0; i < 3; ++i )
-            {
-                // in triangle t[i], the cuts by the other two triangles are segs[(i+2)%3] (by t[(i+1)%3]) and segs[(i+1)%3] (by t[(i+2)%3])
-                if ( !preds.reset( t[i] ) )
-                    break;
-                const auto& sa = segs[( i + 2 ) % 3];
-                const auto& sb = segs[( i + 1 ) % 3];
-                bool defined = true;
-                for ( int j = 0; j < 2; ++j )
-                {
-                    defined = preds.addPoint( VertId( j ), sa[j] ) && defined;
-                    defined = preds.addPoint( VertId( 2 + j ), sb[j] ) && defined;
-                }
-                if ( !defined )
-                    break;
-                ++numFaces;
-                const auto la = cutLine( t[( i + 1 ) % 3] ), lb = cutLine( t[( i + 2 ) % 3] );
-                const bool cross = preds.leftOf( la, false, VertId( 2 ) ) != preds.leftOf( la, false, VertId( 3 ) )
-                    && preds.leftOf( lb, false, VertId( 0 ) ) != preds.leftOf( lb, false, VertId( 1 ) );
-                EXPECT_FALSE( preds.failed() );
-                if ( found )
-                {
-                    EXPECT_EQ( *found, cross );
-                }
-                found = cross;
-                if ( !cross || !preds.addCrossing( 4_v, la, lb, cIdentity ) )
-                    continue;
-                const auto pos = preds.crossingPos( 4_v );
-                if ( foundPos )
-                {
-                    EXPECT_EQ( *foundPos, pos );
-                }
-                foundPos = pos;
-            }
-            if ( numFaces < 3 )
-                continue;
-            ++numChecked;
-            if ( *found )
-                ++numCrossings;
-            if ( halfSize > 2 )
-            {
-                // far from the sides of the triangles, the common point decides
-                const auto x = triplePoint( t[0], t[1], t[2] );
-                const double in = std::min( { insideness( t[0], x ), insideness( t[1], x ), insideness( t[2], x ) } );
-                if ( std::abs( in ) > 1e-6 )
-                {
-                    EXPECT_EQ( *found, in > 0 );
-                }
-            }
-        }
-        EXPECT_GT( numChecked, 100 );
-        EXPECT_GT( numCrossings, 10 );
-    }
-}
-
-// Several crossings on one cut: both triangles holding the cut must order them the same way along it
-TEST( MRMesh, CutTrianglePredicatesOrderAlongCut )
-{
-    for ( int halfSize : { 1 << 20, 3 } )
-    {
-        RandomVerts rv( 3, halfSize );
-        CutTrianglePredicates preds;
-        int numChecked = 0;
-        for ( int trial = 0; trial < 100000 && numChecked < 150; ++trial )
-        {
-            // triangles f and g cross along the cut, and h1, h2 around its middle may cross both of them
-            rv.newTrial();
-            const Tri f = rv.tri(), g = rv.tri();
-            const auto cut = crossingSegment( f, g );
-            if ( !cut )
-                continue;
-            const Vector3d mid = 0.5 * ( positionOf( ( *cut )[0] ) + positionOf( ( *cut )[1] ) );
-            if ( !std::isfinite( mid.x ) || !std::isfinite( mid.y ) || !std::isfinite( mid.z ) )
-                continue; // an end of the cut is not defined without the perturbation
-            const Vector3i c( int( std::round( mid.x ) ), int( std::round( mid.y ) ), int( std::round( mid.z ) ) );
-            const Tri h1 = rv.triAround( c ), h2 = rv.triAround( c );
-            // in triangle a, cut by b: whether the crossings of the cut by h1 and h2 are defined, and if both exist, their order along
-            // the cut from its first end
-            struct Outcome
-            {
-                bool defined = false;
-                std::optional<bool> order;
-            };
-            auto orderIn = [&] ( const Tri& a, const Tri& b )
-            {
-                Outcome res;
-                if ( !preds.reset( a ) )
-                    return res;
-                const auto s1 = crossingSegment( a, h1 ), s2 = crossingSegment( a, h2 );
-                bool defined = true;
-                for ( int j = 0; j < 2; ++j )
-                {
-                    defined = preds.addPoint( VertId( j ), ( *cut )[j] ) && defined;
-                    if ( s1 )
-                        defined = preds.addPoint( VertId( 2 + j ), ( *s1 )[j] ) && defined;
-                    if ( s2 )
-                        defined = preds.addPoint( VertId( 4 + j ), ( *s2 )[j] ) && defined;
-                }
-                const auto lc = cutLine( b ), l1 = cutLine( h1 ), l2 = cutLine( h2 );
-                auto crosses = [&] ( const PreciseCutLine& l, VertId v )
-                {
-                    return preds.leftOf( lc, false, v ) != preds.leftOf( lc, false, v + 1 )
-                        && preds.leftOf( l, false, 0_v ) != preds.leftOf( l, false, 1_v );
-                };
-                if ( !defined || !s1 || !s2 || !crosses( l1, 2_v ) || !crosses( l2, 4_v ) )
-                {
-                    res.defined = defined;
-                    return res;
-                }
-                res.defined = preds.addCrossing( 6_v, lc, l1, cIdentity ) && preds.addCrossing( 7_v, lc, l2, cIdentity );
-                if ( !res.defined )
-                    return res;
-                EXPECT_FALSE( preds.failed() );
-                // the sweep moves along the cut either way, so the order along it follows from the order of its ends
-                res.order = preds.less( 6_v, 7_v ) == preds.less( 0_v, 1_v );
-                return res;
-            };
-            const auto inF = orderIn( f, g );
-            const auto inG = orderIn( g, f );
-            if ( !inF.defined || !inG.defined )
-                continue; // a degenerate triangle, or a point not defined without the perturbation
-            EXPECT_EQ( inF.order.has_value(), inG.order.has_value() );
-            if ( !inF.order || !inG.order )
-                continue;
-            EXPECT_EQ( *inF.order, *inG.order );
-            ++numChecked;
-            if ( halfSize > 3 )
-            {
-                const auto p = positionOf( ( *cut )[0] ), q = positionOf( ( *cut )[1] );
-                const double t1 = dot( triplePoint( f, g, h1 ) - p, q - p ), t2 = dot( triplePoint( f, g, h2 ) - p, q - p );
-                if ( std::abs( t1 - t2 ) > 1e-6 * ( q - p ).lengthSq() )
-                {
-                    EXPECT_EQ( *inF.order, t1 < t2 );
-                }
-            }
-        }
-        EXPECT_GT( numChecked, 100 );
-    }
+    EXPECT_GT( numCoincident, 100 );
+    EXPECT_GT( numSidePairs, 150 );
+    EXPECT_GT( numDegenerate, 300 );
+    EXPECT_GT( numCoincidentBehind, 50 );
 }
 
 } // namespace MR
+

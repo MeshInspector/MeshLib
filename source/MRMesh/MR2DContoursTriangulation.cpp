@@ -46,21 +46,15 @@ struct SweepLinePredicates
     std::function<bool( VertId l, VertId r )> samePos;
     // orientation predicate, equivalent to MR::ccw( { a, b, c } )
     std::function<bool( VertId a, VertId b, VertId c )> ccw;
-    // whether vertex p is to the left of the line of input edge e going from org to dest, i.e. ccw( org, dest, p );
-    // the ends come apart from e, because e may still be under construction, or a piece of e from org to dest is meant
-    // (see SweepLineQueue::inputEdge_), and the predicates of vertex coordinates take the ends of the piece
-    std::function<bool( EdgeId e, VertId org, VertId dest, VertId p )> leftOf;
-    // for input edge e from pivot to b: the orientation of b around pivot relative to the direction the sweep arrives from
+    // orientation of b around pivot relative to the direction the sweep arrives from
     // (i.e. ccw with the first point placed far behind pivot, opposite to the sweep)
-    std::function<bool( EdgeId e, VertId b, VertId pivot )> ccwFromBehind;
+    std::function<bool( VertId b, VertId pivot )> ccwFromBehind;
     // store the position of input vertex v, identified by its (contourId, pointId) in the source contours
     std::function<void( VertId v, int contourId, int pointId )> addInputPoint;
-    // compute and store the position of the vertex v where input edges lower and upper intersect
-    std::function<void( const MeshTopology& tp, VertId v, EdgeId lower, EdgeId upper )> addIntersectionPoint;
+    // compute and store the position of intersection vertex v of segments (a,b) and (c,d)
+    std::function<void( VertId v, VertId a, VertId b, VertId c, VertId d )> addIntersectionPoint;
     // position of vertex v; tp is passed at call time because the queue's topology is moved into the output mesh
     std::function<Vector3f( const MeshTopology& tp, VertId v )> point;
-    // optional: whether the predicates met data they cannot decide on, so the sweep must stop
-    std::function<bool()> failed;
 };
 
 // the sweep-line predicates that depend only on the projected integer coordinates `pts2`;
@@ -79,11 +73,7 @@ static void setPts2Predicates( SweepLinePredicates& p, Vector<Vector2i, VertId>*
     {
         return MR::ccw( { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] } } );
     };
-    p.leftOf = [pts2] ( EdgeId, VertId org, VertId dest, VertId x )
-    {
-        return MR::ccw( { PreciseVertCoords2{ org, ( *pts2 )[org] }, { dest, ( *pts2 )[dest] }, { x, ( *pts2 )[x] } } );
-    };
-    p.ccwFromBehind = [pts2] ( EdgeId, VertId b, VertId pivot )
+    p.ccwFromBehind = [pts2] ( VertId b, VertId pivot )
     {
         Vector2i base = ( *pts2 )[pivot];
         base.x -= 10000; // far behind pivot along -X (the sweep axis), matching the historical reference
@@ -127,9 +117,8 @@ static SweepLinePredicates precisePredicates( const Contours2f& contours, Vector
     {
         pts->autoResizeSet( v, toInt( contours[contourId][pointId] ) );
     };
-    p.addIntersectionPoint = [pts] ( const MeshTopology& tp, VertId v, EdgeId lower, EdgeId upper )
+    p.addIntersectionPoint = [pts] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        const VertId a = tp.org( lower ), b = tp.dest( lower ), c = tp.org( upper ), d = tp.dest( upper );
         pts->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
             { PreciseVertCoords2{ a, ( *pts )[a] }, { b, ( *pts )[b] }, { c, ( *pts )[c] }, { d, ( *pts )[d] } } ) );
     };
@@ -190,9 +179,8 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
         const Vector3i q = toInt( mesh.orgPnt( loops[contourId][pointId] ) );
         pts2->autoResizeSet( v, Vector2i( q[kx], q[ky] ) );
     };
-    p.addIntersectionPoint = [pts2] ( const MeshTopology& tp, VertId v, EdgeId lower, EdgeId upper )
+    p.addIntersectionPoint = [pts2] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        const VertId a = tp.org( lower ), b = tp.dest( lower ), c = tp.org( upper ), d = tp.dest( upper );
         pts2->autoResizeSet( v, findSegmentSegmentIntersectionPrecise(
             { PreciseVertCoords2{ a, ( *pts2 )[a] }, { b, ( *pts2 )[b] }, { c, ( *pts2 )[c] }, { d, ( *pts2 )[d] } } ) );
     };
@@ -227,11 +215,10 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
     if ( edges.size() == 2 )
         return 1;
     const VertId org = tp.org( edges[1] );
-    // orientation of the destination of candidate edges[i] around org relative to the reference ray
-    auto ccwFromBase = [&] ( int i )
+    // orientation of vertex x around org relative to the reference ray
+    auto ccwFromBase = [&] ( VertId x )
     {
-        const VertId x = tp.dest( edges[i] );
-        return baseId.valid() ? predicates.leftOf( edges[0], org, baseId, x ) : predicates.ccwFromBehind( edges[i], x, org );
+        return baseId.valid() ? predicates.ccw( baseId, x, org ) : predicates.ccwFromBehind( x, org );
     };
     auto getNextI = [&] ( int i, bool prev )
     {
@@ -250,17 +237,19 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
     };
     for ( int i = 1; ; )
     {
-        bool ccwBI = ccwFromBase( i );
+        const VertId destI = tp.dest( edges[i] );
+        bool ccwBI = ccwFromBase( destI );
         int nextI = getNextI( i, ccwBI );
 
-        bool ccwBIn = ccwFromBase( nextI );
+        const VertId destNextI = tp.dest( edges[nextI] );
+        bool ccwBIn = ccwFromBase( destNextI );
 
         if ( ccwBI && !ccwBIn )
             return left ? i : nextI;
         if ( !ccwBI && ccwBIn )
             return left ? nextI : i;
 
-        bool ccwIIn = predicates.leftOf( edges[i], org, tp.dest( edges[i] ), tp.dest( edges[nextI] ) );
+        bool ccwIIn = predicates.ccw( destI, destNextI, org );
 
         if ( ccwBI && ccwIIn )
             return left ? i : nextI;
@@ -457,13 +446,8 @@ private:
 
     void invalidateIntersection_( int indexLower );
     bool isIntersectionValid_( int indexLower );
-
-    // the input edge that edge e is a piece of after injectIntersections(), or e itself, taken in the direction of e
-    EdgeId inputEdge_( EdgeId e ) const;
-    // the number of undirected input edges, which injectIntersections() puts its pieces after
-    size_t numInputEdges_{ 0 };
-    // set during findIntersections() as soon as it finds an intersection that abortWhenIntersect forbids
-    bool aborted_{ false };
+    // whether abortWhenIntersect lets the intersection event of edge indexLower through, see allowInnerIntersections
+    bool isAllowedIntersection_( int indexLower );
 
     int findStartIndex_();
     void updateStartRightGoingCache_();
@@ -481,8 +465,8 @@ private:
         operator bool() const { return vId.valid(); }
     };
     using IntersectionMap = HashMap<EdgePair, IntersectionInfo>;
-    // whether input edges a and b properly intersect, via the injected leftOf
-    bool doSegmentSegmentIntersect_( EdgeId a, EdgeId b ) const;
+    // whether segments (aOrg,aDest) and (bOrg,bDest) properly intersect, via the injected ccw
+    bool doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const;
     void checkIntersection_( int index, bool lower );
     void checkIntersection_( int indexLower );
 
@@ -563,7 +547,6 @@ SweepLineQueue::SweepLineQueue( Cache& cache, SweepLinePredicates predicates, co
     initMeshByContours_( contourSizes );
     mergeSamePoints_();
     setupStartVertices_();
-    numInputEdges_ = tp_.undirectedEdgeSize();
 }
 
 SweepLineQueue::SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLinePredicates predicates, const EdgeLoops& holes, const SweepLineParams& params ) :
@@ -574,7 +557,6 @@ SweepLineQueue::SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLin
     resetCache_();
     initMeshByLoops_( inTp, holes );
     setupStartVertices_();
-    numInputEdges_ = tp_.undirectedEdgeSize();
 }
 
 void SweepLineQueue::resetCache_()
@@ -618,9 +600,6 @@ bool SweepLineQueue::findIntersections()
     stage_ = Stage::Intersections;
     events_.clear();
     events_.reserve( tp_.numValidVerts() * 2 );
-    auto stop = [&] { return aborted_ || ( predicates_.failed && predicates_.failed() ); };
-    if ( stop() )
-        return false;
     while ( auto event = getNext_() )
     {
         if ( event.type == EventType::Start )
@@ -628,9 +607,11 @@ bool SweepLineQueue::findIntersections()
         else if ( event.type == EventType::Destination )
             processDestenationEvent_( event.index );
         else if ( event.type == EventType::Intersection )
+        {
+            if ( params_.abortWhenIntersect && !isAllowedIntersection_( event.index ) )
+                return false;
             processIntersectionEvent_( event.index );
-        if ( stop() )
-            return false;
+        }
         events_.push_back( event );
     }
     return true;
@@ -910,17 +891,14 @@ bool SweepLineQueue::isIntersectionValid_( int indexLower )
     return activeSweepEdges_[indexLower].upperInfo.interVertId == activeSweepEdges_[indexLower + 1].lowerInfo.interVertId;
 }
 
-EdgeId SweepLineQueue::inputEdge_( EdgeId e ) const
+bool SweepLineQueue::isAllowedIntersection_( int indexLower )
 {
-    const auto i = size_t( e.undirected() );
-    if ( i < numInputEdges_ )
-        return e;
-    // injectIntersections() makes the two pieces of intersections_[k] the k-th pair of new edges, the lower one first,
-    // each with the parity of the edge it is cut from
-    const auto k = ( i - numInputEdges_ ) / 2;
-    assert( k < intersections_.size() ); // chords never become active
-    const EdgeId edge = ( i - numInputEdges_ ) % 2 == 0 ? intersections_[k].lower : intersections_[k].upper;
-    return edge.odd() == e.odd() ? edge : edge.sym();
+    if ( !params_.allowInnerIntersections )
+        return false;
+    if ( !isIntersectionValid_( indexLower ) )
+        return true; // a stale event, which processIntersectionEvent_ skips
+    return windingInfo_[activeSweepEdges_[indexLower].edgeId.undirected()].takenBothWays()
+        && windingInfo_[activeSweepEdges_[indexLower + 1].edgeId.undirected()].takenBothWays();
 }
 
 int SweepLineQueue::findStartIndex_()
@@ -929,8 +907,10 @@ int SweepLineQueue::findStartIndex_()
     const VertId activeV = startVerts_[startVertIndex_];
     for ( int i = 0; i < activeSweepEdges_.size(); ++i )
     {
-        const EdgeId e = activeSweepEdges_[i].edgeId;
-        if ( activeVPosition == INT_MAX && !predicates_.leftOf( inputEdge_( e ), tp_.org( e ), tp_.dest( e ), activeV ) )
+        const VertId org = tp_.org( activeSweepEdges_[i].edgeId );
+        const VertId dest = tp_.dest( activeSweepEdges_[i].edgeId );
+
+        if ( activeVPosition == INT_MAX && predicates_.ccw( org, activeV, dest ) )
             activeVPosition = i - 1;
     }
 
@@ -1161,17 +1141,16 @@ void SweepLineQueue::checkIntersection_( int index, bool lower )
         return checkIntersection_( index );
 }
 
-bool SweepLineQueue::doSegmentSegmentIntersect_( EdgeId a, EdgeId b ) const
+bool SweepLineQueue::doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const
 {
     // segments intersect iff each separates the endpoints of the other;
     // predicate-based equivalent of MR::doSegmentSegmentIntersect (cIsLeftFromAB is unused here)
-    const VertId aOrg = tp_.org( a ), aDest = tp_.dest( a ), bOrg = tp_.org( b ), bDest = tp_.dest( b );
-    const bool abc = predicates_.leftOf( a, aOrg, aDest, bOrg );
-    const bool abd = predicates_.leftOf( a, aOrg, aDest, bDest );
+    const bool abc = predicates_.ccw( aOrg, aDest, bOrg );
+    const bool abd = predicates_.ccw( aOrg, aDest, bDest );
     if ( abc == abd )
         return false; // segment (bOrg,bDest) is on one side of line (aOrg,aDest)
-    const bool cda = predicates_.leftOf( b, bOrg, bDest, aOrg );
-    const bool cdb = predicates_.leftOf( b, bOrg, bDest, aDest );
+    const bool cda = predicates_.ccw( bOrg, bDest, aOrg );
+    const bool cdb = predicates_.ccw( bOrg, bDest, aDest );
     return cda != cdb; // equal => segment (aOrg,aDest) is on one side of line (bOrg,bDest)
 }
 
@@ -1179,34 +1158,24 @@ void SweepLineQueue::checkIntersection_( int i )
 {
     assert( i >= 0 && i + 1 < activeSweepEdges_.size() );
 
-    const EdgeId lower = activeSweepEdges_[i].edgeId;
-    const EdgeId upper = activeSweepEdges_[i + 1].edgeId;
-    const VertId org1 = tp_.org( lower );
-    const VertId dest1 = tp_.dest( lower );
-    const VertId org2 = tp_.org( upper );
-    const VertId dest2 = tp_.dest( upper );
+    const VertId org1 = tp_.org( activeSweepEdges_[i].edgeId );
+    const VertId dest1 = tp_.dest( activeSweepEdges_[i].edgeId );
+    const VertId org2 = tp_.org( activeSweepEdges_[i + 1].edgeId );
+    const VertId dest2 = tp_.dest( activeSweepEdges_[i + 1].edgeId );
     bool canIntersect = org1 != org2 && dest1 != dest2;
     if ( !canIntersect || !org1 || !org2 || !dest1 || !dest2 )
         return;
 
-    if ( !doSegmentSegmentIntersect_( lower, upper ) )
+    if ( !doSegmentSegmentIntersect_( org1, dest1, org2, dest2 ) )
         return;
 
-    // the intersection is real, so the sweep would meet it anyway: abort right away if it is not allowed
-    if ( params_.abortWhenIntersect && !( params_.allowInnerIntersections
-        && windingInfo_[lower.undirected()].takenBothWays() && windingInfo_[upper.undirected()].takenBothWays() ) )
-    {
-        aborted_ = true;
-        return;
-    }
-
-    auto minEdgeId = std::min( lower, upper );
-    auto maxEdgeId = std::max( lower, upper );
+    auto minEdgeId = std::min( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
+    auto maxEdgeId = std::max( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
     auto& interInfo = intersectionsMap_[{minEdgeId, maxEdgeId}];
     if ( !interInfo )
     {
         interInfo.vId = tp_.addVertId();
-        predicates_.addIntersectionPoint( tp_, interInfo.vId, lower, upper );
+        predicates_.addIntersectionPoint( interInfo.vId, org1, dest1, org2, dest2 );
     }
     else if ( interInfo.processed )
         return;

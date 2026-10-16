@@ -29,23 +29,6 @@ struct PreciseCutPoint
     [[nodiscard]] bool isVertex() const { return !seg[1].id.valid(); }
 };
 
-/// the line that an edge goes along inside a cut triangle, given for one direction of the edge
-struct PreciseCutLine
-{
-    /// for a cut: the vertices of the other triangle, whose plane crosses the cut triangle along the line
-    std::array<PreciseVertCoords, 3> plane;
-
-    /// for a cut: whether the edge goes along cross( normal of the cut triangle, normal of the plane )
-    bool alongCross = false;
-
-    /// for a side of the cut triangle: the index i of the side, which goes from vertex i of the triangle to vertex i+1,
-    /// counterclockwise around the triangle's normal; so does the edge, which has the triangle on its left;
-    /// -1 for a cut
-    int side = -1;
-
-    [[nodiscard]] bool isSide() const { return side >= 0; }
-};
-
 /// exact predicates on the points inside one triangle cut along its intersections with other triangles, for a sweep
 /// line over the triangle; they never contradict the boolean's exact predicates, because every point gets the same
 /// simulation-of-simplicity perturbation by vertex ids as in \ref orient3d, and a point is on the side of a cut where
@@ -64,10 +47,6 @@ public:
     /// returns false if the point is not defined, because its segment is parallel to the plane of its triangle
     MRMESH_API bool addPoint( VertId v, const PreciseCutPoint & p );
 
-    /// sets point v at the crossing of two cuts;
-    /// returns false if their planes and the plane of the triangle have no single common point
-    MRMESH_API bool addCrossing( VertId v, const PreciseCutLine & a, const PreciseCutLine & b, const ConvertToFloatVector & toFloat );
-
     /// whether point p comes before point q along the sweep
     [[nodiscard]] MRMESH_API bool less( VertId p, VertId q ) const;
 
@@ -75,38 +54,28 @@ public:
     /// while less decides some of them by faster rules; nullopt if the points coincide after the perturbation too
     [[nodiscard]] MRMESH_API std::optional<bool> lessByPerturbation( VertId p, VertId q ) const;
 
-    /// whether point p is to the left of line l, taken in its direction, or in the opposite one if reversed;
-    /// p must not be a crossing nor lie on the line
-    [[nodiscard]] MRMESH_API bool leftOf( const PreciseCutLine & l, bool reversed, VertId p ) const;
+    /// whether triangle abc is counterclockwise in the projection;
+    /// two of the points must be on one line, as the ends of every edge of a sweep over the cut triangle are:
+    /// on one side of the triangle, or on the plane of one other triangle (by which the cut along the line goes);
+    /// the points on one side are taken as bulging outward a little, so three of them make a counterclockwise triangle
+    /// if they come in this order along the side, from its vertex i to vertex i+1, up to a cyclic shift
+    [[nodiscard]] MRMESH_API bool ccw( VertId a, VertId b, VertId c ) const;
 
-    /// for an edge going along line l (against it if reversed) from point o to point x: whether the triangle of x, o and a point
-    /// far behind o against the sweep is counterclockwise
-    [[nodiscard]] MRMESH_API bool ccwFromBehind( const PreciseCutLine & l, bool reversed ) const;
-
-    /// whether point v was set by addCrossing
-    [[nodiscard]] bool isCrossing( VertId v ) const { return points_[v].crossing >= 0; }
-
-    /// the position of crossing v, rounded in the integer coordinates and converted by toFloat;
-    /// it is the same in each of the three triangles whose planes meet there
-    [[nodiscard]] MRMESH_API Vector3f crossingPos( VertId v ) const;
+    /// whether the triangle of a point far behind pivot against the sweep, b and pivot is counterclockwise;
+    /// if b and pivot coincide before the perturbation, they must be on one line as in ccw
+    [[nodiscard]] MRMESH_API bool ccwFromBehind( VertId b, VertId pivot ) const;
 
     /// whether a predicate met points it cannot tell apart (e.g. two points with the same definition), or a point
-    /// was not defined; the answers of the predicates are arbitrary then, and the caller must discard them
+    /// was not defined, or no two points of a ccw were on one line; the answers of the predicates are arbitrary then,
+    /// and the caller must discard them
     [[nodiscard]] bool failed() const { return failed_.load( std::memory_order_relaxed ); }
 
 private:
-    struct Crossing
-    {
-        std::array<PreciseVertCoords, 3> a, b; // the planes of the two cuts
-        FastInt256 nx, ny, d; // the projected coordinates are nx / d and ny / d, with d > 0
-        Vector3f pos;
-    };
-
     struct Point
     {
-        PreciseCutPoint def; // not used for a crossing
+        PreciseCutPoint def;
         FastInt128 oa, ob; // for an edge-triangle point: the volumes of its triangle with the ends of its segment
-        int crossing = -1; // for a crossing: its index in crossings_
+        int sides = 0; // bit i is set if the point is on side i of the triangle, from vertex i to vertex i+1
     };
 
     /// a projected coordinate as a fraction with a positive denominator
@@ -115,10 +84,20 @@ private:
         FastInt256 n, d;
     };
 
+    /// the line through two points: a side of the triangle, or its crossing with the plane through three vertices
+    struct Line
+    {
+        int side = -1; // -1 for a plane
+        std::array<PreciseVertCoords, 3> plane;
+    };
+
     Fraction exactCoord_( VertId v, int axis ) const;
     int compareExact_( VertId p, VertId q, int axis ) const;
     bool lessCoincident_( VertId p, VertId q ) const;
     int sweepSign_( const Vector3i64 & u ) const;
+    std::optional<Line> commonLine_( VertId p, VertId q ) const;
+    Vector2i lineDirection_( const Line & l ) const;
+    bool along_( const Vector2i & dir, VertId p, VertId q ) const;
     bool sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, const PreciseCutPoint & p ) const;
     void fail_() const { failed_.store( true, std::memory_order_relaxed ); }
 
@@ -127,7 +106,6 @@ private:
     int kx_ = 0, ky_ = 1; // the projection axes, in this order ccw around the normal
     Vector<Vector2d, VertId> approx_; // the projected coordinates of every point, rounded, to decide most comparisons
     Vector<Point, VertId> points_;
-    std::vector<Crossing> crossings_;
     mutable std::atomic<bool> failed_{ false };
     // the orders of the pairs of points found by expanding the perturbation, which is slow, while a sweep compares the same points often;
     // the key is ( p << 32 ) | q for p < q; a sweep sorts the points in parallel, hence the mutex

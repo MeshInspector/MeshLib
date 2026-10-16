@@ -1,0 +1,85 @@
+name: Test Java Maven artifacts
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to test'
+        required: true
+        type: string
+  workflow_call:
+    inputs:
+      release_tag:
+        required: true
+        type: string
+
+permissions:
+  contents: write # `gh release download` of a draft release.
+
+jobs:
+  java-consumer-test:
+    name: Java consumer test (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: windows-x86_64
+            runner: windows-2025
+          - target: windows-aarch64
+            runner: windows-11-vs2026-arm
+          - target: linux-x86_64
+            runner: ubuntu-24.04
+          - target: linux-aarch64
+            runner: ubuntu-24.04-arm
+          - target: macos-x86_64
+            runner: macos-12-intel
+          - target: macos-aarch64
+            runner: macos-13
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Java
+        uses: ./.github/actions/setup-java
+
+      # The same artifacts `publish-maven.yml` uploads to Maven Central, with the libraries of this platform only.
+      - name: Pack the Maven artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "meshlib_*_java_bindings.zip" --pattern "meshlib_*_rust_native_${{ matrix.target }}.zip" --dir downloaded --repo ${{ github.repository }} --clobber
+          BINDINGS="$(echo downloaded/meshlib_*_java_bindings.zip)"
+          unzip -qo "$BINDINGS" -d downloaded
+          APP_VERSION="${BINDINGS#downloaded/meshlib_}"
+          scripts/java/pack_maven.sh "${APP_VERSION%_java_bindings.zip}" downloaded/MeshLibJava downloaded m2
+          VERSION="$(ls m2/com/meshinspector/meshlib)"
+          echo "MAVEN_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "ARTIFACTS=m2/com/meshinspector/meshlib/$VERSION/meshlib-$VERSION" >> "$GITHUB_ENV"
+
+      # No `java.library.path`: the libraries must come from the natives jar.
+      - name: Run the tests
+        run: |
+          SEP=$([ "$RUNNER_OS" = Windows ] && echo ';' || echo ':')
+          javac --release 22 -Xlint:all -Werror -cp "$ARTIFACTS.jar" -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java
+          java --enable-native-access=ALL-UNNAMED -Dmeshlib.native.cache=native-cache -cp "$ARTIFACTS.jar$SEP$ARTIFACTS-natives-${{ matrix.target }}.jar${SEP}source/MRTestJava/classes" mrtest.Main
+          ls native-cache
+
+      - name: Install Maven
+        run: |
+          if ! command -v mvn >/dev/null; then
+            curl -sSfL https://archive.apache.org/dist/maven/maven-3/3.9.9/binaries/apache-maven-3.9.9-bin.tar.gz | tar -xzf - -C "$RUNNER_TEMP"
+            echo "$RUNNER_TEMP/apache-maven-3.9.9/bin" >> "$GITHUB_PATH"
+          fi
+
+      # The packed artifacts serve as the local repository, as if they were downloaded from Maven Central;
+      # the profiles of the examples' pom.xml pick this platform's natives.
+      - name: Run an example with Maven
+        working-directory: examples/java-examples
+        run: mvn -B -ntp "-Dmaven.repo.local=$GITHUB_WORKSPACE/m2" "-Dmeshlib.version=$MAVEN_VERSION" compile exec:exec -Dexample=MeshBoolean

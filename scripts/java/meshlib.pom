@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.meshinspector</groupId>
+  <artifactId>meshlib</artifactId>
+  <version>@VERSION@</version>
+  <packaging>jar</packaging>
+  <name>MeshLib</name>
+  <description>Java bindings of MeshLib, the 3D mesh processing library. The libraries of each platform are in the artifacts with the classifiers natives-windows-x86_64, natives-windows-aarch64, natives-linux-x86_64, natives-linux-aarch64, natives-macos-x86_64 and natives-macos-aarch64. Needs Java 22 or newer.</description>
+  <url>https://meshlib.io</url>
+  <licenses>
+    <license>
+      <name>MeshLib Non-Commercial and Education License</name>
+      <url>https://github.com/MeshInspector/MeshLib/blob/master/LICENSE</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>MeshInspector</name>
+      <organization>MeshInspector</organization>
+      <organizationUrl>https://meshinspector.com</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:https://github.com/MeshInspector/MeshLib.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/MeshInspector/MeshLib.git</developerConnection>
+    <url>https://github.com/MeshInspector/MeshLib</url>
+    <tag>v@VERSION@</tag>
+  </scm>
+</project>

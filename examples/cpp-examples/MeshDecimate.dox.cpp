@@ -20,9 +20,9 @@ int main()
     MR::Mesh& mesh = *meshRes;
     
 //! [0]
-    // Repack mesh optimally.
+    // Repack mesh optimally without building an AABB tree, which decimation invalidates anyway.
     // It's not necessary but highly recommended to achieve the best performance in parallel processing
-    mesh.packOptimally();
+    mesh.packOptimally( false );
 
     // Setup decimate parameters
     MR::DecimateSettings settings;

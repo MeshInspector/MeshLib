@@ -3,9 +3,9 @@ import meshlib.mrmeshpy as mrmeshpy
 # Load mesh
 mesh = mrmeshpy.loadMesh("mesh.stl")
 
-# Repack mesh optimally.
+# Repack mesh optimally without building an AABB tree, which decimation invalidates anyway.
 # It's not necessary but highly recommended to achieve the best performance in parallel processing
-mesh.packOptimally()
+mesh.packOptimally(False)
 
 # Setup decimate parameters
 settings = mrmeshpy.DecimateSettings()

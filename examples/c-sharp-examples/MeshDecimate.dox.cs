@@ -9,9 +9,9 @@ public class MeshDecimateExample
                 ? MR.MeshLoad.fromAnySupportedFormat(args[0])
                 : MR.makeUVSphere(1.0f, 64, 64);
 
-            // Repack mesh optimally.
+            // Repack mesh optimally without building an AABB tree, which decimation invalidates anyway.
             // It's not necessary but highly recommended to achieve the best performance in parallel processing
-            mesh.packOptimally();
+            mesh.packOptimally(false);
 
             // Setup decimate parameters
             MR.DecimateSettings ds = new();

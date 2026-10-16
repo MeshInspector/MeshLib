@@ -265,12 +265,11 @@ jobs:
           echo ${GITHUB_WORKSPACE}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/imgui
-          git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/parallel-hashmap
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind-pybind11
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind
           git config --global --add safe.directory ${GITHUB_WORKSPACE}/thirdparty/mrbind/deps/cppdecl
           # Retried via retry.sh: submodule endpoints occasionally 500.
-          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty
+          bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_emscripten.sh --skip-prebuilt-thirdparty --wheel
 
       - name: Add the LLVM keg to PATH
         # Via GITHUB_PATH, not GITHUB_ENV: any GITHUB_PATH entry makes the runner
@@ -512,7 +511,7 @@ jobs:
       - name: Checkout third-party submodules
         shell: bash
         run: |
-          bash scripts/retry.sh --timeout 300 -- powershell scripts/clone_submodules_windows.ps1 --skip-prebuilt-thirdparty
+          bash scripts/retry.sh --timeout 300 -- powershell scripts/clone_submodules_windows.ps1 --wheel
 
       - name: Locate Visual Studio
         uses: ./.github/actions/locate-visual-studio
@@ -647,6 +646,8 @@ jobs:
       # https://github.com/actions/runner-images/discussions/5032
       - name: Disable Spotlight indexing
         if: ${{ runner.environment == 'github-hosted' }}
+        # best effort: mdutil fails with -402 on a volume whose index is still transitioning
+        continue-on-error: true
         run: sudo mdutil -a -i off
 
       - name: Checkout

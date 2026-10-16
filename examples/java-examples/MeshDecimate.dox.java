@@ -19,9 +19,9 @@ class MeshDecimate
         }
         Mesh mesh = loaded.value_mut();
 
-        // Repack mesh optimally.
+        // Repack mesh optimally without building an AABB tree, which decimation invalidates anyway.
         // It's not necessary but highly recommended to achieve the best performance in parallel processing.
-        mesh.packOptimally(null);
+        mesh.packOptimally(false);
 
         // Setup decimate parameters.
         DecimateSettings settings = new DecimateSettings();

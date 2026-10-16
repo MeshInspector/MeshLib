@@ -6,6 +6,7 @@ distro=$1
 
 emscripten=(
   scripts/build_thirdparty.sh
+  scripts/clone_submodules_emscripten_thirdparty.sh
   scripts/ask_emscripten_mode.src
   scripts/thirdparty
   thirdparty

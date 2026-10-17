@@ -193,56 +193,11 @@ struct LeadTerm
     int sign = 0;
 };
 
-/// the lowest-degree term of a * b - c * d, found as signOfProductsDiff in MRSparsePolynomial.h finds its sign
+/// the lowest-degree term of a * b - c * d
 LeadTerm leadOfProductsDiff( const SosPoly & a, const SosPoly & b, const SosPoly & c, const SosPoly & d )
 {
-    // the terms of a*b (and of c*d) form rows: the i-th term of a times all the terms of b in the order of increasing degree;
-    // the heap keeps the current term of every row, so all terms of both products are visited in the order of increasing degree
-    struct RowTerm
-    {
-        std::int64_t deg;
-        int i, j; // indices of the terms in the two factors
-        bool neg; // true for the terms of c*d
-    };
-    auto greater = [] ( const RowTerm & x, const RowTerm & y ) { return x.deg > y.deg; };
-    std::vector<RowTerm> heap;
-    heap.reserve( a.get().size() + c.get().size() );
-    if ( !b.get().empty() )
-        for ( int i = 0; i < (int)a.get().size(); ++i )
-            heap.push_back( { a.get()[i].first + b.get()[0].first, i, 0, false } );
-    if ( !d.get().empty() )
-        for ( int i = 0; i < (int)c.get().size(); ++i )
-            heap.push_back( { c.get()[i].first + d.get()[0].first, i, 0, true } );
-    std::make_heap( heap.begin(), heap.end(), greater );
-
-    while ( !heap.empty() )
-    {
-        const auto deg = heap.front().deg;
-        VarBigInt coeff;
-        do
-        {
-            std::pop_heap( heap.begin(), heap.end(), greater );
-            auto r = heap.back();
-            heap.pop_back();
-            const auto & f = ( r.neg ? c : a ).get();
-            const auto & g = ( r.neg ? d : b ).get();
-            const auto prod = f[r.i].second * g[r.j].second;
-            if ( r.neg )
-                coeff -= prod;
-            else
-                coeff += prod;
-            if ( ++r.j < (int)g.size() )
-            {
-                r.deg = f[r.i].first + g[r.j].first;
-                heap.push_back( r );
-                std::push_heap( heap.begin(), heap.end(), greater );
-            }
-        }
-        while ( !heap.empty() && heap.front().deg == deg );
-        if ( const int s = coeff.sign() )
-            return { deg, s };
-    }
-    return {};
+    const auto [deg, sign] = lowestTermOfProductsDiff<VarBigInt>( a, b, c, d );
+    return { deg, sign };
 }
 
 /// whether perturbed point p comes before perturbed point q along the sweep, which orders the points by kx + eta * ky

@@ -428,7 +428,8 @@ struct [[nodiscard]] Mesh
     MRMESH_API Expected<void> pack( const PackMapping & map, ProgressCallback cb = {} );
 
     /// packs tightly and rearranges vertices, triangles and edges to put close in space elements in close indices
-    /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory)
+    /// \param preserveAABBTree whether to keep valid mesh's AABB tree after return (it will take longer to compute and it will occupy more memory);
+    /// an already constructed tree is used for faster ordering of faces in any case
     MRMESH_API PackMapping packOptimally( bool preserveAABBTree = true );
     MRMESH_API Expected<PackMapping> packOptimally( bool preserveAABBTree, ProgressCallback cb );
 

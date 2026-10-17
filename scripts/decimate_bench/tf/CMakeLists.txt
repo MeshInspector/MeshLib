@@ -1,0 +1,28 @@
+cmake_minimum_required(VERSION 3.16)
+project(tf_bench CXX)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# trueform's own CMake: system TBB, and its pinned mimalloc fetched and linked, as in its benchmarks
+set(TRUEFORM_DIR "" CACHE PATH "trueform checkout")
+add_subdirectory(${TRUEFORM_DIR} trueform EXCLUDE_FROM_ALL)
+
+add_executable(tf_bench tf_bench.cpp)
+target_link_libraries(tf_bench PRIVATE tf::trueform)
+
+# trueform's benchmarks are built with -O3 -march=native (-mcpu=native is the Arm spelling)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(ARM64|arm64|aarch64)$")
+  set(TF_BENCH_NATIVE -mcpu=native)
+else()
+  set(TF_BENCH_NATIVE -march=native)
+endif()
+if(MSVC AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+  target_compile_options(tf_bench PRIVATE /clang:-O3 /clang:${TF_BENCH_NATIVE} -Wno-everything)
+elseif(NOT MSVC)
+  include(CheckCXXCompilerFlag)
+  check_cxx_compiler_flag(${TF_BENCH_NATIVE} TF_BENCH_NATIVE_OK)
+  if(TF_BENCH_NATIVE_OK)
+    target_compile_options(tf_bench PRIVATE ${TF_BENCH_NATIVE})
+  endif()
+  target_compile_options(tf_bench PRIVATE -O3)
+endif()

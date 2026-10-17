@@ -1,0 +1,95 @@
+# Temporary: MeshLib vs trueform decimation on GitHub-hosted runners; lives only on the bench/decimate-hosted branch,
+# which sits at the master commit whose CI builds are measured (58a9e98a5, v3.1.4.551).
+name: Decimate bench hosted
+
+on:
+  push:
+    branches: [ bench/decimate-hosted ]
+
+env:
+  ML_VERSION: v3.1.4.551
+  ML_RUN_ID: 38900963184
+  TRUEFORM_REF: 1ee282dc
+  # the last public release with a Windows arm64 archive; only its third-party headers and import libraries are used
+  HEADERS_ZIP: https://github.com/MeshInspector/MeshLib/releases/download/v3.1.4.297/MeshLibDistVS26_v3.1.4.297-arm64.zip
+
+jobs:
+  bench:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 150
+    permissions:
+      contents: write # draft releases are visible only with write access
+      actions: read   # artifacts of the master run
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: linux-x64,   runner: ubuntu-24.04,     deb: ubuntu24-x64-dev.deb }
+          - { name: linux-arm,   runner: ubuntu-24.04-arm, deb: ubuntu24-arm64-dev.deb }
+          - { name: windows-arm, runner: windows-11-arm }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            source
+            scripts/decimate_bench
+
+      - name: Machine
+        run: |
+          case "${{ runner.os }}" in
+            Linux)   cpu=$(lscpu | sed -n 's/^Model name: *//p' | head -1); threads=$(nproc) ;;
+            Windows) cpu=$(powershell -NoProfile -Command "(Get-CimInstance Win32_Processor | Select-Object -First 1).Name"); threads=$NUMBER_OF_PROCESSORS ;;
+          esac
+          echo "$(echo $cpu | xargs), $threads threads, ${{ matrix.runner }}" | tee machine.txt
+
+      - name: Linux - install MeshLib and tools
+        if: runner.os == 'Linux'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$ML_VERSION" -R "$GITHUB_REPOSITORY" -p "meshlib_${ML_VERSION}_${{ matrix.deb }}" -O meshlib.deb
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ./meshlib.deb libtbb-dev ninja-build clang > /dev/null
+          cfg=$(find /usr /opt -name meshlib-config.cmake 2>/dev/null | head -1)
+          echo "MeshLib config: $cfg"
+          echo "ML_PREFIX=$(dirname "$(dirname "$(dirname "$(dirname "$cfg")")")")" >> $GITHUB_ENV
+          echo "ML_EXTRA=" >> $GITHUB_ENV
+
+      - uses: actions/download-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: WindowsArchive_VS26-arm64_Release
+          run-id: ${{ env.ML_RUN_ID }}
+          github-token: ${{ github.token }}
+          path: mlzip
+
+      - name: Windows - MeshLib, headers and TBB
+        if: runner.os == 'Windows'
+        run: |
+          # master's binaries; MeshLib headers from this checkout (the same commit); third-party headers and import libs from v3.1.4.297
+          mkdir mlw && "$SYSTEMROOT/System32/tar.exe" -xf mlzip/*.zip -C mlw
+          mv mlw/source/arm64/Release mlw/bin
+          curl -sSfL -o headers.zip "$HEADERS_ZIP"
+          mkdir h297 && "$SYSTEMROOT/System32/tar.exe" -xf headers.zip -C h297 install/include install/lib/Release
+          rm -rf headers.zip mlzip
+          "$VCPKG_INSTALLATION_ROOT/vcpkg" install tbb:arm64-windows > vcpkg.log 2>&1 || { tail -30 vcpkg.log; exit 1; }
+          src=$(cygpath -m "$PWD/source"); h=$(cygpath -m "$PWD/h297/install")
+          echo "ML_PREFIX=$(cygpath -m "$PWD/mlw")" >> $GITHUB_ENV
+          echo "ML_EXTRA=--vcpkg $(cygpath -m "$VCPKG_INSTALLATION_ROOT/installed/arm64-windows") --ml-define MESHLIB_INCLUDE_DIRS=$src;$h/include --ml-define MESHLIB_LIB_DIRS=$(cygpath -m "$PWD/mlw/bin");$h/lib/Release" >> $GITHUB_ENV
+
+      - name: Bench
+        working-directory: scripts/decimate_bench
+        run: |
+          py=python3; command -v python3 > /dev/null || py=python
+          $py bench.py --meshlib-prefix "$ML_PREFIX" --trueform-ref "$TRUEFORM_REF" $ML_EXTRA
+          cp ../../machine.txt results/*/
+          cat ../../machine.txt results/*/summary.md >> $GITHUB_STEP_SUMMARY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decimate-${{ matrix.name }}
+          path: scripts/decimate_bench/results

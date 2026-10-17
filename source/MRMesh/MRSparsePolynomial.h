@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -24,13 +25,19 @@ SparsePolynomialProduct<T,D,M> mulAs( const SparsePolynomial<C,D,M>& a, const Sp
 template <typename C, typename D, D M>
 SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b ) { return mulAs<C>( a, b ); }
 
-/// returns the sign of the polynomial ( a * b - c * d ) for infinitesimal positive argument, i.e. the sign of its lowest-degree not-zero coefficient,
-/// or 0 if all its coefficients of degrees not above M are zeros (the terms of higher degrees are not considered, since the arguments store the terms of degrees not above M only);
-/// every coefficient is converted into type T before multiplication, and the coefficients of the products have the type of T*T;
+/// returns the degree and the sign of the lowest-degree not-zero coefficient of the polynomial ( a * b - c * d ),
+/// or sign 0 if all its coefficients of degrees not above M are zeros (the terms of higher degrees are not considered, since the arguments store the terms of degrees not above M only);
+/// every coefficient is converted into type T before multiplication (unless it already has type T), and the coefficients of the products have the type of T*T;
 /// the coefficients of the difference are computed in the order of increasing degree and only till the first not-zero one
 template <typename T, typename C, typename D, D M>
-[[nodiscard]] int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
+[[nodiscard]] std::pair<D, int> lowestTermOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
     const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d );
+
+/// returns the sign of the polynomial ( a * b - c * d ) for infinitesimal positive argument, i.e. the sign of its lowest-degree not-zero coefficient,
+/// see \ref lowestTermOfProductsDiff
+template <typename T, typename C, typename D, D M>
+[[nodiscard]] int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
+    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d ) { return lowestTermOfProductsDiff<T>( a, b, c, d ).second; }
 
 /// The class to store a polynomial with a large number of zero coefficients
 /// (only non-zeros are stored in a vector of terms sorted by ascending degree)
@@ -240,7 +247,7 @@ template <typename T, typename C, typename D, D M>
 }
 
 template <typename T, typename C, typename D, D M>
-int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
+std::pair<D, int> lowestTermOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
     const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d )
 {
     // the terms of a*b (and of c*d) form rows: the i-th term of a times all the terms of b in the order of increasing degree;
@@ -274,7 +281,14 @@ int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial
             heap.pop_back();
             const auto & f = ( r.neg ? c : a ).get();
             const auto & g = ( r.neg ? d : b ).get();
-            const auto prod = T( f[r.i].second ) * T( g[r.j].second );
+            // no conversion (and no copy of a big integer) if the coefficients have type T already
+            const auto prod = [&]
+            {
+                if constexpr ( std::is_same_v<T, C> )
+                    return f[r.i].second * g[r.j].second;
+                else
+                    return T( f[r.i].second ) * T( g[r.j].second );
+            }();
             if ( r.neg )
                 coeff -= prod;
             else
@@ -287,11 +301,11 @@ int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial
         }
         while ( !heap.empty() && heap.front().deg == deg );
         if ( coeff > 0 )
-            return 1;
+            return { deg, 1 };
         if ( coeff < 0 )
-            return -1;
+            return { deg, -1 };
     }
-    return 0;
+    return {};
 }
 
 } //namespace MR

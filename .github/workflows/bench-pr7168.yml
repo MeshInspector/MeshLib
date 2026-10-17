@@ -131,7 +131,7 @@ jobs:
         shell: cmd
         env:
           # MeshLib's /Wall means -Weverything to clang-cl
-          EXTRA_CMAKE_RELEASE_FLAGS: ${{ matrix.compiler == 'clang-cl' && '/O2 /Ob2 /DNDEBUG -w' || '' }}
+          EXTRA_CMAKE_RELEASE_FLAGS: ${{ matrix.compiler == 'clang-cl' && '-O2 -Ob2 -DNDEBUG -w' || '' }}
         run: |
           call "%VC_PATH%\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=14.5 || exit /b 1
           set COMPILER_ARGS=

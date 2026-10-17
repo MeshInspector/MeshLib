@@ -17,6 +17,8 @@ for a in args:
     if not msvc and a == '-o':
         skip = True
         continue
+    if not msvc and a == '-c':  # clang -Werror rejects -c together with -S
+        continue
     res.append(a)
 if msvc:
     res += ['/FAs', '/Fa' + out, '/Fo' + out + '.obj']

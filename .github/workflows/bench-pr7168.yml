@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  BENCH_BINS: --bin master=bin-master --bin round=bin-round
+  BENCH_BINS: --bin master=bin-master --bin branchless=bin-branchless
   BENCH_FILTER: ""
 
 jobs:

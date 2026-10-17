@@ -4,7 +4,7 @@
 # extra arguments go to cmake configure
 set -euo pipefail
 BUILD=build/bench
-VARIANTS=${VARIANTS:-master round}
+VARIANTS=${VARIANTS:-master branchless}
 NPROC=${NUMBER_OF_PROCESSORS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu)}
 PY=; for c in python3 python; do if "$c" -c "" >/dev/null 2>&1; then PY=$c; break; fi; done
 OPTS=()

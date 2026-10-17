@@ -765,7 +765,6 @@ void SweepLineQueue::triangulate()
 
 void SweepLineQueue::setupStartVertices_()
 {
-    // TODO: optimize, it seems we can avoid bitset allocation here (at least it can be cached)
     auto& startVertices = startVerticesCache_;
     startVertices.clear();
     startVertices.resize( tp_.vertSize() );
@@ -783,16 +782,12 @@ void SweepLineQueue::setupStartVertices_()
         if ( startVert )
             startVertices.set( v );
     } );
-    startVerts_.resize( startVertices.count() );
+    // all vertices are sorted already
+    startVerts_.reserve( startVertices.count() );
+    for ( auto v : sortedVerts_ )
+        if ( startVertices.test( v ) )
+            startVerts_.push_back( v );
     startVertLowestRight_.resize( startVerts_.size() );
-    int i = 0;
-    for ( auto v : startVertices )
-        startVerts_[i++] = v;
-
-    std::sort( startVerts_.begin(), startVerts_.end(), [&] ( VertId l, VertId r )
-    {
-        return predicates_.less( l, r );
-    } );
 }
 
 SweepLineQueue::Event SweepLineQueue::getNext_()

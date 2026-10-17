@@ -12,7 +12,7 @@ fn area()
     faces.resize(12, Some(true));
     for i in 6..12
     {
-        faces.set_2(FaceId {id_: i}, false);
+        faces.set(FaceId {id_: i}, false);
     }
     let area = mesh.area_const_mr_face_bit_set_ptr(Some(&faces));
     assert!(area > 2.999 && area < 3.001);
@@ -38,7 +38,7 @@ fn incident_faces_from_verts()
     let mesh = create_cube();
     let mut verts = meshlib::VertBitSet::new();
     verts.resize(8, Some(false));
-    verts.set_2(VertId {id_: 0}, true);
+    verts.set(VertId {id_: 0}, true);
     let faces = meshlib::get_incident_faces_mr_vert_bit_set(mesh.topology(), &verts);
     assert_eq!(faces.count(), 6);
 }
@@ -49,7 +49,7 @@ fn incident_faces_from_edges()
     let mesh = create_cube();
     let mut edges = meshlib::UndirectedEdgeBitSet::new();
     edges.resize(12, Some(false));
-    edges.set_2(UndirectedEdgeId {id_: 0}, true);
+    edges.set(UndirectedEdgeId {id_: 0}, true);
     let faces = meshlib::get_incident_faces_mr_undirected_edge_bit_set(mesh.topology(), &edges);
     assert_eq!(faces.count(), 8);
 }

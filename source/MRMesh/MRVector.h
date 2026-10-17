@@ -29,13 +29,13 @@ public:
     Vector() = default;
 
     /// creates a vector with \p size elements with default value
-    explicit Vector( size_t size ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> ) : vec_( size ) { }
+    MR_BIND_OVERLOAD_SUFFIX() explicit Vector( size_t size ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> ) : vec_( size ) { }
 
     /// creates a vector with \p size elements with the given value
-    explicit Vector( size_t size, const T & val ) : vec_( size, val ) { }
+    MR_BIND_OVERLOAD_SUFFIX(fill) explicit Vector( size_t size, const T & val ) : vec_( size, val ) { }
 
     /// moves data from the given std::vector<T>
-    Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
+    MR_BIND_OVERLOAD_SUFFIX(stdVector) Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
 
     template< class InputIt >
     Vector( InputIt first, InputIt last ) : vec_( first, last ) { }

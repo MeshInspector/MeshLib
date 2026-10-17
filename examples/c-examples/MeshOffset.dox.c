@@ -30,7 +30,7 @@ int main( void )
     MR_GeneralOffsetParameters* params = MR_GeneralOffsetParameters_DefaultConstruct();
     // calculate voxel size depending on desired accuracy and/or memory consumption
     MR_GeneralOffsetParameters_Set_voxelSize( params, MR_suggestVoxelSize( inputMeshPart, 10000000.f ) );
-    MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( mesh, NULL );
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox( mesh, NULL );
     float offset = MR_Box3f_diagonal( &bbox ) * 0.1f;
 
     // Make offset mesh
@@ -47,7 +47,7 @@ int main( void )
     }
 
     // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( outputMesh, "mesh_offset.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( outputMesh, "mesh_offset.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

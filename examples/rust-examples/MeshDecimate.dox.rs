@@ -2,7 +2,7 @@
 fn main() -> Result<(), String>
 {
     // Load mesh.
-    let mut mesh = meshlib::mesh_load::from_any_supported_format_2("mesh.stl", None).into_result().map_err(|error| format!("Failed to load mesh: {error}"))?;
+    let mut mesh = meshlib::mesh_load::from_any_supported_format("mesh.stl", None).into_result().map_err(|error| format!("Failed to load mesh: {error}"))?;
 
     // Repack mesh optimally without building an AABB tree, which decimation invalidates anyway.
     // It's not necessary but highly recommended to achieve the best performance in parallel processing.
@@ -24,7 +24,7 @@ fn main() -> Result<(), String>
     println!("Removed {} vertices, {} faces", result.verts_deleted(), result.faces_deleted());
 
     // Save result.
-    meshlib::mesh_save::to_any_supported_format_3(&mesh, "decimated_mesh.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
+    meshlib::mesh_save::to_any_supported_format(&mesh, "decimated_mesh.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
 
     Ok(())
 }

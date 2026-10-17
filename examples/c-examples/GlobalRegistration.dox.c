@@ -81,7 +81,7 @@ int main( int argc, char* argv[] )
 
     for ( int i = 0; i < inputNum; ++i )
     {
-        MR_expected_MR_PointCloud_std_string* pointCloudEx = MR_PointsLoad_fromAnySupportedFormat_2( argv[1 + i], NULL, NULL );
+        MR_expected_MR_PointCloud_std_string* pointCloudEx = MR_PointsLoad_fromAnySupportedFormat( argv[1 + i], NULL, NULL );
         MR_PointCloud* pointCloud = MR_expected_MR_PointCloud_std_string_value_mut( pointCloudEx );
 
         if ( !pointCloud )
@@ -101,7 +101,7 @@ int main( int argc, char* argv[] )
         MR_Vector_MR_MeshOrPointsXf_MR_ObjId_push_back_MR_MeshOrPointsXf_rvalue_ref( inputs, mopXf );
         MR_MeshOrPointsXf_Destroy( mopXf );
 
-        MR_Box3f bbox = MR_PointCloud_computeBoundingBox_1( pointCloud, NULL );
+        MR_Box3f bbox = MR_PointCloud_computeBoundingBox( pointCloud, NULL );
         if ( !MR_Box3f_valid( &maxBBox ) || MR_Box3f_volume( &bbox ) > MR_Box3f_volume( &maxBBox ) )
             maxBBox = bbox;
     }
@@ -143,11 +143,11 @@ int main( int argc, char* argv[] )
         {
             MR_Vector3f point = *MR_VertCoords_index( points, (MR_VertId){j} );
             point = MR_AffineXf3f_call( xf, &point );
-            MR_PointCloud_addPoint_1( output, &point );
+            MR_PointCloud_addPoint( output, &point );
         }
     }
 
-    MR_expected_void_std_string* saveEx = MR_PointsSave_toAnySupportedFormat_3( output, argv[argc - 1], NULL, NULL );
+    MR_expected_void_std_string* saveEx = MR_PointsSave_toAnySupportedFormat( output, argv[argc - 1], NULL, NULL );
     const MR_std_string* saveError = MR_expected_void_std_string_error( saveEx );
     if ( !saveError )
     {

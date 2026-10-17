@@ -41,9 +41,9 @@ Turn a scan into a triangle mesh:
 ```rust
 fn main() -> Result<(), String>
 {
-    let pc = meshlib::points_load::from_any_supported_format_2("scan.ply", None).into_result()?;    // point cloud from any scanner
+    let pc = meshlib::points_load::from_any_supported_format("scan.ply", None).into_result()?;    // point cloud from any scanner
     let mesh = meshlib::triangulate_point_cloud(&pc, None, None).into_option().ok_or("canceled")?; // point cloud -> triangle mesh
-    meshlib::mesh_save::to_any_supported_format_3(&mesh, "model.stl", None).into_result()
+    meshlib::mesh_save::to_any_supported_format(&mesh, "model.stl", None).into_result()
 }
 ```
 
@@ -58,12 +58,12 @@ fn main() -> Result<(), String>
     let mut b = a.clone();
     b.transform(&AffineXf3f::translation(&Vector3f {x: 0.7, y: 0.0, z: 0.0}), None);
 
-    let res = meshlib::boolean_6(&a, &b, BooleanOperation::Union, None, None, None);
+    let res = meshlib::boolean(&a, &b, BooleanOperation::Union, None);
     if !res.valid()
     {
         return Err(res.error_string().to_string());
     }
-    meshlib::mesh_save::to_any_supported_format_3(res.mesh(), "out_boolean.stl", None).into_result()
+    meshlib::mesh_save::to_any_supported_format(res.mesh(), "out_boolean.stl", None).into_result()
 }
 ```
 
@@ -76,15 +76,15 @@ use meshlib::{GeneralOffsetParameters, MeshPart, SignDetectionMode};
 
 fn main() -> Result<(), String>
 {
-    let mesh = meshlib::mesh_load::from_any_supported_format_2("broken.stl", None).into_result()?;
+    let mesh = meshlib::mesh_load::from_any_supported_format("broken.stl", None).into_result()?;
 
     let mut params = GeneralOffsetParameters::new();
-    params.set_voxel_size(mesh.compute_bounding_box_1(None).diagonal() / 200.0);
+    params.set_voxel_size(mesh.compute_bounding_box(None).diagonal() / 200.0);
     params.set_sign_detection_mode(SignDetectionMode::HoleWindingRule);
     params.set_close_holes_in_hole_winding_number(true);
 
     let fixed = meshlib::general_offset_mesh(&MeshPart::construct(&mesh, None), 0.0, &params).into_result()?; // watertight
-    meshlib::mesh_save::to_any_supported_format_3(&fixed, "fixed.stl", None).into_result()
+    meshlib::mesh_save::to_any_supported_format(&fixed, "fixed.stl", None).into_result()
 }
 ```
 
@@ -99,8 +99,8 @@ More in [Tutorials](https://meshlib.io/documentation/Tutorials.html) and the
 including complete, runnable programs for repair, boolean, offset, ICP and triangulation;
 the Rust ones are in [`examples/rust-examples`](https://github.com/MeshInspector/MeshLib/tree/master/examples/rust-examples).
 A few rules of thumb for the Rust API: parameters with default arguments take `Option`
-(`None` for the default), and overloaded C++ functions keep the numbered names of the
-C API, like `boolean_6`; the doc comment of each function names its C++ original.
+(`None` for the default), and overloaded C++ functions may get a suffix, as in the C API,
+like `boolean_with_xf`; the doc comment of each function names its C++ original.
 Returned C++ `expected` and `std::optional` objects become Rust `Result` and `Option`
 with `into_result()` and `into_option()`, so `?` works on them.
 

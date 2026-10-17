@@ -20,8 +20,8 @@ struct [[nodiscard]] MeshNormals
 };
 
 /// returns a vector with face-normal in every element for valid mesh faces
-[[nodiscard]] MRMESH_API FaceNormals computePerFaceNormals( const Mesh & mesh );
-[[nodiscard]] MRMESH_API FaceNormals computePerFaceNormals( const MeshTopology & topology, const VertCoords & points );
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API FaceNormals computePerFaceNormals( const Mesh & mesh );
+MR_BIND_OVERLOAD_SUFFIX(topology) [[nodiscard]] MRMESH_API FaceNormals computePerFaceNormals( const MeshTopology & topology, const VertCoords & points );
 
 /// fills buffer with face-normals as Vector4f for valid mesh faces
 MRMESH_API void computePerFaceNormals4( const Mesh & mesh, Vector4f* faceNormals, size_t size );

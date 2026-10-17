@@ -31,11 +31,14 @@
 #define MR_BIND_PREFERRED_NAME(...) __attribute__((__annotate__(DETAIL_MR_BIND_PREFERRED_NAME(mrbind::preferred_name=__VA_ARGS__))))
 #define DETAIL_MR_BIND_PREFERRED_NAME(...) #__VA_ARGS__
 
+#define MR_BIND_OVERLOAD_SUFFIX(...) [[clang::annotate("mrbind::overload_suffix=" #__VA_ARGS__)]]
+
 #else
 #define MR_BIND_TEMPLATE(...)
 #define MR_BIND_IGNORE
 #define MR_BIND_IGNORE_PY
 #define MR_BIND_PREFERRED_NAME(...)
+#define MR_BIND_OVERLOAD_SUFFIX(...)
 #endif
 
 #ifdef MR_COMPILING_PB11_BINDINGS

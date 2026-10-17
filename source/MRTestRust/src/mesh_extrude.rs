@@ -8,8 +8,8 @@ fn degenerate_band_non_empty()
     let mut mesh = make_torus(1.1, 0.5, 16, 16);
     let count_before = mesh.points().size();
     let mut region = meshlib::FaceBitSet::new();
-    region.auto_resize_set_2(FaceId {id_: 0}, Some(true));
-    region.auto_resize_set_2(FaceId {id_: 1}, Some(true));
+    region.auto_resize_set(FaceId {id_: 0}, Some(true));
+    region.auto_resize_set(FaceId {id_: 1}, Some(true));
     meshlib::make_degenerate_band_around_region(&mut mesh, &region, None);
     mesh.invalidate_caches(Some(true));
     // The number of vertices grows because of the vertex duplication along the boundary.

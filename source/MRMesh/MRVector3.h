@@ -41,7 +41,7 @@ struct Vector3
         static_assert( elements == 3, "Invalid number of elements" );
     }
     explicit Vector3( NoInit ) noexcept { }
-    constexpr Vector3( T x, T y, T z ) noexcept : x( x ), y( y ), z( z ) { }
+    MR_BIND_OVERLOAD_SUFFIX() constexpr Vector3( T x, T y, T z ) noexcept : x( x ), y( y ), z( z ) { }
 
     template <typename U> MR_REQUIRES_IF_SUPPORTED( std::constructible_from<T, U> )
     explicit constexpr Vector3( const Vector2<U> & v ) noexcept : x( v.x ), y( v.y ), z( 0 ) { }

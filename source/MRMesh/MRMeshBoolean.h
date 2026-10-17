@@ -59,7 +59,7 @@ struct BooleanResult
   * \note Input meshes should have no self-intersections in intersecting zone
   * \note If meshes are not closed in intersecting zone some boolean operations are not allowed (as far as input meshes interior and exterior cannot be determined)
   */
-MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+MR_BIND_OVERLOAD_SUFFIX(withXf) MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const AffineXf3f* rigidB2A, BooleanResultMapper* mapper = nullptr, ProgressCallback cb = {} );
 // no version of the function with rvalue-referenced meshes, because meshes' copies are currently used for sorting intersections
 
@@ -103,9 +103,9 @@ struct BooleanParameters
     ProgressCallback cb = {};
 };
 
-MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API BooleanResult boolean( const Mesh& meshA, const Mesh& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
-MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
+MR_BIND_OVERLOAD_SUFFIX(move) MRMESH_API BooleanResult boolean( Mesh&& meshA, Mesh&& meshB, BooleanOperation operation,
                                   const BooleanParameters& params = {} );
 
 /// calls boolean in force mode, also unites close vertices and fills holes afterwards

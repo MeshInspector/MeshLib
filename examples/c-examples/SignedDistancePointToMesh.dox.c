@@ -15,7 +15,7 @@ int main( void )
     int rc = EXIT_FAILURE;
 
     // Load mesh.
-    MR_expected_MR_Mesh_std_string* meshRes = MR_MeshLoad_fromAnySupportedFormat_2( "mesh1.ctm", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshRes = MR_MeshLoad_fromAnySupportedFormat( "mesh1.ctm", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshRes );
     if ( !mesh )
     {
@@ -23,7 +23,7 @@ int main( void )
         goto fail_load;
     }
 
-    MR_Vector3f point = MR_Vector3f_Construct_3( 1.5f, 1.0f, 0.5f );
+    MR_Vector3f point = MR_Vector3f_Construct( 1.5f, 1.0f, 0.5f );
     MR_MeshPart* mp = MR_MeshPart_Construct( mesh, NULL );
 
     MR_std_optional_MR_SignedDistanceToMeshResult* resOpt = MR_findSignedDistance_MR_Vector3f( &point, mp, NULL, NULL );

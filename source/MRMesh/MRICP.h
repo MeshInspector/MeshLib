@@ -205,13 +205,13 @@ public:
     /// the weight of each pair is the double area of mesh triangles around its sample vertex (1 for point clouds)
     ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} ) : ICP( { flt, fltXf }, { ref, refXf }, fltSamples, refSamples ) {}
-    MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} );
+    MR_BIND_OVERLOAD_SUFFIX(samples) MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples = {}, const VertBitSet& refSamples = {} );
 
     /// Constructs ICP framework with given sample points on both objects and the weights of their pairs,
     /// the weights stay fixed during the algorithm
     ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples ) : ICP( { flt, fltXf }, { ref, refXf }, fltSamples, refSamples ) {}
-    MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples );
+    MR_BIND_OVERLOAD_SUFFIX(weightedSamples) MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const std::vector<WeightedVertexf>& fltSamples, const std::vector<WeightedVertexf>& refSamples );
 
     /// Constructs ICP framework with automatic points sampling on both objects
     /// \param flt floating object
@@ -222,7 +222,7 @@ public:
     /// all pairs get equal weights, and a mesh with big triangles gets samples inside them as in samplePoints( samplingVoxelSize, true )
     MRMESH_API ICP( const MeshOrPoints& flt, const MeshOrPoints& ref, const AffineXf3f& fltXf, const AffineXf3f& refXf,
         float samplingVoxelSize ) : ICP( { flt, fltXf }, { ref, refXf }, samplingVoxelSize ) {}
-    MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize );
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, float samplingVoxelSize );
 
     /// tune algorithm params before run calculateTransformation()
     void setParams(const ICPProperties& prop) { prop_ = prop; }

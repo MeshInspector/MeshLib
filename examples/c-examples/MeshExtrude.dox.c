@@ -17,7 +17,7 @@ int main( void )
     int rc = EXIT_FAILURE;
 
     // Load mesh.
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh.
@@ -30,14 +30,14 @@ int main( void )
 
     // Select faces to extrude
     MR_FaceBitSet* facesToExtrude = MR_FaceBitSet_DefaultConstruct();
-    MR_FaceBitSet_autoResizeSet_2( facesToExtrude, (MR_FaceId){1}, NULL );
-    MR_FaceBitSet_autoResizeSet_2( facesToExtrude, (MR_FaceId){2}, NULL );
+    MR_FaceBitSet_autoResizeSet( facesToExtrude, (MR_FaceId){1}, NULL );
+    MR_FaceBitSet_autoResizeSet( facesToExtrude, (MR_FaceId){2}, NULL );
 
     // Create duplicated verts on region boundary
     MR_makeDegenerateBandAroundRegion( mesh, facesToExtrude, NULL );
 
     // Find vertices that will be moved
-    MR_VertBitSet* vertsToMove = MR_getIncidentVerts_2_MR_FaceBitSet( MR_Mesh_Get_topology( mesh ), facesToExtrude );
+    MR_VertBitSet* vertsToMove = MR_getIncidentVerts( MR_Mesh_Get_topology( mesh ), facesToExtrude );
     MR_Vector3f* points = MR_VertCoords_data_mut( MR_Mesh_GetMutable_points( mesh ) );
     MR_Vector3f shift = MR_Vector3f_plusZ();
     size_t numPoints = MR_VertCoords_size( MR_Mesh_GetMutable_points( mesh ) );
@@ -49,7 +49,7 @@ int main( void )
     MR_Mesh_invalidateCaches( mesh, NULL );
 
     // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "extruded_mesh.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "extruded_mesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
     else

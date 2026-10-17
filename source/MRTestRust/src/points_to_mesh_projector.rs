@@ -11,7 +11,7 @@ fn find_signed_distances()
     let xf = AffineXf3f::translation(&shift);
     let mut params = meshlib::MeshProjectionParameters::new();
     params.set_xf(Some(&xf));
-    let results = meshlib::find_signed_distances_4(&mesh_a, &mesh_b, Some(&params), None);
+    let results = meshlib::find_signed_distances(&mesh_a, &mesh_b, Some(&params), None);
     assert_eq!(results.size(), mesh_b.points().size());
     let mut max_dist = 0.0f32;
     for i in 0..results.size()

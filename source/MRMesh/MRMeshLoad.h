@@ -150,11 +150,11 @@ MRMESH_API Expected<Mesh> fromDxf( const std::filesystem::path& path, const Mesh
 MRMESH_API Expected<Mesh> fromDxf( std::istream& in, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from file in the format detected from file extension
-MRMESH_API Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API Expected<Mesh> fromAnySupportedFormat( const std::filesystem::path& file, const MeshLoadSettings& settings = {} );
 
 /// loads mesh from stream in the format detected from given extension-string (`*.ext`);
 /// important on Windows: in stream must be open in binary mode
-MRMESH_API Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings = {} );
+MR_BIND_OVERLOAD_SUFFIX(stream) MRMESH_API Expected<Mesh> fromAnySupportedFormat( std::istream& in, const std::string& extension, const MeshLoadSettings& settings = {} );
 
 /// emits telemetry signal with the integer logarithm of mesh size
 MR_BIND_IGNORE MRMESH_API void telemetryLogSize( const Mesh& mesh );

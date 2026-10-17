@@ -33,27 +33,6 @@ bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToInt
     return Box3i{ conv( a.min ), conv( a.max ) }.intersects( Box3i{ conv( b.min ), conv( b.max ) } );
 }
 
-/// the same box as transformed( box, xf ) for a valid box without NaNs, but faster: every coordinate of xf( p ) is monotone in each coordinate of p,
-/// even with rounding, so its minimum and maximum over the corners of the box are reached at the corners selected by the signs of the matrix row
-Box3f transformedBox( const Box3f & box, const AffineXf3f & xf )
-{
-    Box3f res;
-    for ( int i = 0; i < 3; ++i )
-    {
-        const auto & row = xf.A[i];
-        Vector3f lo, hi;
-        for ( int j = 0; j < 3; ++j )
-        {
-            const bool pos = row[j] >= 0;
-            lo[j] = pos ? box.min[j] : box.max[j];
-            hi[j] = pos ? box.max[j] : box.min[j];
-        }
-        res.min[i] = dot( row, lo ) + xf.b[i];
-        res.max[i] = dot( row, hi ) + xf.b[i];
-    }
-    return res;
-}
-
 /// decides by preciseBoxesIntersect whether a node of tree A and a node of tree B after the transformation xf (if given) intersect
 class PreciseBoxesIntersection
 {
@@ -64,7 +43,7 @@ public:
         if ( xf )
         {
             bBoxes_.resize( bTree.nodes().size() );
-            bState_.resize( bTree.nodes().size() );
+            bState_ = std::make_unique<std::atomic<std::uint8_t>[]>( bTree.nodes().size() );
         }
     }
 
@@ -77,10 +56,10 @@ private:
     /// the box of node b after the transformation, computed on the first request (from any thread) and kept for the next ones
     Box3f transformedB_( NodeId b ) const
     {
-        std::atomic_ref<std::uint8_t> state( bState_[b] );
+        auto & state = bState_[b];
         if ( state.load( std::memory_order_acquire ) == cReady )
             return bBoxes_[b];
-        const auto res = transformedBox( bTree_[b].box, *xf_ );
+        const auto res = transformed( bTree_[b].box, *xf_ );
         // only the thread marking the node first stores the box; the others meanwhile use their own copies
         std::uint8_t expected = cEmpty;
         if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
@@ -98,7 +77,7 @@ private:
     const AffineXf3f * xf_ = nullptr;
     double minGap_ = 0;
     mutable Buffer<Box3f, NodeId> bBoxes_;
-    mutable std::vector<std::uint8_t> bState_;
+    std::unique_ptr<std::atomic<std::uint8_t>[]> bState_;
 };
 
 /// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
@@ -525,7 +504,7 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
     const double minGap = 2 / conv.invRange;
     auto processBoxes = [&rigidB2A, &conv, minGap] ( const Box3f& lBox, const Box3f& rBox )
     {
-        const bool intersect = rigidB2A ? preciseBoxesIntersect( transformedBox( lBox, *rigidB2A ), transformedBox( rBox, *rigidB2A ), conv, minGap )
+        const bool intersect = rigidB2A ? preciseBoxesIntersect( transformed( lBox, *rigidB2A ), transformed( rBox, *rigidB2A ), conv, minGap )
             : preciseBoxesIntersect( lBox, rBox, conv, minGap );
         return intersect ? Processing::Continue : Processing::Stop;
     };

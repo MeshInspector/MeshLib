@@ -2,8 +2,8 @@
 
 #include "MRVector3.h"
 #include "MRId.h"
+#include "MRBitCast.h"
 #include <array>
-#include <bit>
 #include <cstdint>
 #include <optional>
 
@@ -106,7 +106,7 @@ struct ConvertToIntVector
         // the same as (int)std::round( x ), which these compilers turn into a library call:
         // add the largest double below 0.5 with the sign of x, then truncate
         const double x = v * invRange;
-        const double half = std::bit_cast<double>( std::bit_cast<std::uint64_t>( 0.49999999999999994 ) | ( std::bit_cast<std::uint64_t>( x ) & 0x8000000000000000ull ) );
+        const double half = bit_cast<double>( bit_cast<std::uint64_t>( 0.49999999999999994 ) | ( bit_cast<std::uint64_t>( x ) & 0x8000000000000000ull ) );
         return (int)( x + half );
 #else
         return (int)std::round( v * invRange );

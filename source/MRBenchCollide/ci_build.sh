@@ -27,4 +27,4 @@ for v in $VARIANTS; do
   cp -R "$BUILD/bin" "bin-$v"
   { "$PY" source/MRBenchCollide/asm_dump.py "$BUILD/compile_commands.json" source/MRMesh/MRMeshCollidePrecise.cpp "asm/$v.s" || echo "asm dump failed for $v"; } | tee -a asm/counts.txt
 done
-ls -la bin-pr asm
+ls -la asm

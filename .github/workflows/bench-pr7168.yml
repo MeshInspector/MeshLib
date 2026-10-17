@@ -4,19 +4,19 @@ name: Bench scaleOnly rounding
 # built with several compilers and run interleaved on the same runner
 on:
   push:
-    branches: [ bench/round-scaleonly ]
+    branches: [ bench/round-clang ]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
-  BENCH_BINS: --bin master=bin-master --bin branchless=bin-branchless
+  BENCH_BINS: --bin master=bin-master --bin trick=bin-trick
   BENCH_FILTER: ""
 
 jobs:
   linux:
-    name: linux-${{ matrix.arch }}-${{ matrix.compiler }}
+    name: linux-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.replica }}
     timeout-minutes: 240
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
@@ -24,8 +24,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [ x64, arm64 ]
+        arch: [ x64 ]
         compiler: [ gcc, clang ]
+        replica: [ 1, 2 ]
+        exclude:
+          - compiler: gcc
+            replica: 2
     env:
       MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
     steps:
@@ -42,11 +46,11 @@ jobs:
           $CXX --version | head -1 | tee compiler.txt
           source/MRBenchCollide/ci_build.sh
       - name: Bench
-        run: python3 source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 3 --extra-lib-path /usr/local/lib/MeshLib/lib --title "Linux ${{ matrix.arch }}, $(cat compiler.txt)" --out summary-linux-${{ matrix.arch }}-${{ matrix.compiler }}.md -- --filter "$BENCH_FILTER"
+        run: python3 source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 5 --extra-lib-path /usr/local/lib/MeshLib/lib --title "Linux ${{ matrix.arch }}, $(cat compiler.txt)" --out summary-linux-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.replica }}.md -- --filter "$BENCH_FILTER"
       - uses: actions/upload-artifact@v7
         if: ${{ always() }}
         with:
-          name: bench-linux-${{ matrix.arch }}-${{ matrix.compiler }}
+          name: bench-linux-${{ matrix.arch }}-${{ matrix.compiler }}-${{ matrix.replica }}
           path: |
             summary-*.md
             asm/
@@ -59,8 +63,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: arm64
-            runner: macos-15
           - arch: x64
             runner: macos-15-intel
     env:
@@ -86,7 +88,7 @@ jobs:
           $CXX --version | head -1 | tee compiler.txt
           source/MRBenchCollide/ci_build.sh
       - name: Bench
-        run: python3 source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 3 --title "macOS ${{ matrix.arch }} (${{ matrix.runner }}), $(cat compiler.txt)" --out summary-macos-${{ matrix.arch }}.md -- --filter "$BENCH_FILTER"
+        run: python3 source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 5 --title "macOS ${{ matrix.arch }} (${{ matrix.runner }}), $(cat compiler.txt)" --out summary-macos-${{ matrix.arch }}.md -- --filter "$BENCH_FILTER"
       - uses: actions/upload-artifact@v7
         if: ${{ always() }}
         with:
@@ -103,18 +105,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: arm64
-            compiler: msvc
-            runner: windows-11-vs2026-arm
-            triplet: arm64-windows-meshlib
-            vs-dev-args: -arch=arm64 -host_arch=arm64
-          - arch: arm64
-            compiler: clang-cl
-            runner: windows-11-vs2026-arm
-            triplet: arm64-windows-meshlib
-            vs-dev-args: -arch=arm64 -host_arch=arm64
           - arch: x64
-            compiler: msvc
+            compiler: clang-cl
             runner: windows-2025
             triplet: x64-windows-meshlib
             vs-dev-args: -arch=amd64 -host_arch=amd64
@@ -148,7 +140,7 @@ jobs:
           python-version: '3.12'
       - name: Bench
         shell: bash
-        run: python source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 3 --extra-lib-path 'C:\vcpkg\installed\${{ matrix.triplet }}\bin' --title "Windows ${{ matrix.arch }} (${{ matrix.runner }}), $(head -1 compiler.txt | tr -d '\r')" --out summary-windows-${{ matrix.arch }}-${{ matrix.compiler }}.md -- --filter "$BENCH_FILTER"
+        run: python source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 5 --extra-lib-path 'C:\vcpkg\installed\${{ matrix.triplet }}\bin' --title "Windows ${{ matrix.arch }} (${{ matrix.runner }}), $(head -1 compiler.txt | tr -d '\r')" --out summary-windows-${{ matrix.arch }}-${{ matrix.compiler }}.md -- --filter "$BENCH_FILTER"
       - uses: actions/upload-artifact@v7
         if: ${{ always() }}
         with:

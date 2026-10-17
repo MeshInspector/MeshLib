@@ -711,4 +711,4 @@ CoordinateConverters getVectorConverters( const MeshPart& a )
 
 } //namespace MR
 
-extern "C" MRMESH_API const char * mrBenchCollideVariant() { return "branchless"; }
+extern "C" MRMESH_API const char * mrBenchCollideVariant() { return "trick"; }

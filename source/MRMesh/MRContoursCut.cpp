@@ -1037,8 +1037,10 @@ Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const
             sumLength[startPivot] += length;
         }
     }
-    VertId currentId = mesh.topology.lastValidVert() + 1;
-    for ( int i = 0; i < initCutContours.intersections.size(); ++i )
+    // cutMesh added a new vertex per intersection not in a vertex, except the closing duplicate of the first one
+    VertId currentId( mesh.topology.vertSize() );
+    const int numUniqueInters = int( initCutContours.intersections.size() ) - ( initCutContours.closed ? 1 : 0 );
+    for ( int i = 0; i < numUniqueInters; ++i )
     {
         const auto inter = initCutContours.intersections[i];
         VertId interVertId;

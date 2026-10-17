@@ -765,7 +765,6 @@ void SweepLineQueue::triangulate()
 
 void SweepLineQueue::setupStartVertices_()
 {
-    // TODO: optimize, it seems we can avoid bitset allocation here (at least it can be cached)
     auto& startVertices = startVerticesCache_;
     startVertices.clear();
     startVertices.resize( tp_.vertSize() );
@@ -784,7 +783,7 @@ void SweepLineQueue::setupStartVertices_()
             startVertices.set( v );
     } );
     // all vertices are sorted already
-    startVerts_.clear();
+    startVerts_.reserve( startVertices.count() );
     for ( auto v : sortedVerts_ )
         if ( startVertices.test( v ) )
             startVerts_.push_back( v );

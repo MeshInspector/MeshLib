@@ -1,0 +1,188 @@
+#pragma once
+
+#include "MRVector3.h"
+#include "MRId.h"
+#include <array>
+#include <optional>
+
+namespace MR
+{
+
+/// \ingroup MathGroup
+/// \{
+
+/// Precise orientation predicate for the origin against the plane of triangle ABC.
+/// Returns true iff dot( a, cross( b, c ) ) > 0, i.e. (a, b, c) form a right-handed vector triple /
+/// the tetrahedron (origin, a, b, c) has positive signed volume. Geometrically the origin then lies
+/// on the side that the right-hand normal cross( b - a, c - a ) of triangle ABC points away from
+/// (equivalently, seen from the origin A->B->C winds clockwise).
+/// Simulation-of-simplicity resolves the degenerate case dot( a, cross( b, c ) ) == 0 (origin exactly
+/// on plane ABC) deterministically, so the predicate is never "undefined".
+[[nodiscard]] MRMESH_API bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c );
+
+/// Precise orientation predicate for point D against the plane of triangle ABC
+/// (the general case of the 3-argument overload above, which tests the origin instead of D).
+/// Returns true iff dot( a - d, cross( b - d, c - d ) ) > 0, i.e. the tetrahedron (d, a, b, c) has
+/// positive signed volume. Geometrically D then lies on the side that the right-hand normal
+/// cross( b - a, c - a ) of triangle ABC points away from (equivalently, seen from D the vertices
+/// A->B->C wind clockwise). Simulation-of-simplicity resolves the degenerate case (D exactly on
+/// plane ABC) deterministically, so the predicate is never "undefined".
+[[nodiscard]] inline bool orient3d( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+    { return orient3d( a - d, b - d, c - d ); }
+
+struct PreciseVertCoords
+{
+    VertId id;   ///< unique id of the vertex (in both meshes)
+    Vector3i pt; ///< integer coordinates of the vertex
+};
+
+/// Same predicate as orient3d( a, b, c, d ) evaluated on vs[0..3].pt, but first sorts the four
+/// vertices by their id (ascending, flipping the result once per swap). The simulation-of-simplicity
+/// perturbation depends on vertex id, so sorting makes the result depend only on the set of four
+/// vertices and not on the order they are passed in: every call involving the same four vertices
+/// agrees, which keeps orientation decisions consistent mesh-wide.
+[[nodiscard]] MRMESH_API bool orient3d( const PreciseVertCoords* vs );
+[[nodiscard]] inline bool orient3d( const std::array<PreciseVertCoords, 4> & vs )
+    { return orient3d( vs.data() ); }
+
+/// Precise predicate for the rotational order of three half-planes around a directed line.
+/// The line passes via vs[0] and vs[1] and is directed from vs[0] to vs[1]; the three half-planes
+/// are bounded by that line and pass via vs[2], vs[3], vs[4] respectively. Returns true iff the
+/// half-planes follow one another in counter-clockwise order around the line, as seen by the viewer
+/// the line's direction points at. Only the rotation of every point around the line matters, so
+/// cyclic permutations of vs[2], vs[3], vs[4] do not change the result, while a swap of two of them,
+/// as well as a swap of vs[0] and vs[1], inverts it. Implemented via orient3d and inherits its
+/// simulation-of-simplicity, so the predicate is never "undefined" even if some of the points
+/// coincide; all five ids must be distinct.
+[[nodiscard]] MRMESH_API bool ccwAroundLine( const PreciseVertCoords* vs );
+[[nodiscard]] inline bool ccwAroundLine( const std::array<PreciseVertCoords, 5> & vs )
+    { return ccwAroundLine( vs.data() ); }
+
+struct TriangleSegmentIntersectResult
+{
+    bool doIntersect = false;    ///< whether triangle and segment intersect
+    bool dIsLeftFromABC = false; ///< value of orient3d( A, B, C, D ) (see there); "left" means the side the right-hand normal cross( B - A, C - A ) of triangle ABC points away from
+
+    explicit operator bool() const { return doIntersect; }
+};
+
+/// checks whether triangle ABC (vertices 0,1,2) and segment DE (vertices 3,4) intersect.
+/// Simulation-of-simplicity removes the degenerate cases (segment passing exactly through an edge
+/// or vertex of the triangle, or lying in the triangle's plane), so the answer is always a clean yes/no.
+[[nodiscard]] MRMESH_API TriangleSegmentIntersectResult doTriangleSegmentIntersect(
+    const std::array<PreciseVertCoords, 5> & vs );
+
+/// given line segment s (vertices 0,1) and two triangles ta (vertices 2,3,4) and tb (vertices 5,6,7),
+/// each known to be pierced by s, returns the order in which s meets them, using precise predicates.
+/// Here s^t denotes the point where segment s crosses triangle t, and s[0]/s[1] are the segment endpoints.
+/// Walking s from s[0] to s[1]:
+/// true:  order is s[0], s^ta, s^tb, s[1]  (ta met before tb)
+/// false: order is s[0], s^tb, s^ta, s[1]  (tb met before ta)
+/// triangles ta and tb may share at most two vertices; all remaining vertices must be unique
+[[nodiscard]] MRMESH_API bool segmentIntersectionOrder( const std::array<PreciseVertCoords, 8> & vs );
+
+/// given line segment s (vertices 0,1), triangle ta (vertices 2,3,4) known to be pierced by s,
+/// and infinite plane pb passing via vertices 5,6,7,
+/// returns the order in which the line of s meets ta and pb, using precise predicates.
+/// Here s^ta is the point where s crosses ta, and s^pb is the point where the line of s crosses pb.
+/// Walking the line in the direction from s[0] to s[1]:
+/// true:  s^ta is met before s^pb  (order is s[0], s^ta, s^pb)
+/// false: s^pb is met before s^ta  (order is s^pb, s^ta, s[1])
+/// ta and pb may share at most two vertices; all remaining vertices must be unique
+[[nodiscard]] MRMESH_API bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & vs );
+
+/// translate then scale float-to-int coordinate converter
+struct ConvertToIntVector
+{
+    Vector3d center;
+    double invRange = 1;
+
+    /// applies scaling only (without translation) with the following rounding to the nearest int
+    [[nodiscard]] int scaleOnly( double v ) const
+    {
+        // the same as (int)std::round( v * invRange ), which MSVC compiles into a library call
+        const double x = v * invRange;
+        int i = (int)x; // toward zero
+        const double frac = x - i; // exact
+        if ( frac >= 0.5 )
+            ++i;
+        else if ( frac <= -0.5 )
+            --i;
+        return i;
+    }
+
+    /// double-to-int coordinates converter
+    [[nodiscard]] Vector3i operator()( const Vector3d& p ) const
+    {
+        const auto d = p - center;
+        return { scaleOnly( d.x ), scaleOnly( d.y ), scaleOnly( d.z ) };
+    }
+
+    /// float-to-int coordinates converter
+    [[nodiscard]] Vector3i operator()( const Vector3f& p ) const
+    {
+        return operator()( Vector3d{ p } );
+    }
+};
+
+/// scale then translate int-to-float coordinate converter
+struct ConvertToFloatVector
+{
+    double range = 1;
+    Vector3d center;
+
+    /// int-to-double coordinates converter
+    [[nodiscard]] Vector3d convert( const Vector3i& v ) const
+    {
+        return Vector3d{ v } * range + center;
+    }
+
+    /// int-to-float coordinates converter
+    [[nodiscard]] Vector3f operator()( const Vector3i& v ) const
+    {
+        return Vector3f( convert( v ) );
+    }
+};
+
+/// this struct contains coordinate converters float-int-float
+struct CoordinateConverters
+{
+    ConvertToIntVector toInt;
+    ConvertToFloatVector toFloat;
+};
+
+/// creates converter from Vector3f to Vector3i in Box range (int diapason is mapped to box range)
+[[nodiscard]] MRMESH_API ConvertToIntVector getToIntConverter( const Box3d& box );
+/// creates converter from Vector3i to Vector3f in Box range (int diapason is mapped to box range)
+[[nodiscard]] MRMESH_API ConvertToFloatVector getToFloatConverter( const Box3d& box );
+
+/// converts given points into integer coordinates in parallel
+/// \param valid if given then only valid points are converted, and the content of other elements in the returned vector is undefined
+[[nodiscard]] MRMESH_API Vector<Vector3i, VertId> computeIntCoords( const ConvertToIntVector& conv,
+    const VertCoords& points, const VertBitSet* valid = nullptr );
+
+/// converts given integer coordinates into float points in parallel
+/// \param valid if given then only valid coordinates are converted, and the content of other elements in the returned vector is undefined
+[[nodiscard]] MRMESH_API VertCoords computeFloatCoords( const ConvertToFloatVector& conv,
+    const Vector<Vector3i, VertId>& intCoords, const VertBitSet* valid = nullptr );
+
+/// given two line segments AB and CD located in one plane,
+/// finds whether they intersect and if yes, computes their common point using integer-only arithmetic
+[[nodiscard]] MRMESH_API std::optional<Vector3i> findTwoSegmentsIntersection( const Vector3i& ai, const Vector3i& bi, const Vector3i& ci, const Vector3i& di );
+
+/// finds intersection precise, using high precision int inside
+/// this function input should have intersection
+[[nodiscard]] MRMESH_API Vector3f findTriangleSegmentIntersectionPrecise( 
+    const Vector3f& a, const Vector3f& b, const Vector3f& c,
+    const Vector3f& d, const Vector3f& e, 
+    CoordinateConverters converters );
+
+/// the same as findTriangleSegmentIntersectionPrecise, but takes and returns integer coordinates;
+/// returns std::nullopt in the rare case when segment DE lies in the plane of triangle ABC without crossing its sides
+[[nodiscard]] MRMESH_API std::optional<Vector3i> findTriangleSegmentIntersectionPreciseInt(
+    const Vector3i& ai, const Vector3i& bi, const Vector3i& ci,
+    const Vector3i& di, const Vector3i& ei );
+
+/// \}
+
+}

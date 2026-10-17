@@ -7,7 +7,9 @@
 #include "MRParallelFor.h"
 #include "MRProcessSelfTreeSubtasks.h"
 #include "MRRingIterator.h"
+#include "MRBuffer.h"
 #include <array>
+#include <atomic>
 
 namespace MR
 {
@@ -15,38 +17,72 @@ namespace MR
 namespace
 {
 
-/// the int boxes of all nodes of the tree after the transformation xf (if given), which are used for consistency with precise intersections
-Vector<Box3i, NodeId> getPreciseBoxes( const AABBTree & tree, const ConvertToIntVector & conv, const AffineXf3f * xf )
+/// whether the int boxes of two float boxes intersect (int boxes are used for consistency with precise intersections), given minGap = 2 / conv.invRange:
+/// the conversion is monotone, so the int boxes intersect if the float boxes do, and do not if the float boxes are at least two int units apart;
+/// only the boxes in between are converted
+bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToIntVector & conv, double minGap )
 {
-    Vector<Box3i, NodeId> res;
-    res.resizeNoInit( tree.nodes().size() );
-    ParallelFor( res, [&]( NodeId i )
-    {
-        const auto box = transformed( tree[i].box, xf );
-        res[i] = Box3i{ conv( box.min ), conv( box.max ) };
-    } );
-    return res;
+    // all comparisons as <=, which fail on NaN
+    if ( a.min.x <= b.max.x && b.min.x <= a.max.x
+      && a.min.y <= b.max.y && b.min.y <= a.max.y
+      && a.min.z <= b.max.z && b.min.z <= a.max.z )
+        return true;
+    for ( int i = 0; i < 3; ++i )
+        if ( double( a.min[i] ) - b.max[i] >= minGap || double( b.min[i] ) - a.max[i] >= minGap )
+            return false;
+    return Box3i{ conv( a.min ), conv( a.max ) }.intersects( Box3i{ conv( b.min ), conv( b.max ) } );
 }
 
-/// the same int boxes, computed on demand: for a big tree with few visited nodes
-struct LazyPreciseBoxes
+/// decides by preciseBoxesIntersect whether a node of tree A and a node of tree B after the transformation xf (if given) intersect
+class PreciseBoxesIntersection
 {
-    const AABBTree & tree;
-    const ConvertToIntVector & conv;
-    const AffineXf3f * xf = nullptr;
-
-    Box3i operator[]( NodeId n ) const
+public:
+    PreciseBoxesIntersection( const AABBTree & aTree, const AABBTree & bTree, const ConvertToIntVector & conv, const AffineXf3f * xf )
+        : aTree_( aTree ), bTree_( bTree ), conv_( conv ), xf_( xf ), minGap_( 2 / conv.invRange )
     {
-        const auto box = transformed( tree[n].box, xf );
-        return { conv( box.min ), conv( box.max ) };
+        if ( xf )
+        {
+            bBoxes_.resize( bTree.nodes().size() );
+            bState_ = std::make_unique<std::atomic<std::uint8_t>[]>( bTree.nodes().size() );
+        }
     }
+
+    bool operator()( NodeId a, NodeId b ) const
+    {
+        return preciseBoxesIntersect( aTree_[a].box, xf_ ? transformedB_( b ) : bTree_[b].box, conv_, minGap_ );
+    }
+
+private:
+    /// the box of node b after the transformation, computed on the first request (from any thread) and kept for the next ones
+    Box3f transformedB_( NodeId b ) const
+    {
+        auto & state = bState_[b];
+        if ( state.load( std::memory_order_acquire ) == cReady )
+            return bBoxes_[b];
+        const auto res = transformed( bTree_[b].box, *xf_ );
+        // only the thread marking the node first stores the box; the others meanwhile use their own copies
+        std::uint8_t expected = cEmpty;
+        if ( state.compare_exchange_strong( expected, cWriting, std::memory_order_relaxed ) )
+        {
+            bBoxes_[b] = res;
+            state.store( cReady, std::memory_order_release );
+        }
+        return res;
+    }
+
+    static constexpr std::uint8_t cEmpty = 0, cWriting = 1, cReady = 2;
+    const AABBTree & aTree_;
+    const AABBTree & bTree_;
+    const ConvertToIntVector & conv_;
+    const AffineXf3f * xf_ = nullptr;
+    double minGap_ = 0;
+    mutable Buffer<Box3f, NodeId> bBoxes_;
+    std::unique_ptr<std::atomic<std::uint8_t>[]> bState_;
 };
 
-/// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts,
-/// and the int boxes of their nodes (getPreciseBoxes or LazyPreciseBoxes)
-template <typename ABoxes, typename BBoxes>
-PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTree & aTree, const ABoxes & aPreciseBoxes,
-    const MeshPart & b, const AABBTree & bTree, const BBoxes & bPreciseBoxes,
+/// finds all pairs of colliding edges and triangles of two mesh parts, given the AABB trees with (at least) all triangles of the parts
+PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const AABBTree & aTree,
+    const MeshPart & b, const AABBTree & bTree, const PreciseBoxesIntersection & boxesIntersect,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A, bool anyIntersection )
 {
     PreciseCollisionResult res;
@@ -71,9 +107,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
             const auto s = subtasks.back();
             subtasks.pop_back();
 
-            const Box3i& aBox = aPreciseBoxes[s.aNode];
-            const Box3i& bBox = bPreciseBoxes[s.bNode];
-            if ( !aBox.intersects( bBox ) )
+            if ( !boxesIntersect( s.aNode, s.bNode ) )
                 continue;
 
             const auto & aNode = aTree[s.aNode];
@@ -226,9 +260,7 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const A
             const auto s = mySubtasks.back();
             mySubtasks.pop_back();
 
-            const Box3i& aBox = aPreciseBoxes[s.aNode];
-            const Box3i& bBox = bPreciseBoxes[s.bNode];
-            if ( !aBox.intersects( bBox ) )
+            if ( !boxesIntersect( s.aNode, s.bNode ) )
                 continue;
 
             const auto & aNode = aTree[s.aNode];
@@ -289,12 +321,8 @@ PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const M
     MR_TIMER;
     const AABBTree & aTree = a.mesh.getAABBTree();
     const AABBTree & bTree = b.mesh.getAABBTree();
-    // parallel prepare of int boxes that will be used for consistency with precise intersections
-    Timer t( "1 precise boxes" );
-    const auto aPreciseBoxes = getPreciseBoxes( aTree, conv, nullptr );
-    const auto bPreciseBoxes = getPreciseBoxes( bTree, conv, rigidB2A );
-    t.finish();
-    return findCollidingEdgeTrisPrecise( a, aTree, aPreciseBoxes, b, bTree, bPreciseBoxes, conv, rigidB2A, anyIntersection );
+    const PreciseBoxesIntersection boxesIntersect( aTree, bTree, conv, rigidB2A );
+    return findCollidingEdgeTrisPrecise( a, aTree, b, bTree, boxesIntersect, conv, rigidB2A, anyIntersection );
 }
 
 std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
@@ -451,15 +479,13 @@ void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
         } );
 
         // and find them again: the intersections of these triangles and their edges with the whole other mesh,
-        // the same as findCollidingEdgeTrisPrecise( MeshPart{ mesh, &tris }, other ) finds, but with the tree of these triangles only,
-        // and with the int boxes of the other tree computed only for its visited nodes
+        // the same as findCollidingEdgeTrisPrecise( MeshPart{ mesh, &tris }, other ) finds, but with the tree of these triangles only
         const MeshPart part{ mesh, &tris };
         const AABBTree trisTree( part );
-        const auto trisBoxes = getPreciseBoxes( trisTree, conv, inA ? nullptr : rigidB2A );
         const auto & otherTree = ( inA ? b : a ).getAABBTree();
-        const LazyPreciseBoxes otherBoxes{ otherTree, conv, inA ? rigidB2A : nullptr };
-        const auto found = inA ? findCollidingEdgeTrisPrecise( part, trisTree, trisBoxes, b, otherTree, otherBoxes, conv, rigidB2A, false )
-            : findCollidingEdgeTrisPrecise( a, otherTree, otherBoxes, part, trisTree, trisBoxes, conv, rigidB2A, false );
+        const PreciseBoxesIntersection boxesIntersect( inA ? trisTree : otherTree, inA ? otherTree : trisTree, conv, rigidB2A );
+        const auto found = inA ? findCollidingEdgeTrisPrecise( part, trisTree, b, otherTree, boxesIntersect, conv, rigidB2A, false )
+            : findCollidingEdgeTrisPrecise( a, otherTree, part, trisTree, boxesIntersect, conv, rigidB2A, false );
         res.insert( res.end(), found.begin(), found.end() );
     }
 }
@@ -475,13 +501,19 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
     if ( tree.nodes().empty() )
         return res;
 
-    auto processBoxes = [&rigidB2A,&conv] ( const Box3f& lBox, const Box3f& rBox )
+    // the traversal visits every node, and each many times, so the boxes after the transformation are computed once in advance
+    Vector<Box3f, NodeId> xfBoxes;
+    if ( rigidB2A )
     {
-        auto transformedLBox = transformed( lBox, rigidB2A );
-        auto transformedRBox = transformed( rBox, rigidB2A );
-        Box3i liBox{ conv( transformedLBox.min ),conv( transformedLBox.max ) };
-        Box3i riBox{ conv( transformedRBox.min ),conv( transformedRBox.max ) };
-        return liBox.intersects( riBox ) ? Processing::Continue : Processing::Stop;
+        xfBoxes.resizeNoInit( tree.nodes().size() );
+        ParallelFor( xfBoxes, [&]( NodeId i ) { xfBoxes[i] = transformed( tree[i].box, *rigidB2A ); } );
+    }
+    const double minGap = 2 / conv.invRange;
+    auto processBoxes = [&] ( const NodeNode & s )
+    {
+        const Box3f & aBox = rigidB2A ? xfBoxes[s.aNode] : tree[s.aNode].box;
+        const Box3f & bBox = rigidB2A ? xfBoxes[s.bNode] : tree[s.bNode].box;
+        return preciseBoxesIntersect( aBox, bBox, conv, minGap ) ? Processing::Continue : Processing::Stop;
     };
 
     // sequentially subdivide full task on smaller subtasks;

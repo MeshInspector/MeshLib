@@ -1,18 +1,18 @@
-name: Bench PR 7168 compilers
+name: Bench scaleOnly rounding
 
 # temporary benchmark branch: master before #7168 vs #7168 vs #7168 with the exact path out of line,
 # built with several compilers and run interleaved on the same runner
 on:
   push:
-    branches: [ bench/pr7168-compilers ]
+    branches: [ bench/round-scaleonly ]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 env:
-  BENCH_BINS: --bin master=bin-master --bin pr=bin-pr --bin pr-split=bin-pr-split
-  BENCH_FILTER: self/,selfBoolean,mic-spheres
+  BENCH_BINS: --bin master=bin-master --bin round=bin-round
+  BENCH_FILTER: ""
 
 jobs:
   linux:

@@ -242,6 +242,7 @@ endif()
 # MRMesh library is always built
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRPch ./MRPch)
 add_subdirectory(${PROJECT_SOURCE_DIR}/MRMesh ./MRMesh)
+add_subdirectory(${PROJECT_SOURCE_DIR}/MRBenchCollide ./MRBenchCollide)
 
 IF(MESHLIB_BUILD_EXTRA_IO_FORMATS)
   add_subdirectory(${PROJECT_SOURCE_DIR}/MRIOExtras ./MRIOExtras)

@@ -1,0 +1,155 @@
+name: Bench PR 7168 compilers
+
+# temporary benchmark branch: master before #7168 vs #7168 vs #7168 with a relaxed cache-state load (diagnostic),
+# built with several compilers and run interleaved on the same runner
+on:
+  push:
+    branches: [ bench/pr7168-compilers ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  BENCH_BINS: --bin master=bin-master --bin pr=bin-pr --bin pr-relaxed=bin-pr-relaxed
+  BENCH_FILTER: self/,selfBoolean,mic-spheres
+
+jobs:
+  linux:
+    name: linux-${{ matrix.arch }}-${{ matrix.compiler }}
+    timeout-minutes: 240
+    runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
+    container:
+      image: ghcr.io/meshinspector/meshlib-ubuntu24${{ matrix.arch == 'arm64' && '-arm64' || '' }}:latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ x64, arm64 ]
+        compiler: [ gcc, clang ]
+    env:
+      MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build
+        run: |
+          if [ "${{ matrix.compiler }}" = gcc ]; then
+            export CC=/usr/bin/gcc-13 CXX=/usr/bin/g++-13
+          elif [ -n "${LLVM_PREFIX:-}" ]; then
+            export CC=$LLVM_PREFIX/bin/clang CXX=$LLVM_PREFIX/bin/clang++
+          else
+            export CC=clang CXX=clang++
+          fi
+          $CXX --version | head -1 | tee compiler.txt
+          source/MRBenchCollide/ci_build.sh
+      - name: Bench
+        run: python3 source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 3 --extra-lib-path /usr/local/lib/MeshLib/lib --title "Linux ${{ matrix.arch }}, $(cat compiler.txt)" --out summary-linux-${{ matrix.arch }}-${{ matrix.compiler }}.md -- --filter "$BENCH_FILTER"
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: bench-linux-${{ matrix.arch }}-${{ matrix.compiler }}
+          path: |
+            summary-*.md
+            asm/
+
+  macos:
+    name: macos-${{ matrix.arch }}
+    timeout-minutes: 240
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            runner: macos-15
+          - arch: x64
+            runner: macos-15-intel
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+    steps:
+      - name: Disable Spotlight indexing
+        continue-on-error: true
+        run: sudo mdutil -a -i off
+      - uses: actions/checkout@v7
+      - name: Checkout third-party submodules
+        run: bash scripts/retry.sh --timeout 300 -- scripts/clone_submodules_macos.sh
+      - name: Install thirdparty libs
+        uses: ./.github/actions/install-macos-thirdparty
+        with:
+          cache-instance: ${{ matrix.runner }}
+          cache-compiler: AppleClang
+      - name: Build
+        env:
+          MESHLIB_THIRDPARTY_ROOT_DIR: ${{ github.workspace }}
+          CC: /usr/bin/clang
+          CXX: /usr/bin/clang++
+        run: |
+          $CXX --version | head -1 | tee compiler.txt
+          source/MRBenchCollide/ci_build.sh
+      - name: Bench
+        run: python3 source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 3 --title "macOS ${{ matrix.arch }} (${{ matrix.runner }}), $(cat compiler.txt)" --out summary-macos-${{ matrix.arch }}.md -- --filter "$BENCH_FILTER"
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: bench-macos-${{ matrix.arch }}
+          path: |
+            summary-*.md
+            asm/
+
+  windows:
+    name: windows-${{ matrix.arch }}-${{ matrix.compiler }}
+    timeout-minutes: 240
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: arm64
+            compiler: msvc
+            runner: windows-11-vs2026-arm
+            triplet: arm64-windows-meshlib
+            vs-dev-args: -arch=arm64 -host_arch=arm64
+          - arch: arm64
+            compiler: clang-cl
+            runner: windows-11-vs2026-arm
+            triplet: arm64-windows-meshlib
+            vs-dev-args: -arch=arm64 -host_arch=arm64
+          - arch: x64
+            compiler: msvc
+            runner: windows-2025
+            triplet: x64-windows-meshlib
+            vs-dev-args: -arch=amd64 -host_arch=amd64
+    steps:
+      - uses: actions/checkout@v7
+      - name: Locate Visual Studio
+        uses: ./.github/actions/locate-visual-studio
+      - name: Set up vcpkg
+        uses: ./.github/actions/setup-vcpkg-windows
+        with:
+          vcpkg-version: '2026.07.29'
+          vcpkg-triplet: ${{ matrix.triplet }}
+      - name: Build
+        shell: cmd
+        run: |
+          call "%VC_PATH%\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=14.5 || exit /b 1
+          set COMPILER_ARGS=
+          if "${{ matrix.compiler }}"=="clang-cl" (
+            where clang-cl
+            if errorlevel 1 set "PATH=C:\Program Files\LLVM\bin;%PATH%"
+            set "COMPILER_ARGS=-D CMAKE_CXX_COMPILER=clang-cl -D CMAKE_C_COMPILER=clang-cl"
+          )
+          if "${{ matrix.compiler }}"=="clang-cl" (clang-cl --version > compiler.txt) else (cl 2> compiler.txt)
+          type compiler.txt
+          "C:\Program Files\Git\bin\bash.exe" source/MRBenchCollide/ci_build.sh -D VCPKG_ROOT=C:/vcpkg -D VCPKG_TARGET_TRIPLET=${{ matrix.triplet }} %COMPILER_ARGS% || exit /b 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Bench
+        shell: bash
+        run: python source/MRBenchCollide/run_bench.py $BENCH_BINS --rounds 3 --extra-lib-path 'C:\vcpkg\installed\${{ matrix.triplet }}\bin' --title "Windows ${{ matrix.arch }} (${{ matrix.runner }}), $(head -1 compiler.txt | tr -d '\r')" --out summary-windows-${{ matrix.arch }}-${{ matrix.compiler }}.md -- --filter "$BENCH_FILTER"
+      - uses: actions/upload-artifact@v7
+        if: ${{ always() }}
+        with:
+          name: bench-windows-${{ matrix.arch }}-${{ matrix.compiler }}
+          path: |
+            summary-*.md
+            asm/

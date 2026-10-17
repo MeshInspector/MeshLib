@@ -17,11 +17,11 @@ namespace MR
 /// <param name="subtasks">initial tasks to process</param>
 /// <param name="nextSubtasks">subtasks to process next, could be same as `subtasks`</param>
 /// <param name="processLeaf">function that is called for two different leafs</param>
-/// <param name="processNodes">function that determines how to process boxes</param>
+/// <param name="processNodes">function that determines how to process two different nodes (e.g. whether their boxes intersect)</param>
 MR_BIND_IGNORE void processSelfSubtasks( const AABBTree& tree,
     std::vector<NodeNode>& subtasks,
     std::vector<NodeNode>& nextSubtasks, ///< may be same as subtasks
     std::function<Processing( const NodeNode& )> processLeaf,
-    std::function<Processing( const Box3f& lBox, const Box3f& rBox )> processNodes );
+    std::function<Processing( const NodeNode& )> processNodes );
 
 }

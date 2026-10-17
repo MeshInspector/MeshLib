@@ -501,12 +501,19 @@ std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart& mp, Conve
     if ( tree.nodes().empty() )
         return res;
 
-    const double minGap = 2 / conv.invRange;
-    auto processBoxes = [&rigidB2A, &conv, minGap] ( const Box3f& lBox, const Box3f& rBox )
+    // the traversal visits every node, and each many times, so the boxes after the transformation are computed once in advance
+    Vector<Box3f, NodeId> xfBoxes;
+    if ( rigidB2A )
     {
-        const bool intersect = rigidB2A ? preciseBoxesIntersect( transformed( lBox, *rigidB2A ), transformed( rBox, *rigidB2A ), conv, minGap )
-            : preciseBoxesIntersect( lBox, rBox, conv, minGap );
-        return intersect ? Processing::Continue : Processing::Stop;
+        xfBoxes.resizeNoInit( tree.nodes().size() );
+        ParallelFor( xfBoxes, [&]( NodeId i ) { xfBoxes[i] = transformed( tree[i].box, *rigidB2A ); } );
+    }
+    const double minGap = 2 / conv.invRange;
+    auto processBoxes = [&] ( const NodeNode & s )
+    {
+        const Box3f & aBox = rigidB2A ? xfBoxes[s.aNode] : tree[s.aNode].box;
+        const Box3f & bBox = rigidB2A ? xfBoxes[s.bNode] : tree[s.bNode].box;
+        return preciseBoxesIntersect( aBox, bBox, conv, minGap ) ? Processing::Continue : Processing::Stop;
     };
 
     // sequentially subdivide full task on smaller subtasks;

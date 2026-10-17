@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <climits>
+#include <cmath>
 
 namespace MR
 {
@@ -1325,6 +1326,26 @@ TEST( MRMesh, getToIntConverter )
     EXPECT_LE( -i0.z, INT_MAX / 2 );
     EXPECT_LE(  i1.z, INT_MAX / 2 );
     EXPECT_GT( i1.z - i0.z, 0 );
+}
+
+TEST( MRMesh, ConvertToIntVectorRounding )
+{
+    const ConvertToIntVector conv; // invRange = 1
+    auto check = [&]( double x )
+    {
+        EXPECT_EQ( conv.scaleOnly( x ), (int)std::round( x ) ) << x;
+    };
+    for ( int i = -1000; i <= 1000; ++i )
+    {
+        for ( double x : { i + 0.5, double( i ) } )
+        {
+            check( x );
+            check( std::nextafter( x, 1e300 ) );
+            check( std::nextafter( x, -1e300 ) );
+        }
+    }
+    for ( double x : { 0.49999999999999994, -0.49999999999999994, 1e-320, -0.0, 1073741823.5, -1073741823.5, 2147483646.5, -2147483647.5 } )
+        check( x );
 }
 
 } //namespace MR

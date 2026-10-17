@@ -8,6 +8,7 @@ import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 
 import meshlib.mr.BooleanOperation;
+import meshlib.mr.BooleanParameters;
 import meshlib.mr.BooleanResult;
 import meshlib.mr.FaceBitSet;
 import meshlib.mr.FaceId;

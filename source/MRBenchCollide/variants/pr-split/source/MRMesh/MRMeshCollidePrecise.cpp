@@ -20,7 +20,18 @@ namespace
 /// whether the int boxes of two float boxes intersect (int boxes are used for consistency with precise intersections), given minGap = 2 / conv.invRange:
 /// the conversion is monotone, so the int boxes intersect if the float boxes do, and do not if the float boxes are at least two int units apart;
 /// only the boxes in between are converted
-bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToIntVector & conv, double minGap )
+/// the rare exact case, kept out of line so that the fast path of preciseBoxesIntersect needs no calls and no saved registers
+#if defined( _MSC_VER ) && !defined( __clang__ )
+__declspec( noinline )
+#else
+__attribute__(( noinline ))
+#endif
+bool intBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToIntVector & conv )
+{
+    return Box3i{ conv( a.min ), conv( a.max ) }.intersects( Box3i{ conv( b.min ), conv( b.max ) } );
+}
+
+inline bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToIntVector & conv, double minGap )
 {
     // all comparisons as <=, which fail on NaN
     if ( a.min.x <= b.max.x && b.min.x <= a.max.x
@@ -30,7 +41,7 @@ bool preciseBoxesIntersect( const Box3f & a, const Box3f & b, const ConvertToInt
     for ( int i = 0; i < 3; ++i )
         if ( double( a.min[i] ) - b.max[i] >= minGap || double( b.min[i] ) - a.max[i] >= minGap )
             return false;
-    return Box3i{ conv( a.min ), conv( a.max ) }.intersects( Box3i{ conv( b.min ), conv( b.max ) } );
+    return intBoxesIntersect( a, b, conv );
 }
 
 /// decides by preciseBoxesIntersect whether a node of tree A and a node of tree B after the transformation xf (if given) intersect
@@ -57,7 +68,7 @@ private:
     Box3f transformedB_( NodeId b ) const
     {
         auto & state = bState_[b];
-        if ( state.load( std::memory_order_relaxed ) == cReady )
+        if ( state.load( std::memory_order_acquire ) == cReady )
             return bBoxes_[b];
         const auto res = transformed( bTree_[b].box, *xf_ );
         // only the thread marking the node first stores the box; the others meanwhile use their own copies
@@ -711,4 +722,4 @@ CoordinateConverters getVectorConverters( const MeshPart& a )
 
 } //namespace MR
 
-extern "C" MRMESH_API const char * mrBenchCollideVariant() { return "pr-relaxed"; }
+extern "C" MRMESH_API const char * mrBenchCollideVariant() { return "pr-split"; }

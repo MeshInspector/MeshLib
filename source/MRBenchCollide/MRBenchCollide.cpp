@@ -417,6 +417,7 @@ int main( int argc, char ** argv )
             collideNoXf( "collide/" + name + "-noxf/single", 1 );
         }
         std::vector<double> times( n );
+        std::vector<std::uint64_t> poseHashes( n );
         std::uint64_t h = 0;
         for ( int i = 0; i < n; ++i )
         {
@@ -426,8 +427,13 @@ int main( int argc, char ** argv )
             const auto t0 = nowMs();
             const auto res = boolean( sphere, sphere, BooleanOperation::DifferenceAB, params );
             times[i] = nowMs() - t0;
-            h = mix( h, hashBoolean( res ) );
+            poseHashes[i] = hashBoolean( res );
+            h = mix( h, poseHashes[i] );
         }
+        std::printf( "Q boolean/%s/DifferenceAB", name.c_str() );
+        for ( auto ph : poseHashes )
+            std::printf( " %016llx", (unsigned long long)ph );
+        std::printf( "\n" );
         std::printf( "P boolean/%s/DifferenceAB", name.c_str() );
         for ( auto t : times )
             std::printf( " %.4f", t );

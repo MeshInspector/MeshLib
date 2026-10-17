@@ -4,10 +4,11 @@
 # extra arguments go to cmake configure
 set -euo pipefail
 BUILD=build/bench
-VARIANTS=${VARIANTS:-master pr pr-relaxed}
+VARIANTS=${VARIANTS:-master pr pr-split}
 NPROC=${NUMBER_OF_PROCESSORS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || sysctl -n hw.logicalcpu)}
 PY=; for c in python3 python; do if "$c" -c "" >/dev/null 2>&1; then PY=$c; break; fi; done
 OPTS=()
+if [ -n "${EXTRA_CMAKE_RELEASE_FLAGS:-}" ]; then OPTS+=(-D "CMAKE_CXX_FLAGS_RELEASE=${EXTRA_CMAKE_RELEASE_FLAGS}"); fi
 if command -v ninja >/dev/null 2>&1 ; then OPTS+=(-G Ninja); fi
 if [ -n "${MESHLIB_THIRDPARTY_ROOT_DIR:-}" ] && [ -d "${MESHLIB_THIRDPARTY_ROOT_DIR}" ]; then
   OPTS+=(-D "CMAKE_PREFIX_PATH=${MESHLIB_THIRDPARTY_ROOT_DIR}" -D "MESHLIB_THIRDPARTY_ROOT_DIR=${MESHLIB_THIRDPARTY_ROOT_DIR}")

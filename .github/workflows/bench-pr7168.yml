@@ -1,6 +1,6 @@
 name: Bench PR 7168 compilers
 
-# temporary benchmark branch: master before #7168 vs #7168 vs #7168 with a relaxed cache-state load (diagnostic),
+# temporary benchmark branch: master before #7168 vs #7168 vs #7168 with the exact path out of line,
 # built with several compilers and run interleaved on the same runner
 on:
   push:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  BENCH_BINS: --bin master=bin-master --bin pr=bin-pr --bin pr-relaxed=bin-pr-relaxed
+  BENCH_BINS: --bin master=bin-master --bin pr=bin-pr --bin pr-split=bin-pr-split
   BENCH_FILTER: self/,selfBoolean,mic-spheres
 
 jobs:
@@ -129,6 +129,9 @@ jobs:
           vcpkg-triplet: ${{ matrix.triplet }}
       - name: Build
         shell: cmd
+        env:
+          # MeshLib's /Wall means -Weverything to clang-cl
+          EXTRA_CMAKE_RELEASE_FLAGS: ${{ matrix.compiler == 'clang-cl' && '/O2 /Ob2 /DNDEBUG -w' || '' }}
         run: |
           call "%VC_PATH%\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=14.5 || exit /b 1
           set COMPILER_ARGS=

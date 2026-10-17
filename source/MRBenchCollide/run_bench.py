@@ -50,6 +50,8 @@ def parse(out, res):
             res.setdefault('H', {}).setdefault(parts[1], set()).add(parts[2])
         elif parts[0] == 'P':
             res.setdefault('P', {}).setdefault(parts[1], []).append([float(x) for x in parts[2:]])
+        elif parts[0] == 'Q':
+            res.setdefault('Q', {}).setdefault(parts[1], []).append(parts[2:])
         elif parts[0] == 'W':
             res.setdefault('W', []).append(line)
 
@@ -88,6 +90,15 @@ def main():
     for n in names:
         for w in res[n].get('W', []):
             lines.append(f'- {n}: {w}')
+    # per-pose hashes: which poses give different results between rounds or builds
+    for k in res[base].get('Q', {}):
+        runs = [(n, r, hs) for n in names for r, hs in enumerate(res[n].get('Q', {}).get(k, []))]
+        bad = [i for i in range(len(runs[0][2])) if len({hs[i] for _, _, hs in runs}) > 1]
+        lines.append(f'- {k}: {len(bad)} of {len(runs[0][2])} poses differ between runs')
+        for i in bad[:20]:
+            per = {n: sorted({hs[i][-6:] for m, _, hs in runs if m == n}) for n in names}
+            lines.append(f'  - pose {i}: ' + '; '.join(f'{n}: {",".join(v)}' for n, v in per.items()))
+    mism = [k for k in mism if k not in nondet]
     lines.append('')
 
     lines += ['| case | ' + ' | '.join(f'{n}, ms' for n in names) + ' |', '|---' * (len(names) + 1) + '|']

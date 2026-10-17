@@ -5,7 +5,7 @@ import json, os, re, shlex, subprocess, sys
 db, src, out = sys.argv[1], sys.argv[2], os.path.abspath(sys.argv[3])
 entry = next(e for e in json.load(open(db)) if os.path.normcase(os.path.abspath(e['file'])).endswith(os.path.normcase(os.path.normpath(src))))
 args = entry.get('arguments') or shlex.split(entry['command'], posix=(os.name != 'nt'))
-msvc = any(os.path.basename(args[0]).lower().startswith(n) for n in ('cl', 'clang-cl'))
+msvc = os.path.basename(args[0]).lower().strip('"') in ('cl', 'cl.exe', 'clang-cl', 'clang-cl.exe')
 res = []
 skip = False
 for a in args:

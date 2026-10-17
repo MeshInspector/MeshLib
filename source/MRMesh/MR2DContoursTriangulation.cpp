@@ -16,11 +16,15 @@
 #include "MRBox.h"
 #include "MR2to3.h"
 #include "MRBitSetParallelFor.h"
+#include "MRParallelFor.h"
+#include "MRTimer.h"
+#include "MRphmap.h"
 #include "MRPrecisePredicates2.h"
 #include "MRPrecisePredicates3.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 #include <algorithm>
+#include <array>
 #include <limits>
 #include <memory>
 #include <tuple>
@@ -296,6 +300,10 @@ struct SweepLineParams
     /// otherwise aborts
     bool abortWhenIntersect{ false };
 
+    /// if set together with abortWhenIntersect, does not abort on an intersection of two edges
+    /// that the input loops take both ways
+    bool allowInnerIntersections{ false };
+
     WindingMode windingMode{ WindingMode::NonZero };
 
     /// if set do not do real triangulation, just marks inside faces as present
@@ -381,6 +389,9 @@ private:
                 return winding < 0;
             return false;
         }
+        // whether the input loops take the edge both ways, so it has the same winding number on both sides;
+        // initMeshByLoops_ accumulates both traversals in its modifier, and leaves an edge taken once without any
+        bool takenBothWays() const { return windingModifier == 0; }
 
         EdgeWindingInfo() {} // Make `Vector` notice register the default constructor. :/
     };
@@ -435,6 +446,8 @@ private:
 
     void invalidateIntersection_( int indexLower );
     bool isIntersectionValid_( int indexLower );
+    // whether abortWhenIntersect lets the intersection event of edge indexLower through, see allowInnerIntersections
+    bool isAllowedIntersection_( int indexLower );
 
     int findStartIndex_();
     void updateStartRightGoingCache_();
@@ -595,7 +608,7 @@ bool SweepLineQueue::findIntersections()
             processDestenationEvent_( event.index );
         else if ( event.type == EventType::Intersection )
         {
-            if ( params_.abortWhenIntersect )
+            if ( params_.abortWhenIntersect && !isAllowedIntersection_( event.index ) )
                 return false;
             processIntersectionEvent_( event.index );
         }
@@ -876,6 +889,16 @@ bool SweepLineQueue::isIntersectionValid_( int indexLower )
     if ( !activeSweepEdges_[indexLower].upperInfo.interVertId )
         return false;
     return activeSweepEdges_[indexLower].upperInfo.interVertId == activeSweepEdges_[indexLower + 1].lowerInfo.interVertId;
+}
+
+bool SweepLineQueue::isAllowedIntersection_( int indexLower )
+{
+    if ( !params_.allowInnerIntersections )
+        return false;
+    if ( !isIntersectionValid_( indexLower ) )
+        return true; // a stale event, which processIntersectionEvent_ skips
+    return windingInfo_[activeSweepEdges_[indexLower].edgeId.undirected()].takenBothWays()
+        && windingInfo_[activeSweepEdges_[indexLower + 1].edgeId.undirected()].takenBothWays();
 }
 
 int SweepLineQueue::findStartIndex_()
@@ -1845,6 +1868,88 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
             if ( code >= 0 && mesh.topology.left( EdgeId( code ) ) )
                 return {};
         res.items[k] = { code1, code2 };
+    }
+    return res;
+}
+
+Expected<HashMap<UndirectedEdgeId, EdgePath>> splitInnerCrossings( Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+{
+    MR_TIMER;
+    HashMap<UndirectedEdgeId, EdgePath> res;
+    if ( loops.empty() )
+        return res;
+    for ( const auto& loop : loops )
+        if ( loop.size() < 3 )
+            return unexpected( "a loop of less than 3 edges" ); // the sweep skips such loops, so their crossings would stay unseen
+
+    SweepLineQueue::Cache cache;
+    WholeEdgeMap patchToInEdges;
+    SweepLineQueue sweep( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer ), loops,
+        { .abortWhenIntersect = true, .allowInnerIntersections = true, .outPatchMap = &patchToInEdges } );
+    // only the crossings are needed: finding them leaves the patch topology as it is, so patch edges still map to mesh edges
+    if ( !sweep.findIntersections() )
+        return unexpected( "an edge of the region boundary crosses another edge" );
+    // in the order the sweep met them, which is their order along every edge, even at the same point;
+    // both edges of a crossing point along the sweep, and the lower one passes from the right of the upper one to its left
+    const auto& crossings = cache.intersections;
+
+    // a new vertex for every crossing, in the middle of its points on both edges, before the edges change
+    auto& tp = mesh.topology;
+    const VertId firstNewVert( tp.vertSize() );
+    tp.vertResize( tp.vertSize() + crossings.size() );
+    if ( mesh.points.size() < tp.vertSize() )
+        mesh.points.resize( tp.vertSize() );
+    const auto& patch = cache.tp;
+    const auto& pts = cache.pts2Buffer;
+    ParallelFor( size_t( 0 ), crossings.size(), [&] ( size_t i )
+    {
+        const auto& c = crossings[i];
+        assert( !MR::ccw( { PreciseVertCoords2{ patch.org( c.upper ), pts[patch.org( c.upper )] },
+            { patch.dest( c.upper ), pts[patch.dest( c.upper )] }, { patch.org( c.lower ), pts[patch.org( c.lower )] } } ) );
+        auto onEdge = [&] ( EdgeId patchE )
+        {
+            const Vector2d a( pts[patch.org( patchE )] ), b( pts[patch.dest( patchE )] );
+            const float t = float( std::clamp( dot( Vector2d( pts[c.vId] ) - a, b - a ) / ( b - a ).lengthSq(), 0.0, 1.0 ) );
+            const EdgeId e = mapEdge( patchToInEdges, patchE );
+            return ( 1 - t ) * mesh.orgPnt( e ) + t * mesh.destPnt( e );
+        };
+        mesh.points[firstNewVert + i] = 0.5f * ( onEdge( c.upper ) + onEdge( c.lower ) );
+    } );
+
+    // split both edges of every crossing as in MeshTopology::splitEdge: a new piece takes the place of the edge
+    // at its origin, and the edge goes on from the crossing, keeping the next crossing on it
+    for ( size_t i = 0; i < crossings.size(); ++i )
+    {
+        // around the new vertex counterclockwise: the upper edge to its destination, the lower edge to its destination,
+        // the upper edge to its origin, the lower edge to its origin
+        std::array<EdgeId, 4> ring;
+        for ( int j = 0; j < 2; ++j )
+        {
+            const EdgeId e = mapEdge( patchToInEdges, j == 0 ? crossings[i].upper : crossings[i].lower );
+            assert( !tp.left( e ) && !tp.right( e ) );
+            const EdgeId piece = tp.makeEdge();
+            if ( const EdgeId ePrev = tp.prev( e ); ePrev != e )
+            {
+                tp.splice( ePrev, e );
+                tp.splice( ePrev, piece );
+            }
+            else
+            {
+                const VertId v = tp.org( e );
+                tp.setOrg( e, {} );
+                tp.setOrg( piece, v );
+            }
+            ring[j] = e;
+            ring[j + 2] = piece.sym();
+            auto& pieces = res[e.undirected()];
+            if ( pieces.empty() )
+                pieces.push_back( e ); // the last piece
+            pieces.insert( pieces.end() - 1, piece );
+        }
+        tp.splice( ring[0], ring[1] );
+        tp.splice( ring[1], ring[2] );
+        tp.splice( ring[2], ring[3] );
+        tp.setOrg( ring[0], firstNewVert + i );
     }
     return res;
 }

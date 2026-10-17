@@ -2,9 +2,8 @@
 
 #include "MRVector3.h"
 #include "MRId.h"
-#include "MRBitCast.h"
+#include "MRRound.h"
 #include <array>
-#include <cstdint>
 #include <optional>
 
 namespace MR
@@ -102,15 +101,7 @@ struct ConvertToIntVector
     /// applies scaling only (without translation) with the following rounding to the nearest int
     [[nodiscard]] int scaleOnly( double v ) const
     {
-#if ( defined( _MSC_VER ) && !defined( __clang__ ) ) || ( defined( __GNUC__ ) && !defined( __clang__ ) && defined( __x86_64__ ) )
-        // the same as (int)std::round( x ), which these compilers turn into a library call:
-        // add the largest double below 0.5 with the sign of x, then truncate
-        const double x = v * invRange;
-        const double half = bit_cast<double>( bit_cast<std::uint64_t>( 0.49999999999999994 ) | ( bit_cast<std::uint64_t>( x ) & 0x8000000000000000ull ) );
-        return (int)( x + half );
-#else
-        return (int)std::round( v * invRange );
-#endif
+        return roundToInt( v * invRange );
     }
 
     /// double-to-int coordinates converter

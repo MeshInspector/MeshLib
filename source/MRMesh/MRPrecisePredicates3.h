@@ -2,6 +2,7 @@
 
 #include "MRVector3.h"
 #include "MRId.h"
+#include "MRRound.h"
 #include <array>
 #include <optional>
 
@@ -100,7 +101,7 @@ struct ConvertToIntVector
     /// applies scaling only (without translation) with the following rounding to the nearest int
     [[nodiscard]] int scaleOnly( double v ) const
     {
-        return (int)std::round( v * invRange );
+        return roundToInt( v * invRange );
     }
 
     /// double-to-int coordinates converter

@@ -58,6 +58,26 @@ TEST( MRMesh, MeshDecimateParallel )
     ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
 }
 
+TEST( MRMesh, MeshDecimateWithoutQualityChecks )
+{
+    for ( int parts : { 1, 8 } )
+    {
+        auto mesh = makeSphere( { .numMeshVertices = 2000 } );
+        mesh.packOptimally( false );
+        const auto numFaces = mesh.topology.numValidFaces();
+        DecimateSettings settings;
+        settings.maxError = FLT_MAX;
+        settings.maxDeletedFaces = numFaces / 2;
+        settings.maxTriangleAspectRatio = FLT_MAX;
+        settings.preventNormalFlips = false;
+        settings.subdivideParts = parts;
+        const auto res = decimateMesh( mesh, settings );
+        EXPECT_EQ( res.facesDeleted, numFaces / 2 );
+        EXPECT_EQ( mesh.topology.numValidFaces(), numFaces - numFaces / 2 );
+        EXPECT_TRUE( mesh.topology.checkValidity() );
+    }
+}
+
 TEST( MRMesh, MeshDecimateMultipleEdgeResolve )
 {
     //          2               /

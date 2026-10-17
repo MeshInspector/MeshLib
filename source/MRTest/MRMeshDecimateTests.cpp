@@ -8,6 +8,8 @@
 #include <MRMesh/MRObjectMeshData.h>
 #include <MRMesh/MRMeshProject.h>
 #include <MRMesh/MRBitSet.h>
+#include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRQuadraticForm.h>
 #include <map>
 #include <tuple>
 #include <sstream>
@@ -56,6 +58,45 @@ TEST( MRMesh, MeshDecimateParallel )
     decimateMesh( mesh, settings );
     ASSERT_EQ( mesh.topology.numValidFaces(), 2 );
     ASSERT_EQ( mesh.topology.numValidVerts(), 3 );
+}
+
+// all parts modes decimate a region of the mesh in parallel and keep the sets from the settings consistent with the mesh
+TEST( MRMesh, MeshDecimatePartsModes )
+{
+    for ( auto mode : { DecimatePartsMode::PackedMesh, DecimatePartsMode::PackOptimally, DecimatePartsMode::AABBTree } )
+    {
+        auto mesh = makeSphere( { .numMeshVertices = 2000 } );
+        FaceBitSet region( mesh.topology.faceSize() );
+        for ( auto f : mesh.topology.getValidFaces() )
+            if ( mesh.triCenter( f ).z > 0 )
+                region.set( f );
+        const auto numRegionFaces = int( region.count() );
+        auto notFlippable = findRegionBoundaryUndirectedEdgesInsideMesh( mesh.topology, region );
+        Vector<QuadraticForm3f, VertId> vertForms;
+
+        DecimateSettings settings;
+        settings.maxError = FLT_MAX;
+        settings.maxDeletedFaces = numRegionFaces / 2;
+        settings.region = &region;
+        settings.notFlippable = &notFlippable;
+        settings.vertForms = &vertForms;
+        settings.subdivideParts = 8;
+        settings.partsMode = mode;
+        const auto res = decimateMesh( mesh, settings );
+
+        EXPECT_GE( res.facesDeleted, numRegionFaces / 2 );
+        EXPECT_LE( res.facesDeleted, numRegionFaces / 2 + 1 );
+        EXPECT_TRUE( mesh.topology.checkValidity() );
+        EXPECT_LT( int( region.count() ), numRegionFaces * 3 / 4 );
+        EXPECT_EQ( vertForms.size(), mesh.topology.vertSize() );
+        for ( auto f : region )
+        {
+            EXPECT_TRUE( mesh.topology.hasFace( f ) );
+            EXPECT_GT( mesh.triCenter( f ).z, -0.1f ); // the region still covers the upper half of the sphere
+        }
+        for ( auto ue : notFlippable )
+            EXPECT_FALSE( mesh.topology.isLoneEdge( ue ) );
+    }
 }
 
 TEST( MRMesh, MeshDecimateWithoutQualityChecks )

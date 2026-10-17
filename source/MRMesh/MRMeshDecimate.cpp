@@ -20,6 +20,7 @@
 #include "MRMeshDecimateCallbacks.h"
 #include "MRMapEdge.h"
 #include "MRObjectMesh.h"
+#include "MRAABBTree.h"
 
 namespace MR
 {
@@ -1062,11 +1063,63 @@ FaceBitSet getSubdividePart( const FaceBitSet & valids, size_t subdivideParts, s
     return res;
 }
 
-static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings )
+/// renumbers all sets and maps in the settings after mesh.packOptimally() returned given map;
+/// regionEdges are put in given storage, because the settings only point on them
+static void remapSettings( DecimateSettings & settings, const PackMapping & map, UndirectedEdgeBitSet & regionEdges )
+{
+    MR_TIMER;
+    if ( settings.region )
+        *settings.region = settings.region->getMapping( map.f );
+    if ( settings.bdVerts )
+        *settings.bdVerts = settings.bdVerts->getMapping( map.v );
+    if ( settings.notFlippable )
+        *settings.notFlippable = settings.notFlippable->getMapping( map.e );
+    if ( settings.edgesToCollapse )
+        *settings.edgesToCollapse = settings.edgesToCollapse->getMapping( map.e );
+    if ( settings.regionEdges )
+    {
+        regionEdges = settings.regionEdges->getMapping( map.e );
+        settings.regionEdges = &regionEdges;
+    }
+    if ( settings.twinMap )
+    {
+        UndirectedEdgeHashMap twinMap;
+        twinMap.reserve( settings.twinMap->size() );
+        for ( const auto & [key, value] : *settings.twinMap )
+            if ( auto newKey = getAt( map.e.b, key ) )
+                if ( auto newValue = getAt( map.e.b, value ) )
+                    twinMap[newKey] = newValue;
+        *settings.twinMap = std::move( twinMap );
+    }
+    if ( settings.vertForms && !settings.vertForms->empty() )
+        *settings.vertForms = rearrangeVectorByMap( *settings.vertForms, map.v );
+}
+
+/// returns the faces of the subtrees of mesh's AABB tree (or of a tree constructed for the region), at least subdivideParts of them
+static std::vector<FaceBitSet> getTreeParts( const Mesh & mesh, const DecimateSettings & settings )
+{
+    MR_TIMER;
+    std::optional<AABBTree> ownTree;
+    const AABBTree * tree = mesh.getAABBTreeNotCreate();
+    if ( !tree )
+        tree = &ownTree.emplace( MeshPart{ mesh, settings.region } );
+    const auto roots = tree->getSubtrees( settings.subdivideParts );
+    std::vector<FaceBitSet> res( roots.size() );
+    ParallelFor( res, [&]( size_t i )
+    {
+        res[i] = tree->getSubtreeLeaves( roots[i] );
+        res[i].resize( mesh.topology.faceSize() );
+    } );
+    return res;
+}
+
+/// \param treeParts if not null, the faces of each part, used instead of getSubdividePart
+static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const DecimateSettings & settings, std::vector<FaceBitSet> * treeParts = nullptr )
 {
     MR_TIMER;
     assert( settings.subdivideParts > 1 );
-    const auto sz = settings.subdivideParts;
+    assert( !treeParts || ( !settings.partFaces && treeParts->size() > 1 ) );
+    const int sz = treeParts ? int( treeParts->size() ) : settings.subdivideParts;
     // the vertices of the region, which are distributed among the parts to determine their quotas of deletions
     const auto numIniVerts = settings.region ? getIncidentVerts( mesh.topology, *settings.region ).count() : mesh.topology.numValidVerts();
     assert( !settings.partFaces || settings.partFaces->size() == sz );
@@ -1176,6 +1229,8 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
     {
         if ( settings.partFaces )
             parts[i].region = std::move( (*settings.partFaces)[i] );
+        else if ( treeParts )
+            parts[i].region = std::move( (*treeParts)[i] );
         else
             parts[i].region = getSubdividePart( mesh.topology.getValidFaces(), settings.subdivideParts, i );
     } );
@@ -1611,9 +1666,21 @@ DecimateResult decimateMesh( Mesh & mesh, const DecimateSettings & settings0 )
         return res;
 #endif
 
+    UndirectedEdgeBitSet remappedRegionEdges;
+    std::vector<FaceBitSet> treeParts;
+    if ( settings.subdivideParts > 1 && !settings.partFaces )
+    {
+        if ( settings.partsMode == DecimatePartsMode::PackOptimally )
+            remapSettings( settings, mesh.packOptimally( false ), remappedRegionEdges );
+        else if ( settings.partsMode == DecimatePartsMode::AABBTree )
+            treeParts = getTreeParts( mesh, settings ); // before invalidateCaches() to use the tree of the mesh if any
+    }
+
     mesh.invalidateCaches(); // free memory occupied by trees before running the algorithm, which makes them invalid anyway
-    res = ( settings.subdivideParts > 1 ) ?
-        decimateMeshParallelInplace( mesh, settings ) : decimateMeshSerial( mesh, settings );
+    if ( settings.subdivideParts <= 1 || ( settings.partsMode == DecimatePartsMode::AABBTree && !settings.partFaces && treeParts.size() <= 1 ) )
+        res = decimateMeshSerial( mesh, settings );
+    else
+        res = decimateMeshParallelInplace( mesh, settings, treeParts.empty() ? nullptr : &treeParts );
     assert ( !mesh.getAABBTreeNotCreate() ); // make sure that nobody created the tree by mistake
     assert ( mesh.topology.checkValidity() );
     return res;
@@ -1654,8 +1721,9 @@ DecimateResult decimateObjectMeshData( ObjectMeshData & data, const DecimateSett
     }
 
     std::shared_ptr<UndirectedEdgeBMap> emap;
-    if ( settings.subdivideParts > 1 )
+    if ( settings.subdivideParts > 1 && settings.partsMode != DecimatePartsMode::AABBTree )
     {
+        settings.partsMode = DecimatePartsMode::PackedMesh; // packed here together with the attributes
         auto packMapping = data.mesh->packOptimally( false );
         if ( updateUV )
             data.uvCoordinates = rearrangeVectorByMap( data.uvCoordinates, packMapping.v );

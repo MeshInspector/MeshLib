@@ -23,7 +23,7 @@ int main( void )
         goto fail_load;
     }
 
-    MR_Vector3f point = MR_Vector3f_Construct_3( 1.5f, 1.0f, 0.5f );
+    MR_Vector3f point = MR_Vector3f_Construct( 1.5f, 1.0f, 0.5f );
     MR_MeshPart* mp = MR_MeshPart_Construct( mesh, NULL );
 
     MR_std_optional_MR_SignedDistanceToMeshResult* resOpt = MR_findSignedDistance_MR_Vector3f( &point, mp, NULL, NULL );

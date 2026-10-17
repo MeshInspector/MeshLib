@@ -13,7 +13,7 @@ void testMrMeshTopologyPack(void)
     MR_Mesh* mesh = createCube();
     TEST_ASSERT(mesh != NULL);
     MR_MeshTopology* topology = MR_Mesh_GetMutable_topology(mesh);
-    MR_MeshTopology_pack_4( topology, NULL, NULL, NULL, NULL);
+    MR_MeshTopology_pack( topology, NULL, NULL, NULL, NULL);
     MR_Mesh_Destroy(mesh);
 }
 
@@ -53,7 +53,7 @@ void testMrMeshTopologyGetLeftTriVerts( void ) {
 
     MR_EdgeId edge = { 0 };
     MR_VertId v0, v1, v2;
-    MR_MeshTopology_getLeftTriVerts_4(topology, edge, &v0, &v1, &v2);
+    MR_MeshTopology_getLeftTriVerts_outVerts(topology, edge, &v0, &v1, &v2);
     MR_Mesh_Destroy(mesh);
 }
 

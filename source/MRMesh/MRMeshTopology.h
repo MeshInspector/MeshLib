@@ -166,10 +166,10 @@ public:
 
     /// gets 3 vertices of the left face ( face-id may not exist, but the shape must be triangular)
     /// the vertices are returned in counter-clockwise order if look from mesh outside: v0 = org( a ), v1 = dest( a )
-    MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
+    MR_BIND_OVERLOAD_SUFFIX(outVerts) MRMESH_API     void getLeftTriVerts( EdgeId a, VertId & v0, VertId & v1, VertId & v2 ) const;
     MR_BIND_IGNORE void getLeftTriVerts( EdgeId a, VertId (&v)[3] ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); } // This one is not in the bindings because of the reference-to-array parameter.
-                   void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
-    [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
+                   MR_BIND_OVERLOAD_SUFFIX(outArray) void getLeftTriVerts( EdgeId a, ThreeVertIds & v ) const { getLeftTriVerts( a, v[0], v[1], v[2] ); }
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] ThreeVertIds getLeftTriVerts( EdgeId a ) const { ThreeVertIds v; getLeftTriVerts( a, v[0], v[1], v[2] ); return v; }
 
     /// if given point is
     /// 1) in vertex, then invokes callback once with it;
@@ -506,11 +506,11 @@ public:
     /// \param outFmap,outVmap,outEmap if given returns mappings: old.id -> new.id;
     /// \param rearrangeTriangles if true then calls rotateTriangles()
     /// and selects the order of triangles according to the order of their vertices
-    MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
+    MR_BIND_OVERLOAD_SUFFIX() MRMESH_API void pack( FaceMap * outFmap = nullptr, VertMap * outVmap = nullptr, WholeEdgeMap * outEmap = nullptr, bool rearrangeTriangles = false );
 
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping
-    MRMESH_API void pack( const PackMapping & map );
+    MR_BIND_OVERLOAD_SUFFIX(mapping) MRMESH_API void pack( const PackMapping & map );
 
     /// tightly packs all arrays eliminating lone edges and invalid faces and vertices;
     /// reorder all faces, vertices and edges according to given maps, each containing old id -> new id mapping;

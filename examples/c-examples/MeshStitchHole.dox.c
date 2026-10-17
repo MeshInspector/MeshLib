@@ -38,7 +38,7 @@ int main( void )
     }
 
     // Unite meshes
-    MR_Mesh_addMesh_3( mesh, mesh2, NULL, NULL );
+    MR_Mesh_addMesh( mesh, mesh2, NULL, NULL );
 
     // Find holes (expect that there are exactly 2 holes)
     MR_std_vector_MR_EdgeId* edges = MR_MeshTopology_findHoleRepresentiveEdges( MR_Mesh_Get_topology( mesh ), NULL );
@@ -55,9 +55,9 @@ int main( void )
     MR_StitchHolesParams_Set_metric( params, MR_PassBy_Move, metric );
     MR_FillHoleMetric_Destroy( metric );
 
-    // We also have a version of this function (`MR_stitchHoles_2()`) that finds the two holes automatically.
+    // We also have a version of this function (`MR_stitchHoles_auto()`) that finds the two holes automatically.
     // Here we've found them manually for demonstration purposes.
-    MR_stitchHoles_4( mesh, *MR_std_vector_MR_EdgeId_at( edges, 0 ), *MR_std_vector_MR_EdgeId_at( edges, 1 ), params );
+    MR_stitchHoles( mesh, *MR_std_vector_MR_EdgeId_at( edges, 0 ), *MR_std_vector_MR_EdgeId_at( edges, 1 ), params );
     MR_StitchHolesParams_Destroy( params );
 
     // Save result

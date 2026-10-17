@@ -24,7 +24,7 @@ int main( void )
     MR_MeshPart* mp = MR_MeshPart_Construct( mesh, NULL );
 
     // find self-intersecting faces pairs
-    MR_expected_std_vector_MR_FaceFace_std_string* selfCollidingPairsRes = MR_findSelfCollidingTriangles_4( mp, MR_PassBy_DefaultArgument, NULL, NULL, NULL );
+    MR_expected_std_vector_MR_FaceFace_std_string* selfCollidingPairsRes = MR_findSelfCollidingTriangles( mp, MR_PassBy_DefaultArgument, NULL, NULL, NULL );
     MR_std_vector_MR_FaceFace* selfCollidingPairs = MR_expected_std_vector_MR_FaceFace_std_string_value_mut( selfCollidingPairsRes );
     if ( !selfCollidingPairs )
     {
@@ -53,7 +53,7 @@ int main( void )
     fprintf( stdout, "%zu\n", (size_t)MR_FaceBitSet_count( selfCollidingBitSet ) );
 
     // fast check if mesh has self-intersections
-    MR_expected_bool_std_string* isSelfCollidingRes = MR_findSelfCollidingTriangles_5( mp, NULL, MR_PassBy_DefaultArgument, NULL, NULL, NULL );
+    MR_expected_bool_std_string* isSelfCollidingRes = MR_findSelfCollidingTriangles_outPairs( mp, NULL, MR_PassBy_DefaultArgument, NULL, NULL, NULL );
     bool* isSelfColliding = MR_expected_bool_std_string_value_mut( isSelfCollidingRes );
     if ( !isSelfColliding )
     {

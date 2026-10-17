@@ -49,7 +49,7 @@ struct MeshProjectionParameters
 /// Computes signed distances from given test points to the closest point on the reference mesh:
 /// positive value - outside reference mesh, negative - inside reference mesh;
 /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
-[[nodiscard]] MRMESH_API VertScalars findSignedDistances(
+MR_BIND_OVERLOAD_SUFFIX(points) [[nodiscard]] MRMESH_API VertScalars findSignedDistances(
     const Mesh& refMesh, ///< the distances to this mesh will be returned
     const VertCoords & testPoints, const VertBitSet * validTestPoints = {}, ///< the distances from these points will be returned
     const MeshProjectionParameters & params = {},
@@ -58,7 +58,7 @@ struct MeshProjectionParameters
 /// Computes signed distances from valid vertices of test mesh to the closest point on the reference mesh:
 /// positive value - outside reference mesh, negative - inside reference mesh;
 /// this method can return wrong sign if the closest point is located on self-intersecting part of the mesh
-[[nodiscard]] MRMESH_API VertScalars findSignedDistances(
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API VertScalars findSignedDistances(
     const Mesh& refMesh, ///< the distances to this mesh will be returned
     const Mesh& mesh,    ///< the distances from valid vertices of this mesh will be returned
     const MeshProjectionParameters & params = {},

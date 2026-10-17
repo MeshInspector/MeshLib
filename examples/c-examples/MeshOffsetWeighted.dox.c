@@ -27,7 +27,7 @@ int main( void )
 
     // Create VertScalars obj with weights for every vertex
     size_t vertSize = MR_MeshTopology_vertSize( MR_Mesh_Get_topology( mesh ) );
-    MR_VertScalars* scalars = MR_VertScalars_Construct_1_size_t( vertSize );
+    MR_VertScalars* scalars = MR_VertScalars_Construct( vertSize );
     float maxWeight = 0.0f;
     for ( size_t i = 0; i < vertSize; ++i )
     {
@@ -50,7 +50,7 @@ int main( void )
     MR_DistanceFromWeightedPointsParams* dist = MR_WeightedShell_ParametersMetric_GetMutable_dist( params );
     MR_DistanceFromWeightedPointsParams_Set_maxWeight( dist, maxWeight );
 
-    MR_expected_MR_Mesh_std_string* res = MR_WeightedShell_meshShell_3_MR_VertScalars( mesh, scalars, params );
+    MR_expected_MR_Mesh_std_string* res = MR_WeightedShell_meshShell( mesh, scalars, params );
     MR_Mesh* resMesh = MR_expected_MR_Mesh_std_string_value_mut( res );
     if ( !resMesh )
     {

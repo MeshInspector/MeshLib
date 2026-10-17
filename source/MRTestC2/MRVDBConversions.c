@@ -149,7 +149,7 @@ void testAccessors( void )
     MR_VoxelBitSet* region = MR_VoxelBitSet_DefaultConstruct();
     MR_VoxelBitSet_resize( region, dims->x * dims->y * dims->z, NULL );
 
-    MR_VoxelBitSet_set_2( region, (MR_VoxelId){0}, true );
+    MR_VoxelBitSet_set( region, (MR_VoxelId){0}, true );
 
     MR_setValue_MR_VoxelBitSet( MR_VdbVolume_GetMutable_data( volume ), region, 1.0f );
     MR_VoxelBitSet_Destroy( region );

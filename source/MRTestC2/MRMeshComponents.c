@@ -84,7 +84,7 @@ void testLargeComponents( void )
 {
     CreatedMesh m = createMesh();
 
-    MR_FaceBitSet* components = MR_MeshComponents_getLargeByAreaComponents_3( m.part, 0.1f, NULL );
+    MR_FaceBitSet* components = MR_MeshComponents_getLargeByAreaComponents( m.part, 0.1f, NULL );
     TEST_ASSERT( MR_FaceBitSet_test( components, (MR_FaceId){0} ) );
     TEST_ASSERT( !MR_FaceBitSet_test( components, (MR_FaceId){12} ) );
 

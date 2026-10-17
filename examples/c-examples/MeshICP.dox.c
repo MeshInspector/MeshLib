@@ -51,7 +51,7 @@ int main( void )
     MR_MeshOrPoints_Destroy( fltMop );
     MR_MeshOrPoints_Destroy( refMop );
 
-    MR_ICP* icp = MR_ICP_Construct_3( flt, ref, icpSamplingVoxelSize );
+    MR_ICP* icp = MR_ICP_Construct( flt, ref, icpSamplingVoxelSize );
     MR_ICP_setParams( icp, icpParams );
     MR_ICPProperties_Destroy( icpParams );
     MR_AffineXf3f xf = MR_ICP_calculateTransformation( icp );

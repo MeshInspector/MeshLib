@@ -37,7 +37,7 @@ int main( void )
     MR_makeDegenerateBandAroundRegion( mesh, facesToExtrude, NULL );
 
     // Find vertices that will be moved
-    MR_VertBitSet* vertsToMove = MR_getIncidentVerts_2_MR_FaceBitSet( MR_Mesh_Get_topology( mesh ), facesToExtrude );
+    MR_VertBitSet* vertsToMove = MR_getIncidentVerts( MR_Mesh_Get_topology( mesh ), facesToExtrude );
     MR_Vector3f* points = MR_VertCoords_data_mut( MR_Mesh_GetMutable_points( mesh ) );
     MR_Vector3f shift = MR_Vector3f_plusZ();
     size_t numPoints = MR_VertCoords_size( MR_Mesh_GetMutable_points( mesh ) );

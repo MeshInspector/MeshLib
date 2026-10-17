@@ -24,14 +24,14 @@ namespace MR
     const AffineXf3f* rigidB2A = nullptr );
 
 /// finds all pairs (or the fact of any self-collision) of colliding triangles from one mesh or a region
-[[nodiscard]] MRMESH_API Expected<bool> findSelfCollidingTriangles( const MeshPart& mp,
+MR_BIND_OVERLOAD_SUFFIX(outPairs) [[nodiscard]] MRMESH_API Expected<bool> findSelfCollidingTriangles( const MeshPart& mp,
     std::vector<FaceFace>* outCollidingPairs, ///< if nullptr then the algorithm returns with true as soon as first collision is found
     ProgressCallback cb = {},
     const Face2RegionMap* regionMap = nullptr, ///< if regionMap is provided then only self-intersections within a region are returned
     bool touchIsIntersection = false ); ///< if true then treat touching faces as self-intersections too
 
 /// finds all pairs of colliding triangles from one mesh or a region
-[[nodiscard]] MRMESH_API Expected<std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb = {},
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Expected<std::vector<FaceFace>> findSelfCollidingTriangles( const MeshPart& mp, ProgressCallback cb = {},
     const Face2RegionMap * regionMap = nullptr, ///< if regionMap is provided then only self-intersections within a region are returned
     bool touchIsIntersection = false ); ///< if true then treat touching faces as self-intersections too
 

@@ -143,7 +143,7 @@ int main( int argc, char* argv[] )
         {
             MR_Vector3f point = *MR_VertCoords_index( points, (MR_VertId){j} );
             point = MR_AffineXf3f_call( xf, &point );
-            MR_PointCloud_addPoint_1( output, &point );
+            MR_PointCloud_addPoint( output, &point );
         }
     }
 

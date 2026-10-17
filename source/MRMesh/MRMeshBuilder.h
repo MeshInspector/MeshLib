@@ -113,13 +113,13 @@ struct UniteCloseParams
 /// \param optionalVertOldToNew is the mapping of vertices: before -> after
 /// \param uniteOnlyBd if true then only boundary vertices can be united, all internal vertices (even close ones) will remain
 /// \return the number of vertices united, 0 means no change in the mesh
-MRMESH_API int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd = true,
+MR_BIND_OVERLOAD_SUFFIX(dist) MRMESH_API int uniteCloseVertices( Mesh & mesh, float closeDist, bool uniteOnlyBd = true,
     VertMap * optionalVertOldToNew = nullptr );
 
 /// the function finds groups of mesh vertices located closer to each other than \param params.closeDist, and unites such vertices in one;
 /// then the mesh is rebuilt from the remaining triangles
 /// \return the number of vertices united, 0 means no change in the mesh
-MRMESH_API int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params = {} );
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API int uniteCloseVertices( Mesh& mesh, const UniteCloseParams& params = {} );
 
 } //namespace MeshBuilder
 

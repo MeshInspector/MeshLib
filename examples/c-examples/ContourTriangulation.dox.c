@@ -35,7 +35,7 @@ int main( void )
         goto fail_conversion; // error while converting image to distance map
     }
 
-    MR_Polyline2* pl2 = MR_distanceMapTo2DIsoPolyline_2( dm, 210.0f );
+    MR_Polyline2* pl2 = MR_distanceMapTo2DIsoPolyline( dm, 210.0f );
     MR_std_vector_std_vector_MR_Vector2f* conts = MR_Polyline2_contours( pl2, NULL );
 
     MR_Mesh* triangulationRes = MR_PlanarTriangulation_triangulateContours_std_vector_std_vector_MR_Vector2f( conts, NULL );

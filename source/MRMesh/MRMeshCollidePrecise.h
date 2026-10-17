@@ -68,7 +68,7 @@ using PreciseCollisionResult = std::vector<VarEdgeTri>;
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  * \param anyIntersection if true then the function returns as fast as it finds any intersection
  */
-MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b,
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API PreciseCollisionResult findCollidingEdgeTrisPrecise( const MeshPart & a, const MeshPart & b,
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr, bool anyIntersection = false );
 
 /**
@@ -95,13 +95,13 @@ MRMESH_API std::vector<EdgeTri> findSelfCollidingEdgeTrisPrecise( const MeshPart
     ConvertToIntVector conv, bool anyIntersection = false, const AffineXf3f* rigidB2A = nullptr, int aVertSizes = 0 );
 
 /// finds all intersections between every given edge from A and given triangles from B
-MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
+MR_BIND_OVERLOAD_SUFFIX(edgesA) MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
     const Mesh & a, const std::vector<EdgeId> & edgesA,
     const Mesh & b, const std::vector<FaceId> & facesB,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A = nullptr );
 
 /// finds all intersections between every given triangle from A and given edge from B
-MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
+MR_BIND_OVERLOAD_SUFFIX(facesA) MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise( 
     const Mesh & a, const std::vector<FaceId> & facesA,
     const Mesh & b, const std::vector<EdgeId> & edgesB,
     ConvertToIntVector conv, const AffineXf3f * rigidB2A = nullptr );
@@ -109,13 +109,13 @@ MRMESH_API std::vector<EdgeTri> findCollidingEdgeTrisPrecise(
 /**
  * \brief creates simple converters from Vector3f to Vector3i and back in mesh part area range
  */
-MRMESH_API CoordinateConverters getVectorConverters( const MeshPart& a );
+MR_BIND_OVERLOAD_SUFFIX(onePart) MRMESH_API CoordinateConverters getVectorConverters( const MeshPart& a );
 
 /**
  * \brief creates simple converters from Vector3f to Vector3i and back in mesh parts area range
  * \param rigidB2A rigid transformation from B-mesh space to A mesh space, nullptr considered as identity transformation
  */
-MRMESH_API CoordinateConverters getVectorConverters( const MeshPart& a, const MeshPart& b,
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API CoordinateConverters getVectorConverters( const MeshPart& a, const MeshPart& b,
     const AffineXf3f* rigidB2A = nullptr );
 
 /// \}

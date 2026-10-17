@@ -33,7 +33,7 @@ int main( void )
     }
 
     // get object of VertScalars - set of distances between points of target mesh and reference mesh
-    MR_VertScalars* vertDistances = MR_findSignedDistances_4( refMesh, mesh, NULL, NULL );
+    MR_VertScalars* vertDistances = MR_findSignedDistances( refMesh, mesh, NULL, NULL );
     float minDist = FLT_MAX;
     float maxDist = -FLT_MAX;
     for ( size_t i = 0; i < MR_VertScalars_size( vertDistances ); ++i )

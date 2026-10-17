@@ -43,7 +43,7 @@ fn large_regions()
 fn large_components()
 {
     let m = create_mesh();
-    let components = mesh_components::get_large_by_area_components_3(&m.part, 0.1, None);
+    let components = mesh_components::get_large_by_area_components(&m.part, 0.1, None);
     assert!(components.test(FaceId {id_: 0}));
     assert!(!components.test(FaceId {id_: 12}));
 }

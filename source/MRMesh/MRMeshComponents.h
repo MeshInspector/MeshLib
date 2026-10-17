@@ -70,14 +70,14 @@ enum class VolumeSelection
     FaceIncidence incidence = FaceIncidence::PerEdge, const UndirectedEdgeBitSet * isCompBd = {} );
 
 /// returns the union of connected components, each having at least given area
-[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea, const UndirectedEdgeBitSet * isCompBd );
+MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, float minArea, const UndirectedEdgeBitSet * isCompBd );
 
 /// returns the union of connected components, each having at least given volume
 /// note that function require closed mesh part
 [[nodiscard]] MRMESH_API FaceBitSet getLargeByVolumeComponents( const MeshPart& meshPart, float minVolume );
 
 /// given prepared union-find structure returns the union of connected components, each having at least given area
-[[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, BaseUnionFind<FaceId> & unionFind, float minArea,
+MR_BIND_OVERLOAD_SUFFIX(unionFind) [[nodiscard]] MRMESH_API FaceBitSet getLargeByAreaComponents( const MeshPart& meshPart, BaseUnionFind<FaceId> & unionFind, float minArea,
     UndirectedEdgeBitSet * outBdEdgesBetweenLargeComps = nullptr );
 
 struct ExpandToComponentsParams

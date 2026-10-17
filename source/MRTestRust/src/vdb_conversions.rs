@@ -83,7 +83,7 @@ fn accessors()
     let dims = *volume.dims();
     let mut region = meshlib::VoxelBitSet::new();
     region.resize((dims.x * dims.y * dims.z) as _, None);
-    region.set_2(VoxelId {id_: 0}, true);
+    region.set(VoxelId {id_: 0}, true);
     meshlib::set_value_mr_voxel_bit_set(volume.data_mut(), &region, 1.0);
     assert_eq!(meshlib::get_value(volume.data_mut(), &p), 1.0);
     meshlib::set_value_mr_vector3i(volume.data_mut(), &p, 2.0);

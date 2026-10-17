@@ -27,7 +27,7 @@ int main( void )
     }
 
     // Construct deformer on the mesh vertices
-    MR_Laplacian* lDeformer = MR_Laplacian_Construct_1( mesh );
+    MR_Laplacian* lDeformer = MR_Laplacian_Construct( mesh );
 
     // Find an area for the deformation anchor points
     const MR_VertBitSet* verts = MR_MeshTopology_getValidVerts( MR_Mesh_Get_topology( mesh ) );
@@ -37,8 +37,8 @@ int main( void )
     MR_VertBitSet* freeVerts = MR_VertBitSet_DefaultConstruct();
     MR_VertBitSet_resize( freeVerts, MR_VertBitSet_size( verts ), NULL );
 
-    MR_VertBitSet_set_2( freeVerts, ancV0, true );
-    MR_VertBitSet_set_2( freeVerts, ancV1, true );
+    MR_VertBitSet_set( freeVerts, ancV0, true );
+    MR_VertBitSet_set( freeVerts, ancV1, true );
     // Expand the free area
     MR_expand_MR_VertBitSet( MR_Mesh_Get_topology( mesh ), freeVerts, &(int){5} );
 
@@ -52,11 +52,11 @@ int main( void )
     MR_Vector3f posV0 = MR_Mesh_normal_MR_VertId( mesh, ancV0 );
     posV0 = MR_mul_MR_Vector3f_float( &posV0, shiftAmount );
     posV0 = MR_add_MR_Vector3f( MR_VertCoords_index( points, ancV0 ), &posV0 );
-    MR_Laplacian_fixVertex_3( lDeformer, ancV0, &posV0, NULL );
+    MR_Laplacian_fixVertex_pos( lDeformer, ancV0, &posV0, NULL );
     MR_Vector3f posV1 = MR_Mesh_normal_MR_VertId( mesh, ancV1 );
     posV1 = MR_mul_MR_Vector3f_float( &posV1, shiftAmount );
     posV1 = MR_add_MR_Vector3f( MR_VertCoords_index( points, ancV1 ), &posV1 );
-    MR_Laplacian_fixVertex_3( lDeformer, ancV1, &posV1, NULL );
+    MR_Laplacian_fixVertex_pos( lDeformer, ancV1, &posV1, NULL );
 
     // Move the free vertices according to the anchor ones
     MR_Laplacian_apply( lDeformer );

@@ -20,7 +20,7 @@ int main( void )
     // Load meshes:
 
     // First mesh, which will be moved.
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "meshA.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "meshA.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
     if ( !mesh )
     {
@@ -29,7 +29,7 @@ int main( void )
     }
 
     // Second mesh, static.
-    MR_expected_MR_Mesh_std_string* mesh2Ex = MR_MeshLoad_fromAnySupportedFormat_2( "meshB.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* mesh2Ex = MR_MeshLoad_fromAnySupportedFormat( "meshB.stl", NULL, NULL );
     MR_Mesh* mesh2 = MR_expected_MR_Mesh_std_string_value_mut( mesh2Ex );
     if ( !mesh2 )
     {
@@ -61,7 +61,7 @@ int main( void )
     MR_StitchHolesParams_Destroy( params );
 
     // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "stitchedMesh.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "stitchedMesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

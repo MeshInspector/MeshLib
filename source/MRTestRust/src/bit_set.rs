@@ -10,7 +10,7 @@ fn bit_set()
     assert_eq!(a.find_last(), 5);
 
     let mut b = meshlib::BitSet::construct(0, Some(false));
-    b.auto_resize_set_2(6, Some(true));
+    b.auto_resize_set(6, Some(true));
     assert_eq!(b.size(), 7);
 
     a.resize(10, Some(false));

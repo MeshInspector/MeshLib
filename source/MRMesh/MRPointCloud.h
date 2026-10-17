@@ -48,11 +48,11 @@ struct PointCloud
 
     /// passes through all valid points and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     /// passes through all given vertices (or all valid vertices if region == null) and finds the minimal bounding box containing all of them
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const VertBitSet * region, const AffineXf3f * toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX(region) [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const VertBitSet * region, const AffineXf3f * toWorld = nullptr ) const;
 
     /// computes average position of all valid points
     [[nodiscard]] MRMESH_API Vector3f findCenterFromPoints() const;

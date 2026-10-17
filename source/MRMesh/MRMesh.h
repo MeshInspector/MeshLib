@@ -332,11 +332,11 @@ struct [[nodiscard]] Mesh
 
     /// passes through all valid vertices and finds the minimal bounding box containing all of them;
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX() [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const AffineXf3f * toWorld = nullptr ) const;
 
     /// passes through all given faces (or whole mesh if region == null) and finds the minimal bounding box containing all of them
     /// if toWorld transformation is given then returns minimal bounding box in world space
-    [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const FaceBitSet* region, const AffineXf3f* toWorld = nullptr ) const;
+    MR_BIND_OVERLOAD_SUFFIX(region) [[nodiscard]] MRMESH_API Box3f computeBoundingBox( const FaceBitSet* region, const AffineXf3f* toWorld = nullptr ) const;
 
     /// computes average length of an edge in this mesh
     [[nodiscard]] float averageEdgeLength() const { return MR::averageEdgeLength( topology, points ); }

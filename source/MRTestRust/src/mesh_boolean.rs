@@ -46,8 +46,8 @@ fn mesh_boolean()
                     let xf = meshlib::op_mul_mr_affine_xf3f(&AffineXf3f::translation(&shift_vec), &AffineXf3f::linear(&rotation));
                     let mut params = meshlib::BooleanParameters::new();
                     params.set_rigid_b2_a(Some(&xf));
-                    let result_ab = meshlib::boolean_4_const_mr_mesh_ref(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&params));
-                    let result_ba = meshlib::boolean_4_const_mr_mesh_ref(&mesh_b, &mesh_a, BooleanOperation::Union, Some(&params));
+                    let result_ab = meshlib::boolean(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&params));
+                    let result_ba = meshlib::boolean(&mesh_b, &mesh_a, BooleanOperation::Union, Some(&params));
                     assert!(result_ab.valid());
                     assert!(result_ba.valid());
                     angle += angle_step;
@@ -92,8 +92,8 @@ fn boolean_multiple_edge_propogation_sort()
 
     for i in 0..BooleanOperation::Count.0
     {
-        let result_ab = meshlib::boolean_4_const_mr_mesh_ref(&mesh_a, &mesh_b, BooleanOperation(i), None);
-        let result_ba = meshlib::boolean_4_const_mr_mesh_ref(&mesh_b, &mesh_a, BooleanOperation(i), None);
+        let result_ab = meshlib::boolean(&mesh_a, &mesh_b, BooleanOperation(i), None);
+        let result_ba = meshlib::boolean(&mesh_b, &mesh_a, BooleanOperation(i), None);
         assert!(result_ab.valid());
         assert!(result_ba.valid());
     }
@@ -113,7 +113,7 @@ fn boolean_mapper()
     let result = {
         let mut parameters = meshlib::BooleanParameters::new();
         parameters.set_mapper(Some(&mut mapper));
-        meshlib::boolean_4_const_mr_mesh_ref(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&parameters))
+        meshlib::boolean(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&parameters))
     };
     assert!(result.valid());
 

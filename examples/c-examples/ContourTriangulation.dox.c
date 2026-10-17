@@ -40,7 +40,7 @@ int main( void )
 
     MR_Mesh* triangulationRes = MR_PlanarTriangulation_triangulateContours_std_vector_std_vector_MR_Vector2f( conts, NULL );
 
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( triangulationRes, "LogoMesh.ctm", NULL, NULL );
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( triangulationRes, "LogoMesh.ctm", NULL, NULL );
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

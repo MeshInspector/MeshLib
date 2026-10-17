@@ -15,7 +15,7 @@
 int main( void )
 {
     // Load mesh
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh
@@ -45,7 +45,7 @@ int main( void )
     // Initialize laplacian
     MR_Laplacian_init( lDeformer, freeVerts, MR_EdgeWeights_Cotan, &(MR_VertexMass){MR_VertexMass_NeiArea}, NULL );
 
-    MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( mesh, NULL );
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox( mesh, NULL );
     float shiftAmount = MR_Box3f_diagonal( &bbox ) * 0.01f;
     // Fix the anchor vertices in the required position
     const MR_VertCoords* points = MR_Mesh_Get_points( mesh );
@@ -65,7 +65,7 @@ int main( void )
     MR_Mesh_invalidateCaches( mesh, NULL );
 
     // Save the deformed mesh
-    MR_MeshSave_toAnySupportedFormat_3( mesh, "deformed_mesh.stl", NULL, NULL );
+    MR_MeshSave_toAnySupportedFormat( mesh, "deformed_mesh.stl", NULL, NULL );
 
     MR_VertBitSet_Destroy( freeVerts );
     MR_Laplacian_Destroy( lDeformer );

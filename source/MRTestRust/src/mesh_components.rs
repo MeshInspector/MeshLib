@@ -11,7 +11,7 @@ fn create_mesh() -> CreatedMesh
 {
     let mesh_a = meshlib::make_cube(Some(&Vector3f::diagonal(1.0)), Some(&Vector3f::diagonal(-0.5)));
     let mesh_b = meshlib::make_cube(Some(&Vector3f::diagonal(0.1)), Some(&Vector3f::diagonal(1.0)));
-    let mut result = meshlib::boolean_4_const_mr_mesh_ref(&mesh_a, &mesh_b, meshlib::BooleanOperation::Union, None);
+    let mut result = meshlib::boolean(&mesh_a, &mesh_b, meshlib::BooleanOperation::Union, None);
     let mesh = meshlib::Mesh::construct_from_another(result.mesh_mut());
     let part = meshlib::MeshPart::construct(&mesh, None);
     CreatedMesh {part, _mesh: mesh}

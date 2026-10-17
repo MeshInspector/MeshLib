@@ -14,7 +14,7 @@ fn main() -> Result<(), String>
     let mut mapper = BooleanResultMapper::new();
 
     // Perform the boolean operation.
-    let result = meshlib::boolean_6(&sphere1, &sphere2, BooleanOperation::Intersection, None, Some(&mut mapper), None);
+    let result = meshlib::boolean_with_xf(&sphere1, &sphere2, BooleanOperation::Intersection, None, Some(&mut mapper), None);
     if !result.valid()
     {
         return Err(format!("Failed to perform boolean: {}", result.error_string()));
@@ -33,7 +33,7 @@ fn main() -> Result<(), String>
     // result, or drop it completely if that part of sphere1 is not in the result.
     let face_of_sphere1 = FaceId {id_: 793};
     let mut one_face = FaceBitSet::new();
-    one_face.auto_resize_set_2(face_of_sphere1, None);
+    one_face.auto_resize_set(face_of_sphere1, None);
     let produced_faces = mapper.map_mr_face_bit_set(&one_face, MapObject::A);
     println!("face {} of sphere1 produced {} faces of the result", face_of_sphere1.id_, produced_faces.count());
 
@@ -44,7 +44,7 @@ fn main() -> Result<(), String>
     println!("face {} of the result came from face {} of sphere1", result_face.id_, new2old_faces.index(result_face).id_);
 
     // Save result to an STL file.
-    meshlib::mesh_save::to_any_supported_format_3(result.mesh(), "out_boolean.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
+    meshlib::mesh_save::to_any_supported_format(result.mesh(), "out_boolean.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
 
     Ok(())
 }

@@ -205,13 +205,13 @@ public:
     void resizeWithReserve( size_t newSize ) { resize( newSize ); }
 
     /// sets elements [pos, pos+len) to given value, adjusting the size of the set to include new elements
-    void autoResizeSet( size_t pos, size_type len, bool val = true )
+    MR_BIND_OVERLOAD_SUFFIX(range) void autoResizeSet( size_t pos, size_type len, bool val = true )
     {
         if ( pos + len > size() )
             resize( pos + len );
         set( pos, len, val );
     }
-    void autoResizeSet( size_t pos, bool val = true ) { autoResizeSet( pos, 1, val ); }
+    MR_BIND_OVERLOAD_SUFFIX() void autoResizeSet( size_t pos, bool val = true ) { autoResizeSet( pos, 1, val ); }
 
     /// same as \ref autoResizeSet and returns previous value of pos-bit
     [[nodiscard]] bool autoResizeTestSet( size_t pos, bool val = true )
@@ -353,8 +353,8 @@ public:
     /// returns true if, there is a bit which is set in this bitset, such that the corresponding bit in bitset a is also set. Otherwise this function returns false.
     [[nodiscard]] bool intersects( const TypedBitSet & a ) const { return base::intersects( a ); }
 
-    void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
-    void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
+    MR_BIND_OVERLOAD_SUFFIX(range) void autoResizeSet( IndexType pos, size_type len, bool val = true ) { base::autoResizeSet( pos, len, val ); }
+    MR_BIND_OVERLOAD_SUFFIX() void autoResizeSet( IndexType pos, bool val = true ) { base::autoResizeSet( pos, val ); }
     [[nodiscard]] bool autoResizeTestSet( IndexType pos, bool val = true ) { return base::autoResizeTestSet( pos, val ); }
 
     /// constructs another bit set from this where every set bit index is transformed using given map

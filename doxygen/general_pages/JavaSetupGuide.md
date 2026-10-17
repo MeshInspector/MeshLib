@@ -83,7 +83,7 @@ public class Main
 A few rules of thumb:
 
  - Parameters with default arguments, pointers and `std::optional` are nullable, pass `null` for the default. Scalars with defaults are boxed (`Integer`, `Float`), for the same reason.
- - Overloaded C++ functions keep their names as long as their Java parameter types differ; the others get the disambiguated names of the C API, e.g. `boolean_4_const_MR_Mesh_ref`. The doc comment of every method names the C function and the C++ original.
+ - Overloaded C++ functions keep their names as long as their Java parameter types differ; the others get the disambiguated names of the C API, e.g. `boolean_move`. The doc comment of every method names the C function and the C++ original.
  - Callbacks (`std::function` parameters) are built from lambdas: `std_function_bool_from_float.of(progress -> true)`. An exception thrown by the lambda is rethrown by the method that called into MeshLib.
  - Downcasts and upcasts between a class and its bases are explicit: `objectMesh.upcastToObject()`, `ObjectMesh.dynamicDowncastFromObject(object)` (null if the object isn't an `ObjectMesh`).
  - Structs like `Vector3f` are views over native memory with the C++ layout: `v.x()`, `v.setX(1.0f)`, `v.copy()`.

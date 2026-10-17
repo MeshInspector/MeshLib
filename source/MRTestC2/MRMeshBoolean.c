@@ -82,8 +82,8 @@ void testMeshBoolean( void )
                     MR_BooleanParameters *params = MR_BooleanParameters_DefaultConstruct();
                     MR_BooleanParameters_Set_rigidB2A( params, &xf );
 
-                    MR_BooleanResult *resultAB = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, params );
-                    MR_BooleanResult *resultBA = MR_boolean_4_const_MR_Mesh_ref( meshB, meshA, MR_BooleanOperation_Union, params );
+                    MR_BooleanResult *resultAB = MR_boolean( meshA, meshB, MR_BooleanOperation_Union, params );
+                    MR_BooleanResult *resultBA = MR_boolean( meshB, meshA, MR_BooleanOperation_Union, params );
                     TEST_ASSERT( MR_BooleanResult_valid( resultAB ) )
                     TEST_ASSERT( MR_BooleanResult_valid( resultBA ) )
 
@@ -158,8 +158,8 @@ void testBooleanMultipleEdgePropogationSort( void )
 
     for ( int i = 0; i < MR_BooleanOperation_Count; ++i )
     {
-        MR_BooleanResult *resultAB = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, i, NULL );
-        MR_BooleanResult *resultBA = MR_boolean_4_const_MR_Mesh_ref( meshB, meshA, i, NULL );
+        MR_BooleanResult *resultAB = MR_boolean( meshA, meshB, i, NULL );
+        MR_BooleanResult *resultBA = MR_boolean( meshB, meshA, i, NULL );
         TEST_ASSERT( MR_BooleanResult_valid( resultAB ) )
         TEST_ASSERT( MR_BooleanResult_valid( resultBA ) )
 
@@ -197,7 +197,7 @@ void testBooleanMapper( void )
     MR_BooleanParameters* parameters = MR_BooleanParameters_DefaultConstruct();
     MR_BooleanParameters_Set_mapper( parameters, mapper );
 
-    MR_BooleanResult* result = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, parameters );
+    MR_BooleanResult* result = MR_boolean( meshA, meshB, MR_BooleanOperation_Union, parameters );
     MR_BooleanParameters_Destroy( parameters );
 
     TEST_ASSERT( MR_BooleanResult_valid( result ) )

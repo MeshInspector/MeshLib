@@ -30,7 +30,7 @@ CreatedMesh createMesh( void )
     MR_Mesh* meshA = MR_makeCube( &meshASize, &meshABase );
     MR_Mesh* meshB = MR_makeCube( &meshBSize, &meshBBase );
 
-    MR_BooleanResult* resultAB = MR_boolean_4_const_MR_Mesh_ref( meshA, meshB, MR_BooleanOperation_Union, NULL );
+    MR_BooleanResult* resultAB = MR_boolean( meshA, meshB, MR_BooleanOperation_Union, NULL );
     MR_Mesh_Destroy( meshA );
     MR_Mesh_Destroy( meshB );
 

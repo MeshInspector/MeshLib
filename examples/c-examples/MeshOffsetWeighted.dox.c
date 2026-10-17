@@ -58,7 +58,7 @@ int main( void )
         goto fail_shell;
     }
 
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( resMesh, "offset_weighted.ctm", NULL, NULL );
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( resMesh, "offset_weighted.ctm", NULL, NULL );
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

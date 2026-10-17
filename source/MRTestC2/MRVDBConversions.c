@@ -55,7 +55,7 @@ void testVDBConversions( void )
 
     MR_expected_MR_Mesh_std_string* restoredEx = MR_gridToMesh_const_MR_FloatGrid_ref( MR_VdbVolume_Get_data( volume ), gridToMeshSettings );
     const MR_Mesh* restored = MR_expected_MR_Mesh_std_string_value( restoredEx );
-    MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( restored, NULL );
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox( restored, NULL );
     TEST_ASSERT( bbox.min.x > 0.199f && bbox.min.x < 0.201f );
     TEST_ASSERT( bbox.min.y > 0.199f && bbox.min.y < 0.201f );
     TEST_ASSERT( bbox.min.z > 0.199f && bbox.min.z < 0.201f );

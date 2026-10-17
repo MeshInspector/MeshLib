@@ -29,7 +29,7 @@ fn vdb_conversions()
     settings.set_iso_value(1.0);
     let restored = meshlib::grid_to_mesh_const_mr_float_grid_ref(volume.data(), &settings);
     let restored = restored.into_result().expect("gridToMesh failed");
-    let bbox = restored.compute_bounding_box_1(None);
+    let bbox = restored.compute_bounding_box(None);
     assert!(bbox.min.x > 0.199 && bbox.min.x < 0.201);
     assert!(bbox.min.y > 0.199 && bbox.min.y < 0.201);
     assert!(bbox.min.z > 0.199 && bbox.min.z < 0.201);

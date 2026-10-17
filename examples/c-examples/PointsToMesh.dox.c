@@ -16,7 +16,7 @@ int main( void )
 {
     int rc = EXIT_FAILURE;
     // load points
-    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "Points.ply", NULL, NULL );
+    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat( "Points.ply", NULL, NULL );
     MR_PointCloud* pointCloud = MR_expected_MR_PointCloud_std_string_value_mut( loadRes );
     if ( !pointCloud )
     {
@@ -31,7 +31,7 @@ int main( void )
         goto fail_triangulation; // can be nullopt only if canceled by progress callback
     }
 
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "Mesh.ctm", NULL, NULL );
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "Mesh.ctm", NULL, NULL );
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

@@ -24,7 +24,7 @@ public final class TestMeshComponents
     {
         Mesh meshA = Functions.makeCube(Vector3f.diagonal(1.0f), Vector3f.diagonal(-0.5f));
         Mesh meshB = Functions.makeCube(Vector3f.diagonal(0.1f), Vector3f.diagonal(1.0f));
-        BooleanResult result = Functions.boolean_4_const_MR_Mesh_ref(meshA, meshB, BooleanOperation.Union, null);
+        BooleanResult result = Functions.boolean_(meshA, meshB, BooleanOperation.Union, new BooleanParameters());
         Mesh mesh = new Mesh(result.mesh());
         return new MeshPart(mesh, null); // The part keeps the mesh alive.
     }

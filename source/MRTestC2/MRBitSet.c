@@ -15,7 +15,7 @@ void testBitSet( void )
     TEST_ASSERT( MR_BitSet_find_last( a ) == 5 )
 
     MR_BitSet* b = MR_BitSet_Construct( 0, false );
-    MR_BitSet_autoResizeSet_2( b, 6, &(bool){true} );
+    MR_BitSet_autoResizeSet( b, 6, &(bool){true} );
     TEST_ASSERT( MR_BitSet_size( b ) == 7 )
 
     MR_BitSet_resize( a, 10, false );

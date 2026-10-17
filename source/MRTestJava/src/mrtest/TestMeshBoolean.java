@@ -67,8 +67,8 @@ public final class TestMeshBoolean
                         AffineXf3f xf = Functions.opMul(AffineXf3f.translation(shiftVec), AffineXf3f.linear(rotation));
                         BooleanParameters params = new BooleanParameters();
                         params.setRigidB2A(xf);
-                        BooleanResult resultAB = Functions.boolean_4_const_MR_Mesh_ref(meshA, meshB, BooleanOperation.Union, params);
-                        BooleanResult resultBA = Functions.boolean_4_const_MR_Mesh_ref(meshB, meshA, BooleanOperation.Union, params);
+                        BooleanResult resultAB = Functions.boolean_(meshA, meshB, BooleanOperation.Union, params);
+                        BooleanResult resultBA = Functions.boolean_(meshB, meshA, BooleanOperation.Union, params);
                         check(resultAB.valid(), "AB");
                         check(resultBA.valid(), "BA");
                     }
@@ -118,8 +118,8 @@ public final class TestMeshBoolean
 
         for (int i = 0; i < BooleanOperation.Count.value; i++)
         {
-            BooleanResult resultAB = Functions.boolean_4_const_MR_Mesh_ref(meshA, meshB, new BooleanOperation(i), null);
-            BooleanResult resultBA = Functions.boolean_4_const_MR_Mesh_ref(meshB, meshA, new BooleanOperation(i), null);
+            BooleanResult resultAB = Functions.boolean_(meshA, meshB, new BooleanOperation(i), new BooleanParameters());
+            BooleanResult resultBA = Functions.boolean_(meshB, meshA, new BooleanOperation(i), new BooleanParameters());
             check(resultAB.valid(), "AB " + i);
             check(resultBA.valid(), "BA " + i);
         }
@@ -139,7 +139,7 @@ public final class TestMeshBoolean
         {
             BooleanParameters parameters = new BooleanParameters();
             parameters.setMapper(mapper);
-            result = Functions.boolean_4_const_MR_Mesh_ref(meshA, meshB, BooleanOperation.Union, parameters);
+            result = Functions.boolean_(meshA, meshB, BooleanOperation.Union, parameters);
         }
         check(result.valid(), "valid");
 

@@ -7,9 +7,9 @@
 namespace MR
 {
 
-// MSVC (x64 and arm64) and GCC on x64 compile std::round into a library call,
-// while GCC and Clang on arm64 compile it into a single fcvtas instruction
-#if ( defined( _MSC_VER ) && !defined( __clang__ ) ) || ( defined( __GNUC__ ) && !defined( __clang__ ) && defined( __x86_64__ ) )
+// std::round is a library call with MSVC, GCC on x86-64 (unless -fno-trapping-math) and Clang on x86-64 without SSE4.1;
+// GCC and Clang compile it into one fcvtas on arm64, Clang into roundsd with SSE4.1 (e.g. macOS x86-64)
+#if ( defined( _MSC_VER ) && !defined( __clang__ ) ) || ( defined( __x86_64__ ) && !( defined( __clang__ ) && defined( __SSE4_1__ ) ) )
 #define MR_ROUND_TO_INT_NO_LIBRARY_CALL
 #endif
 

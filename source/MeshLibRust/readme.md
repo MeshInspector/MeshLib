@@ -1,8 +1,8 @@
 <p align="left">
 <picture>
-  <source media="(prefers-color-scheme: dark)"  srcset="https://github.com/user-attachments/assets/37d3a562-581d-421b-8209-ef6b224e96a8">
-  <source media="(prefers-color-scheme: light)" srcset="https://github.com/user-attachments/assets/caf6bdd1-b2f1-4d6d-9e22-c213db6fc9cf">
-  <img alt="MeshLib logo" src="https://github.com/user-attachments/assets/caf6bdd1-b2f1-4d6d-9e22-c213db6fc9cf" width="60%">
+  <source media="(prefers-color-scheme: dark)"  srcset="https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/logo_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/logo.png">
+  <img alt="MeshLib logo" src="https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/logo.png" width="60%">
 </picture>
 </p>
 
@@ -17,7 +17,7 @@
 [![crates.io downloads](https://img.shields.io/crates/d/meshlib?label=downloads)](https://crates.io/crates/meshlib)
 [![Stars](https://img.shields.io/github/stars/MeshInspector/MeshLib?style=flat&color=yellow)](https://github.com/MeshInspector/MeshLib)
 
-![MeshLib SDK — 3D mesh processing library](https://github.com/user-attachments/assets/a65dc95f-675d-4fb8-ac17-6857c9a91554)
+![MeshLib SDK — 3D mesh processing library](https://raw.githubusercontent.com/MeshInspector/MeshLib/master/docs/readme_images/banner.png)
 
 ## Install
 
@@ -27,7 +27,7 @@ cargo add meshlib@1.2.3-4
 
 The crate version is the MeshLib version with the build number as a pre-release identifier
 (`3.1.4-528` for v3.1.4.528), and Cargo picks pre-release versions only when they are named:
-`meshlib = "1.2.3-4"` also accepts the later builds of the same release, but `meshlib = "1.2"` matches none.
+`meshlib = "1.2.3-4"` also accepts the later builds of the same release, but `meshlib = "3.1"` matches none.
 
 Rust 1.88 or newer; Windows, Linux (glibc 2.28 or newer) and macOS, on x86_64 and aarch64.
 On the first build, the crate downloads the MeshLib shared libraries of the target platform
@@ -41,16 +41,9 @@ Turn a scan into a triangle mesh:
 ```rust
 fn main() -> Result<(), String>
 {
-    let pc = meshlib::points_load::from_any_supported_format_2("scan.ply", None); // point cloud from any scanner
-    let pc = pc.value().ok_or_else(|| pc.error().unwrap().to_string())?;
-    let mesh = meshlib::triangulate_point_cloud(pc, None, None);                    // point cloud -> triangle mesh
-    let mesh = mesh.value().ok_or("triangulation canceled")?;
-    let saved = meshlib::mesh_save::to_any_supported_format_3(mesh, "model.stl", None);
-    if let Some(error) = saved.error()
-    {
-        return Err(error.to_string());
-    }
-    Ok(())
+    let pc = meshlib::points_load::from_any_supported_format_2("scan.ply", None).into_result()?;    // point cloud from any scanner
+    let mesh = meshlib::triangulate_point_cloud(&pc, None, None).into_option().ok_or("canceled")?; // point cloud -> triangle mesh
+    meshlib::mesh_save::to_any_supported_format_3(&mesh, "model.stl", None).into_result()
 }
 ```
 
@@ -70,12 +63,7 @@ fn main() -> Result<(), String>
     {
         return Err(res.error_string().to_string());
     }
-    let saved = meshlib::mesh_save::to_any_supported_format_3(res.mesh(), "out_boolean.stl", None);
-    if let Some(error) = saved.error()
-    {
-        return Err(error.to_string());
-    }
-    Ok(())
+    meshlib::mesh_save::to_any_supported_format_3(res.mesh(), "out_boolean.stl", None).into_result()
 }
 ```
 
@@ -88,22 +76,15 @@ use meshlib::{GeneralOffsetParameters, MeshPart, SignDetectionMode};
 
 fn main() -> Result<(), String>
 {
-    let mesh = meshlib::mesh_load::from_any_supported_format_2("broken.stl", None);
-    let mesh = mesh.value().ok_or_else(|| mesh.error().unwrap().to_string())?;
+    let mesh = meshlib::mesh_load::from_any_supported_format_2("broken.stl", None).into_result()?;
 
     let mut params = GeneralOffsetParameters::new();
     params.set_voxel_size(mesh.compute_bounding_box_1(None).diagonal() / 200.0);
     params.set_sign_detection_mode(SignDetectionMode::HoleWindingRule);
     params.set_close_holes_in_hole_winding_number(true);
 
-    let fixed = meshlib::general_offset_mesh(&MeshPart::construct(mesh, None), 0.0, &params); // watertight
-    let fixed = fixed.value().ok_or_else(|| fixed.error().unwrap().to_string())?;
-    let saved = meshlib::mesh_save::to_any_supported_format_3(fixed, "fixed.stl", None);
-    if let Some(error) = saved.error()
-    {
-        return Err(error.to_string());
-    }
-    Ok(())
+    let fixed = meshlib::general_offset_mesh(&MeshPart::construct(&mesh, None), 0.0, &params).into_result()?; // watertight
+    meshlib::mesh_save::to_any_supported_format_3(&fixed, "fixed.stl", None).into_result()
 }
 ```
 
@@ -120,6 +101,8 @@ the Rust ones are in [`examples/rust-examples`](https://github.com/MeshInspector
 A few rules of thumb for the Rust API: parameters with default arguments take `Option`
 (`None` for the default), and overloaded C++ functions keep the numbered names of the
 C API, like `boolean_6`; the doc comment of each function names its C++ original.
+Returned C++ `expected` and `std::optional` objects become Rust `Result` and `Option`
+with `into_result()` and `into_option()`, so `?` works on them.
 
 ## What MeshLib does
 

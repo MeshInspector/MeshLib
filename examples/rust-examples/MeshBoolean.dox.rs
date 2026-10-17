@@ -44,11 +44,7 @@ fn main() -> Result<(), String>
     println!("face {} of the result came from face {} of sphere1", result_face.id_, new2old_faces.index(result_face).id_);
 
     // Save result to an STL file.
-    let saved = meshlib::mesh_save::to_any_supported_format_3(result.mesh(), "out_boolean.stl", None);
-    if let Some(error) = saved.error()
-    {
-        return Err(format!("Failed to save mesh: {error}"));
-    }
+    meshlib::mesh_save::to_any_supported_format_3(result.mesh(), "out_boolean.stl", None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
 
     Ok(())
 }

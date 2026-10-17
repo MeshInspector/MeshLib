@@ -449,6 +449,7 @@ jobs:
     uses: ./.github/workflows/update-docs.yml
     with:
       output_folder: MeshLib
+      version: ${{ needs.setup.outputs.wheel_version }}
     secrets: inherit
 
   windows-pip-build:

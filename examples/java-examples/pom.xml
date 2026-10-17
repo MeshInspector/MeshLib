@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Builds and runs the examples with MeshLib from Maven Central: mvn compile exec:exec -Dmeshlib.version=<MeshLib version> -Dexample=MeshBoolean -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.meshinspector.examples</groupId>
+  <artifactId>meshlib-java-examples</artifactId>
+  <version>1.0</version>
+
+  <properties>
+    <meshlib.version>1.2.3.4</meshlib.version>
+    <maven.compiler.release>22</maven.compiler.release>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <example>MeshBoolean</example>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.meshinspector</groupId>
+      <artifactId>meshlib</artifactId>
+      <version>${meshlib.version}</version>
+    </dependency>
+    <!-- The libraries of this platform, see the profiles below. -->
+    <dependency>
+      <groupId>com.meshinspector</groupId>
+      <artifactId>meshlib</artifactId>
+      <version>${meshlib.version}</version>
+      <classifier>natives-${meshlib.platform}</classifier>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+
+  <profiles>
+    <profile>
+      <id>windows-x86_64</id>
+      <activation><os><family>windows</family><arch>amd64</arch></os></activation>
+      <properties><meshlib.platform>windows-x86_64</meshlib.platform></properties>
+    </profile>
+    <profile>
+      <id>windows-aarch64</id>
+      <activation><os><family>windows</family><arch>aarch64</arch></os></activation>
+      <properties><meshlib.platform>windows-aarch64</meshlib.platform></properties>
+    </profile>
+    <profile>
+      <id>linux-x86_64</id>
+      <activation><os><name>linux</name><arch>amd64</arch></os></activation>
+      <properties><meshlib.platform>linux-x86_64</meshlib.platform></properties>
+    </profile>
+    <profile>
+      <id>linux-aarch64</id>
+      <activation><os><name>linux</name><arch>aarch64</arch></os></activation>
+      <properties><meshlib.platform>linux-aarch64</meshlib.platform></properties>
+    </profile>
+    <profile>
+      <id>macos-x86_64</id>
+      <activation><os><family>mac</family><arch>x86_64</arch></os></activation>
+      <properties><meshlib.platform>macos-x86_64</meshlib.platform></properties>
+    </profile>
+    <profile>
+      <id>macos-aarch64</id>
+      <activation><os><family>mac</family><arch>aarch64</arch></os></activation>
+      <properties><meshlib.platform>macos-aarch64</meshlib.platform></properties>
+    </profile>
+  </profiles>
+
+  <build>
+    <!-- The examples are package-private classes in `*.dox.java` next to this file. -->
+    <sourceDirectory>.</sourceDirectory>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>3.5.0</version>
+        <configuration>
+          <executable>java</executable>
+          <arguments>
+            <argument>--enable-native-access=ALL-UNNAMED</argument>
+            <argument>-classpath</argument>
+            <classpath/>
+            <argument>${example}</argument>
+          </arguments>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

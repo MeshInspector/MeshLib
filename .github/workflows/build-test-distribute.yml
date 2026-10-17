@@ -458,6 +458,24 @@ jobs:
     with:
       release_tag: ${{ needs.config.outputs.release_tag }}
 
+  java-consumer-test:
+    # The Maven artifacts are packed from the Java bindings of the arm64 Ubuntu 22 job and the native archives of the Rust crate (from the NuGet package).
+    if: >-
+      ${{ !cancelled()
+        && needs.config.outputs.upload_artifacts == 'true'
+        && needs.config.outputs.build_enable_ubuntu_arm64 == 'true'
+        && needs.create-nuget-package.result == 'success'
+        && needs.ubuntu-build-test.result == 'success'
+        && needs.upload-distributions.result == 'success' }}
+    needs:
+      - config
+      - create-nuget-package
+      - ubuntu-build-test
+      - upload-distributions
+    uses: ./.github/workflows/java-consumer-test.yml
+    with:
+      release_tag: ${{ needs.config.outputs.release_tag }}
+
   test-distribution:
     # Skip if publishing was skipped, so we don't test against an empty release.
     if: ${{ !cancelled() && needs.config.outputs.upload_artifacts == 'true' && needs.upload-distributions.result == 'success' }}

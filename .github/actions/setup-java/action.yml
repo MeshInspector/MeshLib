@@ -19,8 +19,9 @@ runs:
       run: |
         set -eu
         if command -v javac >/dev/null; then
-          version=$(javac -version 2>&1 | sed -E 's/^javac ([0-9]+).*/\1/')
-          if [ "$version" -ge 22 ]; then
+          # On macOS without a JDK, `/usr/bin/javac` is a stub that fails.
+          version=$(javac -version 2>&1 | sed -nE 's/^javac ([0-9]+).*/\1/p' || true)
+          if [ -n "$version" ] && [ "$version" -ge 22 ]; then
             echo "Using the existing $(command -v javac), version $version"
             exit 0
           fi

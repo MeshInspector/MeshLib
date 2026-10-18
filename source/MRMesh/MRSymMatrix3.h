@@ -277,15 +277,26 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
         const auto mxy = xx * yy - xy * xy;
         if ( mxy > 0 )
         {
+            // cofactors of the first row give the determinant, and together with the principal minors - the inverse
             const auto myz = yy * zz - yz * yz;
-            const auto d = xx * myz - xy * ( xy * zz - yz * xz ) + xz * ( xy * yz - yy * xz ); // det()
-            if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * trace() * ( mxy + xx * zz - xz * xz + myz ) )
+            const auto cxy = xz * yz - xy * zz;
+            const auto cxz = xy * yz - xz * yy;
+            const auto d = xx * myz + xy * cxy + xz * cxz;
+            const auto mxz = xx * zz - xz * xz;
+            if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * trace() * ( mxy + mxz + myz ) )
             {
                 if ( rank )
                     *rank = 3;
                 if ( space )
                     *space = Vector3<T>{};
-                return inverse( d );
+                SymMatrix3<T> res;
+                res.xx = myz / d;
+                res.xy = cxy / d;
+                res.xz = cxz / d;
+                res.yy = mxz / d;
+                res.yz = ( xz * xy - xx * yz ) / d;
+                res.zz = mxy / d;
+                return res;
             }
         }
     }

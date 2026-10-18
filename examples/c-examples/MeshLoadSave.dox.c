@@ -19,7 +19,7 @@ int main( int argc, char** argv )
     const char* outputPath = argc > 2 ? argv[2] : "mesh.ply";
 
     // Load mesh.
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( inputPath, NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( inputPath, NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     if ( !mesh )
@@ -31,7 +31,7 @@ int main( int argc, char** argv )
     }
 
     // Save mesh.
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, outputPath, NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, outputPath, NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

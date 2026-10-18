@@ -69,10 +69,10 @@ struct DenoiseViaNormalsSettings
 
 /// Reduces noise in given mesh,
 /// see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-MRMESH_API void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
+MR_BIND_OVERLOAD_SUFFIX() MRMESH_API void meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings = {} );
 
 /// the same, reporting the progress in (cb); returns false if the operation was canceled from it
-[[nodiscard]] MRMESH_API bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb );
+MR_BIND_OVERLOAD_SUFFIX(progress) [[nodiscard]] MRMESH_API bool meshDenoiseViaNormals( Mesh & mesh, const DenoiseViaNormalsSettings & settings, const ProgressCallback & cb );
 
 struct DenoiseWithCreasesSettings
 {

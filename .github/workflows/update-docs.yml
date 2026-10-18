@@ -7,6 +7,11 @@ on:
         required: false
         type: string
         default: "MeshLib"
+      version:
+        description: "MeshLib release version (v1.2.3.4) that replaces the placeholder 1.2.3.4 in the package installation instructions"
+        required: false
+        type: string
+        default: ""
 
 jobs:
   update-documentation:
@@ -37,6 +42,23 @@ jobs:
           path: 'MeshInspector.github.io/'
           token: ${{ secrets.MESHINSPECTOR_BOT_TOKEN }}
           submodules: recursive
+
+      # The Maven coordinates in the Java guide name the exact version of the release.
+      - name: Put the release version into the guides
+        if: ${{ inputs.version != '' }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          VERSION="${VERSION#v}"
+          VERSION="${VERSION%%-*}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::warning::Not a release version: ${{ inputs.version }}, the guides keep 1.2.3.4"
+            exit 0
+          fi
+          FILE=MeshLib/doxygen/general_pages/JavaSetupGuide.md
+          grep -q '1\.2\.3\.4' "$FILE" || { echo "::error::No 1.2.3.4 placeholder in $FILE"; exit 1; }
+          sed -i "s/1\.2\.3\.4/$VERSION/g" "$FILE"
+          grep -n "$VERSION" "$FILE"
 
       - name: Download Python Stubs
         uses: actions/download-artifact@v8

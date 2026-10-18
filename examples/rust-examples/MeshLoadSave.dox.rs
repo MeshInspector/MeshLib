@@ -6,7 +6,7 @@ fn main() -> Result<(), String>
     let output_path = args.get(2).map_or("mesh.ply", String::as_str);
 
     // Load mesh. `into_result()` turns the returned `expected` into a Rust `Result`.
-    let mesh = meshlib::mesh_load::from_any_supported_format_2(input_path, None).into_result().map_err(|error|
+    let mesh = meshlib::mesh_load::from_any_supported_format(input_path, None).into_result().map_err(|error|
     {
         if args.len() <= 1
         {
@@ -16,7 +16,7 @@ fn main() -> Result<(), String>
     })?;
 
     // Save mesh.
-    meshlib::mesh_save::to_any_supported_format_3(&mesh, output_path, None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
+    meshlib::mesh_save::to_any_supported_format(&mesh, output_path, None).into_result().map_err(|error| format!("Failed to save mesh: {error}"))?;
 
     Ok(())
 }

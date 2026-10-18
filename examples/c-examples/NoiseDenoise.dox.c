@@ -15,7 +15,7 @@ int main( void )
     int rc = EXIT_FAILURE;
 
     // Load mesh
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
     if ( !mesh )
     {
@@ -24,7 +24,7 @@ int main( void )
     }
 
     // Add noise to the mesh
-    MR_Box3f box = MR_Mesh_computeBoundingBox_1( mesh, NULL );
+    MR_Box3f box = MR_Mesh_computeBoundingBox( mesh, NULL );
     MR_NoiseSettings* noiseSettings = MR_NoiseSettings_DefaultConstruct();
     MR_NoiseSettings_Set_sigma( noiseSettings, MR_Box3f_diagonal( &box ) * 0.0001f );
     MR_expected_void_std_string* noiseEx = MR_addNoise_MR_Mesh( mesh, NULL, noiseSettings );
@@ -40,7 +40,7 @@ int main( void )
     MR_Mesh_invalidateCaches( mesh, NULL );
 
     // Save the noised mesh
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "noised_mesh.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "noised_mesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );
@@ -49,10 +49,10 @@ int main( void )
 
     // Denoise the mesh with sharpening for sharp edges
     // see the article "Mesh Denoising via a Novel Mumford-Shah Framework"
-    MR_meshDenoiseViaNormals_2( mesh, NULL );
+    MR_meshDenoiseViaNormals( mesh, NULL );
 
     // Save the denoised mesh
-    MR_expected_void_std_string* saveEx2 = MR_MeshSave_toAnySupportedFormat_3( mesh, "denoised_mesh.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx2 = MR_MeshSave_toAnySupportedFormat( mesh, "denoised_mesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx2 ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx2 ) ) );

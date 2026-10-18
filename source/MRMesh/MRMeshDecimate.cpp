@@ -621,6 +621,8 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         }
     }
 
+    // triangle aspect ratios are needed for the aspect ratio check and to find not-degenerate triangles for the normal flip check
+    const bool checkAspectRatios = settings_.preventNormalFlips || settings_.maxTriangleAspectRatio < FLT_MAX;
     float maxOldAspectRatio = settings_.maxTriangleAspectRatio;
     float maxNewAspectRatio = 0;
     const float edgeLenSq = ( po - pd ).lengthSq();
@@ -651,18 +653,23 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
+        if ( !checkAspectRatios )
+            continue;
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vr )
         {
-            auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            sumDblArea += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
             maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
-            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+            if ( settings_.preventNormalFlips )
             {
-                const auto oldA = cross( pDest - po, pDest2 - po );
-                if ( dot( da, oldA ) <= 0 )
-                    triDblAreas_.push_back( da );
+                auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
+                sumDblArea += Vector3d{ da };
+                if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+                {
+                    const auto oldA = cross( pDest - po, pDest2 - po );
+                    if ( dot( da, oldA ) <= 0 )
+                        triDblAreas_.push_back( da );
+                }
             }
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( po, pDest, pDest2 ) );
@@ -693,18 +700,23 @@ auto MeshDecimator::canCollapse_( EdgeId edgeToCollapse, const Vector3f & collap
         if ( !settings_.collapseNearNotFlippable && collapsingFlippable && settings_.notFlippable && settings_.notFlippable->test( e ) )
             return { .status =  CollapseStatus::Flippable }; // cannot collapse a flippable edge incident to a not-flippable edge
 
+        if ( !checkAspectRatios )
+            continue;
         const auto pDest2 = mesh_.destPnt( topology.next( e ) );
         if ( eDest != vl )
         {
-            auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
-            sumDblArea += Vector3d{ da };
             const auto triAspect = triangleAspectRatio( collapsePos, pDest, pDest2 );
             maxNewAspectRatio = std::max( maxNewAspectRatio, triAspect );
-            if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+            if ( settings_.preventNormalFlips )
             {
-                const auto oldA = cross( pDest - pd, pDest2 - pd );
-                if ( dot( da, oldA ) <= 0 )
-                    triDblAreas_.push_back( da );
+                auto da = cross( pDest - collapsePos, pDest2 - collapsePos );
+                sumDblArea += Vector3d{ da };
+                if ( triAspect < settings_.criticalTriAspectRatio ) // can trust direction of not-degenerate triangles only
+                {
+                    const auto oldA = cross( pDest - pd, pDest2 - pd );
+                    if ( dot( da, oldA ) <= 0 )
+                        triDblAreas_.push_back( da );
+                }
             }
         }
         maxOldAspectRatio = std::max( maxOldAspectRatio, triangleAspectRatio( pd, pDest, pDest2 ) );

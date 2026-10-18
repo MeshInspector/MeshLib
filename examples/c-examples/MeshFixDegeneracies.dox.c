@@ -15,7 +15,7 @@ int main( void )
     int rc = EXIT_FAILURE;
 
     // Load mesh
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
     if ( !mesh )
     {
@@ -26,7 +26,7 @@ int main( void )
     // you can set various parameters for the resolving process; see the documentation for more info
     MR_FixMeshDegeneraciesParams* params = MR_FixMeshDegeneraciesParams_DefaultConstruct();
     // maximum permitted deviation
-    const MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( mesh, NULL );
+    const MR_Box3f bbox = MR_Mesh_computeBoundingBox( mesh, NULL );
     MR_FixMeshDegeneraciesParams_Set_maxDeviation( params, 1e-5f * MR_Box3f_diagonal( &bbox ) );
     // maximum length of edges to be collapsed
     MR_FixMeshDegeneraciesParams_Set_tinyEdgeLength( params, 1e-3f );
@@ -41,7 +41,7 @@ int main( void )
     }
 
     // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "fixedMesh.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "fixedMesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

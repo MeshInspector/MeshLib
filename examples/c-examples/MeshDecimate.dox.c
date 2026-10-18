@@ -1,3 +1,4 @@
+#include <MRCMesh/MRBuffer.h>
 #include <MRCMesh/MRMesh.h>
 #include <MRCMesh/MRMeshDecimate.h>
 #include <MRCMesh/MRMeshLoad.h>
@@ -15,7 +16,7 @@ int main( void )
     int rc = EXIT_FAILURE;
 
     // Load mesh.
-    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat_2( "mesh.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshEx = MR_MeshLoad_fromAnySupportedFormat( "mesh.stl", NULL, NULL );
     MR_Mesh* mesh = MR_expected_MR_Mesh_std_string_value_mut( meshEx );
 
     // Handle failure to load mesh.
@@ -25,6 +26,11 @@ int main( void )
         goto fail;
     }
 
+    // Repack mesh optimally without building an AABB tree, which decimation invalidates anyway.
+    // It's not necessary but highly recommended to achieve the best performance in parallel processing
+    bool preserveAABBTree = false;
+    MR_PackMapping_Destroy( MR_Mesh_packOptimally_1( mesh, &preserveAABBTree ) );
+
     // Setup decimate parameters
     MR_DecimateSettings* params = MR_DecimateSettings_DefaultConstruct();
 
@@ -33,7 +39,7 @@ int main( void )
     MR_DecimateSettings_Set_maxError( params, 0.05f ); // Maximum error when decimation stops
 
     // Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
-    // A value close to the number of CPU cores is usually the fastest; much larger values add per-part overhead
+    // 16 is a good choice even with fewer CPU cores, since smaller parts are processed faster; much larger values add per-part overhead
     MR_DecimateSettings_Set_subdivideParts( params, 16 );
 
     // Decimate mesh
@@ -44,7 +50,7 @@ int main( void )
     MR_DecimateResult_Destroy( result );
 
     // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "decimated_mesh.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "decimated_mesh.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

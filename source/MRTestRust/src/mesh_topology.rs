@@ -5,7 +5,7 @@ use meshlib::{EdgeId, VertId};
 fn pack()
 {
     let mut mesh = create_cube();
-    mesh.topology_mut().pack_4(None, None, None, None);
+    mesh.topology_mut().pack(None, None, None, None);
 }
 
 #[test]
@@ -31,11 +31,11 @@ fn find_hole_representive_edges()
 }
 
 #[test]
-fn get_left_tri_verts_4()
+fn get_left_tri_verts_out_verts()
 {
     let mesh = create_cube();
     let (mut v0, mut v1, mut v2) = (VertId {id_: -1}, VertId {id_: -1}, VertId {id_: -1});
-    mesh.topology().get_left_tri_verts_4(EdgeId {id_: 0}, &mut v0, &mut v1, &mut v2);
+    mesh.topology().get_left_tri_verts_out_verts(EdgeId {id_: 0}, &mut v0, &mut v1, &mut v2);
     assert!(v0.id_ >= 0 && v1.id_ >= 0 && v2.id_ >= 0);
 }
 

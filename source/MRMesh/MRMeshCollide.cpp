@@ -189,7 +189,7 @@ Expected<bool> findSelfCollidingTriangles(
     {
         processSelfSubtasks( tree, subtasks, nextSubtasks,
             [&leafTasks]( const NodeNode & s ) { leafTasks.push_back( s ); return Processing::Continue; },
-            [](const Box3f& lBox, const Box3f& rBox ){ return lBox.intersects( rBox ) ? Processing::Continue : Processing::Stop; });
+            [&tree]( const NodeNode & s ){ return tree[s.aNode].box.intersects( tree[s.bNode].box ) ? Processing::Continue : Processing::Stop; });
         subtasks.swap( nextSubtasks );
 
         if ( !reportProgress( sb, i / 16.0f ) )
@@ -296,7 +296,7 @@ Expected<bool> findSelfCollidingTriangles(
                     }
                     return Processing::Continue;
                 },
-                [](const Box3f& lBox, const Box3f& rBox ){ return lBox.intersects( rBox ) ? Processing::Continue : Processing::Stop; }
+                [&tree]( const NodeNode & s ){ return tree[s.aNode].box.intersects( tree[s.bNode].box ) ? Processing::Continue : Processing::Stop; }
             );
 
             subtaskRes[is] = std::move( myRes );

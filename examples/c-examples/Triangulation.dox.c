@@ -21,7 +21,7 @@
 int main( void )
 {
     // Generate point cloud
-    MR_VertCoords* points = MR_VertCoords_Construct_1_size_t( 10000 );
+    MR_VertCoords* points = MR_VertCoords_Construct( 10000 );
     for ( int i = 0; i < 100; ++i )
     {
         float u = PI*2 * (float)i / ( 100.f - 1.f );
@@ -89,7 +89,7 @@ int main( void )
     }
 
     // Save the result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "result.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "result.stl", NULL, NULL);
     MR_expected_MR_Mesh_std_string_Destroy( meshEx );
 
     if ( MR_expected_void_std_string_error( saveEx ) )

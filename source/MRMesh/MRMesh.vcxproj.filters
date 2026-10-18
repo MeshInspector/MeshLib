@@ -1362,6 +1362,9 @@
     <ClInclude Include="MRBitCast.h">
       <Filter>Source Files\Basic</Filter>
     </ClInclude>
+    <ClInclude Include="MRRound.h">
+      <Filter>Source Files\Basic</Filter>
+    </ClInclude>
     <ClInclude Include="MRFastInt128.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>

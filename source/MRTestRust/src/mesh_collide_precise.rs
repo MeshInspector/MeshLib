@@ -11,8 +11,8 @@ fn mesh_collide_precise()
 
     let part_a = meshlib::MeshPart::construct(&mesh_a, None);
     let part_b = meshlib::MeshPart::construct(&mesh_b, None);
-    let conv = meshlib::get_vector_converters_3(&part_a, &part_b, None);
-    let intersections = meshlib::find_colliding_edge_tris_precise_5(&part_a, &part_b, conv.to_int(), None, None);
+    let conv = meshlib::get_vector_converters(&part_a, &part_b, None);
+    let intersections = meshlib::find_colliding_edge_tris_precise(&part_a, &part_b, conv.to_int(), None, None);
     assert_eq!(intersections.size(), 152);
 
     let contours = meshlib::order_intersection_contours(mesh_a.topology(), mesh_b.topology(), &intersections);

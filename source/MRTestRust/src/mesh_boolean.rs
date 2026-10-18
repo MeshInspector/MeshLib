@@ -46,8 +46,8 @@ fn mesh_boolean()
                     let xf = meshlib::op_mul_mr_affine_xf3f(&AffineXf3f::translation(&shift_vec), &AffineXf3f::linear(&rotation));
                     let mut params = meshlib::BooleanParameters::new();
                     params.set_rigid_b2_a(Some(&xf));
-                    let result_ab = meshlib::boolean_4_const_mr_mesh_ref(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&params));
-                    let result_ba = meshlib::boolean_4_const_mr_mesh_ref(&mesh_b, &mesh_a, BooleanOperation::Union, Some(&params));
+                    let result_ab = meshlib::boolean(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&params));
+                    let result_ba = meshlib::boolean(&mesh_b, &mesh_a, BooleanOperation::Union, Some(&params));
                     assert!(result_ab.valid());
                     assert!(result_ba.valid());
                     angle += angle_step;
@@ -61,14 +61,14 @@ fn mesh_boolean()
 #[test]
 fn boolean_multiple_edge_propogation_sort()
 {
-    let mut points = meshlib::VertCoords::construct_1_size_t(6);
+    let mut points = meshlib::VertCoords::construct(6);
     *points.index_mut(VertId {id_: 0}) = Vector3f {x: 0.0, y: 0.0, z: 0.0};
     *points.index_mut(VertId {id_: 1}) = Vector3f {x: -0.5, y: 1.0, z: 0.0};
     *points.index_mut(VertId {id_: 2}) = Vector3f {x: 0.5, y: 1.0, z: 0.0};
     *points.index_mut(VertId {id_: 3}) = Vector3f {x: 0.0, y: 1.5, z: 0.5};
     *points.index_mut(VertId {id_: 4}) = Vector3f {x: -1.0, y: 1.5, z: 0.0};
     *points.index_mut(VertId {id_: 5}) = Vector3f {x: 1.0, y: 1.5, z: 0.0};
-    let mut triangulation = meshlib::Triangulation::construct_1_size_t(5);
+    let mut triangulation = meshlib::Triangulation::construct(5);
     let tri = |a, b, c| meshlib::std_array_MR_VertId_3 {elems: [VertId {id_: a}, VertId {id_: b}, VertId {id_: c}]};
     *triangulation.index_mut(FaceId {id_: 0}) = tri(0, 2, 1);
     *triangulation.index_mut(FaceId {id_: 1}) = tri(1, 2, 3);
@@ -84,7 +84,7 @@ fn boolean_multiple_edge_propogation_sort()
         let mut border_vec = meshlib::std_vector_std_vector_MR_EdgeId::new();
         border_vec.push_back(&border);
         let mp = meshlib::MeshPart::construct(&mesh_a_sup, Some(mesh_a_sup.topology().get_valid_faces()));
-        mesh_a.add_mesh_part_6(&mp, Some(true), Some(&border_vec), Some(&border_vec), None, None);
+        mesh_a.add_mesh_part(&mp, Some(true), Some(&border_vec), Some(&border_vec), None, None);
     }
 
     let mut mesh_b = meshlib::make_cube(Some(&Vector3f::diagonal(2.0)), Some(&Vector3f::diagonal(-0.5)));
@@ -92,8 +92,8 @@ fn boolean_multiple_edge_propogation_sort()
 
     for i in 0..BooleanOperation::Count.0
     {
-        let result_ab = meshlib::boolean_4_const_mr_mesh_ref(&mesh_a, &mesh_b, BooleanOperation(i), None);
-        let result_ba = meshlib::boolean_4_const_mr_mesh_ref(&mesh_b, &mesh_a, BooleanOperation(i), None);
+        let result_ab = meshlib::boolean(&mesh_a, &mesh_b, BooleanOperation(i), None);
+        let result_ba = meshlib::boolean(&mesh_b, &mesh_a, BooleanOperation(i), None);
         assert!(result_ab.valid());
         assert!(result_ba.valid());
     }
@@ -113,7 +113,7 @@ fn boolean_mapper()
     let result = {
         let mut parameters = meshlib::BooleanParameters::new();
         parameters.set_mapper(Some(&mut mapper));
-        meshlib::boolean_4_const_mr_mesh_ref(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&parameters))
+        meshlib::boolean(&mesh_a, &mesh_b, BooleanOperation::Union, Some(&parameters))
     };
     assert!(result.valid());
 

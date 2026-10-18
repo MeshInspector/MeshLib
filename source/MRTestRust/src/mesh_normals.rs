@@ -5,5 +5,5 @@ fn mesh_normals()
 {
     let cube = create_cube();
     assert_eq!(meshlib::compute_per_vert_normals(&cube).size(), 8);
-    assert_eq!(meshlib::compute_per_face_normals_1(&cube).size(), 12);
+    assert_eq!(meshlib::compute_per_face_normals(&cube).size(), 12);
 }

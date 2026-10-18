@@ -24,7 +24,7 @@ int main( void )
     MR_VertColors* colors = MR_VertColors_DefaultConstruct();
     MR_PointsLoadSettings* pls = MR_PointsLoadSettings_DefaultConstruct();
     MR_PointsLoadSettings_Set_colors( pls, colors );
-    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat_2( "TerrainPoints.ply", NULL, pls );
+    MR_expected_MR_PointCloud_std_string* loadRes = MR_PointsLoad_fromAnySupportedFormat( "TerrainPoints.ply", NULL, pls );
     MR_PointCloud* pc = MR_expected_MR_PointCloud_std_string_value_mut( loadRes );
     if ( !pc )
     {
@@ -48,7 +48,7 @@ int main( void )
         MR_SaveSettings_Set_colors( ss, colors );
     }
 
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( mesh, "TerrainMesh.ctm", NULL, ss );
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( mesh, "TerrainMesh.ctm", NULL, ss );
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

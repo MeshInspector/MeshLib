@@ -5,6 +5,9 @@
 #include <gtest/gtest.h>
 #include <MRMesh/MRBitSetParallelFor.h>
 #include <MRMesh/MRPartMappingAdapters.h>
+#include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRBuffer.h>
 
 namespace MR
 {
@@ -549,6 +552,22 @@ TEST( MRMesh, isOutside )
     Mesh mesh = makeCube();
     EXPECT_TRUE( mesh.isOutside( Vector3f( 2, 0, 0 ) ) );
     EXPECT_FALSE( mesh.isOutside( Vector3f( 0, 0, 0 ) ) );
+}
+
+// packOptimally( false ) orders faces by an already constructed tree, as packOptimally( true ) does, and drops the tree
+TEST( MRMesh, PackOptimallyWithCachedTree )
+{
+    const auto src = makeSphere( { .numMeshVertices = 1000 } );
+    Mesh a = src, b = src;
+    (void)a.getAABBTree();
+    (void)b.getAABBTree();
+    a.packOptimally( false );
+    b.packOptimally( true );
+    EXPECT_FALSE( a.getAABBTreeNotCreate() );
+    EXPECT_TRUE( b.getAABBTreeNotCreate() );
+    EXPECT_EQ( a.points, b.points );
+    EXPECT_EQ( a.topology, b.topology );
+    EXPECT_TRUE( a.topology.checkValidity() );
 }
 
 } //namespace MR

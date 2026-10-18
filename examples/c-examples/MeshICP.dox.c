@@ -18,7 +18,7 @@ int main( void )
     // Load meshes:
 
     // First mesh, which will be moved.
-    MR_expected_MR_Mesh_std_string* meshFloatingEx = MR_MeshLoad_fromAnySupportedFormat_2( "meshA.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshFloatingEx = MR_MeshLoad_fromAnySupportedFormat( "meshA.stl", NULL, NULL );
     MR_Mesh* meshFloating = MR_expected_MR_Mesh_std_string_value_mut( meshFloatingEx );
     if ( !meshFloating )
     {
@@ -27,7 +27,7 @@ int main( void )
     }
 
     // Second mesh, static.
-    MR_expected_MR_Mesh_std_string* meshReferenceEx = MR_MeshLoad_fromAnySupportedFormat_2( "meshB.stl", NULL, NULL );
+    MR_expected_MR_Mesh_std_string* meshReferenceEx = MR_MeshLoad_fromAnySupportedFormat( "meshB.stl", NULL, NULL );
     MR_Mesh* meshReference = MR_expected_MR_Mesh_std_string_value_mut( meshReferenceEx );
     if ( !meshReference )
     {
@@ -36,7 +36,7 @@ int main( void )
     }
 
     // Prepare ICP parameters
-    MR_Box3f bbox = MR_Mesh_computeBoundingBox_1( meshReference, NULL );
+    MR_Box3f bbox = MR_Mesh_computeBoundingBox( meshReference, NULL );
     float diagonal = MR_Box3f_diagonal( &bbox );
     float icpSamplingVoxelSize = diagonal * 0.01f; // To sample points from object
     MR_ICPProperties* icpParams = MR_ICPProperties_DefaultConstruct();
@@ -51,7 +51,7 @@ int main( void )
     MR_MeshOrPoints_Destroy( fltMop );
     MR_MeshOrPoints_Destroy( refMop );
 
-    MR_ICP* icp = MR_ICP_Construct_3( flt, ref, icpSamplingVoxelSize );
+    MR_ICP* icp = MR_ICP_Construct( flt, ref, icpSamplingVoxelSize );
     MR_ICP_setParams( icp, icpParams );
     MR_ICPProperties_Destroy( icpParams );
     MR_AffineXf3f xf = MR_ICP_calculateTransformation( icp );
@@ -71,7 +71,7 @@ int main( void )
     MR_MeshOrPointsXf_Destroy( ref );
 
     // Save result
-    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat_3( meshFloating, "meshA_icp.stl", NULL, NULL);
+    MR_expected_void_std_string* saveEx = MR_MeshSave_toAnySupportedFormat( meshFloating, "meshA_icp.stl", NULL, NULL);
     if ( MR_expected_void_std_string_error( saveEx ) )
     {
         fprintf( stderr, "Failed to save mesh: %s\n", MR_std_string_data( MR_expected_void_std_string_error( saveEx ) ) );

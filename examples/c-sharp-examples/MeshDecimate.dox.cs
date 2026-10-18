@@ -21,7 +21,7 @@ public class MeshDecimateExample
             ds.maxError = 0.05f; // Maximum error when decimation stops
 
             // Number of parts for parallel processing, greatly improves performance at the cost of minor quality loss.
-            // A value close to the number of CPU cores is usually the fastest; much larger values add per-part overhead
+            // 16 is a good choice even with fewer CPU cores, since smaller parts are processed faster; much larger values add per-part overhead
             ds.subdivideParts = 16;
 
             // Decimate mesh

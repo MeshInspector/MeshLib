@@ -29,7 +29,7 @@ fn vdb_conversions()
     settings.set_iso_value(1.0);
     let restored = meshlib::grid_to_mesh_const_mr_float_grid_ref(volume.data(), &settings);
     let restored = restored.into_result().expect("gridToMesh failed");
-    let bbox = restored.compute_bounding_box_1(None);
+    let bbox = restored.compute_bounding_box(None);
     assert!(bbox.min.x > 0.199 && bbox.min.x < 0.201);
     assert!(bbox.min.y > 0.199 && bbox.min.y < 0.201);
     assert!(bbox.min.z > 0.199 && bbox.min.z < 0.201);
@@ -83,7 +83,7 @@ fn accessors()
     let dims = *volume.dims();
     let mut region = meshlib::VoxelBitSet::new();
     region.resize((dims.x * dims.y * dims.z) as _, None);
-    region.set_2(VoxelId {id_: 0}, true);
+    region.set(VoxelId {id_: 0}, true);
     meshlib::set_value_mr_voxel_bit_set(volume.data_mut(), &region, 1.0);
     assert_eq!(meshlib::get_value(volume.data_mut(), &p), 1.0);
     meshlib::set_value_mr_vector3i(volume.data_mut(), &p, 2.0);

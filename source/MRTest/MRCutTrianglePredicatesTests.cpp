@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <bit>
-#include <functional>
+#include <cstdint>
 #include <numeric>
 #include <optional>
 #include <random>
@@ -17,24 +17,30 @@ namespace
 using Tri = std::array<PreciseVertCoords, 3>;
 
 // random integer points in a cube, with ids in a random order, so that the perturbation orders the vertices variously;
-// the ids are unique within one trial
+// the ids are unique within one trial; the numbers come straight from mt19937, whose sequence the standard fixes,
+// unlike the ones of std::uniform_int_distribution and std::shuffle, so every platform tests the same points
 class RandomVerts
 {
 public:
-    RandomVerts( unsigned seed, int halfSize ) : gen_( seed ), coord_( -halfSize, halfSize )
+    RandomVerts( unsigned seed, int halfSize ) : gen_( seed ), halfSize_( halfSize )
     {
         ids_.resize( 64 );
         std::iota( ids_.begin(), ids_.end(), 0 );
     }
     void newTrial()
     {
-        std::shuffle( ids_.begin(), ids_.end(), gen_ );
+        for ( size_t i = ids_.size() - 1; i > 0; --i )
+            std::swap( ids_[i], ids_[gen_() % ( i + 1 )] );
         nextId_ = 0;
     }
     PreciseVertCoords vert()
     {
         assert( nextId_ < ids_.size() );
-        return { VertId( ids_[nextId_++] ), Vector3i( coord_( gen_ ), coord_( gen_ ), coord_( gen_ ) ) };
+        const VertId id( ids_[nextId_++] );
+        const int x = coord_();
+        const int y = coord_();
+        const int z = coord_();
+        return { id, Vector3i( x, y, z ) };
     }
     Tri tri()
     {
@@ -42,8 +48,13 @@ public:
     }
 
 private:
+    int coord_()
+    {
+        return int( gen_() % std::uint32_t( 2 * halfSize_ + 1 ) ) - halfSize_;
+    }
+
     std::mt19937 gen_;
-    std::uniform_int_distribution<int> coord_;
+    int halfSize_ = 0;
     std::vector<int> ids_;
     size_t nextId_ = 0;
 };
@@ -92,7 +103,7 @@ Vector3d positionOf( const PreciseCutPoint& p )
 }
 
 // the points of triangle f cut by other triangles: its vertices, the crossings of its sides with the others, and the crossings
-// of their edges with it, if defined; bit s of lines[i] is set if point i is on side s of f, from vertex s to vertex s+1,
+// of their edges with it; bit s of lines[i] is set if point i is on side s of f, from vertex s to vertex s+1,
 // and bit 3+j if it is on the cut by others[j]
 struct CutPoints
 {
@@ -124,13 +135,11 @@ struct CutPoints
     }
 };
 
-CutPoints cutPoints( const Tri& f, const std::vector<Tri>& others, const std::function<bool( const PreciseCutPoint& )>& defined )
+CutPoints cutPoints( const Tri& f, const std::vector<Tri>& others )
 {
     CutPoints res;
     auto add = [&] ( const PreciseCutPoint& p, int lines )
     {
-        if ( !defined( p ) )
-            return;
         res.defs.push_back( p );
         res.lines.push_back( lines );
     };
@@ -210,7 +219,7 @@ TEST( MRMesh, CutTrianglePredicatesRandom )
     {
         rv.newTrial();
         const Tri f = rv.tri();
-        ASSERT_TRUE( preds.reset( f ) );
+        preds.reset( f );
         const auto [kx, ky] = projectionAxes( f );
         {
             // the projection keeps the orientation around the normal
@@ -220,12 +229,12 @@ TEST( MRMesh, CutTrianglePredicatesRandom )
         std::vector<Tri> others;
         for ( int i = 0; i < 6; ++i )
             others.push_back( rv.tri() );
-        const auto pts = cutPoints( f, others, [] ( const PreciseCutPoint& ) { return true; } );
+        const auto pts = cutPoints( f, others );
         const int n = int( pts.defs.size() );
         std::vector<Vector3d> pos;
         for ( int i = 0; i < n; ++i )
         {
-            EXPECT_TRUE( preds.addPoint( VertId( i ), pts.defs[i] ) );
+            preds.addPoint( VertId( i ), pts.defs[i] );
             pos.push_back( positionOf( pts.defs[i] ) );
         }
 
@@ -275,7 +284,7 @@ TEST( MRMesh, CutTrianglePredicatesRandom )
                 }
         EXPECT_FALSE( preds.failed() );
 
-        // no two points on one line: ccw cannot decide
+        // no two points on one line: ccw cannot decide; failed() stays set, so only the first such triple of a trial is checked
         for ( int p = 0; p < n && !preds.failed(); ++p )
             for ( int q = p + 1; q < n && !preds.failed(); ++q )
                 for ( int r = q + 1; r < n && !preds.failed(); ++r )
@@ -293,35 +302,48 @@ TEST( MRMesh, CutTrianglePredicatesRandom )
     EXPECT_GT( numUndecided, 10 );
 }
 
-// Points on a small grid, where many of them coincide and many triangles are degenerate before the perturbation:
-// the predicates must be exact where the points are in general position, and consistent elsewhere;
-// the order must be a strict total order, on coincident points the expansion of the perturbation must agree with the faster rules,
-// and along a side the order must be the one of the boolean's cut
+// Points on a small grid, where many of them coincide and many triangles are degenerate before the perturbation, including
+// segments in the planes of their triangles and triangles with zero normals: the predicates must be exact where the exact
+// positions are known, and consistent elsewhere; the order must be a strict total order that the expansion of the perturbation
+// agrees with, and along a side the order must be the one of the boolean's cut
 TEST( MRMesh, CutTrianglePredicatesGrid )
 {
-    RandomVerts rv( 1, 2 );
+    RandomVerts grid2( 1, 2 ), grid1( 2, 1 );
     CutTrianglePredicates preds;
-    int numTriangles = 0, numCoincident = 0, numSidePairs = 0, numDegenerate = 0, numCoincidentBehind = 0;
-    for ( int trial = 0; trial < 400; ++trial )
+    int numTriangles = 0, numFlat = 0, numInPlane = 0, numPerturbed = 0, numSidePairs = 0, numDegenerate = 0, numCoincidentBehind = 0;
+    for ( int trial = 0; trial < 800; ++trial )
     {
+        // the coarser grid gives more segments in the planes of triangles and more flat triangles
+        auto& rv = trial % 2 ? grid1 : grid2;
         rv.newTrial();
         const Tri f = rv.tri();
-        if ( !preds.reset( f ) )
-            continue; // a degenerate triangle
-        ++numTriangles;
+        preds.reset( f );
+        // a triangle with a zero normal, which only the perturbation orients and projects
+        const bool flat = normalOf( f ) == Vector3d();
+        ++( flat ? numFlat : numTriangles );
         const auto [kx, ky] = projectionAxes( f );
         std::vector<Tri> others;
         for ( int i = 0; i < 4; ++i )
             others.push_back( rv.tri() );
-        // a segment parallel to the plane of its triangle defines no point
-        const auto pts = cutPoints( f, others, [] ( const PreciseCutPoint& p ) { return smallFraction( p ).has_value(); } );
+        const auto pts = cutPoints( f, others );
         const int n = int( pts.defs.size() );
-        std::vector<SmallFraction> pos;
+        // the exact positions in the projection, unknown on a flat triangle and for a segment in the plane of its triangle
+        std::vector<std::optional<SmallFraction>> pos;
         for ( int i = 0; i < n; ++i )
         {
-            ASSERT_TRUE( preds.addPoint( VertId( i ), pts.defs[i] ) );
-            pos.push_back( *smallFraction( pts.defs[i] ) );
+            preds.addPoint( VertId( i ), pts.defs[i] );
+            const auto x = smallFraction( pts.defs[i] );
+            numInPlane += !x;
+            pos.push_back( flat ? std::nullopt : x );
         }
+        // -1, 0, 1 as the exact position of p comes before, at, after the one of q along the sweep, or nullopt if unknown
+        auto compare = [&] ( int p, int q ) -> std::optional<int>
+        {
+            if ( !pos[p] || !pos[q] )
+                return {};
+            const int c = compareSmall( *pos[p], *pos[q], kx );
+            return c != 0 ? c : compareSmall( *pos[p], *pos[q], ky );
+        };
 
         std::vector<char> less( n * n );
         for ( int p = 0; p < n; ++p )
@@ -333,16 +355,13 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
             for ( int q = p + 1; q < n; ++q )
             {
                 EXPECT_NE( less[p * n + q], less[q * n + p] );
-                int c = compareSmall( pos[p], pos[q], kx );
-                if ( c == 0 )
-                    c = compareSmall( pos[p], pos[q], ky );
-                if ( c != 0 )
+                if ( const auto c = compare( p, q ); c && *c != 0 )
                 {
-                    EXPECT_EQ( bool( less[p * n + q] ), c < 0 );
+                    EXPECT_EQ( bool( less[p * n + q] ), *c < 0 );
                     continue;
                 }
-                // coincident before the perturbation
-                ++numCoincident;
+                // coincident before the perturbation, or unknown
+                ++numPerturbed;
                 const auto sos = preds.lessByPerturbation( VertId( p ), VertId( q ) );
                 ASSERT_TRUE( sos.has_value() );
                 EXPECT_EQ( *sos, bool( less[p * n + q] ) );
@@ -356,24 +375,37 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
                         EXPECT_TRUE( less[p * n + r] );
                     }
 
-        // two crossings of a side with other triangles come along it in the order of segmentIntersectionOrder
-        for ( int p = 0; p < n; ++p )
-            for ( int q = 0; q < n; ++q )
+        // along side s of f, from vertex s to vertex s+1 (points s and s+1): the crossings of the side come between them,
+        // in the order of segmentIntersectionOrder, and the sweep goes along all of them either way
+        for ( int s = 0; s < 3; ++s )
+        {
+            const int s1 = ( s + 1 ) % 3;
+            const bool alongSweep = less[s * n + s1] != 0;
+            if ( !flat )
             {
-                const auto& a = pts.defs[p];
-                const auto& b = pts.defs[q];
-                const int side = pts.lines[p] & pts.lines[q] & 7;
-                if ( p == q || !side || a.isVertex() || b.isVertex() )
-                    continue;
-                const int s = std::countr_zero( unsigned( side ) );
-                const Vector3i u = f[( s + 1 ) % 3].pt - f[s].pt; // the segment of both points
-                const bool alongSweep = u[kx] != 0 ? u[kx] > 0 : u[ky] > 0;
-                const bool aFirst = segmentIntersectionOrder( { a.seg[0], a.seg[1], a.tri[0], a.tri[1], a.tri[2], b.tri[0], b.tri[1], b.tri[2] } );
-                EXPECT_EQ( bool( less[p * n + q] ) == alongSweep, aFirst );
-                ++numSidePairs;
+                const Vector3i u = f[s1].pt - f[s].pt;
+                EXPECT_EQ( alongSweep, u[kx] != 0 ? u[kx] > 0 : u[ky] > 0 );
             }
+            for ( int p = 3; p < n; ++p )
+            {
+                if ( !( pts.lines[p] & ( 1 << s ) ) )
+                    continue;
+                EXPECT_EQ( bool( less[s * n + p] ), alongSweep );
+                EXPECT_EQ( bool( less[p * n + s1] ), alongSweep );
+                for ( int q = 3; q < n; ++q )
+                {
+                    if ( q == p || !( pts.lines[q] & ( 1 << s ) ) )
+                        continue;
+                    const auto& a = pts.defs[p];
+                    const auto& b = pts.defs[q];
+                    const bool aFirst = segmentIntersectionOrder( { a.seg[0], a.seg[1], a.tri[0], a.tri[1], a.tri[2], b.tri[0], b.tri[1], b.tri[2] } );
+                    EXPECT_EQ( bool( less[p * n + q] ) == alongSweep, aFirst );
+                    ++numSidePairs;
+                }
+            }
+        }
 
-        // a triangle with two vertices on one line: exact unless degenerate before the perturbation,
+        // a triangle with two vertices on one line: exact unless degenerate before the perturbation or unknown,
         // the same in any rotation of its vertices, and the opposite when flipped
         for ( int p = 0; p < n; ++p )
             for ( int q = 0; q < n; ++q )
@@ -388,7 +420,7 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
                     EXPECT_EQ( preds.ccw( VertId( q ), VertId( r ), VertId( p ) ), c );
                     EXPECT_EQ( preds.ccw( VertId( r ), VertId( p ), VertId( q ) ), c );
                     EXPECT_NE( preds.ccw( VertId( q ), VertId( p ), VertId( r ) ), c );
-                    if ( const int o = orientSmall( pos[p], pos[q], pos[r], kx, ky ) )
+                    if ( const int o = pos[p] && pos[q] && pos[r] ? orientSmall( *pos[p], *pos[q], *pos[r], kx, ky ) : 0 )
                     {
                         EXPECT_EQ( c, o > 0 );
                     }
@@ -403,10 +435,10 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
             {
                 if ( p == q )
                     continue;
-                const int cy = compareSmall( pos[q], pos[p], ky ), cx = compareSmall( pos[q], pos[p], kx );
-                if ( cy != 0 || cx != 0 )
+                if ( const auto c = compare( q, p ); c && *c != 0 )
                 {
-                    EXPECT_EQ( preds.ccwFromBehind( VertId( q ), VertId( p ) ), cy != 0 ? cy < 0 : cx > 0 );
+                    const int cy = compareSmall( *pos[q], *pos[p], ky );
+                    EXPECT_EQ( preds.ccwFromBehind( VertId( q ), VertId( p ) ), cy != 0 ? cy < 0 : *c > 0 );
                 }
                 else if ( pts.onLine( p, q ) )
                 {
@@ -416,11 +448,13 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
             }
         EXPECT_FALSE( preds.failed() );
     }
-    EXPECT_GT( numTriangles, 200 );
-    EXPECT_GT( numCoincident, 100 );
-    EXPECT_GT( numSidePairs, 150 );
-    EXPECT_GT( numDegenerate, 300 );
-    EXPECT_GT( numCoincidentBehind, 50 );
+    EXPECT_GT( numTriangles, 600 );
+    EXPECT_GT( numFlat, 50 );
+    EXPECT_GT( numInPlane, 80 );
+    EXPECT_GT( numPerturbed, 1200 );
+    EXPECT_GT( numSidePairs, 280 );
+    EXPECT_GT( numDegenerate, 20000 );
+    EXPECT_GT( numCoincidentBehind, 2000 );
 }
 
 // selfBoolean cuts f by a triangle sharing a vertex with it along a line from that vertex (a fold), so the sweep asks
@@ -436,17 +470,36 @@ TEST( MRMesh, CutTrianglePredicatesFoldLine )
     const Tri t3 = { vert( 7, 5, 1, -1 ), vert( 8, 5, 1, 1 ), vert( 9, 9, 9, 9 ) };
 
     CutTrianglePredicates preds;
-    ASSERT_TRUE( preds.reset( f ) );
+    preds.reset( f );
     for ( int i = 0; i < 3; ++i )
-        ASSERT_TRUE( preds.addPoint( VertId( i ), vertexPoint( f[i] ) ) );
-    ASSERT_TRUE( preds.addPoint( 3_v, { { t1[1], t1[2] }, f } ) );
-    ASSERT_TRUE( preds.addPoint( 4_v, { { f[1], f[2] }, t2 } ) );
-    ASSERT_TRUE( preds.addPoint( 5_v, { { t3[0], t3[1] }, f } ) );
+        preds.addPoint( VertId( i ), vertexPoint( f[i] ) );
+    preds.addPoint( 3_v, { { t1[1], t1[2] }, f } );
+    preds.addPoint( 4_v, { { f[1], f[2] }, t2 } );
+    preds.addPoint( 5_v, { { t3[0], t3[1] }, f } );
 
     EXPECT_FALSE( preds.ccw( 0_v, 3_v, 5_v ) );
     EXPECT_TRUE( preds.ccw( 0_v, 5_v, 3_v ) );
     EXPECT_FALSE( preds.ccw( 0_v, 4_v, 5_v ) );
     EXPECT_TRUE( preds.ccw( 5_v, 4_v, 0_v ) );
+    EXPECT_FALSE( preds.failed() );
+}
+
+// a triangle with its vertices on the x axis, which only the perturbation orients: the vertex with the smallest id moves most,
+// in z first, so the perturbed normal is about ( 0, -2 eps, 0 ), and the predicates project the triangle on axes x, z
+TEST( MRMesh, CutTrianglePredicatesFlat )
+{
+    auto vert = [] ( int id, int x ) { return PreciseVertCoords{ VertId( id ), Vector3i( x, 0, 0 ) }; };
+    const Tri f = { vert( 0, 0 ), vert( 1, 2 ), vert( 2, 4 ) };
+    CutTrianglePredicates preds;
+    preds.reset( f );
+    for ( int i = 0; i < 3; ++i )
+        preds.addPoint( VertId( i ), vertexPoint( f[i] ) );
+    EXPECT_TRUE( preds.less( 0_v, 1_v ) );
+    EXPECT_TRUE( preds.less( 1_v, 2_v ) );
+    EXPECT_TRUE( preds.ccw( 0_v, 1_v, 2_v ) );
+    // f[1] is ahead of f[0] along the sweep, at the same z
+    EXPECT_TRUE( preds.ccwFromBehind( 1_v, 0_v ) );
+    EXPECT_FALSE( preds.ccwFromBehind( 0_v, 1_v ) );
     EXPECT_FALSE( preds.failed() );
 }
 

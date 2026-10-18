@@ -33,25 +33,26 @@ struct PreciseCutPoint
 /// line over the triangle; they never contradict the boolean's exact predicates, because every point gets the same
 /// simulation-of-simplicity perturbation by vertex ids as in \ref orient3d, and a point is on the side of a cut where
 /// the boolean's predicates put it;
-/// the sweep goes over the projection of the perturbed triangle on the plane of the two axes least aligned with its normal,
-/// meeting the points in the order of one linear functional, which is nearly the first projected coordinate
+/// the sweep goes over the projection of the perturbed triangle on the plane of the two axes least aligned with its normal
+/// (with its perturbed normal, if the exact one is zero), meeting the points in the order of one linear functional,
+/// which is nearly the first projected coordinate
 class MR_BIND_IGNORE CutTrianglePredicates
 {
 public:
-    /// starts a new triangle, given counterclockwise around its normal, forgetting all points but keeping the memory;
-    /// returns false if the exact normal of the triangle is zero
-    MRMESH_API bool reset( const std::array<PreciseVertCoords, 3> & tri );
+    /// starts a new triangle, given counterclockwise around its normal, forgetting all points but keeping the memory
+    MRMESH_API void reset( const std::array<PreciseVertCoords, 3> & tri );
 
     /// sets point v: a vertex of the triangle, or a crossing of one of its sides with another triangle,
-    /// or a crossing of an edge of another triangle with this triangle;
-    /// returns false if the point is not defined, because its segment is parallel to the plane of its triangle
-    MRMESH_API bool addPoint( VertId v, const PreciseCutPoint & p );
+    /// or a crossing of an edge of another triangle with this triangle, as \ref doTriangleSegmentIntersect finds them;
+    /// a segment in the plane of its triangle crosses it after the perturbation, at a point that tends to an end of the segment
+    /// or to a point inside it
+    MRMESH_API void addPoint( VertId v, const PreciseCutPoint & p );
 
     /// whether point p comes before point q along the sweep
     [[nodiscard]] MRMESH_API bool less( VertId p, VertId q ) const;
 
-    /// the same as less for two points that coincide before the perturbation, decided by expanding the perturbation alone,
-    /// while less decides some of them by faster rules; nullopt if the points coincide after the perturbation too
+    /// the same as less, decided by expanding the perturbation alone, which is slow, while less decides most pairs by faster rules;
+    /// nullopt if the points coincide after the perturbation too
     [[nodiscard]] MRMESH_API std::optional<bool> lessByPerturbation( VertId p, VertId q ) const;
 
     /// whether triangle abc is counterclockwise in the projection;
@@ -65,16 +66,18 @@ public:
     /// if b and pivot coincide before the perturbation, they must be on one line as in ccw
     [[nodiscard]] MRMESH_API bool ccwFromBehind( VertId b, VertId pivot ) const;
 
-    /// whether a predicate met points it cannot tell apart (e.g. two points with the same definition), or a point
-    /// was not defined, or no two points of a ccw were on one line; the answers of the predicates are arbitrary then,
-    /// and the caller must discard them
+    /// whether a predicate met points it cannot tell apart (two points with the same definition), or no two points of a ccw
+    /// were on one line, or the input broke a precondition (e.g. repeated ids, or a segment that does not cross the plane
+    /// of its triangle); the answers of the predicates are arbitrary then, and the caller must discard them
     [[nodiscard]] bool failed() const { return failed_.load( std::memory_order_relaxed ); }
 
 private:
     struct Point
     {
         PreciseCutPoint def;
-        FastInt128 oa, ob; // for an edge-triangle point: the volumes of its triangle with the ends of its segment
+        // for an edge-triangle point: the volumes of its triangle with the ends of its segment; if both are zero,
+        // the leading coefficients of the perturbed volumes, with zero for the one of the larger degree
+        FastInt128 oa, ob;
         int sides; // bit i is set if the point is on side i of the triangle, from vertex i to vertex i+1
         // no default member initializers: with them, clang takes Point as not default-constructible in Vector::resize
     };
@@ -95,7 +98,7 @@ private:
     Fraction exactCoord_( VertId v, int axis ) const;
     int compareExact_( VertId p, VertId q, int axis ) const;
     bool lessCoincident_( VertId p, VertId q ) const;
-    int sweepSign_( const Vector3i64 & u ) const;
+    Vector2i segmentDirection_( const PreciseVertCoords & a, const PreciseVertCoords & b ) const;
     std::optional<Line> commonLine_( VertId p, VertId q, bool withVertex ) const;
     Vector2i lineDirection_( const Line & l ) const;
     bool along_( const Vector2i & dir, VertId p, VertId q ) const;

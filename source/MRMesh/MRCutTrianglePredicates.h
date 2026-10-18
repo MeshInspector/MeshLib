@@ -45,30 +45,36 @@ public:
     /// sets point v: a vertex of the triangle, or a crossing of one of its sides with another triangle,
     /// or a crossing of an edge of another triangle with this triangle, as \ref doTriangleSegmentIntersect finds them;
     /// a segment in the plane of its triangle crosses it after the perturbation, at a point that tends to an end of the segment
-    /// or to a point inside it
+    /// or to a point inside it; setting a point again forgets the orders found for its old definition
     MRMESH_API void addPoint( VertId v, const PreciseCutPoint & p );
 
     /// whether point p comes before point q along the sweep
     [[nodiscard]] MRMESH_API bool less( VertId p, VertId q ) const;
 
-    /// the same as less, decided by expanding the perturbation alone, which is slow, while less decides most pairs by faster rules;
-    /// nullopt if the points coincide after the perturbation too
-    [[nodiscard]] MRMESH_API std::optional<bool> lessByPerturbation( VertId p, VertId q ) const;
+    /// the signs of the projected coordinates of q - p found by expanding the perturbation alone, as the sweep sees them:
+    /// a coordinate whose leading term has a larger degree than that of the other one is zero; this is slow,
+    /// while less and ccwFromBehind decide most pairs by faster rules; nullopt if the points coincide after the perturbation too
+    [[nodiscard]] MRMESH_API std::optional<Vector2i> directionByPerturbation( VertId p, VertId q ) const;
 
-    /// whether triangle abc is counterclockwise in the projection;
-    /// two of the points must be on one line, as the ends of every edge of a sweep over the cut triangle are:
-    /// on one side of the triangle, or on the plane of one other triangle (by which the cut along the line goes);
-    /// the points on one side are taken as bulging outward a little, so three of them make a counterclockwise triangle
-    /// if they come in this order along the side, from its vertex i to vertex i+1, up to a cyclic shift
+    /// whether triangle abc is counterclockwise in the projection: decided by the exact positions of the points,
+    /// or by ccwByLines if they are on one line before the perturbation
     [[nodiscard]] MRMESH_API bool ccw( VertId a, VertId b, VertId c ) const;
 
-    /// whether the triangle of a point far behind pivot against the sweep, b and pivot is counterclockwise;
-    /// if b and pivot coincide before the perturbation, they must be on one line as in ccw
+    /// the same as ccw, decided by a line through two of the points known from their definitions, as the ends of every edge
+    /// of the cut triangle are: one side of the triangle, or the plane of another triangle (by which the cut along the line goes),
+    /// or the plane through a vertex and a crossing (at selfBoolean's folds), which ccw needs only for points on one line
+    /// before the perturbation; the points on one side are taken as bulging outward a little, so three of them make
+    /// a counterclockwise triangle if they come in this order along the side, from its vertex i to vertex i+1, up to a cyclic shift;
+    /// nullopt if no two of the points are on a known line
+    [[nodiscard]] MRMESH_API std::optional<bool> ccwByLines( VertId a, VertId b, VertId c ) const;
+
+    /// whether the triangle of a point far behind pivot against the sweep, b and pivot is counterclockwise
     [[nodiscard]] MRMESH_API bool ccwFromBehind( VertId b, VertId pivot ) const;
 
-    /// whether a predicate met points it cannot tell apart (two points with the same definition), or no two points of a ccw
-    /// were on one line, or the input broke a precondition (e.g. repeated ids, or a segment that does not cross the plane
-    /// of its triangle); the answers of the predicates are arbitrary then, and the caller must discard them
+    /// whether a predicate met points it cannot tell apart (two points with the same definition), or the points of a ccw
+    /// were on one line before the perturbation with no two of them on a known one, or the input broke a precondition
+    /// (e.g. repeated ids, or a segment that does not cross the plane of its triangle);
+    /// the answers of the predicates are arbitrary then, and the caller must discard them
     [[nodiscard]] bool failed() const { return failed_.load( std::memory_order_relaxed ); }
 
 private:
@@ -97,7 +103,9 @@ private:
 
     Fraction exactCoord_( VertId v, int axis ) const;
     int compareExact_( VertId p, VertId q, int axis ) const;
+    int exactOrient_( VertId a, VertId b, VertId c ) const;
     bool lessCoincident_( VertId p, VertId q ) const;
+    std::optional<Vector2i> perturbedDirection_( VertId p, VertId q ) const;
     Vector2i segmentDirection_( const PreciseVertCoords & a, const PreciseVertCoords & b ) const;
     std::optional<Line> commonLine_( VertId p, VertId q, bool withVertex ) const;
     Vector2i lineDirection_( const Line & l ) const;
@@ -111,10 +119,10 @@ private:
     Vector<Vector2d, VertId> approx_; // the projected coordinates of every point, rounded, to decide most comparisons
     Vector<Point, VertId> points_;
     mutable std::atomic<bool> failed_{ false };
-    // the orders of the pairs of points found by expanding the perturbation, which is slow, while a sweep compares the same points often;
+    // the directions from p to q found by expanding the perturbation, which is slow, while a sweep compares the same points often;
     // the key is ( p << 32 ) | q for p < q; a sweep sorts the points in parallel, hence the mutex
-    mutable HashMap<std::uint64_t, bool> perturbedLess_;
-    mutable std::mutex perturbedLessMutex_;
+    mutable HashMap<std::uint64_t, Vector2i> perturbedDir_;
+    mutable std::mutex perturbedDirMutex_;
 };
 
 /// \}

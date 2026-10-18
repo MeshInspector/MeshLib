@@ -240,7 +240,11 @@ template <typename T, typename C, typename D, D M>
             const auto deg = degA + degB;
             if ( deg > M )
                 break;
-            res.emplace_back( deg, T( cfA ) * T( cfB ) );
+            // no conversion (and no copy of a big integer) if the coefficients have type T already
+            if constexpr ( std::is_same_v<T, C> )
+                res.emplace_back( deg, cfA * cfB );
+            else
+                res.emplace_back( deg, T( cfA ) * T( cfB ) );
         }
     }
     return Res::fromUnsortedTerms( std::move( res ) );

@@ -1,12 +1,11 @@
 #pragma once
 
 #include "MRPrecisePredicates3.h"
-#include "MRFastInt.h"
+#include "MRFastInt128.h"
 #include "MRVector.h"
 #include "MRVector2.h"
-#include "MRphmap.h"
 #include <atomic>
-#include <mutex>
+#include <memory>
 #include <optional>
 
 namespace MR
@@ -39,6 +38,9 @@ struct PreciseCutPoint
 class MR_BIND_IGNORE CutTrianglePredicates
 {
 public:
+    MRMESH_API CutTrianglePredicates();
+    MRMESH_API ~CutTrianglePredicates();
+
     /// starts a new triangle, given counterclockwise around its normal, forgetting all points but keeping the memory
     MRMESH_API void reset( const std::array<PreciseVertCoords, 3> & tri );
 
@@ -57,22 +59,24 @@ public:
     [[nodiscard]] MRMESH_API std::optional<Vector2i> directionByPerturbation( VertId p, VertId q ) const;
 
     /// whether triangle abc is counterclockwise in the projection: decided by the exact positions of the points,
-    /// or by ccwByLines if they are on one line before the perturbation
+    /// or by ccwByLines if they are on one line before the perturbation, or else by expanding the perturbation,
+    /// so any three points are decided
     [[nodiscard]] MRMESH_API bool ccw( VertId a, VertId b, VertId c ) const;
 
     /// the same as ccw, decided by a line through two of the points known from their definitions, as the ends of every edge
     /// of the cut triangle are: one side of the triangle, or the plane of another triangle (by which the cut along the line goes),
     /// or the plane through a vertex and a crossing (at selfBoolean's folds), which ccw needs only for points on one line
-    /// before the perturbation; the points on one side are taken as bulging outward a little, so three of them make
-    /// a counterclockwise triangle if they come in this order along the side, from its vertex i to vertex i+1, up to a cyclic shift;
+    /// before the perturbation; the points on one side stay on one line after the perturbation, and they are taken
+    /// as bulging inward a little, so three of them make a counterclockwise triangle if they come in the order
+    /// from vertex i+1 to vertex i of side i, up to a cyclic shift;
     /// nullopt if no two of the points are on a known line
     [[nodiscard]] MRMESH_API std::optional<bool> ccwByLines( VertId a, VertId b, VertId c ) const;
 
     /// whether the triangle of a point far behind pivot against the sweep, b and pivot is counterclockwise
     [[nodiscard]] MRMESH_API bool ccwFromBehind( VertId b, VertId pivot ) const;
 
-    /// whether a predicate met points it cannot tell apart (two points with the same definition), or the points of a ccw
-    /// were on one line before the perturbation with no two of them on a known one, or the input broke a precondition
+    /// whether a predicate met points it cannot tell apart (two points with the same definition, or three points off the sides
+    /// on one line also after the perturbation, which needs such points), or the input broke a precondition
     /// (e.g. repeated ids, or a segment that does not cross the plane of its triangle);
     /// the answers of the predicates are arbitrary then, and the caller must discard them
     [[nodiscard]] bool failed() const { return failed_.load( std::memory_order_relaxed ); }
@@ -88,12 +92,6 @@ private:
         // no default member initializers: with them, clang takes Point as not default-constructible in Vector::resize
     };
 
-    /// a projected coordinate as a fraction with a positive denominator
-    struct Fraction
-    {
-        FastInt256 n, d;
-    };
-
     /// the line through two points: a side of the triangle, or its crossing with the plane through three vertices
     struct Line
     {
@@ -101,16 +99,26 @@ private:
         std::array<PreciseVertCoords, 3> plane;
     };
 
-    Fraction exactCoord_( VertId v, int axis ) const;
-    int compareExact_( VertId p, VertId q, int axis ) const;
+    /// the directions between the points that coincide before the perturbation, found by the slower rules; defined in the .cpp file
+    struct Cache;
+
+    /// the exact projected coordinates of a point: ( nx / d, ny / d ) with d > 0
+    struct Coords
+    {
+        FastInt128 nx, ny, d;
+    };
+
+    Coords exactCoords_( VertId v ) const;
+    int compareExact_( VertId p, VertId q, bool y ) const;
     int exactOrient_( VertId a, VertId b, VertId c ) const;
     bool lessCoincident_( VertId p, VertId q ) const;
+    std::optional<Vector2i> directionFromSide_( VertId p, VertId q ) const;
     std::optional<Vector2i> perturbedDirection_( VertId p, VertId q ) const;
     Vector2i segmentDirection_( const PreciseVertCoords & a, const PreciseVertCoords & b ) const;
     std::optional<Line> commonLine_( VertId p, VertId q, bool withVertex ) const;
     Vector2i lineDirection_( const Line & l ) const;
     bool along_( const Vector2i & dir, VertId p, VertId q ) const;
-    bool sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, const PreciseCutPoint & p ) const;
+    bool sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, const Point & x ) const;
     void fail_() const { failed_.store( true, std::memory_order_relaxed ); }
 
     std::array<PreciseVertCoords, 3> tri_;
@@ -119,10 +127,7 @@ private:
     Vector<Vector2d, VertId> approx_; // the projected coordinates of every point, rounded, to decide most comparisons
     Vector<Point, VertId> points_;
     mutable std::atomic<bool> failed_{ false };
-    // the directions from p to q found by expanding the perturbation, which is slow, while a sweep compares the same points often;
-    // the key is ( p << 32 ) | q for p < q; a sweep sorts the points in parallel, hence the mutex
-    mutable HashMap<std::uint64_t, Vector2i> perturbedDir_;
-    mutable std::mutex perturbedDirMutex_;
+    std::unique_ptr<Cache> cache_;
 };
 
 /// \}

@@ -142,10 +142,11 @@ constexpr SymMatrix2<T> SymMatrix2<T>::inverse( T det ) const noexcept
 {
     if ( det == 0 )
         return {};
+    const auto rdet = 1 / det;
     SymMatrix2<T> res;
-    res.xx =  yy / det;
-    res.xy = -xy / det;
-    res.yy =  xx / det;
+    res.xx =  yy * rdet;
+    res.xy = -xy * rdet;
+    res.yy =  xx * rdet;
     return res;
 }
 

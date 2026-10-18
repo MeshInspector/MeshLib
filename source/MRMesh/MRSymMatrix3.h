@@ -172,13 +172,14 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse( T det ) const noexcept
 {
     if ( det == 0 )
         return {};
+    const auto rdet = 1 / det;
     SymMatrix3<T> res;
-    res.xx = ( yy * zz - yz * yz ) / det;
-    res.xy = ( xz * yz - xy * zz ) / det;
-    res.xz = ( xy * yz - xz * yy ) / det;
-    res.yy = ( xx * zz - xz * xz ) / det;
-    res.yz = ( xz * xy - xx * yz ) / det;
-    res.zz = ( xx * yy - xy * xy ) / det;
+    res.xx = ( yy * zz - yz * yz ) * rdet;
+    res.xy = ( xz * yz - xy * zz ) * rdet;
+    res.xz = ( xy * yz - xz * yy ) * rdet;
+    res.yy = ( xx * zz - xz * xz ) * rdet;
+    res.yz = ( xz * xy - xx * yz ) * rdet;
+    res.zz = ( xx * yy - xy * xy ) * rdet;
     return res;
 }
 
@@ -289,13 +290,14 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
                     *rank = 3;
                 if ( space )
                     *space = Vector3<T>{};
+                const auto rd = 1 / d;
                 SymMatrix3<T> res;
-                res.xx = myz / d;
-                res.xy = cxy / d;
-                res.xz = cxz / d;
-                res.yy = mxz / d;
-                res.yz = ( xz * xy - xx * yz ) / d;
-                res.zz = mxy / d;
+                res.xx = myz * rd;
+                res.xy = cxy * rd;
+                res.xz = cxz * rd;
+                res.yy = mxz * rd;
+                res.yz = ( xz * xy - xx * yz ) * rd;
+                res.zz = mxy * rd;
                 return res;
             }
         }

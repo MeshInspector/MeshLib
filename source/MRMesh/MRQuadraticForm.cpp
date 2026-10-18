@@ -33,22 +33,7 @@ std::pair< QuadraticForm<V>, V > sum(
     else
     {
         const auto center = T(0.5) * ( x0 + x1 );
-        const auto rhs = q0.A * ( x0 - center ) + q1.A * ( x1 - center );
-        // a well-conditioned matrix (almost always the case with stabilized vertex forms) is inverted directly,
-        // because pseudoinverse computes eigenvectors and is several times slower;
-        // positive semi-definite A has lambdaMin >= det / m2 (m2 is the sum of principal 2x2 minors >= lambdaMax * lambdaMid)
-        // and lambdaMax <= trace, so det > tol * trace * m2 guarantees that lambdaMin > tol * lambdaMax
-        const auto & A = q2.A;
-        const auto det = A.det();
-        const double trace = A.trace();
-        double m2 = trace; // in 2D, lambdaMin = det / lambdaMax >= det / trace
-        if constexpr ( V::elements == 3 )
-            m2 = double( A.xx ) * A.yy - double( A.xy ) * A.xy + double( A.xx ) * A.zz - double( A.xz ) * A.xz + double( A.yy ) * A.zz - double( A.yz ) * A.yz;
-        constexpr double tol = 1e-4;
-        if ( det > 0 && double( det ) > tol * trace * m2 )
-            x2 = A.inverse( det ) * rhs + center;
-        else
-            x2 = A.pseudoinverse() * rhs + center;
+        x2 = q2.A.pseudoinverse() * ( q0.A * ( x0 - center ) + q1.A * ( x1 - center ) ) + center;
         q2.c = q0.eval( x0 - x2 ) + q1.eval( x1 - x2 );
     }
 

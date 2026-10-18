@@ -206,14 +206,17 @@ SymMatrix2<T> SymMatrix2<T>::pseudoinverse( T tol, int * rank, Vector2<T> * spac
     // a positive definite matrix is inverted directly, which is several times faster,
     // if lambdaMin > tol * lambdaMax is guaranteed: lambdaMin = det / lambdaMax and lambdaMax <= trace;
     // the tolerance is at least 1e-4 to keep the direct inverse accurate
-    const auto d = det();
-    if ( xx > 0 && d > 0 && d > std::max( tol, T( 1e-4 ) ) * sqr( trace() ) )
+    if ( xx > 0 )
     {
-        if ( rank )
-            *rank = 2;
-        if ( space )
-            *space = Vector2<T>{};
-        return inverse( d );
+        const auto d = det();
+        if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * sqr( trace() ) )
+        {
+            if ( rank )
+                *rank = 2;
+            if ( space )
+                *space = Vector2<T>{};
+            return inverse( d );
+        }
     }
 
     SymMatrix2<T> res;

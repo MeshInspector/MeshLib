@@ -272,15 +272,22 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
     // a positive definite matrix (all leading principal minors are positive) is inverted directly, which is several times faster,
     // if lambdaMin > tol * lambdaMax is guaranteed: lambdaMin >= det / m2 (m2 is the sum of principal 2x2 minors >= lambdaMax * lambdaMid),
     // and lambdaMax <= trace; the tolerance is at least 1e-4 to keep the direct inverse accurate
-    const auto mxy = xx * yy - xy * xy;
-    const auto d = det();
-    if ( xx > 0 && mxy > 0 && d > 0 && d > std::max( tol, T( 1e-4 ) ) * trace() * ( mxy + xx * zz - xz * xz + yy * zz - yz * yz ) )
+    if ( xx > 0 )
     {
-        if ( rank )
-            *rank = 3;
-        if ( space )
-            *space = Vector3<T>{};
-        return inverse( d );
+        const auto mxy = xx * yy - xy * xy;
+        if ( mxy > 0 )
+        {
+            const auto myz = yy * zz - yz * yz;
+            const auto d = xx * myz - xy * ( xy * zz - yz * xz ) + xz * ( xy * yz - yy * xz ); // det()
+            if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * trace() * ( mxy + xx * zz - xz * xz + myz ) )
+            {
+                if ( rank )
+                    *rank = 3;
+                if ( space )
+                    *space = Vector3<T>{};
+                return inverse( d );
+            }
+        }
     }
 
     SymMatrix3<T> res;

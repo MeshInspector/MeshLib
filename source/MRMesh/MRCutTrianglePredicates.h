@@ -96,7 +96,7 @@ private:
     int compareExact_( VertId p, VertId q, int axis ) const;
     bool lessCoincident_( VertId p, VertId q ) const;
     int sweepSign_( const Vector3i64 & u ) const;
-    std::optional<Line> commonLine_( VertId p, VertId q ) const;
+    std::optional<Line> commonLine_( VertId p, VertId q, bool withVertex ) const;
     Vector2i lineDirection_( const Line & l ) const;
     bool along_( const Vector2i & dir, VertId p, VertId q ) const;
     bool sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, const PreciseCutPoint & p ) const;

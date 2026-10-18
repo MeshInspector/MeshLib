@@ -99,10 +99,28 @@ struct CutPoints
     std::vector<PreciseCutPoint> defs;
     std::vector<int> lines;
 
+    // whether points i and j are on one line known from their definitions: a side, a cut by another triangle,
+    // the plane through a vertex and an edge crossing this triangle, or the plane of a triangle of a vertex crossing a side
+    bool onLine( int i, int j ) const
+    {
+        if ( lines[i] & lines[j] )
+            return true;
+        const auto& a = defs[i];
+        const auto& b = defs[j];
+        if ( a.isVertex() == b.isVertex() )
+            return false;
+        const auto& v = ( a.isVertex() ? a : b ).seg[0];
+        const auto& x = a.isVertex() ? b : a;
+        if ( x.seg[0].id == v.id || x.seg[1].id == v.id )
+            return false;
+        const bool sideCrossing = ( lines[a.isVertex() ? j : i] & 7 ) != 0;
+        return !sideCrossing || x.tri[0].id == v.id || x.tri[1].id == v.id || x.tri[2].id == v.id;
+    }
+
     // whether two of points p, q, r are on one line
     bool twoOnLine( int p, int q, int r ) const
     {
-        return ( lines[p] & lines[q] ) || ( lines[q] & lines[r] ) || ( lines[r] & lines[p] );
+        return onLine( p, q ) || onLine( q, r ) || onLine( r, p );
     }
 };
 
@@ -272,7 +290,7 @@ TEST( MRMesh, CutTrianglePredicatesRandom )
     EXPECT_GT( numBehind, 3000 );
     EXPECT_GT( numTriangles, 10000 );
     EXPECT_GT( numSideTriangles, 100 );
-    EXPECT_GT( numUndecided, 50 );
+    EXPECT_GT( numUndecided, 10 );
 }
 
 // Points on a small grid, where many of them coincide and many triangles are degenerate before the perturbation:
@@ -360,7 +378,7 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
         for ( int p = 0; p < n; ++p )
             for ( int q = 0; q < n; ++q )
             {
-                if ( p == q || !( pts.lines[p] & pts.lines[q] ) )
+                if ( p == q || !pts.onLine( p, q ) )
                     continue;
                 for ( int r = 0; r < n; ++r )
                 {
@@ -390,7 +408,7 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
                 {
                     EXPECT_EQ( preds.ccwFromBehind( VertId( q ), VertId( p ) ), cy != 0 ? cy < 0 : cx > 0 );
                 }
-                else if ( pts.lines[p] & pts.lines[q] )
+                else if ( pts.onLine( p, q ) )
                 {
                     EXPECT_NE( preds.ccwFromBehind( VertId( q ), VertId( p ) ), preds.ccwFromBehind( VertId( p ), VertId( q ) ) );
                     ++numCoincidentBehind;
@@ -403,6 +421,33 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
     EXPECT_GT( numSidePairs, 150 );
     EXPECT_GT( numDegenerate, 300 );
     EXPECT_GT( numCoincidentBehind, 50 );
+}
+
+// selfBoolean cuts f by a triangle sharing a vertex with it along a line from that vertex (a fold), so the sweep asks
+// the orientation of that vertex, a crossing on the fold and a point of another cut
+TEST( MRMesh, CutTrianglePredicatesFoldLine )
+{
+    auto vert = [] ( int id, int x, int y, int z ) { return PreciseVertCoords{ VertId( id ), Vector3i( x, y, z ) }; };
+    const Tri f = { vert( 0, 0, 0, 0 ), vert( 1, 8, 0, 0 ), vert( 2, 0, 8, 0 ) };
+    // triangles of vertex 0: an edge of the first crosses f at ( 2, 1 ), the second crosses side 1 of f at ( 2, 6 )
+    const Tri t1 = { f[0], vert( 3, 2, 1, -1 ), vert( 4, 2, 1, 1 ) };
+    const Tri t2 = { f[0], vert( 5, 6, 18, -4 ), vert( 6, 6, 18, 4 ) };
+    // an edge of a triangle without vertices of f crosses it at ( 5, 1 )
+    const Tri t3 = { vert( 7, 5, 1, -1 ), vert( 8, 5, 1, 1 ), vert( 9, 9, 9, 9 ) };
+
+    CutTrianglePredicates preds;
+    ASSERT_TRUE( preds.reset( f ) );
+    for ( int i = 0; i < 3; ++i )
+        ASSERT_TRUE( preds.addPoint( VertId( i ), vertexPoint( f[i] ) ) );
+    ASSERT_TRUE( preds.addPoint( 3_v, { { t1[1], t1[2] }, f } ) );
+    ASSERT_TRUE( preds.addPoint( 4_v, { { f[1], f[2] }, t2 } ) );
+    ASSERT_TRUE( preds.addPoint( 5_v, { { t3[0], t3[1] }, f } ) );
+
+    EXPECT_FALSE( preds.ccw( 0_v, 3_v, 5_v ) );
+    EXPECT_TRUE( preds.ccw( 0_v, 5_v, 3_v ) );
+    EXPECT_FALSE( preds.ccw( 0_v, 4_v, 5_v ) );
+    EXPECT_TRUE( preds.ccw( 5_v, 4_v, 0_v ) );
+    EXPECT_FALSE( preds.failed() );
 }
 
 } // namespace MR

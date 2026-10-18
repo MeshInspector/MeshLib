@@ -439,14 +439,24 @@ std::optional<bool> CutTrianglePredicates::lessByPerturbation( VertId p, VertId 
     return sosLess( points_[p].def, points_[q].def, kx_, ky_ );
 }
 
-std::optional<CutTrianglePredicates::Line> CutTrianglePredicates::commonLine_( VertId p, VertId q ) const
+std::optional<CutTrianglePredicates::Line> CutTrianglePredicates::commonLine_( VertId p, VertId q, bool withVertex ) const
 {
     const auto & a = points_[p];
     const auto & b = points_[q];
     if ( const int common = a.sides & b.sides )
         return Line{ .side = std::countr_zero( unsigned( common ) ) }; // one bit, unless p and q are the same vertex
     if ( a.def.isVertex() || b.def.isVertex() )
-        return {};
+    {
+        if ( !withVertex )
+            return {};
+        // a vertex v and a crossing of edge cd with this triangle are on plane vcd; a vertex v and a crossing of a side with a triangle
+        // of v are on the plane of that triangle (selfBoolean cuts along it from v, where the triangles share v)
+        const auto & v = ( a.def.isVertex() ? a : b ).def.seg[0];
+        const auto & x = a.def.isVertex() ? b : a;
+        if ( x.def.isVertex() || ( x.sides != 0 && !hasVert( x.def.tri, v.id ) ) || x.def.seg[0].id == v.id || x.def.seg[1].id == v.id )
+            return {};
+        return Line{ .plane = x.sides != 0 ? x.def.tri : std::array<PreciseVertCoords, 3>{ v, x.def.seg[0], x.def.seg[1] } };
+    }
     // a crossing of a side with another triangle is on the plane of that triangle, and so is a crossing of its edge with this triangle
     auto onPlane = [] ( const std::array<PreciseVertCoords, 3> & t, const Point & x )
     {
@@ -545,12 +555,13 @@ bool CutTrianglePredicates::ccw( VertId a, VertId b, VertId c ) const
         const auto dir = lineDirection_( Line{ .side = std::countr_zero( unsigned( common ) ) } );
         return int( along_( dir, a, b ) ) + int( along_( dir, b, c ) ) + int( along_( dir, c, a ) ) == 2;
     }
-    // rotating the vertices keeps the orientation of the triangle, so any two of them on one line can come first
+    // rotating the vertices keeps the orientation of the triangle, so any two of them on one line can come first;
+    // the lines through a vertex and a crossing come only in the second round: they are needed only at folds, and taking them first was slower
     const std::array<VertId, 3> v{ a, b, c };
-    for ( int i = 0; i < 3; ++i )
+    for ( int i = 0; i < 6; ++i )
     {
-        const VertId p = v[i], q = v[( i + 1 ) % 3], r = v[( i + 2 ) % 3];
-        const auto l = commonLine_( p, q );
+        const VertId p = v[i % 3], q = v[( i + 1 ) % 3], r = v[( i + 2 ) % 3];
+        const auto l = commonLine_( p, q, i >= 3 );
         if ( !l )
             continue;
         const bool forward = along_( lineDirection_( *l ), p, q );
@@ -582,7 +593,7 @@ bool CutTrianglePredicates::ccwFromBehind( VertId b, VertId pivot ) const
     if ( const int c = compareExact_( b, pivot, kx_ ) )
         return c > 0;
     // the points coincide before the perturbation: d goes along the line through them, defined without the perturbation
-    const auto l = commonLine_( pivot, b );
+    const auto l = commonLine_( pivot, b, true );
     if ( !l )
     {
         fail_();

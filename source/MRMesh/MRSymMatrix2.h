@@ -40,8 +40,8 @@ struct SymMatrix2
 
     SymMatrix2 & operator +=( const SymMatrix2<T> & b ) { xx += b.xx; xy += b.xy; yy += b.yy; return * this; }
     SymMatrix2 & operator -=( const SymMatrix2<T> & b ) { xx -= b.xx; xy -= b.xy; yy -= b.yy; return * this; }
-    SymMatrix2 & operator *=( T b ) { xx *= b; xy *= b; yy *= b; return * this; }
-    SymMatrix2 & operator /=( T b )
+    constexpr SymMatrix2 & operator *=( T b ) { xx *= b; xy *= b; yy *= b; return * this; }
+    constexpr SymMatrix2 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { xx /= b; xy /= b; yy /= b; return * this; }
@@ -142,11 +142,11 @@ constexpr SymMatrix2<T> SymMatrix2<T>::inverse( T det ) const noexcept
 {
     if ( det == 0 )
         return {};
-    const auto rdet = 1 / det;
     SymMatrix2<T> res;
-    res.xx =  yy * rdet;
-    res.xy = -xy * rdet;
-    res.yy =  xx * rdet;
+    res.xx =  yy;
+    res.xy = -xy;
+    res.yy =  xx;
+    res /= det; // one division for floating-point T
     return res;
 }
 

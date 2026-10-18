@@ -55,6 +55,24 @@ TEST( MRMesh, SymMatrix3Pseudoinverse )
     EXPECT_NEAR( ( psdInv * Vector3d( 0, 0, 1 ) ).length(), 0, 1e-12 );
 }
 
+// inverse of integer matrices divides each element by the determinant
+TEST( MRMesh, SymMatrixIntegerInverse )
+{
+    SymMatrix2i m2;
+    m2.xx = 4; m2.xy = 2; m2.yy = 2; // det = 4
+    const auto i2 = m2.inverse();
+    EXPECT_EQ( i2.xx, 0 ); // 2 / 4
+    EXPECT_EQ( i2.xy, 0 ); // -2 / 4
+    EXPECT_EQ( i2.yy, 1 ); // 4 / 4
+
+    SymMatrix3i m3 = SymMatrix3i::diagonal( 2 ); // det = 8, cofactors 4
+    m3.zz = 4; // det = 16, cofactors xx = yy = 8, zz = 4
+    const auto i3 = m3.inverse();
+    EXPECT_EQ( i3.xx, 0 ); // 8 / 16
+    EXPECT_EQ( i3.zz, 0 ); // 4 / 16
+    EXPECT_EQ( m3.inverse( 4 ).xx, 2 ); // 8 / 4 with a given determinant
+}
+
 TEST( MRMesh, SymMatrix2Pseudoinverse )
 {
     const float eps = std::numeric_limits<float>::epsilon();

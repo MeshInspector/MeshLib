@@ -41,8 +41,8 @@ struct SymMatrix3
 
     SymMatrix3 & operator +=( const SymMatrix3<T> & b ) { xx += b.xx; xy += b.xy; xz += b.xz; yy += b.yy; yz += b.yz; zz += b.zz; return * this; }
     SymMatrix3 & operator -=( const SymMatrix3<T> & b ) { xx -= b.xx; xy -= b.xy; xz -= b.xz; yy -= b.yy; yz -= b.yz; zz -= b.zz; return * this; }
-    SymMatrix3 & operator *=( T b ) { xx *= b; xy *= b; xz *= b; yy *= b; yz *= b; zz *= b; return * this; }
-    SymMatrix3 & operator /=( T b )
+    constexpr SymMatrix3 & operator *=( T b ) { xx *= b; xy *= b; xz *= b; yy *= b; yz *= b; zz *= b; return * this; }
+    constexpr SymMatrix3 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { xx /= b; xy /= b; xz /= b; yy /= b; yz /= b; zz /= b; return * this; }
@@ -172,14 +172,14 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse( T det ) const noexcept
 {
     if ( det == 0 )
         return {};
-    const auto rdet = 1 / det;
     SymMatrix3<T> res;
-    res.xx = ( yy * zz - yz * yz ) * rdet;
-    res.xy = ( xz * yz - xy * zz ) * rdet;
-    res.xz = ( xy * yz - xz * yy ) * rdet;
-    res.yy = ( xx * zz - xz * xz ) * rdet;
-    res.yz = ( xz * xy - xx * yz ) * rdet;
-    res.zz = ( xx * yy - xy * xy ) * rdet;
+    res.xx = yy * zz - yz * yz;
+    res.xy = xz * yz - xy * zz;
+    res.xz = xy * yz - xz * yy;
+    res.yy = xx * zz - xz * xz;
+    res.yz = xz * xy - xx * yz;
+    res.zz = xx * yy - xy * xy;
+    res /= det; // one division for floating-point T
     return res;
 }
 
@@ -290,14 +290,14 @@ SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * spac
                     *rank = 3;
                 if ( space )
                     *space = Vector3<T>{};
-                const auto rd = 1 / d;
                 SymMatrix3<T> res;
-                res.xx = myz * rd;
-                res.xy = cxy * rd;
-                res.xz = cxz * rd;
-                res.yy = mxz * rd;
-                res.yz = ( xz * xy - xx * yz ) * rd;
-                res.zz = mxy * rd;
+                res.xx = myz;
+                res.xy = cxy;
+                res.xz = cxz;
+                res.yy = mxz;
+                res.yz = xz * xy - xx * yz;
+                res.zz = mxy;
+                res /= d;
                 return res;
             }
         }

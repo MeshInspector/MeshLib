@@ -273,7 +273,7 @@ TEST( MRMesh, triangulateDisjointContoursPinchedLoop )
     EXPECT_EQ( patch->topology.numValidFaces(), 2 );
 }
 
-// a closed contour running along the mesh boundary: its cut leaves holes passing some edges in both directions
+// a closed contour running along the mesh boundary: its cut joins two vertices by parallel edges inside one hole
 TEST( MRMesh, cutMeshAlongBoundaryFillsSpikedHoles )
 {
     Mesh mesh;

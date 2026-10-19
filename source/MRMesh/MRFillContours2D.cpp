@@ -226,7 +226,8 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     float minEdgeLenSq = FLT_MAX;
     for ( EdgeId e : loops.front() )
     {
-        // an edge with this hole on both sides (e.g. a spike left by a cut along the mesh boundary) breaks the 2d triangulation
+        // a cut along the mesh boundary can join two vertices by parallel edges, each with this hole on both sides;
+        // the sweep then meets coincident segments, so leave loops passing an edge both ways to the metric fill
         if ( !mesh.topology.left( e.sym() ) && std::find( loops.front().begin(), loops.front().end(), e.sym() ) != loops.front().end() )
             return unexpected( "Hole boundary passes an edge in both directions" );
         const auto o = mesh.orgPnt( e ), d = mesh.destPnt( e );

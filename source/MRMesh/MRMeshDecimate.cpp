@@ -1792,6 +1792,7 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     subs.maxEdgeLen = settings.targetEdgeLen;
     subs.maxEdgeSplits = settings.maxEdgeSplits;
     subs.maxAngleChangeAfterFlip = settings.maxAngleChangeAfterFlip;
+    subs.maxDeviationAfterFlip = 0.1f * settings.targetEdgeLen; // the default 1 cuts off sharp edges of small meshes
     subs.subdivideBorder = !settings.frozenBoundary;
     subs.maxSplittableTriAspectRatio = settings.maxSplittableTriAspectRatio;
     subs.smoothMode = settings.useCurvature;

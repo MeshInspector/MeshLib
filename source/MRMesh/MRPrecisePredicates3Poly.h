@@ -17,12 +17,16 @@ namespace MR
 /// \addtogroup MathGroup
 /// \{
 
+// for internal use: namespace detail is not bound to other languages
+namespace detail
+{
+
 /// the building blocks of the precise predicates in MRPrecisePredicates3.h, shared with the other predicates that must agree with them:
 /// the exact volume of a tetrahedron, and its polynomial in eps when the points are perturbed by simulation-of-simplicity
 
 /// the exact signed volume of tetrahedron abcd times 6: dot( a - d, cross( b - d, c - d ) ), whose sign orient3d( a, b, c, d ) returns
 /// if it is not zero; 128 bits are enough for coordinates within the range of ConvertToIntVector
-[[nodiscard]] MR_BIND_IGNORE MR_FORCE_INLINE FastInt128 orient3dVolume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
+[[nodiscard]] MR_FORCE_INLINE FastInt128 orient3dVolume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
 {
     const Vector3i64 x( a - d );
     const Vector3i64 y( b - d );
@@ -35,7 +39,7 @@ namespace MR
 }
 
 /// a point with the degree of its perturbation: its coordinates z, y, x get eps^d, eps^(3*d), eps^(9*d)
-struct MR_BIND_IGNORE PointDegree
+struct PointDegree
 {
     Vector3i pt;
     std::int64_t d = 0; ///< degree of epsilon for pt.z; 0 leaves the point unperturbed
@@ -48,13 +52,16 @@ struct MR_BIND_IGNORE PointDegree
     }
 };
 
+/// the largest number of points of one predicate that getPointDegrees and PerturbationStages take
+constexpr int cMaxPerturbedPoints = 16;
+
 /// finds the degrees of the perturbation of points vs[0..n-1] and writes them in res[0..n-1]: sorted by ids, the points get
 /// the degrees 1, r_0, r_0 * r_1, ..., where r_k is the radix of the k-th id, given in radices[] of every point with that id,
 /// and points with equal ids get equal degrees; the smallest id moves most, as in orient3d, and the radix of a point must exceed
 /// its weight in every term of the polynomials of the predicate (the sum of 9, 3, 1 over its coordinates in the term), so that
 /// the degrees order the terms as the perturbation of orient3d does: by the weights of the points from the largest id down;
 /// returns the number of different ids, and writes their degrees in ascending order in places[] if it is not null
-MR_BIND_IGNORE MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::int64_t * radices, int n, PointDegree * res,
+MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::int64_t * radices, int n, PointDegree * res,
     std::int64_t * places = nullptr )
 {
     struct VertN
@@ -62,9 +69,8 @@ MR_BIND_IGNORE MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs
         VertId v;
         int n = 0;
     };
-    constexpr int cMaxPoints = 16;
-    assert( n > 0 && n <= cMaxPoints );
-    std::array<VertN, cMaxPoints> as;
+    assert( n > 0 && n <= cMaxPerturbedPoints );
+    std::array<VertN, cMaxPerturbedPoints> as;
     for ( int i = 0; i < n; ++i )
         as[i] = { vs[i].id, i };
     std::sort( as.begin(), as.begin() + n, []( const auto & a, const auto & b ) { return a.v < b.v; } );
@@ -97,20 +103,26 @@ MR_BIND_IGNORE MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs
 /// the largest degree that no term exceeds: a polynomial with it keeps all its terms
 constexpr std::int64_t cMaxPolyDAll = std::numeric_limits<std::int64_t>::max();
 
+/// the largest degrees of the polynomial terms that segmentIntersectionOrder and segmentIntersectionTriPlaneOrder consider first, found
+/// experimentally (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
+/// in the tests and in a random sweep of degenerate inputs; the terms of higher degrees are not stored to save computation time,
+/// and if they are not enough to decide, the predicates repeat the computation with all terms (cMaxPolyDAll);
+/// the tests count the inputs above them, so they live here rather than in MRPrecisePredicates3.cpp
+constexpr std::int64_t cMaxPolyDTriTri   = 15'943'959; // segmentIntersectionOrder
+constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTriPlaneOrder: it reaches the polynomial path with all three largest ids in the plane
+
 /// the points of a predicate with the degrees of their perturbation, which moves them in stages: at stage s = 1, ..., numStages()
 /// only the points with the s smallest ids are perturbed (orient3dPoly leaves the others unperturbed); a polynomial of the predicate
 /// that is not zero at stage s already has the leading term of the full one, since every term with a point of a later stage has
 /// a larger degree than every term without; and if it was zero at stage s - 1, its terms without the points of stage s cancel
 /// one another, so only the products of the terms of degrees from place( s ) up remain (see `from` in lowestTermOfSumOfProducts)
-class MR_BIND_IGNORE PerturbationStages
+class PerturbationStages
 {
 public:
-    static constexpr int cMaxPoints = 16;
-
     /// the stages of points vs[0..n-1] with the degrees from getPointDegrees
     MR_FORCE_INLINE PerturbationStages( const PreciseVertCoords * vs, const std::int64_t * radices, int n )
     {
-        assert( n <= cMaxPoints );
+        assert( n <= cMaxPerturbedPoints );
         numStages_ = getPointDegrees( vs, radices, n, points_.data(), places_.data() );
     }
 
@@ -141,8 +153,8 @@ public:
     }
 
 private:
-    std::array<PointDegree, cMaxPoints> points_;
-    std::array<std::int64_t, cMaxPoints> places_;
+    std::array<PointDegree, cMaxPerturbedPoints> points_;
+    std::array<std::int64_t, cMaxPerturbedPoints> places_;
     int numStages_ = 0;
 };
 
@@ -200,6 +212,8 @@ template <std::int64_t M>
     }
     return VolumePoly<M>::fromUnsortedTerms( std::move( terms ) );
 }
+
+} // namespace detail
 
 /// \}
 

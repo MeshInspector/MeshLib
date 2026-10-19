@@ -4,12 +4,16 @@
 #include <MRMesh/MRInSphere.h>
 #include <MRMesh/MRSparsePolynomial.h>
 #include <MRMesh/MRFastInt128.h>
+#include <MRMesh/MRFastInt.h>
+#include <MRMesh/MRVarBigInt.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <climits>
+#include <map>
 #include <optional>
 #include <random>
+#include <vector>
 
 namespace MR
 {
@@ -1185,6 +1189,27 @@ TEST( MRMesh, lowestTermOfSumOfProducts )
     EXPECT_EQ( lowestTermOfProductsDiff<std::int64_t>( a, one, one, d, 2 ), T( 2, -1 ) );
     // they do not here, so only -c * one is left of s1
     EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 3, 3 ), T( 3, -1 ) );
+
+    // factors with different coefficient types, multiplied in different types: the other branches of the multiplication
+    using Q = SparsePolynomial<FastInt128, int, 1000>;
+    const Q qOne( std::vector<Q::Term>{ { 0, FastInt128( 1 ) } } );
+    const Q qa( FastInt128( 1 ), 1, FastInt128( 1 ), 2, FastInt128( 1 ) );
+    const Q qb( FastInt128( 1 ), 1, FastInt128( 2 ), 2, FastInt128( 3 ) );
+    const Q qc( FastInt128( 0 ), 3, FastInt128( 2 ) );
+    const SignedProduct<P, Q> pq[3] = { { &a, &qa, false }, { &b, &qOne, true }, { &c, &qOne, true } }; // x^4 as s1
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( pq, 3 ), T( 4, 1 ) ); // only the first factors converted
+    const SignedProduct<Q, P> qp[3] = { { &qa, &a, false }, { &qb, &one, true }, { &qc, &one, true } };
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( qp, 3 ), T( 4, 1 ) ); // only the second factors converted
+    const SignedProduct<Q, Q> qq[3] = { { &qa, &qa, false }, { &qb, &qOne, true }, { &qc, &qOne, true } };
+    EXPECT_EQ( ( lowestTermOfSumOfProducts<Int128Mul256, FastInt128>( qq, 3 ) ), T( 4, 1 ) ); // the factors multiplied in different types
+    EXPECT_EQ( ( lowestTermOfSumOfProducts<FastInt128, Int128Mul256>( qq, 3 ) ), T( 4, 1 ) );
+
+    // `from` takes no part in deducing the type of degrees, so an int works with int64 degrees
+    using P64 = SparsePolynomial<std::int64_t, std::int64_t, 1000>;
+    const P64 one64( std::vector<P64::Term>{ { 0, 1 } } );
+    const P64 a64( 1, 1, 1, 2, 1 );
+    const P64 d64( 1, 1, 1, 2, 2 );
+    EXPECT_EQ( lowestTermOfProductsDiff<std::int64_t>( a64, one64, one64, d64, 2 ), ( std::pair<std::int64_t, int>( 2, -1 ) ) );
 }
 
 TEST( MRMesh, PerturbationStages )
@@ -1192,7 +1217,7 @@ TEST( MRMesh, PerturbationStages )
     // ids 7, 3, 7, 5: the stages of 3, 5, 7 with the degrees 1, r(3), r(3) * r(5)
     const PreciseVertCoords vs[4] = { { 7_v, Vector3i( 1, 2, 3 ) }, { 3_v, Vector3i( 4, 5, 6 ) }, { 7_v, Vector3i( 1, 2, 3 ) }, { 5_v, Vector3i( 7, 8, 9 ) } };
     const std::int64_t radices[4] = { 10, 14, 10, 27 };
-    const PerturbationStages ps( vs, radices, 4 );
+    const detail::PerturbationStages ps( vs, radices, 4 );
     ASSERT_EQ( ps.numStages(), 3 );
     EXPECT_EQ( ps.place( 1 ), 1 );
     EXPECT_EQ( ps.place( 2 ), 14 );
@@ -1436,6 +1461,221 @@ TEST( MRMesh, segmentIntersectionOrder3PartialDegen )
     EXPECT_EQ( numMismatches, 0 );
     EXPECT_GT( numOrders, cTrials / 100 );
     EXPECT_GT( numPlanes, cTrials / 20 );
+}
+
+namespace
+{
+
+// a naive reference of simulation-of-simplicity for segmentIntersectionOrder and segmentIntersectionTriPlaneOrder, which shares
+// no code with them: coordinate c of a point gets + t^( w_c * 27^r ) with w = 9, 3, 1 for x, y, z and r the place of the point's id
+// among the different ids in ascending order (the perturbation that getPointDegrees defines), the volumes are expanded by cofactors
+// as polynomials in t with big integer coefficients, and the sign of a polynomial for infinitesimal t > 0 is that of its lowest term
+namespace SosReference
+{
+
+/// the not-zero coefficients of a polynomial in t by degree
+using Poly = std::map<std::int64_t, VarBigInt>;
+
+Poly add( const Poly & a, const Poly & b, int signB )
+{
+    Poly res = a;
+    for ( const auto & [deg, c] : b )
+        res[deg] = signB > 0 ? res[deg] + c : res[deg] - c;
+    std::erase_if( res, []( const auto & t ) { return t.second.sign() == 0; } );
+    return res;
+}
+
+Poly mul( const Poly & a, const Poly & b )
+{
+    Poly res;
+    for ( const auto & [degA, cA] : a )
+        for ( const auto & [degB, cB] : b )
+            res[degA + degB] = res[degA + degB] + cA * cB;
+    std::erase_if( res, []( const auto & t ) { return t.second.sign() == 0; } );
+    return res;
+}
+
+/// the degree and the sign of the lowest term, sign 0 for the zero polynomial
+std::pair<std::int64_t, int> lowest( const Poly & p )
+{
+    return p.empty() ? std::pair<std::int64_t, int>{ 0, 0 } : std::pair{ p.begin()->first, p.begin()->second.sign() };
+}
+
+struct Order
+{
+    bool taFirst = false;        ///< the answer of both predicates: whether the line of s=01 meets the plane of ta=234 before the plane of tb=567
+    std::int64_t nomDegree = 0;  ///< the degree of the lowest term of the numerator of the difference of the two crossings along s
+    std::int64_t diffDegree = 0; ///< the degree of the lowest term of the difference of the volumes of tb with s[0] and with s[1]
+    bool crossesB = false;       ///< whether s crosses the plane of tb
+};
+
+Order order( const std::array<PreciseVertCoords, 8> & vs )
+{
+    std::vector<VertId> ids;
+    for ( const auto & v : vs )
+        ids.push_back( v.id );
+    std::sort( ids.begin(), ids.end() );
+    ids.erase( std::unique( ids.begin(), ids.end() ), ids.end() );
+
+    std::array<std::array<Poly, 3>, 8> p; // the perturbed coordinates
+    for ( int i = 0; i < 8; ++i )
+    {
+        std::int64_t place = 1;
+        for ( auto it = ids.begin(); *it != vs[i].id; ++it )
+            place *= 27;
+        const std::int64_t w[3] = { 9, 3, 1 };
+        for ( int c = 0; c < 3; ++c )
+        {
+            if ( vs[i].pt[c] != 0 )
+                p[i][c][0] = VarBigInt( std::int64_t( vs[i].pt[c] ) );
+            p[i][c][w[c] * place] = VarBigInt( std::int64_t( 1 ) );
+        }
+    }
+    // the determinant of the rows a - d, b - d, c - d
+    auto volume = [&] ( int a, int b, int c, int d )
+    {
+        std::array<Poly, 3> u, v, w;
+        for ( int k = 0; k < 3; ++k )
+        {
+            u[k] = add( p[a][k], p[d][k], -1 );
+            v[k] = add( p[b][k], p[d][k], -1 );
+            w[k] = add( p[c][k], p[d][k], -1 );
+        }
+        const Poly minor0 = add( mul( v[1], w[2] ), mul( v[2], w[1] ), -1 );
+        const Poly minor1 = add( mul( v[0], w[2] ), mul( v[2], w[0] ), -1 );
+        const Poly minor2 = add( mul( v[0], w[1] ), mul( v[1], w[0] ), -1 );
+        return add( add( mul( u[0], minor0 ), mul( u[1], minor1 ), -1 ), mul( u[2], minor2 ), 1 );
+    };
+    const Poly taOrg = volume( 2, 3, 4, 0 ), taDest = volume( 2, 3, 4, 1 );
+    const Poly tbOrg = volume( 5, 6, 7, 0 ), tbDest = volume( 5, 6, 7, 1 );
+
+    // the line of s meets the planes at the parameters taOrg / ( taOrg - taDest ) and tbOrg / ( tbOrg - tbDest ) from s[0] to s[1],
+    // and the second minus the first is nom / ( ( taOrg - taDest ) * ( tbOrg - tbDest ) )
+    const Poly nom = add( mul( taOrg, tbDest ), mul( tbOrg, taDest ), -1 );
+    const auto [nomDegree, nomSign] = lowest( nom );
+    const auto [diffDegree, diffSign] = lowest( add( tbOrg, tbDest, -1 ) );
+    const int denSign = lowest( add( taOrg, taDest, -1 ) ).second * diffSign;
+    EXPECT_NE( nomSign, 0 );
+    EXPECT_NE( denSign, 0 );
+    return
+    {
+        .taFirst = nomSign * denSign > 0,
+        .nomDegree = nomDegree,
+        .diffDegree = diffDegree,
+        .crossesB = lowest( tbOrg ).second != lowest( tbDest ).second
+    };
+}
+
+} // namespace SosReference
+
+} // anonymous namespace
+
+// both predicates agree with the naive reference above on random inputs: in general position, degenerate ones, and degenerate ones
+// that the terms of degrees up to the limits (detail::cMaxPolyDTriTri, cMaxPolyDTriPlane) leave undecided
+TEST( MRMesh, segmentIntersectionOrder3Reference )
+{
+    // the degree limits of the predicates
+    constexpr std::int64_t cMaxDegTriTri = detail::cMaxPolyDTriTri, cMaxDegTriPlane = detail::cMaxPolyDTriPlane;
+    std::mt19937 gen( 3 );
+    auto shuffle = [&] ( std::array<int, 8> ids, int first, int last )
+    {
+        for ( int i = last - 1; i > first; --i )
+            std::swap( ids[i], ids[first + gen() % ( i - first + 1 )] );
+        return ids;
+    };
+    const Vector3i pool[] = { { 0, 0, 0 }, { 0, 0, -1 }, { 0, 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 }, { 1, 1, 0 } };
+#ifdef NDEBUG
+    constexpr int cTrials = 4000;
+#else
+    constexpr int cTrials = 1000;
+#endif
+    int numPlanes = 0, numAboveTriPlane = 0, numOrders = 0, numExact = 0, numDegenerate = 0, numAboveTriTri = 0, numMismatches = 0;
+    for ( int trial = 0; trial < cTrials; ++trial )
+    {
+        std::array<PreciseVertCoords, 8> ws;
+        // the kinds of inputs below in the ratio 1 : 2 : 3 : 2 (the volumes of points in general position take longest to expand)
+        constexpr int cKinds[8] = { 0, 1, 1, 2, 2, 2, 3, 3 };
+        switch ( cKinds[trial % 8] )
+        {
+        case 0:
+        {
+            // points in general position: a segment along the z-axis and triangles around it
+            const auto ids = shuffle( { 0, 1, 2, 3, 4, 5, 6, 7 }, 0, 8 );
+            for ( int i = 0; i < 8; ++i )
+            {
+                const int r = i < 2 ? 1 : 3;
+                const int x = int( gen() % ( 2 * r + 1 ) ) - r;
+                const int y = int( gen() % ( 2 * r + 1 ) ) - r;
+                const int z = i < 2 ? 3 - 6 * i : int( gen() % 5 ) - 2;
+                ws[i] = { VertId( ids[i] ), Vector3i( x, y, z ) };
+            }
+            break;
+        }
+        case 1:
+        {
+            // the points of a small pool, sometimes with a vertex shared by the triangles
+            const auto ids = shuffle( { 0, 1, 2, 3, 4, 5, 6, 7 }, 0, 8 );
+            const int numPts = 1 + int( gen() % 6 );
+            for ( int i = 0; i < 8; ++i )
+                ws[i] = { VertId( ids[i] ), pool[gen() % numPts] };
+            if ( gen() % 3 == 0 )
+                ws[7] = ws[2];
+            break;
+        }
+        case 2:
+        {
+            // all points on the z-axis, the segment with ids 2 and 7, and the triangles with ids 3, 6 and with 4, 5, each with one of 0, 1:
+            // segmentIntersectionOrder of a quarter of them needs the terms above cMaxDegTriTri
+            std::array<int, 8> ids = { 2, 7, 0, 3, 6, 1, 4, 5 };
+            if ( gen() % 2 )
+                std::swap( ids[0], ids[1] );
+            if ( gen() % 2 )
+                std::swap( ids[2], ids[5] );
+            ids = shuffle( shuffle( ids, 2, 5 ), 5, 8 );
+            if ( gen() % 2 )
+                std::swap_ranges( ids.begin() + 2, ids.begin() + 5, ids.begin() + 5 );
+            for ( int i = 0; i < 8; ++i )
+                ws[i] = { VertId( ids[i] ), Vector3i( 0, 0, int( gen() % 2 ) ) };
+            break;
+        }
+        default:
+        {
+            // all points on the x-axis: the segment from 0 to 1 with two of the ids 0 to 4, the smaller one at 0, triangle ta with
+            // the other three, and the plane of tb through three points at 1 with the largest ids:
+            // segmentIntersectionTriPlaneOrder of two fifths of them needs the terms above cMaxDegTriPlane
+            const auto ids = shuffle( shuffle( { 0, 1, 2, 3, 4, 5, 6, 7 }, 0, 5 ), 5, 8 );
+            for ( int i = 0; i < 8; ++i )
+                ws[i] = { VertId( ids[i] ), Vector3i( i < 5 ? int( gen() % 2 ) : 1, 0, 0 ) };
+            ws[0].pt.x = ids[0] < ids[1] ? 0 : 1;
+            ws[1].pt.x = 1 - ws[0].pt.x;
+            break;
+        }
+        }
+        if ( !doTriangleSegmentIntersect( { ws[2], ws[3], ws[4], ws[0], ws[1] } ) )
+            continue;
+        const auto ref = SosReference::order( ws );
+        ++numPlanes;
+        numMismatches += segmentIntersectionTriPlaneOrder( ws ) != ref.taFirst;
+        if ( ref.crossesB ? ref.nomDegree > cMaxDegTriPlane : ref.diffDegree > cMaxDegTriPlane )
+            ++numAboveTriPlane;
+        if ( !doTriangleSegmentIntersect( { ws[5], ws[6], ws[7], ws[0], ws[1] } ) )
+            continue;
+        ++numOrders;
+        numMismatches += segmentIntersectionOrder( ws ) != ref.taFirst;
+        if ( ref.nomDegree == 0 )
+            ++numExact;
+        else if ( ref.nomDegree <= cMaxDegTriTri )
+            ++numDegenerate;
+        else
+            ++numAboveTriTri;
+    }
+    EXPECT_EQ( numMismatches, 0 );
+    EXPECT_GT( numPlanes, cTrials / 10 );
+    EXPECT_GT( numAboveTriPlane, cTrials / 200 );
+    EXPECT_GT( numOrders, cTrials / 40 );
+    EXPECT_GT( numExact, cTrials / 400 );
+    EXPECT_GT( numDegenerate, cTrials / 50 );
+    EXPECT_GT( numAboveTriTri, cTrials / 200 );
 }
 
 TEST( MRMesh, getToIntConverter )

@@ -81,6 +81,7 @@
     <ClCompile Include="MRStringConvertTests.cpp" />
     <ClCompile Include="MRSurfaceDistanceBuilderTests.cpp" />
     <ClCompile Include="MRSurfacePathTests.cpp" />
+    <ClCompile Include="MRSymMatrixTests.cpp" />
     <ClCompile Include="MRTBBTests.cpp" />
     <ClCompile Include="MRTestApp.cpp" />
     <ClCompile Include="MROverlappingTrisTests.cpp" />

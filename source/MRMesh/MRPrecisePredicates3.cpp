@@ -6,11 +6,9 @@
 #include "MRVector.h"
 #include "MRFastInt.h"
 #include "MRHighPrecision.h"
-#include "MRInt64Mul128.h"
 #include "MRVector2.h"
 #include "MRBox.h"
 #include "MRDivRound.h"
-#include "MRSparsePolynomial.h"
 #include <optional>
 
 namespace MR
@@ -18,15 +16,16 @@ namespace MR
 
 namespace
 {
+using detail::orient3dVolume;
+using detail::PerturbationStages;
+using detail::cMaxPolyDAll;
+using detail::cMaxPolyDTriTri;
+using detail::cMaxPolyDTriPlane;
+using detail::VolumePoly;
+using detail::orient3dPoly;
+
 // INT_MAX in double for mapping in int range
 constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 to be sure the no overflow will ever happen due to rounding errors
-
-// these values were found experimentally as the largest degree of a polynomial term that must be considered in the predicates
-// (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
-// in the tests and in a random sweep of degenerate inputs; the terms of higher degrees are not stored to save computation time,
-// and if they are not enough to decide, the predicates repeat the computation with all terms (see cMaxPolyDAll)
-constexpr std::int64_t cMaxPolyDTriTri   = 15'943'959; // segmentIntersectionOrder
-constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTriPlaneOrder: it reaches the polynomial path with all three largest ids in the plane
 
 /// vertices of two triangles ta=234 and tb=567 split into shared and not-shared ones
 struct SharedPoints
@@ -110,7 +109,7 @@ std::optional<bool> segmentIntersectionOrderExact( const SegmentVolumes & v )
 
 /// the stages of the perturbation of the eight points of segmentIntersectionOrder and segmentIntersectionTriPlaneOrder:
 /// a product of two orient3d-polynomials takes every point at most twice, with the weight at most 9 + 3 + 1 each time;
-/// inlined in the degenerate cases, which then stay out of line in the callers, and their exact paths lean
+/// inlined into the degenerate cases, which then stay out of line, keeping the exact paths of the callers lean
 MR_FORCE_INLINE PerturbationStages perturbationStages( const std::array<PreciseVertCoords, 8> & vs )
 {
     constexpr std::int64_t radices[8] = { 27, 27, 27, 27, 27, 27, 27, 27 };
@@ -184,6 +183,20 @@ std::optional<bool> volumeDiffPositive( const PerturbationStages & ps )
             return {};
         return diff.isPositive();
     }, M );
+}
+
+/// segmentIntersectionTriPlaneOrder for segment s=01 parallel to plane pb=567, with the perturbed volumes of pb with both ends
+/// of the sign o0: whether the line of s crosses pb after s[1], i.e. s[1] is closer to pb than s[0], from the terms of degrees
+/// not above M, which are enough for most inputs, or else from all terms
+template <std::int64_t M>
+bool parallelSegmentOrder( const std::array<PreciseVertCoords, 8> & vs, bool o0 )
+{
+    const auto ps = perturbationStages( vs );
+    if ( const auto pos = volumeDiffPositive<M>( ps ) )
+        return *pos == o0;
+    const auto pos = volumeDiffPositive<cMaxPolyDAll>( ps );
+    assert( pos ); // only invalid input makes the perturbed volumes equal, e.g. s[0] and s[1] with the same id
+    return pos && *pos == o0;
 }
 
 } // anonymous namespace
@@ -373,13 +386,7 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
             return ( volumeOrg > volumeDest ) == o0;
 
         // s is parallel to pb, and the perturbation of the points decides, which end of s is closer to pb
-        const auto ps = perturbationStages( vs );
-        if ( const auto pos = volumeDiffPositive<cMaxPolyDTriPlane>( ps ) )
-            return *pos == o0;
-        // the terms of degrees above cMaxPolyDTriPlane decide
-        const auto pos = volumeDiffPositive<cMaxPolyDAll>( ps );
-        assert( pos ); // only invalid input makes the perturbed volumes equal, e.g. s[0] and s[1] with the same id
-        return pos && *pos == o0;
+        return parallelSegmentOrder<cMaxPolyDTriPlane>( vs, o0 );
     }
 
     // segment s crosses plane pb

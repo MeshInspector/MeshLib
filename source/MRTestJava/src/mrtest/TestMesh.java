@@ -3,16 +3,15 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.FaceBitSet;
-import meshlib.mr.FaceId;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshPart;
-import meshlib.mr.UndirectedEdgeBitSet;
-import meshlib.mr.UndirectedEdgeId;
-import meshlib.mr.VertBitSet;
-import meshlib.mr.VertId;
-import meshlib.mr.expected_MR_UndirectedEdgeBitSet_std_string;
+import meshlib.FaceBitSet;
+import meshlib.FaceId;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.MeshPart;
+import meshlib.UndirectedEdgeBitSet;
+import meshlib.UndirectedEdgeId;
+import meshlib.VertBitSet;
+import meshlib.VertId;
 
 public final class TestMesh
 {
@@ -38,9 +37,8 @@ public final class TestMesh
     {
         Mesh mesh = Common.makeTorus(1.0f, 0.05f, 16, 16);
         MeshPart mp = new MeshPart(mesh, null);
-        expected_MR_UndirectedEdgeBitSet_std_string shortEdges = Functions.findShortEdges(mp, 0.1f, null);
-        check(shortEdges.success(), "findShortEdges failed");
-        checkEq(shortEdges.value().count(), 256, "short edges");
+        UndirectedEdgeBitSet shortEdges = Functions.findShortEdges(mp, 0.1f, null);
+        checkEq(shortEdges.count(), 256, "short edges");
     }
 
     public static void incidentFacesFromVerts()

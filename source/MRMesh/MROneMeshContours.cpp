@@ -162,8 +162,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
     }
 }
 
-// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e)
-FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
+FaceId findSharedFaceImpl( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
 {
     auto mtpEdgeRep = mtp.onEdge( topology );
     if ( !mtpEdgeRep )
@@ -179,6 +178,8 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
             return topology.left( eid );
         else if ( topology.dest( topology.prev( eid ) ) == mtpVertRep )
             return topology.right( eid );
+        else if ( topology.org( eid ) == mtpVertRep || topology.dest( eid ) == mtpVertRep )
+            return topology.left( eid ); // mtp is an end of eid itself (the contour turns back in this vertex), so any face of eid is shared
     }
     else
     {
@@ -195,6 +196,15 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
             return topology.right( eid );
     }
     return topology.left( mtp.e );
+}
+
+// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e);
+// if the found face does not exist (mtp on the mesh boundary), returns any existing face of eid
+FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
+{
+    if ( auto f = findSharedFaceImpl( topology, vid, eid, mtp ) )
+        return f;
+    return topology.left( eid ) ? topology.left( eid ) : topology.right( eid );
 }
 
 // function to get information about mesh tri point intersection between two surfaces paths
@@ -281,9 +291,9 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
                 if ( coordDif < closeEdgeEps )
                 {
                     type = CenterInterType::SameEdgesClosePos;
-                    if ( currF == topology.left( nEId ) )
+                    if ( currF == topology.left( nEId ) && topology.right( nEId ) )
                         currF = topology.right( nEId );
-                    else if ( currF == topology.right( nEId ) )
+                    else if ( currF == topology.right( nEId ) && topology.left( nEId ) )
                         currF = topology.left( nEId );
                 }
                 return OneMeshIntersection{currF,mesh.triPoint( curr )};
@@ -814,23 +824,50 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
         }
     }
 
-    sameMtpsNavigator = 0;
-    pivotNavigator = 0;
-    const float closeEdgeEps = std::numeric_limits<float>::epsilon() * box.diagonal();
-    // add interjacent
-    for ( int i = 0; i < meshTriPoints.size(); ++i )
+    const int numMtps = int( meshTriPoints.size() );
+    std::vector<int> realPivots; // index in meshTriPointsOrg of every meshTriPoints[i]
+    if ( pivotIndices )
     {
-        int realPivotIndex = -1;
-        if ( pivotIndices )
+        realPivots.resize( numMtps );
+        sameMtpsNavigator = 0;
+        pivotNavigator = 0;
+        for ( auto& realPivot : realPivots )
         {
             while ( sameMtpsNavigator < sameEdgeMTPs.size() && pivotNavigator == sameEdgeMTPs[sameMtpsNavigator] )
             {
                 ++pivotNavigator;
                 ++sameMtpsNavigator;
             }
-            realPivotIndex = pivotNavigator;
-            ++pivotNavigator;
+            realPivot = pivotNavigator++;
         }
+    }
+
+    // a closed contour is walked from a point with non-empty incoming and outgoing paths, so that the previous
+    // intersection of every point is already known when the point is processed (not a stand-in from an empty path)
+    int startI = 0;
+    if ( closed )
+    {
+        int startScore = -1;
+        for ( int i = 0; i < numMtps && startScore < 2; ++i )
+        {
+            const int score = int( !surfacePaths[( i + numMtps - 1 ) % numMtps].intersections.empty() ) * ( 1 + int( !surfacePaths[i].intersections.empty() ) );
+            if ( score > startScore )
+            {
+                startScore = score;
+                startI = i;
+            }
+        }
+    }
+
+    const float closeEdgeEps = std::numeric_limits<float>::epsilon() * box.diagonal();
+    int firstMtpStart = 0; // position in res where the intersections of meshTriPoints[0] start
+    // add interjacent
+    for ( int k = 0; k < numMtps; ++k )
+    {
+        const int i = ( startI + k ) % numMtps;
+        if ( i == 0 )
+            firstMtpStart = int( res.intersections.size() );
+        const int realPivotIndex = pivotIndices ? realPivots[i] : -1;
 
         std::vector<OneMeshIntersection>* prevInter = ( closed || i > 0 ) ? &surfacePaths[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()].intersections : nullptr;
         const std::vector<OneMeshIntersection>* nextInter = ( i < sizeMTP ) ? &surfacePaths[i].intersections : nullptr;
@@ -876,20 +913,23 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
             {
                 if ( res.intersections.empty() )
                 {
-                    if ( prevInter )
+                    if ( prevInter && !prevInter->empty() )
                         prevInter->back() = *centerInterOp;
                 }
                 else
                 {
                     res.intersections.back() = *centerInterOp;
                     mtpPushed = true;
+                    if ( i == 0 )
+                        --firstMtpStart; // the first point took over the last intersection of the previous point
                 }
             }
             if ( pivotIndices && mtpPushed )
             {
                 int currentIndex = int( res.intersections.size() ) - 1;
-                if ( realPivotIndex > 0 && ( *pivotIndices )[realPivotIndex - 1] == currentIndex )
-                    ( *pivotIndices )[realPivotIndex - 1] = -1;
+                const int prevPivotIndex = ( closed || i > 0 ) ? realPivots[( i + numMtps - 1 ) % numMtps] : -1;
+                if ( prevPivotIndex >= 0 && ( *pivotIndices )[prevPivotIndex] == currentIndex )
+                    ( *pivotIndices )[prevPivotIndex] = -1;
                 ( *pivotIndices )[realPivotIndex] = currentIndex;
             }
         }
@@ -900,6 +940,16 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
             else
                 res.intersections.insert( res.intersections.end(), nextInter->begin() + 1, nextInter->end() );
         }
+    }
+    if ( firstMtpStart > 0 )
+    {
+        // restore the order starting from the first point
+        const int numInters = int( res.intersections.size() );
+        std::rotate( res.intersections.begin(), res.intersections.begin() + firstMtpStart, res.intersections.end() );
+        if ( pivotIndices )
+            for ( auto& p : *pivotIndices )
+                if ( p >= 0 )
+                    p = ( p - firstMtpStart + numInters ) % numInters;
     }
     if ( closed && !res.intersections.empty() )
     {

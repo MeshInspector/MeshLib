@@ -232,7 +232,7 @@ struct SmallFraction
 
 std::int64_t smallVolume( const Tri& t, const PreciseVertCoords& p )
 {
-    return std::int64_t( orient3dVolume( t[0].pt, t[1].pt, t[2].pt, p.pt ) );
+    return std::int64_t( detail::orient3dVolume( t[0].pt, t[1].pt, t[2].pt, p.pt ) );
 }
 
 // nullopt if the point is not defined
@@ -287,8 +287,8 @@ std::optional<BigFraction> bigFraction( const PreciseCutPoint& p )
         res.d = FastInt256( 1 );
         return res;
     }
-    const auto oa = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[0].pt );
-    const auto ob = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[1].pt );
+    const auto oa = detail::orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[0].pt );
+    const auto ob = detail::orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[1].pt );
     if ( oa == ob )
         return {};
     for ( int k = 0; k < 3; ++k )

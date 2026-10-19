@@ -24,6 +24,16 @@ enum DecimateStrategy
     ShortestEdgeFirst ///< the next edge to collapse will be the shortest one
 };
 
+/// Defines how decimation finds the parts of the mesh for parallel processing (DecimateSettings::subdivideParts > 1)
+enum class DecimatePartsMode
+{
+    /// the mesh is already packed optimally (e.g. by mesh.packOptimally()), and the parts are ranges of face ids
+    PackedMesh,
+    /// the parts are subtrees of mesh's AABB tree (taken from the mesh if present, otherwise constructed), no packing is needed;
+    /// the number of parts is rounded up to a power of two
+    AABBTree
+};
+
 /**
  * \struct MR::DecimateSettings
  * \brief Parameters structure for MR::decimateMesh
@@ -154,8 +164,11 @@ struct DecimateSettings
     ProgressCallback progressCallback;
 
     /// If this value is more than 1, then virtually subdivides the mesh on given number of parts to process them in parallel (using many threads);
-    /// IMPORTANT: please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
+    /// IMPORTANT: with default partsMode, please call mesh.packOptimally() before calling decimating with subdivideParts > 1, otherwise performance will be bad
     int subdivideParts = 1;
+
+    /// how the parts are found for subdivideParts > 1; ignored if partFaces is given
+    DecimatePartsMode partsMode = DecimatePartsMode::PackedMesh;
 
     /// Whether to decimate near the borders of individual parts to eliminate small edges there:
     /// as soon as two sibling nodes in the binary tree of parts are decimated, their union is decimated in parallel with other nodes,

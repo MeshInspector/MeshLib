@@ -26,6 +26,13 @@ namespace MR
 
 namespace
 {
+using detail::cMaxPerturbedPoints;
+using detail::cMaxPolyDAll;
+using detail::orient3dPoly;
+using detail::orient3dVolume;
+using detail::PerturbationStages;
+using detail::PointDegree;
+using detail::VolumePoly;
 
 // the rounded projected coordinates of an edge-triangle point are within 2^-19 integer units from the exact ones, as a ratio
 // of two volumes converted in double, times a coordinate difference within 2^31; so a larger difference of two of them decides
@@ -93,7 +100,7 @@ bool sameTriangle( const std::array<PreciseVertCoords, 3> & a, const std::array<
 // and 768 bits those of three.
 
 constexpr int cMaxSosVerts = 15; // all vertices of three points
-static_assert( cMaxSosVerts <= PerturbationStages::cMaxPoints );
+static_assert( cMaxSosVerts <= cMaxPerturbedPoints );
 
 template <typename C>
 using SosPolyOf = SparsePolynomial<C, std::int64_t, cMaxPolyDAll>;

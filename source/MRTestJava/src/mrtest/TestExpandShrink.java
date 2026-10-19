@@ -3,14 +3,14 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.FaceBitSet;
-import meshlib.mr.FaceId;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshTopology;
-import meshlib.mr.SphereParams;
-import meshlib.mr.VertBitSet;
-import meshlib.mr.VertId;
+import meshlib.FaceBitSet;
+import meshlib.FaceId;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.MeshTopology;
+import meshlib.SphereParams;
+import meshlib.VertBitSet;
+import meshlib.VertId;
 
 public final class TestExpandShrink
 {

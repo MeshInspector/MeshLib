@@ -2,14 +2,14 @@ package mrtest;
 
 import static mrtest.Common.check;
 
-import meshlib.mr.Functions;
-import meshlib.mr.GeneralOffsetParameters;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshPart;
-import meshlib.mr.OffsetMode;
-import meshlib.mr.OffsetParameters;
-import meshlib.mr.PartMapping;
-import meshlib.mr.SharpOffsetParameters;
+import meshlib.Functions;
+import meshlib.GeneralOffsetParameters;
+import meshlib.Mesh;
+import meshlib.MeshPart;
+import meshlib.OffsetMode;
+import meshlib.OffsetParameters;
+import meshlib.PartMapping;
+import meshlib.SharpOffsetParameters;
 
 public final class TestMeshOffset
 {
@@ -19,7 +19,7 @@ public final class TestMeshOffset
         MeshPart mp = new MeshPart(mesh, null);
         OffsetParameters params = new OffsetParameters();
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
-        check(Functions.offsetMesh(mp, 0.1f, params).success(), "offsetMesh");
+        check(Functions.offsetMesh(mp, 0.1f, params) != null, "offsetMesh");
     }
 
     public static void doubleOffsetMesh()
@@ -28,7 +28,7 @@ public final class TestMeshOffset
         MeshPart mp = new MeshPart(mesh, null);
         OffsetParameters params = new OffsetParameters();
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
-        check(Functions.doubleOffsetMesh(mp, 0.1f, -0.2f, params).success(), "doubleOffsetMesh");
+        check(Functions.doubleOffsetMesh(mp, 0.1f, -0.2f, params) != null, "doubleOffsetMesh");
     }
 
     public static void mcOffsetMesh()
@@ -37,7 +37,7 @@ public final class TestMeshOffset
         MeshPart mp = new MeshPart(mesh, null);
         OffsetParameters params = new OffsetParameters();
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
-        check(Functions.mcOffsetMesh(mp, 0.1f, params, null).success(), "mcOffsetMesh");
+        check(Functions.mcOffsetMesh(mp, 0.1f, params, null) != null, "mcOffsetMesh");
     }
 
     public static void sharpOffsetMesh()
@@ -46,7 +46,7 @@ public final class TestMeshOffset
         MeshPart mp = new MeshPart(mesh, null);
         SharpOffsetParameters params = new SharpOffsetParameters();
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
-        check(Functions.sharpOffsetMesh(mp, 0.1f, params).success(), "sharpOffsetMesh");
+        check(Functions.sharpOffsetMesh(mp, 0.1f, params) != null, "sharpOffsetMesh");
     }
 
     public static void generalOffsetMesh()
@@ -56,7 +56,7 @@ public final class TestMeshOffset
         GeneralOffsetParameters params = new GeneralOffsetParameters();
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
         params.setMode(OffsetMode.Standard);
-        check(Functions.generalOffsetMesh(mp, 0.1f, params).success(), "generalOffsetMesh");
+        check(Functions.generalOffsetMesh(mp, 0.1f, params) != null, "generalOffsetMesh");
     }
 
     public static void thickenMesh()
@@ -67,6 +67,6 @@ public final class TestMeshOffset
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
         params.setMode(OffsetMode.Standard);
         PartMapping map = new PartMapping();
-        check(Functions.thickenMesh(mesh, 0.1f, params, map).success(), "thickenMesh");
+        check(Functions.thickenMesh(mesh, 0.1f, params, map) != null, "thickenMesh");
     }
 }

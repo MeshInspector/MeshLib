@@ -3,8 +3,8 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.BitSet;
-import meshlib.mr.Functions;
+import meshlib.BitSet;
+import meshlib.Functions;
 
 public final class TestBitSet
 {

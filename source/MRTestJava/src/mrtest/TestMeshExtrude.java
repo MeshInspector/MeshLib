@@ -3,10 +3,10 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.FaceBitSet;
-import meshlib.mr.FaceId;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
+import meshlib.FaceBitSet;
+import meshlib.FaceId;
+import meshlib.Functions;
+import meshlib.Mesh;
 
 public final class TestMeshExtrude
 {

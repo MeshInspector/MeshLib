@@ -219,4 +219,45 @@ TEST( MRMesh, MeshCollidePrecise )
     }
 }
 
+// new vertices of the cut get ids from vertSize(), so invalid trailing vertices must not change the offset
+TEST( MRMesh, SurfaceOffsetWithInvalidTrailingVerts )
+{
+    std::vector<Vector3f> points;
+    Triangulation t;
+    for ( int y = 0; y < 6; ++y )
+        for ( int x = 0; x < 6; ++x )
+            points.emplace_back( float( x ), float( y ), 0.0f );
+    for ( int y = 0; y < 5; ++y )
+        for ( int x = 0; x < 5; ++x )
+        {
+            const VertId a( y * 6 + x ), b( a + 1 ), c( a + 6 ), d( a + 7 );
+            t.push_back( { a, b, d } );
+            t.push_back( { a, d, c } );
+        }
+    Mesh mesh;
+    mesh.points = std::move( points );
+    mesh.topology = MeshBuilder::fromTriangles( t );
+
+    std::vector<MeshTriPoint> mtps;
+    for ( auto p : { Vector3f( 1.3f, 1.4f, 0 ), Vector3f( 3.6f, 1.2f, 0 ), Vector3f( 3.7f, 3.4f, 0 ), Vector3f( 1.2f, 3.6f, 0 ) } )
+        mtps.push_back( mesh.projectPoint( p ).mtp );
+    mtps.push_back( mtps.front() );
+
+    auto expected = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.3f );
+    ASSERT_TRUE( expected.has_value() );
+    ASSERT_FALSE( expected->empty() );
+
+    mesh.topology.vertResize( mesh.topology.vertSize() + 3 );
+    mesh.points.resize( mesh.topology.vertSize() );
+    auto res = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.3f );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->size(), expected->size() );
+    for ( size_t i = 0; i < res->size(); ++i )
+    {
+        ASSERT_EQ( ( *res )[i].intersections.size(), ( *expected )[i].intersections.size() );
+        for ( size_t j = 0; j < ( *res )[i].intersections.size(); ++j )
+            EXPECT_EQ( ( *res )[i].intersections[j].coordinate, ( *expected )[i].intersections[j].coordinate );
+    }
+}
+
 } //namespace MR

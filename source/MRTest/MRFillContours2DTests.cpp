@@ -335,6 +335,18 @@ TEST( MRMesh, cutMeshAlongBoundaryFillsSpikedHoles )
     auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );
 
+    // the default cut stops at the bad face and leaves the holes open; fillContours2D must reject or fill each, not crash
+    auto unfilled = mesh;
+    cutMesh( unfilled, { *contour } );
+    for ( EdgeId e : unfilled.topology.findHoleRepresentiveEdges() )
+    {
+        auto filled = unfilled;
+        if ( fillContours2D( filled, { e } ) )
+        {
+            EXPECT_TRUE( filled.topology.checkValidity() );
+        }
+    }
+
     cutMesh( mesh, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
     EXPECT_TRUE( mesh.topology.checkValidity() );
     EXPECT_EQ( mesh.topology.findNumHoles(), 1 );

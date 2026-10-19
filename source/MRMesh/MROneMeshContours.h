@@ -38,8 +38,8 @@ struct OneMeshContour
   * \brief Special data type for MR::cutMesh
   * 
   * This is special data for MR::cutMesh, you can convert some other contours representation to it by:\n
-  * \ref MR::convertMeshTriPointsToClosedContour
-  * \ref MR::convertSurfacePathsToMeshContours
+  * \ref MR::surfaceLineToClosedMeshContour
+  * \ref MR::surfacePathsToMeshContours
   */
 using OneMeshContours = std::vector<OneMeshContour>;
 
@@ -77,7 +77,7 @@ using MeshTriPointsConnector = std::function<Expected<SurfacePath>( const MeshTr
   * \param pivotIndices optional output indices of given surfaceLine in result OneMeshContour
   */
 [[nodiscard]]
-MR_BIND_IGNORE MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+MR_BIND_IGNORE MRMESH_API Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     MeshTriPointsConnector connectorFn, std::vector<int>* pivotIndices = nullptr );
 
 /// Geo path search settings
@@ -95,7 +95,7 @@ struct SearchPathSettings
   * \param pivotIndices optional output indices of given surfaceLine in result OneMeshContour
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+MRMESH_API Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
@@ -103,10 +103,10 @@ MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mes
   * 
   * Finds shortest paths between neighbor \p surfaceLine and build closed contour MR::cutMesh input
   * \param pivotIndices optional output indices of given surfaceLine in result OneMeshContour
-  * \note better use convertMeshTriPointsToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour
+  * \note better use surfaceLineToMeshContour(...) instead, note that it requires same front and back MeshTriPoints for closed contour
   */
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+MRMESH_API Expected<OneMeshContour> surfaceLineToClosedMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr );
 
 /** \ingroup BooleanGroup
@@ -128,7 +128,7 @@ MRMESH_API Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const M
   *                 o path
   */
 [[nodiscard]]
-MRMESH_API OneMeshContour convertSurfacePathWithEndsToMeshContour( const Mesh& mesh, 
+MRMESH_API OneMeshContour surfacePathWithEndsToMeshContour( const Mesh& mesh, 
                                                                           const MeshTriPoint& start, 
                                                                           const SurfacePath& surfacePath, 
                                                                           const MeshTriPoint& end );
@@ -139,6 +139,39 @@ MRMESH_API OneMeshContour convertSurfacePathWithEndsToMeshContour( const Mesh& m
   * Creates MR::OneMeshContours object from given surface paths for MR::cutMesh input
   */
 [[nodiscard]]
-MRMESH_API OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths );
+MRMESH_API OneMeshContours surfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths );
 
+// the old names stay in the bindings, since scripts call them
+[[deprecated( "use surfaceLineToMeshContour" )]] [[nodiscard]]
+MR_BIND_IGNORE inline Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    MeshTriPointsConnector connectorFn, std::vector<int>* pivotIndices = nullptr )
+{
+    return surfaceLineToMeshContour( mesh, surfaceLine, std::move( connectorFn ), pivotIndices );
+}
+
+[[deprecated( "use surfaceLineToMeshContour" )]] [[nodiscard]]
+inline Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr )
+{
+    return surfaceLineToMeshContour( mesh, surfaceLine, searchSettings, pivotIndices );
+}
+
+[[deprecated( "use surfaceLineToClosedMeshContour" )]] [[nodiscard]]
+inline Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    SearchPathSettings searchSettings = {}, std::vector<int>* pivotIndices = nullptr )
+{
+    return surfaceLineToClosedMeshContour( mesh, surfaceLine, searchSettings, pivotIndices );
+}
+
+[[deprecated( "use surfacePathWithEndsToMeshContour" )]] [[nodiscard]]
+inline OneMeshContour convertSurfacePathWithEndsToMeshContour( const Mesh& mesh, const MeshTriPoint& start, const SurfacePath& surfacePath, const MeshTriPoint& end )
+{
+    return surfacePathWithEndsToMeshContour( mesh, start, surfacePath, end );
+}
+
+[[deprecated( "use surfacePathsToMeshContours" )]] [[nodiscard]]
+inline OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths )
+{
+    return surfacePathsToMeshContours( mesh, surfacePaths );
+}
 } //namespace MR

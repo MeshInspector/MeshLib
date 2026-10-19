@@ -332,7 +332,7 @@ TEST( MRMesh, cutMeshAlongBoundaryFillsSpikedHoles )
     } )
         mtps.push_back( mesh.projectPoint( p ).mtp );
     mtps.push_back( mtps.front() );
-    auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
+    auto contour = surfaceLineToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );
 
     // the default cut stops at the bad face and leaves the holes open; fillContours2D must reject or fill each, not crash

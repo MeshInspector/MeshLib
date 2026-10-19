@@ -2,9 +2,9 @@ package mrtest;
 
 import static mrtest.Common.check;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshPart;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.MeshPart;
 
 public final class TestMeshCollide
 {

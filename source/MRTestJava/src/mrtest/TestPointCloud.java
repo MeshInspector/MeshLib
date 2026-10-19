@@ -3,12 +3,12 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshTopology;
-import meshlib.mr.PointCloud;
-import meshlib.mr.VertNormalsMode;
-import meshlib.mr.std_optional_MR_Mesh;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.MeshTopology;
+import meshlib.PointCloud;
+import meshlib.VertNormalsMode;
+import meshlib.std_optional_MR_Mesh;
 
 public final class TestPointCloud
 {

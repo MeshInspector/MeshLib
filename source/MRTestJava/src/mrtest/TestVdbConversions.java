@@ -3,22 +3,22 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.Box3f;
-import meshlib.mr.Box3i;
-import meshlib.mr.FloatGrid;
-import meshlib.mr.Functions;
-import meshlib.mr.GridToMeshSettings;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshPart;
-import meshlib.mr.MeshToVolumeParams;
-import meshlib.mr.SphereParams;
-import meshlib.mr.VdbVolume;
-import meshlib.mr.Vector3f;
-import meshlib.mr.Vector3i;
-import meshlib.mr.VoxelBitSet;
-import meshlib.mr.VoxelId;
-import meshlib.mr.expected_MR_Mesh_std_string;
-import meshlib.mr.expected_MR_VdbVolume_std_string;
+import meshlib.Box3f;
+import meshlib.Box3i;
+import meshlib.FloatGrid;
+import meshlib.Functions;
+import meshlib.GridToMeshSettings;
+import meshlib.Mesh;
+import meshlib.MeshPart;
+import meshlib.MeshToVolumeParams;
+import meshlib.SphereParams;
+import meshlib.VdbVolume;
+import meshlib.Vector3f;
+import meshlib.Vector3i;
+import meshlib.VoxelBitSet;
+import meshlib.VoxelId;
+import meshlib.expected_MR_Mesh_std_string;
+import meshlib.expected_MR_VdbVolume_std_string;
 
 public final class TestVdbConversions
 {
@@ -54,7 +54,7 @@ public final class TestVdbConversions
         settings.setIsoValue(1.0f);
         expected_MR_Mesh_std_string restored = Functions.gridToMesh_const_MR_FloatGrid_ref(volume.data(), settings);
         check(restored.success(), "gridToMesh failed");
-        Box3f bbox = restored.value().computeBoundingBox((meshlib.mr.AffineXf3f)null);
+        Box3f bbox = restored.value().computeBoundingBox((meshlib.AffineXf3f)null);
         check(bbox.min().x() > 0.199f && bbox.min().x() < 0.201f, "min x");
         check(bbox.min().y() > 0.199f && bbox.min().y() < 0.201f, "min y");
         check(bbox.min().z() > 0.199f && bbox.min().z() < 0.201f, "min z");

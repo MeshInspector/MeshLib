@@ -4,7 +4,7 @@
 
 [TOC]
 
-The bindings are a plain jar, `meshlib.jar`, with no native code of its own: it calls the C API library `MeshLibC2` (see the [C Setup Guide](\ref MeshLibCSetupGuide)) through the foreign function API of Java 22, so there is no JNI glue to compile. C++ classes become classes whose instances own their C++ object (destroyed when garbage-collected, or earlier by `close()`), references returned by methods keep the object they point into alive, `std::string` parameters take `String`, and C++ exceptions become `meshlib.CppException`. The C++ namespaces become packages, so everything from `MR::` is under `meshlib.mr`, and the free functions are the static methods of `meshlib.mr.Functions`.
+The bindings are a plain jar, `meshlib.jar`, with no native code of its own: it calls the C API library `MeshLibC2` (see the [C Setup Guide](\ref MeshLibCSetupGuide)) through the foreign function API of Java 22, so there is no JNI glue to compile. C++ classes become classes whose instances own their C++ object (destroyed when garbage-collected, or earlier by `close()`), references returned by methods keep the object they point into alive, `std::string` parameters take `String`, and C++ exceptions become `meshlib.CppException`. Everything from `MR::` is directly in the `meshlib` package, nested namespaces become subpackages (`MR::MeshLoad` is `meshlib.meshload`), and the free functions are the static methods of the `Functions` class of each package.
 
 ## Prerequisites {#JavaSetupPrerequisites}
 
@@ -61,9 +61,9 @@ java --enable-native-access=ALL-UNNAMED -Djava.library.path=/usr/local/lib/MeshL
 ## Using the API
 
 ```java
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.expected_void_std_string;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.expected_void_std_string;
 
 public class Main
 {
@@ -72,7 +72,7 @@ public class Main
         try (Mesh mesh = Functions.makeUVSphere(1.0f, 64, 64)) // Owns the C++ object, destroyed by `close()` or by the garbage collector.
         {
             System.out.println(mesh.topology().getValidFaces().count() + " faces");
-            expected_void_std_string saved = meshlib.mr.meshsave.Functions.toAnySupportedFormat(mesh, "sphere.stl", null); // The C++ `expected<void, std::string>`.
+            expected_void_std_string saved = meshlib.meshsave.Functions.toAnySupportedFormat(mesh, "sphere.stl", null); // The C++ `expected<void, std::string>`.
             if (!saved.success())
                 throw new RuntimeException("Failed to save: " + saved.error());
         }

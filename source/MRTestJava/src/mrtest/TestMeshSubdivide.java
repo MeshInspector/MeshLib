@@ -1,8 +1,8 @@
 package mrtest;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.SubdivideSettings;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.SubdivideSettings;
 
 public final class TestMeshSubdivide
 {

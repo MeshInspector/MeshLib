@@ -2,11 +2,11 @@ package mrtest;
 
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.SphereParams;
-import meshlib.mr.VertId;
-import meshlib.mr.VertMap;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.SphereParams;
+import meshlib.VertId;
+import meshlib.VertMap;
 
 public final class TestMeshBuilder
 {
@@ -18,7 +18,7 @@ public final class TestMeshBuilder
         Mesh mesh = Functions.makeSphere(params);
 
         VertMap vertMap = new VertMap();
-        int united = meshlib.mr.meshbuilder.Functions.uniteCloseVertices(mesh, 0.1f, false, vertMap);
+        int united = meshlib.meshbuilder.Functions.uniteCloseVertices(mesh, 0.1f, false, vertMap);
         checkEq(united, 2230, "united");
         checkEq(vertMap.index(new VertId(1000)).id_(), 42, "map");
     }

@@ -15,6 +15,10 @@ EMSCRIPTEN_BINDINGS( meshlib_decimate )
         .value( "MinimizeError", DecimateStrategy::MinimizeError )
         .value( "ShortestEdgeFirst", DecimateStrategy::ShortestEdgeFirst );
 
+    emscripten::enum_<DecimatePartsMode>( "DecimatePartsMode" )
+        .value( "PackedMesh", DecimatePartsMode::PackedMesh )
+        .value( "AABBTree", DecimatePartsMode::AABBTree );
+
     emscripten::value_object<DecimateResult>( "DecimateResult" )
         .field( "vertsDeleted", &DecimateResult::vertsDeleted )
         .field( "facesDeleted", &DecimateResult::facesDeleted )
@@ -41,6 +45,7 @@ EMSCRIPTEN_BINDINGS( meshlib_decimate )
         .property( "maxAngleChange", &DecimateSettings::maxAngleChange )
         .property( "packMesh", &DecimateSettings::packMesh )
         .property( "subdivideParts", &DecimateSettings::subdivideParts )
+        .property( "partsMode", &DecimateSettings::partsMode )
         .property( "decimateBetweenParts", &DecimateSettings::decimateBetweenParts )
         .property( "minFacesInPart", &DecimateSettings::minFacesInPart );
 

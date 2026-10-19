@@ -3,9 +3,9 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkApprox;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Vector3f;
-import meshlib.mr.Vector3i;
+import meshlib.Functions;
+import meshlib.Vector3f;
+import meshlib.Vector3i;
 
 public final class TestVector3
 {

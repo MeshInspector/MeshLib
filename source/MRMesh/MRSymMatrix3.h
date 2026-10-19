@@ -41,8 +41,8 @@ struct SymMatrix3
 
     SymMatrix3 & operator +=( const SymMatrix3<T> & b ) { xx += b.xx; xy += b.xy; xz += b.xz; yy += b.yy; yz += b.yz; zz += b.zz; return * this; }
     SymMatrix3 & operator -=( const SymMatrix3<T> & b ) { xx -= b.xx; xy -= b.xy; xz -= b.xz; yy -= b.yy; yz -= b.yz; zz -= b.zz; return * this; }
-    SymMatrix3 & operator *=( T b ) { xx *= b; xy *= b; xz *= b; yy *= b; yz *= b; zz *= b; return * this; }
-    SymMatrix3 & operator /=( T b )
+    constexpr SymMatrix3 & operator *=( T b ) { xx *= b; xy *= b; xz *= b; yy *= b; yz *= b; zz *= b; return * this; }
+    constexpr SymMatrix3 & operator /=( T b )
     {
         if constexpr ( std::is_integral_v<T> )
             { xx /= b; xy /= b; xz /= b; yy /= b; yz /= b; zz /= b; return * this; }
@@ -173,12 +173,13 @@ constexpr SymMatrix3<T> SymMatrix3<T>::inverse( T det ) const noexcept
     if ( det == 0 )
         return {};
     SymMatrix3<T> res;
-    res.xx = ( yy * zz - yz * yz ) / det;
-    res.xy = ( xz * yz - xy * zz ) / det;
-    res.xz = ( xy * yz - xz * yy ) / det;
-    res.yy = ( xx * zz - xz * xz ) / det;
-    res.yz = ( xz * xy - xx * yz ) / det;
-    res.zz = ( xx * yy - xy * xy ) / det;
+    res.xx = yy * zz - yz * yz;
+    res.xy = xz * yz - xy * zz;
+    res.xz = xy * yz - xz * yy;
+    res.yy = xx * zz - xz * xz;
+    res.yz = xz * xy - xx * yz;
+    res.zz = xx * yy - xy * xy;
+    res /= det; // one division for floating-point T
     return res;
 }
 
@@ -269,6 +270,39 @@ Vector3<T> SymMatrix3<T>::eigenvector( T eigenvalue ) const MR_REQUIRES_IF_SUPPO
 template <typename T>
 SymMatrix3<T> SymMatrix3<T>::pseudoinverse( T tol, int * rank, Vector3<T> * space ) const MR_REQUIRES_IF_SUPPORTED( std::is_floating_point_v<T> )
 {
+    // a positive definite matrix (all leading principal minors are positive) is inverted directly, which is several times faster,
+    // if lambdaMin > tol * lambdaMax is guaranteed: lambdaMin >= det / m2 (m2 is the sum of principal 2x2 minors >= lambdaMax * lambdaMid),
+    // and lambdaMax <= trace; the tolerance is at least 1e-4 to keep the direct inverse accurate
+    if ( xx > 0 )
+    {
+        const auto mxy = xx * yy - xy * xy;
+        if ( mxy > 0 )
+        {
+            // cofactors of the first row give the determinant, and together with the principal minors - the inverse
+            const auto myz = yy * zz - yz * yz;
+            const auto cxy = xz * yz - xy * zz;
+            const auto cxz = xy * yz - xz * yy;
+            const auto d = xx * myz + xy * cxy + xz * cxz;
+            const auto mxz = xx * zz - xz * xz;
+            if ( d > 0 && d > std::max( tol, T( 1e-4 ) ) * trace() * ( mxy + mxz + myz ) )
+            {
+                if ( rank )
+                    *rank = 3;
+                if ( space )
+                    *space = Vector3<T>{};
+                SymMatrix3<T> res;
+                res.xx = myz;
+                res.xy = cxy;
+                res.xz = cxz;
+                res.yy = mxz;
+                res.yz = xz * xy - xx * yz;
+                res.zz = mxy;
+                res /= d;
+                return res;
+            }
+        }
+    }
+
     SymMatrix3<T> res;
     Matrix3<T> eigenvectors;
     const auto eigenvalues = eigens( &eigenvectors );

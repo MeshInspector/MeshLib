@@ -2,13 +2,14 @@ package mrtest;
 
 import static mrtest.Common.check;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshPart;
-import meshlib.mr.Object;
-import meshlib.mr.ObjectMesh;
-import meshlib.mr.OffsetParameters;
-import meshlib.mr.std_function_bool_from_float;
+import meshlib.Functions;
+import meshlib.UnexpectedResultException;
+import meshlib.Mesh;
+import meshlib.MeshPart;
+import meshlib.Object;
+import meshlib.ObjectMesh;
+import meshlib.OffsetParameters;
+import meshlib.std_function_bool_from_float;
 
 /** The `std::function` callbacks from Java lambdas, and the casts between a class and its bases. */
 public final class TestCallbacks
@@ -28,7 +29,7 @@ public final class TestCallbacks
             last[0] = progress;
             return true;
         }));
-        check(Functions.offsetMesh(mp, 0.1f, params).success(), "offsetMesh");
+        check(Functions.offsetMesh(mp, 0.1f, params) != null, "offsetMesh");
         check(calls[0] > 0, "the callback was called");
     }
 
@@ -39,7 +40,16 @@ public final class TestCallbacks
         OffsetParameters params = new OffsetParameters();
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
         params.setCallBack(std_function_bool_from_float.of(progress -> false));
-        check(!Functions.offsetMesh(mp, 0.1f, params).success(), "cancelled");
+        boolean cancelled = false;
+        try
+        {
+            Functions.offsetMesh(mp, 0.1f, params);
+        }
+        catch (UnexpectedResultException e)
+        {
+            cancelled = true;
+        }
+        check(cancelled, "cancelled");
     }
 
     public static void callbackException()
@@ -65,7 +75,7 @@ public final class TestCallbacks
         ObjectMesh back = ObjectMesh.dynamicDowncastFromObject(base);
         check(back != null && back.rawPointer().address() == objectMesh.rawPointer().address(), "dynamic downcast");
         check(ObjectMesh.staticDowncastFromObject(base).rawPointer().address() == objectMesh.rawPointer().address(), "static downcast");
-        meshlib.mr.ObjectPoints notAMesh = new meshlib.mr.ObjectPoints();
+        meshlib.ObjectPoints notAMesh = new meshlib.ObjectPoints();
         check(ObjectMesh.dynamicDowncastFromObject(notAMesh.upcastToObject()) == null, "dynamic downcast of another class is null");
     }
 }

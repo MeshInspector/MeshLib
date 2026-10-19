@@ -3,10 +3,10 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.Box3f;
-import meshlib.mr.Box3i;
-import meshlib.mr.Vector3f;
-import meshlib.mr.Vector3i;
+import meshlib.Box3f;
+import meshlib.Box3i;
+import meshlib.Vector3f;
+import meshlib.Vector3i;
 
 public final class TestBox
 {

@@ -3,9 +3,9 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.EdgeId;
-import meshlib.mr.Mesh;
-import meshlib.mr.VertId;
+import meshlib.EdgeId;
+import meshlib.Mesh;
+import meshlib.VertId;
 
 public final class TestMeshTopology
 {

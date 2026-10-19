@@ -1279,7 +1279,7 @@ generate:
 		--clean-output-dir \
 		--package meshlib \
 		--imported-lib-name MeshLibC2 \
-		--force-namespace MR \
+		--replace-namespace MR :: \
 		$(call, ### Handle sub-libraries) \
 		$(foreach m,$(MODULES),$(if $(and $($m_CSubLibraryMacroPrefix),$($m_CSubLibraryOutputProject)),--imported-split-lib-name $($m_CSubLibraryMacroPrefix) $($m_CSubLibraryOutputProject))) \
 	)

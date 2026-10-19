@@ -210,7 +210,7 @@ std::vector<std::string> Locale::getSystemLocales()
         std::wstring buf( bufSize, L'\0' );
         if ( TRUE == GetUserPreferredUILanguages( MUI_LANGUAGE_NAME, &numLangs, buf.data(), &bufSize ) )
         {
-            ULONG actualNumLangs = 0;
+            [[maybe_unused]] ULONG actualNumLangs = 0;
             for ( auto ptr = buf.data(); ptr[0] != L'\0'; ptr += std::wcslen( ptr ) + 1 )
             {
                 actualNumLangs++;

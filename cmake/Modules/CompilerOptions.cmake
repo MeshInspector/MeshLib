@@ -33,6 +33,16 @@ IF(UNIX AND NOT APPLE AND NOT MR_EMSCRIPTEN AND CMAKE_CXX_COMPILER_ID STREQUAL "
 ENDIF()
 
 # Warnings and misc compiler settings.
+set(MESHLIB_GCC_CLANG_WARNINGS "-Wall -Wextra -Wdeprecated -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror")
+IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+  set(MESHLIB_GCC_CLANG_WARNINGS "${MESHLIB_GCC_CLANG_WARNINGS} -Wno-newline-eof")
+
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 22)
+    # required for __COUNTER__
+    set(MESHLIB_GCC_CLANG_WARNINGS "${MESHLIB_GCC_CLANG_WARNINGS} -Wno-c2y-extensions")
+  endif()
+ENDIF()
+
 IF(MSVC)
   # C++-specific flags.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /DImDrawIdx=unsigned /D_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING /D_SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING /D_SILENCE_CXX23_ALIGNED_STORAGE_DEPRECATION_WARNING /D_SILENCE_CXX23_DENORM_DEPRECATION_WARNING /D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR")
@@ -43,7 +53,15 @@ IF(MSVC)
   set(MESHLIB_COMMON_C_CXX_FLAGS "/utf-8 /fp:precise /permissive- /Zc:wchar_t /Zc:forScope /Zc:inline /DNOMINMAX /D_CRT_SECURE_NO_DEPRECATE /D_CRT_SECURE_NO_WARNINGS")
 
   # Vcpkg automatically adds `/external:W0`, but we duplicate it here because it somehow doesn't propagate to Lazperf.
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /Wall /WX /external:W0 /external:env:INCLUDE")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /external:W0 /external:env:INCLUDE")
+  IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    # clang-cl: both /Wall and -Wall mean -Weverything there, so take the Clang warning set with /W4 (= -Wall -Wextra);
+    # it ignores the MSVC /wd numbers below, and -Wno-clang-cl-pch is its C4605/C4651 (macros differing from the shared PCH)
+    string(REPLACE "-Wall -Wextra" "/W4" MESHLIB_CLANG_CL_WARNINGS "${MESHLIB_GCC_CLANG_WARNINGS}")
+    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} ${MESHLIB_CLANG_CL_WARNINGS} -Wno-clang-cl-pch")
+  ELSE()
+    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /Wall /WX")
+  ENDIF()
 
   # Following warnings are silenced:
   # !! NOTE: Sync this list with `common.props` !!
@@ -88,18 +106,9 @@ IF(MSVC)
   # !! NOTE: Sync this list with `common.props` !!
   set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} /wd4061 /wd4250 /wd4324 /wd4365 /wd4371 /wd4388 /wd4435 /wd4514 /wd4582 /wd4583 /wd4599 /wd4605 /wd4623 /wd4625 /wd4626 /wd4651 /wd4668 /wd4686 /wd4710 /wd4711 /wd4820 /wd4865 /wd4866 /wd4868 /wd5026 /wd5027 /wd5031 /wd5039 /wd5045 /wd5104 /wd5105 /wd5219 /wd5243 /wd5246 /wd5262 /wd5264 /wd26451")
 ELSE()
-  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wall -Wextra -Wdeprecated -Wno-missing-field-initializers -Wno-unknown-pragmas -Wno-sign-compare -Werror -fvisibility=hidden -pedantic-errors")
+  set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} ${MESHLIB_GCC_CLANG_WARNINGS} -fvisibility=hidden -pedantic-errors")
   # command line option '-fvisibility-inlines-hidden' is valid for C++/ObjC++ but not for C, so we cannot put it in MESHLIB_COMMON_C_CXX_FLAGS
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility-inlines-hidden")
-
-  IF(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wno-newline-eof")
-
-    if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 22)
-      # required for __COUNTER__
-      set(MESHLIB_COMMON_C_CXX_FLAGS "${MESHLIB_COMMON_C_CXX_FLAGS} -Wno-c2y-extensions")
-    endif()
-  ENDIF()
 ENDIF()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MESHLIB_COMMON_C_CXX_FLAGS}")

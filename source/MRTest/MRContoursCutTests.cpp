@@ -38,6 +38,10 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
     EXPECT_TRUE( contour->closed );
     for ( const auto& inter : contour->intersections )
         std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
+
+    auto res = cutMesh( mesh, { *contour } );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( res.resultCut.size(), 1 );
 }
 
 TEST( MRMesh, BooleanIntersectionsSort )

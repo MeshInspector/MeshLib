@@ -814,24 +814,50 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
         }
     }
 
-    sameMtpsNavigator = 0;
-    pivotNavigator = 0;
-    const float closeEdgeEps = std::numeric_limits<float>::epsilon() * box.diagonal();
-    std::optional<OneMeshIntersection> deferredFront;
-    // add interjacent
-    for ( int i = 0; i < meshTriPoints.size(); ++i )
+    const int numMtps = int( meshTriPoints.size() );
+    std::vector<int> realPivots; // index in meshTriPointsOrg of every meshTriPoints[i]
+    if ( pivotIndices )
     {
-        int realPivotIndex = -1;
-        if ( pivotIndices )
+        realPivots.resize( numMtps );
+        sameMtpsNavigator = 0;
+        pivotNavigator = 0;
+        for ( auto& realPivot : realPivots )
         {
             while ( sameMtpsNavigator < sameEdgeMTPs.size() && pivotNavigator == sameEdgeMTPs[sameMtpsNavigator] )
             {
                 ++pivotNavigator;
                 ++sameMtpsNavigator;
             }
-            realPivotIndex = pivotNavigator;
-            ++pivotNavigator;
+            realPivot = pivotNavigator++;
         }
+    }
+
+    // a closed contour is walked from a point with non-empty incoming and outgoing paths, so that the previous
+    // intersection of every point is already known when the point is processed (not a stand-in from an empty path)
+    int startI = 0;
+    if ( closed )
+    {
+        int startScore = -1;
+        for ( int i = 0; i < numMtps && startScore < 2; ++i )
+        {
+            const int score = int( !surfacePaths[( i + numMtps - 1 ) % numMtps].intersections.empty() ) * ( 1 + int( !surfacePaths[i].intersections.empty() ) );
+            if ( score > startScore )
+            {
+                startScore = score;
+                startI = i;
+            }
+        }
+    }
+
+    const float closeEdgeEps = std::numeric_limits<float>::epsilon() * box.diagonal();
+    int firstMtpStart = 0; // position in res where the intersections of meshTriPoints[0] start
+    // add interjacent
+    for ( int k = 0; k < numMtps; ++k )
+    {
+        const int i = ( startI + k ) % numMtps;
+        if ( i == 0 )
+            firstMtpStart = int( res.intersections.size() );
+        const int realPivotIndex = pivotIndices ? realPivots[i] : -1;
 
         std::vector<OneMeshIntersection>* prevInter = ( closed || i > 0 ) ? &surfacePaths[( i + int( meshTriPoints.size() ) - 1 ) % meshTriPoints.size()].intersections : nullptr;
         const std::vector<OneMeshIntersection>* nextInter = ( i < sizeMTP ) ? &surfacePaths[i].intersections : nullptr;
@@ -879,8 +905,6 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
                 {
                     if ( prevInter && !prevInter->empty() )
                         prevInter->back() = *centerInterOp;
-                    else if ( prevInter )
-                        deferredFront = *centerInterOp; // previous path is empty: replace its stand-in after the loop
                 }
                 else
                 {
@@ -904,8 +928,16 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
                 res.intersections.insert( res.intersections.end(), nextInter->begin() + 1, nextInter->end() );
         }
     }
-    if ( deferredFront && !res.intersections.empty() )
-        res.intersections.back() = *deferredFront;
+    if ( firstMtpStart > 0 )
+    {
+        // restore the order starting from the first point
+        const int numInters = int( res.intersections.size() );
+        std::rotate( res.intersections.begin(), res.intersections.begin() + firstMtpStart, res.intersections.end() );
+        if ( pivotIndices )
+            for ( auto& p : *pivotIndices )
+                if ( p >= 0 )
+                    p = ( p - firstMtpStart + numInters ) % numInters;
+    }
     if ( closed && !res.intersections.empty() )
     {
         res.intersections.push_back( res.intersections.front() );

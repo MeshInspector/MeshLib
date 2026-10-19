@@ -371,13 +371,13 @@ TEST( MRMesh, SurfaceOffsetWithInvalidTrailingVerts )
         mtps.push_back( mesh.projectPoint( p ).mtp );
     mtps.push_back( mtps.front() );
 
-    auto expected = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.3f );
+    auto expected = offsetSurfaceLineToMeshContours( mesh, mtps, 0.3f );
     ASSERT_TRUE( expected.has_value() );
     ASSERT_FALSE( expected->empty() );
 
     mesh.topology.vertResize( mesh.topology.vertSize() + 3 );
     mesh.points.resize( mesh.topology.vertSize() );
-    auto res = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.3f );
+    auto res = offsetSurfaceLineToMeshContours( mesh, mtps, 0.3f );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->size(), expected->size() );
     for ( size_t i = 0; i < res->size(); ++i )

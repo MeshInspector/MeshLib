@@ -953,16 +953,16 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
 
 } //anonymous namespace
 
-Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings )
+Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints, float isoValue, SearchPathSettings searchSettings )
 {
-    return convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, meshTriPoints,
+    return offsetSurfaceLineToMeshContours( mesh, meshTriPoints,
         [isoValue] ( int )
     {
         return isoValue;
     }, searchSettings );
 }
 
-Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
+Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPoints,
     const std::function<float( int )>& offsetAtPoint, SearchPathSettings searchSettings )
 {
     if ( !offsetAtPoint )

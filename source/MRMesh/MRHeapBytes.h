@@ -65,9 +65,11 @@ template<typename T>
 }
 
 /// Needed for generic code, always returns zero.
-/// The constraint is needed to avoid hard errors in C bindings when using MSVC STL when calling `heapBytes<SomeNonfuncType>(...)`.
-template<typename T> MR_REQUIRES_IF_SUPPORTED( std::is_function_v<T> )
-[[nodiscard]] inline size_t heapBytes( const std::function<T> & )
+/// The signature is spelled out so that `heapBytes<SomeNonfuncType>(...)` in the C bindings never forms
+/// `std::function<SomeNonfuncType>`, which is a hard error in MSVC's STL (Clang on it checks the type
+/// before the constraints; the `requires` alone was enough for cl)
+template<typename R, typename ...Args>
+[[nodiscard]] inline size_t heapBytes( const std::function<R( Args... )> & )
 {
     return 0;
 }

@@ -817,6 +817,7 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
     sameMtpsNavigator = 0;
     pivotNavigator = 0;
     const float closeEdgeEps = std::numeric_limits<float>::epsilon() * box.diagonal();
+    std::optional<OneMeshIntersection> deferredFront;
     // add interjacent
     for ( int i = 0; i < meshTriPoints.size(); ++i )
     {
@@ -876,8 +877,10 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
             {
                 if ( res.intersections.empty() )
                 {
-                    if ( prevInter )
+                    if ( prevInter && !prevInter->empty() )
                         prevInter->back() = *centerInterOp;
+                    else if ( prevInter )
+                        deferredFront = *centerInterOp; // previous path is empty: replace its stand-in after the loop
                 }
                 else
                 {
@@ -901,6 +904,8 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
                 res.intersections.insert( res.intersections.end(), nextInter->begin() + 1, nextInter->end() );
         }
     }
+    if ( deferredFront && !res.intersections.empty() )
+        res.intersections.back() = *deferredFront;
     if ( closed && !res.intersections.empty() )
     {
         res.intersections.push_back( res.intersections.front() );

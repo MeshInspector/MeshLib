@@ -9,6 +9,37 @@
 namespace MR
 {
 
+// the path from the last point back to the first one is empty, and the first path crosses the edge exactly at the last point
+TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
+{
+    std::vector<Vector3f> points;
+    Triangulation t;
+    for ( int y = 0; y < 6; ++y )
+        for ( int x = 0; x < 6; ++x )
+            points.emplace_back( float( x ), float( y ), 0.0f );
+    for ( int y = 0; y < 5; ++y )
+        for ( int x = 0; x < 5; ++x )
+        {
+            const VertId a( y * 6 + x ), b( a + 1 ), c( a + 6 ), d( a + 7 );
+            t.push_back( { a, b, d } );
+            t.push_back( { a, d, c } );
+        }
+    Mesh mesh;
+    mesh.points = std::move( points );
+    mesh.topology = MeshBuilder::fromTriangles( t );
+
+    std::vector<MeshTriPoint> mtps;
+    for ( auto p : { Vector3f( 1.5f, 0.9f, 0 ), Vector3f( 1.5f, 2.5f, 0 ), Vector3f( 3.5f, 2.5f, 0 ), Vector3f( 3.5f, 0.9f, 0 ), Vector3f( 1.5f, 1, 0 ) } )
+        mtps.push_back( mesh.projectPoint( p ).mtp );
+    mtps.push_back( mtps.front() );
+
+    auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
+    ASSERT_TRUE( contour.has_value() );
+    EXPECT_TRUE( contour->closed );
+    for ( const auto& inter : contour->intersections )
+        std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
+}
+
 TEST( MRMesh, BooleanIntersectionsSort )
 {
     Mesh meshA;

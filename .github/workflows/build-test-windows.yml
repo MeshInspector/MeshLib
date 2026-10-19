@@ -62,7 +62,8 @@ jobs:
       PLATFORM_TOOLSET: ${{ fromJSON('{"msvc-2019":"v142","msvc-2022":"v143"}')[matrix.cxx_compiler] || 'v145' }}
       # clang-cl: the runner image's LLVM (newer than the one bundled with VS; a native arm64 build on the
       # arm image) with lld-link, on top of the VS2026 headers, libraries and vcpkg binaries of the
-      # msvc-2026 CMake jobs; CMake only
+      # msvc-2026 CMake jobs; CMake only. nvcc keeps cl as its host compiler (the only one it accepts on
+      # Windows), so MRCuda's .cu objects come from cl and everything else from clang-cl.
       CMAKE_COMPILER_ARGS: ${{ matrix.cxx_compiler == 'clang-cl' && '-DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_LINKER_TYPE=LLD' || '' }}
       MRCUDA_PLATFORM_TOOLSET: ${{ matrix.mrcuda_platform_toolset }}
       # x64 paths below belong to steps arm64 never runs

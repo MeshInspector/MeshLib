@@ -57,7 +57,8 @@
       "config": "Release",
       "build_system": "CMake",
       "vcpkg_triplet": "x64-windows-meshlib",
-      "runner": ["windows-2025"]
+      "runner": ["windows-2025"],
+      "cuda_version": "13.2.0"
     },
     {
       "cxx_compiler": "clang-cl",
@@ -65,6 +66,7 @@
       "build_system": "CMake",
       "arch": "arm64",
       "vcpkg_triplet": "arm64-windows-meshlib",
+      "cuda_version": "13.4.1",
       "runner": ["windows-11-vs2026-arm"]
     }
   ]

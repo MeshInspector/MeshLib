@@ -32,7 +32,7 @@ dependencies {
 
 Run with `--enable-native-access=ALL-UNNAMED` (otherwise the first call into the library prints a warning).
 
-Without access to github.com, download `meshlib_v1.2.3.4_rust_native_<os>-<arch>.zip` of your platform from the release page and point the environment variable `MESHLIB_NATIVE_URL` (or the system property `meshlib.native.url`) to the directory with it. `MESHLIB_CACHE_DIR` (or `meshlib.native.cache`) changes the cache directory.
+Without access to github.com, download `meshlib_v1.2.3.4_native_<os>-<arch>.zip` of your platform from the release page and point the environment variable `MESHLIB_NATIVE_URL` (or the system property `meshlib.native.url`) to the directory with it. `MESHLIB_CACHE_DIR` (or `meshlib.native.cache`) changes the cache directory.
 
 ## Installation from the release archive
 

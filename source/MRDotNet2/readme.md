@@ -2,7 +2,7 @@
 
 # MeshLib — an SDK that supercharges your 3D data processing efficiency
 
-**Geometry algorithms engineered to revolutionize.** We help software engineers process, repair, measure and optimize 3D data with next-generation algorithms, reducing development time and costs — mesh boolean, mesh repair, decimation, offset, point cloud triangulation, ICP registration and voxel processing, in **C++, C, C#, Python and JavaScript**. This is the .NET package.
+**Geometry algorithms engineered to revolutionize.** We help software engineers process, repair, measure and optimize 3D data with next-generation algorithms, reducing development time and costs — mesh boolean, mesh repair, decimation, offset, point cloud triangulation, ICP registration and voxel processing, in **C++, C, C#, Python, JavaScript, Rust and Java**. This is the .NET package.
 
 [**▶ Try it live**](https://demo.meshlib.io) · [Website](https://meshlib.io/) · [Documentation](https://meshlib.io/documentation/index.html) · [C# setup guide](https://meshlib.io/documentation/MeshLibCSharpSetupGuide.html) · [Examples](https://meshlib.io/documentation/Examples.html) · [Benchmarks](https://meshlib.io/blog/comparing-3d-boolean-libraries/) · [Discussions](https://github.com/MeshInspector/MeshLib/discussions)
 
@@ -106,8 +106,8 @@ non-manifold situations are simply not representable — a non-manifold edge, or
 vertex with two closed rings of triangles around it. Broken topology is caught where
 it happens, not three pipeline stages later.
 
-**One engine, five languages.** A native C++ core with official APIs for C, C#,
-Python and JavaScript/WebAssembly. The same algorithms, the same results — on the
+**One engine, seven languages.** A native C++ core with official APIs for C, C#,
+Python, JavaScript/WebAssembly, Rust and Java. The same algorithms, the same results — on the
 desktop, on a server, or in a browser tab.
 
 **Built for real workloads.** Core algorithms are multithreaded; a CUDA module

@@ -49,7 +49,8 @@ jobs:
       - name: Install Java
         uses: ./.github/actions/setup-java
 
-      # The same artifacts `publish-maven.yml` uploads to Maven Central, with the libraries of this platform only.
+      # The same artifacts `publish-maven.yml` uploads to Maven Central, with `native.txt` listing the archive of this platform only.
+      # A draft release can't be downloaded without a token, so the bindings take the archive from a directory (`MESHLIB_NATIVE_URL`).
       - name: Pack the Maven artifacts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -58,18 +59,20 @@ jobs:
           BINDINGS="$(echo downloaded/meshlib_*_java_bindings.zip)"
           unzip -qo "$BINDINGS" -d downloaded
           APP_VERSION="${BINDINGS#downloaded/meshlib_}"
-          scripts/java/pack_maven.sh "${APP_VERSION%_java_bindings.zip}" downloaded/MeshLibJava downloaded m2
+          scripts/java/pack_maven.sh "${APP_VERSION%_java_bindings.zip}" downloaded/MeshLibJava downloaded "https://github.com/${{ github.repository }}/releases/download/${{ inputs.release_tag }}" m2
+          echo "MESHLIB_NATIVE_URL=$GITHUB_WORKSPACE/downloaded" >> "$GITHUB_ENV"
+          echo "MESHLIB_CACHE_DIR=$RUNNER_TEMP/meshlib-cache" >> "$GITHUB_ENV"
           VERSION="$(ls m2/com/meshinspector/meshlib)"
           echo "MAVEN_VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "ARTIFACTS=m2/com/meshinspector/meshlib/$VERSION/meshlib-$VERSION" >> "$GITHUB_ENV"
 
-      # No `java.library.path`: the libraries must come from the natives jar.
+      # No `java.library.path`: the libraries must come from the archive listed in the jar's `native.txt`.
       - name: Run the tests
         run: |
           SEP=$([ "$RUNNER_OS" = Windows ] && echo ';' || echo ':')
           javac --release 22 -Xlint:all -Werror -cp "$ARTIFACTS.jar" -d source/MRTestJava/classes source/MRTestJava/src/mrtest/*.java
-          java --enable-native-access=ALL-UNNAMED -Dmeshlib.native.cache=native-cache -cp "$ARTIFACTS.jar$SEP$ARTIFACTS-natives-${{ matrix.target }}.jar${SEP}source/MRTestJava/classes" mrtest.Main
-          ls native-cache
+          java --enable-native-access=ALL-UNNAMED -cp "$ARTIFACTS.jar${SEP}source/MRTestJava/classes" mrtest.Main
+          ls "$MESHLIB_CACHE_DIR/meshlib"
 
       - name: Install Maven
         run: |
@@ -78,8 +81,7 @@ jobs:
             echo "$RUNNER_TEMP/apache-maven-3.9.9/bin" >> "$GITHUB_PATH"
           fi
 
-      # The packed artifacts serve as the local repository, as if they were downloaded from Maven Central;
-      # the profiles of the examples' pom.xml pick this platform's natives.
+      # The packed artifacts serve as the local repository, as if they were downloaded from Maven Central.
       - name: Run an example with Maven
         working-directory: examples/java-examples
         run: mvn -B -ntp "-Dmaven.repo.local=$GITHUB_WORKSPACE/m2" "-Dmeshlib.version=$MAVEN_VERSION" compile exec:exec -Dexample=MeshBoolean

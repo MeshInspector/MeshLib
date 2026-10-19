@@ -12,34 +12,27 @@ The bindings are a plain jar, `meshlib.jar`, with no native code of its own: it 
 
 ## Installation from Maven Central
 
-The bindings are the artifact `com.meshinspector:meshlib`, and the MeshLib libraries of each platform are artifacts of the same name and version with the classifiers `natives-windows-x86_64`, `natives-windows-aarch64`, `natives-linux-x86_64`, `natives-linux-aarch64`, `natives-macos-x86_64` and `natives-macos-aarch64`. On the first use the bindings extract the libraries of the current platform from the natives jar on the class path to the temporary directory (or to the directory in the system property `meshlib.native.cache`), and later runs reuse them; nothing else needs to be installed.
+The bindings are the artifact `com.meshinspector:meshlib`. On the first use they download the MeshLib libraries of the current platform (Windows, Linux or macOS; x86_64 or aarch64) from the [GitHub release](https://github.com/MeshInspector/MeshLib/releases) of the same version, check them against the SHA-256 stored in the jar, and keep them in the user's cache directory (`%LOCALAPPDATA%\meshlib`, `~/Library/Caches/meshlib` or `~/.cache/meshlib`), where later runs and the MeshLib Rust crate find them. Nothing else needs to be installed.
 
-**Gradle** (`build.gradle.kts`), with the natives of the platforms you need:
+**Gradle** (`build.gradle.kts`):
 ```kotlin
 dependencies {
     implementation("com.meshinspector:meshlib:1.2.3.4")
-    runtimeOnly("com.meshinspector:meshlib:1.2.3.4:natives-windows-x86_64")
-    runtimeOnly("com.meshinspector:meshlib:1.2.3.4:natives-linux-x86_64")
 }
 ```
 
-**Maven**: the dependency on `meshlib`, and one on the natives with a classifier picked by an OS profile, as in [examples/java-examples/pom.xml](https://github.com/MeshInspector/MeshLib/blob/master/examples/java-examples/pom.xml):
+**Maven** (`pom.xml`, see also [examples/java-examples/pom.xml](https://github.com/MeshInspector/MeshLib/blob/master/examples/java-examples/pom.xml)):
 ```xml
 <dependency>
   <groupId>com.meshinspector</groupId>
   <artifactId>meshlib</artifactId>
   <version>1.2.3.4</version>
 </dependency>
-<dependency>
-  <groupId>com.meshinspector</groupId>
-  <artifactId>meshlib</artifactId>
-  <version>1.2.3.4</version>
-  <classifier>natives-${meshlib.platform}</classifier>
-  <scope>runtime</scope>
-</dependency>
 ```
 
 Run with `--enable-native-access=ALL-UNNAMED` (otherwise the first call into the library prints a warning).
+
+Without access to github.com, download `meshlib_v1.2.3.4_rust_native_<os>-<arch>.zip` of your platform from the release page and point the environment variable `MESHLIB_NATIVE_URL` (or the system property `meshlib.native.url`) to the directory with it. `MESHLIB_CACHE_DIR` (or `meshlib.native.cache`) changes the cache directory.
 
 ## Installation from the release archive
 

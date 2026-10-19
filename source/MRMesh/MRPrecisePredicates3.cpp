@@ -6,11 +6,9 @@
 #include "MRVector.h"
 #include "MRFastInt.h"
 #include "MRHighPrecision.h"
-#include "MRInt64Mul128.h"
 #include "MRVector2.h"
 #include "MRBox.h"
 #include "MRDivRound.h"
-#include "MRSparsePolynomial.h"
 #include <optional>
 
 namespace MR
@@ -21,7 +19,6 @@ namespace
 using detail::orient3dVolume;
 using detail::PointDegree;
 using detail::getPointDegrees;
-using detail::VolumePoly;
 using detail::orient3dPoly;
 
 // INT_MAX in double for mapping in int range

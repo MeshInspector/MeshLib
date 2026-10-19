@@ -58,6 +58,14 @@
       "build_system": "CMake",
       "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"]
+    },
+    {
+      "cxx_compiler": "clang-cl",
+      "config": "Release",
+      "build_system": "CMake",
+      "arch": "arm64",
+      "vcpkg_triplet": "arm64-windows-meshlib",
+      "runner": ["windows-11-vs2026-arm"]
     }
   ]
 }

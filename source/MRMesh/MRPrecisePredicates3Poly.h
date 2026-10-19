@@ -5,8 +5,10 @@
 #include "MRMacros.h"
 #include "MRSparsePolynomial.h"
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <limits>
+#include <type_traits>
 #include <vector>
 
 namespace MR
@@ -50,8 +52,10 @@ struct MR_BIND_IGNORE PointDegree
 /// the degrees 1, r_0, r_0 * r_1, ..., where r_k is the radix of the k-th id, given in radices[] of every point with that id,
 /// and points with equal ids get equal degrees; the smallest id moves most, as in orient3d, and the radix of a point must exceed
 /// its weight in every term of the polynomials of the predicate (the sum of 9, 3, 1 over its coordinates in the term), so that
-/// the degrees order the terms as the perturbation of orient3d does: by the weights of the points from the largest id down
-MR_BIND_IGNORE inline void getPointDegrees( const PreciseVertCoords * vs, const std::int64_t * radices, int n, PointDegree * res )
+/// the degrees order the terms as the perturbation of orient3d does: by the weights of the points from the largest id down;
+/// returns the number of different ids, and writes their degrees in ascending order in places[] if it is not null
+MR_BIND_IGNORE MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::int64_t * radices, int n, PointDegree * res,
+    std::int64_t * places = nullptr )
 {
     struct VertN
     {
@@ -59,13 +63,16 @@ MR_BIND_IGNORE inline void getPointDegrees( const PreciseVertCoords * vs, const 
         int n = 0;
     };
     constexpr int cMaxPoints = 16;
-    assert( n <= cMaxPoints );
+    assert( n > 0 && n <= cMaxPoints );
     std::array<VertN, cMaxPoints> as;
     for ( int i = 0; i < n; ++i )
         as[i] = { vs[i].id, i };
     std::sort( as.begin(), as.begin() + n, []( const auto & a, const auto & b ) { return a.v < b.v; } );
 
     std::int64_t d = 1;
+    int numIds = 1;
+    if ( places )
+        places[0] = d;
     for ( int i = 0; i < n; ++i )
     {
         const auto k = as[i].n;
@@ -77,24 +84,67 @@ MR_BIND_IGNORE inline void getPointDegrees( const PreciseVertCoords * vs, const 
         {
             assert( d <= std::numeric_limits<std::int64_t>::max() / r );
             d *= r;
+            if ( places )
+                places[numIds] = d;
+            ++numIds;
         }
         else
             assert( r == radices[as[i+1].n] );
     }
-}
-
-/// the degrees of the perturbation of the eight points of segmentIntersectionOrder and segmentIntersectionTriPlaneOrder:
-/// a product of two orient3d-polynomials takes every point at most twice, with the weight at most 9 + 3 + 1 each time
-[[nodiscard]] MR_BIND_IGNORE inline std::array<PointDegree, 8> getPointDegrees( const std::array<PreciseVertCoords, 8> & vs )
-{
-    constexpr std::int64_t radices[8] = { 27, 27, 27, 27, 27, 27, 27, 27 };
-    std::array<PointDegree, 8> res;
-    getPointDegrees( vs.data(), radices, 8, res.data() );
-    return res;
+    return numIds;
 }
 
 /// the largest degree that no term exceeds: a polynomial with it keeps all its terms
 constexpr std::int64_t cMaxPolyDAll = std::numeric_limits<std::int64_t>::max();
+
+/// the points of a predicate with the degrees of their perturbation, which moves them in stages: at stage s = 1, ..., numStages()
+/// only the points with the s smallest ids are perturbed (orient3dPoly leaves the others unperturbed); a polynomial of the predicate
+/// that is not zero at stage s already has the leading term of the full one, since every term with a point of a later stage has
+/// a larger degree than every term without; and if it was zero at stage s - 1, its terms without the points of stage s cancel
+/// one another, so only the products of the terms of degrees from place( s ) up remain (see `from` in lowestTermOfSumOfProducts)
+class MR_BIND_IGNORE PerturbationStages
+{
+public:
+    static constexpr int cMaxPoints = 16;
+
+    /// the stages of points vs[0..n-1] with the degrees from getPointDegrees
+    MR_FORCE_INLINE PerturbationStages( const PreciseVertCoords * vs, const std::int64_t * radices, int n )
+    {
+        assert( n <= cMaxPoints );
+        numStages_ = getPointDegrees( vs, radices, n, points_.data(), places_.data() );
+    }
+
+    /// the number of stages, which is the number of different ids
+    [[nodiscard]] int numStages() const { return numStages_; }
+
+    /// the degree of the points perturbed first at stage s: every term with them has at least this degree, every term of the earlier stages less
+    [[nodiscard]] std::int64_t place( int s ) const { return places_[s - 1]; }
+
+    /// point i with its degree, as perturbed at the last stage
+    [[nodiscard]] const PointDegree & operator[]( int i ) const { return points_[i]; }
+
+    /// point i as perturbed at stage s
+    [[nodiscard]] PointDegree at( int i, int s ) const { return points_[i].d <= place( s ) ? points_[i] : PointDegree{ points_[i].pt, 0 }; }
+
+    /// whether point i is perturbed first at stage s
+    [[nodiscard]] bool startsAt( int i, int s ) const { return points_[i].d == place( s ); }
+
+    /// calls f( s ) for the stages s = 1, 2, ... until it returns a value, and returns that value (or the empty one after the last stage);
+    /// the stages with places above maxDeg are skipped, since they add only the terms of degrees above it
+    template <typename F>
+    [[nodiscard]] auto firstStage( F && f, std::int64_t maxDeg = cMaxPolyDAll ) const -> std::invoke_result_t<F &, int>
+    {
+        for ( int s = 1; s <= numStages_ && place( s ) <= maxDeg; ++s )
+            if ( auto res = f( s ) )
+                return res;
+        return {};
+    }
+
+private:
+    std::array<PointDegree, cMaxPoints> points_;
+    std::array<std::int64_t, cMaxPoints> places_;
+    int numStages_ = 0;
+};
 
 /// 128 bits are enough to store all coefficients of one orient3d-polynomial (products of three coordinate differences),
 /// while the products of two such polynomials are computed in 256 bits, see signOfProductsDiff<Int128Mul256>

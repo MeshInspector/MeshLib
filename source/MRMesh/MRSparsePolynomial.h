@@ -38,18 +38,21 @@ struct SignedProduct
 /// or sign 0 if all its coefficients of degrees not above M are zeros (the terms of higher degrees are not considered, since the arguments store the terms of degrees not above M only);
 /// every coefficient of the first factors is converted into type TA and every coefficient of the second factors into type TB before multiplication
 /// (unless it already has that type), and the coefficients of the products have the type of TA*TB;
-/// the coefficients of the sum are computed in the order of increasing degree and only till the first not-zero one
+/// the coefficients of the sum are computed in the order of increasing degree and only till the first not-zero one;
+/// the products of two terms of degrees below `from` are skipped, which the caller may do if their sum is known to be zero
+/// (e.g. a polynomial that was zero before the terms of degrees from `from` up were added to its factors)
 template <typename TA, typename TB = TA, typename CA, typename CB, typename D, D M>
-[[nodiscard]] std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts );
+[[nodiscard]] std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts,
+    D from = 0 );
 
 /// returns the degree and the sign of the lowest-degree not-zero coefficient of the polynomial ( a * b - c * d ),
 /// or sign 0 if all its coefficients of degrees not above M are zeros, see \ref lowestTermOfSumOfProducts
 template <typename T, typename C, typename D, D M>
 [[nodiscard]] std::pair<D, int> lowestTermOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
-    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d )
+    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d, D from = 0 )
 {
     const SignedProduct<SparsePolynomial<C,D,M>, SparsePolynomial<C,D,M>> products[2] = { { &a, &b, false }, { &c, &d, true } };
-    return lowestTermOfSumOfProducts<T>( products, 2 );
+    return lowestTermOfSumOfProducts<T>( products, 2, from );
 }
 
 /// returns the sign of the polynomial ( a * b - c * d ) for infinitesimal positive argument, i.e. the sign of its lowest-degree not-zero coefficient,
@@ -270,7 +273,8 @@ template <typename T, typename C, typename D, D M>
 }
 
 template <typename TA, typename TB, typename CA, typename CB, typename D, D M>
-std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts )
+std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts,
+    D from )
 {
     // the terms of every product form rows: the i-th term of its first factor times all the terms of the second one in the order of increasing degree;
     // the heap keeps the current term of every row, so all terms of all products are visited in the order of increasing degree
@@ -285,14 +289,26 @@ std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomia
     for ( int p = 0; p < numProducts; ++p )
         numRows += products[p].a->get().size();
     heap.reserve( numRows );
-    // the terms of degrees above M are never considered, and since the terms of every polynomial are sorted, the initialization stops at the first such row
     for ( int p = 0; p < numProducts; ++p )
     {
         const auto & f = products[p].a->get();
         const auto & g = products[p].b->get();
-        if ( !g.empty() )
-            for ( int i = 0; i < (int)f.size() && f[i].first + g[0].first <= M; ++i )
-                heap.push_back( { f[i].first + g[0].first, p, i, 0 } );
+        if ( g.empty() )
+            continue;
+        // the row of a term of f below `from` starts from the first term of g not below it
+        const int jFrom = from > 0 ? int( std::lower_bound( g.begin(), g.end(), from, []( const auto & t, D d ) { return t.first < d; } ) - g.begin() ) : 0;
+        for ( int i = 0; i < (int)f.size(); ++i )
+        {
+            const int j = f[i].first < from ? jFrom : 0;
+            if ( j == (int)g.size() )
+                continue;
+            // the terms of degrees above M are never considered, and since the terms of every polynomial are sorted,
+            // the initialization stops at the first such row that starts from the first term of g
+            if ( const D deg = f[i].first + g[j].first; deg <= M )
+                heap.push_back( { deg, p, i, j } );
+            else if ( j == 0 )
+                break;
+        }
     }
     std::make_heap( heap.begin(), heap.end(), greater );
 

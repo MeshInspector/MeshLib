@@ -108,53 +108,82 @@ std::optional<bool> segmentIntersectionOrderExact( const SegmentVolumes & v )
     return res;
 }
 
+/// the stages of the perturbation of the eight points of segmentIntersectionOrder and segmentIntersectionTriPlaneOrder:
+/// a product of two orient3d-polynomials takes every point at most twice, with the weight at most 9 + 3 + 1 each time;
+/// inlined in the degenerate cases, which then stay out of line in the callers, and their exact paths lean
+MR_FORCE_INLINE PerturbationStages perturbationStages( const std::array<PreciseVertCoords, 8> & vs )
+{
+    constexpr std::int64_t radices[8] = { 27, 27, 27, 27, 27, 27, 27, 27 };
+    return PerturbationStages( vs.data(), radices, 8 );
+}
+
 /// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 when the intersection points coincide exactly,
 /// resolved by simulation-of-simplicity from the terms of degrees not above M, or nullopt if they do not decide it;
 /// the caller must have checked that neither triangle is on one side of the other's plane
 template <std::int64_t M>
-std::optional<bool> segmentIntersectionOrderDegenerate( const std::array<PointDegree, 8> & ds )
+std::optional<bool> segmentIntersectionOrderDegenerate( const PerturbationStages & ps )
 {
-    const auto polyTaOrg  = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[0] );
-    const auto polyTaDest = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[1] );
-    if ( polyTaOrg.empty() && polyTaDest.empty() )
-        return {};
-    assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
-    const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
+    VolumePoly<M> polyTaOrg, polyTaDest, polyTbOrg, polyTbDest;
+    return ps.firstStage( [&] ( int s ) -> std::optional<bool>
+    {
+        // a volume changes only at the stages of its points
+        auto update = [&] ( VolumePoly<M> & poly, int a, int b, int c, int d )
+        {
+            if ( s == 1 || ps.startsAt( a, s ) || ps.startsAt( b, s ) || ps.startsAt( c, s ) || ps.startsAt( d, s ) )
+                poly = orient3dPoly<M>( ps.at( a, s ), ps.at( b, s ), ps.at( c, s ), ps.at( d, s ) );
+        };
+        update( polyTaOrg,  2, 3, 4, 0 );
+        update( polyTaDest, 2, 3, 4, 1 );
+        update( polyTbOrg,  5, 6, 7, 0 );
+        update( polyTbDest, 5, 6, 7, 1 );
+        if ( ( polyTaOrg.empty() && polyTaDest.empty() ) || ( polyTbOrg.empty() && polyTbDest.empty() ) )
+            return {};
+        assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
+        const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
+        assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
+        const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
 
-    const auto polyTbOrg  = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[0] );
-    const auto polyTbDest = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[1] );
-    if ( polyTbOrg.empty() && polyTbDest.empty() )
-        return {};
-    assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
-    const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
-
-    // the sign of the leading term of nom = polyTaOrg * polyTbDest - polyTbOrg * polyTaDest, whose zero-degree coefficient is nomSimple == 0
-    const int nomSign = signOfProductsDiff<Int128Mul256>( polyTaOrg, polyTbDest, polyTbOrg, polyTaDest );
-    if ( nomSign == 0 )
-        return {};
-    bool res = nomSign > 0;
-    if ( posTaOrg != posTbOrg ) // denominator is negative
-        res = !res;
-    return res;
+        // the sign of the leading term of nom = polyTaOrg * polyTbDest - polyTbOrg * polyTaDest, whose terms of degrees below place( s )
+        // are those of the previous stage, which are zero (at the first stage: the zero-degree coefficient nomSimple == 0)
+        const int nomSign = lowestTermOfProductsDiff<Int128Mul256>( polyTaOrg, polyTbDest, polyTbOrg, polyTaDest, ps.place( s ) ).second;
+        if ( nomSign == 0 )
+            return {};
+        bool res = nomSign > 0;
+        if ( posTaOrg != posTbOrg ) // denominator is negative
+            res = !res;
+        return res;
+    }, M );
 }
 
 /// the same from the terms of degrees not above M, which are enough for most inputs, or else from all terms
 template <std::int64_t M>
 bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords, 8> & vs )
 {
-    const auto ds = getPointDegrees( vs );
-    if ( const auto res = segmentIntersectionOrderDegenerate<M>( ds ) )
+    const auto ps = perturbationStages( vs );
+    if ( const auto res = segmentIntersectionOrderDegenerate<M>( ps ) )
         return *res;
-    const auto res = segmentIntersectionOrderDegenerate<cMaxPolyDAll>( ds );
+    const auto res = segmentIntersectionOrderDegenerate<cMaxPolyDAll>( ps );
     assert( res ); // only invalid input leaves the order undecided, e.g. triangles with three shared vertices
     return res.value_or( false );
 }
 
-/// the difference of the perturbed volumes of plane pb=567 with s[0] and with s[1], without the terms of degrees above M
+/// whether the leading term of the difference of the perturbed volumes of plane pb=567 with s[0] and with s[1] is positive,
+/// from the terms of degrees not above M, or nullopt if they are all zero; the caller must have checked that the exact volumes are equal
 template <std::int64_t M>
-VolumePoly<M> volumeDiff( const std::array<PointDegree, 8> & ds )
+std::optional<bool> volumeDiffPositive( const PerturbationStages & ps )
 {
-    return orient3dPoly<M>( ds[5], ds[6], ds[7], ds[0] ) - orient3dPoly<M>( ds[5], ds[6], ds[7], ds[1] );
+    return ps.firstStage( [&] ( int s ) -> std::optional<bool>
+    {
+        // the difference is zero at the previous stage (at the first stage: the difference of the exact volumes),
+        // so it stays zero unless one of its points moves at this stage
+        if ( !ps.startsAt( 0, s ) && !ps.startsAt( 1, s ) && !ps.startsAt( 5, s ) && !ps.startsAt( 6, s ) && !ps.startsAt( 7, s ) )
+            return {};
+        const auto pb0 = ps.at( 5, s ), pb1 = ps.at( 6, s ), pb2 = ps.at( 7, s );
+        const auto diff = orient3dPoly<M>( pb0, pb1, pb2, ps.at( 0, s ) ) - orient3dPoly<M>( pb0, pb1, pb2, ps.at( 1, s ) );
+        if ( diff.empty() )
+            return {};
+        return diff.isPositive();
+    }, M );
 }
 
 } // anonymous namespace
@@ -344,13 +373,13 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
             return ( volumeOrg > volumeDest ) == o0;
 
         // s is parallel to pb, and the perturbation of the points decides, which end of s is closer to pb
-        const auto ds = getPointDegrees( vs );
-        if ( const auto diff = volumeDiff<cMaxPolyDTriPlane>( ds ); !diff.empty() )
-            return diff.isPositive() == o0;
+        const auto ps = perturbationStages( vs );
+        if ( const auto pos = volumeDiffPositive<cMaxPolyDTriPlane>( ps ) )
+            return *pos == o0;
         // the terms of degrees above cMaxPolyDTriPlane decide
-        const auto diff = volumeDiff<cMaxPolyDAll>( ds );
-        assert( !diff.empty() ); // only invalid input makes the perturbed volumes equal, e.g. s[0] and s[1] with the same id
-        return !diff.empty() && diff.isPositive() == o0;
+        const auto pos = volumeDiffPositive<cMaxPolyDAll>( ps );
+        assert( pos ); // only invalid input makes the perturbed volumes equal, e.g. s[0] and s[1] with the same id
+        return pos && *pos == o0;
     }
 
     // segment s crosses plane pb

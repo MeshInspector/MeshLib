@@ -1,5 +1,6 @@
 #include <MRMesh/MRPrecisePredicates2.h>
 #include <MRMesh/MRPrecisePredicates3.h>
+#include <MRMesh/MRPrecisePredicates3Poly.h>
 #include <MRMesh/MRInSphere.h>
 #include <MRMesh/MRSparsePolynomial.h>
 #include <MRMesh/MRFastInt128.h>
@@ -7,6 +8,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <climits>
+#include <optional>
 #include <random>
 
 namespace MR
@@ -1174,6 +1176,46 @@ TEST( MRMesh, lowestTermOfSumOfProducts )
     const S s3[2] = { { &a, &one, false }, { &one, &a, true } }; // zero
     EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s3, 2 ).second, 0 );
     EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s3, 0 ).second, 0 );
+
+    // the products of two terms below degree `from` are skipped: they cancel one another here, so the answer stays
+    const P d( 1, 1, 1, 2, 2 ); // 1 + x + 2x^2
+    const S s4[2] = { { &a, &one, false }, { &one, &d, true } }; // -x^2
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s4, 2 ), T( 2, -1 ) );
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s4, 2, 2 ), T( 2, -1 ) );
+    EXPECT_EQ( lowestTermOfProductsDiff<std::int64_t>( a, one, one, d, 2 ), T( 2, -1 ) );
+    // they do not here, so only -c * one is left of s1
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 3, 3 ), T( 3, -1 ) );
+}
+
+TEST( MRMesh, PerturbationStages )
+{
+    // ids 7, 3, 7, 5: the stages of 3, 5, 7 with the degrees 1, r(3), r(3) * r(5)
+    const PreciseVertCoords vs[4] = { { 7_v, Vector3i( 1, 2, 3 ) }, { 3_v, Vector3i( 4, 5, 6 ) }, { 7_v, Vector3i( 1, 2, 3 ) }, { 5_v, Vector3i( 7, 8, 9 ) } };
+    const std::int64_t radices[4] = { 10, 14, 10, 27 };
+    const PerturbationStages ps( vs, radices, 4 );
+    ASSERT_EQ( ps.numStages(), 3 );
+    EXPECT_EQ( ps.place( 1 ), 1 );
+    EXPECT_EQ( ps.place( 2 ), 14 );
+    EXPECT_EQ( ps.place( 3 ), 14 * 27 );
+    EXPECT_EQ( ps[1].d, 1 );
+    EXPECT_EQ( ps[3].d, 14 );
+    EXPECT_EQ( ps[0].d, 14 * 27 );
+    EXPECT_EQ( ps[2].d, 14 * 27 );
+    EXPECT_EQ( ps[0].pt, Vector3i( 1, 2, 3 ) );
+    EXPECT_EQ( ps.at( 0, 2 ).d, 0 ); // not perturbed yet
+    EXPECT_EQ( ps.at( 0, 3 ).d, 14 * 27 );
+    EXPECT_EQ( ps.at( 3, 3 ).d, 14 );
+    EXPECT_TRUE( ps.startsAt( 3, 2 ) );
+    EXPECT_FALSE( ps.startsAt( 3, 3 ) );
+
+    // firstStage stops at the first value, and skips the stages with places above maxDeg
+    int last = 0;
+    EXPECT_EQ( ps.firstStage( [&] ( int s ) { last = s; return s == 2 ? std::optional<int>( 5 ) : std::nullopt; } ), 5 );
+    EXPECT_EQ( last, 2 );
+    EXPECT_FALSE( ps.firstStage( [&] ( int s ) { last = s; return std::optional<int>(); }, 100 ) );
+    EXPECT_EQ( last, 2 );
+    EXPECT_FALSE( ps.firstStage( [&] ( int s ) { last = s; return std::optional<int>(); } ) );
+    EXPECT_EQ( last, 3 );
 }
 
 TEST( MRMesh, segmentIntersectionOrder3Scale )

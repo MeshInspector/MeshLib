@@ -162,8 +162,7 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
     }
 }
 
-// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e)
-FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
+FaceId findSharedFaceImpl( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
 {
     auto mtpEdgeRep = mtp.onEdge( topology );
     if ( !mtpEdgeRep )
@@ -179,6 +178,8 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
             return topology.left( eid );
         else if ( topology.dest( topology.prev( eid ) ) == mtpVertRep )
             return topology.right( eid );
+        else if ( topology.org( eid ) == mtpVertRep || topology.dest( eid ) == mtpVertRep )
+            return topology.left( eid ); // mtp is an end of eid itself (the contour turns back in this vertex), so any face of eid is shared
     }
     else
     {
@@ -195,6 +196,15 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
             return topology.right( eid );
     }
     return topology.left( mtp.e );
+}
+
+// finds FaceId if face, shared among vid eid and mtp, if there is no one returns left(mtp.e);
+// if the found face does not exist (mtp on the mesh boundary), returns any existing face of eid
+FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, const MeshTriPoint& mtp )
+{
+    if ( auto f = findSharedFaceImpl( topology, vid, eid, mtp ) )
+        return f;
+    return topology.left( eid ) ? topology.left( eid ) : topology.right( eid );
 }
 
 // function to get information about mesh tri point intersection between two surfaces paths
@@ -281,9 +291,9 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
                 if ( coordDif < closeEdgeEps )
                 {
                     type = CenterInterType::SameEdgesClosePos;
-                    if ( currF == topology.left( nEId ) )
+                    if ( currF == topology.left( nEId ) && topology.right( nEId ) )
                         currF = topology.right( nEId );
-                    else if ( currF == topology.right( nEId ) )
+                    else if ( currF == topology.right( nEId ) && topology.left( nEId ) )
                         currF = topology.left( nEId );
                 }
                 return OneMeshIntersection{currF,mesh.triPoint( curr )};

@@ -81,6 +81,54 @@ TEST( MRMesh, ClosedContourAlongBoundaryEdge )
         std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
 }
 
+// the contour goes along boundary edge W-V and turns back in V to a point on the same edge
+TEST( MRMesh, CutMeshContourTurnsBackOnBoundary )
+{
+    // 4x2 squares in XY plane, vertex 5 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 3; ++y )
+        for ( int x = 0; x < 5; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 2; ++y )
+    {
+        for ( int x = 0; x < 4; ++x )
+        {
+            const VertId v( 5 * y + x );
+            t.push_back( { v, v + 1, v + 6 } );
+            t.push_back( { v, v + 6, v + 5 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+
+    const VertId w( 1 ), v( 2 );
+    const auto wv = mesh.topology.findEdge( w, v );
+    ASSERT_TRUE( mesh.topology.isBdEdge( wv ) );
+    const MeshTriPoint mtpV( MeshEdgePoint( mesh.topology.findEdge( v, 8_v ), 0.0f ) );
+    // otherwise V and the next point are taken as two points on the same edge, and V is dropped
+    ASSERT_NE( mtpV.onEdge( mesh.topology ).e.undirected(), wv.undirected() );
+    const MeshTriPoint mtpW = mesh.toTriPoint( w );
+    const MeshTriPoint nearV( MeshEdgePoint( wv, 0.9f ) );
+    const MeshTriPoint inside = findProjection( Vector3f( 1.3f, 1.6f, 0.0f ), mesh ).mtp;
+
+    auto contour = convertMeshTriPointsToMeshContour( mesh, { mtpW, mtpV, nearV, inside, mtpW } );
+    ASSERT_TRUE( contour.has_value() );
+    ASSERT_TRUE( contour->closed );
+    for ( const auto& inter : contour->intersections )
+    {
+        // V can be in a face here, but it must be a face of W-V, shared with the neighbor intersections
+        if ( auto f = std::get_if<FaceId>( &inter.primitiveId ); f && inter.coordinate == mesh.points[v] )
+        {
+            ASSERT_TRUE( *f == mesh.topology.left( wv ) || *f == mesh.topology.right( wv ) );
+        }
+    }
+
+    auto res = cutMesh( mesh, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( res.resultCut.size(), 1 );
+}
+
 TEST( MRMesh, MeshCollidePrecise )
 {
     const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );

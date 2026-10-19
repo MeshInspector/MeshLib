@@ -2,22 +2,14 @@ import meshlib.DecimateResult;
 import meshlib.DecimateSettings;
 import meshlib.Functions;
 import meshlib.Mesh;
-import meshlib.expected_MR_Mesh_std_string;
-import meshlib.expected_void_std_string;
 
 // The class isn't public because of the `.dox.java` file name, the launcher doesn't mind.
 class MeshDecimate
 {
     public static void main(String[] args)
     {
-        // Load mesh.
-        expected_MR_Mesh_std_string loaded = meshlib.meshload.Functions.fromAnySupportedFormat("mesh.stl", null);
-        if (!loaded.success())
-        {
-            System.err.println("Failed to load mesh: " + loaded.error());
-            System.exit(1);
-        }
-        Mesh mesh = loaded.value_mut();
+        // Load mesh. An error is thrown as `UnexpectedResultException`.
+        Mesh mesh = meshlib.meshload.Functions.fromAnySupportedFormat("mesh.stl", null);
 
         // Repack mesh optimally without building an AABB tree, which decimation invalidates anyway.
         // It's not necessary but highly recommended to achieve the best performance in parallel processing.
@@ -39,11 +31,6 @@ class MeshDecimate
         System.out.println("Removed " + result.vertsDeleted() + " vertices, " + result.facesDeleted() + " faces");
 
         // Save result.
-        expected_void_std_string saved = meshlib.meshsave.Functions.toAnySupportedFormat(mesh, "decimated_mesh.stl", null);
-        if (!saved.success())
-        {
-            System.err.println("Failed to save mesh: " + saved.error());
-            System.exit(1);
-        }
+        meshlib.meshsave.Functions.toAnySupportedFormat(mesh, "decimated_mesh.stl", null);
     }
 }

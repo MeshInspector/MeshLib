@@ -12,7 +12,6 @@ import meshlib.UndirectedEdgeBitSet;
 import meshlib.UndirectedEdgeId;
 import meshlib.VertBitSet;
 import meshlib.VertId;
-import meshlib.expected_MR_UndirectedEdgeBitSet_std_string;
 
 public final class TestMesh
 {
@@ -38,9 +37,8 @@ public final class TestMesh
     {
         Mesh mesh = Common.makeTorus(1.0f, 0.05f, 16, 16);
         MeshPart mp = new MeshPart(mesh, null);
-        expected_MR_UndirectedEdgeBitSet_std_string shortEdges = Functions.findShortEdges(mp, 0.1f, null);
-        check(shortEdges.success(), "findShortEdges failed");
-        checkEq(shortEdges.value().count(), 256, "short edges");
+        UndirectedEdgeBitSet shortEdges = Functions.findShortEdges(mp, 0.1f, null);
+        checkEq(shortEdges.count(), 256, "short edges");
     }
 
     public static void incidentFacesFromVerts()

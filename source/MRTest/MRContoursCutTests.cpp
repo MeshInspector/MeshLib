@@ -62,6 +62,30 @@ TEST( MRMesh, BooleanIntersectionsSort )
         EXPECT_TRUE( dot( meshA.dirDblArea( f ), aNorm ) > 0.0f );
 }
 
+// a closed contour going along a boundary edge must not reference the missing face behind it
+TEST( MRMesh, ClosedContourAlongBoundaryEdge )
+{
+    Mesh mesh;
+    mesh.points = std::vector<Vector3f>{ { 0, 0, 0 }, { 1, 0, 0.3f }, { 0, 1, 0 }, { 1, 1, 0.3f } };
+    mesh.topology = MeshBuilder::fromTriangles( Triangulation{ { 0_v, 1_v, 2_v }, { 1_v, 3_v, 2_v } } );
+
+    std::vector<MeshTriPoint> mtps;
+    for ( auto p : { Vector3f( 0, 1.01f, 0 ), Vector3f( 0, 0, 0.0005f ), Vector3f( 0, 0.5f, 0 ) } )
+        mtps.push_back( mesh.projectPoint( p ).mtp );
+    mtps.push_back( mtps.front() );
+
+    auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
+    ASSERT_TRUE( contour.has_value() );
+    for ( const auto& inter : contour->intersections )
+        std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
+
+    auto offset = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.4f );
+    ASSERT_TRUE( offset.has_value() );
+    for ( const auto& c : *offset )
+        for ( const auto& inter : c.intersections )
+            std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
+}
+
 TEST( MRMesh, MeshCollidePrecise )
 {
     const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );

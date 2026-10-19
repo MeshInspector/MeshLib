@@ -71,22 +71,18 @@ jobs:
       - name: Add our Clang to PATH
         run: echo "PATH=${LLVM_PREFIX}/bin:${PATH}" >> $GITHUB_ENV
 
-      # TEMPORARY (UBSan sweep, not to be merged): our clang ships no compiler-rt, take the
-      # runtime of the distro's clang 22; -shared-libsan because -z defs rejects .so files
-      # with the handlers unresolved
+      # TEMPORARY (UBSan sweep, not to be merged): our clang ships no compiler-rt, so the
+      # distro's clang 22 runtime is unpacked (no root in the container) and linked explicitly;
+      # a shared runtime because -z defs rejects .so files with the handlers unresolved
       - name: Install UBSan runtime
         run: |
-          apt-get update -qq
-          apt-get install -qqy --no-install-recommends libclang-rt-22-dev
-          RD=$(clang++ -print-resource-dir)
-          mkdir -p ${RD}/lib/x86_64-unknown-linux-gnu ${RD}/lib/linux
-          for f in $(find /usr/lib/llvm-22 -name 'libclang_rt.ubsan_standalone*'); do
-            b=$(basename $f)
-            cp $f ${RD}/lib/x86_64-unknown-linux-gnu/${b/-x86_64/}
-            cp $f ${RD}/lib/linux/${b}
-          done
-          ls -l ${RD}/lib/x86_64-unknown-linux-gnu ${RD}/lib/linux
-          cp ${RD}/lib/x86_64-unknown-linux-gnu/*.so /usr/local/lib/ && ldconfig
+          mkdir -p ${RUNNER_TEMP}/ubsan && cd ${RUNNER_TEMP}/ubsan
+          curl -fsSL --retry 5 -o rt.deb http://archive.ubuntu.com/ubuntu/pool/universe/l/llvm-toolchain-22/libclang-rt-22-dev_22.1.8-1ubuntu1_amd64.deb
+          dpkg-deb -x rt.deb .
+          SO=$(find . -name 'libclang_rt.ubsan_standalone*.so' | head -1)
+          D=$(cd $(dirname ${SO}) && pwd)
+          ls -l ${D}
+          echo "LDFLAGS=-fno-sanitize-link-runtime -L${D} -l:$(basename ${SO}) -Wl,-rpath,${D}" >> $GITHUB_ENV
           echo "UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1" >> $GITHUB_ENV
 
       - name: Get AWS instance type
@@ -138,7 +134,7 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
-          CXXFLAGS: -fsanitize=signed-integer-overflow,shift -shared-libsan -gline-tables-only
+          CXXFLAGS: -fsanitize=signed-integer-overflow,shift -gline-tables-only
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}

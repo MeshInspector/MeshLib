@@ -3,6 +3,7 @@
 #include <MRMesh/MRInSphere.h>
 #include <MRMesh/MRSparsePolynomial.h>
 #include <MRMesh/MRFastInt128.h>
+#include <MRMesh/MRFastInt.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -1182,6 +1183,27 @@ TEST( MRMesh, lowestTermOfSumOfProducts )
     EXPECT_EQ( lowestTermOfProductsDiff<std::int64_t>( a, one, one, d, 2 ), T( 2, -1 ) );
     // they do not here, so only -c * one is left of s1
     EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 3, 3 ), T( 3, -1 ) );
+
+    // factors with different coefficient types, multiplied in different types: the other branches of the multiplication
+    using Q = SparsePolynomial<FastInt128, int, 1000>;
+    const Q qOne( std::vector<Q::Term>{ { 0, FastInt128( 1 ) } } );
+    const Q qa( FastInt128( 1 ), 1, FastInt128( 1 ), 2, FastInt128( 1 ) );
+    const Q qb( FastInt128( 1 ), 1, FastInt128( 2 ), 2, FastInt128( 3 ) );
+    const Q qc( FastInt128( 0 ), 3, FastInt128( 2 ) );
+    const SignedProduct<P, Q> pq[3] = { { &a, &qa, false }, { &b, &qOne, true }, { &c, &qOne, true } }; // x^4 as s1
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( pq, 3 ), T( 4, 1 ) ); // only the first factors converted
+    const SignedProduct<Q, P> qp[3] = { { &qa, &a, false }, { &qb, &one, true }, { &qc, &one, true } };
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( qp, 3 ), T( 4, 1 ) ); // only the second factors converted
+    const SignedProduct<Q, Q> qq[3] = { { &qa, &qa, false }, { &qb, &qOne, true }, { &qc, &qOne, true } };
+    EXPECT_EQ( ( lowestTermOfSumOfProducts<Int128Mul256, FastInt128>( qq, 3 ) ), T( 4, 1 ) ); // the factors multiplied in different types
+    EXPECT_EQ( ( lowestTermOfSumOfProducts<FastInt128, Int128Mul256>( qq, 3 ) ), T( 4, 1 ) );
+
+    // `from` takes no part in deducing the type of degrees, so an int works with int64 degrees
+    using P64 = SparsePolynomial<std::int64_t, std::int64_t, 1000>;
+    const P64 one64( std::vector<P64::Term>{ { 0, 1 } } );
+    const P64 a64( 1, 1, 1, 2, 1 );
+    const P64 d64( 1, 1, 1, 2, 2 );
+    EXPECT_EQ( lowestTermOfProductsDiff<std::int64_t>( a64, one64, one64, d64, 2 ), ( std::pair<std::int64_t, int>( 2, -1 ) ) );
 }
 
 TEST( MRMesh, segmentIntersectionOrder3Scale )

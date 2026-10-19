@@ -38,6 +38,18 @@ using detail::VolumePoly;
 // of two volumes converted in double, times a coordinate difference within 2^31; so a larger difference of two of them decides
 constexpr double cApproxTol = 0x1p-17;
 
+/// the order of two points along a projected coordinate, whose rounded values a and b decide most pairs (see cApproxTol): -1 or 1
+/// as the first point comes before or after the second one, or else what exact() finds; inlined, since less is the hot path of a sort
+template <typename F>
+MR_FORCE_INLINE int compareCoord( double a, double b, const F & exact )
+{
+    if ( a < b - cApproxTol )
+        return -1;
+    if ( b < a - cApproxTol )
+        return 1;
+    return exact();
+}
+
 /// the orientation of triangle abc from the rounded projected coordinates of its vertices (see cApproxTol),
 /// or nullopt if the rounding errors could change its sign
 std::optional<bool> approxCcw( const Vector2d & a, const Vector2d & b, const Vector2d & c )
@@ -455,6 +467,15 @@ ExactCoords exactCoords( const CutPoint & pt, int kx, int ky )
     return res;
 }
 
+/// -1, 0, 1 as the exact projected coordinate y (x if not y) of a is less than, equal to, greater than that of b
+MR_FORCE_INLINE int compareExactCoord( const ExactCoords & a, const ExactCoords & b, bool y )
+{
+    // the products of a numerator below 1.3 * 2^126 and a denominator below 1.3 * 2^96 (see exactCoords) fit in 256 bits
+    const auto l = Int128Mul256( y ? a.ny : a.nx ) * Int128Mul256( b.d );
+    const auto r = Int128Mul256( y ? b.ny : b.nx ) * Int128Mul256( a.d );
+    return l < r ? -1 : ( r < l ? 1 : 0 );
+}
+
 } // anonymous namespace
 
 struct CutTrianglePredicates::Impl
@@ -575,6 +596,8 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
         approx_[v] = { double( p.seg[0].pt[kx_] ), double( p.seg[0].pt[ky_] ) };
         return;
     }
+    const int i = corner( p.seg[0] ), j = corner( p.seg[1] );
+    pt.sides = i >= 0 && j >= 0 ? 1 << ( j == ( i + 1 ) % 3 ? i : j ) : 0;
     bool crosses = false;
     if ( p.seg[0].id == p.seg[1].id || hasVert( p.tri, p.seg[0].id ) || hasVert( p.tri, p.seg[1].id )
         || p.tri[0].id == p.tri[1].id || p.tri[1].id == p.tri[2].id || p.tri[2].id == p.tri[0].id )
@@ -582,10 +605,13 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
         // repeated ids, also an end of the segment at a vertex of its triangle, which orient3d does not take
         pt.sides = 0;
     }
+    else if ( pt.sides == 0 && !sameTriangle( p.tri, tri_ ) )
+    {
+        // off the sides, a segment must be an edge of another triangle crossing this one, as ccwBySides_ and commonLine_ take it;
+        // a segment with a single end at a corner is neither
+    }
     else
     {
-        const int i = corner( p.seg[0] ), j = corner( p.seg[1] );
-        pt.sides = i >= 0 && j >= 0 ? 1 << ( j == ( i + 1 ) % 3 ? i : j ) : 0;
         pt.oa = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[0].pt );
         pt.ob = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[1].pt );
         if ( pt.oa == 0 && pt.ob == 0 )
@@ -618,10 +644,13 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
     }
     if ( !crosses )
     {
-        fail_(); // repeated ids, or the segment does not cross the plane, also after the perturbation
+        // repeated ids, a segment off the sides with another triangle, or the segment does not cross the plane, also after the perturbation
+        fail_();
         pt.oa = 1; // any point of the segment, since the answers are arbitrary now
         pt.ob = -1;
     }
+    // that the crossing is inside its triangle stays the caller's precondition, checked in Debug only, since it takes several orient3d
+    assert( !crosses || doTriangleSegmentIntersect( { p.tri[0], p.tri[1], p.tri[2], p.seg[0], p.seg[1] } ) );
     // the point is a + s * ( b - a ), s = oa / ( oa - ob ), where oa and ob have different signs (or one of them is zero)
     const Vector3d a( p.seg[0].pt ), b( p.seg[1].pt );
     const double da = toDouble( pt.oa );
@@ -629,14 +658,18 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
     approx_[v] = { a[kx_] + s * ( b[kx_] - a[kx_] ), a[ky_] + s * ( b[ky_] - a[ky_] ) };
 }
 
-int CutTrianglePredicates::compareExact_( VertId p, VertId q, bool y ) const
+/// the order of points p and q along the projected coordinate y if yFirst (x otherwise), whose rounded values cannot tell it,
+/// and along the other coordinate where the points are level along the first one: -1 or 1 as p comes before or after q along
+/// the first coordinate, -2 or 2 along the second one, 0 if the points coincide before the perturbation
+int CutTrianglePredicates::compareExact_( VertId p, VertId q, bool yFirst ) const
 {
-    // the products of a numerator below 1.3 * 2^126 and a denominator below 1.3 * 2^96 (see exactCoords) fit in 256 bits
     const auto a = exactCoords( impl_->points[p], kx_, ky_ );
     const auto b = exactCoords( impl_->points[q], kx_, ky_ );
-    const auto l = Int128Mul256( y ? a.ny : a.nx ) * Int128Mul256( b.d );
-    const auto r = Int128Mul256( y ? b.ny : b.nx ) * Int128Mul256( a.d );
-    return l < r ? -1 : ( r < l ? 1 : 0 );
+    if ( const int c = compareExactCoord( a, b, yFirst ) )
+        return c;
+    // the exact coordinates found above decide the second one where its rounded values cannot
+    const int k = yFirst ? 0 : 1;
+    return 2 * compareCoord( approx_[p][k], approx_[q][k], [&] { return compareExactCoord( a, b, !yFirst ); } );
 }
 
 Vector2i CutTrianglePredicates::segmentDirection_( const PreciseVertCoords & a, const PreciseVertCoords & b ) const
@@ -654,19 +687,8 @@ bool CutTrianglePredicates::less( VertId p, VertId q ) const
 {
     if ( p == q )
         return false;
-    const auto & a = approx_[p];
-    const auto & b = approx_[q];
-    if ( a.x < b.x - cApproxTol )
-        return true;
-    if ( b.x < a.x - cApproxTol )
-        return false;
-    if ( const int c = compareExact_( p, q, false ) )
-        return c < 0;
-    if ( a.y < b.y - cApproxTol )
-        return true;
-    if ( b.y < a.y - cApproxTol )
-        return false;
-    if ( const int c = compareExact_( p, q, true ) )
+    // along x, then along y
+    if ( const int c = compareCoord( approx_[p].x, approx_[q].x, [&] { return compareExact_( p, q, false ); } ) )
         return c < 0;
     return lessCoincident_( p, q );
 }
@@ -727,7 +749,9 @@ std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, Ver
     const int onlyB = b.sides & ~a.sides;
     if ( onlyA == 0 && onlyB == 0 )
         return {};
-    const auto l = commonLine_( p, q, true );
+    // no line through a vertex: a vertex v exactly at a crossing of segment cd is on the line of cd, so plane vcd has a zero normal,
+    // and exactly at a crossing of a side with a triangle of v it is on that side, so this triangle is flat: no line has a direction then
+    const auto l = commonLine_( p, q, false );
     if ( !l || l->side >= 0 )
         return {};
     const auto line = lineDirectionOf( normal_, normalOf( l->plane ) );
@@ -989,11 +1013,15 @@ std::optional<bool> CutTrianglePredicates::ccwByLines( VertId a, VertId b, VertI
 std::optional<bool> CutTrianglePredicates::ccwByPlanes_( VertId a, VertId b, VertId c ) const
 {
     // the lines through a vertex and a crossing come only in the second round: they are needed only at folds, and taking them first was slower
+    const auto & points = impl_->points;
     const std::array<VertId, 3> v{ a, b, c };
     for ( int i = 0; i < 6; ++i )
     {
         const VertId p = v[i % 3], q = v[( i + 1 ) % 3], r = v[( i + 2 ) % 3];
-        if ( const auto l = commonLine_( p, q, i >= 3 ) )
+        const bool withVertex = i >= 3;
+        if ( withVertex && !points[p].def.isVertex() && !points[q].def.isVertex() )
+            continue; // the first round found no line through these two
+        if ( const auto l = commonLine_( p, q, withVertex ) )
         {
             assert( l->side < 0 ); // no two of the points on one side, see ccwBySides_
             // the left of the line in its direction is the side of the plane opposite to the plane's normal, which is where orient3d is true
@@ -1007,26 +1035,14 @@ bool CutTrianglePredicates::ccwFromBehind( VertId b, VertId pivot ) const
 {
     // the triangle ( pivot - R * ( 1, eta ), b, pivot ) for the sweep direction ( 1, eta ) has the doubled area
     // R * ( eta * d.x - d.y ) for d = b - pivot, so d.y decides, and only an exactly zero d.y leaves d.x to decide, since eps << eta
-    const auto & x = approx_[b];
-    const auto & o = approx_[pivot];
-    if ( x.y < o.y - cApproxTol )
-        return true;
-    if ( o.y < x.y - cApproxTol )
-        return false;
-    if ( const int c = compareExact_( b, pivot, true ) )
-        return c < 0;
-    if ( o.x < x.x - cApproxTol )
-        return true;
-    if ( x.x < o.x - cApproxTol )
-        return false;
-    if ( const int c = compareExact_( b, pivot, false ) )
-        return c > 0;
-    // the points coincide before the perturbation: d goes along the line through them if one is known from their definitions,
-    // otherwise the expansion of the perturbation gives its direction
+    if ( const int c = compareCoord( approx_[b].y, approx_[pivot].y, [&] { return compareExact_( b, pivot, true ); } ) )
+        return std::abs( c ) == 1 ? c < 0 : c > 0; // below pivot, or level with it and ahead
+    // the points coincide before the perturbation: d goes along their common side if they have one, in the order less finds there;
+    // less orders any other pair by the direction of the perturbed points (see lessCoincident_), which gives d
     Vector2i dir;
-    if ( const auto l = commonLine_( pivot, b, true ) )
+    if ( const int common = impl_->points[pivot].sides & impl_->points[b].sides )
     {
-        dir = lineDirection_( *l );
+        dir = lineDirection_( Line{ .side = std::countr_zero( unsigned( common ) ) } );
         if ( !along_( dir, pivot, b ) )
             dir = -dir;
     }

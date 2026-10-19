@@ -14,7 +14,9 @@ namespace MR
 
 /// a point inside a triangle of a mesh cut along its intersections with other triangles, defined by mesh vertices
 /// in the exact coordinates that the boolean's predicates take, with the same ids: either a vertex, or the point
-/// where a segment crosses the plane of a triangle (an edge-triangle intersection found by \ref doTriangleSegmentIntersect)
+/// where a segment crosses the plane of a triangle (an edge-triangle intersection found by \ref doTriangleSegmentIntersect);
+/// the coordinates are below 2^30 by absolute value, as \ref getToIntConverter makes them, which the widths of the exact integers
+/// and the error bounds of the predicates rely on, and an id stands for one vertex with the same coordinates in every point
 struct MR_BIND_IGNORE PreciseCutPoint
 {
     /// the vertex in seg[0] if seg[1].id is invalid; otherwise the ends of the segment
@@ -48,15 +50,17 @@ public:
     /// the triangle on the left of every side i, from tri[i] to tri[i+1]
     MRMESH_API void reset( const std::array<PreciseVertCoords, 3> & tri );
 
-    /// sets point v: a vertex of the triangle, or a crossing of one of its sides with another triangle,
-    /// or a crossing of an edge of another triangle with this triangle, as \ref doTriangleSegmentIntersect finds them;
+    /// sets point v: a vertex of the triangle, or a crossing of one of its sides with another triangle, or a crossing of an edge
+    /// of another triangle with this triangle (whose tri is then the triangle of reset); a crossing is inside the triangle it crosses,
+    /// as \ref doTriangleSegmentIntersect finds them, which only Debug checks, since it takes several orient3d per point;
     /// a segment in the plane of its triangle crosses it after the perturbation, at a point that tends to an end of the segment
-    /// or to a point inside it; setting a point again forgets the orders found for its old definition;
+    /// or to a point inside it; setting a point again forgets the orders found for its old definition, but not a failure;
     /// a vertex point that is not a corner of the triangle, repeated ids, a segment with an end on a vertex of its own triangle,
-    /// or a segment that does not cross the plane of its triangle make the predicates fail
+    /// a segment off the sides with a triangle other than this one (as one with a single end at a corner), or a segment that does not
+    /// cross the plane of its triangle make the predicates fail
     MRMESH_API void addPoint( VertId v, const PreciseCutPoint & p );
 
-    /// whether point p comes before point q along the sweep
+    /// whether point p comes before point q along the sweep: a strict total order, unless addPoint failed (see failed)
     [[nodiscard]] MRMESH_API bool less( VertId p, VertId q ) const;
 
     /// the signs of the projected coordinates of q - p found by expanding the perturbation alone, as the sweep sees them:
@@ -64,7 +68,7 @@ public:
     /// while less and ccwFromBehind decide most pairs by faster rules; nullopt if the points coincide after the perturbation too
     [[nodiscard]] MRMESH_API std::optional<Vector2i> directionByPerturbation( VertId p, VertId q ) const;
 
-    /// whether triangle abc is counterclockwise in the projection: decided by the exact positions of the points,
+    /// whether triangle abc of distinct points is counterclockwise in the projection: decided by the exact positions of the points,
     /// or by ccwByLines if they are on one line before the perturbation, or else by expanding the perturbation,
     /// so any three points are decided; as the sweep asks about the same triangles often, the answers of the slower rules
     /// are kept till reset
@@ -83,12 +87,15 @@ public:
     /// nullopt if the points are on one line after the perturbation too, as the points of one side are
     [[nodiscard]] MRMESH_API std::optional<bool> ccwByPerturbation( VertId a, VertId b, VertId c ) const;
 
-    /// whether the triangle of a point far behind pivot against the sweep, b and pivot is counterclockwise
+    /// whether the triangle of a point far behind pivot against the sweep, b and pivot is counterclockwise, for distinct b and pivot
     [[nodiscard]] MRMESH_API bool ccwFromBehind( VertId b, VertId pivot ) const;
 
-    /// whether a predicate met points it cannot tell apart (two points with the same definition, or three points off the sides
-    /// on one line also after the perturbation, which needs such points), or the input broke a precondition (see addPoint);
-    /// the answers of the predicates are arbitrary then, and the caller must discard them
+    /// whether the input broke a precondition that reset or addPoint checks, or a predicate met points it cannot tell apart, which valid
+    /// input never gives either: two points defined alike, or three points off the sides on one line also after the perturbation (as three
+    /// crossings of one cut, while valid input has two at most); the answers are arbitrary then, and the caller must discard them; it stays
+    /// set till reset; after a failure of addPoint, less may be cyclic, which is undefined behaviour in a sort, so the caller checks failed()
+    /// after the addPoint calls and before sorting with less; points defined alike, which less finds only when it compares them, keep it
+    /// a strict total order (they compare alike with every other point, and by their ids with one another)
     [[nodiscard]] MRMESH_API bool failed() const;
 
 private:
@@ -103,7 +110,7 @@ private:
     /// defined in the .cpp file
     struct Impl;
 
-    int compareExact_( VertId p, VertId q, bool y ) const;
+    int compareExact_( VertId p, VertId q, bool yFirst ) const;
     int exactOrient_( VertId a, VertId b, VertId c ) const;
     bool ccwExact_( VertId a, VertId b, VertId c ) const;
     int orientSlow_( VertId a, VertId b, VertId c ) const;

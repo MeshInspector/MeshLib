@@ -1134,7 +1134,7 @@ TEST( MRMesh, CutTrianglePredicatesCollinear )
 // of the vertical segments along the segments only, so the projected points stay on one line at the first three stages of the expansion,
 // and the fourth one, which perturbs the lower end of the first segment (as the smallest id did above), decides by the shortcut for
 // a stage after a zero one, which takes only the products with the vertex perturbed at that stage; the same holds for two crossings
-// at ( 5, 5 ), which only that vertex moves apart: the first crossing to ( eps^9, eps^3 ) / 2 from the second one, of which the sweep
+// at ( 3, 2 ), which only that vertex moves apart: the first crossing to ( eps^9, eps^3 ) / 2 from the second one, of which the sweep
 // takes only the larger term
 TEST( MRMesh, CutTrianglePredicatesCollinearLate )
 {
@@ -1150,8 +1150,8 @@ TEST( MRMesh, CutTrianglePredicatesCollinearLate )
     EXPECT_TRUE( preds.ccw( 0_v, 1_v, 2_v ) );
     EXPECT_FALSE( preds.ccw( 0_v, 2_v, 1_v ) );
 
-    preds.addPoint( 3_v, { { vert( 30, 5, 5, -1 ), vert( 31, 5, 5, 1 ) }, f } );
-    preds.addPoint( 4_v, { { vert( 32, 5, 5, -2 ), vert( 33, 5, 5, 2 ) }, f } );
+    preds.addPoint( 3_v, { { vert( 30, 3, 2, -1 ), vert( 31, 3, 2, 1 ) }, f } );
+    preds.addPoint( 4_v, { { vert( 32, 3, 2, -2 ), vert( 33, 3, 2, 2 ) }, f } );
     EXPECT_EQ( preds.directionByPerturbation( 3_v, 4_v ), Vector2i( 0, -1 ) );
     EXPECT_EQ( preds.directionByPerturbation( 4_v, 3_v ), Vector2i( 0, 1 ) );
     EXPECT_TRUE( preds.less( 4_v, 3_v ) );
@@ -1202,28 +1202,30 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
     preds.addPoint( 3_v, { { f[0], vert( 10, 1, 1, 1 ) }, f } );
     EXPECT_TRUE( preds.failed() );
 
-    // two points defined alike, which less cannot order
+    // a segment off the sides of f with another triangle, which it crosses inside, also with a single end at a corner of f:
+    // only a side of f can cross another triangle
+    const Tri t = { vert( 20, -4, -4, 1 ), vert( 21, 12, -4, 1 ), vert( 22, -4, 12, 1 ) };
     start();
-    const PreciseCutPoint x{ { vert( 10, 2, 1, -1 ), vert( 11, 2, 1, 1 ) }, f };
-    preds.addPoint( 3_v, x );
-    preds.addPoint( 4_v, x );
-    EXPECT_FALSE( preds.failed() );
-    (void)preds.less( 3_v, 4_v );
+    preds.addPoint( 3_v, { { vert( 10, 1, 1, -1 ), vert( 11, 1, 1, 3 ) }, t } );
     EXPECT_TRUE( preds.failed() );
+    start();
+    preds.addPoint( 3_v, { { f[0], vert( 10, 1, 1, 2 ) }, t } );
+    EXPECT_TRUE( preds.failed() );
+
+    // two points defined alike, which less cannot order, nor ccw tell apart
+    const PreciseCutPoint x{ { vert( 10, 2, 1, -1 ), vert( 11, 2, 1, 1 ) }, f };
+    for ( int i = 0; i < 2; ++i )
+    {
+        start();
+        preds.addPoint( 3_v, x );
+        preds.addPoint( 4_v, x );
+        EXPECT_FALSE( preds.failed() );
+        (void)( i == 0 ? preds.less( 3_v, 4_v ) : preds.ccw( 3_v, 4_v, 0_v ) );
+        EXPECT_TRUE( preds.failed() );
+    }
     start();
     preds.addPoint( 3_v, vertexPoint( f[1] ) );
     (void)preds.less( 1_v, 3_v );
-    EXPECT_TRUE( preds.failed() );
-
-    // three points on the cut by triangle t in plane x = 2: the crossings of sides 0 and 1 of f with t, and the crossing of an edge of t
-    // with the plane of f at ( 2, 15.2, 0 ), outside f, which no crossing of t with f can be, so ccw cannot tell its side of t
-    start();
-    const Tri t = { vert( 20, 2, -4, -4 ), vert( 21, 2, -4, 4 ), vert( 22, 2, 20, -1 ) };
-    preds.addPoint( 3_v, { { f[0], f[1] }, t } );
-    preds.addPoint( 4_v, { { f[1], f[2] }, t } );
-    preds.addPoint( 5_v, { { t[1], t[2] }, f } );
-    EXPECT_FALSE( preds.failed() );
-    (void)preds.ccw( 3_v, 4_v, 5_v );
     EXPECT_TRUE( preds.failed() );
 }
 

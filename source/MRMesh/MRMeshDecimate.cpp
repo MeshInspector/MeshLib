@@ -1807,7 +1807,8 @@ bool remesh( MR::Mesh& mesh, const RemeshSettings & settings )
     // compute target number of triangles to get desired average edge length
     const auto regionArea = mesh.area( settings.region );
     const auto targetTriArea = sqr( settings.targetEdgeLen ) * ( sqrt( 3.0f ) / 4 ); // for equilateral triangle
-    const auto targetNumTri = int( regionArea / targetTriArea );
+    const auto targetNumTriD = regionArea / targetTriArea;
+    const int targetNumTri = targetNumTriD < INT_MAX ? int( targetNumTriD ) : INT_MAX; // a tiny targetEdgeLen gives a ratio beyond int
     const auto currNumTri = settings.region ? (int)settings.region->count() : mesh.topology.numValidFaces();
 
     if ( currNumTri > targetNumTri )

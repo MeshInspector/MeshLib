@@ -308,7 +308,8 @@ TEST( MRMesh, inSphere )
     EXPECT_EQ( inSphere( b, a, c, Vector3i{ 1, 1, 2 }, 4 ), Out );
     EXPECT_EQ( inSphere( b, a, c, Vector3i{ 1, 1, -1 }, 4 ), In );
 
-    // maximal magnitudes as if from getToIntConverter: no overflow in internal computations
+    // maximal magnitudes as if from getToIntConverter: no overflow in internal computations;
+    // the difference of any two points must still fit in int, as the converter guarantees
     constexpr int H = 1'000'000'000;
     const Vector3i a1{ -H, -H, 0 }, b1{ H, -H, 0 }, c1{ -H, H, 0 };
     // circumcircle center (0,0,0), squared radius 2*H^2; with rSq = 3*H^2 sphere center is (0,0,H)
@@ -316,7 +317,7 @@ TEST( MRMesh, inSphere )
     EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 0, 0, 2 * H }, rSq ), In );
     EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 0, 0, -1 }, rSq ), In );
     EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ H, H, 2 * H }, rSq ), On ); // exactly on the sphere
-    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ 2 * H, 0, 0 }, rSq ), Out );
+    EXPECT_EQ( inSphere( a1, b1, c1, Vector3i{ H, H, -H }, rSq ), Out ); // squared distance to the center 6*H^2
 }
 
 TEST( MRMesh, inSphereTester )

@@ -975,7 +975,7 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
         mmOffset.include( std::abs( offsetAtPoint( i ) ) );
 
     std::vector<int> pivotIndices; // only used if offset is variable
-    auto initCutContourRes = convertMeshTriPointsToMeshContour( mesh, meshTriPoints, searchSettings, mmOffset.min == mmOffset.max ? nullptr : &pivotIndices );
+    auto initCutContourRes = surfaceLineToMeshContour( mesh, meshTriPoints, searchSettings, mmOffset.min == mmOffset.max ? nullptr : &pivotIndices );
     if ( !initCutContourRes.has_value() )
         return unexpected( initCutContourRes.error() );
 
@@ -1268,7 +1268,7 @@ Expected<FaceBitSet> cutMeshByContours( Mesh& mesh, const Contours3f& contours, 
             auto proj = findProjection( xf( contour[i] ), mesh );
             surfaceLine[i] = proj.mtp;
         } );
-        maybeOneMeshContours[ic] = convertMeshTriPointsToMeshContour( mesh, surfaceLine );
+        maybeOneMeshContours[ic] = surfaceLineToMeshContour( mesh, surfaceLine );
     } );
 
     std::vector<OneMeshContour> oneMeshContours( contours.size() );
@@ -1319,7 +1319,7 @@ Expected<std::vector<MR::EdgePath>> cutMeshByProjection( Mesh& mesh, const Conto
         } );
         if ( ctx.is_group_execution_cancelled() )
             return; // do not continue if projecting failed
-        auto cutContRes = convertMeshTriPointsToMeshContour( mesh, mtps,
+        auto cutContRes = surfaceLineToMeshContour( mesh, mtps,
             [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int, int )->Expected<SurfacePath>
         {
             auto plPoint = mesh.triPoint( start ) - settings.direction;

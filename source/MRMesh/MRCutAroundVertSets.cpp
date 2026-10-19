@@ -94,7 +94,7 @@ Expected<std::vector<FaceBitSet>> cutAroundVertSets( Mesh & mesh, const std::vec
     }
     firstIsoline[numSets] = allIsolines.size();
 
-    const auto cutRes = cutMesh( mesh, convertSurfacePathsToMeshContours( mesh, allIsolines ) );
+    const auto cutRes = cutMesh( mesh, surfacePathsToMeshContours( mesh, allIsolines ) );
     if ( cutRes.fbsWithContourIntersections.any() )
         return unexpected( "isolines around the vertex sets intersect" );
     assert( cutRes.resultCut.size() == allIsolines.size() );

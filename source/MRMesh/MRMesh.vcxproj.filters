@@ -285,6 +285,9 @@
     <ClInclude Include="MRPrecisePredicates3.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRPrecisePredicates3Poly.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRInSphere.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>

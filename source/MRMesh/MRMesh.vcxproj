@@ -366,6 +366,7 @@
     <ClInclude Include="MRPointsSave.h" />
     <ClInclude Include="MRPolylineProject.h" />
     <ClInclude Include="MRPrecisePredicates3.h" />
+    <ClInclude Include="MRPrecisePredicates3Poly.h" />
     <ClInclude Include="MRRegularMapMesher.h" />
     <ClInclude Include="MRRegularGridMesh.h" />
     <ClInclude Include="MRSceneRoot.h" />

@@ -993,7 +993,7 @@ Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const
     const auto& initCutContours = initCutContoursVec[0];
 
     // setup start vertices
-    VertBitSet startVertices( meshAfterCut.topology.lastValidVert() + 1 );
+    VertBitSet startVertices( meshAfterCut.topology.vertSize() );
     HashMap<VertId, float> startVerticesValues; // only used if offset is variable
     std::vector<float> sumLength; // only used if offset is variable
     struct InterInfo

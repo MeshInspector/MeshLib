@@ -40,16 +40,17 @@ struct SignedProduct
 /// (unless it already has that type), and the coefficients of the products have the type of TA*TB;
 /// the coefficients of the sum are computed in the order of increasing degree and only till the first not-zero one;
 /// the products of two terms of degrees below `from` are skipped, which the caller may do if their sum is known to be zero
-/// (e.g. a polynomial that was zero before the terms of degrees from `from` up were added to its factors)
+/// (e.g. a polynomial that was zero before the terms of degrees from `from` up were added to its factors);
+/// `from` takes no part in deducing D, so any integer converts to it
 template <typename TA, typename TB = TA, typename CA, typename CB, typename D, D M>
 [[nodiscard]] std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts,
-    D from = 0 );
+    std::type_identity_t<D> from = 0 );
 
 /// returns the degree and the sign of the lowest-degree not-zero coefficient of the polynomial ( a * b - c * d ),
 /// or sign 0 if all its coefficients of degrees not above M are zeros, see \ref lowestTermOfSumOfProducts
 template <typename T, typename C, typename D, D M>
 [[nodiscard]] std::pair<D, int> lowestTermOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
-    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d, D from = 0 )
+    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d, std::type_identity_t<D> from = 0 )
 {
     const SignedProduct<SparsePolynomial<C,D,M>, SparsePolynomial<C,D,M>> products[2] = { { &a, &b, false }, { &c, &d, true } };
     return lowestTermOfSumOfProducts<T>( products, 2, from );
@@ -274,7 +275,7 @@ template <typename T, typename C, typename D, D M>
 
 template <typename TA, typename TB, typename CA, typename CB, typename D, D M>
 std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts,
-    D from )
+    std::type_identity_t<D> from )
 {
     // the terms of every product form rows: the i-th term of its first factor times all the terms of the second one in the order of increasing degree;
     // the heap keeps the current term of every row, so all terms of all products are visited in the order of increasing degree

@@ -207,6 +207,12 @@ FaceId findSharedFace( const MeshTopology& topology, VertId vid, EdgeId eid, con
     return topology.left( eid ) ? topology.left( eid ) : topology.right( eid );
 }
 
+// true if v is the third vertex of an existing face of e; across the hole of a boundary edge there is no face to share
+bool isFaceApex( const MeshTopology& topology, VertId v, EdgeId e )
+{
+    return ( topology.left( e ) && topology.dest( topology.next( e ) ) == v ) || ( topology.right( e ) && topology.dest( topology.prev( e ) ) == v );
+}
+
 // function to get information about mesh tri point intersection between two surfaces paths
 // and process it correctly
 std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const OneMeshIntersection& prev, const MeshTriPoint& curr, const OneMeshIntersection& next,
@@ -239,9 +245,7 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
         else if ( std::holds_alternative<EdgeId>( next.primitiveId ) )
         {
             auto nEId = std::get<EdgeId>( next.primitiveId );
-            if ( topology.dest( topology.prev( nEId ) ) == pVId ) // correct orientation
-                return {};
-            if ( topology.dest( topology.next( nEId ) ) == pVId ) // incorrect orientation
+            if ( isFaceApex( topology, pVId, nEId ) ) // in any orientation
                 return {};
             if ( topology.dest( nEId ) == pVId || topology.org( nEId ) == pVId )
                 return OneMeshIntersection{findSharedFace(topology,pVId,nEId,curr),mesh.triPoint( curr )};
@@ -267,9 +271,9 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
         if ( std::holds_alternative<VertId>( next.primitiveId ) )
         {
             auto nVId = std::get<VertId>( next.primitiveId );
-            if ( topology.dest( topology.next( pEId ) ) == nVId )
+            if ( topology.dest( topology.next( pEId ) ) == nVId && isFaceApex( topology, nVId, pEId ) )
                 return {};
-            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || topology.dest( topology.prev( pEId ) ) == nVId )
+            if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || ( topology.dest( topology.prev( pEId ) ) == nVId && topology.right( pEId ) ) )
             {
                 assert( fromSameTriangle( topology, mesh.toTriPoint( nVId ), MeshTriPoint( MeshEdgePoint( pEId, 0.5f ) ) ) );
                 FaceId sharedFaceWithCur = findSharedFace( topology, nVId, pEId, curr );
@@ -305,8 +309,8 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
             // not consistent orientation:
             // it means that one of `prev` or `next` are form original MeshTriPoints vector - orientation should be fixed when this MeshTriPoint will be `curr` in this function
             // all mesh tri points will be curr in this function once so, output orientation should be correct
-            if ( topology.next( pEId ).undirected() == nEId.undirected() ||
-                 topology.prev( pEId.sym() ).undirected() == nEId.sym().undirected() )
+            if ( topology.left( pEId ) && ( topology.next( pEId ).undirected() == nEId.undirected() ||
+                 topology.prev( pEId.sym() ).undirected() == nEId.sym().undirected() ) )
             {
                 // orientation is consistent or `next` orientation can be wrong
                 auto edgeOp = curr.onEdge( topology );
@@ -314,8 +318,8 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
                     return {};
                 return OneMeshIntersection{topology.left( curr.e ),mesh.triPoint( curr )};
             }
-            else if ( topology.prev( pEId ).undirected() == nEId.undirected() ||
-                      topology.next( pEId.sym() ).undirected() == nEId.sym().undirected() )
+            else if ( topology.right( pEId ) && ( topology.prev( pEId ).undirected() == nEId.undirected() ||
+                      topology.next( pEId.sym() ).undirected() == nEId.sym().undirected() ) )
             {
                 // `prev` orientation is wrong (rare case, only seen with first intersection only)
                 auto edgeOp = curr.onEdge( topology );

@@ -52,6 +52,9 @@ struct PointDegree
     }
 };
 
+/// the largest number of points of one predicate that getPointDegrees and PerturbationStages take
+constexpr int cMaxPerturbedPoints = 16;
+
 /// finds the degrees of the perturbation of points vs[0..n-1] and writes them in res[0..n-1]: sorted by ids, the points get
 /// the degrees 1, r_0, r_0 * r_1, ..., where r_k is the radix of the k-th id, given in radices[] of every point with that id,
 /// and points with equal ids get equal degrees; the smallest id moves most, as in orient3d, and the radix of a point must exceed
@@ -66,9 +69,8 @@ MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::in
         VertId v;
         int n = 0;
     };
-    constexpr int cMaxPoints = 16;
-    assert( n > 0 && n <= cMaxPoints );
-    std::array<VertN, cMaxPoints> as;
+    assert( n > 0 && n <= cMaxPerturbedPoints );
+    std::array<VertN, cMaxPerturbedPoints> as;
     for ( int i = 0; i < n; ++i )
         as[i] = { vs[i].id, i };
     std::sort( as.begin(), as.begin() + n, []( const auto & a, const auto & b ) { return a.v < b.v; } );
@@ -109,12 +111,10 @@ constexpr std::int64_t cMaxPolyDAll = std::numeric_limits<std::int64_t>::max();
 class PerturbationStages
 {
 public:
-    static constexpr int cMaxPoints = 16;
-
     /// the stages of points vs[0..n-1] with the degrees from getPointDegrees
     MR_FORCE_INLINE PerturbationStages( const PreciseVertCoords * vs, const std::int64_t * radices, int n )
     {
-        assert( n <= cMaxPoints );
+        assert( n <= cMaxPerturbedPoints );
         numStages_ = getPointDegrees( vs, radices, n, points_.data(), places_.data() );
     }
 
@@ -145,8 +145,8 @@ public:
     }
 
 private:
-    std::array<PointDegree, cMaxPoints> points_;
-    std::array<std::int64_t, cMaxPoints> places_;
+    std::array<PointDegree, cMaxPerturbedPoints> points_;
+    std::array<std::int64_t, cMaxPerturbedPoints> places_;
     int numStages_ = 0;
 };
 

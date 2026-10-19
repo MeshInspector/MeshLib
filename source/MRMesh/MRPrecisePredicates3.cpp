@@ -113,7 +113,7 @@ std::optional<bool> segmentIntersectionOrderExact( const SegmentVolumes & v )
 
 /// the stages of the perturbation of the eight points of segmentIntersectionOrder and segmentIntersectionTriPlaneOrder:
 /// a product of two orient3d-polynomials takes every point at most twice, with the weight at most 9 + 3 + 1 each time;
-/// inlined in the degenerate cases, which then stay out of line in the callers, and their exact paths lean
+/// inlined into the degenerate cases, which then stay out of line, keeping the exact paths of the callers lean
 MR_FORCE_INLINE PerturbationStages perturbationStages( const std::array<PreciseVertCoords, 8> & vs )
 {
     constexpr std::int64_t radices[8] = { 27, 27, 27, 27, 27, 27, 27, 27 };

@@ -102,6 +102,7 @@ jobs:
       tag-upload-binaries:       ${{ steps.live-labels.outputs.tag-upload-binaries }}
       tag-upload-test-artifacts: ${{ steps.live-labels.outputs.tag-upload-test-artifacts }}
       tag-test-pip-build:        ${{ steps.live-labels.outputs.tag-test-pip-build }}
+      tag-ubsan:                 ${{ steps.live-labels.outputs.tag-ubsan }}
       # tags for disabling builds for different systems
       tag-build-release-windows: ${{ steps.live-labels.outputs.tag-build-release-windows }}
       tag-disable-windows:       ${{ steps.live-labels.outputs.tag-disable-windows }}
@@ -346,11 +347,25 @@ jobs:
                   cxx-compiler: /usr/bin/g++-16
                   c-compiler: /usr/bin/gcc-16
                   upload_release: "OFF"
-            # Debug and Clang jobs run in full-ci only, and on x64 only
+            # Debug and Clang jobs run in full-ci only, and on x64 only;
+            # the `ubsan` label keeps ubuntu26 Clang Release, which then builds and tests under UBSan
             - if: ${{ env.full_config_build != 'true' }}
               exclude:
                 - config: Debug
+            - if: ${{ env.full_config_build != 'true' && steps.live-labels.outputs.tag-ubsan != 'true' }}
+              exclude:
                 - compiler: Clang
+            - if: ${{ env.full_config_build != 'true' && steps.live-labels.outputs.tag-ubsan == 'true' }}
+              exclude:
+                - compiler: Clang
+                  os: ubuntu24
+            - if: ${{ steps.live-labels.outputs.tag-ubsan == 'true' }}
+              extend:
+                - arch: x64
+                  os: ubuntu26
+                  config: Release
+                  compiler: Clang
+                  ubsan: "ON"
             - exclude:
                 - arch: arm64
                   config: Debug

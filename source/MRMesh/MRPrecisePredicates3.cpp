@@ -19,18 +19,13 @@ namespace
 using detail::orient3dVolume;
 using detail::PerturbationStages;
 using detail::cMaxPolyDAll;
+using detail::cMaxPolyDTriTri;
+using detail::cMaxPolyDTriPlane;
 using detail::VolumePoly;
 using detail::orient3dPoly;
 
 // INT_MAX in double for mapping in int range
 constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 to be sure the no overflow will ever happen due to rounding errors
-
-// these values were found experimentally as the largest degree of a polynomial term that must be considered in the predicates
-// (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
-// in the tests and in a random sweep of degenerate inputs; the terms of higher degrees are not stored to save computation time,
-// and if they are not enough to decide, the predicates repeat the computation with all terms (see cMaxPolyDAll)
-constexpr std::int64_t cMaxPolyDTriTri   = 15'943'959; // segmentIntersectionOrder
-constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTriPlaneOrder: it reaches the polynomial path with all three largest ids in the plane
 
 /// vertices of two triangles ta=234 and tb=567 split into shared and not-shared ones
 struct SharedPoints

@@ -1571,11 +1571,11 @@ Order order( const std::array<PreciseVertCoords, 8> & vs )
 } // anonymous namespace
 
 // both predicates agree with the naive reference above on random inputs: in general position, degenerate ones, and degenerate ones
-// that the terms of degrees up to the limits in MRPrecisePredicates3.cpp leave undecided
+// that the terms of degrees up to the limits (detail::cMaxPolyDTriTri, cMaxPolyDTriPlane) leave undecided
 TEST( MRMesh, segmentIntersectionOrder3Reference )
 {
-    // the degree limits cMaxPolyDTriTri and cMaxPolyDTriPlane in MRPrecisePredicates3.cpp
-    constexpr std::int64_t cMaxDegTriTri = 15'943'959, cMaxDegTriPlane = 430'486'893;
+    // the degree limits of the predicates
+    constexpr std::int64_t cMaxDegTriTri = detail::cMaxPolyDTriTri, cMaxDegTriPlane = detail::cMaxPolyDTriPlane;
     std::mt19937 gen( 3 );
     auto shuffle = [&] ( std::array<int, 8> ids, int first, int last )
     {

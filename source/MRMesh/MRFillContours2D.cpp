@@ -15,7 +15,6 @@
 #include "MRMapEdge.h"
 #include "MRBitSet.h"
 #include "MRphmap.h"
-#include <algorithm>
 #include <cfloat>
 
 namespace MR
@@ -70,16 +69,6 @@ AffineXf3f getXfFromOxyPlane( const Contours3f& contours )
             c.addLineSegm( contour[i], contour[i + 1] );
     }
     return AffineXf3f( c.getXf() );
-}
-
-// a cut along the mesh boundary can join two vertices by parallel edges, each with the hole on both sides;
-// the sweep then meets coincident segments, so loops passing an edge both ways are left to other fill methods
-static bool passesEdgeBothWays( const MeshTopology& topology, const EdgeLoop& loop )
-{
-    for ( EdgeId e : loop )
-        if ( !topology.left( e.sym() ) && std::find( loop.begin(), loop.end(), e.sym() ) != loop.end() )
-            return true;
-    return false;
 }
 
 // checks that patch boundary loops match the input hole loops one-to-one and re-orients inverted
@@ -138,8 +127,6 @@ Expected<void> fillContours2D( Mesh& mesh, const std::vector<EdgeId>& holeRepres
         paths[i] = trackRightBoundaryLoop( meshTopology, holeRepresentativeEdges[i] );
         if ( paths[i].size() < 3 )
             return unexpected( "Hole boundary is degenerate" );
-        if ( passesEdgeBothWays( meshTopology, paths[i] ) )
-            return unexpected( "Hole boundary passes an edge in both directions" );
         numLoopEdges += paths[i].size();
         for ( EdgeId e : paths[i] )
             sumCross += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
@@ -231,8 +218,6 @@ Expected<HoleFillPlan> fillContours2DPlan( const Mesh& mesh, EdgeId holeEdgeId, 
     EdgeLoops& loops = planCache.loops;
     loops.resize( 1 );
     trackRightBoundaryLoop( mesh.topology, holeEdgeId, loops.front() );
-    if ( passesEdgeBothWays( mesh.topology, loops.front() ) )
-        return unexpected( "Hole boundary passes an edge in both directions" );
 
     // the hole loop winds counterclockwise around this direction, same as around the fitted plane's normal it replaces
     Vector3d sumCross;

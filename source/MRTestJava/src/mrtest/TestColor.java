@@ -3,8 +3,8 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.Color;
-import meshlib.mr.VertColors;
+import meshlib.Color;
+import meshlib.VertColors;
 
 public final class TestColor
 {

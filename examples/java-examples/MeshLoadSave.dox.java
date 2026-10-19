@@ -1,6 +1,6 @@
-import meshlib.mr.Mesh;
-import meshlib.mr.expected_MR_Mesh_std_string;
-import meshlib.mr.expected_void_std_string;
+import meshlib.Mesh;
+import meshlib.expected_MR_Mesh_std_string;
+import meshlib.expected_void_std_string;
 
 // The class isn't public because of the `.dox.java` file name, the launcher doesn't mind.
 class MeshLoadSave
@@ -11,7 +11,7 @@ class MeshLoadSave
         String outputPath = args.length > 1 ? args[1] : "mesh.ply";
 
         // Load mesh.
-        expected_MR_Mesh_std_string loaded = meshlib.mr.meshload.Functions.fromAnySupportedFormat(inputPath, null);
+        expected_MR_Mesh_std_string loaded = meshlib.meshload.Functions.fromAnySupportedFormat(inputPath, null);
         if (!loaded.success())
         {
             if (args.length == 0)
@@ -22,7 +22,7 @@ class MeshLoadSave
         Mesh mesh = loaded.value();
 
         // Save mesh.
-        expected_void_std_string saved = meshlib.mr.meshsave.Functions.toAnySupportedFormat(mesh, outputPath, null);
+        expected_void_std_string saved = meshlib.meshsave.Functions.toAnySupportedFormat(mesh, outputPath, null);
         if (!saved.success())
         {
             System.err.println("Failed to save mesh: " + saved.error());

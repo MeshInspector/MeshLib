@@ -1,9 +1,9 @@
-import meshlib.mr.DecimateResult;
-import meshlib.mr.DecimateSettings;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.expected_MR_Mesh_std_string;
-import meshlib.mr.expected_void_std_string;
+import meshlib.DecimateResult;
+import meshlib.DecimateSettings;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.expected_MR_Mesh_std_string;
+import meshlib.expected_void_std_string;
 
 // The class isn't public because of the `.dox.java` file name, the launcher doesn't mind.
 class MeshDecimate
@@ -11,7 +11,7 @@ class MeshDecimate
     public static void main(String[] args)
     {
         // Load mesh.
-        expected_MR_Mesh_std_string loaded = meshlib.mr.meshload.Functions.fromAnySupportedFormat("mesh.stl", null);
+        expected_MR_Mesh_std_string loaded = meshlib.meshload.Functions.fromAnySupportedFormat("mesh.stl", null);
         if (!loaded.success())
         {
             System.err.println("Failed to load mesh: " + loaded.error());
@@ -39,7 +39,7 @@ class MeshDecimate
         System.out.println("Removed " + result.vertsDeleted() + " vertices, " + result.facesDeleted() + " faces");
 
         // Save result.
-        expected_void_std_string saved = meshlib.mr.meshsave.Functions.toAnySupportedFormat(mesh, "decimated_mesh.stl", null);
+        expected_void_std_string saved = meshlib.meshsave.Functions.toAnySupportedFormat(mesh, "decimated_mesh.stl", null);
         if (!saved.success())
         {
             System.err.println("Failed to save mesh: " + saved.error());

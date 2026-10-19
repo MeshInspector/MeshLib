@@ -2,8 +2,8 @@ package mrtest;
 
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
+import meshlib.Functions;
+import meshlib.Mesh;
 
 public final class TestMeshNormals
 {

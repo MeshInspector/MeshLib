@@ -3,16 +3,16 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.AffineXf3f;
-import meshlib.mr.CoordinateConverters;
-import meshlib.mr.Functions;
-import meshlib.mr.Matrix3f;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshPart;
-import meshlib.mr.Vector3f;
-import meshlib.mr.std_vector_MR_OneMeshContour;
-import meshlib.mr.std_vector_MR_VarEdgeTri;
-import meshlib.mr.std_vector_std_vector_MR_VarEdgeTri;
+import meshlib.AffineXf3f;
+import meshlib.CoordinateConverters;
+import meshlib.Functions;
+import meshlib.Matrix3f;
+import meshlib.Mesh;
+import meshlib.MeshPart;
+import meshlib.Vector3f;
+import meshlib.std_vector_MR_OneMeshContour;
+import meshlib.std_vector_MR_VarEdgeTri;
+import meshlib.std_vector_std_vector_MR_VarEdgeTri;
 
 public final class TestMeshCollidePrecise
 {

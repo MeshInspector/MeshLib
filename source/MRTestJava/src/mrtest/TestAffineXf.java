@@ -3,10 +3,10 @@ package mrtest;
 import static mrtest.Common.check;
 import static mrtest.Common.checkApprox;
 
-import meshlib.mr.AffineXf3f;
-import meshlib.mr.Functions;
-import meshlib.mr.Matrix3f;
-import meshlib.mr.Vector3f;
+import meshlib.AffineXf3f;
+import meshlib.Functions;
+import meshlib.Matrix3f;
+import meshlib.Vector3f;
 
 public final class TestAffineXf
 {

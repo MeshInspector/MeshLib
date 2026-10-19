@@ -1,15 +1,15 @@
-import meshlib.mr.AffineXf3f;
-import meshlib.mr.BooleanOperation;
-import meshlib.mr.BooleanResult;
-import meshlib.mr.BooleanResultMapper;
-import meshlib.mr.BooleanResultMapper_MapObject;
-import meshlib.mr.FaceBitSet;
-import meshlib.mr.FaceId;
-import meshlib.mr.FaceMap;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.Vector3f;
-import meshlib.mr.expected_void_std_string;
+import meshlib.AffineXf3f;
+import meshlib.BooleanOperation;
+import meshlib.BooleanResult;
+import meshlib.BooleanResultMapper;
+import meshlib.BooleanResultMapper_MapObject;
+import meshlib.FaceBitSet;
+import meshlib.FaceId;
+import meshlib.FaceMap;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.Vector3f;
+import meshlib.expected_void_std_string;
 
 // The class isn't public because of the `.dox.java` file name, the launcher doesn't mind.
 class MeshBoolean
@@ -59,7 +59,7 @@ class MeshBoolean
         System.out.println("face " + resultFace.id_() + " of the result came from face " + new2oldFaces.index(resultFace).id_() + " of sphere1");
 
         // Save result to an STL file.
-        expected_void_std_string saved = meshlib.mr.meshsave.Functions.toAnySupportedFormat(result.mesh(), "out_boolean.stl", null);
+        expected_void_std_string saved = meshlib.meshsave.Functions.toAnySupportedFormat(result.mesh(), "out_boolean.stl", null);
         if (!saved.success())
         {
             System.err.println("Failed to save mesh: " + saved.error());

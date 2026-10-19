@@ -2,14 +2,14 @@ package mrtest;
 
 import static mrtest.Common.check;
 
-import meshlib.mr.Functions;
-import meshlib.mr.GeneralOffsetParameters;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshPart;
-import meshlib.mr.OffsetMode;
-import meshlib.mr.OffsetParameters;
-import meshlib.mr.PartMapping;
-import meshlib.mr.SharpOffsetParameters;
+import meshlib.Functions;
+import meshlib.GeneralOffsetParameters;
+import meshlib.Mesh;
+import meshlib.MeshPart;
+import meshlib.OffsetMode;
+import meshlib.OffsetParameters;
+import meshlib.PartMapping;
+import meshlib.SharpOffsetParameters;
 
 public final class TestMeshOffset
 {

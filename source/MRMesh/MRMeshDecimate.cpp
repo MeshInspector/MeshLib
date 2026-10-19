@@ -1499,7 +1499,9 @@ static DecimateResult decimateMeshParallelInplace( MR::Mesh & mesh, const Decima
                 subSeqSettings.progressCallback = [reportThreadProgress]( float p ) { return reportThreadProgress( p ); };
             else if ( settings.progressCallback )
                 subSeqSettings.progressCallback = [&cancelled]( float ) { return !cancelled.load( std::memory_order_relaxed ); };
-            node.decimRes = decimateMeshSerial( mesh, subSeqSettings, node.left >= 0 ? &seamEdges : nullptr );
+            // a part puts in its initial queue all its region edges, found by visiting only the set bits (and not by testing every edge of the mesh);
+            // a united node only the edges near the former border between its children
+            node.decimRes = decimateMeshSerial( mesh, subSeqSettings, node.left >= 0 ? &seamEdges : &node.regionEdges );
             node.subtreeVertsDeleted += node.decimRes.vertsDeleted;
             node.subtreeFacesDeleted += node.decimRes.facesDeleted;
 

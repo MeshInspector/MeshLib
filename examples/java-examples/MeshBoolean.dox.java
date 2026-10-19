@@ -9,7 +9,6 @@ import meshlib.FaceMap;
 import meshlib.Functions;
 import meshlib.Mesh;
 import meshlib.Vector3f;
-import meshlib.expected_void_std_string;
 
 // The class isn't public because of the `.dox.java` file name, the launcher doesn't mind.
 class MeshBoolean
@@ -58,12 +57,7 @@ class MeshBoolean
         FaceId resultFace = producedFaces.find_first();
         System.out.println("face " + resultFace.id_() + " of the result came from face " + new2oldFaces.index(resultFace).id_() + " of sphere1");
 
-        // Save result to an STL file.
-        expected_void_std_string saved = meshlib.meshsave.Functions.toAnySupportedFormat(result.mesh(), "out_boolean.stl", null);
-        if (!saved.success())
-        {
-            System.err.println("Failed to save mesh: " + saved.error());
-            System.exit(1);
-        }
+        // Save result to an STL file. An error is thrown as `UnexpectedResultException`.
+        meshlib.meshsave.Functions.toAnySupportedFormat(result.mesh(), "out_boolean.stl", null);
     }
 }

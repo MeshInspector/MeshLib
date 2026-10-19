@@ -3,6 +3,7 @@ package mrtest;
 import static mrtest.Common.check;
 
 import meshlib.Functions;
+import meshlib.UnexpectedResultException;
 import meshlib.Mesh;
 import meshlib.MeshPart;
 import meshlib.Object;
@@ -28,7 +29,7 @@ public final class TestCallbacks
             last[0] = progress;
             return true;
         }));
-        check(Functions.offsetMesh(mp, 0.1f, params).success(), "offsetMesh");
+        check(Functions.offsetMesh(mp, 0.1f, params) != null, "offsetMesh");
         check(calls[0] > 0, "the callback was called");
     }
 
@@ -39,7 +40,16 @@ public final class TestCallbacks
         OffsetParameters params = new OffsetParameters();
         params.setVoxelSize(Functions.suggestVoxelSize(mp, 10000.0f));
         params.setCallBack(std_function_bool_from_float.of(progress -> false));
-        check(!Functions.offsetMesh(mp, 0.1f, params).success(), "cancelled");
+        boolean cancelled = false;
+        try
+        {
+            Functions.offsetMesh(mp, 0.1f, params);
+        }
+        catch (UnexpectedResultException e)
+        {
+            cancelled = true;
+        }
+        check(cancelled, "cancelled");
     }
 
     public static void callbackException()

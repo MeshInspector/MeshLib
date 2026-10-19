@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <climits>
+#include <random>
 
 namespace MR
 {
@@ -1314,6 +1315,63 @@ TEST( MRMesh, segmentIntersectionTriPlaneOrderFullDegen )
         }
     }
     while ( std::next_permutation( vs.begin(), vs.end() - 1, []( const auto & l, const auto & r ) { return l.id < r.id; } ) );
+}
+
+// some of the points at the origin and the others nearby, which the full degeneracy above does not cover: the terms of degrees
+// up to the experimentally found limits do not decide some of these orders (one in 150 pairs of crossed triangles here with
+// cMaxPolyDTriTri, as a counter in a temporary build found), and all terms do
+TEST( MRMesh, segmentIntersectionOrder3PartialDegen )
+{
+    auto v = []( int id, int z ) { return PreciseVertCoords{ VertId( id ), Vector3i( 0, 0, z ) }; };
+    const std::array<PreciseVertCoords, 8> vs = { v( 6, 0 ), v( 2, 0 ), v( 7, 0 ), v( 3, 0 ), v( 1, 0 ), v( 0, 0 ), v( 4, -1 ), v( 5, 0 ) };
+    EXPECT_TRUE(  segmentIntersectionOrder( vs ) ); // not decided by the terms of degrees up to cMaxPolyDTriTri
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[1], vs[0], vs[2], vs[3], vs[4], vs[5], vs[6], vs[7] } ) );
+    EXPECT_FALSE( segmentIntersectionOrder( { vs[0], vs[1], vs[5], vs[6], vs[7], vs[2], vs[3], vs[4] } ) );
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( vs ) );
+
+    auto u = []( int id, int x ) { return PreciseVertCoords{ VertId( id ), Vector3i( x, 0, 0 ) }; };
+    const std::array<PreciseVertCoords, 8> us = { u( 4, 1 ), u( 1, 0 ), u( 2, 0 ), u( 0, 1 ), u( 3, 1 ), u( 5, 1 ), u( 6, 1 ), u( 7, 1 ) };
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( us ) ); // not decided by the terms of degrees up to cMaxPolyDTriPlane
+    EXPECT_TRUE(  segmentIntersectionTriPlaneOrder( { us[1], us[0], us[2], us[3], us[4], us[5], us[6], us[7] } ) );
+    EXPECT_FALSE( segmentIntersectionTriPlaneOrder( { us[0], us[1], us[2], us[3], us[4], us[6], us[5], us[7] } ) );
+
+    // random sets of the kind: both predicates give the same order where the segment crosses both triangles,
+    // and the opposite one for the reversed segment and for the swapped triangles
+    std::mt19937 gen( 1 );
+    const Vector3i pts[] = { { 0, 0, 0 }, { 0, 0, -1 }, { 0, 0, 1 }, { 1, 0, 0 }, { 0, 1, 0 }, { 1, 1, 0 } };
+#ifdef NDEBUG
+    constexpr int cTrials = 200000;
+#else
+    constexpr int cTrials = 20000;
+#endif
+    int numOrders = 0, numPlanes = 0, numMismatches = 0;
+    for ( int trial = 0; trial < cTrials; ++trial )
+    {
+        std::array<PreciseVertCoords, 8> ws;
+        std::array<int, 8> ids = { 0, 1, 2, 3, 4, 5, 6, 7 };
+        for ( int i = 7; i > 0; --i )
+            std::swap( ids[i], ids[gen() % ( i + 1 )] );
+        const int numPts = 1 + int( gen() % 6 );
+        for ( int i = 0; i < 8; ++i )
+            ws[i] = { VertId( ids[i] ), pts[gen() % numPts] };
+        if ( gen() % 3 == 0 )
+            ws[7] = ws[2]; // a vertex shared by the triangles
+        if ( !doTriangleSegmentIntersect( { ws[2], ws[3], ws[4], ws[0], ws[1] } ) )
+            continue;
+        ++numPlanes;
+        const bool p = segmentIntersectionTriPlaneOrder( ws );
+        numMismatches += p == segmentIntersectionTriPlaneOrder( { ws[1], ws[0], ws[2], ws[3], ws[4], ws[5], ws[6], ws[7] } );
+        if ( !doTriangleSegmentIntersect( { ws[5], ws[6], ws[7], ws[0], ws[1] } ) )
+            continue;
+        ++numOrders;
+        const bool o = segmentIntersectionOrder( ws );
+        numMismatches += o != p;
+        numMismatches += o == segmentIntersectionOrder( { ws[1], ws[0], ws[2], ws[3], ws[4], ws[5], ws[6], ws[7] } );
+        numMismatches += o == segmentIntersectionOrder( { ws[0], ws[1], ws[5], ws[6], ws[7], ws[2], ws[3], ws[4] } );
+    }
+    EXPECT_EQ( numMismatches, 0 );
+    EXPECT_GT( numOrders, cTrials / 100 );
+    EXPECT_GT( numPlanes, cTrials / 20 );
 }
 
 TEST( MRMesh, getToIntConverter )

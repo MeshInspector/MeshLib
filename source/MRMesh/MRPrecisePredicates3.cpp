@@ -24,7 +24,7 @@ constexpr double cRangeIntMax = 0.99 * std::numeric_limits<int>::max(); // 0.99 
 // these values were found experimentally as the largest degree of a polynomial term that must be considered in the predicates
 // (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
 // in the tests and in a random sweep of degenerate inputs; the terms of higher degrees are not stored to save computation time,
-// and if it is not enough then signOfProductsDiff returns 0 with assert violation after it, increase the value in that case
+// and if they are not enough to decide, the predicates repeat the computation with all terms (see cMaxPolyDAll)
 constexpr std::int64_t cMaxPolyDTriTri   = 15'943'959; // segmentIntersectionOrder
 constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTriPlaneOrder: it reaches the polynomial path with all three largest ids in the plane
 
@@ -109,30 +109,52 @@ std::optional<bool> segmentIntersectionOrderExact( const SegmentVolumes & v )
 }
 
 /// the order of intersections of segment s=01 with the planes of ta=234 and tb=567 when the intersection points coincide exactly,
-/// resolved by simulation-of-simplicity; the caller must have checked that neither triangle is on one side of the other's plane
+/// resolved by simulation-of-simplicity from the terms of degrees not above M, or nullopt if they do not decide it;
+/// the caller must have checked that neither triangle is on one side of the other's plane
 template <std::int64_t M>
-bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords, 8> & vs )
+std::optional<bool> segmentIntersectionOrderDegenerate( const std::array<PointDegree, 8> & ds )
 {
-    const auto ds = getPointDegrees( vs );
     const auto polyTaOrg  = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[0] );
     const auto polyTaDest = orient3dPoly<M>( ds[2], ds[3], ds[4], ds[1] );
-    assert( !polyTaOrg.empty() || !polyTaDest.empty() );
+    if ( polyTaOrg.empty() && polyTaDest.empty() )
+        return {};
     assert( polyTaOrg.empty() || polyTaDest.empty() || polyTaOrg.isPositive() != polyTaDest.isPositive() );
     const bool posTaOrg = polyTaOrg.empty() ? !polyTaDest.isPositive() : polyTaOrg.isPositive();
 
     const auto polyTbOrg  = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[0] );
     const auto polyTbDest = orient3dPoly<M>( ds[5], ds[6], ds[7], ds[1] );
-    assert( !polyTbOrg.empty() || !polyTbDest.empty() );
+    if ( polyTbOrg.empty() && polyTbDest.empty() )
+        return {};
     assert( polyTbOrg.empty() || polyTbDest.empty() || polyTbOrg.isPositive() != polyTbDest.isPositive() );
     const bool posTbOrg = polyTbOrg.empty() ? !polyTbDest.isPositive() : polyTbOrg.isPositive();
 
     // the sign of the leading term of nom = polyTaOrg * polyTbDest - polyTbOrg * polyTaDest, whose zero-degree coefficient is nomSimple == 0
     const int nomSign = signOfProductsDiff<Int128Mul256>( polyTaOrg, polyTbDest, polyTbOrg, polyTaDest );
-    assert( nomSign != 0 );
+    if ( nomSign == 0 )
+        return {};
     bool res = nomSign > 0;
     if ( posTaOrg != posTbOrg ) // denominator is negative
         res = !res;
     return res;
+}
+
+/// the same from the terms of degrees not above M, which are enough for most inputs, or else from all terms
+template <std::int64_t M>
+bool segmentIntersectionOrderDegenerate( const std::array<PreciseVertCoords, 8> & vs )
+{
+    const auto ds = getPointDegrees( vs );
+    if ( const auto res = segmentIntersectionOrderDegenerate<M>( ds ) )
+        return *res;
+    const auto res = segmentIntersectionOrderDegenerate<cMaxPolyDAll>( ds );
+    assert( res ); // only invalid input leaves the order undecided, e.g. triangles with three shared vertices
+    return res.value_or( false );
+}
+
+/// the difference of the perturbed volumes of plane pb=567 with s[0] and with s[1], without the terms of degrees above M
+template <std::int64_t M>
+VolumePoly<M> volumeDiff( const std::array<PointDegree, 8> & ds )
+{
+    return orient3dPoly<M>( ds[5], ds[6], ds[7], ds[0] ) - orient3dPoly<M>( ds[5], ds[6], ds[7], ds[1] );
 }
 
 } // anonymous namespace
@@ -323,9 +345,12 @@ bool segmentIntersectionTriPlaneOrder( const std::array<PreciseVertCoords, 8> & 
 
         // s is parallel to pb, and the perturbation of the points decides, which end of s is closer to pb
         const auto ds = getPointDegrees( vs );
-        auto diff = orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[0] );
-        diff -= orient3dPoly<cMaxPolyDTriPlane>( ds[5], ds[6], ds[7], ds[1] );
-        return diff.isPositive() == o0;
+        if ( const auto diff = volumeDiff<cMaxPolyDTriPlane>( ds ); !diff.empty() )
+            return diff.isPositive() == o0;
+        // the terms of degrees above cMaxPolyDTriPlane decide
+        const auto diff = volumeDiff<cMaxPolyDAll>( ds );
+        assert( !diff.empty() ); // only invalid input makes the perturbed volumes equal, e.g. s[0] and s[1] with the same id
+        return !diff.empty() && diff.isPositive() == o0;
     }
 
     // segment s crosses plane pb

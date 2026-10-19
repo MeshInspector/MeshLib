@@ -93,6 +93,9 @@ MR_BIND_IGNORE inline void getPointDegrees( const PreciseVertCoords * vs, const 
     return res;
 }
 
+/// the largest degree that no term exceeds: a polynomial with it keeps all its terms
+constexpr std::int64_t cMaxPolyDAll = std::numeric_limits<std::int64_t>::max();
+
 /// 128 bits are enough to store all coefficients of one orient3d-polynomial (products of three coordinate differences),
 /// while the products of two such polynomials are computed in 256 bits, see signOfProductsDiff<Int128Mul256>
 template <std::int64_t M>

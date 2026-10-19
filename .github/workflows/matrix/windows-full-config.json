@@ -142,6 +142,13 @@
       "upload_name": "Debug-IteratorDebug",
       "runner": ["windows-2022"],
       "cuda_version": "11.4.2"
+    },
+    {
+      "cxx_compiler": "clang-cl",
+      "config": "Release",
+      "build_system": "CMake",
+      "vcpkg_triplet": "x64-windows-meshlib",
+      "runner": ["windows-2025"]
     }
   ]
 }

@@ -51,6 +51,13 @@
       "vcpkg_triplet": "x64-windows-meshlib",
       "runner": ["windows-2025"],
       "cuda_version": "13.2.0"
+    },
+    {
+      "cxx_compiler": "clang-cl",
+      "config": "Release",
+      "build_system": "CMake",
+      "vcpkg_triplet": "x64-windows-meshlib",
+      "runner": ["windows-2025"]
     }
   ]
 }

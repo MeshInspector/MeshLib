@@ -1745,7 +1745,7 @@ FaceBitSet smoothSelection( Mesh& mesh, const FaceBitSet& region, float expandOf
 
     const auto origMesh = mesh;
 
-    const auto meshContours = convertSurfacePathsToMeshContours( mesh, isolines );
+    const auto meshContours = surfacePathsToMeshContours( mesh, isolines );
     CutMeshParameters cutMeshParams;
     cutMeshParams.forceFillMode = CutMeshParameters::ForceFill::All;
     FaceMap new2OldMap;

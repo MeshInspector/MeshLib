@@ -348,6 +348,8 @@ private:
     // make base mesh only containing input contours as edge loops
     void initMeshByContours_( const std::vector<int>& contourSizes );
     void initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops& loops );
+    // two different loop edges join the same two vertices: coincident segments the sweep cannot order, so the run fails
+    bool multipleEdge_{ false };
     // merge same points on base mesh
     void mergeSamePoints_();
     void mergeSinglePare_( VertId unique, VertId same );
@@ -543,7 +545,8 @@ SweepLineQueue::SweepLineQueue( Cache& cache, const MeshTopology& inTp, SweepLin
 {
     resetCache_();
     initMeshByLoops_( inTp, holes );
-    setupStartVertices_();
+    if ( !multipleEdge_ )
+        setupStartVertices_();
 }
 
 void SweepLineQueue::resetCache_()
@@ -584,6 +587,8 @@ MeshTopology* SweepLineQueue::runTopology( IntersectionsMap* interMap )
 
 bool SweepLineQueue::findIntersections()
 {
+    if ( multipleEdge_ )
+        return false;
     stage_ = Stage::Intersections;
     events_.clear();
     events_.reserve( tp_.numValidVerts() * 2 );
@@ -1315,6 +1320,18 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
                 prevFreshPE = newPE.sym();
                 prevInUE = inE.undirected();
             }
+            if ( destNextP )
+            {
+                // inE is not mapped yet, so a patch edge already joining these vertices copies another input edge
+                for ( EdgeId pe : orgRing( tp_, destNextP ) )
+                {
+                    if ( tp_.dest( pe ) == orgP )
+                    {
+                        multipleEdge_ = true;
+                        return;
+                    }
+                }
+            }
             if ( orgNextP )
             {
                 assert( destP );
@@ -1334,7 +1351,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
         const auto& loop = loops[loopId];
         if ( loop.size() < 3 )
             continue;
-        for ( int lId = 0; lId < loop.size(); ++lId )
+        for ( int lId = 0; lId < loop.size() && !multipleEdge_; ++lId )
             addNewEdge( loop[lId], loopId, lId );
     }
 

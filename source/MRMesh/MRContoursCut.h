@@ -137,8 +137,9 @@ struct CutByProjectionSettings
   * \param offset amount of offset form given point, note that absolute value is used and isoline in both direction returned
   * \param searchSettings settings for search geodesic path
   */
+/// \sa offsetSurfaceLine to get the same contours as plain points
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+MRMESH_API Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
     float offset, SearchPathSettings searchSettings = {} );
 
 /** \ingroup BooleanGroup
@@ -148,8 +149,24 @@ MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshCont
   * \param offsetAtPoint functor that returns amount of offset form arg point, note that absolute value is used and isoline in both direction returned
   * \param searchSettings settings for search geodesic path
   */
+/// \sa offsetSurfaceLine to get the same contours as plain points
 [[nodiscard]]
-MRMESH_API Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
-    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {});
+MRMESH_API Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {} );
+
+// the old names stay in the bindings, since scripts call them
+[[deprecated( "use offsetSurfaceLineToMeshContours" )]] [[nodiscard]]
+inline Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    float offset, SearchPathSettings searchSettings = {} )
+{
+    return offsetSurfaceLineToMeshContours( mesh, surfaceLine, offset, searchSettings );
+}
+
+[[deprecated( "use offsetSurfaceLineToMeshContours" )]] [[nodiscard]]
+inline Expected<OneMeshContours> convertMeshTriPointsSurfaceOffsetToMeshContours( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine,
+    const std::function<float(int)>& offsetAtPoint, SearchPathSettings searchSettings = {} )
+{
+    return offsetSurfaceLineToMeshContours( mesh, surfaceLine, offsetAtPoint, searchSettings );
+}
 
 } //namespace MR

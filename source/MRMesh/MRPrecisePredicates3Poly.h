@@ -103,6 +103,14 @@ MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::in
 /// the largest degree that no term exceeds: a polynomial with it keeps all its terms
 constexpr std::int64_t cMaxPolyDAll = std::numeric_limits<std::int64_t>::max();
 
+/// the largest degrees of the polynomial terms that segmentIntersectionOrder and segmentIntersectionTriPlaneOrder consider first, found
+/// experimentally (the leading term of nom, or the leading term of at least one of two orient3d-polynomials for the segment's ends)
+/// in the tests and in a random sweep of degenerate inputs; the terms of higher degrees are not stored to save computation time,
+/// and if they are not enough to decide, the predicates repeat the computation with all terms (cMaxPolyDAll);
+/// the tests count the inputs above them, so they live here rather than in MRPrecisePredicates3.cpp
+constexpr std::int64_t cMaxPolyDTriTri   = 15'943'959; // segmentIntersectionOrder
+constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTriPlaneOrder: it reaches the polynomial path with all three largest ids in the plane
+
 /// the points of a predicate with the degrees of their perturbation, which moves them in stages: at stage s = 1, ..., numStages()
 /// only the points with the s smallest ids are perturbed (orient3dPoly leaves the others unperturbed); a polynomial of the predicate
 /// that is not zero at stage s already has the leading term of the full one, since every term with a point of a later stage has

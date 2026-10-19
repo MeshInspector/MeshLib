@@ -33,7 +33,7 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
         mtps.push_back( mesh.projectPoint( p ).mtp );
     mtps.push_back( mtps.front() );
 
-    auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
+    auto contour = surfaceLineToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );
     EXPECT_TRUE( contour->closed );
     for ( const auto& inter : contour->intersections )
@@ -50,7 +50,7 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
         mtps.push_back( mesh.projectPoint( p ).mtp );
     mtps.push_back( mtps.front() );
     std::vector<int> pivots;
-    contour = convertMeshTriPointsToMeshContour( mesh, mtps, SearchPathSettings{}, &pivots );
+    contour = surfaceLineToMeshContour( mesh, mtps, SearchPathSettings{}, &pivots );
     ASSERT_TRUE( contour.has_value() );
     ASSERT_EQ( pivots.size(), mtps.size() );
     EXPECT_EQ( pivots.front(), 0 );
@@ -130,7 +130,7 @@ TEST( MRMesh, ClosedContourAlongBoundaryEdge )
         mtps.push_back( mesh.projectPoint( p ).mtp );
     mtps.push_back( mtps.front() );
 
-    auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
+    auto contour = surfaceLineToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );
     EXPECT_GE( contour->intersections.size(), 4u );
     for ( const auto& inter : contour->intersections )
@@ -172,7 +172,7 @@ TEST( MRMesh, CutMeshContourTurnsBackOnBoundary )
     const MeshTriPoint nearV( MeshEdgePoint( wv, 0.9f ) );
     const MeshTriPoint inside = findProjection( Vector3f( 1.3f, 1.6f, 0.0f ), mesh ).mtp;
 
-    auto contour = convertMeshTriPointsToMeshContour( mesh, { mtpW, mtpV, nearV, inside, mtpW } );
+    auto contour = surfaceLineToMeshContour( mesh, { mtpW, mtpV, nearV, inside, mtpW } );
     ASSERT_TRUE( contour.has_value() );
     ASSERT_TRUE( contour->closed );
     for ( const auto& inter : contour->intersections )
@@ -460,13 +460,13 @@ TEST( MRMesh, SurfaceOffsetWithInvalidTrailingVerts )
         mtps.push_back( mesh.projectPoint( p ).mtp );
     mtps.push_back( mtps.front() );
 
-    auto expected = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.3f );
+    auto expected = offsetSurfaceLineToMeshContours( mesh, mtps, 0.3f );
     ASSERT_TRUE( expected.has_value() );
     ASSERT_FALSE( expected->empty() );
 
     mesh.topology.vertResize( mesh.topology.vertSize() + 3 );
     mesh.points.resize( mesh.topology.vertSize() );
-    auto res = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.3f );
+    auto res = offsetSurfaceLineToMeshContours( mesh, mtps, 0.3f );
     ASSERT_TRUE( res.has_value() );
     ASSERT_EQ( res->size(), expected->size() );
     for ( size_t i = 0; i < res->size(); ++i )

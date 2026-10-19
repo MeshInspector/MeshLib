@@ -301,7 +301,7 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
             bool lone = true;
             auto cont = noBowtiesMtps[i];
             cont.push_back( cont.front() );
-            auto contourRes = convertMeshTriPointsToMeshContour( result_, cont,
+            auto contourRes = surfaceLineToMeshContour( result_, cont,
                 [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int startInd, int endInd )->Expected<SurfacePath>
             {
                 auto initSMtpIndex = res.filtBowTiesMap[i][startInd];

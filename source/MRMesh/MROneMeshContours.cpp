@@ -698,7 +698,7 @@ Contours3f extractMeshContours( const OneMeshContours& meshContours )
     return res;
 }
 
-Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
+Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     MeshTriPointsConnector connectorFn /*= {}*/, std::vector<int>* pivotIndices /*= nullptr */ )
 {
     MR_TIMER;
@@ -793,7 +793,7 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
         auto sp = connectorFn( meshTriPoints[i], meshTriPoints[( i + 1 ) % meshTriPoints.size()], firstIndex, secondIndex );
         if ( !sp.has_value() )
             return unexpected( sp.error() );
-        auto partContours = convertSurfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
+        auto partContours = surfacePathsToMeshContours( mesh, { std::move( sp.value() ) } );
         assert( partContours.size() == 1 );
         surfacePaths[i] = partContours[0];
         if ( surfacePaths[i].intersections.size() == 1 )
@@ -967,7 +967,7 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
     return res;
 }
 
-Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
+Expected<OneMeshContour> surfaceLineToMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
 {
     MeshTriPointsConnector conFn = [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int, int )->Expected<SurfacePath>
@@ -977,18 +977,18 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
             return unexpected( toString( res.error() ) );
         return *res;
     };
-    return convertMeshTriPointsToMeshContour( mesh, meshTriPointsOrg, conFn, pivotIndices );
+    return surfaceLineToMeshContour( mesh, meshTriPointsOrg, conFn, pivotIndices );
 }
 
-Expected<OneMeshContour> convertMeshTriPointsToClosedContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
+Expected<OneMeshContour> surfaceLineToClosedMeshContour( const Mesh& mesh, const std::vector<MeshTriPoint>& meshTriPointsOrg,
     SearchPathSettings searchSettings, std::vector<int>* pivotIndices )
 {
     auto conts = meshTriPointsOrg;
     conts.push_back( meshTriPointsOrg.front() );
-    return convertMeshTriPointsToMeshContour( mesh, conts, searchSettings, pivotIndices );
+    return surfaceLineToMeshContour( mesh, conts, searchSettings, pivotIndices );
 }
 
-OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, const MeshTriPoint& start, const MR::SurfacePath& surfacePath, const MeshTriPoint& end )
+OneMeshContour surfacePathWithEndsToMeshContour( const MR::Mesh& mesh, const MeshTriPoint& start, const MR::SurfacePath& surfacePath, const MeshTriPoint& end )
 {
     if ( surfacePath.empty() )
     {
@@ -1026,11 +1026,11 @@ OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, co
             updatedPath[i + shift] = surfacePath[i];
         if ( endMep )
             updatedPath.back() = endMep;
-        res = convertSurfacePathsToMeshContours( mesh, { updatedPath } ).front();
+        res = surfacePathsToMeshContours( mesh, { updatedPath } ).front();
     }
     else
     {
-        res = convertSurfacePathsToMeshContours( mesh, { surfacePath } ).front();
+        res = surfacePathsToMeshContours( mesh, { surfacePath } ).front();
     }
     if ( !startMep )
         res.intersections.insert( res.intersections.begin(), intersectionFromMeshTriPoint( mesh, start ) );
@@ -1044,7 +1044,7 @@ OneMeshContour convertSurfacePathWithEndsToMeshContour( const MR::Mesh& mesh, co
     return res;
 }
 
-OneMeshContours convertSurfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths )
+OneMeshContours surfacePathsToMeshContours( const Mesh& mesh, const std::vector<SurfacePath>& surfacePaths )
 {
     MR_TIMER;
     OneMeshContours res;

@@ -8,6 +8,8 @@
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MRMeshFixer.h>
 #include <MRMesh/MR2DContoursTriangulation.h>
+#include <MRMesh/MRContoursCut.h>
+#include <MRMesh/MRMeshBuilder.h>
 #include <gtest/gtest.h>
 #include <limits>
 
@@ -269,6 +271,73 @@ TEST( MRMesh, triangulateDisjointContoursPinchedLoop )
     EXPECT_FALSE( folded );
     EXPECT_NEAR( patchArea, mesh.area(), 1e-5 );
     EXPECT_EQ( patch->topology.numValidFaces(), 2 );
+}
+
+// a closed contour running along the mesh boundary: its cut leaves holes passing some edges in both directions
+TEST( MRMesh, cutMeshAlongBoundaryFillsSpikedHoles )
+{
+    Mesh mesh;
+    mesh.points = std::vector<Vector3f>
+    {
+        { 3.09503722f, -0.014356399f, 0.0114405388f },
+        { 3.43319631f, 0.0118827643f, -0.0905694813f },
+        { 3.77109528f, 0.0146662584f, -0.181916535f },
+        { 4.14991045f, -0.00040723558f, -0.251846105f },
+        { 4.48197079f, 0.0070256046f, -0.292125165f },
+        { 3.11746669f, 0.330836475f, 0.0107670771f },
+        { 3.44530392f, 0.333118767f, -0.0852379948f },
+        { 3.78175545f, 0.361288875f, -0.171207786f },
+        { 4.15785265f, 0.365903229f, -0.23702085f },
+        { 4.50241852f, 0.327096164f, -0.274928868f },
+        { 4.82123899f, 0.34175998f, -0.280468822f },
+        { 3.10280824f, 0.675323844f, 0.00882598013f },
+        { 3.46457219f, 0.676809847f, -0.0698712245f },
+        { 3.81299829f, 0.670834064f, -0.140342325f },
+        { 4.14980745f, 0.703446329f, -0.194290563f },
+        { 4.49644375f, 0.686310351f, -0.225364491f },
+    };
+    Triangulation t =
+    {
+        { 0_v, 1_v, 6_v },
+        { 0_v, 6_v, 5_v },
+        { 1_v, 2_v, 6_v },
+        { 2_v, 7_v, 6_v },
+        { 2_v, 3_v, 8_v },
+        { 2_v, 8_v, 7_v },
+        { 3_v, 4_v, 8_v },
+        { 4_v, 9_v, 8_v },
+        { 4_v, 10_v, 9_v },
+        { 5_v, 6_v, 11_v },
+        { 6_v, 12_v, 11_v },
+        { 6_v, 7_v, 13_v },
+        { 6_v, 13_v, 12_v },
+        { 7_v, 8_v, 13_v },
+        { 8_v, 14_v, 13_v },
+        { 8_v, 9_v, 15_v },
+        { 8_v, 15_v, 14_v },
+        { 9_v, 10_v, 15_v },
+    };
+    mesh.topology = MeshBuilder::fromTriangles( t );
+
+    std::vector<MeshTriPoint> mtps;
+    for ( auto p : {
+        Vector3f( 3.53456426f, 0.0177574754f, -0.117838085f ),
+        Vector3f( 3.58754992f, 0.0137253897f, -0.13228184f ),
+        Vector3f( 3.79290915f, 0.0137982592f, -0.185943395f ),
+        Vector3f( 3.71790814f, 0.0142281214f, -0.167538032f ),
+        Vector3f( 3.74352932f, 0.0159207396f, -0.174424738f ),
+        Vector3f( 3.76883101f, 0.0146476077f, -0.181304455f ),
+        Vector3f( 3.79533172f, 0.0137018608f, -0.186390594f ),
+        Vector3f( 4.15900469f, 0.154283509f, -0.246287376f ),
+    } )
+        mtps.push_back( mesh.projectPoint( p ).mtp );
+    mtps.push_back( mtps.front() );
+    auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
+    ASSERT_TRUE( contour.has_value() );
+
+    cutMesh( mesh, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
 }
 
 }

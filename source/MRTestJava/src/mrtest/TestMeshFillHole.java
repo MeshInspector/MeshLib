@@ -2,18 +2,18 @@ package mrtest;
 
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.FaceBitSet;
-import meshlib.mr.FaceId;
-import meshlib.mr.FillHoleNicelySettings;
-import meshlib.mr.FillHoleParams;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.Triangulation;
-import meshlib.mr.Vector3f;
-import meshlib.mr.VertCoords;
-import meshlib.mr.VertId;
-import meshlib.mr.std_vector_MR_EdgeId;
-import meshlib.mr.std_vector_std_vector_MR_EdgeId;
+import meshlib.FaceBitSet;
+import meshlib.FaceId;
+import meshlib.FillHoleNicelySettings;
+import meshlib.FillHoleParams;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.Triangulation;
+import meshlib.Vector3f;
+import meshlib.VertCoords;
+import meshlib.VertId;
+import meshlib.std_vector_MR_EdgeId;
+import meshlib.std_vector_std_vector_MR_EdgeId;
 
 public final class TestMeshFillHole
 {

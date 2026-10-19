@@ -3,13 +3,13 @@ package mrtest;
 import static mrtest.Common.checkApprox;
 import static mrtest.Common.checkEq;
 
-import meshlib.mr.AffineXf3f;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshProjectionParameters;
-import meshlib.mr.Vector3f;
-import meshlib.mr.VertId;
-import meshlib.mr.VertScalars;
+import meshlib.AffineXf3f;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.MeshProjectionParameters;
+import meshlib.Vector3f;
+import meshlib.VertId;
+import meshlib.VertScalars;
 
 public final class TestPointsToMeshProjector
 {

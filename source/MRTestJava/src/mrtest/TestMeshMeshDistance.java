@@ -2,12 +2,12 @@ package mrtest;
 
 import static mrtest.Common.check;
 
-import meshlib.mr.AffineXf3f;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.MeshMeshDistanceResult;
-import meshlib.mr.MeshPart;
-import meshlib.mr.Vector3f;
+import meshlib.AffineXf3f;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.MeshMeshDistanceResult;
+import meshlib.MeshPart;
+import meshlib.Vector3f;
 
 public final class TestMeshMeshDistance
 {

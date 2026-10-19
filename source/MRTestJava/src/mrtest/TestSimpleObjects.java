@@ -2,11 +2,11 @@ package mrtest;
 
 import static mrtest.Common.checkApprox;
 
-import meshlib.mr.FaceBitSet;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.SphereParams;
-import meshlib.mr.Vector3f;
+import meshlib.FaceBitSet;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.SphereParams;
+import meshlib.Vector3f;
 
 public final class TestSimpleObjects
 {

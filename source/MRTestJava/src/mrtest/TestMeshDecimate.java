@@ -3,11 +3,11 @@ package mrtest;
 import static mrtest.Common.PI_F;
 import static mrtest.Common.check;
 
-import meshlib.mr.DecimateResult;
-import meshlib.mr.DecimateSettings;
-import meshlib.mr.FaceBitSet;
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
+import meshlib.DecimateResult;
+import meshlib.DecimateSettings;
+import meshlib.FaceBitSet;
+import meshlib.Functions;
+import meshlib.Mesh;
 
 public final class TestMeshDecimate
 {

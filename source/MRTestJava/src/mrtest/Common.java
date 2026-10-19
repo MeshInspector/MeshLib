@@ -1,8 +1,8 @@
 package mrtest;
 
-import meshlib.mr.Functions;
-import meshlib.mr.Mesh;
-import meshlib.mr.Vector3f;
+import meshlib.Functions;
+import meshlib.Mesh;
+import meshlib.Vector3f;
 
 final class Common
 {

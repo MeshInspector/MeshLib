@@ -366,4 +366,16 @@ TEST( MRMesh, DecimateObjectMeshDataShortAttributes )
     }
 }
 
+TEST( MRMesh, RemeshTargetTriCountBeyondInt )
+{
+    // area / targetTriArea ~ 2e13 does not fit in int: nothing to decimate, and no overflow
+    Mesh sphere = makeUVSphere( 1000.f, 8, 8 );
+    const auto numFaces = sphere.topology.numValidFaces();
+    RemeshSettings rs;
+    rs.maxEdgeSplits = 100;
+    EXPECT_TRUE( remesh( sphere, rs ) );
+    EXPECT_TRUE( sphere.topology.checkValidity() );
+    EXPECT_GT( sphere.topology.numValidFaces(), numFaces );
+}
+
 } //namespace MR

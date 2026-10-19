@@ -346,11 +346,11 @@ jobs:
                   cxx-compiler: /usr/bin/g++-16
                   c-compiler: /usr/bin/gcc-16
                   upload_release: "OFF"
-            # Debug and Clang jobs run in full-ci only, and on x64 only
-            - if: ${{ env.full_config_build != 'true' }}
-              exclude:
+            # TEMPORARY (UBSan sweep, not to be merged): only ubuntu26 x64 Clang Release
+            - exclude:
                 - config: Debug
-                - compiler: Clang
+                - compiler: GCC
+                - os: ubuntu24
             - exclude:
                 - arch: arm64
                   config: Debug

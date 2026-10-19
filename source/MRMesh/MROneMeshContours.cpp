@@ -917,7 +917,7 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
             if ( pivotIndices && mtpPushed )
             {
                 int currentIndex = int( res.intersections.size() ) - 1;
-                const int prevPivotIndex = realPivotIndex > 0 ? realPivotIndex - 1 : ( closed ? realPivots.back() : -1 );
+                const int prevPivotIndex = ( closed || i > 0 ) ? realPivots[( i + numMtps - 1 ) % numMtps] : -1;
                 if ( prevPivotIndex >= 0 && ( *pivotIndices )[prevPivotIndex] == currentIndex )
                     ( *pivotIndices )[prevPivotIndex] = -1;
                 ( *pivotIndices )[realPivotIndex] = currentIndex;

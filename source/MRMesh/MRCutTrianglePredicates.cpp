@@ -393,65 +393,11 @@ bool sweepForward( const Vector2i & dir )
     return dir.x != 0 ? dir.x > 0 : dir.y > 0;
 }
 
-/// a product of two polynomials, negated if neg, as a term of a sum
-template <typename A, typename B>
-struct SignedProduct
-{
-    const A * a = nullptr;
-    const B * b = nullptr;
-    bool neg = false;
-};
-
-/// the lowest-degree term of the sum of the products, found as in lowestTermOfProductsDiff: the terms of every product
-/// in the order of increasing degree, and only till the first degree with a coefficient that is not zero
-template <typename A, typename B>
+template <typename TA, typename TB, typename A, typename B>
 LeadTerm leadOfSumOfProducts( const SignedProduct<A, B> * products, int num )
 {
-    struct RowTerm
-    {
-        std::int64_t deg;
-        int p, i, j; // the product and the indices of the terms in its factors
-    };
-    auto greater = [] ( const RowTerm & x, const RowTerm & y ) { return x.deg > y.deg; };
-    std::vector<RowTerm> heap;
-    for ( int p = 0; p < num; ++p )
-    {
-        const auto & a = products[p].a->get();
-        const auto & b = products[p].b->get();
-        if ( !b.empty() )
-            for ( int i = 0; i < int( a.size() ); ++i )
-                heap.push_back( { a[i].first + b[0].first, p, i, 0 } );
-    }
-    std::make_heap( heap.begin(), heap.end(), greater );
-    while ( !heap.empty() )
-    {
-        const auto deg = heap.front().deg;
-        decltype( products->a->get()[0].second * products->b->get()[0].second ) coeff;
-        do
-        {
-            std::pop_heap( heap.begin(), heap.end(), greater );
-            auto r = heap.back();
-            heap.pop_back();
-            const auto & pr = products[r.p];
-            const auto & a = pr.a->get();
-            const auto & b = pr.b->get();
-            const auto prod = a[r.i].second * b[r.j].second;
-            if ( pr.neg )
-                coeff -= prod;
-            else
-                coeff += prod;
-            if ( ++r.j < int( b.size() ) )
-            {
-                r.deg = a[r.i].first + b[r.j].first;
-                heap.push_back( r );
-                std::push_heap( heap.begin(), heap.end(), greater );
-            }
-        }
-        while ( !heap.empty() && heap.front().deg == deg );
-        if ( const int sign = coeff.sign() )
-            return { deg, sign };
-    }
-    return {};
+    const auto [deg, sign] = lowestTermOfSumOfProducts<TA, TB>( products, num );
+    return { deg, sign };
 }
 
 /// the terms of the coordinates of a point without and with the vertex perturbed last, of degrees below and from its place
@@ -506,8 +452,8 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
             using P = SignedProduct<SosPoly256, SosPoly256>;
             const P px[4] = { { &hb.nx, &a->d, false }, { &lb.nx, &ha.d, false }, { &ha.nx, &b->d, true }, { &la.nx, &hb.d, true } };
             const P py[4] = { { &hb.ny, &a->d, false }, { &lb.ny, &ha.d, false }, { &ha.ny, &b->d, true }, { &la.ny, &hb.d, true } };
-            x = leadOfSumOfProducts( px, 4 );
-            y = leadOfSumOfProducts( py, 4 );
+            x = leadOfSumOfProducts<FastInt256, FastInt256>( px, 4 );
+            y = leadOfSumOfProducts<FastInt256, FastInt256>( py, 4 );
         }
         // a difference that is still zero has a leading term of a later stage, so of a larger degree
         if ( x.sign != 0 || y.sign != 0 )
@@ -571,7 +517,7 @@ int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const Preci
             addCofactors( hb, la, *c, true );
             addCofactors( hc, la, lb, false );
         }
-        const auto lead = leadOfSumOfProducts( products.data(), num );
+        const auto lead = leadOfSumOfProducts<FastInt256, FastInt512>( products.data(), num );
         if ( lead.sign != 0 )
             return lead.sign;
         // otherwise the vertices perturbed so far keep the points on one line

@@ -2,6 +2,7 @@
 #include <MRMesh/MRPrecisePredicates3.h>
 #include <MRMesh/MRInSphere.h>
 #include <MRMesh/MRSparsePolynomial.h>
+#include <MRMesh/MRFastInt128.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -1152,6 +1153,27 @@ TEST( MRMesh, signOfProductsDiff )
     EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, one, P{}, one ), 1 );
     EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, one, a, one ), -1 );
     EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, P{}, P{}, P{} ), 0 );
+}
+
+TEST( MRMesh, lowestTermOfSumOfProducts )
+{
+    using P = SparsePolynomial<std::int64_t, int, 1000>;
+    using S = SignedProduct<P, P>;
+    const P one( std::vector<P::Term>{ { 0, 1 } } );
+    const P a( 1, 1, 1, 2, 1 ); // 1 + x + x^2
+    const P b( 1, 1, 2, 2, 3 ); // 1 + 2x + 3x^2 = the first three terms of a*a
+    const P c( 0, 3, 2 ); // 2x^3, the next term of a*a
+    using T = std::pair<int, int>;
+
+    const S s1[3] = { { &a, &a, false }, { &b, &one, true }, { &c, &one, true } }; // x^4
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 3 ), T( 4, 1 ) );
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( s1, 3 ), T( 4, 1 ) ); // with the coefficients converted
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 2 ), T( 3, 1 ) ); // 2x^3 + x^4
+    const S s2[3] = { { &a, &a, false }, { &b, &one, true }, { &a, &c, true } }; // -x^4 - 2x^5
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s2, 3 ), T( 4, -1 ) );
+    const S s3[2] = { { &a, &one, false }, { &one, &a, true } }; // zero
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s3, 2 ).second, 0 );
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s3, 0 ).second, 0 );
 }
 
 TEST( MRMesh, segmentIntersectionOrder3Scale )

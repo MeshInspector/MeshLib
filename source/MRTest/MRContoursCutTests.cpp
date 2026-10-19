@@ -256,8 +256,8 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
         {
             SCOPED_TRACE( std::string( mtpC.e == cOnCB.e ? "C on C-B" : "C on another edge" ) + ( forward ? ", forward" : ", backward" ) );
             auto contour = forward ?
-                convertMeshTriPointsToMeshContour( mesh, { before, mtpA, mtpC, onCB, after, before } ) :
-                convertMeshTriPointsToMeshContour( mesh, { after, onCB, mtpC, mtpA, before, after } );
+                surfaceLineToMeshContour( mesh, { before, mtpA, mtpC, onCB, after, before } ) :
+                surfaceLineToMeshContour( mesh, { after, onCB, mtpC, mtpA, before, after } );
             ASSERT_TRUE( contour.has_value() );
             ASSERT_TRUE( contour->closed );
             // cutMesh relies on it

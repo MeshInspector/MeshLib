@@ -36,7 +36,7 @@ cargo add meshlib@<version>          # Rust, the exact version from crates.io
 
 For C++ and C, see the [Installation Guide](https://meshlib.io/documentation/InstallationGuide.html);
 for Rust, the [Rust setup guide](https://github.com/MeshInspector/MeshLib/blob/master/doxygen/general_pages/RustSetupGuide.md);
-for Java, `com.meshinspector:meshlib` with a natives jar for your platform from Maven Central, see the
+for Java, `com.meshinspector:meshlib` from Maven Central, see the
 [Java setup guide](https://github.com/MeshInspector/MeshLib/blob/master/doxygen/general_pages/JavaSetupGuide.md).
 
 ## 60 seconds to your first result

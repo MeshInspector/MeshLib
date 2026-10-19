@@ -217,16 +217,9 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
     ASSERT_TRUE( topology.isBdEdge( cb ) );
     ASSERT_TRUE( topology.isBdEdge( topology.findEdge( c, a ) ) );
     const MeshTriPoint mtpA = mesh.toTriPoint( a );
-    const MeshTriPoint mtpC = mesh.toTriPoint( c );
-    // otherwise C and the next point are taken as two points on the same edge, and C is dropped
-    ASSERT_NE( mtpC.onEdge( topology ).e.undirected(), cb.undirected() );
     const MeshTriPoint onCB( MeshEdgePoint( cb, 0.5f ) );
     const MeshTriPoint before = findProjection( Vector3f( 1.6f, 0.3f, 0.0f ), mesh ).mtp;
     const MeshTriPoint after = findProjection( Vector3f( 0.3f, 1.5f, 0.0f ), mesh ).mtp;
-
-    auto contour = convertMeshTriPointsToMeshContour( mesh, { before, mtpA, mtpC, onCB, after, before } );
-    ASSERT_TRUE( contour.has_value() );
-    ASSERT_TRUE( contour->closed );
     auto facesOf = [&] ( const OneMeshIntersection& inter )
     {
         std::vector<FaceId> res;
@@ -246,20 +239,44 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
             res.push_back( std::get<FaceId>( inter.primitiveId ) );
         return res;
     };
-    // cutMesh relies on it
-    for ( size_t i = 0; i + 1 < contour->intersections.size(); ++i )
-    {
-        const auto fs = facesOf( contour->intersections[i] ), fn = facesOf( contour->intersections[i + 1] );
-        EXPECT_TRUE( std::any_of( fs.begin(), fs.end(), [&] ( FaceId f ) { return std::find( fn.begin(), fn.end(), f ) != fn.end(); } ) )
-            << "intersections " << i << " and " << i + 1 << " have no common face";
-    }
 
-    auto res = cutMesh( mesh, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
-    EXPECT_TRUE( mesh.topology.checkValidity() );
-    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
-    EXPECT_EQ( res.resultCut.size(), 1 );
-    // an edge across the hole at C would split the boundary
-    EXPECT_EQ( mesh.topology.findNumHoles(), 1 );
+    const MeshTriPoint cOnOtherEdge = mesh.toTriPoint( c );
+    ASSERT_NE( cOnOtherEdge.onEdge( topology ).e.undirected(), cb.undirected() );
+    // C stored so that onEdge() gives C-B: the cleanup of duplicates drops C as a second point on the edge of the next point,
+    // and the path from A to the point on C-B goes inside the mesh
+    MeshTriPoint cOnCB;
+    for ( auto e : orgRing( topology, c ) )
+        if ( MeshTriPoint( e, TriPointf( 0, 0 ) ).onEdge( topology ).e.undirected() == cb.undirected() )
+            cOnCB = MeshTriPoint( e, TriPointf( 0, 0 ) );
+    ASSERT_EQ( cOnCB.inVertex( topology ), c );
+    for ( const auto& mtpC : { cOnOtherEdge, cOnCB } )
+    {
+        // forward: vertex A, C, the point on C-B (the vertex-edge test dropped C); backward: the same points in reverse order
+        for ( bool forward : { true, false } )
+        {
+            SCOPED_TRACE( std::string( mtpC.e == cOnCB.e ? "C on C-B" : "C on another edge" ) + ( forward ? ", forward" : ", backward" ) );
+            auto contour = forward ?
+                convertMeshTriPointsToMeshContour( mesh, { before, mtpA, mtpC, onCB, after, before } ) :
+                convertMeshTriPointsToMeshContour( mesh, { after, onCB, mtpC, mtpA, before, after } );
+            ASSERT_TRUE( contour.has_value() );
+            ASSERT_TRUE( contour->closed );
+            // cutMesh relies on it
+            for ( size_t i = 0; i + 1 < contour->intersections.size(); ++i )
+            {
+                const auto fs = facesOf( contour->intersections[i] ), fn = facesOf( contour->intersections[i + 1] );
+                EXPECT_TRUE( std::any_of( fs.begin(), fs.end(), [&] ( FaceId f ) { return std::find( fn.begin(), fn.end(), f ) != fn.end(); } ) )
+                    << "intersections " << i << " and " << i + 1 << " have no common face";
+            }
+
+            auto cut = mesh;
+            auto res = cutMesh( cut, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+            EXPECT_TRUE( cut.topology.checkValidity() );
+            EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+            EXPECT_EQ( res.resultCut.size(), 1 );
+            // an edge across the hole at C would split the boundary
+            EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+        }
+    }
 }
 
 TEST( MRMesh, MeshCollidePrecise )

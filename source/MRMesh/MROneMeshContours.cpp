@@ -271,7 +271,9 @@ std::optional<OneMeshIntersection> centralIntersection( const Mesh& mesh, const 
         if ( std::holds_alternative<VertId>( next.primitiveId ) )
         {
             auto nVId = std::get<VertId>( next.primitiveId );
-            if ( topology.dest( topology.next( pEId ) ) == nVId && isFaceApex( topology, nVId, pEId ) )
+            // `next` is the third vertex of the left face of `prev` edge; if there is no left face (a boundary edge), only an ear tip
+            // still has `next` as the third vertex of its right face too
+            if ( topology.dest( topology.next( pEId ) ) == nVId && ( topology.left( pEId ) || topology.dest( topology.prev( pEId ) ) == nVId ) )
                 return {};
             if ( topology.dest( pEId ) == nVId || topology.org( pEId ) == nVId || ( topology.dest( topology.prev( pEId ) ) == nVId && topology.right( pEId ) ) )
             {

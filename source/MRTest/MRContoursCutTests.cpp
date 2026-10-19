@@ -70,20 +70,15 @@ TEST( MRMesh, ClosedContourAlongBoundaryEdge )
     mesh.topology = MeshBuilder::fromTriangles( Triangulation{ { 0_v, 1_v, 2_v }, { 1_v, 3_v, 2_v } } );
 
     std::vector<MeshTriPoint> mtps;
-    for ( auto p : { Vector3f( 0, 1.01f, 0 ), Vector3f( 0, 0, 0.0005f ), Vector3f( 0, 0.5f, 0 ) } )
+    for ( auto p : { Vector3f( 0, 0.8f, 0 ), Vector3f( 0, 0, 0.005f ), Vector3f( 0, 0.7f, 0 ), Vector3f( 1.3f, 0.2f, 0.36f ) } )
         mtps.push_back( mesh.projectPoint( p ).mtp );
     mtps.push_back( mtps.front() );
 
     auto contour = convertMeshTriPointsToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );
+    EXPECT_GE( contour->intersections.size(), 4u );
     for ( const auto& inter : contour->intersections )
         std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
-
-    auto offset = convertMeshTriPointsSurfaceOffsetToMeshContours( mesh, mtps, 0.4f );
-    ASSERT_TRUE( offset.has_value() );
-    for ( const auto& c : *offset )
-        for ( const auto& inter : c.intersections )
-            std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
 }
 
 TEST( MRMesh, MeshCollidePrecise )

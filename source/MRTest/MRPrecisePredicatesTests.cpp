@@ -2,6 +2,8 @@
 #include <MRMesh/MRPrecisePredicates3.h>
 #include <MRMesh/MRInSphere.h>
 #include <MRMesh/MRSparsePolynomial.h>
+#include <MRMesh/MRFastInt128.h>
+#include <MRMesh/MRFastInt.h>
 #include <MRMesh/MRBox.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -1151,6 +1153,57 @@ TEST( MRMesh, signOfProductsDiff )
     EXPECT_EQ( signOfProductsDiff<std::int64_t>( a, one, P{}, one ), 1 );
     EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, one, a, one ), -1 );
     EXPECT_EQ( signOfProductsDiff<std::int64_t>( P{}, P{}, P{}, P{} ), 0 );
+}
+
+TEST( MRMesh, lowestTermOfSumOfProducts )
+{
+    using P = SparsePolynomial<std::int64_t, int, 1000>;
+    using S = SignedProduct<P, P>;
+    const P one( std::vector<P::Term>{ { 0, 1 } } );
+    const P a( 1, 1, 1, 2, 1 ); // 1 + x + x^2
+    const P b( 1, 1, 2, 2, 3 ); // 1 + 2x + 3x^2 = the first three terms of a*a
+    const P c( 0, 3, 2 ); // 2x^3, the next term of a*a
+    using T = std::pair<int, int>;
+
+    const S s1[3] = { { &a, &a, false }, { &b, &one, true }, { &c, &one, true } }; // x^4
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 3 ), T( 4, 1 ) );
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( s1, 3 ), T( 4, 1 ) ); // with the coefficients converted
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 2 ), T( 3, 1 ) ); // 2x^3 + x^4
+    const S s2[3] = { { &a, &a, false }, { &b, &one, true }, { &a, &c, true } }; // -x^4 - 2x^5
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s2, 3 ), T( 4, -1 ) );
+    const S s3[2] = { { &a, &one, false }, { &one, &a, true } }; // zero
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s3, 2 ).second, 0 );
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s3, 0 ).second, 0 );
+
+    // the products of two terms below degree `from` are skipped: they cancel one another here, so the answer stays
+    const P d( 1, 1, 1, 2, 2 ); // 1 + x + 2x^2
+    const S s4[2] = { { &a, &one, false }, { &one, &d, true } }; // -x^2
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s4, 2 ), T( 2, -1 ) );
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s4, 2, 2 ), T( 2, -1 ) );
+    EXPECT_EQ( lowestTermOfProductsDiff<std::int64_t>( a, one, one, d, 2 ), T( 2, -1 ) );
+    // they do not here, so only -c * one is left of s1
+    EXPECT_EQ( lowestTermOfSumOfProducts<std::int64_t>( s1, 3, 3 ), T( 3, -1 ) );
+
+    // factors with different coefficient types, multiplied in different types: the other branches of the multiplication
+    using Q = SparsePolynomial<FastInt128, int, 1000>;
+    const Q qOne( std::vector<Q::Term>{ { 0, FastInt128( 1 ) } } );
+    const Q qa( FastInt128( 1 ), 1, FastInt128( 1 ), 2, FastInt128( 1 ) );
+    const Q qb( FastInt128( 1 ), 1, FastInt128( 2 ), 2, FastInt128( 3 ) );
+    const Q qc( FastInt128( 0 ), 3, FastInt128( 2 ) );
+    const SignedProduct<P, Q> pq[3] = { { &a, &qa, false }, { &b, &qOne, true }, { &c, &qOne, true } }; // x^4 as s1
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( pq, 3 ), T( 4, 1 ) ); // only the first factors converted
+    const SignedProduct<Q, P> qp[3] = { { &qa, &a, false }, { &qb, &one, true }, { &qc, &one, true } };
+    EXPECT_EQ( lowestTermOfSumOfProducts<FastInt128>( qp, 3 ), T( 4, 1 ) ); // only the second factors converted
+    const SignedProduct<Q, Q> qq[3] = { { &qa, &qa, false }, { &qb, &qOne, true }, { &qc, &qOne, true } };
+    EXPECT_EQ( ( lowestTermOfSumOfProducts<Int128Mul256, FastInt128>( qq, 3 ) ), T( 4, 1 ) ); // the factors multiplied in different types
+    EXPECT_EQ( ( lowestTermOfSumOfProducts<FastInt128, Int128Mul256>( qq, 3 ) ), T( 4, 1 ) );
+
+    // `from` takes no part in deducing the type of degrees, so an int works with int64 degrees
+    using P64 = SparsePolynomial<std::int64_t, std::int64_t, 1000>;
+    const P64 one64( std::vector<P64::Term>{ { 0, 1 } } );
+    const P64 a64( 1, 1, 1, 2, 1 );
+    const P64 d64( 1, 1, 1, 2, 2 );
+    EXPECT_EQ( lowestTermOfProductsDiff<std::int64_t>( a64, one64, one64, d64, 2 ), ( std::pair<std::int64_t, int>( 2, -1 ) ) );
 }
 
 TEST( MRMesh, segmentIntersectionOrder3Scale )

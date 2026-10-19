@@ -2,6 +2,7 @@
 #include <MRMesh/MRMeshDecimate.h>
 #include <MRMesh/MRCylinder.h>
 #include <MRMesh/MRMakeSphereMesh.h>
+#include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBuffer.h>
 #include <MRMesh/MRMeshLoad.h>
@@ -376,6 +377,24 @@ TEST( MRMesh, RemeshTargetTriCountBeyondInt )
     EXPECT_TRUE( remesh( sphere, rs ) );
     EXPECT_TRUE( sphere.topology.checkValidity() );
     EXPECT_GT( sphere.topology.numValidFaces(), numFaces );
+}
+
+TEST( MRMesh, RemeshKeepsSharpEdges )
+{
+    // edge flips across the cube's edges used to be limited only by the absolute deviation 1, losing 1/3 of the volume
+    const Mesh cube = makeCube();
+    Mesh mesh = cube;
+    RemeshSettings rs;
+    rs.targetEdgeLen = 0.05f;
+    rs.maxAngleChangeAfterFlip = PI_F;
+    EXPECT_TRUE( remesh( mesh, rs ) );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_GT( mesh.topology.numValidFaces(), 1000 );
+    EXPECT_NEAR( mesh.volume(), 1.0, 0.01 );
+    float maxDist = 0;
+    for ( auto v : mesh.topology.getValidVerts() )
+        maxDist = std::max( maxDist, std::sqrt( findProjection( mesh.points[v], cube ).distSq ) );
+    EXPECT_LT( maxDist, rs.targetEdgeLen );
 }
 
 } //namespace MR

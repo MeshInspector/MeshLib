@@ -179,12 +179,7 @@ FaceId findSharedFaceImpl( const MeshTopology& topology, VertId vid, EdgeId eid,
         else if ( topology.dest( topology.prev( eid ) ) == mtpVertRep )
             return topology.right( eid );
         else if ( topology.org( eid ) == mtpVertRep || topology.dest( eid ) == mtpVertRep )
-        {
-            // mtp is an end of eid itself (the contour turns back in this vertex), so any face of eid is shared
-            if ( auto l = topology.left( eid ) )
-                return l;
-            return topology.right( eid );
-        }
+            return topology.left( eid ); // mtp is an end of eid itself (the contour turns back in this vertex), so any face of eid is shared
     }
     else
     {

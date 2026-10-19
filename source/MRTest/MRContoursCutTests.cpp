@@ -79,6 +79,11 @@ TEST( MRMesh, ClosedContourAlongBoundaryEdge )
     EXPECT_GE( contour->intersections.size(), 4u );
     for ( const auto& inter : contour->intersections )
         std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
+
+    auto res = cutMesh( mesh, { *contour } );
+    EXPECT_TRUE( mesh.topology.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( res.resultCut.size(), 1 );
 }
 
 // the contour goes along boundary edge W-V and turns back in V to a point on the same edge

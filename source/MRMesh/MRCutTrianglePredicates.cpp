@@ -1,13 +1,16 @@
 #include "MRCutTrianglePredicates.h"
 #include "MRFastInt.h"
 #include "MRInt64Mul128.h"
+#include "MRPrecisePredicates3Poly.h"
 #include "MRSparsePolynomial.h"
+#include "MRTriMath.h"
+#include "MRUnorientedTriangle.h"
 #include "MRVarBigInt.h"
 #include "MRphmap.h"
 #include <algorithm>
+#include <atomic>
 #include <bit>
 #include <cmath>
-#include <limits>
 #include <mutex>
 #include <optional>
 
@@ -46,30 +49,18 @@ std::optional<bool> approxCcw( const Vector2d & a, const Vector2d & b, const Vec
     return {};
 }
 
-/// the signed volume of tetrahedron abcd, positive iff orient3d( a, b, c, d ), computed as in MRPrecisePredicates3.cpp
-FastInt128 volume( const Vector3i & a, const Vector3i & b, const Vector3i & c, const Vector3i & d )
-{
-    const Vector3i64 x( a - d );
-    const Vector3i64 y( b - d );
-    const Vector3i64 z( c - d );
-    return Int64Mul128( x.x ) * Int64Mul128( y.y * z.z - y.z * z.y )
-         - Int64Mul128( x.y ) * Int64Mul128( y.x * z.z - y.z * z.x )
-         + Int64Mul128( x.z ) * Int64Mul128( y.x * z.y - y.y * z.x );
-}
-
 /// the normal of a triangle: every coordinate is below 2^30 by absolute value, as the range factor 0.99 of ConvertToIntVector
 /// ensures, so every coordinate difference is below 2^31, and every component of the normal is below 2 * 2^62 = 2^63
 Vector3i64 normalOf( const std::array<PreciseVertCoords, 3> & t )
 {
-    const Vector3i64 a( t[0].pt );
-    return cross( Vector3i64( t[1].pt ) - a, Vector3i64( t[2].pt ) - a );
+    return dirDblArea( Vector3i64( t[0].pt ), Vector3i64( t[1].pt ), Vector3i64( t[2].pt ) );
 }
 
-/// component k of cross( a, b ) for vectors with components below 2^63, as normals have: it is below 2 * 2^126 = 2^127
-FastInt128 crossComponent( const Vector3i64 & a, const Vector3i64 & b, int k )
+/// the direction of the line where the planes with normals a and b cross, with components below 2 * 2^126 = 2^127 for the components
+/// of the normals below 2^63
+Vector3<FastInt128> lineDirectionOf( const Vector3i64 & a, const Vector3i64 & b )
 {
-    const int i = ( k + 1 ) % 3, j = ( k + 2 ) % 3;
-    return Int64Mul128( a[i] ) * Int64Mul128( b[j] ) - Int64Mul128( a[j] ) * Int64Mul128( b[i] );
+    return cross( Vector3i64mul( a ), Vector3i64mul( b ) );
 }
 
 bool hasVert( const std::array<PreciseVertCoords, 3> & t, VertId v )
@@ -83,28 +74,22 @@ bool sameTriangle( const std::array<PreciseVertCoords, 3> & a, const std::array<
 }
 
 // ---------- simulation of simplicity for points that coincide before the perturbation ----------
-// Coordinate i of the vertex of rank r (the ranks go by ascending ids among the vertices of one predicate) gets eps^( w[i] * P[r] ),
-// w = 9, 3, 1 for x, y, z, as in getPointDegrees of MRPrecisePredicates3.cpp, which takes P[r] = 27^r. Here P[0] = 1 and
-// P[r+1] = P[r] * ( 1 + B[r] ), where B[r] bounds the weight of the vertex of rank r in every term of the polynomials
-// of the predicate (the sum of w[i] over the coordinates of the vertex in the term, with repetitions). As a term has the weights
-// W[s] <= B[s], the vertices below rank r add at most sum_{s<r} B[s] * P[s] = P[r] - 1 to its degree, so the degrees order
-// the terms by the weights of the vertices from the largest id down, as orient3d's degrees do with weights below 27:
-// all predicates take one perturbation, eps^( w[i] * K^r ) for a large enough K, which is the perturbation of the boolean.
-// The bounds follow from the definitions of the points:
+// The perturbation is the one of orient3d: coordinate i of a vertex gets eps^( PointDegree::degree( i ) ), with the degrees
+// from getPointDegrees, which order the terms of every polynomial by the weights of the vertices from the largest id down,
+// if the radix of every vertex exceeds its weight in every term (the sum of 9, 3, 1 over its coordinates in the term, with repetitions).
+// The radix of a vertex here is 1 + the sum of the bounds of its weight in the coordinates nx, ny, d (see SosFraction) of the points
+// of the predicate that contain it, since a product of the coordinates of several points (as in a determinant) adds their weights:
 // - a coordinate of a vertex has the weight of that vertex at most 9;
 // - every term of the perturbed volume of t[0] t[1] t[2] x takes one coordinate from each row t[j] - x, all in different columns,
 //   so it has the weight of every t[j] at most 9 and that of x at most 9 + 3 + 1 = 13;
-// - so the projected coordinates nx = oa * b[k] - ob * a[k] and d = oa - ob of the crossing of segment ab with the plane
-//   of a triangle (see sosPoint) have the weights of a and b at most 13 and those of the vertices of the triangle at most 9,
-//   and the coordinates of a vertex point at most 9;
-// - a product of polynomials of several points (as in a determinant of their coordinates) has the weight of a vertex
-//   at most the sum of its bounds in the points that contain it.
-// For three points of five vertices each, the most that a predicate here takes, P stays below ( 14^2 * 10^3 )^3 < 2^53,
-// since merging two vertices into one never makes the product larger.
+// - so the coordinates nx = oa * b[k] - ob * a[k] and d = oa - ob of the crossing of segment ab with the plane of a triangle
+//   (see sosPoint) have the weights of a and b at most 13 and those of the vertices of the triangle at most 9.
+// For three points of five vertices each, the most that a predicate here takes, the degrees stay below ( 14^2 * 10^3 )^3 < 2^53,
+// since merging two vertices into one never makes the product of their radices larger.
 // The vertices are perturbed in stages: at stage s only the s smallest ids move, so the polynomials stay small, and
 // a polynomial not zero at stage s already has the leading term of the full one, since all terms involving the other
-// vertices come after it. If it was zero at stage s - 1, its terms without the vertex of rank s - 1, perturbed last,
-// cancel one another, so only the products with the terms of that vertex, of degrees from P[s-1] up, need computing.
+// vertices come after it. If it was zero at stage s - 1, its terms without the vertex perturbed last cancel one another,
+// so only the products with the terms of that vertex, of degrees from its degree up, need computing.
 // The coefficients of a volume are below 2^96 (sums of products of three coordinate differences below 2^31),
 // those of nx, ny, d below 2^129, so 128 bits hold the former, 256 bits the latter, 512 bits their products of two
 // and 768 bits those of three.
@@ -112,184 +97,91 @@ bool sameTriangle( const std::array<PreciseVertCoords, 3> & a, const std::array<
 constexpr int cMaxSosVerts = 15; // all vertices of three points
 
 template <typename C>
-using SosPolyOf = SparsePolynomial<C, std::int64_t, std::numeric_limits<std::int64_t>::max()>;
-using SosPoly = SosPolyOf<VarBigInt>;
-using SosVec = std::array<SosPoly, 3>;
+using SosPolyOf = SparsePolynomial<C, std::int64_t, cMaxPolyDAll>;
+using SosPoly256 = SosPolyOf<FastInt256>;
+using SosPoly512 = SosPolyOf<FastInt512>;
 
-/// the vertices of one predicate by ascending ids, with the bounds of their weights and their place values (B and P above),
-/// of which the first `stage` ones are perturbed
-struct SosRanks
+/// the vertices of the points of one predicate with the degrees of their perturbation, point after point: seg[0] of a vertex point,
+/// or seg[0], seg[1], tri[0], tri[1], tri[2] of a crossing; at stage s only the vertices with the s smallest ids are perturbed
+struct SosVerts
 {
-    std::array<VertId, cMaxSosVerts> ids;
-    std::array<std::int64_t, cMaxSosVerts> bounds;
-    std::array<std::int64_t, cMaxSosVerts> places;
-    int n = 0;
-    int stage = 0;
+    std::array<PreciseVertCoords, cMaxSosVerts> verts;
+    std::array<std::int64_t, cMaxSosVerts> bounds; // of the weights of the vertices in the terms of a point
+    std::array<PointDegree, cMaxSosVerts> degrees;
+    std::array<std::int64_t, cMaxSosVerts> places; // the different degrees, ascending
+    int num = 0;
+    int numPlaces = 0;
 
-    /// adds vertex v, whose weight in a term grows by at most bound
-    void add( VertId v, int bound )
+    /// adds vertex v, whose weight in a term is at most bound
+    void add( const PreciseVertCoords & v, std::int64_t bound )
     {
-        const int i = int( std::lower_bound( ids.begin(), ids.begin() + n, v ) - ids.begin() );
-        if ( i < n && ids[i] == v )
-        {
-            bounds[i] += bound;
-            return;
-        }
-        assert( n < cMaxSosVerts );
-        for ( int j = n; j > i; --j )
-        {
-            ids[j] = ids[j - 1];
-            bounds[j] = bounds[j - 1];
-        }
-        ids[i] = v;
-        bounds[i] = bound;
-        ++n;
+        assert( num < cMaxSosVerts );
+        verts[num] = v;
+        bounds[num] = bound;
+        ++num;
     }
 
-    /// adds the vertices of point p with the bounds of their weights in its perturbed projected coordinates
-    void add( const PreciseCutPoint & p )
+    /// adds the vertices of point p, and returns the index of the first of them
+    int add( const PreciseCutPoint & p )
     {
+        const int first = num;
         if ( p.isVertex() )
+            add( p.seg[0], 9 );
+        else
         {
-            add( p.seg[0].id, 9 );
-            return;
+            add( p.seg[0], 13 );
+            add( p.seg[1], 13 );
+            for ( const auto & t : p.tri )
+                add( t, 9 );
         }
-        add( p.seg[0].id, 13 );
-        add( p.seg[1].id, 13 );
-        for ( const auto & t : p.tri )
-            add( t.id, 9 );
+        return first;
     }
 
-    /// computes the place values, once all vertices are added
-    void setPlaces()
+    /// computes the degrees once all vertices are added: a vertex in several points has the sum of their bounds
+    void setDegrees()
     {
-        std::int64_t place = 1;
-        for ( int i = 0; i < n; ++i )
+        std::array<std::int64_t, cMaxSosVerts> radices;
+        for ( int i = 0; i < num; ++i )
         {
-            places[i] = place;
-            assert( place <= std::numeric_limits<std::int64_t>::max() / ( 1 + bounds[i] ) );
-            place *= 1 + bounds[i];
+            radices[i] = 1;
+            for ( int j = 0; j < num; ++j )
+                if ( verts[j].id == verts[i].id )
+                    radices[i] += bounds[j];
         }
+        getPointDegrees( verts.data(), radices.data(), num, degrees.data() );
+        for ( int i = 0; i < num; ++i )
+            places[i] = degrees[i].d;
+        std::sort( places.begin(), places.begin() + num );
+        numPlaces = int( std::unique( places.begin(), places.begin() + num ) - places.begin() );
     }
 
-    int rank( VertId v ) const
+    /// vertex i as perturbed at stage s
+    PointDegree at( int i, int s ) const
     {
-        const auto it = std::lower_bound( ids.begin(), ids.begin() + n, v );
-        assert( it != ids.begin() + n && *it == v );
-        return int( it - ids.begin() );
+        return degrees[i].d <= places[s - 1] ? degrees[i] : PointDegree{ degrees[i].pt, 0 };
+    }
+
+    /// whether point p with its vertices from index first moves at stage s, having the vertex perturbed first at this stage
+    bool moves( const PreciseCutPoint & p, int first, int s ) const
+    {
+        for ( int i = first; i < first + ( p.isVertex() ? 1 : 5 ); ++i )
+            if ( degrees[i].d == places[s - 1] )
+                return true;
+        return false;
     }
 };
 
-int signOf( const VarBigInt & c )
-{
-    return c.sign();
-}
-
-int signOf( FastInt128 c )
-{
-    return sgn( c );
-}
-
-template <int nBits>
-int signOf( const FastInt<nBits> & c )
-{
-    return c.sign();
-}
-
-template <typename C = VarBigInt>
-SosPolyOf<C> sosConst( std::int64_t c )
-{
-    SosPolyOf<C> res;
-    if ( c != 0 )
-        res = SosPolyOf<C>( std::vector<typename SosPolyOf<C>::Term>{ { std::int64_t( 0 ), C( c ) } } );
-    return res;
-}
-
-template <typename C = VarBigInt>
-std::array<SosPolyOf<C>, 3> sosCoords( const PreciseVertCoords & v, const SosRanks & r )
-{
-    constexpr std::int64_t w[3] = { 9, 3, 1 };
-    const int rank = r.rank( v.id );
-    std::array<SosPolyOf<C>, 3> res;
-    for ( int i = 0; i < 3; ++i )
-        res[i] = rank < r.stage
-            ? SosPolyOf<C>( C( std::int64_t( v.pt[i] ) ), w[i] * r.places[rank], C( std::int64_t( 1 ) ) )
-            : sosConst<C>( v.pt[i] );
-    return res;
-}
-
-template <typename P>
-std::array<P, 3> sub( const std::array<P, 3> & a, const std::array<P, 3> & b )
-{
-    return { a[0] - b[0], a[1] - b[1], a[2] - b[2] };
-}
-
-template <typename P>
-std::array<P, 3> cross( const std::array<P, 3> & a, const std::array<P, 3> & b )
-{
-    return { a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] };
-}
-
-/// the perturbed volume of tetrahedron t[0] t[1] t[2] x, positive iff orient3d( t[0], t[1], t[2], x ), see volume above:
-/// the determinant of the rows t[j] - x expanded at once, as orient3dPoly of MRPrecisePredicates3.cpp does it, from the elements
-/// delta + eps^( degree of t[j] ) - eps^( degree of x ); 128 bits are enough for its coefficients, products of three coordinate
-/// differences below 2^31
+/// coordinate i of perturbed vertex v
 template <typename C>
-SosPolyOf<C> sosVolume( const std::array<PreciseVertCoords, 3> & t, const PreciseVertCoords & x, const SosRanks & r )
+SosPolyOf<C> sosCoord( const PointDegree & v, int i )
 {
-    constexpr std::int64_t w[3] = { 9, 3, 1 };
-    struct Element
-    {
-        std::pair<std::int64_t, std::int64_t> terms[3]; // degree and coefficient
-        int num = 0;
-    };
-    const int rx = r.rank( x.id );
-    Element m[3][3];
-    for ( int row = 0; row < 3; ++row )
-    {
-        const int rt = r.rank( t[row].id );
-        for ( int col = 0; col < 3; ++col )
-        {
-            auto & e = m[row][col];
-            if ( const std::int64_t delta = std::int64_t( t[row].pt[col] ) - x.pt[col] )
-                e.terms[e.num++] = { 0, delta };
-            if ( rt < r.stage )
-                e.terms[e.num++] = { w[col] * r.places[rt], 1 };
-            if ( rx < r.stage )
-                e.terms[e.num++] = { w[col] * r.places[rx], -1 };
-        }
-    }
-    // the sum over the permutations of the columns of the signed products of three elements, one from every row
-    constexpr int perms[6][4] = { { 0, 1, 2, 1 }, { 1, 2, 0, 1 }, { 2, 0, 1, 1 }, { 0, 2, 1, -1 }, { 2, 1, 0, -1 }, { 1, 0, 2, -1 } };
     std::vector<typename SosPolyOf<C>::Term> terms;
-    terms.reserve( 6 * 27 );
-    for ( const auto & p : perms )
-    {
-        const Element & e0 = m[0][p[0]];
-        const Element & e1 = m[1][p[1]];
-        const Element & e2 = m[2][p[2]];
-        for ( int k0 = 0; k0 < e0.num; ++k0 )
-            for ( int k1 = 0; k1 < e1.num; ++k1 )
-            {
-                const std::int64_t c01 = p[3] * e0.terms[k0].second * e1.terms[k1].second; // below 2^62
-                const std::int64_t d01 = e0.terms[k0].first + e1.terms[k1].first;
-                for ( int k2 = 0; k2 < e2.num; ++k2 )
-                    terms.emplace_back( d01 + e2.terms[k2].first, C( Int64Mul128( c01 ) * Int64Mul128( e2.terms[k2].second ) ) );
-            }
-    }
-    return SosPolyOf<C>::fromUnsortedTerms( std::move( terms ) );
+    if ( v.pt[i] != 0 )
+        terms.emplace_back( 0, C( std::int64_t( v.pt[i] ) ) );
+    if ( v.d != 0 )
+        terms.emplace_back( v.degree( i ), C( std::int64_t( 1 ) ) );
+    return SosPolyOf<C>( std::move( terms ) );
 }
-
-/// the perturbed normal of triangle t
-SosVec sosNormal( const std::array<PreciseVertCoords, 3> & t, const SosRanks & r )
-{
-    const auto a = sosCoords( t[0], r );
-    return cross( sub( sosCoords( t[1], r ), a ), sub( sosCoords( t[2], r ), a ) );
-}
-
-using SosPoly128 = SosPolyOf<FastInt128>;
-using SosPoly256 = SosPolyOf<FastInt256>;
-using SosPoly512 = SosPolyOf<FastInt512>;
 
 /// the polynomial with the coefficients converted into a wider type
 template <typename C, typename P>
@@ -302,29 +194,58 @@ SosPolyOf<C> widen( const P & p )
     return SosPolyOf<C>( std::move( terms ) );
 }
 
+// the perturbed vectors of the directions of segments and lines, which only the rare points with zero exact directions need,
+// with the coefficients of any size; Vector3 cannot hold polynomials, which have no division
+using SosVec = std::array<SosPolyOf<VarBigInt>, 3>;
+
+SosVec sosCoords( const PointDegree & v )
+{
+    return { sosCoord<VarBigInt>( v, 0 ), sosCoord<VarBigInt>( v, 1 ), sosCoord<VarBigInt>( v, 2 ) };
+}
+
+SosVec sub( const SosVec & a, const SosVec & b )
+{
+    return { a[0] - b[0], a[1] - b[1], a[2] - b[2] };
+}
+
+SosVec cross( const SosVec & a, const SosVec & b )
+{
+    return { a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] };
+}
+
+/// the perturbed normal of the triangle of the vertices from index i of r, at stage s
+SosVec sosNormal( const SosVerts & r, int i, int s )
+{
+    const auto a = sosCoords( r.at( i, s ) );
+    return cross( sub( sosCoords( r.at( i + 1, s ) ), a ), sub( sosCoords( r.at( i + 2, s ) ), a ) );
+}
+
 /// a point with perturbed coordinates: ( nx / d, ny / d ) in the projection
 struct SosFraction
 {
     SosPoly256 nx, ny, d;
 };
 
-/// the perturbed projected point, or nullopt if its denominator is zero at this stage, so that only the vertices
-/// perturbed at a later stage move the ends of its segment off the plane
-std::optional<SosFraction> sosPoint( const PreciseCutPoint & p, const SosRanks & r, int kx, int ky )
+/// the perturbed projected point p with its vertices from index first of r, at stage s; nullopt if its denominator is zero
+/// at this stage, so that only the vertices perturbed at a later stage move the ends of its segment off the plane
+std::optional<SosFraction> sosPoint( const PreciseCutPoint & p, const SosVerts & r, int first, int s, int kx, int ky )
 {
     SosFraction res;
     if ( p.isVertex() )
     {
-        const auto c = sosCoords<FastInt128>( p.seg[0], r );
-        res = { widen<FastInt256>( c[kx] ), widen<FastInt256>( c[ky] ), sosConst<FastInt256>( 1 ) };
+        const auto v = r.at( first, s );
+        res.nx = widen<FastInt256>( sosCoord<FastInt128>( v, kx ) );
+        res.ny = widen<FastInt256>( sosCoord<FastInt128>( v, ky ) );
+        res.d = SosPoly256( std::vector<SosPoly256::Term>{ { 0, FastInt256( 1 ) } } );
         return res;
     }
-    const auto a = sosCoords<FastInt128>( p.seg[0], r ), b = sosCoords<FastInt128>( p.seg[1], r );
-    const auto oa = sosVolume<FastInt128>( p.tri, p.seg[0], r ), ob = sosVolume<FastInt128>( p.tri, p.seg[1], r );
-    // ( oa * b - ob * a ) / ( oa - ob ), as in CutTrianglePredicates::exactCoords_; the coefficients of the volumes are below 2^96
-    // and those of the coordinates 2^30, and a coefficient of a product sums at most two products of them
-    res.nx = mulAs<Int128Mul256>( oa, b[kx] ) - mulAs<Int128Mul256>( ob, a[kx] );
-    res.ny = mulAs<Int128Mul256>( oa, b[ky] ) - mulAs<Int128Mul256>( ob, a[ky] );
+    const auto a = r.at( first, s ), b = r.at( first + 1, s );
+    const auto t0 = r.at( first + 2, s ), t1 = r.at( first + 3, s ), t2 = r.at( first + 4, s );
+    const auto oa = orient3dPoly<cMaxPolyDAll>( t0, t1, t2, a ), ob = orient3dPoly<cMaxPolyDAll>( t0, t1, t2, b );
+    // ( oa * b - ob * a ) / ( oa - ob ), as in exactCoords; the coefficients of the volumes are below 2^96 and those of the coordinates 2^30,
+    // and a coefficient of a product sums at most two products of them
+    res.nx = mulAs<Int128Mul256>( oa, sosCoord<FastInt128>( b, kx ) ) - mulAs<Int128Mul256>( ob, sosCoord<FastInt128>( a, kx ) );
+    res.ny = mulAs<Int128Mul256>( oa, sosCoord<FastInt128>( b, ky ) ) - mulAs<Int128Mul256>( ob, sosCoord<FastInt128>( a, ky ) );
     res.d = widen<FastInt256>( oa - ob );
     if ( res.d.empty() )
         return {};
@@ -344,28 +265,28 @@ struct LeadTerm
     int sign = 0;
 };
 
-/// the lowest-degree term of a * b - c * d, with the products of the coefficients in 512 bits
-LeadTerm leadOfProductsDiff( const SosPoly256 & a, const SosPoly256 & b, const SosPoly256 & c, const SosPoly256 & d )
+LeadTerm leadTerm( const std::pair<std::int64_t, int> & t )
 {
-    const auto [deg, sign] = lowestTermOfProductsDiff<FastInt256>( a, b, c, d );
-    return { deg, sign };
+    return { t.first, t.second };
 }
 
 template <typename C>
 LeadTerm leadOf( const SosPolyOf<C> & p )
 {
-    return p.empty() ? LeadTerm{} : LeadTerm{ p.get().front().first, signOf( p.get().front().second ) };
+    if ( p.empty() )
+        return {};
+    return { p.get().front().first, p.get().front().second.sign() };
 }
 
-/// the lowest-degree terms of the coordinates of a perturbed vector vec(), at the first stage where one of the coordinates
-/// with a bit in mask is not zero; a coordinate that is still zero has a leading term of a later stage, so of a larger degree;
+/// the lowest-degree terms of the coordinates of perturbed vector vec( s ) at the first stage s where one of the coordinates with a bit
+/// in mask is not zero; a coordinate that is still zero has a leading term of a later stage, so of a larger degree;
 /// all signs are zero if the vector stays zero
 template <typename F>
-std::array<LeadTerm, 3> sosLeadTerms( SosRanks & r, int mask, const F & vec )
+std::array<LeadTerm, 3> sosLeadTerms( const SosVerts & r, int mask, const F & vec )
 {
-    for ( r.stage = 1; r.stage <= r.n; ++r.stage )
+    for ( int s = 1; s <= r.numPlaces; ++s )
     {
-        const auto u = vec();
+        const auto u = vec( s );
         const std::array<LeadTerm, 3> res{ leadOf( u[0] ), leadOf( u[1] ), leadOf( u[2] ) };
         for ( int i = 0; i < 3; ++i )
             if ( ( mask & ( 1 << i ) ) && res[i].sign != 0 )
@@ -381,11 +302,6 @@ Vector2i sweepSigns( const LeadTerm & x, const LeadTerm & y )
     return { y.sign == 0 || x.deg <= y.deg ? x.sign : 0, x.sign == 0 || y.deg <= x.deg ? y.sign : 0 };
 }
 
-Vector2i sweepSigns( const std::array<LeadTerm, 3> & t, int kx, int ky )
-{
-    return sweepSigns( t[kx], t[ky] );
-}
-
 /// whether the sweep meets the points along a direction with these signs of the projected coordinates in the order
 /// of the direction: the first coordinate decides, or the second if the first is exactly zero, since eps << eta
 bool sweepForward( const Vector2i & dir )
@@ -393,15 +309,8 @@ bool sweepForward( const Vector2i & dir )
     return dir.x != 0 ? dir.x > 0 : dir.y > 0;
 }
 
-template <typename TA, typename TB, typename A, typename B>
-LeadTerm leadOfSumOfProducts( const SignedProduct<A, B> * products, int num )
-{
-    const auto [deg, sign] = lowestTermOfSumOfProducts<TA, TB>( products, num );
-    return { deg, sign };
-}
-
-/// the terms of the coordinates of a point without and with the vertex perturbed last, of degrees below and from its place
-/// (the other vertices add less to a degree, see the place values above)
+/// the terms of the coordinates of a point without and with the vertex perturbed last, of degrees below and from its degree
+/// (the other vertices add less to a degree, see the radices above)
 void splitAt( const SosFraction & x, std::int64_t place, SosFraction & low, SosFraction & high )
 {
     auto split = [place] ( const SosPoly256 & a, SosPoly256 & l, SosPoly256 & h )
@@ -420,15 +329,18 @@ void splitAt( const SosFraction & x, std::int64_t place, SosFraction & low, SosF
 /// (see sweepSigns); nullopt if the points coincide after the perturbation too
 std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCutPoint & q, int kx, int ky )
 {
-    SosRanks r;
-    r.add( p );
-    r.add( q );
-    r.setPlaces();
+    SosVerts r;
+    const int ip = r.add( p ), iq = r.add( q );
+    r.setDegrees();
+    std::optional<SosFraction> a, b;
     bool prevZero = false; // whether both points were defined at the previous stage, and the differences of their coordinates zero
-    for ( r.stage = 1; r.stage <= r.n; ++r.stage )
+    for ( int s = 1; s <= r.numPlaces; ++s )
     {
-        const auto a = sosPoint( p, r, kx, ky );
-        const auto b = sosPoint( q, r, kx, ky );
+        // a point keeps its coordinates of the previous stage unless it has the vertex perturbed at this one
+        if ( s == 1 || r.moves( p, ip, s ) )
+            a = sosPoint( p, r, ip, s, kx, ky );
+        if ( s == 1 || r.moves( q, iq, s ) )
+            b = sosPoint( q, r, iq, s, kx, ky );
         if ( !a || !b )
         {
             prevZero = false;
@@ -438,8 +350,8 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
         LeadTerm x, y;
         if ( !prevZero )
         {
-            x = leadOfProductsDiff( b->nx, a->d, a->nx, b->d );
-            y = leadOfProductsDiff( b->ny, a->d, a->ny, b->d );
+            x = leadTerm( lowestTermOfProductsDiff<FastInt256>( b->nx, a->d, a->nx, b->d ) );
+            y = leadTerm( lowestTermOfProductsDiff<FastInt256>( b->ny, a->d, a->ny, b->d ) );
         }
         else
         {
@@ -447,13 +359,13 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
             // the products with that vertex in at least one factor remain, e.g. hb.nx * a.d + lb.nx * ha.d - ha.nx * b.d - la.nx * hb.d,
             // which leaves out the products of the terms of the previous stage that cancel one another
             SosFraction la, ha, lb, hb;
-            splitAt( *a, r.places[r.stage - 1], la, ha );
-            splitAt( *b, r.places[r.stage - 1], lb, hb );
+            splitAt( *a, r.places[s - 1], la, ha );
+            splitAt( *b, r.places[s - 1], lb, hb );
             using P = SignedProduct<SosPoly256, SosPoly256>;
             const P px[4] = { { &hb.nx, &a->d, false }, { &lb.nx, &ha.d, false }, { &ha.nx, &b->d, true }, { &la.nx, &hb.d, true } };
             const P py[4] = { { &hb.ny, &a->d, false }, { &lb.ny, &ha.d, false }, { &ha.ny, &b->d, true }, { &la.ny, &hb.d, true } };
-            x = leadOfSumOfProducts<FastInt256, FastInt256>( px, 4 );
-            y = leadOfSumOfProducts<FastInt256, FastInt256>( py, 4 );
+            x = leadTerm( lowestTermOfSumOfProducts<FastInt256>( px, 4 ) );
+            y = leadTerm( lowestTermOfSumOfProducts<FastInt256>( py, 4 ) );
         }
         // a difference that is still zero has a leading term of a later stage, so of a larger degree
         if ( x.sign != 0 || y.sign != 0 )
@@ -468,11 +380,9 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
 /// of the perturbed points, whose denominators d are positive; 0 if the points are on one line after the perturbation too
 int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const PreciseCutPoint & r, int kx, int ky )
 {
-    SosRanks ranks;
-    ranks.add( p );
-    ranks.add( q );
-    ranks.add( r );
-    ranks.setPlaces();
+    SosVerts verts;
+    const int ip = verts.add( p ), iq = verts.add( q ), ir = verts.add( r );
+    verts.setDegrees();
     // the cofactor expansion of det( h, u, v ) along row h, negated if neg: three products of an element of h and a minor
     std::array<SosPoly512, 9> minors;
     std::array<SignedProduct<SosPoly256, SosPoly512>, 9> products;
@@ -489,12 +399,17 @@ int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const Preci
         products[num] = { &h.d, &minors[num], neg };
         ++num;
     };
+    std::optional<SosFraction> a, b, c;
     bool prevZero = false; // whether all points were defined at the previous stage, and their determinant zero
-    for ( ranks.stage = 1; ranks.stage <= ranks.n; ++ranks.stage )
+    for ( int s = 1; s <= verts.numPlaces; ++s )
     {
-        const auto a = sosPoint( p, ranks, kx, ky );
-        const auto b = sosPoint( q, ranks, kx, ky );
-        const auto c = sosPoint( r, ranks, kx, ky );
+        // a point keeps its coordinates of the previous stage unless it has the vertex perturbed at this one
+        if ( s == 1 || verts.moves( p, ip, s ) )
+            a = sosPoint( p, verts, ip, s, kx, ky );
+        if ( s == 1 || verts.moves( q, iq, s ) )
+            b = sosPoint( q, verts, iq, s, kx, ky );
+        if ( s == 1 || verts.moves( r, ir, s ) )
+            c = sosPoint( r, verts, ir, s, kx, ky );
         if ( !a || !b || !c )
         {
             prevZero = false;
@@ -509,7 +424,7 @@ int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const Preci
             // the terms without the vertex perturbed last make the determinant of the previous stage, which is zero, so only the terms
             // with that vertex in at least one row remain: det( ha, b, c ) + det( la, hb, c ) + det( la, lb, hc ),
             // which leaves out the products of the terms of the previous stage that cancel one another
-            const auto place = ranks.places[ranks.stage - 1];
+            const auto place = verts.places[s - 1];
             splitAt( *a, place, la, ha );
             splitAt( *b, place, lb, hb );
             splitAt( *c, place, lc, hc );
@@ -517,91 +432,138 @@ int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const Preci
             addCofactors( hb, la, *c, true );
             addCofactors( hc, la, lb, false );
         }
-        const auto lead = leadOfSumOfProducts<FastInt256, FastInt512>( products.data(), num );
-        if ( lead.sign != 0 )
-            return lead.sign;
+        if ( const int sign = lowestTermOfSumOfProducts<FastInt256, FastInt512>( products.data(), num ).second )
+            return sign;
         // otherwise the vertices perturbed so far keep the points on one line
         prevZero = true;
     }
     return 0;
 }
 
-/// the side of perturbed plane t of perturbed crossing p, +1 where orient3d with t is true: the sign of the volume of t with p,
-/// ( oa * vb - ob * va ) / ( oa - ob ) for the volumes oa, ob of the triangle of p and va, vb of t with the ends of its segment;
-/// 0 if p is on the plane after the perturbation too
-int sosSideOfPlane( const std::array<PreciseVertCoords, 3> & t, const PreciseCutPoint & p )
-{
-    SosRanks r;
-    r.add( p );
-    for ( const auto & v : t )
-        r.add( v.id, 9 ); // as a vertex of the triangle of a volume
-    r.setPlaces();
-    for ( r.stage = 1; r.stage <= r.n; ++r.stage )
-    {
-        const auto oa = sosVolume<FastInt128>( p.tri, p.seg[0], r );
-        const auto ob = sosVolume<FastInt128>( p.tri, p.seg[1], r );
-        const auto d = leadOf( oa - ob );
-        if ( d.sign == 0 )
-            continue; // the segment is still in the plane of its triangle
-        const auto va = sosVolume<FastInt128>( t, p.seg[0], r );
-        const auto vb = sosVolume<FastInt128>( t, p.seg[1], r );
-        // the volumes are within 2^96, and their products within 2^192
-        if ( const int s = signOfProductsDiff<Int128Mul256>( oa, vb, ob, va ) )
-            return s * d.sign;
-        // otherwise the vertices perturbed so far keep the point on the plane
-    }
-    return 0;
-}
-
 /// the signs of the projected coordinates of the perturbed cross( normal of f, normal of g ), as the sweep along kx + eta * ky
-/// with eps << eta sees them: a coordinate whose leading term has a larger degree than that of the other one is taken as zero
+/// with eps << eta sees them (see sweepSigns)
 Vector2i sosCrossDirection( const std::array<PreciseVertCoords, 3> & f, const std::array<PreciseVertCoords, 3> & g, int kx, int ky )
 {
     // a normal has the weight of a vertex at most 9 + 3 = 12
-    SosRanks r;
+    SosVerts r;
     for ( const auto & v : f )
-        r.add( v.id, 12 );
+        r.add( v, 12 );
     for ( const auto & v : g )
-        r.add( v.id, 12 );
-    r.setPlaces();
-    return sweepSigns( sosLeadTerms( r, ( 1 << kx ) | ( 1 << ky ), [&] { return cross( sosNormal( f, r ), sosNormal( g, r ) ); } ), kx, ky );
+        r.add( v, 12 );
+    r.setDegrees();
+    const auto t = sosLeadTerms( r, ( 1 << kx ) | ( 1 << ky ), [&] ( int s ) { return cross( sosNormal( r, 0, s ), sosNormal( r, 3, s ) ); } );
+    return sweepSigns( t[kx], t[ky] );
 }
 
 /// the same for the perturbed b - a
 Vector2i sosSegmentDirection( const PreciseVertCoords & a, const PreciseVertCoords & b, int kx, int ky )
 {
-    SosRanks r;
-    r.add( a.id, 9 );
-    r.add( b.id, 9 );
-    r.setPlaces();
-    return sweepSigns( sosLeadTerms( r, ( 1 << kx ) | ( 1 << ky ), [&] { return sub( sosCoords( b, r ), sosCoords( a, r ) ); } ), kx, ky );
+    SosVerts r;
+    r.add( a, 9 );
+    r.add( b, 9 );
+    r.setDegrees();
+    const auto t = sosLeadTerms( r, ( 1 << kx ) | ( 1 << ky ), [&] ( int s ) { return sub( sosCoords( r.at( 1, s ) ), sosCoords( r.at( 0, s ) ) ); } );
+    return sweepSigns( t[kx], t[ky] );
+}
+
+/// a point with what the predicates take from its definition most often
+struct CutPoint
+{
+    PreciseCutPoint def;
+    // for an edge-triangle point: the volumes of its triangle with the ends of its segment; if both are zero,
+    // the leading coefficients of the perturbed volumes, with zero for the one of the larger degree
+    FastInt128 oa{}, ob{};
+    int sides = 0; // bit i is set if the point is on side i of the triangle, from vertex i to vertex i+1
+};
+
+/// the exact projected coordinates of a point: ( nx / d, ny / d ) with d > 0
+struct ExactCoords
+{
+    FastInt128 nx{}, ny{}, d{};
+};
+
+ExactCoords exactCoords( const CutPoint & pt, int kx, int ky )
+{
+    if ( pt.def.isVertex() )
+        return { pt.def.seg[0].pt[kx], pt.def.seg[0].pt[ky], 1 };
+    // ( oa * b - ob * a ) / ( oa - ob ) for segment ab (see addPoint), where oa and ob have different signs (or one of them is zero);
+    // by Hadamard's inequality |oa|, |ob| < 3^1.5 * 2^93 < 0.65 * 2^96 for coordinate differences below 2^31 (and the leading
+    // coefficients of perturbed volumes are smaller), so the numerators are below ( |oa| + |ob| ) * 2^30 < 1.3 * 2^126,
+    // and the denominator below 1.3 * 2^96
+    const Vector3i & a = pt.def.seg[0].pt;
+    const Vector3i & b = pt.def.seg[1].pt;
+    ExactCoords res{
+        pt.oa * FastInt128( b[kx] ) - pt.ob * FastInt128( a[kx] ),
+        pt.oa * FastInt128( b[ky] ) - pt.ob * FastInt128( a[ky] ),
+        pt.oa - pt.ob };
+    if ( res.d < 0 )
+    {
+        res.nx = -res.nx;
+        res.ny = -res.ny;
+        res.d = -res.d;
+    }
+    return res;
 }
 
 } // anonymous namespace
 
-/// the directions from p to q of the points that coincide before the perturbation, found from a side and a plane line
-/// or by expanding the perturbation, which is slow, while a sweep compares the same points often;
-/// the key is ( p << 32 ) | q for p < q, and a zero direction marks points that coincide after the perturbation too;
-/// a sweep sorts the points in parallel, hence the mutex
-struct CutTrianglePredicates::Cache
+struct CutTrianglePredicates::Impl
 {
-    HashMap<std::uint64_t, Vector2i> perturbedDirs;
-    std::mutex mutex;
+    Vector<CutPoint, VertId> points;
+
+    /// the directions from p to q of the points that coincide before the perturbation, found from a side and a plane line
+    /// or by expanding the perturbation, which is slow, while a sweep compares the same points often;
+    /// the key is ( p << 32 ) | q for p < q, and a zero direction marks points that coincide after the perturbation too;
+    /// a sweep sorts the points in parallel, hence the map with a mutex in every submap
+    phmap::parallel_flat_hash_map_m<std::uint64_t, Vector2i> dirs;
+
+    /// the orientations of the triangles with the vertices sorted by ids that the slower rules decide: 1 if counterclockwise,
+    /// -1 otherwise; the sweep asks about the same triangles often, but not in parallel, so one mutex is enough
+    HashMap<UnorientedTriangle, int> orients;
+    std::mutex orientsMutex;
+
+    /// whether the maps above may have entries, since clearing the empty submaps of the parallel map takes a lock each
+    std::atomic<bool> cached{ false };
+
+    std::atomic<bool> failed{ false };
+
+    /// forgets the orders and orientations found by the slower rules
+    void clearCaches()
+    {
+        if ( !cached.exchange( false, std::memory_order_relaxed ) )
+            return;
+        dirs.clear();
+        orients.clear();
+    }
 };
 
-CutTrianglePredicates::CutTrianglePredicates() : cache_( std::make_unique<Cache>() )
+CutTrianglePredicates::CutTrianglePredicates() : impl_( std::make_unique<Impl>() )
 {
 }
 
+CutTrianglePredicates::CutTrianglePredicates( CutTrianglePredicates && ) noexcept = default;
+CutTrianglePredicates & CutTrianglePredicates::operator =( CutTrianglePredicates && ) noexcept = default;
 CutTrianglePredicates::~CutTrianglePredicates() = default;
+
+bool CutTrianglePredicates::failed() const
+{
+    return impl_->failed.load( std::memory_order_relaxed );
+}
+
+void CutTrianglePredicates::fail_() const
+{
+    impl_->failed.store( true, std::memory_order_relaxed );
+}
 
 void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri )
 {
     tri_ = tri;
     approx_.clear();
-    points_.clear();
-    cache_->perturbedDirs.clear();
-    failed_.store( false, std::memory_order_relaxed );
+    impl_->points.clear();
+    impl_->clearCaches();
+    impl_->failed.store( false, std::memory_order_relaxed );
+    if ( tri[0].id == tri[1].id || tri[1].id == tri[2].id || tri[2].id == tri[0].id )
+        fail_(); // repeated ids
 
     normal_ = normalOf( tri );
     // drop the axis most aligned with the normal; order the two kept axes so that the projection keeps the orientation around the normal
@@ -610,22 +572,23 @@ void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri 
         if ( std::abs( normal_[i] ) > std::abs( normal_[dropAx] ) )
             dropAx = i;
     int dropSign = sgn( normal_[dropAx] );
-    if ( dropSign == 0 )
+    if ( dropSign == 0 && !failed() )
     {
         // the vertices are on one line before the perturbation: drop the axis of the leading term of the perturbed normal
-        SosRanks r;
+        SosVerts r;
         for ( const auto & v : tri )
-            r.add( v.id, 12 );
-        r.setPlaces();
-        const auto n = sosLeadTerms( r, 7, [&] { return sosNormal( tri, r ); } );
+            r.add( v, 12 ); // a normal has the weight of a vertex at most 9 + 3
+        r.setDegrees();
+        const auto n = sosLeadTerms( r, 7, [&] ( int s ) { return sosNormal( r, 0, s ); } );
+        LeadTerm lead;
         for ( int i = 0; i < 3; ++i )
-            if ( n[i].sign != 0 && ( dropSign == 0 || n[i].deg < n[dropAx].deg ) )
+            if ( n[i].sign != 0 && ( lead.sign == 0 || n[i].deg < lead.deg ) )
             {
                 dropAx = i;
-                dropSign = n[i].sign;
+                lead = n[i];
             }
-        if ( dropSign == 0 )
-            fail_(); // two vertices with the same id
+        assert( lead.sign != 0 ); // the perturbed points of distinct ids are not on one line
+        dropSign = lead.sign;
     }
     kx_ = ( dropAx + 1 ) % 3;
     ky_ = ( dropAx + 2 ) % 3;
@@ -635,14 +598,15 @@ void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri 
 
 void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
 {
-    if ( points_.size() <= v )
+    auto & points = impl_->points;
+    if ( points.size() <= v )
     {
-        points_.resize( v + 1 );
+        points.resize( v + 1 );
         approx_.resize( v + 1 );
     }
-    auto & pt = points_[v];
+    auto & pt = points[v];
     if ( pt.def.seg[0].id.valid() )
-        cache_->perturbedDirs.clear(); // the point is set again: forget the orders found for its old definition
+        impl_->clearCaches(); // the point is set again: forget the orders found for its old definition
     pt.def = p;
     auto corner = [&] ( const PreciseVertCoords & x )
     {
@@ -654,34 +618,37 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
     if ( p.isVertex() )
     {
         const int i = corner( p.seg[0] );
+        if ( i < 0 )
+            fail_(); // not a vertex of the triangle, so on none of its sides, while commonLine_ takes the lines through a vertex
         pt.sides = i >= 0 ? ( 1 << i ) | ( 1 << ( ( i + 2 ) % 3 ) ) : 0;
         pt.oa = pt.ob = 0;
         approx_[v] = { double( p.seg[0].pt[kx_] ), double( p.seg[0].pt[ky_] ) };
         return;
     }
-    const int i = corner( p.seg[0] ), j = corner( p.seg[1] );
-    pt.sides = i >= 0 && j >= 0 ? 1 << ( j == ( i + 1 ) % 3 ? i : j ) : 0;
-    pt.oa = volume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[0].pt );
-    pt.ob = volume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[1].pt );
-    if ( pt.oa == 0 && pt.ob == 0 )
+    bool crosses = false;
+    if ( p.seg[0].id == p.seg[1].id || hasVert( p.tri, p.seg[0].id ) || hasVert( p.tri, p.seg[1].id )
+        || p.tri[0].id == p.tri[1].id || p.tri[1].id == p.tri[2].id || p.tri[2].id == p.tri[0].id )
     {
-        // the segment is in the plane, and only the perturbation moves its ends off it: as eps -> 0, the crossing tends to
-        // the point where the leading terms of the perturbed volumes cancel, or to the end whose volume has the leading term
-        // of the larger degree, since the other volume is infinitely larger then
-        SosRanks r;
-        r.add( p );
-        r.setPlaces();
-        r.stage = r.n;
-        const auto va = sosVolume<FastInt128>( p.tri, p.seg[0], r );
-        const auto vb = sosVolume<FastInt128>( p.tri, p.seg[1], r );
-        if ( va.empty() || vb.empty() )
+        // repeated ids, also an end of the segment at a vertex of its triangle, which orient3d does not take
+        pt.sides = 0;
+    }
+    else
+    {
+        const int i = corner( p.seg[0] ), j = corner( p.seg[1] );
+        pt.sides = i >= 0 && j >= 0 ? 1 << ( j == ( i + 1 ) % 3 ? i : j ) : 0;
+        pt.oa = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[0].pt );
+        pt.ob = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[1].pt );
+        if ( pt.oa == 0 && pt.ob == 0 )
         {
-            fail_(); // repeated ids
-            pt.oa = 1; // any point, since the answers are arbitrary now
-            pt.ob = -1;
-        }
-        else
-        {
+            // the segment is in the plane, and only the perturbation moves its ends off it: as eps -> 0, the crossing tends to
+            // the point where the leading terms of the perturbed volumes cancel, or to the end whose volume has the leading term
+            // of the larger degree, since the other volume is infinitely larger then
+            SosVerts r;
+            r.add( p );
+            r.setDegrees();
+            const auto va = orient3dPoly<cMaxPolyDAll>( r.degrees[2], r.degrees[3], r.degrees[4], r.degrees[0] );
+            const auto vb = orient3dPoly<cMaxPolyDAll>( r.degrees[2], r.degrees[3], r.degrees[4], r.degrees[1] );
+            assert( !va.empty() && !vb.empty() ); // the perturbed volumes of distinct vertices are not zero
             const auto & [degA, leadA] = va.get().front();
             const auto & [degB, leadB] = vb.get().front();
             // the leading terms decide as orient3d does, which ties the degrees above to its perturbation
@@ -689,54 +656,34 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
             assert( ( leadB > 0 ) == orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[1] } ) );
             pt.oa = degA <= degB ? leadA : 0;
             pt.ob = degB <= degA ? leadB : 0;
-            if ( ( leadA > 0 ) == ( leadB > 0 ) )
-                fail_(); // the segment does not cross the plane after the perturbation
+            crosses = ( leadA > 0 ) != ( leadB > 0 );
+        }
+        else
+        {
+            // an end exactly on the plane is on the side the perturbation puts it on
+            const bool sa = pt.oa != 0 ? pt.oa > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[0] } );
+            const bool sb = pt.ob != 0 ? pt.ob > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[1] } );
+            crosses = sa != sb;
         }
     }
-    else
+    if ( !crosses )
     {
-        // an end exactly on the plane is on the side the perturbation puts it on
-        const bool sa = pt.oa != 0 ? pt.oa > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[0] } );
-        const bool sb = pt.ob != 0 ? pt.ob > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[1] } );
-        if ( sa == sb )
-            fail_(); // the segment does not cross the plane
+        fail_(); // repeated ids, or the segment does not cross the plane, also after the perturbation
+        pt.oa = 1; // any point of the segment, since the answers are arbitrary now
+        pt.ob = -1;
     }
     // the point is a + s * ( b - a ), s = oa / ( oa - ob ), where oa and ob have different signs (or one of them is zero)
+    const Vector3d a( p.seg[0].pt ), b( p.seg[1].pt );
     const double da = toDouble( pt.oa );
     const double s = da / ( da - toDouble( pt.ob ) );
-    const Vector3d a( p.seg[0].pt ), b( p.seg[1].pt );
     approx_[v] = { a[kx_] + s * ( b[kx_] - a[kx_] ), a[ky_] + s * ( b[ky_] - a[ky_] ) };
-}
-
-CutTrianglePredicates::Coords CutTrianglePredicates::exactCoords_( VertId v ) const
-{
-    const auto & pt = points_[v];
-    if ( pt.def.isVertex() )
-        return { pt.def.seg[0].pt[kx_], pt.def.seg[0].pt[ky_], 1 };
-    // ( oa * b - ob * a ) / ( oa - ob ) for segment ab (see addPoint), where oa and ob have different signs (or one of them is zero);
-    // by Hadamard's inequality |oa|, |ob| < 3^1.5 * 2^93 < 0.65 * 2^96 for coordinate differences below 2^31 (and the leading
-    // coefficients of perturbed volumes are smaller), so the numerators are below ( |oa| + |ob| ) * 2^30 < 1.3 * 2^126,
-    // and the denominator below 1.3 * 2^96
-    const Vector3i & a = pt.def.seg[0].pt;
-    const Vector3i & b = pt.def.seg[1].pt;
-    Coords res{
-        pt.oa * FastInt128( b[kx_] ) - pt.ob * FastInt128( a[kx_] ),
-        pt.oa * FastInt128( b[ky_] ) - pt.ob * FastInt128( a[ky_] ),
-        pt.oa - pt.ob };
-    if ( res.d < 0 )
-    {
-        res.nx = -res.nx;
-        res.ny = -res.ny;
-        res.d = -res.d;
-    }
-    return res;
 }
 
 int CutTrianglePredicates::compareExact_( VertId p, VertId q, bool y ) const
 {
-    // the products of a numerator below 1.3 * 2^126 and a denominator below 1.3 * 2^96 (see exactCoords_) fit in 256 bits
-    const auto a = exactCoords_( p );
-    const auto b = exactCoords_( q );
+    // the products of a numerator below 1.3 * 2^126 and a denominator below 1.3 * 2^96 (see exactCoords) fit in 256 bits
+    const auto a = exactCoords( impl_->points[p], kx_, ky_ );
+    const auto b = exactCoords( impl_->points[q], kx_, ky_ );
     const auto l = Int128Mul256( y ? a.ny : a.nx ) * Int128Mul256( b.d );
     const auto r = Int128Mul256( y ? b.ny : b.nx ) * Int128Mul256( a.d );
     return l < r ? -1 : ( r < l ? 1 : 0 );
@@ -776,8 +723,8 @@ bool CutTrianglePredicates::less( VertId p, VertId q ) const
 
 bool CutTrianglePredicates::lessCoincident_( VertId p, VertId q ) const
 {
-    const auto & da = points_[p].def;
-    const auto & db = points_[q].def;
+    const auto & da = impl_->points[p].def;
+    const auto & db = impl_->points[q].def;
     // along a segment s0 -> s1, the order of the perturbed points is that of the sweep if the sweep meets s0 first
     auto alongSweep = [&] ( const PreciseVertCoords & s0, const PreciseVertCoords & s1 )
     {
@@ -824,8 +771,8 @@ std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, Ver
 {
     // a point on a side and a point not on it, both on one plane line: the latter is strictly on the left of the side,
     // so the direction from the former to it is the direction of the line, signed to point to the left of the side
-    const auto & a = points_[p];
-    const auto & b = points_[q];
+    const auto & a = impl_->points[p];
+    const auto & b = impl_->points[q];
     const int onlyA = a.sides & ~b.sides;
     const int onlyB = b.sides & ~a.sides;
     if ( onlyA == 0 && onlyB == 0 )
@@ -833,9 +780,8 @@ std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, Ver
     const auto l = commonLine_( p, q, true );
     if ( !l || l->side >= 0 )
         return {};
-    const auto n = normalOf( l->plane );
-    const FastInt128 lx = crossComponent( normal_, n, kx_ );
-    const FastInt128 ly = crossComponent( normal_, n, ky_ );
+    const auto line = lineDirectionOf( normal_, normalOf( l->plane ) );
+    const FastInt128 lx = line[kx_], ly = line[ky_];
     if ( lx == 0 && ly == 0 )
         return {}; // the line has no exact direction: the planes are parallel before the perturbation, or a normal is zero
     const Vector2i dir( sgn( lx ), sgn( ly ) );
@@ -858,35 +804,31 @@ std::optional<Vector2i> CutTrianglePredicates::perturbedDirection_( VertId p, Ve
 {
     const bool swapped = q < p;
     const auto key = swapped ? ( std::uint64_t( q ) << 32 ) | std::uint64_t( p ) : ( std::uint64_t( p ) << 32 ) | std::uint64_t( q );
+    Vector2i dir;
+    if ( !impl_->dirs.if_contains( key, [&] ( const auto & x ) { dir = x.second; } ) )
     {
-        std::lock_guard lock( cache_->mutex );
-        if ( const auto it = cache_->perturbedDirs.find( key ); it != cache_->perturbedDirs.end() )
-        {
-            if ( it->second == Vector2i() )
-                return {}; // the points coincide after the perturbation too
-            return swapped ? -it->second : it->second;
-        }
+        // the line through a point on a side gives the direction faster than the expansion of the perturbation, if it applies
+        auto res = swapped ? directionFromSide_( q, p ) : directionFromSide_( p, q );
+        if ( !res )
+            res = swapped ? directionByPerturbation( q, p ) : directionByPerturbation( p, q );
+        dir = res.value_or( Vector2i() );
+        impl_->dirs.emplace( key, dir );
+        impl_->cached.store( true, std::memory_order_relaxed );
     }
-    // the line through a point on a side gives the direction faster than the expansion of the perturbation, if it applies
-    auto res = swapped ? directionFromSide_( q, p ) : directionFromSide_( p, q );
-    if ( !res )
-        res = swapped ? directionByPerturbation( q, p ) : directionByPerturbation( p, q );
-    std::lock_guard lock( cache_->mutex );
-    cache_->perturbedDirs[key] = res.value_or( Vector2i() );
-    if ( !res )
-        return {};
-    return swapped ? -*res : *res;
+    if ( dir == Vector2i() )
+        return {}; // the points coincide after the perturbation too
+    return swapped ? -dir : dir;
 }
 
 std::optional<Vector2i> CutTrianglePredicates::directionByPerturbation( VertId p, VertId q ) const
 {
-    return sosDirection( points_[p].def, points_[q].def, kx_, ky_ );
+    return sosDirection( impl_->points[p].def, impl_->points[q].def, kx_, ky_ );
 }
 
 std::optional<CutTrianglePredicates::Line> CutTrianglePredicates::commonLine_( VertId p, VertId q, bool withVertex ) const
 {
-    const auto & a = points_[p];
-    const auto & b = points_[q];
+    const auto & a = impl_->points[p];
+    const auto & b = impl_->points[q];
     if ( const int common = a.sides & b.sides )
         return Line{ .side = std::countr_zero( unsigned( common ) ) }; // one bit, unless p and q are the same vertex
     if ( a.def.isVertex() || b.def.isVertex() )
@@ -902,7 +844,7 @@ std::optional<CutTrianglePredicates::Line> CutTrianglePredicates::commonLine_( V
         return Line{ .plane = x.sides != 0 ? x.def.tri : std::array<PreciseVertCoords, 3>{ v, x.def.seg[0], x.def.seg[1] } };
     }
     // a crossing of a side with another triangle is on the plane of that triangle, and so is a crossing of its edge with this triangle
-    auto onPlane = [] ( const std::array<PreciseVertCoords, 3> & t, const Point & x )
+    auto onPlane = [] ( const std::array<PreciseVertCoords, 3> & t, const CutPoint & x )
     {
         return x.sides != 0 ? sameTriangle( t, x.def.tri ) : hasVert( t, x.def.seg[0].id ) && hasVert( t, x.def.seg[1].id );
     };
@@ -926,8 +868,8 @@ Vector2i CutTrianglePredicates::lineDirection_( const Line & l ) const
     // and along cross( normal of the triangle, normal of the plane ) on a plane
     if ( l.side >= 0 )
         return segmentDirection_( tri_[l.side], tri_[( l.side + 1 ) % 3] );
-    const auto n = normalOf( l.plane );
-    const Vector2i res( sgn( crossComponent( normal_, n, kx_ ) ), sgn( crossComponent( normal_, n, ky_ ) ) );
+    const auto line = lineDirectionOf( normal_, normalOf( l.plane ) );
+    const Vector2i res( sgn( line[kx_] ), sgn( line[ky_] ) );
     if ( res.x != 0 || res.y != 0 )
         return res;
     // only the perturbation gives the direction if the planes are parallel before it, or one of the normals is zero
@@ -945,9 +887,9 @@ bool CutTrianglePredicates::along_( const Vector2i & dir, VertId p, VertId q ) c
     return less( p, q ) == sweepForward( dir );
 }
 
-bool CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, const Point & x ) const
+bool CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, VertId x ) const
 {
-    const auto & p = x.def;
+    const auto & p = impl_->points[x].def;
     auto orient = [&] ( const PreciseVertCoords & v )
     {
         return orient3d( { plane[0], plane[1], plane[2], v } );
@@ -974,39 +916,34 @@ bool CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3>
     if ( in1 )
         return orient( p.seg[0] );
     // the point is on the segment, so on the side of both ends if they are on one side
-    const auto va = volume( plane[0].pt, plane[1].pt, plane[2].pt, p.seg[0].pt );
-    const auto vb = volume( plane[0].pt, plane[1].pt, plane[2].pt, p.seg[1].pt );
-    if ( va != 0 && vb != 0 && ( va > 0 ) == ( vb > 0 ) )
-        return va > 0;
-    // the point is a + s * ( b - a ) for s = oa / ( oa - ob ) (see addPoint), so its volume with the plane is ( oa * vb - ob * va ) / ( oa - ob ),
-    // where oa - ob is not zero and has the sign of oa > ob; all volumes are within 2^96, and their products within 2^192
-    const auto num = Int128Mul256( x.oa ) * Int128Mul256( vb ) - Int128Mul256( x.ob ) * Int128Mul256( va );
-    if ( const int s = num.sign() )
-        return ( s > 0 ) == ( x.oa > x.ob );
-    // the point is on the plane before the perturbation: it is on the side of both ends if they are on one side after it
-    const bool o0 = va != 0 ? va > 0 : orient( p.seg[0] );
-    const bool o1 = vb != 0 ? vb > 0 : orient( p.seg[1] );
-    if ( o0 == o1 )
+    const bool o0 = orient( p.seg[0] );
+    if ( o0 == orient( p.seg[1] ) )
         return o0;
     if ( sameTriangle( p.tri, plane ) )
     {
         fail_(); // the point is on the plane, so on the line
         return false;
     }
-    if ( const int s = sosSideOfPlane( plane, p ) )
-        return s > 0;
-    fail_(); // the point is on the plane after the perturbation too
-    return false;
+    // the segment crosses the plane, so the point is on the side of the end it meets first if it meets its triangle before the plane;
+    // the boolean's predicate takes any plane through three vertices with distinct ids, as the made-up planes vcd and dce of commonLine_ are,
+    // that shares at most two of them with the triangle and none with the segment, as the checks above and in addPoint ensure
+    const bool res = segmentIntersectionTriPlaneOrder( { p.seg[0], p.seg[1], p.tri[0], p.tri[1], p.tri[2], plane[0], plane[1], plane[2] } ) == o0;
+#ifndef NDEBUG
+    // if the segment crosses the triangle of the plane too, the order along the segment is the one of the boolean's cut, see lessCoincident_
+    if ( doTriangleSegmentIntersect( { plane[0], plane[1], plane[2], p.seg[0], p.seg[1] } ) )
+        assert( res == ( segmentIntersectionOrder( { p.seg[0], p.seg[1], p.tri[0], p.tri[1], p.tri[2], plane[0], plane[1], plane[2] } ) == o0 ) );
+#endif
+    return res;
 }
 
 int CutTrianglePredicates::exactOrient_( VertId a, VertId b, VertId c ) const
 {
     // the determinant of the rows ( nx, ny, d ) of the exact projected points has the sign of the doubled area of abc,
-    // since every d is positive; with numerators below 1.3 * 2^126 and denominators below 1.3 * 2^96 (see exactCoords_),
+    // since every d is positive; with numerators below 1.3 * 2^126 and denominators below 1.3 * 2^96 (see exactCoords),
     // every 2x2 minor is below 3.4 * 2^252 and fits in 256 bits, and the determinant is below 2^352
-    const auto p = exactCoords_( a );
-    const auto q = exactCoords_( b );
-    const auto r = exactCoords_( c );
+    const auto p = exactCoords( impl_->points[a], kx_, ky_ );
+    const auto q = exactCoords( impl_->points[b], kx_, ky_ );
+    const auto r = exactCoords( impl_->points[c], kx_, ky_ );
     using M = Int128Mul256;
     const auto det = ( M( q.ny ) * M( r.d ) - M( q.d ) * M( r.ny ) ) * p.nx
                    - ( M( q.nx ) * M( r.d ) - M( q.d ) * M( r.nx ) ) * p.ny
@@ -1018,41 +955,100 @@ bool CutTrianglePredicates::ccw( VertId a, VertId b, VertId c ) const
 {
     if ( const auto res = approxCcw( approx_[a], approx_[b], approx_[c] ) )
         return *res;
-    // the exact positions are on one line or nearly so: the lines known from the definitions of the points decide even the former
-    if ( const auto res = ccwByLines( a, b, c ) )
-        return *res;
-    if ( const int s = exactOrient_( a, b, c ) )
-        return s > 0;
-    // the points are on one line before the perturbation, and no two of them on a known one
-    if ( const int s = sosOrient( points_[a].def, points_[b].def, points_[c].def, kx_, ky_ ) )
-        return s > 0;
-    fail_(); // the points are on one line after the perturbation too
-    return false;
+    return ccwExact_( a, b, c );
 }
 
-std::optional<bool> CutTrianglePredicates::ccwByLines( VertId a, VertId b, VertId c ) const
+bool CutTrianglePredicates::ccwExact_( VertId a, VertId b, VertId c ) const
 {
-    if ( const int common = points_[a].sides & points_[b].sides & points_[c].sides )
+    // the exact positions are on one line or nearly so: a side through two of the points decides at once
+    if ( const auto res = ccwBySides_( a, b, c ) )
+        return *res;
+    // the other rules are slower, while the sweep asks about the same triangles often:
+    // the cache keeps their answers for the triangles with the vertices sorted by ids
+    bool flipped = false;
+    const UnorientedTriangle key( { a, b, c }, &flipped );
+    int s = 0; // 1 or -1 for the sorted vertices, 0 if not found yet
+    {
+        std::lock_guard lock( impl_->orientsMutex );
+        if ( const auto it = impl_->orients.find( key ); it != impl_->orients.end() )
+            s = it->second;
+    }
+    if ( s == 0 )
+    {
+        s = orientSlow_( key[0], key[1], key[2] );
+        std::lock_guard lock( impl_->orientsMutex );
+        impl_->orients.emplace( key, s );
+        impl_->cached.store( true, std::memory_order_relaxed );
+    }
+    return ( s > 0 ) != flipped;
+}
+
+int CutTrianglePredicates::orientSlow_( VertId a, VertId b, VertId c ) const
+{
+    // the lines known from the definitions of the points decide even the points on one line before the perturbation
+    if ( const auto res = ccwByPlanes_( a, b, c ) )
+        return *res ? 1 : -1;
+    if ( const int s = exactOrient_( a, b, c ) )
+        return s;
+    // the points are on one line before the perturbation, and no two of them on a known one: the expansion of the perturbation decides
+    const auto & points = impl_->points;
+    if ( const int s = sosOrient( points[a].def, points[b].def, points[c].def, kx_, ky_ ) )
+        return s;
+    fail_(); // the points are on one line after the perturbation too
+    return -1;
+}
+
+std::optional<bool> CutTrianglePredicates::ccwByPerturbation( VertId a, VertId b, VertId c ) const
+{
+    const auto & points = impl_->points;
+    if ( const int s = sosOrient( points[a].def, points[b].def, points[c].def, kx_, ky_ ) )
+        return s > 0;
+    return {};
+}
+
+std::optional<bool> CutTrianglePredicates::ccwBySides_( VertId a, VertId b, VertId c ) const
+{
+    const auto & points = impl_->points;
+    if ( const int common = points[a].sides & points[b].sides & points[c].sides )
     {
         // three points on one side: they bulge inward a little (infinitely less than the perturbation of the vertices),
         // so that every point inside the side is a reflex vertex of the boundary, where a triangulation adds no sliver triangle
         const auto dir = lineDirection_( Line{ .side = std::countr_zero( unsigned( common ) ) } );
         return int( along_( dir, a, b ) ) + int( along_( dir, b, c ) ) + int( along_( dir, c, a ) ) == 1;
     }
-    // rotating the vertices keeps the orientation of the triangle, so any two of them on one line can come first;
+    // rotating the vertices keeps the orientation of the triangle, so any two of them on one side can come first,
+    // and the triangle is on the left of its sides
+    const std::array<VertId, 3> v{ a, b, c };
+    for ( int i = 0; i < 3; ++i )
+    {
+        const VertId p = v[i], q = v[( i + 1 ) % 3];
+        if ( const int common = points[p].sides & points[q].sides )
+            return along_( lineDirection_( Line{ .side = std::countr_zero( unsigned( common ) ) } ), p, q );
+    }
+    return {};
+}
+
+std::optional<bool> CutTrianglePredicates::ccwByLines( VertId a, VertId b, VertId c ) const
+{
+    // a side decides at once, and a plane needs the side of the third point, so the sides come first
+    if ( const auto res = ccwBySides_( a, b, c ) )
+        return res;
+    return ccwByPlanes_( a, b, c );
+}
+
+std::optional<bool> CutTrianglePredicates::ccwByPlanes_( VertId a, VertId b, VertId c ) const
+{
     // the lines through a vertex and a crossing come only in the second round: they are needed only at folds, and taking them first was slower
     const std::array<VertId, 3> v{ a, b, c };
     for ( int i = 0; i < 6; ++i )
     {
         const VertId p = v[i % 3], q = v[( i + 1 ) % 3], r = v[( i + 2 ) % 3];
-        const auto l = commonLine_( p, q, i >= 3 );
-        if ( !l )
-            continue;
-        const bool forward = along_( lineDirection_( *l ), p, q );
-        if ( l->side >= 0 )
-            return forward; // the triangle is on the left of its sides, and r is not on this one
-        // the left of the line in its direction is the side of the plane opposite to the plane's normal, which is where orient3d is true
-        return forward == sideOfPlane_( l->plane, points_[r] );
+        if ( const auto l = commonLine_( p, q, i >= 3 ) )
+        {
+            assert( l->side < 0 ); // no two of the points on one side, see ccwBySides_
+            // the left of the line in its direction is the side of the plane opposite to the plane's normal, which is where orient3d is true
+            return along_( lineDirection_( *l ), p, q ) == sideOfPlane_( l->plane, r );
+        }
     }
     return {}; // no two of the points are on a known line
 }

@@ -29,9 +29,6 @@ enum class DecimatePartsMode
 {
     /// the mesh is already packed optimally (e.g. by mesh.packOptimally()), and the parts are ranges of face ids
     PackedMesh,
-    /// the decimation calls mesh.packOptimally( false ) first, renumbering the elements of the mesh
-    /// and all sets and maps in the settings, then the parts are ranges of face ids
-    PackOptimally,
     /// the parts are subtrees of mesh's AABB tree (taken from the mesh if present, otherwise constructed), no packing is needed;
     /// the number of parts is rounded up to a power of two
     AABBTree

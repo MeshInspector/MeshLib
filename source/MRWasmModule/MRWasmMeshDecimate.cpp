@@ -17,7 +17,6 @@ EMSCRIPTEN_BINDINGS( meshlib_decimate )
 
     emscripten::enum_<DecimatePartsMode>( "DecimatePartsMode" )
         .value( "PackedMesh", DecimatePartsMode::PackedMesh )
-        .value( "PackOptimally", DecimatePartsMode::PackOptimally )
         .value( "AABBTree", DecimatePartsMode::AABBTree );
 
     emscripten::value_object<DecimateResult>( "DecimateResult" )

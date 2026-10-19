@@ -63,7 +63,7 @@ TEST( MRMesh, MeshDecimateParallel )
 // all parts modes decimate a region of the mesh in parallel and keep the sets from the settings consistent with the mesh
 TEST( MRMesh, MeshDecimatePartsModes )
 {
-    for ( auto mode : { DecimatePartsMode::PackedMesh, DecimatePartsMode::PackOptimally, DecimatePartsMode::AABBTree } )
+    for ( auto mode : { DecimatePartsMode::PackedMesh, DecimatePartsMode::AABBTree } )
     {
         auto mesh = makeSphere( { .numMeshVertices = 2000 } );
         FaceBitSet region( mesh.topology.faceSize() );

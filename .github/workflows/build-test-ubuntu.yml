@@ -82,7 +82,7 @@ jobs:
           SO=$(find . -name 'libclang_rt.ubsan_standalone-x86_64.so' | head -1)
           D=$(cd $(dirname ${SO}) && pwd)
           ls -l ${D}
-          echo "LDFLAGS=-fno-sanitize-link-runtime -L${D} -l:$(basename ${SO}) -Wl,-rpath,${D}" >> $GITHUB_ENV
+          echo "LDFLAGS=-L${D} -l:$(basename ${SO}) -Wl,-rpath,${D}" >> $GITHUB_ENV
           echo "UBSAN_OPTIONS=print_stacktrace=1:halt_on_error=1" >> $GITHUB_ENV
 
       - name: Get AWS instance type
@@ -134,7 +134,7 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
-          CXXFLAGS: -fsanitize=signed-integer-overflow,shift -gline-tables-only
+          CXXFLAGS: -fsanitize=signed-integer-overflow,shift -fno-sanitize-link-runtime -gline-tables-only
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}

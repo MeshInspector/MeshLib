@@ -39,9 +39,30 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
     for ( const auto& inter : contour->intersections )
         std::visit( [] ( auto id ) { EXPECT_TRUE( id.valid() ); }, inter.primitiveId );
 
-    auto res = cutMesh( mesh, { *contour } );
+    auto cutCopy = mesh;
+    auto res = cutMesh( cutCopy, { *contour } );
     EXPECT_TRUE( res.fbsWithContourIntersections.none() );
     EXPECT_EQ( res.resultCut.size(), 1 );
+
+    // the first point takes over the last intersection of the path to the last point, and must still be the contour start
+    mtps.clear();
+    for ( auto p : { Vector3f( 1.5f, 0.9f, 0 ), Vector3f( 1.5f, 2.5f, 0 ), Vector3f( 3.5f, 2.5f, 0 ), Vector3f( 3.5f, 1.5f, 0 ), Vector3f( 1.5f, 1, 0 ) } )
+        mtps.push_back( mesh.projectPoint( p ).mtp );
+    mtps.push_back( mtps.front() );
+    std::vector<int> pivots;
+    contour = convertMeshTriPointsToMeshContour( mesh, mtps, SearchPathSettings{}, &pivots );
+    ASSERT_TRUE( contour.has_value() );
+    ASSERT_EQ( pivots.size(), mtps.size() );
+    EXPECT_EQ( pivots.front(), 0 );
+    EXPECT_EQ( pivots.back(), 0 );
+    int lastPivot = -1;
+    for ( size_t i = 0; i + 1 < pivots.size(); ++i )
+    {
+        if ( pivots[i] < 0 )
+            continue;
+        EXPECT_GT( pivots[i], lastPivot );
+        lastPivot = pivots[i];
+    }
 }
 
 TEST( MRMesh, BooleanIntersectionsSort )

@@ -910,13 +910,16 @@ Expected<OneMeshContour> convertMeshTriPointsToMeshContour( const Mesh& mesh, co
                 {
                     res.intersections.back() = *centerInterOp;
                     mtpPushed = true;
+                    if ( i == 0 )
+                        --firstMtpStart; // the first point took over the last intersection of the previous point
                 }
             }
             if ( pivotIndices && mtpPushed )
             {
                 int currentIndex = int( res.intersections.size() ) - 1;
-                if ( realPivotIndex > 0 && ( *pivotIndices )[realPivotIndex - 1] == currentIndex )
-                    ( *pivotIndices )[realPivotIndex - 1] = -1;
+                const int prevPivotIndex = realPivotIndex > 0 ? realPivotIndex - 1 : ( closed ? realPivots.back() : -1 );
+                if ( prevPivotIndex >= 0 && ( *pivotIndices )[prevPivotIndex] == currentIndex )
+                    ( *pivotIndices )[prevPivotIndex] = -1;
                 ( *pivotIndices )[realPivotIndex] = currentIndex;
             }
         }

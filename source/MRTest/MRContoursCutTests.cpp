@@ -190,6 +190,95 @@ TEST( MRMesh, CutMeshContourTurnsBackOnBoundary )
     EXPECT_EQ( res.resultCut.size(), 1 );
 }
 
+// the contour goes along the boundary through corner vertex C, whose boundary edges have the hole between them:
+// the vertex before C and the point after it on the other boundary edge of C have no common face
+TEST( MRMesh, ContourThroughBoundaryCorner )
+{
+    // 4x2 squares in XY plane, vertex 5 * y + x is at ( x, y ); corner C = 0 has faces (0,1,6) and (0,6,5)
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 3; ++y )
+        for ( int x = 0; x < 5; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 2; ++y )
+    {
+        for ( int x = 0; x < 4; ++x )
+        {
+            const VertId v( 5 * y + x );
+            t.push_back( { v, v + 1, v + 6 } );
+            t.push_back( { v, v + 6, v + 5 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    const auto& topology = mesh.topology;
+
+    const VertId a( 1 ), c( 0 ), b( 5 );
+    const auto cb = topology.findEdge( c, b );
+    ASSERT_TRUE( topology.isBdEdge( cb ) );
+    ASSERT_TRUE( topology.isBdEdge( topology.findEdge( c, a ) ) );
+    const MeshTriPoint mtpA = mesh.toTriPoint( a );
+    const MeshTriPoint onCB( MeshEdgePoint( cb, 0.5f ) );
+    const MeshTriPoint before = findProjection( Vector3f( 1.6f, 0.3f, 0.0f ), mesh ).mtp;
+    const MeshTriPoint after = findProjection( Vector3f( 0.3f, 1.5f, 0.0f ), mesh ).mtp;
+    auto facesOf = [&] ( const OneMeshIntersection& inter )
+    {
+        std::vector<FaceId> res;
+        if ( auto v = std::get_if<VertId>( &inter.primitiveId ) )
+        {
+            for ( auto e : orgRing( topology, *v ) )
+                if ( auto f = topology.left( e ) )
+                    res.push_back( f );
+        }
+        else if ( auto e = std::get_if<EdgeId>( &inter.primitiveId ) )
+        {
+            for ( auto f : { topology.left( *e ), topology.right( *e ) } )
+                if ( f )
+                    res.push_back( f );
+        }
+        else
+            res.push_back( std::get<FaceId>( inter.primitiveId ) );
+        return res;
+    };
+
+    const MeshTriPoint cOnOtherEdge = mesh.toTriPoint( c );
+    ASSERT_NE( cOnOtherEdge.onEdge( topology ).e.undirected(), cb.undirected() );
+    // C stored so that onEdge() gives C-B: the cleanup of duplicates drops C as a second point on the edge of the next point,
+    // and the path from A to the point on C-B goes inside the mesh
+    MeshTriPoint cOnCB;
+    for ( auto e : orgRing( topology, c ) )
+        if ( MeshTriPoint( e, TriPointf( 0, 0 ) ).onEdge( topology ).e.undirected() == cb.undirected() )
+            cOnCB = MeshTriPoint( e, TriPointf( 0, 0 ) );
+    ASSERT_EQ( cOnCB.inVertex( topology ), c );
+    for ( const auto& mtpC : { cOnOtherEdge, cOnCB } )
+    {
+        // forward: vertex A, C, the point on C-B (the vertex-edge test dropped C); backward: the same points in reverse order
+        for ( bool forward : { true, false } )
+        {
+            SCOPED_TRACE( std::string( mtpC.e == cOnCB.e ? "C on C-B" : "C on another edge" ) + ( forward ? ", forward" : ", backward" ) );
+            auto contour = forward ?
+                surfaceLineToMeshContour( mesh, { before, mtpA, mtpC, onCB, after, before } ) :
+                surfaceLineToMeshContour( mesh, { after, onCB, mtpC, mtpA, before, after } );
+            ASSERT_TRUE( contour.has_value() );
+            ASSERT_TRUE( contour->closed );
+            // cutMesh relies on it
+            for ( size_t i = 0; i + 1 < contour->intersections.size(); ++i )
+            {
+                const auto fs = facesOf( contour->intersections[i] ), fn = facesOf( contour->intersections[i + 1] );
+                EXPECT_TRUE( std::any_of( fs.begin(), fs.end(), [&] ( FaceId f ) { return std::find( fn.begin(), fn.end(), f ) != fn.end(); } ) )
+                    << "intersections " << i << " and " << i + 1 << " have no common face";
+            }
+
+            auto cut = mesh;
+            auto res = cutMesh( cut, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+            EXPECT_TRUE( cut.topology.checkValidity() );
+            EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+            EXPECT_EQ( res.resultCut.size(), 1 );
+            // an edge across the hole at C would split the boundary
+            EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+        }
+    }
+}
+
 TEST( MRMesh, MeshCollidePrecise )
 {
     const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );

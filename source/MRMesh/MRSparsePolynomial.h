@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -24,13 +25,41 @@ SparsePolynomialProduct<T,D,M> mulAs( const SparsePolynomial<C,D,M>& a, const Sp
 template <typename C, typename D, D M>
 SparsePolynomial<C,D,M> operator *( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b ) { return mulAs<C>( a, b ); }
 
+/// one product of two polynomials in a sum, see \ref lowestTermOfSumOfProducts
+template <typename A, typename B>
+struct SignedProduct
+{
+    const A* a = nullptr;
+    const B* b = nullptr;
+    bool negative = false; ///< whether the product is subtracted
+};
+
+/// returns the degree and the sign of the lowest-degree not-zero coefficient of the sum of the given products of polynomials,
+/// or sign 0 if all its coefficients of degrees not above M are zeros (the terms of higher degrees are not considered, since the arguments store the terms of degrees not above M only);
+/// every coefficient of the first factors is converted into type TA and every coefficient of the second factors into type TB before multiplication
+/// (unless it already has that type), and the coefficients of the products have the type of TA*TB;
+/// the coefficients of the sum are computed in the order of increasing degree and only till the first not-zero one;
+/// the products of two terms of degrees below `from` are skipped, which the caller may do if their sum is known to be zero
+/// (e.g. a polynomial that was zero before the terms of degrees from `from` up were added to its factors)
+template <typename TA, typename TB = TA, typename CA, typename CB, typename D, D M>
+[[nodiscard]] std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts,
+    D from = 0 );
+
+/// returns the degree and the sign of the lowest-degree not-zero coefficient of the polynomial ( a * b - c * d ),
+/// or sign 0 if all its coefficients of degrees not above M are zeros, see \ref lowestTermOfSumOfProducts
+template <typename T, typename C, typename D, D M>
+[[nodiscard]] std::pair<D, int> lowestTermOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
+    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d, D from = 0 )
+{
+    const SignedProduct<SparsePolynomial<C,D,M>, SparsePolynomial<C,D,M>> products[2] = { { &a, &b, false }, { &c, &d, true } };
+    return lowestTermOfSumOfProducts<T>( products, 2, from );
+}
+
 /// returns the sign of the polynomial ( a * b - c * d ) for infinitesimal positive argument, i.e. the sign of its lowest-degree not-zero coefficient,
-/// or 0 if all its coefficients of degrees not above M are zeros (the terms of higher degrees are not considered, since the arguments store the terms of degrees not above M only);
-/// every coefficient is converted into type T before multiplication, and the coefficients of the products have the type of T*T;
-/// the coefficients of the difference are computed in the order of increasing degree and only till the first not-zero one
+/// see \ref lowestTermOfProductsDiff
 template <typename T, typename C, typename D, D M>
 [[nodiscard]] int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
-    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d );
+    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d ) { return lowestTermOfProductsDiff<T>( a, b, c, d ).second; }
 
 /// The class to store a polynomial with a large number of zero coefficients
 /// (only non-zeros are stored in a vector of terms sorted by ascending degree)
@@ -233,49 +262,81 @@ template <typename T, typename C, typename D, D M>
             const auto deg = degA + degB;
             if ( deg > M )
                 break;
-            res.emplace_back( deg, T( cfA ) * T( cfB ) );
+            // no conversion (and no copy of a big integer) if the coefficients have type T already
+            if constexpr ( std::is_same_v<T, C> )
+                res.emplace_back( deg, cfA * cfB );
+            else
+                res.emplace_back( deg, T( cfA ) * T( cfB ) );
         }
     }
     return Res::fromUnsortedTerms( std::move( res ) );
 }
 
-template <typename T, typename C, typename D, D M>
-int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial<C,D,M>& b,
-    const SparsePolynomial<C,D,M>& c, const SparsePolynomial<C,D,M>& d )
+template <typename TA, typename TB, typename CA, typename CB, typename D, D M>
+std::pair<D, int> lowestTermOfSumOfProducts( const SignedProduct<SparsePolynomial<CA,D,M>, SparsePolynomial<CB,D,M>>* products, int numProducts,
+    D from )
 {
-    // the terms of a*b (and of c*d) form rows: the i-th term of a times all the terms of b in the order of increasing degree;
-    // the heap keeps the current term of every row, so all terms of both products are visited in the order of increasing degree
+    // the terms of every product form rows: the i-th term of its first factor times all the terms of the second one in the order of increasing degree;
+    // the heap keeps the current term of every row, so all terms of all products are visited in the order of increasing degree
     struct RowTerm
     {
         D deg;
-        int i, j; // indices of the terms in the two factors
-        bool neg; // true for the terms of c*d
+        int p, i, j; // the product and the indices of the terms in its two factors
     };
     auto greater = []( const RowTerm & x, const RowTerm & y ) { return x.deg > y.deg; };
     std::vector<RowTerm> heap;
-    heap.reserve( a.get().size() + c.get().size() );
-    // the terms of degrees above M are never considered, and since the terms of every polynomial are sorted, the initialization stops at the first such row
-    if ( !b.get().empty() )
-        for ( int i = 0; i < (int)a.get().size() && a.get()[i].first + b.get()[0].first <= M; ++i )
-            heap.push_back( { a.get()[i].first + b.get()[0].first, i, 0, false } );
-    if ( !d.get().empty() )
-        for ( int i = 0; i < (int)c.get().size() && c.get()[i].first + d.get()[0].first <= M; ++i )
-            heap.push_back( { c.get()[i].first + d.get()[0].first, i, 0, true } );
+    size_t numRows = 0;
+    for ( int p = 0; p < numProducts; ++p )
+        numRows += products[p].a->get().size();
+    heap.reserve( numRows );
+    for ( int p = 0; p < numProducts; ++p )
+    {
+        const auto & f = products[p].a->get();
+        const auto & g = products[p].b->get();
+        if ( g.empty() )
+            continue;
+        // the row of a term of f below `from` starts from the first term of g not below it
+        const int jFrom = from > 0 ? int( std::lower_bound( g.begin(), g.end(), from, []( const auto & t, D d ) { return t.first < d; } ) - g.begin() ) : 0;
+        for ( int i = 0; i < (int)f.size(); ++i )
+        {
+            const int j = f[i].first < from ? jFrom : 0;
+            if ( j == (int)g.size() )
+                continue;
+            // the terms of degrees above M are never considered, and since the terms of every polynomial are sorted,
+            // the initialization stops at the first such row that starts from the first term of g
+            if ( const D deg = f[i].first + g[j].first; deg <= M )
+                heap.push_back( { deg, p, i, j } );
+            else if ( j == 0 )
+                break;
+        }
+    }
     std::make_heap( heap.begin(), heap.end(), greater );
 
+    // no conversion (and no copy of a big integer) if a coefficient has the type to multiply in already
+    const auto mul = []( const CA & x, const CB & y )
+    {
+        if constexpr ( std::is_same_v<TA, CA> && std::is_same_v<TB, CB> )
+            return x * y;
+        else if constexpr ( std::is_same_v<TA, CA> )
+            return x * TB( y );
+        else if constexpr ( std::is_same_v<TB, CB> )
+            return TA( x ) * y;
+        else
+            return TA( x ) * TB( y );
+    };
     while ( !heap.empty() )
     {
         const auto deg = heap.front().deg;
-        decltype( std::declval<T>() * std::declval<T>() ) coeff{};
+        decltype( mul( std::declval<CA>(), std::declval<CB>() ) ) coeff{};
         do
         {
             std::pop_heap( heap.begin(), heap.end(), greater );
             auto r = heap.back();
             heap.pop_back();
-            const auto & f = ( r.neg ? c : a ).get();
-            const auto & g = ( r.neg ? d : b ).get();
-            const auto prod = T( f[r.i].second ) * T( g[r.j].second );
-            if ( r.neg )
+            const auto & f = products[r.p].a->get();
+            const auto & g = products[r.p].b->get();
+            const auto prod = mul( f[r.i].second, g[r.j].second );
+            if ( products[r.p].negative )
                 coeff -= prod;
             else
                 coeff += prod;
@@ -287,11 +348,11 @@ int signOfProductsDiff( const SparsePolynomial<C,D,M>& a, const SparsePolynomial
         }
         while ( !heap.empty() && heap.front().deg == deg );
         if ( coeff > 0 )
-            return 1;
+            return { deg, 1 };
         if ( coeff < 0 )
-            return -1;
+            return { deg, -1 };
     }
-    return 0;
+    return {};
 }
 
 } //namespace MR

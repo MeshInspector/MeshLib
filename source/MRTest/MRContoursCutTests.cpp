@@ -4,6 +4,7 @@
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRCube.h>
+#include <MRMesh/MREdgePaths.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRConstants.h>
@@ -435,8 +436,8 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
     }
 }
 
-// a closed contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut,
-// near the origin and far from it, also where the contour fills most of the triangle
+// a contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut, near the origin and far from it,
+// also where the contour fills most of the triangle; a closed contour is an island in the hole of the triangle, an open one a slit
 TEST( MRMesh, CutMeshLoneContour )
 {
     // uniform values in [-1, 1] straight from the generator, whose output the standard specifies (unlike that of the distributions),
@@ -476,23 +477,36 @@ TEST( MRMesh, CutMeshLoneContour )
                         const auto b = corners[i] + ( corners[( i + 1 ) % 3] - corners[i] ) * ( j / 4.0f );
                         mtps.push_back( MeshTriPoint( e, TriPointf( b.x, b.y ) ) );
                     }
-                mtps.push_back( mtps.front() );
-                auto contour = surfaceLineToMeshContour( mesh, mtps );
-                ASSERT_TRUE( contour.has_value() );
+                auto closed = mtps;
+                closed.push_back( mtps.front() );
+                // the closed contour, the same without its last segment, and a slit of one segment (a hole loop of 2 edges)
+                for ( const auto& line : { closed, mtps, std::vector<MeshTriPoint>{ mtps[0], mtps[6] } } )
+                {
+                    auto contour = surfaceLineToMeshContour( mesh, line );
+                    ASSERT_TRUE( contour.has_value() );
 
-                Mesh cut = mesh;
-                auto res = cutMesh( cut, { *contour } );
-                EXPECT_TRUE( cut.topology.checkValidity() );
-                EXPECT_TRUE( res.fbsWithContourIntersections.none() ) << "distance " << dist << ", fill " << fill << ", trial " << trial;
-                EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the island is connected and filled on both sides
-                EXPECT_NEAR( cut.area(), mesh.area(), 1e-3 * mesh.area() );
+                    Mesh cut = mesh;
+                    auto res = cutMesh( cut, { *contour } );
+                    EXPECT_TRUE( cut.topology.checkValidity() );
+                    EXPECT_TRUE( res.fbsWithContourIntersections.none() )
+                        << "distance " << dist << ", fill " << fill << ", trial " << trial << ", points " << line.size();
+                    EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the island or the slit is connected and filled on both sides
+                    EXPECT_NEAR( cut.area(), mesh.area(), 1e-3 * mesh.area() );
+                    // the cut goes along the contour
+                    ASSERT_EQ( res.resultCut.size(), 1 );
+                    const auto& path = res.resultCut[0];
+                    ASSERT_EQ( path.size() + 1, contour->intersections.size() );
+                    EXPECT_TRUE( isEdgePath( cut.topology, path ) );
+                    for ( int i = 0; i < path.size(); ++i )
+                        EXPECT_EQ( cut.orgPnt( path[i] ), contour->intersections[i].coordinate );
+                }
             }
         }
     }
 }
 
 // a lone contour crossing itself (a bowtie inside one triangle of a closed mesh) cannot be connected with the triangle;
-// the cut reports the triangle as bad and keeps it, so that its sides make no hole even if the bad faces are filled
+// the cut reports the triangle as bad and keeps it, so that its sides make no hole whichever faces are filled
 TEST( MRMesh, CutMeshSelfCrossingLoneContour )
 {
     const auto mesh = makeCube();
@@ -505,7 +519,7 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
     const auto contour = surfaceLineToMeshContour( mesh, mtps );
     ASSERT_TRUE( contour.has_value() );
 
-    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::All } )
+    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::Good, CutMeshParameters::ForceFill::All } )
     {
         Mesh cut = mesh;
         const auto res = cutMesh( cut, { *contour }, { .forceFillMode = mode } );
@@ -513,8 +527,8 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
         EXPECT_TRUE( res.fbsWithContourIntersections.test( f ) );
         EXPECT_TRUE( cut.topology.hasFace( f ) );
         EXPECT_EQ( cut.topology.left( e ), f );
-        // the two sides of the island are left without faces, or filled
-        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::None ? 2 : 0 );
+        // the two sides of the island are left without faces (Good fills no hole of a bad face), or filled
+        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::All ? 0 : 2 );
     }
 }
 

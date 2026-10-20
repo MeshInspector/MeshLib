@@ -161,7 +161,8 @@ public:
     [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( Vector<T, I> & a ) { return a.vec_.end(); }
 
     /// The user can directly manipulate the vector, they can't break anything anyway.
-    std::vector<T> vec_;
+    /// Not exposed to bindings, except Python, where it is named `vec`.
+    MR_BIND_IGNORE_EXCEPT_PY std::vector<T> vec_;
 
 #if defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined( MR_COMPILING_ANY_BINDINGS )
     static_assert( sizeof(T) > 0 );

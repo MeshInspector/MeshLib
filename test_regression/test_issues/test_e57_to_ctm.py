@@ -32,7 +32,7 @@ def test_e57_to_ctm(tmp_path):
         r = random.uniform(0, 1)
         g = random.uniform(0, 1)
         b = random.uniform(0, 1)
-        colors.vec_.append(mm.Color(r, g, b))
+        colors.vec.append(mm.Color(r, g, b))
 
     cloud = mm.PointCloud()
     cloud.points = points

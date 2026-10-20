@@ -41,9 +41,7 @@ int main( void )
     }
 
     MR_SaveSettings* ss = MR_SaveSettings_DefaultConstruct();
-    if ( MR_std_vector_MR_Color_size( MR_VertColors_Get_vec_( colors ) ) ==
-         MR_std_vector_MR_Vector3f_size( MR_VertCoords_Get_vec_( MR_PointCloud_Get_points( pc ) ) )
-         )
+    if ( MR_VertColors_size( colors ) == MR_VertCoords_size( MR_PointCloud_Get_points( pc ) ) )
     {
         MR_SaveSettings_Set_colors( ss, colors );
     }

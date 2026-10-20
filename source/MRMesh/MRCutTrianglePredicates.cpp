@@ -5,7 +5,6 @@
 #include "MRSparsePolynomial.h"
 #include "MRTriMath.h"
 #include "MRUnorientedTriangle.h"
-#include "MRVarBigInt.h"
 #include "MRphmap.h"
 #include <algorithm>
 #include <atomic>
@@ -210,30 +209,39 @@ SosPolyOf<C> widen( const P & p )
     return SosPolyOf<C>( std::move( terms ) );
 }
 
-// the perturbed vectors of the directions of segments and lines, which only the rare points with zero exact directions need,
-// with the coefficients of any size; Vector3 cannot hold polynomials, which have no division
-using SosVec = std::array<SosPolyOf<VarBigInt>, 3>;
+// the perturbed vectors of the directions of segments and lines, which only the rare points with zero exact directions need;
+// Vector3 cannot hold polynomials, which have no division; the sum |p| of the absolute values of the coefficients of polynomial p
+// bounds each of them and the partial sums that give it, and |p + q| <= |p| + |q|, |p * q| <= |p| * |q| (the terms dropped above
+// degree cMaxPolyDAll only make it smaller); so for coordinates below 2^30 by absolute value, |p| is at most 2^30 for a perturbed
+// coordinate pt[i] + eps^d, 2^31 for a difference of two, 2 * 2^31 * 2^31 = 2^63 for a component of a perturbed normal,
+// and 2 * 2^63 * 2^63 = 2^127 for one of the cross product of two normals: 128 bits hold the former, and 256 bits the latter
+template <typename C>
+using SosVec = std::array<SosPolyOf<C>, 3>;
 
-SosVec sosCoords( const PointDegree & v )
+SosVec<FastInt128> sosCoords( const PointDegree & v )
 {
-    return { sosCoord<VarBigInt>( v, 0 ), sosCoord<VarBigInt>( v, 1 ), sosCoord<VarBigInt>( v, 2 ) };
+    return { sosCoord<FastInt128>( v, 0 ), sosCoord<FastInt128>( v, 1 ), sosCoord<FastInt128>( v, 2 ) };
 }
 
-SosVec sub( const SosVec & a, const SosVec & b )
+template <typename C>
+SosVec<C> sub( const SosVec<C> & a, const SosVec<C> & b )
 {
     return { a[0] - b[0], a[1] - b[1], a[2] - b[2] };
 }
 
-SosVec cross( const SosVec & a, const SosVec & b )
+/// the cross product, with the coefficients converted into T before multiplication
+template <typename T, typename C>
+auto cross( const SosVec<C> & a, const SosVec<C> & b )
 {
-    return { a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] };
+    return std::array{ mulAs<T>( a[1], b[2] ) - mulAs<T>( a[2], b[1] ), mulAs<T>( a[2], b[0] ) - mulAs<T>( a[0], b[2] ),
+        mulAs<T>( a[0], b[1] ) - mulAs<T>( a[1], b[0] ) };
 }
 
 /// the perturbed normal of the triangle of the vertices from index i of the stages, at stage s
-SosVec sosNormal( const PerturbationStages & ps, int i, int s )
+SosVec<FastInt128> sosNormal( const PerturbationStages & ps, int i, int s )
 {
     const auto a = sosCoords( ps.at( i, s ) );
-    return cross( sub( sosCoords( ps.at( i + 1, s ) ), a ), sub( sosCoords( ps.at( i + 2, s ) ), a ) );
+    return cross<FastInt128>( sub( sosCoords( ps.at( i + 1, s ) ), a ), sub( sosCoords( ps.at( i + 2, s ) ), a ) );
 }
 
 /// the lowest-degree term of the perturbed volume of the vertices a, b, c, d of the stages (see orient3dPoly) whose exact volume is zero,
@@ -299,7 +307,7 @@ LeadTerm leadOf( const SosPolyOf<C> & p )
 {
     if ( p.empty() )
         return {};
-    return { p.get().front().first, p.get().front().second.sign() };
+    return { p.get().front().first, sgn( p.get().front().second ) };
 }
 
 /// the lowest-degree terms of the coordinates of perturbed vector vec( s ) at the first stage s where one of the coordinates with a bit
@@ -414,11 +422,15 @@ std::array<LeadTerm, 3> sosNormalLeadTerms( const std::array<PreciseVertCoords, 
     SosVerts r;
     for ( const auto & v : f )
         r.add( v, 12 );
-    if ( g )
-        for ( const auto & v : *g )
-            r.add( v, 12 );
+    if ( !g )
+    {
+        const auto ps = r.stages();
+        return sosLeadTerms( ps, mask, [&] ( int s ) { return sosNormal( ps, 0, s ); } );
+    }
+    for ( const auto & v : *g )
+        r.add( v, 12 );
     const auto ps = r.stages();
-    return sosLeadTerms( ps, mask, [&] ( int s ) { return g ? cross( sosNormal( ps, 0, s ), sosNormal( ps, 3, s ) ) : sosNormal( ps, 0, s ); } );
+    return sosLeadTerms( ps, mask, [&] ( int s ) { return cross<Int128Mul256>( sosNormal( ps, 0, s ), sosNormal( ps, 3, s ) ); } );
 }
 
 /// the signs of the projected coordinates of the perturbed cross( normal of f, normal of g ), as the sweep along kx + eta * ky

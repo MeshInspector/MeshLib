@@ -40,6 +40,46 @@ bool haveCommonFace( const MeshTopology& topology, const OneMeshIntersection& a,
     return std::any_of( fa.begin(), fa.end(), [&] ( FaceId f ) { return std::find( fb.begin(), fb.end(), f ) != fb.end(); } );
 }
 
+// checks offset contours: every closed one ends where it starts, every open one goes from a boundary edge to a boundary edge,
+// no step leaves the faces; then cuts the mesh with them; returns the number of open contours
+int checkOffsetContoursAndCut( const Mesh& mesh, const OneMeshContours& contours )
+{
+    const auto& topology = mesh.topology;
+    int numOpen = 0;
+    for ( size_t c = 0; c < contours.size(); ++c )
+    {
+        const auto& in = contours[c].intersections;
+        EXPECT_GE( in.size(), 2 ) << "contour " << c;
+        if ( in.size() < 2 )
+            continue;
+        for ( size_t i = 0; i + 1 < in.size(); ++i )
+        {
+            EXPECT_TRUE( haveCommonFace( topology, in[i], in[i + 1] ) ) << "contour " << c << ": intersections " << i << " and " << i + 1 << " have no common face";
+        }
+        if ( contours[c].closed )
+        {
+            EXPECT_EQ( in.front().coordinate, in.back().coordinate ) << "contour " << c;
+            EXPECT_TRUE( in.front().primitiveId == in.back().primitiveId ) << "contour " << c;
+            continue;
+        }
+        ++numOpen;
+        for ( const auto& end : { in.front(), in.back() } )
+        {
+            auto e = std::get_if<EdgeId>( &end.primitiveId );
+            EXPECT_TRUE( e && topology.isBdEdge( *e ) ) << "contour " << c << " is open, but does not end on the boundary";
+        }
+    }
+
+    // open contours are cut from boundary to boundary
+    auto cut = mesh;
+    auto res = cutMesh( cut, contours );
+    EXPECT_TRUE( cut.topology.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( res.resultCut.size(), contours.size() );
+    EXPECT_EQ( cut.topology.findNumHoles(), topology.findNumHoles() );
+    return numOpen;
+}
+
 } //anonymous namespace
 
 // the path from the last point back to the first one is empty, and the first path crosses the edge exactly at the last point
@@ -588,46 +628,6 @@ TEST( MRMesh, SurfaceOffsetWithInvalidTrailingVerts )
         for ( size_t j = 0; j < ( *res )[i].intersections.size(); ++j )
             EXPECT_EQ( ( *res )[i].intersections[j].coordinate, ( *expected )[i].intersections[j].coordinate );
     }
-}
-
-// checks offset contours: every closed one ends where it starts, every open one goes from a boundary edge to a boundary edge,
-// no step leaves the faces; then cuts the mesh with them; returns the number of open contours
-static int checkOffsetContoursAndCut( const Mesh& mesh, const OneMeshContours& contours )
-{
-    const auto& topology = mesh.topology;
-    int numOpen = 0;
-    for ( size_t c = 0; c < contours.size(); ++c )
-    {
-        const auto& in = contours[c].intersections;
-        EXPECT_GE( in.size(), 2 ) << "contour " << c;
-        if ( in.size() < 2 )
-            continue;
-        for ( size_t i = 0; i + 1 < in.size(); ++i )
-        {
-            EXPECT_TRUE( haveCommonFace( topology, in[i], in[i + 1] ) ) << "contour " << c << ": intersections " << i << " and " << i + 1 << " have no common face";
-        }
-        if ( contours[c].closed )
-        {
-            EXPECT_EQ( in.front().coordinate, in.back().coordinate ) << "contour " << c;
-            EXPECT_TRUE( in.front().primitiveId == in.back().primitiveId ) << "contour " << c;
-            continue;
-        }
-        ++numOpen;
-        for ( const auto& end : { in.front(), in.back() } )
-        {
-            auto e = std::get_if<EdgeId>( &end.primitiveId );
-            EXPECT_TRUE( e && topology.isBdEdge( *e ) ) << "contour " << c << " is open, but does not end on the boundary";
-        }
-    }
-
-    // open contours are cut from boundary to boundary
-    auto cut = mesh;
-    auto res = cutMesh( cut, contours );
-    EXPECT_TRUE( cut.topology.checkValidity() );
-    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
-    EXPECT_EQ( res.resultCut.size(), contours.size() );
-    EXPECT_EQ( cut.topology.findNumHoles(), topology.findNumHoles() );
-    return numOpen;
 }
 
 // the offset of a contour near the open mesh boundary: one isoline is cut by the boundary

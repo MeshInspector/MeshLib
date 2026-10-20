@@ -1077,7 +1077,8 @@ Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh& mesh, con
         const auto& isoLineI = isoLines[i];
         auto& resI = res[i];
         // an iso-line that reaches the mesh boundary is open: it starts and ends on boundary edges
-        resI.closed = isoLineI.size() > 1 && isoLineI.front() == isoLineI.back();
+        assert( isoLineI.size() > 1 );
+        resI.closed = isoLineI.front() == isoLineI.back();
         resI.intersections.resize( isoLineI.size() );
         ParallelFor( resI.intersections, [&] ( size_t j )
         {

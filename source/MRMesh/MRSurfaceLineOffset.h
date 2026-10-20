@@ -12,8 +12,8 @@ namespace MR
 /// <param name="mesh">mesh to perform offset on</param>
 /// <param name="surfaceLine">surface line to perofrm offset from</param>
 /// <param name="offset">amount of offset, note that absolute value is used</param>
-/// <returns>resulting offset contours or error if something goes wrong</returns>
-/// A contour that reaches the mesh boundary is open: its first and last points are on the boundary and differ
+/// <returns>resulting offset contours or error if something goes wrong; a contour that reaches the mesh boundary is open:
+/// its first and last points are on the boundary and differ</returns>
 /// \sa offsetSurfaceLineToMeshContours to also get the mesh primitive of every contour point
 [[nodiscard]]
 MRMESH_API Expected<Contours3f> offsetSurfaceLine( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine, float offset );
@@ -24,8 +24,8 @@ MRMESH_API Expected<Contours3f> offsetSurfaceLine( const Mesh& mesh, const std::
 /// <param name="mesh">mesh to perform offset on</param>
 /// <param name="surfaceLine">surface line to perofrm offset from</param>
 /// <param name="offsetAtPoint">function that can return different amount of offset in different point (argument is index of point in \p surfaceLine), note that absolute value is used</param>
-/// <returns>resulting offset contours or error if something goes wrong</returns>
-/// A contour that reaches the mesh boundary is open: its first and last points are on the boundary and differ
+/// <returns>resulting offset contours or error if something goes wrong; a contour that reaches the mesh boundary is open:
+/// its first and last points are on the boundary and differ</returns>
 /// \sa offsetSurfaceLineToMeshContours to also get the mesh primitive of every contour point
 [[nodiscard]]
 MRMESH_API Expected<Contours3f> offsetSurfaceLine( const Mesh& mesh, const std::vector<MeshTriPoint>& surfaceLine, const std::function<float( int )>& offsetAtPoint );

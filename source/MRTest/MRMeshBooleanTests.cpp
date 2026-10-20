@@ -15,6 +15,7 @@
 #include <MRMesh/MREdgeIterator.h>
 #include <MRMesh/MRIntersectionContour.h>
 #include <MRMesh/MRAABBTree.h>
+#include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRConstants.h>
 #include <gtest/gtest.h>
 #include <algorithm>
@@ -140,6 +141,45 @@ TEST( MRMesh, BooleanDisjointMeshes )
     expectUnionKeepsBoth(
         makeBox( { 0.f, 0.f, 0.f }, { 1.f, 1.f, 1.f } ),
         makeBox( { 5.f, 5.f, 5.f }, { 6.f, 6.f, 6.f } ) );
+}
+
+// a small sphere pierces a big triangle of the cube without crossing its edges (a lone contour),
+// and another sphere crosses the edges of the same triangle; the cut connects the lone contour with the rest of the triangle
+TEST( MRMesh, BooleanLoneContours )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh spheres = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    spheres.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+    Mesh crossing = makeSphere( { .radius = 0.3f, .numMeshVertices = 300 } );
+    crossing.transform( AffineXf3f::translation( Vector3f( 0.f, 0.f, 2.f ) ) );
+    spheres.addMesh( crossing );
+    const auto xf = AffineXf3f::translation( Vector3f( 0.f, 0.f, 0.25f ) );
+    const double tol = 1e-5 * ( cube.volume() + spheres.volume() );
+
+    for ( bool swap : { false, true } )
+    {
+        for ( const AffineXf3f* rigidB2A : { (const AffineXf3f*)nullptr, &xf } )
+        {
+            // rigidB2A moves the second mesh back in place
+            const Mesh& a = swap ? spheres : cube;
+            Mesh b = swap ? cube : spheres;
+            if ( rigidB2A )
+                b.transform( rigidB2A->inverse() );
+            const auto inter = boolean( a, b, BooleanOperation::Intersection, rigidB2A );
+            const auto uni = boolean( a, b, BooleanOperation::Union, rigidB2A );
+            const auto diff = boolean( a, b, BooleanOperation::DifferenceAB, rigidB2A );
+            ASSERT_TRUE( inter.valid() ) << inter.errorString;
+            ASSERT_TRUE( uni.valid() ) << uni.errorString;
+            ASSERT_TRUE( diff.valid() ) << diff.errorString;
+            for ( const auto* r : { &inter, &uni, &diff } )
+                EXPECT_EQ( r->mesh.topology.findNumHoles(), 0 );
+            // an island left in its triangle would make a separate component
+            EXPECT_EQ( MeshComponents::getNumComponents( uni.mesh ), 1 );
+            EXPECT_EQ( MeshComponents::getNumComponents( inter.mesh ), 2 );
+            EXPECT_NEAR( uni.mesh.volume() + inter.mesh.volume(), a.volume() + b.volume(), tol );
+            EXPECT_NEAR( diff.mesh.volume() + inter.mesh.volume(), a.volume(), tol );
+        }
+    }
 }
 
 // closed mesh of two parts (apexes 3_v and 6_v) stitched along their common boundary, which passes through all vertices of triangle 0_v, 2_v, 1_v

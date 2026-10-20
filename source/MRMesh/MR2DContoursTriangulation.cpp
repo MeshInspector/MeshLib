@@ -18,6 +18,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRPrecisePredicates2.h"
 #include "MRPrecisePredicates3.h"
+#include "MRCutTrianglePredicates.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 #include <algorithm>
@@ -149,8 +150,7 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     {
         for ( EdgeId e : loop )
             box.include( mesh.orgPnt( e ) );
-        if ( loop.size() >= 3 )
-            pointsSize += int( loop.size() );
+        pointsSize += int( loop.size() );
     }
 
     // drop the axis most aligned with the normal; order the two kept axes so the 2D ccw of the
@@ -458,6 +458,8 @@ private:
     bool doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const;
     void checkIntersection_( int index, bool lower );
     void checkIntersection_( int indexLower );
+    // an intersection was found while params_.abortWhenIntersect, so the run fails
+    bool intersectionFound_{ false };
 
 public:
     // all the buffers the sweep-line triangulation reuses between runs sharing the cache;
@@ -599,11 +601,9 @@ bool SweepLineQueue::findIntersections()
         else if ( event.type == EventType::Destination )
             processDestenationEvent_( event.index );
         else if ( event.type == EventType::Intersection )
-        {
-            if ( params_.abortWhenIntersect )
-                return false;
             processIntersectionEvent_( event.index );
-        }
+        if ( intersectionFound_ )
+            return false;
         events_.push_back( event );
     }
     return true;
@@ -1145,6 +1145,11 @@ void SweepLineQueue::checkIntersection_( int i )
 
     if ( !doSegmentSegmentIntersect_( org1, dest1, org2, dest2 ) )
         return;
+    if ( params_.abortWhenIntersect )
+    {
+        intersectionFound_ = true; // the run fails, so the point of the intersection is not needed
+        return;
+    }
 
     auto minEdgeId = std::min( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
@@ -1203,8 +1208,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     // upper bound: capacity hints only, actual sizes come from the built topology
     size_t numLoopEdges = 0;
     for ( const auto& loop : loops )
-        if ( loop.size() >= 3 )
-            numLoopEdges += loop.size();
+        numLoopEdges += loop.size();
     in2p.reserve( numLoopEdges );
     p2in.reserve( numLoopEdges );
     windingInfo_.reserve( numLoopEdges );
@@ -1349,8 +1353,6 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     for ( int loopId = 0; loopId < int( loops.size() ); ++loopId )
     {
         const auto& loop = loops[loopId];
-        if ( loop.size() < 3 )
-            continue;
         for ( int lId = 0; lId < loop.size() && !multipleEdge_; ++lId )
             addNewEdge( loop[lId], loopId, lId );
     }
@@ -1809,19 +1811,18 @@ MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeL
     return triangulator.runTopology();
 }
 
-std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+// the monotone plan of the region bounded by loops, with the predicates that makePredicates builds for the given patch-to-input edge map
+template <typename MakePredicates>
+static std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, MakePredicates&& makePredicates )
 {
     HoleFillPlan res;
     if ( loops.empty() )
         return res;
-    for ( const auto& loop : loops )
-        if ( loop.size() < 3 )
-            return {}; // the sweep skips such loops entirely, so their holes would stay unaddressed
 
     SweepLineQueue::Cache cache;
     WholeEdgeMap patchToInEdges; // initMeshByLoops_ reserves it from the loop sizes
     std::vector<MonotoneChord> chords;
-    SweepLineQueue triangulator( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer ), loops,
+    SweepLineQueue triangulator( cache, mesh.topology, makePredicates( patchToInEdges, cache ), loops,
         { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
     if ( !triangulator.findIntersections() )
         return {};
@@ -1858,6 +1859,39 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
                 return {};
         res.items[k] = { code1, code2 };
     }
+    return res;
+}
+
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+{
+    return getMonotonePlan( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
+    {
+        return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
+    } );
+}
+
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf )
+{
+    CutTrianglePredicates preds;
+    preds.reset( tri );
+    auto res = getMonotonePlan( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& )
+    {
+        SweepLinePredicates p;
+        p.less = [&preds] ( VertId l, VertId r ) { return preds.less( l, r ); };
+        p.ccw = [&preds] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); };
+        p.ccwFromBehind = [&preds] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); };
+        p.addInputPoint = [&] ( VertId v, int contourId, int pointId )
+        {
+            preds.addPoint( v, pointOf( mesh.topology.org( loops[contourId][pointId] ) ) );
+            // the sweep orders some points before it has added all of them (at an edge taken both ways), while no predicate
+            // may run after a failure, which valid points never give
+            assert( !preds.failed() );
+        };
+        return p;
+    } );
+    if ( preds.failed() )
+        return {};
     return res;
 }
 

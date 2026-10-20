@@ -305,7 +305,7 @@ struct SweepLineParams
     /// one can disable merge for identical vertices, merge is useful on symbol contours
     bool allowMerge{ true };
 
-    /// if set, the loops of 2 edges (a slit: one edge taken both ways) are swept too, otherwise skipped
+    /// if set, the loops of 2 edges (a slit: one edge taken both ways) are swept too, otherwise skipped; shorter loops are always skipped
     bool allowTwoEdgeLoops{ false };
 
     /// optional out per-face winding numbers
@@ -1358,7 +1358,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     for ( int loopId = 0; loopId < int( loops.size() ); ++loopId )
     {
         const auto& loop = loops[loopId];
-        if ( loop.size() < 3 && !params_.allowTwoEdgeLoops )
+        if ( loop.size() < ( params_.allowTwoEdgeLoops ? 2 : 3 ) )
             continue;
         for ( int lId = 0; lId < loop.size() && !multipleEdge_; ++lId )
             addNewEdge( loop[lId], loopId, lId );

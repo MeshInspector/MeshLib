@@ -451,36 +451,32 @@ Vector2i sosCrossDirection( const std::array<PreciseVertCoords, 3> & f, const st
     return sweepSigns( t[kx], t[ky] );
 }
 
-/// a point with what the predicates take from its definition most often
-struct CutPoint
-{
-    PreciseCutPoint def;
-    // for an edge-triangle point: the volumes of its triangle with the ends of its segment; if both are zero,
-    // the leading coefficients of the perturbed volumes, with zero for the one of the larger degree
-    FastInt128 oa{}, ob{};
-    int sides = 0; // bit i is set if the point is on side i of the triangle, from vertex i to vertex i+1
-};
-
 /// the exact projected coordinates of a point: ( nx / d, ny / d ) with d > 0
 struct ExactCoords
 {
     FastInt128 nx{}, ny{}, d{};
 };
 
-ExactCoords exactCoords( const CutPoint & pt, int kx, int ky )
+/// a point with what the predicates take from its definition most often
+struct CutPoint
 {
-    if ( pt.def.isVertex() )
-        return { pt.def.seg[0].pt[kx], pt.def.seg[0].pt[ky], 1 };
-    // ( oa * b - ob * a ) / ( oa - ob ) for segment ab (see addPoint), where oa and ob have different signs (or one of them is zero);
+    PreciseCutPoint def;
+    ExactCoords exact; // found once in addPoint, since a sort compares the same points many times where their rounded coordinates cannot decide
+    int sides = 0; // bit i is set if the point is on side i of the triangle, from vertex i to vertex i+1
+};
+
+/// the exact projected coordinates of the crossing of segment ab with the plane of a triangle, where oa and ob are the volumes
+/// of the triangle with a and b (see addPoint)
+ExactCoords exactCoords( const Vector3i & a, const Vector3i & b, const FastInt128 & oa, const FastInt128 & ob, int kx, int ky )
+{
+    // ( oa * b - ob * a ) / ( oa - ob ), where oa and ob have different signs (or one of them is zero);
     // by Hadamard's inequality |oa|, |ob| < 3^1.5 * 2^93 < 0.65 * 2^96 for coordinate differences below 2^31 (and the leading
     // coefficients of perturbed volumes are smaller), so the numerators are below ( |oa| + |ob| ) * 2^30 < 1.3 * 2^126,
     // and the denominator below 1.3 * 2^96
-    const Vector3i & a = pt.def.seg[0].pt;
-    const Vector3i & b = pt.def.seg[1].pt;
     ExactCoords res{
-        pt.oa * FastInt128( b[kx] ) - pt.ob * FastInt128( a[kx] ),
-        pt.oa * FastInt128( b[ky] ) - pt.ob * FastInt128( a[ky] ),
-        pt.oa - pt.ob };
+        oa * FastInt128( b[kx] ) - ob * FastInt128( a[kx] ),
+        oa * FastInt128( b[ky] ) - ob * FastInt128( a[ky] ),
+        oa - ob };
     if ( res.d < 0 )
     {
         res.nx = -res.nx;
@@ -635,12 +631,15 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
         if ( i < 0 )
             fail_(); // not a vertex of the triangle, so on none of its sides, while commonLine_ takes the lines through a vertex
         pt.sides = i >= 0 ? ( 1 << i ) | ( 1 << ( ( i + 2 ) % 3 ) ) : 0;
-        pt.oa = pt.ob = 0;
+        pt.exact = { p.seg[0].pt[kx_], p.seg[0].pt[ky_], 1 };
         approx_[v] = { double( p.seg[0].pt[kx_] ), double( p.seg[0].pt[ky_] ) };
         return;
     }
     const int i = corner( p.seg[0] ), j = corner( p.seg[1] );
     pt.sides = i >= 0 && j >= 0 ? 1 << ( j == ( i + 1 ) % 3 ? i : j ) : 0;
+    // the volumes of the triangle of the point with the ends of its segment; if both are zero, the leading coefficients
+    // of the perturbed volumes, with zero for the one of the larger degree
+    FastInt128 oa = 0, ob = 0;
     bool crosses = false;
     if ( p.seg[0].id == p.seg[1].id || hasVert( p.tri, p.seg[0].id ) || hasVert( p.tri, p.seg[1].id )
         || p.tri[0].id == p.tri[1].id || p.tri[1].id == p.tri[2].id || p.tri[2].id == p.tri[0].id )
@@ -655,9 +654,9 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
     }
     else
     {
-        pt.oa = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[0].pt );
-        pt.ob = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[1].pt );
-        if ( pt.oa == 0 && pt.ob == 0 )
+        oa = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[0].pt );
+        ob = orient3dVolume( p.tri[0].pt, p.tri[1].pt, p.tri[2].pt, p.seg[1].pt );
+        if ( oa == 0 && ob == 0 )
         {
             // the segment is in the plane, and only the perturbation moves its ends off it: as eps -> 0, the crossing tends to
             // the point where the leading terms of the perturbed volumes cancel, or to the end whose volume has the leading term
@@ -673,15 +672,15 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
             // the leading terms decide as orient3d does, which ties the degrees above to its perturbation
             assert( ( leadA > 0 ) == orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[0] } ) );
             assert( ( leadB > 0 ) == orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[1] } ) );
-            pt.oa = degA <= degB ? leadA : 0;
-            pt.ob = degB <= degA ? leadB : 0;
+            oa = degA <= degB ? leadA : 0;
+            ob = degB <= degA ? leadB : 0;
             crosses = ( leadA > 0 ) != ( leadB > 0 );
         }
         else
         {
             // an end exactly on the plane is on the side the perturbation puts it on
-            const bool sa = pt.oa != 0 ? pt.oa > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[0] } );
-            const bool sb = pt.ob != 0 ? pt.ob > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[1] } );
+            const bool sa = oa != 0 ? oa > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[0] } );
+            const bool sb = ob != 0 ? ob > 0 : orient3d( { p.tri[0], p.tri[1], p.tri[2], p.seg[1] } );
             crosses = sa != sb;
         }
     }
@@ -689,15 +688,16 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
     {
         // repeated ids, a segment off the sides with another triangle, or the segment does not cross the plane, also after the perturbation
         fail_();
-        pt.oa = 1; // any point of the segment, since the answers are arbitrary now
-        pt.ob = -1;
+        oa = 1; // any point of the segment, since the answers are arbitrary now
+        ob = -1;
     }
     // that the crossing is inside its triangle stays the caller's precondition, checked in Debug only, since it takes several orient3d
     assert( !crosses || doTriangleSegmentIntersect( { p.tri[0], p.tri[1], p.tri[2], p.seg[0], p.seg[1] } ) );
+    pt.exact = exactCoords( p.seg[0].pt, p.seg[1].pt, oa, ob, kx_, ky_ );
     // the point is a + s * ( b - a ), s = oa / ( oa - ob ), where oa and ob have different signs (or one of them is zero)
     const Vector3d a( p.seg[0].pt ), b( p.seg[1].pt );
-    const double da = toDouble( pt.oa );
-    const double s = da / ( da - toDouble( pt.ob ) );
+    const double da = toDouble( oa );
+    const double s = da / ( da - toDouble( ob ) );
     approx_[v] = { a[kx_] + s * ( b[kx_] - a[kx_] ), a[ky_] + s * ( b[ky_] - a[ky_] ) };
 }
 
@@ -706,11 +706,11 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
 /// the first coordinate, -2 or 2 along the second one, 0 if the points coincide before the perturbation
 int CutTrianglePredicates::compareExact_( VertId p, VertId q, bool yFirst ) const
 {
-    const auto a = exactCoords( impl_->points[p], kx_, ky_ );
-    const auto b = exactCoords( impl_->points[q], kx_, ky_ );
+    const auto & a = impl_->points[p].exact;
+    const auto & b = impl_->points[q].exact;
     if ( const int c = compareExactCoord( a, b, yFirst ) )
         return c;
-    // the exact coordinates found above decide the second one where its rounded values cannot
+    // the exact coordinates decide the second one too where its rounded values cannot
     const int k = yFirst ? 0 : 1;
     return 2 * compareCoord( approx_[p][k], approx_[q][k], [&] { return compareExactCoord( a, b, !yFirst ); } );
 }
@@ -943,9 +943,9 @@ int CutTrianglePredicates::exactOrient_( VertId a, VertId b, VertId c ) const
     // the determinant of the rows ( nx, ny, d ) of the exact projected points has the sign of the doubled area of abc,
     // since every d is positive; with numerators below 1.3 * 2^126 and denominators below 1.3 * 2^96 (see exactCoords),
     // every 2x2 minor is below 3.4 * 2^252 and fits in 256 bits, and the determinant is below 2^352
-    const auto p = exactCoords( impl_->points[a], kx_, ky_ );
-    const auto q = exactCoords( impl_->points[b], kx_, ky_ );
-    const auto r = exactCoords( impl_->points[c], kx_, ky_ );
+    const auto & p = impl_->points[a].exact;
+    const auto & q = impl_->points[b].exact;
+    const auto & r = impl_->points[c].exact;
     using M = Int128Mul256;
     const auto det = ( M( q.ny ) * M( r.d ) - M( q.d ) * M( r.ny ) ) * p.nx
                    - ( M( q.nx ) * M( r.d ) - M( q.d ) * M( r.nx ) ) * p.ny

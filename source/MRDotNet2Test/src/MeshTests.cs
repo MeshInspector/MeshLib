@@ -162,14 +162,14 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             cubeMesh.transform(xf);
 
-            Assert.That(cubeMesh.points[new VertId(0)] == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points[new VertId(1)] == new Vector3f(0.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points[new VertId(2)] == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points[new VertId(3)] == new Vector3f(1.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points[new VertId(4)] == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.points[new VertId(5)] == new Vector3f(0.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points[new VertId(6)] == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points[new VertId(7)] == new Vector3f(1.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[0] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[1] == new Vector3f(0.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[2] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[3] == new Vector3f(1.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[4] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[5] == new Vector3f(0.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[6] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[7] == new Vector3f(1.5f, 0.5f, 1.5f));
         }
 
         [Test]
@@ -185,14 +185,14 @@ namespace MRTest
             var xf = AffineXf3f.translation(Vector3f.diagonal(1.0f));
             cubeMesh.transform(xf, region);
 
-            Assert.That(cubeMesh.points[new VertId(0)] == new Vector3f(0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points[new VertId(1)] == new Vector3f(-0.5f, 0.5f, -0.5f));
-            Assert.That(cubeMesh.points[new VertId(2)] == new Vector3f(1.5f, 1.5f, 0.5f));
-            Assert.That(cubeMesh.points[new VertId(3)] == new Vector3f(0.5f, -0.5f, -0.5f));
-            Assert.That(cubeMesh.points[new VertId(4)] == new Vector3f(0.5f, 0.5f, 1.5f));
-            Assert.That(cubeMesh.points[new VertId(5)] == new Vector3f(-0.5f, 0.5f, 0.5f));
-            Assert.That(cubeMesh.points[new VertId(6)] == new Vector3f(1.5f, 1.5f, 1.5f));
-            Assert.That(cubeMesh.points[new VertId(7)] == new Vector3f(0.5f, -0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[0] == new Vector3f(0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[1] == new Vector3f(-0.5f, 0.5f, -0.5f));
+            Assert.That(cubeMesh.points.vec[2] == new Vector3f(1.5f, 1.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[3] == new Vector3f(0.5f, -0.5f, -0.5f));
+            Assert.That(cubeMesh.points.vec[4] == new Vector3f(0.5f, 0.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[5] == new Vector3f(-0.5f, 0.5f, 0.5f));
+            Assert.That(cubeMesh.points.vec[6] == new Vector3f(1.5f, 1.5f, 1.5f));
+            Assert.That(cubeMesh.points.vec[7] == new Vector3f(0.5f, -0.5f, 0.5f));
         }
 
         [Test]

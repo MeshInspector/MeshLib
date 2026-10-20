@@ -270,6 +270,34 @@ TEST( MRMesh, BooleanMultipleEdgeThroughLoneFace )
     }
 }
 
+// the tip at 0_v of two triangles with the same vertices (see makeMeshWithMultipleEdge) pokes through a big triangle of the cube:
+// edges 0_v-1_v and 0_v-2_v, which both triangles share, cross it at two points, on a closed lone contour of two points; it has zero area
+// and is dropped, so the boolean and selfBoolean give valid closed meshes
+TEST( MRMesh, BooleanTwoPointLoneContour )
+{
+    const Mesh lens = makeMeshWithMultipleEdge();
+    const Mesh cube = makeCube( Vector3f::diagonal( 20.f ), Vector3f( -3.f, 0.5f, -15.f ) ); // only its side y = 0.5 crosses the lens
+    for ( bool swap : { false, true } )
+    {
+        const Mesh& a = swap ? lens : cube;
+        const Mesh& b = swap ? cube : lens;
+        for ( auto op : { BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB } )
+        {
+            const auto res = boolean( a, b, op );
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_TRUE( res.mesh.topology.checkValidity() );
+            EXPECT_EQ( res.mesh.topology.findNumHoles(), 0 );
+        }
+    }
+
+    Mesh both = cube;
+    both.addMesh( lens );
+    const auto res = selfBoolean( both );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+}
+
 // two triangles sharing two vertices but not the edge between them (multiple edges connect the vertices) can meet only along
 // the segment between these vertices, so findSelfCollidingEdgeTrisPrecise skips them as the triangles with a shared edge,
 // but still finds all crossings of other edges and triangles

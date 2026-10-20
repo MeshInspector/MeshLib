@@ -76,6 +76,12 @@ void gatherEdgeInfo( const MeshTopology& topology, EdgeId e, FaceBitSet& faces, 
     dests.set( topology.dest( e ) );
 }
 
+// removes the closed contours of two points, which have zero area, as their two segments coincide
+void removeTwoPointLoops( ContinuousContours& contours )
+{
+    std::erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } );
+}
+
 } //anonymous namespace
 
 void convertIntFloatAllVerts( Mesh & mesh, const CoordinateConverters& conv )
@@ -190,6 +196,7 @@ Expected<MR::Mesh> selfBoolean( const Mesh& inMesh )
 
     // find and order intersections
     auto contours = orderSelfIntersectionContours( mesh.topology, findSelfCollidingEdgeTrisPrecise( mesh, converters.toInt ) );
+    removeTwoPointLoops( contours ); // both contours of a pair together, as they have the same points
 
     auto holePairs = detail::findSelfContoursMapping( contours );
     auto intContours = getOneMeshSelfIntersectionContours( mesh, contours, converters );
@@ -318,6 +325,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     // find and order intersections
     contours = orderIntersectionContours( meshA.topology, meshB.topology,
         findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, params.rigidB2A ) );
+    removeTwoPointLoops( contours );
 
     if ( params.cb && !params.cb( 0.0f ) )
         return { .errorString = stringOperationCanceled() };

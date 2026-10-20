@@ -37,20 +37,17 @@ public:
     template <typename U>
     explicit DynamicArray( const std::vector<U>& vec );
 
-    // copy given vector to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
-    template <typename U>
-    cudaError_t fromVector( const std::vector<U>& vec );
-
-    // copy given vector to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
+    // copy given vector to GPU
     template <typename U, typename I>
-    cudaError_t fromVector( const MR::Vector<U, I>& vec )
-    {
-        return fromVector( vec.vec_ );
-    }
+    explicit DynamicArray( const MR::Vector<U, I>& vec );
 
-    // copy this GPU array to given vector
-    template <typename U>
-    cudaError_t toVector( std::vector<U>& vec ) const;
+    // copy given std::vector or MR::Vector to GPU (if this array was allocated with inconsistent size, free it and then malloc again)
+    template <typename V>
+    cudaError_t fromVector( const V& vec );
+
+    // copy this GPU array to given std::vector or MR::Vector
+    template <typename V>
+    cudaError_t toVector( V& vec ) const;
 #endif
 
     // copy given data to GPU (if this array was allocated with inconsistent size, free it and then malloc again)

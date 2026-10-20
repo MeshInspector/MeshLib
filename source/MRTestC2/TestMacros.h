@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h> // not <tgmath.h>: clang-cl's is incompatible with the UCRT's struct complex types, and only fabs is needed
+#include <math.h>
 
 #define RUN_TEST( func )                      \
     printf( "%s ...\n", #func );              \

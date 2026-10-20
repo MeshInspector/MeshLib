@@ -737,9 +737,9 @@ std::optional<Vector2i> CutTrianglePredicates::coincidentDirection_( VertId p, V
             return {};
         }
     }
-    // a vertex and a crossing of a side from it, which is strictly inside the side: q - p goes along side i forward
-    // from vertex i to the crossing, and from the crossing to vertex i+1
-    if ( const int common = a.sides & b.sides; common != 0 && a.def.isVertex() != b.def.isVertex() )
+    // a vertex and another point of a side from it, a crossing strictly inside the side or the vertex at its other end: q - p goes
+    // along side i in the direction that reset found if it goes from vertex i or to vertex i+1; the same vertex twice has two sides in common
+    if ( const int common = a.sides & b.sides; std::has_single_bit( unsigned( common ) ) && ( a.def.isVertex() || b.def.isVertex() ) )
     {
         const int i = firstSide( common );
         const bool forward = a.def.isVertex() ? a.def.seg[0].id == tri_[i].id : b.def.seg[0].id != tri_[i].id;

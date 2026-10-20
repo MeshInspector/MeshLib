@@ -45,9 +45,9 @@ jobs:
       actions: read   # This is required for wait-for-job
 
     env:
-      # The C# bindings are generated and tested on the MSBuild VS2026 jobs and on the clang-cl jobs;
-      # the NuGet payload (the native DLLs, MRDotNet2.dll and its XML) comes from the clang-cl ones.
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler == 'clang-cl' }}
+      # The C# bindings are generated and tested on the clang-cl jobs, which also produce the NuGet
+      # payload (the native DLLs, MRDotNet2.dll and its XML)
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'clang-cl' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\${{ matrix.arch || 'x64' }}\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       # Upload a developer distributive per Visual Studio toolchain and target

@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRCube.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRConstants.h>
@@ -479,6 +480,33 @@ TEST( MRMesh, CutMeshLoneContour )
                 EXPECT_NEAR( cut.area(), mesh.area(), 1e-3 * mesh.area() );
             }
         }
+    }
+}
+
+// a lone contour crossing itself (a bowtie inside one triangle of a closed mesh) cannot be connected with the triangle;
+// the cut reports the triangle as bad and keeps it, so that its sides make no hole even if the bad faces are filled
+TEST( MRMesh, CutMeshSelfCrossingLoneContour )
+{
+    const auto mesh = makeCube();
+    const auto f = 0_f;
+    const auto e = mesh.topology.edgeWithLeft( f );
+    // side 0-1 crosses side 2-3
+    std::vector<MeshTriPoint> mtps;
+    for ( const auto& b : { Vector2f( 0.2f, 0.2f ), Vector2f( 0.5f, 0.4f ), Vector2f( 0.5f, 0.2f ), Vector2f( 0.2f, 0.4f ), Vector2f( 0.2f, 0.2f ) } )
+        mtps.push_back( MeshTriPoint( e, TriPointf( b.x, b.y ) ) );
+    const auto contour = surfaceLineToMeshContour( mesh, mtps );
+    ASSERT_TRUE( contour.has_value() );
+
+    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::All } )
+    {
+        Mesh cut = mesh;
+        const auto res = cutMesh( cut, { *contour }, { .forceFillMode = mode } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.test( f ) );
+        EXPECT_TRUE( cut.topology.hasFace( f ) );
+        EXPECT_EQ( cut.topology.left( e ), f );
+        // the two sides of the island are left without faces, or filled
+        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::None ? 2 : 0 );
     }
 }
 

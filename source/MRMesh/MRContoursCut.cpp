@@ -507,6 +507,7 @@ std::vector<LoneFace> findLoneFaces( const MeshTopology& topology, const OneMesh
 
 // connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
 // found on the exact predicates consistent with the boolean if sortData is given; the faces where that fails are added to badFaces
+// and stay in the mesh unless another contour removed them
 void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std::vector<LoneFace>& loneFaces, const PreCutResult& preRes,
     UndirectedEdgeId firstNewEdge, const SortIntersectionsData* sortData, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
 {
@@ -573,6 +574,7 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
     // the boundaries of the hole of every lone face
     std::vector<EdgeLoops> faceLoops( loneFaces.size() );
     EdgeBitSet inLoops( mesh.topology.edgeSize() );
+    BitSet removedHere( loneFaces.size() ); // the faces that no other contour removed, to put back if their plans fail
     for ( int i = 0; i < loneFaces.size(); ++i )
     {
         const auto& lf = loneFaces[i];
@@ -581,6 +583,7 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
         {
             mesh.topology.setLeft( lf.edges[0], {} );
             edges.push_back( lf.edges[0] );
+            removedHere.set( i );
         }
         for ( auto e : edges )
         {
@@ -620,7 +623,13 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
         if ( plan && isFillingMultipleEdgeFree( mesh.topology, *plan ) )
             executeTriangulateContourPlan( mesh, faceLoops[i].front().front(), *plan, loneFaces[i].f, nullptr, new2OldEdgeMap );
         else
+        {
             badFaces.autoResizeSet( loneFaces[i].f );
+            // the holes to fill are found by the cut paths, and the old sides of the face have none, so the face is put back;
+            // no chord of it was added, so its old sides still make its ring
+            if ( removedHere.test( i ) )
+                mesh.topology.setLeft( loneFaces[i].edges[0], loneFaces[i].f );
+        }
     }
 }
 

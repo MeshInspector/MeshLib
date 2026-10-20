@@ -2,7 +2,7 @@
 # Packs the Rust crate `meshlib` (top directory `MeshLibRust`: the committed `Cargo.toml` and `build.rs`, the generated `src`)
 # with the libraries of the NuGet package into the current directory:
 #   meshlib_rust_bindings.zip - the crate without libraries, its `native.txt` lets `build.rs` download them;
-#   meshlib_rust_native_<os>-<arch>.zip - the libraries of one platform, what `build.rs` downloads;
+#   meshlib_native_<os>-<arch>.zip - the libraries of one platform, what `build.rs` (and the Java bindings, see `scripts/java/pack_maven.sh`) downloads;
 #   meshlib_rust.zip - the crate with the libraries of all platforms in `native/<os>-<arch>`.
 # The release renames `meshlib_` to `meshlib_<MeshLib version>_` in all of them.
 # Usage: pack_crate.sh <MeshLib version, e.g. v3.1.4.528> <release download URL> <generated src directory> <MeshLib .nupkg>
@@ -45,9 +45,9 @@ echo "url $URL" > "$WORK/native.txt"
 for PAIR in win-x64:windows-x86_64 win-arm64:windows-aarch64 linux-x64:linux-x86_64 linux-arm64:linux-aarch64 osx-x64:macos-x86_64 osx-arm64:macos-aarch64; do
   PLATFORM="${PAIR#*:}"
   LIBS="$WORK/nupkg/runtimes/${PAIR%%:*}/native"
-  rm -f "$OUT/meshlib_rust_native_$PLATFORM.zip"
-  (cd "$LIBS" && zip -q "$OUT/meshlib_rust_native_$PLATFORM.zip" *)
-  echo "$(sha256sum "$OUT/meshlib_rust_native_$PLATFORM.zip" | cut -d' ' -f1) meshlib_${APP_VERSION}_rust_native_$PLATFORM.zip" >> "$WORK/native.txt"
+  rm -f "$OUT/meshlib_native_$PLATFORM.zip"
+  (cd "$LIBS" && zip -q "$OUT/meshlib_native_$PLATFORM.zip" *)
+  echo "$(sha256sum "$OUT/meshlib_native_$PLATFORM.zip" | cut -d' ' -f1) meshlib_${APP_VERSION}_native_$PLATFORM.zip" >> "$WORK/native.txt"
   mkdir -p "$WORK/MeshLibRust/native"
   mv "$LIBS" "$WORK/MeshLibRust/native/$PLATFORM"
 done
@@ -59,4 +59,4 @@ rm -r "$WORK/MeshLibRust/native"
 mv "$WORK/native.txt" "$WORK/MeshLibRust/"
 rm -f "$OUT/meshlib_rust_bindings.zip"
 (cd "$WORK" && zip -qr "$OUT/meshlib_rust_bindings.zip" MeshLibRust)
-ls -l "$OUT"/meshlib_rust*.zip
+ls -l "$OUT"/meshlib_rust*.zip "$OUT"/meshlib_native_*.zip

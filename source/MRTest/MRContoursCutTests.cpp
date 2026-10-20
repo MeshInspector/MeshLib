@@ -305,9 +305,12 @@ TEST( MRMesh, ContourTouchesBoundaryAtEarTip )
     const MeshTriPoint inEar = findProjection( Vector3f( 0.3f, 0.3f, 0.0f ), mesh ).mtp;
     const MeshTriPoint inside = findProjection( Vector3f( 1.5f, 1.6f, 0.0f ), mesh ).mtp;
 
-    // V4 -> point on E-1 -> inside the ear face, and inside the ear face -> point on E-4 -> V1 or point on E-1:
-    // the point on the boundary edge was kept with the hole as the face towards its neighbor,
-    // and cutMesh joined them with an edge outside the mesh
+    // three closed contours, each touches a boundary edge of E and returns into the ear face:
+    // 1. V4 -> point on E-1 -> inside the ear face;
+    // 2. inside the ear face -> point on E-4 -> V1;
+    // 3. inside the ear face -> point on E-4 -> point on E-1.
+    // On master the point on the boundary edge was kept with the hole as its face towards the intersection before it (1)
+    // or after it (2, 3), and cutMesh joined them through the hole: the cut split the boundary loop (1, 2) or filled the outer hole (3)
     for ( const auto& mtps : { std::vector<MeshTriPoint>{ mesh.toTriPoint( 4_v ), MeshTriPoint( MeshEdgePoint( e01, 0.5f ) ), inEar, inside },
                                std::vector<MeshTriPoint>{ inEar, MeshTriPoint( MeshEdgePoint( e04, 0.5f ) ), mesh.toTriPoint( 1_v ), inside },
                                std::vector<MeshTriPoint>{ inEar, MeshTriPoint( MeshEdgePoint( e04, 0.5f ) ), MeshTriPoint( MeshEdgePoint( e01, 0.5f ) ), inside } } )

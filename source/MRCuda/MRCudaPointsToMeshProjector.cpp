@@ -42,9 +42,9 @@ void PointsToMeshProjector::updateMeshData( const MR::Mesh* mesh )
     const auto& meshPoints = mesh->points;
     const auto tris = mesh->topology.getTriangulation();
 
-    meshData_->cudaMeshPoints.fromVector( meshPoints.vec_ );
-    meshData_->cudaNodes.fromVector( nodes.vec_ );
-    meshData_->cudaFaces.fromVector( tris.vec_ );
+    meshData_->cudaMeshPoints.fromVector( meshPoints );
+    meshData_->cudaNodes.fromVector( nodes );
+    meshData_->cudaFaces.fromVector( tris );
 
     mesh_ = mesh;
 }

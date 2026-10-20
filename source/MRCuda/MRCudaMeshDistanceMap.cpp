@@ -51,13 +51,13 @@ Expected<DistanceMap> computeDistanceMap( const MR::Mesh& mesh, const MR::MeshTo
     const auto tris = mesh.topology.getTriangulation();
 
     DynamicArray<float3> cudaMeshPoints;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaMeshPoints.fromVector( meshPoints.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaMeshPoints.fromVector( meshPoints ) );
 
     DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
 
     DynamicArray<FaceToThreeVerts> cudaFaces;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaFaces.fromVector( tris.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaFaces.fromVector( tris ) );
 
     MeshToDistanceMapParams cudaParams {
         .xRange = { params.xRange.x, params.xRange.y, params.xRange.z },

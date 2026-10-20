@@ -133,6 +133,9 @@
     <ClCompile Include="MRPrecisePredicatesTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRCutTrianglePredicatesTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRRoundTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

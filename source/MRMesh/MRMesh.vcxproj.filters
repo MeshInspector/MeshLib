@@ -291,6 +291,9 @@
     <ClInclude Include="MRInSphere.h">
       <Filter>Source Files\Math</Filter>
     </ClInclude>
+    <ClInclude Include="MRCutTrianglePredicates.h">
+      <Filter>Source Files\Math</Filter>
+    </ClInclude>
     <ClInclude Include="MRObjectsAccess.h">
       <Filter>Source Files\DataModel</Filter>
     </ClInclude>
@@ -1596,6 +1599,9 @@
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRInSphere.cpp">
+      <Filter>Source Files\Math</Filter>
+    </ClCompile>
+    <ClCompile Include="MRCutTrianglePredicates.cpp">
       <Filter>Source Files\Math</Filter>
     </ClCompile>
     <ClCompile Include="MRObjectPoints.cpp">

@@ -5,9 +5,42 @@
 #include <MRMesh/MRTorus.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRPlane3.h>
+#include <MRMesh/MRConstants.h>
+#include <cmath>
 
 namespace MR
 {
+
+namespace
+{
+
+// cutMesh expects every two consecutive intersections of a contour to lie in one face
+bool haveCommonFace( const MeshTopology& topology, const OneMeshIntersection& a, const OneMeshIntersection& b )
+{
+    auto facesOf = [&] ( const OneMeshIntersection& inter )
+    {
+        std::vector<FaceId> res;
+        if ( auto v = std::get_if<VertId>( &inter.primitiveId ) )
+        {
+            for ( auto e : orgRing( topology, *v ) )
+                if ( auto f = topology.left( e ) )
+                    res.push_back( f );
+        }
+        else if ( auto e = std::get_if<EdgeId>( &inter.primitiveId ) )
+        {
+            for ( auto f : { topology.left( *e ), topology.right( *e ) } )
+                if ( f )
+                    res.push_back( f );
+        }
+        else
+            res.push_back( std::get<FaceId>( inter.primitiveId ) );
+        return res;
+    };
+    const auto fa = facesOf( a ), fb = facesOf( b );
+    return std::any_of( fa.begin(), fa.end(), [&] ( FaceId f ) { return std::find( fb.begin(), fb.end(), f ) != fb.end(); } );
+}
+
+} //anonymous namespace
 
 // the path from the last point back to the first one is empty, and the first path crosses the edge exactly at the last point
 TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
@@ -220,26 +253,6 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
     const MeshTriPoint onCB( MeshEdgePoint( cb, 0.5f ) );
     const MeshTriPoint before = findProjection( Vector3f( 1.6f, 0.3f, 0.0f ), mesh ).mtp;
     const MeshTriPoint after = findProjection( Vector3f( 0.3f, 1.5f, 0.0f ), mesh ).mtp;
-    auto facesOf = [&] ( const OneMeshIntersection& inter )
-    {
-        std::vector<FaceId> res;
-        if ( auto v = std::get_if<VertId>( &inter.primitiveId ) )
-        {
-            for ( auto e : orgRing( topology, *v ) )
-                if ( auto f = topology.left( e ) )
-                    res.push_back( f );
-        }
-        else if ( auto e = std::get_if<EdgeId>( &inter.primitiveId ) )
-        {
-            for ( auto f : { topology.left( *e ), topology.right( *e ) } )
-                if ( f )
-                    res.push_back( f );
-        }
-        else
-            res.push_back( std::get<FaceId>( inter.primitiveId ) );
-        return res;
-    };
-
     const MeshTriPoint cOnOtherEdge = mesh.toTriPoint( c );
     ASSERT_NE( cOnOtherEdge.onEdge( topology ).e.undirected(), cb.undirected() );
     // C stored so that onEdge() gives C-B: the cleanup of duplicates drops C as a second point on the edge of the next point,
@@ -263,8 +276,7 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
             // cutMesh relies on it
             for ( size_t i = 0; i + 1 < contour->intersections.size(); ++i )
             {
-                const auto fs = facesOf( contour->intersections[i] ), fn = facesOf( contour->intersections[i + 1] );
-                EXPECT_TRUE( std::any_of( fs.begin(), fs.end(), [&] ( FaceId f ) { return std::find( fn.begin(), fn.end(), f ) != fn.end(); } ) )
+                EXPECT_TRUE( haveCommonFace( topology, contour->intersections[i], contour->intersections[i + 1] ) )
                     << "intersections " << i << " and " << i + 1 << " have no common face";
             }
 
@@ -576,6 +588,128 @@ TEST( MRMesh, SurfaceOffsetWithInvalidTrailingVerts )
         for ( size_t j = 0; j < ( *res )[i].intersections.size(); ++j )
             EXPECT_EQ( ( *res )[i].intersections[j].coordinate, ( *expected )[i].intersections[j].coordinate );
     }
+}
+
+// checks offset contours: every closed one ends where it starts, every open one goes from a boundary edge to a boundary edge,
+// no step leaves the faces; then cuts the mesh with them; returns the number of open contours
+static int checkOffsetContoursAndCut( const Mesh& mesh, const OneMeshContours& contours )
+{
+    const auto& topology = mesh.topology;
+    int numOpen = 0;
+    for ( size_t c = 0; c < contours.size(); ++c )
+    {
+        const auto& in = contours[c].intersections;
+        EXPECT_GE( in.size(), 2 ) << "contour " << c;
+        if ( in.size() < 2 )
+            continue;
+        for ( size_t i = 0; i + 1 < in.size(); ++i )
+        {
+            EXPECT_TRUE( haveCommonFace( topology, in[i], in[i + 1] ) ) << "contour " << c << ": intersections " << i << " and " << i + 1 << " have no common face";
+        }
+        if ( contours[c].closed )
+        {
+            EXPECT_EQ( in.front().coordinate, in.back().coordinate ) << "contour " << c;
+            EXPECT_TRUE( in.front().primitiveId == in.back().primitiveId ) << "contour " << c;
+            continue;
+        }
+        ++numOpen;
+        for ( const auto& end : { in.front(), in.back() } )
+        {
+            auto e = std::get_if<EdgeId>( &end.primitiveId );
+            EXPECT_TRUE( e && topology.isBdEdge( *e ) ) << "contour " << c << " is open, but does not end on the boundary";
+        }
+    }
+
+    // open contours are cut from boundary to boundary
+    auto cut = mesh;
+    auto res = cutMesh( cut, contours );
+    EXPECT_TRUE( cut.topology.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( res.resultCut.size(), contours.size() );
+    EXPECT_EQ( cut.topology.findNumHoles(), topology.findNumHoles() );
+    return numOpen;
+}
+
+// the offset of a contour near the open mesh boundary: one isoline is cut by the boundary
+TEST( MRMesh, SurfaceOffsetContoursReachBoundary )
+{
+    // 10x10 squares in XY plane, vertex 11 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 11; ++y )
+        for ( int x = 0; x < 11; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 10; ++y )
+    {
+        for ( int x = 0; x < 10; ++x )
+        {
+            const VertId v( 11 * y + x );
+            t.push_back( { v, v + 1, v + 12 } );
+            t.push_back( { v, v + 12, v + 11 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+
+    // square along grid lines with corners ( 1, 1 ) and ( 7, 7 )
+    std::vector<MeshTriPoint> mtps;
+    for ( int v : { 12, 18, 84, 78, 12 } )
+        mtps.push_back( mesh.toTriPoint( VertId( v ) ) );
+
+    // the inner isoline is closed, the outer one goes from boundary y = 0 to boundary x = 0
+    auto res = offsetSurfaceLineToMeshContours( mesh, mtps, 2.3f );
+    ASSERT_TRUE( res.has_value() );
+    ASSERT_EQ( res->size(), 2 );
+    EXPECT_EQ( checkOffsetContoursAndCut( mesh, *res ), 1 );
+}
+
+// like the reported case of #7167: a closed contour around a flat patch with a wavy open border, partly beyond the border,
+// so that many of its points are projected on the border; the outer offset is cut by the border into open pieces
+TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
+{
+    // 20x20 squares on [-10,10]^2 with alternating diagonals; the faces inside a wavy disk are kept
+    const int n = 21;
+    std::vector<Vector3f> points;
+    for ( int y = 0; y < n; ++y )
+        for ( int x = 0; x < n; ++x )
+            points.emplace_back( float( x - 10 ), float( y - 10 ), 0.0f );
+    Triangulation t;
+    for ( int y = 0; y + 1 < n; ++y )
+    {
+        for ( int x = 0; x + 1 < n; ++x )
+        {
+            const VertId a( y * n + x ), b( a + 1 ), c( a + n ), d( a + n + 1 );
+            const bool flip = ( x + y ) % 2 != 0;
+            for ( ThreeVertIds tri : { flip ? ThreeVertIds{ a, b, d } : ThreeVertIds{ a, b, c }, flip ? ThreeVertIds{ a, d, c } : ThreeVertIds{ b, d, c } } )
+            {
+                const auto cen = ( points[tri[0]] + points[tri[1]] + points[tri[2]] ) / 3.0f;
+                const float rim = 8.0f * ( 1 + 0.08f * std::cos( 6 * std::atan2( cen.y, cen.x ) ) );
+                if ( cen.length() < rim )
+                    t.push_back( tri );
+            }
+        }
+    }
+    Mesh mesh;
+    mesh.points = std::move( points );
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    ASSERT_EQ( mesh.topology.findNumHoles(), 1 );
+
+    std::vector<MeshTriPoint> mtps;
+    int numOnBorder = 0;
+    for ( int i = 0; i < 90; ++i )
+    {
+        const float angle = 2 * PI_F * float( i ) / 90;
+        mtps.push_back( mesh.projectPoint( 8.2f * Vector3f( std::cos( angle ), std::sin( angle ), 0.0f ) ).mtp );
+        if ( mtps.back().isBd( mesh.topology ) )
+            ++numOnBorder;
+    }
+    ASSERT_GT( numOnBorder, 10 );
+    mtps.push_back( mtps.front() );
+
+    auto res = offsetSurfaceLineToMeshContours( mesh, mtps, 1.0f );
+    ASSERT_TRUE( res.has_value() );
+    const int numOpen = checkOffsetContoursAndCut( mesh, *res );
+    EXPECT_GT( numOpen, 0 );
+    EXPECT_LT( numOpen, int( res->size() ) ); // the inner offset is closed
 }
 
 } //namespace MR

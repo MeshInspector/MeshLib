@@ -6,7 +6,9 @@
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRConstants.h>
+#include <MRMesh/MRVector2.h>
 #include <cmath>
+#include <random>
 
 namespace MR
 {
@@ -429,6 +431,54 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
         // the part of (A,B,C) between B, C and the new point was not filled
         EXPECT_EQ( cut.topology.findNumHoles(), 1 );
         EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+    }
+}
+
+// a closed contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut,
+// near the origin and far from it, also where the contour fills most of the triangle
+TEST( MRMesh, CutMeshLoneContour )
+{
+    std::mt19937 gen( 1 );
+    std::normal_distribution<double> nd;
+    auto randomVec = [&] { return Vector3d( nd( gen ), nd( gen ), nd( gen ) ); };
+    for ( double dist : { 0.0, 1e5 } )
+    {
+        for ( float fill : { 0.5f, 0.9f } )
+        {
+            for ( int trial = 0; trial < 50; ++trial )
+            {
+                // an equilateral triangle in a random plane, so that every axis is dropped by the projection in some trials
+                const auto base = dist * randomVec();
+                const auto u = randomVec().normalized();
+                const auto v = cross( u, randomVec() ).normalized();
+                VertCoords points;
+                for ( int i = 0; i < 3; ++i )
+                    points.push_back( Vector3f( base + 10.0 * ( std::cos( 2 * PI * i / 3 ) * u + std::sin( 2 * PI * i / 3 ) * v ) ) );
+                const auto mesh = Mesh::fromTriangles( std::move( points ), { { 0_v, 1_v, 2_v } } );
+
+                // the triangle shrunk around its centroid to the given part of its area, with four points on every side
+                const auto e = mesh.topology.edgeWithLeft( 0_f );
+                const float k = std::sqrt( fill ), m = ( 1 - k ) / 3;
+                const std::array<Vector2f, 3> corners{ Vector2f( m, m ), Vector2f( m + k, m ), Vector2f( m, m + k ) };
+                std::vector<MeshTriPoint> mtps;
+                for ( int i = 0; i < 3; ++i )
+                    for ( int j = 0; j < 4; ++j )
+                    {
+                        const auto b = corners[i] + ( corners[( i + 1 ) % 3] - corners[i] ) * ( j / 4.0f );
+                        mtps.push_back( MeshTriPoint( e, TriPointf( b.x, b.y ) ) );
+                    }
+                mtps.push_back( mtps.front() );
+                auto contour = surfaceLineToMeshContour( mesh, mtps );
+                ASSERT_TRUE( contour.has_value() );
+
+                Mesh cut = mesh;
+                auto res = cutMesh( cut, { *contour } );
+                EXPECT_TRUE( cut.topology.checkValidity() );
+                EXPECT_TRUE( res.fbsWithContourIntersections.none() ) << "distance " << dist << ", fill " << fill << ", trial " << trial;
+                EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the island is connected and filled on both sides
+                EXPECT_NEAR( cut.area(), mesh.area(), 1e-3 * mesh.area() );
+            }
+        }
     }
 }
 

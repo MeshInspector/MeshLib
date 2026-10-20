@@ -2,6 +2,7 @@
 #include "MRMesh.h"
 #include "MRPolyline.h"
 #include "MRTriangleIntersection.h"
+#include "MRTriMath.h"
 #include "MRMeshTopology.h"
 #include "MRMeshDelone.h"
 #include "MR2DContoursTriangulation.h"
@@ -601,11 +602,11 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
                 [&] ( VertId v ) { return pointOf( lf, v ); } );
             return;
         }
-        Vector3d dblArea; // the normal of the face, along which the loops go counterclockwise around the hole
-        for ( const auto& loop : loops )
-            for ( auto e : loop )
-                dblArea += cross( Vector3d( mesh.orgPnt( e ) ), Vector3d( mesh.destPnt( e ) ) );
-        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, Vector3f( dblArea ) );
+        // the loops go counterclockwise around the normal of the face; from its corners in doubles, every component of the normal
+        // has the exact sign, while a sum over the loops would add the rounding of the islands' points
+        const auto& p = mesh.points;
+        const auto normal = dirDblArea( Triangle3d{ Vector3d( p[lf.verts[0]] ), Vector3d( p[lf.verts[1]] ), Vector3d( p[lf.verts[2]] ) } );
+        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, Vector3f( normal ) );
     } );
 
     for ( int i = 0; i < loneFaces.size(); ++i )

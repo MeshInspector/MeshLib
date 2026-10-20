@@ -277,7 +277,7 @@ TEST( MRMesh, triangulateDisjointContoursPinchedLoop )
 TEST( MRMesh, cutMeshAlongBoundaryFillsSpikedHoles )
 {
     Mesh mesh;
-    mesh.points = std::vector<Vector3f>
+    mesh.points = VertCoords
     {
         { 3.09503722f, -0.014356399f, 0.0114405388f },
         { 3.43319631f, 0.0118827643f, -0.0905694813f },

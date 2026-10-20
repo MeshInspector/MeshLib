@@ -34,9 +34,6 @@ public:
     /// creates a vector with \p size elements with the given value
     MR_BIND_OVERLOAD_SUFFIX(fill) explicit Vector( size_t size, const T & val ) : vec( size, val ) { }
 
-    /// moves data from the given std::vector<T>
-    MR_BIND_OVERLOAD_SUFFIX(stdVector) Vector( std::vector<T> && v ) : vec( std::move( v ) ) { }
-
     template< class InputIt >
     Vector( InputIt first, InputIt last ) : vec( first, last ) { }
 

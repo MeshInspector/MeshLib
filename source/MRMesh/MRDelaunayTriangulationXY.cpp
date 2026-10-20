@@ -389,7 +389,9 @@ static Expected<Mesh> delaunayTriangulationXY( VertCoords points, const VertBitS
 
 Expected<Mesh> delaunayTriangulationXY( std::vector<Vector3f> points, const ProgressCallback& cb )
 {
-    return delaunayTriangulationXY( VertCoords( std::move( points ) ), nullptr, cb );
+    VertCoords vertCoords;
+    vertCoords.vec = std::move( points );
+    return delaunayTriangulationXY( std::move( vertCoords ), nullptr, cb );
 }
 
 Expected<Mesh> delaunayTriangulationXY( const PointCloud& cloud, const ProgressCallback& cb )

@@ -59,7 +59,7 @@ template<typename I>
 Vector<int, I> makePalette( const Vector<Color, I>& colors, const TypedBitSet<I>& validColors, std::ostream& out )
 {
     Vector<int, I> res;
-    res = makePalette( colors.vec, validColors, out );
+    res.vec = makePalette( colors.vec, validColors, out );
     return res;
 }
 
@@ -104,7 +104,7 @@ Expected<void> toModel3mf( const Mesh & mesh, std::ostream & out, const SaveSett
     }
     else if ( savePrimColors )
     {
-        facePalette = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
+        facePalette.vec = makePalette( *settings.primitiveColors, mesh.topology.getValidFaces(), out );
         out << "    <object id=\"2\" type=\"model\">\n";
     }
     else if ( settings.solidColor )

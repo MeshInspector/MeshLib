@@ -458,7 +458,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         }
     }
 
-    std::vector<Vector3f> pointsBlocks( numPoints );
+    VertCoords pointsBlocks( numPoints );
 
     std::atomic<bool> forseStop = false;
     bool keepGoing = ParallelFor( pointsBlocks, [&] ( size_t numPoint )
@@ -472,7 +472,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
         Vector3d temp;
         auto result = parseTextCoordinate( line, temp );
-        pointsBlocks[numPoint] = Vector3f( temp );
+        pointsBlocks[VertId( numPoint )] = Vector3f( temp );
 
         if ( !result.has_value() )
         {

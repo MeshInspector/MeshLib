@@ -25,6 +25,12 @@
     <!-- The examples are package-private classes in `*.dox.java` next to this file. -->
     <sourceDirectory>.</sourceDirectory>
     <plugins>
+      <!-- Maven before 3.9 (e.g. apt's on Ubuntu 24.04) defaults to maven-compiler-plugin 3.1, which ignores `maven.compiler.release`. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.14.1</version>
+      </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>exec-maven-plugin</artifactId>

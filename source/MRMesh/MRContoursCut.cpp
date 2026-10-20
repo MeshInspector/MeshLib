@@ -73,28 +73,20 @@ struct PreCutResult
     std::vector<std::vector<PathsEdgeIndex>> oldEdgesInfo;
 };
 
+/// prepares precise-coordinates for a vertex of mesh A or B as the boolean's predicates take them:
+/// the ids of B shifted by meshAVertsNum, its points moved by rigidB2A in float before the conversion
+PreciseVertCoords preciseVert( VertId v, const Mesh& mesh, bool isA, const SortIntersectionsData& sortData )
+{
+    if ( isA )
+        return { v, sortData.converter( mesh.points[v] ) };
+    const auto& p = mesh.points[v];
+    return { v + int( sortData.meshAVertsNum ), sortData.converter( sortData.rigidB2A ? ( *sortData.rigidB2A )( p ) : p ) };
+}
+
 /// prepares precise-coordinates for a vertex from the other mesh
 PreciseVertCoords preciseOtherVert( VertId v, const SortIntersectionsData& sortData )
 {
-    if ( sortData.isOtherA )
-        return { v, sortData.converter( sortData.otherMesh.points[v] ) };
-
-    if ( !sortData.rigidB2A )
-        return { v + int( sortData.meshAVertsNum ), sortData.converter( sortData.otherMesh.points[v] )};
-
-    return { v + int( sortData.meshAVertsNum ),sortData.converter( ( *sortData.rigidB2A )( sortData.otherMesh.points[v] ) )};
-}
-
-/// prepares precise-coordinates for a vertex of the mesh being cut (not sortData.otherMesh)
-PreciseVertCoords preciseOwnVert( VertId v, const Mesh& mesh, const SortIntersectionsData& sortData )
-{
-    if ( !sortData.isOtherA )
-        return { v, sortData.converter( mesh.points[v] ) };
-
-    if ( !sortData.rigidB2A )
-        return { v + int( sortData.meshAVertsNum ), sortData.converter( mesh.points[v] ) };
-
-    return { v + int( sortData.meshAVertsNum ), sortData.converter( ( *sortData.rigidB2A )( mesh.points[v] ) ) };
+    return preciseVert( v, sortData.otherMesh, sortData.isOtherA, sortData );
 }
 
 // sets left face of given edge invalid and saves info about its old left ring
@@ -536,7 +528,7 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
         }
     }
 
-    auto ownVert = [&] ( VertId v ) { return preciseOwnVert( v, mesh, *sortData ); };
+    auto ownVert = [&] ( VertId v ) { return preciseVert( v, mesh, !sortData->isOtherA, *sortData ); };
     // the exact definition of a vertex on the loops of a lone face
     auto pointOf = [&] ( const LoneFace& lf, VertId v )
     {
@@ -688,8 +680,8 @@ CompareResult compareEdgeTrisIntersections( EdgeId intersectedEdge, const Mesh& 
 
     std::array<PreciseVertCoords, 8> preciseVerts
     {
-        preciseOwnVert( mesh.topology.org( intersectedEdge ), mesh, sortData ),
-        preciseOwnVert( mesh.topology.dest( intersectedEdge ), mesh, sortData ),
+        preciseVert( mesh.topology.org( intersectedEdge ), mesh, !sortData.isOtherA, sortData ),
+        preciseVert( mesh.topology.dest( intersectedEdge ), mesh, !sortData.isOtherA, sortData ),
         preciseOtherVert( vsl[0], sortData ),
         preciseOtherVert( vsl[1], sortData ),
         preciseOtherVert( vsl[2], sortData ),

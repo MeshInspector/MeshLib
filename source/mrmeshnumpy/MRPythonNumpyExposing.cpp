@@ -260,9 +260,9 @@ MR::PointCloud pointCloudFromNP( const pybind11::buffer& points, const pybind11:
     MR::PointCloud res;
 
     // verts to points part
-    res.points = fromNumpyArrayInfo( infoPoints );
+    res.points.vec = fromNumpyArrayInfo( infoPoints );
     if ( infoNormals.size > 0 )
-        res.normals = fromNumpyArrayInfo( infoNormals );
+        res.normals.vec = fromNumpyArrayInfo( infoNormals );
 
     res.validPoints = MR::VertBitSet( res.points.size() );
     res.validPoints.flip();

@@ -8,6 +8,7 @@
 #include <MRMesh/MRExtractIsolines.h>
 #include <MRMesh/MRAffineXf3.h>
 #include <MRMesh/MRRegionBoundary.h>
+#include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRMeshFillHole.h>
 #include <MRMesh/MR2to3.h>
 #include <MRSymbolMesh/MRSymbolMesh.h>
@@ -410,6 +411,56 @@ TEST( MRMesh, PlanarTriangulationMonotonePlan )
         EXPECT_EQ( turns, 2 );
     }
     EXPECT_EQ( parts.size(), size_t( 2 ) );
+}
+
+// on the exact predicates of a cut triangle, two vertices of the loops defined alike (as where both edges of a multiple edge
+// of the other mesh cross the triangle) cannot be told apart, so the plan is rejected without running the sweep
+TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
+{
+    // the hole of triangle 0_f with island 1_f inside it
+    VertCoords pts{ Vector3f( 0, 0, 0 ), Vector3f( 1000, 0, 0 ), Vector3f( 0, 1000, 0 ),
+        Vector3f( 200, 200, 0 ), Vector3f( 400, 200, 0 ), Vector3f( 200, 400, 0 ) };
+    Mesh mesh = Mesh::fromTriangles( std::move( pts ), { { 0_v, 1_v, 2_v }, { 3_v, 4_v, 5_v } } );
+    const auto outer = mesh.topology.edgeWithLeft( 0_f );
+    mesh.topology.setLeft( outer, {} );
+    auto ringOf = [&] ( EdgeId e )
+    {
+        EdgeLoop res;
+        for ( auto le : leftRing( mesh.topology, e ) )
+            res.push_back( le );
+        return res;
+    };
+    const EdgeLoops loops{ ringOf( outer ), ringOf( mesh.topology.edgeWithLeft( 1_f ).sym() ) };
+
+    // the corners of the triangle are vertex points, the island vertices are the crossings of vertical segments with the triangle,
+    // the segment of vertex v having the ends of ids 2v and 2v + 1 (larger than those of the triangle)
+    const std::array<PreciseVertCoords, 3> tri{ PreciseVertCoords{ 0_v, { 0, 0, 0 } }, { 1_v, { 1000, 0, 0 } }, { 2_v, { 0, 1000, 0 } } };
+    auto pointOf = [&] ( VertId v, VertId sameAs )
+    {
+        if ( v < 3 )
+            return PreciseCutPoint{ .seg = { tri[v] } };
+        const auto u = v == 4_v && sameAs ? sameAs : v;
+        const auto p = Vector3i( mesh.points[u] );
+        return PreciseCutPoint{ .seg = { PreciseVertCoords{ VertId( 2 * u ), p - Vector3i( 0, 0, 100 ) }, { VertId( 2 * u + 1 ), p + Vector3i( 0, 0, 100 ) } },
+            .tri = tri };
+    };
+
+    auto plan = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( v, {} ); } );
+    ASSERT_TRUE( plan.has_value() );
+    EXPECT_EQ( plan->items.size(), size_t( 2 ) ); // where the sweep reaches the island and where it leaves it
+
+    // vertex 4 defined as vertex 3, also with the ends of the segment and the vertices of the triangle in another order
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( v, 3_v ); } ).has_value() );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v )
+    {
+        auto res = pointOf( v, 3_v );
+        if ( v == 4_v )
+        {
+            std::swap( res.seg[0], res.seg[1] );
+            std::rotate( res.tri.begin(), res.tri.begin() + 1, res.tri.end() );
+        }
+        return res;
+    } ).has_value() );
 }
 
 namespace

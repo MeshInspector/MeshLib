@@ -228,6 +228,27 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
     }
 }
 
+// both edges of the multiple edge (see makeMeshWithMultipleEdge) cross a big triangle of the cube at one point inside it, on a lone contour;
+// the exact predicates of the cut cannot tell apart the two points defined alike: the boolean reports bad faces or gives a valid mesh
+TEST( MRMesh, BooleanMultipleEdgeThroughLoneFace )
+{
+    const Mesh lens = makeMeshWithMultipleEdge();
+    const Mesh cube = makeCube( Vector3f::diagonal( 20.f ), Vector3f( 0.1f, -9.f, -0.6f ) );
+    for ( bool swap : { false, true } )
+    {
+        const Mesh& a = swap ? lens : cube;
+        const Mesh& b = swap ? cube : lens;
+        for ( auto op : { BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB } )
+        {
+            const auto res = boolean( a, b, op );
+            if ( res.valid() )
+                EXPECT_TRUE( res.mesh.topology.checkValidity() );
+            else
+                EXPECT_TRUE( res.meshABadContourFaces.any() || res.meshBBadContourFaces.any() ) << res.errorString;
+        }
+    }
+}
+
 // two triangles sharing two vertices but not the edge between them (multiple edges connect the vertices) can meet only along
 // the segment between these vertices, so findSelfCollidingEdgeTrisPrecise skips them as the triangles with a shared edge,
 // but still finds all crossings of other edges and triangles

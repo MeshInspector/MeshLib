@@ -1880,6 +1880,35 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
 std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf )
 {
+    // the definitions of the distinct vertices of the loops (a vertex can be on several loops, or twice on a slit), sorted by vertex
+    std::vector<VertId> verts;
+    for ( const auto& loop : loops )
+        for ( auto e : loop )
+            verts.push_back( mesh.topology.org( e ) );
+    std::sort( verts.begin(), verts.end() );
+    verts.erase( std::unique( verts.begin(), verts.end() ), verts.end() );
+    std::vector<PreciseCutPoint> defs( verts.size() );
+    // two vertices defined alike make the predicates fail inside the sweep, which then goes on with arbitrary answers that can break it,
+    // while valid input never has them, so such loops are rejected before the sweep: a vertex point by its id, a crossing by the ids
+    // of its segment and triangle in any order
+    std::vector<std::array<int, 5>> keys( verts.size() );
+    for ( size_t i = 0; i < verts.size(); ++i )
+    {
+        const auto& d = defs[i] = pointOf( verts[i] );
+        auto& k = keys[i];
+        if ( d.isVertex() )
+        {
+            k = { d.seg[0].id, -1, -1, -1, -1 };
+            continue;
+        }
+        k = { d.seg[0].id, d.seg[1].id, d.tri[0].id, d.tri[1].id, d.tri[2].id };
+        std::sort( k.begin(), k.begin() + 2 );
+        std::sort( k.begin() + 2, k.end() );
+    }
+    std::sort( keys.begin(), keys.end() );
+    if ( std::adjacent_find( keys.begin(), keys.end() ) != keys.end() )
+        return {};
+
     CutTrianglePredicates preds;
     preds.reset( tri );
     auto res = getMonotonePlan( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& )
@@ -1890,7 +1919,8 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
         p.ccwFromBehind = [&preds] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( b, pivot ); };
         p.addInputPoint = [&] ( VertId v, int contourId, int pointId )
         {
-            preds.addPoint( v, pointOf( mesh.topology.org( loops[contourId][pointId] ) ) );
+            const auto it = std::lower_bound( verts.begin(), verts.end(), mesh.topology.org( loops[contourId][pointId] ) );
+            preds.addPoint( v, defs[it - verts.begin()] );
             // the sweep orders some points before it has added all of them (at an edge taken both ways), while no predicate
             // may run after a failure, which valid points never give
             assert( !preds.failed() );

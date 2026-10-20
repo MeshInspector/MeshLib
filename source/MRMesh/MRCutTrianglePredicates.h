@@ -35,7 +35,8 @@ struct MR_BIND_IGNORE PreciseCutPoint
 /// the sweep goes over the projection of the perturbed triangle on the plane of the two axes least aligned with its normal
 /// (dropping the axis of the largest component of the normal, the first one of equal components, or the axis of the leading
 /// term of the perturbed normal if the exact one is zero), meeting the points in the order of one linear functional,
-/// which is nearly the first projected coordinate
+/// which is nearly the first projected coordinate; the const members may be called concurrently (less from a parallel sort),
+/// while reset and addPoint must not run together with any other member
 class MR_BIND_IGNORE CutTrianglePredicates
 {
 public:
@@ -57,7 +58,7 @@ public:
     /// or to a point inside it; setting a point again forgets the orders found for its old definition, but not a failure;
     /// a vertex point that is not a corner of the triangle, repeated ids, a segment with an end on a vertex of its own triangle,
     /// a segment off the sides with a triangle other than this one (as one with a single end at a corner), or a segment that does not
-    /// cross the plane of its triangle make the predicates fail
+    /// cross the plane of its triangle are failures (see failed)
     MRMESH_API void addPoint( VertId v, const PreciseCutPoint & p );
 
     /// whether point p comes before point q along the sweep: a strict total order, unless addPoint failed (see failed)
@@ -68,10 +69,10 @@ public:
     /// while less and ccwFromBehind decide most pairs by faster rules; nullopt if the points coincide after the perturbation too
     [[nodiscard]] MRMESH_API std::optional<Vector2i> directionByPerturbation( VertId p, VertId q ) const;
 
-    /// whether triangle abc of distinct points is counterclockwise in the projection: decided by the exact positions of the points,
-    /// or by ccwByLines if they are on one line before the perturbation, or else by expanding the perturbation,
-    /// so any three points are decided; as the sweep asks about the same triangles often, the answers of the slower rules
-    /// are kept till reset
+    /// whether triangle abc of distinct points is counterclockwise in the projection, for any three points: the first rule that applies
+    /// decides, of the rounded coordinates (if their errors cannot change the sign), a side through two of the points, and, with the answers
+    /// kept till reset since the sweep asks about the same triangles often, a plane line through two of them (the lines of ccwByLines),
+    /// the exact positions, and the expansion of the perturbation; where several rules apply, they agree
     [[nodiscard]] MRMESH_API bool ccw( VertId a, VertId b, VertId c ) const;
 
     /// the same as ccw, decided by a line through two of the points known from their definitions, as the ends of every edge
@@ -92,10 +93,10 @@ public:
 
     /// whether the input broke a precondition that reset or addPoint checks, or a predicate met points it cannot tell apart, which valid
     /// input never gives either: two points defined alike, or three points off the sides on one line also after the perturbation (as three
-    /// crossings of one cut, while valid input has two at most); the answers are arbitrary then, and the caller must discard them; it stays
-    /// set till reset; after a failure of addPoint, less may be cyclic, which is undefined behaviour in a sort, so the caller checks failed()
-    /// after the addPoint calls and before sorting with less; points defined alike, which less finds only when it compares them, keep it
-    /// a strict total order (they compare alike with every other point, and by their ids with one another)
+    /// crossings of one cut, while valid input has two at most); it stays set till reset; the caller checks it after the addPoint calls
+    /// and calls no predicate if it is set, since they take the points as valid (less may be cyclic then, and Debug asserts may fire);
+    /// a failure that a predicate finds leaves the predicates callable, with arbitrary answers that the caller discards, and less a strict
+    /// total order (points defined alike compare alike with every other point, and by their ids with one another)
     [[nodiscard]] MRMESH_API bool failed() const;
 
 private:

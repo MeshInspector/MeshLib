@@ -92,6 +92,17 @@ bool sameTriangle( const std::array<PreciseVertCoords, 3> & a, const std::array<
     return hasVert( b, a[0].id ) && hasVert( b, a[1].id ) && hasVert( b, a[2].id );
 }
 
+#ifndef NDEBUG
+/// whether every coordinate of v is below 2^30 by absolute value, for which the integer widths and the error bounds here are derived
+bool inRange( const PreciseVertCoords & v )
+{
+    for ( int i = 0; i < 3; ++i )
+        if ( v.pt[i] <= -( 1 << 30 ) || v.pt[i] >= ( 1 << 30 ) )
+            return false;
+    return true;
+}
+#endif
+
 // ---------- simulation of simplicity for points that coincide before the perturbation ----------
 // The perturbation is the one of orient3d: coordinate i of a vertex gets eps^( PointDegree::degree( i ) ), with the degrees
 // from getPointDegrees, which order the terms of every polynomial by the weights of the vertices from the largest id down,
@@ -279,17 +290,9 @@ std::optional<SosFraction> sosPoint( const PreciseCutPoint & p, const Perturbati
     return res;
 }
 
-/// the lowest-degree term of a polynomial: its degree and the sign of its coefficient, which is 0 for the zero polynomial
-struct LeadTerm
-{
-    std::int64_t deg = 0;
-    int sign = 0;
-};
-
-LeadTerm leadTerm( const std::pair<std::int64_t, int> & t )
-{
-    return { t.first, t.second };
-}
+/// the lowest-degree term of a polynomial, as lowestTermOfSumOfProducts gives it: its degree, and the sign of its coefficient,
+/// which is 0 for the zero polynomial
+using LeadTerm = std::pair<std::int64_t, int>;
 
 template <typename C>
 LeadTerm leadOf( const SosPolyOf<C> & p )
@@ -310,7 +313,7 @@ std::array<LeadTerm, 3> sosLeadTerms( const PerturbationStages & ps, int mask, c
         const auto u = vec( s );
         const std::array<LeadTerm, 3> res{ leadOf( u[0] ), leadOf( u[1] ), leadOf( u[2] ) };
         for ( int i = 0; i < 3; ++i )
-            if ( ( mask & ( 1 << i ) ) && res[i].sign != 0 )
+            if ( ( mask & ( 1 << i ) ) && res[i].second != 0 )
                 return res;
         return {};
     } ).value_or( std::array<LeadTerm, 3>{} );
@@ -351,7 +354,9 @@ auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, int kx, 
 /// with eps << eta sees them: a coordinate whose leading term has a larger degree than that of the other one is taken as zero
 Vector2i sweepSigns( const LeadTerm & x, const LeadTerm & y )
 {
-    return { y.sign == 0 || x.deg <= y.deg ? x.sign : 0, x.sign == 0 || y.deg <= x.deg ? y.sign : 0 };
+    const auto & [degX, signX] = x;
+    const auto & [degY, signY] = y;
+    return { signY == 0 || degX <= degY ? signX : 0, signX == 0 || degY <= degX ? signY : 0 };
 }
 
 /// whether the sweep meets the points along a direction with these signs of the projected coordinates in the order
@@ -370,9 +375,9 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
         const SosFraction & a = *x[0];
         const SosFraction & b = *x[1];
         // the signs and the leading degrees of the differences of the coordinates of q and p, whose common denominator is positive
-        const auto dx = leadTerm( lowestTermOfProductsDiff<FastInt256>( b.nx, a.d, a.nx, b.d, from ) );
-        const auto dy = leadTerm( lowestTermOfProductsDiff<FastInt256>( b.ny, a.d, a.ny, b.d, from ) );
-        if ( dx.sign == 0 && dy.sign == 0 )
+        const auto dx = lowestTermOfProductsDiff<FastInt256>( b.nx, a.d, a.nx, b.d, from );
+        const auto dy = lowestTermOfProductsDiff<FastInt256>( b.ny, a.d, a.ny, b.d, from );
+        if ( dx.second == 0 && dy.second == 0 )
             return {}; // the vertices perturbed so far move both points alike
         // a difference that is still zero has a leading term of a later stage, so of a larger degree
         return sweepSigns( dx, dy );
@@ -402,18 +407,25 @@ int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const Preci
     } ).value_or( 0 );
 }
 
-/// the signs of the projected coordinates of the perturbed cross( normal of f, normal of g ), as the sweep along kx + eta * ky
-/// with eps << eta sees them (see sweepSigns)
-Vector2i sosCrossDirection( const std::array<PreciseVertCoords, 3> & f, const std::array<PreciseVertCoords, 3> & g, int kx, int ky )
+/// the leading terms of the perturbed normal of triangle f, or of the perturbed cross( normal of f, normal of g ) if g is given (see sosLeadTerms)
+std::array<LeadTerm, 3> sosNormalLeadTerms( const std::array<PreciseVertCoords, 3> & f, const std::array<PreciseVertCoords, 3> * g, int mask )
 {
     // a normal has the weight of a vertex at most 9 + 3 = 12
     SosVerts r;
     for ( const auto & v : f )
         r.add( v, 12 );
-    for ( const auto & v : g )
-        r.add( v, 12 );
+    if ( g )
+        for ( const auto & v : *g )
+            r.add( v, 12 );
     const auto ps = r.stages();
-    const auto t = sosLeadTerms( ps, ( 1 << kx ) | ( 1 << ky ), [&] ( int s ) { return cross( sosNormal( ps, 0, s ), sosNormal( ps, 3, s ) ); } );
+    return sosLeadTerms( ps, mask, [&] ( int s ) { return g ? cross( sosNormal( ps, 0, s ), sosNormal( ps, 3, s ) ) : sosNormal( ps, 0, s ); } );
+}
+
+/// the signs of the projected coordinates of the perturbed cross( normal of f, normal of g ), as the sweep along kx + eta * ky
+/// with eps << eta sees them (see sweepSigns)
+Vector2i sosCrossDirection( const std::array<PreciseVertCoords, 3> & f, const std::array<PreciseVertCoords, 3> & g, int kx, int ky )
+{
+    const auto t = sosNormalLeadTerms( f, &g, ( 1 << kx ) | ( 1 << ky ) );
     return sweepSigns( t[kx], t[ky] );
 }
 
@@ -528,6 +540,7 @@ void CutTrianglePredicates::fail_() const
 
 void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri )
 {
+    assert( std::all_of( tri.begin(), tri.end(), inRange ) );
     tri_ = tri;
     approx_.clear();
     impl_->points.clear();
@@ -545,21 +558,20 @@ void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri 
     int dropSign = sgn( normal_[dropAx] );
     if ( dropSign == 0 && !failed() )
     {
-        // the vertices are on one line before the perturbation: drop the axis of the leading term of the perturbed normal
-        SosVerts r;
-        for ( const auto & v : tri )
-            r.add( v, 12 ); // a normal has the weight of a vertex at most 9 + 3
-        const auto ps = r.stages();
-        const auto n = sosLeadTerms( ps, 7, [&] ( int s ) { return sosNormal( ps, 0, s ); } );
-        LeadTerm lead;
+        // the vertices are on one line before the perturbation: drop the axis of the leading term of the perturbed normal;
+        // dropping any component whose leading term is not zero gives a bijective projection, oriented by the sign of that term,
+        // so of the components with leading terms of equal degree (as a perturbed z coordinate gives to n_x and n_y)
+        // the first one is as good as any
+        const auto n = sosNormalLeadTerms( tri, nullptr, 7 );
+        std::int64_t leadDeg = 0;
         for ( int i = 0; i < 3; ++i )
-            if ( n[i].sign != 0 && ( lead.sign == 0 || n[i].deg < lead.deg ) )
+            if ( const auto [deg, sign] = n[i]; sign != 0 && ( dropSign == 0 || deg < leadDeg ) )
             {
                 dropAx = i;
-                lead = n[i];
+                dropSign = sign;
+                leadDeg = deg;
             }
-        assert( lead.sign != 0 ); // the perturbed points of distinct ids are not on one line
-        dropSign = lead.sign;
+        assert( dropSign != 0 ); // the perturbed points of distinct ids are not on one line
     }
     kx_ = ( dropAx + 1 ) % 3;
     ky_ = ( dropAx + 2 ) % 3;
@@ -569,6 +581,7 @@ void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri 
 
 void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
 {
+    assert( inRange( p.seg[0] ) && ( p.isVertex() || ( inRange( p.seg[1] ) && std::all_of( p.tri.begin(), p.tri.end(), inRange ) ) ) );
     auto & points = impl_->points;
     if ( points.size() <= v )
     {
@@ -697,11 +710,6 @@ bool CutTrianglePredicates::lessCoincident_( VertId p, VertId q ) const
 {
     const auto & da = impl_->points[p].def;
     const auto & db = impl_->points[q].def;
-    // along a segment s0 -> s1, the order of the perturbed points is that of the sweep if the sweep meets s0 first
-    auto alongSweep = [&] ( const PreciseVertCoords & s0, const PreciseVertCoords & s1 )
-    {
-        return sweepForward( segmentDirection_( s0, s1 ) );
-    };
     if ( !da.isVertex() && !db.isVertex() && sameTriangle( da.tri, db.tri ) )
     {
         const bool same = da.seg[0].id == db.seg[0].id && da.seg[1].id == db.seg[1].id;
@@ -712,20 +720,16 @@ bool CutTrianglePredicates::lessCoincident_( VertId p, VertId q ) const
             return p < q;
         }
     }
-    // a crossing of a side and an end of the side: the crossing is strictly inside the side
-    if ( !da.isVertex() && db.isVertex() )
+    // a crossing x of a side and an end v of the side: the crossing is strictly inside the side, so v comes first
+    // iff the sweep goes from v along the side
+    if ( da.isVertex() != db.isVertex() )
     {
-        if ( db.seg[0].id == da.seg[0].id )
-            return !alongSweep( da.seg[0], da.seg[1] );
-        if ( db.seg[0].id == da.seg[1].id )
-            return !alongSweep( da.seg[1], da.seg[0] );
-    }
-    if ( da.isVertex() && !db.isVertex() )
-    {
-        if ( da.seg[0].id == db.seg[0].id )
-            return alongSweep( db.seg[0], db.seg[1] );
-        if ( da.seg[0].id == db.seg[1].id )
-            return alongSweep( db.seg[1], db.seg[0] );
+        const bool pIsVertex = da.isVertex();
+        const auto & x = pIsVertex ? db : da;
+        const auto & v = pIsVertex ? da : db;
+        for ( int i = 0; i < 2; ++i )
+            if ( v.seg[0].id == x.seg[i].id )
+                return sweepForward( segmentDirection_( x.seg[i], x.seg[1 - i] ) ) == pIsVertex;
     }
     // the other pairs by the direction of the perturbed points, which the slower rules find and the cache keeps: two crossings of one side
     // as the boolean's cut orders them along it (see directionFromSide_)

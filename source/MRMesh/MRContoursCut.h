@@ -133,7 +133,9 @@ struct CutByProjectionSettings
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input
+  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input.
+  * An isoline that reaches the mesh boundary is an open contour (closed = false) from a boundary edge to a boundary edge;
+  * the other isolines are closed, with the last intersection equal to the first one
   * \param offset amount of offset form given point, note that absolute value is used and isoline in both direction returned
   * \param searchSettings settings for search geodesic path
   */
@@ -145,7 +147,9 @@ MRMESH_API Expected<OneMeshContours> offsetSurfaceLineToMeshContours( const Mesh
 /** \ingroup BooleanGroup
   * \brief Makes continuous contour by iso-line from mesh tri points, if first and last meshTriPoint is the same, makes closed contour
   *
-  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input
+  * Finds shortest paths between neighbor \p surfaceLine and build offset contour on surface for MR::cutMesh input.
+  * An isoline that reaches the mesh boundary is an open contour (closed = false) from a boundary edge to a boundary edge;
+  * the other isolines are closed, with the last intersection equal to the first one
   * \param offsetAtPoint functor that returns amount of offset form arg point, note that absolute value is used and isoline in both direction returned
   * \param searchSettings settings for search geodesic path
   */

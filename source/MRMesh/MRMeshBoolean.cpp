@@ -319,8 +319,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     contours = orderIntersectionContours( meshA.topology, meshB.topology,
         findCollidingEdgeTrisPrecise( meshA, meshB, converters.toInt, params.rigidB2A ) );
 
-    const auto mainCb = subprogress( params.cb, 0.8f, 1.0f );
-    if ( mainCb && !mainCb( 0.0f ) )
+    if ( params.cb && !params.cb( 0.0f ) )
         return { .errorString = stringOperationCanceled() };
 
     std::vector<EdgePath> cutA, cutB;
@@ -378,7 +377,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
             needCutMeshB ? &meshBContours : nullptr,
             converters, params.rigidB2A );
 
-    if ( mainCb && !mainCb( 0.33f ) )
+    if ( params.cb && !params.cb( 0.33f ) )
         return { .errorString = stringOperationCanceled() };
 
     if ( params.outPreCutA )
@@ -451,7 +450,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     }
 
 
-    if ( mainCb && !mainCb( 0.66f ) )
+    if ( params.cb && !params.cb( 0.66f ) )
         return { .errorString = stringOperationCanceled() };
 
     if ( params.outPreCutA || params.outPreCutB )
@@ -464,7 +463,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     auto res = doBooleanOperation( std::move( meshA ), std::move( meshB ), std::move( cutA ), std::move( cutB ), 
         operation, params.rigidB2A, params.mapper, params.mergeAllNonIntersectingComponents, intParams );
 
-    if ( mainCb && !mainCb( 1.0f ) )
+    if ( params.cb && !params.cb( 1.0f ) )
         return { .errorString = stringOperationCanceled() };
 
     if ( res.has_value() )

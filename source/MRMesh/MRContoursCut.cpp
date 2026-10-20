@@ -611,10 +611,11 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
             return;
         }
         // the loops go counterclockwise around the normal of the face; from its corners in doubles, every component of the normal
-        // has the exact sign, while a sum over the loops would add the rounding of the islands' points
+        // has the exact sign, while a sum over the loops would add the rounding of the islands' points; normalized before
+        // the conversion to float, which could flush it to zero or overflow at extreme scales
         const auto& p = mesh.points;
         const auto normal = dirDblArea( Triangle3d{ Vector3d( p[lf.verts[0]] ), Vector3d( p[lf.verts[1]] ), Vector3d( p[lf.verts[2]] ) } );
-        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, Vector3f( normal ) );
+        plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, Vector3f( normal.normalized() ) );
     } );
 
     for ( int i = 0; i < loneFaces.size(); ++i )

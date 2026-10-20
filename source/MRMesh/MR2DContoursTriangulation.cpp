@@ -1913,6 +1913,8 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     preds.reset( tri );
     auto res = getMonotonePlan( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& )
     {
+        // samePos, addIntersectionPoint and point stay empty: the sweep on loops merges no points, stops at the first crossing
+        // and triangulates nothing here, so it never calls them
         SweepLinePredicates p;
         p.less = [&preds] ( VertId l, VertId r ) { return preds.less( l, r ); };
         p.ccw = [&preds] ( VertId a, VertId b, VertId c ) { return preds.ccw( a, b, c ); };

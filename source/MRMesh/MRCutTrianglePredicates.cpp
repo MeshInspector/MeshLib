@@ -134,6 +134,12 @@ using SosPolyOf = SparsePolynomial<C, std::int64_t, cMaxPolyDAll>;
 using SosPoly256 = SosPolyOf<FastInt256>;
 using SosPoly512 = SosPolyOf<FastInt512>;
 
+/// the indices of the vertices of one point among those of SosVerts, from first up to end
+struct SosRange
+{
+    int first = 0, end = 0;
+};
+
 /// the vertices of the points of one predicate with the bounds of their weights, point after point: seg[0] of a vertex point,
 /// or seg[0], seg[1], tri[0], tri[1], tri[2] of a crossing
 struct SosVerts
@@ -151,8 +157,8 @@ struct SosVerts
         ++num;
     }
 
-    /// adds the vertices of point p, and returns the index of the first of them
-    int add( const PreciseCutPoint & p )
+    /// adds the vertices of point p, and returns the range of their indices
+    SosRange add( const PreciseCutPoint & p )
     {
         const int first = num;
         if ( p.isVertex() )
@@ -164,7 +170,7 @@ struct SosVerts
             for ( const auto & t : p.tri )
                 add( t, 9 );
         }
-        return first;
+        return { first, num };
     }
 
     /// the stages of the perturbation of the vertices added: a vertex in several points has the sum of their bounds
@@ -182,10 +188,10 @@ struct SosVerts
     }
 };
 
-/// whether point p with its vertices from index first of the stages moves at stage s, having a vertex perturbed first at this stage
-bool startsAt( const PerturbationStages & ps, const PreciseCutPoint & p, int first, int s )
+/// whether a point with its vertices in range of the stages moves at stage s, having a vertex perturbed first at this stage
+bool startsAt( const PerturbationStages & ps, const SosRange & range, int s )
 {
-    for ( int i = first; i < first + ( p.isVertex() ? 1 : 5 ); ++i )
+    for ( int i = range.first; i < range.end; ++i )
         if ( ps.startsAt( i, s ) )
             return true;
     return false;
@@ -338,9 +344,9 @@ template <int N, typename F>
 auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, int kx, int ky, const F & f )
 {
     SosVerts r;
-    std::array<int, N> first;
+    std::array<SosRange, N> ranges;
     for ( int i = 0; i < N; ++i )
-        first[i] = r.add( *pts[i] );
+        ranges[i] = r.add( *pts[i] );
     const auto ps = r.stages();
     std::array<std::optional<SosFraction>, N> x;
     bool prevZero = false; // whether all points were defined at the previous stage, and the polynomial of f zero
@@ -350,8 +356,8 @@ auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, int kx, 
         for ( int i = 0; i < N; ++i )
         {
             // a point keeps its coordinates of the previous stage unless it has a vertex perturbed first at this one
-            if ( s == 1 || startsAt( ps, *pts[i], first[i], s ) )
-                x[i] = sosPoint( *pts[i], ps, first[i], s, kx, ky );
+            if ( s == 1 || startsAt( ps, ranges[i], s ) )
+                x[i] = sosPoint( *pts[i], ps, ranges[i].first, s, kx, ky );
             defined = defined && x[i].has_value();
         }
         decltype( f( x, std::int64_t{} ) ) res;

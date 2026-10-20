@@ -6,6 +6,7 @@
 --merge-std-and-tl-expected
 --no-handle-exceptions
 --skip-template-args-on-func dot
+--skip-template-args-on-func heapBytes
 --expose-as-struct '/MR::Vector\d\w.*/'
 --expose-as-struct '/MR::Matrix\d\w.*/'
 --expose-as-struct '/MR::AffineXf\d\w.*/'

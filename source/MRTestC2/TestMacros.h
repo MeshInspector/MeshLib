@@ -4,7 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <tgmath.h>
+#include <math.h>
 
 #define RUN_TEST( func )                      \
     printf( "%s ...\n", #func );              \

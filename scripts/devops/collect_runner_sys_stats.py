@@ -172,18 +172,20 @@ def get_compiler_id(compiler_path):
 
     output = subprocess.check_output([compiler_path, "--version"]).decode()
     version_line = output.splitlines()[0]
+    clang_cl = os.path.basename(compiler_path).lower().startswith("clang-cl")
     if version_line.startswith("Apple clang"):
         compiler = "appleclang"
     elif version_line.startswith("emcc"):
         compiler = "emcc"
     elif "clang" in version_line:
-        compiler = "clang"
+        compiler = "clang-cl" if clang_cl else "clang"
     elif "g++" in version_line or "gcc" in version_line:
         compiler = "gcc"
     else:
         raise RuntimeError(f"Unknown compiler: {version_line}")
 
-    output = subprocess.check_output([compiler_path, "-dumpversion"]).decode().strip()
+    # clang-cl takes cl-style options only; -clang: forwards one to the GCC-style driver
+    output = subprocess.check_output([compiler_path, "-clang:-dumpversion" if clang_cl else "-dumpversion"]).decode().strip()
     if compiler == "emcc":
         return f"emcc-{output}"
     else:

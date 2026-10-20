@@ -336,7 +336,7 @@ std::shared_ptr<ObjectMesh> merge( const std::vector<std::shared_ptr<ObjectMesh>
             else
             {
                 const auto& curTextures = obj->getTextures();
-                mergedTextures.vec_.insert( mergedTextures.vec_.end(), curTextures.vec_.begin(), curTextures.vec_.end() );
+                mergedTextures.insert( end( mergedTextures ), begin( curTextures ), end( curTextures ) );
 
                 if ( numObject == 0 )
                     curNumTexture = TextureId( 0 );

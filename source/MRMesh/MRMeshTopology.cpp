@@ -153,10 +153,10 @@ size_t MeshTopology::heapBytes() const
 void MeshTopology::shrinkToFit()
 {
     MR_TIMER;
-    edges_.vec_.shrink_to_fit();
-    edgePerVertex_.vec_.shrink_to_fit();
+    edges_.shrink_to_fit();
+    edgePerVertex_.shrink_to_fit();
     validVerts_.shrink_to_fit();
-    edgePerFace_.vec_.shrink_to_fit();
+    edgePerFace_.shrink_to_fit();
     validFaces_.shrink_to_fit();
 }
 

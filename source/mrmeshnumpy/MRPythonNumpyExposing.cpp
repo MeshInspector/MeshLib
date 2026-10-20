@@ -100,7 +100,7 @@ MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, c
 
     // verts to points part
     MR::VertCoords points;
-    points.vec_ = fromNumpyArrayInfo( infoVerts );
+    points = fromNumpyArrayInfo( infoVerts );
     if ( duplicateNonManifoldVertices )
         return MR::Mesh::fromTrianglesDuplicatingNonManifoldVertices( std::move( points ), t, nullptr, settings );
     else

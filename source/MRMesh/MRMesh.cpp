@@ -612,7 +612,7 @@ void Mesh::shrinkToFit()
 {
     MR_TIMER;
     topology.shrinkToFit();
-    points.vec_.shrink_to_fit();
+    points.shrink_to_fit();
 }
 
 void Mesh::mirror( const Plane3f& plane )

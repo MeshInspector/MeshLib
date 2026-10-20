@@ -61,6 +61,8 @@ public:
 
     void reserve( size_t capacity ) { vec_.reserve( capacity ); }
 
+    void shrink_to_fit() { vec_.shrink_to_fit(); }
+
     [[nodiscard]] const_reference operator[]( I i ) const MR_LIFETIMEBOUND
     {
         assert( i < vec_.size() );
@@ -123,6 +125,10 @@ public:
     void push_back( const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( t ); }
     void push_back( T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( std::move( t ) ); }
     void pop_back() { vec_.pop_back(); }
+
+    /// inserts elements from range [first, last) before \p pos
+    template<class InputIt>
+    iterator insert( const_iterator pos, InputIt first, InputIt last ) { return vec_.insert( pos, first, last ); }
 
     template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> )
     T& emplace_back( Args&&... args ) { return vec_.emplace_back( std::forward<Args>(args)... ); }

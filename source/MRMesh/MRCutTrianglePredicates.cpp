@@ -203,15 +203,14 @@ SosPolyOf<C> sosCoord( const PointDegree & v, int i )
     return SosPolyOf<C>( std::move( terms ) );
 }
 
-/// the polynomial with the coefficients converted into a wider type
-template <typename C, typename P>
-SosPolyOf<C> widen( const P & p )
+/// the polynomial with the coefficients converted into 256 bits
+SosPoly256 widen( const SosPolyOf<FastInt128> & p )
 {
-    std::vector<typename SosPolyOf<C>::Term> terms;
+    std::vector<SosPoly256::Term> terms;
     terms.reserve( p.get().size() );
     for ( const auto & [deg, c] : p.get() )
-        terms.emplace_back( deg, C( c ) );
-    return SosPolyOf<C>( std::move( terms ) );
+        terms.emplace_back( deg, FastInt256( c ) );
+    return SosPoly256( std::move( terms ) );
 }
 
 // the perturbed vectors of the directions of segments and lines, which only the rare points with zero exact directions need;
@@ -279,8 +278,8 @@ std::optional<SosFraction> sosPoint( const PreciseCutPoint & p, const Perturbati
     if ( p.isVertex() )
     {
         const auto v = ps.at( first, s );
-        res.nx = widen<FastInt256>( sosCoord<FastInt128>( v, kx ) );
-        res.ny = widen<FastInt256>( sosCoord<FastInt128>( v, ky ) );
+        res.nx = sosCoord<FastInt256>( v, kx );
+        res.ny = sosCoord<FastInt256>( v, ky );
         res.d = SosPoly256( std::vector<SosPoly256::Term>{ { 0, FastInt256( 1 ) } } );
         return res;
     }
@@ -291,7 +290,7 @@ std::optional<SosFraction> sosPoint( const PreciseCutPoint & p, const Perturbati
     // and a coefficient of a product sums at most two products of them
     res.nx = mulAs<Int128Mul256>( oa, sosCoord<FastInt128>( b, kx ) ) - mulAs<Int128Mul256>( ob, sosCoord<FastInt128>( a, kx ) );
     res.ny = mulAs<Int128Mul256>( oa, sosCoord<FastInt128>( b, ky ) ) - mulAs<Int128Mul256>( ob, sosCoord<FastInt128>( a, ky ) );
-    res.d = widen<FastInt256>( oa - ob );
+    res.d = widen( oa - ob );
     if ( res.d.empty() )
         return {};
     if ( res.d.get().front().second.sign() < 0 )
@@ -494,17 +493,6 @@ MR_FORCE_INLINE int compareExactCoord( const ExactCoords & a, const ExactCoords 
     return l < r ? -1 : ( r < l ? 1 : 0 );
 }
 
-/// the hash of a triangle of point ids, distinct for the triangles of ids below 2^21 if size_t has 64 bits, which phmap mixes then;
-/// std::hash<UnorientedTriangle> sums the ids with small weights, which gives one value to many triangles of small dense ids
-struct TriangleIdsHash
-{
-    size_t operator()( const UnorientedTriangle & t ) const noexcept
-    {
-        const auto w = ( std::uint64_t( t[0] ) << 42 ) ^ ( std::uint64_t( t[1] ) << 21 ) ^ std::uint64_t( t[2] );
-        return size_t( w ^ ( w >> 32 ) ); // every id keeps some bits in a 32-bit size_t
-    }
-};
-
 } // anonymous namespace
 
 struct CutTrianglePredicates::Impl
@@ -520,7 +508,7 @@ struct CutTrianglePredicates::Impl
     /// the orientations of the triangles with the vertices sorted by ids that the slower rules decide: 1 if counterclockwise,
     /// -1 otherwise; the sweep asks about the same triangles often; ccw may be called concurrently, but one mutex is enough,
     /// since the sweep asks about the triangles from one thread
-    HashMap<UnorientedTriangle, int, TriangleIdsHash> orients;
+    HashMap<UnorientedTriangle, int> orients;
     std::mutex orientsMutex;
 
     /// whether the maps above may have entries, since clearing the empty submaps of the parallel map takes a lock each

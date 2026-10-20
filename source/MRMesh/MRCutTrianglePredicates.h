@@ -62,7 +62,7 @@ public:
     /// cross the plane of its triangle are failures (see failed)
     MRMESH_API void addPoint( VertId v, const PreciseCutPoint & p );
 
-    /// whether point p comes before point q along the sweep: a strict total order, unless addPoint failed (see failed)
+    /// whether point p comes before point q along the sweep: a strict total order, unless reset or addPoint failed (see failed)
     [[nodiscard]] MRMESH_API bool less( VertId p, VertId q ) const;
 
     /// the signs of the projected coordinates of q - p found by expanding the perturbation alone, as the sweep sees them:
@@ -77,9 +77,10 @@ public:
     [[nodiscard]] MRMESH_API bool ccw( VertId a, VertId b, VertId c ) const;
 
     /// the same as ccw, decided by a line through two of the points known from their definitions, as the ends of every edge
-    /// of the cut triangle are: one side of the triangle, or the plane of another triangle (by which the cut along the line goes),
-    /// or the plane through a vertex and a crossing (at selfBoolean's folds), or the plane through two edges with a common vertex
-    /// (for their crossings with this triangle), which ccw needs only for points on one line before the perturbation;
+    /// of the cut triangle are: one side of the triangle, or the plane of another triangle (by which the cut along the line goes,
+    /// also from a vertex of both at selfBoolean's folds), or the plane vcd through a vertex v of the triangle and an edge cd
+    /// of another one (for v and the crossing of cd with this triangle, at every vertex), or the plane through two edges
+    /// with a common vertex (for their crossings with this triangle), which ccw needs only for points on one line before the perturbation;
     /// the points on one side stay on one line after the perturbation, and they are taken
     /// as bulging inward a little, so three of them make a counterclockwise triangle if they come in the order
     /// from vertex i+1 to vertex i of side i, up to a cyclic shift;

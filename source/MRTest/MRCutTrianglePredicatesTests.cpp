@@ -491,8 +491,9 @@ int checkSet( CutTrianglePredicates& preds, const Tri& f, const CutPoints& pts, 
 } // anonymous namespace
 
 // Points on a small grid, where many of them coincide and many triangles are degenerate before the perturbation, including
-// segments in the planes of their triangles and triangles with zero normals, which only the perturbation orients and projects:
-// the predicates must be exact where the exact positions are known, and consistent elsewhere (see checkOrder and checkCcw);
+// segments in the planes of their triangles and triangles with zero normals, which only the perturbation orients and projects,
+// most of them with two vertices at one point, whose side only the perturbation directs: the predicates must be exact
+// where the exact positions are known, and consistent elsewhere (see checkOrder and checkCcw);
 // in every 14th set, f is a large triangle in plane z = 0 and the other triangles have their vertices in planes z = -1 and z = 1,
 // so that their edges cross f at the halves of grid points, where many points coincide and many triples are on one line
 // on no known one; the slow comparisons with the expansion of the perturbation (see checkCcw) take these sets and every 28th other one
@@ -502,7 +503,7 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
     CutTrianglePredicates preds;
     OrderStats orderStats;
     CcwStats ccwStats;
-    int numTriangles = 0, numFlat = 0, numInPlane = 0;
+    int numTriangles = 0, numZeroSides = 0, numInPlane = 0;
     for ( int trial = 0; trial < 800 / cTrialDivisor; ++trial )
     {
         const bool layers = trial % 14 == 0;
@@ -524,11 +525,13 @@ TEST( MRMesh, CutTrianglePredicatesGrid )
                 for ( auto& v : t )
                     v.pt.z = 2 * rv.index( 2 ) - 1;
         }
-        ++( exactNormal( f ) == Vector3i64() ? numFlat : numTriangles );
+        numTriangles += exactNormal( f ) != Vector3i64();
+        // a flat f with a side between two vertices at one point
+        numZeroSides += f[0].pt == f[1].pt || f[1].pt == f[2].pt || f[2].pt == f[0].pt;
         numInPlane += checkSet<std::int64_t>( preds, f, cutPoints( f, others ), orderStats, ccwStats, layers || trial % 28 == 7 ? 10 : 0 );
     }
     EXPECT_GE( numTriangles, atLeast( 600, 120 ) );
-    EXPECT_GE( numFlat, atLeast( 50, 10 ) );
+    EXPECT_GE( numZeroSides, atLeast( 50, 10 ) );
     EXPECT_GE( numInPlane, atLeast( 90, 18 ) );
     EXPECT_GE( orderStats.perturbed, atLeast( 1300, 250 ) );
     EXPECT_GE( orderStats.perturbedNoLine, atLeast( 530, 100 ) );
@@ -1004,39 +1007,6 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
     EXPECT_FALSE( preds.failed() );
     (void)preds.less( 1_v, 3_v );
     EXPECT_TRUE( preds.failed() );
-}
-
-// a triangle with its vertices on the x axis, which only the perturbation orients: the vertex with the smallest id moves most,
-// in z first, so the perturbed normal is about ( 0, -2 eps, 0 ), and the predicates project the triangle on axes x, z;
-// and a triangle with two vertices at one point, so that its side 0 between them has no exact direction, which only the perturbation
-// gives, to ccw of the vertices, which that side decides, and to ccwFromBehind of its ends
-TEST( MRMesh, CutTrianglePredicatesFlat )
-{
-    CutTrianglePredicates preds;
-    auto start = [&] ( const Tri& f )
-    {
-        preds.reset( f );
-        for ( int i = 0; i < 3; ++i )
-            preds.addPoint( VertId( i ), vertexPoint( f[i] ) );
-    };
-    start( { vert( 0, 0, 0, 0 ), vert( 1, 2, 0, 0 ), vert( 2, 4, 0, 0 ) } );
-    EXPECT_TRUE( preds.less( 0_v, 1_v ) );
-    EXPECT_TRUE( preds.less( 1_v, 2_v ) );
-    EXPECT_TRUE( preds.ccw( 0_v, 1_v, 2_v ) );
-    // f[1] is ahead of f[0] along the sweep, at the same z
-    EXPECT_TRUE( preds.ccwFromBehind( 1_v, 0_v ) );
-    EXPECT_FALSE( preds.ccwFromBehind( 0_v, 1_v ) );
-    EXPECT_FALSE( preds.failed() );
-
-    start( { vert( 0, 1, 1, 0 ), vert( 1, 1, 1, 0 ), vert( 2, 4, 2, 0 ) } );
-    EXPECT_EQ( preds.ccwByPerturbation( 0_v, 1_v, 2_v ), true );
-    EXPECT_TRUE( preds.ccw( 0_v, 1_v, 2_v ) );
-    EXPECT_FALSE( preds.ccw( 1_v, 0_v, 2_v ) );
-    const auto dir = preds.directionByPerturbation( 0_v, 1_v );
-    ASSERT_TRUE( dir.has_value() );
-    EXPECT_EQ( preds.less( 0_v, 1_v ), dir->x != 0 ? dir->x > 0 : dir->y > 0 );
-    EXPECT_EQ( preds.ccwFromBehind( 1_v, 0_v ), dir->y != 0 ? dir->y < 0 : dir->x > 0 );
-    EXPECT_FALSE( preds.failed() );
 }
 
 } // namespace MR

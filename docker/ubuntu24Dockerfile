@@ -58,7 +58,7 @@ RUN <<EOF
     ./scripts/install_apt_requirements.sh
     bash -c 'touch /usr/bin/gdcm{anon,clean,conv,diff,dump,gendir,img,info,pap3,pdf,raw,scanner,scu,tar,xml}'
     # install toolchain
-    TOOLCHAIN=clang-${LLVM_VERSION}_3-pgo-dylib-linux
+    TOOLCHAIN=clang-${LLVM_VERSION}-pgo-dylib-linux
     curl -fsSL --retry 5 --retry-all-errors "https://github.com/MeshInspector/toolchains/releases/download/${TOOLCHAIN}/${TOOLCHAIN}-$(uname -m).tar.gz" | tar -C /opt -xz
     # clean downloaded files
     apt-get clean

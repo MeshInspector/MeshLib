@@ -150,7 +150,8 @@ static SweepLinePredicates meshSpacePredicates( const Mesh& mesh, const EdgeLoop
     {
         for ( EdgeId e : loop )
             box.include( mesh.orgPnt( e ) );
-        pointsSize += int( loop.size() );
+        if ( loop.size() >= 3 )
+            pointsSize += int( loop.size() );
     }
 
     // drop the axis most aligned with the normal; order the two kept axes so the 2D ccw of the
@@ -303,6 +304,9 @@ struct SweepLineParams
 
     /// one can disable merge for identical vertices, merge is useful on symbol contours
     bool allowMerge{ true };
+
+    /// if set, the loops of 2 edges (a slit: one edge taken both ways) are swept too, otherwise skipped
+    bool allowTwoEdgeLoops{ false };
 
     /// optional out per-face winding numbers
     Vector<int, FaceId>* outFaceWinding{ nullptr };
@@ -1208,7 +1212,8 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     // upper bound: capacity hints only, actual sizes come from the built topology
     size_t numLoopEdges = 0;
     for ( const auto& loop : loops )
-        numLoopEdges += loop.size();
+        if ( loop.size() >= 3 )
+            numLoopEdges += loop.size();
     in2p.reserve( numLoopEdges );
     p2in.reserve( numLoopEdges );
     windingInfo_.reserve( numLoopEdges );
@@ -1353,6 +1358,8 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     for ( int loopId = 0; loopId < int( loops.size() ); ++loopId )
     {
         const auto& loop = loops[loopId];
+        if ( loop.size() < 3 && !params_.allowTwoEdgeLoops )
+            continue;
         for ( int lId = 0; lId < loop.size() && !multipleEdge_; ++lId )
             addNewEdge( loop[lId], loopId, lId );
     }
@@ -1823,7 +1830,7 @@ static std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const Edge
     WholeEdgeMap patchToInEdges; // initMeshByLoops_ reserves it from the loop sizes
     std::vector<MonotoneChord> chords;
     SweepLineQueue triangulator( cache, mesh.topology, makePredicates( patchToInEdges, cache ), loops,
-        { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
+        { .abortWhenIntersect = true, .allowTwoEdgeLoops = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
     if ( !triangulator.findIntersections() )
         return {};
     // passing findIntersections here means there is nothing to inject, so monotonation can run at

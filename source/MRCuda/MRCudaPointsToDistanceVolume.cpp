@@ -29,13 +29,13 @@ Expected<MR::SimpleVolumeMinMax> pointsToDistanceVolume( const PointCloud& cloud
     const auto& nodes = tree.nodes();
 
     DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
 
     DynamicArray<OrderedPoint> cudaPoints;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.fromVector( tree.orderedPoints() ) );
 
     DynamicArray<float3> cudaNormals;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNormals.fromVector( params.ptNormals ? params.ptNormals->vec_ : cloud.normals.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNormals.fromVector( params.ptNormals ? *params.ptNormals : cloud.normals ) );
 
     PointsToDistanceVolumeParams cudaParams
     {
@@ -88,13 +88,13 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
     const auto& nodes = tree.nodes();
 
     DynamicArray<Node3> cudaNodes;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNodes.fromVector( nodes ) );
 
     DynamicArray<OrderedPoint> cudaPoints;
     CUDA_LOGE_RETURN_UNEXPECTED( cudaPoints.fromVector( tree.orderedPoints() ) );
 
     DynamicArray<float3> cudaNormals;
-    CUDA_LOGE_RETURN_UNEXPECTED( cudaNormals.fromVector( params.ptNormals ? params.ptNormals->vec_ : cloud.normals.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( cudaNormals.fromVector( params.ptNormals ? *params.ptNormals : cloud.normals ) );
 
     PointsToDistanceVolumeParams cudaParams
     {
@@ -137,7 +137,7 @@ MRCUDA_API Expected<void> pointsToDistanceVolumeByParts( const PointCloud& cloud
             pointsToDistanceVolumeKernel( cudaNodes.data(), cudaPoints.data(), cudaNormals.data(), cudaVolume.data(), cudaParams, chunk.size, chunk.offset );
             CUDA_LOGE_RETURN_UNEXPECTED( cudaGetLastError() );
 
-            CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data.vec_ ) );
+            CUDA_LOGE_RETURN_UNEXPECTED( cudaVolume.toVector( part.data ) );
 
             return {};
         },

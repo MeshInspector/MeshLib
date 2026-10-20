@@ -51,11 +51,11 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
     DynamicArray<Node3> cudaNodes;
-    cudaNodes.fromVector( nodes.vec_ );
+    cudaNodes.fromVector( nodes );
 
-    DynamicArray<float3> cudaMeshPoints( terrain.points.vec_ );
-    DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation().vec_ );
-    DynamicArray<float3> cudaSamples( samples.vec_ );
+    DynamicArray<float3> cudaMeshPoints( terrain.points );
+    DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
+    DynamicArray<float3> cudaSamples( samples );
 
     std::vector<uint64_t> blocks;
     DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );
@@ -93,11 +93,11 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     CUDA_EXEC( cudaSetDevice( 0 ) );
 
     DynamicArray<Node3> cudaNodes;
-    cudaNodes.fromVector( nodes.vec_ );
+    cudaNodes.fromVector( nodes );
 
-    DynamicArray<float3> cudaMeshPoints( terrain.points.vec_ );
-    DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation().vec_ );
-    DynamicArray<float3> cudaSamples( samples.vec_ );
+    DynamicArray<float3> cudaMeshPoints( terrain.points );
+    DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
+    DynamicArray<float3> cudaSamples( samples );
 
     DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );
 
@@ -135,7 +135,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
         cudaIntersections.toVector( *outIntersections );
 
     VertScalars res;
-    cudaRes.toVector( res.vec_ );
+    cudaRes.toVector( res );
     return res;
 }
 

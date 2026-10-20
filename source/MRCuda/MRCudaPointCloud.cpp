@@ -16,7 +16,7 @@ Expected<std::unique_ptr<PointCloudDataHolder>> copyDataFrom( const PointCloud& 
 
     auto result = std::make_unique<PointCloudDataHolder>();
 
-    CUDA_LOGE_RETURN_UNEXPECTED( result->nodes.fromVector( nodes.vec_ ) );
+    CUDA_LOGE_RETURN_UNEXPECTED( result->nodes.fromVector( nodes ) );
     CUDA_LOGE_RETURN_UNEXPECTED( result->points.fromVector( points ) );
     if ( copyNormals )
         CUDA_LOGE_RETURN_UNEXPECTED( result->normals.fromVector( normals ? *normals : pc.normals.vec_ ) );

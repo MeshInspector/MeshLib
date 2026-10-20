@@ -349,7 +349,7 @@ Expected<Mesh> computeSweptVolumeWithDistanceVolume( const ComputeSweptVolumePar
         const auto offset = indexer.sizeXY() * begin;
         ParallelFor( indexer.toVoxelId( { 0, 0, begin } ), indexer.toVoxelId( { 0, 0, end } ), [&] ( VoxelId vox )
         {
-            volume.data.vec_[vox.get() - offset] = getter( indexer.toPos( vox ) );
+            volume.data[VoxelId( vox.get() - offset )] = getter( indexer.toPos( vox ) );
         } );
 
         timer.restart( "triangulating distance volume" );

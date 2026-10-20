@@ -887,7 +887,7 @@ bool MultiwayICP::p2ptIter_()
             return;
         updXf[objId] = res;
     } );
-    if ( !std::all_of( updXf.vec_.begin(), updXf.vec_.end(), [] ( const auto& v ) { return v.has_value(); } ) )
+    if ( !std::all_of( begin( updXf ), end( updXf ), [] ( const auto& v ) { return v.has_value(); } ) )
         return false;
     // fix position of last object, and move all others relative to it
     const auto fixLastXf = updXf.back()->inverse();
@@ -955,7 +955,7 @@ bool MultiwayICP::p2plIter_()
         const AffineXf3d addCentroid{ Matrix3d(), Vector3d(  centroidRef ) };
         updXf[objId] = addCentroid * res * subCentroid;
     } );
-    if ( !std::all_of( updXf.vec_.begin(), updXf.vec_.end(), [] ( const auto& v ) { return v.has_value(); } ) )
+    if ( !std::all_of( begin( updXf ), end( updXf ), [] ( const auto& v ) { return v.has_value(); } ) )
         return false;
     // fix position of last object, and move all others relative to it
     const auto fixLastXf = updXf.back()->inverse();

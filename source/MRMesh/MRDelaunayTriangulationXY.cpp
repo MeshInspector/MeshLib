@@ -38,7 +38,7 @@ public:
         else
         {
             vertOrder_.resize( pts_.size() );
-            std::iota( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), VertId( 0 ) );
+            std::iota( begin( vertOrder_ ), end( vertOrder_ ), VertId( 0 ) );
         }
         if ( !reportProgress( cb, 0.1f ) )
         {
@@ -47,7 +47,7 @@ public:
         }
 
         // sort by SoS predicate
-        tbb::parallel_sort( vertOrder_.vec_.begin(), vertOrder_.vec_.end(), [&] ( VertId l, VertId r )
+        tbb::parallel_sort( begin( vertOrder_ ), end( vertOrder_ ), [&] ( VertId l, VertId r )
         {
             return smaller( { .id = l,.pt = pts_[l].x }, { .id = r,.pt = pts_[r].x } ); // use SoS based predicate
         } );        

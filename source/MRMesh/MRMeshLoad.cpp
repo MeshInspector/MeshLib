@@ -502,7 +502,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         if ( auto e = parseFirstNum( line, numPolygonPoint ); !e )
             return unexpected( std::move( e.error() ) );
 
-        faces.vec_[i] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
+        faces[FaceId( i )] = MeshBuilder::VertSpan{ start, start + numPolygonPoint };
         start += numPolygonPoint;
     }
     if ( !reportProgress( settings.callback, 0.4f ) )
@@ -519,7 +519,7 @@ Expected<Mesh> fromOff( std::istream& in, const MeshLoadSettings& settings /*= {
         size_t numLine = delta + numPolygon;
 
         const std::string_view line( &buf[splitLines[numLine]], splitLines[numLine + 1] - splitLines[numLine] );
-        auto result = parsePolygon( line, &flatPolygonIndices[faces.vec_[numPolygon].firstVertex], nullptr );
+        auto result = parsePolygon( line, &flatPolygonIndices[faces[FaceId( numPolygon )].firstVertex], nullptr );
 
         if ( !result.has_value() )
         {

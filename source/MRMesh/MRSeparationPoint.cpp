@@ -50,9 +50,9 @@ Triangulation SeparationPointStorage::getTriangulation( Vector<VoxelId, FaceId>*
     }
     for ( const auto & b : blocks_ )
     {
-        res.vec_.insert( end( res ), begin( b.tris ), end( b.tris ) );
+        res.insert( end( res ), begin( b.tris ), end( b.tris ) );
         if ( outVoxelPerFaceMap )
-            outVoxelPerFaceMap->vec_.insert( end( *outVoxelPerFaceMap ),
+            outVoxelPerFaceMap->insert( end( *outVoxelPerFaceMap ),
                 begin( b.faceMap ), end( b.faceMap ) );
     }
     return res;

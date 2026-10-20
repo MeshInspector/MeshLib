@@ -338,7 +338,7 @@ bool TetrisDensifier::fillNest_( const ProgressCallback& cb )
     }
     else
     {
-        std::fill( nestVoxels_.vec_.begin(), nestVoxels_.vec_.end(), ObjId() );
+        std::fill( begin( nestVoxels_ ), end( nestVoxels_ ), ObjId() );
     }
 
     if ( !reportProgress( cb, 0.1f ) )

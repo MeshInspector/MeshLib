@@ -21,7 +21,7 @@ TEST( MRMesh, DelaunayTriangulationXY )
     EXPECT_EQ( mesh->topology.numValidFaces(), 6 );
 
     PointCloud cloud;
-    cloud.points.vec_ = points;
+    cloud.points = VertCoords( points.begin(), points.end() );
     cloud.validPoints.resize( points.size(), true );
     cloud.validPoints.reset( VertId( 5 ) );
     auto cloudMesh = delaunayTriangulationXY( cloud );

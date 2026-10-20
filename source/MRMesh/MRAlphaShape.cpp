@@ -428,7 +428,7 @@ std::optional<Triangulation> findAlphaShapeAllTriangles( const PointCloud & clou
     Triangulation res;
     res.reserve( numTris );
     for ( const auto & tls : threadData )
-        res.vec_.insert( end( res ), begin( tls.tris ), end( tls.tris ) );
+        res.insert( end( res ), begin( tls.tris ), end( tls.tris ) );
 
     if ( !reportProgress( cb, 0.95f ) )
         return std::nullopt;

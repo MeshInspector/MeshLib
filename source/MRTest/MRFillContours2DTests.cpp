@@ -70,7 +70,7 @@ TEST( MRMesh, fillContours2DTiltedPlane )
 TEST( MRMesh, fillContours2DPlanPinchedHole )
 {
     VertCoords points;
-    points.vec_ = {
+    points = {
         { 0.f, 0.f, 0.f },                                                     // the pinch vertex
         { 1.2f, -0.4f, 0.f }, { 1.5f, 0.9f, 0.f }, { 0.2f, 1.6f, 0.f }, { -1.1f, 0.9f, 0.f }, // outer arc
         { 0.7f, 0.3f, 0.f }, { 0.1f, 0.75f, 0.f },                             // island touching the pinch
@@ -117,7 +117,7 @@ TEST( MRMesh, fillContours2DPlanCacheReuse )
     // points, and the input->patch edge maps all survive), so plan several holes through one cache
     // and compare every plan with the same call on a fresh cache
     VertCoords points;
-    points.vec_ = {
+    points = {
         { 0.f, 0.f, 0.f },                                                     // the pinch vertex
         { 1.2f, -0.4f, 0.f }, { 1.5f, 0.9f, 0.f }, { 0.2f, 1.6f, 0.f }, { -1.1f, 0.9f, 0.f }, // outer arc
         { 0.7f, 0.3f, 0.f }, { 0.1f, 0.75f, 0.f },                             // island touching the pinch
@@ -171,7 +171,7 @@ TEST( MRMesh, fillContours2DPlanCacheReuse )
 TEST( MRMesh, fillContours2DPinchedHoleValidity )
 {
     VertCoords points;
-    points.vec_ = {
+    points = {
         { -1.f,  1.f, 0.f }, {  1.f,  1.f, 0.f },
         {  0.f,  0.f, 0.f }, // the shared middle vertex
         {  1.f, -1.f, 0.f }, { -1.f, -1.f, 0.f } };
@@ -201,7 +201,7 @@ TEST( MRMesh, fillContours2DPinchedHoleValidity )
 static Mesh makePinchedTwoLobeMesh()
 {
     VertCoords points;
-    points.vec_ = {
+    points = {
         { -0.381682f, -0.002250f, 0.f }, { -0.923765f,  0.363788f, 0.f },
         {  0.057481f,  0.276528f, 0.f }, {  0.626216f,  0.839981f, 0.f },
         { -0.037916f,  0.285011f, 0.f } }; // the pinch vertex, on neither lobe's outer edge

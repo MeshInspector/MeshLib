@@ -75,7 +75,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "meshlib_*_rust_bindings.zip" --pattern "meshlib_*_rust_native_${{ matrix.target }}.zip" --dir downloaded --repo ${{ github.repository }} --clobber
+          scripts/retry.sh -- gh release download ${{ inputs.release_tag }} --pattern "meshlib_*_rust_bindings.zip" --pattern "meshlib_*_native_${{ matrix.target }}.zip" --dir downloaded --repo ${{ github.repository }} --clobber
           rm -rf source/MeshLibRust/native
           unzip -qo downloaded/meshlib_*_rust_bindings.zip -d source
           cat source/MeshLibRust/native.txt

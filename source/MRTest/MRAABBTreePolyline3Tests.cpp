@@ -11,7 +11,7 @@ namespace MR
 TEST( MRMesh, AABBTreePolyline3 )
 {
     Polyline3 polyline;
-    polyline.points.vec_ = {
+    polyline.points = {
         {0.0f,0.1f,0.0f},
         {0.0f,0.1f,1.0f},
         {0.0f,0.1f,2.0f},

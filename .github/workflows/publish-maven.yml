@@ -1,7 +1,8 @@
 name: Publish Java Maven artifacts
 
-# Publishes `com.meshinspector:meshlib` to Maven Central: the bindings jar of `meshlib_<version>_java_bindings.zip` of the release,
-# and a natives jar per platform from its `meshlib_<version>_rust_native_<platform>.zip` (see `scripts/java/pack_maven.sh`).
+# Publishes `com.meshinspector:meshlib` to Maven Central: the bindings jar of `meshlib_<version>_java_bindings.zip` of the release, which downloads
+# the libraries from the release's `meshlib_<version>_native_<platform>.zip` on the first use (see `scripts/java/pack_maven.sh`),
+# so these archives must stay in the release.
 # Needs the secrets MAVEN_CENTRAL_USERNAME and MAVEN_CENTRAL_PASSWORD (a user token of the Sonatype Central Portal account that owns
 # the `com.meshinspector` namespace), MAVEN_GPG_PRIVATE_KEY (ASCII-armored) and MAVEN_GPG_PASSPHRASE; the public key must be on a keyserver.
 
@@ -37,12 +38,12 @@ jobs:
         run: |
           VERSION="${TAG%%-*}"
           scripts/retry.sh -- gh release download "$TAG" --repo ${{ github.repository }} --dir downloaded \
-            --pattern "meshlib_${VERSION}_java_bindings.zip" --pattern "meshlib_${VERSION}_rust_native_*.zip"
+            --pattern "meshlib_${VERSION}_java_bindings.zip" --pattern "meshlib_${VERSION}_native_*.zip"
           unzip -q "downloaded/meshlib_${VERSION}_java_bindings.zip" -d downloaded
-          scripts/java/pack_maven.sh "$VERSION" downloaded/MeshLibJava downloaded maven
-          COUNT=$(ls maven/com/meshinspector/meshlib/*/*-natives-*.jar | wc -l)
+          scripts/java/pack_maven.sh "$VERSION" downloaded/MeshLibJava downloaded "https://github.com/${{ github.repository }}/releases/download/$TAG" maven
+          COUNT=$(ls downloaded/meshlib_*_native_*.zip | wc -l)
           if [ "$COUNT" -ne 6 ]; then
-            echo "::error::Expected the natives of 6 platforms, got $COUNT"
+            echo "::error::Expected the native archives of 6 platforms, got $COUNT"
             exit 1
           fi
           echo "MAVEN_VERSION=${VERSION#v}" >> "$GITHUB_ENV"

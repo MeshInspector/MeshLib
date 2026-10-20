@@ -19,48 +19,7 @@
       <artifactId>meshlib</artifactId>
       <version>${meshlib.version}</version>
     </dependency>
-    <!-- The libraries of this platform, see the profiles below. -->
-    <dependency>
-      <groupId>com.meshinspector</groupId>
-      <artifactId>meshlib</artifactId>
-      <version>${meshlib.version}</version>
-      <classifier>natives-${meshlib.platform}</classifier>
-      <scope>runtime</scope>
-    </dependency>
   </dependencies>
-
-  <profiles>
-    <profile>
-      <id>windows-x86_64</id>
-      <activation><os><family>windows</family><arch>amd64</arch></os></activation>
-      <properties><meshlib.platform>windows-x86_64</meshlib.platform></properties>
-    </profile>
-    <profile>
-      <id>windows-aarch64</id>
-      <activation><os><family>windows</family><arch>aarch64</arch></os></activation>
-      <properties><meshlib.platform>windows-aarch64</meshlib.platform></properties>
-    </profile>
-    <profile>
-      <id>linux-x86_64</id>
-      <activation><os><name>linux</name><arch>amd64</arch></os></activation>
-      <properties><meshlib.platform>linux-x86_64</meshlib.platform></properties>
-    </profile>
-    <profile>
-      <id>linux-aarch64</id>
-      <activation><os><name>linux</name><arch>aarch64</arch></os></activation>
-      <properties><meshlib.platform>linux-aarch64</meshlib.platform></properties>
-    </profile>
-    <profile>
-      <id>macos-x86_64</id>
-      <activation><os><family>mac</family><arch>x86_64</arch></os></activation>
-      <properties><meshlib.platform>macos-x86_64</meshlib.platform></properties>
-    </profile>
-    <profile>
-      <id>macos-aarch64</id>
-      <activation><os><family>mac</family><arch>aarch64</arch></os></activation>
-      <properties><meshlib.platform>macos-aarch64</meshlib.platform></properties>
-    </profile>
-  </profiles>
 
   <build>
     <!-- The examples are package-private classes in `*.dox.java` next to this file. -->

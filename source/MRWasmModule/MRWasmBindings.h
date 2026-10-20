@@ -64,7 +64,7 @@ V packedFromTypedArray( TypedArrayVal<S> arr )
     static_assert( std::is_trivially_copyable_v<Elem> && sizeof( Elem ) == Arity * sizeof( S ) );
     const size_t len = arr["length"].template as<size_t>();
     V v;
-    v.vec_.resize( len / Arity );
+    v.resize( len / Arity );
     if ( len != 0 )
     {
         emscripten::val view = emscripten::val( emscripten::typed_memory_view(

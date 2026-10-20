@@ -564,7 +564,7 @@ TEST(MRMesh, LoadObjSharedTextures)
     ASSERT_EQ( textures1.size(), 2 );
     EXPECT_EQ( textures1[TextureId( 0 )].pixels, textureA->pixels );
     EXPECT_EQ( textures1[TextureId( 1 )].pixels, textureB->pixels );
-    EXPECT_EQ( objMesh1->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 0 ), TextureId( 0 ), TextureId( 1 ) } ) );
+    EXPECT_EQ( objMesh1->getTexturePerFace(), ( TexturePerFace{ TextureId( 0 ), TextureId( 0 ), TextureId( 0 ), TextureId( 1 ) } ) );
     const auto& textures2 = objMesh2->getTextures();
     ASSERT_EQ( textures2.size(), 1 );
     EXPECT_EQ( textures2[TextureId( 0 )].pixels, textureB->pixels );
@@ -646,7 +646,7 @@ TEST(MRMesh, LoadObjPartialTextures)
     ASSERT_EQ( textures.size(), 2 );
     EXPECT_EQ( textures[TextureId( 0 )].pixels, std::vector<Color>( 4, Color( 0, 0, 0, 0 ) ) );
     EXPECT_EQ( textures[TextureId( 1 )].pixels, texture->pixels );
-    EXPECT_EQ( objMesh->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 1 ), TextureId( 1 ), TextureId( 0 ) } ) );
+    EXPECT_EQ( objMesh->getTexturePerFace(), ( TexturePerFace{ TextureId( 0 ), TextureId( 1 ), TextureId( 1 ), TextureId( 0 ) } ) );
     EXPECT_TRUE( objMesh->getVisualizeProperty( MeshVisualizePropertyType::Texture, ViewportMask::any() ) );
 
     // MeshLoad::fromObj loads the first texture file
@@ -700,7 +700,7 @@ TEST(MRMesh, LoadObjConsecutiveUsemtl)
     ASSERT_EQ( textures.size(), 2 );
     EXPECT_EQ( textures[TextureId( 0 )].pixels, std::vector<Color>( 4, Color( 0, 0, 0, 0 ) ) );
     EXPECT_EQ( textures[TextureId( 1 )].pixels, texture->pixels );
-    EXPECT_EQ( objMesh->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 0 ), TextureId( 1 ), TextureId( 0 ) } ) );
+    EXPECT_EQ( objMesh->getTexturePerFace(), ( TexturePerFace{ TextureId( 0 ), TextureId( 0 ), TextureId( 1 ), TextureId( 0 ) } ) );
     EXPECT_EQ( objMesh->getFrontColor( false ), Color::blue() );
 }
 
@@ -745,7 +745,7 @@ TEST(MRMesh, LoadObjFacesBeforeFirstMaterial)
     ASSERT_EQ( textures.size(), 2 );
     EXPECT_EQ( textures[TextureId( 0 )].pixels, std::vector<Color>( 4, Color( 0, 0, 0, 0 ) ) );
     EXPECT_EQ( textures[TextureId( 1 )].pixels, texture->pixels );
-    EXPECT_EQ( objMesh->getTexturePerFace().vec_, ( std::vector<TextureId>{ TextureId( 0 ), TextureId( 0 ), TextureId( 1 ), TextureId( 1 ) } ) );
+    EXPECT_EQ( objMesh->getTexturePerFace(), ( TexturePerFace{ TextureId( 0 ), TextureId( 0 ), TextureId( 1 ), TextureId( 1 ) } ) );
     EXPECT_EQ( objMesh->getFrontColor( false ), Color::blue() );
 
     // MeshLoad::fromObj skips the transparent texture and loads the texture file

@@ -1114,7 +1114,7 @@ RenderBufferRef<uint8_t> RenderMeshObject::loadTexturePerFaceTextureBuffer_()
     ParallelFor( 0, ( int )buffer.size(), [&] ( size_t r )
     {
         if ( r < texPerFace.size() )
-            buffer[r] = static_cast<uint8_t>(texPerFace.vec_[r]);
+            buffer[r] = static_cast<uint8_t>(texPerFace[FaceId( r )]);
         else
             buffer[r] = 0;
     } );

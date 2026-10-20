@@ -492,7 +492,7 @@ Vector<MeshTexture, TextureId> loadCornerControllerTextures()
         };
         for ( auto i = 0; i < 3; ++i )
         {
-            auto& tex = res.vec_[i];
+            auto& tex = res[TextureId( i )];
             const auto& col = textColors[i];
             assert( tex.pixels.size() == textImage->pixels.size() );
             for ( auto px = 0; px < tex.pixels.size(); ++px )

@@ -6,7 +6,7 @@
   <version>@VERSION@</version>
   <packaging>jar</packaging>
   <name>MeshLib</name>
-  <description>Java bindings of MeshLib, the 3D mesh processing library. The libraries of each platform are in the artifacts with the classifiers natives-windows-x86_64, natives-windows-aarch64, natives-linux-x86_64, natives-linux-aarch64, natives-macos-x86_64 and natives-macos-aarch64. Needs Java 22 or newer.</description>
+  <description>Java bindings of MeshLib, the 3D mesh processing library. On the first use it downloads the MeshLib libraries of the current platform (Windows, Linux or macOS; x86_64 or aarch64) from the GitHub release of the same version, and caches them. Needs Java 22 or newer.</description>
   <url>https://meshlib.io</url>
   <licenses>
     <license>

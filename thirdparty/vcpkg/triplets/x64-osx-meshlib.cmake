@@ -2,7 +2,7 @@ set(VCPKG_TARGET_ARCHITECTURE x64)
 set(VCPKG_CRT_LINKAGE dynamic)
 set(VCPKG_LIBRARY_LINKAGE dynamic)
 
-# force-loaded into executables: a dynamic mimalloc aborts at launch on macOS <= 13
+# force-loaded into executables: a dynamic mimalloc 3.4.3 aborts at launch on macOS 13 (dyld thread-local bootstrap during libSystem init)
 if(PORT STREQUAL "mimalloc")
   set(VCPKG_LIBRARY_LINKAGE static)
 endif()

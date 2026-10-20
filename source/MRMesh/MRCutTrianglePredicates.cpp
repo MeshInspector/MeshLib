@@ -482,9 +482,9 @@ struct CutTrianglePredicates::Impl
 {
     Vector<CutPoint, VertId> points;
 
-    /// the directions from p to q of the points that coincide before the perturbation, found from a side and a plane line
-    /// or by expanding the perturbation, which is slow, while a sweep compares the same points often;
-    /// the key is ( p << 32 ) | q for p < q, and a zero direction marks points that coincide after the perturbation too;
+    /// the directions from p to q of the points that coincide before the perturbation, found by the slower rules, while a sweep compares
+    /// the same points often: from a side (the order of two crossings of it, or a plane line through a point on it), or by expanding
+    /// the perturbation; the key is ( p << 32 ) | q for p < q, and a zero direction marks points that coincide after the perturbation too;
     /// a sweep sorts the points in parallel, hence the map with a mutex in every submap
     phmap::parallel_flat_hash_map_m<std::uint64_t, Vector2i> dirs;
 
@@ -702,20 +702,14 @@ bool CutTrianglePredicates::lessCoincident_( VertId p, VertId q ) const
     {
         return sweepForward( segmentDirection_( s0, s1 ) );
     };
-    if ( !da.isVertex() && !db.isVertex() )
+    if ( !da.isVertex() && !db.isVertex() && sameTriangle( da.tri, db.tri ) )
     {
         const bool same = da.seg[0].id == db.seg[0].id && da.seg[1].id == db.seg[1].id;
         const bool opposite = da.seg[0].id == db.seg[1].id && da.seg[1].id == db.seg[0].id;
         if ( same || opposite )
         {
-            // two crossings of one side with other triangles: in the order the boolean's cut puts them along it
-            if ( sameTriangle( da.tri, db.tri ) )
-            {
-                fail_(); // the same point twice
-                return p < q;
-            }
-            const bool aFirst = segmentIntersectionOrder( { da.seg[0], da.seg[1], da.tri[0], da.tri[1], da.tri[2], db.tri[0], db.tri[1], db.tri[2] } );
-            return aFirst == alongSweep( da.seg[0], da.seg[1] );
+            fail_(); // the same point twice
+            return p < q;
         }
     }
     // a crossing of a side and an end of the side: the crossing is strictly inside the side
@@ -733,6 +727,8 @@ bool CutTrianglePredicates::lessCoincident_( VertId p, VertId q ) const
         if ( da.seg[0].id == db.seg[1].id )
             return alongSweep( db.seg[1], db.seg[0] );
     }
+    // the other pairs by the direction of the perturbed points, which the slower rules find and the cache keeps: two crossings of one side
+    // as the boolean's cut orders them along it (see directionFromSide_)
     if ( const auto dir = perturbedDirection_( p, q ) )
         return sweepForward( *dir );
     fail_(); // the points coincide after the perturbation too
@@ -741,10 +737,19 @@ bool CutTrianglePredicates::lessCoincident_( VertId p, VertId q ) const
 
 std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, VertId q ) const
 {
-    // a point on a side and a point not on it, both on one plane line: the latter is strictly on the left of the side,
-    // so the direction from the former to it is the direction of the line, signed to point to the left of the side
     const auto & a = impl_->points[p];
     const auto & b = impl_->points[q];
+    if ( ( a.sides & b.sides ) != 0 && !a.def.isVertex() && !b.def.isVertex() )
+    {
+        // two crossings of one side with other triangles: q - p goes along the side, in the order the boolean's cut puts them,
+        // which segmentIntersectionOrder finds slowly here, since the crossings coincide before the perturbation
+        const auto & s = a.def.seg;
+        const bool aFirst = segmentIntersectionOrder( { s[0], s[1], a.def.tri[0], a.def.tri[1], a.def.tri[2], b.def.tri[0], b.def.tri[1], b.def.tri[2] } );
+        const auto dir = segmentDirection_( s[0], s[1] );
+        return aFirst ? dir : -dir;
+    }
+    // a point on a side and a point not on it, both on one plane line: the latter is strictly on the left of the side,
+    // so the direction from the former to it is the direction of the line, signed to point to the left of the side
     const int onlyA = a.sides & ~b.sides;
     const int onlyB = b.sides & ~a.sides;
     if ( onlyA == 0 && onlyB == 0 )
@@ -781,7 +786,7 @@ std::optional<Vector2i> CutTrianglePredicates::perturbedDirection_( VertId p, Ve
     Vector2i dir;
     if ( !impl_->dirs.if_contains( key, [&] ( const auto & x ) { dir = x.second; } ) )
     {
-        // the line through a point on a side gives the direction faster than the expansion of the perturbation, if it applies
+        // a side gives the direction faster than the expansion of the perturbation, if it applies
         auto res = swapped ? directionFromSide_( q, p ) : directionFromSide_( p, q );
         if ( !res )
             res = swapped ? directionByPerturbation( q, p ) : directionByPerturbation( p, q );

@@ -991,7 +991,7 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
 // a triangle with its vertices on the x axis, which only the perturbation orients: the vertex with the smallest id moves most,
 // in z first, so the perturbed normal is about ( 0, -2 eps, 0 ), and the predicates project the triangle on axes x, z;
 // and a triangle with two vertices at one point, so that its side 0 between them has no exact direction, which only the perturbation
-// gives (sosSegmentDirection), to ccw of the vertices, which that side decides, and to ccwFromBehind of its ends
+// gives, to ccw of the vertices, which that side decides, and to ccwFromBehind of its ends
 TEST( MRMesh, CutTrianglePredicatesFlat )
 {
     CutTrianglePredicates preds;

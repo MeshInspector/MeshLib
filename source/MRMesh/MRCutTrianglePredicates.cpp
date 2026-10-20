@@ -446,17 +446,6 @@ Vector2i sosCrossDirection( const std::array<PreciseVertCoords, 3> & f, const st
     return sweepSigns( t[kx], t[ky] );
 }
 
-/// the same for the perturbed b - a
-Vector2i sosSegmentDirection( const PreciseVertCoords & a, const PreciseVertCoords & b, int kx, int ky )
-{
-    SosVerts r;
-    r.add( a, 9 );
-    r.add( b, 9 );
-    const auto ps = r.stages();
-    const auto t = sosLeadTerms( ps, ( 1 << kx ) | ( 1 << ky ), [&] ( int s ) { return sub( sosCoords( ps.at( 1, s ) ), sosCoords( ps.at( 0, s ) ) ); } );
-    return sweepSigns( t[kx], t[ky] );
-}
-
 /// a point with what the predicates take from its definition most often
 struct CutPoint
 {
@@ -606,6 +595,21 @@ void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri 
     ky_ = ( dropAx + 2 ) % 3;
     if ( dropSign < 0 )
         std::swap( kx_, ky_ );
+
+    // the directions of the sides, which the rules for the points on a side take often; their signs are found without the branches of sgn,
+    // which mispredict on random triangles; only the perturbation gives the direction of a side along the dropped axis, as a side
+    // of a triangle with a zero exact normal can be, and nullopt needs repeated ids
+    for ( int i = 0; i < 3; ++i )
+    {
+        const auto & a = tri[i];
+        const auto & b = tri[( i + 1 ) % 3];
+        auto & dir = sideDirs_[i];
+        const std::int64_t dx = std::int64_t( b.pt[kx_] ) - a.pt[kx_], dy = std::int64_t( b.pt[ky_] ) - a.pt[ky_];
+        dir.x = int( dx > 0 ) - int( dx < 0 );
+        dir.y = int( dy > 0 ) - int( dy < 0 );
+        if ( dir == Vector2i() )
+            dir = sosDirection( { .seg = { a } }, { .seg = { b } }, kx_, ky_ ).value_or( Vector2i() );
+    }
 }
 
 void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
@@ -717,17 +721,6 @@ int CutTrianglePredicates::compareExact_( VertId p, VertId q, bool yFirst ) cons
     return 2 * compareCoord( approx_[p][k], approx_[q][k], [&] { return compareExactCoord( a, b, !yFirst ); } );
 }
 
-Vector2i CutTrianglePredicates::segmentDirection_( const PreciseVertCoords & a, const PreciseVertCoords & b ) const
-{
-    // only the perturbation gives the direction if the segment goes along the dropped axis, as a side of a triangle
-    // with a zero exact normal can
-    const auto u = Vector3i64( b.pt ) - Vector3i64( a.pt );
-    const Vector2i res( sgn( u[kx_] ), sgn( u[ky_] ) );
-    if ( res.x != 0 || res.y != 0 )
-        return res;
-    return sosSegmentDirection( a, b, kx_, ky_ );
-}
-
 bool CutTrianglePredicates::less( VertId p, VertId q ) const
 {
     if ( p == q )
@@ -735,40 +728,41 @@ bool CutTrianglePredicates::less( VertId p, VertId q ) const
     // along x, then along y
     if ( const int c = compareCoord( approx_[p].x, approx_[q].x, [&] { return compareExact_( p, q, false ); } ) )
         return c < 0;
-    return lessCoincident_( p, q );
+    if ( const auto dir = coincidentDirection_( p, q ) )
+        return sweepForward( *dir );
+    return p < q; // the failure: points defined alike, ordered by their ids
 }
 
-bool CutTrianglePredicates::lessCoincident_( VertId p, VertId q ) const
+/// the signs of the projected coordinates of perturbed q - p for points p and q that coincide before the perturbation,
+/// as the sweep sees them (see sweepSigns); nullopt and the failure if they coincide after the perturbation too
+std::optional<Vector2i> CutTrianglePredicates::coincidentDirection_( VertId p, VertId q ) const
 {
-    const auto & da = impl_->points[p].def;
-    const auto & db = impl_->points[q].def;
-    if ( !da.isVertex() && !db.isVertex() && sameTriangle( da.tri, db.tri ) )
+    const auto & a = impl_->points[p];
+    const auto & b = impl_->points[q];
+    if ( !a.def.isVertex() && !b.def.isVertex() && sameTriangle( a.def.tri, b.def.tri ) )
     {
-        const bool same = da.seg[0].id == db.seg[0].id && da.seg[1].id == db.seg[1].id;
-        const bool opposite = da.seg[0].id == db.seg[1].id && da.seg[1].id == db.seg[0].id;
-        if ( same || opposite )
+        const auto & s = a.def.seg;
+        const auto & t = b.def.seg;
+        if ( ( s[0].id == t[0].id && s[1].id == t[1].id ) || ( s[0].id == t[1].id && s[1].id == t[0].id ) )
         {
             fail_(); // the same point twice
-            return p < q;
+            return {};
         }
     }
-    // a crossing x of a side and an end v of the side: the crossing is strictly inside the side, so v comes first
-    // iff the sweep goes from v along the side
-    if ( da.isVertex() != db.isVertex() )
+    // a vertex and a crossing of a side from it, which is strictly inside the side: q - p goes along side i forward
+    // from vertex i to the crossing, and from the crossing to vertex i+1
+    if ( const int common = a.sides & b.sides; common != 0 && a.def.isVertex() != b.def.isVertex() )
     {
-        const bool pIsVertex = da.isVertex();
-        const auto & x = pIsVertex ? db : da;
-        const auto & v = pIsVertex ? da : db;
-        for ( int i = 0; i < 2; ++i )
-            if ( v.seg[0].id == x.seg[i].id )
-                return sweepForward( segmentDirection_( x.seg[i], x.seg[1 - i] ) ) == pIsVertex;
+        const int i = firstSide( common );
+        const bool forward = a.def.isVertex() ? a.def.seg[0].id == tri_[i].id : b.def.seg[0].id != tri_[i].id;
+        return forward ? sideDirs_[i] : -sideDirs_[i];
     }
     // the other pairs by the direction of the perturbed points, which the slower rules find and the cache keeps: two crossings of one side
     // as the boolean's cut orders them along it (see directionFromSide_)
-    if ( const auto dir = perturbedDirection_( p, q ) )
-        return sweepForward( *dir );
-    fail_(); // the points coincide after the perturbation too
-    return p < q;
+    const auto dir = perturbedDirection_( p, q );
+    if ( !dir )
+        fail_(); // the points coincide after the perturbation too
+    return dir;
 }
 
 std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, VertId q ) const
@@ -781,8 +775,9 @@ std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, Ver
         // which segmentIntersectionOrder finds slowly here, since the crossings coincide before the perturbation
         const auto & s = a.def.seg;
         const bool aFirst = segmentIntersectionOrder( { s[0], s[1], a.def.tri[0], a.def.tri[1], a.def.tri[2], b.def.tri[0], b.def.tri[1], b.def.tri[2] } );
-        const auto dir = segmentDirection_( s[0], s[1] );
-        return aFirst ? dir : -dir;
+        // forward along side i iff a comes first along a segment from vertex i, or last along one from vertex i+1
+        const int i = firstSide( a.sides );
+        return aFirst == ( s[0].id == tri_[i].id ) ? sideDirs_[i] : -sideDirs_[i];
     }
     // a point on a side and a point not on it, both on one plane line: the latter is strictly on the left of the side,
     // so the direction from the former to it is the direction of the line, signed to point to the left of the side
@@ -881,7 +876,7 @@ Vector2i CutTrianglePredicates::lineDirection_( const Line & l ) const
     // the signs of the projected coordinates of the direction: from vertex i to vertex i+1 along side i,
     // and along cross( normal of the triangle, normal of the plane ) on a plane
     if ( l.side >= 0 )
-        return segmentDirection_( tri_[l.side], tri_[( l.side + 1 ) % 3] );
+        return sideDirs_[l.side];
     const auto [lx, ly] = lineDirectionOf( normal_, l.plane, kx_, ky_ );
     if ( const Vector2i res( sgn( lx ), sgn( ly ) ); res != Vector2i() )
         return res;
@@ -942,7 +937,7 @@ bool CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3>
     // that shares at most two of them with the triangle and none with the segment, as the checks above and in addPoint ensure
     const bool res = segmentIntersectionTriPlaneOrder( { p.seg[0], p.seg[1], p.tri[0], p.tri[1], p.tri[2], plane[0], plane[1], plane[2] } ) == o0;
 #ifndef NDEBUG
-    // if the segment crosses the triangle of the plane too, the order along the segment is the one of the boolean's cut, see lessCoincident_
+    // if the segment crosses the triangle of the plane too, the order along the segment is the one of the boolean's cut, see directionFromSide_
     if ( doTriangleSegmentIntersect( { plane[0], plane[1], plane[2], p.seg[0], p.seg[1] } ) )
         assert( res == ( segmentIntersectionOrder( { p.seg[0], p.seg[1], p.tri[0], p.tri[1], p.tri[2], plane[0], plane[1], plane[2] } ) == o0 ) );
 #endif
@@ -1076,23 +1071,10 @@ bool CutTrianglePredicates::ccwFromBehind( VertId b, VertId pivot ) const
     // R * ( eta * d.x - d.y ) for d = b - pivot, so d.y decides, and only an exactly zero d.y leaves d.x to decide, since eps << eta
     if ( const int c = compareCoord( approx_[b].y, approx_[pivot].y, [&] { return compareExact_( b, pivot, true ); } ) )
         return std::abs( c ) == 1 ? c < 0 : c > 0; // below pivot, or level with it and ahead
-    // the points coincide before the perturbation: d goes along their common side if they have one, in the order less finds there;
-    // less orders any other pair by the direction of the perturbed points (see lessCoincident_), which gives d
-    Vector2i dir;
-    if ( const int common = impl_->points[pivot].sides & impl_->points[b].sides )
-    {
-        dir = lineDirection_( { .side = firstSide( common ) } );
-        if ( !along_( dir, pivot, b ) )
-            dir = -dir;
-    }
-    else if ( const auto d = perturbedDirection_( pivot, b ) )
-        dir = *d;
-    else
-    {
-        fail_(); // the points coincide after the perturbation too
-        return false;
-    }
-    return dir.y != 0 ? dir.y < 0 : dir.x > 0;
+    // the points coincide before the perturbation: the direction of the perturbed points, by which less orders them, gives d
+    if ( const auto d = coincidentDirection_( pivot, b ) )
+        return d->y != 0 ? d->y < 0 : d->x > 0;
+    return false; // the failure: points defined alike
 }
 
 #if __GNUC__ >= 12

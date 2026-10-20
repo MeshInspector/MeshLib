@@ -119,10 +119,9 @@ private:
     int orientSlow_( VertId a, VertId b, VertId c ) const;
     std::optional<bool> ccwBySides_( VertId a, VertId b, VertId c ) const;
     std::optional<bool> ccwByPlanes_( VertId a, VertId b, VertId c ) const;
-    bool lessCoincident_( VertId p, VertId q ) const;
+    std::optional<Vector2i> coincidentDirection_( VertId p, VertId q ) const;
     std::optional<Vector2i> directionFromSide_( VertId p, VertId q ) const;
     std::optional<Vector2i> perturbedDirection_( VertId p, VertId q ) const;
-    Vector2i segmentDirection_( const PreciseVertCoords & a, const PreciseVertCoords & b ) const;
     std::optional<Line> commonLine_( VertId p, VertId q, bool withVertex ) const;
     Vector2i lineDirection_( const Line & l ) const;
     bool along_( const Vector2i & dir, VertId p, VertId q ) const;
@@ -132,6 +131,7 @@ private:
     std::array<PreciseVertCoords, 3> tri_;
     Vector3i64 normal_;
     int kx_ = 0, ky_ = 1; // the projection axes, in this order ccw around the normal
+    std::array<Vector2i, 3> sideDirs_; // the signs of the projected coordinates of every side i, from vertex i to vertex i+1
     Vector<Vector2d, VertId> approx_; // the projected coordinates of every point, rounded, to decide most comparisons
     std::unique_ptr<Impl> impl_;
 };

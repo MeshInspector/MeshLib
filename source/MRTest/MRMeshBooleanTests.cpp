@@ -143,43 +143,64 @@ TEST( MRMesh, BooleanDisjointMeshes )
         makeBox( { 5.f, 5.f, 5.f }, { 6.f, 6.f, 6.f } ) );
 }
 
-// a small sphere pierces a big triangle of the cube without crossing its edges (a lone contour),
-// and another sphere crosses the edges of the same triangle; the cut connects the lone contour with the rest of the triangle
+// a small sphere pierces a big triangle of the cube without crossing its edges (a lone contour), alone, so that nothing else
+// cuts the triangle, or with another sphere crossing the edges of the same triangle; the cut connects the lone contour with the rest of the triangle
 TEST( MRMesh, BooleanLoneContours )
 {
     const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
-    Mesh spheres = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
-    spheres.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+    Mesh lone = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    lone.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
     Mesh crossing = makeSphere( { .radius = 0.3f, .numMeshVertices = 300 } );
     crossing.transform( AffineXf3f::translation( Vector3f( 0.f, 0.f, 2.f ) ) );
-    spheres.addMesh( crossing );
+    Mesh both = lone;
+    both.addMesh( crossing );
     const auto xf = AffineXf3f::translation( Vector3f( 0.f, 0.f, 0.25f ) );
-    const double tol = 1e-5 * ( cube.volume() + spheres.volume() );
 
-    for ( bool swap : { false, true } )
+    for ( const Mesh* spheres : { &lone, &both } )
     {
-        for ( const AffineXf3f* rigidB2A : { (const AffineXf3f*)nullptr, &xf } )
+        const double tol = 1e-5 * ( cube.volume() + spheres->volume() );
+        for ( bool swap : { false, true } )
         {
-            // rigidB2A moves the second mesh back in place
-            const Mesh& a = swap ? spheres : cube;
-            Mesh b = swap ? cube : spheres;
-            if ( rigidB2A )
-                b.transform( rigidB2A->inverse() );
-            const auto inter = boolean( a, b, BooleanOperation::Intersection, rigidB2A );
-            const auto uni = boolean( a, b, BooleanOperation::Union, rigidB2A );
-            const auto diff = boolean( a, b, BooleanOperation::DifferenceAB, rigidB2A );
-            ASSERT_TRUE( inter.valid() ) << inter.errorString;
-            ASSERT_TRUE( uni.valid() ) << uni.errorString;
-            ASSERT_TRUE( diff.valid() ) << diff.errorString;
-            for ( const auto* r : { &inter, &uni, &diff } )
-                EXPECT_EQ( r->mesh.topology.findNumHoles(), 0 );
-            // an island left in its triangle would make a separate component
-            EXPECT_EQ( MeshComponents::getNumComponents( uni.mesh ), 1 );
-            EXPECT_EQ( MeshComponents::getNumComponents( inter.mesh ), 2 );
-            EXPECT_NEAR( uni.mesh.volume() + inter.mesh.volume(), a.volume() + b.volume(), tol );
-            EXPECT_NEAR( diff.mesh.volume() + inter.mesh.volume(), a.volume(), tol );
+            for ( const AffineXf3f* rigidB2A : { (const AffineXf3f*)nullptr, &xf } )
+            {
+                // rigidB2A moves the second mesh back in place
+                const Mesh& a = swap ? *spheres : cube;
+                Mesh b = swap ? cube : *spheres;
+                if ( rigidB2A )
+                    b.transform( rigidB2A->inverse() );
+                const auto inter = boolean( a, b, BooleanOperation::Intersection, rigidB2A );
+                const auto uni = boolean( a, b, BooleanOperation::Union, rigidB2A );
+                const auto diff = boolean( a, b, BooleanOperation::DifferenceAB, rigidB2A );
+                ASSERT_TRUE( inter.valid() ) << inter.errorString;
+                ASSERT_TRUE( uni.valid() ) << uni.errorString;
+                ASSERT_TRUE( diff.valid() ) << diff.errorString;
+                for ( const auto* r : { &inter, &uni, &diff } )
+                    EXPECT_EQ( r->mesh.topology.findNumHoles(), 0 );
+                // an island left in its triangle would make a separate component
+                EXPECT_EQ( MeshComponents::getNumComponents( uni.mesh ), 1 );
+                EXPECT_EQ( MeshComponents::getNumComponents( inter.mesh ), spheres == &both ? 2 : 1 );
+                EXPECT_NEAR( uni.mesh.volume() + inter.mesh.volume(), a.volume() + b.volume(), tol );
+                EXPECT_NEAR( diff.mesh.volume() + inter.mesh.volume(), a.volume(), tol );
+            }
         }
     }
+}
+
+// selfBoolean of a mesh of two parts, a cube and a small sphere piercing a big triangle of it without crossing its edges
+// (a lone contour); the parts are only reconnected along their intersection, so the result keeps the sum of their volumes
+TEST( MRMesh, SelfBooleanLoneContour )
+{
+    Mesh mesh = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    sphere.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+    const double volume = mesh.volume() + sphere.volume();
+    mesh.addMesh( sphere );
+
+    const auto res = selfBoolean( mesh );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
+    EXPECT_NEAR( res->volume(), volume, 1e-5 * volume );
 }
 
 // closed mesh of two parts (apexes 3_v and 6_v) stitched along their common boundary, which passes through all vertices of triangle 0_v, 2_v, 1_v

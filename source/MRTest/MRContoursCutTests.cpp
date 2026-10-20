@@ -439,9 +439,17 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
 // near the origin and far from it, also where the contour fills most of the triangle
 TEST( MRMesh, CutMeshLoneContour )
 {
+    // uniform values in [-1, 1] straight from the generator, whose output the standard specifies (unlike that of the distributions),
+    // taken in a fixed order, so that every platform runs the same cases
     std::mt19937 gen( 1 );
-    std::normal_distribution<double> nd;
-    auto randomVec = [&] { return Vector3d( nd( gen ), nd( gen ), nd( gen ) ); };
+    auto random = [&] { return 2.0 * gen() / std::mt19937::max() - 1; };
+    auto randomVec = [&]
+    {
+        Vector3d res;
+        for ( int i = 0; i < 3; ++i )
+            res[i] = random();
+        return res;
+    };
     for ( double dist : { 0.0, 1e5 } )
     {
         for ( float fill : { 0.5f, 0.9f } )

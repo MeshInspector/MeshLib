@@ -56,7 +56,7 @@ VertScalars findSignedDistances(
     {
         projector->updateMeshData( &refMesh );
         std::vector<MeshProjectionResult> mpRes( testPoints.size() );
-        projector->findProjections( mpRes, testPoints.vec_, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
+        projector->findProjections( mpRes, testPoints.vec, params.xf, params.refXf, params.upDistLimitSq, params.loDistLimitSq );
 
         ParallelFor( 0_v, testPoints.endId(), [&] ( VertId v )
         {

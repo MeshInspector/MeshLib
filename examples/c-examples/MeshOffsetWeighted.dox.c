@@ -31,7 +31,7 @@ int main( void )
     float maxWeight = 0.0f;
     for ( size_t i = 0; i < vertSize; ++i )
     {
-        const MR_std_vector_MR_Vector3f* points = MR_VertCoords_Get_vec_( MR_Mesh_Get_points( mesh ) );
+        const MR_std_vector_MR_Vector3f* points = MR_VertCoords_Get_vec( MR_Mesh_Get_points( mesh ) );
         float weight = abs( MR_std_vector_MR_Vector3f_at( points, i )->x / 5.0f );
         MR_VertScalars_data_mut( scalars )[i] = weight;
         if ( weight > maxWeight )

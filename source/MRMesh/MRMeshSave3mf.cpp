@@ -59,7 +59,7 @@ template<typename I>
 Vector<int, I> makePalette( const Vector<Color, I>& colors, const TypedBitSet<I>& validColors, std::ostream& out )
 {
     Vector<int, I> res;
-    res = makePalette( colors.vec_, validColors, out );
+    res = makePalette( colors.vec, validColors, out );
     return res;
 }
 

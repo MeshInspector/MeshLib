@@ -427,7 +427,7 @@ Expected<VdbVolume> loadRasterFolder( const RasterFolderLoadSettings& settings )
         }
 
         // the buffer of the layer is reused
-        if ( auto convertRes = convertRasterToFloats( *raster, outVolume.data.vec_ ); !convertRes.has_value() )
+        if ( auto convertRes = convertRasterToFloats( *raster, outVolume.data.vec ); !convertRes.has_value() )
             return unexpected( convertRes.error() + ": " + utf8string( file ) );
         const auto [min, max] = parallelMinMax( outVolume.data );
         outVolume.min = std::min( outVolume.min, min );

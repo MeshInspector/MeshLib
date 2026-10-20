@@ -215,7 +215,7 @@ TEST( MRMesh, AlphaShapeSquare )
         { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, // the diagonal 0-2 from the positive side
         { 0_v, 3_v, 1_v }, { 1_v, 3_v, 2_v }  // the diagonal 1-3 from the negative side
     };
-    EXPECT_EQ( tris.vec_, expectedTris );
+    EXPECT_EQ( tris.vec, expectedTris );
 
     const auto mesh = findAlphaShape( cloud, 0.8f );
     EXPECT_EQ( mesh.topology.numValidFaces(), 4 );

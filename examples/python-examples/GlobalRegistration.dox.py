@@ -58,7 +58,7 @@ def main(argv):
 
     output = mrmeshpy.PointCloud()
     for i in range(input_clouds_num):
-        xf = xfs.vec_[i]
+        xf = xfs.vec[i]
         for point in inputs[i].obj.points():
             output.addPoint(xf(point))
 

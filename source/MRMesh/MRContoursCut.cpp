@@ -508,7 +508,7 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
         return;
     MR_TIMER;
 
-    // the path edges inside every lone face, with the face on the left, and the contour points at their ends
+    // the path edges inside every lone face, with the face on the left, and the contour points at their ends for the exact definitions
     std::vector<EdgePath> faceEdges( loneFaces.size() );
     HashMap<VertId, std::pair<int, int>> vertInters;
     for ( int i = 0; i < preRes.paths.size(); ++i )
@@ -524,6 +524,8 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
             edges.push_back( e );
             if ( e.undirected() >= firstNewEdge ) // a new edge is inside the face, while an old one has it on the left only
                 edges.push_back( e.sym() );
+            if ( !sortData )
+                continue;
             vertInters[mesh.topology.org( e )] = { i, j };
             vertInters[mesh.topology.dest( e )] = { i, j + 1 };
         }
@@ -603,9 +605,9 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
                 [&] ( VertId v ) { return pointOf( lf, v ); } );
             return;
         }
-        // the loops go counterclockwise around the normal of the face; from its corners in doubles, every component of the normal
-        // has the exact sign, while a sum over the loops would add the rounding of the islands' points; normalized before
-        // the conversion to float, which could flush it to zero or overflow at extreme scales
+        // the loops go counterclockwise around the normal of the face, of which only the dominant component and its sign matter;
+        // the corners in doubles give a normal free of the rounding of the islands' points, which a sum over the loops would add;
+        // normalized before the conversion to float, which could flush it to zero or overflow at extreme scales
         const auto& p = mesh.points;
         const auto normal = dirDblArea( Triangle3d{ Vector3d( p[lf.verts[0]] ), Vector3d( p[lf.verts[1]] ), Vector3d( p[lf.verts[2]] ) } );
         plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, Vector3f( normal.normalized() ) );

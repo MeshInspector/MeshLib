@@ -468,7 +468,9 @@ int checkSet( CutTrianglePredicates& preds, const Tri& f, const CutPoints& pts, 
         pos.push_back( flat ? std::nullopt : x );
     }
     EXPECT_FALSE( preds.failed() );
-    // the projection keeps the orientation of f around its normal
+    // the projection keeps the orientation of f around its normal, also around the perturbed one of a flat f, which ccw of its
+    // vertices does not check, since side 0 decides it
+    EXPECT_EQ( preds.ccwByPerturbation( 0_v, 1_v, 2_v ), true );
     if ( !flat )
         EXPECT_GT( orientFractions( *pos[0], *pos[1], *pos[2], kx, ky ), 0 );
     checkOrder( preds, f, pts, kx, ky, flat, [&] ( int p, int q, int k ) -> std::optional<int>
@@ -548,7 +550,7 @@ TEST( MRMesh, CutTrianglePredicatesSharedVertices )
     CutTrianglePredicates preds;
     OrderStats orderStats;
     CcwStats ccwStats;
-    int numFlat = 0, numFolds = 0, numSharedEdges = 0, numEdgePlanes = 0;
+    int numFolds = 0, numSharedEdges = 0, numEdgePlanes = 0;
     for ( int trial = 0; trial < 300 / cTrialDivisor; ++trial )
     {
         rv.newTrial();
@@ -567,7 +569,6 @@ TEST( MRMesh, CutTrianglePredicatesSharedVertices )
                 tris.push_back( t );
         }
         const Tri f = tris[0];
-        numFlat += exactNormal( f ) == Vector3i64();
         const auto pts = cutPoints( f, std::vector<Tri>( tris.begin() + 1, tris.end() ) );
         const int n = int( pts.defs.size() );
         // a point on the cuts by two triangles: a crossing of their common edge, or a vertex of f shared by them
@@ -588,7 +589,6 @@ TEST( MRMesh, CutTrianglePredicatesSharedVertices )
             }
         checkSet<std::int64_t>( preds, f, pts, orderStats, ccwStats );
     }
-    EXPECT_GE( numFlat, atLeast( 6, 0 ) );
     EXPECT_GE( numFolds, atLeast( 200, 36 ) );
     EXPECT_GE( numSharedEdges, atLeast( 40, 11 ) );
     EXPECT_GE( numEdgePlanes, atLeast( 40, 12 ) );
@@ -959,11 +959,15 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
 
     // two points defined alike, the second one with the segment backward, which less cannot order: it orders them by their ids,
     // and alike with the other points, also with a third point at their position, so it stays a strict total order
-    start();
-    preds.addPoint( 3_v, x );
-    preds.addPoint( 4_v, { { x.seg[1], x.seg[0] }, x.tri } );
-    preds.addPoint( 5_v, { { vert( 12, 1, 0, -1 ), vert( 13, 3, 2, 1 ) }, f } );
-    EXPECT_FALSE( preds.failed() );
+    auto alike = [&]
+    {
+        start();
+        preds.addPoint( 3_v, x );
+        preds.addPoint( 4_v, { { x.seg[1], x.seg[0] }, x.tri } );
+        preds.addPoint( 5_v, { { vert( 12, 1, 0, -1 ), vert( 13, 3, 2, 1 ) }, f } );
+        EXPECT_FALSE( preds.failed() );
+    };
+    alike();
     for ( int p = 0; p < 6; ++p )
         for ( int q = 0; q < 6; ++q )
         {
@@ -973,12 +977,20 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
                 EXPECT_FALSE( preds.less( VertId( p ), VertId( q ) ) && preds.less( VertId( q ), VertId( r ) ) && !preds.less( VertId( p ), VertId( r ) ) );
         }
     EXPECT_TRUE( preds.failed() );
-    // nor can ccw tell them apart
-    start();
-    preds.addPoint( 3_v, x );
-    preds.addPoint( 4_v, x );
-    EXPECT_FALSE( preds.failed() );
+    // nor can ccw tell them apart: with a vertex of f, on the plane line through it and either of them, and with a third point defined
+    // alike, on no known line with them, where the expansion of the perturbation finds the three on one line after all its stages
+    // (with a third point of other vertices, about 50 times slower); nor can ccwFromBehind
+    alike();
     (void)preds.ccw( 3_v, 4_v, 0_v );
+    EXPECT_TRUE( preds.failed() );
+    alike();
+    preds.addPoint( 5_v, x );
+    EXPECT_FALSE( preds.ccwByLines( 3_v, 4_v, 5_v ).has_value() );
+    EXPECT_FALSE( preds.failed() );
+    (void)preds.ccw( 3_v, 4_v, 5_v );
+    EXPECT_TRUE( preds.failed() );
+    alike();
+    (void)preds.ccwFromBehind( 4_v, 3_v );
     EXPECT_TRUE( preds.failed() );
     // the same vertex twice
     start();

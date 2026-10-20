@@ -562,14 +562,16 @@ jobs:
           VCPKG_ROOT: C:\vcpkg
           VCPKG_TARGET_TRIPLET: ${{ matrix.vcpkg-triplet }}
         # The CMake branch of the Build step of build-test-windows.yml, Release only; see the notes there
-        # on `|| exit /b 1` and on the serial z-applocal pass.
+        # on `|| exit /b 1` and on the serial z-applocal pass. VsDevCmd.bat replaces VCPKG_ROOT with the
+        # VS-bundled vcpkg, whose path has a space, so the project's one is kept aside for the loop.
         run: |
+          set "PROJ_VCPKG_ROOT=%VCPKG_ROOT%"
           call "${{ env.VC_PATH }}\Common7\Tools\VsDevCmd.bat" ${{ matrix.vs-dev-args }} -vcvars_ver=${{ env.VCVARS_VER }} || exit /b 1
           cmake --version || exit /b 1
           cmake -B source\TempOutput -GNinja -DCMAKE_BUILD_TYPE=Release %CMAKE_COMPILER_ARGS% -DVCPKG_TARGET_TRIPLET=%VCPKG_TARGET_TRIPLET% -DVCPKG_APPLOCAL_DEPS=OFF -DMESHLIB_BUILD_GENERATED_C_BINDINGS=OFF -DMESHLIB_BUILD_MRCUDA=${{ matrix.cuda-version != '' && 'ON' || 'OFF' }} -DMESHLIB_BUILD_MCP=OFF -DMR_PCH_USE_EXTRA_HEADERS=ON -DMRVOXELS_UNITY_BUILD=ON || exit /b 1
           cmake --build source\TempOutput -j || exit /b 1
           for %%b in (source\TempOutput\bin\*.exe source\TempOutput\bin\*.dll) do (
-            %VCPKG_ROOT%\vcpkg.exe z-applocal --target-binary="%%b" --installed-bin-dir="%VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%\bin" >nul || exit 1
+            "%PROJ_VCPKG_ROOT%\vcpkg.exe" z-applocal --target-binary="%%b" --installed-bin-dir="%PROJ_VCPKG_ROOT%\installed\%VCPKG_TARGET_TRIPLET%\bin" >nul || exit 1
           )
           if not exist source\${{ matrix.platform }} mkdir source\${{ matrix.platform }} || exit /b 1
           xcopy source\TempOutput\bin\* source\${{ matrix.platform }}\Release\* /s /e /i /Y || exit /b 1

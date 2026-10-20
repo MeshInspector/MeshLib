@@ -74,12 +74,17 @@ Vector3i64 normalOf( const std::array<PreciseVertCoords, 3> & t )
     return dirDblArea( Vector3i64( t[0].pt ), Vector3i64( t[1].pt ), Vector3i64( t[2].pt ) );
 }
 
-/// the direction of the line where the planes with normals a and b cross, with components below 2 * 2^126 = 2^127 for the components
-/// of the normals below 2^63
-Vector3<FastInt128> lineDirectionOf( const Vector3i64 & a, const Vector3i64 & b )
+/// the projected coordinates kx, ky of the exact direction of the line where the plane with normal n crosses the plane of triangle t,
+/// cross( n, normal of t ), below 2 * 2^126 = 2^127 for the components of the normals below 2^63; both are zero if the planes
+/// are parallel before the perturbation, or a normal is zero; inlined, since the slower rules of ccw and less ask it often
+MR_FORCE_INLINE std::array<FastInt128, 2> lineDirectionOf( const Vector3i64 & n, const std::array<PreciseVertCoords, 3> & t, int kx, int ky )
 {
-    return cross( Vector3i64mul( a ), Vector3i64mul( b ) );
+    const auto line = cross( Vector3i64mul( n ), Vector3i64mul( normalOf( t ) ) );
+    return { line[kx], line[ky] };
 }
+
+/// the first side of a set of sides, bit i for side i: the side of the points with these sides in common
+int firstSide( int sides ) { return std::countr_zero( unsigned( sides ) ); }
 
 bool hasVert( const std::array<PreciseVertCoords, 3> & t, VertId v )
 {
@@ -524,7 +529,8 @@ struct CutTrianglePredicates::Impl
     phmap::parallel_flat_hash_map_m<std::uint64_t, Vector2i> dirs;
 
     /// the orientations of the triangles with the vertices sorted by ids that the slower rules decide: 1 if counterclockwise,
-    /// -1 otherwise; the sweep asks about the same triangles often, but not in parallel, so one mutex is enough
+    /// -1 otherwise; the sweep asks about the same triangles often; ccw may be called concurrently, but one mutex is enough,
+    /// since the sweep asks about the triangles from one thread
     HashMap<UnorientedTriangle, int, TriangleIdsHash> orients;
     std::mutex orientsMutex;
 
@@ -619,7 +625,10 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
     {
         for ( int i = 0; i < 3; ++i )
             if ( tri_[i].id == x.id )
+            {
+                assert( tri_[i].pt == x.pt ); // an id stands for one vertex with the same coordinates in every point
                 return i;
+            }
         return -1;
     };
     if ( p.isVertex() )
@@ -786,11 +795,10 @@ std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, Ver
     const auto l = commonLine_( p, q, false );
     if ( !l || l->side >= 0 )
         return {};
-    const auto line = lineDirectionOf( normal_, normalOf( l->plane ) );
-    const FastInt128 lx = line[kx_], ly = line[ky_];
-    if ( lx == 0 && ly == 0 )
-        return {}; // the line has no exact direction: the planes are parallel before the perturbation, or a normal is zero
+    const auto [lx, ly] = lineDirectionOf( normal_, l->plane, kx_, ky_ );
     const Vector2i dir( sgn( lx ), sgn( ly ) );
+    if ( dir == Vector2i() )
+        return {}; // the line has no exact direction: the planes are parallel before the perturbation, or a normal is zero
     for ( int i = 0; i < 3; ++i )
     {
         const int bit = 1 << i;
@@ -836,7 +844,7 @@ std::optional<CutTrianglePredicates::Line> CutTrianglePredicates::commonLine_( V
     const auto & a = impl_->points[p];
     const auto & b = impl_->points[q];
     if ( const int common = a.sides & b.sides )
-        return Line{ .side = std::countr_zero( unsigned( common ) ) }; // one bit, unless p and q are the same vertex
+        return Line{ .side = firstSide( common ) }; // one bit, unless p and q are the same vertex
     if ( a.def.isVertex() || b.def.isVertex() )
     {
         if ( !withVertex )
@@ -874,9 +882,8 @@ Vector2i CutTrianglePredicates::lineDirection_( const Line & l ) const
     // and along cross( normal of the triangle, normal of the plane ) on a plane
     if ( l.side >= 0 )
         return segmentDirection_( tri_[l.side], tri_[( l.side + 1 ) % 3] );
-    const auto line = lineDirectionOf( normal_, normalOf( l.plane ) );
-    const Vector2i res( sgn( line[kx_] ), sgn( line[ky_] ) );
-    if ( res.x != 0 || res.y != 0 )
+    const auto [lx, ly] = lineDirectionOf( normal_, l.plane, kx_, ky_ );
+    if ( const Vector2i res( sgn( lx ), sgn( ly ) ); res != Vector2i() )
         return res;
     // only the perturbation gives the direction if the planes are parallel before it, or one of the normals is zero
     return sosCrossDirection( tri_, l.plane, kx_, ky_ );
@@ -1019,7 +1026,7 @@ std::optional<bool> CutTrianglePredicates::ccwBySides_( VertId a, VertId b, Vert
     {
         // three points on one side: they bulge inward a little (infinitely less than the perturbation of the vertices),
         // so that every point inside the side is a reflex vertex of the boundary, where a triangulation adds no sliver triangle
-        const auto dir = lineDirection_( Line{ .side = std::countr_zero( unsigned( common ) ) } );
+        const auto dir = lineDirection_( { .side = firstSide( common ) } );
         return int( along_( dir, a, b ) ) + int( along_( dir, b, c ) ) + int( along_( dir, c, a ) ) == 1;
     }
     // rotating the vertices keeps the orientation of the triangle, so any two of them on one side can come first,
@@ -1029,7 +1036,7 @@ std::optional<bool> CutTrianglePredicates::ccwBySides_( VertId a, VertId b, Vert
     {
         const VertId p = v[i], q = v[( i + 1 ) % 3];
         if ( const int common = points[p].sides & points[q].sides )
-            return along_( lineDirection_( Line{ .side = std::countr_zero( unsigned( common ) ) } ), p, q );
+            return along_( lineDirection_( { .side = firstSide( common ) } ), p, q );
     }
     return {};
 }
@@ -1074,7 +1081,7 @@ bool CutTrianglePredicates::ccwFromBehind( VertId b, VertId pivot ) const
     Vector2i dir;
     if ( const int common = impl_->points[pivot].sides & impl_->points[b].sides )
     {
-        dir = lineDirection_( Line{ .side = std::countr_zero( unsigned( common ) ) } );
+        dir = lineDirection_( { .side = firstSide( common ) } );
         if ( !along_( dir, pivot, b ) )
             dir = -dir;
     }

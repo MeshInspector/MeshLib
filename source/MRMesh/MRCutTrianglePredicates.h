@@ -52,7 +52,8 @@ public:
     MRMESH_API void reset( const std::array<PreciseVertCoords, 3> & tri );
 
     /// sets point v: a vertex of the triangle, or a crossing of one of its sides with another triangle, or a crossing of an edge
-    /// of another triangle with this triangle (whose tri is then the triangle of reset); a crossing is inside the triangle it crosses,
+    /// of another triangle with this triangle (whose tri is then the triangle of reset); v indexes a vector of the points, resized
+    /// to the largest v + 1, so the points take small local ids, not those of the mesh vertices; a crossing is inside the triangle it crosses,
     /// as \ref doTriangleSegmentIntersect finds them, which only Debug checks, since it takes several orient3d per point;
     /// a segment in the plane of its triangle crosses it after the perturbation, at a point that tends to an end of the segment
     /// or to a point inside it; setting a point again forgets the orders found for its old definition, but not a failure;
@@ -77,8 +78,9 @@ public:
 
     /// the same as ccw, decided by a line through two of the points known from their definitions, as the ends of every edge
     /// of the cut triangle are: one side of the triangle, or the plane of another triangle (by which the cut along the line goes),
-    /// or the plane through a vertex and a crossing (at selfBoolean's folds), which ccw needs only for points on one line
-    /// before the perturbation; the points on one side stay on one line after the perturbation, and they are taken
+    /// or the plane through a vertex and a crossing (at selfBoolean's folds), or the plane through two edges with a common vertex
+    /// (for their crossings with this triangle), which ccw needs only for points on one line before the perturbation;
+    /// the points on one side stay on one line after the perturbation, and they are taken
     /// as bulging inward a little, so three of them make a counterclockwise triangle if they come in the order
     /// from vertex i+1 to vertex i of side i, up to a cyclic shift;
     /// nullopt if no two of the points are on a known line

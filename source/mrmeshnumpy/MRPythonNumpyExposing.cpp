@@ -382,12 +382,12 @@ pybind11::array_t<double> toNumpyArray( const std::vector<MR::Vector3f>& coords 
 
 pybind11::array_t<double> toNumpyArray( const MR::VertCoords& coords )
 {
-    return toNumpyArray( coords.vec_ );
+    return toNumpyArray( coords.vec );
 }
 
 pybind11::array_t<double> toNumpyArray( const MR::FaceNormals& norms )
 {
-    return toNumpyArray( norms.vec_ );
+    return toNumpyArray( norms.vec );
 }
 
 // returns numpy array shapes [num verts,3] which represents coordinates of all mesh points (including invalid ones)

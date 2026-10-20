@@ -29,63 +29,63 @@ public:
     Vector() = default;
 
     /// creates a vector with \p size elements with default value
-    MR_BIND_OVERLOAD_SUFFIX() explicit Vector( size_t size ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> ) : vec_( size ) { }
+    MR_BIND_OVERLOAD_SUFFIX() explicit Vector( size_t size ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> ) : vec( size ) { }
 
     /// creates a vector with \p size elements with the given value
-    MR_BIND_OVERLOAD_SUFFIX(fill) explicit Vector( size_t size, const T & val ) : vec_( size, val ) { }
+    MR_BIND_OVERLOAD_SUFFIX(fill) explicit Vector( size_t size, const T & val ) : vec( size, val ) { }
 
     /// moves data from the given std::vector<T>
-    MR_BIND_OVERLOAD_SUFFIX(stdVector) Vector( std::vector<T> && vec ) : vec_( std::move( vec ) ) { }
+    MR_BIND_OVERLOAD_SUFFIX(stdVector) Vector( std::vector<T> && v ) : vec( std::move( v ) ) { }
 
     template< class InputIt >
-    Vector( InputIt first, InputIt last ) : vec_( first, last ) { }
+    Vector( InputIt first, InputIt last ) : vec( first, last ) { }
 
-    Vector( std::initializer_list<T> init ) : vec_( init ) { }
+    Vector( std::initializer_list<T> init ) : vec( init ) { }
 
-    [[nodiscard]] bool operator == ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ == b.vec_; }
-    [[nodiscard]] bool operator != ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec_ != b.vec_; }
+    [[nodiscard]] bool operator == ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec == b.vec; }
+    [[nodiscard]] bool operator != ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec != b.vec; }
 
-    void clear() { vec_.clear(); }
+    void clear() { vec.clear(); }
 
-    [[nodiscard]] bool empty() const { return vec_.empty(); }
+    [[nodiscard]] bool empty() const { return vec.empty(); }
 
-    [[nodiscard]] std::size_t size() const { return vec_.size(); }
+    [[nodiscard]] std::size_t size() const { return vec.size(); }
 
-    void resize( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::default_initializable<T> ) { vec_.resize( newSize ); }
-    void resize( size_t newSize, const T & t ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { vec_.resize( newSize, t ); }
+    void resize( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::default_initializable<T> ) { vec.resize( newSize ); }
+    void resize( size_t newSize, const T & t ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { vec.resize( newSize, t ); }
 
     // resizes the vector skipping initialization of its elements (more precisely initializing them using ( noInit ) constructor )
-    void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec_, targetSize ); }
+    void resizeNoInit( size_t targetSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, NoInit> ) { MR::resizeNoInit( vec, targetSize ); }
 
-    [[nodiscard]] std::size_t capacity() const { return vec_.capacity(); }
+    [[nodiscard]] std::size_t capacity() const { return vec.capacity(); }
 
-    void reserve( size_t capacity ) { vec_.reserve( capacity ); }
+    void reserve( size_t capacity ) { vec.reserve( capacity ); }
 
-    void shrink_to_fit() { vec_.shrink_to_fit(); }
+    void shrink_to_fit() { vec.shrink_to_fit(); }
 
     [[nodiscard]] const_reference operator[]( I i ) const MR_LIFETIMEBOUND
     {
-        assert( i < vec_.size() );
-        return vec_[i];
+        assert( i < vec.size() );
+        return vec[i];
     }
     [[nodiscard]] reference operator[]( I i ) MR_LIFETIMEBOUND
     {
-        assert( i < vec_.size() );
-        return vec_[i];
+        assert( i < vec.size() );
+        return vec[i];
     }
 
     /// same as resize(newSize), which already grows the capacity geometrically
     [[deprecated( "use resize() instead" )]]
     void resizeWithReserve( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
     {
-        vec_.resize( newSize );
+        vec.resize( newSize );
     }
 
     /// same as resize(newSize, value), which already grows the capacity geometrically
     [[deprecated( "use resize() instead" )]]
     void resizeWithReserve( size_t newSize, const T & value ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> )
     {
-        vec_.resize( newSize, value );
+        vec.resize( newSize, value );
     }
 
     /// sets elements [pos, pos+len) to the given value, adjusting the size of the vector to include new elements;
@@ -97,7 +97,7 @@ public:
         if ( const auto sz = size(); p + len > sz )
         {
             // add new elements with the given value
-            vec_.resize( p + len, val );
+            vec.resize( p + len, val );
             if ( p >= sz )
                 return;
             // the number of the elements existing before function call to be changed
@@ -105,7 +105,7 @@ public:
         }
         // change the value of the elements existing before function call
         for ( size_t i = 0; i < len; ++i )
-            vec_[ p + i ] = val;
+            vec[ p + i ] = val;
     }
 
     /// sets the element #i to the given value, adjusting the size of the vector to include new element
@@ -118,51 +118,51 @@ public:
     [[nodiscard]] reference autoResizeAt( I i ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )
     {
         if ( i + 1 > size() )
-            vec_.resize( i + 1 );
-        return vec_[i];
+            vec.resize( i + 1 );
+        return vec[i];
     }
 
-    void push_back( const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( t ); }
-    void push_back( T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec_.push_back( std::move( t ) ); }
-    void pop_back() { vec_.pop_back(); }
+    void push_back( const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec.push_back( t ); }
+    void push_back( T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec.push_back( std::move( t ) ); }
+    void pop_back() { vec.pop_back(); }
 
     /// inserts elements from range [first, last) before \p pos
     template<class InputIt>
-    iterator insert( const_iterator pos, InputIt first, InputIt last ) { return vec_.insert( pos, first, last ); }
+    iterator insert( const_iterator pos, InputIt first, InputIt last ) { return vec.insert( pos, first, last ); }
 
     template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> )
-    T& emplace_back( Args&&... args ) { return vec_.emplace_back( std::forward<Args>(args)... ); }
+    T& emplace_back( Args&&... args ) { return vec.emplace_back( std::forward<Args>(args)... ); }
 
-    [[nodiscard]] const_reference front() const MR_LIFETIMEBOUND { return vec_.front(); }
-    [[nodiscard]]       reference front()       MR_LIFETIMEBOUND { return vec_.front(); }
-    [[nodiscard]] const_reference  back() const MR_LIFETIMEBOUND { return vec_.back(); }
-    [[nodiscard]]       reference  back()       MR_LIFETIMEBOUND { return vec_.back(); }
+    [[nodiscard]] const_reference front() const MR_LIFETIMEBOUND { return vec.front(); }
+    [[nodiscard]]       reference front()       MR_LIFETIMEBOUND { return vec.front(); }
+    [[nodiscard]] const_reference  back() const MR_LIFETIMEBOUND { return vec.back(); }
+    [[nodiscard]]       reference  back()       MR_LIFETIMEBOUND { return vec.back(); }
 
     /// returns the identifier of the first element
     [[nodiscard]] I beginId() const { return I( size_t(0) ); }
 
     /// returns the identifier of the back() element
-    [[nodiscard]] I backId() const { assert( !vec_.empty() ); return I( vec_.size() - 1 ); }
+    [[nodiscard]] I backId() const { assert( !vec.empty() ); return I( vec.size() - 1 ); }
 
     /// returns backId() + 1
-    [[nodiscard]] I endId() const { return I( vec_.size() ); }
+    [[nodiscard]] I endId() const { return I( vec.size() ); }
 
-    [[nodiscard]] T* data() MR_LIFETIMEBOUND { return vec_.data(); }
-    [[nodiscard]] const T* data() const MR_LIFETIMEBOUND { return vec_.data(); }
+    [[nodiscard]] T* data() MR_LIFETIMEBOUND { return vec.data(); }
+    [[nodiscard]] const T* data() const MR_LIFETIMEBOUND { return vec.data(); }
 
-    void swap( Vector & b ) { vec_.swap( b.vec_ ); }
+    void swap( Vector & b ) { vec.swap( b.vec ); }
 
     /// returns the amount of memory this object occupies on heap
     [[nodiscard]] size_t heapBytes() const { return capacity() * sizeof(T); }
 
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const Vector<T, I> & a ) { return a.vec_.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( Vector<T, I> & a ) { return a.vec_.begin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const Vector<T, I> & a ) { return a.vec_.end(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( Vector<T, I> & a ) { return a.vec_.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( const Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( Vector<T, I> & a ) { return a.vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const Vector<T, I> & a ) { return a.vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( Vector<T, I> & a ) { return a.vec.end(); }
 
     /// The user can directly manipulate the vector, they can't break anything anyway.
-    /// Not exposed to bindings, except Python, where it is named `vec`.
-    MR_BIND_IGNORE_EXCEPT_PY std::vector<T> vec_;
+    /// Not exposed to bindings, except Python.
+    MR_BIND_IGNORE_EXCEPT_PY std::vector<T> vec;
 
 #if defined( MR_PARSING_FOR_ANY_BINDINGS ) || defined( MR_COMPILING_ANY_BINDINGS )
     static_assert( sizeof(T) > 0 );
@@ -180,7 +180,7 @@ template <typename T>
 template <typename T, typename I>
 [[nodiscard]] inline T getAt( const Vector<T, I> & a, I id, T def = {} )
 {
-    return getAt( a.vec_, size_t( id ), def );
+    return getAt( a.vec, size_t( id ), def );
 }
 
 } // namespace MR

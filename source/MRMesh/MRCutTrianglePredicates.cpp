@@ -488,6 +488,17 @@ MR_FORCE_INLINE int compareExactCoord( const ExactCoords & a, const ExactCoords 
     return l < r ? -1 : ( r < l ? 1 : 0 );
 }
 
+/// the hash of a triangle of point ids, distinct for the triangles of ids below 2^21 if size_t has 64 bits, which phmap mixes then;
+/// std::hash<UnorientedTriangle> sums the ids with small weights, which gives one value to many triangles of small dense ids
+struct TriangleIdsHash
+{
+    size_t operator()( const UnorientedTriangle & t ) const noexcept
+    {
+        const auto w = ( std::uint64_t( t[0] ) << 42 ) ^ ( std::uint64_t( t[1] ) << 21 ) ^ std::uint64_t( t[2] );
+        return size_t( w ^ ( w >> 32 ) ); // every id keeps some bits in a 32-bit size_t
+    }
+};
+
 } // anonymous namespace
 
 struct CutTrianglePredicates::Impl
@@ -502,7 +513,7 @@ struct CutTrianglePredicates::Impl
 
     /// the orientations of the triangles with the vertices sorted by ids that the slower rules decide: 1 if counterclockwise,
     /// -1 otherwise; the sweep asks about the same triangles often, but not in parallel, so one mutex is enough
-    HashMap<UnorientedTriangle, int> orients;
+    HashMap<UnorientedTriangle, int, TriangleIdsHash> orients;
     std::mutex orientsMutex;
 
     /// whether the maps above may have entries, since clearing the empty submaps of the parallel map takes a lock each

@@ -45,15 +45,16 @@ jobs:
       actions: read   # This is required for wait-for-job
 
     env:
-      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' }}
+      # The C# bindings are generated and tested on the MSBuild VS2026 jobs and on the clang-cl jobs;
+      # the NuGet payload (the native DLLs, MRDotNet2.dll and its XML) comes from the clang-cl ones.
+      BUILD_C_SHARP: ${{ matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler == 'clang-cl' }}
       PYTEST_C_SHARP_ARGS: --run-c-sharp-samples --csharp-sample-dir=..\source\${{ matrix.arch || 'x64' }}\${{ matrix.config }}
       VCPKG_DEFAULT_TRIPLET: ${{ matrix.vcpkg_triplet || 'x64-windows-meshlib' }}
       # Upload a developer distributive per Visual Studio toolchain and target
       # architecture so update-win-version can repackage each into
       # MeshLibDistVS{19,22,26}[-arm64].zip.
-      # VS2019/VS2022 ship the CMake build; VS2026 ships the MSBuild build
-      # (which also produces the C#/.NET components). VS_TAG keeps the archive
-      # names distinct.
+      # VS2019/VS2022 ship the CMake build; VS2026 ships the MSBuild build.
+      # VS_TAG keeps the archive names distinct.
       job_upload_artifact: ${{ inputs.upload_artifacts && ( matrix.cxx_compiler == 'msvc-2026' && matrix.build_system == 'MSBuild' || matrix.cxx_compiler != 'msvc-2026' && matrix.cxx_compiler != 'clang-cl' && matrix.build_system == 'CMake' ) }}
       # Only VS2026 has an arm64 leg, so the suffix separates it from the x64 VS26 archive
       VS_TAG: ${{ format('{0}{1}', fromJSON('{"msvc-2019":"VS19","msvc-2022":"VS22"}')[matrix.cxx_compiler] || 'VS26', matrix.arch == 'arm64' && '-arm64' || '') }}
@@ -489,7 +490,7 @@ jobs:
           compression-level: 0
 
       - name: Create and fix fake Wheel for NuGet
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'clang-cl' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         run: |
           py -3 -m venv wheel_venv
           wheel_venv\Scripts\Activate
@@ -497,7 +498,7 @@ jobs:
           py -3 ./scripts/nuget_patch/patch_library_deps.py ./patched_content/ ./source/${{ env.MR_ARCH }}/Release/MeshLibC2.dll ./source/${{ env.MR_ARCH }}/Release/MeshLibC2Cuda.dll
 
       - name: Upload NuGet files to Artifacts
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'clang-cl' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetPatchArchiveWindows-${{ env.MR_ARCH }}
@@ -508,7 +509,7 @@ jobs:
       - name: Upload NuGet library DLL and XML to Artifacts
         # These are netstandard2.0 and carry no architecture, so take them from the x64
         # leg only; the arm64 one would only overwrite them with equivalent assemblies.
-        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'msvc-2026' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
+        if: ${{ inputs.nuget_build && matrix.cxx_compiler == 'clang-cl' && matrix.config == 'Release' && env.BUILD_C_SHARP == 'true' && matrix.arch != 'arm64' }}
         uses: actions/upload-artifact@v7
         with:
           name: DotNetDllXml

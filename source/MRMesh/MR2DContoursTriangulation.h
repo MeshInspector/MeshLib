@@ -2,13 +2,14 @@
 #include "MRMeshFwd.h"
 #include "MRId.h"
 #include "MRHoleFillPlan.h"
-#include "MRCutTrianglePredicates.h"
-#include <functional>
 #include <memory>
 #include <optional>
 
 namespace MR
 {
+
+struct PreciseVertCoords;
+struct PreciseCutPoint;
 
 namespace PlanarTriangulation
 {

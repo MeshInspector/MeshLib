@@ -6,6 +6,7 @@
 #include "MRMeshTopology.h"
 #include "MRMeshDelone.h"
 #include "MR2DContoursTriangulation.h"
+#include "MRCutTrianglePredicates.h"
 #include "MRRingIterator.h"
 #include "MRMeshFillHole.h"
 #include "MRTimer.h"

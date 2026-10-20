@@ -1,4 +1,5 @@
 #include <MRMesh/MR2DContoursTriangulation.h>
+#include <MRMesh/MRCutTrianglePredicates.h>
 #include <MRMesh/MRMesh.h>
 #include <MRMesh/MRBox.h>
 #include <MRMesh/MRContour.h>
@@ -414,7 +415,8 @@ TEST( MRMesh, PlanarTriangulationMonotonePlan )
 }
 
 // on the exact predicates of a cut triangle, two vertices of the loops defined alike (as where both edges of a multiple edge
-// of the other mesh cross the triangle) cannot be told apart, so the plan is rejected without running the sweep
+// of the other mesh cross the triangle) cannot be told apart, and an invalid definition makes addPoint fail,
+// so the plan is rejected without running the sweep
 TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
 {
     // the hole of triangle 0_f with island 1_f inside it
@@ -461,6 +463,20 @@ TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
         }
         return res;
     } ).has_value() );
+
+    // vertex 4 as a vertex point off the corners of the triangle, or as a segment not reaching the plane of the triangle
+    for ( bool asVertex : { true, false } )
+    {
+        EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v )
+        {
+            auto res = pointOf( v, {} );
+            if ( v == 4_v && asVertex )
+                res = PreciseCutPoint{ .seg = { res.seg[0] } };
+            else if ( v == 4_v )
+                res.seg[0].pt.z += 150;
+            return res;
+        } ).has_value() );
+    }
 }
 
 namespace

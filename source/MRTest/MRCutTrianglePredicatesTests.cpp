@@ -472,7 +472,9 @@ int checkSet( CutTrianglePredicates& preds, const Tri& f, const CutPoints& pts, 
     // vertices does not check, since side 0 decides it
     EXPECT_EQ( preds.ccwByPerturbation( 0_v, 1_v, 2_v ), true );
     if ( !flat )
+    {
         EXPECT_GT( orientFractions( *pos[0], *pos[1], *pos[2], kx, ky ), 0 );
+    }
     checkOrder( preds, f, pts, kx, ky, flat, [&] ( int p, int q, int k ) -> std::optional<int>
     {
         if ( !pos[p] || !pos[q] )
@@ -972,9 +974,13 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
         for ( int q = 0; q < 6; ++q )
         {
             if ( p != q )
+            {
                 EXPECT_NE( preds.less( VertId( p ), VertId( q ) ), preds.less( VertId( q ), VertId( p ) ) );
+            }
             for ( int r = 0; r < 6; ++r )
+            {
                 EXPECT_FALSE( preds.less( VertId( p ), VertId( q ) ) && preds.less( VertId( q ), VertId( r ) ) && !preds.less( VertId( p ), VertId( r ) ) );
+            }
         }
     EXPECT_TRUE( preds.failed() );
     // nor can ccw tell them apart: with a vertex of f, on the plane line through it and either of them, and with a third point defined

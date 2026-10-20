@@ -156,7 +156,7 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 /// \param tri the triangle, counterclockwise around its normal
 /// \param pointOf the definition of every vertex on the loops, valid as \ref CutTrianglePredicates::addPoint requires
 /// \return std::nullopt also if the predicates fail on the points
-MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
+MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
 
 }

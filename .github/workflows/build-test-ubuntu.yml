@@ -38,7 +38,7 @@ jobs:
   ubuntu-build-test:
     # the entries carry every compiler field, so spell out the ones that identify a job;
     # the name must contain the job id for fetch_job_id.py
-    name: ubuntu-build-test (${{ matrix.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }})
+    name: ubuntu-build-test (${{ matrix.arch }}, ${{ matrix.os }}, ${{ matrix.config }}, ${{ matrix.cxx-compiler }}${{ matrix.ubsan == 'ON' && ', UBSan' || '' }})
     timeout-minutes: 60
     runs-on: ${{ matrix.arch == 'arm64' && 'ubuntu-24.04-arm' || 'ubuntu-latest' }}
     container:
@@ -53,6 +53,8 @@ jobs:
       actions: read   # This is required for wait-for-job
     env:
       MESHLIB_THIRDPARTY_ROOT_DIR: /usr/local/lib/MeshLib
+      # the `ubsan` label's job: every test fails on its first UBSan report, with a symbolized stack
+      UBSAN_OPTIONS: ${{ matrix.ubsan == 'ON' && 'print_stacktrace=1:halt_on_error=1' || '' }}
       # the job that uploads PythonStubs and CsharpBindings
       UPLOAD_BINDINGS_SOURCES: ${{ matrix.arch == 'arm64' && matrix.os == 'ubuntu22' && matrix.config == 'Release' }}
       # one Release job per OS and architecture builds the Rust bindings and runs their examples
@@ -120,6 +122,9 @@ jobs:
       - name: Build
         run: ./scripts/build_source.sh
         env:
+          # -shared-libsan because -Wl,-z,defs rejects a .so with the UBSan handlers unresolved;
+          # -frtlib-add-rpath makes the runtime found at load time by everything linked here
+          CXXFLAGS: ${{ matrix.ubsan == 'ON' && '-fsanitize=signed-integer-overflow,shift -shared-libsan -frtlib-add-rpath -gline-tables-only' || '' }}
           MESHLIB_BUILD_RELEASE: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Release'] }}
           MESHLIB_BUILD_DEBUG: ${{ fromJSON('["OFF", "ON"]')[matrix.config == 'Debug'] }}
           CMAKE_C_COMPILER: ${{ matrix.c-compiler }}
@@ -264,10 +269,23 @@ jobs:
           build-bin-dir: ./build/${{ matrix.config }}/bin
 
       - name: Unit Tests
+        if: ${{ matrix.ubsan != 'ON' }}
         env:
           GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
         timeout-minutes: 10
         run: ./build/${{ matrix.config }}/bin/MRTest --with-python-tests
+
+      # the reports are recoverable: list all of them in one run, then fail on any
+      - name: Unit Tests under UBSan
+        if: ${{ matrix.ubsan == 'ON' }}
+        env:
+          GTEST_OUTPUT: 'xml:unit_tests_report_gtest.xml'
+          UBSAN_OPTIONS: print_stacktrace=1
+        timeout-minutes: 10
+        run: |
+          set -o pipefail
+          ./build/${{ matrix.config }}/bin/MRTest --with-python-tests 2>&1 | tee mrtest.log
+          ! grep -q "runtime error" mrtest.log
 
       - name: C Unit Tests
         if: ${{ inputs.mrbind_c }}

@@ -347,8 +347,8 @@ jobs:
                   cxx-compiler: /usr/bin/g++-16
                   c-compiler: /usr/bin/gcc-16
                   upload_release: "OFF"
-            # Debug and Clang jobs run in full-ci only, and on x64 only;
-            # the `ubsan` label keeps ubuntu26 Clang Release, which then builds and tests under UBSan
+            # Debug and Clang jobs run in full-ci only, and on x64 only; ubuntu26 Clang Release builds
+            # and tests under UBSan in full-config runs, and alone with the `ubsan` label
             - if: ${{ env.full_config_build != 'true' }}
               exclude:
                 - config: Debug
@@ -359,7 +359,7 @@ jobs:
               exclude:
                 - compiler: Clang
                   os: ubuntu24
-            - if: ${{ steps.live-labels.outputs.tag-ubsan == 'true' }}
+            - if: ${{ env.full_config_build == 'true' || steps.live-labels.outputs.tag-ubsan == 'true' }}
               extend:
                 - arch: x64
                   os: ubuntu26

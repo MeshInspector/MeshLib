@@ -72,10 +72,12 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
                 assert( mesh.topology.right( e ) == pFId );
             }
 
+            // without a face left of `e` (mesh boundary) the contour only touches `e` and returns to `prev` face;
+            // at an ear tip (boundary vertex with one face) next( e ) is an edge of `prev` face, so check the face too
             if ( std::holds_alternative<VertId>( next.primitiveId ) )
             {
                 auto nVId = std::get<VertId>( next.primitiveId );
-                if ( mesh.topology.dest( mesh.topology.next( e ) ) != nVId )
+                if ( !mesh.topology.left( e ) || mesh.topology.dest( mesh.topology.next( e ) ) != nVId )
                 {
 #ifndef NDEBUG
                     VertId pV[3];
@@ -92,8 +94,8 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
             else if ( std::holds_alternative<EdgeId>( next.primitiveId ) )
             {
                 auto nEUId = std::get<EdgeId>( next.primitiveId ).undirected();
-                if ( mesh.topology.next( e ).undirected() != nEUId &&
-                     mesh.topology.prev( e.sym() ).undirected() != nEUId )
+                if ( !mesh.topology.left( e ) || ( mesh.topology.next( e ).undirected() != nEUId &&
+                     mesh.topology.prev( e.sym() ).undirected() != nEUId ) )
                 {
                     assert( nEUId == e.undirected() || nEUId == mesh.topology.prev( e ).undirected() || nEUId == mesh.topology.next( e.sym() ).undirected() );
                     return {};
@@ -126,10 +128,11 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
                 assert( mesh.topology.left( e ) == nFId );
             }
 
+            // the same without a face right of `e`
             if ( std::holds_alternative<VertId>( prev.primitiveId ) )
             {
                 auto pVId = std::get<VertId>( prev.primitiveId );
-                if ( mesh.topology.dest( mesh.topology.prev( e ) ) != pVId )
+                if ( !mesh.topology.right( e ) || mesh.topology.dest( mesh.topology.prev( e ) ) != pVId )
                 {
 #ifndef NDEBUG
                     VertId nV[3];
@@ -147,8 +150,8 @@ std::optional<OneMeshIntersection> centralIntersectionForFaces( const Mesh& mesh
             else // if edge
             {
                 auto pEUId = std::get<EdgeId>( prev.primitiveId ).undirected();
-                if ( mesh.topology.prev( e ).undirected() != pEUId &&
-                     mesh.topology.next(e.sym() ).undirected() != pEUId )
+                if ( !mesh.topology.right( e ) || ( mesh.topology.prev( e ).undirected() != pEUId &&
+                     mesh.topology.next(e.sym() ).undirected() != pEUId ) )
                 {
                     assert( pEUId == e.undirected() || pEUId == mesh.topology.next( e ).undirected() || pEUId == mesh.topology.prev( e.sym() ).undirected() );
                     return {};

@@ -279,6 +279,107 @@ TEST( MRMesh, ContourThroughBoundaryCorner )
     }
 }
 
+// the contour touches a boundary edge of ear tip E (boundary vertex with one face) and returns into that face
+TEST( MRMesh, ContourTouchesBoundaryAtEarTip )
+{
+    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y ); the first square has diagonal 1-4, so E = 0 has the only face (0,1,4)
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    t.push_back( { 0_v, 1_v, 4_v } );
+    t.push_back( { 1_v, 5_v, 4_v } );
+    for ( int y = 0; y < 3; ++y )
+    {
+        for ( int x = y == 0 ? 1 : 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    const auto e01 = mesh.topology.findEdge( 0_v, 1_v ), e04 = mesh.topology.findEdge( 0_v, 4_v );
+    ASSERT_TRUE( mesh.topology.isBdEdge( e01 ) && mesh.topology.isBdEdge( e04 ) );
+    const MeshTriPoint inEar = findProjection( Vector3f( 0.3f, 0.3f, 0.0f ), mesh ).mtp;
+    const MeshTriPoint inside = findProjection( Vector3f( 1.5f, 1.6f, 0.0f ), mesh ).mtp;
+
+    // three closed contours, each touches a boundary edge of E and returns into the ear face:
+    // 1. V4 -> point on E-1 -> inside the ear face;
+    // 2. inside the ear face -> point on E-4 -> V1;
+    // 3. inside the ear face -> point on E-4 -> point on E-1.
+    // On master the point on the boundary edge was kept with the hole as its face towards the intersection before it (1)
+    // or after it (2, 3), and cutMesh joined them through the hole: the cut split the boundary loop (1, 2) or filled the outer hole (3)
+    for ( const auto& mtps : { std::vector<MeshTriPoint>{ mesh.toTriPoint( 4_v ), MeshTriPoint( MeshEdgePoint( e01, 0.5f ) ), inEar, inside },
+                               std::vector<MeshTriPoint>{ inEar, MeshTriPoint( MeshEdgePoint( e04, 0.5f ) ), mesh.toTriPoint( 1_v ), inside },
+                               std::vector<MeshTriPoint>{ inEar, MeshTriPoint( MeshEdgePoint( e04, 0.5f ) ), MeshTriPoint( MeshEdgePoint( e01, 0.5f ) ), inside } } )
+    {
+        auto closedMtps = mtps;
+        closedMtps.push_back( mtps.front() );
+        auto contour = surfaceLineToMeshContour( mesh, closedMtps );
+        ASSERT_TRUE( contour.has_value() );
+        ASSERT_TRUE( contour->closed );
+
+        Mesh cut = mesh;
+        auto res = cutMesh( cut, { *contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+        EXPECT_EQ( res.resultCut.size(), 1 );
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+        EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+    }
+}
+
+// the contour goes along edge A-B of face (A,B,C), then back into that face to a point on edge A-C
+TEST( MRMesh, CutMeshContourTurnsInsideFace )
+{
+    // 3x3 squares in XY plane, vertex 4 * y + x is at ( x, y )
+    Mesh mesh;
+    Triangulation t;
+    for ( int y = 0; y < 4; ++y )
+        for ( int x = 0; x < 4; ++x )
+            mesh.points.push_back( Vector3f( float( x ), float( y ), 0.0f ) );
+    for ( int y = 0; y < 3; ++y )
+    {
+        for ( int x = 0; x < 3; ++x )
+        {
+            const VertId v( 4 * y + x );
+            t.push_back( { v, v + 1, v + 5 } );
+            t.push_back( { v, v + 5, v + 4 } );
+        }
+    }
+    mesh.topology = MeshBuilder::fromTriangles( t );
+    const auto& topology = mesh.topology;
+
+    // inside the mesh, and with B-C on the boundary
+    for ( auto [a, b, c, q] : { std::tuple{ 10_v, 5_v, 6_v, Vector3f( 2.3f, 1.8f, 0.0f ) }, std::tuple{ 6_v, 1_v, 2_v, Vector3f( 2.3f, 0.6f, 0.0f ) } } )
+    {
+        // the step A-B removes face (A,B,C) on its left, the step B -> point on A-C goes in it again
+        const auto ab = topology.findEdge( a, b );
+        ASSERT_EQ( topology.dest( topology.next( ab ) ), c );
+        const auto ac = topology.findEdge( a, c );
+        ASSERT_EQ( topology.dest( topology.prev( ac ) ), b );
+        OneMeshContour contour;
+        contour.closed = true;
+        contour.intersections = {
+            { a, mesh.points[a] },
+            { b, mesh.points[b] },
+            { ac, 0.5f * ( mesh.points[a] + mesh.points[c] ) },
+            { topology.left( ac ), q },
+            { a, mesh.points[a] } };
+
+        Mesh cut = mesh;
+        auto res = cutMesh( cut, { contour }, { .forceFillMode = CutMeshParameters::ForceFill::All } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+        EXPECT_EQ( res.resultCut.size(), 1 );
+        // the part of (A,B,C) between B, C and the new point was not filled
+        EXPECT_EQ( cut.topology.findNumHoles(), 1 );
+        EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+    }
+}
+
 TEST( MRMesh, MeshCollidePrecise )
 {
     const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );

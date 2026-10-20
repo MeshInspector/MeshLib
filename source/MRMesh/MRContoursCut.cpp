@@ -247,6 +247,10 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                         {
                             auto e = std::get<EdgeId>( nextPrimId );
                             mesh.topology.splice( mesh.topology.next( e.sym() ).sym(), newEdgeId );
+                            // the face right of e was already removed by the previous steps in it (e.g. along its edge to this vertex):
+                            // take its info, otherwise the part on the other side of the new edge is not filled
+                            if ( !mesh.topology.left( newEdgeId ) )
+                                iterateFindRemovedFaceInfo( res.removedFaces, contourId, intersectionId, e.sym() );
                         }
                         else
                         {

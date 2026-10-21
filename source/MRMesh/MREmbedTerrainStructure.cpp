@@ -312,7 +312,8 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
                 [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int startInd, int endInd )->Expected<SurfacePath>
             {
                 auto initSMtpIndex = res.filtBowTiesMap[i][startInd];
-                auto initEMtpIndex = res.filtBowTiesMap[i][endInd];
+                // the end of the last section is the closing point of cont, which repeats its first point
+                auto initEMtpIndex = res.filtBowTiesMap[i][endInd % res.filtBowTiesMap[i].size()];
                 auto baseSIndex = findOffsetContourIndex_( initSMtpIndex, offCont.idsShifts ) % bounds_[0].size();
                 auto baseEIndex = findOffsetContourIndex_( initEMtpIndex, offCont.idsShifts ) % bounds_[0].size();
                 auto planePoint = ( cutStructure_.orgPnt( bounds_[0][baseSIndex] ) + cutStructure_.orgPnt( bounds_[0][baseEIndex] ) ) * 0.5f;

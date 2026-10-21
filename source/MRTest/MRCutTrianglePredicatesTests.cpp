@@ -200,11 +200,14 @@ struct Fraction
     T d = {};
 };
 
-// nullopt if the position is unknown before the perturbation: a segment in the plane of its triangle
+// nullopt if the position is unknown before the perturbation: a segment in the plane of its triangle; and for a crossing of two cuts,
+// whose position comes from the points of the cuts (see crossingFraction)
 template <typename T>
 std::optional<Fraction<T>> fractionOf( const PreciseCutPoint& p )
 {
     Fraction<T> res;
+    if ( p.isCrossing() )
+        return {};
     if ( p.isVertex() )
     {
         for ( int k = 0; k < 3; ++k )
@@ -357,6 +360,7 @@ struct CcwStats
     int sides = 0; // triangles of three points on one side
     int lines = 0; // such triangles off the sides that ccwByLines decides
     int byPerturbation = 0; // triangles checked against the expansion of the perturbation
+    int unexpanded = 0; // triangles with a crossing of two cuts whose perturbation takes more vertices than its degrees fit
 };
 
 // checks ccw on all triangles of the points: decided without a failure, exact where orient( p, q, r ) gives the sign of the exact
@@ -366,7 +370,8 @@ struct CcwStats
 // unless exactStride is 0, the expansion of the perturbation alone (ccwByPerturbation), which is slow, gives the same on every
 // triangle off the sides that is degenerate or unknown, so also where ccwByLines decides, and on every exactStride-th triangle
 // with a known exact orientation (the points of one side stay on one line after the perturbation, which the expansion finds
-// only after all its stages, too slowly for all such triangles here, see CutTrianglePredicatesCollinear)
+// only after all its stages, too slowly for all such triangles here, see CutTrianglePredicatesCollinear, and so do the points of a cut
+// with a crossing of two cuts among them), except the triangles with a crossing of two cuts that the expansion cannot take (CcwStats::unexpanded)
 template <typename Orient>
 void checkCcw( const CutTrianglePredicates& preds, const CutPoints& pts, const Orient& orient, int exactStride, CcwStats& stats )
 {
@@ -413,9 +418,18 @@ void checkCcw( const CutTrianglePredicates& preds, const CutPoints& pts, const O
                     numWrongLines += pts.twoOnSideOrCut( p, q, r );
                 if ( o == 0 && !side )
                     ++( l ? stats.lines : stats.perturbed );
-                if ( exactStride == 0 || side || ( o != 0 && ++numExact % exactStride != 0 ) )
+                // the points of a cut with a crossing of two cuts among them stay on one line after the perturbation, as those of a side do
+                const bool withCrossing = pts.defs[p].isCrossing() || pts.defs[q].isCrossing() || pts.defs[r].isCrossing();
+                const bool onCut = withCrossing && ( pts.lines[p] & pts.lines[q] & pts.lines[r] & ~7 ) != 0;
+                if ( exactStride == 0 || side || onCut || ( o != 0 && ++numExact % exactStride != 0 ) )
                     continue;
-                numWrongPerturbation += preds.ccwByPerturbation( VertId( p ), VertId( q ), VertId( r ) ) != c;
+                const auto byPerturbation = preds.ccwByPerturbation( VertId( p ), VertId( q ), VertId( r ) );
+                if ( !byPerturbation && withCrossing )
+                {
+                    ++stats.unexpanded;
+                    continue;
+                }
+                numWrongPerturbation += byPerturbation != c;
                 ++stats.byPerturbation;
             }
     // interiority: if t is inside triangle pqr, which is counterclockwise then; cyclic symmetry lets p be the first of p, q, r
@@ -469,7 +483,7 @@ int checkSet( CutTrianglePredicates& preds, const Tri& f, const CutPoints& pts, 
     {
         preds.addPoint( VertId( i ), pts.defs[i] );
         auto x = fractionOf<T>( pts.defs[i] );
-        numInPlane += !x;
+        numInPlane += !x && !pts.defs[i].isCrossing();
         if ( !x && i < int( limits.size() ) )
             x = limits[i];
         pos.push_back( flat ? std::nullopt : x );
@@ -1309,6 +1323,388 @@ TEST( MRMesh, CutTrianglePredicatesDefinedAlike )
     EXPECT_GE( numFirstOrderZero, atLeast( 200, 45 ) );
     EXPECT_GE( orderStats.perturbed, atLeast( 320, 60 ) );
     EXPECT_GE( ccwStats.exact, atLeast( 110000, 21000 ) );
+}
+
+namespace
+{
+
+// the exact crossing of line ab with the plane of triangle q: ( vb * a - va * b ) / ( vb - va ) for the values va, vb of dot( m, x - q0 )
+// at a and b times their denominators, with the normal m of q, which is not the formula of the predicates; nullopt if the line
+// is parallel to the plane
+template <typename T>
+std::optional<Fraction<T>> crossingFraction( const Fraction<T>& a, const Fraction<T>& b, const Tri& q )
+{
+    const auto m = exactNormal( q );
+    const T mx( m.x ), my( m.y ), mz( m.z );
+    const T c = T( T( mx * T( q[0].pt.x ) ) + T( my * T( q[0].pt.y ) ) + T( mz * T( q[0].pt.z ) ) );
+    auto value = [&] ( const Fraction<T>& x )
+    {
+        return T( T( mx * x.n[0] ) + T( my * x.n[1] ) + T( mz * x.n[2] ) - T( c * x.d ) );
+    };
+    const T va = value( a ), vb = value( b );
+    Fraction<T> res;
+    for ( int k = 0; k < 3; ++k )
+        res.n[k] = T( T( vb * a.n[k] ) - T( va * b.n[k] ) );
+    res.d = T( T( vb * a.d ) - T( va * b.d ) );
+    if ( res.d == T() )
+        return {};
+    if ( res.d < T() )
+    {
+        for ( auto& x : res.n )
+            x = -x;
+        res.d = -res.d;
+    }
+    return res;
+}
+
+// a crossing of two cuts that addCrossings added: its index, and the ends of the segments of both cuts
+struct CrossingInfo
+{
+    int x = 0;
+    std::array<int, 4> ends{}; // a, b of the first cut, c, d of the second one
+};
+
+// adds to pts the crossings of the cuts of f by others where their segments in f cross as the predicates see them, with the other points
+// set: the segment of the cut by others[j] goes between its two points (bit cutBit( j ) of lines), and a cut by a triangle with two vertices
+// of f, along a side, is skipped; the planes of every crossing come in either order; writes in pos the exact positions of the crossings,
+// the same from the segments of both cuts, and nullopt for the other points, for a segment in the plane of its triangle, and for parallel cuts
+template <typename T>
+std::vector<CrossingInfo> addCrossings( CutTrianglePredicates& preds, const Tri& f, const std::vector<Tri>& others, CutPoints& pts,
+    std::vector<std::optional<Fraction<T>>>& pos )
+{
+    const int n = int( pts.defs.size() );
+    preds.reset( f );
+    for ( int i = 0; i < n; ++i )
+        preds.addPoint( VertId( i ), pts.defs[i] );
+    const int numCuts = std::min( int( others.size() ), 28 );
+    std::vector<std::array<int, 2>> ends( numCuts, { -1, -1 } );
+    for ( int j = 0; j < numCuts; ++j )
+    {
+        const auto& t = others[j];
+        if ( int( hasVert( t, f[0].id ) ) + int( hasVert( t, f[1].id ) ) + int( hasVert( t, f[2].id ) ) >= 2 )
+            continue;
+        int num = 0;
+        for ( int i = 0; i < n; ++i )
+            if ( pts.lines[i] & cutBit( j ) )
+                ends[j][std::min( num++, 1 )] = i;
+        if ( num != 2 )
+            ends[j] = { -1, -1 };
+    }
+    pos.assign( n, std::nullopt );
+    std::vector<CrossingInfo> res;
+    auto ccw = [&] ( int x, int y, int z ) { return preds.ccw( VertId( x ), VertId( y ), VertId( z ) ); };
+    for ( int j = 0; j < numCuts; ++j )
+        for ( int k = j + 1; k < numCuts; ++k )
+        {
+            if ( ends[j][0] < 0 || ends[k][0] < 0 )
+                continue;
+            const auto [a, b] = ends[j];
+            const auto [c, d] = ends[k];
+            if ( a == c || a == d || b == c || b == d )
+                continue; // the cuts meet at a point of both
+            if ( ccw( a, b, c ) == ccw( a, b, d ) || ccw( c, d, a ) == ccw( c, d, b ) )
+                continue;
+            PreciseCutPoint x;
+            const bool swapped = ( j + k ) % 2 == 1;
+            x.tri = others[swapped ? k : j];
+            x.tri2 = others[swapped ? j : k];
+            res.push_back( { int( pts.defs.size() ), { a, b, c, d } } );
+            const auto fa = fractionOf<T>( pts.defs[a] ), fb = fractionOf<T>( pts.defs[b] );
+            const auto fc = fractionOf<T>( pts.defs[c] ), fd = fractionOf<T>( pts.defs[d] );
+            const auto onJ = fa && fb ? crossingFraction( *fa, *fb, others[k] ) : std::nullopt;
+            const auto onK = fc && fd ? crossingFraction( *fc, *fd, others[j] ) : std::nullopt;
+            if ( onJ && onK )
+            {
+                for ( int i = 0; i < 3; ++i )
+                {
+                    EXPECT_EQ( compareFractions( *onJ, *onK, i ), 0 );
+                }
+            }
+            pos.push_back( onJ ? onJ : onK );
+            pts.add( x, cutBit( j ) | cutBit( k ) );
+        }
+    EXPECT_FALSE( preds.failed() );
+    return res;
+}
+
+// checks that every crossing of two cuts is on the segments of both cuts as the predicates see them: between the ends of each segment
+// along the sweep, and on its line for every point off the line, which is on the same side of the pieces of the segment as of all of it;
+// counts the wrong answers
+void checkCrossings( const CutTrianglePredicates& preds, const CutPoints& pts, const std::vector<CrossingInfo>& crossings, int& numWrong )
+{
+    const int n = int( pts.defs.size() );
+    for ( const auto& [x, e] : crossings )
+        for ( int s = 0; s < 2; ++s )
+        {
+            const VertId a( e[2 * s] ), b( e[2 * s + 1] ), xv( x );
+            numWrong += preds.less( a, xv ) != preds.less( xv, b );
+            const int line = pts.lines[a] & pts.lines[b] & ~7;
+            for ( int r = 0; r < n; ++r )
+            {
+                if ( pts.lines[r] & line )
+                    continue;
+                const bool c = preds.ccw( a, b, VertId( r ) );
+                numWrong += preds.ccw( a, xv, VertId( r ) ) != c || preds.ccw( xv, b, VertId( r ) ) != c;
+            }
+        }
+}
+
+} // anonymous namespace
+
+// The crossings of the cuts of f by other triangles in general position, which cross f in long segments, so that many of them cross:
+// with coordinates in the whole range of 2^30, where the exact positions in 512-bit integers decide every pair and every triangle, and up
+// to 2^20, where the rounded coordinates decide most of them; the predicates must agree with the exact positions, which the test finds
+// as the crossings of the line of one segment with the plane of the other cut, the same from either segment, and every crossing must be
+// on the segments of its cuts (see checkCrossings)
+TEST( MRMesh, CutTrianglePredicatesCrossings )
+{
+    std::mt19937 gen( 11 );
+    CutTrianglePredicates preds;
+    OrderStats orderStats;
+    CcwStats ccwStats;
+    int numCrossings = 0, numWrong = 0;
+    for ( int trial = 0; trial < 300 / cTrialDivisor; ++trial )
+    {
+        const int half = trial % 2 ? ( 1 << 30 ) - 1 : 1 << 20;
+        const int tilt = half / 8;
+        std::vector<int> ids( 15 );
+        std::iota( ids.begin(), ids.end(), 0 );
+        for ( size_t i = ids.size() - 1; i > 0; --i )
+            std::swap( ids[i], ids[gen() % ( i + 1 )] );
+        int nextId = 0;
+        auto coord = [&] ( int from, int to ) { return from + int( gen() % std::uint32_t( to - from + 1 ) ); };
+        auto vertex = [&] ( int x, int y, int z ) { return PreciseVertCoords{ VertId( ids[nextId++] ), Vector3i( x, y, z ) }; };
+        // f over the half of the square below its diagonal, nearly in the plane z = 0, and the other triangles across it, with a vertex
+        // on one side and two on the other over the part of the square inside f, so that their cuts cross f
+        const Vector3i corners[3] = { { -half, -half, 0 }, { half, -half, 0 }, { -half, half, 0 } };
+        Tri f;
+        for ( int i = 0; i < 3; ++i )
+        {
+            const int z = coord( -tilt, tilt );
+            f[i] = vertex( corners[i].x, corners[i].y, z );
+        }
+        std::vector<Tri> others;
+        for ( int i = 0; i < 4; ++i )
+        {
+            Tri t;
+            for ( int v = 0; v < 3; ++v )
+            {
+                const int x = coord( -half + tilt, -tilt );
+                const int y = coord( -half + tilt, -tilt );
+                const int z = coord( 2 * tilt, half );
+                t[v] = vertex( x, y, ( v == 0 ) == ( i % 2 == 0 ) ? -z : z );
+            }
+            others.push_back( t );
+        }
+        auto pts = cutPoints( f, others );
+        std::vector<std::optional<Fraction<FastInt512>>> pos;
+        const auto crossings = addCrossings( preds, f, others, pts, pos );
+        numCrossings += int( crossings.size() );
+        checkSet<FastInt512>( preds, f, pts, orderStats, ccwStats, 10, pos );
+        checkCrossings( preds, pts, crossings, numWrong );
+    }
+    EXPECT_EQ( numWrong, 0 );
+    EXPECT_GE( numCrossings, atLeast( 120, 20 ) );
+    EXPECT_EQ( orderStats.perturbed, 0 );
+    EXPECT_EQ( ccwStats.perturbed, 0 );
+    EXPECT_GE( ccwStats.exact, atLeast( 45000, 8000 ) );
+    EXPECT_GE( ccwStats.exactNoLine, atLeast( 26000, 4500 ) );
+    EXPECT_GE( ccwStats.byPerturbation, atLeast( 4500, 800 ) );
+    EXPECT_EQ( ccwStats.unexpanded, 0 );
+}
+
+// The crossings of cuts on small grids (of 7 and 3 points per axis), where many points coincide before the perturbation: f is a large triangle
+// in the plane z = 0 and the other triangles have their vertices in the planes z = -1 and z = 1, as in the layers of CutTrianglePredicatesGrid,
+// so that the cuts go through the halves of grid points, many crossings coincide with one another (four planes through one point) and with
+// the crossings of edges, many triangles of the points are on one line, and some cuts are on one line, so that only the perturbation
+// tells where they cross; in every third set, two other triangles share an edge, whose cuts meet at its crossing; the predicates must be exact
+// where the positions are known, consistent elsewhere (see checkSet), and every crossing must be on the segments of its cuts (see checkCrossings);
+// no triangle is compared with the expansion of the perturbation, which takes seconds for some of the triangles with a crossing here
+// (with a degenerate other triangle, whose two crossings of f coincide till the last stages), while CutTrianglePredicatesGrid compares the others
+TEST( MRMesh, CutTrianglePredicatesCrossingsGrid )
+{
+    RandomVerts grid3( 12, 3 ), grid1( 13, 1 );
+    CutTrianglePredicates preds;
+    OrderStats orderStats;
+    CcwStats ccwStats;
+    int numCrossings = 0, numUnknown = 0, numWrong = 0;
+    for ( int trial = 0; trial < 600 / cTrialDivisor; ++trial )
+    {
+        auto& rv = trial % 2 ? grid1 : grid3;
+        rv.newTrial();
+        Tri f = rv.tri();
+        const Vector3i corners[3] = { { -5, -5, 0 }, { 11, -5, 0 }, { -5, 11, 0 } };
+        const int step = rv.index( 2 ) + 1;
+        for ( int i = 0; i < 3; ++i )
+            f[i].pt = corners[i * step % 3];
+        std::vector<Tri> others;
+        for ( int i = 0; i < 4; ++i )
+            others.push_back( rv.tri() );
+        for ( auto& t : others )
+            for ( auto& v : t )
+                v.pt.z = 2 * rv.index( 2 ) - 1;
+        if ( trial % 3 == 0 )
+        {
+            others[1][0] = others[0][1];
+            others[1][1] = others[0][0];
+        }
+        auto pts = cutPoints( f, others );
+        std::vector<std::optional<Fraction<FastInt512>>> pos;
+        const auto crossings = addCrossings( preds, f, others, pts, pos );
+        numCrossings += int( crossings.size() );
+        for ( const auto& c : crossings )
+            numUnknown += !pos[c.x];
+        checkSet<FastInt512>( preds, f, pts, orderStats, ccwStats, 0, pos );
+        checkCrossings( preds, pts, crossings, numWrong );
+    }
+    EXPECT_EQ( numWrong, 0 );
+    EXPECT_GE( numCrossings, atLeast( 160, 25 ) );
+    EXPECT_GE( numUnknown, atLeast( 1, 0 ) );
+    EXPECT_GE( orderStats.perturbed, atLeast( 430, 70 ) );
+    EXPECT_GE( orderStats.perturbedOnCut, atLeast( 210, 35 ) );
+    EXPECT_GE( ccwStats.perturbed, atLeast( 850, 140 ) );
+    EXPECT_GE( ccwStats.lines, atLeast( 4000, 700 ) );
+}
+
+// Two boxes of another mesh that overlap, as in a self-intersecting mesh B of a boolean, cut a triangle f across them; the cuts come
+// from the triangles of the faces of the boxes: the two triangles of one face meet at the crossing of their common diagonal, and the faces
+// of the two boxes in one plane (y = 0 here) give cuts on one line, whose crossings only the perturbation gives, as the limits of the crossings
+// of the perturbed cuts; f is in the plane z = 0 or tilted, and the ids come in random orders; the predicates must be consistent (see checkSet),
+// and every crossing must be on the segments of its cuts (see checkCrossings)
+TEST( MRMesh, CutTrianglePredicatesCrossingsBoxes )
+{
+    std::mt19937 gen( 14 );
+    CutTrianglePredicates preds;
+    OrderStats orderStats;
+    CcwStats ccwStats;
+    int numCrossings = 0, numUnknown = 0, numWrong = 0, numSets = 0;
+    for ( int dx = 0; dx <= 4; ++dx )
+        for ( int face = 0; face < 3; ++face )
+            for ( int tilted = 0; tilted < 2; ++tilted )
+                for ( int rep = 0; rep < 8 / cTrialDivisor + 1; ++rep )
+                {
+                    std::vector<int> ids( 16 );
+                    std::iota( ids.begin(), ids.end(), 0 );
+                    for ( size_t i = ids.size() - 1; i > 0; --i )
+                        std::swap( ids[i], ids[gen() % ( i + 1 )] );
+                    int nextId = 0;
+                    auto vertex = [&] ( int x, int y, int z ) { return PreciseVertCoords{ VertId( ids[nextId++] ), Vector3i( x, y, z ) }; };
+                    const Tri f = { vertex( -5, -5, -tilted ), vertex( 11, -5, 0 ), vertex( -5, 11, tilted ) };
+                    // a face of box [x0, x0 + 4] x [0, 4] x [-2, 2] as two triangles with a common diagonal: the face y = 0,
+                    // or x = x0 + 4 (face 1), or the face x = x0 (face 2) of the second box
+                    auto boxFace = [&] ( int x0, bool alongX, int at )
+                    {
+                        std::array<PreciseVertCoords, 4> q;
+                        for ( int i = 0; i < 4; ++i )
+                        {
+                            const int u = i == 1 || i == 2 ? 4 : 0, z = i >= 2 ? 2 : -2;
+                            q[i] = alongX ? vertex( x0 + u, at, z ) : vertex( at, u, z );
+                        }
+                        return std::array<Tri, 2>{ Tri{ q[0], q[1], q[2] }, Tri{ q[0], q[2], q[3] } };
+                    };
+                    const auto a = boxFace( 0, true, 0 );
+                    const auto b = face == 0 ? boxFace( dx, true, 0 ) : boxFace( 0, false, face == 1 ? dx : 4 - dx );
+                    const std::vector<Tri> others = { a[0], a[1], b[0], b[1] };
+                    auto pts = cutPoints( f, others );
+                    std::vector<std::optional<Fraction<FastInt512>>> pos;
+                    const auto crossings = addCrossings( preds, f, others, pts, pos );
+                    numCrossings += int( crossings.size() );
+                    for ( const auto& c : crossings )
+                        numUnknown += !pos[c.x];
+                    checkSet<FastInt512>( preds, f, pts, orderStats, ccwStats, 3, pos );
+                    checkCrossings( preds, pts, crossings, numWrong );
+                    ++numSets;
+                }
+    EXPECT_EQ( numWrong, 0 );
+    EXPECT_GE( numSets, 60 );
+    EXPECT_GE( numCrossings, numSets / 3 );
+    EXPECT_GE( numUnknown, numSets / 10 );
+    EXPECT_GE( orderStats.perturbed, 2 * numSets );
+    EXPECT_GE( ccwStats.lines, 15 * numSets );
+    EXPECT_GE( ccwStats.byPerturbation, 30 * numSets );
+    EXPECT_EQ( ccwStats.unexpanded, 0 );
+}
+
+// The rules of the crossings of two cuts on hand-made sets: three cuts through one point, whose three crossings coincide, so that only
+// the sides of the planes, perturbed, order them (the same as the expansion of the perturbation); the points of one cut, a crossing among them,
+// bulging to the left of the cut; and the definitions that make addPoint fail
+TEST( MRMesh, CutTrianglePredicatesCrossingRules )
+{
+    const Tri f = { vert( 0, -8, -8, 0 ), vert( 1, 16, -8, 0 ), vert( 2, -8, 16, 0 ) };
+    // vertical planes through ( 1, 1, 0 ): x = 1 (with a triangle crossing two sides of f), y = 1 and x + y = 2
+    const Tri p = { vert( 10, 1, -30, -1 ), vert( 11, 1, 30, -1 ), vert( 12, 1, 0, 1 ) };
+    const Tri q = { vert( 13, -6, 1, -1 ), vert( 14, 6, 1, -1 ), vert( 15, 0, 1, 1 ) };
+    const Tri r = { vert( 16, -4, 6, -1 ), vert( 17, 6, -4, -1 ), vert( 18, 1, 1, 1 ) };
+    auto crossing = [] ( const Tri& a, const Tri& b )
+    {
+        PreciseCutPoint x;
+        x.tri = a;
+        x.tri2 = b;
+        return x;
+    };
+    CutTrianglePredicates preds;
+    preds.reset( f );
+    for ( int i = 0; i < 3; ++i )
+        preds.addPoint( VertId( i ), vertexPoint( f[i] ) );
+    preds.addPoint( 3_v, crossing( p, q ) );
+    preds.addPoint( 4_v, crossing( r, p ) );
+    preds.addPoint( 5_v, crossing( q, r ) );
+    // the crossings of the sides of f with p, at its ends
+    preds.addPoint( 6_v, { { f[0], f[1] }, p } );
+    preds.addPoint( 7_v, { { f[1], f[2] }, p } );
+    EXPECT_FALSE( preds.failed() );
+    for ( int a = 3; a < 6; ++a )
+        for ( int b = 3; b < 6; ++b )
+        {
+            if ( a == b )
+                continue;
+            const auto dir = preds.directionByPerturbation( VertId( a ), VertId( b ) );
+            ASSERT_TRUE( dir.has_value() );
+            EXPECT_EQ( preds.less( VertId( a ), VertId( b ) ), dir->x != 0 ? dir->x > 0 : dir->y > 0 );
+            EXPECT_EQ( preds.ccwFromBehind( VertId( b ), VertId( a ) ), dir->y != 0 ? dir->y < 0 : dir->x > 0 );
+        }
+    // the three crossings make a triangle by the perturbation, whose orientation the sides of the planes decide: two of them are on a cut
+    const bool c = preds.ccw( 3_v, 4_v, 5_v );
+    EXPECT_EQ( preds.ccwByLines( 3_v, 4_v, 5_v ), c );
+    EXPECT_EQ( preds.ccwByPerturbation( 3_v, 4_v, 5_v ), c );
+    EXPECT_EQ( preds.ccw( 4_v, 5_v, 3_v ), c );
+    EXPECT_EQ( preds.ccw( 4_v, 3_v, 5_v ), !c );
+    // the crossings on the cut by p between its ends 6 and 7, all bulging to the left of the cut in the direction of the sweep along it,
+    // here +y from 6 to 7, as the points of a side bulge inward: so the triangles of three of them are counterclockwise if they come
+    // against that direction
+    EXPECT_TRUE( preds.less( 6_v, 3_v ) == preds.less( 3_v, 7_v ) );
+    for ( VertId x : { 3_v, 4_v } )
+    {
+        EXPECT_EQ( preds.ccwByLines( 6_v, x, 7_v ), false );
+        EXPECT_EQ( preds.ccw( 6_v, x, 7_v ), false );
+        EXPECT_EQ( preds.ccw( 7_v, x, 6_v ), true );
+        EXPECT_EQ( preds.ccw( x, 7_v, 6_v ), false );
+    }
+    const bool along = preds.less( 3_v, 4_v ) == preds.less( 6_v, 7_v ); // 3 before 4 from 6 to 7
+    EXPECT_EQ( preds.ccw( 6_v, 3_v, 4_v ), !along );
+    EXPECT_EQ( preds.ccw( 7_v, 3_v, 4_v ), !along );
+    EXPECT_EQ( preds.ccw( 7_v, 4_v, 3_v ), along );
+    EXPECT_FALSE( preds.failed() );
+
+    // the definitions that make addPoint fail: a plane twice, a plane with two vertices of f (whose cut is a side), the plane of f,
+    // repeated ids in a plane
+    const PreciseCutPoint broken[] =
+    {
+        crossing( p, p ),
+        crossing( p, { p[1], p[2], p[0] } ),
+        crossing( p, { f[0], f[1], vert( 19, 0, 0, 5 ) } ),
+        crossing( f, p ),
+        crossing( p, { q[0], q[1], q[0] } ),
+    };
+    for ( const auto& x : broken )
+    {
+        preds.reset( f );
+        for ( int i = 0; i < 3; ++i )
+            preds.addPoint( VertId( i ), vertexPoint( f[i] ) );
+        EXPECT_FALSE( preds.failed() );
+        preds.addPoint( 3_v, x );
+        EXPECT_TRUE( preds.failed() );
+    }
 }
 
 } // namespace MR

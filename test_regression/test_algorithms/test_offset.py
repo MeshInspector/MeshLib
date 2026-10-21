@@ -276,14 +276,14 @@ def test_offset_weighted_shell(tmp_path):
     vertex_count = mesh.points.size()
     scalars = mrmeshpy.VertScalars(vertex_count)
     for i in range(vertex_count):
-        weight = abs(mesh.points.vec[i].x / 5) + 0.1
-        scalars.vec[i] = weight
+        weight = abs(mesh.points[mrmeshpy.VertId(i)].x / 5) + 0.1
+        scalars[mrmeshpy.VertId(i)] = weight
 
     # Setup parameters
     params = mrmeshpy.WeightedShell.ParametersMetric()
     params.offset = 0.05
     params.voxelSize = 0.1
-    params.dist.maxWeight = max(scalars.vec)
+    params.dist.maxWeight = max(scalars)
 
     # Run weightedMeshShell
     new_mesh = mrmeshpy.WeightedShell.meshShell(mesh, scalars, params)

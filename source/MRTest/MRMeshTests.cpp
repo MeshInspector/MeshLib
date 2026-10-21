@@ -449,7 +449,7 @@ TEST( MRMesh, BasicExport )
 
     const std::vector<ThreeVertIds> triangles = mesh.topology.getAllTriVerts();
 
-    const std::vector<Vector3f> & points =  mesh.points.vec;
+    const VertCoords & points = mesh.points;
     const int * vertexTripples = reinterpret_cast<const int*>( triangles.data() );
 
     (void)points;

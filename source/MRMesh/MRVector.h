@@ -24,6 +24,12 @@ public:
     using const_reference = typename std::vector<T>::const_reference;
     using iterator = typename std::vector<T>::iterator;
     using const_iterator = typename std::vector<T>::const_iterator;
+    using reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::reverse_iterator;
+    using const_reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::const_reverse_iterator;
+    using size_type = typename std::vector<T>::size_type;
+    using difference_type = typename std::vector<T>::difference_type;
+    using pointer = typename std::vector<T>::pointer;
+    using const_pointer = typename std::vector<T>::const_pointer;
 
     /// creates empty vector
     Vector() = default;
@@ -39,6 +45,15 @@ public:
 
     Vector( std::initializer_list<T> init ) : vec( init ) { }
 
+    /// replaces the contents with \p count copies of \p val
+    void assign( size_t count, const T & val MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::is_copy_assignable_v<T> ) { vec.assign( count, val ); }
+
+    /// replaces the contents with elements from range [first, last)
+    template< class InputIt >
+    void assign( InputIt first, InputIt last ) { vec.assign( first, last ); }
+
+    void assign( std::initializer_list<T> init ) { vec.assign( init ); }
+
     [[nodiscard]] bool operator == ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec == b.vec; }
     [[nodiscard]] bool operator != ( const Vector & b ) const MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::equality_comparable<T> ) { return vec != b.vec; }
 
@@ -47,6 +62,8 @@ public:
     [[nodiscard]] bool empty() const { return vec.empty(); }
 
     [[nodiscard]] std::size_t size() const { return vec.size(); }
+
+    [[nodiscard]] std::size_t max_size() const { return vec.max_size(); }
 
     void resize( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> && std::default_initializable<T> ) { vec.resize( newSize ); }
     void resize( size_t newSize, const T & t ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { vec.resize( newSize, t ); }
@@ -123,9 +140,28 @@ public:
     void push_back( T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) { vec.push_back( std::move( t ) ); }
     void pop_back() { vec.pop_back(); }
 
+    /// inserts \p t before \p pos
+    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::copy_constructible<T> && std::movable<T> ) { return vec.insert( pos, t ); }
+    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, T && t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.insert( pos, std::move( t ) ); }
+
+    /// inserts \p count copies of \p t before \p pos
+    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, size_t count, const T & t MR_LIFETIME_CAPTURE_BY_NESTED(this) ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::copy_constructible<T> && std::movable<T> ) { return vec.insert( pos, count, t ); }
+
     /// inserts elements from range [first, last) before \p pos
     template<class InputIt>
     iterator insert( const_iterator pos, InputIt first, InputIt last ) { return vec.insert( pos, first, last ); }
+
+    MR_BIND_IGNORE_PY iterator insert( const_iterator pos, std::initializer_list<T> init ) { return vec.insert( pos, init ); }
+
+    /// constructs an element in-place before \p pos
+    template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> && std::movable<T> )
+    iterator emplace( const_iterator pos, Args&&... args ) { return vec.emplace( pos, std::forward<Args>(args)... ); }
+
+    /// removes the element at \p pos
+    MR_BIND_IGNORE_PY iterator erase( const_iterator pos ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.erase( pos ); }
+
+    /// removes the elements in range [first, last)
+    MR_BIND_IGNORE_PY iterator erase( const_iterator first, const_iterator last ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::movable<T> ) { return vec.erase( first, last ); }
 
     template<typename... Args> MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::constructible_from<T, Args &&...> )
     T& emplace_back( Args&&... args ) { return vec.emplace_back( std::forward<Args>(args)... ); }
@@ -147,6 +183,19 @@ public:
     [[nodiscard]] T* data() MR_LIFETIMEBOUND { return vec.data(); }
     [[nodiscard]] const T* data() const MR_LIFETIMEBOUND { return vec.data(); }
 
+    [[nodiscard]] MR_BIND_IGNORE_PY iterator begin() MR_LIFETIMEBOUND { return vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator begin() const MR_LIFETIMEBOUND { return vec.begin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator cbegin() const MR_LIFETIMEBOUND { return vec.cbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY iterator end() MR_LIFETIMEBOUND { return vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator end() const MR_LIFETIMEBOUND { return vec.end(); }
+    [[nodiscard]] MR_BIND_IGNORE_PY const_iterator cend() const MR_LIFETIMEBOUND { return vec.cend(); }
+    [[nodiscard]] MR_BIND_IGNORE reverse_iterator rbegin() MR_LIFETIMEBOUND { return vec.rbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator rbegin() const MR_LIFETIMEBOUND { return vec.rbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator crbegin() const MR_LIFETIMEBOUND { return vec.crbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE reverse_iterator rend() MR_LIFETIMEBOUND { return vec.rend(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator rend() const MR_LIFETIMEBOUND { return vec.rend(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator crend() const MR_LIFETIMEBOUND { return vec.crend(); }
+
     void swap( Vector & b ) { vec.swap( b.vec ); }
 
     /// returns the amount of memory this object occupies on heap
@@ -156,6 +205,14 @@ public:
     [[nodiscard]] MR_BIND_IGNORE_PY friend auto begin( Vector<T, I> & a ) { return a.vec.begin(); }
     [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const Vector<T, I> & a ) { return a.vec.end(); }
     [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( Vector<T, I> & a ) { return a.vec.end(); }
+
+    /// removes all elements equal to \p value, returns the number of removed elements
+    template <typename U>
+    friend size_t erase( Vector<T, I> & a, const U & value ) { return std::erase( a.vec, value ); }
+
+    /// removes all elements satisfying \p pred, returns the number of removed elements
+    template <typename Pred>
+    friend size_t erase_if( Vector<T, I> & a, Pred pred ) { return std::erase_if( a.vec, pred ); }
 
     /// The user can directly manipulate the vector, they can't break anything anyway.
     std::vector<T> vec;

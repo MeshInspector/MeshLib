@@ -13,8 +13,8 @@ def test_position_verts_smooth():
     verts.set(mrmesh.VertId(0), False)
     mrmesh.positionVertsSmoothly(torus, verts, params)
 
-    p = torus.points.vec[0]
-    for i in torus.points.vec:
+    p = torus.points[mrmesh.VertId(0)]
+    for i in torus.points:
         assert i.x * i.x + i.y * i.y + i.z * i.z == p.x * p.x + p.y * p.y + p.z * p.z
         
 def test_position_verts_smooth_sharpbd():
@@ -27,8 +27,8 @@ def test_position_verts_smooth_sharpbd():
     verts.set(mrmesh.VertId(0), False)
     mrmesh.positionVertsSmoothlySharpBd(torus, verts)
 
-    p = torus.points.vec[0]
-    for i in torus.points.vec:
+    p = torus.points[mrmesh.VertId(0)]
+    for i in torus.points:
         assert i.x * i.x + i.y * i.y + i.z * i.z == p.x * p.x + p.y * p.y + p.z * p.z
 
 def test_inflate_verts_smooth():

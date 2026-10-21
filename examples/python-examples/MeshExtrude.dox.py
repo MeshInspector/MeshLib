@@ -18,7 +18,7 @@ verts_for_move = mrmeshpy.getIncidentVerts(mesh.topology, faces_to_extrude)
 # Move each vertex
 for v in range(verts_for_move.size()):
     if verts_for_move.test(mrmeshpy.VertId(v)):
-        mesh.points.vec[v] += mrmeshpy.Vector3f(0.0, 0.0, 1.0)
+        mesh.points[mrmeshpy.VertId(v)] += mrmeshpy.Vector3f(0.0, 0.0, 1.0)
 
 # Invalidate internal caches after manual changing
 mesh.invalidateCaches()

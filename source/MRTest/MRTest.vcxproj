@@ -149,6 +149,7 @@
     <ClCompile Include="MRTupleBindingsTests.cpp" />
     <ClCompile Include="MRViewportIdTests.cpp" />
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
+    <ClCompile Include="MRVectorTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />
     <ClCompile Include="MRMimallocRedirectTests.cpp" />
     <ClCompile Include="MRTiffTests.cpp" />

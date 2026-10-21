@@ -36,5 +36,5 @@ def test_numpy_conversions():
     vertNormsFromNp = mrmeshnumpy.fromNumpyArray(vertNormsNp)
 
     assert vertNormsFromNp.size() == vertNorms.size()
-    assert vertNormsNp.shape[0] == len(vertNorms.vec)
-    assert faceNormsNp.shape[0] == len(faceNorms.vec)
+    assert vertNormsNp.shape[0] == vertNorms.size()
+    assert faceNormsNp.shape[0] == faceNorms.size()

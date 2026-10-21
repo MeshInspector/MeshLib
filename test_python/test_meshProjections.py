@@ -13,6 +13,6 @@ def test_mesh_projections():
     assert signedDist.dist < 0.0
 
     allProjRes = mrmesh.projectAllMeshVertices(torusRef, torus)
-    assert allProjRes.vec.size() == torus.points.vec.size()
-    for i in allProjRes.vec:
+    assert allProjRes.size() == torus.points.size()
+    for i in allProjRes:
         assert i < 10

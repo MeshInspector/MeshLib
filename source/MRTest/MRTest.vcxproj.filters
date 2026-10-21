@@ -376,6 +376,9 @@
     <ClCompile Include="MRVolumeIndexerTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRVectorTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRVoxelsLoadTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

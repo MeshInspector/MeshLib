@@ -88,10 +88,6 @@ public:
         return vec[i];
     }
 
-    /// same as operator[], but throws std::out_of_range if \p i is outside the vector
-    [[nodiscard]] const_reference at( I i ) const MR_LIFETIMEBOUND { return vec.at( i ); }
-    [[nodiscard]]       reference at( I i )       MR_LIFETIMEBOUND { return vec.at( i ); }
-
     /// same as resize(newSize), which already grows the capacity geometrically
     [[deprecated( "use resize() instead" )]]
     void resizeWithReserve( size_t newSize ) MR_REQUIRES_IF_SUPPORTED( sizeof(T)>0 && std::default_initializable<T> )

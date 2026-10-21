@@ -16,9 +16,6 @@ TEST( MRMesh, VectorStdMethods )
     EXPECT_EQ( v, ( Vector<int, VertId>{ 4, 5 } ) );
     EXPECT_GE( v.max_size(), v.size() );
 
-    EXPECT_EQ( v.at( 1_v ), 5 );
-    EXPECT_THROW( (void)v.at( 2_v ), std::out_of_range );
-
     const int one = 1;
     v.insert( v.begin(), one );          // 1 4 5
     v.insert( v.end(), 6 );              // 1 4 5 6

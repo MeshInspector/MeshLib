@@ -909,9 +909,6 @@
     <ClInclude Include="MRIOParsing.h">
       <Filter>Source Files\IO</Filter>
     </ClInclude>
-    <ClInclude Include="MRTerrainTriangulation.h">
-      <Filter>Source Files\Triangulation</Filter>
-    </ClInclude>
     <ClInclude Include="MRDelaunayTriangulationXY.h">
       <Filter>Source Files\Triangulation</Filter>
     </ClInclude>

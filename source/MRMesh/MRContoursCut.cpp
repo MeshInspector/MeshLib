@@ -616,7 +616,9 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
     for ( int i = 0; i < loneFaces.size(); ++i )
     {
         auto& plan = plans[i];
-        if ( plan && isFillingMultipleEdgeFree( mesh.topology, *plan ) )
+        // every island or slit needs a chord to the rest of its face, so a plan without any leaves them unconnected
+        // (as where the cut of a side has already filled the face again, ending an open contour on that side)
+        if ( plan && !plan->items.empty() && isFillingMultipleEdgeFree( mesh.topology, *plan ) )
             executeTriangulateContourPlan( mesh, faceLoops[i].front().front(), *plan, loneFaces[i].f, nullptr, new2OldEdgeMap );
         else
         {

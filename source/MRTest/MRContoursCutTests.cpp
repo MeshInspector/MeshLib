@@ -568,6 +568,53 @@ TEST( MRMesh, CutMeshLoneSlitExact )
     }
 }
 
+namespace
+{
+
+// the square [0, 10]x[0, 10] in the plane z = 0 of two triangles: 0_f below its diagonal from 0_v to 2_v, 1_f above it
+Mesh makeSquareOfTwoTriangles()
+{
+    return Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 10, 0, 0 ), Vector3f( 10, 10, 0 ), Vector3f( 0, 10, 0 ) },
+        { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v } } );
+}
+
+// an island inside triangle 0_f of the square: the closed contour around the triangle (6, 2), (8, 2), (8, 4)
+OneMeshContour makeIslandInSquare( const Mesh& square )
+{
+    std::vector<MeshTriPoint> mtps;
+    for ( const auto& p : { Vector3f( 6, 2, 0 ), Vector3f( 8, 2, 0 ), Vector3f( 8, 4, 0 ), Vector3f( 6, 2, 0 ) } )
+        mtps.push_back( square.toTriPoint( 0_f, p ) );
+    auto res = surfaceLineToMeshContour( square, mtps );
+    EXPECT_TRUE( res.has_value() && res->closed && res->intersections.size() == 4 );
+    return res.value_or( OneMeshContour{} );
+}
+
+// the point of a contour on side ab of the square, which the contour crosses from the right of ab to its left
+OneMeshIntersection onSquareSide( const Mesh& square, VertId a, VertId b, const Vector3f& p )
+{
+    return { .primitiveId = square.topology.findEdge( a, b ), .coordinate = p };
+}
+
+} //anonymous namespace
+
+// an island inside triangle 0_f of the square, and an open contour from the side of the square in triangle 1_f to the middle of
+// the diagonal: the cut of the diagonal fills 0_f again with the end of the open contour as a new corner before the island is
+// connected, so the island has nothing to connect with there, and 0_f is reported as bad instead of the island being left unconnected
+TEST( MRMesh, CutMeshLoneContourInRefilledFace )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    const auto island = makeIslandInSquare( square );
+    const OneMeshContour open{ .intersections = {
+        onSquareSide( square, 3_v, 0_v, Vector3f( 0, 5, 0 ) ), onSquareSide( square, 2_v, 0_v, Vector3f( 5, 5, 0 ) ) } };
+    for ( bool islandFirst : { false, true } )
+    {
+        Mesh cut = square;
+        const auto res = cutMesh( cut, islandFirst ? OneMeshContours{ island, open } : OneMeshContours{ open, island } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.test( 0_f ) ) << "island first " << islandFirst;
+    }
+}
+
 TEST( MRMesh, MeshCollidePrecise )
 {
     const auto meshA = makeTorus( 1.1f, 0.5f, 8, 8 );

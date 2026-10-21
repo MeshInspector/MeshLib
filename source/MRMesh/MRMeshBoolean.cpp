@@ -334,6 +334,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     std::vector<EdgePath> cutA, cutB;
     OneMeshContours meshAContours;
     OneMeshContours meshBContours;
+    // the meshes cut here, which need the sorting data: a precut output takes its mesh uncut
+    const bool doCutA = needCutMeshA && !params.outPreCutA;
+    const bool doCutB = needCutMeshB && !params.outPreCutB;
     // original mesh is needed to properly sort edges intersections while cutting meshes
     // as far as meshes is going to be change in the same time we need to take copies before start cutting
     Mesh meshACopyBuffer; // (only used if meshes were not copied before, otherwise old copy will be used)
@@ -342,11 +345,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     std::unique_ptr<SortIntersectionsData> dataForB;
 
     tbb::task_group taskGroup;
-    if ( needCutMeshA )
+    if ( doCutA )
     {
         taskGroup.run( [&] ()
         {
-            if ( needCutMeshB )
+            if ( doCutB )
             {
                 if ( !intParams.originalMeshB )
                 {
@@ -362,9 +365,9 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         } );
     }
 
-    if ( needCutMeshB )
+    if ( doCutB )
     {
-        if ( needCutMeshA )
+        if ( doCutA )
         {
             if ( !intParams.originalMeshA )
             {
@@ -391,7 +394,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
 
     bool needInsideA = operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA;
     bool needInsideB = operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB;
-    if ( needCutMeshA && !params.outPreCutA )
+    if ( doCutA )
     {
         taskGroup.run( [&] ()
         {
@@ -413,7 +416,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         } );
     }
 
-    if ( needCutMeshB && !params.outPreCutB )
+    if ( doCutB )
     {
         Timer t( "CutMeshB" );
         FaceMap* cut2oldBPtr = params.mapper ? &params.mapper->maps[int( BooleanResultMapper::MapObject::B )].cut2origin : nullptr;
@@ -433,7 +436,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     }
     taskGroup.wait();
 
-    // the precut outputs take the meshes only after the cuts: where the operation does not cut one mesh,
+    // the precut outputs take the meshes only after the cuts: where one mesh is not cut (by the operation or for its precut output),
     // the cut of the other one sorts its intersections by that mesh itself, not by a copy;
     // nothing reads the intersections after that, so the last output takes them
     auto fillPreCut = [&] ( BooleanPreCutResult& out, Mesh& mesh, OneMeshContours& meshContours, bool isMeshA, bool last )

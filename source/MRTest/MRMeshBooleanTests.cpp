@@ -255,27 +255,32 @@ TEST( MRMesh, BooleanPreCutOfUncutMesh )
         const Mesh& b = swap ? cube : sphere;
         const auto op = swap ? BooleanOperation::InsideB : BooleanOperation::InsideA;
         const auto cubeObj = swap ? BooleanResultMapper::MapObject::B : BooleanResultMapper::MapObject::A;
-        BooleanPreCutResult preCut;
-        BooleanResultMapper mapper;
-        const auto res = boolean( a, b, op, { .mapper = &mapper, .outPreCutA = swap ? &preCut : nullptr, .outPreCutB = swap ? nullptr : &preCut } );
-        ASSERT_TRUE( res.valid() ) << res.errorString;
-        EXPECT_TRUE( res.meshABadContourFaces.none() && res.meshBBadContourFaces.none() );
-        EXPECT_TRUE( preCut.mesh == sphere );
-
-        // the cube is cut as by the operation without the precut output, whose result is the disc of the cube inside the sphere
         BooleanResultMapper fullMapper;
         const auto full = boolean( a, b, op, { .mapper = &fullMapper } );
         ASSERT_TRUE( full.valid() ) << full.errorString;
         EXPECT_TRUE( full.mesh.topology.checkValidity() );
-        EXPECT_EQ( full.mesh.topology.findNumHoles(), 1 );
+        EXPECT_EQ( full.mesh.topology.findNumHoles(), 1 ); // the disc of the cube inside the sphere
         EXPECT_GT( full.mesh.topology.numValidFaces(), 0 );
-        EXPECT_TRUE( mapper.getMaps( cubeObj ).cut2origin == fullMapper.getMaps( cubeObj ).cut2origin );
+
+        // with the precut output, through the const& overload and the Mesh&& one, the cube is cut as without it
+        for ( bool rvalue : { false, true } )
+        {
+            BooleanPreCutResult preCut;
+            BooleanResultMapper mapper;
+            const BooleanParameters params{ .mapper = &mapper, .outPreCutA = swap ? &preCut : nullptr, .outPreCutB = swap ? nullptr : &preCut };
+            const auto res = rvalue ? boolean( Mesh( a ), Mesh( b ), op, params ) : boolean( a, b, op, params );
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_TRUE( res.meshABadContourFaces.none() && res.meshBBadContourFaces.none() );
+            EXPECT_TRUE( preCut.mesh == sphere );
+            EXPECT_TRUE( mapper.getMaps( cubeObj ).cut2origin == fullMapper.getMaps( cubeObj ).cut2origin );
+        }
     }
 }
 
 // the precut output of either mesh of an operation cutting both, or of both meshes at once, has what cutMesh needs for the boolean's
 // exact cut: the cut of the precut mesh by its contours with sortData( the other mesh ) is the boolean's own one, here of a cube
-// with a lone contour of a small sphere, as mesh A and as mesh B, also with a rotated rigidB2A
+// with a lone contour of a small sphere, as mesh A and as mesh B, also with a rotated rigidB2A, through both overloads (where the Mesh&&
+// one copies no mesh: the cut of the other mesh sorts its intersections by the uncut one itself, and with both outputs nothing is cut)
 TEST( MRMesh, BooleanPreCutExactCut )
 {
     const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
@@ -304,33 +309,37 @@ TEST( MRMesh, BooleanPreCutExactCut )
                 {
                     if ( !wantA && !wantB )
                         continue;
-                    BooleanPreCutResult preA, preB;
-                    const auto res = boolean( a, b, op, { .rigidB2A = rigidB2A, .outPreCutA = wantA ? &preA : nullptr, .outPreCutB = wantB ? &preB : nullptr } );
-                    ASSERT_TRUE( res.valid() ) << res.errorString;
-                    for ( bool isA : { true, false } )
+                    for ( bool rvalue : { false, true } )
                     {
-                        if ( !( isA ? wantA : wantB ) )
-                            continue;
-                        SCOPED_TRACE( std::string( swap ? "sphere is A" : "cube is A" ) + ( rigidB2A ? ", rigidB2A" : "" ) +
-                            ( wantA && wantB ? ", both outputs" : "" ) + ( isA ? ", output A" : ", output B" ) );
-                        const auto& pre = isA ? preA : preB;
-                        EXPECT_TRUE( pre.mesh == ( isA ? a : b ) );
-                        EXPECT_EQ( pre.isMeshA, isA );
-                        EXPECT_EQ( pre.meshAVertsNum, a.topology.vertSize() );
-                        EXPECT_FALSE( pre.intersections.empty() );
-                        EXPECT_EQ( pre.rigidB2A.has_value(), rigidB2A != nullptr );
-                        if ( rigidB2A && pre.rigidB2A )
+                        BooleanPreCutResult preA, preB;
+                        const BooleanParameters params{ .rigidB2A = rigidB2A, .outPreCutA = wantA ? &preA : nullptr, .outPreCutB = wantB ? &preB : nullptr };
+                        const auto res = rvalue ? boolean( Mesh( a ), Mesh( b ), op, params ) : boolean( a, b, op, params );
+                        ASSERT_TRUE( res.valid() ) << res.errorString;
+                        for ( bool isA : { true, false } )
                         {
-                            EXPECT_TRUE( *pre.rigidB2A == *rigidB2A );
-                        }
+                            if ( !( isA ? wantA : wantB ) )
+                                continue;
+                            SCOPED_TRACE( std::string( swap ? "sphere is A" : "cube is A" ) + ( rigidB2A ? ", rigidB2A" : "" ) +
+                                ( wantA && wantB ? ", both outputs" : "" ) + ( isA ? ", output A" : ", output B" ) + ( rvalue ? ", Mesh&&" : "" ) );
+                            const auto& pre = isA ? preA : preB;
+                            EXPECT_TRUE( pre.mesh == ( isA ? a : b ) );
+                            EXPECT_EQ( pre.isMeshA, isA );
+                            EXPECT_EQ( pre.meshAVertsNum, a.topology.vertSize() );
+                            EXPECT_FALSE( pre.intersections.empty() );
+                            EXPECT_EQ( pre.rigidB2A.has_value(), rigidB2A != nullptr );
+                            if ( rigidB2A && pre.rigidB2A )
+                            {
+                                EXPECT_TRUE( *pre.rigidB2A == *rigidB2A );
+                            }
 
-                        Mesh cut = pre.mesh;
-                        FaceMap new2Old;
-                        const auto sortData = pre.sortData( isA ? b : a );
-                        const auto cutRes = cutMesh( cut, pre.contours, { .sortData = &sortData, .new2OldMap = &new2Old,
-                            .fillPart = isA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right } );
-                        EXPECT_TRUE( cutRes.fbsWithContourIntersections.none() );
-                        EXPECT_TRUE( new2Old == mapper.getMaps( isA ? BooleanResultMapper::MapObject::A : BooleanResultMapper::MapObject::B ).cut2origin );
+                            Mesh cut = pre.mesh;
+                            FaceMap new2Old;
+                            const auto sortData = pre.sortData( isA ? b : a );
+                            const auto cutRes = cutMesh( cut, pre.contours, { .sortData = &sortData, .new2OldMap = &new2Old,
+                                .fillPart = isA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right } );
+                            EXPECT_TRUE( cutRes.fbsWithContourIntersections.none() );
+                            EXPECT_TRUE( new2Old == mapper.getMaps( isA ? BooleanResultMapper::MapObject::A : BooleanResultMapper::MapObject::B ).cut2origin );
+                        }
                     }
                 }
             }

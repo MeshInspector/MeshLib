@@ -529,12 +529,12 @@ Expected<void> makeSignedByWindingNumber( FloatGrid& grid, const Vector3f& voxel
 
     if ( auto fwnByParts = std::dynamic_pointer_cast<IFastWindingNumberByParts>( fwn ) )
     {
-        auto func = [&] ( std::vector<float>&& vals, const Vector3i&, int zOffset ) -> Expected<void>
+        auto func = [&] ( Vector<float, VoxelId>&& vals, const Vector3i&, int zOffset ) -> Expected<void>
         {
             const auto offset = indexer.sizeXY() * zOffset;
             ParallelFor( size_t( 0 ), vals.size(), [&] ( size_t i )
             {
-                updateGrid( VoxelId( i + offset ), vals[i] );
+                updateGrid( VoxelId( i + offset ), vals[VoxelId( i )] );
             } );
             return {};
         };

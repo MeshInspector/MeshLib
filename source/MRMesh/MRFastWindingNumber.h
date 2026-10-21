@@ -85,7 +85,7 @@ public:
     /// \param data - block data
     /// \param dims - block dimensions
     /// \param zOffset - block offset in XY dimension
-    using GridByPartsFunc = std::function<Expected<void> ( std::vector<float>&& data, const Vector3i& dims, int zOffset )>;
+    using GridByPartsFunc = std::function<Expected<void> ( Vector<float, VoxelId> && data, const Vector3i& dims, int zOffset )>;
 
     /// calculates winding numbers in each point from a three-dimensional grid
     /// \param resFunc callback that gets a block of resulting winding numbers

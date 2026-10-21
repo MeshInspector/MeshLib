@@ -257,6 +257,11 @@ jobs:
           path: ./scripts/wheel/meshlib/meshlib/*.pyi
           retention-days: 1
 
+      - name: Boolean benchmark (static vs shared mimalloc)
+        if: ${{ matrix.config == 'Release' && matrix.ubsan != 'ON' }}
+        timeout-minutes: 30
+        run: python3 scripts/bench_bool.py ./build/Release/bin 9
+
       - name: Run Start-and-Exit Tests
         timeout-minutes: 3
         run: xvfb-run -a ./build/${{ matrix.config }}/bin/MeshViewer -hidden -noEventLoop -unloadPluginsAtEnd

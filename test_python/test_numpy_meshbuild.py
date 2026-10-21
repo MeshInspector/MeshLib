@@ -34,9 +34,9 @@ def test_numpy_meshbuild():
     assert b.get() == 1
     assert c.get() == 2
 
-    assert mesh.points.vec.size() == 4
-    np.testing.assert_almost_equal(mesh.points.vec[0].z, 0.0)
-    np.testing.assert_almost_equal(mesh.points.vec[2].x, 1.0)
+    assert mesh.points.size() == 4
+    np.testing.assert_almost_equal(mesh.points[mrmesh.VertId(0)].z, 0.0)
+    np.testing.assert_almost_equal(mesh.points[mrmesh.VertId(2)].x, 1.0)
 
 
 def test_numpy_makeManifold():

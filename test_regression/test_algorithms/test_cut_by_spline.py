@@ -10,7 +10,7 @@ input_folder = Path(test_files_path) / "algorithms" / "cut_by_spline"
 
 def _make_spline(mesh):
     # Control points form an already-closed contour (last point repeats the first).
-    control_points = mm.loadPoints(input_folder / "control_points_closed.xyz").points.vec
+    control_points = mm.loadPoints(input_folder / "control_points_closed.xyz").points
 
     # Project the control points onto the mesh and gather surface normals there.
     contour_points = mm.Contour3f()

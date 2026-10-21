@@ -17,11 +17,10 @@ def createTestMesh() -> mrmesh.Mesh:
     triangulation.vec[1] = mrmesh.ThreeVertIds([mrmesh.VertId(0), mrmesh.VertId(2), mrmesh.VertId(3)])
 
     mesh = mrmesh.Mesh()
-    mesh.points.vec.resize(4)
-    mesh.points.vec[0] = mrmesh.Vector3f(0, 0, 0)
-    mesh.points.vec[1] = mrmesh.Vector3f(1, 0, 0)
-    mesh.points.vec[2] = mrmesh.Vector3f(1, 1, 0)
-    mesh.points.vec[3] = mrmesh.Vector3f(0, 1, 0)
+    mesh.points.push_back(mrmesh.Vector3f(0, 0, 0))
+    mesh.points.push_back(mrmesh.Vector3f(1, 0, 0))
+    mesh.points.push_back(mrmesh.Vector3f(1, 1, 0))
+    mesh.points.push_back(mrmesh.Vector3f(0, 1, 0))
     mesh.topology = mrmesh.topologyFromTriangles(triangulation)
 
     # Basic assertions to verify the mesh is created correctly

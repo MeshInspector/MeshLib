@@ -19,7 +19,7 @@ def test_numpy_pointsbuild1():
 
     pc = mrmeshnumpy.pointCloudFromPoints(verts)
     assert pc.validPoints.count() == 4
-    assert pc.normals.vec.size() == 0
+    assert pc.normals.size() == 0
 
     # mrmesh uses float32 for vertex coordinates
     # however, you could also use float64
@@ -35,7 +35,7 @@ def test_numpy_pointsbuild1():
 
     pc = mrmeshnumpy.pointCloudFromPoints(verts, norms)
     assert pc.validPoints.count() == 4
-    assert pc.normals.vec.size() == 4
+    assert pc.normals.size() == 4
 
 
 def test_numpy_points_mesh():

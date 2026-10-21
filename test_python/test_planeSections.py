@@ -28,4 +28,4 @@ def test_plane_sections():
     validVerts = cube.topology.getValidVerts()
     for v in range(validVerts.size()):
         if validVerts.test(mrmesh.VertId(v)):
-            assert cube.points.vec[v].z >= 0
+            assert cube.points[mrmesh.VertId(v)].z >= 0

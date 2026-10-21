@@ -211,11 +211,11 @@ TEST( MRMesh, AlphaShapeSquare )
     const auto tris = findAlphaShapeAllTriangles( cloud, 0.8f );
     // the square is covered by two triangles from each side, and the sides take different diagonals;
     // in floating point all the four balls looked empty giving eight triangles
-    const std::vector<ThreeVertIds> expectedTris{
+    const Triangulation expectedTris{
         { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v }, // the diagonal 0-2 from the positive side
         { 0_v, 3_v, 1_v }, { 1_v, 3_v, 2_v }  // the diagonal 1-3 from the negative side
     };
-    EXPECT_EQ( tris.vec, expectedTris );
+    EXPECT_EQ( tris, expectedTris );
 
     const auto mesh = findAlphaShape( cloud, 0.8f );
     EXPECT_EQ( mesh.topology.numValidFaces(), 4 );

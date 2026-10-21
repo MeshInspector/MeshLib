@@ -26,16 +26,17 @@ namespace MRTest
                 else
                     edgeBTriACount++;
             }
-            Assert.That(edgeATriBCount, Is.EqualTo(80));
-            Assert.That(edgeBTriACount, Is.EqualTo(72));
+            // the second values are with FMA instructions (clang-cl on arm64), as in the C++ test of MRMeshBooleanTests.cpp
+            Assert.That(edgeATriBCount, Is.EqualTo(80).Or.EqualTo(76));
+            Assert.That(edgeBTriACount, Is.EqualTo(72).Or.EqualTo(76));
 
             var contours = orderIntersectionContours(meshA.topology, meshB.topology, intersections);
 
             Assert.That(contours.size(), Is.EqualTo((nuint)4));
-            Assert.That(contours[0].size(), Is.EqualTo((nuint)71));
-            Assert.That(contours[1].size(), Is.EqualTo((nuint)7));
-            Assert.That(contours[2].size(), Is.EqualTo((nuint)69));
-            Assert.That(contours[3].size(), Is.EqualTo((nuint)9));
+            Assert.That(contours[0].size(), Is.EqualTo((nuint)71).Or.EqualTo((nuint)69));
+            Assert.That(contours[1].size(), Is.EqualTo((nuint)7).Or.EqualTo((nuint)9));
+            Assert.That(contours[2].size(), Is.EqualTo((nuint)69).Or.EqualTo((nuint)71));
+            Assert.That(contours[3].size(), Is.EqualTo((nuint)9).Or.EqualTo((nuint)7));
             var aConts = new Std.Vector_MROneMeshContour();
             getOneMeshIntersectionContours(meshA, meshB, contours, aConts, null, conv);
             Assert.That(aConts.size(), Is.EqualTo((nuint)4));

@@ -39,7 +39,7 @@ ENDIF()
 
 IF(NOT MRVOXELS_NO_DICOM)
   find_package(GDCM CONFIG REQUIRED)
-  target_link_libraries(${PROJECT_NAME} PRIVATE gdcmIOD gdcmDICT gdcmDSED gdcmMEXD gdcmMSFF)
+  target_link_libraries(${PROJECT_NAME} PRIVATE gdcmIOD gdcmDICT gdcmDSED gdcmMSFF)
 ENDIF()
 
 IF(MR_PCH)

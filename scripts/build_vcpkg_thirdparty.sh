@@ -24,6 +24,9 @@ fi
 if [ -n "${CI}" ] ; then
   VCPKG_INSTALL_FLAGS=--debug
 fi
+if [[ $(uname -s) == Darwin ]] ; then
+  VCPKG_INSTALL_FLAGS="${VCPKG_INSTALL_FLAGS} --overlay-ports=${BASE_DIR}/thirdparty/vcpkg/ports-macos"
+fi
 
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \

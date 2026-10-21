@@ -230,136 +230,116 @@ Expected<TerrainEmbedder::MappedMeshContours> TerrainEmbedder::prepareTerrainCut
 
     auto offCont = offsetContour_( mc, cutOffset, fillOffset );
 
-    for ( int loneResolveTries = 0; loneResolveTries < 5; ++loneResolveTries )
+    std::vector<MeshTriPoint> mtps( offCont.contour.size() - 1 );
+    tbb::task_group_context ctx;
+    bool canceled = false;
+    ParallelFor( mtps, [&] ( size_t i )
     {
-        std::vector<MeshTriPoint> mtps( offCont.contour.size() - 1 );
-        tbb::task_group_context ctx;
-        bool canceled = false;
-        ParallelFor( mtps, [&] ( size_t i )
+        auto index = findOffsetContourIndex_( int( i ), offCont.idsShifts );
+        const auto& startPoint = mc.contour[index];
+        if ( mc.intBitSet.test( VertId( index ) ) )
         {
-            auto index = findOffsetContourIndex_( int( i ), offCont.idsShifts );
-            const auto& startPoint = mc.contour[index];
-            if ( mc.intBitSet.test( VertId( index ) ) )
-            {
-                mtps[i] = findProjection( startPoint, result_ ).mtp;
-                return;
-            }
-            auto line =
-                Line3f( startPoint,
-                    to3dim( offCont.contour[i] ) + Vector3f( 0, 0, startPoint.z ) +
-                    ( mc.cutBitSet.test( VertId( index ) ) ? Vector3f::plusZ() : Vector3f::minusZ() ) - startPoint );
-            auto interRes = rayMeshIntersect( result_, line, -FLT_MIN ); // - FLT_MIN here to handle vertex lying in the same plane
-            if ( !interRes )
-            {
-                if ( ctx.cancel_group_execution() )
-                    canceled = true;
-                return;
-            }
-            mtps[i] = interRes.mtp;
-        } );
-
-        if ( canceled )
-            return unexpected( "Cannot embed structure beyond terrain" );
-
-        filterDuplicates( mtps, offCont.idsShifts );
-
-        Contour2f planarCont( mtps.size() + 1 );
-        ParallelFor( mtps, [&] ( size_t i )
+            mtps[i] = findProjection( startPoint, result_ ).mtp;
+            return;
+        }
+        auto line =
+            Line3f( startPoint,
+                to3dim( offCont.contour[i] ) + Vector3f( 0, 0, startPoint.z ) +
+                ( mc.cutBitSet.test( VertId( index ) ) ? Vector3f::plusZ() : Vector3f::minusZ() ) - startPoint );
+        auto interRes = rayMeshIntersect( result_, line, -FLT_MIN ); // - FLT_MIN here to handle vertex lying in the same plane
+        if ( !interRes )
         {
-            planarCont[i] = to2dim( result_.triPoint( mtps[i] ) );
-        } );
-        planarCont.back() = planarCont.front();
+            if ( ctx.cancel_group_execution() )
+                canceled = true;
+            return;
+        }
+        mtps[i] = interRes.mtp;
+    } );
 
-        auto filterBt = filterBowties( planarCont );
-        std::vector<std::vector<MeshTriPoint>> noBowtiesMtps( filterBt.initIndices.size() );
-        for ( int i = 0; i < noBowtiesMtps.size(); ++i )
+    if ( canceled )
+        return unexpected( "Cannot embed structure beyond terrain" );
+
+    filterDuplicates( mtps, offCont.idsShifts );
+
+    Contour2f planarCont( mtps.size() + 1 );
+    ParallelFor( mtps, [&] ( size_t i )
+    {
+        planarCont[i] = to2dim( result_.triPoint( mtps[i] ) );
+    } );
+    planarCont.back() = planarCont.front();
+
+    auto filterBt = filterBowties( planarCont );
+    std::vector<std::vector<MeshTriPoint>> noBowtiesMtps( filterBt.initIndices.size() );
+    for ( int i = 0; i < noBowtiesMtps.size(); ++i )
+    {
+        const auto& initInds = filterBt.initIndices[i];
+        const auto& noBTCont = filterBt.contours[i];
+        auto& noBowtiesMtp = noBowtiesMtps[i];
+        noBowtiesMtp.resize( initInds.size() );
+        for ( int j = 0; j < initInds.size(); ++j )
         {
-            const auto& initInds = filterBt.initIndices[i];
-            const auto& noBTCont = filterBt.contours[i];
-            auto& noBowtiesMtp = noBowtiesMtps[i];
-            noBowtiesMtp.resize( initInds.size() );
-            for ( int j = 0; j < initInds.size(); ++j )
+            if ( initInds[j] != -1 )
+                noBowtiesMtp[j] = mtps[initInds[j]];
+            else
             {
-                if ( initInds[j] != -1 )
-                    noBowtiesMtp[j] = mtps[initInds[j]];
-                else
-                {
-                    auto line = Line3f( to3dim( noBTCont[j] ), Vector3f::plusZ() );
-                    auto interRes = rayMeshIntersect( result_, line, -FLT_MAX, FLT_MAX );
-                    if ( !interRes )
-                        return unexpected( "Cannot resolve bow ties on embedded structure wall" );
-                    noBowtiesMtp[j] = interRes.mtp;
-                }
+                auto line = Line3f( to3dim( noBTCont[j] ), Vector3f::plusZ() );
+                auto interRes = rayMeshIntersect( result_, line, -FLT_MAX, FLT_MAX );
+                if ( !interRes )
+                    return unexpected( "Cannot resolve bow ties on embedded structure wall" );
+                noBowtiesMtp[j] = interRes.mtp;
             }
         }
-
-        MappedMeshContours res;
-        res.filtBowTiesMap = std::move( filterBt.initIndices );
-        res.contours.resize( noBowtiesMtps.size() );
-        res.map.resize( noBowtiesMtps.size() );
-        OneMeshContours loneContours;
-        for ( int i = 0; i < res.contours.size(); ++i )
-        {
-            bool lone = true;
-            auto cont = noBowtiesMtps[i];
-            cont.push_back( cont.front() );
-            auto contourRes = surfaceLineToMeshContour( result_, cont,
-                [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int startInd, int endInd )->Expected<SurfacePath>
-            {
-                auto initSMtpIndex = res.filtBowTiesMap[i][startInd];
-                // the end of the last section is the closing point of cont, which repeats its first point
-                auto initEMtpIndex = res.filtBowTiesMap[i][endInd % res.filtBowTiesMap[i].size()];
-                auto baseSIndex = findOffsetContourIndex_( initSMtpIndex, offCont.idsShifts ) % bounds_[0].size();
-                auto baseEIndex = findOffsetContourIndex_( initEMtpIndex, offCont.idsShifts ) % bounds_[0].size();
-                auto planePoint = ( cutStructure_.orgPnt( bounds_[0][baseSIndex] ) + cutStructure_.orgPnt( bounds_[0][baseEIndex] ) ) * 0.5f;
-                auto ccwPath = trackSection( result_, start, end, planePoint, true );
-                auto cwPath = trackSection( result_, start, end, planePoint, false );
-                if ( ccwPath.has_value() && cwPath.has_value() )
-                {
-                    auto ccwL = surfacePathLength( result_, *ccwPath );
-                    auto cwL = surfacePathLength( result_, *cwPath );
-                    if ( ccwL < cwL )
-                        return ccwPath;
-                    else
-                        return cwPath;
-                }
-                else if ( ccwPath.has_value() )
-                    return ccwPath;
-                else if ( cwPath.has_value() )
-                    return cwPath;
-                else
-                {
-                    auto locRes = computeGeodesicPath( result_, start, end );
-                    if ( !locRes.has_value() )
-                        return unexpected( toString( locRes.error() ) );
-                    return *locRes;
-                }
-            }, &res.map[i] );
-            if ( !contourRes.has_value() )
-                return unexpected( contourRes.error() );
-            res.contours[i] = std::move( *contourRes );
-            for ( int j = 0; j < res.contours[i].intersections.size(); ++j )
-            {
-                if ( std::holds_alternative<EdgeId>( res.contours[i].intersections[j].primitiveId ) )
-                {
-                    lone = false;
-                    break;
-                }
-            }
-            if ( !lone )
-                continue;
-            loneContours.emplace_back( std::move( res.contours[i] ) );
-        }
-        if ( loneContours.empty() )
-        {
-            res.offsetMap = std::move( offCont.idsShifts );
-            res.intBitSet = std::move( mc.intBitSet );
-            res.cutBitSet = std::move( mc.cutBitSet );
-            return res;
-        }
-        subdivideLoneContours( result_, loneContours );
     }
-    return unexpected( "Cannot resolve lone cut on terrain" );
+
+    MappedMeshContours res;
+    res.filtBowTiesMap = std::move( filterBt.initIndices );
+    res.contours.resize( noBowtiesMtps.size() );
+    res.map.resize( noBowtiesMtps.size() );
+    for ( int i = 0; i < res.contours.size(); ++i )
+    {
+        auto cont = noBowtiesMtps[i];
+        cont.push_back( cont.front() );
+        auto contourRes = surfaceLineToMeshContour( result_, cont,
+            [&] ( const MeshTriPoint& start, const MeshTriPoint& end, int startInd, int endInd )->Expected<SurfacePath>
+        {
+            auto initSMtpIndex = res.filtBowTiesMap[i][startInd];
+            // the end of the last section is the closing point of cont, which repeats its first point
+            auto initEMtpIndex = res.filtBowTiesMap[i][endInd % res.filtBowTiesMap[i].size()];
+            auto baseSIndex = findOffsetContourIndex_( initSMtpIndex, offCont.idsShifts ) % bounds_[0].size();
+            auto baseEIndex = findOffsetContourIndex_( initEMtpIndex, offCont.idsShifts ) % bounds_[0].size();
+            auto planePoint = ( cutStructure_.orgPnt( bounds_[0][baseSIndex] ) + cutStructure_.orgPnt( bounds_[0][baseEIndex] ) ) * 0.5f;
+            auto ccwPath = trackSection( result_, start, end, planePoint, true );
+            auto cwPath = trackSection( result_, start, end, planePoint, false );
+            if ( ccwPath.has_value() && cwPath.has_value() )
+            {
+                auto ccwL = surfacePathLength( result_, *ccwPath );
+                auto cwL = surfacePathLength( result_, *cwPath );
+                if ( ccwL < cwL )
+                    return ccwPath;
+                else
+                    return cwPath;
+            }
+            else if ( ccwPath.has_value() )
+                return ccwPath;
+            else if ( cwPath.has_value() )
+                return cwPath;
+            else
+            {
+                auto locRes = computeGeodesicPath( result_, start, end );
+                if ( !locRes.has_value() )
+                    return unexpected( toString( locRes.error() ) );
+                return *locRes;
+            }
+        }, &res.map[i] );
+        if ( !contourRes.has_value() )
+            return unexpected( contourRes.error() );
+        res.contours[i] = std::move( *contourRes );
+    }
+    // a contour inside one triangle of the terrain, crossing none of its edges, is connected with the rest of the triangle by cutMesh in cutTerrain
+    res.offsetMap = std::move( offCont.idsShifts );
+    res.intBitSet = std::move( mc.intBitSet );
+    res.cutBitSet = std::move( mc.cutBitSet );
+    return res;
 }
 
 Expected<std::vector<EdgeLoop>> TerrainEmbedder::cutTerrain( const MappedMeshContours& mmc )

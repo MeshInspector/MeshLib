@@ -516,6 +516,35 @@ TEST( MRMesh, EmbedStructureLoneContour )
     }
 }
 
+// the wall of a small structure above a terrain of two big triangles reaches the terrain inside one of them, so the terrain is cut
+// along a lone contour, which the cut connects with the rest of the triangle; every face of the terrain in the result maps to
+// the triangle of the input terrain it is in
+TEST( MRMesh, EmbedStructureLoneTerrainContour )
+{
+    Mesh terrain = makePlane();
+    terrain.transform( AffineXf3f::linear( Matrix3f::scale( 40.f ) ) );
+    Mesh structure = makePlane();
+    structure.transform( AffineXf3f::translation( Vector3f( 8.f, -8.f, 0.5f ) ) ); // above the triangle below the diagonal y = x
+    const FaceId lower = findProjection( Vector3f( 8.f, -8.f, 0.f ), terrain ).proj.face;
+    ASSERT_TRUE( lower.valid() );
+    FaceMap new2Old;
+    const auto res = embedStructureToTerrain( terrain, structure, { .fillAngle = PI_F / 4, .cutAngle = PI_F / 4, .new2oldFaces = &new2Old } );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 1 ); // the border of the terrain
+    int numTerrainFaces = 0;
+    for ( auto f : res->topology.getValidFaces() )
+    {
+        if ( f >= new2Old.size() )
+            continue; // the faces of the structure and its walls come after those of the cut terrain
+        ++numTerrainFaces;
+        const auto c = res->triCenter( f );
+        EXPECT_TRUE( terrain.topology.hasFace( new2Old[f] ) ) << "face " << f;
+        EXPECT_EQ( new2Old[f] == lower, c.y < c.x ) << "face " << f;
+    }
+    EXPECT_GT( numTerrainFaces, 0 );
+}
+
 // two triangles sharing two vertices but not the edge between them (multiple edges connect the vertices) can meet only along
 // the segment between these vertices, so findSelfCollidingEdgeTrisPrecise skips them as the triangles with a shared edge,
 // but still finds all crossings of other edges and triangles

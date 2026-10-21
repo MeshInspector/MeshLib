@@ -10,6 +10,7 @@
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRVector2.h>
 #include <MRMesh/MRMakePlane.h>
+#include <MRMesh/MRMeshComponents.h>
 #include <cmath>
 #include <random>
 
@@ -595,6 +596,35 @@ OneMeshIntersection onSquareSide( const Mesh& square, VertId a, VertId b, const 
     return { .primitiveId = square.topology.findEdge( a, b ), .coordinate = p };
 }
 
+// cuts the square by the contours, which cross none of one another, and checks that the cut is valid without bad faces and keeps
+// the area, every island is connected, and the maps take every new face, and every new edge inside a triangle, to the triangle it is in
+void checkSquareCut( const Mesh& square, const OneMeshContours& contours )
+{
+    Mesh cut = square;
+    FaceMap new2Old;
+    NewEdgesMap new2OldEdges;
+    const auto res = cutMesh( cut, contours, { .new2OldMap = &new2Old, .new2oldEdgesMap = &new2OldEdges } );
+    const auto& tp = cut.topology;
+    EXPECT_TRUE( tp.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( tp.findNumHoles(), 1 ); // the border of the square
+    EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 ); // no island is left unconnected
+    EXPECT_NEAR( cut.area(), square.area(), 1e-5 * square.area() );
+    auto triangleOf = [] ( const Vector3f& p ) { return p.y < p.x ? 0_f : 1_f; };
+    for ( auto f : tp.getValidFaces() )
+    {
+        EXPECT_EQ( f < new2Old.size() ? new2Old[f] : FaceId(), triangleOf( cut.triCenter( f ) ) ) << "face " << f;
+    }
+    for ( const auto& [ue, old] : new2OldEdges.map )
+    {
+        const EdgeId e = ue;
+        const auto mid = 0.5f * ( cut.orgPnt( e ) + cut.destPnt( e ) );
+        if ( new2OldEdges.splitEdges.test( ue ) || std::abs( mid.x - mid.y ) < 1e-5f )
+            continue; // a part of an old edge, or on the diagonal
+        EXPECT_EQ( FaceId( old ), triangleOf( mid ) ) << "edge " << e;
+    }
+}
+
 } //anonymous namespace
 
 // an island inside triangle 0_f of the square, and an open contour from the side of the square in triangle 1_f to the middle of
@@ -612,6 +642,34 @@ TEST( MRMesh, CutMeshLoneContourInRefilledFace )
         const auto res = cutMesh( cut, islandFirst ? OneMeshContours{ island, open } : OneMeshContours{ open, island } );
         EXPECT_TRUE( cut.topology.checkValidity() );
         EXPECT_TRUE( res.fbsWithContourIntersections.test( 0_f ) ) << "island first " << islandFirst;
+    }
+}
+
+// a contour along the diagonal from 0_v to 2_v (0_f on its right) or back (0_f on its left), with an island inside 0_f, which the cut
+// connects with the rest of 0_f after removing it, or with a contour cutting off the corner of 0_f at 1_v, in either order: the faces
+// filled in 0_f map to it, also on the right of the diagonal, where they took the face on its left (1_f) before
+TEST( MRMesh, CutMeshContourAlongSideMaps )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    auto along = [&] ( VertId a, VertId b )
+    {
+        return OneMeshContour{ .intersections = {
+            { .primitiveId = a, .coordinate = square.points[a] }, { .primitiveId = b, .coordinate = square.points[b] } } };
+    };
+    const OneMeshContour corner{ .intersections = {
+        onSquareSide( square, 0_v, 1_v, Vector3f( 8, 0, 0 ) ), onSquareSide( square, 2_v, 1_v, Vector3f( 10, 2, 0 ) ) } };
+    const std::pair<const char*, OneMeshContour> alongs[] = { { "along 0-2", along( 0_v, 2_v ) }, { "along 2-0", along( 2_v, 0_v ) } };
+    const std::pair<const char*, OneMeshContour> others[] = { { "island", makeIslandInSquare( square ) }, { "corner", corner } };
+    for ( const auto& [alongName, alongContour] : alongs )
+    {
+        for ( const auto& [otherName, other] : others )
+        {
+            for ( bool alongFirst : { true, false } )
+            {
+                SCOPED_TRACE( std::string( alongName ) + ( alongFirst ? " before " : " after " ) + otherName );
+                checkSquareCut( square, alongFirst ? OneMeshContours{ alongContour, other } : OneMeshContours{ other, alongContour } );
+            }
+        }
     }
 }
 

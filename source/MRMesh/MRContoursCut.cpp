@@ -56,6 +56,7 @@ struct PathsEdgeIndex
 {
     bool hasLeft{true};
     bool hasRight{true};
+    FaceId right; // the face on the right of a path edge of the old mesh, while removedFaces has the one on its left
 };
 
 struct RemovedFaceInfo
@@ -243,6 +244,7 @@ PreCutResult doPreCutMesh( Mesh& mesh, const OneMeshContours& contours )
                                 newEdgeId = e;
                                 oldEdgesInfo[intersectionId].hasLeft = mesh.topology.left( newEdgeId ).valid();
                                 oldEdgesInfo[intersectionId].hasRight = mesh.topology.right( newEdgeId ).valid();
+                                oldEdgesInfo[intersectionId].right = mesh.topology.right( newEdgeId );
                                 break;
                             }
                         }
@@ -1342,16 +1344,18 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
                 continue;
             bool addLeftDesc = oldEdgesInfo[edgeId].hasLeft && !mesh.topology.left( path[edgeId] ).valid();
             bool addRightDesc = oldEdgesInfo[edgeId].hasRight && !mesh.topology.right( path[edgeId] ).valid();
+            // the hole on the right of an edge of the old mesh is in its right face, which another contour or a lone one removed later
+            const FaceId oldRightF = oldEdgesInfo[edgeId].right ? oldEdgesInfo[edgeId].right : oldf;
             // order does matter because bad holes have tunnels and passes through both left and right
             if ( !fillLeft )
             {
-                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldf, !fillRight );
+                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldRightF, !fillRight );
                 if ( addLeftDesc ) addHoleDesc( path[edgeId], oldf, true ); // pseudo hole should always be second
             }
             else
             {
                 if ( addLeftDesc ) addHoleDesc( path[edgeId], oldf, false ); // real hole should alwauys be first
-                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldf, !fillRight );
+                if ( addRightDesc ) addHoleDesc( path[edgeId].sym(), oldRightF, !fillRight );
             }
         }
     }

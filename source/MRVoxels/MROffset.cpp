@@ -207,10 +207,10 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
             assert( data.size() <= (size_t)dims.x * dims.y * dims.z );
             assert( zOffset == mesher.nextZ() );
             SimpleVolume res {
-                .data = std::move( data ),
                 .dims = dims,
                 .voxelSize = vol.voxelSize,
             };
+            res.data.vec = std::move( data );
             return mesher.addPart( res );
         };
         return

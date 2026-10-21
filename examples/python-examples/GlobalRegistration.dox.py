@@ -26,7 +26,7 @@ def main(argv):
     # the global registration can be applied to meshes and point clouds
     # to simplify the sample app, we will work with point clouds only
     input_clouds_num = len(file_args) - 1
-    inputs = []
+    inputs = mrmeshpy.Vector_MeshOrPointsXf_ObjId()
     # as ICP and MultiwayICP classes accept both meshes and point clouds,
     # the input data must be converted to special wrapper objects
     # NB: the wrapper objects hold *references* to the source data, NOT their copies
@@ -34,7 +34,7 @@ def main(argv):
     for i in range(input_clouds_num):
         points = mrmeshpy.loadPoints(file_args[i])
         # you may also set an affine transformation for each input as a second argument
-        inputs.append(mrmeshpy.MeshOrPointsXf(points, mrmeshpy.AffineXf3f()))
+        inputs.push_back(mrmeshpy.MeshOrPointsXf(points, mrmeshpy.AffineXf3f()))
 
         bbox = points.getBoundingBox()
         if not max_bbox or bbox.volume() > max_bbox.volume():
@@ -45,7 +45,7 @@ def main(argv):
     # set sampling voxel size
     sampling_params.samplingVoxelSize = max_bbox.diagonal() * 0.03
 
-    icp = mrmeshpy.MultiwayICP(mrmeshpy.Vector_MeshOrPointsXf_ObjId(inputs), sampling_params)
+    icp = mrmeshpy.MultiwayICP(inputs, sampling_params)
     icp.setParams(mrmeshpy.ICPProperties())
 
     # gather statistics
@@ -59,7 +59,7 @@ def main(argv):
     output = mrmeshpy.PointCloud()
     for i in range(input_clouds_num):
         xf = xfs.vec[i]
-        for point in inputs[i].obj.points():
+        for point in inputs.vec[i].obj.points():
             output.addPoint(xf(point))
 
     mrmeshpy.PointsSave.toAnySupportedFormat(output, file_args[-1])

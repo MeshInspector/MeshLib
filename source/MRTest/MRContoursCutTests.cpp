@@ -85,7 +85,7 @@ int checkOffsetContoursAndCut( const Mesh& mesh, const OneMeshContours& contours
 // the path from the last point back to the first one is empty, and the first path crosses the edge exactly at the last point
 TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
 {
-    std::vector<Vector3f> points;
+    VertCoords points;
     Triangulation t;
     for ( int y = 0; y < 6; ++y )
         for ( int x = 0; x < 6; ++x )
@@ -141,7 +141,7 @@ TEST( MRMesh, ClosedContourWithEmptyWrapAroundPath )
 TEST( MRMesh, BooleanIntersectionsSort )
 {
     Mesh meshA;
-    meshA.points = std::vector<Vector3f>
+    meshA.points = VertCoords
     {
         { 8.95297337f, 14.3548975f,-0.212119192f },
         { 8.98828983f, 14.3914976f,-0.198161319f },
@@ -156,7 +156,7 @@ TEST( MRMesh, BooleanIntersectionsSort )
     meshA.topology = MeshBuilder::fromTriangles( tA );
 
     Mesh meshB;
-    meshB.points = std::vector<Vector3f>
+    meshB.points = VertCoords
     {
         { 8.91892719f, 14.3419390f, -0.208497435f },
         { 8.99423218f, 14.4023476f, -0.208966389f },
@@ -195,7 +195,7 @@ TEST( MRMesh, BooleanIntersectionsSort )
 TEST( MRMesh, ClosedContourAlongBoundaryEdge )
 {
     Mesh mesh;
-    mesh.points = std::vector<Vector3f>{ { 0, 0, 0 }, { 1, 0, 0.3f }, { 0, 1, 0 }, { 1, 1, 0.3f } };
+    mesh.points = VertCoords{ { 0, 0, 0 }, { 1, 0, 0.3f }, { 0, 1, 0 }, { 1, 1, 0.3f } };
     mesh.topology = MeshBuilder::fromTriangles( Triangulation{ { 0_v, 1_v, 2_v }, { 1_v, 3_v, 2_v } } );
 
     std::vector<MeshTriPoint> mtps;
@@ -592,7 +592,7 @@ TEST( MRMesh, MeshCollidePrecise )
 // new vertices of the cut get ids from vertSize(), so invalid trailing vertices must not change the offset
 TEST( MRMesh, SurfaceOffsetWithInvalidTrailingVerts )
 {
-    std::vector<Vector3f> points;
+    VertCoords points;
     Triangulation t;
     for ( int y = 0; y < 6; ++y )
         for ( int x = 0; x < 6; ++x )
@@ -668,7 +668,7 @@ TEST( MRMesh, SurfaceOffsetAlongOpenBorder )
 {
     // 20x20 squares on [-10,10]^2 with alternating diagonals; the faces inside a wavy disk are kept
     const int n = 21;
-    std::vector<Vector3f> points;
+    VertCoords points;
     for ( int y = 0; y < n; ++y )
         for ( int x = 0; x < n; ++x )
             points.emplace_back( float( x - 10 ), float( y - 10 ), 0.0f );

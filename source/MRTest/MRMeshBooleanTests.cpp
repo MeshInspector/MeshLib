@@ -108,7 +108,7 @@ static Mesh makeWedge( float length, float halfWidth, float halfAngle )
 {
     const float h = length * std::tan( halfAngle );
     Mesh res;
-    res.points = std::vector<Vector3f>{
+    res.points = VertCoords{
         { 0.f, -halfWidth, 0.f }, { 0.f, halfWidth, 0.f },
         { -length, -halfWidth, h }, { -length, halfWidth, h },
         { -length, -halfWidth, -h }, { -length, halfWidth, -h } };
@@ -147,7 +147,7 @@ TEST( MRMesh, BooleanDisjointMeshes )
 static Mesh makeMeshWithMultipleEdge()
 {
     Mesh res;
-    res.points = std::vector<Vector3f>
+    res.points = VertCoords
     {
         {0.0f,0.0f,0.0f},
         {-0.5f,1.0f,0.0f},

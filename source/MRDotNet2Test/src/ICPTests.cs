@@ -12,23 +12,23 @@ namespace MRTest
         [Test]
         public void TestMultiwayICP()
         {
-            var inputs = new Std.Vector_MRMeshOrPointsXf();
+            var inputs = new Vector_MRMeshOrPointsXf_MRObjId();
             Box3f maxBBox = new Box3f();
 
             inputs.pushBack( new MeshOrPointsXf(makeSphere(new SphereParams(1.0f, 1000)), new AffineXf3f()));
-            Box3f bbox = inputs[0].obj.getObjBoundingBox();
+            Box3f bbox = inputs[new ObjId(0)].obj.getObjBoundingBox();
             if (!maxBBox.valid() || bbox.volume() > maxBBox.volume())
                 maxBBox = bbox;
 
             inputs.pushBack(new MeshOrPointsXf(makeSphere(new SphereParams(1.0f, 1000)), AffineXf3f.linear(Matrix3f.rotation(Vector3f.plusZ(), 0.1f))));
-            bbox = inputs[1].obj.getObjBoundingBox();
+            bbox = inputs[new ObjId(1)].obj.getObjBoundingBox();
             if (!maxBBox.valid() || bbox.volume() > maxBBox.volume())
                 maxBBox = bbox;
 
             MultiwayICPSamplingParameters samplingParams = new MultiwayICPSamplingParameters();
             samplingParams.samplingVoxelSize = maxBBox.diagonal() * 0.03f;
 
-            MultiwayICP icp = new MultiwayICP(new Vector_MRMeshOrPointsXf_MRObjId(Misc.Move(inputs)), samplingParams);
+            MultiwayICP icp = new MultiwayICP(inputs, samplingParams);
             ICPProperties iCPProperties = new ICPProperties();
             icp.setParams(iCPProperties);
             icp.updateAllPointPairs();

@@ -19,7 +19,7 @@ FaceNormals computePerFaceNormals( const Mesh & mesh )
 FaceNormals computePerFaceNormals( const MeshTopology & topology, const VertCoords & points )
 {
     MR_TIMER;
-    std::vector<Vector3f> res( topology.faceSize() );
+    FaceNormals res( topology.faceSize() );
     BitSetParallelFor( topology.getValidFaces(), [&]( FaceId f )
     {
         res[f] = normal( topology, points, f );
@@ -43,7 +43,7 @@ void computePerFaceNormals4( const Mesh & mesh, Vector4f* faceNormals, size_t si
 VertNormals computePerVertNormals( const Mesh & mesh )
 {
     MR_TIMER;
-    std::vector<Vector3f> res( mesh.topology.vertSize() );
+    VertNormals res( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
         res[v] = mesh.normal( v );
@@ -54,7 +54,7 @@ VertNormals computePerVertNormals( const Mesh & mesh )
 VertNormals computePerVertPseudoNormals( const Mesh & mesh )
 {
     MR_TIMER;
-    std::vector<Vector3f> res( mesh.topology.vertSize() );
+    VertNormals res( mesh.topology.vertSize() );
     BitSetParallelFor( mesh.topology.getValidVerts(), [&] ( VertId v )
     {
         res[v] = mesh.pseudonormal( v );

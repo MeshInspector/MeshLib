@@ -11,14 +11,14 @@ Mesh makeSolidOfRevolution( const Contour2f& profile, int resolution )
     const auto isClosed = ( profile.front() == profile.back() );
     const auto profileSize = profile.size() - int( isClosed );
 
-    std::vector<Vector3f> points( profileSize * resolution );
+    VertCoords points( profileSize * resolution );
     ParallelFor( points, [&] ( size_t index )
     {
         const auto angle = 2.f * PI_F * (float)( index / profileSize ) / (float)resolution;
         const auto x = std::cos( angle ), y = std::sin( angle );
 
         const auto& pp = profile[index % profileSize];
-        points[index] = {
+        points[VertId( index )] = {
             pp.x * x,
             pp.x * y,
             pp.y,

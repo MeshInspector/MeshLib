@@ -482,6 +482,10 @@ ASSUME_NPROC := $(call safe_shell,sysctl -n hw.physicalcpu)
 else
 # `--giga` uses 10^3 instead of 2^10, which is actually good for us, since it overreports a bit, which counters computers typically having slightly less RAM than 2^N gigs.
 ASSUME_RAM := $(shell LANG= free --giga 2>/dev/null | awk 'NR==2{print $$2}')
+ifeq ($(ASSUME_RAM),)
+# MSYS2 has no `free`. MemTotal is in KiB; convert to 10^9 bytes to match `--giga`.
+ASSUME_RAM := $(shell awk '/^MemTotal:/{printf "%d", $$2 * 1024 / 1000000000}' /proc/meminfo 2>/dev/null)
+endif
 ASSUME_NPROC := $(call safe_shell,nproc)
 endif
 
@@ -500,6 +504,8 @@ endif
 #   >= 7 cores, RAM < 32G (or unknown)  -> JOBS=cores, NUM_FRAGMENTS=64
 #   RAM >= 64G                          -> JOBS=cores, NUM_FRAGMENTS=cores (few big fragments)
 #   32G <= RAM < 64G                    -> JOBS=cores, NUM_FRAGMENTS=cores*2
+# Below 32G of known RAM, JOBS is also capped at RAM / (1 + 64/NUM_FRAGMENTS) so that the compiles don't swap:
+#   one Release fragment compile peaks at 1.55G with 64 fragments, 2.35G with 32, 3.85G with 16.
 # Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
 override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
 ifeq ($(call safe_shell,echo $$(( $(ASSUME_NPROC) < 7 ))),1)
@@ -514,6 +520,13 @@ JOBS := $(CAPPED_NPROC)
 else
 NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(CAPPED_NPROC) * 2 )))
 JOBS := $(CAPPED_NPROC)
+endif
+ifneq ($(and $(ASSUME_RAM),$(filter 1,$(call safe_shell,echo $$(( $(ASSUME_RAM) < 32 ))))),)
+override ram_jobs := $(call safe_shell,j=$$(( $(ASSUME_RAM) * $(NUM_FRAGMENTS) / ($(NUM_FRAGMENTS) + 64) )); echo $$(( j > 1 ? j : 1 )))
+ifeq ($(origin JOBS)$(call safe_shell,echo $$(( $(ram_jobs) < $(JOBS) ))),file1)
+JOBS := $(ram_jobs)
+override ram_string += (capped -j by RAM)
+endif
 endif
 MAKEFLAGS += -j$(JOBS)
 ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)

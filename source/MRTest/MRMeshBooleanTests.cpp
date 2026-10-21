@@ -197,7 +197,9 @@ TEST( MRMesh, BooleanLoneContours )
                 ++numInside;
             }
             if ( fromLone )
+            {
                 EXPECT_TRUE( std::abs( c.z - 2.f ) < eps && c.y < c.x + eps && c.x < 2.f + eps && c.y > -2.f - eps );
+            }
         }
         EXPECT_GT( numInside, 0 );
     };
@@ -347,9 +349,13 @@ TEST( MRMesh, BooleanMultipleEdgeThroughLoneFace )
         {
             const auto res = boolean( a, b, op );
             if ( res.valid() )
+            {
                 EXPECT_TRUE( res.mesh.topology.checkValidity() );
+            }
             else
+            {
                 EXPECT_TRUE( res.meshABadContourFaces.any() || res.meshBBadContourFaces.any() ) << res.errorString;
+            }
         }
     }
 }

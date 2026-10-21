@@ -9,6 +9,7 @@
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRConstants.h>
 #include <MRMesh/MRVector2.h>
+#include <MRMesh/MRMakePlane.h>
 #include <cmath>
 #include <random>
 
@@ -529,6 +530,41 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
         EXPECT_EQ( cut.topology.left( e ), f );
         // the two sides of the island are left without faces (Good fills no hole of a bad face), or filled
         EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::All ? 0 : 2 );
+    }
+}
+
+// a small square pierces a big triangle of a cube without crossing its edges, so the cube is cut along an open lone contour (a slit)
+// of three points on one line, where the sides and the diagonal of the square cross the triangle; the steps of the boolean before its cut
+// (as in the terrain embedding) give the exact sorting data, with the square as mesh A, and as mesh B, whose vertex ids the predicates shift
+TEST( MRMesh, CutMeshLoneSlitExact )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    // the square of side 0.4 in the plane y = -0.4, centered on the top z = 2 of the cube, in its triangle below the diagonal y = x
+    auto square = makePlane();
+    square.transform( AffineXf3f( Matrix3f( { 0.4f, 0, 0 }, { 0, 0, -0.4f }, { 0, 0.4f, 0 } ), Vector3f( 1.f, -0.4f, 2.f ) ) );
+
+    for ( bool squareIsA : { true, false } )
+    {
+        const auto& a = squareIsA ? square : cube;
+        const auto& b = squareIsA ? cube : square;
+        const auto conv = getVectorConverters( a, b );
+        const auto contours = orderIntersectionContours( a.topology, b.topology, findCollidingEdgeTrisPrecise( a, b, conv.toInt ) );
+        OneMeshContours cubeContours;
+        getOneMeshIntersectionContours( a, b, contours, squareIsA ? nullptr : &cubeContours, squareIsA ? &cubeContours : nullptr, conv );
+        ASSERT_EQ( cubeContours.size(), 1 );
+        ASSERT_EQ( cubeContours[0].intersections.size(), 3 );
+        EXPECT_FALSE( cubeContours[0].closed );
+        const SortIntersectionsData sortData{ square, contours, conv.toInt, nullptr, a.topology.vertSize(), squareIsA };
+
+        Mesh cut = cube;
+        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData } );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() ) << "square is " << ( squareIsA ? "A" : "B" );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 0 ); // the slit is connected and filled on both sides
+        EXPECT_NEAR( cut.area(), cube.area(), 1e-6 * cube.area() );
+        ASSERT_EQ( res.resultCut.size(), 1 );
+        EXPECT_EQ( res.resultCut[0].size(), 2 );
+        EXPECT_TRUE( isEdgePath( cut.topology, res.resultCut[0] ) );
     }
 }
 

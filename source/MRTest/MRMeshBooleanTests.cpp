@@ -20,6 +20,7 @@
 #include <MRMesh/MRRegularGridMesh.h>
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MREmbedTerrainStructure.h>
+#include <MRMesh/MRMeshProject.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <tuple>
@@ -147,7 +148,9 @@ TEST( MRMesh, BooleanDisjointMeshes )
 }
 
 // a small sphere pierces a big triangle of the cube without crossing its edges (a lone contour), alone, so that nothing else
-// cuts the triangle, or with another sphere crossing the edges of the same triangle; the cut connects the lone contour with the rest of the triangle
+// cuts the triangle, or with another sphere crossing the edges of the same triangle, or in the hole of a torus lying in the plane
+// of the triangle, which cuts it along two nested circles around the sphere's one; the cut connects the lone contours with the rest
+// of the triangle, and the mapper maps the faces made of the triangle back to it
 TEST( MRMesh, BooleanLoneContours )
 {
     const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
@@ -157,9 +160,49 @@ TEST( MRMesh, BooleanLoneContours )
     crossing.transform( AffineXf3f::translation( Vector3f( 0.f, 0.f, 2.f ) ) );
     Mesh both = lone;
     both.addMesh( crossing );
-    const auto xf = AffineXf3f::translation( Vector3f( 0.f, 0.f, 0.25f ) );
+    // the torus cuts the triangle along circles of radii about 0.4 and 0.8, and the small sphere in its hole along one of radius 0.15,
+    // around a point 1.13 or more from the sides; the torus is a little above the plane z = 2, which its inner circle of vertices would be in otherwise
+    Mesh islands = makeTorus( 0.6f, 0.2f, 16, 8 );
+    islands.transform( AffineXf3f::translation( Vector3f( 0.8f, -0.8f, 2.01f ) ) );
+    Mesh inner = makeSphere( { .radius = 0.15f, .numMeshVertices = 100 } );
+    inner.transform( AffineXf3f::translation( Vector3f( 0.8f, -0.8f, 2.f ) ) );
+    islands.addMesh( inner );
+    const auto xf = AffineXf3f::translation( Vector3f( 0.3f, -0.2f, 0.25f ) ) *
+        AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1.f, 2.f, 3.f ).normalized(), 0.7f ) );
+    // the triangle of the lone contours on the top z = 2 of the cube, below its diagonal y = x
+    const FaceId loneFace = findProjection( Vector3f( 1.f, -0.4f, 2.f ), cube ).proj.face;
+    ASSERT_TRUE( loneFace.valid() );
 
-    for ( const Mesh* spheres : { &lone, &both } )
+    // every face of a result comes from a valid face of one input; the faces in the plane of the triangle strictly inside it come from it,
+    // and those from it are inside it or on its sides
+    auto checkMapper = [&] ( const BooleanResult& r, const BooleanResultMapper& mapper, const Mesh& a, const Mesh& b, bool cubeIsA )
+    {
+        const auto mapA = mapper.getNew2OldFaceMap( BooleanResultMapper::MapObject::A );
+        const auto mapB = mapper.getNew2OldFaceMap( BooleanResultMapper::MapObject::B );
+        const float eps = 1e-4f;
+        int numInside = 0;
+        for ( auto f : r.mesh.topology.getValidFaces() )
+        {
+            const auto fa = f < mapA.size() ? mapA[f] : FaceId();
+            const auto fb = f < mapB.size() ? mapB[f] : FaceId();
+            EXPECT_NE( fa.valid(), fb.valid() );
+            EXPECT_TRUE( fa ? a.topology.hasFace( fa ) : b.topology.hasFace( fb ) );
+            const bool fromLone = ( cubeIsA ? fa : fb ) == loneFace;
+            const auto c = r.mesh.triCenter( f );
+            // the slivers along the contours have no reliable normal, while the other faces of the spheres there are nearly vertical
+            if ( std::abs( c.z - 2.f ) < eps && r.mesh.area( f ) > 1e-6 && std::abs( r.mesh.normal( f ).z ) > 0.99f
+                && c.y < c.x - eps && c.x < 2.f - eps && c.y > -2.f + eps )
+            {
+                EXPECT_TRUE( fromLone );
+                ++numInside;
+            }
+            if ( fromLone )
+                EXPECT_TRUE( std::abs( c.z - 2.f ) < eps && c.y < c.x + eps && c.x < 2.f + eps && c.y > -2.f - eps );
+        }
+        EXPECT_GT( numInside, 0 );
+    };
+
+    for ( const Mesh* spheres : { &lone, &both, &islands } )
     {
         const double tol = 1e-5 * ( cube.volume() + spheres->volume() );
         for ( bool swap : { false, true } )
@@ -171,19 +214,24 @@ TEST( MRMesh, BooleanLoneContours )
                 Mesh b = swap ? cube : *spheres;
                 if ( rigidB2A )
                     b.transform( rigidB2A->inverse() );
-                const auto inter = boolean( a, b, BooleanOperation::Intersection, rigidB2A );
-                const auto uni = boolean( a, b, BooleanOperation::Union, rigidB2A );
-                const auto diff = boolean( a, b, BooleanOperation::DifferenceAB, rigidB2A );
+                BooleanResultMapper interMapper, uniMapper, diffMapper;
+                const auto inter = boolean( a, b, BooleanOperation::Intersection, rigidB2A, &interMapper );
+                const auto uni = boolean( a, b, BooleanOperation::Union, rigidB2A, &uniMapper );
+                const auto diff = boolean( a, b, BooleanOperation::DifferenceAB, rigidB2A, &diffMapper );
                 ASSERT_TRUE( inter.valid() ) << inter.errorString;
                 ASSERT_TRUE( uni.valid() ) << uni.errorString;
                 ASSERT_TRUE( diff.valid() ) << diff.errorString;
                 for ( const auto* r : { &inter, &uni, &diff } )
                     EXPECT_EQ( r->mesh.topology.findNumHoles(), 0 );
-                // an island left in its triangle would make a separate component
+                // an island left in its triangle would make a separate component; the components of the intersection are the lower halves
+                // of the spheres and of the torus, which do not touch one another
                 EXPECT_EQ( MeshComponents::getNumComponents( uni.mesh ), 1 );
-                EXPECT_EQ( MeshComponents::getNumComponents( inter.mesh ), spheres == &both ? 2 : 1 );
+                EXPECT_EQ( MeshComponents::getNumComponents( inter.mesh ), spheres == &lone ? 1 : 2 );
                 EXPECT_NEAR( uni.mesh.volume() + inter.mesh.volume(), a.volume() + b.volume(), tol );
                 EXPECT_NEAR( diff.mesh.volume() + inter.mesh.volume(), a.volume(), tol );
+                checkMapper( inter, interMapper, a, b, !swap );
+                checkMapper( uni, uniMapper, a, b, !swap );
+                checkMapper( diff, diffMapper, a, b, !swap );
             }
         }
     }

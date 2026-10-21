@@ -1,19 +1,15 @@
-# The icon folders of a resource directory (icons, object_icons, independent_icons, logos) are packed into
-# resource/icons-<target>.zip in the output directory, which MR::RibbonIcons reads on start instead of
-# a thousand small files; the other resources are copied as files.
-set(MR_ICON_FOLDERS_REGEX "/(icons|object_icons|independent_icons|logos)$")
-
 # copies the resource directory of a target to the output directory and installs it,
-# with the icon folders packed into resource/icons-<target>.zip
+# with the icon folders packed into resource/icons-<target>.zip, which MR::RibbonIcons reads on start
 function(mr_add_resources TARGET_NAME)
+  set(ICON_FOLDERS_REGEX "/(icons|object_icons|independent_icons|logos)$")
   set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/resource")
   if(EMSCRIPTEN)
     set(DST_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/assets")
   else()
     set(DST_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
   endif()
-  file(COPY "${SRC_DIR}" DESTINATION "${DST_DIR}" REGEX "${MR_ICON_FOLDERS_REGEX}" EXCLUDE)
-  install(DIRECTORY "${SRC_DIR}" DESTINATION "${MR_RESOURCES_DIR}" REGEX "${MR_ICON_FOLDERS_REGEX}" EXCLUDE)
+  file(COPY "${SRC_DIR}" DESTINATION "${DST_DIR}" REGEX "${ICON_FOLDERS_REGEX}" EXCLUDE)
+  install(DIRECTORY "${SRC_DIR}" DESTINATION "${MR_RESOURCES_DIR}" REGEX "${ICON_FOLDERS_REGEX}" EXCLUDE)
 
   file(GLOB_RECURSE ICON_FILES CONFIGURE_DEPENDS
     "${SRC_DIR}/icons/*.png"

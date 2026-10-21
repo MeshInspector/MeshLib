@@ -55,17 +55,20 @@ MRMESH_API bool isClosed( const ContinuousContour& contour );
 /// Detects contours that fully lay inside one triangle
 /// if `ignoreOpen` then do not mark non-closed contours as lone, even if they really are
 /// returns they indices in contours
+[[deprecated( "cutMesh connects lone contours itself, and the boolean no longer uses this" )]]
 MRMESH_API std::vector<int> detectLoneContours( const ContinuousContours& contours, bool ignoreOpen = false );
 
 /// Removes contours with zero area (do not remove if contour is handle on topology)
 /// edgesTopology - topology on which contours are represented with edges
 /// faceContours - lone contours represented by faces (all intersections are in same mesh A face)
 /// edgeContours - lone contours represented by edges (all intersections are in mesh B edges, edgesTopology: meshB.topology)
+[[deprecated( "cutMesh connects lone contours itself, and the boolean no longer uses this" )]]
 MRMESH_API void removeLoneDegeneratedContours( const MeshTopology& edgesTopology,
     OneMeshContours& faceContours, OneMeshContours& edgeContours );
 
 /// Removes contours that fully lay inside one triangle from the contours
 /// if `ignoreOpen` then do not consider non-closed contours as lone, even if they really are
+[[deprecated( "cutMesh connects lone contours itself, and the boolean no longer uses this" )]]
 MRMESH_API void removeLoneContours( ContinuousContours& contours, bool ignoreOpen = false );
 
 }

@@ -18,6 +18,7 @@
 #include "MRBitSetParallelFor.h"
 #include "MRPrecisePredicates2.h"
 #include "MRPrecisePredicates3.h"
+#include "MRCutTrianglePredicates.h"
 #include "MRPch/MRTBB.h"
 #include <queue>
 #include <algorithm>
@@ -51,6 +52,9 @@ struct SweepLinePredicates
     std::function<void( VertId v, VertId a, VertId b, VertId c, VertId d )> addIntersectionPoint;
     // position of vertex v; tp is passed at call time because the queue's topology is moved into the output mesh
     std::function<Vector3f( const MeshTopology& tp, VertId v )> point;
+    // whether the predicates met points they cannot tell apart, after which their answers are arbitrary (empty if they cannot fail);
+    // findIntersections and makeMonotone check it after every event, the former also before the first one, and then stop with a failure
+    std::function<bool()> failed;
 };
 
 // the sweep-line predicates that depend only on the projected integer coordinates `pts2`;
@@ -256,8 +260,10 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
             break;
         i = nextI;
     }
-    assert( false );
-    return 0;
+    // only failed predicates get here (CutTrianglePredicates on invalid points), whose run stops at the end of the event;
+    // 1 is a valid index for every caller, while 0 is the queried edge itself (a position of -1 for the start vertex)
+    assert( predicates.failed && predicates.failed() );
+    return 1;
 }
 
 // same as above, reading the reference ray target from edges[0]'s dest (so edges[0] must be a valid
@@ -304,6 +310,9 @@ struct SweepLineParams
     /// one can disable merge for identical vertices, merge is useful on symbol contours
     bool allowMerge{ true };
 
+    /// if set, the loops of 2 edges (a slit: one edge taken both ways) are swept too, otherwise skipped; shorter loops are always skipped
+    bool allowTwoEdgeLoops{ false };
+
     /// optional out per-face winding numbers
     Vector<int, FaceId>* outFaceWinding{ nullptr };
 
@@ -334,9 +343,12 @@ public:
 
     bool findIntersections();
     void injectIntersections( IntersectionsMap* interMap );
-    void makeMonotone();
+    bool makeMonotone();
     void triangulate();
 private:
+    // whether the predicates failed, see SweepLinePredicates::failed
+    bool predicatesFailed_() const { return predicates_.failed && predicates_.failed(); }
+
     // clears the cached buffers of the previous run, keeping their capacity
     void resetCache_();
 
@@ -458,6 +470,8 @@ private:
     bool doSegmentSegmentIntersect_( VertId aOrg, VertId aDest, VertId bOrg, VertId bDest ) const;
     void checkIntersection_( int index, bool lower );
     void checkIntersection_( int indexLower );
+    // an intersection was found while params_.abortWhenIntersect, so the run fails
+    bool intersectionFound_{ false };
 
 public:
     // all the buffers the sweep-line triangulation reuses between runs sharing the cache;
@@ -580,14 +594,15 @@ MeshTopology* SweepLineQueue::runTopology( IntersectionsMap* interMap )
     if ( !findIntersections() )
         return nullptr;
     injectIntersections( interMap );
-    makeMonotone();
+    if ( !makeMonotone() )
+        return nullptr;
     triangulate();
     return &tp_;
 }
 
 bool SweepLineQueue::findIntersections()
 {
-    if ( multipleEdge_ )
+    if ( multipleEdge_ || predicatesFailed_() )
         return false;
     stage_ = Stage::Intersections;
     events_.clear();
@@ -599,11 +614,9 @@ bool SweepLineQueue::findIntersections()
         else if ( event.type == EventType::Destination )
             processDestenationEvent_( event.index );
         else if ( event.type == EventType::Intersection )
-        {
-            if ( params_.abortWhenIntersect )
-                return false;
             processIntersectionEvent_( event.index );
-        }
+        if ( intersectionFound_ || predicatesFailed_() )
+            return false;
         events_.push_back( event );
     }
     return true;
@@ -717,7 +730,7 @@ void SweepLineQueue::injectIntersections( IntersectionsMap* interMap )
             e = newE;
 }
 
-void SweepLineQueue::makeMonotone()
+bool SweepLineQueue::makeMonotone()
 {
     stage_ = Stage::Monotonation;
     startVertIndex_ = 0;
@@ -729,7 +742,10 @@ void SweepLineQueue::makeMonotone()
         else
             processDestenationEvent_( event.index );
         calculateWinding_();
+        if ( predicatesFailed_() )
+            return false;
     }
+    return true;
 }
 
 void SweepLineQueue::triangulate()
@@ -1145,6 +1161,11 @@ void SweepLineQueue::checkIntersection_( int i )
 
     if ( !doSegmentSegmentIntersect_( org1, dest1, org2, dest2 ) )
         return;
+    if ( params_.abortWhenIntersect )
+    {
+        intersectionFound_ = true; // the run fails, so the point of the intersection is not needed
+        return;
+    }
 
     auto minEdgeId = std::min( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
     auto maxEdgeId = std::max( activeSweepEdges_[i].edgeId, activeSweepEdges_[i + 1].edgeId );
@@ -1349,7 +1370,7 @@ void SweepLineQueue::initMeshByLoops_( const MeshTopology& inTp, const EdgeLoops
     for ( int loopId = 0; loopId < int( loops.size() ); ++loopId )
     {
         const auto& loop = loops[loopId];
-        if ( loop.size() < 3 )
+        if ( loop.size() < ( params_.allowTwoEdgeLoops ? 2 : 3 ) )
             continue;
         for ( int lId = 0; lId < loop.size() && !multipleEdge_; ++lId )
             addNewEdge( loop[lId], loopId, lId );
@@ -1809,25 +1830,25 @@ MeshTopology* triangulateDisjointContoursTopology( const Mesh& mesh, const EdgeL
     return triangulator.runTopology();
 }
 
-std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+// the monotone plan of the region bounded by loops, with the predicates that makePredicates builds for the given patch-to-input edge map
+template <typename MakePredicates>
+static std::optional<HoleFillPlan> getMonotonePlanImpl( const Mesh& mesh, const EdgeLoops& loops, MakePredicates&& makePredicates )
 {
     HoleFillPlan res;
     if ( loops.empty() )
         return res;
-    for ( const auto& loop : loops )
-        if ( loop.size() < 3 )
-            return {}; // the sweep skips such loops entirely, so their holes would stay unaddressed
 
     SweepLineQueue::Cache cache;
     WholeEdgeMap patchToInEdges; // initMeshByLoops_ reserves it from the loop sizes
     std::vector<MonotoneChord> chords;
-    SweepLineQueue triangulator( cache, mesh.topology, meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer ), loops,
-        { .abortWhenIntersect = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
+    SweepLineQueue triangulator( cache, mesh.topology, makePredicates( patchToInEdges, cache ), loops,
+        { .abortWhenIntersect = true, .allowTwoEdgeLoops = true, .outPatchMap = &patchToInEdges, .outChords = &chords } );
     if ( !triangulator.findIntersections() )
         return {};
     // passing findIntersections here means there is nothing to inject, so monotonation can run at
     // once; and it is where to stop - monotone parts are what the caller fills
-    triangulator.makeMonotone();
+    if ( !triangulator.makeMonotone() )
+        return {};
 
     // an anchor is a patch edge: either a loop edge copied from the mesh (patchToInEdges maps it back),
     // or, past those, a chord referenced by the item that will create it
@@ -1859,6 +1880,76 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
         res.items[k] = { code1, code2 };
     }
     return res;
+}
+
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal )
+{
+    return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap& patchToInEdges, SweepLineQueue::Cache& cache )
+    {
+        return meshSpacePredicates( mesh, loops, normal, patchToInEdges, &cache.pts2Buffer );
+    } );
+}
+
+std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf )
+{
+    // the distinct vertices of the loops (a vertex can be on several loops, or twice on a slit), sorted; vertex verts[i] is point i
+    // of the predicates, all added before the sweep, since no predicate may run after a failed addPoint
+    std::vector<VertId> verts;
+    for ( const auto& loop : loops )
+        for ( auto e : loop )
+            verts.push_back( mesh.topology.org( e ) );
+    std::sort( verts.begin(), verts.end() );
+    verts.erase( std::unique( verts.begin(), verts.end() ), verts.end() );
+    CutTrianglePredicates preds;
+    preds.reset( tri );
+    // two vertices defined alike make the predicates fail only if the sweep compares them, unless the shifts of their edges tell them apart
+    // (as the crossings of the edges of a multiple edge of the other mesh with their wedges), so every two of them are compared before
+    // the sweep, and the loops are rejected if that fails: a vertex point by its id, a crossing by the ids of its segment and triangle
+    // in any order, with the index of the point
+    std::vector<std::pair<std::array<int, 5>, int>> keys( verts.size() );
+    for ( int i = 0; i < verts.size(); ++i )
+    {
+        const auto d = pointOf( verts[i] );
+        preds.addPoint( VertId( i ), d );
+        auto& [k, pos] = keys[i];
+        pos = i;
+        if ( d.isVertex() )
+        {
+            k = { d.seg[0].id, -1, -1, -1, -1 };
+            continue;
+        }
+        k = { d.seg[0].id, d.seg[1].id, d.tri[0].id, d.tri[1].id, d.tri[2].id };
+        std::sort( k.begin(), k.begin() + 2 );
+        std::sort( k.begin() + 2, k.end() );
+    }
+    if ( preds.failed() )
+        return {};
+    std::sort( keys.begin(), keys.end() );
+    for ( size_t i = 0; i < keys.size(); ++i )
+        for ( size_t j = i + 1; j < keys.size() && keys[j].first == keys[i].first; ++j )
+            (void)preds.less( VertId( keys[i].second ), VertId( keys[j].second ) );
+    if ( preds.failed() )
+        return {};
+
+    Vector<VertId, VertId> pointIds; // the point of every vertex of the sweep
+    return getMonotonePlanImpl( mesh, loops, [&] ( const WholeEdgeMap&, SweepLineQueue::Cache& )
+    {
+        // samePos, addIntersectionPoint and point stay empty: the sweep on loops merges no points, stops at the first crossing
+        // and triangulates nothing here, so it never calls them
+        SweepLinePredicates p;
+        p.less = [&] ( VertId l, VertId r ) { return preds.less( pointIds[l], pointIds[r] ); };
+        p.ccw = [&] ( VertId a, VertId b, VertId c ) { return preds.ccw( pointIds[a], pointIds[b], pointIds[c] ); };
+        p.ccwFromBehind = [&] ( VertId b, VertId pivot ) { return preds.ccwFromBehind( pointIds[b], pointIds[pivot] ); };
+        p.addInputPoint = [&] ( VertId v, int contourId, int pointId )
+        {
+            const auto it = std::lower_bound( verts.begin(), verts.end(), mesh.topology.org( loops[contourId][pointId] ) );
+            pointIds.autoResizeSet( v, VertId( int( it - verts.begin() ) ) );
+        };
+        // the predicates can still fail on invalid points that the checks above miss, as three crossings of one cut on one line
+        p.failed = [&] { return preds.failed(); };
+        return p;
+    } );
 }
 
 }

@@ -3,10 +3,16 @@
 #include <gtest/gtest.h>
 #include <MRMesh/MRMeshBuilder.h>
 #include <MRMesh/MRTorus.h>
+#include <MRMesh/MRCube.h>
+#include <MRMesh/MREdgePaths.h>
 #include <MRMesh/MRRingIterator.h>
 #include <MRMesh/MRPlane3.h>
 #include <MRMesh/MRConstants.h>
+#include <MRMesh/MRVector2.h>
+#include <MRMesh/MRMakePlane.h>
+#include <MRMesh/MRMeshComponents.h>
 #include <cmath>
+#include <random>
 
 namespace MR
 {
@@ -429,6 +435,292 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
         // the part of (A,B,C) between B, C and the new point was not filled
         EXPECT_EQ( cut.topology.findNumHoles(), 1 );
         EXPECT_NEAR( cut.area(), mesh.area(), 1e-5f );
+    }
+}
+
+// a contour inside one triangle (a lone contour) is connected with the rest of the triangle by the cut, near the origin and far from it,
+// also where the contour fills most of the triangle; a closed contour is an island in the hole of the triangle, an open one a slit
+TEST( MRMesh, CutMeshLoneContour )
+{
+    // uniform values in [-1, 1] straight from the generator, whose output the standard specifies (unlike that of the distributions),
+    // so they are the same on every platform; the points made of them with std::cos and std::sin can differ in their last bits there,
+    // which the tolerances absorb
+    std::mt19937 gen( 1 );
+    auto random = [&] { return 2.0 * gen() / std::mt19937::max() - 1; };
+    auto randomVec = [&]
+    {
+        Vector3d res;
+        for ( int i = 0; i < 3; ++i )
+            res[i] = random();
+        return res;
+    };
+    for ( double dist : { 0.0, 1e5 } )
+    {
+        for ( float fill : { 0.5f, 0.9f } )
+        {
+            for ( int trial = 0; trial < 50; ++trial )
+            {
+                // an equilateral triangle in a random plane, so that every axis is dropped by the projection in some trials
+                const auto base = dist * randomVec();
+                const auto u = randomVec().normalized();
+                const auto v = cross( u, randomVec() ).normalized();
+                VertCoords points;
+                for ( int i = 0; i < 3; ++i )
+                    points.push_back( Vector3f( base + 10.0 * ( std::cos( 2 * PI * i / 3 ) * u + std::sin( 2 * PI * i / 3 ) * v ) ) );
+                const auto mesh = Mesh::fromTriangles( std::move( points ), { { 0_v, 1_v, 2_v } } );
+
+                // the triangle shrunk around its centroid to the given part of its area, with four points on every side
+                const auto e = mesh.topology.edgeWithLeft( 0_f );
+                const float k = std::sqrt( fill ), m = ( 1 - k ) / 3;
+                const std::array<Vector2f, 3> corners{ Vector2f( m, m ), Vector2f( m + k, m ), Vector2f( m, m + k ) };
+                std::vector<MeshTriPoint> mtps;
+                for ( int i = 0; i < 3; ++i )
+                    for ( int j = 0; j < 4; ++j )
+                    {
+                        const auto b = corners[i] + ( corners[( i + 1 ) % 3] - corners[i] ) * ( j / 4.0f );
+                        mtps.push_back( MeshTriPoint( e, TriPointf( b.x, b.y ) ) );
+                    }
+                auto closed = mtps;
+                closed.push_back( mtps.front() );
+                // the closed contour, the same without its last segment, and a slit of one segment (a hole loop of 2 edges)
+                for ( const auto& line : { closed, mtps, std::vector<MeshTriPoint>{ mtps[0], mtps[6] } } )
+                {
+                    auto contour = surfaceLineToMeshContour( mesh, line );
+                    ASSERT_TRUE( contour.has_value() );
+
+                    Mesh cut = mesh;
+                    NewEdgesMap new2OldEdges;
+                    auto res = cutMesh( cut, { *contour }, { .new2oldEdgesMap = &new2OldEdges } );
+                    EXPECT_TRUE( cut.topology.checkValidity() );
+                    EXPECT_TRUE( res.fbsWithContourIntersections.none() )
+                        << "distance " << dist << ", fill " << fill << ", trial " << trial << ", points " << line.size();
+                    EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the island or the slit is connected and filled on both sides
+                    EXPECT_NEAR( cut.area(), mesh.area(), 1e-3 * mesh.area() );
+                    // every new edge, as a chord connecting the contour with the sides, maps to the triangle (surface offset relies on it)
+                    for ( auto ue = UndirectedEdgeId( mesh.topology.undirectedEdgeSize() ); ue < cut.topology.undirectedEdgeSize(); ++ue )
+                    {
+                        const auto it = new2OldEdges.map.find( ue );
+                        ASSERT_NE( it, new2OldEdges.map.end() );
+                        EXPECT_FALSE( new2OldEdges.splitEdges.test( ue ) );
+                        EXPECT_EQ( it->second, 0 ); // 0_f
+                    }
+                    // the cut goes along the contour
+                    ASSERT_EQ( res.resultCut.size(), 1 );
+                    const auto& path = res.resultCut[0];
+                    ASSERT_EQ( path.size() + 1, contour->intersections.size() );
+                    EXPECT_TRUE( isEdgePath( cut.topology, path ) );
+                    for ( int i = 0; i < path.size(); ++i )
+                        EXPECT_EQ( cut.orgPnt( path[i] ), contour->intersections[i].coordinate );
+                }
+            }
+        }
+    }
+}
+
+// a lone contour crossing itself (a bowtie inside one triangle of a closed mesh) cannot be connected with the triangle;
+// the cut reports the triangle as bad and keeps it, so that its sides make no hole whichever faces are filled
+TEST( MRMesh, CutMeshSelfCrossingLoneContour )
+{
+    const auto mesh = makeCube();
+    const auto f = 0_f;
+    const auto e = mesh.topology.edgeWithLeft( f );
+    // side 0-1 crosses side 2-3
+    std::vector<MeshTriPoint> mtps;
+    for ( const auto& b : { Vector2f( 0.2f, 0.2f ), Vector2f( 0.5f, 0.4f ), Vector2f( 0.5f, 0.2f ), Vector2f( 0.2f, 0.4f ), Vector2f( 0.2f, 0.2f ) } )
+        mtps.push_back( MeshTriPoint( e, TriPointf( b.x, b.y ) ) );
+    const auto contour = surfaceLineToMeshContour( mesh, mtps );
+    ASSERT_TRUE( contour.has_value() );
+
+    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::Good, CutMeshParameters::ForceFill::All } )
+    {
+        Mesh cut = mesh;
+        const auto res = cutMesh( cut, { *contour }, { .forceFillMode = mode } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.test( f ) );
+        EXPECT_TRUE( cut.topology.hasFace( f ) );
+        EXPECT_EQ( cut.topology.left( e ), f );
+        // the two sides of the island are left without faces (Good fills no hole of a bad face), or filled
+        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::All ? 0 : 2 );
+    }
+}
+
+// a lone contour inside a triangle of zero area (its corners on one line) has no plane to connect it with the triangle in;
+// without the exact sorting data, the cut reports the triangle as bad and keeps it
+TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
+{
+    // corner 2_v of 1_f is on its side from 1_v to 0_v
+    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 10, 10, 0 ), Vector3f( 4, 4, 0 ), Vector3f( 0, 10, 0 ) },
+        { { 0_v, 1_v, 3_v }, { 1_v, 0_v, 2_v } } );
+    const auto e = mesh.topology.edgeWithLeft( 1_f );
+    OneMeshContour island;
+    for ( float t : { 1.f, 3.f, 7.f, 1.f } )
+        island.intersections.push_back( { .primitiveId = 1_f, .coordinate = Vector3f( t, t, 0 ) } );
+    island.closed = true;
+
+    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::All } )
+    {
+        Mesh cut = mesh;
+        const auto res = cutMesh( cut, { island }, { .forceFillMode = mode } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.test( 1_f ) );
+        EXPECT_TRUE( cut.topology.hasFace( 1_f ) );
+        EXPECT_EQ( cut.topology.left( e ), 1_f );
+        // the border of the mesh, and the two sides of the island unless they are filled
+        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::All ? 1 : 3 );
+    }
+}
+
+// a small square pierces a big triangle of a cube without crossing its edges, so the cube is cut along an open lone contour (a slit)
+// of three points on one line, where the sides and the diagonal of the square cross the triangle; the steps of the boolean before its cut
+// (as in the terrain embedding) give the exact sorting data, with the square as mesh A, and as mesh B, whose vertex ids the predicates shift
+TEST( MRMesh, CutMeshLoneSlitExact )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    // the square of side 0.4 in the plane y = -0.4, centered on the top z = 2 of the cube, in its triangle below the diagonal y = x
+    auto square = makePlane();
+    square.transform( AffineXf3f( Matrix3f( { 0.4f, 0, 0 }, { 0, 0, -0.4f }, { 0, 0.4f, 0 } ), Vector3f( 1.f, -0.4f, 2.f ) ) );
+
+    for ( bool squareIsA : { true, false } )
+    {
+        const auto& a = squareIsA ? square : cube;
+        const auto& b = squareIsA ? cube : square;
+        const auto conv = getVectorConverters( a, b );
+        const auto contours = orderIntersectionContours( a.topology, b.topology, findCollidingEdgeTrisPrecise( a, b, conv.toInt ) );
+        OneMeshContours cubeContours;
+        getOneMeshIntersectionContours( a, b, contours, squareIsA ? nullptr : &cubeContours, squareIsA ? &cubeContours : nullptr, conv );
+        ASSERT_EQ( cubeContours.size(), 1 );
+        ASSERT_EQ( cubeContours[0].intersections.size(), 3 );
+        EXPECT_FALSE( cubeContours[0].closed );
+        const SortIntersectionsData sortData{ square, contours, conv.toInt, nullptr, a.topology.vertSize(), squareIsA };
+
+        Mesh cut = cube;
+        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData } );
+        EXPECT_TRUE( res.fbsWithContourIntersections.none() ) << "square is " << ( squareIsA ? "A" : "B" );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_EQ( cut.topology.findNumHoles(), 0 ); // the slit is connected and filled on both sides
+        EXPECT_NEAR( cut.area(), cube.area(), 1e-6 * cube.area() );
+        ASSERT_EQ( res.resultCut.size(), 1 );
+        EXPECT_EQ( res.resultCut[0].size(), 2 );
+        EXPECT_TRUE( isEdgePath( cut.topology, res.resultCut[0] ) );
+    }
+}
+
+namespace
+{
+
+// the square [0, 10]x[0, 10] in the plane z = 0 of two triangles: 0_f below its diagonal from 0_v to 2_v, 1_f above it
+Mesh makeSquareOfTwoTriangles()
+{
+    return Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 10, 0, 0 ), Vector3f( 10, 10, 0 ), Vector3f( 0, 10, 0 ) },
+        { { 0_v, 1_v, 2_v }, { 0_v, 2_v, 3_v } } );
+}
+
+// an island inside triangle 0_f of the square: the closed contour around the triangle (6, 2), (8, 2), (8, 4)
+OneMeshContour makeIslandInSquare( const Mesh& square )
+{
+    std::vector<MeshTriPoint> mtps;
+    for ( const auto& p : { Vector3f( 6, 2, 0 ), Vector3f( 8, 2, 0 ), Vector3f( 8, 4, 0 ), Vector3f( 6, 2, 0 ) } )
+        mtps.push_back( square.toTriPoint( 0_f, p ) );
+    auto res = surfaceLineToMeshContour( square, mtps );
+    EXPECT_TRUE( res.has_value() && res->closed && res->intersections.size() == 4 );
+    return res.value_or( OneMeshContour{} );
+}
+
+// the point of a contour on side ab of the square, which the contour crosses from the right of ab to its left
+OneMeshIntersection onSquareSide( const Mesh& square, VertId a, VertId b, const Vector3f& p )
+{
+    return { .primitiveId = square.topology.findEdge( a, b ), .coordinate = p };
+}
+
+// cuts the square by the contours, which cross none of one another, and checks that the cut is valid without bad faces and keeps
+// the area, every island is connected, and the maps take every new face, and every new edge inside a triangle, to the triangle it is in
+void checkSquareCut( const Mesh& square, const OneMeshContours& contours )
+{
+    Mesh cut = square;
+    FaceMap new2Old;
+    NewEdgesMap new2OldEdges;
+    const auto res = cutMesh( cut, contours, { .new2OldMap = &new2Old, .new2oldEdgesMap = &new2OldEdges } );
+    const auto& tp = cut.topology;
+    EXPECT_TRUE( tp.checkValidity() );
+    EXPECT_TRUE( res.fbsWithContourIntersections.none() );
+    EXPECT_EQ( tp.findNumHoles(), 1 ); // the border of the square
+    EXPECT_EQ( MeshComponents::getNumComponents( cut ), 1 ); // no island is left unconnected
+    EXPECT_NEAR( cut.area(), square.area(), 1e-5 * square.area() );
+    auto triangleOf = [] ( const Vector3f& p ) { return p.y < p.x ? 0_f : 1_f; };
+    for ( auto f : tp.getValidFaces() )
+    {
+        EXPECT_EQ( f < new2Old.size() ? new2Old[f] : FaceId(), triangleOf( cut.triCenter( f ) ) ) << "face " << f;
+    }
+    for ( const auto& [ue, old] : new2OldEdges.map )
+    {
+        const EdgeId e = ue;
+        const auto mid = 0.5f * ( cut.orgPnt( e ) + cut.destPnt( e ) );
+        if ( new2OldEdges.splitEdges.test( ue ) || std::abs( mid.x - mid.y ) < 1e-5f )
+            continue; // a part of an old edge, or on the diagonal
+        EXPECT_EQ( FaceId( old ), triangleOf( mid ) ) << "edge " << e;
+    }
+}
+
+} //anonymous namespace
+
+// an island inside triangle 0_f of the square, and an open contour from the side of the square in triangle 1_f to the middle of
+// the diagonal: the cut of the diagonal fills 0_f again with the end of the open contour as a new corner before the island is
+// connected, so the island has nothing to connect with there, and 0_f is reported as bad instead of the island being left unconnected
+TEST( MRMesh, CutMeshLoneContourInRefilledFace )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    const auto island = makeIslandInSquare( square );
+    const OneMeshContour open{ .intersections = {
+        onSquareSide( square, 3_v, 0_v, Vector3f( 0, 5, 0 ) ), onSquareSide( square, 2_v, 0_v, Vector3f( 5, 5, 0 ) ) } };
+    for ( bool islandFirst : { false, true } )
+    {
+        Mesh cut = square;
+        const auto res = cutMesh( cut, islandFirst ? OneMeshContours{ island, open } : OneMeshContours{ open, island } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.test( 0_f ) ) << "island first " << islandFirst;
+    }
+}
+
+// a contour along the diagonal from 0_v to 2_v (0_f on its right) or back (0_f on its left), with an island inside 0_f, which the cut
+// connects with the rest of 0_f after removing it, or with a contour cutting off the corner of 0_f at 1_v, in either order: the faces
+// filled in 0_f map to it, also on the right of the diagonal, where they took the face on its left (1_f) before
+TEST( MRMesh, CutMeshContourAlongSideMaps )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    auto along = [&] ( VertId a, VertId b )
+    {
+        return OneMeshContour{ .intersections = {
+            { .primitiveId = a, .coordinate = square.points[a] }, { .primitiveId = b, .coordinate = square.points[b] } } };
+    };
+    const OneMeshContour corner{ .intersections = {
+        onSquareSide( square, 0_v, 1_v, Vector3f( 8, 0, 0 ) ), onSquareSide( square, 2_v, 1_v, Vector3f( 10, 2, 0 ) ) } };
+    const std::pair<const char*, OneMeshContour> alongs[] = { { "along 0-2", along( 0_v, 2_v ) }, { "along 2-0", along( 2_v, 0_v ) } };
+    const std::pair<const char*, OneMeshContour> others[] = { { "island", makeIslandInSquare( square ) }, { "corner", corner } };
+    for ( const auto& [alongName, alongContour] : alongs )
+    {
+        for ( const auto& [otherName, other] : others )
+        {
+            for ( bool alongFirst : { true, false } )
+            {
+                SCOPED_TRACE( std::string( alongName ) + ( alongFirst ? " before " : " after " ) + otherName );
+                checkSquareCut( square, alongFirst ? OneMeshContours{ alongContour, other } : OneMeshContours{ other, alongContour } );
+            }
+        }
+    }
+}
+
+// an island inside triangle 0_f of the square, and a contour from the side of the square in triangle 1_f through 0_f to its side
+// on the border of the square, in either order: the cut connects the island with the part of 0_f around it on the float path
+TEST( MRMesh, CutMeshLoneContourWithCrossingContour )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    const auto island = makeIslandInSquare( square );
+    const OneMeshContour crossing{ .intersections = { onSquareSide( square, 3_v, 0_v, Vector3f( 0, 2, 0 ) ),
+        onSquareSide( square, 2_v, 0_v, Vector3f( 1.5f, 1.5f, 0 ) ), onSquareSide( square, 1_v, 0_v, Vector3f( 6, 0, 0 ) ) } };
+    for ( bool islandFirst : { true, false } )
+    {
+        SCOPED_TRACE( islandFirst ? "island first" : "island second" );
+        checkSquareCut( square, islandFirst ? OneMeshContours{ island, crossing } : OneMeshContours{ crossing, island } );
     }
 }
 

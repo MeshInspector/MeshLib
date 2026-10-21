@@ -25,6 +25,11 @@ struct MR_BIND_IGNORE PreciseCutPoint
     /// the triangle whose plane the segment crosses; not used for a vertex
     std::array<PreciseVertCoords, 3> tri;
 
+    /// optional for a segment that is an edge of another mesh crossing the triangle: the third vertices of the two triangles of that edge,
+    /// in any order, with invalid ids if not given (as for a boundary edge); they tell apart the crossings of the edges of a multiple edge,
+    /// which are defined alike otherwise (see \ref CutTrianglePredicates)
+    std::array<PreciseVertCoords, 2> wedge;
+
     [[nodiscard]] bool isVertex() const { return !seg[1].id.valid(); }
 };
 
@@ -32,6 +37,11 @@ struct MR_BIND_IGNORE PreciseCutPoint
 /// line over the triangle; they never contradict the boolean's exact predicates, because every point gets the same
 /// simulation-of-simplicity perturbation by vertex ids as in \ref orient3d, and a point is on the side of a cut where
 /// the boolean's predicates put it;
+/// the crossings of a segment with the triangle defined alike (the edges of a multiple edge of another mesh), which that perturbation
+/// cannot tell apart and the boolean's predicates never compare, are told apart by the triangles of their edges: each edge is shifted by
+/// an amount infinitely smaller than every term of the perturbation, toward the third vertices of its triangles (PreciseCutPoint::wedge),
+/// or away from them if the triangles of another edge defined alike are in the angle between its own ones, so that the contours of two edges
+/// whose sheets touch along the segment without crossing do not cross either, while those of crossing sheets do;
 /// the sweep goes over the projection of the perturbed triangle on the plane of the two axes least aligned with its normal
 /// (dropping the axis of the largest component of the normal, the first one of equal components, or the axis of the leading
 /// term of the perturbed normal if the exact one is zero), meeting the points in the order of one linear functional,
@@ -56,7 +66,8 @@ public:
     /// to the largest v + 1, so the points take small local ids, not those of the mesh vertices; a crossing is inside the triangle it crosses,
     /// as \ref doTriangleSegmentIntersect finds them, which only Debug checks, since it takes several orient3d per point;
     /// a segment in the plane of its triangle crosses it after the perturbation, at a point that tends to an end of the segment
-    /// or to a point inside it; setting a point again forgets the orders found for its old definition, but not a failure;
+    /// or to a point inside it; setting a point again forgets the orders found for its old definition, but not a failure, and so does
+    /// setting one with a wedge after points defined alike were compared, since it may change their shifts;
     /// a vertex point that is not a corner of the triangle, repeated ids, a segment with an end on a vertex of its own triangle,
     /// a segment off the sides with a triangle other than this one (as one with a single end at a corner), or a segment that does not
     /// cross the plane of its triangle are failures (see failed)
@@ -67,7 +78,8 @@ public:
 
     /// the signs of the projected coordinates of q - p found by expanding the perturbation alone, as the sweep sees them:
     /// a coordinate whose leading term has a larger degree than that of the other one is zero; this is slow,
-    /// while less and ccwFromBehind decide most pairs by faster rules; nullopt if the points coincide after the perturbation too
+    /// while less and ccwFromBehind decide most pairs by faster rules; nullopt if the points coincide after the perturbation too,
+    /// as points defined alike do (only the shifts of their edges tell them apart)
     [[nodiscard]] MRMESH_API std::optional<Vector2i> directionByPerturbation( VertId p, VertId q ) const;
 
     /// whether triangle abc of distinct points is counterclockwise in the projection, for any three points: the first rule that applies
@@ -83,23 +95,27 @@ public:
     /// with a common vertex (for their crossings with this triangle), which ccw needs only for points on one line before the perturbation;
     /// the points on one side stay on one line after the perturbation, and they are taken
     /// as bulging inward a little, so three of them make a counterclockwise triangle if they come in the order
-    /// from vertex i+1 to vertex i of side i, up to a cyclic shift;
+    /// from vertex i+1 to vertex i of side i, up to a cyclic shift; where the line has the third point too, two of the points
+    /// are defined alike in valid input, and the shifts of their edges decide;
     /// nullopt if no two of the points are on a known line
     [[nodiscard]] MRMESH_API std::optional<bool> ccwByLines( VertId a, VertId b, VertId c ) const;
 
     /// the same as ccw found by expanding the perturbation alone, which is slow, while ccw decides most triangles by faster rules;
-    /// nullopt if the points are on one line after the perturbation too, as the points of one side are
+    /// nullopt if the points are on one line after the perturbation too, as the points of one side are, and two points defined alike
     [[nodiscard]] MRMESH_API std::optional<bool> ccwByPerturbation( VertId a, VertId b, VertId c ) const;
 
     /// whether the triangle of a point far behind pivot against the sweep, b and pivot is counterclockwise, for distinct b and pivot
     [[nodiscard]] MRMESH_API bool ccwFromBehind( VertId b, VertId pivot ) const;
 
-    /// whether the input broke a precondition that reset or addPoint checks, or a predicate met points it cannot tell apart, which valid
-    /// input never gives either: two points defined alike, or three points off the sides on one line also after the perturbation (as three
-    /// crossings of one cut, while valid input has two at most); it stays set till reset; the caller checks it after the addPoint calls
+    /// whether the input broke a precondition that reset or addPoint checks, or a predicate met points it cannot tell apart: two points
+    /// defined alike that the shifts of their edges do not tell apart (a vertex twice, crossings of a side, crossings without wedges or
+    /// with the same one, or with the segment parallel to the triangle before the perturbation, as with a zero normal), three points defined alike with
+    /// their shifts on one line, or three points off the sides on one line also after the perturbation (as three crossings of one cut,
+    /// while valid input has two at most, apart from points defined alike); it stays set till reset; the caller checks it after the addPoint calls
     /// and calls no predicate if it is set, since they take the points as valid (less may be cyclic then, and Debug asserts may fire);
     /// a failure that a predicate finds leaves the predicates callable, with arbitrary answers that the caller discards, and less a strict
-    /// total order (points defined alike compare alike with every other point, and by their ids with one another)
+    /// total order (points defined alike compare alike with every other point, and by their ids with one another if their shifts do not
+    /// tell them apart)
     [[nodiscard]] MRMESH_API bool failed() const;
 
 private:
@@ -114,19 +130,25 @@ private:
     /// defined in the .cpp file
     struct Impl;
 
+    /// the shift of a point defined alike with others; defined in the .cpp file
+    struct Shift;
+
     int compareExact_( VertId p, VertId q, bool yFirst ) const;
     int exactOrient_( VertId a, VertId b, VertId c ) const;
     bool ccwExact_( VertId a, VertId b, VertId c ) const;
     int orientSlow_( VertId a, VertId b, VertId c ) const;
     std::optional<bool> ccwBySides_( VertId a, VertId b, VertId c ) const;
     std::optional<bool> ccwByPlanes_( VertId a, VertId b, VertId c ) const;
+    std::optional<bool> ccwByShifts_( VertId a, VertId b, VertId c ) const;
     std::optional<Vector2i> coincidentDirection_( VertId p, VertId q ) const;
     std::optional<Vector2i> directionFromSide_( VertId p, VertId q ) const;
-    std::optional<Vector2i> perturbedDirection_( VertId p, VertId q ) const;
+    std::optional<Vector2i> perturbedDirection_( VertId p, VertId q, bool alike ) const;
+    std::optional<Vector2i> shiftDirection_( VertId p, VertId q ) const;
+    std::optional<Shift> shift_( VertId p ) const;
     std::optional<Line> commonLine_( VertId p, VertId q, bool withVertex ) const;
     Vector2i lineDirection_( const Line & l ) const;
     bool along_( const Vector2i & dir, VertId p, VertId q ) const;
-    bool sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, VertId x ) const;
+    int sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, VertId x ) const;
     void fail_() const;
 
     std::array<PreciseVertCoords, 3> tri_;

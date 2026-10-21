@@ -78,7 +78,8 @@ struct CutMeshResult
 /** \ingroup BooleanGroup
   * \brief Cuts mesh by given contours
   * 
-  * This function cuts mesh making new edges paths on place of input contours
+  * This function cuts mesh making new edges paths on place of input contours;
+  * a contour inside one face is connected with the rest of the face by new edges
   * \param mesh Input mesh that will be cut
   * \param contours Input contours to cut mesh with, find more \ref MR::OneMeshContours
   * \param params Parameters describing some cut options, find more \ref MR::CutMeshParameters

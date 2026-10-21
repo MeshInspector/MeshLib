@@ -143,7 +143,10 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
  * @brief splits the near-planar region bounded by \p loops in monotone parts, without triangulating them
  * this is the sweep-line triangulation stopped right after monotonation
  * @param loops one closed EdgeLoop per boundary of one region, bounding holes of \p mesh as trackRightBoundaryLoop
- *        returns them (a slit of one edge is a loop of 2 edges); which way round a loop runs does not matter
+ *        returns them (a slit of one edge is a loop of 2 edges, and a loop of one edge is skipped); which way round a loop runs
+ *        does not matter; the holes can be several parts of one region split by edges between them, as all the holes of a face
+ *        cut along contours (the parts between the contours that cross its sides, and both sides of every island), since an edge
+ *        taken both ways adds zero winding
  * @param normal the orientation the region is monotone around, see \ref triangulateDisjointContours
  * @return std::nullopt if the loops intersect or a chord would land in a face instead of a hole, so that
  *         the caller can fall back on filling every loop separately; otherwise a plan with numTris == 0
@@ -152,8 +155,9 @@ MR_BIND_IGNORE MRMESH_API MeshTopology* triangulateDisjointContoursTopology( con
  */
 MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops, const Vector3f& normal );
 
-/// same as above for the region inside one triangle of a mesh cut by the boolean, on the exact predicates of \ref CutTrianglePredicates,
-/// which never contradict the boolean's ones, so the region's loops are disjoint whenever the boolean's contours are
+/// same as above for the region of one triangle of a mesh cut by the boolean (the loops of all the holes of the triangle),
+/// on the exact predicates of \ref CutTrianglePredicates, which never contradict the boolean's ones, so the loops are disjoint
+/// whenever the boolean's contours are
 /// \param tri the triangle, counterclockwise around its normal
 /// \param pointOf the definition of every vertex on the loops, valid as \ref CutTrianglePredicates::addPoint requires
 /// \return std::nullopt also if two vertices on the loops are defined alike, or the predicates fail on the points

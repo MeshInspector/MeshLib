@@ -189,6 +189,39 @@ TEST( MRMesh, BooleanLoneContours )
     }
 }
 
+// the precut output of the mesh that the operation does not cut (A for InsideB, B for InsideA) takes it only after the cut
+// of the other mesh, which sorts its intersections by that mesh itself, not by a copy; here the cut of the cube connects
+// a lone contour, whose exact points are made of the vertices of the sphere
+TEST( MRMesh, BooleanPreCutOfUncutMesh )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    sphere.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+
+    for ( bool swap : { false, true } )
+    {
+        const Mesh& a = swap ? sphere : cube;
+        const Mesh& b = swap ? cube : sphere;
+        const auto op = swap ? BooleanOperation::InsideB : BooleanOperation::InsideA;
+        const auto cubeObj = swap ? BooleanResultMapper::MapObject::B : BooleanResultMapper::MapObject::A;
+        BooleanPreCutResult preCut;
+        BooleanResultMapper mapper;
+        const auto res = boolean( a, b, op, { .mapper = &mapper, .outPreCutA = swap ? &preCut : nullptr, .outPreCutB = swap ? nullptr : &preCut } );
+        ASSERT_TRUE( res.valid() ) << res.errorString;
+        EXPECT_TRUE( res.meshABadContourFaces.none() && res.meshBBadContourFaces.none() );
+        EXPECT_TRUE( preCut.mesh == sphere );
+
+        // the cube is cut as by the operation without the precut output, whose result is the disc of the cube inside the sphere
+        BooleanResultMapper fullMapper;
+        const auto full = boolean( a, b, op, { .mapper = &fullMapper } );
+        ASSERT_TRUE( full.valid() ) << full.errorString;
+        EXPECT_TRUE( full.mesh.topology.checkValidity() );
+        EXPECT_EQ( full.mesh.topology.findNumHoles(), 1 );
+        EXPECT_GT( full.mesh.topology.numValidFaces(), 0 );
+        EXPECT_TRUE( mapper.getMaps( cubeObj ).cut2origin == fullMapper.getMaps( cubeObj ).cut2origin );
+    }
+}
+
 // selfBoolean of a mesh of two parts, a cube and a small sphere piercing a big triangle of it without crossing its edges
 // (a lone contour); the parts are only reconnected along their intersection, so the result keeps the sum of their volumes
 TEST( MRMesh, SelfBooleanLoneContour )

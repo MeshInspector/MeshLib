@@ -388,12 +388,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     if ( params.cb && !params.cb( 0.33f ) )
         return { .errorString = stringOperationCanceled() };
 
-    if ( params.outPreCutA )
-    {
-        params.outPreCutA->contours = std::move( meshAContours );
-        params.outPreCutA->mesh = std::move( meshA );
-    }
-
     bool needInsideA = operation == BooleanOperation::InsideA || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceBA;
     bool needInsideB = operation == BooleanOperation::InsideB || operation == BooleanOperation::Intersection || operation == BooleanOperation::DifferenceAB;
     if ( needCutMeshA && !params.outPreCutA )
@@ -418,11 +412,6 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
         } );
     }
 
-    if ( params.outPreCutB )
-    {
-        params.outPreCutB->contours = std::move( meshBContours );
-        params.outPreCutB->mesh = std::move( meshB );
-    }
     if ( needCutMeshB && !params.outPreCutB )
     {
         Timer t( "CutMeshB" );
@@ -443,6 +432,18 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     }
     taskGroup.wait();
 
+    // the precut outputs take the meshes only after the cuts: where the operation does not cut one mesh,
+    // the cut of the other one sorts its intersections by that mesh itself, not by a copy
+    if ( params.outPreCutA )
+    {
+        params.outPreCutA->contours = std::move( meshAContours );
+        params.outPreCutA->mesh = std::move( meshA );
+    }
+    if ( params.outPreCutB )
+    {
+        params.outPreCutB->contours = std::move( meshBContours );
+        params.outPreCutB->mesh = std::move( meshB );
+    }
 
     if ( !params.forceCut && result.meshABadContourFaces.any() )
     {

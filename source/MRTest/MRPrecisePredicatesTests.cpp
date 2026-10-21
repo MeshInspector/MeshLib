@@ -1242,6 +1242,30 @@ TEST( MRMesh, PerturbationStages )
     EXPECT_EQ( last, 2 );
     EXPECT_FALSE( ps.firstStage( [&] ( int s ) { last = s; return std::optional<int>(); } ) );
     EXPECT_EQ( last, 3 );
+
+    // with degrees that do not fit in int64: the stages end before the first id whose terms can have degrees above it,
+    // here 5 with the radix 2^40 after 3 with 2^30, and its points and those of the larger ids stay unperturbed at every stage
+    const std::int64_t large[4] = { 10, std::int64_t( 1 ) << 30, 10, std::int64_t( 1 ) << 40 };
+    const detail::PerturbationStagesOf<4, true> bounded( vs, large, 4 );
+    ASSERT_EQ( bounded.numStages(), 1 );
+    EXPECT_EQ( bounded.place( 1 ), 1 );
+    EXPECT_EQ( bounded.at( 1, 1 ).d, 1 );
+    EXPECT_EQ( bounded.at( 0, 1 ).d, 0 );
+    EXPECT_EQ( bounded.at( 3, 1 ).d, 0 );
+    EXPECT_FALSE( bounded.startsAt( 3, 1 ) );
+    EXPECT_FALSE( bounded.firstStage( [&] ( int s ) { last = s; return std::optional<int>(); } ) );
+    EXPECT_EQ( last, 1 );
+    // the same radices with room for all: the stages of a bounded and of an unbounded expansion are the same
+    const detail::PerturbationStagesOf<4, true> fits( vs, radices, 4 );
+    ASSERT_EQ( fits.numStages(), 3 );
+    for ( int s = 1; s <= 3; ++s )
+    {
+        EXPECT_EQ( fits.place( s ), ps.place( s ) );
+        for ( int i = 0; i < 4; ++i )
+        {
+            EXPECT_EQ( fits.at( i, s ).d, ps.at( i, s ).d );
+        }
+    }
 }
 
 TEST( MRMesh, segmentIntersectionOrder3Scale )

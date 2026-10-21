@@ -33,12 +33,7 @@ up.y = 1
 up.z = 0
 
 newMesh = mrmesh.Mesh();
-newMesh.points.resize(3)
-newMesh.points[mrmesh.VertId(1)] = mrmesh.Vector3f(1, 0, 0)
-newMesh.points[mrmesh.VertId(2)] = mrmesh.Vector3f(0, 1, 0)
-
-tris = mrmesh.Triangulation()
-tris.push_back(mrmesh.ThreeVertIds( mrmesh.VertId(0),mrmesh.VertId(1),mrmesh.VertId(2) ))
-newMesh.topology = mrmesh.topologyFromTriangles(tris)
+newMesh.points = mrmesh.VertCoords([mrmesh.Vector3f(0, 0, 0), mrmesh.Vector3f(1, 0, 0), mrmesh.Vector3f(0, 1, 0)])
+newMesh.topology = mrmesh.topologyFromTriangles([mrmesh.ThreeVertIds( mrmesh.VertId(0),mrmesh.VertId(1),mrmesh.VertId(2) )])
 
 print(newMesh.topology.getValidFaces().count())

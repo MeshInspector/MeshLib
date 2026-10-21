@@ -272,6 +272,71 @@ TEST( MRMesh, BooleanPreCutOfUncutMesh )
     }
 }
 
+// the precut output of either mesh of an operation cutting both, or of both meshes at once, has what cutMesh needs for the boolean's
+// exact cut: the cut of the precut mesh by its contours with sortData( the other mesh ) is the boolean's own one, here of a cube
+// with a lone contour of a small sphere, as mesh A and as mesh B, also with a rotated rigidB2A
+TEST( MRMesh, BooleanPreCutExactCut )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    sphere.transform( AffineXf3f::translation( Vector3f( 1.f, -0.4f, 2.f ) ) );
+    const auto xf = AffineXf3f::translation( Vector3f( 0.3f, -0.2f, 0.25f ) ) *
+        AffineXf3f::linear( Matrix3f::rotation( Vector3f( 1.f, 2.f, 3.f ).normalized(), 0.7f ) );
+    const auto op = BooleanOperation::Intersection; // A is filled on the left of its cut, B on the right
+
+    for ( bool swap : { false, true } )
+    {
+        for ( const AffineXf3f* rigidB2A : { (const AffineXf3f*)nullptr, &xf } )
+        {
+            // rigidB2A moves the second mesh back in place
+            const Mesh& a = swap ? sphere : cube;
+            Mesh b = swap ? cube : sphere;
+            if ( rigidB2A )
+                b.transform( rigidB2A->inverse() );
+            BooleanResultMapper mapper;
+            const auto full = boolean( a, b, op, { .rigidB2A = rigidB2A, .mapper = &mapper } );
+            ASSERT_TRUE( full.valid() ) << full.errorString;
+
+            for ( bool wantA : { true, false } )
+            {
+                for ( bool wantB : { true, false } )
+                {
+                    if ( !wantA && !wantB )
+                        continue;
+                    BooleanPreCutResult preA, preB;
+                    const auto res = boolean( a, b, op, { .rigidB2A = rigidB2A, .outPreCutA = wantA ? &preA : nullptr, .outPreCutB = wantB ? &preB : nullptr } );
+                    ASSERT_TRUE( res.valid() ) << res.errorString;
+                    for ( bool isA : { true, false } )
+                    {
+                        if ( !( isA ? wantA : wantB ) )
+                            continue;
+                        SCOPED_TRACE( std::string( swap ? "sphere is A" : "cube is A" ) + ( rigidB2A ? ", rigidB2A" : "" ) +
+                            ( wantA && wantB ? ", both outputs" : "" ) + ( isA ? ", output A" : ", output B" ) );
+                        const auto& pre = isA ? preA : preB;
+                        EXPECT_TRUE( pre.mesh == ( isA ? a : b ) );
+                        EXPECT_EQ( pre.isMeshA, isA );
+                        EXPECT_EQ( pre.meshAVertsNum, a.topology.vertSize() );
+                        EXPECT_FALSE( pre.intersections.empty() );
+                        EXPECT_EQ( pre.rigidB2A.has_value(), rigidB2A != nullptr );
+                        if ( rigidB2A && pre.rigidB2A )
+                        {
+                            EXPECT_TRUE( *pre.rigidB2A == *rigidB2A );
+                        }
+
+                        Mesh cut = pre.mesh;
+                        FaceMap new2Old;
+                        const auto sortData = pre.sortData( isA ? b : a );
+                        const auto cutRes = cutMesh( cut, pre.contours, { .sortData = &sortData, .new2OldMap = &new2Old,
+                            .fillPart = isA ? CutMeshParameters::FillPart::Left : CutMeshParameters::FillPart::Right } );
+                        EXPECT_TRUE( cutRes.fbsWithContourIntersections.none() );
+                        EXPECT_TRUE( new2Old == mapper.getMaps( isA ? BooleanResultMapper::MapObject::A : BooleanResultMapper::MapObject::B ).cut2origin );
+                    }
+                }
+            }
+        }
+    }
+}
+
 // selfBoolean of a mesh of two parts, a cube and a small sphere piercing a big triangle of it without crossing its edges
 // (a lone contour); the parts are only reconnected along their intersection, so the result keeps the sum of their volumes
 TEST( MRMesh, SelfBooleanLoneContour )

@@ -321,6 +321,7 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     bool needCutMeshB = operation != BooleanOperation::InsideA && operation != BooleanOperation::OutsideA;
 
     converters = getVectorConverters( meshA, meshB, params.rigidB2A );
+    const size_t meshAVertsNum = meshA.topology.vertSize(); // before any cut of A
 
     // find and order intersections
     contours = orderIntersectionContours( meshA.topology, meshB.topology,
@@ -353,11 +354,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                     meshBCopyBuffer = meshB;
                     intParams.originalMeshB = &meshBCopyBuffer;
                 }
-                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshB, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false } );
+                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
             }
             else
                 // B is stable so no need copy
-                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshB, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), false } );
+                dataForA = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshB, contours, converters.toInt, params.rigidB2A, meshAVertsNum, false } );
         } );
     }
 
@@ -371,11 +372,11 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
                 meshACopyBuffer = meshA;
                 intParams.originalMeshA = &meshACopyBuffer;
             }
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ *intParams.originalMeshA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
         }
         else
             // A is stable so no need to copy
-            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshA, contours, converters.toInt, params.rigidB2A, meshA.topology.vertSize(), true } );
+            dataForB = std::make_unique<SortIntersectionsData>( SortIntersectionsData{ meshA, contours, converters.toInt, params.rigidB2A, meshAVertsNum, true } );
     }
     taskGroup.wait();
 
@@ -433,17 +434,22 @@ BooleanResult booleanImpl( Mesh&& meshA, Mesh&& meshB, BooleanOperation operatio
     taskGroup.wait();
 
     // the precut outputs take the meshes only after the cuts: where the operation does not cut one mesh,
-    // the cut of the other one sorts its intersections by that mesh itself, not by a copy
+    // the cut of the other one sorts its intersections by that mesh itself, not by a copy;
+    // nothing reads the intersections after that, so the last output takes them
+    auto fillPreCut = [&] ( BooleanPreCutResult& out, Mesh& mesh, OneMeshContours& meshContours, bool isMeshA, bool last )
+    {
+        out.mesh = std::move( mesh );
+        out.contours = std::move( meshContours );
+        out.intersections = last ? std::move( contours ) : contours;
+        out.toInt = converters.toInt;
+        out.rigidB2A = params.rigidB2A ? std::optional<AffineXf3f>( *params.rigidB2A ) : std::nullopt;
+        out.meshAVertsNum = meshAVertsNum;
+        out.isMeshA = isMeshA;
+    };
     if ( params.outPreCutA )
-    {
-        params.outPreCutA->contours = std::move( meshAContours );
-        params.outPreCutA->mesh = std::move( meshA );
-    }
+        fillPreCut( *params.outPreCutA, meshA, meshAContours, true, !params.outPreCutB );
     if ( params.outPreCutB )
-    {
-        params.outPreCutB->contours = std::move( meshBContours );
-        params.outPreCutB->mesh = std::move( meshB );
-    }
+        fillPreCut( *params.outPreCutB, meshB, meshBContours, false, true );
 
     if ( !params.forceCut && result.meshABadContourFaces.any() )
     {

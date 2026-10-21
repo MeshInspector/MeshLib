@@ -28,30 +28,9 @@ function(mr_enable_mimalloc target)
     find_package(mimalloc CONFIG REQUIRED)
     target_link_options(${target} PRIVATE "LINKER:-force_load,$<TARGET_FILE:mimalloc-static>")
   elseif(NOT EMSCRIPTEN)
-    # Linux: mimalloc's single object file linked into the executable overrides glibc's malloc for the
-    # whole process; a separate build keeps mimalloc's install rules out of the packages
-    set(_mimalloc_dir ${CMAKE_BINARY_DIR}/mimalloc)
-    if(NOT TARGET mimalloc_build)
-      include(ExternalProject)
-      ExternalProject_Add(mimalloc_build
-        URL https://github.com/microsoft/mimalloc/archive/refs/tags/v3.4.3.tar.gz
-        URL_HASH SHA256=7b043c26b64dde66344d144fbcac3664858a4eb32197793ea2a18feb32741ca1
-        INSTALL_DIR ${_mimalloc_dir}
-        CMAKE_ARGS
-          -DCMAKE_BUILD_TYPE=Release
-          -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-          -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
-          -DCMAKE_INSTALL_LIBDIR=lib
-          -DMI_INSTALL_TOPLEVEL=ON
-          -DMI_USE_CXX=ON
-          -DMI_BUILD_SHARED=OFF
-          -DMI_BUILD_TESTS=OFF
-        BUILD_BYPRODUCTS ${_mimalloc_dir}/lib/mimalloc.o
-      )
-    endif()
-    add_dependencies(${target} mimalloc_build)
-    # an object file, not a library: CMake may repeat link items, giving multiple definitions
-    set_source_files_properties(${_mimalloc_dir}/lib/mimalloc.o PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
-    target_sources(${target} PRIVATE ${_mimalloc_dir}/lib/mimalloc.o)
+    # Linux: the shared mimalloc overrides glibc's malloc for the whole process, and MeshLib libraries
+    # linking the same target share this one copy; thirdparty/cpm builds vcpkg's version for Ubuntu
+    find_package(mimalloc 3.4 EXACT CONFIG REQUIRED)
+    target_link_libraries(${target} PRIVATE mimalloc)
   endif()
 endfunction()

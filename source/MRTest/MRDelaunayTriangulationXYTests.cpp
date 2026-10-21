@@ -8,7 +8,7 @@ namespace MR
 
 TEST( MRMesh, DelaunayTriangulationXY )
 {
-    std::vector<Vector3f> points
+    VertCoords points
     {
         { 0, 0, 0 }, { 1, 0, 0 }, { 1, 1, 0 }, { 0, 1, 0 }, // square
         { 0.5f, 0.5f, 1 }, // its center
@@ -21,7 +21,7 @@ TEST( MRMesh, DelaunayTriangulationXY )
     EXPECT_EQ( mesh->topology.numValidFaces(), 6 );
 
     PointCloud cloud;
-    cloud.points = VertCoords( points.begin(), points.end() );
+    cloud.points = points;
     cloud.validPoints.resize( points.size(), true );
     cloud.validPoints.reset( VertId( 5 ) );
     auto cloudMesh = delaunayTriangulationXY( cloud );

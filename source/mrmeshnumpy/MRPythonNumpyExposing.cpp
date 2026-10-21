@@ -49,13 +49,13 @@ MR::VertCoords fromNumpyArrayInfo( const pybind11::buffer_info& bufInfo )
     return res;
 }
 
-std::vector<MR::Vector3f> fromNumpyArray( const pybind11::buffer& coords )
+MR::VertCoords fromNumpyArray( const pybind11::buffer& coords )
 {
     pybind11::buffer_info bufInfo = coords.request();
     if ( bufInfo.ndim != 2 || bufInfo.shape[1] != 3 )
         throw std::runtime_error( "shape of input python vector 'coords' should be (n,3)" );
 
-    return fromNumpyArrayInfo( bufInfo ).vec;
+    return fromNumpyArrayInfo( bufInfo );
 }
 
 MR::Mesh fromFV( const pybind11::buffer& faces, const pybind11::buffer& verts, const MR::MeshBuilder::BuildSettings & settings, bool duplicateNonManifoldVertices )
@@ -490,7 +490,7 @@ MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, NumpyMeshData, [] ( pybind11::module_& m 
     m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const MR::VertCoords& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
     m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const MR::FaceNormals& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
     m.def( "toNumpyArray", ( pybind11::array_t<double>( * )( const std::vector<MR::Vector3f>& ) )& toNumpyArray, pybind11::arg( "coords" ), "returns numpy array shapes [num coords,3] which represents coordinates from given vector" );
-    m.def( "fromNumpyArray", &fromNumpyArray, pybind11::arg( "coords" ), "constructs mrmeshpy.vectorVector3f from numpy ndarray with shape (n,3)" );
+    m.def( "fromNumpyArray", &fromNumpyArray, pybind11::arg( "coords" ), "constructs mrmeshpy.VertCoords from numpy ndarray with shape (n,3)" );
 } )
 
 MR_ADD_PYTHON_CUSTOM_DEF( mrmeshnumpy, PointCloudFromPoints, [] ( pybind11::module_& m )

@@ -21,6 +21,7 @@
 #include <MRMesh/MRMakePlane.h>
 #include <MRMesh/MREmbedTerrainStructure.h>
 #include <MRMesh/MRMeshProject.h>
+#include <MRPch/MRSuppressWarning.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <tuple>
@@ -641,6 +642,10 @@ TEST( MRMesh, BooleanResultMapper )
     EXPECT_EQ( mapsB.cut2origin.size(), 320 );
 }
 
+// the tests of the functions deprecated since cutMesh connects lone contours itself
+MR_SUPPRESS_WARNING_PUSH
+MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 )
+
 // the spheres of the Boolean benchmark (B rotated around Z by n times 0.1 degree) have lone contours (each inside one triangle) for some n;
 // subdivideLoneContours splits those triangles and updates the AABB tree instead of its rebuild
 TEST( MRMesh, SubdivideLoneContoursUpdatesAABBTree )
@@ -744,5 +749,7 @@ TEST( MRMesh, UpdateCollidingEdgeTrisPrecise )
         EXPECT_EQ( res, newRes );
     }
 }
+
+MR_SUPPRESS_WARNING_POP
 
 } //namespace MR

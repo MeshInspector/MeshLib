@@ -7,6 +7,7 @@
 #include "MRAffineXf3.h"
 #include "MRParallelFor.h"
 #include "MRphmap.h"
+#include "MRPch/MRSuppressWarning.h"
 #include <optional>
 
 namespace MR
@@ -353,7 +354,10 @@ void removeLoneDegeneratedContours( const MeshTopology& edgesTopology, OneMeshCo
 void removeLoneContours( ContinuousContours& contours, bool ignoreOpen )
 {
     MR_TIMER;
+    MR_SUPPRESS_WARNING_PUSH
+    MR_SUPPRESS_WARNING( "-Wdeprecated-declarations", 4996 ) // deprecated together with this function
     auto loneContours = detectLoneContours( contours, ignoreOpen );
+    MR_SUPPRESS_WARNING_POP
     for ( int i = int( loneContours.size() ) - 1; i >= 0; --i )
     {
         contours.erase( contours.begin() + loneContours[i] );

@@ -81,6 +81,7 @@ MR_BIND_OVERLOAD_SUFFIX() MRMESH_API PreciseCollisionResult findCollidingEdgeTri
  * \param res the result of findCollidingEdgeTrisPrecise with the same conv and rigidB2A before the splits
  * \param aFirstNewVert (bFirstNewVert) all vertices of mesh A (B) with this or larger ids appeared in the splits
  */
+[[deprecated( "cutMesh connects lone contours itself, and the boolean no longer uses this" )]]
 MRMESH_API void updateCollidingEdgeTrisPrecise( PreciseCollisionResult & res,
     const Mesh & a, VertId aFirstNewVert, const Mesh & b, VertId bFirstNewVert,
     ConvertToIntVector conv, const AffineXf3f* rigidB2A = nullptr );

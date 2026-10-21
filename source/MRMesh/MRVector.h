@@ -24,8 +24,8 @@ public:
     using const_reference = typename std::vector<T>::const_reference;
     using iterator = typename std::vector<T>::iterator;
     using const_iterator = typename std::vector<T>::const_iterator;
-    using reverse_iterator = typename std::vector<T>::reverse_iterator;
-    using const_reverse_iterator = typename std::vector<T>::const_reverse_iterator;
+    using reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::reverse_iterator;
+    using const_reverse_iterator MR_BIND_IGNORE = typename std::vector<T>::const_reverse_iterator;
     using size_type = typename std::vector<T>::size_type;
     using difference_type = typename std::vector<T>::difference_type;
     using pointer = typename std::vector<T>::pointer;
@@ -193,12 +193,12 @@ public:
     [[nodiscard]] MR_BIND_IGNORE_PY iterator end() MR_LIFETIMEBOUND { return vec.end(); }
     [[nodiscard]] MR_BIND_IGNORE_PY const_iterator end() const MR_LIFETIMEBOUND { return vec.end(); }
     [[nodiscard]] MR_BIND_IGNORE_PY const_iterator cend() const MR_LIFETIMEBOUND { return vec.cend(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY reverse_iterator rbegin() MR_LIFETIMEBOUND { return vec.rbegin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_reverse_iterator rbegin() const MR_LIFETIMEBOUND { return vec.rbegin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_reverse_iterator crbegin() const MR_LIFETIMEBOUND { return vec.crbegin(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY reverse_iterator rend() MR_LIFETIMEBOUND { return vec.rend(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_reverse_iterator rend() const MR_LIFETIMEBOUND { return vec.rend(); }
-    [[nodiscard]] MR_BIND_IGNORE_PY const_reverse_iterator crend() const MR_LIFETIMEBOUND { return vec.crend(); }
+    [[nodiscard]] MR_BIND_IGNORE reverse_iterator rbegin() MR_LIFETIMEBOUND { return vec.rbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator rbegin() const MR_LIFETIMEBOUND { return vec.rbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator crbegin() const MR_LIFETIMEBOUND { return vec.crbegin(); }
+    [[nodiscard]] MR_BIND_IGNORE reverse_iterator rend() MR_LIFETIMEBOUND { return vec.rend(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator rend() const MR_LIFETIMEBOUND { return vec.rend(); }
+    [[nodiscard]] MR_BIND_IGNORE const_reverse_iterator crend() const MR_LIFETIMEBOUND { return vec.crend(); }
 
     void swap( Vector & b ) { vec.swap( b.vec ); }
 

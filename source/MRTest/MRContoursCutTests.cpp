@@ -544,6 +544,32 @@ TEST( MRMesh, CutMeshSelfCrossingLoneContour )
     }
 }
 
+// a lone contour inside a triangle of zero area (its corners on one line) has no plane to connect it with the triangle in;
+// without the exact sorting data, the cut reports the triangle as bad and keeps it
+TEST( MRMesh, CutMeshLoneContourInZeroAreaFace )
+{
+    // corner 2_v of 1_f is on its side from 1_v to 0_v
+    const auto mesh = Mesh::fromTriangles( { Vector3f( 0, 0, 0 ), Vector3f( 10, 10, 0 ), Vector3f( 4, 4, 0 ), Vector3f( 0, 10, 0 ) },
+        { { 0_v, 1_v, 3_v }, { 1_v, 0_v, 2_v } } );
+    const auto e = mesh.topology.edgeWithLeft( 1_f );
+    OneMeshContour island;
+    for ( float t : { 1.f, 3.f, 7.f, 1.f } )
+        island.intersections.push_back( { .primitiveId = 1_f, .coordinate = Vector3f( t, t, 0 ) } );
+    island.closed = true;
+
+    for ( auto mode : { CutMeshParameters::ForceFill::None, CutMeshParameters::ForceFill::All } )
+    {
+        Mesh cut = mesh;
+        const auto res = cutMesh( cut, { island }, { .forceFillMode = mode } );
+        EXPECT_TRUE( cut.topology.checkValidity() );
+        EXPECT_TRUE( res.fbsWithContourIntersections.test( 1_f ) );
+        EXPECT_TRUE( cut.topology.hasFace( 1_f ) );
+        EXPECT_EQ( cut.topology.left( e ), 1_f );
+        // the border of the mesh, and the two sides of the island unless they are filled
+        EXPECT_EQ( cut.topology.findNumHoles(), mode == CutMeshParameters::ForceFill::All ? 1 : 3 );
+    }
+}
+
 // a small square pierces a big triangle of a cube without crossing its edges, so the cube is cut along an open lone contour (a slit)
 // of three points on one line, where the sides and the diagonal of the square cross the triangle; the steps of the boolean before its cut
 // (as in the terrain embedding) give the exact sorting data, with the square as mesh A, and as mesh B, whose vertex ids the predicates shift

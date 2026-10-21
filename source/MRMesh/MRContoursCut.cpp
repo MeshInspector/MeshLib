@@ -612,6 +612,9 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
         // normalized before the conversion to float, which could flush it to zero or overflow at extreme scales
         const auto& p = mesh.points;
         const auto normal = dirDblArea( Triangle3d{ Vector3d( p[lf.verts[0]] ), Vector3d( p[lf.verts[1]] ), Vector3d( p[lf.verts[2]] ) } );
+        // corners on one line give no normal, so no plane to connect the islands in: the plan stays empty, and the face is reported
+        if ( normal == Vector3d() )
+            return;
         plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, Vector3f( normal.normalized() ) );
     } );
 

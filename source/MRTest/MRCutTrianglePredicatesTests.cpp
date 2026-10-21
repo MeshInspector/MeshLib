@@ -962,7 +962,7 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
         EXPECT_TRUE( preds.failed() );
     }
 
-    // two points defined alike, the second one with the segment backward, which less cannot order: it orders them by their ids,
+    // two points defined alike without wedges, the second one with the segment backward, which less cannot order: it orders them by their ids,
     // and alike with the other points, also with a third point at their position, so it stays a strict total order
     auto alike = [&]
     {
@@ -1007,6 +1007,301 @@ TEST( MRMesh, CutTrianglePredicatesFailed )
     EXPECT_FALSE( preds.failed() );
     (void)preds.less( 1_v, 3_v );
     EXPECT_TRUE( preds.failed() );
+}
+
+namespace
+{
+
+// the direction in which the crossing of segment ab of p with the plane of f moves when the segment moves toward the wedge w0, w1 of p,
+// by u = w0 + w1 - a - b: u - ( n.u ) / ( n.d ) * d for d = b - a and the normal n of f, times |n.d|, projected on axes kx, ky
+Vector2i64 shiftOf( const Tri& f, const PreciseCutPoint& p, int kx, int ky )
+{
+    const auto n = exactNormal( f );
+    const Vector3i64 a( p.seg[0].pt ), b( p.seg[1].pt );
+    const auto d = b - a;
+    const auto u = Vector3i64( p.wedge[0].pt ) + Vector3i64( p.wedge[1].pt ) - a - b;
+    const auto nd = dot( n, d );
+    const auto res = ( nd < 0 ? -nd : nd ) * u - ( nd < 0 ? -dot( n, u ) : dot( n, u ) ) * d;
+    return { res[kx], res[ky] };
+}
+
+std::int64_t cross2( const Vector2i64& a, const Vector2i64& b )
+{
+    return a.x * b.y - a.y * b.x;
+}
+
+// whether direction y is strictly inside the angle below 180 degrees between directions x and z
+bool insideAngle2( const Vector2i64& x, const Vector2i64& z, const Vector2i64& y )
+{
+    return ( cross2( x, y ) > 0 ) == ( cross2( x, z ) > 0 ) && ( cross2( z, y ) > 0 ) == ( cross2( z, x ) > 0 );
+}
+
+} // anonymous namespace
+
+// Crossings of one segment ab with f defined alike, as of the edges of a multiple edge of another mesh, with different wedges (the third vertices
+// of the triangles of the edges, which may share one of them): the predicates must agree with the exact model, where every such point is moved
+// off their common position P by a tiny delta along the projection of its shift u (see shiftOf), reversed if the triangles of another of them
+// are in the angle between its own ones, which this test finds from the directions of the cuts of f by the triangles; less must be a strict
+// total order, and ccw must make a CC system, with the triangles where the first-order terms of the model vanish left to the expansion
+// of the perturbation; also, two crossings of a contour from each point along the cuts by its triangles, as the boolean's contour
+// goes there, must cross the ones from the other point exactly if the triangles of the two points interleave around ab (the sheets of
+// the edges cross); with equal wedges, or without one, the predicates must fail
+TEST( MRMesh, CutTrianglePredicatesDefinedAlike )
+{
+    RandomVerts rv( 11, 4 );
+    CutTrianglePredicates preds;
+    OrderStats orderStats;
+    CcwStats ccwStats;
+    int numSets = 0, numSideBySide = 0, numNested = 0, numInterleaved = 0, numSharedRay = 0, numThree = 0, numFirstOrderZero = 0;
+    const FastInt256 scale( FastInt128( 1 ) << 100 ); // 1 / delta
+    for ( int trial = 0; numSets < 400 / cTrialDivisor && trial < 20000; ++trial )
+    {
+        rv.newTrial();
+        const Tri f = rv.tri();
+        const auto n = exactNormal( f );
+        const auto a = rv.vert(), b = rv.vert();
+        if ( n == Vector3i64() || dot( n, Vector3i64( b.pt - a.pt ) ) == 0 || !doTriangleSegmentIntersect( { f[0], f[1], f[2], a, b } ) )
+            continue;
+        const auto [kx, ky] = projectionAxes( f );
+        // two points defined alike, or three in every fourth set, the second one with a wedge vertex of the first one in every third set
+        const int numAlike = numSets % 4 == 3 ? 3 : 2;
+        std::vector<PreciseVertCoords> opp;
+        for ( int i = 0; i < 2 * numAlike; ++i )
+            opp.push_back( rv.vert() );
+        const bool sharedRay = numSets % 3 == 1;
+        if ( sharedRay )
+            opp[2] = opp[0];
+        // the direction of the cut of f by triangle abo from P; all of them must differ and not be opposite, so that no exact ties remain
+        std::vector<Vector2i64> rays;
+        for ( const auto& o : opp )
+            rays.push_back( shiftOf( f, { .seg = { a, b }, .wedge = { o, o } }, kx, ky ) );
+        bool generic = true;
+        for ( int i = 0; i < int( opp.size() ); ++i )
+            for ( int j = i + 1; j < int( opp.size() ); ++j )
+                generic = generic && ( opp[i].id == opp[j].id || cross2( rays[i], rays[j] ) != 0 );
+        for ( const auto& r : rays )
+            generic = generic && r != Vector2i64();
+        if ( !generic )
+            continue;
+
+        // the points defined alike, with the segment backward, the triangle rotated or reversed, or the wedge swapped in some of them
+        std::vector<PreciseCutPoint> alike;
+        for ( int k = 0; k < numAlike; ++k )
+        {
+            PreciseCutPoint p{ .seg = { a, b }, .tri = f, .wedge = { opp[2 * k], opp[2 * k + 1] } };
+            if ( k % 2 == 1 )
+                std::swap( p.seg[0], p.seg[1] );
+            if ( k == 1 )
+                std::rotate( p.tri.begin(), p.tri.begin() + 1, p.tri.end() );
+            if ( k == 2 )
+            {
+                std::swap( p.tri[1], p.tri[2] );
+                std::swap( p.wedge[0], p.wedge[1] );
+            }
+            alike.push_back( p );
+        }
+        // the shift of every point, reversed if the triangles of another one are in the angle between its own ones (shared or strictly inside)
+        auto nestedIn = [&] ( int k, int j )
+        {
+            int numShared = 0;
+            for ( int i : { 2 * j, 2 * j + 1 } )
+            {
+                if ( opp[i].id == opp[2 * k].id || opp[i].id == opp[2 * k + 1].id )
+                    ++numShared;
+                else if ( !insideAngle2( rays[2 * k], rays[2 * k + 1], rays[i] ) )
+                    return false;
+            }
+            return numShared < 2;
+        };
+        std::vector<Vector2i64> shifts;
+        for ( int k = 0; k < numAlike; ++k )
+        {
+            bool away = false;
+            for ( int j = 0; j < numAlike; ++j )
+                away = away || ( j != k && nestedIn( k, j ) );
+            const auto s = shiftOf( f, alike[k], kx, ky );
+            shifts.push_back( away ? -s : s );
+        }
+        bool distinct = true;
+        for ( int k = 0; k < numAlike; ++k )
+            for ( int j = k + 1; j < numAlike; ++j )
+                distinct = distinct && shifts[k] != shifts[j];
+        if ( !distinct || ( numAlike == 3 && cross2( shifts[1] - shifts[0], shifts[2] - shifts[0] ) == 0 ) )
+            continue;
+        if ( numAlike == 2 )
+        {
+            const bool in2 = insideAngle2( rays[0], rays[1], rays[2] ), in3 = insideAngle2( rays[0], rays[1], rays[3] );
+            const bool interleaved = !sharedRay && in2 != in3;
+            numInterleaved += interleaved;
+            numNested += nestedIn( 0, 1 ) || nestedIn( 1, 0 );
+            numSideBySide += !interleaved && !nestedIn( 0, 1 ) && !nestedIn( 1, 0 );
+        }
+        numSharedRay += sharedRay;
+        numThree += numAlike == 3;
+        ++numSets;
+
+        // the cuts of f by the triangles abo and two other triangles; the crossing P of ab is replaced by the points defined alike,
+        // marked on no cut, since the shifts move them off the cuts by the triangles of the others, which ccwByLines takes
+        std::vector<Tri> tris;
+        std::vector<int> rayTri; // the index in tris of the triangle of every wedge vertex
+        for ( const auto& o : opp )
+        {
+            const auto it = std::find_if( tris.begin(), tris.end(), [&] ( const Tri& t ) { return t[2].id == o.id; } );
+            rayTri.push_back( int( it - tris.begin() ) );
+            if ( it == tris.end() )
+                tris.push_back( { a, b, o } );
+        }
+        for ( int i = 0; i < 2; ++i )
+            tris.push_back( rv.tri() );
+        auto base = cutPoints( f, tris );
+        const auto itP = std::find_if( base.defs.begin(), base.defs.end(), [&] ( const PreciseCutPoint& p )
+        {
+            return !p.isVertex() && ( ( p.seg[0].id == a.id && p.seg[1].id == b.id ) || ( p.seg[0].id == b.id && p.seg[1].id == a.id ) );
+        } );
+        ASSERT_TRUE( itP != base.defs.end() );
+        const int iP = int( itP - base.defs.begin() );
+
+        // the far end of the cut by the triangle of every wedge vertex
+        std::vector<int> farEnd;
+        for ( int i = 0; i < int( opp.size() ); ++i )
+        {
+            int end = -1;
+            for ( int j = 0; j < int( base.defs.size() ); ++j )
+                if ( j != iP && ( base.lines[j] & ( 8 << rayTri[i] ) ) )
+                    end = j;
+            EXPECT_GE( end, 0 );
+            farEnd.push_back( end );
+        }
+        base.lines[iP] = 0;
+
+        // the points with those defined alike at P and after the others, the first two of them in either order
+        auto layout = [&] ( int order, std::vector<int>& ids )
+        {
+            auto res = base;
+            ids = { iP };
+            for ( int k = 1; k < numAlike; ++k )
+            {
+                ids.push_back( int( res.defs.size() ) );
+                res.add( alike[k], 0 );
+            }
+            if ( order == 1 )
+                std::swap( ids[0], ids[1] );
+            for ( int k = 0; k < numAlike; ++k )
+                res.defs[ids[k]] = alike[k];
+            return res;
+        };
+        for ( int order = 0; order < 2; ++order )
+        {
+            std::vector<int> ids;
+            const auto pts = layout( order, ids );
+            const int num = int( pts.defs.size() );
+            preds.reset( f );
+            for ( int i = 0; i < num; ++i )
+                preds.addPoint( VertId( i ), pts.defs[i] );
+            ASSERT_FALSE( preds.failed() );
+
+            // the exact positions, and the moved ones of the points defined alike: P + shift / ( |n.d| * scale )
+            std::vector<std::optional<Fraction<FastInt256>>> pos;
+            for ( const auto& d : pts.defs )
+                pos.push_back( fractionOf<FastInt256>( d ) );
+            const auto& common = *pos[iP];
+            const auto nd = dot( n, Vector3i64( b.pt - a.pt ) );
+            const FastInt256 den( common.d * FastInt256( nd < 0 ? -nd : nd ) * scale );
+            std::vector<int> alikeOf( num, -1 );
+            std::vector<Fraction<FastInt256>> moved( numAlike );
+            for ( int k = 0; k < numAlike; ++k )
+            {
+                alikeOf[ids[k]] = k;
+                auto& m = moved[k];
+                m.d = den;
+                for ( int c = 0; c < 3; ++c )
+                    m.n[c] = FastInt256( common.n[c] * FastInt256( nd < 0 ? -nd : nd ) * scale );
+                m.n[kx] = m.n[kx] + FastInt256( FastInt128( shifts[k].x ) * common.d );
+                m.n[ky] = m.n[ky] + FastInt256( FastInt128( shifts[k].y ) * common.d );
+            }
+            auto compare = [&] ( int p, int q, int c ) -> std::optional<int>
+            {
+                if ( alikeOf[p] >= 0 && alikeOf[q] >= 0 )
+                    return compareFractions( moved[alikeOf[p]], moved[alikeOf[q]], c );
+                if ( !pos[p] || !pos[q] )
+                    return {};
+                return compareFractions( *pos[p], *pos[q], c );
+            };
+            auto orient = [&] ( int p, int q, int r )
+            {
+                const int numMoved = ( alikeOf[p] >= 0 ) + ( alikeOf[q] >= 0 ) + ( alikeOf[r] >= 0 );
+                if ( numMoved < 2 )
+                    return pos[p] && pos[q] && pos[r] ? orientFractions( *pos[p], *pos[q], *pos[r], kx, ky ) : 0;
+                if ( numMoved == 2 )
+                {
+                    // the first-order term: cross( wy - wx, z - P ) for the points x, y defined alike and the other one z;
+                    // zero if z - P is parallel to the difference of the shifts, where the expansion of the perturbation decides
+                    const int z = alikeOf[p] < 0 ? p : ( alikeOf[q] < 0 ? q : r );
+                    const int x = z == p ? q : p, y = z == r ? q : r;
+                    if ( !pos[z] )
+                        return 0;
+                    auto toward = common;
+                    toward.n[kx] = toward.n[kx] + FastInt256( FastInt128( shifts[alikeOf[y]].x - shifts[alikeOf[x]].x ) * common.d );
+                    toward.n[ky] = toward.n[ky] + FastInt256( FastInt128( shifts[alikeOf[y]].y - shifts[alikeOf[x]].y ) * common.d );
+                    if ( orientFractions( common, toward, *pos[z], kx, ky ) == 0 )
+                    {
+                        ++numFirstOrderZero;
+                        return 0;
+                    }
+                }
+                auto at = [&] ( int i ) { return alikeOf[i] >= 0 ? moved[alikeOf[i]] : *pos[i]; };
+                return orientFractions( at( p ), at( q ), at( r ), kx, ky );
+            };
+            checkOrder( preds, f, pts, kx, ky, false, compare, orderStats );
+            checkCcw( preds, pts, orient, 0, ccwStats );
+
+            // the contour from the first two points along the cuts by their triangles, as the boolean's contour goes:
+            // its pieces from one point cross those from the other one exactly if the triangles interleave
+            if ( numAlike == 2 )
+            {
+                auto crosses = [&] ( int p, int pEnd, int q, int qEnd )
+                {
+                    auto ccw = [&] ( int x, int y, int z ) { return preds.ccw( VertId( x ), VertId( y ), VertId( z ) ); };
+                    return ccw( p, pEnd, q ) != ccw( p, pEnd, qEnd ) && ccw( q, qEnd, p ) != ccw( q, qEnd, pEnd );
+                };
+                bool anyCross = false;
+                for ( int i : { 0, 1 } )
+                    for ( int j : { 2, 3 } )
+                        if ( farEnd[i] >= 0 && farEnd[j] >= 0 && farEnd[i] != farEnd[j] )
+                            anyCross = anyCross || crosses( ids[0], farEnd[i], ids[1], farEnd[j] );
+                const bool in2 = insideAngle2( rays[0], rays[1], rays[2] ), in3 = insideAngle2( rays[0], rays[1], rays[3] );
+                EXPECT_EQ( anyCross, !sharedRay && in2 != in3 ) << "trial " << trial;
+                EXPECT_FALSE( preds.failed() );
+            }
+        }
+
+        // with the same wedge, in either order, or without the wedge of one of the points, the predicates cannot tell them apart
+        if ( numAlike == 2 )
+        {
+            std::vector<int> ids;
+            const auto pts = layout( 0, ids );
+            for ( int k = 0; k < 3; ++k )
+            {
+                auto p = alike[1];
+                p.wedge = k == 0 ? alike[0].wedge : ( k == 1 ? std::array{ alike[0].wedge[1], alike[0].wedge[0] } : std::array<PreciseVertCoords, 2>{} );
+                preds.reset( f );
+                for ( int i = 0; i < int( pts.defs.size() ); ++i )
+                    preds.addPoint( VertId( i ), i == ids[1] ? p : pts.defs[i] );
+                EXPECT_FALSE( preds.failed() );
+                (void)preds.less( VertId( ids[0] ), VertId( ids[1] ) );
+                EXPECT_TRUE( preds.failed() );
+            }
+        }
+    }
+    EXPECT_EQ( numSets, 400 / cTrialDivisor );
+    EXPECT_EQ( numThree, numSets / 4 );
+    EXPECT_GE( numSideBySide, atLeast( 110, 17 ) );
+    EXPECT_GE( numNested, atLeast( 85, 18 ) );
+    EXPECT_GE( numInterleaved, atLeast( 55, 12 ) );
+    EXPECT_GE( numSharedRay, atLeast( 110, 22 ) );
+    EXPECT_GE( numFirstOrderZero, atLeast( 200, 45 ) );
+    EXPECT_GE( orderStats.perturbed, atLeast( 320, 60 ) );
+    EXPECT_GE( ccwStats.exact, atLeast( 110000, 21000 ) );
 }
 
 } // namespace MR

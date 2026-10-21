@@ -96,6 +96,45 @@ bool sameTriangle( const std::array<PreciseVertCoords, 3> & a, const std::array<
     return hasVert( b, a[0].id ) && hasVert( b, a[1].id ) && hasVert( b, a[2].id );
 }
 
+/// whether p and q are defined alike: crossings of one segment, in either direction, with one triangle, with its vertices in any order
+bool definedAlike( const PreciseCutPoint & p, const PreciseCutPoint & q )
+{
+    if ( p.isVertex() || q.isVertex() || !sameTriangle( p.tri, q.tri ) )
+        return false;
+    const auto & s = p.seg;
+    const auto & t = q.seg;
+    return ( s[0].id == t[0].id && s[1].id == t[1].id ) || ( s[0].id == t[1].id && s[1].id == t[0].id );
+}
+
+/// whether the segment of p has a wedge: two distinct third vertices of its triangles
+bool hasWedge( const PreciseCutPoint & p )
+{
+    return p.wedge[0].id.valid() && p.wedge[1].id.valid() && p.wedge[0].id != p.wedge[1].id;
+}
+
+/// whether the half-plane from line ab through y is in the angle below 180 degrees between the half-planes through x and z,
+/// on the sides of planes abx and abz where the boolean's orient3d puts it
+bool insideAngle( const std::array<PreciseVertCoords, 2> & ab, const PreciseVertCoords & x, const PreciseVertCoords & z, const PreciseVertCoords & y )
+{
+    const auto & [a, b] = ab;
+    return orient3d( { a, b, x, y } ) == orient3d( { a, b, x, z } ) && orient3d( { a, b, z, y } ) == orient3d( { a, b, z, x } );
+}
+
+/// whether the triangles of the edge of q, defined alike as p, are in the angle below 180 degrees between the triangles of the edge of p:
+/// each of them shared with p or in that angle, not both shared
+bool nestedIn( const PreciseCutPoint & p, const PreciseCutPoint & q )
+{
+    int numShared = 0;
+    for ( const auto & y : q.wedge )
+    {
+        if ( y.id == p.wedge[0].id || y.id == p.wedge[1].id )
+            ++numShared;
+        else if ( !insideAngle( p.seg, p.wedge[0], p.wedge[1], y ) )
+            return false;
+    }
+    return numShared < 2;
+}
+
 #ifndef NDEBUG
 /// whether every coordinate of v is below 2^30 by absolute value, for which the integer widths and the error bounds here are derived
 bool inRange( const PreciseVertCoords & v )
@@ -516,16 +555,28 @@ struct CutTrianglePredicates::Impl
     /// whether the maps above may have entries, since clearing the empty submaps of the parallel map takes a lock each
     std::atomic<bool> cached{ false };
 
+    /// whether the maps may have entries found by the shifts of the points defined alike, which depend on the other points defined alike
+    std::atomic<bool> shifted{ false };
+
     std::atomic<bool> failed{ false };
 
     /// forgets the orders and orientations found by the slower rules
     void clearCaches()
     {
+        shifted.store( false, std::memory_order_relaxed );
         if ( !cached.exchange( false, std::memory_order_relaxed ) )
             return;
         dirs.clear();
         orients.clear();
     }
+};
+
+/// the shift of the edge of a point defined alike with others (see CutTrianglePredicates): x and y are the projected coordinates
+/// of the direction in which the point moves, times scale > 0, which is the same for all points defined alike
+struct CutTrianglePredicates::Shift
+{
+    FastInt256 x, y;
+    FastInt128 scale;
 };
 
 CutTrianglePredicates::CutTrianglePredicates() : impl_( std::make_unique<Impl>() )
@@ -605,6 +656,7 @@ void CutTrianglePredicates::reset( const std::array<PreciseVertCoords, 3> & tri 
 void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
 {
     assert( inRange( p.seg[0] ) && ( p.isVertex() || ( inRange( p.seg[1] ) && std::all_of( p.tri.begin(), p.tri.end(), inRange ) ) ) );
+    assert( !hasWedge( p ) || ( inRange( p.wedge[0] ) && inRange( p.wedge[1] ) ) );
     auto & points = impl_->points;
     if ( points.size() <= v )
     {
@@ -612,8 +664,10 @@ void CutTrianglePredicates::addPoint( VertId v, const PreciseCutPoint & p )
         approx_.resize( v + 1 );
     }
     auto & pt = points[v];
-    if ( pt.def.seg[0].id.valid() )
-        impl_->clearCaches(); // the point is set again: forget the orders found for its old definition
+    // the point is set again: forget the orders found for its old definition; or a point with a wedge may change the shifts
+    // of the points defined alike as it, and so the orders found by them
+    if ( pt.def.seg[0].id.valid() || ( impl_->shifted.load( std::memory_order_relaxed ) && hasWedge( p ) ) )
+        impl_->clearCaches();
     pt.def = p;
     auto corner = [&] ( const PreciseVertCoords & x )
     {
@@ -724,25 +778,16 @@ bool CutTrianglePredicates::less( VertId p, VertId q ) const
         return c < 0;
     if ( const auto dir = coincidentDirection_( p, q ) )
         return sweepForward( *dir );
-    return p < q; // the failure: points defined alike, ordered by their ids
+    return p < q; // the failure: points defined alike, not told apart by their shifts, ordered by their ids
 }
 
 /// the signs of the projected coordinates of perturbed q - p for points p and q that coincide before the perturbation,
-/// as the sweep sees them (see sweepSigns); nullopt and the failure if they coincide after the perturbation too
+/// as the sweep sees them (see sweepSigns), or of the difference of their shifts for points defined alike;
+/// nullopt and the failure if they coincide after the perturbation and the shifts too
 std::optional<Vector2i> CutTrianglePredicates::coincidentDirection_( VertId p, VertId q ) const
 {
     const auto & a = impl_->points[p];
     const auto & b = impl_->points[q];
-    if ( !a.def.isVertex() && !b.def.isVertex() && sameTriangle( a.def.tri, b.def.tri ) )
-    {
-        const auto & s = a.def.seg;
-        const auto & t = b.def.seg;
-        if ( ( s[0].id == t[0].id && s[1].id == t[1].id ) || ( s[0].id == t[1].id && s[1].id == t[0].id ) )
-        {
-            fail_(); // the same point twice
-            return {};
-        }
-    }
     // a vertex and another point of a side from it, a crossing strictly inside the side or the vertex at its other end: q - p goes
     // along side i in the direction that reset found if it goes from vertex i or to vertex i+1; the same vertex twice has two sides in common
     if ( const int common = a.sides & b.sides; std::has_single_bit( unsigned( common ) ) && ( a.def.isVertex() || b.def.isVertex() ) )
@@ -752,10 +797,10 @@ std::optional<Vector2i> CutTrianglePredicates::coincidentDirection_( VertId p, V
         return forward ? sideDirs_[i] : -sideDirs_[i];
     }
     // the other pairs by the direction of the perturbed points, which the slower rules find and the cache keeps: two crossings of one side
-    // as the boolean's cut orders them along it (see directionFromSide_)
-    const auto dir = perturbedDirection_( p, q );
+    // as the boolean's cut orders them along it (see directionFromSide_), and the same point twice by the shifts of its edges
+    const auto dir = perturbedDirection_( p, q, definedAlike( a.def, b.def ) );
     if ( !dir )
-        fail_(); // the points coincide after the perturbation too
+        fail_(); // the points coincide after the perturbation and the shifts too
     return dir;
 }
 
@@ -803,17 +848,23 @@ std::optional<Vector2i> CutTrianglePredicates::directionFromSide_( VertId p, Ver
     return {};
 }
 
-std::optional<Vector2i> CutTrianglePredicates::perturbedDirection_( VertId p, VertId q ) const
+std::optional<Vector2i> CutTrianglePredicates::perturbedDirection_( VertId p, VertId q, bool alike ) const
 {
     const bool swapped = q < p;
     const auto key = swapped ? ( std::uint64_t( q ) << 32 ) | std::uint64_t( p ) : ( std::uint64_t( p ) << 32 ) | std::uint64_t( q );
     Vector2i dir;
     if ( !impl_->dirs.if_contains( key, [&] ( const auto & x ) { dir = x.second; } ) )
     {
-        // a side gives the direction faster than the expansion of the perturbation, if it applies
-        auto res = swapped ? directionFromSide_( q, p ) : directionFromSide_( p, q );
-        if ( !res )
-            res = swapped ? directionByPerturbation( q, p ) : directionByPerturbation( p, q );
+        std::optional<Vector2i> res;
+        if ( alike )
+            res = swapped ? shiftDirection_( q, p ) : shiftDirection_( p, q ); // the perturbation moves both points alike
+        else
+        {
+            // a side gives the direction faster than the expansion of the perturbation, if it applies
+            res = swapped ? directionFromSide_( q, p ) : directionFromSide_( p, q );
+            if ( !res )
+                res = swapped ? directionByPerturbation( q, p ) : directionByPerturbation( p, q );
+        }
         dir = res.value_or( Vector2i() );
         impl_->dirs.emplace( key, dir );
         impl_->cached.store( true, std::memory_order_relaxed );
@@ -826,6 +877,61 @@ std::optional<Vector2i> CutTrianglePredicates::perturbedDirection_( VertId p, Ve
 std::optional<Vector2i> CutTrianglePredicates::directionByPerturbation( VertId p, VertId q ) const
 {
     return sosDirection( impl_->points[p].def, impl_->points[q].def, kx_, ky_ );
+}
+
+/// the signs of the projected coordinates of q - p for points p and q defined alike: of the difference of their shifts, with the same scale;
+/// nullopt if they have no shifts, or equal ones
+std::optional<Vector2i> CutTrianglePredicates::shiftDirection_( VertId p, VertId q ) const
+{
+    const auto sp = shift_( p ), sq = shift_( q );
+    if ( !sp || !sq )
+        return {};
+    const Vector2i dir( ( sq->x - sp->x ).sign(), ( sq->y - sp->y ).sign() );
+    if ( dir == Vector2i() )
+        return {};
+    return dir;
+}
+
+/// the shift of crossing p of an edge of another mesh with the triangle, by which the predicates tell apart the points defined alike:
+/// the edge ab moves by delta * u, u = w0 + w1 - a - b toward its wedge w0, w1, by delta infinitely smaller than every term of the perturbation
+/// of the vertices, and so its crossing with the plane of normal n by delta * ( u - ( n.u ) / ( n.d ) * d ), d = b - a, along the cut of the plane
+/// by the plane of ab and u, into the angle between the cuts by the triangles of the edge (the same for either direction of the segment and
+/// either orientation of the triangle); or by -delta * u if the triangles of another edge defined alike are in that angle, so that the sheets
+/// of the edges that touch along the segment give contours that do not cross; nullopt without a wedge, or if the segment is parallel to the plane
+std::optional<CutTrianglePredicates::Shift> CutTrianglePredicates::shift_( VertId p ) const
+{
+    const auto & points = impl_->points;
+    const auto & pt = points[p];
+    const auto & def = pt.def;
+    // the segment of a crossing of a side is that side
+    if ( def.isVertex() || pt.sides != 0 || !hasWedge( def ) )
+        return {};
+    const Vector3i64 a( def.seg[0].pt ), b( def.seg[1].pt );
+    const auto d = b - a;
+    const auto u = Vector3i64( def.wedge[0].pt ) + Vector3i64( def.wedge[1].pt ) - a - b;
+    // with the components of the normal below 2^63 (see normalOf), those of d below 2^31 and those of u below 2^32,
+    // n.d and n.u are below 3 * 2^95, and the projected coordinates below 6 * 2^126
+    auto dot = [&] ( const Vector3i64 & v )
+    {
+        return Int64Mul128( normal_.x ) * Int64Mul128( v.x ) + Int64Mul128( normal_.y ) * Int64Mul128( v.y )
+            + Int64Mul128( normal_.z ) * Int64Mul128( v.z );
+    };
+    const FastInt128 nd = dot( d ), nu = dot( u );
+    if ( nd == 0 )
+        return {}; // the segment is in the plane before the perturbation, or the triangle has a zero normal
+    auto coord = [&] ( int k ) { return Int128Mul256( nd ) * Int128Mul256( u[k] ) - Int128Mul256( nu ) * Int128Mul256( d[k] ); };
+    Shift res{ coord( kx_ ), coord( ky_ ), nd < 0 ? -nd : nd };
+    // away from the wedge if the triangles of another point defined alike are in its angle; found only here, since points defined alike are rare
+    bool away = false;
+    for ( auto x = points.beginId(); x < points.endId() && !away; ++x )
+        away = x != p && points[x].sides == 0 && hasWedge( points[x].def ) && definedAlike( def, points[x].def ) && nestedIn( def, points[x].def );
+    if ( ( nd < 0 ) != away )
+    {
+        res.x = -res.x;
+        res.y = -res.y;
+    }
+    impl_->shifted.store( true, std::memory_order_relaxed );
+    return res;
 }
 
 std::optional<CutTrianglePredicates::Line> CutTrianglePredicates::commonLine_( VertId p, VertId q, bool withVertex ) const
@@ -889,43 +995,32 @@ bool CutTrianglePredicates::along_( const Vector2i & dir, VertId p, VertId q ) c
     return less( p, q ) == sweepForward( dir );
 }
 
-bool CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, VertId x ) const
+/// 1 or -1 as point x is on the side of the plane where orient3d is true or false, or 0 if it is on the plane, so on the line
+int CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, VertId x ) const
 {
     const auto & p = impl_->points[x].def;
     auto orient = [&] ( const PreciseVertCoords & v )
     {
         return orient3d( { plane[0], plane[1], plane[2], v } );
     };
+    auto side = [] ( bool positive ) { return positive ? 1 : -1; };
     if ( p.isVertex() )
-    {
-        if ( hasVert( plane, p.seg[0].id ) )
-        {
-            fail_(); // a vertex of the plane, so on the line
-            return false;
-        }
-        return orient( p.seg[0] );
-    }
+        return hasVert( plane, p.seg[0].id ) ? 0 : side( orient( p.seg[0] ) ); // a vertex of the plane is on it
     // an end of the segment in the plane: the segment meets the plane only there, so the point is on the side of the other end
     const bool in0 = hasVert( plane, p.seg[0].id );
     const bool in1 = hasVert( plane, p.seg[1].id );
     if ( in0 && in1 )
-    {
-        fail_(); // the segment is in the plane, so the point is on the line
-        return false;
-    }
+        return 0; // the segment is in the plane
     if ( in0 )
-        return orient( p.seg[1] );
+        return side( orient( p.seg[1] ) );
     if ( in1 )
-        return orient( p.seg[0] );
+        return side( orient( p.seg[0] ) );
     // the point is on the segment, so on the side of both ends if they are on one side
     const bool o0 = orient( p.seg[0] );
     if ( o0 == orient( p.seg[1] ) )
-        return o0;
+        return side( o0 );
     if ( sameTriangle( p.tri, plane ) )
-    {
-        fail_(); // the point is on the plane, so on the line
-        return false;
-    }
+        return 0; // the point is on the plane
     // the segment crosses the plane, so the point is on the side of the end it meets first if it meets its triangle before the plane;
     // the boolean's predicate takes any plane through three vertices with distinct ids, as the made-up planes vcd and dce of commonLine_ are,
     // that shares at most two of them with the triangle and none with the segment, as the checks above and in addPoint ensure
@@ -935,7 +1030,7 @@ bool CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3>
     if ( doTriangleSegmentIntersect( { plane[0], plane[1], plane[2], p.seg[0], p.seg[1] } ) )
         assert( res == ( segmentIntersectionOrder( { p.seg[0], p.seg[1], p.tri[0], p.tri[1], p.tri[2], plane[0], plane[1], plane[2] } ) == o0 ) );
 #endif
-    return res;
+    return side( res );
 }
 
 int CutTrianglePredicates::exactOrient_( VertId a, VertId b, VertId c ) const
@@ -992,7 +1087,10 @@ int CutTrianglePredicates::orientSlow_( VertId a, VertId b, VertId c ) const
         return *res ? 1 : -1;
     if ( const int s = exactOrient_( a, b, c ) )
         return s;
-    // the points are on one line before the perturbation, and no two of them on a known one: the expansion of the perturbation decides
+    // the points are on one line before the perturbation, and no two of them on a known one: the expansion of the perturbation decides,
+    // unless two of them are defined alike, which it moves alike, and which only their shifts tell apart
+    if ( const auto res = ccwByShifts_( a, b, c ) )
+        return *res ? 1 : -1;
     const auto & points = impl_->points;
     if ( const int s = sosOrient( points[a].def, points[b].def, points[c].def, kx_, ky_ ) )
         return s;
@@ -1053,10 +1151,82 @@ std::optional<bool> CutTrianglePredicates::ccwByPlanes_( VertId a, VertId b, Ver
         {
             assert( l->side < 0 ); // no two of the points on one side, see ccwBySides_
             // the left of the line in its direction is the side of the plane opposite to the plane's normal, which is where orient3d is true
-            return along_( lineDirection_( *l ), p, q ) == sideOfPlane_( l->plane, r );
+            if ( const int side = sideOfPlane_( l->plane, r ) )
+                return along_( lineDirection_( *l ), p, q ) == ( side > 0 );
+            // r is on the line too, which in valid input only a point defined alike as p or q is: their shifts decide
+            if ( const auto res = ccwByShifts_( a, b, c ) )
+                return res;
+            fail_(); // three points on one line also after the perturbation
+            return false;
         }
     }
     return {}; // no two of the points are on a known line
+}
+
+/// the orientation of triangle abc with two points defined alike, by the shifts of their edges (see shift_), or nullopt if no two of them are;
+/// the failure if the shifts do not tell it either
+std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, VertId c ) const
+{
+    const auto & points = impl_->points;
+    // rotating the vertices keeps the orientation of the triangle, so the two defined alike can come first
+    const std::array<VertId, 3> v{ a, b, c };
+    int i = 0;
+    while ( i < 3 && !definedAlike( points[v[i]].def, points[v[( i + 1 ) % 3]].def ) )
+        ++i;
+    if ( i == 3 )
+        return {};
+    const VertId p = v[i], q = v[( i + 1 ) % 3], r = v[( i + 2 ) % 3];
+    const auto sp = shift_( p ), sq = shift_( q );
+    if ( !sp || !sq )
+    {
+        fail_(); // nothing tells apart p and q
+        return false;
+    }
+    // p and q at the common point P are shifted by delta * wp and delta * wq, and r by delta * wr, so the doubled area of the triangle is
+    // delta * cross( wq - wp, r - P ) + delta^2 * cross( wq - wp, wr - wp ), where r - P is perturbed, and all its terms come before delta
+    const FastInt256 dx = sq->x - sp->x, dy = sq->y - sp->y;
+    if ( !definedAlike( points[p].def, points[r].def ) )
+    {
+        // r - P = ( f.nx * e.d - e.nx * f.d, f.ny * e.d - e.ny * f.d ) / ( e.d * f.d ) with positive denominators, and the numerators
+        // below 2^223 (see exactCoords), times the coordinates of the difference of the shifts below 2^130
+        const auto & e = points[p].exact;
+        const auto & f = points[r].exact;
+        using M = Int128Mul256;
+        const FastInt256 ex = M( f.nx ) * M( e.d ) - M( e.nx ) * M( f.d ), ey = M( f.ny ) * M( e.d ) - M( e.ny ) * M( f.d );
+        if ( const int s = ( dx * ey - dy * ex ).sign() )
+            return s > 0;
+        // r - P is parallel to the difference of the shifts before the perturbation, so the expansion of the perturbation decides
+        auto constant = [] ( const FastInt256 & x ) { return x.sign() ? SosPoly256( std::vector<SosPoly256::Term>{ { 0, x } } ) : SosPoly256(); };
+        const SosPoly256 wx = constant( dx ), wy = constant( dy );
+        const int sos = sosFirstStage<2>( { &points[p].def, &points[r].def }, kx_, ky_, [&] ( const auto & pts, std::int64_t from ) -> std::optional<int>
+        {
+            const SosFraction & pp = *pts[0];
+            const SosFraction & rr = *pts[1];
+            const SosPoly512 nx = mulAs<FastInt256>( rr.nx, pp.d ) - mulAs<FastInt256>( pp.nx, rr.d );
+            const SosPoly512 ny = mulAs<FastInt256>( rr.ny, pp.d ) - mulAs<FastInt256>( pp.ny, rr.d );
+            const SignedProduct<SosPoly256, SosPoly512> products[2] = { { &wx, &ny, false }, { &wy, &nx, true } };
+            if ( const int sign = lowestTermOfSumOfProducts<FastInt256, FastInt512>( products, 2, from ).second )
+                return sign;
+            return {};
+        } ).value_or( 0 );
+        if ( sos )
+            return sos > 0;
+    }
+    // the second-order term, with the shift of r of its own scale (zero for a point without a shift):
+    // wr - wp = ( Wr * scale - Wp * rScale ) / ( scale * rScale ), the products below 2^129 * 2^96
+    FastInt256 rx, ry;
+    FastInt128 rScale = 1;
+    if ( const auto sr = shift_( r ) )
+    {
+        rx = sr->x;
+        ry = sr->y;
+        rScale = sr->scale;
+    }
+    const FastInt256 fx( rx * sp->scale - sp->x * rScale ), fy( ry * sp->scale - sp->y * rScale );
+    if ( const int s = ( dx * fy - dy * fx ).sign() )
+        return s > 0;
+    fail_(); // the shifts are on one line too
+    return false;
 }
 
 bool CutTrianglePredicates::ccwFromBehind( VertId b, VertId pivot ) const
@@ -1065,10 +1235,10 @@ bool CutTrianglePredicates::ccwFromBehind( VertId b, VertId pivot ) const
     // R * ( eta * d.x - d.y ) for d = b - pivot, so d.y decides, and only an exactly zero d.y leaves d.x to decide, since eps << eta
     if ( const int c = compareCoord( approx_[b].y, approx_[pivot].y, [&] { return compareExact_( b, pivot, true ); } ) )
         return std::abs( c ) == 1 ? c < 0 : c > 0; // below pivot, or level with it and ahead
-    // the points coincide before the perturbation: the direction of the perturbed points, by which less orders them, gives d
+    // the points coincide before the perturbation: the direction of the perturbed (or shifted) points, by which less orders them, gives d
     if ( const auto d = coincidentDirection_( pivot, b ) )
         return d->y != 0 ? d->y < 0 : d->x > 0;
-    return false; // the failure: points defined alike
+    return false; // the failure: points defined alike, not told apart by their shifts
 }
 
 #if __GNUC__ >= 12

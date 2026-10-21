@@ -257,8 +257,10 @@ int findClosestToFront( const MeshTopology& tp, const SweepLinePredicates& predi
             break;
         i = nextI;
     }
+    // only inconsistent predicates get here (CutTrianglePredicates after a failure), whose run is discarded;
+    // 1 is a valid index for every caller, while 0 is the queried edge itself (a position of -1 for the start vertex)
     assert( false );
-    return 0;
+    return 1;
 }
 
 // same as above, reading the reference ray target from edges[0]'s dest (so edges[0] must be a valid

@@ -504,8 +504,7 @@ endif
 #   >= 7 cores, RAM < 32G (or unknown)  -> JOBS=cores, NUM_FRAGMENTS=64
 #   RAM >= 64G                          -> JOBS=cores, NUM_FRAGMENTS=cores (few big fragments)
 #   32G <= RAM < 64G                    -> JOBS=cores, NUM_FRAGMENTS=cores*2
-# Below 32G of known RAM, JOBS is also capped at RAM / (1 + 64/NUM_FRAGMENTS) so that the compiles don't swap:
-#   one Release fragment compile peaks at 1.55G with 64 fragments, 2.35G with 32, 3.85G with 16.
+# Then JOBS is capped from above by the RAM in GB (when known), so that the compiles don't swap.
 # Override with `-jN` or `JOBS=N`; override fragment count with `NUM_FRAGMENTS=N`.
 override ram_string := $(if $(ASSUME_RAM),$(ASSUME_RAM)G RAM,unknown RAM)
 ifeq ($(call safe_shell,echo $$(( $(ASSUME_NPROC) < 7 ))),1)
@@ -521,12 +520,8 @@ else
 NUM_FRAGMENTS := $(call safe_shell,echo $$(( $(CAPPED_NPROC) * 2 )))
 JOBS := $(CAPPED_NPROC)
 endif
-ifneq ($(and $(ASSUME_RAM),$(filter 1,$(call safe_shell,echo $$(( $(ASSUME_RAM) < 32 ))))),)
-override ram_jobs := $(call safe_shell,j=$$(( $(ASSUME_RAM) * $(NUM_FRAGMENTS) / ($(NUM_FRAGMENTS) + 64) )); echo $$(( j > 1 ? j : 1 )))
-ifeq ($(origin JOBS)$(call safe_shell,echo $$(( $(ram_jobs) < $(JOBS) ))),file1)
-JOBS := $(ram_jobs)
-override ram_string += (capped -j by RAM)
-endif
+ifeq ($(origin JOBS)$(call safe_shell,echo $$(( $(or $(ASSUME_RAM),0) > 0 && $(or $(ASSUME_RAM),0) < $(JOBS) ))),file1)
+JOBS := $(ASSUME_RAM)
 endif
 MAKEFLAGS += -j$(JOBS)
 ifeq ($(filter-out file,$(origin NUM_FRAGMENTS) $(origin JOBS)),)

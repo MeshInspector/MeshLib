@@ -301,7 +301,6 @@
     <ClInclude Include="MRSurfaceDistanceBuilder.h" />
     <ClInclude Include="MRSurroundingContour.h" />
     <ClInclude Include="MRSymMatrix2.h" />
-    <ClInclude Include="MRTerrainTriangulation.h" />
     <ClInclude Include="MRDelaunayTriangulationXY.h" />
     <ClInclude Include="MRCameraPointsTriangulation.h" />
     <ClInclude Include="MRTimeRecord.h" />

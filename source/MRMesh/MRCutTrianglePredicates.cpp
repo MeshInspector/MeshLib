@@ -10,7 +10,6 @@
 #include <atomic>
 #include <bit>
 #include <cmath>
-#include <limits>
 #include <mutex>
 #include <optional>
 
@@ -26,11 +25,10 @@ namespace MR
 
 namespace
 {
-using detail::cMaxPerturbedPoints;
 using detail::cMaxPolyDAll;
 using detail::orient3dPoly;
 using detail::orient3dVolume;
-using detail::PerturbationStages;
+using detail::PerturbationStagesOf;
 using detail::PointDegree;
 using detail::VolumePoly;
 
@@ -73,6 +71,13 @@ std::optional<bool> approxCcw( const Vector2d & a, const Vector2d & b, const Vec
 Vector3i64 normalOf( const std::array<PreciseVertCoords, 3> & t )
 {
     return dirDblArea( Vector3i64( t[0].pt ), Vector3i64( t[1].pt ), Vector3i64( t[2].pt ) );
+}
+
+/// dot( n, v ) of a normal n (see normalOf) and a vector v with the components below 2^32, as the offset of a plane through a vertex
+/// or the projection of a segment on the normal: below 3 * 2^63 * 2^32 < 2^97
+FastInt128 normalDot( const Vector3i64 & n, const Vector3i64 & v )
+{
+    return Int64Mul128( n.x ) * Int64Mul128( v.x ) + Int64Mul128( n.y ) * Int64Mul128( v.y ) + Int64Mul128( n.z ) * Int64Mul128( v.z );
 }
 
 /// the projected coordinates kx, ky of the exact direction of the line where the plane with normal n crosses the plane of triangle t,
@@ -165,17 +170,24 @@ bool inRange( const PreciseVertCoords & v )
 // - a component of the normal of a triangle has the weight of its first vertex at most 9 + 3 = 12 and of the others 9, and the offset
 //   dot( n, v ) of its plane through its first vertex v that of v at most 13, so the crossing n / d of two cuts (see sosCrossing)
 //   has the weights of the first vertices of the three triangles at most 13 and of their other vertices 9.
-// For three points of five vertices each, the degrees stay below ( 14^2 * 10^3 )^3 < 2^53, since merging two vertices into one never
-// makes the product of their radices larger; the crossings of two cuts take more vertices, so a predicate checks that its degrees fit
-// (see SosVerts::fits): they do for two crossings with no common plane, 27 * 19^2 * 14^4 * 10^8 < 2^56, and for three crossings by four
-// planes, below 2^63, while three crossings with no common plane take too many vertices.
-// The vertices are perturbed in stages (see PerturbationStages), so the polynomials stay small, and the expansion stops
+// For three points of five vertices each, the most that three points other than crossings of two cuts take, the degrees stay below
+// ( 14^2 * 10^3 )^3 < 2^53, since merging two vertices into one never makes the product of their radices larger. A crossing of two cuts
+// takes nine vertices, three of them those of the cut triangle, so three points take at most 3 + 3 * 6 = 21 distinct vertices, whose degrees
+// may not fit in int64: those of two crossings with no common plane do, 27 * 19^2 * 14^4 * 10^8 < 2^56, and those of three crossings
+// by four planes, below 2^63, but not those of two crossings with no common plane and a crossing of an edge with the triangle,
+// 36 * 28^2 * 14^6 * 10^8 > 2^64, or of three crossings with no common plane, 40 * 28^2 * 14^6 * 10^12 > 2^77; so the expansion
+// takes only the stages before the first one whose terms can have degrees above int64 (see SosStages), which it rarely reaches.
+// The vertices are perturbed in stages (see PerturbationStagesOf), so the polynomials stay small, and the expansion stops
 // at the first stage where the polynomial of the predicate is not zero.
 // The coefficients of a volume are below 2^96 (sums of products of three coordinate differences below 2^31),
-// those of nx, ny, d below 2^129 (2^225 for a crossing of two cuts), so 128 bits hold the former, 256 bits the latter,
-// 512 bits their products of two and 768 bits those of three.
+// those of nx, ny, d below 2^129, and those of a crossing of two cuts below 2^224 for nx, ny and 2^192 for d, as its exact numerators
+// and denominator are (see crossingExact and SosVec), so 128 bits hold the former, 256 bits the latter, 512 bits their products of two
+// and 768 bits those of three.
 
-constexpr int cMaxSosVerts = cMaxPerturbedPoints; // the distinct vertices of two crossings of two cuts, or of three other points
+constexpr int cMaxSosVerts = 21; // the distinct vertices of three crossings of two cuts, the most that three points take
+
+/// the stages of the perturbation of the vertices of a predicate, which end before the first one whose degrees do not fit
+using SosStages = PerturbationStagesOf<cMaxSosVerts, true>;
 
 template <typename C>
 using SosPolyOf = SparsePolynomial<C, std::int64_t, cMaxPolyDAll>;
@@ -197,7 +209,6 @@ struct SosVerts
     std::array<PreciseVertCoords, cMaxSosVerts> verts;
     std::array<std::int64_t, cMaxSosVerts> radices;
     int num = 0;
-    bool overflow = false; // more distinct vertices were added than fit
 
     /// adds vertex v, whose weight in a term of a point is at most bound, and returns its index
     int add( const PreciseVertCoords & v, std::int64_t bound )
@@ -210,11 +221,7 @@ struct SosVerts
                 return i;
             }
         }
-        if ( num == cMaxSosVerts )
-        {
-            overflow = true;
-            return 0;
-        }
+        assert( num < cMaxSosVerts );
         verts[num] = v;
         radices[num] = 1 + bound;
         return num++;
@@ -246,31 +253,15 @@ struct SosVerts
         return res;
     }
 
-    /// whether the degrees of the perturbation fit in int64: every term of a polynomial of the predicate has a degree below the product
-    /// of the radices of all its vertices
-    bool fits() const
-    {
-        if ( overflow )
-            return false;
-        std::int64_t prod = 1;
-        for ( int i = 0; i < num; ++i )
-        {
-            if ( prod > std::numeric_limits<std::int64_t>::max() / radices[i] )
-                return false;
-            prod *= radices[i];
-        }
-        return true;
-    }
-
     /// the stages of the perturbation of the vertices added
-    PerturbationStages stages() const
+    SosStages stages() const
     {
-        return PerturbationStages( verts.data(), radices.data(), num );
+        return SosStages( verts.data(), radices.data(), num );
     }
 };
 
 /// whether a point with its vertices v of the stages moves at stage s, having a vertex perturbed first at this stage
-bool startsAt( const PerturbationStages & ps, const SosPointVerts & v, int s )
+bool startsAt( const SosStages & ps, const SosPointVerts & v, int s )
 {
     for ( int i = 0; i < v.num; ++i )
         if ( ps.startsAt( v.idx[i], s ) )
@@ -339,7 +330,7 @@ auto cross( const SosVec<C> & a, const SosVec<C> & b )
         mulAs<T>( a[0], b[1] ) - mulAs<T>( a[1], b[0] ) };
 }
 
-/// the vertices of a predicate perturbed at stage s (see PerturbationStages), or with only the vertex of stage s perturbed (alone):
+/// the vertices of a predicate perturbed at stage s (see PerturbationStagesOf), or with only the vertex of stage s perturbed (alone):
 /// if the polynomial of the predicate is zero at stage s - 1, its terms of degrees below place( s ) cancel one another, and its term
 /// of degree place( s ), the lowest one that can remain, is the derivative by the coordinate of that vertex with the weight 1
 /// at the unperturbed points, the same when the vertices of the earlier stages are not perturbed; so if the polynomial with that vertex
@@ -347,7 +338,7 @@ auto cross( const SosVec<C> & a, const SosVec<C> & b )
 /// need, whose polynomials of all vertices grow to many thousands of terms at the later stages
 struct Stage
 {
-    const PerturbationStages & ps;
+    const SosStages & ps;
     int s = 1;
     bool alone = false;
 
@@ -402,7 +393,7 @@ SosCrossing sosCrossing( const Stage & st, const SosPointVerts & v )
 
 /// the lowest-degree term of the perturbed volume of the vertices a, b, c, d of the stages (see orient3dPoly) whose exact volume is zero,
 /// at the first stage where it is not zero; nullopt if it stays zero, which needs repeated ids
-std::optional<VolumePoly<cMaxPolyDAll>::Term> sosLeadOfVolume( const PerturbationStages & ps, int a, int b, int c, int d )
+std::optional<VolumePoly<cMaxPolyDAll>::Term> sosLeadOfVolume( const SosStages & ps, int a, int b, int c, int d )
 {
     return ps.firstStage( [&] ( int s ) -> std::optional<VolumePoly<cMaxPolyDAll>::Term>
     {
@@ -483,7 +474,7 @@ LeadTerm leadOf( const SosPolyOf<C> & p )
 /// in mask is not zero; a coordinate that is still zero has a leading term of a later stage, so of a larger degree;
 /// all signs are zero if the vector stays zero
 template <typename F>
-std::array<LeadTerm, 3> sosLeadTerms( const PerturbationStages & ps, int mask, const F & vec )
+std::array<LeadTerm, 3> sosLeadTerms( const SosStages & ps, int mask, const F & vec )
 {
     return ps.firstStage( [&] ( int s ) -> std::optional<std::array<LeadTerm, 3>>
     {
@@ -497,8 +488,8 @@ std::array<LeadTerm, 3> sosLeadTerms( const PerturbationStages & ps, int mask, c
 }
 
 /// the first value that f( x, from ) gives for the perturbed projected points x[i] of pts[i] of the cut triangle tri at the stages
-/// of their perturbation where all of them are defined, or the empty value if it gives none, or if the points take more vertices
-/// than the degrees of their perturbation fit; the products of the terms below degree from cancel one another in the polynomial of f,
+/// of their perturbation where all of them are defined, or the empty value if it gives none at the stages whose degrees fit in int64
+/// (see SosStages); the products of the terms below degree from cancel one another in the polynomial of f,
 /// which it found zero at the previous stage if from is not zero (see `from` in lowestTermOfSumOfProducts); f also gives the degree
 /// of the leading term that its value comes from, so that a stage takes the value found with its vertex perturbed alone if that degree
 /// is the place of the stage (see Stage), where every point keeps the sign of its denominator, which its constant term gives then
@@ -512,8 +503,6 @@ auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const st
     std::array<SosPointVerts, N> verts;
     for ( int i = 0; i < N; ++i )
         verts[i] = r.add( *pts[i], tri );
-    if ( !r.fits() )
-        return Res{};
     const auto ps = r.stages();
     bool prevZero = false; // whether all points were defined at the previous stage, and the polynomial of f zero
     return ps.firstStage( [&] ( int s )
@@ -567,7 +556,8 @@ bool sweepForward( const Vector2i & dir )
 /// (see sweepSigns); nullopt if the points coincide after the perturbation too
 std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCutPoint & q, const std::array<PreciseVertCoords, 3> & tri, int kx, int ky )
 {
-    // the products of a numerator below 2^225 and a denominator below 2^192 fit in 512 bits, also for the crossings of two cuts
+    // the products of a numerator below 2^224 and a denominator below 2^192 fit in 512 bits, also for the crossings of two cuts;
+    // two points take at most 3 + 2 * 6 = 15 distinct vertices, whose degrees fit (see cMaxSosVerts)
     return sosFirstStage<2>( { &p, &q }, tri, kx, ky, [] ( const auto & x, std::int64_t from, std::int64_t & deg ) -> std::optional<Vector2i>
     {
         const SosFraction & a = *x[0];
@@ -585,11 +575,13 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
 
 /// the sign of the doubled area of perturbed triangle pqr in the projection: the determinant of the rows ( nx, ny, d )
 /// of the perturbed points, whose denominators d are positive; 0 if the points are on one line after the perturbation too,
-/// or if they take more vertices than the degrees of their perturbation fit
+/// or if the expansion reaches a stage whose degrees do not fit in int64, which only crossings of two cuts with many vertices give
 int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const PreciseCutPoint & r, const std::array<PreciseVertCoords, 3> & tri,
     int kx, int ky )
 {
-    // the minors below 2 * 2^225 * 2^192 fit in 512 bits and their products with the elements in 768 bits, also for the crossings of two cuts
+    // also for the crossings of two cuts, with the numerators below 2^224 and the denominators below 2^192, the minors with a denominator
+    // are below 2 * 2^224 * 2^192 = 2^417 and the one of the numerators below 2 * 2^224 * 2^224 = 2^449, which fit in 512 bits,
+    // and their products with the elements below 2^641, whose sum fits in 768 bits
     return sosFirstStage<3>( { &p, &q, &r }, tri, kx, ky, [] ( const auto & x, std::int64_t from, std::int64_t & deg ) -> std::optional<int>
     {
         // the cofactor expansion of det( a, b, c ) along row a: three products of an element of a and a minor of b, c
@@ -640,10 +632,9 @@ int sosCrossingSide( const PreciseCutPoint & x, const std::array<PreciseVertCoor
 {
     SosVerts r;
     const auto xv = r.add( x, t );
-    // the normal of the plane has the weight of R0 at most 12 and of the others 9, and its offset that of R0 at most 13
+    // the normal of the plane has the weight of R0 at most 12 and of the others 9, and its offset that of R0 at most 13;
+    // the degrees of these 12 vertices at most fit, below 14^4 * 10^8 < 2^43
     const int r0 = r.add( plane[0], 13 ), r1 = r.add( plane[1], 9 ), r2 = r.add( plane[2], 9 );
-    if ( !r.fits() )
-        return 0;
     const auto ps = r.stages();
     // the lowest term of the polynomial, and its degree
     auto lead = [&] ( const Stage & st, std::int64_t from )
@@ -687,7 +678,10 @@ struct ExactCoords
     FastInt128 nx{}, ny{}, d{};
 };
 
-/// the exact projected coordinates of any point in the integers wide enough for a crossing of two cuts: ( nx / d, ny / d ) with d > 0
+/// the exact projected coordinates of any point in the integers wide enough for a crossing of two cuts: ( nx / d, ny / d ) with d > 0,
+/// with the numerators below 2^224 and the denominator below 2^192, as those of a crossing (see crossingExact) and the leading coefficients
+/// of the perturbed ones that give the limit of the crossing of cuts parallel before the perturbation (see SosVec) are, and the other points
+/// smaller ones (see exactCoords)
 struct WideCoords
 {
     FastInt256 nx, ny, d;
@@ -709,11 +703,7 @@ CrossingExact crossingExact( const std::array<PreciseVertCoords, 3> & t, const s
     const std::array<PreciseVertCoords, 3> & Q )
 {
     const auto nt = normalOf( t ), nP = normalOf( P ), nQ = normalOf( Q );
-    auto offset = [] ( const Vector3i64 & n, const PreciseVertCoords & v )
-    {
-        return Int64Mul128( n.x ) * Int64Mul128( v.pt.x ) + Int64Mul128( n.y ) * Int64Mul128( v.pt.y ) + Int64Mul128( n.z ) * Int64Mul128( v.pt.z );
-    };
-    const FastInt128 at = offset( nt, t[0] ), aP = offset( nP, P[0] ), aQ = offset( nQ, Q[0] );
+    const FastInt128 at = normalDot( nt, Vector3i64( t[0].pt ) ), aP = normalDot( nP, Vector3i64( P[0].pt ) ), aQ = normalDot( nQ, Vector3i64( Q[0].pt ) );
     const auto cPQ = cross( Vector3i64mul( nP ), Vector3i64mul( nQ ) );
     const auto cQt = cross( Vector3i64mul( nQ ), Vector3i64mul( nt ) );
     const auto ctP = cross( Vector3i64mul( nt ), Vector3i64mul( nP ) );
@@ -761,7 +751,7 @@ WideCoords wideOf( const CutPoint & x, const std::vector<CrossingData> & crossin
 }
 
 /// -1, 0, 1 as the exact projected coordinate y (x if not y) of a is less than, equal to, greater than that of b;
-/// the products of the numerators below 2^225 and the denominators below 2^192 fit in 512 bits
+/// the products of the numerators below 2^224 and the denominators below 2^192 fit in 512 bits
 int compareWide( const WideCoords & a, const WideCoords & b, bool y )
 {
     const auto l = ( y ? a.ny : a.nx ) * b.d;
@@ -770,7 +760,8 @@ int compareWide( const WideCoords & a, const WideCoords & b, bool y )
 }
 
 /// the sign of the determinant of the rows ( nx, ny, d ) of the exact projected points, which is that of the doubled area of pqr;
-/// the minors below 2 * 2^225 * 2^192 fit in 512 bits, and the determinant in 768 bits
+/// the minors with a denominator below 2 * 2^224 * 2^192 = 2^417 and the one of the numerators below 2 * 2^224 * 2^224 = 2^449 fit
+/// in 512 bits, and the determinant, the sum of three products below 2^641, in 768 bits
 int orientWide( const WideCoords & p, const WideCoords & q, const WideCoords & r )
 {
     const auto det = ( q.ny * r.d - q.d * r.ny ) * p.nx - ( q.nx * r.d - q.d * r.nx ) * p.ny + ( q.nx * r.ny - q.ny * r.nx ) * p.d;
@@ -1059,7 +1050,17 @@ void CutTrianglePredicates::addCrossing_( VertId v, const PreciseCutPoint & p )
     {
         return int( hasVert( t, tri_[0].id ) ) + int( hasVert( t, tri_[1].id ) ) + int( hasVert( t, tri_[2].id ) ) >= 2;
     };
-    bool valid = distinct( p.tri ) && distinct( p.tri2 ) && !sameTriangle( p.tri, p.tri2 ) && !alongSide( p.tri ) && !alongSide( p.tri2 );
+    // the crossing is another point also after the perturbation if both planes have a corner of this triangle, which they cross at,
+    // or two common vertices, whose edge they cross where it crosses this triangle (and the same plane if three)
+    const int numCommon = int( hasVert( p.tri, p.tri2[0].id ) ) + int( hasVert( p.tri, p.tri2[1].id ) ) + int( hasVert( p.tri, p.tri2[2].id ) );
+    auto atCorner = [&]
+    {
+        for ( const auto & x : tri_ )
+            if ( hasVert( p.tri, x.id ) && hasVert( p.tri2, x.id ) )
+                return true;
+        return false;
+    };
+    bool valid = distinct( p.tri ) && distinct( p.tri2 ) && numCommon < 2 && !alongSide( p.tri ) && !alongSide( p.tri2 ) && !atCorner();
     if ( valid )
         c.parts = crossingExact( tri_, p.tri, p.tri2 );
     if ( valid && c.parts.d.sign() != 0 )
@@ -1076,51 +1077,51 @@ void CutTrianglePredicates::addCrossing_( VertId v, const PreciseCutPoint & p )
         valid = false;
         SosVerts r;
         const auto vs = r.add( p, tri_ );
-        if ( r.fits() )
+        const auto ps = r.stages();
+        (void)ps.firstStage( [&] ( int s )
         {
-            const auto ps = r.stages();
-            (void)ps.firstStage( [&] ( int s )
+            // the denominator and the numerators are zero at the previous stage (see below), so the vertex of this stage alone gives
+            // their terms of the place of the stage, if the denominator has one (see Stage)
+            for ( const bool alone : { true, false } )
             {
-                // the denominator is zero at the previous stage, so the vertex of this stage alone gives its term of the place of the stage,
-                // if it has one, and the terms of the numerators of that degree (see Stage)
-                for ( const bool alone : { true, false } )
+                if ( alone && s == 1 )
+                    continue; // the same as all vertices perturbed
+                const auto x = sosCrossing( { ps, s, alone }, vs );
+                if ( x.d.empty() )
                 {
-                    if ( alone && s == 1 )
-                        continue; // the same as all vertices perturbed
-                    const auto x = sosCrossing( { ps, s, alone }, vs );
-                    if ( x.d.empty() )
-                    {
-                        if ( alone )
-                            continue;
-                        return false; // still parallel at this stage
-                    }
-                    const auto & [deg, cd] = x.d.get().front();
-                    if ( alone && deg != ps.place( s ) )
+                    if ( alone )
                         continue;
-                    FastInt256 n[2];
-                    for ( int k = 0; k < 2; ++k )
-                    {
-                        const auto & num = x.n[k == 0 ? kx_ : ky_];
-                        if ( num.empty() )
-                            continue;
-                        const auto & [numDeg, numCoef] = num.get().front();
-                        if ( numDeg < deg )
-                            return true; // at infinity: stays invalid
-                        if ( numDeg == deg )
-                            n[k] = numCoef;
-                    }
-                    c.dSign = cd.sign();
-                    c.exact = { n[0], n[1], cd };
-                    valid = true;
-                    return true;
+                    // still parallel at this stage: the crossing goes to infinity if a numerator is not zero, since every term
+                    // of the denominator at a later stage has a degree of at least the place of that stage, above every term found now
+                    return !x.n[kx_].empty() || !x.n[ky_].empty();
                 }
-                return false;
-            } );
-        }
+                const auto & [deg, cd] = x.d.get().front();
+                if ( alone && deg != ps.place( s ) )
+                    continue;
+                FastInt256 n[2];
+                for ( int k = 0; k < 2; ++k )
+                {
+                    const auto & num = x.n[k == 0 ? kx_ : ky_];
+                    if ( num.empty() )
+                        continue;
+                    const auto & [numDeg, numCoef] = num.get().front();
+                    if ( numDeg < deg )
+                        return true; // at infinity: stays invalid
+                    if ( numDeg == deg )
+                        n[k] = numCoef;
+                }
+                c.dSign = cd.sign();
+                c.exact = { n[0], n[1], cd };
+                valid = true;
+                return true;
+            }
+            return false;
+        } );
     }
     if ( !valid )
     {
-        // repeated ids, a plane taken twice or along a side, or cuts that do not cross also after the perturbation
+        // repeated ids, a plane taken twice or along a side, cuts crossing at a corner or at the crossing of a common edge, or cuts
+        // that do not cross also after the perturbation, or whose crossing goes to infinity
         fail_();
         c.dSign = 1;
         c.exact = { FastInt256( tri_[0].pt[kx_] ), FastInt256( tri_[0].pt[ky_] ), FastInt256( 1 ) }; // any point, since the answers are arbitrary now
@@ -1346,20 +1347,15 @@ std::optional<CutTrianglePredicates::Shift> CutTrianglePredicates::shift_( VertI
     const auto & points = impl_->points;
     const auto & pt = points[p];
     const auto & def = pt.def;
-    // the segment of a crossing of a side is that side
-    if ( def.isVertex() || pt.sides != 0 || !hasWedge( def ) )
+    // the segment of a crossing of a side is that side, and a crossing of two cuts has no segment
+    if ( def.isVertex() || def.isCrossing() || pt.sides != 0 || !hasWedge( def ) )
         return {};
     const Vector3i64 a( def.seg[0].pt ), b( def.seg[1].pt );
     const auto d = b - a;
     const auto u = Vector3i64( def.wedge[0].pt ) + Vector3i64( def.wedge[1].pt ) - a - b;
     // with the components of the normal below 2^63 (see normalOf), those of d below 2^31 and those of u below 2^32,
     // n.d and n.u are below 3 * 2^95, and the projected coordinates below 6 * 2^126
-    auto dot = [&] ( const Vector3i64 & v )
-    {
-        return Int64Mul128( normal_.x ) * Int64Mul128( v.x ) + Int64Mul128( normal_.y ) * Int64Mul128( v.y )
-            + Int64Mul128( normal_.z ) * Int64Mul128( v.z );
-    };
-    const FastInt128 nd = dot( d ), nu = dot( u );
+    const FastInt128 nd = normalDot( normal_, d ), nu = normalDot( normal_, u );
     if ( nd == 0 )
         return {}; // the segment is in the plane before the perturbation, or the triangle has a zero normal
     auto coord = [&] ( int k ) { return Int128Mul256( nd ) * Int128Mul256( u[k] ) - Int128Mul256( nu ) * Int128Mul256( d[k] ); };
@@ -1502,8 +1498,7 @@ int CutTrianglePredicates::crossingSideOfPlane_( const std::array<PreciseVertCoo
         return 0; // on the cut by the plane
     const auto & c = impl_->crossings[pt.crossing];
     const auto m = normalOf( plane );
-    const auto & r0 = plane[0].pt;
-    const FastInt128 offset = Int64Mul128( m.x ) * Int64Mul128( r0.x ) + Int64Mul128( m.y ) * Int64Mul128( r0.y ) + Int64Mul128( m.z ) * Int64Mul128( r0.z );
+    const FastInt128 offset = normalDot( m, Vector3i64( plane[0].pt ) );
     // with the components of m below 2^63 and of n below 2^224, and the offset below 2^95 and d below 2^192, M is below 2^289
     const FastInt<384> mm = FastInt<384>( c.parts.n[0] * m.x + c.parts.n[1] * m.y + c.parts.n[2] * m.z ) - offset * c.parts.d;
     int s = mm.sign();
@@ -1580,12 +1575,12 @@ int CutTrianglePredicates::orientSlow_( VertId a, VertId b, VertId c ) const
         return s;
     // the points are on one line before the perturbation, and no two of them on a known one: the expansion of the perturbation decides,
     // unless two of them are defined alike, which it moves alike, and which only their shifts tell apart
-    if ( const auto res = ccwByShifts_( a, b, c ) )
+    if ( const auto res = ccwByShifts_( a, b, c, false ) )
         return *res ? 1 : -1;
     const auto & points = impl_->points;
     if ( const int s = sosOrient( points[a].def, points[b].def, points[c].def, tri_, kx_, ky_ ) )
         return s;
-    fail_(); // the points are on one line after the perturbation too, or their perturbation takes too many vertices
+    fail_(); // the points are on one line after the perturbation too, or the expansion reaches a stage whose degrees do not fit
     return -1;
 }
 
@@ -1647,16 +1642,15 @@ std::optional<bool> CutTrianglePredicates::ccwByPlanes_( VertId a, VertId b, Ver
             // r is on the line too: the points of a cut with a crossing of two cuts among them, as the pieces of a cut split at its crossings
             // have, bulge to the left of the line in the direction that the sweep goes along it, as the points of a side bulge inward
             // (see ccwBySides_), which does not depend on the plane that the line is found by (as a made-up plane through the vertices
-            // of a triangle in another order); otherwise only a point defined alike as p or q is there in valid input, and their shifts decide
-            if ( isCrossing_( a ) || isCrossing_( b ) || isCrossing_( c ) )
-            {
-                auto dir = lineDirection_( *l );
-                if ( !sweepForward( dir ) )
-                    dir = -dir;
-                return int( along_( dir, a, b ) ) + int( along_( dir, b, c ) ) + int( along_( dir, c, a ) ) == 1;
-            }
-            if ( const auto res = ccwByShifts_( a, b, c ) )
+            // of a triangle in another order), and in valid input, two of the points are defined alike otherwise; but two points defined alike,
+            // which only the shifts of their edges move apart, make the doubled area delta * cross( w2 - w1, x - P ) + delta * bulge * ...
+            // with the third point x (see ccwByShifts_), so the first-order term of their shifts decides before the bulge, though the shifts
+            // are infinitely smaller than the bulge, which decides the triangles with at most one point defined alike
+            const bool bulging = isCrossing_( a ) || isCrossing_( b ) || isCrossing_( c );
+            if ( const auto res = ccwByShifts_( a, b, c, bulging ) )
                 return res;
+            if ( bulging )
+                return int( less( a, b ) ) + int( less( b, c ) ) + int( less( c, a ) ) == 1; // along the sweep
             fail_(); // three points on one line also after the perturbation
             return false;
         }
@@ -1665,8 +1659,12 @@ std::optional<bool> CutTrianglePredicates::ccwByPlanes_( VertId a, VertId b, Ver
 }
 
 /// the orientation of triangle abc with two points defined alike, by the shifts of their edges (see shift_), or nullopt if no two of them are;
-/// the failure if the shifts do not tell it either
-std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, VertId c ) const
+/// the failure if the shifts do not tell it either, or if bulging (for the points of a cut with a crossing of two cuts among them,
+/// see ccwByPlanes_) and their first-order term is zero, since the bulge decides before the second-order term then, while neither
+/// the order along the cut, as for the other points of the cut, nor the second-order term, as for the triangles of a third point of the cut
+/// without a crossing, keeps the axioms of CC systems in every set; that needs the difference of the shifts along the cut also after
+/// the perturbation, which turns the cut, so valid input hardly gives it
+std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, VertId c, bool bulging ) const
 {
     const auto & points = impl_->points;
     // rotating the vertices keeps the orientation of the triangle, so the two defined alike can come first
@@ -1689,8 +1687,8 @@ std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, Ver
     if ( !definedAlike( points[p].def, points[r].def ) )
     {
         // r - P = ( f.nx * e.d - e.nx * f.d, f.ny * e.d - e.ny * f.d ) / ( e.d * f.d ) with positive denominators, and the numerators
-        // below 2^223 (see exactCoords), or 2 * 2^225 * 2^97 for a crossing r of two cuts, times the coordinates of the difference
-        // of the shifts below 2^130, in the wide integers, since points defined alike are rare
+        // below 2 * 1.3 * 2^126 * 1.3 * 2^96 < 2^224 (see exactCoords), or 2 * 2^224 * 2^97 for a crossing r of two cuts (see WideCoords),
+        // times the coordinates of the difference of the shifts below 2^130, in the wide integers, since points defined alike are rare
         const auto e = wideOf( points[p], impl_->crossings ), f = wideOf( points[r], impl_->crossings );
         const auto ex = f.nx * e.d - e.nx * f.d, ey = f.ny * e.d - e.ny * f.d;
         if ( const int s = ( dx * ey - dy * ex ).sign() )
@@ -1714,6 +1712,11 @@ std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, Ver
         } ).value_or( 0 );
         if ( sos )
             return sos > 0;
+    }
+    if ( bulging )
+    {
+        fail_(); // the bulge would decide before the second-order term
+        return false;
     }
     // the second-order term, with the shift of r of its own scale (zero for a point without a shift):
     // wr - wp = ( Wr * scale - Wp * rScale ) / ( scale * rScale ), the products below 2^129 * 2^96

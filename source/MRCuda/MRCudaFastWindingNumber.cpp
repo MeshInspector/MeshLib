@@ -312,8 +312,8 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
     size_t iterIndex = 0;
 
     const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
-    return cudaPipeline( Vector<float, VoxelId>{}, begin, end,
-        [&] ( Vector<float, VoxelId>& data, Chunk chunk ) -> Expected<void>
+    return cudaPipeline( VoxelScalars{}, begin, end,
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             spdlog::info( "CudaFastWindingNumber: chunk [{}, {}) starting", chunk.offset, chunk.offset + chunk.size );
             fastWindingNumberFromGrid(
@@ -337,7 +337,7 @@ Expected<void> FastWindingNumber::calcFromGridByParts( GridByPartsFunc resFunc, 
 
             return {};
         },
-        [&] ( Vector<float, VoxelId>& data, Chunk chunk ) -> Expected<void>
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
             data.resize( chunk.size );
@@ -385,8 +385,8 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
     size_t iterIndex = 0;
 
     const auto [begin, end] = splitByChunks( totalSize, bufferSize, layerSize * layerOverlap );
-    return cudaPipeline( Vector<float, VoxelId>{}, begin, end,
-        [&] ( Vector<float, VoxelId>& data, Chunk chunk ) -> Expected<void>
+    return cudaPipeline( VoxelScalars{}, begin, end,
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             spdlog::info( "CudaFastWindingNumber+dist: chunk [{}, {}) starting", chunk.offset, chunk.offset + chunk.size );
             signedDistance(
@@ -410,7 +410,7 @@ Expected<void> FastWindingNumber::calcFromGridWithDistancesByParts( GridByPartsF
 
             return {};
         },
-        [&] ( Vector<float, VoxelId>& data, Chunk chunk ) -> Expected<void>
+        [&] ( VoxelScalars& data, Chunk chunk ) -> Expected<void>
         {
             const auto cb2 = subprogress( cb1, iterIndex++, iterCount );
             data.resize( chunk.size );

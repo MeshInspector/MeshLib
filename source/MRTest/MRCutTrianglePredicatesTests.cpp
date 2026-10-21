@@ -139,6 +139,13 @@ struct CutPoints
     }
 };
 
+// bit 3+j of CutPoints::lines, for the cut by others[j]; the cuts after the first 28 are not tracked,
+// as they do not fit in int, and only the tests that ignore lines take more
+int cutBit( int j )
+{
+    return j < 28 ? 8 << j : 0;
+}
+
 // the points of f cut by others, which may share vertices and edges with f and with one another, as in a mesh: a segment and a triangle
 // with a common vertex are never tested for a crossing, as doTriangleSegmentIntersect cannot take them, so a triangle sharing vertex v
 // with f cuts it from v to one crossing; an edge of several triangles crosses f at one point, on the cuts by all of them
@@ -150,7 +157,7 @@ CutPoints cutPoints( const Tri& f, const std::vector<Tri>& others )
         int lines = ( 1 << s ) | ( 1 << ( ( s + 2 ) % 3 ) );
         for ( int j = 0; j < int( others.size() ); ++j )
             if ( hasVert( others[j], f[s].id ) )
-                lines |= 8 << j;
+                lines |= cutBit( j );
         res.add( vertexPoint( f[s] ), lines );
     }
     for ( int j = 0; j < int( others.size() ); ++j )
@@ -161,7 +168,7 @@ CutPoints cutPoints( const Tri& f, const std::vector<Tri>& others )
             const auto& a = f[s];
             const auto& b = f[( s + 1 ) % 3];
             if ( !hasVert( t, a.id ) && !hasVert( t, b.id ) && doTriangleSegmentIntersect( { t[0], t[1], t[2], a, b } ) )
-                res.add( { { a, b }, t }, ( 1 << s ) | ( 8 << j ) );
+                res.add( { { a, b }, t }, ( 1 << s ) | cutBit( j ) );
         }
         for ( int e = 0; e < 3; ++e )
         {
@@ -176,9 +183,9 @@ CutPoints cutPoints( const Tri& f, const std::vector<Tri>& others )
             };
             const auto it = std::find_if( res.defs.begin(), res.defs.end(), sameEdge );
             if ( it != res.defs.end() )
-                res.lines[it - res.defs.begin()] |= 8 << j;
+                res.lines[it - res.defs.begin()] |= cutBit( j );
             else
-                res.add( { { a, b }, f }, 8 << j );
+                res.add( { { a, b }, f }, cutBit( j ) );
         }
     }
     return res;

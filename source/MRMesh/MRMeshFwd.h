@@ -581,6 +581,7 @@ MR_CANONICAL_TYPEDEFS( (template <typename T, typename I> class MRMESH_CLASS), V
     ( FaceScalars,  Vector<float, FaceId> )
     ( EdgeScalars,  Vector<float, EdgeId> )
     ( UndirectedEdgeScalars,  Vector<float, UndirectedEdgeId> )
+    ( VoxelScalars,  Vector<float, VoxelId> )
 )
 
 using VertPredicate = std::function<bool( VertId )>;

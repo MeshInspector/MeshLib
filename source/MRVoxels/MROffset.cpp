@@ -202,7 +202,7 @@ Expected<Mesh> mcOffsetMesh( const MeshPart& mp, float offset,
         const AffineXf3f basis { Matrix3f::scale( vol.voxelSize ), origin + 0.5f * vol.voxelSize };
 
         MarchingCubesByParts mesher( vol.dimensions, vmParams );
-        const auto addPart = [&] ( Vector<float, VoxelId>&& data, const Vector3i& dims, [[maybe_unused]] int zOffset )
+        const auto addPart = [&] ( VoxelScalars&& data, const Vector3i& dims, [[maybe_unused]] int zOffset )
         {
             assert( data.size() <= (size_t)dims.x * dims.y * dims.z );
             assert( zOffset == mesher.nextZ() );

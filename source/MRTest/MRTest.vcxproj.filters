@@ -10,6 +10,9 @@
     <ClCompile Include="MRNormalDenoisingTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="MRPointCloudFPFHTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="MRSpdlog.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

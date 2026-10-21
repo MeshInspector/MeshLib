@@ -179,6 +179,10 @@ else
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/clip.sh ${MESHLIB_THIRDPARTY_DIR}/clip
   # build fastmcpp separately
   CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/fastmcpp.sh ${MESHLIB_THIRDPARTY_DIR}/fastmcpp
+  if [[ $OSTYPE == 'linux'* ]]; then
+    # build shared mimalloc separately
+    CMAKE_OPTIONS="${MR_CMAKE_OPTIONS}" ${SCRIPT_DIR}/thirdparty/mimalloc.sh ${MESHLIB_THIRDPARTY_BUILD_DIR}/mimalloc
+  fi
 fi
 popd
 

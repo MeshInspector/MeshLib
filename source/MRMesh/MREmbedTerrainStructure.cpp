@@ -8,6 +8,7 @@
 #include "MRRingIterator.h"
 #include "MRRegionBoundary.h"
 #include "MRMeshBoolean.h"
+#include "MRMeshCollidePrecise.h"
 #include "MRFillContour.h"
 #include "MRId.h"
 #include "MR2DContoursTriangulation.h"
@@ -171,12 +172,18 @@ Expected<Mesh> TerrainEmbedder::run()
 
 Expected<VertBitSet> TerrainEmbedder::createCutStructure_()
 {
-    BooleanPreCutResult structPrecutRes;
-    boolean( result_, struct_, BooleanOperation::InsideB, { .outPreCutB = &structPrecutRes } );
+    // the steps of boolean( result_, struct_, InsideB ) before its cut, to cut with its exact sorting data,
+    // which also connects the contours inside one face of the structure exactly
+    const auto conv = getVectorConverters( result_, struct_ );
+    auto contours = orderIntersectionContours( result_.topology, struct_.topology, findCollidingEdgeTrisPrecise( result_, struct_, conv.toInt ) );
+    std::erase_if( contours, [] ( const ContinuousContour& c ) { return c.size() == 3 && isClosed( c ); } ); // zero area, as in boolean
+    BooleanPreCutResult structPrecutRes{ .mesh = struct_ };
+    getOneMeshIntersectionContours( result_, struct_, contours, nullptr, &structPrecutRes.contours, conv );
     VertBitSet cutVerts;
     if ( !structPrecutRes.contours.empty() )
     {
-        auto structCutRes = cutMesh( structPrecutRes.mesh, structPrecutRes.contours );
+        const SortIntersectionsData sortData{ result_, contours, conv.toInt, nullptr, result_.topology.vertSize(), true };
+        auto structCutRes = cutMesh( structPrecutRes.mesh, structPrecutRes.contours, { .sortData = &sortData } );
         if ( structCutRes.fbsWithContourIntersections.any() )
             return unexpected( "Intersection contour of structure and terrain has self-intersections" );
         cutVerts = getIncidentVerts( structPrecutRes.mesh.topology,

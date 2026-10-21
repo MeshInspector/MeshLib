@@ -17,6 +17,9 @@
 #include <MRMesh/MRAABBTree.h>
 #include <MRMesh/MRMeshComponents.h>
 #include <MRMesh/MRConstants.h>
+#include <MRMesh/MRRegularGridMesh.h>
+#include <MRMesh/MRMakePlane.h>
+#include <MRMesh/MREmbedTerrainStructure.h>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include <tuple>
@@ -296,6 +299,28 @@ TEST( MRMesh, BooleanTwoPointLoneContour )
     ASSERT_TRUE( res.has_value() ) << res.error();
     EXPECT_TRUE( res->topology.checkValidity() );
     EXPECT_EQ( res->topology.findNumHoles(), 0 );
+}
+
+// a peak of the terrain pokes through a big triangle of the structure without crossing its edges, so the structure is cut along
+// a lone contour; far from the origin with the peak just above the structure, all points of the contour are the same in float,
+// so only the exact predicates tell how to connect it with the corners of the triangle
+TEST( MRMesh, EmbedStructureLoneContour )
+{
+    for ( float shift : { 0.f, 1000.f } )
+    {
+        const float peak = shift == 0 ? 2.f : std::nextafter( 1.f, 2.f );
+        const auto terrain = makeRegularGridMesh( 21, 21, [] ( size_t, size_t ) { return true; }, [&] ( size_t x, size_t y )
+        {
+            return Vector3f( shift + float( x ) - 10.f, shift + float( y ) - 10.f, x == 10 && y == 10 ? peak : 0.f );
+        } );
+        ASSERT_TRUE( terrain.has_value() );
+        Mesh structure = makePlane(); // the peak is inside one of its two triangles
+        structure.transform( AffineXf3f( Matrix3f::scale( 8.f ), Vector3f( shift + 1.f, shift - 1.f, 1.f ) ) );
+        const auto res = embedStructureToTerrain( *terrain, structure, { .fillAngle = PI_F / 4, .cutAngle = PI_F / 4 } );
+        ASSERT_TRUE( res.has_value() ) << res.error();
+        EXPECT_TRUE( res->topology.checkValidity() );
+        EXPECT_EQ( res->topology.findNumHoles(), 1 ); // the border of the terrain
+    }
 }
 
 // two triangles sharing two vertices but not the edge between them (multiple edges connect the vertices) can meet only along

@@ -64,6 +64,8 @@ MR_BIND_OVERLOAD_SUFFIX(withXf) MRMESH_API BooleanResult boolean( const Mesh& me
 // no version of the function with rvalue-referenced meshes, because meshes' copies are currently used for sorting intersections
 
 
+/// a mesh and its contours of intersection with the other mesh before the cut; the contours can include lone ones (inside one face,
+/// crossing none of its edges), which cutMesh connects exactly only given the boolean's sorting data (CutMeshParameters::sortData)
 struct BooleanPreCutResult
 {
     Mesh mesh;

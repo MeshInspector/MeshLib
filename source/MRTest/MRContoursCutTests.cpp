@@ -443,7 +443,8 @@ TEST( MRMesh, CutMeshContourTurnsInsideFace )
 TEST( MRMesh, CutMeshLoneContour )
 {
     // uniform values in [-1, 1] straight from the generator, whose output the standard specifies (unlike that of the distributions),
-    // taken in a fixed order, so that every platform runs the same cases
+    // so they are the same on every platform; the points made of them with std::cos and std::sin can differ in their last bits there,
+    // which the tolerances absorb
     std::mt19937 gen( 1 );
     auto random = [&] { return 2.0 * gen() / std::mt19937::max() - 1; };
     auto randomVec = [&]
@@ -488,12 +489,21 @@ TEST( MRMesh, CutMeshLoneContour )
                     ASSERT_TRUE( contour.has_value() );
 
                     Mesh cut = mesh;
-                    auto res = cutMesh( cut, { *contour } );
+                    NewEdgesMap new2OldEdges;
+                    auto res = cutMesh( cut, { *contour }, { .new2oldEdgesMap = &new2OldEdges } );
                     EXPECT_TRUE( cut.topology.checkValidity() );
                     EXPECT_TRUE( res.fbsWithContourIntersections.none() )
                         << "distance " << dist << ", fill " << fill << ", trial " << trial << ", points " << line.size();
                     EXPECT_EQ( cut.topology.findNumHoles(), 1 ); // the island or the slit is connected and filled on both sides
                     EXPECT_NEAR( cut.area(), mesh.area(), 1e-3 * mesh.area() );
+                    // every new edge, as a chord connecting the contour with the sides, maps to the triangle (surface offset relies on it)
+                    for ( auto ue = UndirectedEdgeId( mesh.topology.undirectedEdgeSize() ); ue < cut.topology.undirectedEdgeSize(); ++ue )
+                    {
+                        const auto it = new2OldEdges.map.find( ue );
+                        ASSERT_NE( it, new2OldEdges.map.end() );
+                        EXPECT_FALSE( new2OldEdges.splitEdges.test( ue ) );
+                        EXPECT_EQ( it->second, 0 ); // 0_f
+                    }
                     // the cut goes along the contour
                     ASSERT_EQ( res.resultCut.size(), 1 );
                     const auto& path = res.resultCut[0];
@@ -670,6 +680,21 @@ TEST( MRMesh, CutMeshContourAlongSideMaps )
                 checkSquareCut( square, alongFirst ? OneMeshContours{ alongContour, other } : OneMeshContours{ other, alongContour } );
             }
         }
+    }
+}
+
+// an island inside triangle 0_f of the square, and a contour from the side of the square in triangle 1_f through 0_f to its side
+// on the border of the square, in either order: the cut connects the island with the part of 0_f around it on the float path
+TEST( MRMesh, CutMeshLoneContourWithCrossingContour )
+{
+    const auto square = makeSquareOfTwoTriangles();
+    const auto island = makeIslandInSquare( square );
+    const OneMeshContour crossing{ .intersections = { onSquareSide( square, 3_v, 0_v, Vector3f( 0, 2, 0 ) ),
+        onSquareSide( square, 2_v, 0_v, Vector3f( 1.5f, 1.5f, 0 ) ), onSquareSide( square, 1_v, 0_v, Vector3f( 6, 0, 0 ) ) } };
+    for ( bool islandFirst : { true, false } )
+    {
+        SCOPED_TRACE( islandFirst ? "island first" : "island second" );
+        checkSquareCut( square, islandFirst ? OneMeshContours{ island, crossing } : OneMeshContours{ crossing, island } );
     }
 }
 

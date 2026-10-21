@@ -388,6 +388,47 @@ TEST( MRMesh, BooleanTwoPointLoneContour )
     EXPECT_EQ( res->topology.findNumHoles(), 0 );
 }
 
+// a corner of a small cube, or the lowest vertex of a small sphere, lies exactly on a big triangle of a cube, the rest of it outside;
+// the edges from that vertex meet the triangle at one point, so simulation of simplicity makes a lone contour of points that are all
+// the same in float (here with the big cube as mesh A), or no contact (as mesh B); either way the results are valid closed meshes
+// with the volumes of meshes touching at a point
+TEST( MRMesh, BooleanVertexOnFace )
+{
+    const Mesh cube = makeCube( Vector3f::diagonal( 4.f ), Vector3f::diagonal( -2.f ) );
+    const Vector3f p( 1.f, -0.4f, 2.f ); // on the top z = 2 of the cube, in its triangle below the diagonal y = x
+    Mesh corner = makeCube( Vector3f::diagonal( 0.4f ), Vector3f::diagonal( -0.2f ) );
+    corner.transform( AffineXf3f::linear( Matrix3f::rotation( Vector3f::diagonal( -1.f ), Vector3f::minusZ() ) ) ); // a corner down
+    Mesh sphere = makeSphere( { .radius = 0.2f, .numMeshVertices = 200 } );
+    for ( Mesh* m : { &corner, &sphere } )
+    {
+        VertId low;
+        for ( auto v : m->topology.getValidVerts() )
+            if ( !low || m->points[v].z < m->points[low].z )
+                low = v;
+        m->transform( AffineXf3f::translation( p - m->points[low] ) );
+        m->points[low] = p; // exactly
+        m->invalidateCaches();
+    }
+
+    for ( const Mesh* tip : { &corner, &sphere } )
+    {
+        for ( bool swap : { false, true } )
+        {
+            const Mesh& a = swap ? *tip : cube;
+            const Mesh& b = swap ? cube : *tip;
+            for ( auto op : { BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB } )
+            {
+                const auto res = boolean( a, b, op );
+                ASSERT_TRUE( res.valid() ) << res.errorString;
+                EXPECT_TRUE( res.mesh.topology.checkValidity() );
+                EXPECT_EQ( res.mesh.topology.findNumHoles(), 0 );
+                const double volume = op == BooleanOperation::Union ? a.volume() + b.volume() : op == BooleanOperation::Intersection ? 0 : a.volume();
+                EXPECT_NEAR( res.mesh.volume(), volume, 1e-6 * cube.volume() );
+            }
+        }
+    }
+}
+
 // a peak of the terrain pokes through a big triangle of the structure without crossing its edges, so the structure is cut along
 // a lone contour; far from the origin with the peak just above the structure, all points of the contour are the same in float,
 // so only the exact predicates tell how to connect it with the corners of the triangle

@@ -415,8 +415,8 @@ TEST( MRMesh, PlanarTriangulationMonotonePlan )
 }
 
 // on the exact predicates of a cut triangle, two vertices of the loops defined alike (as where both edges of a multiple edge
-// of the other mesh cross the triangle) cannot be told apart, and an invalid definition makes addPoint fail,
-// so the plan is rejected without running the sweep
+// of the other mesh cross the triangle) are told apart only by different wedges (the third vertices of the triangles of their edges),
+// and an invalid definition makes addPoint fail, so without such wedges, or with an invalid point, the plan is rejected without running the sweep
 TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
 {
     // the hole of triangle 0_f with island 1_f inside it
@@ -453,7 +453,7 @@ TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
 
     // vertex 4 defined as vertex 3, also with the ends of the segment and the vertices of the triangle in another order
     EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v ) { return pointOf( v, 3_v ); } ).has_value() );
-    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, [&] ( VertId v )
+    auto reordered = [&] ( VertId v )
     {
         auto res = pointOf( v, 3_v );
         if ( v == 4_v )
@@ -462,7 +462,35 @@ TEST( MRMesh, PlanarTriangulationMonotonePlanSameDefinitions )
             std::rotate( res.tri.begin(), res.tri.begin() + 1, res.tri.end() );
         }
         return res;
-    } ).has_value() );
+    };
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, reordered ).has_value() );
+
+    // with wedges, of the triangles of two edges between the ends of the segment of vertex 3 at ( 200, 200 ), one to the left and one
+    // to the right of the segment: the shifts toward them keep vertex 4 to the right of vertex 3, so the island keeps its orientation,
+    // and the plan is the same as with vertex 4 at its own place; with the same wedge, in either order, or without the wedge of one of them,
+    // the points stay defined alike
+    const Vector3i p3( mesh.points[3_v] );
+    auto wedgeVert = [&] ( int id, int dx, int dy, int dz ) { return PreciseVertCoords{ VertId( id ), p3 + Vector3i( dx, dy, dz ) }; };
+    const std::array<PreciseVertCoords, 2> left{ wedgeVert( 20, -10, 5, 50 ), wedgeVert( 21, -10, -5, -50 ) };
+    const std::array<PreciseVertCoords, 2> right{ wedgeVert( 22, 10, 5, 50 ), wedgeVert( 23, 10, -5, -50 ) };
+    auto withWedges = [&] ( const std::array<PreciseVertCoords, 2>& w3, const std::array<PreciseVertCoords, 2>& w4 )
+    {
+        return [&reordered, w3, w4] ( VertId v )
+        {
+            auto res = reordered( v );
+            if ( v == 3_v )
+                res.wedge = w3;
+            else if ( v == 4_v )
+                res.wedge = w4;
+            return res;
+        };
+    };
+    plan = PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, right ) );
+    ASSERT_TRUE( plan.has_value() );
+    EXPECT_EQ( plan->items.size(), size_t( 2 ) );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, left ) ).has_value() );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, { left[1], left[0] } ) ).has_value() );
+    EXPECT_FALSE( PlanarTriangulation::getMonotonePlan( mesh, loops, tri, withWedges( left, {} ) ).has_value() );
 
     // vertex 4 as a vertex point off the corners of the triangle, or as a segment not reaching the plane of the triangle
     for ( bool asVertex : { true, false } )

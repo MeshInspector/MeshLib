@@ -559,9 +559,13 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
         }
         else if ( std::holds_alternative<FaceId>( prim ) )
         {
-            // an edge of the other mesh crosses the face
-            res.seg = { preciseOtherVert( otherTopology.org( et.edge ), *sortData ), preciseOtherVert( otherTopology.dest( et.edge ), *sortData ) };
+            // an edge of the other mesh crosses the face; the third vertices of its triangles tell apart the crossings of a multiple edge
+            const EdgeId e = et.edge;
+            res.seg = { preciseOtherVert( otherTopology.org( e ), *sortData ), preciseOtherVert( otherTopology.dest( e ), *sortData ) };
             res.tri = { ownVert( lf.verts[0] ), ownVert( lf.verts[1] ), ownVert( lf.verts[2] ) };
+            if ( otherTopology.left( e ) && otherTopology.right( e ) )
+                res.wedge = { preciseOtherVert( otherTopology.getLeftTriVerts( e )[2], *sortData ),
+                    preciseOtherVert( otherTopology.getLeftTriVerts( e.sym() )[2], *sortData ) };
         }
         else
             res.seg[0] = ownVert( std::get<VertId>( prim ) );

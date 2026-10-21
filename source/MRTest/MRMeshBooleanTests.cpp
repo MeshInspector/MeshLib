@@ -410,29 +410,45 @@ TEST( MRMesh, BooleanMultipleEdgePropogationSort )
     }
 }
 
-// both edges of the multiple edge (see makeMeshWithMultipleEdge) cross a big triangle of the cube at one point inside it, on a lone contour;
-// the exact predicates of the cut cannot tell apart the two points defined alike: the boolean reports bad faces or gives a valid mesh
+// both edges of the multiple edge (see makeMeshWithMultipleEdge) cross a big triangle of the cube at one point inside it, on a lone contour
+// that goes through this point twice, from the upper half of the lens to the lower one; the exact predicates of the cut tell apart the two
+// crossings defined alike by the third vertices of the triangles of each edge, so every boolean and selfBoolean give valid closed meshes
+// with the volumes of the halves of the lens on either side of the cube's side x = 0.1
 TEST( MRMesh, BooleanMultipleEdgeThroughLoneFace )
 {
     const Mesh lens = makeMeshWithMultipleEdge();
     const Mesh cube = makeCube( Vector3f::diagonal( 20.f ), Vector3f( 0.1f, -9.f, -0.6f ) );
+    const double volCube = cube.volume(), volLens = lens.volume();
+    EXPECT_NEAR( volCube, 8000., 1e-6 * 8000. );
+    EXPECT_NEAR( volLens, 0.25, 1e-6 * 0.25 );
     for ( bool swap : { false, true } )
     {
         const Mesh& a = swap ? lens : cube;
         const Mesh& b = swap ? cube : lens;
-        for ( auto op : { BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB } )
+        double vols[3] = {};
+        // the volumes of the intersection and the union, and of the difference of the cube and the lens or the other way round
+        const double expected[3] = { 0.100166672, 8000.149845, swap ? 0.1498333365 : 7999.899845 };
+        for ( int i = 0; i < 3; ++i )
         {
+            const auto op = std::array{ BooleanOperation::Intersection, BooleanOperation::Union, BooleanOperation::DifferenceAB }[i];
             const auto res = boolean( a, b, op );
-            if ( res.valid() )
-            {
-                EXPECT_TRUE( res.mesh.topology.checkValidity() );
-            }
-            else
-            {
-                EXPECT_TRUE( res.meshABadContourFaces.any() || res.meshBBadContourFaces.any() ) << res.errorString;
-            }
+            ASSERT_TRUE( res.valid() ) << res.errorString;
+            EXPECT_TRUE( res.mesh.topology.checkValidity() );
+            EXPECT_EQ( res.mesh.topology.findNumHoles(), 0 );
+            vols[i] = res.mesh.volume();
+            EXPECT_NEAR( vols[i], expected[i], 1e-6 * expected[i] );
         }
+        const double volA = swap ? volLens : volCube, volB = swap ? volCube : volLens;
+        EXPECT_NEAR( vols[1] + vols[0], volA + volB, 1e-6 * ( volA + volB ) );
+        EXPECT_NEAR( vols[2], volA - vols[0], 1e-6 * ( volA + volB ) );
     }
+
+    Mesh both = cube;
+    both.addMesh( lens );
+    const auto res = selfBoolean( both );
+    ASSERT_TRUE( res.has_value() ) << res.error();
+    EXPECT_TRUE( res->topology.checkValidity() );
+    EXPECT_EQ( res->topology.findNumHoles(), 0 );
 }
 
 // the tip at 0_v of two triangles with the same vertices (see makeMeshWithMultipleEdge) pokes through a big triangle of the cube:

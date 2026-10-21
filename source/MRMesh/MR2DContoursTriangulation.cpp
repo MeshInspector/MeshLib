@@ -1903,14 +1903,17 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     verts.erase( std::unique( verts.begin(), verts.end() ), verts.end() );
     CutTrianglePredicates preds;
     preds.reset( tri );
-    // two vertices defined alike, which valid input never has, make the predicates fail only if the sweep compares them, so such loops
-    // are rejected before the sweep: a vertex point by its id, a crossing by the ids of its segment and triangle in any order
-    std::vector<std::array<int, 5>> keys( verts.size() );
+    // two vertices defined alike make the predicates fail only if the sweep compares them, unless the shifts of their edges tell them apart
+    // (as the crossings of the edges of a multiple edge of the other mesh with their wedges), so every two of them are compared before
+    // the sweep, and the loops are rejected if that fails: a vertex point by its id, a crossing by the ids of its segment and triangle
+    // in any order, with the index of the point
+    std::vector<std::pair<std::array<int, 5>, int>> keys( verts.size() );
     for ( int i = 0; i < verts.size(); ++i )
     {
         const auto d = pointOf( verts[i] );
         preds.addPoint( VertId( i ), d );
-        auto& k = keys[i];
+        auto& [k, pos] = keys[i];
+        pos = i;
         if ( d.isVertex() )
         {
             k = { d.seg[0].id, -1, -1, -1, -1 };
@@ -1923,7 +1926,10 @@ std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& 
     if ( preds.failed() )
         return {};
     std::sort( keys.begin(), keys.end() );
-    if ( std::adjacent_find( keys.begin(), keys.end() ) != keys.end() )
+    for ( size_t i = 0; i < keys.size(); ++i )
+        for ( size_t j = i + 1; j < keys.size() && keys[j].first == keys[i].first; ++j )
+            (void)preds.less( VertId( keys[i].second ), VertId( keys[j].second ) );
+    if ( preds.failed() )
         return {};
 
     Vector<VertId, VertId> pointIds; // the point of every vertex of the sweep

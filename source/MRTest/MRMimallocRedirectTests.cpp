@@ -1,8 +1,7 @@
 #include <gtest/gtest.h>
 
-#ifdef _WIN32
-
 #include <cstdlib>
+#include <memory>
 #include <string_view>
 
 // mimalloc.h declares these as `bool`. Matching the actual return type is
@@ -15,12 +14,12 @@ extern "C" bool mi_is_in_heap_region( const void* p );
 namespace MR
 {
 
-// Verifies mimalloc's transparent CRT-allocator redirect engaged for this EXE.
-// Wired in MeshLib/source/MimallocRedirect.props (MSBuild) and
-// MeshLib/cmake/Modules/MimallocRedirect.cmake (CMake). Skipped when
-// MIMALLOC_DISABLE_REDIRECT=1 (mimalloc's own runtime kill-switch).
+// Verifies mimalloc replaced the system allocator for this executable, see mr_enable_mimalloc
+// in MeshLib/cmake/Modules/Mimalloc.cmake. Skipped on Windows when MIMALLOC_DISABLE_REDIRECT=1
+// (mimalloc's own runtime kill-switch).
 TEST( MRMesh, MimallocRedirectActive )
 {
+#ifdef _WIN32
     if ( const char* disable = std::getenv( "MIMALLOC_DISABLE_REDIRECT" );
          disable && std::string_view( disable ) == "1" )
     {
@@ -28,13 +27,15 @@ TEST( MRMesh, MimallocRedirectActive )
     }
 
     EXPECT_TRUE( mi_is_redirected() );
+#endif
 
     void* p = std::malloc( 64 );
     ASSERT_NE( p, nullptr );
     EXPECT_TRUE( mi_is_in_heap_region( p ) );
     std::free( p );
+
+    auto q = std::make_unique<int[]>( 16 );
+    EXPECT_TRUE( mi_is_in_heap_region( q.get() ) );
 }
 
 } // namespace MR
-
-#endif // _WIN32

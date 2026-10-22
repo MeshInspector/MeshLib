@@ -152,7 +152,7 @@
     <ClCompile Include="MRVolumeIndexerTests.cpp" />
     <ClCompile Include="MRVectorTests.cpp" />
     <ClCompile Include="MRVoxelsLoadTests.cpp" />
-    <ClCompile Include="MRMimallocRedirectTests.cpp" />
+    <ClCompile Include="MRMimallocTests.cpp" />
     <ClCompile Include="MRTiffTests.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -215,7 +215,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <Import Project="$(ProjectDir)\..\common.props" />
-  <Import Project="$(ProjectDir)\..\MimallocRedirect.props" />
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>

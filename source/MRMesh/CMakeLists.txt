@@ -7,6 +7,7 @@ list(REMOVE_ITEM SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/MRPchCreate.cpp")
 
 add_library(${PROJECT_NAME} SHARED ${SOURCES} ${HEADERS})
 
+include(Mimalloc)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h.in ${CMAKE_CURRENT_SOURCE_DIR}/config_cmake.h)
 
 # Emscripten's Boost package doesn't contain CMake config files
@@ -59,9 +60,9 @@ if(NOT libzip_FOUND)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
-# BitSet's mi_stl_allocator; the same shared copy as mr_enable_mimalloc gives the executables
+# BitSet's mi_stl_allocator
 IF(NOT EMSCRIPTEN)
-  find_package(mimalloc CONFIG REQUIRED)
+  mr_find_mimalloc()
   target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)
 ENDIF()
 

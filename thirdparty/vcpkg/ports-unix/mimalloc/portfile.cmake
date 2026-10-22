@@ -14,6 +14,11 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
         secure      MI_SECURE
 )
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "static" MI_BUILD_STATIC)
+# dlopen-safe thread-locals, MeshLib libraries are loaded into Python and other hosts
+set(MI_LOCAL_DYNAMIC_TLS OFF)
+if(VCPKG_TARGET_IS_LINUX)
+    set(MI_LOCAL_DYNAMIC_TLS ON)
+endif()
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "dynamic" MI_BUILD_SHARED)
 
 vcpkg_cmake_configure(
@@ -26,6 +31,7 @@ vcpkg_cmake_configure(
         -DMI_BUILD_STATIC=${MI_BUILD_STATIC}
         -DMI_BUILD_SHARED=${MI_BUILD_SHARED}
         -DMI_INSTALL_TOPLEVEL=ON
+        -DMI_LOCAL_DYNAMIC_TLS=${MI_LOCAL_DYNAMIC_TLS}
     OPTIONS_DEBUG
         -DMI_DEBUG_FULL=ON
     OPTIONS_RELEASE

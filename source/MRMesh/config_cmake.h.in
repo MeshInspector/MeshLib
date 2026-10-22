@@ -2,3 +2,4 @@
 
 #cmakedefine MESHLIB_VERSION "@MESHLIB_VERSION@"
 #cmakedefine MR_PLATFORM "@MR_PLATFORM@"
+#cmakedefine MR_MIMALLOC_OVERRIDE

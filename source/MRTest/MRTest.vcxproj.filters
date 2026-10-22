@@ -385,7 +385,7 @@
     <ClCompile Include="MRVoxelsLoadTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="MRMimallocRedirectTests.cpp">
+    <ClCompile Include="MRMimallocTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MRFastIntTests.cpp">

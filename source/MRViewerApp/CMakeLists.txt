@@ -23,9 +23,6 @@ ELSE()
   )
 ENDIF()
 
-include(Mimalloc)
-mr_enable_mimalloc(${PROJECT_NAME})
-
 install(
   TARGETS ${PROJECT_NAME}
   DESTINATION "${MR_BIN_DIR}"

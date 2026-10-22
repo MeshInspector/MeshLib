@@ -2,7 +2,7 @@ project(MRTest CXX)
 
 file(GLOB SOURCES "*.cpp")
 IF(EMSCRIPTEN AND NOT MR_EMSCRIPTEN_MIMALLOC)
-  list(FILTER SOURCES EXCLUDE REGEX "MRMimallocRedirectTests\.cpp$")
+  list(FILTER SOURCES EXCLUDE REGEX "MRMimallocTests\.cpp$")
 ENDIF()
 
 add_executable(${PROJECT_NAME} ${SOURCES})
@@ -32,9 +32,6 @@ ELSE()
       ${CMAKE_DL_LIBS}
   )
 ENDIF()
-
-include(Mimalloc)
-mr_enable_mimalloc(${PROJECT_NAME})
 
 add_test(
   NAME ${PROJECT_NAME}

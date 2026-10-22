@@ -1,12 +1,11 @@
 #include <MRMesh/config.h>
-// with MR_MIMALLOC_OVERRIDE, MeshLib libraries do not use mimalloc and MRTest does not override malloc
-#ifndef MR_MIMALLOC_OVERRIDE
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
 #include <gtest/gtest.h>
 
 #include <cstdlib>
+#include <memory>
 #include <string_view>
 
 #ifdef __linux__
@@ -16,11 +15,38 @@
 #ifdef __EMSCRIPTEN__
 // part of -sMALLOC=mimalloc without a header; mimalloc.h declares it returning `bool`
 extern "C" bool mi_is_in_heap_region( const void* p );
+#else
+#include <mimalloc.h>
 #endif
 
 namespace MR
 {
 
+#ifdef MR_MIMALLOC_OVERRIDE
+// Verifies mimalloc replaced the system allocator for this executable, see mr_enable_mimalloc
+// in MeshLib/cmake/Modules/Mimalloc.cmake. Skipped on Windows when MIMALLOC_DISABLE_REDIRECT=1
+// (mimalloc's own runtime kill-switch).
+TEST( MRMesh, MimallocRedirectActive )
+{
+#ifdef _WIN32
+    if ( const char* disable = std::getenv( "MIMALLOC_DISABLE_REDIRECT" );
+         disable && std::string_view( disable ) == "1" )
+    {
+        GTEST_SKIP() << "MIMALLOC_DISABLE_REDIRECT=1; redirect intentionally disabled.";
+    }
+
+    EXPECT_TRUE( mi_is_redirected() );
+#endif
+
+    void* p = std::malloc( 64 );
+    ASSERT_NE( p, nullptr );
+    EXPECT_TRUE( mi_is_in_heap_region( p ) );
+    std::free( p );
+
+    auto q = std::make_unique<int[]>( 16 );
+    EXPECT_TRUE( mi_is_in_heap_region( q.get() ) );
+}
+#else
 // BitSet allocates with mimalloc explicitly, see BitSet::Blocks
 TEST( MRMesh, MimallocBitSet )
 {
@@ -32,7 +58,7 @@ TEST( MRMesh, MimallocBitSet )
     EXPECT_TRUE( mi_is_in_heap_region( mesh.topology.getValidFaces().bits().data() ) );
 }
 
-// malloc is mimalloc only in Emscripten builds and in mr_enable_mimalloc executables, MRTest is not one of them
+// MeshLib's own executables keep the system allocator, except in Emscripten builds
 TEST( MRMesh, MimallocMallocOverride )
 {
 #ifdef __EMSCRIPTEN__
@@ -49,15 +75,17 @@ TEST( MRMesh, MimallocMallocOverride )
     EXPECT_EQ( mi_is_in_heap_region( p ), expected );
     std::free( p );
 }
+#endif
 
 #ifdef __linux__
-// The executable and MeshLib libraries must share one libmimalloc.so of the version in mimalloc.h
+// The process must have only one mimalloc, of the version in mimalloc.h
 TEST( MRMesh, MimallocSharedLibrary )
 {
     int numMimallocs = 0;
     dl_iterate_phdr( []( dl_phdr_info* info, size_t, void* data )
     {
-        if ( std::string_view( info->dlpi_name ).find( "libmimalloc" ) != std::string_view::npos )
+        // libmimalloc or libMRMimalloc
+        if ( std::string_view( info->dlpi_name ).find( "imalloc" ) != std::string_view::npos )
             ++*static_cast<int*>( data );
         return 0;
     }, &numMimallocs );
@@ -67,5 +95,3 @@ TEST( MRMesh, MimallocSharedLibrary )
 #endif
 
 } // namespace MR
-
-#endif

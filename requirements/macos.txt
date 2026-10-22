@@ -14,6 +14,7 @@ libharu
 libpng
 libtiff
 libzip
+mimalloc
 ninja
 nlohmann-json
 opencascade

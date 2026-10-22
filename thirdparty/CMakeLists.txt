@@ -174,20 +174,6 @@ ELSE() # not MR_EMSCRIPTEN
   add_subdirectory(./libE57Format)
 ENDIF()
 
-# shared and without malloc override, which Homebrew's formula has, see mr_find_mimalloc
-IF(APPLE AND NOT MESHLIB_USE_VCPKG)
-  include(${CMAKE_CURRENT_LIST_DIR}/cpm/package-lock.cmake)
-  include(FetchContent)
-  set(MI_OVERRIDE OFF)
-  set(MI_BUILD_SHARED ON)
-  set(MI_BUILD_STATIC OFF)
-  set(MI_BUILD_OBJECT OFF)
-  set(MI_BUILD_TESTS OFF)
-  set(MI_INSTALL_TOPLEVEL ON)
-  FetchContent_Declare(mimalloc ${MESHLIB_PACKAGE_mimalloc})
-  FetchContent_MakeAvailable(mimalloc)
-ENDIF()
-
 find_package(glad)
 IF(NOT glad_FOUND)
   set(GLAD_INSTALL ON CACHE BOOL "")

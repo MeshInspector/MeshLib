@@ -56,7 +56,10 @@
         },
         {
             "name": "mimalloc",
-            "platform": "osx | linux"
+            "platform": "windows | osx | linux",
+            "features": [
+                "override"
+            ]
         },
         {
             "name": "python3",

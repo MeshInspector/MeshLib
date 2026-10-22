@@ -9,21 +9,8 @@ find_dependency(phmap 2.0)
 find_dependency(spdlog 1.9)
 find_dependency(TBB 2020.1)
 find_dependency(tl-expected)
-if(NOT EMSCRIPTEN AND NOT "@MR_MIMALLOC_OVERRIDE@" AND NOT TARGET mimalloc)
-  # MeshLib distributions bundle it with the thirdparty libraries and headers,
-  # in a layout its own CMake config does not know
-  if(DEFINED MESHLIB_THIRDPARTY_LIB_DIR)
-    find_library(MESHLIB_MIMALLOC_LIBRARY NAMES mimalloc PATHS "${MESHLIB_THIRDPARTY_LIB_DIR}" NO_DEFAULT_PATH)
-  endif()
-  if(MESHLIB_MIMALLOC_LIBRARY)
-    add_library(mimalloc SHARED IMPORTED)
-    set_target_properties(mimalloc PROPERTIES
-      IMPORTED_LOCATION "${MESHLIB_MIMALLOC_LIBRARY}"
-      INTERFACE_INCLUDE_DIRECTORIES "${MESHLIB_THIRDPARTY_INCLUDE_DIR}"
-    )
-  else()
-    find_dependency(mimalloc)
-  endif()
+if(NOT EMSCRIPTEN AND NOT "@MR_MIMALLOC_OVERRIDE@" AND WIN32)
+  find_dependency(mimalloc)
 endif()
 
 # static builds require to find private dependencies
@@ -36,5 +23,19 @@ if(EMSCRIPTEN)
 endif()
 
 include("${CMAKE_CURRENT_LIST_DIR}/MRMeshTargets.cmake")
+
+if(NOT EMSCRIPTEN AND NOT "@MR_MIMALLOC_OVERRIDE@" AND NOT WIN32 AND NOT TARGET mimalloc)
+  # MeshLib's own non-override mimalloc next to MRMesh, see mr_find_mimalloc
+  get_target_property(_mr_configs MeshLib::MRMesh IMPORTED_CONFIGURATIONS)
+  list(GET _mr_configs 0 _mr_config)
+  get_target_property(_mr_mesh MeshLib::MRMesh IMPORTED_LOCATION_${_mr_config})
+  get_filename_component(_mr_lib_dir "${_mr_mesh}" DIRECTORY)
+  find_library(MESHLIB_MIMALLOC_LIBRARY NAMES MRMimalloc PATHS "${_mr_lib_dir}" NO_DEFAULT_PATH REQUIRED)
+  add_library(mimalloc SHARED IMPORTED)
+  set_target_properties(mimalloc PROPERTIES IMPORTED_LOCATION "${MESHLIB_MIMALLOC_LIBRARY}")
+  if(DEFINED MESHLIB_THIRDPARTY_INCLUDE_DIR)
+    set_target_properties(mimalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${MESHLIB_THIRDPARTY_INCLUDE_DIR}")
+  endif()
+endif()
 
 check_required_components(MRMesh)

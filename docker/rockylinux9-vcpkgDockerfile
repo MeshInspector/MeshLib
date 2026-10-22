@@ -53,7 +53,6 @@ WORKDIR /root
 
 COPY requirements/vcpkg-linux.txt MeshLib/requirements.txt
 COPY thirdparty/vcpkg/ports MeshLib/ports
-COPY thirdparty/vcpkg/ports-unix MeshLib/ports-unix
 COPY thirdparty/vcpkg/triplets MeshLib/triplets
 COPY thirdparty/vcpkg/configure_s3_cache.sh MeshLib/configure_s3_cache.sh
 
@@ -81,7 +80,7 @@ RUN --mount=type=secret,id=AWS_ACCESS_KEY_ID \
     source /root/MeshLib/configure_s3_cache.sh
     source /opt/rh/autoconf271/enable
     export VCPKG_DEFAULT_HOST_TRIPLET=${VCPKG_TRIPLET}
-    export VCPKG_OVERLAY_PORTS=/root/MeshLib/ports:/root/MeshLib/ports-unix
+    export VCPKG_OVERLAY_PORTS=/root/MeshLib/ports
     export VCPKG_OVERLAY_TRIPLETS=/root/MeshLib/triplets
     # network may flake
     retry.sh -- \

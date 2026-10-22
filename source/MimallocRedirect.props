@@ -21,8 +21,9 @@
     3.x: mimalloc(-debug).dll.lib). Probe both with Exists() so the file works
     against either vcpkg snapshot without per-runner edits.
 
-    For applications only: MeshLib's own executables keep the system allocator, see
-    mr_enable_mimalloc in Mimalloc.cmake for the CMake equivalent.
+    Verified by MRTest's MRMesh.MimallocRedirectActive unit test (gated by
+    MIMALLOC_DISABLE_REDIRECT env var). See also mr_enable_mimalloc in Mimalloc.cmake for the
+    CMake equivalent.
   -->
   <PropertyGroup>
     <MimallocDebugLib Condition="Exists('$(VcpkgCurrentInstalledDir)\debug\lib\mimalloc-debug.dll.lib')">mimalloc-debug.dll.lib</MimallocDebugLib>

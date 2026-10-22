@@ -29,6 +29,11 @@ struct RigidXfRansacParams
     std::uint32_t seed = 0;
 };
 
+/// counts the matches (source point, target point) that given transformation maps within given distance from their target points
+/// \ingroup AligningTransformGroup
+[[nodiscard]] MRMESH_API size_t countInliers( const VertCoords & srcPoints, const VertCoords & tgtPoints,
+    const std::vector<VertPair> & matches, const AffineXf3f & xf, float inlierDistance );
+
 /// \brief Finds the rigid transformation of source points to target points from given matches, many of which can be wrong:
 /// tests the transformations through random samples of three matches and keeps the one with most inliers,
 /// then refines it by least squares fitting on all its inliers

@@ -35,10 +35,7 @@ TEST( MRMesh, RigidXfRansac )
     ASSERT_TRUE( res.has_value() );
     for ( const auto & p : src )
         EXPECT_LT( distance( ( *res )( p ), xf( p ) ), 1e-3f );
-    size_t numInliers = 0;
-    for ( const auto & m : matches )
-        numInliers += distance( ( *res )( src[m.first] ), tgt[m.second] ) <= params.inlierDistance;
-    EXPECT_EQ( numInliers, numCorrect );
+    EXPECT_EQ( countInliers( src, tgt, matches, *res, params.inlierDistance ), numCorrect );
 
     // the same result with a single thread
     {

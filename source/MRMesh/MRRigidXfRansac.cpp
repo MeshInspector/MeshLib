@@ -24,6 +24,17 @@ std::uint64_t splitMix( std::uint64_t x )
 
 } // anonymous namespace
 
+size_t countInliers( const VertCoords & srcPoints, const VertCoords & tgtPoints,
+    const std::vector<VertPair> & matches, const AffineXf3f & xf, float inlierDistance )
+{
+    const auto distSq = sqr( inlierDistance );
+    size_t res = 0;
+    for ( const auto & m : matches )
+        if ( distanceSq( xf( srcPoints[m.first] ), tgtPoints[m.second] ) <= distSq )
+            ++res;
+    return res;
+}
+
 Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const VertCoords & tgtPoints,
     const std::vector<VertPair> & matches, const RigidXfRansacParams & params, const ProgressCallback & progress )
 {
@@ -31,16 +42,6 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     const auto numMatches = matches.size();
     if ( numMatches < 3 )
         return unexpected( "At least three matches are required" );
-
-    const auto distSq = sqr( params.inlierDistance );
-    auto countInliers = [&]( const AffineXf3f & xf )
-    {
-        int res = 0;
-        for ( const auto & m : matches )
-            if ( distanceSq( xf( srcPoints[m.first] ), tgtPoints[m.second] ) <= distSq )
-                ++res;
-        return res;
-    };
 
     // the transformation of the sample with given index, or nothing if the sample is inconsistent
     auto sampleXf = [&]( int iteration ) -> std::optional<AffineXf3f>
@@ -72,9 +73,9 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     // samples are processed in batches, and the best one is taken from each batch in the order of indices,
     // so the result does not depend on the number of threads
     constexpr int batchSize = 1024;
-    std::vector<int> counts( batchSize );
+    std::vector<size_t> counts( batchSize );
     std::vector<AffineXf3f> xfs( batchSize );
-    int bestCount = 0;
+    size_t bestCount = 0;
     AffineXf3f bestXf;
     int required = params.maxIterations;
     for ( int done = 0; done < required; )
@@ -86,7 +87,7 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
             if ( auto xf = sampleXf( done + i ) )
             {
                 xfs[i] = *xf;
-                counts[i] = countInliers( *xf );
+                counts[i] = countInliers( srcPoints, tgtPoints, matches, *xf, params.inlierDistance );
             }
         } );
         done += num;
@@ -116,9 +117,10 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
 
     PointToPointAligningTransform p2p;
     for ( const auto & m : matches )
-        if ( distanceSq( bestXf( srcPoints[m.first] ), tgtPoints[m.second] ) <= distSq )
+        if ( distanceSq( bestXf( srcPoints[m.first] ), tgtPoints[m.second] ) <= sqr( params.inlierDistance ) )
             p2p.add( srcPoints[m.first], tgtPoints[m.second] );
-    if ( const auto refinedXf = AffineXf3f( p2p.findBestRigidXf() ); countInliers( refinedXf ) >= bestCount )
+    const auto refinedXf = AffineXf3f( p2p.findBestRigidXf() );
+    if ( countInliers( srcPoints, tgtPoints, matches, refinedXf, params.inlierDistance ) >= bestCount )
         return refinedXf;
     return bestXf;
 }

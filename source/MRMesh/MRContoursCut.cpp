@@ -625,16 +625,9 @@ EdgeLoops holeLoops( const MeshTopology& topology, const EdgePath& edges, EdgeBi
 {
     EdgeLoops res;
     for ( auto e : edges )
-    {
-        if ( topology.left( e ) || inLoops.test( e ) )
-            continue;
-        auto& loop = res.emplace_back();
-        for ( auto le : leftRing( topology, e ) )
-        {
-            inLoops.set( le );
-            loop.push_back( le );
-        }
-    }
+        if ( !topology.left( e ) && !inLoops.test( e ) )
+            for ( auto le : res.emplace_back( topology.getLeftRing( e ) ) )
+                inLoops.set( le );
     return res;
 }
 
@@ -1369,10 +1362,8 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
     FaceBitSet badFacesBS( topology.getValidFaces().size() );
     EdgeBitSet visited( topology.edgeSize() );
     // a loop is bad if it passes an edge both ways, as a contour crossing others in its face, whatever edge it starts from:
-    // such an edge is a new one inside the face, and its second way finds the first one in the same walk by the walk numbers of new edges
-    const int firstNew = int( EdgeId( firstNewEdge ) );
-    std::vector<int> walkOf( topology.edgeSize() - firstNew, -1 );
-    int walk = 0;
+    // such an edge is a new one inside the face, met twice in the walk from e0, which walkOf keeps for every new edge
+    std::vector<EdgeId> walkOf( topology.undirectedEdgeSize() - firstNewEdge );
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
@@ -1388,21 +1379,19 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
 
             if ( visited.test( e0 ) )
                 continue;
-            bool bad = false;
             for ( auto e : leftRing( topology, e0 ) )
             {
                 visited.set( e );
                 if ( e == e0.sym() )
-                    bad = true;
-                else if ( int( e ) >= firstNew )
+                    badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
+                else if ( e.undirected() >= firstNewEdge )
                 {
-                    bad = bad || walkOf[int( e.sym() ) - firstNew] == walk;
-                    walkOf[int( e ) - firstNew] = walk;
+                    auto& w = walkOf[e.undirected() - firstNewEdge];
+                    if ( w == e0 )
+                        badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
+                    w = e0;
                 }
             }
-            ++walk;
-            if ( bad )
-                badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
         }
     }
     return badFacesBS;

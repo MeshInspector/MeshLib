@@ -2058,4 +2058,180 @@ TEST( MRMesh, CutTrianglePredicatesFlatFaceCrossings )
     EXPECT_EQ( ccwStats.perturbed, 2 );
 }
 
+namespace
+{
+
+// the triangles of CutTrianglePredicatesSelfIntersectingFace with the ids in the order of gen: f, and the others cutting it: the four triangles
+// of the multiple edge ab, ab o[0] and ab o[1] of one sheet and ab o[2] and ab o[3] of the other one, three long cuts, the last one across the flat
+// face in x = 35, the fold from f[0], and the flat face: a strip of three triangles in the plane through ( 10, -20, 0 ) along ( 5, 2, 0 )
+// and ( 1, -1, 9 ), with the vertices above and below f in turn, so that their cuts follow one another along one line
+struct SelfIntersectingFace
+{
+    Tri f;
+    std::vector<Tri> others;
+    PreciseVertCoords a, b;
+    std::array<PreciseVertCoords, 4> o;
+    int firstStrip = 0; // the index of the first triangle of the flat face in others
+};
+
+SelfIntersectingFace selfIntersectingFace( std::mt19937& gen )
+{
+    std::vector<int> ids( 25 );
+    std::iota( ids.begin(), ids.end(), 0 );
+    for ( size_t i = ids.size() - 1; i > 0; --i )
+        std::swap( ids[i], ids[gen() % ( i + 1 )] );
+    int nextId = 0;
+    auto vertex = [&] ( int x, int y, int z ) { return PreciseVertCoords{ VertId( ids[nextId++] ), Vector3i( x, y, z ) }; };
+    SelfIntersectingFace res;
+    auto& f = res.f;
+    f = { vertex( -100, -90, 3 ), vertex( 130, -80, -4 ), vertex( -90, 120, 5 ) };
+    res.a = vertex( 10, 5, -40 );
+    res.b = vertex( 15, 8, 40 );
+    res.o = { vertex( 91, 20, 20 ), vertex( -63, -21, -20 ), vertex( 12, 86, 25 ), vertex( 10, -70, -25 ) };
+    for ( const auto& w : res.o )
+        res.others.push_back( { res.a, res.b, w } );
+    res.others.push_back( { vertex( -150, -20, -60 ), vertex( 160, 10, -50 ), vertex( 0, 30, 90 ) } );
+    res.others.push_back( { vertex( -60, -120, 70 ), vertex( -20, 140, 60 ), vertex( 40, -10, -80 ) } );
+    res.others.push_back( { vertex( 30, -100, -50 ), vertex( 40, 100, -50 ), vertex( 35, 0, 80 ) } );
+    res.others.push_back( { f[0], vertex( -20, -60, 50 ), vertex( -40, -10, -45 ) } );
+    std::array<PreciseVertCoords, 5> strip;
+    const int along[5] = { -12, -8, -2, 4, 10 };
+    for ( int i = 0; i < 5; ++i )
+    {
+        const int up = i % 2 ? -5 : 5;
+        strip[i] = vertex( 10 + 5 * along[i] + up, -20 + 2 * along[i] - up, 9 * up );
+    }
+    res.firstStrip = int( res.others.size() );
+    for ( int i = 0; i < 3; ++i )
+        res.others.push_back( { strip[i], strip[i + 1], strip[i + 2] } );
+    return res;
+}
+
+} // anonymous namespace
+
+// The points that the force fill of cutMesh gives the predicates in a face f of a self-intersecting mesh, of all kinds together: long cuts split
+// at their crossings, a multiple edge ab of four triangles crossing f at P, two sheets crossing along ab, whose cuts go from P, a fold from a vertex
+// of f (a triangle with that vertex), and a flat face of three triangles in one plane (as CAD meshes have), whose cuts are on one line, crossed there
+// by three other cuts with no known line through two of the crossings (see CutTrianglePredicatesFlatFaceCrossings); with the ids in several orders,
+// with P as one point on the four cuts, checked by checkSet, also against the expansion of the perturbation, and with P as two points defined alike
+// with their wedges (see CutTrianglePredicatesDefinedAlike), whose order and triangles the shifts of their edges decide; every crossing must be
+// on the segments of its cuts (see checkCrossings)
+TEST( MRMesh, CutTrianglePredicatesSelfIntersectingFace )
+{
+    std::mt19937 gen( 18 );
+    CutTrianglePredicates preds;
+    OrderStats orderStats;
+    CcwStats ccwStats, alikeStats;
+    int numCrossings = 0, numWrong = 0, numFlatLine = 0, numFlatTriangles = 0;
+    const int numReps = cTrialDivisor == 1 ? 4 : 1;
+    for ( int rep = 0; rep < numReps; ++rep )
+    {
+        const auto face = selfIntersectingFace( gen );
+        const Tri& f = face.f;
+        const auto& others = face.others;
+        const auto& a = face.a;
+        const auto& b = face.b;
+        const auto& o = face.o;
+        auto pts = cutPoints( f, others );
+        std::vector<std::optional<Fraction<FastInt512>>> pos;
+        auto crossings = addCrossings( preds, f, others, pts, pos );
+        numCrossings += int( crossings.size() );
+        // the crossings on the line of the flat face
+        std::vector<VertId> flat;
+        for ( const auto& c : crossings )
+            if ( pts.lines[c.x] & ~( cutBit( face.firstStrip ) - 1 ) )
+                flat.push_back( VertId( c.x ) );
+        numFlatLine += int( flat.size() );
+        checkSet<FastInt512>( preds, f, pts, orderStats, ccwStats, 1000, pos );
+        checkCrossings( preds, pts, crossings, numWrong );
+        // the triangles of the crossings on that line with no known line through two of them, which only the expansion of the perturbation orients
+        for ( int i = 0; i < int( flat.size() ); ++i )
+            for ( int j = i + 1; j < int( flat.size() ); ++j )
+                for ( int k = j + 1; k < int( flat.size() ); ++k )
+                    numFlatTriangles += !preds.ccwByLines( flat[i], flat[j], flat[k] ).has_value();
+
+        // P as two points defined alike: P1 with the wedge of the first sheet on its cuts, and P2 with the other one on the cuts of the second sheet,
+        // which the crossings on these cuts take as their ends; the sheets cross along ab, so the shifts of P1 and P2 point into the angles
+        // of their own sheets (see shiftOf)
+        const auto [kx, ky] = projectionAxes( f );
+        std::vector<Vector2i64> rays;
+        for ( const auto& w : o )
+            rays.push_back( shiftOf( f, { .seg = { a, b }, .wedge = { w, w } }, kx, ky ) );
+        EXPECT_NE( insideAngle2( rays[0], rays[1], rays[2] ), insideAngle2( rays[0], rays[1], rays[3] ) );
+        const int n = int( pts.defs.size() );
+        int iP = -1;
+        for ( int i = 0; i < n; ++i )
+            if ( !pts.defs[i].isVertex() && !pts.defs[i].isCrossing() && pts.defs[i].seg[0].id == a.id && pts.defs[i].seg[1].id == b.id )
+                iP = i;
+        ASSERT_GE( iP, 0 );
+        const int iP2 = n, secondSheet = cutBit( 2 ) | cutBit( 3 );
+        for ( auto& c : crossings )
+            for ( int s = 0; s < 2; ++s )
+                if ( pts.lines[c.ends[2 * s]] & pts.lines[c.ends[2 * s + 1]] & secondSheet )
+                    for ( int k : { 2 * s, 2 * s + 1 } )
+                        if ( c.ends[k] == iP )
+                            c.ends[k] = iP2;
+        pts.defs[iP].wedge = { o[0], o[1] };
+        pts.lines[iP] = cutBit( 0 ) | cutBit( 1 );
+        pts.add( { .seg = { b, a }, .tri = f, .wedge = { o[2], o[3] } }, secondSheet );
+        pos.resize( n + 1 );
+        for ( int i = 0; i <= n; ++i )
+            if ( !pts.defs[i].isCrossing() )
+                pos[i] = fractionOf<FastInt512>( pts.defs[i] );
+        const Vector2i64 shifts[2] = { shiftOf( f, pts.defs[iP], kx, ky ), shiftOf( f, pts.defs[iP2], kx, ky ) };
+        auto alikeOf = [&] ( int i ) { return i == iP ? 0 : ( i == iP2 ? 1 : -1 ); };
+        // the order of P1 and P2 by their shifts, the others by their exact positions
+        auto compare = [&] ( int p, int q, int k ) -> std::optional<int>
+        {
+            if ( alikeOf( p ) >= 0 && alikeOf( q ) >= 0 )
+            {
+                const auto d = shifts[alikeOf( p )] - shifts[alikeOf( q )];
+                return sgn( k == kx ? d.x : d.y );
+            }
+            if ( !pos[p] || !pos[q] )
+                return {};
+            return compareFractions( *pos[p], *pos[q], k );
+        };
+        // a triangle of P1, P2 and another point z by the first-order term of the shifts, cross( wy - wx, z - P ) for the rotation x, y, z
+        // of its vertices, or 0 if it is zero, where the expansion of the perturbation decides; the others by their exact positions
+        auto orient = [&] ( int p, int q, int r )
+        {
+            const int v[3] = { p, q, r };
+            for ( int i = 0; i < 3; ++i )
+            {
+                const int x = v[i], y = v[( i + 1 ) % 3], z = v[( i + 2 ) % 3];
+                if ( alikeOf( x ) < 0 || alikeOf( y ) < 0 )
+                    continue;
+                if ( !pos[z] )
+                    return 0;
+                const auto w = shifts[alikeOf( y )] - shifts[alikeOf( x )];
+                const auto& c = *pos[iP];
+                const auto& t = *pos[z];
+                const auto dx = t.n[kx] * c.d - c.n[kx] * t.d, dy = t.n[ky] * c.d - c.n[ky] * t.d;
+                return ( dy * w.x - dx * w.y ).sign();
+            }
+            return pos[p] && pos[q] && pos[r] ? orientFractions( *pos[p], *pos[q], *pos[r], kx, ky ) : 0;
+        };
+        preds.reset( f );
+        for ( int i = 0; i <= n; ++i )
+            preds.addPoint( VertId( i ), pts.defs[i] );
+        ASSERT_FALSE( preds.failed() );
+        checkOrder( preds, f, pts, kx, ky, false, compare, orderStats );
+        checkCcw( preds, pts, orient, 0, alikeStats );
+        // P1 and P2 are on the planes of all four triangles of ab, so on all four cuts as the predicates see them, since the shifts
+        // are infinitely smaller than the bulge of the points of a cut with a crossing
+        auto onCuts = pts;
+        onCuts.lines[iP] = onCuts.lines[iP2] = cutBit( 0 ) | cutBit( 1 ) | secondSheet;
+        checkCrossings( preds, onCuts, crossings, numWrong );
+    }
+    EXPECT_EQ( numWrong, 0 );
+    EXPECT_EQ( numCrossings, 7 * numReps );
+    EXPECT_EQ( numFlatLine, 4 * numReps );
+    EXPECT_EQ( numFlatTriangles, 2 * numReps );
+    EXPECT_GE( ccwStats.perturbed, 8 * numReps );
+    EXPECT_GE( ccwStats.lines, 60 * numReps );
+    EXPECT_GE( ccwStats.byPerturbation, 50 * numReps );
+    EXPECT_GE( alikeStats.exact, 2800 * numReps );
+}
+
 } // namespace MR

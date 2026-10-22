@@ -101,7 +101,8 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
             }
         }
 
-        // the number of samples to have at least one sample of three inliers with given confidence
+        // the number of samples to have at least one sample of three inliers with given confidence,
+        // see M. A. Fischler, R. C. Bolles, "Random Sample Consensus", Communications of the ACM, 1981
         const auto inlierSampleProb = std::pow( double( bestCount ) / double( numMatches ), 3.0 );
         if ( inlierSampleProb >= 1 )
             break;

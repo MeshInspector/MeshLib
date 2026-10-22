@@ -608,7 +608,7 @@ TEST( MRMesh, CutMeshLoneSlitExact )
 namespace
 {
 
-// the box [c.x - h, c.x + h] x [c.y - hy, c.y + hy] x [z0, z1]
+// the box [c.x - hx, c.x + hx] x [c.y - hy, c.y + hy] x [z0, z1]
 Mesh makeBox( const Vector2f& c, float hx, float hy, float z0, float z1 )
 {
     return makeCube( Vector3f( 2 * hx, 2 * hy, z1 - z0 ), Vector3f( c.x - hx, c.y - hy, z0 ) );

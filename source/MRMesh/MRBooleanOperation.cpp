@@ -51,9 +51,8 @@ HashMap<FaceId, int> windingsAroundParts( const MeshTopology& topology, const st
     std::vector<FaceId> linked;
     for ( const auto& [start, unused] : links )
     {
-        if ( res.contains( start ) )
+        if ( !res.insert( { start, 0 } ).second )
             continue;
-        res[start] = 0;
         linked = { start };
         int minW = 0, maxW = 0;
         for ( size_t i = 0; i < linked.size(); ++i )

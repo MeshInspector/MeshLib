@@ -2001,9 +2001,7 @@ std::optional<std::vector<EdgePair>> findCrossings( const Mesh& mesh, const Edge
     auto p = loopPointsPredicates( mesh, loops, lp );
     p.addIntersectionPoint = [&] ( VertId v, VertId a, VertId b, VertId c, VertId d )
     {
-        PreciseCutPoint x;
-        x.tri = cutOf( meshEdge( a, b ).undirected() );
-        x.tri2 = cutOf( meshEdge( c, d ).undirected() );
+        const PreciseCutPoint x{ .tri = cutOf( meshEdge( a, b ).undirected() ), .tri2 = cutOf( meshEdge( c, d ).undirected() ) };
         if ( !x.tri[0].id || !x.tri2[0].id )
         {
             // the run stops at the end of this event, and no predicate takes the vertex before that

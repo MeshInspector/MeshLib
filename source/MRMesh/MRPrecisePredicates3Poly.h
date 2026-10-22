@@ -63,7 +63,7 @@ constexpr int cMaxPerturbedPoints = 16;
 /// returns the number of different ids, and writes their degrees in ascending order in places[] if it is not null;
 /// n is at most N; the caller makes the degrees fit in int64, unless Bounded: then only the first ids whose terms fit count,
 /// since the terms with the k-th id and smaller ones have degrees below r_0 * ... * r_k, and the points of the other ids
-/// get the largest int64 as their degree, which no stage reaches (see PerturbationStagesOf)
+/// get the degree 0, which leaves them unperturbed at every stage (see PerturbationStagesOf)
 template <int N = cMaxPerturbedPoints, bool Bounded = false>
 MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::int64_t * radices, int n, PointDegree * res,
     std::int64_t * places = nullptr )
@@ -90,9 +90,9 @@ MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::in
         {
             if ( d > std::numeric_limits<std::int64_t>::max() / radices[k] )
             {
-                // the degrees of the terms with this id do not fit: the ids before it count
+                // the degrees of the terms with this id do not fit: the ids before it count, and the points of the others stay unperturbed
                 for ( int j = i; j < n; ++j )
-                    res[as[j].n] = { vs[as[j].n].pt, std::numeric_limits<std::int64_t>::max() };
+                    res[as[j].n] = { vs[as[j].n].pt, 0 };
                 return numIds - 1;
             }
         }
@@ -149,7 +149,7 @@ public:
     /// the degree of the points perturbed first at stage s: every term with them has at least this degree, every term of the earlier stages less
     [[nodiscard]] std::int64_t place( int s ) const { return places_[s - 1]; }
 
-    /// point i with its degree, as perturbed at the last stage (if Bounded, with the largest int64 if no stage perturbs it)
+    /// point i with its degree, as perturbed at the last stage (if Bounded, with the degree 0 if no stage perturbs it)
     [[nodiscard]] const PointDegree & operator[]( int i ) const { return points_[i]; }
 
     /// point i as perturbed at stage s

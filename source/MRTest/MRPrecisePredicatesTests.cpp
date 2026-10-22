@@ -1244,11 +1244,17 @@ TEST( MRMesh, PerturbationStages )
     EXPECT_EQ( last, 3 );
 
     // with degrees that do not fit in int64: the stages end before the first id whose terms can have degrees above it,
-    // here 5 with the radix 2^40 after 3 with 2^30, and its points and those of the larger ids stay unperturbed at every stage
+    // here 5 with the radix 2^40 after 3 with 2^30, and its points and those of the larger ids stay unperturbed at every stage,
+    // with the degree 0
     const std::int64_t large[4] = { 10, std::int64_t( 1 ) << 30, 10, std::int64_t( 1 ) << 40 };
     const detail::PerturbationStagesOf<4, true> bounded( vs, large, 4 );
     ASSERT_EQ( bounded.numStages(), 1 );
     EXPECT_EQ( bounded.place( 1 ), 1 );
+    EXPECT_EQ( bounded[1].d, 1 );
+    EXPECT_EQ( bounded[0].d, 0 );
+    EXPECT_EQ( bounded[2].d, 0 );
+    EXPECT_EQ( bounded[3].d, 0 );
+    EXPECT_EQ( bounded[3].pt, Vector3i( 7, 8, 9 ) );
     EXPECT_EQ( bounded.at( 1, 1 ).d, 1 );
     EXPECT_EQ( bounded.at( 0, 1 ).d, 0 );
     EXPECT_EQ( bounded.at( 3, 1 ).d, 0 );

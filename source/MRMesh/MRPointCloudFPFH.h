@@ -45,4 +45,14 @@ using FPFHDescriptors = Vector<FPFHDescriptor, VertId>;
 [[nodiscard]] MRMESH_API Expected<VertBitSet> findUniqueFPFHPoints( const PointCloud& pointCloud,
     float radius, float beta, const ProgressCallback & progress = {} );
 
+/// \brief Finds for every source point the target point with the closest descriptor (in Euclidean distance)
+/// by comparing all pairs of points, which is fast enough for clouds of several thousand points
+/// \param mutual if true, keeps only the pairs where the source point is also the closest one to the target point
+/// \return (source point, target point) pairs ordered by source point, or error if progress returned false
+/// \ingroup PointCloudGroup
+[[nodiscard]] MRMESH_API Expected<std::vector<VertPair>> findFPFHMatches(
+    const FPFHDescriptors & srcDescriptors, const VertBitSet & srcPoints,
+    const FPFHDescriptors & tgtDescriptors, const VertBitSet & tgtPoints,
+    bool mutual = true, const ProgressCallback & progress = {} );
+
 } //namespace MR

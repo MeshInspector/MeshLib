@@ -25,7 +25,7 @@ function(mr_enable_mimalloc target)
     target_link_options(${target} PRIVATE "/INCLUDE:mi_version")
   elseif(APPLE)
     # the mimalloc dylib loaded at launch interposes malloc and replaces the default malloc zone for the whole process;
-    # it needs mimalloc >= 3.5.4 (ports-macos): a dynamic 3.4.3 aborts at launch on macOS 13 (dyld thread-local bootstrap during libSystem init)
+    # it needs mimalloc >= 3.5 (ports-macos): a dynamic 3.4.3 aborts at launch on macOS 13 (dyld thread-local bootstrap during libSystem init)
     find_package(mimalloc 3.5 CONFIG REQUIRED)
     target_link_libraries(${target} PRIVATE mimalloc)
   elseif(NOT EMSCRIPTEN)

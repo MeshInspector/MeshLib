@@ -8,14 +8,13 @@
 #include "MRMesh/MRCube.h"
 #include "MRMesh/MRMesh.h"
 #include <link.h>
-#include <mimalloc.h>
-#else
-// mimalloc.h declares these as `bool`. Matching the actual return type is
-// critical: MSVC returns `bool` in the low byte of EAX, so reading the call
-// site as `int` picks up garbage in the upper 24 bits (e.g. -980287487).
-// Local Debug happened to zero those bits; Release CI didn't.
-extern "C" bool mi_is_redirected();
+#endif
+
+#ifdef __EMSCRIPTEN__
+// part of -sMALLOC=mimalloc without a header; mimalloc.h declares it returning `bool`
 extern "C" bool mi_is_in_heap_region( const void* p );
+#else
+#include <mimalloc.h>
 #endif
 
 namespace MR

@@ -23,11 +23,10 @@ namespace MR
 namespace
 {
 
-// the winding numbers of the other mesh around the parts of origin separated by the cut (by their roots in unionFind) that have path edges
-// on their boundaries, where the other mesh crosses itself, so that the contours cross and a part is to the left of one path and to the right
-// of another one, as the parts inside one of two overlapping shells are: crossing a path from its left to its right leaves the other mesh
-// on mesh A, and enters it on mesh B; the numbers of every set of parts linked by the paths start from 0;
-// empty if no number is above 1 (every part is only to the left or only to the right of the paths) or the paths contradict one another
+// the winding numbers of the other mesh around the parts of origin separated by the cut (by their roots in unionFind), from 0 in every set
+// of parts linked by the paths: crossing a path from its left to its right leaves the other mesh on mesh A, and enters it on mesh B;
+// empty if no number is above 1, as where the other mesh does not cross itself (every part is only to the left or only to the right
+// of the paths), or if the paths contradict one another
 HashMap<FaceId, int> windingsAroundParts( const MeshTopology& topology, const std::vector<EdgePath>& cutPaths,
     BaseUnionFind<FaceId>& unionFind, bool originIsA )
 {

@@ -92,16 +92,16 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
     }, subprogress( progress, 0.0f, 0.5f ) ) )
         return unexpectedOperationCanceled();
 
-    // final histograms are the averages of neighbour histograms with the weights inversely proportional to the distance
+    // final histograms are the averages of the histograms of the point and its neighbours with Gaussian weights of the distance,
+    // sigma = 0.4 * radius gave more correct matches than other sigmas and 1/distance weights on real scans
+    const auto expCoef = -1 / ( 2 * sqr( 0.4f * radius ) );
     FPFHDescriptors res( points.size() );
     if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
     {
         auto & h = res[v];
         findPointsInBall( pointCloud, { points[v], radiusSq }, [&]( const PointsProjectionResult & found, const Vector3f &, Ball3f & )
         {
-            if ( found.vId == v || !( found.distSq > 0 ) )
-                return Processing::Continue;
-            const auto weight = 1 / std::sqrt( found.distSq );
+            const auto weight = std::exp( expCoef * found.distSq );
             const auto & nh = spfh[found.vId];
             for ( int i = 0; i < 3 * FPFHBins; ++i )
                 h[i] += weight * nh[i];

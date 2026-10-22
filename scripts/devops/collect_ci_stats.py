@@ -126,21 +126,33 @@ def fetch_jobs(repo: str, run_id: str):
         url = resp.links.get('next', {}).get('url')
     return jobs
 
-# GitHub may report a finished job with conclusion null for several minutes
-def fetch_concluded_jobs(repo: str, run_id: str, attempts=10, cooldown=60):
-    for attempt in range(1, attempts + 1):
+def get_last_step_end(job):
+    ends = [parse_iso8601(step['completed_at']) for step in job['steps'] if step.get('completed_at')]
+    return max(ends, default=None)
+
+# GitHub may report a finished job with conclusion null for up to ~15 minutes after its last step;
+# max_wait keeps the whole collection job within the 15-minute limit of ubuntu-slim runners
+def fetch_concluded_jobs(repo: str, run_id: str, conclusion_delay=datetime.timedelta(minutes=15),
+                         max_wait=datetime.timedelta(minutes=13), cooldown=60):
+    give_up = datetime.datetime.now(datetime.timezone.utc) + max_wait
+    while True:
         jobs = fetch_jobs(repo, run_id)
         pending = [
-            job['id']
+            job
             for job in jobs
             if job['conclusion'] is None and Path(f"RunnerSysStats-{job['id']}.json").exists()
         ]
         if not pending:
             return jobs
-        if attempt == attempts:
-            raise RuntimeError(f'jobs {pending} still have no conclusion after {attempts} attempts')
-        print(f'fetch_concluded_jobs: jobs {pending} have no conclusion yet (attempt {attempt}/{attempts}); retrying in {cooldown}s...')
-        time.sleep(cooldown)
+        pending_ids = [job['id'] for job in pending]
+        ends = [get_last_step_end(job) for job in pending]
+        deadline = give_up if None in ends else min(give_up, max(ends) + conclusion_delay)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if now >= deadline:
+            raise RuntimeError(f'jobs {pending_ids} still have no conclusion at {deadline:%H:%M:%S} UTC')
+        wait_s = min(cooldown, (deadline - now).total_seconds())
+        print(f'fetch_concluded_jobs: jobs {pending_ids} have no conclusion yet; retrying in {wait_s:.0f}s (until {deadline:%H:%M:%S} UTC)...')
+        time.sleep(wait_s)
 
 def sign_api_request(url, method, headers, body, region, service):
     # Use the credentials from the assumed role

@@ -31,6 +31,18 @@ HashMap<FaceId, int> windingsAroundParts( const MeshTopology& topology, const st
     BaseUnionFind<FaceId>& unionFind, bool originIsA )
 {
     MR_TIMER;
+    // a number is above 1 only if a part is to the left of a path and to the right of another one
+    FaceBitSet leftParts( topology.faceSize() ), rightParts( topology.faceSize() );
+    for ( const auto& path : cutPaths )
+        for ( auto e : path )
+            if ( const auto l = topology.left( e ), r = topology.right( e ); l && r )
+            {
+                leftParts.set( unionFind.find( l ) );
+                rightParts.set( unionFind.find( r ) );
+            }
+    if ( !leftParts.intersects( rightParts ) )
+        return {};
+
     HashMap<FaceId, std::vector<std::pair<FaceId, int>>> links; // the parts across every path edge, with the change of the number
     const int step = originIsA ? -1 : 1;
     for ( const auto& path : cutPaths )

@@ -481,37 +481,35 @@ struct CutFace
 // so it is an island in the hole of its face, or a slit if it is open
 std::vector<CutFace> findCutFaces( const MeshTopology& topology, const OneMeshContours& contours, bool loneOnly )
 {
-    std::vector<FaceId> faces;
+    FaceBitSet faces( topology.faceSize() );
     for ( const auto& c : contours )
     {
         if ( loneOnly )
         {
             if ( c.intersections.size() > 1 && std::all_of( c.intersections.begin(), c.intersections.end(),
                 [] ( const OneMeshIntersection& i ) { return std::holds_alternative<FaceId>( i.primitiveId ); } ) )
-                faces.push_back( std::get<FaceId>( c.intersections.front().primitiveId ) );
+                faces.set( std::get<FaceId>( c.intersections.front().primitiveId ) );
             continue;
         }
         for ( const auto& i : c.intersections )
         {
             if ( const auto f = std::get_if<FaceId>( &i.primitiveId ) )
-                faces.push_back( *f );
+                faces.set( *f );
             else if ( const auto e = std::get_if<EdgeId>( &i.primitiveId ) )
             {
                 // the contour goes on in the faces on both sides of the edge
                 if ( const auto l = topology.left( *e ) )
-                    faces.push_back( l );
+                    faces.set( l );
                 if ( const auto r = topology.right( *e ) )
-                    faces.push_back( r );
+                    faces.set( r );
             }
         }
     }
-    std::sort( faces.begin(), faces.end() );
-    faces.erase( std::unique( faces.begin(), faces.end() ), faces.end() );
-    std::vector<CutFace> res( faces.size() );
-    for ( int i = 0; i < faces.size(); ++i )
+    std::vector<CutFace> res;
+    for ( auto f : faces )
     {
-        auto& cf = res[i];
-        cf.f = faces[i];
+        auto& cf = res.emplace_back();
+        cf.f = f;
         topology.getTriEdges( cf.f, cf.edges[0], cf.edges[1], cf.edges[2] );
         for ( int k = 0; k < 3; ++k )
             cf.verts[k] = topology.org( cf.edges[k] );

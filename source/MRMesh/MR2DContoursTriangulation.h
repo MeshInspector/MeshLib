@@ -165,5 +165,17 @@ MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const 
 MR_BIND_IGNORE MRMESH_API std::optional<HoleFillPlan> getMonotonePlan( const Mesh& mesh, const EdgeLoops& loops,
     const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf );
 
+/// finds where the edges of the loops of one triangle of a mesh cut by the boolean cross one another, on the same exact predicates
+/// as \ref getMonotonePlan above, as where the contours of a self-intersecting mesh cross inside the triangle
+/// \param cutOf the triangle of the other mesh along whose plane every edge of the loops inside the triangle goes, as PreciseCutPoint::tri,
+///        or invalid ids for an edge along a side; every crossing of two cuts is a point of the predicates (see PreciseCutPoint::tri2)
+/// \return the crossings in the order a sweep over the triangle meets them, which is their order along every edge also at one point
+///         (as at the crossings of three cuts one by one); every crossing is two edges directed along the sweep, the first one passing from
+///         the right of the second one to its left at the crossing; std::nullopt if an edge without a cut crosses another one,
+///         if two vertices on the loops are defined alike and their wedges do not tell them apart, or if the predicates fail on the points
+MR_BIND_IGNORE MRMESH_API std::optional<std::vector<EdgePair>> findCrossings( const Mesh& mesh, const EdgeLoops& loops,
+    const std::array<PreciseVertCoords, 3>& tri, const std::function<PreciseCutPoint( VertId )>& pointOf,
+    const std::function<std::array<PreciseVertCoords, 3>( UndirectedEdgeId )>& cutOf );
+
 }
 }

@@ -15,12 +15,74 @@
 #include "MRRegionBoundary.h"
 #include "MREdgeIterator.h"
 #include "MRUnionFindParallel.h"
+#include "MRphmap.h"
 
 namespace MR
 {
 
 namespace
 {
+
+// the winding numbers of the other mesh around the parts of origin separated by the cut (by their roots in unionFind) that have path edges
+// on their boundaries, where the other mesh crosses itself, so that the contours cross and a part is to the left of one path and to the right
+// of another one, as the parts inside one of two overlapping shells are: crossing a path from its left to its right leaves the other mesh
+// on mesh A, and enters it on mesh B; the numbers of every set of parts linked by the paths start from 0;
+// empty if no number is above 1 (every part is only to the left or only to the right of the paths) or the paths contradict one another
+HashMap<FaceId, int> windingsAroundParts( const MeshTopology& topology, const std::vector<EdgePath>& cutPaths,
+    BaseUnionFind<FaceId>& unionFind, bool originIsA )
+{
+    MR_TIMER;
+    HashMap<FaceId, std::vector<std::pair<FaceId, int>>> links; // the parts across every path edge, with the change of the number
+    const int step = originIsA ? -1 : 1;
+    for ( const auto& path : cutPaths )
+    {
+        for ( auto e : path )
+        {
+            const auto l = topology.left( e ), r = topology.right( e );
+            if ( !l || !r )
+                continue;
+            const auto lr = unionFind.find( l ), rr = unionFind.find( r );
+            links[lr].emplace_back( rr, step );
+            links[rr].emplace_back( lr, -step );
+        }
+    }
+
+    HashMap<FaceId, int> res;
+    bool aboveOne = false;
+    std::vector<FaceId> linked;
+    for ( const auto& [start, unused] : links )
+    {
+        if ( res.contains( start ) )
+            continue;
+        res[start] = 0;
+        linked = { start };
+        int minW = 0, maxW = 0;
+        for ( size_t i = 0; i < linked.size(); ++i )
+        {
+            const auto x = linked[i];
+            const int wx = res.at( x );
+            for ( const auto& [y, d] : links.at( x ) )
+            {
+                const auto [it, inserted] = res.insert( { y, wx + d } );
+                if ( !inserted )
+                {
+                    if ( it->second != wx + d )
+                        return {};
+                    continue;
+                }
+                linked.push_back( y );
+                minW = std::min( minW, wx + d );
+                maxW = std::max( maxW, wx + d );
+            }
+        }
+        for ( auto x : linked )
+            res[x] -= minW;
+        aboveOne = aboveOne || maxW - minW > 1;
+    }
+    if ( !aboveOne )
+        return {};
+    return res;
+}
 
 // Finds needed mesh part based on components relative positions (inside/outside)
 // returns std::nullopt if given cuts do not divide origin mesh on good components (e.g. cuts have self-interections or components are not consistently oriented)
@@ -57,15 +119,30 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     FaceId rightRoot; // root of the components to the right of cutPaths
     if ( !cutPaths.empty() )
     {
-        // unite regions separately to the left and to the right of cutPaths
-        for ( const auto& path : cutPaths )
-            for ( auto e : path )
+        // the forced cut splits the contours where they cross, as where the other mesh crosses itself
+        const auto windings = intParams.graphCutSeparation ? windingsAroundParts( origin.topology, cutPaths, unionFind, originIsA ) : HashMap<FaceId, int>{};
+        if ( !windings.empty() )
+        {
+            // unite the regions inside the other mesh (with a positive winding number) and the ones outside it separately:
+            // the inside is to the left of the paths on mesh A, and to the right on mesh B
+            for ( const auto& [r, w] : windings )
             {
-                if ( auto l = origin.topology.left( e ) )
-                    leftRoot = leftRoot ? unionFind.uniteUnbalanced( leftRoot, l ).first : unionFind.find( l );
-                if ( auto r = origin.topology.right( e ) )
-                    rightRoot = rightRoot ? unionFind.uniteUnbalanced( rightRoot, r ).first : unionFind.find( r );
+                auto& root = ( w > 0 ) == originIsA ? leftRoot : rightRoot;
+                root = root ? unionFind.uniteUnbalanced( root, r ).first : unionFind.find( r );
             }
+        }
+        else
+        {
+            // unite regions separately to the left and to the right of cutPaths
+            for ( const auto& path : cutPaths )
+                for ( auto e : path )
+                {
+                    if ( auto l = origin.topology.left( e ) )
+                        leftRoot = leftRoot ? unionFind.uniteUnbalanced( leftRoot, l ).first : unionFind.find( l );
+                    if ( auto r = origin.topology.right( e ) )
+                        rightRoot = rightRoot ? unionFind.uniteUnbalanced( rightRoot, r ).first : unionFind.find( r );
+                }
+        }
 
         // if last unite merged left and right, we need to update roots
         if ( leftRoot )

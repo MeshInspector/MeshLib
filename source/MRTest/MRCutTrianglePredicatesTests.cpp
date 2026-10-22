@@ -10,6 +10,7 @@
 #include <numeric>
 #include <optional>
 #include <random>
+#include <tuple>
 
 namespace MR
 {
@@ -1855,10 +1856,50 @@ enum class FlatFaceLayout
     Diagonal
 };
 
+// the frame of a layout: the point a and the direction e of the line L where f crosses the plane Pi, and the directions g of f and h of Pi off it
+struct FlatFrame
+{
+    Vector3i a, e, g, h;
+};
+
+FlatFrame flatFrame( FlatFaceLayout layout )
+{
+    const int l = int( layout );
+    const Vector3i as[3] = { { 2, -3, 1 }, { 3, 0, 0 }, { 3, 0, 0 } };
+    const Vector3i es[3] = { { 4, 1, -1 }, { 0, 2, 0 }, { 2, -2, 0 } };
+    const Vector3i gs[3] = { { 1, -5, 2 }, { 5, 1, 0 }, { 5, 1, 0 } };
+    const Vector3i hs[3] = { { 2, 3, 5 }, { 0, 1, 3 }, { 1, -1, 3 } };
+    return { as[l], es[l], gs[l], hs[l] };
+}
+
+// the vertices of f in the frame of a layout, with L across f from a - 22 * e to beyond a + 17 * e, with the ids from id on
+Tri flatFrameFace( const FlatFrame& fr, int id )
+{
+    const int fe[3] = { -30, 30, -10 }, fg[3] = { -6, -4, 9 };
+    Tri res;
+    for ( int i = 0; i < 3; ++i )
+        res[i] = { VertId( id + i ), fr.a + fe[i] * fr.e + fg[i] * fr.g };
+    return res;
+}
+
+// the triangle with the centroid x and the vertices x + u, x + w, x - u - w for the k-th pair of vectors u, w, across L at x if x is on it,
+// in the plane y = const in the layout of CAD meshes; with the ids from nextId on
+Tri acrossLine( FlatFaceLayout layout, const Vector3i& x, int k, int& nextId )
+{
+    const Vector3i pa[3] = { { 300, -500, 410 }, { -200, 600, 350 }, { 380, 420, -520 } };
+    const Vector3i pb[3] = { { -450, 120, -380 }, { 520, -260, -300 }, { -560, -150, 260 } };
+    Vector3i u = pa[k], w = pb[k];
+    if ( layout == FlatFaceLayout::Cad )
+        u.y = w.y = 0;
+    auto vertex = [&] ( const Vector3i& v ) { return PreciseVertCoords{ VertId( nextId++ ), v }; };
+    return { vertex( x + u ), vertex( x + w ), vertex( x - u - w ) };
+}
+
 // the triangles of CutTrianglePredicatesFlatFaceCrossings: f and three triangles p[k] with the smaller ids, and three distinct triangles q[k] in one
 // plane Pi with the larger ids, as a boolean gives them for a face of mesh A and the triangles of a flat face of mesh B, or with the ids of the q[k]
 // between those of f and of the p[k] if qFirst; the cuts by p[k] and q[k] cross at X_k = a + 8 * ( k - 1 ) * e, the centroid of both triangles,
-// on the line of f and Pi through a along e
+// on the line of f and Pi through a along e; or, if onEdge, X_0 is on the edge uv of q[0] = ( g, u, v ) opposite its vertex g, which has
+// the smallest id of the q[k], so that g perturbed alone turns q[0] about uv and leaves X_0 in place, as the other crossings
 struct FlatFaceCrossings
 {
     Tri f;
@@ -1866,33 +1907,65 @@ struct FlatFaceCrossings
     std::array<Vector3i, 3> x;
 };
 
-FlatFaceCrossings flatFaceCrossings( FlatFaceLayout layout, bool qFirst )
+FlatFaceCrossings flatFaceCrossings( FlatFaceLayout layout, bool qFirst, bool onEdge = false )
 {
-    int nextId = 0, nextP = qFirst ? 12 : 3, nextQ = qFirst ? 3 : 12;
-    auto vertex = [&] ( const Vector3i& v, int& id ) { return PreciseVertCoords{ VertId( id++ ), v }; };
-    // the point a and the direction e of the line, the directions g of f and h of Pi off it in each layout, and the vectors from the centroids
-    // of p[k] to two of their vertices
-    const int l = int( layout );
-    const Vector3i as[3] = { { 2, -3, 1 }, { 3, 0, 0 }, { 3, 0, 0 } };
-    const Vector3i es[3] = { { 4, 1, -1 }, { 0, 2, 0 }, { 2, -2, 0 } };
-    const Vector3i gs[3] = { { 1, -5, 2 }, { 5, 1, 0 }, { 5, 1, 0 } };
-    const Vector3i hs[3] = { { 2, 3, 5 }, { 0, 1, 3 }, { 1, -1, 3 } };
-    const Vector3i a = as[l], e = es[l], g = gs[l], h = hs[l];
-    const Vector3i pa[3] = { { 300, -500, 410 }, { -200, 600, 350 }, { 380, 420, -520 } };
-    const Vector3i pb[3] = { { -450, 120, -380 }, { 520, -260, -300 }, { -560, -150, 260 } };
+    int nextP = qFirst ? 12 : 3, nextQ = qFirst ? 3 : 12;
+    auto inPi = [&] ( const Vector3i& v ) { return PreciseVertCoords{ VertId( nextQ++ ), v }; };
+    const auto fr = flatFrame( layout );
+    const Vector3i e = fr.e, h = fr.h;
     FlatFaceCrossings res;
-    const int fe[3] = { -30, 30, -10 }, fg[3] = { -6, -4, 9 };
-    for ( int i = 0; i < 3; ++i )
-        res.f[i] = vertex( a + fe[i] * e + fg[i] * g, nextId );
+    res.f = flatFrameFace( fr, 0 );
     for ( int k = 0; k < 3; ++k )
     {
-        res.x[k] = a + 8 * ( k - 1 ) * e;
-        Vector3i u = pa[k], w = pb[k];
-        if ( layout == FlatFaceLayout::Cad )
-            u.y = w.y = 0;
-        res.p[k] = { vertex( res.x[k] + u, nextP ), vertex( res.x[k] + w, nextP ), vertex( res.x[k] - u - w, nextP ) };
-        res.q[k] = { vertex( res.x[k] - 3 * e - h, nextQ ), vertex( res.x[k] + 3 * e - h, nextQ ), vertex( res.x[k] + 2 * h, nextQ ) };
+        const Vector3i x = res.x[k] = fr.a + 8 * ( k - 1 ) * e;
+        res.p[k] = acrossLine( layout, x, k, nextP );
+        res.q[k] = onEdge && k == 0 ? Tri{ inPi( x + 4 * e + h ), inPi( x + e - 2 * h ), inPi( x - e + 2 * h ) }
+            : Tri{ inPi( x - 3 * e - h ), inPi( x + 3 * e - h ), inPi( x + 2 * h ) };
     }
+    return res;
+}
+
+// the triangles of CutTrianglePredicatesBoxFacesCrossings in the frame of a layout (see FlatFrame): f, triangles R and S across L at a - 8 * e
+// and a + 8 * e, and in Pi, as the coplanar faces of two overlapping boxes of a self-intersecting mesh, the faces A over a + s * e + t * h
+// for s in [-12, 4] and t in [-2, 2], and B over s in [-6, 12], each split into two triangles by a diagonal, A1 and A2, B1 and B2, whose cuts
+// go along L over s in [-4, 4], [-12, -4], [-6, 3] and [3, 12]; X2, X1 and X3 are the crossings of the cuts by A2 and R, by A1 and B1,
+// parallel ones, and by B2 and S, with no known line through two of them; the ids of f, of R and S, and of A and B begin at first[0..2],
+// and the vertex of A1 opposite its diagonal has the smallest id of A and B, so that the perturbation turns A1 first, about that diagonal,
+// and X1 is the limit at the crossing of the diagonal with L, a - 4 * e
+struct BoxFacesCrossings
+{
+    Tri f;
+    std::vector<Tri> others; // R, S, A1, A2, B1, B2
+    std::array<PreciseCutPoint, 3> x; // X2, X1, X3
+    std::array<Vector3i, 3> at; // their positions, before the perturbation or in its limit
+};
+
+BoxFacesCrossings boxFacesCrossings( FlatFaceLayout layout, const std::array<int, 3>& first )
+{
+    const auto fr = flatFrame( layout );
+    BoxFacesCrossings res;
+    res.f = flatFrameFace( fr, first[0] );
+    int nextRS = first[1], nextBox = first[2];
+    const Tri r = acrossLine( layout, fr.a - 8 * fr.e, 0, nextRS ), s = acrossLine( layout, fr.a + 8 * fr.e, 2, nextRS );
+    // the corners from ( s0, -2 ) counterclockwise in s, t
+    auto face = [&] ( int s0, int s1, int firstCorner )
+    {
+        const int cs[4][2] = { { s0, -2 }, { s1, -2 }, { s1, 2 }, { s0, 2 } };
+        std::array<PreciseVertCoords, 4> q;
+        for ( int i = 0; i < 4; ++i )
+        {
+            const int c = ( firstCorner + i ) % 4;
+            q[c] = { VertId( nextBox++ ), fr.a + cs[c][0] * fr.e + cs[c][1] * fr.h };
+        }
+        return q;
+    };
+    const auto qa = face( -12, 4, 1 ), qb = face( -6, 12, 0 );
+    const Tri a1 = { qa[0], qa[1], qa[2] }, a2 = { qa[0], qa[2], qa[3] }, b1 = { qb[1], qb[3], qb[0] }, b2 = { qb[1], qb[2], qb[3] };
+    res.others = { r, s, a1, a2, b1, b2 };
+    res.x[0] = { .tri = r, .tri2 = a2 };
+    res.x[1] = { .tri = a1, .tri2 = b1 };
+    res.x[2] = { .tri = b2, .tri2 = s };
+    res.at = { fr.a - 8 * fr.e, fr.a - 4 * fr.e, fr.a + 8 * fr.e };
     return res;
 }
 
@@ -1906,6 +1979,23 @@ int crossingIndex( const CutPoints& pts, const Tri& a, const Tri& b )
             return i;
     }
     return -1;
+}
+
+// checks the points of f with three crossings xs on one line with no known line through two of them by checkSet, with every triangle against
+// the expansion of the perturbation and the exact positions of the crossings in limits, and that the expansion alone gives the orientation
+// of the crossings in any order, and ccw the same
+void checkLineCrossings( CutTrianglePredicates& preds, const Tri& f, const CutPoints& pts, const std::array<VertId, 3>& xs,
+    const std::vector<std::optional<Fraction<FastInt512>>>& limits, OrderStats& orderStats, CcwStats& ccwStats )
+{
+    checkSet<FastInt512>( preds, f, pts, orderStats, ccwStats, 1, limits );
+    const auto [x, y, z] = xs;
+    EXPECT_FALSE( preds.ccwByLines( x, y, z ).has_value() );
+    const auto c = preds.ccwByPerturbation( x, y, z );
+    ASSERT_TRUE( c.has_value() );
+    EXPECT_EQ( preds.ccw( x, y, z ), *c );
+    EXPECT_EQ( preds.ccwByPerturbation( y, z, x ), *c );
+    EXPECT_EQ( preds.ccwByPerturbation( z, y, x ), !*c );
+    EXPECT_FALSE( preds.failed() );
 }
 
 } // anonymous namespace
@@ -2032,19 +2122,26 @@ TEST( MRMesh, CutTrianglePredicatesCrossingsFolds )
 // in general position, as the faces of CAD meshes are (f in z = 0, the q[k] in x = 3 and the p[k] in y = const), with the ids of the q[k]
 // before or after those of the p[k], and with the q[k] in x + y = 3 (see FlatFaceLayout): the first vertex of a q[k] moves the crossings
 // off the line only by its x coordinate, or by its x and y ones, whose term with the lowest weight decides at its stage, above the place
-// of the stage, which took seconds with the ids of the q[k] last, expanded with all the vertices before it; with the corners of f
-// and the ends of the cuts by the p[k] (see cutPoints), the predicates must be consistent (see checkSet), and the expansion alone must give
-// the same orientation of the crossings in any order
+// of the stage, which took seconds with the ids of the q[k] last, expanded with all the vertices before it; and in each layout with X_0
+// on the edge of q[0] opposite its vertex of the smallest id of the q[k], which perturbed alone leaves the crossings in place, so that
+// its stage is expanded with all the vertices before it, which takes 0.2 to 5 seconds in Release with the ids of the q[k] last, so they come
+// first there; with the corners of f and the ends of the cuts by the p[k] (see cutPoints), the predicates must be consistent (see checkSet),
+// and the expansion alone must give the same orientation of the crossings in any order
 TEST( MRMesh, CutTrianglePredicatesFlatFaceCrossings )
 {
     CutTrianglePredicates preds;
     OrderStats orderStats;
     CcwStats ccwStats;
-    const std::pair<FlatFaceLayout, bool> layouts[] =
-        { { FlatFaceLayout::General, false }, { FlatFaceLayout::Cad, true }, { FlatFaceLayout::Cad, false }, { FlatFaceLayout::Diagonal, false } };
-    for ( const auto& [layout, qFirst] : layouts )
+    // the layout, whether the ids of the q[k] come first, and whether X_0 is on an edge of q[0] (see flatFaceCrossings)
+    const std::tuple<FlatFaceLayout, bool, bool> sets[] =
     {
-        const auto s = flatFaceCrossings( layout, qFirst );
+        { FlatFaceLayout::General, false, false }, { FlatFaceLayout::Cad, true, false }, { FlatFaceLayout::Cad, false, false },
+        { FlatFaceLayout::Diagonal, false, false }, { FlatFaceLayout::General, true, true }, { FlatFaceLayout::Cad, true, true },
+        { FlatFaceLayout::Diagonal, true, true }
+    };
+    for ( const auto& [layout, qFirst, onEdge] : sets )
+    {
+        const auto s = flatFaceCrossings( layout, qFirst, onEdge );
         auto pts = cutPoints( s.f, { s.p[0], s.p[1], s.p[2] } );
         std::vector<std::optional<Fraction<FastInt512>>> limits( pts.defs.size() );
         std::array<VertId, 3> xs;
@@ -2059,16 +2156,45 @@ TEST( MRMesh, CutTrianglePredicatesFlatFaceCrossings )
             limits.push_back( fractionOf<FastInt512>( vertexPoint( { VertId( 0 ), s.x[k] } ) ) );
         }
         EXPECT_EQ( int( pts.defs.size() ), 12 );
-        checkSet<FastInt512>( preds, s.f, pts, orderStats, ccwStats, 1, limits );
-        EXPECT_FALSE( preds.ccwByLines( xs[0], xs[1], xs[2] ).has_value() );
-        const auto c = preds.ccwByPerturbation( xs[0], xs[1], xs[2] );
-        ASSERT_TRUE( c.has_value() );
-        EXPECT_EQ( preds.ccw( xs[0], xs[1], xs[2] ), *c );
-        EXPECT_EQ( preds.ccwByPerturbation( xs[1], xs[2], xs[0] ), *c );
-        EXPECT_EQ( preds.ccwByPerturbation( xs[2], xs[1], xs[0] ), !*c );
-        EXPECT_FALSE( preds.failed() );
+        checkLineCrossings( preds, s.f, pts, xs, limits, orderStats, ccwStats );
     }
-    EXPECT_EQ( ccwStats.perturbed, 4 );
+    EXPECT_EQ( ccwStats.perturbed, 7 );
+}
+
+// Three crossings on the line L where a face f crosses the plane Pi of the coplanar faces of two overlapping boxes of a self-intersecting mesh,
+// each face split into two triangles (see boxFacesCrossings): X1 of the cuts by A1 and B1 of the two faces, parallel ones, at the limit of their
+// perturbed crossing, and X2 and X3 of the cuts by the other triangles A2 and B2 with the cuts by the triangles R and S across L, with no known
+// line through two of them, so that only the expansion of the perturbation orients them; X1 is undefined with the vertex of a stage perturbed
+// alone, so every stage from the first one of a vertex of the faces (see planeGuards) is expanded with all the vertices before it, which takes
+// seconds in Release with the ids of the faces after those of f, R and S, so they come first here; with Pi in general position, and with f
+// in z = 0 and Pi in x = 3, as in CAD meshes; with the corners of f, the ends of all the cuts and the crossings of the edges of the faces with f
+// (see cutPoints), the predicates must be consistent (see checkSet), with X1 at the crossing of the diagonal of A with L, and the expansion alone
+// must give the same orientation of the crossings in any order
+TEST( MRMesh, CutTrianglePredicatesBoxFacesCrossings )
+{
+    CutTrianglePredicates preds;
+    OrderStats orderStats;
+    CcwStats ccwStats;
+    for ( auto layout : { FlatFaceLayout::General, FlatFaceLayout::Cad } )
+    {
+        const auto s = boxFacesCrossings( layout, { 8, 11, 0 } );
+        auto pts = cutPoints( s.f, s.others );
+        std::vector<std::optional<Fraction<FastInt512>>> limits( pts.defs.size() );
+        // the cuts of X2, X1, X3 by others: R, S, A1, A2, B1, B2
+        const int cuts[3] = { cutBit( 0 ) | cutBit( 3 ), cutBit( 2 ) | cutBit( 4 ), cutBit( 1 ) | cutBit( 5 ) };
+        std::array<VertId, 3> xs;
+        for ( int k = 0; k < 3; ++k )
+        {
+            xs[k] = VertId( int( pts.defs.size() ) );
+            pts.add( s.x[k], cuts[k] );
+            limits.push_back( fractionOf<FastInt512>( vertexPoint( { VertId( 0 ), s.at[k] } ) ) );
+        }
+        EXPECT_EQ( int( pts.defs.size() ), 16 );
+        checkLineCrossings( preds, s.f, pts, xs, limits, orderStats, ccwStats );
+    }
+    EXPECT_GE( orderStats.perturbed, 2 );
+    EXPECT_GE( ccwStats.perturbed, 40 );
+    EXPECT_GE( ccwStats.lines, 140 );
 }
 
 namespace

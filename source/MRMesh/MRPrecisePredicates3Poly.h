@@ -52,7 +52,7 @@ struct PointDegree
     }
 };
 
-/// the largest number of points of one predicate that getPointDegrees and PerturbationStages take
+/// the largest number of points of one predicate that getPointDegrees and PerturbationStages take by default
 constexpr int cMaxPerturbedPoints = 16;
 
 /// finds the degrees of the perturbation of points vs[0..n-1] and writes them in res[0..n-1]: sorted by ids, the points get
@@ -60,7 +60,11 @@ constexpr int cMaxPerturbedPoints = 16;
 /// and points with equal ids get equal degrees; the smallest id moves most, as in orient3d, and the radix of a point must exceed
 /// its weight in every term of the polynomials of the predicate (the sum of 9, 3, 1 over its coordinates in the term), so that
 /// the degrees order the terms as the perturbation of orient3d does: by the weights of the points from the largest id down;
-/// returns the number of different ids, and writes their degrees in ascending order in places[] if it is not null
+/// returns the number of different ids, and writes their degrees in ascending order in places[] if it is not null;
+/// n is at most N; the caller makes the degrees fit in int64, unless Bounded: then only the first ids whose terms fit count,
+/// since the terms with the k-th id and smaller ones have degrees below r_0 * ... * r_k, and the points of the other ids
+/// get the degree 0, which leaves them unperturbed at every stage (see PerturbationStagesOf)
+template <int N = cMaxPerturbedPoints, bool Bounded = false>
 MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::int64_t * radices, int n, PointDegree * res,
     std::int64_t * places = nullptr )
 {
@@ -69,8 +73,8 @@ MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::in
         VertId v;
         int n = 0;
     };
-    assert( n > 0 && n <= cMaxPerturbedPoints );
-    std::array<VertN, cMaxPerturbedPoints> as;
+    assert( n > 0 && n <= N );
+    std::array<VertN, N> as;
     for ( int i = 0; i < n; ++i )
         as[i] = { vs[i].id, i };
     std::sort( as.begin(), as.begin() + n, []( const auto & a, const auto & b ) { return a.v < b.v; } );
@@ -82,6 +86,16 @@ MR_FORCE_INLINE int getPointDegrees( const PreciseVertCoords * vs, const std::in
     for ( int i = 0; i < n; ++i )
     {
         const auto k = as[i].n;
+        if constexpr ( Bounded )
+        {
+            if ( d > std::numeric_limits<std::int64_t>::max() / radices[k] )
+            {
+                // the degrees of the terms with this id do not fit: the ids before it count, and the points of the others stay unperturbed
+                for ( int j = i; j < n; ++j )
+                    res[as[j].n] = { vs[as[j].n].pt, 0 };
+                return numIds - 1;
+            }
+        }
         res[k] = { vs[k].pt, d };
         if ( i + 1 == n )
             break;
@@ -115,24 +129,27 @@ constexpr std::int64_t cMaxPolyDTriPlane = 430'486'893; // segmentIntersectionTr
 /// only the points with the s smallest ids are perturbed (orient3dPoly leaves the others unperturbed); a polynomial of the predicate
 /// that is not zero at stage s already has the leading term of the full one, since every term with a point of a later stage has
 /// a larger degree than every term without; and if it was zero at stage s - 1, its terms without the points of stage s cancel
-/// one another, so only the products of the terms of degrees from place( s ) up remain (see `from` in lowestTermOfSumOfProducts)
-class PerturbationStages
+/// one another, so only the products of the terms of degrees from place( s ) up remain (see `from` in lowestTermOfSumOfProducts);
+/// at most N points; if Bounded, the degrees need not fit in int64, and the stages end before the first one whose terms can have
+/// degrees above it (see getPointDegrees), so that firstStage gives the empty value if no stage before gives one
+template <int N, bool Bounded>
+class PerturbationStagesOf
 {
 public:
     /// the stages of points vs[0..n-1] with the degrees from getPointDegrees
-    MR_FORCE_INLINE PerturbationStages( const PreciseVertCoords * vs, const std::int64_t * radices, int n )
+    MR_FORCE_INLINE PerturbationStagesOf( const PreciseVertCoords * vs, const std::int64_t * radices, int n )
     {
-        assert( n <= cMaxPerturbedPoints );
-        numStages_ = getPointDegrees( vs, radices, n, points_.data(), places_.data() );
+        assert( n <= N );
+        numStages_ = getPointDegrees<N, Bounded>( vs, radices, n, points_.data(), places_.data() );
     }
 
-    /// the number of stages, which is the number of different ids
+    /// the number of stages, which is the number of different ids (if Bounded, of those before the first one whose degrees do not fit)
     [[nodiscard]] int numStages() const { return numStages_; }
 
     /// the degree of the points perturbed first at stage s: every term with them has at least this degree, every term of the earlier stages less
     [[nodiscard]] std::int64_t place( int s ) const { return places_[s - 1]; }
 
-    /// point i with its degree, as perturbed at the last stage
+    /// point i with its degree, as perturbed at the last stage (if Bounded, with the degree 0 if no stage perturbs it)
     [[nodiscard]] const PointDegree & operator[]( int i ) const { return points_[i]; }
 
     /// point i as perturbed at stage s
@@ -153,10 +170,13 @@ public:
     }
 
 private:
-    std::array<PointDegree, cMaxPerturbedPoints> points_;
-    std::array<std::int64_t, cMaxPerturbedPoints> places_;
+    std::array<PointDegree, N> points_;
+    std::array<std::int64_t, N> places_;
     int numStages_ = 0;
 };
+
+/// the stages of at most cMaxPerturbedPoints points, whose degrees the caller makes fit in int64
+using PerturbationStages = PerturbationStagesOf<cMaxPerturbedPoints, false>;
 
 /// 128 bits are enough to store all coefficients of one orient3d-polynomial (products of three coordinate differences),
 /// while the products of two such polynomials are computed in 256 bits, see signOfProductsDiff<Int128Mul256>

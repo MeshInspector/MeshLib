@@ -839,9 +839,19 @@ CrossingExact crossingExact( const std::array<PreciseVertCoords, 3> & t, const s
 struct CrossingData
 {
     WideCoords exact; // of the crossing, or of its limit if the cuts are parallel before the perturbation
-    CrossingExact parts; // all zero if the cuts are parallel before the perturbation
+    // n and d of the crossing, or their leading coefficients at the degree of the limit (see addCrossing_); all zero for the limit
+    // in a triangle with a zero normal, or for a failed point
+    CrossingExact parts;
     int dSign = 0; // the sign of the perturbed d (see crossingExact), which tells the sides of the planes (see crossingSideOfPlane_)
 };
+
+/// M = dot( m, n ) - offset * d for the parts of a crossing of two cuts (see CrossingData) and the plane with normal m and offset dot( m, R0 ),
+/// whose sign times that of d is the side of the plane (see crossingSideOfPlane_); with the components of m below 2^63 and of n below 2^224,
+/// and the offset below 2^95 and d below 2^192, M is below 2^289
+FastInt<384> planeValue( const CrossingExact & x, const Vector3i64 & m, const FastInt128 & offset )
+{
+    return FastInt<384>( x.n[0] * m.x + x.n[1] * m.y + x.n[2] * m.z ) - offset * x.d;
+}
 
 /// a point with what the predicates take from its definition most often
 struct CutPoint
@@ -1218,20 +1228,36 @@ void CutTrianglePredicates::addCrossing_( VertId v, const PreciseCutPoint & p )
                 const auto & [deg, cd] = x.d.get().front();
                 if ( alone && deg != ps.place( s ) )
                     continue;
-                FastInt256 n[2];
-                for ( int k = 0; k < 2; ++k )
+                // the coefficients of the terms of degree deg of all components of n, by the axes, zero for a component without one
+                const int kz = 3 - kx_ - ky_;
+                std::array<FastInt256, 3> n;
+                for ( int k = 0; k < 3; ++k )
                 {
-                    const auto & num = x.n[k == 0 ? kx_ : ky_];
+                    const auto & num = x.n[k];
                     if ( num.empty() )
                         continue;
                     const auto & [numDeg, numCoef] = num.get().front();
-                    if ( numDeg < deg )
+                    if ( numDeg < deg && k != kz )
                         return true; // at infinity: stays invalid
+                    assert( numDeg >= deg || normal_[kz] == 0 ); // see below
                     if ( numDeg == deg )
                         n[k] = numCoef;
                 }
                 c.dSign = cd.sign();
-                c.exact = { n[0], n[1], cd };
+                c.exact = { n[kx_], n[ky_], cd };
+                // the leading coefficients give the side of a plane at the limit, as the exact parts at an exact crossing (see crossingSideOfPlane_),
+                // if the exact normal of this triangle is not zero: n[kx] and n[ky] have no terms below deg (see above), and n[kz] has none either,
+                // since dot( nt, n ) = at * d identically (see crossingExact), so nt[kz] * n[kz] = at * d - nt[kx] * n[kx] - nt[ky] * n[ky] has none,
+                // while nt[kz] has the constant term normal_[kz], the largest component of the exact normal, not zero then; so for any plane R,
+                // M = dot( m, n ) - dot( m, R0 ) * d with the perturbed normal m and vertex R0 has no terms below deg, and its term of degree deg
+                // is M0 = dot( m, n0 ) - dot( m, R0 ) * d0 with the unperturbed m and R0 and the coefficients n0 and d0 of n and d at deg, since
+                // the perturbation adds only terms of positive degrees to m and R0; with the vertices of R added, as in sosCrossingSide,
+                // the degrees of the terms change, but neither their order, by the weights of the vertices from the largest id down
+                // (see getPointDegrees), nor their coefficients; so M0, if not zero, has the sign of M that sosCrossingSide finds, and the side
+                // follows with dSign as at an exact crossing; n0 and d0 are below 2^224 and 2^192, as all the coefficients are (see SosVec),
+                // so M0 is below 2^289 as there; with a zero normal, nt[kz] has no constant term, and the parts stay zero, for sosCrossingSide
+                if ( normal_[kz] != 0 )
+                    c.parts = { n, cd };
                 valid = true;
                 return true;
             }
@@ -1264,6 +1290,8 @@ void CutTrianglePredicates::addCrossing_( VertId v, const PreciseCutPoint & p )
         auto corner = [&] ( int i ) { return WideCoords{ FastInt256( tri_[i].pt[kx_] ), FastInt256( tri_[i].pt[ky_] ), FastInt256( 1 ) }; };
         for ( int i = 0; i < 3; ++i )
             assert( orientWide( corner( i ), corner( ( i + 1 ) % 3 ), c.exact ) >= 0 );
+        // the parts are on the plane of this triangle, the limit as the exact crossing, as dot( nt, n ) = at * d gives (see above)
+        assert( planeValue( c.parts, normal_, normalDot( normal_, Vector3i64( tri_[0].pt ) ) ).sign() == 0 );
     }
 #endif
 }
@@ -1609,8 +1637,10 @@ int CutTrianglePredicates::sideOfPlane_( const std::array<PreciseVertCoords, 3> 
 }
 
 /// sideOfPlane_ for a crossing X = n / d of two cuts (see crossingExact) and the plane R with normal m: the sign of m.( X - R0 ) is that
-/// of M * d for M = dot( m, n ) - dot( m, R0 ) * d, or of the perturbed polynomials if M is zero, as the planes of four triangles
-/// through one point (common in CAD meshes) give, or the cuts of X are parallel before the perturbation
+/// of M * d for M = dot( m, n ) - dot( m, R0 ) * d (see planeValue), with the leading coefficients of the perturbed n and d at the limit
+/// of cuts parallel before the perturbation (see addCrossing_); or of the perturbed polynomials if M is zero: for the planes of four triangles
+/// through one point (common in CAD meshes), for a plane through the limit (as the other triangles in the plane of both cuts are), and for
+/// the limit in a triangle with a zero normal, whose parts are zero
 int CutTrianglePredicates::crossingSideOfPlane_( const std::array<PreciseVertCoords, 3> & plane, VertId x ) const
 {
     const auto & pt = impl_->points[x];
@@ -1618,10 +1648,7 @@ int CutTrianglePredicates::crossingSideOfPlane_( const std::array<PreciseVertCoo
         return 0; // on the cut by the plane
     const auto & c = impl_->crossings[pt.crossing];
     const auto m = normalOf( plane );
-    const FastInt128 offset = normalDot( m, Vector3i64( plane[0].pt ) );
-    // with the components of m below 2^63 and of n below 2^224, and the offset below 2^95 and d below 2^192, M is below 2^289
-    const FastInt<384> mm = FastInt<384>( c.parts.n[0] * m.x + c.parts.n[1] * m.y + c.parts.n[2] * m.z ) - offset * c.parts.d;
-    int s = mm.sign();
+    int s = planeValue( c.parts, m, normalDot( m, Vector3i64( plane[0].pt ) ) ).sign();
     if ( s == 0 )
         s = sosCrossingSide( pt.def, tri_, plane );
     if ( s == 0 )

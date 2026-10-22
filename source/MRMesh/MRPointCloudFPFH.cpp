@@ -94,8 +94,8 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
         return unexpectedOperationCanceled();
 
     // final histograms are the averages of the histograms of the point and its neighbours with Gaussian weights of the distance,
-    // sigma = 0.4 * radius gave more correct matches than other sigmas and 1/distance weights on real scans
-    const auto expCoef = -1 / ( 2 * sqr( 0.4f * radius ) );
+    // sigma = 0.2 * radius gave more precise correct matches than other sigmas and 1/distance weights on real scans
+    const auto expCoef = -1 / ( 2 * sqr( 0.2f * radius ) );
     FPFHDescriptors res( points.size() );
     if ( !BitSetParallelFor( pointCloud.validPoints, [&]( VertId v )
     {

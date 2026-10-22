@@ -1995,14 +1995,7 @@ std::optional<std::vector<EdgePair>> findCrossings( const Mesh& mesh, const Edge
     SweepLineQueue::Cache cache;
     WholeEdgeMap patchToInEdges;
     // the mesh edge of the edge of the sweep from a to b, which is an edge of the loops, since findIntersections splits no edge
-    auto meshEdge = [&] ( VertId a, VertId b )
-    {
-        for ( auto e : orgRing( cache.tp, a ) )
-            if ( cache.tp.dest( e ) == b )
-                return mapEdge( patchToInEdges, e );
-        assert( false );
-        return EdgeId{};
-    };
+    auto meshEdge = [&] ( VertId a, VertId b ) { return mapEdge( patchToInEdges, cache.tp.findEdge( a, b ) ); };
     VertId nextPoint( lp.verts.size() );
     bool alongSide = false; // an edge without a cut crosses another one
     auto p = loopPointsPredicates( mesh, loops, lp );

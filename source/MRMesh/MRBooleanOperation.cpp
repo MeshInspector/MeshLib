@@ -60,18 +60,14 @@ HashMap<FaceId, int> windingsAroundParts( const MeshTopology& topology, const st
         {
             const auto x = linked[i];
             const int wx = res.at( x );
+            minW = std::min( minW, wx );
+            maxW = std::max( maxW, wx );
             for ( const auto& [y, d] : links.at( x ) )
             {
-                const auto [it, inserted] = res.insert( { y, wx + d } );
-                if ( !inserted )
-                {
-                    if ( it->second != wx + d )
-                        return {};
-                    continue;
-                }
-                linked.push_back( y );
-                minW = std::min( minW, wx + d );
-                maxW = std::max( maxW, wx + d );
+                if ( const auto [it, inserted] = res.insert( { y, wx + d } ); inserted )
+                    linked.push_back( y );
+                else if ( it->second != wx + d )
+                    return {};
             }
         }
         for ( auto x : linked )

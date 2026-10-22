@@ -877,19 +877,15 @@ HashMap<UndirectedEdgeId, EdgePath> splitContourCrossings( Mesh& mesh, const One
                 tp.setLeft( cf.edges[0], cf.f );
             continue;
         }
-        const auto firstNewVert = splitCrossings( mesh, *crossings[k], cf.f, pieces, new2OldEdgeMap );
-        for ( int i = 0; i < crossings[k]->size(); ++i )
+        const auto& cs = *crossings[k];
+        const auto firstNewVert = splitCrossings( mesh, cs, cf.f, pieces, new2OldEdgeMap );
+        for ( int i = 0; i < cs.size(); ++i )
         {
-            const auto [a, b] = ( *crossings[k] )[i];
+            const auto [a, b] = cs[i];
             exact.crossings[firstNewVert + i] = { .tri = cutOf( a.undirected() ), .tri2 = cutOf( b.undirected() ) };
             for ( auto e : { a, b } )
-            {
                 for ( auto p : pieces.at( e.undirected() ) )
-                {
-                    holes.edges[k].push_back( p );
-                    holes.edges[k].push_back( p.sym() );
-                }
-            }
+                    holes.edges[k].insert( holes.edges[k].end(), { p, p.sym() } );
         }
         if ( findCutFace( loneFaces, cf.f ) >= 0 )
             islandFaces.push_back( k );

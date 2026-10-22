@@ -369,6 +369,9 @@
     <ClInclude Include="MRPointCloudMakeNormals.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
+    <ClInclude Include="MRPointCloudFPFH.h">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClInclude>
     <ClInclude Include="MRRegularMapMesher.h">
       <Filter>Source Files\PointCloud</Filter>
     </ClInclude>
@@ -1650,6 +1653,9 @@
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRPointCloudMakeNormals.cpp">
+      <Filter>Source Files\PointCloud</Filter>
+    </ClCompile>
+    <ClCompile Include="MRPointCloudFPFH.cpp">
       <Filter>Source Files\PointCloud</Filter>
     </ClCompile>
     <ClCompile Include="MRRegularMapMesher.cpp">

@@ -73,7 +73,6 @@ jobs:
         run: python3 scripts/devops/collect_ci_stats.py
 
       - name: Delete stats artifacts
-        if: always()
         uses: actions/github-script@v9
         with:
           script: |

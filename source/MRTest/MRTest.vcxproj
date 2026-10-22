@@ -138,6 +138,7 @@
     <ClCompile Include="MRPolylineSubdivideTests.cpp" />
     <ClCompile Include="MRPolylineTopologyTests.cpp" />
     <ClCompile Include="MRNormalDenoisingTests.cpp" />
+    <ClCompile Include="MRPointCloudFPFHTests.cpp" />
     <ClCompile Include="MRPositionVertsSmoothlyTests.cpp" />
     <ClCompile Include="MRQuadraticFormTests.cpp" />
     <ClCompile Include="MRRasterTests.cpp" />

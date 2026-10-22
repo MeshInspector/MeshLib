@@ -10,7 +10,8 @@ find_dependency(spdlog 1.9)
 find_dependency(TBB 2020.1)
 find_dependency(tl-expected)
 if(NOT EMSCRIPTEN)
-  find_dependency(mimalloc)
+  # bundled with the thirdparty libraries in MeshLib distributions
+  find_dependency(mimalloc HINTS "${MESHLIB_THIRDPARTY_LIB_DIR}/cmake/mimalloc")
 endif()
 
 # static builds require to find private dependencies

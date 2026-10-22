@@ -29,22 +29,14 @@ struct RigidXfRansacParams
     std::uint32_t seed = 0;
 };
 
-struct RigidXfRansacResult
-{
-    /// rigid transformation of source points to target points
-    AffineXf3f xf;
-
-    /// the matches mapped by the transformation within inlierDistance
-    std::vector<VertPair> inliers;
-};
-
 /// \brief Finds the rigid transformation of source points to target points from given matches, many of which can be wrong:
 /// tests the transformations through random samples of three matches and keeps the one with most inliers,
 /// then refines it by least squares fitting on all its inliers
 /// \param matches (source point, target point) pairs, e.g. from findFPFHMatches(...)
-/// \return error if there are less than three matches, no consistent sample was found or progress returned false
+/// \return rigid transformation of source points to target points,
+/// or error if there are less than three matches, no consistent sample was found or progress returned false
 /// \ingroup AligningTransformGroup
-[[nodiscard]] MRMESH_API Expected<RigidXfRansacResult> findRigidXfRansac( const VertCoords & srcPoints, const VertCoords & tgtPoints,
+[[nodiscard]] MRMESH_API Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const VertCoords & tgtPoints,
     const std::vector<VertPair> & matches, const RigidXfRansacParams & params, const ProgressCallback & progress = {} );
 
 } //namespace MR

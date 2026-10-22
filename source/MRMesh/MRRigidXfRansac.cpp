@@ -23,7 +23,7 @@ std::uint64_t splitMix( std::uint64_t x )
 
 } // anonymous namespace
 
-Expected<RigidXfRansacResult> findRigidXfRansac( const VertCoords & srcPoints, const VertCoords & tgtPoints,
+Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const VertCoords & tgtPoints,
     const std::vector<VertPair> & matches, const RigidXfRansacParams & params, const ProgressCallback & progress )
 {
     MR_TIMER;
@@ -113,19 +113,13 @@ Expected<RigidXfRansacResult> findRigidXfRansac( const VertCoords & srcPoints, c
     if ( bestCount == 0 )
         return unexpected( "No consistent sample of three matches was found" );
 
-    RigidXfRansacResult res;
-    res.xf = bestXf;
     PointToPointAligningTransform p2p;
     for ( const auto & m : matches )
         if ( distanceSq( bestXf( srcPoints[m.first] ), tgtPoints[m.second] ) <= distSq )
             p2p.add( srcPoints[m.first], tgtPoints[m.second] );
     if ( const auto refinedXf = AffineXf3f( p2p.findBestRigidXf() ); countInliers( refinedXf ) >= bestCount )
-        res.xf = refinedXf;
-
-    for ( const auto & m : matches )
-        if ( distanceSq( res.xf( srcPoints[m.first] ), tgtPoints[m.second] ) <= distSq )
-            res.inliers.push_back( m );
-    return res;
+        return refinedXf;
+    return bestXf;
 }
 
 } //namespace MR

@@ -33,16 +33,19 @@ TEST( MRMesh, RigidXfRansac )
     params.inlierDistance = 1e-3f;
     auto res = findRigidXfRansac( src, tgt, matches, params );
     ASSERT_TRUE( res.has_value() );
-    EXPECT_EQ( res->inliers.size(), numCorrect );
     for ( const auto & p : src )
-        EXPECT_LT( distance( res->xf( p ), xf( p ) ), 1e-3f );
+        EXPECT_LT( distance( ( *res )( p ), xf( p ) ), 1e-3f );
+    size_t numInliers = 0;
+    for ( const auto & m : matches )
+        numInliers += distance( ( *res )( src[m.first] ), tgt[m.second] ) <= params.inlierDistance;
+    EXPECT_EQ( numInliers, numCorrect );
 
     // the same result with a single thread
     {
         tbb::global_control singleThread( tbb::global_control::max_allowed_parallelism, 1 );
         auto res1 = findRigidXfRansac( src, tgt, matches, params );
         ASSERT_TRUE( res1.has_value() );
-        EXPECT_EQ( res1->xf, res->xf );
+        EXPECT_EQ( *res1, *res );
     }
 
     matches.resize( 2 );

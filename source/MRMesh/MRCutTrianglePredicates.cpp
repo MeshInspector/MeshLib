@@ -487,14 +487,24 @@ std::array<LeadTerm, 3> sosLeadTerms( const SosStages & ps, int mask, const F & 
     } ).value_or( std::array<LeadTerm, 3>{} );
 }
 
+/// the vertices of the definitions of the points of a predicate that keep all of them on one plane while they stay unperturbed (see planeGuards)
+struct PlaneGuards
+{
+    std::array<VertId, 9> ids;
+    int num = 0;
+};
+
 /// the first value that f( x, from ) gives for the perturbed projected points x[i] of pts[i] of the cut triangle tri at the stages
 /// of their perturbation where all of them are defined, or the empty value if it gives none at the stages whose degrees fit in int64
 /// (see SosStages); the products of the terms below degree from cancel one another in the polynomial of f,
 /// which it found zero at the previous stage if from is not zero (see `from` in lowestTermOfSumOfProducts); f also gives the degree
 /// of the leading term that its value comes from, so that a stage takes the value found with its vertex perturbed alone if that degree
-/// is the place of the stage (see Stage), where every point keeps the sign of its denominator, which its constant term gives then
+/// is the place of the stage (see Stage), where every point keeps the sign of its denominator, which its constant term gives then;
+/// the expansion starts at the first stage that perturbs a vertex of guards, as after a zero stage, if the caller proved the polynomial
+/// of f zero at the stages before it (see planeGuards)
 template <int N, typename F>
-auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const std::array<PreciseVertCoords, 3> & tri, int kx, int ky, const F & f )
+auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const std::array<PreciseVertCoords, 3> & tri, int kx, int ky, const F & f,
+    const PlaneGuards & guards = {} )
 {
     std::array<std::optional<SosFraction>, N> x;
     std::int64_t deg = 0;
@@ -504,10 +514,24 @@ auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const st
     for ( int i = 0; i < N; ++i )
         verts[i] = r.add( *pts[i], tri );
     const auto ps = r.stages();
-    bool prevZero = false; // whether all points were defined at the previous stage, and the polynomial of f zero
+    // the first stage to expand: the stage of the guard vertex of the smallest id, after the last one if no stage perturbs a guard
+    int first = 1;
+    if ( guards.num > 0 )
+    {
+        first = ps.numStages() + 1;
+        for ( int g = 0; g < guards.num; ++g )
+            for ( int i = 0; i < r.num; ++i )
+                if ( r.verts[i].id == guards.ids[g] )
+                    for ( int s = 1; s < first; ++s )
+                        if ( ps.startsAt( i, s ) )
+                            first = s;
+    }
+    bool prevZero = first > 1; // whether all points were defined at the previous stage, and the polynomial of f zero, or the stages were skipped
     return ps.firstStage( [&] ( int s )
     {
         Res res;
+        if ( s < first )
+            return res;
         if ( prevZero )
         {
             std::array<std::optional<SosFraction>, N> alone;
@@ -525,7 +549,7 @@ auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const st
         for ( int i = 0; i < N; ++i )
         {
             // a point keeps its coordinates of the previous stage unless it has a vertex perturbed first at this one
-            if ( s == 1 || startsAt( ps, verts[i], s ) )
+            if ( s == first || startsAt( ps, verts[i], s ) )
                 x[i] = sosPoint( *pts[i], { ps, s }, verts[i], kx, ky );
             defined = defined && x[i].has_value();
         }
@@ -573,16 +597,85 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
     } );
 }
 
+/// the guards of three points of the cut triangle t with a crossing of two cuts among them, if all of them are on one plane Pi by their definitions
+/// before the perturbation, as the crossings with the cuts by the triangles of a flat face of another mesh are: every point has a triangle
+/// or a segment of its definition in Pi exactly (the plane of a cut of a crossing of two cuts or of the triangle that a segment crosses,
+/// or the segment), or is a vertex on Pi, by the exact volumes of their vertices with a triangle of a crossing among the points that spans Pi;
+/// the guards are the vertices of those triangles and segments, and the vertices on Pi; none if no such plane is found, as for points
+/// without a crossing of two cuts, whose expansion stays as it was;
+/// the determinant of the points is zero at every stage before the first one that perturbs a guard, so the expansion may start there,
+/// as after a zero stage (see sosFirstStage): while the guards stay unperturbed, so do the triangles and the segments of the points in Pi,
+/// so every point is on Pi, or undefined, with a zero row (a crossing of two cuts that are parallel at this stage, or a crossing of a segment
+/// in the plane of its triangle, whose numerators are zero too in valid input: two cuts whose crossing goes to infinity fail in addPoint,
+/// and a segment with equal volumes of its ends that are not zero does not cross the plane); and every defined point is on the perturbed t,
+/// so the defined points are on the line where the perturbed t crosses Pi, or on none if they are parallel, while if the perturbed t is Pi,
+/// the crossing of two cuts by a plane in Pi is undefined; so every term of the determinant below the place of that stage is zero;
+/// without that, the triangles of three crossings on such a line with the vertices of t and of the other cuts of smaller ids
+/// (a face of mesh A of a boolean cut by mesh B with a flat face split into triangles) expanded all the stages of the former in full
+/// only to find zero, which took 80 seconds for one triangle (see CutTrianglePredicatesFlatFaceCrossings); that stage is still expanded
+/// with all the vertices before it if its vertex alone moves the points off Pi only by a coordinate of a larger weight, as for Pi in x = const,
+/// which takes seconds then
+PlaneGuards planeGuards( const std::array<const PreciseCutPoint *, 3> & pts )
+{
+    // the vertices of a triangle or a segment of the definition of a point that keep it on their plane, or of the vertex point itself
+    struct Carrier
+    {
+        const PreciseVertCoords * v = nullptr;
+        int num = 0;
+    };
+    auto carriers = [] ( const PreciseCutPoint & p ) -> std::array<Carrier, 2>
+    {
+        if ( p.isCrossing() )
+            return { Carrier{ p.tri.data(), 3 }, Carrier{ p.tri2.data(), 3 } };
+        if ( p.isVertex() )
+            return { Carrier{ p.seg.data(), 1 }, Carrier{} };
+        return { Carrier{ p.tri.data(), 3 }, Carrier{ p.seg.data(), 2 } };
+    };
+    for ( const auto * x : pts )
+    {
+        if ( !x->isCrossing() )
+            continue;
+        for ( const auto * plane : { &x->tri, &x->tri2 } )
+        {
+            if ( normalOf( *plane ) == Vector3i64() )
+                continue; // its vertices are on one line
+            const auto & [a, b, c] = *plane;
+            auto inPlane = [&] ( const Carrier & k )
+            {
+                for ( int i = 0; i < k.num; ++i )
+                    if ( orient3dVolume( a.pt, b.pt, c.pt, k.v[i].pt ) != 0 )
+                        return false;
+                return k.num > 0;
+            };
+            PlaneGuards res;
+            bool all = true;
+            for ( int i = 0; i < 3 && all; ++i )
+            {
+                const auto ks = carriers( *pts[i] );
+                const auto it = std::find_if( ks.begin(), ks.end(), inPlane );
+                all = it != ks.end();
+                if ( all )
+                    for ( int j = 0; j < it->num; ++j )
+                        res.ids[res.num++] = it->v[j].id;
+            }
+            if ( all )
+                return res;
+        }
+    }
+    return {};
+}
+
 /// the sign of the doubled area of perturbed triangle pqr in the projection: the determinant of the rows ( nx, ny, d )
 /// of the perturbed points, whose denominators d are positive; 0 if the points are on one line after the perturbation too,
 /// or if the expansion reaches a stage whose degrees do not fit in int64, which only crossings of two cuts with many vertices give
 int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const PreciseCutPoint & r, const std::array<PreciseVertCoords, 3> & tri,
     int kx, int ky )
 {
+    const std::array<const PreciseCutPoint *, 3> pts{ &p, &q, &r };
     // also for the crossings of two cuts, with the numerators below 2^224 and the denominators below 2^192, the minors with a denominator
     // are below 2 * 2^224 * 2^192 = 2^417 and the one of the numerators below 2 * 2^224 * 2^224 = 2^449, which fit in 512 bits,
     // and their products with the elements below 2^641, whose sum fits in 768 bits
-    return sosFirstStage<3>( { &p, &q, &r }, tri, kx, ky, [] ( const auto & x, std::int64_t from, std::int64_t & deg ) -> std::optional<int>
+    return sosFirstStage<3>( pts, tri, kx, ky, [] ( const auto & x, std::int64_t from, std::int64_t & deg ) -> std::optional<int>
     {
         // the cofactor expansion of det( a, b, c ) along row a: three products of an element of a and a minor of b, c
         const SosFraction & a = *x[0];
@@ -600,7 +693,7 @@ int sosOrient( const PreciseCutPoint & p, const PreciseCutPoint & q, const Preci
             return {}; // the vertices perturbed so far keep the points on one line
         deg = leadDeg;
         return sign;
-    } ).value_or( 0 );
+    }, planeGuards( pts ) ).value_or( 0 );
 }
 
 /// the leading terms of the perturbed normal of triangle f, or of the perturbed cross( normal of f, normal of g ) if g is given (see sosLeadTerms)

@@ -24,10 +24,8 @@ fi
 if [ -n "${CI}" ] ; then
   VCPKG_INSTALL_FLAGS=--debug
 fi
-# vcpkg 2026.10.16's mimalloc 3.5.3 port: a dynamic 3.4.3 aborts at launch on macOS 13
-if [[ $(uname -s) == Darwin ]] ; then
-  VCPKG_INSTALL_FLAGS="${VCPKG_INSTALL_FLAGS} --overlay-ports=${BASE_DIR}/thirdparty/vcpkg/ports-macos"
-fi
+# vcpkg 2026.10.16's mimalloc 3.5.3 port for macOS and Linux: a dynamic 3.4.3 aborts at launch on macOS 13
+VCPKG_INSTALL_FLAGS="${VCPKG_INSTALL_FLAGS} --overlay-ports=${BASE_DIR}/thirdparty/vcpkg/ports-unix"
 
 vcpkg install \
     --x-manifest-root=${BASE_DIR}/thirdparty/vcpkg \

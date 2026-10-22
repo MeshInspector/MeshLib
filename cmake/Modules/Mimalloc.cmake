@@ -23,15 +23,11 @@ function(mr_enable_mimalloc target)
       set_property(TARGET ${target} PROPERTY LINK_LIBRARIES mimalloc)
     endif()
     target_link_options(${target} PRIVATE "/INCLUDE:mi_version")
-  elseif(APPLE)
-    # the mimalloc dylib loaded at launch interposes malloc and replaces the default malloc zone for the whole process;
-    # it needs mimalloc >= 3.5 (ports-macos): a dynamic 3.4.3 aborts at launch on macOS 13 (dyld thread-local bootstrap during libSystem init)
-    find_package(mimalloc 3.5 CONFIG REQUIRED)
-    target_link_libraries(${target} PRIVATE mimalloc)
   elseif(NOT EMSCRIPTEN)
-    # Linux: the shared mimalloc overrides glibc's malloc for the whole process, and MeshLib libraries
-    # linking the same target share this one copy; thirdparty/cpm builds vcpkg's version for Ubuntu
-    find_package(mimalloc 3.4 EXACT CONFIG REQUIRED)
+    # macOS and Linux: the shared mimalloc loaded at launch replaces malloc for the whole process, and MeshLib libraries
+    # linking the same target share this one copy; >= 3.5 (thirdparty/vcpkg/ports-unix, thirdparty/cpm on Ubuntu):
+    # a dynamic 3.4.3 aborts at launch on macOS 13 (dyld thread-local bootstrap during libSystem init)
+    find_package(mimalloc 3.5 CONFIG REQUIRED)
     target_link_libraries(${target} PRIVATE mimalloc)
   endif()
 endfunction()

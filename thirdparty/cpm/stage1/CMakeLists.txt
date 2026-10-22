@@ -134,7 +134,7 @@ endif()
 
 # shared and with malloc override: the executables and MeshLib libraries use this one copy
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-  find_package(mimalloc 3.4 EXACT CONFIG QUIET)
+  find_package(mimalloc 3.5 CONFIG QUIET)
   if(NOT mimalloc_FOUND)
     function(add_mimalloc)
       set(MI_USE_CXX ON)

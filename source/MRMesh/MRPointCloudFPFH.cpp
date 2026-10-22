@@ -66,32 +66,22 @@ float distanceSq( const FPFHDescriptor & a, const FPFHDescriptor & b )
 bool findClosestDescriptors( const FPFHDescriptors & fromDescriptors, const VertBitSet & from,
     const FPFHDescriptors & toDescriptors, const VertBitSet & to, VertMap & closest, const ProgressCallback & progress )
 {
-    // contiguous copy of the target descriptors for cache-friendly scanning
-    std::vector<VertId> toIds;
-    toIds.reserve( to.count() );
-    std::vector<FPFHDescriptor> toDescs;
-    toDescs.reserve( toIds.capacity() );
-    for ( auto v : to )
-    {
-        toIds.push_back( v );
-        toDescs.push_back( toDescriptors[v] );
-    }
-
+    MR_TIMER;
     closest.resize( from.find_last() + 1 );
     return BitSetParallelFor( from, [&]( VertId v )
     {
         const auto & d = fromDescriptors[v];
         auto bestDistSq = FLT_MAX;
-        size_t best = 0;
-        for ( size_t i = 0; i < toDescs.size(); ++i )
+        VertId best;
+        for ( auto u : to )
         {
-            if ( const auto distSq = distanceSq( d, toDescs[i] ); distSq < bestDistSq )
+            if ( const auto distSq = distanceSq( d, toDescriptors[u] ); distSq < bestDistSq )
             {
                 bestDistSq = distSq;
-                best = i;
+                best = u;
             }
         }
-        closest[v] = toIds[best];
+        closest[v] = best;
     }, progress );
 }
 

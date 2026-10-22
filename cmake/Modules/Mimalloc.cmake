@@ -33,6 +33,8 @@ function(mr_find_mimalloc)
     FetchContent_Declare(mimalloc ${MESHLIB_PACKAGE_mimalloc})
     FetchContent_MakeAvailable(mimalloc)
     set_target_properties(mimalloc PROPERTIES OUTPUT_NAME mimalloc-override)
+    # release checks also in Debug builds, like the packaged mimalloc: debug ones hang a macOS app at exit
+    target_compile_definitions(mimalloc PRIVATE MI_BUILD_RELEASE)
     install(TARGETS mimalloc LIBRARY DESTINATION "${MR_MAIN_LIB_DIR}" RUNTIME DESTINATION "${MR_BIN_DIR}")
   endif()
 endfunction()

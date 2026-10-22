@@ -14,7 +14,9 @@ if(NOT EMSCRIPTEN AND NOT "@MR_MIMALLOC_OVERRIDE@" AND NOT TARGET mimalloc)
     find_dependency(mimalloc)
   else()
     # MeshLib's own non-override mimalloc next to MRMesh, see mr_find_mimalloc
-    find_library(MESHLIB_MIMALLOC_LIBRARY NAMES MRMimalloc PATHS "@PACKAGE_MR_MAIN_LIB_DIR@" NO_DEFAULT_PATH REQUIRED)
+    # meshlib-config.cmake's MESHLIB_THIRDPARTY_LIB_DIR is <main lib dir>/lib, relocatable also in .deb packages
+    find_library(MESHLIB_MIMALLOC_LIBRARY NAMES MRMimalloc
+      PATHS "${MESHLIB_THIRDPARTY_LIB_DIR}/.." "@PACKAGE_MR_MAIN_LIB_DIR@" NO_DEFAULT_PATH REQUIRED)
     add_library(mimalloc SHARED IMPORTED)
     set_target_properties(mimalloc PROPERTIES IMPORTED_LOCATION "${MESHLIB_MIMALLOC_LIBRARY}")
     if(DEFINED MESHLIB_THIRDPARTY_INCLUDE_DIR AND EXISTS "${MESHLIB_THIRDPARTY_INCLUDE_DIR}")

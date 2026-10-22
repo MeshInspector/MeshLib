@@ -487,11 +487,14 @@ std::array<LeadTerm, 3> sosLeadTerms( const SosStages & ps, int mask, const F & 
     } ).value_or( std::array<LeadTerm, 3>{} );
 }
 
-/// the vertices of the definitions of the points of a predicate that keep all of them on one plane while they stay unperturbed (see planeGuards)
+/// the vertices of the definitions of the points of a predicate that keep all of them on one plane Pi while they stay on Pi (see planeGuards)
 struct PlaneGuards
 {
     std::array<VertId, 9> ids;
     int num = 0;
+    /// the weight (see PointDegree) of the lowest coordinate in which the normal of Pi is not zero: 1 for z, 3 for y, 9 for x;
+    /// a guard moving in the other coordinates stays on Pi
+    int weight = 1;
 };
 
 /// the first value that f( x, from ) gives for the perturbed projected points x[i] of pts[i] of the cut triangle tri at the stages
@@ -501,7 +504,8 @@ struct PlaneGuards
 /// of the leading term that its value comes from, so that a stage takes the value found with its vertex perturbed alone if that degree
 /// is the place of the stage (see Stage), where every point keeps the sign of its denominator, which its constant term gives then;
 /// the expansion starts at the first stage that perturbs a vertex of guards, as after a zero stage, if the caller proved the polynomial
-/// of f zero at the stages before it (see planeGuards)
+/// of f zero at the stages before it (see planeGuards), and that stage takes the value found with its vertex alone if that degree is
+/// the place of the stage times the weight of guards, the lowest one that a term can have there (see below)
 template <int N, typename F>
 auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const std::array<PreciseVertCoords, 3> & tri, int kx, int ky, const F & f,
     const PlaneGuards & guards = {} )
@@ -534,6 +538,21 @@ auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const st
             return res;
         if ( prevZero )
         {
+            // the vertex g of this stage alone gives the leading term if its degree is the lowest one that a term with g can have (see Stage):
+            // place( s ), or at the first stage of guards, w * place( s ) for w = guards.weight, which fits in int64, as place( s ) times
+            // the radix of g, above 9 (see SosVerts::add), does (see getPointDegrees); there f is the determinant of sosOrient, and only
+            // the coordinates of g in which the normal of Pi is not zero move the points off Pi, so for Pi in x = const, the term of degree
+            // place( s ), of the coordinate z, is zero: take the determinant as a polynomial in the perturbations of the coordinates
+            // of the vertices of the stages up to s as independent variables; with those of g in which the normal of Pi is not zero
+            // set to zero, g stays on Pi, as the other guards do (the earlier stages perturb no guard, and the vertices of the later ones
+            // are not perturbed), so wherever no denominator is zero, every point is on Pi and on the cut triangle, and so all of them
+            // on one line (see planeGuards), and the determinant is zero; so its product with the denominators is the zero polynomial,
+            // while the denominators are not (their constant terms, of the unperturbed points, are not zero, as ok checks), so the determinant
+            // is; so every term of the determinant has a variable of g in which the normal of Pi is not zero, and a degree in eps of at least
+            // w * place( s ), which only the variable of weight w alone has, whose coefficient is the derivative of the determinant by it
+            // at the unperturbed points, the same with g perturbed alone, whose other terms have larger degrees too; the terms of the other
+            // variables may get equal degrees in eps (as y^3 and x of g), but they cancel as monomials already
+            const std::int64_t lowest = s == first && guards.num > 0 ? guards.weight * ps.place( s ) : ps.place( s );
             std::array<std::optional<SosFraction>, N> alone;
             bool ok = true;
             for ( int i = 0; i < N && ok; ++i )
@@ -541,8 +560,12 @@ auto sosFirstStage( const std::array<const PreciseCutPoint *, N> & pts, const st
                 alone[i] = sosPoint( *pts[i], { ps, s, true }, verts[i], kx, ky );
                 ok = alone[i] && alone[i]->d.get().front().first == 0;
             }
-            if ( ok && ( res = f( alone, ps.place( s ), deg ) ) && deg == ps.place( s ) )
-                return res;
+            if ( ok && ( res = f( alone, ps.place( s ), deg ) ) )
+            {
+                assert( deg >= lowest ); // in valid input, see above
+                if ( deg == lowest )
+                    return res;
+            }
             res = {};
         }
         bool defined = true;
@@ -612,9 +635,10 @@ std::optional<Vector2i> sosDirection( const PreciseCutPoint & p, const PreciseCu
 /// the crossing of two cuts by a plane in Pi is undefined; so every term of the determinant below the place of that stage is zero;
 /// without that, the triangles of three crossings on such a line with the vertices of t and of the other cuts of smaller ids
 /// (a face of mesh A of a boolean cut by mesh B with a flat face split into triangles) expanded all the stages of the former in full
-/// only to find zero, which took 80 seconds for one triangle (see CutTrianglePredicatesFlatFaceCrossings); that stage is still expanded
-/// with all the vertices before it if its vertex alone moves the points off Pi only by a coordinate of a larger weight, as for Pi in x = const,
-/// which takes seconds then
+/// only to find zero, which took 80 seconds for one triangle (see CutTrianglePredicatesFlatFaceCrossings); and since the guards keep the points
+/// on Pi also while they move along Pi, the vertex of that stage moves them off Pi first by its coordinate of the weight in PlaneGuards,
+/// whose term found with that vertex alone decides if it is not zero (see sosFirstStage), also for Pi in x = const, where the term
+/// of the place of that stage, of the coordinate z, is zero, and that stage was expanded with all the vertices before it, for seconds
 PlaneGuards planeGuards( const std::array<const PreciseCutPoint *, 3> & pts )
 {
     // the vertices of a triangle or a segment of the definition of a point that keep it on their plane, or of the vertex point itself
@@ -637,7 +661,8 @@ PlaneGuards planeGuards( const std::array<const PreciseCutPoint *, 3> & pts )
             continue;
         for ( const auto * plane : { &x->tri, &x->tri2 } )
         {
-            if ( normalOf( *plane ) == Vector3i64() )
+            const auto n = normalOf( *plane );
+            if ( n == Vector3i64() )
                 continue; // its vertices are on one line
             const auto & [a, b, c] = *plane;
             auto inPlane = [&] ( const Carrier & k )
@@ -648,6 +673,7 @@ PlaneGuards planeGuards( const std::array<const PreciseCutPoint *, 3> & pts )
                 return k.num > 0;
             };
             PlaneGuards res;
+            res.weight = n.z != 0 ? 1 : ( n.y != 0 ? 3 : 9 );
             bool all = true;
             for ( int i = 0; i < 3 && all; ++i )
             {

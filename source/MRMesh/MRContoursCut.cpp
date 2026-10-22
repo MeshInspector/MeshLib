@@ -1435,14 +1435,16 @@ void prepareFacesMap( const MeshTopology& topology, FaceMap& new2OldMap )
 // Checks if cut mesh has valid loops in intersections
 // if error occurs returns bad faces bit set, otherwise returns empty one
 FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult& preRes,
-                               const FullRemovedFacesInfo& oldFaces )
+                               const FullRemovedFacesInfo& oldFaces, UndirectedEdgeId firstNewEdge )
 {
     MR_TIMER;
     FaceBitSet badFacesBS( topology.getValidFaces().size() );
     EdgeBitSet visited( topology.edgeSize() );
-    // the edges of the current loop, which is bad if it passes an edge both ways, not only the one it starts from
-    EdgeBitSet inLoop( topology.edgeSize() );
-    EdgePath loop;
+    // a loop is bad if it passes an edge both ways, as a contour crossing others in its face, whatever edge it starts from:
+    // such an edge is a new one inside the face, and its second way finds the first one in the same walk by the walk numbers of new edges
+    const int firstNew = int( EdgeId( firstNewEdge ) );
+    std::vector<int> walkOf( topology.edgeSize() - firstNew, -1 );
+    int walk = 0;
     for ( int pathId = 0; pathId < preRes.paths.size(); ++pathId )
     {
         const auto& path = preRes.paths[pathId];
@@ -1458,23 +1460,21 @@ FaceBitSet getBadFacesAfterCut( const MeshTopology& topology, const PreCutResult
 
             if ( visited.test( e0 ) )
                 continue;
-            loop.clear();
+            bool bad = false;
             for ( auto e : leftRing( topology, e0 ) )
             {
                 visited.set( e );
-                inLoop.set( e );
-                loop.push_back( e );
-            }
-            for ( auto e : loop )
-            {
-                if ( inLoop.test( e.sym() ) )
+                if ( e == e0.sym() )
+                    bad = true;
+                else if ( int( e ) >= firstNew )
                 {
-                    badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
-                    break;
+                    bad = bad || walkOf[int( e.sym() ) - firstNew] == walk;
+                    walkOf[int( e ) - firstNew] = walk;
                 }
             }
-            for ( auto e : loop )
-                inLoop.reset( e );
+            ++walk;
+            if ( bad )
+                badFacesBS.autoResizeSet( oldFaces[pathId][edgeId].f );
         }
     }
     return badFacesBS;
@@ -1666,7 +1666,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     connectLoneContours( mesh, contours, loneFaces, preRes, firstNewEdge, params.sortData, params.new2oldEdgesMap, badLoneFaces );
     fixOrphans( mesh, preRes.paths, preRes.removedFaces, params.new2OldMap, params.new2oldEdgesMap );
 
-    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces ) | badLoneFaces;
+    res.fbsWithContourIntersections = getBadFacesAfterCut( mesh.topology, preRes, preRes.removedFaces, firstNewEdge ) | badLoneFaces;
     if ( !params.forceFill && res.fbsWithContourIntersections.any() )
         return res;
     if ( splitCrossings && res.fbsWithContourIntersections.any() )

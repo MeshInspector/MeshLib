@@ -4,12 +4,19 @@
 #include <memory>
 #include <string_view>
 
+#ifdef __linux__
+#include "MRMesh/MRCube.h"
+#include "MRMesh/MRMesh.h"
+#include <link.h>
+#include <mimalloc.h>
+#else
 // mimalloc.h declares these as `bool`. Matching the actual return type is
 // critical: MSVC returns `bool` in the low byte of EAX, so reading the call
 // site as `int` picks up garbage in the upper 24 bits (e.g. -980287487).
 // Local Debug happened to zero those bits; Release CI didn't.
 extern "C" bool mi_is_redirected();
 extern "C" bool mi_is_in_heap_region( const void* p );
+#endif
 
 namespace MR
 {
@@ -37,5 +44,25 @@ TEST( MRMesh, MimallocRedirectActive )
     auto q = std::make_unique<int[]>( 16 );
     EXPECT_TRUE( mi_is_in_heap_region( q.get() ) );
 }
+
+#ifdef __linux__
+// The executable and MeshLib libraries must share one libmimalloc.so of the version in mimalloc.h
+TEST( MRMesh, MimallocSharedLibrary )
+{
+    int numMimallocs = 0;
+    dl_iterate_phdr( []( dl_phdr_info* info, size_t, void* data )
+    {
+        if ( std::string_view( info->dlpi_name ).find( "libmimalloc" ) != std::string_view::npos )
+            ++*static_cast<int*>( data );
+        return 0;
+    }, &numMimallocs );
+    EXPECT_EQ( numMimallocs, 1 );
+    EXPECT_EQ( mi_version(), MI_MALLOC_VERSION );
+
+    // allocated inside libMRMesh
+    const auto mesh = makeCube();
+    EXPECT_TRUE( mi_is_in_heap_region( mesh.points.data() ) );
+}
+#endif
 
 } // namespace MR

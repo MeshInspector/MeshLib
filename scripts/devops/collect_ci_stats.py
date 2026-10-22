@@ -33,6 +33,18 @@ def parse_step(step: dict):
         'duration_s': get_duration_s(step),
     }
 
+# GitHub may leave a finished job's conclusion null for an hour or more, so take it from the steps
+def fill_missing_conclusion(job: dict):
+    if job['conclusion'] is not None:
+        return
+    steps = job['steps']
+    if not steps or any(step['status'] != 'completed' for step in steps):
+        raise RuntimeError(f"job {job['id']} has no conclusion and has not finished all its steps")
+    conclusions = {step['conclusion'] for step in steps}
+    job['conclusion'] = next((c for c in ('failure', 'cancelled') if c in conclusions), 'success')
+    job['completed_at'] = max((step['completed_at'] for step in steps if step['completed_at']), default=None)
+    print(f"job {job['id']} has no conclusion, taken from its steps: {job['conclusion']}")
+
 def parse_job(job: dict):
     job_id = job['id']
 
@@ -49,6 +61,8 @@ def parse_job(job: dict):
     artifact_stats_filename = Path(f"ArtifactStats-{job_id}.json")
     if not stats_filename.exists():
         return None
+
+    fill_missing_conclusion(job)
 
     runner_stats = None
     try:
@@ -126,34 +140,6 @@ def fetch_jobs(repo: str, run_id: str):
         url = resp.links.get('next', {}).get('url')
     return jobs
 
-def get_last_step_end(job):
-    ends = [parse_iso8601(step['completed_at']) for step in job['steps'] if step.get('completed_at')]
-    return max(ends, default=None)
-
-# GitHub may report a finished job with conclusion null for up to ~15 minutes after its last step;
-# max_wait keeps the whole collection job within the 15-minute limit of ubuntu-slim runners
-def fetch_concluded_jobs(repo: str, run_id: str, conclusion_delay=datetime.timedelta(minutes=15),
-                         max_wait=datetime.timedelta(minutes=13), cooldown=60):
-    give_up = datetime.datetime.now(datetime.timezone.utc) + max_wait
-    while True:
-        jobs = fetch_jobs(repo, run_id)
-        pending = [
-            job
-            for job in jobs
-            if job['conclusion'] is None and Path(f"RunnerSysStats-{job['id']}.json").exists()
-        ]
-        if not pending:
-            return jobs
-        pending_ids = [job['id'] for job in pending]
-        ends = [get_last_step_end(job) for job in pending]
-        deadline = give_up if None in ends else min(give_up, max(ends) + conclusion_delay)
-        now = datetime.datetime.now(datetime.timezone.utc)
-        if now >= deadline:
-            raise RuntimeError(f'jobs {pending_ids} still have no conclusion at {deadline:%H:%M:%S} UTC')
-        wait_s = min(cooldown, (deadline - now).total_seconds())
-        print(f'fetch_concluded_jobs: jobs {pending_ids} have no conclusion yet; retrying in {wait_s:.0f}s (until {deadline:%H:%M:%S} UTC)...')
-        time.sleep(wait_s)
-
 def sign_api_request(url, method, headers, body, region, service):
     # Use the credentials from the assumed role
     session = boto3.Session()
@@ -184,7 +170,7 @@ if __name__ == "__main__":
         'git_branch':  branch,
         'github_ref':  ref,
         'github_repo': repo,
-        'jobs':        parse_jobs(fetch_concluded_jobs(repo, run_id)),
+        'jobs':        parse_jobs(fetch_jobs(repo, run_id)),
     }
     pprint.pp(result, indent=2, width=150)
 

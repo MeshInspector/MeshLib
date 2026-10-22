@@ -76,6 +76,7 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
     const auto radiusSq = sqr( radius );
     const auto & points = pointCloud.points;
     const auto & normals = pointCloud.normals;
+    auto [spfhProgress, fpfhProgress] = splitProgress( progress, 0.5f );
 
     // simplified histograms of every point from the angles to its neighbours
     FPFHDescriptors spfh( points.size() );
@@ -89,7 +90,7 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
             return Processing::Continue;
         } );
         normalize( h );
-    }, subprogress( progress, 0.0f, 0.5f ) ) )
+    }, spfhProgress ) )
         return unexpectedOperationCanceled();
 
     // final histograms are the averages of the histograms of the point and its neighbours with Gaussian weights of the distance,
@@ -108,7 +109,7 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
             return Processing::Continue;
         } );
         normalize( h );
-    }, subprogress( progress, 0.5f, 1.0f ) ) )
+    }, fpfhProgress ) )
         return unexpectedOperationCanceled();
 
     return res;

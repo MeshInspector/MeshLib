@@ -12,10 +12,13 @@ namespace MR
 /// number of bins in each of three angular histograms of FPFH descriptor
 inline constexpr int FPFHBins = 11;
 
+/// number of values in FPFH descriptor
+inline constexpr int FPFHDescriptorSize = 3 * FPFHBins;
+
 /// Fast Point Feature Histogram of a point: three concatenated histograms of FPFHBins bins each,
 /// describing the angles between the normals of nearby points and the directions between them;
 /// each histogram sums to 1 (or to 0 for a point without neighbours)
-using FPFHDescriptor = std::array<float, 3 * FPFHBins>;
+using FPFHDescriptor = std::array<float, FPFHDescriptorSize>;
 using FPFHDescriptors = Vector<FPFHDescriptor, VertId>;
 
 /// \brief Computes Fast Point Feature Histograms for all valid points of given point cloud,

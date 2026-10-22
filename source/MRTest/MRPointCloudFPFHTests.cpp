@@ -34,7 +34,7 @@ TEST( MRMesh, FPFHPlane )
     ASSERT_TRUE( res.has_value() );
     // all angles between equal normals and the lines in their plane are zero, which is the middle bin of every histogram
     for ( auto v : cloud.validPoints )
-        for ( int i = 0; i < std::ssize( (*res)[v] ); ++i )
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
             EXPECT_NEAR( (*res)[v][i], i % FPFHBins == FPFHBins / 2 ? 1.0f : 0.0f, 1e-6f );
 
     cloud.normals.clear();
@@ -61,7 +61,7 @@ TEST( MRMesh, FPFHInvariance )
     for ( auto v : cloud.validPoints )
     {
         float diff = 0;
-        for ( size_t i = 0; i < (*res0)[v].size(); ++i )
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
             diff += std::abs( (*res0)[v][i] - (*res1)[v][i] );
         maxDiff = std::max( maxDiff, diff );
     }

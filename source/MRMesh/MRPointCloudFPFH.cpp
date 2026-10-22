@@ -104,7 +104,7 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
         {
             const auto weight = std::exp( expCoef * found.distSq );
             const auto & nh = spfh[found.vId];
-            for ( size_t i = 0; i < h.size(); ++i )
+            for ( int i = 0; i < FPFHDescriptorSize; ++i )
                 h[i] += weight * nh[i];
             return Processing::Continue;
         } );
@@ -122,9 +122,9 @@ VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const Vert
     if ( num == 0 )
         return {};
 
-    std::array<double, std::tuple_size_v<FPFHDescriptor>> mean{};
+    std::array<double, FPFHDescriptorSize> mean{};
     for ( auto v : points )
-        for ( size_t i = 0; i < mean.size(); ++i )
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
             mean[i] += descriptors[v][i];
     for ( auto & x : mean )
         x /= double( num );
@@ -133,7 +133,7 @@ VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const Vert
     BitSetParallelFor( points, [&]( VertId v )
     {
         double sum = 0;
-        for ( size_t i = 0; i < mean.size(); ++i )
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
             sum += sqr( descriptors[v][i] - mean[i] );
         dist[v] = float( std::sqrt( sum ) );
     } );

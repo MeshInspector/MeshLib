@@ -776,14 +776,15 @@ endif
 # emitted by the oneTBB headers, but `__TBB_NO_IMPLICIT_LINKAGE` now disables that, so the inline TBB
 # code instantiated in the binding translation units would otherwise leave `tbb::detail::r1::*` undefined.
 # The release/debug import libraries have different names but both live in the right `-L$(DEPS_LIB_DIR)`.
+# Same for mimalloc, called from the inline `mi_stl_allocator` of `MR::BitSet`.
 ifeq ($(VS_MODE),Debug)
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrtd -D_DEBUG
 # Override to match meshlib:
 COMPILER_FLAGS += -D_ITERATOR_DEBUG_LEVEL=0
-LINKER_FLAGS += -ltbb12_debug
+LINKER_FLAGS += -ltbb12_debug -lmimalloc-debug.dll
 else # VS_MODE == Release
 COMPILER_FLAGS += -Xclang --dependent-lib=msvcrt
-LINKER_FLAGS += -ltbb12
+LINKER_FLAGS += -ltbb12 -lmimalloc.dll
 endif # VS_MODE == Release
 endif # Windows
 

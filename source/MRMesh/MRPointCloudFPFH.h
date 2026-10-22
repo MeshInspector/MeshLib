@@ -3,6 +3,7 @@
 #include "MRMeshFwd.h"
 #include "MRExpected.h"
 #include "MRVector.h"
+#include "MRBitSet.h"
 #include <array>
 
 namespace MR
@@ -26,5 +27,19 @@ using FPFHDescriptors = Vector<FPFHDescriptor, VertId>;
 /// \ingroup PointCloudGroup
 [[nodiscard]] MRMESH_API Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud,
     float radius, const ProgressCallback & progress = {} );
+
+/// \brief Finds the points with unique descriptors, which are less likely to be matched ambiguously:
+/// the points whose distance from the mean descriptor of all given points is outside the interval mu +- beta * sigma,
+/// where mu and sigma are the mean and the standard deviation of these distances
+/// \param beta the half-width of the interval in standard deviations, usually 1..2
+/// \ingroup PointCloudGroup
+[[nodiscard]] MRMESH_API VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const VertBitSet & points, float beta );
+
+/// \brief Computes FPFH descriptors of all valid points of given point cloud and finds the points with unique descriptors among them
+/// \param radius of neighborhood to consider in computeFPFH(...)
+/// \param beta the half-width of the interval in standard deviations in findUniqueFPFHPoints(...), usually 1..2
+/// \ingroup PointCloudGroup
+[[nodiscard]] MRMESH_API Expected<VertBitSet> findUniqueFPFHPoints( const PointCloud& pointCloud,
+    float radius, float beta, const ProgressCallback & progress = {} );
 
 } //namespace MR

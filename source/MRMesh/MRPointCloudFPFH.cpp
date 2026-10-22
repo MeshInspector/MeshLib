@@ -104,7 +104,7 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
         {
             const auto weight = std::exp( expCoef * found.distSq );
             const auto & nh = spfh[found.vId];
-            for ( int i = 0; i < 3 * FPFHBins; ++i )
+            for ( int i = 0; i < FPFHDescriptorSize; ++i )
                 h[i] += weight * nh[i];
             return Processing::Continue;
         } );
@@ -113,6 +113,58 @@ Expected<FPFHDescriptors> computeFPFH( const PointCloud& pointCloud, float radiu
         return unexpectedOperationCanceled();
 
     return res;
+}
+
+VertBitSet findUniqueFPFHPoints( const FPFHDescriptors & descriptors, const VertBitSet & points, float beta )
+{
+    MR_TIMER;
+    const auto num = points.count();
+    if ( num == 0 )
+        return {};
+
+    std::array<double, FPFHDescriptorSize> mean{};
+    for ( auto v : points )
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
+            mean[i] += descriptors[v][i];
+    for ( auto & x : mean )
+        x /= double( num );
+
+    VertScalars dist( points.find_last() + 1 );
+    BitSetParallelFor( points, [&]( VertId v )
+    {
+        double sum = 0;
+        for ( int i = 0; i < FPFHDescriptorSize; ++i )
+            sum += sqr( descriptors[v][i] - mean[i] );
+        dist[v] = float( std::sqrt( sum ) );
+    } );
+
+    double sum = 0, sumSq = 0;
+    for ( auto v : points )
+    {
+        sum += dist[v];
+        sumSq += sqr( double( dist[v] ) );
+    }
+    const auto mu = sum / double( num );
+    const auto sigma = std::sqrt( std::max( 0.0, sumSq / double( num ) - sqr( mu ) ) );
+
+    // the floor ignores float rounding in the distances of equal descriptors
+    const auto threshold = std::max( beta * sigma, 1e-6 );
+    VertBitSet res( dist.size() );
+    BitSetParallelFor( points, [&]( VertId v )
+    {
+        if ( std::abs( dist[v] - mu ) > threshold )
+            res.set( v );
+    } );
+    return res;
+}
+
+Expected<VertBitSet> findUniqueFPFHPoints( const PointCloud& pointCloud, float radius, float beta, const ProgressCallback & progress )
+{
+    MR_TIMER;
+    auto descriptors = computeFPFH( pointCloud, radius, progress );
+    if ( !descriptors )
+        return unexpected( std::move( descriptors.error() ) );
+    return findUniqueFPFHPoints( *descriptors, pointCloud.validPoints, beta );
 }
 
 } //namespace MR

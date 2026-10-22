@@ -23,6 +23,8 @@ function(mr_find_mimalloc)
     # without MeshLib's -Werror -pedantic-errors
     set(CMAKE_C_FLAGS "")
     set(MI_OVERRIDE ON)
+    # dlopen-safe thread-locals, so that Python modules of such builds still load into a plain Python
+    set(MI_LOCAL_DYNAMIC_TLS ON)
     set(MI_BUILD_SHARED ON)
     set(MI_BUILD_STATIC OFF)
     set(MI_BUILD_OBJECT OFF)

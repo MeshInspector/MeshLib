@@ -13,6 +13,7 @@ namespace MR
 namespace
 {
 
+// one step of SplitMix64 pseudo-random generator (Steele, Lea, Flood, "Fast Splittable Pseudorandom Number Generators", 2014)
 std::uint64_t splitMix( std::uint64_t x )
 {
     x += 0x9e3779b97f4a7c15ULL;

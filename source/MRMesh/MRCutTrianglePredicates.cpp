@@ -1138,13 +1138,14 @@ void CutTrianglePredicates::addCrossing_( VertId v, const PreciseCutPoint & p )
     {
         return t[0].id.valid() && t[1].id.valid() && t[2].id.valid() && t[0].id != t[1].id && t[1].id != t[2].id && t[2].id != t[0].id;
     };
-    // a plane with two corners of this triangle cuts it along a side, where a crossing is on the side, and the plane of this triangle does not cut it
+    // a triangle with two corners of this triangle cuts it along a side, where a crossing is on the side, and this triangle does not cut itself
     auto alongSide = [&] ( const std::array<PreciseVertCoords, 3> & t )
     {
         return int( hasVert( t, tri_[0].id ) ) + int( hasVert( t, tri_[1].id ) ) + int( hasVert( t, tri_[2].id ) ) >= 2;
     };
-    // the crossing is another point also after the perturbation if both planes have a corner of this triangle, which they cross at,
-    // or two common vertices, whose edge they cross where it crosses this triangle (and the same plane if three)
+    // the crossing is another point also after the perturbation if both triangles have a corner of this triangle, which they cross at,
+    // or two common vertices, whose edge they cross where it crosses this triangle (and the same triangle if three, while distinct
+    // triangles in one plane give parallel cuts, which cross at the limit of their perturbed crossing, see below)
     const int numCommon = int( hasVert( p.tri, p.tri2[0].id ) ) + int( hasVert( p.tri, p.tri2[1].id ) ) + int( hasVert( p.tri, p.tri2[2].id ) );
     auto atCorner = [&]
     {
@@ -1213,7 +1214,7 @@ void CutTrianglePredicates::addCrossing_( VertId v, const PreciseCutPoint & p )
     }
     if ( !valid )
     {
-        // repeated ids, a plane taken twice or along a side, cuts crossing at a corner or at the crossing of a common edge, or cuts
+        // repeated ids, a triangle taken twice, along a side or this one, cuts crossing at a corner or at the crossing of a common edge, or cuts
         // that do not cross also after the perturbation, or whose crossing goes to infinity
         fail_();
         c.dSign = 1;
@@ -1668,7 +1669,7 @@ int CutTrianglePredicates::orientSlow_( VertId a, VertId b, VertId c ) const
         return s;
     // the points are on one line before the perturbation, and no two of them on a known one: the expansion of the perturbation decides,
     // unless two of them are defined alike, which it moves alike, and which only their shifts tell apart
-    if ( const auto res = ccwByShifts_( a, b, c, false ) )
+    if ( const auto res = ccwByShifts_( a, b, c, nullptr ) )
         return *res ? 1 : -1;
     const auto & points = impl_->points;
     if ( const int s = sosOrient( points[a].def, points[b].def, points[c].def, tri_, kx_, ky_ ) )
@@ -1739,10 +1740,9 @@ std::optional<bool> CutTrianglePredicates::ccwByPlanes_( VertId a, VertId b, Ver
             // which only the shifts of their edges move apart, make the doubled area delta * cross( w2 - w1, x - P ) + delta * bulge * ...
             // with the third point x (see ccwByShifts_), so the first-order term of their shifts decides before the bulge, though the shifts
             // are infinitely smaller than the bulge, which decides the triangles with at most one point defined alike
-            const bool bulging = isCrossing_( a ) || isCrossing_( b ) || isCrossing_( c );
-            if ( const auto res = ccwByShifts_( a, b, c, bulging ) )
+            if ( const auto res = ccwByShifts_( a, b, c, &*l ) )
                 return res;
-            if ( bulging )
+            if ( isCrossing_( a ) || isCrossing_( b ) || isCrossing_( c ) )
                 return int( less( a, b ) ) + int( less( b, c ) ) + int( less( c, a ) ) == 1; // along the sweep
             fail_(); // three points on one line also after the perturbation
             return false;
@@ -1752,12 +1752,14 @@ std::optional<bool> CutTrianglePredicates::ccwByPlanes_( VertId a, VertId b, Ver
 }
 
 /// the orientation of triangle abc with two points defined alike, by the shifts of their edges (see shift_), or nullopt if no two of them are;
-/// the failure if the shifts do not tell it either, or if bulging (for the points of a cut with a crossing of two cuts among them,
-/// see ccwByPlanes_) and their first-order term is zero, since the bulge decides before the second-order term then, while neither
-/// the order along the cut, as for the other points of the cut, nor the second-order term, as for the triangles of a third point of the cut
-/// without a crossing, keeps the axioms of CC systems in every set; that needs the difference of the shifts along the cut also after
-/// the perturbation, which turns the cut, so valid input hardly gives it
-std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, VertId c, bool bulging ) const
+/// line is the known line of all three points that ccwByPlanes_ found, or null; the failure if the shifts do not tell it either, or if
+/// the first-order term of the third point is zero also after the perturbation, and a crossing of two cuts is on the line, among the points
+/// or not: then the points of the line bulge (see ccwByPlanes_), so the bulge decides before the second-order term for the triangles of the two
+/// points defined alike with that crossing, while neither the order along the line, as for the other points of the line, nor the second-order term,
+/// as for the triangles of a third point without a crossing, keeps the axioms of CC systems in every set; that needs the difference of the shifts
+/// along the line also after the perturbation, which turns the line, so valid input hardly gives it; without a known line, the second-order term
+/// decides then
+std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, VertId c, const Line * line ) const
 {
     const auto & points = impl_->points;
     // rotating the vertices keeps the orientation of the triangle, so the two defined alike can come first
@@ -1805,11 +1807,17 @@ std::optional<bool> CutTrianglePredicates::ccwByShifts_( VertId a, VertId b, Ver
         } ).value_or( 0 );
         if ( sos )
             return sos > 0;
-    }
-    if ( bulging )
-    {
-        fail_(); // the bulge would decide before the second-order term
-        return false;
+        // a crossing of two cuts is on the line iff the line is a cut of it, as sideOfPlane_ finds it, also for a made-up plane;
+        // the scan is rare, as this path is
+        auto onLine = [&] ( const CutPoint & x )
+        {
+            return x.crossing >= 0 && ( sameTriangle( line->plane, x.def.tri ) || sameTriangle( line->plane, x.def.tri2 ) );
+        };
+        if ( line && std::any_of( points.begin(), points.end(), onLine ) )
+        {
+            fail_(); // the bulge would decide before the second-order term for the triangles of p and q with that crossing
+            return false;
+        }
     }
     // the second-order term, with the shift of r of its own scale (zero for a point without a shift):
     // wr - wp = ( Wr * scale - Wp * rScale ) / ( scale * rScale ), the products below 2^129 * 2^96

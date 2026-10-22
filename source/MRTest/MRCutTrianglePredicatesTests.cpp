@@ -1707,9 +1707,10 @@ TEST( MRMesh, CutTrianglePredicatesCrossingRules )
     EXPECT_EQ( preds.ccw( 7_v, 4_v, 3_v ), along );
     EXPECT_FALSE( preds.failed() );
 
-    // the definitions that make addPoint fail: a plane twice, a plane with two vertices of f (whose cut is a side), the plane of f,
-    // repeated ids in a plane, and two cuts whose crossing is another point also after the perturbation: by planes through a vertex of f,
-    // which they cross at, as two folds from it, and by triangles with a common edge, which they cross where that edge crosses f
+    // the definitions that make addPoint fail: a triangle twice (also with its vertices in another order), a triangle with two vertices of f
+    // (whose cut is a side), f itself, repeated ids in a triangle, and two cuts whose crossing is another point also after the perturbation:
+    // by triangles through a vertex of f, which they cross at, as two folds from it, and by triangles with a common edge, which they cross
+    // where that edge crosses f
     const PreciseCutPoint broken[] =
     {
         crossing( p, p ),

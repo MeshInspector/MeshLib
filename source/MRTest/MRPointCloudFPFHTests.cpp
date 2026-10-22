@@ -97,4 +97,47 @@ TEST( MRMesh, FPFHUniquePoints )
     EXPECT_FALSE( findUniqueFPFHPoints( cloud, 2.5f, 1 ).has_value() );
 }
 
+TEST( MRMesh, FPFHMatches )
+{
+    auto oneHot = []( int i )
+    {
+        FPFHDescriptor d{};
+        d[i] = 1;
+        return d;
+    };
+    FPFHDescriptors src, tgt;
+    for ( int i = 0; i < 5; ++i )
+        src.push_back( oneHot( i ) );
+    for ( int i = 4; i >= 0; --i )
+        tgt.push_back( oneHot( i ) );
+    // its closest target point is the copy of descriptor 1, which is closer to source point 1
+    auto extra = oneHot( 1 );
+    extra[1] = 0.6f;
+    src.push_back( extra );
+
+    VertBitSet srcPoints( src.size() ), tgtPoints( tgt.size() );
+    srcPoints.set();
+    tgtPoints.set();
+    auto all = findFPFHMatches( src, srcPoints, tgt, tgtPoints, false );
+    ASSERT_TRUE( all.has_value() );
+    ASSERT_EQ( all->size(), 6 );
+    for ( int i = 0; i < 5; ++i )
+        EXPECT_EQ( (*all)[i], VertPair( VertId( i ), VertId( 4 - i ) ) );
+    EXPECT_EQ( (*all)[5], VertPair( VertId( 5 ), VertId( 3 ) ) );
+
+    auto mutual = findFPFHMatches( src, srcPoints, tgt, tgtPoints, true );
+    ASSERT_TRUE( mutual.has_value() );
+    EXPECT_EQ( mutual->size(), 5 );
+    EXPECT_EQ( std::count( mutual->begin(), mutual->end(), VertPair( VertId( 5 ), VertId( 3 ) ) ), 0 );
+
+    // without source point 1, the extra point becomes the mutual match of its target
+    srcPoints.reset( VertId( 1 ) );
+    mutual = findFPFHMatches( src, srcPoints, tgt, tgtPoints, true );
+    ASSERT_TRUE( mutual.has_value() );
+    EXPECT_EQ( mutual->size(), 5 );
+    EXPECT_EQ( std::count( mutual->begin(), mutual->end(), VertPair( VertId( 5 ), VertId( 3 ) ) ), 1 );
+
+    EXPECT_TRUE( findFPFHMatches( src, srcPoints, tgt, VertBitSet( tgt.size() ) )->empty() );
+}
+
 } //namespace MR

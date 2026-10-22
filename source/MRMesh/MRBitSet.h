@@ -11,6 +11,14 @@
 #include <iterator>
 #ifndef __EMSCRIPTEN__
 #include <mimalloc.h>
+#ifdef _MSC_VER
+// BitSet's inline mi_stl_allocator calls mimalloc from every binary using MRMesh
+#ifdef _DEBUG
+#pragma comment( lib, "mimalloc-debug.dll.lib" )
+#else
+#pragma comment( lib, "mimalloc.dll.lib" )
+#endif
+#endif
 #endif
 
 namespace MR

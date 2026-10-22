@@ -534,8 +534,8 @@ struct ExactCutPoints
     const SortIntersectionsData& sortData;
     // the contour point of every vertex of the paths inside the faces, as {contour, point}
     HashMap<VertId, std::pair<int, int>> vertInters;
-    // the triangles of the other mesh along whose planes the two paths go at every split crossing (see splitContourCrossings)
-    HashMap<VertId, std::pair<FaceId, FaceId>> crossings;
+    // the definition of every vertex at a split crossing of two paths (see splitContourCrossings)
+    HashMap<VertId, PreciseCutPoint> crossings;
 
     PreciseVertCoords ownVert( VertId v ) const { return preciseVert( v, mesh, !sortData.isOtherA, sortData ); }
 
@@ -553,16 +553,12 @@ struct ExactCutPoints
     // the definition of vertex v on the loops of face cf
     PreciseCutPoint point( const CutFace& cf, VertId v ) const
     {
-        PreciseCutPoint res;
         if ( !crossings.empty() )
         {
             if ( const auto it = crossings.find( v ); it != crossings.end() )
-            {
-                res.tri = otherTriangle( it->second.first );
-                res.tri2 = otherTriangle( it->second.second );
-                return res;
-            }
+                return it->second;
         }
+        PreciseCutPoint res;
         const auto it = vertInters.find( v );
         if ( it == vertInters.end() )
         {
@@ -885,7 +881,7 @@ HashMap<UndirectedEdgeId, EdgePath> splitContourCrossings( Mesh& mesh, const One
         for ( int i = 0; i < crossings[k]->size(); ++i )
         {
             const auto [a, b] = ( *crossings[k] )[i];
-            exact.crossings[firstNewVert + i] = { edgeCuts.at( a.undirected() ), edgeCuts.at( b.undirected() ) };
+            exact.crossings[firstNewVert + i] = { .tri = cutOf( a.undirected() ), .tri2 = cutOf( b.undirected() ) };
             for ( auto e : { a, b } )
             {
                 for ( auto p : pieces.at( e.undirected() ) )

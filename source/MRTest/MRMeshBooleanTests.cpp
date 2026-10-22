@@ -240,10 +240,9 @@ TEST( MRMesh, BooleanLoneContours )
     }
 }
 
-// two overlapping boxes, one mesh crossing itself, poke through one triangle of the top of the cube; the forced cut of the cube splits
-// their contours where they cross, and the parts of the cube are told by the winding numbers of the boxes around them (0 outside both,
-// 1 inside one, 2 inside both), so the cube keeps its top outside the boxes, or inside them for the intersection, and the forced boolean
-// is one closed shell
+// two overlapping boxes (one mesh crossing itself) poke through one triangle of the top of the cube; the forced cut splits their contours
+// where they cross, and the winding numbers of the boxes (0 outside both, 1 inside one, 2 inside both) tell the parts of the cube, so it keeps
+// its top outside the boxes, or inside them for the intersection; the forced boolean is one closed shell
 TEST( MRMesh, BooleanForceCutCrossingContours )
 {
     const auto cube = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
@@ -256,11 +255,8 @@ TEST( MRMesh, BooleanForceCutCrossingContours )
     {
         double res = 0;
         for ( auto f : m.topology.getValidFaces() )
-        {
-            const auto ps = m.getTriPoints( f );
-            if ( std::all_of( ps.begin(), ps.end(), [] ( const Vector3f& p ) { return std::abs( p.z - 1.f ) < 1e-5f; } ) && m.normal( f ).z > 0 )
+            if ( std::abs( m.triCenter( f ).z - 1.f ) < 1e-5f && m.normal( f ).z > 0 )
                 res += m.area( f );
-        }
         return res;
     };
     for ( bool cubeIsA : { true, false } )

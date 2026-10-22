@@ -682,9 +682,9 @@ FaceHoles makeFaceHoles( MeshTopology& topology, const std::vector<CutFace>& fac
 }
 
 // adds the chords that split the holes of the faces (bounded by all their loops together) in monotone parts, on the exact predicates
-// consistent with the boolean if exact has sortData; returns the indices of the faces where that fails
-BitSet addMonotoneChords( Mesh& mesh, const std::vector<CutFace>& loneFaces, const std::vector<EdgeLoops>& faceLoops, const ExactCutPoints& exact,
-    NewEdgesMap* new2OldEdgeMap )
+// consistent with the boolean if exact has sortData; the faces where that fails are added to badFaces, and put back if removed here
+void addMonotoneChords( Mesh& mesh, const std::vector<CutFace>& loneFaces, const std::vector<EdgeLoops>& faceLoops, const BitSet& removedHere,
+    const ExactCutPoints& exact, NewEdgesMap* new2OldEdgeMap, FaceBitSet& badFaces )
 {
     // the faces are independent, so plan them in parallel
     std::vector<std::optional<HoleFillPlan>> plans( loneFaces.size() );
@@ -708,7 +708,6 @@ BitSet addMonotoneChords( Mesh& mesh, const std::vector<CutFace>& loneFaces, con
         plans[i] = PlanarTriangulation::getMonotonePlan( mesh, loops, Vector3f( normal.normalized() ) );
     } );
 
-    BitSet failed( loneFaces.size() );
     for ( int i = 0; i < loneFaces.size(); ++i )
     {
         auto& plan = plans[i];
@@ -717,9 +716,14 @@ BitSet addMonotoneChords( Mesh& mesh, const std::vector<CutFace>& loneFaces, con
         if ( plan && !plan->items.empty() && isFillingMultipleEdgeFree( mesh.topology, *plan ) )
             executeTriangulateContourPlan( mesh, faceLoops[i].front().front(), *plan, loneFaces[i].f, nullptr, new2OldEdgeMap );
         else
-            failed.set( i );
+        {
+            badFaces.autoResizeSet( loneFaces[i].f );
+            // the holes to fill are found by the cut paths, and the old sides of the face have none, so the face is put back;
+            // no chord of it was added, so its old sides still make its ring
+            if ( removedHere.test( i ) )
+                mesh.topology.setLeft( loneFaces[i].edges[0], loneFaces[i].f );
+        }
     }
-    return failed;
 }
 
 // connects the islands of lone contours with the rest of the holes of their faces by the chords that split the holes in monotone parts,
@@ -734,19 +738,11 @@ void connectLoneContours( Mesh& mesh, const OneMeshContours& contours, const std
 
     ExactCutPoints exact{ mesh, contours, sortData };
     const auto holes = makeFaceHoles( mesh.topology, loneFaces, preRes, firstNewEdge, exact );
-    for ( auto i : addMonotoneChords( mesh, loneFaces, holes.loops, exact, new2OldEdgeMap ) )
-    {
-        badFaces.autoResizeSet( loneFaces[i].f );
-        // the holes to fill are found by the cut paths, and the old sides of the face have none, so the face is put back;
-        // no chord of it was added, so its old sides still make its ring
-        if ( holes.removedHere.test( i ) )
-            mesh.topology.setLeft( loneFaces[i].edges[0], loneFaces[i].f );
-    }
+    addMonotoneChords( mesh, loneFaces, holes.loops, holes.removedHere, exact, new2OldEdgeMap, badFaces );
 }
 
-// splits both edges of every crossing at a new vertex where they come closest, in the order that findCrossings gives (along every edge),
-// as MeshTopology::splitEdge does: a new piece takes the place of the edge at its origin, and the edge goes on from the crossing; adds
-// the pieces of every split edge to `pieces` in the order along the edge, the last one keeping the id of the edge; returns the first new vertex
+// splits both edges of every crossing at a new vertex, in the order that findCrossings gives (along every edge), as MeshTopology::splitEdge does;
+// adds the pieces of every split edge to `pieces` in the order along the edge, the last one keeping the id of the edge; returns the first new vertex
 VertId splitCrossings( Mesh& mesh, const std::vector<EdgePair>& crossings, FaceId oldFace, HashMap<UndirectedEdgeId, EdgePath>& pieces,
     NewEdgesMap* new2OldEdgeMap )
 {
@@ -788,20 +784,16 @@ VertId splitCrossings( Mesh& mesh, const std::vector<EdgePair>& crossings, FaceI
     return firstNewVert;
 }
 
-// with the exact sorting data under force fill: splits the path edges inside the bad faces where they cross at new vertices shared
-// by the crossing paths, so that the holes of these faces can be filled as usual, and connects the islands of lone contours left
-// in them with the rest of their holes (see connectLoneContours); a face where an edge of the paths crosses a side or the predicates
-// fail stays as it is; returns for every split edge its pieces (see splitCrossings)
-HashMap<UndirectedEdgeId, EdgePath> splitContourCrossings( Mesh& mesh, const OneMeshContours& contours, const std::vector<CutFace>& contourFaces,
-    const std::vector<CutFace>& loneFaces, const FaceBitSet& badFaces, const PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
+// splits the path edges inside the bad faces where they cross at new vertices shared by the crossing paths, so that the holes of these faces
+// can be filled as usual, and connects the islands of lone contours left in them with the rest of their holes (see connectLoneContours); a face
+// where an edge of the paths crosses a side or the predicates fail stays as it is; returns for every split edge its pieces (see splitCrossings)
+HashMap<UndirectedEdgeId, EdgePath> splitContourCrossings( Mesh& mesh, const OneMeshContours& contours, std::vector<CutFace> faces,
+    const std::vector<CutFace>& loneFaces, FaceBitSet& badFaces, const PreCutResult& preRes, UndirectedEdgeId firstNewEdge,
     const SortIntersectionsData& sortData, NewEdgesMap* new2OldEdgeMap )
 {
     MR_TIMER;
     HashMap<UndirectedEdgeId, EdgePath> pieces;
-    std::vector<CutFace> faces;
-    for ( const auto& cf : contourFaces )
-        if ( badFaces.test( cf.f ) )
-            faces.push_back( cf );
+    std::erase_if( faces, [&] ( const CutFace& cf ) { return !badFaces.test( cf.f ); } );
     if ( faces.empty() )
         return pieces;
 
@@ -840,12 +832,10 @@ HashMap<UndirectedEdgeId, EdgePath> splitContourCrossings( Mesh& mesh, const One
                 tp.setLeft( cf.edges[0], cf.f );
             continue;
         }
-        const auto& cs = *crossings[k];
-        const auto firstNewVert = splitCrossings( mesh, cs, cf.f, pieces, new2OldEdgeMap );
-        for ( int i = 0; i < cs.size(); ++i )
+        auto newVert = splitCrossings( mesh, *crossings[k], cf.f, pieces, new2OldEdgeMap );
+        for ( const auto& [a, b] : *crossings[k] )
         {
-            const auto [a, b] = cs[i];
-            exact.crossings[firstNewVert + i] = { .tri = cutOf( a.undirected() ), .tri2 = cutOf( b.undirected() ) };
+            exact.crossings[newVert++] = { .tri = cutOf( a.undirected() ), .tri2 = cutOf( b.undirected() ) };
             for ( auto e : { a, b } )
                 for ( auto p : pieces.at( e.undirected() ) )
                     holes.edges[k].insert( holes.edges[k].end(), { p, p.sym() } );
@@ -856,18 +846,16 @@ HashMap<UndirectedEdgeId, EdgePath> splitContourCrossings( Mesh& mesh, const One
 
     std::vector<CutFace> lfs;
     std::vector<EdgeLoops> lfLoops;
+    BitSet lfRemoved( islandFaces.size() );
     EdgeBitSet inLoops( tp.edgeSize() );
     for ( auto k : islandFaces )
     {
+        lfRemoved.set( lfs.size(), holes.removedHere.test( k ) );
         lfs.push_back( faces[k] );
         lfLoops.push_back( holeLoops( tp, holes.edges[k], inLoops ) );
     }
-    for ( auto i : addMonotoneChords( mesh, lfs, lfLoops, exact, new2OldEdgeMap ) )
-    {
-        // the islands stay as they are, filled on both sides, as in a face where the plan of its lone contours fails (see connectLoneContours)
-        if ( holes.removedHere.test( islandFaces[i] ) )
-            tp.setLeft( lfs[i].edges[0], lfs[i].f );
-    }
+    // where that fails, the islands stay as they are, filled on both sides (see connectLoneContours); these faces are in badFaces already
+    addMonotoneChords( mesh, lfs, lfLoops, lfRemoved, exact, new2OldEdgeMap, badFaces );
     return pieces;
 }
 
@@ -1560,7 +1548,7 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
 
     const auto loneFaces = findCutFaces( mesh.topology, contours, true );
     // under force fill, the crossings of the contours in bad faces are split on the exact predicates, which take the faces before the cut
-    const auto contourFaces = params.forceFill && params.sortData ? findCutFaces( mesh.topology, contours, false ) : std::vector<CutFace>{};
+    auto contourFaces = params.forceFill && params.sortData ? findCutFaces( mesh.topology, contours, false ) : std::vector<CutFace>{};
     const auto firstNewEdge = UndirectedEdgeId( mesh.topology.undirectedEdgeSize() );
     auto preRes = doPreCutMesh( mesh, contours );
 
@@ -1585,8 +1573,8 @@ CutMeshResult cutMesh( Mesh& mesh, const OneMeshContours& contours, const CutMes
     if ( !params.forceFill && res.fbsWithContourIntersections.any() )
         return res;
     if ( params.forceFill && params.sortData && res.fbsWithContourIntersections.any() )
-        insertPieces( preRes, splitContourCrossings( mesh, contours, contourFaces, loneFaces, res.fbsWithContourIntersections, preRes, firstNewEdge,
-            *params.sortData, params.new2oldEdgesMap ) );
+        insertPieces( preRes, splitContourCrossings( mesh, contours, std::move( contourFaces ), loneFaces, res.fbsWithContourIntersections, preRes,
+            firstNewEdge, *params.sortData, params.new2oldEdgesMap ) );
 
     // find one edge for every hole to fill
     Timer t( "find edge per hole" );

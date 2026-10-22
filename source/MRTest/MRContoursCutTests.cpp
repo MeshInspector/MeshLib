@@ -608,89 +608,6 @@ TEST( MRMesh, CutMeshLoneSlitExact )
 namespace
 {
 
-// the box [c.x - hx, c.x + hx] x [c.y - hy, c.y + hy] x [z0, z1]
-Mesh makeBox( const Vector2f& c, float hx, float hy, float z0, float z1 )
-{
-    return makeCube( Vector3f( 2 * hx, 2 * hy, z1 - z0 ), Vector3f( c.x - hx, c.y - hy, z0 ) );
-}
-
-// cuts the cube by its intersections with the boxes, which are one mesh crossing itself, with the exact sorting data as the boolean
-// gives them, the cube as mesh A and as mesh B; checks that the forced cut finds numBadFaces faces where the contours cross,
-// and splits the contours there at numCrossings new vertices: the cut is valid without holes, every face of the cube
-// is cut in pieces of its orientation that add up to its area, and the paths are closed, each crossing a vertex of two paths or twice of one
-void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces, int numCrossings )
-{
-    const auto cube = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
-    Mesh other;
-    for ( const auto& b : boxes )
-        other.addMesh( b );
-    for ( bool cubeIsA : { true, false } )
-    {
-        const auto& a = cubeIsA ? cube : other;
-        const auto& b = cubeIsA ? other : cube;
-        const auto conv = getVectorConverters( a, b );
-        const auto contours = orderIntersectionContours( a.topology, b.topology, findCollidingEdgeTrisPrecise( a, b, conv.toInt ) );
-        OneMeshContours cubeContours;
-        getOneMeshIntersectionContours( a, b, contours, cubeIsA ? &cubeContours : nullptr, cubeIsA ? nullptr : &cubeContours, conv );
-        const SortIntersectionsData sortData{ other, contours, conv.toInt, nullptr, a.topology.vertSize(), !cubeIsA };
-
-        Mesh cut = cube;
-        FaceMap new2Old;
-        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old, .forceFill = true } );
-        EXPECT_EQ( res.fbsWithContourIntersections.count(), numBadFaces ) << "cube is " << ( cubeIsA ? "A" : "B" );
-        const auto& tp = cut.topology;
-        EXPECT_TRUE( tp.checkValidity() );
-        EXPECT_EQ( tp.findNumHoles(), 0 );
-        std::vector<double> areas( cube.topology.faceSize() );
-        for ( auto f : tp.getValidFaces() )
-        {
-            const auto of = new2Old[f];
-            ASSERT_TRUE( of );
-            EXPECT_GE( dot( Vector3d( cut.dirDblArea( f ) ), Vector3d( cube.dirDblArea( of ) ) ), 0 );
-            areas[of] += cut.dblArea( f );
-        }
-        for ( auto f : cube.topology.getValidFaces() )
-            EXPECT_NEAR( areas[f], cube.dblArea( f ), 1e-5 * cube.dblArea( f ) );
-
-        ASSERT_EQ( res.resultCut.size(), cubeContours.size() );
-        std::vector<int> passes( tp.vertSize() );
-        for ( const auto& path : res.resultCut )
-        {
-            EXPECT_TRUE( isEdgeLoop( tp, path ) );
-            for ( auto e : path )
-                ++passes[tp.org( e )];
-        }
-        EXPECT_EQ( std::count( passes.begin(), passes.end(), 2 ), numCrossings );
-        EXPECT_EQ( std::count_if( passes.begin(), passes.end(), [] ( int n ) { return n > 2; } ), 0 );
-    }
-}
-
-} // anonymous namespace
-
-// two overlapping boxes poke through the top of the cube in one of its triangles, so their lone contours cross there twice;
-// the forced cut connects the two crossing islands in one, and that one with the rest of the triangle
-TEST( MRMesh, CutMeshForceFillCrossingIslands )
-{
-    checkForcedCutAtCrossings( { makeBox( { 0.6f, 0.f }, 0.1f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.65f, 0.05f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
-}
-
-// two long boxes across the top of the cube, along x and along y, so their contours (also over the sides of the cube) cross four times
-// on the top, twice in each of its triangles (split by the diagonal y = x), where one side of the box along y crosses both sides
-// of the other one; the cut finds the triangles bad since a path there crosses an odd number of others
-TEST( MRMesh, CutMeshForceFillCrossingContours )
-{
-    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.2f, 0.f }, 0.4f, 2.f, 0.45f, 1.55f ) }, 2, 4 );
-}
-
-// a long box across the top of the cube, and a small box poking through it whose lone contour crosses the contour of the long one twice
-TEST( MRMesh, CutMeshForceFillIslandCrossingContour )
-{
-    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { -0.6f, 0.3f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
-}
-
-namespace
-{
-
 // the square [0, 10]x[0, 10] in the plane z = 0 of two triangles: 0_f below its diagonal from 0_v to 2_v, 1_f above it
 Mesh makeSquareOfTwoTriangles()
 {
@@ -741,6 +658,62 @@ void checkSquareCut( const Mesh& square, const OneMeshContours& contours )
         if ( new2OldEdges.splitEdges.test( ue ) || std::abs( mid.x - mid.y ) < 1e-5f )
             continue; // a part of an old edge, or on the diagonal
         EXPECT_EQ( FaceId( old ), triangleOf( mid ) ) << "edge " << e;
+    }
+}
+
+// the box [c.x - hx, c.x + hx] x [c.y - hy, c.y + hy] x [z0, z1]
+Mesh makeBox( const Vector2f& c, float hx, float hy, float z0, float z1 )
+{
+    return makeCube( Vector3f( 2 * hx, 2 * hy, z1 - z0 ), Vector3f( c.x - hx, c.y - hy, z0 ) );
+}
+
+// cuts the cube by its contours with the boxes (one mesh crossing itself) with the exact sorting data of the boolean, the cube as mesh A and as B;
+// checks that the forced cut finds numBadFaces bad faces, leaves no holes, and keeps the area and orientation of every face of the cube,
+// and that its closed paths meet at numCrossings new vertices, each passed by two paths or twice by one
+void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces, int numCrossings )
+{
+    const auto cube = makeCube( Vector3f::diagonal( 2.f ), Vector3f::diagonal( -1.f ) );
+    Mesh other;
+    for ( const auto& b : boxes )
+        other.addMesh( b );
+    for ( bool cubeIsA : { true, false } )
+    {
+        const auto& a = cubeIsA ? cube : other;
+        const auto& b = cubeIsA ? other : cube;
+        const auto conv = getVectorConverters( a, b );
+        const auto contours = orderIntersectionContours( a.topology, b.topology, findCollidingEdgeTrisPrecise( a, b, conv.toInt ) );
+        OneMeshContours cubeContours;
+        getOneMeshIntersectionContours( a, b, contours, cubeIsA ? &cubeContours : nullptr, cubeIsA ? nullptr : &cubeContours, conv );
+        const SortIntersectionsData sortData{ other, contours, conv.toInt, nullptr, a.topology.vertSize(), !cubeIsA };
+
+        Mesh cut = cube;
+        FaceMap new2Old;
+        const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old, .forceFill = true } );
+        EXPECT_EQ( res.fbsWithContourIntersections.count(), numBadFaces ) << "cube is " << ( cubeIsA ? "A" : "B" );
+        const auto& tp = cut.topology;
+        EXPECT_TRUE( tp.checkValidity() );
+        EXPECT_EQ( tp.findNumHoles(), 0 );
+        std::vector<double> areas( cube.topology.faceSize() );
+        for ( auto f : tp.getValidFaces() )
+        {
+            const auto of = new2Old[f];
+            ASSERT_TRUE( of );
+            EXPECT_GE( dot( Vector3d( cut.dirDblArea( f ) ), Vector3d( cube.dirDblArea( of ) ) ), 0 );
+            areas[of] += cut.dblArea( f );
+        }
+        for ( auto f : cube.topology.getValidFaces() )
+            EXPECT_NEAR( areas[f], cube.dblArea( f ), 1e-5 * cube.dblArea( f ) );
+
+        ASSERT_EQ( res.resultCut.size(), cubeContours.size() );
+        std::vector<int> passes( tp.vertSize() );
+        for ( const auto& path : res.resultCut )
+        {
+            EXPECT_TRUE( isEdgeLoop( tp, path ) );
+            for ( auto e : path )
+                ++passes[tp.org( e )];
+        }
+        EXPECT_EQ( std::count( passes.begin(), passes.end(), 2 ), numCrossings );
+        EXPECT_EQ( std::count_if( passes.begin(), passes.end(), [] ( int n ) { return n > 2; } ), 0 );
     }
 }
 
@@ -805,6 +778,26 @@ TEST( MRMesh, CutMeshLoneContourWithCrossingContour )
         SCOPED_TRACE( islandFirst ? "island first" : "island second" );
         checkSquareCut( square, islandFirst ? OneMeshContours{ island, crossing } : OneMeshContours{ crossing, island } );
     }
+}
+
+// two overlapping boxes poke through the top of the cube in one of its triangles, so their lone contours cross there twice;
+// the forced cut connects the two crossing islands in one, and that one with the rest of the triangle
+TEST( MRMesh, CutMeshForceFillCrossingIslands )
+{
+    checkForcedCutAtCrossings( { makeBox( { 0.6f, 0.f }, 0.1f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.65f, 0.05f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
+}
+
+// two long boxes across the top of the cube, along x and along y, whose contours cross twice in each triangle of the top (split by y = x),
+// where a side of the box along y crosses both sides of the other one: a path there crosses an odd number of others, so the triangle is bad
+TEST( MRMesh, CutMeshForceFillCrossingContours )
+{
+    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { 0.2f, 0.f }, 0.4f, 2.f, 0.45f, 1.55f ) }, 2, 4 );
+}
+
+// a long box across the top of the cube, and a small box poking through it whose lone contour crosses the contour of the long one twice
+TEST( MRMesh, CutMeshForceFillIslandCrossingContour )
+{
+    checkForcedCutAtCrossings( { makeBox( { 0.f, 0.2f }, 2.f, 0.1f, 0.5f, 1.5f ), makeBox( { -0.6f, 0.3f }, 0.1f, 0.1f, 0.45f, 1.55f ) }, 1, 2 );
 }
 
 TEST( MRMesh, MeshCollidePrecise )

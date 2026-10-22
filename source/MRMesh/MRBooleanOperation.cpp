@@ -120,10 +120,9 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     FaceId rightRoot; // root of the components to the right of cutPaths
     if ( !cutPaths.empty() )
     {
-        // the forced cut splits the contours where they cross, as where the other mesh crosses itself
+        // unite regions separately to the left and to the right of cutPaths
+        // (by the winding numbers where the forced cut splits crossing contours, as where the other mesh crosses itself)
         if ( !intParams.graphCutSeparation || !uniteByWindings( origin.topology, cutPaths, unionFind, originIsA, leftRoot, rightRoot ) )
-        {
-            // unite regions separately to the left and to the right of cutPaths
             for ( const auto& path : cutPaths )
                 for ( auto e : path )
                 {
@@ -132,7 +131,6 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
                     if ( auto r = origin.topology.right( e ) )
                         rightRoot = rightRoot ? unionFind.uniteUnbalanced( rightRoot, r ).first : unionFind.find( r );
                 }
-        }
 
         // if last unite merged left and right, we need to update roots
         if ( leftRoot )

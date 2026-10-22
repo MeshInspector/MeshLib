@@ -133,8 +133,8 @@ if(NOT TBB_FOUND)
 endif()
 
 # shared, without malloc override and dlopen-safe: MeshLib libraries allocate with it explicitly from any process;
-# always our own build, since system ones (Homebrew) override malloc, see mr_find_mimalloc
-if(NOT EMSCRIPTEN AND NOT WIN32)
+# always our own build, see mr_find_mimalloc
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
   function(add_mimalloc)
     set(MI_OVERRIDE OFF)
     set(MI_LOCAL_DYNAMIC_TLS ON)

@@ -11,8 +11,8 @@
 #include <iterator>
 #ifndef __EMSCRIPTEN__
 #include <mimalloc.h>
-#ifdef _MSC_VER
-// BitSet's inline mi_stl_allocator calls mimalloc from every binary using MRMesh
+#if defined( _MSC_VER ) && !defined( MR_USE_CMAKE_CONFIGURE_FILE )
+// BitSet's inline mi_stl_allocator calls mimalloc from every binary using MRMesh; MeshLib's CMake targets link it instead
 #ifdef _DEBUG
 #pragma comment( lib, "mimalloc-debug.dll.lib" )
 #else

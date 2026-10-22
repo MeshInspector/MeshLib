@@ -1,15 +1,17 @@
 # MeshLib libraries allocate explicitly with mimalloc (e.g. BitSet's mi_stl_allocator) and never override malloc,
 # so they can be loaded into any process (Python, .NET, Java). An application that wants mimalloc for all its
-# allocations sets MR_MIMALLOC_OVERRIDE=ON and calls mr_enable_mimalloc on its executable.
+# allocations sets MR_MIMALLOC_OVERRIDE=ON and calls mr_enable_mimalloc on its executable; MeshLib libraries then
+# use the standard allocators and do not link mimalloc.
 # Emscripten builds get mimalloc from -sMALLOC=mimalloc instead, see ConfigureEmscripten.cmake.
-option(MR_MIMALLOC_OVERRIDE "Link MeshLib with a malloc-overriding mimalloc for mr_enable_mimalloc executables" OFF)
+option(MR_MIMALLOC_OVERRIDE "MeshLib libraries rely on mr_enable_mimalloc executables instead of explicit mimalloc" OFF)
 
 # mr_find_mimalloc()
 #
 # Provides the `mimalloc` target; there must be only one mimalloc in a process.
 # Windows: vcpkg's mimalloc[override], whose redirect engages only in mr_enable_mimalloc executables.
-# macOS and Linux: the dependencies' non-override build, or with MR_MIMALLOC_OVERRIDE an override build made here
-# (named mimalloc-override, so it does not collide with the dependencies' one in packages).
+# macOS and Linux: the dependencies' non-override build for MeshLib libraries, or with MR_MIMALLOC_OVERRIDE
+# an override build made here for mr_enable_mimalloc executables (named mimalloc-override,
+# so it does not collide with the dependencies' one in packages).
 set(MR_MIMALLOC_PACKAGE_LOCK ${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/cpm/package-lock.cmake)
 function(mr_find_mimalloc)
   if(TARGET mimalloc)
@@ -23,11 +25,6 @@ function(mr_find_mimalloc)
     # without MeshLib's -Werror -pedantic-errors
     set(CMAKE_C_FLAGS "")
     set(MI_OVERRIDE ON)
-    # Linux: dlopen-safe thread-locals, so that Python modules of such builds still load into a plain Python;
-    # on macOS 13 its local-dynamic TLS model aborts in dyld at launch
-    if(NOT APPLE)
-      set(MI_LOCAL_DYNAMIC_TLS ON)
-    endif()
     set(MI_BUILD_SHARED ON)
     set(MI_BUILD_STATIC OFF)
     set(MI_BUILD_OBJECT OFF)

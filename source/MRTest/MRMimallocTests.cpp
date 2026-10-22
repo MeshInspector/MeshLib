@@ -1,4 +1,6 @@
 #include <MRMesh/config.h>
+// with MR_MIMALLOC_OVERRIDE, MeshLib libraries do not use mimalloc and MRTest does not override malloc
+#ifndef MR_MIMALLOC_OVERRIDE
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
@@ -30,11 +32,10 @@ TEST( MRMesh, MimallocBitSet )
     EXPECT_TRUE( mi_is_in_heap_region( mesh.topology.getValidFaces().bits().data() ) );
 }
 
-// malloc is mimalloc only in Emscripten builds and in mr_enable_mimalloc executables (MR_MIMALLOC_OVERRIDE);
-// MRTest is not one of them, but on macOS and Linux linking the override build is enough
+// malloc is mimalloc only in Emscripten builds and in mr_enable_mimalloc executables, MRTest is not one of them
 TEST( MRMesh, MimallocMallocOverride )
 {
-#if defined( __EMSCRIPTEN__ ) || ( defined( MR_MIMALLOC_OVERRIDE ) && !defined( _WIN32 ) )
+#ifdef __EMSCRIPTEN__
     constexpr bool expected = true;
 #else
     constexpr bool expected = false;
@@ -66,3 +67,5 @@ TEST( MRMesh, MimallocSharedLibrary )
 #endif
 
 } // namespace MR
+
+#endif

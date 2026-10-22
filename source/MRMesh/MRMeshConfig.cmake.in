@@ -9,7 +9,7 @@ find_dependency(phmap 2.0)
 find_dependency(spdlog 1.9)
 find_dependency(TBB 2020.1)
 find_dependency(tl-expected)
-if(NOT EMSCRIPTEN AND NOT TARGET mimalloc)
+if(NOT EMSCRIPTEN AND NOT "@MR_MIMALLOC_OVERRIDE@" AND NOT TARGET mimalloc)
   # MeshLib distributions bundle it with the thirdparty libraries and headers,
   # in a layout its own CMake config does not know
   if(DEFINED MESHLIB_THIRDPARTY_LIB_DIR)

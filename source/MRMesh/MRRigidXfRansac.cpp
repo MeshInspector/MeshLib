@@ -43,6 +43,7 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
     if ( numMatches < 3 )
         return unexpected( "At least three matches are required" );
 
+    const auto ratioSq = sqr( params.edgeLengthRatio );
     // the transformation of the sample with given index, or nothing if the sample is inconsistent
     auto sampleXf = [&]( int iteration ) -> std::optional<AffineXf3f>
     {
@@ -59,9 +60,9 @@ Expected<AffineXf3f> findRigidXfRansac( const VertCoords & srcPoints, const Vert
         {
             const auto & ma = matches[ids[a]];
             const auto & mb = matches[ids[( a + 1 ) % 3]];
-            const auto ds = distance( srcPoints[ma.first], srcPoints[mb.first] );
-            const auto dt = distance( tgtPoints[ma.second], tgtPoints[mb.second] );
-            if ( !( ds > 0 ) || !( std::min( ds, dt ) >= params.edgeLengthRatio * std::max( ds, dt ) ) )
+            const auto dsSq = distanceSq( srcPoints[ma.first], srcPoints[mb.first] );
+            const auto dtSq = distanceSq( tgtPoints[ma.second], tgtPoints[mb.second] );
+            if ( !( dsSq > 0 ) || !( std::min( dsSq, dtSq ) >= ratioSq * std::max( dsSq, dtSq ) ) )
                 return {};
         }
         PointToPointAligningTransform p2p;

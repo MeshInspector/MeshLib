@@ -34,7 +34,7 @@ TEST( MRMesh, RigidXfRansac )
     auto res = findRigidXfRansac( src, tgt, matches, params );
     ASSERT_TRUE( res.has_value() );
     for ( const auto & p : src )
-        EXPECT_LT( distance( ( *res )( p ), xf( p ) ), 1e-3f );
+        EXPECT_LT( distanceSq( ( *res )( p ), xf( p ) ), 1e-6f );
     EXPECT_EQ( countInliers( src, tgt, matches, *res, params.inlierDistance ), numCorrect );
 
     // the same result with a single thread

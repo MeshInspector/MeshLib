@@ -59,6 +59,12 @@ if(NOT libzip_FOUND)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
+# BitSet's mi_stl_allocator; the same shared copy as mr_enable_mimalloc gives the executables
+IF(NOT EMSCRIPTEN)
+  find_package(mimalloc CONFIG REQUIRED)
+  target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)
+ENDIF()
+
 IF(APPLE)
   # for Boost.Stacktrace
   target_compile_definitions(${PROJECT_NAME} PUBLIC _GNU_SOURCE)

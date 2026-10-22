@@ -9,6 +9,9 @@
 #include <functional>
 #include <iosfwd>
 #include <iterator>
+#ifndef __EMSCRIPTEN__
+#include <mimalloc.h>
+#endif
 
 namespace MR
 {
@@ -70,6 +73,11 @@ class BitSet
 {
 public:
     using block_type = std::uint64_t;
+#ifdef __EMSCRIPTEN__
+    using Blocks = std::vector<block_type>; // malloc is already mimalloc there with MR_EMSCRIPTEN_MIMALLOC
+#else
+    using Blocks = std::vector<block_type, mi_stl_allocator<block_type>>;
+#endif
     inline static constexpr size_t bits_per_block = sizeof( block_type ) * 8;
     inline static constexpr size_t npos = (size_t)-1;
 
@@ -83,7 +91,7 @@ public:
     explicit BitSet( size_t numBits, bool fillValue = false ) { resize( numBits, fillValue ); }
 
     /// creates bitset from the given blocks of bits
-    static BitSet fromBlocks( std::vector<block_type> && blocks )
+    static BitSet fromBlocks( Blocks && blocks )
     {
         BitSet res;
         res.blocks_ = std::move( blocks );
@@ -278,7 +286,7 @@ private:
     [[nodiscard]] MR_BIND_IGNORE_PY friend auto end( const BitSet & ) { return SetBitIteratorT<BitSet>(); }
 
 private:
-    std::vector<block_type> blocks_;
+    Blocks blocks_;
     size_type numBits_ = 0;
 };
 

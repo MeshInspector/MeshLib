@@ -57,7 +57,6 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
     DynamicArray<float3> cudaSamples( samples );
 
-    std::vector<uint64_t> blocks;
     DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );
 
     const auto precs = calcPrecs( skyPatches );
@@ -75,7 +74,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     if ( outIntersections )
         cudaIntersections.toVector( *outIntersections );
 
-    std::vector<uint64_t> resBlocks;
+    BitSet::Blocks resBlocks;
     cudaRes.toVector( resBlocks );
     return BitSet::fromBlocks( std::move( resBlocks ) );
 }
@@ -115,7 +114,7 @@ VertScalars  computeSkyViewFactor( const Mesh& terrain,
     if ( outSkyRays &&
         findSkyRaysKernel( cudaNodes.data(), cudaMeshPoints.data(), cudaFaces.data(), cudaSamples.data(), cudaValidSamples.data(), cudaPrecs.data(), cudaOutSkyRays.data(), cudaOutSkyRays.size(), cudaSamples.size(), cudaPrecs.size(), cudaIntersections.data() ) == cudaSuccess )
     {
-        std::vector<uint64_t> outSkyRaysBlocks;
+        BitSet::Blocks outSkyRaysBlocks;
         cudaOutSkyRays.toVector( outSkyRaysBlocks );
         *outSkyRays = BitSet::fromBlocks( std::move( outSkyRaysBlocks ) );
     }

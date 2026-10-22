@@ -23,15 +23,15 @@ namespace MR
 namespace
 {
 
-// the winding numbers of the other mesh around the parts of origin separated by the cut (by their roots in unionFind), from 0 in every set
-// of parts linked by the paths: crossing a path from its left to its right leaves the other mesh on mesh A, and enters it on mesh B;
-// empty if no number is above 1, as where the other mesh does not cross itself (every part is only to the left or only to the right
-// of the paths), or if the paths contradict one another
-HashMap<FaceId, int> windingsAroundParts( const MeshTopology& topology, const std::vector<EdgePath>& cutPaths,
-    BaseUnionFind<FaceId>& unionFind, bool originIsA )
+// unites the parts of origin separated by the cut (by their roots in unionFind) by the winding numbers of the other mesh around them,
+// from 0 in every set of parts linked by the paths (crossing a path from its left to its right leaves the other mesh on mesh A, and enters
+// it on mesh B): the ones inside the other mesh in leftRoot on mesh A and in rightRoot on mesh B, the others in the other root;
+// unites nothing and returns false if every part is only to the left or only to the right of the paths (as where the other mesh
+// does not cross itself), or if the paths contradict one another
+bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>& cutPaths, BaseUnionFind<FaceId>& unionFind, bool originIsA,
+    FaceId& leftRoot, FaceId& rightRoot )
 {
     MR_TIMER;
-    // a number is above 1 only if a part is to the left of a path and to the right of another one
     FaceBitSet leftParts( topology.faceSize() ), rightParts( topology.faceSize() );
     for ( const auto& path : cutPaths )
         for ( auto e : path )
@@ -41,53 +41,48 @@ HashMap<FaceId, int> windingsAroundParts( const MeshTopology& topology, const st
                 rightParts.set( unionFind.find( r ) );
             }
     if ( !leftParts.intersects( rightParts ) )
-        return {};
+        return false;
 
     HashMap<FaceId, std::vector<std::pair<FaceId, int>>> links; // the parts across every path edge, with the change of the number
     const int step = originIsA ? -1 : 1;
     for ( const auto& path : cutPaths )
-    {
         for ( auto e : path )
-        {
-            const auto l = topology.left( e ), r = topology.right( e );
-            if ( !l || !r )
-                continue;
-            const auto lr = unionFind.find( l ), rr = unionFind.find( r );
-            links[lr].emplace_back( rr, step );
-            links[rr].emplace_back( lr, -step );
-        }
-    }
+            if ( const auto l = topology.left( e ), r = topology.right( e ); l && r )
+            {
+                const auto lr = unionFind.find( l ), rr = unionFind.find( r );
+                links[lr].emplace_back( rr, step );
+                links[rr].emplace_back( lr, -step );
+            }
 
-    HashMap<FaceId, int> res;
-    bool aboveOne = false;
-    std::vector<FaceId> linked;
+    // a part on both sides of the paths makes a number above 1 in its set, unless the paths contradict one another
+    HashMap<FaceId, int> windings;
+    std::vector<std::pair<FaceId, int>> linked; // the parts of one set with their numbers
     for ( const auto& [start, unused] : links )
     {
-        if ( !res.insert( { start, 0 } ).second )
+        if ( !windings.insert( { start, 0 } ).second )
             continue;
-        linked = { start };
-        int minW = 0, maxW = 0;
+        linked = { { start, 0 } };
+        int minW = 0;
         for ( size_t i = 0; i < linked.size(); ++i )
         {
-            const auto x = linked[i];
-            const int wx = res.at( x );
+            const auto [x, wx] = linked[i];
             minW = std::min( minW, wx );
-            maxW = std::max( maxW, wx );
             for ( const auto& [y, d] : links.at( x ) )
-            {
-                if ( const auto [it, inserted] = res.insert( { y, wx + d } ); inserted )
-                    linked.push_back( y );
+                if ( const auto [it, inserted] = windings.insert( { y, wx + d } ); inserted )
+                    linked.emplace_back( y, wx + d );
                 else if ( it->second != wx + d )
-                    return {};
-            }
+                    return false;
         }
-        for ( auto x : linked )
-            res[x] -= minW;
-        aboveOne = aboveOne || maxW - minW > 1;
+        for ( const auto& [x, w] : linked )
+            windings[x] = w - minW;
     }
-    if ( !aboveOne )
-        return {};
-    return res;
+
+    for ( const auto& [r, w] : windings )
+    {
+        auto& root = ( w > 0 ) == originIsA ? leftRoot : rightRoot;
+        root = root ? unionFind.uniteUnbalanced( root, r ).first : unionFind.find( r );
+    }
+    return true;
 }
 
 // Finds needed mesh part based on components relative positions (inside/outside)
@@ -126,18 +121,7 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     if ( !cutPaths.empty() )
     {
         // the forced cut splits the contours where they cross, as where the other mesh crosses itself
-        const auto windings = intParams.graphCutSeparation ? windingsAroundParts( origin.topology, cutPaths, unionFind, originIsA ) : HashMap<FaceId, int>{};
-        if ( !windings.empty() )
-        {
-            // unite the regions inside the other mesh (with a positive winding number) and the ones outside it separately:
-            // the inside is to the left of the paths on mesh A, and to the right on mesh B
-            for ( const auto& [r, w] : windings )
-            {
-                auto& root = ( w > 0 ) == originIsA ? leftRoot : rightRoot;
-                root = root ? unionFind.uniteUnbalanced( root, r ).first : unionFind.find( r );
-            }
-        }
-        else
+        if ( !intParams.graphCutSeparation || !uniteByWindings( origin.topology, cutPaths, unionFind, originIsA, leftRoot, rightRoot ) )
         {
             // unite regions separately to the left and to the right of cutPaths
             for ( const auto& path : cutPaths )

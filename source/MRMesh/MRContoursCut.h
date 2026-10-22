@@ -48,12 +48,11 @@ struct CutMeshParameters
     } fillPart{ FillPart::Both };
 
     /// This flag defines the MR::cutMesh behaviour in case of bad faces acure
-    /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts;
-    /// if bad faces occur, it does not fill anything unless this flag is set, and then it fills all faces with bad ones:
-    /// with sortData, the contours are split where they cross in bad faces, at new vertices shared by their paths in \ref CutMeshResult::resultCut,
-    /// so these faces are filled like the others, except where that fails; otherwise, and where it fails,
+    /// basicaly MR::cutMesh removes all faces which contours pass through, adds new edges to topology and fills all removed parts
+    /// If bad faces occur, nothing is filled unless this flag is set; then with sortData, the contours are split where they cross
+    /// in bad faces (see \ref CutMeshResult::resultCut) to fill these like the others; otherwise, and where the split fails,
     /// the triangulation of bad faces can be bad (may have self-intersections or tunnels)
-    ///
+    /// 
     /// \note Bad faces here mean faces where contours have intersections and cannot be cut and filled in an good way
     bool forceFill{ false };
 

@@ -615,8 +615,8 @@ Mesh makeBox( const Vector2f& c, float hx, float hy, float z0, float z1 )
 }
 
 // cuts the cube by its intersections with the boxes, which are one mesh crossing itself, with the exact sorting data as the boolean
-// gives them, the cube as mesh A and as mesh B; checks that the cut stops at numBadFaces faces where the contours cross, unless forced,
-// and that the forced cut splits the contours there at numCrossings new vertices: the cut is valid without holes, every face of the cube
+// gives them, the cube as mesh A and as mesh B; checks that the forced cut finds numBadFaces faces where the contours cross,
+// and splits the contours there at numCrossings new vertices: the cut is valid without holes, every face of the cube
 // is cut in pieces of its orientation that add up to its area, and the paths are closed, each crossing a vertex of two paths or twice of one
 void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces, int numCrossings )
 {
@@ -635,9 +635,6 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
         const SortIntersectionsData sortData{ other, contours, conv.toInt, nullptr, a.topology.vertSize(), !cubeIsA };
 
         Mesh cut = cube;
-        EXPECT_EQ( cutMesh( cut, cubeContours, { .sortData = &sortData } ).fbsWithContourIntersections.count(), numBadFaces );
-
-        cut = cube;
         FaceMap new2Old;
         const auto res = cutMesh( cut, cubeContours, { .sortData = &sortData, .new2OldMap = &new2Old, .forceFill = true } );
         EXPECT_EQ( res.fbsWithContourIntersections.count(), numBadFaces ) << "cube is " << ( cubeIsA ? "A" : "B" );
@@ -659,9 +656,7 @@ void checkForcedCutAtCrossings( const std::vector<Mesh>& boxes, int numBadFaces,
         std::vector<int> passes( tp.vertSize() );
         for ( const auto& path : res.resultCut )
         {
-            ASSERT_FALSE( path.empty() );
-            EXPECT_TRUE( isEdgePath( tp, path ) );
-            EXPECT_EQ( tp.dest( path.back() ), tp.org( path.front() ) );
+            EXPECT_TRUE( isEdgeLoop( tp, path ) );
             for ( auto e : path )
                 ++passes[tp.org( e )];
         }

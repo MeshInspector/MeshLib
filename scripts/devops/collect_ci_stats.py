@@ -126,6 +126,22 @@ def fetch_jobs(repo: str, run_id: str):
         url = resp.links.get('next', {}).get('url')
     return jobs
 
+# GitHub may report a finished job with conclusion null for several minutes
+def fetch_concluded_jobs(repo: str, run_id: str, attempts=10, cooldown=60):
+    for attempt in range(1, attempts + 1):
+        jobs = fetch_jobs(repo, run_id)
+        pending = [
+            job['id']
+            for job in jobs
+            if job['conclusion'] is None and Path(f"RunnerSysStats-{job['id']}.json").exists()
+        ]
+        if not pending:
+            return jobs
+        if attempt == attempts:
+            raise RuntimeError(f'jobs {pending} still have no conclusion after {attempts} attempts')
+        print(f'fetch_concluded_jobs: jobs {pending} have no conclusion yet (attempt {attempt}/{attempts}); retrying in {cooldown}s...')
+        time.sleep(cooldown)
+
 def sign_api_request(url, method, headers, body, region, service):
     # Use the credentials from the assumed role
     session = boto3.Session()
@@ -156,7 +172,7 @@ if __name__ == "__main__":
         'git_branch':  branch,
         'github_ref':  ref,
         'github_repo': repo,
-        'jobs':        parse_jobs(fetch_jobs(repo, run_id)),
+        'jobs':        parse_jobs(fetch_concluded_jobs(repo, run_id)),
     }
     pprint.pp(result, indent=2, width=150)
 

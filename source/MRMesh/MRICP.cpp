@@ -55,9 +55,7 @@ size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
 }
 
 
-/// returns grid samples of the object; for a mesh with triangles too big for the sampling, the samples are taken
-/// from its dense point cloud returned in (cloud), with the normals interpolated from the vertex pseudonormals as MeshOrPoints::normals() returns
-static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, bool nonVertexSamples, std::shared_ptr<PointCloud> & cloud )
+VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, bool nonVertexSamples, std::shared_ptr<PointCloud> & cloud )
 {
     MR_TIMER;
     cloud.reset();

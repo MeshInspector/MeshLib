@@ -61,7 +61,10 @@ endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
 # MR::Allocator, see MRAllocator.h
-IF(NOT MR_STD_ALLOCATOR)
+IF(MR_STD_ALLOCATOR)
+  # also for code built against installed MeshLib, which does not see config_cmake.h
+  target_compile_definitions(${PROJECT_NAME} PUBLIC MR_STD_ALLOCATOR=1)
+ELSE()
   mr_find_mimalloc()
   target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)
 ENDIF()
@@ -124,6 +127,7 @@ configure_package_config_file(
   ${PROJECT_NAME}Config.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${MR_CONFIG_DIR}
+  PATH_VARS MR_MAIN_LIB_DIR
 )
 install(
   FILES ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}Config.cmake

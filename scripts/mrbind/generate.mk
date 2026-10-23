@@ -653,7 +653,7 @@ COMPILER_FLAGS += -I $(MRBIND_SOURCE)/include
 # MeshLib configured with MR_STD_ALLOCATOR (see `cmake/Modules/Mimalloc.cmake`): `BitSet::Blocks` must match MRMesh's.
 override allocator_config_header := $(makefile_dir)../../source/MRMesh/config_cmake.h
 ifneq ($(findstring define MR_STD_ALLOCATOR,$(if $(wildcard $(allocator_config_header)),$(call load_file,$(allocator_config_header)))),)
-COMPILER_FLAGS += -DMR_STD_ALLOCATOR
+COMPILER_FLAGS += -DMR_STD_ALLOCATOR=1
 endif
 
 COMPILER_FLAGS_LIBCLANG += -DMR_PARSING_FOR_ANY_BINDINGS

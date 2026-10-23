@@ -2,4 +2,4 @@
 
 #cmakedefine MESHLIB_VERSION "@MESHLIB_VERSION@"
 #cmakedefine MR_PLATFORM "@MR_PLATFORM@"
-#cmakedefine MR_STD_ALLOCATOR
+#cmakedefine MR_STD_ALLOCATOR 1

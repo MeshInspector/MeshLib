@@ -10,8 +10,20 @@ find_dependency(spdlog 1.9)
 find_dependency(TBB 2020.1)
 find_dependency(tl-expected)
 # MR::Allocator, see MRAllocator.h
-if(NOT "@MR_STD_ALLOCATOR@")
-  find_dependency(mimalloc)
+if(NOT "@MR_STD_ALLOCATOR@" AND NOT TARGET mimalloc)
+  if(WIN32)
+    find_dependency(mimalloc)
+  else()
+    # the dependencies' mimalloc copied with MeshLib: the thirdparty lib dir (.deb), or next to MRMesh (vcpkg install)
+    # meshlib-config.cmake's MESHLIB_THIRDPARTY_LIB_DIR is <main lib dir>/lib, relocatable also in .deb packages
+    find_library(MESHLIB_MIMALLOC_LIBRARY NAMES mimalloc
+      PATHS "${MESHLIB_THIRDPARTY_LIB_DIR}" "@PACKAGE_MR_MAIN_LIB_DIR@" NO_DEFAULT_PATH REQUIRED)
+    add_library(mimalloc SHARED IMPORTED)
+    set_target_properties(mimalloc PROPERTIES IMPORTED_LOCATION "${MESHLIB_MIMALLOC_LIBRARY}")
+    if(DEFINED MESHLIB_THIRDPARTY_INCLUDE_DIR AND EXISTS "${MESHLIB_THIRDPARTY_INCLUDE_DIR}")
+      set_target_properties(mimalloc PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${MESHLIB_THIRDPARTY_INCLUDE_DIR}")
+    endif()
+  endif()
 endif()
 
 # static builds require to find private dependencies

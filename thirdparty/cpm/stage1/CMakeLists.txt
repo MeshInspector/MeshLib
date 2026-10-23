@@ -132,6 +132,23 @@ if(NOT TBB_FOUND)
   add_onetbb()
 endif()
 
+# mimalloc.h for MeshLib headers outside its CMake targets (MRPch, the bindings, installed packages);
+# MeshLib libraries and executables link their own MRMimalloc, see cmake/Modules/Mimalloc.cmake
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  find_package(mimalloc 3.5 CONFIG QUIET)
+  if(NOT mimalloc_FOUND)
+    function(add_mimalloc)
+      set(MI_USE_CXX ON)
+      set(MI_BUILD_STATIC OFF)
+      set(MI_BUILD_OBJECT OFF)
+      set(MI_BUILD_TESTS OFF)
+      set(MI_INSTALL_TOPLEVEL ON)
+      meshlib_add_package(mimalloc)
+    endfunction()
+    add_mimalloc()
+  endif()
+endif()
+
 # required by OpenVDB (stage2)
 find_package(Blosc)
 if(NOT Blosc_FOUND)

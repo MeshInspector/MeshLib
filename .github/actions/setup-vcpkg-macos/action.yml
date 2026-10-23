@@ -83,7 +83,7 @@ runs:
       run: |
         FILES_HASH=$(${REPO_PREFIX}scripts/devops/cache_key.sh \
           ${REPO_PREFIX}thirdparty/vcpkg/vcpkg.json \
-          ${REPO_PREFIX}thirdparty/vcpkg/ports \
+          ${REPO_PREFIX}thirdparty/vcpkg/ports           ${REPO_PREFIX}thirdparty/vcpkg/ports-unix \
           ${REPO_PREFIX}thirdparty/vcpkg/triplets/${VCPKG_TRIPLET}.cmake \
           ${REPO_PREFIX}scripts/build_vcpkg_thirdparty.sh \
           "${VCPKG_CXX}")

@@ -182,13 +182,6 @@ struct ICPProperties
     bool ignoreBdTgts = true;
 };
 
-/// returns grid samples of the object with approximately (samplingVoxelSize) distance between them;
-/// if (nonVertexSamples) and the object is a mesh with triangles too big for the sampling, the samples are taken from its dense point cloud
-/// (see meshToDensePointCloud) returned in (cloud) with Mesh::pseudonormal in every point, and the returned ids refer to the points of that cloud;
-/// otherwise (cloud) is reset and the ids refer to the points of the object
-[[nodiscard]] MRMESH_API VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, bool nonVertexSamples,
-    std::shared_ptr<PointCloud> & cloud );
-
 /// reset active bit if pair distance is further than maxDistSq
 MRMESH_API size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq );
 

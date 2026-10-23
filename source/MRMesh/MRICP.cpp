@@ -7,7 +7,6 @@
 #include "MRQuaternion.h"
 #include "MRBestFit.h"
 #include "MRBitSetParallelFor.h"
-#include "MRMeshToPointCloud.h"
 #include "MRPointCloud.h"
 #include "MRParallelFor.h"
 #include <numeric>
@@ -54,22 +53,6 @@ size_t deactivateFarPairs( IPointPairs& pairs, float maxDistSq )
     return cnt0 - pairs.active.count();
 }
 
-
-VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize, bool nonVertexSamples, std::shared_ptr<PointCloud> & cloud )
-{
-    MR_TIMER;
-    cloud.reset();
-    const auto mp = nonVertexSamples ? obj.asMeshPart() : nullptr;
-    if ( !mp || !( samplingVoxelSize > 0 ) || isCoveredByVertices( *mp, samplingVoxelSize / 2 ) )
-        return *obj.pointsGridSampling( samplingVoxelSize );
-
-    auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, VertNormalsMode::AngleWeighted );
-    if ( !dense )
-        return *obj.pointsGridSampling( samplingVoxelSize );
-
-    cloud = std::make_shared<PointCloud>( std::move( *dense ) );
-    return *MeshOrPoints( *cloud ).pointsGridSampling( samplingVoxelSize );
-}
 
 ICP::ICP( const MeshOrPointsXf& flt, const MeshOrPointsXf& ref, const VertBitSet& fltSamples, const VertBitSet& refSamples )
     : flt_( flt )
@@ -145,7 +128,9 @@ void ICP::setFltSamples( const VertBitSet& fltSamples )
 
 void ICP::sampleFltPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setupPairs( flt2refPairs_, gridSamples( flt_.obj, samplingVoxelSize, nonVertexSamples, fltSamplesCloud_ ), {} );
+    fltSamplesCloud_.reset();
+    setupPairs( flt2refPairs_, nonVertexSamples ? flt_.obj.surfaceGridSampling( samplingVoxelSize, fltSamplesCloud_ )
+        : *flt_.obj.pointsGridSampling( samplingVoxelSize ), {} );
 }
 
 void ICP::setRefSamples( const VertBitSet& refSamples )
@@ -156,7 +141,9 @@ void ICP::setRefSamples( const VertBitSet& refSamples )
 
 void ICP::sampleRefPoints( float samplingVoxelSize, bool nonVertexSamples )
 {
-    setupPairs( ref2fltPairs_, gridSamples( ref_.obj, samplingVoxelSize, nonVertexSamples, refSamplesCloud_ ), {} );
+    refSamplesCloud_.reset();
+    setupPairs( ref2fltPairs_, nonVertexSamples ? ref_.obj.surfaceGridSampling( samplingVoxelSize, refSamplesCloud_ )
+        : *ref_.obj.pointsGridSampling( samplingVoxelSize ), {} );
 }
 
 static PointCloud samplesCloud( const PointPairs & pairs, const MeshOrPoints & src )

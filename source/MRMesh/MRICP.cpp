@@ -65,8 +65,8 @@ static VertBitSet gridSamples( const MeshOrPoints & obj, float samplingVoxelSize
         return *obj.pointsGridSampling( samplingVoxelSize );
 
     auto dense = meshToDensePointCloud( *mp, samplingVoxelSize / 2, VertNormalsMode::AngleWeighted );
-    if ( !dense || dense->points.size() <= mp->mesh.points.size() )
-        return *obj.pointsGridSampling( samplingVoxelSize ); // the vertices are dense enough
+    if ( !dense )
+        return *obj.pointsGridSampling( samplingVoxelSize );
 
     cloud = std::make_shared<PointCloud>( std::move( *dense ) );
     return *MeshOrPoints( *cloud ).pointsGridSampling( samplingVoxelSize );

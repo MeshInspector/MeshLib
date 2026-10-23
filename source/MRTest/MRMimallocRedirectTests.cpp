@@ -1,4 +1,5 @@
 #include <MRMesh/config.h>
+#include <MRMesh/MRAllocator.h>
 #include <MRMesh/MRBitSet.h>
 #include <MRMesh/MRCube.h>
 #include <MRMesh/MRMesh.h>
@@ -47,17 +48,6 @@ TEST( MRMesh, MimallocRedirectActive )
     EXPECT_TRUE( mi_is_in_heap_region( q.get() ) );
 }
 #else
-// BitSet allocates with mimalloc explicitly, see BitSet::Blocks
-TEST( MRMesh, MimallocBitSet )
-{
-    BitSet local( 1000, true );
-    EXPECT_TRUE( mi_is_in_heap_region( local.bits().data() ) );
-
-    // allocated inside MRMesh
-    const auto mesh = makeCube();
-    EXPECT_TRUE( mi_is_in_heap_region( mesh.topology.getValidFaces().bits().data() ) );
-}
-
 // MeshLib's own executables keep the system allocator, except in Emscripten builds
 TEST( MRMesh, MimallocMallocOverride )
 {
@@ -77,19 +67,46 @@ TEST( MRMesh, MimallocMallocOverride )
 }
 #endif
 
+#ifdef MR_ALLOCATOR_IS_MIMALLOC
+// BitSet allocates with mimalloc explicitly, see BitSet::Blocks
+TEST( MRMesh, MimallocBitSet )
+{
+    BitSet local( 1000, true );
+    EXPECT_TRUE( mi_is_in_heap_region( local.bits().data() ) );
+
+    // allocated inside MRMesh
+    const auto mesh = makeCube();
+    EXPECT_TRUE( mi_is_in_heap_region( mesh.topology.getValidFaces().bits().data() ) );
+}
+#endif
+
 #ifdef __linux__
 // The process must have only one mimalloc, of the version in mimalloc.h
 TEST( MRMesh, MimallocSharedLibrary )
 {
-    int numMimallocs = 0;
+    struct Counts
+    {
+        int mimallocs = 0;
+        int overrides = 0;
+    } counts;
     dl_iterate_phdr( []( dl_phdr_info* info, size_t, void* data )
     {
-        // libmimalloc or libMRMimalloc
-        if ( std::string_view( info->dlpi_name ).find( "imalloc" ) != std::string_view::npos )
-            ++*static_cast<int*>( data );
+        const std::string_view path = info->dlpi_name;
+        const auto name = path.substr( path.find_last_of( '/' ) + 1 );
+        auto& c = *static_cast<Counts*>( data );
+        if ( name.starts_with( "libmimalloc" ) || name.starts_with( "libMRMimalloc." ) )
+            ++c.mimallocs;
+        if ( name.starts_with( "libMRMimallocOverride." ) )
+            ++c.overrides;
         return 0;
-    }, &numMimallocs );
-    EXPECT_EQ( numMimallocs, 1 );
+    }, &counts );
+    EXPECT_EQ( counts.mimallocs, 1 );
+#ifdef MR_MIMALLOC_OVERRIDE
+    // forwards malloc and new to the libraries' mimalloc, see mr_enable_mimalloc
+    EXPECT_EQ( counts.overrides, 1 );
+#else
+    EXPECT_EQ( counts.overrides, 0 );
+#endif
     EXPECT_EQ( mi_version(), MI_MALLOC_VERSION );
 }
 #endif

@@ -4,18 +4,12 @@
 # and MRTest and MeshViewer override malloc too; the override uses the same mimalloc as the libraries.
 # Emscripten builds get mimalloc from -sMALLOC=mimalloc instead, see ConfigureEmscripten.cmake.
 option(MR_MIMALLOC_OVERRIDE "Executables override malloc with the mimalloc of MeshLib libraries" OFF)
-if(EMSCRIPTEN)
-  set(MR_MIMALLOC_IN_LIBRARIES OFF)
-else()
-  set(MR_MIMALLOC_IN_LIBRARIES ON)
-endif()
 
 # mr_find_mimalloc()
 #
-# Provides the `mimalloc` target for MeshLib libraries (MR_MIMALLOC_IN_LIBRARIES).
+# Provides the `mimalloc` target for MeshLib libraries (not in Emscripten builds).
 # Windows: vcpkg's mimalloc[override], whose redirect engages only in mr_enable_mimalloc executables.
-# macOS and Linux: the dependencies' mimalloc overrides malloc, which crashes a plain Python loading it late,
-# so MeshLib builds its own non-override copy of the same version, named MRMimalloc.
+# macOS and Linux: MeshLib's own non-override mimalloc, named MRMimalloc: an override one crashes a plain Python loading it late.
 set(MR_MIMALLOC_PACKAGE_LOCK ${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/cpm/package-lock.cmake)
 function(mr_find_mimalloc)
   if(WIN32)
@@ -36,7 +30,7 @@ function(mr_find_mimalloc)
     set(MI_BUILD_TESTS OFF)
     set(MI_INSTALL_TOPLEVEL ON)
     if(MR_MIMALLOC_OVERRIDE)
-      # the allocator of the whole process: release-built, as the dependencies' override mimalloc it replaces
+      # the allocator of the whole process: release-built in every build type
       set(CMAKE_BUILD_TYPE Release)
     endif()
     FetchContent_Declare(mimalloc ${MESHLIB_PACKAGE_mimalloc})

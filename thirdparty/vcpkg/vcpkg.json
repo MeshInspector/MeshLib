@@ -56,7 +56,7 @@
         },
         {
             "name": "mimalloc",
-            "platform": "windows | osx | linux",
+            "platform": "windows",
             "features": [
                 "override"
             ]

@@ -28,7 +28,6 @@ libe57format
 libharu
 libjpeg-turbo
 libzip
-mimalloc[override]
 mrbind-pybind11
 opencascade-minimal
 openctm

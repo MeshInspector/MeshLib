@@ -36,6 +36,8 @@ ENDIF()
 IF(MR_MIMALLOC_OVERRIDE)
   include(Mimalloc)
   mr_enable_mimalloc(${PROJECT_NAME})
+  # for MRMimallocRedirectTests.cpp
+  target_compile_definitions(${PROJECT_NAME} PRIVATE MR_MIMALLOC_OVERRIDE)
 ENDIF()
 
 add_test(

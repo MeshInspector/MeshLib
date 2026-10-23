@@ -61,7 +61,7 @@ endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
 # MR::Allocator, see MRAllocator.h
-IF(MR_MIMALLOC_IN_LIBRARIES)
+IF(NOT EMSCRIPTEN)
   mr_find_mimalloc()
   target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)
 ENDIF()

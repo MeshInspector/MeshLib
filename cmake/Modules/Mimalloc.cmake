@@ -13,15 +13,13 @@ option(MR_MIMALLOC_OVERRIDE "Executables override malloc with mimalloc instead o
 # so MeshLib builds its own non-override copy of the same version, named MRMimalloc.
 set(MR_MIMALLOC_PACKAGE_LOCK ${CMAKE_CURRENT_LIST_DIR}/../../thirdparty/cpm/package-lock.cmake)
 function(mr_find_mimalloc)
-  if(TARGET mimalloc)
-  elseif(WIN32)
+  if(WIN32)
     find_package(mimalloc CONFIG REQUIRED)
   else()
     include(${MR_MIMALLOC_PACKAGE_LOCK})
     include(FetchContent)
-    # without MeshLib's -Werror -pedantic-errors, and release checks in Debug builds too
+    # without MeshLib's -Werror -pedantic-errors
     set(CMAKE_C_FLAGS "")
-    set(CMAKE_BUILD_TYPE Release)
     set(MI_OVERRIDE OFF)
     if(NOT APPLE)
       # dlopen-safe thread-locals; on macOS 13 this TLS model aborts in dyld at launch

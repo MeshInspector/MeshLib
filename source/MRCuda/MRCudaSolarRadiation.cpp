@@ -57,6 +57,7 @@ BitSet findSkyRays( const Mesh& terrain, const VertCoords& samples, const VertBi
     DynamicArray<FaceToThreeVerts> cudaFaces( terrain.topology.getTriangulation() );
     DynamicArray<float3> cudaSamples( samples );
 
+    std::vector<uint64_t> blocks;
     DynamicArray<uint64_t> cudaValidSamples( validSamples.bits() );
 
     const auto precs = calcPrecs( skyPatches );

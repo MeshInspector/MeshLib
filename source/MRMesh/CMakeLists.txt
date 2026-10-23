@@ -60,7 +60,7 @@ if(NOT libzip_FOUND)
 endif()
 target_link_libraries(${PROJECT_NAME} PRIVATE libzip::zip)
 
-# BitSet's mi_stl_allocator
+# MR::Allocator, see MRAllocator.h
 IF(NOT EMSCRIPTEN AND NOT MR_MIMALLOC_OVERRIDE)
   mr_find_mimalloc()
   target_link_libraries(${PROJECT_NAME} PUBLIC mimalloc)

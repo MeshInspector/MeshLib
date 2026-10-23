@@ -147,7 +147,7 @@ public:
     void pop_back() { assert( numBits_ > 0 ); { if ( bitIndex_( numBits_ ) == 1 ) blocks_.pop_back(); else reset( numBits_ - 1 ); } --numBits_; }
 
     /// read-only access to all bits stored as a vector of uint64 blocks
-    [[nodiscard]] MR_BIND_IGNORE const Blocks & bits() const { return blocks_; }
+    [[nodiscard]] MR_BIND_IGNORE const auto & bits() const { return blocks_; }
 
     MRMESH_API BitSet & operator &= ( const BitSet & b );
     MRMESH_API BitSet & operator |= ( const BitSet & b );

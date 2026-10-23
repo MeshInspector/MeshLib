@@ -2,7 +2,7 @@ project(MRTest CXX)
 
 file(GLOB SOURCES "*.cpp")
 IF(EMSCRIPTEN AND NOT MR_EMSCRIPTEN_MIMALLOC)
-  list(FILTER SOURCES EXCLUDE REGEX "MRMimallocTests\.cpp$")
+  list(FILTER SOURCES EXCLUDE REGEX "MRMimallocRedirectTests\.cpp$")
 ENDIF()
 
 add_executable(${PROJECT_NAME} ${SOURCES})

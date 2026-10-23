@@ -16,6 +16,9 @@
 #include "MREdgeIterator.h"
 #include "MRUnionFindParallel.h"
 #include "MRphmap.h"
+#include "MRAABBTree.h"
+#include "MRInplaceStack.h"
+#include "MRPrecisePredicates3.h"
 
 namespace MR
 {
@@ -23,14 +26,88 @@ namespace MR
 namespace
 {
 
-// unites the parts of origin separated by the cut (by their roots in unionFind) by the winding numbers of the other mesh around them,
-// from 0 in every set of parts linked by the paths (crossing a path from its left to its right leaves the other mesh on mesh A, and enters
-// it on mesh B): the ones inside the other mesh in leftRoot on mesh A and in rightRoot on mesh B, the others in the other root;
+// the exact winding numbers of the other mesh around the vertices of origin that the cut did not add
+struct OtherMeshWindings
+{
+    const Mesh& origin;
+    const MeshPart& other;
+    const CoordinateConverters& conv;
+    bool originIsA = true;
+    const AffineXf3f* rigidB2A = nullptr;
+    int bVertShift = 0;
+
+    // the number of the triangles of other that the segment from v up above both meshes crosses from their back to their front,
+    // minus those it crosses from front to back; by the precise predicates with the coordinates and (in their order) the vertex ids
+    // of the cut, so that it agrees with the paths
+    int operator()( VertId v ) const;
+};
+
+int OtherMeshWindings::operator()( VertId v ) const
+{
+    const auto* xfOrigin = originIsA ? nullptr : rigidB2A;
+    const auto* xfOther = originIsA ? rigidB2A : nullptr;
+    std::array<PreciseVertCoords, 5> vs; // a triangle of other, v, the point above
+    vs[3].id = VertId( int( v ) + ( originIsA ? 0 : bVertShift ) );
+    vs[3].pt = conv.toInt( xfOrigin ? ( *xfOrigin )( origin.points[v] ) : origin.points[v] );
+    vs[4].id = VertId( std::numeric_limits<int>::max() );
+    // the int coordinates of the points of both meshes are within the half of 0.99 of the int range
+    vs[4].pt = Vector3i( vs[3].pt.x, vs[3].pt.y, std::numeric_limits<int>::max() / 2 );
+
+    const auto& tree = other.mesh.getAABBTree();
+    if ( tree.nodes().empty() )
+        return 0;
+    // the int coordinates of the transformed points are within the transformed box in int units (not rounded, as the box can be
+    // larger than the range of the int coordinates), the rounding being monotone; with a margin of a few float steps for safety
+    const auto rootBox = transformed( tree[tree.rootNodeId()].box, xfOther );
+    const double margin = 1 + 4 * FLT_EPSILON * conv.toInt.invRange *
+        std::max( { std::abs( rootBox.min.x ), std::abs( rootBox.min.y ), std::abs( rootBox.min.z ),
+                    std::abs( rootBox.max.x ), std::abs( rootBox.max.y ), std::abs( rootBox.max.z ) } );
+    int res = 0;
+    InplaceStack<NoInitNodeId, 32> subtasks;
+    subtasks.push( tree.rootNodeId() );
+    while ( !subtasks.empty() )
+    {
+        const auto& node = tree[subtasks.top()];
+        subtasks.pop();
+        const auto box = transformed( node.box, xfOther );
+        const auto lo = ( Vector3d( box.min ) - conv.toInt.center ) * conv.toInt.invRange;
+        const auto hi = ( Vector3d( box.max ) - conv.toInt.center ) * conv.toInt.invRange;
+        if ( vs[3].pt.x < lo.x - margin || vs[3].pt.x > hi.x + margin || vs[3].pt.y < lo.y - margin || vs[3].pt.y > hi.y + margin
+            || vs[3].pt.z > hi.z + margin )
+            continue;
+        if ( !node.leaf() )
+        {
+            subtasks.push( node.l );
+            subtasks.push( node.r );
+            continue;
+        }
+        const auto f = node.leafId();
+        if ( other.region && !other.region->test( f ) )
+            continue;
+        other.mesh.topology.getTriVerts( f, vs[0].id, vs[1].id, vs[2].id );
+        for ( int i = 0; i < 3; ++i )
+        {
+            const auto& p = other.mesh.points[vs[i].id];
+            vs[i].pt = conv.toInt( xfOther ? ( *xfOther )( p ) : p );
+            vs[i].id = VertId( int( vs[i].id ) + ( originIsA ? bVertShift : 0 ) );
+        }
+        if ( const auto x = doTriangleSegmentIntersect( vs ) )
+            res += x.dIsLeftFromABC ? 1 : -1;
+    }
+    return res;
+}
+
+// unites the parts of origin separated by the cut (by their roots in unionFind) by the winding numbers of the other mesh around them
+// (crossing a path from its left to its right leaves the other mesh on mesh A, and enters it on mesh B): the ones inside the other mesh
+// in leftRoot on mesh A and in rightRoot on mesh B, the others in the other root;
+// every set of parts linked by the paths is numbered from its part with the most path edges among those with a vertex not on the paths,
+// whose number is the exact winding number there if given windings (on a closed other mesh); otherwise (or if no part of the set
+// has such a vertex) the set is numbered from 0 at its lowest part;
 // a part reached with two numbers (as by crossings in a face not reported bad, which are not split) keeps the first one;
 // unites nothing and returns false if every part is only to the left or only to the right of the paths (as where the other mesh
 // does not cross itself)
 bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>& cutPaths, BaseUnionFind<FaceId>& unionFind, bool originIsA,
-    FaceId& leftRoot, FaceId& rightRoot )
+    const OtherMeshWindings* exactWindings, FaceId& leftRoot, FaceId& rightRoot )
 {
     MR_TIMER;
     FaceBitSet leftParts( topology.faceSize() ), rightParts( topology.faceSize() );
@@ -44,7 +121,24 @@ bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>&
     if ( !leftParts.intersects( rightParts ) )
         return false;
 
+    if ( exactWindings && !exactWindings->other.mesh.topology.isClosed( exactWindings->other.region ) )
+        exactWindings = nullptr; // an open mesh has no winding numbers
+
+    // the vertices that the cut added are on the paths
+    VertBitSet pathVerts;
+    if ( exactWindings )
+    {
+        pathVerts.resize( topology.vertSize() );
+        for ( const auto& path : cutPaths )
+            for ( auto e : path )
+            {
+                pathVerts.set( topology.org( e ) );
+                pathVerts.set( topology.dest( e ) );
+            }
+    }
+
     HashMap<FaceId, std::vector<std::pair<FaceId, int>>> links; // the parts across every path edge, with the change of the number
+    HashMap<FaceId, VertId> probes; // a vertex not on the paths, of a face next to them, in the parts having one
     const int step = originIsA ? -1 : 1;
     for ( const auto& path : cutPaths )
         for ( auto e : path )
@@ -53,34 +147,62 @@ bool uniteByWindings( const MeshTopology& topology, const std::vector<EdgePath>&
                 const auto lr = unionFind.find( l ), rr = unionFind.find( r );
                 links[lr].emplace_back( rr, step );
                 links[rr].emplace_back( lr, -step );
+                if ( !exactWindings )
+                    continue;
+                if ( const auto v = topology.dest( topology.next( e ) ); !pathVerts.test( v ) )
+                    probes.insert( { lr, v } );
+                if ( const auto v = topology.dest( topology.next( e.sym() ) ); !pathVerts.test( v ) )
+                    probes.insert( { rr, v } );
             }
 
+    std::vector<std::tuple<bool, size_t, FaceId>> starts; // has a probe, the number of path edges, the part
+    starts.reserve( links.size() );
+    for ( const auto& [x, xLinks] : links )
+        starts.emplace_back( probes.contains( x ), xLinks.size(), x );
+    if ( exactWindings )
+        std::sort( starts.begin(), starts.end(), std::greater() );
+
     // a part on both sides of the paths makes a number above 1 in its set
-    HashMap<FaceId, int> windings;
-    std::vector<std::pair<FaceId, int>> linked; // the parts of one set with their numbers
-    for ( const auto& [start, unused] : links )
+    struct LinkedSet
     {
-        if ( !windings.insert( { start, 0 } ).second )
+        size_t end = 0; // of its parts in linked
+        int shift = 0; // to the winding numbers
+        VertId probe; // of its start, which has number 0
+    };
+    std::vector<LinkedSet> sets;
+    std::vector<std::pair<FaceId, int>> linked; // the parts of all sets with their numbers, set after set
+    FaceBitSet numbered( topology.faceSize() );
+    for ( const auto& [probed, unused, start] : starts )
+    {
+        if ( numbered.test_set( start ) )
             continue;
-        linked = { { start, 0 } };
+        linked.emplace_back( start, 0 );
         int minW = 0;
-        for ( size_t i = 0; i < linked.size(); ++i )
+        for ( size_t i = sets.empty() ? 0 : sets.back().end; i < linked.size(); ++i )
         {
             const auto [x, wx] = linked[i];
             minW = std::min( minW, wx );
             for ( const auto& [y, d] : links.at( x ) )
-                if ( windings.insert( { y, wx + d } ).second )
+                if ( !numbered.test_set( y ) )
                     linked.emplace_back( y, wx + d );
         }
-        for ( const auto& [x, w] : linked )
-            windings[x] = w - minW;
+        sets.push_back( { .end = linked.size(), .shift = -minW, .probe = probed ? probes.at( start ) : VertId{} } );
     }
+    if ( exactWindings )
+        ParallelFor( sets, [&] ( size_t i )
+        {
+            if ( sets[i].probe )
+                sets[i].shift = ( *exactWindings )( sets[i].probe );
+        } );
 
-    for ( const auto& [r, w] : windings )
-    {
-        auto& root = ( w > 0 ) == originIsA ? leftRoot : rightRoot;
-        root = root ? unionFind.uniteUnbalanced( root, r ).first : unionFind.find( r );
-    }
+    size_t i = 0;
+    for ( const auto& s : sets )
+        for ( ; i < s.end; ++i )
+        {
+            const auto [x, w] = linked[i];
+            auto& root = ( w + s.shift > 0 ) == originIsA ? leftRoot : rightRoot;
+            root = root ? unionFind.uniteUnbalanced( root, x ).first : unionFind.find( x );
+        }
     return true;
 }
 
@@ -117,14 +239,20 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
     FaceBitSet connectedComp( origin.topology.lastValidFace() + 1 );
     AffineXf3f a2b = rigidB2A ? rigidB2A->inverse() : AffineXf3f();
     bool needRightPart = needInsideComps != originIsA;
+    const Mesh* otherPtr = originIsA ? intParams.originalMeshB : intParams.originalMeshA;
+    const MeshPart other( otherPtr ? *otherPtr : otherMesh );
 
     FaceId leftRoot;  // root of the components to the left of cutPaths
     FaceId rightRoot; // root of the components to the right of cutPaths
     if ( !cutPaths.empty() )
     {
+        std::optional<OtherMeshWindings> exactWindings;
+        if ( intParams.converters )
+            exactWindings.emplace( OtherMeshWindings{ origin, other, *intParams.converters, originIsA, rigidB2A, bVertShift } );
         // unite regions separately to the left and to the right of cutPaths
         // (by the winding numbers where the forced cut splits crossing contours, as where the other mesh crosses itself)
-        if ( !intParams.graphCutSeparation || !uniteByWindings( origin.topology, cutPaths, unionFind, originIsA, leftRoot, rightRoot ) )
+        if ( !intParams.graphCutSeparation ||
+            !uniteByWindings( origin.topology, cutPaths, unionFind, originIsA, exactWindings ? &*exactWindings : nullptr, leftRoot, rightRoot ) )
             for ( const auto& path : cutPaths )
                 for ( auto e : path )
                 {
@@ -162,8 +290,6 @@ std::optional<FaceBitSet> findMeshPart( const Mesh& origin,
         else
         {
             // a connected component without any cut
-            const Mesh* otherPtr = originIsA ? intParams.originalMeshB : intParams.originalMeshA;
-            const MeshPart other( otherPtr ? *otherPtr : otherMesh );
             if ( mergeAllNonIntersectingComponents ||
                 ( intParams.converters ?
                     isNonIntersectingInsidePrecise( origin, f, other, *intParams.converters,

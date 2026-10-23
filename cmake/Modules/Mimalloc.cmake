@@ -36,8 +36,7 @@ function(mr_find_mimalloc)
     set(MI_BUILD_TESTS OFF)
     set(MI_INSTALL_TOPLEVEL ON)
     if(MR_MIMALLOC_OVERRIDE)
-      # the allocator of the whole process, as release-built as the dependencies' override mimalloc was:
-      # mimalloc's Debug (guarded pages, padding) crashed MeshViewer at launch on macOS
+      # the allocator of the whole process: release-built, as the dependencies' override mimalloc it replaces
       set(CMAKE_BUILD_TYPE Release)
     endif()
     FetchContent_Declare(mimalloc ${MESHLIB_PACKAGE_mimalloc})

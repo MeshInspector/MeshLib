@@ -23,8 +23,6 @@ function(mr_find_mimalloc)
   else()
     find_package(mimalloc 3.5 CONFIG REQUIRED)
   endif()
-  # for the targets linking MRMesh in other directories
-  set_target_properties(mimalloc PROPERTIES IMPORTED_GLOBAL TRUE)
 
   if(MR_MIMALLOC_OVERRIDE AND NOT WIN32)
     # malloc, new and the rest of the system allocation functions, for mr_enable_mimalloc
